@@ -90,7 +90,7 @@ def _apply_blur(image: Any, boxes: List[BoundingBox], radius: int,
                 overlay_color: Optional[Tuple[int, int, int]]) -> Any:
     """Blur (or solid-overlay) each box; return a new image."""
     from PIL import Image, ImageFilter
-    base = image.copy()
+    base = _blurrable(image)
     for x1, y1, x2, y2 in boxes:
         region = (max(0, x1), max(0, y1),
                   max(0, x2), max(0, y2))
@@ -106,6 +106,19 @@ def _apply_blur(image: Any, boxes: List[BoundingBox], radius: int,
             blurred = crop.filter(ImageFilter.GaussianBlur(radius=int(radius)))
             base.paste(blurred, region)
     return base
+
+
+def _blurrable(image: Any) -> Any:
+    """A copy in RGB / RGBA: the only modes both the blur and a colour overlay accept.
+
+    ``GaussianBlur`` refuses palette (``P``) and bilevel (``1``) images and an
+    RGB overlay tuple is refused by ``L`` / ``LA``, so a redaction of a GIF,
+    grayscale or palette PNG raised instead of hiding the region.
+    """
+    if image.mode in ("RGB", "RGBA"):
+        return image.copy()
+    has_alpha = "A" in image.mode or "transparency" in image.info
+    return image.convert("RGBA" if has_alpha else "RGB")
 
 
 __all__ = ["RedactionEngine", "RedactionResult"]

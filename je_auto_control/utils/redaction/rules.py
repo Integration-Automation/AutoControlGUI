@@ -152,14 +152,33 @@ def _first_int(source: Mapping[str, Any], *names: str, default: int = 0) -> int:
     return default
 
 
+_CORNER_KEYS = frozenset({"x1", "y1", "x2", "y2", "left", "top", "right", "bottom"})
+
+
+def _dict_bbox(bbox: Mapping[str, Any]) -> Tuple[int, int, int, int]:
+    """Corners from ``x1/y1/x2/y2``, ``left/top/right/bottom`` or ``x/y/width/height``.
+
+    The ``x/y/width/height`` shape (what OCR and accessibility dumps use) used
+    to collapse to ``(0, 0, 0, 0)``, so the field it described was never
+    blurred; a dict with none of these keys is refused for the same reason.
+    """
+    if "width" in bbox or "height" in bbox:
+        x1 = _first_int(bbox, "x", "left", "x1")
+        y1 = _first_int(bbox, "y", "top", "y1")
+        return (x1, y1, x1 + _first_int(bbox, "width"), y1 + _first_int(bbox, "height"))
+    if not _CORNER_KEYS.intersection(bbox):
+        raise ValueError(f"bbox has no coordinates: {sorted(bbox)}")
+    x1 = _first_int(bbox, "x1", "left")
+    y1 = _first_int(bbox, "y1", "top")
+    return (x1, y1, _first_int(bbox, "x2", "right", default=x1),
+            _first_int(bbox, "y2", "bottom", default=y1))
+
+
 def _normalise_bbox(bbox: Any) -> BoundingBox:
     if bbox is None:
         raise ValueError("bbox cannot be None")
-    if isinstance(bbox, dict):
-        x1 = _first_int(bbox, "x1", "left")
-        y1 = _first_int(bbox, "y1", "top")
-        x2 = _first_int(bbox, "x2", "right", default=x1)
-        y2 = _first_int(bbox, "y2", "bottom", default=y1)
+    if isinstance(bbox, Mapping):
+        x1, y1, x2, y2 = _dict_bbox(bbox)
     else:
         seq = list(bbox)
         if len(seq) != 4:

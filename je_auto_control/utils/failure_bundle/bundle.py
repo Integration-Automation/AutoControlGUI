@@ -23,6 +23,8 @@ from je_auto_control.utils.config_redaction import (
     redact_config,
     redact_secret_text,
 )
+from je_auto_control.utils.executor.action_redaction import redact_actions
+from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 
 
 @dataclass(frozen=True)
@@ -53,10 +55,25 @@ def _safe_name(path: Path, used: set[str]) -> str:
 
 def _read_log_tail(path: Path, limit: int) -> str:
     with path.open("rb") as handle:
-        if path.stat().st_size > limit:
+        truncated = path.stat().st_size > limit
+        if truncated:
             handle.seek(-limit, os.SEEK_END)
         data = handle.read()
+    if truncated:
+        # The first line starts mid-way: a half line can cut a secret in two,
+        # leaving a fragment the text patterns no longer recognise.
+        data = data.partition(b"\n")[2]
     return redact_secret_text(data.decode("utf-8", errors="replace"))
+
+
+def _redact(value: Any) -> Any:
+    """Mask vault-command arguments, then anything that looks like a secret.
+
+    ``redact_config`` goes by key names and value shapes, which an
+    ``AC_secret_set`` argument list (``["AC_secret_set", "db", "hunter2"]``)
+    has neither of.
+    """
+    return redact_config(redact_actions(value))
 
 
 def _collect_diagnostics(archive: zipfile.ZipFile,
@@ -118,6 +135,11 @@ def _collect_all(archive: zipfile.ZipFile, opts: FailureBundleOptions,
     _collect_attachments(archive, opts, failures)
 
 
+def _plain(event: Any) -> Any:
+    """A Mapping event as a dict, so the redaction walk (dict / list only) enters it."""
+    return dict(event) if isinstance(event, Mapping) else event
+
+
 def create_failure_bundle(
     output_path: str | os.PathLike[str],
     *,
@@ -140,8 +162,8 @@ def create_failure_bundle(
             "platform": platform.platform(),
             "executable": Path(sys.executable).name,
         },
-        "context": redact_config(dict(context or {})),
-        "events": redact_config(list(events)),
+        "context": _redact(dict(context or {})),
+        "events": _redact([_plain(event) for event in events]),
         "collector_failures": failures,
     }
 
@@ -167,10 +189,18 @@ def failure_bundle_on_error(
     events: Iterable[Mapping[str, Any]] = (),
     options: FailureBundleOptions | None = None,
 ):
-    """Create a bundle when the wrapped block raises, then re-raise it."""
+    """Create a bundle when the wrapped block raises, then re-raise it.
+
+    The block's own exception is always the one that propagates: a bundle
+    that cannot be written (full disk, bad path) is logged, not raised in
+    its place.
+    """
     try:
         yield
     except BaseException as error:
-        create_failure_bundle(output_path, error=error, context=context,
-                              events=events, options=options)
+        try:
+            create_failure_bundle(output_path, error=error, context=context,
+                                  events=events, options=options)
+        except Exception as bundle_error:  # noqa: BLE001  # reason: must not mask the original error; logged
+            autocontrol_logger.error("failure bundle not written: %r", bundle_error)
         raise

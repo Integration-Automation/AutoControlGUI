@@ -33,6 +33,12 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Changed
 
+- **Secret-key matching is by word.** `scan_secrets` and `redact_config` no
+  longer treat keys that merely contain `pass` or `token` (`bypass_proxy`,
+  `tokenizer`) as secrets, and now do treat `apiKey`, `cookie`, `sessionId`
+  and `Authorization` as secrets. A redaction bounding box with no known
+  coordinate keys raises `ValueError`.
+
 - **An empty window title is an error.** `find_window`, `focus_window`,
   `close_window_by_title` and the other title lookups raise
   `AutoControlActionException` for a blank or non-string title; `""` used to
@@ -159,6 +165,16 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
   package does no PKCS#7 decryption, so the `>=48.0.1` floor is unchanged.
 
 ### Fixed
+
+- **Secrets stay out of reports, bundles and logs.** Secret keys are matched
+  by word (`apiKey`, `db_password`, `sessionId` count; `tokenizer` does not);
+  list and tuple items and numbers under a secret key are checked; JWTs and
+  credentials URLs are found; free-text redaction masks prefixed keys,
+  Basic/Token/Digest `Authorization` and URL passwords. Failure bundles mask
+  `AC_secret_*` arguments, re-raise the block's own error when the bundle
+  cannot be written, and drop a truncated log's partial first line.
+  Screenshot redaction reads `x/y/width/height` boxes and handles palette,
+  grayscale and bilevel images.
 
 - **Accessibility, OCR and window lookups match what was asked.** A blank
   `contains` name no longer matches every element; a blank window title is
