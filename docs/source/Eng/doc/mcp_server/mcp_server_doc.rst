@@ -372,8 +372,10 @@ Audit log
 
 Set ``JE_AUTOCONTROL_MCP_AUDIT=/path/to/audit.jsonl`` to append one
 JSONL record per ``tools/call``: timestamp, tool name, sanitised
-arguments (``password`` / ``token`` / ``secret`` / ``api_key`` /
-``authorization`` are redacted), status (``ok`` / ``error`` /
+arguments (``password`` / ``passphrase`` / ``token`` / ``secret`` /
+``api_key`` / ``key`` / ``authorization`` and similar names are redacted at
+any depth, and action lists are masked like the executor log), status
+(``ok`` / ``error`` /
 ``cancelled``), duration, optional error text, and optional
 auto-screenshot artifact path (see below).
 

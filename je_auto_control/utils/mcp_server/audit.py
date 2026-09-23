@@ -12,6 +12,8 @@ import threading
 import time
 from typing import Any, Dict, Optional
 
+from je_auto_control.utils.executor.action_redaction import SENSITIVE_ARGUMENT_NAMES, redact_actions
+
 
 class AuditLogger:
     """Thread-safe JSONL audit logger for MCP tool calls."""
@@ -57,21 +59,28 @@ class AuditLogger:
                 handle.write(line + "\n")
 
 
-REDACTED_KEYS = frozenset({"password", "token", "secret", "api_key",
-                            "authorization"})
+REDACTED_KEYS = SENSITIVE_ARGUMENT_NAMES
 REDACTED_PLACEHOLDER = "<redacted>"
 
 
-def _sanitise(arguments: Dict[str, Any]) -> Dict[str, Any]:
-    """Replace obvious secret-like values with ``REDACTED_PLACEHOLDER``."""
+def _sanitise(arguments: Any) -> Any:
+    """Replace secret-like values with ``REDACTED_PLACEHOLDER``, at any depth.
+
+    Only top-level names were checked, so a passphrase inside an ``actions``
+    list (``ac_execute_actions``) or under a name missing from the list
+    (``key``, ``passphrase``) was written to the audit file as is. Action
+    lists are masked with the executor's own rules.
+    """
+    if isinstance(arguments, list):
+        return [_sanitise(item) for item in redact_actions(arguments)]
     if not isinstance(arguments, dict):
         return arguments
     out: Dict[str, Any] = {}
     for key, value in arguments.items():
-        if key.lower() in REDACTED_KEYS:
+        if str(key).lower() in REDACTED_KEYS or str(key).lower() == "key":
             out[key] = REDACTED_PLACEHOLDER
         else:
-            out[key] = value
+            out[key] = _sanitise(value)
     return out
 
 

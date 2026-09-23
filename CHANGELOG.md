@@ -190,6 +190,10 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Security
 
+- **Keys, passwords and tokens given to actions are masked** in the executor
+  log and result record (signing, encryption and JWT keys; any `password`,
+  `passphrase`, `token`...), and the MCP audit file masks them at any depth,
+  including inside `actions` lists.
 - **The `discovery` extra requires zeroconf 0.149.16**, which fixes the
   2026 mDNS memory and CPU exhaustion advisories reachable from the local
   network.

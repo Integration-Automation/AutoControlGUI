@@ -339,8 +339,9 @@ scope——包含你在 ``initialize`` 聲明的能力,以及進行中呼叫佔�
 
 設定 ``JE_AUTOCONTROL_MCP_AUDIT=/path/to/audit.jsonl``,每次
 ``tools/call`` 都會寫一筆 JSONL:時間戳、工具名稱、過濾過的參數
-(``password`` / ``token`` / ``secret`` / ``api_key`` /
-``authorization`` 會被替換成 ``<redacted>``)、狀態(``ok`` /
+(``password`` / ``passphrase`` / ``token`` / ``secret`` / ``api_key`` /
+``key`` / ``authorization`` 等名稱在任何層級都會被替換成 ``<redacted>``,
+動作清單照執行器 log 的規則遮罩)、狀態(``ok`` /
 ``error`` / ``cancelled``)、執行時間、錯誤訊息與
 auto-screenshot 路徑(見下)。
 
