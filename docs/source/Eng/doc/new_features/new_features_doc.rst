@@ -553,9 +553,9 @@ Connection approval + view-only mode
 ------------------------------------
 
 Optional callback gates every incoming session AnyDesk-style.
-Returning ``"view_only"`` admits the viewer but drops their ``INPUT``
-messages; returning a falsy value (or raising) sends ``AUTH_FAIL``
-"rejected by host"::
+Returning ``"view_only"`` admits the viewer but drops their ``INPUT``,
+``CLIPBOARD`` and file-transfer messages; returning a falsy value (or
+raising) sends ``AUTH_FAIL`` "rejected by host"::
 
    from je_auto_control import RemoteDesktopHost, PendingViewer
 
@@ -570,7 +570,8 @@ IP allowlist (CIDR + exact IPs)
 -------------------------------
 
 Reject peers outside the configured ranges *before* TLS / auth runs,
-so attackers can't probe further::
+so attackers can't probe further. Invalid entries are dropped with a
+warning; a list whose every entry is invalid admits nobody::
 
    host = RemoteDesktopHost(
        token="tok",

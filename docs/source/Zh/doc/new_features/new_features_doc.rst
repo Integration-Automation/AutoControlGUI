@@ -520,8 +520,8 @@ TCP / WS host + viewer、WebRTC host + viewer 含手動 SDP / 自訂編碼器
 ----------------------
 
 可選的 callback 守住每一個 incoming session，AnyDesk 風格。回傳
-``"view_only"`` admit 但丟掉 viewer 的 ``INPUT``；回傳 falsy（或
-raise）就送 ``AUTH_FAIL "rejected by host"``::
+``"view_only"`` admit 但丟掉 viewer 的 ``INPUT``、``CLIPBOARD`` 與檔案傳輸訊息；
+回傳 falsy（或 raise）就送 ``AUTH_FAIL "rejected by host"``::
 
    from je_auto_control import RemoteDesktopHost, PendingViewer
 
@@ -535,7 +535,8 @@ raise）就送 ``AUTH_FAIL "rejected by host"``::
 IP 白名單（CIDR + 單一 IP）
 ----------------------------
 
-在 TLS / auth 之前就拒絕範圍外的對端，攻擊者連探測都不行::
+在 TLS / auth 之前就拒絕範圍外的對端，攻擊者連探測都不行。無效的項目會被丟掉並
+記下警告；每一項都無效的清單不放任何人進來::
 
    host = RemoteDesktopHost(
        token="tok",
