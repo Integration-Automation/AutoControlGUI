@@ -193,6 +193,9 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Security
 
+- **The admin console no longer sends its bearer token to a redirect target**,
+  bounds each host's response by `timeout_s` as a whole and by size, and
+  reports broadcast labels that name no host.
 - **The USB passthrough ACL fails closed when its signature is deleted** once a
   signing key exists, keeps a damaged file aside instead of overwriting it,
   and refuses malformed vendor/product ids that never matched.
@@ -282,6 +285,9 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Fixed
 
+- **The admin console keeps a damaged or partly unreadable host file**
+  instead of dropping entries on the next save, and the USB passthrough
+  viewer caps a message that never sends EOF.
 - **USB/IP answers a libusb error without an errno with `-EIO`** instead of
   dropping the client connection.
 - **`match_masked`, `match_masked_all`, `match_subpixel`, `match_auto` and

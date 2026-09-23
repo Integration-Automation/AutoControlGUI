@@ -20,7 +20,7 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 | 指標 | 數值 |
 | --- | ---: |
 | Python 模組總數（含周邊子專案） | 1,048 |
-| 程式碼總行數 | 146,214 |
+| 程式碼總行數 | 146,277 |
 | `je_auto_control/utils/` 子套件數 | 310 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 773 |
 | 套件門面 `__all__` 公開名稱數 | 1,241 |
@@ -513,15 +513,15 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.10 遠端桌面與 USB
 
-> 6 個套件、約 18,728 行。
+> 6 個套件、約 18,791 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
-| `utils/admin/` | 349 | 多主機管理主控台：平行輪詢 N 個 AutoControl REST 端點 |
+| `utils/admin/` | 398 | 多主機管理主控台：平行輪詢 N 個 AutoControl REST 端點 |
 | `utils/config_sync/` | 279 | 透過訊令伺服器做跨機器設定同步 |
 | `utils/device_matrix/` | 138 | 行動裝置矩陣：同一 action list 於多台裝置平行執行 |
 | `utils/remote_desktop/` | 12,559 | **遠端桌面子系統**（56 檔／11.7K LOC）：TCP／WebSocket／WebRTC 三條傳輸路徑、主機與檢視端、訊令伺服器、TURN／中繼、多檢視者、錄影、信任清單、TOTP、稽核鏈 |
-| `utils/usb/` | 4,458 | 跨平台 USB 列舉／熱插拔／裝置直通（WinUSB、IOKit、libusb 後端 + ACL + WebRTC DataChannel 通道） |
+| `utils/usb/` | 4,472 | 跨平台 USB 列舉／熱插拔／裝置直通（WinUSB、IOKit、libusb 後端 + ACL + WebRTC DataChannel 通道） |
 | `utils/usbip/` | 945 | USB/IP 線路協定主機端（協定封包、TCP 伺服器、libusb URB 後端） |
 
 ### 5.4.11 伺服器、網路協定與外部整合
@@ -791,12 +791,12 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `permissions.py` / `clipboard_sync.py` / `wake_on_lan.py` / `session_actions.py` / `auth.py` | 64 / 72 / 56 / 40 / 28 | 逐 session 權限、剪貼簿同步、WOL、SAS 注入與螢幕遮蔽、HMAC 挑戰回應。 |
 | `ws_host.py` / `ws_viewer.py` / `jpeg_recorder.py` | 40 / 29 / 146 | WebSocket 傳輸變體與 TCP 路徑錄影。 |
 
-#### `utils/usb/`（4,458 行）與 `utils/usbip/`（945 行）
+#### `utils/usb/`（4,472 行）與 `utils/usbip/`（945 行）
 
 | 檔案 | 行數 | 職責 |
 | --- | ---: | --- |
 | `usb/passthrough/session.py` | 642 | 逐 peer 的 USB 直通 session。 |
-| `usb/passthrough/viewer_client.py` | 561 | 檢視端的直通協定用戶端。 |
+| `usb/passthrough/viewer_client.py` | 575 | 檢視端的直通協定用戶端。 |
 | `usb/passthrough/backend.py` | 463 | 後端 ABC + libusb 實作。 |
 | `usb/passthrough/winusb_backend.py` | 488 | Windows WinUSB 後端（ctypes）。 |
 | `usb/passthrough/acl.py` | 495 | 逐裝置 ACL。 |
@@ -1064,7 +1064,7 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `utils/mcp_server/` | 31 | 17,650 |
 | `utils/remote_desktop/` | 56 | 12,559 |
 | `utils/executor/` | 7 | 9,326 |
-| `utils/usb/` | 17 | 4,458 |
+| `utils/usb/` | 17 | 4,472 |
 | `je_auto_control/`（頂層 3 檔） | 3 | 2,388 |
 | `utils/accessibility/` | 14 | 2,890 |
 | `wrapper/` | 19 | 3,615 |
@@ -1080,6 +1080,6 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `osx/` | 17 | 919 |
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 837 |
-| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 676 | 50,572 |
-| **總計** | **1,042** | **146,149** |
+| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 676 | 50,621 |
+| **總計** | **1,042** | **146,212** |
 

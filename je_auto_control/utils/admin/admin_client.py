@@ -21,12 +21,27 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+from je_auto_control.utils.json_store.json_store import quarantine_file
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 
 
 _DEFAULT_PATH_RELATIVE = ".je_auto_control/admin_hosts.json"
 _DEFAULT_TIMEOUT = 3.0
 _DEFAULT_MAX_PARALLEL = 8
+#: Largest response body read from a host (a screenshot is the big one).
+_MAX_RESPONSE_BYTES = 16 * 1024 * 1024
+_READ_CHUNK_BYTES = 65536
+
+
+class _RefuseRedirects(urllib.request.HTTPRedirectHandler):
+    """Turn every 3xx into an error instead of following it.
+
+    urllib's default handler re-sent the ``Authorization`` header to wherever
+    a host redirected -- another origin, or https downgraded to http.
+    """
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):  # noqa: D102
+        return None
 
 
 def default_admin_hosts_path() -> Path:
@@ -67,6 +82,10 @@ class AdminConsoleClient:
         self._max_parallel = max(1, int(max_parallel))
         self._timeout = float(timeout_s)
         self._lock = threading.Lock()
+        self._opener = urllib.request.build_opener(_RefuseRedirects)
+        # Entries the loader could not read, written back on save rather than
+        # dropped with their tokens.
+        self._unreadable_entries: List[Any] = []
         self._hosts: Dict[str, AdminHost] = {}
         self._load()
 
@@ -80,11 +99,15 @@ class AdminConsoleClient:
 
     def add_host(self, label: str, base_url: str, token: str,
                  *, tags: Optional[List[str]] = None) -> AdminHost:
+        label, base_url, token = (str(label or "").strip(), str(base_url or "").strip(),
+                                  str(token or "").strip())
+        # Checked after stripping: a whitespace-only label became "" and the
+        # host was dropped on the next load.
         if not label or not base_url or not token:
             raise ValueError("label, base_url, and token are required")
         host = AdminHost(
-            label=label.strip(), base_url=base_url.rstrip("/"),
-            token=token.strip(), tags=list(tags or []),
+            label=label, base_url=base_url.rstrip("/"),
+            token=token, tags=list(tags or []),
         )
         with self._lock:
             self._hosts[host.label] = host
@@ -145,12 +168,17 @@ class AdminConsoleClient:
                           *, labels: Optional[List[str]] = None,
                           ) -> List[Dict[str, Any]]:
         targets = self._resolve_targets(labels)
+        # A label that names no host is a failure to report, not a host to
+        # skip: a typo used to make the broadcast look complete.
+        known = {host.label for host in targets}
+        missing = [{"label": label, "ok": False, "error": "unknown host"}
+                   for label in (labels or []) if label not in known]
         if not targets:
-            return []
+            return missing
         with ThreadPoolExecutor(max_workers=self._max_parallel) as pool:
             return list(pool.map(
                 lambda host: self._execute_one(host, actions), targets,
-            ))
+            )) + missing
 
     def _resolve_targets(self, labels: Optional[List[str]]) -> List[AdminHost]:
         if not labels:
@@ -235,13 +263,37 @@ class AdminConsoleClient:
         request = urllib.request.Request(
             url, data=data, headers=headers, method=method,
         )
-        with urllib.request.urlopen(  # nosec B310  # reason: scheme validated above to http(s) only
+        with self._opener.open(  # nosec B310  # reason: scheme validated above to http(s) only
                 request, timeout=self._timeout,
         ) as response:
-            raw = response.read()
+            raw = self._read_bounded(response)
         if not raw:
             return {}
         return json.loads(raw.decode("utf-8"))
+
+    def _read_bounded(self, response: Any) -> bytes:
+        """Read the body within the timeout as a whole and a size cap.
+
+        The socket timeout bounds each read only, so a host dripping a byte
+        at a time held a poll round for as long as it liked, and an endless
+        body was read into memory whole.
+        """
+        deadline = time.monotonic() + self._timeout
+        chunks: List[bytes] = []
+        total = 0
+        while True:
+            if time.monotonic() > deadline:
+                raise TimeoutError(f"response took longer than {self._timeout}s")
+            # read1: whatever has arrived. read(n) keeps reading until it has
+            # n bytes, so the deadline was never checked against a slow host.
+            reader = getattr(response, "read1", response.read)
+            chunk = reader(_READ_CHUNK_BYTES)
+            if not chunk:
+                return b"".join(chunks)
+            total += len(chunk)
+            if total > _MAX_RESPONSE_BYTES:
+                raise ValueError(f"response larger than {_MAX_RESPONSE_BYTES} bytes")
+            chunks.append(chunk)
 
     def _load(self) -> None:
         if not self._path.exists():
@@ -249,8 +301,8 @@ class AdminConsoleClient:
         try:
             payload = json.loads(self._path.read_text(encoding="utf-8"))
         except (OSError, ValueError) as error:
-            autocontrol_logger.warning("admin: load %s failed: %r",
-                                       self._path, error)
+            # Moved aside: the next add_host saved over it with one host.
+            quarantine_file(self._path, "admin hosts", repr(error))
             return
         # 一個損毀的檔案必須退化成空簿,而不是讓 __init__ 崩潰。原本只有
         # json.loads 在 try 內:非物件的頂層 JSON(如 [] / null)會讓
@@ -263,29 +315,25 @@ class AdminConsoleClient:
         # entry with extra/missing keys makes AdminHost(**entry) raise
         # TypeError — both escaped the constructor, and default_admin_console()
         # caches only on success, so it re-raised on every later call.
-        if not isinstance(payload, dict):
-            autocontrol_logger.warning(
-                "admin: %s is not a JSON object; ignoring", self._path)
-            return
-        entries = payload.get("hosts", [])
+        entries = payload.get("hosts", []) if isinstance(payload, dict) else None
         if not isinstance(entries, list):
-            autocontrol_logger.warning(
-                "admin: %s 'hosts' is not a list; ignoring", self._path)
+            quarantine_file(self._path, "admin hosts", "no 'hosts' list")
             return
         hosts: Dict[str, AdminHost] = {}
+        unreadable: List[Any] = []
         for entry in entries:
-            if not (isinstance(entry, dict) and entry.get("label")):
-                continue
             try:
                 hosts[entry["label"]] = AdminHost(**entry)
-            except TypeError as error:
+            except (TypeError, KeyError) as error:
                 # Skip a malformed entry (extra/missing field) but keep the
-                # rest of the book usable.
+                # rest of the book usable -- and keep the entry itself, which
+                # the next save used to drop along with its token.
                 autocontrol_logger.warning(
-                    "admin: skipping malformed host %r in %s: %r",
-                    entry.get("label"), self._path, error)
+                    "admin: skipping malformed host entry in %s: %r", self._path, error)
+                unreadable.append(entry)
         with self._lock:
             self._hosts = hosts
+            self._unreadable_entries = unreadable
 
     def _save(self) -> None:
         # Snapshot and write under the same lock. Splitting them let a stale
@@ -293,7 +341,8 @@ class AdminConsoleClient:
         # add_host, silently losing a host. The write itself is atomic (temp +
         # os.replace) so a crash mid-write can never truncate the token file.
         with self._lock:
-            payload = {"hosts": [asdict(h) for h in self._hosts.values()]}
+            payload = {"hosts": [asdict(h) for h in self._hosts.values()]
+                       + list(self._unreadable_entries)}
             try:
                 self._write_atomic(payload)
             except OSError as error:
