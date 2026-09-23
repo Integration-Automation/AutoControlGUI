@@ -17,6 +17,7 @@ from typing import TYPE_CHECKING, Callable, ClassVar, Dict, List, Optional, Tupl
 from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.json.json_file import read_executable_action_json
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
+from je_auto_control.utils.timeouts import clamp_poll_interval
 from je_auto_control.utils.run_history.artifact_manager import (
     capture_error_snapshot,
 )
@@ -236,7 +237,7 @@ class TriggerEngine:
                  tick_seconds: float = 0.25) -> None:
         from je_auto_control.utils.executor.action_executor import execute_action
         self._execute = executor or execute_action
-        self._tick = max(0.05, float(tick_seconds))
+        self._tick = clamp_poll_interval(tick_seconds)
         self._triggers: Dict[str, _TriggerBase] = {}
         self._lock = threading.Lock()
         self._thread: Optional[threading.Thread] = None
@@ -296,6 +297,8 @@ class TriggerEngine:
         for trigger in candidates:
             if not self._is_fired_safely(trigger):
                 continue
+            if not self._still_armed(trigger):
+                continue
             try:
                 self._fire(trigger, now)
             except Exception as error:  # noqa: BLE001  # reason: see below
@@ -307,6 +310,15 @@ class TriggerEngine:
                     "trigger %s disabled after _fire() raised: %r",
                     trigger.trigger_id, error, exc_info=True,
                 )
+
+    def _still_armed(self, trigger: _TriggerBase) -> bool:
+        """Whether ``trigger`` is still registered and enabled.
+
+        The candidates are a snapshot, and an earlier trigger's script in the
+        same pass may remove or disable a later one; its script ran anyway.
+        """
+        with self._lock:
+            return self._triggers.get(trigger.trigger_id) is trigger and trigger.enabled
 
     def _is_fired_safely(self, trigger: _TriggerBase) -> bool:
         """Evaluate one trigger; never let it take the polling thread down.

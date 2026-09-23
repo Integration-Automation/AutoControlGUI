@@ -58,6 +58,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260924-11 | 2026-09-24 | Trigger engine skips triggers removed mid-pass; poll threads survive infinite intervals and any rule error; callback executor returns its documented None | #bugfix #audit | [2026-09](2026-09.md) |
 | U-20260924-10 | 2026-09-24 | Email triggers: a failing script fires once, IMAP connections time out, unknown charsets keep their body | #bugfix #audit | [2026-09](2026-09.md) |
 | U-20260924-09 | 2026-09-24 | Step videos from a generator, one-string trajectory rubrics, and the error type in failure bundles | #bugfix #audit | [2026-09](2026-09.md) |
 | U-20260924-08 | 2026-09-24 | Codegen: every name compiles, NaN/Infinity survive, execute_action keeps its arguments, wrapped files and Robot names | #bugfix #audit #codegen | [2026-09](2026-09.md) |
@@ -169,7 +170,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | File | Period | Entries |
 |---|---|---:|
-| [2026-09.md](2026-09.md) | 2026-09 | 80 |
+| [2026-09.md](2026-09.md) | 2026-09 | 81 |
 | [2026-08-f.md](2026-08-f.md) | 2026-08 | 1 |
 | [2026-08-e.md](2026-08-e.md) | 2026-08 | 2 |
 | [2026-08-d.md](2026-08-d.md) | 2026-08 | 2 |

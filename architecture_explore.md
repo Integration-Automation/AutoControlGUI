@@ -20,7 +20,7 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 | 指標 | 數值 |
 | --- | ---: |
 | Python 模組總數（含周邊子專案） | 1,048 |
-| 程式碼總行數 | 145,576 |
+| 程式碼總行數 | 145,609 |
 | `je_auto_control/utils/` 子套件數 | 310 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 773 |
 | 套件門面 `__all__` 公開名稱數 | 1,241 |
@@ -162,7 +162,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `je_auto_control/utils/deprecation.py` | 35 | 公開 API 的一致性棄用警告。 |
 | `je_auto_control/utils/http_headers.py` | 45 | 入站 HTTP 標頭的共用防禦式解析。 |
 | `je_auto_control/utils/sqlite_support.py` | 112 | 選用標準函式庫 `sqlite3` 的取用點：`require_sqlite3()`／`sqlite3_available()`／`SQLITE_ERRORS`。十個以 SQLite 存放狀態的子系統都經由這裡，所以 FreeBSD 這種把 `sqlite3` 另外包成 `databases/py-sqlite3` 的 Python 仍然 import 得起門面。 |
-| `je_auto_control/utils/timeouts.py` | 17 | 把使用者給的逾時換成截止時間：`deadline_after()` 拒絕 NaN（`json` 接受它，而 `clock() >= NaN` 永遠不成立，輪詢迴圈會永遠跑下去），負值與無限大維持原意。 |
+| `je_auto_control/utils/timeouts.py` | 33 | 把使用者給的逾時換成截止時間：`deadline_after()` 拒絕 NaN（`json` 接受它，而 `clock() >= NaN` 永遠不成立，輪詢迴圈會永遠跑下去），負值與無限大維持原意；`clamp_poll_interval()` 把背景迴圈的輪詢間隔夾在 0.05 秒到 1 小時之間（`Event.wait(inf)` 在 Windows 會丟 `OverflowError`）。 |
 
 ### 5.2 wrapper 抽象層
 
@@ -302,11 +302,11 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.2 框架基礎設施
 
-> 14 個套件、約 2,816 行。
+> 14 個套件、約 2,818 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
-| `utils/callback/` | 202 | Observer 模式：`callback_executor` 以字串名觸發功能，執行後呼叫回呼 |
+| `utils/callback/` | 204 | Observer 模式：`callback_executor` 以字串名觸發功能，執行後呼叫回呼 |
 | `utils/config_bundle/` | 420 | 使用者設定的單檔匯出／匯入 |
 | `utils/critical_exit/` | 98 | 監看緊急停止鍵的守護執行緒，用於中止失控腳本 |
 | `utils/diagnostics/` | 322 | 跨子系統的「一切正常嗎」健檢，附 `python -m` 進入點 |
@@ -323,18 +323,18 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.3 排程、觸發與背景監看
 
-> 11 個套件、約 3,807 行。
+> 11 個套件、約 3,822 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
 | `utils/hotkey/` | 783 | 全域熱鍵守護行程，把 OS 層熱鍵綁到 action 檔（Win/macOS/X11 三後端） |
 | `utils/idle_keepawake/` | 216 | 偵測使用者閒置時間並在無人值守執行期間阻止系統睡眠 |
 | `utils/lock_session/` | 164 | 鎖定工作站、等待解鎖並分類鎖定狀態轉換 |
-| `utils/observer/` | 226 | 反應式畫面觀察者，在出現／消失／變化時觸發 |
+| `utils/observer/` | 229 | 反應式畫面觀察者，在出現／消失／變化時觸發 |
 | `utils/recurrence/` | 373 | RFC 5545 重複規則解析與發生時間展開 |
 | `utils/scheduler/` | 439 | 間隔式與 cron 式的 action JSON 排程器 |
 | `utils/session_guard/` | 62 | 驅動輸入前先偵測工作階段是否已鎖定／非互動 |
-| `utils/triggers/` | 1,200 | 事件驅動觸發引擎：影像／視窗／像素／檔案／webhook／IMAP 郵件 |
+| `utils/triggers/` | 1,212 | 事件驅動觸發引擎：影像／視窗／像素／檔案／webhook／IMAP 郵件 |
 | `utils/voice/` | 87 | 語音指令路由：把辨識到的語句對應到 `AC_*` action list |
 | `utils/watchdog/` | 175 | 背景彈窗／中斷看門狗，供無人值守自動化 |
 | `utils/watcher/` | 82 | 無頭輪詢原語：滑鼠位置、像素顏色、log tail |
@@ -1073,13 +1073,13 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `utils/agent/` | 8 | 1,348 |
 | `linux_with_x11/` | 19 | 1,236 |
 | `linux_wayland/` | 17 | 2,870 |
-| `utils/triggers/` | 4 | 1,200 |
+| `utils/triggers/` | 4 | 1,212 |
 | `utils/ocr/` | 9 | 1,126 |
 | `utils/usbip/` | 5 | 943 |
 | `utils/assertion/` | 3 | 881 |
 | `osx/` | 17 | 919 |
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 783 |
-| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 676 | 50,290 |
-| **總計** | **1,042** | **145,511** |
+| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 676 | 50,311 |
+| **總計** | **1,042** | **145,544** |
 

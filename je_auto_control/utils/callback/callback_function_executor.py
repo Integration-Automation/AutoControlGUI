@@ -5,7 +5,7 @@ from je_auto_control.utils.cv2_utils.screenshot import pil_screenshot
 from je_auto_control.utils.exception.exception_tags import (
     get_bad_trigger_function_error_message, get_bad_trigger_method_error_message,
 )
-from je_auto_control.utils.exception.exceptions import AutoControlException, CallbackExecutorException
+from je_auto_control.utils.exception.exceptions import CallbackExecutorException
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 # executor
 from je_auto_control.utils.executor.action_executor import execute_action, execute_files
@@ -168,9 +168,11 @@ class CallbackFunctionExecutor:
         # Run the trigger in its own scope: a trigger failure (including the
         # framework family — mouse / image / assertion errors) returns None and
         # is never confused with a later callback failure.
+        # Anything the trigger raises (OSError from a file command, a
+        # LookupError...) is the documented None, not an escaping exception.
         try:
             execute_return_value = self.event_dict[trigger_function_name](**kwargs)
-        except (AutoControlException, TypeError, ValueError, RuntimeError) as error:
+        except Exception as error:  # noqa: BLE001  # reason: documented to return None
             autocontrol_logger.error("callback_function trigger failed: %r", error)
             return None
 
@@ -179,7 +181,7 @@ class CallbackFunctionExecutor:
         try:
             self._invoke_callback(
                 callback_function, callback_function_param, callback_param_method)
-        except (AutoControlException, TypeError, ValueError, RuntimeError) as error:
+        except Exception as error:  # noqa: BLE001  # reason: logged; the trigger result stands
             autocontrol_logger.error("callback_function callback failed: %r", error)
 
         return execute_return_value

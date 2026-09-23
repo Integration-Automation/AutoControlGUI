@@ -19,16 +19,16 @@ from typing import Any, Callable, Dict, List, Optional, Sequence
 
 from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
+from je_auto_control.utils.timeouts import clamp_poll_interval
 
 EVENT_APPEAR = "appear"
 EVENT_VANISH = "vanish"
 EVENT_CHANGE = "change"
 _ALL_EVENTS = (EVENT_APPEAR, EVENT_VANISH, EVENT_CHANGE)
 
-# Errors a predicate/handler may raise that must not kill the poll loop.
-# LookupError/StopIteration/ArithmeticError cover user callbacks that index a
-# dict/list, exhaust an iterator, or divide — an uncaught one kills the daemon
-# thread and silently stops every rule.
+# Errors a built-in predicate's locator may raise; it reports them as "absent".
+# Rules themselves are guarded by a broad except in ScreenObserver, since any
+# error escaping one killed the daemon thread and silently stopped every rule.
 _RULE_ERRORS = (OSError, RuntimeError, ValueError, AttributeError, TypeError,
                 LookupError, StopIteration, ArithmeticError,
                 AutoControlException)
@@ -64,7 +64,7 @@ class ScreenObserver:
     """Poll registered watches and fire callbacks on appear/vanish/change."""
 
     def __init__(self, poll_interval_s: float = 0.5) -> None:
-        self._poll = max(0.05, float(poll_interval_s))
+        self._poll = clamp_poll_interval(poll_interval_s)
         self._rules: List[WatchRule] = []
         self._lock = threading.Lock()
         # 序列化 start()/stop():兩者原本無互斥,交錯的 stop() 會在 start()
@@ -123,13 +123,16 @@ class ScreenObserver:
                 if event is not None]
 
     def _evaluate(self, rule: WatchRule) -> Optional[Dict[str, Any]]:
+        # The transition is inside the guard too: a predicate returning, say,
+        # a numpy array raised from bool() there. One rule may not stop the
+        # poll thread -- and with it every other rule -- whatever it raises.
         try:
             value = rule.predicate()
-        except _RULE_ERRORS as error:
+            event = _transition(rule.last, value)
+        except Exception as error:  # noqa: BLE001  # reason: logged; the other rules keep running
             autocontrol_logger.info(
                 "observer %r predicate error: %r", rule.name, error)
             return None
-        event = _transition(rule.last, value)
         rule.last = value
         if event is None or event not in rule.events:
             return None
@@ -146,7 +149,7 @@ class ScreenObserver:
     def _fire(self, rule: WatchRule, event: str, value: Any) -> None:
         try:
             rule.on_event(event, value)
-        except _RULE_ERRORS as error:
+        except Exception as error:  # noqa: BLE001  # reason: logged; the other rules keep running
             autocontrol_logger.info(
                 "observer %r handler error: %r", rule.name, error)
 

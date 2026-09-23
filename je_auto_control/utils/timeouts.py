@@ -1,4 +1,4 @@
-"""Turn a user-supplied timeout into a deadline, refusing NaN."""
+"""Turn user-supplied timeouts and poll intervals into safe values."""
 import math
 from typing import Any
 
@@ -15,3 +15,19 @@ def deadline_after(start: float, timeout: Any, name: str = "timeout") -> float:
     if math.isnan(seconds):
         raise ValueError(f"{name} must be a number, not NaN")
     return start + seconds
+
+
+#: Longest poll interval a background loop accepts; an infinite one lands here.
+MAX_POLL_INTERVAL_S = 3600.0
+
+
+def clamp_poll_interval(seconds: Any, floor: float = 0.05) -> float:
+    """Clamp a poll interval into ``[floor, MAX_POLL_INTERVAL_S]``; NaN gives ``floor``.
+
+    ``Event.wait(inf)`` raises ``OverflowError`` on Windows, which killed a
+    poll thread after its first pass; ``max(floor, inf)`` let it through.
+    """
+    value = float(seconds)
+    if math.isnan(value):
+        return floor
+    return min(max(floor, value), MAX_POLL_INTERVAL_S)

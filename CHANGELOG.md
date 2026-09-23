@@ -253,6 +253,10 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Fixed
 
+- **A trigger removed by an earlier trigger's script in the same pass no
+  longer runs**; an infinite poll interval no longer kills the trigger or
+  observer thread; one failing observer rule no longer stops the others; and
+  `callback_function` returns `None` for any trigger error, as documented.
 - **Email triggers fire a failing script once per message**, not on every
   poll, and record it as an error; IMAP connections time out after 30 s
   instead of hanging the watcher; a body in an unknown charset is kept.
