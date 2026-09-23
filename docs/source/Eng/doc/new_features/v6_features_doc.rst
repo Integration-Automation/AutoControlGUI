@@ -62,7 +62,10 @@ loops / ifs for screen-flow automation::
     result = run_state_machine(spec)   # {final_state, steps, elapsed_s}
 
 Each state's ``on_enter`` actions run through the executor; transitions
-fire on guards (``after`` a delay, ``if_var_eq``, or a caller predicate).
+fire on guards: ``after`` (seconds in the state -- the machine waits for
+it), ``if_var_eq``, ``if_image_found`` (a template path, or
+``{"image": ..., "detect_threshold": ...}``) or a caller predicate; any
+other ``if_*`` key is an error.
 ``max_steps`` and ``global_timeout_s`` bound the run so it can't loop
 forever.
 

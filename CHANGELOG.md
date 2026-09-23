@@ -15,6 +15,11 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Added
 
+- **State-machine `if_image_found` guard.** Fires once the template is on
+  screen (`"welcome.png"` or `{"image": ..., "detect_threshold": ...}`).
+  Other `if_*` keys, which used to fire unconditionally, now raise
+  `StateMachineError`.
+
 - **`WorkQueue.get_next(stale_after_s=...)`** (and the same optional
   argument on `AC_queue_next` / `ac_queue_next`) reclaims an item a crashed
   performer left in progress for that many seconds.
@@ -149,6 +154,17 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
   package does no PKCS#7 decryption, so the `>=48.0.1` floor is unchanged.
 
 ### Fixed
+
+- **DAG, state machine, recurrence rules and suites.** A DAG node whose
+  actions fail is failed (its dependants are skipped), and a slow node no
+  longer holds back unrelated ready nodes. State-machine `after` guards wait
+  for their timer, counted from state entry, and reaching the final state on
+  the last allowed step succeeds. YEARLY RRULEs without BYMONTH cover the
+  whole year as RFC 5545 specifies, a rule that can never match ends instead
+  of overflowing, and invalid INTERVAL / COUNT / BYMONTH / BYMONTHDAY values
+  are rejected. A data-driven suite no longer leaves its row variable set,
+  and an `OverflowError` or `ZeroDivisionError` from an action is recorded
+  instead of aborting the script.
 
 - **Remote desktop keeps serving after bad input.** A malformed INPUT
   message or WebSocket frame no longer kills the host's receive thread while

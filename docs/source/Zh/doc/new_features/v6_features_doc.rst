@@ -58,7 +58,9 @@ headless 測試(PIL 影像 / spec 以注入方式提供,完全不需真實螢幕
     result = run_state_machine(spec)   # {final_state, steps, elapsed_s}
 
 每個狀態的 ``on_enter`` 動作會透過執行器執行;transition 依 guard 觸發
-(延遲 ``after``、``if_var_eq`` 或呼叫端 predicate)。``max_steps`` 與
+(``after``:在該狀態停留的秒數,機器會等到它成立;``if_var_eq``;
+``if_image_found``:範本路徑,或 ``{"image": ..., "detect_threshold": ...}``;
+或呼叫端 predicate;其他 ``if_*`` 鍵視為錯誤)。``max_steps`` 與
 ``global_timeout_s`` 限制執行,使其不會無限迴圈。
 
 執行器指令:``AC_run_state_machine``(``spec`` dict 可原樣經 JSON 動作檔 /

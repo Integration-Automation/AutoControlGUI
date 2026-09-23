@@ -47,8 +47,21 @@ class Recurrence:  # pylint: disable=too-many-instance-attributes
 
 # --- parsing ---------------------------------------------------------------
 
-def _parse_ints(value: str) -> Tuple[int, ...]:
-    return tuple(int(token) for token in value.split(",") if token.strip())
+def _parse_int(name: str, token: str) -> int:
+    try:
+        return int(token)
+    except ValueError as error:
+        raise AutoControlException(f"{name} must be an integer, got {token!r}") from error
+
+
+def _parse_ints(value: str, name: str = "value", low: int = -366,
+                high: int = 366) -> Tuple[int, ...]:
+    """Comma-separated integers, each non-zero and within ``low..high``."""
+    numbers = tuple(_parse_int(name, token) for token in value.split(",") if token.strip())
+    for number in numbers:
+        if number == 0 or not low <= number <= high:
+            raise AutoControlException(f"{name} value {number} is out of range")
+    return numbers
 
 
 def _parse_byday(value: str) -> Tuple[ByDay, ...]:
@@ -58,7 +71,10 @@ def _parse_byday(value: str) -> Tuple[ByDay, ...]:
         if weekday not in _WEEKDAYS:
             raise AutoControlException(f"invalid BYDAY token {token!r}")
         prefix = token[:-2]
-        result.append((int(prefix) if prefix else None, _WEEKDAYS[weekday]))
+        ordinal = _parse_int("BYDAY ordinal", prefix) if prefix else None
+        if ordinal is not None and (ordinal == 0 or not -53 <= ordinal <= 53):
+            raise AutoControlException(f"invalid BYDAY ordinal in {token!r}")
+        result.append((ordinal, _WEEKDAYS[weekday]))
     return tuple(result)
 
 
@@ -88,15 +104,22 @@ def parse_rrule(text: str) -> Recurrence:
     freq = parts.get("FREQ", "").upper()
     if freq not in _FREQS:
         raise AutoControlException(f"unsupported or missing FREQ {freq!r}")
+    # INTERVAL=0 repeated the same date forever, and BYMONTH=13 or
+    # BYMONTHDAY=40 could never match -- the expansion then ran until the
+    # calendar overflowed.
+    interval = _parse_int("INTERVAL", parts.get("INTERVAL", "1"))
+    count = _parse_int("COUNT", parts["COUNT"]) if "COUNT" in parts else None
+    if interval < 1 or (count is not None and count < 1):
+        raise AutoControlException("INTERVAL and COUNT must be at least 1")
     return Recurrence(
         freq=freq,
-        interval=int(parts.get("INTERVAL", "1")),
-        count=int(parts["COUNT"]) if "COUNT" in parts else None,
+        interval=interval,
+        count=count,
         until=_parse_until(parts["UNTIL"]) if "UNTIL" in parts else None,
         by_day=_parse_byday(parts.get("BYDAY", "")),
-        by_month_day=_parse_ints(parts.get("BYMONTHDAY", "")),
-        by_month=_parse_ints(parts.get("BYMONTH", "")),
-        by_set_pos=_parse_ints(parts.get("BYSETPOS", "")),
+        by_month_day=_parse_ints(parts.get("BYMONTHDAY", ""), "BYMONTHDAY", -31, 31),
+        by_month=_parse_ints(parts.get("BYMONTH", ""), "BYMONTH", 1, 12),
+        by_set_pos=_parse_ints(parts.get("BYSETPOS", ""), "BYSETPOS"),
         wkst=_WEEKDAYS.get(parts.get("WKST", "MO").upper(), 0),
     )
 
@@ -205,19 +228,47 @@ def _safe_date(year: int, month: int, day: int) -> Optional[_dt.date]:
 
 def _yearly_dates(year: int, dtstart: _dt.datetime,
                   rule: Recurrence) -> List[_dt.date]:
-    months = rule.by_month or (dtstart.month,)
+    if not rule.by_month and rule.by_day and not rule.by_month_day:
+        # BYDAY ordinals count within the year here: -1FR is the year's
+        # last Friday, 20MO its 20th Monday.
+        return _setpos(_select_in_year(year, rule.by_day), rule.by_set_pos)
+    # Without BYMONTH, BYMONTHDAY / BYDAY apply to every month of the year;
+    # restricting them to dtstart's month gave one date a year.
+    return _setpos(sorted(set(_yearly_month_dates(year, dtstart, rule))), rule.by_set_pos)
+
+
+def _yearly_month_dates(year: int, dtstart: _dt.datetime,
+                        rule: Recurrence) -> List[_dt.date]:
+    if rule.by_month_day or rule.by_day:
+        return [day for month in (rule.by_month or range(1, 13))
+                for day in _select_in_month(year, month, rule)]
+    dates = (_safe_date(year, month, dtstart.day)
+             for month in (rule.by_month or (dtstart.month,)))
+    return [day for day in dates if day is not None]
+
+
+def _select_in_year(year: int, by_day: Tuple[ByDay, ...]) -> List[_dt.date]:
     chosen: List[_dt.date] = []
-    for month in months:
-        if rule.by_month_day or rule.by_day:
-            chosen.extend(_select_in_month(year, month, rule))
-        else:
-            day = _safe_date(year, month, dtstart.day)
-            if day is not None:
-                chosen.append(day)
-    return _setpos(sorted(set(chosen)), rule.by_set_pos)
+    days = [_dt.date(year, 1, 1) + _dt.timedelta(days=offset)
+            for offset in range(366 if monthrange(year, 2)[1] == 29 else 365)]
+    for ordinal, weekday in by_day:
+        matching = [day for day in days if day.weekday() == weekday]
+        if ordinal is None:
+            chosen.extend(matching)
+        elif -len(matching) <= ordinal <= len(matching):
+            chosen.append(matching[ordinal - 1 if ordinal > 0 else ordinal])
+    return sorted(set(chosen))
 
 
-# --- period series (unbounded; the caller applies limits) ------------------
+# --- period series (bounded: _MAX_SCAN_YEARS past dtstart, never past 9999)
+
+#: A rule that can never match (BYMONTH=2;BYMONTHDAY=30) used to scan until
+#: the calendar overflowed and let OverflowError out of the executor.
+_MAX_SCAN_YEARS = 400
+
+
+def _scan_end(dtstart: _dt.datetime) -> int:
+    return min(dtstart.year + _MAX_SCAN_YEARS, _dt.MAXYEAR - 1)
 
 def _add_months(year: int, month: int, delta: int) -> Tuple[int, int]:
     index = year * 12 + (month - 1) + delta
@@ -228,7 +279,7 @@ def _daily_series(rule: Recurrence,
                   dtstart: _dt.datetime) -> Iterator[_dt.datetime]:
     cursor = dtstart.date()
     step = _dt.timedelta(days=rule.interval)
-    while True:
+    while cursor.year <= _scan_end(dtstart):
         for day in _daily_dates(cursor, rule):
             yield _apply_time(day, dtstart)
         cursor += step
@@ -239,7 +290,7 @@ def _weekly_series(rule: Recurrence,
     offset = (dtstart.weekday() - rule.wkst) % 7
     cursor = dtstart.date() - _dt.timedelta(days=offset)
     step = _dt.timedelta(weeks=rule.interval)
-    while True:
+    while cursor.year <= _scan_end(dtstart):
         for day in _weekly_dates(cursor, dtstart, rule):
             yield _apply_time(day, dtstart)
         cursor += step
@@ -248,7 +299,7 @@ def _weekly_series(rule: Recurrence,
 def _monthly_series(rule: Recurrence,
                     dtstart: _dt.datetime) -> Iterator[_dt.datetime]:
     year, month = dtstart.year, dtstart.month
-    while True:
+    while year <= _scan_end(dtstart):
         for day in _monthly_dates(year, month, dtstart, rule):
             yield _apply_time(day, dtstart)
         year, month = _add_months(year, month, rule.interval)
@@ -257,7 +308,7 @@ def _monthly_series(rule: Recurrence,
 def _yearly_series(rule: Recurrence,
                    dtstart: _dt.datetime) -> Iterator[_dt.datetime]:
     year = dtstart.year
-    while True:
+    while year <= _scan_end(dtstart):
         for day in _yearly_dates(year, dtstart, rule):
             yield _apply_time(day, dtstart)
         year += rule.interval
@@ -296,16 +347,14 @@ def occurrences(rule: Recurrence, dtstart: _dt.datetime, *,
     limit_count = rule.count if count is None else count
     limit_until = _normalize_until(rule.until if until is None else until,
                                    dtstart)
-    emitted = 0
+    # count=0 used to yield one date before checking the limit.
+    remaining = limit_count if limit_count is not None else max_iter
     for index, moment in enumerate(_SERIES[rule.freq](rule, dtstart)):
-        if index >= max_iter or _after_until(moment, limit_until):
+        if remaining < 1 or index >= max_iter or _after_until(moment, limit_until):
             return
-        if moment < dtstart:
-            continue
-        yield moment
-        emitted += 1
-        if limit_count is not None and emitted >= limit_count:
-            return
+        if moment >= dtstart:
+            yield moment
+            remaining -= 1
 
 
 def next_occurrence(rule: Recurrence, dtstart: _dt.datetime, *,

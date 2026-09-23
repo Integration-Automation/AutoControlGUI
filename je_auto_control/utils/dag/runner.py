@@ -9,7 +9,7 @@ remote calls.
 from __future__ import annotations
 
 import time
-from concurrent.futures import Future, ThreadPoolExecutor
+from concurrent.futures import FIRST_COMPLETED, Future, ThreadPoolExecutor, wait
 from dataclasses import asdict, dataclass, field
 from typing import Any, Callable, Dict, List, Mapping, Optional, Set
 
@@ -171,11 +171,19 @@ def _blocked_by_ancestor(ancestor_ids: Set[str],
 
 def _harvest_one(inflight: Dict[Future, str],
                  results: Dict[str, NodeResult]) -> None:
-    finished = next(iter(inflight))
-    nid = inflight.pop(finished)
+    # Whichever node finishes first: waiting on the oldest submitted one
+    # held back every node whose inputs a faster sibling had just produced.
+    done, _ = wait(inflight, return_when=FIRST_COMPLETED)
+    for finished in done:
+        _record_future(inflight.pop(finished), finished, results)
+
+
+def _record_future(nid: str, finished: Future,
+                   results: Dict[str, NodeResult]) -> None:
     try:
         finished.result()
-    except (AutoControlException, RuntimeError, OSError, ValueError) as error:
+    except (AutoControlException, RuntimeError, OSError, ValueError,
+            LookupError, TypeError, AttributeError, ArithmeticError) as error:
         # Defensive: _run_one swallows tool errors into NodeResult.
         # This branch only catches pool / runner-side faults. It includes
         # AutoControlException so a framework failure that slips past
@@ -188,7 +196,10 @@ def _run_one(node: DagNode, result: NodeResult,
              runner: NodeRunner, _nodes: Dict[str, DagNode]) -> None:
     try:
         outcome = runner(node, _build_proxy_definition(node, _nodes))
-    except (AutoControlException, RuntimeError, OSError, ValueError) as error:
+    # The executor's own containment set: a KeyError or TypeError from a
+    # runner used to escape run_dag and leave the node "running".
+    except (AutoControlException, RuntimeError, OSError, ValueError,
+            LookupError, TypeError, AttributeError, ArithmeticError) as error:
         # AutoControlException covers validate_actions / locate / assert
         # failures raised by the executor: a node failure becomes a failed
         # NodeResult (and a downstream skip cascade), not a raw crash that
@@ -242,12 +253,14 @@ def _ancestor_index(dag: DagDefinition) -> Dict[str, Set[str]]:
 
 
 def _default_local_runner(node: DagNode, _definition: DagDefinition) -> Any:
-    from je_auto_control.utils.executor.action_executor import (
-        execute_action, execute_files,
-    )
-    if node.actions is not None:
-        return execute_action(list(node.actions))
-    return execute_files([node.action_file])
+    from je_auto_control.utils.executor.action_executor import executor
+    from je_auto_control.utils.json.json_file import read_executable_action_json
+    # raise_on_error=True: by default a failed action is only recorded, so
+    # a node whose actions all failed counted as succeeded and its
+    # dependants ran anyway.
+    actions = (list(node.actions) if node.actions is not None
+               else read_executable_action_json(str(node.action_file)))
+    return executor.execute_action(actions, raise_on_error=True)
 
 
 def _default_remote_runner(node: DagNode,

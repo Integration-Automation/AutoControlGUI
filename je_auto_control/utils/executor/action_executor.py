@@ -8087,7 +8087,10 @@ class Executor:
         # ``AutoControlException`` is the family base: image/mouse/keyboard/
         # screen/null-action failures all subclass it, so an incidental error
         # is contained (recorded) here rather than aborting the whole script.
-        except (AutoControlException, OSError, RuntimeError,
+        # ArithmeticError: an OverflowError (a date past year 9999, int() of
+        # an infinite float) or a ZeroDivisionError is a failed action too;
+        # it used to abort every remaining action.
+        except (AutoControlException, OSError, RuntimeError, ArithmeticError,
                 AttributeError, TypeError, ValueError, LookupError) as error:
             _observe_executor_metrics(action_name, started, error=error)
             # A failed ``AC_assert_*`` (raise_on_fail=True) is a deliberate

@@ -22,6 +22,7 @@ The module is GUI-free: it only calls the headless ``assert_*`` layer.
 """
 from __future__ import annotations
 
+import inspect
 import time
 from dataclasses import asdict, dataclass, field
 from typing import Any, Callable, Dict, List, Mapping, Optional, Sequence
@@ -106,6 +107,13 @@ def run_assertion_spec(spec: Mapping[str, Any],
         )
     kwargs = {k: v for k, v in spec.items() if k != "kind"}
     kwargs["raise_on_fail"] = bool(raise_on_fail)
+    try:
+        inspect.signature(assert_fn).bind(**kwargs)
+    except TypeError as error:
+        # A misspelt or missing key surfaced as a bare TypeError from deep in
+        # the helper; it gets the same error an unknown kind does.
+        raise AutoControlAssertionException(
+            f"invalid {kind!r} assertion spec: {error}") from error
     return assert_fn(**kwargs)
 
 

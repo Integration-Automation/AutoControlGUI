@@ -88,7 +88,7 @@ def _run_actions(executor: Any, actions: List[Any]) -> Tuple[str, str]:
         return STATUS_PASSED, ""
     except AutoControlAssertionException as error:
         return STATUS_FAILED, str(error)
-    except (AutoControlException, LookupError, AttributeError,
+    except (AutoControlException, LookupError, AttributeError, ArithmeticError,
             OSError, RuntimeError, TypeError, ValueError) as error:
         # Mirrors the executor's raise_on_error re-raise set: the framework
         # family (incl. AutoControlActionNullException), plus LookupError /
@@ -107,14 +107,36 @@ def _run_one_case(executor: Any, name: str, spec: Dict[str, Any],
             name=name, status=STATUS_SKIPPED, message="quarantined",
             tags=tags, data_row=row,
         )
-    if binding is not None:
-        executor.variables.set(binding[0], binding[1])
     started = time.monotonic()
-    status, message = _run_actions(executor, spec.get("actions") or [])
+    if binding is None:
+        status, message = _run_actions(executor, spec.get("actions") or [])
+    else:
+        status, message = _run_with_binding(executor, binding, spec.get("actions") or [])
     return TestCaseResult(
         name=name, status=status, duration_s=time.monotonic() - started,
         message=message, tags=tags, data_row=row,
     )
+
+
+def _run_with_binding(executor: Any, binding: Tuple[str, Dict[str, Any]],
+                      actions: List[Any]) -> Tuple[str, str]:
+    """Run a data-driven row with its variable bound, then put the old value back.
+
+    The row variable used to stay set: later plain cases, and the global
+    executor after the suite, saw the last row.
+    """
+    name, row = binding
+    variables = executor.variables
+    had_value = name in variables
+    previous = variables.get_value(name)
+    variables.set(name, row)
+    try:
+        return _run_actions(executor, actions)
+    finally:
+        if had_value:
+            variables.set(name, previous)
+        else:
+            del variables[name]
 
 
 def run_suite(spec: Dict[str, Any],
