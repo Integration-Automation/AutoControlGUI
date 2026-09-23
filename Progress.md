@@ -290,3 +290,20 @@ MCP 工具的檔案參數（`path`、`file_path`、`db`、`image_path`、`golden
 
 **為什麼要拍板**：根目錄從哪來（新的環境變數、沿用 `roots/list`、或兩者），唯讀模式要不要預設開啟；
 預設開啟會讓現有讀取工作區外檔案的用法失效。
+
+---
+
+## 無障礙錄製器沒辦法追蹤焦點
+
+`TODO` — 各平台後端都缺「目前焦點元素」的查詢
+
+`utils/accessibility/recorder.py` 的 `_default_fetcher` 只能呼叫 `find_accessibility_element(app_name=...)`，
+拿到的是掃描到的第一個元素，不是焦點所在的元素；`AccessibilityElement` 也沒有焦點欄位。所以焦點從
+一個欄位移到另一個欄位時，錄製器偵測不到（2026-09-23 稽核重現；docstring 已改成照實描述）。
+
+**做法**：在 `utils/accessibility/backends/base.py` 加 `focused_element(app_name)`，Windows 用 UIA
+`GetFocusedElement`、Linux 用 AT-SPI 的 `STATE_FOCUSED`、macOS 用 `AXFocusedUIElement`，再讓
+`_default_fetcher` 改用它；無法取得時退回現在的行為。
+
+**要先想清楚**：三個後端都要能在 CI 上用假物件測；macOS 的 AX 呼叫需要 TCC 權限（CI runner 有）。
+

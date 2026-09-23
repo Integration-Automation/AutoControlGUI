@@ -14,8 +14,9 @@ injectable ``sleep``, so timing and sequencing are unit-tested
 deterministically with a fake clock and a recording sink — no real input.
 Imports no ``PySide6``.
 """
+import math
 import time
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 
 def _sink_move(event: Dict[str, Any]) -> None:
@@ -31,8 +32,19 @@ def _sink_click(event: Dict[str, Any]) -> None:
     click_mouse(event.get("button", "mouse_left"), x, y)
 
 
+def _move_to_event(event: Dict[str, Any]) -> None:
+    """Put the cursor where a recorded event happened (when it says where).
+
+    The Windows and X11 backends press and scroll wherever the cursor is, so
+    without this a recorded drag replayed as a click in place.
+    """
+    if "x" in event and "y" in event:
+        _sink_move(event)
+
+
 def _sink_scroll(event: Dict[str, Any]) -> None:
     from je_auto_control.wrapper.auto_control_mouse import mouse_scroll
+    _move_to_event(event)
     # ``value`` is the DSL's name for it, ``delta`` the recorder's. The sign
     # is kept, and that is now enough: a negative value reverses the
     # direction on every backend, X11 and Wayland included. They used to
@@ -82,12 +94,14 @@ def _sink_key_up(event: Dict[str, Any]) -> None:
 
 def _sink_mouse_down(event: Dict[str, Any]) -> None:
     from je_auto_control.wrapper.auto_control_mouse import press_mouse
+    _move_to_event(event)
     press_mouse(_RECORDED_BUTTON.get(event.get("button", ""), "mouse_left"),
                 int(event.get("x", 0)), int(event.get("y", 0)))
 
 
 def _sink_mouse_up(event: Dict[str, Any]) -> None:
     from je_auto_control.wrapper.auto_control_mouse import release_mouse
+    _move_to_event(event)
     release_mouse(_RECORDED_BUTTON.get(event.get("button", ""), "mouse_left"),
                   int(event.get("x", 0)), int(event.get("y", 0)))
 
@@ -109,8 +123,57 @@ _SINKS: Dict[str, Callable[[Dict[str, Any]], None]] = {
 
 def _default_sink(event: Dict[str, Any]) -> None:
     handler = _SINKS.get(event.get("op", ""))
-    if handler is not None:
-        handler(event)
+    if handler is None:
+        # A typo ("presss") used to be skipped while reported as played.
+        raise ValueError(f"unknown input op {event.get('op')!r}")
+    handler(event)
+
+
+#: A "down" op -> (the op that releases it, the key identifying what is held).
+_RELEASE_FOR = {"press": ("release", "key"), "key_down": ("key_up", "vk"),
+                "mouse_down": ("mouse_up", "button")}
+
+
+class _HeldInputs:
+    """Tracks keys and buttons pressed and not yet released, to release on error.
+
+    A step that failed between a press and its release left the key (Shift,
+    a mouse button) held down after the call returned.
+    """
+
+    def __init__(self, dispatch: Callable) -> None:
+        self._dispatch = dispatch
+        self._held: List[Tuple[str, str, Any]] = []
+
+    def __call__(self, event: Dict[str, Any]) -> None:
+        self._dispatch(event)
+        op = event.get("op")
+        if op in _RELEASE_FOR:
+            release_op, field = _RELEASE_FOR[op]
+            self._held.append((release_op, field, event.get(field)))
+            return
+        for index, (release_op, field, value) in enumerate(self._held):
+            if op == release_op and event.get(field) == value:
+                del self._held[index]
+                return
+
+    def release_all(self) -> None:
+        """Release everything still held, newest first; keep going on errors."""
+        while self._held:
+            release_op, field, value = self._held.pop()
+            try:
+                self._dispatch({"op": release_op, field: value})
+            except Exception as error:  # noqa: BLE001  # reason: cleanup after a failure must try every held input; the original error is re-raised by the caller
+                from je_auto_control.utils.logging.logging_instance import autocontrol_logger
+                autocontrol_logger.warning("could not release %r: %r", value, error)
+
+
+def _playback_factor(speed: float) -> float:
+    factor = float(speed)
+    if not math.isfinite(factor) or factor <= 0:
+        # 0 or a negative speed slept ~3 years per gap; NaN dropped all timing.
+        raise ValueError(f"speed must be a positive number, got {speed!r}")
+    return factor
 
 
 def replay_timeline(events: List[Dict[str, Any]], *, speed: float = 1.0,
@@ -120,23 +183,30 @@ def replay_timeline(events: List[Dict[str, Any]], *, speed: float = 1.0,
                     max_gap: Optional[float] = None) -> int:
     """Replay ``events`` honoring per-event ``delta_ms`` gaps; return count.
 
-    ``speed`` > 1 plays faster (gaps divided by speed). Gaps are clamped to
-    ``[min_gap, max_gap]``. Each event is dispatched via ``sink`` (default:
-    real input); ``sleep`` is injectable for tests.
+    ``speed`` > 1 plays faster (gaps divided by speed) and must be a positive
+    number. Gaps are clamped to ``[min_gap, max_gap]``. Each event is
+    dispatched via ``sink`` (default: real input, at the event's recorded
+    position; an unknown op raises); ``sleep`` is injectable for tests. If an
+    event fails, keys and buttons still held are released before the error
+    propagates.
     """
-    dispatch = sink or _default_sink
+    dispatch = _HeldInputs(sink or _default_sink)
     sleeper = sleep or time.sleep
-    factor = max(float(speed), 1e-9)
+    factor = _playback_factor(speed)
     played = 0
-    for event in events:
-        gap = float(event.get("delta_ms", 0)) / 1000.0 / factor
-        gap = max(float(min_gap), gap)
-        if max_gap is not None:
-            gap = min(gap, float(max_gap))
-        if gap > 0:
-            sleeper(gap)
-        dispatch(event)
-        played += 1
+    try:
+        for event in events:
+            gap = float(event.get("delta_ms", 0)) / 1000.0 / factor
+            gap = max(float(min_gap), gap)
+            if max_gap is not None:
+                gap = min(gap, float(max_gap))
+            if gap > 0:
+                sleeper(gap)
+            dispatch(event)
+            played += 1
+    except BaseException:
+        dispatch.release_all()
+        raise
     return played
 
 
@@ -161,10 +231,15 @@ def run_sequence(steps: List[Dict[str, Any]], *,
     """Run a declarative input sequence; return the flattened executed log.
 
     Steps are ``{op: press|release|key|click|move|scroll}`` plus control ops
-    ``{op: wait, ms}`` and ``{op: repeat, times, steps:[...]}``.
+    ``{op: wait, ms}`` and ``{op: repeat, times, steps:[...]}``. An unknown op
+    raises, and keys still held when a step fails are released first.
     """
-    dispatch = sink or _default_sink
+    dispatch = _HeldInputs(sink or _default_sink)
     sleeper = sleep or time.sleep
     log: List[Dict[str, Any]] = []
-    _run_steps(steps, dispatch, sleeper, log)
+    try:
+        _run_steps(steps, dispatch, sleeper, log)
+    except BaseException:
+        dispatch.release_all()
+        raise
     return log

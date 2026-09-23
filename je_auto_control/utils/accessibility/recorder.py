@@ -1,9 +1,12 @@
 """Polling-based recorder for accessibility events.
 
-The pure-Python recorder polls :func:`find_accessibility_element`
-output at a configurable interval and emits an event whenever the
-*focused element* (by name + role) changes, or when its bounds shift
-by more than ``min_movement_px`` pixels. macOS's native AXObserver
+The pure-Python recorder polls a snapshot fetcher at a configurable
+interval and emits an event whenever the observed element (by name +
+role) changes, or when its bounds shift by more than ``min_movement_px``
+pixels. The default fetcher observes the first element
+:func:`find_accessibility_element` returns for ``app_name`` -- not the
+focused element, which no backend exposes yet; pass a ``fetcher`` that
+reads focus to track it. macOS's native AXObserver
 API would be lower-latency but requires the pyobjc run-loop bridge;
 polling is good enough for human-speed automation playback and works
 on Windows / Linux through the same interface.

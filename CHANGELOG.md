@@ -42,6 +42,10 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Changed
 
+- **`replay_timeline` / `run_sequence` refuse unknown ops and bad speeds.**
+  An unknown op raises instead of being skipped, and `speed` must be a
+  positive number.
+
 - **`WorkQueue.complete` / `fail` require an `in_progress` item.** An unknown
   id or an item in another state raises, so finished work is never requeued
   and a stale performer cannot overwrite a newer outcome.
@@ -227,6 +231,13 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
   package does no PKCS#7 decryption, so the `>=48.0.1` floor is unchanged.
 
 ### Fixed
+
+- **Replays happen where they were recorded and never leave keys held.**
+  Recorded presses, releases and scrolls move to their recorded position;
+  recording gaps keep their total length; a failing step in `run_sequence`,
+  `replay_timeline`, `tween_drag` or `drag_path` releases held keys and
+  buttons. Windows accepts `ctrl` and every platform accepts `left` /
+  `right` / `middle` as button names.
 
 - **Sagas roll back.** `run_saga` / `AC_run_saga` ran steps leniently, so a
   failing step was never noticed and nothing was compensated; a compensation

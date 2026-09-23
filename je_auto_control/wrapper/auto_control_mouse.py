@@ -49,6 +49,11 @@ from je_auto_control.wrapper.auto_control_screen import screen_size
 from je_auto_control.wrapper.backend_contract import MouseKeycode
 from je_auto_control.wrapper.platform_wrapper import mouse, mouse_keys_table, special_mouse_keys_table
 
+#: Plain button names -> mouse-table keys. Recorders and several commands say
+#: "left"; the tables only knew "mouse_left", so AC_act_with_mode's default
+#: button failed without clicking.
+_BUTTON_ALIASES = {"left": "mouse_left", "right": "mouse_right", "middle": "mouse_middle"}
+
 
 def get_mouse_table() -> dict:
     """
@@ -72,7 +77,7 @@ def mouse_preprocess(mouse_keycode: Union[int, str], x: Optional[int],
     keycode: MouseKeycode = mouse_keycode
     try:
         if isinstance(mouse_keycode, str):
-            keycode = mouse_keys_table.get(mouse_keycode)
+            keycode = mouse_keys_table.get(_BUTTON_ALIASES.get(mouse_keycode, mouse_keycode))
             if keycode is None:
                 raise AutoControlCantFindKeyException(table_cant_find_key_error_message)
     except AutoControlCantFindKeyException as error:

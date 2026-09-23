@@ -58,6 +58,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260923-50 | 2026-09-23 | Record / replay and input-helper audit: positions, held keys, speed, unknown ops, key names | #incident #input | [2026-09](2026-09.md) |
 | U-20260923-49 | 2026-09-23 | Orchestration-runner audit: sagas that never rolled back, device matrix, DAG, work queue, observer | #incident #orchestration | [2026-09](2026-09.md) |
 | U-20260923-48 | 2026-09-23 | Observability and report-output audit: OTLP spans, Prometheus, SARIF, purls, version ordering, step videos | #incident #observability | [2026-09](2026-09.md) |
 | U-20260923-47 | 2026-09-23 | File-store audit: lost saves, assets without db, bundle entries, permissions, non-ASCII recall | #incident #storage #security | [2026-09](2026-09.md) |
@@ -154,7 +155,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | File | Period | Entries |
 |---|---|---:|
-| [2026-09.md](2026-09.md) | 2026-09 | 65 |
+| [2026-09.md](2026-09.md) | 2026-09 | 66 |
 | [2026-08-f.md](2026-08-f.md) | 2026-08 | 1 |
 | [2026-08-e.md](2026-08-e.md) | 2026-08 | 2 |
 | [2026-08-d.md](2026-08-d.md) | 2026-08 | 2 |

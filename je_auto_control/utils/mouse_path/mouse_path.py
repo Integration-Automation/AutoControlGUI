@@ -77,9 +77,12 @@ def drag_path(waypoints: Sequence[Point], *, button: str = "mouse_left",
     dispatch = sink or _default_sink
     first, last = points[0], points[-1]
     dispatch({"op": "press", "button": button, "x": first[0], "y": first[1]})
-    for x, y in points:
-        dispatch({"op": "move", "x": x, "y": y})
-    dispatch({"op": "release", "button": button, "x": last[0], "y": last[1]})
+    try:
+        for x, y in points:
+            dispatch({"op": "move", "x": x, "y": y})
+    finally:
+        # A failed move used to leave the button held down.
+        dispatch({"op": "release", "button": button, "x": last[0], "y": last[1]})
     return {"points": len(points), "path": points}
 
 

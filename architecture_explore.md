@@ -20,7 +20,7 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 | 指標 | 數值 |
 | --- | ---: |
 | Python 模組總數（含周邊子專案） | 1,046 |
-| 程式碼總行數 | 145,139 |
+| 程式碼總行數 | 145,233 |
 | `je_auto_control/utils/` 子套件數 | 310 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 773 |
 | 套件門面 `__all__` 公開名稱數 | 1,241 |
@@ -171,11 +171,11 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | --- | ---: | --- |
 | `wrapper/platform_wrapper.py` | 116 | **Strategy 樞紐**。依 `sys.platform` 匯入唯一後端並匯出 `keyboard`、`keyboard_check`、`keyboard_keys_table`、`mouse`、`mouse_keys_table`、`special_mouse_keys_table`、`screen`、`recorder`；八個名稱都帶著 `backend_contract` 的型別出去，其中 `keyboard`／`mouse` 因為四個分支綁的是三種互不相容的形狀，先落在私有的 `_keyboard`／`_mouse`（`Any`）上再標合約；載入失敗直接拋 `AutoControlException`（fail fast）。 |
 | `wrapper/backend_contract.py` | 238 | 平台縫的型別合約：`ScreenBackend`／`KeyboardCheckBackend`／`RecorderBackend` 三個跨平台 Protocol，加上 `keyboard`／`mouse` 各自的三份——`Win32*`（SendInput 與 Interception）、`Darwin*`（Quartz）、`X11Unix*`（XTest／uinput／Wayland／BSD），因為這兩個名稱的呼叫形狀真的因平台而異；`KeyboardBackend`／`MouseBackend` 依 `sys.platform` 別名到其中一組，所以呼叫端被檢查的是它真的會走到的簽章。四個 `_platform_*` 組裝模組各自標注自己綁的是什麼，少一個成員就在該後端自己的檔案裡紅掉，而不是在三層之上的呼叫點。 |
-| `wrapper/_platform_windows.py` | 315 | Windows 後端組裝：Win32 ctypes 模組 + 虛擬鍵表 + 選用 Interception 驅動。 |
+| `wrapper/_platform_windows.py` | 318 | Windows 後端組裝：Win32 ctypes 模組 + 虛擬鍵表 + 選用 Interception 驅動。 |
 | `wrapper/_platform_osx.py` | 157 | macOS 後端組裝（Quartz 事件 + osx 虛擬鍵表）。 |
 | `wrapper/_platform_linux.py` | 275 | X11 後端組裝（python-Xlib + 選用 uinput）。 |
 | `wrapper/_platform_wayland.py` | 58 | Wayland 後端組裝（libei／ydotool／grim）。 |
-| `wrapper/auto_control_mouse.py` | 486 | 滑鼠 API：位置讀寫、按下／放開／點擊、捲動、座標前處理、送訊息給指定視窗。 |
+| `wrapper/auto_control_mouse.py` | 491 | 滑鼠 API：位置讀寫、按下／放開／點擊、捲動、座標前處理、送訊息給指定視窗。 |
 | `wrapper/auto_control_keyboard.py` | 368 | 鍵盤 API：鍵表查詢、按下／放開／敲擊、`write` 字串、`hotkey` 組合鍵、按鍵狀態偵測。**`type_keyboard` 與 `hotkey` 的放開走 `finally`**（見下）。 |
 | `wrapper/auto_control_screen.py` | 111 | 螢幕 API：`screen_size`、`screenshot`（可指定區域）、`get_pixel`。 |
 | `wrapper/auto_control_image.py` | 83 | 影像 API：`locate_all_image`、`locate_image_center`、`locate_and_click`。 |
@@ -270,7 +270,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.1 執行引擎與腳本資產
 
-> 24 個套件、約 13,694 行。
+> 24 個套件、約 13,771 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -283,7 +283,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/deterministic/` | 98 | 決定性執行控制：固定亂數種子 + 凍結時鐘 |
 | `utils/executor/` | 9,299 | **核心**。`Executor` 指令分派表（773 個 `AC_*`）、參數插值、乾跑、逐步 callback；`flow_control` 提供 34 個區塊指令（迴圈／分支／try／巨集／變數） |
 | `utils/flow_debugger/` | 142 | action list 的單步除錯器與追蹤器 |
-| `utils/input_macro/` | 359 | 定時輸入事件：錄製結果的整形（`timeline`／`InputRecorder`，Windows 與 macOS 共用）、重播與宣告式輸入序列 DSL |
+| `utils/input_macro/` | 436 | 定時輸入事件：錄製結果的整形（`timeline`／`InputRecorder`，Windows 與 macOS 共用）、重播與宣告式輸入序列 DSL |
 | `utils/json/` | 97 | action JSON 檔讀寫與正規化格式化（`fmt --check` 的後端） |
 | `utils/json_store/` | 195 | JSON 字典檔持久化的共用小工具（內部管線） |
 | `utils/loop_guard/` | 146 | 機械式卡死迴圈偵測（agent loop 用） |
@@ -340,7 +340,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.4 輸入模擬與動作品質
 
-> 22 個套件、約 2,643 行。
+> 22 個套件、約 2,649 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -356,7 +356,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/ime_state/` | 144 | 讀取即時 IME 組字／轉換狀態，確保 CJK 輸入安全 |
 | `utils/key_hold/` | 107 | 按住按鍵一段時間，或以固定頻率自動重複 |
 | `utils/modifier_state/` | 76 | 跨一組動作按住修飾鍵，並保證安全釋放 |
-| `utils/mouse_path/` | 94 | 多路徑點滑鼠手勢（沿折線移動或拖曳） |
+| `utils/mouse_path/` | 97 | 多路徑點滑鼠手勢（沿折線移動或拖曳） |
 | `utils/mouse_relative/` | 59 | 相對位移滑鼠移動 |
 | `utils/postcondition/` | 138 | 宣告式的動作預期結果規格，對照畫面驗證 |
 | `utils/step_repair/` | 114 | 失敗／無效動作的修復策略（自我修正迴圈） |
@@ -364,7 +364,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/input_reach/` | 111 | 送出去的輸入到不到得了：桌面鎖定查詢（免費）＋ 實際送一個 F13 確認沒有被過濾（有副作用，只給診斷用） |
 | `utils/keyboard_layout/` | 148 | 向系統問「這個鍵盤配置下每個鍵印出什麼字」（`ToUnicodeEx`），問不到退回 US 對照表 |
 | `utils/text_unicode/` | 151 | 輸入任意 Unicode（emoji／CJK／重音字）：優先送字元按鍵事件，不支援時退回剪貼簿貼上 |
-| `utils/tween_drag/` | 95 | 沿曲線的緩動插值拖曳 |
+| `utils/tween_drag/` | 98 | 沿曲線的緩動插值拖曳 |
 | `utils/verify_field/` | 112 | 打字後讀回欄位，確認內容確實落地 |
 
 ### 5.4.5 影像辨識與畫面分析
@@ -439,12 +439,12 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.7 無障礙樹與原生控制項
 
-> 16 個套件、約 4,336 行。
+> 16 個套件、約 4,339 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
 | `utils/a11y_audit/` | 355 | 以無障礙樹 + OCR 進行無障礙與 i18n 稽核 |
-| `utils/accessibility/` | 2,867 | 跨平台無障礙樹定位與錄製；Windows UIA／macOS AX／null 三後端。支援限定視窗（換搜尋起點，不是過濾）、逐節點可中斷走訪、`IUIAutomation2` 連線逾時、名稱子字串比對與排序、`control_get_state` 一次讀完值／勾選／選取／數值（密碼欄位不回內容） |
+| `utils/accessibility/` | 2,870 | 跨平台無障礙樹定位與錄製；Windows UIA／macOS AX／null 三後端。支援限定視窗（換搜尋起點，不是過濾）、逐節點可中斷走訪、`IUIAutomation2` 連線逾時、名稱子字串比對與排序、`control_get_state` 一次讀完值／勾選／選取／數值（密碼欄位不回內容） |
 | `utils/ax_events/` | 29 | 反應式 UIA 事件等待（focus-changed） |
 | `utils/ax_props/` | 44 | 讀取豐富 UIA 屬性（enabled／offscreen／help／status／快捷鍵） |
 | `utils/ax_text/` | 102 | 透過 UIA TextPattern 取得原生文字（讀取／尋找／選取／屬性） |
@@ -1065,8 +1065,8 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `utils/executor/` | 7 | 9,299 |
 | `utils/usb/` | 17 | 4,422 |
 | `je_auto_control/`（頂層 3 檔） | 3 | 2,388 |
-| `utils/accessibility/` | 13 | 2,867 |
-| `wrapper/` | 19 | 3,606 |
+| `utils/accessibility/` | 13 | 2,870 |
+| `wrapper/` | 19 | 3,614 |
 | `windows/` | 23 | 1,957 |
 | `utils/rest_api/` | 8 | 1,758 |
 | `utils/agent/` | 8 | 1,348 |
@@ -1079,6 +1079,6 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `osx/` | 17 | 919 |
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 783 |
-| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 675 | 50,031 |
-| **總計** | **1,040** | **145,074** |
+| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 675 | 50,114 |
+| **總計** | **1,040** | **145,168** |
 

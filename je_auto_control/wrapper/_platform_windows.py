@@ -139,6 +139,9 @@ keyboard_keys_table = {
     "capital": WIN32_VK_CAPITAL,
     "clear": WIN32_VK_CLEAR,
     "control": WIN32_VK_CONTROL,
+    # Linux and macOS call it "ctrl", and so do the defaults of type_unicode,
+    # set_field_text and with_modifiers; without the alias they failed here.
+    "ctrl": WIN32_VK_CONTROL,
     "convert": WIN32_VK_CONVERT,
     "decimal": WIN32_VK_DECIMAL,
     "delete": WIN32_VK_DELETE,

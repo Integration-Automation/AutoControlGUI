@@ -61,8 +61,10 @@ def timeline(events: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     for event in events:
         moment = float(event.get("time", 0.0))
         item = {key: value for key, value in event.items() if key != "time"}
+        # Rounded from cumulative milliseconds: truncating each gap lost up to
+        # 1 ms per event, and a long recording replayed noticeably fast.
         item["delta_ms"] = 0 if previous is None else max(
-            0, int((moment - previous) * 1000))
+            0, round(moment * 1000) - round(previous * 1000))
         out.append(item)
         previous = moment
     return out
