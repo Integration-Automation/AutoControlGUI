@@ -19,8 +19,8 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 
 | 指標 | 數值 |
 | --- | ---: |
-| Python 模組總數（含周邊子專案） | 1,045 |
-| 程式碼總行數 | 144,402 |
+| Python 模組總數（含周邊子專案） | 1,046 |
+| 程式碼總行數 | 144,585 |
 | `je_auto_control/utils/` 子套件數 | 310 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 773 |
 | 套件門面 `__all__` 公開名稱數 | 1,240 |
@@ -270,7 +270,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.1 執行引擎與腳本資產
 
-> 24 個套件、約 13,583 行。
+> 24 個套件、約 13,591 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -281,7 +281,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/dag/` | 491 | 跨主機 DAG 編排器（圖模型 + runner） |
 | `utils/decision_table/` | 103 | DMN 風格決策表：規則 + 命中策略，把分支外部化 |
 | `utils/deterministic/` | 98 | 決定性執行控制：固定亂數種子 + 凍結時鐘 |
-| `utils/executor/` | 9,290 | **核心**。`Executor` 指令分派表（773 個 `AC_*`）、參數插值、乾跑、逐步 callback；`flow_control` 提供 34 個區塊指令（迴圈／分支／try／巨集／變數） |
+| `utils/executor/` | 9,298 | **核心**。`Executor` 指令分派表（773 個 `AC_*`）、參數插值、乾跑、逐步 callback；`flow_control` 提供 34 個區塊指令（迴圈／分支／try／巨集／變數） |
 | `utils/flow_debugger/` | 142 | action list 的單步除錯器與追蹤器 |
 | `utils/input_macro/` | 359 | 定時輸入事件：錄製結果的整形（`timeline`／`InputRecorder`，Windows 與 macOS 共用）、重播與宣告式輸入序列 DSL |
 | `utils/json/` | 94 | action JSON 檔讀寫與正規化格式化（`fmt --check` 的後端） |
@@ -369,23 +369,23 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.5 影像辨識與畫面分析
 
-> 37 個套件、約 5,146 行。
+> 37 個套件、約 5,271 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
 | `utils/annotate/` | 115 | 截圖標註：畫框、highlight、箭頭、標籤 |
 | `utils/barcode/` | 53 | 一維條碼（EAN／UPC）解碼，解碼器可注入 |
-| `utils/color_match/` | 105 | 在 HSV 通道上做顏色感知的樣板比對 |
-| `utils/color_region/` | 79 | 以顏色定位畫面區域（遮罩 + 連通元件） |
+| `utils/color_match/` | 127 | 在 HSV 通道上做顏色感知的樣板比對 |
+| `utils/color_region/` | 78 | 以顏色定位畫面區域（遮罩 + 連通元件） |
 | `utils/color_stats/` | 98 | 區域顏色統計：平均色與主色 |
 | `utils/coordinate_space/` | 84 | 模型網格座標與實體像素之間的座標空間對映 |
-| `utils/cv2_utils/` | 676 | OpenCV 基礎層：擷取後端選擇（`screen_grabber`，Pillow／mss 或平台後端）、截圖、樣板比對（走 `grab_logical`，涵蓋所有螢幕）、螢幕錄影、影片錄製、連通元件、影像堆疊的取用口（`optional`，Windows arm64 沒有 wheel 時語意報錯） |
+| `utils/cv2_utils/` | 723 | OpenCV 基礎層：擷取後端選擇（`screen_grabber`，Pillow／mss 或平台後端）、截圖、樣板比對（走 `grab_logical`，涵蓋所有螢幕）、螢幕錄影、影片錄製、連通元件、影像堆疊的取用口（`optional`，Windows arm64 沒有 wheel 時語意報錯）、非 ASCII 路徑也讀寫得到的影像檔存取（`image_file`） |
 | `utils/edge_lines/` | 120 | 以 Hough 轉換偵測線條／格線／分隔線 |
 | `utils/edge_match/` | 112 | 邊緣形狀（Chamfer／距離轉換）樣板比對 |
 | `utils/feature_match/` | 130 | ORB 特徵比對：在旋轉／縮放／主題變更下定位樣板 |
 | `utils/hsv_segment/` | 91 | HSV 色彩空間分割（抗光照的顏色遮罩 + blob 框） |
 | `utils/icon_classify/` | 113 | 從像素形狀判斷一個框是哪一類元件 |
-| `utils/image_dedup/` | 83 | 感知雜湊影像去重（Pillow aHash/dHash） |
+| `utils/image_dedup/` | 90 | 感知雜湊影像去重（Pillow aHash/dHash） |
 | `utils/image_quality/` | 77 | 在 OCR／比對前評分影像品質（銳利度／對比／亮度） |
 | `utils/img_histogram/` | 99 | 顏色直方圖指紋與變化偵測（抗光照） |
 | `utils/marks_layout/` | 124 | Set-of-Marks 標籤的不重疊排版與可讀配色 |
@@ -396,20 +396,20 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/monitor_layout/` | 317 | 多螢幕／虛擬桌面幾何（在哪個螢幕、位置、重映射）＋ `logical_frame` 以滑鼠座標空間擷取畫面 |
 | `utils/motion_regions/` | 73 | 兩影格間的局部變化／活動偵測（absdiff） |
 | `utils/perceptual_diff/` | 100 | 感知式（YIQ）影像差異，抑制反鋸齒邊緣誤報 |
-| `utils/preprocess/` | 185 | OCR／比對前的影像前處理（灰階、二值化、去傾斜…） |
+| `utils/preprocess/` | 219 | OCR／比對前的影像前處理（灰階、二值化、去傾斜…） |
 | `utils/qr/` | 60 | 從影像或螢幕區域解碼 QR code（OpenCV） |
 | `utils/rotated_match/` | 145 | 容忍旋轉與縮放的樣板比對（尺度空間 × 角度掃描） |
 | `utils/saliency/` | 107 | 頻譜殘差視覺顯著性：顯著圖與排序後的顯著區域 |
 | `utils/scale_detect/` | 84 | 偵測樣板實際渲染的顯示縮放／視覺 DPI |
 | `utils/screen_grid/` | 143 | 供 VLM 接地用的粗粒度標號網格（點 ↔ 格對映） |
-| `utils/set_of_marks/` | 150 | Set-of-Marks 疊圖：為畫面元素編號供 VLM 指認 |
+| `utils/set_of_marks/` | 154 | Set-of-Marks 疊圖：為畫面元素編號供 VLM 指認 |
 | `utils/shape_locator/` | 105 | 以邊緣／輪廓偵測定位元件（矩形／形狀，免樣板） |
-| `utils/ssim/` | 140 | 結構相似度比較：感知分數 + 變化區域 |
+| `utils/ssim/` | 141 | 結構相似度比較：感知分數 + 變化區域 |
 | `utils/subpixel_match/` | 101 | 以二次曲面擬合做次像素級比對精修 |
 | `utils/theme_normalize/` | 92 | 主題無關的影像正規化，讓亮色樣板能配對深色模式 |
 | `utils/video_report/` | 133 | 影片步驟疊圖報告：把截圖加字幕串成操作導覽影片 |
 | `utils/visual_match/` | 454 | 會回傳信心值的樣板比對（分數、多尺度、find-all + NMS）；擷取走 `grab_logical`，命中座標已加回虛擬桌面原點，單色樣板直接拒收 |
-| `utils/visual_regression/` | 226 | 桌面 GUI 的視覺回歸測試（黃金圖比對） |
+| `utils/visual_regression/` | 237 | 桌面 GUI 的視覺回歸測試（黃金圖比對） |
 
 ### 5.4.6 OCR 與文字理解
 
@@ -462,7 +462,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.8 元素定位、自我修復與智慧等待
 
-> 23 個套件、約 4,039 行。
+> 23 個套件、約 4,073 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -483,7 +483,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/locator_repair/` | 117 | 自癒回寫：把修正後的定位器持久化 |
 | `utils/observation/` | 92 | 供 VLM／agent 接地用的 token 預算內、帶索引的 a11y 文字觀察 |
 | `utils/observation_delta/` | 103 | token 預算內的觀察差異：兩個 UI 影格之間變了什麼 |
-| `utils/screen_state/` | 143 | 語義畫面狀態：快照／差異與結構化畫面描述 |
+| `utils/screen_state/` | 177 | 語義畫面狀態：快照／差異與結構化畫面描述 |
 | `utils/scroll_find/` | 84 | 捲動直到目標影像／文字可見 |
 | `utils/self_healing/` | 352 | 自癒定位器：先影像樣板、失敗改用 VLM，並留稽核記錄 |
 | `utils/semantic_recording/` | 423 | 為錄製內容加上語義錨點，支援換機重播與自癒重播 |
@@ -556,12 +556,12 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.12 報表、可觀測性與測試治理
 
-> 34 個套件、約 7,040 行。
+> 34 個套件、約 7,056 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
 | `utils/anomaly/` | 107 | 單一序列異常偵測 |
-| `utils/approval/` | 102 | Approval testing：以核可基準線驗證產出物 |
+| `utils/approval/` | 118 | Approval testing：以核可基準線驗證產出物 |
 | `utils/assertion/` | 879 | 斷言 DSL：畫面狀態驗證 + 組合子 |
 | `utils/baggage/` | 111 | W3C Baggage 傳遞 |
 | `utils/canonical_log/` | 90 | canonical log line 與結構化 JSON 日誌 |
@@ -694,11 +694,11 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 上表以子套件為單位；以下把行數最大的幾個子系統展開到檔案層。
 
-#### `utils/executor/`（9,290 行）— 執行核心
+#### `utils/executor/`（9,298 行）— 執行核心
 
 | 檔案 | 行數 | 職責 |
 | --- | ---: | --- |
-| `action_executor.py` | 8,241 | `Executor` 類別與 `event_dict` 分派表（773 個指令），另含數百個把 utils 能力接成指令的 adapter 函式；全域單例 `executor` 與 `add_command_to_executor()` 擴充點。 |
+| `action_executor.py` | 8,249 | `Executor` 類別與 `event_dict` 分派表（773 個指令），另含數百個把 utils 能力接成指令的 adapter 函式；全域單例 `executor` 與 `add_command_to_executor()` 擴充點。 |
 | `flow_control.py` | 574 | 真正的流程控制：`AC_loop`／`AC_for_each`／`AC_while_*`／`AC_if_*`／`AC_try`／`AC_retry`／`AC_parallel`／`AC_define_macro`／`AC_call_macro`／變數指令（`AC_set_var`／`AC_get_var`／`AC_inc_var`）。`LoopBreak`／`LoopContinue` 以例外實作。34 個區塊指令的分派表 `BLOCK_COMMANDS` 也在這裡，含下一列匯入的資料來源指令。 |
 | `flow_data_commands.py` | 268 | `AC_*_to_var` 資料來源與轉換指令：shell、時鐘、亂數、PDF、TOTP、SQL、檔案、HTTP、OCR，加上 `AC_assert_var`／`AC_assert_db`／`AC_assert_duration`／`AC_transform_var`。都不執行巢狀 action list，所以沒有迴圈／分支語意。 |
 | `action_schema.py` | 128 | action list 的結構驗證：形狀、參數型別、未知指令拒絕。單一走訪同時支援兩種消費方式：`validate_actions()` 遇到第一個問題就拋、`unknown_command_names()` 收齊全部不認得的名字（REST `/execute` 用它回 400）。 |
@@ -844,7 +844,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `semantic_recording/` | `enrich.py`（加錨點）、`replay.py`（換機重播）、`self_healing.py`（自癒重播） |
 | `tls_acme/` | `challenge.py`、`keys.py`、`renewal.py` |
 | `pytest_plugin/` | `plugin.py`（pytest11 進入點）、`keywords.py`、`bdd_steps.py`（Gherkin） |
-| `cv2_utils/` | `screen_grabber.py`、`screenshot.py`、`template_detection.py`、`screen_record.py`、`video_recording.py`、`blobs.py`、`optional.py` |
+| `cv2_utils/` | `screen_grabber.py`、`screenshot.py`、`template_detection.py`、`screen_record.py`、`video_recording.py`、`blobs.py`、`optional.py`、`image_file.py` |
 | `action_lint/` | `linter.py`、`schema.py`、`__main__.py`（CI 使用） |
 | `time_travel/` | `controller.py`、`player.py` |
 | `dag/` | `graph.py`、`runner.py` |
@@ -1062,7 +1062,7 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `gui/` | 91 | 26,794 |
 | `utils/mcp_server/` | 31 | 17,584 |
 | `utils/remote_desktop/` | 56 | 12,328 |
-| `utils/executor/` | 7 | 9,290 |
+| `utils/executor/` | 7 | 9,298 |
 | `utils/usb/` | 17 | 4,422 |
 | `je_auto_control/`（頂層 3 檔） | 3 | 2,388 |
 | `utils/accessibility/` | 13 | 2,867 |
@@ -1079,6 +1079,6 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `osx/` | 17 | 919 |
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 783 |
-| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 674 | 49,320 |
-| **總計** | **1,039** | **144,337** |
+| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 675 | 49,495 |
+| **總計** | **1,040** | **144,520** |
 

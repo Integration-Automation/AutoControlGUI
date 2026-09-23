@@ -53,6 +53,10 @@ def mark_elements(elements: List[Any]) -> List[Dict[str, Any]]:
             continue
         left, top, width, height = (int(bbox[0]), int(bbox[1]),
                                     int(bbox[2]), int(bbox[3]))
+        if width <= 0 or height <= 0:
+            # No area, e.g. the (0, 0, 0, 0) a backend reports for an element
+            # without a position: marking it made mark_click click (0, 0).
+            continue
         marks.append({
             "id": next_id, "bbox": [left, top, width, height],
             "center": [left + width // 2, top + height // 2],

@@ -165,6 +165,17 @@ def compare_to_golden(golden_path,
         raise FileNotFoundError(f"golden image not found: {target}")
     expected = Image.open(str(target))
     current = actual if actual is not None else _grab(region)
+    if current.size != expected.size:
+        # A capture of another size is a mismatch, not a crash: the ValueError
+        # ignored raise_on_fail=False and escaped every containment boundary.
+        total = max(current.size[0] * current.size[1],
+                    expected.size[0] * expected.size[1])
+        return DiffResult(
+            matched=False, diff_pct=100.0, differing_pixels=total,
+            total_pixels=total, tolerance_pct=float(tolerance),
+            per_pixel_threshold=per_pixel_threshold,
+            diff_image=current.convert("RGB"),
+        )
     differing, total, overlay = image_difference(
         current, expected,
         per_pixel_threshold=per_pixel_threshold, masks=masks,

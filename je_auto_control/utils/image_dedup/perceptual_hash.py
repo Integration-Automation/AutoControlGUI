@@ -44,7 +44,14 @@ def dhash(image: Any, hash_size: int = 8) -> str:
 
 
 def hamming_distance(hash_a: str, hash_b: str) -> int:
-    """Number of differing bits between two hex fingerprints."""
+    """Number of differing bits between two hex fingerprints of the same size.
+
+    Raises ``ValueError`` for fingerprints of different sizes, whose distance
+    means nothing (an 8x8 against a 16x16 hash gave 128).
+    """
+    if len(hash_a) != len(hash_b):
+        raise ValueError(
+            f"hash sizes differ: {len(hash_a) * 4} and {len(hash_b) * 4} bits")
     return bin(int(hash_a, 16) ^ int(hash_b, 16)).count("1")
 
 

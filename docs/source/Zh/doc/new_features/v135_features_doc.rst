@@ -27,8 +27,10 @@ NumPy ndarray,因此可對合成陣列做單元測試。OpenCV + NumPy 透過 ``
 基礎元件有 ``to_grayscale``、``upscale``(``scale`` / ``interp``)、``binarize``(``method`` =
 ``otsu`` / ``adaptive_mean`` / ``adaptive_gaussian``)、``denoise``、``enhance_contrast``(CLAHE)、``deskew``
 以及 ``detect_skew_angle``(回傳量測到的文字歪斜角度,夾在 ``±max_angle``)。``preprocess_image`` 依序串接任意
-具名 ``steps``——``grayscale``、``upscale``、``binarize``、``denoise``、``deskew``、``contrast``;未知步驟名稱
-會丟出 ``ValueError``。
+具名 ``steps``——``grayscale``、``upscale``、``binarize``(Otsu)、``adaptive_mean`` / ``adaptive_gaussian``
+(以 ``block_size`` / ``c`` 調整)、``denoise``、``deskew``、``contrast``;未知步驟名稱會丟出 ``ValueError``。
+彩色影像一律以 OpenCV 的 BGR 順序處理:檔案照此讀入,PIL 影像與螢幕擷取會先轉換,所以灰階對紅與藍的權重
+正確;路徑可含非 ASCII 字元。``deskew`` 也適用於深色背景上的淺色文字,``upscale`` 拒絕非正數的倍率。
 
 執行器命令
 ----------

@@ -15,6 +15,9 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Added
 
+- **`adaptive_mean` / `adaptive_gaussian` preprocessing steps.** They take
+  `block_size` / `c`, which no step used before.
+
 - **`SoftAssertionsFailed`.** The exception `SoftAssertions.assert_all`
   raises; exported from the package.
 
@@ -35,6 +38,12 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
   get a `ValueError` out of `datetime.fromisoformat`.
 
 ### Changed
+
+- **Colour-match scores are RMS colour distance.** `match_color` scores are
+  `1 -` the root-mean-square HSV distance, hue compared round the colour
+  wheel; `min_score` thresholds tuned on the old metric may need adjusting.
+  `AC_image_hash` refuses an unknown `algo`, `hamming_distance` refuses
+  hashes of different sizes, and `upscale` refuses a non-positive scale.
 
 - **A failed soft-assert batch is an assertion failure.** It raises
   `SoftAssertionsFailed` (an `AutoControlAssertionException` and still an
@@ -191,6 +200,14 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
   package does no PKCS#7 decryption, so the `>=48.0.1` floor is unchanged.
 
 ### Fixed
+
+- **Image utilities see the colours and files they are given.** Grayscale
+  no longer swaps red and blue for PIL images and screen grabs, palette
+  images are read by colour, deskew works on dark themes, and image paths
+  may contain non-ASCII characters. A red glyph can be colour-matched, colour
+  regions accept any PIL mode, a golden of another size is a mismatch rather
+  than an error, and zero-area elements get no mark.
+- **An approval `extension` cannot leave `approvals_dir`.**
 
 - **Test reports and suites count what happened.** A setup failure is
   counted in the JUnit totals and reported to Allure; `assert_http` scores a

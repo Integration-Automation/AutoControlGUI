@@ -5,17 +5,19 @@ Every matcher in ``visual_match`` converts to grayscale first, so a red versus g
 indicator of identical shape is *indistinguishable* to ``match_template`` — the discriminating
 signal is thrown away. ``color_region`` finds blobs of a *known* colour but cannot
 template-match a multi-colour glyph by appearance. ``color_match`` matches on the HSV
-hue / saturation channels using a colour-*distance* metric (``TM_SQDIFF_NORMED``, not a
+hue / saturation channels using a colour-*distance* metric (squared distance, not a
 correlation — correlation normalises away the absolute hue, so a red→green edge and a
 black→blue edge would score the same), locating colour-discriminated targets that grayscale
-matching collapses.
+matching collapses. The score is ``1 -`` the root-mean-square distance, each channel scaled to
+its full range; hue is compared the short way round the colour wheel, so hue 1 and hue 179
+are both red.
 
 It reuses ``color_region``'s RGB loaders and ``visual_match``'s resize / NMS / ``Match``. The
 ``haystack`` is injectable; the search is unit-testable on synthetic arrays. Imports no
 ``PySide6``.
 
-Note: like any window metric, a *flat* single-colour patch has no per-channel variance — for
-solid colour blobs use ``find_color_region``; ``color_match`` is for targets with colour
+Note: a *flat* single-colour patch matches every area of that colour — for solid colour
+blobs ``find_color_region`` is the better tool; ``color_match`` is for targets with colour
 *structure*.
 
 Headless API

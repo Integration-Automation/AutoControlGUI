@@ -4565,7 +4565,7 @@ def _preprocess_image(output_path: str, source: Any = None, steps: Any = None,
                       c: Any = 11) -> Dict[str, Any]:
     """Adapter: run the preprocessing pipeline and write the result to a file."""
     import json
-    import cv2
+    from je_auto_control.utils.cv2_utils.image_file import write_image
     from je_auto_control.utils.preprocess import preprocess_image
     if isinstance(steps, str):
         steps = (json.loads(steps) if steps.strip().startswith("[")
@@ -4576,8 +4576,11 @@ def _preprocess_image(output_path: str, source: Any = None, steps: Any = None,
         source, region=region,
         steps=tuple(steps) if steps else ("grayscale", "upscale", "binarize"),
         scale=float(scale), block_size=int(block_size), c=int(c))
-    if not cv2.imwrite(str(output_path), result):
-        raise AutoControlActionException(f"could not write image: {output_path!r}")
+    try:
+        # cv2.imwrite wrote a non-ASCII path to a mangled name and said it succeeded.
+        write_image(output_path, result)
+    except (OSError, ValueError) as error:
+        raise AutoControlActionException(f"could not write image: {output_path!r}") from error
     return {"path": str(output_path), "width": int(result.shape[1]),
             "height": int(result.shape[0])}
 
@@ -6621,7 +6624,12 @@ def _s3_delete(key: str) -> Dict[str, Any]:
 def _image_hash(path: str, algo: str = "average") -> Dict[str, Any]:
     """Adapter: perceptual hash of an image (average or dhash)."""
     from je_auto_control.utils.image_dedup import average_hash, dhash
-    hasher = dhash if algo == "dhash" else average_hash
+    hashers = {"average": average_hash, "dhash": dhash}
+    if algo not in hashers:
+        # Any other name (``phash``, ``DHASH``) silently returned the average hash.
+        raise AutoControlActionException(
+            f"unknown hash algo {algo!r}; expected one of {sorted(hashers)}")
+    hasher = hashers[algo]
     return {"hash": hasher(path)}
 
 

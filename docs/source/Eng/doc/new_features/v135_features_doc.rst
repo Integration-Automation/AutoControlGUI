@@ -34,8 +34,13 @@ The building blocks are ``to_grayscale``, ``upscale`` (``scale`` / ``interp``),
 ``denoise``, ``enhance_contrast`` (CLAHE), ``deskew`` and ``detect_skew_angle``
 (returns the measured text-skew in degrees, clamped to ``±max_angle``).
 ``preprocess_image`` chains any of the named ``steps`` — ``grayscale``,
-``upscale``, ``binarize``, ``denoise``, ``deskew``, ``contrast`` — in order;
-unknown step names raise ``ValueError``.
+``upscale``, ``binarize`` (Otsu), ``adaptive_mean`` / ``adaptive_gaussian``
+(tuned by ``block_size`` / ``c``), ``denoise``, ``deskew``, ``contrast`` — in
+order; unknown step names raise ``ValueError``. Colour images are handled in
+OpenCV's BGR order: files are read that way and PIL images and screen grabs are
+converted, so grayscale weights red and blue correctly; paths may contain
+non-ASCII characters. ``deskew`` works on light-on-dark text too, and
+``upscale`` refuses a scale that is not a positive number.
 
 Executor command
 ----------------

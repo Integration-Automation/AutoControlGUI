@@ -12,6 +12,7 @@ Pure standard library; imports no ``PySide6``. The pure functions
 (``snapshot`` / ``diff_snapshots`` / ``describe_screen`` with supplied
 elements) are unit-testable without a live desktop.
 """
+import math
 from typing import Any, Dict, List, Optional
 
 _INTERACTIVE_HINTS = ("button", "edit", "text", "combo", "check", "radio",
@@ -49,16 +50,43 @@ def _key(item: Dict[str, Any]) -> tuple:
     return (item.get("role", ""), item.get("name", ""))
 
 
-def _moved_items(before_map: Dict[tuple, Dict[str, Any]],
-                 after_map: Dict[tuple, Dict[str, Any]]) -> List[Dict[str, Any]]:
-    moved = []
-    for key, item in after_map.items():
-        prior = before_map.get(key)
-        if prior is not None and item.get("bbox") != prior.get("bbox"):
-            moved.append({"role": key[0], "name": key[1],
-                          "before": prior.get("bbox"),
-                          "after": item.get("bbox")})
-    return moved
+def _group(items: List[Dict[str, Any]]) -> Dict[tuple, List[Dict[str, Any]]]:
+    groups: Dict[tuple, List[Dict[str, Any]]] = {}
+    for item in items:
+        groups.setdefault(_key(item), []).append(item)
+    return groups
+
+
+def _centre(item: Dict[str, Any]) -> tuple:
+    bbox = list(item.get("bbox") or [0, 0, 0, 0])[:4] + [0, 0, 0, 0]
+    return (bbox[0] + bbox[2] / 2.0, bbox[1] + bbox[3] / 2.0)
+
+
+def _pair_group(before: List[Dict[str, Any]], after: List[Dict[str, Any]],
+                diff: Dict[str, List[Dict[str, Any]]]) -> None:
+    """Pair same-key items, unchanged boxes first, then nearest centres.
+
+    Keyed by ``(role, name)`` alone, a second unnamed row collapsed onto the
+    first and was reported as ``moved`` instead of ``appeared``.
+    """
+    remaining = list(before)
+    unmatched = []
+    for item in after:
+        same = next((prior for prior in remaining if prior.get("bbox") == item.get("bbox")), None)
+        if same is None:
+            unmatched.append(item)
+        else:
+            remaining.remove(same)
+    for item in unmatched:
+        if not remaining:
+            diff["added"].append(item)
+            continue
+        centre = _centre(item)
+        prior = min(remaining, key=lambda candidate: math.dist(_centre(candidate), centre))
+        remaining.remove(prior)
+        diff["moved"].append({"role": item.get("role", ""), "name": item.get("name", ""),
+                              "before": prior.get("bbox"), "after": item.get("bbox")})
+    diff["removed"].extend(remaining)
 
 
 def _diff_summary(added: List[Dict[str, Any]], removed: List[Dict[str, Any]],
@@ -73,14 +101,16 @@ def diff_snapshots(before: List[Dict[str, Any]],
                    after: List[Dict[str, Any]]) -> Dict[str, Any]:
     """Diff two snapshots into ``{added, removed, moved, summary}``.
 
-    Identity is ``(role, name)``; ``moved`` are matched items whose bbox
-    changed. ``summary`` is a list of human-readable strings.
+    Identity is ``(role, name)``; items sharing one are paired by unchanged
+    bbox first, then by nearest centre, and the surplus on either side has
+    ``appeared`` / ``vanished``. ``moved`` are paired items whose bbox changed.
+    ``summary`` is a list of human-readable strings.
     """
-    before_map = {_key(i): i for i in before}
-    after_map = {_key(i): i for i in after}
-    added = [after_map[k] for k in after_map if k not in before_map]
-    removed = [before_map[k] for k in before_map if k not in after_map]
-    moved = _moved_items(before_map, after_map)
+    before_groups, after_groups = _group(before), _group(after)
+    diff: Dict[str, List[Dict[str, Any]]] = {"added": [], "removed": [], "moved": []}
+    for key in list(after_groups) + [k for k in before_groups if k not in after_groups]:
+        _pair_group(before_groups.get(key, []), after_groups.get(key, []), diff)
+    added, removed, moved = diff["added"], diff["removed"], diff["moved"]
     return {"added": added, "removed": removed, "moved": moved,
             "summary": _diff_summary(added, removed, moved),
             "changed_count": len(added) + len(removed) + len(moved)}
@@ -101,7 +131,11 @@ def snapshot_screen(app_name: Optional[str] = None) -> List[Dict[str, Any]]:
 
 
 def screen_changed(app_name: Optional[str] = None) -> Dict[str, Any]:
-    """Diff the live screen against the last :func:`snapshot_screen` baseline."""
+    """Diff the live screen against the previous snapshot, then make it the baseline.
+
+    The previous snapshot is the last :func:`snapshot_screen` or
+    ``screen_changed`` call, so polling reports what changed since the last poll.
+    """
     before = list(_last_snapshot)
     after = snapshot(_live_elements(app_name))
     _last_snapshot.clear()

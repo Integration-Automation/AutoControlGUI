@@ -33,22 +33,44 @@ def _hsv(source, region, is_haystack: bool):
     return cv2.cvtColor(rgb, cv2.COLOR_RGB2HSV)
 
 
-def _score_map(template_hsv, haystack_hsv, channels: Sequence[str]):
-    """Per-channel colour-distance score (higher = better) over the chosen channels.
+def _channel_distance(template, haystack, channel: str):
+    """Mean squared distance per pixel, scaled to 0..1, for one HSV channel.
 
-    Uses ``TM_SQDIFF_NORMED`` (not a correlation): correlation methods normalise away the
-    *absolute* hue, so a red→green edge and a black→blue edge correlate identically. Squared
-    distance keeps the absolute colour, so red is told from green. Score is ``1 - mean(sqdiff)``;
-    a flat channel (no variance, sqdiff undefined) contributes the worst score.
+    Plain ``TM_SQDIFF`` divided by the largest possible distance -- not
+    ``TM_SQDIFF_NORMED``, which divides by the template's own energy: a red
+    glyph on white has hue 0 everywhere, so that was 0 / 0 and even an exact
+    copy scored as the worst match. Hue is circular (OpenCV's 0..179), so it
+    is also compared shifted half-way round and the nearer reading wins:
+    hue 1 and hue 179 are both red.
     """
     import cv2
     import numpy as np
+    index = _CHANNEL_INDEX[channel]
+    t_plane = template[:, :, index].astype(np.float32)
+    h_plane = haystack[:, :, index].astype(np.float32)
+    pixels = float(t_plane.size)
+    if channel != "h":
+        return cv2.matchTemplate(h_plane, t_plane, cv2.TM_SQDIFF) / (pixels * 255.0 ** 2)
+    direct = cv2.matchTemplate(h_plane, t_plane, cv2.TM_SQDIFF)
+    shifted = cv2.matchTemplate(np.mod(h_plane + 90.0, 180.0),
+                                np.mod(t_plane + 90.0, 180.0), cv2.TM_SQDIFF)
+    return np.minimum(direct, shifted) / (pixels * 90.0 ** 2)
+
+
+def _score_map(template_hsv, haystack_hsv, channels: Sequence[str]):
+    """Per-channel colour-distance score (higher = better) over the chosen channels.
+
+    Uses squared distance (not a correlation): correlation methods normalise away the
+    *absolute* hue, so a red→green edge and a black→blue edge correlate identically. Squared
+    distance keeps the absolute colour, so red is told from green. Score is ``1 -`` the
+    root-mean-square distance averaged over the channels, each scaled to 0..1: linear in
+    how far the colours are apart, so a hue 30-60 degrees off does not pass as a match.
+    """
+    import numpy as np
     accumulator = None
     for channel in channels:
-        index = _CHANNEL_INDEX[channel]
-        result = cv2.matchTemplate(haystack_hsv[:, :, index],
-                                   template_hsv[:, :, index], cv2.TM_SQDIFF_NORMED)
-        result = np.nan_to_num(result, nan=1.0, posinf=1.0)
+        result = np.sqrt(np.clip(
+            _channel_distance(template_hsv, haystack_hsv, channel), 0.0, 1.0))
         accumulator = result if accumulator is None else accumulator + result
     if accumulator is None:
         raise ValueError("match_color needs at least one channel")

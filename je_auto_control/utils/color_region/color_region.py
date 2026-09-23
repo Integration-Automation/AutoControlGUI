@@ -23,11 +23,10 @@ def _to_rgb(source: ImageSource):
     if hasattr(source, "shape"):
         return np.asarray(source)
     if isinstance(source, (str, bytes)) or hasattr(source, "__fspath__"):
-        bgr = cv2.imread(str(source), cv2.IMREAD_COLOR)
-        if bgr is None:
-            raise ValueError(f"could not read image: {source!r}")
-        return cv2.cvtColor(bgr, cv2.COLOR_BGR2RGB)
-    return np.asarray(source)
+        from je_auto_control.utils.cv2_utils.image_file import read_image
+        return cv2.cvtColor(read_image(source, cv2.IMREAD_COLOR), cv2.COLOR_BGR2RGB)
+    # RGBA / L / P images passed through unchanged made cv2.inRange fail.
+    return np.asarray(source.convert("RGB"))
 
 
 def _grab_rgb(region: Optional[Sequence[int]]):
