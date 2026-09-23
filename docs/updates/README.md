@@ -58,6 +58,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260923-53 | 2026-09-23 | Signaling server serves the config-sync bucket routes | #feature #remote_desktop #config_sync | [2026-09](2026-09.md) |
 | U-20260923-52 | 2026-09-23 | Server-surface audit: signaling secret checked before the body, bearer scheme case | #incident #security #remote_desktop | [2026-09](2026-09.md) |
 | U-20260923-51 | 2026-09-23 | Split the pure UIA reads out of windows_backend.py | #refactor #accessibility | [2026-09](2026-09.md) |
 | U-20260923-50 | 2026-09-23 | Record / replay and input-helper audit: positions, held keys, speed, unknown ops, key names | #incident #input | [2026-09](2026-09.md) |
@@ -157,7 +158,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | File | Period | Entries |
 |---|---|---:|
-| [2026-09.md](2026-09.md) | 2026-09 | 68 |
+| [2026-09.md](2026-09.md) | 2026-09 | 69 |
 | [2026-08-f.md](2026-08-f.md) | 2026-08 | 1 |
 | [2026-08-e.md](2026-08-e.md) | 2026-08 | 2 |
 | [2026-08-d.md](2026-08-d.md) | 2026-08 | 2 |

@@ -15,6 +15,11 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Added
 
+- **Config-sync routes on the signaling server.** `GET` / `PUT
+  /config/{user_id}` serve the buckets `ConfigSyncClient` pushes and pulls
+  (in memory, secret-checked, 1 MiB per bucket); the client had no server
+  to talk to before.
+
 - **`approval_gate(db=None)`.** The approval gate the `AC_approval_*`
   commands use: file-backed with `db`, otherwise one per process.
 
