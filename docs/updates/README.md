@@ -58,6 +58,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260924-30 | 2026-09-24 | AC_parallel branches inherit strictness, macro depth and failure counting; string branches are validated before anything runs | #bugfix #audit #executor | [2026-09](2026-09.md) |
 | U-20260924-29 | 2026-09-24 | Versioned store keeps its high-water marks and locks CAS; config-bundle import copies before writing; cassettes redact credentials and check match fields | #bugfix #security #audit | [2026-09](2026-09.md) |
 | U-20260924-28 | 2026-09-24 | JWT codec: strict base64url, every malformed token a JwtError, NaN expiry refused, alg not overridable | #security #audit | [2026-09](2026-09.md) |
 | U-20260924-27 | 2026-09-24 | Admin console: no token on redirects, whole-request timeout and size cap, unknown labels reported, host files kept intact; USB viewer reassembly capped | #security #audit | [2026-09](2026-09.md) |
@@ -188,7 +189,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | File | Period | Entries |
 |---|---|---:|
-| [2026-09.md](2026-09.md) | 2026-09 | 99 |
+| [2026-09.md](2026-09.md) | 2026-09 | 100 |
 | [2026-08-f.md](2026-08-f.md) | 2026-08 | 1 |
 | [2026-08-e.md](2026-08-e.md) | 2026-08 | 2 |
 | [2026-08-d.md](2026-08-d.md) | 2026-08 | 2 |

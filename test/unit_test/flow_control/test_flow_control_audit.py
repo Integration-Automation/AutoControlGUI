@@ -31,9 +31,10 @@ def test_a_failed_assertion_in_a_parallel_branch_propagates(ex):
 
 
 def test_a_parallel_branch_that_errors_is_still_recorded_not_raised(ex):
-    # JSON-string branches skip up-front validation, so this fails in-thread.
+    # JSON-string branches are validated before any branch runs; the failure
+    # is still recorded, not raised, under raise_on_error=False.
     record = ex.execute_action([["AC_parallel", {"branches": '[{"not": "a list"}]'}]])
-    assert any("branch(es) failed" in str(value) for value in record.values())
+    assert any("must be a list" in str(value) for value in record.values())
 
 
 def test_an_empty_parallel_branch_is_a_no_op(ex):

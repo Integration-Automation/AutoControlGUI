@@ -423,6 +423,95 @@ def _as_list(value: Any) -> list:
     return list(value) if value else []
 
 
+def _parallel_branches(executor: Any, raw_branches: Any) -> list:
+    """The branch lists of an ``AC_parallel``, validated when they came as a string.
+
+    A JSON-string list is parsed only here, after dispatch-time validation,
+    so its unknown commands used to run half a branch first.
+    """
+    branches = _as_list(raw_branches)
+    if isinstance(raw_branches, str):
+        from je_auto_control.utils.executor.action_schema import validate_actions
+        for branch in branches:
+            if branch:
+                validate_actions(branch, executor.known_commands())
+    return branches
+
+
+class _ParallelRun:
+    """The shared state of one ``AC_parallel``: what each branch returned or raised.
+
+    Strictness, macro depth and the failure count are per thread, and each
+    branch runs on a new one: a failing branch under raise_on_error was only
+    recorded (AC_parallel returned success, AC_try never caught it, the CLI
+    exit code never saw it), and a macro calling itself through a branch
+    restarted the recursion limit at 0 on every level. They are captured
+    here, on the parent thread, and handed to every branch.
+    """
+
+    def __init__(self, executor: Any, branches: list) -> None:
+        from je_auto_control.utils.executor import action_executor as executor_module
+        self._module = executor_module
+        # Snapshot before spawning threads so branch workers never read the
+        # parent's live command/macro maps concurrently.
+        self._event_dict = dict(executor.event_dict)
+        self._macros = dict(executor.macros)
+        self._strict = getattr(executor_module._STRICT_BODIES, "value", False)
+        self._macro_depth = getattr(_MACRO_DEPTH, "value", 0)
+        self.results: list = [None] * len(branches)
+        self._failures: list = [0] * len(branches)
+        self._errors: Dict[int, str] = {}
+        self._assertions: Dict[int, AutoControlAssertionException] = {}
+
+    def _branch_executor(self) -> Any:
+        branch_executor = self._module.Executor()
+        # setdefault (not update): copy the parent's *custom* commands/macros
+        # while keeping the branch executor's own self-bound stock commands.
+        # A blind update() would overwrite AC_execute_action/AC_execute_files
+        # (bound to the parent) so a nested execute inside a branch would run
+        # against the parent's variable scope, defeating the isolation
+        # AC_parallel promises and reintroducing the cross-branch race.
+        for name, handler in self._event_dict.items():
+            branch_executor.event_dict.setdefault(name, handler)
+        branch_executor.macros.update(self._macros)
+        return branch_executor
+
+    def run_branch(self, index: int, branch: Any) -> None:
+        """Run one branch on the current (worker) thread, recording the outcome."""
+        # An exception here would otherwise only kill this worker thread,
+        # leaving results[index] as None — indistinguishable from a branch
+        # that legitimately returned None, and reported as success.
+        if not branch:
+            return  # an empty branch is a no-op, as everywhere else
+        _MACRO_DEPTH.value = self._macro_depth
+        self._module.reset_recorded_failures()
+        try:
+            self.results[index] = self._branch_executor().execute_action(
+                branch, raise_on_error=self._strict, _validated=True)
+            self._failures[index] = self._module.recorded_failures()
+        except AutoControlAssertionException as error:
+            self._assertions[index] = error
+        except Exception as error:  # noqa: BLE001  # reason: see comment above
+            self._errors[index] = repr(error)
+            autocontrol_logger.error(
+                "AC_parallel branch %d failed: %r", index, error, exc_info=True)
+
+    def settle(self) -> None:
+        """On the parent thread: count branch failures, then raise the first problem."""
+        for _ in range(sum(self._failures)):
+            self._module._count_recorded_failure()
+        if self._assertions:
+            # Re-raised as itself so it propagates like a top-level assert.
+            raise self._assertions[min(self._assertions)]
+        if self._errors:
+            # Raise so the executor's own machinery handles it like any other
+            # failed command: recorded when raise_on_error is off, propagated
+            # when it is on.
+            failed = ", ".join(f"branch {idx}: {err}" for idx, err in sorted(self._errors.items()))
+            raise AutoControlActionException(
+                f"AC_parallel: {len(self._errors)} branch(es) failed: {failed}")
+
+
 def exec_parallel(executor: Any, args: Mapping[str, Any]) -> Dict[str, Any]:
     """Run each branch action list concurrently on its own isolated executor.
 
@@ -432,61 +521,19 @@ def exec_parallel(executor: Any, args: Mapping[str, Any]) -> Dict[str, Any]:
     (registered via ``add_command_to_executor``) and ``AC_define_macro``
     macros are copied from the parent so a branch recognises them — otherwise
     a branch's fresh executor only has the stock command set and rejects them
-    at runtime even though validation (against the parent) passed.
+    at runtime even though validation (against the parent) passed. Branches
+    inherit the caller's strictness and macro depth.
     """
-    from je_auto_control.utils.executor.action_executor import Executor
-    # Snapshot before spawning threads so branch workers never read the
-    # parent's live command/macro maps concurrently.
-    parent_event_dict = dict(executor.event_dict)
-    parent_macros = dict(executor.macros)
-    branches = _as_list(args.get("branches"))
-    results: list = [None] * len(branches)
-    errors: Dict[int, str] = {}
-    assertions: Dict[int, AutoControlAssertionException] = {}
-
-    def _run(index: int, branch: Any) -> None:
-        # An exception here would otherwise only kill this worker thread,
-        # leaving results[index] as None — indistinguishable from a branch
-        # that legitimately returned None, and reported as success.
-        if not branch:
-            return  # an empty branch is a no-op, as everywhere else
-        try:
-            branch_executor = Executor()
-            # setdefault (not update): copy the parent's *custom* commands/macros
-            # while keeping the branch executor's own self-bound stock commands.
-            # A blind update() would overwrite AC_execute_action/AC_execute_files
-            # (bound to the parent) so a nested execute inside a branch would run
-            # against the parent's variable scope, defeating the isolation this
-            # function promises and reintroducing the cross-branch race.
-            for _name, _handler in parent_event_dict.items():
-                branch_executor.event_dict.setdefault(_name, _handler)
-            branch_executor.macros.update(parent_macros)
-            results[index] = branch_executor.execute_action(
-                branch, _validated=True)
-        except AutoControlAssertionException as error:
-            assertions[index] = error
-        except Exception as error:  # noqa: BLE001  # reason: see comment above
-            errors[index] = repr(error)
-            autocontrol_logger.error(
-                "AC_parallel branch %d failed: %r", index, error, exc_info=True)
-
-    threads = [threading.Thread(target=_run, args=(idx, branch), daemon=True)
+    branches = _parallel_branches(executor, args.get("branches"))
+    run = _ParallelRun(executor, branches)
+    threads = [threading.Thread(target=run.run_branch, args=(idx, branch), daemon=True)
                for idx, branch in enumerate(branches)]
     for thread in threads:
         thread.start()
     for thread in threads:
         thread.join()
-    if assertions:
-        # Re-raised as itself so it propagates like a top-level assert.
-        raise assertions[min(assertions)]
-    if errors:
-        # Raise so the executor's own machinery handles it like any other
-        # failed command: recorded when raise_on_error is off, propagated
-        # when it is on.
-        failed = ", ".join(f"branch {idx}: {err}" for idx, err in sorted(errors.items()))
-        raise AutoControlActionException(
-            f"AC_parallel: {len(errors)} branch(es) failed: {failed}")
-    return {"branches": len(branches), "results": results}
+    run.settle()
+    return {"branches": len(branches), "results": run.results}
 
 
 #: Macro calls nested deeper than this fail instead of recursing. Without a

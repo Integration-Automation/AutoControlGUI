@@ -290,6 +290,10 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Fixed
 
+- **`AC_parallel` reports a failed branch under `raise_on_error`** (so `AC_try`
+  and `AC_retry` see it), counts branch failures for the caller, keeps the
+  macro recursion limit across branches, and validates a JSON-string
+  `branches` before running any of it.
 - **The versioned store (`AC_cas_*`) keeps versions monotonic across a
   reload and serialises concurrent writers**, and a config-bundle import whose
   write fails leaves the live file in place.
