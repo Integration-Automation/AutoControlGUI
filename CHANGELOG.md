@@ -150,6 +150,13 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Fixed
 
+- **Remote desktop keeps serving after bad input.** A malformed INPUT
+  message or WebSocket frame no longer kills the host's receive thread while
+  its viewer keeps a client slot, nor the viewer's thread without an error
+  callback; a slow or silent peer no longer blocks other viewers from
+  connecting (each connection is handshaken on its own thread); and a
+  signaling timeout or hang-up is reported as `SignalingError`.
+
 - **Generated code cannot run what an action file smuggles in.** Codegen
   emits a parameter as a keyword argument only when its name is a plain
   identifier, and the Robot target carries the actions base64-encoded.

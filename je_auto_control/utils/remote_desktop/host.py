@@ -69,6 +69,17 @@ def _validate_host_args(token: str, fps: float, quality: int) -> None:
         raise ValueError("quality must be in [1, 95]")
 
 
+#: Connections being handshaken at once; beyond this new ones are closed.
+_MAX_HANDSHAKES = 32
+
+
+def _close_quietly(sock: socket.socket) -> None:
+    try:
+        sock.close()
+    except OSError:
+        pass
+
+
 class RemoteDesktopHost(FrameProductionMixin):
     """Stream the screen to authenticated viewers and apply their input.
 
@@ -176,6 +187,7 @@ class RemoteDesktopHost(FrameProductionMixin):
         self._lifecycle_lock = threading.RLock()
         self._clients: List[_ClientHandler] = []
         self._clients_lock = threading.Lock()
+        self._handshake_slots = threading.BoundedSemaphore(_MAX_HANDSHAKES)
         self._frame_cond = threading.Condition()
         self._latest_frame: Optional[bytes] = None
         self._latest_seq = 0
@@ -546,45 +558,66 @@ class RemoteDesktopHost(FrameProductionMixin):
             except OSError:
                 return
             if not self._ip_allowed(address):
-                try:
-                    client_sock.close()
-                except OSError:
-                    pass
+                _close_quietly(client_sock)
                 continue
+            # The TLS handshake, the WS upgrade and authentication each wait
+            # up to _AUTH_TIMEOUT_S *per read*, and ran here, on the one
+            # accept thread: a peer sending a byte just inside each timeout
+            # kept every other viewer from connecting. Each connection now
+            # gets its own thread, and a bounded number of them at once.
+            if not self._handshake_slots.acquire(blocking=False):
+                autocontrol_logger.info(
+                    "remote_desktop dropping %s: too many handshakes in progress",
+                    address,
+                )
+                _close_quietly(client_sock)
+                continue
+            threading.Thread(
+                target=self._handshake, args=(client_sock, address, stop),
+                name="rd-handshake", daemon=True,
+            ).start()
+
+    def _handshake(self, client_sock: socket.socket, address,
+                   stop: threading.Event) -> None:
+        """Open the channel, register the client, then authenticate it."""
+        try:
             channel = self._open_channel(client_sock, address)
             if channel is None:
-                continue
+                return
             handler = _ClientHandler(self, channel, address)
-            # Prune handlers whose viewer already disconnected *before* the
-            # capacity check below. Otherwise a client table filled with
-            # max_clients dead handlers rejects every new connection forever:
-            # the reject branch continues without ever reaping (the reap used
-            # to run only on the accept-success path).
-            self._reap_dead_clients()
-            with self._clients_lock:
-                # Re-check under the lock. _open_channel above performs the
-                # auth/TLS handshake, which can take up to _AUTH_TIMEOUT_S; a
-                # stop() during that window sets _shutdown and then snapshots
-                # and clears _clients under this same lock. Without this check
-                # the handler is registered *after* that snapshot, so nothing
-                # ever stops it — leaving a viewer dispatching input to a host
-                # the operator has already stopped.
-                if stop.is_set():
-                    autocontrol_logger.info(
-                        "remote_desktop dropping %s: host stopped during "
-                        "handshake", address,
-                    )
-                    handler._close()
-                    return
-                if len(self._clients) >= self._max_clients:
-                    autocontrol_logger.info(
-                        "remote_desktop dropping %s: max_clients reached",
-                        address,
-                    )
-                    handler._close()
-                    continue
-                self._clients.append(handler)
-            handler.start()
+            if self._register_client(handler, address, stop):
+                handler.start()
+        finally:
+            self._handshake_slots.release()
+
+    def _register_client(self, handler: "_ClientHandler", address,
+                         stop: threading.Event) -> bool:
+        """Add ``handler`` to the client table unless stopped or full."""
+        # Prune handlers whose viewer already disconnected *before* the
+        # capacity check below. Otherwise a client table filled with
+        # max_clients dead handlers rejects every new connection forever.
+        self._reap_dead_clients()
+        with self._clients_lock:
+            # Re-check under the lock: a stop() during the handshake sets
+            # _shutdown and then snapshots and clears _clients under this same
+            # lock, so a handler registered after that would never be stopped
+            # -- a viewer dispatching input to a host the operator stopped.
+            if stop.is_set():
+                autocontrol_logger.info(
+                    "remote_desktop dropping %s: host stopped during "
+                    "handshake", address,
+                )
+                handler._close()
+                return False
+            if len(self._clients) >= self._max_clients:
+                autocontrol_logger.info(
+                    "remote_desktop dropping %s: max_clients reached",
+                    address,
+                )
+                handler._close()
+                return False
+            self._clients.append(handler)
+        return True
 
     def _build_channel(self, sock: socket.socket,
                        address) -> MessageChannel:

@@ -12,6 +12,7 @@ import json
 import threading
 from typing import TYPE_CHECKING, Deque, Optional
 
+from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.remote_desktop.auth import make_nonce
 from je_auto_control.utils.remote_desktop.clipboard_sync import (
@@ -81,10 +82,10 @@ class _ClientHandler:
             return
         self.authenticated = True
         # The initial cursor + frame are seeded from _send_loop (the
-        # per-client sender thread), not here. start() runs on the shared
-        # accept thread with the socket timeout already cleared, so sending a
-        # full-screen JPEG to a viewer that authenticates then stops reading
-        # would block every new accept until its send buffer drains.
+        # per-client sender thread), not here: start() runs on this
+        # connection's handshake thread with the socket timeout already
+        # cleared, and a viewer that authenticates then stops reading would
+        # pin that thread -- and its handshake slot -- until its buffer drains.
         self._sender_thread = threading.Thread(
             target=self._send_loop, name="rd-sender", daemon=True,
         )
@@ -267,7 +268,14 @@ class _ClientHandler:
                     )
                 self.stop()
                 return
-            self._route_incoming(msg_type, payload)
+            try:
+                self._route_incoming(msg_type, payload)
+            except BaseException:
+                # Dying here without stop() left a handler that still
+                # counted as an authenticated client: it ignored all later
+                # input and held a slot that locked out new viewers.
+                self.stop()
+                raise
 
     def _route_incoming(self, msg_type: MessageType, payload: bytes) -> None:
         """Dispatch one received message to the matching handler."""
@@ -396,7 +404,10 @@ class _ClientHandler:
                 "remote_desktop rejected INPUT from %s: %r",
                 self._address, error,
             )
-        except (OSError, RuntimeError, ValueError, TypeError) as error:
+        # AutoControlException: the wrappers raise it for an unknown key or
+        # button name, which is the peer's input, not the host failing.
+        except (OSError, RuntimeError, ValueError, TypeError,
+                AutoControlException) as error:
             autocontrol_logger.warning(
                 "remote_desktop input apply failed for %s: %r",
                 self._address, error,

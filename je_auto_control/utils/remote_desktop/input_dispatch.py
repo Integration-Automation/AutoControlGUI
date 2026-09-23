@@ -57,7 +57,13 @@ def dispatch_input(message: Mapping[str, Any]) -> Any:
     if action == "ping":
         return None
     wrappers = _import_wrappers()
-    return _APPLIERS[action](message, wrappers)
+    try:
+        return _APPLIERS[action](message, wrappers)
+    except (KeyError, TypeError, ValueError, OverflowError) as error:
+        # A missing field (KeyError), a non-numeric or infinite coordinate
+        # (ValueError / OverflowError from int()) is the peer's malformed
+        # message, and the receive loop only expects this type for that.
+        raise InputDispatchError(f"malformed {action!r} message: {error!r}") from error
 
 
 def _apply_mouse_move(message: Mapping[str, Any], wrappers: Dict[str, Any]) -> Any:
