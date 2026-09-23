@@ -251,6 +251,10 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Fixed
 
+- **Codegen output always compiles and runs as the JSON would**: keyword or
+  non-identifier flow names, NaN / Infinity values, `AC_execute_action`
+  arguments, `{"auto_control": [...]}` files and Robot test names that read as
+  headers or comments are all handled.
 - **Rate limiters refuse a NaN or infinite rate, capacity or window**, which
   let every request through or spun the waiter; `RetryBudget` refuses a NaN
   deadline; the shared `LoopGuard` is thread-safe; `plan_repair` returns no

@@ -20,7 +20,7 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 | 指標 | 數值 |
 | --- | ---: |
 | Python 模組總數（含周邊子專案） | 1,048 |
-| 程式碼總行數 | 145,468 |
+| 程式碼總行數 | 145,543 |
 | `je_auto_control/utils/` 子套件數 | 310 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 773 |
 | 套件門面 `__all__` 公開名稱數 | 1,241 |
@@ -271,14 +271,14 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.1 執行引擎與腳本資產
 
-> 24 個套件、約 13,776 行。
+> 24 個套件、約 13,851 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
 | `utils/action_lint/` | 328 | action 檔 linter 與 JSON Schema 產生器（CI 用 `python -m` 進入點） |
 | `utils/action_signing/` | 362 | action 檔 HMAC-SHA256 簽章與 Fernet 加密，`execute_files` 會強制驗簽 |
 | `utils/checkpoint/` | 116 | 流程檢查點與續跑，讓長 action list 具持久性 |
-| `utils/codegen/` | 180 | 由 action list 產生可執行的 pytest / python / robot 測試碼 |
+| `utils/codegen/` | 255 | 由 action list 產生可執行的 pytest / python / robot 測試碼 |
 | `utils/dag/` | 490 | 跨主機 DAG 編排器（圖模型 + runner） |
 | `utils/decision_table/` | 103 | DMN 風格決策表：規則 + 命中策略，把分支外部化 |
 | `utils/deterministic/` | 98 | 決定性執行控制：固定亂數種子 + 凍結時鐘 |
@@ -1080,6 +1080,6 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `osx/` | 17 | 919 |
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 783 |
-| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 676 | 50,203 |
-| **總計** | **1,042** | **145,403** |
+| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 676 | 50,278 |
+| **總計** | **1,042** | **145,478** |
 
