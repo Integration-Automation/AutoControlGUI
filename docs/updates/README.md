@@ -58,6 +58,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260923-46 | 2026-09-23 | Plugin-loading audit: broken files, dataclass plugins, built-in overrides, watcher ownership | #incident #plugins #security | [2026-09](2026-09.md) |
 | U-20260923-45 | 2026-09-23 | Resilience-primitive audit: backoff caps, rate limits, Retry-After, loop guard, leases, approvals, CAS, breaker | #incident #resilience #security | [2026-09](2026-09.md) |
 | U-20260923-44 | 2026-09-23 | Text and clipboard-format audit: fuzzy autojunk, RTF Unicode, drop lists, pseudo-localization, slugify | #incident #text #clipboard | [2026-09](2026-09.md) |
 | U-20260923-43 | 2026-09-23 | Image-utility audit: BGR/RGB grayscale, red colour matching, non-ASCII paths, approval extension | #incident #vision #security | [2026-09](2026-09.md) |
@@ -150,7 +151,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | File | Period | Entries |
 |---|---|---:|
-| [2026-09.md](2026-09.md) | 2026-09 | 61 |
+| [2026-09.md](2026-09.md) | 2026-09 | 62 |
 | [2026-08-f.md](2026-08-f.md) | 2026-08 | 1 |
 | [2026-08-e.md](2026-08-e.md) | 2026-08 | 2 |
 | [2026-08-d.md](2026-08-d.md) | 2026-08 | 2 |

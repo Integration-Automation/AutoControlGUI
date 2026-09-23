@@ -49,14 +49,16 @@ def discover_plugins(group: str = COMMANDS_GROUP,
 
 
 def load_plugins(group: str = COMMANDS_GROUP,
-                 entry_points: Optional[List[Any]] = None) -> List[str]:
+                 entry_points: Optional[List[Any]] = None, *,
+                 allow_override: bool = False) -> List[str]:
     """Discover plugin commands and register them into the executor.
 
-    Returns the sorted names of the commands that were registered.
+    Returns the sorted names of the commands that were registered. An entry
+    that is not a function, or that would replace a built-in command (unless
+    ``allow_override``), is skipped and logged -- it used to raise part-way
+    through, leaving the plugins before it registered and the rest not.
     """
-    commands = discover_plugins(group, entry_points)
-    if commands:
-        from je_auto_control.utils.executor.action_executor import (
-            add_command_to_executor)
-        add_command_to_executor(commands)
-    return sorted(commands)
+    from je_auto_control.utils.plugin_loader.plugin_loader import (
+        register_plugin_commands)
+    return register_plugin_commands(discover_plugins(group, entry_points),
+                                    allow_override=allow_override)

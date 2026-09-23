@@ -42,6 +42,11 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Changed
 
+- **Plugins cannot replace built-in commands by default.**
+  `register_plugin_commands` and `load_plugins` skip (and log) a name that
+  already belongs to a built-in or user command; pass `allow_override=True`
+  to replace one deliberately.
+
 - **Impossible rate-limit requests raise.** `TokenBucket` and
   `SlidingWindowLimiter` refuse `n <= 0` or above capacity / limit, and
   `CredentialBroker.lease` refuses a TTL that is not a finite positive number.
@@ -211,6 +216,11 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
   package does no PKCS#7 decryption, so the `>=48.0.1` floor is unchanged.
 
 ### Fixed
+
+- **Plugins load reliably.** One plugin file that fails to import no longer
+  stops the rest of its directory, `@dataclass` plugins load, a non-function
+  entry-point value is skipped instead of aborting discovery half-way, and
+  the MCP plugin watcher keeps a tool another file still defines.
 
 - **Approvals and leases enforce what they promise.** Approval commands
   without `db` share one gate (a token was forgotten between commands), an

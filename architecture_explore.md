@@ -20,7 +20,7 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 | 指標 | 數值 |
 | --- | ---: |
 | Python 模組總數（含周邊子專案） | 1,046 |
-| 程式碼總行數 | 144,821 |
+| 程式碼總行數 | 144,883 |
 | `je_auto_control/utils/` 子套件數 | 310 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 773 |
 | 套件門面 `__all__` 公開名稱數 | 1,241 |
@@ -270,7 +270,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.1 執行引擎與腳本資產
 
-> 24 個套件、約 13,597 行。
+> 24 個套件、約 13,642 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -287,8 +287,8 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/json/` | 94 | action JSON 檔讀寫與正規化格式化（`fmt --check` 的後端） |
 | `utils/json_store/` | 176 | JSON 字典檔持久化的共用小工具（內部管線） |
 | `utils/loop_guard/` | 146 | 機械式卡死迴圈偵測（agent loop 用） |
-| `utils/plugin_loader/` | 85 | 掃描外部 Python 外掛目錄並註冊其 `AC_` callable |
-| `utils/plugin_sdk/` | 68 | 外掛 SDK：透過 entry points 發佈／載入第三方 `AC_*` 指令 |
+| `utils/plugin_loader/` | 128 | 掃描外部 Python 外掛目錄並註冊其 `AC_` callable |
+| `utils/plugin_sdk/` | 70 | 外掛 SDK：透過 entry points 發佈／載入第三方 `AC_*` 指令 |
 | `utils/project/` | 186 | 專案腳手架：建立目錄結構與範本 action 檔 |
 | `utils/recording_edit/` | 150 | 不重錄的前提下裁切／過濾／縮放已錄製的 action list |
 | `utils/saga/` | 93 | Saga 協調器：失敗時以 LIFO 補償動作回滾 |
@@ -492,7 +492,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.9 AI / Agent / LLM
 
-> 13 個套件、約 21,023 行。
+> 13 個套件、約 21,040 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -505,7 +505,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/cua_action/` | 127 | 標準化 computer-use 動作結構（Anthropic／OpenAI → `AC_*`） |
 | `utils/llm/` | 361 | 自然語言 → action list 規劃器 + Anthropic／null 後端 |
 | `utils/mcp_registry/` | 92 | MCP registry `server.json` 資訊清單產生（可被發現） |
-| `utils/mcp_server/` | 17,584 | **無頭 MCP 伺服器**（16K LOC，預設註冊 676 個工具＝657 個 `ac_*` + 19 個別名）：stdio + HTTP 傳輸、工具工廠與處理器、資源、prompt、稽核、限流、外掛熱重載 |
+| `utils/mcp_server/` | 17,601 | **無頭 MCP 伺服器**（16K LOC，預設註冊 676 個工具＝657 個 `ac_*` + 19 個別名）：stdio + HTTP 傳輸、工具工廠與處理器、資源、prompt、稽核、限流、外掛熱重載 |
 | `utils/tool_use_schema/` | 180 | 把 `AC_*` 指令匯出成 Claude／OpenAI 的 tool-use schema |
 | `utils/trajectory_eval/` | 106 | agent 軌跡評估：依評分規準為一次執行打分 |
 | `utils/vision/` | 491 | VLM 元素定位器（依描述找元素）+ Anthropic／OpenAI／null 後端 |
@@ -705,7 +705,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `action_redaction.py` | 40 | 記錄與紀錄鍵用的遮蔽：`AC_secret_*` 的參數（金庫通行碼、機密值）在寫進 log、當成結果紀錄的鍵之前換成 `***`，巢狀在區塊指令裡的也一樣。 |
 | `mouse_aliases.py` | 39 | 單鍵點擊別名（`AC_click_left` 等），executor 與 callback executor 共用。 |
 
-#### `utils/mcp_server/`（17,584 行，676 個工具）— 最大子系統
+#### `utils/mcp_server/`（17,601 行，676 個工具）— 最大子系統
 
 | 檔案 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -729,7 +729,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `resources.py` | 307 | MCP resource 提供者。 |
 | `prompts.py` | 220 | MCP prompt 目錄。 |
 | `fake_backend.py` | 184 | CI／無頭測試用的記憶體內假後端。 |
-| `plugin_watcher.py` | 151 | 檔案變更時熱重載外掛工具的背景 watcher。 |
+| `plugin_watcher.py` | 168 | 檔案變更時熱重載外掛工具的背景 watcher。 |
 | `tools/_base.py` | 146 | 工具註冊表的共用型別與輔助。 |
 | `tools/_validation.py` | 122 | MCP 工具用到的 JSON Schema 子集驗證器。 |
 | `tools/plugin_tools.py` | 89 | 把外掛載入的 `AC_*` callable 包成 `MCPTool`。 |
@@ -1060,7 +1060,7 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | 層／子系統 | 檔案數 | 行數 |
 | --- | ---: | ---: |
 | `gui/` | 91 | 26,794 |
-| `utils/mcp_server/` | 31 | 17,584 |
+| `utils/mcp_server/` | 31 | 17,601 |
 | `utils/remote_desktop/` | 56 | 12,328 |
 | `utils/executor/` | 7 | 9,298 |
 | `utils/usb/` | 17 | 4,422 |
@@ -1079,6 +1079,6 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `osx/` | 17 | 919 |
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 783 |
-| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 675 | 49,731 |
-| **總計** | **1,040** | **144,756** |
+| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 675 | 49,776 |
+| **總計** | **1,040** | **144,818** |
 

@@ -132,6 +132,12 @@ start with ``AC_``. Each one becomes a new executor command::
    # Now usable from JSON:
    # [["AC_greet", {"name": "world"}]]
 
+A file that fails to import is logged and skipped; the rest of the directory
+still loads. ``register_plugin_commands`` skips (and logs) a value that is not a
+function and a name that already belongs to a built-in command such as
+``AC_click_mouse``; pass ``allow_override=True`` to replace one on purpose.
+A plugin may always re-register its own commands (a reload).
+
 GUI: **Plugins** tab (browse directory, one-click register).
 
 .. warning::

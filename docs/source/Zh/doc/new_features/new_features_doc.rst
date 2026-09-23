@@ -124,6 +124,10 @@ executor 指令::
    commands = load_plugin_directory("my_plugins/")
    register_plugin_commands(commands)
 
+匯入失敗的檔案會記錄後略過，目錄裡其他檔案照常載入。``register_plugin_commands`` 會略過（並記錄）
+不是函式的值，以及已屬於內建指令（例如 ``AC_click_mouse``）的名稱；確實要取代時傳入
+``allow_override=True``。外掛隨時可以重新註冊自己的指令（重新載入）。
+
 GUI：**外掛** 分頁，可選擇目錄一鍵載入。
 
 .. warning::

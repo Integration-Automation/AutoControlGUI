@@ -38,7 +38,8 @@ Playwright 的成長方式)。AutoControl 於執行期探索它們;探索到的�
     discover_plugins()      # 來自所有外掛的 {command_name: handler}
     load_plugins()          # 探索 + 註冊到執行器
 
-壞掉的外掛會被略過(記錄),不致命。對應 ``AC_list_plugins``(探索名稱)
+壞掉的外掛會被略過(記錄),不致命;不是函式的項目,以及會取代內建指令的項目也一樣
+(除非 ``load_plugins(allow_override=True)``)。對應 ``AC_list_plugins``(探索名稱)
 / ``AC_load_plugins``(探索 + 註冊)以及 ``ac_list_plugins`` /
 ``ac_load_plugins``。entry-point 來源可注入,因此探索能在不安裝真實外掛
 的情況下單元測試。這是既有執行期路徑載入器的宣告式、具命名空間的對應物。

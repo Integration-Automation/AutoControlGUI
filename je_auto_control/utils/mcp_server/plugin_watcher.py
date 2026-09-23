@@ -28,6 +28,8 @@ class PluginWatcher:
         self._thread: Optional[threading.Thread] = None
         # path → (mtime, [tool_names])
         self._known: Dict[str, tuple] = {}
+        # path -> {tool name: tool} for every file that built successfully.
+        self._defined: Dict[str, Dict[str, Any]] = {}
 
     @property
     def directory(self) -> str:
@@ -99,9 +101,9 @@ class PluginWatcher:
         # Build succeeded — only now swap the live registry. Doing the
         # unregister *after* a successful build means a broken edit leaves the
         # file's existing tools in place instead of vanishing them.
+        self._defined[path] = {tool.name: tool for tool in tools}
         if previous is not None:
-            for tool_name in previous[1]:
-                self._server.unregister_tool(tool_name)
+            self._release(path, set(previous[1]) - set(self._defined[path]))
         registered: List[str] = []
         for tool in tools:
             self._server.register_tool(tool)
@@ -136,12 +138,27 @@ class PluginWatcher:
             self._known[path] = (mtime, previous[1] if previous else [])
             return None
 
+    def _release(self, path: str, names) -> None:
+        """Drop ``path``'s claim on ``names``.
+
+        A tool another watched file still defines is handed to that file's
+        definition instead of being unregistered: deleting one of two files
+        that both defined ``AC_shared`` used to remove the tool entirely.
+        """
+        for name in names:
+            other = next((tools[name] for owner, tools in self._defined.items()
+                          if owner != path and name in tools), None)
+            if other is None:
+                self._server.unregister_tool(name)
+            else:
+                self._server.register_tool(other)
+
     def _unregister_file(self, path: str) -> None:
         previous = self._known.pop(path, None)
+        self._defined.pop(path, None)
         if previous is None:
             return
-        for tool_name in previous[1]:
-            self._server.unregister_tool(tool_name)
+        self._release(path, previous[1])
         autocontrol_logger.info(
             "plugin %s removed → %d tools dropped",
             os.path.basename(path), len(previous[1]),
