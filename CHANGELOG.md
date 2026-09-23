@@ -33,6 +33,14 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Changed
 
+- **More MCP tools are destructive.** Tools that run action lists or code,
+  send input, delete data, send data off the machine or loosen a security
+  control carry `destructiveHint: true`, so
+  `JE_AUTOCONTROL_MCP_CONFIRM_DESTRUCTIVE=1` asks before them.
+  `ac_export_sarif`, `ac_compliance_report` and `ac_assert_visual` are no
+  longer read-only. A `tools/call` argument the schema does not declare is
+  refused with `-32602`.
+
 - **Secret-key matching is by word.** `scan_secrets` and `redact_config` no
   longer treat keys that merely contain `pass` or `token` (`bypass_proxy`,
   `tokenizer`) as secrets, and now do treat `apiKey`, `cookie`, `sessionId`
@@ -165,6 +173,12 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
   package does no PKCS#7 decryption, so the `>=48.0.1` floor is unchanged.
 
 ### Fixed
+
+- **MCP read-only mode and the confirmation gate hold.** `ac_bulkhead_run`
+  and `ac_run_chaos` no longer run action lists in read-only mode; file
+  writers and `ac_assert_http` with a mutating method are out of it; read-only
+  tools no longer create a database at a missing `db` path; `resources/read`
+  serves only the `*.json` files `resources/list` shows.
 
 - **Secrets stay out of reports, bundles and logs.** Secret keys are matched
   by word (`apiKey`, `db_password`, `sessionId` count; `tokenizer` does not);

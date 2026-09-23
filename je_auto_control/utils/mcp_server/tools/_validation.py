@@ -103,4 +103,20 @@ def _validate_array(schema: Dict[str, Any], value: list,
     return None
 
 
-__all__ = ["validate_arguments"]
+def undeclared_arguments(schema: Dict[str, Any],
+                         arguments: Dict[str, Any]) -> Optional[str]:
+    """Name the top-level arguments ``schema`` does not declare, or ``None``.
+
+    A handler receives the arguments as keywords, so an undeclared one
+    (``ctx`` included) reached it and failed as a ``TypeError`` tool error
+    instead of an invalid-params reply. Only checked when the schema lists
+    its properties and does not allow additional ones.
+    """
+    declared = schema.get("properties")
+    if declared is None or schema.get("additionalProperties"):
+        return None
+    unknown = sorted(set(arguments) - set(declared))
+    return f"$: unknown argument(s) {unknown}" if unknown else None
+
+
+__all__ = ["undeclared_arguments", "validate_arguments"]

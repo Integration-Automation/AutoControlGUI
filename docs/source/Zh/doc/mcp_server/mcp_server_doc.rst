@@ -86,12 +86,24 @@ list-changed 通知與 elicitation。
 ``openWorldHint``),client 可以據此自動允許唯讀查詢,並在執行破壞
 性動作前要求使用者確認。
 
+會送出輸入、執行 action 清單／腳本／程式碼(當下執行,或之後由排程、
+觸發器、熱鍵、監看、語音指令執行)、刪除資料、把資料送出本機,或放寬安全
+控制(對外連線、USB ACL、核准、秘密租借、開放遠端工作階段)的工具,都標為
+破壞性。會寫入呼叫端指定路徑的工具一律不是唯讀;唯讀工具拿到不存在的
+``db`` 時回傳空結果,不會建立檔案。``ac_assert_http`` 只送 ``GET`` 或
+``HEAD``。
+
+``tools/call`` 帶了工具輸入 schema 沒宣告的參數時,會在工具執行前以
+``-32602``(參數無效)拒絕。
+
 Resources、Prompts、Sampling
 ============================
 
 Resources
   - ``autocontrol://files/<name>`` — workspace 根目錄底下的所有
     JSON action 檔(client 推送 ``roots/list`` 後會自動切換根目錄)。
+    只讀得到單純的 ``*.json`` 檔名;根目錄裡的其他檔案、子目錄和含
+    ``:`` 的串流名稱都讀不到。
   - ``autocontrol://history`` — 最近的執行歷程快照。
   - ``autocontrol://commands`` — 完整 ``AC_*`` 執行器目錄。
   - ``autocontrol://screen/live`` — base64 PNG 直播,

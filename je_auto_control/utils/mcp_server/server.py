@@ -34,7 +34,7 @@ from je_auto_control.utils.mcp_server.tools import (
     MCPTool, build_default_tool_registry,
 )
 from je_auto_control.utils.mcp_server.tools._validation import (
-    validate_arguments,
+    undeclared_arguments, validate_arguments,
 )
 from je_auto_control.utils.mcp_server._client_requests import (
     ClientRequestMixin,
@@ -638,7 +638,8 @@ class MCPServer(ClientRequestMixin):
         tool = self._tools.get(name)
         if tool is None:
             raise _MCPError(-32602, f"Unknown tool: {name}")
-        violation = validate_arguments(tool.input_schema, arguments)
+        violation = (validate_arguments(tool.input_schema, arguments)
+                     or undeclared_arguments(tool.input_schema, arguments))
         if violation is not None:
             raise _MCPError(-32602, f"Invalid arguments for {name}: {violation}")
         if self._rate_limiter is not None and not self._rate_limiter.try_acquire():

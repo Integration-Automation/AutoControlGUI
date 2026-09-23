@@ -88,13 +88,26 @@ Every tool carries the MCP 2025-06-18 ``annotations`` block
 read-only queries and require user confirmation before destructive
 ones.
 
+A tool is destructive when it sends input, runs an action list, script or
+code (now, or later from a scheduler, trigger, hotkey, watch or voice
+command), deletes data, sends data off the machine, or loosens a security
+control (egress, USB ACL, approvals, secret leases, hosting a remote
+session). A tool that writes a file at a path the caller chooses is never
+read-only, and a read-only tool given a ``db`` that does not exist answers
+with an empty result instead of creating the file. ``ac_assert_http`` only
+sends ``GET`` or ``HEAD``.
+
+A ``tools/call`` argument that the tool's input schema does not declare is
+refused with ``-32602`` (invalid params) before the tool runs.
+
 Resources, prompts, sampling
 ============================
 
 Resources
   - ``autocontrol://files/<name>`` — every JSON action file in the
     workspace root (re-targets when the client publishes
-    ``roots/list``).
+    ``roots/list``). Only a plain ``*.json`` name is readable; other
+    files in the root, subdirectories and ``:`` stream names are not.
   - ``autocontrol://history`` — recent run-history snapshot.
   - ``autocontrol://commands`` — full ``AC_*`` executor catalogue.
   - ``autocontrol://screen/live`` — base64 PNG screenshots, with

@@ -4,6 +4,7 @@ Same contract as :mod:`._handlers` -- normalise arguments and return values so
 they survive the JSON-RPC boundary, with every project import lazy -- split out
 by theme because ``_handlers.py`` is over the 750-line limit.
 """
+import os
 import threading
 from typing import Any, Dict, List, Optional
 
@@ -163,6 +164,8 @@ def run_resumable(actions, run_id, db, variables=None):
 
 
 def checkpoint_status(run_id, db):
+    if not os.path.exists(db):   # read-only: never create the store
+        return {"checkpoint": None}
     from je_auto_control.utils.checkpoint import CheckpointStore
     cp = CheckpointStore(db).load(run_id)
     if cp is None:

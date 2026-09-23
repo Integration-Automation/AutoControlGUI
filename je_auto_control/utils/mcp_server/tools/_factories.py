@@ -374,7 +374,7 @@ def window_tools() -> List[MCPTool]:
                 "case_sensitive": {"type": "boolean"},
             }, required=["title_substring", "key"]),
             handler=h_system.post_key_to_window,
-            annotations=NON_DESTRUCTIVE,
+            annotations=DESTRUCTIVE,
         ),
         MCPTool(
             name="ac_post_click_to_window",
@@ -390,7 +390,7 @@ def window_tools() -> List[MCPTool]:
                 "case_sensitive": {"type": "boolean"},
             }, required=["title_substring"]),
             handler=h_system.post_click_to_window,
-            annotations=NON_DESTRUCTIVE,
+            annotations=DESTRUCTIVE,
         ),
         MCPTool(
             name="ac_window_pid",
@@ -1730,7 +1730,7 @@ def failure_hook_tools() -> List[MCPTool]:
                 "metadata": {"type": "object"},
             }, required=["source", "source_id"]),
             handler=h_ops.failure_hook_fire,
-            annotations=NON_DESTRUCTIVE,
+            annotations=DESTRUCTIVE,
         ),
         MCPTool(
             name="ac_failure_hook_list",
@@ -2043,7 +2043,7 @@ def smart_wait_tools() -> List[MCPTool]:
                                  "attempts": {"type": "integer"}},
                                 required=["desired"]),
             handler=h_system.ensure_field_value,
-            annotations=SIDE_EFFECT_ONLY,
+            annotations=DESTRUCTIVE,
         ),
         MCPTool(
             name="ac_wait_until_app_idle",
@@ -2082,7 +2082,7 @@ def smart_wait_tools() -> List[MCPTool]:
                                  "button": {"type": "string"}},
                                 required=["target"]),
             handler=h_system.act_in_view,
-            annotations=SIDE_EFFECT_ONLY,
+            annotations=DESTRUCTIVE,
         ),
         MCPTool(
             name="ac_act_with_mode",
@@ -2096,7 +2096,7 @@ def smart_wait_tools() -> List[MCPTool]:
                                  "button": {"type": "string"}},
                                 required=["x", "y"]),
             handler=h_system.act_with_mode,
-            annotations=SIDE_EFFECT_ONLY,
+            annotations=DESTRUCTIVE,
         ),
     ]
 
@@ -2271,7 +2271,7 @@ def scheduler_tools() -> List[MCPTool]:
                 "job_id": {"type": "string"},
             }, required=["script_path"]),
             handler=h_sched.scheduler_add_job,
-            annotations=SIDE_EFFECT_ONLY,
+            annotations=DESTRUCTIVE,
         ),
         MCPTool(
             name="ac_scheduler_remove_job",
@@ -2331,7 +2331,7 @@ def trigger_tools() -> List[MCPTool]:
                 "watch_path": {"type": "string"},
             }, required=["kind", "script_path"]),
             handler=h_sched.trigger_add,
-            annotations=SIDE_EFFECT_ONLY,
+            annotations=DESTRUCTIVE,
         ),
         MCPTool(
             name="ac_trigger_remove",
@@ -2422,7 +2422,7 @@ def process_and_shell_tools() -> List[MCPTool]:
                                  "verb": {"type": "string"}},
                                 required=["target"]),
             handler=h_system.open_path,
-            annotations=SIDE_EFFECT_ONLY,
+            annotations=DESTRUCTIVE,
         ),
         MCPTool(
             name="ac_plan_open",
@@ -2776,7 +2776,7 @@ def element_repository_tools() -> List[MCPTool]:
             description="Click the element behind a saved locator.",
             input_schema=schema(dict(_R), required=["path", "key"]),
             handler=h.element_click,
-            annotations=SIDE_EFFECT_ONLY,
+            annotations=DESTRUCTIVE,
         ),
         MCPTool(
             name="ac_element_remove",
@@ -2834,7 +2834,7 @@ def skill_library_tools() -> List[MCPTool]:
             description="Execute a stored skill's actions; returns the record.",
             input_schema=schema(dict(_S), required=["path", "name"]),
             handler=h.skill_run,
-            annotations=SIDE_EFFECT_ONLY,
+            annotations=DESTRUCTIVE,
         ),
         MCPTool(
             name="ac_skill_list",
@@ -3045,7 +3045,7 @@ def observer_tools() -> List[MCPTool]:
                 "x": {"type": "integer"}, "y": {"type": "integer"},
             }, required=["name"]),
             handler=h_loc.observe_add,
-            annotations=SIDE_EFFECT_ONLY,
+            annotations=DESTRUCTIVE,
         ),
         MCPTool(
             name="ac_observe_remove",
@@ -3245,7 +3245,7 @@ def checkpoint_tools() -> List[MCPTool]:
                 "variables": {"type": "object"}, **_R},
                 required=["actions", "run_id", "db"]),
             handler=h_ops.run_resumable,
-            annotations=SIDE_EFFECT_ONLY,
+            annotations=DESTRUCTIVE,
         ),
         MCPTool(
             name="ac_checkpoint_status",
@@ -3286,7 +3286,7 @@ def set_of_marks_tools() -> List[MCPTool]:
             input_schema=schema({"mark_id": {"type": "integer"}},
                                 required=["mark_id"]),
             handler=h_loc.mark_click,
-            annotations=SIDE_EFFECT_ONLY,
+            annotations=DESTRUCTIVE,
         ),
     ]
 
@@ -3345,7 +3345,7 @@ def input_macro_tools() -> List[MCPTool]:
                 "speed": {"type": "number"}},
                 required=["events"]),
             handler=h.replay_timeline,
-            annotations=SIDE_EFFECT_ONLY,
+            annotations=DESTRUCTIVE,
         ),
         MCPTool(
             name="ac_input_sequence",
@@ -3357,7 +3357,7 @@ def input_macro_tools() -> List[MCPTool]:
                 "steps": {"type": "array", "items": {"type": "object"}}},
                 required=["steps"]),
             handler=h.input_sequence,
-            annotations=SIDE_EFFECT_ONLY,
+            annotations=DESTRUCTIVE,
         ),
     ]
 
@@ -3377,7 +3377,7 @@ def resilience_tools() -> List[MCPTool]:
                 "reset_s": {"type": "number"}},
                 required=["name", "actions"]),
             handler=h_exec.circuit_call,
-            annotations=SIDE_EFFECT_ONLY,
+            annotations=DESTRUCTIVE,
         ),
     ]
 
@@ -3498,7 +3498,7 @@ def tween_drag_tools() -> List[MCPTool]:
                 "button": {"type": "string"}},
                 required=["start", "end"]),
             handler=h.tween_drag,
-            annotations=SIDE_EFFECT_ONLY,
+            annotations=DESTRUCTIVE,
         ),
     ]
 
@@ -3911,7 +3911,7 @@ def expect_poll_tools() -> List[MCPTool]:
                 "interval_s": {"type": "number"}},
                 required=["action"]),
             handler=h_exec.expect_poll,
-            annotations=NON_DESTRUCTIVE,
+            annotations=DESTRUCTIVE,
         ),
     ]
 
@@ -4077,7 +4077,7 @@ def clipboard_files_tools() -> List[MCPTool]:
                 "point": {"type": "array", "items": {"type": "integer"}}},
                 required=["hwnd", "paths"]),
             handler=h_exec.drop_files,
-            annotations=SIDE_EFFECT_ONLY,
+            annotations=DESTRUCTIVE,
         ),
     ]
 
@@ -4757,7 +4757,7 @@ def agent_replay_tools() -> List[MCPTool]:
                          "results}. Side-effecting (runs the actions)."),
             input_schema=schema({"trace": {"type": "array"}}, required=["trace"]),
             handler=h_exec.replay_trace,
-            annotations=SIDE_EFFECT_ONLY,
+            annotations=DESTRUCTIVE,
         ),
     ]
 
@@ -5417,7 +5417,7 @@ def modifier_state_tools() -> List[MCPTool]:
                 "actions": {"type": "array"}},
                 required=["modifiers", "actions"]),
             handler=h_exec.with_modifiers,
-            annotations=SIDE_EFFECT_ONLY,
+            annotations=DESTRUCTIVE,
         ),
     ]
 
@@ -5434,7 +5434,7 @@ def text_unicode_tools() -> List[MCPTool]:
                 {"text": {"type": "string"}, "modifier": {"type": "string"}},
                 required=["text"]),
             handler=h_exec.type_unicode,
-            annotations=SIDE_EFFECT_ONLY,
+            annotations=DESTRUCTIVE,
         ),
         MCPTool(
             name="ac_input_reachable",
@@ -5456,7 +5456,7 @@ def text_unicode_tools() -> List[MCPTool]:
                          "Returns {ops, plan, method, code_units}."),
             input_schema=schema({"text": {"type": "string"}}, required=["text"]),
             handler=h_exec.type_unicode_keys,
-            annotations=SIDE_EFFECT_ONLY,
+            annotations=DESTRUCTIVE,
         ),
         MCPTool(
             name="ac_type_unicode_text",
@@ -5468,7 +5468,7 @@ def text_unicode_tools() -> List[MCPTool]:
                 {"text": {"type": "string"}, "modifier": {"type": "string"}},
                 required=["text"]),
             handler=h_exec.type_unicode_text,
-            annotations=SIDE_EFFECT_ONLY,
+            annotations=DESTRUCTIVE,
         ),
     ]
 
@@ -5501,7 +5501,7 @@ def key_hold_tools() -> List[MCPTool]:
                 "rate_hz": {"type": "number"}},
                 required=["key", "duration_s"]),
             handler=h_exec.hold_key,
-            annotations=SIDE_EFFECT_ONLY,
+            annotations=DESTRUCTIVE,
         ),
     ]
 
@@ -5519,7 +5519,7 @@ def field_entry_tools() -> List[MCPTool]:
                 "paste": {"type": "boolean"}, "modifier": {"type": "string"}},
                 required=["text"]),
             handler=h_exec.set_field_text,
-            annotations=SIDE_EFFECT_ONLY,
+            annotations=DESTRUCTIVE,
         ),
     ]
 
@@ -5539,7 +5539,7 @@ def mouse_path_tools() -> List[MCPTool]:
                 "per_segment_steps": {"type": "integer"}},
                 required=["waypoints"]),
             handler=h_exec.move_along_path,
-            annotations=SIDE_EFFECT_ONLY,
+            annotations=DESTRUCTIVE,
         ),
         MCPTool(
             name="ac_drag_path",
@@ -5555,7 +5555,7 @@ def mouse_path_tools() -> List[MCPTool]:
                 "per_segment_steps": {"type": "integer"}},
                 required=["waypoints"]),
             handler=h_exec.drag_path,
-            annotations=SIDE_EFFECT_ONLY,
+            annotations=DESTRUCTIVE,
         ),
     ]
 
@@ -5578,7 +5578,7 @@ def plugin_sdk_tools() -> List[MCPTool]:
                          "into the executor. Returns {loaded} names."),
             input_schema=schema(dict(_G)),
             handler=h_ops.load_plugins,
-            annotations=SIDE_EFFECT_ONLY,
+            annotations=DESTRUCTIVE,
         ),
     ]
 
@@ -5606,7 +5606,7 @@ def governance_tools() -> List[MCPTool]:
                          "equals the requester (segregation of duties)."),
             input_schema=schema(_TA, ["token", "approver"]),
             handler=h_ops.approval_approve,
-            annotations=SIDE_EFFECT_ONLY,
+            annotations=DESTRUCTIVE,
         ),
         MCPTool(
             name="ac_approval_reject",
@@ -5641,7 +5641,7 @@ def credential_lease_tools() -> List[MCPTool]:
             input_schema=schema({"name": {"type": "string"},
                                  "ttl": {"type": "number"}}, ["name"]),
             handler=h_ops.lease_secret,
-            annotations=SIDE_EFFECT_ONLY,
+            annotations=DESTRUCTIVE,
         ),
         MCPTool(
             name="ac_lease_valid",
@@ -5682,7 +5682,7 @@ def egress_tools() -> List[MCPTool]:
                          "is allow-all. Returns the effective {allow, deny}."),
             input_schema=schema(dict(_LISTS)),
             handler=h_ops.egress_allow,
-            annotations=SIDE_EFFECT_ONLY,
+            annotations=DESTRUCTIVE,
         ),
         MCPTool(
             name="ac_egress_check",
@@ -5780,7 +5780,7 @@ def compliance_tools() -> List[MCPTool]:
                  "fmt": {"type": "string", "enum": ["json", "html"]}},
                 ["evidence"]),
             handler=h_ops.compliance_report,
-            annotations=READ_ONLY,
+            annotations=SIDE_EFFECT_ONLY,
         ),
     ]
 
@@ -5906,7 +5906,7 @@ def artifact_store_tools() -> List[MCPTool]:
                 {"local_path": {"type": "string"}, "key": {"type": "string"}},
                 ["local_path"]),
             handler=h_ops.s3_upload,
-            annotations=SIDE_EFFECT_ONLY,
+            annotations=DESTRUCTIVE,
         ),
         MCPTool(
             name="ac_s3_download",
@@ -5932,7 +5932,7 @@ def artifact_store_tools() -> List[MCPTool]:
                         "Returns {deleted}.",
             input_schema=schema({"key": {"type": "string"}}, ["key"]),
             handler=h_ops.s3_delete,
-            annotations=SIDE_EFFECT_ONLY,
+            annotations=DESTRUCTIVE,
         ),
     ]
 
@@ -6068,7 +6068,7 @@ def voice_tools() -> List[MCPTool]:
                  "actions": {"type": "array", "items": {"type": "object"}}},
                 ["phrase", "actions"]),
             handler=h.voice_register,
-            annotations=SIDE_EFFECT_ONLY,
+            annotations=DESTRUCTIVE,
         ),
         MCPTool(
             name="ac_voice_dispatch",
@@ -6076,7 +6076,7 @@ def voice_tools() -> List[MCPTool]:
                          "'text' (fuzzy). Returns {matched, phrase}."),
             input_schema=schema({"text": {"type": "string"}}, ["text"]),
             handler=h.voice_dispatch,
-            annotations=SIDE_EFFECT_ONLY,
+            annotations=DESTRUCTIVE,
         ),
         MCPTool(
             name="ac_voice_list",
@@ -6223,7 +6223,7 @@ def events_tools() -> List[MCPTool]:
                  "subject": {"type": "string"}, "url": {"type": "string"}},
                 ["event_type"]),
             handler=h_ops.emit_event,
-            annotations=SIDE_EFFECT_ONLY,
+            annotations=DESTRUCTIVE,
         ),
     ]
 
@@ -6243,7 +6243,7 @@ def notify_channel_tools() -> List[MCPTool]:
                                "enum": ["raw", "slack", "discord", "teams"]},
                  "title": {"type": "string"}}, ["url", "text"]),
             handler=h_ops.notify_webhook,
-            annotations=SIDE_EFFECT_ONLY,
+            annotations=DESTRUCTIVE,
         ),
     ]
 
@@ -7349,7 +7349,7 @@ def bulkhead_tools() -> List[MCPTool]:
                  "actions": {"type": "array"}},
                 ["name", "max_concurrent", "actions"]),
             handler=h_exec.bulkhead_run,
-            annotations=READ_ONLY,
+            annotations=DESTRUCTIVE,
         ),
         MCPTool(
             name="ac_retry_after",
@@ -7417,7 +7417,7 @@ def chaos_tools() -> List[MCPTool]:
                          "back. Returns the journal {status, deviated, ...}."),
             input_schema=schema({"spec": {"type": "object"}}, ["spec"]),
             handler=h_exec.run_chaos,
-            annotations=READ_ONLY,
+            annotations=DESTRUCTIVE,
         ),
     ]
 
@@ -7670,7 +7670,7 @@ def saga_tools() -> List[MCPTool]:
                 {"steps": {"type": "array", "items": {"type": "object"}}},
                 ["steps"]),
             handler=h_ops.run_saga,
-            annotations=SIDE_EFFECT_ONLY,
+            annotations=DESTRUCTIVE,
         ),
     ]
 
@@ -7783,7 +7783,7 @@ def sarif_tools() -> List[MCPTool]:
                  "path": {"type": "string"},
                  "tool_name": {"type": "string"}}, ["findings"]),
             handler=h_ops.export_sarif,
-            annotations=READ_ONLY,
+            annotations=SIDE_EFFECT_ONLY,
         ),
     ]
 
@@ -7889,7 +7889,7 @@ def hotkey_tools() -> List[MCPTool]:
                 "binding_id": {"type": "string"},
             }, required=["combo", "script_path"]),
             handler=h_sched.hotkey_bind,
-            annotations=SIDE_EFFECT_ONLY,
+            annotations=DESTRUCTIVE,
         ),
         MCPTool(
             name="ac_hotkey_unbind",
@@ -7949,7 +7949,7 @@ def remote_desktop_tools() -> List[MCPTool]:
                             "description": "Optional 9-digit ID; auto-generated when omitted"},
             }, required=["token"]),
             handler=h_remote.remote_host_start,
-            annotations=SIDE_EFFECT_ONLY,
+            annotations=DESTRUCTIVE,
         ),
         MCPTool(
             name="ac_remote_host_stop",
@@ -8134,7 +8134,7 @@ def usb_passthrough_tools() -> List[MCPTool]:
                          "honoured."),
             input_schema=schema({"enabled": {"type": "boolean"}}),
             handler=h_input.usb_passthrough_enable,
-            annotations=NON_DESTRUCTIVE,
+            annotations=DESTRUCTIVE,
         ),
         MCPTool(
             name="ac_usb_passthrough_status",
@@ -8163,7 +8163,7 @@ def usb_passthrough_tools() -> List[MCPTool]:
                 "label": {"type": "string"},
             }, required=["vendor_id", "product_id"]),
             handler=h_input.usb_acl_add,
-            annotations=NON_DESTRUCTIVE,
+            annotations=DESTRUCTIVE,
         ),
         MCPTool(
             name="ac_usb_acl_remove",
@@ -8181,7 +8181,7 @@ def usb_passthrough_tools() -> List[MCPTool]:
                 "policy": {"type": "string", "enum": ["allow", "deny"]},
             }, required=["policy"]),
             handler=h_input.usb_acl_set_default,
-            annotations=NON_DESTRUCTIVE,
+            annotations=DESTRUCTIVE,
         ),
         MCPTool(
             name="ac_usb_loopback_list",
@@ -8350,7 +8350,8 @@ def assertion_tools() -> List[MCPTool]:
                 "status": {"type": "integer"},
                 "contains": {"type": "string"},
                 "timeout": {"type": "number"},
-                "method": {"type": "string"},
+                # Read-only: a probe must not be able to send DELETE / POST.
+                "method": {"type": "string", "enum": ["GET", "HEAD", "get", "head"]},
                 "raise_on_fail": {"type": "boolean"},
             }, required=["url"]),
             handler=hq.assert_http,
@@ -8472,7 +8473,7 @@ def email_tools() -> List[MCPTool]:
                 "smtp": {"type": "object"},
             }, required=["message", "smtp"]),
             handler=hq.send_email,
-            annotations=SIDE_EFFECT_ONLY,
+            annotations=DESTRUCTIVE,
         ),
     ]
 
@@ -8540,7 +8541,7 @@ def http_tools() -> List[MCPTool]:
                 "timeout": {"type": "number"},
             }, required=["url"]),
             handler=hq.http_request,
-            annotations=SIDE_EFFECT_ONLY,
+            annotations=DESTRUCTIVE,
         ),
     ]
 
@@ -8577,7 +8578,7 @@ def visual_regression_tools() -> List[MCPTool]:
                 "raise_on_fail": {"type": "boolean"},
             }, required=["golden_path"]),
             handler=hq.assert_visual,
-            annotations=READ_ONLY,
+            annotations=SIDE_EFFECT_ONLY,
         ),
     ]
 
@@ -8594,7 +8595,7 @@ def state_machine_tools() -> List[MCPTool]:
             input_schema=schema({"spec": {"type": "object"}},
                                 required=["spec"]),
             handler=hq.run_state_machine,
-            annotations=SIDE_EFFECT_ONLY,
+            annotations=DESTRUCTIVE,
         ),
     ]
 
@@ -8754,7 +8755,7 @@ def suite_tools() -> List[MCPTool]:
                 "allure_dir": {"type": "string"},
             }, required=["spec"]),
             handler=hq.run_suite,
-            annotations=SIDE_EFFECT_ONLY,
+            annotations=DESTRUCTIVE,
         ),
     ]
 
@@ -8875,7 +8876,7 @@ def device_matrix_tools() -> List[MCPTool]:
                 "var_name": {"type": "string"},
             }, required=["actions", "devices"]),
             handler=hq.run_device_matrix,
-            annotations=SIDE_EFFECT_ONLY,
+            annotations=DESTRUCTIVE,
         ),
     ]
 

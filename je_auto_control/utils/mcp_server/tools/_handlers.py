@@ -5,6 +5,7 @@ values (lists / dicts / strings, or :class:`MCPContent`) so they
 survive the JSON-RPC boundary. Wrapper imports are lazy to keep the
 top-level MCP server boot cheap.
 """
+import os
 from typing import Any, Dict, List
 
 from je_auto_control.utils.mcp_server.tools._handlers_executor_bridge import (
@@ -53,7 +54,21 @@ def queue_fail(db, item_id, error, kind="application", max_retries=3,
 
 
 def queue_stats(db, name="default"):
+    if _no_database(db):
+        from je_auto_control.utils.work_queue.work_queue import (
+            STATUS_FAILED, STATUS_IN_PROGRESS, STATUS_NEW, STATUS_SUCCESS,
+        )
+        return dict.fromkeys((STATUS_NEW, STATUS_IN_PROGRESS, STATUS_SUCCESS, STATUS_FAILED), 0)
     return _work_queue(db, name).stats()
+
+
+def _no_database(db) -> bool:
+    """Whether a read-only tool's ``db`` does not exist yet.
+
+    Opening it would create an empty SQLite file at a caller-chosen path,
+    which a tool advertised as read-only must not do.
+    """
+    return not os.path.exists(db)
 
 
 def element_save(path, key, name=None, role=None, app_name=None):
@@ -141,11 +156,15 @@ def memory_remember(db, goal, steps=None, outcome="", tags=None):
 
 
 def memory_recall(db, query, limit=5):
+    if _no_database(db):
+        return {"episodes": []}
     eps = _agent_memory(db).recall(query, limit=int(limit))
     return {"episodes": [_episode_dict(ep) for ep in eps]}
 
 
 def memory_recent(db, limit=10):
+    if _no_database(db):
+        return {"episodes": []}
     eps = _agent_memory(db).recent(limit=int(limit))
     return {"episodes": [_episode_dict(ep) for ep in eps]}
 
@@ -155,6 +174,8 @@ def memory_forget(db, episode_id):
 
 
 def memory_stats(db):
+    if _no_database(db):
+        return {"episodes": 0}
     return _agent_memory(db).stats()
 
 

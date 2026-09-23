@@ -58,6 +58,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260923-38 | 2026-09-23 | MCP tool-safety audit: annotations, read-only writes, resource reads, undeclared arguments | #incident #security #mcp | [2026-09](2026-09.md) |
 | U-20260923-37 | 2026-09-23 | Secret detection and failure-bundle audit: key words, free text, vault commands, image modes | #incident #security #redaction | [2026-09](2026-09.md) |
 | U-20260923-36 | 2026-09-23 | Accessibility / OCR / window audit: blank matches, wrong windows, zero timeouts | #incident #accessibility #window | [2026-09](2026-09.md) |
 | U-20260923-35 | 2026-09-23 | Android/iOS audit: adb shell injection, escaping SDK errors | #incident #security #mobile | [2026-09](2026-09.md) |
@@ -142,7 +143,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | File | Period | Entries |
 |---|---|---:|
-| [2026-09.md](2026-09.md) | 2026-09 | 53 |
+| [2026-09.md](2026-09.md) | 2026-09 | 54 |
 | [2026-08-f.md](2026-08-f.md) | 2026-08 | 1 |
 | [2026-08-e.md](2026-08-e.md) | 2026-08 | 2 |
 | [2026-08-d.md](2026-08-d.md) | 2026-08 | 2 |
