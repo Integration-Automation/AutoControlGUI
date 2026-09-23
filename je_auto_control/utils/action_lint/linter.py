@@ -159,8 +159,8 @@ def _main(argv: Optional[List[str]] = None) -> int:
     for path in args:
         target = Path(path)
         try:
-            actions = json.loads(target.read_text(encoding="utf-8"))
-        except (OSError, json.JSONDecodeError) as error:
+            actions = json.loads(target.read_text(encoding="utf-8-sig"))
+        except (OSError, ValueError) as error:
             print(f"{target}: {error}", file=sys.stderr)
             exit_code = 1
             continue

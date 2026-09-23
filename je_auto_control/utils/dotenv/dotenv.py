@@ -107,8 +107,13 @@ def parse_dotenv(text: str) -> Dict[str, str]:
 
 
 def dotenv_values(path: str) -> Dict[str, str]:
-    """Read and parse a ``.env`` file at ``path``."""
-    return parse_dotenv(Path(path).read_text(encoding="utf-8"))
+    """Read and parse a ``.env`` file at ``path``.
+
+    Decoded as ``utf-8-sig``: with a BOM (Notepad) the first key read as
+    U+FEFF followed by ``KEY``, was rejected as invalid and silently
+    dropped.
+    """
+    return parse_dotenv(Path(path).read_text(encoding="utf-8-sig"))
 
 
 def load_dotenv(path: str, env: MutableMapping[str, str], *,

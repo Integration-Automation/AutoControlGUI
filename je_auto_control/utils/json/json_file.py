@@ -47,7 +47,9 @@ def read_executable_action_json(json_file_path: str) -> List[List[Dict[str, Dict
         raise AutoControlJsonActionException(cant_find_json_error_message)
     try:
         data = read_signed_action_bytes(json_file_path)
-        return json.loads(data.decode("utf-8"))
+        # utf-8-sig, as read_action_json: a file saved from Notepad carries
+        # a BOM, and `validate` passed a file that every runner refused.
+        return json.loads(data.decode("utf-8-sig"))
     except (OSError, ValueError) as error:
         # ValueError covers JSONDecodeError and UnicodeDecodeError.
         raise AutoControlJsonActionException(f"{cant_find_json_error_message}: {repr(error)}") from error

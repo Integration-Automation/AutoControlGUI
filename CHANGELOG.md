@@ -251,6 +251,10 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Fixed
 
+- **Action files saved with a UTF-8 BOM run.** `validate` accepted them but
+  every runner and the action linter refused them; a `.env` file with a BOM
+  no longer loses its first key.
+
 - **A NaN timeout raises `ValueError` instead of polling forever** in
   `AC_wait_image`, `AC_wait_pixel`, `expect_poll`, the app-idle, IME, lock
   and window waits and OCR `wait_for_text`; the MCP image and pixel waits no

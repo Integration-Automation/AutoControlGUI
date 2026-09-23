@@ -20,7 +20,7 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 | 指標 | 數值 |
 | --- | ---: |
 | Python 模組總數（含周邊子專案） | 1,048 |
-| 程式碼總行數 | 145,374 |
+| 程式碼總行數 | 145,381 |
 | `je_auto_control/utils/` 子套件數 | 310 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 773 |
 | 套件門面 `__all__` 公開名稱數 | 1,241 |
@@ -271,7 +271,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.1 執行引擎與腳本資產
 
-> 24 個套件、約 13,766 行。
+> 24 個套件、約 13,768 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -285,7 +285,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/executor/` | 9,294 | **核心**。`Executor` 指令分派表（773 個 `AC_*`）、參數插值、乾跑、逐步 callback；`flow_control` 提供 34 個區塊指令（迴圈／分支／try／巨集／變數） |
 | `utils/flow_debugger/` | 142 | action list 的單步除錯器與追蹤器 |
 | `utils/input_macro/` | 436 | 定時輸入事件：錄製結果的整形（`timeline`／`InputRecorder`，Windows 與 macOS 共用）、重播與宣告式輸入序列 DSL |
-| `utils/json/` | 97 | action JSON 檔讀寫與正規化格式化（`fmt --check` 的後端） |
+| `utils/json/` | 99 | action JSON 檔讀寫與正規化格式化（`fmt --check` 的後端） |
 | `utils/json_store/` | 195 | JSON 字典檔持久化的共用小工具（內部管線） |
 | `utils/loop_guard/` | 146 | 機械式卡死迴圈偵測（agent loop 用） |
 | `utils/plugin_loader/` | 128 | 掃描外部 Python 外掛目錄並註冊其 `AC_` callable |
@@ -649,7 +649,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.15 韌性、流量控制與設定
 
-> 14 個套件、約 1,868 行。
+> 14 個套件、約 1,873 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -658,7 +658,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/bulkhead/` | 139 | Bulkhead 併發隔離 + 伺服器限流標頭解析 |
 | `utils/chaos/` | 153 | 決定性混沌實驗（穩態假說 + 故障注入） |
 | `utils/dedup_window/` | 63 | 時間視窗內的訊息去重 |
-| `utils/dotenv/` | 144 | `.env` 檔解析與序列化 |
+| `utils/dotenv/` | 149 | `.env` 檔解析與序列化 |
 | `utils/feature_flags/` | 173 | 功能旗標評估，含目標規則與決定性灰度 |
 | `utils/idempotency/` | 125 | 冪等鍵儲存與已存回應重放 |
 | `utils/layered_config/` | 110 | 分層設定解析 |
@@ -1080,6 +1080,6 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `osx/` | 17 | 919 |
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 783 |
-| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 676 | 50,109 |
-| **總計** | **1,042** | **145,309** |
+| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 676 | 50,116 |
+| **總計** | **1,042** | **145,316** |
 

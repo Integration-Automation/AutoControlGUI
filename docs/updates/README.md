@@ -58,6 +58,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260924-04 | 2026-09-24 | Action and .env files saved with a UTF-8 BOM run, lint and load | #bugfix #windows | [2026-09](2026-09.md) |
 | U-20260924-03 | 2026-09-24 | A NaN timeout is refused instead of polling forever | #bugfix #audit | [2026-09](2026-09.md) |
 | U-20260924-02 | 2026-09-24 | System utilities: Windows shell quoting, keep-awake, clipboard leaks, file triggers, waits, dotenv | #bugfix #windows #audit | [2026-09](2026-09.md) |
 | U-20260924-01 | 2026-09-24 | Security floors: zeroconf 0.149.16 for discovery, and a test pinning every floor | #security #deps | [2026-09](2026-09.md) |
@@ -162,7 +163,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | File | Period | Entries |
 |---|---|---:|
-| [2026-09.md](2026-09.md) | 2026-09 | 73 |
+| [2026-09.md](2026-09.md) | 2026-09 | 74 |
 | [2026-08-f.md](2026-08-f.md) | 2026-08 | 1 |
 | [2026-08-e.md](2026-08-e.md) | 2026-08 | 2 |
 | [2026-08-d.md](2026-08-d.md) | 2026-08 | 2 |
