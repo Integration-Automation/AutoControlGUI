@@ -196,10 +196,9 @@ def _run_one(node: DagNode, result: NodeResult,
              runner: NodeRunner, _nodes: Dict[str, DagNode]) -> None:
     try:
         outcome = runner(node, _build_proxy_definition(node, _nodes))
-    # The executor's own containment set: a KeyError or TypeError from a
-    # runner used to escape run_dag and leave the node "running".
-    except (AutoControlException, RuntimeError, OSError, ValueError,
-            LookupError, TypeError, AttributeError, ArithmeticError) as error:
+    # A runner is user code and may raise any Exception subclass; one that
+    # escaped left the node "running" and run_dag returned no result.
+    except Exception as error:  # noqa: BLE001  # reason: any node failure becomes a failed NodeResult and a skip cascade, never a crash of the whole run
         # AutoControlException covers validate_actions / locate / assert
         # failures raised by the executor: a node failure becomes a failed
         # NodeResult (and a downstream skip cascade), not a raw crash that

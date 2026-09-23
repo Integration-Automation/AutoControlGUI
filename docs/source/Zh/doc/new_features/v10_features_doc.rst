@@ -42,7 +42,8 @@ Dispatcher / performer
         item = q.get_next()
 
 ``get_next`` 會原子性地認領最舊的 ``new`` 項目(標為 ``in_progress``),
-因此多個 performer 不會重複處理。
+因此多個 performer 不會重複處理。``complete`` 與 ``fail`` 只處理 ``in_progress`` 的項目;
+不存在的 id 或其他狀態的項目會拋出例外,已完成的工作不會被重新排入佇列。
 
 
 失敗語意

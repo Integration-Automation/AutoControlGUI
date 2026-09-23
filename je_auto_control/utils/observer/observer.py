@@ -133,6 +133,10 @@ class ScreenObserver:
         rule.last = value
         if event is None or event not in rule.events:
             return None
+        with self._lock:
+            removed = rule not in self._rules
+        if removed:
+            return None     # removed while this poll was running: remove() returned True
         self._fire(rule, event, value)
         record = {"rule": rule.name, "event": event, "time": time.time()}
         with self._lock:

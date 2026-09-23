@@ -72,8 +72,10 @@ def test_compensation_failure_is_best_effort():
               .step("b", make("do-b"), bad_undo)    # its undo raises
               .step("c", boom, None)
               .run())
-    # rollback continues past the failing compensation; a still undone
-    assert result.compensated == ["b", "a"]
+    # rollback continues past the failing compensation; a still undone, and
+    # b -- whose undo raised -- is reported as an error, not as compensated
+    assert result.compensated == ["a"]
+    assert result.compensation_errors == {"b": "undo failed"}
     assert log == ["do-a", "do-b", "undo-a"]       # undo-a still ran
 
 

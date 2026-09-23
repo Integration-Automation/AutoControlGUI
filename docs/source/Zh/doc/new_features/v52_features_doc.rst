@@ -7,7 +7,8 @@ Saga / 補償回溯
 任何失敗時以 **LIFO** 順序對已完成步驟執行補償。
 
 前向動作與補償皆為純可呼叫物件(或經執行器以 JSON 動作清單),因此編排可在無任何真實副
-作用下完整單元測試。補償為盡力而為:失敗的補償會被記錄,回溯繼續進行。不匯入
+作用下完整單元測試。補償為盡力而為:失敗的補償會被記錄並列入
+``compensation_errors``(不列入 ``compensated``),回溯繼續進行。不匯入
 ``PySide6``。
 
 無頭 API
@@ -37,5 +38,6 @@ Saga / 補償回溯
 
 ``AC_run_saga`` 接受 ``steps`` —— 一個 ``{name, action: [...], compensation: [...]}``
 的清單(或 JSON 字串),其中 ``action`` / ``compensation`` 各為一個 AutoControl 動作清單。
-回傳 ``{ok, completed, compensated, failed_step, error}``。相同操作亦提供為 MCP 工具
+動作清單以嚴格模式執行——任何動作失敗都會讓該步驟失敗並開始回溯。回傳
+``{ok, completed, compensated, compensation_errors, failed_step, error}``。相同操作亦提供為 MCP 工具
 ``ac_run_saga``,以及 Script Builder 中 **Flow** 分類下的指令。

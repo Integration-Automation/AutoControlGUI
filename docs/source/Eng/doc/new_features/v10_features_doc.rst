@@ -45,7 +45,9 @@ Dispatcher / performer
         item = q.get_next()
 
 ``get_next`` atomically claims the oldest ``new`` item (marking it
-``in_progress``) so multiple performers don't double-process.
+``in_progress``) so multiple performers don't double-process. ``complete`` and
+``fail`` only settle an ``in_progress`` item; an unknown id or an item in any
+other state raises, so finished work is never requeued.
 
 
 Failure semantics

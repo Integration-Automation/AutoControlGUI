@@ -10,8 +10,8 @@ compensations for the completed steps in **LIFO** order.
 
 Forward actions and compensations are plain callables (or, via the executor, JSON
 action lists), so the orchestration is fully unit-testable with no real side
-effects. Compensation is best-effort: a failing compensation is logged and the
-rollback continues. Imports no ``PySide6``.
+effects. Compensation is best-effort: a failing compensation is logged, recorded
+in ``compensation_errors`` (not in ``compensated``) and the rollback continues. Imports no ``PySide6``.
 
 Headless API
 ------------
@@ -40,6 +40,7 @@ Executor command
 
 ``AC_run_saga`` takes ``steps`` — a list (or JSON string) of ``{name, action:
 [...], compensation: [...]}`` where each ``action`` / ``compensation`` is an
-AutoControl action list. It returns ``{ok, completed, compensated, failed_step,
-error}``. The same operation is exposed as the MCP tool ``ac_run_saga`` and as a
+AutoControl action list, run strictly -- any failing action fails its step and
+starts the rollback. It returns ``{ok, completed, compensated,
+compensation_errors, failed_step, error}``. The same operation is exposed as the MCP tool ``ac_run_saga`` and as a
 Script Builder command under **Flow**.

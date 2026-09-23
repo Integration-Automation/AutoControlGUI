@@ -24,9 +24,7 @@ from concurrent.futures import ThreadPoolExecutor
 from dataclasses import asdict, dataclass, field
 from typing import Any, Dict, List, Optional
 
-from je_auto_control.utils.exception.exceptions import (
-    AutoControlActionException, AutoControlAssertionException,
-)
+from je_auto_control.utils.exception.exceptions import AutoControlException
 
 
 @dataclass
@@ -92,8 +90,10 @@ def _run_one_device(actions: List[Any], device: Dict[str, Any],
         runner.execute_action(actions, raise_on_error=True)
         return DeviceResult(device_id, platform, True,
                             time.monotonic() - started)
-    except (AutoControlAssertionException, AutoControlActionException,
-            OSError, RuntimeError, TypeError, ValueError) as error:
+    # The executor's own containment set: an ImageNotFoundException or a
+    # KeyError on one device used to abort the whole matrix.
+    except (AutoControlException, OSError, RuntimeError, ArithmeticError,
+            AttributeError, TypeError, ValueError, LookupError) as error:
         return DeviceResult(device_id, platform, False,
                             time.monotonic() - started, repr(error))
 

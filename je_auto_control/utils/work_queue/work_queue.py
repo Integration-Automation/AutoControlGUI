@@ -50,6 +50,21 @@ class WorkItem:
     output: str = ""
 
 
+def _require_in_progress(item_id: int, row: Any) -> None:
+    """Refuse to settle an item that is unknown or not claimed.
+
+    Completing a never-claimed item, or failing one that had already
+    succeeded (requeueing it for a second run), used to be accepted -- and a
+    performer whose item was re-claimed as stale could overwrite the new
+    performer's outcome.
+    """
+    if row is None:
+        raise AutoControlException(f"no work item with id {item_id}")
+    if row["status"] != STATUS_IN_PROGRESS:
+        raise AutoControlException(
+            f"work item {item_id} is {row['status']}, not {STATUS_IN_PROGRESS}")
+
+
 class WorkQueue:
     """A named, SQLite-backed queue of work items."""
 
@@ -136,11 +151,14 @@ class WorkQueue:
         Returns the resulting status (``new`` when requeued, else ``failed``).
         """
         with self._connect() as conn:
-            row = conn.execute("SELECT retries FROM work_items WHERE id=?",
+            conn.execute("BEGIN IMMEDIATE")
+            row = conn.execute("SELECT retries, status FROM work_items WHERE id=?",
                                (item_id,)).fetchone()
-            if row is None:
-                # It used to report "new" -- requeued -- having updated nothing.
-                raise AutoControlException(f"no work item with id {item_id}")
+            try:
+                _require_in_progress(item_id, row)
+            except AutoControlException:
+                conn.execute("ROLLBACK")
+                raise
             retries = int(row["retries"])
             retryable = kind == "application" and retries < int(max_retries)
             status = STATUS_NEW if retryable else STATUS_FAILED
@@ -148,13 +166,19 @@ class WorkQueue:
                 "UPDATE work_items SET status=?, retries=?, error=?, updated=? "
                 "WHERE id=?",
                 (status, retries + 1, str(error), time.time(), item_id))
+            conn.execute("COMMIT")
             return status
 
     def _set_status(self, item_id: int, status: str, *, output: str = "") -> None:
         with self._connect() as conn:
-            conn.execute(
-                "UPDATE work_items SET status=?, output=?, updated=? WHERE id=?",
-                (status, output, time.time(), item_id))
+            cursor = conn.execute(
+                "UPDATE work_items SET status=?, output=?, updated=? "
+                "WHERE id=? AND status=?",
+                (status, output, time.time(), item_id, STATUS_IN_PROGRESS))
+            if cursor.rowcount == 0:
+                row = conn.execute("SELECT status FROM work_items WHERE id=?",
+                                   (item_id,)).fetchone()
+                _require_in_progress(item_id, row)
 
     def stats(self) -> Dict[str, int]:
         """Return a count of items per status for this queue."""

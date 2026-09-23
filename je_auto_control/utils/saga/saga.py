@@ -13,7 +13,7 @@ side effects. Compensation is best-effort: a failing compensation is logged and
 the rollback continues. Imports no ``PySide6``.
 """
 from dataclasses import dataclass, field
-from typing import Any, Callable, List, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 
 @dataclass
@@ -25,6 +25,9 @@ class SagaResult:
     compensated: List[str] = field(default_factory=list)
     failed_step: Optional[str] = None
     error: str = ""
+    #: ``{step name: error}`` for compensations that raised; such a step is
+    #: not listed in ``compensated``.
+    compensation_errors: Dict[str, str] = field(default_factory=dict)
 
 
 class Saga:
@@ -51,6 +54,8 @@ class Saga:
                     autocontrol_logger)
                 autocontrol_logger.warning(
                     "saga compensation for %r failed: %r", name, error)
+                result.compensation_errors[name] = str(error)
+                continue
             result.compensated.append(name)
 
     def run(self) -> SagaResult:
@@ -76,10 +81,12 @@ def run_saga(steps: Any) -> SagaResult:
     [...]}`` mappings; each ``action`` / ``compensation`` is an AutoControl
     action list run through the executor.
     """
-    from je_auto_control.utils.executor.action_executor import execute_action
+    from je_auto_control.utils.executor.action_executor import executor
 
     def _runner(action_list: Any) -> Callable[[], Any]:
-        return lambda: execute_action(action_list)
+        # raise_on_error: a failed action is otherwise recorded and swallowed,
+        # so the saga never saw a failing step and never rolled back.
+        return lambda: executor.execute_action(list(action_list), raise_on_error=True)
 
     saga = Saga()
     for spec in steps:

@@ -6937,6 +6937,7 @@ def _run_saga(steps: Any) -> Dict[str, Any]:
     result = run_saga(steps)
     return {"ok": result.ok, "completed": result.completed,
             "compensated": result.compensated,
+            "compensation_errors": result.compensation_errors,
             "failed_step": result.failed_step, "error": result.error}
 
 

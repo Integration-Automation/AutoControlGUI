@@ -42,6 +42,10 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Changed
 
+- **`WorkQueue.complete` / `fail` require an `in_progress` item.** An unknown
+  id or an item in another state raises, so finished work is never requeued
+  and a stale performer cannot overwrite a newer outcome.
+
 - **`AgentTrace.to_otel` returns OTLP/JSON spans** (trace and span ids,
   nanosecond times, integer enums, typed attributes) instead of flat dicts
   with `duration_s`. Cost records refuse negative token counts.
@@ -223,6 +227,12 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
   package does no PKCS#7 decryption, so the `>=48.0.1` floor is unchanged.
 
 ### Fixed
+
+- **Sagas roll back.** `run_saga` / `AC_run_saga` ran steps leniently, so a
+  failing step was never noticed and nothing was compensated; a compensation
+  that raises is reported in `compensation_errors`. One failing device no
+  longer aborts the device matrix, a DAG node raising any exception fails
+  that node, and an observer rule removed mid-poll no longer fires.
 
 - **Metrics, SARIF, SBOM and version checks follow their specs.** Labelled
   Prometheus metrics no longer render a bogus unlabelled series, partial
