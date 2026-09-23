@@ -19,7 +19,7 @@ from je_auto_control.utils.remote_desktop.clipboard_sync import (
     ClipboardSyncError, decode as decode_clipboard,
 )
 from je_auto_control.utils.remote_desktop.file_transfer import (
-    FileTransferError,
+    FileTransferError, decode_begin,
 )
 from je_auto_control.utils.remote_desktop.host_access import (
     PERMISSION_DENIED, PERMISSION_FULL, PERMISSION_VIEW_ONLY,
@@ -65,6 +65,9 @@ class _ClientHandler:
         self._audio_event = threading.Event()
         self._audio_sender_thread: Optional[threading.Thread] = None
         self.authenticated = False
+        # Transfers this viewer began: aborted if it disconnects mid-file,
+        # which used to leave the .part file and its open handle behind.
+        self._transfer_ids: set = set()
         # Phase 5.3: per-client permission set by the approval callback.
         # Default is full control so legacy callers (no callback) keep
         # the prior behaviour.
@@ -145,8 +148,12 @@ class _ClientHandler:
         self._audio_event.set()
 
     def stop(self) -> None:
-        """Signal threads and close the socket."""
+        """Signal threads, abandon this viewer's unfinished uploads, close the socket."""
         self._shutdown.set()
+        receiver = self._host._file_receiver
+        if receiver is not None:
+            for transfer_id in list(self._transfer_ids):
+                receiver.abort(transfer_id, "viewer disconnected")
         with self._host._frame_cond:
             self._host._frame_cond.notify_all()
         self._audio_event.set()
@@ -337,6 +344,7 @@ class _ClientHandler:
         receiver = self._host._ensure_file_receiver()
         try:
             if msg_type is MessageType.FILE_BEGIN:
+                self._transfer_ids.add(decode_begin(payload)[0])
                 receiver.handle_begin(payload)
             elif msg_type is MessageType.FILE_CHUNK:
                 receiver.handle_chunk(payload)

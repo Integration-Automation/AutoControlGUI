@@ -244,6 +244,22 @@ class FileReceiver:
         _discard(incoming.part_path)
         return ok, message
 
+    def abort(self, transfer_id: str, reason: str) -> None:
+        """Abandon an in-flight transfer: close it and delete its part file."""
+        with self._lock:
+            incoming = self._active.get(transfer_id)
+        if incoming is None:
+            return
+        incoming.error = incoming.error or reason
+        self._abort(incoming)
+
+    def abort_all(self, reason: str) -> None:
+        """Abandon every in-flight transfer (the host is stopping)."""
+        with self._lock:
+            transfer_ids = list(self._active)
+        for transfer_id in transfer_ids:
+            self.abort(transfer_id, reason)
+
     def _abort(self, incoming: _Incoming) -> None:
         try:
             incoming.handle.close()

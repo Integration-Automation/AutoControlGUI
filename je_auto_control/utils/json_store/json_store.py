@@ -12,6 +12,8 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Any, Callable, Dict, Iterator, Optional, TypeVar, Union
 
+from je_auto_control.utils.logging.logging_instance import autocontrol_logger
+
 _Result = TypeVar("_Result")
 
 
@@ -187,3 +189,38 @@ class SharedJsonDict:
             result = mutate(data)
             write_json_dict(self._path, data)
         return result
+
+
+def quarantine_file(path: Union[str, Path], label: str, reason: Any) -> Optional[Path]:
+    """Move an unusable store file aside as ``<name>.corrupt-<time>``; return where.
+
+    A store that reads a damaged file as empty and then saves replaces every
+    entry the file held. Moving it aside keeps the data for the operator and
+    lets the store start clean. Returns ``None`` when the move fails.
+    """
+    source = Path(path)
+    target = source.with_name(f"{source.name}.corrupt-{int(time.time())}")
+    try:
+        os.replace(source, target)
+    except OSError as error:
+        autocontrol_logger.error("%s %s unreadable (%s) and could not be moved aside: %r",
+                                 label, source, reason, error)
+        return None
+    autocontrol_logger.warning("%s %s unreadable (%s); moved to %s", label, source, reason, target)
+    return target
+
+
+def load_json_or_quarantine(path: Union[str, Path], label: str) -> Any:
+    """The JSON at ``path``, ``None`` when missing; an unreadable file is quarantined.
+
+    See :func:`quarantine_file`. A UTF-8 BOM is accepted.
+    """
+    source = Path(path)
+    if not source.exists():
+        return None
+    try:
+        return json.loads(source.read_text(encoding="utf-8-sig"))
+    except (OSError, ValueError) as error:  # ValueError: bad JSON or not UTF-8
+        quarantine_file(source, label, repr(error))
+        return None
+

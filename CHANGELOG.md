@@ -273,6 +273,10 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Fixed
 
+- **Remote desktop: a damaged trust list, known_hosts or address book is
+  moved aside instead of being overwritten**, an upload interrupted by a
+  disconnect or a host stop leaves no `.part` file, and stopping the relay
+  ends its paired sessions.
 - **The socket server reads indented (multi-line) JSON commands whole**, and
   the socket driver docs' client example sends the newline terminator it
   needs.

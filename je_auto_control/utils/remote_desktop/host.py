@@ -291,6 +291,8 @@ class RemoteDesktopHost(FrameProductionMixin):
             self._clients.clear()
         for client in clients:
             client.stop()
+        if self._file_receiver is not None:
+            self._file_receiver.abort_all("host stopped")
         for thread in (self._accept_thread, self._capture_thread,
                        self._cursor_thread):
             # is_alive() also guards the not-yet-started case: start() assigns

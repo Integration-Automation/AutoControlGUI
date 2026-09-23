@@ -63,10 +63,11 @@ def _read_exact(sock: socket.socket, length: int) -> bytes:
 
 
 def _pipe(src: socket.socket, dst: socket.socket,
-          stop_event: threading.Event) -> None:
-    """Forward bytes from ``src`` to ``dst`` until either closes."""
+          stop_event: threading.Event,
+          server_stop: Optional[threading.Event] = None) -> None:
+    """Forward bytes from ``src`` to ``dst`` until either closes or the server stops."""
     try:
-        while not stop_event.is_set():
+        while not stop_event.is_set() and not (server_stop is not None and server_stop.is_set()):
             # Wait for readability with a timeout instead of a bare blocking
             # recv() so the loop always circles back to re-check stop_event
             # even if a cross-thread shutdown() fails to wake the recv().
@@ -97,15 +98,21 @@ def _pipe(src: socket.socket, dst: socket.socket,
 
 
 def _pair_and_pump(host_sock: socket.socket,
-                   viewer_sock: socket.socket) -> None:
-    """Bridge two sockets in both directions on dedicated threads."""
+                   viewer_sock: socket.socket,
+                   server_stop: Optional[threading.Event] = None) -> None:
+    """Bridge two sockets in both directions on dedicated threads.
+
+    ``server_stop`` ends the session with the relay: ``RelayServer.stop()``
+    used to close only the listener and parked peers, and paired sessions
+    kept forwarding.
+    """
     stop = threading.Event()
     t1 = threading.Thread(
-        target=_pipe, args=(host_sock, viewer_sock, stop),
+        target=_pipe, args=(host_sock, viewer_sock, stop, server_stop),
         name="relay-h2v", daemon=True,
     )
     t2 = threading.Thread(
-        target=_pipe, args=(viewer_sock, host_sock, stop),
+        target=_pipe, args=(viewer_sock, host_sock, stop, server_stop),
         name="relay-v2h", daemon=True,
     )
     t1.start()
@@ -273,7 +280,7 @@ class RelayServer:
             return
         host_sock = client_sock if role == _ROLE_HOST else partner_sock
         viewer_sock = client_sock if role == _ROLE_VIEWER else partner_sock
-        _pair_and_pump(host_sock, viewer_sock)
+        _pair_and_pump(host_sock, viewer_sock, self._shutdown)
 
 
 _PENDING_TTL_S = 300.0

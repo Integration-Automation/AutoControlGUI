@@ -22,7 +22,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Dict, Optional
 
-from je_auto_control.utils.json_store.json_store import atomic_write_text
+from je_auto_control.utils.json_store.json_store import (
+    atomic_write_text, load_json_or_quarantine, quarantine_file,
+)
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 
 
@@ -46,12 +48,9 @@ def load_or_create_host_fingerprint(path: Optional[Path] = None) -> str:
             pass
     new_fp = secrets.token_hex(32)
     try:
+        # Atomic and 0600 from creation (mkstemp), not written then chmod-ed.
         target.parent.mkdir(parents=True, exist_ok=True)
-        target.write_text(new_fp, encoding="utf-8")
-        try:
-            os.chmod(target, 0o600)
-        except OSError:
-            pass
+        atomic_write_text(target, new_fp)
     except OSError as error:
         autocontrol_logger.warning("host_fingerprint persist: %r", error)
     return new_fp
@@ -77,14 +76,14 @@ class KnownHosts:
         self._load()
 
     def _load(self) -> None:
-        if not self._path.exists():
-            return
-        try:
-            data = json.loads(self._path.read_text(encoding="utf-8"))
-        except (OSError, ValueError) as error:  # ValueError: bad JSON or not UTF-8
-            autocontrol_logger.warning("known_hosts load: %r", error)
+        # Quarantined, not dropped: an empty known_hosts saved over a damaged
+        # one silently reset every pin, so the next connection re-trusted
+        # whatever answered.
+        data = load_json_or_quarantine(self._path, "known_hosts")
+        if data is None:
             return
         if not isinstance(data, dict):
+            quarantine_file(self._path, "known_hosts", "not a JSON object")
             return
         for host_id, value in data.items():
             if not isinstance(host_id, str):
