@@ -49,8 +49,11 @@ def _sink_scroll(event: Dict[str, Any]) -> None:
     # is kept, and that is now enough: a negative value reverses the
     # direction on every backend, X11 and Wayland included. They used to
     # discard it and always scroll ``scroll_direction``, so a macro
-    # recorded on Windows replayed backwards there, silently.
-    mouse_scroll(int(event.get("value", event.get("delta", 1))))
+    # recorded on Windows replayed backwards there, silently. The direction
+    # is named too: X11 and Wayland default to ``scroll_down`` for a positive
+    # value, the recorders' "up".
+    mouse_scroll(int(event.get("value", event.get("delta", 1))),
+                 scroll_direction="scroll_up")
 
 
 def _sink_press(event: Dict[str, Any]) -> None:
@@ -92,18 +95,30 @@ def _sink_key_up(event: Dict[str, Any]) -> None:
     release_keyboard_key(event["vk"])
 
 
+def _event_point(event: Dict[str, Any]) -> Tuple[Optional[int], Optional[int]]:
+    """The event's point, or ``(None, None)`` for "where the cursor is".
+
+    The cleanup release after a failed step carries no point; filling in
+    ``(0, 0)`` made macOS release the button in the top-left corner, where a
+    hot corner can fire.
+    """
+    if "x" in event and "y" in event:
+        return int(event["x"]), int(event["y"])
+    return None, None
+
+
 def _sink_mouse_down(event: Dict[str, Any]) -> None:
     from je_auto_control.wrapper.auto_control_mouse import press_mouse
     _move_to_event(event)
     press_mouse(_RECORDED_BUTTON.get(event.get("button", ""), "mouse_left"),
-                int(event.get("x", 0)), int(event.get("y", 0)))
+                *_event_point(event))
 
 
 def _sink_mouse_up(event: Dict[str, Any]) -> None:
     from je_auto_control.wrapper.auto_control_mouse import release_mouse
     _move_to_event(event)
     release_mouse(_RECORDED_BUTTON.get(event.get("button", ""), "mouse_left"),
-                  int(event.get("x", 0)), int(event.get("y", 0)))
+                  *_event_point(event))
 
 
 #: Two vocabularies reach this table and both have to work. The `run_sequence`

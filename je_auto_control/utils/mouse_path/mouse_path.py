@@ -18,6 +18,15 @@ Point = Sequence[int]
 Sink = Callable[[Dict[str, Any]], None]
 
 
+def _pixel(value: Any) -> int:
+    """A waypoint coordinate rounded to a pixel.
+
+    ``int()`` truncated toward zero, so ``-0.6`` -- a point on a monitor left
+    of the primary one -- landed on the primary screen at ``0``.
+    """
+    return int(round(float(value)))
+
+
 def plan_path(waypoints: Sequence[Point], *, easing: str = "linear",
               per_segment_steps: int = 20) -> List[List[int]]:
     """Return the eased point list passing through every waypoint in order.
@@ -31,11 +40,11 @@ def plan_path(waypoints: Sequence[Point], *, easing: str = "linear",
         return points
     if len(waypoints) == 1:
         first = waypoints[0]
-        return [[int(first[0]), int(first[1])]]
+        return [[_pixel(first[0]), _pixel(first[1])]]
     for index in range(len(waypoints) - 1):
         here, there = waypoints[index], waypoints[index + 1]
-        segment = tween_points((int(here[0]), int(here[1])),
-                               (int(there[0]), int(there[1])),
+        segment = tween_points((_pixel(here[0]), _pixel(here[1])),
+                               (_pixel(there[0]), _pixel(there[1])),
                                per_segment_steps, easing)
         points.extend(segment[1:] if index else segment)
     return points

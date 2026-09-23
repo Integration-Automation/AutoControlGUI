@@ -8,6 +8,7 @@ unit-testable); :func:`hold_key` dispatches it through an injectable ``sink`` an
 ``sleep`` so it is tested without real input or real waiting. Imports no
 ``PySide6``.
 """
+import math
 import time
 from typing import Any, Callable, Dict, List, Optional
 
@@ -23,15 +24,16 @@ def plan_key_hold(key: str, duration_s: float, *,
     With ``rate_hz`` unset the key is pressed, held for ``duration_s``, then
     released. With ``rate_hz`` set it is sent as ``round(duration_s * rate_hz)``
     discrete key events spaced ``1 / rate_hz`` apart (simulated auto-repeat).
-    Raises ``ValueError`` on a non-positive duration or rate.
+    Raises ``ValueError`` on a non-positive or non-finite duration or rate.
     """
-    if duration_s <= 0:
+    # NaN passed `<= 0`, so the key went down before sleep(NaN) raised.
+    if not (math.isfinite(duration_s) and duration_s > 0):
         raise ValueError("duration_s must be positive")
     if rate_hz is None:
         return [{"op": "press", "key": key},
                 {"op": "wait", "seconds": float(duration_s)},
                 {"op": "release", "key": key}]
-    if rate_hz <= 0:
+    if not (math.isfinite(rate_hz) and rate_hz > 0):
         raise ValueError("rate_hz must be positive")
     interval = 1.0 / float(rate_hz)
     count = max(1, round(float(duration_s) * float(rate_hz)))

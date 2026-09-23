@@ -253,6 +253,10 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Fixed
 
+- **Replayed wheel-up scrolls up on X11 and Wayland**, the cleanup release
+  after a failed replay step stays at the cursor instead of `(0, 0)`, gesture
+  waypoints round to the nearest pixel, and a NaN key-hold duration is
+  refused before the key goes down.
 - **macOS and Linux hotkeys no longer retry a combo that failed on every
   tick**, logging an error ten times a second; `bind()` rejects a key macOS
   cannot take up front, as it already did on Windows.
