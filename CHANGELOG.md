@@ -193,6 +193,9 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Security
 
+- **The USB passthrough ACL fails closed when its signature is deleted** once a
+  signing key exists, keeps a damaged file aside instead of overwriting it,
+  and refuses malformed vendor/product ids that never matched.
 - **`AC_list_plugins` / `AC_load_plugins` and the matching MCP tools load only
   the `je_auto_control.commands` entry-point group**; another group such as
   `console_scripts` ran every installed tool's `main()`.
@@ -279,6 +282,8 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Fixed
 
+- **USB/IP answers a libusb error without an errno with `-EIO`** instead of
+  dropping the client connection.
 - **`match_masked`, `match_masked_all`, `match_subpixel`, `match_auto` and
   `detect_scale` return screen coordinates** when given a region or when the
   virtual desktop starts at a negative x, instead of frame-local ones.

@@ -253,7 +253,9 @@ sidecar 簽章；載入時驗證，不符就 fail-closed（default-deny、
 產生一把隨機金鑰檔（POSIX 上 ``0o600``）。注意：同使用者身分的
 process 仍可讀金鑰檔而偽造簽章，故高保證部署建議改用 keychain 金鑰
 （見 operator guide）。升級前既有的未簽章檔案視為 legacy，仍可載入
-（下次儲存即補簽），可用 ``require_signature=True`` 拒絕未簽章檔。
+（下次儲存即補簽）——但只限還沒有簽章金鑰的時候：金鑰存在後，缺少簽章就和
+簽章錯誤一樣拒絕。可用 ``require_signature=True`` 一律拒絕未簽章檔。無法解析
+的檔案會被移到 ``usb_acl.json.corrupt-<時間>``，ACL 退回全部拒絕。
 
 稽核
 ----

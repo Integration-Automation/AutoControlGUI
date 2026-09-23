@@ -201,7 +201,9 @@ def _translate_error(error: BaseException) -> int:
         return -110
     if name == "USBError":
         # Take errno from the OS where available; else fall back to -EIO.
-        return -getattr(error, "errno", 5) or -5
+        # pyusb raises errno=None for LIBUSB_ERROR_OTHER, and -None was a
+        # TypeError that dropped the client connection.
+        return -(getattr(error, "errno", None) or 5)
     if isinstance(error, ValueError):
         return -22
     return -71
