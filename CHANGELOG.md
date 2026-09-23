@@ -193,6 +193,8 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Security
 
+- **HTTP cassettes no longer record credential headers**, and a `match_on`
+  field they cannot compare raises instead of matching every request.
 - **JWT decoding rejects characters outside base64url** (which made tokens
   malleable) and a `NaN` expiry that never expired, and `encode_jwt` no longer
   lets extra headers override `alg`.
@@ -288,6 +290,9 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Fixed
 
+- **The versioned store (`AC_cas_*`) keeps versions monotonic across a
+  reload and serialises concurrent writers**, and a config-bundle import whose
+  write fails leaves the live file in place.
 - **Every malformed JWT raises `JwtError`**, so `AC_jwt_decode` answers
   `{"ok": false}` instead of failing, and it accepts `algorithms` given as one
   name.

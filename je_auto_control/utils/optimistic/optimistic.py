@@ -10,10 +10,12 @@ monotonic int and the store is in-memory with JSON persistence, so behaviour is
 fully deterministic in CI.
 """
 import json
+import threading
 from pathlib import Path
 from typing import Any, Dict, Optional
 
 from je_auto_control.utils.exception.exceptions import AutoControlException
+from je_auto_control.utils.json_store.json_store import atomic_write_text
 
 
 class VersionConflict(AutoControlException):
@@ -24,6 +26,10 @@ class VersionedStore:
     """A key/value store guarded by a monotonic version (optimistic CAS)."""
 
     def __init__(self) -> None:
+        # put/delete are check-then-write: without a lock two writers holding
+        # the same expected_version both succeeded (AC_cas_put is reachable
+        # from concurrent servers).
+        self._lock = threading.RLock()
         self._data: Dict[str, Dict[str, Any]] = {}
         # Highest version each key has had, kept across deletes: re-creating a
         # deleted key restarted at version 1, so a stale writer holding the
@@ -32,8 +38,9 @@ class VersionedStore:
 
     def get(self, key: str) -> Optional[Dict[str, Any]]:
         """Return ``{value, version}`` for ``key`` or ``None``."""
-        record = self._data.get(key)
-        return dict(record) if record is not None else None
+        with self._lock:
+            record = self._data.get(key)
+            return dict(record) if record is not None else None
 
     def _check(self, key: str, expected_version: Optional[int]) -> int:
         current = self._data.get(key)
@@ -51,44 +58,60 @@ class VersionedStore:
         ``expected_version`` of ``0`` requires the key to be absent; ``None``
         forces a blind write. Raises :class:`VersionConflict` on a mismatch.
         """
-        current = self._check(key, expected_version)
-        new_version = max(current, self._high_water.get(key, 0)) + 1
-        self._data[key] = {"value": value, "version": new_version}
-        self._high_water[key] = new_version
-        return new_version
+        with self._lock:
+            current = self._check(key, expected_version)
+            new_version = max(current, self._high_water.get(key, 0)) + 1
+            self._data[key] = {"value": value, "version": new_version}
+            self._high_water[key] = new_version
+            return new_version
 
     def delete(self, key: str, *,
                expected_version: Optional[int] = None) -> bool:
         """Delete ``key`` if ``expected_version`` matches; return whether it existed."""
-        if key not in self._data:
-            return False
-        self._check(key, expected_version)
-        del self._data[key]
-        return True
+        with self._lock:
+            if key not in self._data:
+                return False
+            self._check(key, expected_version)
+            del self._data[key]
+            return True
 
     def to_dict(self) -> Dict[str, Any]:
         """Return all records as a plain dict."""
-        return {key: dict(value) for key, value in self._data.items()}
+        with self._lock:
+            return {key: dict(value) for key, value in self._data.items()}
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "VersionedStore":
-        """Build a store from a :meth:`to_dict` mapping."""
+    def from_dict(cls, data: Dict[str, Any],
+                  high_water: Optional[Dict[str, int]] = None) -> "VersionedStore":
+        """Build a store from a :meth:`to_dict` mapping (and saved high-water marks)."""
         store = cls()
         store._data = {key: dict(value) for key, value in data.items()}
         store._high_water = {key: int(value.get("version", 0)) for key, value in data.items()}
+        for key, version in (high_water or {}).items():
+            store._high_water[key] = max(store._high_water.get(key, 0), int(version))
         return store
 
     def save(self, path: str) -> str:
-        """Persist the store to ``path`` as JSON; return the path."""
+        """Persist the store to ``path`` as JSON (atomically); return the path.
+
+        The high-water marks are saved with the records: without them a key
+        deleted and re-created after a reload restarted at version 1, and a
+        stale writer holding the old version 1 overwrote it (ABA).
+        """
+        with self._lock:
+            payload = {"records": self.to_dict(), "high_water": dict(self._high_water)}
         out = Path(path)
         out.parent.mkdir(parents=True, exist_ok=True)
-        out.write_text(json.dumps(self.to_dict(), indent=2), encoding="utf-8")
+        atomic_write_text(out, json.dumps(payload, indent=2))
         return str(out)
 
     @classmethod
     def load(cls, path: str) -> "VersionedStore":
-        """Load a store from a JSON file."""
-        return cls.from_dict(json.loads(Path(path).read_text(encoding="utf-8")))
+        """Load a store saved by :meth:`save` (or the older bare-records file)."""
+        data = json.loads(Path(path).read_text(encoding="utf-8"))
+        if isinstance(data, dict) and isinstance(data.get("records"), dict):
+            return cls.from_dict(data["records"], data.get("high_water"))
+        return cls.from_dict(data)
 
 
 def if_match_header(version: int) -> str:

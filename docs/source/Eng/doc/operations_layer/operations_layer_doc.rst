@@ -506,7 +506,8 @@ Headless::
    print(report.written, report.skipped, report.backups)
 
 Import is non-destructive: anything we are about to overwrite is
-first renamed to ``<name>.bak.<unix_ts>``. Bad versions, unknown
+first copied to ``<name>.bak.<unix_ts>``, and the original stays in place
+until the new content has been written. Bad versions, unknown
 filenames and path-traversal attempts are rejected; format
 mismatches between the bundle and the allowlist (e.g. a ``text``
 entry where the allowlist expects ``json``) are skipped.

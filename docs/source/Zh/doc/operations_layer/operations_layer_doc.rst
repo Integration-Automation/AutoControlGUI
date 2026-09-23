@@ -479,7 +479,7 @@ Headless::
    report = import_config_bundle(bundle)
    print(report.written, report.skipped, report.backups)
 
-匯入是非破壞性的：要覆寫的東西先 rename 成 ``<name>.bak.<unix_ts>``\ 。
+匯入是非破壞性的：要覆寫的東西先複製成 ``<name>.bak.<unix_ts>``\ ，原檔在新內容寫好之前都留在原處。
 壞版本、未知檔名、path-traversal 嘗試都會被拒；bundle 與 allowlist
 之間的 format 不一致（例如 allowlist 期望 ``json`` 但 bundle 給
 ``text``）會被略過。

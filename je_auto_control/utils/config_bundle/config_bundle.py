@@ -22,7 +22,7 @@ Files in the allowlist that don't exist on disk simply don't appear in
 target", not "delete it".
 
 Import is **non-destructive**: any file we are about to overwrite is
-first renamed to ``<name>.bak.<unix_ts>`` so the user can roll back.
+first copied to ``<name>.bak.<unix_ts>`` so the user can roll back.
 The audit log (``audit.db``) is intentionally NOT in the allowlist —
 it's a tamper-evident log, not config. Replacing it from a bundle
 would defeat the chain.
@@ -32,6 +32,7 @@ from __future__ import annotations
 import json
 import os
 import platform
+import shutil
 import time
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
@@ -148,7 +149,7 @@ def export_config_bundle(root: Optional[Path] = None) -> Dict[str, Any]:
 class ConfigBundleImporter:
     """Validate a bundle dict, then write its contents back to ``root``.
 
-    Existing files are renamed to ``<name>.bak.<unix_ts>`` before being
+    Existing files are copied to ``<name>.bak.<unix_ts>`` before being
     overwritten. Files not in the bundle are left alone.
     """
 
@@ -260,7 +261,10 @@ class ConfigBundleImporter:
         if target.exists():
             backup_path = _unused_backup_path(target, backup_stamp)
             try:
-                target.replace(backup_path)
+                # Copied, not moved: the move left no file at all when the
+                # write below then failed, so a "non-destructive" import
+                # deleted the live config.
+                shutil.copy2(target, backup_path)
                 report.backups[relative] = str(backup_path.name)
             except OSError as error:
                 autocontrol_logger.warning(

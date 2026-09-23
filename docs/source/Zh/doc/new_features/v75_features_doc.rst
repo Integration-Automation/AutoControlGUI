@@ -29,7 +29,10 @@ CI 重跑。用戶端現在開放 ``build_call`` / ``urllib_transport`` 接縫,�
 
 ``build_call`` 把請求參數轉成純 dict(url、method、headers、body、timeout)而不碰網路;
 ``urllib_transport`` 負責實際發送。``Cassette.record`` 儲存一組請求/回應;``replay`` 為符合
-``match_on``(預設 ``("method", "url")``,可加 ``"body"``)的請求回傳已錄製的回應,找不到時拋出
+``match_on``(預設 ``("method", "url")``,可加 ``"body"`` 與 ``"headers"``;其他名稱會拋出
+``ValueError``)的請求回傳已錄製的回應;憑證類標頭(``Authorization``、``Cookie``、
+``Set-Cookie``、``Proxy-Authorization``、``X-Api-Key``、``X-Auth-Token``)錄成
+``<redacted>`` 且不參與比對。找不到時拋出
 ``CassetteMissError``。``replay_transport`` / ``recording_transport`` 回傳可直接替換的傳輸,讓既有
 呼叫端在不變動下把實際流量換成卡帶。
 

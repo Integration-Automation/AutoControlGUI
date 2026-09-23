@@ -33,8 +33,11 @@ Headless API
 body, timeout) without touching the network; ``urllib_transport`` performs it.
 ``Cassette.record`` stores one request/response pair; ``replay`` returns the
 recorded response for a request matching ``match_on`` (``("method", "url")`` by
-default, optionally ``"body"``) and raises ``CassetteMissError`` when nothing
-matches. ``replay_transport`` / ``recording_transport`` return drop-in
+default, optionally ``"body"`` and ``"headers"``; any other name raises
+``ValueError``) and raises ``CassetteMissError`` when nothing matches.
+Credential headers (``Authorization``, ``Cookie``, ``Set-Cookie``,
+``Proxy-Authorization``, ``X-Api-Key``, ``X-Auth-Token``) are recorded as
+``<redacted>`` and not compared. ``replay_transport`` / ``recording_transport`` return drop-in
 transports so existing call sites swap live traffic for the cassette unchanged.
 
 Executor command
