@@ -157,6 +157,8 @@ def create_failure_bundle(
         "schema": "autocontrol.failure-bundle/v1",
         "created_at_unix": time.time(),
         "error": None if error is None else redact_secret_text(str(error)),
+        # str(TimeoutError()) is "", so the message alone can say nothing.
+        "error_type": None if error is None else type(error).__name__,
         "runtime": {
             "python": sys.version.split()[0],
             "platform": platform.platform(),

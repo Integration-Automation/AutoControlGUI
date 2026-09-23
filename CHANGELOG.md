@@ -15,6 +15,8 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Added
 
+- **Failure-bundle manifests record `error_type`** beside the redacted
+  message, which is empty for exceptions such as `TimeoutError()`.
 - **Config-sync routes on the signaling server.** `GET` / `PUT
   /config/{user_id}` serve the buckets `ConfigSyncClient` pushes and pulls
   (in memory, secret-checked, 1 MiB per bucket); the client had no server
@@ -251,6 +253,9 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Fixed
 
+- **`write_step_video` renders a generator of steps** instead of an empty
+  video, and a trajectory rubric given one action name as a string checks
+  that name rather than its letters.
 - **Codegen output always compiles and runs as the JSON would**: keyword or
   non-identifier flow names, NaN / Infinity values, `AC_execute_action`
   arguments, `{"auto_control": [...]}` files and Robot test names that read as

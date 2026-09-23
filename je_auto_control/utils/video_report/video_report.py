@@ -115,6 +115,9 @@ def write_step_video(steps: Sequence[Any], output_path: str, *,
     makes the assembly testable without cv2.
     """
     load = loader or _default_loader
+    # Read twice below: a generator was spent by the plan, and the video came
+    # out empty without an error.
+    steps = list(steps)
     plan = build_overlay_plan(steps, fps, seconds_per_step)
     coerced = [_coerce_step(step) for step in steps]
     rendered = [render_overlay_frame(load(step.image), entry["caption"],
