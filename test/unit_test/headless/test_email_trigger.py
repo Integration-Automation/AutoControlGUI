@@ -20,10 +20,11 @@ class _FakeIMAP:
 
     instances: List["_FakeIMAP"] = []
 
-    def __init__(self, host: str, port: int, ssl_context=None):
+    def __init__(self, host: str, port: int, ssl_context=None, timeout=None):
         self.host = host
         self.port = port
         self.ssl_context = ssl_context
+        self.timeout = timeout
         self.logged_in = False
         self.selected = None
         self.searches: List[str] = []

@@ -23,7 +23,6 @@ from dataclasses import dataclass, field
 from email.header import decode_header, make_header
 from typing import Any, Callable, Dict, Iterable, List, Optional
 
-from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.json.json_file import read_executable_action_json
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.run_history.artifact_manager import (
@@ -72,21 +71,35 @@ def _decode_header_value(value: Optional[str]) -> str:
         return str(value)
 
 
+def _part_text(part) -> Optional[str]:
+    """A text part's content, or ``None`` when its bytes cannot be read.
+
+    A charset Python does not know (``unknown-8bit``, ``x-user-defined``,
+    common on mailing lists) raised ``LookupError`` and the body was dropped;
+    the raw bytes are decoded as UTF-8 with replacement instead.
+    """
+    try:
+        return (part.get_content() or "").strip()
+    except LookupError:
+        payload = part.get_payload(decode=True)
+        if not isinstance(payload, bytes):
+            return None
+        return payload.decode("utf-8", errors="replace").strip()
+    except ValueError:
+        return None
+
+
 def _extract_text_body(msg) -> str:
     """Return the first text/plain part as a string, falling back to the body."""
     if msg.is_multipart():
         for part in msg.walk():
             if part.get_content_type() == "text/plain" \
                     and "attachment" not in (part.get("Content-Disposition") or ""):
-                try:
-                    return part.get_content().strip()
-                except (LookupError, ValueError):
-                    continue
+                text = _part_text(part)
+                if text is not None:
+                    return text
         return ""
-    try:
-        return (msg.get_content() or "").strip()
-    except (LookupError, ValueError):
-        return ""
+    return _part_text(msg) or ""
 
 
 def _build_payload(uid: str, msg) -> Dict[str, Any]:
@@ -101,6 +114,10 @@ def _build_payload(uid: str, msg) -> Dict[str, Any]:
     }
 
 
+#: Seconds any one IMAP connect or command may block.
+_IMAP_TIMEOUT_S = 30.0
+
+
 def _connect(trigger: EmailTrigger) -> imaplib.IMAP4:
     """Open and authenticate against the IMAP server."""
     context = ssl_module.create_default_context()
@@ -108,11 +125,14 @@ def _connect(trigger: EmailTrigger) -> imaplib.IMAP4:
     # 3.10+, but stating it explicitly satisfies python:S4423.
     context.minimum_version = ssl_module.TLSVersion.TLSv1_2
     client: imaplib.IMAP4
+    # Without a timeout a server that accepts and never greets hung this
+    # watcher's thread for good: stop() gave up on it and start() added
+    # another.
     if trigger.use_ssl:
         client = imaplib.IMAP4_SSL(trigger.host, trigger.port,
-                                   ssl_context=context)
+                                   ssl_context=context, timeout=_IMAP_TIMEOUT_S)
     else:
-        client = imaplib.IMAP4(trigger.host, trigger.port)
+        client = imaplib.IMAP4(trigger.host, trigger.port, timeout=_IMAP_TIMEOUT_S)
     client.login(trigger.username, trigger.password)
     return client
 
@@ -329,10 +349,12 @@ class EmailTriggerWatcher:
         # AutoControlException). Missing the base here let it escape *before*
         # the uid was marked seen below, so the same message re-fired every
         # poll forever. Catch the whole family: record the failure and still
-        # mark the uid processed.
+        # mark the uid processed. The same holds for any other error a script
+        # or custom executor raises (KeyError, TypeError...): a narrower tuple
+        # re-fired the message on every poll.
         try:
             self._execute_with_history(trigger, payload)
-        except (OSError, ValueError, RuntimeError, AutoControlException) as error:
+        except Exception as error:  # noqa: BLE001  # reason: recorded; the uid must still be marked seen
             trigger.last_error = repr(error)
             autocontrol_logger.error("imap %s fire failed: %r",
                                      trigger.trigger_id, error)
@@ -355,10 +377,9 @@ class EmailTriggerWatcher:
             try:
                 actions = read_executable_action_json(trigger.script_path)
                 self._executor(actions, payload)
-            # Include the framework base so a bad script is recorded as
-            # STATUS_ERROR — not a bogus STATUS_OK — before re-raising.
-            except (OSError, ValueError, RuntimeError,
-                    AutoControlException) as error:
+            # Any failure is recorded as STATUS_ERROR -- not a bogus
+            # STATUS_OK from the finally below -- before re-raising.
+            except Exception as error:  # noqa: BLE001  # reason: re-raised
                 status = STATUS_ERROR
                 error_text = repr(error)
                 raise

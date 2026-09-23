@@ -253,6 +253,9 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Fixed
 
+- **Email triggers fire a failing script once per message**, not on every
+  poll, and record it as an error; IMAP connections time out after 30 s
+  instead of hanging the watcher; a body in an unknown charset is kept.
 - **`write_step_video` renders a generator of steps** instead of an empty
   video, and a trajectory rubric given one action name as a string checks
   that name rather than its letters.
