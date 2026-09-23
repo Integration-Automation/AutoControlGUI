@@ -20,7 +20,7 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 | 指標 | 數值 |
 | --- | ---: |
 | Python 模組總數（含周邊子專案） | 1,048 |
-| 程式碼總行數 | 146,140 |
+| 程式碼總行數 | 146,166 |
 | `je_auto_control/utils/` 子套件數 | 310 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 773 |
 | 套件門面 `__all__` 公開名稱數 | 1,241 |
@@ -370,7 +370,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.5 影像辨識與畫面分析
 
-> 37 個套件、約 5,302 行。
+> 37 個套件、約 5,328 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -390,7 +390,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/image_quality/` | 77 | 在 OCR／比對前評分影像品質（銳利度／對比／亮度） |
 | `utils/img_histogram/` | 99 | 顏色直方圖指紋與變化偵測（抗光照） |
 | `utils/marks_layout/` | 124 | Set-of-Marks 標籤的不重疊排版與可讀配色 |
-| `utils/match_autothresh/` | 105 | Otsu 自動門檻，免去手動調 `min_score` |
+| `utils/match_autothresh/` | 108 | Otsu 自動門檻，免去手動調 `min_score` |
 | `utils/match_ensemble/` | 63 | 多樣板共識比對（多張參考圖投票到同一位置） |
 | `utils/match_stability/` | 68 | 比對前的靜止閘門與跨影格的比對持續性 |
 | `utils/match_trust/` | 136 | 樣板比對可信度評分（次峰比 + peak-to-sidelobe） |
@@ -406,10 +406,10 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/set_of_marks/` | 154 | Set-of-Marks 疊圖：為畫面元素編號供 VLM 指認 |
 | `utils/shape_locator/` | 105 | 以邊緣／輪廓偵測定位元件（矩形／形狀，免樣板） |
 | `utils/ssim/` | 141 | 結構相似度比較：感知分數 + 變化區域 |
-| `utils/subpixel_match/` | 101 | 以二次曲面擬合做次像素級比對精修 |
+| `utils/subpixel_match/` | 103 | 以二次曲面擬合做次像素級比對精修 |
 | `utils/theme_normalize/` | 92 | 主題無關的影像正規化，讓亮色樣板能配對深色模式 |
 | `utils/video_report/` | 164 | 影片步驟疊圖報告：把截圖加字幕串成操作導覽影片 |
-| `utils/visual_match/` | 454 | 會回傳信心值的樣板比對（分數、多尺度、find-all + NMS）；擷取走 `grab_logical`，命中座標已加回虛擬桌面原點，單色樣板直接拒收 |
+| `utils/visual_match/` | 475 | 會回傳信心值的樣板比對（分數、多尺度、find-all + NMS）；擷取走 `grab_logical`，命中座標已加回虛擬桌面原點，單色樣板直接拒收 |
 | `utils/visual_regression/` | 237 | 桌面 GUI 的視覺回歸測試（黃金圖比對） |
 
 ### 5.4.6 OCR 與文字理解
@@ -1080,6 +1080,6 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `osx/` | 17 | 919 |
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 837 |
-| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 676 | 50,536 |
-| **總計** | **1,042** | **146,075** |
+| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 676 | 50,562 |
+| **總計** | **1,042** | **146,101** |
 

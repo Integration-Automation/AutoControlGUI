@@ -91,14 +91,14 @@ def take_golden(path,
 
 
 def _grab(region: Optional[Sequence[int]]) -> Image.Image:
-    """Screen capture via the platform's grabber; raises if not available."""
-    from je_auto_control.utils.cv2_utils.screen_grabber import image_grabber
-    grabber = image_grabber()
-    if region is not None:
-        x, y, width, height = (int(v) for v in region)
-        return grabber.grab(bbox=(x, y, x + width, y + height),
-                            all_screens=True)
-    return grabber.grab(all_screens=True)
+    """Screen capture in mouse coordinates, like every other capture here.
+
+    ``ImageGrab.grab(bbox=...)`` crops in physical pixels, so on a scaled
+    display a region captured the wrong area -- (25..75) instead of (50..150)
+    at 200 %. ``grab_logical`` maps the region first.
+    """
+    from je_auto_control.utils.monitor_layout.logical_frame import grab_logical
+    return grab_logical(region)[0]
 
 
 def image_difference(actual: Image.Image, expected: Image.Image,

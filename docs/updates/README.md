@@ -58,6 +58,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260924-24 | 2026-09-24 | Masked, sub-pixel, auto-threshold and scale matchers answer in screen coordinates; golden images capture in mouse coordinates | #bugfix #audit #vision | [2026-09](2026-09.md) |
 | U-20260924-23 | 2026-09-24 | Remote desktop stores keep damaged files aside; interrupted uploads are cleaned up; stopping the relay ends its sessions | #bugfix #audit | [2026-09](2026-09.md) |
 | U-20260924-22 | 2026-09-24 | Remote desktop host: failed logins free their slot, view-only means view-only, an allowlist of typos admits nobody | #security #audit | [2026-09](2026-09.md) |
 | U-20260924-21 | 2026-09-24 | Socket server reads whole pretty-printed commands; the documented client example works | #bugfix #audit | [2026-09](2026-09.md) |
@@ -182,7 +183,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | File | Period | Entries |
 |---|---|---:|
-| [2026-09.md](2026-09.md) | 2026-09 | 93 |
+| [2026-09.md](2026-09.md) | 2026-09 | 94 |
 | [2026-08-f.md](2026-08-f.md) | 2026-08 | 1 |
 | [2026-08-e.md](2026-08-e.md) | 2026-08 | 2 |
 | [2026-08-d.md](2026-08-d.md) | 2026-08 | 2 |

@@ -15,7 +15,9 @@ are imported lazily. Imports no ``PySide6``.
 """
 from typing import Any, Dict, List, Optional, Sequence
 
-from je_auto_control.utils.visual_match.visual_match import Match, _score_map
+from je_auto_control.utils.visual_match.visual_match import (
+    Match, _score_map, _score_map_with_origin,
+)
 
 ImageSource = Any
 
@@ -85,14 +87,15 @@ def match_auto(template: ImageSource, *, haystack: Optional[ImageSource] = None,
     """
     import numpy as np
     from je_auto_control.utils.cv2_utils.blobs import connected_boxes
-    score_map, tmpl = _score_map(template, haystack, region=region, method=method)
+    score_map, tmpl, origin_x, origin_y = _score_map_with_origin(
+        template, haystack, region=region, method=method)
     if score_map is None:
         return []
     threshold, _ = _otsu_on_scores(score_map)
     cutoff = max(float(floor), threshold)
     mask = (score_map >= cutoff).astype(np.uint8)
     height, width = tmpl.shape[:2]
-    matches = [Match(px, py, width, height, round(score, 4), 1.0)
+    matches = [Match(px + origin_x, py + origin_y, width, height, round(score, 4), 1.0)
                for px, py, score in
                (_peak_in_box(score_map, box) for box in connected_boxes(mask))]
     matches.sort(key=lambda m: m.score, reverse=True)

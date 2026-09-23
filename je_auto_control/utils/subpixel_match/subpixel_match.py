@@ -14,7 +14,7 @@ unit-testable on synthetic arrays. Imports no ``PySide6``.
 from dataclasses import asdict, dataclass
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
-from je_auto_control.utils.visual_match.visual_match import _score_map
+from je_auto_control.utils.visual_match.visual_match import _score_map_with_origin
 
 ImageSource = Any
 
@@ -80,14 +80,16 @@ def match_subpixel(template: ImageSource, *, haystack: Optional[ImageSource] = N
     quadratic-fit offset to the integer centre for fractional-pixel click placement.
     """
     import cv2
-    score_map, tmpl = _score_map(template, haystack, region=region, method=method)
+    score_map, tmpl, origin_x, origin_y = _score_map_with_origin(
+        template, haystack, region=region, method=method)
     if score_map is None:
         return None
     _, max_val, _, max_loc = cv2.minMaxLoc(score_map)
     if max_val < min_score:
         return None
-    peak_x, peak_y = int(max_loc[0]), int(max_loc[1])
-    offset_x, offset_y = refine_peak(score_map, (peak_x, peak_y))
+    local_x, local_y = int(max_loc[0]), int(max_loc[1])
+    offset_x, offset_y = refine_peak(score_map, (local_x, local_y))
+    peak_x, peak_y = local_x + origin_x, local_y + origin_y
     height, width = tmpl.shape[:2]
     return SubPixelMatch(peak_x, peak_y, width, height, round(float(max_val), 4),
                          round(peak_x + width / 2.0 + offset_x, 3),

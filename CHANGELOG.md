@@ -49,6 +49,9 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Changed
 
+- **Golden-image capture (`take_golden` / `compare_to_golden`) reads its
+  region in mouse coordinates**, like every other capture; region goldens
+  taken on a scaled display need re-taking.
 - **`ShellManager.exec_shell` accepts `command=`** as well as
   `shell_command=`, matching the Script Builder and the docs; the new
   `command_args()` is how every shell entry point turns a command into what
@@ -273,6 +276,9 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Fixed
 
+- **`match_masked`, `match_masked_all`, `match_subpixel`, `match_auto` and
+  `detect_scale` return screen coordinates** when given a region or when the
+  virtual desktop starts at a negative x, instead of frame-local ones.
 - **Remote desktop: a damaged trust list, known_hosts or address book is
   moved aside instead of being overwritten**, an upload interrupted by a
   disconnect or a host stop leaves no `.part` file, and stopping the relay

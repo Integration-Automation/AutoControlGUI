@@ -201,16 +201,33 @@ def _score_map(template: ImageSource, haystack: Optional[ImageSource] = None, *,
     is inverted). Returns ``(None, template)`` when the template is larger than
     the haystack at this scale. This exposes the whole ``matchTemplate`` surface
     that the public matchers discard, for trust / threshold / sub-pixel analysis.
+    A position in the map is local to the captured frame; callers that report
+    one use :func:`_score_map_with_origin`.
+    """
+    result, tmpl, _origin_x, _origin_y = _score_map_with_origin(
+        template, haystack, region=region, method=method, scale=scale)
+    return result, tmpl
+
+
+def _score_map_with_origin(template: ImageSource, haystack: Optional[ImageSource] = None, *,
+                           region: Optional[Sequence[int]] = None,
+                           method: str = "ccoeff_normed", scale: float = 1.0):
+    """:func:`_score_map` plus the frame's origin: ``(map, template, origin_x, origin_y)``.
+
+    Add the origin to a map position to get a screen coordinate. Without it
+    the sub-pixel, auto-threshold and scale-detect matchers answered in
+    frame-local coordinates -- off by the region's offset, or by the virtual
+    desktop's negative origin.
     """
     import cv2
     tmpl = _resize(_to_gray(template), float(scale))
-    hay = _haystack_gray(haystack, region)
+    hay, origin_x, origin_y = _haystack_gray_with_origin(haystack, region)
     if tmpl.shape[0] > hay.shape[0] or tmpl.shape[1] > hay.shape[1]:
-        return None, tmpl
+        return None, tmpl, origin_x, origin_y
     result = cv2.matchTemplate(hay, tmpl, _method(method))
     if method == "sqdiff_normed":
         result = 1.0 - result
-    return result, tmpl
+    return result, tmpl, origin_x, origin_y
 
 
 @_contain_cv2_error
@@ -395,15 +412,19 @@ def _template_and_mask(template: ImageSource, mask: Optional[ImageSource]):
 def _masked_scores(template: ImageSource, mask: Optional[ImageSource],
                    haystack: Optional[ImageSource],
                    region: Optional[Sequence[int]]):
-    """Return (score_map, gray_template) for masked correlation, NaNs zeroed."""
+    """Return (score_map, gray_template, origin_x, origin_y) for masked correlation.
+
+    NaNs are zeroed. The origin is what to add to a map position; dropping it
+    made ``match_masked`` answer in frame-local coordinates.
+    """
     import cv2
     import numpy as np
     tmpl, msk = _template_and_mask(template, mask)
-    hay = _haystack_gray(haystack, region)
+    hay, origin_x, origin_y = _haystack_gray_with_origin(haystack, region)
     if tmpl.shape[0] > hay.shape[0] or tmpl.shape[1] > hay.shape[1]:
-        return None, tmpl
+        return None, tmpl, origin_x, origin_y
     result = cv2.matchTemplate(hay, tmpl, cv2.TM_CCORR_NORMED, mask=msk)
-    return np.nan_to_num(result, nan=0.0, posinf=0.0, neginf=0.0), tmpl
+    return np.nan_to_num(result, nan=0.0, posinf=0.0, neginf=0.0), tmpl, origin_x, origin_y
 
 
 @_contain_cv2_error
@@ -420,14 +441,14 @@ def match_masked(template: ImageSource, *, mask: Optional[ImageSource] = None,
     Returns ``None`` when nothing clears ``min_score``.
     """
     import cv2
-    scores, tmpl = _masked_scores(template, mask, haystack, region)
+    scores, tmpl, origin_x, origin_y = _masked_scores(template, mask, haystack, region)
     if scores is None:
         return None
     _, max_val, _, max_loc = cv2.minMaxLoc(scores)
     if max_val < min_score:
         return None
-    return Match(int(max_loc[0]), int(max_loc[1]), tmpl.shape[1], tmpl.shape[0],
-                 round(float(max_val), 4), 1.0)
+    return Match(int(max_loc[0]) + origin_x, int(max_loc[1]) + origin_y,
+                 tmpl.shape[1], tmpl.shape[0], round(float(max_val), 4), 1.0)
 
 
 @_contain_cv2_error
@@ -437,10 +458,10 @@ def match_masked_all(template: ImageSource, *, mask: Optional[ImageSource] = Non
                      min_score: float = 0.9, max_results: int = 20,
                      nms_iou: float = 0.3) -> List[Match]:
     """Return every masked match >= ``min_score`` with overlaps removed (NMS)."""
-    scores, tmpl = _masked_scores(template, mask, haystack, region)
+    scores, tmpl, origin_x, origin_y = _masked_scores(template, mask, haystack, region)
     if scores is None:
         return []
     height, width = tmpl.shape[:2]
     candidates = _select_candidates(scores, min_score, width, height,
-                                    max_results)
+                                    max_results, (origin_x, origin_y))
     return _nms(candidates, float(nms_iou))[:int(max_results)]
