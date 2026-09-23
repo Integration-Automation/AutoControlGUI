@@ -33,8 +33,10 @@ from je_auto_control.utils.accessibility.backends import (
     windows_backend as backend_module,
 )
 from je_auto_control.utils.accessibility.backends.windows_backend import (
-    WindowsAccessibilityBackend, _header_names, _read_cell, _read_legacy,
-    _read_text_attributes, _view_name,
+    WindowsAccessibilityBackend,
+)
+from je_auto_control.utils.accessibility.backends.windows_reads import (
+    _header_names, _read_cell, _read_legacy, _read_text_attributes, _view_name,
 )
 
 VALUE = backend_module._UIA_VALUE_PATTERN_ID

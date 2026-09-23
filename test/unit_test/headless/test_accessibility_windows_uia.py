@@ -46,7 +46,10 @@ from je_auto_control.utils.accessibility.backends import (
 )
 from je_auto_control.utils.accessibility.backends.windows_backend import (
     WindowsAccessibilityBackend, _convert_uia, _create_automation,
-    _process_name, _read_properties, _safe_name,
+    _process_name,
+)
+from je_auto_control.utils.accessibility.backends.windows_reads import (
+    _read_properties, _safe_name,
 )
 from je_auto_control.utils.accessibility.element import (
     AccessibilityNotAvailableError,

@@ -28,7 +28,7 @@
 | --- | ---: | --- |
 | `utils/mcp_server/tools/_handlers_executor_bridge.py` | 1,448 | 2026-09-23 拆 `_handlers.py` 時新建。252 個純委派（中位數 3 行）：`from action_executor import _x` 再 `return _x(...)`,沒有分支。**不套用 flat data tables 條款**——那一條講的是「一個對照表或清單」,這裡是 252 個函式定義。再切下去只能照 MCP 工廠領域分（159 個領域）,那會把同一種委派散進十幾個檔,而它們之間沒有語意邊界。規則照舊:只准變短。 |
 | `gui/remote_desktop/webrtc_panel.py` | 2,530 | 單一 Qt 面板,但已含連線、監視器選擇、頻寬自適應、麥克風、錄影五組互動狀態。應拆成 panel + 各控制器。 |
-| `utils/accessibility/backends/windows_backend.py` | 923 | 已拆出 `windows_query.py`（170）與 `windows_state.py`（98）。剩下的是同一套 UIA COM 生命週期管理,再拆會把 `CoInitialize`／介面釋放的配對邏輯切散。**2026-08-24 從 918 長到 923**:見下面的說明。 |
+| `utils/accessibility/backends/windows_backend.py` | 801 | 已拆出 `windows_query.py`（176）、`windows_state.py`（98）與 `windows_reads.py`（142,2026-09-23）。剩下的是同一套 UIA COM 生命週期管理,再拆會把 `CoInitialize`／介面釋放的配對邏輯切散。 |
 
 **本質豁免（依 `CLAUDE.md` 的「flat data tables」條款,不算既有豁免）**:
 `utils/mcp_server/tools/_factories.py`（8,975,MCP 工具註冊表）、
@@ -53,17 +53,6 @@ commit `46f4cd5` 的說明裡（`docs/updates/` 沒有對應條目：舊的 `WHA
 
 行數沒有任何 CI 在把關（`quality.yml` 的五個 job 裡只有 ruff 管到這一節的限制,而它只管行寬),
 所以這張表只會在有人手動實測時才會被發現對不上——上次就是。
-
-### 2026-08-24:`windows_backend.py` 從 918 長到 923，理由記在這裡
-
-表上原本寫 915，2026-08-24 實測時工作樹已經是 **918**（表本身就過期了，
-正是上一段講的那件事）。這次又 +5，是為了改掉一個真的錯：檔內 37 個
-`except (OSError, AttributeError, …)` 攔不到 comtypes 的 `COMError`
-（細節見 [docs/updates/2026-08.md](docs/updates/2026-08.md) 的 U-20260824-01、U-20260824-02 與 [CHANGELOG.md](CHANGELOG.md)）。5 行是一個模組層
-常數加兩行註解——`CLAUDE.md` 允許「超標檔案再變長」的兩條路是**先拆**或
-**在這裡寫明為什麼不拆**，這是後者：拆這個檔的正確切點是 UIA COM 的生命週期
-管理，和這次的修正無關，綁在一起會讓一個三行的正確性修補變成大面積 diff。
-**新上限是 923**，規則不變。
 
 ---
 

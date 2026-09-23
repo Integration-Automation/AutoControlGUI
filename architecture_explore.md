@@ -19,8 +19,8 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 
 | 指標 | 數值 |
 | --- | ---: |
-| Python 模組總數（含周邊子專案） | 1,046 |
-| 程式碼總行數 | 145,233 |
+| Python 模組總數（含周邊子專案） | 1,047 |
+| 程式碼總行數 | 145,253 |
 | `je_auto_control/utils/` 子套件數 | 310 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 773 |
 | 套件門面 `__all__` 公開名稱數 | 1,241 |
@@ -439,12 +439,12 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.7 無障礙樹與原生控制項
 
-> 16 個套件、約 4,339 行。
+> 16 個套件、約 4,359 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
 | `utils/a11y_audit/` | 355 | 以無障礙樹 + OCR 進行無障礙與 i18n 稽核 |
-| `utils/accessibility/` | 2,870 | 跨平台無障礙樹定位與錄製；Windows UIA／macOS AX／null 三後端。支援限定視窗（換搜尋起點，不是過濾）、逐節點可中斷走訪、`IUIAutomation2` 連線逾時、名稱子字串比對與排序、`control_get_state` 一次讀完值／勾選／選取／數值（密碼欄位不回內容） |
+| `utils/accessibility/` | 2,890 | 跨平台無障礙樹定位與錄製；Windows UIA／macOS AX／null 三後端。支援限定視窗（換搜尋起點，不是過濾）、逐節點可中斷走訪、`IUIAutomation2` 連線逾時、名稱子字串比對與排序、`control_get_state` 一次讀完值／勾選／選取／數值（密碼欄位不回內容） |
 | `utils/ax_events/` | 29 | 反應式 UIA 事件等待（focus-changed） |
 | `utils/ax_props/` | 44 | 讀取豐富 UIA 屬性（enabled／offscreen／help／status／快捷鍵） |
 | `utils/ax_text/` | 102 | 透過 UIA TextPattern 取得原生文字（讀取／尋找／選取／屬性） |
@@ -829,7 +829,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 | 子套件 | 檔案組成 |
 | --- | --- |
-| `accessibility/` | `accessibility_api.py`（公開 API）、`element.py`（dataclass）、`tree.py`（遞迴樹傾印）、`recorder.py`（輪詢式事件錄製）、`backends/`：`base.py` 330 行抽象、`windows_backend.py` 915 行（comtypes UIA）、`windows_query.py` 170 行（UIA 搜尋起點、可中斷走訪、快取請求、NULL COM 指標判定與 `UIA_ERRORS`）、`windows_state.py` 98 行（控制項狀態讀取與密碼欄位判定）、`macos_backend.py` 125 行（pyobjc AX）、`null_backend.py` fallback |
+| `accessibility/` | `accessibility_api.py`（公開 API）、`element.py`（dataclass）、`tree.py`（遞迴樹傾印）、`recorder.py`（輪詢式事件錄製）、`backends/`：`base.py` 330 行抽象、`windows_backend.py` 801 行（comtypes UIA）、`windows_reads.py` 142 行（pattern／文字範圍／表頭／元素屬性的純讀取與 `UIA_READ_ERRORS`）、`windows_query.py` 176 行（UIA 搜尋起點、可中斷走訪、快取請求、NULL COM 指標判定與 `UIA_ERRORS`）、`windows_state.py` 98 行（控制項狀態讀取與密碼欄位判定）、`macos_backend.py` 125 行（pyobjc AX）、`null_backend.py` fallback |
 | `agent/` | `agent_loop.py`、`computer_use.py`、`backends/`：`anthropic.py`、`anthropic_computer_use.py`（435 行）、`openai.py`、`base.py` |
 | `ocr/` | `ocr_engine.py`（門面）、`structure.py`（版面）、`backends/`：`tesseract_backend.py`、`easyocr_backend.py`、`paddleocr_backend.py`、`base.py` |
 | `vision/` | `vlm_api.py`、`backends/`：`anthropic_backend.py`、`openai_backend.py`、`null_backend.py`、`_parse.py`、`base.py` |
@@ -1065,7 +1065,7 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `utils/executor/` | 7 | 9,299 |
 | `utils/usb/` | 17 | 4,422 |
 | `je_auto_control/`（頂層 3 檔） | 3 | 2,388 |
-| `utils/accessibility/` | 13 | 2,870 |
+| `utils/accessibility/` | 14 | 2,890 |
 | `wrapper/` | 19 | 3,614 |
 | `windows/` | 23 | 1,957 |
 | `utils/rest_api/` | 8 | 1,758 |
@@ -1080,5 +1080,5 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 783 |
 | 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 675 | 50,114 |
-| **總計** | **1,040** | **145,168** |
+| **總計** | **1,041** | **145,188** |
 
