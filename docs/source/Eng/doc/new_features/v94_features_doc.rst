@@ -1,10 +1,10 @@
 OTLP/JSON Span Export
 =====================
 
-``agent_trace.to_otel`` returns flat span dicts that are not valid OTLP/JSON
-(no ``resourceSpans`` / ``scopeSpans`` nesting, no proper attribute encoding,
-times not as uint64 strings). This shapes a list of spans into the envelope an
-OpenTelemetry collector ingests directly via its file exporter.
+OTLP/JSON spans travel inside a ``resourceSpans`` / ``scopeSpans`` envelope.
+This shapes a list of spans into the envelope an OpenTelemetry collector ingests
+directly via its file exporter (``agent_trace.to_otel`` already returns OTLP
+span objects; this module builds the envelope from plain span dicts).
 
 Pure standard library (``json``); imports no ``PySide6``. Times are supplied by
 the caller (no wall clock), so the envelope is byte-stable and CI-testable.

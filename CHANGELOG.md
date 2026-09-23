@@ -42,6 +42,10 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Changed
 
+- **`AgentTrace.to_otel` returns OTLP/JSON spans** (trace and span ids,
+  nanosecond times, integer enums, typed attributes) instead of flat dicts
+  with `duration_s`. Cost records refuse negative token counts.
+
 - **`AssetStore.set` validates the type and value** it is given, and a
   string `tags` argument is one tag, not a list of letters.
 
@@ -219,6 +223,16 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
   package does no PKCS#7 decryption, so the `>=48.0.1` floor is unchanged.
 
 ### Fixed
+
+- **Metrics, SARIF, SBOM and version checks follow their specs.** Labelled
+  Prometheus metrics no longer render a bogus unlabelled series, partial
+  label sets and non-ASCII names are refused and HELP text is escaped. SARIF
+  levels are normalised, lint issues point at the right 1-based line and
+  file locations are URIs. SBOM purls are normalised and percent-encoded.
+  The vulnerability scan orders PEP 440 and SemVer pre-releases before their
+  release. W3C multi-tenant `tracestate` keys are kept. Step videos resize
+  mismatched frames, fail on an unwritable path and leave the caller's frame
+  untouched.
 
 - **Stores keep what they are given.** Two skill libraries or element
   repositories on one file no longer lose each other's saves (a corrupt file

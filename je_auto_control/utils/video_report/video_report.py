@@ -77,7 +77,18 @@ def _default_loader(image: Any) -> Any:
         if frame is None:
             raise FileNotFoundError(f"could not read image: {image!r}")
         return frame
-    return image
+    # A copy: the caption is drawn onto the frame, and a caller's array (or
+    # one reused for two steps) used to get every caption burned into it.
+    return image.copy() if hasattr(image, "copy") else image
+
+
+def _fit(frame: Any, size: Any) -> Any:
+    """``frame`` at ``size``; OpenCV silently drops frames of another size."""
+    # Injected loaders may hand back non-array frames; only arrays are resized.
+    if size is None or not hasattr(frame, "shape") or _frame_size(frame) == tuple(size):
+        return frame
+    import cv2
+    return cv2.resize(frame, tuple(size))
 
 
 def _default_writer_factory(path: str, fps: int, size: Any) -> Any:
@@ -111,14 +122,31 @@ def write_step_video(steps: Sequence[Any], output_path: str, *,
                 for step, entry in zip(coerced, plan)]
     if size is None and rendered:
         size = _frame_size(rendered[0])
-    writer = (writer_factory or _default_writer_factory)(output_path, fps, size)
-    frame_count = 0
+    writer = _open_writer(writer_factory or _default_writer_factory, output_path, fps, size)
     try:
-        for frame, entry in zip(rendered, plan):
-            for _ in range(entry["frames"]):
-                writer.write(frame)
-                frame_count += 1
+        frame_count = _write_frames(writer, rendered, plan, size)
     finally:
         writer.release()
     return {"output": output_path, "steps": len(plan), "fps": fps,
             "frame_count": frame_count}
+
+
+def _open_writer(factory: Callable[..., Any], output_path: str, fps: int, size: Any) -> Any:
+    """A writer that is really open: an unwritable path used to report frames it never wrote."""
+    writer = factory(output_path, fps, size)
+    if hasattr(writer, "isOpened") and not writer.isOpened():
+        writer.release()
+        raise OSError(f"could not open a video writer for {output_path!r}")
+    return writer
+
+
+def _write_frames(writer: Any, rendered: Sequence[Any], plan: Sequence[Dict[str, Any]],
+                  size: Any) -> int:
+    """Write each step's frame its planned number of times, at ``size``; return the count."""
+    frame_count = 0
+    for frame, entry in zip(rendered, plan):
+        fitted = _fit(frame, size)
+        for _ in range(entry["frames"]):
+            writer.write(fitted)
+            frame_count += 1
+    return frame_count

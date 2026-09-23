@@ -21,7 +21,15 @@ _SPEC_VERSION = "1.6"
 
 
 def _purl(name: str, version: str) -> str:
-    return f"pkg:pypi/{name}@{version}"
+    """A pypi purl: the name normalised (PEP 503) and the version percent-encoded.
+
+    ``PySide6_Essentials`` must be ``pyside6-essentials`` and the ``+`` of a
+    local version ``%2B``, or tools matching purls miss the component.
+    """
+    import re
+    import urllib.parse
+    normalized = re.sub(r"[-_.]+", "-", name).lower()
+    return f"pkg:pypi/{normalized}@{urllib.parse.quote(version, safe='.-_~!')}"
 
 
 def _component(dist: "metadata.Distribution") -> Dict[str, Any]:

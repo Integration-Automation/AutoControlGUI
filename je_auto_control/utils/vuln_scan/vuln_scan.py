@@ -22,7 +22,6 @@ from typing import Any, Callable, Dict, List, Mapping, Optional, Sequence, Tuple
 
 from je_auto_control.utils.sarif import make_finding
 
-_NUMBERS_RE = re.compile(r"\d+")
 
 # OSV / GHSA severity word -> SARIF level.
 _SEVERITY_LEVELS = {
@@ -38,13 +37,49 @@ _PURL_ECOSYSTEM = {
 }
 
 
-def version_key(version: str) -> Tuple[Tuple[int, ...], int, str]:
-    """Return a sortable key for a version string (release, pre-rank, pre)."""
-    text = str(version).strip().lstrip("vV")
-    parts = re.split(r"[-+]", text, maxsplit=1)
-    numbers = tuple(int(n) for n in _NUMBERS_RE.findall(parts[0]))
-    pre = parts[1] if len(parts) > 1 else ""
-    return (numbers, 0 if pre else 1, pre)
+_RELEASE_RE = re.compile(r"\d+(?:\.\d+)*")
+_PRE_LETTERS = {"a": 0, "alpha": 0, "b": 1, "beta": 1, "c": 2, "rc": 2, "pre": 2, "preview": 2}
+_PHASE_DEV, _PHASE_PRE, _PHASE_FINAL, _PHASE_POST = 0, 1, 2, 3
+
+
+def _identifier(token: str) -> Tuple[int, Any]:
+    """One pre-release identifier: numbers compare numerically, before words."""
+    return (0, int(token)) if token.isdigit() else (1, token)
+
+
+def _suffix_key(suffix: str) -> Tuple[int, Tuple[Tuple[int, Any], ...]]:
+    """``(phase, identifiers)`` for what follows the release numbers.
+
+    PEP 440 phases rank dev < a/b/rc < final < post; anything else is a SemVer
+    pre-release whose dot-separated identifiers compare as SemVer says.
+    """
+    tokens = re.findall(r"[a-z]+|\d+", suffix.lower())
+    if not tokens:
+        return _PHASE_FINAL, ()
+    head = tokens[0]
+    if head == "dev":
+        return _PHASE_DEV, tuple(_identifier(t) for t in tokens[1:])
+    if head in ("post", "rev", "r"):
+        return _PHASE_POST, tuple(_identifier(t) for t in tokens[1:])
+    if head in _PRE_LETTERS:
+        return _PHASE_PRE, ((0, _PRE_LETTERS[head]),) + tuple(_identifier(t) for t in tokens[1:])
+    return _PHASE_PRE, tuple(_identifier(t) for t in re.split(r"[.]", suffix.lower()) if t)
+
+
+def version_key(version: str) -> Tuple[Tuple[int, ...], int, Tuple[Tuple[int, Any], ...]]:
+    """Return a sortable key for a version string: (release, phase, identifiers).
+
+    Trailing zeros do not count (``2.0`` == ``2.0.0``), build metadata and
+    PEP 440 local versions (``+cu118``) are ignored, and pre-releases -- PEP
+    440 ``rc1`` / ``.dev1`` or SemVer ``-alpha.10`` -- sort before the release.
+    """
+    text = str(version).strip().lstrip("vV").split("+", 1)[0]
+    match = _RELEASE_RE.match(text)
+    release = tuple(int(n) for n in match.group(0).split(".")) if match else ()
+    while release and release[-1] == 0:
+        release = release[:-1]
+    phase, identifiers = _suffix_key(text[match.end():] if match else text)
+    return (release, phase, identifiers)
 
 
 def _normalize_name(name: str) -> str:

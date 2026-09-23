@@ -1,9 +1,9 @@
 OTLP/JSON Span 匯出
 ==================
 
-``agent_trace.to_otel`` 回傳的是扁平 span dict,並非有效的 OTLP/JSON(沒有 ``resourceSpans`` /
-``scopeSpans`` 巢狀、屬性未正確編碼、時間不是 uint64 字串)。本功能把一串 span 塑形成 OpenTelemetry
-collector 可透過 file exporter 直接攝取的封套。
+OTLP/JSON 的 span 要放在 ``resourceSpans`` / ``scopeSpans`` 封套裡。本功能把一串 span 塑形成
+OpenTelemetry collector 可透過 file exporter 直接攝取的封套(``agent_trace.to_otel`` 已回傳 OTLP
+span 物件;本模組則從一般的 span dict 建出封套)。
 
 純標準函式庫(``json``);不匯入 ``PySide6``。時間由呼叫端提供(不使用 wall clock),因此封套位元組穩定、
 可於 CI 測試。

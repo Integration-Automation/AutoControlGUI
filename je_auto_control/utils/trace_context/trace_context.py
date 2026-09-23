@@ -20,7 +20,9 @@ _VERSION = "00"
 _TRACE_ID_RE = re.compile(r"^[0-9a-f]{32}$")
 _SPAN_ID_RE = re.compile(r"^[0-9a-f]{16}$")
 _FLAGS_RE = re.compile(r"^[0-9a-f]{2}$")
-_TRACESTATE_KEY_RE = re.compile(r"^[a-z0-9][_0-9a-z\-*/]{0,255}$")
+# A simple key, or a multi-tenant ``tenant@system`` key (W3C Trace Context).
+_TRACESTATE_KEY_RE = re.compile(
+    r"^(?:[a-z0-9][_0-9a-z\-*/]{0,240}@[a-z][_0-9a-z\-*/]{0,13}|[a-z][_0-9a-z\-*/]{0,255})$")
 _FLAG_SAMPLED = 0x01
 
 RandBytes = Callable[[int], bytes]
@@ -91,8 +93,12 @@ def parse_tracestate(header: Optional[str]) -> List[Tuple[str, str]]:
         if not member:
             continue
         key, sep, value = member.partition("=")
-        if sep and _TRACESTATE_KEY_RE.match(key.strip()):
-            items.append((key.strip(), value.strip()))
+        key = key.strip()
+        if not sep or not _TRACESTATE_KEY_RE.match(key):
+            continue
+        if any(existing == key for existing, _ in items):
+            return []           # a duplicated key makes the whole header invalid
+        items.append((key, value.strip()))
     return items[:32]
 
 

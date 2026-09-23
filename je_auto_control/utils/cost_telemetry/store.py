@@ -83,7 +83,13 @@ class CostStore:
                run_id: Optional[str] = None,
                user: Optional[str] = None,
                ) -> CostEvent:
-        """Append + return one cost event. Estimates ``$`` if not given."""
+        """Append + return one cost event. Estimates ``$`` if not given.
+
+        Negative token counts are refused: they were stored as given and
+        subtracted from the totals while the cost treated them as zero.
+        """
+        if int(input_tokens) < 0 or int(output_tokens) < 0:
+            raise ValueError("token counts must not be negative")
         cost = (
             float(estimated_usd) if estimated_usd is not None
             else estimate_usd(model, input_tokens, output_tokens)

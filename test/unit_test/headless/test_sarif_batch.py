@@ -44,8 +44,9 @@ def test_from_lint_issues():
     findings = from_lint_issues(
         [{"index": 4, "severity": "error", "code": "E1", "message": "bad"}],
         file="flow.json")
+    # index is the 0-based action index; SARIF lines are 1-based.
     assert findings[0] == {"rule_id": "E1", "level": "error", "message": "bad",
-                           "file": "flow.json", "line": 4}
+                           "file": "flow.json", "line": 5}
 
 
 def test_from_lint_negative_index_has_no_line():

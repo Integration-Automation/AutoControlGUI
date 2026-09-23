@@ -20,7 +20,7 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 | 指標 | 數值 |
 | --- | ---: |
 | Python 模組總數（含周邊子專案） | 1,046 |
-| 程式碼總行數 | 144,933 |
+| 程式碼總行數 | 145,104 |
 | `je_auto_control/utils/` 子套件數 | 310 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 773 |
 | 套件門面 `__all__` 公開名稱數 | 1,241 |
@@ -369,7 +369,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.5 影像辨識與畫面分析
 
-> 37 個套件、約 5,271 行。
+> 37 個套件、約 5,299 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -407,7 +407,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/ssim/` | 141 | 結構相似度比較：感知分數 + 變化區域 |
 | `utils/subpixel_match/` | 101 | 以二次曲面擬合做次像素級比對精修 |
 | `utils/theme_normalize/` | 92 | 主題無關的影像正規化，讓亮色樣板能配對深色模式 |
-| `utils/video_report/` | 133 | 影片步驟疊圖報告：把截圖加字幕串成操作導覽影片 |
+| `utils/video_report/` | 161 | 影片步驟疊圖報告：把截圖加字幕串成操作導覽影片 |
 | `utils/visual_match/` | 454 | 會回傳信心值的樣板比對（分數、多尺度、find-all + NMS）；擷取走 `grab_logical`，命中座標已加回虛擬桌面原點，單色樣板直接拒收 |
 | `utils/visual_regression/` | 237 | 桌面 GUI 的視覺回歸測試（黃金圖比對） |
 
@@ -492,7 +492,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.9 AI / Agent / LLM
 
-> 13 個套件、約 21,043 行。
+> 13 個套件、約 21,073 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -500,8 +500,8 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/agent/` | 1,348 | 閉環 Computer-Use Agent 主迴圈 + Anthropic／OpenAI／Computer-Use 三後端 |
 | `utils/agent_memory/` | 152 | agent 的持久化情節記憶（goal → trajectory → outcome） |
 | `utils/agent_replay/` | 63 | 可攜的 agent 軌跡追蹤（記錄 observation→action 並重播） |
-| `utils/agent_trace/` | 129 | agent 可觀測性：OpenTelemetry GenAI 慣例的 LLM span |
-| `utils/cost_telemetry/` | 301 | 每次呼叫的 LLM 成本遙測：token 數 + 估算美金 |
+| `utils/agent_trace/` | 153 | agent 可觀測性：OpenTelemetry GenAI 慣例的 LLM span |
+| `utils/cost_telemetry/` | 307 | 每次呼叫的 LLM 成本遙測：token 數 + 估算美金 |
 | `utils/cua_action/` | 127 | 標準化 computer-use 動作結構（Anthropic／OpenAI → `AC_*`） |
 | `utils/llm/` | 361 | 自然語言 → action list 規劃器 + Anthropic／null 後端 |
 | `utils/mcp_registry/` | 92 | MCP registry `server.json` 資訊清單產生（可被發現） |
@@ -556,7 +556,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.12 報表、可觀測性與測試治理
 
-> 34 個套件、約 7,056 行。
+> 34 個套件、約 7,126 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -573,7 +573,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/flakiness/` | 150 | 以執行歷史分析不穩定測試 |
 | `utils/generate_report/` | 293 | HTML／JSON／XML 三種報表產生器（Template Method） |
 | `utils/media_assert/` | 233 | 媒體斷言：音訊活動與影片動態檢查 |
-| `utils/observability/` | 668 | Prometheus 格式指標 + OpenTelemetry 相容 trace + `/metrics` 匯出伺服器 |
+| `utils/observability/` | 696 | Prometheus 格式指標 + OpenTelemetry 相容 trace + `/metrics` 匯出伺服器 |
 | `utils/otlp_export/` | 81 | OTLP/JSON span 匯出 |
 | `utils/percentiles/` | 103 | 可合併的串流延遲摘要與精確百分位數 |
 | `utils/process_doc/` | 85 | 由錄製的 action list 產生逐步 SOP 文件 |
@@ -582,18 +582,18 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/quarantine/` | 200 | 易碎測試隔離區，讓套件執行器跳過已知不穩定案例 |
 | `utils/run_diff/` | 123 | 兩次執行軌跡的差異（LCS 對齊：新增／移除／狀態翻轉／退化） |
 | `utils/run_history/` | 405 | 執行歷史儲存與產出物管理 |
-| `utils/sarif/` | 134 | 以 SARIF 2.1.0 匯出發現項，供 GitHub／Azure code scanning |
+| `utils/sarif/` | 163 | 以 SARIF 2.1.0 匯出發現項，供 GitHub／Azure code scanning |
 | `utils/slo/` | 112 | SLO 評估：SLI、錯誤預算與多視窗燃燒率告警 |
 | `utils/smoothing/` | 67 | 數列移動平均平滑 |
 | `utils/soft_assert/` | 74 | 軟斷言：累積檢查並在區塊結束時一次拋出 |
-| `utils/stats/` | 213 | 描述統計與 A/B 顯著性檢定（純標準庫） |
+| `utils/stats/` | 220 | 描述統計與 A/B 顯著性檢定（純標準庫） |
 | `utils/step_timeline/` | 81 | 每次執行的步驟瀑布圖與瓶頸（關鍵路徑）步驟排名 |
 | `utils/test_select/` | 123 | 以執行歷史做風險導向的測試選取 |
 | `utils/test_shard/` | 87 | 以耗時為權重的套件切分與分片結果合併 |
 | `utils/test_suite/` | 527 | QA 套件編排：把扁平 action list 評分為測試案例 + CI 報表 |
 | `utils/time_travel/` | 381 | 錄製 session 的時光回溯除錯（控制器 + 播放器） |
 | `utils/timeseries/` | 143 | 時間序列轉換（rate／降採樣／重採樣） |
-| `utils/trace_context/` | 162 | W3C Trace Context 傳遞 |
+| `utils/trace_context/` | 168 | W3C Trace Context 傳遞 |
 
 ### 5.4.13 資料來源、結構驗證與 i18n
 
@@ -628,7 +628,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.14 安全、機密與合規
 
-> 13 個套件、約 2,432 行。
+> 13 個套件、約 2,475 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -639,12 +639,12 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/provenance/` | 104 | SLSA 建置來源證明（in-toto v1） |
 | `utils/rbac/` | 269 | 角色型存取控制與逐使用者稽核歸因 |
 | `utils/redaction/` | 499 | 截圖遮蔽層：規則偵測 + 政策 + 協調器（上傳 VLM 前先遮） |
-| `utils/sbom/` | 110 | SBOM（CycloneDX）產生 |
+| `utils/sbom/` | 118 | SBOM（CycloneDX）產生 |
 | `utils/secret_ref/` | 126 | URI scheme 形式的值參照解析 |
 | `utils/secrets/` | 302 | 加密機密儲存庫，供 `${secrets.NAME}` 解析 |
 | `utils/secrets_scan/` | 130 | 掃描 action JSON／資料中應入庫卻硬編碼的機密 |
 | `utils/vex/` | 143 | OpenVEX 陳述撰寫與漏洞分類處置 |
-| `utils/vuln_scan/` | 188 | 以 OSV 比對 SBOM 元件的漏洞（純標準庫） |
+| `utils/vuln_scan/` | 223 | 以 OSV 比對 SBOM 元件的漏洞（純標準庫） |
 
 ### 5.4.15 韌性、流量控制與設定
 
@@ -1079,6 +1079,6 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `osx/` | 17 | 919 |
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 783 |
-| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 675 | 49,826 |
-| **總計** | **1,040** | **144,868** |
+| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 675 | 49,997 |
+| **總計** | **1,040** | **145,039** |
 

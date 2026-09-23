@@ -8,6 +8,7 @@ can drop in ``prometheus_client`` later without rewriting call sites.
 from __future__ import annotations
 
 import math
+import re
 import threading
 from dataclasses import dataclass, field
 from typing import Dict, Iterable, List, Optional, Sequence, Tuple
@@ -19,15 +20,28 @@ _DEFAULT_HISTOGRAM_BUCKETS: Tuple[float, ...] = (
 _LABEL_KEY_SEPARATOR = "\x1f"  # ASCII unit separator, can't appear in labels
 
 
+_METRIC_NAME = re.compile(r"[a-zA-Z_:][a-zA-Z0-9_:]*")
+_LABEL_NAME = re.compile(r"[a-zA-Z_][a-zA-Z0-9_]*")
+
+
 def _validate_name(name: str, kind: str) -> None:
-    """Prometheus naming: letters / digits / underscore, can't start with digit."""
+    """Prometheus naming: ASCII letters, digits, ``_`` (and ``:`` in metric names).
+
+    ``str.isalnum`` accepted ``é`` and ``²`` and refused the valid ``:``;
+    label names starting with ``__`` are reserved.
+    """
     if not isinstance(name, str) or not name:
         raise ValueError(f"{kind} name must be a non-empty string")
-    if not (name[0].isalpha() or name[0] == "_"):
-        raise ValueError(f"{kind} name must start with letter or underscore")
-    for ch in name:
-        if not (ch.isalnum() or ch == "_"):
-            raise ValueError(f"{kind} name contains illegal character: {ch!r}")
+    pattern = _LABEL_NAME if kind == "label" else _METRIC_NAME
+    if not pattern.fullmatch(name):
+        raise ValueError(f"{kind} name is not a valid Prometheus name: {name!r}")
+    if kind == "label" and name.startswith("__"):
+        raise ValueError(f"label names starting with '__' are reserved: {name!r}")
+
+
+def _escape_help(text: str) -> str:
+    """HELP text escapes backslash and newline (a raw newline became a bogus sample)."""
+    return str(text).replace("\\", "\\\\").replace("\n", "\\n")
 
 
 def _frozen_labels(labels: Optional[Dict[str, str]]) -> Tuple[Tuple[str, str], ...]:
@@ -75,11 +89,17 @@ class _MetricBase:
             raise ValueError(
                 f"{self.name} expects labels {self.label_names}",
             )
-        # Reject any label name not declared at registration.
+        # Reject any label name not declared at registration, and a partial
+        # set: either one forks the series instead of adding to it.
         unknown = set(labels) - set(self.label_names)
         if unknown:
             raise ValueError(
                 f"unknown labels {sorted(unknown)} for {self.name}",
+            )
+        missing = set(self.label_names) - set(labels)
+        if missing:
+            raise ValueError(
+                f"missing labels {sorted(missing)} for {self.name}",
             )
         return _frozen_labels(labels)
 
@@ -103,7 +123,10 @@ class Counter(_MetricBase):
         super().__init__(name=name, help_text=help_text,
                           label_names=tuple(label_names))
         self._lock = threading.Lock()
-        self._values: Dict[Tuple[Tuple[str, str], ...], float] = {(): 0.0}
+        # The label-less zero series only exists for a metric without labels;
+        # a labelled one rendered a bogus unlabelled sample next to its series.
+        self._values: Dict[Tuple[Tuple[str, str], ...], float] = (
+            {} if self.label_names else {(): 0.0})
 
     def inc(self, amount: float = 1.0,
             *, labels: Optional[Dict[str, str]] = None) -> None:
@@ -120,7 +143,7 @@ class Counter(_MetricBase):
 
     def render(self) -> str:
         lines: List[str] = [
-            f"# HELP {self.name} {self.help_text}",
+            f"# HELP {self.name} {_escape_help(self.help_text)}",
             f"# TYPE {self.name} counter",
         ]
         with self._lock:
@@ -141,7 +164,10 @@ class Gauge(_MetricBase):
         super().__init__(name=name, help_text=help_text,
                           label_names=tuple(label_names))
         self._lock = threading.Lock()
-        self._values: Dict[Tuple[Tuple[str, str], ...], float] = {(): 0.0}
+        # The label-less zero series only exists for a metric without labels;
+        # a labelled one rendered a bogus unlabelled sample next to its series.
+        self._values: Dict[Tuple[Tuple[str, str], ...], float] = (
+            {} if self.label_names else {(): 0.0})
 
     def set(self, value: float,
             *, labels: Optional[Dict[str, str]] = None) -> None:
@@ -166,7 +192,7 @@ class Gauge(_MetricBase):
 
     def render(self) -> str:
         lines: List[str] = [
-            f"# HELP {self.name} {self.help_text}",
+            f"# HELP {self.name} {_escape_help(self.help_text)}",
             f"# TYPE {self.name} gauge",
         ]
         with self._lock:
@@ -192,6 +218,8 @@ class Histogram(_MetricBase):
         _validate_name(name, "histogram")
         for lname in label_names:
             _validate_name(lname, "label")
+        if "le" in label_names:
+            raise ValueError("'le' is the histogram's own bucket label")
         if not buckets:
             raise ValueError("Histogram requires at least one bucket")
         # Buckets must be strictly increasing.
@@ -236,7 +264,7 @@ class Histogram(_MetricBase):
 
     def render(self) -> str:
         lines: List[str] = [
-            f"# HELP {self.name} {self.help_text}",
+            f"# HELP {self.name} {_escape_help(self.help_text)}",
             f"# TYPE {self.name} histogram",
         ]
         with self._lock:

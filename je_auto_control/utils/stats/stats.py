@@ -158,9 +158,16 @@ def welch_t_test(a: Sequence[float], b: Sequence[float], *,
     var_a, var_b = statistics.variance(a), statistics.variance(b)
     se = math.sqrt(var_a / na + var_b / nb)
     if se == 0:
-        return {"t": 0.0, "df": float(na + nb - 2), "p_value": 1.0,
-                "significant": False, "mean_diff": mean_b - mean_a,
-                "ci_low": 0.0, "ci_high": 0.0}
+        # No variance on either side: equal means are identical samples, and
+        # different means are certainly different (the CI used to be [0, 0]
+        # around a non-zero difference).
+        diff = mean_b - mean_a
+        if diff == 0:
+            return {"t": 0.0, "df": float(na + nb - 2), "p_value": 1.0,
+                    "significant": False, "mean_diff": 0.0, "ci_low": 0.0, "ci_high": 0.0}
+        return {"t": math.copysign(math.inf, diff), "df": float(na + nb - 2),
+                "p_value": 0.0, "significant": True, "mean_diff": diff,
+                "ci_low": diff, "ci_high": diff}
     t = (mean_b - mean_a) / se
     df = (var_a / na + var_b / nb) ** 2 / (
         (var_a / na) ** 2 / (na - 1) + (var_b / nb) ** 2 / (nb - 1))
