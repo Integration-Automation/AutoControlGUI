@@ -33,6 +33,11 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Changed
 
+- **An empty window title is an error.** `find_window`, `focus_window`,
+  `close_window_by_title` and the other title lookups raise
+  `AutoControlActionException` for a blank or non-string title; `""` used to
+  match every window.
+
 - **`je_auto_control run` exits 1 when any action failed.** It used to exit
   0 whenever the file loaded. Migration: a pipeline that relied on the old
   status can ignore it (`|| true`).
@@ -154,6 +159,15 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
   package does no PKCS#7 decryption, so the `>=48.0.1` floor is unchanged.
 
 ### Fixed
+
+- **Accessibility, OCR and window lookups match what was asked.** A blank
+  `contains` name no longer matches every element; a blank window title is
+  refused instead of matching (and closing) the first window; Linux
+  single-control lookups honour `window_title`; saving and restoring a window
+  layout no longer reads or moves the wrong window when titles overlap or
+  repeat; `show_window` no longer foregrounds a window it was told to
+  minimise or show without activating; `wait_for_window` / `wait_for_text`
+  with `timeout=0` look once; OCR text matching normalises Unicode.
 
 - **Android input cannot run shell commands on the device.** Text typed with
   `AC_android_text` is shell-quoted, and `AC_android_key` accepts only key

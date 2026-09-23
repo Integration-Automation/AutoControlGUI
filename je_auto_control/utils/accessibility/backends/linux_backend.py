@@ -280,15 +280,15 @@ class LinuxAccessibilityBackend(AccessibilityBackend):
             if app_name is not None and owner != app_name:
                 continue
             found = self._search(connection, application, owner, name, role,
-                                 contains)
+                                 contains, window_title=window_title)
             if found is not None:
                 return found
-        del window_title  # accepted for signature parity with the base class
         return None
 
     def _search(self, connection: _AtspiConnection, reference: Reference,
                 app_name: str, name: Optional[str], role: Optional[str],
-                contains: bool, depth: int = 0) -> Optional[Reference]:
+                contains: bool, depth: int = 0,
+                window_title: Optional[str] = None) -> Optional[Reference]:
         if depth > 32:
             return None
         try:
@@ -297,6 +297,11 @@ class LinuxAccessibilityBackend(AccessibilityBackend):
             return None
         for child in children:
             converted = _convert(connection, child, app_name)
+            # The same window scoping _walk applies: window_title was
+            # dropped here, so get_value('Name', window_title='Firefox')
+            # read the first 'Name' of whichever app came first.
+            if depth == 0 and _outside_window(converted, window_title):
+                continue
             if converted is not None and element_matches(
                     converted, name, role, app_name, contains):
                 return child
@@ -423,3 +428,11 @@ def _convert(connection: _AtspiConnection, reference: Reference,
         native_id=reference[1],
         enabled=bool(bits & (1 << _STATE_ENABLED)),
     )
+
+
+def _outside_window(window: Optional[AccessibilityElement],
+                    window_title: Optional[str]) -> bool:
+    """Whether a top-level ``window`` falls outside the requested title."""
+    if window_title is None:
+        return False
+    return window is None or window_title.lower() not in window.name.lower()

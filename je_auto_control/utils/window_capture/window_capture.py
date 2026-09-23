@@ -95,10 +95,12 @@ def save_window_layout(path: Optional[Union[str, Path]] = None, *,
     :func:`restore_window_layout`. Windows with no readable geometry are
     skipped.
     """
-    provider = geometry or get_window_geometry
     layout: List[Dict[str, Any]] = []
-    for _hwnd, title in (lister or _default_lister)():
-        rect = provider(title)
+    for hwnd, title in (lister or _default_lister)():
+        # By handle, which the lister already has: looking the window up
+        # again by title substring read another window's geometry whenever
+        # one title contained another or two windows shared a title.
+        rect = geometry(title) if geometry is not None else _handle_geometry(hwnd)
         if rect is None:
             continue
         layout.append({"title": title, "x": rect[0], "y": rect[1],
@@ -110,12 +112,44 @@ def save_window_layout(path: Optional[Union[str, Path]] = None, *,
 
 def _default_mover(title: str, x: int, y: int,
                    width: int, height: int) -> bool:
+    """Move the first window whose title contains ``title`` (snap / grid / cascade).
+
+    Those take titles a user typed, often partial. A saved layout holds exact
+    titles and uses :func:`_exact_title_mover` instead.
+    """
     from je_auto_control.wrapper.auto_control_window import find_window
     hit = find_window(title)
     if hit is None or sys.platform != "win32":
         return False
     from je_auto_control.windows.window import windows_window_manage as wm
     return bool(wm.move_window(int(hit[0]), x, y, width, height))
+
+
+def _handle_geometry(hwnd: int) -> Optional[Rect]:
+    return _win32_geometry(int(hwnd)) if sys.platform == "win32" else None
+
+
+def _exact_title_mover() -> WindowMover:
+    """A mover that gives each saved entry a different window of that exact title.
+
+    It matched by title substring, so every entry whose title another
+    window's title contained -- and every duplicate title -- moved the same
+    first window, leaving the others where they were.
+    """
+    used: set = set()
+
+    def move(title: str, x: int, y: int, width: int, height: int) -> bool:
+        if sys.platform != "win32":
+            return False
+        from je_auto_control.wrapper.auto_control_window import list_windows
+        from je_auto_control.windows.window import windows_window_manage as wm
+        for hwnd, name in list_windows(titled_only=True):
+            if name == title and hwnd not in used:
+                used.add(hwnd)
+                return bool(wm.move_window(int(hwnd), x, y, width, height))
+        return False
+
+    return move
 
 
 def restore_window_layout(layout: Union[List[Dict[str, Any]], str, Path], *,
@@ -129,7 +163,7 @@ def restore_window_layout(layout: Union[List[Dict[str, Any]], str, Path], *,
         json.loads(Path(layout).read_text(encoding="utf-8"))
         if isinstance(layout, (str, Path)) else list(layout)
     )
-    move = mover or _default_mover
+    move = mover or _exact_title_mover()
     restored = 0
     for entry in entries:
         title = entry.get("title")

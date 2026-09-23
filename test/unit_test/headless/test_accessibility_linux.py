@@ -504,3 +504,26 @@ def test_the_walk_stops_mid_application_once_it_is_full(monkeypatch):
         atspi.LinuxAccessibilityBackend)
     instance.available = True
     assert len(instance.list_elements(max_results=2)) == 2
+
+
+def test_get_value_is_scoped_to_the_named_window(monkeypatch):
+    """window_title was dropped for single-control lookups: a same-named
+    field was read from whichever application came first."""
+    gedit, gedit_window, gedit_field = ("g", "/app"), ("g", "/win"), ("g", "/field")
+    firefox, firefox_window, firefox_field = ("f", "/app"), ("f", "/win"), ("f", "/field")
+    connection = FakeConnection(
+        tree={("registry", "/root"): [gedit, firefox],
+              gedit: [gedit_window], gedit_window: [gedit_field],
+              firefox: [firefox_window], firefox_window: [firefox_field]},
+        names={gedit: "gedit", gedit_window: "notes.txt - gedit", gedit_field: "Name",
+               firefox: "firefox", firefox_window: "Mozilla Firefox", firefox_field: "Name"},
+        roles={gedit_window: "frame", firefox_window: "frame",
+               gedit_field: "entry", firefox_field: "entry"},
+    )
+    connection.texts = {gedit_field: "from gedit", firefox_field: "from firefox"}
+    monkeypatch.setattr(atspi, "_AtspiConnection", lambda: connection)
+    instance = atspi.LinuxAccessibilityBackend.__new__(atspi.LinuxAccessibilityBackend)
+    instance.available = True
+    instance.connection = connection
+    assert instance.get_value(name="Name", window_title="Firefox") == "from firefox"
+    assert instance.get_value(name="Name") == "from gedit", "unscoped still takes the first"

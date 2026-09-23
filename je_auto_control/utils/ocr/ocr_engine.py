@@ -193,11 +193,14 @@ def wait_for_text(target: str,
     """Poll until ``target`` appears on screen; raise on timeout."""
     poll = max(0.05, float(poll))
     deadline = time.monotonic() + float(timeout)
-    while time.monotonic() < deadline:
+    # Look first, then check the clock: with timeout=0 the loop never ran.
+    while True:
         try:
             return locate_text_center(target, lang, region, min_confidence,
                                       case_sensitive, backend=backend)
         except AutoControlActionException:
+            if time.monotonic() >= deadline:
+                break
             time.sleep(poll)
     raise AutoControlActionException(f"OCR: wait_for_text timeout: {target!r}")
 

@@ -69,10 +69,17 @@ def search_root(automation, window_title: Optional[str]):
     )
     needle = window_title.strip().lower()
     for hwnd, title in get_all_window_hwnd():
-        if needle in (title or "").lower():
+        if needle not in (title or "").lower():
+            continue
+        # As the unscoped walk does: a window that stops answering (a raw
+        # COMError) or hands back a null element is skipped, and the next
+        # window with that title is tried instead of the search failing.
+        try:
             element = automation.ElementFromHandle(hwnd)
-            if element is not None:
-                return element
+        except UIA_ERRORS:
+            continue
+        if not _is_null(element):
+            return element
     raise AccessibilityNotAvailableError(
         f"no visible window title contains {window_title!r}")
 
