@@ -42,10 +42,15 @@ Sending Commands (Client)
        ["AC_set_mouse_position", {"x": 500, "y": 300}],
        ["AC_click_mouse", {"mouse_keycode": "mouse_left"}]
    ])
-   sock.sendall(command.encode("utf-8"))
+   sock.sendall((command + "\n").encode("utf-8"))
 
-   response = sock.recv(8192).decode("utf-8")
-   print(response)
+   response = b""
+   while b"Return_Data_Over_JE" not in response:
+       chunk = sock.recv(8192)
+       if not chunk:
+           break
+       response += chunk
+   print(response.decode("utf-8"))
    sock.close()
 
 Protocol Details
@@ -63,5 +68,12 @@ Protocol Details
      - ``Return_Data_Over_JE``
    * - Shutdown command
      - Send ``"quit_server"`` to stop the server
+   * - Request framing
+     - One command per connection: the JSON action list followed by a
+       newline. Indented JSON is fine; the command ends at the newline after
+       which it parses (or at the client's half-close).
+   * - Response framing
+     - One line per result, then ``Return_Data_Over_JE`` and a newline. Read
+       until the marker; one ``recv`` may return only part of the reply.
    * - Default port
      - 9938

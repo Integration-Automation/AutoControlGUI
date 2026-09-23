@@ -20,7 +20,7 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 | 指標 | 數值 |
 | --- | ---: |
 | Python 模組總數（含周邊子專案） | 1,048 |
-| 程式碼總行數 | 146,019 |
+| 程式碼總行數 | 146,039 |
 | `je_auto_control/utils/` 子套件數 | 310 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 773 |
 | 套件門面 `__all__` 公開名稱數 | 1,241 |
@@ -526,7 +526,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.11 伺服器、網路協定與外部整合
 
-> 24 個套件、約 6,120 行。
+> 24 個套件、約 6,140 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -549,7 +549,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/outbox/` | 92 | 交易式 outbox，保證至少一次的事件投遞 |
 | `utils/pytest_plugin/` | 375 | pytest 外掛 + BDD step library（`pytest11` entry point） |
 | `utils/rest_api/` | 1,793 | 純標準庫 REST 前端：路由、Bearer 驗證、限流、Prometheus 指標、OpenAPI 3.1 產生 |
-| `utils/socket_server/` | 136 | 執行 action JSON 的執行緒式 TCP 指令伺服器（預設綁 127.0.0.1） |
+| `utils/socket_server/` | 156 | 執行 action JSON 的執行緒式 TCP 指令伺服器（預設綁 127.0.0.1） |
 | `utils/sse_client/` | 126 | Server-Sent Events 用戶端解析 |
 | `utils/tls_acme/` | 455 | TLS 自動化：HTTP-01 挑戰伺服器、金鑰／CSR、自動續期 |
 | `utils/url_canon/` | 117 | RFC 3986 URL 正規化與查詢字串工具 |
@@ -1080,6 +1080,6 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `osx/` | 17 | 919 |
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 837 |
-| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 676 | 50,479 |
-| **總計** | **1,042** | **145,954** |
+| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 676 | 50,499 |
+| **總計** | **1,042** | **145,974** |
 

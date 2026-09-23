@@ -58,6 +58,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260924-21 | 2026-09-24 | Socket server reads whole pretty-printed commands; the documented client example works | #bugfix #audit | [2026-09](2026-09.md) |
 | U-20260924-20 | 2026-09-24 | MCP HTTP: anonymous initialize floods cannot evict a session in use; DELETE checks its path; state of a session dropped mid-request is released | #security #audit #mcp | [2026-09](2026-09.md) |
 | U-20260924-19 | 2026-09-24 | REST API: authenticate before reading the body, never lock out the valid token, survive a corrupt audit database | #security #audit | [2026-09](2026-09.md) |
 | U-20260924-18 | 2026-09-24 | User store keeps a damaged file and refuses shared tokens; secret managers stop overwriting each other; malformed vaults are store errors | #security #audit | [2026-09](2026-09.md) |
@@ -179,7 +180,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | File | Period | Entries |
 |---|---|---:|
-| [2026-09.md](2026-09.md) | 2026-09 | 90 |
+| [2026-09.md](2026-09.md) | 2026-09 | 91 |
 | [2026-08-f.md](2026-08-f.md) | 2026-08 | 1 |
 | [2026-08-e.md](2026-08-e.md) | 2026-08 | 2 |
 | [2026-08-d.md](2026-08-d.md) | 2026-08 | 2 |

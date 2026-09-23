@@ -269,6 +269,9 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Fixed
 
+- **The socket server reads indented (multi-line) JSON commands whole**, and
+  the socket driver docs' client example sends the newline terminator it
+  needs.
 - **The MCP HTTP transport releases the state of a session dropped while a
   request for it was running.**
 - **A corrupt audit database no longer stops the REST server from
