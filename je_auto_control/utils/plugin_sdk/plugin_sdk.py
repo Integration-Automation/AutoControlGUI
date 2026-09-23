@@ -17,6 +17,16 @@ COMMANDS_GROUP = "je_auto_control.commands"
 
 
 def _entry_points(group: str) -> List[Any]:
+    """The installed entry points of ``group``, which must be ours.
+
+    ``group`` reaches here from action files and MCP calls (``ac_list_plugins``
+    is annotated read-only), and discovery *calls* every entry point it finds:
+    ``group="console_scripts"`` ran the ``main()`` of every installed command
+    line tool, pip's included. Only :data:`COMMANDS_GROUP` is loaded.
+    """
+    if group != COMMANDS_GROUP:
+        raise ValueError(
+            f"only the {COMMANDS_GROUP!r} entry-point group can be loaded, not {group!r}")
     from importlib import metadata
     return list(metadata.entry_points(group=group))
 

@@ -193,6 +193,9 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Security
 
+- **`AC_list_plugins` / `AC_load_plugins` and the matching MCP tools load only
+  the `je_auto_control.commands` entry-point group**; another group such as
+  `console_scripts` ran every installed tool's `main()`.
 - **Remote desktop: failed logins no longer use up the host's client slots**,
   a view-only viewer can no longer set the clipboard or write files, and an
   IP allowlist whose every entry is invalid admits nobody instead of
