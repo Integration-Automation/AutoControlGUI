@@ -20,7 +20,7 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 | 指標 | 數值 |
 | --- | ---: |
 | Python 模組總數（含周邊子專案） | 1,046 |
-| 程式碼總行數 | 144,817 |
+| 程式碼總行數 | 144,821 |
 | `je_auto_control/utils/` 子套件數 | 310 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 773 |
 | 套件門面 `__all__` 公開名稱數 | 1,241 |
@@ -462,7 +462,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.8 元素定位、自我修復與智慧等待
 
-> 23 個套件、約 4,074 行。
+> 23 個套件、約 4,078 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -483,7 +483,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/locator_repair/` | 117 | 自癒回寫：把修正後的定位器持久化 |
 | `utils/observation/` | 92 | 供 VLM／agent 接地用的 token 預算內、帶索引的 a11y 文字觀察 |
 | `utils/observation_delta/` | 103 | token 預算內的觀察差異：兩個 UI 影格之間變了什麼 |
-| `utils/screen_state/` | 178 | 語義畫面狀態：快照／差異與結構化畫面描述 |
+| `utils/screen_state/` | 182 | 語義畫面狀態：快照／差異與結構化畫面描述 |
 | `utils/scroll_find/` | 84 | 捲動直到目標影像／文字可見 |
 | `utils/self_healing/` | 352 | 自癒定位器：先影像樣板、失敗改用 VLM，並留稽核記錄 |
 | `utils/semantic_recording/` | 423 | 為錄製內容加上語義錨點，支援換機重播與自癒重播 |
@@ -1079,6 +1079,6 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `osx/` | 17 | 919 |
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 783 |
-| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 675 | 49,727 |
-| **總計** | **1,040** | **144,752** |
+| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 675 | 49,731 |
+| **總計** | **1,040** | **144,756** |
 

@@ -13,7 +13,7 @@ Pure standard library; imports no ``PySide6``. The pure functions
 elements) are unit-testable without a live desktop.
 """
 import math
-from typing import Any, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional
 
 _INTERACTIVE_HINTS = ("button", "edit", "text", "combo", "check", "radio",
                       "menu", "link", "tab", "list", "slider")
@@ -62,6 +62,11 @@ def _centre(item: Dict[str, Any]) -> tuple:
     return (bbox[0] + bbox[2] / 2.0, bbox[1] + bbox[3] / 2.0)
 
 
+def _distance_from(target: tuple) -> Callable[[Dict[str, Any]], float]:
+    """Key function: how far an item's centre is from ``target``."""
+    return lambda item: math.dist(_centre(item), target)
+
+
 def _pair_group(before: List[Dict[str, Any]], after: List[Dict[str, Any]],
                 diff: Dict[str, List[Dict[str, Any]]]) -> None:
     """Pair same-key items, unchanged boxes first, then nearest centres.
@@ -82,8 +87,7 @@ def _pair_group(before: List[Dict[str, Any]], after: List[Dict[str, Any]],
             diff["added"].append(item)
             continue
         centre = _centre(item)
-        prior = min(remaining,
-                    key=lambda candidate, target=centre: math.dist(_centre(candidate), target))
+        prior = min(remaining, key=_distance_from(centre))
         remaining.remove(prior)
         diff["moved"].append({"role": item.get("role", ""), "name": item.get("name", ""),
                               "before": prior.get("bbox"), "after": item.get("bbox")})
