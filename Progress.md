@@ -201,6 +201,33 @@ MCP 的 bearer 比對同理；稽核寫入帶上 `user_id`。
 
 ---
 
+## USB passthrough viewer 以種類配對回覆，逾時的回覆會交給下一個請求
+
+`DECIDE` — 協定要不要加請求編號（線上格式改動，新舊版本相容要一起想）
+
+`utils/usb/passthrough/viewer_client.py:413`（`_on_opened`）與 `:466`（`_complete_pending`）只按 OPEN／LIST／claim
+配對回覆，回覆沒有序號。請求逾時後，對同一種類的下一個請求會拿到遲到的舊回覆：`open(aaaa)` 逾時、`open(bbbb)`
+收到 `aaaa` 的 OPENED，claim 綁錯裝置；bulk 讀逾時後，下一次傳輸拿到上一次的資料。host 接受最長 60 秒的
+`timeout_ms`，client 預設 10 秒就放棄，正常使用就會遇到（2026-09-24 稽核重現）。
+
+**選項**：在 payload 加一個由 client 產生、host 原樣帶回的請求編號（舊 host 不帶就退回現在的配對）；或逾時後把該
+claim 標成需排空，丟掉下一個回覆——但 host 若根本沒回，會丟掉正確的回覆。
+
+---
+
+## Admin console 廣播的 `ok` 只代表 HTTP 200
+
+`TODO` — 讓遠端 `/execute` 的動作失敗也能回報成失敗
+
+`utils/admin/admin_client.py`（`_execute_one`）在 host 回 200 時一律 `ok: True`；遠端 `/execute` 以
+`raise_on_error=False` 執行，動作失敗只出現在結果內容裡（例如 `{"execute: [...]": "TypeError(...)"}`）。
+`utils/dag/runner.py:270` 的遠端節點因此把失敗的節點算成成功，本機路徑早已用 `raise_on_error=True` 修正過。
+
+**做法**：REST `/execute` 接受並轉交 `raise_on_error`（失敗時回非 200 或 `ok: false`），admin client 與 DAG 遠端
+節點帶上它；同時更新 REST 的 OpenAPI 描述與 `architecture.md` §6（其他工具也會呼叫 `/execute`）。
+
+---
+
 ## pytest11 進入點會把整個門面拉進每一次 pytest
 
 `DECIDE` — 要不要把進入點搬到一個精簡的頂層模組（打包層的改動，維護者拍板）
