@@ -87,7 +87,10 @@ def _post_initialize(host: str, port: int, ctx: ssl.SSLContext) -> int:
 
 def test_silent_tls_client_does_not_wedge_the_accept_thread(tmp_path,
                                                             monkeypatch):
-    monkeypatch.setattr(http_transport, "_HANDSHAKE_TIMEOUT", 0.5)
+    # Well under the client's 6 s timeout (and the 10 s default), yet long
+    # enough that the real client's own handshake fits on a loaded machine:
+    # at 0.5 s the server dropped it mid-handshake during full-suite runs.
+    monkeypatch.setattr(http_transport, "_HANDSHAKE_TIMEOUT", 2.0)
     server = start_mcp_http_server(
         host="127.0.0.1", port=0, ssl_context=_server_ssl_context(tmp_path))
     host, port = server.address
