@@ -7008,6 +7008,12 @@ def _export_sarif(findings: Any, path: Optional[str] = None,
     return result
 
 
+#: Whether the action list running on this thread was asked to raise on
+#: error; nested bodies (``_validated=True``) inherit it. Thread-local, so
+#: AC_parallel branches -- their own threads and executors -- are unaffected.
+_STRICT_BODIES = threading.local()
+
+
 class Executor:
     """
     Executor
@@ -7025,6 +7031,26 @@ class Executor:
     # would resolve ${err} before it exists.
     _DEFERRED_ARG_KEYS: frozenset = frozenset(
         {"body", "then", "else", "branches", "catch", "finally"})
+
+    # Commands that run an action list held under another key. Expanding it
+    # at dispatch and again when the nested list runs expanded a variable
+    # *value*: text read from OCR, HTTP or a file that contained
+    # ``${secrets.NAME}`` was resolved from the vault. Per command, because
+    # the same key is plain data elsewhere (``AC_tween_drag``'s ``steps``).
+    _DEFERRED_COMMAND_KEYS: Dict[str, frozenset] = {
+        "AC_execute_action": frozenset({"action_list"}),
+        "AC_expect_poll": frozenset({"action"}),
+        "AC_run_saga": frozenset({"steps"}),
+        "AC_run_chaos": frozenset({"spec"}),
+        "AC_run_state_machine": frozenset({"spec"}),
+        "AC_run_suite": frozenset({"spec"}),
+        "AC_replay_trace": frozenset({"trace"}),
+        **{name: frozenset({"actions"}) for name in (
+            "AC_circuit_call", "AC_bulkhead_run", "AC_run_resumable",
+            "AC_run_device_matrix", "AC_observe_add", "AC_voice_register",
+            "AC_with_modifiers", "AC_debug_trace", "AC_skill_save",
+            "AC_admin_broadcast_execute")},
+    }
 
     def __init__(self):
         self._block_commands = BLOCK_COMMANDS
@@ -7930,11 +7956,13 @@ class Executor:
         return unknown_command_names(self._unwrap_action_list(action_list),
                                      self.known_commands())
 
-    def _resolve_runtime_args(self, args: Any) -> Any:
+    def _resolve_runtime_args(self, args: Any, command: str = "") -> Any:
         """Interpolate ``${var}`` placeholders against the current scope.
 
-        Keys inside :attr:`_DEFERRED_ARG_KEYS` are left as-is so nested
-        action lists keep their placeholders for per-iteration evaluation.
+        Keys inside :attr:`_DEFERRED_ARG_KEYS`, and the ``command``'s keys in
+        :attr:`_DEFERRED_COMMAND_KEYS`, are left as-is so nested action lists
+        keep their placeholders for per-iteration evaluation -- and are
+        expanded exactly once, when the nested action runs.
 
         An empty scope is not a reason to skip interpolation: ``${secrets.*}``
         resolves through the vault without consulting the scope at all, and an
@@ -7942,9 +7970,11 @@ class Executor:
         literal placeholder.
         """
         if isinstance(args, dict):
+            deferred = self._DEFERRED_ARG_KEYS | self._DEFERRED_COMMAND_KEYS.get(
+                command, frozenset())
             resolved: Dict[str, Any] = {}
             for key, value in args.items():
-                if key in self._DEFERRED_ARG_KEYS:
+                if key in deferred:
                     resolved[key] = value
                 else:
                     resolved[key] = interpolate_value(value, self.variables)
@@ -7966,14 +7996,14 @@ class Executor:
                 raise AutoControlActionException(
                     f"{name} requires a dict of arguments"
                 )
-            return block_handler(self, self._resolve_runtime_args(args))
+            return block_handler(self, self._resolve_runtime_args(args, name))
 
         event = self.event_dict.get(name)
         if event is None:
             raise AutoControlActionException(f"Unknown action: {name}")
 
         if len(action) == 2:
-            resolved = self._resolve_runtime_args(action[1])
+            resolved = self._resolve_runtime_args(action[1], name)
             if isinstance(resolved, dict):
                 return event(**resolved)
             return event(*resolved)
@@ -7999,6 +8029,24 @@ class Executor:
         :return: 執行紀錄字典
         """
         autocontrol_logger.info(f"execute_action, action_list: {redact_actions(action_list)}")
+        # A nested body inherits the strictness of the list that runs it, so
+        # a failure inside an AC_loop / AC_if_* / macro under raise_on_error
+        # reaches the enclosing AC_try / AC_retry / caller instead of being
+        # recorded and swallowed at the first block boundary.
+        inherited = getattr(_STRICT_BODIES, "value", False)
+        raise_on_error = bool(raise_on_error) or (_validated and inherited)
+        _STRICT_BODIES.value = raise_on_error
+        try:
+            return self._execute_list(action_list, raise_on_error, _validated,
+                                      dry_run, step_callback)
+        finally:
+            _STRICT_BODIES.value = inherited
+
+    def _execute_list(self, action_list: Union[list, dict], raise_on_error: bool,
+                      _validated: bool, dry_run: bool,
+                      step_callback: Optional[Callable[[list], None]],
+                      ) -> Dict[str, str]:
+        """The body of :meth:`execute_action`, with strictness already settled."""
         action_list = self._unwrap_action_list(action_list)
         if not _validated:
             validate_actions(action_list, self.known_commands())

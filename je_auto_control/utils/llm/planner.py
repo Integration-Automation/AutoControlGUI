@@ -82,7 +82,9 @@ def run_from_description(description: str,
         model=model,
         max_tokens=max_tokens,
     )
-    record = executor.execute_action(actions, _validated=True)
+    # A top-level run: ``_validated=True`` would mark it as a nested body,
+    # and a stray AC_break from the model would escape as a raw LoopBreak.
+    record = executor.execute_action(actions)
     return {"actions": actions, "record": record}
 
 

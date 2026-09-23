@@ -386,7 +386,10 @@ false. ``AC_break`` / ``AC_continue`` work as in any loop::
 runs (on success, on a caught error, or while a ``reraise`` / loop
 break/continue propagates). The error text is exposed to ``error_var``
 for the ``catch`` branch to inspect, and ``reraise=true`` re-raises after
-cleanup::
+cleanup. A failure anywhere inside ``body`` counts, including inside a loop,
+an ``AC_if_*`` branch or a macro it runs: nested bodies inherit the strictness
+of the list running them, which also makes ``AC_retry`` retry them and
+``execute_action(..., raise_on_error=True)`` raise from them::
 
    executor.execute_action([
        ["AC_try", {

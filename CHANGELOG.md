@@ -33,6 +33,10 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Changed
 
+- **`raise_on_error=True` reaches into nested bodies.** Loops, branches and
+  macros run by a strict list are strict too, so a failure inside them
+  raises instead of being recorded; lenient runs are unchanged.
+
 - **JSONPath refuses what it cannot read.** `json_query` raises `ValueError`
   for an unsupported filter, an unterminated `[` or a stray character (an
   unsupported filter used to match every element). Filters take nested
@@ -179,6 +183,16 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
   package does no PKCS#7 decryption, so the `>=48.0.1` floor is unchanged.
 
 ### Fixed
+
+- **Failures inside nested blocks reach `AC_try`, `AC_retry` and strict
+  callers.** A failure inside an `AC_loop`, `AC_if_*` branch or macro was
+  swallowed at the block boundary. `AC_try` / `AC_retry` now also catch
+  arithmetic and lookup errors and let the macro depth limit reach the
+  top-level record; a planned `AC_break` is recorded instead of raised.
+- **A variable's value is never expanded as a placeholder.** Commands that
+  run a nested action list (`AC_execute_action`, `AC_circuit_call`,
+  `AC_run_saga`, ...) expanded it twice, so a value containing
+  `${secrets.NAME}` was resolved from the vault.
 
 - **VEX no longer suppresses findings it does not cover.** `apply_vex`
   matches products by package name instead of substring, honours the

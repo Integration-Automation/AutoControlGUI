@@ -185,6 +185,20 @@ def exec_while_image(executor: Any, args: Mapping[str, Any]) -> int:
     return iterations
 
 
+# Errors a protected block may raise that ``AC_try`` / ``AC_retry`` are
+# willing to catch -- the executor's own containment tuple. ``LoopBreak`` /
+# ``LoopContinue`` are deliberately excluded so loop control-flow still
+# propagates through a try block, and ``MacroDepthExceeded`` is re-raised
+# before this tuple is consulted so it reaches the top-level record.
+# ``AutoControlException`` is the family base (every framework error
+# subclasses it), so image/mouse/keyboard/screen/assertion failures inside
+# the body are recoverable too.
+_TRY_CATCHABLE = (
+    AutoControlException, OSError, RuntimeError, ArithmeticError,
+    AttributeError, TypeError, ValueError, LookupError,
+)
+
+
 def exec_retry(executor: Any, args: Mapping[str, Any]) -> Any:
     """Execute ``body`` with retries; raise after exhausting attempts."""
     max_attempts = max(int(args.get("max_attempts", 3)), 1)
@@ -194,8 +208,9 @@ def exec_retry(executor: Any, args: Mapping[str, Any]) -> Any:
     for attempt in range(max_attempts):
         try:
             return _run_strict(executor, body)
-        except (AutoControlException, OSError, RuntimeError,
-                AttributeError, TypeError, ValueError) as error:
+        except MacroDepthExceeded:
+            raise
+        except _TRY_CATCHABLE as error:
             last_error = error
             autocontrol_logger.info(
                 "AC_retry attempt %d/%d failed: %s",
@@ -210,20 +225,6 @@ def exec_retry(executor: Any, args: Mapping[str, Any]) -> Any:
     raise AutoControlActionException(
         f"AC_retry exhausted after {max_attempts} attempts"
     ) from last_error
-
-
-# Errors a protected block may raise that ``AC_try`` is willing to catch.
-# ``LoopBreak`` / ``LoopContinue`` are deliberately excluded so loop
-# control-flow still propagates through a try block.
-# ``LookupError`` keeps this aligned with the executor's own catch tuple, so
-# a KeyError/IndexError from a malformed nested action is catchable by
-# ``AC_try`` rather than tearing down the whole script. ``AutoControlException``
-# is the family base (every framework error subclasses it), so image/mouse/
-# keyboard/screen/assertion failures inside the body are recoverable too.
-_TRY_CATCHABLE = (
-    AutoControlException, OSError, RuntimeError,
-    AttributeError, TypeError, ValueError, LookupError,
-)
 
 
 def exec_try(executor: Any, args: Mapping[str, Any]) -> Dict[str, Any]:
@@ -242,7 +243,7 @@ def exec_try(executor: Any, args: Mapping[str, Any]) -> Dict[str, Any]:
     try:
         try:
             _run_strict(executor, body)
-        except (LoopBreak, LoopContinue):
+        except (LoopBreak, LoopContinue, MacroDepthExceeded):
             raise
         except _TRY_CATCHABLE as error:
             caught_repr = repr(error)

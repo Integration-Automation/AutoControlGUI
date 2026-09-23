@@ -365,7 +365,9 @@ scope 重新判斷條件,因此會變動該變數的 body(例如 ``AC_inc_var``)
 ``AC_try`` 提供 try / catch / finally。``body`` 失敗時改走 ``catch`` 分支而
 非中止腳本;``finally`` 一律執行(成功、捕捉到錯誤,或在 ``reraise`` / 迴圈
 break、continue 穿透時皆然)。錯誤文字會暴露到 ``error_var`` 供 ``catch``
-分支檢視,``reraise=true`` 會在清理後重新拋出::
+分支檢視,``reraise=true`` 會在清理後重新拋出。``body`` 裡任何地方失敗都算,包括它執行的
+迴圈、``AC_if_*`` 分支或巨集裡面:巢狀的 body 沿用執行它的清單的嚴格程度,所以 ``AC_retry``
+也會重試它們,``execute_action(..., raise_on_error=True)`` 也會從裡面拋出::
 
    executor.execute_action([
        ["AC_try", {
