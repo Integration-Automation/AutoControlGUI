@@ -21,6 +21,8 @@ import base64
 import hashlib
 import hmac
 import json
+import math
+import re
 import time
 from dataclasses import dataclass
 from typing import Any, Dict, Iterable, Mapping, Optional, Sequence, Union
@@ -64,7 +66,15 @@ def _b64url_encode(raw: bytes) -> str:
     return base64.urlsafe_b64encode(raw).rstrip(b"=").decode("ascii")
 
 
+_B64URL_SEGMENT = re.compile(r"[A-Za-z0-9_-]*")
+
+
 def _b64url_decode(segment: str) -> bytes:
+    # urlsafe_b64decode drops characters outside the alphabet, so "sig!!"
+    # verified like "sig": many token strings per signature, which defeats a
+    # denylist or replay cache keyed on the token.
+    if not _B64URL_SEGMENT.fullmatch(segment):
+        raise JwtError("malformed base64url segment")
     padding = "=" * (-len(segment) % 4)
     try:
         return base64.urlsafe_b64decode(segment + padding)
@@ -88,9 +98,12 @@ def encode_jwt(claims: Mapping[str, Any], key: Key, *, alg: str = "HS256",
     """Return a signed compact JWT for ``claims``."""
     if alg not in _ALGORITHMS:
         raise JwtError(f"unsupported algorithm {alg!r}")
-    header = {"alg": alg, "typ": "JWT"}
+    header = {"typ": "JWT"}
     if headers:
         header.update(headers)
+    # Set last: an "alg" in ``headers`` labelled an HS256 token "none" (or
+    # HS512, which then could not be decoded).
+    header["alg"] = alg
     header_segment = _b64url_encode(json.dumps(
         header, separators=(",", ":"), sort_keys=True).encode("utf-8"))
     payload_segment = _b64url_encode(json.dumps(
@@ -100,7 +113,20 @@ def encode_jwt(claims: Mapping[str, Any], key: Key, *, alg: str = "HS256",
     return f"{header_segment}.{payload_segment}.{signature}"
 
 
+def _json_object(segment: str, what: str) -> Dict[str, Any]:
+    """Decode a JSON-object segment; anything else is a :class:`JwtError`."""
+    try:
+        value = json.loads(_b64url_decode(segment))
+    except ValueError as exc:  # JSONDecodeError, UnicodeDecodeError
+        raise JwtError(f"{what} is not valid JSON") from exc
+    if not isinstance(value, dict):
+        raise JwtError(f"{what} must be a JSON object")
+    return value
+
+
 def _split_token(token: str) -> tuple:
+    if not isinstance(token, str):
+        raise JwtError("token must be a string")
     parts = token.split(".")
     if len(parts) != 3:
         raise JwtError("token must have three segments")
@@ -109,7 +135,7 @@ def _split_token(token: str) -> tuple:
 
 def _verify_signature(header_seg: str, payload_seg: str, signature_seg: str,
                       key: Key, algorithms: Iterable[str]) -> Dict[str, Any]:
-    header = json.loads(_b64url_decode(header_seg))
+    header = _json_object(header_seg, "header")
     alg = header.get("alg")
     if alg == "none" or alg not in _ALGORITHMS:
         raise JwtError(f"algorithm {alg!r} is not allowed")
@@ -122,13 +148,26 @@ def _verify_signature(header_seg: str, payload_seg: str, signature_seg: str,
     return header
 
 
+def _numeric_claim(claims: Mapping[str, Any], name: str) -> float:
+    """A time claim as a finite number.
+
+    ``exp: "soon"`` raised a bare ``ValueError``, and ``exp: NaN`` (valid in
+    Python's JSON) compared false with every time, so the token never expired.
+    """
+    value = claims[name]
+    if isinstance(value, bool) or not isinstance(value, (int, float)) \
+            or not math.isfinite(value):
+        raise JwtError(f"{name} claim must be a finite number")
+    return float(value)
+
+
 def _check_time_claims(claims: Mapping[str, Any], now: float,
                        policy: "ClaimsPolicy") -> None:
     if policy.verify_exp and "exp" in claims and \
-            now > float(claims["exp"]) + policy.leeway:
+            now > _numeric_claim(claims, "exp") + policy.leeway:
         raise ExpiredTokenError("token has expired")
     if policy.verify_nbf and "nbf" in claims and \
-            now < float(claims["nbf"]) - policy.leeway:
+            now < _numeric_claim(claims, "nbf") - policy.leeway:
         raise JwtError("token is not yet valid (nbf)")
 
 
@@ -137,7 +176,15 @@ def _check_audience(claims: Mapping[str, Any], audience: Any) -> None:
         return
     allowed = {audience} if isinstance(audience, str) else set(audience)
     actual = claims.get("aud")
-    actual_set = {actual} if isinstance(actual, str) else set(actual or [])
+    if isinstance(actual, str):
+        actual_set = {actual}
+    elif actual is None:
+        actual_set = set()
+    elif isinstance(actual, list) and all(isinstance(item, str) for item in actual):
+        actual_set = set(actual)
+    else:
+        # aud: 5 raised TypeError from set().
+        raise JwtError("audience claim must be a string or a list of strings")
     if allowed.isdisjoint(actual_set):
         raise JwtError("audience claim mismatch")
 
@@ -153,7 +200,7 @@ def decode_jwt(token: str, key: Key, policy: Optional[ClaimsPolicy] = None, *,
     header_seg, payload_seg, signature_seg = _split_token(token)
     _verify_signature(header_seg, payload_seg, signature_seg, key,
                       policy.algorithms)
-    claims = json.loads(_b64url_decode(payload_seg))
+    claims = _json_object(payload_seg, "payload")
     when = time.time() if now is None else now
     _check_time_claims(claims, when, policy)
     _check_audience(claims, policy.audience)

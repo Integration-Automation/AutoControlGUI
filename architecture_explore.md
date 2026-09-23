@@ -20,7 +20,7 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 | 指標 | 數值 |
 | --- | ---: |
 | Python 模組總數（含周邊子專案） | 1,048 |
-| 程式碼總行數 | 146,277 |
+| 程式碼總行數 | 146,324 |
 | `je_auto_control/utils/` 子套件數 | 310 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 773 |
 | 套件門面 `__all__` 公開名稱數 | 1,241 |
@@ -526,7 +526,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.11 伺服器、網路協定與外部整合
 
-> 24 個套件、約 6,140 行。
+> 24 個套件、約 6,187 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -540,7 +540,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/http_conditional/` | 107 | 條件式 HTTP 請求與快取驗證器 |
 | `utils/http_content/` | 103 | HTTP 內容協商與回應解壓縮 |
 | `utils/http_problem/` | 116 | RFC 9457 problem+json 解析 |
-| `utils/jwt/` | 172 | JWT（HMAC 家族）編碼、解碼與 claim 驗證 |
+| `utils/jwt/` | 219 | JWT（HMAC 家族）編碼、解碼與 claim 驗證 |
 | `utils/link_header/` | 115 | RFC 8288 Link header 解析與分頁 |
 | `utils/multipart/` | 139 | multipart/form-data 建構與解析 |
 | `utils/notify/` | 95 | 跨平台桌面通知 |
@@ -1080,6 +1080,6 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `osx/` | 17 | 919 |
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 837 |
-| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 676 | 50,621 |
-| **總計** | **1,042** | **146,212** |
+| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 676 | 50,668 |
+| **總計** | **1,042** | **146,259** |
 

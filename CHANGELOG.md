@@ -193,6 +193,9 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Security
 
+- **JWT decoding rejects characters outside base64url** (which made tokens
+  malleable) and a `NaN` expiry that never expired, and `encode_jwt` no longer
+  lets extra headers override `alg`.
 - **The admin console no longer sends its bearer token to a redirect target**,
   bounds each host's response by `timeout_s` as a whole and by size, and
   reports broadcast labels that name no host.
@@ -285,6 +288,9 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Fixed
 
+- **Every malformed JWT raises `JwtError`**, so `AC_jwt_decode` answers
+  `{"ok": false}` instead of failing, and it accepts `algorithms` given as one
+  name.
 - **The admin console keeps a damaged or partly unreadable host file**
   instead of dropping entries on the next save, and the USB passthrough
   viewer caps a message that never sends EOF.
