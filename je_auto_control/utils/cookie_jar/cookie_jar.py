@@ -6,9 +6,11 @@ login-then-call REST flow could not carry a session headlessly. This parses
 header; the jar is JSON-serialisable so a session can be saved and reloaded.
 
 Pure standard library (``json``); imports no ``PySide6``. The jar is a simple
-in-memory name-value store (cookies cleared on ``max-age<=0`` / empty value), so
-behaviour is fully deterministic in CI.
+in-memory name-value store (cookies cleared on ``max-age<=0``, a past
+``Expires`` or an empty value), so behaviour is fully deterministic in CI.
 """
+import datetime
+import email.utils
 import json
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
@@ -22,6 +24,8 @@ def parse_set_cookie(header: str) -> Optional[Dict[str, Any]]:
     if not segments or "=" not in segments[0]:
         return None
     name, _, value = segments[0].partition("=")
+    if not name.strip():
+        return None                      # RFC 6265 5.2 step 5: ignore it
     attributes: Dict[str, str] = {}
     for segment in segments[1:]:
         key, sep, attr_value = segment.partition("=")
@@ -31,13 +35,27 @@ def parse_set_cookie(header: str) -> Optional[Dict[str, Any]]:
 
 
 def _is_expired(attributes: Dict[str, str]) -> bool:
+    """``Max-Age <= 0``, else an ``Expires`` in the past (Max-Age wins)."""
     max_age = attributes.get("max-age")
     if max_age is not None:
         try:
             return int(max_age) <= 0
         except ValueError:
             return False
-    return False
+    return _expires_passed(attributes.get("expires"))
+
+
+def _expires_passed(expires: Optional[str]) -> bool:
+    """Whether an ``Expires`` date is in the past -- how servers delete a cookie."""
+    if not expires:
+        return False
+    try:
+        when = email.utils.parsedate_to_datetime(expires)
+    except (TypeError, ValueError, IndexError):
+        return False
+    if when.tzinfo is None:
+        when = when.replace(tzinfo=datetime.timezone.utc)
+    return when <= datetime.datetime.now(datetime.timezone.utc)
 
 
 class CookieJar:

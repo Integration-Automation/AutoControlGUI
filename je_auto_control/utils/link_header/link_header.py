@@ -13,6 +13,8 @@ import re
 from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, List, Mapping, Optional, Union
 
+from je_auto_control.utils.http_conditional.http_conditional import split_outside_quotes
+
 _LINK_RE = re.compile(r"<([^>]*)>\s*(;[^<]*)?")
 
 Links = Union[str, List["Link"]]
@@ -40,7 +42,7 @@ def _strip_quotes(value: str) -> str:
 
 def _parse_params(chunk: Optional[str]) -> Dict[str, str]:
     params: Dict[str, str] = {}
-    for part in (chunk or "").split(";"):
+    for part in split_outside_quotes(chunk or "", ";"):   # title="x;y" is one
         cleaned = part.strip().rstrip(",").strip()
         if not cleaned:
             continue
@@ -70,7 +72,7 @@ def links_by_rel(links: Links) -> Dict[str, Link]:
     indexed: Dict[str, Link] = {}
     for link in _as_links(links):
         for token in (link.rel or "").split():
-            indexed[token] = link
+            indexed[token.lower()] = link   # relation types are case-insensitive
     return indexed
 
 

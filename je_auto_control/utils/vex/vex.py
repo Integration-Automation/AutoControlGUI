@@ -83,26 +83,39 @@ def build_vex(statements: Sequence[Mapping[str, Any]], *,
     }
 
 
+def _product_name(product_id: str) -> str:
+    """Package name of a purl (``pkg:pypi/requests@2.0`` -> ``requests``), else the id."""
+    if not product_id.startswith("pkg:"):
+        return product_id.lower()
+    path = product_id[4:].split("?", 1)[0].split("#", 1)[0].split("@", 1)[0]
+    return path.rsplit("/", 1)[-1].lower()
+
+
 def _statement_matches(statement: Mapping[str, Any],
                        finding: Mapping[str, Any]) -> bool:
-    name = statement.get("vulnerability", {}).get("name", "")
+    vulnerability = statement.get("vulnerability", {})
+    names = {vulnerability.get("name", "")} | set(vulnerability.get("aliases", []))
     identifiers = {finding.get("id")} | set(finding.get("aliases", []))
-    if name not in identifiers:
+    if not names & identifiers:
         return False
     products = [str(item.get("@id", "")) for item in
                 statement.get("products", [])]
     if not products:
         return True
-    package = str(finding.get("package", ""))
-    return bool(package) and any(package in product for product in products)
+    # By name, not substring: a statement about ``requests-toolbelt`` must not
+    # suppress a finding in ``requests``.
+    package = str(finding.get("package", "")).lower()
+    return bool(package) and any(_product_name(product) == package for product in products)
 
 
 def _resolve_status(finding: Mapping[str, Any],
                     statements: Sequence[Mapping[str, Any]]) -> Optional[str]:
+    """Status of the last matching statement: later ones supersede earlier ones."""
+    status = None
     for statement in statements:
         if _statement_matches(statement, finding):
-            return statement.get("status")
-    return None
+            status = statement.get("status")
+    return status
 
 
 def apply_vex(findings: Sequence[Mapping[str, Any]],

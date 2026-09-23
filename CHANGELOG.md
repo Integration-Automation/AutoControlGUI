@@ -180,6 +180,16 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Fixed
 
+- **VEX no longer suppresses findings it does not cover.** `apply_vex`
+  matches products by package name instead of substring, honours the
+  statement's aliases, and lets a later statement supersede an earlier one.
+- **Parsing fixes for `.env`, data sources and HTTP headers.** Quoted `.env`
+  values drop a trailing comment and may span lines; `dump_dotenv` output
+  parses back unchanged. CSV/JSON data sources skip a UTF-8 BOM. A past
+  cookie `Expires` deletes the cookie and a nameless cookie is ignored;
+  quoted `Cache-Control` and `Link` parameters stay whole; `rel` is
+  case-insensitive; SSE handles a `\r\n` split across chunks and a BOM.
+
 - **JSON Patch, JSONPath and unified diffs follow their specs.** JSON Patch
   `add` accepts an index equal to the array length and no longer shares its
   value with the patch; `move` checks its source. `apply_unified` places

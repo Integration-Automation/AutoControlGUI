@@ -58,6 +58,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260923-40 | 2026-09-23 | dotenv, VEX, data-source and HTTP-header parsing audit | #incident #data #security | [2026-09](2026-09.md) |
 | U-20260923-39 | 2026-09-23 | JSON Patch, JSONPath and unified-diff audit: bounds, shared values, silent wildcards, -U0 hunks | #incident #data | [2026-09](2026-09.md) |
 | U-20260923-38 | 2026-09-23 | MCP tool-safety audit: annotations, read-only writes, resource reads, undeclared arguments | #incident #security #mcp | [2026-09](2026-09.md) |
 | U-20260923-37 | 2026-09-23 | Secret detection and failure-bundle audit: key words, free text, vault commands, image modes | #incident #security #redaction | [2026-09](2026-09.md) |
@@ -144,7 +145,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | File | Period | Entries |
 |---|---|---:|
-| [2026-09.md](2026-09.md) | 2026-09 | 55 |
+| [2026-09.md](2026-09.md) | 2026-09 | 56 |
 | [2026-08-f.md](2026-08-f.md) | 2026-08 | 1 |
 | [2026-08-e.md](2026-08-e.md) | 2026-08 | 2 |
 | [2026-08-d.md](2026-08-d.md) | 2026-08 | 2 |

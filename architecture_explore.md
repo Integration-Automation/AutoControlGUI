@@ -20,7 +20,7 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 | 指標 | 數值 |
 | --- | ---: |
 | Python 模組總數（含周邊子專案） | 1,045 |
-| 程式碼總行數 | 144,155 |
+| 程式碼總行數 | 144,265 |
 | `je_auto_control/utils/` 子套件數 | 310 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 773 |
 | 套件門面 `__all__` 公開名稱數 | 1,239 |
@@ -525,22 +525,22 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.11 伺服器、網路協定與外部整合
 
-> 24 個套件、約 6,028 行。
+> 24 個套件、約 6,082 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
 | `utils/acme_v2/` | 610 | 完整 ACME v2 用戶端（RFC 8555），不依賴 certbot |
 | `utils/chatops/` | 649 | Chat-ops bot：接收 Slack／Discord／webhook 的 slash 指令並路由到動作 |
-| `utils/cookie_jar/` | 103 | RFC 6265 cookie jar |
+| `utils/cookie_jar/` | 121 | RFC 6265 cookie jar |
 | `utils/email_send/` | 116 | SMTP 寄信（email 觸發器的發送端搭檔） |
 | `utils/events/` | 82 | 對外 CloudEvents 發送（執行生命週期事件） |
 | `utils/http_cassette/` | 110 | 錄製／重播 HTTP 互動，做離線決定性 API 測試 |
 | `utils/http_client/` | 193 | 零依賴 HTTP(S) 用戶端，供 action 步驟呼叫 API |
-| `utils/http_conditional/` | 87 | 條件式 HTTP 請求與快取驗證器 |
+| `utils/http_conditional/` | 107 | 條件式 HTTP 請求與快取驗證器 |
 | `utils/http_content/` | 103 | HTTP 內容協商與回應解壓縮 |
 | `utils/http_problem/` | 116 | RFC 9457 problem+json 解析 |
 | `utils/jwt/` | 172 | JWT（HMAC 家族）編碼、解碼與 claim 驗證 |
-| `utils/link_header/` | 112 | RFC 8288 Link header 解析與分頁 |
+| `utils/link_header/` | 114 | RFC 8288 Link header 解析與分頁 |
 | `utils/multipart/` | 139 | multipart/form-data 建構與解析 |
 | `utils/notify/` | 95 | 跨平台桌面通知 |
 | `utils/notify_channels/` | 100 | 對外聊天／webhook 通知（Slack／Discord／Teams／raw） |
@@ -549,7 +549,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/pytest_plugin/` | 373 | pytest 外掛 + BDD step library（`pytest11` entry point） |
 | `utils/rest_api/` | 1,758 | 純標準庫 REST 前端：路由、Bearer 驗證、限流、Prometheus 指標、OpenAPI 3.1 產生 |
 | `utils/socket_server/` | 136 | 執行 action JSON 的執行緒式 TCP 指令伺服器（預設綁 127.0.0.1） |
-| `utils/sse_client/` | 112 | Server-Sent Events 用戶端解析 |
+| `utils/sse_client/` | 126 | Server-Sent Events 用戶端解析 |
 | `utils/tls_acme/` | 455 | TLS 自動化：HTTP-01 挑戰伺服器、金鑰／CSR、自動續期 |
 | `utils/url_canon/` | 117 | RFC 3986 URL 正規化與查詢字串工具 |
 | `utils/webrunner_bridge/` | 161 | 把 action JSON 橋接到 WebRunner（`je_web_runner`） |
@@ -597,7 +597,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.13 資料來源、結構驗證與 i18n
 
-> 24 個套件、約 3,999 行。
+> 24 個套件、約 4,001 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -606,7 +606,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/data_drift/` | 125 | 分布漂移偵測 |
 | `utils/data_profile/` | 121 | 資料剖析與結構推斷 |
 | `utils/data_quality/` | 186 | 資料品質：列結構驗證、欄位擷取、遮蔽 |
-| `utils/data_source/` | 190 | 資料驅動執行：從 CSV／JSON／SQLite／Excel 載入資料列 |
+| `utils/data_source/` | 192 | 資料驅動執行：從 CSV／JSON／SQLite／Excel 載入資料列 |
 | `utils/dataset_diff/` | 89 | 表格資料列差異比對（CDC 風格） |
 | `utils/gettext_catalog/` | 296 | GNU gettext 目錄 I/O（解析 .po、編譯／讀取 .mo、訊息查詢） |
 | `utils/i18n_test/` | 130 | 國際化／在地化測試輔助 |
@@ -628,7 +628,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.14 安全、機密與合規
 
-> 13 個套件、約 2,390 行。
+> 13 個套件、約 2,403 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -643,12 +643,12 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/secret_ref/` | 126 | URI scheme 形式的值參照解析 |
 | `utils/secrets/` | 302 | 加密機密儲存庫，供 `${secrets.NAME}` 解析 |
 | `utils/secrets_scan/` | 130 | 掃描 action JSON／資料中應入庫卻硬編碼的機密 |
-| `utils/vex/` | 130 | OpenVEX 陳述撰寫與漏洞分類處置 |
+| `utils/vex/` | 143 | OpenVEX 陳述撰寫與漏洞分類處置 |
 | `utils/vuln_scan/` | 188 | 以 OSV 比對 SBOM 元件的漏洞（純標準庫） |
 
 ### 5.4.15 韌性、流量控制與設定
 
-> 14 個套件、約 1,723 行。
+> 14 個套件、約 1,764 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -657,7 +657,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/bulkhead/` | 134 | Bulkhead 併發隔離 + 伺服器限流標頭解析 |
 | `utils/chaos/` | 153 | 決定性混沌實驗（穩態假說 + 故障注入） |
 | `utils/dedup_window/` | 63 | 時間視窗內的訊息去重 |
-| `utils/dotenv/` | 101 | `.env` 檔解析與序列化 |
+| `utils/dotenv/` | 142 | `.env` 檔解析與序列化 |
 | `utils/feature_flags/` | 173 | 功能旗標評估，含目標規則與決定性灰度 |
 | `utils/idempotency/` | 114 | 冪等鍵儲存與已存回應重放 |
 | `utils/layered_config/` | 110 | 分層設定解析 |
@@ -1079,6 +1079,6 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `osx/` | 17 | 919 |
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 783 |
-| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 674 | 49,130 |
-| **總計** | **1,039** | **144,090** |
+| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 674 | 49,240 |
+| **總計** | **1,039** | **144,200** |
 

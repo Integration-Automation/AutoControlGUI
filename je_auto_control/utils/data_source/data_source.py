@@ -48,7 +48,8 @@ def _load_csv(source: Dict[str, Any]) -> List[Dict[str, Any]]:
     """Load rows from a CSV file; the header row supplies the dict keys."""
     path = _resolve_path(source["path"])
     delimiter = str(source.get("delimiter", ","))
-    encoding = str(source.get("encoding", "utf-8"))
+    # utf-8-sig: reads plain UTF-8 too, and drops the BOM Excel writes.
+    encoding = str(source.get("encoding", "utf-8-sig"))
     with path.open("r", encoding=encoding, newline="") as handle:
         reader = csv.DictReader(handle, delimiter=delimiter)
         try:
@@ -75,7 +76,8 @@ def _coerce_json_rows(payload: Any) -> List[Dict[str, Any]]:
 def _load_json(source: Dict[str, Any]) -> List[Dict[str, Any]]:
     """Load rows from a JSON file (a list of objects, or ``{"rows": [...]}``)."""
     path = _resolve_path(source["path"])
-    encoding = str(source.get("encoding", "utf-8"))
+    # utf-8-sig: reads plain UTF-8 too, and drops the BOM Excel writes.
+    encoding = str(source.get("encoding", "utf-8-sig"))
     with path.open("r", encoding=encoding) as handle:
         return _coerce_json_rows(json.load(handle))
 

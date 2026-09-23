@@ -24,7 +24,7 @@ Dotenv(.env)解析
 
 ``parse_dotenv`` 略過空白與 ``#`` 註解行,去除選用的 ``export`` 前綴,驗證鍵,並解析值:單引號值為
 字面值,雙引號值處理 ``\n`` / ``\t`` / ``\\`` / ``\"`` 轉義,未加引號的值會去除結尾 `` #`` 註解與
-前後空白。``dotenv_values`` 讀取並解析檔案;``load_dotenv`` 把檔案合併進明確的 ``env`` mapping
+前後空白。加引號的值到收尾的引號為止,後面的註解會略過,值也可以跨多行。``dotenv_values`` 讀取並解析檔案;``load_dotenv`` 把檔案合併進明確的 ``env`` mapping
 (預設保留既有鍵,除非 ``override``);``dump_dotenv`` 把 mapping 序列化回 ``.env`` 文字,並為需要的值
 加上引號。
 
