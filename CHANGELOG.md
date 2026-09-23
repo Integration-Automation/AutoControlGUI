@@ -190,6 +190,9 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Security
 
+- **The audit log's hash chain catches a forged row whose hash was cleared
+  and the deletion of its oldest rows**, and `clear()` leaves an
+  `audit_log_cleared` event instead of an empty, clean-looking log.
 - **`JE_AUTOCONTROL_REQUIRE_SIGNED_ACTIONS` covers DAG nodes that run on a
   remote host**; an unsigned action file was dispatched to it.
 - **Keys, passwords and tokens given to actions are masked** in the executor

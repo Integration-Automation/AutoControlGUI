@@ -37,6 +37,9 @@ _DEFAULT_PATH_RELATIVE = ".je_auto_control/audit.db"
 _MAX_ROWS = 50_000
 _PRUNE_TARGET = 37_500  # ~75% of MAX after a prune
 _GENESIS_HASH = "0" * 64
+#: ``PRAGMA user_version`` once the one-off backfill and the anchor exist.
+_CHAIN_SCHEMA_VERSION = 1
+_CLEARED_EVENT = "audit_log_cleared"
 
 
 def default_audit_log_path() -> Path:
@@ -113,7 +116,30 @@ class AuditLog:
             self._conn.execute("ALTER TABLE events ADD COLUMN row_hash TEXT")
         except SQLITE_OPERATIONAL_ERRORS:
             pass  # Column already exists — that's fine.
+        self._conn.execute(
+            "CREATE TABLE IF NOT EXISTS chain_meta (key TEXT PRIMARY KEY, value TEXT)"
+        )
+        (version,) = self._conn.execute("PRAGMA user_version").fetchone()
+        if int(version) < _CHAIN_SCHEMA_VERSION:
+            self._migrate_chain_locked()
+
+    def _migrate_chain_locked(self) -> None:
+        """Chain the rows written before the hash columns existed -- once.
+
+        The backfill used to run on every open and re-hash any row whose
+        ``row_hash`` was NULL, so forging a row and clearing its hash made
+        the next open bless the forgery. It runs once now; afterwards a
+        NULL hash is a broken link. A table that was pruned before the
+        anchor existed keeps its first row's ``prev_hash`` as the anchor.
+        """
+        first = self._conn.execute(
+            "SELECT prev_hash FROM events WHERE row_hash IS NOT NULL ORDER BY id ASC LIMIT 1"
+        ).fetchone()
+        if first is not None and first[0]:
+            self._set_anchor_locked(first[0])
         self._backfill_chain_locked()
+        # PRAGMA takes no bound parameters; the literal is _CHAIN_SCHEMA_VERSION.
+        self._conn.execute("PRAGMA user_version = 1")
 
     def _backfill_chain_locked(self) -> None:
         cur = self._conn.execute(
@@ -135,6 +161,19 @@ class AuditLog:
                 (prev_hash, row_hash, row_id),
             )
             prev_hash = row_hash
+
+    def _read_anchor_locked(self) -> str:
+        """The hash the first row must point at: genesis, or the last pruned row."""
+        row = self._conn.execute(
+            "SELECT value FROM chain_meta WHERE key = 'anchor'"
+        ).fetchone()
+        return row[0] if row and row[0] else _GENESIS_HASH
+
+    def _set_anchor_locked(self, value: str) -> None:
+        self._conn.execute(
+            "INSERT OR REPLACE INTO chain_meta (key, value) VALUES ('anchor', ?)",
+            (value,),
+        )
 
     def _read_last_hash_locked(self) -> str:
         cur = self._conn.execute(
@@ -178,9 +217,16 @@ class AuditLog:
             return
         # Keep the most recent ``_PRUNE_TARGET`` rows. The chain stays
         # valid for kept rows: each surviving row's prev_hash still
-        # matches the row above it; the very first surviving row's
-        # prev_hash points at a row that no longer exists, which is
-        # expected and reported by verify_chain as a "pruned" boundary.
+        # matches the row above it. The first survivor's prev_hash names a
+        # row that no longer exists, so it becomes the anchor verify_chain
+        # starts from -- deleting rows from the top by hand does not.
+        boundary = self._conn.execute(
+            "SELECT row_hash FROM events WHERE id = ("
+            "SELECT id FROM events ORDER BY id DESC LIMIT 1 OFFSET ?)",
+            (_PRUNE_TARGET,),
+        ).fetchone()
+        if boundary is not None and boundary[0]:
+            self._set_anchor_locked(boundary[0])
         self._conn.execute(
             "DELETE FROM events WHERE id <= ("
             "SELECT id FROM events ORDER BY id DESC LIMIT 1 OFFSET ?)",
@@ -215,9 +261,10 @@ class AuditLog:
                 " prev_hash, row_hash FROM events ORDER BY id ASC"
             )
             rows = cur.fetchall()
+            anchor = self._read_anchor_locked()
         if not rows:
             return ChainVerification(ok=True, broken_at_id=None, total_rows=0)
-        prev_hash = rows[0][6] or _GENESIS_HASH
+        prev_hash = anchor
         for row in rows:
             row_id, ts, event_type, host_id, viewer_id, detail, ph, rh = row
             if ph != prev_hash:
@@ -235,11 +282,17 @@ class AuditLog:
         return ChainVerification(ok=True, broken_at_id=None, total_rows=len(rows))
 
     def clear(self) -> int:
-        """Wipe the table. Returns the number of rows deleted."""
+        """Wipe the table, leaving one ``audit_log_cleared`` event. Returns the rows deleted.
+
+        A clear used to leave nothing behind, so a wiped log verified as a
+        clean empty one. The new chain starts with the event that says so.
+        """
         with self._lock:
             cur = self._conn.execute("SELECT COUNT(*) FROM events")
             (count,) = cur.fetchone()
             self._conn.execute("DELETE FROM events")
+            self._set_anchor_locked(_GENESIS_HASH)
+        self.log(_CLEARED_EVENT, detail=f"{int(count)} rows deleted")
         return int(count)
 
     def close(self) -> None:

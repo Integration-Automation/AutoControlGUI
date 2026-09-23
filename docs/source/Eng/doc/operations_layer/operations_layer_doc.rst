@@ -241,7 +241,20 @@ Headless::
    print(result.ok, result.broken_at_id, result.total_rows)
 
 The chain is "trust on first use": rows that existed before the column
-was added are backfilled in insertion order at startup.
+was added are backfilled in insertion order, once, the first time a log is
+opened by a version with the chain (``PRAGMA user_version`` records it).
+After that a row whose hash was cleared is a broken link.
+
+The first row must point at the chain's anchor: the genesis hash, or the
+hash of the last row removed by automatic pruning, so deleting the oldest
+rows by hand is caught too. ``clear()`` starts a new chain with an
+``audit_log_cleared`` event that records how many rows it removed.
+
+The hashes are unkeyed SHA-256: the chain shows edits, deletions and
+reorderings to anyone who did not rewrite every later hash, but someone who
+can write the database file can rebuild the whole chain, and dropping the
+newest rows is not detectable from the file alone. Keep a copy of the last
+``row_hash`` elsewhere when that matters.
 
 REST endpoints::
 
