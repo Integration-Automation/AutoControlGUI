@@ -31,6 +31,10 @@ def renewal_due(certificate_path,
     except (ValueError, OSError):
         return True
     reference = now or datetime.now(timezone.utc)
+    if reference.tzinfo is None:
+        # A naive now raised TypeError against the aware expiry; like
+        # the certificate, it is read as UTC.
+        reference = reference.replace(tzinfo=timezone.utc)
     return (not_after - reference) <= threshold
 
 

@@ -238,3 +238,18 @@ viewer 端的 `FileReceiver`（`utils/remote_desktop/file_transfer.py`）照單�
 
 **為什麼要拍板**：`dest_path` 的語意會從「viewer 上的絕對路徑」變成「viewer 下載目錄裡的相對路徑」，
 現有腳本與文件範例都要跟著改。
+
+---
+
+## Config sync 刪掉的項目會在下次同步時回來
+
+`TODO` — 同步格式要加 tombstone，伺服器端與舊版客戶端的相容要一起想
+
+`utils/config_sync/client.py` 的 `ConfigBucket.remove()` 直接把項目從本機 dict 拿掉；`merge_buckets` 把
+「只有遠端有」的項目照收，所以 `remove()` 之後 `sync()` 會把它從伺服器拿回來（2026-09-23 稽核重現）。
+
+**做法**：`remove()` 留下 `{"deleted": True, "last_modified": now}`，merge 照一般 last-write-wins 比較，
+合併完再把 tombstone 從對外的檢視濾掉；過了保留期（例如 30 天）才真正清掉。
+
+**要先想清楚**：已經在跑的舊版客戶端看不懂 `deleted`，會把 tombstone 當成一般項目；伺服器是否要認得它。
+

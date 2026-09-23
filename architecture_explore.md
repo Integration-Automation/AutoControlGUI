@@ -20,7 +20,7 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 | 指標 | 數值 |
 | --- | ---: |
 | Python 模組總數（含周邊子專案） | 1,045 |
-| 程式碼總行數 | 143,464 |
+| 程式碼總行數 | 143,534 |
 | `je_auto_control/utils/` 子套件數 | 310 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 773 |
 | 套件門面 `__all__` 公開名稱數 | 1,239 |
@@ -512,12 +512,12 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.10 遠端桌面與 USB
 
-> 6 個套件、約 18,426 行。
+> 6 個套件、約 18,459 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
 | `utils/admin/` | 349 | 多主機管理主控台：平行輪詢 N 個 AutoControl REST 端點 |
-| `utils/config_sync/` | 246 | 透過訊令伺服器做跨機器設定同步 |
+| `utils/config_sync/` | 279 | 透過訊令伺服器做跨機器設定同步 |
 | `utils/device_matrix/` | 138 | 行動裝置矩陣：同一 action list 於多台裝置平行執行 |
 | `utils/remote_desktop/` | 12,328 | **遠端桌面子系統**（56 檔／11.7K LOC）：TCP／WebSocket／WebRTC 三條傳輸路徑、主機與檢視端、訊令伺服器、TURN／中繼、多檢視者、錄影、信任清單、TOTP、稽核鏈 |
 | `utils/usb/` | 4,422 | 跨平台 USB 列舉／熱插拔／裝置直通（WinUSB、IOKit、libusb 後端 + ACL + WebRTC DataChannel 通道） |
@@ -525,11 +525,11 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.11 伺服器、網路協定與外部整合
 
-> 24 個套件、約 6,012 行。
+> 24 個套件、約 6,028 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
-| `utils/acme_v2/` | 598 | 完整 ACME v2 用戶端（RFC 8555），不依賴 certbot |
+| `utils/acme_v2/` | 610 | 完整 ACME v2 用戶端（RFC 8555），不依賴 certbot |
 | `utils/chatops/` | 649 | Chat-ops bot：接收 Slack／Discord／webhook 的 slash 指令並路由到動作 |
 | `utils/cookie_jar/` | 103 | RFC 6265 cookie jar |
 | `utils/email_send/` | 116 | SMTP 寄信（email 觸發器的發送端搭檔） |
@@ -550,7 +550,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/rest_api/` | 1,758 | 純標準庫 REST 前端：路由、Bearer 驗證、限流、Prometheus 指標、OpenAPI 3.1 產生 |
 | `utils/socket_server/` | 136 | 執行 action JSON 的執行緒式 TCP 指令伺服器（預設綁 127.0.0.1） |
 | `utils/sse_client/` | 112 | Server-Sent Events 用戶端解析 |
-| `utils/tls_acme/` | 451 | TLS 自動化：HTTP-01 挑戰伺服器、金鑰／CSR、自動續期 |
+| `utils/tls_acme/` | 455 | TLS 自動化：HTTP-01 挑戰伺服器、金鑰／CSR、自動續期 |
 | `utils/url_canon/` | 117 | RFC 3986 URL 正規化與查詢字串工具 |
 | `utils/webrunner_bridge/` | 161 | 把 action JSON 橋接到 WebRunner（`je_web_runner`） |
 
@@ -648,7 +648,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.15 韌性、流量控制與設定
 
-> 14 個套件、約 1,702 行。
+> 14 個套件、約 1,723 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -663,7 +663,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/layered_config/` | 110 | 分層設定解析 |
 | `utils/optimistic/` | 105 | 樂觀併發的版本化儲存 |
 | `utils/rate_limit/` | 162 | 用戶端限流：token bucket、滑動視窗、throttle |
-| `utils/resilience/` | 110 | 韌性原語：退避重試與斷路器 |
+| `utils/resilience/` | 131 | 韌性原語：退避重試與斷路器 |
 | `utils/retry_budget/` | 147 | 重試預算：以牆鐘期限與 full jitter 約束重試 |
 | `utils/sequence_gap/` | 65 | 逐串流的序號缺口偵測 |
 
@@ -1079,6 +1079,6 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `osx/` | 17 | 919 |
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 783 |
-| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 674 | 48,671 |
-| **總計** | **1,039** | **143,399** |
+| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 674 | 48,741 |
+| **總計** | **1,039** | **143,469** |
 

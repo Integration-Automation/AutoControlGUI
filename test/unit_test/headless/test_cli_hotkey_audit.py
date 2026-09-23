@@ -30,7 +30,8 @@ def _legacy(tmp_path, *args):
     """Run ``python -m je_auto_control`` on this working tree, not an installed copy."""
     env = dict(os.environ)
     env["PYTHONPATH"] = os.pathsep.join(filter(None, [str(REPO_ROOT), env.get("PYTHONPATH")]))
-    return subprocess.run(  # nosec B603  # reason: fixed argv, this package's own entry point
+    # argv is sys.executable plus this test's own literals.
+    return subprocess.run(  # nosemgrep: python.lang.security.audit.dangerous-subprocess-use-audit.dangerous-subprocess-use-audit  # nosec B603
         [sys.executable, "-m", "je_auto_control", *args],
         capture_output=True, timeout=120, check=False, cwd=tmp_path, env=env)
 

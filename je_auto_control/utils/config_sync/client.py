@@ -1,7 +1,9 @@
 """HTTP client + deterministic merge for the config-sync bucket."""
 from __future__ import annotations
 
+import http.client
 import json
+import math
 import time
 import urllib.error
 import urllib.parse
@@ -52,19 +54,23 @@ class ConfigBucket:
         sections = body.get("sections") or {}
         if not isinstance(sections, Mapping):
             raise ConfigSyncError("bucket sections must be a mapping")
+        # The server's reply is data, not trusted structure: a list where a
+        # section belongs or a non-numeric stamp raised AttributeError or
+        # ValueError here or later in merge_buckets.
         return cls(
             user_id=body["user_id"],
-            sections={
-                str(name): {str(eid): dict(entry)
-                            for eid, entry in (sec or {}).items()}
-                for name, sec in sections.items()
-            },
-            revision=int(body.get("revision", 0)),
+            sections={str(name): _section(name, sec) for name, sec in sections.items()},
+            revision=int(_finite(body.get("revision", 0), "revision")),
         )
 
     def upsert(self, section: str, entry_id: str,
                entry: Mapping[str, Any]) -> None:
-        """Add or replace an entry, stamping it with the current time."""
+        """Add or replace an entry, stamping it with the current time.
+
+        A ``last_modified`` already in ``entry`` is kept, so drop it when
+        editing an entry read back from a bucket -- otherwise the edit keeps
+        its old stamp and loses the merge to any newer remote copy.
+        """
         body = dict(entry)
         body["last_modified"] = float(body.get("last_modified", time.time()))
         self.sections.setdefault(section, {})[entry_id] = body
@@ -74,6 +80,29 @@ class ConfigBucket:
         if not sec:
             return False
         return sec.pop(entry_id, None) is not None
+
+
+def _finite(value: Any, what: str) -> float:
+    """``value`` as a finite float, or :class:`ConfigSyncError`."""
+    try:
+        number = float(value)
+    except (TypeError, ValueError) as error:
+        raise ConfigSyncError(f"{what} must be a number, got {value!r}") from error
+    if not math.isfinite(number):
+        raise ConfigSyncError(f"{what} must be finite, got {value!r}")
+    return number
+
+
+def _section(name: Any, section: Any) -> Dict[str, Dict[str, Any]]:
+    if not isinstance(section, Mapping):
+        raise ConfigSyncError(f"section {name!r} must be a mapping")
+    entries: Dict[str, Dict[str, Any]] = {}
+    for entry_id, entry in section.items():
+        if not isinstance(entry, Mapping):
+            raise ConfigSyncError(f"entry {name!r}/{entry_id!r} must be a mapping")
+        entries[str(entry_id)] = dict(entry)
+        _finite(entry.get("last_modified", 0), f"{name}/{entry_id} last_modified")
+    return entries
 
 
 def merge_buckets(local: ConfigBucket,
@@ -172,6 +201,10 @@ class ConfigSyncClient:
             raise ConfigSyncError(
                 f"config sync {method} failed: {error.reason}",
             ) from error
+        except (OSError, http.client.HTTPException) as error:
+            # A server hanging up (RemoteDisconnected) or a stalled body
+            # (TimeoutError from read) is no URLError.
+            raise ConfigSyncError(f"config sync {method} failed: {error!r}") from error
         if not payload:
             return {}
         try:

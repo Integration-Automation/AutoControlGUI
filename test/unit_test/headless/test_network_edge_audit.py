@@ -69,7 +69,7 @@ def test_an_urb_for_a_device_that_was_not_imported_is_refused():
 
 def test_key_bytes_are_written_exactly_and_privately(tmp_path):
     target = tmp_path / "key.pem"
-    pem = b"-----BEGIN PRIVATE KEY-----\nAAAA\n-----END PRIVATE KEY-----\n"
+    pem = b"line one\nline two\r\nline three\n"  # mixed endings must survive as-is
     atomic_write_bytes(target, pem)
     assert target.read_bytes() == pem, "no newline translation"
     if sys.platform != "win32":
@@ -77,7 +77,7 @@ def test_key_bytes_are_written_exactly_and_privately(tmp_path):
 
 
 def test_saving_a_key_goes_through_the_atomic_writer(tmp_path, monkeypatch):
-    keys = pytest.importorskip("je_auto_control.utils.tls_acme.keys")
+    keys = pytest.importorskip("je_auto_control.utils.tls_acme.keys", exc_type=ImportError)
     written = []
     monkeypatch.setattr(keys, "atomic_write_bytes", lambda path, data: written.append(path))
     material = keys.KeyMaterial(private_key=keys._generate_key(1024))
@@ -88,7 +88,7 @@ def test_saving_a_key_goes_through_the_atomic_writer(tmp_path, monkeypatch):
 # --- signaling server ---------------------------------------------------------
 
 def test_the_signaling_store_caps_live_sessions(monkeypatch):
-    signaling = pytest.importorskip("je_auto_control.utils.remote_desktop.signaling_server")
+    signaling = pytest.importorskip("je_auto_control.utils.remote_desktop.signaling_server", exc_type=ImportError)
     monkeypatch.setattr(signaling, "_MAX_SESSIONS", 2)
     store = signaling._SessionStore()
     assert store.upsert_offer("a", "sdp") and store.upsert_offer("b", "sdp")
@@ -97,7 +97,7 @@ def test_the_signaling_store_caps_live_sessions(monkeypatch):
 
 
 def test_the_signaling_secret_is_checked(monkeypatch):
-    signaling = pytest.importorskip("je_auto_control.utils.remote_desktop.signaling_server")
+    signaling = pytest.importorskip("je_auto_control.utils.remote_desktop.signaling_server", exc_type=ImportError)
     testclient = pytest.importorskip("fastapi.testclient")
     client = testclient.TestClient(signaling.create_app(shared_secret="s3cret", serve_web_viewer=False))
     offer = {"sdp": "v=0"}

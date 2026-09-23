@@ -155,6 +155,13 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Fixed
 
+- **Circuit breaker, config sync and ACME.** A half-open circuit breaker
+  admits one trial call at a time instead of every concurrent caller, and is
+  safe to share between threads. Config sync rejects a malformed server reply
+  and reports a dropped connection as `ConfigSyncError`; the ACME client
+  reports an unreachable CA as `AcmeError` and a bad CSR as `JwsError`; and
+  `renewal_due` accepts a naive `now`.
+
 - **DAG, state machine, recurrence rules and suites.** A DAG node whose
   actions fail is failed (its dependants are skipped), and a slow node no
   longer holds back unrelated ready nodes. State-machine `after` guards wait

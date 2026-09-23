@@ -58,6 +58,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260923-32 | 2026-09-23 | Circuit-breaker trials, config-sync and ACME error handling | #incident #resilience | [2026-09](2026-09.md) |
 | U-20260923-31 | 2026-09-23 | Logic-engine audit: DAG failures, FSM guards and timers, RRULE semantics, suite variables | #incident #executor | [2026-09](2026-09.md) |
 | U-20260923-30 | 2026-09-23 | Remote-desktop robustness: dead receive threads, blocked accept thread, signaling errors | #incident #remote-desktop | [2026-09](2026-09.md) |
 | U-20260923-29 | 2026-09-23 | Codegen injection, USB/IP device scope, TLS key writes, signaling and relay limits | #incident #security | [2026-09](2026-09.md) |
@@ -136,7 +137,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | File | Period | Entries |
 |---|---|---:|
-| [2026-09.md](2026-09.md) | 2026-09 | 47 |
+| [2026-09.md](2026-09.md) | 2026-09 | 48 |
 | [2026-08-f.md](2026-08-f.md) | 2026-08 | 1 |
 | [2026-08-e.md](2026-08-e.md) | 2026-08 | 2 |
 | [2026-08-d.md](2026-08-d.md) | 2026-08 | 2 |

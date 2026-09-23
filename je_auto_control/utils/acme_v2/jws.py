@@ -122,7 +122,10 @@ def csr_to_b64url(csr_pem: bytes) -> str:
         raise JwsError("csr_pem is empty")
     # Defer to cryptography to parse the PEM, then re-emit as DER.
     from cryptography import x509
-    csr = x509.load_pem_x509_csr(csr_pem)
+    try:
+        csr = x509.load_pem_x509_csr(csr_pem)
+    except ValueError as error:
+        raise JwsError(f"csr_pem is not a PEM certificate request: {error}") from error
     return _b64url(csr.public_bytes(serialization.Encoding.DER))
 
 

@@ -1,6 +1,7 @@
 """ACME v2 client driving the RFC 8555 state machine end-to-end."""
 from __future__ import annotations
 
+import http.client
 import json
 import time
 import urllib.error
@@ -341,13 +342,21 @@ class AcmeClient:
                 dict(error.headers.items()) if error.headers else {}
             )
             status = error.code
-        body_value: Any = raw
-        if "json" in ct.lower():
-            try:
-                body_value = json.loads(raw.decode("utf-8")) if raw else {}
-            except (UnicodeDecodeError, json.JSONDecodeError):
-                body_value = raw
-        return status, body_value, resp_headers
+        except (OSError, http.client.HTTPException) as error:
+            # URLError, a timeout, a dropped connection: the CA is
+            # unreachable, which callers handle as AcmeError.
+            raise AcmeError(f"ACME {method} {url} failed: {error!r}") from error
+        return status, _decode_body(raw, ct), resp_headers
+
+
+def _decode_body(raw: bytes, content_type: str) -> Any:
+    """Parse a JSON reply; anything else (or unparsable JSON) stays bytes."""
+    if "json" not in content_type.lower():
+        return raw
+    try:
+        return json.loads(raw.decode("utf-8")) if raw else {}
+    except (UnicodeDecodeError, json.JSONDecodeError):
+        return raw
 
 
 def _is_bad_nonce(status: int, parsed: Any) -> bool:

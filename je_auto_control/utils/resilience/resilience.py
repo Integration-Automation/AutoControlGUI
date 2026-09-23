@@ -14,6 +14,7 @@ Both take injectable ``sleep`` / ``clock`` callables, so behaviour is
 unit-tested deterministically with a fake clock. Pure standard library;
 imports no ``PySide6``.
 """
+import threading
 import time
 from dataclasses import dataclass
 from typing import Any, Callable, Optional, Tuple, Type
@@ -63,7 +64,14 @@ def retry_call(func: Callable[..., Any], *args: Any, max_attempts: int = 3,
 
 
 class CircuitBreaker:
-    """Open after consecutive failures; short-circuit until a reset timeout."""
+    """Open after consecutive failures; short-circuit until a reset timeout.
+
+    After the timeout the circuit is half-open and admits exactly one trial
+    call; others are refused with :class:`CircuitOpenError` until it ends.
+    Without that, every caller arriving during the half-open window ran --
+    20 concurrent trials against a service the breaker exists to protect.
+    Safe to share between threads.
+    """
 
     def __init__(self, failure_threshold: int = 5, reset_timeout: float = 30.0,
                  clock: Optional[Callable[[], float]] = None) -> None:
@@ -72,10 +80,16 @@ class CircuitBreaker:
         self._clock = clock or time.monotonic
         self._failures = 0
         self._opened_at: Optional[float] = None
+        self._trial_in_flight = False
+        self._lock = threading.Lock()
 
     @property
     def state(self) -> str:
         """``closed`` / ``open`` / ``half_open``."""
+        with self._lock:
+            return self._state_locked()
+
+    def _state_locked(self) -> str:
         if self._opened_at is None:
             return "closed"
         if self._clock() - self._opened_at >= self._reset:
@@ -83,22 +97,29 @@ class CircuitBreaker:
         return "open"
 
     def call(self, func: Callable[..., Any], *args: Any, **kwargs: Any) -> Any:
-        """Invoke ``func`` unless the circuit is open."""
-        if self.state == "open":
-            raise CircuitOpenError("circuit is open")
+        """Invoke ``func`` unless the circuit is open (or its trial is running)."""
+        with self._lock:
+            state = self._state_locked()
+            if state == "open" or (state == "half_open" and self._trial_in_flight):
+                raise CircuitOpenError("circuit is open")
+            trial = state == "half_open"
+            self._trial_in_flight = self._trial_in_flight or trial
         try:
             result = func(*args, **kwargs)
         except Exception:
-            self._record_failure()
+            self._settle(trial, succeeded=False)
             raise
-        self._record_success()
+        self._settle(trial, succeeded=True)
         return result
 
-    def _record_failure(self) -> None:
-        self._failures += 1
-        if self._failures >= self._threshold:
-            self._opened_at = self._clock()
-
-    def _record_success(self) -> None:
-        self._failures = 0
-        self._opened_at = None
+    def _settle(self, trial: bool, *, succeeded: bool) -> None:
+        with self._lock:
+            if trial:
+                self._trial_in_flight = False
+            if succeeded:
+                self._failures = 0
+                self._opened_at = None
+                return
+            self._failures += 1
+            if self._failures >= self._threshold:
+                self._opened_at = self._clock()
