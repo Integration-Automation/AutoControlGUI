@@ -90,7 +90,30 @@ def _load_vault(path: Path) -> Optional[dict]:
         raise SecretStoreError(f"vault unreadable: {error!r}") from error
     if not isinstance(data, dict) or data.get("version") != 1:
         raise SecretStoreError("vault format unsupported")
+    _check_vault_fields(data)
     return data
+
+
+def _check_vault_fields(data: dict) -> None:
+    """Raise ``SecretStoreError`` for a vault whose fields cannot be used.
+
+    A missing salt raised ``KeyError`` from :meth:`SecretManager.unlock`, and
+    ``iterations: 0`` a ``ValueError``, both outside the family.
+    """
+    iterations = data.get("iterations", _KEY_ITERATIONS)
+    fields_ok = (
+        isinstance(data.get("salt"), str)
+        and isinstance(data.get("verifier"), str)
+        and isinstance(data.get("items", {}), dict)
+        and isinstance(iterations, int) and not isinstance(iterations, bool)
+        and iterations > 0
+    )
+    if not fields_ok:
+        raise SecretStoreError("vault fields are missing or invalid")
+    try:
+        base64.b64decode(data["salt"], validate=True)
+    except ValueError as error:  # binascii.Error is a ValueError
+        raise SecretStoreError("vault salt is not base64") from error
 
 
 def _atomic_write(path: Path, payload: dict) -> None:
@@ -276,11 +299,26 @@ class SecretManager:
                 pass
 
     def _require_unlocked(self) -> Tuple[Any, dict]:
-        """Return the live ``(fernet, vault)`` pair, or raise if locked."""
+        """Return the key and the vault as it is on disk now, or raise if locked.
+
+        Every operation re-reads the file: each manager used to write back its
+        own cached copy, so two of them on one vault (the GUI and a service
+        process) silently undid each other's changes. A vault re-keyed
+        elsewhere locks this manager again.
+        """
         fernet, vault = self._fernet, self._vault
         if fernet is None or vault is None:
             raise SecretStoreLocked("secret vault is locked")
-        return fernet, vault
+        fresh = _load_vault(self._path)
+        if fresh is None:
+            self.lock()
+            raise SecretStoreLocked("secret vault no longer exists")
+        if (fresh.get("salt"), fresh.get("verifier")) != (vault.get("salt"), vault.get("verifier")):
+            self.lock()
+            raise SecretStoreLocked("secret vault was re-keyed; unlock it again")
+        fresh.setdefault("items", {})
+        self._vault = fresh
+        return fernet, fresh
 
 
 default_secret_manager = SecretManager()

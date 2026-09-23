@@ -190,6 +190,8 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Security
 
+- **The RBAC user store refuses a token another user already has**, and no
+  longer replaces every user when its file is damaged.
 - **The audit log's hash chain catches a forged row whose hash was cleared
   and the deletion of its oldest rows**, and `clear()` leaves an
   `audit_log_cleared` event instead of an empty, clean-looking log.
@@ -262,6 +264,9 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Fixed
 
+- **Two `SecretManager`s on one vault keep each other's changes**, and a
+  malformed vault raises `SecretStoreError` instead of `KeyError` or
+  `ValueError`.
 - **`UserAuthError` and `CredentialBrokerError` derive from
   `AutoControlException`**, so containment boundaries catch them.
 - **Replayed wheel-up scrolls up on X11 and Wayland**, the cleanup release
