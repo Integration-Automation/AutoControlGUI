@@ -59,6 +59,10 @@ def _import_device(sock: socket.socket, busid: str = "1-1") -> None:
     _recv(sock, 312)  # device descriptor body
 
 
+# (busnum << 16) | devnum of _device(): the only devid the server now accepts.
+_IMPORTED_DEVID = 0x10002
+
+
 def _cmd_submit(*, seqnum: int, devid: int, direction: int, ep: int,
                 transfer_length: int, buffer: bytes = b"") -> bytes:
     header = struct.pack("!IIIII", USBIP_CMD_SUBMIT, seqnum, devid,
@@ -79,7 +83,7 @@ def test_peek_transfer_length_returns_direction_and_length():
 
 def test_out_cmd_submit_with_payload_is_forwarded():
     backend = FakeUrbBackend(devices=[_device("1-1")])
-    backend.script_urb(devid=2, direction=0, ep=2,
+    backend.script_urb(devid=_IMPORTED_DEVID, direction=0, ep=2,
                        response=UrbResponse(status=0, actual_length=0))
     server = UsbIpServer(backend, host="127.0.0.1", port=_free_port())
     server.start()
@@ -88,7 +92,7 @@ def test_out_cmd_submit_with_payload_is_forwarded():
                                         timeout=5.0)
         _import_device(sock)
         payload = b"hello-out-transfer"
-        sock.sendall(_cmd_submit(seqnum=42, devid=2, direction=0, ep=2,
+        sock.sendall(_cmd_submit(seqnum=42, devid=_IMPORTED_DEVID, direction=0, ep=2,
                                  transfer_length=len(payload),
                                  buffer=payload))
         # Pre-fix the first decode raised UsbIpError and the connection was
@@ -116,7 +120,7 @@ def test_oversized_transfer_buffer_is_rejected():
         # Advertise a huge OUT transfer but send no buffer: the server must
         # reject on the length check (dropping the connection) rather than
         # try to allocate/read it.
-        sock.sendall(_cmd_submit(seqnum=7, devid=2, direction=0, ep=1,
+        sock.sendall(_cmd_submit(seqnum=7, devid=_IMPORTED_DEVID, direction=0, ep=1,
                                  transfer_length=huge))
         assert _recv(sock, 1) == b""  # connection closed, no huge alloc
         assert backend.received == []
@@ -144,7 +148,7 @@ def test_server_replies_negative_status_without_killing_worker():
         sock = socket.create_connection(("127.0.0.1", server.port),
                                         timeout=5.0)
         _import_device(sock)
-        sock.sendall(_cmd_submit(seqnum=11, devid=2, direction=1, ep=5,
+        sock.sendall(_cmd_submit(seqnum=11, devid=_IMPORTED_DEVID, direction=1, ep=5,
                                  transfer_length=0))
         header = _recv(sock, 20)
         body = _recv(sock, 28)

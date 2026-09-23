@@ -19,6 +19,8 @@ except ImportError as exc:  # pragma: no cover - platform-dependent wheel
     ) from exc
 
 
+from je_auto_control.utils.json_store.json_store import atomic_write_bytes
+
 _DEFAULT_KEY_BITS = 2048
 
 
@@ -38,11 +40,10 @@ class KeyMaterial:
     def save_pem(self, path) -> Path:
         target = Path(os.path.expanduser(str(path)))
         target.parent.mkdir(parents=True, exist_ok=True)
-        target.write_bytes(self.to_pem())
-        try:
-            os.chmod(target, 0o600)
-        except OSError:
-            pass
+        # Atomic and 0600 from creation: write_bytes made the key readable
+        # under the umask (0644) until the chmod, and a crash mid-write
+        # destroyed the key that was there before.
+        atomic_write_bytes(target, self.to_pem())
         self.key_path = target
         return target
 

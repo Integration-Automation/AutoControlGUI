@@ -150,6 +150,17 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Fixed
 
+- **Generated code cannot run what an action file smuggles in.** Codegen
+  emits a parameter as a keyword argument only when its name is a plain
+  identifier, and the Robot target carries the actions base64-encoded.
+  Pytest code generated with `failure_bundle=True` now runs (it imported the
+  wrong module as `ac`).
+- **USB/IP, TLS keys, signaling and relay.** A USB/IP client can only send
+  URBs to the device it imported; TLS private keys are written atomically and
+  0600 from creation; the signaling server compares its secret in constant
+  time and caps live sessions (503 when full); and the relay frees the slot
+  of a parked peer that disconnected.
+
 - **Approval gate, asset store and locator-repair store across processes.**
   Each change re-reads the file under a lock file, so processes sharing it no
   longer overwrite each other; an approval request can be decided only once.

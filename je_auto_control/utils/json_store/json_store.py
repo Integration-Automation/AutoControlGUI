@@ -24,13 +24,34 @@ def atomic_write_text(path: Union[str, Path], text: str,
     previous file intact instead of truncating it. Leftover temp files are
     removed on failure.
     """
+    _atomic_write(path, lambda handle_fd: _write_text_fd(handle_fd, text, encoding))
+
+
+def atomic_write_bytes(path: Union[str, Path], data: bytes) -> None:
+    """Atomically write ``data`` to ``path``, byte for byte.
+
+    Like :func:`atomic_write_text` -- same temp file, same rename, and on
+    POSIX the file is 0600 from the moment it exists -- without newline
+    translation, for content such as a PEM private key.
+    """
+    def write(handle_fd: int) -> None:
+        with os.fdopen(handle_fd, "wb") as handle:
+            handle.write(data)
+    _atomic_write(path, write)
+
+
+def _write_text_fd(handle_fd: int, text: str, encoding: str) -> None:
+    with os.fdopen(handle_fd, "w", encoding=encoding) as handle:
+        handle.write(text)
+
+
+def _atomic_write(path: Union[str, Path], write: Callable[[int], None]) -> None:
     file_path = Path(path)
     directory = str(file_path.parent) or "."
     handle_fd, tmp_name = tempfile.mkstemp(
         dir=directory, prefix=f".{file_path.name}.", suffix=".tmp")
     try:
-        with os.fdopen(handle_fd, "w", encoding=encoding) as handle:
-            handle.write(text)
+        write(handle_fd)
         os.replace(tmp_name, str(file_path))
     finally:
         if os.path.exists(tmp_name):

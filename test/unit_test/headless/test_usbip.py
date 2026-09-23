@@ -205,7 +205,8 @@ def test_server_import_unknown_busid_returns_status_1():
 
 def test_server_forwards_urb_to_backend():
     backend = FakeUrbBackend(devices=[_device("1-1")])
-    backend.script_urb(devid=2, direction=1, ep=1,
+    # devid is (busnum << 16) | devnum of the imported device (bus 1, dev 2).
+    backend.script_urb(devid=0x10002, direction=1, ep=1,
                        response=UrbResponse(status=0, actual_length=4,
                                             data=b"PONG"))
     server = UsbIpServer(backend, host="127.0.0.1", port=_free_port())
@@ -216,10 +217,10 @@ def test_server_forwards_urb_to_backend():
         sock.sendall(header + b"1-1".ljust(32, b"\x00"))
         _ = _recv(sock, 8)  # OP_REP_IMPORT header
         _ = _recv(sock, 312)  # device descriptor body
-        # Send a CMD_SUBMIT for devid=2 direction=1 ep=1.
+        # Send a CMD_SUBMIT for the imported device, direction=1 ep=1.
         cmd = struct.pack(
             "!IIIII",
-            USBIP_CMD_SUBMIT, 77, 2, 1, 1,
+            USBIP_CMD_SUBMIT, 77, 0x10002, 1, 1,
         )
         body = struct.pack(
             "!IIiII8s",
@@ -234,7 +235,7 @@ def test_server_forwards_urb_to_backend():
         # And the backend recorded the call.
         assert len(backend.received) == 1
         recorded = backend.received[0]
-        assert recorded.devid == 2
+        assert recorded.devid == 0x10002
         assert recorded.direction == 1
         sock.close()
     finally:

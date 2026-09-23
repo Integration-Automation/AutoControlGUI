@@ -25,6 +25,7 @@ from __future__ import annotations
 import select
 import socket
 import threading
+import time
 from typing import Dict, Optional, Tuple
 
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
@@ -134,7 +135,8 @@ class RelayServer:
         self._accept_thread: Optional[threading.Thread] = None
         self._shutdown = threading.Event()
         # session_id -> (role, socket) waiting for the partner.
-        self._pending: Dict[bytes, Tuple[int, socket.socket]] = {}
+        # session id -> (role, socket, monotonic time it was parked)
+        self._pending: Dict[bytes, Tuple[int, socket.socket, float]] = {}
         self._pending_lock = threading.Lock()
         self._port = 0
 
@@ -182,7 +184,7 @@ class RelayServer:
             pass
         self._listen_sock = None
         with self._pending_lock:
-            for _role, sock in self._pending.values():
+            for _role, sock, _parked in self._pending.values():
                 try:
                     sock.close()
                 except OSError:
@@ -231,20 +233,37 @@ class RelayServer:
             return
         self._register_or_pair(role, session_id, client_sock)
 
+    def _drop_departed_locked(self) -> None:
+        """Forget parked peers that disconnected or waited past the TTL.
+
+        An entry used to stay until its partner arrived or the relay stopped,
+        so once ``max_pending_sessions`` peers had parked and gone, every new
+        session was refused for good.
+        """
+        now = time.monotonic()
+        for session_id, (_role, sock, parked) in list(self._pending.items()):
+            if now - parked > _PENDING_TTL_S or not _still_connected(sock):
+                del self._pending[session_id]
+                sock.close()
+
     def _register_or_pair(self, role: int, session_id: bytes,
                           client_sock: socket.socket) -> None:
         with self._pending_lock:
             partner = self._pending.pop(session_id, None)
+            if partner is not None and not _still_connected(partner[1]):
+                partner[1].close()
+                partner = None  # it left; this peer parks in its place
             if partner is None:
+                self._drop_departed_locked()
                 if len(self._pending) >= self._max_pending:
                     autocontrol_logger.info(
                         "relay rejecting session: pending table full",
                     )
                     client_sock.close()
                     return
-                self._pending[session_id] = (role, client_sock)
+                self._pending[session_id] = (role, client_sock, time.monotonic())
                 return
-        partner_role, partner_sock = partner
+        partner_role, partner_sock, _parked = partner
         if partner_role == role:
             autocontrol_logger.info(
                 "relay role collision for session %r", session_id,
@@ -255,6 +274,20 @@ class RelayServer:
         host_sock = client_sock if role == _ROLE_HOST else partner_sock
         viewer_sock = client_sock if role == _ROLE_VIEWER else partner_sock
         _pair_and_pump(host_sock, viewer_sock)
+
+
+_PENDING_TTL_S = 300.0
+
+
+def _still_connected(sock: socket.socket) -> bool:
+    """Whether a parked peer is still there (no EOF or error waiting to be read)."""
+    try:
+        readable, _, _ = select.select([sock], [], [], 0)
+        if not readable:
+            return True
+        return sock.recv(1, socket.MSG_PEEK) != b""
+    except (OSError, ValueError):
+        return False
 
 
 def encode_handshake(role: str, session_id: bytes) -> bytes:

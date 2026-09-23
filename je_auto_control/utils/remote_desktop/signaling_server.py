@@ -19,6 +19,7 @@ or swap the in-memory store for Redis (left as a follow-up).
 from __future__ import annotations
 
 import argparse
+import hmac
 import logging
 import os
 import threading
@@ -40,6 +41,9 @@ except ImportError as exc:  # pragma: no cover - optional dep
 
 _DEFAULT_TTL_S = 120.0
 _MAX_SDP_BYTES = 256 * 1024  # 256 KB; aiortc offers are typically ~4 KB
+# Live sessions at once. Any client allowed to post could otherwise create
+# sessions without limit -- 200 of them held 48 MB for the TTL.
+_MAX_SESSIONS = 1024
 _LOG = logging.getLogger("rd-signaling")
 _WEB_VIEWER_DIR = (
     __import__("pathlib").Path(__file__).parent / "web_viewer"
@@ -62,14 +66,18 @@ class _SessionStore:
         self._ttl_s = ttl_s
         self._lock = threading.Lock()
 
-    def upsert_offer(self, host_id: str, offer_sdp: str) -> None:
+    def upsert_offer(self, host_id: str, offer_sdp: str) -> bool:
+        """Store the offer; ``False`` when a new session would exceed the cap."""
         with self._lock:
             self._evict_locked()
+            if host_id not in self._sessions and len(self._sessions) >= _MAX_SESSIONS:
+                return False
             session = self._sessions.get(host_id) or _Session()
             session.offer_sdp = offer_sdp
             session.answer_sdp = None
             session.updated_at = time.monotonic()
             self._sessions[host_id] = session
+            return True
 
     def fetch_offer(self, host_id: str) -> Optional[str]:
         with self._lock:
@@ -118,6 +126,10 @@ _VALIDATION_RESPONSES = {
     400: {"description": "invalid host_id or sdp"},
     **_AUTH_RESPONSES,
 }
+_OFFER_RESPONSES = {
+    **_VALIDATION_RESPONSES,
+    503: {"description": "too many live sessions"},
+}
 _NOT_FOUND_RESPONSES = {
     404: {"description": "session or message not found"},
     **_AUTH_RESPONSES,
@@ -131,7 +143,10 @@ def _build_secret_dependency(shared_secret: Optional[str]):
             Optional[str], Header(alias="X-Signaling-Secret"),
         ] = None,
     ) -> None:
-        if shared_secret and x_signaling_secret != shared_secret:
+        # compare_digest on bytes: != leaks how much of the secret matched.
+        if shared_secret and not hmac.compare_digest(
+                (x_signaling_secret or "").encode("utf-8"),
+                shared_secret.encode("utf-8")):
             raise HTTPException(status_code=401, detail="bad shared secret")
     return _check
 
@@ -184,11 +199,12 @@ def _register_routes(app: FastAPI, store: "_SessionStore",
         return {"status": "ok"}
 
     @app.post("/sessions/{host_id}/offer",
-              responses=_VALIDATION_RESPONSES, dependencies=auth_only)
+              responses=_OFFER_RESPONSES, dependencies=auth_only)
     def _post_offer(host_id: str, body: _OfferIn) -> dict:
         _validate_host_id(host_id)
         _validate_sdp(body.sdp)
-        store.upsert_offer(host_id, body.sdp)
+        if not store.upsert_offer(host_id, body.sdp):
+            raise HTTPException(status_code=503, detail="too many live sessions")  # NOSONAR - see _OFFER_RESPONSES
         return {"ok": True}
 
     @app.get("/sessions/{host_id}/offer",

@@ -58,6 +58,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260923-29 | 2026-09-23 | Codegen injection, USB/IP device scope, TLS key writes, signaling and relay limits | #incident #security | [2026-09](2026-09.md) |
 | U-20260923-28 | 2026-09-23 | Shared JSON stores lock and re-read across processes | #done #stores | [2026-09](2026-09.md) |
 | U-20260923-27 | 2026-09-23 | CLI / hotkey / recording audit: exit codes, lost recordings, wrong virtual keys | #incident #cli #hotkey | [2026-09](2026-09.md) |
 | U-20260923-26 | 2026-09-23 | JSON store audit: in-place rewrites, constructor crashes, lost counts and log lines | #incident #stores | [2026-09](2026-09.md) |
@@ -133,7 +134,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | File | Period | Entries |
 |---|---|---:|
-| [2026-09.md](2026-09.md) | 2026-09 | 44 |
+| [2026-09.md](2026-09.md) | 2026-09 | 45 |
 | [2026-08-f.md](2026-08-f.md) | 2026-08 | 1 |
 | [2026-08-e.md](2026-08-e.md) | 2026-08 | 2 |
 | [2026-08-d.md](2026-08-d.md) | 2026-08 | 2 |

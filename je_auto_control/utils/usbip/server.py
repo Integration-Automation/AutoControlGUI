@@ -165,7 +165,11 @@ class UsbIpServer:
         if device is None:
             return
         # After a successful import the client switches to URB-mode.
-        # Loop reading USBIP_CMD_* until the client hangs up.
+        # Loop reading USBIP_CMD_* until the client hangs up. Only the
+        # imported device may be addressed: the devid in each URB used to
+        # reach the backend unchecked, so importing one device gave URB
+        # access to every device the backend had enumerated.
+        imported_devid = (device.busnum << 16) | device.devnum
         while not stop.is_set():
             try:
                 header = _recv_exact(sock, _URB_HEADER_BYTES)
@@ -173,7 +177,7 @@ class UsbIpServer:
                 return
             command = int.from_bytes(header[:4], "big")
             if command == USBIP_CMD_SUBMIT:
-                self._serve_cmd_submit(sock, header)
+                self._serve_cmd_submit(sock, header, imported_devid)
             elif command == USBIP_CMD_UNLINK:
                 _ = _recv_exact(sock, _CMD_SUBMIT_BODY_BYTES)
                 # Unlink: we don't track in-flight URBs in the scaffold,
@@ -182,7 +186,7 @@ class UsbIpServer:
                 # client's URB-cancel forever pending.
                 seqnum = int.from_bytes(header[4:8], "big")
                 ret = encode_ret_unlink(
-                    seqnum=seqnum, devid=device.devnum,
+                    seqnum=seqnum, devid=imported_devid,
                     direction=0, ep=0, status=0,
                 )
                 sock.sendall(ret)
@@ -192,7 +196,7 @@ class UsbIpServer:
                 )
 
     def _serve_cmd_submit(self, sock: socket.socket,
-                          header: bytes) -> None:
+                          header: bytes, imported_devid: int) -> None:
         body = _recv_exact(sock, _CMD_SUBMIT_BODY_BYTES)
         # Two-phase: peek the length first (decode_cmd_submit would raise on
         # an OUT transfer whose buffer isn't present yet), read the buffer,
@@ -207,6 +211,14 @@ class UsbIpServer:
         if direction == 0 and tlen > 0:
             extra = _recv_exact(sock, tlen)
         submit = decode_cmd_submit(header + body + extra)
+        if submit.devid != imported_devid:
+            sock.sendall(encode_ret_submit(
+                seqnum=submit.seqnum, devid=submit.devid,
+                direction=submit.direction, ep=submit.ep,
+                status=_ENODEV, actual_length=0, data=b"",
+                setup=submit.setup,
+            ))
+            return
         response = self._backend.submit_urb(UrbRequest(
             seqnum=submit.seqnum, devid=submit.devid,
             direction=submit.direction, ep=submit.ep,
@@ -223,6 +235,9 @@ class UsbIpServer:
             setup=submit.setup,
         )
         sock.sendall(ret)
+
+
+_ENODEV = -19  # Linux errno, as usbip reports a URB for a device it lacks
 
 
 def _recv_exact(sock: socket.socket, n: int) -> bytes:

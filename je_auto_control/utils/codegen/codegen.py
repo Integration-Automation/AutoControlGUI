@@ -10,7 +10,9 @@ whole list and replays it through the executor for exact fidelity.
 
 This module imports no ``PySide6`` so codegen works fully headlessly.
 """
+import base64
 import json
+import keyword
 import os
 import pprint
 import re
@@ -44,13 +46,26 @@ def _action_to_call(action: Sequence, event_dict: dict, public: set) -> str:
     func = event_dict.get(name)
     public_name = getattr(func, "__name__", "") if func is not None else ""
     direct = public_name in public
-    if direct and (params is None or isinstance(params, dict)):
+    if direct and (params is None or _keyword_safe(params)):
         if params:
             kwargs = ", ".join(
                 f"{key}={value!r}" for key, value in params.items())
             return f"ac.{public_name}({kwargs})"
         return f"ac.{public_name}()"
     return f"ac.execute_action({[list(action)]!r})"
+
+
+def _keyword_safe(params: object) -> bool:
+    """Whether every key can be emitted as ``key=value`` source text.
+
+    The keys come from the action file and went into the generated code
+    as written, so a key such as ``x=1)\\nimport os; os.system(...)`` put
+    arbitrary statements into the test. Anything else takes the
+    ``execute_action([...])`` fall-back, where the key is a string literal.
+    """
+    return isinstance(params, dict) and all(
+        isinstance(key, str) and key.isidentifier() and not keyword.iskeyword(key)
+        for key in params)
 
 
 def _calls_body(actions: Sequence) -> str:
@@ -77,15 +92,19 @@ def _render_pytest(actions: Sequence, name: str, style: str,
                    failure_bundle: bool = False) -> str:
     raw_body = _body(actions, style)
     if failure_bundle:
-        body = ("    with ac.failure_bundle_on_error(\n"
+        body = ("    with failure_bundle_on_error(\n"
                 f"            {(_slug(name) + '-failure.zip')!r},\n"
                 f"            context={{'generated_test': {_slug(name)!r}}}):\n"
                 + textwrap.indent(raw_body, "        "))
     else:
         body = textwrap.indent(raw_body, "    ")
-    return (f'"""{_HEADER}"""\n'
-            + ("import je_auto_control.api as ac\n\n\n" if failure_bundle
-               else "import je_auto_control as ac\n\n\n")
+    # The facade supplies the ac.<function> calls; failure_bundle_on_error
+    # lives in je_auto_control.api, which the facade does not re-export --
+    # importing api *as ac* made every generated call an AttributeError.
+    imports = "import je_auto_control as ac\n"
+    if failure_bundle:
+        imports += "from je_auto_control.api import failure_bundle_on_error\n"
+    return (f'"""{_HEADER}"""\n' + imports + "\n\n"
             + f"def test_{_slug(name)}():\n{body}\n")
 
 
@@ -102,16 +121,19 @@ def _render_python(actions: Sequence, name: str, style: str,
 
 def _render_robot(actions: Sequence, name: str, _style: str,
                   _failure_bundle: bool = False) -> str:
-    payload = json.dumps([list(action) for action in actions],
-                         ensure_ascii=False)
-    test_name = name.replace("_", " ").strip().title() or "Recorded Flow"
+    # Base64, not a raw-string literal: ''' in any value closed the literal
+    # and the rest ran as Python inside Evaluate, and Robot itself splits
+    # cells on two spaces and substitutes ${...} in the text.
+    payload = base64.b64encode(json.dumps(
+        [list(action) for action in actions], ensure_ascii=False).encode("utf-8")).decode("ascii")
+    test_name = " ".join(name.replace("_", " ").split()).title() or "Recorded Flow"
     return "\n".join([
         "*** Settings ***",
         f"Documentation    {_HEADER}",
         "",
         "*** Test Cases ***",
         test_name,
-        f"    ${{actions}}=    Evaluate    json.loads(r'''{payload}''')    json",
+        f"    ${{actions}}=    Evaluate    json.loads(base64.b64decode('{payload}'))    base64,json",
         "    Evaluate    __import__('je_auto_control').execute_action($actions)",
         "",
     ])

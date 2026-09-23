@@ -20,7 +20,7 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 | 指標 | 數值 |
 | --- | ---: |
 | Python 模組總數（含周邊子專案） | 1,045 |
-| 程式碼總行數 | 143,119 |
+| 程式碼總行數 | 143,227 |
 | `je_auto_control/utils/` 子套件數 | 310 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 773 |
 | 套件門面 `__all__` 公開名稱數 | 1,239 |
@@ -270,14 +270,14 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.1 執行引擎與腳本資產
 
-> 24 個套件、約 13,396 行。
+> 24 個套件、約 13,439 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
 | `utils/action_lint/` | 328 | action 檔 linter 與 JSON Schema 產生器（CI 用 `python -m` 進入點） |
 | `utils/action_signing/` | 362 | action 檔 HMAC-SHA256 簽章與 Fernet 加密，`execute_files` 會強制驗簽 |
 | `utils/checkpoint/` | 116 | 流程檢查點與續跑，讓長 action list 具持久性 |
-| `utils/codegen/` | 158 | 由 action list 產生可執行的 pytest / python / robot 測試碼 |
+| `utils/codegen/` | 180 | 由 action list 產生可執行的 pytest / python / robot 測試碼 |
 | `utils/dag/` | 478 | 跨主機 DAG 編排器（圖模型 + runner） |
 | `utils/decision_table/` | 103 | DMN 風格決策表：規則 + 命中策略，把分支外部化 |
 | `utils/deterministic/` | 98 | 決定性執行控制：固定亂數種子 + 凍結時鐘 |
@@ -285,7 +285,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/flow_debugger/` | 142 | action list 的單步除錯器與追蹤器 |
 | `utils/input_macro/` | 359 | 定時輸入事件：錄製結果的整形（`timeline`／`InputRecorder`，Windows 與 macOS 共用）、重播與宣告式輸入序列 DSL |
 | `utils/json/` | 94 | action JSON 檔讀寫與正規化格式化（`fmt --check` 的後端） |
-| `utils/json_store/` | 155 | JSON 字典檔持久化的共用小工具（內部管線） |
+| `utils/json_store/` | 176 | JSON 字典檔持久化的共用小工具（內部管線） |
 | `utils/loop_guard/` | 140 | 機械式卡死迴圈偵測（agent loop 用） |
 | `utils/plugin_loader/` | 85 | 掃描外部 Python 外掛目錄並註冊其 `AC_` callable |
 | `utils/plugin_sdk/` | 68 | 外掛 SDK：透過 entry points 發佈／載入第三方 `AC_*` 指令 |
@@ -512,20 +512,20 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.10 遠端桌面與 USB
 
-> 6 個套件、約 18,299 行。
+> 6 個套件、約 18,363 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
 | `utils/admin/` | 349 | 多主機管理主控台：平行輪詢 N 個 AutoControl REST 端點 |
 | `utils/config_sync/` | 246 | 透過訊令伺服器做跨機器設定同步 |
 | `utils/device_matrix/` | 138 | 行動裝置矩陣：同一 action list 於多台裝置平行執行 |
-| `utils/remote_desktop/` | 12,216 | **遠端桌面子系統**（56 檔／11.7K LOC）：TCP／WebSocket／WebRTC 三條傳輸路徑、主機與檢視端、訊令伺服器、TURN／中繼、多檢視者、錄影、信任清單、TOTP、稽核鏈 |
+| `utils/remote_desktop/` | 12,265 | **遠端桌面子系統**（56 檔／11.7K LOC）：TCP／WebSocket／WebRTC 三條傳輸路徑、主機與檢視端、訊令伺服器、TURN／中繼、多檢視者、錄影、信任清單、TOTP、稽核鏈 |
 | `utils/usb/` | 4,422 | 跨平台 USB 列舉／熱插拔／裝置直通（WinUSB、IOKit、libusb 後端 + ACL + WebRTC DataChannel 通道） |
-| `utils/usbip/` | 928 | USB/IP 線路協定主機端（協定封包、TCP 伺服器、libusb URB 後端） |
+| `utils/usbip/` | 943 | USB/IP 線路協定主機端（協定封包、TCP 伺服器、libusb URB 後端） |
 
 ### 5.4.11 伺服器、網路協定與外部整合
 
-> 24 個套件、約 6,011 行。
+> 24 個套件、約 6,012 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -550,7 +550,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/rest_api/` | 1,758 | 純標準庫 REST 前端：路由、Bearer 驗證、限流、Prometheus 指標、OpenAPI 3.1 產生 |
 | `utils/socket_server/` | 136 | 執行 action JSON 的執行緒式 TCP 指令伺服器（預設綁 127.0.0.1） |
 | `utils/sse_client/` | 112 | Server-Sent Events 用戶端解析 |
-| `utils/tls_acme/` | 450 | TLS 自動化：HTTP-01 挑戰伺服器、金鑰／CSR、自動續期 |
+| `utils/tls_acme/` | 451 | TLS 自動化：HTTP-01 挑戰伺服器、金鑰／CSR、自動續期 |
 | `utils/url_canon/` | 117 | RFC 3986 URL 正規化與查詢字串工具 |
 | `utils/webrunner_bridge/` | 161 | 把 action JSON 橋接到 WebRunner（`je_web_runner`） |
 
@@ -739,7 +739,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `rate_limit.py` | 48 | 工具呼叫的 token bucket 限流。 |
 | `__main__.py` | 88 | `je_auto_control_mcp` console script 進入點。 |
 
-#### `utils/remote_desktop/`（12,216 行／56 檔）
+#### `utils/remote_desktop/`（12,265 行／56 檔）
 
 三條傳輸路徑並存：**TCP**（JPEG 影格）、**WebSocket**（同協定換傳輸）、**WebRTC**（aiortc 視訊 + DataChannel）。
 
@@ -754,12 +754,12 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `registry.py` | 370 | `AC_remote_*` 指令使用的行程級單例。 |
 | `webrtc_transport.py` | 369 | 共用 WebRTC 管線：asyncio 橋接執行緒、螢幕視訊軌、設定。 |
 | `multi_viewer.py` | 339 | 每個連入檢視端各跑一個 `WebRTCDesktopHost` 的協調器。 |
-| `signaling_server.py` | 297 | 獨立的 WebRTC SDP 交換 rendezvous 服務。 |
+| `signaling_server.py` | 313 | 獨立的 WebRTC SDP 交換 rendezvous 服務。 |
 | `audit_log.py` | 302 | SQLite 雜湊鏈稽核記錄。 |
 | `host_capture.py` | 297 | TCP 主機的影格與游標產生：螢幕列舉、監視器索引轉擷取區域、預設 JPEG／游標 provider,以及 `FrameProductionMixin`（游標輪詢、擷取迴圈、上線編碼）。 |
 | `ws_protocol.py` | 277 | 最小 RFC 6455 WebSocket 框架與握手。 |
 | `file_transfer.py` | 323 | 分塊檔案傳輸。 |
-| `relay.py` | 274 | NAT 穿透失敗時的 TCP 中繼。 |
+| `relay.py` | 307 | NAT 穿透失敗時的 TCP 中繼。 |
 | `fingerprint.py` | 246 | TOFU 主機指紋驗證。 |
 | `turn_config.py` | 234 | coturn 設定產生器。 |
 | `presence.py` | 221 | 多檢視者的執行緒安全在場註冊表。 |
@@ -790,7 +790,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `permissions.py` / `clipboard_sync.py` / `wake_on_lan.py` / `session_actions.py` / `auth.py` | 64 / 72 / 56 / 40 / 28 | 逐 session 權限、剪貼簿同步、WOL、SAS 注入與螢幕遮蔽、HMAC 挑戰回應。 |
 | `ws_host.py` / `ws_viewer.py` / `jpeg_recorder.py` | 40 / 29 / 146 | WebSocket 傳輸變體與 TCP 路徑錄影。 |
 
-#### `utils/usb/`（4,422 行）與 `utils/usbip/`（928 行）
+#### `utils/usb/`（4,422 行）與 `utils/usbip/`（943 行）
 
 | 檔案 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -809,7 +809,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `usb/usb_devices.py` | 296 | 跨平台 USB 裝置列舉。 |
 | `usb/usb_watcher.py` | 260 | 輪詢式 USB 熱插拔監看。 |
 | `usbip/protocol.py` | 330 | USB/IP 線路格式封裝／解析。 |
-| `usbip/server.py` | 241 | USB/IP 主機端 TCP 伺服器。 |
+| `usbip/server.py` | 256 | USB/IP 主機端 TCP 伺服器。 |
 | `usbip/libusb_backend.py` | 210 | 以 PyUSB／libusb 執行 URB 的正式後端。 |
 | `usbip/backend.py` | 87 | 可插拔 URB 執行後端。 |
 
@@ -1061,7 +1061,7 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | --- | ---: | ---: |
 | `gui/` | 91 | 26,794 |
 | `utils/mcp_server/` | 31 | 17,538 |
-| `utils/remote_desktop/` | 56 | 12,216 |
+| `utils/remote_desktop/` | 56 | 12,265 |
 | `utils/executor/` | 7 | 9,238 |
 | `utils/usb/` | 17 | 4,422 |
 | `je_auto_control/`（頂層 3 檔） | 3 | 2,388 |
@@ -1074,11 +1074,11 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `linux_wayland/` | 17 | 2,870 |
 | `utils/triggers/` | 4 | 1,176 |
 | `utils/ocr/` | 9 | 1,113 |
-| `utils/usbip/` | 5 | 928 |
+| `utils/usbip/` | 5 | 943 |
 | `utils/assertion/` | 3 | 863 |
 | `osx/` | 17 | 919 |
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 783 |
-| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 674 | 48,464 |
-| **總計** | **1,039** | **143,054** |
+| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 674 | 48,508 |
+| **總計** | **1,039** | **143,162** |
 
