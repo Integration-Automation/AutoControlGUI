@@ -190,6 +190,8 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Security
 
+- **Anonymous `initialize` requests can no longer evict an MCP HTTP session in
+  use**, and `DELETE` off the `/mcp` path no longer ends a session.
 - **The REST API checks the token before reading a POST body**, and a valid
   token is never locked out by other clients' failed attempts from the same
   IP.
@@ -267,6 +269,8 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Fixed
 
+- **The MCP HTTP transport releases the state of a session dropped while a
+  request for it was running.**
 - **A corrupt audit database no longer stops the REST server from
   starting**; it runs without the audit hook, as intended.
 - **Two `SecretManager`s on one vault keep each other's changes**, and a

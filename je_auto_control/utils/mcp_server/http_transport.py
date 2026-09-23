@@ -64,6 +64,17 @@ def _is_initialize(line: str) -> bool:
     return isinstance(message, dict) and message.get("method") == "initialize"
 
 
+def _forget_if_dropped(bridge: "MCPServer", session: Optional[HttpSession]) -> None:
+    """Release a session's dispatcher state if it was dropped mid-request.
+
+    A session evicted, swept or deleted while its ``initialize`` ran had the
+    capabilities stored under its dead id after the drop hook had already
+    run, and nothing would ever release them.
+    """
+    if session is not None and session.closed.is_set():
+        bridge.forget_connection(session.id)
+
+
 def _notifier_for(writer: Optional[Callable[[str], None]]):
     """Wrap a raw writer as a (method, params) notifier, or ``None``."""
     if writer is None:
@@ -109,6 +120,7 @@ class _MCPHttpHandler(BaseHTTPRequestHandler):
         extra = {SESSION_HEADER: session.id} if session is not None else None
         if self._client_accepts_sse():
             self._dispatch_sse(bridge, line, conn_id, extra)
+            _forget_if_dropped(bridge, session)
             return
         # A plain POST has no stream of its own, but a session may have a
         # standing GET stream; server-initiated traffic belongs on it. Absent
@@ -118,6 +130,7 @@ class _MCPHttpHandler(BaseHTTPRequestHandler):
         with bridge.connection_scope(connection_id=conn_id, writer=writer,
                                       notifier=_notifier_for(writer)):
             response = bridge.handle_line(line)
+        _forget_if_dropped(bridge, session)
         if response is None:
             # MCP notification — no body, ack with 202.
             self._send_blank(status=202)
@@ -332,6 +345,10 @@ class _MCPHttpHandler(BaseHTTPRequestHandler):
     def do_DELETE(self) -> None:  # noqa: N802  # reason: stdlib API
         """Terminate the session named by the header, if there is one."""
         if not self._authorize():
+            return
+        if self.path != DEFAULT_PATH:
+            # GET and POST answer 404 here; DELETE /anything ended the session.
+            self._send_json({"error": "unknown path"}, status=404)
             return
         registry: SessionRegistry = self.server.sessions  # type: ignore[attr-defined]
         header_id = session_id_from_headers(self.headers)
