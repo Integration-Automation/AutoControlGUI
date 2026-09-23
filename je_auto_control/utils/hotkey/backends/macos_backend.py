@@ -6,7 +6,7 @@ it ``CGEventTapCreate`` silently returns ``None`` and we log + exit.
 """
 from typing import Dict, Optional, Tuple
 
-from je_auto_control.utils.hotkey.backends.base import HotkeyBackend
+from je_auto_control.utils.hotkey.backends.base import FailedCombos, HotkeyBackend
 from je_auto_control.utils.hotkey.hotkey_daemon import (
     BackendContext, split_combo,
 )
@@ -79,6 +79,7 @@ class MacOSHotkeyBackend(HotkeyBackend):
     def __init__(self) -> None:
         # binding_id -> (combo, flags_mask, keycode)
         self._registered: Dict[str, Tuple[str, int, int]] = {}
+        self._failed = FailedCombos()
         self._pending_fires: list = []
 
     def run_forever(self, context: BackendContext) -> None:
@@ -140,20 +141,28 @@ class MacOSHotkeyBackend(HotkeyBackend):
         current_ids = {b.binding_id for b in bindings}
         for stale in [bid for bid in self._registered if bid not in current_ids]:
             self._registered.pop(stale, None)
+        self._failed.forget_missing(current_ids)
         for binding in bindings:
             prior = self._registered.get(binding.binding_id)
             if prior is not None and prior[0] == binding.combo:
                 continue
+            if self._failed.blocked(binding):
+                continue
+            # A changed combo replaces the old one even if the new one fails.
+            self._registered.pop(binding.binding_id, None)
             try:
                 mask, keycode = _combo_to_macos(binding.combo)
             except ValueError as error:
                 autocontrol_logger.error(
-                    "hotkey parse failed for %s: %r", binding.combo, error,
+                    "hotkey parse failed for %s: %r; not retried until the combo changes",
+                    binding.combo, error,
                 )
+                self._failed.record(binding)
                 continue
             self._registered[binding.binding_id] = (
                 binding.combo, mask, keycode,
             )
+            self._failed.clear(binding.binding_id)
 
     def _match(self, keycode: int, flags: int) -> Optional[str]:
         for bid, (_combo, mask, kc) in self._registered.items():

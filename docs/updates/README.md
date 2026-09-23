@@ -58,6 +58,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260924-13 | 2026-09-24 | macOS and Linux hotkeys stop retrying a failed combo every tick; bind() validates on macOS | #bugfix #audit #macos #linux | [2026-09](2026-09.md) |
 | U-20260924-12 | 2026-09-24 | Webhook server: chunked bodies, case-insensitive Bearer, and an answer when run history fails | #bugfix #audit #security | [2026-09](2026-09.md) |
 | U-20260924-11 | 2026-09-24 | Trigger engine skips triggers removed mid-pass; poll threads survive infinite intervals and any rule error; callback executor returns its documented None | #bugfix #audit | [2026-09](2026-09.md) |
 | U-20260924-10 | 2026-09-24 | Email triggers: a failing script fires once, IMAP connections time out, unknown charsets keep their body | #bugfix #audit | [2026-09](2026-09.md) |
@@ -171,7 +172,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | File | Period | Entries |
 |---|---|---:|
-| [2026-09.md](2026-09.md) | 2026-09 | 82 |
+| [2026-09.md](2026-09.md) | 2026-09 | 83 |
 | [2026-08-f.md](2026-08-f.md) | 2026-08 | 1 |
 | [2026-08-e.md](2026-08-e.md) | 2026-08 | 2 |
 | [2026-08-d.md](2026-08-d.md) | 2026-08 | 2 |

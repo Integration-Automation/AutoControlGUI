@@ -144,8 +144,12 @@ class HotkeyDaemon:
              binding_id: Optional[str] = None) -> HotkeyBinding:
         """Register a hotkey → script binding. Safe to call before/after start."""
         split_combo(combo)
+        # A key the platform cannot take fails here, not later on every tick.
         if sys.platform == "win32":
-            parse_combo(combo)  # a key RegisterHotKey cannot take fails here, not later
+            parse_combo(combo)
+        elif sys.platform == "darwin":
+            from je_auto_control.utils.hotkey.backends.macos_backend import _combo_to_macos
+            _combo_to_macos(combo)
         bid = binding_id or uuid.uuid4().hex[:8]
         binding = HotkeyBinding(
             binding_id=bid, combo=combo, script_path=script_path,

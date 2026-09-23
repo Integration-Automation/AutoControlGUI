@@ -253,6 +253,9 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Fixed
 
+- **macOS and Linux hotkeys no longer retry a combo that failed on every
+  tick**, logging an error ten times a second; `bind()` rejects a key macOS
+  cannot take up front, as it already did on Windows.
 - **The webhook server reads chunked request bodies** instead of running the
   script on an empty body, accepts a lower-case `bearer` scheme, and answers
   500 when the run history is unavailable instead of dropping the connection.

@@ -6,7 +6,7 @@ masked so the hotkey still fires with those toggles active.
 """
 from typing import Callable, Dict, List, Optional, Tuple
 
-from je_auto_control.utils.hotkey.backends.base import HotkeyBackend
+from je_auto_control.utils.hotkey.backends.base import FailedCombos, HotkeyBackend
 from je_auto_control.utils.hotkey.hotkey_daemon import (
     BackendContext, HotkeyBinding, split_combo,
 )
@@ -66,6 +66,7 @@ class LinuxHotkeyBackend(HotkeyBackend):
     def __init__(self) -> None:
         # binding_id -> (combo, modifier_mask, keycode)
         self._registered: Dict[str, Tuple[str, int, int]] = {}
+        self._failed = FailedCombos()
 
     def run_forever(self, context: BackendContext) -> None:
         from Xlib import X
@@ -91,6 +92,7 @@ class LinuxHotkeyBackend(HotkeyBackend):
     def _sync(self, disp, root, bindings: List[HotkeyBinding]) -> None:
         current_ids = {b.binding_id for b in bindings}
         self._ungrab_stale(root, current_ids)
+        self._failed.forget_missing(current_ids)
         for binding in bindings:
             self._sync_one(root, binding)
         disp.sync()
@@ -104,6 +106,8 @@ class LinuxHotkeyBackend(HotkeyBackend):
     def _sync_one(self, root, binding: HotkeyBinding) -> None:
         prior = self._registered.get(binding.binding_id)
         if prior is not None and prior[0] == binding.combo:
+            return
+        if self._failed.blocked(binding):
             return
         if prior is not None:
             # Release the old key before forgetting it. Dropping it from
@@ -119,13 +123,18 @@ class LinuxHotkeyBackend(HotkeyBackend):
             mask, keycode = _combo_to_x11(binding.combo)
         except ValueError as error:
             autocontrol_logger.error(
-                "hotkey parse failed for %s: %r", binding.combo, error,
+                "hotkey parse failed for %s: %r; not retried until the combo changes",
+                binding.combo, error,
             )
+            self._failed.record(binding)
             return
         if self._grab_masked(root, binding, mask, keycode):
             self._registered[binding.binding_id] = (
                 binding.combo, mask, keycode,
             )
+            self._failed.clear(binding.binding_id)
+        else:
+            self._failed.record(binding)
 
     @staticmethod
     def _ungrab_masked(root, keycode: int, mask: int) -> None:
