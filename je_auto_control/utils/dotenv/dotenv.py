@@ -95,7 +95,9 @@ def _parse_line(line: str) -> Optional[Tuple[str, str]]:
 def parse_dotenv(text: str) -> Dict[str, str]:
     """Parse ``.env`` ``text`` into an ordered ``{key: value}`` dict."""
     result: Dict[str, str] = {}
-    lines = (text or "").splitlines()
+    # Only CR / LF end a line: str.splitlines() also splits on \\v, \\f and
+    # U+2028, which dump_dotenv leaves unquoted, so such values were cut.
+    lines = re.split(r"\r\n|\r|\n", text or "")
     index = 0
     while index < len(lines):
         item, index = _parse_entry(lines, index)

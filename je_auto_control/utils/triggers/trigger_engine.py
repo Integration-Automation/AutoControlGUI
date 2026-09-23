@@ -115,22 +115,25 @@ class PixelColorTrigger(_TriggerBase):
 @dataclass
 class FilePathTrigger(_TriggerBase):
     consumes_on_check: ClassVar[bool] = True
-    """Fire when ``watch_path`` mtime changes (created or modified)."""
+    """Fire when ``watch_path`` is created or its mtime changes.
+
+    The first poll only records a baseline. After that, the path appearing
+    (absent -> present) fires, as does any mtime change -- older too, since
+    a copied-in replacement keeps its source's timestamp. Deleting the file
+    re-arms the creation check.
+    """
     watch_path: str = ""
     _baseline: Optional[float] = None
+    _primed: bool = False
 
     def is_fired(self) -> bool:
         try:
-            mtime = os.path.getmtime(self.watch_path)
+            mtime: Optional[float] = os.path.getmtime(self.watch_path)
         except OSError:
-            return False
-        if self._baseline is None:
-            self._baseline = mtime
-            return False
-        if mtime > self._baseline:
-            self._baseline = mtime
-            return True
-        return False
+            mtime = None
+        previous, primed = self._baseline, self._primed
+        self._baseline, self._primed = mtime, True
+        return primed and mtime is not None and mtime != previous
 
 
 @dataclass

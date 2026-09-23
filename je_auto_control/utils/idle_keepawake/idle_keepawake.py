@@ -110,10 +110,13 @@ def plan_keep_awake(*, display: bool = True,
 
 def _win_keep_awake(flags: int) -> Callable[[], None]:
     kernel32 = ctypes.windll.kernel32  # type: ignore[attr-defined]  # reason: win32-only ctypes
-    kernel32.SetThreadExecutionState(ctypes.c_uint(flags))
+    # The DWORD comes back through ctypes' default c_int: mask it back to 32 bits.
+    previous = int(kernel32.SetThreadExecutionState(ctypes.c_uint(flags)) or 0) & 0xFFFFFFFF
 
     def _release() -> None:
-        kernel32.SetThreadExecutionState(ctypes.c_uint(_ES_CONTINUOUS))
+        # Back to what was in force before, not to plain ES_CONTINUOUS: that
+        # cancelled an enclosing keep_awake() when a nested one ended.
+        kernel32.SetThreadExecutionState(ctypes.c_uint(previous or _ES_CONTINUOUS))
 
     return _release
 
@@ -182,13 +185,14 @@ def keep_awake_on(*, display: bool = True, system: bool = True,
     """
     plan = plan_keep_awake(display=display, system=system)
     acquire = driver if driver is not None else _default_driver
-    release = acquire(plan)
     with _LOCK:
         previous = _ACTIVE[:]
         _ACTIVE.clear()
-        _ACTIVE.append(release)
-    for old in previous:
-        old()
+        # Release the old request first: releasing it after acquiring the new
+        # one reset the execution state and cancelled the new request.
+        for old in previous:
+            old()
+        _ACTIVE.append(acquire(plan))
     return plan
 
 

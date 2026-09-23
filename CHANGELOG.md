@@ -47,6 +47,11 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Changed
 
+- **`ShellManager.exec_shell` accepts `command=`** as well as
+  `shell_command=`, matching the Script Builder and the docs; the new
+  `command_args()` is how every shell entry point turns a command into what
+  `subprocess` receives.
+
 - **`replay_timeline` / `run_sequence` refuse unknown ops and bad speeds.**
   An unknown op raises instead of being skipped, and `speed` must be a
   positive number.
@@ -245,6 +250,22 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
   package does no PKCS#7 decryption, so the `>=48.0.1` floor is unchanged.
 
 ### Fixed
+
+- **Quoted command lines work on Windows.** `AC_shell_command`,
+  `AC_exec_shell_to_var` and `ac_shell` pass the string to `CreateProcess`
+  as written instead of re-quoting `shlex` tokens that still held their
+  quotes.
+- **Keep-awake requests nest.** Releasing one restores the state it replaced,
+  so a second `keep_awake_on()` or a nested `keep_awake()` no longer lets the
+  machine sleep.
+- **The Win32 clipboard setters free their memory when setting fails.**
+- **`FilePathTrigger` fires when the file is created** and when it is replaced
+  by one with an older timestamp.
+- **`wait_until_file` does not accept a directory**, and every smart wait
+  refuses a NaN timeout or poll interval.
+- **A missing psutil is an error, not a failed assertion**, and
+  `ac_kill_process` reports a process that exits mid-kill instead of raising.
+- **`.env` values containing U+2028, U+0085, `\v` or `\f` survive a round trip.**
 
 - **The signaling server refuses unauthenticated requests before reading
   them.** A wrong `X-Signaling-Secret` gets 401 and an oversized or

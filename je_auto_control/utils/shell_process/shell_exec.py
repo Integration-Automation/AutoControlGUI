@@ -8,15 +8,21 @@ from typing import List, Union
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 
 
-def _normalize_command(shell_command: Union[str, List[str]]) -> List[str]:
-    """
-    Normalize shell command to an argv list with no shell interpretation.
-    將 shell 指令正規化為 argv list，不經 shell 解譯，避免指令注入。
+def command_args(shell_command: Union[str, List[str]]) -> Union[str, List[str]]:
+    """What to hand ``subprocess`` for ``shell_command``, never through a shell.
+
+    A list is the argv. A string is split with POSIX rules, except on
+    native Windows (not Cygwin or MSYS, whose ``subprocess`` is POSIX), where
+    it goes to ``CreateProcess`` as the command line it is:
+    ``shlex`` in non-POSIX mode keeps the quote characters in each token, and
+    ``subprocess`` then quoted them again -- ``"C:\\Program Files\\x"`` arrived
+    with its quotes and a quoted executable path was not found.
     """
     if isinstance(shell_command, list):
         return [str(part) for part in shell_command]
-    posix_mode = sys.platform not in ("win32", "cygwin", "msys")
-    return shlex.split(shell_command, posix=posix_mode)
+    if sys.platform == "win32":
+        return str(shell_command)
+    return shlex.split(shell_command)
 
 
 class ShellManager:
@@ -42,15 +48,22 @@ class ShellManager:
         self.program_encoding: str = shell_encoding
         self.program_buffer: int = program_buffer
 
-    def exec_shell(self, shell_command: Union[str, List[str]]) -> None:
+    def exec_shell(self, shell_command: Union[str, List[str], None] = None, *,
+                   command: Union[str, List[str], None] = None) -> None:
         """
         Execute shell command with shell=False.
         執行 shell 指令 (shell=False，呼叫端需自備 argv 或可被 shlex 切分的字串)
+
+        ``command`` is accepted as another name for ``shell_command`` -- the
+        name ``AC_shell_to_var`` and the documented examples use.
         """
+        shell_command = shell_command if shell_command is not None else command
+        if shell_command is None:
+            raise ValueError("exec_shell needs shell_command")
         autocontrol_logger.info(f"exec_shell, shell_command: {shell_command}")
         try:
             self.exit_program()
-            args = _normalize_command(shell_command)
+            args = command_args(shell_command)
             # nosemgrep: python.lang.security.audit.dangerous-subprocess-use-audit.dangerous-subprocess-use-audit
             self.process = subprocess.Popen(  # nosec B603  # reason: shell=False, argv list validated via _normalize_command
                 args,

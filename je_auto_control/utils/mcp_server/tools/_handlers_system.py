@@ -222,32 +222,39 @@ def kill_process(pid: int, timeout: float = 5.0) -> str:
         proc = psutil.Process(int(pid))
     except psutil.NoSuchProcess:
         return "not-found"
-    proc.terminate()
+    # The process may exit between any two of these calls.
     try:
+        proc.terminate()
         proc.wait(timeout=float(timeout))
         return "terminated"
+    except psutil.NoSuchProcess:
+        return "terminated"
     except psutil.TimeoutExpired:
+        pass
+    try:
         proc.kill()
-        return "killed"
+    except psutil.NoSuchProcess:
+        pass
+    return "killed"
 
 
 def shell_command(command: str, timeout: float = 30.0
                   ) -> Dict[str, Any]:
     """Run a shell-style command line and return stdout/stderr/exit_code.
 
-    Uses argv-list parsing via ``shlex.split`` so we never enable a
-    shell — protects against the parameterised command injection
-    classes Bandit B602 / B605 cover.
+    Never enables a shell: the line becomes an argv list (POSIX) or a
+    ``CreateProcess`` command line (Windows) via ``command_args``, which
+    protects against the command injection classes Bandit B602 / B605
+    cover.
     """
-    import shlex
     import subprocess  # nosec B404  # reason: required for child execution
 
+    from je_auto_control.utils.shell_process.shell_exec import command_args
     if not command or not command.strip():
         raise ValueError("command must be a non-empty string")
-    argv = shlex.split(command, posix=False) if os.name == "nt" \
-        else shlex.split(command)
+    argv = command_args(command)
     # nosemgrep: python.lang.security.audit.dangerous-subprocess-use-audit.dangerous-subprocess-use-audit
-    proc = subprocess.run(  # nosec B603  # reason: argv from shlex.split, no shell
+    proc = subprocess.run(  # nosec B603  # reason: argv from command_args, no shell
         argv, capture_output=True, text=True,
         timeout=float(timeout), check=False,
     )

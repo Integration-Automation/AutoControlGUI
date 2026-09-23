@@ -76,6 +76,8 @@ def clipboard_api() -> Tuple[Any, Any]:
     kernel32.GlobalUnlock.restype = wintypes.BOOL
     kernel32.GlobalSize.argtypes = [wintypes.HGLOBAL]
     kernel32.GlobalSize.restype = ctypes.c_size_t
+    kernel32.GlobalFree.argtypes = [wintypes.HGLOBAL]
+    kernel32.GlobalFree.restype = wintypes.HGLOBAL
     return user32, kernel32
 
 
@@ -119,16 +121,28 @@ def set_clipboard_format(format_id: int, payload: bytes, *,
     handle = kernel32.GlobalAlloc(GMEM_MOVEABLE, len(payload))
     if not handle:
         raise RuntimeError("GlobalAlloc failed")
+    try:
+        _fill(kernel32, handle, payload)
+        with open_clipboard(user32):
+            if empty_first:
+                user32.EmptyClipboard()
+            if not user32.SetClipboardData(int(format_id), handle):
+                raise RuntimeError(f"SetClipboardData({format_id}) failed")
+    except BaseException:
+        # Until SetClipboardData succeeds the handle is still ours; every
+        # failure path used to leak it.
+        kernel32.GlobalFree(handle)
+        raise
+
+
+def _fill(kernel32: Any, handle: Any, payload: bytes) -> None:
     pointer = kernel32.GlobalLock(handle)
     if not pointer:
         raise RuntimeError("GlobalLock failed")
-    ctypes.memmove(pointer, payload, len(payload))
-    kernel32.GlobalUnlock(handle)
-    with open_clipboard(user32):
-        if empty_first:
-            user32.EmptyClipboard()
-        if not user32.SetClipboardData(int(format_id), handle):
-            raise RuntimeError(f"SetClipboardData({format_id}) failed")
+    try:
+        ctypes.memmove(pointer, payload, len(payload))
+    finally:
+        kernel32.GlobalUnlock(handle)
 
 
 def get_clipboard_format(format_id: int) -> Optional[bytes]:

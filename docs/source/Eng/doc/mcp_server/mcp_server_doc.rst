@@ -466,4 +466,5 @@ Security notes
   normalised via ``os.path.realpath``; the resource provider blocks
   path traversal at the boundary.
 - Subprocess calls (``ac_launch_process`` / ``ac_shell``) accept
-  argv lists or ``shlex.split`` parses — never an OS shell.
+  argv lists or a command line (POSIX-split, or passed to
+  ``CreateProcess`` as written on Windows) — never an OS shell.

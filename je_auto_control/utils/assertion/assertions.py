@@ -24,7 +24,7 @@ from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Sequence
 
 from je_auto_control.utils.exception.exceptions import (
-    AutoControlAssertionException,
+    AutoControlAssertionException, AutoControlException,
 )
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 
@@ -397,8 +397,10 @@ def _running_process_names(name_contains: str) -> List[str]:
     try:
         import psutil  # type: ignore[import-untyped]
     except ImportError as error:
-        raise AutoControlAssertionException(
-            "assert_process requires psutil — pip install psutil"
+        # A missing dependency is not a failed assertion: an assertion
+        # bypasses raise_on_error=False and aborted the whole script.
+        raise AutoControlException(
+            "process checks require psutil — pip install psutil"
         ) from error
     needle = name_contains.lower()
     names: List[str] = []

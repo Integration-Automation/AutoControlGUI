@@ -427,4 +427,5 @@ CI runner 也能走完所有 MCP 工具:
   正規化;FileSystem resource provider 也會在邊界擋住 path
   traversal。
 - 子程序呼叫(``ac_launch_process`` / ``ac_shell``)只接受 argv list
-  或 ``shlex.split`` 的解析結果,從不啟用 OS shell。
+  或指令字串(POSIX 規則切分;Windows 上原樣交給 ``CreateProcess``),
+  從不啟用 OS shell。

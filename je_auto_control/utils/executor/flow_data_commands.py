@@ -27,16 +27,10 @@ def exec_shell_to_var(executor: Any, args: Mapping[str, Any]) -> Dict[str, Any]:
     ``var`` (default ``shell_output``) for later ``${var}`` use.
     """
     import locale
-    import os
-    import shlex
     import subprocess  # nosec B404 — argv list only, no shell
+    from je_auto_control.utils.shell_process.shell_exec import command_args
     command = args.get("command", args.get("shell_command"))
-    if isinstance(command, list):
-        argv: Any = [str(part) for part in command]
-    elif os.name == "nt":
-        argv = str(command)
-    else:
-        argv = shlex.split(str(command))
+    argv = command_args(command if isinstance(command, list) else str(command))
     encoding = str(args.get("encoding") or locale.getpreferredencoding(False))
     timeout_s = float(args.get("timeout", 30.0))
     try:
