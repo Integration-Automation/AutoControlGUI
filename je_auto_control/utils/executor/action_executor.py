@@ -6351,7 +6351,13 @@ def _jwt_decode(token: str, key: str, algorithms: Any = None,
     import json
     from je_auto_control.utils.jwt import ClaimsPolicy, JwtError, decode_jwt
     if isinstance(algorithms, str):
-        algorithms = json.loads(algorithms)
+        # A JSON list, or one algorithm name: "HS256" raised JSONDecodeError.
+        try:
+            algorithms = json.loads(algorithms)
+        except ValueError:
+            algorithms = [algorithms]
+        if isinstance(algorithms, str):
+            algorithms = [algorithms]
     policy = ClaimsPolicy(algorithms=tuple(algorithms) if algorithms
                           else ("HS256",), audience=audience, leeway=leeway)
     try:
