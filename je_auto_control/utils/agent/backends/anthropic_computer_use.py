@@ -19,6 +19,7 @@ return).
 """
 from __future__ import annotations
 
+import math
 from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple
 
 from je_auto_control.utils.agent.agent_loop import AgentBackend, AgentStep
@@ -166,10 +167,18 @@ class ComputerUseAgentBackend(AgentBackend):
                 continue
             name = _attr(block, "name")
             if name != "computer":
-                continue
+                # Skipping it made the turn look like a final answer: the run
+                # reported success having done nothing the model asked for.
+                raise AgentBackendError(
+                    f"model called tool {name!r}; only 'computer' was offered",
+                )
             payload = _attr(block, "input") or {}
             self._pending_tool_use_id = _attr(block, "id")
-            return _decision_from_computer_action(payload)
+            return _clamp_decision(
+                _decision_from_computer_action(payload),
+                self._tool_schema["display_width_px"],
+                self._tool_schema["display_height_px"],
+            )
         # No tool_use → final answer + stop, unless the turn was cut short
         # (default max_tokens can be hit mid-plan, or the model may refuse):
         # a truncated reply must not be reported as a successful final answer.
@@ -235,8 +244,8 @@ def _action_type(payload):
 def _action_wait(payload):
     duration = payload.get("duration")
     # An explicit 0 is a valid "don't wait" — only fall back when unset.
-    seconds = float(duration) if duration is not None else 1.0
-    return {"tool": "AC_sleep", "input": {"seconds": seconds}}
+    seconds = _number(duration, "duration") if duration is not None else 1.0
+    return _sequence([["AC_sleep", {"seconds": seconds}]])
 
 
 _CLICK_ACTIONS = frozenset({
@@ -261,11 +270,23 @@ def _decision_from_computer_action(payload: Dict[str, Any]) -> Dict[str, Any]:
 def _click_decision(action: str, coordinate) -> Dict[str, Any]:
     button = _click_button(action)
     repeats = _click_repeats(action)
-    inputs: Dict[str, Any] = {"mouse_keycode": button, "repeat": repeats}
+    inputs: Dict[str, Any] = {"mouse_keycode": button}
     if coordinate is not None:
         x, y = _xy(coordinate)
         inputs["x"], inputs["y"] = x, y
-    return {"tool": "AC_click_mouse", "input": inputs}
+    if repeats == 1:
+        return {"tool": "AC_click_mouse", "input": inputs}
+    # AC_click_mouse takes no repeat count (a 'repeat' argument made every
+    # click a TypeError): move once, then click the given number of times.
+    clicks = [["AC_click_mouse", inputs]]
+    clicks += [["AC_click_mouse", {"mouse_keycode": button}]] * (repeats - 1)
+    return _sequence(clicks)
+
+
+def _sequence(actions: List[List[Any]]) -> Dict[str, Any]:
+    """Run several executor actions as one step, failing the step on any error."""
+    return {"tool": "AC_execute_action",
+            "input": {"action_list": actions, "raise_on_error": True}}
 
 
 def _drag_decision(payload: Dict[str, Any]) -> Dict[str, Any]:
@@ -277,21 +298,19 @@ def _drag_decision(payload: Dict[str, Any]) -> Dict[str, Any]:
         )
     sx, sy = _xy(start)
     ex, ey = _xy(end)
-    return {
-        "tool": "AC_drag",
-        "input": {
-            "start_x": sx, "start_y": sy,
-            "end_x": ex, "end_y": ey,
-            "mouse_keycode": "mouse_left",
-        },
-    }
+    # No AC_drag command exists: press at the start, move, release at the end.
+    return _sequence([
+        ["AC_press_mouse", {"mouse_keycode": "mouse_left", "x": sx, "y": sy}],
+        ["AC_set_mouse_position", {"x": ex, "y": ey}],
+        ["AC_release_mouse", {"mouse_keycode": "mouse_left", "x": ex, "y": ey}],
+    ])
 
 
 def _scroll_decision(payload: Dict[str, Any]) -> Dict[str, Any]:
     direction = str(payload.get("scroll_direction") or "down").lower()
     raw_amount = payload.get("scroll_amount")
     # An explicit 0 means "no scroll" — only default when the key is absent.
-    amount = int(raw_amount) if raw_amount is not None else 3
+    amount = int(_number(raw_amount, "scroll_amount")) if raw_amount is not None else 3
     delta = amount if direction == "up" else -amount
     return {"tool": "AC_mouse_scroll", "input": {"scroll_value": delta}}
 
@@ -310,10 +329,10 @@ def _hold_key_decision(payload: Dict[str, Any]) -> Dict[str, Any]:
     key = _normalise_key(str(payload.get("text") or payload.get("key") or ""))
     if not key:
         raise AgentBackendError("hold_key action missing 'text'")
-    duration = float(payload.get("duration") or 0.0)
+    duration = _number(payload.get("duration") or 0.0, "duration")
     return {
         "tool": "AC_hold_key",
-        "input": {"keycode": key, "duration": duration},
+        "input": {"key": key, "duration_s": duration},
     }
 
 
@@ -375,7 +394,39 @@ def _xy(coordinate: Any) -> Tuple[int, int]:
         raise AgentBackendError(
             f"coordinate must be [x, y]; got {coordinate!r}",
         )
-    return int(coordinate[0]), int(coordinate[1])
+    return int(_number(coordinate[0], "x")), int(_number(coordinate[1], "y"))
+
+
+def _number(value: Any, what: str) -> float:
+    """``value`` as a finite float, or :class:`AgentBackendError`."""
+    try:
+        number = float(value)
+    except (TypeError, ValueError) as error:
+        raise AgentBackendError(f"{what} must be a number, got {value!r}") from error
+    if not math.isfinite(number):
+        raise AgentBackendError(f"{what} must be finite, got {value!r}")
+    return number
+
+
+def _clamp_decision(decision: Dict[str, Any], width: int, height: int) -> Dict[str, Any]:
+    """Keep every ``x`` / ``y`` in the decision on the declared display.
+
+    The model's coordinates went to the mouse unchecked: [-500, 99999] on a
+    100x100 display was dispatched as given.
+    """
+    inputs = decision.get("input") or {}
+    _clamp_inputs(inputs, width, height)
+    for action in inputs.get("action_list") or []:
+        if len(action) == 2 and isinstance(action[1], dict):
+            _clamp_inputs(action[1], width, height)
+    return decision
+
+
+def _clamp_inputs(inputs: Dict[str, Any], width: int, height: int) -> None:
+    if "x" in inputs:
+        inputs["x"] = min(max(int(inputs["x"]), 0), width - 1)
+    if "y" in inputs:
+        inputs["y"] = min(max(int(inputs["y"]), 0), height - 1)
 
 
 def _block_type(block: Any) -> Optional[str]:

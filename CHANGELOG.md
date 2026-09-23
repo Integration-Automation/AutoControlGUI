@@ -155,6 +155,18 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Fixed
 
+- **Computer-use agent actions work.** Clicks, double and triple clicks,
+  drags, waits and held keys were translated into calls the executor could
+  not make, so each failed as a step error; they now map to real commands.
+- **Agent backends run only the tools they offered.** A model reply naming
+  any other `AC_*` command (a shell command, for instance) raises
+  `AgentBackendError` instead of executing; unparsable or non-object OpenAI
+  arguments raise instead of running the tool with `{}`; computer-use
+  coordinates are clamped to the display.
+- **VLM location.** Provider errors (rate limit, timeout) are handled like
+  other request failures instead of escaping, and a point outside the
+  requested region is "not found" instead of clicked.
+
 - **Circuit breaker, config sync and ACME.** A half-open circuit breaker
   admits one trial call at a time instead of every concurrent caller, and is
   safe to share between threads. Config sync rejects a malformed server reply

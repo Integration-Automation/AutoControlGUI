@@ -46,7 +46,7 @@ def _response(tool_calls=None, content=None, finish_reason="stop"):
 
 
 def _backend(client):
-    return OpenAIAgentBackend(client=client, tools=[{"type": "function"}])
+    return OpenAIAgentBackend(client=client, tools=[{"type": "function", "function": {"name": "AC_click_mouse"}}])
 
 
 def test_parallel_tool_calls_disabled_on_every_request():

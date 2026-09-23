@@ -15,7 +15,14 @@ from je_auto_control.utils.rest_api.rest_server import RestApiServer  # noqa: E4
 
 
 @pytest.fixture()
-def rest_server():
+def rest_server(monkeypatch):
+    # These tests cover the HTTP path, not this machine's USB hardware. The
+    # real enumeration shells out to PowerShell on Windows, which under the
+    # suite's redirected USERPROFILE rebuilds its module cache on every call
+    # and outran the helper's 5 s timeout.
+    from je_auto_control.utils.usb import usb_devices
+    monkeypatch.setattr(usb_devices, "list_usb_devices", lambda: usb_devices.UsbEnumerationResult(
+        backend="fake", devices=[usb_devices.UsbDevice(vendor_id="046d", product_id="c52b")]))
     server = RestApiServer(host="127.0.0.1", port=0, enable_audit=False)
     server.start()
     yield server
@@ -31,7 +38,7 @@ def test_fetch_returns_list_against_real_server(rest_server):
         token=rest_server.token,
     )
     assert isinstance(devices, list)
-    # Each entry, if any, has the expected keys.
+    assert len(devices) == 1, "the stubbed device came through the REST route"
     for d in devices:
         assert isinstance(d, dict)
         for key in ("vendor_id", "product_id"):

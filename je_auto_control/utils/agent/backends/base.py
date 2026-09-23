@@ -2,10 +2,12 @@
 from __future__ import annotations
 
 import base64
-from typing import Optional
+from typing import Any, FrozenSet, Iterable, Mapping, Optional
+
+from je_auto_control.utils.exception.exceptions import AutoControlException
 
 
-class AgentBackendError(RuntimeError):
+class AgentBackendError(AutoControlException, RuntimeError):
     """Raised when the vendor SDK is missing or the API call fails."""
 
 
@@ -26,6 +28,29 @@ _DEFAULT_SYSTEM_PROMPT = (
     "  * Prefer accessibility-tree / VLM tools (AC_a11y_*, AC_vlm_*) "
     "for clicks where they apply; absolute coordinates are brittle.\n"
 )
+
+
+def offered_tool_names(tools: Iterable[Mapping[str, Any]]) -> FrozenSet[str]:
+    """Names in an Anthropic (``name``) or OpenAI (``function.name``) tool list."""
+    names = set()
+    for tool in tools:
+        function = tool.get("function")
+        name = function.get("name") if isinstance(function, Mapping) else tool.get("name")
+        if isinstance(name, str):
+            names.add(name)
+    return frozenset(names)
+
+
+def require_offered(name: Any, offered: FrozenSet[str]) -> str:
+    """Return ``name`` if it is one of the offered tools, else raise.
+
+    The model's tool name used to go straight to the executor, which runs
+    any AC_* command: offering one click tool did not stop a reply naming
+    AC_shell_command, so ``only=[...]`` protected nothing.
+    """
+    if not isinstance(name, str) or name not in offered:
+        raise AgentBackendError(f"model called tool {name!r}, which was not offered")
+    return name
 
 
 def build_default_system_prompt(goal: str) -> str:

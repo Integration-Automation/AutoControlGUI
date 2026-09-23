@@ -7,6 +7,7 @@ from typing import Any, Dict, List, Optional, Sequence
 from je_auto_control.utils.agent.agent_loop import AgentBackend, AgentStep
 from je_auto_control.utils.agent.backends.base import (
     AgentBackendError, build_default_system_prompt, encode_screenshot_b64,
+    offered_tool_names, require_offered,
 )
 
 
@@ -33,6 +34,7 @@ class OpenAIAgentBackend(AgentBackend):
                 "(see export_openai_tools()).",
             )
         self._tools = list(tools)
+        self._offered = offered_tool_names(self._tools)
         self._client = client
         self._api_key = api_key
         self._model = model
@@ -115,18 +117,34 @@ class OpenAIAgentBackend(AgentBackend):
         if tool_calls:
             call = tool_calls[0]
             fn = call.function
-            try:
-                args = json.loads(fn.arguments) if fn.arguments else {}
-            except json.JSONDecodeError:
-                args = {}
+            name = require_offered(fn.name, self._offered)
+            args = _parse_arguments(name, fn.arguments)
             self._pending_tool_call_id = call.id
-            return {"tool": fn.name, "input": args}
+            return {"tool": name, "input": args}
         # No tool call → final answer, unless the turn was truncated at the
         # token cap: returning a length-cut reply as the final answer would
         # silently end the run mid-plan.
         _raise_if_truncated(choice)
         text = getattr(message, "content", None) or ""
         return {"stop": True, "message": text.strip() if isinstance(text, str) else ""}
+
+
+def _parse_arguments(name: str, raw: Any) -> Dict[str, Any]:
+    """The tool call's JSON arguments, which must be an object.
+
+    Unparsable arguments used to become ``{}`` and the tool still ran -- a
+    truncated click became a click wherever the cursor was -- and a JSON
+    list or string crashed the run from ``dict()``.
+    """
+    if not raw:
+        return {}
+    try:
+        args = json.loads(raw)
+    except (TypeError, ValueError) as error:
+        raise AgentBackendError(f"arguments for {name!r} are not valid JSON") from error
+    if not isinstance(args, dict):
+        raise AgentBackendError(f"arguments for {name!r} must be a JSON object")
+    return args
 
 
 def _raise_if_truncated(choice: Any) -> None:

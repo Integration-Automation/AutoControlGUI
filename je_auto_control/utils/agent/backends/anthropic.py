@@ -6,6 +6,7 @@ from typing import Any, Dict, List, Optional, Sequence
 from je_auto_control.utils.agent.agent_loop import AgentBackend, AgentStep
 from je_auto_control.utils.agent.backends.base import (
     AgentBackendError, build_default_system_prompt, encode_screenshot_b64,
+    offered_tool_names, require_offered,
 )
 
 
@@ -34,6 +35,7 @@ class AnthropicAgentBackend(AgentBackend):
                 "(see export_anthropic_tools()).",
             )
         self._tools = list(tools)
+        self._offered = offered_tool_names(self._tools)
         self._client = client
         self._api_key = api_key
         self._model = model
@@ -106,7 +108,7 @@ class AnthropicAgentBackend(AgentBackend):
             )
             if block_type == "tool_use":
                 return {
-                    "tool": _attr(block, "name"),
+                    "tool": require_offered(_attr(block, "name"), self._offered),
                     "input": _attr(block, "input") or {},
                     "_tool_use_id": _attr(block, "id"),
                 }

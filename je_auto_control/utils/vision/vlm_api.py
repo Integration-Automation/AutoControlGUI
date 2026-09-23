@@ -43,6 +43,12 @@ def locate_by_description(description: str,
         return None
     x, y = coords
     if screen_region is not None:
+        # A reply outside the region is a misread, not a location: it was
+        # translated and clicked anyway (region 100x100 -> a point at y=5100).
+        width = int(screen_region[2]) - int(screen_region[0])
+        height = int(screen_region[3]) - int(screen_region[1])
+        if not (0 <= x < width and 0 <= y < height):
+            return None
         x += int(screen_region[0])
         y += int(screen_region[1])
     return (int(x), int(y))
