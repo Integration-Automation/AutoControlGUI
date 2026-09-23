@@ -88,7 +88,7 @@ def _sdk_errors() -> tuple:
     SDK's to catch.
     """
     try:
-        import openai
+        import openai  # nosemgrep: codacy.python.openai.import-without-guardrails  # reason: error type only
     except ImportError:
         return ()
     return (openai.OpenAIError,)
