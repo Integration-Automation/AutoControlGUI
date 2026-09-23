@@ -20,7 +20,7 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 | 指標 | 數值 |
 | --- | ---: |
 | Python 模組總數（含周邊子專案） | 1,048 |
-| 程式碼總行數 | 145,426 |
+| 程式碼總行數 | 145,443 |
 | `je_auto_control/utils/` 子套件數 | 310 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 773 |
 | 套件門面 `__all__` 公開名稱數 | 1,241 |
@@ -323,7 +323,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.3 排程、觸發與背景監看
 
-> 11 個套件、約 3,769 行。
+> 11 個套件、約 3,786 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -332,7 +332,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/lock_session/` | 164 | 鎖定工作站、等待解鎖並分類鎖定狀態轉換 |
 | `utils/observer/` | 226 | 反應式畫面觀察者，在出現／消失／變化時觸發 |
 | `utils/recurrence/` | 373 | RFC 5545 重複規則解析與發生時間展開 |
-| `utils/scheduler/` | 422 | 間隔式與 cron 式的 action JSON 排程器 |
+| `utils/scheduler/` | 439 | 間隔式與 cron 式的 action JSON 排程器 |
 | `utils/session_guard/` | 62 | 驅動輸入前先偵測工作階段是否已鎖定／非互動 |
 | `utils/triggers/` | 1,179 | 事件驅動觸發引擎：影像／視窗／像素／檔案／webhook／IMAP 郵件 |
 | `utils/voice/` | 87 | 語音指令路由：把辨識到的語句對應到 `AC_*` action list |
@@ -1080,6 +1080,6 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `osx/` | 17 | 919 |
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 783 |
-| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 676 | 50,161 |
-| **總計** | **1,042** | **145,361** |
+| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 676 | 50,178 |
+| **總計** | **1,042** | **145,378** |
 

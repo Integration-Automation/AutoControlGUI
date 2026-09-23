@@ -58,6 +58,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260924-06 | 2026-09-24 | Scheduler: cron jobs no longer refire every tick in the repeated DST hour; a removed job's run leaves its successor alone | #bugfix #audit | [2026-09](2026-09.md) |
 | U-20260924-05 | 2026-09-24 | JSON Schema validator: invalid regex, sub-schema $ref cycles, $ref siblings, nested const, exact multipleOf | #bugfix #audit | [2026-09](2026-09.md) |
 | U-20260924-04 | 2026-09-24 | Action and .env files saved with a UTF-8 BOM run, lint and load | #bugfix #windows | [2026-09](2026-09.md) |
 | U-20260924-03 | 2026-09-24 | A NaN timeout is refused instead of polling forever | #bugfix #audit | [2026-09](2026-09.md) |
@@ -164,7 +165,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | File | Period | Entries |
 |---|---|---:|
-| [2026-09.md](2026-09.md) | 2026-09 | 75 |
+| [2026-09.md](2026-09.md) | 2026-09 | 76 |
 | [2026-08-f.md](2026-08-f.md) | 2026-08 | 1 |
 | [2026-08-e.md](2026-08-e.md) | 2026-08 | 2 |
 | [2026-08-d.md](2026-08-d.md) | 2026-08 | 2 |

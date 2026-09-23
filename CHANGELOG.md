@@ -251,6 +251,10 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Fixed
 
+- **Cron jobs fire once per slot through the hour repeated when clocks fall
+  back**, instead of on every scheduler tick; and a run of a job removed
+  while in flight no longer counts against a new job registered under the
+  same id.
 - **`AC_validate_json` reports an invalid regular expression instead of
   aborting the script**, detects a `$ref` cycle through a sub-schema, applies
   the keywords beside a `$ref`, keeps `true` and `1` apart inside containers,

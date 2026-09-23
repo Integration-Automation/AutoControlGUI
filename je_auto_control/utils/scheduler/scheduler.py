@@ -107,19 +107,17 @@ class Scheduler:
         _check_max_runs(max_runs)
         expression = parse_cron(cron_expression)
         jid = job_id or uuid.uuid4().hex[:8]
-        now_wall = _dt.datetime.now()
-        next_at = next_match(expression, now_wall)
         job = ScheduledJob(
             job_id=jid, script_path=script_path,
             interval_seconds=0.0,
             cron_expression=expression,
             repeat=True, max_runs=max_runs,
-            next_run_ts=next_at.timestamp(),
+            next_run_ts=_next_cron_ts(expression, time.time()),
         )
         with self._lock:
             self._jobs[jid] = job
         autocontrol_logger.info("scheduler add_cron_job %s %r -> %s",
-                                jid, cron_expression, next_at.isoformat())
+                                jid, cron_expression, _dt.datetime.fromtimestamp(job.next_run_ts).isoformat())
         return job
 
     def remove_job(self, job_id: str) -> bool:
@@ -240,7 +238,9 @@ class Scheduler:
             )
         with self._lock:
             live = self._jobs.get(job.job_id)
-            if live is None:
+            if live is not job:
+                # Removed while running -- or removed and a new job registered
+                # under the same id, whose runs and schedule are not ours.
                 return
             live.runs += 1
             if live.max_runs is not None and live.runs >= live.max_runs:
@@ -248,8 +248,7 @@ class Scheduler:
                 return
             if live.is_cron and live.cron_expression is not None:
                 try:
-                    next_dt = next_match(live.cron_expression,
-                                         _dt.datetime.fromtimestamp(now_wall))
+                    next_ts = _next_cron_ts(live.cron_expression, now_wall)
                 except ValueError as error:
                     # Escaping here left next_run_ts in the past, so the job
                     # fired again on every tick. It has no future run: drop it.
@@ -257,12 +256,30 @@ class Scheduler:
                     autocontrol_logger.error(
                         "scheduler job %s removed: %s", job.job_id, error)
                     return
-                live.next_run_ts = next_dt.timestamp()
+                live.next_run_ts = next_ts
                 return
             if not live.repeat:
                 self._jobs.pop(job.job_id, None)
                 return
             live.next_run_ts = now_mono + live.interval_seconds
+
+
+def _next_cron_ts(expression: CronExpression, now_wall: float) -> float:
+    """The epoch time of the first cron slot strictly after ``now_wall``.
+
+    ``next_match`` works in wall-clock time, and in the hour repeated when
+    clocks fall back a wall time names two instants. ``timestamp()`` picks
+    the first, so during the second pass every slot landed an hour in the
+    past and the job re-fired on every tick for that hour. A slot whose first
+    instant is past is taken at its second (``fold=1``), so ``*/15`` keeps
+    its pace through the repeated hour; a slot past in both is skipped.
+    """
+    candidate = next_match(expression, _dt.datetime.fromtimestamp(now_wall))
+    while True:
+        for instant in (candidate, candidate.replace(fold=1)):
+            if instant.timestamp() > now_wall:
+                return instant.timestamp()
+        candidate = next_match(expression, candidate)
 
 
 def _check_max_runs(max_runs: Optional[int]) -> None:
