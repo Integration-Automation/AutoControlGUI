@@ -34,8 +34,10 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any, Callable, Dict, List, Optional, Tuple
 from urllib.parse import parse_qs, urlparse
 
+from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.http_headers import (
-    INVALID_CONTENT_LENGTH, parse_content_length,
+    INVALID_CONTENT_LENGTH, ChunkedBodyError, is_chunked, parse_content_length,
+    read_chunked_body,
 )
 from je_auto_control.utils.json.json_file import read_executable_action_json
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
@@ -59,6 +61,13 @@ _FIRE_LOCK_TIMEOUT_S = 120.0
 # and accept the TCP RST.
 _DRAIN_CAP_MULTIPLE = 4
 _DRAIN_CHUNK_BYTES = 64 * 1024
+
+
+def _decode_body(raw: bytes) -> str:
+    try:
+        return raw.decode("utf-8")
+    except UnicodeDecodeError:
+        return raw.decode("latin-1", errors="replace")
 
 
 @dataclass
@@ -122,27 +131,35 @@ class _WebhookHandler(BaseHTTPRequestHandler):
         autocontrol_logger.debug("webhook %s", format % args)
     # pylint: enable=redefined-builtin
 
-    def _read_body(self) -> str:
+    def _read_body(self) -> Optional[str]:
+        """The request body as text, or ``None`` once an error has been answered."""
+        if is_chunked(self.headers):
+            return self._read_chunked()
         length = parse_content_length(self.headers)
         if length == INVALID_CONTENT_LENGTH:
             # A malformed header is a client error and must be answered.
-            # Don't fall into the `length <= 0` branch below: that returns an
-            # empty body silently, and _dispatch would then close the
-            # connection without ever sending a response.
             self.send_error(HTTPStatus.BAD_REQUEST, "invalid Content-Length")
-            return ""
+            return None
         if length <= 0:
             return ""
         if length > _MAX_BODY_BYTES:
             self._reject_with_drain(
                 HTTPStatus.REQUEST_ENTITY_TOO_LARGE, "body too large", length,
             )
-            return ""
-        raw = self.rfile.read(length)
+            return None
+        return _decode_body(self.rfile.read(length))
+
+    def _read_chunked(self) -> Optional[str]:
+        # A chunked request has no Content-Length: it used to read as an empty
+        # body, and the script ran on data it never saw while the client got 200.
         try:
-            return raw.decode("utf-8")
-        except UnicodeDecodeError:
-            return raw.decode("latin-1", errors="replace")
+            return _decode_body(read_chunked_body(self.rfile, _MAX_BODY_BYTES))
+        except ChunkedBodyError as error:
+            status = (HTTPStatus.REQUEST_ENTITY_TOO_LARGE if error.too_large
+                      else HTTPStatus.BAD_REQUEST)
+            self.close_connection = True
+            self.send_error(status, str(error))
+            return None
 
     def _reject_with_drain(self, status: HTTPStatus, message: str,
                            length: int) -> None:
@@ -189,7 +206,7 @@ class _WebhookHandler(BaseHTTPRequestHandler):
             )
             return
         body = self._read_body()
-        if body == "" and parse_content_length(self.headers) != 0:
+        if body is None:
             return  # _read_body already wrote an error response
         payload = {
             "webhook.method": method,
@@ -201,7 +218,15 @@ class _WebhookHandler(BaseHTTPRequestHandler):
                 self.headers.get("Content-Type", ""), body,
             ),
         }
-        run_id = registry.fire(trigger, payload)
+        try:
+            run_id = registry.fire(trigger, payload)
+        except AutoControlException as error:
+            # The run-history store failed before the script ran; the client
+            # still gets an answer instead of a dropped connection.
+            autocontrol_logger.error("webhook %s not fired: %r", trigger.webhook_id, error)
+            self._send_json(HTTPStatus.INTERNAL_SERVER_ERROR,
+                            {"fired": False, "error": "run history unavailable"})
+            return
         if run_id is None:
             self._send_json(
                 HTTPStatus.SERVICE_UNAVAILABLE,
@@ -309,8 +334,12 @@ class WebhookTriggerServer:
             return True
         if not auth_header:
             return False
-        expected = f"Bearer {trigger.token}".encode("utf-8")
-        return hmac.compare_digest(auth_header.encode("utf-8"), expected)
+        # The scheme is case-insensitive (RFC 7235); `bearer x` was refused.
+        scheme, _, token = auth_header.strip().partition(" ")
+        if scheme.lower() != "bearer":
+            return False
+        return hmac.compare_digest(token.strip().encode("utf-8"),
+                                   trigger.token.encode("utf-8"))
 
     def fire(self, trigger: WebhookTrigger,
              payload: Dict[str, Any]) -> Optional[int]:

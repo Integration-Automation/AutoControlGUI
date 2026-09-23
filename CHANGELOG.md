@@ -253,6 +253,9 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Fixed
 
+- **The webhook server reads chunked request bodies** instead of running the
+  script on an empty body, accepts a lower-case `bearer` scheme, and answers
+  500 when the run history is unavailable instead of dropping the connection.
 - **A trigger removed by an earlier trigger's script in the same pass no
   longer runs**; an infinite poll interval no longer kills the trigger or
   observer thread; one failing observer rule no longer stops the others; and
