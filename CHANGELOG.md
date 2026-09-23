@@ -290,6 +290,10 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Fixed
 
+- **`AC_run_dag` node actions are placeholder-expanded once**, a nested
+  `AC_execute_action` failure reaches the enclosing `AC_try`, and a top-level
+  `AC_break` or a dry run no longer overwrites or collapses the record of a
+  repeated identical action.
 - **`AC_parallel` reports a failed branch under `raise_on_error`** (so `AC_try`
   and `AC_retry` see it), counts branch failures for the caller, keeps the
   macro recursion limit across branches, and validates a JSON-string

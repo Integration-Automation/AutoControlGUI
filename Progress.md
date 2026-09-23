@@ -228,6 +228,23 @@ claim 標成需排空，丟掉下一個回覆——但 host 若根本沒回，�
 
 ---
 
+## 全域 executor 的變數會留到下一次執行
+
+`DECIDE` — 每次頂層執行要不要有自己的變數範圍（行為改動，維護者拍板）
+
+`execute_action_with_vars`（`utils/executor/action_executor.py`）把變數種進全域 `executor` 後從不清除，REST、MCP、
+socket server 的執行也都用同一個 `executor`；`for_each` 的迴圈變數與巨集參數同樣留著。下一次執行裡的 `${user}`
+會安靜地取到前一個呼叫者的值，而不是報 `Unknown variable`（2026-09-24 稽核重現）。模組文件把這個範圍描述成
+「共用」，所以有人可能依賴它在執行之間傳值。
+
+**選項**：`execute_action_with_vars` 與各伺服器入口每次開一個新的 `VariableScope`（`AC_set_var` 在單次執行內照舊）；
+或保留共用，但在伺服器入口清空，並在文件寫明。
+
+**附帶**：`AC_circuit_call`、`AC_bulkhead_run`、`AC_run_chaos`、`AC_run_dag` 的巢狀動作跑在全域 `executor` 上，
+在 `AC_parallel` 分支裡因此用到父層的變數範圍，而不是分支自己的。
+
+---
+
 ## pytest11 進入點會把整個門面拉進每一次 pytest
 
 `DECIDE` — 要不要把進入點搬到一個精簡的頂層模組（打包層的改動，維護者拍板）

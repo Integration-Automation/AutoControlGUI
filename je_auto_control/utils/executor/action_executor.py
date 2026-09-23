@@ -7060,6 +7060,7 @@ class Executor:
         "AC_run_state_machine": frozenset({"spec"}),
         "AC_run_suite": frozenset({"spec"}),
         "AC_replay_trace": frozenset({"trace"}),
+        "AC_run_dag": frozenset({"definition"}),
         **{name: frozenset({"actions"}) for name in (
             "AC_circuit_call", "AC_bulkhead_run", "AC_run_resumable",
             "AC_run_device_matrix", "AC_observe_add", "AC_voice_register",
@@ -8048,8 +8049,11 @@ class Executor:
         # a failure inside an AC_loop / AC_if_* / macro under raise_on_error
         # reaches the enclosing AC_try / AC_retry / caller instead of being
         # recorded and swallowed at the first block boundary.
+        # A nested AC_execute_action (not _validated) inherits it too: inside an
+        # AC_try body it ran non-strict and its failures never reached catch.
+        # A top-level call always sees False -- the finally below restores it.
         inherited = getattr(_STRICT_BODIES, "value", False)
-        raise_on_error = bool(raise_on_error) or (_validated and inherited)
+        raise_on_error = bool(raise_on_error) or inherited
         _STRICT_BODIES.value = raise_on_error
         try:
             return self._execute_list(action_list, raise_on_error, _validated,
@@ -8071,24 +8075,25 @@ class Executor:
             if step_callback is not None:
                 step_callback(action)
             if dry_run:
-                execute_record_dict["dry-run: " + describe_action(action)] = "(not executed)"
+                key = _unique_key(execute_record_dict, "dry-run: " + describe_action(action))
+                execute_record_dict[key] = "(not executed)"
                 continue
+            key = _unique_key(execute_record_dict, "execute: " + describe_action(action))
             try:
-                self._run_one_action(action, execute_record_dict, raise_on_error)
+                self._run_one_action(action, execute_record_dict, raise_on_error, key)
             except (LoopBreak, LoopContinue, MacroDepthExceeded) as signal:
                 if _validated:
                     raise  # a nested body: the enclosing block handles it
                 self._record_unwound_signal(
-                    action, signal, execute_record_dict, raise_on_error)
+                    signal, execute_record_dict, raise_on_error, key)
 
         for key, value in execute_record_dict.items():
             autocontrol_logger.info("%s -> %s", key, value)
         return execute_record_dict
 
     @staticmethod
-    def _record_unwound_signal(action: list, signal: Exception,
-                               record: Dict[str, Any],
-                               raise_on_error: bool) -> None:
+    def _record_unwound_signal(signal: Exception, record: Dict[str, Any],
+                               raise_on_error: bool, key: str) -> None:
         """Settle, at the top level, a signal that unwound every nested body.
 
         AC_break / AC_continue with no enclosing loop is a failed command:
@@ -8101,12 +8106,16 @@ class Executor:
         if isinstance(signal, AutoControlException):
             error: AutoControlException = signal
         else:
-            name = action[0] if action and isinstance(action[0], str) else "<invalid>"
+            # Name the signal, not the action it unwound through: a break
+            # inside a macro was reported as "AC_call_macro outside a loop".
+            name = "AC_continue" if isinstance(signal, LoopContinue) else "AC_break"
             error = AutoControlActionException(f"{name} outside a loop")
         if raise_on_error:
             raise error
         record_action_to_list("AC_execute_action", None, repr(error))
-        record["execute: " + describe_action(action)] = repr(error)
+        # The key _execute_list chose, so a repeated identical action's earlier
+        # result is not overwritten.
+        record[key] = repr(error)
         _count_recorded_failure()
 
     @staticmethod
@@ -8122,19 +8131,9 @@ class Executor:
         return actions
 
     def _run_one_action(self, action: list, record: Dict[str, Any],
-                        raise_on_error: bool) -> None:
-        """Execute a single action, recording the result or raising."""
+                        raise_on_error: bool, key: str) -> None:
+        """Execute a single action, recording the result under ``key`` or raising."""
         import time as _time
-        key = "execute: " + describe_action(action)
-        if key in record:
-            # Two byte-identical actions would otherwise share one record slot,
-            # so an earlier failure is silently overwritten by a later success.
-            # The first occurrence keeps the bare key (unchanged for callers);
-            # repeats get a numeric suffix so every outcome is preserved.
-            suffix = 2
-            while f"{key} #{suffix}" in record:
-                suffix += 1
-            key = f"{key} #{suffix}"
         action_name = action[0] if action and isinstance(action[0], str) else "<invalid>"
         started = _time.monotonic()
         try:
@@ -8189,6 +8188,22 @@ class Executor:
 
 
 _RECORDED_FAILURES = threading.local()
+
+
+def _unique_key(record: Dict[str, Any], key: str) -> str:
+    """``key``, or ``key #N`` when an identical action already has a slot.
+
+    Two byte-identical actions would otherwise share one record slot, so an
+    earlier failure was silently overwritten by a later success (and a dry run
+    listed a repeated action once). The first occurrence keeps the bare key;
+    repeats get a numeric suffix so every outcome is preserved.
+    """
+    if key not in record:
+        return key
+    suffix = 2
+    while f"{key} #{suffix}" in record:
+        suffix += 1
+    return f"{key} #{suffix}"
 
 
 def reset_recorded_failures() -> None:
