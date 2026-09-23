@@ -32,7 +32,7 @@ def test_move_onto_itself_still_needs_the_source():
         apply_patch({}, [{"op": "move", "from": "/nope", "path": "/nope"}])
 
 
-@pytest.mark.parametrize("index", ["²", "١"])
+@pytest.mark.parametrize("index", ["\u00b2", "\u0661"])
 def test_array_indexes_are_ascii_digits(index):
     with pytest.raises(PatchError):
         apply_patch({"a": [0, 1, 2]}, [{"op": "remove", "path": f"/a/{index}"}])
