@@ -15,7 +15,7 @@ JSON Schema 驗證
 ------------
 
 * ``type`` —— 包含 ``integer`` 會匹配整數值的浮點數(``5.0``)但永不匹配布林值;
-  ``enum`` / ``const``(讓 ``True`` 與 ``1`` 保持相異)。
+  ``enum`` / ``const``(讓 ``True`` 與 ``1`` 保持相異,巢狀內也一樣)。
 * 數字 —— ``minimum`` / ``maximum`` / ``exclusiveMinimum`` / ``exclusiveMaximum`` /
   ``multipleOf``。
 * 字串 —— ``minLength`` / ``maxLength`` / ``pattern``。
@@ -24,7 +24,9 @@ JSON Schema 驗證
 * 物件 —— ``required`` / ``minProperties`` / ``maxProperties`` / ``properties`` /
   ``patternProperties`` / ``additionalProperties``。
 * 組合器 —— ``allOf`` / ``anyOf`` / ``oneOf`` / ``not``;布林 schema(``True`` /
-  ``False``);本地 ``$ref``(``#/$defs/...`` JSON Pointer)。
+  ``False``);本地 ``$ref``(``#/$defs/...`` JSON Pointer),旁邊的關鍵字
+  也會一起套用。``$ref`` 形成循環時回報為 ``$ref`` 錯誤;不合法的正規表示式
+  會丟出 ``AutoControlJsonException``。
 
 遠端 ``$ref`` 與 ``format`` 斷言刻意排除在範圍之外。
 

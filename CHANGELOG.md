@@ -251,6 +251,11 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Fixed
 
+- **`AC_validate_json` reports an invalid regular expression instead of
+  aborting the script**, detects a `$ref` cycle through a sub-schema, applies
+  the keywords beside a `$ref`, keeps `true` and `1` apart inside containers,
+  checks `multipleOf` exactly for integers and treats `1` and `1.0` as
+  duplicates for `uniqueItems`.
 - **Action files saved with a UTF-8 BOM run.** `validate` accepted them but
   every runner and the action linter refused them; a `.env` file with a BOM
   no longer loses its first key.
