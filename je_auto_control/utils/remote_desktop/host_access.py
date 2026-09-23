@@ -66,16 +66,19 @@ def _compile_ip_allowlist(
     ``None`` or an empty list → no filtering (allow all). Entries are
     plain IPs (``"192.168.1.10"``) or CIDR ranges (``"10.0.0.0/8"``);
     unparseable entries are dropped with a warning so a typo doesn't
-    silently broaden access.
+    silently broaden access -- and a list whose every entry was a typo
+    admits nobody, where it used to turn into "no filtering".
     """
     if not entries:
         return None
     import ipaddress
     compiled: List[Any] = []
+    named = False
     for entry in entries:
         text = str(entry).strip()
         if not text:
             continue
+        named = True
         try:
             if "/" in text:
                 compiled.append(ipaddress.ip_network(text, strict=False))
@@ -85,11 +88,15 @@ def _compile_ip_allowlist(
             autocontrol_logger.warning(
                 "remote_desktop ip_allowlist entry rejected: %r", text,
             )
-    return compiled or None
+    return compiled if named else None
 
 def _ip_in_allowlist(allowlist: Optional[List[Any]], peer_ip: str) -> bool:
-    """Return True when ``peer_ip`` matches any allowlist entry (or no list)."""
-    if not allowlist:
+    """Return True when ``peer_ip`` matches any allowlist entry (or no list).
+
+    ``None`` is "no list"; an empty list -- every entry was invalid -- admits
+    nobody.
+    """
+    if allowlist is None:
         return True
     import ipaddress
     try:

@@ -41,6 +41,10 @@ _FILE_MSG_TYPES = frozenset({
 })
 
 
+#: Messages a view-only viewer may not send, besides INPUT.
+_CONTROL_MSG_TYPES = frozenset({MessageType.CLIPBOARD, *_FILE_MSG_TYPES})
+
+
 class _ClientHandler:
     """Per-connection auth + input-receive + frame-send state."""
 
@@ -71,15 +75,30 @@ class _ClientHandler:
         return self._address
 
     def start(self) -> None:
-        """Run auth (with optional host approval), then start the loops."""
+        """Run auth (with optional host approval), then start the loops.
+
+        However the handshake fails, the handler is stopped: it was only
+        closed, and the host reaps stopped handlers alone, so every failed
+        login kept a ``max_clients`` slot until the host restarted. A
+        watchdog bounds the whole handshake -- the socket timeout only bounds
+        each read, and a peer trickling a byte at a time never tripped it.
+        """
+        watchdog = threading.Timer(_AUTH_TIMEOUT_S, self._close)
+        watchdog.daemon = True
+        watchdog.start()
         try:
             self._authenticate()
         except (AuthenticationError, ProtocolError, OSError) as error:
             autocontrol_logger.info(
                 "remote_desktop client %s rejected: %r", self._address, error,
             )
-            self._close()
+            self.stop()
             return
+        except Exception:  # noqa: BLE001  # reason: re-raised; the slot must be freed first
+            self.stop()
+            raise
+        finally:
+            watchdog.cancel()
         self.authenticated = True
         # The initial cursor + frame are seeded from _send_loop (the
         # per-client sender thread), not here: start() runs on this
@@ -153,7 +172,7 @@ class _ClientHandler:
         )
         try:
             return _interpret_approval(callback(pending))
-        except (RuntimeError, ValueError, TypeError) as error:
+        except Exception as error:  # noqa: BLE001  # reason: user callback; any failure denies the viewer
             autocontrol_logger.info(
                 "remote_desktop approval callback raised for %s: %r",
                 self._address, error,
@@ -286,6 +305,15 @@ class _ClientHandler:
             # watch but cannot drive the mouse / keyboard.
             if self.permission != PERMISSION_VIEW_ONLY:
                 self._handle_input_payload(payload)
+            return
+        if msg_type in _CONTROL_MSG_TYPES and self.permission == PERMISSION_VIEW_ONLY:
+            # Setting the host clipboard or writing files on it is control,
+            # not viewing: a file dropped in the Startup folder is full
+            # control at the next logon.
+            autocontrol_logger.info(
+                "remote_desktop view-only viewer %s sent %s; dropped",
+                self._address, msg_type.name,
+            )
             return
         if msg_type is MessageType.CLIPBOARD:
             self._handle_clipboard_payload(payload)

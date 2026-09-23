@@ -190,6 +190,10 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Security
 
+- **Remote desktop: failed logins no longer use up the host's client slots**,
+  a view-only viewer can no longer set the clipboard or write files, and an
+  IP allowlist whose every entry is invalid admits nobody instead of
+  everyone.
 - **Anonymous `initialize` requests can no longer evict an MCP HTTP session in
   use**, and `DELETE` off the `/mcp` path no longer ends a session.
 - **The REST API checks the token before reading a POST body**, and a valid
