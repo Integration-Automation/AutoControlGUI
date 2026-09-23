@@ -104,9 +104,11 @@ class _RestRequestHandler(BaseHTTPRequestHandler):
     """Stdlib request handler — delegates to gate + route table."""
 
     server_version = "AutoControlREST/2.0"
-    # socketserver applies this to the connection socket in setup(); it bounds
-    # every read (the body is read before the auth gate) so a client that
-    # declares a Content-Length then stalls cannot pin a worker thread forever.
+    # socketserver applies this to the connection socket in setup(). It bounds
+    # each read, not the request: a client that stops sending is dropped
+    # after 30 s, but one that trickles a byte at a time can hold a worker
+    # for as long as its (capped) body lasts. The body is read only after
+    # the auth gate, so that client has to hold a valid token.
     timeout = 30.0
 
     def log_message(self, format, *args) -> None:  # noqa: A002  # pylint: disable=redefined-builtin  # reason: stdlib BaseHTTPRequestHandler override
@@ -171,16 +173,18 @@ class _RestRequestHandler(BaseHTTPRequestHandler):
         self._metrics().record_request("GET", _PATH_METRICS, 200)
 
     def do_POST(self) -> None:  # noqa: N802  # reason: stdlib API
-        body = self._read_json_body()
-        if body is _BODY_ERROR_SENT:
-            return
-        self._dispatch("POST", _POST_ROUTES, body=body)
+        # The body is read after the route and the auth gate: reading it
+        # first let an unauthenticated client send 1 MB bodies at will and
+        # answered its bad ones 400 -- never 401 or 429, and never counted
+        # against the rate limit or the lockout.
+        self._dispatch("POST", _POST_ROUTES, body=_BODY_PENDING)
 
     def _dispatch(self, method: str, routes: Dict[str, HandlerFn],
                   body: Any) -> None:
         parsed = urlparse(self.path)
         handler = routes.get(parsed.path)
         if handler is None:
+            self._drain_unread_body(body)
             self._send_json({"error": "unknown path"}, status=404)
             return
         client_ip = self.client_address[0] if self.client_address else "?"
@@ -192,11 +196,16 @@ class _RestRequestHandler(BaseHTTPRequestHandler):
             if verdict != "ok":
                 if verdict == "unauthorized":
                     self._metrics().record_failed_auth()
+                self._drain_unread_body(body)
                 self._reject(verdict)
                 self._audit(method, parsed.path, client_ip, verdict)
                 self._metrics().record_request(
                     method, parsed.path, _verdict_to_status(verdict),
                 )
+                return
+        if body is _BODY_PENDING:
+            body = self._read_json_body()
+            if body is _BODY_ERROR_SENT:
                 return
         ctx = RouteContext(query=parsed.query, body=body, client_ip=client_ip)
         try:
@@ -242,6 +251,21 @@ class _RestRequestHandler(BaseHTTPRequestHandler):
         else:
             self._send_json({"error": "unauthorized"}, status=401)
 
+    def _drain_unread_body(self, body: Any) -> None:
+        """Discard a body nobody will read before answering, up to a cap.
+
+        Closing a Windows socket with unread bytes sends RST, and the client
+        then sees a reset instead of the 401 / 404 it was sent.
+        """
+        if body is not _BODY_PENDING:
+            return
+        remaining = min(max(parse_content_length(self.headers), 0), _MAX_BODY_BYTES * 4)
+        while remaining > 0:
+            chunk = self.rfile.read(min(remaining, 65536))
+            if not chunk:
+                break
+            remaining -= len(chunk)
+
     def _read_json_body(self) -> Any:
         length = parse_content_length(self.headers)
         if length <= 0 or length > _MAX_BODY_BYTES:
@@ -265,6 +289,8 @@ class _RestRequestHandler(BaseHTTPRequestHandler):
 
 
 _BODY_ERROR_SENT = object()
+#: A POST whose body is still on the socket, read once the request is allowed.
+_BODY_PENDING = object()
 
 
 def _verdict_to_status(verdict: str) -> int:
@@ -359,7 +385,9 @@ class RestApiServer:
                 default_audit_log,
             )
             return default_audit_log()
-        except (OSError, RuntimeError, ImportError) as error:
+        except (OSError, RuntimeError, ImportError, AutoControlException) as error:
+            # AuditLogError (a corrupt database) is an AutoControlException;
+            # missing it made RestApiServer() itself raise.
             autocontrol_logger.warning("rest-api audit unavailable: %r", error)
             return None
 

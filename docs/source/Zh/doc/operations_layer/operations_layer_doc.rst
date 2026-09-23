@@ -101,8 +101,10 @@ REST API 圍繞三個面向重建：bearer token 認證、稽核軌跡、以及 
 - Token 為 URL-safe 隨機字串；以 ``secrets.compare_digest`` 做常數
   時間比較。
 - Per-IP token bucket：每分鐘 120 次、burst 30。
-- 失敗認證追蹤：60 秒內 8 次錯誤 token → ``locked_out``\ （回 429）；
-  鎖定為 per-IP，不會誤殺其他使用者。
+- 失敗認證追蹤：60 秒內 8 次錯誤 token → 之後該 IP 再送錯誤 token 會得到
+  ``locked_out``\ （回 429）；正確的 token 永遠不會被鎖，鎖定也不會是全域的。
+- POST 的內文要等路徑與 token 檢查通過才讀取，未認證的請求直接得到 401／429，
+  不會被解析。
 
 Headless::
 

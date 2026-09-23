@@ -190,6 +190,9 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Security
 
+- **The REST API checks the token before reading a POST body**, and a valid
+  token is never locked out by other clients' failed attempts from the same
+  IP.
 - **The RBAC user store refuses a token another user already has**, and no
   longer replaces every user when its file is damaged.
 - **The audit log's hash chain catches a forged row whose hash was cleared
@@ -264,6 +267,8 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Fixed
 
+- **A corrupt audit database no longer stops the REST server from
+  starting**; it runs without the audit hook, as intended.
 - **Two `SecretManager`s on one vault keep each other's changes**, and a
   malformed vault raises `SecretStoreError` instead of `KeyError` or
   `ValueError`.

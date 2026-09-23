@@ -79,15 +79,22 @@ class RestAuthGate:
         return self._token
 
     def check(self, *, client_ip: str, header_value: Optional[str]) -> str:
+        """Rate-limit, then authenticate; a valid token is never locked out.
+
+        The lockout used to be checked first, keyed by IP alone -- and every
+        local client is 127.0.0.1, every proxied one the proxy -- so eight bad
+        requests a minute from anyone kept the real token holder out. It now
+        only answers wrong tokens; the per-IP rate limit still applies to all.
+        """
         if not self._consume_token(client_ip):
             return "rate_limited"
+        if _matches_bearer(header_value, self._token):
+            self._reset_failures(client_ip)
+            return "ok"
         if self._is_locked_out(client_ip):
             return "locked_out"
-        if not _matches_bearer(header_value, self._token):
-            self._note_failure(client_ip)
-            return "unauthorized"
-        self._reset_failures(client_ip)
-        return "ok"
+        self._note_failure(client_ip)
+        return "unauthorized"
 
     def _consume_token(self, client_ip: str) -> bool:
         now = time.monotonic()

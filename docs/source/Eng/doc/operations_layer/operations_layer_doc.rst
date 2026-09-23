@@ -108,7 +108,10 @@ Auth gate
   constant-time comparison.
 - Per-IP token bucket: 120 requests/minute, burst 30.
 - Failed-auth tracking: 8 wrong tokens in 60 s → ``locked_out``
-  (returns 429); the lockout is per-IP, never global.
+  (returns 429) for further wrong tokens from that IP; the valid token is
+  never locked out, and the lockout is never global.
+- A POST body is read only after the route and the token check pass, so
+  unauthenticated requests get 401 / 429 without being parsed.
 
 Headless::
 

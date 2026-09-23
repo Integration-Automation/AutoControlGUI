@@ -15,11 +15,11 @@ from je_auto_control.utils.http_headers import (
 )
 
 
-def _status_line(port: int, path: str) -> bytes:
+def _status_line(port: int, path: str, extra_headers: str = "") -> bytes:
     sock = socket.create_connection(("127.0.0.1", port), timeout=5)
     try:
         sock.sendall(
-            f"POST {path} HTTP/1.1\r\nHost: 127.0.0.1\r\n"
+            f"POST {path} HTTP/1.1\r\nHost: 127.0.0.1\r\n{extra_headers}"
             "Content-Length: abc\r\nContent-Type: application/json\r\n\r\n"
             .encode()
         )
@@ -56,7 +56,10 @@ def test_rest_server_answers_400(monkeypatch):
     from je_auto_control.utils.rest_api.rest_server import start_rest_api_server
     server = start_rest_api_server(host="127.0.0.1", port=0, token=None)
     try:
-        assert b"400" in _status_line(server.address[1], "/execute")
+        # Authorised: the REST server checks the token before it reads the
+        # body, so an unauthenticated request is answered 401 first.
+        auth = f"Authorization: Bearer {server.token}\r\n"
+        assert b"400" in _status_line(server.address[1], "/execute", auth)
     finally:
         server.stop()
 
