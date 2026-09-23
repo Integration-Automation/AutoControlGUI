@@ -151,6 +151,23 @@ pip install --dry-run --only-binary=:all: --platform win_arm64 --python-version 
 
 ---
 
+## 鍵盤與滑鼠 wrapper 的輸入修正：等 Jeffrey_RPA 批次停下
+
+`BLOCKED` — Jeffrey_RPA 以 editable install 載入這個工作樹，正式批次（`webrunner_novelai.py`）與 Discord bot 正在跑，並且經 `_gui_control.py` 呼叫 `ac.write`、`ac.hotkey`、`ac.mouse_scroll`；下面每一項都會改變它打出來的字或滾動方向，依工作區規則在它執行期間不動
+
+2026-09-24 稽核用假後端重現：
+
+- **大寫字母打成小寫**：`wrapper/auto_control_keyboard.py:234` `write()` 在 Windows 送的是與小寫相同的虛擬鍵（`_platform_windows.py` 的表裡 `"A"` 與 `"a"` 同一個碼），沒有按 Shift，`"Hi"` 打成 `hi`；X11 很可能一樣。做法：需要 Shift 的字元改走 `_write_char_via_unicode`，或包一層 Shift 按下／放開。
+- **`is_shift` 在 Windows 與 X11 無效**：`auto_control_keyboard.py:73`、`:104` 只在 macOS 把它傳下去，其他平台直接忽略，docstring 卻寫「是否同時按下 Shift」。做法：在這一層按住 `keyboard_keys_table["shift"]`，`finally` 放開。
+- **`"\r\n"` 按兩次 Enter**：`write()` 把 `\r` 與 `\n` 都對到 `return`，從檔案讀進來的 Windows 換行每行多一個空行。做法：迴圈前把 `\r\n` 換成 `\n`。
+- **X11 預設滾動方向與 Windows／macOS 相反**：`wrapper/auto_control_mouse.py` `mouse_scroll(..., scroll_direction="scroll_down")`，正值在 X11 往下、其他平台往上，與 docstring「一份寫法各平台通用」不符。做法：預設改 `scroll_up`，或改 docstring 講清楚（重播路徑已在 U-20260924-14 明確傳 `scroll_up`）。
+- **`mouse_scroll` 的 NaN 座標被悄悄夾到桌面邊緣**：`auto_control_mouse.py` 的夾限在 `_coordinate()` 驗證之前，`mouse_scroll(3, x=nan, y=100)` 移到 `(-1920, 100)` 才滾；`set_mouse_position(nan, …)` 則正確丟例外。做法：夾限前先過 `_coordinate()`。
+- **座標截斷而非四捨五入**：`set_mouse_position(-0.6, 10.9)` 得到 `(0, 10)`，註解寫的是「rounded point」。做法：`int(round(value))`。
+
+**解除條件**：Jeffrey_RPA 沒有批次在跑（`webrunner.pid` 的行程不在、Discord bot 停止）；改完在 Jeffrey_RPA 跑 `test/test_je_facade.py`。
+
+---
+
 ## pytest11 進入點會把整個門面拉進每一次 pytest
 
 `DECIDE` — 要不要把進入點搬到一個精簡的頂層模組（打包層的改動，維護者拍板）
