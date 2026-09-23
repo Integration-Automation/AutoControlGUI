@@ -258,6 +258,23 @@ socket server 的執行也都用同一個 `executor`；`for_each` 的迴圈變�
 
 ---
 
+## Computer use 改走 GA 的 `computer_toolset_20260801`
+
+`TODO` — 換成新的工具形式需要改 agent 迴圈，不只是換一個 tool 型別
+
+`utils/agent/backends/anthropic_computer_use.py` 現在以 beta 送 `computer_20251124`（2026-09-24 修正：原本沒帶 beta，
+每個請求都被 API 拒絕）。GA 的 `computer_toolset_20260801` 不需要 beta，但每個動作是一個名稱為成員名的 `tool_use`
+（`screenshot`、`left_click`…），可能一回合好幾個，每個 `tool_result` 都要帶回 `"toolset_name": "computer"`；
+截圖要先縮到模型的影像上限內。Claude Opus 5.5 只接受這個形式。
+
+**做法**：`_decision_from_computer_action` 改讀區塊的 `name`，一回合允許多個呼叫並逐一回覆，`_ingest_history` 帶上
+`toolset_name`；在 `claude-opus-5`（兩種都接受）上測過再換預設。
+
+**附帶**：`AC_run_agent backend="openai"` 送出全部約 740 個工具，超過 OpenAI Chat Completions 的 128 個上限，
+所以一定失敗——與「`AC_run_agent` 預設工具集」那一條 DECIDE 一起決定。
+
+---
+
 ## pytest11 進入點會把整個門面拉進每一次 pytest
 
 `DECIDE` — 要不要把進入點搬到一個精簡的頂層模組（打包層的改動，維護者拍板）

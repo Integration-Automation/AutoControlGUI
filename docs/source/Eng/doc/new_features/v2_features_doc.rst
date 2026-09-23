@@ -202,7 +202,9 @@ Computer-use high-level API
 ---------------------------
 
 Wraps :class:`ComputerUseAgentBackend` + :class:`AgentLoop` so a
-single call drives Anthropic's official ``computer_20250124`` tool::
+single call drives Anthropic's computer-use tool (``computer_20251124`` on
+``claude-opus-5`` by default, sent under its ``computer-use-2025-11-24`` beta;
+``tool_type=`` picks another version and ``beta=`` names its beta)::
 
     from je_auto_control import run_computer_use
     result = run_computer_use(
@@ -372,7 +374,7 @@ language and the MCP tool registry. Parameters:
 * ``max_steps`` (default 25) and ``wall_seconds`` (default 300.0).
 * ``model`` / ``max_tokens`` — backend-specific overrides.
 
-The Anthropic-only Computer-Use raw path (``computer_20250124``) is
+The Anthropic-only Computer-Use raw path (``computer_20251124``) is
 still available via ``AC_computer_use`` / ``ac_computer_use`` and is
 the right choice when the agent needs to drive a desktop the model
 itself sees pixel-for-pixel.

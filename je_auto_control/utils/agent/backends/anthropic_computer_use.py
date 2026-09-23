@@ -1,6 +1,6 @@
 """Anthropic Computer-Use tool backend.
 
-Bridges Anthropic's official ``computer_20250124`` tool to AutoControl's
+Bridges Anthropic's computer-use tool (``computer_20251124`` by default) to AutoControl's
 executor: the model issues one ``computer`` tool call per turn with an
 ``action`` field (``screenshot`` / ``left_click`` / ``type`` / ...)
 and this backend translates it into the equivalent ``AC_*`` action
@@ -28,8 +28,22 @@ from je_auto_control.utils.agent.backends.base import (
 )
 
 
-_DEFAULT_MODEL = "claude-opus-4-7"
-_DEFAULT_TOOL_TYPE = "computer_20250124"
+_DEFAULT_MODEL = "claude-opus-5"
+_DEFAULT_TOOL_TYPE = "computer_20251124"
+
+#: The beta each computer-use tool version is sent under. Every version is
+#: beta-only: posted through the plain ``messages.create`` without one, the
+#: API rejects the request, so the backend could never run.
+_TOOL_BETAS = {
+    "computer_20250124": "computer-use-2025-01-24",
+    "computer_20251124": "computer-use-2025-11-24",
+}
+
+#: Upper bounds on what one model action may ask for. The spec caps ``wait``
+#: at 100 s; a hold longer than that, or a scroll of more notches, is not a
+#: step an agent needs, and an unbounded scroll overflowed the platform call.
+_MAX_WAIT_S = 100.0
+_MAX_SCROLL_NOTCHES = 100
 
 
 # Map xdotool-style key names (used by Anthropic's tool spec) to the
@@ -95,6 +109,7 @@ class ComputerUseAgentBackend(AgentBackend):
                  api_key: Optional[str] = None,
                  model: str = _DEFAULT_MODEL,
                  tool_type: str = _DEFAULT_TOOL_TYPE,
+                 beta: Optional[str] = None,
                  max_tokens: int = 1024,
                  system_prompt_builder: Optional[Callable[[str], str]] = None,
                  ) -> None:
@@ -110,6 +125,10 @@ class ComputerUseAgentBackend(AgentBackend):
         }
         if display_number is not None:
             self._tool_schema["display_number"] = int(display_number)
+        self._beta = beta or _TOOL_BETAS.get(tool_type)
+        if not self._beta:
+            raise AgentBackendError(
+                f"no known beta for computer-use tool {tool_type!r}; pass beta=")
         self._client = client
         self._api_key = api_key
         self._model = model
@@ -135,7 +154,8 @@ class ComputerUseAgentBackend(AgentBackend):
             })
         client = self._resolve_client()
         try:
-            response = client.messages.create(
+            response = client.beta.messages.create(
+                betas=[self._beta],
                 model=self._model,
                 system=self._build_system(goal),
                 tools=[self._tool_schema],
@@ -245,7 +265,16 @@ def _action_wait(payload):
     duration = payload.get("duration")
     # An explicit 0 is a valid "don't wait" — only fall back when unset.
     seconds = _number(duration, "duration") if duration is not None else 1.0
-    return _sequence([["AC_sleep", {"seconds": seconds}]])
+    return _sequence([["AC_sleep", {"seconds": _bounded_seconds(seconds)}]])
+
+
+def _bounded_seconds(seconds: float) -> float:
+    """A model-chosen duration within ``[0, _MAX_WAIT_S]``.
+
+    The run's wall-clock budget is checked between steps, so one unbounded
+    ``wait`` or ``hold_key`` blocked far past it.
+    """
+    return min(max(float(seconds), 0.0), _MAX_WAIT_S)
 
 
 _CLICK_ACTIONS = frozenset({
@@ -311,8 +340,14 @@ def _scroll_decision(payload: Dict[str, Any]) -> Dict[str, Any]:
     raw_amount = payload.get("scroll_amount")
     # An explicit 0 means "no scroll" — only default when the key is absent.
     amount = int(_number(raw_amount, "scroll_amount")) if raw_amount is not None else 3
+    amount = min(max(amount, 0), _MAX_SCROLL_NOTCHES)
     delta = amount if direction == "up" else -amount
-    return {"tool": "AC_mouse_scroll", "input": {"scroll_value": delta}}
+    inputs: Dict[str, Any] = {"scroll_value": delta}
+    # The scroll happens where the model pointed, not wherever the cursor was;
+    # _clamp_decision keeps the point on the display.
+    if payload.get("coordinate") is not None:
+        inputs["x"], inputs["y"] = _xy(payload["coordinate"])
+    return {"tool": "AC_mouse_scroll", "input": inputs}
 
 
 def _key_decision(payload: Dict[str, Any]) -> Dict[str, Any]:
@@ -329,7 +364,7 @@ def _hold_key_decision(payload: Dict[str, Any]) -> Dict[str, Any]:
     key = _normalise_key(str(payload.get("text") or payload.get("key") or ""))
     if not key:
         raise AgentBackendError("hold_key action missing 'text'")
-    duration = _number(payload.get("duration") or 0.0, "duration")
+    duration = _bounded_seconds(_number(payload.get("duration") or 0.0, "duration"))
     return {
         "tool": "AC_hold_key",
         "input": {"key": key, "duration_s": duration},

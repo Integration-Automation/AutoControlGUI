@@ -52,6 +52,8 @@ class _StubMessages:
 class _StubClient:
     def __init__(self):
         self.messages = _StubMessages()
+        # The backend calls the beta namespace (computer use is beta-only).
+        self.beta = type("Beta", (), {"messages": self.messages})()
 
 
 def _backend(client: Optional[_StubClient] = None):
@@ -194,7 +196,9 @@ def test_backend_emits_correct_tool_schema():
     call = client.messages.calls[0]
     tools = call["tools"]
     assert len(tools) == 1
-    assert tools[0]["type"] == "computer_20250124"
+    assert tools[0]["type"] == "computer_20251124"
+    # Computer use is beta-only: the beta must travel with the tool.
+    assert call["betas"] == ["computer-use-2025-11-24"]
     assert tools[0]["name"] == "computer"
     assert tools[0]["display_width_px"] == 1920
     assert tools[0]["display_height_px"] == 1080
@@ -237,10 +241,11 @@ def test_backend_handles_tool_use_then_threads_result():
 
 def test_backend_rewraps_client_failures_as_AgentBackendError():  # NOSONAR python:S1542  # reason: name mirrors the AgentBackendError class under test
     class _BoomClient:
-        class messages:
-            @staticmethod
-            def create(**_):
-                raise RuntimeError("network down")
+        class beta:
+            class messages:
+                @staticmethod
+                def create(**_):
+                    raise RuntimeError("network down")
     backend = ComputerUseAgentBackend(
         display_width_px=800, display_height_px=600,
         client=_BoomClient(),

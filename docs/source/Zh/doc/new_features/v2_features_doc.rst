@@ -196,7 +196,8 @@ Computer-use 高階 API
 ---------------------
 
 封裝 :class:`ComputerUseAgentBackend` + :class:`AgentLoop`，一次呼叫
-即可驅動 Anthropic 官方 ``computer_20250124`` tool::
+即可驅動 Anthropic 的 computer-use tool(預設是 ``claude-opus-5`` 上的 ``computer_20251124``,
+以對應的 ``computer-use-2025-11-24`` beta 送出;``tool_type=`` 可換版本,``beta=`` 指定它的 beta)::
 
     from je_auto_control import run_computer_use
     result = run_computer_use(
@@ -356,7 +357,7 @@ helper（``je_auto_control.gui.flow_editor.layout_steps``）可單元
 * ``max_steps``（預設 25）、``wall_seconds``（預設 300.0）。
 * ``model`` / ``max_tokens`` — backend 專屬覆寫。
 
-Anthropic 原生 Computer-Use 路徑（``computer_20250124``）仍透過
+Anthropic 原生 Computer-Use 路徑（``computer_20251124``）仍透過
 ``AC_computer_use`` / ``ac_computer_use`` 提供，適合需要由模型
 直接看見桌面像素的場景。
 

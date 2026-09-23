@@ -290,6 +290,10 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Fixed
 
+- **Computer use reaches the API**: the `computer` tool is sent under its
+  beta (it was rejected on every request), now `computer_20251124` on
+  `claude-opus-5` by default; model-chosen scrolls and waits are bounded and a
+  scroll goes to the model's coordinate.
 - **`python -m je_auto_control -d` runs a directory's files in sorted order**
   and no longer follows links out of it, and the legacy entry point prints its
   error to stderr; `je_auto_control run` exits 1 for a failed `AC_run_suite`

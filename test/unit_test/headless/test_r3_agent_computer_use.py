@@ -32,6 +32,8 @@ class _RecordingClient:
                 return SimpleNamespace(content=content, stop_reason=stop_reason)
 
         self.messages = _Messages()
+        # The backend calls the beta namespace (computer use is beta-only).
+        self.beta = type("Beta", (), {"messages": self.messages})()
 
 
 def _computer_tool_use(block_id, payload):
