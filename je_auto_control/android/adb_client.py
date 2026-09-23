@@ -151,7 +151,7 @@ class AdbClient:
         # The key goes into a command line the device shell parses again:
         # "HOME; echo x" ran the second command. Key names and codes are
         # letters, digits and underscores.
-        if not re.fullmatch(r"[A-Za-z0-9_]+", payload):
+        if not re.fullmatch(r"\w+", payload, re.ASCII):
             raise AdbError(f"invalid key name: {key!r}")
         self.shell(f"input keyevent {payload}", serial=serial)
 

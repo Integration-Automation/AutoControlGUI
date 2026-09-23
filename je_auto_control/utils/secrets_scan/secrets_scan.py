@@ -26,7 +26,7 @@ _KEY_WORD = re.compile(r"[A-Z]?[a-z]+|[A-Z]+(?![a-z])|\d+")
 _VALUE_PATTERNS: Tuple[Tuple[str, "re.Pattern"], ...] = (
     ("aws-access-key", re.compile(r"\bAKIA[0-9A-Z]{16}\b")),
     ("private-key-block", re.compile(r"-----BEGIN [A-Z ]*PRIVATE KEY(?: BLOCK)?-----")),
-    ("bearer-token", re.compile(r"(?i)\bBearer\s+[A-Za-z0-9._\-]{16,}")),
+    ("bearer-token", re.compile(r"(?i)\bBearer\s+[a-z0-9._-]{16,}")),
     ("github-token", re.compile(r"\bgh[pousr]_[A-Za-z0-9]{20,}\b")),
     ("jwt", re.compile(r"\beyJ[\w-]+\.[\w-]+\.[\w-]*")),
     # The (?!\*\*\*@) lets an already-masked URL keep its host readable.

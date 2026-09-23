@@ -11,9 +11,9 @@ returned a step. Every action is a probe on a private executor.
 import json
 import socket
 import threading
-import xml.etree.ElementTree as ET  # nosec B405  # reason: parses XML this test just generated
 
 import pytest
+from defusedxml import ElementTree as ET
 
 from je_auto_control.utils.assertion.assertions import assert_http
 from je_auto_control.utils.assertion.combinators import assert_eventually
@@ -49,7 +49,7 @@ def _suite(executor, cases, **kwargs):
 def test_junit_counts_a_setup_failure(executor):
     result = _suite(executor, [{"name": "c", "actions": [["AC_probe_ok"]]}],
                     setup=[["AC_probe_fail"]])
-    suite = ET.fromstring(to_junit_xml(result)).find("testsuite")  # nosec B314  # reason: our own output
+    suite = ET.fromstring(to_junit_xml(result)).find("testsuite")
     assert (suite.get("tests"), suite.get("errors")) == ("1", "1")
     assert suite.get("timestamp")
 

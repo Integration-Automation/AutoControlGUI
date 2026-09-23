@@ -84,7 +84,7 @@ def _read_hunk(lines: List[str], index: int, old_left: int,
         old_left -= tag != "+"
         new_left -= tag != "-"
         body.append(line)
-    while index < len(lines) and lines[index][:1] == "\\":
+    while index < len(lines) and lines[index].startswith("\\"):
         index += 1
     return body, index
 

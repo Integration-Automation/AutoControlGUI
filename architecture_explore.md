@@ -20,7 +20,7 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 | 指標 | 數值 |
 | --- | ---: |
 | Python 模組總數（含周邊子專案） | 1,046 |
-| 程式碼總行數 | 144,804 |
+| 程式碼總行數 | 144,817 |
 | `je_auto_control/utils/` 子套件數 | 310 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 773 |
 | 套件門面 `__all__` 公開名稱數 | 1,241 |
@@ -413,7 +413,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.6 OCR 與文字理解
 
-> 19 個套件、約 3,252 行。
+> 19 個套件、約 3,251 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -433,7 +433,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/search_index/` | 142 | 記憶體內 BM25／TF-IDF 全文檢索 |
 | `utils/text_blocks/` | 88 | 把 OCR 行組成段落與項目符號／編號清單 |
 | `utils/text_diff/` | 187 | unified diff 產生、套用與三方合併 |
-| `utils/text_normalize/` | 75 | Unicode 正規化與 slug 產生 |
+| `utils/text_normalize/` | 74 | Unicode 正規化與 slug 產生 |
 | `utils/text_regions/` | 161 | 免模型的畫面文字區域偵測（MSER）：區域與行 |
 | `utils/text_similarity/` | 165 | 字串距離度量（文字比對用） |
 
@@ -462,7 +462,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.8 元素定位、自我修復與智慧等待
 
-> 23 個套件、約 4,073 行。
+> 23 個套件、約 4,074 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -483,7 +483,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/locator_repair/` | 117 | 自癒回寫：把修正後的定位器持久化 |
 | `utils/observation/` | 92 | 供 VLM／agent 接地用的 token 預算內、帶索引的 a11y 文字觀察 |
 | `utils/observation_delta/` | 103 | token 預算內的觀察差異：兩個 UI 影格之間變了什麼 |
-| `utils/screen_state/` | 177 | 語義畫面狀態：快照／差異與結構化畫面描述 |
+| `utils/screen_state/` | 178 | 語義畫面狀態：快照／差異與結構化畫面描述 |
 | `utils/scroll_find/` | 84 | 捲動直到目標影像／文字可見 |
 | `utils/self_healing/` | 352 | 自癒定位器：先影像樣板、失敗改用 VLM，並留稽核記錄 |
 | `utils/semantic_recording/` | 423 | 為錄製內容加上語義錨點，支援換機重播與自癒重播 |
@@ -525,7 +525,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.11 伺服器、網路協定與外部整合
 
-> 24 個套件、約 6,082 行。
+> 24 個套件、約 6,083 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -540,7 +540,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/http_content/` | 103 | HTTP 內容協商與回應解壓縮 |
 | `utils/http_problem/` | 116 | RFC 9457 problem+json 解析 |
 | `utils/jwt/` | 172 | JWT（HMAC 家族）編碼、解碼與 claim 驗證 |
-| `utils/link_header/` | 114 | RFC 8288 Link header 解析與分頁 |
+| `utils/link_header/` | 115 | RFC 8288 Link header 解析與分頁 |
 | `utils/multipart/` | 139 | multipart/form-data 建構與解析 |
 | `utils/notify/` | 95 | 跨平台桌面通知 |
 | `utils/notify_channels/` | 100 | 對外聊天／webhook 通知（Slack／Discord／Teams／raw） |
@@ -597,7 +597,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.13 資料來源、結構驗證與 i18n
 
-> 24 個套件、約 4,067 行。
+> 24 個套件、約 4,079 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -613,7 +613,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/json_contract/` | 135 | JSON 契約／快照比對：`match_json`、`diff_json`、`snapshot_json` |
 | `utils/json_patch/` | 322 | JSON Pointer（6901）、JSON Patch（6902）與 Merge Patch（7386） |
 | `utils/json_schema/` | 374 | JSON Schema（Draft 2020-12 子集）驗證 |
-| `utils/jsonpath/` | 213 | 精簡 JSONPath 查詢 |
+| `utils/jsonpath/` | 225 | 精簡 JSONPath 查詢 |
 | `utils/list_format/` | 72 | 地區感知清單格式化（CLDR 風格的「A、B 和 C」） |
 | `utils/locale_collation/` | 128 | 地區感知字串排序（決定性多層排序鍵） |
 | `utils/locale_parse/` | 68 | 地區感知數字／貨幣／日期解析與格式化（選用 babel） |
@@ -1079,6 +1079,6 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `osx/` | 17 | 919 |
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 783 |
-| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 675 | 49,714 |
-| **總計** | **1,040** | **144,739** |
+| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 675 | 49,727 |
+| **總計** | **1,040** | **144,752** |
 

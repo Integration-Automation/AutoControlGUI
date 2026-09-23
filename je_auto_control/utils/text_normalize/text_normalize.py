@@ -59,8 +59,7 @@ def normalize_text(text: str, *, form: str = "NFKC", casefold: bool = True,
 def slugify(text: str, *, sep: str = "-") -> str:
     """Produce an ASCII slug: de-accent, lowercase, join alnum runs with ``sep``."""
     base = deaccent(unicodedata.normalize("NFKC", text or "")).lower()
-    # Trim the edges first, then join: ``sep`` is inserted literally (it was a
-    # re.sub template, so ``\\`` raised), and stripping by ``sep`` also ate
-    # real letters when they matched it (``sep="x"`` on "xylophone").
-    base = re.sub(r"^[^a-z0-9]+|[^a-z0-9]+$", "", base)
-    return re.sub(r"[^a-z0-9]+", lambda _match: sep, base)
+    # Join the alphanumeric runs: ``sep`` is inserted literally (it was a
+    # re.sub template, so a backslash raised), and nothing is stripped by
+    # ``sep`` (which ate real letters when they matched it, ``sep="x"``).
+    return sep.join(re.findall(r"[a-z0-9]+", base))

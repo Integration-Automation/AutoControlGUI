@@ -42,7 +42,8 @@ def _strip_quotes(value: str) -> str:
 
 def _parse_params(chunk: Optional[str]) -> Dict[str, str]:
     params: Dict[str, str] = {}
-    for part in split_outside_quotes(chunk or "", ";"):   # title="x;y" is one
+    # Quote-aware: a semicolon inside a quoted value stays in that value.
+    for part in split_outside_quotes(chunk or "", ";"):
         cleaned = part.strip().rstrip(",").strip()
         if not cleaned:
             continue

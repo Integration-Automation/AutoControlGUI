@@ -82,7 +82,8 @@ def _pair_group(before: List[Dict[str, Any]], after: List[Dict[str, Any]],
             diff["added"].append(item)
             continue
         centre = _centre(item)
-        prior = min(remaining, key=lambda candidate: math.dist(_centre(candidate), centre))
+        prior = min(remaining,
+                    key=lambda candidate, target=centre: math.dist(_centre(candidate), target))
         remaining.remove(prior)
         diff["moved"].append({"role": item.get("role", ""), "name": item.get("name", ""),
                               "before": prior.get("bbox"), "after": item.get("bbox")})

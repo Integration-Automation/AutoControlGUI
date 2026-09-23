@@ -28,8 +28,10 @@ _COMPARATORS = {
     ">": lambda a, b: a > b, ">=": lambda a, b: a >= b,
 }
 
-# A small, linear filter pattern (no nested quantifiers -> no backtracking).
-_FILTER_RE = re.compile(r"@\.([\w-]+(?:\.[\w-]+)*)\s*(?:(==|!=|<=|>=|<|>)\s*(.+))?$")
+# The field path of a filter; the operator and value are split off by hand, so
+# no pattern has two quantifiers competing for the same characters.
+_FILTER_FIELD = re.compile(r"@\.([\w-]+(?:\.[\w-]+)*)")
+_OPERATORS = ("==", "!=", "<=", ">=", "<", ">")
 _ABSENT = object()
 
 
@@ -52,18 +54,28 @@ def _parse_bracket(inner: str) -> Tuple[str, Any]:
         return ("wild", None)
     if inner.startswith("?"):
         body = inner[1:].strip().lstrip("(").rstrip(")").strip()
-        match = _FILTER_RE.match(body)
-        if match is None:
-            # This used to become a wildcard and return every element.
-            raise ValueError(f"unsupported JSONPath filter {inner!r}")
-        value = None if match.group(2) is None else _parse_value(match.group(3))
-        return ("filter", (tuple(match.group(1).split(".")), match.group(2), value))
+        return ("filter", _parse_filter(body, inner))
     if inner[:1] in "'\"" and inner[-1:] in "'\"":
         return ("key", inner[1:-1])
     try:
         return ("index", int(inner))
     except ValueError:
         return ("key", inner)
+
+
+def _parse_filter(body: str, inner: str) -> Tuple[Tuple[str, ...], Any, Any]:
+    """``(field path, operator or None, value)`` for a ``?(...)`` body.
+
+    Anything else raises: an unreadable filter used to become a wildcard and
+    return every element.
+    """
+    match = _FILTER_FIELD.match(body)
+    rest = body[match.end():].strip() if match else ""
+    operator = next((op for op in _OPERATORS if rest.startswith(op)), None)
+    if match is None or (rest and (operator is None or not rest[len(operator):].strip())):
+        raise ValueError(f"unsupported JSONPath filter {inner!r}")
+    value = None if operator is None else _parse_value(rest[len(operator):])
+    return tuple(match.group(1).split(".")), operator, value
 
 
 def _read_bare_key(path: str, start: int) -> Tuple[str, int]:

@@ -116,7 +116,7 @@ def find_image_multi(image: Any, detect_threshold: float = 1.0,
     (frame, scores), template, threshold, origin = _prepare(
         image, detect_threshold, screen_region, all_screens)
     height, width = template.shape[:2]
-    rows, cols = np.where(scores >= threshold)
+    rows, cols = np.nonzero(scores >= threshold)
     order = np.argsort(-scores[rows, cols], kind="stable")
     spacing = min(height, width)
     accepted: List[Tuple[int, int]] = []
