@@ -64,10 +64,6 @@ _NEEDS_MORE_THAN_THE_CONTRACT = {
     # Indexes a key out of a Dict[str, Any] the annotation cannot promise.
     "ac_tween_drag",
     "ac_voice_dispatch",
-    # Its anchor's `kind` selects a locator backend, and the first value the
-    # enum offers is `image` -- so the call leaves the adapter and goes into
-    # OpenCV template matching against a real screen.
-    "ac_anchor_click",
     # Needs a viewer that registered earlier. The registry it is handed is
     # real and empty, and refusing an unknown viewer is what it is for.
     "ac_presence_update_cursor",

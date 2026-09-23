@@ -116,6 +116,8 @@ def _scroll_env(monkeypatch, platform, *, cursor=(7, 7)):
                         lambda *a, **k: None)
     monkeypatch.setattr(auto_control_mouse, "screen_size",
                         lambda: (1920, 1080))
+    # No virtual desktop reported: the clamp falls back to screen_size.
+    monkeypatch.setattr(auto_control_mouse, "logical_virtual_rect", lambda: None)
     monkeypatch.setattr(auto_control_mouse, "special_mouse_keys_table",
                         {"scroll_down": 5})
     monkeypatch.setattr(auto_control_mouse, "get_mouse_position",

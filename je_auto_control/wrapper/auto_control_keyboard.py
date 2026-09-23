@@ -45,6 +45,10 @@ def _resolve_keycode(keycode: Union[int, str]) -> int:
         if resolved is None:
             raise AutoControlCantFindKeyException(table_cant_find_key_error_message)
         return resolved
+    if is_windows() and isinstance(keycode, int) and not 0 <= keycode <= 0xFFFF:
+        # ctypes truncates to the 16-bit wVk without a word: 65601 pressed
+        # 'A' (65) while this function reported success for 65601.
+        raise AutoControlKeyboardException(f"keycode {keycode} is not a Windows virtual key")
     return keycode
 
 

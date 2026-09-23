@@ -155,6 +155,18 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Fixed
 
+- **Image location is accurate.** `locate_image_center` / `locate_and_click`
+  return the best-scoring match instead of the first position over the
+  threshold (which was a few pixels off), an identical template now matches
+  at the default threshold of 1.0, and `locate_all_image(draw_image=True)`
+  works. A missing template file or a threshold outside 0..1 raises
+  `ImageNotFoundException` naming the problem.
+- **Mouse and keyboard input.** Scrolling at a point on a secondary monitor
+  reaches it instead of the primary monitor's edge; a coordinate that is not
+  a number or is out of range raises `AutoControlMouseException` instead of
+  moving somewhere else; on Windows a keycode past 16 bits is refused instead
+  of pressing a different key.
+
 - **Computer-use agent actions work.** Clicks, double and triple clicks,
   drags, waits and held keys were translated into calls the executor could
   not make, so each failed as a step error; they now map to real commands.

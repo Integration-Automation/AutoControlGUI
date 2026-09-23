@@ -20,7 +20,7 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 | 指標 | 數值 |
 | --- | ---: |
 | Python 模組總數（含周邊子專案） | 1,045 |
-| 程式碼總行數 | 143,752 |
+| 程式碼總行數 | 143,843 |
 | `je_auto_control/utils/` 子套件數 | 310 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 773 |
 | 套件門面 `__all__` 公開名稱數 | 1,239 |
@@ -255,13 +255,13 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
-| `android/adb_client.py` | 183 | `adb` CLI 的薄封裝。 |
-| `android/client.py` | 91 | `uiautomator2.Device` 的延遲封裝。 |
-| `android/find.py` | 104 | uiautomator2 widget 樹的元素查詢。 |
-| `ios/client.py` | 94 | `facebook-wda`（WebDriverAgent）封裝。 |
-| `ios/find.py` | 86 | XCUITest 無障礙查詢。 |
-| `ios/input.py` | 46 | iOS 觸控與按鍵原語。 |
-| `ios/screen.py` | 32 | iOS 裝置螢幕擷取與尺寸。 |
+| `android/adb_client.py` | 197 | `adb` CLI 的薄封裝。 |
+| `android/client.py` | 127 | `uiautomator2.Device` 的延遲封裝。 |
+| `android/find.py` | 107 | uiautomator2 widget 樹的元素查詢。 |
+| `ios/client.py` | 122 | `facebook-wda`（WebDriverAgent）封裝。 |
+| `ios/find.py` | 89 | XCUITest 無障礙查詢。 |
+| `ios/input.py` | 51 | iOS 觸控與按鍵原語。 |
+| `ios/screen.py` | 34 | iOS 裝置螢幕擷取與尺寸。 |
 
 ### 5.4 能力層 `utils/`（310 個子套件）
 
@@ -1079,6 +1079,6 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `osx/` | 17 | 919 |
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 783 |
-| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 674 | 48,824 |
-| **總計** | **1,039** | **143,687** |
+| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 674 | 48,915 |
+| **總計** | **1,039** | **143,778** |
 

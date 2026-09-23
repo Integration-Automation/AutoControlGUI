@@ -42,6 +42,7 @@ from je_auto_control.utils.exception.exceptions import (
     AutoControlCantFindKeyException, AutoControlMouseException
 )
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
+from je_auto_control.utils.monitor_layout.logical_frame import logical_virtual_rect
 from je_auto_control.utils.platform_id import is_windows, is_x11_unix
 from je_auto_control.utils.test_record.record_test_class import record_action_to_list
 from je_auto_control.wrapper.auto_control_screen import screen_size
@@ -106,7 +107,27 @@ def mouse_preprocess(mouse_keycode: Union[int, str], x: Optional[int],
     # would hit an un-prototyped SetCursorPos / Xlib fake_input and raise
     # ctypes.ArgumentError / struct.error — which escapes the executor and
     # aborts the whole run instead of clicking at the rounded point.
-    return keycode, int(x), int(y)
+    return keycode, _coordinate(x, "x"), _coordinate(y, "y")
+
+
+_INT32_MIN, _INT32_MAX = -(2 ** 31), 2 ** 31 - 1
+
+
+def _coordinate(value: object, axis: str) -> int:
+    """``value`` as an int the native input calls can take, else raise.
+
+    A non-numeric or infinite value raised ValueError / OverflowError, which
+    callers catching AutoControlException missed; a value past int32 was
+    truncated by ctypes and moved the cursor somewhere else while this
+    reported the requested point.
+    """
+    try:
+        number = int(value)  # type: ignore[call-overload]
+    except (TypeError, ValueError, OverflowError) as error:
+        raise AutoControlMouseException(f"{axis} must be a number, got {value!r}") from error
+    if not _INT32_MIN <= number <= _INT32_MAX:
+        raise AutoControlMouseException(f"{axis}={number} is outside the screen coordinate range")
+    return number
 
 
 def get_mouse_position() -> tuple[int, int] | None:
@@ -143,7 +164,7 @@ def set_mouse_position(x: int, y: int) -> tuple[int, int]:
         # int coercion: a float coord would reach an un-prototyped native call
         # (SetCursorPos / Xlib fake_input) and raise ctypes.ArgumentError /
         # struct.error, which escapes the executor and aborts the whole run.
-        x, y = int(x), int(y)
+        x, y = _coordinate(x, "x"), _coordinate(y, "y")
         mouse.set_position(x=x, y=y)
         record_action_to_list("set_mouse_position", param)
         return x, y
@@ -269,7 +290,7 @@ def _scroll_to(x: Optional[int], y: Optional[int]) -> None:
     supplied the current position is never needed, so backends that cannot
     report it (e.g. Wayland) must not be forced to raise.
     """
-    width, height = screen_size()
+    left, top, width, height = _scroll_bounds()
     # 兩個座標都給定時不會被讀到，見下面的三元運算。
     # Never read when both coordinates were supplied.
     now_x, now_y = 0, 0
@@ -290,9 +311,23 @@ def _scroll_to(x: Optional[int], y: Optional[int]) -> None:
             # Same answer for a backend that returns no position at all.
             return
         now_x, now_y = position
-    target_x = now_x if x is None else max(0, min(x, width - 1))
-    target_y = now_y if y is None else max(0, min(y, height - 1))
+    target_x = now_x if x is None else max(left, min(x, left + width - 1))
+    target_y = now_y if y is None else max(top, min(y, top + height - 1))
     set_mouse_position(target_x, target_y)
+
+
+def _scroll_bounds() -> Tuple[int, int, int, int]:
+    """``(left, top, width, height)`` a scroll point is clamped to.
+
+    The virtual desktop where the platform reports it: clamping to the
+    primary screen made a monitor left of or beyond it unreachable -- the
+    scroll landed on the primary monitor's edge, with no error.
+    """
+    rect = logical_virtual_rect()
+    if rect is not None:
+        return rect
+    width, height = screen_size()
+    return 0, 0, width, height
 
 
 def _resolve_scroll_axis(scroll_direction: str) -> int:

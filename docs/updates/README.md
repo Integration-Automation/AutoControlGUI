@@ -58,6 +58,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260923-34 | 2026-09-23 | Wrapper audit: template-match accuracy, drawn multi-match, multi-monitor scroll, ctypes truncation | #incident #wrapper #image | [2026-09](2026-09.md) |
 | U-20260923-33 | 2026-09-23 | Agent audit: broken computer-use actions, unoffered tools, VLM errors | #incident #security #agent | [2026-09](2026-09.md) |
 | U-20260923-32 | 2026-09-23 | Circuit-breaker trials, config-sync and ACME error handling | #incident #resilience | [2026-09](2026-09.md) |
 | U-20260923-31 | 2026-09-23 | Logic-engine audit: DAG failures, FSM guards and timers, RRULE semantics, suite variables | #incident #executor | [2026-09](2026-09.md) |
@@ -138,7 +139,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | File | Period | Entries |
 |---|---|---:|
-| [2026-09.md](2026-09.md) | 2026-09 | 49 |
+| [2026-09.md](2026-09.md) | 2026-09 | 50 |
 | [2026-08-f.md](2026-08-f.md) | 2026-08 | 1 |
 | [2026-08-e.md](2026-08-e.md) | 2026-08 | 2 |
 | [2026-08-d.md](2026-08-d.md) | 2026-08 | 2 |
