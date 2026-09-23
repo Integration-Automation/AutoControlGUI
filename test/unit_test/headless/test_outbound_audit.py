@@ -25,9 +25,14 @@ class _Recorder(http.server.BaseHTTPRequestHandler):
 
     def _handle(self):
         self.server.seen.append((self.command, self.path, self.headers.get("Authorization")))
+        # Drain the request body first: closing a socket with unread data
+        # makes macOS send an RST, and the client then sees "connection reset"
+        # instead of the response.
+        self.rfile.read(int(self.headers.get("Content-Length") or 0))
         if self.path.startswith("/redir"):
             self.send_response(302)
             self.send_header("Location", self.server.redirect_to)
+            self.send_header("Content-Length", "0")
             self.end_headers()
             return
         body = self.server.body
