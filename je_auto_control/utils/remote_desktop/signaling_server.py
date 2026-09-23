@@ -286,7 +286,11 @@ def _guard_refusal(request: Request, shared_secret: Optional[str]) -> Optional[J
     so a client without the secret made the server buffer a body of any size
     (30 MB cost ~95 MB) and got JSON validation details back instead of 401.
     """
-    path = request.url.path
+    # scope["path"] is what the router dispatches on. request.url is rebuilt
+    # from the Host header, and Starlette <= 1.0.0 let a crafted Host
+    # ("example.com?") make it show another path (CVE-2026-48710, "BadHost"),
+    # which would slip a request past a guard deciding by request.url.path.
+    path = str(request.scope.get("path", ""))
     if not path.startswith(("/sessions", "/config")) or request.method == "OPTIONS":
         return None
     if not _secret_matches(request.headers.get("X-Signaling-Secret"), shared_secret):
@@ -353,7 +357,7 @@ def _register_request_logging(app: FastAPI) -> None:
     @app.middleware("http")
     async def _log_request(request: Request, call_next):
         response = await call_next(request)
-        _LOG.info("%s %s -> %d", request.method, request.url.path,
+        _LOG.info("%s %s -> %d", request.method, request.scope.get("path", ""),
                   response.status_code)
         return response
 

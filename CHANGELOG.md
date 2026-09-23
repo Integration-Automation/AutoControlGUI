@@ -183,6 +183,11 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Security
 
+- **The `signaling` extra requires Starlette 1.0.1** (CVE-2026-48710,
+  "BadHost": a crafted `Host` header made middleware see another path than
+  the router served). The signaling server's pre-body guard also decides by
+  the routed path, so it holds on older Starlette too.
+
 - **MCP over HTTP: a web page could drive the machine, and one session could
   confirm another's destructive call.** With no token configured (the default)
   the server accepted cross-site browser requests — a `text/plain` POST needs
