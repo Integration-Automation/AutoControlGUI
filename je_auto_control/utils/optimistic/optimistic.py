@@ -25,6 +25,10 @@ class VersionedStore:
 
     def __init__(self) -> None:
         self._data: Dict[str, Dict[str, Any]] = {}
+        # Highest version each key has had, kept across deletes: re-creating a
+        # deleted key restarted at version 1, so a stale writer holding the
+        # old v1 overwrote the new record (ABA).
+        self._high_water: Dict[str, int] = {}
 
     def get(self, key: str) -> Optional[Dict[str, Any]]:
         """Return ``{value, version}`` for ``key`` or ``None``."""
@@ -47,8 +51,10 @@ class VersionedStore:
         ``expected_version`` of ``0`` requires the key to be absent; ``None``
         forces a blind write. Raises :class:`VersionConflict` on a mismatch.
         """
-        new_version = self._check(key, expected_version) + 1
+        current = self._check(key, expected_version)
+        new_version = max(current, self._high_water.get(key, 0)) + 1
         self._data[key] = {"value": value, "version": new_version}
+        self._high_water[key] = new_version
         return new_version
 
     def delete(self, key: str, *,
@@ -69,6 +75,7 @@ class VersionedStore:
         """Build a store from a :meth:`to_dict` mapping."""
         store = cls()
         store._data = {key: dict(value) for key, value in data.items()}
+        store._high_water = {key: int(value.get("version", 0)) for key, value in data.items()}
         return store
 
     def save(self, path: str) -> str:

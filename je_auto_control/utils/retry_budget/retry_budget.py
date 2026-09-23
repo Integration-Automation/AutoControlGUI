@@ -43,7 +43,11 @@ def backoff_delay(attempt: int, *, base: float, max_delay: float,
     """
     if attempt < 1:
         return 0.0
-    raw = float(base) * (float(multiplier) ** (attempt - 1))
+    try:
+        raw = float(base) * (float(multiplier) ** (attempt - 1))
+    except OverflowError:
+        # A large attempt number overflowed instead of hitting the cap.
+        raw = float("inf")
     return max(0.0, min(float(max_delay), raw))
 
 

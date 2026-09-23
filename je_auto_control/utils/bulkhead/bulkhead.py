@@ -11,6 +11,7 @@ The permit counting is lock-guarded and non-blocking (reject when full), so the
 accounting is deterministic and CI-testable without spawning threads. Pure
 standard library (``threading`` + ``email.utils``); imports no ``PySide6``.
 """
+import datetime
 import threading
 import time
 from email.utils import parsedate_to_datetime
@@ -84,12 +85,16 @@ def parse_retry_after(headers: Mapping[str, Any], *,
     if raw is None:
         return None
     text = str(raw).strip()
-    if text.isdigit():
+    if text.isascii() and text.isdigit():   # isdigit alone accepts "²"
         return float(text)
     try:
         target = parsedate_to_datetime(text)
     except (TypeError, ValueError):
         return None
+    if target.tzinfo is None:
+        # asctime and "-0000" dates come back naive; every HTTP-date is GMT
+        # (RFC 7231), and a naive timestamp() would read it as local time.
+        target = target.replace(tzinfo=datetime.timezone.utc)
     when = time.time() if now is None else now
     return max(0.0, target.timestamp() - when)
 

@@ -648,8 +648,8 @@ from je_auto_control.utils.plugin_sdk import (
 )
 # Maker-checker approval gate + just-in-time credential leases (PAM/governance)
 from je_auto_control.utils.governance import (
-    ApprovalGate, CredentialBroker, CredentialBrokerError, default_broker,
-    set_secret_resolver,
+    ApprovalGate, CredentialBroker, CredentialBrokerError, approval_gate,
+    default_broker, set_secret_resolver,
 )
 # Network egress allowlist guard for the headless HTTP client
 from je_auto_control.utils.egress import (
@@ -1631,7 +1631,7 @@ __all__ = [
     "describe_step", "generate_sop", "write_sop",
     "easing_names", "tween_drag", "tween_points",
     "COMMANDS_GROUP", "discover_plugins", "load_plugins",
-    "ApprovalGate", "CredentialBroker", "CredentialBrokerError",
+    "ApprovalGate", "CredentialBroker", "CredentialBrokerError", "approval_gate",
     "default_broker", "set_secret_resolver",
     "EgressBlocked", "EgressPolicy", "get_egress_policy", "set_egress_policy",
     "ApprovalResult", "approve_artifact", "pending_artifacts",

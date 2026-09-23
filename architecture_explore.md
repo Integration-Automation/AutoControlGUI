@@ -20,10 +20,10 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 | 指標 | 數值 |
 | --- | ---: |
 | Python 模組總數（含周邊子專案） | 1,046 |
-| 程式碼總行數 | 144,694 |
+| 程式碼總行數 | 144,804 |
 | `je_auto_control/utils/` 子套件數 | 310 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 773 |
-| 套件門面 `__all__` 公開名稱數 | 1,240 |
+| 套件門面 `__all__` 公開名稱數 | 1,241 |
 | GUI 分頁數（`main_widget` 註冊） | 48 |
 | MCP 工具數（`build_default_tool_registry()` 實測） | 676 |
 | `test_*.py` 測試檔／測試函式 | 478 / 4,654 |
@@ -270,7 +270,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.1 執行引擎與腳本資產
 
-> 24 個套件、約 13,591 行。
+> 24 個套件、約 13,597 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -286,7 +286,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/input_macro/` | 359 | 定時輸入事件：錄製結果的整形（`timeline`／`InputRecorder`，Windows 與 macOS 共用）、重播與宣告式輸入序列 DSL |
 | `utils/json/` | 94 | action JSON 檔讀寫與正規化格式化（`fmt --check` 的後端） |
 | `utils/json_store/` | 176 | JSON 字典檔持久化的共用小工具（內部管線） |
-| `utils/loop_guard/` | 140 | 機械式卡死迴圈偵測（agent loop 用） |
+| `utils/loop_guard/` | 146 | 機械式卡死迴圈偵測（agent loop 用） |
 | `utils/plugin_loader/` | 85 | 掃描外部 Python 外掛目錄並註冊其 `AC_` callable |
 | `utils/plugin_sdk/` | 68 | 外掛 SDK：透過 entry points 發佈／載入第三方 `AC_*` 指令 |
 | `utils/project/` | 186 | 專案腳手架：建立目錄結構與範本 action 檔 |
@@ -628,13 +628,13 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.14 安全、機密與合規
 
-> 13 個套件、約 2,403 行。
+> 13 個套件、約 2,432 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
 | `utils/config_redaction/` | 79 | 設定結構與 log 字串的機密遮蔽 |
 | `utils/egress/` | 114 | 無頭 HTTP 用戶端的網路外連允許清單守衛 |
-| `utils/governance/` | 200 | 治理：maker-checker 核准閘門與即時憑證租約 |
+| `utils/governance/` | 229 | 治理：maker-checker 核准閘門與即時憑證租約 |
 | `utils/license_policy/` | 139 | 以 SBOM 元件評估 SPDX 授權允許／拒絕政策 |
 | `utils/provenance/` | 104 | SLSA 建置來源證明（in-toto v1） |
 | `utils/rbac/` | 269 | 角色型存取控制與逐使用者稽核歸因 |
@@ -648,23 +648,23 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.15 韌性、流量控制與設定
 
-> 14 個套件、約 1,764 行。
+> 14 個套件、約 1,839 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
 | `utils/artifact_store/` | 114 | S3 相容產出物儲存（報表／截圖／錄影） |
 | `utils/assets/` | 151 | 環境範圍的型別化資產／設定儲存（UiPath Assets 風格） |
-| `utils/bulkhead/` | 134 | Bulkhead 併發隔離 + 伺服器限流標頭解析 |
+| `utils/bulkhead/` | 139 | Bulkhead 併發隔離 + 伺服器限流標頭解析 |
 | `utils/chaos/` | 153 | 決定性混沌實驗（穩態假說 + 故障注入） |
 | `utils/dedup_window/` | 63 | 時間視窗內的訊息去重 |
 | `utils/dotenv/` | 142 | `.env` 檔解析與序列化 |
 | `utils/feature_flags/` | 173 | 功能旗標評估，含目標規則與決定性灰度 |
-| `utils/idempotency/` | 114 | 冪等鍵儲存與已存回應重放 |
+| `utils/idempotency/` | 125 | 冪等鍵儲存與已存回應重放 |
 | `utils/layered_config/` | 110 | 分層設定解析 |
-| `utils/optimistic/` | 105 | 樂觀併發的版本化儲存 |
-| `utils/rate_limit/` | 162 | 用戶端限流：token bucket、滑動視窗、throttle |
-| `utils/resilience/` | 131 | 韌性原語：退避重試與斷路器 |
-| `utils/retry_budget/` | 147 | 重試預算：以牆鐘期限與 full jitter 約束重試 |
+| `utils/optimistic/` | 112 | 樂觀併發的版本化儲存 |
+| `utils/rate_limit/` | 197 | 用戶端限流：token bucket、滑動視窗、throttle |
+| `utils/resilience/` | 144 | 韌性原語：退避重試與斷路器 |
+| `utils/retry_budget/` | 151 | 重試預算：以牆鐘期限與 full jitter 約束重試 |
 | `utils/sequence_gap/` | 65 | 逐串流的序號缺口偵測 |
 
 ### 5.4.16 系統、視窗與剪貼簿
@@ -1079,6 +1079,6 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `osx/` | 17 | 919 |
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 783 |
-| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 675 | 49,604 |
-| **總計** | **1,040** | **144,629** |
+| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 675 | 49,714 |
+| **總計** | **1,040** | **144,739** |
 

@@ -71,16 +71,22 @@ class LoopGuard:
         return LoopVerdict(pattern, self._level(pattern, count), count)
 
     def _classify(self) -> Tuple[Optional[str], int]:
-        repeat = self._trailing_repeat()
-        if repeat >= 2:
-            return "repeat", repeat
-        ping = self._trailing_ping_pong()
-        if ping >= 4:
-            return "ping_pong", ping
-        no_op = self._trailing_no_op()
-        if no_op >= 2:
-            return "no_op", no_op
-        return None, 0
+        """The pattern with the longest run among those past their minimum.
+
+        Returning the first qualifying pattern let a fresh 2-step repeat hide
+        a 15-step no-op run, reporting a stuck agent as ``ok``.
+        """
+        candidates = [
+            (count, pattern)
+            for pattern, count, minimum in (
+                ("repeat", self._trailing_repeat(), 2),
+                ("ping_pong", self._trailing_ping_pong(), 4),
+                ("no_op", self._trailing_no_op(), 2))
+            if count >= minimum]
+        if not candidates:
+            return None, 0
+        count, pattern = max(candidates, key=lambda item: item[0])
+        return pattern, count
 
     def _trailing_repeat(self) -> int:
         keys = [event[0] for event in self._events]

@@ -29,7 +29,8 @@ Headless API
         run_high_risk_action()
 
 ``reject(token, approver)`` blocks an action; a request that has already been
-decided cannot be re-decided. ``status(token)`` returns
+decided cannot be re-decided. The approver must be named and must not be the
+requester (surrounding spaces ignored), so an anonymous approval is refused. ``status(token)`` returns
 ``pending`` / ``approved`` / ``rejected`` (or ``None`` for an unknown token),
 ``get(token)`` returns the full record, and ``pending()`` lists every request
 still awaiting a decision.
@@ -47,6 +48,7 @@ Command                          Effect
 ================================ ===================================================
 
 Each command accepts an optional ``db`` path so a flow can persist requests to
-a shared JSON file. The same operations are exposed as MCP tools
+a shared JSON file; without one they share a single in-memory gate for the
+process (``approval_gate()``). The same operations are exposed as MCP tools
 (``ac_approval_request`` / ``ac_approval_approve`` / ``ac_approval_reject`` /
 ``ac_approval_status``) and as Script Builder commands under **Tools**.

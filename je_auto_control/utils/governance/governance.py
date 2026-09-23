@@ -9,6 +9,7 @@ can run as separate processes (CI dispatcher and a human approver).
 
 Pure standard library; imports no ``PySide6``. Tokens use :mod:`secrets`.
 """
+import functools
 import secrets
 import time
 from typing import Dict, List, Optional
@@ -43,12 +44,16 @@ class ApprovalGate:
         return token
 
     def _decide(self, token: str, approver: str, status: str) -> bool:
+        checker = str(approver or "").strip()
+
         def decide(items: Dict[str, Dict[str, object]]) -> bool:
             record = items.get(token)
             if record is None or record["status"] != STATUS_PENDING:
                 return False
-            if approver and approver == record["requester"]:
-                return False  # segregation of duties: checker must differ from maker
+            # Segregation of duties: a named checker who is not the maker. An
+            # empty approver skipped the check (anonymous approved anonymous).
+            if not checker or checker == str(record["requester"] or "").strip():
+                return False
             record["status"] = status
             record["approver"] = approver
             return True
@@ -81,3 +86,19 @@ class ApprovalGate:
         """Return copies of all requests still awaiting a decision."""
         return [dict(r) for r in self._state.read().values()
                 if r["status"] == STATUS_PENDING]
+
+
+@functools.lru_cache(maxsize=1)
+def _process_gate() -> ApprovalGate:
+    return ApprovalGate(None)
+
+
+def approval_gate(db: Optional[str] = None) -> ApprovalGate:
+    """The gate stored in ``db`` or, without ``db``, the one this process shares.
+
+    The approval commands built a fresh in-memory gate per call, so without a
+    ``db`` a token from ``AC_approval_request`` was unknown to
+    ``AC_approval_approve`` / ``AC_approval_status``.
+    """
+    return ApprovalGate(db) if db else _process_gate()
+

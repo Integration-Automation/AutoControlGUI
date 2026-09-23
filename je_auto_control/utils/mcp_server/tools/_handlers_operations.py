@@ -201,23 +201,23 @@ def load_plugins(group="je_auto_control.commands"):
 
 def approval_request(action: str, requester: str = "",
                      db: Optional[str] = None):
-    from je_auto_control.utils.governance import ApprovalGate
-    return {"token": ApprovalGate(db).request(action, requester)}
+    from je_auto_control.utils.governance import approval_gate
+    return {"token": approval_gate(db).request(action, requester)}
 
 
 def approval_approve(token: str, approver: str, db: Optional[str] = None):
-    from je_auto_control.utils.governance import ApprovalGate
-    return {"approved": ApprovalGate(db).approve(token, approver)}
+    from je_auto_control.utils.governance import approval_gate
+    return {"approved": approval_gate(db).approve(token, approver)}
 
 
 def approval_reject(token: str, approver: str, db: Optional[str] = None):
-    from je_auto_control.utils.governance import ApprovalGate
-    return {"rejected": ApprovalGate(db).reject(token, approver)}
+    from je_auto_control.utils.governance import approval_gate
+    return {"rejected": approval_gate(db).reject(token, approver)}
 
 
 def approval_status(token: str, db: Optional[str] = None):
-    from je_auto_control.utils.governance import ApprovalGate
-    gate = ApprovalGate(db)
+    from je_auto_control.utils.governance import approval_gate
+    gate = approval_gate(db)
     return {"status": gate.status(token), "approved": gate.is_approved(token)}
 
 

@@ -6396,28 +6396,28 @@ def _load_plugins(group: str = "je_auto_control.commands") -> Dict[str, Any]:
 def _approval_request(action: str, requester: str = "",
                       db: Optional[str] = None) -> Dict[str, Any]:
     """Adapter: file a maker-checker approval request; return its token."""
-    from je_auto_control.utils.governance import ApprovalGate
-    return {"token": ApprovalGate(db).request(action, requester)}
+    from je_auto_control.utils.governance import approval_gate
+    return {"token": approval_gate(db).request(action, requester)}
 
 
 def _approval_approve(token: str, approver: str,
                       db: Optional[str] = None) -> Dict[str, Any]:
     """Adapter: approve a request as ``approver`` (must differ from maker)."""
-    from je_auto_control.utils.governance import ApprovalGate
-    return {"approved": ApprovalGate(db).approve(token, approver)}
+    from je_auto_control.utils.governance import approval_gate
+    return {"approved": approval_gate(db).approve(token, approver)}
 
 
 def _approval_reject(token: str, approver: str,
                      db: Optional[str] = None) -> Dict[str, Any]:
     """Adapter: reject a request as ``approver`` (must differ from maker)."""
-    from je_auto_control.utils.governance import ApprovalGate
-    return {"rejected": ApprovalGate(db).reject(token, approver)}
+    from je_auto_control.utils.governance import approval_gate
+    return {"rejected": approval_gate(db).reject(token, approver)}
 
 
 def _approval_status(token: str, db: Optional[str] = None) -> Dict[str, Any]:
     """Adapter: report the status and approved flag of a request token."""
-    from je_auto_control.utils.governance import ApprovalGate
-    gate = ApprovalGate(db)
+    from je_auto_control.utils.governance import approval_gate
+    gate = approval_gate(db)
     return {"status": gate.status(token), "approved": gate.is_approved(token)}
 
 

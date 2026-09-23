@@ -15,6 +15,9 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Added
 
+- **`approval_gate(db=None)`.** The approval gate the `AC_approval_*`
+  commands use: file-backed with `db`, otherwise one per process.
+
 - **`adaptive_mean` / `adaptive_gaussian` preprocessing steps.** They take
   `block_size` / `c`, which no step used before.
 
@@ -38,6 +41,10 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
   get a `ValueError` out of `datetime.fromisoformat`.
 
 ### Changed
+
+- **Impossible rate-limit requests raise.** `TokenBucket` and
+  `SlidingWindowLimiter` refuse `n <= 0` or above capacity / limit, and
+  `CredentialBroker.lease` refuses a TTL that is not a finite positive number.
 
 - **Pseudo-localization padding counts visible text only**, and
   `check_catalog` compares printf conversions and argument names rather
@@ -204,6 +211,18 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
   package does no PKCS#7 decryption, so the `>=48.0.1` floor is unchanged.
 
 ### Fixed
+
+- **Approvals and leases enforce what they promise.** Approval commands
+  without `db` share one gate (a token was forgotten between commands), an
+  anonymous approver is refused, and a lease TTL of NaN or infinity is
+  rejected instead of never expiring.
+- **Retry, rate-limit and breaker edge cases.** Backoff caps huge attempt
+  numbers instead of overflowing, `RetryPolicy` caps its first sleep, the
+  sliding-window wait is long enough, asctime `Retry-After` dates are GMT,
+  the loop guard reports the longest stuck pattern, re-created CAS keys never
+  reuse a version, an interrupted half-open trial no longer jams the
+  breaker, and idempotency claims are atomic with the TTL starting at
+  completion.
 
 - **Text and clipboard helpers handle real-world input.** Long
   near-identical strings fuzzy-match again; RTF round-trips characters

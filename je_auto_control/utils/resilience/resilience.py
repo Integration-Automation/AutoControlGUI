@@ -40,6 +40,8 @@ class RetryPolicy:
         sleeper = sleep or time.sleep
         attempts = max(1, int(self.max_attempts))
         delay = self.backoff
+        if self.max_backoff is not None:
+            delay = min(delay, self.max_backoff)   # the first sleep is capped too
         last_error: Optional[BaseException] = None
         for attempt in range(1, attempts + 1):
             try:
@@ -109,8 +111,19 @@ class CircuitBreaker:
         except Exception:
             self._settle(trial, succeeded=False)
             raise
+        except BaseException:
+            # KeyboardInterrupt / SystemExit are not a verdict on the service,
+            # but the trial slot must be freed: left set, every later call was
+            # refused for good.
+            self._release_trial(trial)
+            raise
         self._settle(trial, succeeded=True)
         return result
+
+    def _release_trial(self, trial: bool) -> None:
+        if trial:
+            with self._lock:
+                self._trial_in_flight = False
 
     def _settle(self, trial: bool, *, succeeded: bool) -> None:
         with self._lock:

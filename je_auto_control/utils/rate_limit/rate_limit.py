@@ -15,6 +15,7 @@ Pure standard library (``threading`` for the lock, ``time`` only as the default
 clock); imports no ``PySide6``.
 """
 import functools
+import math
 import threading
 import time
 from typing import Callable, Dict, Optional
@@ -50,8 +51,21 @@ class TokenBucket:
             self._refill()
             return self._tokens
 
+    def _check_request(self, n: float) -> float:
+        """``n`` as a float; a request the bucket can never satisfy is an error.
+
+        A negative ``n`` minted tokens past capacity, and ``n`` above capacity
+        made :meth:`acquire` without a timeout wait forever.
+        """
+        amount = float(n)
+        if not math.isfinite(amount) or amount <= 0 or amount > self._capacity:
+            raise AutoControlException(
+                f"n must be in (0, capacity={self._capacity}], got {n!r}")
+        return amount
+
     def try_acquire(self, n: float = 1.0) -> bool:
         """Take ``n`` tokens if available; return whether it succeeded."""
+        n = self._check_request(n)
         with self._lock:
             self._refill()
             if self._tokens >= n:
@@ -61,6 +75,7 @@ class TokenBucket:
 
     def time_until_available(self, n: float = 1.0) -> float:
         """Seconds until ``n`` tokens would be available (0 if already)."""
+        n = self._check_request(n)
         with self._lock:
             self._refill()
             if self._tokens >= n:
@@ -70,6 +85,7 @@ class TokenBucket:
     def acquire(self, n: float = 1.0, *, timeout: Optional[float] = None,
                 sleep: Callable[[float], None] = time.sleep) -> bool:
         """Block until ``n`` tokens are taken or ``timeout`` elapses."""
+        self._check_request(n)
         deadline = None if timeout is None else self._clock() + timeout
         while True:
             if self.try_acquire(n):
@@ -112,8 +128,15 @@ class SlidingWindowLimiter:
         weight = max(0.0, (self._window - elapsed_in_cur) / self._window)
         return self._prev * weight + self._cur
 
+    def _check_request(self, n: int) -> int:
+        count = int(n)
+        if count <= 0 or count > self._limit:
+            raise AutoControlException(f"n must be in (0, limit={self._limit}], got {n!r}")
+        return count
+
     def try_acquire(self, n: int = 1) -> bool:
         """Record ``n`` calls if the weighted estimate stays under the limit."""
+        n = self._check_request(n)
         with self._lock:
             self._roll()
             if self._estimate() + n <= self._limit:
@@ -122,12 +145,24 @@ class SlidingWindowLimiter:
             return False
 
     def time_until_available(self, n: int = 1) -> float:
-        """Seconds until ``n`` more calls would fit (0 if they already do)."""
+        """Seconds until ``n`` more calls would fit (0 if they already do).
+
+        Solves the weighted estimate for the wait instead of answering "the
+        rest of this window": after the roll the current count becomes the
+        previous one at full weight, so that answer was often too short.
+        """
+        n = self._check_request(n)
         with self._lock:
             self._roll()
             if self._estimate() + n <= self._limit:
                 return 0.0
-            return max(0.0, self._window - (self._clock() - self._cur_start))
+            room = self._limit - n
+            remaining = self._window - (self._clock() - self._cur_start)
+            if self._cur <= room:
+                # Fits in this window once the previous one has decayed enough.
+                return max(0.0, remaining - (room - self._cur) * self._window / self._prev)
+            # Only after the roll, once the current count (then "previous") decays.
+            return remaining + self._window - room * self._window / self._cur
 
 
 def throttle(interval_s: float, *,
