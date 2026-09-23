@@ -270,3 +270,23 @@ viewer 端的 `FileReceiver`（`utils/remote_desktop/file_transfer.py`）照單�
 
 **為什麼要拍板**：這會縮小既有的 agent 能力，依賴它跑 shell 的腳本會改變行為。
 
+
+---
+
+## MCP 工具的檔案路徑參數要不要限制在工作區根目錄裡
+
+`DECIDE` — 限制範圍與預設值由維護者決定
+
+MCP 工具的檔案參數（`path`、`file_path`、`db`、`image_path`、`golden_path`、`output_path`… 約 100 個）
+不受任何根目錄限制；只有 `resources/read` 關在 `roots/list` 的根目錄裡。完整模式下這不是新的權限
+（`ac_execute_actions` 本來就能做任何事），但 `JE_AUTOCONTROL_MCP_READONLY=1` 的部署仍能讀到根目錄外的
+任意檔案：例如 `ac_load_dotenv` 會把任何檔案解析成 KEY=VALUE 回給模型，`ac_read_document`、
+`ac_extract_pdf_text` 也一樣。2026 年 MCP 伺服器通報最多的一類就是這種路徑越界。
+
+**做法**：在 `utils/mcp_server/tools/_factories.py` 的 schema 裡把真正是檔案路徑的屬性標上
+`"format": "path"`（不能照名字判斷：`ac_json_query` 的 `path` 是 JSON 路徑，`template`／`source`／
+`target` 有時是檔案有時不是），`server.py` 的 `_prepare_tool_call` 在設定了根目錄時先 `realpath`
+再檢查是否落在根目錄內，不在就回 `-32602`。
+
+**為什麼要拍板**：根目錄從哪來（新的環境變數、沿用 `roots/list`、或兩者），唯讀模式要不要預設開啟；
+預設開啟會讓現有讀取工作區外檔案的用法失效。
