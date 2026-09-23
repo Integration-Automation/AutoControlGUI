@@ -155,6 +155,15 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Fixed
 
+- **Android input cannot run shell commands on the device.** Text typed with
+  `AC_android_text` is shell-quoted, and `AC_android_key` accepts only key
+  names and codes; `$(...)`, quotes or `;` in either used to reach the
+  device shell.
+- **Android and iOS device errors are contained.** uiautomator2, adbutils
+  and facebook-wda errors (no device, several devices, an invalid session)
+  are raised as `UIAutomatorUnavailableError` / `IOSUnavailableError`
+  instead of aborting the rest of a script.
+
 - **Image location is accurate.** `locate_image_center` / `locate_and_click`
   return the best-scoring match instead of the first position over the
   threshold (which was a few pixels off), an identical template now matches

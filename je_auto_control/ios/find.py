@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from typing import Any, Dict, Optional, Tuple
 
-from je_auto_control.ios.client import IOSDevice, default_ios_device
+from je_auto_control.ios.client import IOSDevice, default_ios_device, translate_device_errors
 
 
 class ElementNotFoundError(LookupError):
@@ -35,6 +35,7 @@ def _build_query(handle: Any,
     return handle(**selectors)
 
 
+@translate_device_errors
 def find_element(name: Optional[str] = None,
                  class_name: Optional[str] = None,
                  predicate: Optional[str] = None,
@@ -57,6 +58,7 @@ def find_element(name: Optional[str] = None,
     return (x, y, x + width, y + height)
 
 
+@translate_device_errors
 def click_element(name: Optional[str] = None,
                   class_name: Optional[str] = None,
                   predicate: Optional[str] = None,
@@ -75,6 +77,7 @@ def click_element(name: Optional[str] = None,
     return (int(cx), int(cy))
 
 
+@translate_device_errors
 def dump_source(*, device: Optional[IOSDevice] = None) -> str:
     """Return the page source (XCUITest XML tree) as a string."""
     handle = (device or default_ios_device()).handle

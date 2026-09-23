@@ -118,7 +118,8 @@ def test_shell_returns_decoded_stdout(stub_adb_path):
      "input swipe 10 20 30 40 250"),  # default duration
     ("key_event", ("KEYCODE_HOME",), "input keyevent HOME"),
     ("key_event", ("BACK",), "input keyevent BACK"),
-    ("text", ("hello world",), 'input text "hello%sworld"'),
+    # shlex.quote leaves a string with no shell metacharacters as it is.
+    ("text", ("hello world",), "input text hello%sworld"),
 ])
 def test_input_dispatch_builds_correct_shell_command(
     stub_adb_path, method, args, expected_cmd,

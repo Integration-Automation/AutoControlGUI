@@ -9,8 +9,9 @@ isn't installed.
 """
 from __future__ import annotations
 
+import functools
 import threading
-from typing import Any, Optional
+from typing import Any, Callable, Optional, TypeVar
 
 
 class UIAutomatorUnavailableError(RuntimeError):
@@ -60,7 +61,7 @@ class UIAutomatorDevice:
                 ) from error
             try:
                 self._handle = u2.connect(self._serial)
-            except (OSError, RuntimeError, ValueError) as error:
+            except (OSError, RuntimeError, ValueError, *_sdk_errors()) as error:
                 raise UIAutomatorUnavailableError(
                     f"could not connect to Android device "
                     f"{self._serial or '(default)'}: {error}",
@@ -89,3 +90,38 @@ __all__ = [
     "UIAutomatorDevice", "UIAutomatorUnavailableError",
     "default_ui_device", "reset_default_ui_device",
 ]
+
+
+_Result = TypeVar("_Result")
+
+
+def _sdk_errors() -> tuple:
+    """``adbutils.AdbError`` (no device, or several without a serial) and
+    uiautomator2's base error, whichever are installed."""
+    errors = []
+    try:
+        import adbutils
+        errors.append(adbutils.AdbError)
+    except ImportError:
+        pass
+    try:
+        from uiautomator2 import exceptions as u2_exceptions
+        errors.append(u2_exceptions.BaseException)
+    except (ImportError, AttributeError):
+        pass
+    return tuple(errors)
+
+
+def translate_device_errors(function: Callable[..., _Result]) -> Callable[..., _Result]:
+    """Re-raise the adbutils / uiautomator2 errors a device call can raise as :class:`UIAutomatorUnavailableError`.
+
+    They derive from ``Exception`` alone, so an unreachable or confused device
+    escaped ``raise_on_error=False`` and aborted every remaining action.
+    """
+    @functools.wraps(function)
+    def wrapper(*args: Any, **kwargs: Any) -> _Result:
+        try:
+            return function(*args, **kwargs)
+        except (*_sdk_errors(),) as error:
+            raise UIAutomatorUnavailableError(f"{function.__name__}: {error}") from error
+    return wrapper

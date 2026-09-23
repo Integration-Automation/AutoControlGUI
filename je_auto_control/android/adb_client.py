@@ -1,6 +1,8 @@
 """AdbClient — thin wrapper around the ``adb`` CLI for Android automation."""
 from __future__ import annotations
 
+import re
+import shlex
 import shutil
 import subprocess  # nosec B404  # reason: required to invoke the adb binary
 from dataclasses import dataclass
@@ -146,16 +148,28 @@ class AdbClient:
             payload = key.upper()[len("KEYCODE_"):]
         else:
             payload = str(key)
+        # The key goes into a command line the device shell parses again:
+        # "HOME; echo x" ran the second command. Key names and codes are
+        # letters, digits and underscores.
+        if not re.fullmatch(r"[A-Za-z0-9_]+", payload):
+            raise AdbError(f"invalid key name: {key!r}")
         self.shell(f"input keyevent {payload}", serial=serial)
 
     def text(self, value: str, *, serial: Optional[str] = None) -> None:
-        """Type ``value`` via ``input text``. Spaces are %s-escaped."""
+        """Type ``value`` via ``input text``. Spaces are %s-escaped.
+
+        ``input text`` itself turns every ``%s`` into a space and offers no
+        escape for it, so a literal ``%s`` in ``value`` arrives as a space.
+        """
         if not isinstance(value, str):
             raise AdbError(f"text must be a string, got {type(value).__name__}")
         # ``input text`` mangles spaces; the official workaround is to
         # replace them with %s before passing through the shell layer.
         escaped = value.replace(" ", "%s")
-        self.shell(f'input text "{escaped}"', serial=serial)
+        # shlex.quote: inside double quotes the device shell still expanded
+        # $(...), backticks and $VAR, and a '"' closed the quote -- typed
+        # text could run commands on the device.
+        self.shell("input text " + shlex.quote(escaped), serial=serial)
 
     # --- screen capture -----------------------------------------------
 

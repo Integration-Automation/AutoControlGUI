@@ -289,7 +289,7 @@ module = [
     "usb", "usb.*", "sounddevice", "sounddevice.*",
     "vgamepad", "vgamepad.*", "psutil", "psutil.*",
     "opentelemetry", "opentelemetry.*",
-    "uiautomator2", "uiautomator2.*", "wda", "wda.*",
+    "uiautomator2", "uiautomator2.*", "adbutils", "adbutils.*", "wda", "wda.*",
     # dev-time integrations, absent from a runtime install
     "pytest", "pytest.*", "behave", "behave.*",
     "send2trash", "send2trash.*",
