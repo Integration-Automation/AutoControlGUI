@@ -30,6 +30,7 @@ from typing import Annotated, Dict, List, Optional
 try:
     from fastapi import Depends, FastAPI, Header, HTTPException, Request
     from fastapi.middleware.cors import CORSMiddleware
+    from fastapi.responses import JSONResponse
     from fastapi.staticfiles import StaticFiles
     from pydantic import BaseModel
 except ImportError as exc:  # pragma: no cover - optional dep
@@ -143,10 +144,7 @@ def _build_secret_dependency(shared_secret: Optional[str]):
             Optional[str], Header(alias="X-Signaling-Secret"),
         ] = None,
     ) -> None:
-        # compare_digest on bytes: != leaks how much of the secret matched.
-        if shared_secret and not hmac.compare_digest(
-                (x_signaling_secret or "").encode("utf-8"),
-                shared_secret.encode("utf-8")):
+        if not _secret_matches(x_signaling_secret, shared_secret):
             raise HTTPException(status_code=401, detail="bad shared secret")
     return _check
 
@@ -243,6 +241,44 @@ def _register_routes(app: FastAPI, store: "_SessionStore",
         return {"deleted": store.delete(host_id)}
 
 
+#: Room for the JSON wrapper around the largest SDP a route accepts.
+_MAX_BODY_BYTES = _MAX_SDP_BYTES + 4096
+
+
+def _secret_matches(provided: Optional[str], shared_secret: Optional[str]) -> bool:
+    # compare_digest on bytes: != leaks how much of the secret matched.
+    return not shared_secret or hmac.compare_digest(
+        (provided or "").encode("utf-8"), shared_secret.encode("utf-8"))
+
+
+def _guard_refusal(request: Request, shared_secret: Optional[str]) -> Optional[JSONResponse]:
+    """The response refusing ``request`` before its body is read, or ``None``.
+
+    FastAPI reads and parses the body before it resolves route dependencies,
+    so a client without the secret made the server buffer a body of any size
+    (30 MB cost ~95 MB) and got JSON validation details back instead of 401.
+    """
+    if not request.url.path.startswith("/sessions") or request.method == "OPTIONS":
+        return None
+    if not _secret_matches(request.headers.get("X-Signaling-Secret"), shared_secret):
+        return JSONResponse({"detail": "bad shared secret"}, status_code=401)
+    if request.method != "POST":
+        return None
+    length = request.headers.get("Content-Length")
+    if length is None or not length.isdigit():
+        return JSONResponse({"detail": "Content-Length required"}, status_code=411)
+    if int(length) > _MAX_BODY_BYTES:
+        return JSONResponse({"detail": "request body too large"}, status_code=413)
+    return None
+
+
+def _register_body_guard(app: FastAPI, shared_secret: Optional[str]) -> None:
+    @app.middleware("http")
+    async def _guard(request: Request, call_next):
+        refusal = _guard_refusal(request, shared_secret)
+        return refusal if refusal is not None else await call_next(request)
+
+
 def _register_request_logging(app: FastAPI) -> None:
     @app.middleware("http")
     async def _log_request(request: Request, call_next):
@@ -259,6 +295,8 @@ def create_app(shared_secret: Optional[str] = None,
     """Build the FastAPI app. Importable for embedding in larger services."""
     app = FastAPI(title="AutoControl Signaling", version="1.0.0")
     store = _SessionStore(ttl_s=ttl_s)
+    # Before CORS, so CORS wraps it and a browser still sees the 401 / 413.
+    _register_body_guard(app, shared_secret)
     _configure_cors(app, cors_origins)
     _maybe_mount_viewer(app, serve_web_viewer)
     _register_routes(app, store, _build_secret_dependency(shared_secret))

@@ -168,11 +168,13 @@ class _MCPHttpHandler(BaseHTTPRequestHandler):
         expected: Optional[str] = self.server.auth_token  # type: ignore[attr-defined]
         if expected is None:
             return True
-        header = self.headers.get("Authorization", "")
-        if not header.startswith("Bearer "):
+        # The scheme is case-insensitive (RFC 7235 2.1): "bearer tok" was
+        # refused here while the REST gate accepted it.
+        scheme, _, provided = self.headers.get("Authorization", "").strip().partition(" ")
+        if scheme.lower() != "bearer":
             self._send_json({"error": "missing bearer token"}, status=401)
             return False
-        provided = header[len("Bearer "):].strip()
+        provided = provided.strip()
         # Bytes: compare_digest raises TypeError on a non-ASCII str, and
         # http.server decodes headers as latin-1, so a crafted token used to
         # kill the request thread instead of being refused.

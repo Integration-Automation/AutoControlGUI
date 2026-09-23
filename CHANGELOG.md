@@ -232,6 +232,11 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Fixed
 
+- **The signaling server refuses unauthenticated requests before reading
+  them.** A wrong `X-Signaling-Secret` gets 401 and an oversized or
+  length-less POST 413 / 411 before the body is buffered; the MCP HTTP
+  transport accepts a lower-case `bearer` scheme.
+
 - **Replays happen where they were recorded and never leave keys held.**
   Recorded presses, releases and scrolls move to their recorded position;
   recording gaps keep their total length; a failing step in `run_sequence`,
