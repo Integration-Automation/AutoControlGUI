@@ -25,7 +25,9 @@ Headless API
 ``check(condition, message)`` records a pass/fail and never raises (it returns the
 bool, so you can branch on it); ``check_equal(actual, expected, message)`` is the
 equality shortcut. ``failures`` lists the failed messages, ``passed`` counts the
-passes, and ``assert_all()`` raises ``AutoControlActionException`` aggregating them.
+passes, and ``assert_all()`` raises ``SoftAssertionsFailed`` aggregating them -- an
+``AutoControlAssertionException`` (a suite scores it *failed*, and a lenient run does
+not swallow it) that is also the ``AutoControlActionException`` raised before.
 The context manager calls ``assert_all`` on a clean exit (and never masks an exception
 already propagating). Pass ``raise_on_exit=False`` to collect without auto-raising.
 

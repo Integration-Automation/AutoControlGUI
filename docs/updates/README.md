@@ -58,6 +58,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260923-42 | 2026-09-23 | QA subsystem audit: setup failures in reports, soft asserts, dead servers, malformed cases | #incident #qa | [2026-09](2026-09.md) |
 | U-20260923-41 | 2026-09-23 | Executor flow-control audit: strictness through nested bodies, try/retry catch sets, double expansion | #incident #executor #security | [2026-09](2026-09.md) |
 | U-20260923-40 | 2026-09-23 | dotenv, VEX, data-source and HTTP-header parsing audit | #incident #data #security | [2026-09](2026-09.md) |
 | U-20260923-39 | 2026-09-23 | JSON Patch, JSONPath and unified-diff audit: bounds, shared values, silent wildcards, -U0 hunks | #incident #data | [2026-09](2026-09.md) |
@@ -146,7 +147,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | File | Period | Entries |
 |---|---|---:|
-| [2026-09.md](2026-09.md) | 2026-09 | 57 |
+| [2026-09.md](2026-09.md) | 2026-09 | 58 |
 | [2026-08-f.md](2026-08-f.md) | 2026-08 | 1 |
 | [2026-08-e.md](2026-08-e.md) | 2026-08 | 2 |
 | [2026-08-d.md](2026-08-d.md) | 2026-08 | 2 |

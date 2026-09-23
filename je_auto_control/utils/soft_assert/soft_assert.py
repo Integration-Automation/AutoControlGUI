@@ -10,7 +10,19 @@ Pure-stdlib context manager; imports no ``PySide6``.
 """
 from typing import Any, List, Literal
 
-from je_auto_control.utils.exception.exceptions import AutoControlActionException
+from je_auto_control.utils.exception.exceptions import (
+    AutoControlActionException, AutoControlAssertionException,
+)
+
+
+class SoftAssertionsFailed(AutoControlAssertionException, AutoControlActionException):
+    """One or more soft checks failed.
+
+    An assertion failure like every ``AC_assert_*``: a suite scores it
+    *failed* rather than *error*, and a lenient run does not swallow it. It
+    is still an ``AutoControlActionException``, the type raised before, so
+    existing ``except`` clauses keep catching it.
+    """
 
 
 class SoftAssertions:
@@ -42,10 +54,10 @@ class SoftAssertions:
         return sum(1 for ok, _message in self._results if ok)
 
     def assert_all(self) -> None:
-        """Raise ``AutoControlActionException`` if any recorded check failed."""
+        """Raise :class:`SoftAssertionsFailed` if any recorded check failed."""
         failures = self.failures
         if failures:
-            raise AutoControlActionException(
+            raise SoftAssertionsFailed(
                 f"{len(failures)} soft assertion(s) failed: "
                 + "; ".join(failures))
 

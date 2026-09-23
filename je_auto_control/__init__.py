@@ -588,7 +588,7 @@ from je_auto_control.utils.window_zorder import (
     bring_to_front, plan_zorder, send_to_back, set_topmost,
 )
 # Soft assertions (accumulate checks, raise the aggregate at block end)
-from je_auto_control.utils.soft_assert import SoftAssertions
+from je_auto_control.utils.soft_assert import SoftAssertions, SoftAssertionsFailed
 # Perceptual (YIQ) image diff with anti-alias edge suppression
 from je_auto_control.utils.perceptual_diff import (
     PerceptualDiffResult, assert_perceptual, perceptual_diff,
@@ -1597,7 +1597,7 @@ __all__ = [
     "set_topmost",
     "bring_to_front",
     "send_to_back",
-    "SoftAssertions",
+    "SoftAssertions", "SoftAssertionsFailed",
     "perceptual_diff",
     "assert_perceptual",
     "PerceptualDiffResult",

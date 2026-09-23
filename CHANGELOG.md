@@ -15,6 +15,9 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Added
 
+- **`SoftAssertionsFailed`.** The exception `SoftAssertions.assert_all`
+  raises; exported from the package.
+
 - **State-machine `if_image_found` guard.** Fires once the template is on
   screen (`"welcome.png"` or `{"image": ..., "detect_threshold": ...}`).
   Other `if_*` keys, which used to fire unconditionally, now raise
@@ -32,6 +35,11 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
   get a `ValueError` out of `datetime.fromisoformat`.
 
 ### Changed
+
+- **A failed soft-assert batch is an assertion failure.** It raises
+  `SoftAssertionsFailed` (an `AutoControlAssertionException` and still an
+  `AutoControlActionException`), so suites score it *failed* and lenient runs
+  no longer swallow it.
 
 - **`raise_on_error=True` reaches into nested bodies.** Loops, branches and
   macros run by a strict list are strict too, so a failure inside them
@@ -183,6 +191,14 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
   package does no PKCS#7 decryption, so the `>=48.0.1` floor is unchanged.
 
 ### Fixed
+
+- **Test reports and suites count what happened.** A setup failure is
+  counted in the JUnit totals and reported to Allure; `assert_http` scores a
+  read timeout or dropped connection as a failed assertion instead of
+  crashing; `assert_eventually` refuses a NaN timeout (an endless loop); one
+  malformed case or quarantine entry no longer aborts the suite; string tags
+  are one tag; runs with equal timestamps list newest first;
+  `critical_steps(top=0)` is empty.
 
 - **Failures inside nested blocks reach `AC_try`, `AC_retry` and strict
   callers.** A failure inside an `AC_loop`, `AC_if_*` branch or macro was

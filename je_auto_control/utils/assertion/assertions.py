@@ -357,14 +357,19 @@ def assert_http(url: str,
     explicit ``timeout``. A connection failure (DNS / refused / timeout)
     counts as a failed assertion rather than crashing the script.
     """
-    import urllib.error
+    import http.client
     actual: Dict[str, Any] = {}
     try:
         code, body = _http_probe(url, timeout, method)
-    except urllib.error.URLError as error:
+    # urllib wraps only connect-phase errors in URLError (an OSError); a read
+    # timeout or a server closing without a reply arrives raw -- TimeoutError
+    # / RemoteDisconnected -- and crashed the script, or ended an
+    # assert_eventually poll on its first attempt.
+    except (OSError, http.client.HTTPException) as error:
+        reason = getattr(error, "reason", error)
         passed = False
-        actual = {"error": str(error.reason)}
-        message = f"assert_http failed: {url!r} unreachable — {error.reason}"
+        actual = {"error": str(reason)}
+        message = f"assert_http failed: {url!r} unreachable — {reason}"
         return _finalize(
             "http", passed, message,
             expected={"url": url, "status": status, "contains": contains},

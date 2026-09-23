@@ -72,4 +72,4 @@ def critical_steps(steps: Sequence[Step], *, name_key: str = "name",
     ranked = sorted(resolved, key=lambda step: step["duration"], reverse=True)
     return [{"name": step["name"], "duration": step["duration"],
              "pct": round(step["duration"] / busy * 100, 1)}
-            for step in ranked[:max(1, int(top))]]
+            for step in ranked[:max(0, int(top))]]

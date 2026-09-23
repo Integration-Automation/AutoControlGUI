@@ -39,6 +39,14 @@ def _default_path() -> Path:
     return Path.home() / ".je_auto_control" / "quarantine.json"
 
 
+def _timestamp(value: Any) -> float:
+    """``added_at`` as a float; an unreadable one reads as 0.0."""
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return 0.0
+
+
 class QuarantineStore:
     """Thread-safe JSON-backed set of quarantined case names."""
 
@@ -66,15 +74,16 @@ class QuarantineStore:
             autocontrol_logger.warning("quarantine file %s ignored: not an object", self._path)
             return
         for item in entries:
-            if not isinstance(item, dict):
+            # One malformed entry (a null ``added_at``, a list as the name)
+            # used to crash the store -- and every suite run that consults it.
+            if not isinstance(item, dict) or not isinstance(item.get("name"), str) \
+                    or not item["name"]:
                 continue
-            name = item.get("name")
-            if name:
-                self._entries[name] = QuarantineEntry(
-                    name=name, reason=item.get("reason", ""),
-                    added_at=float(item.get("added_at", 0.0)),
-                    flip_rate=item.get("flip_rate"),
-                )
+            self._entries[item["name"]] = QuarantineEntry(
+                name=item["name"], reason=str(item.get("reason", "")),
+                added_at=_timestamp(item.get("added_at")),
+                flip_rate=item.get("flip_rate"),
+            )
 
     def _save(self) -> None:
         payload = {"entries": [e.to_dict() for e in self._entries.values()]}

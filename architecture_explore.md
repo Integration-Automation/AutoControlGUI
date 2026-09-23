@@ -20,10 +20,10 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 | 指標 | 數值 |
 | --- | ---: |
 | Python 模組總數（含周邊子專案） | 1,045 |
-| 程式碼總行數 | 144,316 |
+| 程式碼總行數 | 144,402 |
 | `je_auto_control/utils/` 子套件數 | 310 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 773 |
-| 套件門面 `__all__` 公開名稱數 | 1,239 |
+| 套件門面 `__all__` 公開名稱數 | 1,240 |
 | GUI 分頁數（`main_widget` 註冊） | 48 |
 | MCP 工具數（`build_default_tool_registry()` 實測） | 676 |
 | `test_*.py` 測試檔／測試函式 | 478 / 4,654 |
@@ -556,13 +556,13 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.12 報表、可觀測性與測試治理
 
-> 34 個套件、約 6,954 行。
+> 34 個套件、約 7,040 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
 | `utils/anomaly/` | 107 | 單一序列異常偵測 |
 | `utils/approval/` | 102 | Approval testing：以核可基準線驗證產出物 |
-| `utils/assertion/` | 871 | 斷言 DSL：畫面狀態驗證 + 組合子 |
+| `utils/assertion/` | 879 | 斷言 DSL：畫面狀態驗證 + 組合子 |
 | `utils/baggage/` | 111 | W3C Baggage 傳遞 |
 | `utils/canonical_log/` | 90 | canonical log line 與結構化 JSON 日誌 |
 | `utils/ci_annotations/` | 62 | 由執行結果輸出 CI 工作流程註記（GitHub Actions） |
@@ -579,18 +579,18 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/process_doc/` | 85 | 由錄製的 action list 產生逐步 SOP 文件 |
 | `utils/process_mining/` | 110 | 流程探勘：從動作日誌挖掘可自動化的候選 |
 | `utils/profiler/` | 426 | 逐動作效能剖析器 + 資源剖析器 |
-| `utils/quarantine/` | 191 | 易碎測試隔離區，讓套件執行器跳過已知不穩定案例 |
+| `utils/quarantine/` | 200 | 易碎測試隔離區，讓套件執行器跳過已知不穩定案例 |
 | `utils/run_diff/` | 123 | 兩次執行軌跡的差異（LCS 對齊：新增／移除／狀態翻轉／退化） |
 | `utils/run_history/` | 405 | 執行歷史儲存與產出物管理 |
 | `utils/sarif/` | 134 | 以 SARIF 2.1.0 匯出發現項，供 GitHub／Azure code scanning |
 | `utils/slo/` | 112 | SLO 評估：SLI、錯誤預算與多視窗燃燒率告警 |
 | `utils/smoothing/` | 67 | 數列移動平均平滑 |
-| `utils/soft_assert/` | 62 | 軟斷言：累積檢查並在區塊結束時一次拋出 |
+| `utils/soft_assert/` | 74 | 軟斷言：累積檢查並在區塊結束時一次拋出 |
 | `utils/stats/` | 213 | 描述統計與 A/B 顯著性檢定（純標準庫） |
 | `utils/step_timeline/` | 81 | 每次執行的步驟瀑布圖與瓶頸（關鍵路徑）步驟排名 |
 | `utils/test_select/` | 123 | 以執行歷史做風險導向的測試選取 |
 | `utils/test_shard/` | 87 | 以耗時為權重的套件切分與分片結果合併 |
-| `utils/test_suite/` | 470 | QA 套件編排：把扁平 action list 評分為測試案例 + CI 報表 |
+| `utils/test_suite/` | 527 | QA 套件編排：把扁平 action list 評分為測試案例 + CI 報表 |
 | `utils/time_travel/` | 381 | 錄製 session 的時光回溯除錯（控制器 + 播放器） |
 | `utils/timeseries/` | 143 | 時間序列轉換（rate／降採樣／重採樣） |
 | `utils/trace_context/` | 162 | W3C Trace Context 傳遞 |
@@ -1075,10 +1075,10 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `utils/triggers/` | 4 | 1,176 |
 | `utils/ocr/` | 9 | 1,125 |
 | `utils/usbip/` | 5 | 943 |
-| `utils/assertion/` | 3 | 871 |
+| `utils/assertion/` | 3 | 879 |
 | `osx/` | 17 | 919 |
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 783 |
-| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 674 | 49,242 |
-| **總計** | **1,039** | **144,251** |
+| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 674 | 49,320 |
+| **總計** | **1,039** | **144,337** |
 

@@ -10,6 +10,7 @@ stdlib ``xml.etree.ElementTree`` writer is safe to use.
 """
 from __future__ import annotations
 
+import datetime
 import json
 import uuid
 # Write-only XML generation; never parses untrusted input.
@@ -54,13 +55,19 @@ def to_junit_xml(result: TestSuiteResult) -> str:
     """Render ``result`` as a JUnit XML string."""
     suites = ET.Element("testsuites")
     suite_name = xml_safe_text(result.name)
+    # A setup failure is written as a ``<setup>`` testcase with an error, so
+    # it is counted too: readers that trust the attributes saw an empty,
+    # green suite (tests="0" errors="0").
+    setup_failed = 1 if result.setup_error else 0
     suite = ET.SubElement(suites, "testsuite", {
         "name": suite_name,
-        "tests": str(result.total),
+        "tests": str(result.total + setup_failed),
         "failures": str(result.failed),
-        "errors": str(result.errored),
+        "errors": str(result.errored + setup_failed),
         "skipped": str(result.skipped),
         "time": f"{result.duration_s:.3f}",
+        "timestamp": datetime.datetime.fromtimestamp(
+            result.started_at).isoformat(timespec="seconds"),
     })
     if result.setup_error:
         setup_error = xml_safe_text(result.setup_error)
@@ -83,25 +90,49 @@ def write_junit_xml(result: TestSuiteResult, path: str) -> str:
     return str(target)
 
 
-def _allure_case(result: TestSuiteResult, case: Any) -> Dict[str, Any]:
-    """Build one Allure-2 result dict for a case."""
-    labels = [{"name": "suite", "value": result.name}]
-    labels.extend({"name": "tag", "value": tag} for tag in case.tags)
+def _utf8(text: str) -> str:
+    """``text`` with lone surrogates replaced, so it can be written as UTF-8.
+
+    One ``\\ud800`` in a name or message raised ``UnicodeEncodeError``
+    part-way through writing the result files.
+    """
+    return text.encode("utf-8", "replace").decode("utf-8")
+
+
+def _allure_payload(result: TestSuiteResult, name: str, status: str,
+                    message: str, tags: List[str]) -> Dict[str, Any]:
+    labels = [{"name": "suite", "value": _utf8(result.name)}]
+    labels.extend({"name": "tag", "value": _utf8(tag)} for tag in tags)
     payload: Dict[str, Any] = {
         "uuid": str(uuid.uuid4()),
-        "name": case.name,
-        "fullName": f"{result.name}#{case.name}",
-        "status": _ALLURE_STATUS.get(case.status, "unknown"),
+        "name": _utf8(name),
+        "fullName": _utf8(f"{result.name}#{name}"),
+        "status": status,
         "labels": labels,
     }
-    if case.message:
-        payload["statusDetails"] = {"message": case.message}
+    if message:
+        payload["statusDetails"] = {"message": _utf8(message)}
     return payload
 
 
+def _allure_case(result: TestSuiteResult, case: Any) -> Dict[str, Any]:
+    """Build one Allure-2 result dict for a case."""
+    return _allure_payload(result, case.name,
+                           _ALLURE_STATUS.get(case.status, "unknown"),
+                           case.message, list(case.tags))
+
+
 def to_allure_results(result: TestSuiteResult) -> List[Dict[str, Any]]:
-    """Return the list of Allure-2 result dicts for ``result``."""
-    return [_allure_case(result, case) for case in result.cases]
+    """Return the list of Allure-2 result dicts for ``result``.
+
+    A setup failure is a ``broken`` ``<setup>`` result, as in the JUnit
+    report; it used to produce no result at all, so Allure showed nothing.
+    """
+    payloads = [_allure_case(result, case) for case in result.cases]
+    if result.setup_error:
+        payloads.insert(0, _allure_payload(result, "<setup>", "broken",
+                                           result.setup_error, []))
+    return payloads
 
 
 def write_allure_results(result: TestSuiteResult, directory: str) -> List[str]:

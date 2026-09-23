@@ -218,7 +218,7 @@ class HistoryStore:
             with self._lock:
                 rows = self._connection().execute(
                     "SELECT * FROM runs "
-                    "ORDER BY started_at DESC LIMIT ?",
+                    "ORDER BY started_at DESC, id DESC LIMIT ?",
                     (bound_limit,),
                 ).fetchall()
         else:
@@ -226,7 +226,7 @@ class HistoryStore:
             with self._lock:
                 rows = self._connection().execute(
                     "SELECT * FROM runs WHERE source_type = ? "
-                    "ORDER BY started_at DESC LIMIT ?",
+                    "ORDER BY started_at DESC, id DESC LIMIT ?",
                     (source_type, bound_limit),
                 ).fetchall()
         return [_row_to_record(row) for row in rows]
@@ -276,12 +276,12 @@ class HistoryStore:
             paths = [r[0] for r in self._connection().execute(
                 "SELECT artifact_path FROM runs WHERE artifact_path IS NOT NULL"
                 " AND id NOT IN ("
-                "SELECT id FROM runs ORDER BY started_at DESC LIMIT ?)",
+                "SELECT id FROM runs ORDER BY started_at DESC, id DESC LIMIT ?)",
                 (int(keep_latest),),
             ).fetchall()]
             cursor = self._connection().execute(
                 "DELETE FROM runs WHERE id NOT IN ("
-                "SELECT id FROM runs ORDER BY started_at DESC LIMIT ?"
+                "SELECT id FROM runs ORDER BY started_at DESC, id DESC LIMIT ?"
                 ")",
                 (int(keep_latest),),
             )
