@@ -11,6 +11,7 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Dict, List, Optional, Set
 
+from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.json_store.json_store import atomic_write_text
 
 
@@ -46,7 +47,7 @@ _ROLE_CAPABILITIES: Dict[str, Set[str]] = {
 }
 
 
-class UserAuthError(RuntimeError):
+class UserAuthError(AutoControlException, RuntimeError):
     """Raised when a token doesn't match any known user."""
 
 

@@ -286,9 +286,11 @@ def _resolve_remote_actions(node: DagNode) -> List[Any]:
     if node.action_file is None:
         raise RuntimeError(
             f"node {node.id!r} has neither actions nor an action_file")
-    import json
-    with open(node.action_file, "r", encoding="utf-8") as fp:
-        loaded = json.load(fp)
+    # Through the signature check like every local path: a plain json.load
+    # sent an unsigned file to a remote host with
+    # JE_AUTOCONTROL_REQUIRE_SIGNED_ACTIONS set.
+    from je_auto_control.utils.json.json_file import read_executable_action_json
+    loaded = read_executable_action_json(str(node.action_file))
     if not isinstance(loaded, list):
         raise RuntimeError(
             f"action_file {node.action_file!r} must contain a list",

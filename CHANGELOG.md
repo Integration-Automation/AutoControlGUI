@@ -190,6 +190,8 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Security
 
+- **`JE_AUTOCONTROL_REQUIRE_SIGNED_ACTIONS` covers DAG nodes that run on a
+  remote host**; an unsigned action file was dispatched to it.
 - **Keys, passwords and tokens given to actions are masked** in the executor
   log and result record (signing, encryption and JWT keys; any `password`,
   `passphrase`, `token`...), and the MCP audit file masks them at any depth,
@@ -257,6 +259,8 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Fixed
 
+- **`UserAuthError` and `CredentialBrokerError` derive from
+  `AutoControlException`**, so containment boundaries catch them.
 - **Replayed wheel-up scrolls up on X11 and Wayland**, the cleanup release
   after a failed replay step stays at the cursor instead of `(0, 0)`, gesture
   waypoints round to the nearest pixel, and a NaN key-hold duration is

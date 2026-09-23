@@ -22,8 +22,10 @@ import secrets
 import time
 from typing import Any, Callable, Dict, List, Optional
 
+from je_auto_control.utils.exception.exceptions import AutoControlException
 
-class CredentialBrokerError(RuntimeError):
+
+class CredentialBrokerError(AutoControlException, RuntimeError):
     """Raised when a lease is unknown/expired or no resolver is configured."""
 
 
