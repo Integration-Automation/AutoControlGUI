@@ -988,6 +988,10 @@ def _run_suite(spec: Dict[str, Any],
         reports["allure"] = write_allure_results(result, allure_dir)
     if reports:
         payload["reports"] = reports
+    if not result.success:
+        # The suite runs its cases strictly, so none of their failures was
+        # recorded: `je_auto_control run` exited 0 for a failed suite.
+        _count_recorded_failure()
     return payload
 
 

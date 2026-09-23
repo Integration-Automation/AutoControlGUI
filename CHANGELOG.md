@@ -290,6 +290,13 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Fixed
 
+- **`python -m je_auto_control -d` runs a directory's files in sorted order**
+  and no longer follows links out of it, and the legacy entry point prints its
+  error to stderr; `je_auto_control run` exits 1 for a failed `AC_run_suite`
+  and accepts `--dry-run --var` with loop variables; `validate` agrees with
+  `run` on wrapped and empty files; `start-server --port 0` reports the real
+  port; the pytest plugin no longer ends the session when a failure screenshot
+  cannot be taken, nor screenshots skipped tests.
 - **Screen recordings play back at their real length** (frames are paced to
   the declared fps), stop adding an `AC_screenshot` record per frame, and an
   unusable frame rate, codec or path raises instead of leaving a recorder

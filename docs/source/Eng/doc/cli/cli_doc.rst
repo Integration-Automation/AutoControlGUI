@@ -69,6 +69,9 @@ Execute all files in a directory
    python -m je_auto_control --execute_dir "path/to/action_files/"
    python -m je_auto_control -d "path/to/action_files/"
 
+Every ``.json`` file under the directory runs, subdirectories included, in
+sorted path order; links that lead outside the directory are not followed.
+
 Execute a JSON string directly
 ------------------------------
 

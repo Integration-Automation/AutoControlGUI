@@ -245,6 +245,19 @@ socket server 的執行也都用同一個 `executor`；`for_each` 的迴圈變�
 
 ---
 
+## 舊式 CLI（`-e`／`-d`／`--execute_str`）在動作失敗時仍然結束碼 0
+
+`DECIDE` — 要不要讓舊式入口也以結束碼 1 回報動作失敗（跨專案契約，PyBreeze 與 TestPioneer 以子程序呼叫）
+
+`je_auto_control/__main__.py` 執行完不看 `recorded_failures()`；`je_auto_control run` 在 `cli.py` 已經會回 1。
+同一個會失敗的腳本，`run` 回 1，`-e`、`-d`、`--execute_str` 回 0（2026-09-24 稽核重現）。
+
+**要先確認**：PyBreeze（`AI_CONTEXT.md` §5）與 TestPioneer 的 `parallel_run` 怎麼解讀這個結束碼——若把非 0 當成
+「無法執行」而非「有動作失敗」，改了會讓它們把一次有失敗步驟的執行回報成錯誤。改的話兩邊的 `architecture.md` §6
+與相容性測試要一起更新。
+
+---
+
 ## pytest11 進入點會把整個門面拉進每一次 pytest
 
 `DECIDE` — 要不要把進入點搬到一個精簡的頂層模組（打包層的改動，維護者拍板）

@@ -73,11 +73,15 @@ if __name__ == "__main__":
             handler(value)
         if all(value is None for value in parsed.values()):
             raise AutoControlArgparseException(argparse_get_wrong_data_error_message)
+    # The message also goes to stderr: it went only to the log file, so a
+    # failed -e printed nothing at all.
     except AutoControlArgparseException as error:
         autocontrol_logger.error("argparse failure: %r", error)
+        sys.stderr.write(f"error: {error}\n")
         sys.exit(1)
     # AutoControlException: a missing or invalid action file used to end in
     # a raw traceback rather than this message (the exit status was 1 then too).
     except (OSError, ValueError, RuntimeError, AutoControlException) as error:
         autocontrol_logger.error("cli execution failed: %r", error)
+        sys.stderr.write(f"error: {error}\n")
         sys.exit(1)

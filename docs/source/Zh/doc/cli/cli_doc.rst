@@ -24,6 +24,8 @@ AutoControl 可以直接從命令列執行自動化腳本。
    # 簡寫
    python -m je_auto_control -d "path/to/action_files/"
 
+資料夾（含子資料夾）裡每個 ``.json`` 檔都會執行，依路徑排序；指向資料夾外的連結不會跟進。
+
 直接執行 JSON 字串
 ==================
 
