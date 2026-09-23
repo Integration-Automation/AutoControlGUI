@@ -30,6 +30,11 @@ def build_dropfiles(paths: Sequence[str], *, point: Tuple[int, int] = (0, 0),
     """
     if not paths:
         raise ValueError("at least one path is required")
+    for path in paths:
+        # An empty path writes the list terminator early: Windows stops at the
+        # first double NUL and sees only the files before it.
+        if not path or "\0" in path:
+            raise ValueError(f"invalid path in a file drop list: {path!r}")
     header = struct.pack("<5I", _HEADER_SIZE, int(point[0]), int(point[1]),
                          1 if non_client else 0, 1 if wide else 0)
     listing = "".join(f"{path}\0" for path in paths) + "\0"
@@ -43,9 +48,14 @@ def parse_dropfiles(data: bytes) -> Dict[str, Any]:
         raise ValueError("data too short for a DROPFILES header")
     p_files, x, y, f_nc, f_wide = struct.unpack("<5I", data[:_HEADER_SIZE])
     wide = bool(f_wide)
-    body = data[p_files:]
-    text = body.decode("utf-16-le" if wide else "latin-1")
-    paths = [part for part in text.split("\0") if part]
+    if not _HEADER_SIZE <= p_files <= len(data):
+        raise ValueError(f"DROPFILES pFiles offset {p_files} is outside the data")
+    text = data[p_files:].decode("utf-16-le" if wide else "latin-1", "replace")
+    # The list ends at the first double NUL; a clipboard block can be larger
+    # than what was written, and the bytes after it are not paths.
+    terminator = text.find("\0\0")
+    listing = text if terminator == -1 else text[:terminator]
+    paths = [part for part in listing.split("\0") if part]
     return {"paths": paths, "point": [x, y], "wide": wide,
             "non_client": bool(f_nc)}
 

@@ -39,6 +39,10 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Changed
 
+- **Pseudo-localization padding counts visible text only**, and
+  `check_catalog` compares printf conversions and argument names rather
+  than whole ICU blocks.
+
 - **Colour-match scores are RMS colour distance.** `match_color` scores are
   `1 -` the root-mean-square HSV distance, hue compared round the colour
   wheel; `min_score` thresholds tuned on the old metric may need adjusting.
@@ -200,6 +204,13 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
   package does no PKCS#7 decryption, so the `>=48.0.1` floor is unchanged.
 
 ### Fixed
+
+- **Text and clipboard helpers handle real-world input.** Long
+  near-identical strings fuzzy-match again; RTF round-trips characters
+  beyond the BMP, lone CRs and Word's fallback escapes; a file-drop list
+  with an empty path is refused and parsing stops at its terminator;
+  pseudo-localization keeps printf, HTML and ICU placeholders; `slugify`
+  inserts the separator literally; a null CSV cell is empty.
 
 - **Image utilities see the colours and files they are given.** Grayscale
   no longer swaps red and blue for PIL images and screen grabs, palette
