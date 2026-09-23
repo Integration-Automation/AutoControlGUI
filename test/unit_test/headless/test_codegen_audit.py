@@ -6,6 +6,7 @@ with arguments the facade does not take; the executor's
 ``{"auto_control": [...]}`` wrapper was refused; and a Robot test name could
 turn into a section header or comment.
 """
+import ast
 import json
 
 import pytest
@@ -24,10 +25,13 @@ def test_every_name_yields_code_that_compiles(name, target):
 def test_nan_and_infinity_from_json_are_defined_in_the_generated_code():
     actions = json.loads('[["AC_set_mouse_position", {"x": NaN, "y": -Infinity}]]')
     for style in ("calls", "actions"):
-        code = generate_code(actions, target="python", style=style)
-        namespace = {"__name__": "generated"}
-        exec(compile(code, "generated", "exec"), namespace)  # nosec B102  # nosemgrep  # reason: runs only the module header; the flow function is never called
-        assert "nan" in namespace and "inf" in namespace
+        tree = ast.parse(generate_code(actions, target="python", style=style))
+        imported = {alias.asname or alias.name for node in ast.walk(tree)
+                    if isinstance(node, (ast.Import, ast.ImportFrom)) for alias in node.names}
+        used = {node.id for node in ast.walk(tree)
+                if isinstance(node, ast.Name) and node.id in ("nan", "inf")}
+        assert used == {"nan", "inf"}
+        assert used <= imported
 
 
 def test_finite_values_need_no_math_import():
