@@ -20,7 +20,7 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 | 指標 | 數值 |
 | --- | ---: |
 | Python 模組總數（含周邊子專案） | 1,048 |
-| 程式碼總行數 | 145,443 |
+| 程式碼總行數 | 145,468 |
 | `je_auto_control/utils/` 子套件數 | 310 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 773 |
 | 套件門面 `__all__` 公開名稱數 | 1,241 |
@@ -271,7 +271,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.1 執行引擎與腳本資產
 
-> 24 個套件、約 13,768 行。
+> 24 個套件、約 13,776 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -287,7 +287,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/input_macro/` | 436 | 定時輸入事件：錄製結果的整形（`timeline`／`InputRecorder`，Windows 與 macOS 共用）、重播與宣告式輸入序列 DSL |
 | `utils/json/` | 99 | action JSON 檔讀寫與正規化格式化（`fmt --check` 的後端） |
 | `utils/json_store/` | 195 | JSON 字典檔持久化的共用小工具（內部管線） |
-| `utils/loop_guard/` | 146 | 機械式卡死迴圈偵測（agent loop 用） |
+| `utils/loop_guard/` | 154 | 機械式卡死迴圈偵測（agent loop 用） |
 | `utils/plugin_loader/` | 128 | 掃描外部 Python 外掛目錄並註冊其 `AC_` callable |
 | `utils/plugin_sdk/` | 70 | 外掛 SDK：透過 entry points 發佈／載入第三方 `AC_*` 指令 |
 | `utils/project/` | 186 | 專案腳手架：建立目錄結構與範本 action 檔 |
@@ -341,7 +341,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.4 輸入模擬與動作品質
 
-> 22 個套件、約 2,651 行。
+> 22 個套件、約 2,654 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -360,7 +360,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/mouse_path/` | 97 | 多路徑點滑鼠手勢（沿折線移動或拖曳） |
 | `utils/mouse_relative/` | 59 | 相對位移滑鼠移動 |
 | `utils/postcondition/` | 138 | 宣告式的動作預期結果規格，對照畫面驗證 |
-| `utils/step_repair/` | 114 | 失敗／無效動作的修復策略（自我修正迴圈） |
+| `utils/step_repair/` | 117 | 失敗／無效動作的修復策略（自我修正迴圈） |
 | `utils/table_grid_fill/` | 143 | 以 OCR 文字填滿格線表格，取得可定址的表格 |
 | `utils/input_reach/` | 111 | 送出去的輸入到不到得了：桌面鎖定查詢（免費）＋ 實際送一個 F13 確認沒有被過濾（有副作用，只給診斷用） |
 | `utils/keyboard_layout/` | 148 | 向系統問「這個鍵盤配置下每個鍵印出什麼字」（`ToUnicodeEx`），問不到退回 US 對照表 |
@@ -649,7 +649,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.15 韌性、流量控制與設定
 
-> 14 個套件、約 1,873 行。
+> 14 個套件、約 1,887 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -663,9 +663,9 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/idempotency/` | 125 | 冪等鍵儲存與已存回應重放 |
 | `utils/layered_config/` | 110 | 分層設定解析 |
 | `utils/optimistic/` | 112 | 樂觀併發的版本化儲存 |
-| `utils/rate_limit/` | 197 | 用戶端限流：token bucket、滑動視窗、throttle |
+| `utils/rate_limit/` | 204 | 用戶端限流：token bucket、滑動視窗、throttle |
 | `utils/resilience/` | 144 | 韌性原語：退避重試與斷路器 |
-| `utils/retry_budget/` | 151 | 重試預算：以牆鐘期限與 full jitter 約束重試 |
+| `utils/retry_budget/` | 158 | 重試預算：以牆鐘期限與 full jitter 約束重試 |
 | `utils/sequence_gap/` | 65 | 逐串流的序號缺口偵測 |
 
 ### 5.4.16 系統、視窗與剪貼簿
@@ -1080,6 +1080,6 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `osx/` | 17 | 919 |
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 783 |
-| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 676 | 50,178 |
-| **總計** | **1,042** | **145,378** |
+| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 676 | 50,203 |
+| **總計** | **1,042** | **145,403** |
 

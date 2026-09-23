@@ -251,6 +251,10 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Fixed
 
+- **Rate limiters refuse a NaN or infinite rate, capacity or window**, which
+  let every request through or spun the waiter; `RetryBudget` refuses a NaN
+  deadline; the shared `LoopGuard` is thread-safe; `plan_repair` returns no
+  tactics for a negative `max_attempts`.
 - **Cron jobs fire once per slot through the hour repeated when clocks fall
   back**, instead of on every scheduler tick; and a run of a job removed
   while in flight no longer counts against a new job registered under the

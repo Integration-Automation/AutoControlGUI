@@ -59,7 +59,8 @@ def plan_repair(verdict: Any, *, policy: Optional[RepairPolicy] = None) -> List[
     policy = policy or RepairPolicy()
     preferred = _VERDICT_TACTICS.get(_effect_of(verdict), policy.tactics)
     ordered = [tactic for tactic in preferred if tactic in policy.tactics]
-    return (ordered or list(policy.tactics))[:int(policy.max_attempts)]
+    # A negative count sliced from the end and returned tactics anyway.
+    return (ordered or list(policy.tactics))[:max(0, int(policy.max_attempts))]
 
 
 def next_tactic(verdict: Any, used: List[str], *,
@@ -80,7 +81,9 @@ def run_with_repair(act: Callable[[], Any], verify: Callable[[], bool], *,
 
     Every effect is injected: ``act`` performs the action, ``verify`` returns success,
     ``apply_tactic`` mutates state for a named tactic, ``verdict_for`` supplies the current
-    effect verdict, ``sleep`` backs off. Returns a :class:`RepairOutcome`.
+    effect verdict, and ``sleep`` is called with ``0`` between attempts -- a
+    yield point, not a back-off; waiting is the ``wait_retry`` tactic's job.
+    Returns a :class:`RepairOutcome`.
     """
     policy = policy or RepairPolicy()
     sleeper = sleep or (lambda _seconds: None)

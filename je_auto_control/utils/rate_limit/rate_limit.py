@@ -23,13 +23,20 @@ from typing import Callable, Dict, Optional
 from je_auto_control.utils.exception.exceptions import AutoControlException
 
 
+def _positive_finite(value: float) -> bool:
+    return math.isfinite(value) and value > 0
+
+
 class TokenBucket:
     """A token-bucket limiter: ``rate`` tokens/sec up to ``capacity`` burst."""
 
     def __init__(self, rate: float, capacity: float, *,
                  clock: Callable[[], float] = time.monotonic) -> None:
-        if rate <= 0 or capacity <= 0:
-            raise AutoControlException("rate and capacity must be positive")
+        # NaN passed `<= 0` (every comparison with NaN is false): a NaN
+        # rate or capacity let every request through, or spun a waiter at
+        # 100% CPU. Values arrive from JSON via AC_rate_limit.
+        if not (_positive_finite(rate) and _positive_finite(capacity)):
+            raise AutoControlException("rate and capacity must be positive finite numbers")
         self._rate = float(rate)
         self._capacity = float(capacity)
         self._clock = clock
@@ -101,8 +108,8 @@ class SlidingWindowLimiter:
 
     def __init__(self, limit: int, window_s: float, *,
                  clock: Callable[[], float] = time.monotonic) -> None:
-        if limit <= 0 or window_s <= 0:
-            raise AutoControlException("limit and window_s must be positive")
+        if not (limit > 0 and _positive_finite(window_s)):
+            raise AutoControlException("limit and window_s must be positive (window_s finite)")
         self._limit = int(limit)
         self._window = float(window_s)
         self._clock = clock

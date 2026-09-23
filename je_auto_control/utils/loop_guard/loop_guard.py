@@ -15,6 +15,7 @@ stuck one) and the offline trajectory evaluator. Pure standard library
 """
 import hashlib
 import json
+import threading
 from collections import deque
 from dataclasses import dataclass
 from typing import Any, Deque, Optional, Tuple
@@ -58,16 +59,23 @@ class LoopGuard:
         self._warn = warn
         self._critical = critical
         self._events: Deque[Tuple[str, str]] = deque(maxlen=window)
+        # default_loop_guard is shared by every executor thread (socket, REST,
+        # scheduler); classifying while another thread appended raised
+        # "deque mutated during iteration".
+        self._lock = threading.Lock()
 
     def reset(self) -> None:
         """Forget all observed steps."""
-        self._events.clear()
+        with self._lock:
+            self._events.clear()
 
     def observe(self, tool: str, args: Any = None,
                 result_digest: str = "") -> LoopVerdict:
-        """Record a step and return the strongest stuck-loop verdict."""
-        self._events.append((f"{tool}:{_args_key(args)}", result_digest))
-        pattern, count = self._classify()
+        """Record a step and return the strongest stuck-loop verdict. Thread-safe."""
+        key = f"{tool}:{_args_key(args)}"
+        with self._lock:
+            self._events.append((key, result_digest))
+            pattern, count = self._classify()
         return LoopVerdict(pattern, self._level(pattern, count), count)
 
     def _classify(self) -> Tuple[Optional[str], int]:
