@@ -33,6 +33,9 @@ class _FakeVideoWriter:
         self.writes = 0
         self.released = False
 
+    def isOpened(self):  # noqa: N802 - cv2 name
+        return True
+
     def write(self, _frame):
         self.writes += 1
 
@@ -54,7 +57,7 @@ def test_stop_before_run_is_honored(monkeypatch):
         thread.stop()
         return frame
 
-    monkeypatch.setattr(sr, "screenshot", screenshot_bounds_the_buggy_path)
+    monkeypatch.setattr(thread, "_grab", screenshot_bounds_the_buggy_path)
 
     thread.stop()      # stop BEFORE the thread body runs
     thread.run()       # run synchronously
@@ -75,10 +78,12 @@ def test_normal_run_writes_frames_and_releases(monkeypatch):
             thread.stop()
         return frame
 
-    monkeypatch.setattr(sr, "screenshot", screenshot_stop_after_two)
+    monkeypatch.setattr(thread, "_grab", screenshot_stop_after_two)
     thread.run()
 
-    assert thread.video_writer.writes == 2
+    # Frames are paced to 30 fps, so two captures write at least two frames
+    # (more if the second capture came after two frame intervals).
+    assert thread.video_writer.writes >= 2
     assert thread.video_writer.released is True
 
 

@@ -58,6 +58,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260924-32 | 2026-09-24 | Screen recordings play back at their real length; unusable writers are refused; iOS find_element honours its timeout | #bugfix #audit | [2026-09](2026-09.md) |
 | U-20260924-31 | 2026-09-24 | Executor: AC_run_dag expanded once, nested AC_execute_action inherits strictness, every repeated or unwound action keeps its record | #bugfix #audit #executor | [2026-09](2026-09.md) |
 | U-20260924-30 | 2026-09-24 | AC_parallel branches inherit strictness, macro depth and failure counting; string branches are validated before anything runs | #bugfix #audit #executor | [2026-09](2026-09.md) |
 | U-20260924-29 | 2026-09-24 | Versioned store keeps its high-water marks and locks CAS; config-bundle import copies before writing; cassettes redact credentials and check match fields | #bugfix #security #audit | [2026-09](2026-09.md) |
@@ -190,7 +191,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | File | Period | Entries |
 |---|---|---:|
-| [2026-09.md](2026-09.md) | 2026-09 | 101 |
+| [2026-09.md](2026-09.md) | 2026-09 | 102 |
 | [2026-08-f.md](2026-08-f.md) | 2026-08 | 1 |
 | [2026-08-e.md](2026-08-e.md) | 2026-08 | 2 |
 | [2026-08-d.md](2026-08-d.md) | 2026-08 | 2 |

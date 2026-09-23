@@ -45,12 +45,16 @@ def find_element(name: Optional[str] = None,
     """Return the matched element's bounding rect ``(x1, y1, x2, y2)``."""
     handle = (device or default_ios_device()).handle
     query = _build_query(handle, name, class_name, predicate)
-    if not query.wait(timeout=float(timeout_s)):
+    element = query.wait(timeout=float(timeout_s))
+    if not element:
         raise ElementNotFoundError(
             f"no XCUITest element matched name={name!r} "
             f"class_name={class_name!r} predicate={predicate!r}",
         )
-    bounds = query.bounds
+    # The element wait() found, not query.bounds: that looks the element up
+    # again with the client's own 30 s timeout, so an element gone in between
+    # took 30 s and surfaced as "device unavailable" instead of not found.
+    bounds = getattr(element, "bounds", None) or query.bounds
     x = int(getattr(bounds, "x", 0))
     y = int(getattr(bounds, "y", 0))
     width = int(getattr(bounds, "width", 0))

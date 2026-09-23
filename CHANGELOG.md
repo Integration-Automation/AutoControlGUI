@@ -290,6 +290,10 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Fixed
 
+- **Screen recordings play back at their real length** (frames are paced to
+  the declared fps), stop adding an `AC_screenshot` record per frame, and an
+  unusable frame rate, codec or path raises instead of leaving a recorder
+  that writes nothing; iOS `find_element` honours `timeout_s`.
 - **`AC_run_dag` node actions are placeholder-expanded once**, a nested
   `AC_execute_action` failure reaches the enclosing `AC_try`, and a top-level
   `AC_break` or a dry run no longer overwrites or collapses the record of a

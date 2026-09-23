@@ -19,8 +19,8 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 
 | 指標 | 數值 |
 | --- | ---: |
-| Python 模組總數（含周邊子專案） | 1,048 |
-| 程式碼總行數 | 146,462 |
+| Python 模組總數（含周邊子專案） | 1,049 |
+| 程式碼總行數 | 146,541 |
 | `je_auto_control/utils/` 子套件數 | 310 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 773 |
 | 套件門面 `__all__` 公開名稱數 | 1,241 |
@@ -260,7 +260,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `android/client.py` | 127 | `uiautomator2.Device` 的延遲封裝。 |
 | `android/find.py` | 107 | uiautomator2 widget 樹的元素查詢。 |
 | `ios/client.py` | 122 | `facebook-wda`（WebDriverAgent）封裝。 |
-| `ios/find.py` | 89 | XCUITest 無障礙查詢。 |
+| `ios/find.py` | 93 | XCUITest 無障礙查詢。 |
 | `ios/input.py` | 51 | iOS 觸控與按鍵原語。 |
 | `ios/screen.py` | 34 | iOS 裝置螢幕擷取與尺寸。 |
 
@@ -370,7 +370,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.5 影像辨識與畫面分析
 
-> 37 個套件、約 5,328 行。
+> 37 個套件、約 5,403 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -380,7 +380,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/color_region/` | 78 | 以顏色定位畫面區域（遮罩 + 連通元件） |
 | `utils/color_stats/` | 98 | 區域顏色統計：平均色與主色 |
 | `utils/coordinate_space/` | 84 | 模型網格座標與實體像素之間的座標空間對映 |
-| `utils/cv2_utils/` | 723 | OpenCV 基礎層：擷取後端選擇（`screen_grabber`，Pillow／mss 或平台後端）、截圖、樣板比對（走 `grab_logical`，涵蓋所有螢幕）、螢幕錄影、影片錄製、連通元件、影像堆疊的取用口（`optional`，Windows arm64 沒有 wheel 時語意報錯）、非 ASCII 路徑也讀寫得到的影像檔存取（`image_file`） |
+| `utils/cv2_utils/` | 798 | OpenCV 基礎層：擷取後端選擇（`screen_grabber`，Pillow／mss 或平台後端）、截圖、樣板比對（走 `grab_logical`，涵蓋所有螢幕）、螢幕錄影、影片錄製（兩者都經 `frame_clock` 依 fps 配速）、連通元件、影像堆疊的取用口（`optional`，Windows arm64 沒有 wheel 時語意報錯）、非 ASCII 路徑也讀寫得到的影像檔存取（`image_file`） |
 | `utils/edge_lines/` | 120 | 以 Hough 轉換偵測線條／格線／分隔線 |
 | `utils/edge_match/` | 112 | 邊緣形狀（Chamfer／距離轉換）樣板比對 |
 | `utils/feature_match/` | 130 | ORB 特徵比對：在旋轉／縮放／主題變更下定位樣板 |
@@ -845,7 +845,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `semantic_recording/` | `enrich.py`（加錨點）、`replay.py`（換機重播）、`self_healing.py`（自癒重播） |
 | `tls_acme/` | `challenge.py`、`keys.py`、`renewal.py` |
 | `pytest_plugin/` | `plugin.py`（pytest11 進入點）、`keywords.py`、`bdd_steps.py`（Gherkin） |
-| `cv2_utils/` | `screen_grabber.py`、`screenshot.py`、`template_detection.py`、`screen_record.py`、`video_recording.py`、`blobs.py`、`optional.py`、`image_file.py` |
+| `cv2_utils/` | `screen_grabber.py`、`screenshot.py`、`template_detection.py`、`screen_record.py`、`video_recording.py`、`frame_clock.py`、`blobs.py`、`optional.py`、`image_file.py` |
 | `action_lint/` | `linter.py`、`schema.py`、`__main__.py`（CI 使用） |
 | `time_travel/` | `controller.py`、`player.py` |
 | `dag/` | `graph.py`、`runner.py` |
@@ -1080,6 +1080,6 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `osx/` | 17 | 919 |
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 837 |
-| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 676 | 50,738 |
-| **總計** | **1,042** | **146,397** |
+| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 677 | 50,817 |
+| **總計** | **1,043** | **146,476** |
 

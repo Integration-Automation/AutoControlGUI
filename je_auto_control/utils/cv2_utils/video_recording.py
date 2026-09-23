@@ -1,6 +1,8 @@
 import threading
 
+from je_auto_control.utils.cv2_utils.frame_clock import record_paced
 from je_auto_control.utils.cv2_utils.screen_grabber import mss_grabber
+from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 
 
@@ -61,12 +63,13 @@ class RecordingThread(threading.Thread):
                 return
 
             try:
-                while self.recording_flag:
-                    # 擷取螢幕畫面 Capture screen frame
-                    screen_image = sct.grab(resolution)
-                    image_rgb = cv2.cvtColor(np.array(screen_image), cv2.COLOR_BGRA2BGR)
-                    video_writer.write(image_rgb)
-            except (cv2.error, ValueError, RuntimeError) as error:
+                # Paced to self.fps: written as fast as capture allowed, a
+                # 2 s recording played back as 18 s at 20 fps.
+                record_paced(
+                    lambda: self.recording_flag,
+                    lambda: cv2.cvtColor(np.array(sct.grab(resolution)), cv2.COLOR_BGRA2BGR),
+                    video_writer.write, self.fps)
+            except (cv2.error, ValueError, RuntimeError, AutoControlException) as error:
                 autocontrol_logger.error("RecordingThread error: %r", error)
             finally:
                 video_writer.release()
