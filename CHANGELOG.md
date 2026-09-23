@@ -251,6 +251,11 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Fixed
 
+- **A NaN timeout raises `ValueError` instead of polling forever** in
+  `AC_wait_image`, `AC_wait_pixel`, `expect_poll`, the app-idle, IME, lock
+  and window waits and OCR `wait_for_text`; the MCP image and pixel waits no
+  longer report an immediate timeout for one.
+
 - **Quoted command lines work on Windows.** `AC_shell_command`,
   `AC_exec_shell_to_var` and `ac_shell` pass the string to `CreateProcess`
   as written instead of re-quoting `shlex` tokens that still held their

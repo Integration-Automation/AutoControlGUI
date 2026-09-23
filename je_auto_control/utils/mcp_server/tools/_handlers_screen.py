@@ -10,6 +10,7 @@ import os
 from typing import Any, Dict, List, Optional
 
 from je_auto_control.utils.mcp_server.tools._base import MCPContent
+from je_auto_control.utils.timeouts import deadline_after
 
 
 # === Screen / image / OCR ===================================================
@@ -99,7 +100,7 @@ def wait_for_image(image_path: str, timeout: float = 10.0,
     from je_auto_control.utils.exception.exceptions import ImageNotFoundException
     from je_auto_control.wrapper.auto_control_image import locate_image_center as _loc
     poll_seconds = max(0.05, float(poll))
-    deadline = _time.monotonic() + float(timeout)
+    deadline = deadline_after(_time.monotonic(), timeout)
     while _time.monotonic() < deadline:
         if ctx is not None:
             ctx.check_cancelled()
@@ -129,7 +130,7 @@ def wait_for_pixel(x: int, y: int, target_rgb: List[int],
     target = [int(c) for c in target_rgb[:3]]
     tol = max(0, int(tolerance))
     poll_seconds = max(0.05, float(poll))
-    deadline = _time.monotonic() + float(timeout)
+    deadline = deadline_after(_time.monotonic(), timeout)
     while _time.monotonic() < deadline:
         if ctx is not None:
             ctx.check_cancelled()

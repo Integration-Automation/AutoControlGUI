@@ -24,6 +24,7 @@ from typing import Any, Callable, Dict, List, Optional, Sequence
 
 from je_auto_control.utils.session_guard import is_session_locked
 from je_auto_control.utils.session_guard.session_guard import LockProbe
+from je_auto_control.utils.timeouts import deadline_after
 
 # A driver performs the lock and returns whether it succeeded.
 LockDriver = Callable[[], bool]
@@ -105,7 +106,7 @@ def _wait_lock_state(target_locked: bool, *, probe: Optional[LockProbe],
                      clock: Callable[[], float],
                      sleep: Callable[[float], None]) -> bool:
     """Poll until the lock state equals ``target_locked`` or timeout."""
-    deadline = clock() + float(timeout_s)
+    deadline = deadline_after(clock(), timeout_s, "timeout_s")
     while True:
         if bool(is_session_locked(probe)) == target_locked:
             return True

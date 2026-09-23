@@ -15,6 +15,7 @@ from dataclasses import dataclass
 from typing import Any, Callable, Dict
 
 from je_auto_control.utils.exception.exceptions import AutoControlActionException
+from je_auto_control.utils.timeouts import deadline_after
 
 Matcher = Callable[[Any], bool]
 
@@ -97,7 +98,7 @@ def expect_poll(getter: Callable[[], Any], matcher: Matcher, *,
     if interval_s <= 0:
         raise ValueError("interval_s must be positive")
     start = clock()
-    deadline = start + float(timeout_s)
+    deadline = deadline_after(start, timeout_s, "timeout_s")
     attempts = 0
     value: Any = None
     while True:

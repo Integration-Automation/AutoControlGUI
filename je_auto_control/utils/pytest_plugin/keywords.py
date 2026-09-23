@@ -8,6 +8,8 @@ from __future__ import annotations
 
 from typing import Optional, Tuple
 
+from je_auto_control.utils.timeouts import deadline_after
+
 
 def keyword_click_image(image_path: str,
                         button: str = "mouse_left",
@@ -55,7 +57,7 @@ def keyword_wait_for_image(image_path: str,
         ImageNotFoundException,
     )
     from je_auto_control.wrapper.auto_control_image import locate_image_center
-    deadline = time.monotonic() + float(timeout)
+    deadline = deadline_after(time.monotonic(), timeout)
     last_error: Optional[BaseException] = None
     while time.monotonic() < deadline:
         try:

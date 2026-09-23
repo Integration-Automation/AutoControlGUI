@@ -86,7 +86,7 @@ def wait_until_screen_stable(*,
         raise ValueError(_TIMEOUT_POSITIVE)
     if not poll_interval_s > 0:
         raise ValueError(_POLL_POSITIVE)
-    if stable_for_s < 0:
+    if not stable_for_s >= 0:
         raise ValueError("stable_for_s must be >= 0")
     grab = sampler or _default_sampler
     started = time.monotonic()
@@ -313,7 +313,7 @@ def wait_until_file(path: str, *,
         raise ValueError(_TIMEOUT_POSITIVE)
     if not poll_interval_s > 0:
         raise ValueError(_POLL_POSITIVE)
-    if stable_for_s < 0:
+    if not stable_for_s >= 0:
         raise ValueError("stable_for_s must be >= 0")
     read = stat_reader or _default_file_size
     tracker = _StableSize(float(stable_for_s), int(min_size))
@@ -450,7 +450,7 @@ def wait_until_gone(present: Callable[[], bool], *,
         raise ValueError(_TIMEOUT_POSITIVE)
     if not poll_interval_s > 0:
         raise ValueError(_POLL_POSITIVE)
-    if gone_for_s < 0:
+    if not gone_for_s >= 0:
         raise ValueError("gone_for_s must be >= 0")
     started = time.monotonic()
     deadline = started + float(timeout_s)

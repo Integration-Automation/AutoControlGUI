@@ -23,6 +23,7 @@ from je_auto_control.utils.executor.flow_data_commands import (
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.wrapper.auto_control_image import locate_image_center
 from je_auto_control.wrapper.auto_control_screen import get_pixel
+from je_auto_control.utils.timeouts import deadline_after
 
 
 class LoopBreak(Exception):
@@ -114,7 +115,7 @@ def exec_wait_image(executor: Any, args: Mapping[str, Any]) -> bool:
     threshold = float(args.get("threshold", 0.8))
     timeout = float(args.get("timeout", 10.0))
     poll = max(float(args.get("poll", 0.2)), 0.01)
-    deadline = time.monotonic() + timeout
+    deadline = deadline_after(time.monotonic(), timeout)
     # Probe before checking the deadline: timeout=0 means "look once",
     # not "never look".
     while True:
@@ -134,7 +135,7 @@ def exec_wait_pixel(executor: Any, args: Mapping[str, Any]) -> bool:
     tolerance = int(args.get("tolerance", 0))
     timeout = float(args.get("timeout", 10.0))
     poll = max(float(args.get("poll", 0.2)), 0.01)
-    deadline = time.monotonic() + timeout
+    deadline = deadline_after(time.monotonic(), timeout)
     while True:  # probe first, as in exec_wait_image
         if _pixel_matches(x, y, rgb, tolerance):
             return True
