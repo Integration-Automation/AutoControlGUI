@@ -17,6 +17,11 @@ Syntax           Meaning
 ``[?(@.k op v)]`` filter array elements (``op`` ∈ ``== != < <= > >=``)
 ================ ===================================================
 
+A filter field may be nested (``@.a.b``), and ``[?(@.k)]`` keeps the elements
+that have ``k``. Values of different types never compare equal (``true != 1``).
+A path the subset cannot read -- an unsupported filter, an unterminated ``[``,
+a stray character -- raises ``ValueError`` instead of matching something else.
+
 Pure standard library (``re``); imports no ``PySide6``.
 
 Headless API

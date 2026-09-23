@@ -33,6 +33,12 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Changed
 
+- **JSONPath refuses what it cannot read.** `json_query` raises `ValueError`
+  for an unsupported filter, an unterminated `[` or a stray character (an
+  unsupported filter used to match every element). Filters take nested
+  fields (`@.a.b`) and existence tests (`[?(@.k)]`), `true` no longer equals
+  `1`, and a bare key may contain `-`.
+
 - **More MCP tools are destructive.** Tools that run action lists or code,
   send input, delete data, send data off the machine or loosen a security
   control carry `destructiveHint: true`, so
@@ -173,6 +179,13 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
   package does no PKCS#7 decryption, so the `>=48.0.1` floor is unchanged.
 
 ### Fixed
+
+- **JSON Patch, JSONPath and unified diffs follow their specs.** JSON Patch
+  `add` accepts an index equal to the array length and no longer shares its
+  value with the patch; `move` checks its source. `apply_unified` places
+  `-N,0` insertion hunks correctly, keeps body lines that start with `---` /
+  `+++` and skips `\ No newline` markers. `three_way_merge` reports two
+  insertions at one point as a conflict and applies an identical change once.
 
 - **MCP read-only mode and the confirmation gate hold.** `ac_bulkhead_run`
   and `ac_run_chaos` no longer run action lists in read-only mode; file

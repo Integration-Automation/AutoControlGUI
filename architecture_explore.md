@@ -20,7 +20,7 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 | 指標 | 數值 |
 | --- | ---: |
 | Python 模組總數（含周邊子專案） | 1,045 |
-| 程式碼總行數 | 144,072 |
+| 程式碼總行數 | 144,155 |
 | `je_auto_control/utils/` 子套件數 | 310 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 773 |
 | 套件門面 `__all__` 公開名稱數 | 1,239 |
@@ -413,7 +413,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.6 OCR 與文字理解
 
-> 19 個套件、約 3,208 行。
+> 19 個套件、約 3,247 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -432,7 +432,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/reading_flow/` | 119 | 以遞迴 XY-cut 推導欄位感知的閱讀順序 |
 | `utils/search_index/` | 142 | 記憶體內 BM25／TF-IDF 全文檢索 |
 | `utils/text_blocks/` | 88 | 把 OCR 行組成段落與項目符號／編號清單 |
-| `utils/text_diff/` | 148 | unified diff 產生、套用與三方合併 |
+| `utils/text_diff/` | 187 | unified diff 產生、套用與三方合併 |
 | `utils/text_normalize/` | 72 | Unicode 正規化與 slug 產生 |
 | `utils/text_regions/` | 161 | 免模型的畫面文字區域偵測（MSER）：區域與行 |
 | `utils/text_similarity/` | 165 | 字串距離度量（文字比對用） |
@@ -597,7 +597,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.13 資料來源、結構驗證與 i18n
 
-> 24 個套件、約 3,955 行。
+> 24 個套件、約 3,999 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -611,9 +611,9 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/gettext_catalog/` | 296 | GNU gettext 目錄 I/O（解析 .po、編譯／讀取 .mo、訊息查詢） |
 | `utils/i18n_test/` | 130 | 國際化／在地化測試輔助 |
 | `utils/json_contract/` | 135 | JSON 契約／快照比對：`match_json`、`diff_json`、`snapshot_json` |
-| `utils/json_patch/` | 312 | JSON Pointer（6901）、JSON Patch（6902）與 Merge Patch（7386） |
+| `utils/json_patch/` | 322 | JSON Pointer（6901）、JSON Patch（6902）與 Merge Patch（7386） |
 | `utils/json_schema/` | 374 | JSON Schema（Draft 2020-12 子集）驗證 |
-| `utils/jsonpath/` | 179 | 精簡 JSONPath 查詢 |
+| `utils/jsonpath/` | 213 | 精簡 JSONPath 查詢 |
 | `utils/list_format/` | 72 | 地區感知清單格式化（CLDR 風格的「A、B 和 C」） |
 | `utils/locale_collation/` | 128 | 地區感知字串排序（決定性多層排序鍵） |
 | `utils/locale_parse/` | 68 | 地區感知數字／貨幣／日期解析與格式化（選用 babel） |
@@ -1079,6 +1079,6 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `osx/` | 17 | 919 |
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 783 |
-| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 674 | 49,047 |
-| **總計** | **1,039** | **144,007** |
+| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 674 | 49,130 |
+| **總計** | **1,039** | **144,090** |
 

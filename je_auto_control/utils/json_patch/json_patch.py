@@ -52,15 +52,22 @@ def _split_pointer(pointer: str) -> List[str]:
     return refs
 
 
-def _array_index(ref: str, length: int, *, allow_end: bool = False) -> int:
+def _array_index(ref: str, length: int, *, allow_end: bool = False,
+                 inserting: bool = False) -> int:
+    """Index ``ref`` addresses in a list of ``length``.
+
+    ``inserting`` also accepts ``length`` itself: RFC 6902 ``add`` may insert
+    at the end by number as well as by ``-``. Digits must be ASCII --
+    ``str.isdigit`` also accepts ``²`` and Arabic-Indic digits.
+    """
     if ref == "-":
         if allow_end:
             return length
         raise PatchError("array index '-' is not valid here")
-    if not ref.isdigit() or (len(ref) > 1 and ref[0] == "0"):
+    if not (ref.isascii() and ref.isdigit()) or (len(ref) > 1 and ref[0] == "0"):
         raise PatchError(f"invalid array index {ref!r}")
     index = int(ref)
-    if index >= length:
+    if index > length or (index == length and not inserting):
         raise PatchError(f"array index {index} out of range")
     return index
 
@@ -116,7 +123,7 @@ def _assign(parent: Any, ref: str, value: Any, *, insert: bool) -> None:
     if isinstance(parent, dict):
         parent[ref] = value
     elif isinstance(parent, list):
-        index = _array_index(ref, len(parent), allow_end=True)
+        index = _array_index(ref, len(parent), allow_end=True, inserting=insert)
         if insert:
             parent.insert(index, value)
         elif index == len(parent):
@@ -166,7 +173,9 @@ def _op_add(doc: Any, op: Dict[str, Any]) -> Any:
     refs = _split_pointer(op["path"])
     if not refs:
         return copy.deepcopy(op["value"])
-    _assign(_walk(doc, refs[:-1]), refs[-1], op["value"], insert=True)
+    # A copy: the patch's own value must not become part of the document,
+    # or a later op editing the document edits the caller's patch too.
+    _assign(_walk(doc, refs[:-1]), refs[-1], copy.deepcopy(op["value"]), insert=True)
     return doc
 
 
@@ -184,7 +193,7 @@ def _op_replace(doc: Any, op: Dict[str, Any]) -> Any:
         return copy.deepcopy(op["value"])
     parent = _walk(doc, refs[:-1])
     _child(parent, refs[-1])  # must exist
-    _assign(parent, refs[-1], op["value"], insert=False)
+    _assign(parent, refs[-1], copy.deepcopy(op["value"]), insert=False)
     return doc
 
 
@@ -197,6 +206,7 @@ def _is_prefix(prefix: str, pointer: str) -> bool:
 def _op_move(doc: Any, op: Dict[str, Any]) -> Any:
     source, dest = op["from"], op["path"]
     if source == dest:
+        resolve_pointer(doc, source)   # RFC 6902 4.4: "from" MUST exist
         return doc
     if _is_prefix(source, dest):
         raise PatchError("cannot move a value into its own child")

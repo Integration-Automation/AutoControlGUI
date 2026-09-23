@@ -8,7 +8,8 @@ had no headless primitive. This adds the missing pieces. The complement,
 
 Operates on lines split without keep-ends and rejoined with ``\\n`` (a trailing
 newline is preserved); ``\\r\\n`` and missing-final-newline nuances are out of
-scope. Pure standard library (``difflib`` + ``re``); imports no ``PySide6``.
+scope -- a ``\\ No newline at end of file`` marker is skipped, not applied.
+Pure standard library (``difflib`` + ``re``); imports no ``PySide6``.
 """
 import difflib
 import re
@@ -17,7 +18,7 @@ from typing import List, Tuple
 
 from je_auto_control.utils.exception.exceptions import AutoControlException
 
-_HUNK_RE = re.compile(r"^@@ -(\d+)(?:,\d+)? \+(\d+)(?:,\d+)? @@")
+_HUNK_RE = re.compile(r"^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@")
 
 
 class PatchApplyError(AutoControlException):
@@ -64,6 +65,40 @@ def _apply_hunk(source: List[str], out: List[str], cursor: int,
     return cursor
 
 
+def _read_hunk(lines: List[str], index: int, old_left: int,
+               new_left: int) -> Tuple[List[str], int]:
+    """The hunk body starting at ``index``, read by the header's line counts.
+
+    Counting is what tells a removed ``-- comment`` line (``--- comment``)
+    or an added ``++x`` line from a file header; skipping every line that
+    starts with ``---`` / ``+++`` dropped them. ``\\`` marker lines are
+    skipped.
+    """
+    body: List[str] = []
+    while index < len(lines) and (old_left > 0 or new_left > 0):
+        line = lines[index]
+        index += 1
+        tag = line[:1]
+        if tag == "\\":
+            continue
+        old_left -= tag != "+"
+        new_left -= tag != "-"
+        body.append(line)
+    while index < len(lines) and lines[index][:1] == "\\":
+        index += 1
+    return body, index
+
+
+def _hunk_start(match: "re.Match") -> int:
+    """0-based source line the hunk starts at.
+
+    ``-N,0`` (a pure insertion, from ``-U0`` diffs) means "after line N",
+    so it starts at N, not N - 1.
+    """
+    old_start = int(match.group(1))
+    return old_start if match.group(2) == "0" else old_start - 1
+
+
 def apply_unified(text: str, diff: str) -> str:
     """Apply a unified ``diff`` to ``text``; raise on context mismatch."""
     source = text.splitlines()
@@ -76,15 +111,11 @@ def apply_unified(text: str, diff: str) -> str:
         if match is None:
             index += 1
             continue
-        start = int(match.group(1)) - 1
+        start = _hunk_start(match)
         out.extend(source[cursor:start])
         cursor = max(cursor, start)
-        index += 1
-        body = []
-        while index < len(lines) and not lines[index].startswith("@@"):
-            if lines[index][:3] not in ("---", "+++"):
-                body.append(lines[index])
-            index += 1
+        body, index = _read_hunk(lines, index + 1, int(match.group(2) or 1),
+                                 int(match.group(4) or 1))
         cursor = _apply_hunk(source, out, cursor, body)
     out.extend(source[cursor:])
     trailing = "\n" if text.endswith("\n") else ""
@@ -100,9 +131,14 @@ def _changes(base: List[str], side: List[str]) -> List[Tuple[int, int, List[str]
 
 
 def _overlap(ours: List[Tuple], theirs: List[Tuple]) -> bool:
+    """Whether two change lists touch the same base lines.
+
+    Two insertions at the same point overlap too: which goes first is a
+    decision, and diff3 reports it as a conflict.
+    """
     for o_lo, o_hi, _ in ours:
         for t_lo, t_hi, _ in theirs:
-            if o_lo < t_hi and t_lo < o_hi:
+            if (o_lo < t_hi and t_lo < o_hi) or o_lo == o_hi == t_lo == t_hi:
                 return True
     return False
 
@@ -123,7 +159,10 @@ def three_way_merge(base: str, ours: str, theirs: str, *,
         return MergeResult(ours, conflicts=0, clean=True)
     base_lines = base.splitlines()
     ours_changes = _changes(base_lines, ours.splitlines())
-    theirs_changes = _changes(base_lines, theirs.splitlines())
+    # A change both sides made identically is one change, not a conflict
+    # (and not applied twice).
+    theirs_changes = [change for change in _changes(base_lines, theirs.splitlines())
+                      if change not in ours_changes]
     if _overlap(ours_changes, theirs_changes):
         return MergeResult(
             _conflict_block(ours, theirs, marker_size), conflicts=1, clean=False)
