@@ -295,6 +295,8 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Fixed
 
+- **Key names in file dialogs and popup rules**: the default "enter" confirm
+  key and "esc" / "enter" dismiss rules resolve to the Windows names.
 - **Input and form helpers**: computer-use and CUA key names resolve to the
   running platform's spelling (Enter, Esc, paging, Backspace, Alt and Super
   failed on Windows); CUA double clicks click twice and scrolls carry their

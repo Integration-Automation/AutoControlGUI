@@ -20,7 +20,7 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 | 指標 | 數值 |
 | --- | ---: |
 | Python 模組總數（含周邊子專案） | 1,049 |
-| 程式碼總行數 | 148,684 |
+| 程式碼總行數 | 148,690 |
 | `je_auto_control/utils/` 子套件數 | 310 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 774 |
 | 套件門面 `__all__` 公開名稱數 | 1,241 |
@@ -323,7 +323,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.3 排程、觸發與背景監看
 
-> 11 個套件、約 3,954 行。
+> 11 個套件、約 3,957 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -336,7 +336,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/session_guard/` | 62 | 驅動輸入前先偵測工作階段是否已鎖定／非互動 |
 | `utils/triggers/` | 1,241 | 事件驅動觸發引擎：影像／視窗／像素／檔案／webhook／IMAP 郵件 |
 | `utils/voice/` | 87 | 語音指令路由：把辨識到的語句對應到 `AC_*` action list |
-| `utils/watchdog/` | 180 | 背景彈窗／中斷看門狗，供無人值守自動化 |
+| `utils/watchdog/` | 183 | 背景彈窗／中斷看門狗，供無人值守自動化 |
 | `utils/watcher/` | 82 | 無頭輪詢原語：滑鼠位置、像素顏色、log tail |
 
 ### 5.4.4 輸入模擬與動作品質
@@ -670,7 +670,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.16 系統、視窗與剪貼簿
 
-> 16 個套件、約 2,520 行。
+> 16 個套件、約 2,523 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -680,7 +680,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/clipboard_history/` | 114 | 剪貼簿歷史：環形緩衝 + 背景輪詢器 |
 | `utils/clipboard_rich_formats/` | 328 | 豐富剪貼簿格式 — RTF 與 CSV/TSV 編解碼 + Windows 存取 |
 | `utils/file_assoc/` | 92 | 解析哪個應用程式被註冊來開啟某副檔名 |
-| `utils/file_dialog/` | 63 | 驅動原生檔案 開啟／儲存／資料夾選擇 對話框 |
+| `utils/file_dialog/` | 66 | 驅動原生檔案 開啟／儲存／資料夾選擇 對話框 |
 | `utils/file_drop/` | 96 | 以 WM_DROPFILES 把檔案拖放到視窗 |
 | `utils/rich_clipboard/` | 131 | 豐富剪貼簿格式 — HTML（CF_HTML）建構／解析／存取 |
 | `utils/shell_open/` | 97 | 以預設應用開啟檔案，或以預設瀏覽器開啟 URL |
@@ -1080,6 +1080,6 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `osx/` | 17 | 919 |
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 837 |
-| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 677 | 52,641 |
-| **總計** | **1,043** | **148,619** |
+| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 677 | 52,647 |
+| **總計** | **1,043** | **148,625** |
 

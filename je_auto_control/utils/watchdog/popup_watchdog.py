@@ -166,8 +166,11 @@ def _window_action(title: str, action: str,
         return close
 
     def press_key() -> None:
+        from je_auto_control.utils.cua_action.cua_action import resolve_key_name
         from je_auto_control.wrapper.auto_control_keyboard import type_keyboard
-        type_keyboard(action)
+        # "esc" / "enter" dismiss rules name keys the Windows table spells
+        # "escape" / "return".
+        type_keyboard(resolve_key_name(action))
     return press_key
 
 

@@ -58,6 +58,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260924-53 | 2026-09-24 | File-dialog confirm and popup-watchdog keys resolve to the platform's key names | #bugfix #audit | [2026-09](2026-09.md) |
 | U-20260924-52 | 2026-09-24 | Input and form helpers: platform key names for computer use, linted flow bodies, working gamepad clicks and dpad, RTF code pages | #bugfix #audit #agent | [2026-09](2026-09.md) |
 | U-20260924-51 | 2026-09-24 | Media and analysis: exact bucket edges, converged KS p-values, normalised histogram intersection, honest video motion and visual-diff percentages | #bugfix #audit | [2026-09](2026-09.md) |
 | U-20260924-50 | 2026-09-24 | Image matching: screen coordinates everywhere, masked rotated templates, flat templates refused on every path, per-blob peaks | #bugfix #audit #vision | [2026-09](2026-09.md) |
@@ -211,7 +212,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | File | Period | Entries |
 |---|---|---:|
-| [2026-09.md](2026-09.md) | 2026-09 | 122 |
+| [2026-09.md](2026-09.md) | 2026-09 | 123 |
 | [2026-08-f.md](2026-08-f.md) | 2026-08 | 1 |
 | [2026-08-e.md](2026-08-e.md) | 2026-08 | 2 |
 | [2026-08-d.md](2026-08-d.md) | 2026-08 | 2 |
