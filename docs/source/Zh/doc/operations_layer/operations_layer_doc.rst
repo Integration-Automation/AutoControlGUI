@@ -146,7 +146,9 @@ CLI::
 
 動作（POST）：
 
-- ``/execute`` — body ``{"actions": [...]}`` — 執行動作清單
+- ``/execute`` — body ``{"actions": [...], "raise_on_error": false}`` — 執行動作清單；
+  ``raise_on_error`` 為 true 時在第一個失敗的動作停下，回 ``{"ok": false, "error": ...}``
+  （成功則回 ``{"ok": true, "result": ...}``）
 - ``/execute_file`` — body ``{"path": "..."}`` — 執行 JSON 動作檔
 
 Executor 指令::
@@ -203,6 +205,10 @@ Headless::
    results = client.broadcast_execute(
        actions=[["AC_get_mouse_position"]],
    )
+
+傳 ``raise_on_error=True`` 時，每台主機在第一個失敗的動作停下，並以
+``ok: false`` 附上錯誤回報；否則 ``ok`` 只代表主機有回應，動作失敗記在
+``result`` 裡。DAG runner 的遠端節點與 Admin Console 分頁都會傳這個參數。
 
 持久化：主機儲存在 ``~/.je_auto_control/admin_hosts.json``\ （POSIX 上
 模式 0600）。建構時自動 reload。

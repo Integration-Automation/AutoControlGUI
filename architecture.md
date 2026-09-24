@@ -142,6 +142,11 @@ new, add it to both.
 `je_web_runner` is not a declared dependency; when it is missing the bridge raises `WebRunnerBridgeError`.
 Moving that WebRunner module breaks the bridge.
 
+**Wire contract between AutoControl versions:** the Admin Console and DAG remote nodes drive other hosts through
+REST `POST /execute` (`{"actions": [...], "raise_on_error": bool}`), and those hosts may run an older release.
+A new body field must be optional and safe to ignore — an old host drops `raise_on_error` and answers the pre-flag
+`{"result": ...}`, which the client still reads as `ok: true`.
+
 **Import-time contracts**
 
 - `import je_auto_control` must not load PySide6; the GUI window is imported only inside `start_autocontrol_gui()`.

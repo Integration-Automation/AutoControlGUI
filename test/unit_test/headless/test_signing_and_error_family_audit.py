@@ -23,7 +23,7 @@ def test_an_unsigned_file_is_not_sent_to_a_remote_host(tmp_path, monkeypatch):
     sent = []
 
     class _Console:
-        def broadcast_execute(self, actions, labels):
+        def broadcast_execute(self, actions, labels, raise_on_error=False):
             sent.append((actions, labels))
             return [{"ok": True, "result": "ran"}]
 

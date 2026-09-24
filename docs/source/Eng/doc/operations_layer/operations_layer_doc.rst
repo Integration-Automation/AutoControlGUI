@@ -154,7 +154,9 @@ Read-only (GET):
 
 Action (POST):
 
-- ``/execute`` — body ``{"actions": [...]}`` — runs an action list
+- ``/execute`` — body ``{"actions": [...], "raise_on_error": false}`` — runs an action list;
+  with ``raise_on_error`` it stops at the first failing action and answers
+  ``{"ok": false, "error": ...}`` (success: ``{"ok": true, "result": ...}``)
 - ``/execute_file`` — body ``{"path": "..."}`` — runs a JSON action file
 
 Executor commands::
@@ -212,6 +214,11 @@ Headless::
    results = client.broadcast_execute(
        actions=[["AC_get_mouse_position"]],
    )
+
+Pass ``raise_on_error=True`` to have each host stop at its first failing
+action and report ``ok: false`` with the error; otherwise ``ok`` only means
+the host answered, and action failures are recorded inside ``result``. The
+DAG runner's remote nodes and the Admin Console tab both pass it.
 
 Persistence: hosts are saved to ``~/.je_auto_control/admin_hosts.json``
 (mode 0600 on POSIX). Reload happens automatically on construction.

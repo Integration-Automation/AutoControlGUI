@@ -216,6 +216,15 @@ _ENDPOINT_METADATA: Dict[Tuple[str, str], Dict[str, Any]] = {
                     "description": "List of [command, args] action tuples.",
                     "items": {"type": "array"},
                 },
+                "raise_on_error": {
+                    "type": "boolean",
+                    "default": False,
+                    "description": (
+                        "Stop at the first failing action and answer "
+                        "{ok: false, error}; success answers {ok: true, "
+                        "result}. When false (the default) every action "
+                        "runs and failures are recorded inside 'result'."),
+                },
             },
         },
         "errors": {

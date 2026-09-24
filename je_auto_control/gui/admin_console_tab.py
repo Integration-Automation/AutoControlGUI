@@ -195,7 +195,8 @@ class AdminConsoleTab(TranslatableMixin, QWidget):
         except ValueError as error:
             QMessageBox.warning(self, _t("admin_broadcast_run"), str(error))
             return
-        results = self._client.broadcast_execute(actions=actions)
+        # Each host stops at its first failing action and its row says so.
+        results = self._client.broadcast_execute(actions=actions, raise_on_error=True)
         self._broadcast_output.setPlainText(
             json.dumps(results, indent=2, ensure_ascii=False, default=str),
         )

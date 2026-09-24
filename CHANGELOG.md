@@ -15,6 +15,10 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Added
 
+- REST `POST /execute` accepts `"raise_on_error": true`: the run stops at
+  the first failing action and answers `{"ok": false, "error": ...}`.
+  `AdminConsoleClient.broadcast_execute(raise_on_error=True)` reports such a
+  host as `ok: false`.
 - `HistoryStore.list_runs(script_path=...)`, and `environ=` on
   `validate_config` / `ConfigSchema.validate`.
 - **`AC_idempotency_release`** / MCP `ac_idempotency_release` / Script
@@ -310,6 +314,9 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Fixed
 
+- A DAG remote node whose actions failed on the host no longer counts as
+  succeeded, and the Admin Console broadcast shows a remote action failure
+  as a failed host.
 - **GUI threads**:
   - Admin Console refresh and thumbnails, and the USB Browser and passthrough actions, now run; their workers were collected before starting.
   - Worker results are applied on the GUI thread.

@@ -215,19 +215,6 @@ claim 標成需排空，丟掉下一個回覆——但 host 若根本沒回，�
 
 ---
 
-## Admin console 廣播的 `ok` 只代表 HTTP 200
-
-`TODO` — 讓遠端 `/execute` 的動作失敗也能回報成失敗
-
-`utils/admin/admin_client.py`（`_execute_one`）在 host 回 200 時一律 `ok: True`；遠端 `/execute` 以
-`raise_on_error=False` 執行，動作失敗只出現在結果內容裡（例如 `{"execute: [...]": "TypeError(...)"}`）。
-`utils/dag/runner.py:270` 的遠端節點因此把失敗的節點算成成功，本機路徑早已用 `raise_on_error=True` 修正過。
-
-**做法**：REST `/execute` 接受並轉交 `raise_on_error`（失敗時回非 200 或 `ok: false`），admin client 與 DAG 遠端
-節點帶上它；同時更新 REST 的 OpenAPI 描述與 `architecture.md` §6（其他工具也會呼叫 `/execute`）。
-
----
-
 ## 全域 executor 的變數會留到下一次執行
 
 `DECIDE` — 每次頂層執行要不要有自己的變數範圍（行為改動，維護者拍板）

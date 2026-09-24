@@ -267,7 +267,9 @@ def _default_remote_runner(node: DagNode,
     from je_auto_control.utils.admin.admin_client import default_admin_console
     console = default_admin_console()
     actions = _resolve_remote_actions(node)
-    rows = console.broadcast_execute(actions, labels=[node.host])
+    # raise_on_error, as the local runner does: a host that answered 200 but
+    # whose actions failed used to count as a succeeded node.
+    rows = console.broadcast_execute(actions, labels=[node.host], raise_on_error=True)
     if not rows:
         raise RuntimeError(
             f"no registered admin host with label {node.host!r}",

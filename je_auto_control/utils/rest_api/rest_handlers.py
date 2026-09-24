@@ -164,15 +164,38 @@ def _reject_bad_action_list(actions: Any) -> Optional[HandlerResult]:
     return None
 
 
+def _execute_strict(actions: Any) -> HandlerResult:
+    """Run ``actions`` so the first failing action stops the run and is reported.
+
+    A failed action is the caller's result rather than a server fault, so it
+    comes back as ``200 {"ok": false, "error": ...}``. Without this a remote
+    run whose every action failed still read as a success to its caller:
+    the default run records failures inside ``result`` and returns 200.
+    """
+    from je_auto_control.utils.executor.action_executor import executor
+    try:
+        result = executor.execute_action(actions, raise_on_error=True)
+    except Exception as error:  # noqa: BLE001  # pylint: disable=broad-except  # reason: REST boundary; the failure is the response
+        autocontrol_logger.info("rest execute stopped on a failed action: %r", error)
+        return 200, {"ok": False, "error": f"{type(error).__name__}: {error}"}
+    return 200, {"ok": True, "result": result}
+
+
 def handle_execute(ctx: RouteContext) -> HandlerResult:
     if not isinstance(ctx.body, dict):
         return 400, {"error": "body must be JSON object"}
     actions = ctx.body.get("actions")
     if actions is None:
         return 400, {"error": "missing 'actions' field"}
+    try:
+        strict = _body_bool(ctx.body, "raise_on_error", False)
+    except ValueError as error:
+        return 400, {"error": str(error)}
     rejection = _reject_bad_action_list(actions)
     if rejection is not None:
         return rejection
+    if strict:
+        return _execute_strict(actions)
     try:
         from je_auto_control.utils.executor.action_executor import execute_action
         result = execute_action(actions)
