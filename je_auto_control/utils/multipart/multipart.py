@@ -43,9 +43,24 @@ def _iter_fields(fields: Fields) -> List[Tuple[str, str]]:
     return list(fields)
 
 
+# The HTML multipart/form-data encoding: a quote or line break in a name or
+# filename would end the parameter or the header line, letting a caller-
+# supplied name inject headers and whole extra parts.
+_PARAM_ESCAPES = {'"': "%22", "\r": "%0D", "\n": "%0A"}
+_PARAM_UNESCAPES = {value: key for key, value in _PARAM_ESCAPES.items()}
+
+
+def _quote_param(value: str) -> str:
+    return "".join(_PARAM_ESCAPES.get(char, char) for char in str(value))
+
+
+def _unquote_param(value: str) -> str:
+    return re.sub(r"%(22|0D|0A)", lambda match: _PARAM_UNESCAPES[match.group(0)], value)
+
+
 def _field_part(boundary: str, name: str, value: str) -> bytes:
     head = (f"--{boundary}\r\n"
-            f'Content-Disposition: form-data; name="{name}"\r\n\r\n')
+            f'Content-Disposition: form-data; name="{_quote_param(name)}"\r\n\r\n')
     return head.encode("utf-8") + _to_bytes(value) + b"\r\n"
 
 
@@ -59,9 +74,11 @@ def _as_file(spec: Union[MultipartFile, Mapping[str, Any]]) -> MultipartFile:
 
 
 def _file_part(boundary: str, spec: MultipartFile) -> bytes:
+    if "\r" in spec.content_type or "\n" in spec.content_type:
+        raise ValueError(f"content_type contains a line break: {spec.content_type!r}")
     head = (f"--{boundary}\r\n"
-            f'Content-Disposition: form-data; name="{spec.name}"; '
-            f'filename="{spec.filename}"\r\n'
+            f'Content-Disposition: form-data; name="{_quote_param(spec.name)}"; '
+            f'filename="{_quote_param(spec.filename)}"\r\n'
             f"Content-Type: {spec.content_type}\r\n\r\n")
     return head.encode("utf-8") + _to_bytes(spec.content) + b"\r\n"
 
@@ -79,7 +96,8 @@ def build_multipart(fields: Fields = None,
 
 
 def _boundary_of(content_type: str) -> Optional[str]:
-    match = re.search(r"boundary=([^;]+)", content_type or "")
+    # Parameter names are case-insensitive: "Boundary=B" is the boundary too.
+    match = re.search(r'(?i)boundary=("[^"]*"|[^;]+)', content_type or "")
     return match.group(1).strip().strip('"') if match else None
 
 
@@ -92,13 +110,21 @@ def _disp_params(header_block: bytes) -> Dict[str, str]:
     return headers
 
 
+_DISPOSITION_PARAM = re.compile(r';\s*([^\s=;]+)\s*=\s*("(?:[^"\\]|\\.)*"|[^;]*)')
+
+
 def _disposition_params(disposition: str) -> Dict[str, str]:
+    """Parameters of a Content-Disposition value, quoted or bare.
+
+    Splitting on every ";" broke a quoted ``filename="a;b.txt"``, and a bare
+    token value (``name=a``) was dropped.
+    """
     params: Dict[str, str] = {}
-    for segment in disposition.split(";"):
-        key, sep, value = segment.partition("=")
-        value = value.strip()
-        if sep and len(value) >= 2 and value[0] == '"' and value[-1] == '"':
-            params[key.strip()] = value[1:-1]
+    for match in _DISPOSITION_PARAM.finditer(disposition):
+        value = match.group(2).strip()
+        if len(value) >= 2 and value[0] == '"' and value[-1] == '"':
+            value = re.sub(r"\\(.)", r"\1", value[1:-1])
+        params.setdefault(match.group(1).lower(), _unquote_param(value))
     return params
 
 
@@ -121,11 +147,21 @@ def parse_multipart(content_type: str, body: bytes) -> Dict[str, Any]:
         raise ValueError("content_type has no multipart boundary")
     fields: Dict[str, str] = {}
     files: List[Dict[str, Any]] = []
-    for chunk in body.split(b"--" + boundary.encode("utf-8")):
-        trimmed = chunk.strip(b"\r\n")
-        if not trimmed or trimmed == b"--":
+    # A delimiter is CRLF + "--" + boundary; the CRLF belongs to it, not to
+    # the part before. Stripping every CR and LF around a part cut the line
+    # breaks a value ended with, and "--boundary" inside a line split it.
+    chunks = (b"\r\n" + body).split(b"\r\n--" + boundary.encode("utf-8"))
+    for chunk in chunks[1:]:
+        if chunk.startswith(b"--"):
+            break
+        _, newline, part = chunk.partition(b"\r\n")  # transport padding
+        if not newline:
             continue
-        head, sep, content = trimmed.partition(b"\r\n\r\n")
-        if sep:
-            _assign_part(_disp_params(head), content, fields, files)
+        if part.startswith(b"\r\n"):
+            head, content = b"", part[2:]
+        else:
+            head, sep, content = part.partition(b"\r\n\r\n")
+            if not sep:
+                continue
+        _assign_part(_disp_params(head), content, fields, files)
     return {"fields": fields, "files": files}

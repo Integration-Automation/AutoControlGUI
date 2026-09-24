@@ -19,6 +19,9 @@ from typing import Any, Dict, Mapping, Optional
 # are rejected); plain http is required for internal/localhost endpoints.
 _ALLOWED_SCHEMES = ("http://", "https://")  # NOSONAR python:S5332
 _DEFAULT_TIMEOUT = 30.0
+# The whole body is held in memory (and decoded, and parsed as JSON), so an
+# endless or huge response used to exhaust memory.
+MAX_RESPONSE_BYTES = 64 * 1024 * 1024
 
 
 def _validate_url(url: str) -> None:
@@ -55,6 +58,9 @@ def _encode_body(json_body: Any, data: Any) -> Optional[bytes]:
         return json.dumps(json_body).encode("utf-8")
     if data is None:
         return None
+    if isinstance(data, int):
+        # bytes(5) is five NUL bytes, not "5".
+        raise TypeError("data must be str or bytes, not int")
     return data.encode("utf-8") if isinstance(data, str) else bytes(data)
 
 
@@ -70,17 +76,44 @@ def _read_response(response: Any) -> Dict[str, Any]:
     if raw_status is None:
         raw_status = getattr(response, "code", 0)
     status = int(raw_status)
-    text = response.read().decode("utf-8", errors="replace")
+    body = response.read(MAX_RESPONSE_BYTES + 1)
+    if len(body) > MAX_RESPONSE_BYTES:
+        raise urllib.error.URLError(
+            f"response body exceeds {MAX_RESPONSE_BYTES} bytes")
+    text = body.decode("utf-8", errors="replace")
     raw_headers = getattr(response, "headers", None)
-    headers = dict(raw_headers.items()) if raw_headers else {}
+    headers, set_cookie = _collect_headers(raw_headers)
     return {
         "status": status,
         "ok": 200 <= status < 400,
         "headers": headers,
+        "set_cookie": set_cookie,
         "text": text,
         "json": _try_json(text),
         "url": getattr(response, "url", None),
     }
+
+
+def _collect_headers(raw_headers: Any) -> "tuple[Dict[str, str], list]":
+    """Response headers with repeats joined, plus every ``Set-Cookie`` value.
+
+    ``dict(headers.items())`` kept only the last of a repeated header, so a
+    second ``Link`` or ``Set-Cookie`` silently replaced the first. Repeats
+    are joined with ", " (RFC 9110 5.3) except ``Set-Cookie``, whose dates
+    contain commas: it keeps its last value under ``headers`` and all of
+    them in the list.
+    """
+    headers: Dict[str, str] = {}
+    set_cookie: list = []
+    for name, value in (raw_headers.items() if raw_headers else []):
+        if name.lower() == "set-cookie":
+            set_cookie.append(value)
+            headers[name] = value
+        elif name in headers:
+            headers[name] = f"{headers[name]}, {value}"
+        else:
+            headers[name] = value
+    return headers, set_cookie
 
 
 def build_call(url: str, method: str = "GET",
@@ -109,9 +142,10 @@ class _CheckedRedirectHandler(urllib.request.HTTPRedirectHandler):
         _validate_url(newurl)
         get_egress_policy().check(newurl)
         new_request = super().redirect_request(req, fp, code, msg, headers, newurl)
-        if new_request is not None and _host(newurl) != _host(req.full_url):
+        if new_request is not None and _origin(newurl) != _origin(req.full_url):
             # urllib carries every header over, so a redirect to another host
-            # received the Authorization meant for this one.
+            # received the Authorization meant for this one -- and a redirect
+            # from https to http on the same host sent it in the clear.
             for name in _CREDENTIAL_HEADERS:
                 new_request.remove_header(name)
         return new_request
@@ -124,8 +158,9 @@ class _RefusingRedirectHandler(urllib.request.HTTPRedirectHandler):
         return None
 
 
-def _host(url: str) -> str:
-    return (urllib.parse.urlsplit(url).netloc or "").lower()
+def _origin(url: str) -> "tuple[str, str]":
+    parts = urllib.parse.urlsplit(url)
+    return parts.scheme.lower(), (parts.netloc or "").lower()
 
 
 # Request.remove_header matches the capitalize()d spelling urllib stores.

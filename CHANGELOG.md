@@ -15,6 +15,8 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Added
 
+- `http_request` responses carry `set_cookie`, the list of every
+  `Set-Cookie` value.
 - **Failure-bundle manifests record `error_type`** beside the redacted
   message, which is empty for exceptions such as `TimeoutError()`.
 - **Config-sync routes on the signaling server.** `GET` / `PUT
@@ -290,6 +292,12 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Fixed
 
+- **HTTP family**: the egress policy matches the host urllib connects to
+  (percent-decoded, trailing dot, IP literals in any spelling); response
+  bodies and gzip/deflate decoding are capped at 64 MiB; repeated headers are
+  kept (`set_cookie` lists every `Set-Cookie`); credentials are dropped on an
+  https-to-http redirect; multipart names cannot inject parts and parsing keeps
+  line breaks; Link and URL normalisation follow RFC 8288 / RFC 3986.
 - **Process, secret and file boundaries**: recycling a symlink recycles the
   link, not its target; relative `file://` secret refs resolve under
   `base_dir`; cmd metacharacters in a `.bat` / `.cmd` argument list are

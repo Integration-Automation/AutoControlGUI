@@ -20,8 +20,9 @@ class _FakeResponse:
         self.headers = headers or {"Content-Type": "application/json"}
         self.url = url
 
-    def read(self):
-        return self._body
+    def read(self, size=-1):
+        # The client reads at most MAX_RESPONSE_BYTES + 1, like any file object.
+        return self._body if size < 0 else self._body[:size]
 
     def __enter__(self):
         return self

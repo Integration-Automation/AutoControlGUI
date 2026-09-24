@@ -72,7 +72,8 @@ def _from_document(document: Mapping[str, Any]) -> ProblemDetails:
     extensions = {key: value for key, value in document.items()
                   if key not in _REGISTERED}
     return ProblemDetails(
-        type=str(document.get("type", "about:blank")),
+        # A non-string type (null, 42) is treated as about:blank, not "None".
+        type=document["type"] if isinstance(document.get("type"), str) else "about:blank",
         title=document.get("title"),
         status=_coerce_status(document.get("status")),
         detail=document.get("detail"),

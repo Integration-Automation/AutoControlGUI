@@ -41,7 +41,7 @@ def _is_expired(attributes: Dict[str, str]) -> bool:
         try:
             return int(max_age) <= 0
         except ValueError:
-            return False
+            pass  # RFC 6265 5.2.2: ignore it, so a past Expires still deletes
     return _expires_passed(attributes.get("expires"))
 
 

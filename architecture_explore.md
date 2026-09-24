@@ -20,7 +20,7 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 | 指標 | 數值 |
 | --- | ---: |
 | Python 模組總數（含周邊子專案） | 1,049 |
-| 程式碼總行數 | 146,893 |
+| 程式碼總行數 | 147,101 |
 | `je_auto_control/utils/` 子套件數 | 310 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 773 |
 | 套件門面 `__all__` 公開名稱數 | 1,241 |
@@ -526,7 +526,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.11 伺服器、網路協定與外部整合
 
-> 24 個套件、約 6,254 行。
+> 24 個套件、約 6,430 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -536,13 +536,13 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/email_send/` | 116 | SMTP 寄信（email 觸發器的發送端搭檔） |
 | `utils/events/` | 82 | 對外 CloudEvents 發送（執行生命週期事件） |
 | `utils/http_cassette/` | 153 | 錄製／重播 HTTP 互動，做離線決定性 API 測試 |
-| `utils/http_client/` | 193 | 零依賴 HTTP(S) 用戶端，供 action 步驟呼叫 API |
-| `utils/http_conditional/` | 107 | 條件式 HTTP 請求與快取驗證器 |
-| `utils/http_content/` | 103 | HTTP 內容協商與回應解壓縮 |
-| `utils/http_problem/` | 116 | RFC 9457 problem+json 解析 |
+| `utils/http_client/` | 228 | 零依賴 HTTP(S) 用戶端，供 action 步驟呼叫 API |
+| `utils/http_conditional/` | 108 | 條件式 HTTP 請求與快取驗證器 |
+| `utils/http_content/` | 148 | HTTP 內容協商與回應解壓縮 |
+| `utils/http_problem/` | 117 | RFC 9457 problem+json 解析 |
 | `utils/jwt/` | 219 | JWT（HMAC 家族）編碼、解碼與 claim 驗證 |
-| `utils/link_header/` | 115 | RFC 8288 Link header 解析與分頁 |
-| `utils/multipart/` | 139 | multipart/form-data 建構與解析 |
+| `utils/link_header/` | 146 | RFC 8288 Link header 解析與分頁 |
+| `utils/multipart/` | 175 | multipart/form-data 建構與解析 |
 | `utils/notify/` | 95 | 跨平台桌面通知 |
 | `utils/notify_channels/` | 100 | 對外聊天／webhook 通知（Slack／Discord／Teams／raw） |
 | `utils/otp/` | 37 | TOTP 一次性密碼產生（自動化 2FA 登入） |
@@ -552,7 +552,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/socket_server/` | 156 | 執行 action JSON 的執行緒式 TCP 指令伺服器（預設綁 127.0.0.1） |
 | `utils/sse_client/` | 126 | Server-Sent Events 用戶端解析 |
 | `utils/tls_acme/` | 455 | TLS 自動化：HTTP-01 挑戰伺服器、金鑰／CSR、自動續期 |
-| `utils/url_canon/` | 117 | RFC 3986 URL 正規化與查詢字串工具 |
+| `utils/url_canon/` | 144 | RFC 3986 URL 正規化與查詢字串工具 |
 | `utils/webrunner_bridge/` | 161 | 把 action JSON 橋接到 WebRunner（`je_web_runner`） |
 
 ### 5.4.12 報表、可觀測性與測試治理
@@ -629,12 +629,12 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.14 安全、機密與合規
 
-> 13 個套件、約 2,568 行。
+> 13 個套件、約 2,600 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
 | `utils/config_redaction/` | 85 | 設定結構與 log 字串的機密遮蔽 |
-| `utils/egress/` | 114 | 無頭 HTTP 用戶端的網路外連允許清單守衛 |
+| `utils/egress/` | 146 | 無頭 HTTP 用戶端的網路外連允許清單守衛 |
 | `utils/governance/` | 231 | 治理：maker-checker 核准閘門與即時憑證租約 |
 | `utils/license_policy/` | 139 | 以 SBOM 元件評估 SPDX 授權允許／拒絕政策 |
 | `utils/provenance/` | 104 | SLSA 建置來源證明（in-toto v1） |
@@ -1080,6 +1080,6 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `osx/` | 17 | 919 |
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 837 |
-| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 677 | 51,055 |
-| **總計** | **1,043** | **146,828** |
+| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 677 | 51,263 |
+| **總計** | **1,043** | **147,036** |
 

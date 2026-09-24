@@ -15,8 +15,11 @@ in *allow-all* mode, so there is no behavior change until an operator calls
 Pure standard library; imports no ``PySide6``.
 """
 import fnmatch
+import ipaddress
+import re
+import socket
 from typing import List, Optional, Sequence, Union
-from urllib.parse import urlparse
+from urllib.parse import unquote, urlparse
 
 Patterns = Optional[Union[str, Sequence[str]]]
 
@@ -26,17 +29,46 @@ def _as_patterns(value: Patterns) -> Optional[List[str]]:
     if value is None:
         return None
     items = value.split(",") if isinstance(value, str) else list(value)
-    return [str(item).strip().lower() for item in items if str(item).strip()]
+    patterns = [str(item).strip().lower().rstrip(".") for item in items]
+    return [_canonical_ip(pattern) or pattern for pattern in patterns if pattern]
 
 
 class EgressBlocked(ValueError):
     """Raised when a URL's host is not permitted by the egress policy."""
 
 
+_NUMERIC_HOST = re.compile(r"^[0-9a-fx.]+$")
+
+
 def _host_of(url: str) -> Optional[str]:
-    """Return the lowercase hostname of ``url``, or ``None`` if absent."""
+    """Return the canonical hostname of ``url``, or ``None`` if absent.
+
+    The literal hostname was matched, but urllib connects to the decoded
+    one: ``%65vil.com`` reached ``evil.com``, ``evil.com.`` is the same host,
+    and ``2130706433`` / ``0x7f.1`` / ``[::ffff:127.0.0.1]`` all name
+    127.0.0.1 -- each walked past a deny list. Names are still matched as
+    names; what they resolve to is not checked.
+    """
     host = urlparse(url).hostname
-    return host.lower() if host else None
+    if not host:
+        return None
+    host = unquote(host).lower().rstrip(".")
+    return _canonical_ip(host) or host or None
+
+
+def _canonical_ip(host: str) -> Optional[str]:
+    """Dotted-quad / compressed form of an IP literal in any spelling, else None."""
+    try:
+        address = ipaddress.ip_address(host)
+    except ValueError:
+        if not _NUMERIC_HOST.match(host):
+            return None
+        try:  # the legacy forms getaddrinfo accepts: 2130706433, 0x7f.1, 127.1
+            address = ipaddress.ip_address(socket.inet_aton(host))
+        except OSError:
+            return None
+    mapped = getattr(address, "ipv4_mapped", None)
+    return str(mapped or address)
 
 
 class EgressPolicy:

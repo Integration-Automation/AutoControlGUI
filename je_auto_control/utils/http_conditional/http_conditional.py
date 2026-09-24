@@ -87,7 +87,8 @@ def is_fresh(validators: Mapping[str, Any], age_seconds: float) -> bool:
     if cache_control.get("no-store") or cache_control.get("no-cache"):
         return False
     max_age = cache_control.get("max-age")
-    if isinstance(max_age, int):
+    # A bare "max-age" parses as True, and bool is an int.
+    if isinstance(max_age, int) and not isinstance(max_age, bool):
         return age_seconds < max_age
     return False
 

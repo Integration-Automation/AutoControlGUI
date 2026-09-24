@@ -94,7 +94,7 @@ class SSEParser:
             self._data.append(value)
         elif field == "id" and "\x00" not in value:
             self._last_id = value
-        elif field == "retry" and value.isdigit():
+        elif field == "retry" and value.isascii() and value.isdigit():
             self._retry = int(value)
 
     def _dispatch(self) -> Optional[SSEEvent]:

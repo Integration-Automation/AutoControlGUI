@@ -58,6 +58,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260924-38 | 2026-09-24 | HTTP family: egress matches the connected host, bounded bodies and decompression, safe multipart, RFC-correct Link and URL handling | #bugfix #audit #security #http | [2026-09](2026-09.md) |
 | U-20260924-37 | 2026-09-24 | Process, secret and file boundaries: links recycled not targets, base-relative secret refs, batch-file arguments, fuller log redaction | #bugfix #audit #security | [2026-09](2026-09.md) |
 | U-20260924-36 | 2026-09-24 | Queues and durable state: numbered claims, failed resumable steps retried, releasable idempotency keys, thread-safe dedup and outbox | #bugfix #audit #queue | [2026-09](2026-09.md) |
 | U-20260924-35 | 2026-09-24 | Agent requests time out and resend only recent screenshots; empty tool filters, empty plans and stray VLM coordinates refused | #bugfix #audit #agent #llm #vision | [2026-09](2026-09.md) |
@@ -196,7 +197,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | File | Period | Entries |
 |---|---|---:|
-| [2026-09.md](2026-09.md) | 2026-09 | 107 |
+| [2026-09.md](2026-09.md) | 2026-09 | 108 |
 | [2026-08-f.md](2026-08-f.md) | 2026-08 | 1 |
 | [2026-08-e.md](2026-08-e.md) | 2026-08 | 2 |
 | [2026-08-d.md](2026-08-d.md) | 2026-08 | 2 |
