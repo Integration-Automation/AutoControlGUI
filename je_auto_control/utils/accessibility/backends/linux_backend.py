@@ -61,9 +61,15 @@ _PROPERTIES = "org.freedesktop.DBus.Properties"
 _COORDS_SCREEN = 0
 
 #: Bit positions in the ``GetState`` bitfield that this backend reads.
+_STATE_ACTIVE = 1
 _STATE_ENABLED = 8
 _STATE_FOCUSED = 12
 _STATE_SELECTED = 25
+
+#: How many accessibles one focus search may examine. The search only enters
+#: active windows, but a window can still hold a table with thousands of rows,
+#: and "which one is focused?" must not turn into a walk of all of them.
+_FOCUS_SCAN_LIMIT = 5000
 
 #: A reference to one accessible: the owning application's bus name and the
 #: object path inside it.
@@ -374,6 +380,25 @@ class LinuxAccessibilityBackend(AccessibilityBackend):
                 autocontrol_logger.info("set_focus failed: %r", error)
                 return False
 
+    def focused_element(self) -> Optional[AccessibilityElement]:
+        """The accessible holding focus, searched inside active windows only.
+
+        AT-SPI has no "what is focused?" call on the bus, so this looks for
+        ``STATE_FOCUSED`` -- but only below top-level windows that are
+        ``STATE_ACTIVE``, which is where keyboard focus lives.
+        """
+        self._require()
+        with _AtspiConnection() as connection:
+            for application in connection.children(connection.root):
+                owner = _safe_name(connection, application)
+                for window in _children_or_none(connection, application):
+                    if not _has_state(connection, window, _STATE_ACTIVE):
+                        continue
+                    found = _focused_below(connection, window, owner)
+                    if found is not None:
+                        return found
+        return None
+
     def get_state(self, name: Optional[str] = None,
                   role: Optional[str] = None, app_name: Optional[str] = None,
                   automation_id: Optional[str] = None,
@@ -428,6 +453,37 @@ def _convert(connection: _AtspiConnection, reference: Reference,
         native_id=reference[1],
         enabled=bool(bits & (1 << _STATE_ENABLED)),
     )
+
+
+def _children_or_none(connection: _AtspiConnection,
+                      reference: Reference) -> List[Reference]:
+    """Children of ``reference``; none when it went away while being asked."""
+    try:
+        return connection.children(reference)
+    except DBusError:
+        return []
+
+
+def _has_state(connection: _AtspiConnection, reference: Reference,
+               bit: int) -> bool:
+    try:
+        return bool(connection.state(reference) & (1 << bit))
+    except DBusError:
+        return False
+
+
+def _focused_below(connection: _AtspiConnection, window: Reference,
+                   app_name: str,
+                   limit: int = _FOCUS_SCAN_LIMIT) -> Optional[AccessibilityElement]:
+    """Depth-first search of one window for the focused accessible, bounded."""
+    stack = [window]
+    while stack and limit > 0:
+        limit -= 1
+        reference = stack.pop()
+        if _has_state(connection, reference, _STATE_FOCUSED):
+            return _convert(connection, reference, app_name)
+        stack.extend(reversed(_children_or_none(connection, reference)))
+    return None
 
 
 def _outside_window(window: Optional[AccessibilityElement],

@@ -32,6 +32,13 @@ class MacOSAccessibilityBackend(AccessibilityBackend):
     def __init__(self) -> None:
         self.available = _is_available()
 
+    def _require(self) -> None:
+        if not self.available:
+            raise AccessibilityNotAvailableError(
+                "pyobjc (ApplicationServices, AppKit) is required for "
+                "macOS accessibility",
+            )
+
     def list_elements(self, app_name: Optional[str] = None,
                       max_results: int = 200,
                       window_title: Optional[str] = None,
@@ -40,11 +47,7 @@ class MacOSAccessibilityBackend(AccessibilityBackend):
         # per-application, and returning nothing would be worse than returning
         # the application's elements unscoped.
         del window_title
-        if not self.available:
-            raise AccessibilityNotAvailableError(
-                "pyobjc (ApplicationServices, AppKit) is required for "
-                "macOS accessibility",
-            )
+        self._require()
         import ApplicationServices as ax_module
         import AppKit
 
@@ -68,6 +71,32 @@ class MacOSAccessibilityBackend(AccessibilityBackend):
             if len(results) >= max_results:
                 break
         return results[:max_results]
+
+    def focused_element(self) -> Optional[AccessibilityElement]:
+        """The frontmost application's ``AXFocusedUIElement``, or None.
+
+        Asked of the frontmost application rather than the system-wide
+        element: the system-wide query answers ``kAXErrorCannotComplete``
+        (-25204) in environments where the per-application one works, and it
+        would still need a second call to learn which application owns the
+        answer.
+        """
+        self._require()
+        import ApplicationServices as ax_module
+        import AppKit
+
+        app = AppKit.NSWorkspace.sharedWorkspace().frontmostApplication()
+        if app is None:
+            return None
+        name = str(app.localizedName() or "")
+        pid = int(app.processIdentifier())
+        root = ax_module.AXUIElementCreateApplication(pid)
+        err, element = ax_module.AXUIElementCopyAttributeValue(
+            root, "AXFocusedUIElement", None,
+        )
+        if err or element is None:
+            return None
+        return _convert_ax(ax_module, element, name, pid)
 
     def _walk(self, ax_module, element, app_name: str, pid: int,
               results: List[AccessibilityElement], max_results: int) -> None:

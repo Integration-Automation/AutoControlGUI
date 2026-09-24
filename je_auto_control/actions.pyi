@@ -38,6 +38,9 @@ def AC_a11y_find_all(
 ) -> List[dict]:
     """Executor adapter: every matching accessibility element, best match first."""
 
+def AC_a11y_focused(app_name: str | None = ...) -> dict | None:
+    """Executor adapter: the element holding keyboard focus, as a dict."""
+
 def AC_a11y_list(app_name: str | None = ..., max_results: int = ..., window_title: str | None = ...) -> List[dict]:
     """Executor adapter: list accessibility elements as plain dicts."""
 
@@ -2213,7 +2216,7 @@ def AC_realize_item(
 ) -> Dict[str, Any]:
     """Adapter: find + realize a virtualized list/grid item (VirtualizedItem)."""
 
-def AC_record() -> None:
+def AC_record() -> bool:
     """start record keyboard and mouse event until stop_record"""
 
 def AC_redact_config(obj: Any, mask: str = ...) -> Dict[str, Any]:

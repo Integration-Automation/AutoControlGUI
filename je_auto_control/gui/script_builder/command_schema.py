@@ -1784,6 +1784,11 @@ def _add_native_control_specs(specs: List[CommandSpec]) -> None:
         description="Switch a control to the named view (MultipleViewPattern).",
     ))
     specs.append(CommandSpec(
+        "AC_a11y_focused", _NATIVE_UI, "Get Focused Element",
+        fields=(FieldSpec("app_name", FieldType.STRING, optional=True),),
+        description="Read the element holding keyboard focus (None if none).",
+    ))
+    specs.append(CommandSpec(
         "AC_wait_for_focus_change", _NATIVE_UI, "Wait for Focus Change",
         fields=(FieldSpec("timeout", FieldType.FLOAT, optional=True,
                           default=5.0),),

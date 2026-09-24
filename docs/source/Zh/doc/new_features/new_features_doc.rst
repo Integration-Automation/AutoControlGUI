@@ -228,18 +228,24 @@ Action-JSON 指令：``AC_locate_text``、``AC_click_text``、
 Accessibility 元件搜尋
 ======================
 
-透過作業系統無障礙樹查詢控制項（Windows UIA 透過 ``uiautomation``；
-macOS AX），支援依名稱 / 角色 / 應用程式過濾::
+透過作業系統無障礙樹查詢控制項（Windows UIA 透過 ``comtypes``；macOS AX
+透過 pyobjc；Linux AT-SPI 透過 D-Bus），支援依名稱 / 角色 / 應用程式過濾::
 
    import je_auto_control as ac
 
    elements = ac.list_accessibility_elements(app_name="Calculator")
    ok = ac.find_accessibility_element(name="OK", role="Button")
    ac.click_accessibility_element(name="OK", app_name="Calculator")
+   field = ac.focused_accessibility_element()   # 鍵盤焦點所在元素，或 None
+
+``focused_accessibility_element(app_name=None)`` 回傳目前擁有鍵盤焦點的元素，
+沒有焦點時回傳 ``None``；指定 ``app_name`` 時，焦點元素不屬於該應用程式就回傳
+``None``。無障礙錄製器追蹤的就是這個元素。
 
 當前平台若沒有可用後端會拋出 ``AccessibilityNotAvailableError``。
-Action-JSON 指令：``AC_a11y_list``、``AC_a11y_find``、
-``AC_a11y_click``。GUI：**Accessibility** 分頁。
+Action-JSON 指令：``AC_a11y_list``、``AC_a11y_find``、``AC_a11y_find_all``、
+``AC_a11y_focused``、``AC_a11y_click``。GUI：**Accessibility** 分頁
+（Actions 選單：*顯示焦點元素*）。
 
 
 VLM（AI）元件定位

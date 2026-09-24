@@ -3,10 +3,10 @@
 The pure-Python recorder polls a snapshot fetcher at a configurable
 interval and emits an event whenever the observed element (by name +
 role) changes, or when its bounds shift by more than ``min_movement_px``
-pixels. The default fetcher observes the first element
-:func:`find_accessibility_element` returns for ``app_name`` -- not the
-focused element, which no backend exposes yet; pass a ``fetcher`` that
-reads focus to track it. macOS's native AXObserver
+pixels. The default fetcher observes the element holding keyboard focus
+(:func:`focused_accessibility_element`), and only on a backend that cannot
+report focus falls back to the first element
+:func:`find_accessibility_element` returns for ``app_name``. macOS's native AXObserver
 API would be lower-latency but requires the pyobjc run-loop bridge;
 polling is good enough for human-speed automation playback and works
 on Windows / Linux through the same interface.
@@ -189,12 +189,23 @@ def _now_iso() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="milliseconds")
 
 
+def _observed_element(app_name: Optional[str]) -> Any:
+    """The focused element; the first element only where focus is unreadable."""
+    from je_auto_control.utils.accessibility.accessibility_api import (
+        find_accessibility_element, focused_accessibility_element,
+    )
+    from je_auto_control.utils.accessibility.element import (
+        AccessibilityNotAvailableError,
+    )
+    try:
+        return focused_accessibility_element(app_name=app_name)
+    except AccessibilityNotAvailableError:
+        return find_accessibility_element(app_name=app_name)
+
+
 def _default_fetcher(app_name: Optional[str]) -> Optional[Dict[str, Any]]:
     try:
-        from je_auto_control.utils.accessibility.accessibility_api import (
-            find_accessibility_element,
-        )
-        element = find_accessibility_element(app_name=app_name)
+        element = _observed_element(app_name)
     except (RuntimeError, OSError, ValueError):
         return None
     if element is None:

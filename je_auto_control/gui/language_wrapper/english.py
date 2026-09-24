@@ -966,6 +966,8 @@ english_word_dict = {
     "a11y_name_placeholder": "partial match",
     "a11y_refresh": "Refresh",
     "a11y_click_selected": "Click selected",
+    "a11y_show_focused": "Show focused element",
+    "a11y_no_focus": "Nothing has keyboard focus.",
     "a11y_col_app": "App",
     "a11y_col_role": "Role",
     "a11y_col_name": "Name",

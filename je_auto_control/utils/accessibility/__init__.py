@@ -5,7 +5,7 @@ from je_auto_control.utils.accessibility.accessibility_api import (
     control_invoke,
     control_set_value, control_toggle, dump_accessibility_tree,
     find_accessibility_element, find_accessibility_elements,
-    list_accessibility_elements, read_control_table,
+    focused_accessibility_element, list_accessibility_elements, read_control_table,
 )
 from je_auto_control.utils.accessibility.recorder import (
     AXRecorderEvent, AccessibilityRecorder,
@@ -20,7 +20,8 @@ __all__ = [
     "AccessibilityRecorder", "AXRecorderEvent", "AXTreeNode",
     "AXTreeWalker", "click_accessibility_element", "count_nodes",
     "dump_accessibility_tree", "find_accessibility_element",
-    "find_accessibility_elements", "list_accessibility_elements",
+    "find_accessibility_elements", "focused_accessibility_element",
+    "list_accessibility_elements",
     "max_depth",
     "control_get_state", "control_get_value", "control_set_value",
     "control_invoke",

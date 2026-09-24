@@ -49,7 +49,7 @@ from je_auto_control.utils.accessibility import (
     control_invoke,
     control_set_value, control_toggle, dump_accessibility_tree,
     find_accessibility_element, find_accessibility_elements,
-    list_accessibility_elements, read_control_table,
+    focused_accessibility_element, list_accessibility_elements, read_control_table,
 )
 # Extended UIA control patterns (Expand / Select / Range / Scroll)
 from je_auto_control.utils.control_patterns import (
@@ -1789,7 +1789,7 @@ __all__ = [
     "AccessibilityRecorder", "AXRecorderEvent", "AXTreeNode",
     "click_accessibility_element", "dump_accessibility_tree",
     "find_accessibility_element", "find_accessibility_elements",
-    "list_accessibility_elements",
+    "focused_accessibility_element", "list_accessibility_elements",
     "control_get_state", "control_get_value", "control_set_value",
     "control_invoke", "control_toggle", "read_control_table",
     "expand_control", "collapse_control", "control_expand_state",

@@ -839,6 +839,8 @@ traditional_chinese_word_dict = {
     "a11y_name_placeholder": "部分比對",
     "a11y_refresh": "重新整理",
     "a11y_click_selected": "點擊所選",
+    "a11y_show_focused": "顯示焦點元素",
+    "a11y_no_focus": "目前沒有元素擁有鍵盤焦點。",
     "a11y_col_app": "應用程式",
     "a11y_col_role": "角色",
     "a11y_col_name": "名稱",

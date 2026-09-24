@@ -765,6 +765,19 @@ def semantic_locator_tools() -> List[MCPTool]:
             annotations=READ_ONLY,
         ),
         MCPTool(
+            name="ac_a11y_focused",
+            description=("The accessibility element holding keyboard focus "
+                         "(name, role, bounds, app_name), or null when "
+                         "nothing is focused. With 'app_name' the answer is "
+                         "null unless the focused element belongs to that "
+                         "application."),
+            input_schema=schema({
+                "app_name": {"type": "string"},
+            }),
+            handler=h_loc.a11y_focused,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
             name="ac_a11y_find_all",
             description=("Every accessibility element matching the filters, "
                          "best name match first. Same options as "

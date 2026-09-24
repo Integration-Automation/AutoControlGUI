@@ -28,15 +28,15 @@
 | --- | ---: | --- |
 | `utils/mcp_server/tools/_handlers_executor_bridge.py` | 1,448 | 2026-09-23 拆 `_handlers.py` 時新建。252 個純委派（中位數 3 行）：`from action_executor import _x` 再 `return _x(...)`,沒有分支。**不套用 flat data tables 條款**——那一條講的是「一個對照表或清單」,這裡是 252 個函式定義。再切下去只能照 MCP 工廠領域分（159 個領域）,那會把同一種委派散進十幾個檔,而它們之間沒有語意邊界。規則照舊:只准變短。 |
 | `gui/remote_desktop/webrtc_panel.py` | 2,530 | 單一 Qt 面板,但已含連線、監視器選擇、頻寬自適應、麥克風、錄影五組互動狀態。應拆成 panel + 各控制器。 |
-| `utils/accessibility/backends/windows_backend.py` | 801 | 已拆出 `windows_query.py`（176）、`windows_state.py`（98）與 `windows_reads.py`（142,2026-09-23）。剩下的是同一套 UIA COM 生命週期管理,再拆會把 `CoInitialize`／介面釋放的配對邏輯切散。 |
+| `utils/accessibility/backends/windows_backend.py` | 805 | 已拆出 `windows_query.py`（193）、`windows_state.py`（98）與 `windows_reads.py`（142,2026-09-23;拆完 801,同日加焦點查詢的委派 +4）。剩下的是同一套 UIA COM 生命週期管理,再拆會把 `CoInitialize`／介面釋放的配對邏輯切散。 |
 
 **本質豁免（依 `CLAUDE.md` 的「flat data tables」條款,不算既有豁免）**:
-`utils/mcp_server/tools/_factories.py`（8,975,MCP 工具註冊表）、
-`utils/executor/action_executor.py`（8,131,`AC_*` 分派表）、
-`gui/script_builder/command_schema.py`（5,051,每個 `AC_*` 的參數 schema）、
+`utils/mcp_server/tools/_factories.py`（9,001,MCP 工具註冊表）、
+`utils/executor/action_executor.py`（8,260,`AC_*` 分派表）、
+`gui/script_builder/command_schema.py`（5,057,每個 `AC_*` 的參數 schema）、
 `je_auto_control/__init__.py`（1,970,門面 re-export）、
 `gui/language_wrapper/{english,japanese,traditional_chinese,simplified_chinese}.py`
-（1,318／1,205／1,191／1,190,語系字串表；2026-09-22 實測）。
+（1,326／1,213／1,193／1,192,語系字串表；以上皆 2026-09-23 實測）。
 
 ### 2026-08-19 決議:上表的實測行數就是新的上限
 
@@ -416,20 +416,3 @@ MCP 工具的檔案參數（`path`、`file_path`、`db`、`image_path`、`golden
 
 **為什麼要拍板**：根目錄從哪來（新的環境變數、沿用 `roots/list`、或兩者），唯讀模式要不要預設開啟；
 預設開啟會讓現有讀取工作區外檔案的用法失效。
-
----
-
-## 無障礙錄製器沒辦法追蹤焦點
-
-`TODO` — 各平台後端都缺「目前焦點元素」的查詢
-
-`utils/accessibility/recorder.py` 的 `_default_fetcher` 只能呼叫 `find_accessibility_element(app_name=...)`，
-拿到的是掃描到的第一個元素，不是焦點所在的元素；`AccessibilityElement` 也沒有焦點欄位。所以焦點從
-一個欄位移到另一個欄位時，錄製器偵測不到（2026-09-23 稽核重現；docstring 已改成照實描述）。
-
-**做法**：在 `utils/accessibility/backends/base.py` 加 `focused_element(app_name)`，Windows 用 UIA
-`GetFocusedElement`、Linux 用 AT-SPI 的 `STATE_FOCUSED`、macOS 用 `AXFocusedUIElement`，再讓
-`_default_fetcher` 改用它；無法取得時退回現在的行為。
-
-**要先想清楚**：三個後端都要能在 CI 上用假物件測；macOS 的 AX 呼叫需要 TCC 權限（CI runner 有）。
-

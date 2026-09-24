@@ -134,6 +134,15 @@ def _a11y_find_as_dict(name: Optional[str] = None,
     return None if element is None else element.to_dict()
 
 
+def _a11y_focused_as_dict(app_name: Optional[str] = None) -> Optional[dict]:
+    """Executor adapter: the element holding keyboard focus, as a dict."""
+    from je_auto_control.utils.accessibility.accessibility_api import (
+        focused_accessibility_element,
+    )
+    element = focused_accessibility_element(app_name=app_name)
+    return None if element is None else element.to_dict()
+
+
 def _a11y_find_all_as_dicts(name: Optional[str] = None,
                             role: Optional[str] = None,
                             app_name: Optional[str] = None,
@@ -7220,6 +7229,7 @@ class Executor:
             "AC_a11y_list": _a11y_list_as_dicts,
             "AC_a11y_find": _a11y_find_as_dict,
             "AC_a11y_find_all": _a11y_find_all_as_dicts,
+            "AC_a11y_focused": _a11y_focused_as_dict,
             "AC_a11y_click": click_accessibility_element,
             "AC_a11y_dump": _a11y_dump,
             "AC_walk_tree": _walk_tree,

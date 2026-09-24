@@ -36,6 +36,12 @@ def a11y_find(name: Optional[str] = None,
     return None if element is None else element.to_dict()
 
 
+def a11y_focused(app_name: Optional[str] = None) -> Optional[Dict[str, Any]]:
+    from je_auto_control.utils.accessibility import accessibility_api as api
+    element = api.focused_accessibility_element(app_name=app_name)
+    return None if element is None else element.to_dict()
+
+
 def a11y_find_all(name: Optional[str] = None,
                   role: Optional[str] = None,
                   app_name: Optional[str] = None,

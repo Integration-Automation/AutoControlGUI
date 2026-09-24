@@ -838,6 +838,8 @@ simplified_chinese_word_dict = {
     "a11y_name_placeholder": "部分匹配",
     "a11y_refresh": "刷新",
     "a11y_click_selected": "点击所选",
+    "a11y_show_focused": "显示焦点元素",
+    "a11y_no_focus": "当前没有元素拥有键盘焦点。",
     "a11y_col_app": "应用",
     "a11y_col_role": "角色",
     "a11y_col_name": "名称",

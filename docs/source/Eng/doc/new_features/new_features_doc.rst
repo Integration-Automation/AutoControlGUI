@@ -241,18 +241,25 @@ Action-JSON commands: ``AC_locate_text``, ``AC_click_text``,
 Accessibility element finder
 ============================
 
-Query the OS accessibility tree (Windows UIA via ``uiautomation``,
-macOS AX) by name / role / app name::
+Query the OS accessibility tree (Windows UIA via ``comtypes``, macOS AX
+via pyobjc, Linux AT-SPI over D-Bus) by name / role / app name::
 
    import je_auto_control as ac
 
    elements = ac.list_accessibility_elements(app_name="Calculator")
    ok = ac.find_accessibility_element(name="OK", role="Button")
    ac.click_accessibility_element(name="OK", app_name="Calculator")
+   field = ac.focused_accessibility_element()   # keyboard focus, or None
+
+``focused_accessibility_element(app_name=None)`` returns the element holding
+keyboard focus, or ``None`` when nothing is focused; with ``app_name`` it is
+``None`` unless the focused element belongs to that application. The
+accessibility recorder follows this element.
 
 Raises ``AccessibilityNotAvailableError`` on platforms where no backend
 is installed. Action-JSON commands: ``AC_a11y_list``, ``AC_a11y_find``,
-``AC_a11y_click``. GUI: **Accessibility** tab.
+``AC_a11y_find_all``, ``AC_a11y_focused``, ``AC_a11y_click``. GUI:
+**Accessibility** tab (Actions menu: *Show focused element*).
 
 
 VLM (AI) element locator

@@ -855,6 +855,8 @@ japanese_word_dict = {
     "a11y_name_placeholder": "部分一致",
     "a11y_refresh": "更新",
     "a11y_click_selected": "選択項目をクリック",
+    "a11y_show_focused": "フォーカス中の要素を表示",
+    "a11y_no_focus": "キーボードフォーカスを持つ要素がありません。",
     "a11y_col_app": "アプリ",
     "a11y_col_role": "ロール",
     "a11y_col_name": "名前",

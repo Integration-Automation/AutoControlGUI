@@ -23,6 +23,7 @@ from typing import Any, Iterator, List, Optional, Tuple, Type
 from je_auto_control.utils.accessibility.element import (
     AccessibilityNotAvailableError,
 )
+from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 
 TREE_SCOPE_DESCENDANTS = 4
 
@@ -126,6 +127,22 @@ def _is_null(element) -> bool:
     access`` the moment anything reads it. Truthiness is the check that works.
     """
     return element is None or not bool(element)
+
+
+def focused_raw(automation):
+    """The raw element holding keyboard focus, or ``None`` when none does.
+
+    ``GetFocusedElement`` answers with an error rather than an empty result
+    when focus is somewhere UIA cannot see -- the secure desktop, a window
+    being torn down -- and to a caller asking "what is focused?" that is the
+    same answer as nothing.
+    """
+    try:
+        element = automation.GetFocusedElement()
+    except UIA_ERRORS as error:
+        autocontrol_logger.info("UIA GetFocusedElement failed: %r", error)
+        return None
+    return None if _is_null(element) else element
 
 
 def _children(walker, node, request, limit: int) -> list:

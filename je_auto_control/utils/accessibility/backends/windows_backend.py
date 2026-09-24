@@ -19,7 +19,7 @@ from je_auto_control.utils.accessibility.element import (
     AccessibilityElement, AccessibilityNotAvailableError, element_matches,
 )
 from je_auto_control.utils.accessibility.backends.windows_query import (
-    UIA_ERRORS, search_roots, walk_elements,
+    UIA_ERRORS, focused_raw, search_roots, walk_elements,
 )
 from je_auto_control.utils.accessibility.backends.windows_state import (
     is_password, read_state,
@@ -723,6 +723,10 @@ class WindowsAccessibilityBackend(AccessibilityBackend):
             return True
         except _UIA_ERRORS:
             return False
+
+    def focused_element(self) -> Optional[AccessibilityElement]:
+        raw = focused_raw(self._ensure_automation())
+        return None if raw is None else _convert_uia(raw)
 
     @staticmethod
     def _read_row(pattern, row: int, cols: int):
