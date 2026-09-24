@@ -185,7 +185,10 @@ node is reported as ``skipped`` instead of attempted::
         ],
     })
 
-Executor: ``AC_run_dag``. GUI: **DAG Runner** tab.
+Pass ``stop_event=`` (a ``threading.Event``) to stop a run from another
+thread: running nodes finish, and every node not yet started is ``skipped``
+with the error ``"stopped"``. Executor: ``AC_run_dag``. GUI: **DAG Runner**
+tab, whose Actions menu has **Stop DAG**.
 
 
 Multi-viewer presence
@@ -221,8 +224,11 @@ coordinates mapped back to the screen::
     )
 
 Auto-detects display size; takes ``max_steps`` + ``wall_seconds``
-budgets so a runaway loop can't drain the API. Executor:
-``AC_computer_use``. GUI: **Computer Use** tab.
+budgets so a runaway loop can't drain the API; setting ``stop_event=`` (a
+``threading.Event``) ends the run before its next step, with
+``final_message`` ``"stopped"``. Executor: ``AC_computer_use``. GUI:
+**Computer Use** tab, whose Actions menu has **Stop**. Closing the window
+asks a running job to stop and waits up to 10 seconds for it.
 
 
 WebRunner executor + MCP integration

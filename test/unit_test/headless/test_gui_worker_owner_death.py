@@ -98,7 +98,7 @@ def test_the_tabs_run_their_job_and_clear_the_guard(monkeypatch, which):
     elif which == "dag":
         from je_auto_control.gui import dag_tab as mod
 
-        def failing_run(definition, max_parallel):
+        def failing_run(definition, max_parallel, stop_event=None):
             seen.append(definition)
             raise RuntimeError("stop")
 

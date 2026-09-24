@@ -31,7 +31,7 @@ _RUNNING: Dict[QThread, QObject] = {}
 
 
 #: How long interpreter exit waits, in all, for worker threads to wind down.
-_EXIT_GRACE_S = 3.0
+_EXIT_GRACE_S = 10.0
 
 
 def _stop_running_threads() -> None:
@@ -41,9 +41,13 @@ def _stop_running_threads() -> None:
     every remaining wrapper at exit. A worker's ``finished`` only *queues*
     ``quit`` on the GUI thread, which no longer runs an event loop by then, so
     the thread's own loop is told to quit directly, and the threads share one
-    grace period. A worker still inside a long ``run()`` after it cannot be
-    stopped from here (see ``Progress.md``).
+    grace period. A worker with a ``request_stop()`` method is asked to stop
+    first, so a long ``run()`` ends at its next checkpoint.
     """
+    for worker in list(_RUNNING.values()):
+        request_stop = getattr(worker, "request_stop", None)
+        if callable(request_stop):
+            request_stop()
     deadline = time.monotonic() + _EXIT_GRACE_S
     # Every thread here is still alive: ``destroyed`` removes it first.
     for thread in list(_RUNNING):

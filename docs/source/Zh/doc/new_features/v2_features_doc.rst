@@ -178,7 +178,9 @@ Executor：``AC_failure_hook_fire / _list / _clear``。
         ],
     })
 
-Executor：``AC_run_dag``。GUI：**DAG Runner** 分頁。
+從別的執行緒設定 ``stop_event=``（``threading.Event``）即可停止：執行中的節點會跑完，
+尚未開始的節點一律為 ``skipped``、錯誤為 ``"stopped"``。Executor：``AC_run_dag``。
+GUI：**DAG Runner** 分頁，Actions 選單有 **停止 DAG**。
 
 
 多 viewer 名單
@@ -211,8 +213,9 @@ Computer-use 高階 API
     )
 
 自動偵測螢幕大小；以 ``max_steps`` + ``wall_seconds`` 為預算上限，
-避免失控的 loop 把 API 額度耗光。Executor：``AC_computer_use``。
-GUI：**Computer Use** 分頁。
+避免失控的 loop 把 API 額度耗光；設定 ``stop_event=``（``threading.Event``）會在下一步之前結束，
+``final_message`` 為 ``"stopped"``。Executor：``AC_computer_use``。
+GUI：**Computer Use** 分頁，Actions 選單有 **停止**。關閉視窗時會請執行中的工作停止，最多等 10 秒。
 
 
 WebRunner 接入 executor + MCP

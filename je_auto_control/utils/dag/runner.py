@@ -8,6 +8,7 @@ remote calls.
 """
 from __future__ import annotations
 
+import threading
 import time
 from concurrent.futures import FIRST_COMPLETED, Future, ThreadPoolExecutor, wait
 from dataclasses import asdict, dataclass, field
@@ -79,27 +80,51 @@ def run_dag(definition: Any,
             max_parallel: int = 4,
             local_runner: Optional[NodeRunner] = None,
             remote_runner: Optional[NodeRunner] = None,
+            stop_event: Optional[threading.Event] = None,
             ) -> DagRunResult:
     """Execute ``definition`` in topological order with bounded parallelism.
 
     ``definition`` may be a :class:`DagDefinition` or the JSON-shaped
     mapping :func:`parse_definition` accepts. ``local_runner`` /
     ``remote_runner`` let tests substitute the real dispatch with a
-    pure-Python fake — both default to the production paths.
+    pure-Python fake — both default to the production paths. Once
+    ``stop_event`` is set, no further node starts: the running ones finish
+    and every pending node is ``skipped`` with the error ``"stopped"``.
     """
     dag = _coerce_definition(definition)
     local = local_runner or _default_local_runner
     remote = remote_runner or _default_remote_runner
+    if stop_event is not None:
+        local = _stoppable(local, stop_event)
+        remote = _stoppable(remote, stop_event)
     started_at = time.monotonic()
     nodes_by_id = dag.by_id()
     results = {nid: NodeResult(id=nid, host=nodes_by_id[nid].host)
                for nid in nodes_by_id}
-    _execute_with_pool(dag, results, local, remote, max(1, int(max_parallel)))
+    _execute_with_pool(dag, results, local, remote, max(1, int(max_parallel)),
+                       stop_event)
     elapsed = round(time.monotonic() - started_at, 3)
     succeeded = all(r.status == STATUS_SUCCEEDED for r in results.values())
     return DagRunResult(
         succeeded=succeeded, elapsed_s=elapsed, nodes=results,
     )
+
+
+class _NodeStopped(AutoControlException):
+    """A node reached its runner after a stop was requested."""
+
+
+def _stoppable(runner: NodeRunner, stop_event: threading.Event) -> NodeRunner:
+    """``runner``, refusing to start once ``stop_event`` is set.
+
+    The scheduling loop checks the event too, but a node can become ready and
+    be submitted in the same pass that its dependency finished and set it.
+    """
+    def run(node: DagNode, definition: DagDefinition) -> Any:
+        if stop_event.is_set():
+            raise _NodeStopped(node.id)
+        return runner(node, definition)
+    return run
 
 
 def _coerce_definition(definition: Any) -> DagDefinition:
@@ -115,7 +140,8 @@ def _coerce_definition(definition: Any) -> DagDefinition:
 def _execute_with_pool(dag: DagDefinition,
                        results: Dict[str, NodeResult],
                        local: NodeRunner, remote: NodeRunner,
-                       max_parallel: int) -> None:
+                       max_parallel: int,
+                       stop_event: Optional[threading.Event] = None) -> None:
     """Schedule nodes whose deps are all done; cascade skip on failure."""
     pending: Set[str] = set(results)
     inflight: Dict[Future, str] = {}
@@ -123,10 +149,13 @@ def _execute_with_pool(dag: DagDefinition,
     nodes_by_id = dag.by_id()
     with ThreadPoolExecutor(max_workers=max_parallel) as pool:
         while pending or inflight:
-            _spawn_ready_nodes(
-                pending, inflight, results,
-                ancestors, nodes_by_id, local, remote, pool,
-            )
+            if stop_event is not None and stop_event.is_set():
+                _skip_stopped(pending, results)
+            else:
+                _spawn_ready_nodes(
+                    pending, inflight, results,
+                    ancestors, nodes_by_id, local, remote, pool,
+                )
             if not inflight:
                 continue
             _harvest_one(inflight, results)
@@ -153,6 +182,14 @@ def _spawn_ready_nodes(pending: Set[str], inflight: Dict[Future, str],
         future = pool.submit(_run_one, node, results[nid], runner, nodes_by_id)
         inflight[future] = nid
         pending.discard(nid)
+
+
+def _skip_stopped(pending: Set[str], results: Dict[str, NodeResult]) -> None:
+    """Mark every node not yet started as skipped by a stop request."""
+    for nid in pending:
+        results[nid].status = STATUS_SKIPPED
+        results[nid].error = "stopped"
+    pending.clear()
 
 
 def _blocked_by_ancestor(ancestor_ids: Set[str],
@@ -196,6 +233,9 @@ def _run_one(node: DagNode, result: NodeResult,
              runner: NodeRunner, _nodes: Dict[str, DagNode]) -> None:
     try:
         outcome = runner(node, _build_proxy_definition(node, _nodes))
+    except _NodeStopped:
+        result.status = STATUS_SKIPPED
+        result.error = "stopped"
     # A runner is user code and may raise any Exception subclass; one that
     # escaped left the node "running" and run_dag returned no result.
     except Exception as error:  # noqa: BLE001  # reason: any node failure becomes a failed NodeResult and a skip cascade, never a crash of the whole run

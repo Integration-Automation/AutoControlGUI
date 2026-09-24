@@ -259,13 +259,13 @@ socket server 的執行也都用同一個 `executor`；`for_each` 的迴圈變�
 
 ---
 
-## Computer use、DAG 與 LLM 規劃分頁的執行不能中途停止
+## 關閉視窗時，一個超過 10 秒的步驟仍會讓行程 abort
 
-`TODO` — 給 `AgentLoop`、`run_dag` 與 `plan_actions` 一個停止旗標，並在分頁的 Actions 選單加上「停止」
+`TODO` — 讓 LLM 請求可以中斷（或在結束時放棄等待而不銷毀 `QThread`），再把 LLM 規劃分頁也接上停止
 
-`gui/computer_use_tab.py`、`gui/dag_tab.py`、`gui/llm_planner_tab.py` 經 `gui/_worker_thread.py:start_worker` 在背景執行緒跑，
-按下執行後只能等它跑完或用完預算（computer use 預設 300 秒）。關閉視窗時 `_stop_running_threads` 最多等 3 秒；
-還在 `run()` 裡的工作等不完，PySide 在結束時銷毀仍在執行的 `QThread`，行程會以 abort 結束。
+`gui/_worker_thread.py:_stop_running_threads` 在結束時先呼叫 worker 的 `request_stop()`，再共用 10 秒等執行緒結束；
+computer use 與 DAG 在下一步／下一個節點之前停下。但一個步驟本身（一次 LLM 請求、一個 DAG 節點）或
+`gui/llm_planner_tab.py` 的 `plan_actions` 呼叫若超過 10 秒，PySide 在結束時銷毀仍在執行的 `QThread`，行程會以 abort 結束。
 
 ---
 

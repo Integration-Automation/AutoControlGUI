@@ -20,7 +20,7 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 | 指標 | 數值 |
 | --- | ---: |
 | Python 模組總數（含周邊子專案） | 1,051 |
-| 程式碼總行數 | 150,565 |
+| 程式碼總行數 | 150,670 |
 | `je_auto_control/utils/` 子套件數 | 310 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 775 |
 | 套件門面 `__all__` 公開名稱數 | 1,241 |
@@ -271,7 +271,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.1 執行引擎與腳本資產
 
-> 24 個套件、約 14,265 行。
+> 24 個套件、約 14,305 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -279,7 +279,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/action_signing/` | 380 | action 檔 HMAC-SHA256 簽章與 Fernet 加密，`execute_files` 會強制驗簽 |
 | `utils/checkpoint/` | 120 | 流程檢查點與續跑，讓長 action list 具持久性 |
 | `utils/codegen/` | 255 | 由 action list 產生可執行的 pytest / python / robot 測試碼 |
-| `utils/dag/` | 496 | 跨主機 DAG 編排器（圖模型 + runner） |
+| `utils/dag/` | 536 | 跨主機 DAG 編排器（圖模型 + runner） |
 | `utils/decision_table/` | 112 | DMN 風格決策表：規則 + 命中策略，把分支外部化 |
 | `utils/deterministic/` | 116 | 決定性執行控制：固定亂數種子 + 凍結時鐘 |
 | `utils/executor/` | 9,425 | **核心**。`Executor` 指令分派表（775 個 `AC_*`）、參數插值、乾跑、逐步 callback；`flow_control` 提供 34 個區塊指令（迴圈／分支／try／巨集／變數） |
@@ -493,12 +493,12 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.9 AI / Agent / LLM
 
-> 13 個套件、約 21,696 行。
+> 13 個套件、約 21,707 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
 | `utils/a2a/` | 92 | A2A（agent-to-agent）agent card 產生 |
-| `utils/agent/` | 1,711 | 閉環 Computer-Use Agent 主迴圈 + Anthropic／OpenAI／Computer-Use 三後端 |
+| `utils/agent/` | 1,722 | 閉環 Computer-Use Agent 主迴圈 + Anthropic／OpenAI／Computer-Use 三後端 |
 | `utils/agent_memory/` | 154 | agent 的持久化情節記憶（goal → trajectory → outcome） |
 | `utils/agent_replay/` | 67 | 可攜的 agent 軌跡追蹤（記錄 observation→action 並重播） |
 | `utils/agent_trace/` | 168 | agent 可觀測性：OpenTelemetry GenAI 慣例的 LLM span |
@@ -884,8 +884,8 @@ GUI 是**選用 extra**（`pip install je_auto_control[gui]`，PySide6 + qt-mate
 | `_record_tab.py` | 110 | 錄製／回放分頁 mixin。 |
 | `_report_tab.py` | 88 | 報表分頁 mixin。 |
 | `_i18n_helpers.py` | 66 | 需要即時語言切換的分頁共用的翻譯註冊 mixin。 |
-| `_worker_thread.py` | 118 | `start_worker()`：把 `QObject` worker 放到 `QThread` 上執行，並經由分頁擁有的中繼物件回報結果（回呼一律在 GUI 執行緒）；執行緒與 worker 留在模組登錄表直到執行完，關閉分頁不會銷毀執行中的執行緒，程式結束時先讓它們收尾。 |
-| `language_wrapper/` | 5,007 | 四語系字典（英／日／簡中／繁中）+ `multi_language_wrapper` 執行期切換器與監聽註冊表。 |
+| `_worker_thread.py` | 122 | `start_worker()`：把 `QObject` worker 放到 `QThread` 上執行，並經由分頁擁有的中繼物件回報結果（回呼一律在 GUI 執行緒）；執行緒與 worker 留在模組登錄表直到執行完，關閉分頁不會銷毀執行中的執行緒，程式結束時先呼叫 worker 的 `request_stop()`，再讓它們收尾。 |
+| `language_wrapper/` | 5,023 | 四語系字典（英／日／簡中／繁中）+ `multi_language_wrapper` 執行期切換器與監聽註冊表。 |
 | `selector/` | 179 | 拖曳選取螢幕區域的半透明全螢幕覆蓋層與樣板裁切工具（互動式，但都有對應的程式化 API）。 |
 
 > **分頁指令一律走 Actions 選單**：分頁本身只放輸入、表格與結果檢視，指令由視窗層選單暴露。
@@ -1061,7 +1061,7 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 
 | 層／子系統 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `gui/` | 92 | 26,942 |
+| `gui/` | 92 | 26,996 |
 | `utils/mcp_server/` | 31 | 17,711 |
 | `utils/remote_desktop/` | 56 | 12,842 |
 | `utils/executor/` | 7 | 9,425 |
@@ -1071,7 +1071,7 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `wrapper/` | 19 | 3,615 |
 | `windows/` | 23 | 1,959 |
 | `utils/rest_api/` | 8 | 1,840 |
-| `utils/agent/` | 9 | 1,711 |
+| `utils/agent/` | 9 | 1,722 |
 | `linux_with_x11/` | 19 | 1,281 |
 | `linux_wayland/` | 17 | 2,921 |
 | `utils/triggers/` | 4 | 1,300 |
@@ -1081,6 +1081,6 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `osx/` | 17 | 925 |
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 837 |
-| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 677 | 53,523 |
-| **總計** | **1,045** | **150,500** |
+| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 677 | 53,563 |
+| **總計** | **1,045** | **150,605** |
 

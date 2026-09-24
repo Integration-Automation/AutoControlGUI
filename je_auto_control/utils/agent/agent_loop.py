@@ -1,6 +1,7 @@
 """Closed-loop driver: observe → plan → act → verify → loop."""
 from __future__ import annotations
 
+import threading
 import time
 from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, List, Optional, Sequence
@@ -92,11 +93,14 @@ class AgentLoop:
                  backend: AgentBackend,
                  *, tool_runner: Optional[Callable[[str, Dict[str, Any]], Any]] = None,
                  screenshot_fn: Optional[Callable[[], Optional[bytes]]] = None,
-                 budget: Optional[AgentBudget] = None) -> None:
+                 budget: Optional[AgentBudget] = None,
+                 stop_event: Optional[threading.Event] = None) -> None:
+        """``stop_event``, once set, ends the run before its next step."""
         self._backend = backend
         self._tool_runner = tool_runner or _default_tool_runner
         self._screenshot_fn = screenshot_fn or _default_screenshot
         self._budget = budget or AgentBudget()
+        self._stop_event = stop_event
 
     def run(self, goal: str) -> AgentResult:
         started_at = time.monotonic()
@@ -119,6 +123,9 @@ class AgentLoop:
     def _run_loop(self, goal: str, started_at: float,
                   result: AgentResult, metrics) -> None:
         for index in range(self._budget.max_steps):
+            if self._stop_event is not None and self._stop_event.is_set():
+                result.final_message = "stopped"
+                return
             if time.monotonic() - started_at > self._budget.wall_seconds:
                 result.final_message = "wall_seconds budget exhausted"
                 return

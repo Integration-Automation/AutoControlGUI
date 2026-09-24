@@ -15,6 +15,9 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Added
 
+- `stop_event=` on `AgentLoop`, `run_computer_use` and `run_dag`; the
+  Computer Use and DAG Runner tabs have a Stop action, and closing the
+  window asks a running job to stop.
 - `parse_multipart` files carry `content_base64` (the exact bytes).
 - Computer use speaks the GA `computer_toolset_20260801`, used
   automatically for `claude-opus-5-5` (which rejects the beta tool); pass

@@ -1,5 +1,6 @@
 """Computer-Use tab: launch Anthropic's closed-loop agent from the GUI."""
 import json
+import threading
 from typing import Optional
 
 from PySide6.QtCore import QObject, QThread, Signal
@@ -29,13 +30,18 @@ class _ComputerUseWorker(QObject):
     finished = Signal(dict)
     failed = Signal(str)
 
-    def __init__(self, params: dict) -> None:
+    def __init__(self, params: dict, stop_event: threading.Event) -> None:
         super().__init__()
         self._params = dict(params)
+        self._stop_event = stop_event
+
+    def request_stop(self) -> None:
+        """End the run before its next step (thread-safe)."""
+        self._stop_event.set()
 
     def run(self) -> None:
         try:
-            result = run_computer_use(**self._params)
+            result = run_computer_use(**self._params, stop_event=self._stop_event)
         except (AgentBackendError, ValueError, RuntimeError) as error:
             self.failed.emit(f"{type(error).__name__}: {error}")
             return
@@ -63,6 +69,7 @@ class ComputerUseTab(TranslatableMixin, QWidget):
         self._output.setReadOnly(True)
         self._status = QLabel()
         self._thread: Optional[QThread] = None
+        self._stop_event = threading.Event()
         self._build_layout()
 
     def retranslate(self) -> None:
@@ -106,6 +113,7 @@ class ComputerUseTab(TranslatableMixin, QWidget):
         """Expose tab commands to the window-level Actions menu."""
         return [
             ("computer_use_run_btn", self._on_run),
+            ("computer_use_stop_btn", self._on_stop),
         ]
 
     # --- run path --------------------------------------------------
@@ -132,9 +140,17 @@ class ComputerUseTab(TranslatableMixin, QWidget):
         self._spawn_worker(params)
 
     def _spawn_worker(self, params: dict) -> None:
+        self._stop_event = threading.Event()
         self._thread = start_worker(
-            self, _ComputerUseWorker(params), on_done=self._on_worker_finished,
+            self, _ComputerUseWorker(params, self._stop_event),
+            on_done=self._on_worker_finished,
             on_fail=self._on_worker_failed, on_thread_done=self._on_thread_done)
+
+    def _on_stop(self) -> None:
+        if self._thread is None:
+            return
+        self._stop_event.set()
+        self._status.setText(_t("computer_use_stopping"))
 
     def _on_thread_done(self) -> None:
         self._thread = None

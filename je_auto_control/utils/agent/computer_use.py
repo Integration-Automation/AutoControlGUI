@@ -8,6 +8,7 @@ GUI panel.
 """
 from __future__ import annotations
 
+import threading
 from dataclasses import asdict
 from typing import Any, Dict, List, Optional
 
@@ -50,11 +51,14 @@ def run_computer_use(goal: str,
                      api_key: Optional[str] = None,
                      client: Optional[Any] = None,
                      backend: Optional[ComputerUseAgentBackend] = None,
+                     stop_event: Optional[threading.Event] = None,
                      ) -> AgentResult:
     """Drive Anthropic Computer-Use until ``goal`` is met or the budget hits.
 
     Auto-detects display dimensions when not passed. ``backend`` lets
-    tests inject a fake without bringing in the SDK.
+    tests inject a fake without bringing in the SDK. Setting ``stop_event``
+    from another thread ends the run before its next step, with
+    ``final_message`` ``"stopped"``.
     """
     if not isinstance(goal, str) or not goal.strip():
         raise ValueError("run_computer_use requires a non-empty goal string")
@@ -71,7 +75,7 @@ def run_computer_use(goal: str,
     budget = AgentBudget(
         max_steps=int(max_steps), wall_seconds=float(wall_seconds),
     )
-    return AgentLoop(backend, budget=budget).run(goal)
+    return AgentLoop(backend, budget=budget, stop_event=stop_event).run(goal)
 
 
 def result_to_dict(result: AgentResult) -> Dict[str, Any]:
