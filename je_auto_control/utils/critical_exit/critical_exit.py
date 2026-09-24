@@ -1,5 +1,6 @@
 import _thread
 import signal
+import threading
 from threading import Event, Thread
 from typing import Optional, Union
 
@@ -16,15 +17,22 @@ def _interrupt_main() -> None:
     """Raise KeyboardInterrupt in the main thread, waking it if it is blocked.
 
     ``_thread.interrupt_main`` only sets a flag, so a main thread inside
-    ``time.sleep`` or ``Event.wait`` on Windows stopped when the wait ended
-    (a 3 s sleep, 3 s later). Raising SIGINT goes through the handler that
-    also wakes those waits (0.2 s, measured). It is used only when Python's
-    own handler is installed; otherwise SIG_DFL would end the process.
+    ``time.sleep`` or ``Event.wait`` stopped when the wait ended (a 3 s
+    sleep, 3 s later). A real SIGINT wakes it (0.2 s, measured on Windows
+    and Linux): on POSIX it has to be sent to the main thread itself --
+    ``raise_signal`` from this thread signals this thread and the main
+    thread sleeps on -- while Windows has no ``pthread_kill`` and its
+    ``raise_signal`` sets the event those waits watch. Used only when
+    Python's own handler is installed; otherwise SIG_DFL would end the
+    process.
     """
-    if callable(signal.getsignal(signal.SIGINT)):
-        signal.raise_signal(signal.SIGINT)
-    else:
+    main_ident = threading.main_thread().ident
+    if not callable(signal.getsignal(signal.SIGINT)) or main_ident is None:
         _thread.interrupt_main()
+    elif hasattr(signal, "pthread_kill"):
+        signal.pthread_kill(main_ident, signal.SIGINT)
+    else:
+        signal.raise_signal(signal.SIGINT)
 
 
 class CriticalExit(Thread):

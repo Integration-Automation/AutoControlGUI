@@ -295,6 +295,8 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Fixed
 
+- **Emergency stop on Linux / macOS**: the stop key wakes a sleeping or
+  waiting main thread there too (SIGINT is sent to the main thread).
 - **Image analysis and packaging**: colour-vision simulation uses Machado
   (2009) in linear RGB; squares are checkboxes and hollow boxes text fields,
   not radios / toggles; step repair stops after escalating and does not repeat

@@ -58,6 +58,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260924-56 | 2026-09-24 | Emergency stop wakes a sleeping main thread on Linux and macOS too | #bugfix #ci | [2026-09](2026-09.md) |
 | U-20260924-55 | 2026-09-24 | Image analysis and packaging: Machado CVD simulation, square-aware widget classes, repair that does not re-act, schema-valid registry manifests | #bugfix #audit | [2026-09](2026-09.md) |
 | U-20260924-54 | 2026-09-24 | Observation and state: an emergency stop that wakes a sleeping script, non-overlapping mark labels, strict placeholders, CloudEvents and coordinate spaces | #bugfix #audit | [2026-09](2026-09.md) |
 | U-20260924-53 | 2026-09-24 | File-dialog confirm and popup-watchdog keys resolve to the platform's key names | #bugfix #audit | [2026-09](2026-09.md) |
@@ -214,7 +215,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | File | Period | Entries |
 |---|---|---:|
-| [2026-09.md](2026-09.md) | 2026-09 | 125 |
+| [2026-09.md](2026-09.md) | 2026-09 | 126 |
 | [2026-08-f.md](2026-08-f.md) | 2026-08 | 1 |
 | [2026-08-e.md](2026-08-e.md) | 2026-08 | 2 |
 | [2026-08-d.md](2026-08-d.md) | 2026-08 | 2 |
