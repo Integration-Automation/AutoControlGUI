@@ -20,7 +20,7 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 | 指標 | 數值 |
 | --- | ---: |
 | Python 模組總數（含周邊子專案） | 1,051 |
-| 程式碼總行數 | 150,977 |
+| 程式碼總行數 | 151,027 |
 | `je_auto_control/utils/` 子套件數 | 310 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 775 |
 | 套件門面 `__all__` 公開名稱數 | 1,244 |
@@ -414,27 +414,27 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.6 OCR 與文字理解
 
-> 19 個套件、約 3,384 行。
+> 19 個套件、約 3,434 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
-| `utils/bidi_check/` | 129 | 雙向文字 QA（bidi 控制碼、巢狀平衡、Trojan-source 掃描） |
+| `utils/bidi_check/` | 138 | 雙向文字 QA（bidi 控制碼、巢狀平衡、Trojan-source 掃描） |
 | `utils/column_layout/` | 153 | 從垂直空白推斷欄位，處理無框線表格 |
-| `utils/confusables/` | 139 | 易混淆／同形字偵測（Unicode 欺騙骨架） |
+| `utils/confusables/` | 146 | 易混淆／同形字偵測（Unicode 欺騙骨架） |
 | `utils/form_fields/` | 128 | 多方向關聯表單標籤與值，並讀取核取方塊狀態 |
-| `utils/fuzzy/` | 96 | 模糊字串比對與去重（預設 difflib，有 rapidfuzz 則優先） |
+| `utils/fuzzy/` | 111 | 模糊字串比對與去重（預設 difflib，有 rapidfuzz 則優先） |
 | `utils/grid_locator/` | 71 | 以 (row, column) 從邊界框定址表格／網格儲存格 |
 | `utils/guardrail/` | 116 | 針對畫面／OCR 文字的啟發式 prompt-injection 防護 |
 | `utils/heading_segment/` | 69 | 判定 OCR 行是標題或內文，建出文件大綱 |
 | `utils/near_dup/` | 108 | 近似重複文字偵測（SimHash／MinHash） |
 | `utils/ocr/` | 1,136 | OCR 引擎門面 + 三個後端（Tesseract／EasyOCR／PaddleOCR）、版面結構化與跨詞比對（`text_span`） |
 | `utils/pii_text/` | 119 | 自由文字中的 PII 偵測與遮蔽（email／電話／SSN／卡號／IP／IBAN） |
-| `utils/readability/` | 138 | 可讀性評分（Flesch、Flesch-Kincaid、Gunning Fog、SMOG、ARI） |
+| `utils/readability/` | 140 | 可讀性評分（Flesch、Flesch-Kincaid、Gunning Fog、SMOG、ARI） |
 | `utils/reading_flow/` | 145 | 以遞迴 XY-cut 推導欄位感知的閱讀順序 |
 | `utils/search_index/` | 145 | 記憶體內 BM25／TF-IDF 全文檢索 |
 | `utils/text_blocks/` | 88 | 把 OCR 行組成段落與項目符號／編號清單 |
-| `utils/text_diff/` | 187 | unified diff 產生、套用與三方合併 |
-| `utils/text_normalize/` | 82 | Unicode 正規化與 slug 產生 |
+| `utils/text_diff/` | 202 | unified diff 產生、套用與三方合併 |
+| `utils/text_normalize/` | 84 | Unicode 正規化與 slug 產生 |
 | `utils/text_regions/` | 163 | 免模型的畫面文字區域偵測（MSER）：區域與行 |
 | `utils/text_similarity/` | 172 | 字串距離度量（文字比對用） |
 
@@ -1081,6 +1081,6 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `osx/` | 17 | 925 |
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 837 |
-| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 677 | 53,731 |
-| **總計** | **1,045** | **150,912** |
+| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 677 | 53,781 |
+| **總計** | **1,045** | **150,962** |
 

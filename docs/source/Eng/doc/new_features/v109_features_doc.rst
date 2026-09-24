@@ -28,9 +28,9 @@ Headless API
     is_mixed_script("pаypal")              # True  (Latin + Cyrillic)
     scripts_of("pаypal")                   # {'LATIN', 'CYRILLIC'}
 
-``confusable_skeleton`` NFKC-normalises (folding fullwidth, ligatures and math
-alphanumerics) then maps each remaining cross-script lookalike to its Latin
-prototype; invisible format characters (zero-width space, soft hyphen,
+``confusable_skeleton`` follows UTS #39: it decomposes with NFKD (folding fullwidth,
+ligatures, math alphanumerics and accents), maps each remaining cross-script
+lookalike to its Latin prototype, and decomposes again with NFD; invisible format characters (zero-width space, soft hyphen,
 joiners) are dropped first. ``is_confusable`` is true only for *distinct*
 strings with equal skeletons. ``detect_homoglyphs`` returns the offending characters with their
 position and prototype. ``scripts_of`` / ``is_mixed_script`` classify characters

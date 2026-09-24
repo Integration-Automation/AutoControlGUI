@@ -74,6 +74,10 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Changed
 
+- `confusable_skeleton` follows UTS #39 (NFKD, map, NFD); `×` and `÷`
+  count as Common script.
+- Without rapidfuzz, fuzzy scores are the symmetric Indel ratio (the
+  same as the rapidfuzz backend).
 - Toolset screenshots are fitted into the high-resolution tier (2576 px
   long edge, 4784 visual tokens) instead of 1568 px / 1.15 MP.
 - `parse_dotenv` decodes `\'` and `\\` inside single-quoted values, as
@@ -339,6 +343,12 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Fixed
 
+- `apply_unified`, `unified_diff` and `three_way_merge` split lines at
+  line feeds only, so form feeds and U+2028 inside a line survive and
+  CRLF text keeps its endings.
+- Readability counts only sentences that hold a word.
+- `normalize_text(casefold=True)` stays in the requested form.
+- `is_balanced` checks bidi controls per paragraph.
 - Closing the window while a GUI job is inside a long step (an LLM
   request) no longer aborts the process.
 - `format_message` accepts `offset: 1` and reports an infinite count

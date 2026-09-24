@@ -54,9 +54,18 @@ def _pop_matches(stack: List[str], expected: str) -> bool:
 
 
 def is_balanced(text: str) -> bool:
-    """Whether embeddings/overrides (PDF) and isolates (PDI) are well nested."""
+    """Whether embeddings/overrides (PDF) and isolates (PDI) are well nested.
+
+    Each paragraph is checked on its own: UAX #9 rule X8 ends every open
+    embedding, override and isolate at a paragraph separator, so a PDF after
+    one closes nothing.
+    """
     stack: List[str] = []
     for char in text or "":
+        if unicodedata.bidirectional(char) == "B":
+            if stack:
+                return False
+            continue
         kind = _OPEN_KIND.get(char)
         if kind is not None:
             stack.append(kind)

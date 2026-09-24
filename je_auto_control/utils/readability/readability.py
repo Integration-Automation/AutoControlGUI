@@ -47,7 +47,9 @@ def readability_stats(text: str) -> Dict[str, int]:
     """Return raw counts: ``words``, ``sentences``, ``syllables``,
     ``characters`` (letters), and ``complex_words`` (>= 3 syllables)."""
     words: List[str] = _WORD_RE.findall(text or "")
-    sentences = [part for part in _SENTENCE_RE.split(text or "") if part.strip()]
+    # A piece holding no word -- the closing quote or bracket after a full
+    # stop -- is not a sentence: 'She said "Stop."' counted two.
+    sentences = [part for part in _SENTENCE_RE.split(text or "") if _WORD_RE.search(part)]
     syllables = [count_syllables(word) for word in words]
     return {
         "words": len(words),

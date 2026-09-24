@@ -25,8 +25,8 @@
     is_mixed_script("pаypal")              # True  (拉丁 + 西里爾)
     scripts_of("pаypal")                   # {'LATIN', 'CYRILLIC'}
 
-``confusable_skeleton`` 先以 NFKC 正規化(折疊全形、連字與數學英數字),再將每個剩餘的跨文字系統仿冒字對映到
-其拉丁原型;不可見的格式字元(零寬空格、軟連字號、連接符)會先被移除。``is_confusable`` 僅在兩個*不同*字串骨架相同時為真。``detect_homoglyphs`` 回傳有問題的字元連同其
+``confusable_skeleton`` 依 UTS #39:先以 NFKD 分解(折疊全形、連字、數學英數字與重音),再將每個剩餘的跨文字系統仿冒字對映到
+其拉丁原型,最後再以 NFD 分解;不可見的格式字元(零寬空格、軟連字號、連接符)會先被移除。``is_confusable`` 僅在兩個*不同*字串骨架相同時為真。``detect_homoglyphs`` 回傳有問題的字元連同其
 位置與原型。``scripts_of`` / ``is_mixed_script`` 依 Unicode 區塊將字元分類(忽略數字、標點與空白),因此可單獨
 標記一個混用文字系統的權杖。依 UTS #39 的 highly restrictive 等級，拉丁字母搭配漢字 + 平假名 + 片假名
 (日文)或漢字 + 諺文(韓文)視為同一套書寫系統，不算混用;全形拉丁字母算拉丁字母。

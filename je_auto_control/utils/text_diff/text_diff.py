@@ -18,6 +18,7 @@ from typing import List, Tuple
 
 from je_auto_control.utils.exception.exceptions import AutoControlException
 
+_LF = chr(10)
 _HUNK_RE = re.compile(r"^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@")
 
 
@@ -34,11 +35,25 @@ class MergeResult:
     clean: bool
 
 
+def _lines(text: str) -> List[str]:
+    """``text`` split at line feeds only, without the final one.
+
+    ``str.splitlines`` also splits at form feeds, U+2028 and other separators
+    that sit inside a line, and the pieces were re-joined with line feeds, so
+    lines no diff touched came back changed. A CR stays on its line, so CRLF
+    text keeps its line endings.
+    """
+    if not text:
+        return []
+    parts = text.split(_LF)
+    return parts[:-1] if text.endswith(_LF) else parts
+
+
 def unified_diff(a: str, b: str, *, a_name: str = "a", b_name: str = "b",
                  context: int = 3) -> str:
     """Return a unified diff transforming ``a`` into ``b``."""
     lines = difflib.unified_diff(
-        a.splitlines(), b.splitlines(), fromfile=a_name, tofile=b_name,
+        _lines(a), _lines(b), fromfile=a_name, tofile=b_name,
         lineterm="", n=context)
     return "\n".join(lines)
 
@@ -101,10 +116,10 @@ def _hunk_start(match: "re.Match") -> int:
 
 def apply_unified(text: str, diff: str) -> str:
     """Apply a unified ``diff`` to ``text``; raise on context mismatch."""
-    source = text.splitlines()
+    source = _lines(text)
     out: List[str] = []
     cursor = 0
-    lines = diff.splitlines()
+    lines = _lines(diff)
     index = 0
     while index < len(lines):
         match = _HUNK_RE.match(lines[index])
@@ -157,11 +172,11 @@ def three_way_merge(base: str, ours: str, theirs: str, *,
         return MergeResult(theirs, conflicts=0, clean=True)
     if theirs == base:
         return MergeResult(ours, conflicts=0, clean=True)
-    base_lines = base.splitlines()
-    ours_changes = _changes(base_lines, ours.splitlines())
+    base_lines = _lines(base)
+    ours_changes = _changes(base_lines, _lines(ours))
     # A change both sides made identically is one change, not a conflict
     # (and not applied twice).
-    theirs_changes = [change for change in _changes(base_lines, theirs.splitlines())
+    theirs_changes = [change for change in _changes(base_lines, _lines(theirs))
                       if change not in ours_changes]
     if _overlap(ours_changes, theirs_changes):
         return MergeResult(

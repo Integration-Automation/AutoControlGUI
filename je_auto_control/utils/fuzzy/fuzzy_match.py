@@ -2,11 +2,11 @@
 
 Exact string comparison is brittle when text comes from OCR or shifting UI
 copy. These helpers score similarity, pick the best candidate from a list, and
-collapse near-duplicates. The default backend is the standard library
-``difflib`` (so the feature works with **zero** extra dependencies); if the
-optional ``rapidfuzz`` package is installed it is used instead for speed — the
-scores are normalised to ``0.0..1.0`` either way, so callers don't care which
-backend ran. :data:`BACKEND` names the active one.
+collapse near-duplicates. The default backend is pure Python (still named
+``difflib``), so the feature works with **zero** extra dependencies; if the
+optional ``rapidfuzz`` package is installed it is used instead for speed. Both
+compute the symmetric Indel ratio ``2 * LCS / (len(a) + len(b))`` in ``0.0..1.0``,
+so callers don't care which backend ran. :data:`BACKEND` names the active one.
 
 Pure Python; imports no ``PySide6``.
 """
@@ -20,14 +20,29 @@ try:  # optional acceleration; the difflib fallback is always correct
     def _similarity(left: str, right: str) -> float:
         return _rf.ratio(left, right) / 100.0
 except ImportError:  # pragma: no cover - exercised wherever rapidfuzz is absent
-    from difflib import SequenceMatcher
-
     BACKEND = "difflib"
 
     def _similarity(left: str, right: str) -> float:
-        # autojunk=False: from 200 characters on, difflib's heuristic treats
-        # common characters as junk, and two texts one letter apart scored ~0.14.
-        return SequenceMatcher(None, left, right, autojunk=False).ratio()
+        # The Indel ratio rapidfuzz computes, 2 * LCS / (len + len): symmetric
+        # and backend-independent. difflib's SequenceMatcher is neither --
+        # ("Settings", "Preferences") scored 0.105 one way and 0.316 the other.
+        total = len(left) + len(right)
+        return 1.0 if total == 0 else 2.0 * _lcs_length(left, right) / total
+
+
+def _lcs_length(left: str, right: str) -> int:
+    """Length of the longest common subsequence (bit-parallel, Allison-Dix)."""
+    if len(left) < len(right):
+        left, right = right, left
+    masks: dict = {}
+    for position, char in enumerate(right):
+        masks[char] = masks.get(char, 0) | (1 << position)
+    full = (1 << len(right)) - 1
+    row = full
+    for char in left:
+        matched = row & masks.get(char, 0)
+        row = ((row + matched) | (row - matched)) & full
+    return len(right) - bin(row).count("1")
 
 
 def _prepare(value: Any, ignore_case: bool) -> str:

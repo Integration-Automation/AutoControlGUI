@@ -15,14 +15,15 @@ deterministic in CI.
 import unicodedata
 from typing import Dict, List, Set, Tuple
 
-# Cross-script homoglyphs that NFKC does not fold. Maps each lookalike to its
+# Cross-script homoglyphs that NFKD does not fold. Maps each lookalike to its
 # Latin/ASCII prototype. (Fullwidth, math-alphanumerics, etc. are handled by the
-# NFKC pass in ``skeleton`` and need no entry here.)
+# NFKD pass in ``skeleton`` and need no entry here; accented letters decompose
+# first, so only base letters are listed.)
 _CONFUSABLES: Dict[str, str] = {
     # Cyrillic lowercase
     "а": "a", "е": "e", "о": "o", "р": "p", "с": "c", "у": "y", "х": "x",
     "і": "i", "ј": "j", "ѕ": "s", "ԁ": "d", "һ": "h", "ѵ": "v", "ԛ": "q",
-    "ԝ": "w", "ё": "e", "г": "r", "п": "n",
+    "ԝ": "w", "г": "r", "п": "n",
     # Cyrillic uppercase
     "А": "A", "В": "B", "Е": "E", "К": "K", "М": "M", "Н": "H", "О": "O",
     "Р": "P", "С": "C", "Т": "T", "Х": "X", "І": "I", "Ј": "J", "Ѕ": "S",
@@ -40,7 +41,9 @@ _CONFUSABLES: Dict[str, str] = {
 # are ignored when deciding whether scripts are mixed.
 _SCRIPT_RANGES: Tuple[Tuple[int, int, str], ...] = (
     (0x0041, 0x005A, "LATIN"), (0x0061, 0x007A, "LATIN"),
-    (0x00C0, 0x024F, "LATIN"), (0x1E00, 0x1EFF, "LATIN"),
+    # U+00D7 (multiplication sign) and U+00F7 (division sign) are Common.
+    (0x00C0, 0x00D6, "LATIN"), (0x00D8, 0x00F6, "LATIN"),
+    (0x00F8, 0x024F, "LATIN"), (0x1E00, 0x1EFF, "LATIN"),
     (0x0370, 0x03FF, "GREEK"), (0x1F00, 0x1FFF, "GREEK"),
     (0x0400, 0x052F, "CYRILLIC"),
     (0x0530, 0x058F, "ARMENIAN"),
@@ -72,14 +75,18 @@ def _script_of(char: str) -> str:
 
 
 def skeleton(text: str) -> str:
-    """Return the confusable skeleton of ``text`` (TR39-style).
+    """Return the confusable skeleton of ``text`` (UTS #39 section 4).
 
-    NFKC-normalises (folding fullwidth, ligatures, math alphanumerics), then maps
-    each remaining cross-script homoglyph to its Latin prototype. Two strings are
-    confusable exactly when their skeletons are equal.
+    Decomposes (NFKD: fullwidth, ligatures, math alphanumerics and accents),
+    maps each cross-script homoglyph to its Latin prototype, then decomposes
+    again (NFD). Two strings are confusable exactly when their skeletons are
+    equal. Composing with NFKC instead turned a Cyrillic "e" plus a combining
+    acute into a character with no entry, so it no longer matched "e" with an
+    acute.
     """
-    normalised = unicodedata.normalize("NFKC", _strip_invisible(text or ""))
-    return "".join(_CONFUSABLES.get(char, char) for char in normalised)
+    decomposed = unicodedata.normalize("NFKD", _strip_invisible(text or ""))
+    mapped = "".join(_CONFUSABLES.get(char, char) for char in decomposed)
+    return unicodedata.normalize("NFD", mapped)
 
 
 def _strip_invisible(text: str) -> str:
@@ -104,10 +111,10 @@ def detect_homoglyphs(text: str) -> List[Dict[str, object]]:
     differs from itself (i.e. a cross-script lookalike).
     """
     findings: List[Dict[str, object]] = []
-    # Indexed by the input: the NFKC string's positions shifted after any
+    # Indexed by the input: the NFKD string's positions shifted after any
     # character that normalises to several ("\ufb01" -> "fi").
     for index, original in enumerate(text or ""):
-        for char in unicodedata.normalize("NFKC", original):
+        for char in unicodedata.normalize("NFKD", original):
             prototype = _CONFUSABLES.get(char)
             if prototype is not None:
                 findings.append({"index": index, "char": char,
