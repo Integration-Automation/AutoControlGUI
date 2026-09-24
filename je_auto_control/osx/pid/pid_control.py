@@ -1,12 +1,6 @@
-import objc
 import subprocess  # nosec B404  # reason: required to invoke osascript with argv list
-from ctypes import cdll, c_void_p
 
-from Quartz import CGEventCreateKeyboardEvent
-from ApplicationServices import ProcessSerialNumber, GetProcessForPID
-
-# 載入 Carbon 函式庫 Load Carbon framework
-carbon = cdll.LoadLibrary('/System/Library/Frameworks/Carbon.framework/Carbon')
+from Quartz import CGEventCreateKeyboardEvent, CGEventPostToPid
 
 
 def send_key_to_pid(pid: int, keycode: int) -> None:
@@ -14,20 +8,15 @@ def send_key_to_pid(pid: int, keycode: int) -> None:
     Send a key press + release event to a specific process by PID
     將鍵盤事件 (按下 + 釋放) 傳送到指定的 PID
 
+    Posted with ``CGEventPostToPid``. The Carbon ``CGEventPostToPSN`` path
+    passed ``id(psn)`` -- the Python object's address, not the struct's --
+    so the events went to a garbage process serial number.
+
     :param pid: Process ID 目標應用程式的 PID
     :param keycode: Keycode 要傳送的鍵盤代碼
     """
-    psn = ProcessSerialNumber()
-    GetProcessForPID(pid, objc.byref(psn))
-
-    # 建立按下事件 Create key down event
-    event_down = CGEventCreateKeyboardEvent(None, keycode, True)
-    # 建立釋放事件 Create key up event
-    event_up = CGEventCreateKeyboardEvent(None, keycode, False)
-
-    # 傳送事件到指定的 ProcessSerialNumber
-    carbon.CGEventPostToPSN(c_void_p(id(psn)), event_down)
-    carbon.CGEventPostToPSN(c_void_p(id(psn)), event_up)
+    for is_down in (True, False):
+        CGEventPostToPid(int(pid), CGEventCreateKeyboardEvent(None, int(keycode), is_down))
 
 
 def get_pid_by_window_title(title: str) -> int | None:

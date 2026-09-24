@@ -3,7 +3,9 @@ import time
 from typing import Tuple
 
 from je_auto_control.utils.exception.exception_tags import osx_import_error_message
-from je_auto_control.utils.exception.exceptions import AutoControlException
+from je_auto_control.utils.exception.exceptions import (
+    AutoControlException, AutoControlMouseException,
+)
 
 # === 平台檢查 Platform Check ===
 # 僅允許在 macOS (Darwin) 環境執行，否則拋出例外
@@ -86,6 +88,8 @@ def press_mouse(x: int, y: int, mouse_button: int) -> None:
         mouse_event(Quartz.kCGEventOtherMouseDown, x, y, Quartz.kCGMouseButtonCenter)
     elif mouse_button == osx_mouse_right:
         mouse_event(Quartz.kCGEventRightMouseDown, x, y, Quartz.kCGMouseButtonRight)
+    else:   # nothing was posted, and the wrapper reported the press done
+        raise AutoControlMouseException(f"unknown mouse button {mouse_button!r}")
 
 
 def release_mouse(x: int, y: int, mouse_button: int) -> None:
@@ -103,6 +107,8 @@ def release_mouse(x: int, y: int, mouse_button: int) -> None:
         mouse_event(Quartz.kCGEventOtherMouseUp, x, y, Quartz.kCGMouseButtonCenter)
     elif mouse_button == osx_mouse_right:
         mouse_event(Quartz.kCGEventRightMouseUp, x, y, Quartz.kCGMouseButtonRight)
+    else:
+        raise AutoControlMouseException(f"unknown mouse button {mouse_button!r}")
 
 
 def click_mouse(x: int, y: int, mouse_button: int) -> None:

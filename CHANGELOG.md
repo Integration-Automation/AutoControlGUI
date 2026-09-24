@@ -303,6 +303,11 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Fixed
 
+- **X11, uinput and macOS input**: the uinput backend types the intended
+  keys and scrolls with the same sign rules as XTest; sending keys and clicks
+  to an X window releases what it pressed; an unbound X key raises instead of
+  pretending; recorded wheel events no longer break replay; macOS media keys
+  press and release; a timed-out macOS recording tap is re-enabled.
 - **Wayland**: libei input keeps working after a screen lock or VT switch
   and releases each device reference once; screen size follows rotated and
   scaled outputs; a malformed capture-command override is a screen error.

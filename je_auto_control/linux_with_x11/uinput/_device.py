@@ -17,6 +17,8 @@ import threading
 import time
 from typing import Optional
 
+from je_auto_control.utils.exception.exceptions import AutoControlException
+
 # --- Linux uinput / input-event-codes structs -------------------------------
 #
 # Layout cribbed from <linux/uinput.h> + <linux/input.h>. We only need
@@ -86,7 +88,7 @@ class _uinput_user_dev(ctypes.Structure):  # noqa: N801  C struct
     ]
 
 
-class UinputUnavailable(RuntimeError):
+class UinputUnavailable(AutoControlException, RuntimeError):
     """Raised when ``/dev/uinput`` can't be opened or ``ioctl`` fails."""
 
 

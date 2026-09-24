@@ -116,6 +116,7 @@ class OSXInputTap:
         self._stop = threading.Event()
         self._ready = threading.Event()
         self._thread: Optional[threading.Thread] = None
+        self._tap: Any = None   # the CFMachPort from CGEventTapCreate, re-enabled on timeout
 
     # -- public ------------------------------------------------------------
     def start(self) -> None:
@@ -159,6 +160,7 @@ class OSXInputTap:
                 Quartz.kCGEventTapOptionListenOnly, _TAP_MASK,
                 self._callback, None,
             )
+            self._tap = tap
             if tap is None:
                 autocontrol_logger.error(
                     "CGEventTapCreate returned None - Accessibility not granted")
@@ -200,7 +202,9 @@ class OSXInputTap:
                 # Re-arm, rather than record silence for the rest of the run.
                 autocontrol_logger.info(
                     "event tap disabled (%s), re-enabling", event_type)
-                Quartz.CGEventTapEnable(proxy, True)
+                # The tap itself: ``proxy`` is a CGEventTapProxy, not the
+                # CFMachPort CGEventTapEnable takes, so the tap stayed off.
+                Quartz.CGEventTapEnable(self._tap, True)
             else:
                 self.decode(int(event_type), event)
         except Exception as error:  # noqa: BLE001  # reason: an OS callback; see above

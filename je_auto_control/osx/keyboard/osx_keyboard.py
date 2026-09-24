@@ -1,8 +1,9 @@
 import sys
 
 from je_auto_control.utils.exception.exception_tags import osx_import_error_message
-from je_auto_control.utils.exception.exceptions import AutoControlException
-from je_auto_control.utils.logging.logging_instance import autocontrol_logger
+from je_auto_control.utils.exception.exceptions import (
+    AutoControlException, AutoControlKeyboardException,
+)
 
 # === 平台檢查 Platform Check ===
 # 僅允許在 macOS (Darwin) 環境執行，否則拋出例外
@@ -71,16 +72,18 @@ def normal_key(keycode: int, is_shift: bool, is_down: bool) -> None:
         Quartz.CGEventPost(Quartz.kCGHIDEventTap, event)
 
     except ValueError as error:
-        autocontrol_logger.error("normal_key failed: %r", error)
+        # Logged and swallowed, the wrapper then reported the key sent.
+        raise AutoControlKeyboardException(f"normal_key failed: {error}") from error
 
 
-def special_key(keycode: str, is_shift: bool) -> None:
+def special_key(keycode: str, is_down: bool) -> None:
     """
     Simulate special key press/release
     模擬特殊鍵盤按下/釋放 (例如音量、亮度、播放鍵)
 
     :param keycode: 特殊鍵名稱 (必須存在於 special_key_table)
-    :param is_shift: 是否同時按下 Shift
+    :param is_down: True 為按下、False 為放開 (it used to be ``is_shift``,
+        so a press and its release were the same event)
     """
     if keycode not in special_key_table:
         raise ValueError(f"Unknown special key: {keycode}")
@@ -90,15 +93,16 @@ def special_key(keycode: str, is_shift: bool) -> None:
     event = AppKit.NSEvent.otherEventWithType_location_modifierFlags_timestamp_windowNumber_context_subtype_data1_data2(
         Quartz.NSSystemDefined,
         (0, 0),
-        0xa00 if is_shift else 0xb00,
+        0xa00 if is_down else 0xb00,
         0,
         0,
         0,
         8,
-        (mapped_code << 16) | ((0xa if is_shift else 0xb) << 8),
+        (mapped_code << 16) | ((0xa if is_down else 0xb) << 8),
         -1
     )
-    Quartz.CGEventPost(0, event)
+    # CGEventPost takes the CGEventRef, not the NSEvent wrapping it.
+    Quartz.CGEventPost(0, event.CGEvent())
 
 
 def press_key(keycode: int | str, is_shift: bool) -> None:
@@ -114,7 +118,7 @@ def press_key(keycode: int | str, is_shift: bool) -> None:
         # 「不認識這個鍵」，而不是當成 keycode 丟給 Quartz。
         # A string only ever names a special key. One the table does not know
         # is `special_key`'s refusal to make, not a keycode for Quartz.
-        special_key(keycode, is_shift)
+        special_key(keycode, True)
     else:
         normal_key(keycode, is_shift, True)
 
@@ -132,6 +136,6 @@ def release_key(keycode: int | str, is_shift: bool) -> None:
         # 「不認識這個鍵」，而不是當成 keycode 丟給 Quartz。
         # A string only ever names a special key. One the table does not know
         # is `special_key`'s refusal to make, not a keycode for Quartz.
-        special_key(keycode, is_shift)
+        special_key(keycode, False)
     else:
         normal_key(keycode, is_shift, False)
