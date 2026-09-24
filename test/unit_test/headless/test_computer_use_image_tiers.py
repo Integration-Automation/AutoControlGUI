@@ -128,3 +128,27 @@ def test_later_screenshots_are_resized_too():
     result = client.messages.calls[1]["messages"][-2]["content"][0]["content"][0]
     with Image.open(io.BytesIO(base64.b64decode(result["source"]["data"]))) as image:
         assert image.size == (2576, 1449)
+
+
+@pytest.mark.parametrize("size, tier, expected", [
+    ((1920, 1080), STANDARD_TIER, (1456, 819)),     # the vision docs' examples
+    ((1075, 1520), STANDARD_TIER, (924, 1307)),
+    ((1075, 1520), HIGH_RES_TIER, (1075, 1520)),
+    ((3840, 2160), HIGH_RES_TIER, (2576, 1449)),
+])
+def test_fitted_sizes_match_the_documented_resize(size, tier, expected):
+    from je_auto_control.utils.agent.backends._computer_toolset import fitted_size
+    assert fitted_size(*size, tier) == expected
+
+
+def test_the_generic_backend_fits_screenshots_and_maps_x_y_back():
+    from je_auto_control.utils.agent.backends.anthropic import AnthropicAgentBackend
+    call = _Response([_Block("tool_use", id="t1", name="AC_click_mouse",
+                             input={"mouse_keycode": "mouse_left", "x": 1288, "y": 724})])
+    client = _Client([call])
+    backend = AnthropicAgentBackend(
+        tools=[{"name": "AC_click_mouse", "input_schema": {"type": "object"}}],
+        client=client, model="claude-opus-4-7")
+    decision = backend.decide_next_action("goal", _png(3840, 2160), [])
+    assert _sent_image_size(client.messages.calls[0]) == (2576, 1449)
+    assert (decision["input"]["x"], decision["input"]["y"]) == (1920, 1079)

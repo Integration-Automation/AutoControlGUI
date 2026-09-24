@@ -4,6 +4,9 @@ from __future__ import annotations
 from typing import Any, Dict, List, Optional, Sequence
 
 from je_auto_control.utils.agent.agent_loop import AgentBackend, AgentStep
+from je_auto_control.utils.agent.backends._computer_toolset import (
+    fit_screenshot, image_tier, unscale_decision,
+)
 from je_auto_control.utils.agent.backends.base import (
     REQUEST_TIMEOUT_S, AgentBackendError, build_default_system_prompt,
     encode_screenshot_b64, offered_tool_names, prune_old_screenshots,
@@ -37,6 +40,11 @@ class AnthropicAgentBackend(AgentBackend):
             )
         self._tools = list(tools)
         self._offered = offered_tool_names(self._tools)
+        # Claude answers in the pixels of the image it sees, and an image over
+        # the model's limits is downscaled first: each screenshot is fitted
+        # here, and the x / y a tool call carries are mapped back by _scale.
+        self._tier = image_tier(model)
+        self._scale = (1.0, 1.0)
         self._client = client
         self._api_key = api_key
         self._model = model
@@ -64,6 +72,8 @@ class AnthropicAgentBackend(AgentBackend):
         self._ingest_history(history)
         # Always attach the latest screenshot so the model has fresh
         # state — text-only context drifts quickly during a long run.
+        if screenshot:
+            screenshot, self._scale = fit_screenshot(screenshot, self._tier)
         user_content = _build_user_content(screenshot)
         self._conversation.append({"role": "user", "content": user_content})
         prune_old_screenshots(self._conversation)
@@ -110,11 +120,11 @@ class AnthropicAgentBackend(AgentBackend):
                 else getattr(block, "type", None)
             )
             if block_type == "tool_use":
-                return {
+                return unscale_decision({
                     "tool": require_offered(_attr(block, "name"), self._offered),
                     "input": _attr(block, "input") or {},
                     "_tool_use_id": _attr(block, "id"),
-                }
+                }, self._scale)
         # No tool_use — interpret the text as a final answer + stop, unless
         # the turn was cut short (default max_tokens can be hit mid-plan, or
         # the model may refuse). Surfacing a truncated reply as a successful

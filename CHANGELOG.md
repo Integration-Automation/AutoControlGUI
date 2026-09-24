@@ -361,6 +361,9 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Fixed
 
+- `AC_run_agent` with the Anthropic backend fits screenshots into the
+  model's image tier and maps tool-call `x` / `y` back to the screen.
+- Screenshot fitting follows the documented resize rule exactly.
 - SLSA provenance omits empty metadata timestamps; verification reports
   a subject without a name instead of raising.
 - PEP 440 ordering of `.postN.devM` and of omitted numbers.

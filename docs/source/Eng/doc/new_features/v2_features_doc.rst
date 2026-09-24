@@ -388,7 +388,8 @@ language and the MCP tool registry. Parameters:
 
 * ``goal`` — natural-language objective.
 * ``backend`` — ``"anthropic"`` (uses ``export_anthropic_tools()``
-  with tool-use messages) or ``"openai"`` (uses ``export_openai_tools()``
+  with tool-use messages; each screenshot is fitted into the model's image
+  tier and the ``x`` / ``y`` of a tool call mapped back to the screen) or ``"openai"`` (uses ``export_openai_tools()``
   with Chat Completions function calling).
 * ``max_steps`` (default 25) and ``wall_seconds`` (default 300.0).
 * ``model`` / ``max_tokens`` — backend-specific overrides.

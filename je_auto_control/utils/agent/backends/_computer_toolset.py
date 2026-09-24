@@ -72,18 +72,36 @@ def visual_tokens(width: int, height: int) -> int:
     return math.ceil(width / PATCH_PX) * math.ceil(height / PATCH_PX)
 
 
+def _fits(width: int, height: int, tier: Tuple[int, int]) -> bool:
+    """Whether an image of this size is inside both limits (padded edges, tokens)."""
+    long_edge, max_tokens = tier
+    return (math.ceil(width / PATCH_PX) * PATCH_PX <= long_edge
+            and math.ceil(height / PATCH_PX) * PATCH_PX <= long_edge
+            and visual_tokens(width, height) <= max_tokens)
+
+
 def fitted_size(width: int, height: int,
                 tier: Tuple[int, int] = HIGH_RES_TIER) -> Tuple[int, int]:
-    """The largest size, aspect ratio kept, inside both limits of ``tier``."""
-    long_edge, max_tokens = tier
-    scale = min(1.0, long_edge / max(width, height),
-                math.sqrt(max_tokens * PATCH_PX * PATCH_PX / float(width * height)))
-    size = (max(1, int(width * scale)), max(1, int(height * scale)))
-    # Patches round up, so the pixel bound can still be a few tokens over.
-    while visual_tokens(*size) > max_tokens:
-        scale *= 0.995
-        size = (max(1, int(width * scale)), max(1, int(height * scale)))
-    return size
+    """The size Claude itself resizes an image to: the largest inside ``tier``.
+
+    The vision docs' reference rule: a binary search along the long edge, the
+    short edge rounded half to even. Matching it exactly means the model sees
+    precisely the image sent (1920x1080 on the standard tier is 1456x819).
+    """
+    if _fits(width, height, tier):
+        return width, height
+    if height > width:
+        fitted_height, fitted_width = fitted_size(height, width, tier)
+        return fitted_width, fitted_height
+    aspect = width / height
+    low, high = 1, width            # low always fits; high never does
+    while low + 1 < high:
+        middle = (low + high) // 2
+        if _fits(middle, max(round(middle / aspect), 1), tier):
+            low = middle
+        else:
+            high = middle
+    return low, max(round(low / aspect), 1)
 
 
 def fit_screenshot(png: bytes, tier: Tuple[int, int] = HIGH_RES_TIER,
@@ -95,7 +113,11 @@ def fit_screenshot(png: bytes, tier: Tuple[int, int] = HIGH_RES_TIER,
     the limits comes back unchanged with a scale of 1.
     """
     from PIL import Image
-    with Image.open(io.BytesIO(png)) as image:
+    try:
+        image = Image.open(io.BytesIO(png))
+    except OSError:   # PIL.UnidentifiedImageError: nothing to fit, send as is
+        return png, (1.0, 1.0)
+    with image:
         width, height = image.size
         size = fitted_size(width, height, tier)
         if size == (width, height):
@@ -163,10 +185,11 @@ def unscale_decision(decision: Dict[str, Any], scale: Tuple[float, float]) -> Di
     if (sx, sy) == (1.0, 1.0):
         return decision
     for inputs in _all_inputs(decision):
-        if "x" in inputs:
-            inputs["x"] = int(round(inputs["x"] / sx))
-        if "y" in inputs:
-            inputs["y"] = int(round(inputs["y"] / sy))
+        for key, factor in (("x", sx), ("y", sy)):
+            value = inputs.get(key)
+            # Only numbers: a generic tool call's x may be anything the model sent.
+            if isinstance(value, (int, float)) and not isinstance(value, bool):
+                inputs[key] = int(round(value / factor))
     return decision
 
 
