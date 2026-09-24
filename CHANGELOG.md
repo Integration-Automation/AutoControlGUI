@@ -66,6 +66,11 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Changed
 
+- `CookieJar.update` keeps a cookie with an empty value (only
+  `Max-Age<=0` or a past `Expires` deletes one), and `parse_traceparent`
+  accepts a newer version (read as `00`); only `ff` is rejected.
+- `parse_problem` ignores `title` / `status` / `detail` / `instance` of
+  the wrong JSON type instead of keeping or coercing them.
 - `format_annotation` / `emit_annotations` / `AC_ci_annotations` raise
   `ValueError` for an unknown level instead of emitting `error`.
   `generate_sop` raises `ValueError` for a step that is neither a list nor a
@@ -317,6 +322,14 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Fixed
 
+- `decode_jwt` raises `JwtError` for a non-string `alg` (was
+  `TypeError`) and rejects any `crit` header.
+- The SSE parser no longer drops an event when a CRLF is split so the
+  `\n` arrives alone.
+- An escaped quote inside a quoted Link or Cache-Control parameter no
+  longer ends the string (a Link header's `rel` could be lost).
+- `urls_equal` / URL normalisation decode escaped unreserved characters
+  (`%7E` is `~`).
 - Closing a GUI tab or the main window while its background job
   (Admin Console poll, USB browser, computer use, DAG, LLM planner) is
   running no longer aborts the process.

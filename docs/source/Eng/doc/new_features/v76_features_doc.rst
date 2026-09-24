@@ -34,8 +34,8 @@ Headless API
 ``tracestate``) tuple. ``new_root_context`` mints a fresh trace; ``child_context``
 keeps the trace id and inherited state but allocates a new span id.
 ``parse_traceparent`` / ``format_traceparent`` round-trip the version-``00``
-header (rejecting bad versions, malformed or all-zero IDs with
-``TraceContextError``); ``parse_tracestate`` / ``format_tracestate`` handle the
+header (a newer version is read as ``00`` with any extra fields ignored; version
+``ff``, malformed or all-zero IDs raise ``TraceContextError``); ``parse_tracestate`` / ``format_tracestate`` handle the
 vendor list. ``inject_context`` writes the headers; ``extract_context`` reads
 them back (case-insensitively) and returns ``None`` for a missing or invalid
 ``traceparent``, so the receiver starts a new trace as W3C Trace Context says.

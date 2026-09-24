@@ -146,8 +146,14 @@ def _verify_signature(header_seg: str, payload_seg: str, signature_seg: str,
                       key: Key, algorithms: Iterable[str]) -> Dict[str, Any]:
     header = _json_object(header_seg, "header")
     alg = header.get("alg")
-    if alg == "none" or alg not in _ALGORITHMS:
+    # A list or object "alg" is unhashable: the membership test raised a bare
+    # TypeError that escaped every ``except JwtError``.
+    if not isinstance(alg, str) or alg == "none" or alg not in _ALGORITHMS:
         raise JwtError(f"algorithm {alg!r} is not allowed")
+    # RFC 7515 4.1.11: a token naming critical extensions must be rejected
+    # unless every one is understood, and none are.
+    if "crit" in header:
+        raise JwtError(f"unsupported critical header parameters: {header['crit']!r}")
     if alg not in set(algorithms):
         raise JwtError(f"algorithm {alg!r} is not in the allowed set")
     signing_input = f"{header_seg}.{payload_seg}".encode("ascii")

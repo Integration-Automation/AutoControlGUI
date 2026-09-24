@@ -45,7 +45,8 @@ def test_child_keeps_trace_changes_span():
 
 @pytest.mark.parametrize("bad", [
     "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7",   # 3 fields
-    "01-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01",  # version
+    "ff-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01",  # version ff
+    "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01-x",  # 00 with 5 fields
     "00-00000000000000000000000000000000-00f067aa0ba902b7-01",  # zero trace
     "00-4bf92f3577b34da6a3ce929d0e0e4736-0000000000000000-01",  # zero span
     "00-zz-00f067aa0ba902b7-01",                                # non-hex

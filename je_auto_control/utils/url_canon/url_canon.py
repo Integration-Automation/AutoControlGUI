@@ -21,9 +21,21 @@ _PERCENT = re.compile(r"%[0-9a-fA-F]{2}")
 QueryPairs = Sequence[Tuple[str, str]]
 
 
+_UNRESERVED = frozenset("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~")
+
+
+def _normalize_escape(escape: str) -> str:
+    char = chr(int(escape[1:], 16))
+    return char if char in _UNRESERVED else escape.upper()
+
+
 def _normalize_percent(text: str) -> str:
-    """Upper-case the hex digits of every percent-escape (RFC 3986 §6.2.2.1)."""
-    return _PERCENT.sub(lambda match: match.group(0).upper(), text)
+    """Normalise every percent-escape (RFC 3986 §6.2.2.1 and §6.2.2.2).
+
+    Hex digits are upper-cased, and an escape of an unreserved character
+    (``%7E`` for ``~``) is decoded, since both spellings name the same URL.
+    """
+    return _PERCENT.sub(lambda match: _normalize_escape(match.group(0)), text)
 
 
 def _remove_dot_segments(path: str) -> str:

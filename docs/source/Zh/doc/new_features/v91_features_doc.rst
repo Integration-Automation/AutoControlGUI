@@ -5,8 +5,8 @@ Cookie Jar(HTTP 工作階段攜帶)
 無法在無頭情況下攜帶工作階段。本功能把 ``Set-Cookie`` 回應標頭解析進一個 jar 並建立 ``Cookie`` 請求標頭;
 jar 可序列化為 JSON,因此工作階段可存檔與重新載入。
 
-純標準函式庫(``json``);不匯入 ``PySide6``。jar 為簡單的記憶體內名稱-值儲存(``Max-Age<=0`` / 空值時
-清除 cookie),因此行為在 CI 中完全具決定性。
+純標準函式庫(``json``);不匯入 ``PySide6``。jar 為簡單的記憶體內名稱-值儲存(``Max-Age<=0`` 或
+``Expires`` 已過時清除 cookie;空值照樣保留),因此行為在 CI 中完全具決定性。
 
 無頭 API
 --------
@@ -24,7 +24,7 @@ jar 可序列化為 JSON,因此工作階段可存檔與重新載入。
     jar = CookieJar.load("session.json")
 
 ``parse_set_cookie`` 把單一 ``Set-Cookie`` 值解析成 ``{name, value, attributes}``。``CookieJar.update``
-套用一或多個 ``Set-Cookie`` 標頭(空值或 ``Max-Age<=0`` 時移除 cookie);``set`` 直接指定;``cookie_header``
+套用一或多個 ``Set-Cookie`` 標頭(``Max-Age<=0`` 或 ``Expires`` 已過時移除 cookie);``set`` 直接指定;``cookie_header``
 建立請求標頭;``to_dict`` / ``from_dict`` 與 ``save`` / ``load`` 以 JSON 持久化 jar。(網域/路徑比對為簡化版
 —— 這是工作階段攜帶用的 jar,而非完整 RFC 6265 政策引擎。)
 

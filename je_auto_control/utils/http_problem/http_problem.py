@@ -61,11 +61,12 @@ def is_problem(headers: Optional[Mapping[str, Any]]) -> bool:
     return False
 
 
-def _coerce_status(value: Any) -> Optional[int]:
-    try:
-        return int(value) if value is not None else None
-    except (TypeError, ValueError):
+def _typed(document: Mapping[str, Any], name: str, kind: type) -> Any:
+    """A member of the right JSON type, else ``None`` (RFC 9457 3.1: ignore it)."""
+    value = document.get(name)
+    if isinstance(value, bool) or not isinstance(value, kind):
         return None
+    return value
 
 
 def _from_document(document: Mapping[str, Any]) -> ProblemDetails:
@@ -73,11 +74,11 @@ def _from_document(document: Mapping[str, Any]) -> ProblemDetails:
                   if key not in _REGISTERED}
     return ProblemDetails(
         # A non-string type (null, 42) is treated as about:blank, not "None".
-        type=document["type"] if isinstance(document.get("type"), str) else "about:blank",
-        title=document.get("title"),
-        status=_coerce_status(document.get("status")),
-        detail=document.get("detail"),
-        instance=document.get("instance"),
+        type=_typed(document, "type", str) or "about:blank",
+        title=_typed(document, "title", str),
+        status=_typed(document, "status", int),
+        detail=_typed(document, "detail", str),
+        instance=_typed(document, "instance", str),
         extensions=extensions)
 
 

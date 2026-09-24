@@ -58,6 +58,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260924-84 | 2026-09-24 | Protocol helpers follow their specs at the edges: JWT list alg and crit, SSE split CRLF, escaped quotes in Link and Cache-Control, newer traceparent versions, typed problem members, escaped unreserved URL characters, empty cookie values | #bugfix #http #security | [2026-09](2026-09.md) |
 | U-20260924-83 | 2026-09-24 | Closing a tab or the window while its background job runs no longer aborts the process; the computer-use, DAG and LLM planner tabs share start_worker | #bugfix #gui | [2026-09](2026-09.md) |
 | U-20260924-82 | 2026-09-24 | LAN browse dialogs stop their zeroconf browser however they close; the presence tab leaves the registry when destroyed | #bugfix #gui | [2026-09](2026-09.md) |
 | U-20260924-81 | 2026-09-24 | Computer use speaks the GA computer_toolset_20260801 (Claude Opus 5.5 accepts nothing else); drags end where the model said, key repeat and click modifiers are honoured | #feature #bugfix #agent | [2026-09](2026-09.md) |
@@ -242,7 +243,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | File | Period | Entries |
 |---|---|---:|
-| [2026-09.md](2026-09.md) | 2026-09 | 153 |
+| [2026-09.md](2026-09.md) | 2026-09 | 154 |
 | [2026-08-f.md](2026-08-f.md) | 2026-08 | 1 |
 | [2026-08-e.md](2026-08-e.md) | 2026-08 | 2 |
 | [2026-08-d.md](2026-08-d.md) | 2026-08 | 2 |

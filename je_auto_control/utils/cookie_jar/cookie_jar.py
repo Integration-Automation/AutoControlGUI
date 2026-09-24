@@ -6,8 +6,9 @@ login-then-call REST flow could not carry a session headlessly. This parses
 header; the jar is JSON-serialisable so a session can be saved and reloaded.
 
 Pure standard library (``json``); imports no ``PySide6``. The jar is a simple
-in-memory name-value store (cookies cleared on ``max-age<=0``, a past
-``Expires`` or an empty value), so behaviour is fully deterministic in CI.
+in-memory name-value store (cookies cleared on ``max-age<=0`` or a past
+``Expires``; an empty value is a cookie like any other, as RFC 6265 5.2 has
+it), so behaviour is fully deterministic in CI.
 """
 import datetime
 import email.utils
@@ -75,7 +76,7 @@ class CookieJar:
         parsed = parse_set_cookie(header)
         if parsed is None:
             return
-        if not parsed["value"] or _is_expired(parsed["attributes"]):
+        if _is_expired(parsed["attributes"]):
             self._cookies.pop(parsed["name"], None)
         else:
             self._cookies[parsed["name"]] = parsed["value"]

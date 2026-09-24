@@ -35,9 +35,13 @@ class Link:
         return {"uri": self.uri, "rel": self.rel, "params": dict(self.params)}
 
 
+_QUOTED_PAIR = re.compile(r"\\(.)")
+
+
 def _strip_quotes(value: str) -> str:
+    """Unquote a quoted-string, resolving its quoted-pairs (RFC 9110 5.6.4)."""
     if len(value) >= 2 and value[0] == '"' and value[-1] == '"':
-        return value[1:-1]
+        return _QUOTED_PAIR.sub(r"\1", value[1:-1])
     return value
 
 

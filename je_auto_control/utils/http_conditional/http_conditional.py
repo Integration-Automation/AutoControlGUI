@@ -22,13 +22,20 @@ def _header(headers: Optional[Mapping[str, Any]], name: str) -> str:
 def split_outside_quotes(text: str, separator: str) -> List[str]:
     """Split ``text`` on ``separator`` except inside ``"..."``.
 
-    ``private="Set-Cookie, X-Foo"`` is one directive, not two.
+    ``private="Set-Cookie, X-Foo"`` is one directive, not two. Inside a quoted
+    string a backslash escapes the next character (RFC 9110 5.6.4), so ``\\"``
+    does not end the string.
     """
     parts: List[str] = []
     current: List[str] = []
     quoted = False
+    escaped = False
     for char in text:
-        if char == '"':
+        if escaped:
+            escaped = False
+        elif quoted and char == "\\":
+            escaped = True
+        elif char == '"':
             quoted = not quoted
         if char == separator and not quoted:
             parts.append("".join(current))
