@@ -25,6 +25,7 @@ import json
 import re
 from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, List, Set, Tuple
+from urllib.parse import unquote
 
 from je_auto_control.utils.exception.exceptions import (
     AutoControlAssertionException, AutoControlJsonException)
@@ -342,10 +343,15 @@ _CHECKERS = (
 )
 
 
+_ARRAY_INDEX = re.compile(r"0|[1-9][0-9]*")
+
+
 def _ref_step(node: Any, token: str, ref: str) -> Any:
     if isinstance(node, dict) and token in node:
         return node[token]
-    if isinstance(node, list) and token.isdigit() and int(token) < len(node):
+    # RFC 6901 4: an index is "0" or has no leading zero, ASCII digits only
+    # (str.isdigit took "²" and int() then raised a bare ValueError).
+    if isinstance(node, list) and _ARRAY_INDEX.fullmatch(token) and int(token) < len(node):
         return node[int(token)]
     raise AutoControlJsonException(f"cannot resolve $ref {ref!r}")
 
@@ -353,7 +359,8 @@ def _ref_step(node: Any, token: str, ref: str) -> Any:
 def _resolve_ref(ref: str, root: Schema) -> Schema:
     if not ref.startswith("#"):
         raise AutoControlJsonException(f"only local $ref is supported, got {ref!r}")
-    pointer = ref[1:].lstrip("/")
+    # A pointer in a URI fragment is percent-encoded (RFC 6901 6): "a%20b".
+    pointer = unquote(ref[1:]).lstrip("/")
     if not pointer:
         return root
     node = root

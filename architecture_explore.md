@@ -20,7 +20,7 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 | 指標 | 數值 |
 | --- | ---: |
 | Python 模組總數（含周邊子專案） | 1,051 |
-| 程式碼總行數 | 150,749 |
+| 程式碼總行數 | 150,838 |
 | `je_auto_control/utils/` 子套件數 | 310 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 775 |
 | 套件門面 `__all__` 公開名稱數 | 1,244 |
@@ -598,7 +598,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.13 資料來源、結構驗證與 i18n
 
-> 24 個套件、約 4,546 行。
+> 24 個套件、約 4,627 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -607,18 +607,18 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/data_drift/` | 128 | 分布漂移偵測 |
 | `utils/data_profile/` | 129 | 資料剖析與結構推斷 |
 | `utils/data_quality/` | 216 | 資料品質：列結構驗證、欄位擷取、遮蔽 |
-| `utils/data_source/` | 197 | 資料驅動執行：從 CSV／JSON／SQLite／Excel 載入資料列 |
+| `utils/data_source/` | 229 | 資料驅動執行：從 CSV／JSON／SQLite／Excel 載入資料列 |
 | `utils/dataset_diff/` | 89 | 表格資料列差異比對（CDC 風格） |
-| `utils/gettext_catalog/` | 343 | GNU gettext 目錄 I/O（解析 .po、編譯／讀取 .mo、訊息查詢） |
+| `utils/gettext_catalog/` | 362 | GNU gettext 目錄 I/O（解析 .po、編譯／讀取 .mo、訊息查詢） |
 | `utils/i18n_test/` | 231 | 國際化／在地化測試輔助 |
 | `utils/json_contract/` | 145 | JSON 契約／快照比對：`match_json`、`diff_json`、`snapshot_json` |
 | `utils/json_patch/` | 352 | JSON Pointer（6901）、JSON Patch（6902）與 Merge Patch（7386） |
-| `utils/json_schema/` | 419 | JSON Schema（Draft 2020-12 子集）驗證 |
+| `utils/json_schema/` | 426 | JSON Schema（Draft 2020-12 子集）驗證 |
 | `utils/jsonpath/` | 322 | 精簡 JSONPath 查詢 |
 | `utils/list_format/` | 82 | 地區感知清單格式化（CLDR 風格的「A、B 和 C」） |
 | `utils/locale_collation/` | 135 | 地區感知字串排序（決定性多層排序鍵） |
-| `utils/locale_parse/` | 79 | 地區感知數字／貨幣／日期解析與格式化（選用 babel） |
-| `utils/message_format/` | 266 | ICU-lite MessageFormat（plural／select／selectordinal） |
+| `utils/locale_parse/` | 80 | 地區感知數字／貨幣／日期解析與格式化（選用 babel） |
+| `utils/message_format/` | 288 | ICU-lite MessageFormat（plural／select／selectordinal） |
 | `utils/office/` | 180 | Office 文件無頭讀寫（Excel／Word／PowerPoint） |
 | `utils/pdf/` | 117 | PDF 讀取與斷言（選用 pypdf 後端） |
 | `utils/referential/` | 83 | 跨資料集的參照完整性檢查 |
@@ -649,7 +649,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.15 韌性、流量控制與設定
 
-> 14 個套件、約 2,005 行。
+> 14 個套件、約 2,013 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -658,7 +658,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/bulkhead/` | 141 | Bulkhead 併發隔離 + 伺服器限流標頭解析 |
 | `utils/chaos/` | 153 | 決定性混沌實驗（穩態假說 + 故障注入） |
 | `utils/dedup_window/` | 72 | 時間視窗內的訊息去重 |
-| `utils/dotenv/` | 157 | `.env` 檔解析與序列化 |
+| `utils/dotenv/` | 165 | `.env` 檔解析與序列化 |
 | `utils/feature_flags/` | 191 | 功能旗標評估，含目標規則與決定性灰度 |
 | `utils/idempotency/` | 142 | 冪等鍵儲存與已存回應重放 |
 | `utils/layered_config/` | 110 | 分層設定解析 |
@@ -1081,6 +1081,6 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `osx/` | 17 | 925 |
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 837 |
-| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 677 | 53,642 |
-| **總計** | **1,045** | **150,684** |
+| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 677 | 53,731 |
+| **總計** | **1,045** | **150,773** |
 

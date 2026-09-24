@@ -45,10 +45,10 @@ def _unquoted(value: str) -> str:
 
 
 def _closing_quote(value: str, quote: str) -> int:
-    """Index of the quote closing ``value[0]``, or -1; ``\\"`` does not close."""
+    """Index of the quote closing ``value[0]``, or -1; an escaped quote does not close."""
     index = 1
     while index < len(value):
-        if value[index] == "\\" and quote == '"':
+        if value[index] == "\\":
             index += 2
             continue
         if value[index] == quote:
@@ -80,7 +80,15 @@ def _parse_entry(lines: List[str], index: int) -> Tuple[Optional[Tuple[str, str]
     if close == -1:
         return (key, _unquoted(raw.strip())), index + 1
     inner = value[1:close]
-    return (key, inner if quote == "'" else _unescape(inner)), end
+    return (key, _unescape_single(inner) if quote == "'" else _unescape(inner)), end
+
+
+_SINGLE_QUOTE_ESCAPE = re.compile(r"\\([\\'])")
+
+
+def _unescape_single(value: str) -> str:
+    """Decode the only escapes a single-quoted value has: ``\\\\`` and ``\\'`` (python-dotenv)."""
+    return _SINGLE_QUOTE_ESCAPE.sub(r"\1", value)
 
 
 _EXPORT = re.compile(r"export[ \t]")

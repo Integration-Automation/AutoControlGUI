@@ -72,6 +72,10 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Changed
 
+- `parse_dotenv` decodes `\'` and `\\` inside single-quoted values, as
+  python-dotenv does.
+- `format_message` keeps an apostrophe before `#` outside a plural and
+  before `|` (ICU); French has the CLDR `many` category.
 - `parse_rrule` raises `AutoControlException` for RRULE parts it does
   not support (`BYHOUR`, `BYWEEKNO`, `BYYEARDAY`…) and for `COUNT` with
   `UNTIL`, instead of silently ignoring them.
@@ -331,6 +335,14 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Fixed
 
+- `format_message` accepts `offset: 1` and reports an infinite count
+  as not a number.
+- `read_mo` decodes a catalogue in the charset its header declares.
+- JSON Schema `$ref` tokens follow RFC 6901 (ASCII indexes,
+  percent-decoded fragment).
+- A `;` inside an SQL string literal no longer counts as a second
+  statement.
+- `parse_number("Infinity")` raises `ValueError`.
 - The secret vault no longer loses a secret when two managers write
   it at once.
 - JSON stores read a file with a UTF-8 BOM, and a write waits for a

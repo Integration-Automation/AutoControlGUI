@@ -31,7 +31,7 @@ ICU-lite MessageFormat(複數 / 選擇)
 支援:簡單 ``{name}`` 參數、``select``(如性別)、``plural`` 與 ``selectordinal`` 搭配 CLDR 類別
 (``zero``/``one``/``two``/``few``/``many``/``other``)、優先於類別的精確 ``=N`` 選擇器、``#`` 數量佔位符、
 複數 ``offset:``(``#`` 變為 count − offset)、巢狀參數,以及 ICU 單引號跳脫(``''`` → ``'``;``'{'`` → 字面
-大括號)。``plural_rules`` / ``ordinal_rules`` 可注入自訂類別函式;``locale`` 選擇內建規則(``en``、``fr``)。
+大括號;``'#'`` 只在 plural 內跳脫,其他地方單引號照樣保留)。``plural_rules`` / ``ordinal_rules`` 可注入自訂類別函式;``locale`` 選擇內建規則(``en``、``fr``)。
 
 執行器命令
 ----------
