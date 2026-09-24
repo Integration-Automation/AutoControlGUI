@@ -93,17 +93,16 @@ class _FakePlayer:
         self.stopped = True
 
 
-class _Frame:
-    """Stands in for an ``av.AudioFrame`` the decoder handed us."""
+def _frame(array, layout="mono", fmt="s16", rate=48000):
+    """A real ``av.AudioFrame``, as aiortc's decoder hands one over."""
+    import av
+    frame = av.AudioFrame.from_ndarray(array, format=fmt, layout=layout)
+    frame.sample_rate = rate
+    return frame
 
-    def __init__(self, array=None, error=None) -> None:
-        self._array = array
-        self._error = error
 
-    def to_ndarray(self):
-        if self._error is not None:
-            raise self._error
-        return self._array
+class _NotAFrame:
+    """Something a broken track might yield instead of an audio frame."""
 
 
 @pytest.fixture(autouse=True)
@@ -291,7 +290,7 @@ def test_receiver_plays_the_decoded_frames_it_drains():
 
     async def _drive():
         receiver = OpusMicReceiver()
-        track = FrameTrack(_Frame(samples))
+        track = FrameTrack(_frame(samples))
         receiver.consume(track)
         await receiver._task
         return receiver
@@ -303,22 +302,36 @@ def test_receiver_plays_the_decoded_frames_it_drains():
 
 def test_receiver_converts_a_float_frame_before_playing_it():
     # av hands back whatever the decoder produced; the player only speaks
-    # int16 PCM, so a float layout has to be narrowed rather than passed on.
+    # int16 PCM. Float PCM runs -1..1, so 0.5 is half of full scale.
     async def _drive():
         receiver = OpusMicReceiver()
-        receiver.consume(FrameTrack(_Frame(np.array([[1.0, 2.0]],
-                                                dtype=np.float32))))
+        receiver.consume(FrameTrack(_frame(np.array([[0.5, -0.5]], dtype=np.float32),
+                                           fmt="fltp")))
         await receiver._task
 
     asyncio.run(_drive())
     [player] = _FakePlayer.instances
-    assert player.played == [np.array([[1, 2]], dtype=np.int16).tobytes()]
+    assert player.played == [np.array([[16384, -16384]], dtype=np.int16).tobytes()]
+
+
+def test_a_stereo_frame_is_mixed_down_for_a_mono_player():
+    # aiortc's Opus decoder always yields stereo; written as is to a mono
+    # player it played at half speed and twice the length.
+    async def _drive():
+        receiver = OpusMicReceiver()
+        receiver.consume(FrameTrack(_frame(np.array([[100, 100, 200, 200]], dtype=np.int16),
+                                           layout="stereo")))
+        await receiver._task
+
+    asyncio.run(_drive())
+    [player] = _FakePlayer.instances
+    assert player.played == [np.array([[100, 200]], dtype=np.int16).tobytes()]
 
 
 def test_a_second_consume_does_not_start_a_second_drain():
     async def _drive():
         receiver = OpusMicReceiver()
-        track = FrameTrack(_Frame(np.array([[1]], dtype=np.int16)))
+        track = FrameTrack(_frame(np.array([[1]], dtype=np.int16)))
         receiver.consume(track)
         first = receiver._task
         receiver.consume(FrameTrack())
@@ -333,8 +346,7 @@ def test_an_undecodable_frame_is_skipped_rather_than_ending_the_stream():
 
     async def _drive():
         receiver = OpusMicReceiver()
-        receiver.consume(FrameTrack(_Frame(error=ValueError("bad plane")),
-                                _Frame(good)))
+        receiver.consume(FrameTrack(_NotAFrame(), _frame(good)))
         await receiver._task
 
     asyncio.run(_drive())
@@ -346,8 +358,8 @@ def test_the_drain_stops_when_the_player_is_no_longer_running():
     async def _drive():
         receiver = OpusMicReceiver()
         _FakePlayer.instances[0].is_running = False
-        track = FrameTrack(_Frame(np.array([[1]], dtype=np.int16)),
-                       _Frame(np.array([[2]], dtype=np.int16)))
+        track = FrameTrack(_frame(np.array([[1]], dtype=np.int16)),
+                           _frame(np.array([[2]], dtype=np.int16)))
         receiver.consume(track)
         await receiver._task
         return track
@@ -371,7 +383,7 @@ def test_the_drain_ends_quietly_when_the_track_dies():
 def test_stopping_the_receiver_cancels_the_drain_and_closes_the_player():
     async def _drive():
         receiver = OpusMicReceiver()
-        receiver.consume(FrameTrack(_Frame(np.array([[1]], dtype=np.int16))))
+        receiver.consume(FrameTrack(_frame(np.array([[1]], dtype=np.int16))))
         task = receiver._task
         receiver.stop()
         assert receiver._task is None

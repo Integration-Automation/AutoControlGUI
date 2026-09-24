@@ -8,6 +8,7 @@ the loop; callers do that explicitly via :func:`get_bridge`.
 from __future__ import annotations
 
 import asyncio
+import fractions
 import sys
 import threading
 import time
@@ -24,6 +25,7 @@ try:
         RTCConfiguration, RTCIceServer, RTCPeerConnection,
         RTCSessionDescription, VideoStreamTrack,
     )
+    from aiortc.mediastreams import VIDEO_CLOCK_RATE, MediaStreamError
 except ImportError as exc:  # pragma: no cover - optional dependency
     raise ImportError(
         "WebRTC transport requires the 'webrtc' extra: "
@@ -148,15 +150,37 @@ class _AsyncioBridge:
         self.start().call_soon_threadsafe(callback, *args)
 
     def stop(self) -> None:
+        """Cancel pending tasks, stop the loop and close it once its thread has ended.
+
+        Closing a loop whose thread was still running raised and left the
+        dead loop registered, and tasks never cancelled hung their futures.
+        """
         with self._lock:
-            if self._loop is None:
-                return
-            self._loop.call_soon_threadsafe(self._loop.stop)
-            if self._thread is not None:
-                self._thread.join(timeout=2.0)
-            self._loop.close()
+            loop, thread = self._loop, self._thread
             self._loop = None
             self._thread = None
+        if loop is None:
+            return
+        try:
+            asyncio.run_coroutine_threadsafe(_cancel_all_tasks(), loop).result(timeout=2.0)
+        except (TimeoutError, asyncio.CancelledError, RuntimeError) as error:
+            autocontrol_logger.warning("webrtc bridge: task cancel on stop: %r", error)
+        loop.call_soon_threadsafe(loop.stop)
+        if thread is not None:
+            thread.join(timeout=2.0)
+            if thread.is_alive():
+                autocontrol_logger.warning("webrtc bridge: loop thread still running; loop left open")
+                return
+        loop.close()
+
+
+async def _cancel_all_tasks() -> None:
+    current = asyncio.current_task()
+    pending = [task for task in asyncio.all_tasks() if task is not current]
+    for task in pending:
+        task.cancel()
+    await asyncio.gather(*pending, return_exceptions=True)
+    await asyncio.get_running_loop().shutdown_asyncgens()
 
 
 _bridge = _AsyncioBridge()
@@ -256,6 +280,8 @@ class ScreenVideoTrack(VideoStreamTrack):
             max_workers=1, thread_name_prefix="rd-capture",
         )
         self._last_emit: Optional[float] = None
+        self._clock_start: Optional[float] = None
+        self._last_pts = -1
 
     @property
     def fps(self) -> int:
@@ -297,6 +323,22 @@ class ScreenVideoTrack(VideoStreamTrack):
             self._monitor = _resolve_monitor(sct, self._monitor_index)
         return self._monitor
 
+    def _timestamp(self) -> Tuple[int, fractions.Fraction]:
+        """A 90 kHz timestamp from the wall clock.
+
+        aiortc's ``next_timestamp()`` adds 1/30 s per frame and paces to 30
+        fps itself, so 10 fps frames were stamped a third of real time and
+        60 fps was capped at 30; this track does its own pacing.
+        """
+        if self.readyState != "live":
+            raise MediaStreamError
+        now = time.monotonic()
+        if self._clock_start is None:
+            self._clock_start = now
+        pts = max(round((now - self._clock_start) * VIDEO_CLOCK_RATE), self._last_pts + 1)
+        self._last_pts = pts
+        return pts, fractions.Fraction(1, VIDEO_CLOCK_RATE)
+
     async def recv(self):
         if self._last_emit is None:
             self._last_emit = time.monotonic()
@@ -306,7 +348,7 @@ class ScreenVideoTrack(VideoStreamTrack):
             if sleep_for > 0:
                 await asyncio.sleep(sleep_for)
             self._last_emit = time.monotonic()
-        pts, time_base = await self.next_timestamp()
+        pts, time_base = self._timestamp()
         loop = asyncio.get_event_loop()
         monitor = self._resolve()
         frame_array = await loop.run_in_executor(

@@ -303,6 +303,11 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Fixed
 
+- **WebRTC media**: screen frames are stamped at the rate they are sent and
+  frame rates above 30 fps take effect; host voice plays at the right speed on
+  a mono output; an audio device that fails no longer aborts the connection or
+  wedges later starts; a viewer reused for a second session shows video;
+  mDNS and the asyncio bridge release their resources on failure and stop.
 - **USB passthrough, agent loop and locators**: the second of two identical
   USB devices opens by serial, a transfer whose direction contradicts the
   endpoint is refused and closing gives the device back to the kernel; a

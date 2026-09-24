@@ -351,7 +351,12 @@ class WebRTCDesktopViewer:
 
     async def _async_process_offer(self, offer_sdp: str) -> str:
         if self._pc is not None:
-            await self._pc.close()
+            # The whole previous session goes, not only its peer connection:
+            # tracks, receivers and the authenticated flag outlived it.
+            await self._async_stop()
+        # stop() set this and nothing cleared it, so a reused viewer's video
+        # loop ended at once and showed no frames.
+        self._closed.clear()
         self._pc = RTCPeerConnection(
             configuration=self._config.to_rtc_configuration(),
         )

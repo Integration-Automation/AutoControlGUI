@@ -39,6 +39,9 @@ class _FakeStream:
 
 
 class _FakeSounddevice:
+    class PortAudioError(Exception):
+        """sounddevice's own error, which derives from ``Exception`` directly."""
+
     def __init__(self) -> None:
         self.last_input: Optional[_FakeStream] = None
         self.last_output: Optional[_FakeStream] = None

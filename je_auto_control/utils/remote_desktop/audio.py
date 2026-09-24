@@ -14,6 +14,9 @@ import threading
 from dataclasses import dataclass
 from typing import Any, Callable, Optional
 
+from je_auto_control.utils.exception.exceptions import AutoControlException
+from je_auto_control.utils.logging.logging_instance import autocontrol_logger
+
 DEFAULT_SAMPLE_RATE = 16_000
 DEFAULT_CHANNELS = 1
 DEFAULT_BLOCK_FRAMES = 800  # 50 ms at 16 kHz
@@ -23,20 +26,67 @@ BYTES_PER_SAMPLE = 2
 AudioBlockCallback = Callable[[bytes], None]
 
 
-class AudioBackendError(RuntimeError):
-    """Raised when the optional ``sounddevice`` backend cannot be loaded."""
+class AudioBackendError(AutoControlException, RuntimeError):
+    """Raised when ``sounddevice`` cannot be loaded or an audio device fails."""
 
 
 def _load_sounddevice():
-    """Import ``sounddevice`` lazily; raise a helpful error if missing."""
+    """Import ``sounddevice`` lazily; raise a helpful error if missing.
+
+    ``OSError`` too: sounddevice raises it when the PortAudio library
+    itself cannot be found.
+    """
     try:
         import sounddevice  # noqa: PLC0415  intentional lazy import
-    except ImportError as error:
+    except (ImportError, OSError) as error:
         raise AudioBackendError(
             "audio support requires 'sounddevice'. Install with: "
             "pip install sounddevice"
         ) from error
     return sounddevice
+
+
+def _device_errors(sd: Any) -> tuple:
+    """What a PortAudio call may raise: ``PortAudioError`` derives from ``Exception`` directly."""
+    return (OSError, RuntimeError, sd.PortAudioError)
+
+
+def _open_started(sd: Any, factory: Callable[[], Any]) -> Any:
+    """Create a stream and start it; a stream that fails to start is closed.
+
+    Raises :class:`AudioBackendError`: a raw ``PortAudioError`` escaped the
+    ``RuntimeError`` / ``OSError`` guards around every caller, and a stream
+    kept after a failed ``start()`` made every later ``start()`` a no-op.
+    """
+    errors = _device_errors(sd)
+    try:
+        stream = factory()
+    except errors as error:
+        raise AudioBackendError(f"audio device unavailable: {error}") from error
+    try:
+        stream.start()
+    except errors as error:
+        _close_quietly(stream, errors)
+        raise AudioBackendError(f"audio device failed to start: {error}") from error
+    return stream
+
+
+def _close_quietly(stream: Any, errors: tuple) -> None:
+    try:
+        stream.close()
+    except errors as error:
+        autocontrol_logger.debug("audio stream close: %r", error)
+
+
+def _stop_and_close(stream: Any) -> None:
+    """Stop and close ``stream``; device errors on the way out are logged, never raised."""
+    errors = _device_errors(_load_sounddevice())
+    try:
+        stream.stop()
+    except errors as error:
+        autocontrol_logger.debug("audio stream stop: %r", error)
+    finally:
+        _close_quietly(stream, errors)
 
 
 def is_audio_backend_available() -> bool:
@@ -104,15 +154,14 @@ class AudioCapture:
             if self._stream is not None:
                 return
             sd = _load_sounddevice()
-            self._stream = sd.RawInputStream(
+            self._stream = _open_started(sd, lambda: sd.RawInputStream(
                 samplerate=self._sample_rate,
                 channels=self._channels,
                 dtype=SAMPLE_DTYPE,
                 blocksize=self._block_frames,
                 device=self._device,
                 callback=self._raw_callback,
-            )
-            self._stream.start()
+            ))
 
     def stop(self) -> None:
         """Stop and release the input stream."""
@@ -121,20 +170,14 @@ class AudioCapture:
             self._stream = None
         if stream is None:
             return
-        try:
-            stream.stop()
-        finally:
-            try:
-                stream.close()
-            except (OSError, RuntimeError):
-                pass
+        _stop_and_close(stream)
 
     def _raw_callback(self, indata, frames, time_info, status) -> None:
         del frames, time_info  # unused — block size is fixed
         if status:
-            # Drops / overflows are surfaced via ``status``; we let the
-            # audio thread continue rather than tearing down the stream.
-            return
+            # An overflow flag still comes with valid samples; dropping the
+            # block added a second gap on top of the glitch.
+            autocontrol_logger.debug("audio capture status: %s", status)
         try:
             self._on_block(bytes(indata))
         except Exception:  # noqa: BLE001  callback isolation  # nosec B110  # reason: PortAudio callback must never raise
@@ -154,6 +197,7 @@ class AudioPlayer:
         self._sample_rate = int(sample_rate)
         self._channels = int(channels)
         self._stream: Optional[Any] = None
+        self._write_errors: tuple = (OSError, RuntimeError)
         self._lock = threading.Lock()
 
     @property
@@ -166,13 +210,13 @@ class AudioPlayer:
             if self._stream is not None:
                 return
             sd = _load_sounddevice()
-            self._stream = sd.RawOutputStream(
+            self._write_errors = _device_errors(sd)
+            self._stream = _open_started(sd, lambda: sd.RawOutputStream(
                 samplerate=self._sample_rate,
                 channels=self._channels,
                 dtype=SAMPLE_DTYPE,
                 device=self._device,
-            )
-            self._stream.start()
+            ))
 
     def play(self, chunk: bytes) -> None:
         """Write a chunk of int16 PCM bytes to the stream."""
@@ -185,10 +229,10 @@ class AudioPlayer:
             raise RuntimeError("AudioPlayer is not running; call start() first")
         try:
             stream.write(bytes(chunk))
-        except (OSError, RuntimeError):
-            # Late writes after stop / device removal — ignore so the
-            # network thread can keep flowing without crashing.
-            pass
+        except self._write_errors as error:
+            # Late writes after stop / device removal — ignored so the
+            # network thread keeps flowing; PortAudioError included.
+            autocontrol_logger.debug("audio write dropped: %r", error)
 
     def stop(self) -> None:
         with self._lock:
@@ -196,10 +240,4 @@ class AudioPlayer:
             self._stream = None
         if stream is None:
             return
-        try:
-            stream.stop()
-        finally:
-            try:
-                stream.close()
-            except (OSError, RuntimeError):
-                pass
+        _stop_and_close(stream)
