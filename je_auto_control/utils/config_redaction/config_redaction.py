@@ -50,7 +50,8 @@ _TEXT_PATTERNS = (
     re.compile(r"(?i)(\bauthorization[\"']?\s*[=:]\s*[\"']?(?:bearer|basic|token|digest)\s+)[^\s,;\"']+"),
     # key="a quoted value with spaces" -- the whole quoted value, not its
     # first word.
-    re.compile(r"(?i)(" + _CREDENTIAL_KEY_NAMES + r"[\"']?\s*[=:]\s*([\"']))(?:(?!\2).)+"),
+    # An escaped quote does not end the value: "ab\\"cdSECRET" showed cdSECRET.
+    re.compile(r"(?i)(" + _CREDENTIAL_KEY_NAMES + r"[\"']?\s*[=:]\s*([\"']))(?:\\.|(?!\2).)+"),
     # key=value / key: value / "key": "value" -- the key may carry a prefix
     # (db_password, client_secret), which the old leading \b refused.
     re.compile(r"(?i)(" + _CREDENTIAL_KEY_NAMES + r"[\"']?\s*[=:]\s*[\"']?)[^\s,;\"']+"),

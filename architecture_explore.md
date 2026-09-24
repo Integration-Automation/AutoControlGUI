@@ -20,7 +20,7 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 | 指標 | 數值 |
 | --- | ---: |
 | Python 模組總數（含周邊子專案） | 1,051 |
-| 程式碼總行數 | 151,215 |
+| 程式碼總行數 | 151,306 |
 | `je_auto_control/utils/` 子套件數 | 310 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 775 |
 | 套件門面 `__all__` 公開名稱數 | 1,244 |
@@ -271,7 +271,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.1 執行引擎與腳本資產
 
-> 24 個套件、約 14,351 行。
+> 24 個套件、約 14,356 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -286,7 +286,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/flow_debugger/` | 155 | action list 的單步除錯器與追蹤器 |
 | `utils/input_macro/` | 451 | 定時輸入事件：錄製結果的整形（`timeline`／`InputRecorder`，Windows 與 macOS 共用）、重播與宣告式輸入序列 DSL |
 | `utils/json/` | 99 | action JSON 檔讀寫與正規化格式化（`fmt --check` 的後端） |
-| `utils/json_store/` | 266 | JSON 字典檔持久化的共用小工具（內部管線） |
+| `utils/json_store/` | 271 | JSON 字典檔持久化的共用小工具（內部管線） |
 | `utils/loop_guard/` | 158 | 機械式卡死迴圈偵測（agent loop 用） |
 | `utils/plugin_loader/` | 142 | 掃描外部 Python 外掛目錄並註冊其 `AC_` callable |
 | `utils/plugin_sdk/` | 80 | 外掛 SDK：透過 entry points 發佈／載入第三方 `AC_*` 指令 |
@@ -414,7 +414,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.6 OCR 與文字理解
 
-> 19 個套件、約 3,436 行。
+> 19 個套件、約 3,459 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -424,11 +424,11 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/form_fields/` | 128 | 多方向關聯表單標籤與值，並讀取核取方塊狀態 |
 | `utils/fuzzy/` | 111 | 模糊字串比對與去重（預設 difflib，有 rapidfuzz 則優先） |
 | `utils/grid_locator/` | 71 | 以 (row, column) 從邊界框定址表格／網格儲存格 |
-| `utils/guardrail/` | 116 | 針對畫面／OCR 文字的啟發式 prompt-injection 防護 |
+| `utils/guardrail/` | 117 | 針對畫面／OCR 文字的啟發式 prompt-injection 防護 |
 | `utils/heading_segment/` | 71 | 判定 OCR 行是標題或內文，建出文件大綱 |
 | `utils/near_dup/` | 108 | 近似重複文字偵測（SimHash／MinHash） |
 | `utils/ocr/` | 1,136 | OCR 引擎門面 + 三個後端（Tesseract／EasyOCR／PaddleOCR）、版面結構化與跨詞比對（`text_span`） |
-| `utils/pii_text/` | 119 | 自由文字中的 PII 偵測與遮蔽（email／電話／SSN／卡號／IP／IBAN） |
+| `utils/pii_text/` | 141 | 自由文字中的 PII 偵測與遮蔽（email／電話／SSN／卡號／IP／IBAN） |
 | `utils/readability/` | 140 | 可讀性評分（Flesch、Flesch-Kincaid、Gunning Fog、SMOG、ARI） |
 | `utils/reading_flow/` | 145 | 以遞迴 XY-cut 推導欄位感知的閱讀順序 |
 | `utils/search_index/` | 145 | 記憶體內 BM25／TF-IDF 全文檢索 |
@@ -557,7 +557,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.12 報表、可觀測性與測試治理
 
-> 34 個套件、約 7,392 行。
+> 34 個套件、約 7,396 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -583,7 +583,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/quarantine/` | 200 | 易碎測試隔離區，讓套件執行器跳過已知不穩定案例 |
 | `utils/run_diff/` | 123 | 兩次執行軌跡的差異（LCS 對齊：新增／移除／狀態翻轉／退化） |
 | `utils/run_history/` | 410 | 執行歷史儲存與產出物管理 |
-| `utils/sarif/` | 163 | 以 SARIF 2.1.0 匯出發現項，供 GitHub／Azure code scanning |
+| `utils/sarif/` | 167 | 以 SARIF 2.1.0 匯出發現項，供 GitHub／Azure code scanning |
 | `utils/slo/` | 115 | SLO 評估：SLI、錯誤預算與多視窗燃燒率告警 |
 | `utils/smoothing/` | 67 | 數列移動平均平滑 |
 | `utils/soft_assert/` | 79 | 軟斷言：累積檢查並在區塊結束時一次拋出 |
@@ -629,23 +629,23 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.14 安全、機密與合規
 
-> 13 個套件、約 2,817 行。
+> 13 個套件、約 2,876 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
-| `utils/config_redaction/` | 85 | 設定結構與 log 字串的機密遮蔽 |
-| `utils/egress/` | 148 | 無頭 HTTP 用戶端的網路外連允許清單守衛 |
-| `utils/governance/` | 237 | 治理：maker-checker 核准閘門與即時憑證租約 |
-| `utils/license_policy/` | 222 | 以 SBOM 元件評估 SPDX 授權允許／拒絕政策 |
+| `utils/config_redaction/` | 86 | 設定結構與 log 字串的機密遮蔽 |
+| `utils/egress/` | 169 | 無頭 HTTP 用戶端的網路外連允許清單守衛 |
+| `utils/governance/` | 242 | 治理：maker-checker 核准閘門與即時憑證租約 |
+| `utils/license_policy/` | 240 | 以 SBOM 元件評估 SPDX 授權允許／拒絕政策 |
 | `utils/provenance/` | 117 | SLSA 建置來源證明（in-toto v1） |
 | `utils/rbac/` | 299 | 角色型存取控制：使用者、角色與權杖驗證（尚未接到 REST／MCP） |
 | `utils/redaction/` | 504 | 截圖遮蔽層：規則偵測 + 政策 + 協調器（上傳 VLM 前先遮） |
-| `utils/sbom/` | 143 | SBOM（CycloneDX）產生 |
+| `utils/sbom/` | 148 | SBOM（CycloneDX）產生 |
 | `utils/secret_ref/` | 143 | URI scheme 形式的值參照解析 |
 | `utils/secrets/` | 360 | 加密機密儲存庫，供 `${secrets.NAME}` 解析 |
-| `utils/secrets_scan/` | 133 | 掃描 action JSON／資料中應入庫卻硬編碼的機密 |
+| `utils/secrets_scan/` | 138 | 掃描 action JSON／資料中應入庫卻硬編碼的機密 |
 | `utils/vex/` | 167 | OpenVEX 陳述撰寫與漏洞分類處置 |
-| `utils/vuln_scan/` | 259 | 以 OSV 比對 SBOM 元件的漏洞（純標準庫） |
+| `utils/vuln_scan/` | 263 | 以 OSV 比對 SBOM 元件的漏洞（純標準庫） |
 
 ### 5.4.15 韌性、流量控制與設定
 
@@ -1081,6 +1081,6 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `osx/` | 17 | 925 |
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 837 |
-| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 677 | 53,917 |
-| **總計** | **1,045** | **151,150** |
+| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 677 | 54,008 |
+| **總計** | **1,045** | **151,241** |
 

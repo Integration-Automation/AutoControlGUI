@@ -58,6 +58,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260925-11 | 2026-09-25 | Security helpers hold at the edges: IDNA hosts in the egress policy, OSV ranges with several pairs, licence spellings and every licence entry, whole-placeholder secrets only, locked in-memory gates and broker, PEP 639 licences, print-format IBANs, escaped quotes, SARIF without severity, a colleague called Dan | #bugfix #security | [2026-09](2026-09.md) |
 | U-20260925-10 | 2026-09-25 | observation_delta inherits element matching's IoU > 0 rule; its moved-element test now uses boxes that overlap | #test #vision | [2026-09](2026-09.md) |
 | U-20260925-09 | 2026-09-25 | Computer use on the beta tool fits screenshots into the model's image tier and maps coordinates back, so clicks land where the model meant on screens over the limit | #bugfix #agent | [2026-09](2026-09.md) |
 | U-20260925-08 | 2026-09-25 | Image helpers follow their references: pixelmatch's anti-aliasing test instead of a morphological open, L1 histograms with a symmetric intersection, SSIM on the images' dynamic range, the true median line height, no IoU-zero matches, arrays in the perceptual hashes | #bugfix #vision | [2026-09](2026-09.md) |
@@ -253,7 +254,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | File | Period | Entries |
 |---|---|---:|
-| [2026-09.md](2026-09.md) | 2026-09 | 164 |
+| [2026-09.md](2026-09.md) | 2026-09 | 165 |
 | [2026-08-f.md](2026-08-f.md) | 2026-08 | 1 |
 | [2026-08-e.md](2026-08-e.md) | 2026-08 | 2 |
 | [2026-08-d.md](2026-08-d.md) | 2026-08 | 2 |

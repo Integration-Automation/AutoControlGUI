@@ -138,7 +138,11 @@ def is_affected(version: str, osv_range: Mapping[str, Any]) -> bool:
     affected = False
     for kind, bound in _sorted_events(osv_range.get("events", [])):
         if kind == "introduced":
-            affected = bound == "0" or target >= version_key(bound)
+            # Only ever sets the flag (OSV range evaluation): a later
+            # "introduced" above the version cleared a match from an earlier
+            # introduced / fixed pair.
+            if bound == "0" or target >= version_key(bound):
+                affected = True
         elif kind == "fixed" and target >= version_key(bound):
             affected = False
         elif kind == "last_affected" and target > version_key(bound):

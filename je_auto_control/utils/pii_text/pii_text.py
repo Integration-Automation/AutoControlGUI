@@ -15,6 +15,8 @@ import re
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Sequence
 
+from je_auto_control.utils.checksum.checksum import mod97_10_validate
+
 PII_KINDS = ("email", "ipv4", "ssn", "credit_card", "iban", "phone")
 
 _PATTERNS: Dict[str, "re.Pattern[str]"] = {
@@ -26,7 +28,9 @@ _PATTERNS: Dict[str, "re.Pattern[str]"] = {
     "ssn": re.compile(r"\b\d{3}-\d{2}-\d{4}\b"),
     # 13-19 digits in any grouping (Amex is 4-6-5), confirmed by Luhn below.
     "credit_card": re.compile(r"\b\d(?:[ -]?\d){12,18}\b"),
-    "iban": re.compile(r"\b[A-Z]{2}\d{2}[A-Z0-9]{10,30}\b"),
+    # ISO 13616: compact, or the print format in groups of four
+    # ("DE89 3704 0044 0532 0130 00"); confirmed by mod-97 below.
+    "iban": re.compile(r"\b[A-Z]{2}\d{2}(?: ?[A-Z0-9]{4}){2,7}(?: ?[A-Z0-9]{1,4})?\b"),
     # Up to 20 characters: "+1 (555) 123-4567" and "+44 20 7946 0958" were
     # cut at 15 and their last digits left visible.
     "phone": re.compile(r"(?<![\w+])\+?\(?\d[\d().\- ]{6,18}\d(?!\w)"),
@@ -46,6 +50,24 @@ def luhn_valid(number: str) -> bool:
                 digit -= 9
         total += digit
     return total % 10 == 0
+
+
+def _iban_valid(value: str) -> bool:
+    """ISO 13616 mod-97: the rearranged IBAN, letters as 10..35, leaves 1."""
+    compact = value.replace(" ", "").upper()
+    if not 15 <= len(compact) <= 34:
+        return False
+    rearranged = compact[4:] + compact[:4]
+    return mod97_10_validate("".join(str(int(char, 36)) for char in rearranged))
+
+
+def _confirmed(kind: str, value: str) -> bool:
+    """Checksum the kinds that carry one (Luhn for cards, mod-97 for IBANs)."""
+    if kind == "credit_card":
+        return luhn_valid(value)
+    if kind == "iban":
+        return _iban_valid(value)
+    return True
 
 
 @dataclass(frozen=True)
@@ -75,7 +97,7 @@ def detect_pii(text: str, *,
         candidates.extend(
             PIIFinding(kind, m.group(0), m.start(), m.end())
             for m in pattern.finditer(text)
-            if kind != "credit_card" or luhn_valid(m.group(0)))
+            if _confirmed(kind, m.group(0)))
     candidates.sort(key=lambda f: (f.start, -(f.end - f.start)))
     kept: List[PIIFinding] = []
     last_end = -1

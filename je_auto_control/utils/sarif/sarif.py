@@ -25,6 +25,10 @@ _LEVELS = {
 
 
 def _level(severity: Any) -> str:
+    # No severity is a warning: str(None) is "none", a level SARIF 2.1.0
+    # 3.27.10 reserves for results whose kind is not "fail".
+    if severity is None:
+        return "warning"
     return _LEVELS.get(str(severity).lower(), "warning")
 
 

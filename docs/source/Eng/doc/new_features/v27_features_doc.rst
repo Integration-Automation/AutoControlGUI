@@ -39,6 +39,7 @@ Secret scan
 Walks a JSON-like structure and flags string values that look like secrets —
 by key name (``password`` / ``token`` / ``api_key`` …), by value pattern
 (AWS / GitHub tokens, private-key blocks), or by high Shannon entropy — that
-should reference the vault (``${secrets.NAME}``). Values already referencing
-the vault are ignored; previews are masked. Exposed as ``AC_scan_secrets`` /
+should reference the vault (``${secrets.NAME}``). A value that is only a
+placeholder (``${secrets.NAME}``) is ignored; one that merely starts with one is
+still scanned; previews are masked. Exposed as ``AC_scan_secrets`` /
 ``ac_scan_secrets``.

@@ -74,6 +74,8 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Changed
 
+- The SBOM prefers PEP 639 `License-Expression`; licence evaluation
+  reads every `licenses` entry.
 - `perceptual_diff` discounts anti-aliasing with pixelmatch's test
   instead of a morphological open, so thin real changes (small text,
   1 px rules) now count.
@@ -253,6 +255,13 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Security
 
+- The egress policy matches hosts by their IDNA encoding, so soft
+  hyphens, fullwidth characters and ideographic full stops no longer
+  slip past a deny list.
+- `GPLv3+`, `GPL-3.0 License` and `LGPL-2.1-or-later` are caught by the
+  copyleft deny list.
+- The secrets scan skips only values that are a single placeholder.
+- Secret redaction no longer stops at an escaped quote.
 - **HTTP cassettes no longer record credential headers**, and a `match_on`
   field they cannot compare raises instead of matching every request.
 - **JWT decoding rejects characters outside base64url** (which made tokens
@@ -350,6 +359,11 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Fixed
 
+- OSV ranges with several introduced/fixed pairs match every pair.
+- In-memory approval gates and the credential broker are thread-safe.
+- Print-format IBANs are detected (mod-97 checked).
+- SARIF findings without a severity are warnings; the name "Dan" is
+  not a jailbreak marker.
 - Computer use on the beta tool fits screenshots into the model's image
   tier, declares that size and maps coordinates back, so clicks land
   correctly on screens above the model's image limits (4K, or 1080p on

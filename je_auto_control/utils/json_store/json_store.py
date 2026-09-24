@@ -7,6 +7,7 @@ load/flush logic. Pure standard library; imports no ``PySide6``.
 import json
 import os
 import tempfile
+import threading
 import time
 from contextlib import contextmanager
 from pathlib import Path
@@ -194,6 +195,7 @@ class SharedJsonDict:
                  strict: bool = False) -> None:
         self._path = Path(path) if path is not None else None
         self._memory: Dict[str, Any] = {}
+        self._memory_lock = threading.Lock()
         self._strict = strict
 
     def _load(self, path: Path) -> Dict[str, Any]:
@@ -208,7 +210,10 @@ class SharedJsonDict:
     def update(self, mutate: Callable[[Dict[str, Any]], _Result]) -> _Result:
         """Apply ``mutate`` to the current contents and persist them."""
         if self._path is None:
-            return mutate(self._memory)
+            # The file lock does not cover memory: two threads deciding one
+            # approval request could both be told they had succeeded.
+            with self._memory_lock:
+                return mutate(self._memory)
         with _file_lock(self._path):
             data = self._load(self._path)
             result = mutate(data)

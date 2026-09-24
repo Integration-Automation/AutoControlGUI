@@ -37,5 +37,5 @@ fallback_rate, avg_duration_ms, top_brittle}``——在定位器真正失效前,
 
 走訪 JSON 結構並標記看起來像機密的字串值——依鍵名(``password`` /
 ``token`` / ``api_key`` …)、依值樣式(AWS / GitHub token、私鑰區塊),或
-依高夏農熵——這些應改用保險庫(``${secrets.NAME}``)。已引用保險庫的值會被
-略過;預覽會遮罩。對應 ``AC_scan_secrets`` / ``ac_scan_secrets``。
+依高夏農熵——這些應改用保險庫(``${secrets.NAME}``)。只由一個占位符組成的值(``${secrets.NAME}``)會被
+略過,只是以占位符開頭的值仍會掃描;預覽會遮罩。對應 ``AC_scan_secrets`` / ``ac_scan_secrets``。

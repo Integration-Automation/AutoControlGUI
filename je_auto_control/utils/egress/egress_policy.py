@@ -31,8 +31,25 @@ def _as_patterns(value: Patterns) -> Optional[List[str]]:
     if value is None:
         return None
     items = value.split(",") if isinstance(value, str) else list(value)
-    patterns = [str(item).strip().lower().rstrip(".") for item in items]
+    patterns = [_ascii_name(str(item).strip().lower().rstrip(".")) or str(item).strip().lower()
+                for item in items]
+    patterns = [pattern.rstrip(".") for pattern in patterns]
     return [_canonical_ip(pattern) or pattern for pattern in patterns if pattern]
+
+
+def _ascii_name(host: str) -> Optional[str]:
+    """The ASCII name a socket connects to for ``host`` (IDNA), or ``None``.
+
+    IDNA drops a soft hyphen, folds fullwidth letters and digits and turns the
+    ideographic full stop into a dot, so "12<SHY>7.0.0.1" and "evil<U+3002>com"
+    reached 127.0.0.1 and evil.com while a deny list compared the raw text.
+    """
+    if host.isascii():
+        return host
+    try:
+        return host.encode("idna").decode("ascii").lower()
+    except UnicodeError:
+        return None
 
 
 class EgressBlocked(AutoControlException, ValueError):
@@ -54,7 +71,11 @@ def _host_of(url: str) -> Optional[str]:
     host = urlparse(url).hostname
     if not host:
         return None
-    host = unquote(host).lower().rstrip(".")
+    # A name IDNA cannot encode cannot be connected to either: no host, blocked.
+    ascii_host = _ascii_name(unquote(host).lower())
+    if ascii_host is None:
+        return None
+    host = ascii_host.rstrip(".")
     return _canonical_ip(host) or host or None
 
 

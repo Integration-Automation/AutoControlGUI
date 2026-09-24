@@ -17,8 +17,8 @@ from je_auto_control.utils.sarif import make_finding
 # Strong/network copyleft SPDX ids most policies want to flag.
 DEFAULT_COPYLEFT = frozenset({
     "GPL-2.0-only", "GPL-2.0-or-later", "GPL-3.0-only", "GPL-3.0-or-later",
-    "AGPL-3.0-only", "AGPL-3.0-or-later", "LGPL-2.1-only", "LGPL-3.0-only",
-    "LGPL-3.0-or-later", "MPL-2.0", "EPL-2.0", "CDDL-1.0",
+    "AGPL-3.0-only", "AGPL-3.0-or-later", "LGPL-2.1-only", "LGPL-2.1-or-later",
+    "LGPL-3.0-only", "LGPL-3.0-or-later", "MPL-2.0", "EPL-2.0", "CDDL-1.0",
 })
 
 # Canonical SPDX id -> the loose names that should normalize to it. Inverted
@@ -62,11 +62,20 @@ def normalize_spdx(raw: str) -> str:
     alias = _ALIASES.get(text.lower())
     if alias:
         return alias
-    lowered = text.lower()
+    # "+" means "or later" and is taken off before any lookup: "GPLv3+" read
+    # as the alias key "gplv3+", found nothing and came out "GPLv3", which a
+    # GPL-3.0 deny list does not name. A " License" suffix is dropped first
+    # too, so "GPL-3.0 License" still reaches the GNU normalisation.
+    later = text.endswith("+")
+    base = text[:-1].rstrip() if later else text
     for suffix in (" license", " licence"):
-        if lowered.endswith(suffix):
-            return text[:-len(suffix)].strip()
-    return _gnu_id(text) or text.rstrip("+")
+        if base.lower().endswith(suffix):
+            base = base[:-len(suffix)].strip()
+            break
+    base = _ALIASES.get(base.lower(), base)
+    if later and base.endswith("-only"):
+        return base[:-len("-only")] + "-or-later"
+    return _gnu_id(base + ("+" if later else "")) or base
 
 
 # A parsed expression: ("id", spdx) or ("and" / "or", [children]).
@@ -170,14 +179,23 @@ def evaluate_license(license_str: str, *,
 
 
 def _component_license(component: Mapping[str, Any]) -> str:
+    """Every licence a component declares, joined with AND.
+
+    Only the first entry was read, so MIT listed before GPL-3.0-only hid the
+    GPL from a deny list.
+    """
+    parts: List[str] = []
     for entry in component.get("licenses", []):
         if "expression" in entry:
-            return str(entry["expression"])
+            parts.append(str(entry["expression"]))
+            continue
         license_obj = entry.get("license", {})
         name = license_obj.get("id") or license_obj.get("name")
         if name:
-            return str(name)
-    return ""
+            parts.append(str(name))
+    if len(parts) <= 1:
+        return parts[0] if parts else ""
+    return " AND ".join(f"({part})" for part in parts)
 
 
 def evaluate_sbom(components: Sequence[Mapping[str, Any]], *,
