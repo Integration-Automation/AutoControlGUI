@@ -6,7 +6,8 @@ because a panic key that quietly does nothing is worse than none at all.
 
 No test injects real input. ``check_key_is_press`` is always stubbed so the
 suite never depends on — or disturbs — the real keyboard, and
-``interrupt_main`` is always stubbed so a test can never interrupt pytest.
+the module's ``_interrupt_main`` is always stubbed so a test can never
+interrupt pytest (it raises a real SIGINT, not only ``_thread.interrupt_main``).
 """
 import _thread
 import time
@@ -31,12 +32,13 @@ def never_pressed(monkeypatch):
 
 @pytest.fixture()
 def no_real_interrupt(monkeypatch):
-    """Stub interrupt_main and count calls, so pytest is never interrupted."""
+    """Stub the interrupt and count calls, so pytest is never interrupted."""
     calls = {"count": 0}
 
     def _fake_interrupt():
         calls["count"] += 1
 
+    monkeypatch.setattr(critical_exit_module, "_interrupt_main", _fake_interrupt)
     monkeypatch.setattr(_thread, "interrupt_main", _fake_interrupt)
     return calls
 
@@ -118,12 +120,14 @@ def test_listener_polls_at_an_interval_rather_than_busy_spinning(monkeypatch):
     assert 0 < calls["count"] < 500
 
 
-def test_interrupt_fires_once_and_then_stops(monkeypatch, no_real_interrupt):
+def test_a_held_key_interrupts_once(monkeypatch, no_real_interrupt):
     """A held key must not flood the main thread with interrupts.
 
     Regression: the loop re-fired every iteration for as long as the key was
     held, which could interrupt the main thread's own KeyboardInterrupt
-    handler and its cleanup.
+    handler and its cleanup. The listener now waits for the release and arms
+    again (it used to end, so a second press did nothing), so it stays alive
+    until stop().
     """
     monkeypatch.setattr(
         critical_exit_module.keyboard_check, "check_key_is_press",
@@ -131,6 +135,8 @@ def test_interrupt_fires_once_and_then_stops(monkeypatch, no_real_interrupt):
     )
     listener = CriticalExit()
     listener.init_critical_exit()
+    time.sleep(0.3)
+    listener.stop()
     listener.join(2.0)
 
     assert not listener.is_alive()
