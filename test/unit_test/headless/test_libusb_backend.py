@@ -1,8 +1,6 @@
 """Phase 9.6: LibUsbBackend tests (mocked PyUSB, no real device access)."""
-from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
-import pytest
 
 from je_auto_control.utils.usbip import LibUsbBackend, UrbRequest
 from je_auto_control.utils.usbip.libusb_backend import (

@@ -9,8 +9,7 @@ from PIL import Image
 
 from je_auto_control.utils.redaction import (
     POLICY_MODERATE, POLICY_OFF, POLICY_STRICT,
-    RedactionEngine, RedactionPolicy, RedactionResult,
-    default_policy, policy_from_name, redact_png_bytes,
+    RedactionEngine, RedactionPolicy, default_policy, policy_from_name, redact_png_bytes,
 )
 from je_auto_control.utils.redaction.policies import (
     DETECTOR_CREDIT_CARD, DETECTOR_EMAIL, DETECTOR_SECURE_FIELD,

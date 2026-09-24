@@ -1,7 +1,6 @@
 """End-to-end TLS tests using a self-signed loopback certificate."""
 import datetime
 import ipaddress
-import socket
 import ssl
 import time
 from pathlib import Path

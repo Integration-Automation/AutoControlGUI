@@ -1,6 +1,5 @@
 """Phase 6.5: tests for AdminConsoleClient.fetch_thumbnails."""
 import base64
-import json
 from unittest.mock import patch
 
 import pytest

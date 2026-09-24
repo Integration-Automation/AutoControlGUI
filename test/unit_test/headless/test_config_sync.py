@@ -1,5 +1,4 @@
 """Phase 7.4: config sync client + merge tests."""
-import json
 from unittest.mock import patch
 
 import pytest

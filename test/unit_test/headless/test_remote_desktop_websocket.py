@@ -9,7 +9,7 @@ from je_auto_control.utils.remote_desktop import (
     WebSocketDesktopHost, WebSocketDesktopViewer,
 )
 from je_auto_control.utils.remote_desktop.protocol import (
-    AuthenticationError, MessageType, encode_frame,
+    AuthenticationError,
 )
 from je_auto_control.utils.remote_desktop.ws_protocol import (
     WsProtocolError, client_handshake, recv_message, send_binary,

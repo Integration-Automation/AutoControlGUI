@@ -6,7 +6,7 @@ package. We verify the constructed argv, parse the device list, and
 exercise the executor's AC_android_* dispatch entries.
 """
 import subprocess
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 

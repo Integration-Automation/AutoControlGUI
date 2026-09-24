@@ -7,8 +7,7 @@ import pytest
 
 from je_auto_control.utils.usbip import (
     FakeUrbBackend, OP_REP_DEVLIST, OP_REP_IMPORT, OP_REQ_DEVLIST,
-    OP_REQ_IMPORT, PROTOCOL_VERSION, USBIP_CMD_SUBMIT, UrbRequest,
-    UrbResponse, UsbIpError, UsbIpServer, decode_cmd_submit,
+    OP_REQ_IMPORT, PROTOCOL_VERSION, USBIP_CMD_SUBMIT, UrbResponse, UsbIpError, UsbIpServer, decode_cmd_submit,
     decode_op_request, encode_op_rep_devlist, encode_op_rep_import,
     encode_ret_submit, default_port,
 )

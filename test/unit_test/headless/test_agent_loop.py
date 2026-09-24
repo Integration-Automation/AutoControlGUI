@@ -1,7 +1,6 @@
 """Phase 7.9: Computer-Use Agent loop tests."""
 import time
 
-import pytest
 
 from je_auto_control.utils.agent import (
     AgentBudget, AgentLoop, AgentStep, FakeAgentBackend, run_agent,

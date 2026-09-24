@@ -2,7 +2,6 @@
 import json
 from pathlib import Path
 
-import pytest
 
 from je_auto_control.utils.action_lint import (
     LintSeverity, build_action_schema, lint_actions, render_schema_json,

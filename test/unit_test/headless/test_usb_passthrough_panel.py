@@ -83,7 +83,9 @@ def qapp():
 def _make_panel(qapp, tmp_path):
     acl = UsbAcl(path=tmp_path / "acl.json")
     backend = FakeUsbBackend(devices=[_SAMPLE])
-    factory = lambda: UsbLoopback(backend=backend, acl=acl, viewer_id="test")
+    def factory():
+        return UsbLoopback(backend=backend, acl=acl, viewer_id="test")
+
     panel = _panel_mod.UsbPassthroughPanel(
         acl=acl, loopback_factory=factory,
     )

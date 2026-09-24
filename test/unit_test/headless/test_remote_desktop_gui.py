@@ -22,7 +22,6 @@ pyside = pytest.importorskip("PySide6.QtWidgets", exc_type=ImportError)
 pytest.importorskip("av")
 pytest.importorskip("aiortc")
 
-from PySide6.QtCore import Qt  # noqa: E402
 from PySide6.QtWidgets import QApplication  # noqa: E402
 
 from je_auto_control.utils.remote_desktop.registry import registry  # noqa: E402

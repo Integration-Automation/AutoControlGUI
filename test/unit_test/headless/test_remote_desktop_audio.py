@@ -6,7 +6,6 @@ loading, the AUDIO message type round-trip, viewer ``on_audio`` dispatch,
 host queue back-pressure (oldest dropped), and the audio sender thread
 shutting down with the client.
 """
-import threading
 import time
 from typing import Optional
 

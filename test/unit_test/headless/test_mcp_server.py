@@ -1285,7 +1285,6 @@ def test_logging_set_level_rejects_unknown_name():
 
 
 def test_wait_for_image_returns_center_when_template_found(monkeypatch):
-    import je_auto_control.utils.mcp_server.tools._handlers_system as handlers
     import je_auto_control.wrapper.auto_control_image as image_module
     monkeypatch.setattr(image_module, "locate_image_center",
                         lambda image_path, detect_threshold=1.0: (42, 84))
@@ -1357,7 +1356,6 @@ def test_window_geometry_tools_present_in_default_registry():
     reason="windows_window_manage uses ctypes.WINFUNCTYPE; Win32-only.",
 )
 def test_window_move_calls_into_windows_manager(monkeypatch):
-    import je_auto_control.utils.mcp_server.tools._handlers_system as handlers
     import je_auto_control.wrapper.auto_control_window as window_module
     monkeypatch.setattr(window_module, "find_window",
                         lambda title, case_sensitive=False: (123, title))
