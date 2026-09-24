@@ -110,7 +110,7 @@ def bridge(monkeypatch):
 
 # === The token is the gate ==================================================
 
-@pytest.mark.parametrize("token", ["wrong", "", None, 7, ["secret"]])
+@pytest.mark.parametrize("token", ["wrong", "", None, 7, ["secret"], "secret" + chr(0xD800)])
 def test_a_wrong_or_malformed_token_never_authenticates(bridge, token):
     """The token arrives from the network; only an equal string may pass."""
     host = _Host(token="secret")

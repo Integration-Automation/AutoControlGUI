@@ -181,8 +181,11 @@ class MediaNegotiationMixin:
             return
         audio_ts = [t for t in self._pc.getTransceivers() if t.kind == "audio"]
         if audio_ts:
+            # With host voice on, this transceiver also carries the host's
+            # own track: only its receiving half is turned off.
+            sending = audio_ts[0].sender is not None and audio_ts[0].sender.track is not None
             try:
-                audio_ts[0].direction = "inactive"
+                audio_ts[0].direction = "sendonly" if sending else "inactive"
             except (RuntimeError, OSError) as error:
                 autocontrol_logger.debug("inactivate audio: %r", error)
         if self._opus_audio_receiver is not None:

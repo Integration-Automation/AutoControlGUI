@@ -8,10 +8,12 @@ without buying anything. PING / PONG control frames are handled
 transparently in :func:`recv_message`.
 """
 import base64
+import contextlib
 import hashlib
 import os
 import socket
 import struct
+import threading
 from typing import Optional, Tuple
 
 from je_auto_control.utils.remote_desktop.protocol import ProtocolError
@@ -66,9 +68,9 @@ def server_handshake(sock: socket.socket) -> str:
         _send_http_error(sock, 400, "Bad Request: Connection")
         raise WsProtocolError("missing connection upgrade header")
     key = headers.get("sec-websocket-key")
-    if not key:
+    if not key or not _is_valid_key(key):
         _send_http_error(sock, 400, "Bad Request: Sec-WebSocket-Key")
-        raise WsProtocolError("missing Sec-WebSocket-Key")
+        raise WsProtocolError("missing or malformed Sec-WebSocket-Key")
     accept = _compute_accept(key)
     response = (
         "HTTP/1.1 101 Switching Protocols\r\n"
@@ -146,6 +148,18 @@ def _parse_headers(text: str) -> dict:
     return headers
 
 
+def _is_valid_key(key: str) -> bool:
+    """RFC 6455 4.2.1: base64 of exactly 16 bytes.
+
+    A non-ASCII key raised ``UnicodeEncodeError`` past every handler and
+    killed the handshake thread with the socket left open.
+    """
+    try:
+        return len(base64.b64decode(key.encode("ascii"), validate=True)) == 16
+    except (UnicodeEncodeError, ValueError):   # binascii.Error is a ValueError
+        return False
+
+
 def _compute_accept(key: str) -> str:
     # RFC 6455 mandates SHA-1 for the Sec-WebSocket-Accept handshake;
     # ``usedforsecurity=False`` tells linters this is a protocol-required
@@ -215,14 +229,20 @@ def _send_frame(sock: socket.socket, opcode: int, payload: bytes,
         sock.sendall(bytes(header) + bytes(payload))
 
 
-def recv_message(sock: socket.socket) -> bytes:
+def recv_message(sock: socket.socket, *, mask: bool = False,
+                 expect_masked: Optional[bool] = None,
+                 send_lock: Optional[threading.Lock] = None) -> bytes:
     """Read one application message (BINARY) and return its payload bytes.
 
     Control frames (PING / PONG / CLOSE) are handled inline: PINGs get a
     PONG reply, PONGs are dropped, CLOSE raises :class:`WsClosedError`.
+    ``mask`` masks that PONG (a client must mask every frame it sends);
+    ``expect_masked`` rejects frames whose mask bit differs (a server must
+    refuse unmasked client frames, RFC 6455 5.1); ``send_lock`` serialises
+    the PONG with the caller's other writes so frames never interleave.
     """
     while True:
-        opcode, payload = _read_frame(sock)
+        opcode, payload = _read_frame(sock, expect_masked)
         if opcode == OPCODE_BINARY:
             return payload
         if opcode == OPCODE_TEXT:
@@ -230,7 +250,8 @@ def recv_message(sock: socket.socket) -> bytes:
         if opcode == OPCODE_CLOSE:
             raise WsClosedError("peer sent CLOSE")
         if opcode == OPCODE_PING:
-            _send_frame(sock, OPCODE_PONG, payload, mask=False)
+            with send_lock or contextlib.nullcontext():
+                _send_frame(sock, OPCODE_PONG, payload, mask=mask)
             continue
         if opcode == OPCODE_PONG:
             continue
@@ -239,17 +260,30 @@ def recv_message(sock: socket.socket) -> bytes:
         raise WsProtocolError(f"unknown opcode 0x{opcode:x}")
 
 
-def _read_frame(sock: socket.socket) -> Tuple[int, bytes]:
+def _read_frame(sock: socket.socket,
+                expect_masked: Optional[bool] = None) -> Tuple[int, bytes]:
     header = _read_exact(sock, 2)
     fin = (header[0] & 0x80) != 0
     rsv = (header[0] >> 4) & 0x07
     opcode = header[0] & 0x0F
     masked = (header[1] & 0x80) != 0
-    length = header[1] & 0x7F
     if rsv != 0:
         raise WsProtocolError("RSV bits set")
     if not fin:
         raise WsProtocolError("fragmented frames not supported")
+    if expect_masked is not None and masked != expect_masked:
+        # RFC 6455 5.1: clients mask every frame, servers never do.
+        raise WsProtocolError("masked frame from the server" if masked
+                              else "unmasked frame from the client")
+    length = _read_length(sock, header[1] & 0x7F, opcode)
+    masking_key = _read_exact(sock, 4) if masked else None
+    payload = _read_exact(sock, length) if length > 0 else b""
+    return opcode, _unmask(payload, masking_key)
+
+
+def _read_length(sock: socket.socket, short_length: int, opcode: int) -> int:
+    """The payload length after the 7-bit field, bounded before anything is allocated."""
+    length = short_length
     if length == 126:
         length = struct.unpack("!H", _read_exact(sock, 2))[0]
     elif length == 127:
@@ -258,9 +292,9 @@ def _read_frame(sock: socket.socket) -> Tuple[int, bytes]:
         raise WsProtocolError(
             f"declared payload too large: {length} > {MAX_FRAME_PAYLOAD_BYTES}"
         )
-    masking_key = _read_exact(sock, 4) if masked else None
-    payload = _read_exact(sock, length) if length > 0 else b""
-    return opcode, _unmask(payload, masking_key)
+    if opcode & 0x08 and length > 125:   # RFC 6455 5.5
+        raise WsProtocolError(f"control frame payload too large: {length} > 125")
+    return length
 
 
 def _unmask(payload: bytes, masking_key: Optional[bytes]) -> bytes:

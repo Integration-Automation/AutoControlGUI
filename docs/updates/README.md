@@ -58,6 +58,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260924-67 | 2026-09-24 | Remote desktop: RFC 6455 masking and control-frame rules, a handshake that survives a bad key, file transfers to no file, an honest encrypted recorder, restartable mic, host voice kept on | #bugfix #audit #security | [2026-09](2026-09.md) |
 | U-20260924-66 | 2026-09-24 | Audit tests that only see their own file's leaks and pass Codacy | #test #ci | [2026-09](2026-09.md) |
 | U-20260924-65 | 2026-09-24 | Make the poison-email regression test independent of the CPython patch release | #ci #test | [2026-09](2026-09.md) |
 | U-20260924-64 | 2026-09-24 | Per-flow history for flow selection and sharding, depth-safe XY-cut, config env and lossless ints, null-aware uniqueness, CLDR unit lists, MIME-typed A2A modes, UIA Value / RangeValue ids | #bugfix #audit | [2026-09](2026-09.md) |
@@ -225,7 +226,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | File | Period | Entries |
 |---|---|---:|
-| [2026-09.md](2026-09.md) | 2026-09 | 136 |
+| [2026-09.md](2026-09.md) | 2026-09 | 137 |
 | [2026-08-f.md](2026-08-f.md) | 2026-08 | 1 |
 | [2026-08-e.md](2026-08-e.md) | 2026-08 | 2 |
 | [2026-08-d.md](2026-08-d.md) | 2026-08 | 2 |

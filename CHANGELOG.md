@@ -309,6 +309,12 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
   coercion refused; single-column uniqueness ignores nulls; unit lists follow
   CLDR outside English; A2A card modes are MIME types; `within` excludes the
   pixel past its region; Windows accessibility reads edit and slider values.
+- **Remote desktop**: WebSocket frames follow RFC 6455 masking and
+  control-frame limits and a malformed handshake key no longer kills the
+  handshake thread; a transfer to a path naming no file fails cleanly; the
+  encrypted recorder's frame count matches its entries and a tampered manifest
+  verifies as `False`; a mic whose device failed to start can start again;
+  turning off viewer audio keeps the host's voice.
 - **Triggers and scheduler**: concurrent trigger-engine start / stop no
   longer doubles the polling thread or raises; one malformed email no longer
   stops a mailbox's polling; mailbox names with spaces or brackets work; a

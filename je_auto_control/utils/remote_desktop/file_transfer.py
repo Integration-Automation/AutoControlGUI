@@ -73,7 +73,7 @@ def decode_begin(payload: bytes) -> Tuple[str, str, int]:
         raise FileTransferError("FILE_BEGIN missing valid transfer_id")
     if not isinstance(dest_path, str) or not dest_path:
         raise FileTransferError("FILE_BEGIN missing dest_path")
-    if not isinstance(size, int) or size < 0:
+    if not isinstance(size, int) or isinstance(size, bool) or size < 0:
         raise FileTransferError("FILE_BEGIN missing valid size")
     return transfer_id, dest_path, size
 
@@ -167,6 +167,9 @@ class FileReceiver:
             )
             return
         path = Path(os.path.expanduser(dest_path))
+        if not path.name:   # ".", "/" or "C:\\": with_name raised ValueError past the handler
+            self._fire_complete(transfer_id, False, "dest_path names no file", str(path))
+            return
         part = path.with_name(f".{path.name}.{transfer_id[:8]}.part")
         try:
             # mkdir inside the try: a NUL in the name (ValueError) or a

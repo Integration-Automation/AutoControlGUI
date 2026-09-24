@@ -20,6 +20,8 @@ import threading
 import time
 from base64 import b64encode
 from pathlib import Path
+
+from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from typing import Dict, List, Optional
 
 try:
@@ -143,7 +145,9 @@ class EncryptedJpegSequenceRecorder:
             target.write_bytes(nonce + ciphertext)
         except OSError:
             with self._lock:
-                if entries and self._counter == counter:
+                # Rolled back even before any frame succeeded: "entries and"
+                # skipped it then, and frame_count overstated the entries.
+                if self._counter == counter:
                     self._counter -= 1
             return
         entry = {
@@ -183,19 +187,31 @@ class EncryptedJpegSequenceRecorder:
                 json.dumps(manifest, indent=2, sort_keys=True),
                 encoding="utf-8",
             )
-        except OSError:
-            pass
+        except OSError as error:
+            autocontrol_logger.error("encrypted recorder manifest not written: %r", error)
         return self.manifest_path
 
 
 def verify_manifest(manifest_path, hmac_key: bytes) -> bool:
-    """Recompute the manifest signature and verify it in constant time."""
-    raw = json.loads(Path(manifest_path).read_text(encoding="utf-8"))
+    """Recompute the manifest signature and verify it in constant time.
+
+    A manifest that is not a signed JSON object is ``False``, not an
+    exception: tampering is exactly what this is asked to detect.
+    """
+    try:
+        raw = json.loads(Path(manifest_path).read_text(encoding="utf-8"))
+    except ValueError:   # JSONDecodeError, UnicodeDecodeError
+        return False
+    if not isinstance(raw, dict):
+        return False
     declared_b64 = raw.pop("signature_hmac_sha256", None)
     if not isinstance(declared_b64, str):
         return False
     from base64 import b64decode
-    declared = b64decode(declared_b64)
+    try:
+        declared = b64decode(declared_b64, validate=True)
+    except ValueError:   # binascii.Error
+        return False
     expected = hmac.new(
         hmac_key,
         json.dumps(raw, sort_keys=True).encode("utf-8"),

@@ -69,8 +69,10 @@ class ViewerAuthMixin:
         token = data.get("token")
         # compare_digest, not !=: a short-circuiting comparison tells anyone
         # who can send auth messages how many leading characters matched.
+        # surrogatepass: JSON can carry a lone surrogate, which strict UTF-8
+        # refused with an error that skipped the rejection below.
         if not isinstance(token, str) or not hmac.compare_digest(
-                token.encode("utf-8"), self._token.encode("utf-8")):
+                token.encode("utf-8", "surrogatepass"), self._token.encode("utf-8")):
             self._reject_auth(data)
             return
         viewer_id = data.get("viewer_id")

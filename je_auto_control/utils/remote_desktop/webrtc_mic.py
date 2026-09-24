@@ -55,14 +55,17 @@ class MicUplinkSender:
         with self._lock:
             if self._capture is not None:
                 return
-            self._capture = AudioCapture(
+            capture = AudioCapture(
                 on_block=self._on_block,
                 device=self._device,
                 sample_rate=self._sample_rate,
                 channels=self._channels,
                 block_frames=self._block_frames,
             )
-            self._capture.start()
+            # Kept only once started: a device that failed to start left it
+            # set, and every later start() returned early.
+            capture.start()
+            self._capture = capture
         autocontrol_logger.info("mic uplink: capture started (%d Hz)",
                                 self._sample_rate)
 
@@ -112,12 +115,13 @@ class MicUplinkReceiver:
         with self._lock:
             if self._player is not None:
                 return
-            self._player = AudioPlayer(
+            player = AudioPlayer(
                 device=self._device,
                 sample_rate=self._sample_rate,
                 channels=self._channels,
             )
-            self._player.start()
+            player.start()   # kept only once started, as for the capture
+            self._player = player
         autocontrol_logger.info("mic uplink: playback started (%d Hz)",
                                 self._sample_rate)
 
