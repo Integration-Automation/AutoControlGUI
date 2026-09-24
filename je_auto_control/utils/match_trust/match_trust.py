@@ -16,7 +16,9 @@ NumPy are imported lazily. Imports no ``PySide6``.
 from dataclasses import asdict, dataclass
 from typing import Any, Dict, List, Optional, Sequence
 
-from je_auto_control.utils.visual_match.visual_match import _score_map
+from je_auto_control.utils.visual_match.visual_match import (
+    _contain_cv2_error, _score_map_with_origin,
+)
 
 ImageSource = Any
 
@@ -70,7 +72,9 @@ def _peak_stats(score_map, exclude_radius: int):
                              float(sidelobe.std()))
     else:
         second, mean, std = 0.0, 0.0, 0.0
-    peak_ratio = second / best if abs(best) > 1e-9 else 1.0
+    # Only a positive peak has a meaningful ratio: best -0.2 / second -0.5 gave
+    # 2.5 ("ambiguous"), and a negative second made any match look unique.
+    peak_ratio = max(second, 0.0) / best if best > 1e-9 else 1.0
     psr = (best - mean) / std if std > 1e-9 else float("inf")
     return (best_x, best_y), best, second, peak_ratio, psr
 
@@ -82,6 +86,7 @@ def _default_radius(template_shape, exclude_radius: Optional[int]) -> int:
     return max(3, min(template_shape[:2]) // 4)
 
 
+@_contain_cv2_error
 def score_peaks(template: ImageSource, *, haystack: Optional[ImageSource] = None,
                 region: Optional[Sequence[int]] = None,
                 exclude_radius: Optional[int] = None, method: str = "ccoeff_normed",
@@ -92,16 +97,19 @@ def score_peaks(template: ImageSource, *, haystack: Optional[ImageSource] = None
     means a second place scored almost as high (ambiguous); ``psr`` is the
     peak-to-sidelobe ratio (``None`` when the sidelobe is flat).
     """
-    score_map, tmpl = _score_map(template, haystack, region=region, method=method)
+    score_map, tmpl, origin_x, origin_y = _score_map_with_origin(
+        template, haystack, region=region, method=method)
     if score_map is None:
         return None
     radius = _default_radius(tmpl.shape, exclude_radius)
     (peak_x, peak_y), best, second, ratio, psr = _peak_stats(score_map, radius)
     return {"best": round(best, 4), "second": round(second, 4),
             "peak_ratio": round(ratio, 4), "psr": _safe_psr(psr),
-            "ambiguous": ratio >= ambiguous_ratio, "location": [peak_x, peak_y]}
+            "ambiguous": ratio >= ambiguous_ratio,
+            "location": [peak_x + origin_x, peak_y + origin_y]}
 
 
+@_contain_cv2_error
 def match_with_trust(template: ImageSource, *,
                      haystack: Optional[ImageSource] = None,
                      region: Optional[Sequence[int]] = None,
@@ -115,15 +123,15 @@ def match_with_trust(template: ImageSource, *,
     """
     best_match: Optional[TrustedMatch] = None
     for scale in scales:
-        score_map, tmpl = _score_map(template, haystack, region=region,
-                                     method=method, scale=float(scale))
+        score_map, tmpl, origin_x, origin_y = _score_map_with_origin(
+            template, haystack, region=region, method=method, scale=float(scale))
         if score_map is None:
             continue
         radius = _default_radius(tmpl.shape, exclude_radius)
         (peak_x, peak_y), best, second, ratio, psr = _peak_stats(score_map, radius)
         if best < min_score or (best_match is not None and best <= best_match.score):
             continue
-        best_match = TrustedMatch(int(peak_x), int(peak_y), tmpl.shape[1],
+        best_match = TrustedMatch(int(peak_x) + origin_x, int(peak_y) + origin_y, tmpl.shape[1],
                                   tmpl.shape[0], round(best, 4), float(scale),
                                   round(second, 4), round(ratio, 4), _safe_psr(psr),
                                   ratio >= ambiguous_ratio)

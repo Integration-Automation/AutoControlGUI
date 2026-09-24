@@ -66,13 +66,21 @@ def auto_threshold(template: ImageSource, *, haystack: Optional[ImageSource] = N
             "n_above": int(np.count_nonzero(score_map >= threshold))}
 
 
-def _peak_in_box(score_map, box: Dict[str, Any]):
-    """Return ``(x, y, score)`` of the highest score inside one connected blob box."""
+def _blob_peaks(score_map, mask):
+    """``(x, y, score)`` of the highest score inside each connected blob.
+
+    Searched within the blob itself: its bounding box can hold another blob,
+    and the box search returned that blob's peak twice and lost this one's.
+    """
+    import cv2
     import numpy as np
-    x, y, width, height = box["x"], box["y"], box["width"], box["height"]
-    sub = score_map[y:y + height, x:x + width]
-    iy, ix = np.unravel_index(int(np.argmax(sub)), sub.shape)
-    return x + int(ix), y + int(iy), float(sub[iy, ix])
+    count, labels = cv2.connectedComponents(mask, connectivity=8)
+    peaks = []
+    for label in range(1, count):
+        blob = np.where(labels == label, score_map, -np.inf)
+        iy, ix = np.unravel_index(int(np.argmax(blob)), blob.shape)
+        peaks.append((int(ix), int(iy), float(score_map[iy, ix])))
+    return peaks
 
 
 def match_auto(template: ImageSource, *, haystack: Optional[ImageSource] = None,
@@ -86,7 +94,6 @@ def match_auto(template: ImageSource, *, haystack: Optional[ImageSource] = None,
     NMS leaves on a wide correlation peak. Ordered by score, capped at ``max_results``.
     """
     import numpy as np
-    from je_auto_control.utils.cv2_utils.blobs import connected_boxes
     score_map, tmpl, origin_x, origin_y = _score_map_with_origin(
         template, haystack, region=region, method=method)
     if score_map is None:
@@ -96,7 +103,6 @@ def match_auto(template: ImageSource, *, haystack: Optional[ImageSource] = None,
     mask = (score_map >= cutoff).astype(np.uint8)
     height, width = tmpl.shape[:2]
     matches = [Match(px + origin_x, py + origin_y, width, height, round(score, 4), 1.0)
-               for px, py, score in
-               (_peak_in_box(score_map, box) for box in connected_boxes(mask))]
+               for px, py, score in _blob_peaks(score_map, mask)]
     matches.sort(key=lambda m: m.score, reverse=True)
     return matches[:int(max_results)]

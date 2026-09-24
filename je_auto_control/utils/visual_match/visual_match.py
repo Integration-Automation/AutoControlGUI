@@ -12,6 +12,7 @@ is unit-testable on synthetic arrays without a real screen; only the default
 (grab the screen) is device-bound. OpenCV + NumPy come in via the project's
 ``je_open_cv`` dependency and are imported lazily. Imports no ``PySide6``.
 """
+import dataclasses
 import functools
 from dataclasses import asdict, dataclass
 from typing import Any, Dict, List, Optional, Protocol, Sequence, TypeVar
@@ -105,7 +106,14 @@ def _to_gray(source: ImageSource):
             raise ValueError(f"could not read image: {source!r}")
         is_bgr = True
     else:
+        # Palette ("P"), "LA" and 16-bit PIL images: np.asarray gave palette
+        # indices as luminance, a 2-channel array cvtColor rejects, or a
+        # non-uint8 array matchTemplate rejects.
+        if getattr(source, "mode", "RGB") not in ("RGB", "RGBA", "L") and hasattr(source, "convert"):
+            source = source.convert("RGB")
         array = np.asarray(source)
+    if array.ndim == 3 and array.shape[2] in (1, 2):
+        array = array[:, :, 0]  # gray (+ alpha): the first channel is the luminance
     if array.ndim == 2:
         return array
     return cv2.cvtColor(array, _gray_code(array.shape[2], is_bgr))
@@ -128,6 +136,35 @@ def _grab_gray_with_origin(region: Optional[Sequence[int]]):
     from je_auto_control.utils.monitor_layout.logical_frame import grab_logical
     image, origin_x, origin_y = grab_logical(region)
     return _to_gray(image), origin_x, origin_y
+
+
+def _to_screen(result: Any, origin_x: int, origin_y: int) -> Any:
+    """Move a frame-local result (a match dataclass or a box / segment dict) by the frame origin.
+
+    Several matchers reported positions relative to the captured region --
+    off by the region's offset, or by a negative origin when a monitor sits
+    left of or above the primary one.
+    """
+    if not (origin_x or origin_y) or result is None:
+        return result
+    if dataclasses.is_dataclass(result) and not isinstance(result, type):
+        return dataclasses.replace(result, x=getattr(result, "x") + origin_x,
+                                   y=getattr(result, "y") + origin_y)
+    return _move_dict(dict(result), origin_x, origin_y)
+
+
+_X_KEYS, _Y_KEYS = ("x", "x1", "x2"), ("y", "y1", "y2")
+
+
+def _move_dict(moved: Dict[str, Any], origin_x: int, origin_y: int) -> Dict[str, Any]:
+    """Shift the coordinate keys of a box / segment dict in place and return it."""
+    for keys, offset in ((_X_KEYS, origin_x), (_Y_KEYS, origin_y)):
+        for key in keys:
+            if key in moved:
+                moved[key] = int(moved[key]) + offset
+    if "center" in moved:
+        moved["center"] = [int(moved["center"][0]) + origin_x, int(moved["center"][1]) + origin_y]
+    return moved
 
 
 def _haystack_gray(haystack: Optional[ImageSource],
@@ -221,6 +258,9 @@ def _score_map_with_origin(template: ImageSource, haystack: Optional[ImageSource
     """
     import cv2
     tmpl = _resize(_to_gray(template), float(scale))
+    # Checked here, not only in match_template: a flat template scores 1.0
+    # at (0, 0) on every other path built on the score map.
+    _reject_flat_template(tmpl)
     hay, origin_x, origin_y = _haystack_gray_with_origin(haystack, region)
     if tmpl.shape[0] > hay.shape[0] or tmpl.shape[1] > hay.shape[1]:
         return None, tmpl, origin_x, origin_y

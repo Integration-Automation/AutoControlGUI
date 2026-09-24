@@ -14,7 +14,9 @@ the project's ``je_open_cv`` dependency and are imported lazily. Imports no
 """
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
-from je_auto_control.utils.visual_match.visual_match import _haystack_gray
+from je_auto_control.utils.visual_match.visual_match import (
+    _haystack_gray_with_origin, _to_screen,
+)
 
 ImageSource = Any
 AspectRange = Optional[Tuple[float, float]]
@@ -73,10 +75,11 @@ def find_shapes(haystack: Optional[ImageSource] = None, *,
     (default: grab the screen / ``region``); ``min_area`` / ``max_area`` drop
     specks and full-frame borders.
     """
-    boxes = [_box(contour) for contour in _contours(_haystack_gray(haystack, region))]
+    gray, origin_x, origin_y = _haystack_gray_with_origin(haystack, region)
+    boxes = [_box(contour) for contour in _contours(gray)]
     boxes = [box for box in boxes if _passes(box, min_area, max_area, None)]
     boxes.sort(key=lambda box: box["area"], reverse=True)
-    return boxes
+    return [_to_screen(box, origin_x, origin_y) for box in boxes]
 
 
 def find_rectangles(haystack: Optional[ImageSource] = None, *,
@@ -91,9 +94,9 @@ def find_rectangles(haystack: Optional[ImageSource] = None, *,
     is an optional ``(min, max)`` width/height filter — e.g. ``(1.5, 8)`` for wide
     buttons, ``(0.8, 1.2)`` for square icons.
     """
-    gray = _haystack_gray(haystack, region)
+    gray, origin_x, origin_y = _haystack_gray_with_origin(haystack, region)
     boxes = [_box(contour) for contour in _contours(gray)
              if _is_rectangle(contour, float(epsilon))]
     boxes = [box for box in boxes if _passes(box, min_area, max_area, aspect_range)]
     boxes.sort(key=lambda box: box["area"], reverse=True)
-    return boxes
+    return [_to_screen(box, origin_x, origin_y) for box in boxes]

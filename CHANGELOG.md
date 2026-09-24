@@ -293,6 +293,12 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Fixed
 
+- **Image matching**: rotated, trust, feature, edge, shape, line and saliency
+  finders report screen coordinates (region and multi-monitor origins
+  included); rotated templates are matched with a mask and `sqdiff_normed`
+  picks the best spot; flat templates are refused on every matcher;
+  auto-threshold reports each blob's own peak; ORB with too few matches returns
+  `None`; palette / LA / 16-bit PIL images load as true luminance.
 - **System and device helpers**: keep-awake ends with the process and no
   longer depends on the calling thread on Windows; file associations report
   the real content type; checksums reject input with no digits and mod-97

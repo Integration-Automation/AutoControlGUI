@@ -17,7 +17,8 @@ imported lazily. Imports no ``PySide6``.
 from typing import Any, List, Optional, Sequence, Tuple
 
 from je_auto_control.utils.visual_match.visual_match import (
-    Match, _haystack_gray, _nms, _resize, _to_gray,
+    Match, _contain_cv2_error, _haystack_gray, _haystack_gray_with_origin, _nms,
+    _resize, _to_gray, _to_screen,
 )
 
 ImageSource = Any
@@ -57,6 +58,7 @@ def _best(score_map, size: Tuple[int, int], scale: float, min_score: float,
     return current
 
 
+@_contain_cv2_error
 def edge_match(template: ImageSource, *, haystack: Optional[ImageSource] = None,
                region: Optional[Sequence[int]] = None,
                scales: Sequence[float] = (1.0,),
@@ -64,16 +66,17 @@ def edge_match(template: ImageSource, *, haystack: Optional[ImageSource] = None,
                min_score: float = 0.7) -> Optional[Match]:
     """Return the best edge-shape (Chamfer) match at or above ``min_score``, or ``None``."""
     template_gray = _to_gray(template)
-    scene_gray = _haystack_gray(haystack, region)
+    scene_gray, origin_x, origin_y = _haystack_gray_with_origin(haystack, region)
     best: Optional[Match] = None
     for scale in scales:
         score_map, size = _chamfer_score_map(_resize(template_gray, float(scale)),
                                              scene_gray, canny)
         if score_map is not None:
             best = _best(score_map, size, float(scale), float(min_score), best)
-    return best
+    return _to_screen(best, origin_x, origin_y)
 
 
+@_contain_cv2_error
 def edge_match_all(template: ImageSource, *,
                    haystack: Optional[ImageSource] = None,
                    region: Optional[Sequence[int]] = None,
@@ -81,12 +84,12 @@ def edge_match_all(template: ImageSource, *,
                    max_results: int = 20, nms_iou: float = 0.3) -> List[Match]:
     """Return every edge-shape match >= ``min_score`` (scale 1.0), overlaps removed (NMS)."""
     import numpy as np
-    score_map, size = _chamfer_score_map(_to_gray(template),
-                                         _haystack_gray(haystack, region), canny)
+    scene_gray, origin_x, origin_y = _haystack_gray_with_origin(haystack, region)
+    score_map, size = _chamfer_score_map(_to_gray(template), scene_gray, canny)
     if score_map is None:
         return []
     ys, xs = np.nonzero(score_map >= float(min_score))
-    candidates = [Match(int(x), int(y), size[0], size[1],
+    candidates = [Match(int(x) + origin_x, int(y) + origin_y, size[0], size[1],
                         round(float(score_map[y, x]), 4), 1.0)
                   for y, x in zip(ys, xs)]
     return _nms(candidates, float(nms_iou))[:int(max_results)]

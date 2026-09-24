@@ -23,6 +23,11 @@ def _gray(source: Optional[ImageSource], region: Optional[Sequence[int]]):
     return _haystack_gray(source, region)
 
 
+def _gray_with_origin(source: Optional[ImageSource], region: Optional[Sequence[int]]):
+    from je_auto_control.utils.visual_match.visual_match import _haystack_gray_with_origin
+    return _haystack_gray_with_origin(source, region)
+
+
 def _saliency_from_gray(gray, size: int):
     import cv2
     import numpy as np
@@ -85,10 +90,12 @@ def salient_regions(source: Optional[ImageSource] = None, *,
     per Hou & Zhang), extracted with ``connected_boxes`` and scaled back to the
     source's pixel coordinates, ranked most-salient first.
     """
-    gray = _gray(source, region)
+    from je_auto_control.utils.visual_match.visual_match import _to_screen
+    gray, origin_x, origin_y = _gray_with_origin(source, region)
     saliency = _saliency_from_gray(gray, int(size))
-    return _regions_from_saliency(saliency, gray.shape[:2], threshold,
-                                  int(min_area), int(size))
+    regions = _regions_from_saliency(saliency, gray.shape[:2], threshold,
+                                     int(min_area), int(size))
+    return [_to_screen(item, origin_x, origin_y) for item in regions]
 
 
 def most_salient(source: Optional[ImageSource] = None, *,
