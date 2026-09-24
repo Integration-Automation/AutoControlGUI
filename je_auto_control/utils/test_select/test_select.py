@@ -27,6 +27,8 @@ _UNTESTED_SCORE = 0.8
 _STALE_DAYS = 30.0
 _SECONDS_PER_DAY = 86400.0
 _FINISHED = ("ok", "error")
+#: Extra rows read per flow past ``window``: running rows are not scored.
+_RUNNING_HEADROOM = 16
 
 
 def _open_store(history_path: Optional[str]):
@@ -40,11 +42,14 @@ def _open_store(history_path: Optional[str]):
     return default_history_store, False
 
 
-def _runs_by_flow(store: Any, limit: int) -> Dict[str, List[Any]]:
-    grouped: Dict[str, List[Any]] = {}
-    for rec in store.list_runs(limit=limit):
-        grouped.setdefault(rec.script_path, []).append(rec)
-    return grouped
+def _runs_by_flow(store: Any, flows: List[str], limit: int) -> Dict[str, List[Any]]:
+    """Each flow's newest runs, read per flow.
+
+    One global newest-N read let a flow's runs fall behind N unrelated runs,
+    and the flow then scored as never run.
+    """
+    return {flow: store.list_runs(limit=limit, script_path=flow)
+            for flow in dict.fromkeys(flows)}
 
 
 def _flaky(chrono: List[str]) -> tuple:
@@ -87,7 +92,8 @@ def rank_flows(flows: List[str], *, history_path: Optional[str] = None,
     store, owned = _open_store(history_path)
     now = time.time()
     try:
-        grouped = _runs_by_flow(store, max(100, window * max(1, len(flows))))
+        # Head-room past ``window`` for rows still running, which are skipped.
+        grouped = _runs_by_flow(store, flows, int(window) + _RUNNING_HEADROOM)
     finally:
         if owned:
             store.close()

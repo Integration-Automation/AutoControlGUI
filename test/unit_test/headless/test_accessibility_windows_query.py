@@ -324,10 +324,12 @@ def test_a_node_with_more_children_than_the_budget_is_capped():
 # --- reading a control's state ------------------------------------------------
 
 _IS_PASSWORD = 30019
-_IS_VALUE_AVAILABLE, _VALUE = 30029, 30045
+# UIAutomationClient.h: 30029 / 30034 are IsGridItem / IsScroll; the Value and
+# RangeValue availability ids are 30043 / 30033.
+_IS_VALUE_AVAILABLE, _VALUE = 30043, 30045
 _IS_TOGGLE_AVAILABLE, _TOGGLE = 30041, 30086
 _IS_SELECTION_AVAILABLE, _SELECTED = 30036, 30079
-_IS_RANGE_AVAILABLE, _RANGE = 30034, 30047
+_IS_RANGE_AVAILABLE, _RANGE = 30033, 30047
 _READONLY = 30046
 _LEGACY_VALUE = 30093
 

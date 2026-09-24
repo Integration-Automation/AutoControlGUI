@@ -441,7 +441,7 @@ def test_a_control_that_is_not_there_has_no_interaction_state(backend, found):
 
 def test_the_state_of_a_control_is_read_from_it(backend, found):
     found["set"](_control(properties={_IS_PASSWORD: False,
-                                       30029: True, 30045: "typed",
+                                       30043: True, 30045: "typed",
                                        30046: False}))
     assert backend.get_state(name="Field")["value"] == "typed"
 

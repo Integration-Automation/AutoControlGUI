@@ -8,7 +8,8 @@ against declared fields, coercing types and reporting actionable errors — a
 stdlib analog of pydantic-settings.
 
 Pure standard library (``dataclasses``); imports no ``PySide6``. Validation is a
-pure function (mapping in, report out), so it is fully deterministic in CI.
+function of the mapping and the ``environ`` it is given (default ``os.environ``);
+pass ``environ={}`` to make it fully deterministic in CI.
 
 Headless API
 ------------
@@ -26,8 +27,10 @@ Headless API
     # {"ok": True, "config": {"port": 8080, "env": "dev", "debug": True}, "errors": []}
 
 ``ConfigField`` declares a ``type`` (``str`` / ``int`` / ``float`` / ``bool``),
-optional ``default``, ``required`` flag, ``choices``, and an ``env`` hint.
-``ConfigSchema.validate`` coerces each present value, applies defaults, enforces
+optional ``default``, ``required`` flag, ``choices``, and an ``env`` variable
+name. A value comes from the mapping, else from that variable, else from the
+default (the pydantic-settings order); an ``int`` field refuses a float with a
+fraction instead of truncating it. ``ConfigSchema.validate`` coerces each value, applies defaults, enforces
 required fields and choices, and returns ``{ok, config, errors}`` (errors as
 ``{field, error}``). ``ConfigSchema.from_dict`` builds a schema from a plain
 spec, ``validate_config`` does spec-plus-mapping in one call, and ``coerce``

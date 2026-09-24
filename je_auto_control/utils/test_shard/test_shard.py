@@ -11,6 +11,8 @@ Imports no ``PySide6``.
 from typing import Any, Dict, List, Optional
 
 _SUM_KEYS = ("total", "passed", "failed", "skipped", "errors")
+#: Extra rows read per flow past ``window``: running rows have no duration.
+_RUNNING_HEADROOM = 16
 
 
 def _durations(flows: List[str], history_path: Optional[str],
@@ -20,9 +22,12 @@ def _durations(flows: List[str], history_path: Optional[str],
         HistoryStore, default_history_store)
     store, owned = ((HistoryStore(history_path), True) if history_path
                     else (default_history_store, False))
+    # Read per flow: one global newest-N read let a flow's runs fall behind
+    # N unrelated runs, and the flow then got the default weight.
     try:
-        records = store.list_runs(
-            limit=max(100, int(window) * max(1, len(flows))))
+        records = [record for flow in dict.fromkeys(flows)
+                   for record in store.list_runs(
+                       limit=int(window) + _RUNNING_HEADROOM, script_path=flow)]
     finally:
         if owned:
             store.close()

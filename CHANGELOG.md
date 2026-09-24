@@ -15,6 +15,8 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Added
 
+- `HistoryStore.list_runs(script_path=...)`, and `environ=` on
+  `validate_config` / `ConfigSchema.validate`.
 - **`AC_idempotency_release`** / MCP `ac_idempotency_release` / Script
   Builder *Idempotency: Release*: free an in-progress idempotency key whose
   work failed so a retry runs it.
@@ -301,6 +303,12 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Fixed
 
+- **Layout and data checks**: flow selection and sharding see a flow's own
+  history however many other runs followed it; column reading order survives
+  long runs of paragraphs; `ConfigField.env` is honoured and lossy int
+  coercion refused; single-column uniqueness ignores nulls; unit lists follow
+  CLDR outside English; A2A card modes are MIME types; `within` excludes the
+  pixel past its region; Windows accessibility reads edit and slider values.
 - **Triggers and scheduler**: concurrent trigger-engine start / stop no
   longer doubles the polling thread or raises; one malformed email no longer
   stops a mailbox's polling; mailbox names with spaces or brackets work; a

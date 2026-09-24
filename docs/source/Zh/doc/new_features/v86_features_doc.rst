@@ -27,7 +27,7 @@
     rc = check_row_count(orders, minimum=1)                  # {ok, count}
 
 ``check_foreign_key`` 標記父欄位中不存在的非空子值(dbt ``relationships``)。``check_unique_key`` 回報
-重複的單一或複合鍵。``check_accepted_values`` 列出允許集合之外的非空值。``check_row_count`` 驗證筆數
+重複的單一或複合鍵;單一欄位的鍵會略過空值，與 dbt 的 ``unique`` 相同。``check_accepted_values`` 列出允許集合之外的非空值。``check_row_count`` 驗證筆數
 落在選用的 ``minimum`` / ``maximum`` 範圍內。每個皆回傳 ``ok`` 旗標加上細節。
 
 執行器命令

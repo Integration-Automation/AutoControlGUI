@@ -5,9 +5,14 @@ structure, but nothing bound a resolved config dict into a typed object with
 required-field enforcement and choice constraints. This validates a mapping
 against declared fields, coercing types and reporting actionable errors.
 
+A value comes from the mapping first, then from the field's ``env`` variable,
+then from its default (the pydantic-settings order).
+
 Pure standard library (``dataclasses``); imports no ``PySide6``. Validation is a
-pure function (mapping in, report out), so it is fully deterministic in CI.
+function of the mapping and the environment it is given (``environ``, default
+``os.environ``), so passing ``environ={}`` makes it fully deterministic in CI.
 """
+import os
 from dataclasses import dataclass, field as dataclass_field
 from typing import Any, Dict, List, Mapping, Optional, Sequence
 
@@ -39,6 +44,9 @@ def _to_bool(value: Any) -> bool:
 def coerce(value: Any, kind: str) -> Any:
     """Coerce ``value`` to ``kind`` (``str`` / ``int`` / ``float`` / ``bool``)."""
     if kind == "int":
+        # int(2.9) is 2: a silent loss the caller never sees.
+        if isinstance(value, float) and not value.is_integer():
+            raise ValueError(f"not an integer: {value!r}")
         return int(value)
     if kind == "float":
         return float(value)
@@ -67,11 +75,17 @@ class ConfigSchema:
         return cls(fields)
 
     def _resolve_field(self, name: str, definition: ConfigField,
-                       mapping: Mapping[str, Any]) -> Any:
+                       mapping: Mapping[str, Any],
+                       environ: Mapping[str, str]) -> Any:
         """Return ``(status, payload)``: ``ok``/value, ``error``/dict, ``skip``."""
+        raw: Any = _MISSING
         if name in mapping:
+            raw = mapping[name]
+        elif definition.env and definition.env in environ:
+            raw = environ[definition.env]
+        if raw is not _MISSING:
             try:
-                value = coerce(mapping[name], definition.type)
+                value = coerce(raw, definition.type)
             except (ValueError, TypeError):
                 return "error", {"field": name,
                                  "error": f"cannot coerce to {definition.type}"}
@@ -84,12 +98,18 @@ class ConfigSchema:
             return "error", {"field": name, "error": "required"}
         return "skip", None
 
-    def validate(self, mapping: Mapping[str, Any]) -> Dict[str, Any]:
-        """Validate ``mapping``; return ``{ok, config, errors}``."""
+    def validate(self, mapping: Mapping[str, Any],
+                 environ: Optional[Mapping[str, str]] = None) -> Dict[str, Any]:
+        """Validate ``mapping``; return ``{ok, config, errors}``.
+
+        A field missing from ``mapping`` is read from its ``env`` variable in
+        ``environ`` (default ``os.environ``) before falling back to its default.
+        """
+        env = os.environ if environ is None else environ
         config: Dict[str, Any] = {}
         errors: List[Dict[str, str]] = []
         for name, definition in self.fields.items():
-            status, payload = self._resolve_field(name, definition, mapping)
+            status, payload = self._resolve_field(name, definition, mapping, env)
             if status == "ok":
                 config[name] = payload
             elif status == "error":
@@ -98,6 +118,7 @@ class ConfigSchema:
 
 
 def validate_config(spec: Mapping[str, Mapping[str, Any]],
-                    mapping: Mapping[str, Any]) -> Dict[str, Any]:
+                    mapping: Mapping[str, Any],
+                    environ: Optional[Mapping[str, str]] = None) -> Dict[str, Any]:
     """Validate ``mapping`` against a schema ``spec`` dict in one call."""
-    return ConfigSchema.from_dict(spec).validate(mapping)
+    return ConfigSchema.from_dict(spec).validate(mapping, environ)

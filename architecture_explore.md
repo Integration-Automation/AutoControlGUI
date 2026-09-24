@@ -20,7 +20,7 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 | 指標 | 數值 |
 | --- | ---: |
 | Python 模組總數（含周邊子專案） | 1,049 |
-| 程式碼總行數 | 149,138 |
+| 程式碼總行數 | 149,214 |
 | `je_auto_control/utils/` 子套件數 | 310 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 775 |
 | 套件門面 `__all__` 公開名稱數 | 1,241 |
@@ -414,7 +414,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.6 OCR 與文字理解
 
-> 19 個套件、約 3,345 行。
+> 19 個套件、約 3,371 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -430,7 +430,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/ocr/` | 1,126 | OCR 引擎門面 + 三個後端（Tesseract／EasyOCR／PaddleOCR）、版面結構化與跨詞比對（`text_span`） |
 | `utils/pii_text/` | 119 | 自由文字中的 PII 偵測與遮蔽（email／電話／SSN／卡號／IP／IBAN） |
 | `utils/readability/` | 138 | 可讀性評分（Flesch、Flesch-Kincaid、Gunning Fog、SMOG、ARI） |
-| `utils/reading_flow/` | 119 | 以遞迴 XY-cut 推導欄位感知的閱讀順序 |
+| `utils/reading_flow/` | 145 | 以遞迴 XY-cut 推導欄位感知的閱讀順序 |
 | `utils/search_index/` | 145 | 記憶體內 BM25／TF-IDF 全文檢索 |
 | `utils/text_blocks/` | 88 | 把 OCR 行組成段落與項目符號／編號清單 |
 | `utils/text_diff/` | 187 | unified diff 產生、套用與三方合併 |
@@ -557,7 +557,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.12 報表、可觀測性與測試治理
 
-> 34 個套件、約 7,307 行。
+> 34 個套件、約 7,318 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -589,8 +589,8 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/soft_assert/` | 79 | 軟斷言：累積檢查並在區塊結束時一次拋出 |
 | `utils/stats/` | 223 | 描述統計與 A/B 顯著性檢定（純標準庫） |
 | `utils/step_timeline/` | 81 | 每次執行的步驟瀑布圖與瓶頸（關鍵路徑）步驟排名 |
-| `utils/test_select/` | 123 | 以執行歷史做風險導向的測試選取 |
-| `utils/test_shard/` | 98 | 以耗時為權重的套件切分與分片結果合併 |
+| `utils/test_select/` | 129 | 以執行歷史做風險導向的測試選取 |
+| `utils/test_shard/` | 103 | 以耗時為權重的套件切分與分片結果合併 |
 | `utils/test_suite/` | 527 | QA 套件編排：把扁平 action list 評分為測試案例 + CI 報表 |
 | `utils/time_travel/` | 383 | 錄製 session 的時光回溯除錯（控制器 + 播放器） |
 | `utils/timeseries/` | 171 | 時間序列轉換（rate／降採樣／重採樣） |
@@ -598,12 +598,12 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.13 資料來源、結構驗證與 i18n
 
-> 24 個套件、約 4,367 行。
+> 24 個套件、約 4,406 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
 | `utils/checksum/` | 138 | 檢查碼演算法：Luhn、Verhoeff、Damm、ISO 7064 MOD 97-10 |
-| `utils/config_schema/` | 109 | 型別化設定結構驗證 |
+| `utils/config_schema/` | 130 | 型別化設定結構驗證 |
 | `utils/data_drift/` | 128 | 分布漂移偵測 |
 | `utils/data_profile/` | 121 | 資料剖析與結構推斷 |
 | `utils/data_quality/` | 216 | 資料品質：列結構驗證、欄位擷取、遮蔽 |
@@ -615,13 +615,13 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/json_patch/` | 352 | JSON Pointer（6901）、JSON Patch（6902）與 Merge Patch（7386） |
 | `utils/json_schema/` | 419 | JSON Schema（Draft 2020-12 子集）驗證 |
 | `utils/jsonpath/` | 242 | 精簡 JSONPath 查詢 |
-| `utils/list_format/` | 72 | 地區感知清單格式化（CLDR 風格的「A、B 和 C」） |
+| `utils/list_format/` | 82 | 地區感知清單格式化（CLDR 風格的「A、B 和 C」） |
 | `utils/locale_collation/` | 128 | 地區感知字串排序（決定性多層排序鍵） |
 | `utils/locale_parse/` | 79 | 地區感知數字／貨幣／日期解析與格式化（選用 babel） |
 | `utils/message_format/` | 254 | ICU-lite MessageFormat（plural／select／selectordinal） |
 | `utils/office/` | 180 | Office 文件無頭讀寫（Excel／Word／PowerPoint） |
 | `utils/pdf/` | 117 | PDF 讀取與斷言（選用 pypdf 後端） |
-| `utils/referential/` | 75 | 跨資料集的參照完整性檢查 |
+| `utils/referential/` | 83 | 跨資料集的參照完整性檢查 |
 | `utils/schema_compat/` | 177 | JSON Schema 相容性分級 |
 | `utils/sql/` | 88 | 對 SQLite 的臨時唯讀 SQL 查詢 |
 | `utils/test_data/` | 211 | 帶種子的合成測試資料產生（純標準庫） |
@@ -1080,6 +1080,6 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `osx/` | 17 | 919 |
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 837 |
-| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 677 | 53,021 |
-| **總計** | **1,043** | **149,073** |
+| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 677 | 53,097 |
+| **總計** | **1,043** | **149,149** |
 

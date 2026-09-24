@@ -49,8 +49,8 @@ class Candidates:
         """Keep boxes whose centre falls inside ``region`` ``(x, y, w, h)``."""
         rx, ry, rw, rh = (int(value) for value in region[:4])
         kept = [box for box in self._boxes
-                if rx <= _center(box)[0] <= rx + rw
-                and ry <= _center(box)[1] <= ry + rh]
+                if rx <= _center(box)[0] < rx + rw
+                and ry <= _center(box)[1] < ry + rh]
         return Candidates(kept)
 
     def filter(self, *, has_text: Optional[str] = None,
