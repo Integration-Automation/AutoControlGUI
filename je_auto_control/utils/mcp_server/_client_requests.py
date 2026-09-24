@@ -177,6 +177,11 @@ class ClientRequestMixin:
                 "request_sampling requires an outbound writer; "
                 "start serve_stdio or call set_writer() first",
             )
+        # MCP: only a client that declared "sampling" at initialize takes
+        # sampling/createMessage; anyone else left the tool waiting out the
+        # whole timeout for a reply that could not come.
+        if "sampling" not in self._client_capabilities:
+            raise RuntimeError("the client did not declare the sampling capability")
         params: Dict[str, Any] = {
             "messages": list(messages),
             "maxTokens": int(max_tokens),

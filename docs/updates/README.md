@@ -58,6 +58,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260925-14 | 2026-09-25 | The MCP server negotiates only versions it speaks, declares only server capabilities, refuses an unsupported MCP-Protocol-Version header with 400, and asks for sampling only from a client that declared it | #bugfix #mcp | [2026-09](2026-09.md) |
 | U-20260925-13 | 2026-09-25 | Screenshots are fitted with the vision docs' exact resize rule, and AC_run_agent's Anthropic backend fits its screenshots and maps tool-call x / y back | #bugfix #agent | [2026-09](2026-09.md) |
 | U-20260925-12 | 2026-09-25 | Supply-chain formats follow their specs: OpenVEX affected needs an action statement, SLSA provenance omits empty metadata and reports nameless subjects, PEP 440 orders post/dev releases and implicit numbers, redaction boxes merge transitively | #bugfix #security | [2026-09](2026-09.md) |
 | U-20260925-11 | 2026-09-25 | Security helpers hold at the edges: IDNA hosts in the egress policy, OSV ranges with several pairs, licence spellings and every licence entry, whole-placeholder secrets only, locked in-memory gates and broker, PEP 639 licences, print-format IBANs, escaped quotes, SARIF without severity, a colleague called Dan | #bugfix #security | [2026-09](2026-09.md) |
@@ -256,7 +257,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | File | Period | Entries |
 |---|---|---:|
-| [2026-09.md](2026-09.md) | 2026-09 | 167 |
+| [2026-09.md](2026-09.md) | 2026-09 | 168 |
 | [2026-08-f.md](2026-08-f.md) | 2026-08 | 1 |
 | [2026-08-e.md](2026-08-e.md) | 2026-08 | 2 |
 | [2026-08-d.md](2026-08-d.md) | 2026-08 | 2 |

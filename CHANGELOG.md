@@ -361,6 +361,10 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Fixed
 
+- MCP `initialize` answers with a protocol version the server supports
+  (not whatever the client sent) and declares only server capabilities;
+  an unsupported `MCP-Protocol-Version` header gets 400;
+  `request_sampling` needs the client's sampling capability.
 - `AC_run_agent` with the Anthropic backend fits screenshots into the
   model's image tier and maps tool-call `x` / `y` back to the screen.
 - Screenshot fitting follows the documented resize rule exactly.

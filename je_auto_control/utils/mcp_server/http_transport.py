@@ -30,12 +30,15 @@ from typing import Any, Callable, Dict, Optional, Tuple
 from je_auto_control.utils.http_headers import parse_content_length
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.mcp_server._protocol import (
+    SUPPORTED_PROTOCOL_VERSIONS,
     _notification_message,
 )
 from je_auto_control.utils.mcp_server.http_sessions import (
     HttpSession, SESSION_HEADER, SessionRegistry, session_id_from_headers,
 )
 from je_auto_control.utils.mcp_server.server import MCPServer
+
+_PROTOCOL_VERSION_HEADER = "MCP-Protocol-Version"
 
 DEFAULT_PATH = "/mcp"
 _MAX_BODY = 1_000_000
@@ -174,6 +177,24 @@ class _MCPHttpHandler(BaseHTTPRequestHandler):
                 bridge.forget_connection(id(self))
 
     def _authorize(self) -> bool:
+        """Refuse cross-site callers and bad tokens, then unsupported protocol versions."""
+        return self._caller_allowed() and self._protocol_version_supported()
+
+    def _protocol_version_supported(self) -> bool:
+        """Streamable HTTP: an unsupported ``MCP-Protocol-Version`` header is a 400.
+
+        A request without the header is served as before (the spec assumes
+        2025-03-26 then); one naming a version this server does not speak
+        used to be served as if it matched.
+        """
+        version = self.headers.get(_PROTOCOL_VERSION_HEADER)
+        if version is None or version.strip() in SUPPORTED_PROTOCOL_VERSIONS:
+            return True
+        self._send_json({"error": f"unsupported MCP-Protocol-Version {version!r}"},
+                        status=400)
+        return False
+
+    def _caller_allowed(self) -> bool:
         """Refuse browser cross-site requests, then check the bearer token."""
         if not self._origin_allowed():
             self._send_json({"error": "origin not allowed"}, status=403)

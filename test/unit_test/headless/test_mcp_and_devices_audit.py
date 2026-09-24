@@ -51,6 +51,7 @@ def test_sampling_uses_the_connection_aware_request(monkeypatch):
     from je_auto_control.utils.mcp_server.server import MCPServer
     server = MCPServer()
     server._writer = lambda _line: None
+    server._client_capabilities = {"sampling": {}}
     sent = []
     monkeypatch.setattr(server, "_send_outbound_request",
                         lambda method, params, timeout: sent.append(method) or {"ok": 1})

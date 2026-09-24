@@ -40,7 +40,8 @@ from je_auto_control.utils.mcp_server._client_requests import (
     ClientRequestMixin,
 )
 from je_auto_control.utils.mcp_server._protocol import (
-    PROTOCOL_VERSION, SERVER_NAME, SERVER_VERSION, _capture_error_screenshot,
+    PROTOCOL_VERSION,  # noqa: F401  # reason: re-exported; callers import it from server
+    SERVER_NAME, SERVER_VERSION, _capture_error_screenshot, negotiate_protocol_version,
     _coerce_params, _DISPATCH_ERRORS, _error_response, _is_hashable,
     _MCPError, _notification_message, _result_response, _to_content_blocks,
     _TOOL_INVOKE_ERRORS, _TOOLS_CALL_METHOD,
@@ -534,21 +535,21 @@ class MCPServer(ClientRequestMixin):
         return {}
 
     def _handle_initialize(self, params: Dict[str, Any]) -> Dict[str, Any]:
-        client_version = params.get("protocolVersion", PROTOCOL_VERSION)
         client_caps = params.get("capabilities") or {}
         if isinstance(client_caps, dict):
             self._client_capabilities = client_caps
+        # Only server capabilities: "sampling" and "roots" are ones a *client*
+        # declares (the server then sends it sampling/createMessage or
+        # roots/list), and advertising them from here claimed features the
+        # server does not offer.
         capabilities: Dict[str, Any] = {
             "tools": {"listChanged": True},
             "resources": {"listChanged": False, "subscribe": True},
             "prompts": {"listChanged": False},
-            "sampling": {},
             "logging": {},
         }
-        if "roots" in self._client_capabilities:
-            capabilities["roots"] = {"listChanged": True}
         return {
-            "protocolVersion": client_version or PROTOCOL_VERSION,
+            "protocolVersion": negotiate_protocol_version(params.get("protocolVersion")),
             "capabilities": capabilities,
             "serverInfo": {"name": SERVER_NAME, "version": SERVER_VERSION},
         }

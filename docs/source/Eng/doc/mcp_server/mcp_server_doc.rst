@@ -282,6 +282,14 @@ the session a prompt was sent to can answer it.
 Sessions
 ========
 
+``initialize`` agrees on a protocol version: the client's, when it is one the
+server speaks (``2025-06-18``, ``2025-03-26``, ``2024-11-05``), otherwise the
+newest of those. Over HTTP a request whose ``MCP-Protocol-Version`` header names
+any other version is refused with 400. The server declares only server
+capabilities (tools, resources, prompts, logging); it sends
+``sampling/createMessage``, ``roots/list`` and ``elicitation/create`` only to a
+client that declared the matching capability.
+
 ``initialize`` mints a session and returns it in an
 ``Mcp-Session-Id`` response header. Echo that header on every later
 request and the server keeps one scope for you — the capabilities

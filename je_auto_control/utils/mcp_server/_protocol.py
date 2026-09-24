@@ -22,6 +22,18 @@ from je_auto_control.utils.sqlite_support import SQLITE_ERRORS
 
 
 PROTOCOL_VERSION = "2025-06-18"
+#: Every revision this server speaks, newest first. ``initialize`` answers with
+#: the client's version when it is one of these, else with the newest.
+SUPPORTED_PROTOCOL_VERSIONS = ("2025-06-18", "2025-03-26", "2024-11-05")
+
+
+def negotiate_protocol_version(requested: Any) -> str:
+    """The version to answer ``initialize`` with (MCP lifecycle, version negotiation).
+
+    A version the server does not implement is never echoed back: the client
+    would take it as agreed and use features this server does not have.
+    """
+    return requested if requested in SUPPORTED_PROTOCOL_VERSIONS else PROTOCOL_VERSION
 SERVER_NAME = "je_auto_control"
 SERVER_VERSION = "0.1.0"
 _TOOLS_CALL_METHOD = "tools/call"

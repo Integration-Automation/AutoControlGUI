@@ -740,6 +740,7 @@ def test_request_sampling_round_trips_via_writer():
     )
     server = MCPServer(tools=[tool], concurrent_tools=True)
     server.set_writer(captured_lines.append)
+    server._client_capabilities = {"sampling": {}}  # noqa: SLF001
 
     server.handle_line(_request("tools/call", msg_id=10, params={
         "name": "ask_model", "arguments": {"prompt": "ping?"},
@@ -787,10 +788,15 @@ def test_request_sampling_without_writer_raises():
         raise AssertionError("expected RuntimeError")
 
 
-def test_initialize_advertises_sampling_capability():
+def test_initialize_does_not_claim_client_capabilities():
+    # "sampling" and "roots" are capabilities a client declares; the server
+    # uses them (sampling/createMessage, roots/list) but does not offer them.
     server = MCPServer(tools=[])
-    response = _decode(server.handle_line(_request("initialize", params={})))
-    assert "sampling" in response["result"]["capabilities"]
+    response = _decode(server.handle_line(_request("initialize", params={
+        "capabilities": {"roots": {"listChanged": True}, "sampling": {}},
+    })))
+    capabilities = response["result"]["capabilities"]
+    assert "sampling" not in capabilities and "roots" not in capabilities
 
 
 def test_tools_call_rejects_missing_required_field():
@@ -1176,12 +1182,12 @@ def test_rate_limiter_zero_rate_means_unlimited():
         assert limiter.try_acquire() is True
 
 
-def test_initialize_advertises_roots_when_client_supports_it():
+def test_initialize_records_the_clients_roots_capability():
     server = MCPServer(tools=[])
-    response = _decode(server.handle_line(_request("initialize", params={
+    server.handle_line(_request("initialize", params={
         "capabilities": {"roots": {"listChanged": True}},
-    })))
-    assert "roots" in response["result"]["capabilities"]
+    }))
+    assert "roots" in server._client_capabilities  # noqa: SLF001
 
 
 def test_initialize_omits_roots_when_client_lacks_capability():

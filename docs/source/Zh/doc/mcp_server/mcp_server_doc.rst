@@ -264,6 +264,12 @@ loopback 時，``Host`` 不是 loopback 名稱的也回 403（防 DNS rebinding�
 Session
 =======
 
+``initialize`` 會協商協定版本:client 提出的版本若是伺服器支援的(``2025-06-18``、
+``2025-03-26``、``2024-11-05``)就用它,否則用其中最新的。走 HTTP 時,``MCP-Protocol-Version``
+標頭寫的若是其他版本,請求會以 400 拒絕。伺服器只宣告伺服器端能力(tools、resources、
+prompts、logging);``sampling/createMessage``、``roots/list`` 與 ``elicitation/create``
+只會送給在 initialize 時宣告了對應能力的 client。
+
 ``initialize`` 會產生一個 session,並用 ``Mcp-Session-Id`` 回應標頭
 交給 client。之後每個請求都帶上這個標頭,伺服器就會把它們視為同一個
 scope——包含你在 ``initialize`` 聲明的能力,以及進行中呼叫佔用的槽位
