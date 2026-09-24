@@ -25,9 +25,21 @@ _QUOTABLE = "{}#|"
 # --- CLDR plural / ordinal categories -------------------------------------
 
 def _to_operands(value: Any) -> Tuple[float, int, bool]:
-    """Return ``(number, integer_part, is_integer)`` for a numeric value."""
+    """Return ``(number, integer_part, is_integer)`` for a numeric value.
+
+    An ``int`` stays an ``int``: through ``float`` a 17-digit count lost
+    its last digit in ``#``.
+    """
+    if isinstance(value, int) and not isinstance(value, bool):
+        return value, value, True
     number = float(value)
     return number, int(number), number.is_integer()
+
+
+def _category_operands(value: Any) -> Tuple[float, int, bool]:
+    """Operands for a plural rule: CLDR's n and i are absolute values, so -1 is ``one``."""
+    number, integer, is_int = _to_operands(value)
+    return abs(number), abs(integer), is_int
 
 
 def _cardinal_en(_number: float, integer: int, is_int: bool) -> str:
@@ -58,13 +70,13 @@ _ORDINAL = {"en": _ordinal_en}
 def plural_category(number: Any, locale: str = "en") -> str:
     """Return the CLDR cardinal plural category (``one``/``other``/...)."""
     rule = _CARDINAL.get(locale, _cardinal_en)
-    return rule(*_to_operands(number))
+    return rule(*_category_operands(number))
 
 
 def ordinal_category(number: Any, locale: str = "en") -> str:
     """Return the CLDR ordinal plural category (``one``/``two``/``few``/...)."""
     rule = _ORDINAL.get(locale, _ordinal_en)
-    return rule(*_to_operands(number))
+    return rule(*_category_operands(number))
 
 
 def _format_number(value: Any) -> str:

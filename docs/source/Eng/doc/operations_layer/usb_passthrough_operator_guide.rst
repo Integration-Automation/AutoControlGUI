@@ -306,7 +306,8 @@ The same operations are exposed over two more surfaces:
 * **REST API** — ``GET/POST /usb/passthrough/...``, ``/usb/acl...``,
   ``/usb/loopback/...``, ``/usb/remote/...`` (bearer-token gated; see
   ``/openapi.json``). ACL export/import are intentionally *not* on REST
-  (server-side file paths).
+  (server-side file paths). ``enabled``, ``allow`` and ``prompt_on_open`` must be JSON
+  booleans; a string such as ``"false"`` is a 400.
 * **MCP** — first-class ``ac_usb_*`` tools (``ac_usb_loopback_open`` …)
   with JSON Schemas, so an agent can call them directly.
 

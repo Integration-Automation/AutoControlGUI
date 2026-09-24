@@ -60,6 +60,9 @@ coturn TURN 設定包
 - ``README.txt`` — 含 ``turn:`` / ``turns:`` URL、使用者名稱、密鑰的
   快速參考
 
+含換行的欄位，或含 ``:`` 的 ``user``，會以 ``ValueError`` 拒絕（命令列回傳
+結束碼 2）；否則它會在 ``turnserver.conf`` 裡加入自己的指令。
+
 Headless::
 
    from pathlib import Path

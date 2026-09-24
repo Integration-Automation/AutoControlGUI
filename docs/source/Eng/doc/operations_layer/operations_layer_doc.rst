@@ -65,6 +65,10 @@ without paying a relay service. Outputs four files:
 - ``README.txt`` — quick reference with ``turn:`` / ``turns:`` URL,
   username, secret
 
+A field holding a line break, or a ``user`` holding ``:``, is refused with
+``ValueError`` (exit code 2 from the command line): it would otherwise add
+its own directives to ``turnserver.conf``.
+
 Headless::
 
    from pathlib import Path

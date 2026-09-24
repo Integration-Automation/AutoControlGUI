@@ -18,13 +18,16 @@ from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
 from typing import Any, Callable, Dict, List, Optional
 
+from je_auto_control.utils.exception.exceptions import AutoControlException
+from je_auto_control.utils.logging.logging_instance import autocontrol_logger
+
 
 ROLE_CONTROLLER = "controller"
 ROLE_OBSERVER = "observer"
 _VALID_ROLES = frozenset({ROLE_CONTROLLER, ROLE_OBSERVER})
 
 
-class PresenceError(ValueError):
+class PresenceError(AutoControlException, ValueError):
     """Raised when a presence operation is invalid (unknown id, bad role)."""
 
 
@@ -76,6 +79,7 @@ class PresenceRegistry:
     def unregister(self, viewer_id: str) -> bool:
         """Drop the row; returns True if it existed, False otherwise."""
         with self._lock:
+            viewer_id = _key(viewer_id)
             existed = self._rows.pop(viewer_id, None) is not None
         if existed:
             self._notify(viewer_id, None)
@@ -93,6 +97,11 @@ class PresenceRegistry:
 
     def update_cursor(self, viewer_id: str, x: int, y: int) -> ViewerPresence:
         """Move the cursor pin without touching role / label."""
+        try:
+            cursor_x, cursor_y = int(x), int(y)
+        except (TypeError, ValueError, OverflowError) as error:
+            raise PresenceError(f"cursor must be integers, got {x!r}, {y!r}") from error
+        viewer_id = _key(viewer_id)
         with self._lock:
             existing = self._rows.get(viewer_id)
             if existing is None:
@@ -100,7 +109,7 @@ class PresenceRegistry:
             updated = ViewerPresence(
                 viewer_id=existing.viewer_id, label=existing.label,
                 role=existing.role,
-                cursor_x=int(x), cursor_y=int(y),
+                cursor_x=cursor_x, cursor_y=cursor_y,
                 last_seen_iso=_now_iso(),
             )
             self._rows[viewer_id] = updated
@@ -110,6 +119,7 @@ class PresenceRegistry:
     def update_role(self, viewer_id: str, role: str) -> ViewerPresence:
         """Promote / demote a viewer between controller and observer."""
         normalised_role = _normalise_role(role)
+        viewer_id = _key(viewer_id)
         with self._lock:
             existing = self._rows.get(viewer_id)
             if existing is None:
@@ -127,7 +137,7 @@ class PresenceRegistry:
     def can_control(self, viewer_id: str) -> bool:
         """Convenience: True iff the viewer is currently a controller."""
         with self._lock:
-            row = self._rows.get(viewer_id)
+            row = self._rows.get(_key(viewer_id))
         return row is not None and row.can_control()
 
     # --- inspection ----------------------------------------------
@@ -138,7 +148,7 @@ class PresenceRegistry:
 
     def get(self, viewer_id: str) -> Optional[ViewerPresence]:
         with self._lock:
-            return self._rows.get(viewer_id)
+            return self._rows.get(_key(viewer_id))
 
     def count(self) -> int:
         with self._lock:
@@ -177,12 +187,17 @@ class PresenceRegistry:
         for listener in listeners:
             try:
                 listener(viewer_id, row)
-            except (RuntimeError, OSError, ValueError):
-                continue
+            except Exception as error:  # noqa: BLE001  # reason: one failing listener must not skip the others after the row is stored
+                autocontrol_logger.error("presence listener failed: %r", error)
 
 
 def _now_iso() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="seconds")
+
+
+def _key(viewer_id: str) -> str:
+    """The stored form of ``viewer_id``: :meth:`PresenceRegistry.register` strips it."""
+    return viewer_id.strip() if isinstance(viewer_id, str) else viewer_id
 
 
 def _require_id(viewer_id: str) -> str:
@@ -192,7 +207,9 @@ def _require_id(viewer_id: str) -> str:
 
 
 def _normalise_role(role: str) -> str:
-    lowered = (role or "").strip().lower()
+    if not isinstance(role, str):
+        raise PresenceError(f"role must be a string, got {role!r}")
+    lowered = role.strip().lower()
     if lowered not in _VALID_ROLES:
         raise PresenceError(
             f"role must be one of {sorted(_VALID_ROLES)}, got {role!r}",

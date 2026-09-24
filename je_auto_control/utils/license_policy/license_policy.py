@@ -37,7 +37,9 @@ _ALIAS_GROUPS = {
 _ALIASES = {alias: spdx for spdx, names in _ALIAS_GROUPS.items()
             for alias in names}
 
-_TOKEN_SPLIT = re.compile(r"(\bOR\b|\bAND\b|\bWITH\b|[()])", re.IGNORECASE)
+# An operator only counts between whitespace or parentheses: "\b" also
+# matched at the hyphens of "GPL-2.0-or-later", cutting it into three tokens.
+_TOKEN_SPLIT = re.compile(r"((?<![^\s()])(?:OR|AND|WITH)(?![^\s()])|[()])", re.IGNORECASE)
 _OPERATORS = ("OR", "AND", "WITH", "(", ")")
 # GPL / LGPL / AGPL ids, whose "+" and deprecated bare forms have SPDX names.
 _GNU_ID = re.compile(r"(?i)((?:A|L)?GPL-\d\.\d)(\+|-only|-or-later)?")

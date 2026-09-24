@@ -9,6 +9,17 @@ _XML_INVALID = re.compile(
     "[^\x09\x0a\x0d\x20-\ud7ff\ue000-\ufffd\U00010000-\U0010ffff]")
 
 
+# An XML Name, optionally prefixed: a key such as "b><evil/><c" was written
+# verbatim and injected markup into the document.
+_XML_NAME = re.compile(r"[^\W\d][\w.-]*(?::[^\W\d][\w.-]*)?")
+
+
+def _xml_name(name: str) -> str:
+    if not _XML_NAME.fullmatch(name):
+        raise ValueError(f"not a valid XML name: {name!r}")
+    return name
+
+
 def xml_safe_text(text: str) -> str:
     """Replace every character XML 1.0 forbids with U+FFFD.
 
@@ -91,10 +102,11 @@ def _validate_text_node(key: str, value: Any) -> None:
 def _set_attribute(root: ElementTree.Element, key: str, value: Any) -> None:
     if not isinstance(value, str):
         raise TypeError(f"Expected str attribute value, got {type(value)}")
-    root.set(key[1:], xml_safe_text(value))
+    root.set(_xml_name(key[1:]), xml_safe_text(value))
 
 
 def _build_child_node(parent: ElementTree.Element, key: str, value: Any) -> None:
+    _xml_name(key)
     if isinstance(value, list):
         for element in value:
             _to_elements_tree(element, ElementTree.SubElement(parent, key))
@@ -148,7 +160,7 @@ def dict_to_elements_tree(json_dict: Dict[str, Any]) -> str:
             f"with {key_count} keys"
         )
     tag, body = next(iter(json_dict.items()))
-    node = ElementTree.Element(tag)
+    node = ElementTree.Element(_xml_name(tag))
     _to_elements_tree(body, node)
     return ElementTree.tostring(node, encoding="utf-8").decode("utf-8")
 

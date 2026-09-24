@@ -314,6 +314,13 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
   stops a mailbox's polling; mailbox names with spaces or brackets work; a
   string `max_runs` stops the job; a corrupt .xlsx data source is an ordinary
   action error.
+- **Text, config and registries**: `-or-later` licences are no longer split
+  (a denylist naming one now holds); REST USB booleans must be JSON booleans;
+  `.po` entries need no blank line between them and CRLF files parse;
+  negative numbers take CLDR's plural category and large counts keep their
+  digits; `file://` URIs naming another host are refused; coturn fields and
+  XML names cannot inject directives or markup; presence ids are matched as
+  registered and its errors are `AutoControlException`s.
 - **Data utilities**: JWTs are rejected at their expiry second and only in
   canonical base64url; malformed tokens raise `JwtError`; n-gram similarity
   rejects `n < 1`; `DagDefinitionError` is an `AutoControlException`;

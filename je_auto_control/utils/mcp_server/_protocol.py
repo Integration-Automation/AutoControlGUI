@@ -115,6 +115,10 @@ def _file_uri_to_path(uri: str) -> Optional[str]:
         return None
     from urllib.parse import unquote, urlparse
     parsed = urlparse(uri)
+    # file://server/share/x named another host; dropping the host read the
+    # local /share/x instead.
+    if parsed.netloc not in ("", "localhost"):
+        return None
     raw_path = unquote(parsed.path)
     # Windows: file:///C:/foo strips the leading slash before the drive letter.
     if sys.platform.startswith("win") and raw_path.startswith("/") and \

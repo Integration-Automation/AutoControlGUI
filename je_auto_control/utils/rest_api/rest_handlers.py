@@ -363,9 +363,23 @@ def handle_usb_passthrough_status(_ctx: RouteContext) -> HandlerResult:
     return _usb_command(commands.passthrough_status)
 
 
+def _body_bool(body: Dict[str, Any], key: str, default: bool) -> bool:
+    """A JSON boolean from ``body``; anything else is a ``ValueError``.
+
+    ``bool("false")`` is True, so a string used to switch passthrough on.
+    """
+    value = body.get(key, default)
+    if not isinstance(value, bool):
+        raise ValueError(f"{key} must be a JSON boolean")
+    return value
+
+
 def handle_usb_passthrough_enable(ctx: RouteContext) -> HandlerResult:
     from je_auto_control.utils.usb.passthrough import commands
-    enabled = bool(_usb_body(ctx).get("enabled", True))
+    try:
+        enabled = _body_bool(_usb_body(ctx), "enabled", True)
+    except ValueError as error:
+        return 400, {"error": str(error)}
     return _usb_command(lambda: commands.passthrough_enable(enabled))
 
 
@@ -379,12 +393,13 @@ def handle_usb_acl_add(ctx: RouteContext) -> HandlerResult:
     body = _usb_body(ctx)
     try:
         vendor_id, product_id, serial = _usb_vid_pid(body)
+        allow = _body_bool(body, "allow", True)
+        prompt_on_open = _body_bool(body, "prompt_on_open", False)
     except ValueError as error:
         return 400, {"error": str(error)}
     return _usb_command(lambda: commands.acl_add(
         vendor_id, product_id, serial=serial,
-        allow=bool(body.get("allow", True)),
-        prompt_on_open=bool(body.get("prompt_on_open", False)),
+        allow=allow, prompt_on_open=prompt_on_open,
         label=str(body.get("label", "")),
     ))
 

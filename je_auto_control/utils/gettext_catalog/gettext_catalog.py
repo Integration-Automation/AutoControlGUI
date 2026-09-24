@@ -15,7 +15,7 @@ import re
 import struct
 from gettext import c2py
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, Iterator, List, Optional, Tuple
 
 _MO_MAGIC_LE = 0x950412DE
 _MO_MAGIC_BE = 0xDE120495
@@ -241,7 +241,7 @@ def _append(entry: Dict[str, object], field: Optional[object],
 
 
 def _parse_block(block: str) -> Optional[Dict[str, object]]:
-    """Parse one blank-line-delimited ``.po`` block into a field dict."""
+    """Parse one ``.po`` entry into a field dict."""
     entry: Dict[str, object] = {}
     field: Optional[object] = None
     fuzzy = False
@@ -298,10 +298,31 @@ def _store_block(catalog: GettextCatalog, entry: Dict[str, object]) -> None:
         catalog.add(msgid, plurals.get(0, ""), context=ctx)
 
 
+def _entry_blocks(text: str) -> Iterator[str]:
+    """Split ``.po`` source into entries.
+
+    An entry ends at a blank line, a comment or a new ``msgctxt``/``msgid``
+    once it has a ``msgstr``: msgfmt needs no blank line between entries,
+    and splitting on blank lines alone merged such entries (and every entry
+    of a CRLF file) into one.
+    """
+    block: List[str] = []
+    has_msgstr = False
+    for line in text.splitlines():
+        stripped = line.strip()
+        if has_msgstr and (not stripped or stripped.startswith(("#", "msgctxt ", "msgid "))):
+            yield "\n".join(block)
+            block, has_msgstr = [], False
+        has_msgstr = has_msgstr or stripped.startswith("msgstr")
+        block.append(line)
+    if block:
+        yield "\n".join(block)
+
+
 def parse_po(text: str) -> GettextCatalog:
     """Parse ``.po`` source ``text`` into a :class:`GettextCatalog`."""
     catalog = GettextCatalog()
-    for block in re.split(r"\n[ \t]*\n", text or ""):
+    for block in _entry_blocks(text or ""):
         entry = _parse_block(block)
         if entry is not None:
             _store_block(catalog, entry)

@@ -20,7 +20,7 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 | 指標 | 數值 |
 | --- | ---: |
 | Python 模組總數（含周邊子專案） | 1,049 |
-| 程式碼總行數 | 149,214 |
+| 程式碼總行數 | 149,320 |
 | `je_auto_control/utils/` 子套件數 | 310 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 775 |
 | 套件門面 `__all__` 公開名稱數 | 1,241 |
@@ -493,7 +493,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.9 AI / Agent / LLM
 
-> 13 個套件、約 21,383 行。
+> 13 個套件、約 21,387 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -506,27 +506,27 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/cua_action/` | 204 | 標準化 computer-use 動作結構（Anthropic／OpenAI → `AC_*`） |
 | `utils/llm/` | 365 | 自然語言 → action list 規劃器 + Anthropic／null 後端 |
 | `utils/mcp_registry/` | 97 | MCP registry `server.json` 資訊清單產生（可被發現） |
-| `utils/mcp_server/` | 17,667 | **無頭 MCP 伺服器**（16K LOC，預設註冊 678 個工具＝659 個 `ac_*` + 19 個別名）：stdio + HTTP 傳輸、工具工廠與處理器、資源、prompt、稽核、限流、外掛熱重載 |
+| `utils/mcp_server/` | 17,671 | **無頭 MCP 伺服器**（16K LOC，預設註冊 678 個工具＝659 個 `ac_*` + 19 個別名）：stdio + HTTP 傳輸、工具工廠與處理器、資源、prompt、稽核、限流、外掛熱重載 |
 | `utils/tool_use_schema/` | 189 | 把 `AC_*` 指令匯出成 Claude／OpenAI 的 tool-use schema |
 | `utils/trajectory_eval/` | 113 | agent 軌跡評估：依評分規準為一次執行打分 |
 | `utils/vision/` | 518 | VLM 元素定位器（依描述找元素）+ Anthropic／OpenAI／null 後端 |
 
 ### 5.4.10 遠端桌面與 USB
 
-> 6 個套件、約 18,837 行。
+> 6 個套件、約 18,869 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
 | `utils/admin/` | 396 | 多主機管理主控台：平行輪詢 N 個 AutoControl REST 端點 |
 | `utils/config_sync/` | 323 | 透過訊令伺服器做跨機器設定同步 |
 | `utils/device_matrix/` | 138 | 行動裝置矩陣：同一 action list 於多台裝置平行執行 |
-| `utils/remote_desktop/` | 12,563 | **遠端桌面子系統**（56 檔／11.7K LOC）：TCP／WebSocket／WebRTC 三條傳輸路徑、主機與檢視端、訊令伺服器、TURN／中繼、多檢視者、錄影、信任清單、TOTP、稽核鏈 |
+| `utils/remote_desktop/` | 12,595 | **遠端桌面子系統**（56 檔／11.7K LOC）：TCP／WebSocket／WebRTC 三條傳輸路徑、主機與檢視端、訊令伺服器、TURN／中繼、多檢視者、錄影、信任清單、TOTP、稽核鏈 |
 | `utils/usb/` | 4,472 | 跨平台 USB 列舉／熱插拔／裝置直通（WinUSB、IOKit、libusb 後端 + ACL + WebRTC DataChannel 通道） |
 | `utils/usbip/` | 945 | USB/IP 線路協定主機端（協定封包、TCP 伺服器、libusb URB 後端） |
 
 ### 5.4.11 伺服器、網路協定與外部整合
 
-> 24 個套件、約 6,500 行。
+> 24 個套件、約 6,515 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -548,7 +548,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/otp/` | 37 | TOTP 一次性密碼產生（自動化 2FA 登入） |
 | `utils/outbox/` | 107 | 交易式 outbox，保證至少一次的事件投遞 |
 | `utils/pytest_plugin/` | 380 | pytest 外掛 + BDD step library（`pytest11` entry point） |
-| `utils/rest_api/` | 1,793 | 純標準庫 REST 前端：路由、Bearer 驗證、限流、Prometheus 指標、OpenAPI 3.1 產生 |
+| `utils/rest_api/` | 1,808 | 純標準庫 REST 前端：路由、Bearer 驗證、限流、Prometheus 指標、OpenAPI 3.1 產生 |
 | `utils/socket_server/` | 156 | 執行 action JSON 的執行緒式 TCP 指令伺服器（預設綁 127.0.0.1） |
 | `utils/sse_client/` | 126 | Server-Sent Events 用戶端解析 |
 | `utils/tls_acme/` | 455 | TLS 自動化：HTTP-01 挑戰伺服器、金鑰／CSR、自動續期 |
@@ -557,7 +557,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.12 報表、可觀測性與測試治理
 
-> 34 個套件、約 7,318 行。
+> 34 個套件、約 7,326 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -574,7 +574,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/flakiness/` | 150 | 以執行歷史分析不穩定測試 |
 | `utils/generate_report/` | 293 | HTML／JSON／XML 三種報表產生器（Template Method） |
 | `utils/media_assert/` | 242 | 媒體斷言：音訊活動與影片動態檢查 |
-| `utils/observability/` | 697 | Prometheus 格式指標 + OpenTelemetry 相容 trace + `/metrics` 匯出伺服器 |
+| `utils/observability/` | 705 | Prometheus 格式指標 + OpenTelemetry 相容 trace + `/metrics` 匯出伺服器 |
 | `utils/otlp_export/` | 81 | OTLP/JSON span 匯出 |
 | `utils/percentiles/` | 116 | 可合併的串流延遲摘要與精確百分位數 |
 | `utils/process_doc/` | 85 | 由錄製的 action list 產生逐步 SOP 文件 |
@@ -598,7 +598,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.13 資料來源、結構驗證與 i18n
 
-> 24 個套件、約 4,406 行。
+> 24 個套件、約 4,451 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -609,7 +609,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/data_quality/` | 216 | 資料品質：列結構驗證、欄位擷取、遮蔽 |
 | `utils/data_source/` | 197 | 資料驅動執行：從 CSV／JSON／SQLite／Excel 載入資料列 |
 | `utils/dataset_diff/` | 89 | 表格資料列差異比對（CDC 風格） |
-| `utils/gettext_catalog/` | 322 | GNU gettext 目錄 I/O（解析 .po、編譯／讀取 .mo、訊息查詢） |
+| `utils/gettext_catalog/` | 343 | GNU gettext 目錄 I/O（解析 .po、編譯／讀取 .mo、訊息查詢） |
 | `utils/i18n_test/` | 231 | 國際化／在地化測試輔助 |
 | `utils/json_contract/` | 145 | JSON 契約／快照比對：`match_json`、`diff_json`、`snapshot_json` |
 | `utils/json_patch/` | 352 | JSON Pointer（6901）、JSON Patch（6902）與 Merge Patch（7386） |
@@ -618,25 +618,25 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/list_format/` | 82 | 地區感知清單格式化（CLDR 風格的「A、B 和 C」） |
 | `utils/locale_collation/` | 128 | 地區感知字串排序（決定性多層排序鍵） |
 | `utils/locale_parse/` | 79 | 地區感知數字／貨幣／日期解析與格式化（選用 babel） |
-| `utils/message_format/` | 254 | ICU-lite MessageFormat（plural／select／selectordinal） |
+| `utils/message_format/` | 266 | ICU-lite MessageFormat（plural／select／selectordinal） |
 | `utils/office/` | 180 | Office 文件無頭讀寫（Excel／Word／PowerPoint） |
 | `utils/pdf/` | 117 | PDF 讀取與斷言（選用 pypdf 後端） |
 | `utils/referential/` | 83 | 跨資料集的參照完整性檢查 |
 | `utils/schema_compat/` | 177 | JSON Schema 相容性分級 |
 | `utils/sql/` | 88 | 對 SQLite 的臨時唯讀 SQL 查詢 |
 | `utils/test_data/` | 211 | 帶種子的合成測試資料產生（純標準庫） |
-| `utils/xml/` | 277 | XML 檔讀寫與結構變更（`defusedxml`） |
+| `utils/xml/` | 289 | XML 檔讀寫與結構變更（`defusedxml`） |
 
 ### 5.4.14 安全、機密與合規
 
-> 13 個套件、約 2,793 行。
+> 13 個套件、約 2,795 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
 | `utils/config_redaction/` | 85 | 設定結構與 log 字串的機密遮蔽 |
 | `utils/egress/` | 146 | 無頭 HTTP 用戶端的網路外連允許清單守衛 |
 | `utils/governance/` | 237 | 治理：maker-checker 核准閘門與即時憑證租約 |
-| `utils/license_policy/` | 220 | 以 SBOM 元件評估 SPDX 授權允許／拒絕政策 |
+| `utils/license_policy/` | 222 | 以 SBOM 元件評估 SPDX 授權允許／拒絕政策 |
 | `utils/provenance/` | 117 | SLSA 建置來源證明（in-toto v1） |
 | `utils/rbac/` | 299 | 角色型存取控制：使用者、角色與權杖驗證（尚未接到 REST／MCP） |
 | `utils/redaction/` | 504 | 截圖遮蔽層：規則偵測 + 政策 + 協調器（上傳 VLM 前先遮） |
@@ -706,7 +706,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `action_redaction.py` | 72 | 記錄與紀錄鍵用的遮蔽：`AC_secret_*` 的參數（金庫通行碼、機密值）在寫進 log、當成結果紀錄的鍵之前換成 `***`，巢狀在區塊指令裡的也一樣。 |
 | `mouse_aliases.py` | 39 | 單鍵點擊別名（`AC_click_left` 等），executor 與 callback executor 共用。 |
 
-#### `utils/mcp_server/`（17,667 行，678 個工具）— 最大子系統
+#### `utils/mcp_server/`（17,671 行，678 個工具）— 最大子系統
 
 | 檔案 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -726,7 +726,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `http_transport.py` | 585 | MCP 的 HTTP 傳輸。 |
 | `http_sessions.py` | 247 | MCP 的 HTTP 傳輸用的 session 身分:`Mcp-Session-Id` 註冊表,以及每個 session 那條常駐的 server→client SSE 串流。 |
 | `_client_requests.py` | 249 | 伺服器主動送出的請求：`roots/list`／`elicitation/create`／`sampling/createMessage`,對應表與回應路由,以及破壞性工具的確認交握。 |
-| `_protocol.py` | 167 | JSON-RPC 線路格式：版本與識別常數、`_MCPError`、決定失敗工具行為的錯誤 tuple、envelope 產生器、工具回傳值轉 `content` 區塊。不碰伺服器狀態。 |
+| `_protocol.py` | 171 | JSON-RPC 線路格式：版本與識別常數、`_MCPError`、決定失敗工具行為的錯誤 tuple、envelope 產生器、工具回傳值轉 `content` 區塊。不碰伺服器狀態。 |
 | `resources.py` | 307 | MCP resource 提供者。 |
 | `prompts.py` | 220 | MCP prompt 目錄。 |
 | `fake_backend.py` | 184 | CI／無頭測試用的記憶體內假後端。 |
@@ -740,7 +740,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `rate_limit.py` | 48 | 工具呼叫的 token bucket 限流。 |
 | `__main__.py` | 88 | `je_auto_control_mcp` console script 進入點。 |
 
-#### `utils/remote_desktop/`（12,563 行／56 檔）
+#### `utils/remote_desktop/`（12,595 行／56 檔）
 
 三條傳輸路徑並存：**TCP**（JPEG 影格）、**WebSocket**（同協定換傳輸）、**WebRTC**（aiortc 視訊 + DataChannel）。
 
@@ -762,8 +762,8 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `file_transfer.py` | 339 | 分塊檔案傳輸。 |
 | `relay.py` | 314 | NAT 穿透失敗時的 TCP 中繼。 |
 | `fingerprint.py` | 245 | TOFU 主機指紋驗證。 |
-| `turn_config.py` | 234 | coturn 設定產生器。 |
-| `presence.py` | 221 | 多檢視者的執行緒安全在場註冊表。 |
+| `turn_config.py` | 249 | coturn 設定產生器。 |
+| `presence.py` | 238 | 多檢視者的執行緒安全在場註冊表。 |
 | `jpeg_recorder_encrypted.py` | 223 | AES-GCM 加密版 session 錄影。 |
 | `address_book.py` | 213 | 檢視端的主機通訊錄。 |
 | `audio.py` / `webrtc_audio.py` / `webrtc_mic.py` | 205 / 189 / 151 | 音訊擷取播放、音訊軌、麥克風上行。 |
@@ -814,12 +814,12 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `usbip/libusb_backend.py` | 212 | 以 PyUSB／libusb 執行 URB 的正式後端。 |
 | `usbip/backend.py` | 87 | 可插拔 URB 執行後端。 |
 
-#### `utils/rest_api/`（1,793 行）
+#### `utils/rest_api/`（1,808 行）
 
 | 檔案 | 行數 | 職責 |
 | --- | ---: | --- |
 | `rest_server.py` | 508 | HTTP 前端主體。 |
-| `rest_handlers.py` | 486 | 端點實作。 |
+| `rest_handlers.py` | 501 | 端點實作。 |
 | `rest_openapi.py` | 422 | 走訪路由表產生 OpenAPI 3.1 規格。 |
 | `rest_auth.py` | 157 | Bearer token 驗證 + 逐 client 限流閘門。 |
 | `rest_metrics.py` | 75 | Prometheus 曝露端點。 |
@@ -1061,15 +1061,15 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | 層／子系統 | 檔案數 | 行數 |
 | --- | ---: | ---: |
 | `gui/` | 91 | 26,829 |
-| `utils/mcp_server/` | 31 | 17,667 |
-| `utils/remote_desktop/` | 56 | 12,563 |
+| `utils/mcp_server/` | 31 | 17,671 |
+| `utils/remote_desktop/` | 56 | 12,595 |
 | `utils/executor/` | 7 | 9,425 |
 | `utils/usb/` | 17 | 4,472 |
 | `je_auto_control/`（頂層 3 檔） | 3 | 2,395 |
 | `utils/accessibility/` | 14 | 3,032 |
 | `wrapper/` | 19 | 3,615 |
 | `windows/` | 23 | 1,957 |
-| `utils/rest_api/` | 8 | 1,793 |
+| `utils/rest_api/` | 8 | 1,808 |
 | `utils/agent/` | 8 | 1,446 |
 | `linux_with_x11/` | 19 | 1,236 |
 | `linux_wayland/` | 17 | 2,870 |
@@ -1080,6 +1080,6 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `osx/` | 17 | 919 |
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 837 |
-| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 677 | 53,097 |
-| **總計** | **1,043** | **149,149** |
+| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 677 | 53,152 |
+| **總計** | **1,043** | **149,255** |
 
