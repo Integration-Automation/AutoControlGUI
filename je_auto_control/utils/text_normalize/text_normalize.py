@@ -42,13 +42,21 @@ def normalize_quotes(text: str) -> str:
 
 
 def normalize_text(text: str, *, form: str = "NFKC", casefold: bool = True,
-                   collapse_ws: bool = True) -> str:
-    """Canonicalise ``text``: Unicode ``form``, optional casefold + ws fold."""
+                   collapse_ws: bool = True, strip_format: bool = True) -> str:
+    """Canonicalise ``text``: Unicode ``form``, optional casefold + ws fold.
+
+    ``strip_format`` drops invisible format characters (zero-width space,
+    soft hyphen, joiners), which NFKC keeps: "pass\u200bword" did not
+    normalise to "password".
+    """
     if form not in _NORMAL_FORMS:
         raise ValueError(
             f"unknown normalisation form {form!r}; "
             f"expected one of {', '.join(_NORMAL_FORMS)}")
-    result = unicodedata.normalize(cast(_NormalForm, form), text or "")
+    source = text or ""
+    if strip_format:
+        source = "".join(ch for ch in source if unicodedata.category(ch) != "Cf")
+    result = unicodedata.normalize(cast(_NormalForm, form), source)
     if casefold:
         result = result.casefold()
     if collapse_ws:

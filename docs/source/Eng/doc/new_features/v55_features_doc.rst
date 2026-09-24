@@ -30,7 +30,9 @@ Headless API
 
 ``detect_pii`` returns non-overlapping findings sorted by position (the earlier,
 then longer, match wins — so a credit-card number is not also flagged as a
-phone). ``redact_pii_text`` modes: ``label`` (``[email]``), ``mask`` (``****``),
+phone). A card number is 13-19 digits in any grouping (Amex's 4-6-5 included)
+that passes the Luhn check; a phone number may run to 20 characters with its
+separators. ``redact_pii_text`` modes: ``label`` (``[email]``), ``mask`` (``****``),
 ``partial`` (keep last 4), ``hash`` (``[email:<digest>]``).
 
 Executor commands

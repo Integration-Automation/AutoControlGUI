@@ -20,7 +20,7 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 | 指標 | 數值 |
 | --- | ---: |
 | Python 模組總數（含周邊子專案） | 1,049 |
-| 程式碼總行數 | 147,666 |
+| 程式碼總行數 | 147,804 |
 | `je_auto_control/utils/` 子套件數 | 310 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 773 |
 | 套件門面 `__all__` 公開名稱數 | 1,241 |
@@ -414,13 +414,13 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.6 OCR 與文字理解
 
-> 19 個套件、約 3,260 行。
+> 19 個套件、約 3,329 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
-| `utils/bidi_check/` | 116 | 雙向文字 QA（bidi 控制碼、巢狀平衡、Trojan-source 掃描） |
+| `utils/bidi_check/` | 129 | 雙向文字 QA（bidi 控制碼、巢狀平衡、Trojan-source 掃描） |
 | `utils/column_layout/` | 150 | 從垂直空白推斷欄位，處理無框線表格 |
-| `utils/confusables/` | 112 | 易混淆／同形字偵測（Unicode 欺騙骨架） |
+| `utils/confusables/` | 139 | 易混淆／同形字偵測（Unicode 欺騙骨架） |
 | `utils/form_fields/` | 128 | 多方向關聯表單標籤與值，並讀取核取方塊狀態 |
 | `utils/fuzzy/` | 96 | 模糊字串比對與去重（預設 difflib，有 rapidfuzz 則優先） |
 | `utils/grid_locator/` | 71 | 以 (row, column) 從邊界框定址表格／網格儲存格 |
@@ -428,13 +428,13 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/heading_segment/` | 69 | 判定 OCR 行是標題或內文，建出文件大綱 |
 | `utils/near_dup/` | 105 | 近似重複文字偵測（SimHash／MinHash） |
 | `utils/ocr/` | 1,126 | OCR 引擎門面 + 三個後端（Tesseract／EasyOCR／PaddleOCR）、版面結構化與跨詞比對（`text_span`） |
-| `utils/pii_text/` | 98 | 自由文字中的 PII 偵測與遮蔽（email／電話／SSN／卡號／IP／IBAN） |
+| `utils/pii_text/` | 119 | 自由文字中的 PII 偵測與遮蔽（email／電話／SSN／卡號／IP／IBAN） |
 | `utils/readability/` | 137 | 可讀性評分（Flesch、Flesch-Kincaid、Gunning Fog、SMOG、ARI） |
 | `utils/reading_flow/` | 119 | 以遞迴 XY-cut 推導欄位感知的閱讀順序 |
 | `utils/search_index/` | 142 | 記憶體內 BM25／TF-IDF 全文檢索 |
 | `utils/text_blocks/` | 88 | 把 OCR 行組成段落與項目符號／編號清單 |
 | `utils/text_diff/` | 187 | unified diff 產生、套用與三方合併 |
-| `utils/text_normalize/` | 74 | Unicode 正規化與 slug 產生 |
+| `utils/text_normalize/` | 82 | Unicode 正規化與 slug 產生 |
 | `utils/text_regions/` | 161 | 免模型的畫面文字區域偵測（MSER）：區域與行 |
 | `utils/text_similarity/` | 165 | 字串距離度量（文字比對用） |
 
@@ -598,7 +598,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.13 資料來源、結構驗證與 i18n
 
-> 24 個套件、約 4,265 行。
+> 24 個套件、約 4,326 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -609,8 +609,8 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/data_quality/` | 201 | 資料品質：列結構驗證、欄位擷取、遮蔽 |
 | `utils/data_source/` | 192 | 資料驅動執行：從 CSV／JSON／SQLite／Excel 載入資料列 |
 | `utils/dataset_diff/` | 89 | 表格資料列差異比對（CDC 風格） |
-| `utils/gettext_catalog/` | 296 | GNU gettext 目錄 I/O（解析 .po、編譯／讀取 .mo、訊息查詢） |
-| `utils/i18n_test/` | 196 | 國際化／在地化測試輔助 |
+| `utils/gettext_catalog/` | 322 | GNU gettext 目錄 I/O（解析 .po、編譯／讀取 .mo、訊息查詢） |
+| `utils/i18n_test/` | 231 | 國際化／在地化測試輔助 |
 | `utils/json_contract/` | 145 | JSON 契約／快照比對：`match_json`、`diff_json`、`snapshot_json` |
 | `utils/json_patch/` | 352 | JSON Pointer（6901）、JSON Patch（6902）與 Merge Patch（7386） |
 | `utils/json_schema/` | 419 | JSON Schema（Draft 2020-12 子集）驗證 |
@@ -629,7 +629,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.14 安全、機密與合規
 
-> 13 個套件、約 2,747 行。
+> 13 個套件、約 2,755 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -639,11 +639,11 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/license_policy/` | 220 | 以 SBOM 元件評估 SPDX 授權允許／拒絕政策 |
 | `utils/provenance/` | 104 | SLSA 建置來源證明（in-toto v1） |
 | `utils/rbac/` | 299 | 角色型存取控制：使用者、角色與權杖驗證（尚未接到 REST／MCP） |
-| `utils/redaction/` | 499 | 截圖遮蔽層：規則偵測 + 政策 + 協調器（上傳 VLM 前先遮） |
+| `utils/redaction/` | 504 | 截圖遮蔽層：規則偵測 + 政策 + 協調器（上傳 VLM 前先遮） |
 | `utils/sbom/` | 118 | SBOM（CycloneDX）產生 |
 | `utils/secret_ref/` | 143 | URI scheme 形式的值參照解析 |
 | `utils/secrets/` | 340 | 加密機密儲存庫，供 `${secrets.NAME}` 解析 |
-| `utils/secrets_scan/` | 130 | 掃描 action JSON／資料中應入庫卻硬編碼的機密 |
+| `utils/secrets_scan/` | 133 | 掃描 action JSON／資料中應入庫卻硬編碼的機密 |
 | `utils/vex/` | 167 | OpenVEX 陳述撰寫與漏洞分類處置 |
 | `utils/vuln_scan/` | 259 | 以 OSV 比對 SBOM 元件的漏洞（純標準庫） |
 
@@ -1080,6 +1080,6 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `osx/` | 17 | 919 |
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 837 |
-| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 677 | 51,828 |
-| **總計** | **1,043** | **147,601** |
+| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 677 | 51,966 |
+| **總計** | **1,043** | **147,739** |
 

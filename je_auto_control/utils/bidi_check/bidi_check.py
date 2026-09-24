@@ -68,8 +68,21 @@ def is_balanced(text: str) -> bool:
 
 
 def base_direction(text: str) -> str:
-    """Infer the paragraph base direction from the first strong character."""
+    """Infer the paragraph base direction from the first strong character.
+
+    Characters inside an isolate (LRI / RLI / FSI ... PDI) are skipped, as
+    UAX #9 rule P2 says; "\u2066abc\u2069 \u05e9" is RTL, not LTR.
+    """
+    depth = 0
     for char in text or "":
+        if _OPEN_KIND.get(char) == "I":
+            depth += 1
+            continue
+        if char == _CLOSE_ISOLATE:
+            depth = max(0, depth - 1)
+            continue
+        if depth:
+            continue
         bidi = unicodedata.bidirectional(char)
         if bidi == "L":
             return "LTR"

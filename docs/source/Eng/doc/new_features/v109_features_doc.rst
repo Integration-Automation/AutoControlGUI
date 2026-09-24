@@ -30,11 +30,14 @@ Headless API
 
 ``confusable_skeleton`` NFKC-normalises (folding fullwidth, ligatures and math
 alphanumerics) then maps each remaining cross-script lookalike to its Latin
-prototype. ``is_confusable`` is true only for *distinct* strings with equal
-skeletons. ``detect_homoglyphs`` returns the offending characters with their
+prototype; invisible format characters (zero-width space, soft hyphen,
+joiners) are dropped first. ``is_confusable`` is true only for *distinct*
+strings with equal skeletons. ``detect_homoglyphs`` returns the offending characters with their
 position and prototype. ``scripts_of`` / ``is_mixed_script`` classify characters
 by Unicode block (ignoring digits, punctuation and spaces) so a single mixed-
-script token can be flagged on its own.
+script token can be flagged on its own. Following UTS #39's highly restrictive
+level, Latin with Han + Hiragana + Katakana (Japanese) or with Han + Hangul
+(Korean) is one writing system, not a mix; fullwidth Latin counts as Latin.
 
 Executor commands
 -----------------

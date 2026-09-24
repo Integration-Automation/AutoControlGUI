@@ -18,14 +18,34 @@ from typing import Dict, List, Optional, Sequence
 PII_KINDS = ("email", "ipv4", "ssn", "credit_card", "iban", "phone")
 
 _PATTERNS: Dict[str, "re.Pattern[str]"] = {
-    "email": re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}"),
+    # Bounded, and anchored to a boundary: the unbounded local part rescanned
+    # to the end from every position (quadratic on 20 KB of letters).
+    "email": re.compile(
+        r"(?<![A-Za-z0-9._%+-])[A-Za-z0-9._%+-]{1,64}@[A-Za-z0-9.-]{1,255}\.[A-Za-z]{2,24}"),
     "ipv4": re.compile(r"\b(?:\d{1,3}\.){3}\d{1,3}\b"),
     "ssn": re.compile(r"\b\d{3}-\d{2}-\d{4}\b"),
-    "credit_card": re.compile(
-        r"\b\d{4}[ -]?\d{4}[ -]?\d{4}[ -]?\d{1,4}\b"),
+    # 13-19 digits in any grouping (Amex is 4-6-5), confirmed by Luhn below.
+    "credit_card": re.compile(r"\b\d(?:[ -]?\d){12,18}\b"),
     "iban": re.compile(r"\b[A-Z]{2}\d{2}[A-Z0-9]{10,30}\b"),
-    "phone": re.compile(r"\+?\d[\d().\- ]{6,12}\d"),
+    # Up to 20 characters: "+1 (555) 123-4567" and "+44 20 7946 0958" were
+    # cut at 15 and their last digits left visible.
+    "phone": re.compile(r"(?<![\w+])\+?\(?\d[\d().\- ]{6,18}\d(?!\w)"),
 }
+
+
+def luhn_valid(number: str) -> bool:
+    """Whether the digits of ``number`` pass the Luhn checksum card numbers carry."""
+    digits = [int(char) for char in number if char.isdigit()]
+    if len(digits) < 13:
+        return False
+    total = 0
+    for position, digit in enumerate(reversed(digits)):
+        if position % 2:
+            digit *= 2
+            if digit > 9:
+                digit -= 9
+        total += digit
+    return total % 10 == 0
 
 
 @dataclass(frozen=True)
@@ -54,7 +74,8 @@ def detect_pii(text: str, *,
             continue
         candidates.extend(
             PIIFinding(kind, m.group(0), m.start(), m.end())
-            for m in pattern.finditer(text))
+            for m in pattern.finditer(text)
+            if kind != "credit_card" or luhn_valid(m.group(0)))
     candidates.sort(key=lambda f: (f.start, -(f.end - f.start)))
     kept: List[PIIFinding] = []
     last_end = -1

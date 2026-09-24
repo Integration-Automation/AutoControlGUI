@@ -155,7 +155,42 @@ def _placeholders(value: Any) -> set:
     which legitimately differ between languages."""
     text = str(value)
     return set(_PRINTF_ONLY.findall(text)) | {
-        "{" + name + "}" for name in _ARGUMENT.findall(text)}
+        "{" + name + "}" for name in _argument_names(text)}
+
+
+def _argument_names(text: str) -> List[str]:
+    """Names of the ``{arguments}`` in ``text``, skipping ICU case bodies.
+
+    ``male {He}`` inside a select is a case body, not an argument; matching
+    every ``{word`` reported "He" / "Il" as a placeholder mismatch.
+    """
+    names: List[str] = []
+    stack: List[bool] = []   # True: an ICU argument whose "{" opens case bodies
+    index = 0
+    while index < len(text):
+        char = text[index]
+        if char == "}":
+            if stack:
+                stack.pop()
+        elif char == "{":
+            index = _open_brace(text, index, stack, names)
+            continue
+        index += 1
+    return names
+
+
+def _open_brace(text: str, index: int, stack: List[bool], names: List[str]) -> int:
+    """Handle the ``{`` at ``index``; return where scanning resumes."""
+    if stack and stack[-1]:
+        stack.append(False)          # a case body: its text is a message
+        return index + 1
+    match = _ARGUMENT.match(text, index)
+    if match is None:
+        stack.append(False)
+        return index + 1
+    names.append(match.group(1))
+    stack.append(bool(_ICU_HEAD.match(text, index)))
+    return match.end()
 
 
 def _empty_keys(base: Dict[str, Any], target: Dict[str, Any]) -> List[str]:

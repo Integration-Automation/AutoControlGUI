@@ -27,7 +27,8 @@
     detect_pii(text, kinds=["email", "phone"])            # 限定偵測器
 
 ``detect_pii`` 回傳依位置排序、互不重疊的結果(較前、再較長的匹配勝出 —— 因此信用卡號不
-會同時被標記為電話)。``redact_pii_text`` 模式:``label``(``[email]``)、``mask``
+會同時被標記為電話)。信用卡號是任意分組、13 到 19 位且通過 Luhn 檢查的數字(含 Amex 的 4-6-5);
+電話號碼連同分隔符號最長 20 個字元。``redact_pii_text`` 模式:``label``(``[email]``)、``mask``
 (``****``)、``partial``(保留末 4 碼)、``hash``(``[email:<digest>]``)。
 
 執行器指令

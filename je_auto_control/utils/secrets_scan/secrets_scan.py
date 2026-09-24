@@ -30,7 +30,10 @@ _VALUE_PATTERNS: Tuple[Tuple[str, "re.Pattern"], ...] = (
     ("github-token", re.compile(r"\bgh[pousr]_[A-Za-z0-9]{20,}\b")),
     ("jwt", re.compile(r"\beyJ[\w-]+\.[\w-]+\.[\w-]*")),
     # The (?!\*\*\*@) lets an already-masked URL keep its host readable.
-    ("url-credentials", re.compile(r"(?i)\b[a-z][a-z0-9+.-]*://[^/\s:@]+:(?!\*\*\*@)[^/\s@]+@")),
+    # The scheme is bounded and cannot start right after a letter, digit or
+    # "." -- as written, "a.a.a..." started a scan to the end at every dot.
+    ("url-credentials", re.compile(
+        r"(?i)(?<![a-z0-9+.-])[a-z][a-z0-9+.-]{0,31}://[^/\s:@]{1,256}:(?!\*\*\*@)[^/\s@]{1,256}@")),
 )
 
 

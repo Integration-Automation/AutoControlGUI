@@ -48,6 +48,17 @@ _SCRIPT_RANGES: Tuple[Tuple[int, int, str], ...] = (
     (0x0600, 0x06FF, "ARABIC"),
     (0x3040, 0x309F, "HIRAGANA"), (0x30A0, 0x30FF, "KATAKANA"),
     (0x3400, 0x9FFF, "HAN"), (0xAC00, 0xD7AF, "HANGUL"),
+    # Fullwidth Latin counted as COMMON, hiding a Cyrillic letter inside a
+    # fullwidth-Latin word.
+    (0xFF21, 0xFF3A, "LATIN"), (0xFF41, 0xFF5A, "LATIN"),
+    (0xFF66, 0xFF9F, "KATAKANA"),
+)
+
+# TR39 "highly restrictive": these script sets are one writing system, not
+# a mix -- Japanese text used to be flagged as mixed script.
+_ALLOWED_SCRIPT_SETS = (
+    frozenset({"LATIN", "HAN", "HIRAGANA", "KATAKANA"}),
+    frozenset({"LATIN", "HAN", "HANGUL"}),
 )
 
 
@@ -67,8 +78,18 @@ def skeleton(text: str) -> str:
     each remaining cross-script homoglyph to its Latin prototype. Two strings are
     confusable exactly when their skeletons are equal.
     """
-    normalised = unicodedata.normalize("NFKC", text or "")
+    normalised = unicodedata.normalize("NFKC", _strip_invisible(text or ""))
     return "".join(_CONFUSABLES.get(char, char) for char in normalised)
+
+
+def _strip_invisible(text: str) -> str:
+    """Drop format characters (ZWSP, soft hyphen, joiners) and variation selectors.
+
+    NFKC keeps them, so "pa\u200bypal" was not confusable with "paypal".
+    """
+    return "".join(char for char in text
+                   if unicodedata.category(char) != "Cf"
+                   and not 0xFE00 <= ord(char) <= 0xFE0F)
 
 
 def is_confusable(first: str, second: str) -> bool:
@@ -83,11 +104,14 @@ def detect_homoglyphs(text: str) -> List[Dict[str, object]]:
     differs from itself (i.e. a cross-script lookalike).
     """
     findings: List[Dict[str, object]] = []
-    for index, char in enumerate(unicodedata.normalize("NFKC", text or "")):
-        prototype = _CONFUSABLES.get(char)
-        if prototype is not None:
-            findings.append({"index": index, "char": char,
-                             "prototype": prototype})
+    # Indexed by the input: the NFKC string's positions shifted after any
+    # character that normalises to several ("\ufb01" -> "fi").
+    for index, original in enumerate(text or ""):
+        for char in unicodedata.normalize("NFKC", original):
+            prototype = _CONFUSABLES.get(char)
+            if prototype is not None:
+                findings.append({"index": index, "char": char,
+                                 "prototype": prototype})
     return findings
 
 
@@ -99,5 +123,8 @@ def scripts_of(text: str) -> Set[str]:
 
 
 def is_mixed_script(text: str) -> bool:
-    """Whether ``text`` mixes more than one script (a spoofing red flag)."""
-    return len(scripts_of(text)) > 1
+    """Whether ``text`` mixes scripts that are not one writing system (TR39)."""
+    scripts = scripts_of(text)
+    if len(scripts) <= 1:
+        return False
+    return not any(scripts <= allowed for allowed in _ALLOWED_SCRIPT_SETS)

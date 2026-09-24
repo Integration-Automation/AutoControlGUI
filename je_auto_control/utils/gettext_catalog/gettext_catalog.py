@@ -21,7 +21,9 @@ _MO_MAGIC_LE = 0x950412DE
 _MO_MAGIC_BE = 0xDE120495
 _CONTEXT_SEP = "\x04"
 _PLURAL_SEP = "\x00"
-_ESCAPES = {"n": "\n", "t": "\t", "r": "\r", '"': '"', "\\": "\\"}
+_ESCAPES = {"n": "\n", "t": "\t", "r": "\r", '"': '"', "\\": "\\",
+            "a": "\a", "b": "\b", "f": "\f", "v": "\v"}
+_NUMERIC_ESCAPE = re.compile(r"[0-7]{1,3}|x[0-9A-Fa-f]{1,2}")
 
 Key = Tuple[Optional[str], str]
 
@@ -33,6 +35,13 @@ def _decode_escapes(text: str) -> str:
     while index < len(text):
         char = text[index]
         if char == "\\" and index + 1 < len(text):
+            # Octal (\101) and hex (\x41) escapes were read as their digits.
+            numeric = _NUMERIC_ESCAPE.match(text, index + 1)
+            if numeric:
+                digits = numeric.group(0)
+                out.append(chr(int(digits[1:], 16) if digits[0] == "x" else int(digits, 8)))
+                index = numeric.end()
+                continue
             out.append(_ESCAPES.get(text[index + 1], text[index + 1]))
             index += 2
         else:
@@ -183,7 +192,15 @@ def _store_mo_entry(catalog: GettextCatalog, original: str,
 
 
 def read_mo(data: bytes) -> GettextCatalog:
-    """Parse GNU ``.mo`` binary ``data`` into a catalog."""
+    """Parse GNU ``.mo`` binary ``data`` into a catalog; damaged data is ``ValueError``."""
+    try:
+        return _read_mo(data)
+    except (struct.error, UnicodeDecodeError) as error:
+        # A truncated file raised struct.error from deep inside the parser.
+        raise ValueError(f"damaged .mo data: {error}") from error
+
+
+def _read_mo(data: bytes) -> GettextCatalog:
     magic = struct.unpack("<I", data[:4])[0]
     if magic not in (_MO_MAGIC_LE, _MO_MAGIC_BE):
         raise ValueError("not a .mo file (bad magic)")
@@ -227,12 +244,21 @@ def _parse_block(block: str) -> Optional[Dict[str, object]]:
     """Parse one blank-line-delimited ``.po`` block into a field dict."""
     entry: Dict[str, object] = {}
     field: Optional[object] = None
+    fuzzy = False
     for line in block.splitlines():
         stripped = line.strip()
+        if stripped.startswith("#,"):
+            fuzzy = fuzzy or "fuzzy" in (flag.strip() for flag in stripped[2:].split(","))
         if not stripped or stripped.startswith("#"):
             continue
         field = _consume_line(stripped, entry, field)
-    return entry if "msgid" in entry else None
+    if "msgid" not in entry:
+        return None
+    # A fuzzy entry is an unreviewed guess: msgfmt leaves it out (the header
+    # excepted), and it used to be served as the translation.
+    if fuzzy and entry["msgid"] != "":
+        return None
+    return entry
 
 
 def _consume_line(stripped: str, entry: Dict[str, object],

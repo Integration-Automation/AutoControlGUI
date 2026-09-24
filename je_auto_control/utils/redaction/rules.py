@@ -31,15 +31,20 @@ DetectorFn = Callable[[Any, Dict[str, Any]], List[BoundingBox]]
 _RE_EMAIL = re.compile(
     r"\b[A-Za-z0-9._%+\-]{1,64}@[A-Za-z0-9.\-]{1,255}\.[A-Za-z]{2,24}\b",
 )
+# 13-19 digits in any grouping: only 16-digit 4-4-4-4 numbers matched, so
+# an Amex (4-6-5) stayed readable under every policy.
 _RE_CREDIT_CARD = re.compile(
-    r"\b(?:\d{4}[ \-]?){3}\d{4}\b",
+    r"\b\d(?:[ \-]?\d){12,18}\b",
 )
 _RE_SSN = re.compile(
     r"\b\d{3}-\d{2}-\d{4}\b",
 )
+# North American numbers, or an international "+" number of 8-15 digits
+# ("+44 20 7946 0958" matched neither before).
 _RE_PHONE = re.compile(
     r"\b(?:\+?\d{1,3}[ .\-]?)?"
-    r"\(?\d{3}\)?[ .\-]?\d{3}[ .\-]?\d{4}\b",
+    r"\(?\d{3}\)?[ .\-]?\d{3}[ .\-]?\d{4}\b"
+    r"|\+\d(?:[ .\-]?\d){7,14}\b",
 )
 
 
