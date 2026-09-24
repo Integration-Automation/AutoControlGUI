@@ -67,6 +67,7 @@ class ScreenObserver:
         self._poll = clamp_poll_interval(poll_interval_s)
         self._rules: List[WatchRule] = []
         self._lock = threading.Lock()
+        self._poll_lock = threading.RLock()
         # 序列化 start()/stop():兩者原本無互斥,交錯的 stop() 會在 start()
         # 指派 _thread 與 .start() 之間 join 未啟動的執行緒 → RuntimeError。
         # Serialises start()/stop(): without it, a concurrent stop() joins the
@@ -119,8 +120,12 @@ class ScreenObserver:
         """Evaluate every watch once; fire callbacks and return the events."""
         with self._lock:
             rules = list(self._rules)
-        return [event for event in (self._evaluate(rule) for rule in rules)
-                if event is not None]
+        # Serialised: a manual poll_once() racing the thread (or a thread left
+        # over from a stop() whose join timed out) read the same rule.last and
+        # fired the same transition twice.
+        with self._poll_lock:
+            return [event for event in (self._evaluate(rule) for rule in rules)
+                    if event is not None]
 
     def _evaluate(self, rule: WatchRule) -> Optional[Dict[str, Any]]:
         # The transition is inside the guard too: a predicate returning, say,

@@ -24,7 +24,7 @@ from typing import Any, Callable, Dict, List, Optional, Sequence
 
 from je_auto_control.utils.session_guard import is_session_locked
 from je_auto_control.utils.session_guard.session_guard import LockProbe
-from je_auto_control.utils.timeouts import deadline_after
+from je_auto_control.utils.timeouts import clamp_poll_interval, deadline_after
 
 # A driver performs the lock and returns whether it succeeded.
 LockDriver = Callable[[], bool]
@@ -110,9 +110,11 @@ def _wait_lock_state(target_locked: bool, *, probe: Optional[LockProbe],
     while True:
         if bool(is_session_locked(probe)) == target_locked:
             return True
-        if clock() >= deadline:
+        now = clock()
+        if now >= deadline:
             return False
-        sleep(float(interval_s))
+        # Capped at the time left: a 30 s interval held a 1 s wait for 30 s.
+        sleep(min(clamp_poll_interval(float(interval_s)), deadline - now))
 
 
 def wait_for_unlock(*, probe: Optional[LockProbe] = None,

@@ -70,14 +70,39 @@ def _pick_position(bbox: Sequence[int], label_w: int, label_h: int,
         rect = (cx, cy, label_w, label_h)
         if fallback is None:
             fallback = rect
-        if bounds is not None and not _in_bounds(rect, bounds):
+        # Without bounds the screen still starts at 0: a mark at y=0 got its
+        # label at y=-16.
+        if cx < 0 or cy < 0 or (bounds is not None and not _in_bounds(rect, bounds)):
             continue
         if any(_overlap(rect, other) for other in placed):
             continue
         return rect
-    if bounds is not None and fallback is not None:
-        return _clamp_to_bounds(fallback, bounds)
-    return fallback if fallback is not None else (0, 0, label_w, label_h)
+    start = fallback if fallback is not None else (0, 0, label_w, label_h)
+    return _free_spot(start, bounds, placed)
+
+
+def _free_spot(rect: Rect, bounds: Optional[Tuple[int, int]], placed: List[Rect]) -> Rect:
+    """Step ``rect`` down, then across, until it clears every placed label.
+
+    The fallback used to be clamped and returned as is, so crowded marks got
+    identical, overlapping labels.
+    """
+    x, y, w, h = rect
+    x, y = max(0, x), max(0, y)
+    if bounds is not None:
+        x, y, w, h = _clamp_to_bounds((x, y, w, h), bounds)
+    for _ in range(_MAX_NUDGES):
+        if not any(_overlap((x, y, w, h), other) for other in placed):
+            break
+        y += h
+        if bounds is not None and y + h > bounds[1]:
+            x, y = x + w, 0
+            if x + w > bounds[0]:
+                break
+    return (x, y, w, h)
+
+
+_MAX_NUDGES = 256
 
 
 def place_labels(marks: Sequence[Dict[str, Any]], *, label_width: int = 22,

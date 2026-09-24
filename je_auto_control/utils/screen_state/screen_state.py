@@ -67,6 +67,12 @@ def _distance_from(target: tuple) -> Callable[[Dict[str, Any]], float]:
     return lambda item: math.dist(_centre(item), target)
 
 
+def _same_box(first: Any, second: Any) -> bool:
+    """Equal boxes: a list and a tuple, or 10 and 10.0000001, are not a move."""
+    a, b = list(first or [])[:4], list(second or [])[:4]
+    return len(a) == len(b) and all(abs(float(x) - float(y)) < 0.5 for x, y in zip(a, b))
+
+
 def _pair_group(before: List[Dict[str, Any]], after: List[Dict[str, Any]],
                 diff: Dict[str, List[Dict[str, Any]]]) -> None:
     """Pair same-key items, unchanged boxes first, then nearest centres.
@@ -77,7 +83,8 @@ def _pair_group(before: List[Dict[str, Any]], after: List[Dict[str, Any]],
     remaining = list(before)
     unmatched = []
     for item in after:
-        same = next((prior for prior in remaining if prior.get("bbox") == item.get("bbox")), None)
+        same = next((prior for prior in remaining
+                     if _same_box(prior.get("bbox"), item.get("bbox"))), None)
         if same is None:
             unmatched.append(item)
         else:

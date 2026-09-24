@@ -43,7 +43,14 @@ def interpolate_actions(actions: list, variables: Mapping[str, Any]) -> list:
     return interpolate_value(actions, variables)
 
 
+_NESTED = re.compile(r"\$\{[^}]*\$\{")
+
+
 def _interpolate_string(text: str, variables: Mapping[str, Any]) -> Any:
+    if _NESTED.search(text):
+        # "${a.${b}}" replaced the inner name and left "${a.b}" as literal
+        # text for the action -- an unresolved name, silently.
+        raise ValueError(f"nested placeholders are not supported: {text!r}")
     exact = _PLACEHOLDER.fullmatch(text)
     if exact is not None:
         return _lookup(exact.group(1), variables)

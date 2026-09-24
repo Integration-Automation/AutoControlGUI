@@ -295,6 +295,12 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Fixed
 
+- **Observation and state**: the emergency-stop key interrupts a sleeping or
+  waiting script at once, ignores a press made before it started and works
+  more than once; mark labels never overlap or leave the screen; nested
+  placeholders raise; lock waits end at their timeout; observer transitions
+  fire once; CloudEvents enforce source/type/time and carry bytes as
+  `data_base64`; coordinate spaces reject zero sizes.
 - **Key names in file dialogs and popup rules**: the default "enter" confirm
   key and "esc" / "enter" dismiss rules resolve to the Windows names.
 - **Input and form helpers**: computer-use and CUA key names resolve to the

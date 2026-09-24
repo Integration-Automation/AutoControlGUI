@@ -23,6 +23,13 @@ class CoordinateSpace:
     model_w: int
     model_h: int
 
+    def __post_init__(self) -> None:
+        # A zero size raised a bare ZeroDivisionError on first use, and a
+        # negative one produced nonsense coordinates.
+        sizes = (self.physical_w, self.physical_h, self.model_w, self.model_h)
+        if any(int(size) <= 0 for size in sizes):
+            raise ValueError(f"coordinate space sizes must be positive, got {sizes}")
+
     def to_physical(self, x: float, y: float) -> Tuple[int, int]:
         """Map a model-space ``(x, y)`` to physical pixels (clamped, rounded)."""
         px = round(x * self.physical_w / self.model_w)
@@ -52,6 +59,8 @@ def xga_space(physical_w: int, physical_h: int, *, max_w: int = 1024,
     The aspect ratio is preserved (the larger downscale factor wins), matching
     the Anthropic "downscale to XGA" recommendation.
     """
+    if physical_w <= 0 or physical_h <= 0 or max_w <= 0 or max_h <= 0:
+        raise ValueError("screen and model sizes must be positive")
     scale = min(max_w / physical_w, max_h / physical_h, 1.0)
     model_w = max(1, round(physical_w * scale))
     model_h = max(1, round(physical_h * scale))
