@@ -7,6 +7,8 @@ names were sent unquoted; a webhook could register a verb the server never
 answers; a string ``max_runs`` made a job run on every tick forever; a
 corrupt .xlsx escaped the executor as a bare ``BadZipFile``.
 """
+import email
+import email.policy
 import json
 import sys
 import threading
@@ -128,8 +130,27 @@ def test_a_malformed_header_neither_blocks_the_mailbox_nor_the_message(tmp_path,
     watcher.add("imap.example", "u", "pw", str(script), mailbox="Sent Items")
     for _ in range(3):
         watcher.poll_once()
-    assert sorted(fired) == [("bad", '<"'), ("good", "a@example.com")]
+    # How `From: <"` parses differs between CPython patch releases (IndexError
+    # on some, "<>" on others); either way both messages fire exactly once.
+    assert sorted(subject for subject, _sender in fired) == ["bad", "good"]
     assert _Imap.selected[0] == '"Sent Items"'
+
+
+class _UnparsableHeaders(EmailMessage):
+    """A message whose parsed ``From`` raises, as the email package can."""
+
+    def get(self, name, failobj=None):
+        if name == "From":
+            raise IndexError("list index out of range")
+        return super().get(name, failobj)
+
+
+def test_an_unparsable_header_falls_back_to_its_raw_text():
+    raw = b"From: Alice <a@example.com>\r\nSubject: bad\r\n\r\nbody\r\n"
+    msg = email.message_from_bytes(raw, _class=_UnparsableHeaders, policy=email.policy.default)
+    payload = et._build_payload("1", msg)
+    assert payload["email.from"] == "Alice <a@example.com>"
+    assert payload["email.subject"] == "bad"
 
 
 @pytest.mark.parametrize("name, quoted", [
