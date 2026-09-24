@@ -59,6 +59,9 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Changed
 
+- `compare_field_value` / `verify_field_value` / `fill_and_verify` raise
+  `ValueError` for an unknown `mode` and accept any case. Profiles of numeric
+  columns carry a `non_finite` count.
 - **Webhook methods**: `PATCH` webhooks are served; verbs the server cannot
   answer (e.g. `HEAD`) are refused when the webhook is added instead of
   returning 501 on every request.
@@ -303,6 +306,16 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Fixed
 
+- **Utilities**:
+  - Dropping files onto a window no longer leaks memory on failure and no longer reports success for window 0.
+  - A zero-weight grounding candidate no longer divides by zero.
+  - Table cells and borderless rows read in reading order.
+  - A data profile survives `inf` / `nan`.
+  - An unknown verify mode is refused.
+  - Collation distinguishes accent position and handles decomposed text.
+  - `parse_cf_html` applies header offsets to `str` input.
+  - A superscript digit no longer crashes role parsing.
+  - Out-of-range HSV bounds are clamped or wrapped.
 - **macOS media keys**: pressing a media key no longer raises
   `AttributeError`; the PyObjC selector name was missing its trailing `_`.
 - **Error family**: twenty-five errors that derived only from a builtin

@@ -54,7 +54,8 @@ def parse_cf_html(blob) -> str:
     """Extract the HTML fragment from a ``CF_HTML`` payload (bytes or str).
 
     Prefers the ``StartFragment`` / ``EndFragment`` comment markers, falling back to
-    the header's byte offsets.
+    the header's byte offsets. The offsets count UTF-8 bytes, so a ``str`` is
+    encoded to find them; it used to skip the fallback and return the header.
     """
     raw = bytes(blob) if isinstance(blob, (bytes, bytearray)) else None
     text = (raw.decode("utf-8", "replace") if raw is not None else str(blob))
@@ -64,8 +65,9 @@ def parse_cf_html(blob) -> str:
         return text[start + len(_START_MARK):end]
     start_offset = _header_offset(text, "StartFragment")
     end_offset = _header_offset(text, "EndFragment")
-    if raw is not None and start_offset is not None and end_offset is not None:
-        return raw[start_offset:end_offset].decode("utf-8", "replace")
+    if start_offset is not None and end_offset is not None:
+        payload = raw if raw is not None else text.encode("utf-8")
+        return payload[start_offset:end_offset].decode("utf-8", "replace")
     return text
 
 

@@ -20,7 +20,7 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 | 指標 | 數值 |
 | --- | ---: |
 | Python 模組總數（含周邊子專案） | 1,049 |
-| 程式碼總行數 | 149,910 |
+| 程式碼總行數 | 150,007 |
 | `je_auto_control/utils/` 子套件數 | 310 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 775 |
 | 套件門面 `__all__` 公開名稱數 | 1,241 |
@@ -341,7 +341,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.4 輸入模擬與動作品質
 
-> 22 個套件、約 2,735 行。
+> 22 個套件、約 2,761 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -361,16 +361,16 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/mouse_relative/` | 59 | 相對位移滑鼠移動 |
 | `utils/postcondition/` | 146 | 宣告式的動作預期結果規格，對照畫面驗證 |
 | `utils/step_repair/` | 134 | 失敗／無效動作的修復策略（自我修正迴圈） |
-| `utils/table_grid_fill/` | 143 | 以 OCR 文字填滿格線表格，取得可定址的表格 |
+| `utils/table_grid_fill/` | 163 | 以 OCR 文字填滿格線表格，取得可定址的表格 |
 | `utils/input_reach/` | 111 | 送出去的輸入到不到得了：桌面鎖定查詢（免費）＋ 實際送一個 F13 確認沒有被過濾（有副作用，只給診斷用） |
 | `utils/keyboard_layout/` | 152 | 向系統問「這個鍵盤配置下每個鍵印出什麼字」（`ToUnicodeEx`），問不到退回 US 對照表 |
 | `utils/text_unicode/` | 151 | 輸入任意 Unicode（emoji／CJK／重音字）：優先送字元按鍵事件，不支援時退回剪貼簿貼上 |
 | `utils/tween_drag/` | 101 | 沿曲線的緩動插值拖曳 |
-| `utils/verify_field/` | 112 | 打字後讀回欄位，確認內容確實落地 |
+| `utils/verify_field/` | 118 | 打字後讀回欄位，確認內容確實落地 |
 
 ### 5.4.5 影像辨識與畫面分析
 
-> 37 個套件、約 5,622 行。
+> 37 個套件、約 5,635 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -384,7 +384,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/edge_lines/` | 122 | 以 Hough 轉換偵測線條／格線／分隔線 |
 | `utils/edge_match/` | 115 | 邊緣形狀（Chamfer／距離轉換）樣板比對 |
 | `utils/feature_match/` | 143 | ORB 特徵比對：在旋轉／縮放／主題變更下定位樣板 |
-| `utils/hsv_segment/` | 91 | HSV 色彩空間分割（抗光照的顏色遮罩 + blob 框） |
+| `utils/hsv_segment/` | 104 | HSV 色彩空間分割（抗光照的顏色遮罩 + blob 框） |
 | `utils/icon_classify/` | 132 | 從像素形狀判斷一個框是哪一類元件 |
 | `utils/image_dedup/` | 90 | 感知雜湊影像去重（Pillow aHash/dHash） |
 | `utils/image_quality/` | 77 | 在 OCR／比對前評分影像品質（銳利度／對比／亮度） |
@@ -414,12 +414,12 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.6 OCR 與文字理解
 
-> 19 個套件、約 3,381 行。
+> 19 個套件、約 3,384 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
 | `utils/bidi_check/` | 129 | 雙向文字 QA（bidi 控制碼、巢狀平衡、Trojan-source 掃描） |
-| `utils/column_layout/` | 150 | 從垂直空白推斷欄位，處理無框線表格 |
+| `utils/column_layout/` | 153 | 從垂直空白推斷欄位，處理無框線表格 |
 | `utils/confusables/` | 139 | 易混淆／同形字偵測（Unicode 欺騙骨架） |
 | `utils/form_fields/` | 128 | 多方向關聯表單標籤與值，並讀取核取方塊狀態 |
 | `utils/fuzzy/` | 96 | 模糊字串比對與去重（預設 difflib，有 rapidfuzz 則優先） |
@@ -440,7 +440,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.7 無障礙樹與原生控制項
 
-> 16 個套件、約 4,520 行。
+> 16 個套件、約 4,521 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -449,7 +449,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/ax_events/` | 29 | 反應式 UIA 事件等待（focus-changed） |
 | `utils/ax_props/` | 44 | 讀取豐富 UIA 屬性（enabled／offscreen／help／status／快捷鍵） |
 | `utils/ax_text/` | 102 | 透過 UIA TextPattern 取得原生文字（讀取／尋找／選取／屬性） |
-| `utils/ax_tree_walk/` | 118 | 可讀、可定址的無障礙樹後處理（角色名 + 節點路徑） |
+| `utils/ax_tree_walk/` | 119 | 可讀、可定址的無障礙樹後處理（角色名 + 節點路徑） |
 | `utils/contrast_map/` | 120 | 取樣實際顏色以評定畫面文字的可讀性（WCAG） |
 | `utils/control_patterns/` | 88 | 延伸 UIA 控制項模式動作（Expand／Select／Range／Scroll） |
 | `utils/cvd_simulate/` | 140 | 模擬色覺缺陷並標示在該狀況下會撞色的顏色 |
@@ -463,7 +463,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.8 元素定位、自我修復與智慧等待
 
-> 23 個套件、約 4,209 行。
+> 23 個套件、約 4,235 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -478,7 +478,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/element_proposal/` | 86 | 免樣板、免模型地從原始像素提出乾淨元素清單 |
 | `utils/element_scoring/` | 105 | 加權候選評分（角色 + 名稱相似度 + 鄰近度 + 啟用狀態） |
 | `utils/expect_poll/` | 149 | 反覆取值直到符合條件（Playwright `expect.poll` 風格） |
-| `utils/grounding_consensus/` | 127 | 對同一目標的多個接地提案做自我一致性投票 |
+| `utils/grounding_consensus/` | 153 | 對同一目標的多個接地提案做自我一致性投票 |
 | `utils/heal_analytics/` | 77 | 自癒事件記錄的分析（治癒率、脆弱定位器） |
 | `utils/locator_chain/` | 112 | 可組合／可過濾的候選定位器（chained-locator 慣用法） |
 | `utils/locator_repair/` | 117 | 自癒回寫：把修正後的定位器持久化 |
@@ -598,14 +598,14 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.13 資料來源、結構驗證與 i18n
 
-> 24 個套件、約 4,509 行。
+> 24 個套件、約 4,524 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
 | `utils/checksum/` | 138 | 檢查碼演算法：Luhn、Verhoeff、Damm、ISO 7064 MOD 97-10 |
 | `utils/config_schema/` | 130 | 型別化設定結構驗證 |
 | `utils/data_drift/` | 128 | 分布漂移偵測 |
-| `utils/data_profile/` | 121 | 資料剖析與結構推斷 |
+| `utils/data_profile/` | 129 | 資料剖析與結構推斷 |
 | `utils/data_quality/` | 216 | 資料品質：列結構驗證、欄位擷取、遮蔽 |
 | `utils/data_source/` | 197 | 資料驅動執行：從 CSV／JSON／SQLite／Excel 載入資料列 |
 | `utils/dataset_diff/` | 89 | 表格資料列差異比對（CDC 風格） |
@@ -616,7 +616,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/json_schema/` | 419 | JSON Schema（Draft 2020-12 子集）驗證 |
 | `utils/jsonpath/` | 300 | 精簡 JSONPath 查詢 |
 | `utils/list_format/` | 82 | 地區感知清單格式化（CLDR 風格的「A、B 和 C」） |
-| `utils/locale_collation/` | 128 | 地區感知字串排序（決定性多層排序鍵） |
+| `utils/locale_collation/` | 135 | 地區感知字串排序（決定性多層排序鍵） |
 | `utils/locale_parse/` | 79 | 地區感知數字／貨幣／日期解析與格式化（選用 babel） |
 | `utils/message_format/` | 266 | ICU-lite MessageFormat（plural／select／selectordinal） |
 | `utils/office/` | 180 | Office 文件無頭讀寫（Excel／Word／PowerPoint） |
@@ -670,19 +670,19 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.16 系統、視窗與剪貼簿
 
-> 16 個套件、約 2,538 行。
+> 16 個套件、約 2,551 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
-| `utils/clipboard/` | 448 | 跨平台無頭剪貼簿存取（文字 + 影像）＋ `win32_clipboard_api.py`：**所有剪貼簿格式共用的 Win32 原型與 open/alloc/lock 流程**（`open_clipboard()` 會等過短暫被別的行程佔住的剪貼簿——Win32 一次只允許一個行程開啟，別人正在複製就必然失敗）（`argtypes` 只宣告一半曾讓四支 writer 在 64 位元上必然丟 `OverflowError`，見 CHANGELOG）。`set_clipboard_image` 同時接受 PNG 位元組與檔案路徑——先前這個名字在本子套件裡有**兩份不同簽章的實作**（`clipboard.py` 吃 bytes、`clipboard_image.py` 吃路徑），匯錯來源只會在執行期才炸，已合併成一支 |
+| `utils/clipboard/` | 449 | 跨平台無頭剪貼簿存取（文字 + 影像）＋ `win32_clipboard_api.py`：**所有剪貼簿格式共用的 Win32 原型與 open/alloc/lock 流程**（`open_clipboard()` 會等過短暫被別的行程佔住的剪貼簿——Win32 一次只允許一個行程開啟，別人正在複製就必然失敗）（`argtypes` 只宣告一半曾讓四支 writer 在 64 位元上必然丟 `OverflowError`，見 CHANGELOG）。`set_clipboard_image` 同時接受 PNG 位元組與檔案路徑——先前這個名字在本子套件裡有**兩份不同簽章的實作**（`clipboard.py` 吃 bytes、`clipboard_image.py` 吃路徑），匯錯來源只會在執行期才炸，已合併成一支 |
 | `utils/clipboard_files/` | 112 | 剪貼簿檔案清單（CF_HDROP）：純 DROPFILES 封裝 + Win32 存取 |
 | `utils/clipboard_formats/` | 151 | 檢視與分類剪貼簿可用格式（純分類／差異 + Win32 列舉） |
 | `utils/clipboard_history/` | 114 | 剪貼簿歷史：環形緩衝 + 背景輪詢器 |
 | `utils/clipboard_rich_formats/` | 328 | 豐富剪貼簿格式 — RTF 與 CSV/TSV 編解碼 + Windows 存取 |
 | `utils/file_assoc/` | 92 | 解析哪個應用程式被註冊來開啟某副檔名 |
 | `utils/file_dialog/` | 66 | 驅動原生檔案 開啟／儲存／資料夾選擇 對話框 |
-| `utils/file_drop/` | 96 | 以 WM_DROPFILES 把檔案拖放到視窗 |
-| `utils/rich_clipboard/` | 131 | 豐富剪貼簿格式 — HTML（CF_HTML）建構／解析／存取 |
+| `utils/file_drop/` | 106 | 以 WM_DROPFILES 把檔案拖放到視窗 |
+| `utils/rich_clipboard/` | 133 | 豐富剪貼簿格式 — HTML（CF_HTML）建構／解析／存取 |
 | `utils/shell_open/` | 97 | 以預設應用開啟檔案，或以預設瀏覽器開啟 URL |
 | `utils/system_volume/` | 212 | 讀取與控制系統主音量與靜音狀態 |
 | `utils/trash/` | 93 | 把檔案移到系統資源回收筒（可復原刪除） |
@@ -1080,6 +1080,6 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `osx/` | 17 | 925 |
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 837 |
-| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 677 | 53,267 |
-| **總計** | **1,043** | **149,845** |
+| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 677 | 53,364 |
+| **總計** | **1,043** | **149,942** |
 

@@ -58,6 +58,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260924-76 | 2026-09-24 | Utility audit: file drops free their block, zero-weight grounding, reading order in table cells, non-finite profiles, verify modes, collation accents and NFD, CF_HTML str offsets, role digits, HSV bounds | #bugfix #audit | [2026-09](2026-09.md) |
 | U-20260924-75 | 2026-09-24 | macOS media keys call the real PyObjC selector; the platform audit tests pass on Linux and macOS | #bugfix #test | [2026-09](2026-09.md) |
 | U-20260924-74 | 2026-09-24 | Twenty-five errors that inherited only a builtin exception join the AutoControlException family | #bugfix #audit | [2026-09](2026-09.md) |
 | U-20260924-73 | 2026-09-24 | Audit tests import their subjects explicitly, which Codacy's import-injection rule accepts | #test #ci | [2026-09](2026-09.md) |
@@ -234,7 +235,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | File | Period | Entries |
 |---|---|---:|
-| [2026-09.md](2026-09.md) | 2026-09 | 145 |
+| [2026-09.md](2026-09.md) | 2026-09 | 146 |
 | [2026-08-f.md](2026-08-f.md) | 2026-08 | 1 |
 | [2026-08-e.md](2026-08-e.md) | 2026-08 | 2 |
 | [2026-08-d.md](2026-08-d.md) | 2026-08 | 2 |

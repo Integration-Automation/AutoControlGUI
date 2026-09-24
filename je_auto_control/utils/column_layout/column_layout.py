@@ -96,7 +96,10 @@ def _row_gap(boxes: Sequence[Box], row_gap: Optional[int]) -> int:
 
 
 def _bucket_rows(boxes: Sequence[Box], gap: int) -> List[List[Box]]:
-    """Group boxes into rows by vertical spacing; sort each row by column."""
+    """Group boxes into rows by vertical spacing; sort each row by column, then x.
+
+    Without the x, two words in one cell kept the caller's order.
+    """
     ordered = sorted(boxes, key=_center_y)
     rows: List[List[Box]] = [[ordered[0]]]
     last = _center_y(ordered[0])
@@ -108,7 +111,7 @@ def _bucket_rows(boxes: Sequence[Box], gap: int) -> List[List[Box]]:
             rows[-1].append(box)
         last = center
     for row in rows:
-        row.sort(key=lambda item: item.get("column", 0))
+        row.sort(key=lambda item: (item.get("column", 0), _box_bounds(item)[0]))
     return rows
 
 

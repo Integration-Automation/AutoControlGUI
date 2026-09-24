@@ -11,9 +11,8 @@ Pure standard library (``collections`` + reuse of ``stats``); imports no
 deterministic in CI.
 """
 from collections import Counter
+import math
 from typing import Any, Dict, List, Optional, Sequence
-
-from je_auto_control.utils.stats.stats import describe
 
 _NULLS = (None, "")
 _TOP_N = 5
@@ -40,10 +39,19 @@ def _infer_type(non_null: Sequence[Any]) -> str:
 
 
 def _numeric_summary(kind: str, non_null: Sequence[Any]) -> Dict[str, Any]:
+    """``min`` / ``max`` / ``mean`` over the finite values, plus how many were not.
+
+    One ``inf`` or ``nan`` used to abort the whole profile with ``ValueError``
+    from ``statistics.pstdev``, which this summary never even reported.
+    """
     if kind not in ("int", "number") or not non_null:
         return {}
-    stats = describe([float(value) for value in non_null])
-    return {"min": stats["min"], "max": stats["max"], "mean": stats["mean"]}
+    finite = [float(value) for value in non_null if math.isfinite(float(value))]
+    summary: Dict[str, Any] = {"min": None, "max": None, "mean": None,
+                               "non_finite": len(non_null) - len(finite)}
+    if finite:
+        summary.update(min=min(finite), max=max(finite), mean=math.fsum(finite) / len(finite))
+    return summary
 
 
 def _column_profile(name: str, rows: List[Dict[str, Any]]) -> Dict[str, Any]:

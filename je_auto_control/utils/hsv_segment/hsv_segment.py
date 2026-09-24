@@ -25,19 +25,24 @@ def _hsv(haystack: Optional[ImageSource], region: Optional[Sequence[int]]):
     return cv2.cvtColor(rgb, cv2.COLOR_RGB2HSV)
 
 
+def _uint8_bound(values: Sequence[int]):
+    """An inRange bound, clamped to 0..255: numpy 2 raises on 256 or -1."""
+    import numpy as np
+    return np.array([min(255, max(0, int(value))) for value in values],
+                    dtype=np.uint8)
+
+
 def color_mask(haystack: Optional[ImageSource] = None, *,
                region: Optional[Sequence[int]] = None,
                lower_hsv: Sequence[int], upper_hsv: Sequence[int]):
     """Return a uint8 mask of pixels inside the ``lower_hsv``..``upper_hsv`` band.
 
-    HSV ranges are OpenCV's: H in 0..179, S and V in 0..255.
+    HSV ranges are OpenCV's: H in 0..179, S and V in 0..255. A bound outside
+    0..255 is clamped, so ``256`` means "up to the maximum".
     """
     import cv2
-    import numpy as np
     hsv = _hsv(haystack, region)
-    lower = np.array([int(value) for value in lower_hsv], dtype=np.uint8)
-    upper = np.array([int(value) for value in upper_hsv], dtype=np.uint8)
-    return cv2.inRange(hsv, lower, upper)
+    return cv2.inRange(hsv, _uint8_bound(lower_hsv), _uint8_bound(upper_hsv))
 
 
 def segment_hsv(haystack: Optional[ImageSource] = None, *,
@@ -51,17 +56,25 @@ def segment_hsv(haystack: Optional[ImageSource] = None, *,
     return connected_boxes(mask, int(min_area))
 
 
-def _hue_mask(hsv, low_h: int, high_h: int, sat_min: int, val_min: int):
-    """Build an inRange mask for a hue band, OR-ing the two parts when it wraps 0/180."""
+def _hue_mask(hsv, hue: int, hue_tol: int, sat_min: int, val_min: int):
+    """Build an inRange mask for ``hue`` ± ``hue_tol``, OR-ing the two parts when it wraps 0/180.
+
+    The hue is taken round OpenCV's 180-step circle and a tolerance of 90 or
+    more is the whole circle; both used to reach numpy as an out-of-range
+    ``uint8`` and raise ``OverflowError``.
+    """
     import cv2
-    import numpy as np
+    if hue_tol < 0:
+        raise ValueError(f"hue_tol must be >= 0, got {hue_tol}")
     floor = [int(sat_min), int(val_min)]
-    top = [255, 255]
 
     def band(start: int, end: int):
-        return cv2.inRange(hsv, np.array([start, *floor], dtype=np.uint8),
-                           np.array([end, *top], dtype=np.uint8))
+        return cv2.inRange(hsv, _uint8_bound([start, *floor]),
+                           _uint8_bound([end, 255, 255]))
 
+    if hue_tol >= 90:
+        return band(0, 179)
+    low_h, high_h = hue % 180 - hue_tol, hue % 180 + hue_tol
     if low_h < 0:
         return cv2.bitwise_or(band(180 + low_h, 179), band(0, high_h))
     if high_h > 179:
@@ -80,6 +93,6 @@ def dominant_hue_regions(haystack: Optional[ImageSource] = None, *,
     RGB box. Red's 0/180 hue wrap is handled automatically.
     """
     from je_auto_control.utils.cv2_utils.blobs import connected_boxes
-    mask = _hue_mask(_hsv(haystack, region), int(hue) - int(hue_tol),
-                     int(hue) + int(hue_tol), int(sat_min), int(val_min))
+    mask = _hue_mask(_hsv(haystack, region), int(hue), int(hue_tol),
+                     int(sat_min), int(val_min))
     return connected_boxes(mask, int(min_area))

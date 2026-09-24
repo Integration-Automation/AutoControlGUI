@@ -59,7 +59,8 @@ def humanize_role(role: Union[str, int]) -> str:
         return control_type_name(role)
     text = str(role)
     digits = text[len(_ROLE_PREFIX):] if text.startswith(_ROLE_PREFIX) else text
-    if digits.isdigit():
+    # ASCII only: str.isdigit() also accepts "²", which int() then rejects.
+    if digits.isascii() and digits.isdigit():
         return control_type_name(int(digits))
     return text
 
@@ -99,7 +100,7 @@ def find_by_path(root: AXTreeNode, path: str) -> Optional[AXTreeNode]:
         return None
     node = root
     for part in parts[1:]:
-        if not part.isdigit():
+        if not (part.isascii() and part.isdigit()):
             return None
         index = int(part)
         if index >= len(node.children):
