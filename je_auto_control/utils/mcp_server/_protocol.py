@@ -36,8 +36,11 @@ _TOOLS_CALL_METHOD = "tools/call"
 _FRAMEWORK_TOOL_ERRORS = (
     AutoControlException, subprocess.TimeoutExpired, *SQLITE_ERRORS,
 )
+# ArithmeticError / LookupError: an OverflowError from ``1e400`` or an
+# IndexError from a short list killed the stdio worker, and that request
+# never got a reply.
 _BUILTIN_DISPATCH_ERRORS = (
-    OSError, RuntimeError, ValueError, TypeError, KeyError,
+    OSError, RuntimeError, ValueError, TypeError, ArithmeticError, LookupError,
 )
 _DISPATCH_ERRORS: Tuple[Type[BaseException], ...] = (
     _BUILTIN_DISPATCH_ERRORS + _FRAMEWORK_TOOL_ERRORS

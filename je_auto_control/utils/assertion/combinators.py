@@ -180,6 +180,13 @@ def assert_any(specs: Sequence[Mapping[str, Any]],
     return group
 
 
+def _as_number(value: Any, name: str) -> float:
+    """``value`` as a float; text such as ``"5"`` raised a bare ``TypeError`` from ``math.isfinite``."""
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        raise AutoControlAssertionException(f"{name} must be a number, got {value!r}")
+    return float(value)
+
+
 def assert_eventually(spec: Mapping[str, Any],
                       timeout: float = 5.0,
                       interval: float = 0.25,
@@ -194,6 +201,8 @@ def assert_eventually(spec: Mapping[str, Any],
     """
     # isfinite: NaN (valid in action JSON) passed ``timeout < 0`` and made
     # ``monotonic() >= deadline`` never true -- a loop that never ended.
+    timeout = _as_number(timeout, "timeout")
+    interval = _as_number(interval, "interval")
     if not math.isfinite(timeout) or timeout < 0:
         raise AutoControlAssertionException("timeout must be a non-negative number")
     # timeout 有驗證,interval 卻被 max(..., 0.0) 靜默吞掉:負值或 0

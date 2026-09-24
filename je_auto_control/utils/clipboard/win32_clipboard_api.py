@@ -118,7 +118,9 @@ def set_clipboard_format(format_id: int, payload: bytes, *,
     On success the clipboard owns the handle and must not free it here.
     """
     user32, kernel32 = clipboard_api()
-    handle = kernel32.GlobalAlloc(GMEM_MOVEABLE, len(payload))
+    # At least one byte: a zero-byte GMEM_MOVEABLE block is discarded, and
+    # GlobalLock on it fails, so an empty payload could never be set.
+    handle = kernel32.GlobalAlloc(GMEM_MOVEABLE, max(1, len(payload)))
     if not handle:
         raise RuntimeError("GlobalAlloc failed")
     try:

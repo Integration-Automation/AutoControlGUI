@@ -309,6 +309,13 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
   coercion refused; single-column uniqueness ignores nulls; unit lists follow
   CLDR outside English; A2A card modes are MIME types; `within` excludes the
   pixel past its region; Windows accessibility reads edit and slider values.
+- **MCP, USB passthrough and device helpers**: an overflowing or short
+  argument no longer leaves an MCP request unanswered; a failed drag releases
+  the button; sampling works over HTTP; waits look once at `timeout=0` and
+  survive an infinite poll; USB credits are never missed and transfers on one
+  claim no longer swap data; assertion failures propagate through callbacks;
+  gamepad, clipboard and volume errors stay in the `AutoControlException`
+  family.
 - **Remote desktop**: WebSocket frames follow RFC 6455 masking and
   control-frame limits and a malformed handshake key no longer kills the
   handshake thread; a transfer to a path naming no file fails cleanly; the

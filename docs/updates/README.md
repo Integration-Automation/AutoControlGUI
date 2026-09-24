@@ -58,6 +58,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260924-68 | 2026-09-24 | MCP requests that always get a reply, a drag that releases, sampling over HTTP, waits that look once; USB credits and claims without races; assertions through callbacks; gamepad, clipboard and volume errors in the family | #bugfix #audit | [2026-09](2026-09.md) |
 | U-20260924-67 | 2026-09-24 | Remote desktop: RFC 6455 masking and control-frame rules, a handshake that survives a bad key, file transfers to no file, an honest encrypted recorder, restartable mic, host voice kept on | #bugfix #audit #security | [2026-09](2026-09.md) |
 | U-20260924-66 | 2026-09-24 | Audit tests that only see their own file's leaks and pass Codacy | #test #ci | [2026-09](2026-09.md) |
 | U-20260924-65 | 2026-09-24 | Make the poison-email regression test independent of the CPython patch release | #ci #test | [2026-09](2026-09.md) |
@@ -226,7 +227,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | File | Period | Entries |
 |---|---|---:|
-| [2026-09.md](2026-09.md) | 2026-09 | 137 |
+| [2026-09.md](2026-09.md) | 2026-09 | 138 |
 | [2026-08-f.md](2026-08-f.md) | 2026-08 | 1 |
 | [2026-08-e.md](2026-08-e.md) | 2026-08 | 2 |
 | [2026-08-d.md](2026-08-d.md) | 2026-08 | 2 |

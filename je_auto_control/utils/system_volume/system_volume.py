@@ -20,8 +20,11 @@ default driver raises a clear error telling the caller to pass ``driver=``.
 
 Imports no ``PySide6``.
 """
+import math
 import sys
 from typing import Optional, Protocol
+
+from je_auto_control.utils.exception.exceptions import AutoControlActionException
 
 # A normalized master-volume scalar runs 0.0 (silent) .. 1.0 (full).
 _MIN_SCALAR = 0.0
@@ -51,8 +54,18 @@ class VolumeDriver(Protocol):
 
 
 def clamp_percent(level: float) -> int:
-    """Clamp ``level`` to an integer percent in ``[0, 100]`` (pure)."""
-    rounded = int(round(float(level)))
+    """Clamp ``level`` to an integer percent in ``[0, 100]`` (pure).
+
+    Raises ``AutoControlActionException`` for a value that is not a finite
+    number (NaN / inf / text arrive through action JSON).
+    """
+    try:
+        number = float(level)
+    except (TypeError, ValueError) as error:
+        raise AutoControlActionException(f"volume must be a number, got {level!r}") from error
+    if not math.isfinite(number):
+        raise AutoControlActionException(f"volume must be finite, got {level!r}")
+    rounded = int(round(number))
     return max(0, min(_PERCENT_MAX, rounded))
 
 

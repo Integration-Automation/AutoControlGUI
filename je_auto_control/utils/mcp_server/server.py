@@ -98,7 +98,6 @@ class MCPServer(ClientRequestMixin):
         self._active_calls: Dict[Any, ToolCallContext] = {}
         self._calls_lock = threading.Lock()
         self._write_lock = threading.Lock()
-        self._sampling_id_counter = itertools.count(1)
         self._outbound_id_counter = itertools.count(1)
         self._pending_outbound: Dict[Any, Dict[str, Any]] = {}
         self._outbound_lock = threading.Lock()

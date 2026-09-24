@@ -82,7 +82,9 @@ def _sample_value(spec: Dict[str, Any], name: str, depth: int = 0) -> Any:
         kind = next((entry for entry in kind if entry != "null"), "string")
     if kind == "array":
         item = spec.get("items")
-        return [_sample_value(item, name, depth + 1)] if item else []
+        # As many items as the schema demands: an RGB triple is three.
+        count = max(1, int(spec.get("minItems", 1)))
+        return [_sample_value(item, name, depth + 1)] * count if item else []
     if kind == "object":
         properties = spec.get("properties") or {}
         if not properties or depth >= _MAX_SCHEMA_DEPTH:

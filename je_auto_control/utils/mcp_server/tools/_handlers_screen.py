@@ -6,11 +6,12 @@ by theme because ``_handlers.py`` is over the 750-line limit.
 """
 import base64
 import io
+import math
 import os
 from typing import Any, Dict, List, Optional
 
 from je_auto_control.utils.mcp_server.tools._base import MCPContent
-from je_auto_control.utils.timeouts import deadline_after
+from je_auto_control.utils.timeouts import clamp_poll_interval, deadline_after
 
 
 # === Screen / image / OCR ===================================================
@@ -91,6 +92,26 @@ def get_pixel(x: int, y: int) -> List[int]:
     return [int(component) for component in pixel]
 
 
+def _matching_channels(raw: Any, target: List[int], tol: int) -> Optional[List[int]]:
+    """The pixel's RGB when every channel is within ``tol`` of ``target``, else ``None``."""
+    if raw is None or len(raw) < 3:
+        return None
+    channels = [int(raw[i]) for i in range(3)]
+    if all(abs(channels[i] - target[i]) <= tol for i in range(3)):
+        return channels
+    return None
+
+
+def _sleep_before(deadline: float, poll_seconds: float) -> bool:
+    """Sleep one poll, never past ``deadline``; ``False`` once the deadline has passed."""
+    import time as _time
+    remaining = deadline - _time.monotonic()
+    if remaining <= 0:
+        return False
+    _time.sleep(min(poll_seconds, remaining))
+    return True
+
+
 def wait_for_image(image_path: str, timeout: float = 10.0,
                    poll: float = 0.5,
                    detect_threshold: float = 1.0,
@@ -99,20 +120,22 @@ def wait_for_image(image_path: str, timeout: float = 10.0,
     import time as _time
     from je_auto_control.utils.exception.exceptions import ImageNotFoundException
     from je_auto_control.wrapper.auto_control_image import locate_image_center as _loc
-    poll_seconds = max(0.05, float(poll))
-    deadline = deadline_after(_time.monotonic(), timeout)
-    while _time.monotonic() < deadline:
+    poll_seconds = clamp_poll_interval(poll)
+    start = _time.monotonic()
+    deadline = deadline_after(start, timeout)
+    total = float(timeout) if math.isfinite(float(timeout)) else None
+    while True:   # probe first: timeout=0 means "look once"
         if ctx is not None:
             ctx.check_cancelled()
-            ctx.progress(_time.monotonic() - (deadline - float(timeout)),
-                          total=float(timeout),
+            ctx.progress(_time.monotonic() - start, total=total,
                           message=f"waiting for {image_path}")
         try:
             cx, cy = _loc(image_path,
                           detect_threshold=float(detect_threshold))
             return [int(cx), int(cy)]
         except ImageNotFoundException:
-            _time.sleep(poll_seconds)
+            if not _sleep_before(deadline, poll_seconds):
+                break
     raise TimeoutError(
         f"wait_for_image timed out after {timeout}s: {image_path!r}"
     )
@@ -129,17 +152,16 @@ def wait_for_pixel(x: int, y: int, target_rgb: List[int],
         raise ValueError("target_rgb must contain at least 3 channels")
     target = [int(c) for c in target_rgb[:3]]
     tol = max(0, int(tolerance))
-    poll_seconds = max(0.05, float(poll))
+    poll_seconds = clamp_poll_interval(poll)
     deadline = deadline_after(_time.monotonic(), timeout)
-    while _time.monotonic() < deadline:
+    while True:   # probe first: timeout=0 means "look once"
         if ctx is not None:
             ctx.check_cancelled()
-        raw = _pixel(int(x), int(y))
-        if raw is not None and len(raw) >= 3:
-            channels = [int(raw[i]) for i in range(3)]
-            if all(abs(channels[i] - target[i]) <= tol for i in range(3)):
-                return channels
-        _time.sleep(poll_seconds)
+        channels = _matching_channels(_pixel(int(x), int(y)), target, tol)
+        if channels is not None:
+            return channels
+        if not _sleep_before(deadline, poll_seconds):
+            break
     raise TimeoutError(
         f"wait_for_pixel timed out after {timeout}s at ({x}, {y})"
     )

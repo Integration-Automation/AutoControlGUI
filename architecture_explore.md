@@ -20,7 +20,7 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 | 指標 | 數值 |
 | --- | ---: |
 | Python 模組總數（含周邊子專案） | 1,049 |
-| 程式碼總行數 | 149,501 |
+| 程式碼總行數 | 149,604 |
 | `je_auto_control/utils/` 子套件數 | 310 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 775 |
 | 套件門面 `__all__` 公開名稱數 | 1,241 |
@@ -302,11 +302,11 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.2 框架基礎設施
 
-> 14 個套件、約 2,922 行。
+> 14 個套件、約 2,927 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
-| `utils/callback/` | 204 | Observer 模式：`callback_executor` 以字串名觸發功能，執行後呼叫回呼 |
+| `utils/callback/` | 209 | Observer 模式：`callback_executor` 以字串名觸發功能，執行後呼叫回呼 |
 | `utils/config_bundle/` | 424 | 使用者設定的單檔匯出／匯入 |
 | `utils/critical_exit/` | 132 | 監看緊急停止鍵的守護執行緒，用於中止失控腳本 |
 | `utils/diagnostics/` | 330 | 跨子系統的「一切正常嗎」健檢，附 `python -m` 進入點 |
@@ -341,7 +341,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.4 輸入模擬與動作品質
 
-> 22 個套件、約 2,726 行。
+> 22 個套件、約 2,735 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -352,7 +352,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/actionability/` | 168 | 動作前就緒閘門（可見 + 穩定 + 啟用 + 未被遮擋） |
 | `utils/ensure_state/` | 74 | 冪等地把控制項／設定帶到期望狀態 |
 | `utils/field_entry/` | 76 | 清空再輸入的欄位填寫慣用法（Playwright `fill`） |
-| `utils/gamepad/` | 324 | 虛擬遊戲手把後端（Windows ViGEmBus 驅動） |
+| `utils/gamepad/` | 333 | 虛擬遊戲手把後端（Windows ViGEmBus 驅動） |
 | `utils/humanize/` | 191 | 擬人輸入：貝茲曲線滑鼠路徑 + 抖動打字節奏 |
 | `utils/ime_state/` | 146 | 讀取即時 IME 組字／轉換狀態，確保 CJK 輸入安全 |
 | `utils/key_hold/` | 109 | 按住按鍵一段時間，或以固定頻率自動重複 |
@@ -493,7 +493,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.9 AI / Agent / LLM
 
-> 13 個套件、約 21,387 行。
+> 13 個套件、約 21,427 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -506,14 +506,14 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/cua_action/` | 204 | 標準化 computer-use 動作結構（Anthropic／OpenAI → `AC_*`） |
 | `utils/llm/` | 365 | 自然語言 → action list 規劃器 + Anthropic／null 後端 |
 | `utils/mcp_registry/` | 97 | MCP registry `server.json` 資訊清單產生（可被發現） |
-| `utils/mcp_server/` | 17,671 | **無頭 MCP 伺服器**（16K LOC，預設註冊 678 個工具＝659 個 `ac_*` + 19 個別名）：stdio + HTTP 傳輸、工具工廠與處理器、資源、prompt、稽核、限流、外掛熱重載 |
+| `utils/mcp_server/` | 17,711 | **無頭 MCP 伺服器**（16K LOC，預設註冊 678 個工具＝659 個 `ac_*` + 19 個別名）：stdio + HTTP 傳輸、工具工廠與處理器、資源、prompt、稽核、限流、外掛熱重載 |
 | `utils/tool_use_schema/` | 189 | 把 `AC_*` 指令匯出成 Claude／OpenAI 的 tool-use schema |
 | `utils/trajectory_eval/` | 113 | agent 軌跡評估：依評分規準為一次執行打分 |
 | `utils/vision/` | 518 | VLM 元素定位器（依描述找元素）+ Anthropic／OpenAI／null 後端 |
 
 ### 5.4.10 遠端桌面與 USB
 
-> 6 個套件、約 18,982 行。
+> 6 個套件、約 19,007 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -521,7 +521,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/config_sync/` | 323 | 透過訊令伺服器做跨機器設定同步 |
 | `utils/device_matrix/` | 138 | 行動裝置矩陣：同一 action list 於多台裝置平行執行 |
 | `utils/remote_desktop/` | 12,708 | **遠端桌面子系統**（56 檔／11.7K LOC）：TCP／WebSocket／WebRTC 三條傳輸路徑、主機與檢視端、訊令伺服器、TURN／中繼、多檢視者、錄影、信任清單、TOTP、稽核鏈 |
-| `utils/usb/` | 4,472 | 跨平台 USB 列舉／熱插拔／裝置直通（WinUSB、IOKit、libusb 後端 + ACL + WebRTC DataChannel 通道） |
+| `utils/usb/` | 4,497 | 跨平台 USB 列舉／熱插拔／裝置直通（WinUSB、IOKit、libusb 後端 + ACL + WebRTC DataChannel 通道） |
 | `utils/usbip/` | 945 | USB/IP 線路協定主機端（協定封包、TCP 伺服器、libusb URB 後端） |
 
 ### 5.4.11 伺服器、網路協定與外部整合
@@ -557,13 +557,13 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.12 報表、可觀測性與測試治理
 
-> 34 個套件、約 7,326 行。
+> 34 個套件、約 7,335 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
 | `utils/anomaly/` | 114 | 單一序列異常偵測 |
 | `utils/approval/` | 118 | Approval testing：以核可基準線驗證產出物 |
-| `utils/assertion/` | 881 | 斷言 DSL：畫面狀態驗證 + 組合子 |
+| `utils/assertion/` | 890 | 斷言 DSL：畫面狀態驗證 + 組合子 |
 | `utils/baggage/` | 120 | W3C Baggage 傳遞 |
 | `utils/canonical_log/` | 96 | canonical log line 與結構化 JSON 日誌 |
 | `utils/ci_annotations/` | 62 | 由執行結果輸出 CI 工作流程註記（GitHub Actions） |
@@ -670,11 +670,11 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.16 系統、視窗與剪貼簿
 
-> 16 個套件、約 2,523 行。
+> 16 個套件、約 2,538 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
-| `utils/clipboard/` | 446 | 跨平台無頭剪貼簿存取（文字 + 影像）＋ `win32_clipboard_api.py`：**所有剪貼簿格式共用的 Win32 原型與 open/alloc/lock 流程**（`open_clipboard()` 會等過短暫被別的行程佔住的剪貼簿——Win32 一次只允許一個行程開啟，別人正在複製就必然失敗）（`argtypes` 只宣告一半曾讓四支 writer 在 64 位元上必然丟 `OverflowError`，見 CHANGELOG）。`set_clipboard_image` 同時接受 PNG 位元組與檔案路徑——先前這個名字在本子套件裡有**兩份不同簽章的實作**（`clipboard.py` 吃 bytes、`clipboard_image.py` 吃路徑），匯錯來源只會在執行期才炸，已合併成一支 |
+| `utils/clipboard/` | 448 | 跨平台無頭剪貼簿存取（文字 + 影像）＋ `win32_clipboard_api.py`：**所有剪貼簿格式共用的 Win32 原型與 open/alloc/lock 流程**（`open_clipboard()` 會等過短暫被別的行程佔住的剪貼簿——Win32 一次只允許一個行程開啟，別人正在複製就必然失敗）（`argtypes` 只宣告一半曾讓四支 writer 在 64 位元上必然丟 `OverflowError`，見 CHANGELOG）。`set_clipboard_image` 同時接受 PNG 位元組與檔案路徑——先前這個名字在本子套件裡有**兩份不同簽章的實作**（`clipboard.py` 吃 bytes、`clipboard_image.py` 吃路徑），匯錯來源只會在執行期才炸，已合併成一支 |
 | `utils/clipboard_files/` | 112 | 剪貼簿檔案清單（CF_HDROP）：純 DROPFILES 封裝 + Win32 存取 |
 | `utils/clipboard_formats/` | 151 | 檢視與分類剪貼簿可用格式（純分類／差異 + Win32 列舉） |
 | `utils/clipboard_history/` | 114 | 剪貼簿歷史：環形緩衝 + 背景輪詢器 |
@@ -684,7 +684,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/file_drop/` | 96 | 以 WM_DROPFILES 把檔案拖放到視窗 |
 | `utils/rich_clipboard/` | 131 | 豐富剪貼簿格式 — HTML（CF_HTML）建構／解析／存取 |
 | `utils/shell_open/` | 97 | 以預設應用開啟檔案，或以預設瀏覽器開啟 URL |
-| `utils/system_volume/` | 199 | 讀取與控制系統主音量與靜音狀態 |
+| `utils/system_volume/` | 212 | 讀取與控制系統主音量與靜音狀態 |
 | `utils/trash/` | 93 | 把檔案移到系統資源回收筒（可復原刪除） |
 | `utils/window_capture/` | 304 | 逐視窗截圖、視窗版面儲存／還原、貼齊與排列 |
 | `utils/window_geometry/` | 81 | 視窗客戶區幾何（外框內縮、client→screen 對映） |
@@ -706,27 +706,27 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `action_redaction.py` | 72 | 記錄與紀錄鍵用的遮蔽：`AC_secret_*` 的參數（金庫通行碼、機密值）在寫進 log、當成結果紀錄的鍵之前換成 `***`，巢狀在區塊指令裡的也一樣。 |
 | `mouse_aliases.py` | 39 | 單鍵點擊別名（`AC_click_left` 等），executor 與 callback executor 共用。 |
 
-#### `utils/mcp_server/`（17,671 行，678 個工具）— 最大子系統
+#### `utils/mcp_server/`（17,711 行，678 個工具）— 最大子系統
 
 | 檔案 | 行數 | 職責 |
 | --- | ---: | --- |
-| `tools/_factories.py` | 9,016 | 工具工廠：每個函式回傳一個領域的 `MCPTool` 清單（把 `AC_*` 能力包成 MCP 工具）。 |
+| `tools/_factories.py` | 9,023 | 工具工廠：每個函式回傳一個領域的 `MCPTool` 清單（把 `AC_*` 能力包成 MCP 工具）。 |
 | `tools/_handlers.py` | 545 | 把 MCP 工具呼叫橋接到 AutoControl 無頭 API 的 adapter；主題模組拆完之後這裡留的是資料／文字／HTTP 那一類與 WebRunner 橋接。 |
-| `tools/_handlers_qa.py` | 414 | 同一種 adapter，QA 主題：斷言 DSL、資料驅動、SQL／PDF／郵件／HTTP 步驟、codegen、視覺回歸、狀態機、flaky 偵測與隔離、suite runner、無障礙稽核、裝置矩陣、媒體斷言。從 `_handlers.py` 依主題拆出的第一塊（750 行上限）；兩者互不引用。 |
-| `tools/_handlers_input.py` | 212 | 同一種 adapter，輸入主題：滑鼠、鍵盤、虛擬手把（ViGEm）。 |
-| `tools/_handlers_screen.py` | 305 | 同一種 adapter，螢幕主題：擷取、像素、影像與文字搜尋、螢幕錄影。 |
+| `tools/_handlers_qa.py` | 419 | 同一種 adapter，QA 主題：斷言 DSL、資料驅動、SQL／PDF／郵件／HTTP 步驟、codegen、視覺回歸、狀態機、flaky 偵測與隔離、suite runner、無障礙稽核、裝置矩陣、媒體斷言。從 `_handlers.py` 依主題拆出的第一塊（750 行上限）；兩者互不引用。 |
+| `tools/_handlers_input.py` | 218 | 同一種 adapter，輸入主題：滑鼠、鍵盤、虛擬手把（ViGEm）。 |
+| `tools/_handlers_screen.py` | 327 | 同一種 adapter，螢幕主題：擷取、像素、影像與文字搜尋、螢幕錄影。 |
 | `tools/_handlers_system.py` | 566 | 同一種 adapter，桌面工作階段：視窗、行程與 shell、開檔、閒置與睡眠、音量、鎖定、輸入法狀態、欄位驗證與重試、色彩對比、變更排序、元件分類、剪貼簿。 |
 | `tools/_handlers_runs.py` | 110 | 同一種 adapter，執行主題：executor、執行歷史、錄製、動作檔。 |
 | `tools/_handlers_scheduling.py` | 200 | 同一種 adapter，排程主題：排程器、觸發器、熱鍵常駐。 |
 | `tools/_handlers_remote.py` | 66 | 同一種 adapter，遠端桌面的 host 與 viewer。 |
 | `tools/_handlers_executor_bridge.py` | 1,429 | 252 個純委派（中位數 3 行，最長的 16 行全是參數簽章）：每個都是 `from action_executor import _x` 再 `return _x(...)`，沒有分支邏輯。超過 750 行,理由記在 `Progress.md` 的豁免表（再切只能照 MCP 工廠領域分,會把同一種委派散進十幾個沒有語意邊界的檔）。 |
-| `tools/_handlers_locators.py` | 423 | 同一種 adapter，定位主題：無障礙樹、智慧等待、自我修復、螢幕觀察、座標空間、視覺與 OCR、影像去重、元件倉庫、A/B 定位。 |
+| `tools/_handlers_locators.py` | 436 | 同一種 adapter，定位主題：無障礙樹、智慧等待、自我修復、螢幕觀察、座標空間、視覺與 OCR、影像去重、元件倉庫、A/B 定位。 |
 | `tools/_handlers_operations.py` | 647 | 同一種 adapter，營運主題：agent 與其記憶／追蹤、治理與合規、成本與遙測、失敗掛鉤、看門狗、速率限制、檢查點、核可、產物與資產、測試選擇與分片、佇列與 saga。 |
-| `server.py` | 718 | JSON-RPC 2.0 over stdio 的最小 MCP 伺服器：連線範圍狀態、行內／併發分派、工具與 resource／prompt 處理器。 |
+| `server.py` | 717 | JSON-RPC 2.0 over stdio 的最小 MCP 伺服器：連線範圍狀態、行內／併發分派、工具與 resource／prompt 處理器。 |
 | `http_transport.py` | 585 | MCP 的 HTTP 傳輸。 |
 | `http_sessions.py` | 247 | MCP 的 HTTP 傳輸用的 session 身分:`Mcp-Session-Id` 註冊表,以及每個 session 那條常駐的 server→client SSE 串流。 |
-| `_client_requests.py` | 249 | 伺服器主動送出的請求：`roots/list`／`elicitation/create`／`sampling/createMessage`,對應表與回應路由,以及破壞性工具的確認交握。 |
-| `_protocol.py` | 171 | JSON-RPC 線路格式：版本與識別常數、`_MCPError`、決定失敗工具行為的錯誤 tuple、envelope 產生器、工具回傳值轉 `content` 區塊。不碰伺服器狀態。 |
+| `_client_requests.py` | 234 | 伺服器主動送出的請求：`roots/list`／`elicitation/create`／`sampling/createMessage`,對應表與回應路由,以及破壞性工具的確認交握。 |
+| `_protocol.py` | 174 | JSON-RPC 線路格式：版本與識別常數、`_MCPError`、決定失敗工具行為的錯誤 tuple、envelope 產生器、工具回傳值轉 `content` 區塊。不碰伺服器狀態。 |
 | `resources.py` | 307 | MCP resource 提供者。 |
 | `prompts.py` | 220 | MCP prompt 目錄。 |
 | `fake_backend.py` | 184 | CI／無頭測試用的記憶體內假後端。 |
@@ -791,12 +791,12 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `permissions.py` / `clipboard_sync.py` / `wake_on_lan.py` / `session_actions.py` / `auth.py` | 64 / 72 / 56 / 40 / 28 | 逐 session 權限、剪貼簿同步、WOL、SAS 注入與螢幕遮蔽、HMAC 挑戰回應。 |
 | `ws_host.py` / `ws_viewer.py` / `jpeg_recorder.py` | 40 / 29 / 146 | WebSocket 傳輸變體與 TCP 路徑錄影。 |
 
-#### `utils/usb/`（4,472 行）與 `utils/usbip/`（945 行）
+#### `utils/usb/`（4,497 行）與 `utils/usbip/`（945 行）
 
 | 檔案 | 行數 | 職責 |
 | --- | ---: | --- |
 | `usb/passthrough/session.py` | 642 | 逐 peer 的 USB 直通 session。 |
-| `usb/passthrough/viewer_client.py` | 575 | 檢視端的直通協定用戶端。 |
+| `usb/passthrough/viewer_client.py` | 600 | 檢視端的直通協定用戶端。 |
 | `usb/passthrough/backend.py` | 463 | 後端 ABC + libusb 實作。 |
 | `usb/passthrough/winusb_backend.py` | 488 | Windows WinUSB 後端（ctypes）。 |
 | `usb/passthrough/acl.py` | 495 | 逐裝置 ACL。 |
@@ -1061,10 +1061,10 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | 層／子系統 | 檔案數 | 行數 |
 | --- | ---: | ---: |
 | `gui/` | 91 | 26,829 |
-| `utils/mcp_server/` | 31 | 17,671 |
+| `utils/mcp_server/` | 31 | 17,711 |
 | `utils/remote_desktop/` | 56 | 12,708 |
 | `utils/executor/` | 7 | 9,425 |
-| `utils/usb/` | 17 | 4,472 |
+| `utils/usb/` | 17 | 4,497 |
 | `je_auto_control/`（頂層 3 檔） | 3 | 2,395 |
 | `utils/accessibility/` | 14 | 3,032 |
 | `wrapper/` | 19 | 3,615 |
@@ -1076,10 +1076,10 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `utils/triggers/` | 4 | 1,300 |
 | `utils/ocr/` | 9 | 1,136 |
 | `utils/usbip/` | 5 | 945 |
-| `utils/assertion/` | 3 | 881 |
+| `utils/assertion/` | 3 | 890 |
 | `osx/` | 17 | 919 |
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 837 |
-| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 677 | 53,210 |
-| **總計** | **1,043** | **149,436** |
+| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 677 | 53,239 |
+| **總計** | **1,043** | **149,539** |
 

@@ -8145,6 +8145,13 @@ def gamepad_tools() -> List[MCPTool]:
     ]
 
 
+# An sRGB colour: exactly three channels, each 0..255.
+_RGB_SCHEMA = {
+    "type": "array", "minItems": 3, "maxItems": 3,
+    "items": {"type": "integer", "minimum": 0, "maximum": 255},
+}
+
+
 _VID_PID = {
     "vendor_id": {"type": "string"},
     "product_id": {"type": "string"},
@@ -8859,8 +8866,8 @@ def a11y_audit_tools() -> List[MCPTool]:
                          "and background RGB colour; reports pass/fail against "
                          "the AA threshold."),
             input_schema=schema({
-                "foreground": {"type": "array", "items": {"type": "integer"}},
-                "background": {"type": "array", "items": {"type": "integer"}},
+                "foreground": _RGB_SCHEMA,
+                "background": _RGB_SCHEMA,
                 "min_ratio": {"type": "number"},
             }, required=["foreground", "background"]),
             handler=hq.audit_contrast,

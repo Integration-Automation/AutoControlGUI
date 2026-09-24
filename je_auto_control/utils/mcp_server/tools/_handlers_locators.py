@@ -4,6 +4,7 @@ Same contract as :mod:`._handlers` -- normalise arguments and return values so
 they survive the JSON-RPC boundary, with every project import lazy -- split out
 by theme because ``_handlers.py`` is over the 750-line limit.
 """
+import math
 from typing import Any, Dict, List, Optional
 
 from je_auto_control.utils.mcp_server.tools._handlers_executor_bridge import (
@@ -205,8 +206,18 @@ def dedupe_images(paths, max_distance=5):
     return {"unique": _dedupe(paths, max_distance=max_distance)}
 
 
+def _finite(**values: Any) -> None:
+    """Reject NaN / infinite numbers, which crashed the int() conversions."""
+    for name, value in values.items():
+        if isinstance(value, bool) or not isinstance(value, (int, float)) \
+                or not math.isfinite(value):
+            raise ValueError(f"{name} must be a finite number, got {value!r}")
+
+
 def to_physical(x, y, physical_w, physical_h, model_w, model_h):
     from je_auto_control.utils.coordinate_space import CoordinateSpace
+    _finite(x=x, y=y, physical_w=physical_w, physical_h=physical_h,
+            model_w=model_w, model_h=model_h)
     px, py = CoordinateSpace(physical_w, physical_h, model_w,
                              model_h).to_physical(x, y)
     return {"x": px, "y": py}
@@ -214,6 +225,8 @@ def to_physical(x, y, physical_w, physical_h, model_w, model_h):
 
 def to_model(x, y, physical_w, physical_h, model_w, model_h):
     from je_auto_control.utils.coordinate_space import CoordinateSpace
+    _finite(x=x, y=y, physical_w=physical_w, physical_h=physical_h,
+            model_w=model_w, model_h=model_h)
     mx, my = CoordinateSpace(physical_w, physical_h, model_w,
                              model_h).to_model(x, y)
     return {"x": mx, "y": my}

@@ -16,8 +16,10 @@ from __future__ import annotations
 import threading
 from typing import Dict, Optional, Tuple
 
+from je_auto_control.utils.exception.exceptions import AutoControlException
 
-class GamepadUnavailable(RuntimeError):
+
+class GamepadUnavailable(AutoControlException, RuntimeError):
     """Raised when ``vgamepad`` or ViGEmBus is missing."""
 
 
@@ -78,7 +80,14 @@ def _import_vgamepad():
             "`pip install vgamepad` after installing the ViGEmBus "
             "driver from https://github.com/nefarius/ViGEmBus."
         ) from exc
+    except Exception as exc:  # noqa: BLE001  # reason: vgamepad raises a bare Exception at import when ViGEmBus is missing
+        raise GamepadUnavailable(f"ViGEmBus is not available: {exc}") from exc
     return vgamepad
+
+
+# vgamepad asserts that the bus connected, so a missing or stopped driver
+# is an AssertionError from the constructor.
+_BUS_ERRORS = (OSError, RuntimeError, AssertionError)
 
 
 def is_available() -> bool:
@@ -91,7 +100,7 @@ def is_available() -> bool:
     # driver. Tear down right after so we don't leak a connection.
     try:
         pad = vg.VX360Gamepad()
-    except (OSError, RuntimeError):
+    except _BUS_ERRORS:
         return False
     try:
         pad.reset()
@@ -138,7 +147,7 @@ class VirtualGamepad:
         vg = _import_vgamepad()
         try:
             self._pad = vg.VX360Gamepad()
-        except (OSError, RuntimeError) as exc:
+        except _BUS_ERRORS as exc:
             raise GamepadUnavailable(
                 "ViGEmBus driver is not installed or the service is "
                 "stopped. Install from "

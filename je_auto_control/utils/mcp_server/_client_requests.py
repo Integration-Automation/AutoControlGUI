@@ -30,7 +30,7 @@ class ClientRequestMixin:
 
     Requires the host to provide ``_writer``, ``_client_capabilities``,
     ``_resources``, ``_outbound_lock``, ``_pending_outbound``,
-    ``_outbound_id_counter``, ``_sampling_id_counter`` and ``_connection_id``.
+    ``_outbound_id_counter`` and ``_connection_id``.
     """
 
     if TYPE_CHECKING:
@@ -43,7 +43,6 @@ class ClientRequestMixin:
         _outbound_lock: threading.Lock
         _pending_outbound: Dict[Any, Dict[str, Any]]
         _outbound_id_counter: "itertools.count[int]"
-        _sampling_id_counter: "itertools.count[int]"
 
         @property
         def _connection_id(self) -> Any:
@@ -178,7 +177,6 @@ class ClientRequestMixin:
                 "request_sampling requires an outbound writer; "
                 "start serve_stdio or call set_writer() first",
             )
-        request_id = f"sampling-{next(self._sampling_id_counter)}"
         params: Dict[str, Any] = {
             "messages": list(messages),
             "maxTokens": int(max_tokens),
@@ -187,25 +185,12 @@ class ClientRequestMixin:
             params["systemPrompt"] = str(system_prompt)
         if model_preferences is not None:
             params["modelPreferences"] = dict(model_preferences)
-        slot: Dict[str, Any] = {"event": threading.Event()}
-        with self._outbound_lock:
-            self._pending_outbound[request_id] = slot
-        envelope = json.dumps({
-            "jsonrpc": "2.0", "id": request_id,
-            "method": "sampling/createMessage", "params": params,
-        }, ensure_ascii=False, default=str)
-        try:
-            writer(envelope)
-            if not slot["event"].wait(timeout=timeout):
-                raise TimeoutError(
-                    f"sampling request {request_id} timed out after {timeout}s"
-                )
-        finally:
-            with self._outbound_lock:
-                self._pending_outbound.pop(request_id, None)
-        if "error" in slot:
-            raise RuntimeError(f"sampling failed: {slot['error']}")
-        return slot.get("result") or {}
+        # The shared path records the connection: a slot without one had
+        # every reply over HTTP discarded as another session's, and its
+        # sequential id was guessable.
+        return self._send_outbound_request(
+            "sampling/createMessage", params=params, timeout=timeout,
+        )
 
     def _maybe_confirm_destructive(self, name: str, tool: MCPTool,
                                     arguments: Dict[str, Any]) -> None:
