@@ -59,9 +59,9 @@ _PROBE = textwrap.dedent("""
 
 def _run_probe(mode: str) -> subprocess.CompletedProcess:
     env = dict(os.environ, PYTHONPATH=str(_REPO_ROOT))
-    return subprocess.run(  # nosec B603  # reason: fixed argv, this interpreter
-        [sys.executable, "-c", _PROBE, mode],  # nosemgrep  # reason: literal probe, mode set by these tests
-        capture_output=True, text=True, timeout=60, env=env, check=False)
+    argv = [sys.executable, "-c", _PROBE, mode]   # a literal probe; these tests set mode
+    return subprocess.run(argv, env=env, timeout=60,  # nosec B603  # nosemgrep  # reason: literal argv
+                          capture_output=True, text=True, check=False)
 
 
 def test_destroying_the_owner_mid_run_neither_aborts_nor_calls_back():
