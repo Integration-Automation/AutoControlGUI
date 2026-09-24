@@ -58,6 +58,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260924-80 | 2026-09-24 | Config-sync tombstones: the Progress item is closed (implemented in 37d0a4fc) | #done #config_sync | [2026-09](2026-09.md) |
 | U-20260924-79 | 2026-09-24 | Remote action failures are reported: REST /execute takes raise_on_error, and the admin console and DAG remote nodes use it | #bugfix #done | [2026-09](2026-09.md) |
 | U-20260924-78 | 2026-09-24 | GUI threads: workers that never ran now run, results land on the GUI thread, Quick Connect repaints off the receiver thread no more, stopped WebRTC signaling threads no longer abort the process | #bugfix #audit #gui | [2026-09](2026-09.md) |
 | U-20260924-77 | 2026-09-24 | Replay traces survive Unicode line separators, persistence needs every frame, one modifier name is one key, unknown CI levels refused, off-frame change boxes score nothing, OTLP output is strict JSON, SOPs read every action-file shape | #bugfix #audit | [2026-09](2026-09.md) |
@@ -238,7 +239,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | File | Period | Entries |
 |---|---|---:|
-| [2026-09.md](2026-09.md) | 2026-09 | 149 |
+| [2026-09.md](2026-09.md) | 2026-09 | 150 |
 | [2026-08-f.md](2026-08-f.md) | 2026-08 | 1 |
 | [2026-08-e.md](2026-08-e.md) | 2026-08 | 2 |
 | [2026-08-d.md](2026-08-d.md) | 2026-08 | 2 |
