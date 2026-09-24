@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Sequence, Set
 
 from je_auto_control.utils.executor.action_schema import (
+    BLOCK_REQUIRED_KEYS,
     FLOW_BODY_KEYS, FLOW_BRANCH_LIST_KEYS,
 )
 
@@ -94,7 +95,12 @@ class ActionLinter:
             if not isinstance(params, dict):
                 return [LintIssue(idx, LintSeverity.ERROR, "bad-params",
                                   f"{trail}{name} requires a dict of arguments")]
-            return self._lint_bodies(idx, name, params, trail)
+            # A block command's own arguments were never checked: AC_sleep
+            # without "seconds" linted clean and raised KeyError when run.
+            missing = [LintIssue(idx, LintSeverity.ERROR, "missing-param",
+                                 f"{trail}{name} requires parameter {key!r}")
+                       for key in BLOCK_REQUIRED_KEYS.get(name, ()) if key not in params]
+            return missing + self._lint_bodies(idx, name, params, trail)
         if name not in self._commands:
             return [LintIssue(idx, LintSeverity.ERROR, "unknown-command",
                               f"{trail}unknown command {name!r}")]

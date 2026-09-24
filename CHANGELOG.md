@@ -363,6 +363,10 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Fixed
 
+- The action JSON Schema lists every command, block commands included,
+  and types parameters from their annotations instead of "string".
+- The linter reports a block command's missing required arguments
+  (e.g. `AC_sleep` without `seconds`).
 - `${webhook.body}`, `${email.subject}` and other dotted trigger
   variables resolve in scripts.
 - Step repair repeats a no-op action whatever form the verdict takes.
