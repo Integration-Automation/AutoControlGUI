@@ -21,7 +21,7 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from je_auto_control.utils.json_store.json_store import quarantine_file
+from je_auto_control.utils.json_store.json_store import load_json_or_quarantine, quarantine_file
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 
 
@@ -296,13 +296,11 @@ class AdminConsoleClient:
             chunks.append(chunk)
 
     def _load(self) -> None:
-        if not self._path.exists():
-            return
-        try:
-            payload = json.loads(self._path.read_text(encoding="utf-8"))
-        except (OSError, ValueError) as error:
-            # Moved aside: the next add_host saved over it with one host.
-            quarantine_file(self._path, "admin hosts", repr(error))
+        # Moved aside only when the content is damaged: the next add_host
+        # would save over it with one host. A read error (a locked file) is
+        # not damage and propagates instead of emptying the host list.
+        payload = load_json_or_quarantine(self._path, "admin hosts")
+        if payload is None:
             return
         # 一個損毀的檔案必須退化成空簿,而不是讓 __init__ 崩潰。原本只有
         # json.loads 在 try 內:非物件的頂層 JSON(如 [] / null)會讓

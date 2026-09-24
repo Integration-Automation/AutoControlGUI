@@ -300,6 +300,9 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
   arguments; chat commands are case-insensitive and the Slack poller reads
   every page; NaN counter increments are refused; the diagnostics CLI fails
   on errors only.
+- **Store files are set aside only for damaged content**: a transient read
+  error no longer renames a healthy known_hosts, trust list, address book or
+  admin host list and starts it empty; the error propagates instead.
 - **Workflow and test tooling**: merged shard reports keep errored cases;
   smart waits never sleep past their timeout; unknown decision-table hit
   policies and non-callable state-machine predicates are refused (`ANY` is

@@ -211,16 +211,25 @@ def quarantine_file(path: Union[str, Path], label: str, reason: Any) -> Optional
 
 
 def load_json_or_quarantine(path: Union[str, Path], label: str) -> Any:
-    """The JSON at ``path``, ``None`` when missing; an unreadable file is quarantined.
+    """The JSON at ``path``, ``None`` when missing; damaged content is quarantined.
 
-    See :func:`quarantine_file`. A UTF-8 BOM is accepted.
+    See :func:`quarantine_file`. A UTF-8 BOM is accepted. Only content that
+    is not UTF-8 JSON is moved aside: an ``OSError`` reading the file (a lock
+    held by an antivirus scan, a permission error) says nothing about what
+    it holds, and moving a good file aside started the store empty -- for
+    known_hosts that reset every pinned fingerprint. Such errors propagate.
     """
     source = Path(path)
-    if not source.exists():
+    try:
+        text = source.read_text(encoding="utf-8-sig")
+    except FileNotFoundError:
+        return None
+    except UnicodeDecodeError as error:
+        quarantine_file(source, label, repr(error))
         return None
     try:
-        return json.loads(source.read_text(encoding="utf-8-sig"))
-    except (OSError, ValueError) as error:  # ValueError: bad JSON or not UTF-8
+        return json.loads(text)
+    except ValueError as error:
         quarantine_file(source, label, repr(error))
         return None
 
