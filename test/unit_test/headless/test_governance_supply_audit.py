@@ -116,8 +116,8 @@ def test_json_log_lines_keep_the_traceback():
     except RuntimeError:
         record = logging.getLogger("t").makeRecord(
             "t", logging.ERROR, __file__, 1, "failed", (), __import__("sys").exc_info())
-    line = JSONLogFormatter().format(record)
-    assert "RuntimeError: boom" in line
+        line = JSONLogFormatter().format(record)
+        assert "RuntimeError: boom" in line
 
 
 def test_baggage_stays_under_8192_bytes():
