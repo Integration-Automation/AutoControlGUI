@@ -250,9 +250,8 @@ socket server 的執行也都用同一個 `executor`；`for_each` 的迴圈變�
 `TODO` — 在 `claude-opus-5`（兩種形式都接受）上實測 GA toolset 後，把它設成所有模型的預設
 
 `utils/agent/backends/anthropic_computer_use.py` 已支援 `computer_toolset_20260801`（`_computer_toolset.py`：成員名即動作、
-一回合多個呼叫逐一執行後一次回覆、每個 `tool_result` 帶 `toolset_name`、截圖縮到 1568 px／1.15 MP 內並換算座標），
+一回合多個呼叫逐一執行後一次回覆、每個 `tool_result` 帶 `toolset_name`、截圖縮到高解析度層級的 2576 px／4784 visual tokens 內並換算座標、`zoom` 以全解析度裁切回覆），
 `claude-opus-5-5` 自動使用它；其他模型仍預設 beta 形式，因為 toolset 只以假 client 測過、還沒對真的 API 跑過。
-`zoom` 成員目前在 `configs` 裡關閉（需要依區域回傳全解析度截圖）。
 
 **附帶**：`AC_run_agent backend="openai"` 送出全部約 740 個工具，超過 OpenAI Chat Completions 的 128 個上限，
 所以一定失敗——與「`AC_run_agent` 預設工具集」那一條 DECIDE 一起決定。

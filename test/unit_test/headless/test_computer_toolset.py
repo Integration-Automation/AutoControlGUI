@@ -8,6 +8,7 @@ ignored ``key``'s ``repeat`` and a click's modifier ``text``. Stub client only.
 """
 from __future__ import annotations
 
+import base64
 import io
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional
@@ -16,7 +17,7 @@ import pytest
 
 from je_auto_control.utils.agent.agent_loop import AgentStep
 from je_auto_control.utils.agent.backends._computer_toolset import (
-    MAX_LONG_EDGE_PX, MAX_TOTAL_PX, fit_screenshot,
+    MAX_LONG_EDGE_PX, MAX_VISUAL_TOKENS, fit_screenshot, visual_tokens,
 )
 from je_auto_control.utils.agent.backends.anthropic_computer_use import (
     ComputerUseAgentBackend, _decision_from_computer_action,
@@ -67,7 +68,7 @@ def _step(index, tool, error=None):
     return AgentStep(index=index, tool=tool, arguments={}, result=None, error=error)
 
 
-def _toolset_backend(script, width=2560, height=1440):
+def _toolset_backend(script, width=3840, height=2160):
     client = _Client(script)
     backend = ComputerUseAgentBackend(display_width_px=width, display_height_px=height,
                                       client=client, model="claude-opus-5-5")
@@ -81,17 +82,16 @@ def test_opus_5_5_gets_the_toolset_without_a_beta():
     ])
     done = _Response([_Block("text", text="done")], stop_reason="end_turn")
     backend, client = _toolset_backend([batch, done])
-    screen = _png(2560, 1440)
+    screen = _png(3840, 2160)
 
     first = backend.decide_next_action("goal", screen, [])
     request = client.messages.calls[0]
-    assert request["tools"] == [{"type": "computer_toolset_20260801",
-                                 "configs": {"zoom": {"enabled": False}}}]
+    assert request["tools"] == [{"type": "computer_toolset_20260801"}]
     assert "betas" not in request and "tool_choice" not in request
-    # 2560x1440 (3.7 MP) is fitted to 1.15 MP, a scale of about 0.558:
-    # model pixel (100, 50) is screen pixel (179, 90).
+    # 3840x2160 is fitted to 2576x1449 (4784 visual tokens), a scale of
+    # about 0.671: model pixel (100, 50) is screen pixel (149, 75).
     assert first == {"tool": "AC_click_mouse",
-                     "input": {"mouse_keycode": "mouse_left", "x": 179, "y": 90}}
+                     "input": {"mouse_keycode": "mouse_left", "x": 149, "y": 75}}
 
     second = backend.decide_next_action("goal", screen, [_step(0, "AC_click_mouse")])
     assert second == {"tool": "AC_write", "input": {"write_string": "hi"}}
@@ -125,8 +125,8 @@ def test_a_failed_step_answers_the_rest_of_the_batch_as_skipped():
 
 def test_an_unknown_member_is_refused():
     backend, _client = _toolset_backend([_Response([
-        _Block("tool_use", id="z", name="zoom", input={"region": [0, 0, 10, 10]})])])
-    with pytest.raises(AgentBackendError, match="zoom"):
+        _Block("tool_use", id="z", name="teleport", input={})])])
+    with pytest.raises(AgentBackendError, match="teleport"):
         backend.decide_next_action("goal", None, [])
 
 
@@ -135,10 +135,18 @@ def test_screenshots_are_fitted_into_the_image_limits():
     from PIL import Image
     with Image.open(io.BytesIO(fitted)) as image:
         width, height = image.size
-    assert max(width, height) <= MAX_LONG_EDGE_PX and width * height <= MAX_TOTAL_PX
+    assert (width, height) == (2576, 1449)
+    assert max(width, height) <= MAX_LONG_EDGE_PX
+    assert visual_tokens(width, height) <= MAX_VISUAL_TOKENS
     assert sx == pytest.approx(width / 3840) and sy == pytest.approx(height / 2160)
-    small = _png(800, 600)
-    assert fit_screenshot(small) == (small, (1.0, 1.0))
+    # A 1080p screen is inside the high-resolution tier: it goes as it is.
+    full_hd = _png(1920, 1080)
+    assert fit_screenshot(full_hd) == (full_hd, (1.0, 1.0))
+    for size in [(5120, 1440), (1000, 8000), (2576, 2576)]:
+        fitted, _scale = fit_screenshot(_png(*size))
+        with Image.open(io.BytesIO(fitted)) as image:
+            assert visual_tokens(*image.size) <= MAX_VISUAL_TOKENS
+            assert max(image.size) <= MAX_LONG_EDGE_PX
 
 
 def test_other_models_keep_the_beta_tool():
@@ -169,3 +177,38 @@ def test_a_modifier_click_holds_the_modifier():
     assert len(out["input"]["modifiers"]) == 1
     assert out["input"]["actions"] == [
         ["AC_click_mouse", {"mouse_keycode": "mouse_left", "x": 5, "y": 6}]]
+
+
+def test_zoom_answers_with_a_full_resolution_crop():
+    from PIL import Image
+    batch = _Response([
+        _Block("tool_use", id="z1", name="zoom", input={"region": [100, 50, 300, 150]}),
+        _Block("tool_use", id="c1", name="left_click", input={"coordinate": [200, 100]}),
+    ])
+    done = _Response([_Block("text", text="done")], stop_reason="end_turn")
+    backend, client = _toolset_backend([batch, done])
+    screen = _png(3840, 2160)
+    first = backend.decide_next_action("goal", screen, [])
+    assert first == {"tool": "AC_screenshot", "input": {}}
+    second = backend.decide_next_action("goal", screen, [_step(0, "AC_screenshot")])
+    # The click after a zoom is still in the full screenshot's space.
+    assert second["input"]["x"] == 298 and second["input"]["y"] == 149
+    backend.decide_next_action("goal", screen, [_step(0, "AC_screenshot"),
+                                                _step(1, "AC_click_mouse")])
+    answers = client.messages.calls[1]["messages"][-2]["content"]
+    zoom_answer = answers[0]
+    assert zoom_answer["tool_use_id"] == "z1" and not zoom_answer["is_error"]
+    image_block = zoom_answer["content"][0]
+    assert image_block["type"] == "image"
+    data = base64.b64decode(image_block["source"]["data"])
+    with Image.open(io.BytesIO(data)) as image:
+        # Model region (100, 50)-(300, 150) at scale 2576/3840 is screen
+        # (149, 74)-(448, 224), sent unscaled.
+        assert image.size == (299, 150)
+
+
+def test_a_malformed_zoom_is_a_backend_error():
+    backend, _client = _toolset_backend([_Response([
+        _Block("tool_use", id="z", name="zoom", input={"region": [1, 2]})])])
+    with pytest.raises(AgentBackendError, match="zoom"):
+        backend.decide_next_action("goal", None, [])

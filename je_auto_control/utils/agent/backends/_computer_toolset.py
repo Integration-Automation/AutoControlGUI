@@ -11,7 +11,10 @@ agent loop has to follow:
   one without it);
 * the tool takes no display size and the API does not downscale, so a
   screenshot must already fit the image limits, and the model's coordinates
-  are in that screenshot's pixel space.
+  are in that screenshot's pixel space;
+* ``zoom`` asks for a region at full resolution; the answer is that crop,
+  fitted into the same limits, and later coordinates stay in the full
+  screenshot's space.
 
 ``AgentLoop`` runs one decision per ``decide_next_action`` call, so
 :class:`ToolsetBatch` hands a turn's calls out one at a time and gathers the
@@ -30,18 +33,36 @@ TOOLSET_NAME = "computer"
 #: is a 400 on them.
 TOOLSET_ONLY_MODELS = frozenset({"claude-opus-5-5"})
 
-#: The toolset definition sent to the API. ``zoom`` is switched off: it asks
-#: for a full-resolution crop, which this loop does not produce.
-TOOLSET_SCHEMA: Dict[str, Any] = {
-    "type": TOOLSET_TYPE,
-    "configs": {"zoom": {"enabled": False}},
-}
+#: The toolset definition sent to the API; every member, ``zoom`` included,
+#: is enabled by default.
+TOOLSET_SCHEMA: Dict[str, Any] = {"type": TOOLSET_TYPE}
 
-#: Image limits the toolset requires of screenshots (long edge, total pixels).
-MAX_LONG_EDGE_PX = 1568
-MAX_TOTAL_PX = 1_150_000
+#: Image limits of the models the toolset runs on (Claude 4.7 and later, the
+#: high-resolution tier): a long edge of 2576 px and 4784 visual tokens, one
+#: token per started 28 x 28 patch. The API rejects a larger tool_result image
+#: instead of downscaling it.
+MAX_LONG_EDGE_PX = 2576
+MAX_VISUAL_TOKENS = 4784
+PATCH_PX = 28
 
 _SKIPPED = "not run: an earlier action in this batch failed"
+
+
+def visual_tokens(width: int, height: int) -> int:
+    """What an image of ``width`` x ``height`` costs: one token per started patch."""
+    return math.ceil(width / PATCH_PX) * math.ceil(height / PATCH_PX)
+
+
+def fitted_size(width: int, height: int) -> Tuple[int, int]:
+    """The largest size, aspect ratio kept, inside both image limits."""
+    scale = min(1.0, MAX_LONG_EDGE_PX / max(width, height),
+                math.sqrt(MAX_VISUAL_TOKENS * PATCH_PX * PATCH_PX / float(width * height)))
+    size = (max(1, int(width * scale)), max(1, int(height * scale)))
+    # Patches round up, so the pixel bound can still be a few tokens over.
+    while visual_tokens(*size) > MAX_VISUAL_TOKENS:
+        scale *= 0.995
+        size = (max(1, int(width * scale)), max(1, int(height * scale)))
+    return size
 
 
 def fit_screenshot(png: bytes) -> Tuple[bytes, Tuple[float, float]]:
@@ -54,15 +75,50 @@ def fit_screenshot(png: bytes) -> Tuple[bytes, Tuple[float, float]]:
     from PIL import Image
     with Image.open(io.BytesIO(png)) as image:
         width, height = image.size
-        scale = min(1.0, MAX_LONG_EDGE_PX / max(width, height),
-                    math.sqrt(MAX_TOTAL_PX / float(width * height)))
-        if scale >= 1.0:
+        size = fitted_size(width, height)
+        if size == (width, height):
             return png, (1.0, 1.0)
-        size = (max(1, int(width * scale)), max(1, int(height * scale)))
         resized = image.resize(size, Image.Resampling.LANCZOS)
+    return _png_bytes(resized), (size[0] / width, size[1] / height)
+
+
+def zoom_image(png: bytes, region: Tuple[int, int, int, int]) -> bytes:
+    """The ``(x0, y0, x1, y1)`` part of ``png`` at full resolution, fitted into the limits."""
+    from PIL import Image
+    with Image.open(io.BytesIO(png)) as image:
+        x0, y0, x1, y1 = _clip_region(region, image.size)
+        crop = image.crop((x0, y0, x1, y1))
+        size = fitted_size(*crop.size)
+        if size != crop.size:
+            crop = crop.resize(size, Image.Resampling.LANCZOS)
+        return _png_bytes(crop)
+
+
+def screen_region(region: Any, scale: Tuple[float, float]) -> Tuple[int, int, int, int]:
+    """A zoom ``region`` in the model's screenshot space as screenshot pixels."""
+    if not isinstance(region, (list, tuple)) or len(region) != 4:
+        raise ValueError(f"zoom region must be [x0, y0, x1, y1], got {region!r}")
+    x0, y0, x1, y1 = (float(value) for value in region)
+    if not all(math.isfinite(value) for value in (x0, y0, x1, y1)):
+        raise ValueError(f"zoom region must be finite, got {region!r}")
+    sx, sy = scale
+    return (int(min(x0, x1) / sx), int(min(y0, y1) / sy),
+            int(math.ceil(max(x0, x1) / sx)), int(math.ceil(max(y0, y1) / sy)))
+
+
+def _clip_region(region: Tuple[int, int, int, int],
+                 size: Tuple[int, int]) -> Tuple[int, int, int, int]:
+    """``region`` inside an image of ``size``, at least one pixel each way."""
+    width, height = size
+    x0 = min(max(0, region[0]), width - 1)
+    y0 = min(max(0, region[1]), height - 1)
+    return x0, y0, min(max(x0 + 1, region[2]), width), min(max(y0 + 1, region[3]), height)
+
+
+def _png_bytes(image: Any) -> bytes:
     buffer = io.BytesIO()
-    resized.save(buffer, format="PNG")
-    return buffer.getvalue(), (size[0] / width, size[1] / height)
+    image.save(buffer, format="PNG")
+    return buffer.getvalue()
 
 
 def unscale_decision(decision: Dict[str, Any], scale: Tuple[float, float]) -> Dict[str, Any]:

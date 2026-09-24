@@ -30,7 +30,7 @@ from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple
 from je_auto_control.utils.agent.agent_loop import AgentBackend, AgentStep
 from je_auto_control.utils.agent.backends._computer_toolset import (
     TOOLSET_ONLY_MODELS, TOOLSET_SCHEMA, TOOLSET_TYPE, ToolsetBatch,
-    fit_screenshot, unscale_decision,
+    fit_screenshot, screen_region, unscale_decision, zoom_image,
 )
 from je_auto_control.utils.agent.backends.base import (
     REQUEST_TIMEOUT_S, AgentBackendError, build_default_system_prompt,
@@ -144,6 +144,8 @@ class ComputerUseAgentBackend(AgentBackend):
                                   else _DEFAULT_TOOL_TYPE)
         self._batch: Optional[ToolsetBatch] = None
         self._scale = (1.0, 1.0)
+        #: tool_use id -> the region a queued ``zoom`` asked for, in screenshot pixels.
+        self._zooms: Dict[str, Tuple[int, int, int, int]] = {}
         if tool_type == TOOLSET_TYPE:
             # GA: no beta, no name, no display size.
             self._batch = ToolsetBatch()
@@ -220,7 +222,8 @@ class ComputerUseAgentBackend(AgentBackend):
         """Run the turn's queued calls first; ask the model once all are answered."""
         if batch.inflight is not None and history:
             last = history[-1]
-            batch.record(self._toolset_result_content(last, screenshot), bool(last.error))
+            content = self._toolset_result_content(last, screenshot, batch.inflight)
+            batch.record(content, bool(last.error))
         if batch.has_next():
             return batch.next_decision()
         results = batch.drain_results()
@@ -241,15 +244,21 @@ class ComputerUseAgentBackend(AgentBackend):
         fitted, self._scale = fit_screenshot(screenshot)
         return fitted
 
-    def _toolset_result_content(self, step: AgentStep,
-                                screenshot: Optional[bytes]) -> List[Dict[str, Any]]:
-        fitted = self._fit(screenshot) if step.tool == "AC_screenshot" else screenshot
-        return _tool_result_content(step, fitted)
+    def _toolset_result_content(self, step: AgentStep, screenshot: Optional[bytes],
+                                tool_use_id: str) -> List[Dict[str, Any]]:
+        region = self._zooms.pop(tool_use_id, None)
+        if step.tool != "AC_screenshot" or not screenshot:
+            return _tool_result_content(step, screenshot)
+        # A zoom is answered from the full-resolution frame; the scale of the
+        # full screenshot stays, since later coordinates are still in its space.
+        image = zoom_image(screenshot, region) if region is not None else self._fit(screenshot)
+        return _tool_result_content(step, image)
 
     def _handle_toolset_response(self, response: Any,
                                  batch: ToolsetBatch) -> Dict[str, Any]:
         content = list(getattr(response, "content", []) or [])
         self._conversation.append({"role": "assistant", "content": content})
+        self._zooms.clear()
         calls = [(_attr(block, "id"), self._toolset_decision(block))
                  for block in content if _block_type(block) == "tool_use"]
         if not calls:
@@ -260,6 +269,8 @@ class ComputerUseAgentBackend(AgentBackend):
     def _toolset_decision(self, block: Any) -> Dict[str, Any]:
         """A member call as a decision, in screen pixels and on the display."""
         name = str(_attr(block, "name") or "")
+        if name == "zoom":
+            return self._zoom_decision(block)
         if name not in _CLICK_ACTIONS and name not in _ACTION_HANDLERS:
             raise AgentBackendError(
                 f"model called tool {name!r}; only computer toolset members were offered")
@@ -267,6 +278,17 @@ class ComputerUseAgentBackend(AgentBackend):
         payload["action"] = name       # the member name is the action
         decision = unscale_decision(_decision_from_computer_action(payload), self._scale)
         return _clamp_decision(decision, *self._display)
+
+    def _zoom_decision(self, block: Any) -> Dict[str, Any]:
+        """A ``zoom`` runs as a screenshot; its region crops the result."""
+        payload = _attr(block, "input") or {}
+        try:
+            region = screen_region(payload.get("region") if isinstance(payload, dict) else None,
+                                   self._scale)
+        except (TypeError, ValueError) as error:
+            raise AgentBackendError(f"model sent an invalid zoom: {error}") from error
+        self._zooms[str(_attr(block, "id"))] = region
+        return {"tool": "AC_screenshot", "input": {}}
 
     # --- response → AgentLoop decision -------------------------------
 

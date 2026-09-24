@@ -214,8 +214,10 @@ single call drives Anthropic's computer-use tool (``computer_20251124`` on
 ``tool_type=`` picks another version and ``beta=`` names its beta). With
 ``model="claude-opus-5-5"``, which accepts nothing else, the backend sends the
 GA ``computer_toolset_20260801`` instead: no beta, several actions per turn,
-and screenshots scaled into the model's image limits with the model's
-coordinates mapped back to the screen::
+and screenshots scaled into the model's image limits (2576 px on the long
+edge and 4784 visual tokens, so a 1080p screen goes unscaled) with the
+model's coordinates mapped back to the screen. ``zoom`` is answered with a
+full-resolution crop of the region it names::
 
     from je_auto_control import run_computer_use
     result = run_computer_use(

@@ -15,6 +15,8 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Added
 
+- Computer use with `computer_toolset_20260801` answers `zoom` with a
+  full-resolution crop of the region.
 - `WorkQueueError` and `CheckpointStoreError` (both
   `AutoControlException`) for a database that cannot be opened or used.
 - `stop_event=` on `AgentLoop`, `run_computer_use` and `run_dag`; the
@@ -72,6 +74,8 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Changed
 
+- Toolset screenshots are fitted into the high-resolution tier (2576 px
+  long edge, 4784 visual tokens) instead of 1568 px / 1.15 MP.
 - `parse_dotenv` decodes `\'` and `\\` inside single-quoted values, as
   python-dotenv does.
 - `format_message` keeps an apostrophe before `#` outside a plural and
