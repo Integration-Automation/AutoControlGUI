@@ -74,6 +74,13 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Changed
 
+- `perceptual_diff` discounts anti-aliasing with pixelmatch's test
+  instead of a morphological open, so thin real changes (small text,
+  1 px rules) now count.
+- `image_histogram` channels are L1-normalised; histogram intersection
+  divides by the larger mass.
+- `ssim_compare` scales its constants to the images' dynamic range and
+  reports -1..1.
 - `confusable_skeleton` follows UTS #39 (NFKD, map, NFD); `×` and `÷`
   count as Common script.
 - Without rapidfuzz, fuzzy scores are the symmetric Indel ratio (the
@@ -343,6 +350,10 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Fixed
 
+- `ssim_compare` accepts single-channel HxWx1 arrays.
+- Heading detection uses the true median line height.
+- Element matching never pairs boxes that do not overlap.
+- `average_hash` / `dhash` accept NumPy arrays.
 - `apply_unified`, `unified_diff` and `three_way_merge` split lines at
   line feeds only, so form feeds and U+2028 inside a line survive and
   CRLF text keeps its endings.

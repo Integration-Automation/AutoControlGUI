@@ -58,6 +58,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260925-08 | 2026-09-25 | Image helpers follow their references: pixelmatch's anti-aliasing test instead of a morphological open, L1 histograms with a symmetric intersection, SSIM on the images' dynamic range, the true median line height, no IoU-zero matches, arrays in the perceptual hashes | #bugfix #vision | [2026-09](2026-09.md) |
 | U-20260925-07 | 2026-09-25 | Text helpers follow their references: diffs split at line feeds only, UTS #39 skeletons, a symmetric fuzzy fallback, sentences that hold a word, casefolding that stays normalised, Common-script x and division sign, bidi per paragraph | #bugfix #text | [2026-09](2026-09.md) |
 | U-20260925-06 | 2026-09-25 | GUI workers run on daemon threads, so exiting during a long step no longer aborts the process: start_worker returns a WorkerHandle and there is no QThread left to destroy | #bugfix #gui #done | [2026-09](2026-09.md) |
 | U-20260925-05 | 2026-09-25 | Computer toolset screenshots use the high-resolution image tier (2576 px, 4784 visual tokens) and zoom is implemented with a full-resolution crop | #feature #agent | [2026-09](2026-09.md) |
@@ -250,7 +251,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | File | Period | Entries |
 |---|---|---:|
-| [2026-09.md](2026-09.md) | 2026-09 | 161 |
+| [2026-09.md](2026-09.md) | 2026-09 | 162 |
 | [2026-08-f.md](2026-08-f.md) | 2026-08 | 1 |
 | [2026-08-e.md](2026-08-e.md) | 2026-08 | 2 |
 | [2026-08-d.md](2026-08-d.md) | 2026-08 | 2 |

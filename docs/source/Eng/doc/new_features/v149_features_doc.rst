@@ -6,8 +6,10 @@ Perceptual (YIQ) Image Diff with Anti-Alias Suppression
 metric, and neither ignores **anti-aliased edges** — the #1 source of false-positive
 visual-diff failures across DPI and font-hinting. ``perceptual_diff`` compares pixels
 in YIQ space (the pixelmatch colour metric, far closer to human perception than RGB)
-and, by default, removes the thin one-pixel edge differences that anti-aliasing
-produces (a morphological open), so only *solid* changed regions count.
+and, by default, discounts the pixels pixelmatch's anti-aliasing test classifies as
+anti-aliasing (a pixel between a darker and a brighter neighbour, next to a flat
+area in both images), so a re-rendered edge does not count while a thin real
+change, such as edited small text or a 1 px rule, still does.
 
 Runs on an injectable image pair (ndarray / path / PIL), so it is headless-testable on
 synthetic arrays. OpenCV + NumPy come in via ``je_open_cv``; reuses the shared

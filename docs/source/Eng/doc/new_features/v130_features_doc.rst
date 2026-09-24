@@ -29,7 +29,9 @@ Headless API
     for box in ssim_changed_regions("golden.png", ignore=[[0, 0, 120, 30]]):
         print(box["x"], box["y"], box["width"], box["height"])
 
-``ssim_compare`` returns the mean SSIM over the image (``1.0`` = identical);
+``ssim_compare`` returns the mean SSIM over the image, in ``-1..1`` (``1.0`` =
+identical), with the constants scaled to the images' dynamic range (255 for 8-bit,
+1.0 for 0..1 floats);
 ``current`` defaults to a screen grab of the optional ``region``. ``ignore`` is a
 list of ``[x, y, w, h]`` boxes excluded from the score and from change detection.
 ``ssim_changed_regions`` flags pixels where local dissimilarity ``1 - SSIM``

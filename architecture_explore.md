@@ -20,7 +20,7 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 | 指標 | 數值 |
 | --- | ---: |
 | Python 模組總數（含周邊子專案） | 1,051 |
-| 程式碼總行數 | 151,027 |
+| 程式碼總行數 | 151,163 |
 | `je_auto_control/utils/` 子套件數 | 310 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 775 |
 | 套件門面 `__all__` 公開名稱數 | 1,244 |
@@ -370,7 +370,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.5 影像辨識與畫面分析
 
-> 37 個套件、約 5,637 行。
+> 37 個套件、約 5,770 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -386,9 +386,9 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/feature_match/` | 143 | ORB 特徵比對：在旋轉／縮放／主題變更下定位樣板 |
 | `utils/hsv_segment/` | 104 | HSV 色彩空間分割（抗光照的顏色遮罩 + blob 框） |
 | `utils/icon_classify/` | 132 | 從像素形狀判斷一個框是哪一類元件 |
-| `utils/image_dedup/` | 90 | 感知雜湊影像去重（Pillow aHash/dHash） |
+| `utils/image_dedup/` | 100 | 感知雜湊影像去重（Pillow aHash/dHash） |
 | `utils/image_quality/` | 77 | 在 OCR／比對前評分影像品質（銳利度／對比／亮度） |
-| `utils/img_histogram/` | 105 | 顏色直方圖指紋與變化偵測（抗光照） |
+| `utils/img_histogram/` | 112 | 顏色直方圖指紋與變化偵測（抗光照） |
 | `utils/marks_layout/` | 149 | Set-of-Marks 標籤的不重疊排版與可讀配色 |
 | `utils/match_autothresh/` | 114 | Otsu 自動門檻，免去手動調 `min_score` |
 | `utils/match_ensemble/` | 63 | 多樣板共識比對（多張參考圖投票到同一位置） |
@@ -396,7 +396,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/match_trust/` | 144 | 樣板比對可信度評分（次峰比 + peak-to-sidelobe） |
 | `utils/monitor_layout/` | 320 | 多螢幕／虛擬桌面幾何（在哪個螢幕、位置、重映射）＋ `logical_frame` 以滑鼠座標空間擷取畫面 |
 | `utils/motion_regions/` | 73 | 兩影格間的局部變化／活動偵測（absdiff） |
-| `utils/perceptual_diff/` | 100 | 感知式（YIQ）影像差異，抑制反鋸齒邊緣誤報 |
+| `utils/perceptual_diff/` | 196 | 感知式（YIQ）影像差異，抑制反鋸齒邊緣誤報 |
 | `utils/preprocess/` | 219 | OCR／比對前的影像前處理（灰階、二值化、去傾斜…） |
 | `utils/qr/` | 59 | 從影像或螢幕區域解碼 QR code（OpenCV） |
 | `utils/rotated_match/` | 166 | 容忍旋轉與縮放的樣板比對（尺度空間 × 角度掃描） |
@@ -405,7 +405,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/screen_grid/` | 146 | 供 VLM 接地用的粗粒度標號網格（點 ↔ 格對映） |
 | `utils/set_of_marks/` | 154 | Set-of-Marks 疊圖：為畫面元素編號供 VLM 指認 |
 | `utils/shape_locator/` | 108 | 以邊緣／輪廓偵測定位元件（矩形／形狀，免樣板） |
-| `utils/ssim/` | 143 | 結構相似度比較：感知分數 + 變化區域 |
+| `utils/ssim/` | 163 | 結構相似度比較：感知分數 + 變化區域 |
 | `utils/subpixel_match/` | 103 | 以二次曲面擬合做次像素級比對精修 |
 | `utils/theme_normalize/` | 92 | 主題無關的影像正規化，讓亮色樣板能配對深色模式 |
 | `utils/video_report/` | 171 | 影片步驟疊圖報告：把截圖加字幕串成操作導覽影片 |
@@ -414,7 +414,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.6 OCR 與文字理解
 
-> 19 個套件、約 3,434 行。
+> 19 個套件、約 3,436 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -425,7 +425,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/fuzzy/` | 111 | 模糊字串比對與去重（預設 difflib，有 rapidfuzz 則優先） |
 | `utils/grid_locator/` | 71 | 以 (row, column) 從邊界框定址表格／網格儲存格 |
 | `utils/guardrail/` | 116 | 針對畫面／OCR 文字的啟發式 prompt-injection 防護 |
-| `utils/heading_segment/` | 69 | 判定 OCR 行是標題或內文，建出文件大綱 |
+| `utils/heading_segment/` | 71 | 判定 OCR 行是標題或內文，建出文件大綱 |
 | `utils/near_dup/` | 108 | 近似重複文字偵測（SimHash／MinHash） |
 | `utils/ocr/` | 1,136 | OCR 引擎門面 + 三個後端（Tesseract／EasyOCR／PaddleOCR）、版面結構化與跨詞比對（`text_span`） |
 | `utils/pii_text/` | 119 | 自由文字中的 PII 偵測與遮蔽（email／電話／SSN／卡號／IP／IBAN） |
@@ -463,7 +463,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.8 元素定位、自我修復與智慧等待
 
-> 23 個套件、約 4,238 行。
+> 23 個套件、約 4,239 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -473,7 +473,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/app_idle/` | 109 | 等應用程式不再忙碌，再驅動下一步 |
 | `utils/change_localize/` | 83 | 把畫面變化歸因到實際改變的元素框 |
 | `utils/critic_features/` | 85 | 每步的 critic 特徵集合與規則式步驟評分 |
-| `utils/element_diff/` | 93 | 跨影格的幾何感知元素比對（穩定 ID、移動追蹤） |
+| `utils/element_diff/` | 94 | 跨影格的幾何感知元素比對（穩定 ID、移動追蹤） |
 | `utils/element_parse/` | 106 | 融合並排序畫面元素框（IoU、合併、多來源融合、閱讀順序） |
 | `utils/element_proposal/` | 86 | 免樣板、免模型地從原始像素提出乾淨元素清單 |
 | `utils/element_scoring/` | 105 | 加權候選評分（角色 + 名稱相似度 + 鄰近度 + 啟用狀態） |
@@ -1081,6 +1081,6 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `osx/` | 17 | 925 |
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 837 |
-| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 677 | 53,781 |
-| **總計** | **1,045** | **150,962** |
+| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 677 | 53,917 |
+| **總計** | **1,045** | **151,098** |
 
