@@ -71,10 +71,13 @@ class ClipboardHistory:
 
     def capture_once(self) -> bool:
         """Read the live clipboard once and record it; return whether added."""
+        import subprocess  # nosec B404  # reason: only for its exception types
         from je_auto_control.utils.clipboard.clipboard import get_clipboard
         try:
             return self.add(get_clipboard())
-        except (OSError, RuntimeError, ValueError):
+        # SubprocessError: xclip / pbpaste run with check=True and a timeout;
+        # xclip exits 1 on an empty clipboard, and the error ended the poller.
+        except (OSError, RuntimeError, ValueError, subprocess.SubprocessError):
             return False
 
     def start(self) -> None:

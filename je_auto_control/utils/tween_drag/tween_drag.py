@@ -46,7 +46,10 @@ def tween_points(start: Tuple[int, int], end: Tuple[int, int],
                  steps: int = 30,
                  easing: str = "ease_in_out_quad") -> List[List[int]]:
     """Return ``steps + 1`` eased points from ``start`` to ``end``."""
-    curve = _EASINGS.get(easing, _linear)
+    if easing not in _EASINGS:
+        # It fell back to linear silently, so a typo ("ease-in-out") hid.
+        raise ValueError(f"unknown easing {easing!r}; choose from {easing_names()}")
+    curve = _EASINGS[easing]
     count = max(1, int(steps))
     start_x, start_y = start
     end_x, end_y = end

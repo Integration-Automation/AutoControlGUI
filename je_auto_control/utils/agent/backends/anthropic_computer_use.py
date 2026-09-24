@@ -71,7 +71,15 @@ _XDOTOOL_KEY_ALIAS = {
 
 
 def _normalise_key(name: str) -> str:
-    return _XDOTOOL_KEY_ALIAS.get(name.lower(), name.lower())
+    """This platform's name for an xdotool key.
+
+    The fixed aliases ("return" -> "enter", "escape" -> "esc", "page_down" ->
+    "pagedown") are not names the Windows key table knows, so Enter, Esc,
+    paging, Alt and Super failed there; cua_action's resolver knows each
+    platform's spelling.
+    """
+    from je_auto_control.utils.cua_action.cua_action import resolve_key_name
+    return resolve_key_name(_XDOTOOL_KEY_ALIAS.get(name.lower(), name.lower()))
 
 
 def _parse_combo(combo: str) -> List[str]:

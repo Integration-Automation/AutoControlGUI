@@ -38,7 +38,8 @@ def test_to_ac_command_click_key_scroll():
     assert to_ac_command({"type": "type", "text": "hi"}) == [
         "AC_write", {"write_string": "hi"}]
     assert to_ac_command({"type": "scroll", "x": 1, "y": 2, "scroll_y": 120}) == [
-        "AC_mouse_scroll", {"scroll_value": -120, "x": 1, "y": 2}]
+        # The direction is explicit so X11 / Wayland scroll the same way as Windows.
+        "AC_mouse_scroll", {"scroll_value": -120, "scroll_direction": "scroll_up", "x": 1, "y": 2}]
 
 
 def test_to_ac_command_applies_scale():

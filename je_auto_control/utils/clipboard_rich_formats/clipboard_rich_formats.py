@@ -63,6 +63,17 @@ def build_rtf(text: str) -> str:
     return _RTF_PREAMBLE + "".join(_escape_char(ch) for ch in text) + "}"
 
 
+# Control words / symbols that stand for text (the rest are formatting).
+_RTF_WORD_TEXT = {
+    "par": "\n", "line": "\n", "tab": "\t",
+    "emdash": chr(0x2014), "endash": chr(0x2013), "bullet": chr(0x2022),
+    "lquote": chr(0x2018), "rquote": chr(0x2019),
+    "ldblquote": chr(0x201C), "rdblquote": chr(0x201D),
+    "emspace": chr(0x2003), "enspace": chr(0x2002),
+}
+_RTF_SYMBOLS = {"~": chr(0xA0), "_": chr(0x2011)}
+
+
 class _RtfReader:
     """Single pass over an RTF document collecting its visible text.
 
@@ -77,19 +88,34 @@ class _RtfReader:
         self.frames: List[List[Any]] = [[False, 1]]
         self.skip = 0
         self.result: List[str] = []
+        # \'XX bytes are collected and decoded together in the document's
+        # \ansicpg code page: they were decoded one by one as cp1252, so a
+        # two-byte GBK or Shift-JIS character came out as two Latin letters.
+        self.codepage = "cp1252"
+        self.pending = bytearray()
 
     def read(self) -> str:
         while self.index < len(self.text):
             self._step(self.text[self.index])
+        self._flush()
         # \uN escapes of a surrogate pair arrive as two halves; join them.
         joined = "".join(self.result)
         return joined.encode("utf-16", "surrogatepass").decode("utf-16", "replace")
+
+    def _flush(self) -> None:
+        if self.pending:
+            self.result.append(bytes(self.pending).decode(self.codepage, "replace"))
+            self.pending.clear()
+
+    def _append(self, text: str) -> None:
+        self._flush()
+        self.result.append(text)
 
     def _emit(self, text: str) -> None:
         if self.skip > 0:
             self.skip -= 1
         elif not self.frames[-1][0]:
-            self.result.append(text)
+            self._append(text)
 
     def _step(self, char: str) -> None:
         if char == "{":
@@ -123,21 +149,31 @@ class _RtfReader:
         elif nxt.isalpha():
             self._word()
         else:
-            self.index = i + 2   # other control symbol (\~, \-, ...)
+            # \~ is a non-breaking space and \_ a non-breaking hyphen (they
+            # were dropped); \- is an optional hyphen and stays invisible.
+            if nxt in _RTF_SYMBOLS:
+                self._emit(_RTF_SYMBOLS[nxt])
+            self.index = i + 2
 
     def _hex(self, digits: str) -> None:
         try:
-            byte = bytes([int(digits, 16)])
+            value = int(digits, 16)
         except ValueError:
             return
-        self._emit(byte.decode("cp1252", "replace"))
+        if self.skip > 0:
+            self.skip -= 1
+        elif not self.frames[-1][0]:
+            self.pending.append(value)
 
     def _word(self) -> None:
         text, start = self.text, self.index + 1
         end = start
         while end < len(text) and text[end].isalpha():
             end += 1
-        stop = end + 1 if end < len(text) and text[end] == "-" else end
+        # A "-" is the parameter's sign only when a digit follows: "\\par-b"
+        # lost its hyphen.
+        signed = end + 1 < len(text) and text[end] == "-" and text[end + 1].isdigit()
+        stop = end + 1 if signed else end
         while stop < len(text) and text[stop].isdigit():
             stop += 1
         param = text[end:stop]
@@ -153,15 +189,25 @@ class _RtfReader:
             frame[0] = True
         elif word == "uc" and param:
             frame[1] = max(0, int(param))
+        elif word == "ansicpg" and param:
+            self._set_codepage(param)
         elif frame[0]:
             return
-        elif word in ("par", "line"):
-            self.result.append("\n")
-        elif word == "tab":
-            self.result.append("\t")
+        elif word in _RTF_WORD_TEXT:
+            self._append(_RTF_WORD_TEXT[word])
         elif word == "u" and param:
-            self.result.append(chr(int(param) % 0x10000))
+            self._append(chr(int(param) % 0x10000))
             self.skip = frame[1]
+
+    def _set_codepage(self, param: str) -> None:
+        import codecs
+        name = f"cp{int(param)}"
+        try:
+            codecs.lookup(name)
+        except LookupError:
+            return
+        self._flush()
+        self.codepage = name
 
 
 def rtf_to_text(rtf: str) -> str:

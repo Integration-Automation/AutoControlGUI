@@ -20,7 +20,7 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 | 指標 | 數值 |
 | --- | ---: |
 | Python 模組總數（含周邊子專案） | 1,049 |
-| 程式碼總行數 | 148,481 |
+| 程式碼總行數 | 148,684 |
 | `je_auto_control/utils/` 子套件數 | 310 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 774 |
 | 套件門面 `__all__` 公開名稱數 | 1,241 |
@@ -271,11 +271,11 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.1 執行引擎與腳本資產
 
-> 24 個套件、約 14,175 行。
+> 24 個套件、約 14,216 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
-| `utils/action_lint/` | 328 | action 檔 linter 與 JSON Schema 產生器（CI 用 `python -m` 進入點） |
+| `utils/action_lint/` | 369 | action 檔 linter 與 JSON Schema 產生器（CI 用 `python -m` 進入點） |
 | `utils/action_signing/` | 380 | action 檔 HMAC-SHA256 簽章與 Fernet 加密，`execute_files` 會強制驗簽 |
 | `utils/checkpoint/` | 120 | 流程檢查點與續跑，讓長 action list 具持久性 |
 | `utils/codegen/` | 255 | 由 action list 產生可執行的 pytest / python / robot 測試碼 |
@@ -341,7 +341,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.4 輸入模擬與動作品質
 
-> 22 個套件、約 2,680 行。
+> 22 個套件、約 2,705 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -352,20 +352,20 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/actionability/` | 168 | 動作前就緒閘門（可見 + 穩定 + 啟用 + 未被遮擋） |
 | `utils/ensure_state/` | 74 | 冪等地把控制項／設定帶到期望狀態 |
 | `utils/field_entry/` | 76 | 清空再輸入的欄位填寫慣用法（Playwright `fill`） |
-| `utils/gamepad/` | 311 | 虛擬遊戲手把後端（Windows ViGEmBus 驅動） |
-| `utils/humanize/` | 190 | 擬人輸入：貝茲曲線滑鼠路徑 + 抖動打字節奏 |
+| `utils/gamepad/` | 324 | 虛擬遊戲手把後端（Windows ViGEmBus 驅動） |
+| `utils/humanize/` | 191 | 擬人輸入：貝茲曲線滑鼠路徑 + 抖動打字節奏 |
 | `utils/ime_state/` | 146 | 讀取即時 IME 組字／轉換狀態，確保 CJK 輸入安全 |
 | `utils/key_hold/` | 109 | 按住按鍵一段時間，或以固定頻率自動重複 |
 | `utils/modifier_state/` | 76 | 跨一組動作按住修飾鍵，並保證安全釋放 |
 | `utils/mouse_path/` | 106 | 多路徑點滑鼠手勢（沿折線移動或拖曳） |
 | `utils/mouse_relative/` | 59 | 相對位移滑鼠移動 |
-| `utils/postcondition/` | 138 | 宣告式的動作預期結果規格，對照畫面驗證 |
+| `utils/postcondition/` | 146 | 宣告式的動作預期結果規格，對照畫面驗證 |
 | `utils/step_repair/` | 117 | 失敗／無效動作的修復策略（自我修正迴圈） |
 | `utils/table_grid_fill/` | 143 | 以 OCR 文字填滿格線表格，取得可定址的表格 |
 | `utils/input_reach/` | 111 | 送出去的輸入到不到得了：桌面鎖定查詢（免費）＋ 實際送一個 F13 確認沒有被過濾（有副作用，只給診斷用） |
 | `utils/keyboard_layout/` | 148 | 向系統問「這個鍵盤配置下每個鍵印出什麼字」（`ToUnicodeEx`），問不到退回 US 對照表 |
 | `utils/text_unicode/` | 151 | 輸入任意 Unicode（emoji／CJK／重音字）：優先送字元按鍵事件，不支援時退回剪貼簿貼上 |
-| `utils/tween_drag/` | 98 | 沿曲線的緩動插值拖曳 |
+| `utils/tween_drag/` | 101 | 沿曲線的緩動插值拖曳 |
 | `utils/verify_field/` | 112 | 打字後讀回欄位，確認內容確實落地 |
 
 ### 5.4.5 影像辨識與畫面分析
@@ -493,17 +493,17 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.9 AI / Agent / LLM
 
-> 13 個套件、約 21,301 行。
+> 13 個套件、約 21,386 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
 | `utils/a2a/` | 92 | A2A（agent-to-agent）agent card 產生 |
-| `utils/agent/` | 1,438 | 閉環 Computer-Use Agent 主迴圈 + Anthropic／OpenAI／Computer-Use 三後端 |
+| `utils/agent/` | 1,446 | 閉環 Computer-Use Agent 主迴圈 + Anthropic／OpenAI／Computer-Use 三後端 |
 | `utils/agent_memory/` | 154 | agent 的持久化情節記憶（goal → trajectory → outcome） |
 | `utils/agent_replay/` | 63 | 可攜的 agent 軌跡追蹤（記錄 observation→action 並重播） |
 | `utils/agent_trace/` | 168 | agent 可觀測性：OpenTelemetry GenAI 慣例的 LLM span |
 | `utils/cost_telemetry/` | 307 | 每次呼叫的 LLM 成本遙測：token 數 + 估算美金 |
-| `utils/cua_action/` | 127 | 標準化 computer-use 動作結構（Anthropic／OpenAI → `AC_*`） |
+| `utils/cua_action/` | 204 | 標準化 computer-use 動作結構（Anthropic／OpenAI → `AC_*`） |
 | `utils/llm/` | 365 | 自然語言 → action list 規劃器 + Anthropic／null 後端 |
 | `utils/mcp_registry/` | 92 | MCP registry `server.json` 資訊清單產生（可被發現） |
 | `utils/mcp_server/` | 17,675 | **無頭 MCP 伺服器**（16K LOC，預設註冊 677 個工具＝658 個 `ac_*` + 19 個別名）：stdio + HTTP 傳輸、工具工廠與處理器、資源、prompt、稽核、限流、外掛熱重載 |
@@ -670,17 +670,17 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.16 系統、視窗與剪貼簿
 
-> 16 個套件、約 2,468 行。
+> 16 個套件、約 2,520 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
 | `utils/clipboard/` | 446 | 跨平台無頭剪貼簿存取（文字 + 影像）＋ `win32_clipboard_api.py`：**所有剪貼簿格式共用的 Win32 原型與 open/alloc/lock 流程**（`open_clipboard()` 會等過短暫被別的行程佔住的剪貼簿——Win32 一次只允許一個行程開啟，別人正在複製就必然失敗）（`argtypes` 只宣告一半曾讓四支 writer 在 64 位元上必然丟 `OverflowError`，見 CHANGELOG）。`set_clipboard_image` 同時接受 PNG 位元組與檔案路徑——先前這個名字在本子套件裡有**兩份不同簽章的實作**（`clipboard.py` 吃 bytes、`clipboard_image.py` 吃路徑），匯錯來源只會在執行期才炸，已合併成一支 |
 | `utils/clipboard_files/` | 112 | 剪貼簿檔案清單（CF_HDROP）：純 DROPFILES 封裝 + Win32 存取 |
 | `utils/clipboard_formats/` | 151 | 檢視與分類剪貼簿可用格式（純分類／差異 + Win32 列舉） |
-| `utils/clipboard_history/` | 111 | 剪貼簿歷史：環形緩衝 + 背景輪詢器 |
-| `utils/clipboard_rich_formats/` | 282 | 豐富剪貼簿格式 — RTF 與 CSV/TSV 編解碼 + Windows 存取 |
+| `utils/clipboard_history/` | 114 | 剪貼簿歷史：環形緩衝 + 背景輪詢器 |
+| `utils/clipboard_rich_formats/` | 328 | 豐富剪貼簿格式 — RTF 與 CSV/TSV 編解碼 + Windows 存取 |
 | `utils/file_assoc/` | 92 | 解析哪個應用程式被註冊來開啟某副檔名 |
-| `utils/file_dialog/` | 60 | 驅動原生檔案 開啟／儲存／資料夾選擇 對話框 |
+| `utils/file_dialog/` | 63 | 驅動原生檔案 開啟／儲存／資料夾選擇 對話框 |
 | `utils/file_drop/` | 96 | 以 WM_DROPFILES 把檔案拖放到視窗 |
 | `utils/rich_clipboard/` | 131 | 豐富剪貼簿格式 — HTML（CF_HTML）建構／解析／存取 |
 | `utils/shell_open/` | 97 | 以預設應用開啟檔案，或以預設瀏覽器開啟 URL |
@@ -1070,7 +1070,7 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `wrapper/` | 19 | 3,615 |
 | `windows/` | 23 | 1,957 |
 | `utils/rest_api/` | 8 | 1,793 |
-| `utils/agent/` | 8 | 1,438 |
+| `utils/agent/` | 8 | 1,446 |
 | `linux_with_x11/` | 19 | 1,236 |
 | `linux_wayland/` | 17 | 2,870 |
 | `utils/triggers/` | 4 | 1,241 |
@@ -1080,6 +1080,6 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `osx/` | 17 | 919 |
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 837 |
-| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 677 | 52,446 |
-| **總計** | **1,043** | **148,416** |
+| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 677 | 52,641 |
+| **總計** | **1,043** | **148,619** |
 

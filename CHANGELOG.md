@@ -15,6 +15,8 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Added
 
+- `cua_action.resolve_key_name` / `split_key_combo`, and
+  `compile_postcondition(before=...)`.
 - `pii_text.luhn_valid` and `normalize_text(strip_format=...)`.
 - `http_request` responses carry `set_cookie`, the list of every
   `Set-Cookie` value.
@@ -293,6 +295,12 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Fixed
 
+- **Input and form helpers**: computer-use and CUA key names resolve to the
+  running platform's spelling (Enter, Esc, paging, Backspace, Alt and Super
+  failed on Windows); CUA double clicks click twice and scrolls carry their
+  direction; the action linter knows flow-control commands and lints their
+  bodies; gamepad clicks and the dpad work; clipboard history survives xclip
+  errors; RTF text honours `\ansicpg` and text symbols.
 - **Media and analysis**: float bucket edges land in their own bucket; KS
   p-values for near-identical samples are 1.0; histogram intersection is
   normalised to 0..1; unreadable or too-short videos are errors, not "no

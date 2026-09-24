@@ -145,9 +145,26 @@ def test_scroll_translates_direction_to_sign():
     assert down["input"]["scroll_value"] == -5
 
 
-def test_single_key_goes_through_type_keyboard():
+# Key names follow the running platform's key table (Windows says "return",
+# X11 / macOS "enter"); these tests pin both with a stubbed table.
+_X11_KEYS = {"enter": 1, "return": 1, "esc": 1, "ctrl": 1, "win": 1, "c": 1, "l": 1}
+_WIN32_KEYS = {"return": 1, "escape": 1, "control": 1, "ctrl": 1, "lwin": 1, "c": 1, "l": 1}
+
+
+@pytest.fixture
+def key_table(monkeypatch):
+    from je_auto_control.utils.cua_action import cua_action
+
+    def use(table):
+        monkeypatch.setattr(cua_action, "_platform_key_table", lambda: table)
+    return use
+
+
+@pytest.mark.parametrize("table, expected", [(_X11_KEYS, "enter"), (_WIN32_KEYS, "return")])
+def test_single_key_goes_through_type_keyboard(key_table, table, expected):
+    key_table(table)
     out = _decision_from_computer_action({"action": "key", "text": "Return"})
-    assert out == {"tool": "AC_type_keyboard", "input": {"keycode": "enter"}}
+    assert out == {"tool": "AC_type_keyboard", "input": {"keycode": expected}}
 
 
 def test_key_combo_goes_through_hotkey():
@@ -172,14 +189,17 @@ def test_bad_coordinate_rejected():
 
 # --- xdotool key alias normalisation --------------------------------
 
-@pytest.mark.parametrize("xdotool,expected", [
-    ("Return", ["enter"]),
-    ("escape", ["esc"]),
-    ("ctrl_l+c", ["ctrl", "c"]),
-    ("super_l+L", ["win", "l"]),
+@pytest.mark.parametrize("xdotool, x11, win32", [
+    ("Return", ["enter"], ["return"]),
+    ("escape", ["esc"], ["escape"]),
+    ("ctrl_l+c", ["ctrl", "c"], ["ctrl", "c"]),
+    ("super_l+L", ["win", "l"], ["lwin", "l"]),
 ])
-def test_parse_combo_normalises_xdotool_aliases(xdotool, expected):
-    assert _parse_combo(xdotool) == expected
+def test_parse_combo_normalises_xdotool_aliases(key_table, xdotool, x11, win32):
+    key_table(_X11_KEYS)
+    assert _parse_combo(xdotool) == x11
+    key_table(_WIN32_KEYS)
+    assert _parse_combo(xdotool) == win32
 
 
 # --- end-to-end backend exercise ------------------------------------

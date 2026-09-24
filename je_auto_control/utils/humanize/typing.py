@@ -23,10 +23,11 @@ def humanized_key_delays(text: str, *, base_delay: float = 0.05,
     rng = random.Random(seed)  # nosec B311  # reason: non-crypto typing jitter
     delays: List[float] = []
     for _ in text:
-        delay = max(0.0, base_delay + rng.uniform(-jitter, jitter))
+        delay = base_delay + rng.uniform(-jitter, jitter)
         if pause_chance and rng.random() < pause_chance:  # NOSONAR S2245 non-crypto
             delay += pause_delay
-        delays.append(delay)
+        # Clamped after the pause: a negative pause_delay made negative delays.
+        delays.append(max(0.0, delay))
     return delays
 
 

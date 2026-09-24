@@ -5,7 +5,11 @@ import inspect
 import json
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Sequence
+from typing import Any, Dict, List, Optional, Sequence, Set
+
+from je_auto_control.utils.executor.action_schema import (
+    FLOW_BODY_KEYS, FLOW_BRANCH_LIST_KEYS,
+)
 
 
 @dataclass
@@ -38,14 +42,28 @@ def _ac_callables() -> Dict[str, Any]:
     }
 
 
+def _block_commands() -> Set[str]:
+    """Flow-control commands (AC_loop, AC_if_*, AC_try...), which live outside event_dict."""
+    from je_auto_control.utils.executor.action_executor import executor
+    return set(executor._block_commands)
+
+
 class ActionLinter:
     """Walks an action JSON document and reports issues."""
 
     def __init__(self,
-                 *, known_commands: Optional[Dict[str, Any]] = None) -> None:
+                 *, known_commands: Optional[Dict[str, Any]] = None,
+                 block_commands: Optional[Set[str]] = None) -> None:
         self._commands = (
             known_commands if known_commands is not None else _ac_callables()
         )
+        # Block commands used to be reported as unknown, so AC_loop, AC_try,
+        # AC_if_* and the rest failed a valid file; their bodies go unchecked
+        # too, so a typo inside a loop passed.
+        if block_commands is not None:
+            self._blocks = set(block_commands)
+        else:
+            self._blocks = _block_commands() if known_commands is None else set()
 
     def lint_actions(self,
                      actions: Sequence[Any]) -> List[LintIssue]:
@@ -65,35 +83,58 @@ class ActionLinter:
             issues.extend(self._lint_item(idx, item))
         return issues
 
-    def _lint_item(self, idx: int, item: Any) -> List[LintIssue]:
-        if not isinstance(item, (list, tuple)):
-            return [LintIssue(
-                idx, LintSeverity.ERROR, "bad-shape",
-                "action item must be a list [command_name, params]",
-            )]
-        if not item:
-            return [LintIssue(
-                idx, LintSeverity.ERROR, "empty-action",
-                "action item is empty",
-            )]
+    def _lint_item(self, idx: int, item: Any, trail: str = "") -> List[LintIssue]:
+        shape = self._shape_issue(item)
+        if shape is not None:
+            code, message = shape
+            return [LintIssue(idx, LintSeverity.ERROR, code, trail + message)]
         name = item[0]
-        params = item[1] if len(item) >= 2 else {}
-        if not isinstance(name, str):
-            return [LintIssue(
-                idx, LintSeverity.ERROR, "bad-name",
-                f"command name must be a string, got {type(name).__name__}",
-            )]
+        params = item[1] if len(item) == 2 else {}
+        if name in self._blocks:
+            if not isinstance(params, dict):
+                return [LintIssue(idx, LintSeverity.ERROR, "bad-params",
+                                  f"{trail}{name} requires a dict of arguments")]
+            return self._lint_bodies(idx, name, params, trail)
         if name not in self._commands:
-            return [LintIssue(
-                idx, LintSeverity.ERROR, "unknown-command",
-                f"unknown command {name!r}",
-            )]
-        if params and not isinstance(params, dict):
-            return [LintIssue(
-                idx, LintSeverity.ERROR, "bad-params",
-                "second element must be a JSON object (dict) of kwargs",
-            )]
-        return self._check_required(idx, name, params or {})
+            return [LintIssue(idx, LintSeverity.ERROR, "unknown-command",
+                              f"{trail}unknown command {name!r}")]
+        if isinstance(params, list):
+            return []  # positional arguments, as the executor calls event(*args)
+        return [LintIssue(i.index, i.severity, i.code, trail + i.message)
+                for i in self._check_required(idx, name, params)]
+
+    @staticmethod
+    def _shape_issue(item: Any) -> Optional[tuple]:
+        """``(code, message)`` when ``item`` is not ``[name]`` / ``[name, params]``."""
+        if not isinstance(item, (list, tuple)):
+            return "bad-shape", "action item must be a list [command_name, params]"
+        if not item:
+            return "empty-action", "action item is empty"
+        if len(item) > 2:
+            # The executor refuses a third element; the linter let it pass.
+            return "bad-shape", "action item has more than [command_name, params]"
+        if not isinstance(item[0], str):
+            return "bad-name", f"command name must be a string, got {type(item[0]).__name__}"
+        if len(item) == 2 and not isinstance(item[1], (dict, list)):
+            # "" and other falsy non-dicts slipped past the old check.
+            return "bad-params", "second element must be a JSON object or a list of arguments"
+        return None
+
+    def _lint_bodies(self, idx: int, name: str, params: Dict[str, Any],
+                     trail: str) -> List[LintIssue]:
+        """Lint the nested action lists a block command holds."""
+        issues: List[LintIssue] = []
+        bodies = [(key, params.get(key)) for key in FLOW_BODY_KEYS.get(name, ())]
+        for key in FLOW_BRANCH_LIST_KEYS.get(name, ()):
+            branches = params.get(key)
+            if isinstance(branches, list):
+                bodies.extend((f"{key}[{n}]", branch) for n, branch in enumerate(branches))
+        for key, body in bodies:
+            if not isinstance(body, list):
+                continue
+            for position, nested in enumerate(body):
+                issues.extend(self._lint_item(idx, nested, f"{trail}{name}.{key}[{position}]: "))
+        return issues
 
     def _check_required(self, idx: int, name: str,
                         params: Dict[str, Any]) -> List[LintIssue]:
