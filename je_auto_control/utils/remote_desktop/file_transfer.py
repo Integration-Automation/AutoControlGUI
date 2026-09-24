@@ -24,6 +24,7 @@ existing file or leaves a partial one behind.
 import json
 import os
 import threading
+from collections import OrderedDict
 import uuid
 from dataclasses import dataclass
 from pathlib import Path
@@ -145,6 +146,10 @@ def _discard(part: Path) -> None:
         autocontrol_logger.info("remote_desktop part file %s left: %r", part, error)
 
 
+#: How many aborted-before-they-began transfer ids a receiver remembers.
+_CANCELLED_MAX = 1024
+
+
 class FileReceiver:
     """Demultiplex incoming FILE_* messages into one or more file writes."""
 
@@ -153,18 +158,27 @@ class FileReceiver:
         self._on_progress = on_progress
         self._on_complete = on_complete
         self._active: Dict[str, _Incoming] = {}
+        # Transfers aborted before FILE_BEGIN registered them. A viewer that
+        # disconnected while its begin was opening the part file had the
+        # abort miss (nothing registered yet), and the part file and its open
+        # handle were left behind for good.
+        self._cancelled: "OrderedDict[str, bool]" = OrderedDict()
         self._lock = threading.Lock()
 
     def handle_begin(self, payload: bytes) -> None:
         transfer_id, dest_path, total_size = decode_begin(payload)
         with self._lock:
             duplicate = transfer_id in self._active
+            cancelled = self._cancelled.pop(transfer_id, False)
         if duplicate:
             # Replacing the entry leaked the first transfer's open handle.
             autocontrol_logger.info(
                 "remote_desktop FILE_BEGIN for active transfer %s ignored",
                 transfer_id,
             )
+            return
+        if cancelled:
+            self._fire_complete(transfer_id, False, "cancelled before it began", str(dest_path))
             return
         path = Path(os.path.expanduser(dest_path))
         if not path.name:   # ".", "/" or "C:\\": with_name raised ValueError past the handler
@@ -179,13 +193,22 @@ class FileReceiver:
         except (OSError, ValueError) as error:
             self._fire_complete(transfer_id, False, str(error), str(path))
             return
-        with self._lock:
-            self._active[transfer_id] = _Incoming(
-                transfer_id=transfer_id, dest_path=path, part_path=part,
-                total_size=total_size, handle=handle,
-            )
+        incoming = _Incoming(transfer_id=transfer_id, dest_path=path, part_path=part,
+                             total_size=total_size, handle=handle)
+        if not self._register(incoming):
+            incoming.error = "cancelled before it began"
+            self._abort(incoming)
+            return
         if self._on_progress is not None:
             self._on_progress(transfer_id, 0, total_size)
+
+    def _register(self, incoming: _Incoming) -> bool:
+        """Make ``incoming`` active, unless it was aborted while its file opened."""
+        with self._lock:
+            if self._cancelled.pop(incoming.transfer_id, False):
+                return False
+            self._active[incoming.transfer_id] = incoming
+            return True
 
     def handle_chunk(self, payload: bytes) -> None:
         transfer_id, chunk = decode_chunk(payload)
@@ -251,8 +274,14 @@ class FileReceiver:
         """Abandon an in-flight transfer: close it and delete its part file."""
         with self._lock:
             incoming = self._active.get(transfer_id)
-        if incoming is None:
-            return
+            if incoming is None:
+                # Not begun yet (or already finished): remembered, so a
+                # FILE_BEGIN still on its way does not open a part file
+                # nobody will abort.
+                self._cancelled[transfer_id] = True
+                while len(self._cancelled) > _CANCELLED_MAX:
+                    self._cancelled.popitem(last=False)
+                return
         incoming.error = incoming.error or reason
         self._abort(incoming)
 

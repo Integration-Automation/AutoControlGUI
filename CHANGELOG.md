@@ -363,6 +363,8 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Fixed
 
+- A remote-desktop upload aborted while it was starting no longer leaves
+  its `.part` file and open handle behind.
 - The action JSON Schema lists every command, block commands included,
   and types parameters from their annotations instead of "string".
 - The linter reports a block command's missing required arguments
