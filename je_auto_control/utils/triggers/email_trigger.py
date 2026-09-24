@@ -102,14 +102,30 @@ def _extract_text_body(msg) -> str:
     return _part_text(msg) or ""
 
 
+def _header(msg, name: str) -> str:
+    """A header's decoded value, or its raw text when it does not parse.
+
+    ``email.policy.default`` parses a header when it is read, and a
+    malformed address (``From: <"``) raises IndexError, HeaderParseError or
+    AttributeError from inside the email package -- which escaped the poll
+    and blocked the mailbox on that message for good.
+    """
+    try:
+        value = msg.get(name)
+    except Exception:  # noqa: BLE001  # reason: the email package's parse errors have no common base; fall back to the raw header
+        value = next((str(raw) for key, raw in msg.raw_items()
+                      if key.lower() == name.lower()), None)
+    return _decode_header_value(value)
+
+
 def _build_payload(uid: str, msg) -> Dict[str, Any]:
     return {
         "email.uid": uid,
-        "email.from": _decode_header_value(msg.get("From")),
-        "email.to": _decode_header_value(msg.get("To")),
-        "email.subject": _decode_header_value(msg.get("Subject")),
-        "email.message_id": msg.get("Message-ID", ""),
-        "email.date": msg.get("Date", ""),
+        "email.from": _header(msg, "From"),
+        "email.to": _header(msg, "To"),
+        "email.subject": _header(msg, "Subject"),
+        "email.message_id": _header(msg, "Message-ID"),
+        "email.date": _header(msg, "Date"),
         "email.body": _extract_text_body(msg),
     }
 
@@ -161,6 +177,19 @@ def _fetch_message(client: imaplib.IMAP4, uid: str):
     if not isinstance(raw, (bytes, bytearray)):
         return None
     return email.message_from_bytes(bytes(raw), policy=email.policy.default)
+
+
+def _quote_mailbox(name: str) -> str:
+    """``name`` as an IMAP quoted string.
+
+    imaplib sends ``select``'s argument as-is, so ``Sent Items`` went out as
+    two atoms (``SELECT Sent Items``), a BAD command; ``[Gmail]/All Mail``
+    likewise.
+    """
+    if len(name) >= 2 and name.startswith('"') and name.endswith('"'):
+        return name
+    escaped = name.replace("\\", "\\\\").replace('"', '\\"')
+    return f'"{escaped}"'
 
 
 def _mark_seen(client: imaplib.IMAP4, uid: str) -> None:
@@ -253,11 +282,13 @@ class EmailTriggerWatcher:
             self._thread.start()
 
     def stop(self, timeout: float = 5.0) -> None:
-        self._stop.set()
-        thread = self._thread
-        if thread is not None:
-            thread.join(timeout=timeout)
-        self._thread = None
+        """Stop polling; under start()'s lock so it never joins an unstarted thread."""
+        with self._lock:
+            self._stop.set()
+            thread = self._thread
+            if thread is not None and thread.is_alive():
+                thread.join(timeout=timeout)
+            self._thread = None
 
     def poll_once(self) -> int:
         """Run exactly one polling pass; return total messages fired."""
@@ -303,7 +334,7 @@ class EmailTriggerWatcher:
             return 0
         fired = 0
         try:
-            typ, _ = client.select(trigger.mailbox, readonly=False)
+            typ, _ = client.select(_quote_mailbox(trigger.mailbox), readonly=False)
             if typ != "OK":
                 trigger.last_error = f"select {trigger.mailbox} failed"
                 return 0
@@ -344,7 +375,14 @@ class EmailTriggerWatcher:
         msg = _fetch_message(client, uid)
         if msg is None:
             return 0
-        payload = _build_payload(uid, msg)
+        try:
+            payload = _build_payload(uid, msg)
+        except Exception as error:  # noqa: BLE001  # reason: a message the email package cannot read is skipped, not retried forever
+            trigger.last_error = repr(error)
+            autocontrol_logger.error("imap %s unreadable message %s: %r",
+                                     trigger.trigger_id, uid, error)
+            trigger._seen_uids.add(uid)
+            return 0
         # A missing/renamed script raises AutoControlJsonActionException (an
         # AutoControlException). Missing the base here let it escape *before*
         # the uid was marked seen below, so the same message re-fired every

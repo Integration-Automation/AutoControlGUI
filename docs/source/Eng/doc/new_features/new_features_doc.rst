@@ -1227,7 +1227,8 @@ Webhook (HTTP push) trigger
 
 A bundled :mod:`http.server` dispatcher fires an action script when an
 external service POSTs to a registered path. Configure path, allowed
-methods, and an optional bearer token; the request method, path, query,
+methods (``GET``, ``POST``, ``PUT``, ``PATCH``, ``DELETE``; any other verb
+is refused when the webhook is added), and an optional bearer token; the request method, path, query,
 headers, raw body, and parsed JSON are seeded into the variable scope::
 
    import je_auto_control as ac

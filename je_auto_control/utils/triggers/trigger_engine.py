@@ -115,7 +115,6 @@ class PixelColorTrigger(_TriggerBase):
 
 @dataclass
 class FilePathTrigger(_TriggerBase):
-    consumes_on_check: ClassVar[bool] = True
     """Fire when ``watch_path`` is created or its mtime changes.
 
     The first poll only records a baseline. After that, the path appearing
@@ -123,6 +122,7 @@ class FilePathTrigger(_TriggerBase):
     a copied-in replacement keeps its source's timestamp. Deleting the file
     re-arms the creation check.
     """
+    consumes_on_check: ClassVar[bool] = True
     watch_path: str = ""
     _baseline: Optional[float] = None
     _primed: bool = False
@@ -240,6 +240,11 @@ class TriggerEngine:
         self._tick = clamp_poll_interval(tick_seconds)
         self._triggers: Dict[str, _TriggerBase] = {}
         self._lock = threading.Lock()
+        # start() / stop() race without it: two starts made two polling
+        # threads (every trigger fired twice) and a stop() between creating
+        # and starting the thread raised "cannot join thread before it is
+        # started". Same lock as the Scheduler's.
+        self._lifecycle_lock = threading.RLock()
         self._thread: Optional[threading.Thread] = None
         self._stop = threading.Event()
 
@@ -268,20 +273,25 @@ class TriggerEngine:
             return True
 
     def start(self) -> None:
-        if self._thread is not None and self._thread.is_alive():
-            return
-        # A fresh event per run, never clear() on the old one: a thread that
-        # outlived stop()'s join would see it cleared and keep running.
-        self._stop = threading.Event()
-        self._thread = threading.Thread(
-            target=self._run, args=(self._stop,), daemon=True, name="AutoControlTriggers",
-        )
-        self._thread.start()
+        """Start the polling thread if it is not already running."""
+        with self._lifecycle_lock:
+            if self._thread is not None and self._thread.is_alive():
+                return
+            # A fresh event per run, never clear() on the old one: a thread that
+            # outlived stop()'s join would see it cleared and keep running.
+            self._stop = threading.Event()
+            self._thread = threading.Thread(
+                target=self._run, args=(self._stop,), daemon=True, name="AutoControlTriggers",
+            )
+            self._thread.start()
 
     def stop(self, timeout: float = 2.0) -> None:
-        self._stop.set()
-        if self._thread is not None:
-            self._thread.join(timeout=timeout)
+        """Stop polling and wait up to ``timeout`` seconds for the thread."""
+        with self._lifecycle_lock:
+            self._stop.set()
+            thread = self._thread
+            if thread is not None and thread.is_alive():
+                thread.join(timeout=timeout)
             self._thread = None
 
     def _run(self, stop: threading.Event) -> None:

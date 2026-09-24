@@ -123,7 +123,12 @@ def _load_excel(source: Dict[str, Any]) -> List[Dict[str, Any]]:
             "Excel data sources require openpyxl (pip install openpyxl).",
         ) from error
     path = _resolve_path(source["path"])
-    workbook = load_workbook(filename=str(path), read_only=True, data_only=True)
+    try:
+        workbook = load_workbook(filename=str(path), read_only=True, data_only=True)
+    except OSError:
+        raise
+    except Exception as error:  # noqa: BLE001  # reason: openpyxl's BadZipFile / InvalidFileException derive from Exception only; re-raised as the action family
+        raise AutoControlActionException(f"Excel {path}: {error}") from error
     try:
         sheet_name = source.get("sheet")
         worksheet = workbook[sheet_name] if sheet_name else workbook.active

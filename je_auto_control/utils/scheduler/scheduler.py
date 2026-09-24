@@ -85,7 +85,7 @@ class Scheduler:
                 repeat: bool = True, max_runs: Optional[int] = None,
                 job_id: Optional[str] = None) -> ScheduledJob:
         """Register and schedule a new interval job; return the record."""
-        _check_max_runs(max_runs)
+        max_runs = _check_max_runs(max_runs)
         jid = job_id or uuid.uuid4().hex[:8]
         now = time.monotonic()
         interval = max(0.1, float(interval_seconds))
@@ -104,7 +104,7 @@ class Scheduler:
                      max_runs: Optional[int] = None,
                      job_id: Optional[str] = None) -> ScheduledJob:
         """Register a cron-driven job (5-field expression)."""
-        _check_max_runs(max_runs)
+        max_runs = _check_max_runs(max_runs)
         expression = parse_cron(cron_expression)
         jid = job_id or uuid.uuid4().hex[:8]
         job = ScheduledJob(
@@ -282,10 +282,19 @@ def _next_cron_ts(expression: CronExpression, now_wall: float) -> float:
         candidate = next_match(expression, candidate)
 
 
-def _check_max_runs(max_runs: Optional[int]) -> None:
-    """``max_runs`` is a positive count or ``None``; 0 used to mean "once"."""
-    if max_runs is not None and int(max_runs) < 1:
+def _check_max_runs(max_runs: Optional[int]) -> Optional[int]:
+    """``max_runs`` as a positive ``int`` or ``None``; 0 used to mean "once".
+
+    The converted value is what gets stored: ``"2"`` (from JSON or an MCP
+    call) passed the check but then ``runs >= "2"`` raised on every tick,
+    before the next run time advanced, so the job ran every tick forever.
+    """
+    if max_runs is None:
+        return None
+    count = int(max_runs)
+    if count < 1:
         raise ValueError(f"max_runs must be at least 1 or None, got {max_runs!r}")
+    return count
 
 
 default_scheduler = Scheduler()

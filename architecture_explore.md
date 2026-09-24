@@ -20,7 +20,7 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 | 指標 | 數值 |
 | --- | ---: |
 | Python 模組總數（含周邊子專案） | 1,049 |
-| 程式碼總行數 | 148,925 |
+| 程式碼總行數 | 148,998 |
 | `je_auto_control/utils/` 子套件數 | 310 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 774 |
 | 套件門面 `__all__` 公開名稱數 | 1,241 |
@@ -323,7 +323,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.3 排程、觸發與背景監看
 
-> 11 個套件、約 3,964 行。
+> 11 個套件、約 4,032 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -332,9 +332,9 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/lock_session/` | 166 | 鎖定工作站、等待解鎖並分類鎖定狀態轉換 |
 | `utils/observer/` | 234 | 反應式畫面觀察者，在出現／消失／變化時觸發 |
 | `utils/recurrence/` | 388 | RFC 5545 重複規則解析與發生時間展開 |
-| `utils/scheduler/` | 439 | 間隔式與 cron 式的 action JSON 排程器 |
+| `utils/scheduler/` | 448 | 間隔式與 cron 式的 action JSON 排程器 |
 | `utils/session_guard/` | 62 | 驅動輸入前先偵測工作階段是否已鎖定／非互動 |
-| `utils/triggers/` | 1,241 | 事件驅動觸發引擎：影像／視窗／像素／檔案／webhook／IMAP 郵件 |
+| `utils/triggers/` | 1,300 | 事件驅動觸發引擎：影像／視窗／像素／檔案／webhook／IMAP 郵件 |
 | `utils/voice/` | 87 | 語音指令路由：把辨識到的語句對應到 `AC_*` action list |
 | `utils/watchdog/` | 183 | 背景彈窗／中斷看門狗，供無人值守自動化 |
 | `utils/watcher/` | 82 | 無頭輪詢原語：滑鼠位置、像素顏色、log tail |
@@ -598,7 +598,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.13 資料來源、結構驗證與 i18n
 
-> 24 個套件、約 4,337 行。
+> 24 個套件、約 4,342 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -607,7 +607,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/data_drift/` | 128 | 分布漂移偵測 |
 | `utils/data_profile/` | 121 | 資料剖析與結構推斷 |
 | `utils/data_quality/` | 201 | 資料品質：列結構驗證、欄位擷取、遮蔽 |
-| `utils/data_source/` | 192 | 資料驅動執行：從 CSV／JSON／SQLite／Excel 載入資料列 |
+| `utils/data_source/` | 197 | 資料驅動執行：從 CSV／JSON／SQLite／Excel 載入資料列 |
 | `utils/dataset_diff/` | 89 | 表格資料列差異比對（CDC 風格） |
 | `utils/gettext_catalog/` | 322 | GNU gettext 目錄 I/O（解析 .po、編譯／讀取 .mo、訊息查詢） |
 | `utils/i18n_test/` | 231 | 國際化／在地化測試輔助 |
@@ -1073,13 +1073,13 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `utils/agent/` | 8 | 1,446 |
 | `linux_with_x11/` | 19 | 1,236 |
 | `linux_wayland/` | 17 | 2,870 |
-| `utils/triggers/` | 4 | 1,241 |
+| `utils/triggers/` | 4 | 1,300 |
 | `utils/ocr/` | 9 | 1,126 |
 | `utils/usbip/` | 5 | 945 |
 | `utils/assertion/` | 3 | 881 |
 | `osx/` | 17 | 919 |
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 837 |
-| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 677 | 52,882 |
-| **總計** | **1,043** | **148,860** |
+| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 677 | 52,896 |
+| **總計** | **1,043** | **148,933** |
 

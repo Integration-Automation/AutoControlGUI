@@ -83,12 +83,20 @@ class WebhookTrigger:
     last_status: int = 0
 
 
+#: Verbs the request handler answers; anything else gets a 501 before routing.
+SUPPORTED_METHODS = ("GET", "POST", "PUT", "PATCH", "DELETE")
+
+
 def _normalize_methods(methods: Optional[List[str]]) -> Tuple[str, ...]:
+    """Upper-cased, de-duplicated verbs; one the server cannot receive raises."""
     if not methods:
         return ("POST",)
     seen: List[str] = []
     for raw in methods:
         method = str(raw).upper().strip()
+        if method and method not in SUPPORTED_METHODS:
+            raise ValueError(
+                f"webhook method {method!r} is not supported; use one of {SUPPORTED_METHODS}")
         if method and method not in seen:
             seen.append(method)
     return tuple(seen) or ("POST",)
@@ -243,6 +251,9 @@ class _WebhookHandler(BaseHTTPRequestHandler):
 
     def do_PUT(self) -> None:  # noqa: N802
         self._dispatch("PUT")
+
+    def do_PATCH(self) -> None:  # noqa: N802
+        self._dispatch("PATCH")
 
     def do_DELETE(self) -> None:  # noqa: N802
         self._dispatch("DELETE")

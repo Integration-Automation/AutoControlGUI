@@ -1149,7 +1149,8 @@ Webhook(HTTP push)觸發
 =======================
 
 內建的 :mod:`http.server` dispatcher 在外部服務 POST 到註冊路徑時
-觸發腳本。可設定路徑、允許的方法、可選 bearer token;請求方法、
+觸發腳本。可設定路徑、允許的方法(``GET``、``POST``、``PUT``、``PATCH``、
+``DELETE``;其他方法在註冊時就會被拒絕)、可選 bearer token;請求方法、
 路徑、query、headers、原始 body、解析後 JSON 都會種到變數作用域::
 
    import je_auto_control as ac

@@ -54,6 +54,9 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Changed
 
+- **Webhook methods**: `PATCH` webhooks are served; verbs the server cannot
+  answer (e.g. `HEAD`) are refused when the webhook is added instead of
+  returning 501 on every request.
 - **Golden-image capture (`take_golden` / `compare_to_golden`) reads its
   region in mouse coordinates**, like every other capture; region goldens
   taken on a scaled display need re-taking.
@@ -295,6 +298,11 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Fixed
 
+- **Triggers and scheduler**: concurrent trigger-engine start / stop no
+  longer doubles the polling thread or raises; one malformed email no longer
+  stops a mailbox's polling; mailbox names with spaces or brackets work; a
+  string `max_runs` stops the job; a corrupt .xlsx data source is an ordinary
+  action error.
 - **Emergency stop on Linux / macOS**: the stop key wakes a sleeping or
   waiting main thread there too (SIGINT is sent to the main thread).
 - **Image analysis and packaging**: colour-vision simulation uses Machado
