@@ -58,6 +58,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260925-03 | 2026-09-25 | Stores keep data and secrets under contention and odd input: the secret vault locks across processes, JSON stores read a BOM and wait out a reader, cassettes redact set_cookie, truncated deflate is refused, x-gzip is gzip, WorkQueue and CheckpointStore raise their own errors | #bugfix #security #storage | [2026-09](2026-09.md) |
 | U-20260925-02 | 2026-09-25 | Computer use and DAG runs can be stopped: stop_event on AgentLoop, run_computer_use and run_dag, Stop in the tabs' Actions menu, and closing the window asks running jobs to stop | #feature #gui #agent | [2026-09](2026-09.md) |
 | U-20260925-01 | 2026-09-25 | Data-format helpers follow their specs: multipart keeps binary file bytes and backslashes in filenames, JSONPath != matches a missing member and filter strings may hold )], RRULE refuses parts it would ignore, LatencyDigest orders negative values | #bugfix #data | [2026-09](2026-09.md) |
 | U-20260924-84 | 2026-09-24 | Protocol helpers follow their specs at the edges: JWT list alg and crit, SSE split CRLF, escaped quotes in Link and Cache-Control, newer traceparent versions, typed problem members, escaped unreserved URL characters, empty cookie values | #bugfix #http #security | [2026-09](2026-09.md) |
@@ -245,7 +246,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | File | Period | Entries |
 |---|---|---:|
-| [2026-09.md](2026-09.md) | 2026-09 | 156 |
+| [2026-09.md](2026-09.md) | 2026-09 | 157 |
 | [2026-08-f.md](2026-08-f.md) | 2026-08 | 1 |
 | [2026-08-e.md](2026-08-e.md) | 2026-08 | 2 |
 | [2026-08-d.md](2026-08-d.md) | 2026-08 | 2 |

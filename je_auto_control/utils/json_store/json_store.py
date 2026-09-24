@@ -54,10 +54,33 @@ def _atomic_write(path: Union[str, Path], write: Callable[[int], None]) -> None:
         dir=directory, prefix=f".{file_path.name}.", suffix=".tmp")
     try:
         write(handle_fd)
-        os.replace(tmp_name, str(file_path))
+        _replace(tmp_name, str(file_path))
     finally:
         if os.path.exists(tmp_name):
             os.remove(tmp_name)
+
+
+#: How long a rename waits for a reader to let go of the destination (Windows).
+_REPLACE_WAIT_S = 1.0
+
+
+def _replace(source: str, destination: str) -> None:
+    """``os.replace``, retried while Windows reports the destination as in use.
+
+    Windows refuses to replace a file another handle has open without
+    ``FILE_SHARE_DELETE`` -- which is how Python opens files -- so a reader
+    that happened to have the store open failed the write with
+    ``PermissionError``, after the caller's change had already been made.
+    """
+    deadline = time.monotonic() + _REPLACE_WAIT_S
+    while True:
+        try:
+            os.replace(source, destination)
+            return
+        except PermissionError:
+            if time.monotonic() > deadline:
+                raise
+            time.sleep(0.01)
 
 
 def append_json_line(path: Union[str, Path], line: str) -> None:
@@ -85,7 +108,9 @@ def read_json_dict(path: Optional[Union[str, Path]]) -> Dict[str, Any]:
     if not file_path.is_file():
         return {}
     try:
-        data = json.loads(file_path.read_text(encoding="utf-8"))
+        # utf-8-sig: a file saved by an editor with a BOM read as unreadable,
+        # so the next update() wrote back only its own key.
+        data = json.loads(file_path.read_text(encoding="utf-8-sig"))
     except (OSError, ValueError):
         return {}
     return data if isinstance(data, dict) else {}
@@ -95,7 +120,7 @@ def _read_json_object(path: Path) -> Dict[str, Any]:
     """The JSON object at ``path`` (``{}`` if missing); anything else raises ``ValueError``."""
     if not path.is_file():
         return {}
-    data = json.loads(path.read_text(encoding="utf-8"))
+    data = json.loads(path.read_text(encoding="utf-8-sig"))
     if not isinstance(data, dict):
         raise ValueError(f"{path} does not hold a JSON object")
     return data

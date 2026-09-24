@@ -119,6 +119,9 @@ class Cassette:
         recorded_response = dict(response)
         if "headers" in recorded_response:
             recorded_response["headers"] = _redacted(recorded_response["headers"])
+        # http_request also hands every Set-Cookie back in its own list.
+        if isinstance(recorded_response.get("set_cookie"), list):
+            recorded_response["set_cookie"] = [REDACTED] * len(recorded_response["set_cookie"])
         self._interactions.append({"request": _request_view(call),
                                    "response": recorded_response})
 

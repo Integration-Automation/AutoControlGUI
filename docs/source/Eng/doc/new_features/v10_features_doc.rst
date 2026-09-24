@@ -62,7 +62,9 @@ Two failure kinds, mirroring REFramework:
   ``kind="business"``.
 
 ``stats()`` returns per-status counts (``new`` / ``in_progress`` /
-``success`` / ``failed``) for dashboards and run reports.
+``success`` / ``failed``) for dashboards and run reports. A database that
+cannot be opened or used (not a SQLite file, locked past the timeout) raises
+``WorkQueueError``, an ``AutoControlException``.
 
 
 Executor commands

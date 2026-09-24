@@ -20,10 +20,10 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 | 指標 | 數值 |
 | --- | ---: |
 | Python 模組總數（含周邊子專案） | 1,051 |
-| 程式碼總行數 | 150,670 |
+| 程式碼總行數 | 150,749 |
 | `je_auto_control/utils/` 子套件數 | 310 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 775 |
-| 套件門面 `__all__` 公開名稱數 | 1,241 |
+| 套件門面 `__all__` 公開名稱數 | 1,244 |
 | GUI 分頁數（`main_widget` 註冊） | 48 |
 | MCP 工具數（`build_default_tool_registry()` 實測） | 678 |
 | `test_*.py` 測試檔／測試函式 | 478 / 4,654 |
@@ -271,13 +271,13 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.1 執行引擎與腳本資產
 
-> 24 個套件、約 14,305 行。
+> 24 個套件、約 14,351 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
 | `utils/action_lint/` | 369 | action 檔 linter 與 JSON Schema 產生器（CI 用 `python -m` 進入點） |
 | `utils/action_signing/` | 380 | action 檔 HMAC-SHA256 簽章與 Fernet 加密，`execute_files` 會強制驗簽 |
-| `utils/checkpoint/` | 120 | 流程檢查點與續跑，讓長 action list 具持久性 |
+| `utils/checkpoint/` | 129 | 流程檢查點與續跑，讓長 action list 具持久性 |
 | `utils/codegen/` | 255 | 由 action list 產生可執行的 pytest / python / robot 測試碼 |
 | `utils/dag/` | 536 | 跨主機 DAG 編排器（圖模型 + runner） |
 | `utils/decision_table/` | 112 | DMN 風格決策表：規則 + 命中策略，把分支外部化 |
@@ -286,7 +286,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/flow_debugger/` | 155 | action list 的單步除錯器與追蹤器 |
 | `utils/input_macro/` | 451 | 定時輸入事件：錄製結果的整形（`timeline`／`InputRecorder`，Windows 與 macOS 共用）、重播與宣告式輸入序列 DSL |
 | `utils/json/` | 99 | action JSON 檔讀寫與正規化格式化（`fmt --check` 的後端） |
-| `utils/json_store/` | 241 | JSON 字典檔持久化的共用小工具（內部管線） |
+| `utils/json_store/` | 266 | JSON 字典檔持久化的共用小工具（內部管線） |
 | `utils/loop_guard/` | 158 | 機械式卡死迴圈偵測（agent loop 用） |
 | `utils/plugin_loader/` | 142 | 掃描外部 Python 外掛目錄並註冊其 `AC_` callable |
 | `utils/plugin_sdk/` | 80 | 外掛 SDK：透過 entry points 發佈／載入第三方 `AC_*` 指令 |
@@ -298,7 +298,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/state_machine/` | 268 | 宣告式有限狀態機驅動 action JSON |
 | `utils/stubs/` | 311 | 為 `AC_*` 指令面產生型別 stub |
 | `utils/test_record/` | 70 | 全域測試紀錄單例，記錄每個動作的參數與例外 |
-| `utils/work_queue/` | 268 | 交易式工作佇列（dispatcher／performer），支撐大量批次執行 |
+| `utils/work_queue/` | 280 | 交易式工作佇列（dispatcher／performer），支撐大量批次執行 |
 
 ### 5.4.2 框架基礎設施
 
@@ -526,7 +526,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.11 伺服器、網路協定與外部整合
 
-> 24 個套件、約 6,591 行。
+> 24 個套件、約 6,604 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -535,10 +535,10 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/cookie_jar/` | 122 | RFC 6265 cookie jar |
 | `utils/email_send/` | 118 | SMTP 寄信（email 觸發器的發送端搭檔） |
 | `utils/events/` | 106 | 對外 CloudEvents 發送（執行生命週期事件） |
-| `utils/http_cassette/` | 153 | 錄製／重播 HTTP 互動，做離線決定性 API 測試 |
+| `utils/http_cassette/` | 156 | 錄製／重播 HTTP 互動，做離線決定性 API 測試 |
 | `utils/http_client/` | 228 | 零依賴 HTTP(S) 用戶端，供 action 步驟呼叫 API |
 | `utils/http_conditional/` | 115 | 條件式 HTTP 請求與快取驗證器 |
-| `utils/http_content/` | 148 | HTTP 內容協商與回應解壓縮 |
+| `utils/http_content/` | 158 | HTTP 內容協商與回應解壓縮 |
 | `utils/http_problem/` | 118 | RFC 9457 problem+json 解析 |
 | `utils/jwt/` | 240 | JWT（HMAC 家族）編碼、解碼與 claim 驗證 |
 | `utils/link_header/` | 150 | RFC 8288 Link header 解析與分頁 |
@@ -629,7 +629,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.14 安全、機密與合規
 
-> 13 個套件、約 2,797 行。
+> 13 個套件、約 2,817 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -642,7 +642,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/redaction/` | 504 | 截圖遮蔽層：規則偵測 + 政策 + 協調器（上傳 VLM 前先遮） |
 | `utils/sbom/` | 143 | SBOM（CycloneDX）產生 |
 | `utils/secret_ref/` | 143 | URI scheme 形式的值參照解析 |
-| `utils/secrets/` | 340 | 加密機密儲存庫，供 `${secrets.NAME}` 解析 |
+| `utils/secrets/` | 360 | 加密機密儲存庫，供 `${secrets.NAME}` 解析 |
 | `utils/secrets_scan/` | 133 | 掃描 action JSON／資料中應入庫卻硬編碼的機密 |
 | `utils/vex/` | 167 | OpenVEX 陳述撰寫與漏洞分類處置 |
 | `utils/vuln_scan/` | 259 | 以 OSV 比對 SBOM 元件的漏洞（純標準庫） |
@@ -1081,6 +1081,6 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `osx/` | 17 | 925 |
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 837 |
-| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 677 | 53,563 |
-| **總計** | **1,045** | **150,605** |
+| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 677 | 53,642 |
+| **總計** | **1,045** | **150,684** |
 

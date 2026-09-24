@@ -30,7 +30,8 @@ variables::
 On normal completion the checkpoint is cleared. A failing step raises and
 leaves the checkpoint on that step, so the next call runs it again. The store is injectable, so
 resume is unit-tested deterministically without a real crash:
-``CheckpointStore.save`` / ``load`` / ``clear``.
+``CheckpointStore.save`` / ``load`` / ``clear``. A database that cannot be opened
+or used raises ``CheckpointStoreError``, an ``AutoControlException``.
 
 Executor / MCP commands:
 

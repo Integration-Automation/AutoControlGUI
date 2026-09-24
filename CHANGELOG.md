@@ -15,6 +15,8 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Added
 
+- `WorkQueueError` and `CheckpointStoreError` (both
+  `AutoControlException`) for a database that cannot be opened or used.
 - `stop_event=` on `AgentLoop`, `run_computer_use` and `run_dag`; the
   Computer Use and DAG Runner tabs have a Stop action, and closing the
   window asks a running job to stop.
@@ -329,6 +331,13 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Fixed
 
+- The secret vault no longer loses a secret when two managers write
+  it at once.
+- JSON stores read a file with a UTF-8 BOM, and a write waits for a
+  Windows reader instead of failing.
+- HTTP cassettes redact `set_cookie`.
+- A truncated deflate body raises instead of returning a prefix;
+  `x-gzip` is accepted.
 - JSONPath `!=` keeps nodes that lack the member; a filter string may
   contain `)]`.
 - `parse_multipart` keeps a backslash in a filename.

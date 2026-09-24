@@ -15,7 +15,8 @@ import time
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, ContextManager, Dict, List, Optional
 
-from je_auto_control.utils.sqlite_support import autocommit_connection
+from je_auto_control.utils.exception.exceptions import AutoControlException
+from je_auto_control.utils.sqlite_support import autocommit_connection, sqlite_errors_as
 
 if TYPE_CHECKING:  # reason: sqlite3 types are named only in annotations
     import sqlite3
@@ -30,9 +31,14 @@ class Checkpoint:
     updated: float = 0.0
 
 
+class CheckpointStoreError(AutoControlException):
+    """The checkpoint database could not be opened or used."""
+
+
 class CheckpointStore:
     """SQLite-backed store of one checkpoint per ``run_id``."""
 
+    @sqlite_errors_as(CheckpointStoreError)
     def __init__(self, db_path: str) -> None:
         self._db_path = db_path
         self._ensure_schema()
@@ -47,6 +53,7 @@ class CheckpointStore:
                 "run_id TEXT PRIMARY KEY, step_index INTEGER NOT NULL, "
                 "variables TEXT NOT NULL, updated REAL NOT NULL)")
 
+    @sqlite_errors_as(CheckpointStoreError)
     def save(self, run_id: str, step_index: int,
              variables: Dict[str, Any]) -> None:
         """Persist (or overwrite) the checkpoint for ``run_id``."""
@@ -59,6 +66,7 @@ class CheckpointStore:
                 (str(run_id), int(step_index), json.dumps(variables),
                  time.time()))
 
+    @sqlite_errors_as(CheckpointStoreError)
     def load(self, run_id: str) -> Optional[Checkpoint]:
         """Return the checkpoint for ``run_id`` or ``None``."""
         with self._connect() as conn:
@@ -71,6 +79,7 @@ class CheckpointStore:
                           variables=json.loads(row["variables"]),
                           updated=row["updated"])
 
+    @sqlite_errors_as(CheckpointStoreError)
     def clear(self, run_id: str) -> bool:
         """Delete the checkpoint for ``run_id``; return whether it existed."""
         with self._connect() as conn:
