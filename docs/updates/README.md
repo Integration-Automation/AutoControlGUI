@@ -58,6 +58,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260925-18 | 2026-09-25 | Scripting, recording and locator helpers at their edges: dotted trigger variables resolve, repair verdicts in every form, torn heal-log lines, A/B stats across stores, actions before the first frame, CJK recall, BOM variable files, a new trace per reset | #bugfix #scripting | [2026-09](2026-09.md) |
 | U-20260925-17 | 2026-09-25 | Remote-desktop workers run on daemon threads: exiting during a signaling long-poll, or closing the viewer mid-transfer, no longer aborts the process | #bugfix #gui #remote-desktop | [2026-09](2026-09.md) |
 | U-20260925-16 | 2026-09-25 | Tests carry no unused imports: 20 removed across 16 test modules, and one lambda assignment made a def | #test #cleanup | [2026-09](2026-09.md) |
 | U-20260925-15 | 2026-09-25 | Test-infrastructure and statistics helpers at their edges: re-merged shard reports, bucket edges at Unix time, regex assert_text ignore_case, the screen-stable clock, the documented cost summary and current Claude prices, huge ints in validate_rows, the t quantile for tiny alpha | #bugfix #testing #data | [2026-09](2026-09.md) |
@@ -260,7 +261,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | File | Period | Entries |
 |---|---|---:|
-| [2026-09.md](2026-09.md) | 2026-09 | 171 |
+| [2026-09.md](2026-09.md) | 2026-09 | 172 |
 | [2026-08-f.md](2026-08-f.md) | 2026-08 | 1 |
 | [2026-08-e.md](2026-08-e.md) | 2026-08 | 2 |
 | [2026-08-d.md](2026-08-d.md) | 2026-08 | 2 |

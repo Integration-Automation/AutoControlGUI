@@ -29,6 +29,12 @@ if TYPE_CHECKING:  # reason: sqlite3 types are named only in annotations
 
 # Any language's letters and digits: [a-z0-9] never matched "登入" and cut "café".
 _TOKEN = re.compile(r"\w+")
+# Scripts written without spaces (kana, CJK ideographs, Hangul). \w+ made
+# "登入後台系統" one token, so recalling "登入" found nothing; such runs are
+# split into overlapping character pairs instead.
+_UNSPACED = re.compile("[" + "".join(f"{chr(low)}-{chr(high)}" for low, high in (
+    (0x3040, 0x30FF), (0x3400, 0x4DBF), (0x4E00, 0x9FFF), (0xAC00, 0xD7AF),
+    (0xF900, 0xFAFF))) + "]+")
 
 
 @dataclass
@@ -44,7 +50,13 @@ class Episode:
 
 
 def _tokens(text: str) -> List[str]:
-    return _TOKEN.findall((text or "").lower())
+    tokens: List[str] = []
+    for word in _TOKEN.findall((text or "").lower()):
+        tokens.extend(part for part in _UNSPACED.split(word) if part)
+        for run in _UNSPACED.findall(word):
+            tokens.extend([run] if len(run) == 1
+                          else [run[i:i + 2] for i in range(len(run) - 1)])
+    return tokens
 
 
 def _row_to_episode(row: "sqlite3.Row", score: float = 0.0) -> Episode:

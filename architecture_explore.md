@@ -20,7 +20,7 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 | 指標 | 數值 |
 | --- | ---: |
 | Python 模組總數（含周邊子專案） | 1,052 |
-| 程式碼總行數 | 151,557 |
+| 程式碼總行數 | 151,601 |
 | `je_auto_control/utils/` 子套件數 | 310 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 775 |
 | 套件門面 `__all__` 公開名稱數 | 1,244 |
@@ -271,7 +271,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.1 執行引擎與腳本資產
 
-> 24 個套件、約 14,356 行。
+> 24 個套件、約 14,370 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -293,7 +293,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/project/` | 187 | 專案腳手架：建立目錄結構與範本 action 檔 |
 | `utils/recording_edit/` | 150 | 不重錄的前提下裁切／過濾／縮放已錄製的 action list |
 | `utils/saga/` | 100 | Saga 協調器：失敗時以 LIFO 補償動作回滾 |
-| `utils/script_vars/` | 197 | 執行期變數作用域與 `${var}` / `${secrets.*}` 插值 |
+| `utils/script_vars/` | 211 | 執行期變數作用域與 `${var}` / `${secrets.*}` 插值 |
 | `utils/skill_library/` | 115 | 具名可重用 action 序列（skill）的持久化倉庫 |
 | `utils/state_machine/` | 268 | 宣告式有限狀態機驅動 action JSON |
 | `utils/stubs/` | 311 | 為 `AC_*` 指令面產生型別 stub |
@@ -341,7 +341,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.4 輸入模擬與動作品質
 
-> 22 個套件、約 2,766 行。
+> 22 個套件、約 2,768 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -360,7 +360,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/mouse_path/` | 106 | 多路徑點滑鼠手勢（沿折線移動或拖曳） |
 | `utils/mouse_relative/` | 59 | 相對位移滑鼠移動 |
 | `utils/postcondition/` | 146 | 宣告式的動作預期結果規格，對照畫面驗證 |
-| `utils/step_repair/` | 134 | 失敗／無效動作的修復策略（自我修正迴圈） |
+| `utils/step_repair/` | 136 | 失敗／無效動作的修復策略（自我修正迴圈） |
 | `utils/table_grid_fill/` | 163 | 以 OCR 文字填滿格線表格，取得可定址的表格 |
 | `utils/input_reach/` | 111 | 送出去的輸入到不到得了：桌面鎖定查詢（免費）＋ 實際送一個 F13 確認沒有被過濾（有副作用，只給診斷用） |
 | `utils/keyboard_layout/` | 152 | 向系統問「這個鍵盤配置下每個鍵印出什麼字」（`ToUnicodeEx`），問不到退回 US 對照表 |
@@ -463,11 +463,11 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.8 元素定位、自我修復與智慧等待
 
-> 23 個套件、約 4,244 行。
+> 23 個套件、約 4,251 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
-| `utils/ab_locator/` | 382 | A/B 定位器框架：同時競速 N 種策略並記錄各自勝率 |
+| `utils/ab_locator/` | 386 | A/B 定位器框架：同時競速 N 種策略並記錄各自勝率 |
 | `utils/adaptive_timeout/` | 84 | 由觀測到的步驟耗時推導等待逾時，而非硬猜 |
 | `utils/anchor_locator/` | 457 | 錨點定位器：以空間關係組合 影像／OCR／VLM／a11y 四種來源 |
 | `utils/app_idle/` | 109 | 等應用程式不再忙碌，再驅動下一步 |
@@ -486,22 +486,22 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/observation_delta/` | 103 | token 預算內的觀察差異：兩個 UI 影格之間變了什麼 |
 | `utils/screen_state/` | 189 | 語義畫面狀態：快照／差異與結構化畫面描述 |
 | `utils/scroll_find/` | 103 | 捲動直到目標影像／文字可見 |
-| `utils/self_healing/` | 356 | 自癒定位器：先影像樣板、失敗改用 VLM，並留稽核記錄 |
+| `utils/self_healing/` | 359 | 自癒定位器：先影像樣板、失敗改用 VLM，並留稽核記錄 |
 | `utils/semantic_recording/` | 460 | 為錄製內容加上語義錨點，支援換機重播與自癒重播 |
 | `utils/settle_detector/` | 79 | 以純函式介面判定 UI 是否已靜止 |
 | `utils/smart_waits/` | 663 | 智慧等待：以影格差異取代 `time.sleep` |
 
 ### 5.4.9 AI / Agent / LLM
 
-> 13 個套件、約 21,945 行。
+> 13 個套件、約 21,961 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
 | `utils/a2a/` | 92 | A2A（agent-to-agent）agent card 產生 |
 | `utils/agent/` | 1,885 | 閉環 Computer-Use Agent 主迴圈 + Anthropic／OpenAI／Computer-Use 三後端 |
-| `utils/agent_memory/` | 154 | agent 的持久化情節記憶（goal → trajectory → outcome） |
+| `utils/agent_memory/` | 166 | agent 的持久化情節記憶（goal → trajectory → outcome） |
 | `utils/agent_replay/` | 67 | 可攜的 agent 軌跡追蹤（記錄 observation→action 並重播） |
-| `utils/agent_trace/` | 168 | agent 可觀測性：OpenTelemetry GenAI 慣例的 LLM span |
+| `utils/agent_trace/` | 172 | agent 可觀測性：OpenTelemetry GenAI 慣例的 LLM span |
 | `utils/cost_telemetry/` | 343 | 每次呼叫的 LLM 成本遙測：token 數 + 估算美金 |
 | `utils/cua_action/` | 204 | 標準化 computer-use 動作結構（Anthropic／OpenAI → `AC_*`） |
 | `utils/llm/` | 365 | 自然語言 → action list 規劃器 + Anthropic／null 後端 |
@@ -557,7 +557,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.12 報表、可觀測性與測試治理
 
-> 34 個套件、約 7,410 行。
+> 34 個套件、約 7,415 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -592,7 +592,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/test_select/` | 129 | 以執行歷史做風險導向的測試選取 |
 | `utils/test_shard/` | 105 | 以耗時為權重的套件切分與分片結果合併 |
 | `utils/test_suite/` | 527 | QA 套件編排：把扁平 action list 評分為測試案例 + CI 報表 |
-| `utils/time_travel/` | 383 | 錄製 session 的時光回溯除錯（控制器 + 播放器） |
+| `utils/time_travel/` | 388 | 錄製 session 的時光回溯除錯（控制器 + 播放器） |
 | `utils/timeseries/` | 175 | 時間序列轉換（rate／降採樣／重採樣） |
 | `utils/trace_context/` | 183 | W3C Trace Context 傳遞 |
 
@@ -1082,6 +1082,6 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `osx/` | 17 | 925 |
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 837 |
-| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 677 | 54,098 |
-| **總計** | **1,046** | **151,492** |
+| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 677 | 54,142 |
+| **總計** | **1,046** | **151,536** |
 

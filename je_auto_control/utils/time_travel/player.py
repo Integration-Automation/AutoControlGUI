@@ -210,9 +210,14 @@ class TimelinePlayer:
         else:
             window_end = frame.timestamp + 1.0
         # Half-open between frames: an action exactly on the next frame's
-        # timestamp was listed in both snapshots.
+        # timestamp was listed in both snapshots. The first frame's window
+        # reaches back to the first action, which could precede every frame
+        # and was then shown nowhere.
+        window_start = frame.timestamp
+        if step == 0 and self._actions:
+            window_start = min(window_start, min(a.timestamp for a in self._actions))
         actions = self.actions_in_window(
-            frame.timestamp, window_end,
+            window_start, window_end,
             include_end=step + 1 >= len(self._frames))
         return TimelineSnapshot(
             step=step, frame=frame,

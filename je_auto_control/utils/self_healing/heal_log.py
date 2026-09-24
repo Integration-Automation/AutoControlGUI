@@ -84,7 +84,10 @@ class HealEventLog:
         with self._lock:
             if not self._path.exists():
                 return []
-            with self._path.open("r", encoding="utf-8") as fp:
+            # errors="replace": a write cut inside a multi-byte character left
+            # bytes strict UTF-8 refused, and the whole log became unreadable
+            # instead of that one line being skipped.
+            with self._path.open("r", encoding="utf-8", errors="replace") as fp:
                 lines = fp.readlines()
         return lines[-limit:]
 

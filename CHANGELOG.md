@@ -363,6 +363,16 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Fixed
 
+- `${webhook.body}`, `${email.subject}` and other dotted trigger
+  variables resolve in scripts.
+- Step repair repeats a no-op action whatever form the verdict takes.
+- The self-healing log survives a torn multi-byte line.
+- A/B locator reports see other stores' records; a strategy that never
+  succeeded is not recommended.
+- Time-travel replay shows actions logged before the first frame.
+- Agent memory recalls CJK keywords.
+- Variable files with a UTF-8 BOM load.
+- `AC_trace_reset` starts a new trace id.
 - Exiting while a WebRTC signaling poll is running, or closing the
   remote-desktop viewer during a file transfer, no longer aborts the
   process.

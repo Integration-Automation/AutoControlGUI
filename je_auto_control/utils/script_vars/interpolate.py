@@ -14,7 +14,7 @@ silently executing with wrong values.
 import json
 import re
 from pathlib import Path
-from typing import Any, Mapping, MutableMapping, Optional
+from typing import Any, List, Mapping, MutableMapping, Optional, Tuple
 
 # Bounded character class with a single quantifier — avoids the nested
 # alternation that ReDoS scanners (semgrep regex_dos) flag on
@@ -78,14 +78,27 @@ def _resolve_segment(value: Any, segment: str) -> Any:
     return _MISSING
 
 
+def _split_variable(name: str, variables: Mapping[str, Any]) -> Tuple[str, List[str]]:
+    """The longest dotted prefix of ``name`` that is a variable, and the path after it.
+
+    The webhook and e-mail triggers store ``webhook.body``, ``email.subject``
+    and the like under dotted names; taking only the text before the first
+    dot looked for ``webhook`` and never found them.
+    """
+    parts = name.split(".")
+    for cut in range(len(parts), 0, -1):
+        base = ".".join(parts[:cut])
+        if base in variables:
+            return base, parts[cut:]
+    raise ValueError(f"Unknown variable: ${{{name}}}")
+
+
 def _lookup(name: str, variables: Mapping[str, Any]) -> Any:
     if name.startswith(_VAULT_NAMESPACE):
         return _lookup_secret(name[len(_VAULT_NAMESPACE):])
-    base, _, path = name.partition(".")
-    if base not in variables:
-        raise ValueError(f"Unknown variable: ${{{name}}}")
+    base, path = _split_variable(name, variables)
     value = variables[base]
-    for segment in filter(None, path.split(".")):
+    for segment in filter(None, path):
         value = _resolve_segment(value, segment)
         if value is _MISSING:
             raise ValueError(f"Unknown variable: ${{{name}}}")
@@ -114,7 +127,8 @@ def load_vars_from_json(path: str,
                         into: Optional[MutableMapping[str, Any]] = None
                         ) -> MutableMapping[str, Any]:
     """Load a flat JSON object as a variable bag."""
-    with open(Path(path), encoding="utf-8") as file:
+    # utf-8-sig: Windows editors save a BOM, which json.load refused.
+    with open(Path(path), encoding="utf-8-sig") as file:
         data = json.load(file)
     if not isinstance(data, dict):
         raise ValueError(f"{path}: expected a JSON object of variables")

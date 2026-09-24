@@ -118,7 +118,9 @@ def _try_tactic(tactic: str, verdict: str, used: List[str], act: Callable[[], An
     # Only an action that did nothing is repeated. One that changed the
     # screen (but not as verified) is waited on / re-checked instead: acting
     # again toggled a checkbox back or submitted twice.
-    if verdict == "no_op":
+    # The same unwrapping plan_repair uses: an EffectVerdict or a dict was
+    # never equal to "no_op", so its action was never repeated.
+    if _effect_of(verdict) == "no_op":
         act()
     if verify():
         return RepairOutcome(True, len(used) + 1, list(used), f"recovered via {tactic}")

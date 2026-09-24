@@ -150,8 +150,12 @@ class AgentTrace:
         } for s in self._spans]
 
     def reset(self) -> None:
-        """Drop all recorded spans."""
+        """Drop all recorded spans and start a new trace id for the next run.
+
+        Keeping the id made an OTLP backend merge the next run into this one.
+        """
         self._spans.clear()
+        self._trace_id = new_trace_id()
 
 
 default_trace = AgentTrace()
