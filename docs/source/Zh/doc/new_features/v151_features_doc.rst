@@ -29,7 +29,10 @@
 ``from_anthropic`` / ``from_openai_cua`` 把各供應商酬載對應為標準 ``{type, x, y, text, …}``(click、double/right/
 middle click、move、type、key、scroll、screenshot)。``to_ac_command`` 把標準動作對應為 ``[command_name, params]``
 AC 動作(``AC_click_mouse`` / ``AC_set_mouse_position`` / ``AC_write`` / ``AC_hotkey`` / ``AC_mouse_scroll`` /
-``AC_screenshot``),並對座標套用 ``scale``;無法對應的類型會丟出 ``AutoControlActionException``。``canonical_action``
+``AC_screenshot``;雙擊會變成對兩次點擊的 ``AC_loop``),並對座標套用 ``scale``;無法對應的類型會丟出
+``AutoControlActionException``。按鍵名稱由 ``resolve_key_name`` 換成當前平台的寫法(``Return`` / ``ENTER`` 在
+Windows 是 ``return``,在 X11 與 macOS 是 ``enter``;Esc、翻頁、Backspace、Alt、Super 亦同)。捲動會帶上
+``scroll_direction``;左右捲動需要水平滾輪軸(X11 / Wayland),其他平台會丟出例外。``canonical_action``
 直接建立標準字典。
 
 執行器命令

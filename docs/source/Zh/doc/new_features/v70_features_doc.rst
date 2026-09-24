@@ -32,7 +32,7 @@ JSON 合約與快照比對
 ``match_json`` 回傳 ``MatchReport(ok, mismatches)``,每個不符為 ``{path, kind}``,``kind`` 為
 ``missing``(在 expected、actual 沒有)、``extra``(在 actual、expected 沒有)或 ``changed`` 之一。
 選項:``partial`` 捨棄 ``extra`` 不符(子集比對),``match_type`` 接受型別相符的 ``changed`` 葉
-(Pact ``like``),``ignore`` 略過列出的路徑。``diff_json`` 是原始的路徑標記差異;``normalize_json``
+(Pact ``like``),``ignore`` 略過列出的路徑及其下的所有路徑。``diff_json`` 是原始的路徑標記差異;``normalize_json``
 回傳正規化副本(鍵排序、移除 ``drop`` 鍵)以利穩定比對;``snapshot_json`` 是 golden-master 測試
 (首次執行寫檔,之後比對)。``true`` 與 ``1`` 保持相異。
 

@@ -70,8 +70,10 @@ A dependency-free HTTP(S) client for hybrid UI + API flows::
         timeout=30.0)
     assert resp["status"] == 201
 
-Returns ``{status, ok, headers, text, json, url}``; non-2xx responses are
-returned rather than raised, so you can assert on the status code. Only
+Returns ``{status, ok, headers, set_cookie, text, json, url}``; non-2xx
+responses are returned rather than raised, so you can assert on the status
+code. A repeated header is joined with ", " in ``headers``; ``set_cookie``
+lists every ``Set-Cookie`` value. A body over 64 MiB raises ``URLError``. Only
 ``http`` / ``https`` schemes are allowed. ``AC_http_to_var`` now shares
 the same client, so it can POST bodies and send headers / auth.
 

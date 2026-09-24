@@ -10,11 +10,12 @@ import threading
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING, List, Optional, Union
+from typing import TYPE_CHECKING, Callable, List, Optional, Union
 
+from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.sqlite_support import (
-    SQLITE_ERRORS, last_row_id, require_sqlite3,
+    SQLITE_ERRORS, last_row_id, require_sqlite3, sqlite_errors_as,
 )
 
 if TYPE_CHECKING:  # reason: sqlite3 types are named only in annotations
@@ -27,6 +28,7 @@ SOURCE_MANUAL = "manual"
 SOURCE_REST = "rest"
 
 STATUS_RUNNING = "running"
+_LIVE_RUN_WINDOW_S = 24 * 3600
 STATUS_OK = "ok"
 STATUS_ERROR = "error"
 
@@ -96,11 +98,26 @@ def _validate_status(status: str) -> None:
         )
 
 
+class HistoryStoreError(AutoControlException):
+    """The run-history database failed (corrupt file, lock timeout...)."""
+
+
 class HistoryStore:
     """SQLite-backed run log. Safe to share across threads."""
 
-    def __init__(self, path: Union[str, Path] = _IN_MEMORY_DB) -> None:
-        self._path = str(path) if path == _IN_MEMORY_DB else str(Path(path))
+    def __init__(self,
+                 path: Union[str, Path, Callable[[], Path]] = _IN_MEMORY_DB,
+                 ) -> None:
+        # A callable is resolved on first use. The module-level
+        # ``default_history_store`` is built while the package imports, and
+        # a path fixed then ignores a HOME set afterwards -- which is when a
+        # test suite's conftest.py runs, after the pytest11 plugin.
+        self._path_source: Optional[Callable[[], Path]] = (
+            path if callable(path) else None)
+        self._path: Optional[str] = None
+        if not callable(path):
+            self._path = (str(path) if path == _IN_MEMORY_DB
+                          else str(Path(path)))
         self._lock = threading.Lock()
         # The database is opened on first use, not here. The module-level
         # ``default_history_store`` is built during ``import
@@ -118,10 +135,10 @@ class HistoryStore:
         if self._conn is not None:
             return self._conn
         driver = require_sqlite3()
-        if self._path != _IN_MEMORY_DB:
-            os.makedirs(os.path.dirname(self._path) or ".", exist_ok=True)
+        if self.path != _IN_MEMORY_DB:
+            os.makedirs(os.path.dirname(self.path) or ".", exist_ok=True)
         conn = driver.connect(
-            self._path, check_same_thread=False, isolation_level=None,
+            self.path, check_same_thread=False, isolation_level=None,
         )
         conn.row_factory = driver.Row
         conn.executescript(_SCHEMA)
@@ -141,8 +158,13 @@ class HistoryStore:
 
     @property
     def path(self) -> str:
+        if self._path is None:
+            source = self._path_source
+            self._path = (str(Path(source())) if source is not None
+                          else _IN_MEMORY_DB)
         return self._path
 
+    @sqlite_errors_as(HistoryStoreError)
     def start_run(self, source_type: str, source_id: str,
                   script_path: str, started_at: Optional[float] = None,
                   ) -> int:
@@ -157,6 +179,7 @@ class HistoryStore:
             )
             return last_row_id(cursor)
 
+    @sqlite_errors_as(HistoryStoreError)
     def finish_run(self, run_id: int, status: str,
                    error_text: Optional[str] = None,
                    finished_at: Optional[float] = None,
@@ -174,6 +197,7 @@ class HistoryStore:
             )
             return cursor.rowcount > 0
 
+    @sqlite_errors_as(HistoryStoreError)
     def attach_artifact(self, run_id: int, artifact_path: str) -> bool:
         """Attach or replace the artifact path on a finished run."""
         with self._lock:
@@ -183,6 +207,7 @@ class HistoryStore:
             )
             return cursor.rowcount > 0
 
+    @sqlite_errors_as(HistoryStoreError)
     def list_runs(self, limit: int = 100,
                   source_type: Optional[str] = None,
                   ) -> List[RunRecord]:
@@ -194,7 +219,7 @@ class HistoryStore:
             with self._lock:
                 rows = self._connection().execute(
                     "SELECT * FROM runs "
-                    "ORDER BY started_at DESC LIMIT ?",
+                    "ORDER BY started_at DESC, id DESC LIMIT ?",
                     (bound_limit,),
                 ).fetchall()
         else:
@@ -202,11 +227,12 @@ class HistoryStore:
             with self._lock:
                 rows = self._connection().execute(
                     "SELECT * FROM runs WHERE source_type = ? "
-                    "ORDER BY started_at DESC LIMIT ?",
+                    "ORDER BY started_at DESC, id DESC LIMIT ?",
                     (source_type, bound_limit),
                 ).fetchall()
         return [_row_to_record(row) for row in rows]
 
+    @sqlite_errors_as(HistoryStoreError)
     def get_run(self, run_id: int) -> Optional[RunRecord]:
         """Return a specific row or ``None`` if absent."""
         with self._lock:
@@ -215,6 +241,7 @@ class HistoryStore:
             ).fetchone()
         return _row_to_record(row) if row is not None else None
 
+    @sqlite_errors_as(HistoryStoreError)
     def count(self, source_type: Optional[str] = None) -> int:
         """Return the number of rows, optionally filtered by source."""
         if source_type is not None:
@@ -229,6 +256,7 @@ class HistoryStore:
                 row = self._connection().execute("SELECT COUNT(*) FROM runs").fetchone()
         return int(row[0])
 
+    @sqlite_errors_as(HistoryStoreError)
     def clear(self) -> int:
         """Delete every row (and its artifact file); return rows removed."""
         with self._lock:
@@ -240,22 +268,27 @@ class HistoryStore:
         _remove_artifact_files(paths)
         return removed
 
+    @sqlite_errors_as(HistoryStoreError)
     def prune(self, keep_latest: int) -> int:
         """Keep only the newest ``keep_latest`` rows; delete the rest."""
         if keep_latest < 0:
             raise ValueError("keep_latest must be >= 0")
         with self._lock:
+            # A run still in progress is kept (finish_run would find no row
+            # and its result was lost) unless it started over a day ago, when
+            # it is an orphan of a process that died mid-run.
+            live_since = time.time() - _LIVE_RUN_WINDOW_S
             paths = [r[0] for r in self._connection().execute(
                 "SELECT artifact_path FROM runs WHERE artifact_path IS NOT NULL"
-                " AND id NOT IN ("
-                "SELECT id FROM runs ORDER BY started_at DESC LIMIT ?)",
-                (int(keep_latest),),
+                " AND (status != ? OR started_at < ?) AND id NOT IN ("
+                "SELECT id FROM runs ORDER BY started_at DESC, id DESC LIMIT ?)",
+                (STATUS_RUNNING, live_since, int(keep_latest)),
             ).fetchall()]
             cursor = self._connection().execute(
-                "DELETE FROM runs WHERE id NOT IN ("
-                "SELECT id FROM runs ORDER BY started_at DESC LIMIT ?"
+                "DELETE FROM runs WHERE (status != ? OR started_at < ?) AND id NOT IN ("
+                "SELECT id FROM runs ORDER BY started_at DESC, id DESC LIMIT ?"
                 ")",
-                (int(keep_latest),),
+                (STATUS_RUNNING, live_since, int(keep_latest)),
             )
             removed = int(cursor.rowcount)
         _remove_artifact_files(paths)
@@ -309,4 +342,4 @@ def _remove_artifact_files(paths) -> None:
             )
 
 
-default_history_store = HistoryStore(path=_default_history_path())
+default_history_store = HistoryStore(path=_default_history_path)

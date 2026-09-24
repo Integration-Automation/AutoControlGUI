@@ -10,32 +10,28 @@ through the accessibility backend.
 Pure standard library (JSON file storage); imports no ``PySide6``. The
 accessibility backend is imported lazily so storage works on any platform.
 """
-import json
-from pathlib import Path
 from typing import Any, Dict, List, Optional
+
+from je_auto_control.utils.json_store import SharedJsonDict
 
 _FILTER_FIELDS = ("name", "role", "app_name")
 
 
 class ElementRepository:
-    """A JSON-backed map of friendly name -> accessibility locator."""
+    """A JSON-backed map of friendly name -> accessibility locator.
+
+    Every change re-reads the file under a lock and writes it atomically, so
+    two repositories on one file no longer drop each other's saves; a file
+    that is not a JSON object raises instead of being erased.
+    """
 
     def __init__(self, path: str) -> None:
-        self._path = Path(path)
-        self._items: Dict[str, Dict[str, str]] = self._load()
+        self._state = SharedJsonDict(path, strict=True)
+        self._state.read()          # a corrupt repository fails here, as before
 
-    def _load(self) -> Dict[str, Dict[str, str]]:
-        if not self._path.exists():
-            return {}
-        data = json.loads(self._path.read_text(encoding="utf-8"))
-        if not isinstance(data, dict):
-            raise ValueError(f"{self._path} is not a locator map")
-        return {str(k): dict(v) for k, v in data.items()}
-
-    def _flush(self) -> None:
-        self._path.write_text(
-            json.dumps(self._items, indent=2, ensure_ascii=False),
-            encoding="utf-8")
+    @property
+    def _items(self) -> Dict[str, Dict[str, str]]:
+        return {str(key): dict(value) for key, value in self._state.read().items()}
 
     def save(self, key: str, *, name: Optional[str] = None,
              role: Optional[str] = None,
@@ -47,8 +43,7 @@ class ElementRepository:
         if not locator:
             raise ValueError("a locator needs at least one of name/role/"
                              "app_name")
-        self._items[str(key)] = locator
-        self._flush()
+        self._state.update(lambda items: items.__setitem__(str(key), locator))
         return dict(locator)
 
     def get(self, key: str) -> Optional[Dict[str, str]]:
@@ -58,11 +53,7 @@ class ElementRepository:
 
     def remove(self, key: str) -> bool:
         """Delete a locator; return whether it existed."""
-        existed = str(key) in self._items
-        if existed:
-            del self._items[str(key)]
-            self._flush()
-        return existed
+        return self._state.update(lambda items: items.pop(str(key), None) is not None)
 
     def keys(self) -> List[str]:
         """Return the saved locator names, sorted."""

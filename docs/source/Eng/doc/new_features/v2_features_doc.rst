@@ -148,6 +148,10 @@ scheduled run, trigger, or REST job blows up::
                        token=os.environ["GH_TOKEN"]),
     )
 
+Credentials in the error text, log tail and metadata are masked before
+any backend sees the report, and a backend that raises becomes a failed
+``TicketResult`` without stopping the others.
+
 Executor: ``AC_failure_hook_fire / _list / _clear``.
 
 
@@ -202,7 +206,9 @@ Computer-use high-level API
 ---------------------------
 
 Wraps :class:`ComputerUseAgentBackend` + :class:`AgentLoop` so a
-single call drives Anthropic's official ``computer_20250124`` tool::
+single call drives Anthropic's computer-use tool (``computer_20251124`` on
+``claude-opus-5`` by default, sent under its ``computer-use-2025-11-24`` beta;
+``tool_type=`` picks another version and ``beta=`` names its beta)::
 
     from je_auto_control import run_computer_use
     result = run_computer_use(
@@ -236,7 +242,11 @@ Chat-ops bot
 Transport-agnostic ``CommandRouter`` plus a polling Slack adapter so
 ``/run <script>`` over Slack hits the same execution path as the
 scheduler. Built-in commands: ``/help``, ``/scripts``, ``/run``,
-``/screenshot``, ``/status``. RBAC via the ``required_role``
+``/screenshot [name]``, ``/status``. ``/screenshot`` writes into the
+context's ``screenshot_dir`` (default: ``je_auto_control_chatops`` in the
+temp directory) and keeps only the file name it is given. The Slack
+adapter goes through the package HTTP client, so the egress policy applies.
+RBAC via the ``required_role``
 parameter. GUI: **Chat-Ops** playground tab.
 
 
@@ -368,7 +378,12 @@ language and the MCP tool registry. Parameters:
 * ``max_steps`` (default 25) and ``wall_seconds`` (default 300.0).
 * ``model`` / ``max_tokens`` — backend-specific overrides.
 
-The Anthropic-only Computer-Use raw path (``computer_20250124``) is
+Each model request times out after 120 s, and only the three newest
+screenshots are resent (older ones become a text note), so a long run stays
+under the API's request size limit. ``export_anthropic_tools(only=[...])``
+offers exactly the listed commands — an empty list offers none.
+
+The Anthropic-only Computer-Use raw path (``computer_20251124``) is
 still available via ``AC_computer_use`` / ``ac_computer_use`` and is
 the right choice when the agent needs to drive a desktop the model
 itself sees pixel-for-pixel.

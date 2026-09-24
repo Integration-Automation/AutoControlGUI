@@ -143,6 +143,9 @@ Linear / GitHub Issues::
                        token=os.environ["GH_TOKEN"]),
     )
 
+錯誤文字、日誌尾端與 metadata 裡的憑證會在任何 backend 看到報告前先遮蔽;某個 backend 拋出例外時，
+它會記成失敗的 ``TicketResult``,不影響其他 backend。
+
 Executor：``AC_failure_hook_fire / _list / _clear``。
 
 
@@ -196,7 +199,8 @@ Computer-use 高階 API
 ---------------------
 
 封裝 :class:`ComputerUseAgentBackend` + :class:`AgentLoop`，一次呼叫
-即可驅動 Anthropic 官方 ``computer_20250124`` tool::
+即可驅動 Anthropic 的 computer-use tool(預設是 ``claude-opus-5`` 上的 ``computer_20251124``,
+以對應的 ``computer-use-2025-11-24`` beta 送出;``tool_type=`` 可換版本,``beta=`` 指定它的 beta)::
 
     from je_auto_control import run_computer_use
     result = run_computer_use(
@@ -229,7 +233,10 @@ Chat-ops 機器人
 傳輸層中立的 ``CommandRouter`` 加上 Slack polling adapter，
 ``/run <script>`` 經 Slack 進入和 scheduler 相同的執行路徑。
 內建命令：``/help``、``/scripts``、``/run``、``/screenshot``、
-``/status``。RBAC 透過 ``required_role`` 參數。
+``/status``。``/screenshot [name]`` 寫進 context 的 ``screenshot_dir``
+（預設為暫存目錄下的 ``je_auto_control_chatops``），給的名稱只保留檔名。
+Slack adapter 走套件的 HTTP client，所以出站政策同樣適用。
+RBAC 透過 ``required_role`` 參數。
 GUI：**Chat-Ops** 試用分頁。
 
 
@@ -353,7 +360,11 @@ helper（``je_auto_control.gui.flow_editor.layout_steps``）可單元
 * ``max_steps``（預設 25）、``wall_seconds``（預設 300.0）。
 * ``model`` / ``max_tokens`` — backend 專屬覆寫。
 
-Anthropic 原生 Computer-Use 路徑（``computer_20250124``）仍透過
+每次向模型發出的請求 120 秒逾時，對話裡只重送最新的三張截圖（較早的換成一行文字），
+長時間執行也不會超過 API 的請求大小上限。``export_anthropic_tools(only=[...])``
+只提供列出的指令——空清單就是一個都不提供。
+
+Anthropic 原生 Computer-Use 路徑（``computer_20251124``）仍透過
 ``AC_computer_use`` / ``ac_computer_use`` 提供，適合需要由模型
 直接看見桌面像素的場景。
 

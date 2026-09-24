@@ -22,6 +22,8 @@ The module is GUI-free: it only calls the headless ``assert_*`` layer.
 """
 from __future__ import annotations
 
+import inspect
+import math
 import time
 from dataclasses import asdict, dataclass, field
 from typing import Any, Callable, Dict, List, Mapping, Optional, Sequence
@@ -106,6 +108,13 @@ def run_assertion_spec(spec: Mapping[str, Any],
         )
     kwargs = {k: v for k, v in spec.items() if k != "kind"}
     kwargs["raise_on_fail"] = bool(raise_on_fail)
+    try:
+        inspect.signature(assert_fn).bind(**kwargs)
+    except TypeError as error:
+        # A misspelt or missing key surfaced as a bare TypeError from deep in
+        # the helper; it gets the same error an unknown kind does.
+        raise AutoControlAssertionException(
+            f"invalid {kind!r} assertion spec: {error}") from error
     return assert_fn(**kwargs)
 
 
@@ -183,15 +192,17 @@ def assert_eventually(spec: Mapping[str, Any],
     :class:`AutoControlAssertionException`, annotated with the elapsed
     wait so the timeout is visible in the failure.
     """
-    if timeout < 0:
-        raise AutoControlAssertionException("timeout must be non-negative")
+    # isfinite: NaN (valid in action JSON) passed ``timeout < 0`` and made
+    # ``monotonic() >= deadline`` never true -- a loop that never ended.
+    if not math.isfinite(timeout) or timeout < 0:
+        raise AutoControlAssertionException("timeout must be a non-negative number")
     # timeout 有驗證,interval 卻被 max(..., 0.0) 靜默吞掉:負值或 0
     # 會變成 sleep(0),迴圈空轉燒滿一顆核心(實測 0.4 秒內 244k 次)。
     # timeout was validated but interval was silently clamped by
     # max(..., 0.0), so 0 or a negative turned the loop into a busy-spin —
     # measured at 244k attempts in 0.4s, each a real assertion evaluation.
-    if interval <= 0:
-        raise AutoControlAssertionException("interval must be positive")
+    if not math.isfinite(interval) or interval <= 0:
+        raise AutoControlAssertionException("interval must be a positive number")
     poll = float(interval)
     deadline = time.monotonic() + float(timeout)
     attempts = 0

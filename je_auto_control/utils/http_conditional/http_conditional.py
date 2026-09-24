@@ -9,7 +9,7 @@ Modified``.
 Pure standard library; imports no ``PySide6``. Freshness takes an explicit age
 (no wall clock), so the logic is fully deterministic in CI.
 """
-from typing import Any, Dict, Mapping, Optional
+from typing import Any, Dict, List, Mapping, Optional
 
 
 def _header(headers: Optional[Mapping[str, Any]], name: str) -> str:
@@ -19,10 +19,30 @@ def _header(headers: Optional[Mapping[str, Any]], name: str) -> str:
     return ""
 
 
+def split_outside_quotes(text: str, separator: str) -> List[str]:
+    """Split ``text`` on ``separator`` except inside ``"..."``.
+
+    ``private="Set-Cookie, X-Foo"`` is one directive, not two.
+    """
+    parts: List[str] = []
+    current: List[str] = []
+    quoted = False
+    for char in text:
+        if char == '"':
+            quoted = not quoted
+        if char == separator and not quoted:
+            parts.append("".join(current))
+            current = []
+        else:
+            current.append(char)
+    parts.append("".join(current))
+    return parts
+
+
 def parse_cache_control(headers: Optional[Mapping[str, Any]]) -> Dict[str, Any]:
     """Parse a ``Cache-Control`` header into a directive dict."""
     directives: Dict[str, Any] = {}
-    for part in _header(headers, "cache-control").split(","):
+    for part in split_outside_quotes(_header(headers, "cache-control"), ","):
         cleaned = part.strip()
         if not cleaned:
             continue
@@ -67,7 +87,8 @@ def is_fresh(validators: Mapping[str, Any], age_seconds: float) -> bool:
     if cache_control.get("no-store") or cache_control.get("no-cache"):
         return False
     max_age = cache_control.get("max-age")
-    if isinstance(max_age, int):
+    # A bare "max-age" parses as True, and bool is an int.
+    if isinstance(max_age, int) and not isinstance(max_age, bool):
         return age_seconds < max_age
     return False
 

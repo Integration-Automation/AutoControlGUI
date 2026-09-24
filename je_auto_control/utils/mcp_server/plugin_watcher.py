@@ -28,6 +28,8 @@ class PluginWatcher:
         self._thread: Optional[threading.Thread] = None
         # path → (mtime, [tool_names])
         self._known: Dict[str, tuple] = {}
+        # path -> {tool name: tool} for every file that built successfully.
+        self._defined: Dict[str, Dict[str, Any]] = {}
 
     @property
     def directory(self) -> str:
@@ -40,9 +42,11 @@ class PluginWatcher:
             raise NotADirectoryError(
                 f"plugin directory not found: {self._directory}"
             )
-        self._stop.clear()
+        # A fresh event per run, never clear() on the old one: a thread that
+        # outlived stop()'s join would see it cleared and keep running.
+        self._stop = threading.Event()
         self._thread = threading.Thread(
-            target=self._run, daemon=True, name="MCPPluginWatcher",
+            target=self._run, args=(self._stop,), daemon=True, name="MCPPluginWatcher",
         )
         self._thread.start()
 
@@ -74,19 +78,19 @@ class PluginWatcher:
 
     # --- internals ----------------------------------------------------------
 
-    def _run(self) -> None:
+    def _run(self, stop: threading.Event) -> None:
         autocontrol_logger.info(
             "plugin watcher started: %s (every %ss)",
             self._directory, self._poll_seconds,
         )
-        while not self._stop.is_set():
+        while not stop.is_set():
             try:
                 self.poll_once()
             except OSError as error:
                 autocontrol_logger.warning(
                     "plugin watcher poll failed: %r", error,
                 )
-            self._stop.wait(self._poll_seconds)
+            stop.wait(self._poll_seconds)
         autocontrol_logger.info("plugin watcher stopped")
 
     def _reload_file(self, path: str, mtime: float) -> None:
@@ -97,9 +101,9 @@ class PluginWatcher:
         # Build succeeded — only now swap the live registry. Doing the
         # unregister *after* a successful build means a broken edit leaves the
         # file's existing tools in place instead of vanishing them.
+        self._defined[path] = {tool.name: tool for tool in tools}
         if previous is not None:
-            for tool_name in previous[1]:
-                self._server.unregister_tool(tool_name)
+            self._release(path, set(previous[1]) - set(self._defined[path]))
         registered: List[str] = []
         for tool in tools:
             self._server.register_tool(tool)
@@ -134,12 +138,27 @@ class PluginWatcher:
             self._known[path] = (mtime, previous[1] if previous else [])
             return None
 
+    def _release(self, path: str, names) -> None:
+        """Drop ``path``'s claim on ``names``.
+
+        A tool another watched file still defines is handed to that file's
+        definition instead of being unregistered: deleting one of two files
+        that both defined ``AC_shared`` used to remove the tool entirely.
+        """
+        for name in names:
+            other = next((tools[name] for owner, tools in self._defined.items()
+                          if owner != path and name in tools), None)
+            if other is None:
+                self._server.unregister_tool(name)
+            else:
+                self._server.register_tool(other)
+
     def _unregister_file(self, path: str) -> None:
         previous = self._known.pop(path, None)
+        self._defined.pop(path, None)
         if previous is None:
             return
-        for tool_name in previous[1]:
-            self._server.unregister_tool(tool_name)
+        self._release(path, previous[1])
         autocontrol_logger.info(
             "plugin %s removed → %d tools dropped",
             os.path.basename(path), len(previous[1]),

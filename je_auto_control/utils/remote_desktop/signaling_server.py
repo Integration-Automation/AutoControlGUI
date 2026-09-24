@@ -4,6 +4,10 @@ Hosts register an offer keyed by their host ID; viewers fetch the offer,
 post an answer, and the host polls for it. The server is stateless beyond
 an in-memory dict with TTL eviction — restart loses pending sessions.
 
+It also serves ``GET`` / ``PUT /config/{user_id}``, the per-user bucket that
+:mod:`je_auto_control.utils.config_sync` pushes and pulls. Buckets are kept
+in memory as sent (no TTL), so they too are lost on restart.
+
 Run::
 
     python -m je_auto_control.utils.remote_desktop.signaling_server \\
@@ -19,6 +23,7 @@ or swap the in-memory store for Redis (left as a follow-up).
 from __future__ import annotations
 
 import argparse
+import hmac
 import logging
 import os
 import threading
@@ -29,6 +34,7 @@ from typing import Annotated, Dict, List, Optional
 try:
     from fastapi import Depends, FastAPI, Header, HTTPException, Request
     from fastapi.middleware.cors import CORSMiddleware
+    from fastapi.responses import JSONResponse
     from fastapi.staticfiles import StaticFiles
     from pydantic import BaseModel
 except ImportError as exc:  # pragma: no cover - optional dep
@@ -40,6 +46,13 @@ except ImportError as exc:  # pragma: no cover - optional dep
 
 _DEFAULT_TTL_S = 120.0
 _MAX_SDP_BYTES = 256 * 1024  # 256 KB; aiortc offers are typically ~4 KB
+# Live sessions at once. Any client allowed to post could otherwise create
+# sessions without limit -- 200 of them held 48 MB for the TTL.
+_MAX_SESSIONS = 1024
+# A config-sync bucket (hotkeys, triggers, address book) and how many users
+# may hold one at once.
+_MAX_CONFIG_BYTES = 1024 * 1024
+_MAX_CONFIG_USERS = 1024
 _LOG = logging.getLogger("rd-signaling")
 _WEB_VIEWER_DIR = (
     __import__("pathlib").Path(__file__).parent / "web_viewer"
@@ -54,6 +67,26 @@ class _Session:
     updated_at: float = field(default_factory=time.monotonic)
 
 
+class _ConfigStore:
+    """Thread-safe in-memory map of user id -> config-sync bucket."""
+
+    def __init__(self) -> None:
+        self._buckets: Dict[str, Dict] = {}
+        self._lock = threading.Lock()
+
+    def get(self, user_id: str) -> Optional[Dict]:
+        with self._lock:
+            return self._buckets.get(user_id)
+
+    def put(self, user_id: str, bucket: Dict) -> bool:
+        """Store ``bucket``; ``False`` when a new user would exceed the cap."""
+        with self._lock:
+            if user_id not in self._buckets and len(self._buckets) >= _MAX_CONFIG_USERS:
+                return False
+            self._buckets[user_id] = bucket
+            return True
+
+
 class _SessionStore:
     """Thread-safe in-memory session map with TTL eviction."""
 
@@ -62,14 +95,18 @@ class _SessionStore:
         self._ttl_s = ttl_s
         self._lock = threading.Lock()
 
-    def upsert_offer(self, host_id: str, offer_sdp: str) -> None:
+    def upsert_offer(self, host_id: str, offer_sdp: str) -> bool:
+        """Store the offer; ``False`` when a new session would exceed the cap."""
         with self._lock:
             self._evict_locked()
+            if host_id not in self._sessions and len(self._sessions) >= _MAX_SESSIONS:
+                return False
             session = self._sessions.get(host_id) or _Session()
             session.offer_sdp = offer_sdp
             session.answer_sdp = None
             session.updated_at = time.monotonic()
             self._sessions[host_id] = session
+            return True
 
     def fetch_offer(self, host_id: str) -> Optional[str]:
         with self._lock:
@@ -118,6 +155,10 @@ _VALIDATION_RESPONSES = {
     400: {"description": "invalid host_id or sdp"},
     **_AUTH_RESPONSES,
 }
+_OFFER_RESPONSES = {
+    **_VALIDATION_RESPONSES,
+    503: {"description": "too many live sessions"},
+}
 _NOT_FOUND_RESPONSES = {
     404: {"description": "session or message not found"},
     **_AUTH_RESPONSES,
@@ -131,7 +172,7 @@ def _build_secret_dependency(shared_secret: Optional[str]):
             Optional[str], Header(alias="X-Signaling-Secret"),
         ] = None,
     ) -> None:
-        if shared_secret and x_signaling_secret != shared_secret:
+        if not _secret_matches(x_signaling_secret, shared_secret):
             raise HTTPException(status_code=401, detail="bad shared secret")
     return _check
 
@@ -184,11 +225,12 @@ def _register_routes(app: FastAPI, store: "_SessionStore",
         return {"status": "ok"}
 
     @app.post("/sessions/{host_id}/offer",
-              responses=_VALIDATION_RESPONSES, dependencies=auth_only)
+              responses=_OFFER_RESPONSES, dependencies=auth_only)
     def _post_offer(host_id: str, body: _OfferIn) -> dict:
         _validate_host_id(host_id)
         _validate_sdp(body.sdp)
-        store.upsert_offer(host_id, body.sdp)
+        if not store.upsert_offer(host_id, body.sdp):
+            raise HTTPException(status_code=503, detail="too many live sessions")  # NOSONAR - see _OFFER_RESPONSES
         return {"ok": True}
 
     @app.get("/sessions/{host_id}/offer",
@@ -227,11 +269,95 @@ def _register_routes(app: FastAPI, store: "_SessionStore",
         return {"deleted": store.delete(host_id)}
 
 
+#: Room for the JSON wrapper around the largest SDP a route accepts.
+_MAX_BODY_BYTES = _MAX_SDP_BYTES + 4096
+
+
+def _secret_matches(provided: Optional[str], shared_secret: Optional[str]) -> bool:
+    # compare_digest on bytes: != leaks how much of the secret matched.
+    return not shared_secret or hmac.compare_digest(
+        (provided or "").encode("utf-8"), shared_secret.encode("utf-8"))
+
+
+def _guard_refusal(request: Request, shared_secret: Optional[str]) -> Optional[JSONResponse]:
+    """The response refusing ``request`` before its body is read, or ``None``.
+
+    FastAPI reads and parses the body before it resolves route dependencies,
+    so a client without the secret made the server buffer a body of any size
+    (30 MB cost ~95 MB) and got JSON validation details back instead of 401.
+    """
+    # scope["path"] is what the router dispatches on. request.url is rebuilt
+    # from the Host header, and Starlette <= 1.0.0 let a crafted Host
+    # ("example.com?") make it show another path (CVE-2026-48710, "BadHost"),
+    # which would slip a request past a guard deciding by request.url.path.
+    path = str(request.scope.get("path", ""))
+    if not path.startswith(("/sessions", "/config")) or request.method == "OPTIONS":
+        return None
+    if not _secret_matches(request.headers.get("X-Signaling-Secret"), shared_secret):
+        return JSONResponse({"detail": "bad shared secret"}, status_code=401)
+    if request.method not in ("POST", "PUT"):
+        return None
+    length = request.headers.get("Content-Length")
+    if length is None or not length.isdigit():
+        return JSONResponse({"detail": "Content-Length required"}, status_code=411)
+    limit = _MAX_CONFIG_BYTES if path.startswith("/config") else _MAX_BODY_BYTES
+    if int(length) > limit:
+        return JSONResponse({"detail": "request body too large"}, status_code=413)
+    return None
+
+
+def _register_body_guard(app: FastAPI, shared_secret: Optional[str]) -> None:
+    @app.middleware("http")
+    async def _guard(request: Request, call_next):
+        refusal = _guard_refusal(request, shared_secret)
+        return refusal if refusal is not None else await call_next(request)
+
+
+def _validate_user_id(user_id: str) -> None:
+    # Printable, no path separators: the id is a single URL path segment.
+    if not user_id or len(user_id) > 128 or not user_id.isprintable() or "/" in user_id:
+        raise HTTPException(status_code=400, detail="invalid user_id")  # NOSONAR — see _CONFIG_RESPONSES
+
+
+_CONFIG_RESPONSES = {
+    400: {"description": "invalid user_id or bucket"},
+    404: {"description": "no bucket for this user"},
+    503: {"description": "too many users"},
+    **_AUTH_RESPONSES,
+}
+
+
+def _register_config_routes(app: FastAPI, store: _ConfigStore, secret_dep) -> None:
+    """``GET`` / ``PUT /config/{user_id}`` for :mod:`je_auto_control.utils.config_sync`.
+
+    The client has always called these; nothing served them, so every sync
+    failed. A bucket is stored as sent -- the merge happens client-side.
+    """
+    auth_only = [Depends(secret_dep)]
+
+    @app.get("/config/{user_id}", responses=_CONFIG_RESPONSES, dependencies=auth_only)
+    def _get_config(user_id: str) -> dict:
+        _validate_user_id(user_id)
+        bucket = store.get(user_id)
+        if bucket is None:
+            raise HTTPException(status_code=404, detail="no bucket")  # NOSONAR — see _CONFIG_RESPONSES
+        return bucket
+
+    @app.put("/config/{user_id}", responses=_CONFIG_RESPONSES, dependencies=auth_only)
+    def _put_config(user_id: str, bucket: Dict) -> dict:
+        _validate_user_id(user_id)
+        if bucket.get("user_id", user_id) != user_id:
+            raise HTTPException(status_code=400, detail="bucket user_id mismatch")  # NOSONAR — see _CONFIG_RESPONSES
+        if not store.put(user_id, bucket):
+            raise HTTPException(status_code=503, detail="too many users")  # NOSONAR — see _CONFIG_RESPONSES
+        return {"ok": True}
+
+
 def _register_request_logging(app: FastAPI) -> None:
     @app.middleware("http")
     async def _log_request(request: Request, call_next):
         response = await call_next(request)
-        _LOG.info("%s %s -> %d", request.method, request.url.path,
+        _LOG.info("%s %s -> %d", request.method, request.scope.get("path", ""),
                   response.status_code)
         return response
 
@@ -243,9 +369,13 @@ def create_app(shared_secret: Optional[str] = None,
     """Build the FastAPI app. Importable for embedding in larger services."""
     app = FastAPI(title="AutoControl Signaling", version="1.0.0")
     store = _SessionStore(ttl_s=ttl_s)
+    # Before CORS, so CORS wraps it and a browser still sees the 401 / 413.
+    _register_body_guard(app, shared_secret)
     _configure_cors(app, cors_origins)
     _maybe_mount_viewer(app, serve_web_viewer)
-    _register_routes(app, store, _build_secret_dependency(shared_secret))
+    secret_dep = _build_secret_dependency(shared_secret)
+    _register_routes(app, store, secret_dep)
+    _register_config_routes(app, _ConfigStore(), secret_dep)
     _register_request_logging(app)
     return app
 

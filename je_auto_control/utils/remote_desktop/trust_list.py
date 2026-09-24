@@ -22,6 +22,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Dict, List, Optional
 
+from je_auto_control.utils.json_store.json_store import (
+    atomic_write_text, load_json_or_quarantine, quarantine_file,
+)
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 
 
@@ -45,14 +48,11 @@ class TrustList:
     # --- persistence --------------------------------------------------------
 
     def _load(self) -> None:
-        if not self._path.exists():
+        data = load_json_or_quarantine(self._path, "trust list")
+        if data is None:
             return
-        try:
-            data = json.loads(self._path.read_text(encoding="utf-8"))
-        except (OSError, json.JSONDecodeError) as error:
-            autocontrol_logger.warning("trust list load failed: %r", error)
-            return
-        if not isinstance(data, dict):
+        if not isinstance(data, dict) or not isinstance(data.get("viewers", []), list):
+            quarantine_file(self._path, "trust list", "no 'viewers' list")
             return
         for entry in data.get("viewers", []):
             if not isinstance(entry, dict):
@@ -65,14 +65,9 @@ class TrustList:
         payload = {"viewers": list(self._entries.values())}
         try:
             self._path.parent.mkdir(parents=True, exist_ok=True)
-            self._path.write_text(
-                json.dumps(payload, indent=2, ensure_ascii=False),
-                encoding="utf-8",
-            )
-            try:
-                os.chmod(self._path, 0o600)
-            except OSError:
-                pass
+            # atomic_write_text: a concurrent reader saw a half-written file, and
+            # its mkstemp file is 0600 from the start instead of after a chmod.
+            atomic_write_text(self._path, json.dumps(payload, indent=2, ensure_ascii=False))
         except OSError as error:
             autocontrol_logger.warning("trust list save failed: %r", error)
 

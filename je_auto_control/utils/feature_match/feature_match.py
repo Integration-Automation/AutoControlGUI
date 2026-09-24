@@ -15,10 +15,11 @@ via the project's ``je_open_cv`` dependency and are imported lazily. Imports no
 OpenCV (no contrib modules).
 """
 from dataclasses import asdict, dataclass
+import dataclasses
 from typing import Any, Dict, List, Optional, Sequence
 
 from je_auto_control.utils.visual_match.visual_match import (
-    _haystack_gray, _to_gray,
+    _contain_cv2_error, _haystack_gray_with_origin, _to_gray,
 )
 
 ImageSource = Any
@@ -100,6 +101,7 @@ def _locate(template_shape, kp1, kp2, good, min_inliers: int
                         round(inliers / len(good), 4))
 
 
+@_contain_cv2_error
 def feature_match(template: ImageSource, *,
                   haystack: Optional[ImageSource] = None,
                   region: Optional[Sequence[int]] = None,
@@ -114,11 +116,22 @@ def feature_match(template: ImageSource, *,
     ``center``, ``inliers``, ``score``) or ``None`` when the target is not found.
     """
     template_gray = _to_gray(template)
-    scene_gray = _haystack_gray(haystack, region)
+    scene_gray, origin_x, origin_y = _haystack_gray_with_origin(haystack, region)
     found = _keypoint_matches(template_gray, scene_gray, max_features, ratio)
     if found is None:
         return None
     kp1, kp2, good = found
-    if len(good) < int(min_inliers):
+    # A homography needs 4 points: with min_inliers <= 3, findHomography
+    # raised a raw cv2.error on 1-3 matches.
+    if len(good) < max(_HOMOGRAPHY_POINTS, int(min_inliers)):
         return None
-    return _locate(template_gray.shape, kp1, kp2, good, min_inliers)
+    located = _locate(template_gray.shape, kp1, kp2, good, min_inliers)
+    if located is None or not (origin_x or origin_y):
+        return located
+    return dataclasses.replace(
+        located,
+        corners=[[x + origin_x, y + origin_y] for x, y in located.corners],
+        center=[located.center[0] + origin_x, located.center[1] + origin_y])
+
+
+_HOMOGRAPHY_POINTS = 4

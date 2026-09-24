@@ -26,7 +26,7 @@ def _bits_to_hex(bits: str) -> str:
 
 def average_hash(image: Any, hash_size: int = 8) -> str:
     """Average-hash an image to a hex fingerprint (brightness vs. the mean)."""
-    pixels = list(_gray_resized(image, (hash_size, hash_size)).getdata())
+    pixels = list(_gray_resized(image, (hash_size, hash_size)).get_flattened_data())
     average = sum(pixels) / len(pixels)
     return _bits_to_hex("".join("1" if p > average else "0" for p in pixels))
 
@@ -34,7 +34,7 @@ def average_hash(image: Any, hash_size: int = 8) -> str:
 def dhash(image: Any, hash_size: int = 8) -> str:
     """Difference-hash an image (each pixel brighter than its right neighbour)."""
     width = hash_size + 1
-    pixels = list(_gray_resized(image, (width, hash_size)).getdata())
+    pixels = list(_gray_resized(image, (width, hash_size)).get_flattened_data())
     bits = [
         "1" if pixels[row * width + col] > pixels[row * width + col + 1]
         else "0"
@@ -44,7 +44,14 @@ def dhash(image: Any, hash_size: int = 8) -> str:
 
 
 def hamming_distance(hash_a: str, hash_b: str) -> int:
-    """Number of differing bits between two hex fingerprints."""
+    """Number of differing bits between two hex fingerprints of the same size.
+
+    Raises ``ValueError`` for fingerprints of different sizes, whose distance
+    means nothing (an 8x8 against a 16x16 hash gave 128).
+    """
+    if len(hash_a) != len(hash_b):
+        raise ValueError(
+            f"hash sizes differ: {len(hash_a) * 4} and {len(hash_b) * 4} bits")
     return bin(int(hash_a, 16) ^ int(hash_b, 16)).count("1")
 
 

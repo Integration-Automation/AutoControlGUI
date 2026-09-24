@@ -126,7 +126,10 @@ def remap_point(src: Monitor, dst: Monitor, local_x: int,
     """
     frac_x = (local_x / src.width) if src.width else 0.0
     frac_y = (local_y / src.height) if src.height else 0.0
-    return (round(frac_x * dst.width), round(frac_y * dst.height))
+    # Clamped to the last pixel: (999, 999) on 1000x1000 rounded to
+    # (100, 100) on 100x100, a point just off the target monitor.
+    return (min(max(round(frac_x * dst.width), 0), max(dst.width - 1, 0)),
+            min(max(round(frac_y * dst.height), 0), max(dst.height - 1, 0)))
 
 
 def _mss_rows() -> List[Dict[str, Any]]:

@@ -26,7 +26,10 @@ Each state has:
   * ``on_enter`` — list of AC actions to execute when the FSM enters
   * ``transitions`` — ordered list of guards; first match wins
   * ``final`` — when ``true``, the FSM stops with success
-  * ``retry`` — ``{max: N, backoff_s: 2.0}`` retry on action failure
+
+Guards: ``after`` (seconds in the state; the machine waits for it),
+``if_var_eq`` (``{name, value}`` against the FSM context),
+``if_image_found`` (a template path) and, from Python, ``predicate``.
 
 The engine is headless; the GUI script-builder wraps it via a new
 ``AC_state_machine`` command.

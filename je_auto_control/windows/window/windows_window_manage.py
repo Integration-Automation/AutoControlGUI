@@ -207,6 +207,12 @@ def set_window_position(hwnd: int, position: int) -> None:
                          swp_no_move | swp_no_size)
 
 
+#: SW_SHOWNORMAL, SW_SHOWMAXIMIZED, SW_SHOW, SW_RESTORE, SW_SHOWDEFAULT. The
+#: other commands minimise or show *without* activating, and forcing the
+#: window to the foreground afterwards undid exactly what they ask for.
+_ACTIVATING_SHOW_COMMANDS = frozenset({1, 3, 5, 9, 10})
+
+
 def show_window(hwnd: int, cmd_show: int) -> None:
     """
     顯示或隱藏視窗
@@ -219,7 +225,7 @@ def show_window(hwnd: int, cmd_show: int) -> None:
     _user32.ShowWindow(hwnd, cmd_show)
     # 隱藏之後不該再把它拉到前景，那是自相矛盾的一組動作。
     # Do not pull a window forward right after hiding it.
-    if cmd_show != 0:
+    if cmd_show in _ACTIVATING_SHOW_COMMANDS:
         _user32.SetForegroundWindow(hwnd)
 
 

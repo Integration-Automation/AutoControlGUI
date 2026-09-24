@@ -29,7 +29,8 @@
     expect_poll(lambda: ocr_value(), to_be_stable(3))
 
 ``expect_poll`` 回傳 ``PollResult``(``ok``、``value``、``attempts``、``waited_s``、``description``);
-``assert_poll`` 在始終不符時丟出 ``AutoControlActionException``。matcher 工廠有 ``to_equal``、``to_contain``、
+``assert_poll`` 在始終不符時丟出 ``PollAssertionError``:它是 ``AutoControlAssertionException``(測試記為
+失敗,``raise_on_error=False`` 也不會吞掉),同時也是 ``AutoControlActionException``。matcher 工廠有 ``to_equal``、``to_contain``、
 ``to_be_greater_than``、``to_match_regex``、``to_be_truthy`` 與 ``to_be_stable(n)``(值重複 ``n`` 次後符合)。
 
 執行器命令

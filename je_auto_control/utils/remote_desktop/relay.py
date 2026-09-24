@@ -25,6 +25,7 @@ from __future__ import annotations
 import select
 import socket
 import threading
+import time
 from typing import Dict, Optional, Tuple
 
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
@@ -62,10 +63,11 @@ def _read_exact(sock: socket.socket, length: int) -> bytes:
 
 
 def _pipe(src: socket.socket, dst: socket.socket,
-          stop_event: threading.Event) -> None:
-    """Forward bytes from ``src`` to ``dst`` until either closes."""
+          stop_event: threading.Event,
+          server_stop: Optional[threading.Event] = None) -> None:
+    """Forward bytes from ``src`` to ``dst`` until either closes or the server stops."""
     try:
-        while not stop_event.is_set():
+        while not stop_event.is_set() and not (server_stop is not None and server_stop.is_set()):
             # Wait for readability with a timeout instead of a bare blocking
             # recv() so the loop always circles back to re-check stop_event
             # even if a cross-thread shutdown() fails to wake the recv().
@@ -96,15 +98,21 @@ def _pipe(src: socket.socket, dst: socket.socket,
 
 
 def _pair_and_pump(host_sock: socket.socket,
-                   viewer_sock: socket.socket) -> None:
-    """Bridge two sockets in both directions on dedicated threads."""
+                   viewer_sock: socket.socket,
+                   server_stop: Optional[threading.Event] = None) -> None:
+    """Bridge two sockets in both directions on dedicated threads.
+
+    ``server_stop`` ends the session with the relay: ``RelayServer.stop()``
+    used to close only the listener and parked peers, and paired sessions
+    kept forwarding.
+    """
     stop = threading.Event()
     t1 = threading.Thread(
-        target=_pipe, args=(host_sock, viewer_sock, stop),
+        target=_pipe, args=(host_sock, viewer_sock, stop, server_stop),
         name="relay-h2v", daemon=True,
     )
     t2 = threading.Thread(
-        target=_pipe, args=(viewer_sock, host_sock, stop),
+        target=_pipe, args=(viewer_sock, host_sock, stop, server_stop),
         name="relay-v2h", daemon=True,
     )
     t1.start()
@@ -134,7 +142,8 @@ class RelayServer:
         self._accept_thread: Optional[threading.Thread] = None
         self._shutdown = threading.Event()
         # session_id -> (role, socket) waiting for the partner.
-        self._pending: Dict[bytes, Tuple[int, socket.socket]] = {}
+        # session id -> (role, socket, monotonic time it was parked)
+        self._pending: Dict[bytes, Tuple[int, socket.socket, float]] = {}
         self._pending_lock = threading.Lock()
         self._port = 0
 
@@ -149,7 +158,10 @@ class RelayServer:
     def start(self) -> None:
         if self.is_running:
             return
-        self._shutdown.clear()
+        # A fresh event per run, never clear() on the old one: a loop that
+        # outlived stop()'s join would see it cleared and resume beside
+        # the new run.
+        self._shutdown = threading.Event()
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         sock.bind((self._bind, self._requested_port))
@@ -164,7 +176,8 @@ class RelayServer:
         self._port = sock.getsockname()[1]
         self._listen_sock = sock
         self._accept_thread = threading.Thread(
-            target=self._accept_loop, name="relay-accept", daemon=True,
+            target=self._accept_loop, args=(self._shutdown,),
+            name="relay-accept", daemon=True,
         )
         self._accept_thread.start()
 
@@ -178,7 +191,7 @@ class RelayServer:
             pass
         self._listen_sock = None
         with self._pending_lock:
-            for _role, sock in self._pending.values():
+            for _role, sock, _parked in self._pending.values():
                 try:
                     sock.close()
                 except OSError:
@@ -188,13 +201,13 @@ class RelayServer:
             self._accept_thread.join(timeout=timeout)
             self._accept_thread = None
 
-    def _accept_loop(self) -> None:
+    def _accept_loop(self, stop: threading.Event) -> None:
         # The timeout is already set by start(); touching the socket here would
         # reintroduce the shutdown race this loop is meant to survive.
         listen = self._listen_sock
         if listen is None:
             return
-        while not self._shutdown.is_set():
+        while not stop.is_set():
             try:
                 client_sock, _address = listen.accept()
             except socket.timeout:
@@ -227,20 +240,37 @@ class RelayServer:
             return
         self._register_or_pair(role, session_id, client_sock)
 
+    def _drop_departed_locked(self) -> None:
+        """Forget parked peers that disconnected or waited past the TTL.
+
+        An entry used to stay until its partner arrived or the relay stopped,
+        so once ``max_pending_sessions`` peers had parked and gone, every new
+        session was refused for good.
+        """
+        now = time.monotonic()
+        for session_id, (_role, sock, parked) in list(self._pending.items()):
+            if now - parked > _PENDING_TTL_S or not _still_connected(sock):
+                del self._pending[session_id]
+                sock.close()
+
     def _register_or_pair(self, role: int, session_id: bytes,
                           client_sock: socket.socket) -> None:
         with self._pending_lock:
             partner = self._pending.pop(session_id, None)
+            if partner is not None and not _still_connected(partner[1]):
+                partner[1].close()
+                partner = None  # it left; this peer parks in its place
             if partner is None:
+                self._drop_departed_locked()
                 if len(self._pending) >= self._max_pending:
                     autocontrol_logger.info(
                         "relay rejecting session: pending table full",
                     )
                     client_sock.close()
                     return
-                self._pending[session_id] = (role, client_sock)
+                self._pending[session_id] = (role, client_sock, time.monotonic())
                 return
-        partner_role, partner_sock = partner
+        partner_role, partner_sock, _parked = partner
         if partner_role == role:
             autocontrol_logger.info(
                 "relay role collision for session %r", session_id,
@@ -250,7 +280,21 @@ class RelayServer:
             return
         host_sock = client_sock if role == _ROLE_HOST else partner_sock
         viewer_sock = client_sock if role == _ROLE_VIEWER else partner_sock
-        _pair_and_pump(host_sock, viewer_sock)
+        _pair_and_pump(host_sock, viewer_sock, self._shutdown)
+
+
+_PENDING_TTL_S = 300.0
+
+
+def _still_connected(sock: socket.socket) -> bool:
+    """Whether a parked peer is still there (no EOF or error waiting to be read)."""
+    try:
+        readable, _, _ = select.select([sock], [], [], 0)
+        if not readable:
+            return True
+        return sock.recv(1, socket.MSG_PEEK) != b""
+    except (OSError, ValueError):
+        return False
 
 
 def encode_handshake(role: str, session_id: bytes) -> bytes:

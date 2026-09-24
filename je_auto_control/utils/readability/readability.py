@@ -15,7 +15,8 @@ from typing import Dict, List
 
 _VOWELS = "aeiouy"
 _WORD_RE = re.compile(r"[A-Za-z]+(?:['’][A-Za-z]+)?")
-_SENTENCE_RE = re.compile(r"[.!?]+")
+# "3.14" is one number, not two sentences.
+_SENTENCE_RE = re.compile(r"[!?]+|\.+(?!\d)")
 
 
 def count_syllables(word: str) -> int:

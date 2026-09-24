@@ -31,6 +31,10 @@ def renewal_due(certificate_path,
     except (ValueError, OSError):
         return True
     reference = now or datetime.now(timezone.utc)
+    if reference.tzinfo is None:
+        # A naive now raised TypeError against the aware expiry; like
+        # the certificate, it is read as UTC.
+        reference = reference.replace(tzinfo=timezone.utc)
     return (not_after - reference) <= threshold
 
 
@@ -65,9 +69,11 @@ class RenewalScheduler:
     def start(self) -> None:
         if self.is_running:
             return
-        self._stop.clear()
+        # A fresh event per run, never clear() on the old one: a thread that
+        # outlived stop()'s join would see it cleared and keep running.
+        self._stop = threading.Event()
         self._thread = threading.Thread(
-            target=self._loop, name="acme-renewal", daemon=True,
+            target=self._loop, args=(self._stop,), name="acme-renewal", daemon=True,
         )
         self._thread.start()
 
@@ -119,8 +125,8 @@ class RenewalScheduler:
                 "acme renewal on_failure hook raised: %r", hook_error,
             )
 
-    def _loop(self) -> None:
-        while not self._stop.is_set():
+    def _loop(self, stop: threading.Event) -> None:
+        while not stop.is_set():
             # Belt-and-braces: even with the hook guarded, nothing tick() might
             # raise may be allowed to kill the renewal thread.
             try:
@@ -129,7 +135,7 @@ class RenewalScheduler:
                 autocontrol_logger.error(
                     "acme renewal tick raised: %r", error, exc_info=True,
                 )
-            if self._stop.wait(self._check_interval_s):
+            if stop.wait(self._check_interval_s):
                 return
 
 

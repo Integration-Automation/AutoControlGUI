@@ -28,7 +28,8 @@ Headless API
 ``export`` prefix, validates keys, and resolves values: single-quoted values
 are literal, double-quoted values process ``\n`` / ``\t`` / ``\\`` / ``\"``
 escapes, and unquoted values drop a trailing `` #`` comment and surrounding
-whitespace. ``dotenv_values`` reads and parses a file; ``load_dotenv`` merges a
+whitespace. A quoted value ends at its closing quote, so a comment after it is
+dropped, and it may span several lines. ``dotenv_values`` reads and parses a file; ``load_dotenv`` merges a
 file into an explicit ``env`` mapping (keeping existing keys unless
 ``override``); ``dump_dotenv`` serialises a mapping back to ``.env`` text,
 quoting values that need it.

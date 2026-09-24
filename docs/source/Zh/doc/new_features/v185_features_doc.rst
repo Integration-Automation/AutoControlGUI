@@ -31,8 +31,9 @@
     set_clipboard_rtf("以樣式文字貼上我")        # Windows
     set_clipboard_csv([["Name", "Qty"], ["Pen", "3"]], delimiter="\t")  # TSV
 
-``build_rtf`` 會轉義大括號 / 反斜線,把換行轉為 ``\par``,並把非 ASCII 字元轉為 ``\uNNNN?``
-轉義(輸出為純 ASCII)。``set_clipboard_rtf`` / ``set_clipboard_csv`` 預設也會種入純文字,讓
+``build_rtf`` 會轉義大括號 / 反斜線,把換行(``\n``、``\r\n`` 或單獨的 ``\r``)轉為 ``\par``,
+並把非 ASCII 字元轉為其 UTF-16 單元(帶號 16 位元)的 ``\uN?`` 轉義(輸出為純 ASCII);
+``rtf_to_text`` 會遵守 ``\ucN`` 並接回代理對。``set_clipboard_rtf`` / ``set_clipboard_csv`` 預設也會種入純文字,讓
 純文字編輯器仍能貼上內容;``get_clipboard_rtf`` 回傳原始 RTF 字串(再餵給 ``rtf_to_text``),
 ``get_clipboard_csv`` 回傳列。
 

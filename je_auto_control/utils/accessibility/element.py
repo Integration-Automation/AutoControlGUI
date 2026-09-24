@@ -2,6 +2,8 @@
 from dataclasses import dataclass
 from typing import List, Optional, Tuple
 
+from je_auto_control.utils.exception.exceptions import AutoControlException
+
 
 @dataclass(frozen=True)
 class AccessibilityElement:
@@ -35,7 +37,7 @@ class AccessibilityElement:
         }
 
 
-class AccessibilityNotAvailableError(RuntimeError):
+class AccessibilityNotAvailableError(AutoControlException, RuntimeError):
     """Raised when the platform backend cannot be initialised."""
 
 
@@ -68,7 +70,10 @@ def element_matches(element: AccessibilityElement,
     """
     if name is not None:
         if contains:
-            if name.strip().lower() not in element.name.lower():
+            needle = name.strip().lower()
+            # An empty needle is "in" every name: a blank search matched,
+            # and would have clicked, whatever element came first.
+            if not needle or needle not in element.name.lower():
                 return False
         elif element.name != name:
             return False

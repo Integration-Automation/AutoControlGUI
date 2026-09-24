@@ -31,9 +31,16 @@ def mad_scores(values: Sequence[float]) -> List[float]:
     if not values:
         return []
     median = statistics.median(values)
-    mad = statistics.median([abs(value - median) for value in values])
+    deviations = [abs(value - median) for value in values]
+    mad = statistics.median(deviations)
     if mad == 0:
-        return [0.0] * len(values)
+        # More than half the values are identical, so MAD is 0 and a lone
+        # outlier scored 0. Use the mean absolute deviation instead, scaled
+        # to be consistent with the standard deviation (IBM's fallback).
+        mean_ad = statistics.fmean(deviations)
+        if mean_ad == 0:
+            return [0.0] * len(values)
+        return [(value - median) / (1.253314 * mean_ad) for value in values]
     return [0.6745 * (value - median) / mad for value in values]
 
 

@@ -96,7 +96,9 @@ class ResourceProfiler:
         """Spawn the sampling thread (no-op when already running)."""
         if self.is_running:
             return
-        self._stop.clear()
+        # A fresh event per run, never clear() on the old one: a thread that
+        # outlived stop()'s join would see it cleared and keep running.
+        self._stop = threading.Event()
         self._samples = []
         self._frames = []
         self._started_at = time.monotonic()
@@ -110,7 +112,7 @@ class ResourceProfiler:
         except (AttributeError, OSError):
             pass
         self._thread = threading.Thread(
-            target=self._sample_loop, name="resource-profiler", daemon=True,
+            target=self._sample_loop, args=(self._stop,), name="resource-profiler", daemon=True,
         )
         self._thread.start()
 
@@ -206,12 +208,12 @@ class ResourceProfiler:
         """Convenience: speedscope payload serialised."""
         return json.dumps(self.speedscope_payload(), indent=2)
 
-    def _sample_loop(self) -> None:
+    def _sample_loop(self, stop: threading.Event) -> None:
         psutil = self._psutil
         proc = self._proc
         if psutil is None or proc is None:
             return
-        while not self._stop.is_set():
+        while not stop.is_set():
             try:
                 cpu = proc.cpu_percent(interval=None)
                 rss = proc.memory_info().rss
@@ -224,7 +226,7 @@ class ResourceProfiler:
                     cpu_percent=cpu, rss_bytes=int(rss),
                     action=action,
                 ))
-            if self._stop.wait(self._interval):
+            if stop.wait(self._interval):
                 break
 
 

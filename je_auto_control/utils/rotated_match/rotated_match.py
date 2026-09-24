@@ -19,7 +19,8 @@ from dataclasses import asdict, dataclass
 from typing import Any, Dict, List, Optional, Sequence
 
 from je_auto_control.utils.visual_match.visual_match import (
-    _haystack_gray, _method, _nms, _resize, _to_gray,
+    _contain_cv2_error, _haystack_gray_with_origin, _method, _nms,
+    _reject_flat_template, _resize, _to_gray, _to_screen,
 )
 
 ImageSource = Any
@@ -66,6 +67,17 @@ def _rotate(template, angle: float):
     return cv2.warpAffine(template, matrix, (new_w, new_h))
 
 
+def _rotate_with_mask(template, angle: float):
+    """The rotated template and a mask of its real pixels.
+
+    The enlarged canvas is padded with black, and without a mask the black
+    corners took part in the correlation: a rotated control on a white
+    background scored 0.32 at the wrong place instead of 1.0.
+    """
+    import numpy as np
+    return _rotate(template, angle), _rotate(np.full_like(template, 255), angle)
+
+
 def scale_space(min_scale: float = 0.8, max_scale: float = 1.25,
                 steps: int = 5) -> List[float]:
     """Return ``steps`` evenly spaced scales in ``[min_scale, max_scale]``."""
@@ -77,10 +89,16 @@ def scale_space(min_scale: float = 0.8, max_scale: float = 1.25,
 def _best_at(hay, tmpl, scale: float, angle: float, metric: int):
     """Return the best ``RotatedMatch`` for one (scale, angle), or ``None``."""
     import cv2
-    warped = _rotate(_resize(tmpl, float(scale)), float(angle))
+    import numpy as np
+    warped, mask = _rotate_with_mask(_resize(tmpl, float(scale)), float(angle))
     if warped.shape[0] > hay.shape[0] or warped.shape[1] > hay.shape[1]:
         return None
-    _, max_val, _, max_loc = cv2.minMaxLoc(cv2.matchTemplate(hay, warped, metric))
+    scores = cv2.matchTemplate(hay, warped, metric, mask=mask)
+    if metric == cv2.TM_SQDIFF_NORMED:
+        scores = 1.0 - scores  # lower is better for sqdiff; the maximum was the worst spot
+    # Masked correlation over a flat window divides by zero.
+    scores = np.nan_to_num(scores, nan=-1.0, posinf=-1.0, neginf=-1.0)
+    _, max_val, _, max_loc = cv2.minMaxLoc(scores)
     return RotatedMatch(int(max_loc[0]), int(max_loc[1]), warped.shape[1],
                         warped.shape[0], round(float(max_val), 4),
                         float(scale), float(angle))
@@ -91,17 +109,19 @@ def _sweep(template: ImageSource, haystack: Optional[ImageSource],
            angles: Sequence[float], method: str) -> List[RotatedMatch]:
     """Correlate every (scale, angle) candidate and return them all."""
     tmpl = _to_gray(template)
-    hay = _haystack_gray(haystack, region)
+    _reject_flat_template(tmpl)
+    hay, origin_x, origin_y = _haystack_gray_with_origin(haystack, region)
     metric = _method(method)
     found: List[RotatedMatch] = []
     for scale in scales:
         for angle in angles:
             candidate = _best_at(hay, tmpl, scale, angle, metric)
             if candidate is not None:
-                found.append(candidate)
+                found.append(_to_screen(candidate, origin_x, origin_y))
     return found
 
 
+@_contain_cv2_error
 def match_rotated(template: ImageSource, *, haystack: Optional[ImageSource] = None,
                   region: Optional[Sequence[int]] = None,
                   scales: Sequence[float] = (1.0,),
@@ -121,6 +141,7 @@ def match_rotated(template: ImageSource, *, haystack: Optional[ImageSource] = No
     return best
 
 
+@_contain_cv2_error
 def match_rotated_all(template: ImageSource, *,
                       haystack: Optional[ImageSource] = None,
                       region: Optional[Sequence[int]] = None,

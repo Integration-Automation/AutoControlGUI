@@ -25,7 +25,9 @@ except ImportError:  # pragma: no cover - exercised wherever rapidfuzz is absent
     BACKEND = "difflib"
 
     def _similarity(left: str, right: str) -> float:
-        return SequenceMatcher(None, left, right).ratio()
+        # autojunk=False: from 200 characters on, difflib's heuristic treats
+        # common characters as junk, and two texts one letter apart scored ~0.14.
+        return SequenceMatcher(None, left, right, autojunk=False).ratio()
 
 
 def _prepare(value: Any, ignore_case: bool) -> str:

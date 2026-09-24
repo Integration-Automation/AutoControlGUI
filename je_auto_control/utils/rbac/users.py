@@ -11,6 +11,10 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Dict, List, Optional, Set
 
+from je_auto_control.utils.exception.exceptions import AutoControlException
+from je_auto_control.utils.json_store.json_store import atomic_write_text
+from je_auto_control.utils.logging.logging_instance import autocontrol_logger
+
 
 class Role:
     """Enum-like string constants. Strings (not IntEnum) so JSON is readable."""
@@ -44,7 +48,7 @@ _ROLE_CAPABILITIES: Dict[str, Set[str]] = {
 }
 
 
-class UserAuthError(RuntimeError):
+class UserAuthError(AutoControlException, RuntimeError):
     """Raised when a token doesn't match any known user."""
 
 
@@ -97,6 +101,9 @@ class UserStore:
         self._path = Path(path) if path is not None else default_users_path()
         self._lock = threading.Lock()
         self._users: Dict[str, UserRecord] = {}
+        # Why the file on disk could not be read, if it could not. Saving
+        # then would replace every user in it with what this instance holds.
+        self._unreadable: Optional[str] = None
         self._load()
 
     @property
@@ -119,13 +126,18 @@ class UserStore:
         record = UserRecord(
             user_id=user_id, display_name=display_name or user_id,
             role=role, token_hash=_hash_token(plain_token),
-            tags=list(tags or []),
+            tags=_tags(tags),
         )
         with self._lock:
             if user_id in self._users:
                 raise UserAuthError(
                     f"user_id {user_id!r} already exists",
                 )
+            # authenticate() returns the first match: a second user given
+            # the same token would log in as whoever was added first.
+            if any(hmac.compare_digest(existing.token_hash, record.token_hash)
+                   for existing in self._users.values()):
+                raise UserAuthError("that token is already in use")
             self._users[user_id] = record
             self._save_locked()
         return plain_token
@@ -190,10 +202,12 @@ class UserStore:
             return
         try:
             body = json.loads(self._path.read_text(encoding="utf-8"))
-        except (OSError, json.JSONDecodeError):
+        except (OSError, ValueError) as error:  # ValueError: bad JSON or not UTF-8
+            self._mark_unreadable(repr(error))
             return
         users = body.get("users") if isinstance(body, dict) else None
         if not isinstance(users, list):
+            self._mark_unreadable("no 'users' list")
             return
         with self._lock:
             for entry in users:
@@ -204,22 +218,34 @@ class UserStore:
                     display_name=str(entry.get("display_name", "")),
                     role=str(entry.get("role", Role.VIEWER)),
                     token_hash=str(entry.get("token_hash", "")),
-                    tags=list(entry.get("tags") or []),
+                    tags=_tags(entry.get("tags")),
                 )
                 if record.user_id:
                     self._users[record.user_id] = record
 
+    def _mark_unreadable(self, reason: str) -> None:
+        self._unreadable = reason
+        autocontrol_logger.error(
+            "user store %s unreadable (%s); no user can sign in and it will not be overwritten",
+            self._path, reason)
+
     def _save_locked(self) -> None:
+        if self._unreadable is not None:
+            raise UserAuthError(
+                f"user store {self._path} is unreadable ({self._unreadable}); "
+                "refusing to overwrite it -- repair or remove the file first")
         self._path.parent.mkdir(parents=True, exist_ok=True)
         body = {"users": [u.to_dict() for u in self._users.values()]}
-        self._path.write_text(
-            json.dumps(body, indent=2, ensure_ascii=False),
-            encoding="utf-8",
-        )
-        try:
-            os.chmod(self._path, 0o600)
-        except OSError:
-            pass
+        # atomic_write_text: a concurrent reader saw a half-written file, and
+        # its mkstemp file is 0600 from the start instead of after a chmod.
+        atomic_write_text(self._path, json.dumps(body, indent=2, ensure_ascii=False))
+
+
+def _tags(value: object) -> List[str]:
+    """A tag list from caller or file input; anything but a list of strings is empty."""
+    if isinstance(value, (list, tuple)):
+        return [str(tag) for tag in value]
+    return []
 
 
 _default_store: Optional[UserStore] = None

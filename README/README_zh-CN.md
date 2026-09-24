@@ -20,7 +20,7 @@
 
 - **一套 API，七个平台。** `wrapper/platform_wrapper.py` 在导入时挑选后端；同一份脚本在
   Windows、macOS、X11 与 Wayland 上都不需要改写。
-- **不写 Python 也能脚本化。** 773 个 `AC_*` 命令覆盖全部功能，因此一个 JSON 文件能做到库
+- **不写 Python 也能脚本化。** 774 个 `AC_*` 命令覆盖全部功能，因此一个 JSON 文件能做到库
   能做的任何事——包含循环、分支、try/catch、宏与变量。
 - **默认无头运行。** `import je_auto_control` 绝不会加载 Qt。GUI 是可选包，包在同一个无头内核之外。
 - **四种定位方式。** 模板匹配、OCR、无障碍树、视觉语言模型——可通过锚点定位器与自愈回退串接组合。
@@ -64,6 +64,11 @@ sudo apt-get install cmake libssl-dev
 
 OCR、VLM 与 LLM 后端（`pytesseract`、`easyocr`、`paddleocr`、`anthropic`、`openai`）
 都是按需加载——只装你实际会用到的。
+
+**日志文件：** 库写到 `~/.je_auto_control/logs/AutoControlGUI.log`，第一条记录时
+才创建（只 import 不会写任何文件），同一个账户的所有进程共用（追加写入、每行带进程 ID，
+超过 10 MB 就改名为 `.1`）。要写到别处就设置
+`JE_AUTOCONTROL_LOG_FILE`，设为 `os.devnull` 则不写文件。
 
 ---
 
@@ -110,10 +115,11 @@ je_auto_control run flow.json --dry-run     # 只列出步骤，不会真的动�
 
 ```bash
 pip install je_auto_control[gui]
-python -m je_auto_control          # 或：je_auto_control.start_autocontrol_gui()
+python -c "import je_auto_control; je_auto_control.start_autocontrol_gui()"
 ```
 
 录制一段流程、在可视化 Script Builder 里编辑，然后存成 CLI 能直接执行的同一种 JSON 格式。
+（`python -m je_auto_control` 是旧式的动作文件执行器——`-e`、`-d`、`-c`、`--execute_str`——不会打开 GUI。）
 
 ---
 
@@ -136,7 +142,7 @@ python -m je_auto_control          # 或：je_auto_control.start_autocontrol_gui
 | 自然语言规划 | `plan_actions`、`run_from_description` | `AC_llm_plan` | LLM Planner |
 | Computer-use agent | `AgentLoop`、`run_agent` | `AC_run_agent` | Computer Use |
 | 录制与回放 | `record`、`stop_record` | `AC_record`、`AC_stop_record` | Record |
-| JSON 脚本 | `execute_action`、`execute_files` | 全部 773 个命令 | Script、Script Builder |
+| JSON 脚本 | `execute_action`、`execute_files` | 全部 774 个命令 | Script、Script Builder |
 | 变量与流程控制 | `execute_action_with_vars` | `AC_set_var`、`AC_loop`、`AC_for_each`、`AC_try`、`AC_retry` | Variables |
 | 数据驱动执行 | — | `AC_for_each_row`（CSV／JSON／SQLite／Excel） | Data Sources |
 | 断言 | `assert_text`、`assert_image` | `AC_assert_text` 等 21 个 | Assertions |
@@ -144,7 +150,7 @@ python -m je_auto_control          # 或：je_auto_control.start_autocontrol_gui
 | 调度（间隔 + cron） | `default_scheduler` | — | Scheduler |
 | 全局热键 | `default_hotkey_daemon` | — | Hotkeys |
 | 事件触发 | `default_trigger_engine` | `AC_email_trigger_add` | Triggers、Webhooks、Email |
-| 窗口管理 *(仅 Windows)* | `list_windows`、`focus_window` | `AC_focus_window`、`AC_snap_window` | Window Manager |
+| 窗口管理 *(Windows、macOS、X11)* | `list_windows`、`focus_window` | `AC_focus_window`、`AC_snap_window` | Window Manager |
 | 剪贴板（文本 + 图片） | `get_clipboard`、`set_clipboard`、`get_clipboard_image`、`set_clipboard_image` | `AC_clipboard_get`、`AC_clipboard_set`、`AC_clipboard_get_image`、`AC_clipboard_set_image` | — |
 | 远程桌面 | `RemoteDesktopHost`、`RemoteDesktopViewer` | `AC_start_remote_host`、`AC_remote_connect` | Remote Desktop |
 | USB 枚举与直通 | `list_usb_devices`、`enable_usb_passthrough` | `AC_usb_*`（16 个命令） | USB Devices、USB Share |
@@ -177,7 +183,7 @@ je_auto_control version
 ```
 
 `--var name=value` 会尽量以 JSON 解析（`count=10` 会变成整数），否则视为字符串。
-旧版 `python -m je_auto_control -e file.json` 入口仍然可用。
+`run` 只要有任何动作失败就以 1 退出（仍会跑完整份脚本），CI 步骤会随之失败。旧版 `python -m je_auto_control -e file.json` 入口仍然可用。
 
 ---
 
@@ -185,7 +191,7 @@ je_auto_control version
 
 | 接口 | 启动方式 | 说明 |
 |---|---|---|
-| **MCP 服务器** | `je_auto_control_mcp`（stdio）或 `AC_start_mcp_http_server` | 676 个工具，供 Claude Desktop／Claude Code／自定义 tool loop 使用。Bearer 认证、TLS、审计日志、限流、插件热重载、CI 假后端。 |
+| **MCP 服务器** | `je_auto_control_mcp`（stdio）或 `AC_start_mcp_http_server` | 677 个工具，供 Claude Desktop／Claude Code／自定义 tool loop 使用。Bearer 认证、TLS、审计日志、限流、插件热重载、CI 假后端。 |
 | **REST API** | `je_auto_control start-rest` | Bearer token、按 IP 限流与锁定、SQLite 审计 hook、`/metrics`、`/openapi.json`、`/docs` Swagger UI、`/dashboard`。 |
 | **TCP socket 服务器** | `je_auto_control start-server` | 以换行分隔的 JSON 动作列表。默认绑定 `127.0.0.1`。 |
 | **pytest 插件** | 安装后自动生效 | 提供 fixture 与供 pytest-bdd／behave 使用的 Gherkin step library。 |
@@ -298,8 +304,9 @@ export JE_AUTOCONTROL_WAYLAND_CAPTURE_COMMAND="mycapture --png {output}"
 ```
 
 Wayland 禁止非特权客户端进行全局输入录制——若要录制，请设置
-`JE_AUTOCONTROL_LINUX_DISPLAY_SERVER=x11` 并在 X11 会话下运行。窗口管理目前仅
-Windows 有实现，其他平台会抛出明确的 `NotImplementedError`。对于会忽略合成输入的应用，
+`JE_AUTOCONTROL_LINUX_DISPLAY_SERVER=x11` 并在 X11 会话下运行。窗口管理支持
+Windows、macOS（pyobjc）与 X11（含 XWayland）；纯 Wayland 会话的协议不让客户端看到其他程序的窗口，
+所以 `list_windows()` 返回空列表，其余窗口操作一律抛出带原因的 `AutoControlUnsupportedOperationException`。对于会忽略合成输入的应用，
 可选用驱动层后端（`JE_AUTOCONTROL_WIN32_BACKEND=interception`、
 `JE_AUTOCONTROL_LINUX_BACKEND=uinput`、ViGEm 虚拟手柄）；驱动未安装时会自动回退到原有行为。
 
@@ -314,7 +321,7 @@ Windows 有实现，其他平台会抛出明确的 `NotImplementedError`。对�
 | [architecture_explore.md](../architecture_explore.md) | 逐层记录每个模块的职责。 |
 | [docs/CAPABILITY_MATRIX.md](../docs/CAPABILITY_MATRIX.md) | 能力 × 平台对照矩阵。 |
 | [docs/API_LIFECYCLE.md](../docs/API_LIFECYCLE.md) | 稳定 API 与弃用策略。 |
-| [WHATS_NEW.md](../WHATS_NEW.md) | 各版本更新说明。 |
+| [docs/updates/](../docs/updates/README.md) | 更新记录：各版本说明与完成的工作，每月一个文件（原 `WHATS_NEW.md`）。 |
 | [CHANGELOG.md](../CHANGELOG.md) | 兼容性变更记录。 |
 | [SECURITY.md](../SECURITY.md) | 安全策略与报告方式。 |
 

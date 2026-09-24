@@ -1,7 +1,8 @@
 # Progress
 
-**只記未完成的事。** 已出貨的內容寫進 [WHATS_NEW.md](WHATS_NEW.md)，相容性變更寫進
-[CHANGELOG.md](CHANGELOG.md)；完成的項目從本檔移除，不累積歷史。
+**只記未完成的事。** 完成的工作記在 [docs/updates/](docs/updates/README.md)（每月一個批次檔，
+索引與查詢指令在它的 README），相容性變更寫進 [CHANGELOG.md](CHANGELOG.md)；完成的項目
+從本檔移除，同一個 commit 在 `docs/updates/` 補一筆 `#done` 條目，不在這裡累積歷史。
 
 狀態標記：
 
@@ -18,22 +19,24 @@
 
 `CLAUDE.md` §Size and complexity limits 規定:超標檔案只能列在這裡,列不進來的就是缺陷。
 清單上的檔案**可以改、可以變短,但不得再變長**——要再長就得先拆。
-行數為 2026-08-19 實測（`len(text.splitlines())`）；`webrtc_panel.py` 於
-2026-08-22 拆出 `advanced_group.py` 後降到 2,545，上限跟著往下走。
+行數為實測（`len(text.splitlines())`）；`webrtc_panel.py` 於 2026-08-22 拆出
+`advanced_group.py`、2026-09-23 拆出 `trusted_group.py` 後降到 2,530，上限跟著往下走。
+**這張表現在有測試在守**：`test/unit_test/headless/test_file_length_budget.py` 比對本表與樹，
+超標未列、列上的檔案變長、或已經縮到線內卻還留著的列，都會紅。
 
 | 檔案 | 行數 | 為何還沒拆 |
 | --- | ---: | --- |
-| `utils/mcp_server/tools/_handlers.py` | 4,789 | 676 個 MCP 工具的處理函式本體。與 `_factories.py`（表）不同,這裡是邏輯,應該依主題拆成 `_handlers/` 套件（input／screen／window／file／agent…）。拆點清楚,純粹是量大。 |
-| `gui/remote_desktop/webrtc_panel.py` | 2,545 | 單一 Qt 面板,但已含連線、監視器選擇、頻寬自適應、麥克風、錄影五組互動狀態。應拆成 panel + 各控制器。 |
-| `utils/accessibility/backends/windows_backend.py` | 915 | 已拆出 `windows_query.py`（170）與 `windows_state.py`（98）。剩下的是同一套 UIA COM 生命週期管理,再拆會把 `CoInitialize`／介面釋放的配對邏輯切散。 |
+| `utils/mcp_server/tools/_handlers_executor_bridge.py` | 1,448 | 2026-09-23 拆 `_handlers.py` 時新建。252 個純委派（中位數 3 行）：`from action_executor import _x` 再 `return _x(...)`,沒有分支。**不套用 flat data tables 條款**——那一條講的是「一個對照表或清單」,這裡是 252 個函式定義。再切下去只能照 MCP 工廠領域分（159 個領域）,那會把同一種委派散進十幾個檔,而它們之間沒有語意邊界。規則照舊:只准變短。 |
+| `gui/remote_desktop/webrtc_panel.py` | 2,530 | 單一 Qt 面板,但已含連線、監視器選擇、頻寬自適應、麥克風、錄影五組互動狀態。應拆成 panel + 各控制器。 |
+| `utils/accessibility/backends/windows_backend.py` | 805 | 已拆出 `windows_query.py`（193）、`windows_state.py`（98）與 `windows_reads.py`（142,2026-09-23;拆完 801,同日加焦點查詢的委派 +4）。剩下的是同一套 UIA COM 生命週期管理,再拆會把 `CoInitialize`／介面釋放的配對邏輯切散。 |
 
 **本質豁免（依 `CLAUDE.md` 的「flat data tables」條款,不算既有豁免）**:
-`utils/mcp_server/tools/_factories.py`（8,972,MCP 工具註冊表）、
-`utils/executor/action_executor.py`（8,125,`AC_*` 分派表）、
-`gui/script_builder/command_schema.py`（5,051,每個 `AC_*` 的參數 schema）、
+`utils/mcp_server/tools/_factories.py`（9,001,MCP 工具註冊表）、
+`utils/executor/action_executor.py`（8,260,`AC_*` 分派表）、
+`gui/script_builder/command_schema.py`（5,057,每個 `AC_*` 的參數 schema）、
 `je_auto_control/__init__.py`（1,970,門面 re-export）、
 `gui/language_wrapper/{english,japanese,traditional_chinese,simplified_chinese}.py`
-（1,316／1,203／1,189／1,188,語系字串表）。
+（1,326／1,213／1,193／1,192,語系字串表；以上皆 2026-09-23 實測）。
 
 ### 2026-08-19 決議:上表的實測行數就是新的上限
 
@@ -42,11 +45,13 @@
 **維護者已於 2026-08-19 拍板:接受實測數字當新基準**——不為了回到舊數字而去拆
 `_handlers.py`（4,789）與 `webrtc_panel.py`。上表的行數即是各自的新上限,
 規則不變:只准變短,再變長就得先拆。
+（`_handlers.py` 後來還是拆了:2026-09-22 拆出 QA 主題,2026-09-23 再拆出九個主題模組,
+本體降到 522 行、離開上表。見 `docs/updates/` 的 U-20260922-05 與 U-20260923-09。）
 
 同一批裡有六個檔案在 2026-08-19 已經拆回線內、從表上移除,做法寫在
-[WHATS_NEW.md](WHATS_NEW.md)。
+commit `46f4cd5` 的說明裡（`docs/updates/` 沒有對應條目：舊的 `WHATS_NEW.md` 從沒記過這件事）。
 
-行數沒有任何 CI 在把關（`quality.yml` 只跑 ruff 與 bandit,而 ruff 只管行寬),
+行數沒有任何 CI 在把關（`quality.yml` 的五個 job 裡只有 ruff 管到這一節的限制,而它只管行寬),
 所以這張表只會在有人手動實測時才會被發現對不上——上次就是。
 
 ---
@@ -122,7 +127,7 @@ pip install --dry-run --only-binary=:all: --platform win_arm64 --python-version 
 當成了「容器做不到的事」**。portal 是 D-Bus 介面,誰佔住那個名字誰就是 portal;
 「會吃 libinput 裝置的 seat」是 wlroots 的 `WLR_BACKENDS=headless,libinput` 加
 `LIBSEAT_BACKEND=builtin` 加 `SEATD_VTBOUND=0`（第四個條件是 udev 要比 ydotoold 早起
-來)。都已經是 CI job 了,見下面「已經有答案的」與 [WHATS_NEW.md](WHATS_NEW.md)。
+來)。都已經是 CI job 了,見 [docs/updates/2026-08.md](docs/updates/2026-08.md) 的 U-20260819-02（原本在這裡的「已經有答案的」一節）與 U-20260818-01、U-20260819-01。
 
 **下次要往這裡加「需要一台 VM／真桌面」之前,先問這件事到底是誰做不到。**
 
@@ -141,63 +146,182 @@ pip install --dry-run --only-binary=:all: --platform win_arm64 --python-version 
   bus 上跑過,三種都得在自己的時限內收斂。至於真的 mutter 對話框長什麼樣、真人猶豫
   三十秒會不會撞到別的東西,那是 mutter 的事,CI 裡沒有人可以去按它。
 
-### 已經有答案的（都在 CI 裡,做法見 WHATS_NEW）
-
-五個 job 都在 GitHub runner 上跑過了（2026-08-19,PR #481）。`modprobe uinput evdev`
-在 runner 上載得起來,`systemd-udevd` 在容器裡也收得到 kernel uevent——這兩件事原本
-只在本機（Docker Desktop 的 WSL2 kernel）驗過,曾經記在上面當待辦,現在有答案了。
-job 一律寫成模組載不起來就明講失敗,不會靜默跳過,所以哪天 runner 的 kernel 變了會
-當場紅掉。
-
-| 面向 | 怎麼驗的 | job |
-| --- | --- | --- |
-| 擷取路徑 | 真的 wlroots 合成器（sway headless,兩個上不同純色的 output）,27 項 × 2 種版面 | `wayland-verification` |
-| libei 協定層 | 真的 `libeis.so.1` server 在 Unix socket 上,20 項 | `eis-verification` |
-| RemoteDesktop portal 交握 | 真的 `dbus-daemon` + 真的 `liboeffis`,對面是自己實作的 portal,`ConnectToEIS` 交出通往真 libeis 的活 fd,20 項 | `portal-verification` |
-| ydotool CLI | 真的 uinput 裝置,直接讀回 `/dev/input/eventN`,12 項 | `ydotool-verification` |
-| ydotool 的絕對移動落在哪 | 真的 wlroots session 吃真的 ydotool 裝置（`headless,libinput` + builtin seat）,游標位置從 `grim -c` 的像素讀回,14 項 × 2 種版面 | `seat-verification` |
-
-擷取那一列的第二種版面是**負原點**:`output HEADLESS-1 position -1280 0`,
-也就是「第二台螢幕在主螢幕左邊」的桌面。sway headless 收這個座標,grim 也收負的
-`-g`,所以這件事根本不必等 GNOME VM——原本記在這裡說測不到,是把「合成器做得到的事」
-當成了「容器做不到的事」。跑起來當場抓到三個真的錯:`size()` 回的是版面右緣不是寬度、
-非 grim 層級的裁切用版面座標去裁一張以版面原點為 (0,0) 的圖、`grab_logical()` 一律回
-原點 (0,0) 所以比對到的座標整個偏掉。修法見 [WHATS_NEW.md](WHATS_NEW.md)。
-
-portal 那一列是同一個錯誤犯第二次的結果,而它抓到的東西比前一次更嚴重:
-`portal.py` 那條「先開 `gdbus monitor`、再用 `gdbus call` 發請求」的路
-**在任何真的 bus 上都不可能成功**——portal 的 `Response` 是**指名送給發出呼叫的那條
-連線**,兩個 gdbus 行程是兩條連線,監聽的那條永遠不是收件人。在真的 `dbus-daemon` 上
-量到的就是這樣:呼叫看得到,回答永遠等不到,每次都走到 30 秒逾時。修法見
-[WHATS_NEW.md](WHATS_NEW.md)。
-
-五者都不需要合成器以外的東西,更不需要 GNOME VM。libei 這一層驗掉的包含
-capability enum 值與 variadic `ei_seat_bind_capabilities`、event-type enum 值、
-`start_emulating` → 事件 → `frame` 的實際上線內容、live context 的 teardown
-安全性（原本每個行程漏一個 context + 一個 fd,已修）、以及絕對指標的座標空間
-（region offset 讀得回來且含在座標裡、region 外的移動被靜靜丟掉、負原點的版面要
-正規化）。portal 這一層驗掉的是四個呼叫的順序與 client 自己預測的 request path、
-`SelectDevices` 收到的裝置遮罩（也就是使用者被要求同意的範圍）、交回來的 fd 真的
-承載得起一個 EI session,以及六種拒絕路徑各自都要 fail closed。ydotool 這一層驗掉的是
-`click` 位元遮罩、拆邊的 press／release、`mousemove --absolute` 的實際上線內容、
-捲動正負號與軸向,以及 `mouse`／`keyboard` 自己組出來的 argv。seat 這一層驗掉的是
-`--absolute` 到底相對於哪裡（版面左上角,不是版面座標的 `(0, 0)`)、關掉加速度後
-一像素對一像素、沒轉換的 `(0, 0)` 會打到隔壁螢幕、`set_position` 減掉的正好是原點、
-以及預設 profile 下的 2 倍加速。
-
-### 一件關於發行版的事實,會影響使用者拿到什麼
-
-- **`liboeffis` 是獨立的二進位套件,`libei1` 不會把它帶進來。** Debian trixie
-  **有** `liboeffis1`（1.3.901-1,`liboeffis.so.1`,連 libsystemd 的 sd-bus）——
-  這裡原本寫「Debian trixie 沒有」,是錯的,已實測更正。Arch（1.6.0）與 Fedora 也有。
-  但因為它不是 `libei1` 的相依,只裝 libei 的機器上 portal 快速路徑仍然是關閉的,
-  `connect()` 會退到 `$XDG_RUNTIME_DIR/eis-0` socket,GNOME／KDE 不開那個 socket
-  → 退回 ydotool。**所以要用 libei 快速路徑,`liboeffis` 得自己裝。**
-- 而那條退路本身,在同一批發行版上原本是壞的——0.1.x 對本專案送的 argv 回傳 0
-  卻不送任何事件。已於 2026-08-19 擋掉,見 CHANGELOG 與 WHATS_NEW;此處無待辦。
-
 **緩解**:驗不到的擷取部分有逃生門——`JE_AUTOCONTROL_WAYLAND_CAPTURE_COMMAND` 讓操作者
 直接指定自己的擷取指令（`{output}` 會被換成暫存 PNG 路徑）,優先於所有偵測。
+
+---
+
+## 鍵盤與滑鼠 wrapper 的輸入修正：等 Jeffrey_RPA 批次停下
+
+`BLOCKED` — Jeffrey_RPA 以 editable install 載入這個工作樹，正式批次（`webrunner_novelai.py`）與 Discord bot 正在跑，並且經 `_gui_control.py` 呼叫 `ac.write`、`ac.hotkey`、`ac.mouse_scroll`；下面每一項都會改變它打出來的字或滾動方向，依工作區規則在它執行期間不動
+
+2026-09-24 稽核用假後端重現：
+
+- **大寫字母打成小寫**：`wrapper/auto_control_keyboard.py:234` `write()` 在 Windows 送的是與小寫相同的虛擬鍵（`_platform_windows.py` 的表裡 `"A"` 與 `"a"` 同一個碼），沒有按 Shift，`"Hi"` 打成 `hi`；X11 很可能一樣。做法：需要 Shift 的字元改走 `_write_char_via_unicode`，或包一層 Shift 按下／放開。
+- **`is_shift` 在 Windows 與 X11 無效**：`auto_control_keyboard.py:73`、`:104` 只在 macOS 把它傳下去，其他平台直接忽略，docstring 卻寫「是否同時按下 Shift」。做法：在這一層按住 `keyboard_keys_table["shift"]`，`finally` 放開。
+- **`"\r\n"` 按兩次 Enter**：`write()` 把 `\r` 與 `\n` 都對到 `return`，從檔案讀進來的 Windows 換行每行多一個空行。做法：迴圈前把 `\r\n` 換成 `\n`。
+- **X11 預設滾動方向與 Windows／macOS 相反**：`wrapper/auto_control_mouse.py` `mouse_scroll(..., scroll_direction="scroll_down")`，正值在 X11 往下、其他平台往上，與 docstring「一份寫法各平台通用」不符。做法：預設改 `scroll_up`，或改 docstring 講清楚（重播路徑已在 U-20260924-14 明確傳 `scroll_up`）。
+- **`mouse_scroll` 的 NaN 座標被悄悄夾到桌面邊緣**：`auto_control_mouse.py` 的夾限在 `_coordinate()` 驗證之前，`mouse_scroll(3, x=nan, y=100)` 移到 `(-1920, 100)` 才滾；`set_mouse_position(nan, …)` 則正確丟例外。做法：夾限前先過 `_coordinate()`。
+- **座標截斷而非四捨五入**：`set_mouse_position(-0.6, 10.9)` 得到 `(0, 10)`，註解寫的是「rounded point」。做法：`int(round(value))`。
+
+同一次稽核的影像與 OCR 部分也在它的路徑上（Discord bot 的 `!find_image`／`!find_text`），一併等：
+
+- **非 ASCII 路徑與灰階樣板**：`cv2_utils/template_detection.py:126` 經 `je_open_cv` 的 `cv2.imread` 讀樣板，`測試\t.png` 讀不到；2-D 陣列或 PIL `"L"` 樣板丟出 `cv2.error`，不在 `wrapper/auto_control_image.py` 的例外清單裡。做法：路徑改走 `cv2_utils/image_file.read_image`，2-D 直接用，`cv2.error` 包成 `ImageNotFoundException`。
+- **部分超出螢幕的 `screen_region` 被補黑**：`monitor_layout/logical_frame.py:143` 沒有先和畫面取交集，PIL `crop` 補零，可能回傳螢幕外的命中；寬或高為負時丟裸 `ValueError`。做法：先取交集（回傳裁過的原點），非正的寬高丟框架例外。
+- **OCR 跨框比對漏掉從長框中段開始的字串**：`ocr/text_span.py:330` 的視窗超過「目標長度＋40」就整個丟掉最左框，即使目標從那框開始；`"Save As"` 在長句框之後就找不到。做法：只有剩下的部分仍不短於目標時才丟左框。
+- **負座標的中心點差一**：`wrapper/auto_control_image.py:48`、`:73` 的 `int((x1 + x2) / 2)` 向零截斷。做法：`(x1 + x2) // 2`。
+
+**解除條件**：Jeffrey_RPA 沒有批次在跑（`webrunner.pid` 的行程不在、Discord bot 停止）；改完在 Jeffrey_RPA 跑 `test/test_je_facade.py`。
+
+---
+
+## RBAC 還沒接到 REST API 與 MCP server
+
+`DECIDE` — 要不要把 `utils/rbac` 接上兩個伺服器，以及現有單一共用 token 怎麼過渡（維護者拍板）
+
+`utils/rbac/users.py` 有使用者、角色與權杖驗證（2026-09-24 已補上：壞檔不覆寫、權杖不得重複），但沒有任何程式
+import 它：`rest_api/rest_auth.py` 與 `mcp_server/http_transport.py` 都只比對一個共用 token，稽核 log 也沒有
+`user_id`。模組 docstring 已改成照實描述。
+
+**做法**：`RestAuthGate.check` 改成先查 `UserStore.authenticate`、再依路由對應的 `Capability` 呼叫 `can()`；
+MCP 的 bearer 比對同理；稽核寫入帶上 `user_id`。
+
+**要先想清楚**：沒有任何使用者時是否退回共用 token（相容現有部署）；viewer／operator／admin 各能呼叫哪些路由與工具。
+
+---
+
+## 能執行動作的人也能替檔案簽章
+
+`DECIDE` — `JE_AUTOCONTROL_REQUIRE_SIGNED_ACTIONS` 要防的是誰（維護者拍板）
+
+`AC_sign_action_file` 用預設的個人金鑰簽章，所以凡是能透過 socket、REST 或 MCP 執行動作的人，都能先簽一個檔再用
+`AC_execute_files` 執行它；內嵌的動作清單本來就不驗簽。現在的強制簽章只擋得住「能改檔案、但不能執行動作」的人。
+
+**選項**：簽章指令在強制模式下只准本機 CLI 使用；或簽章金鑰與執行權限分開保存（簽章端不在執行端）。
+
+---
+
+## USB passthrough viewer 以種類配對回覆，逾時的回覆會交給下一個請求
+
+`DECIDE` — 協定要不要加請求編號（線上格式改動，新舊版本相容要一起想）
+
+`utils/usb/passthrough/viewer_client.py:413`（`_on_opened`）與 `:466`（`_complete_pending`）只按 OPEN／LIST／claim
+配對回覆，回覆沒有序號。請求逾時後，對同一種類的下一個請求會拿到遲到的舊回覆：`open(aaaa)` 逾時、`open(bbbb)`
+收到 `aaaa` 的 OPENED，claim 綁錯裝置；bulk 讀逾時後，下一次傳輸拿到上一次的資料。host 接受最長 60 秒的
+`timeout_ms`，client 預設 10 秒就放棄，正常使用就會遇到（2026-09-24 稽核重現）。
+
+**選項**：在 payload 加一個由 client 產生、host 原樣帶回的請求編號（舊 host 不帶就退回現在的配對）；或逾時後把該
+claim 標成需排空，丟掉下一個回覆——但 host 若根本沒回，會丟掉正確的回覆。
+
+---
+
+## Admin console 廣播的 `ok` 只代表 HTTP 200
+
+`TODO` — 讓遠端 `/execute` 的動作失敗也能回報成失敗
+
+`utils/admin/admin_client.py`（`_execute_one`）在 host 回 200 時一律 `ok: True`；遠端 `/execute` 以
+`raise_on_error=False` 執行，動作失敗只出現在結果內容裡（例如 `{"execute: [...]": "TypeError(...)"}`）。
+`utils/dag/runner.py:270` 的遠端節點因此把失敗的節點算成成功，本機路徑早已用 `raise_on_error=True` 修正過。
+
+**做法**：REST `/execute` 接受並轉交 `raise_on_error`（失敗時回非 200 或 `ok: false`），admin client 與 DAG 遠端
+節點帶上它；同時更新 REST 的 OpenAPI 描述與 `architecture.md` §6（其他工具也會呼叫 `/execute`）。
+
+---
+
+## 全域 executor 的變數會留到下一次執行
+
+`DECIDE` — 每次頂層執行要不要有自己的變數範圍（行為改動，維護者拍板）
+
+`execute_action_with_vars`（`utils/executor/action_executor.py`）把變數種進全域 `executor` 後從不清除，REST、MCP、
+socket server 的執行也都用同一個 `executor`；`for_each` 的迴圈變數與巨集參數同樣留著。下一次執行裡的 `${user}`
+會安靜地取到前一個呼叫者的值，而不是報 `Unknown variable`（2026-09-24 稽核重現）。模組文件把這個範圍描述成
+「共用」，所以有人可能依賴它在執行之間傳值。
+
+**選項**：`execute_action_with_vars` 與各伺服器入口每次開一個新的 `VariableScope`（`AC_set_var` 在單次執行內照舊）；
+或保留共用，但在伺服器入口清空，並在文件寫明。
+
+**附帶**：`AC_circuit_call`、`AC_bulkhead_run`、`AC_run_chaos`、`AC_run_dag` 的巢狀動作跑在全域 `executor` 上，
+在 `AC_parallel` 分支裡因此用到父層的變數範圍，而不是分支自己的。
+
+---
+
+## 舊式 CLI（`-e`／`-d`／`--execute_str`）在動作失敗時仍然結束碼 0
+
+`DECIDE` — 要不要讓舊式入口也以結束碼 1 回報動作失敗（跨專案契約，PyBreeze 與 TestPioneer 以子程序呼叫）
+
+`je_auto_control/__main__.py` 執行完不看 `recorded_failures()`；`je_auto_control run` 在 `cli.py` 已經會回 1。
+同一個會失敗的腳本，`run` 回 1，`-e`、`-d`、`--execute_str` 回 0（2026-09-24 稽核重現）。
+
+**要先確認**：PyBreeze（`AI_CONTEXT.md` §5）與 TestPioneer 的 `parallel_run` 怎麼解讀這個結束碼——若把非 0 當成
+「無法執行」而非「有動作失敗」，改了會讓它們把一次有失敗步驟的執行回報成錯誤。改的話兩邊的 `architecture.md` §6
+與相容性測試要一起更新。
+
+---
+
+## Computer use 改走 GA 的 `computer_toolset_20260801`
+
+`TODO` — 換成新的工具形式需要改 agent 迴圈，不只是換一個 tool 型別
+
+`utils/agent/backends/anthropic_computer_use.py` 現在以 beta 送 `computer_20251124`（2026-09-24 修正：原本沒帶 beta，
+每個請求都被 API 拒絕）。GA 的 `computer_toolset_20260801` 不需要 beta，但每個動作是一個名稱為成員名的 `tool_use`
+（`screenshot`、`left_click`…），可能一回合好幾個，每個 `tool_result` 都要帶回 `"toolset_name": "computer"`；
+截圖要先縮到模型的影像上限內。Claude Opus 5.5 只接受這個形式。
+
+**做法**：`_decision_from_computer_action` 改讀區塊的 `name`，一回合允許多個呼叫並逐一回覆，`_ingest_history` 帶上
+`toolset_name`；在 `claude-opus-5`（兩種都接受）上測過再換預設。
+
+**附帶**：`AC_run_agent backend="openai"` 送出全部約 740 個工具，超過 OpenAI Chat Completions 的 128 個上限，
+所以一定失敗——與「`AC_run_agent` 預設工具集」那一條 DECIDE 一起決定。
+
+---
+
+## Idempotency 的 `release` 還沒有執行器指令
+
+`TODO` — 只有 headless API，JSON 腳本與 MCP 還放不掉失敗的鍵
+
+`utils/idempotency/idempotency.py` 的 `IdempotencyStore.release()` 讓工作失敗的 `in_progress` 鍵可以重跑，但
+`action_executor.py` 的 `_idempotency_begin`／`_idempotency_complete` 旁邊沒有對應的 `AC_idempotency_release`，
+而執行器的具名儲存沒有 TTL，所以腳本裡工作失敗的鍵仍然永遠是 `in_progress`。
+
+**做法**：加 `AC_idempotency_release`、`ac_idempotency_release` 與 Script Builder 的 **Flow** 指令，並重量指令數
+（`test_doc_counts.py` 會要求 README 三份與 `architecture_explore.md` 一起改）。
+
+---
+
+## MCP registry 的 server 名稱與專案網址還是舊組織
+
+`DECIDE` — 要發布到 MCP registry 前得先定名稱，改名會影響已發布的項目
+
+`utils/mcp_registry/registry.py` 的 `_SERVER_NAME` 是 `io.github.intergration-automation-testing/autocontrol`，
+`_REPO_URL` 與 `pyproject.toml` 的 Homepage / Code、`README.md` 的 clone 網址都還是
+`Intergration-Automation-Testing/AutoControl`；repo 現在在 `Integration-Automation/AutoControlGUI`（舊網址只是轉址）。
+registry 以 GitHub 帳號驗證 `io.github.<org>/` 命名空間，舊組織名發布不了。
+
+**做法**：決定正式名稱（例如 `io.github.integration-automation/autocontrol`），在同一輪改 `registry.py`、
+`pyproject.toml`、三份 README 的網址。
+
+---
+
+## pytest11 進入點會把整個門面拉進每一次 pytest
+
+`DECIDE` — 要不要把進入點搬到一個精簡的頂層模組（打包層的改動，維護者拍板）
+
+`pyproject.toml` 的 `pytest11` 進入點指向 `je_auto_control.utils.pytest_plugin.plugin`。
+外掛模組本身很輕（只 import pytest，fixture 裡才 import 本套件），但它是**套件的子模組**，
+所以 Python 會先跑 `je_auto_control/__init__.py`——量到 **1,355 個模組**。機器上任何一個
+安裝了本套件的環境，每一次 pytest 啟動都付這筆成本（Jeffrey_RPA 因此在 `pytest.ini` 用
+`-p no:je_auto_control` 擋掉它）。pytest 官方文件建議的形狀正是「進入點指向只 import pytest
+的精簡模組」。
+
+改法：新增頂層模組（例如 `je_auto_control_pytest.py`，`[tool.setuptools] py-modules`），
+進入點改指它，`utils/pytest_plugin/plugin.py` 轉為 re-export 以維持
+`pytest_plugins = ["je_auto_control.utils.pytest_plugin"]` 這條路。
+
+**為什麼要拍板**：(1) 這是發佈產物的改動，會在 site-packages 多一個頂層名字；
+(2) 進入點改了要重裝才生效（本機的 editable 安裝、CI 的 `pip install -e .`）；
+(3) `test/unit_test/headless/test_coverage_measurement.py` 的前提會改變——它現在釘住
+「外掛載入時門面已經在 `sys.modules` 裡」，改完就不成立，那份說明與測試要一起改寫
+（CI 仍可繼續用 `coverage run -m pytest`）。
 
 ---
 
@@ -220,131 +344,89 @@ capability enum 值與 variadic `ei_seat_bind_capabilities`、event-type enum �
 
 ---
 
-## 兩個門檻：mypy 那半到終點了，覆蓋率那半是量錯了
+## `cryptography` 的安全下限要不要拉到 50
 
-`DECIDE` — 兩半都做完了，只剩「下一個覆蓋率目標是多少」要維護者拍板
+`DECIDE` — 要不要用 Intel Mac 的預編 wheel 換掉一個本套件沒用到的漏洞範圍
 
-原本這一條記的是兩個只存在於 `pyproject.toml` 註解裡、沒有任何機制的承諾。
-2026-08-21 把**機制**補上了（做法見 [WHATS_NEW.md](WHATS_NEW.md)），兩半也都走完了：
-型別契約的豁免清單 2026-08-22 清空，平台縫最後兩個名稱（`keyboard`／`mouse`）
-2026-08-23 拿到合約；覆蓋率那半發現不是爬得不夠，是量測起點錯了，修正後地板
-從 50 提到 69。
+`pyproject.toml` 的 `cryptography>=48.0.1` 仍包含 GHSA-g6cj-pr64-35w5（high,`>=44.0.0, <50.0.0`,
+PKCS#7 EnvelopedData 解密的 Bleichenbacher oracle）的範圍。本套件沒有呼叫 PKCS#7 解密
+（用的是 Fernet，以及 aiortc 的 DTLS），所以目前不受影響。`uv.lock` 已鎖在 50.0.1。
 
-**這一條還留著，是因為只剩一個問題要維護者回答：下一個覆蓋率目標值是多少。**
-另外兩節留著是因為它們記的那幾個坑之後還會踩到。
+**為什麼要拍板**:49.0.0 起上游不再發 `macosx_10_9_universal2` wheel，只剩 `macosx_11_0_arm64`。
+下限拉到 `>=50.0.0` 之後，Intel Mac 上的 `pip install` 要從原始碼編譯（得先裝 Rust 工具鏈）。
+CI 只有 macos-14(arm64)，量不到這一點。重新檢查（不需要機器）:
 
-### 覆蓋率：目標 70 其實早就到了，是量錯了
+```bash
+pip install --dry-run --only-binary=:all: --platform macosx_10_9_x86_64 \
+    --python-version 3.12 --target /tmp/probe 'cryptography>=50'
+```
 
-`DECIDE` — 地板已經設成修正後矩陣的最低那一格（69）；**下一個目標值要維護者定**
+---
 
-`fail_under` 一度從 35 提到 50，理由寫在 `pyproject.toml`。**那兩個數字都低了大約
-24 點**，而原因不在測試，在量測的起點：
+## Viewer 端要不要把 host 推來的檔案關在一個目錄裡
 
-`quality.yml` 用的是 `pytest --cov`，而本套件註冊了 `pytest11` entry point。
-pytest 在載入外掛時就會 import `je_auto_control.utils.pytest_plugin.plugin`——
-要 import 那個子模組，Python 必須先執行 `je_auto_control/__init__.py`，也就是門面，
-連帶把好幾百個模組拉進來。`pytest-cov` 是**在那之後**才開始量的，所以那幾百個模組的
-import 期程式碼（`def` 行、類別本體、常數、兩張大分派表）全部被記成「從沒執行過」。
+`DECIDE` — 這是改一個已寫進文件的功能，由維護者決定
 
-2026-08-23 實測，同一套測試、同一份 `[tool.coverage.run]` 設定，**只差開始的時機**：
+`host.send_file_to_viewers(source, dest_path)` 由 **host** 指定 viewer 機器上的完整路徑
+（`docs/source/{Eng,Zh}/doc/new_features/new_features_doc.rst` 的範例是 `/tmp/from_host.bin`），
+viewer 端的 `FileReceiver`（`utils/remote_desktop/file_transfer.py`）照單全收：`expanduser`、
+建立父目錄、寫入。也就是被控端可以在控制端機器的任何可寫位置放檔案。模組說明的
+「trusted token holders == trusted users」只涵蓋 host 端；viewer 連上一台被入侵的 host 時沒有這層保護。
 
-| 量法 | 總覆蓋率 |
-| --- | ---: |
-| `pytest --cov=je_auto_control` | 52.22% |
-| `coverage run -m pytest` | **72.05%** |
+**做法**：`FileReceiver` 加 `base_dir`，viewer（`viewer.py` 的 `_ensure_file_receiver`、GUI 的
+`viewer_panel.py`）預設給一個下載目錄，只保留相對路徑並拒絕跳出 `base_dir`；host 端維持現狀。
 
-差 11,962 個 statement。受害最深的正好是最大的幾個檔：`action_executor.py` +786、
-`_handlers.py` +684、門面自己 +369、`_factories.py` +209。
+**為什麼要拍板**：`dest_path` 的語意會從「viewer 上的絕對路徑」變成「viewer 下載目錄裡的相對路徑」，
+現有腳本與文件範例都要跟著改。
 
-**一個註冊了 pytest 外掛的套件，沒辦法用 `pytest --cov` 量自己。**
-`quality.yml` 已經改成 `coverage run -m pytest`（先於 pytest 載入任何東西），
-`test/unit_test/headless/test_coverage_measurement.py` 把這件事釘住——因為兩種寫法的
-差別在綠色的建置裡看不出來：改回去會白送 24 點，而每一格照樣是綠的。
+---
 
-修正後的九宮格已經量出來了（2026-08-23，本 PR 的 run）：
+## Config sync 刪掉的項目會在下次同步時回來
 
-| | 最低 | 最高 |
-| --- | --- | --- |
-| 修正前（`pytest --cov`） | 50.26%（ubuntu-22.04／3.10） | 51.69%（windows-2022／3.14） |
-| 修正後（`coverage run`） | **69.67%**（ubuntu-22.04／3.14） | 70.97%（windows-2022／3.12） |
+`TODO` — 同步格式要加 tombstone，伺服器端與舊版客戶端的相容要一起想
 
-地板因此設成 **69**——取最低那一格往下取整，與當初 50 取自 50.26% 是同一個慣例。
-`[tool.coverage.report]` 的 `precision` 也從預設的 0 提到 2：預設精度下九格全部印
-「70%」，而它們其實是 69.67 到 70.97，害得這次的地板得去 XML artifact 裡撈。
-順帶把 `fail_under` 的容差從一整個百分點縮到 0.01。
-地板只有一個家（`pyproject.toml` 的 `fail_under`），`quality.yml` 不再另外抄一份。
+`utils/config_sync/client.py` 的 `ConfigBucket.remove()` 直接把項目從本機 dict 拿掉；`merge_buckets` 把
+「只有遠端有」的項目照收，所以 `remove()` 之後 `sync()` 會把它從伺服器拿回來（2026-09-23 稽核重現）。
 
-Windows 是高的那一角，因為門面 import 進來的是**它自己那個平台的後端**；
-換句話說剩下的那 30 點裡，有一部分是任何單一平台都拿不到的。
+**做法**：`remove()` 留下 `{"deleted": True, "last_modified": now}`，merge 照一般 last-write-wins 比較，
+合併完再把 tombstone 從對外的檢視濾掉；過了保留期（例如 30 天）才真正清掉。
 
-**還要決定的**：70 是舊的目的地，現在等於已經到了，**下一個目標值該由維護者定**。
-真正還低的是哪幾塊，現在有實測（本機 Windows／3.14，修正後）：
-`utils/remote_desktop` 35%、`utils/mcp_server` 34%（`_handlers.py` 自己 10%）、
-`utils/executor` 41%、`utils/accessibility` 29%、`wrapper/window_backends` 10%。
-這四塊的共同形狀是「一大堆薄轉接函式包著已經測過的無頭函式」，所以往上爬的方式
-是走註冊表逐一驅動，而不是一支一支手寫測試。
+**要先想清楚**：已經在跑的舊版客戶端看不懂 `deleted`，會把 tombstone 當成一般項目；伺服器是否要認得它。
 
-### mypy：整包把關，**豁免清單已經清空**
+---
 
-`TODO` → **完成（2026-08-22）**
+## `AC_run_agent` 預設把每個 AC_* 指令都交給模型
 
-範圍不再是兩條路徑，而是**整包減去一張只准變少的清單**
-（`test/verify/typing_contract_exempt.txt`）。差別在於預設值：路徑清單只有人想到才會長，
-新模組預設在圈外；現在新模組**預設就在契約裡**。
+`DECIDE` — 預設工具集要不要排除高風險指令
 
-**2026-08-22 那張清單降到零**：`je_auto_control/` 的 1,018 個檔案在
-win32／linux／darwin 三個目標上全部乾淨。清掉 136 個模組的過程與每一群的做法寫在
-[WHATS_NEW.md](WHATS_NEW.md)；這裡只留下之後還用得到的五件事：
+`utils/executor/action_executor.py` 的 `_run_agent` 以 `export_anthropic_tools()` / `export_openai_tools()`
+不帶 `only=` 建立 backend，所以模型拿得到 `AC_shell_command`、`AC_execute_process`、`AC_android_shell`、
+`AC_add_package_to_executor`、`AC_run_agent`、`AC_computer_use`、`AC_execute_action` 等指令。
+2026-09-23 已讓 backend 拒絕「沒有提供的工具」，但提供的清單本身就包含這些；
+螢幕上的內容（網頁、文件）若誘導模型呼叫 shell，目前不會被擋。
 
-* **反覆出現的五種形狀**：mixin 讀取宿主的成員（用類別本體裡的
-  `if TYPE_CHECKING:` 宣告，執行期會被剝掉）、`self._x = None` 沒有標注
-  （mypy 會把屬性的型別判成 `None`）、`callable` 被當成型別用、
-  `x: SomeType = None` 的隱含 Optional、以及掉了長度的 tuple。
-* **攔截用的 tuple 必須標成 `Tuple[Type[BaseException], ...]`**，而且要收成一個
-  模組常數——`except (A, B, *TUPLE)` 的星號解包 mypy 跟不進 `except`。
-* **`# type: ignore` 只有當它是那一行的第一個註解時才生效**（已實測），所以有
-  `# nosec` 的行要把它放前面。
-* **`cv2` 的 stub 會隨版本變**：`pyproject.toml` 把它列在「ship no stubs 的基礎相依」
-  底下，但 opencv-python 有附 `.pyi`，閘門會去讀。實測 4.13.0：`MSER_create`、
-  `ORB_create`、`VideoWriter_fourcc` 執行期都在、stub 裡都沒有。`>=4.8,<6` 範圍內
-  版本一換，判定就可能跟著動——與 numpy 那條註解同一類的坑。
-* **要讓 mypy 剪掉一個分支，整條條件都得是它讀得懂的**：`sys.platform == "..."`
-  與 `.startswith("...")` 算，`in [...]` 不算，而只要裡面**混進一個函式呼叫**
-  （`is_windows()`），`or`／`and` 整條就變成未知、兩邊都會被檢查。所以
-  `platform_wrapper` 那種「問 `platform_id` 才知道綁哪個後端」的分支**沒辦法**
-  讓自己被剪掉——它綁的三種形狀互不相容，一個型別蓋不住。做法是那兩個名稱進來時
-  先落在私有的 `Any` 上、出去時才標合約：後端那一側在 `_platform_*.py` 被檢查，
-  呼叫端那一側在 `auto_control_*.py` 被檢查，中間那一接頭本來就沒有東西可查。
-  細節見 `wrapper/backend_contract.py` 的 docstring。
+**做法**：`_run_agent` 預設排除上述類別，另加一個 opt-in 參數（例如 `allow_system_commands`）
+讓需要的人明確打開；MCP `ac_run_agent` 與 Script Builder 的欄位同步。
 
-清單現在只有標頭、沒有任何條目。**它變長就是退步**，`typing_contract_verify.py`
-會在有人讓它變長時紅掉。
+**為什麼要拍板**：這會縮小既有的 agent 能力，依賴它跑 shell 的腳本會改變行為。
 
-#### 已拍板（2026-08-22）：Win32 ctypes 表面用 28 個逐行抑制解決
 
-原本這裡是一條 `DECIDE`，寫的是「`windows/` 底下 8 個模組」。重新實測後是
-**16 個模組**，而且**一半不在 `windows/` 底下**（`utils/trash/`、`utils/app_idle/`、
-`utils/file_assoc/`、`utils/idle_keepawake/`、`utils/lock_session/`、
-`utils/session_guard/`、`utils/usb/passthrough/key_provider.py`、
-`gui/main_window.py`）——這一點直接否掉了原本推薦的那一條（照目錄決定用哪個平台量，
-分不到這八個）。
+---
 
-**維護者選了逐行 `# type: ignore` 附理由**，實際只用了 **28 行**（原本估的 58
-是把同一行在 linux 與 darwin 各算了一次）。做法見 [WHATS_NEW.md](WHATS_NEW.md)，
-兩件必須實測的事記在這裡免得再踩：
+## MCP 工具的檔案路徑參數要不要限制在工作區根目錄裡
 
-* **mypy 只認每一行的第一個註解**——接在既有 `# nosec` 後面的 `# type: ignore`
-  完全不生效（已實測）。所以有 `# nosec` 的那兩行，marker 放前面、兩個理由併成一句。
-* 有九行放不進 120 字元，是**改寫**而不是把理由砍到看不懂：括號換行時 marker 跟著
-  左括號走，兩處先把值取出來成區域變數（DPAPI 的 `last_error`、input hook 的
-  `kernel32`），讀起來比原本的一行式更清楚。
+`DECIDE` — 限制範圍與預設值由維護者決定
 
-十六個模組事後都在真的 Windows 機器上重新 import 並實際呼叫過
-（`dpapi_available()`、`_windows_locked()`、`check_key_is_press`）——
-只有型別檢查器驗過的改寫等於沒人驗過。
+MCP 工具的檔案參數（`path`、`file_path`、`db`、`image_path`、`golden_path`、`output_path`… 約 100 個）
+不受任何根目錄限制；只有 `resources/read` 關在 `roots/list` 的根目錄裡。完整模式下這不是新的權限
+（`ac_execute_actions` 本來就能做任何事），但 `JE_AUTOCONTROL_MCP_READONLY=1` 的部署仍能讀到根目錄外的
+任意檔案：例如 `ac_load_dotenv` 會把任何檔案解析成 KEY=VALUE 回給模型，`ac_read_document`、
+`ac_extract_pdf_text` 也一樣。2026 年 MCP 伺服器通報最多的一類就是這種路徑越界。
 
-有一件事別再踩：**這個閘門的判定不能隨環境浮動**。裝了 `[gui]`／`[webrtc]` 的開發機
-與乾淨的 `pip install -e .` 曾經對 38 個模組看法不同（36 個 Qt 模組只在 PySide6
-*不在*時才過關，2 個只在 babel／pytest 不在時才失敗）。修法是把所有非基礎相依的
-第三方模組壓成 `Any`；其中 `follow_imports = "skip"` 對 `.pyi` 無效、必須同時開
-`follow_imports_for_stubs`，正是 numpy 那條註解早就寫過的坑。
+**做法**：在 `utils/mcp_server/tools/_factories.py` 的 schema 裡把真正是檔案路徑的屬性標上
+`"format": "path"`（不能照名字判斷：`ac_json_query` 的 `path` 是 JSON 路徑，`template`／`source`／
+`target` 有時是檔案有時不是），`server.py` 的 `_prepare_tool_call` 在設定了根目錄時先 `realpath`
+再檢查是否落在根目錄內，不在就回 `-32602`。
+
+**為什麼要拍板**：根目錄從哪來（新的環境變數、沿用 `roots/list`、或兩者），唯讀模式要不要預設開啟；
+預設開啟會讓現有讀取工作區外檔案的用法失效。

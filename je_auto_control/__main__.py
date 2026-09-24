@@ -1,27 +1,34 @@
 # argparse
 import argparse
 import json
+import os
 import sys
 
 from je_auto_control.utils.exception.exception_tags import \
     argparse_get_wrong_data_error_message
-from je_auto_control.utils.exception.exceptions import \
-    AutoControlArgparseException
+from je_auto_control.utils.exception.exceptions import (
+    AutoControlArgparseException, AutoControlException,
+)
 from je_auto_control.utils.executor.action_executor import execute_action
 from je_auto_control.utils.executor.action_executor import execute_files
 from je_auto_control.utils.file_process.get_dir_file_list import \
     get_dir_files_as_list
-from je_auto_control.utils.json.json_file import read_action_json
+from je_auto_control.utils.json.json_file import read_executable_action_json
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.project.create_project_structure import create_project_dir
 
 if __name__ == "__main__":
     try:
         def preprocess_execute_action(file_path: str):
-            execute_action(read_action_json(file_path))
+            execute_action(read_executable_action_json(file_path))
 
 
         def preprocess_execute_files(file_path: str):
+            if not os.path.isdir(file_path):
+                # os.walk yields nothing for a missing directory, so a typo
+                # ran no file at all and still exited 0.
+                raise AutoControlArgparseException(
+                    f"not a directory: {file_path}")
             execute_files(get_dir_files_as_list(file_path))
 
 
@@ -66,9 +73,15 @@ if __name__ == "__main__":
             handler(value)
         if all(value is None for value in parsed.values()):
             raise AutoControlArgparseException(argparse_get_wrong_data_error_message)
+    # The message also goes to stderr: it went only to the log file, so a
+    # failed -e printed nothing at all.
     except AutoControlArgparseException as error:
         autocontrol_logger.error("argparse failure: %r", error)
+        sys.stderr.write(f"error: {error}\n")
         sys.exit(1)
-    except (OSError, ValueError, RuntimeError) as error:
+    # AutoControlException: a missing or invalid action file used to end in
+    # a raw traceback rather than this message (the exit status was 1 then too).
+    except (OSError, ValueError, RuntimeError, AutoControlException) as error:
         autocontrol_logger.error("cli execution failed: %r", error)
+        sys.stderr.write(f"error: {error}\n")
         sys.exit(1)

@@ -28,7 +28,9 @@ order or the first seen), ``duplicate`` (already seen), ``gap`` (numbers were
 skipped — they are recorded as missing), or ``reorder`` (a late earlier number,
 which fills a gap when applicable). ``gaps`` lists the outstanding missing
 numbers and ``high_water`` is the highest seen. Streams are tracked
-independently by ``stream_id``.
+independently by ``stream_id``. Only the outstanding gaps are stored, capped
+by ``SequenceTracker(max_gap=100_000)``: a jump that would leave more missing
+numbers than that (a reset or a corrupt value) raises ``ValueError``.
 
 Executor command
 ----------------

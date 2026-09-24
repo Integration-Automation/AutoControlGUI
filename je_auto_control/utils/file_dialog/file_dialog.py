@@ -18,11 +18,14 @@ class FileDialogDriver:
     """Pluggable window-wait / type / confirm steps for a file dialog."""
 
     def wait_window(self, title: str, timeout_s: float) -> bool:
+        from je_auto_control.utils.exception.exceptions import AutoControlException
         from je_auto_control.wrapper.auto_control_window import wait_for_window
         try:
             wait_for_window(title, timeout=float(timeout_s))
             return True
-        except (OSError, RuntimeError, ValueError):
+        # wait_for_window reports a timeout as AutoControlActionException,
+        # which escaped instead of becoming {"handled": False}.
+        except (OSError, RuntimeError, ValueError, AutoControlException):
             return False
 
     def type_path(self, path: str) -> None:
@@ -30,8 +33,11 @@ class FileDialogDriver:
         write(str(path))
 
     def confirm(self, key: str) -> None:
+        from je_auto_control.utils.cua_action.cua_action import resolve_key_name
         from je_auto_control.wrapper.auto_control_keyboard import type_keyboard
-        type_keyboard(str(key))
+        # The default "enter" is not a name the Windows key table knows
+        # (it says "return"), so the default confirm step failed there.
+        type_keyboard(resolve_key_name(str(key)))
 
 
 def handle_file_dialog(path: str, *, action: str = "open",

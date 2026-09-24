@@ -45,7 +45,8 @@ def _to_gray_f(source: ImageSource):
     if hasattr(source, "shape"):
         array = np.asarray(source)
     elif isinstance(source, (str, bytes)) or hasattr(source, "__fspath__"):
-        array = cv2.imread(str(source), cv2.IMREAD_COLOR)
+        from je_auto_control.utils.cv2_utils.image_file import read_image
+        array = read_image(source, cv2.IMREAD_COLOR)
         if array is None:
             raise ValueError(f"could not read image: {source!r}")
         is_bgr = True
@@ -93,7 +94,9 @@ def _keep_mask(shape, ignore: IgnoreBoxes):
     keep = np.ones(shape, dtype=bool)
     for box in ignore or ():
         x, y, width, height = (int(value) for value in box[:4])
-        keep[y:y + height, x:x + width] = False
+        # Clamped at 0: a negative start sliced from the far edge, so
+        # x=-5, w=10 became keep[:, -5:5] -- empty -- and ignored nothing.
+        keep[max(0, y):max(0, y + height), max(0, x):max(0, x + width)] = False
     return keep
 
 

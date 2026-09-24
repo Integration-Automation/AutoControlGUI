@@ -88,7 +88,10 @@ class RemoteDesktopViewer:
     """
 
     def __init__(
-            self, host: str, port: int, token: str,  # NOSONAR python:S107  # reason: each callback is a documented public hook; bundling further would force every caller (viewer_panel, registry, 10+ test files) through a wrapper object for marginal benefit
+            # Each callback is a documented public hook; bundling them would
+            # force every caller (viewer_panel, registry, 10+ test files)
+            # through a wrapper object.
+            self, host: str, port: int, token: str,  # NOSONAR python:S107  # reason: see above
             on_frame: Optional[FrameCallback] = None,
             on_error: Optional[ErrorCallback] = None,
             on_audio: Optional[AudioCallback] = None,
@@ -214,10 +217,14 @@ class RemoteDesktopViewer:
         channel.settimeout(None)
         self._sock = sock
         self._channel = channel
-        self._shutdown.clear()
+        # A fresh event per run, never clear() on the old one: a receiver
+        # that outlived disconnect()'s join would see it cleared and resume beside
+        # the new run.
+        self._shutdown = threading.Event()
         self._connected = True
         self._receiver = threading.Thread(
-            target=self._recv_loop, name="rd-viewer", daemon=True,
+            target=self._recv_loop, args=(channel, self._shutdown),
+            name="rd-viewer", daemon=True,
         )
         self._receiver.start()
 
@@ -332,7 +339,7 @@ class RemoteDesktopViewer:
         if self._on_clipboard is not None:
             try:
                 self._on_clipboard(kind, data)
-            except Exception:  # noqa: BLE001
+            except Exception:  # noqa: BLE001  # reason: callback isolation, a caller's handler must not kill the receive loop
                 autocontrol_logger.exception(
                     "remote_desktop viewer on_clipboard callback raised"
                 )
@@ -383,23 +390,27 @@ class RemoteDesktopViewer:
                 f"got {announced!r}"
             )
 
-    def _recv_loop(self) -> None:
-        channel = self._channel
-        if channel is None:
-            return
+    def _recv_loop(self, channel: MessageChannel,
+                   stop: threading.Event) -> None:
         try:
-            while not self._shutdown.is_set():
+            while not stop.is_set():
                 if not self._read_and_dispatch(channel):
                     return
         finally:
-            self._connected = False
+            # Only this run's connection: a receiver finishing after a
+            # reconnect must not mark the new connection as down.
+            if self._channel is channel:
+                self._connected = False
 
     def _read_and_dispatch(self, channel: MessageChannel) -> bool:
         """Read one typed message and dispatch it; return False on disconnect."""
         try:
             msg_type, payload = channel.read_typed()
         except (OSError, ProtocolError) as error:
-            self._notify_error(error)
+            # A read failing on a connection that has since been replaced
+            # is the old one closing, not an error in the new session.
+            if self._channel is channel:
+                self._notify_error(error)
             return False
         handler = _RECV_HANDLERS.get(msg_type)
         if handler is None:
@@ -422,7 +433,7 @@ class RemoteDesktopViewer:
             return
         try:
             self._on_frame(payload)
-        except Exception as error:  # noqa: BLE001  callback isolation
+        except Exception as error:  # noqa: BLE001  # reason: callback isolation, a caller's handler must not kill the receive loop
             autocontrol_logger.exception(
                 "remote_desktop viewer on_frame callback raised"
             )
@@ -477,7 +488,7 @@ class RemoteDesktopViewer:
             return
         try:
             self._on_audio(payload)
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001  # reason: callback isolation, a caller's handler must not kill the receive loop
             autocontrol_logger.exception(
                 "remote_desktop viewer on_audio callback raised"
             )
@@ -559,7 +570,7 @@ class RemoteDesktopViewer:
             return
         try:
             self._on_chat(str(sender), text)
-        except Exception:  # noqa: BLE001  callback isolation
+        except Exception:  # noqa: BLE001  # reason: callback isolation, a caller's handler must not kill the receive loop
             autocontrol_logger.exception(
                 "remote_desktop viewer on_chat callback raised"
             )
@@ -584,7 +595,7 @@ class RemoteDesktopViewer:
         if viewer_id and self._on_viewer_cursor is not None:
             try:
                 self._on_viewer_cursor(str(viewer_id), x, y)
-            except Exception:  # noqa: BLE001  callback isolation
+            except Exception:  # noqa: BLE001  # reason: callback isolation, a caller's handler must not kill the receive loop
                 autocontrol_logger.exception(
                     "remote_desktop viewer on_viewer_cursor callback raised"
                 )
@@ -593,7 +604,7 @@ class RemoteDesktopViewer:
             return
         try:
             self._on_cursor(x, y)
-        except Exception:  # noqa: BLE001  callback isolation
+        except Exception:  # noqa: BLE001  # reason: callback isolation, a caller's handler must not kill the receive loop
             autocontrol_logger.exception(
                 "remote_desktop viewer on_cursor callback raised"
             )
@@ -603,7 +614,7 @@ class RemoteDesktopViewer:
             return
         try:
             self._on_error(error)
-        except Exception:  # noqa: BLE001  callback isolation
+        except Exception:  # noqa: BLE001  # reason: callback isolation, a caller's handler must not kill the receive loop
             autocontrol_logger.exception(
                 "remote_desktop viewer on_error callback raised"
             )

@@ -27,7 +27,9 @@ Maker-Checker 審批閘門
     if gate.is_approved(token):
         run_high_risk_action()
 
-``reject(token, approver)`` 會封鎖動作;已決議的請求無法再次決議。
+``reject(token, approver)`` 會封鎖動作;已決議的請求無法再次決議。核准者必須具名且不可是
+申請者(去掉前後空白、做 NFKC 正規化並忽略大小寫後比較，所以 ``Alice`` 不能核准 ``alice`` 的請求),
+匿名核准也會被拒絕。
 ``status(token)`` 回傳 ``pending`` / ``approved`` / ``rejected``(未知 token 為
 ``None``),``get(token)`` 回傳完整紀錄,``pending()`` 則列出所有仍待決議的請求。
 
@@ -43,7 +45,8 @@ Maker-Checker 審批閘門
 ``AC_approval_status``           回傳 ``{status, approved}`` 以閘控動作。
 ================================ ===================================================
 
-每個指令都接受選用的 ``db`` 路徑,讓流程可將請求保存到共用 JSON 檔。相同操作亦提供
+每個指令都接受選用的 ``db`` 路徑,讓流程可將請求保存到共用 JSON 檔;不給時共用同一行程內的
+記憶體閘門(``approval_gate()``)。相同操作亦提供
 為 MCP 工具(``ac_approval_request`` / ``ac_approval_approve`` /
 ``ac_approval_reject`` / ``ac_approval_status``),以及 Script Builder 中 **Tools**
 分類下的指令。

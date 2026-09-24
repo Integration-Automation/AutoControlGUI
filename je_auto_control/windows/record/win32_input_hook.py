@@ -55,6 +55,16 @@ _KEY_UP = (0x0101, 0x0105)          # WM_KEYUP, WM_SYSKEYUP
 _WM_MOUSEWHEEL = 0x020A
 _WHEEL_NOTCH = 120                  # one detent, per Win32
 
+_WM_XBUTTONDOWN = 0x020B
+_WM_XBUTTONUP = 0x020C
+#: Which side button fired. Like the wheel, ``WM_XBUTTON*`` packs this into the
+#: HIGH word of ``mouseData`` rather than into the message id -- one message
+#: covers both buttons, so the table below cannot express them and they have to
+#: be decoded separately. Unknown values are dropped rather than guessed: the
+#: replay side falls back to the LEFT button for a name it does not recognise,
+#: so guessing here would turn a side click into a real left click.
+_XBUTTON_NAMES = {0x0001: "x1", 0x0002: "x2"}
+
 _MOUSE_BUTTONS = {
     0x0201: ("mouse_down", "left"), 0x0202: ("mouse_up", "left"),
     0x0204: ("mouse_down", "right"), 0x0205: ("mouse_up", "right"),
@@ -85,6 +95,8 @@ class Win32InputHook:
         self._thread_id = 0
         self._ready = threading.Event()
         self._hooks: List[Any] = []
+        # Wheel movement not yet worth a whole notch; see _wheel_notches.
+        self._wheel_remainder = 0
         # WINFUNCTYPE callbacks must stay referenced: once collected, the OS
         # still calls that address and the process dies.
         self._procs: List[Any] = []
@@ -201,8 +213,41 @@ class Win32InputHook:
         if button is not None:
             self._put({"op": button[0], "button": button[1],
                        "x": int(data.pt.x), "y": int(data.pt.y)})
+        elif message in (_WM_XBUTTONDOWN, _WM_XBUTTONUP):
+            # Playback has supported x1 / x2 all along; only the recorder was
+            # blind to them, so a macro recorded with a side button replayed
+            # without it and nothing said why.
+            which = _XBUTTON_NAMES.get((int(data.mouseData) >> 16) & 0xFFFF)
+            if which is not None:
+                self._put({
+                    "op": ("mouse_down" if message == _WM_XBUTTONDOWN
+                           else "mouse_up"),
+                    "button": which,
+                    "x": int(data.pt.x), "y": int(data.pt.y)})
         elif message == _WM_MOUSEWHEEL:
-            # The high word of mouseData is a signed notch count times 120.
+            # The high word of mouseData is a signed wheel delta in 1/120ths
+            # of a notch.
             raw = ctypes.c_short((int(data.mouseData) >> 16) & 0xFFFF).value
-            self._put({"op": "scroll", "delta": raw // _WHEEL_NOTCH,
-                       "x": int(data.pt.x), "y": int(data.pt.y)})
+            notches = self._wheel_notches(raw)
+            if notches:
+                self._put({"op": "scroll", "delta": notches,
+                           "x": int(data.pt.x), "y": int(data.pt.y)})
+
+    def _wheel_notches(self, raw: int) -> int:
+        """Whole notches completed by a wheel delta of ``raw`` (1/120 units).
+
+        Precision touchpads and free-spinning wheels send fractions of a notch
+        (``±30`` is typical), and replay can only scroll whole notches. Flooring
+        each event on its own lost every upward fraction (``30 // 120 == 0``)
+        and turned every downward one into a full notch (``-30 // 120 == -1``),
+        so a touchpad recording dropped scrolling up and quadrupled scrolling
+        down. The remainder is carried to the next event instead, and dropped
+        when the direction reverses so a leftover fraction cannot cancel a
+        scroll the other way.
+        """
+        if raw * self._wheel_remainder < 0:
+            self._wheel_remainder = 0
+        total = self._wheel_remainder + raw
+        notches = int(total / _WHEEL_NOTCH)
+        self._wheel_remainder = total - notches * _WHEEL_NOTCH
+        return notches

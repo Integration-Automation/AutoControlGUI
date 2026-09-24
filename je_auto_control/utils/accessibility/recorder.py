@@ -1,9 +1,12 @@
 """Polling-based recorder for accessibility events.
 
-The pure-Python recorder polls :func:`find_accessibility_element`
-output at a configurable interval and emits an event whenever the
-*focused element* (by name + role) changes, or when its bounds shift
-by more than ``min_movement_px`` pixels. macOS's native AXObserver
+The pure-Python recorder polls a snapshot fetcher at a configurable
+interval and emits an event whenever the observed element (by name +
+role) changes, or when its bounds shift by more than ``min_movement_px``
+pixels. The default fetcher observes the element holding keyboard focus
+(:func:`focused_accessibility_element`), and only on a backend that cannot
+report focus falls back to the first element
+:func:`find_accessibility_element` returns for ``app_name``. macOS's native AXObserver
 API would be lower-latency but requires the pyobjc run-loop bridge;
 polling is good enough for human-speed automation playback and works
 on Windows / Linux through the same interface.
@@ -72,9 +75,11 @@ class AccessibilityRecorder:
         """Spawn the background polling thread if not already running."""
         if self._thread is not None and self._thread.is_alive():
             return
-        self._stop.clear()
+        # A fresh event per run, never clear() on the old one: a thread that
+        # outlived stop()'s join would see it cleared and keep running.
+        self._stop = threading.Event()
         self._thread = threading.Thread(
-            target=self._run, name="AccessibilityRecorder", daemon=True,
+            target=self._run, args=(self._stop,), name="AccessibilityRecorder", daemon=True,
         )
         self._thread.start()
 
@@ -109,13 +114,13 @@ class AccessibilityRecorder:
 
     # --- internals -----------------------------------------------
 
-    def _run(self) -> None:
-        while not self._stop.is_set():
+    def _run(self, stop: threading.Event) -> None:
+        while not stop.is_set():
             try:
                 self.sample_once()
             except (RuntimeError, OSError, ValueError):
                 pass
-            self._stop.wait(self._poll)
+            stop.wait(self._poll)
 
     def _compare_and_emit(self, snapshot: Optional[Dict[str, Any]],
                           ) -> Optional[AXRecorderEvent]:
@@ -184,12 +189,23 @@ def _now_iso() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="milliseconds")
 
 
+def _observed_element(app_name: Optional[str]) -> Any:
+    """The focused element; the first element only where focus is unreadable."""
+    from je_auto_control.utils.accessibility.accessibility_api import (
+        find_accessibility_element, focused_accessibility_element,
+    )
+    from je_auto_control.utils.accessibility.element import (
+        AccessibilityNotAvailableError,
+    )
+    try:
+        return focused_accessibility_element(app_name=app_name)
+    except AccessibilityNotAvailableError:
+        return find_accessibility_element(app_name=app_name)
+
+
 def _default_fetcher(app_name: Optional[str]) -> Optional[Dict[str, Any]]:
     try:
-        from je_auto_control.utils.accessibility.accessibility_api import (
-            find_accessibility_element,
-        )
-        element = find_accessibility_element(app_name=app_name)
+        element = _observed_element(app_name)
     except (RuntimeError, OSError, ValueError):
         return None
     if element is None:

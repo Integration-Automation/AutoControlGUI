@@ -64,7 +64,7 @@ def test_daemon_routes_through_backend(monkeypatch):
     daemon = HotkeyDaemon(executor=lambda actions: called.append(actions))
     # Provide bindings + stub read_action_json so _fire_binding finishes.
     from je_auto_control.utils.hotkey import hotkey_daemon as mod
-    monkeypatch.setattr(mod, "read_action_json", lambda path: [["AC_noop"]])
+    monkeypatch.setattr(mod, "read_executable_action_json", lambda path: [["AC_noop"]])
     binding = daemon.bind("ctrl+alt+1", "script.json")
     try:
         daemon.start()

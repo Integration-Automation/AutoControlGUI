@@ -32,7 +32,8 @@ W3C Trace Context 傳播
 ``new_root_context`` 鑄造新 trace;``child_context`` 保留 trace id 與繼承狀態但配置新的 span id。
 ``parse_traceparent`` / ``format_traceparent`` 來回轉換 version-``00`` 標頭(對錯誤版本、格式不符或全零
 ID 拋出 ``TraceContextError``);``parse_tracestate`` / ``format_tracestate`` 處理 vendor 清單。
-``inject_context`` 寫入標頭;``extract_context`` 將其讀回(不分大小寫)。
+``inject_context`` 寫入標頭;``extract_context`` 將其讀回(不分大小寫),``traceparent`` 缺少或無效時回傳
+``None``,讓接收端依 W3C Trace Context 開一條新的 trace。
 
 執行器命令
 ----------

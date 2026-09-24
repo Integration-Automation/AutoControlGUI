@@ -1,4 +1,4 @@
 """Soft assertions — accumulate checks and raise the aggregate at block end."""
-from je_auto_control.utils.soft_assert.soft_assert import SoftAssertions
+from je_auto_control.utils.soft_assert.soft_assert import SoftAssertions, SoftAssertionsFailed
 
-__all__ = ["SoftAssertions"]
+__all__ = ["SoftAssertions", "SoftAssertionsFailed"]

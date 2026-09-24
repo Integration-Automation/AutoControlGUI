@@ -49,7 +49,7 @@ from je_auto_control.utils.accessibility import (
     control_invoke,
     control_set_value, control_toggle, dump_accessibility_tree,
     find_accessibility_element, find_accessibility_elements,
-    list_accessibility_elements, read_control_table,
+    focused_accessibility_element, list_accessibility_elements, read_control_table,
 )
 # Extended UIA control patterns (Expand / Select / Range / Scroll)
 from je_auto_control.utils.control_patterns import (
@@ -588,7 +588,7 @@ from je_auto_control.utils.window_zorder import (
     bring_to_front, plan_zorder, send_to_back, set_topmost,
 )
 # Soft assertions (accumulate checks, raise the aggregate at block end)
-from je_auto_control.utils.soft_assert import SoftAssertions
+from je_auto_control.utils.soft_assert import SoftAssertions, SoftAssertionsFailed
 # Perceptual (YIQ) image diff with anti-alias edge suppression
 from je_auto_control.utils.perceptual_diff import (
     PerceptualDiffResult, assert_perceptual, perceptual_diff,
@@ -648,8 +648,8 @@ from je_auto_control.utils.plugin_sdk import (
 )
 # Maker-checker approval gate + just-in-time credential leases (PAM/governance)
 from je_auto_control.utils.governance import (
-    ApprovalGate, CredentialBroker, CredentialBrokerError, default_broker,
-    set_secret_resolver,
+    ApprovalGate, CredentialBroker, CredentialBrokerError, approval_gate,
+    default_broker, set_secret_resolver,
 )
 # Network egress allowlist guard for the headless HTTP client
 from je_auto_control.utils.egress import (
@@ -1192,7 +1192,7 @@ from je_auto_control.utils.generate_report.generate_xml_report import \
 from je_auto_control.utils.generate_report.generate_xml_report import \
     generate_xml_report
 # json
-from je_auto_control.utils.json.json_file import read_action_json
+from je_auto_control.utils.json.json_file import read_action_json, read_executable_action_json
 from je_auto_control.utils.json.json_file import write_action_json
 from je_auto_control.utils.json.json_file import format_action_json
 # codegen: action list -> pytest / python / robot source
@@ -1304,7 +1304,7 @@ __all__ = [
     "ImageNotFoundException", "AutoControlJsonActionException",
     "AutoControlRecordException", "AutoControlActionNullException", "AutoControlActionException", "record",
     "stop_record", "stop_record_timeline",
-    "read_action_json", "write_action_json", "format_action_json",
+    "read_action_json", "read_executable_action_json", "write_action_json", "format_action_json",
     "execute_action", "execute_files", "executor",
     "execute_action_with_vars", "record_to_json",
     "generate_code", "generate_code_file", "http_request", "query_sqlite",
@@ -1597,7 +1597,7 @@ __all__ = [
     "set_topmost",
     "bring_to_front",
     "send_to_back",
-    "SoftAssertions",
+    "SoftAssertions", "SoftAssertionsFailed",
     "perceptual_diff",
     "assert_perceptual",
     "PerceptualDiffResult",
@@ -1631,7 +1631,7 @@ __all__ = [
     "describe_step", "generate_sop", "write_sop",
     "easing_names", "tween_drag", "tween_points",
     "COMMANDS_GROUP", "discover_plugins", "load_plugins",
-    "ApprovalGate", "CredentialBroker", "CredentialBrokerError",
+    "ApprovalGate", "CredentialBroker", "CredentialBrokerError", "approval_gate",
     "default_broker", "set_secret_resolver",
     "EgressBlocked", "EgressPolicy", "get_egress_policy", "set_egress_policy",
     "ApprovalResult", "approve_artifact", "pending_artifacts",
@@ -1789,7 +1789,7 @@ __all__ = [
     "AccessibilityRecorder", "AXRecorderEvent", "AXTreeNode",
     "click_accessibility_element", "dump_accessibility_tree",
     "find_accessibility_element", "find_accessibility_elements",
-    "list_accessibility_elements",
+    "focused_accessibility_element", "list_accessibility_elements",
     "control_get_state", "control_get_value", "control_set_value",
     "control_invoke", "control_toggle", "read_control_table",
     "expand_control", "collapse_control", "control_expand_state",

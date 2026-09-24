@@ -12,11 +12,12 @@ import threading
 import time
 import uuid
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Callable, Dict, List, Optional, Tuple
+from typing import TYPE_CHECKING, Callable, ClassVar, Dict, List, Optional, Tuple
 
 from je_auto_control.utils.exception.exceptions import AutoControlException
-from je_auto_control.utils.json.json_file import read_action_json
+from je_auto_control.utils.json.json_file import read_executable_action_json
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
+from je_auto_control.utils.timeouts import clamp_poll_interval
 from je_auto_control.utils.run_history.artifact_manager import (
     capture_error_snapshot,
 )
@@ -38,6 +39,10 @@ class _TriggerBase:
     fired: int = 0
     cooldown_seconds: float = 0.5
     _last_fire: float = field(default=0.0)
+    #: True when checking the trigger uses up the event it reports (an edge:
+    #: a cron minute, a file change, a sequence step), so a composite has to
+    #: check it last. Not a dataclass field.
+    consumes_on_check: ClassVar[bool] = False
 
     def is_fired(self) -> bool:  # pragma: no cover - abstract
         raise NotImplementedError
@@ -110,22 +115,26 @@ class PixelColorTrigger(_TriggerBase):
 
 @dataclass
 class FilePathTrigger(_TriggerBase):
-    """Fire when ``watch_path`` mtime changes (created or modified)."""
+    consumes_on_check: ClassVar[bool] = True
+    """Fire when ``watch_path`` is created or its mtime changes.
+
+    The first poll only records a baseline. After that, the path appearing
+    (absent -> present) fires, as does any mtime change -- older too, since
+    a copied-in replacement keeps its source's timestamp. Deleting the file
+    re-arms the creation check.
+    """
     watch_path: str = ""
     _baseline: Optional[float] = None
+    _primed: bool = False
 
     def is_fired(self) -> bool:
         try:
-            mtime = os.path.getmtime(self.watch_path)
+            mtime: Optional[float] = os.path.getmtime(self.watch_path)
         except OSError:
-            return False
-        if self._baseline is None:
-            self._baseline = mtime
-            return False
-        if mtime > self._baseline:
-            self._baseline = mtime
-            return True
-        return False
+            mtime = None
+        previous, primed = self._baseline, self._primed
+        self._baseline, self._primed = mtime, True
+        return primed and mtime is not None and mtime != previous
 
 
 @dataclass
@@ -134,8 +143,12 @@ class AllOfTrigger(_TriggerBase):
     children: List[_TriggerBase] = field(default_factory=list)
 
     def is_fired(self) -> bool:
-        return bool(self.children) and all(
-            child.is_fired() for child in self.children)
+        # Level conditions first, edges last: all() stops at the first false
+        # child, and an edge checked before a false level child had already
+        # spent its event -- "at 09:00 and only if the image is on screen"
+        # never fired if the image appeared a few seconds into the minute.
+        ordered = sorted(self.children, key=_consumes_on_check)
+        return bool(ordered) and all(child.is_fired() for child in ordered)
 
 
 @dataclass
@@ -156,6 +169,7 @@ class SequenceTrigger(_TriggerBase):
     """
     children: List[_TriggerBase] = field(default_factory=list)
     _step: int = 0
+    consumes_on_check: ClassVar[bool] = True
 
     def is_fired(self) -> bool:
         if not self.children:
@@ -170,6 +184,14 @@ class SequenceTrigger(_TriggerBase):
         return False
 
 
+def _consumes_on_check(trigger: _TriggerBase) -> bool:
+    """Whether checking ``trigger`` spends an event, composites included."""
+    if isinstance(trigger, (AllOfTrigger, AnyOfTrigger)):
+        return any(_consumes_on_check(child) for child in trigger.children)
+    # Duck-typed children (anything with is_fired) count as level conditions.
+    return bool(getattr(type(trigger), "consumes_on_check", False))
+
+
 @dataclass
 class CronTrigger(_TriggerBase):
     """Fire when the current local time matches a five-field cron expression.
@@ -179,6 +201,7 @@ class CronTrigger(_TriggerBase):
     ``AllOfTrigger`` of a cron + an image trigger means "at 09:00 *and*
     only if the image is on screen".
     """
+    consumes_on_check: ClassVar[bool] = True
     cron: str = "* * * * *"
     _expr: Optional["CronExpression"] = None
     _last_minute: Optional[str] = None
@@ -214,7 +237,7 @@ class TriggerEngine:
                  tick_seconds: float = 0.25) -> None:
         from je_auto_control.utils.executor.action_executor import execute_action
         self._execute = executor or execute_action
-        self._tick = max(0.05, float(tick_seconds))
+        self._tick = clamp_poll_interval(tick_seconds)
         self._triggers: Dict[str, _TriggerBase] = {}
         self._lock = threading.Lock()
         self._thread: Optional[threading.Thread] = None
@@ -247,9 +270,11 @@ class TriggerEngine:
     def start(self) -> None:
         if self._thread is not None and self._thread.is_alive():
             return
-        self._stop.clear()
+        # A fresh event per run, never clear() on the old one: a thread that
+        # outlived stop()'s join would see it cleared and keep running.
+        self._stop = threading.Event()
         self._thread = threading.Thread(
-            target=self._run, daemon=True, name="AutoControlTriggers",
+            target=self._run, args=(self._stop,), daemon=True, name="AutoControlTriggers",
         )
         self._thread.start()
 
@@ -259,10 +284,10 @@ class TriggerEngine:
             self._thread.join(timeout=timeout)
             self._thread = None
 
-    def _run(self) -> None:
-        while not self._stop.is_set():
+    def _run(self, stop: threading.Event) -> None:
+        while not stop.is_set():
             self._poll_once()
-            self._stop.wait(self._tick)
+            stop.wait(self._tick)
 
     def _poll_once(self) -> None:
         now = time.monotonic()
@@ -271,6 +296,8 @@ class TriggerEngine:
                           if t.should_poll(now)]
         for trigger in candidates:
             if not self._is_fired_safely(trigger):
+                continue
+            if not self._still_armed(trigger):
                 continue
             try:
                 self._fire(trigger, now)
@@ -283,6 +310,15 @@ class TriggerEngine:
                     "trigger %s disabled after _fire() raised: %r",
                     trigger.trigger_id, error, exc_info=True,
                 )
+
+    def _still_armed(self, trigger: _TriggerBase) -> bool:
+        """Whether ``trigger`` is still registered and enabled.
+
+        The candidates are a snapshot, and an earlier trigger's script in the
+        same pass may remove or disable a later one; its script ran anyway.
+        """
+        with self._lock:
+            return self._triggers.get(trigger.trigger_id) is trigger and trigger.enabled
 
     def _is_fired_safely(self, trigger: _TriggerBase) -> bool:
         """Evaluate one trigger; never let it take the polling thread down.
@@ -311,7 +347,7 @@ class TriggerEngine:
         status = STATUS_OK
         error_text: Optional[str] = None
         try:
-            actions = read_action_json(trigger.script_path)
+            actions = read_executable_action_json(trigger.script_path)
             self._execute(actions)
         # 這裡刻意攔截所有例外：一個 trigger 失敗必須記錄成 STATUS_ERROR
         # 並繼續，而不是拖垮輪詢執行緒。原本的 tuple 漏掉

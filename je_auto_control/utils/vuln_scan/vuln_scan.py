@@ -22,7 +22,6 @@ from typing import Any, Callable, Dict, List, Mapping, Optional, Sequence, Tuple
 
 from je_auto_control.utils.sarif import make_finding
 
-_NUMBERS_RE = re.compile(r"\d+")
 
 # OSV / GHSA severity word -> SARIF level.
 _SEVERITY_LEVELS = {
@@ -38,13 +37,74 @@ _PURL_ECOSYSTEM = {
 }
 
 
-def version_key(version: str) -> Tuple[Tuple[int, ...], int, str]:
-    """Return a sortable key for a version string (release, pre-rank, pre)."""
-    text = str(version).strip().lstrip("vV")
-    parts = re.split(r"[-+]", text, maxsplit=1)
-    numbers = tuple(int(n) for n in _NUMBERS_RE.findall(parts[0]))
-    pre = parts[1] if len(parts) > 1 else ""
-    return (numbers, 0 if pre else 1, pre)
+_RELEASE_RE = re.compile(r"\d+(?:\.\d+)*")
+_EPOCH_RE = re.compile(r"(\d+)!")
+_PRE_LETTERS = {"a": 0, "alpha": 0, "b": 1, "beta": 1, "c": 2, "rc": 2, "pre": 2, "preview": 2}
+_PHASE_DEV, _PHASE_PRE, _PHASE_FINAL, _PHASE_POST = 0, 1, 2, 3
+
+
+def _identifier(token: str) -> Tuple[int, Any]:
+    """One pre-release identifier: numbers compare numerically, before words."""
+    return (0, int(token)) if token.isdigit() else (1, token)
+
+
+# Ends every PEP 440 pre-release key. It sorts below any identifier, so
+# alpha < alpha.1 as SemVer requires, and above the (-2, N) that ends a
+# ".devN" of that pre-release, so 1.0a1.dev1 < 1.0a1.
+_PRE_FINAL = (-1, 0)
+
+
+def _pep440_pre(tokens: List[str]) -> Tuple[Tuple[int, Any], ...]:
+    """Identifiers of a PEP 440 pre-release such as ``a1`` or ``rc2.dev3``."""
+    rest = tokens[1:]
+    marker = _PRE_FINAL
+    if "dev" in rest:
+        at = rest.index("dev")
+        dev = rest[at + 1:]
+        marker = (-2, int(dev[0]) if dev and dev[0].isdigit() else 0)
+        rest = rest[:at]
+    return ((0, _PRE_LETTERS[tokens[0]]),) + tuple(_identifier(t) for t in rest) + (marker,)
+
+
+def _suffix_key(suffix: str) -> Tuple[int, Tuple[Tuple[int, Any], ...]]:
+    """``(phase, identifiers)`` for what follows the release numbers.
+
+    PEP 440 phases rank dev < a/b/rc < final < post; anything else is a SemVer
+    pre-release whose dot-separated identifiers compare as SemVer says.
+    """
+    tokens = re.findall(r"[a-z]+|\d+", suffix.lower())
+    if not tokens:
+        return _PHASE_FINAL, ()
+    head = tokens[0]
+    if head == "dev":
+        return _PHASE_DEV, tuple(_identifier(t) for t in tokens[1:])
+    if head in ("post", "rev", "r"):
+        return _PHASE_POST, tuple(_identifier(t) for t in tokens[1:])
+    if head in _PRE_LETTERS:
+        return _PHASE_PRE, _pep440_pre(tokens)
+    return _PHASE_PRE, tuple(_identifier(t) for t in re.split(r"[.]", suffix.lower()) if t)
+
+
+def version_key(version: str) -> Tuple[Tuple[int, ...], int, Tuple[Tuple[int, Any], ...]]:
+    """Return a sortable key for a version string: (release, phase, identifiers).
+
+    Trailing zeros do not count (``2.0`` == ``2.0.0``), build metadata and
+    PEP 440 local versions (``+cu118``) are ignored, and pre-releases -- PEP
+    440 ``rc1`` / ``.dev1`` or SemVer ``-alpha.10`` -- sort before the release.
+    The release tuple starts with the PEP 440 epoch (0 when absent).
+    """
+    text = str(version).strip().lstrip("vV").split("+", 1)[0]
+    epoch_match = _EPOCH_RE.match(text)
+    epoch = int(epoch_match.group(1)) if epoch_match else 0
+    if epoch_match:
+        text = text[epoch_match.end():]
+    match = _RELEASE_RE.match(text)
+    release = tuple(int(n) for n in match.group(0).split(".")) if match else ()
+    while release and release[-1] == 0:
+        release = release[:-1]
+    phase, identifiers = _suffix_key(text[match.end():] if match else text)
+    # The PEP 440 epoch leads the release numbers: 1!1.0 is above every 2.x.
+    return ((epoch,) + release, phase, identifiers)
 
 
 def _normalize_name(name: str) -> str:
@@ -108,17 +168,27 @@ def _advisory_hits(advisory: Mapping[str, Any], ecosystem: str,
                for entry in advisory.get("affected", []))
 
 
-def _fixed_in_range(osv_range: Mapping[str, Any]) -> Optional[str]:
-    for event in osv_range.get("events", []):
-        if "fixed" in event:
-            return str(event["fixed"])
+def _fix_after(version: str, osv_range: Mapping[str, Any]) -> Optional[str]:
+    """The first ``fixed`` bound above ``version`` in one range, if any."""
+    target = version_key(version)
+    for kind, bound in _sorted_events(osv_range.get("events", [])):
+        if kind == "fixed" and version_key(bound) > target:
+            return bound
     return None
 
 
-def _first_fixed(advisory: Mapping[str, Any]) -> Optional[str]:
+def _first_fixed(advisory: Mapping[str, Any], ecosystem: str, name: str,
+                 version: str) -> Optional[str]:
+    """The fix for this package at this version.
+
+    It used to be the first ``fixed`` of any entry, so a finding for one
+    package could name another package's fix, or an earlier range's.
+    """
     for entry in advisory.get("affected", []):
+        if not _package_matches(entry.get("package", {}), ecosystem, name):
+            continue
         for osv_range in entry.get("ranges", []):
-            fixed = _fixed_in_range(osv_range)
+            fixed = _fix_after(version, osv_range)
             if fixed is not None:
                 return fixed
     return None
@@ -129,14 +199,15 @@ def _severity_level(advisory: Mapping[str, Any]) -> str:
     return _SEVERITY_LEVELS.get(raw, "warning")
 
 
-def _to_finding(advisory: Mapping[str, Any], name: str, version: str) -> Dict[str, Any]:
+def _to_finding(advisory: Mapping[str, Any], ecosystem: str, name: str,
+                version: str) -> Dict[str, Any]:
     return {
         "id": str(advisory.get("id", "OSV-UNKNOWN")),
         "package": name,
         "version": version,
         "summary": str(advisory.get("summary", "")),
         "severity": _severity_level(advisory),
-        "fixed": _first_fixed(advisory),
+        "fixed": _first_fixed(advisory, ecosystem, name, version),
         "aliases": list(advisory.get("aliases", [])),
     }
 
@@ -144,7 +215,7 @@ def _to_finding(advisory: Mapping[str, Any], name: str, version: str) -> Dict[st
 def match_package(ecosystem: str, name: str, version: str,
                   advisories: Sequence[Mapping[str, Any]]) -> List[Dict[str, Any]]:
     """Return a finding per advisory that affects ``name``@``version``."""
-    return [_to_finding(advisory, name, version) for advisory in advisories
+    return [_to_finding(advisory, ecosystem, name, version) for advisory in advisories
             if _advisory_hits(advisory, ecosystem, name, version)]
 
 

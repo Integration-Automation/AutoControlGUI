@@ -23,6 +23,17 @@ EnvReader = Mapping[str, str]
 SecretResolver = Callable[[str], Optional[str]]
 
 
+
+_DRIVE_URL_PATH = re.compile(r"^/[A-Za-z]:[/\\]")
+
+
+def _is_within(base: str, resolved: str) -> bool:
+    """Whether ``resolved`` is ``base`` or below it; other drives are not."""
+    try:
+        return os.path.commonpath([base, resolved]) == base
+    except ValueError:  # different drives, or absolute vs relative
+        return False
+
 class SecretRefError(AutoControlException):
     """A value reference could not be resolved."""
 
@@ -82,10 +93,16 @@ class RefResolver:
         return source[name]
 
     def _resolve_file(self, path: str) -> str:
-        resolved = os.path.realpath(path)
-        if self._base_dir is not None:
+        if _DRIVE_URL_PATH.match(path):
+            path = path[1:]  # file:///C:/x names C:/x, not the drive-relative /C:/x
+        if self._base_dir is None:
+            resolved = os.path.realpath(path)
+        else:
+            # A relative ref is relative to base_dir: it used to resolve
+            # against the working directory and then fail the check below.
             base = os.path.realpath(self._base_dir)
-            if os.path.commonpath([base, resolved]) != base:
+            resolved = os.path.realpath(os.path.join(base, path))
+            if not _is_within(base, resolved):
                 raise SecretRefError(f"path escapes base dir: {path!r}")
         try:
             return Path(resolved).read_text(encoding="utf-8")

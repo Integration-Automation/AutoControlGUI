@@ -57,8 +57,9 @@ class FailureHookManager:
         with self._lock:
             targets = list(self._backends)
         results: List[TicketResult] = []
+        safe = report.redacted()
         for backend in targets:
-            results.append(self._invoke(backend, report))
+            results.append(self._invoke(backend, safe))
         return results
 
     def _invoke(self, backend: TicketBackend,
@@ -66,7 +67,10 @@ class FailureHookManager:
         name = getattr(backend, "name", type(backend).__name__)
         try:
             return backend.create_issue(report)
-        except (RuntimeError, OSError, ValueError) as error:
+        # A backend is third-party code; a KeyError / TypeError (or the Linear
+        # backend's AttributeError on an odd response) ended fire() and the
+        # remaining backends never ran.
+        except Exception as error:  # noqa: BLE001  # pylint: disable=broad-exception-caught  # reason: one backend's failure becomes its TicketResult
             autocontrol_logger.warning(
                 "failure-hook backend %r raised: %r", name, error,
             )

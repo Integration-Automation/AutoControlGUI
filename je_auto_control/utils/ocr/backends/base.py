@@ -10,11 +10,13 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, List, Protocol, runtime_checkable
 
+from je_auto_control.utils.exception.exceptions import AutoControlException
+
 if TYPE_CHECKING:  # pragma: no cover
     from je_auto_control.utils.ocr.ocr_engine import TextMatch
 
 
-class OCRBackendNotAvailableError(RuntimeError):
+class OCRBackendNotAvailableError(AutoControlException, RuntimeError):
     """Raised when the requested OCR backend can't be loaded."""
 
 

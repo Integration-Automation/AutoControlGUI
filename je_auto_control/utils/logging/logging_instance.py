@@ -1,35 +1,102 @@
-import logging
-from logging.handlers import RotatingFileHandler
+"""The ``AutoControlGUI`` logger and the file it writes to.
 
-# 設定 root logger 等級 Set root logger level
-logging.root.setLevel(logging.DEBUG)
+The log file lives at ``~/.je_auto_control/logs/AutoControlGUI.log`` unless the
+``JE_AUTOCONTROL_LOG_FILE`` environment variable names another path (a relative
+one resolves against the cwd when the file is opened; ``os.devnull`` turns the
+file off).
+It used to be the relative path ``AutoControlGUI.log``, opened at import, so
+every process that imported the package -- including every pytest run on a
+machine where it is installed, through its ``pytest11`` plugin -- left a log in
+whatever directory it happened to start in.
+
+The package's handler opens the file on the first record, not at import:
+importing writes nothing (``test_facade_import_is_light`` holds that for the
+whole state directory). It also reads ``JE_AUTOCONTROL_LOG_FILE`` at that
+moment rather than at import, so a test suite -- whose ``conftest.py`` runs
+only after the ``pytest11`` plugin has imported the package -- can still
+redirect it. The file is shared by every process on the account, so
+it is opened for append, each line carries the process id, and it is rotated
+only when a process opens it: renaming a file another process holds open fails
+on Windows, and a rotation attempted inside ``emit()`` would then fail on every
+later record.
+"""
+import logging
+import os
+import warnings
+from logging.handlers import RotatingFileHandler
+from pathlib import Path
+from typing import Optional
 
 # 建立 AutoControlGUI 專用 logger Create dedicated logger
+# 只設自己這個 logger 的等級。以前這裡設的是 root：函式庫改掉宿主程式的全域
+# 日誌設定，任何 import 本套件的程式都會把所有第三方 logger 的 DEBUG 灌進
+# root 的 handler。
+# Only this logger's level. It used to be the root logger's, so importing the
+# package flooded the host application's handlers with every third-party
+# library's DEBUG records.
 autocontrol_logger = logging.getLogger("AutoControlGUI")
+autocontrol_logger.setLevel(logging.DEBUG)
 
 # 日誌格式 Formatter
 formatter = logging.Formatter(
-    "%(asctime)s | %(name)s | %(levelname)s | %(message)s"
+    "%(asctime)s | %(process)d | %(name)s | %(levelname)s | %(message)s"
 )
+
+#: Environment variable that overrides where the log file is written.
+LOG_FILE_ENV = "JE_AUTOCONTROL_LOG_FILE"
+
+#: A file past this size is moved to ``<name>.1`` when a process opens it.
+ROTATE_AT_BYTES = 10 * 1024 * 1024
+
+
+def default_log_file() -> Path:
+    """Return the log file path: ``$JE_AUTOCONTROL_LOG_FILE``, else the home default."""
+    configured = os.environ.get(LOG_FILE_ENV, "").strip()
+    if configured:
+        return Path(configured).expanduser()
+    return Path.home() / ".je_auto_control" / "logs" / "AutoControlGUI.log"
+
+
+def _rotate_if_large(path: Path, limit: int) -> None:
+    """Move ``path`` to ``<path>.1`` when it is larger than ``limit`` bytes.
+
+    Best effort: while another process has the file open Windows refuses the
+    rename, and the file is simply appended to until a later open succeeds.
+    """
+    try:
+        if limit <= 0 or not path.is_file() or path.stat().st_size <= limit:
+            return
+        os.replace(path, path.with_name(path.name + ".1"))
+    except OSError:
+        return
 
 
 class AutoControlGUILoggingHandler(RotatingFileHandler):
     """
     AutoControlGUILoggingHandler
     自訂日誌處理器，繼承 RotatingFileHandler
-    - 支援檔案大小輪替
-    - 預設輸出到 AutoControlGUI.log
+    - 預設輸出到 ``default_log_file()``，附加模式
+    - 開檔時建立目錄；超過 ``ROTATE_AT_BYTES`` 就先輪替成 ``.1``
+    - 開不了檔就改寫到 ``os.devnull``，並發出一次 ``RuntimeWarning``
+
+    ``delay=True`` defers opening (and so creating the directory) to the first
+    record, which is how the package's own handler is built. Without an
+    explicit ``filename`` the path is re-read from ``default_log_file()`` each
+    time the file is opened.
     """
 
     def __init__(
         self,
-        filename: str = "AutoControlGUI.log",
-        mode: str = "w",
-        max_bytes: int = 1073741824,  # 1GB
+        filename: Optional[str] = None,
+        mode: str = "a",
+        max_bytes: int = 0,
         backup_count: int = 0,
         encoding: str = "utf-8",
         errors: str = "backslashreplace",
+        delay: bool = False,
     ):
+        self._follows_environment = filename is None
+        path = filename if filename is not None else str(default_log_file())
         # encoding 必須明確指定。省略時 RotatingFileHandler 會採用系統
         # 預設編碼（zh-TW Windows 為 cp950），任何非 CP950 字元都會讓
         # emit() 拋出 UnicodeEncodeError；logging 會把它吞成 stderr 訊息，
@@ -48,15 +115,38 @@ class AutoControlGUILoggingHandler(RotatingFileHandler):
         # paths) still raises under strict. backslashreplace is what
         # logging.basicConfig itself defaults to — degrade, never drop.
         super().__init__(
-            filename=filename,
+            filename=path,
             mode=mode,
             maxBytes=max_bytes,
             backupCount=backup_count,
             encoding=encoding,
+            delay=delay,
             errors=errors,
         )
         self.setFormatter(formatter)  # 設定格式器
         self.setLevel(logging.DEBUG)  # 設定等級
+
+    def _open(self):
+        """Open the file, creating its directory and rotating it first.
+
+        A file that cannot be opened (read-only home, a path through a regular
+        file) must not turn every later record into a logging error, nor make
+        the import fail: the handler writes to ``os.devnull`` instead and says
+        so once.
+        """
+        if self._follows_environment:
+            self.baseFilename = os.path.abspath(default_log_file())
+        path = Path(self.baseFilename)
+        try:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            _rotate_if_large(path, ROTATE_AT_BYTES)
+            return super()._open()
+        except OSError as error:
+            warnings.warn(
+                f"AutoControlGUI log file {path} unavailable, file logging "
+                f"off: {error!r}", RuntimeWarning, stacklevel=2)
+            return open(os.devnull, self.mode, encoding=self.encoding,  # noqa: SIM115  # reason: the handler owns and closes its stream
+                        errors=self.errors)
 
     def emit(self, record: logging.LogRecord) -> None:
         """
@@ -67,5 +157,5 @@ class AutoControlGUILoggingHandler(RotatingFileHandler):
 
 
 # 建立並加入檔案處理器 Add file handler to logger
-file_handler = AutoControlGUILoggingHandler()
+file_handler = AutoControlGUILoggingHandler(delay=True)
 autocontrol_logger.addHandler(file_handler)

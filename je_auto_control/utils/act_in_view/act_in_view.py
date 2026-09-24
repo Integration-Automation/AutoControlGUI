@@ -24,7 +24,9 @@ from typing import Any, Callable, Dict, List, Optional
 from je_auto_control.utils.actionability import GateConfig, act_when_ready
 from je_auto_control.utils.exception.exceptions import AutoControlActionException
 from je_auto_control.utils.scroll_find import scroll_until_visible
-from je_auto_control.utils.scroll_find.scroll_find import Locator, Scroller
+from je_auto_control.utils.scroll_find.scroll_find import (
+    _DEFAULT_LANG, _DEFAULT_THRESHOLD, Locator, Scroller, _default_locator,
+)
 
 
 @dataclass
@@ -62,7 +64,15 @@ def act_in_view(target: str, action: Callable[[List[int]], Any], *,
         raise AutoControlActionException(
             f"target {target!r} not in view after {found['scrolls']} scrolls")
     cx, cy = int(found["coords"][0]), int(found["coords"][1])
-    result = act_when_ready(action, lambda: (cx, cy, 1, 1),
+    locate = plan.locator or _default_locator(plan.kind, _DEFAULT_THRESHOLD, _DEFAULT_LANG)
+
+    def target_box():
+        # Located again on every poll: a constant box could never disappear
+        # or move, so the visibility and stability gates checked nothing.
+        coords = locate(target)
+        return None if coords is None else (int(coords[0]), int(coords[1]), 1, 1)
+
+    result = act_when_ready(action, target_box,
                             region_sampler=region_sampler,
                             enabled_probe=enabled_probe, hit_tester=hit_tester,
                             config=config)

@@ -44,6 +44,10 @@ from je_auto_control.utils.usb.passthrough.protocol import (
     FLAG_EOF, Frame, Opcode,
 )
 
+#: Largest reassembled message: a 1 MiB endpoint transfer (the host's
+#: MAX_ENDPOINT_LENGTH) base64-encoded is ~1.4 MiB, plus JSON framing.
+_MAX_REASSEMBLED_BYTES = 2 * 1024 * 1024
+
 
 _DEFAULT_REPLY_TIMEOUT_S = 10.0
 _DEFAULT_CREDIT_TIMEOUT_S = 30.0
@@ -247,10 +251,20 @@ class UsbPassthroughClient:
         )
 
     def _reassemble(self, frame: Frame) -> Optional[bytes]:
-        """Buffer a fragment; return the full payload once EOF arrives."""
+        """Buffer a fragment; return the full payload once EOF arrives.
+
+        A message may not grow past :data:`_MAX_REASSEMBLED_BYTES`: a host
+        sending fragments without EOF grew the buffer without limit.
+        """
         cid = int(frame.claim_id)
         with self._lock:
             buffer = self._reasm.setdefault(cid, bytearray())
+            if len(buffer) + len(frame.payload) > _MAX_REASSEMBLED_BYTES:
+                self._reasm.pop(cid, None)
+                autocontrol_logger.warning(
+                    "passthrough client: message on claim %d exceeds %d bytes; dropped",
+                    cid, _MAX_REASSEMBLED_BYTES)
+                return None
             buffer.extend(frame.payload)
             if not (frame.flags & FLAG_EOF):
                 return None

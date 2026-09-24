@@ -88,8 +88,9 @@ def test_clear_returns_deleted_count_and_resets_chain(audit):
         audit.log("test", host_id="h", detail="x")
     deleted = audit.clear()
     assert deleted == 4
-    # Empty chain after clear.
-    assert audit.verify_chain().total_rows == 0
+    # The new chain starts with the event recording the clear.
+    assert audit.verify_chain().total_rows == 1
+    assert [row["event_type"] for row in audit.query()] == ["audit_log_cleared"]
     # Inserting again should still produce a valid chain.
     audit.log("test", host_id="h", detail="x")
     assert audit.verify_chain().ok is True

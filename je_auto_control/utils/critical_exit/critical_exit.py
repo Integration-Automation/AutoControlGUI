@@ -1,4 +1,6 @@
 import _thread
+import signal
+import threading
 from threading import Event, Thread
 from typing import Optional, Union
 
@@ -9,6 +11,28 @@ from je_auto_control.wrapper.platform_wrapper import keyboard_check
 # 輪詢間隔，避免佔滿一顆 CPU 核心
 # Poll interval; without it the listener busy-spins and pegs a CPU core.
 _POLL_INTERVAL_SECONDS: float = 0.02
+
+
+def _interrupt_main() -> None:
+    """Raise KeyboardInterrupt in the main thread, waking it if it is blocked.
+
+    ``_thread.interrupt_main`` only sets a flag, so a main thread inside
+    ``time.sleep`` or ``Event.wait`` stopped when the wait ended (a 3 s
+    sleep, 3 s later). A real SIGINT wakes it (0.2 s, measured on Windows
+    and Linux): on POSIX it has to be sent to the main thread itself --
+    ``raise_signal`` from this thread signals this thread and the main
+    thread sleeps on -- while Windows has no ``pthread_kill`` and its
+    ``raise_signal`` sets the event those waits watch. Used only when
+    Python's own handler is installed; otherwise SIG_DFL would end the
+    process.
+    """
+    main_ident = threading.main_thread().ident
+    if not callable(signal.getsignal(signal.SIGINT)) or main_ident is None:
+        _thread.interrupt_main()
+    elif hasattr(signal, "pthread_kill"):
+        signal.pthread_kill(main_ident, signal.SIGINT)
+    else:
+        signal.raise_signal(signal.SIGINT)
 
 
 class CriticalExit(Thread):
@@ -68,18 +92,23 @@ class CriticalExit(Thread):
         - 按下時中斷主程式一次後結束監聽
         """
         try:
+            # One read before watching: on Windows the key state also carries
+            # "pressed since the last call", so a press made before the
+            # listener started fired it at once.
+            keyboard_check.check_key_is_press(self._exit_check_key)
             # wait() 兼作節流與停止訊號：回傳 True 代表已呼叫 stop()。
             # wait() doubles as the throttle and the stop signal: it returns
             # True only once stop() has been called.
             while not self._stop_event.wait(_POLL_INTERVAL_SECONDS):
                 if keyboard_check.check_key_is_press(self._exit_check_key):
-                    # 只中斷一次。持續中斷會打斷主程式的 KeyboardInterrupt
-                    # 處理與清理程式碼。
-                    # Interrupt once. Firing every poll while the key is still
-                    # held would interrupt the main thread's own
-                    # KeyboardInterrupt handler and its cleanup code.
-                    _thread.interrupt_main()
-                    return
+                    # 每次按下只中斷一次：等放開後再重新監聽。
+                    # Interrupt once per press. Firing every poll while the
+                    # key is held would interrupt the main thread's own
+                    # KeyboardInterrupt handler and its cleanup code; after
+                    # the key is released the listener arms again (it used to
+                    # end, so a second press did nothing).
+                    _interrupt_main()
+                    self._wait_for_release()
         # 守護執行緒無法將例外往外拋，靜默死亡會讓緊急退出鍵失效，
         # 因此刻意攔截所有例外並完整記錄。
         # A daemon listener cannot propagate anything to the caller; dying
@@ -88,6 +117,11 @@ class CriticalExit(Thread):
         except Exception as error:  # noqa: BLE001  # reason: see comment above
             autocontrol_logger.error(
                 "critical exit listener failed: %r", error, exc_info=True)
+
+    def _wait_for_release(self) -> None:
+        while not self._stop_event.wait(_POLL_INTERVAL_SECONDS):
+            if not keyboard_check.check_key_is_press(self._exit_check_key):
+                return
 
     def init_critical_exit(self) -> None:
         """

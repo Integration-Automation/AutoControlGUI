@@ -18,11 +18,12 @@
 
     from je_auto_control import pseudo_localize, pseudo_localize_catalog
 
-    pseudo_localize("Hello {name}")        # "⟦Hèllo {name}········⟧"
+    pseudo_localize("Hello {name}")        # "⟦Hèllò {name}··⟧"
     pseudo_localize_catalog({"save": "Save", "cancel": "Cancel"})
 
-佔位符(``{name}`` / ``{{x}}`` / ``%s`` / ``%d``)會原樣保留;``expansion``
-控制填充比例;``⟦…⟧`` 括號讓截斷一眼可見。對應 ``AC_pseudo_localize`` /
+佔位符(``{name}`` / ``{{x}}`` / ``{0}``,以及 ``%s`` / ``%(user)s`` / ``%1$s`` 等 printf 轉換)、
+HTML 標籤與 ICU ``plural`` / ``select`` 參數的結構會原樣保留,各個 ICU 分支的文字則照常在地化;
+``expansion`` 是填充量佔可見文字長度的比例;``⟦…⟧`` 括號讓截斷一眼可見。對應 ``AC_pseudo_localize`` /
 ``ac_pseudo_localize``。畫面中未被加重音(未翻譯)的字串,代表它是未外部化
 的寫死文字。
 

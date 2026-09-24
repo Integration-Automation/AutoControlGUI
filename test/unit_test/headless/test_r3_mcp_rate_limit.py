@@ -7,7 +7,9 @@ either parameter changes while reusing it when they do not.
 """
 import uuid
 
-from je_auto_control.utils.mcp_server.tools._handlers import rate_limit
+from je_auto_control.utils.mcp_server.tools._handlers_operations import (
+    rate_limit,
+)
 
 
 def _name() -> str:

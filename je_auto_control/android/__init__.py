@@ -18,7 +18,7 @@ Two entry points:
 
         ["AC_android_tap",        {"x": 540, "y": 1100, "serial": "..."}],
         ["AC_android_swipe",      {"x1": 100, "y1": 100,
-                                   "x2": 800, "y2": 100, "ms": 250}],
+                                   "x2": 800, "y2": 100, "duration_ms": 250}],
         ["AC_android_key",        {"key": "KEYCODE_HOME"}],
         ["AC_android_text",       {"text": "hello"}],
         ["AC_android_screenshot", {"file_path": "phone.png"}],

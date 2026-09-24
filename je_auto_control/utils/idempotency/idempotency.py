@@ -12,11 +12,13 @@ expiry and replay are fully deterministic in CI.
 """
 import hashlib
 import json
+import threading
 import time
 from pathlib import Path
 from typing import Any, Callable, Dict, Optional
 
 from je_auto_control.utils.exception.exceptions import AutoControlException
+from je_auto_control.utils.json_store.json_store import atomic_write_text
 
 
 class IdempotencyConflict(AutoControlException):
@@ -37,6 +39,9 @@ class IdempotencyStore:
         self._records: Dict[str, Dict[str, Any]] = {}
         self._clock = clock
         self._ttl = ttl
+        # The socket / REST / MCP servers call in concurrently; without it two
+        # duplicates could both see "new" and both run the side effect.
+        self._lock = threading.RLock()
 
     def _live(self, key: str) -> Optional[Dict[str, Any]]:
         record = self._records.get(key)
@@ -56,36 +61,59 @@ class IdempotencyStore:
         the stored response). Raises :class:`IdempotencyConflict` when ``key`` is
         reused with a different ``request`` fingerprint.
         """
-        record = self._live(key)
-        if record is not None:
-            if (request is not None and record["request"] is not None
-                    and record["request"] != request):
-                raise IdempotencyConflict(
-                    f"key {key!r} reused with a different request")
-            return {"status": record["status"], "response": record["response"]}
-        self._records[key] = {"status": "in_progress", "request": request,
-                              "response": None, "stored_at": self._clock()}
-        return {"status": "new", "response": None}
+        with self._lock:
+            record = self._live(key)
+            if record is not None:
+                if (request is not None and record["request"] is not None
+                        and record["request"] != request):
+                    raise IdempotencyConflict(
+                        f"key {key!r} reused with a different request")
+                return {"status": record["status"], "response": record["response"]}
+            self._records[key] = {"status": "in_progress", "request": request,
+                                  "response": None, "stored_at": self._clock()}
+            return {"status": "new", "response": None}
 
     def complete(self, key: str, response: Any) -> None:
-        """Record the completed ``response`` for ``key``."""
-        record = self._records.get(key)
-        if record is None:
-            self._records[key] = {"status": "completed", "request": None,
-                                  "response": response,
-                                  "stored_at": self._clock()}
-        else:
-            record["status"] = "completed"
-            record["response"] = response
+        """Record the completed ``response`` for ``key``; its TTL starts now.
+
+        The TTL used to run from :meth:`begin`, so work that took longer than
+        the TTL lost its stored response and the next duplicate ran again.
+        """
+        with self._lock:
+            record = self._records.get(key)
+            if record is None:
+                self._records[key] = {"status": "completed", "request": None,
+                                      "response": response,
+                                      "stored_at": self._clock()}
+            else:
+                record["status"] = "completed"
+                record["response"] = response
+                record["stored_at"] = self._clock()
+
+    def release(self, key: str) -> bool:
+        """Drop an ``in_progress`` key whose work failed, so a retry runs it.
+
+        Without this the key stayed in progress for the life of the store
+        (for ever with no TTL) and every retry was told to wait. A completed
+        key is kept; returns whether a key was released.
+        """
+        with self._lock:
+            record = self._records.get(key)
+            if record is None or record["status"] != "in_progress":
+                return False
+            del self._records[key]
+            return True
 
     def get(self, key: str) -> Optional[Dict[str, Any]]:
         """Return the live record for ``key`` (or ``None`` if absent/expired)."""
-        record = self._live(key)
-        return dict(record) if record is not None else None
+        with self._lock:
+            record = self._live(key)
+            return dict(record) if record is not None else None
 
     def to_dict(self) -> Dict[str, Any]:
         """Return all records as a plain dict."""
-        return {key: dict(value) for key, value in self._records.items()}
+        with self._lock:
+            return {key: dict(value) for key, value in self._records.items()}
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any], **kwargs: Any) -> "IdempotencyStore":
@@ -98,7 +126,7 @@ class IdempotencyStore:
         """Persist the store to ``path`` as JSON; return the path."""
         out = Path(path)
         out.parent.mkdir(parents=True, exist_ok=True)
-        out.write_text(json.dumps(self.to_dict(), indent=2), encoding="utf-8")
+        atomic_write_text(out, json.dumps(self.to_dict(), indent=2))
         return str(out)
 
     @classmethod

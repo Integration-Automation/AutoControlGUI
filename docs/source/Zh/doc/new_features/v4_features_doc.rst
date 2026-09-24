@@ -40,7 +40,8 @@ Builder 項目。視覺與視窗功能的 geometry / IO 操作皆可注入,因�
   ``verify()`` 搭檔)。``AC_assert_vlm``。
 * **捲動找元素** — ``scroll_until_visible(target, kind="image",
   direction="down", max_scrolls=10)`` 往某方向捲動直到樣板圖或 OCR 文字
-  出現,回傳 ``{found, coords, scrolls}``。``AC_scroll_to_find``。
+  出現,回傳 ``{found, coords, scrolls}``。``left`` / ``right`` 需要水平滾輪軸(X11 / Wayland),
+  其他平台除非給了 ``scroller=``,否則拋出 ``ValueError``。``AC_scroll_to_find``。
 * **區域顏色統計** — ``region_color_stats(source, region)`` 回傳區域的
   ``average_rgb``、``dominant_rgb`` 及該色的像素占比(量化色彩空間 → 取
   最多的 bucket → 平均其真實像素)。``AC_region_color_stats``。
@@ -61,7 +62,7 @@ Builder 項目。視覺與視窗功能的 geometry / IO 操作皆可注入,因�
   ``AC_assert_duration`` 在區塊耗時超過預算時判失敗——銜接 profiler 與
   斷言 DSL 的延遲回歸守門。
 * **讀進變數** — 把外部資料綁進流程範圍供後續 ``${var}`` 使用:
-  ``AC_ocr_to_var``(區域文字)、``AC_shell_to_var``(命令 stdout)、
+  ``AC_ocr_to_var``(區域文字)、``AC_shell_to_var``(命令 stdout,以 ``encoding`` 解碼,預設為系統地區設定的編碼)、
   ``AC_read_file_to_var``(檔案文字)、``AC_http_to_var``(GET body 或
   dotted JSON path)、``AC_now_to_var``(strftime)、``AC_random_to_var``
   (seeded int / float / choice)。
@@ -105,11 +106,14 @@ Builder 項目。視覺與視窗功能的 geometry / IO 操作皆可注入,因�
 
 * **動作檔簽章** — ``sign_action_file`` 寫出 HMAC-SHA256 的 ``.sig``
   sidecar;``verify_action_file`` 以常數時間驗證。設定
-  ``JE_AUTOCONTROL_REQUIRE_SIGNED_ACTIONS`` 時,``execute_files`` 會強制
-  簽章(opt-in)。``AC_sign_action_file`` / ``AC_verify_action_file``。
+  ``JE_AUTOCONTROL_REQUIRE_SIGNED_ACTIONS`` 時(opt-in),所有從磁碟執行檔案的
+  路徑 -- ``execute_files``、``je_auto_control run``、排程器、觸發器、熱鍵、
+  webhook、MCP 執行工具與 GUI -- 都會拒絕未簽章或被改過的檔案;自行載入時
+  用 ``read_executable_action_json`` 可得到同樣的檢查。每位使用者的金鑰檔
+  至少要有 32 位元組。``AC_sign_action_file`` / ``AC_verify_action_file``。
 * **動作檔加密** — ``encrypt_action_file`` / ``decrypt_action_file`` 以
-  Fernet(AES-128-CBC + HMAC)讓腳本內容在靜態時保密,金鑰來自通行碼或
-  每位使用者的 0600 金鑰。``AC_encrypt_action_file`` /
+  Fernet(AES-128-CBC + HMAC)讓腳本內容在靜態時保密,金鑰來自每位使用者的
+  0600 金鑰,或經 scrypt 與每個檔案各自的隨機鹽值衍生自通行碼。``AC_encrypt_action_file`` /
   ``AC_decrypt_action_file``。
 * **可還原刪除** — ``move_to_trash(path)`` 把檔案送進 OS 資源回收桶
   (Win32 ``SHFileOperation`` undo flag / macOS Trash / Linux XDG trash,

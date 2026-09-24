@@ -6,12 +6,39 @@ when it is missing, mirroring the optional Excel backend in the
 data-source loader; the rest of the module stays import-light. Imports no
 ``PySide6`` so PDF checks run fully headlessly.
 """
+import functools
 import os
-from typing import Any, Dict, Iterable, List, Optional, Union
+from typing import Any, Callable, Dict, Iterable, List, Optional, TypeVar, Union
 
-from je_auto_control.utils.exception.exceptions import AutoControlAssertionException
+from je_auto_control.utils.exception.exceptions import (
+    AutoControlActionException, AutoControlAssertionException,
+)
 
 PageSelector = Optional[Union[int, Iterable[int]]]
+_Result = TypeVar("_Result")
+
+
+def _pdf_errors_as_action_errors(function: Callable[..., _Result]) -> Callable[..., _Result]:
+    """Re-raise pypdf's own errors as :class:`AutoControlActionException`.
+
+    ``PyPdfError`` derives from ``Exception`` alone, so a corrupt or non-PDF
+    file aborted the whole script instead of failing one step.
+    """
+    @functools.wraps(function)
+    def wrapper(*args: Any, **kwargs: Any) -> _Result:
+        try:
+            from pypdf.errors import DependencyError, PyPdfError
+        except ImportError:
+            # Without pypdf there is nothing of its to translate: the function
+            # either uses a stubbed reader or _open_pdf explains what is missing.
+            return function(*args, **kwargs)
+        try:
+            return function(*args, **kwargs)
+        # DependencyError (an AES-encrypted file without `cryptography`) is
+        # not a PyPdfError and escaped raw.
+        except (PyPdfError, DependencyError) as error:
+            raise AutoControlActionException(f"unreadable PDF: {error}") from error
+    return wrapper
 
 
 def _open_pdf(path: str):
@@ -41,6 +68,7 @@ def _page_indices(pages: PageSelector, total: int) -> List[int]:
     return indices
 
 
+@_pdf_errors_as_action_errors
 def extract_pdf_text(path: str, pages: PageSelector = None) -> str:
     """Extract text from a PDF; ``pages`` is None (all), a 1-based page, or list."""
     reader = _open_pdf(path)
@@ -48,11 +76,13 @@ def extract_pdf_text(path: str, pages: PageSelector = None) -> str:
     return "\n".join(reader.pages[i].extract_text() or "" for i in indices)
 
 
+@_pdf_errors_as_action_errors
 def pdf_page_count(path: str) -> int:
     """Return the number of pages in a PDF."""
     return len(_open_pdf(path).pages)
 
 
+@_pdf_errors_as_action_errors
 def pdf_metadata(path: str) -> Dict[str, Any]:
     """Return the PDF's document metadata (keys without the leading slash)."""
     meta = _open_pdf(path).metadata or {}

@@ -1,6 +1,6 @@
 """Headless tests for the HTTP/API request action.
 
-No real network is used: urllib.request.urlopen is monkeypatched with a
+No real network is used: the module opener (``_OPENER.open``) is monkeypatched with a
 fake response/HTTPError so the tests stay deterministic and offline.
 """
 import io
@@ -20,8 +20,9 @@ class _FakeResponse:
         self.headers = headers or {"Content-Type": "application/json"}
         self.url = url
 
-    def read(self):
-        return self._body
+    def read(self, size=-1):
+        # The client reads at most MAX_RESPONSE_BYTES + 1, like any file object.
+        return self._body if size < 0 else self._body[:size]
 
     def __enter__(self):
         return self
@@ -39,7 +40,7 @@ def _capture_request(captured):
 
 
 def test_get_parses_json_and_status(monkeypatch):
-    monkeypatch.setattr(http_client.urllib.request, "urlopen",
+    monkeypatch.setattr(http_client._OPENER, "open",
                         lambda req, timeout=None: _FakeResponse(
                             200, '{"hello": "world"}'))
     resp = http_client.http_request("https://api.example/data")
@@ -51,7 +52,7 @@ def test_get_parses_json_and_status(monkeypatch):
 
 def test_post_sends_json_body_and_content_type(monkeypatch):
     captured = {}
-    monkeypatch.setattr(http_client.urllib.request, "urlopen",
+    monkeypatch.setattr(http_client._OPENER, "open",
                         _capture_request(captured))
     http_client.http_request("https://api.example/items", method="post",
                              json_body={"name": "Sam"})
@@ -63,7 +64,7 @@ def test_post_sends_json_body_and_content_type(monkeypatch):
 
 def test_bearer_auth_header(monkeypatch):
     captured = {}
-    monkeypatch.setattr(http_client.urllib.request, "urlopen",
+    monkeypatch.setattr(http_client._OPENER, "open",
                         _capture_request(captured))
     http_client.http_request("https://api.example", auth={
         "type": "bearer", "token": "abc123"})
@@ -72,7 +73,7 @@ def test_bearer_auth_header(monkeypatch):
 
 def test_basic_auth_header(monkeypatch):
     captured = {}
-    monkeypatch.setattr(http_client.urllib.request, "urlopen",
+    monkeypatch.setattr(http_client._OPENER, "open",
                         _capture_request(captured))
     http_client.http_request("https://api.example", auth={
         "type": "basic", "username": "u", "password": "p"})  # NOSONAR python:S2068
@@ -81,7 +82,7 @@ def test_basic_auth_header(monkeypatch):
 
 
 def test_unknown_auth_type_rejected(monkeypatch):
-    monkeypatch.setattr(http_client.urllib.request, "urlopen",
+    monkeypatch.setattr(http_client._OPENER, "open",
                         lambda req, timeout=None: _FakeResponse(200, "{}"))
     with pytest.raises(ValueError):
         http_client.http_request("https://x", auth={"type": "oauth"})
@@ -92,7 +93,7 @@ def test_http_error_is_returned_not_raised(monkeypatch):
         raise urllib.error.HTTPError(
             "https://x", 404, "Not Found", {"Content-Type": "text/plain"},
             io.BytesIO(b"missing"))
-    monkeypatch.setattr(http_client.urllib.request, "urlopen", raise_http_error)
+    monkeypatch.setattr(http_client._OPENER, "open", raise_http_error)
     resp = http_client.http_request("https://x")
     assert resp["status"] == 404
     assert resp["ok"] is False
@@ -106,14 +107,14 @@ def test_non_http_scheme_rejected():
 
 def test_timeout_is_passed_through(monkeypatch):
     captured = {}
-    monkeypatch.setattr(http_client.urllib.request, "urlopen",
+    monkeypatch.setattr(http_client._OPENER, "open",
                         _capture_request(captured))
     http_client.http_request("https://x", timeout=5)
     assert captured["timeout"] == pytest.approx(5.0)
 
 
 def test_facade_and_executor_wiring(monkeypatch):
-    monkeypatch.setattr(http_client.urllib.request, "urlopen",
+    monkeypatch.setattr(http_client._OPENER, "open",
                         lambda req, timeout=None: _FakeResponse(201, '{"id": 7}'))
     assert ac.http_request is http_client.http_request
     assert "AC_http_request" in ac.executor.known_commands()

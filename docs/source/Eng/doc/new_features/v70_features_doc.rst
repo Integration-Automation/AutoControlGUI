@@ -36,7 +36,7 @@ Headless API
 actual), ``extra`` (in actual, absent from expected), or ``changed``. Options:
 ``partial`` drops ``extra`` mismatches (subset match), ``match_type`` accepts a
 ``changed`` leaf whose types match (Pact ``like``), and ``ignore`` skips listed
-paths. ``diff_json`` is the raw path-tagged diff; ``normalize_json`` returns a
+paths and everything under them. ``diff_json`` is the raw path-tagged diff; ``normalize_json`` returns a
 canonical copy (sorted keys, ``drop`` keys removed) for stable comparison;
 ``snapshot_json`` is golden-master testing (writes the file on first run, then
 matches against it). ``true`` stays distinct from ``1``.

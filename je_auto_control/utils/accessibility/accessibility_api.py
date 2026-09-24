@@ -94,6 +94,22 @@ def find_accessibility_element(name: Optional[str] = None,
     return found[0] if found else None
 
 
+def focused_accessibility_element(app_name: Optional[str] = None,
+                                  ) -> Optional[AccessibilityElement]:
+    """The element holding keyboard focus, or ``None`` when none does.
+
+    With ``app_name`` the answer is ``None`` unless the focused element belongs
+    to that application -- focus is one element on the whole desktop, so this
+    filters the answer rather than searching inside the application. Raises
+    :class:`AccessibilityNotAvailableError` when the backend is missing or
+    cannot report focus.
+    """
+    element = get_backend().focused_element()
+    if element is None or (app_name is not None and element.app_name != app_name):
+        return None
+    return element
+
+
 def click_accessibility_element(name: Optional[str] = None,
                                 role: Optional[str] = None,
                                 app_name: Optional[str] = None,

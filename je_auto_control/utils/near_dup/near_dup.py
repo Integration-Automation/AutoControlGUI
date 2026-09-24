@@ -35,7 +35,10 @@ def _hash64(value: str, salt: bytes = b"") -> int:
 
 
 def simhash(text: str, *, bits: int = 64) -> int:
-    """Return a ``bits``-wide SimHash fingerprint of ``text``."""
+    """Return a ``bits``-wide SimHash fingerprint of ``text`` (1-64 bits)."""
+    if not 1 <= int(bits) <= 64:
+        # The shingle hash is 64 bits: wider fingerprints were zero above bit 63.
+        raise ValueError("simhash bits must be between 1 and 64")
     vector = [0] * bits
     for shingle in _shingles(text):
         value = _hash64(shingle)

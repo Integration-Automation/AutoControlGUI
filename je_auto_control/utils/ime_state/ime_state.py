@@ -24,6 +24,8 @@ import sys
 import time
 from typing import Any, Callable, Dict, Optional
 
+from je_auto_control.utils.timeouts import deadline_after
+
 # IMM32 conversion-mode (IME_CMODE_*) bit flags.
 IME_CMODE_NATIVE = 0x0001
 IME_CMODE_KATAKANA = 0x0002
@@ -84,7 +86,7 @@ def wait_for_composition_commit(
 
     ``clock`` / ``sleep`` / ``reader`` are injectable for deterministic tests.
     """
-    deadline = clock() + float(timeout_s)
+    deadline = deadline_after(clock(), timeout_s, "timeout_s")
     while True:
         if not is_composing(reader=reader):
             return True

@@ -63,15 +63,22 @@ def _check_success(trajectory: Sequence[Mapping[str, Any]],
                   f"marker {marker!r} {'found' if found else 'not found'}")
 
 
+def _action_names(value: Any) -> List[str]:
+    """A rubric's action list; a lone string is one action, not its letters."""
+    if isinstance(value, str):
+        return [value]
+    return [str(name) for name in value]
+
+
 def _collect_checks(trajectory: Sequence[Mapping[str, Any]],
                     actions: List[str],
                     rubric: Mapping[str, Any]) -> List[Dict[str, Any]]:
     checks: List[Dict[str, Any]] = []
     if "required_actions" in rubric:
-        checks.append(_check_required(actions, rubric["required_actions"],
+        checks.append(_check_required(actions, _action_names(rubric["required_actions"]),
                                       bool(rubric.get("ordered", False))))
     if "forbidden_actions" in rubric:
-        checks.append(_check_forbidden(actions, rubric["forbidden_actions"]))
+        checks.append(_check_forbidden(actions, _action_names(rubric["forbidden_actions"])))
     if "max_steps" in rubric:
         checks.append(_check_max_steps(len(actions), int(rubric["max_steps"])))
     if "success_contains" in rubric:

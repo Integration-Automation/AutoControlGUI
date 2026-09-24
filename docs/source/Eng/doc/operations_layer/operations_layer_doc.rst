@@ -108,7 +108,10 @@ Auth gate
   constant-time comparison.
 - Per-IP token bucket: 120 requests/minute, burst 30.
 - Failed-auth tracking: 8 wrong tokens in 60 s → ``locked_out``
-  (returns 429); the lockout is per-IP, never global.
+  (returns 429) for further wrong tokens from that IP; the valid token is
+  never locked out, and the lockout is never global.
+- A POST body is read only after the route and the token check pass, so
+  unauthenticated requests get 401 / 429 without being parsed.
 
 Headless::
 
@@ -241,7 +244,20 @@ Headless::
    print(result.ok, result.broken_at_id, result.total_rows)
 
 The chain is "trust on first use": rows that existed before the column
-was added are backfilled in insertion order at startup.
+was added are backfilled in insertion order, once, the first time a log is
+opened by a version with the chain (``PRAGMA user_version`` records it).
+After that a row whose hash was cleared is a broken link.
+
+The first row must point at the chain's anchor: the genesis hash, or the
+hash of the last row removed by automatic pruning, so deleting the oldest
+rows by hand is caught too. ``clear()`` starts a new chain with an
+``audit_log_cleared`` event that records how many rows it removed.
+
+The hashes are unkeyed SHA-256: the chain shows edits, deletions and
+reorderings to anyone who did not rewrite every later hash, but someone who
+can write the database file can rebuild the whole chain, and dropping the
+newest rows is not detectable from the file alone. Keep a copy of the last
+``row_hash`` elsewhere when that matters.
 
 REST endpoints::
 
@@ -490,7 +506,8 @@ Headless::
    print(report.written, report.skipped, report.backups)
 
 Import is non-destructive: anything we are about to overwrite is
-first renamed to ``<name>.bak.<unix_ts>``. Bad versions, unknown
+first copied to ``<name>.bak.<unix_ts>``, and the original stays in place
+until the new content has been written. Bad versions, unknown
 filenames and path-traversal attempts are rejected; format
 mismatches between the bundle and the allowlist (e.g. a ``text``
 entry where the allowlist expects ``json``) are skipped.

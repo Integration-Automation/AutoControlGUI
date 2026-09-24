@@ -40,8 +40,11 @@ class LatencyDigest:
         return round(value, digits)
 
     def record(self, value: float) -> None:
-        """Record one observation."""
+        """Record one observation (a finite number)."""
         value = float(value)
+        if not math.isfinite(value):
+            # log10 of NaN / inf raised a bare ValueError / OverflowError.
+            raise ValueError(f"cannot record a non-finite value: {value!r}")
         bucket = self._bucket(value)
         self._counts[bucket] = self._counts.get(bucket, 0) + 1
         self._count += 1
@@ -63,8 +66,18 @@ class LatencyDigest:
         for bucket in sorted(self._counts):
             cumulative += self._counts[bucket]
             if cumulative >= rank:
-                return bucket
+                return self._clamp(bucket)
         return self._max if self._max is not None else 0.0
+
+    def _clamp(self, bucket: float) -> float:
+        """Keep a rounded bucket inside what was recorded.
+
+        Rounding (and the single bucket for values <= 0) put p99 of a lone
+        1234.5 at 1230.0, below the minimum.
+        """
+        low = self._min if self._min is not None else bucket
+        high = self._max if self._max is not None else bucket
+        return min(max(bucket, low), high)
 
     def quantiles(self, qs: Iterable[float]) -> Dict[float, float]:
         """Return ``{q: percentile(q)}`` for each requested quantile."""

@@ -8,36 +8,52 @@ anywhere in the framework today.
 
 Every function runs on an injectable ``haystack`` image (ndarray / path / PIL, default:
 grab the screen / ``region``) and returns a NumPy ndarray you can pass straight to an
-OCR / match call or save. OpenCV + NumPy come in via the project's ``je_open_cv``
-dependency and are imported lazily. Imports no ``PySide6``.
+OCR / match call or save. Colour arrays are in OpenCV's BGR order: files are read that
+way, and PIL images and screen grabs (RGB) are converted, so grayscale weights red and
+blue correctly; an ndarray you pass in is taken to be BGR already. OpenCV + NumPy
+come in via the project's ``je_open_cv`` dependency and are imported lazily.
+Imports no ``PySide6``.
 """
+import math
 from typing import Any, Callable, Dict, Optional, Sequence
 
 ImageSource = Any
 _INTERP = ("nearest", "linear", "cubic", "lanczos")
 
 
+def _pil_to_bgr(image: Any):
+    """A PIL image as an OpenCV array: ``L`` stays single-channel, colour becomes BGR(A).
+
+    ``np.asarray`` on a palette image gives palette *indices*, and RGB order
+    made every grayscale step swap the red and blue weights.
+    """
+    import cv2
+    import numpy as np
+    if image.mode == "L":
+        return np.asarray(image)
+    has_alpha = "A" in image.mode or "transparency" in image.info
+    if has_alpha:
+        return cv2.cvtColor(np.asarray(image.convert("RGBA")), cv2.COLOR_RGBA2BGRA)
+    return cv2.cvtColor(np.asarray(image.convert("RGB")), cv2.COLOR_RGB2BGR)
+
+
 def _to_array(source: ImageSource):
-    """Load a path / ndarray / PIL image as a uint8 ndarray (as stored)."""
+    """Load a path / ndarray / PIL image as a uint8 ndarray in OpenCV's BGR order."""
     import cv2
     import numpy as np
     if hasattr(source, "shape"):
         return np.asarray(source)
     if isinstance(source, (str, bytes)) or hasattr(source, "__fspath__"):
-        array = cv2.imread(str(source), cv2.IMREAD_UNCHANGED)
-        if array is None:
-            raise ValueError(f"could not read image: {source!r}")
-        return array
-    return np.asarray(source)
+        from je_auto_control.utils.cv2_utils.image_file import read_image
+        return read_image(source, cv2.IMREAD_UNCHANGED)
+    return _pil_to_bgr(source)
 
 
 def _resolve(haystack: Optional[ImageSource], region: Optional[Sequence[int]]):
-    import numpy as np
     if haystack is not None:
         return _to_array(haystack)
     from je_auto_control.utils.cv2_utils.screenshot import pil_screenshot
-    image = pil_screenshot(screen_region=list(region) if region else None)
-    return np.asarray(image.convert("RGB"))
+    return _pil_to_bgr(pil_screenshot(screen_region=list(region) if region else None))
 
 
 def _gray(array):
@@ -63,9 +79,13 @@ def upscale(haystack: Optional[ImageSource] = None, *,
         raise ValueError(f"unknown interp: {interp!r}")
     table = {"nearest": cv2.INTER_NEAREST, "linear": cv2.INTER_LINEAR,
              "cubic": cv2.INTER_CUBIC, "lanczos": cv2.INTER_LANCZOS4}
+    factor = float(scale)
+    if not math.isfinite(factor) or factor <= 0:
+        # 0 or a negative scale silently produced a 1x1 image.
+        raise ValueError(f"scale must be a positive number, got {scale!r}")
     array = _resolve(haystack, region)
     height, width = array.shape[:2]
-    size = (max(1, round(width * float(scale))), max(1, round(height * float(scale))))
+    size = (max(1, round(width * factor)), max(1, round(height * factor)))
     return cv2.resize(array, size, interpolation=table[interp])
 
 
@@ -114,6 +134,10 @@ def detect_skew_angle(haystack: Optional[ImageSource] = None, *,
     gray = _gray(_resolve(haystack, region))
     _, mask = cv2.threshold(gray, 0, 255,
                             cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
+    if cv2.countNonZero(mask) * 2 > mask.size:
+        # Light text on a dark theme: the inverted mask is the background,
+        # and the whole frame's rectangle has no skew.
+        mask = cv2.bitwise_not(mask)
     coords = cv2.findNonZero(mask)
     if coords is None:
         return 0.0
@@ -145,14 +169,23 @@ def _step_upscale(array, *, scale: float, **_kwargs):
     return upscale(array, scale=scale)
 
 
-def _step_binarize(array, *, block_size: int, c: int, **_kwargs):
-    return binarize(array, block_size=block_size, c=c)
+def _step_binarize(array, **_kwargs):
+    return binarize(array)
+
+
+def _step_adaptive(method: str) -> Callable[..., Any]:
+    def _step(array, *, block_size: int, c: int, **_kwargs):
+        return binarize(array, method=method, block_size=block_size, c=c)
+    return _step
 
 
 _STEPS: Dict[str, Callable[..., Any]] = {
     "grayscale": _step_grayscale,
     "upscale": _step_upscale,
     "binarize": _step_binarize,
+    # block_size / c reach these two; plain "binarize" is Otsu and has none.
+    "adaptive_mean": _step_adaptive("adaptive_mean"),
+    "adaptive_gaussian": _step_adaptive("adaptive_gaussian"),
     "denoise": lambda array, **_kwargs: denoise(array),
     "deskew": lambda array, **_kwargs: deskew(array),
     "contrast": lambda array, **_kwargs: enhance_contrast(array),
@@ -165,9 +198,10 @@ def preprocess_image(haystack: Optional[ImageSource] = None, *,
                      scale: float = 2.0, block_size: int = 31, c: int = 11):
     """Apply a pipeline of named preprocessing ``steps`` in order, returning the result.
 
-    Steps: ``grayscale``, ``upscale`` (by ``scale``), ``binarize`` (otsu, tuned by
-    ``block_size`` / ``c`` only for the adaptive variants), ``denoise``, ``deskew``,
-    ``contrast`` (CLAHE). Unknown step names raise ``ValueError``.
+    Steps: ``grayscale``, ``upscale`` (by ``scale``), ``binarize`` (Otsu),
+    ``adaptive_mean`` / ``adaptive_gaussian`` (adaptive binarisation tuned by
+    ``block_size`` / ``c``), ``denoise``, ``deskew``, ``contrast`` (CLAHE).
+    Unknown step names raise ``ValueError``.
     """
     array = _resolve(haystack, region)
     for step in steps:

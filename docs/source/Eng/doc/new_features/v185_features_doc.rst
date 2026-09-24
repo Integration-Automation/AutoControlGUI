@@ -34,8 +34,10 @@ Headless API
     set_clipboard_rtf("Paste me as styled text")   # Windows
     set_clipboard_csv([["Name", "Qty"], ["Pen", "3"]], delimiter="\t")  # TSV
 
-``build_rtf`` escapes braces / backslashes, turns newlines into ``\par`` and
-non-ASCII characters into ``\uNNNN?`` escapes (the output is pure ASCII).
+``build_rtf`` escapes braces / backslashes, turns line breaks (``\n``, ``\r\n``
+or a lone ``\r``) into ``\par`` and non-ASCII characters into ``\uN?`` escapes of
+their signed 16-bit UTF-16 units (the output is pure ASCII); ``rtf_to_text``
+honours ``\ucN`` and joins surrogate pairs.
 ``set_clipboard_rtf`` / ``set_clipboard_csv`` also seed plain text by default so
 plain editors still paste something; ``get_clipboard_rtf`` returns the raw RTF
 string (feed it to ``rtf_to_text``) and ``get_clipboard_csv`` returns rows.

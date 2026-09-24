@@ -59,7 +59,8 @@ def plan_repair(verdict: Any, *, policy: Optional[RepairPolicy] = None) -> List[
     policy = policy or RepairPolicy()
     preferred = _VERDICT_TACTICS.get(_effect_of(verdict), policy.tactics)
     ordered = [tactic for tactic in preferred if tactic in policy.tactics]
-    return (ordered or list(policy.tactics))[:int(policy.max_attempts)]
+    # A negative count sliced from the end and returned tactics anyway.
+    return (ordered or list(policy.tactics))[:max(0, int(policy.max_attempts))]
 
 
 def next_tactic(verdict: Any, used: List[str], *,
@@ -80,7 +81,9 @@ def run_with_repair(act: Callable[[], Any], verify: Callable[[], bool], *,
 
     Every effect is injected: ``act`` performs the action, ``verify`` returns success,
     ``apply_tactic`` mutates state for a named tactic, ``verdict_for`` supplies the current
-    effect verdict, ``sleep`` backs off. Returns a :class:`RepairOutcome`.
+    effect verdict, and ``sleep`` is called with ``0`` between attempts -- a
+    yield point, not a back-off; waiting is the ``wait_retry`` tactic's job.
+    Returns a :class:`RepairOutcome`.
     """
     policy = policy or RepairPolicy()
     sleeper = sleep or (lambda _seconds: None)
@@ -89,17 +92,34 @@ def run_with_repair(act: Callable[[], Any], verify: Callable[[], bool], *,
         return RepairOutcome(True, 1, [], "ok on first try")
     used: List[str] = []
     while len(used) < int(policy.max_attempts):
-        tactic = next_tactic(verdict_for() if verdict_for else "no_op", used,
-                             policy=policy)
+        verdict = verdict_for() if verdict_for else "no_op"
+        tactic = next_tactic(verdict, used, policy=policy)
         if tactic is None:
             break
         used.append(tactic)
-        if apply_tactic is not None:
-            apply_tactic(tactic)
-        act()
-        if verify():
-            return RepairOutcome(True, len(used) + 1, list(used),
-                                 f"recovered via {tactic}")
+        outcome = _try_tactic(tactic, verdict, used, act, verify, apply_tactic)
+        if outcome is not None:
+            return outcome
         sleeper(0)
     return RepairOutcome(False, len(used) + 1, list(used),
                          "exhausted repair tactics")
+
+
+def _try_tactic(tactic: str, verdict: str, used: List[str], act: Callable[[], Any],
+                verify: Callable[[], bool],
+                apply_tactic: Optional[Callable[[str], Any]]) -> Optional[RepairOutcome]:
+    """Apply one tactic; the outcome when it ends the repair, else ``None``."""
+    if apply_tactic is not None:
+        apply_tactic(tactic)
+    if tactic == "escalate":
+        # Escalating hands the step to someone else: acting again after it
+        # repeated an action that had just changed the wrong target.
+        return RepairOutcome(False, len(used) + 1, list(used), "escalated")
+    # Only an action that did nothing is repeated. One that changed the
+    # screen (but not as verified) is waited on / re-checked instead: acting
+    # again toggled a checkbox back or submitted twice.
+    if verdict == "no_op":
+        act()
+    if verify():
+        return RepairOutcome(True, len(used) + 1, list(used), f"recovered via {tactic}")
+    return None

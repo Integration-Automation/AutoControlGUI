@@ -40,15 +40,13 @@ class RepairStore:
 
     def __init__(self, db_path: Optional[str] = None) -> None:
         """``db_path`` persists suggestions across runs (JSON)."""
-        from je_auto_control.utils.json_store import read_json_dict
-        self._path = db_path
-        data = read_json_dict(db_path)
-        self._items: List[Dict[str, Any]] = list(data.get("suggestions", []))
+        from je_auto_control.utils.json_store import SharedJsonDict
+        # Re-read and locked per change, so a reviewer process and the
+        # run recording suggestions do not overwrite each other.
+        self._state = SharedJsonDict(db_path)
 
-    def _flush(self) -> None:
-        if self._path is not None:
-            from je_auto_control.utils.json_store import write_json_dict
-            write_json_dict(self._path, {"suggestions": self._items})
+    def _items(self) -> List[Dict[str, Any]]:
+        return list(self._state.read().get("suggestions", []))
 
     def record(self, key: str, *, method: str,
                coordinates: Optional[List[int]] = None,
@@ -62,17 +60,19 @@ class RepairStore:
             confidence=float(confidence), status=status,
             coordinates=list(coordinates) if coordinates else None,
             description=description)
-        self._items.append(asdict(suggestion))
-        self._flush()
+        row = asdict(suggestion)
+        self._state.update(
+            lambda data: data.setdefault("suggestions", []).append(row))
         return suggestion
 
     def _set_status(self, suggestion_id: str, new_status: str) -> bool:
-        for item in self._items:
-            if item["id"] == suggestion_id and item["status"] == STATUS_PENDING:
-                item["status"] = new_status
-                self._flush()
-                return True
-        return False
+        def set_status(data: Dict[str, Any]) -> bool:
+            for item in data.get("suggestions", []):
+                if item["id"] == suggestion_id and item["status"] == STATUS_PENDING:
+                    item["status"] = new_status
+                    return True
+            return False
+        return self._state.update(set_status)
 
     def approve(self, suggestion_id: str) -> bool:
         """Approve a pending suggestion (makes it usable by ``resolved``)."""
@@ -84,11 +84,11 @@ class RepairStore:
 
     def pending(self) -> List[Dict[str, Any]]:
         """Return suggestions awaiting review."""
-        return [dict(i) for i in self._items if i["status"] == STATUS_PENDING]
+        return [dict(i) for i in self._items() if i["status"] == STATUS_PENDING]
 
     def resolved(self, key: str) -> Optional[Dict[str, Any]]:
         """Return the latest applied/approved corrected locator for ``key``."""
-        for item in reversed(self._items):
+        for item in reversed(self._items()):
             if item["key"] == key and item["status"] in _USABLE:
                 return {"method": item["method"],
                         "coordinates": item["coordinates"],

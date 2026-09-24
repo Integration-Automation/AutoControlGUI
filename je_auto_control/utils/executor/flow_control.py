@@ -11,7 +11,8 @@ import time
 from typing import Any, Callable, Dict, Mapping, Optional, Sequence
 
 from je_auto_control.utils.exception.exceptions import (
-    AutoControlActionException, AutoControlException, ImageNotFoundException,
+    AutoControlActionException, AutoControlAssertionException,
+    AutoControlException, ImageNotFoundException,
 )
 from je_auto_control.utils.executor.flow_data_commands import (
     exec_assert_db, exec_assert_duration, exec_assert_var, exec_http_to_var,
@@ -22,6 +23,7 @@ from je_auto_control.utils.executor.flow_data_commands import (
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.wrapper.auto_control_image import locate_image_center
 from je_auto_control.wrapper.auto_control_screen import get_pixel
+from je_auto_control.utils.timeouts import deadline_after
 
 
 class LoopBreak(Exception):
@@ -30,6 +32,14 @@ class LoopBreak(Exception):
 
 class LoopContinue(Exception):
     """Internal signal raised by AC_continue; caught only by loop handlers."""
+
+
+class MacroDepthExceeded(AutoControlActionException):
+    """A macro call nested past ``MAX_MACRO_DEPTH``.
+
+    Unwinds through every nested body instead of being recorded at the
+    deepest one, so the script's top-level record shows the failure.
+    """
 
 
 def _image_present(image: str, threshold: float) -> bool:
@@ -105,10 +115,14 @@ def exec_wait_image(executor: Any, args: Mapping[str, Any]) -> bool:
     threshold = float(args.get("threshold", 0.8))
     timeout = float(args.get("timeout", 10.0))
     poll = max(float(args.get("poll", 0.2)), 0.01)
-    deadline = time.monotonic() + timeout
-    while time.monotonic() < deadline:
+    deadline = deadline_after(time.monotonic(), timeout)
+    # Probe before checking the deadline: timeout=0 means "look once",
+    # not "never look".
+    while True:
         if _image_present(image, threshold):
             return True
+        if time.monotonic() >= deadline:
+            break
         time.sleep(poll)
     raise AutoControlActionException(f"AC_wait_image timeout: {image}")
 
@@ -121,10 +135,12 @@ def exec_wait_pixel(executor: Any, args: Mapping[str, Any]) -> bool:
     tolerance = int(args.get("tolerance", 0))
     timeout = float(args.get("timeout", 10.0))
     poll = max(float(args.get("poll", 0.2)), 0.01)
-    deadline = time.monotonic() + timeout
-    while time.monotonic() < deadline:
+    deadline = deadline_after(time.monotonic(), timeout)
+    while True:  # probe first, as in exec_wait_image
         if _pixel_matches(x, y, rgb, tolerance):
             return True
+        if time.monotonic() >= deadline:
+            break
         time.sleep(poll)
     raise AutoControlActionException(f"AC_wait_pixel timeout at ({x},{y})")
 
@@ -170,6 +186,20 @@ def exec_while_image(executor: Any, args: Mapping[str, Any]) -> int:
     return iterations
 
 
+# Errors a protected block may raise that ``AC_try`` / ``AC_retry`` are
+# willing to catch -- the executor's own containment tuple. ``LoopBreak`` /
+# ``LoopContinue`` are deliberately excluded so loop control-flow still
+# propagates through a try block, and ``MacroDepthExceeded`` is re-raised
+# before this tuple is consulted so it reaches the top-level record.
+# ``AutoControlException`` is the family base (every framework error
+# subclasses it), so image/mouse/keyboard/screen/assertion failures inside
+# the body are recoverable too.
+_TRY_CATCHABLE = (
+    AutoControlException, OSError, RuntimeError, ArithmeticError,
+    AttributeError, TypeError, ValueError, LookupError,
+)
+
+
 def exec_retry(executor: Any, args: Mapping[str, Any]) -> Any:
     """Execute ``body`` with retries; raise after exhausting attempts."""
     max_attempts = max(int(args.get("max_attempts", 3)), 1)
@@ -179,8 +209,9 @@ def exec_retry(executor: Any, args: Mapping[str, Any]) -> Any:
     for attempt in range(max_attempts):
         try:
             return _run_strict(executor, body)
-        except (AutoControlException, OSError, RuntimeError,
-                AttributeError, TypeError, ValueError) as error:
+        except MacroDepthExceeded:
+            raise
+        except _TRY_CATCHABLE as error:
             last_error = error
             autocontrol_logger.info(
                 "AC_retry attempt %d/%d failed: %s",
@@ -188,23 +219,13 @@ def exec_retry(executor: Any, args: Mapping[str, Any]) -> Any:
             )
             if attempt + 1 < max_attempts:
                 time.sleep(backoff * (2 ** attempt))
+    # A failed assertion is a deliberate fail signal that must propagate
+    # even under raise_on_error=False; wrapping it would neutralise it.
+    if isinstance(last_error, AutoControlAssertionException):
+        raise last_error
     raise AutoControlActionException(
         f"AC_retry exhausted after {max_attempts} attempts"
     ) from last_error
-
-
-# Errors a protected block may raise that ``AC_try`` is willing to catch.
-# ``LoopBreak`` / ``LoopContinue`` are deliberately excluded so loop
-# control-flow still propagates through a try block.
-# ``LookupError`` keeps this aligned with the executor's own catch tuple, so
-# a KeyError/IndexError from a malformed nested action is catchable by
-# ``AC_try`` rather than tearing down the whole script. ``AutoControlException``
-# is the family base (every framework error subclasses it), so image/mouse/
-# keyboard/screen/assertion failures inside the body are recoverable too.
-_TRY_CATCHABLE = (
-    AutoControlException, OSError, RuntimeError,
-    AttributeError, TypeError, ValueError, LookupError,
-)
 
 
 def exec_try(executor: Any, args: Mapping[str, Any]) -> Dict[str, Any]:
@@ -223,7 +244,7 @@ def exec_try(executor: Any, args: Mapping[str, Any]) -> Dict[str, Any]:
     try:
         try:
             _run_strict(executor, body)
-        except (LoopBreak, LoopContinue):
+        except (LoopBreak, LoopContinue, MacroDepthExceeded):
             raise
         except _TRY_CATCHABLE as error:
             caught_repr = repr(error)
@@ -402,6 +423,95 @@ def _as_list(value: Any) -> list:
     return list(value) if value else []
 
 
+def _parallel_branches(executor: Any, raw_branches: Any) -> list:
+    """The branch lists of an ``AC_parallel``, validated when they came as a string.
+
+    A JSON-string list is parsed only here, after dispatch-time validation,
+    so its unknown commands used to run half a branch first.
+    """
+    branches = _as_list(raw_branches)
+    if isinstance(raw_branches, str):
+        from je_auto_control.utils.executor.action_schema import validate_actions
+        for branch in branches:
+            if branch:
+                validate_actions(branch, executor.known_commands())
+    return branches
+
+
+class _ParallelRun:
+    """The shared state of one ``AC_parallel``: what each branch returned or raised.
+
+    Strictness, macro depth and the failure count are per thread, and each
+    branch runs on a new one: a failing branch under raise_on_error was only
+    recorded (AC_parallel returned success, AC_try never caught it, the CLI
+    exit code never saw it), and a macro calling itself through a branch
+    restarted the recursion limit at 0 on every level. They are captured
+    here, on the parent thread, and handed to every branch.
+    """
+
+    def __init__(self, executor: Any, branches: list) -> None:
+        from je_auto_control.utils.executor import action_executor as executor_module
+        self._module = executor_module
+        # Snapshot before spawning threads so branch workers never read the
+        # parent's live command/macro maps concurrently.
+        self._event_dict = dict(executor.event_dict)
+        self._macros = dict(executor.macros)
+        self._strict = getattr(executor_module._STRICT_BODIES, "value", False)
+        self._macro_depth = getattr(_MACRO_DEPTH, "value", 0)
+        self.results: list = [None] * len(branches)
+        self._failures: list = [0] * len(branches)
+        self._errors: Dict[int, str] = {}
+        self._assertions: Dict[int, AutoControlAssertionException] = {}
+
+    def _branch_executor(self) -> Any:
+        branch_executor = self._module.Executor()
+        # setdefault (not update): copy the parent's *custom* commands/macros
+        # while keeping the branch executor's own self-bound stock commands.
+        # A blind update() would overwrite AC_execute_action/AC_execute_files
+        # (bound to the parent) so a nested execute inside a branch would run
+        # against the parent's variable scope, defeating the isolation
+        # AC_parallel promises and reintroducing the cross-branch race.
+        for name, handler in self._event_dict.items():
+            branch_executor.event_dict.setdefault(name, handler)
+        branch_executor.macros.update(self._macros)
+        return branch_executor
+
+    def run_branch(self, index: int, branch: Any) -> None:
+        """Run one branch on the current (worker) thread, recording the outcome."""
+        # An exception here would otherwise only kill this worker thread,
+        # leaving results[index] as None — indistinguishable from a branch
+        # that legitimately returned None, and reported as success.
+        if not branch:
+            return  # an empty branch is a no-op, as everywhere else
+        _MACRO_DEPTH.value = self._macro_depth
+        self._module.reset_recorded_failures()
+        try:
+            self.results[index] = self._branch_executor().execute_action(
+                branch, raise_on_error=self._strict, _validated=True)
+            self._failures[index] = self._module.recorded_failures()
+        except AutoControlAssertionException as error:
+            self._assertions[index] = error
+        except Exception as error:  # noqa: BLE001  # reason: see comment above
+            self._errors[index] = repr(error)
+            autocontrol_logger.error(
+                "AC_parallel branch %d failed: %r", index, error, exc_info=True)
+
+    def settle(self) -> None:
+        """On the parent thread: count branch failures, then raise the first problem."""
+        for _ in range(sum(self._failures)):
+            self._module._count_recorded_failure()
+        if self._assertions:
+            # Re-raised as itself so it propagates like a top-level assert.
+            raise self._assertions[min(self._assertions)]
+        if self._errors:
+            # Raise so the executor's own machinery handles it like any other
+            # failed command: recorded when raise_on_error is off, propagated
+            # when it is on.
+            failed = ", ".join(f"branch {idx}: {err}" for idx, err in sorted(self._errors.items()))
+            raise AutoControlActionException(
+                f"AC_parallel: {len(self._errors)} branch(es) failed: {failed}")
+
+
 def exec_parallel(executor: Any, args: Mapping[str, Any]) -> Dict[str, Any]:
     """Run each branch action list concurrently on its own isolated executor.
 
@@ -411,53 +521,27 @@ def exec_parallel(executor: Any, args: Mapping[str, Any]) -> Dict[str, Any]:
     (registered via ``add_command_to_executor``) and ``AC_define_macro``
     macros are copied from the parent so a branch recognises them — otherwise
     a branch's fresh executor only has the stock command set and rejects them
-    at runtime even though validation (against the parent) passed.
+    at runtime even though validation (against the parent) passed. Branches
+    inherit the caller's strictness and macro depth.
     """
-    from je_auto_control.utils.executor.action_executor import Executor
-    # Snapshot before spawning threads so branch workers never read the
-    # parent's live command/macro maps concurrently.
-    parent_event_dict = dict(executor.event_dict)
-    parent_macros = dict(executor.macros)
-    branches = _as_list(args.get("branches"))
-    results: list = [None] * len(branches)
-    errors: Dict[int, str] = {}
-
-    def _run(index: int, branch: Any) -> None:
-        # An exception here would otherwise only kill this worker thread,
-        # leaving results[index] as None — indistinguishable from a branch
-        # that legitimately returned None, and reported as success.
-        try:
-            branch_executor = Executor()
-            # setdefault (not update): copy the parent's *custom* commands/macros
-            # while keeping the branch executor's own self-bound stock commands.
-            # A blind update() would overwrite AC_execute_action/AC_execute_files
-            # (bound to the parent) so a nested execute inside a branch would run
-            # against the parent's variable scope, defeating the isolation this
-            # function promises and reintroducing the cross-branch race.
-            for _name, _handler in parent_event_dict.items():
-                branch_executor.event_dict.setdefault(_name, _handler)
-            branch_executor.macros.update(parent_macros)
-            results[index] = branch_executor.execute_action(
-                branch, _validated=True)
-        except Exception as error:  # noqa: BLE001  # reason: see comment above
-            errors[index] = repr(error)
-            autocontrol_logger.error(
-                "AC_parallel branch %d failed: %r", index, error, exc_info=True)
-
-    threads = [threading.Thread(target=_run, args=(idx, branch), daemon=True)
+    branches = _parallel_branches(executor, args.get("branches"))
+    run = _ParallelRun(executor, branches)
+    threads = [threading.Thread(target=run.run_branch, args=(idx, branch), daemon=True)
                for idx, branch in enumerate(branches)]
     for thread in threads:
         thread.start()
     for thread in threads:
         thread.join()
-    if errors:
-        # Raise so the executor's own machinery handles it like any other
-        # failed command: recorded when raise_on_error is off, propagated
-        # when it is on.
-        failed = ", ".join(f"branch {idx}: {err}" for idx, err in sorted(errors.items()))
-        raise AutoControlActionException(
-            f"AC_parallel: {len(errors)} branch(es) failed: {failed}")
-    return {"branches": len(branches), "results": results}
+    run.settle()
+    return {"branches": len(branches), "results": run.results}
+
+
+#: Macro calls nested deeper than this fail instead of recursing. Without a
+#: bound a self-calling macro hit RecursionError deep in the stack, where it
+#: was recorded as an ordinary failure and the script carried on.
+MAX_MACRO_DEPTH = 50
+# Per thread: nested calls stay on one thread, AC_parallel branches start at 0.
+_MACRO_DEPTH = threading.local()
 
 
 def exec_define_macro(executor: Any, args: Mapping[str, Any]) -> Dict[str, Any]:
@@ -489,7 +573,15 @@ def exec_call_macro(executor: Any, args: Mapping[str, Any]) -> Any:
         raw_args = json.loads(raw_args) if raw_args.strip() else {}
     for param in macro["params"]:
         executor.variables.set(param, raw_args.get(param))
-    return executor.execute_action(macro["body"], _validated=True)
+    depth = getattr(_MACRO_DEPTH, "value", 0)
+    if depth >= MAX_MACRO_DEPTH:
+        raise MacroDepthExceeded(
+            f"AC_call_macro: {name!r} nested deeper than {MAX_MACRO_DEPTH}")
+    _MACRO_DEPTH.value = depth + 1
+    try:
+        return _run_branch(executor, macro["body"])
+    finally:
+        _MACRO_DEPTH.value = depth
 
 
 BLOCK_COMMANDS: Dict[str, Callable[[Any, Mapping[str, Any]], Any]] = {

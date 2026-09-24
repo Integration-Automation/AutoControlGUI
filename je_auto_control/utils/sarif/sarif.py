@@ -20,7 +20,7 @@ _LEVELS = {
     "error": "error", "critical": "error", "serious": "error",
     "high": "error", "warning": "warning", "moderate": "warning",
     "medium": "warning", "info": "note", "note": "note", "minor": "note",
-    "low": "note",
+    "low": "note", "none": "none",
 }
 
 
@@ -54,19 +54,46 @@ def result_fingerprint(finding: Mapping[str, Any]) -> str:
     return hashlib.sha256(basis.encode("utf-8")).hexdigest()[:16]
 
 
+def _artifact_uri(path: Any) -> str:
+    """A SARIF ``artifactLocation.uri``: a URI reference, not an OS path.
+
+    ``C:\\my dir\\flow file.json`` is not a URI; an absolute path becomes a
+    ``file:`` URI and a relative one a percent-encoded POSIX path.
+    """
+    import urllib.parse
+    from pathlib import PurePath, PureWindowsPath
+    text = str(path)
+    if "://" in text:
+        return text
+    pure = PureWindowsPath(text) if "\\" in text else PurePath(text)
+    if pure.is_absolute():
+        return pure.as_uri()
+    return urllib.parse.quote(pure.as_posix())
+
+
+def _start_line(line: Any) -> Any:
+    """A 1-based ``startLine``, or ``None`` when there is no valid line."""
+    try:
+        number = int(line)
+    except (TypeError, ValueError):
+        return None
+    return number if number >= 1 else None
+
+
 def _result(finding: Mapping[str, Any]) -> Dict[str, Any]:
     result: Dict[str, Any] = {
-        "ruleId": finding.get("rule_id", "AC0000"),
-        "level": finding.get("level", "warning"),
+        "ruleId": str(finding.get("rule_id", "AC0000")),
+        # SARIF allows only none / note / warning / error.
+        "level": _level(finding.get("level", "warning")),
         "message": {"text": finding.get("message", "")},
         "partialFingerprints": {"primaryLocationLineHash":
                                 result_fingerprint(finding)},
     }
     if finding.get("file"):
-        region = {"startLine": int(finding["line"])} if finding.get("line") \
-            else {}
+        line = _start_line(finding.get("line"))
+        region = {"startLine": line} if line is not None else {}
         result["locations"] = [{"physicalLocation": {
-            "artifactLocation": {"uri": finding["file"]},
+            "artifactLocation": {"uri": _artifact_uri(finding["file"])},
             **({"region": region} if region else {})}}]
     return result
 
@@ -107,7 +134,9 @@ def from_lint_issues(issues: Sequence[Any], *,
     return [
         make_finding(str(_get(i, "code") or "lint"), _get(i, "message", ""),
                      level=_level(_get(i, "severity")), file=file,
-                     line=(_get(i, "index") if (_get(i, "index") or 0) >= 0
+                     # ``index`` is the 0-based action index; SARIF lines are 1-based.
+                     line=(int(_get(i, "index")) + 1
+                           if isinstance(_get(i, "index"), int) and _get(i, "index") >= 0
                            else None))
         for i in issues
     ]

@@ -40,6 +40,15 @@ def subject_for_bytes(name: str, data: bytes) -> Dict[str, Any]:
     return {"name": name, "digest": {"sha256": hashlib.sha256(data).hexdigest()}}
 
 
+def _unique_subjects(subjects: Sequence[Mapping[str, Any]]) -> List[Dict[str, Any]]:
+    """The subjects as dicts; two with one name cannot both be verified."""
+    names = [str(subject.get("name")) for subject in subjects]
+    duplicates = sorted({name for name in names if names.count(name) > 1})
+    if duplicates:
+        raise ValueError(f"provenance subjects share names {duplicates}; pass name= to subject_for")
+    return [dict(subject) for subject in subjects]
+
+
 def build_provenance(subjects: Sequence[Mapping[str, Any]], *,
                      build_type: str = "https://je-auto-control/buildtype/v1",
                      builder_id: str = "je_auto_control",
@@ -50,7 +59,7 @@ def build_provenance(subjects: Sequence[Mapping[str, Any]], *,
     meta = metadata or {}
     return {
         "_type": _STATEMENT_TYPE,
-        "subject": [dict(subject) for subject in subjects],
+        "subject": _unique_subjects(subjects),
         "predicateType": _PREDICATE_TYPE,
         "predicate": {
             "buildDefinition": {
@@ -91,4 +100,8 @@ def verify_provenance(statement: Mapping[str, Any],
         if expected.get(name) != actual:
             mismatches.append({"name": name, "expected": expected.get(name),
                                "actual": actual})
+    # A subject no file was given for was never checked; verify(stmt, {})
+    # used to report no mismatches at all.
+    mismatches.extend({"name": name, "expected": digest, "actual": None}
+                      for name, digest in expected.items() if name not in files)
     return mismatches

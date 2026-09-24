@@ -313,11 +313,12 @@ def test_parallel_surfaces_a_failed_branch():
     traceback going only to stderr.
     """
     ex = Executor()
-    with pytest.raises(AutoControlActionException, match="branch"):
-        ex.execute_action([["AC_parallel", {"branches": [
-            [["AC_set_var", {"name": "a", "value": 1}]],
-            [],                                   # empty branch raises in-thread
-        ]}]], raise_on_error=True)
+    # A JSON-string ``branches`` is validated like a list before any branch
+    # runs, so the malformed second branch is refused up front.
+    with pytest.raises(AutoControlActionException, match="must be a list"):
+        ex.execute_action([["AC_parallel", {"branches": (
+            '[[["AC_set_var", {"name": "a", "value": 1}]], {"not": "a list"}]'
+        )}]], raise_on_error=True)
 
 
 @pytest.mark.parametrize("action", [

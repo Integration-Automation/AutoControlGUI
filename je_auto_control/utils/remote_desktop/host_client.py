@@ -12,13 +12,14 @@ import json
 import threading
 from typing import TYPE_CHECKING, Deque, Optional
 
+from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.remote_desktop.auth import make_nonce
 from je_auto_control.utils.remote_desktop.clipboard_sync import (
     ClipboardSyncError, decode as decode_clipboard,
 )
 from je_auto_control.utils.remote_desktop.file_transfer import (
-    FileTransferError,
+    FileTransferError, decode_begin,
 )
 from je_auto_control.utils.remote_desktop.host_access import (
     PERMISSION_DENIED, PERMISSION_FULL, PERMISSION_VIEW_ONLY,
@@ -38,6 +39,10 @@ if TYPE_CHECKING:  # avoids a runtime cycle: host imports this module
 _FILE_MSG_TYPES = frozenset({
     MessageType.FILE_BEGIN, MessageType.FILE_CHUNK, MessageType.FILE_END,
 })
+
+
+#: Messages a view-only viewer may not send, besides INPUT.
+_CONTROL_MSG_TYPES = frozenset({MessageType.CLIPBOARD, *_FILE_MSG_TYPES})
 
 
 class _ClientHandler:
@@ -60,6 +65,9 @@ class _ClientHandler:
         self._audio_event = threading.Event()
         self._audio_sender_thread: Optional[threading.Thread] = None
         self.authenticated = False
+        # Transfers this viewer began: aborted if it disconnects mid-file,
+        # which used to leave the .part file and its open handle behind.
+        self._transfer_ids: set = set()
         # Phase 5.3: per-client permission set by the approval callback.
         # Default is full control so legacy callers (no callback) keep
         # the prior behaviour.
@@ -70,21 +78,36 @@ class _ClientHandler:
         return self._address
 
     def start(self) -> None:
-        """Run auth (with optional host approval), then start the loops."""
+        """Run auth (with optional host approval), then start the loops.
+
+        However the handshake fails, the handler is stopped: it was only
+        closed, and the host reaps stopped handlers alone, so every failed
+        login kept a ``max_clients`` slot until the host restarted. A
+        watchdog bounds the whole handshake -- the socket timeout only bounds
+        each read, and a peer trickling a byte at a time never tripped it.
+        """
+        watchdog = threading.Timer(_AUTH_TIMEOUT_S, self._close)
+        watchdog.daemon = True
+        watchdog.start()
         try:
             self._authenticate()
         except (AuthenticationError, ProtocolError, OSError) as error:
             autocontrol_logger.info(
                 "remote_desktop client %s rejected: %r", self._address, error,
             )
-            self._close()
+            self.stop()
             return
+        except Exception:  # noqa: BLE001  # reason: re-raised; the slot must be freed first
+            self.stop()
+            raise
+        finally:
+            watchdog.cancel()
         self.authenticated = True
         # The initial cursor + frame are seeded from _send_loop (the
-        # per-client sender thread), not here. start() runs on the shared
-        # accept thread with the socket timeout already cleared, so sending a
-        # full-screen JPEG to a viewer that authenticates then stops reading
-        # would block every new accept until its send buffer drains.
+        # per-client sender thread), not here: start() runs on this
+        # connection's handshake thread with the socket timeout already
+        # cleared, and a viewer that authenticates then stops reading would
+        # pin that thread -- and its handshake slot -- until its buffer drains.
         self._sender_thread = threading.Thread(
             target=self._send_loop, name="rd-sender", daemon=True,
         )
@@ -125,8 +148,12 @@ class _ClientHandler:
         self._audio_event.set()
 
     def stop(self) -> None:
-        """Signal threads and close the socket."""
+        """Signal threads, abandon this viewer's unfinished uploads, close the socket."""
         self._shutdown.set()
+        receiver = self._host._file_receiver
+        if receiver is not None:
+            for transfer_id in list(self._transfer_ids):
+                receiver.abort(transfer_id, "viewer disconnected")
         with self._host._frame_cond:
             self._host._frame_cond.notify_all()
         self._audio_event.set()
@@ -152,7 +179,7 @@ class _ClientHandler:
         )
         try:
             return _interpret_approval(callback(pending))
-        except (RuntimeError, ValueError, TypeError) as error:
+        except Exception as error:  # noqa: BLE001  # reason: user callback; any failure denies the viewer
             autocontrol_logger.info(
                 "remote_desktop approval callback raised for %s: %r",
                 self._address, error,
@@ -267,7 +294,14 @@ class _ClientHandler:
                     )
                 self.stop()
                 return
-            self._route_incoming(msg_type, payload)
+            try:
+                self._route_incoming(msg_type, payload)
+            except BaseException:
+                # Dying here without stop() left a handler that still
+                # counted as an authenticated client: it ignored all later
+                # input and held a slot that locked out new viewers.
+                self.stop()
+                raise
 
     def _route_incoming(self, msg_type: MessageType, payload: bytes) -> None:
         """Dispatch one received message to the matching handler."""
@@ -278,6 +312,15 @@ class _ClientHandler:
             # watch but cannot drive the mouse / keyboard.
             if self.permission != PERMISSION_VIEW_ONLY:
                 self._handle_input_payload(payload)
+            return
+        if msg_type in _CONTROL_MSG_TYPES and self.permission == PERMISSION_VIEW_ONLY:
+            # Setting the host clipboard or writing files on it is control,
+            # not viewing: a file dropped in the Startup folder is full
+            # control at the next logon.
+            autocontrol_logger.info(
+                "remote_desktop view-only viewer %s sent %s; dropped",
+                self._address, msg_type.name,
+            )
             return
         if msg_type is MessageType.CLIPBOARD:
             self._handle_clipboard_payload(payload)
@@ -301,6 +344,7 @@ class _ClientHandler:
         receiver = self._host._ensure_file_receiver()
         try:
             if msg_type is MessageType.FILE_BEGIN:
+                self._transfer_ids.add(decode_begin(payload)[0])
                 receiver.handle_begin(payload)
             elif msg_type is MessageType.FILE_CHUNK:
                 receiver.handle_chunk(payload)
@@ -358,7 +402,7 @@ class _ClientHandler:
             return
         try:
             callback(str(sender), text)
-        except Exception:  # noqa: BLE001  callback isolation
+        except Exception:  # noqa: BLE001  # reason: callback isolation, a caller's handler must not kill the receive loop
             autocontrol_logger.exception(
                 "remote_desktop on_chat callback raised"
             )
@@ -396,7 +440,10 @@ class _ClientHandler:
                 "remote_desktop rejected INPUT from %s: %r",
                 self._address, error,
             )
-        except (OSError, RuntimeError, ValueError, TypeError) as error:
+        # AutoControlException: the wrappers raise it for an unknown key or
+        # button name, which is the peer's input, not the host failing.
+        except (OSError, RuntimeError, ValueError, TypeError,
+                AutoControlException) as error:
             autocontrol_logger.warning(
                 "remote_desktop input apply failed for %s: %r",
                 self._address, error,

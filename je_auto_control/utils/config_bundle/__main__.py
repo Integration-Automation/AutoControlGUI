@@ -11,6 +11,7 @@ from je_auto_control.utils.config_bundle.config_bundle import (
     ConfigBundleError, default_bundle_root, export_config_bundle,
     import_config_bundle,
 )
+from je_auto_control.utils.json_store.json_store import atomic_write_text
 from je_auto_control.utils.path_guard.path_guard import (
     PathNotAllowedError, validate_path,
 )
@@ -55,10 +56,8 @@ def _do_export(output: Path, root: Optional[Path]) -> int:
     bundle = export_config_bundle(root=root)
     output.parent.mkdir(parents=True, exist_ok=True)
     # ``output`` was canonicalised and bounded by validate_path() in main().
-    output.write_text(
-        json.dumps(bundle, ensure_ascii=False, indent=2),
-        encoding="utf-8",
-    )
+    # The bundle carries tokens: create it 0600 rather than at the umask default.
+    atomic_write_text(output, json.dumps(bundle, ensure_ascii=False, indent=2))
     print(f"Wrote bundle to {output.resolve()}")
     print(f"  source root: {bundle['manifest']['source_root']}")
     print(f"  files included: {len(bundle['files'])}")

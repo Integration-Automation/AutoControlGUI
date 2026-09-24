@@ -42,7 +42,8 @@ Dispatcher / performer
         item = q.get_next()
 
 ``get_next`` 會原子性地認領最舊的 ``new`` 項目(標為 ``in_progress``),
-因此多個 performer 不會重複處理。
+因此多個 performer 不會重複處理。``complete`` 與 ``fail`` 只處理 ``in_progress`` 的項目;
+不存在的 id 或其他狀態的項目會拋出例外,已完成的工作不會被重新排入佇列。
 
 
 失敗語意
@@ -63,9 +64,10 @@ Dispatcher / performer
 ==========
 
 * ``AC_queue_add`` — 入列 ``data``(依 ``reference`` 去重)。
-* ``AC_queue_next`` — 認領下一項(排空時回 null)。
-* ``AC_queue_complete`` — 標記項目成功。
-* ``AC_queue_fail`` — 以 ``kind``(``application`` / ``business``)失敗。
+* ``AC_queue_next`` — 認領下一項(排空時回 null)。項目帶有認領編號 ``claim``;給了
+  ``stale_after_s`` 時，被丟下的項目會被重新認領並算一次重試，被丟下 ``max_retries`` 次的標為 ``failed``。
+* ``AC_queue_complete`` — 標記項目成功。傳回該項目的 ``claim``,項目在這段期間被別人重新認領時就會被拒絕。
+* ``AC_queue_fail`` — 以 ``kind``(``application`` / ``business``)失敗;``claim`` 用法相同。
 * ``AC_queue_stats`` — 各狀態計數。
 
 同一個 ``db`` 檔 + ``name`` 識別一個佇列,因此 dispatcher 腳本與 performer

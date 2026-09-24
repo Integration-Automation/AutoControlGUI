@@ -12,7 +12,9 @@ from je_auto_control.gui.language_wrapper.multi_language_wrapper import language
 from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.executor.action_executor import execute_action, execute_files
 from je_auto_control.utils.file_process.get_dir_file_list import get_dir_files_as_list
-from je_auto_control.utils.json.json_file import read_action_json
+from je_auto_control.utils.json.json_file import (
+    read_action_json, read_executable_action_json,
+)
 
 _JSON_FILE_FILTER = "JSON (*.json)"
 
@@ -79,7 +81,7 @@ class ScriptTabMixin:
             path = self.script_path_input.text()
             if not path:
                 return
-            data = read_action_json(path)
+            data = read_executable_action_json(path)
             result = execute_action(data)
             self.script_result_text.setText(json.dumps(result, indent=2, default=str, ensure_ascii=False))
         except (AutoControlException, OSError, ValueError, TypeError, RuntimeError) as error:

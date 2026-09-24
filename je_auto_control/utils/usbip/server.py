@@ -75,9 +75,13 @@ class UsbIpServer:
         sock.settimeout(_ACCEPT_POLL_TIMEOUT_S)
         self._port = sock.getsockname()[1]
         self._listen_sock = sock
-        self._stop.clear()
+        # A fresh event per run, never clear() on the old one: a URB worker
+        # still blocked in recv() when stop() gave up joining would see it
+        # cleared and go on serving its client after a restart.
+        self._stop = threading.Event()
         self._accept_thread = threading.Thread(
-            target=self._accept_loop, name="usbip-accept", daemon=True,
+            target=self._accept_loop, args=(self._stop,),
+            name="usbip-accept", daemon=True,
         )
         self._accept_thread.start()
         return self._port
@@ -99,13 +103,13 @@ class UsbIpServer:
 
     # --- internals ----------------------------------------------------
 
-    def _accept_loop(self) -> None:
+    def _accept_loop(self, stop: threading.Event) -> None:
         # The timeout is set by start() on the owning thread before the socket
         # is published; touching it here would reintroduce the stop() race.
         listen = self._listen_sock
         if listen is None:
             return
-        while not self._stop.is_set():
+        while not stop.is_set():
             try:
                 client_sock, _address = listen.accept()
             except socket.timeout:
@@ -113,7 +117,7 @@ class UsbIpServer:
             except OSError:
                 return
             worker = threading.Thread(
-                target=self._handle_client, args=(client_sock,),
+                target=self._handle_client, args=(client_sock, stop),
                 name="usbip-client", daemon=True,
             )
             # Drop finished workers so the list doesn't grow without bound over
@@ -123,10 +127,11 @@ class UsbIpServer:
             self._workers.append(worker)
             worker.start()
 
-    def _handle_client(self, client_sock: socket.socket) -> None:
+    def _handle_client(self, client_sock: socket.socket,
+                       stop: threading.Event) -> None:
         try:
             client_sock.settimeout(30.0)
-            self._serve(client_sock)
+            self._serve(client_sock, stop)
         except (OSError, UsbIpError) as error:
             autocontrol_logger.info("usbip client error: %r", error)
         finally:
@@ -135,7 +140,7 @@ class UsbIpServer:
             except OSError:
                 pass
 
-    def _serve(self, sock: socket.socket) -> None:
+    def _serve(self, sock: socket.socket, stop: threading.Event) -> None:
         """One OP request, then optionally a stream of URB commands."""
         raw = _recv_exact(sock, _OP_HEADER_BYTES)
         _version, command, _status = parse_op_header(raw)
@@ -145,7 +150,7 @@ class UsbIpServer:
         if command == OP_REQ_IMPORT:
             busid_bytes = _recv_exact(sock, _OP_IMPORT_BUSID_BYTES)
             request = decode_op_request(raw + busid_bytes)
-            self._serve_import(sock, request.busid or "")
+            self._serve_import(sock, request.busid or "", stop)
             return
         raise UsbIpError(f"unknown OP command 0x{command:04x}")
 
@@ -153,21 +158,26 @@ class UsbIpServer:
         devices = self._backend.list_devices()
         sock.sendall(encode_op_rep_devlist(devices))
 
-    def _serve_import(self, sock: socket.socket, busid: str) -> None:
+    def _serve_import(self, sock: socket.socket, busid: str,
+                      stop: threading.Event) -> None:
         device = self._backend.find_by_busid(busid)
         sock.sendall(encode_op_rep_import(device))
         if device is None:
             return
         # After a successful import the client switches to URB-mode.
-        # Loop reading USBIP_CMD_* until the client hangs up.
-        while not self._stop.is_set():
+        # Loop reading USBIP_CMD_* until the client hangs up. Only the
+        # imported device may be addressed: the devid in each URB used to
+        # reach the backend unchecked, so importing one device gave URB
+        # access to every device the backend had enumerated.
+        imported_devid = (device.busnum << 16) | device.devnum
+        while not stop.is_set():
             try:
                 header = _recv_exact(sock, _URB_HEADER_BYTES)
             except OSError:
                 return
             command = int.from_bytes(header[:4], "big")
             if command == USBIP_CMD_SUBMIT:
-                self._serve_cmd_submit(sock, header)
+                self._serve_cmd_submit(sock, header, imported_devid)
             elif command == USBIP_CMD_UNLINK:
                 _ = _recv_exact(sock, _CMD_SUBMIT_BODY_BYTES)
                 # Unlink: we don't track in-flight URBs in the scaffold,
@@ -176,7 +186,7 @@ class UsbIpServer:
                 # client's URB-cancel forever pending.
                 seqnum = int.from_bytes(header[4:8], "big")
                 ret = encode_ret_unlink(
-                    seqnum=seqnum, devid=device.devnum,
+                    seqnum=seqnum, devid=imported_devid,
                     direction=0, ep=0, status=0,
                 )
                 sock.sendall(ret)
@@ -186,7 +196,7 @@ class UsbIpServer:
                 )
 
     def _serve_cmd_submit(self, sock: socket.socket,
-                          header: bytes) -> None:
+                          header: bytes, imported_devid: int) -> None:
         body = _recv_exact(sock, _CMD_SUBMIT_BODY_BYTES)
         # Two-phase: peek the length first (decode_cmd_submit would raise on
         # an OUT transfer whose buffer isn't present yet), read the buffer,
@@ -201,6 +211,14 @@ class UsbIpServer:
         if direction == 0 and tlen > 0:
             extra = _recv_exact(sock, tlen)
         submit = decode_cmd_submit(header + body + extra)
+        if submit.devid != imported_devid:
+            sock.sendall(encode_ret_submit(
+                seqnum=submit.seqnum, devid=submit.devid,
+                direction=submit.direction, ep=submit.ep,
+                status=_ENODEV, actual_length=0, data=b"",
+                setup=submit.setup,
+            ))
+            return
         response = self._backend.submit_urb(UrbRequest(
             seqnum=submit.seqnum, devid=submit.devid,
             direction=submit.direction, ep=submit.ep,
@@ -217,6 +235,9 @@ class UsbIpServer:
             setup=submit.setup,
         )
         sock.sendall(ret)
+
+
+_ENODEV = -19  # Linux errno, as usbip reports a URB for a device it lacks
 
 
 def _recv_exact(sock: socket.socket, n: int) -> bytes:

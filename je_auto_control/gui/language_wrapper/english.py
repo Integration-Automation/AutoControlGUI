@@ -194,7 +194,9 @@ english_word_dict = {
 
     # USB passthrough ACL prompt dialog
     "usb_prompt_title": "USB device claim request",
-    "usb_prompt_intro": "A remote viewer is asking to claim a USB device on this host. Allow only if you recognise the request.",
+    "usb_prompt_intro": (
+        "A remote viewer is asking to claim a USB device on this host. "
+        "Allow only if you recognise the request."),
     "usb_prompt_vendor": "Vendor ID:",
     "usb_prompt_product": "Product ID:",
     "usb_prompt_serial": "Serial:",
@@ -246,7 +248,9 @@ english_word_dict = {
     "usb_share_policy_allow": "allow",
     "usb_share_policy_deny": "deny",
     "usb_share_policy_prompt": "prompt",
-    "usb_share_intro": "Enable sharing on the left, then list and open a shared device here over the in-process channel, or browse a remote host below.",
+    "usb_share_intro": (
+        "Enable sharing on the left, then list and open a shared device here "
+        "over the in-process channel, or browse a remote host below."),
     "usb_share_fetch_shared": "List shared devices",
     "usb_share_open_selected": "Open selected",
     "usb_share_enable_first": "Enable sharing first.",
@@ -342,7 +346,9 @@ english_word_dict = {
     "rest_config_export": "Export config",
     "rest_config_import": "Import config",
     "rest_config_export_done": "Wrote {count} files into {path}.",
-    "rest_config_import_confirm": "Replace user config from this bundle? Existing files are renamed to .bak.<timestamp> first.",
+    "rest_config_import_confirm": (
+        "Replace user config from this bundle? "
+        "Existing files are renamed to .bak.<timestamp> first."),
     "rest_config_import_done": "Wrote {written} files; skipped {skipped}.",
 
     # Remote Desktop — WebRTC sub-tabs
@@ -960,6 +966,8 @@ english_word_dict = {
     "a11y_name_placeholder": "partial match",
     "a11y_refresh": "Refresh",
     "a11y_click_selected": "Click selected",
+    "a11y_show_focused": "Show focused element",
+    "a11y_no_focus": "Nothing has keyboard focus.",
     "a11y_col_app": "App",
     "a11y_col_role": "Role",
     "a11y_col_name": "Name",

@@ -7,6 +7,8 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+from je_auto_control.utils.json_store.json_store import append_json_line
+
 
 @dataclass(frozen=True)
 class HealEvent:
@@ -26,14 +28,25 @@ class HealEvent:
         return asdict(self)
 
 
+def default_heal_log_path() -> Path:
+    """``~/.je_auto_control/self_healing_events.jsonl``, resolved at call time."""
+    return Path.home() / ".je_auto_control" / "self_healing_events.jsonl"
+
+
 class HealEventLog:
     """Thread-safe append-only JSON-lines store for HealEvent records."""
 
-    DEFAULT_PATH = Path.home() / ".je_auto_control" / "self_healing_events.jsonl"
-
     def __init__(self, path: Optional[Path] = None) -> None:
-        self._path = Path(path) if path is not None else self.DEFAULT_PATH
+        # Only an explicit path is kept; the default is resolved on every
+        # use, because this module builds a shared instance while the
+        # package imports -- before a test suite's conftest.py can set HOME.
+        self._explicit_path: Optional[Path] = (
+            Path(path) if path is not None else None)
         self._lock = threading.Lock()
+
+    @property
+    def _path(self) -> Path:
+        return self._explicit_path or default_heal_log_path()
 
     @property
     def path(self) -> Path:
@@ -44,10 +57,7 @@ class HealEventLog:
         """Atomically append one event as a JSON line."""
         payload = json.dumps(event.to_dict(), ensure_ascii=False)
         with self._lock:
-            self._path.parent.mkdir(parents=True, exist_ok=True)
-            with self._path.open("a", encoding="utf-8") as fp:
-                fp.write(payload)
-                fp.write("\n")
+            append_json_line(self._path, payload)
 
     def list_events(self, limit: int = 100) -> List[HealEvent]:
         """Return up to ``limit`` most-recent events (oldest first in slice)."""

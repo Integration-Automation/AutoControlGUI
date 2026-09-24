@@ -68,7 +68,10 @@ class WebRTCDesktopHost(ViewerAuthMixin, MediaNegotiationMixin):
     "one person controls my machine" workflow and keeps the GUI simple.
     """
 
-    def __init__(self, *, token: str,  # NOSONAR python:S107  # public constructor; callbacks/permissions are kept as discrete kwargs to keep the call site readable at the GUI layer (see gui/remote_desktop/webrtc_panel.py + utils/remote_desktop/multi_viewer.py)
+    # Public constructor: callbacks and permissions stay discrete kwargs so the
+    # GUI call sites read well (gui/remote_desktop/webrtc_panel.py,
+    # utils/remote_desktop/multi_viewer.py).
+    def __init__(self, *, token: str,  # NOSONAR python:S107
                  config: Optional[WebRTCConfig] = None,
                  on_state_change: Optional[StateCallback] = None,
                  on_authenticated: Optional[Callable[[], None]] = None,
@@ -253,6 +256,7 @@ class WebRTCDesktopHost(ViewerAuthMixin, MediaNegotiationMixin):
         self._mic_channel = None
         self._files_channel = None
         self._files_receiver = None
+        self._release_usb_claims()
         self._authenticated = False
         if self._auth_deadline_handle is not None:
             self._auth_deadline_handle.cancel()
@@ -423,9 +427,19 @@ class WebRTCDesktopHost(ViewerAuthMixin, MediaNegotiationMixin):
             )
             return bool(self._authenticated) and is_usb_passthrough_enabled()
 
+        self._release_usb_claims()  # a new offer replaces the old channel
         self._usb_host = UsbChannelHost(
             channel, session_factory=_factory, enabled_check=_enabled,
         )
+
+    def _release_usb_claims(self) -> None:
+        usb_host, self._usb_host = self._usb_host, None
+        if usb_host is None:
+            return
+        try:
+            usb_host.close()
+        except (RuntimeError, OSError) as error:
+            autocontrol_logger.warning("usb claims release: %r", error)
 
     def set_file_received_callback(self, callback) -> None:
         """Register a sync callback ``cb(path: Path)`` for completed transfers."""

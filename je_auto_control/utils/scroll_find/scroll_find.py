@@ -46,9 +46,28 @@ def _default_locator(kind: str, threshold: float, lang: str) -> Locator:
 
 
 def _default_scroller(direction: str, amount: int) -> None:
-    from je_auto_control.wrapper.auto_control_mouse import mouse_scroll
-    sign = -1 if str(direction).lower() in ("down", "right") else 1
-    mouse_scroll(sign * int(amount))
+    """Scroll with the mouse wheel; sideways only where there is a horizontal axis.
+
+    ``right`` / ``left`` used to be sent as ``down`` / ``up``: Windows and
+    macOS have one wheel axis, so a sideways search scrolled vertically and
+    could never find anything off to the side.
+    """
+    from je_auto_control.wrapper.auto_control_mouse import (
+        mouse_scroll, special_mouse_keys_table,
+    )
+    name = str(direction).lower()
+    if name in ("left", "right"):
+        axis = f"scroll_{name}"
+        if axis not in (special_mouse_keys_table or {}):
+            raise ValueError(
+                f"no horizontal scroll wheel on this platform for direction {name!r}; "
+                "pass scroller= to scroll sideways")
+        mouse_scroll(int(amount), scroll_direction=axis)
+        return
+    # A positive count scrolls up everywhere: Windows and macOS read the
+    # sign, X11 / Wayland read scroll_direction as the positive direction.
+    sign = -1 if name == "down" else 1
+    mouse_scroll(sign * int(amount), scroll_direction="scroll_up")
 
 
 def scroll_until_visible(target: str, *, kind: str = "image",

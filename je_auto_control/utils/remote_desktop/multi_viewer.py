@@ -117,7 +117,13 @@ class MultiViewerHost:
                 on_pending_viewer=self._wrap_pending_callback(session_id),
             )
             self._sessions[session_id] = host
-        offer = host.create_offer(peer_label=f"viewer-{session_id[:6]}")
+        try:
+            offer = host.create_offer(peer_label=f"viewer-{session_id[:6]}")
+        except BaseException:
+            # The caller never learns this session_id, so nobody else could
+            # stop it: it would hold its screen-source subscription forever.
+            self.stop_session(session_id)
+            raise
         return session_id, offer
 
     def accept_session_answer(self, session_id: str, answer_sdp: str) -> None:
@@ -274,14 +280,28 @@ class MultiViewerHost:
 
     def _wrap_state_callback(self, session_id: str):
         cb = self._on_session_state
-        if cb is None:
-            return None
         def _emit(state: str) -> None:
+            if state in _FINAL_STATES:
+                self._prune_later(session_id)
+            if cb is None:
+                return
             try:
                 cb(session_id, state)
             except (RuntimeError, OSError) as error:
                 autocontrol_logger.debug("session state cb: %r", error)
         return _emit
+
+    def _prune_later(self, session_id: str) -> None:
+        """Drop a session whose peer connection ended, off the loop thread.
+
+        A peer that fails, closes, or misses the auth deadline is stopped
+        inside its host, but this registry kept the entry: ``session_count``
+        only grew and the screen source was never released, so capture ran
+        on with nobody watching. ``stop_session`` blocks on the bridge, and
+        this is called from the loop thread, hence the thread.
+        """
+        threading.Thread(target=self.stop_session, args=(session_id,),
+                         name="webrtc-prune", daemon=True).start()
 
     def _wrap_auth_callback(self, session_id: str):
         cb = self._on_session_authenticated
@@ -309,6 +329,11 @@ class MultiViewerHost:
             except (RuntimeError, OSError) as error:
                 autocontrol_logger.debug("pending cb: %r", error)
         return _emit
+
+
+#: Peer-connection states after which a session is over for good.
+#: ``disconnected`` is left out on purpose: ICE can recover from it.
+_FINAL_STATES = frozenset({"failed", "closed"})
 
 
 __all__ = ["MultiViewerHost"]

@@ -1,7 +1,22 @@
+import re
 from collections import defaultdict
 from defusedxml import ElementTree as DefusedET  # nosec B405  # nosemgrep: python.lang.security.use-defused-xml.use-defused-xml  # reason: defusedxml is the safe replacement
 from xml.etree import ElementTree  # nosec B405  # nosemgrep: python.lang.security.use-defused-xml.use-defused-xml  # reason: only used to construct trees, not to parse untrusted data
 from typing import Any, Dict
+
+# Characters XML 1.0 cannot hold at all, not even as a character reference.
+_XML_INVALID = re.compile(
+    "[^\x09\x0a\x0d\x20-\ud7ff\ue000-\ufffd\U00010000-\U0010ffff]")
+
+
+def xml_safe_text(text: str) -> str:
+    """Replace every character XML 1.0 forbids with U+FFFD.
+
+    ElementTree writes such characters (``\\x01``, an ANSI escape's
+    ``\\x1b``) as they are, and the document it produces is then rejected
+    by every XML parser -- including the one that pretty-prints reports.
+    """
+    return _XML_INVALID.sub("\ufffd", text)
 
 
 def _initial_body(children: list, element: ElementTree.Element) -> Any:
@@ -76,7 +91,7 @@ def _validate_text_node(key: str, value: Any) -> None:
 def _set_attribute(root: ElementTree.Element, key: str, value: Any) -> None:
     if not isinstance(value, str):
         raise TypeError(f"Expected str attribute value, got {type(value)}")
-    root.set(key[1:], value)
+    root.set(key[1:], xml_safe_text(value))
 
 
 def _build_child_node(parent: ElementTree.Element, key: str, value: Any) -> None:
@@ -92,7 +107,7 @@ def _process_dict_entry(root: ElementTree.Element, key: str, value: Any) -> None
         raise TypeError(f"Expected str key, got {type(key)}")
     if key.startswith('#'):
         _validate_text_node(key, value)
-        root.text = value
+        root.text = xml_safe_text(value)
         return
     if key.startswith('@'):
         _set_attribute(root, key, value)
@@ -101,8 +116,15 @@ def _process_dict_entry(root: ElementTree.Element, key: str, value: Any) -> None
 
 
 def _to_elements_tree(json_dict: Any, root: ElementTree.Element) -> None:
+    if json_dict is None:
+        # <b/> reads back as None; writing it raised TypeError, so the
+        # conversion could not round-trip an empty element.
+        return
+    if isinstance(json_dict, (int, float)) and not isinstance(json_dict, bool):
+        root.text = str(json_dict)
+        return
     if isinstance(json_dict, str):
-        root.text = json_dict
+        root.text = xml_safe_text(json_dict)
         return
     if isinstance(json_dict, dict):
         for key, value in json_dict.items():

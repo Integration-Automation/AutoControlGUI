@@ -41,7 +41,8 @@ _DAMM = (
 
 def _digits(value: object) -> List[int]:
     """Extract the decimal digits of a value as a list of ints."""
-    return [int(ch) for ch in str(value) if ch.isdigit()]
+    # ASCII only: "\u00b2".isdigit() is true and int() then raised.
+    return [int(ch) for ch in str(value) if ch in "0123456789"]
 
 
 # --- Luhn (mod 10) --------------------------------------------------------
@@ -73,10 +74,12 @@ def luhn_check_digit(partial: object) -> str:
 
 def verhoeff_validate(number: object) -> bool:
     """Whether ``number`` (incl. check digit) passes the Verhoeff scheme."""
+    digits = _digits(number)
     check = 0
-    for index, digit in enumerate(reversed(_digits(number))):
+    for index, digit in enumerate(reversed(digits)):
         check = _VERHOEFF_D[check][_VERHOEFF_P[index % 8][digit]]
-    return check == 0
+    # No digits is not a valid number: "" and "abc" used to pass.
+    return bool(digits) and check == 0
 
 
 def verhoeff_check_digit(partial: object) -> str:
@@ -91,10 +94,11 @@ def verhoeff_check_digit(partial: object) -> str:
 
 def damm_validate(number: object) -> bool:
     """Whether ``number`` (incl. check digit) passes the Damm scheme."""
+    digits = _digits(number)
     interim = 0
-    for digit in _digits(number):
+    for digit in digits:
         interim = _DAMM[interim][digit]
-    return interim == 0
+    return bool(digits) and interim == 0
 
 
 def damm_check_digit(partial: object) -> str:
@@ -109,12 +113,14 @@ def damm_check_digit(partial: object) -> str:
 
 def mod97_10_validate(number: object) -> bool:
     """Whether the numeric string ``number`` satisfies ISO 7064 MOD 97-10."""
-    digits = "".join(ch for ch in str(number) if ch.isdigit())
+    digits = "".join(ch for ch in str(number) if ch in "0123456789")
     return bool(digits) and int(digits) % 97 == 1
 
 
 def mod97_10_check_digits(partial: object) -> str:
     """Return the two MOD 97-10 check digits to append to ``partial``."""
-    digits = "".join(ch for ch in str(partial) if ch.isdigit())
+    digits = "".join(ch for ch in str(partial) if ch in "0123456789")
     value = int(digits) if digits else 0
-    return f"{(1 - value * 100) % 97:02d}"
+    # ISO 7064 / IBAN: 98 - (n * 100 mod 97), always 02..98. The old
+    # (1 - n * 100) mod 97 gave 00 or 01 for some inputs.
+    return f"{98 - (value * 100) % 97:02d}"

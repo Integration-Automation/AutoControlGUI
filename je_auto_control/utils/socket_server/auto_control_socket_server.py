@@ -18,9 +18,8 @@ def _read_command(request) -> str:
 
     A single ``recv`` returns whatever one TCP segment carried, not the whole
     message, so a >8 KiB script was silently truncated and then failed to parse.
-    Accumulate chunks until the client's ``\\n`` terminator arrives (matching the
-    request framing every client already uses), the peer half-closes (EOF), or
-    the safety cap is hit.
+    Accumulate chunks until the command is complete (see :func:`_is_complete`),
+    the peer half-closes (EOF), or the safety cap is hit.
     """
     chunks = []
     total = 0
@@ -30,9 +29,32 @@ def _read_command(request) -> str:
             break  # EOF: peer finished sending
         chunks.append(chunk)
         total += len(chunk)
-        if _COMMAND_TERMINATOR in chunk or total >= _MAX_COMMAND_BYTES:
+        if total >= _MAX_COMMAND_BYTES:
             break
-    return str(b"".join(chunks).strip(), encoding="utf-8")
+        if chunk.endswith(_COMMAND_TERMINATOR) and _is_complete(b"".join(chunks)):
+            break
+    # errors="replace": invalid UTF-8 then fails as bad JSON and is answered
+    # with the error and the sentinel, instead of a UnicodeDecodeError that
+    # escaped every handler here and dropped the client without a reply.
+    return b"".join(chunks).strip().decode("utf-8", errors="replace")
+
+
+def _is_complete(buffer: bytes) -> bool:
+    """Whether a buffer ending in the terminator holds the whole command.
+
+    A newline is also ordinary whitespace inside JSON, so stopping at the
+    first one cut pretty-printed commands short ("Expecting value"). The
+    command is complete when it parses, or when it fails before its end --
+    malformed, answered with the error as before. It is still arriving when
+    parsing fails exactly at the end of what has come so far.
+    """
+    text = buffer.strip().decode("utf-8", errors="replace")
+    try:
+        json.loads(text)
+    except ValueError as error:
+        position = getattr(error, "pos", None)
+        return position is None or position < len(text)
+    return True
 
 
 def _close_server_async(server: socketserver.BaseServer) -> None:
@@ -66,12 +88,15 @@ class TCPServerHandler(socketserver.BaseRequestHandler):
             self.request.settimeout(_HANDLER_TIMEOUT_S)
             command_string = _read_command(self.request)
         except OSError as error:
-            # A client that connects and never sends a terminator would
-            # otherwise block this handler thread forever; the timeout drops it.
+            # The timeout bounds each read, not the command: a client that
+            # stops sending is dropped after it, one that trickles bytes is
+            # held until the size cap.
             autocontrol_logger.info("socket command read dropped: %r", error)
             return
         socket = self.request
-        autocontrol_logger.info("command is: %s", command_string)
+        # Not the text itself: it may carry a vault passphrase or secret, and
+        # execute_action logs the parsed list with those masked.
+        autocontrol_logger.info("command received: %d characters", len(command_string))
         if command_string == "quit_server":
             autocontrol_logger.info("Now quit server")
             _close_server_async(self.server)

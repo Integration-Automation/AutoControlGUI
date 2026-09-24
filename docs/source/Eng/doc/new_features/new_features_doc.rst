@@ -132,6 +132,12 @@ start with ``AC_``. Each one becomes a new executor command::
    # Now usable from JSON:
    # [["AC_greet", {"name": "world"}]]
 
+A file that fails to import is logged and skipped; the rest of the directory
+still loads. ``register_plugin_commands`` skips (and logs) a value that is not a
+function and a name that already belongs to a built-in command such as
+``AC_click_mouse``; pass ``allow_override=True`` to replace one on purpose.
+A plugin may always re-register its own commands (a reload).
+
 GUI: **Plugins** tab (browse directory, one-click register).
 
 .. warning::
@@ -235,18 +241,25 @@ Action-JSON commands: ``AC_locate_text``, ``AC_click_text``,
 Accessibility element finder
 ============================
 
-Query the OS accessibility tree (Windows UIA via ``uiautomation``,
-macOS AX) by name / role / app name::
+Query the OS accessibility tree (Windows UIA via ``comtypes``, macOS AX
+via pyobjc, Linux AT-SPI over D-Bus) by name / role / app name::
 
    import je_auto_control as ac
 
    elements = ac.list_accessibility_elements(app_name="Calculator")
    ok = ac.find_accessibility_element(name="OK", role="Button")
    ac.click_accessibility_element(name="OK", app_name="Calculator")
+   field = ac.focused_accessibility_element()   # keyboard focus, or None
+
+``focused_accessibility_element(app_name=None)`` returns the element holding
+keyboard focus, or ``None`` when nothing is focused; with ``app_name`` it is
+``None`` unless the focused element belongs to that application. The
+accessibility recorder follows this element.
 
 Raises ``AccessibilityNotAvailableError`` on platforms where no backend
 is installed. Action-JSON commands: ``AC_a11y_list``, ``AC_a11y_find``,
-``AC_a11y_click``. GUI: **Accessibility** tab.
+``AC_a11y_find_all``, ``AC_a11y_focused``, ``AC_a11y_click``. GUI:
+**Accessibility** tab (Actions menu: *Show focused element*).
 
 
 VLM (AI) element locator
@@ -386,7 +399,10 @@ false. ``AC_break`` / ``AC_continue`` work as in any loop::
 runs (on success, on a caught error, or while a ``reraise`` / loop
 break/continue propagates). The error text is exposed to ``error_var``
 for the ``catch`` branch to inspect, and ``reraise=true`` re-raises after
-cleanup::
+cleanup. A failure anywhere inside ``body`` counts, including inside a loop,
+an ``AC_if_*`` branch or a macro it runs: nested bodies inherit the strictness
+of the list running them, which also makes ``AC_retry`` retry them and
+``execute_action(..., raise_on_error=True)`` raise from them::
 
    executor.execute_action([
        ["AC_try", {
@@ -544,9 +560,9 @@ Connection approval + view-only mode
 ------------------------------------
 
 Optional callback gates every incoming session AnyDesk-style.
-Returning ``"view_only"`` admits the viewer but drops their ``INPUT``
-messages; returning a falsy value (or raising) sends ``AUTH_FAIL``
-"rejected by host"::
+Returning ``"view_only"`` admits the viewer but drops their ``INPUT``,
+``CLIPBOARD`` and file-transfer messages; returning a falsy value (or
+raising) sends ``AUTH_FAIL`` "rejected by host"::
 
    from je_auto_control import RemoteDesktopHost, PendingViewer
 
@@ -561,7 +577,8 @@ IP allowlist (CIDR + exact IPs)
 -------------------------------
 
 Reject peers outside the configured ranges *before* TLS / auth runs,
-so attackers can't probe further::
+so attackers can't probe further. Invalid entries are dropped with a
+warning; a list whose every entry is invalid admits nobody::
 
    host = RemoteDesktopHost(
        token="tok",

@@ -73,7 +73,7 @@ def test_execute_script_slot_surfaces_autocontrol_exception(monkeypatch):
     import je_auto_control.gui.main_widget as mw
     import je_auto_control.gui._script_tab as st
     captured = {}
-    monkeypatch.setattr(st, "read_action_json", lambda _p: [["AC_ok"]])
+    monkeypatch.setattr(st, "read_executable_action_json", lambda _p: [["AC_ok"]])
     monkeypatch.setattr(
         st, "execute_action",
         _raiser(AutoControlExecuteActionException("boom")),

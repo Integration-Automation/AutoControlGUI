@@ -101,8 +101,10 @@ REST API 圍繞三個面向重建：bearer token 認證、稽核軌跡、以及 
 - Token 為 URL-safe 隨機字串；以 ``secrets.compare_digest`` 做常數
   時間比較。
 - Per-IP token bucket：每分鐘 120 次、burst 30。
-- 失敗認證追蹤：60 秒內 8 次錯誤 token → ``locked_out``\ （回 429）；
-  鎖定為 per-IP，不會誤殺其他使用者。
+- 失敗認證追蹤：60 秒內 8 次錯誤 token → 之後該 IP 再送錯誤 token 會得到
+  ``locked_out``\ （回 429）；正確的 token 永遠不會被鎖，鎖定也不會是全域的。
+- POST 的內文要等路徑與 token 檢查通過才讀取，未認證的請求直接得到 401／429，
+  不會被解析。
 
 Headless::
 
@@ -231,8 +233,17 @@ Headless::
    result = log.verify_chain()
    print(result.ok, result.broken_at_id, result.total_rows)
 
-雜湊鏈為「初次使用即信任」：在欄位加入前就存在的紀錄，會在啟動時依
-插入順序回填。
+雜湊鏈為「初次使用即信任」：在欄位加入前就存在的紀錄，會在具備雜湊鏈的版本
+第一次開啟時依插入順序回填一次（記在 ``PRAGMA user_version``）。之後雜湊被清空的
+紀錄就是斷鏈。
+
+第一筆紀錄必須指向雜湊鏈的錨點：創始雜湊，或自動修剪時刪掉的最後一筆的雜湊，
+所以手動刪掉最舊的紀錄也會被發現。``clear()`` 會以一筆 ``audit_log_cleared``
+事件開始新的鏈，記下刪了幾筆。
+
+雜湊是不帶金鑰的 SHA-256：沒有改寫後面所有雜湊的修改、刪除與重排都看得出來，
+但能寫入資料庫檔案的人可以重建整條鏈，而刪掉最新的幾筆，單看檔案本身無法發現。
+需要時請把最後一筆的 ``row_hash`` 另外保存。
 
 REST 端點::
 
@@ -468,7 +479,7 @@ Headless::
    report = import_config_bundle(bundle)
    print(report.written, report.skipped, report.backups)
 
-匯入是非破壞性的：要覆寫的東西先 rename 成 ``<name>.bak.<unix_ts>``\ 。
+匯入是非破壞性的：要覆寫的東西先複製成 ``<name>.bak.<unix_ts>``\ ，原檔在新內容寫好之前都留在原處。
 壞版本、未知檔名、path-traversal 嘗試都會被拒；bundle 與 allowlist
 之間的 format 不一致（例如 allowlist 期望 ``json`` 但 bundle 給
 ``text``）會被略過。

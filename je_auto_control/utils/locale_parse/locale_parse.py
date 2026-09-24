@@ -25,13 +25,24 @@ def _numbers() -> Any:
 
 
 def parse_decimal(text: str, locale: str = "en_US") -> float:
-    """Parse a locale-formatted decimal string into a ``float``."""
-    return float(_numbers().parse_decimal(text, locale=locale))
+    """Parse a locale-formatted decimal string into a ``float``.
+
+    Grouping separators must sit where the locale puts them: "1,5" in
+    en_US is refused (ValueError) instead of read as 15.
+    """
+    return float(_numbers().parse_decimal(text, locale=locale, strict=True))
 
 
 def parse_number(text: str, locale: str = "en_US") -> int:
-    """Parse a locale-formatted integer string into an ``int``."""
-    return int(_numbers().parse_decimal(text, locale=locale))
+    """Parse a locale-formatted integer string into an ``int``.
+
+    A fractional value is refused (ValueError) rather than truncated:
+    "1.5" used to come back as 1.
+    """
+    value = _numbers().parse_decimal(text, locale=locale, strict=True)
+    if value != value.to_integral_value():
+        raise ValueError(f"{text!r} is not an integer")
+    return int(value)
 
 
 def format_decimal(value: Union[int, float], locale: str = "en_US") -> str:

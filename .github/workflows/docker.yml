@@ -2,14 +2,14 @@ name: AutoControl Docker CI
 
 on:
   push:
-    branches: [ "dev", "main" ]
+    branches: [ "main" ]
     paths:
       - "docker/**"
       - "je_auto_control/**"
       - "pyproject.toml"
       - ".github/workflows/docker.yml"
   pull_request:
-    branches: [ "dev", "main" ]
+    branches: [ "main" ]
     paths:
       - "docker/**"
       - "je_auto_control/**"
@@ -25,15 +25,15 @@ jobs:
     runs-on: ubuntu-22.04
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Set up Docker Buildx
         # nosemgrep: yaml.github-actions.security.third-party-action-not-pinned-to-commit-sha.third-party-action-not-pinned-to-commit-sha
-        uses: docker/setup-buildx-action@v3  # NOSONAR githubactions:S7637
+        uses: docker/setup-buildx-action@v4  # NOSONAR githubactions:S7637
 
       - name: Build image (no push)
         # nosemgrep: yaml.github-actions.security.third-party-action-not-pinned-to-commit-sha.third-party-action-not-pinned-to-commit-sha
-        uses: docker/build-push-action@v5  # NOSONAR githubactions:S7637
+        uses: docker/build-push-action@v7  # NOSONAR githubactions:S7637
         with:
           context: .
           file: docker/Dockerfile
@@ -51,15 +51,15 @@ jobs:
     runs-on: ubuntu-22.04
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Set up Docker Buildx
         # nosemgrep: yaml.github-actions.security.third-party-action-not-pinned-to-commit-sha.third-party-action-not-pinned-to-commit-sha
-        uses: docker/setup-buildx-action@v3  # NOSONAR githubactions:S7637
+        uses: docker/setup-buildx-action@v4  # NOSONAR githubactions:S7637
 
       - name: Rebuild image (cached)
         # nosemgrep: yaml.github-actions.security.third-party-action-not-pinned-to-commit-sha.third-party-action-not-pinned-to-commit-sha
-        uses: docker/build-push-action@v5  # NOSONAR githubactions:S7637
+        uses: docker/build-push-action@v7  # NOSONAR githubactions:S7637
         with:
           context: .
           file: docker/Dockerfile
@@ -115,15 +115,15 @@ jobs:
     runs-on: ubuntu-22.04
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Set up Docker Buildx
         # nosemgrep: yaml.github-actions.security.third-party-action-not-pinned-to-commit-sha.third-party-action-not-pinned-to-commit-sha
-        uses: docker/setup-buildx-action@v3  # NOSONAR githubactions:S7637
+        uses: docker/setup-buildx-action@v4  # NOSONAR githubactions:S7637
 
       - name: Build the Wayland verification image
         # nosemgrep: yaml.github-actions.security.third-party-action-not-pinned-to-commit-sha.third-party-action-not-pinned-to-commit-sha
-        uses: docker/build-push-action@v5  # NOSONAR githubactions:S7637
+        uses: docker/build-push-action@v7  # NOSONAR githubactions:S7637
         with:
           context: .
           file: docker/Dockerfile.wayland
@@ -161,15 +161,15 @@ jobs:
     runs-on: ubuntu-22.04
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Set up Docker Buildx
         # nosemgrep: yaml.github-actions.security.third-party-action-not-pinned-to-commit-sha.third-party-action-not-pinned-to-commit-sha
-        uses: docker/setup-buildx-action@v3  # NOSONAR githubactions:S7637
+        uses: docker/setup-buildx-action@v4  # NOSONAR githubactions:S7637
 
       - name: Build the EIS verification image
         # nosemgrep: yaml.github-actions.security.third-party-action-not-pinned-to-commit-sha.third-party-action-not-pinned-to-commit-sha
-        uses: docker/build-push-action@v5  # NOSONAR githubactions:S7637
+        uses: docker/build-push-action@v7  # NOSONAR githubactions:S7637
         with:
           context: .
           file: docker/Dockerfile.eis
@@ -200,15 +200,15 @@ jobs:
     runs-on: ubuntu-22.04
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Set up Docker Buildx
         # nosemgrep: yaml.github-actions.security.third-party-action-not-pinned-to-commit-sha.third-party-action-not-pinned-to-commit-sha
-        uses: docker/setup-buildx-action@v3  # NOSONAR githubactions:S7637
+        uses: docker/setup-buildx-action@v4  # NOSONAR githubactions:S7637
 
       - name: Build the portal verification image
         # nosemgrep: yaml.github-actions.security.third-party-action-not-pinned-to-commit-sha.third-party-action-not-pinned-to-commit-sha
-        uses: docker/build-push-action@v5  # NOSONAR githubactions:S7637
+        uses: docker/build-push-action@v7  # NOSONAR githubactions:S7637
         with:
           context: .
           file: docker/Dockerfile.portal
@@ -247,15 +247,15 @@ jobs:
     runs-on: ubuntu-22.04
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Set up Docker Buildx
         # nosemgrep: yaml.github-actions.security.third-party-action-not-pinned-to-commit-sha.third-party-action-not-pinned-to-commit-sha
-        uses: docker/setup-buildx-action@v3  # NOSONAR githubactions:S7637
+        uses: docker/setup-buildx-action@v4  # NOSONAR githubactions:S7637
 
       - name: Build the X11 verification image
         # nosemgrep: yaml.github-actions.security.third-party-action-not-pinned-to-commit-sha.third-party-action-not-pinned-to-commit-sha
-        uses: docker/build-push-action@v5  # NOSONAR githubactions:S7637
+        uses: docker/build-push-action@v7  # NOSONAR githubactions:S7637
         with:
           context: .
           file: docker/Dockerfile.x11
@@ -295,15 +295,15 @@ jobs:
     runs-on: ubuntu-22.04
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Set up Docker Buildx
         # nosemgrep: yaml.github-actions.security.third-party-action-not-pinned-to-commit-sha.third-party-action-not-pinned-to-commit-sha
-        uses: docker/setup-buildx-action@v3  # NOSONAR githubactions:S7637
+        uses: docker/setup-buildx-action@v4  # NOSONAR githubactions:S7637
 
       - name: Build the seat verification image
         # nosemgrep: yaml.github-actions.security.third-party-action-not-pinned-to-commit-sha.third-party-action-not-pinned-to-commit-sha
-        uses: docker/build-push-action@v5  # NOSONAR githubactions:S7637
+        uses: docker/build-push-action@v7  # NOSONAR githubactions:S7637
         with:
           context: .
           file: docker/Dockerfile.seat
@@ -352,15 +352,15 @@ jobs:
     runs-on: ubuntu-22.04
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Set up Docker Buildx
         # nosemgrep: yaml.github-actions.security.third-party-action-not-pinned-to-commit-sha.third-party-action-not-pinned-to-commit-sha
-        uses: docker/setup-buildx-action@v3  # NOSONAR githubactions:S7637
+        uses: docker/setup-buildx-action@v4  # NOSONAR githubactions:S7637
 
       - name: Build the ydotool verification image
         # nosemgrep: yaml.github-actions.security.third-party-action-not-pinned-to-commit-sha.third-party-action-not-pinned-to-commit-sha
-        uses: docker/build-push-action@v5  # NOSONAR githubactions:S7637
+        uses: docker/build-push-action@v7  # NOSONAR githubactions:S7637
         with:
           context: .
           file: docker/Dockerfile.ydotool

@@ -14,7 +14,7 @@ from typing import Any, Dict, List, Tuple
 
 import pytest
 from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.primitives.asymmetric import padding, rsa
+from cryptography.hazmat.primitives.asymmetric import padding
 
 from je_auto_control.utils.acme_v2 import (
     AcmeClient, AcmeError, build_jwk_thumbprint, key_authorization,
@@ -188,6 +188,9 @@ def _stub_response(stub: "_StubServer", method: str, url: str,
     if url.endswith("/authz/1"):
         return 200, _authz_body(stub), headers
     if url.endswith("/chall/1"):
+        # Answering the challenge validates a pending authorization.
+        if stub.auth_status == "pending":
+            stub.auth_status = "valid"
         return 200, {"type": "http-01", "status": "pending"}, headers
     if url.endswith(("/order/1/finalize", "/order/1")):
         return 200, _ORDER_BODY, headers
@@ -213,7 +216,6 @@ def _install_stub(monkeypatch, stub: "_StubServer") -> List[Tuple]:
 
 def test_full_request_certificate_flow(monkeypatch, account_key):
     stub = _StubServer()
-    stub.auth_status = "valid"  # skip the polling wait
     _install_stub(monkeypatch, stub)
 
     cert_key = generate_certificate_key().private_key
@@ -307,3 +309,24 @@ def test_http_challenge_not_offered_raises(account_key):
     )
     with pytest.raises(AcmeError, match="http-01"):
         auth.http_challenge()
+
+
+def test_a_reused_valid_authorization_needs_no_challenge(monkeypatch, account_key):
+    # Let's Encrypt reuses a recently validated authorization, listing only
+    # the challenge that validated it -- the client must not answer one.
+    stub = _StubServer()
+    stub.auth_status = "valid"
+    _install_stub(monkeypatch, stub)
+    published: List[Tuple[str, str]] = []
+    client = AcmeClient(
+        directory_url="https://acme.example/directory",
+        account_key=account_key,
+    )
+    cert_pem = client.request_certificate(
+        domains=["example.com"],
+        csr_pem=generate_csr(generate_certificate_key().private_key,
+                             common_name="example.com"),
+        http_publisher=lambda t, ka: published.append((t, ka)),
+    )
+    assert b"BEGIN CERTIFICATE" in cert_pem
+    assert published == []

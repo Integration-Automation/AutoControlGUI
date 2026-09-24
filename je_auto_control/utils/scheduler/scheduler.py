@@ -8,9 +8,9 @@ import threading
 import time
 import uuid
 from dataclasses import dataclass, field
-from typing import Callable, Dict, List, Optional
+from typing import Callable, Dict, List, Optional, Set
 
-from je_auto_control.utils.json.json_file import read_action_json
+from je_auto_control.utils.json.json_file import read_executable_action_json
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.run_history.artifact_manager import (
     capture_error_snapshot,
@@ -63,6 +63,11 @@ class Scheduler:
         self._execute = executor or execute_action
         self._tick = max(0.1, float(tick_seconds))
         self._jobs: Dict[str, ScheduledJob] = {}
+        # Jobs being executed right now, by id. A job is rescheduled only
+        # after it finishes, so until then it still looks due; a second
+        # loop -- the new run after a stop() that timed out mid-job --
+        # would otherwise start it again while the first is still running.
+        self._in_flight: Set[str] = set()
         self._lock = threading.Lock()
         # 保護 start()/stop() 互斥。兩者原本毫無互斥,交錯時 stop() 會在
         # start() 指派 _thread 與呼叫 .start() 之間 join 尚未啟動的執行緒
@@ -80,6 +85,7 @@ class Scheduler:
                 repeat: bool = True, max_runs: Optional[int] = None,
                 job_id: Optional[str] = None) -> ScheduledJob:
         """Register and schedule a new interval job; return the record."""
+        _check_max_runs(max_runs)
         jid = job_id or uuid.uuid4().hex[:8]
         now = time.monotonic()
         interval = max(0.1, float(interval_seconds))
@@ -98,21 +104,20 @@ class Scheduler:
                      max_runs: Optional[int] = None,
                      job_id: Optional[str] = None) -> ScheduledJob:
         """Register a cron-driven job (5-field expression)."""
+        _check_max_runs(max_runs)
         expression = parse_cron(cron_expression)
         jid = job_id or uuid.uuid4().hex[:8]
-        now_wall = _dt.datetime.now()
-        next_at = next_match(expression, now_wall)
         job = ScheduledJob(
             job_id=jid, script_path=script_path,
             interval_seconds=0.0,
             cron_expression=expression,
             repeat=True, max_runs=max_runs,
-            next_run_ts=next_at.timestamp(),
+            next_run_ts=_next_cron_ts(expression, time.time()),
         )
         with self._lock:
             self._jobs[jid] = job
         autocontrol_logger.info("scheduler add_cron_job %s %r -> %s",
-                                jid, cron_expression, next_at.isoformat())
+                                jid, cron_expression, _dt.datetime.fromtimestamp(job.next_run_ts).isoformat())
         return job
 
     def remove_job(self, job_id: str) -> bool:
@@ -136,8 +141,10 @@ class Scheduler:
         with self._lifecycle_lock:
             if self._thread is not None and self._thread.is_alive():
                 return
-            self._stop.clear()
-            self._thread = threading.Thread(target=self._run, daemon=True,
+            # A fresh event per run, never clear() on the old one: a thread that
+            # outlived stop()'s join would see it cleared and keep running.
+            self._stop = threading.Event()
+            self._thread = threading.Thread(target=self._run, args=(self._stop,), daemon=True,
                                             name="AutoControlScheduler")
             self._thread.start()
 
@@ -149,8 +156,8 @@ class Scheduler:
                 thread.join(timeout=timeout)
             self._thread = None
 
-    def _run(self) -> None:
-        while not self._stop.is_set():
+    def _run(self, stop: threading.Event) -> None:
+        while not stop.is_set():
             # Outer guard: _tick_once must never let anything escape and take
             # the scheduler thread (hence every job) down.
             try:
@@ -158,7 +165,7 @@ class Scheduler:
             except Exception as error:  # noqa: BLE001  # reason: see above
                 autocontrol_logger.error("scheduler tick failed: %r",
                                          error, exc_info=True)
-            self._stop.wait(self._tick)
+            stop.wait(self._tick)
 
     def _tick_once(self) -> None:
         now_mono = time.monotonic()
@@ -166,23 +173,37 @@ class Scheduler:
         due: List[ScheduledJob] = []
         with self._lock:
             for job in self._jobs.values():
-                if not job.enabled:
+                if not job.enabled or job.job_id in self._in_flight:
                     continue
                 deadline_now = now_wall if job.is_cron else now_mono
                 if deadline_now >= job.next_run_ts:
                     due.append(job)
-        for job in due:
-            # _fire's run-history bookkeeping (start_run / capture_error_snapshot
-            # / finish_run) and its cron re-scheduling sit OUTSIDE its own broad
-            # except. A sqlite3.Error from the shared history DB, or an
-            # AutoControlScreenException while snapshotting, would otherwise kill
-            # this loop and stop every scheduled job. Contain per job.
-            try:
-                self._fire(job, now_mono, now_wall)
-            except Exception as error:  # noqa: BLE001  # reason: see above
-                autocontrol_logger.error("scheduler job %s bookkeeping "
-                                         "failed: %r", job.job_id, error,
-                                         exc_info=True)
+                    self._in_flight.add(job.job_id)
+        pending = list(due)
+        try:
+            while pending:
+                job = pending.pop(0)
+                # _fire's run-history bookkeeping (start_run / capture_error_snapshot
+                # / finish_run) and its cron re-scheduling sit OUTSIDE its own broad
+                # except. A sqlite3.Error from the shared history DB, or an
+                # AutoControlScreenException while snapshotting, would otherwise kill
+                # this loop and stop every scheduled job. Contain per job.
+                try:
+                    self._fire(job, now_mono, now_wall)
+                except Exception as error:  # noqa: BLE001  # reason: see above
+                    autocontrol_logger.error("scheduler job %s bookkeeping "
+                                             "failed: %r", job.job_id, error,
+                                             exc_info=True)
+                finally:
+                    with self._lock:
+                        self._in_flight.discard(job.job_id)
+        finally:
+            # Anything that escaped the loop above (a BaseException) must not
+            # leave the jobs it never reached marked as running forever. Only
+            # those: a job already handled may be another loop's by now.
+            with self._lock:
+                self._in_flight.difference_update(
+                    job.job_id for job in pending)
 
     def _fire(self, job: ScheduledJob, now_mono: float, now_wall: float) -> None:
         run_id = default_history_store.start_run(
@@ -191,7 +212,7 @@ class Scheduler:
         status = STATUS_OK
         error_text: Optional[str] = None
         try:
-            actions = read_action_json(job.script_path)
+            actions = read_executable_action_json(job.script_path)
             self._execute(actions)
         # 一個排程工作失敗必須記錄為 STATUS_ERROR 並繼續輪詢,絕不能拖垮
         # 排程執行緒。原本的 tuple 漏掉 AutoControlException——它是幾乎所有
@@ -217,21 +238,54 @@ class Scheduler:
             )
         with self._lock:
             live = self._jobs.get(job.job_id)
-            if live is None:
+            if live is not job:
+                # Removed while running -- or removed and a new job registered
+                # under the same id, whose runs and schedule are not ours.
                 return
             live.runs += 1
             if live.max_runs is not None and live.runs >= live.max_runs:
                 self._jobs.pop(job.job_id, None)
                 return
             if live.is_cron and live.cron_expression is not None:
-                next_dt = next_match(live.cron_expression,
-                                     _dt.datetime.fromtimestamp(now_wall))
-                live.next_run_ts = next_dt.timestamp()
+                try:
+                    next_ts = _next_cron_ts(live.cron_expression, now_wall)
+                except ValueError as error:
+                    # Escaping here left next_run_ts in the past, so the job
+                    # fired again on every tick. It has no future run: drop it.
+                    self._jobs.pop(job.job_id, None)
+                    autocontrol_logger.error(
+                        "scheduler job %s removed: %s", job.job_id, error)
+                    return
+                live.next_run_ts = next_ts
                 return
             if not live.repeat:
                 self._jobs.pop(job.job_id, None)
                 return
             live.next_run_ts = now_mono + live.interval_seconds
+
+
+def _next_cron_ts(expression: CronExpression, now_wall: float) -> float:
+    """The epoch time of the first cron slot strictly after ``now_wall``.
+
+    ``next_match`` works in wall-clock time, and in the hour repeated when
+    clocks fall back a wall time names two instants. ``timestamp()`` picks
+    the first, so during the second pass every slot landed an hour in the
+    past and the job re-fired on every tick for that hour. A slot whose first
+    instant is past is taken at its second (``fold=1``), so ``*/15`` keeps
+    its pace through the repeated hour; a slot past in both is skipped.
+    """
+    candidate = next_match(expression, _dt.datetime.fromtimestamp(now_wall))
+    while True:
+        for instant in (candidate, candidate.replace(fold=1)):
+            if instant.timestamp() > now_wall:
+                return instant.timestamp()
+        candidate = next_match(expression, candidate)
+
+
+def _check_max_runs(max_runs: Optional[int]) -> None:
+    """``max_runs`` is a positive count or ``None``; 0 used to mean "once"."""
+    if max_runs is not None and int(max_runs) < 1:
+        raise ValueError(f"max_runs must be at least 1 or None, got {max_runs!r}")
 
 
 default_scheduler = Scheduler()

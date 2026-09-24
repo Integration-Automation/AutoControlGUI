@@ -22,6 +22,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import List, Optional
 
+from je_auto_control.utils.json_store.json_store import (
+    atomic_write_text, load_json_or_quarantine, quarantine_file,
+)
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 
 
@@ -44,30 +47,25 @@ class AddressBook:
         self._load()
 
     def _load(self) -> None:
-        if not self._path.exists():
+        # A non-UTF-8 file raised UnicodeDecodeError, and {"entries": 5} a
+        # TypeError, from the constructor; a damaged file read as empty and
+        # the next save erased every entry.
+        data = load_json_or_quarantine(self._path, "address book")
+        if data is None:
             return
-        try:
-            data = json.loads(self._path.read_text(encoding="utf-8"))
-        except (OSError, json.JSONDecodeError) as error:
-            autocontrol_logger.warning("address book load failed: %r", error)
+        entries = data.get("entries", []) if isinstance(data, dict) else None
+        if not isinstance(entries, list):
+            quarantine_file(self._path, "address book", "no 'entries' list")
             return
-        if isinstance(data, dict):
-            entries = data.get("entries", [])
-            self._entries = [e for e in entries if isinstance(e, dict)
-                             and isinstance(e.get("host_id"), str)]
+        self._entries = [e for e in entries if isinstance(e, dict)
+                         and isinstance(e.get("host_id"), str)]
 
     def _save(self) -> None:
         payload = {"entries": self._entries}
         try:
+            # Atomic, and 0600 from creation: a crash mid-write truncated it.
             self._path.parent.mkdir(parents=True, exist_ok=True)
-            self._path.write_text(
-                json.dumps(payload, indent=2, ensure_ascii=False),
-                encoding="utf-8",
-            )
-            try:
-                os.chmod(self._path, 0o600)
-            except OSError:
-                pass
+            atomic_write_text(self._path, json.dumps(payload, indent=2, ensure_ascii=False))
         except OSError as error:
             autocontrol_logger.warning("address book save failed: %r", error)
 
@@ -142,8 +140,14 @@ class AddressBook:
 
     def set_tags(self, *, host_id: str, server_url: str,
                  tags: list) -> None:
-        """Replace ``tags`` on the matching entry."""
-        clean = [str(t).strip() for t in tags if str(t).strip()]
+        """Replace ``tags`` on the matching entry.
+
+        A JSON ``null`` reaches here as None, and ``str(None)`` is the
+        non-empty string ``"None"`` -- so an omitted tag used to be stored as
+        one, and `all_tags` then listed it alongside the real ones.
+        """
+        clean = [str(t).strip() for t in tags
+                 if t is not None and str(t).strip()]
         with self._lock:
             for entry in self._entries:
                 if (entry.get("host_id") == host_id

@@ -20,10 +20,12 @@ _SERVER_NAME = "io.github.intergration-automation-testing/autocontrol"
 _REPO_URL = "https://github.com/Intergration-Automation-Testing/AutoControl"
 _PYPI_NAME = "je_auto_control"
 _DEFAULT_VERSION = "0.0.189"
-_DESCRIPTION = (
-    "Cross-platform GUI automation: mouse/keyboard control, image and OCR "
-    "recognition, native-UI (accessibility) control, and action scripting — "
-    "exposed as MCP tools.")
+# The registry schema caps description at 100 characters; the old 161 would
+# have been rejected on publish.
+_DESCRIPTION = "Cross-platform GUI automation: mouse, keyboard, image/OCR and accessibility as MCP tools"
+_MAX_DESCRIPTION = 100
+# The one _meta key the registry schema defines for publisher data.
+_META_KEY = "io.modelcontextprotocol.registry/publisher-provided"
 
 
 def _package_version() -> str:
@@ -54,6 +56,9 @@ def build_server_manifest(*, name: str = _SERVER_NAME,
     discovery without changing the registry-valid core fields.
     """
     resolved = version or _package_version()
+    if not 1 <= len(description) <= _MAX_DESCRIPTION:
+        raise ValueError(f"description must be 1-{_MAX_DESCRIPTION} characters "
+                         f"(the registry schema's limit), got {len(description)}")
     manifest: Dict[str, Any] = {
         "$schema": _SCHEMA_URL,
         "name": name,
@@ -69,7 +74,7 @@ def build_server_manifest(*, name: str = _SERVER_NAME,
     }
     if include_tools:
         names = _tool_names()
-        manifest["_meta"] = {name: {"toolCount": len(names), "tools": names}}
+        manifest["_meta"] = {_META_KEY: {"toolCount": len(names), "tools": names}}
     return manifest
 
 

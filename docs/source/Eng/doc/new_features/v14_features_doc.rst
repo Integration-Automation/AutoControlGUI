@@ -32,7 +32,9 @@ Excel
     rows = read_workbook("people.xlsx", sheet="P")   # [{'name': 'Ada', ...}]
 
 The first row supplies the dict keys; ``sheet`` defaults to the active
-sheet. Commands: ``AC_read_workbook`` / ``AC_write_workbook`` (and
+sheet. ``write_workbook`` writes a column for every key (in order of first
+appearance) and stores every value as data: a string starting with ``=`` is
+text, not a formula Excel would run. Commands: ``AC_read_workbook`` / ``AC_write_workbook`` (and
 ``ac_read_workbook`` / ``ac_write_workbook``).
 
 

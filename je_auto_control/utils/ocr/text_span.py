@@ -14,6 +14,7 @@ before comparing: where the engine chooses to split is arbitrary, so it must not
 decide whether a match exists. Imports no ``PySide6``.
 """
 import re
+import unicodedata
 from typing import Any, List, Optional, Sequence, Tuple
 
 # How far apart two boxes' vertical centres may be, as a fraction of the shorter
@@ -31,9 +32,15 @@ _WHITESPACE = re.compile(r"\s+")
 
 
 def normalize(text: str, case_sensitive: bool = False) -> str:
-    """Strip all whitespace (and case, by default) for comparison."""
-    stripped = _WHITESPACE.sub("", text or "")
-    return stripped if case_sensitive else stripped.lower()
+    """Strip all whitespace (and case, by default) for comparison.
+
+    NFKC first: OCR engines and typed targets disagree on composed vs
+    decomposed characters ('Cafe' + combining accent never matched 'Caf\u00e9')
+    and on full-width forms. casefold() rather than lower() so 'STRASSE'
+    matches 'stra\u00dfe'.
+    """
+    stripped = _WHITESPACE.sub("", unicodedata.normalize("NFKC", text or ""))
+    return stripped if case_sensitive else stripped.casefold()
 
 
 def same_line(first: Any, second: Any,

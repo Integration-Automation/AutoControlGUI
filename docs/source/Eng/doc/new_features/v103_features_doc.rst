@@ -29,7 +29,8 @@ Headless API
 ``in_progress`` (a duplicate before completion), or ``completed`` (replay the
 stored response); reusing a key with a different ``request`` fingerprint raises
 ``IdempotencyConflict`` (Stripe's HTTP-400 behaviour). ``complete`` records the
-response, ``get`` reads a live record, and ``save`` / ``load`` persist the store
+response, ``release`` drops an ``in_progress`` key whose work failed so a retry
+runs it, ``get`` reads a live record, and ``save`` / ``load`` persist the store
 as JSON. ``request_fingerprint`` is a stable, order-independent SHA-256 of a
 payload.
 

@@ -1784,6 +1784,11 @@ def _add_native_control_specs(specs: List[CommandSpec]) -> None:
         description="Switch a control to the named view (MultipleViewPattern).",
     ))
     specs.append(CommandSpec(
+        "AC_a11y_focused", _NATIVE_UI, "Get Focused Element",
+        fields=(FieldSpec("app_name", FieldType.STRING, optional=True),),
+        description="Read the element holding keyboard focus (None if none).",
+    ))
+    specs.append(CommandSpec(
         "AC_wait_for_focus_change", _NATIVE_UI, "Wait for Focus Change",
         fields=(FieldSpec("timeout", FieldType.FLOAT, optional=True,
                           default=5.0),),
@@ -4358,12 +4363,13 @@ def _add_work_queue_specs(specs: List[CommandSpec]) -> None:
     ))
     specs.append(CommandSpec(
         "AC_queue_next", "Queue", "Queue: Get Next Item",
-        fields=(db, name),
+        fields=(db, name, FieldSpec("stale_after_s", FieldType.FLOAT, optional=True)),
         description="Atomically claim the next work item (performer).",
     ))
     specs.append(CommandSpec(
         "AC_queue_complete", "Queue", "Queue: Complete Item",
-        fields=(db, FieldSpec("item_id", FieldType.INT), name),
+        fields=(db, FieldSpec("item_id", FieldType.INT), name,
+                FieldSpec("claim", FieldType.INT, optional=True)),
         description="Mark a work item successfully processed.",
     ))
     specs.append(CommandSpec(
@@ -4375,7 +4381,7 @@ def _add_work_queue_specs(specs: List[CommandSpec]) -> None:
                           optional=True, default="application"),
                 FieldSpec("max_retries", FieldType.INT, optional=True,
                           default=3),
-                name),
+                name, FieldSpec("claim", FieldType.INT, optional=True)),
         description="Fail an item; application errors retry, business don't.",
     ))
     specs.append(CommandSpec(
@@ -4868,6 +4874,7 @@ def _add_work_queue_specs(specs: List[CommandSpec]) -> None:
             FieldSpec("command", FieldType.STRING),
             FieldSpec("var", FieldType.STRING, default="shell_output"),
             FieldSpec("timeout", FieldType.FLOAT, optional=True, default=30.0),
+            FieldSpec("encoding", FieldType.STRING, optional=True),
         ),
         description="Run a command and store its stdout in a flow variable.",
     ))

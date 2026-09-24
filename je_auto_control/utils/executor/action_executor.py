@@ -1,3 +1,4 @@
+import threading
 import types
 from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple, Union
 
@@ -28,8 +29,9 @@ from je_auto_control.utils.executor.action_schema import (
     unknown_command_names, validate_actions,
 )
 from je_auto_control.utils.executor.flow_control import (
-    BLOCK_COMMANDS, LoopBreak, LoopContinue,
+    BLOCK_COMMANDS, LoopBreak, LoopContinue, MacroDepthExceeded,
 )
+from je_auto_control.utils.executor.action_redaction import describe_action, redact_actions
 from je_auto_control.utils.executor.mouse_aliases import MOUSE_BUTTON_COMMANDS
 from je_auto_control.utils.llm.planner import (
     plan_actions as llm_plan_actions,
@@ -129,6 +131,15 @@ def _a11y_find_as_dict(name: Optional[str] = None,
         name=name, role=role, app_name=app_name, window_title=window_title,
         contains=_as_bool(contains),
     )
+    return None if element is None else element.to_dict()
+
+
+def _a11y_focused_as_dict(app_name: Optional[str] = None) -> Optional[dict]:
+    """Executor adapter: the element holding keyboard focus, as a dict."""
+    from je_auto_control.utils.accessibility.accessibility_api import (
+        focused_accessibility_element,
+    )
+    element = focused_accessibility_element(app_name=app_name)
     return None if element is None else element.to_dict()
 
 
@@ -986,6 +997,10 @@ def _run_suite(spec: Dict[str, Any],
         reports["allure"] = write_allure_results(result, allure_dir)
     if reports:
         payload["reports"] = reports
+    if not result.success:
+        # The suite runs its cases strictly, so none of their failures was
+        # recorded: `je_auto_control run` exited 0 for a failed suite.
+        _count_recorded_failure()
     return payload
 
 
@@ -3184,27 +3199,32 @@ def _queue_add(db: str, data: Any, reference: Optional[str] = None,
     return {"id": _queue(db, name).add(data, reference=reference)}
 
 
-def _queue_next(db: str, name: str = "default") -> Optional[Dict[str, Any]]:
+def _queue_next(db: str, name: str = "default",
+                stale_after_s: Optional[float] = None) -> Optional[Dict[str, Any]]:
     """Adapter: atomically claim the next work item (or None)."""
-    item = _queue(db, name).get_next()
+    item = _queue(db, name).get_next(stale_after_s=stale_after_s)
     return None if item is None else {
         "id": item.id, "reference": item.reference, "data": item.data,
-        "status": item.status, "retries": item.retries}
+        "status": item.status, "retries": item.retries, "claim": item.claim}
 
 
 def _queue_complete(db: str, item_id: int, output: Any = None,
-                    name: str = "default") -> Dict[str, Any]:
-    """Adapter: mark a work item successful."""
-    _queue(db, name).complete(int(item_id), output=output)
+                    name: str = "default",
+                    claim: Optional[int] = None) -> Dict[str, Any]:
+    """Adapter: mark a work item successful (``claim`` from AC_queue_next)."""
+    _queue(db, name).complete(int(item_id), output=output,
+                              claim=None if claim is None else int(claim))
     return {"id": int(item_id), "status": "success"}
 
 
 def _queue_fail(db: str, item_id: int, error: str,
                 kind: str = "application", max_retries: int = 3,
-                name: str = "default") -> Dict[str, Any]:
+                name: str = "default",
+                claim: Optional[int] = None) -> Dict[str, Any]:
     """Adapter: fail a work item (application errors retry, business don't)."""
     status = _queue(db, name).fail(int(item_id), str(error), kind=str(kind),
-                                   max_retries=int(max_retries))
+                                   max_retries=int(max_retries),
+                                   claim=None if claim is None else int(claim))
     return {"id": int(item_id), "status": status}
 
 
@@ -4562,7 +4582,7 @@ def _preprocess_image(output_path: str, source: Any = None, steps: Any = None,
                       c: Any = 11) -> Dict[str, Any]:
     """Adapter: run the preprocessing pipeline and write the result to a file."""
     import json
-    import cv2
+    from je_auto_control.utils.cv2_utils.image_file import write_image
     from je_auto_control.utils.preprocess import preprocess_image
     if isinstance(steps, str):
         steps = (json.loads(steps) if steps.strip().startswith("[")
@@ -4573,8 +4593,11 @@ def _preprocess_image(output_path: str, source: Any = None, steps: Any = None,
         source, region=region,
         steps=tuple(steps) if steps else ("grayscale", "upscale", "binarize"),
         scale=float(scale), block_size=int(block_size), c=int(c))
-    if not cv2.imwrite(str(output_path), result):
-        raise AutoControlActionException(f"could not write image: {output_path!r}")
+    try:
+        # cv2.imwrite wrote a non-ASCII path to a mangled name and said it succeeded.
+        write_image(output_path, result)
+    except (OSError, ValueError) as error:
+        raise AutoControlActionException(f"could not write image: {output_path!r}") from error
     return {"path": str(output_path), "width": int(result.shape[1]),
             "height": int(result.shape[0])}
 
@@ -6345,7 +6368,13 @@ def _jwt_decode(token: str, key: str, algorithms: Any = None,
     import json
     from je_auto_control.utils.jwt import ClaimsPolicy, JwtError, decode_jwt
     if isinstance(algorithms, str):
-        algorithms = json.loads(algorithms)
+        # A JSON list, or one algorithm name: "HS256" raised JSONDecodeError.
+        try:
+            algorithms = json.loads(algorithms)
+        except ValueError:
+            algorithms = [algorithms]
+        if isinstance(algorithms, str):
+            algorithms = [algorithms]
     policy = ClaimsPolicy(algorithms=tuple(algorithms) if algorithms
                           else ("HS256",), audience=audience, leeway=leeway)
     try:
@@ -6390,28 +6419,28 @@ def _load_plugins(group: str = "je_auto_control.commands") -> Dict[str, Any]:
 def _approval_request(action: str, requester: str = "",
                       db: Optional[str] = None) -> Dict[str, Any]:
     """Adapter: file a maker-checker approval request; return its token."""
-    from je_auto_control.utils.governance import ApprovalGate
-    return {"token": ApprovalGate(db).request(action, requester)}
+    from je_auto_control.utils.governance import approval_gate
+    return {"token": approval_gate(db).request(action, requester)}
 
 
 def _approval_approve(token: str, approver: str,
                       db: Optional[str] = None) -> Dict[str, Any]:
     """Adapter: approve a request as ``approver`` (must differ from maker)."""
-    from je_auto_control.utils.governance import ApprovalGate
-    return {"approved": ApprovalGate(db).approve(token, approver)}
+    from je_auto_control.utils.governance import approval_gate
+    return {"approved": approval_gate(db).approve(token, approver)}
 
 
 def _approval_reject(token: str, approver: str,
                      db: Optional[str] = None) -> Dict[str, Any]:
     """Adapter: reject a request as ``approver`` (must differ from maker)."""
-    from je_auto_control.utils.governance import ApprovalGate
-    return {"rejected": ApprovalGate(db).reject(token, approver)}
+    from je_auto_control.utils.governance import approval_gate
+    return {"rejected": approval_gate(db).reject(token, approver)}
 
 
 def _approval_status(token: str, db: Optional[str] = None) -> Dict[str, Any]:
     """Adapter: report the status and approved flag of a request token."""
-    from je_auto_control.utils.governance import ApprovalGate
-    gate = ApprovalGate(db)
+    from je_auto_control.utils.governance import approval_gate
+    gate = approval_gate(db)
     return {"status": gate.status(token), "approved": gate.is_approved(token)}
 
 
@@ -6618,7 +6647,12 @@ def _s3_delete(key: str) -> Dict[str, Any]:
 def _image_hash(path: str, algo: str = "average") -> Dict[str, Any]:
     """Adapter: perceptual hash of an image (average or dhash)."""
     from je_auto_control.utils.image_dedup import average_hash, dhash
-    hasher = dhash if algo == "dhash" else average_hash
+    hashers = {"average": average_hash, "dhash": dhash}
+    if algo not in hashers:
+        # Any other name (``phash``, ``DHASH``) silently returned the average hash.
+        raise AutoControlActionException(
+            f"unknown hash algo {algo!r}; expected one of {sorted(hashers)}")
+    hasher = hashers[algo]
     return {"hash": hasher(path)}
 
 
@@ -6926,6 +6960,7 @@ def _run_saga(steps: Any) -> Dict[str, Any]:
     result = run_saga(steps)
     return {"ok": result.ok, "completed": result.completed,
             "compensated": result.compensated,
+            "compensation_errors": result.compensation_errors,
             "failed_step": result.failed_step, "error": result.error}
 
 
@@ -7005,6 +7040,12 @@ def _export_sarif(findings: Any, path: Optional[str] = None,
     return result
 
 
+#: Whether the action list running on this thread was asked to raise on
+#: error; nested bodies (``_validated=True``) inherit it. Thread-local, so
+#: AC_parallel branches -- their own threads and executors -- are unaffected.
+_STRICT_BODIES = threading.local()
+
+
 class Executor:
     """
     Executor
@@ -7022,6 +7063,27 @@ class Executor:
     # would resolve ${err} before it exists.
     _DEFERRED_ARG_KEYS: frozenset = frozenset(
         {"body", "then", "else", "branches", "catch", "finally"})
+
+    # Commands that run an action list held under another key. Expanding it
+    # at dispatch and again when the nested list runs expanded a variable
+    # *value*: text read from OCR, HTTP or a file that contained
+    # ``${secrets.NAME}`` was resolved from the vault. Per command, because
+    # the same key is plain data elsewhere (``AC_tween_drag``'s ``steps``).
+    _DEFERRED_COMMAND_KEYS: Dict[str, frozenset] = {
+        "AC_execute_action": frozenset({"action_list"}),
+        "AC_expect_poll": frozenset({"action"}),
+        "AC_run_saga": frozenset({"steps"}),
+        "AC_run_chaos": frozenset({"spec"}),
+        "AC_run_state_machine": frozenset({"spec"}),
+        "AC_run_suite": frozenset({"spec"}),
+        "AC_replay_trace": frozenset({"trace"}),
+        "AC_run_dag": frozenset({"definition"}),
+        **{name: frozenset({"actions"}) for name in (
+            "AC_circuit_call", "AC_bulkhead_run", "AC_run_resumable",
+            "AC_run_device_matrix", "AC_observe_add", "AC_voice_register",
+            "AC_with_modifiers", "AC_debug_trace", "AC_skill_save",
+            "AC_admin_broadcast_execute")},
+    }
 
     def __init__(self):
         self._block_commands = BLOCK_COMMANDS
@@ -7167,6 +7229,7 @@ class Executor:
             "AC_a11y_list": _a11y_list_as_dicts,
             "AC_a11y_find": _a11y_find_as_dict,
             "AC_a11y_find_all": _a11y_find_all_as_dicts,
+            "AC_a11y_focused": _a11y_focused_as_dict,
             "AC_a11y_click": click_accessibility_element,
             "AC_a11y_dump": _a11y_dump,
             "AC_walk_tree": _walk_tree,
@@ -7927,11 +7990,13 @@ class Executor:
         return unknown_command_names(self._unwrap_action_list(action_list),
                                      self.known_commands())
 
-    def _resolve_runtime_args(self, args: Any) -> Any:
+    def _resolve_runtime_args(self, args: Any, command: str = "") -> Any:
         """Interpolate ``${var}`` placeholders against the current scope.
 
-        Keys inside :attr:`_DEFERRED_ARG_KEYS` are left as-is so nested
-        action lists keep their placeholders for per-iteration evaluation.
+        Keys inside :attr:`_DEFERRED_ARG_KEYS`, and the ``command``'s keys in
+        :attr:`_DEFERRED_COMMAND_KEYS`, are left as-is so nested action lists
+        keep their placeholders for per-iteration evaluation -- and are
+        expanded exactly once, when the nested action runs.
 
         An empty scope is not a reason to skip interpolation: ``${secrets.*}``
         resolves through the vault without consulting the scope at all, and an
@@ -7939,9 +8004,11 @@ class Executor:
         literal placeholder.
         """
         if isinstance(args, dict):
+            deferred = self._DEFERRED_ARG_KEYS | self._DEFERRED_COMMAND_KEYS.get(
+                command, frozenset())
             resolved: Dict[str, Any] = {}
             for key, value in args.items():
-                if key in self._DEFERRED_ARG_KEYS:
+                if key in deferred:
                     resolved[key] = value
                 else:
                     resolved[key] = interpolate_value(value, self.variables)
@@ -7963,20 +8030,20 @@ class Executor:
                 raise AutoControlActionException(
                     f"{name} requires a dict of arguments"
                 )
-            return block_handler(self, self._resolve_runtime_args(args))
+            return block_handler(self, self._resolve_runtime_args(args, name))
 
         event = self.event_dict.get(name)
         if event is None:
             raise AutoControlActionException(f"Unknown action: {name}")
 
         if len(action) == 2:
-            resolved = self._resolve_runtime_args(action[1])
+            resolved = self._resolve_runtime_args(action[1], name)
             if isinstance(resolved, dict):
                 return event(**resolved)
             return event(*resolved)
         if len(action) == 1:
             return event()
-        raise AutoControlActionException(cant_execute_action_error_message + " " + str(action))
+        raise AutoControlActionException(cant_execute_action_error_message + " " + describe_action(action))
 
     def execute_action(self, action_list: Union[list, dict],
                        raise_on_error: bool = False,
@@ -7995,7 +8062,28 @@ class Executor:
         :param step_callback: 每個 action 開始前呼叫此 hook（偵錯用）。
         :return: 執行紀錄字典
         """
-        autocontrol_logger.info(f"execute_action, action_list: {action_list}")
+        autocontrol_logger.info(f"execute_action, action_list: {redact_actions(action_list)}")
+        # A nested body inherits the strictness of the list that runs it, so
+        # a failure inside an AC_loop / AC_if_* / macro under raise_on_error
+        # reaches the enclosing AC_try / AC_retry / caller instead of being
+        # recorded and swallowed at the first block boundary.
+        # A nested AC_execute_action (not _validated) inherits it too: inside an
+        # AC_try body it ran non-strict and its failures never reached catch.
+        # A top-level call always sees False -- the finally below restores it.
+        inherited = getattr(_STRICT_BODIES, "value", False)
+        raise_on_error = bool(raise_on_error) or inherited
+        _STRICT_BODIES.value = raise_on_error
+        try:
+            return self._execute_list(action_list, raise_on_error, _validated,
+                                      dry_run, step_callback)
+        finally:
+            _STRICT_BODIES.value = inherited
+
+    def _execute_list(self, action_list: Union[list, dict], raise_on_error: bool,
+                      _validated: bool, dry_run: bool,
+                      step_callback: Optional[Callable[[list], None]],
+                      ) -> Dict[str, str]:
+        """The body of :meth:`execute_action`, with strictness already settled."""
         action_list = self._unwrap_action_list(action_list)
         if not _validated:
             validate_actions(action_list, self.known_commands())
@@ -8005,13 +8093,48 @@ class Executor:
             if step_callback is not None:
                 step_callback(action)
             if dry_run:
-                execute_record_dict["dry-run: " + str(action)] = "(not executed)"
+                key = _unique_key(execute_record_dict, "dry-run: " + describe_action(action))
+                execute_record_dict[key] = "(not executed)"
                 continue
-            self._run_one_action(action, execute_record_dict, raise_on_error)
+            key = _unique_key(execute_record_dict, "execute: " + describe_action(action))
+            try:
+                self._run_one_action(action, execute_record_dict, raise_on_error, key)
+            except (LoopBreak, LoopContinue, MacroDepthExceeded) as signal:
+                if _validated:
+                    raise  # a nested body: the enclosing block handles it
+                self._record_unwound_signal(
+                    signal, execute_record_dict, raise_on_error, key)
 
         for key, value in execute_record_dict.items():
             autocontrol_logger.info("%s -> %s", key, value)
         return execute_record_dict
+
+    @staticmethod
+    def _record_unwound_signal(signal: Exception, record: Dict[str, Any],
+                               raise_on_error: bool, key: str) -> None:
+        """Settle, at the top level, a signal that unwound every nested body.
+
+        AC_break / AC_continue with no enclosing loop is a failed command:
+        the signals derive from ``Exception`` so AC_try cannot catch them, and
+        uncaught here they escaped every ``AutoControlException`` boundary
+        and silently skipped the rest of the script. A macro nested past its
+        depth limit unwinds the same way so the failure is recorded here, not
+        inside the deepest body.
+        """
+        if isinstance(signal, AutoControlException):
+            error: AutoControlException = signal
+        else:
+            # Name the signal, not the action it unwound through: a break
+            # inside a macro was reported as "AC_call_macro outside a loop".
+            name = "AC_continue" if isinstance(signal, LoopContinue) else "AC_break"
+            error = AutoControlActionException(f"{name} outside a loop")
+        if raise_on_error:
+            raise error
+        record_action_to_list("AC_execute_action", None, repr(error))
+        # The key _execute_list chose, so a repeated identical action's earlier
+        # result is not overwritten.
+        record[key] = repr(error)
+        _count_recorded_failure()
 
     @staticmethod
     def _unwrap_action_list(action_list: Union[list, dict]) -> list:
@@ -8026,19 +8149,9 @@ class Executor:
         return actions
 
     def _run_one_action(self, action: list, record: Dict[str, Any],
-                        raise_on_error: bool) -> None:
-        """Execute a single action, recording the result or raising."""
+                        raise_on_error: bool, key: str) -> None:
+        """Execute a single action, recording the result under ``key`` or raising."""
         import time as _time
-        key = "execute: " + str(action)
-        if key in record:
-            # Two byte-identical actions would otherwise share one record slot,
-            # so an earlier failure is silently overwritten by a later success.
-            # The first occurrence keeps the bare key (unchanged for callers);
-            # repeats get a numeric suffix so every outcome is preserved.
-            suffix = 2
-            while f"{key} #{suffix}" in record:
-                suffix += 1
-            key = f"{key} #{suffix}"
         action_name = action[0] if action and isinstance(action[0], str) else "<invalid>"
         started = _time.monotonic()
         try:
@@ -8054,7 +8167,10 @@ class Executor:
         # ``AutoControlException`` is the family base: image/mouse/keyboard/
         # screen/null-action failures all subclass it, so an incidental error
         # is contained (recorded) here rather than aborting the whole script.
-        except (AutoControlException, OSError, RuntimeError,
+        # ArithmeticError: an OverflowError (a date past year 9999, int() of
+        # an infinite float) or a ZeroDivisionError is a failed action too;
+        # it used to abort every remaining action.
+        except (AutoControlException, OSError, RuntimeError, ArithmeticError,
                 AttributeError, TypeError, ValueError, LookupError) as error:
             _observe_executor_metrics(action_name, started, error=error)
             # A failed ``AC_assert_*`` (raise_on_fail=True) is a deliberate
@@ -8062,13 +8178,15 @@ class Executor:
             # under raise_on_error=False — otherwise the assertion would be
             # silently neutralised. ``AC_try``/``AC_retry`` run their body with
             # raise_on_error=True and still catch it via their own tuples.
-            if raise_on_error or isinstance(error, AutoControlAssertionException):
+            if raise_on_error or isinstance(
+                    error, (AutoControlAssertionException, MacroDepthExceeded)):
                 raise
             autocontrol_logger.info(
-                f"execute_action failed, action: {action}, error: {repr(error)}"
+                f"execute_action failed, action: {describe_action(action)}, error: {repr(error)}"
             )
             record_action_to_list("AC_execute_action", None, repr(error))
             record[key] = repr(error)
+            _count_recorded_failure()
 
     def execute_files(self, execute_files_list: list) -> List[Dict[str, str]]:
         """
@@ -8079,12 +8197,52 @@ class Executor:
         :return: 每個檔案的執行結果
         """
         autocontrol_logger.info(f"execute_files, execute_files_list: {execute_files_list}")
-        from je_auto_control.utils.action_signing import require_signed_actions
+        from je_auto_control.utils.json.json_file import read_executable_action_json
         execute_detail_list = []
         for file in execute_files_list:
-            require_signed_actions(file)
-            execute_detail_list.append(self.execute_action(read_action_json(file)))
+            execute_detail_list.append(
+                self.execute_action(read_executable_action_json(file)))
         return execute_detail_list
+
+
+_RECORDED_FAILURES = threading.local()
+
+
+def _unique_key(record: Dict[str, Any], key: str) -> str:
+    """``key``, or ``key #N`` when an identical action already has a slot.
+
+    Two byte-identical actions would otherwise share one record slot, so an
+    earlier failure was silently overwritten by a later success (and a dry run
+    listed a repeated action once). The first occurrence keeps the bare key;
+    repeats get a numeric suffix so every outcome is preserved.
+    """
+    if key not in record:
+        return key
+    suffix = 2
+    while f"{key} #{suffix}" in record:
+        suffix += 1
+    return f"{key} #{suffix}"
+
+
+def reset_recorded_failures() -> None:
+    """Zero this thread's count of failures ``execute_action`` recorded."""
+    _RECORDED_FAILURES.count = 0
+
+
+def recorded_failures() -> int:
+    """Failures ``execute_action`` recorded on this thread since the reset.
+
+    A failed action is recorded as its ``repr`` and the run goes on, so the
+    result dict alone cannot tell a failure from a command that returned a
+    string; ``je_auto_control run`` reads this for its exit code. Failures
+    that propagate (``raise_on_error=True``, inside ``AC_try``) are not
+    counted here -- whoever catches them decides.
+    """
+    return getattr(_RECORDED_FAILURES, "count", 0)
+
+
+def _count_recorded_failure() -> None:
+    _RECORDED_FAILURES.count = recorded_failures() + 1
 
 
 # === 全域 Executor 實例 Global Executor Instance ===

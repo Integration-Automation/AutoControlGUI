@@ -22,7 +22,7 @@ Files in the allowlist that don't exist on disk simply don't appear in
 target", not "delete it".
 
 Import is **non-destructive**: any file we are about to overwrite is
-first renamed to ``<name>.bak.<unix_ts>`` so the user can roll back.
+first copied to ``<name>.bak.<unix_ts>`` so the user can roll back.
 The audit log (``audit.db``) is intentionally NOT in the allowlist —
 it's a tamper-evident log, not config. Replacing it from a bundle
 would defeat the chain.
@@ -32,6 +32,7 @@ from __future__ import annotations
 import json
 import os
 import platform
+import shutil
 import time
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
@@ -39,6 +40,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from je_auto_control.utils.exception.exceptions import AutoControlException
+from je_auto_control.utils.json_store.json_store import atomic_write_text
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 
 
@@ -147,7 +149,7 @@ def export_config_bundle(root: Optional[Path] = None) -> Dict[str, Any]:
 class ConfigBundleImporter:
     """Validate a bundle dict, then write its contents back to ``root``.
 
-    Existing files are renamed to ``<name>.bak.<unix_ts>`` before being
+    Existing files are copied to ``<name>.bak.<unix_ts>`` before being
     overwritten. Files not in the bundle are left alone.
     """
 
@@ -239,9 +241,14 @@ class ConfigBundleImporter:
                 f"format mismatch: bundle says {declared_format!r}, "
                 f"allowlist says {fmt!r}",
             )
+        if "content" not in entry:
+            # An entry with no content used to overwrite the file with null.
+            raise ConfigBundleError("bundle entry has no content")
         if fmt == "json":
+            if not isinstance(entry["content"], (dict, list)):
+                raise ConfigBundleError("json entry content must be an object or a list")
             return json.dumps(
-                entry.get("content"), ensure_ascii=False, indent=2,
+                entry["content"], ensure_ascii=False, indent=2,
             )
         content = entry.get("content")
         if not isinstance(content, str):
@@ -252,11 +259,12 @@ class ConfigBundleImporter:
                            relative: str, report: ImportReport,
                            backup_stamp: int) -> None:
         if target.exists():
-            backup_path = target.with_name(
-                f"{target.name}.bak.{backup_stamp}",
-            )
+            backup_path = _unused_backup_path(target, backup_stamp)
             try:
-                target.replace(backup_path)
+                # Copied, not moved: the move left no file at all when the
+                # write below then failed, so a "non-destructive" import
+                # deleted the live config.
+                shutil.copy2(target, backup_path)
                 report.backups[relative] = str(backup_path.name)
             except OSError as error:
                 autocontrol_logger.warning(
@@ -265,7 +273,10 @@ class ConfigBundleImporter:
                 report.skipped.append(relative)
                 return
         try:
-            target.write_text(body, encoding="utf-8")
+            # Created 0600 and replaced atomically: these files hold tokens
+            # (admin_hosts.json is documented as 0600), and write_text left
+            # them at the umask's default -- world-readable.
+            atomic_write_text(target, body)
         except OSError as error:
             autocontrol_logger.warning(
                 "config bundle write %s: %r", target, error,
@@ -273,6 +284,20 @@ class ConfigBundleImporter:
             report.skipped.append(relative)
             return
         report.written.append(relative)
+
+
+def _unused_backup_path(target: Path, backup_stamp: int) -> Path:
+    """``<name>.bak.<stamp>``, with ``.N`` added until no file has the name.
+
+    Two imports in the same second used the same name, and ``replace``
+    overwrote the first backup -- the one holding the user's original file.
+    """
+    candidate = target.with_name(f"{target.name}.bak.{backup_stamp}")
+    counter = 1
+    while candidate.exists():
+        candidate = target.with_name(f"{target.name}.bak.{backup_stamp}.{counter}")
+        counter += 1
+    return candidate
 
 
 def import_config_bundle(bundle: Any,

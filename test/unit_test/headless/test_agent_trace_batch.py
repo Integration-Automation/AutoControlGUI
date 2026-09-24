@@ -65,9 +65,14 @@ def test_to_otel_shape():
     trace = AgentTrace()
     trace.record("chat", model="m", status="error")
     otel = trace.to_otel()
-    assert otel[0]["kind"] == "CLIENT"
-    assert otel[0]["status"]["code"] == "ERROR"
-    assert otel[0]["attributes"]["gen_ai.operation.name"] == "chat"
+    # OTLP/JSON: enum integers (SPAN_KIND_CLIENT = 3, STATUS_CODE_ERROR = 2)
+    # and typed {key, value} attributes.
+    assert otel[0]["kind"] == 3
+    assert otel[0]["status"]["code"] == 2
+    assert {"key": "gen_ai.operation.name", "value": {"stringValue": "chat"}} \
+        in otel[0]["attributes"]
+    assert len(otel[0]["traceId"]) == 32 and len(otel[0]["spanId"]) == 16
+    assert int(otel[0]["endTimeUnixNano"]) >= int(otel[0]["startTimeUnixNano"]) > 0
 
 
 def test_reset_clears():

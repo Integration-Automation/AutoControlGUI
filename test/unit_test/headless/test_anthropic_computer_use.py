@@ -52,6 +52,8 @@ class _StubMessages:
 class _StubClient:
     def __init__(self):
         self.messages = _StubMessages()
+        # The backend calls the beta namespace (computer use is beta-only).
+        self.beta = type("Beta", (), {"messages": self.messages})()
 
 
 def _backend(client: Optional[_StubClient] = None):
@@ -72,8 +74,10 @@ def _backend(client: Optional[_StubClient] = None):
      {"tool": "AC_set_mouse_position", "input": {"x": 120, "y": 240}}),
     ({"action": "type", "text": "hello world"},
      {"tool": "AC_write", "input": {"write_string": "hello world"}}),
+    # AC_sleep is a flow command, so it runs inside AC_execute_action.
     ({"action": "wait", "duration": 2.5},
-     {"tool": "AC_sleep", "input": {"seconds": 2.5}}),
+     {"tool": "AC_execute_action",
+      "input": {"action_list": [["AC_sleep", {"seconds": 2.5}]], "raise_on_error": True}}),
 ])
 def test_simple_action_translations(payload, expected):
     assert _decision_from_computer_action(payload) == expected
@@ -86,7 +90,7 @@ def test_left_click_with_coordinate():
     assert out["tool"] == "AC_click_mouse"
     assert out["input"]["mouse_keycode"] == "mouse_left"
     assert (out["input"]["x"], out["input"]["y"]) == (50, 60)
-    assert out["input"]["repeat"] == 1
+    assert "repeat" not in out["input"], "AC_click_mouse takes no repeat argument"
 
 
 def test_double_and_triple_click_repeat():
@@ -96,8 +100,12 @@ def test_double_and_triple_click_repeat():
     tri = _decision_from_computer_action({
         "action": "triple_click", "coordinate": [3, 4],
     })
-    assert dbl["input"]["repeat"] == 2
-    assert tri["input"]["repeat"] == 3
+    # AC_click_mouse has no repeat count: the clicks run as a sequence,
+    # positioned by the first one.
+    assert dbl["tool"] == tri["tool"] == "AC_execute_action"
+    assert [a[0] for a in dbl["input"]["action_list"]] == ["AC_click_mouse"] * 2
+    assert [a[0] for a in tri["input"]["action_list"]] == ["AC_click_mouse"] * 3
+    assert (tri["input"]["action_list"][0][1]["x"], tri["input"]["action_list"][0][1]["y"]) == (3, 4)
 
 
 def test_left_click_without_coordinate_uses_current_cursor():
@@ -111,16 +119,19 @@ def test_drag_requires_both_endpoints():
         _decision_from_computer_action({"action": "left_click_drag"})
 
 
-def test_drag_translates_to_AC_drag():  # NOSONAR python:S1542  # reason: name mirrors the AC_drag executor command under test
+def test_drag_presses_moves_and_releases():
     out = _decision_from_computer_action({
         "action": "left_click_drag",
         "start_coordinate": [0, 0],
         "end_coordinate": [100, 200],
     })
-    assert out["tool"] == "AC_drag"
-    assert out["input"]["start_x"] == 0
-    assert out["input"]["end_x"] == 100
-    assert out["input"]["end_y"] == 200
+    # There is no AC_drag command; the drag is three real ones.
+    assert out["tool"] == "AC_execute_action"
+    assert out["input"]["action_list"] == [
+        ["AC_press_mouse", {"mouse_keycode": "mouse_left", "x": 0, "y": 0}],
+        ["AC_set_mouse_position", {"x": 100, "y": 200}],
+        ["AC_release_mouse", {"mouse_keycode": "mouse_left", "x": 100, "y": 200}],
+    ]
 
 
 def test_scroll_translates_direction_to_sign():
@@ -134,9 +145,26 @@ def test_scroll_translates_direction_to_sign():
     assert down["input"]["scroll_value"] == -5
 
 
-def test_single_key_goes_through_type_keyboard():
+# Key names follow the running platform's key table (Windows says "return",
+# X11 / macOS "enter"); these tests pin both with a stubbed table.
+_X11_KEYS = {"enter": 1, "return": 1, "esc": 1, "ctrl": 1, "win": 1, "c": 1, "l": 1}
+_WIN32_KEYS = {"return": 1, "escape": 1, "control": 1, "ctrl": 1, "lwin": 1, "c": 1, "l": 1}
+
+
+@pytest.fixture
+def key_table(monkeypatch):
+    from je_auto_control.utils.cua_action import cua_action
+
+    def use(table):
+        monkeypatch.setattr(cua_action, "_platform_key_table", lambda: table)
+    return use
+
+
+@pytest.mark.parametrize("table, expected", [(_X11_KEYS, "enter"), (_WIN32_KEYS, "return")])
+def test_single_key_goes_through_type_keyboard(key_table, table, expected):
+    key_table(table)
     out = _decision_from_computer_action({"action": "key", "text": "Return"})
-    assert out == {"tool": "AC_type_keyboard", "input": {"keycode": "enter"}}
+    assert out == {"tool": "AC_type_keyboard", "input": {"keycode": expected}}
 
 
 def test_key_combo_goes_through_hotkey():
@@ -161,14 +189,17 @@ def test_bad_coordinate_rejected():
 
 # --- xdotool key alias normalisation --------------------------------
 
-@pytest.mark.parametrize("xdotool,expected", [
-    ("Return", ["enter"]),
-    ("escape", ["esc"]),
-    ("ctrl_l+c", ["ctrl", "c"]),
-    ("super_l+L", ["win", "l"]),
+@pytest.mark.parametrize("xdotool, x11, win32", [
+    ("Return", ["enter"], ["return"]),
+    ("escape", ["esc"], ["escape"]),
+    ("ctrl_l+c", ["ctrl", "c"], ["ctrl", "c"]),
+    ("super_l+L", ["win", "l"], ["lwin", "l"]),
 ])
-def test_parse_combo_normalises_xdotool_aliases(xdotool, expected):
-    assert _parse_combo(xdotool) == expected
+def test_parse_combo_normalises_xdotool_aliases(key_table, xdotool, x11, win32):
+    key_table(_X11_KEYS)
+    assert _parse_combo(xdotool) == x11
+    key_table(_WIN32_KEYS)
+    assert _parse_combo(xdotool) == win32
 
 
 # --- end-to-end backend exercise ------------------------------------
@@ -185,7 +216,9 @@ def test_backend_emits_correct_tool_schema():
     call = client.messages.calls[0]
     tools = call["tools"]
     assert len(tools) == 1
-    assert tools[0]["type"] == "computer_20250124"
+    assert tools[0]["type"] == "computer_20251124"
+    # Computer use is beta-only: the beta must travel with the tool.
+    assert call["betas"] == ["computer-use-2025-11-24"]
     assert tools[0]["name"] == "computer"
     assert tools[0]["display_width_px"] == 1920
     assert tools[0]["display_height_px"] == 1080
@@ -228,10 +261,11 @@ def test_backend_handles_tool_use_then_threads_result():
 
 def test_backend_rewraps_client_failures_as_AgentBackendError():  # NOSONAR python:S1542  # reason: name mirrors the AgentBackendError class under test
     class _BoomClient:
-        class messages:
-            @staticmethod
-            def create(**_):
-                raise RuntimeError("network down")
+        class beta:
+            class messages:
+                @staticmethod
+                def create(**_):
+                    raise RuntimeError("network down")
     backend = ComputerUseAgentBackend(
         display_width_px=800, display_height_px=600,
         client=_BoomClient(),

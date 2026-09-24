@@ -22,6 +22,8 @@ Headless API
 
     parse_decimal("1.234,56", locale="de_DE")    # -> 1234.56
     parse_number("1,234", locale="en_US")        # -> 1234
+    # Misplaced grouping ("1,5" in en_US) and, for parse_number, a
+    # fraction ("1.5") raise ValueError instead of parsing as 15 / 1.
 
     format_decimal(1234.5, locale="en_US")       # -> "1,234.5"
     format_currency(1234.5, "USD", locale="en_US")   # -> "$1,234.50"

@@ -37,8 +37,11 @@ Headless API
     exporter.export(trace.to_otel())        # OTLP-friendly span dicts
 
 ``summary`` aggregates ``span_count``, ``error_count``, ``input_tokens``,
-``output_tokens``, and total ``duration_s``. ``to_otel`` returns each span as
-``{name, kind, attributes, duration_s, status:{code}}`` with an OTel status code.
+``output_tokens``, and total ``duration_s``. ``to_otel`` returns each span as an
+OTLP/JSON span: the run's ``traceId``, its own ``spanId``, wall-clock
+``startTimeUnixNano`` / ``endTimeUnixNano`` (strings), ``kind`` and ``status.code``
+as OTLP enum integers, and ``attributes`` as typed ``{key, value}`` pairs. The
+provider is recorded as both ``gen_ai.provider.name`` and ``gen_ai.system``.
 
 Executor commands
 -----------------

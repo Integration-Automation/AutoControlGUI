@@ -58,6 +58,17 @@ def _quarantined_keys(respect: bool) -> Set[str]:
         return set()
 
 
+def _as_tags(value: Any) -> List[str]:
+    """Tags as a list of strings; a bare string is one tag, not its letters."""
+    if value is None:
+        return []
+    if isinstance(value, str):
+        return [value]
+    if isinstance(value, (list, tuple, set)):
+        return [str(tag) for tag in value]
+    raise TypeError(f"tags must be a string or a list, got {type(value).__name__}")
+
+
 def _tags_match(case_tags: Iterable[str], wanted: Optional[Set[str]]) -> bool:
     if not wanted:
         return True
@@ -88,7 +99,7 @@ def _run_actions(executor: Any, actions: List[Any]) -> Tuple[str, str]:
         return STATUS_PASSED, ""
     except AutoControlAssertionException as error:
         return STATUS_FAILED, str(error)
-    except (AutoControlException, LookupError, AttributeError,
+    except (AutoControlException, LookupError, AttributeError, ArithmeticError,
             OSError, RuntimeError, TypeError, ValueError) as error:
         # Mirrors the executor's raise_on_error re-raise set: the framework
         # family (incl. AutoControlActionNullException), plus LookupError /
@@ -100,21 +111,43 @@ def _run_one_case(executor: Any, name: str, spec: Dict[str, Any],
                   binding: Optional[Tuple[str, Dict[str, Any]]],
                   quarantined: Set[str]) -> TestCaseResult:
     """Run (or skip) a single expanded case and return its result."""
-    tags = [str(tag) for tag in spec.get("tags", [])]
+    tags = _as_tags(spec.get("tags"))
     row = binding[1] if binding is not None else None
-    if name in quarantined or spec.get("name") in quarantined:
+    if name in quarantined or str(spec.get("name")) in quarantined:
         return TestCaseResult(
             name=name, status=STATUS_SKIPPED, message="quarantined",
             tags=tags, data_row=row,
         )
-    if binding is not None:
-        executor.variables.set(binding[0], binding[1])
     started = time.monotonic()
-    status, message = _run_actions(executor, spec.get("actions") or [])
+    if binding is None:
+        status, message = _run_actions(executor, spec.get("actions") or [])
+    else:
+        status, message = _run_with_binding(executor, binding, spec.get("actions") or [])
     return TestCaseResult(
         name=name, status=status, duration_s=time.monotonic() - started,
         message=message, tags=tags, data_row=row,
     )
+
+
+def _run_with_binding(executor: Any, binding: Tuple[str, Dict[str, Any]],
+                      actions: List[Any]) -> Tuple[str, str]:
+    """Run a data-driven row with its variable bound, then put the old value back.
+
+    The row variable used to stay set: later plain cases, and the global
+    executor after the suite, saw the last row.
+    """
+    name, row = binding
+    variables = executor.variables
+    had_value = name in variables
+    previous = variables.get_value(name)
+    variables.set(name, row)
+    try:
+        return _run_actions(executor, actions)
+    finally:
+        if had_value:
+            variables.set(name, previous)
+        else:
+            del variables[name]
 
 
 def run_suite(spec: Dict[str, Any],
@@ -131,7 +164,7 @@ def run_suite(spec: Dict[str, Any],
     if not isinstance(spec, dict):
         raise ValueError("suite spec must be a dict")
     runner = _resolve_executor(executor)
-    wanted = {str(tag) for tag in tags} if tags else None
+    wanted = set(_as_tags(tags)) if tags else None
     quarantined = _quarantined_keys(respect_quarantine)
     result = TestSuiteResult(name=str(spec.get("name", "suite")))
     started = time.monotonic()
@@ -178,7 +211,14 @@ def _run_all_cases(executor: Any, spec: Dict[str, Any],
                 TypeError(f"case spec must be a dict, got "
                           f"{type(case_spec).__name__}")))
             continue
-        if not _tags_match(case_spec.get("tags", []), wanted):
+        try:
+            case_tags = _as_tags(case_spec.get("tags"))
+        except TypeError as error:
+            # One malformed case scored as an error; it used to abort the
+            # whole suite and lose every result.
+            result.cases.append(_error_case_result(case_spec, error))
+            continue
+        if not _tags_match(case_tags, wanted):
             continue
         _run_case_spec(executor, case_spec, quarantined, result)
 
@@ -204,5 +244,13 @@ def _error_case_result(case_spec: Dict[str, Any],
     return TestCaseResult(
         name=str(case_spec.get("name", "case")), status=STATUS_ERROR,
         message=repr(error),
-        tags=[str(tag) for tag in case_spec.get("tags", [])],
+        tags=_tags_or_none(case_spec.get("tags")),
     )
+
+
+def _tags_or_none(value: Any) -> List[str]:
+    """Tags for an error result: a malformed ``tags`` is the error, not a second one."""
+    try:
+        return _as_tags(value)
+    except TypeError:
+        return []

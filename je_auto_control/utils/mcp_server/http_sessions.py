@@ -91,6 +91,21 @@ class HttpSession:
                 self._stream_writer = None
 
 
+def _abandoned(session: HttpSession) -> bool:
+    """Whether ``session`` was never used after the ``initialize`` that made it."""
+    return not session.has_stream and session.last_seen == session.created_at
+
+
+def _eviction_victim(sessions: List[HttpSession]) -> HttpSession:
+    """The session to evict at the cap: the oldest abandoned one, else the oldest.
+
+    Choosing by ``last_seen`` alone let anyone evict a session in real use by
+    sending ``initialize`` 128 times while ignoring the session header.
+    """
+    candidates = [session for session in sessions if _abandoned(session)] or sessions
+    return min(candidates, key=lambda item: item.last_seen)
+
+
 def _log_eviction(victim: HttpSession, cap: int) -> None:
     """Report an eviction, loudly only when the victim was in use.
 
@@ -99,8 +114,7 @@ def _log_eviction(victim: HttpSession, cap: int) -> None:
     capacity work; evicting a session a client is actually holding means the
     cap is too low for the load, and that is worth a warning.
     """
-    abandoned = not victim.has_stream and victim.last_seen == victim.created_at
-    if abandoned:
+    if _abandoned(victim):
         autocontrol_logger.info(
             "MCP session cap %d reached — evicting a session that was never "
             "used after initialize", cap,
@@ -147,8 +161,7 @@ class SessionRegistry:
         with self._lock:
             dropped.extend(self._expired_locked(now))
             while len(self._sessions) >= self._max_sessions:
-                victim = min(self._sessions.values(),
-                             key=lambda item: item.last_seen)
+                victim = _eviction_victim(list(self._sessions.values()))
                 del self._sessions[victim.id]
                 dropped.append(victim)
                 _log_eviction(victim, self._max_sessions)

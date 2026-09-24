@@ -3,15 +3,17 @@ from __future__ import annotations
 
 from typing import Optional
 
-from je_auto_control.ios.client import IOSDevice, default_ios_device
+from je_auto_control.ios.client import IOSDevice, default_ios_device, translate_device_errors
 
 
+@translate_device_errors
 def tap(x: int, y: int, *, device: Optional[IOSDevice] = None) -> None:
     """Single-tap absolute pixel coordinates."""
     handle = (device or default_ios_device()).handle
     handle.tap(int(x), int(y))
 
 
+@translate_device_errors
 def long_press(x: int, y: int, duration_s: float = 1.0,
                *, device: Optional[IOSDevice] = None) -> None:
     """Press-and-hold at ``(x, y)`` for ``duration_s`` seconds."""
@@ -19,6 +21,7 @@ def long_press(x: int, y: int, duration_s: float = 1.0,
     handle.tap_hold(int(x), int(y), float(duration_s))
 
 
+@translate_device_errors
 def swipe(x1: int, y1: int, x2: int, y2: int,
           duration_s: float = 0.5,
           *, device: Optional[IOSDevice] = None) -> None:
@@ -27,6 +30,7 @@ def swipe(x1: int, y1: int, x2: int, y2: int,
     handle.swipe(int(x1), int(y1), int(x2), int(y2), float(duration_s))
 
 
+@translate_device_errors
 def type_text(text: str, *, device: Optional[IOSDevice] = None) -> None:
     """Type ``text`` into whatever has keyboard focus right now."""
     if not isinstance(text, str):
@@ -35,6 +39,7 @@ def type_text(text: str, *, device: Optional[IOSDevice] = None) -> None:
     handle.send_keys(text)
 
 
+@translate_device_errors
 def press_key(name: str, *, device: Optional[IOSDevice] = None) -> None:
     """Press a hardware/system key (``"home"``, ``"volumeup"`` …)."""
     if not name:

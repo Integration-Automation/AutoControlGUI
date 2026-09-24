@@ -103,10 +103,14 @@ def _consume_quote(text: str, index: int, buffer: List[str]) -> int:
         return index + 2
     if nxt in _QUOTABLE:
         index += 1
-        while index < len(text) and text[index] != "'":
+        while index < len(text):
+            if text[index] == "'":
+                if text[index + 1:index + 2] != "'":
+                    return index + 1
+                index += 1  # '' inside a quoted section is one apostrophe
             buffer.append(text[index])
             index += 1
-        return index + 1 if index < len(text) else index
+        return index
     buffer.append("'")
     return index + 1
 
@@ -175,7 +179,10 @@ def _parse_argument(text: str, index: int) -> Tuple[Node, int]:
 def _render_select(node: Node, args: Mapping[str, Any],
                    rules: Tuple[PluralRule, PluralRule]) -> str:
     _, name, options = node
-    chosen = options.get(str(args.get(name, ""))) or options.get("other") or []
+    # "is None", not "or": an empty chosen branch ({}) is a valid message.
+    chosen = options.get(str(args.get(name, "")))
+    if chosen is None:
+        chosen = options.get("other", [])
     return _render(chosen, args, rules)
 
 
@@ -183,12 +190,19 @@ def _render_plural(node: Node, args: Mapping[str, Any],
                    rules: Tuple[PluralRule, PluralRule]) -> str:
     _, name, options, is_ordinal, offset = node
     value = args.get(name, 0)
-    number, integer, is_int = _to_operands(value)
+    try:
+        number, integer, is_int = _to_operands(value)
+    except (TypeError, ValueError) as error:
+        raise ValueError(f"plural argument {name!r} is not a number: {value!r}") from error
     exact = "=" + (str(integer) if is_int else _format_number(number))
     chosen = options.get(exact)
     if chosen is None:
         rule = rules[1] if is_ordinal else rules[0]
-        chosen = options.get(rule(value)) or options.get("other") or []
+        # ICU picks the keyword from the value minus the offset.
+        keyword = rule(integer - offset if is_int else number - offset)
+        chosen = options.get(keyword)
+        if chosen is None:
+            chosen = options.get("other", [])
     return _render(chosen, args, rules, plural_value=number - offset)
 
 
@@ -224,7 +238,11 @@ def format_message(pattern: str, arguments: Optional[Mapping[str, Any]] = None,
     ``ordinal_rules`` override the locale's category functions.
     """
     args = arguments or {}
-    nodes, _ = _parse_message(pattern or "", 0)
+    text = pattern or ""
+    nodes, end = _parse_message(text, 0)
+    if end < len(text):
+        # A stray "}" silently cut the rest of the message off.
+        raise ValueError(f"unmatched '}}' at position {end} in message pattern")
     cardinal = plural_rules or (lambda value: plural_category(value, locale))
     ordinal = ordinal_rules or (lambda value: ordinal_category(value, locale))
     return _render(nodes, args, (cardinal, ordinal))

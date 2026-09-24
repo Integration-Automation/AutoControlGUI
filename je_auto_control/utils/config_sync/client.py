@@ -1,7 +1,9 @@
 """HTTP client + deterministic merge for the config-sync bucket."""
 from __future__ import annotations
 
+import http.client
 import json
+import math
 import time
 import urllib.error
 import urllib.parse
@@ -10,6 +12,16 @@ from dataclasses import asdict, dataclass, field
 from typing import Any, Dict, List, Mapping, Optional, Tuple
 
 _DEFAULT_TIMEOUT_S = 5.0
+
+#: How long a deletion is remembered. A tombstone purged before every machine
+#: has synced lets a machine that still holds the entry bring it back, so this
+#: bounds how long a machine may stay offline without that happening.
+TOMBSTONE_RETENTION_S = 30 * 24 * 3600.0
+
+
+def is_tombstone(entry: Mapping[str, Any]) -> bool:
+    """Whether ``entry`` records a deletion rather than a value."""
+    return entry.get("deleted") is True
 
 
 class ConfigSyncError(RuntimeError):
@@ -33,6 +45,11 @@ class ConfigBucket:
     a ``last_modified`` epoch timestamp. Unknown sections are passed
     through untouched so callers can extend the schema without
     touching the syncer.
+
+    A removed entry stays in ``sections`` as a tombstone
+    (``{"deleted": True, "last_modified": ...}``) so the deletion wins the
+    merge against an older copy on another machine instead of being undone
+    by it; read entries through :meth:`entries`, which leaves tombstones out.
     """
     user_id: str
     sections: Dict[str, Dict[str, Dict[str, Any]]] = field(
@@ -52,34 +69,85 @@ class ConfigBucket:
         sections = body.get("sections") or {}
         if not isinstance(sections, Mapping):
             raise ConfigSyncError("bucket sections must be a mapping")
+        # The server's reply is data, not trusted structure: a list where a
+        # section belongs or a non-numeric stamp raised AttributeError or
+        # ValueError here or later in merge_buckets.
         return cls(
             user_id=body["user_id"],
-            sections={
-                str(name): {str(eid): dict(entry)
-                            for eid, entry in (sec or {}).items()}
-                for name, sec in sections.items()
-            },
-            revision=int(body.get("revision", 0)),
+            sections={str(name): _section(name, sec) for name, sec in sections.items()},
+            revision=int(_finite(body.get("revision", 0), "revision")),
         )
 
     def upsert(self, section: str, entry_id: str,
                entry: Mapping[str, Any]) -> None:
-        """Add or replace an entry, stamping it with the current time."""
+        """Add or replace an entry, stamping it with the current time.
+
+        A ``last_modified`` already in ``entry`` is kept, so drop it when
+        editing an entry read back from a bucket -- otherwise the edit keeps
+        its old stamp and loses the merge to any newer remote copy.
+        """
         body = dict(entry)
         body["last_modified"] = float(body.get("last_modified", time.time()))
         self.sections.setdefault(section, {})[entry_id] = body
 
     def remove(self, section: str, entry_id: str) -> bool:
-        sec = self.sections.get(section)
-        if not sec:
+        """Replace a live entry with a tombstone; False when there was none.
+
+        Dropping the entry outright let the next sync bring it straight back
+        from the server, where it still existed. The tombstone is stamped no
+        earlier than the entry it deletes, so a clock running behind cannot
+        make the deletion lose to the value it removed.
+        """
+        entry = self.sections.get(section, {}).get(entry_id)
+        if entry is None or is_tombstone(entry):
             return False
-        return sec.pop(entry_id, None) is not None
+        stamp = max(time.time(), float(entry.get("last_modified", 0)))
+        self.sections[section][entry_id] = {"deleted": True, "last_modified": stamp}
+        return True
+
+    def entries(self, section: str) -> Dict[str, Dict[str, Any]]:
+        """The live entries of ``section``: everything except tombstones."""
+        return {entry_id: entry for entry_id, entry in self.sections.get(section, {}).items()
+                if not is_tombstone(entry)}
+
+
+def _finite(value: Any, what: str) -> float:
+    """``value`` as a finite float, or :class:`ConfigSyncError`."""
+    try:
+        number = float(value)
+    except (TypeError, ValueError) as error:
+        raise ConfigSyncError(f"{what} must be a number, got {value!r}") from error
+    if not math.isfinite(number):
+        raise ConfigSyncError(f"{what} must be finite, got {value!r}")
+    return number
+
+
+def _section(name: Any, section: Any) -> Dict[str, Dict[str, Any]]:
+    if not isinstance(section, Mapping):
+        raise ConfigSyncError(f"section {name!r} must be a mapping")
+    entries: Dict[str, Dict[str, Any]] = {}
+    for entry_id, entry in section.items():
+        if not isinstance(entry, Mapping):
+            raise ConfigSyncError(f"entry {name!r}/{entry_id!r} must be a mapping")
+        entries[str(entry_id)] = dict(entry)
+        _finite(entry.get("last_modified", 0), f"{name}/{entry_id} last_modified")
+        if not isinstance(entry.get("deleted", False), bool):
+            raise ConfigSyncError(f"entry {name!r}/{entry_id!r} deleted must be a boolean")
+    return entries
 
 
 def merge_buckets(local: ConfigBucket,
                   remote: ConfigBucket,
+                  *, now: Optional[float] = None,
+                  tombstone_retention_s: float = TOMBSTONE_RETENTION_S,
                   ) -> Tuple[ConfigBucket, List[ConflictRecord]]:
-    """Last-write-wins merge across every section. Returns merged + conflicts."""
+    """Last-write-wins merge across every section. Returns merged + conflicts.
+
+    Tombstones take part like any other entry, so a deletion newer than a
+    remote copy removes it and an edit newer than a deletion restores it.
+    Tombstones older than ``tombstone_retention_s`` (measured from ``now``,
+    default the current time) are left out of the result.
+    """
     if local.user_id != remote.user_id:
         raise ConfigSyncError(
             f"user_id mismatch: local={local.user_id!r} remote={remote.user_id!r}",
@@ -118,9 +186,16 @@ def merge_buckets(local: ConfigBucket,
                 ))
             else:
                 merged_section[entry_id] = local_entry  # tie — local wins
-        merged.sections[name] = merged_section
+        merged.sections[name] = _without_expired(
+            merged_section, (time.time() if now is None else now) - tombstone_retention_s)
     merged.revision = max(local.revision, remote.revision) + 1
     return merged, conflicts
+
+
+def _without_expired(section: Dict[str, Dict[str, Any]],
+                     cutoff: float) -> Dict[str, Dict[str, Any]]:
+    return {entry_id: entry for entry_id, entry in section.items()
+            if not (is_tombstone(entry) and float(entry.get("last_modified", 0)) < cutoff)}
 
 
 class ConfigSyncClient:
@@ -172,6 +247,10 @@ class ConfigSyncClient:
             raise ConfigSyncError(
                 f"config sync {method} failed: {error.reason}",
             ) from error
+        except (OSError, http.client.HTTPException) as error:
+            # A server hanging up (RemoteDisconnected) or a stalled body
+            # (TimeoutError from read) is no URLError.
+            raise ConfigSyncError(f"config sync {method} failed: {error!r}") from error
         if not payload:
             return {}
         try:
@@ -206,5 +285,5 @@ class ConfigSyncClient:
 
 __all__ = [
     "ConfigBucket", "ConflictRecord", "ConfigSyncClient",
-    "ConfigSyncError", "merge_buckets",
+    "ConfigSyncError", "TOMBSTONE_RETENTION_S", "is_tombstone", "merge_buckets",
 ]

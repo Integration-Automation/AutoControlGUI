@@ -18,7 +18,8 @@
 
    CriticalExit().init_critical_exit()
 
-呼叫 ``init_critical_exit()`` 後，按下 **F7** 會中斷主執行緒並終止程式。
+呼叫 ``init_critical_exit()`` 後，按下 **F7** 會中斷主執行緒並終止程式；主執行緒正在 sleep 或等待時也會立刻中斷。
+監聽開始前的按鍵不算數；放開按鍵後監聽會重新就緒，等待下一次按下。
 
 更改熱鍵
 ========

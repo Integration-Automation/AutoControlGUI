@@ -25,7 +25,7 @@ from je_auto_control.utils.exception.exceptions import (
     AutoControlException, AutoControlUnsupportedOperationException,
 )
 from je_auto_control.utils import sqlite_support
-from je_auto_control.utils.run_history.history_store import HistoryStore
+from je_auto_control.utils.run_history.history_store import HistoryStore, HistoryStoreError
 
 #: The working tree, so the subprocess tests the checkout rather than whatever
 #: version of the package happens to be installed in site-packages.
@@ -156,5 +156,8 @@ def test_a_closed_store_does_not_silently_reopen(tmp_path):
     store = HistoryStore(path=tmp_path / "closed.sqlite")
     store.start_run("scheduler", "job-1", "script.json")
     store.close()
-    with pytest.raises(sqlite3.ProgrammingError):
+    # A framework error since the store stopped leaking sqlite3.Error out of
+    # the boundaries that contain the family; the cause is still the same.
+    with pytest.raises(HistoryStoreError) as raised:
         store.count()
+    assert isinstance(raised.value.__cause__, sqlite3.ProgrammingError)

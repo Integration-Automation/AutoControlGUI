@@ -2,7 +2,10 @@
 import re
 from typing import Optional, Tuple
 
-_COORDS_RE = re.compile(r"(-?\d{1,5})(?:\s*,\s*|\s+)(-?\d{1,5})")
+# Anchored so a pair is never cut out of a longer number: "123456, 7" read as
+# (23456, 7) and "1.5, 2" as (5, 2).
+_COORDS_RE = re.compile(
+    r"(?<![\d.])(-?\d{1,5})(?:\s*,\s*|\s+)(-?\d{1,5})(?!\d)(?!\.\d)")
 
 
 def parse_coords(text: str) -> Optional[Tuple[int, int]]:

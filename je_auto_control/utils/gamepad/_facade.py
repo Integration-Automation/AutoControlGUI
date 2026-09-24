@@ -50,17 +50,22 @@ _BUTTON_ATTR_MAP: Dict[str, str] = {
     "rs": "XUSB_GAMEPAD_RIGHT_THUMB",
 }
 
-_DPAD_ATTR_MAP: Dict[str, str] = {
-    "up": "XUSB_GAMEPAD_DPAD_UP",
-    "down": "XUSB_GAMEPAD_DPAD_DOWN",
-    "left": "XUSB_GAMEPAD_DPAD_LEFT",
-    "right": "XUSB_GAMEPAD_DPAD_RIGHT",
-    "up_left": "XUSB_GAMEPAD_DPAD_UP_LEFT",
-    "up_right": "XUSB_GAMEPAD_DPAD_UP_RIGHT",
-    "down_left": "XUSB_GAMEPAD_DPAD_DOWN_LEFT",
-    "down_right": "XUSB_GAMEPAD_DPAD_DOWN_RIGHT",
-    "none": "XUSB_GAMEPAD_DPAD_NONE",
+# vgamepad's XUSB_BUTTON has the four dpad directions only (and VX360Gamepad
+# no directional_pad()): a diagonal is two buttons held together.
+_DPAD_UP, _DPAD_DOWN = "XUSB_GAMEPAD_DPAD_UP", "XUSB_GAMEPAD_DPAD_DOWN"
+_DPAD_LEFT, _DPAD_RIGHT = "XUSB_GAMEPAD_DPAD_LEFT", "XUSB_GAMEPAD_DPAD_RIGHT"
+_DPAD_ATTR_MAP: Dict[str, Tuple[str, ...]] = {
+    "up": (_DPAD_UP,),
+    "down": (_DPAD_DOWN,),
+    "left": (_DPAD_LEFT,),
+    "right": (_DPAD_RIGHT,),
+    "up_left": (_DPAD_UP, _DPAD_LEFT),
+    "up_right": (_DPAD_UP, _DPAD_RIGHT),
+    "down_left": (_DPAD_DOWN, _DPAD_LEFT),
+    "down_right": (_DPAD_DOWN, _DPAD_RIGHT),
+    "none": (),
 }
+_DPAD_ALL = (_DPAD_UP, _DPAD_DOWN, _DPAD_LEFT, _DPAD_RIGHT)
 
 
 def _import_vgamepad():
@@ -166,8 +171,13 @@ class VirtualGamepad:
             self._pad.update()
 
     def click_button(self, name: str) -> None:
-        """Press then release in one shot."""
-        self.press_button(name, update=False)
+        """Press then release in one shot.
+
+        Each state goes out in its own report: pressing with update=False and
+        releasing with update=True sent one report saying "not pressed", so
+        the driver never saw the button go down.
+        """
+        self.press_button(name, update=True)
         self.release_button(name, update=True)
 
     # --- dpad ---------------------------------------------------------------
@@ -181,7 +191,10 @@ class VirtualGamepad:
                 f"unknown dpad direction {direction!r}; choose from "
                 f"{DPAD_DIRECTIONS!r}"
             ) from exc
-        self._pad.directional_pad(direction=getattr(self._vg.XUSB_BUTTON, attr))
+        for button in _DPAD_ALL:
+            self._pad.release_button(button=getattr(self._vg.XUSB_BUTTON, button))
+        for button in attr:
+            self._pad.press_button(button=getattr(self._vg.XUSB_BUTTON, button))
         if update:
             self._pad.update()
 

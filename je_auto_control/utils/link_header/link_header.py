@@ -12,8 +12,11 @@ without a live server.
 import re
 from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, List, Mapping, Optional, Union
+from urllib.parse import urljoin
 
-_LINK_RE = re.compile(r"<([^>]*)>\s*(;[^<]*)?")
+from je_auto_control.utils.http_conditional.http_conditional import split_outside_quotes
+
+_LINK_VALUE = re.compile(r"\s*<([^>]*)>(.*)", re.DOTALL)
 
 Links = Union[str, List["Link"]]
 Fetch = Callable[[str], Mapping[str, Any]]
@@ -40,21 +43,50 @@ def _strip_quotes(value: str) -> str:
 
 def _parse_params(chunk: Optional[str]) -> Dict[str, str]:
     params: Dict[str, str] = {}
-    for part in (chunk or "").split(";"):
+    # Quote-aware: a semicolon inside a quoted value stays in that value.
+    for part in split_outside_quotes(chunk or "", ";"):
         cleaned = part.strip().rstrip(",").strip()
         if not cleaned:
             continue
         key, sep, value = cleaned.partition("=")
         key = key.strip().lower()
-        if key and sep:
+        # RFC 8288 3.3: occurrences after the first are ignored -- the last
+        # used to win, so rel="next"; rel="prev" lost its next link.
+        if key and sep and key not in params:
             params[key] = _strip_quotes(value.strip().rstrip(",").strip())
     return params
+
+
+# A quoted string or a <URI> is one token, so the commas inside them do not
+# separate links.
+_LINK_TOKEN = re.compile(r'"(?:[^"\\]|\\.)*"|<[^>]*>|[^",<]+|[<"]|,')
+
+
+def _split_links(value: str) -> List[str]:
+    """Split a Link header on the commas between links.
+
+    Commas inside a quoted parameter or inside ``<...>`` do not separate
+    links; a "<" inside a quoted title used to end the parameters there.
+    """
+    pieces: List[str] = []
+    current: List[str] = []
+    for lexeme in _LINK_TOKEN.findall(value):
+        if lexeme == ",":
+            pieces.append("".join(current))
+            current = []
+        else:
+            current.append(lexeme)
+    pieces.append("".join(current))
+    return pieces
 
 
 def parse_link_header(value: Optional[str]) -> List[Link]:
     """Parse a ``Link`` header value into a list of :class:`Link`."""
     links: List[Link] = []
-    for match in _LINK_RE.finditer(value or ""):
+    for piece in _split_links(value or ""):
+        match = _LINK_VALUE.match(piece)
+        if match is None:
+            continue
         params = _parse_params(match.group(2))
         links.append(Link(uri=match.group(1).strip(),
                           rel=params.get("rel"), params=params))
@@ -70,7 +102,7 @@ def links_by_rel(links: Links) -> Dict[str, Link]:
     indexed: Dict[str, Link] = {}
     for link in _as_links(links):
         for token in (link.rel or "").split():
-            indexed[token] = link
+            indexed[token.lower()] = link   # relation types are case-insensitive
     return indexed
 
 
@@ -93,6 +125,7 @@ def paginate(url: str, fetch: Fetch, *,
 
     ``fetch`` maps a URL to a response mapping with a ``headers`` dict. Stops at
     ``max_pages`` or when no ``next`` link is present. Returns each response.
+    A relative ``next`` link is resolved against the page it came from.
     """
     responses: List[Mapping[str, Any]] = []
     current: Optional[str] = url
@@ -100,5 +133,6 @@ def paginate(url: str, fetch: Fetch, *,
         response = fetch(current)
         responses.append(response)
         header = _link_header_of(response.get("headers"))
-        current = next_url(header) if header else None
+        following = next_url(header) if header else None
+        current = urljoin(current, following) if following else None
     return responses

@@ -24,7 +24,8 @@ z-score、穩健的 MAD(modified z-score)與 EWMA 控制圖,在單一序列中�
 
 ``detect_anomalies`` 為每個值評分(預設 ``mad``,或 ``zscore``)並標記超過門檻者(MAD 為 3.5、z-score
 為 3.0)。``mad_anomalies`` / ``zscore_anomalies`` 只回傳被標記的索引,``mad_scores`` / ``zscore_scores``
-回傳原始分數。MAD(Iglewicz-Hoaglin modified z-score)對離群值膨脹離散度具穩健性,因此在純 z-score 失靈
+回傳原始分數。超過一半的值相同(MAD 為 0)時改用平均絕對偏差計分，所以單一離群值仍會被找到。
+MAD(Iglewicz-Hoaglin modified z-score)對離群值膨脹離散度具穩健性,因此在純 z-score 失靈
 之處仍保持敏感。``ewma_control`` 是針對持續性水準偏移的 EWMA 控制圖 —— 傳入 ``target_mean`` /
 ``target_sigma`` 設定 in-control 基準(否則用序列自身統計)。
 

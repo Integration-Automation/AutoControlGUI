@@ -125,8 +125,16 @@ def check_postcondition(after: Sequence[Element], spec: Dict[str, Any], *,
     return PostconditionReport(ok=not failed, clauses=clauses, failed=failed)
 
 
-def compile_postcondition(spec: Dict[str, Any]) -> Callable[[Sequence[Element]], bool]:
-    """Return a predicate ``after -> bool`` for the spec (for use with ``expect_poll``)."""
+def compile_postcondition(spec: Dict[str, Any], *,
+                          before: Optional[Sequence[Element]] = None
+                          ) -> Callable[[Sequence[Element]], bool]:
+    """Return a predicate ``after -> bool`` for the spec (for use with ``expect_poll``).
+
+    Pass the ``before`` frame for ``appears`` / ``disappears``: without it
+    ``disappears`` could never hold and ``appears`` only meant "present".
+    """
+    frozen_before = list(before) if before is not None else None
+
     def predicate(after: Sequence[Element]) -> bool:
-        return check_postcondition(after, spec).ok
+        return check_postcondition(after, spec, before=frozen_before).ok
     return predicate

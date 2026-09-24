@@ -10,7 +10,19 @@ Pure-stdlib context manager; imports no ``PySide6``.
 """
 from typing import Any, List, Literal
 
-from je_auto_control.utils.exception.exceptions import AutoControlActionException
+from je_auto_control.utils.exception.exceptions import (
+    AutoControlActionException, AutoControlAssertionException,
+)
+
+
+class SoftAssertionsFailed(AutoControlAssertionException, AutoControlActionException):
+    """One or more soft checks failed.
+
+    An assertion failure like every ``AC_assert_*``: a suite scores it
+    *failed* rather than *error*, and a lenient run does not swallow it. It
+    is still an ``AutoControlActionException``, the type raised before, so
+    existing ``except`` clauses keep catching it.
+    """
 
 
 class SoftAssertions:
@@ -42,17 +54,22 @@ class SoftAssertions:
         return sum(1 for ok, _message in self._results if ok)
 
     def assert_all(self) -> None:
-        """Raise ``AutoControlActionException`` if any recorded check failed."""
+        """Raise :class:`SoftAssertionsFailed` if any recorded check failed."""
         failures = self.failures
         if failures:
-            raise AutoControlActionException(
+            raise SoftAssertionsFailed(
                 f"{len(failures)} soft assertion(s) failed: "
                 + "; ".join(failures))
 
     def __enter__(self) -> "SoftAssertions":
         return self
 
-    def __exit__(self, exc_type, _exc, _tb) -> Literal[False]:
+    def __exit__(self, exc_type, exc, _tb) -> Literal[False]:
         if exc_type is None and self._raise_on_exit:
             self.assert_all()
+        elif exc is not None and self.failures and hasattr(exc, "add_note"):
+            # The block raised: its exception wins, but the checks that had
+            # already failed were lost with it.
+            exc.add_note(f"{len(self.failures)} soft assertion(s) had failed: "
+                         + "; ".join(self.failures))
         return False

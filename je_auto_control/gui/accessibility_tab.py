@@ -13,7 +13,8 @@ from je_auto_control.gui.language_wrapper.multi_language_wrapper import (
     language_wrapper,
 )
 from je_auto_control.utils.accessibility.accessibility_api import (
-    click_accessibility_element, list_accessibility_elements,
+    click_accessibility_element, focused_accessibility_element,
+    list_accessibility_elements,
 )
 from je_auto_control.utils.accessibility.element import (
     AccessibilityNotAvailableError,
@@ -83,6 +84,7 @@ class AccessibilityTab(TranslatableMixin, QWidget):
         return [
             ("a11y_refresh", self._refresh),
             ("a11y_click_selected", self._click_selected),
+            ("a11y_show_focused", self._show_focused),
         ]
 
     def _refresh(self) -> None:
@@ -106,6 +108,17 @@ class AccessibilityTab(TranslatableMixin, QWidget):
         self._status.setText(
             _t("a11y_count_label").replace("{n}", str(len(elements))),
         )
+
+    def _show_focused(self) -> None:
+        app = self._app_filter.text().strip() or None
+        try:
+            element = focused_accessibility_element(app_name=app)
+        except AccessibilityNotAvailableError as error:
+            self._status.setText(str(error))
+            return
+        self._populate([] if element is None else [element])
+        self._status.setText(_t("a11y_no_focus") if element is None
+                             else _t("a11y_count_label").replace("{n}", "1"))
 
     def _populate(self, elements) -> None:
         self._table.setRowCount(len(elements))

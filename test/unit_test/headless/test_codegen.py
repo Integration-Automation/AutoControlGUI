@@ -3,7 +3,9 @@
 No PySide6 is imported; generated Python is checked for valid syntax via
 ``compile`` so the tests stay fast and side-effect free.
 """
+import base64
 import json
+import re
 
 import pytest
 
@@ -54,7 +56,9 @@ def test_robot_target_is_self_contained():
     assert "Login Flow" in code
     assert "Evaluate" in code
     payload_line = [ln for ln in code.splitlines() if "json.loads" in ln][0]
-    assert "AC_click_mouse" in payload_line
+    # The actions travel base64-encoded, so no value can break out of the cell.
+    encoded = re.search(r"b64decode\('([A-Za-z0-9+/=]+)'\)", payload_line).group(1)
+    assert "AC_click_mouse" in base64.b64decode(encoded).decode("utf-8")
 
 
 def test_name_is_slugged_to_valid_identifier():
@@ -80,10 +84,16 @@ def test_empty_actions_rejected():
 
 def test_pytest_can_emit_automatic_failure_bundle():
     code = generate_code(_ACTIONS, failure_bundle=True, name="login")
-    assert "import je_auto_control.api as ac" in code
-    assert "with ac.failure_bundle_on_error(" in code
+    # It used to import je_auto_control.api *as ac*, and api has none of the
+    # ac.<function> calls, so every generated test failed with AttributeError
+    # -- while compiling cleanly, which is all this test checked.
+    assert "import je_auto_control as ac" in code
+    assert "from je_auto_control.api import failure_bundle_on_error" in code
+    assert "with failure_bundle_on_error(" in code
     assert "login-failure.zip" in code
     assert _compiles(code)
+    for called in re.findall(r"\bac\.(\w+)\(", code):
+        assert hasattr(ac, called), called
 
 
 def test_generate_code_file_from_path(tmp_path):

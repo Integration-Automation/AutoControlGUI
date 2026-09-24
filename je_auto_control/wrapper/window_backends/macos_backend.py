@@ -237,10 +237,14 @@ class MacOSWindowBackend(WindowManageBackend):
         window = self._ax_window(window_id)
         if window is None:
             return False
+        # The AXValue type constants come from ApplicationServices, not
+        # Quartz: pyobjc builds ApplicationServices on top of HIServices,
+        # which declares them, and Quartz has no such parent. Spelling them
+        # `Quartz.` raised AttributeError on the one platform this runs on.
         position = ax.AXValueCreate(
-            Quartz.kAXValueCGPointType, Quartz.CGPoint(float(x), float(y)))
+            ax.kAXValueCGPointType, Quartz.CGPoint(float(x), float(y)))
         size = ax.AXValueCreate(
-            Quartz.kAXValueCGSizeType,
+            ax.kAXValueCGSizeType,
             Quartz.CGSize(float(width), float(height)))
         moved = ax.AXUIElementSetAttributeValue(window, "AXPosition", position)
         resized = ax.AXUIElementSetAttributeValue(window, "AXSize", size)
@@ -279,11 +283,10 @@ def _best_match(candidates: list, wanted_origin: Tuple[int, int],
 def _point(value: Any) -> Tuple[int, int]:
     """Read an ``AXValue`` point as ``(x, y)``, or ``(-1, -1)``."""
     import ApplicationServices as ax
-    import Quartz
 
     if value is None:
         return (-1, -1)
-    ok, point = ax.AXValueGetValue(value, Quartz.kAXValueCGPointType, None)
+    ok, point = ax.AXValueGetValue(value, ax.kAXValueCGPointType, None)
     if not ok or point is None:
         return (-1, -1)
     return (int(point.x), int(point.y))

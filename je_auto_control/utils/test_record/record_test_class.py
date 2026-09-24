@@ -61,6 +61,10 @@ def record_action_to_list(function_name: str, local_param,
             "function_name": function_name,
             "local_param": local_param,
             "time": datetime.datetime.now().isoformat(),  # 使用 ISO 格式更標準
-            "program_exception": repr(program_exception),
+            # Callers already pass repr(error); a second repr() showed it in
+            # every report as '"ValueError(\'boom\')"'. repr(None) stays "None",
+            # which is how the reports tell a success from a failure.
+            "program_exception": (program_exception if isinstance(program_exception, str)
+                                  else repr(program_exception)),
         }
     )

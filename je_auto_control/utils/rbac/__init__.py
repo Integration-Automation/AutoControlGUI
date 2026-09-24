@@ -1,4 +1,4 @@
-"""Phase 7.5: role-based access control + per-user audit attribution.
+"""Role-based access control: users, roles and token authentication.
 
 The REST API and MCP server today accept a single shared bearer token —
 fine for solo use but useless for a small team where one person should
@@ -11,9 +11,10 @@ mouse. This module adds:
     a coarse-grained capability check (``can(role, capability)``).
   * Token authentication: ``authenticate(token)`` constant-time
     compares against every user's hashed token.
-  * Audit attribution: the existing :mod:`audit_log` module gains a
-    ``user_id`` field so every recorded action ties back to the
-    operator who triggered it.
+
+It is a building block only: the REST API and the MCP server do not consult
+it yet, and the audit log has no ``user_id`` field -- both still use their
+single shared token.
 
 The store is intentionally tiny — no LDAP, no OAuth, no row-level
 permissions. Operators who need more should stand up a proper IdP in

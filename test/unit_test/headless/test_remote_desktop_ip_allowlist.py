@@ -55,7 +55,14 @@ def test_compile_allowlist_drops_garbage_entries():
 
 def test_ip_in_allowlist_with_no_list_accepts_all():
     assert _ip_in_allowlist(None, _OUT_IP) is True
-    assert _ip_in_allowlist([], _OUT_IP) is True
+
+
+def test_an_allowlist_of_only_invalid_entries_admits_nobody():
+    # A compiled empty list means every entry named was invalid; treating it
+    # as "no filtering" let a typo open the host to everyone.
+    compiled = _compile_ip_allowlist(["192.168.1.300", "10.0.0.1/33"])
+    assert compiled == []
+    assert _ip_in_allowlist(compiled, _OUT_IP) is False
 
 
 def test_ip_in_allowlist_exact_match():

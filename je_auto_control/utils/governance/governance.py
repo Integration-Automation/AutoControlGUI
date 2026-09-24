@@ -9,49 +9,61 @@ can run as separate processes (CI dispatcher and a human approver).
 
 Pure standard library; imports no ``PySide6``. Tokens use :mod:`secrets`.
 """
+import functools
 import secrets
 import time
+import unicodedata
 from typing import Dict, List, Optional
 
-from je_auto_control.utils.json_store import read_json_dict, write_json_dict
+from je_auto_control.utils.json_store import SharedJsonDict
 
 STATUS_PENDING = "pending"
 STATUS_APPROVED = "approved"
 STATUS_REJECTED = "rejected"
 
 
+
+def _principal(user: object) -> str:
+    """Compare user ids as one person: "Alice" approving "alice" is self-approval."""
+    return unicodedata.normalize("NFKC", str(user or "")).strip().casefold()
+
 class ApprovalGate:
-    """A maker-checker approval registry backed by an optional JSON file."""
+    """A maker-checker approval registry backed by an optional JSON file.
+
+    With a file, every decision re-reads it under a lock, so a request can be
+    decided once even when the maker and several checkers are separate
+    processes.
+    """
 
     def __init__(self, db_path: Optional[str] = None) -> None:
         """Open the gate; ``db_path`` persists state across processes."""
-        self._path = db_path
-        self._items: Dict[str, Dict[str, object]] = read_json_dict(db_path)
-
-    def _flush(self) -> None:
-        if self._path is not None:
-            write_json_dict(self._path, self._items)
+        self._state = SharedJsonDict(db_path)
 
     def request(self, action: str, requester: str = "") -> str:
         """File an approval request for ``action``; return its token."""
         token = secrets.token_hex(8)
-        self._items[token] = {
+        record = {
             "token": token, "action": action, "requester": requester,
             "status": STATUS_PENDING, "approver": "", "created": time.time(),
         }
-        self._flush()
+        self._state.update(lambda items: items.__setitem__(token, record))
         return token
 
     def _decide(self, token: str, approver: str, status: str) -> bool:
-        record = self._items.get(token)
-        if record is None or record["status"] != STATUS_PENDING:
-            return False
-        if approver and approver == record["requester"]:
-            return False  # segregation of duties: checker must differ from maker
-        record["status"] = status
-        record["approver"] = approver
-        self._flush()
-        return True
+        checker = _principal(approver)
+
+        def decide(items: Dict[str, Dict[str, object]]) -> bool:
+            record = items.get(token)
+            if record is None or record["status"] != STATUS_PENDING:
+                return False
+            # Segregation of duties: a named checker who is not the maker. An
+            # empty approver skipped the check (anonymous approved anonymous).
+            if not checker or checker == _principal(record["requester"]):
+                return False
+            record["status"] = status
+            record["approver"] = approver
+            return True
+        return self._state.update(decide)
 
     def approve(self, token: str, approver: str) -> bool:
         """Approve ``token`` as ``approver`` (must differ from the requester)."""
@@ -63,20 +75,36 @@ class ApprovalGate:
 
     def status(self, token: str) -> Optional[str]:
         """Return the status string for ``token``, or ``None`` if unknown."""
-        record = self._items.get(token)
+        record = self._state.read().get(token)
         return str(record["status"]) if record else None
 
     def is_approved(self, token: str) -> bool:
         """Return ``True`` only when ``token`` has been approved."""
-        record = self._items.get(token)
+        record = self._state.read().get(token)
         return record is not None and record["status"] == STATUS_APPROVED
 
     def get(self, token: str) -> Optional[Dict[str, object]]:
         """Return a copy of the request record for ``token``, or ``None``."""
-        record = self._items.get(token)
+        record = self._state.read().get(token)
         return dict(record) if record else None
 
     def pending(self) -> List[Dict[str, object]]:
         """Return copies of all requests still awaiting a decision."""
-        return [dict(r) for r in self._items.values()
+        return [dict(r) for r in self._state.read().values()
                 if r["status"] == STATUS_PENDING]
+
+
+@functools.lru_cache(maxsize=1)
+def _process_gate() -> ApprovalGate:
+    return ApprovalGate(None)
+
+
+def approval_gate(db: Optional[str] = None) -> ApprovalGate:
+    """The gate stored in ``db`` or, without ``db``, the one this process shares.
+
+    The approval commands built a fresh in-memory gate per call, so without a
+    ``db`` a token from ``AC_approval_request`` was unknown to
+    ``AC_approval_approve`` / ``AC_approval_status``.
+    """
+    return ApprovalGate(db) if db else _process_gate()
+

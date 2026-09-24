@@ -40,9 +40,13 @@ Discovering & loading
     discover_plugins()      # {command_name: handler} from all plugins
     load_plugins()          # discover + register into the executor
 
-Broken plugins are skipped (logged), not fatal. Exposed as
+Broken plugins are skipped (logged), not fatal -- so is an entry that is not a
+function, and one that would replace a built-in command unless
+``load_plugins(allow_override=True)``. Exposed as
 ``AC_list_plugins`` (discover names) / ``AC_load_plugins`` (discover +
-register) and ``ac_list_plugins`` / ``ac_load_plugins``. The entry-point
+register) and ``ac_list_plugins`` / ``ac_load_plugins``. Only the
+``je_auto_control.commands`` group is loaded; any other ``group`` is refused,
+since discovery calls every entry point it finds. The entry-point
 source is injectable, so discovery is unit-testable without installing a
 real plugin. This is the declarative, namespaced complement to the existing
 runtime path loader.

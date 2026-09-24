@@ -45,7 +45,9 @@ Dispatcher / performer
         item = q.get_next()
 
 ``get_next`` atomically claims the oldest ``new`` item (marking it
-``in_progress``) so multiple performers don't double-process.
+``in_progress``) so multiple performers don't double-process. ``complete`` and
+``fail`` only settle an ``in_progress`` item; an unknown id or an item in any
+other state raises, so finished work is never requeued.
 
 
 Failure semantics
@@ -67,9 +69,14 @@ Executor commands
 =================
 
 * ``AC_queue_add`` — enqueue ``data`` (dedup by ``reference``).
-* ``AC_queue_next`` — claim the next item (or null when drained).
-* ``AC_queue_complete`` — mark an item successful.
-* ``AC_queue_fail`` — fail with ``kind`` (``application`` / ``business``).
+* ``AC_queue_next`` — claim the next item (or null when drained). The item
+  carries a ``claim`` number; with ``stale_after_s`` an abandoned item is
+  reclaimed, which counts as a retry, and one abandoned ``max_retries`` times is
+  marked ``failed``.
+* ``AC_queue_complete`` — mark an item successful. Pass the item's ``claim`` so
+  a performer whose item was reclaimed meanwhile is refused.
+* ``AC_queue_fail`` — fail with ``kind`` (``application`` / ``business``); takes
+  ``claim`` the same way.
 * ``AC_queue_stats`` — per-status counts.
 
 The same ``db`` file + ``name`` identify a queue, so a dispatcher script

@@ -40,12 +40,15 @@ from je_auto_control.gui.remote_desktop.annotation_overlay import (
     HostAnnotationOverlay,
 )
 from je_auto_control.gui.remote_desktop.tray_icon import install_host_tray
+from je_auto_control.gui.remote_desktop.trusted_group import (
+    build_trusted_group,
+)
 from je_auto_control.gui.remote_desktop.viewer_screen_window import (
     ViewerScreenWindow,
 )
 from je_auto_control.gui.remote_desktop.webrtc_dialogs import (
     AddressBookList, AuditLogDialog, KnownHostsDialog, LanBrowseDialog,
-    PendingViewerDialog, RemoteFilesTable, TrustedViewersList,
+    PendingViewerDialog, RemoteFilesTable,
 )
 from je_auto_control.gui.remote_desktop.webrtc_workers import (
     HostPublishLoopWorker, ViewerAnswerPushWorker, ViewerSignalingWorker,
@@ -229,7 +232,7 @@ class _WebRTCHostPanel(TranslatableMixin, QWidget):
         layout.addWidget(self._build_config_group())
         layout.addWidget(self._build_manual_group())
         layout.addWidget(build_advanced_group(self, include_hw_codec=True))
-        layout.addWidget(self._build_trusted_group())
+        layout.addWidget(build_trusted_group(self))
         self._status_label = QLabel(_t("rd_webrtc_status_idle"))
         layout.addWidget(self._status_label)
         sessions_row = QHBoxLayout()
@@ -333,29 +336,6 @@ class _WebRTCHostPanel(TranslatableMixin, QWidget):
             self._status_label.setText(
                 _t("rd_webrtc_hw_codec_failed").format(codec=codec),
             )
-
-    def _build_trusted_group(self) -> QGroupBox:
-        group = self._tr(QGroupBox(), "rd_webrtc_trusted_group")
-        layout = QVBoxLayout()
-        self._trusted_list = TrustedViewersList()
-        self._trusted_list.removed.connect(self._on_remove_trust)
-        layout.addWidget(self._trusted_list)
-        button_row = QHBoxLayout()
-        remove_btn = self._tr(QPushButton(), "rd_webrtc_remove_trusted")
-        remove_btn.clicked.connect(self._on_remove_trust_button)
-        button_row.addWidget(remove_btn)
-        clear_btn = self._tr(QPushButton(), "rd_webrtc_clear_trusted")
-        clear_btn.clicked.connect(self._on_clear_trust)
-        button_row.addWidget(clear_btn)
-        import_btn = self._tr(QPushButton(), "rd_webrtc_trust_import")
-        import_btn.clicked.connect(self._on_import_trust)
-        button_row.addWidget(import_btn)
-        export_btn = self._tr(QPushButton(), "rd_webrtc_trust_export")
-        export_btn.clicked.connect(self._on_export_trust)
-        button_row.addWidget(export_btn)
-        layout.addLayout(button_row)
-        group.setLayout(layout)
-        return group
 
     def _on_export_trust(self) -> None:
         import json as _json
@@ -886,14 +866,18 @@ class _WebRTCHostPanel(TranslatableMixin, QWidget):
     def _sync_session_pollers(self) -> None:
         """Spawn StatsPoller for new sessions; stop pollers for gone ones."""
         if self._multi_host is None:
-            for poller in list(self._session_pollers.values()):  # NOSONAR python:S7504  # snapshot before clear() so a slow stop() doesn't race with the clear that follows
+            # Snapshot before clear() so a slow stop() doesn't race with the
+            # clear that follows.
+            for poller in list(self._session_pollers.values()):  # NOSONAR python:S7504
                 poller.stop()
             self._session_pollers.clear()
             self._session_cache.reset()
             return
         active_sids = {s["session_id"] for s in self._multi_host.list_sessions()}
         # Stop pollers whose session is gone
-        for sid in list(self._session_pollers.keys()):  # NOSONAR python:S7504  # the loop deletes from self._session_pollers — list() is required to avoid RuntimeError
+        # The loop deletes from self._session_pollers, so list() is required
+        # to avoid a RuntimeError.
+        for sid in list(self._session_pollers.keys()):  # NOSONAR python:S7504
             if sid not in active_sids:
                 self._session_pollers[sid].stop()
                 del self._session_pollers[sid]
@@ -1244,7 +1228,8 @@ class _WebRTCHostPanel(TranslatableMixin, QWidget):
         if self._annotation_overlay is not None:
             self._annotation_overlay.clear()
             self._annotation_overlay.hide()
-        for poller in list(self._session_pollers.values()):  # NOSONAR python:S7504  # snapshot before clear() — same reasoning as in _refresh_session_pollers
+        # Snapshot before clear(), as in _refresh_session_pollers.
+        for poller in list(self._session_pollers.values()):  # NOSONAR python:S7504
             poller.stop()
         self._session_pollers.clear()
         self._session_cache.reset()

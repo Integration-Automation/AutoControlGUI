@@ -53,6 +53,15 @@ class Frame:
     pixels: bytes
 
 
+def _pause(deadline: float, poll_interval_s: float) -> None:
+    """Sleep one poll interval, but not past ``deadline``.
+
+    Every wait slept its whole interval, so a 0.1 s timeout polled at
+    1.5 s returned after 1.5 s.
+    """
+    time.sleep(max(0.0, min(float(poll_interval_s), deadline - time.monotonic())))
+
+
 def _default_sampler(region: Optional[Sequence[int]]) -> Frame:
     """Snapshot once through the platform's grabber. Fails closed on missing dep."""
     from je_auto_control.utils.cv2_utils.screen_grabber import image_grabber
@@ -82,11 +91,11 @@ def wait_until_screen_stable(*,
     before we declare victory; ``poll_interval_s`` is the gap between
     samples; ``timeout_s`` is the absolute cap.
     """
-    if timeout_s <= 0:
+    if not timeout_s > 0:
         raise ValueError(_TIMEOUT_POSITIVE)
-    if poll_interval_s <= 0:
+    if not poll_interval_s > 0:
         raise ValueError(_POLL_POSITIVE)
-    if stable_for_s < 0:
+    if not stable_for_s >= 0:
         raise ValueError("stable_for_s must be >= 0")
     grab = sampler or _default_sampler
     started = time.monotonic()
@@ -95,7 +104,7 @@ def wait_until_screen_stable(*,
     samples = 1
     stable_since: Optional[float] = None
     while time.monotonic() < deadline:
-        time.sleep(float(poll_interval_s))
+        _pause(deadline, poll_interval_s)
         current = grab(region)
         samples += 1
         diff = _frame_diff(previous, current)
@@ -118,14 +127,14 @@ def wait_until_pixel_changes(*, x: int, y: int,
                               sampler: Optional[ScreenSampler] = None,
                               ) -> WaitOutcome:
     """Return when the pixel at ``(x, y)`` changes beyond ``rgb_tolerance``."""
-    if timeout_s <= 0:
+    if not timeout_s > 0:
         raise ValueError(_TIMEOUT_POSITIVE)
     # 與其他 wait_* 一致:0 會讓迴圈空轉燒滿一顆核心,負數則由
     # time.sleep 拋出無關的錯誤訊息。
     # Matches every sibling wait_*: 0 turns the loop into a busy-spin that
     # pegs a core (measured ~215k full-screen grabs in 0.5s), and a negative
     # surfaces as time.sleep's own unrelated error instead of ours.
-    if poll_interval_s <= 0:
+    if not poll_interval_s > 0:
         raise ValueError(_POLL_POSITIVE)
     grab = sampler or _default_sampler
     started = time.monotonic()
@@ -133,7 +142,7 @@ def wait_until_pixel_changes(*, x: int, y: int,
     initial = _read_pixel(grab(None), int(x), int(y))
     samples = 1
     while time.monotonic() < deadline:
-        time.sleep(float(poll_interval_s))
+        _pause(deadline, poll_interval_s)
         current = _read_pixel(grab(None), int(x), int(y))
         samples += 1
         if _rgb_distance(initial, current) > int(rgb_tolerance):
@@ -180,9 +189,9 @@ def wait_until_clipboard_changes(*,
     *contains* it when ``contains`` is True. ``reader`` is injectable so
     tests need no real clipboard.
     """
-    if timeout_s <= 0:
+    if not timeout_s > 0:
         raise ValueError(_TIMEOUT_POSITIVE)
-    if poll_interval_s <= 0:
+    if not poll_interval_s > 0:
         raise ValueError(_POLL_POSITIVE)
     read = reader or _default_clipboard_reader
     started = time.monotonic()
@@ -194,7 +203,7 @@ def wait_until_clipboard_changes(*,
         samples += 1
         if _clipboard_satisfied(current, initial, target, contains):
             return _finish(True, "clipboard changed", started, samples)
-        time.sleep(float(poll_interval_s))
+        _pause(deadline, poll_interval_s)
     return _finish(False, "timeout while waiting for clipboard change",
                    started, samples)
 
@@ -225,9 +234,9 @@ def wait_until_window_closed(title: str, *, case_sensitive: bool = False,
     to *appear*). ``finder(title, case_sensitive) -> bool`` reports whether
     a matching window still exists; it is injectable for tests.
     """
-    if timeout_s <= 0:
+    if not timeout_s > 0:
         raise ValueError(_TIMEOUT_POSITIVE)
-    if poll_interval_s <= 0:
+    if not poll_interval_s > 0:
         raise ValueError(_POLL_POSITIVE)
     exists = finder or _default_window_finder
     started = time.monotonic()
@@ -237,7 +246,7 @@ def wait_until_window_closed(title: str, *, case_sensitive: bool = False,
         samples += 1
         if not exists(title, case_sensitive):
             return _finish(True, "window closed", started, samples)
-        time.sleep(float(poll_interval_s))
+        _pause(deadline, poll_interval_s)
     return _finish(False, "timeout while waiting for window to close",
                    started, samples)
 
@@ -270,9 +279,9 @@ def wait_until_window_title(pattern: str, *, present: bool = True,
     browser tab to navigate to ``r".*— Checkout$"``. ``title_lister() -> [titles]``
     is injectable for tests.
     """
-    if timeout_s <= 0:
+    if not timeout_s > 0:
         raise ValueError(_TIMEOUT_POSITIVE)
-    if poll_interval_s <= 0:
+    if not poll_interval_s > 0:
         raise ValueError(_POLL_POSITIVE)
     titles_of = title_lister or _default_title_lister
     compiled = re.compile(pattern) if regex else None
@@ -283,7 +292,7 @@ def wait_until_window_title(pattern: str, *, present: bool = True,
         samples += 1
         if _title_matches(titles_of(), pattern, compiled) == bool(present):
             return _finish(True, "window title condition met", started, samples)
-        time.sleep(float(poll_interval_s))
+        _pause(deadline, poll_interval_s)
     return _finish(False, "timeout while waiting for window title",
                    started, samples)
 
@@ -309,11 +318,11 @@ def wait_until_file(path: str, *,
     ``stat_reader(path) -> size or None`` is injectable so tests need no real
     growing file; the default reports the on-disk size (``None`` when absent).
     """
-    if timeout_s <= 0:
+    if not timeout_s > 0:
         raise ValueError(_TIMEOUT_POSITIVE)
-    if poll_interval_s <= 0:
+    if not poll_interval_s > 0:
         raise ValueError(_POLL_POSITIVE)
-    if stable_for_s < 0:
+    if not stable_for_s >= 0:
         raise ValueError("stable_for_s must be >= 0")
     read = stat_reader or _default_file_size
     tracker = _StableSize(float(stable_for_s), int(min_size))
@@ -324,7 +333,7 @@ def wait_until_file(path: str, *,
         samples += 1
         if tracker.ready(read(str(path))):
             return _finish(True, "file ready", started, samples)
-        time.sleep(float(poll_interval_s))
+        _pause(deadline, poll_interval_s)
     return _finish(False, "timeout while waiting for file", started, samples)
 
 
@@ -350,10 +359,13 @@ class _StableSize:
 def _default_file_size(path: str) -> Optional[int]:
     """Return the on-disk byte size of ``path``, or None if it is absent."""
     import os
+    import stat
     try:
-        return os.path.getsize(path)
+        info = os.stat(path)
     except OSError:
         return None
+    # A directory has a size too (4096 on POSIX): it is not a file that is ready.
+    return info.st_size if stat.S_ISREG(info.st_mode) else None
 
 
 PortConnector = Callable[[str, int, float], bool]
@@ -371,9 +383,9 @@ def wait_until_port(host: str, port: int, *,
     accepts connections. ``connector(host, port, timeout) -> bool`` is
     injectable so tests need no real listener.
     """
-    if timeout_s <= 0:
+    if not timeout_s > 0:
         raise ValueError(_TIMEOUT_POSITIVE)
-    if poll_interval_s <= 0:
+    if not poll_interval_s > 0:
         raise ValueError(_POLL_POSITIVE)
     if not 0 < int(port) <= 65535:
         raise ValueError("port must be in 1..65535")
@@ -385,7 +397,7 @@ def wait_until_port(host: str, port: int, *,
         samples += 1
         if probe(str(host), int(port), float(connect_timeout_s)):
             return _finish(True, f"port {host}:{port} open", started, samples)
-        time.sleep(float(poll_interval_s))
+        _pause(deadline, poll_interval_s)
     return _finish(False, f"timeout waiting for {host}:{port}",
                    started, samples)
 
@@ -415,9 +427,9 @@ def wait_until_process(name: str, *, present: bool = True,
     ``lister(name) -> [matching names]`` is injectable so tests need no
     real processes; the default uses psutil.
     """
-    if timeout_s <= 0:
+    if not timeout_s > 0:
         raise ValueError(_TIMEOUT_POSITIVE)
-    if poll_interval_s <= 0:
+    if not poll_interval_s > 0:
         raise ValueError(_POLL_POSITIVE)
     find = lister or _default_process_lister
     started = time.monotonic()
@@ -428,7 +440,7 @@ def wait_until_process(name: str, *, present: bool = True,
         samples += 1
         if bool(find(name)) == bool(present):
             return _finish(True, f"process {name!r} {verb}", started, samples)
-        time.sleep(float(poll_interval_s))
+        _pause(deadline, poll_interval_s)
     return _finish(False, f"timeout waiting for process {name!r} to {verb}",
                    started, samples)
 
@@ -443,11 +455,11 @@ def wait_until_gone(present: Callable[[], bool], *,
     "is this image still on screen"); it is polled every ``poll_interval_s`` up to
     ``timeout_s``. Injecting ``present`` keeps the loop headless-testable.
     """
-    if timeout_s <= 0:
+    if not timeout_s > 0:
         raise ValueError(_TIMEOUT_POSITIVE)
-    if poll_interval_s <= 0:
+    if not poll_interval_s > 0:
         raise ValueError(_POLL_POSITIVE)
-    if gone_for_s < 0:
+    if not gone_for_s >= 0:
         raise ValueError("gone_for_s must be >= 0")
     started = time.monotonic()
     deadline = started + float(timeout_s)
@@ -462,7 +474,7 @@ def wait_until_gone(present: Callable[[], bool], *,
                 gone_since = time.monotonic()
             if time.monotonic() - gone_since >= float(gone_for_s):
                 return _finish(True, "target gone", started, samples)
-        time.sleep(float(poll_interval_s))
+        _pause(deadline, poll_interval_s)
     return _finish(False, "timeout while waiting for target to vanish",
                    started, samples)
 
@@ -532,9 +544,9 @@ def wait_until_color(*, region: Optional[Sequence[int]] = None,
     ``present=False`` it succeeds once the fraction drops below it (the colour
     disappears). ``sampler`` is injectable for headless tests.
     """
-    if timeout_s <= 0:
+    if not timeout_s > 0:
         raise ValueError(_TIMEOUT_POSITIVE)
-    if poll_interval_s <= 0:
+    if not poll_interval_s > 0:
         raise ValueError(_POLL_POSITIVE)
     grab = sampler or _default_sampler
     started = time.monotonic()
@@ -546,7 +558,7 @@ def wait_until_color(*, region: Optional[Sequence[int]] = None,
         reached = fraction >= float(min_fraction)
         if reached == bool(present):
             return _finish(True, "colour condition met", started, samples)
-        time.sleep(float(poll_interval_s))
+        _pause(deadline, poll_interval_s)
     return _finish(False, "timeout while waiting for colour", started, samples)
 
 

@@ -36,7 +36,7 @@ def test_tick_survives_history_db_error(monkeypatch):
 
     monkeypatch.setattr(sch, "default_history_store", BoomHistory())
     monkeypatch.setattr(sch, "capture_error_snapshot", lambda run_id: None)
-    monkeypatch.setattr(sch, "read_action_json", lambda path: [])
+    monkeypatch.setattr(sch, "read_executable_action_json", lambda path: [])
 
     scheduler = sch.Scheduler(executor=lambda actions: None, tick_seconds=0.05)
     job = scheduler.add_job("s.json", interval_seconds=0.1)
@@ -61,7 +61,7 @@ def test_tick_survives_snapshot_error(monkeypatch):
         raise AutoControlScreenException("no display")
 
     monkeypatch.setattr(sch, "capture_error_snapshot", boom_snapshot)
-    monkeypatch.setattr(sch, "read_action_json", lambda path: [])
+    monkeypatch.setattr(sch, "read_executable_action_json", lambda path: [])
 
     def failing_exec(actions):
         raise AutoControlActionException("bad action")
@@ -83,7 +83,7 @@ def test_scheduler_thread_stays_alive_on_db_error(monkeypatch):
 
     monkeypatch.setattr(sch, "default_history_store", BoomHistory())
     monkeypatch.setattr(sch, "capture_error_snapshot", lambda run_id: None)
-    monkeypatch.setattr(sch, "read_action_json", lambda path: [])
+    monkeypatch.setattr(sch, "read_executable_action_json", lambda path: [])
 
     scheduler = sch.Scheduler(executor=lambda actions: None, tick_seconds=0.05)
     scheduler.add_job("s.json", interval_seconds=0.05)

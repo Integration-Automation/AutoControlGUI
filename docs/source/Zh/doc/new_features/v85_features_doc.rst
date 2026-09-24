@@ -24,7 +24,7 @@ URI-Scheme 值參照
     })
 
 ``resolve_ref`` 解析單一參照:``env://`` 讀取環境變數(來自可注入的 mapping,否則回退 ``os.environ``),
-``file://`` 讀取檔案(可選的 ``base_dir`` realpath 防穿越保護),``secret://`` 委派給可注入的解析器或
+``file://`` 讀取檔案(相對路徑以可選的 ``base_dir`` 為準，解析後落在它外面的路徑一律拒絕),``secret://`` 委派給可注入的解析器或
 governance 憑證 broker。``resolve_refs_in`` 走訪巢狀 dict/list 並就地解析每個參照,非參照值保持不變。
 ``is_ref`` 測試一個值,``RefResolver`` 把可注入後端打包以便重複使用。無法解析或未知 scheme 的參照會拋出
 ``SecretRefError``。

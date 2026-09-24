@@ -17,7 +17,8 @@ Supported keywords
 ------------------
 
 * ``type`` — including ``integer`` matching integral floats (``5.0``) but never
-  booleans; ``enum`` / ``const`` (keeping ``True`` and ``1`` distinct).
+  booleans; ``enum`` / ``const`` (keeping ``True`` and ``1`` distinct at any
+  depth).
 * numbers — ``minimum`` / ``maximum`` / ``exclusiveMinimum`` /
   ``exclusiveMaximum`` / ``multipleOf``.
 * strings — ``minLength`` / ``maxLength`` / ``pattern``.
@@ -26,7 +27,10 @@ Supported keywords
 * objects — ``required`` / ``minProperties`` / ``maxProperties`` /
   ``properties`` / ``patternProperties`` / ``additionalProperties``.
 * combinators — ``allOf`` / ``anyOf`` / ``oneOf`` / ``not``; boolean schemas
-  (``True`` / ``False``); local ``$ref`` (``#/$defs/...`` JSON Pointer).
+  (``True`` / ``False``); local ``$ref`` (``#/$defs/...`` JSON Pointer), with
+  the keywords beside it applied too. A ``$ref`` cycle is reported as a
+  ``$ref`` error; an invalid regular expression raises
+  ``AutoControlJsonException``.
 
 Remote ``$ref`` and ``format`` assertions are intentionally out of scope.
 

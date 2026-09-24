@@ -56,9 +56,11 @@ class LoopbackTransport:
     def start(self) -> None:
         if self._thread is not None:
             return
-        self._stop.clear()
+        # A fresh event per run, never clear() on the old one: a thread that
+        # outlived stop()'s join would see it cleared and keep running.
+        self._stop = threading.Event()
         thread = threading.Thread(
-            target=self._pump, name="usb-loopback", daemon=True,
+            target=self._pump, args=(self._stop,), name="usb-loopback", daemon=True,
         )
         self._thread = thread
         thread.start()
@@ -71,8 +73,8 @@ class LoopbackTransport:
         if thread is not None:
             thread.join(timeout=_JOIN_TIMEOUT_S)
 
-    def _pump(self) -> None:
-        while not self._stop.is_set():
+    def _pump(self, stop: threading.Event) -> None:
+        while not stop.is_set():
             try:
                 frame = self._queue.get(timeout=_PUMP_POLL_S)
             except queue.Empty:

@@ -6,7 +6,7 @@ masked so the hotkey still fires with those toggles active.
 """
 from typing import Callable, Dict, List, Optional, Tuple
 
-from je_auto_control.utils.hotkey.backends.base import HotkeyBackend
+from je_auto_control.utils.hotkey.backends.base import FailedCombos, HotkeyBackend
 from je_auto_control.utils.hotkey.hotkey_daemon import (
     BackendContext, HotkeyBinding, split_combo,
 )
@@ -66,6 +66,7 @@ class LinuxHotkeyBackend(HotkeyBackend):
     def __init__(self) -> None:
         # binding_id -> (combo, modifier_mask, keycode)
         self._registered: Dict[str, Tuple[str, int, int]] = {}
+        self._failed = FailedCombos()
 
     def run_forever(self, context: BackendContext) -> None:
         from Xlib import X
@@ -73,7 +74,7 @@ class LinuxHotkeyBackend(HotkeyBackend):
 
         try:
             disp = xdisplay.Display()
-        except Exception as error:
+        except Exception as error:  # noqa: BLE001  # reason: Xlib display errors share no base with OSError
             autocontrol_logger.error("open X display failed: %r", error)
             return
 
@@ -91,6 +92,7 @@ class LinuxHotkeyBackend(HotkeyBackend):
     def _sync(self, disp, root, bindings: List[HotkeyBinding]) -> None:
         current_ids = {b.binding_id for b in bindings}
         self._ungrab_stale(root, current_ids)
+        self._failed.forget_missing(current_ids)
         for binding in bindings:
             self._sync_one(root, binding)
         disp.sync()
@@ -105,19 +107,34 @@ class LinuxHotkeyBackend(HotkeyBackend):
         prior = self._registered.get(binding.binding_id)
         if prior is not None and prior[0] == binding.combo:
             return
+        if self._failed.blocked(binding):
+            return
         if prior is not None:
+            # Release the old key before forgetting it. Dropping it from
+            # `_registered` alone leaves the grab held on the server for the
+            # life of the process — the *previous* combo keeps being consumed
+            # from every application and fires nothing, and `_ungrab_all`
+            # cannot release what it no longer knows about. The Windows
+            # backend has always unregistered here.
+            _combo, prior_mask, prior_keycode = prior
+            self._ungrab_masked(root, prior_keycode, prior_mask)
             self._registered.pop(binding.binding_id, None)
         try:
             mask, keycode = _combo_to_x11(binding.combo)
         except ValueError as error:
             autocontrol_logger.error(
-                "hotkey parse failed for %s: %r", binding.combo, error,
+                "hotkey parse failed for %s: %r; not retried until the combo changes",
+                binding.combo, error,
             )
+            self._failed.record(binding)
             return
         if self._grab_masked(root, binding, mask, keycode):
             self._registered[binding.binding_id] = (
                 binding.combo, mask, keycode,
             )
+            self._failed.clear(binding.binding_id)
+        else:
+            self._failed.record(binding)
 
     @staticmethod
     def _ungrab_masked(root, keycode: int, mask: int) -> None:

@@ -22,7 +22,7 @@ from JSON files / CLI / servers, and a **GUI tab**. Nothing is GUI-only.
 
 - **One API, seven platforms.** `wrapper/platform_wrapper.py` picks the backend at import
   time; your script does not change between Windows, macOS, X11, and Wayland.
-- **Scriptable without Python.** 773 `AC_*` commands cover the whole feature set, so a
+- **Scriptable without Python.** 774 `AC_*` commands cover the whole feature set, so a
   JSON file can do anything the library can — including loops, branches, try/catch,
   macros, and variables.
 - **Headless by default.** `import je_auto_control` never loads Qt. The GUI is an
@@ -75,6 +75,12 @@ sudo apt-get install cmake libssl-dev
 OCR, VLM, and LLM backends (`pytesseract`, `easyocr`, `paddleocr`, `anthropic`,
 `openai`) are loaded on demand — install whichever you actually use.
 
+**Log file:** the library logs to `~/.je_auto_control/logs/AutoControlGUI.log`,
+created on the first record (importing alone writes nothing) and shared by every
+process on the account (appended to, one process id per line, moved to `.1`
+past 10 MB). Set `JE_AUTOCONTROL_LOG_FILE` to write elsewhere, or to
+`os.devnull` to turn the file off.
+
 ---
 
 ## 60-second quick start
@@ -120,11 +126,12 @@ je_auto_control run flow.json --dry-run     # list the steps without touching th
 
 ```bash
 pip install je_auto_control[gui]
-python -m je_auto_control          # or: je_auto_control.start_autocontrol_gui()
+python -c "import je_auto_control; je_auto_control.start_autocontrol_gui()"
 ```
 
 Record a flow, edit it in the visual Script Builder, and save it as the same JSON
-format the CLI runs.
+format the CLI runs. (`python -m je_auto_control` is the legacy action-file runner — `-e`, `-d`,
+`-c`, `--execute_str` — not the GUI.)
 
 ---
 
@@ -147,7 +154,7 @@ desktop app; tab commands live in the window's **Actions** menu.
 | Natural-language planner | `plan_actions`, `run_from_description` | `AC_llm_plan` | LLM Planner |
 | Computer-use agent | `AgentLoop`, `run_agent` | `AC_run_agent` | Computer Use |
 | Record & replay | `record`, `stop_record` | `AC_record`, `AC_stop_record` | Record |
-| JSON scripting | `execute_action`, `execute_files` | all 773 commands | Script, Script Builder |
+| JSON scripting | `execute_action`, `execute_files` | all 774 commands | Script, Script Builder |
 | Variables & flow control | `execute_action_with_vars` | `AC_set_var`, `AC_loop`, `AC_for_each`, `AC_try`, `AC_retry` | Variables |
 | Data-driven runs | — | `AC_for_each_row` (CSV / JSON / SQLite / Excel) | Data Sources |
 | Assertions | `assert_text`, `assert_image` | `AC_assert_text` + 20 more | Assertions |
@@ -155,7 +162,7 @@ desktop app; tab commands live in the window's **Actions** menu.
 | Scheduler (interval + cron) | `default_scheduler` | — | Scheduler |
 | Global hotkeys | `default_hotkey_daemon` | — | Hotkeys |
 | Event triggers | `default_trigger_engine` | `AC_email_trigger_add` | Triggers, Webhooks, Email |
-| Window management *(Windows)* | `list_windows`, `focus_window` | `AC_focus_window`, `AC_snap_window` | Window Manager |
+| Window management *(Windows, macOS, X11)* | `list_windows`, `focus_window` | `AC_focus_window`, `AC_snap_window` | Window Manager |
 | Clipboard (text + image) | `get_clipboard`, `set_clipboard`, `get_clipboard_image`, `set_clipboard_image` | `AC_clipboard_get`, `AC_clipboard_set`, `AC_clipboard_get_image`, `AC_clipboard_set_image` | — |
 | Remote desktop | `RemoteDesktopHost`, `RemoteDesktopViewer` | `AC_start_remote_host`, `AC_remote_connect` | Remote Desktop |
 | USB enumeration & passthrough | `list_usb_devices`, `enable_usb_passthrough` | `AC_usb_*` (16 commands) | USB Devices, USB Share |
@@ -189,8 +196,9 @@ je_auto_control version
 ```
 
 `--var name=value` is parsed as JSON when possible (`count=10` becomes an int),
-otherwise kept as a string. The legacy `python -m je_auto_control -e file.json`
-entry point still works.
+otherwise kept as a string. `run` exits 1 when any action failed (the run
+still goes on to the end), so a CI step fails with it. The legacy
+`python -m je_auto_control -e file.json` entry point still works.
 
 ---
 
@@ -198,7 +206,7 @@ entry point still works.
 
 | Surface | Start it with | Notes |
 |---|---|---|
-| **MCP server** | `je_auto_control_mcp` (stdio) or `AC_start_mcp_http_server` | 676 tools for Claude Desktop / Claude Code / custom tool loops. Bearer auth, TLS, audit log, rate limit, plugin hot-reload, CI fake backend. |
+| **MCP server** | `je_auto_control_mcp` (stdio) or `AC_start_mcp_http_server` | 677 tools for Claude Desktop / Claude Code / custom tool loops. Bearer auth, TLS, audit log, rate limit, plugin hot-reload, CI fake backend. |
 | **REST API** | `je_auto_control start-rest` | Bearer token, per-IP rate limit + lockout, SQLite audit hook, `/metrics`, `/openapi.json`, `/docs` Swagger UI, `/dashboard`. |
 | **TCP socket server** | `je_auto_control start-server` | Newline-framed JSON action lists. Binds `127.0.0.1` by default. |
 | **pytest plugin** | installed automatically | Fixtures plus a Gherkin step library for pytest-bdd / behave. |
@@ -329,8 +337,10 @@ export JE_AUTOCONTROL_WAYLAND_CAPTURE_COMMAND="mycapture --png {output}"
 
 Wayland forbids global input recording for unprivileged clients — set
 `JE_AUTOCONTROL_LINUX_DISPLAY_SERVER=x11` to record on an X11 session. Window
-management is currently Windows-only and raises a clear `NotImplementedError`
-elsewhere. Opt-in driver-level backends (`JE_AUTOCONTROL_WIN32_BACKEND=interception`,
+management works on Windows, macOS (pyobjc) and X11, including XWayland; on a pure
+Wayland session, whose protocol hides other clients' windows, `list_windows()` returns
+an empty list and every window action raises `AutoControlUnsupportedOperationException`
+saying why. Opt-in driver-level backends (`JE_AUTOCONTROL_WIN32_BACKEND=interception`,
 `JE_AUTOCONTROL_LINUX_BACKEND=uinput`, ViGEm virtual gamepad) exist for apps that
 ignore synthetic input, and fall back silently when the driver is absent.
 
@@ -345,7 +355,7 @@ ignore synthetic input, and fall back silently when the driver is absent.
 | [architecture_explore.md](architecture_explore.md) | Every module's responsibility, layer by layer. |
 | [docs/CAPABILITY_MATRIX.md](docs/CAPABILITY_MATRIX.md) | Capability × platform matrix. |
 | [docs/API_LIFECYCLE.md](docs/API_LIFECYCLE.md) | Stable-API and deprecation policy. |
-| [WHATS_NEW.md](WHATS_NEW.md) | Per-release notes. |
+| [docs/updates/](docs/updates/README.md) | Update log: release notes and finished work, one file per month (formerly `WHATS_NEW.md`). |
 | [CHANGELOG.md](CHANGELOG.md) | Compatibility changelog. |
 | [SECURITY.md](SECURITY.md) | Security policy and reporting. |
 

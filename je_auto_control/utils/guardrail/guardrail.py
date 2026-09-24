@@ -78,9 +78,17 @@ def redact_text(text: str, *, placeholder: str = "[REDACTED]") -> str:
     findings = scan_text(text)
     if not findings:
         return text or ""
+    # Overlapping matches are merged first: replacing each one by its offsets
+    # in the original text cut a later span in half and left part of it.
+    spans: List[List[int]] = []
+    for finding in findings:  # scan_text sorts by start
+        if spans and finding.start <= spans[-1][1]:
+            spans[-1][1] = max(spans[-1][1], finding.end)
+        else:
+            spans.append([finding.start, finding.end])
     result = text
-    for finding in sorted(findings, key=lambda f: f.start, reverse=True):
-        result = result[:finding.start] + placeholder + result[finding.end:]
+    for start, end in reversed(spans):
+        result = result[:start] + placeholder + result[end:]
     return result
 
 

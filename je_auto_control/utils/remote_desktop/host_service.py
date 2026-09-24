@@ -32,9 +32,9 @@ from typing import Any, Dict, Optional
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 
 
-_DEFAULT_CONFIG_PATH = (
-    Path(os.path.expanduser("~")) / ".je_auto_control" / "host_service.json"
-)
+def _default_config_path() -> Path:
+    """``~/.je_auto_control/host_service.json``, resolved at call time."""
+    return Path(os.path.expanduser("~")) / ".je_auto_control" / "host_service.json"
 
 
 @dataclass
@@ -52,7 +52,7 @@ class HostServiceConfig:
 
 
 def load_config(path: Optional[Path] = None) -> HostServiceConfig:
-    target = Path(path) if path else _DEFAULT_CONFIG_PATH
+    target = Path(path) if path else _default_config_path()
     if not target.exists():
         raise FileNotFoundError(f"service config not found: {target}")
     raw = json.loads(target.read_text(encoding="utf-8"))
@@ -75,7 +75,7 @@ def load_config(path: Optional[Path] = None) -> HostServiceConfig:
 
 def write_default_config(path: Optional[Path] = None) -> Path:
     """Write a stub config the user must edit before installing."""
-    target = Path(path) if path else _DEFAULT_CONFIG_PATH
+    target = Path(path) if path else _default_config_path()
     target.parent.mkdir(parents=True, exist_ok=True)
     template = {
         "token": "CHANGE_ME_BEFORE_USE",  # nosec B105  # NOSONAR — placeholder in stub config the user MUST edit before installing the service
@@ -99,7 +99,7 @@ def write_default_config(path: Optional[Path] = None) -> Path:
 def run_daemon(config: HostServiceConfig) -> None:
     """Block forever: publish offer → wait for answer → accept → loop."""
     from je_auto_control.utils.remote_desktop import (
-        WebRTCConfig, default_trust_list, signaling_client,
+        WebRTCConfig, default_trust_list,
     )
     from je_auto_control.utils.remote_desktop.multi_viewer import MultiViewerHost
 
@@ -119,21 +119,7 @@ def run_daemon(config: HostServiceConfig) -> None:
     )
     while True:
         try:
-            session_id, offer = multi.create_session_offer()
-            signaling_client.push_offer(
-                config.server_url, config.host_id, offer,
-                secret=config.server_secret,
-            )
-            answer = signaling_client.wait_for_answer(
-                config.server_url, config.host_id,
-                secret=config.server_secret,
-                timeout_s=300.0,
-            )
-            multi.accept_session_answer(session_id, answer)
-            autocontrol_logger.info(
-                "host_service: viewer connected to session %s (%d total)",
-                session_id, multi.session_count(),
-            )
+            _serve_one_viewer(multi, config)
             time.sleep(config.poll_interval_s)
         except KeyboardInterrupt:
             autocontrol_logger.info("host_service: shutting down")
@@ -142,6 +128,36 @@ def run_daemon(config: HostServiceConfig) -> None:
         except Exception as error:  # noqa: BLE001  # reason: a daemon must survive ANY transient error (signaling/aiortc/av/ValueError) and retry, not exit the loop
             autocontrol_logger.warning("host_service loop: %r", error)
             time.sleep(min(30.0, config.poll_interval_s * 5))
+
+
+def _serve_one_viewer(multi: Any, config: HostServiceConfig) -> None:
+    """Publish one offer, wait for its answer, and connect the viewer.
+
+    Any failure after the offer exists stops that session before the error
+    reaches the retry loop. It used to stay registered: with no viewer, every
+    300-second answer timeout left another session holding a subscription to
+    the screen source, for the life of the daemon.
+    """
+    from je_auto_control.utils.remote_desktop import signaling_client
+    session_id, offer = multi.create_session_offer()
+    try:
+        signaling_client.push_offer(
+            config.server_url, config.host_id, offer,
+            secret=config.server_secret,
+        )
+        answer = signaling_client.wait_for_answer(
+            config.server_url, config.host_id,
+            secret=config.server_secret,
+            timeout_s=300.0,
+        )
+        multi.accept_session_answer(session_id, answer)
+    except BaseException:
+        multi.stop_session(session_id)
+        raise
+    autocontrol_logger.info(
+        "host_service: viewer connected to session %s (%d total)",
+        session_id, multi.session_count(),
+    )
 
 
 # --- service installation helpers ----------------------------------------
@@ -200,7 +216,7 @@ WantedBy=default.target
 def _interactive_configure() -> int:
     """Prompt the user for the four required fields and write a config."""
     print("AutoControl host service — interactive configuration")
-    print(f"Config will be written to: {_DEFAULT_CONFIG_PATH}")
+    print(f"Config will be written to: {_default_config_path()}")
     answers: Dict[str, Any] = {}
     answers["token"] = input("Auth token (shared with viewers): ").strip()
     answers["server_url"] = input("Signaling server URL: ").strip()
@@ -216,30 +232,30 @@ def _interactive_configure() -> int:
         input("Show cursor in stream? (Y/n): ").strip().lower() != "n"
     )
     answers["poll_interval_s"] = 2.0
-    _DEFAULT_CONFIG_PATH.parent.mkdir(parents=True, exist_ok=True)
-    # _DEFAULT_CONFIG_PATH is a hardcoded module constant, not user input
-    _DEFAULT_CONFIG_PATH.write_text(  # NOSONAR
+    _default_config_path().parent.mkdir(parents=True, exist_ok=True)
+    # The path is derived from the home directory, not from user input.
+    _default_config_path().write_text(  # NOSONAR
         json.dumps(answers, indent=2), encoding="utf-8",
     )
     try:
-        os.chmod(_DEFAULT_CONFIG_PATH, 0o600)
+        os.chmod(_default_config_path(), 0o600)
     except OSError:
         pass
-    print(f"Wrote {_DEFAULT_CONFIG_PATH}")
+    print(f"Wrote {_default_config_path()}")
     return 0
 
 
 def _print_status() -> int:
     """Print whether config exists + Windows service state if applicable."""
-    if _DEFAULT_CONFIG_PATH.exists():
+    if _default_config_path().exists():
         try:
             cfg = load_config()
-            print(f"Config: {_DEFAULT_CONFIG_PATH}  ({len(cfg.token)}-char token, "
+            print(f"Config: {_default_config_path()}  ({len(cfg.token)}-char token, "
                   f"host_id={cfg.host_id})")
         except (ValueError, OSError) as error:
             print(f"Config exists but invalid: {error}")
     else:
-        print(f"No config at {_DEFAULT_CONFIG_PATH} — run 'configure' or 'init'.")
+        print(f"No config at {_default_config_path()} — run 'configure' or 'init'.")
     if sys.platform == "win32":
         import subprocess  # nosec B404  # reason: only invoke fixed sc query argv
         try:
@@ -490,11 +506,11 @@ def _cmd_available_codecs(_args) -> int:
 
 
 def _cmd_install_windows_service(args) -> int:
-    return _install_windows_service(args.config or _DEFAULT_CONFIG_PATH)
+    return _install_windows_service(args.config or _default_config_path())
 
 
 def _cmd_generate_launchd(args) -> int:
-    _generate_launchd_plist(args.config or _DEFAULT_CONFIG_PATH, args.output)
+    _generate_launchd_plist(args.config or _default_config_path(), args.output)
     print(f"Wrote launchd plist: {args.output}")
     print("Activate with:")
     print(f"  cp {args.output} ~/Library/LaunchAgents/")
@@ -503,7 +519,7 @@ def _cmd_generate_launchd(args) -> int:
 
 
 def _cmd_generate_systemd(args) -> int:
-    _generate_systemd_unit(args.config or _DEFAULT_CONFIG_PATH, args.output)
+    _generate_systemd_unit(args.config or _default_config_path(), args.output)
     print(f"Wrote systemd unit: {args.output}")
     print("Activate with:")
     print(f"  mkdir -p ~/.config/systemd/user && cp {args.output} "

@@ -15,6 +15,7 @@ stuck one) and the offline trajectory evaluator. Pure standard library
 """
 import hashlib
 import json
+import threading
 from collections import deque
 from dataclasses import dataclass
 from typing import Any, Deque, Optional, Tuple
@@ -55,32 +56,49 @@ class LoopGuard:
     def __init__(self, *, warn: int = 8, critical: int = 15,
                  window: int = 20) -> None:
         """``warn``/``critical`` are run-length thresholds; ``window`` caps memory."""
+        if not 1 <= int(warn) <= int(critical) <= int(window):
+            # A threshold above the window could never be reached, so the
+            # guard silently never tripped.
+            raise ValueError("need 1 <= warn <= critical <= window")
         self._warn = warn
         self._critical = critical
         self._events: Deque[Tuple[str, str]] = deque(maxlen=window)
+        # default_loop_guard is shared by every executor thread (socket, REST,
+        # scheduler); classifying while another thread appended raised
+        # "deque mutated during iteration".
+        self._lock = threading.Lock()
 
     def reset(self) -> None:
         """Forget all observed steps."""
-        self._events.clear()
+        with self._lock:
+            self._events.clear()
 
     def observe(self, tool: str, args: Any = None,
                 result_digest: str = "") -> LoopVerdict:
-        """Record a step and return the strongest stuck-loop verdict."""
-        self._events.append((f"{tool}:{_args_key(args)}", result_digest))
-        pattern, count = self._classify()
+        """Record a step and return the strongest stuck-loop verdict. Thread-safe."""
+        key = f"{tool}:{_args_key(args)}"
+        with self._lock:
+            self._events.append((key, result_digest))
+            pattern, count = self._classify()
         return LoopVerdict(pattern, self._level(pattern, count), count)
 
     def _classify(self) -> Tuple[Optional[str], int]:
-        repeat = self._trailing_repeat()
-        if repeat >= 2:
-            return "repeat", repeat
-        ping = self._trailing_ping_pong()
-        if ping >= 4:
-            return "ping_pong", ping
-        no_op = self._trailing_no_op()
-        if no_op >= 2:
-            return "no_op", no_op
-        return None, 0
+        """The pattern with the longest run among those past their minimum.
+
+        Returning the first qualifying pattern let a fresh 2-step repeat hide
+        a 15-step no-op run, reporting a stuck agent as ``ok``.
+        """
+        candidates = [
+            (count, pattern)
+            for pattern, count, minimum in (
+                ("repeat", self._trailing_repeat(), 2),
+                ("ping_pong", self._trailing_ping_pong(), 4),
+                ("no_op", self._trailing_no_op(), 2))
+            if count >= minimum]
+        if not candidates:
+            return None, 0
+        count, pattern = max(candidates, key=lambda item: item[0])
+        return pattern, count
 
     def _trailing_repeat(self) -> int:
         keys = [event[0] for event in self._events]

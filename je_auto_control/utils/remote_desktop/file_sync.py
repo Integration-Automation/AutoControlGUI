@@ -53,10 +53,12 @@ class FolderSyncEngine:
                 raise FileNotFoundError(
                     f"watch dir not a directory: {self._watch}"
                 )
-            self._stop.clear()
+            # A fresh event per run, never clear() on the old one: a thread that
+            # outlived stop()'s join would see it cleared and keep running.
+            self._stop = threading.Event()
             self._ready.clear()
             self._thread = threading.Thread(
-                target=self._loop, name="folder-sync", daemon=True,
+                target=self._loop, args=(self._stop,), name="folder-sync", daemon=True,
             )
             self._thread.start()
         autocontrol_logger.info(
@@ -101,15 +103,15 @@ class FolderSyncEngine:
             autocontrol_logger.warning("folder sync scan: %r", error)
         return out
 
-    def _loop(self) -> None:
+    def _loop(self, stop: threading.Event) -> None:
         # Build initial snapshot WITHOUT sending; treat pre-existing files
         # as "already synced" so engaging sync mid-edit doesn't re-upload
         # the entire directory.
         self._snapshot = self._scan()
         self._ready.set()
-        while not self._stop.is_set():
-            self._stop.wait(self._interval)
-            if self._stop.is_set():
+        while not stop.is_set():
+            stop.wait(self._interval)
+            if stop.is_set():
                 return
             current = self._scan()
             for rel, mtime in current.items():

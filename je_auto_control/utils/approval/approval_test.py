@@ -15,6 +15,7 @@ complementing pixel diffing with a review-gated baseline. Pure standard
 library; imports no ``PySide6``.
 """
 import os
+import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import List, Union
@@ -40,9 +41,24 @@ def _safe_name(name: str) -> str:
     return name
 
 
+_EXTENSION = re.compile(r"[A-Za-z0-9]+(?:\.[A-Za-z0-9]+)*")
+
+
+def _safe_extension(extension: str) -> str:
+    """``extension`` without its leading dot; path separators and ``..`` are refused.
+
+    Only ``name`` was checked, so ``extension="x/../../outside/pwned"`` wrote
+    outside ``approvals_dir``.
+    """
+    ext = str(extension).lstrip(".")
+    if not _EXTENSION.fullmatch(ext):
+        raise ValueError(f"unsafe approval extension: {extension!r}")
+    return ext
+
+
 def _paths(name: str, approvals_dir: str, extension: str):
     base = Path(approvals_dir)
-    ext = extension.lstrip(".")
+    ext = _safe_extension(extension)
     return (base / f"{_safe_name(name)}.approved.{ext}",
             base / f"{name}.received.{ext}")
 

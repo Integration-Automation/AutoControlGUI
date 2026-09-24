@@ -31,6 +31,12 @@ from typing import Any, Dict, List, Optional, Sequence, Tuple
 MAX_EVENTS = 20000
 
 #: Legacy queue entries: the down-event half, shaped as executor commands.
+#: Side buttons (``x1`` / ``x2``) are deliberately absent: there is no
+#: ``AC_mouse_x1`` executor alias, and the caller below drops a name it cannot
+#: map. Dropping is the safe direction here -- naming a command that does not
+#: exist would fail at replay time instead. The timeline path
+#: (``stop_record_timeline`` -> ``replay_timeline``) does handle them; only this
+#: historical down-events-only queue does not.
 LEGACY_MOUSE_COMMAND = {"left": "AC_mouse_left", "right": "AC_mouse_right",
                         "middle": "AC_mouse_middle"}
 
@@ -55,8 +61,10 @@ def timeline(events: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     for event in events:
         moment = float(event.get("time", 0.0))
         item = {key: value for key, value in event.items() if key != "time"}
+        # Rounded from cumulative milliseconds: truncating each gap lost up to
+        # 1 ms per event, and a long recording replayed noticeably fast.
         item["delta_ms"] = 0 if previous is None else max(
-            0, int((moment - previous) * 1000))
+            0, round(moment * 1000) - round(previous * 1000))
         out.append(item)
         previous = moment
     return out
@@ -97,6 +105,10 @@ class InputRecorder:
 
     # -- capture -----------------------------------------------------------
     def _start(self, kinds: Sequence[str]) -> None:
+        if self.hook is not None:
+            # Replacing it left the first low-level hook and its message
+            # pump installed for the life of the process.
+            self.hook.stop()
         self._kinds = tuple(kinds)
         self.hook = self.new_hook()
         self.record_queue = Queue()

@@ -1,8 +1,10 @@
 """Abstract VLM (vision-language model) backend."""
 from typing import Optional, Tuple
 
+from je_auto_control.utils.exception.exceptions import AutoControlException
 
-class VLMNotAvailableError(RuntimeError):
+
+class VLMNotAvailableError(AutoControlException, RuntimeError):
     """Raised when no VLM backend can be initialised."""
 
 

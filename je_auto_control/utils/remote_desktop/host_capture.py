@@ -144,8 +144,9 @@ class FrameProductionMixin:
     The loops that turn the host screen into what viewers receive: the
     ~30 Hz cursor poll, the capture loop that paces frames at the
     configured fps, and the codec step between a JPEG frame and the bytes
-    that go on the wire. Requires the host to provide ``_shutdown``,
-    ``_clients``/``_clients_lock``, ``_frame_provider``,
+    that go on the wire. Each loop is handed its run's stop event rather
+    than reading the host's, so a restart cannot revive it. Requires the
+    host to provide ``_clients``/``_clients_lock``, ``_frame_provider``,
     ``_cursor_provider``, ``_codec``, ``_fps``, ``_latest_frame`` and
     ``_frame_lock``.
     """
@@ -154,7 +155,6 @@ class FrameProductionMixin:
         # Declared, never defined: the host class this is mixed into owns
         # every one of these. The block is stripped at runtime, so nothing
         # here can shadow what the host actually binds.
-        _shutdown: threading.Event
         _clients: List["_ClientHandler"]
         _clients_lock: threading.Lock
         _frame_cond: threading.Condition
@@ -166,12 +166,12 @@ class FrameProductionMixin:
         _latest_seq: int
         _period: float
 
-    def _cursor_loop(self) -> None:
+    def _cursor_loop(self, stop: threading.Event) -> None:
         """Poll cursor position at ~30 Hz and push it to viewers as JSON."""
         provider = self._cursor_provider
         if provider is None:
             return
-        while not self._shutdown.is_set():
+        while not stop.is_set():
             position = provider()
             if position is not None and len(position) >= 2:
                 payload = json.dumps(
@@ -183,7 +183,7 @@ class FrameProductionMixin:
                     self._latest_cursor_payload = payload
                 if is_new:
                     self._broadcast_cursor(payload)
-            if self._shutdown.wait(timeout=_CURSOR_POLL_INTERVAL_S):
+            if stop.wait(timeout=_CURSOR_POLL_INTERVAL_S):
                 return
 
     def _broadcast_cursor(self, payload: bytes) -> None:
@@ -244,17 +244,17 @@ class FrameProductionMixin:
         except OSError:
             pass
 
-    def _capture_loop(self) -> None:
+    def _capture_loop(self, stop: threading.Event) -> None:
         next_tick = time.monotonic()
         last_frame_hash: Optional[int] = None
-        while not self._shutdown.is_set():
+        while not stop.is_set():
             try:
                 frame = self._frame_provider()
             except (OSError, RuntimeError, ValueError) as error:
                 autocontrol_logger.warning(
                     "remote_desktop frame capture failed: %r", error,
                 )
-                self._shutdown.wait(self._period)
+                stop.wait(self._period)
                 continue
             # Phase 2.3: drop frames that are byte-identical to the
             # previous capture. A static desktop produces the same JPEG
@@ -277,7 +277,7 @@ class FrameProductionMixin:
             sleep_for = max(0.0, next_tick - time.monotonic())
             if sleep_for <= 0.0:
                 next_tick = time.monotonic()
-            self._shutdown.wait(sleep_for)
+            stop.wait(sleep_for)
 
     def _encode_for_wire(self, jpeg_bytes: bytes):
         """Wrap codec output with a 1-byte tag (skipped for JPEG)."""

@@ -23,6 +23,8 @@ from je_auto_control.utils.config_redaction import (
     redact_config,
     redact_secret_text,
 )
+from je_auto_control.utils.executor.action_redaction import redact_actions
+from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 
 
 @dataclass(frozen=True)
@@ -53,10 +55,25 @@ def _safe_name(path: Path, used: set[str]) -> str:
 
 def _read_log_tail(path: Path, limit: int) -> str:
     with path.open("rb") as handle:
-        if path.stat().st_size > limit:
+        truncated = path.stat().st_size > limit
+        if truncated:
             handle.seek(-limit, os.SEEK_END)
         data = handle.read()
+    if truncated:
+        # The first line starts mid-way: a half line can cut a secret in two,
+        # leaving a fragment the text patterns no longer recognise.
+        data = data.partition(b"\n")[2]
     return redact_secret_text(data.decode("utf-8", errors="replace"))
+
+
+def _redact(value: Any) -> Any:
+    """Mask vault-command arguments, then anything that looks like a secret.
+
+    ``redact_config`` goes by key names and value shapes, which an
+    ``AC_secret_set`` argument list (``["AC_secret_set", "db", "hunter2"]``)
+    has neither of.
+    """
+    return redact_config(redact_actions(value))
 
 
 def _collect_diagnostics(archive: zipfile.ZipFile,
@@ -65,7 +82,7 @@ def _collect_diagnostics(archive: zipfile.ZipFile,
         from je_auto_control.utils.diagnostics import run_diagnostics
         archive.writestr("diagnostics.json",
                          _json_bytes(run_diagnostics().to_dict()))
-    except Exception as exc:  # diagnostics are best-effort
+    except Exception as exc:  # noqa: BLE001  # reason: best-effort, recorded in the manifest
         failures.append({"collector": "diagnostics", "error": repr(exc)})
 
 
@@ -80,7 +97,7 @@ def _collect_screenshot(archive: zipfile.ZipFile,
             archive.write(image_path, "screenshot.png")
         finally:
             Path(image_path).unlink(missing_ok=True)
-    except Exception as exc:  # headless and locked sessions are valid
+    except Exception as exc:  # noqa: BLE001  # reason: headless/locked sessions are valid, recorded
         failures.append({"collector": "screenshot", "error": repr(exc)})
 
 
@@ -90,7 +107,7 @@ def _collect_log(archive: zipfile.ZipFile, opts: FailureBundleOptions,
         archive.writestr("logs/tail.log", _read_log_tail(
             Path(opts.log_path or "").expanduser().resolve(),
             max(1, opts.log_tail_bytes)))
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001  # reason: a bad log path must not lose the bundle
         failures.append({"collector": "log", "error": repr(exc)})
 
 
@@ -103,7 +120,7 @@ def _collect_attachments(archive: zipfile.ZipFile, opts: FailureBundleOptions,
             if not path.is_file():
                 raise ValueError("attachment is not a regular file")
             archive.write(path, f"attachments/{_safe_name(path, used)}")
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001  # reason: one bad attachment must not lose the bundle
             failures.append({"collector": "attachment", "error": repr(exc)})
 
 
@@ -116,6 +133,11 @@ def _collect_all(archive: zipfile.ZipFile, opts: FailureBundleOptions,
     if opts.log_path:
         _collect_log(archive, opts, failures)
     _collect_attachments(archive, opts, failures)
+
+
+def _plain(event: Any) -> Any:
+    """A Mapping event as a dict, so the redaction walk (dict / list only) enters it."""
+    return dict(event) if isinstance(event, Mapping) else event
 
 
 def create_failure_bundle(
@@ -135,13 +157,15 @@ def create_failure_bundle(
         "schema": "autocontrol.failure-bundle/v1",
         "created_at_unix": time.time(),
         "error": None if error is None else redact_secret_text(str(error)),
+        # str(TimeoutError()) is "", so the message alone can say nothing.
+        "error_type": None if error is None else type(error).__name__,
         "runtime": {
             "python": sys.version.split()[0],
             "platform": platform.platform(),
             "executable": Path(sys.executable).name,
         },
-        "context": redact_config(dict(context or {})),
-        "events": redact_config(list(events)),
+        "context": _redact(dict(context or {})),
+        "events": _redact([_plain(event) for event in events]),
         "collector_failures": failures,
     }
 
@@ -167,10 +191,18 @@ def failure_bundle_on_error(
     events: Iterable[Mapping[str, Any]] = (),
     options: FailureBundleOptions | None = None,
 ):
-    """Create a bundle when the wrapped block raises, then re-raise it."""
+    """Create a bundle when the wrapped block raises, then re-raise it.
+
+    The block's own exception is always the one that propagates: a bundle
+    that cannot be written (full disk, bad path) is logged, not raised in
+    its place.
+    """
     try:
         yield
     except BaseException as error:
-        create_failure_bundle(output_path, error=error, context=context,
-                              events=events, options=options)
+        try:
+            create_failure_bundle(output_path, error=error, context=context,
+                                  events=events, options=options)
+        except Exception as bundle_error:  # noqa: BLE001  # reason: must not mask the original error; logged
+            autocontrol_logger.error("failure bundle not written: %r", bundle_error)
         raise

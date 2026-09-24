@@ -70,7 +70,13 @@ def compare_histograms(hist_a: Sequence[float], hist_b: Sequence[float], *,
         raise ValueError(f"unknown method: {method!r}")
     array_a = np.asarray(hist_a, dtype=np.float32)
     array_b = np.asarray(hist_b, dtype=np.float32)
-    return round(float(cv2.compareHist(array_a, array_b, methods[method])), 4)
+    score = float(cv2.compareHist(array_a, array_b, methods[method]))
+    if method == "intersection":
+        # Normalised to 0..1 (1 = identical): the raw sum of minima ran up to
+        # about 3 * bins, so red vs blue scored 2.0 and passed a 0.9 threshold.
+        mass = min(float(array_a.sum()), float(array_b.sum()))
+        score = score / mass if mass > 0 else 1.0
+    return round(score, 4)
 
 
 def histogram_changed(reference: ImageSource,

@@ -27,6 +27,19 @@ def _command_of(action: Any) -> Optional[str]:
     return None
 
 
+
+def _merge_record(record: Dict[str, Any], result: Dict[str, Any]) -> None:
+    """Add one step's record, numbering a key a previous step already used.
+
+    Stepping the same action twice produced the same record key, and
+    ``update`` replaced the first result with the second.
+    """
+    for key, value in result.items():
+        unique, number = key, 2
+        while unique in record:
+            unique, number = f"{key} #{number}", number + 1
+        record[unique] = value
+
 class FlowDebugger:
     """Step through an action list with breakpoints and variable inspection."""
 
@@ -84,7 +97,7 @@ class FlowDebugger:
         current = self._index
         action = self._actions[current]
         result = self._exec().execute_action([action])
-        self._record.update(result)
+        _merge_record(self._record, result)
         self._index += 1
         return {"index": current, "command": _command_of(action),
                 "result": next(iter(result.values()), None)}

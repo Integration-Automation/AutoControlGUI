@@ -11,11 +11,12 @@ value through an injected resolver — so the secret never lands in a plain
 
 JSON-backed (or in-memory); pure standard library; imports no ``PySide6``.
 """
+import functools
 import os
 from dataclasses import dataclass
 from typing import Any, Callable, Dict, List, Optional
 
-from je_auto_control.utils.json_store import read_json_dict, write_json_dict
+from je_auto_control.utils.json_store import SharedJsonDict
 
 ENV_VAR = "JE_AUTOCONTROL_ENV"
 DEFAULT_ENV = "default"
@@ -23,6 +24,7 @@ TYPE_TEXT = "text"
 TYPE_INT = "int"
 TYPE_BOOL = "bool"
 TYPE_CREDENTIAL = "credential"
+_TYPES = (TYPE_TEXT, TYPE_INT, TYPE_BOOL, TYPE_CREDENTIAL)
 
 
 @dataclass(frozen=True)
@@ -66,27 +68,35 @@ class AssetStore:
                  secret_resolver: Optional[Callable[[str], Any]] = None
                  ) -> None:
         """``secret_resolver(name)`` resolves ``credential`` references lazily."""
-        self._path = db_path
+        # Re-read and locked per change, so processes sharing the file do
+        # not overwrite each other's assets.
+        self._state = SharedJsonDict(db_path)
         self._resolver = secret_resolver
-        self._data: Dict[str, Dict[str, Dict[str, Any]]] = read_json_dict(
-            db_path)
-
-    def _flush(self) -> None:
-        if self._path is not None:
-            write_json_dict(self._path, self._data)
 
     def set(self, name: str, value: Any, *, asset_type: str = TYPE_TEXT,
             environment: str = DEFAULT_ENV) -> None:
-        """Store ``value`` for ``name`` under ``environment`` with a type tag."""
-        self._data.setdefault(environment, {})[name] = {
-            "type": asset_type, "value": value}
-        self._flush()
+        """Store ``value`` for ``name`` under ``environment`` with a type tag.
+
+        An unknown type, or a value the type cannot read (``"eighty"`` as an
+        ``int``), raises ``ValueError`` here -- it used to be stored and then
+        fail on every later read.
+        """
+        if asset_type not in _TYPES:
+            raise ValueError(f"unknown asset type {asset_type!r}; expected one of {_TYPES}")
+        try:
+            _coerce(value, asset_type)
+        except (TypeError, ValueError) as error:
+            raise ValueError(f"{value!r} is not a valid {asset_type} asset") from error
+        record = {"type": asset_type, "value": value}
+        self._state.update(
+            lambda data: data.setdefault(environment, {}).__setitem__(name, record))
 
     def _lookup(self, name: str, environment: str,
                 fallback_to_default: bool) -> Optional[Dict[str, Any]]:
-        record = self._data.get(environment, {}).get(name)
+        data = self._state.read()
+        record = data.get(environment, {}).get(name)
         if record is None and fallback_to_default and environment != DEFAULT_ENV:
-            record = self._data.get(DEFAULT_ENV, {}).get(name)
+            record = data.get(DEFAULT_ENV, {}).get(name)
         return record
 
     def get(self, name: str, *, environment: str = DEFAULT_ENV,
@@ -110,26 +120,39 @@ class AssetStore:
 
     def delete(self, name: str, *, environment: str = DEFAULT_ENV) -> bool:
         """Delete an asset; return whether it existed."""
-        removed = self._data.get(environment, {}).pop(name, None) is not None
-        if removed:
-            self._flush()
-        return removed
+        return self._state.update(
+            lambda data: data.get(environment, {}).pop(name, None) is not None)
 
     def list(self, *, environment: Optional[str] = None) -> List[Asset]:
         """List assets, optionally restricted to one ``environment``."""
-        envs = [environment] if environment else list(self._data)
+        data = self._state.read()
+        envs = [environment] if environment else list(data)
         return [
             Asset(name, str(rec["type"]), env, rec["value"])
             for env in envs
-            for name, rec in self._data.get(env, {}).items()
+            for name, rec in data.get(env, {}).items()
         ]
+
+
+@functools.lru_cache(maxsize=1)
+def _process_store() -> AssetStore:
+    return AssetStore(None)
+
+
+def asset_store(db: Optional[str] = None) -> AssetStore:
+    """The store in ``db`` or, without ``db``, the one this process shares.
+
+    Each command built a fresh in-memory store, so without ``db`` a value
+    set by ``AC_set_asset`` was gone by the next ``AC_get_asset``.
+    """
+    return AssetStore(db) if db else _process_store()
 
 
 def store_set(name: str, value: Any, *, asset_type: str = TYPE_TEXT,
               environment: str = DEFAULT_ENV,
               db: Optional[str] = None) -> Dict[str, Any]:
     """Set an asset and return a result dict (shared by executor/MCP layers)."""
-    AssetStore(db).set(name, value, asset_type=asset_type,
+    asset_store(db).set(name, value, asset_type=asset_type,
                        environment=environment)
     return {"ok": True, "name": name, "environment": environment}
 
@@ -137,13 +160,13 @@ def store_set(name: str, value: Any, *, asset_type: str = TYPE_TEXT,
 def store_get(name: str, *, environment: str = DEFAULT_ENV,
               db: Optional[str] = None) -> Dict[str, Any]:
     """Get an asset as a result dict (credential value stays a reference)."""
-    asset = AssetStore(db).get(name, environment=environment)
+    asset = asset_store(db).get(name, environment=environment)
     return {"name": asset.name, "type": asset.type, "value": asset.value}
 
 
 def store_list(*, environment: Optional[str] = None,
                db: Optional[str] = None) -> Dict[str, Any]:
     """List assets as a result dict of ``{name, type, environment}`` (no values)."""
-    assets = AssetStore(db).list(environment=environment)
+    assets = asset_store(db).list(environment=environment)
     return {"assets": [{"name": a.name, "type": a.type,
                         "environment": a.environment} for a in assets]}

@@ -14,6 +14,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional
 
+from je_auto_control.utils.json_store.json_store import append_json_line
 from je_auto_control.utils.cost_telemetry.pricing import estimate_usd
 
 
@@ -51,14 +52,25 @@ class CostSummary:
         return asdict(self)
 
 
+def default_cost_log_path() -> Path:
+    """``~/.je_auto_control/cost_events.jsonl``, resolved at call time."""
+    return Path.home() / ".je_auto_control" / "cost_events.jsonl"
+
+
 class CostStore:
     """Thread-safe append-only JSONL log of :class:`CostEvent` records."""
 
-    DEFAULT_PATH = Path.home() / ".je_auto_control" / "cost_events.jsonl"
-
     def __init__(self, path: Optional[Path] = None) -> None:
-        self._path = Path(path) if path is not None else self.DEFAULT_PATH
+        # Only an explicit path is kept; the default is resolved on every
+        # use, because this module builds a shared instance while the
+        # package imports -- before a test suite's conftest.py can set HOME.
+        self._explicit_path: Optional[Path] = (
+            Path(path) if path is not None else None)
         self._lock = threading.Lock()
+
+    @property
+    def _path(self) -> Path:
+        return self._explicit_path or default_cost_log_path()
 
     @property
     def path(self) -> Path:
@@ -71,7 +83,13 @@ class CostStore:
                run_id: Optional[str] = None,
                user: Optional[str] = None,
                ) -> CostEvent:
-        """Append + return one cost event. Estimates ``$`` if not given."""
+        """Append + return one cost event. Estimates ``$`` if not given.
+
+        Negative token counts are refused: they were stored as given and
+        subtracted from the totals while the cost treated them as zero.
+        """
+        if int(input_tokens) < 0 or int(output_tokens) < 0:
+            raise ValueError("token counts must not be negative")
         cost = (
             float(estimated_usd) if estimated_usd is not None
             else estimate_usd(model, input_tokens, output_tokens)
@@ -86,10 +104,7 @@ class CostStore:
         )
         payload = json.dumps(event.to_dict(), ensure_ascii=False)
         with self._lock:
-            self._path.parent.mkdir(parents=True, exist_ok=True)
-            with self._path.open("a", encoding="utf-8") as fp:
-                fp.write(payload)
-                fp.write("\n")
+            append_json_line(self._path, payload)
         return event
 
     def list_events(self, limit: int = 1000) -> List[CostEvent]:

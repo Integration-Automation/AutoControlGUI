@@ -7,6 +7,10 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
+from je_auto_control.utils.json_store.json_store import (
+    _file_lock, quarantine_file,
+)
+
 
 @dataclass
 class ABStrategyStats:
@@ -64,16 +68,27 @@ class ABReport:
         }
 
 
+def default_stats_path() -> Path:
+    """``~/.je_auto_control/ab_locator_stats.json``, resolved at call time."""
+    return Path.home() / ".je_auto_control" / "ab_locator_stats.json"
+
+
 class ABStore:
     """Thread-safe ``(target_id, strategy) → ABStrategyStats`` ledger."""
 
-    DEFAULT_PATH = Path.home() / ".je_auto_control" / "ab_locator_stats.json"
-
     def __init__(self, path: Optional[Path] = None) -> None:
-        self._path = Path(path) if path is not None else self.DEFAULT_PATH
+        # Only an explicit path is kept; the default is resolved on every
+        # use, because this module builds a shared instance while the
+        # package imports -- before a test suite's conftest.py can set HOME.
+        self._explicit_path: Optional[Path] = (
+            Path(path) if path is not None else None)
         self._lock = threading.RLock()
         self._cache: Dict[Tuple[str, str], ABStrategyStats] = {}
         self._loaded = False
+
+    @property
+    def _path(self) -> Path:
+        return self._explicit_path or default_stats_path()
 
     @property
     def path(self) -> Path:
@@ -81,8 +96,14 @@ class ABStore:
 
     def record(self, *, target_id: str, strategy: str,
                succeeded: bool, elapsed_ms: float) -> ABStrategyStats:
-        with self._lock:
-            self._load_if_needed()
+        """Count one run; the file is re-read under its lock first.
+
+        The file used to be read once and the whole cache written back on
+        every record, so two processes (or two stores on one file) erased
+        each other's counts.
+        """
+        with self._lock, _file_lock(self._path):
+            self._reload()
             key = (target_id, strategy)
             stats = self._cache.get(key) or ABStrategyStats(
                 target_id=target_id, strategy=strategy,
@@ -119,17 +140,20 @@ class ABStore:
                 pass
 
     def _load_if_needed(self) -> None:
-        if self._loaded:
-            return
+        if not self._loaded:
+            self._reload()
+
+    def _reload(self) -> None:
+        """Replace the cache with the file; an unreadable file is set aside.
+
+        A damaged file used to be read as empty and then overwritten by the
+        next record(), losing every count. A read error other than a missing
+        file (a transient PermissionError) propagates and leaves the cache
+        unloaded rather than empty.
+        """
+        payload = self._read_payload()
+        self._cache.clear()
         self._loaded = True
-        try:
-            raw = self._path.read_text(encoding="utf-8")
-        except FileNotFoundError:
-            return
-        try:
-            payload = json.loads(raw)
-        except ValueError:
-            return
         if not isinstance(payload, list):
             return
         for row in payload:
@@ -138,6 +162,23 @@ class ABStore:
             except TypeError:
                 continue
             self._cache[(stats.target_id, stats.strategy)] = stats
+
+    def _read_payload(self) -> Any:
+        """The parsed file, ``None`` when missing; unparseable JSON is set aside.
+
+        Only bad content is quarantined: a read error (a file locked by an
+        antivirus scan) propagates, since moving the file aside then would
+        drop counts that are fine.
+        """
+        try:
+            raw = self._path.read_text(encoding="utf-8-sig")
+        except FileNotFoundError:
+            return None
+        try:
+            return json.loads(raw)
+        except ValueError as error:
+            quarantine_file(self._path, "A/B locator stats", repr(error))
+            return None
 
     def _save(self) -> None:
         self._path.parent.mkdir(parents=True, exist_ok=True)

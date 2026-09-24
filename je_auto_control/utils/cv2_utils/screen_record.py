@@ -1,7 +1,8 @@
 import threading
-from typing import Dict, Tuple
+from typing import Any, Dict, Tuple
 
-from je_auto_control.wrapper.auto_control_screen import screenshot
+from je_auto_control.utils.cv2_utils.frame_clock import check_fps, record_paced
+from je_auto_control.utils.exception.exceptions import AutoControlScreenException
 
 
 class ScreenRecorder:
@@ -67,10 +68,25 @@ class ScreenRecordThread(threading.Thread):
     """
 
     def __init__(self, path_and_filename, codec, frame_per_sec, resolution: Tuple[int, int]):
+        """Open the writer, refusing a frame rate, size or file it cannot use.
+
+        An unopened VideoWriter (fps 0 or NaN, an unknown codec, a missing
+        directory) was accepted silently, and the thread then captured the
+        screen in a busy loop writing nothing.
+        """
         super().__init__()
         import cv2
+        self.frame_per_sec = check_fps(frame_per_sec)
+        width, height = (int(value) for value in resolution)
+        if width <= 0 or height <= 0:
+            raise AutoControlScreenException(f"resolution must be positive, got {resolution!r}")
         self.fourcc = cv2.VideoWriter.fourcc(*codec)
-        self.video_writer = cv2.VideoWriter(path_and_filename, self.fourcc, frame_per_sec, resolution)
+        self.video_writer = cv2.VideoWriter(
+            path_and_filename, self.fourcc, self.frame_per_sec, (width, height))
+        if not self.video_writer.isOpened():
+            self.video_writer.release()
+            raise AutoControlScreenException(
+                f"cannot open a {codec} video writer for {path_and_filename!r}")
         # 用 Event 而非布林旗標:run() 之前呼叫 stop() 也能被遵守,不會被覆寫。
         # An Event, not a bool flag, so a stop() that lands before run() starts
         # is honoured instead of being overwritten by run() (which would leave
@@ -79,20 +95,26 @@ class ScreenRecordThread(threading.Thread):
         self.resolution = resolution
 
     def run(self) -> None:
-        import cv2
         try:
-            while not self._stop_event.is_set():
-                # 擷取螢幕畫面 Capture screen frame
-                image = screenshot()
-
-                # 確保影像大小符合設定解析度 Ensure frame size matches resolution
-                if image.shape[1] != self.resolution[0] or image.shape[0] != self.resolution[1]:
-                    image = cv2.resize(image, self.resolution)
-
-                self.video_writer.write(image)
+            record_paced(lambda: not self._stop_event.is_set(), self._grab,
+                         self.video_writer.write, self.frame_per_sec)
         finally:
             # 錄影結束後釋放資源 Release resources after recording
             self.video_writer.release()
+
+    def _grab(self) -> Any:
+        """One BGR frame at the configured resolution.
+
+        Not the public ``screenshot()``: that one records an ``AC_screenshot``
+        action and logs a line for every frame of the video.
+        """
+        import cv2
+        import numpy as np
+        from je_auto_control.utils.cv2_utils.screenshot import pil_screenshot
+        image = cv2.cvtColor(np.array(pil_screenshot()), cv2.COLOR_RGB2BGR)
+        if image.shape[1] != self.resolution[0] or image.shape[0] != self.resolution[1]:
+            image = cv2.resize(image, tuple(self.resolution))
+        return image
 
     def stop(self) -> None:
         """

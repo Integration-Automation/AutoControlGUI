@@ -9,7 +9,9 @@ scope made the whole package unimportable on such a Python -- mouse and
 keyboard included, neither of which touches a database. Going through here
 instead defers the failure to the first call that actually opens one.
 """
-from typing import Any, Tuple, Type
+import functools
+from contextlib import contextmanager
+from typing import Any, Callable, Iterator, Tuple, Type, TypeVar
 
 from je_auto_control.utils.exception.exceptions import (
     AutoControlException, AutoControlUnsupportedOperationException,
@@ -39,6 +41,28 @@ _UNAVAILABLE_MESSAGE = (
 )
 
 
+_Function = TypeVar("_Function", bound=Callable[..., Any])
+
+
+def sqlite_errors_as(error_type: Type[AutoControlException]) -> Callable[[_Function], _Function]:
+    """Decorate a store method so ``sqlite3.Error`` leaves it as ``error_type``.
+
+    ``sqlite3.Error`` derives from ``Exception`` alone, so a corrupt database
+    file or a lock held past the timeout escaped every boundary that contains
+    the ``AutoControlException`` family -- and ended the background thread
+    (a hotkey listener, a host service) that had called the store.
+    """
+    def decorate(function: _Function) -> _Function:
+        @functools.wraps(function)
+        def wrapper(*args: Any, **kwargs: Any) -> Any:
+            try:
+                return function(*args, **kwargs)
+            except SQLITE_ERRORS as error:
+                raise error_type(f"{function.__qualname__}: {error}") from error
+        return wrapper  # type: ignore[return-value]
+    return decorate
+
+
 def last_row_id(cursor: Any) -> int:
     """Return the id of the row a just-executed INSERT created.
 
@@ -50,6 +74,24 @@ def last_row_id(cursor: Any) -> int:
     if row_id is None:
         raise AutoControlException("INSERT did not report a row id")
     return int(row_id)
+
+
+@contextmanager
+def autocommit_connection(db_path: str, *, timeout: float = 30.0) -> Iterator[Any]:
+    """Open ``db_path`` in autocommit mode with ``Row`` rows; close it on exit.
+
+    ``with sqlite3.connect(...) as conn`` only commits or rolls back -- it
+    never closes -- so every store that used it leaked one connection per
+    call until garbage collection. A transaction the caller began with
+    ``BEGIN`` and did not finish is rolled back by the close.
+    """
+    driver = require_sqlite3()
+    connection = driver.connect(db_path, timeout=timeout, isolation_level=None)
+    try:
+        connection.row_factory = driver.Row
+        yield connection
+    finally:
+        connection.close()
 
 
 def sqlite3_available() -> bool:

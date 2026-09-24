@@ -1,9 +1,10 @@
-from threading import Lock
 from typing import Tuple, Union
 
 from defusedxml.minidom import parseString  # nosec B405  # nosemgrep: python.lang.security.use-defused-xml.use-defused-xml  # reason: defusedxml is the safe replacement
 
+from je_auto_control.utils.exception.exceptions import XMLException
 from je_auto_control.utils.generate_report.generate_json_report import generate_json
+from je_auto_control.utils.json_store.json_store import atomic_write_text
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.xml.change_xml_structure.change_xml_structure import dict_to_elements_tree
 
@@ -25,21 +26,16 @@ def generate_xml() -> Tuple[Union[str, bytes], Union[str, bytes]]:
     return success_xml, failure_xml
 
 
-def _write_xml_file(file_name: str, xml_content: str, lock: Lock) -> None:
-    """
-    Write XML content to file safely with lock.
-    使用 Lock 安全地將 XML 內容寫入檔案
+def _write_xml_file(file_name: str, xml_content: str) -> None:
+    """Write ``xml_content`` atomically; raise :class:`XMLException` on failure.
 
-    :param file_name: 檔案名稱
-    :param xml_content: XML 字串
-    :param lock: 執行緒鎖
+    A failed write used to be logged and dropped, so callers and scripts went
+    on as if the report existed.
     """
-    with lock:
-        try:
-            with open(file_name, "w+", encoding="utf-8") as file_to_write:
-                file_to_write.write(xml_content)
-        except OSError as error:
-            autocontrol_logger.error(f"Failed to write {file_name}, error: {repr(error)}")
+    try:
+        atomic_write_text(file_name, xml_content)
+    except OSError as error:
+        raise XMLException(f"cannot write report {file_name!r}: {error!r}") from error
 
 
 def generate_xml_report(xml_file_name: str = "default_name") -> None:
@@ -57,6 +53,5 @@ def generate_xml_report(xml_file_name: str = "default_name") -> None:
     success_xml = parseString(success_xml).toprettyxml()
     failure_xml = parseString(failure_xml).toprettyxml()
 
-    lock = Lock()
-    _write_xml_file(xml_file_name + "_success.xml", success_xml, lock)
-    _write_xml_file(xml_file_name + "_failure.xml", failure_xml, lock)
+    _write_xml_file(xml_file_name + "_success.xml", success_xml)
+    _write_xml_file(xml_file_name + "_failure.xml", failure_xml)

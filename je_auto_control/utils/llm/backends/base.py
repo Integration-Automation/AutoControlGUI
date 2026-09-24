@@ -1,8 +1,10 @@
 """Common protocol shared by every LLM backend."""
 from typing import Optional
 
+from je_auto_control.utils.exception.exceptions import AutoControlException
 
-class LLMNotAvailableError(RuntimeError):
+
+class LLMNotAvailableError(AutoControlException, RuntimeError):
     """Raised when no LLM backend is configured / reachable."""
 
 

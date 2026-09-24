@@ -15,11 +15,15 @@ and reporting golden-master deltas. Pure standard library (``json`` + ``copy``);
 fully deterministic; imports no ``PySide6``.
 """
 import copy
+import re
 from typing import Any, Dict, List
 
 from je_auto_control.utils.exception.exceptions import AutoControlException
 
 _MISSING = object()
+
+
+_BAD_ESCAPE = re.compile(r"~(?![01])")
 
 
 class PatchError(AutoControlException):
@@ -33,6 +37,10 @@ class PatchTestFailed(PatchError):
 # --- RFC 6901 JSON Pointer -------------------------------------------------
 
 def _unescape(ref: str) -> str:
+    # RFC 6901: "~" is only ever "~0" or "~1"; "~2" or a trailing "~" is an
+    # error, not a literal key.
+    if _BAD_ESCAPE.search(ref):
+        raise PatchError(f"invalid escape in JSON Pointer token {ref!r}")
     return ref.replace("~1", "/").replace("~0", "~")
 
 
@@ -52,15 +60,22 @@ def _split_pointer(pointer: str) -> List[str]:
     return refs
 
 
-def _array_index(ref: str, length: int, *, allow_end: bool = False) -> int:
+def _array_index(ref: str, length: int, *, allow_end: bool = False,
+                 inserting: bool = False) -> int:
+    """Index ``ref`` addresses in a list of ``length``.
+
+    ``inserting`` also accepts ``length`` itself: RFC 6902 ``add`` may insert
+    at the end by number as well as by ``-``. Digits must be ASCII --
+    ``str.isdigit`` also accepts ``²`` and Arabic-Indic digits.
+    """
     if ref == "-":
         if allow_end:
             return length
         raise PatchError("array index '-' is not valid here")
-    if not ref.isdigit() or (len(ref) > 1 and ref[0] == "0"):
+    if not (ref.isascii() and ref.isdigit()) or (len(ref) > 1 and ref[0] == "0"):
         raise PatchError(f"invalid array index {ref!r}")
     index = int(ref)
-    if index >= length:
+    if index > length or (index == length and not inserting):
         raise PatchError(f"array index {index} out of range")
     return index
 
@@ -116,7 +131,7 @@ def _assign(parent: Any, ref: str, value: Any, *, insert: bool) -> None:
     if isinstance(parent, dict):
         parent[ref] = value
     elif isinstance(parent, list):
-        index = _array_index(ref, len(parent), allow_end=True)
+        index = _array_index(ref, len(parent), allow_end=True, inserting=insert)
         if insert:
             parent.insert(index, value)
         elif index == len(parent):
@@ -166,7 +181,9 @@ def _op_add(doc: Any, op: Dict[str, Any]) -> Any:
     refs = _split_pointer(op["path"])
     if not refs:
         return copy.deepcopy(op["value"])
-    _assign(_walk(doc, refs[:-1]), refs[-1], op["value"], insert=True)
+    # A copy: the patch's own value must not become part of the document,
+    # or a later op editing the document edits the caller's patch too.
+    _assign(_walk(doc, refs[:-1]), refs[-1], copy.deepcopy(op["value"]), insert=True)
     return doc
 
 
@@ -184,7 +201,7 @@ def _op_replace(doc: Any, op: Dict[str, Any]) -> Any:
         return copy.deepcopy(op["value"])
     parent = _walk(doc, refs[:-1])
     _child(parent, refs[-1])  # must exist
-    _assign(parent, refs[-1], op["value"], insert=False)
+    _assign(parent, refs[-1], copy.deepcopy(op["value"]), insert=False)
     return doc
 
 
@@ -197,6 +214,7 @@ def _is_prefix(prefix: str, pointer: str) -> bool:
 def _op_move(doc: Any, op: Dict[str, Any]) -> Any:
     source, dest = op["from"], op["path"]
     if source == dest:
+        resolve_pointer(doc, source)   # RFC 6902 4.4: "from" MUST exist
         return doc
     if _is_prefix(source, dest):
         raise PatchError("cannot move a value into its own child")
@@ -223,14 +241,36 @@ _OPS = {
 }
 
 
+_REQUIRED_MEMBERS = {
+    "add": ("path", "value"), "remove": ("path",), "replace": ("path", "value"),
+    "move": ("from", "path"), "copy": ("from", "path"), "test": ("path", "value"),
+}
+
+
+def _checked_op(op: Any) -> Dict[str, Any]:
+    """An operation with the members its ``op`` needs, else ``PatchError``.
+
+    A missing member raised KeyError, and a non-object op AttributeError.
+    """
+    if not isinstance(op, dict):
+        raise PatchError(f"patch operation must be an object, not {op!r}")
+    name = str(op.get("op", ""))
+    if name not in _OPS:
+        raise PatchError(f"unknown patch op {op.get('op')!r}")
+    for member in _REQUIRED_MEMBERS[name]:
+        if member not in op:
+            raise PatchError(f"{name} operation needs {member!r}")
+        if member != "value" and not isinstance(op[member], str):
+            raise PatchError(f"{name} operation's {member!r} must be a string")
+    return op
+
+
 def apply_patch(doc: Any, patch: List[Dict[str, Any]]) -> Any:
     """Apply an RFC 6902 patch to ``doc`` atomically; return the new document."""
     result = copy.deepcopy(doc)
     for op in patch:
-        handler = _OPS.get(str(op.get("op", "")))
-        if handler is None:
-            raise PatchError(f"unknown patch op {op.get('op')!r}")
-        result = handler(result, op)
+        checked = _checked_op(op)
+        result = _OPS[str(checked["op"])](result, checked)
     return result
 
 

@@ -9,7 +9,7 @@ remote calls.
 from __future__ import annotations
 
 import time
-from concurrent.futures import Future, ThreadPoolExecutor
+from concurrent.futures import FIRST_COMPLETED, Future, ThreadPoolExecutor, wait
 from dataclasses import asdict, dataclass, field
 from typing import Any, Callable, Dict, List, Mapping, Optional, Set
 
@@ -171,11 +171,19 @@ def _blocked_by_ancestor(ancestor_ids: Set[str],
 
 def _harvest_one(inflight: Dict[Future, str],
                  results: Dict[str, NodeResult]) -> None:
-    finished = next(iter(inflight))
-    nid = inflight.pop(finished)
+    # Whichever node finishes first: waiting on the oldest submitted one
+    # held back every node whose inputs a faster sibling had just produced.
+    done, _ = wait(inflight, return_when=FIRST_COMPLETED)
+    for finished in done:
+        _record_future(inflight.pop(finished), finished, results)
+
+
+def _record_future(nid: str, finished: Future,
+                   results: Dict[str, NodeResult]) -> None:
     try:
         finished.result()
-    except (AutoControlException, RuntimeError, OSError, ValueError) as error:
+    except (AutoControlException, RuntimeError, OSError, ValueError,
+            LookupError, TypeError, AttributeError, ArithmeticError) as error:
         # Defensive: _run_one swallows tool errors into NodeResult.
         # This branch only catches pool / runner-side faults. It includes
         # AutoControlException so a framework failure that slips past
@@ -188,7 +196,9 @@ def _run_one(node: DagNode, result: NodeResult,
              runner: NodeRunner, _nodes: Dict[str, DagNode]) -> None:
     try:
         outcome = runner(node, _build_proxy_definition(node, _nodes))
-    except (AutoControlException, RuntimeError, OSError, ValueError) as error:
+    # A runner is user code and may raise any Exception subclass; one that
+    # escaped left the node "running" and run_dag returned no result.
+    except Exception as error:  # noqa: BLE001  # reason: any node failure becomes a failed NodeResult and a skip cascade, never a crash of the whole run
         # AutoControlException covers validate_actions / locate / assert
         # failures raised by the executor: a node failure becomes a failed
         # NodeResult (and a downstream skip cascade), not a raw crash that
@@ -242,12 +252,14 @@ def _ancestor_index(dag: DagDefinition) -> Dict[str, Set[str]]:
 
 
 def _default_local_runner(node: DagNode, _definition: DagDefinition) -> Any:
-    from je_auto_control.utils.executor.action_executor import (
-        execute_action, execute_files,
-    )
-    if node.actions is not None:
-        return execute_action(list(node.actions))
-    return execute_files([node.action_file])
+    from je_auto_control.utils.executor.action_executor import executor
+    from je_auto_control.utils.json.json_file import read_executable_action_json
+    # raise_on_error=True: by default a failed action is only recorded, so
+    # a node whose actions all failed counted as succeeded and its
+    # dependants ran anyway.
+    actions = (list(node.actions) if node.actions is not None
+               else read_executable_action_json(str(node.action_file)))
+    return executor.execute_action(actions, raise_on_error=True)
 
 
 def _default_remote_runner(node: DagNode,
@@ -274,9 +286,11 @@ def _resolve_remote_actions(node: DagNode) -> List[Any]:
     if node.action_file is None:
         raise RuntimeError(
             f"node {node.id!r} has neither actions nor an action_file")
-    import json
-    with open(node.action_file, "r", encoding="utf-8") as fp:
-        loaded = json.load(fp)
+    # Through the signature check like every local path: a plain json.load
+    # sent an unsigned file to a remote host with
+    # JE_AUTOCONTROL_REQUIRE_SIGNED_ACTIONS set.
+    from je_auto_control.utils.json.json_file import read_executable_action_json
+    loaded = read_executable_action_json(str(node.action_file))
     if not isinstance(loaded, list):
         raise RuntimeError(
             f"action_file {node.action_file!r} must contain a list",

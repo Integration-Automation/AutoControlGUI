@@ -30,19 +30,57 @@ def _decode_body(body: Any) -> Optional[str]:
     return str(body)
 
 
+#: Headers whose values are credentials: never written to a cassette.
+SENSITIVE_HEADERS = frozenset({
+    "authorization", "proxy-authorization", "cookie", "set-cookie",
+    "x-api-key", "x-auth-token",
+})
+REDACTED = "<redacted>"
+_MATCH_FIELDS = ("method", "url", "body", "headers")
+
+
+def _redacted(headers: Any) -> Dict[str, Any]:
+    """``headers`` with credential values replaced by :data:`REDACTED`."""
+    return {name: REDACTED if str(name).lower() in SENSITIVE_HEADERS else value
+            for name, value in dict(headers or {}).items()}
+
+
 def _request_view(call: Mapping[str, Any]) -> Dict[str, Any]:
     return {"method": str(call.get("method", "GET")).upper(),
             "url": call.get("url"),
-            "headers": dict(call.get("headers") or {}),
+            "headers": _redacted(call.get("headers")),
             "body": _decode_body(call.get("body"))}
+
+
+def _headers_match(recorded: Mapping[str, Any], live: Mapping[str, Any]) -> bool:
+    """Every recorded header is sent again with the same value (case-insensitive name).
+
+    Redacted headers are not compared: their recorded value is gone.
+    """
+    sent = {str(name).lower(): value for name, value in live.items()}
+    return all(value == REDACTED or sent.get(str(name).lower()) == value
+               for name, value in dict(recorded or {}).items())
+
+
+def _check_match_on(match_on: Sequence[str]) -> None:
+    """Refuse a field that cannot be compared.
+
+    An unknown field (``"methd"``) matched every request, and ``"headers"`` was
+    recorded but never compared, so tenant B was served tenant A's response.
+    """
+    unknown = [field for field in match_on if field not in _MATCH_FIELDS]
+    if unknown:
+        raise ValueError(f"match_on fields must be among {_MATCH_FIELDS}, not {unknown}")
 
 
 def _matches(recorded: Mapping[str, Any], call: Mapping[str, Any],
              match_on: Sequence[str]) -> bool:
     view = _request_view(call)
     for field in match_on:
-        if field in ("method", "url", "body") and \
-                recorded.get(field) != view[field]:
+        if field == "headers":
+            if not _headers_match(recorded.get("headers", {}), dict(call.get("headers") or {})):
+                return False
+        elif recorded.get(field) != view[field]:
             return False
     return True
 
@@ -77,13 +115,17 @@ class Cassette:
 
     def record(self, call: Mapping[str, Any],
                response: Mapping[str, Any]) -> None:
-        """Append one request/response interaction."""
+        """Append one request/response interaction, credentials redacted."""
+        recorded_response = dict(response)
+        if "headers" in recorded_response:
+            recorded_response["headers"] = _redacted(recorded_response["headers"])
         self._interactions.append({"request": _request_view(call),
-                                   "response": dict(response)})
+                                   "response": recorded_response})
 
     def replay(self, call: Mapping[str, Any], *,
                match_on: Sequence[str] = ("method", "url")) -> Dict[str, Any]:
         """Return the recorded response for a matching ``call`` (no network)."""
+        _check_match_on(match_on)
         for interaction in self._interactions:
             if _matches(interaction.get("request", {}), call, match_on):
                 return dict(interaction["response"])
@@ -93,6 +135,7 @@ class Cassette:
     def replay_transport(self, *,
                          match_on: Sequence[str] = ("method", "url")) -> Transport:
         """Return a transport that replays from this cassette."""
+        _check_match_on(match_on)
         return lambda call: self.replay(call, match_on=match_on)
 
     def recording_transport(self, inner: Transport) -> Transport:

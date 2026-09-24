@@ -15,8 +15,9 @@ injectable so the logic is unit-tested without a real desktop. Imports no
 """
 import threading
 import time
+from collections import deque
 from dataclasses import dataclass
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Deque, Dict, List, Optional
 
 from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
@@ -25,9 +26,13 @@ from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 # (e.g. find_window raising AutoControlException off Windows). LookupError/
 # StopIteration/ArithmeticError cover user callbacks that index/iterate/divide;
 # an uncaught one kills the daemon thread and silently stops every rule.
+# ImportError: the built-in window rules import the platform wrapper lazily,
+# and a missing backend ended the watchdog thread silently, rules and all.
 _RULE_ERRORS = (OSError, RuntimeError, ValueError, AttributeError, TypeError,
-                LookupError, StopIteration, ArithmeticError,
+                LookupError, StopIteration, ArithmeticError, ImportError,
                 AutoControlException)
+# A popup that keeps coming back adds a hit per poll; keep the recent ones.
+_MAX_HITS = 1000
 
 
 @dataclass
@@ -53,7 +58,7 @@ class PopupWatchdog:
         self._lifecycle_lock = threading.RLock()
         self._thread: Optional[threading.Thread] = None
         self._stop = threading.Event()
-        self._hits: List[Dict[str, Any]] = []
+        self._hits: Deque[Dict[str, Any]] = deque(maxlen=_MAX_HITS)
 
     def add_rule(self, rule: WatchdogRule) -> None:
         """Register a generic detector/dismisser rule."""
@@ -98,9 +103,11 @@ class PopupWatchdog:
         with self._lifecycle_lock:
             if self.running:
                 return
-            self._stop.clear()
+            # A fresh event per run, never clear() on the old one: a thread that
+            # outlived stop()'s join would see it cleared and keep running.
+            self._stop = threading.Event()
             self._thread = threading.Thread(
-                target=self._loop, name="rd-popup-watchdog", daemon=True)
+                target=self._loop, args=(self._stop,), name="rd-popup-watchdog", daemon=True)
             self._thread.start()
 
     def stop(self, timeout: float = 2.0) -> None:
@@ -135,10 +142,10 @@ class PopupWatchdog:
             self._hits.append({"rule": rule.name, "time": time.time()})
         return True
 
-    def _loop(self) -> None:
-        while not self._stop.is_set():
+    def _loop(self, stop: threading.Event) -> None:
+        while not stop.is_set():
             self.check_once()
-            self._stop.wait(self._poll)
+            stop.wait(self._poll)
 
 
 def _window_matcher(title: str, case_sensitive: bool) -> Callable[[], bool]:
@@ -159,8 +166,11 @@ def _window_action(title: str, action: str,
         return close
 
     def press_key() -> None:
+        from je_auto_control.utils.cua_action.cua_action import resolve_key_name
         from je_auto_control.wrapper.auto_control_keyboard import type_keyboard
-        type_keyboard(action)
+        # "esc" / "enter" dismiss rules name keys the Windows table spells
+        # "escape" / "return".
+        type_keyboard(resolve_key_name(action))
     return press_key
 
 

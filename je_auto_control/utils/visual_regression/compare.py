@@ -91,14 +91,14 @@ def take_golden(path,
 
 
 def _grab(region: Optional[Sequence[int]]) -> Image.Image:
-    """Screen capture via the platform's grabber; raises if not available."""
-    from je_auto_control.utils.cv2_utils.screen_grabber import image_grabber
-    grabber = image_grabber()
-    if region is not None:
-        x, y, width, height = (int(v) for v in region)
-        return grabber.grab(bbox=(x, y, x + width, y + height),
-                            all_screens=True)
-    return grabber.grab(all_screens=True)
+    """Screen capture in mouse coordinates, like every other capture here.
+
+    ``ImageGrab.grab(bbox=...)`` crops in physical pixels, so on a scaled
+    display a region captured the wrong area -- (25..75) instead of (50..150)
+    at 200 %. ``grab_logical`` maps the region first.
+    """
+    from je_auto_control.utils.monitor_layout.logical_frame import grab_logical
+    return grab_logical(region)[0]
 
 
 def image_difference(actual: Image.Image, expected: Image.Image,
@@ -142,8 +142,22 @@ def image_difference(actual: Image.Image, expected: Image.Image,
             if max(r, g, b) > threshold:
                 differing += 1
                 overlay_draw.point((x, y), fill=(255, 0, 0))
-    total = width * height
+    # Masked pixels are excluded from the total as well: counting them made
+    # a mask over 90% of the image dilute a 100% change in the rest to 9%.
+    total = width * height - _masked_pixels(diff.size, masks)
     return differing, total, overlay
+
+
+def _masked_pixels(size: Tuple[int, int], masks: Sequence[MaskRegion]) -> int:
+    """How many pixels the masks cover (overlaps once), as ``_apply_masks`` draws them."""
+    from PIL import Image, ImageDraw
+    if not masks:
+        return 0
+    stencil = Image.new("1", size, 0)
+    draw = ImageDraw.Draw(stencil)
+    for m in masks:
+        draw.rectangle((m.left, m.top, m.right, m.bottom), fill=1)
+    return int(sum(stencil.histogram()[1:]))
 
 
 def compare_to_golden(golden_path,
@@ -165,6 +179,17 @@ def compare_to_golden(golden_path,
         raise FileNotFoundError(f"golden image not found: {target}")
     expected = Image.open(str(target))
     current = actual if actual is not None else _grab(region)
+    if current.size != expected.size:
+        # A capture of another size is a mismatch, not a crash: the ValueError
+        # ignored raise_on_fail=False and escaped every containment boundary.
+        total = max(current.size[0] * current.size[1],
+                    expected.size[0] * expected.size[1])
+        return DiffResult(
+            matched=False, diff_pct=100.0, differing_pixels=total,
+            total_pixels=total, tolerance_pct=float(tolerance),
+            per_pixel_threshold=per_pixel_threshold,
+            diff_image=current.convert("RGB"),
+        )
     differing, total, overlay = image_difference(
         current, expected,
         per_pixel_threshold=per_pixel_threshold, masks=masks,

@@ -49,7 +49,8 @@ _DESC_LENGTH = 18
 def _is_loopback_target(base_url: str) -> bool:
     """True if ``base_url`` points at this machine (so a local open is valid)."""
     text = base_url.strip()
-    if not text.startswith(("http://", "https://")):  # NOSONAR python:S5332 - scheme detection on user input, not an outbound http call
+    # Scheme detection on user input, not an outbound http call.
+    if not text.startswith(("http://", "https://")):  # NOSONAR python:S5332
         text = f"{_TEST_SCHEME}://{text}"
     host = urllib.parse.urlsplit(text).hostname or ""
     return host.lower() in _LOOPBACK_HOSTS
@@ -140,7 +141,9 @@ class _FetchWorker(QObject):
             devices = fetch_remote_devices(
                 base_url=self._base_url, token=self._token,
             )
-        except (ValueError, OSError, TimeoutError) as error:  # NOSONAR — TimeoutError is not an OSError on Python 3.10; URLError already is, so it was dropped
+        # Not redundant: TimeoutError is not an OSError on Python 3.10.
+        # URLError already is one, so it was dropped.
+        except (ValueError, OSError, TimeoutError) as error:  # NOSONAR
             self.failed.emit(str(error))
             return
         self.finished.emit(devices)

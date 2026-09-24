@@ -14,7 +14,10 @@ import time
 from dataclasses import dataclass
 from typing import Any, Callable, Dict
 
-from je_auto_control.utils.exception.exceptions import AutoControlActionException
+from je_auto_control.utils.exception.exceptions import (
+    AutoControlActionException, AutoControlAssertionException,
+)
+from je_auto_control.utils.timeouts import deadline_after
 
 Matcher = Callable[[Any], bool]
 
@@ -97,7 +100,7 @@ def expect_poll(getter: Callable[[], Any], matcher: Matcher, *,
     if interval_s <= 0:
         raise ValueError("interval_s must be positive")
     start = clock()
-    deadline = start + float(timeout_s)
+    deadline = deadline_after(start, timeout_s, "timeout_s")
     attempts = 0
     value: Any = None
     while True:
@@ -115,14 +118,23 @@ def expect_poll(getter: Callable[[], Any], matcher: Matcher, *,
         sleep(min(float(interval_s), max(remaining, 0.0)))
 
 
+class PollAssertionError(AutoControlAssertionException, AutoControlActionException):
+    """An :func:`assert_poll` whose condition never held."""
+
+
 def assert_poll(getter: Callable[[], Any], matcher: Matcher, *,
                 timeout_s: float = 5.0, interval_s: float = 0.25,
                 describe: Callable[[Any], str] = repr) -> PollResult:
-    """Like :func:`expect_poll` but raise ``AutoControlActionException`` on failure."""
+    """Like :func:`expect_poll` but raise :class:`PollAssertionError` on failure.
+
+    It is an assertion: the suite runner scores it as *failed* (not
+    *errored*) and ``raise_on_error=False`` does not swallow it. It still
+    subclasses ``AutoControlActionException`` for existing handlers.
+    """
     result = expect_poll(getter, matcher, timeout_s=timeout_s,
                          interval_s=interval_s, describe=describe)
     if not result.ok:
-        raise AutoControlActionException(
+        raise PollAssertionError(
             f"expect_poll failed after {result.attempts} attempt(s): "
             f"{result.description}")
     return result

@@ -31,15 +31,20 @@ DetectorFn = Callable[[Any, Dict[str, Any]], List[BoundingBox]]
 _RE_EMAIL = re.compile(
     r"\b[A-Za-z0-9._%+\-]{1,64}@[A-Za-z0-9.\-]{1,255}\.[A-Za-z]{2,24}\b",
 )
+# 13-19 digits in any grouping: only 16-digit 4-4-4-4 numbers matched, so
+# an Amex (4-6-5) stayed readable under every policy.
 _RE_CREDIT_CARD = re.compile(
-    r"\b(?:\d{4}[ \-]?){3}\d{4}\b",
+    r"\b\d(?:[ \-]?\d){12,18}\b",
 )
 _RE_SSN = re.compile(
     r"\b\d{3}-\d{2}-\d{4}\b",
 )
+# North American numbers, or an international "+" number of 8-15 digits
+# ("+44 20 7946 0958" matched neither before).
 _RE_PHONE = re.compile(
     r"\b(?:\+?\d{1,3}[ .\-]?)?"
-    r"\(?\d{3}\)?[ .\-]?\d{3}[ .\-]?\d{4}\b",
+    r"\(?\d{3}\)?[ .\-]?\d{3}[ .\-]?\d{4}\b"
+    r"|\+\d(?:[ .\-]?\d){7,14}\b",
 )
 
 
@@ -152,14 +157,33 @@ def _first_int(source: Mapping[str, Any], *names: str, default: int = 0) -> int:
     return default
 
 
+_CORNER_KEYS = frozenset({"x1", "y1", "x2", "y2", "left", "top", "right", "bottom"})
+
+
+def _dict_bbox(bbox: Mapping[str, Any]) -> Tuple[int, int, int, int]:
+    """Corners from ``x1/y1/x2/y2``, ``left/top/right/bottom`` or ``x/y/width/height``.
+
+    The ``x/y/width/height`` shape (what OCR and accessibility dumps use) used
+    to collapse to ``(0, 0, 0, 0)``, so the field it described was never
+    blurred; a dict with none of these keys is refused for the same reason.
+    """
+    if "width" in bbox or "height" in bbox:
+        x1 = _first_int(bbox, "x", "left", "x1")
+        y1 = _first_int(bbox, "y", "top", "y1")
+        return (x1, y1, x1 + _first_int(bbox, "width"), y1 + _first_int(bbox, "height"))
+    if not _CORNER_KEYS.intersection(bbox):
+        raise ValueError(f"bbox has no coordinates: {sorted(bbox)}")
+    x1 = _first_int(bbox, "x1", "left")
+    y1 = _first_int(bbox, "y1", "top")
+    return (x1, y1, _first_int(bbox, "x2", "right", default=x1),
+            _first_int(bbox, "y2", "bottom", default=y1))
+
+
 def _normalise_bbox(bbox: Any) -> BoundingBox:
     if bbox is None:
         raise ValueError("bbox cannot be None")
-    if isinstance(bbox, dict):
-        x1 = _first_int(bbox, "x1", "left")
-        y1 = _first_int(bbox, "y1", "top")
-        x2 = _first_int(bbox, "x2", "right", default=x1)
-        y2 = _first_int(bbox, "y2", "bottom", default=y1)
+    if isinstance(bbox, Mapping):
+        x1, y1, x2, y2 = _dict_bbox(bbox)
     else:
         seq = list(bbox)
         if len(seq) != 4:

@@ -7,15 +7,13 @@ generic :class:`FailureReport` into the provider-specific payload.
 from __future__ import annotations
 
 import base64
-import json
-import urllib.error
-import urllib.request
 from dataclasses import dataclass
 from typing import Any, Dict, Optional, Protocol
 
 from je_auto_control.utils.failure_hooks.report import (
     FailureReport, TicketResult,
 )
+from je_auto_control.utils.http_client.http_client import build_call, perform_call
 
 
 _HTTP_TIMEOUT = 15.0
@@ -130,24 +128,25 @@ def _post_json(backend_name: str, url: str, body: Dict[str, Any], *,
             backend=backend_name, succeeded=False,
             error=f"refusing to call non-HTTP(S) URL: {url}",
         )
-    data = json.dumps(body).encode("utf-8")
-    request = urllib.request.Request(  # nosec B310  # reason: scheme guard above
-        url, data=data, method="POST",
-        headers={**headers, "Content-Type": "application/json"},
-    )
+    # Through http_client so the egress policy applies, and with redirects
+    # refused: urllib turned a 302 into a GET that carried the credentials to
+    # the other host, and counted that reply as a created ticket.
+    call = build_call(url, "POST", headers=headers, json_body=body, timeout=_HTTP_TIMEOUT)
+    call["follow_redirects"] = False
     try:
-        with urllib.request.urlopen(  # nosec B310
-                request, timeout=_HTTP_TIMEOUT,
-        ) as response:
-            payload = json.loads(response.read().decode("utf-8"))
-    except urllib.error.URLError as error:
-        return TicketResult(
-            backend=backend_name, succeeded=False, error=str(error),
-        )
-    except ValueError as error:
+        response = perform_call(call)
+    except (OSError, ValueError) as error:  # URLError, EgressBlocked
+        return TicketResult(backend=backend_name, succeeded=False, error=str(error))
+    if not 200 <= response["status"] < 300:
         return TicketResult(
             backend=backend_name, succeeded=False,
-            error=f"non-JSON response: {error}",
+            error=f"HTTP {response['status']}: {response['text'][:200]}",
+        )
+    payload = response["json"]
+    if not isinstance(payload, dict):
+        return TicketResult(
+            backend=backend_name, succeeded=False,
+            error="response is not a JSON object",
         )
     if response_extractor is not None:
         return response_extractor(backend_name, payload)
@@ -177,7 +176,10 @@ def _generic_extract(backend_name: str, payload: Dict[str, Any], *,
 
 def _extract_linear_response(backend_name: str,
                               payload: Dict[str, Any]) -> TicketResult:
-    data = ((payload.get("data") or {}).get("issueCreate")) or {}
+    data = payload.get("data")
+    data = (data.get("issueCreate") if isinstance(data, dict) else None) or {}
+    if not isinstance(data, dict):
+        data = {}
     if not data.get("success"):
         errors = payload.get("errors") or data.get("error") or "unknown"
         return TicketResult(

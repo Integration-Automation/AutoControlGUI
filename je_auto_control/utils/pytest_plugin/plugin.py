@@ -61,10 +61,13 @@ def _capture_failure_screenshot(item: "pytest.Item",
     """Best-effort screenshot capture on failure; returns the path or None."""
     name = item.nodeid.replace("/", "_").replace("::", "__")
     target = directory / f"{name}.png"
+    from je_auto_control.utils.exception.exceptions import AutoControlException
     try:
         from je_auto_control.wrapper.auto_control_screen import screenshot
         screenshot(file_path=str(target))
-    except (OSError, RuntimeError, ValueError) as exc:
+    # AutoControlScreenException (no display) and ImportError (no cv2) turned
+    # a failed test into an INTERNALERROR that ended the whole session.
+    except (OSError, RuntimeError, ValueError, ImportError, AutoControlException) as exc:
         item.add_report_section(
             "call", "autocontrol-screenshot",
             f"failed to capture screenshot: {exc!r}",
@@ -78,7 +81,9 @@ def pytest_runtest_makereport(item, call):  # noqa: D401
     """Attach a screenshot path to the failure report for ``autocontrol`` tests."""
     outcome = yield
     report = outcome.get_result()
-    if report.when != "call" or report.passed:
+    # Failures only: a skipped or xfailed test is not passed either, and was
+    # screenshotted as if it had failed.
+    if report.when != "call" or not report.failed or hasattr(report, "wasxfail"):
         return
     if item.get_closest_marker(_MARKER_NAME) is None:
         return

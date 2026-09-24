@@ -24,7 +24,7 @@ Layering: entry points (`cli.py`, `gui/`, socket / REST / MCP servers) → execu
 
 ```bash
 pip install -r dev_requirements.txt         # dev deps
-pip install -e .[gui]                       # + GUI extra
+pip install -e .[gui,webrtc]                # + GUI and WebRTC extras
 python -m pytest test/unit_test/headless    # headless unit tests
 python -m pytest test/integrated_test/      # cross-module workflows
 python -m coverage run -m pytest            # the suite WITH coverage (see below)
@@ -40,6 +40,13 @@ have their import-time lines recorded as never executed: measured, that is
 11,962 statements and ~24 percentage points (52.22% vs 72.05% on the same
 suite). `test/unit_test/headless/test_coverage_measurement.py` holds CI to the
 correct spelling.
+
+**Measure it with the `[webrtc]` extra installed**, which is why it is in the
+line above. Eleven modules under `utils/remote_desktop` raise `ImportError` at
+module level without `aiortc`/`av` — 2,090 statements, about 4 points — and the
+tests covering the WebRTC host's auth, TLS, tokens and file transfer
+`importorskip` straight past. `quality.yml` installs the extra so the floor is
+measured against the same tree a developer sees.
 
 `pyproject.toml` pins `python_files = ["test_*.py"]` on purpose: the `*_test.py` files under `test/unit_test/` are manual demo scripts whose module bodies drive the real mouse and keyboard on import. Never loosen that setting.
 
@@ -86,12 +93,16 @@ The map is only useful while it matches the tree, so **update it in the same cha
 - **`test/unit_test/headless/test_doc_counts.py` enforces this and fails CI on a mismatch.** It re-measures the command, MCP-tool, `utils/` subpackage and `examples/` counts and compares them against every place the four documents quote them, so code and docs have to move in the same commit. If you reword a sentence that holds one of those numbers, update the test's pattern — it fails loudly when a citation disappears rather than passing on a document it can no longer read. The GUI tab count is guarded the same way but from `test_actions_menu_gui.py`, whose subprocess probe already builds the widget that count needs.
 - **`test_doc_line_counts.py` does the same for every line count**, and is also the `--fix` tool above — so any change in module size reddens CI until the map is re-measured, and re-measuring is one command.
 
+### README stays current and in sync across all three languages
+
+`README.md` (English, the source), `README/README_zh-CN.md`, and `README/README_zh-TW.md` MUST stay current with the code. Any user-facing change (a feature or API surface, an `AC_*` command, a CLI flag, a GUI tab, install / setup, configuration, an env var, a requirement, or a quoted count) updates `README.md` **and both translations in the same commit**, structure and content aligned. Never update one language and leave the others stale. `test/unit_test/headless/test_doc_counts.py` guards the quoted figures across all three (see above), but everything else — new sections, changed commands, reworded setup — is on you: read the diff against all three before committing.
+
 ### Outstanding work goes in `Progress.md`
 
 Anything agreed but not done — deferred follow-ups, known gaps, half-delivered features, decisions waiting on the maintainer — is recorded in [Progress.md](Progress.md), not left in chat history or buried in a commit message.
 
 - **Write the entry when you defer the work**, in the same change that created the gap. Each entry states its status (`TODO` / `WIP` / `BLOCKED` / `DECIDE`), what is missing, and where in the tree.
-- **Open items only.** Delete the entry when the work lands; shipped work is described in `WHATS_NEW.md` and compatibility changes in `CHANGELOG.md`. `Progress.md` is not a changelog.
+- **Open items only.** Delete the entry when the work lands; finished work is recorded as an entry in `docs/updates/` (index and query commands: `docs/updates/README.md`) and compatibility changes in `CHANGELOG.md`. `Progress.md` is not a changelog.
 - A feature that reaches only some of the delivery surfaces above belongs here until the rest land.
 
 ## Coding Standards
@@ -116,7 +127,7 @@ Anything agreed but not done — deferred follow-ups, known gaps, half-delivered
 
 Cyclomatic complexity ≤ 10 · cognitive complexity ≤ 15 · function ≤ 75 lines · parameters ≤ 7 · nesting ≤ 4 · file ≤ 750 lines · line ≤ 120 chars · no duplicated block ≥ 10 lines.
 
-**What actually enforces these.** `quality.yml` runs ruff and bandit only, so line length is the only limit a CI job rejects. Complexity is measured by `radon cc -nc` in the pre-commit list below and read by a human. The file-length limit is enforced by nobody — treat this section as a review standard, not a gate, and do not describe it as CI-enforced.
+**What actually enforces these.** `quality.yml` has five jobs — `lint` (ruff), `security` (bandit), `pytest-headless` (the suite plus the coverage floor), `typing-stable-api` (mypy) and `dependency-review`. Of the limits in this section, line length is rejected by ruff (`[tool.ruff] line-length = 120` with `E501`; it exempts a line ending in a pragma, which cannot wrap), and the file-length limit by `test/unit_test/headless/test_file_length_budget.py`, which reads the exemption list in `Progress.md` and fails on a file over the limit that is not listed, on a listed file that grew past its recorded ceiling, and on a row whose file is now under the limit. Cyclomatic complexity is measured with the same `radon` the pre-commit list below names, by `test/unit_test/headless/test_complexity_budget.py`; the whole package was one function over the limit when that gate went in. Cognitive complexity, function length, parameter count and nesting depth are still review standards rather than gates.
 
 **Scope of the file-length limit.** It applies to:
 
@@ -152,6 +163,21 @@ These tools own the generic rules (bare `except`, mutable defaults, unused names
 
 Suppressions need an inline justification — `# noqa: <code>  # reason: <why>` or `# nosec B404  # reason: <why>`. Blanket file- or module-level suppressions are forbidden.
 
+A broad `except` (`Exception`, `BaseException`, bare) that swallows rather than re-raises needs `# reason:` on its own `except` line. `test/unit_test/headless/test_broad_except_reasons.py` fails CI on one that does not — the linters cannot: CI runs `ruff` with its default rules (no `BLE`) and does not run pylint.
+
+## Stage commits, `Progress.md`, `docs/updates/` and `architecture.md`
+
+Workspace rule shared by every repository under `D:\Codes` (full text: `D:\Codes\CLAUDE.md`).
+
+- **Commit at every stage.** A stage is the smallest piece of work that leaves the repository consistent and passes this project's checks (definition of done, tests, lint): one finished `Progress.md` item, or one self-contained step of a larger one. Commit it before starting the next stage, before switching to another repository, and before the session ends. Do not leave work uncommitted across sessions; if a stage cannot be finished, commit the consistent part and record the rest in `Progress.md`.
+  - Stage only the files that stage touched (`git add <path>`, never `git add -A`), follow this file's commit-message rules, and never add AI attribution.
+  - Committing is not pushing: push or open a PR only as this project's branch flow says or when asked.
+- **`Progress.md`** (repository root, tracked) holds outstanding work only: no finished items, no history, no rules.
+- **`docs/updates/`** records finished work: one batch file per month (`YYYY-MM.md`), one entry per piece of work headed `## U-YYYYMMDD-NN · date · title · #tags`, and an index with query commands in `docs/updates/README.md`. When a `Progress.md` item is done, delete it and add a `#done` entry plus its index row in the same commit.
+- **`architecture.md`** (repository root) is the short architecture overview: layers, entry points, main flows, extension points, cross-project boundaries. Update it in the same commit whenever a change alters any of those. `architecture_explore.md` stays the detailed per-module map under its own rule in this file.
+- **Cross-project contracts** are listed in `architecture.md` §6: what other repositories rely on here (CLI flags, import paths, constructor arguments, file layouts) and what this repository relies on elsewhere. `test/unit_test/headless/test_cross_project_contracts.py` pins the ones §6 lists (legacy CLI flags as a real child process, the facade and internal names each consumer imports), but it only knows what §6 knows: never rename or remove one without changing its consumers in the same round, and update §6 and that test whenever a contract is added or changes.
+- Here the progress file is `Progress.md` (see "Outstanding work goes in `Progress.md`" above); its 750-line exemption list stays there. `WHATS_NEW.md` now only points to `docs/updates/`, and compatibility changes still go to `CHANGELOG.md`.
+
 ## Commit Conventions
 
 - Concise messages focused on **why**, not what. Imperative mood: `Add image threshold parameter validation`, `Fix mouse scroll direction on macOS`, `Remove deprecated screen capture fallback`.
@@ -173,10 +199,11 @@ Suppressions need an inline justification — `# noqa: <code>  # reason: <why>` 
   seven `AdminConsoleTab`s this way, and they detonated inside the nested modal
   `exec()` of `test_usb_acl_prompt.py`, killing the interpreter with rc
   3221226505 (0xC0000409) — a `__fastfail`, so no traceback, no faulthandler
-  output, and nothing after it in the suite ran. Note the failure is invisible
-  to CI: `test_usb_acl_prompt.py` needs the optional `webrtc` extra (`av`,
-  `aiortc`), which CI does not install, so CI skips it and only developers with
-  that extra installed see the crash.
+  output, and nothing after it in the suite ran. `test_usb_acl_prompt.py` needs
+  the optional `webrtc` extra (`av`, `aiortc`) and skips without it; the
+  `pytest-headless` job installs `.[webrtc]`, so CI runs it on every square
+  and a leak like this fails CI instead of only a developer's machine. Keep
+  the extra in that install for this reason as well as for coverage.
 
 ## Key Conventions
 

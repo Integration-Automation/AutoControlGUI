@@ -1,5 +1,5 @@
 """Triggers tab: image / window / pixel / file event watchers."""
-from typing import Optional
+from typing import Any, Dict, Iterable, List, Optional, Sequence
 
 from PySide6.QtCore import QTimer
 from PySide6.QtWidgets import (
@@ -27,6 +27,24 @@ _TYPE_KEYS = (
     "tr_type_image", "tr_type_window", "tr_type_pixel", "tr_type_file",
     "tr_type_cron",
 )
+
+
+#: Which composite trigger each "combine" button builds.
+COMPOSITE_BY_MODE: Dict[str, type] = {
+    "all": AllOfTrigger, "any": AnyOfTrigger, "sequence": SequenceTrigger,
+}
+
+
+def children_to_combine(ids: Sequence[str],
+                        triggers: Iterable[Any]) -> List[Any]:
+    """The triggers named by ``ids``, or ``[]`` when fewer than two resolve.
+
+    Ids that no longer name a trigger are dropped: the table can outlive a
+    removal, and combining one trigger with nothing is not a composite.
+    """
+    by_id = {trigger.trigger_id: trigger for trigger in triggers}
+    children = [by_id[tid] for tid in ids if tid in by_id]
+    return children if len(children) >= 2 else []
 
 
 class TriggersTab(TranslatableMixin, QWidget):
@@ -256,10 +274,14 @@ class TriggersTab(TranslatableMixin, QWidget):
         default_trigger_engine.remove(tid)
         self._refresh()
 
-    def _on_combine(self, mode: str) -> None:
+    def _selected_ids(self) -> List[str]:
+        """Trigger ids of the selected rows, in row order, without duplicates."""
         rows = sorted({idx.row() for idx in self._table.selectedIndexes()})
-        ids = [self._table.item(row, 0).text() for row in rows
-               if self._table.item(row, 0) is not None]
+        return [self._table.item(row, 0).text() for row in rows
+                if self._table.item(row, 0) is not None]
+
+    def _on_combine(self, mode: str) -> None:
+        ids = self._selected_ids()
         if len(ids) < 2:
             QMessageBox.warning(self, "Error", _t("tr_combine_need_two"))
             return
@@ -267,16 +289,13 @@ class TriggersTab(TranslatableMixin, QWidget):
         if not script:
             QMessageBox.warning(self, "Error", "Script path is required")
             return
-        by_id = {t.trigger_id: t
-                 for t in default_trigger_engine.list_triggers()}
-        children = [by_id[tid] for tid in ids if tid in by_id]
-        if len(children) < 2:
+        children = children_to_combine(
+            ids, default_trigger_engine.list_triggers())
+        if not children:
             return
         for tid in ids:
             default_trigger_engine.remove(tid)
-        composite_cls = {"all": AllOfTrigger, "any": AnyOfTrigger,
-                         "sequence": SequenceTrigger}[mode]
-        default_trigger_engine.add(composite_cls(
+        default_trigger_engine.add(COMPOSITE_BY_MODE[mode](
             trigger_id="", script_path=script,
             repeat=self._repeat_check.isChecked(), children=children,
         ))

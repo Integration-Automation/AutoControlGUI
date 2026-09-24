@@ -18,6 +18,7 @@ from typing import List, Optional, Tuple, Union
 from je_auto_control.utils.exception.exceptions import AutoControlActionException
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.wrapper.window_backends import get_backend
+from je_auto_control.utils.timeouts import deadline_after
 
 
 def list_windows(titled_only: bool = False) -> List[Tuple[int, str]]:
@@ -38,6 +39,11 @@ def list_windows(titled_only: bool = False) -> List[Tuple[int, str]]:
 def find_window(title_substring: str,
                 case_sensitive: bool = False) -> Optional[Tuple[int, str]]:
     """Return the first window whose title contains ``title_substring``."""
+    if not isinstance(title_substring, str) or not title_substring.strip():
+        # An empty title is contained in every title: close_window_by_title('')
+        # closed whatever window was listed first.
+        raise AutoControlActionException(
+            f"window title must be a non-empty string, got {title_substring!r}")
     needle = title_substring if case_sensitive else title_substring.lower()
     for hwnd, title in list_windows():
         haystack = title if case_sensitive else title.lower()
@@ -71,11 +77,14 @@ def wait_for_window(title_substring: str,
                     case_sensitive: bool = False) -> int:
     """Poll until a window with the given title appears; return its hwnd."""
     poll = max(0.05, float(poll))
-    deadline = time.monotonic() + float(timeout)
-    while time.monotonic() < deadline:
+    deadline = deadline_after(time.monotonic(), timeout)
+    # Look first, then check the clock: with timeout=0 the loop never ran.
+    while True:
         hit = find_window(title_substring, case_sensitive)
         if hit is not None:
             return hit[0]
+        if time.monotonic() >= deadline:
+            break
         time.sleep(poll)
     raise AutoControlActionException(
         f"wait_for_window timeout: {title_substring!r}"

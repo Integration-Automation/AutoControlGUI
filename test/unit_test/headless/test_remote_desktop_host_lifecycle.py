@@ -83,6 +83,51 @@ def test_a_client_finishing_its_handshake_after_stop_is_not_attached(
         host.stop(timeout=1.0)
 
 
+def test_a_handshake_from_the_stopped_run_does_not_join_the_next_one(
+        monkeypatch):
+    """The same window as above, with a restart inside it.
+
+    The re-check under ``_clients_lock`` read the host's one ``_shutdown``
+    event, and ``start()`` cleared that event. A handshake begun before
+    ``stop()`` and finished after the next ``start()`` therefore passed the
+    re-check and attached a viewer authenticated against the old run to the new
+    one -- which the operator had just started for somebody else. Each run now
+    has its own event, and the old accept loop checks the old one.
+    """
+    parked, release = threading.Event(), threading.Event()
+    calls = []
+
+    def slow_open_channel(_self, _sock, _address):
+        calls.append(1)
+        if len(calls) == 1:
+            parked.set()
+            release.wait(5.0)
+        return _FakeChannel()
+
+    monkeypatch.setattr(RemoteDesktopHost, "_open_channel", slow_open_channel)
+    monkeypatch.setattr(host_mod._ClientHandler, "start", lambda self: None)
+
+    host = _make_host()
+    host.start()
+    conn = socket.create_connection(("127.0.0.1", host.port), timeout=3)
+    try:
+        assert parked.wait(3.0), "accept thread never reached the handshake"
+        host.stop(timeout=0.2)          # gives up while the handshake runs
+        host.start()                    # a new run, a new listening socket
+        release.set()
+        time.sleep(0.8)                 # let the old handshake finish
+
+        assert host._clients == [], (
+            "a viewer from the stopped run attached to the new one")
+    finally:
+        release.set()
+        try:
+            conn.close()
+        except OSError:
+            pass
+        host.stop(timeout=1.0)
+
+
 def test_stop_racing_start_never_raises_or_leaks_a_thread_exception():
     """start() and stop() must be mutually exclusive.
 

@@ -30,7 +30,8 @@ class OpenAIVLMBackend(VLMBackend):
             self.available = False
             return
         try:
-            from openai import OpenAI  # nosemgrep: codacy.python.openai.import-without-guardrails  # reason: internal client init, input is user-supplied prompt only
+            # Internal client init; the only input is the caller's prompt.
+            from openai import OpenAI  # nosemgrep: codacy.python.openai.import-without-guardrails  # reason: see above
             self._client = OpenAI(timeout=_REQUEST_TIMEOUT_S)
             self.available = True
         except (ImportError, ValueError, RuntimeError) as error:
@@ -64,7 +65,10 @@ class OpenAIVLMBackend(VLMBackend):
                     ],
                 }],
             )
-        except (OSError, ValueError, RuntimeError) as error:
+        # The SDK's errors (rate limit, timeout, 5xx) derive from
+        # openai.OpenAIError, a bare Exception, so they escaped here while
+        # the LLM backend already caught them.
+        except (*_sdk_errors(), OSError, ValueError, RuntimeError) as error:
             autocontrol_logger.warning(
                 "OpenAI VLM request failed: %r", error,
             )
@@ -74,3 +78,17 @@ class OpenAIVLMBackend(VLMBackend):
         except (AttributeError, IndexError):
             text = ""
         return parse_coords(text)
+
+
+def _sdk_errors() -> tuple:
+    """``(openai.OpenAIError,)``, the base of every error the SDK raises.
+
+    Evaluated while an exception is being matched, so it must not raise:
+    with an injected client and no SDK installed there is nothing of the
+    SDK's to catch.
+    """
+    try:
+        import openai  # nosemgrep: codacy.python.openai.import-without-guardrails  # reason: error type only
+    except ImportError:
+        return ()
+    return (openai.OpenAIError,)

@@ -19,14 +19,14 @@ by both formats. Imports no ``PySide6``.
 import csv
 import io
 import sys
-from typing import List, Optional, Sequence
+from typing import Any, List, Optional, Sequence
 
 _RTF_FORMAT_NAME = "Rich Text Format"
 _CSV_FORMAT_NAME = "Csv"
 _GMEM_MOVEABLE = 0x0002
 _RTF_PREAMBLE = "{\\rtf1\\ansi\\ansicpg1252\\deff0{\\fonttbl{\\f0\\fnil Calibri;}}\n"
 _RTF_LITERAL_ESCAPE = {"\\": "\\\\", "{": "\\{", "}": "\\}",
-                       "\n": "\\par\n", "\r": "", "\t": "\\tab "}
+                       "\n": "\\par\n", "\t": "\\tab "}
 # RTF destination groups whose textual content is metadata, not document text.
 _RTF_DESTINATIONS = frozenset({
     "fonttbl", "colortbl", "stylesheet", "info", "pict", "header", "footer",
@@ -39,81 +39,175 @@ _RTF_DESTINATIONS = frozenset({
 def _escape_char(char: str) -> str:
     if char in _RTF_LITERAL_ESCAPE:
         return _RTF_LITERAL_ESCAPE[char]
-    if ord(char) > 127:
-        return f"\\u{ord(char)}?"
-    return char
+    if ord(char) <= 127:
+        return char
+    # \uN takes a *signed* 16-bit N, one per UTF-16 unit: U+AC00 is
+    # \u-21504? and an emoji is a surrogate pair of two escapes.
+    units = char.encode("utf-16-le")
+    return "".join(
+        f"\\u{unit - 0x10000 if unit > 0x7FFF else unit}?"
+        for unit in (int.from_bytes(units[i:i + 2], "little")
+                     for i in range(0, len(units), 2)))
 
 
 def build_rtf(text: str) -> str:
     """Wrap plain ``text`` in a minimal, valid RTF document.
 
-    Backslash / brace are escaped, newlines become ``\\par`` and non-ASCII
-    characters become ``\\uNNNN?`` escapes, so the result is pure ASCII.
+    Backslash / brace are escaped, line breaks (``\\n``, ``\\r\\n`` or a lone
+    ``\\r``) become ``\\par`` and non-ASCII characters become ``\\uN?`` escapes
+    of their UTF-16 units, so the result is pure ASCII.
     """
     if not isinstance(text, str):
         raise TypeError("build_rtf expects a str")
+    text = text.replace("\r\n", "\n").replace("\r", "\n")
     return _RTF_PREAMBLE + "".join(_escape_char(ch) for ch in text) + "}"
 
 
-def _apply_word(word: str, param: str, stack: List[bool],
-                result: List[str]) -> int:
-    """Apply one RTF control word; return how many following chars to skip."""
-    if word in _RTF_DESTINATIONS:
-        stack[-1] = True
-        return 0
-    if stack[-1]:
-        return 1 if word == "u" else 0
-    if word in ("par", "line"):
-        result.append("\n")
-    elif word == "tab":
-        result.append("\t")
-    elif word == "u" and param:
-        result.append(chr(int(param) % 0x10000))
-        return 1  # the trailing fallback char is consumed
-    return 0
+# Control words / symbols that stand for text (the rest are formatting).
+_RTF_WORD_TEXT = {
+    "par": "\n", "line": "\n", "tab": "\t",
+    "emdash": chr(0x2014), "endash": chr(0x2013), "bullet": chr(0x2022),
+    "lquote": chr(0x2018), "rquote": chr(0x2019),
+    "ldblquote": chr(0x201C), "rdblquote": chr(0x201D),
+    "emspace": chr(0x2003), "enspace": chr(0x2002),
+}
+_RTF_SYMBOLS = {"~": chr(0xA0), "_": chr(0x2011)}
 
 
-def _consume_word(text: str, i: int, stack: List[bool],
-                  result: List[str]) -> int:
-    n = len(text)
-    j = i + 1
-    while j < n and text[j].isalpha():
-        j += 1
-    k = j + 1 if j < n and text[j] == "-" else j
-    while k < n and text[k].isdigit():
-        k += 1
-    param = text[j:k]
-    if k < n and text[k] == " ":
-        k += 1
-    return k + _apply_word(text[i + 1:j], param, stack, result)
+class _RtfReader:
+    """Single pass over an RTF document collecting its visible text.
 
+    Each group frame is ``[hidden, uc]``: whether the group is metadata, and
+    its ``\\ucN`` -- how many fallback *tokens* follow each ``\\uN`` (a
+    ``\\'xx`` escape is one token, and a control word ends the fallback).
+    """
 
-def _consume_hex(text: str, i: int, stack: List[bool],
-                 result: List[str]) -> int:
-    if not stack[-1]:
+    def __init__(self, text: str) -> None:
+        self.text = text
+        self.index = 0
+        self.frames: List[List[Any]] = [[False, 1]]
+        self.skip = 0
+        self.result: List[str] = []
+        # \'XX bytes are collected and decoded together in the document's
+        # \ansicpg code page: they were decoded one by one as cp1252, so a
+        # two-byte GBK or Shift-JIS character came out as two Latin letters.
+        self.codepage = "cp1252"
+        self.pending = bytearray()
+
+    def read(self) -> str:
+        while self.index < len(self.text):
+            self._step(self.text[self.index])
+        self._flush()
+        # \uN escapes of a surrogate pair arrive as two halves; join them.
+        joined = "".join(self.result)
+        return joined.encode("utf-16", "surrogatepass").decode("utf-16", "replace")
+
+    def _flush(self) -> None:
+        if self.pending:
+            self.result.append(bytes(self.pending).decode(self.codepage, "replace"))
+            self.pending.clear()
+
+    def _append(self, text: str) -> None:
+        self._flush()
+        self.result.append(text)
+
+    def _emit(self, text: str) -> None:
+        if self.skip > 0:
+            self.skip -= 1
+        elif not self.frames[-1][0]:
+            self._append(text)
+
+    def _step(self, char: str) -> None:
+        if char == "{":
+            self.frames.append(list(self.frames[-1]))
+            self.skip = 0
+            self.index += 1
+        elif char == "}":
+            if len(self.frames) > 1:
+                self.frames.pop()
+            self.skip = 0
+            self.index += 1
+        elif char == "\\":
+            self._control()
+        else:
+            if char not in "\r\n":   # raw line breaks in the source are insignificant
+                self._emit(char)
+            self.index += 1
+
+    def _control(self) -> None:
+        text, i = self.text, self.index
+        nxt = text[i + 1] if i + 1 < len(text) else ""
+        if nxt in ("\\", "{", "}"):
+            self._emit(nxt)
+            self.index = i + 2
+        elif nxt == "*":
+            self.frames[-1][0] = True
+            self.index = i + 2
+        elif nxt == "'":
+            self._hex(text[i + 2:i + 4])
+            self.index = i + 4
+        elif nxt.isalpha():
+            self._word()
+        else:
+            # \~ is a non-breaking space and \_ a non-breaking hyphen (they
+            # were dropped); \- is an optional hyphen and stays invisible.
+            if nxt in _RTF_SYMBOLS:
+                self._emit(_RTF_SYMBOLS[nxt])
+            self.index = i + 2
+
+    def _hex(self, digits: str) -> None:
         try:
-            byte = bytes([int(text[i + 2:i + 4], 16)])
-            result.append(byte.decode("cp1252", "replace"))
+            value = int(digits, 16)
         except ValueError:
-            pass
-    return i + 4
+            return
+        if self.skip > 0:
+            self.skip -= 1
+        elif not self.frames[-1][0]:
+            self.pending.append(value)
 
+    def _word(self) -> None:
+        text, start = self.text, self.index + 1
+        end = start
+        while end < len(text) and text[end].isalpha():
+            end += 1
+        # A "-" is the parameter's sign only when a digit follows: "\\par-b"
+        # lost its hyphen.
+        signed = end + 1 < len(text) and text[end] == "-" and text[end + 1].isdigit()
+        stop = end + 1 if signed else end
+        while stop < len(text) and text[stop].isdigit():
+            stop += 1
+        param = text[end:stop]
+        if stop < len(text) and text[stop] == " ":
+            stop += 1
+        self.index = stop
+        self.skip = 0                   # a control word ends a fallback
+        self._apply(text[start:end], param)
 
-def _consume_control(text: str, i: int, stack: List[bool],
-                     result: List[str]) -> int:
-    nxt = text[i + 1] if i + 1 < len(text) else ""
-    if nxt in "\\{}":
-        if not stack[-1]:
-            result.append(nxt)
-        return i + 2
-    if nxt == "*":
-        stack[-1] = True
-        return i + 2
-    if nxt == "'":
-        return _consume_hex(text, i, stack, result)
-    if nxt.isalpha():
-        return _consume_word(text, i, stack, result)
-    return i + 2  # other control symbol (\~, \-, …)
+    def _apply(self, word: str, param: str) -> None:
+        frame = self.frames[-1]
+        if word in _RTF_DESTINATIONS:
+            frame[0] = True
+        elif word == "uc" and param:
+            frame[1] = max(0, int(param))
+        elif word == "ansicpg" and param:
+            self._set_codepage(param)
+        elif frame[0]:
+            return
+        elif word in _RTF_WORD_TEXT:
+            self._append(_RTF_WORD_TEXT[word])
+        elif word == "u" and param:
+            self._append(chr(int(param) % 0x10000))
+            self.skip = frame[1]
+
+    def _set_codepage(self, param: str) -> None:
+        import codecs
+        name = f"cp{int(param)}"
+        try:
+            codecs.lookup(name)
+        except LookupError:
+            return
+        self._flush()
+        self.codepage = name
 
 
 def rtf_to_text(rtf: str) -> str:
@@ -121,30 +215,9 @@ def rtf_to_text(rtf: str) -> str:
 
     Drops metadata groups (font / colour / style tables, etc.), converts
     ``\\par`` / ``\\line`` to newlines and ``\\tab`` to a tab, and decodes
-    ``\\uNNNN`` / ``\\'XX`` character escapes.
+    ``\\uN`` (honouring ``\\ucN`` and surrogate pairs) / ``\\'XX`` escapes.
     """
-    text = str(rtf)
-    result: List[str] = []
-    stack: List[bool] = [False]
-    i, n = 0, len(text)
-    while i < n:
-        char = text[i]
-        if char == "{":
-            stack.append(stack[-1])
-            i += 1
-        elif char == "}":
-            if len(stack) > 1:
-                stack.pop()
-            i += 1
-        elif char == "\\":
-            i = _consume_control(text, i, stack, result)
-        elif char in "\r\n":
-            i += 1  # raw line breaks in the source are insignificant
-        else:
-            if not stack[-1]:
-                result.append(char)
-            i += 1
-    return "".join(result)
+    return _RtfReader(str(rtf)).read()
 
 
 # --- CSV / TSV codec (pure) ------------------------------------------------
@@ -153,7 +226,8 @@ def rows_to_csv(rows: Sequence[Sequence[object]], *, delimiter: str = ",") -> st
     """Serialise rows of cells to CSV/TSV text (use ``delimiter="\\t"`` for TSV)."""
     buffer = io.StringIO()
     writer = csv.writer(buffer, delimiter=delimiter, lineterminator="\r\n")
-    writer.writerows([[str(cell) for cell in row] for row in rows])
+    # None (JSON null) is an empty cell, as csv.writer writes it -- not the text "None".
+    writer.writerows([["" if cell is None else str(cell) for cell in row] for row in rows])
     return buffer.getvalue()
 
 

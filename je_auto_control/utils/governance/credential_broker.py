@@ -17,12 +17,15 @@ Pure standard library; imports no ``PySide6``. Clock and resolver are
 injectable, so expiry is deterministically testable without real time or a
 real vault.
 """
+import math
 import secrets
 import time
 from typing import Any, Callable, Dict, List, Optional
 
+from je_auto_control.utils.exception.exceptions import AutoControlException
 
-class CredentialBrokerError(RuntimeError):
+
+class CredentialBrokerError(AutoControlException, RuntimeError):
     """Raised when a lease is unknown/expired or no resolver is configured."""
 
 
@@ -42,10 +45,17 @@ class CredentialBroker:
         self._resolver = resolver
 
     def lease(self, name: str, ttl: float = 300.0) -> str:
-        """Issue a lease for secret ``name`` valid for ``ttl`` seconds."""
+        """Issue a lease for secret ``name`` valid for ``ttl`` seconds.
+
+        ``ttl`` must be a finite positive number: NaN never compared as
+        expired, so such a lease was valid forever.
+        """
+        lifetime = float(ttl)
+        if not math.isfinite(lifetime) or lifetime <= 0:
+            raise CredentialBrokerError(f"lease ttl must be a positive number, got {ttl!r}")
         token = secrets.token_hex(8)
         self._leases[token] = {"name": name,
-                               "expires_at": self._clock() + float(ttl)}
+                               "expires_at": self._clock() + lifetime}
         return token
 
     def _valid_lease(self, token: str) -> Optional[Dict[str, object]]:

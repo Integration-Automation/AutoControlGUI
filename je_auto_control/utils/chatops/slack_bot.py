@@ -18,7 +18,6 @@ Three pieces of state are tracked per channel:
 """
 from __future__ import annotations
 
-import json
 import threading
 import urllib.error
 import urllib.parse
@@ -28,16 +27,18 @@ from typing import Any, Dict, Optional
 
 from je_auto_control.utils.chatops.router import CommandResult, CommandRouter
 from je_auto_control.utils.exception.exceptions import AutoControlException
+from je_auto_control.utils.http_client.http_client import build_call, perform_call
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 
 
 _SLACK_API = "https://slack.com/api"
 _HTTP_TIMEOUT = 15.0
 _MIN_POLL_INTERVAL = 1.0
+_MAX_PAGES = 20  # 1000 messages per poll
 _MAX_BACKOFF = 60.0
 
 
-class SlackError(RuntimeError):
+class SlackError(AutoControlException, RuntimeError):
     """Raised when the Slack API returns ``ok: false`` or HTTP fails."""
 
 
@@ -92,10 +93,13 @@ class SlackBot:
 
     def run_forever(self, *, max_iterations: Optional[int] = None) -> None:
         """Poll on a loop until :meth:`stop` is called."""
-        self._stop.clear()
+        # A fresh event per call, never clear() on the old one: a loop still
+        # inside poll_once() when stop() was called would see it cleared by
+        # the next run_forever() and keep polling beside it.
+        stop = self._stop = threading.Event()
         backoff = 0.0
         iteration = 0
-        while not self._stop.is_set():
+        while not stop.is_set():
             try:
                 self.poll_once()
                 backoff = 0.0
@@ -105,7 +109,7 @@ class SlackBot:
             iteration += 1
             if max_iterations is not None and iteration >= max_iterations:
                 return
-            self._stop.wait(self.poll_interval_s + backoff)
+            stop.wait(self.poll_interval_s + backoff)
 
     def stop(self) -> None:
         self._stop.set()
@@ -123,7 +127,10 @@ class SlackBot:
                                 "slack_ts": message.get("ts"),
                                 "slack_channel": self.channel_id},
             )
-        except (RuntimeError, ValueError, AutoControlException) as error:
+        # Defence in depth, as wide as the router's own boundary: an
+        # ImportError from a handler's lazy import ended run_forever for good.
+        except (RuntimeError, ValueError, TypeError, LookupError, AttributeError,
+                ImportError, ArithmeticError, OSError, AutoControlException) as error:
             self.post_message(f"router error: {error}")
             return None
         if result is None:
@@ -141,14 +148,27 @@ class SlackBot:
         return self._api_post("chat.postMessage", payload)
 
     def _fetch_messages(self) -> list:
+        """Every message since ``last_seen_ts``, newest first, across pages.
+
+        One page of 50 was read and ``last_seen_ts`` then moved past the
+        newest, so older messages beyond the first page were never routed.
+        """
         params: Dict[str, Any] = {
             "channel": self.channel_id,
             "limit": 50,
         }
         if self.last_seen_ts:
             params["oldest"] = self.last_seen_ts
-        body = self._api_get("conversations.history", params)
-        return list(body.get("messages") or [])
+        messages: list = []
+        for _ in range(_MAX_PAGES):
+            body = self._api_get("conversations.history", params)
+            messages.extend(message for message in body.get("messages") or []
+                            if isinstance(message, dict))
+            cursor = (body.get("response_metadata") or {}).get("next_cursor")
+            if not body.get("has_more") or not cursor:
+                break
+            params["cursor"] = cursor
+        return messages
 
     def _is_self(self, message: Dict[str, Any]) -> bool:
         if message.get("subtype") == "bot_message":
@@ -185,23 +205,21 @@ class SlackBot:
                  ) -> Dict[str, Any]:
         if not url.startswith("https://slack.com/api/"):
             raise SlackError(f"refusing to call non-Slack URL: {url}")
-        headers = {"Authorization": f"Bearer {self.token}"}
-        data: Optional[bytes] = None
-        if payload is not None:
-            data = json.dumps(payload).encode("utf-8")
-            headers["Content-Type"] = "application/json"
-        request = urllib.request.Request(  # nosec B310  # reason: scheme allow-listed above
-            url, data=data, method=method, headers=headers,
-        )
+        # Through http_client, so the egress policy applies to Slack too; a
+        # Slack API call never redirects, so a 3xx is an error, not followed.
+        call = build_call(url, method, headers={"Authorization": f"Bearer {self.token}"},
+                          json_body=payload, timeout=_HTTP_TIMEOUT)
+        call["follow_redirects"] = False
         try:
-            with urllib.request.urlopen(  # nosec B310
-                    request, timeout=_HTTP_TIMEOUT,
-            ) as response:
-                body = json.loads(response.read().decode("utf-8"))
-        except urllib.error.URLError as error:
+            response = perform_call(call)
+        except (OSError, ValueError) as error:  # URLError, EgressBlocked
             raise SlackError(f"HTTP failure: {error}") from error
-        except ValueError as error:
-            raise SlackError(f"non-JSON response: {error}") from error
+        body = response["json"]
+        if not isinstance(body, dict):
+            # A list or string body raised AttributeError, which run_forever
+            # does not catch: one bad reply ended the poll loop for good.
+            raise SlackError(f"Slack {url} returned HTTP {response['status']} "
+                             "without a JSON object")
         if not body.get("ok"):
             raise SlackError(
                 f"Slack {url} returned {body.get('error', 'unknown')}",

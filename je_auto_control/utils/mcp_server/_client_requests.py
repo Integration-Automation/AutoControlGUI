@@ -12,6 +12,7 @@ round-trip, not a tool-execution step.
 """
 import itertools
 import json
+import secrets
 import threading
 from typing import (
     TYPE_CHECKING, Any, Callable, Dict, List, Optional,
@@ -29,7 +30,7 @@ class ClientRequestMixin:
 
     Requires the host to provide ``_writer``, ``_client_capabilities``,
     ``_resources``, ``_outbound_lock``, ``_pending_outbound``,
-    ``_outbound_id_counter`` and ``_sampling_id_counter``.
+    ``_outbound_id_counter``, ``_sampling_id_counter`` and ``_connection_id``.
     """
 
     if TYPE_CHECKING:
@@ -43,6 +44,10 @@ class ClientRequestMixin:
         _pending_outbound: Dict[Any, Dict[str, Any]]
         _outbound_id_counter: "itertools.count[int]"
         _sampling_id_counter: "itertools.count[int]"
+
+        @property
+        def _connection_id(self) -> Any:
+            """Identity of the connection the current request arrived on."""
 
     @staticmethod
     def _is_outbound_response(method: Optional[str], msg_id: Any,
@@ -59,6 +64,12 @@ class ClientRequestMixin:
         """Route a JSON-RPC response to the matching pending request."""
         with self._outbound_lock:
             slot = self._pending_outbound.get(msg_id)
+        if slot is not None and slot.get("connection") != self._connection_id:
+            # A reply from another session: ignore it, or any client could
+            # answer (for instance, accept) a prompt sent to someone else.
+            autocontrol_logger.warning(
+                "MCP outbound response %r from a different connection", msg_id)
+            return
         if slot is None:
             autocontrol_logger.debug(
                 "MCP outbound response for unknown id %r", msg_id,
@@ -111,8 +122,10 @@ class ClientRequestMixin:
         writer = self._writer
         if writer is None:
             raise RuntimeError(f"{method} requires an outbound writer")
-        request_id = f"srv-{next(self._outbound_id_counter)}"
-        slot: Dict[str, Any] = {"event": threading.Event()}
+        # Unguessable: a sequential id told other clients which reply to forge.
+        request_id = f"srv-{secrets.token_urlsafe(12)}"
+        slot: Dict[str, Any] = {"event": threading.Event(),
+                                "connection": self._connection_id}
         with self._outbound_lock:
             self._pending_outbound[request_id] = slot
         envelope = json.dumps({
@@ -209,7 +222,11 @@ class ClientRequestMixin:
             )
             return
         if self._writer is None:
-            return
+            # The client said it can answer a prompt but this request has no
+            # stream to send one on. Running anyway made the gate a no-op.
+            raise _MCPError(
+                -32000, f"User confirmation unavailable for {name}: "
+                "open the session's event stream first")
         prompt = (f"AutoControl is about to run a destructive tool "
                   f"'{name}'. Continue?")
         try:

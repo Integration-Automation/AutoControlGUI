@@ -17,7 +17,10 @@ both, behind injectable seams so all logic is testable without touching the OS.
 
 All three keep-awake entry points apply the plan through an injectable ``driver``
 (``SetThreadExecutionState`` on Windows, ``caffeinate`` on macOS,
-``systemd-inhibit`` on Linux by default). Imports no ``PySide6``.
+``systemd-inhibit`` on Linux by default). On Windows each request is held by a
+thread of its own, so it does not depend on which thread turns it off; the
+macOS and Linux helpers exit with this process, and :func:`allow_sleep` runs at
+exit. Imports no ``PySide6``.
 
 Headless API
 ------------

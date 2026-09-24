@@ -28,9 +28,9 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
 
@@ -41,8 +41,10 @@ jobs:
           python -m pip install --only-binary :all: --upgrade "pip==26.0.1"
           # The spec is a documented workflow input — pinned by default so a
           # lint run is reproducible, overridable so a caller can track their
-          # own release or a git ref.
-          python -m pip install "$AUTOCONTROL_REF"
+          # own release or a git ref. --only-binary still builds a git ref's
+          # own project (pip builds VCS requirements regardless) but runs no
+          # dependency's setup script.
+          python -m pip install --only-binary :all: "$AUTOCONTROL_REF"
 
       - name: Lint action JSON files
         shell: bash

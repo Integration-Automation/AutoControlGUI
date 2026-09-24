@@ -20,7 +20,10 @@ Policy           Behavior
 ``FIRST``        The first matching rule wins.
 ``PRIORITY``     Same as FIRST — first match in rule order.
 ``COLLECT``      All matching rules' outputs (a list).
+``ANY``          Several rules may match only if their outputs agree.
 ================ ===================================================
+
+Any other policy name raises ``ValueError``.
 
 Headless API
 ------------

@@ -124,6 +124,10 @@ executor 指令::
    commands = load_plugin_directory("my_plugins/")
    register_plugin_commands(commands)
 
+匯入失敗的檔案會記錄後略過，目錄裡其他檔案照常載入。``register_plugin_commands`` 會略過（並記錄）
+不是函式的值，以及已屬於內建指令（例如 ``AC_click_mouse``）的名稱；確實要取代時傳入
+``allow_override=True``。外掛隨時可以重新註冊自己的指令（重新載入）。
+
 GUI：**外掛** 分頁，可選擇目錄一鍵載入。
 
 .. warning::
@@ -224,18 +228,24 @@ Action-JSON 指令：``AC_locate_text``、``AC_click_text``、
 Accessibility 元件搜尋
 ======================
 
-透過作業系統無障礙樹查詢控制項（Windows UIA 透過 ``uiautomation``；
-macOS AX），支援依名稱 / 角色 / 應用程式過濾::
+透過作業系統無障礙樹查詢控制項（Windows UIA 透過 ``comtypes``；macOS AX
+透過 pyobjc；Linux AT-SPI 透過 D-Bus），支援依名稱 / 角色 / 應用程式過濾::
 
    import je_auto_control as ac
 
    elements = ac.list_accessibility_elements(app_name="Calculator")
    ok = ac.find_accessibility_element(name="OK", role="Button")
    ac.click_accessibility_element(name="OK", app_name="Calculator")
+   field = ac.focused_accessibility_element()   # 鍵盤焦點所在元素，或 None
+
+``focused_accessibility_element(app_name=None)`` 回傳目前擁有鍵盤焦點的元素，
+沒有焦點時回傳 ``None``；指定 ``app_name`` 時，焦點元素不屬於該應用程式就回傳
+``None``。無障礙錄製器追蹤的就是這個元素。
 
 當前平台若沒有可用後端會拋出 ``AccessibilityNotAvailableError``。
-Action-JSON 指令：``AC_a11y_list``、``AC_a11y_find``、
-``AC_a11y_click``。GUI：**Accessibility** 分頁。
+Action-JSON 指令：``AC_a11y_list``、``AC_a11y_find``、``AC_a11y_find_all``、
+``AC_a11y_focused``、``AC_a11y_click``。GUI：**Accessibility** 分頁
+（Actions 選單：*顯示焦點元素*）。
 
 
 VLM（AI）元件定位
@@ -365,7 +375,9 @@ scope 重新判斷條件,因此會變動該變數的 body(例如 ``AC_inc_var``)
 ``AC_try`` 提供 try / catch / finally。``body`` 失敗時改走 ``catch`` 分支而
 非中止腳本;``finally`` 一律執行(成功、捕捉到錯誤,或在 ``reraise`` / 迴圈
 break、continue 穿透時皆然)。錯誤文字會暴露到 ``error_var`` 供 ``catch``
-分支檢視,``reraise=true`` 會在清理後重新拋出::
+分支檢視,``reraise=true`` 會在清理後重新拋出。``body`` 裡任何地方失敗都算,包括它執行的
+迴圈、``AC_if_*`` 分支或巨集裡面:巢狀的 body 沿用執行它的清單的嚴格程度,所以 ``AC_retry``
+也會重試它們,``execute_action(..., raise_on_error=True)`` 也會從裡面拋出::
 
    executor.execute_action([
        ["AC_try", {
@@ -514,8 +526,8 @@ TCP / WS host + viewer、WebRTC host + viewer 含手動 SDP / 自訂編碼器
 ----------------------
 
 可選的 callback 守住每一個 incoming session，AnyDesk 風格。回傳
-``"view_only"`` admit 但丟掉 viewer 的 ``INPUT``；回傳 falsy（或
-raise）就送 ``AUTH_FAIL "rejected by host"``::
+``"view_only"`` admit 但丟掉 viewer 的 ``INPUT``、``CLIPBOARD`` 與檔案傳輸訊息；
+回傳 falsy（或 raise）就送 ``AUTH_FAIL "rejected by host"``::
 
    from je_auto_control import RemoteDesktopHost, PendingViewer
 
@@ -529,7 +541,8 @@ raise）就送 ``AUTH_FAIL "rejected by host"``::
 IP 白名單（CIDR + 單一 IP）
 ----------------------------
 
-在 TLS / auth 之前就拒絕範圍外的對端，攻擊者連探測都不行::
+在 TLS / auth 之前就拒絕範圍外的對端，攻擊者連探測都不行。無效的項目會被丟掉並
+記下警告；每一項都無效的清單不放任何人進來::
 
    host = RemoteDesktopHost(
        token="tok",

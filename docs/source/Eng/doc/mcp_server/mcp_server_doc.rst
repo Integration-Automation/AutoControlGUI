@@ -88,13 +88,26 @@ Every tool carries the MCP 2025-06-18 ``annotations`` block
 read-only queries and require user confirmation before destructive
 ones.
 
+A tool is destructive when it sends input, runs an action list, script or
+code (now, or later from a scheduler, trigger, hotkey, watch or voice
+command), deletes data, sends data off the machine, or loosens a security
+control (egress, USB ACL, approvals, secret leases, hosting a remote
+session). A tool that writes a file at a path the caller chooses is never
+read-only, and a read-only tool given a ``db`` that does not exist answers
+with an empty result instead of creating the file. ``ac_assert_http`` only
+sends ``GET`` or ``HEAD``.
+
+A ``tools/call`` argument that the tool's input schema does not declare is
+refused with ``-32602`` (invalid params) before the tool runs.
+
 Resources, prompts, sampling
 ============================
 
 Resources
   - ``autocontrol://files/<name>`` — every JSON action file in the
     workspace root (re-targets when the client publishes
-    ``roots/list``).
+    ``roots/list``). Only a plain ``*.json`` name is readable; other
+    files in the root, subdirectories and ``:`` stream names are not.
   - ``autocontrol://history`` — recent run-history snapshot.
   - ``autocontrol://commands`` — full ``AC_*`` executor catalogue.
   - ``autocontrol://screen/live`` — base64 PNG screenshots, with
@@ -253,6 +266,19 @@ box), start the same dispatcher behind HTTP:
 
 Bearer token can also come from ``JE_AUTOCONTROL_MCP_TOKEN``.
 
+Browser requests are refused unless they come from this machine: a request
+whose ``Origin`` header is not a loopback origin gets 403, and when the
+server is bound to loopback so does one whose ``Host`` header does not name
+loopback (DNS rebinding). Clients that are not browsers send no ``Origin``
+and are unaffected. To let a browser-based client on another origin in, list
+its exact origins in ``JE_AUTOCONTROL_MCP_ALLOWED_ORIGINS``
+(comma-separated, e.g. ``https://tool.example:8443``).
+
+With ``JE_AUTOCONTROL_MCP_CONFIRM_DESTRUCTIVE=1``, a client that advertised
+``elicitation`` must have its session's event stream open for a destructive
+call to be confirmed; without one the call is refused rather than run. Only
+the session a prompt was sent to can answer it.
+
 Sessions
 ========
 
@@ -346,8 +372,10 @@ Audit log
 
 Set ``JE_AUTOCONTROL_MCP_AUDIT=/path/to/audit.jsonl`` to append one
 JSONL record per ``tools/call``: timestamp, tool name, sanitised
-arguments (``password`` / ``token`` / ``secret`` / ``api_key`` /
-``authorization`` are redacted), status (``ok`` / ``error`` /
+arguments (``password`` / ``passphrase`` / ``token`` / ``secret`` /
+``api_key`` / ``key`` / ``authorization`` and similar names are redacted at
+any depth, and action lists are masked like the executor log), status
+(``ok`` / ``error`` /
 ``cancelled``), duration, optional error text, and optional
 auto-screenshot artifact path (see below).
 
@@ -440,4 +468,5 @@ Security notes
   normalised via ``os.path.realpath``; the resource provider blocks
   path traversal at the boundary.
 - Subprocess calls (``ac_launch_process`` / ``ac_shell``) accept
-  argv lists or ``shlex.split`` parses — never an OS shell.
+  argv lists or a command line (POSIX-split, or passed to
+  ``CreateProcess`` as written on Windows) — never an OS shell.

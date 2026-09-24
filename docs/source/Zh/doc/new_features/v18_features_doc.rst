@@ -46,5 +46,6 @@ worker 決定總時長。``shard_flows`` 以 run-history 中的**每個流程歷
 
 沒有歷史的流程退回為已知流程的平均(讓新測試平均分散)。``merge_results``
 會重新合併各分片報告 dict——加總 ``total`` / ``passed`` / ``failed`` /
-``skipped`` / ``errors`` 並串接 ``results``。對應 ``AC_shard_suite`` /
+``skipped`` / ``errors`` 並串接 ``results``;``TestSuiteResult.to_dict()`` 報告的 ``errored`` 與 ``cases``
+也會讀進來，合併後的報告兩種寫法都有。對應 ``AC_shard_suite`` /
 ``AC_merge_results``(以及 ``ac_shard_suite`` / ``ac_merge_results``)。

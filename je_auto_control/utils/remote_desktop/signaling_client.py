@@ -9,6 +9,7 @@ No third-party HTTP dep — everything goes through ``urllib.request``.
 """
 from __future__ import annotations
 
+import http.client
 import json
 import time
 import urllib.error
@@ -47,6 +48,11 @@ def _request(method: str, url: str, *,
         ) from error
     except urllib.error.URLError as error:
         raise SignalingError(f"signaling {method} {url} failed: {error.reason}") from error
+    except (OSError, http.client.HTTPException) as error:
+        # A read timeout (TimeoutError) or a server that hangs up
+        # (RemoteDisconnected) is no URLError, and the GUI workers catch
+        # only SignalingError, so these ended their threads.
+        raise SignalingError(f"signaling {method} {url} failed: {error!r}") from error
     if not payload:
         return {}
     try:

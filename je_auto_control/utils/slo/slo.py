@@ -41,7 +41,10 @@ def _window(records: Sequence[Mapping[str, Any]], window_s: Optional[float],
     if window_s is None:
         return list(records)
     cutoff = now - window_s
-    return [r for r in records if float(r.get("timestamp", now)) >= cutoff]
+    # Records after ``now`` are outside the window too: replaying a log with
+    # an injected ``now`` counted the future and reported a false burn rate.
+    return [r for r in records
+            if cutoff <= float(r.get("timestamp", now)) <= now]
 
 
 def _counts(records: Sequence[Mapping[str, Any]]) -> tuple:

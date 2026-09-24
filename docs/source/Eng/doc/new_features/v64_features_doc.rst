@@ -38,7 +38,8 @@ returns ranked ``SearchHit(doc_id, score)`` results — by default BM25
 Okapi formula with ``IDF = ln(1 + (N − df + 0.5) / (df + 0.5))``, so a rare term
 out-ranks a common one, term-frequency saturates (``k1``), and long documents
 are normalized down (``b``). A ``stop_words`` set can be supplied to drop noise
-terms. Results are deterministic (ties broken by ``doc_id``).
+terms. Terms are case-folded runs of letters and digits in any script, so
+``登入`` and ``café`` are indexed whole; stop words are folded the same way. Results are deterministic (ties broken by ``doc_id``).
 
 Executor command
 ----------------

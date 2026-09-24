@@ -50,8 +50,11 @@ guide).
 
 Files written before signing existed are treated as *legacy unsigned*:
 they still load (so upgrades don't lock operators out) but a signature
-is written on the next save. Pass ``require_signature=True`` to refuse
-unsigned files outright.
+is written on the next save. That holds only while no key exists; once
+one does, a missing signature fails closed like a wrong one. Pass
+``require_signature=True`` to refuse unsigned files outright. A file that
+cannot be parsed is moved aside (``<acl>.corrupt-<time>``) and the ACL falls
+back to deny-all.
 """
 from __future__ import annotations
 
@@ -59,12 +62,14 @@ import hashlib
 import hmac
 import json
 import os
+import re
 import secrets
 import threading
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import List, Optional
 
+from je_auto_control.utils.json_store.json_store import atomic_write_bytes, quarantine_file
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 
 
@@ -75,6 +80,32 @@ _VALID_DECISIONS = frozenset({"allow", "deny", "prompt"})
 _SIG_SUFFIX = ".sig"
 _KEY_SUFFIX = ".key"
 _KEY_BYTES = 32
+
+
+_USB_ID_RE = re.compile(r"^(?:0[xX])?([0-9a-fA-F]{4})$")
+
+
+def normalize_usb_id(value: object) -> str:
+    """Return a vendor/product id as four lowercase hex digits.
+
+    Accepts an optional ``0x`` prefix and nothing else. The ACL compared ids
+    as strings while the libusb backend parsed them with ``int(x, 16)``, so
+    ``"0x1050"``, ``"01050"`` or ``"10_50"`` missed a ``1050`` deny rule
+    and then opened device 0x1050 anyway.
+
+    :raises ValueError: for anything that is not exactly one 16-bit hex id.
+    """
+    match = _USB_ID_RE.match(str(value).strip())
+    if match is None:
+        raise ValueError(f"not a 4-digit hex USB id: {value!r}")
+    return match.group(1).lower()
+
+
+def _same_id(left: str, right: str) -> bool:
+    try:
+        return normalize_usb_id(left) == normalize_usb_id(right)
+    except ValueError:
+        return left.lower() == right.lower()
 
 
 def default_acl_path() -> Path:
@@ -92,14 +123,21 @@ class AclRule:
     allow: bool = True
     prompt_on_open: bool = False
 
+    def __post_init__(self) -> None:
+        # Normalised (and validated) up front: "01050" or "1050:0407" used to
+        # be stored as is and never matched, so a deny rule silently did
+        # nothing under an "allow" default.
+        self.vendor_id = normalize_usb_id(self.vendor_id)
+        self.product_id = normalize_usb_id(self.product_id)
+
     def matches(self, *, vendor_id: str, product_id: str,
                 serial: Optional[str]) -> bool:
         # vid/pid are hex strings; compare case-insensitively so an
         # uppercase-hex rule still matches a lowercase device id (and vice
         # versa). A case mismatch would silently skip the rule — bypassing a
         # DENY rule when the default policy is "allow".
-        if (self.vendor_id.lower() != vendor_id.lower()
-                or self.product_id.lower() != product_id.lower()):
+        if (not _same_id(self.vendor_id, vendor_id)
+                or not _same_id(self.product_id, product_id)):
             return False
         if self.serial is None:
             return True
@@ -168,6 +206,8 @@ class UsbAcl:
             return list(self._state.rules)
 
     def add_rule(self, rule: AclRule, *, persist: bool = True) -> None:
+        if persist:
+            self._refresh()
         with self._lock:
             self._state.rules.append(rule)
         if persist:
@@ -176,16 +216,15 @@ class UsbAcl:
     def remove_rule(self, *, vendor_id: str, product_id: str,
                     serial: Optional[str] = None,
                     persist: bool = True) -> bool:
+        if persist:
+            self._refresh()
         with self._lock:
-            # Compare vid/pid case-insensitively to mirror matches(); otherwise a
-            # rule a device matches (case-insensitively) could fail to be removed
-            # when the caller passes a different hex case.
-            vid = vendor_id.lower()
-            pid = product_id.lower()
+            # The same id comparison as matches(): a rule a device matches
+            # ("0x1050" for 1050) must also be removable by that id.
             new_rules = [
                 r for r in self._state.rules
-                if not (r.vendor_id.lower() == vid
-                        and r.product_id.lower() == pid
+                if not (_same_id(r.vendor_id, vendor_id)
+                        and _same_id(r.product_id, product_id)
                         and r.serial == serial)
             ]
             removed = len(new_rules) != len(self._state.rules)
@@ -223,6 +262,8 @@ class UsbAcl:
             raise ValueError("'rules' must be a list")
         imported = [AclRule.from_dict(r) for r in raw_rules
                     if isinstance(r, dict)]
+        if persist:
+            self._refresh()
         with self._lock:
             if replace:
                 default = str(payload.get("default", self._state.default))
@@ -240,6 +281,8 @@ class UsbAcl:
             raise ValueError(
                 f"default_policy must be one of {_VALID_DEFAULTS}",
             )
+        if persist:
+            self._refresh()
         with self._lock:
             self._state.default = policy
         if persist:
@@ -295,6 +338,15 @@ class UsbAcl:
     def _verify_signature(self, raw: bytes) -> bool:
         """True iff ``raw`` matches the sidecar signature (or is legacy)."""
         if not self._sig_path.exists():
+            # Legacy means "written before signing existed", which cannot be
+            # true once a key exists: deleting the .sig next to a rewritten
+            # file used to pass as legacy and load whatever it granted.
+            if self._explicit_key is not None or self._key_path.exists():
+                autocontrol_logger.warning(
+                    "usb acl %s has a signing key but no signature — deny",
+                    self._path,
+                )
+                return False
             if self._require_signature:
                 autocontrol_logger.warning(
                     "usb acl %s unsigned and require_signature set — deny",
@@ -338,6 +390,15 @@ class UsbAcl:
 
     # --- Persistence -------------------------------------------------------
 
+    def _refresh(self) -> None:
+        """Re-read the file before a change, so another instance's save is kept.
+
+        Every instance wrote its own snapshot over the file, so two of them
+        (the GUI and a host session) undid each other's rules.
+        """
+        if self._path.exists():
+            self._load()
+
     def _load(self) -> None:
         try:
             raw = self._path.read_bytes()
@@ -356,17 +417,12 @@ class UsbAcl:
         try:
             payload = json.loads(raw.decode("utf-8"))
         except ValueError as error:
-            autocontrol_logger.warning(
-                "usb acl parse %s failed: %r", self._path, error,
-            )
+            self._set_aside(f"unparseable: {error!r}")
             return
         try:
             version = int(payload.get("version", 0))
             if version != _ACL_VERSION:
-                autocontrol_logger.warning(
-                    "usb acl version %s unsupported (want %s); ignoring file",
-                    version, _ACL_VERSION,
-                )
+                self._set_aside(f"version {version} unsupported (want {_ACL_VERSION})")
                 return
             default = str(payload.get("default", "deny"))
             if default not in _VALID_DEFAULTS:
@@ -376,13 +432,21 @@ class UsbAcl:
                 rules_payload = []
             rules = [AclRule.from_dict(r) for r in rules_payload
                      if isinstance(r, dict)]
-        except (KeyError, TypeError, ValueError) as error:
-            autocontrol_logger.warning(
-                "usb acl parse failed: %r — using default-deny", error,
-            )
+        except (AttributeError, KeyError, TypeError, ValueError) as error:
+            self._set_aside(f"invalid rules: {error!r}")
             return
         with self._lock:
             self._state = _AclState(default=default, rules=rules)
+
+    def _set_aside(self, reason: str) -> None:
+        """Move an unusable file aside and fall back to deny-all.
+
+        The next save used to replace it with just the new rule, losing every
+        rule the file held. It stays next to the ACL for the operator.
+        """
+        quarantine_file(self._path, "usb acl", reason)
+        with self._lock:
+            self._state = _AclState(default="deny")
 
     def _save(self) -> None:
         with self._lock:
@@ -396,9 +460,8 @@ class UsbAcl:
         ).encode("utf-8")
         try:
             self._path.parent.mkdir(parents=True, exist_ok=True)
-            self._path.write_bytes(data)
-            if os.name == "posix":
-                os.chmod(self._path, 0o600)
+            # Atomic and 0600 from creation.
+            atomic_write_bytes(self._path, data)
         except OSError as error:
             autocontrol_logger.warning(
                 "usb acl save %s failed: %r", self._path, error,

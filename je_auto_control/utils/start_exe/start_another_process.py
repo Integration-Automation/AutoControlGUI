@@ -23,7 +23,9 @@ def start_exe(exe_path: str) -> None:
         # Pass an argv list so the path is launched verbatim: a single string
         # is shlex-split by ShellManager, which mangles a path containing a
         # space ("C:\\Program Files\\...\\foo.exe") into the wrong argv.
-        process_manager.exec_shell([str(exe_path_obj)])
+        # The resolved path: a bare "myapp" passed the check against the
+        # working directory and then launched whatever PATH found first.
+        process_manager.exec_shell([str(exe_path_obj.resolve())])
         if process_manager.process is None:
             # exec_shell swallows launch failures (OSError) internally and
             # leaves process unset; surface it as the documented exception.

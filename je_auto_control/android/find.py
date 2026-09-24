@@ -11,7 +11,7 @@ from __future__ import annotations
 from typing import Any, Dict, Optional, Tuple
 
 from je_auto_control.android.client import (
-    UIAutomatorDevice, default_ui_device,
+    UIAutomatorDevice, default_ui_device, translate_device_errors,
 )
 
 
@@ -42,6 +42,7 @@ def _build_query(handle: Any,
     return handle(**selectors)
 
 
+@translate_device_errors
 def find_element(text: Optional[str] = None,
                  resource_id: Optional[str] = None,
                  description: Optional[str] = None,
@@ -68,6 +69,7 @@ def find_element(text: Optional[str] = None,
     )
 
 
+@translate_device_errors
 def click_element(text: Optional[str] = None,
                   resource_id: Optional[str] = None,
                   description: Optional[str] = None,
@@ -92,6 +94,7 @@ def click_element(text: Optional[str] = None,
     return (int(cx), int(cy))
 
 
+@translate_device_errors
 def dump_hierarchy(*, device: Optional[UIAutomatorDevice] = None) -> str:
     """Return the device's current widget tree as an XML string."""
     handle = (device or default_ui_device()).handle

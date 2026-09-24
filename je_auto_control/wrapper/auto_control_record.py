@@ -19,17 +19,22 @@ from je_auto_control.utils.test_record.record_test_class import record_action_to
 from je_auto_control.wrapper.platform_wrapper import recorder
 
 
-def record() -> None:
+def record() -> bool:
     """
     start record keyboard and mouse event until stop_record
+
+    Returns whether recording started; a failure is logged and recorded.
     """
     autocontrol_logger.info("record")
     try:
         record_action_to_list("record", None)
         recorder.record()
-    except (OSError, RuntimeError, AttributeError, TypeError, ValueError, AutoControlException, AutoControlJsonActionException) as error:
+        return True
+    except (OSError, RuntimeError, AttributeError, TypeError, ValueError,
+            AutoControlException, AutoControlJsonActionException) as error:
         record_action_to_list("record", None, repr(error))
         autocontrol_logger.error(f"record, failed: {repr(error)}")
+        return False
 
 
 def stop_record() -> list:
@@ -56,7 +61,8 @@ def stop_record() -> list:
                 new_list.append([action[0], {"x": action[1], "y": action[2]}])
         record_action_to_list("stop_record", None)
         return new_list
-    except (OSError, RuntimeError, AttributeError, TypeError, ValueError, AutoControlException, AutoControlJsonActionException) as error:
+    except (OSError, RuntimeError, AttributeError, TypeError, ValueError,
+            AutoControlException, AutoControlJsonActionException) as error:
         record_action_to_list("stop_record", None, repr(error))
         autocontrol_logger.error(f"stop_record, failed: {repr(error)}")
         return []
@@ -105,7 +111,11 @@ def record_to_json(output_path: str, *, stop_event: threading.Event,
     :return: 錄製到的動作列表
     """
     target = os.path.realpath(output_path)
-    record()
+    if not record():
+        # Writing the empty result anyway replaced an existing file with []
+        # while the CLI reported "Recorded 0 action(s)" and exit status 0.
+        raise AutoControlException(
+            f"recording could not start; {output_path} was not written")
     try:
         stop_event.wait(timeout)
     finally:

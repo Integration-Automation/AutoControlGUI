@@ -22,7 +22,8 @@
 
 ``check(condition, message)`` 記錄通過/失敗且永不拋出(回傳布林值,可據以分支);``check_equal(actual, expected,
 message)`` 是相等捷徑。``failures`` 列出失敗訊息、``passed`` 計算通過數、``assert_all()`` 彙整後丟出
-``AutoControlActionException``。context manager 在乾淨退出時呼叫 ``assert_all``(且永不遮蔽已在傳播的例外)。
+``SoftAssertionsFailed``:它是 ``AutoControlAssertionException``(套件把它記為 *failed*,寬鬆執行
+也不會吞掉它),同時仍是先前丟出的 ``AutoControlActionException``。context manager 在乾淨退出時呼叫 ``assert_all``(且永不遮蔽已在傳播的例外)。
 傳入 ``raise_on_exit=False`` 可只收集不自動拋出。
 
 執行器命令

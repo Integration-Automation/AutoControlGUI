@@ -18,11 +18,11 @@ Pure standard library (``sqlite3``); imports no ``PySide6``.
 import json
 import time
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, ContextManager, Dict, List, Optional
 
 from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.sqlite_support import (
-    last_row_id, require_sqlite3,
+    autocommit_connection, last_row_id,
 )
 
 if TYPE_CHECKING:  # reason: sqlite3 types are named only in annotations
@@ -48,6 +48,31 @@ class WorkItem:
     retries: int
     error: str = ""
     output: str = ""
+    claim: int = 0
+
+
+_ABANDONED = "abandoned: claimed and never settled"
+
+
+def _require_in_progress(item_id: int, row: Any,
+                         claim: Optional[int] = None) -> None:
+    """Refuse to settle an item that is unknown, not claimed, or claimed again.
+
+    Completing a never-claimed item, or failing one that had already
+    succeeded (requeueing it for a second run), used to be accepted. The
+    status alone cannot tell a stale performer from the one that re-claimed
+    the item, so each claim is numbered; a performer that passes its
+    ``claim`` back is refused once someone else has claimed the item since.
+    """
+    if row is None:
+        raise AutoControlException(f"no work item with id {item_id}")
+    if row["status"] != STATUS_IN_PROGRESS:
+        raise AutoControlException(
+            f"work item {item_id} is {row['status']}, not {STATUS_IN_PROGRESS}")
+    if claim is not None and int(row["claim"]) != int(claim):
+        raise AutoControlException(
+            f"work item {item_id} was claimed again (claim {row['claim']}); "
+            f"claim {claim} is stale")
 
 
 class WorkQueue:
@@ -58,12 +83,8 @@ class WorkQueue:
         self._name = name
         self._ensure_schema()
 
-    def _connect(self) -> "sqlite3.Connection":
-        driver = require_sqlite3()
-        conn = driver.connect(self._db_path, timeout=30.0,
-                              isolation_level=None)
-        conn.row_factory = driver.Row
-        return conn
+    def _connect(self) -> ContextManager["sqlite3.Connection"]:
+        return autocommit_connection(self._db_path)
 
     def _ensure_schema(self) -> None:
         with self._connect() as conn:
@@ -72,19 +93,30 @@ class WorkQueue:
                 "id INTEGER PRIMARY KEY AUTOINCREMENT, queue TEXT NOT NULL, "
                 "reference TEXT, data TEXT NOT NULL, status TEXT NOT NULL, "
                 "retries INTEGER NOT NULL DEFAULT 0, error TEXT DEFAULT '', "
-                "output TEXT DEFAULT '', updated REAL NOT NULL)")
+                "output TEXT DEFAULT '', updated REAL NOT NULL, "
+                "claim INTEGER NOT NULL DEFAULT 0)")
+            columns = {row["name"] for row in
+                       conn.execute("PRAGMA table_info(work_items)")}
+            if "claim" not in columns:
+                conn.execute("ALTER TABLE work_items ADD COLUMN "
+                             "claim INTEGER NOT NULL DEFAULT 0")
 
     def add(self, data: Dict[str, Any], *, reference: Optional[str] = None,
             dedupe: bool = True) -> Optional[int]:
         """Enqueue an item; skip (return None) on a live duplicate reference."""
         with self._connect() as conn:
+            # One write transaction for the check and the insert: in autocommit
+            # two dispatchers could both pass the check and enqueue twice.
+            conn.execute("BEGIN IMMEDIATE")
             if dedupe and reference and self._has_pending(conn, reference):
+                conn.execute("COMMIT")
                 return None
             cur = conn.execute(
                 "INSERT INTO work_items (queue, reference, data, status, "
                 "updated) VALUES (?, ?, ?, ?, ?)",
                 (self._name, reference or "", json.dumps(data), STATUS_NEW,
                  time.time()))
+            conn.execute("COMMIT")
             return last_row_id(cur)
 
     def _has_pending(self, conn: "sqlite3.Connection", reference: str) -> bool:
@@ -94,50 +126,104 @@ class WorkQueue:
             (self._name, reference, STATUS_NEW, STATUS_IN_PROGRESS)).fetchone()
         return row is not None
 
-    def get_next(self) -> Optional[WorkItem]:
-        """Atomically claim the oldest ``new`` item, marking it in-progress."""
+    def get_next(self, *, stale_after_s: Optional[float] = None,
+                 max_retries: int = 3) -> Optional[WorkItem]:
+        """Atomically claim the oldest ``new`` item, marking it in-progress.
+
+        With ``stale_after_s``, an ``in_progress`` item not updated for that
+        long is claimable again too: a performer that crashed mid-item left
+        it in progress for good -- and, since a live duplicate blocks
+        ``add``, it could not even be enqueued again. Such a reclaim counts
+        as a retry, and an item already abandoned ``max_retries`` times is
+        marked ``failed`` instead of being handed out forever.
+
+        The returned item's ``claim`` numbers this claim; pass it back to
+        :meth:`complete` / :meth:`fail` so a performer whose item was
+        reclaimed meanwhile cannot settle it.
+        """
         with self._connect() as conn:
             conn.execute("BEGIN IMMEDIATE")
-            row = conn.execute(
-                "SELECT * FROM work_items WHERE queue=? AND status=? "
-                "ORDER BY id LIMIT 1", (self._name, STATUS_NEW)).fetchone()
+            row = self._claimable(conn, stale_after_s, max_retries)
             if row is None:
                 conn.execute("COMMIT")
                 return None
+            item = _row_to_item(dict(row), status=STATUS_IN_PROGRESS)
+            if row["status"] == STATUS_IN_PROGRESS:
+                item.retries += 1
+            item.claim += 1
             conn.execute(
-                "UPDATE work_items SET status=?, updated=? WHERE id=?",
-                (STATUS_IN_PROGRESS, time.time(), row["id"]))
+                "UPDATE work_items SET status=?, retries=?, claim=?, updated=? "
+                "WHERE id=?",
+                (STATUS_IN_PROGRESS, item.retries, item.claim, time.time(),
+                 item.id))
             conn.execute("COMMIT")
-            return _row_to_item(dict(row), status=STATUS_IN_PROGRESS)
+            return item
 
-    def complete(self, item_id: int, *, output: Any = None) -> None:
-        """Mark an item successfully processed."""
-        self._set_status(item_id, STATUS_SUCCESS,
+    def _claimable(self, conn: "sqlite3.Connection",
+                   stale_after_s: Optional[float],
+                   max_retries: int) -> Optional[Any]:
+        """The next row to claim, failing exhausted stale items first."""
+        if stale_after_s is None:
+            return conn.execute(
+                "SELECT * FROM work_items WHERE queue=? AND status=? "
+                "ORDER BY id LIMIT 1", (self._name, STATUS_NEW)).fetchone()
+        cutoff = time.time() - float(stale_after_s)
+        conn.execute(
+            "UPDATE work_items SET status=?, error=?, updated=? WHERE queue=? "
+            "AND status=? AND updated<? AND retries>=?",
+            (STATUS_FAILED, _ABANDONED, time.time(), self._name,
+             STATUS_IN_PROGRESS, cutoff, int(max_retries)))
+        return conn.execute(
+            "SELECT * FROM work_items WHERE queue=? AND (status=? OR "
+            "(status=? AND updated<?)) ORDER BY id LIMIT 1",
+            (self._name, STATUS_NEW, STATUS_IN_PROGRESS, cutoff)).fetchone()
+
+    def complete(self, item_id: int, *, output: Any = None,
+                 claim: Optional[int] = None) -> None:
+        """Mark an item successfully processed (refused if ``claim`` is stale)."""
+        self._set_status(item_id, STATUS_SUCCESS, claim=claim,
                          output=json.dumps(output) if output is not None else "")
 
     def fail(self, item_id: int, error: str, *, kind: str = "application",
-             max_retries: int = 3) -> str:
+             max_retries: int = 3, claim: Optional[int] = None) -> str:
         """Fail an item; application errors retry, business errors don't.
 
         Returns the resulting status (``new`` when requeued, else ``failed``).
+        A stale ``claim`` is refused as in :meth:`complete`.
         """
         with self._connect() as conn:
-            row = conn.execute("SELECT retries FROM work_items WHERE id=?",
-                               (item_id,)).fetchone()
-            retries = int(row["retries"]) if row else 0
+            conn.execute("BEGIN IMMEDIATE")
+            row = conn.execute(
+                "SELECT retries, status, claim FROM work_items WHERE id=?",
+                (item_id,)).fetchone()
+            try:
+                _require_in_progress(item_id, row, claim)
+            except AutoControlException:
+                conn.execute("ROLLBACK")
+                raise
+            retries = int(row["retries"])
             retryable = kind == "application" and retries < int(max_retries)
             status = STATUS_NEW if retryable else STATUS_FAILED
             conn.execute(
                 "UPDATE work_items SET status=?, retries=?, error=?, updated=? "
                 "WHERE id=?",
                 (status, retries + 1, str(error), time.time(), item_id))
+            conn.execute("COMMIT")
             return status
 
-    def _set_status(self, item_id: int, status: str, *, output: str = "") -> None:
+    def _set_status(self, item_id: int, status: str, *, output: str = "",
+                    claim: Optional[int] = None) -> None:
         with self._connect() as conn:
-            conn.execute(
-                "UPDATE work_items SET status=?, output=?, updated=? WHERE id=?",
-                (status, output, time.time(), item_id))
+            cursor = conn.execute(
+                "UPDATE work_items SET status=?, output=?, updated=? "
+                "WHERE id=? AND status=? AND (? IS NULL OR claim=?)",
+                (status, output, time.time(), item_id, STATUS_IN_PROGRESS,
+                 claim, claim))
+            if cursor.rowcount == 0:
+                row = conn.execute(
+                    "SELECT status, claim FROM work_items WHERE id=?",
+                    (item_id,)).fetchone()
+                _require_in_progress(item_id, row, claim)
 
     def stats(self) -> Dict[str, int]:
         """Return a count of items per status for this queue."""
@@ -173,4 +259,4 @@ def _row_to_item(row: Dict[str, Any],
         id=int(row["id"]), reference=row["reference"] or "",
         data=json.loads(row["data"]), status=status or row["status"],
         retries=int(row["retries"]), error=row.get("error") or "",
-        output=row.get("output") or "")
+        output=row.get("output") or "", claim=int(row.get("claim") or 0))

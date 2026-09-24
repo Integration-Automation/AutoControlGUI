@@ -21,6 +21,8 @@ CLDR 資料解析這類字串(並可反向格式化值),讓流程能跨區域設
 
     parse_decimal("1.234,56", locale="de_DE")    # -> 1234.56
     parse_number("1,234", locale="en_US")        # -> 1234
+    # 分組符號位置不對(en_US 的 "1,5")以及 parse_number 遇到小數("1.5")
+    # 會拋出 ValueError,不再解析成 15 / 1。
 
     format_decimal(1234.5, locale="en_US")       # -> "1,234.5"
     format_currency(1234.5, "USD", locale="en_US")   # -> "$1,234.50"

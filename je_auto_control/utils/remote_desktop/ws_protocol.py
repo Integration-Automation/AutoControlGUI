@@ -14,6 +14,8 @@ import socket
 import struct
 from typing import Optional, Tuple
 
+from je_auto_control.utils.remote_desktop.protocol import ProtocolError
+
 WS_GUID = b"258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
 
 OPCODE_CONTINUATION = 0x0
@@ -27,8 +29,13 @@ MAX_FRAME_PAYLOAD_BYTES = 16 * 1024 * 1024
 MAX_HEADER_BYTES = 8192
 
 
-class WsProtocolError(RuntimeError):
+class WsProtocolError(ProtocolError):
     """Raised when a peer breaks the WebSocket framing contract."""
+    # A ProtocolError, so every receive loop that ends a connection on a
+    # malformed frame ends it on a malformed WebSocket frame too; as a bare
+    # RuntimeError one TEXT frame killed the host's and the viewer's
+    # receive threads while the session stayed registered.
+
 
 
 class WsClosedError(ConnectionError):

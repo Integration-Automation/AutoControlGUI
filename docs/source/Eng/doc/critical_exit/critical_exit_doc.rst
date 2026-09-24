@@ -20,7 +20,9 @@ Enabling Critical Exit
    CriticalExit().init_critical_exit()
 
 After calling ``init_critical_exit()``, pressing **F7** will interrupt the main thread
-and terminate the program.
+and terminate the program -- also while it is sleeping or waiting, which the stop
+interrupts at once. A press made before the listener started is ignored, and after
+the key is released the listener arms again for the next press.
 
 Changing the Hotkey
 ===================

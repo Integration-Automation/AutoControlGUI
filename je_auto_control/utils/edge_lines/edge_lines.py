@@ -15,7 +15,9 @@ on synthetic arrays. ``cv2.HoughLinesP`` is base OpenCV; OpenCV + NumPy come in 
 import math
 from typing import Any, Dict, List, Optional, Sequence
 
-from je_auto_control.utils.visual_match.visual_match import _haystack_gray
+from je_auto_control.utils.visual_match.visual_match import (
+    _haystack_gray_with_origin, _to_screen,
+)
 
 ImageSource = Any
 _CANNY_LOW = 50
@@ -49,8 +51,8 @@ def find_lines(haystack: Optional[ImageSource] = None, *,
     ``horizontal`` / ``vertical`` / ``diagonal``. Pass ``orientation`` other than
     ``any`` to keep only that kind. ``min_length`` / ``max_gap`` tune the Hough probe.
     """
-    segments = _segments(_haystack_gray(haystack, region), int(min_length),
-                         int(max_gap))
+    gray, origin_x, origin_y = _haystack_gray_with_origin(haystack, region)
+    segments = _segments(gray, int(min_length), int(max_gap))
     out: List[Dict[str, Any]] = []
     if segments is None or len(segments) == 0:
         return out
@@ -65,7 +67,7 @@ def find_lines(haystack: Optional[ImageSource] = None, *,
                     "length": round(math.hypot(x2 - x1, y2 - y1), 1),
                     "orientation": kind})
     out.sort(key=lambda seg: seg["length"], reverse=True)
-    return out
+    return [_to_screen(seg, origin_x, origin_y) for seg in out]
 
 
 def _cluster(values: Sequence[int], tol: int) -> List[int]:

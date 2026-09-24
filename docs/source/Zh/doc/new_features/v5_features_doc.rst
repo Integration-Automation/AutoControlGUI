@@ -66,8 +66,9 @@ HTTP / API
         timeout=30.0)
     assert resp["status"] == 201
 
-回傳 ``{status, ok, headers, text, json, url}``;非 2xx 回應會被回傳而非
-丟出例外,因此可直接對狀態碼斷言。僅允許 ``http`` / ``https``。
+回傳 ``{status, ok, headers, set_cookie, text, json, url}``;非 2xx 回應會被回傳而非
+丟出例外,因此可直接對狀態碼斷言。重複的標頭在 ``headers`` 裡以 ", " 串接,``set_cookie``
+列出每一個 ``Set-Cookie`` 值。回應本文超過 64 MiB 會拋出 ``URLError``。僅允許 ``http`` / ``https``。
 ``AC_http_to_var`` 現在共用同一個客戶端,因此也能送 body、headers 與認證。
 
 執行器指令:``AC_http_request``。

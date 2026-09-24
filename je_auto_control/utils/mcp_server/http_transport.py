@@ -23,6 +23,7 @@ import json
 import os
 import ssl
 import threading
+from urllib.parse import urlsplit
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any, Callable, Dict, Optional, Tuple
 
@@ -61,6 +62,17 @@ def _is_initialize(line: str) -> bool:
     except ValueError:
         return False
     return isinstance(message, dict) and message.get("method") == "initialize"
+
+
+def _forget_if_dropped(bridge: "MCPServer", session: Optional[HttpSession]) -> None:
+    """Release a session's dispatcher state if it was dropped mid-request.
+
+    A session evicted, swept or deleted while its ``initialize`` ran had the
+    capabilities stored under its dead id after the drop hook had already
+    run, and nothing would ever release them.
+    """
+    if session is not None and session.closed.is_set():
+        bridge.forget_connection(session.id)
 
 
 def _notifier_for(writer: Optional[Callable[[str], None]]):
@@ -108,6 +120,7 @@ class _MCPHttpHandler(BaseHTTPRequestHandler):
         extra = {SESSION_HEADER: session.id} if session is not None else None
         if self._client_accepts_sse():
             self._dispatch_sse(bridge, line, conn_id, extra)
+            _forget_if_dropped(bridge, session)
             return
         # A plain POST has no stream of its own, but a session may have a
         # standing GET stream; server-initiated traffic belongs on it. Absent
@@ -117,6 +130,7 @@ class _MCPHttpHandler(BaseHTTPRequestHandler):
         with bridge.connection_scope(connection_id=conn_id, writer=writer,
                                       notifier=_notifier_for(writer)):
             response = bridge.handle_line(line)
+        _forget_if_dropped(bridge, session)
         if response is None:
             # MCP notification — no body, ack with 202.
             self._send_blank(status=202)
@@ -160,18 +174,51 @@ class _MCPHttpHandler(BaseHTTPRequestHandler):
                 bridge.forget_connection(id(self))
 
     def _authorize(self) -> bool:
-        """Validate Bearer token if the server has one configured."""
+        """Refuse browser cross-site requests, then check the bearer token."""
+        if not self._origin_allowed():
+            self._send_json({"error": "origin not allowed"}, status=403)
+            return False
         expected: Optional[str] = self.server.auth_token  # type: ignore[attr-defined]
         if expected is None:
             return True
-        header = self.headers.get("Authorization", "")
-        if not header.startswith("Bearer "):
+        # The scheme is case-insensitive (RFC 7235 2.1): "bearer tok" was
+        # refused here while the REST gate accepted it.
+        scheme, _, provided = self.headers.get("Authorization", "").strip().partition(" ")
+        if scheme.lower() != "bearer":
             self._send_json({"error": "missing bearer token"}, status=401)
             return False
-        provided = header[len("Bearer "):].strip()
-        if not hmac.compare_digest(provided, expected):
+        provided = provided.strip()
+        # Bytes: compare_digest raises TypeError on a non-ASCII str, and
+        # http.server decodes headers as latin-1, so a crafted token used to
+        # kill the request thread instead of being refused.
+        if not hmac.compare_digest(provided.encode("utf-8"),
+                                   expected.encode("utf-8")):
             self._send_json({"error": "invalid bearer token"}, status=403)
             return False
+        return True
+
+    def _origin_allowed(self) -> bool:
+        """True unless a browser on another site, or a rebound name, sent this.
+
+        With no token configured (the default) any web page the user opened
+        could POST ``tools/call`` here as a simple ``text/plain`` request,
+        which browsers send without a CORS preflight; the MCP specification
+        requires servers to validate ``Origin`` for exactly this. A request
+        without ``Origin`` comes from a non-browser client and is fine. When
+        bound to loopback, ``Host`` must also name loopback: a DNS-rebinding
+        page reaches 127.0.0.1 under its own name, and a same-origin GET
+        carries no ``Origin`` at all.
+        """
+        origin = self.headers.get("Origin")
+        if origin and origin not in _allowed_origins():
+            if urlsplit(origin).hostname not in _LOOPBACK_NAMES:
+                return False
+        address = self.server.server_address
+        bound_host = address[0] if isinstance(address, tuple) else address
+        if bound_host in _LOOPBACK_NAMES:
+            host = urlsplit("//" + self.headers.get("Host", "")).hostname
+            if host not in _LOOPBACK_NAMES:
+                return False
         return True
 
     def _client_accepts_sse(self) -> bool:
@@ -298,6 +345,10 @@ class _MCPHttpHandler(BaseHTTPRequestHandler):
     def do_DELETE(self) -> None:  # noqa: N802  # reason: stdlib API
         """Terminate the session named by the header, if there is one."""
         if not self._authorize():
+            return
+        if self.path != DEFAULT_PATH:
+            # GET and POST answer 404 here; DELETE /anything ended the session.
+            self._send_json({"error": "unknown path"}, status=404)
             return
         registry: SessionRegistry = self.server.sessions  # type: ignore[attr-defined]
         header_id = session_id_from_headers(self.headers)
@@ -426,6 +477,19 @@ class _MCPHttpServer(ThreadingHTTPServer):
                 conn.close()
                 raise
         return conn, addr
+
+
+#: Host names that mean this machine. ``urlsplit`` strips IPv6 brackets.
+_LOOPBACK_NAMES = frozenset({"localhost", "127.0.0.1", "::1"})
+
+#: Extra browser origins allowed to call the server, comma-separated and
+#: exact (``https://example.test:8443``); loopback origins always are.
+ALLOWED_ORIGINS_ENV = "JE_AUTOCONTROL_MCP_ALLOWED_ORIGINS"
+
+
+def _allowed_origins() -> frozenset:
+    raw = os.environ.get(ALLOWED_ORIGINS_ENV, "")
+    return frozenset(part.strip() for part in raw.split(",") if part.strip())
 
 
 class HttpMCPServer:

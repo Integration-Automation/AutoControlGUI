@@ -19,7 +19,8 @@ Element = Dict[str, Any]
 def in_bounds(x: int, y: int, screen_size: Sequence[int]) -> bool:
     """Whether ``(x, y)`` lies within the ``(width, height)`` screen."""
     width, height = int(screen_size[0]), int(screen_size[1])
-    return 0 <= int(x) < width and 0 <= int(y) < height
+    # Compared as numbers: int(-0.9) is 0, so a point just off the edge passed.
+    return 0 <= float(x) < width and 0 <= float(y) < height
 
 
 def _center(element: Element) -> List[int]:
@@ -40,9 +41,11 @@ def snap_to_element(x: int, y: int, elements: Sequence[Element], *,
     element centre within ``max_dist`` pixels is returned, else ``None``.
     """
     px, py = int(x), int(y)
-    for element in elements:
-        if _contains(element, px, py):
-            return _center(element)
+    # The innermost (smallest) containing element: the first one found was
+    # often the window around the button, whose centre is far away.
+    containing = [element for element in elements if _contains(element, px, py)]
+    if containing:
+        return _center(min(containing, key=lambda e: int(e["width"]) * int(e["height"])))
     best: Optional[List[int]] = None
     best_dist = float("inf")
     for element in elements:

@@ -67,7 +67,10 @@ class AnthropicVLMBackend(VLMBackend):
                     ],
                 }],
             )
-        except (OSError, ValueError, RuntimeError) as error:
+        # The SDK's errors (rate limit, timeout, 5xx) derive from
+        # anthropic.AnthropicError, a bare Exception, so they escaped here while
+        # the LLM backend already caught them.
+        except (*_sdk_errors(), OSError, ValueError, RuntimeError) as error:
             autocontrol_logger.warning(
                 "Anthropic VLM request failed: %r", error,
             )
@@ -81,3 +84,17 @@ def _first_text_block(response) -> str:
         if getattr(block, "type", None) == "text":
             return getattr(block, "text", "") or ""
     return ""
+
+
+def _sdk_errors() -> tuple:
+    """``(anthropic.AnthropicError,)``, the base of every error the SDK raises.
+
+    Evaluated while an exception is being matched, so it must not raise:
+    with an injected client and no SDK installed there is nothing of the
+    SDK's to catch.
+    """
+    try:
+        import anthropic
+    except ImportError:
+        return ()
+    return (anthropic.AnthropicError,)

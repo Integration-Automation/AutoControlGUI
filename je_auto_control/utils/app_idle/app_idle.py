@@ -22,6 +22,7 @@ import time
 from typing import Any, Callable, Dict, Optional, Sequence
 
 from je_auto_control.utils.settle_detector import SettleTracker, settle_point
+from je_auto_control.utils.timeouts import deadline_after
 
 # A busy probe returns truthy while the application is busy.
 BusyProbe = Callable[[], bool]
@@ -57,7 +58,7 @@ def wait_until_app_idle(*, busy_probe: Optional[BusyProbe] = None,
     probe = busy_probe if busy_probe is not None else _default_busy_probe
     tracker = SettleTracker(quiet_samples=int(quiet_samples), max_churn=0.0)
     start = clock()
-    deadline = start + float(timeout_s)
+    deadline = deadline_after(start, timeout_s, "timeout_s")
     polls = 0
     quiet_run = 0
     while True:

@@ -9,7 +9,15 @@ awkward to extract from. This adds a focused JSONPath subset:
 * ``[n]`` / ``[-n]``   list index (negative from the end)
 * ``*`` / ``[*]``      wildcard (all members / all elements)
 * ``..``               recursive descent
-* ``[?(@.k op v)]``    filter array elements (``op`` ∈ == != < <= > >=)
+* ``[?(@.k op v)]``    filter array elements or object member values
+  (``op`` ∈ == != < <= > >=; ``v`` a JSON number, quoted string, true,
+  false or null);
+  ``@.a.b`` reaches into nested objects and ``[?(@.k)]`` tests that ``k``
+  exists. Values of different types never compare equal (``true != 1``).
+
+A path this subset cannot read -- an unsupported filter, an unterminated
+``[``, a stray character -- raises ``ValueError`` rather than matching
+something else.
 
 Pure standard library (``re``); imports no ``PySide6``.
 """
@@ -22,47 +30,88 @@ _COMPARATORS = {
     ">": lambda a, b: a > b, ">=": lambda a, b: a >= b,
 }
 
-# A small, linear filter pattern (no nested quantifiers -> no backtracking).
-_FILTER_RE = re.compile(r"@\.(\w+)\s*(==|!=|<=|>=|<|>)\s*(.+)")
+# The field path of a filter; the operator and value are split off by hand, so
+# no pattern has two quantifiers competing for the same characters.
+_FILTER_FIELD = re.compile(r"@\.([\w-]+(?:\.[\w-]+)*)")
+_OPERATORS = ("==", "!=", "<=", ">=", "<", ">")
+_JSON_NUMBER = re.compile(r"-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?")
+_LITERALS = {"true": True, "false": False, "null": None}
+_BARE_KEY = re.compile(r"[\w-]+")
+_ABSENT = object()
 
 
 def _parse_value(raw: str) -> Any:
     raw = raw.strip()
     if raw[:1] in "'\"" and raw[-1:] in "'\"":
         return raw[1:-1]
-    for caster in (int, float):
-        try:
-            return caster(raw)
-        except ValueError:
-            continue
-    return {"true": True, "false": False, "null": None}.get(raw, raw)
+    if _JSON_NUMBER.fullmatch(raw):
+        return float(raw) if any(ch in raw for ch in ".eE") else int(raw)
+    if raw in _LITERALS:
+        return _LITERALS[raw]
+    # "1 && @.b==2" used to be compared as that string and match nothing,
+    # and Python-only spellings (1_000, nan, inf) were accepted.
+    raise ValueError(f"unsupported JSONPath filter value {raw!r}")
 
 
 def _parse_bracket(inner: str) -> Tuple[str, Any]:
     """Turn the text inside ``[...]`` into a token."""
     inner = inner.strip()
+    if not inner:
+        raise ValueError("empty JSONPath selector []")
     if inner == "*":
         return ("wild", None)
     if inner.startswith("?"):
         body = inner[1:].strip().lstrip("(").rstrip(")").strip()
-        match = _FILTER_RE.match(body)
-        if match:
-            return ("filter", (match.group(1), match.group(2),
-                               _parse_value(match.group(3))))
-        return ("wild", None)
+        return ("filter", _parse_filter(body, inner))
     if inner[:1] in "'\"" and inner[-1:] in "'\"":
         return ("key", inner[1:-1])
-    try:
+    if re.fullmatch(r"-?\d+", inner):
         return ("index", int(inner))
-    except ValueError:
-        return ("key", inner)
+    if not _BARE_KEY.fullmatch(inner):
+        # Slices ([0:2]), unions ([0,1]) and [] were looked up as keys.
+        raise ValueError(f"unsupported JSONPath selector [{inner}]")
+    return ("key", inner)
+
+
+def _parse_filter(body: str, inner: str) -> Tuple[Tuple[str, ...], Any, Any]:
+    """``(field path, operator or None, value)`` for a ``?(...)`` body.
+
+    Anything else raises: an unreadable filter used to become a wildcard and
+    return every element.
+    """
+    match = _FILTER_FIELD.match(body)
+    rest = body[match.end():].strip() if match else ""
+    operator = next((op for op in _OPERATORS if rest.startswith(op)), None)
+    if match is None or (rest and (operator is None or not rest[len(operator):].strip())):
+        raise ValueError(f"unsupported JSONPath filter {inner!r}")
+    value = None if operator is None else _parse_value(rest[len(operator):])
+    return tuple(match.group(1).split(".")), operator, value
 
 
 def _read_bare_key(path: str, start: int) -> Tuple[str, int]:
     end = start
-    while end < len(path) and (path[end].isalnum() or path[end] == "_"):
+    while end < len(path) and (path[end].isalnum() or path[end] in "_-"):
         end += 1
     return path[start:end], end
+
+
+def _read_bracket(path: str, start: int) -> Tuple[str, int]:
+    """Text inside the ``[`` at ``start`` and the index after its ``]``.
+
+    A quoted key or a filter may itself contain ``]`` (``['a]b']``,
+    ``[?(@.k == "x]")]``), so the search starts after the quote / looks for
+    the filter's ``)]``.
+    """
+    opener = path[start + 1:start + 2]
+    search_from = start + 1
+    if opener in ("'", '"'):
+        search_from = path.find(opener, start + 2) + 1
+    closer = ")]" if opener == "?" and path.find(")]", start) != -1 else "]"
+    close = path.find(closer, search_from) if search_from else -1
+    if close == -1:
+        raise ValueError(f"unterminated '[' in JSONPath {path!r}")
+    close += len(closer) - 1
+    return path[start + 1:close], close + 1
 
 
 def _tokenize(path: str) -> List[Tuple[str, Any]]:
@@ -83,17 +132,13 @@ def _tokenize(path: str) -> List[Tuple[str, Any]]:
             tokens.append(("wild", None))
             index += 1
         elif char == "[":
-            close = path.find("]", index)
-            if close == -1:
-                break
-            tokens.append(_parse_bracket(path[index + 1:close]))
-            index = close + 1
+            inner, index = _read_bracket(path, index)
+            tokens.append(_parse_bracket(inner))
         else:
             name, index = _read_bare_key(path, index)
-            if name:
-                tokens.append(("key", name))
-            else:
-                index += 1                   # skip an unrecognized char
+            if not name:
+                raise ValueError(f"unexpected {char!r} in JSONPath {path!r}")
+            tokens.append(("key", name))
     return tokens
 
 
@@ -108,12 +153,23 @@ def _descendants(node: Any) -> List[Any]:
     return found
 
 
-def _match_filter(node: Any, spec: Tuple[str, str, Any]) -> bool:
-    field, op, value = spec
-    if not isinstance(node, dict) or field not in node:
-        return False
+def _field(node: Any, fields: Tuple[str, ...]) -> Any:
+    for name in fields:
+        if not isinstance(node, dict) or name not in node:
+            return _ABSENT
+        node = node[name]
+    return node
+
+
+def _match_filter(node: Any, spec: Tuple[Tuple[str, ...], Any, Any]) -> bool:
+    fields, op, value = spec
+    actual = _field(node, fields)
+    if actual is _ABSENT or op is None:
+        return actual is not _ABSENT
+    if isinstance(actual, bool) != isinstance(value, bool):
+        return op == "!="   # Python has True == 1; JSON does not
     try:
-        return _COMPARATORS[op](node[field], value)
+        return _COMPARATORS[op](actual, value)
     except TypeError:
         return False
 
@@ -135,7 +191,14 @@ def _on_wild(node: Any, _arg: Any) -> List[Any]:
 
 
 def _on_filter(node: Any, arg: Any) -> List[Any]:
-    elements = node if isinstance(node, list) else [node]
+    # RFC 9535: a filter selects among an array's elements or an object's
+    # member values; it used to test the object itself.
+    if isinstance(node, dict):
+        elements = list(node.values())
+    elif isinstance(node, list):
+        elements = node
+    else:
+        return []
     return [item for item in elements if _match_filter(item, arg)]
 
 

@@ -246,11 +246,10 @@ def test_openai_handles_malformed_tool_arguments():
     ])
     client = _FakeOpenAIClient(response)
     backend = OpenAIAgentBackend(tools=_OPENAI_FAKE_TOOLS, client=client)
-    decision = backend.decide_next_action(
-        goal="g", screenshot=None, history=[],
-    )
-    # Malformed args fall back to an empty dict instead of crashing.
-    assert decision["input"] == {}
+    # Falling back to {} ran the tool anyway -- a truncated click became a
+    # click wherever the cursor happened to be. It is an error now.
+    with pytest.raises(AgentBackendError, match="not valid JSON"):
+        backend.decide_next_action(goal="g", screenshot=None, history=[])
 
 
 def test_openai_threads_tool_result_via_history():

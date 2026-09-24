@@ -19,11 +19,14 @@ text and pre-stress layout *before* any real translation exists::
 
     from je_auto_control import pseudo_localize, pseudo_localize_catalog
 
-    pseudo_localize("Hello {name}")        # "⟦Hèllo {name}········⟧"
+    pseudo_localize("Hello {name}")        # "⟦Hèllò {name}··⟧"
     pseudo_localize_catalog({"save": "Save", "cancel": "Cancel"})
 
-Placeholders (``{name}`` / ``{{x}}`` / ``%s`` / ``%d``) are preserved
-verbatim; ``expansion`` controls the padding fraction; the ``⟦…⟧`` brackets
+Placeholders (``{name}`` / ``{{x}}`` / ``{0}``, printf conversions such as
+``%s`` / ``%(user)s`` / ``%1$s``), HTML tags and the structure of ICU
+``plural`` / ``select`` arguments are preserved verbatim, while the text of each
+ICU case is localized; ``expansion`` is the padding as a fraction of the visible
+text; the ``⟦…⟧`` brackets
 make truncation visible. Exposed as ``AC_pseudo_localize`` /
 ``ac_pseudo_localize``. Untranslated (un-accented) strings in a screen are a
 sign of unexternalized, hardcoded text.

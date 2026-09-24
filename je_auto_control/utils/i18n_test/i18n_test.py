@@ -19,30 +19,92 @@ from typing import Any, Dict, List
 # Accent map for common Latin letters (pseudo-localization).
 _ACCENTS = str.maketrans(
     "aeiouAEIOUncysNCYS", "àèìòùÀÈÌÒÙñçÿśÑÇÝŚ")
-# Placeholders to preserve verbatim: {name}, {{x}}, %s, %d, {0}.
-_PLACEHOLDER = re.compile(r"\{\{[^}]*\}\}|\{[^}]*\}|%[sd]")
-_SENTINEL = re.compile("\x00(\\d+)\x00")
+# printf conversions: %s, %d, %(user)s, %1$s, %-5.2f, %i, %%.
+_PRINTF = r"%(?:\(\w+\))?(?:\d+\$)?[-+ #0]*\d*(?:\.\d+)?[sdifxXeEgGcr@%]"
+# Kept verbatim by pseudo-localization: {name}, {{x}}, {0}, printf, HTML tags.
+_PROTECTED = re.compile(r"\{\{[^{}]*\}\}|\{[^{}]*\}|" + _PRINTF + r"|<[^<>]+>")
+# An ICU plural / select argument: its header, each case selector, and ``#``
+# (in plurals) are kept; the text of every case is localized.
+_ICU_HEAD = re.compile(r"\{\s*\w+\s*,\s*(plural|selectordinal|select)\s*,")
+_ICU_CASE = re.compile(r"\s*(?:offset:\d+\s*)?(?:=\d+|\w+)\s*\{")
+_ICU_CLOSE = re.compile(r"\s*\}")
+# What check_catalog compares: printf conversions and {argument} names.
+_ARGUMENT = re.compile(r"\{\{?\s*(\w+)")
+_PRINTF_ONLY = re.compile(_PRINTF)
+
+
+class _Segmenter:
+    """Split a UI string into ``(protected, text)`` pieces."""
+
+    def __init__(self, text: str) -> None:
+        self.text = text
+        self.pieces: List[List[Any]] = []
+
+    def run(self) -> List[List[Any]]:
+        self._scan(0, nested=False, plural=False)
+        return self.pieces
+
+    def _add(self, protected: bool, text: str) -> None:
+        if self.pieces and self.pieces[-1][0] == protected:
+            self.pieces[-1][1] += text
+        else:
+            self.pieces.append([protected, text])
+
+    def _scan(self, index: int, *, nested: bool, plural: bool) -> int:
+        """Consume up to the ``}`` closing a nested case (not consumed); return its index."""
+        text = self.text
+        while index < len(text):
+            char = text[index]
+            if nested and char == "}":
+                return index
+            head = _ICU_HEAD.match(text, index)
+            simple = None if head else _PROTECTED.match(text, index)
+            if head:
+                index = self._icu(head)
+            elif simple:
+                self._add(True, simple.group(0))
+                index = simple.end()
+            else:
+                self._add(plural and char == "#", char)
+                index += 1
+        return index
+
+    def _icu(self, head: "re.Match") -> int:
+        self._add(True, head.group(0))
+        plural = head.group(1) != "select"
+        index = head.end()
+        case = _ICU_CASE.match(self.text, index)
+        while case:
+            self._add(True, case.group(0))
+            index = self._scan(case.end(), nested=True, plural=plural)
+            if index < len(self.text):
+                self._add(True, "}")
+                index += 1
+            case = _ICU_CASE.match(self.text, index)
+        close = _ICU_CLOSE.match(self.text, index)
+        if close:
+            self._add(True, close.group(0))
+            return close.end()
+        return index
 
 
 def pseudo_localize(text: str, *, expansion: float = 0.4,
                     accent: bool = True, brackets: bool = True) -> str:
     """Return a pseudo-localized copy of ``text`` (placeholders preserved).
 
-    Accents Latin letters, pads by ``expansion`` (fraction of length) to
-    mimic translation growth, and wraps in ``⟦…⟧`` so truncation is visible.
+    Accents Latin letters, pads by ``expansion`` (a fraction of the visible
+    text's length) to mimic translation growth, and wraps in ``⟦…⟧`` so
+    truncation is visible. Placeholders (``{name}``, ``{{x}}``, printf
+    conversions such as ``%(user)s`` / ``%1$s``), HTML tags and the structure
+    of ICU ``plural`` / ``select`` arguments are kept verbatim, while the text
+    of each ICU case is localized.
     """
-    source = text or ""
-    holders: List[str] = []
-
-    def stash(match: "re.Match") -> str:
-        holders.append(match.group(0))
-        return f"\x00{len(holders) - 1}\x00"
-
-    protected = _PLACEHOLDER.sub(stash, source)
-    body = protected.translate(_ACCENTS) if accent else protected
-    body += "·" * max(0, round(len(protected) * float(expansion)))
-    restored = _SENTINEL.sub(lambda m: holders[int(m.group(1))], body)
-    return f"⟦{restored}⟧" if brackets else restored
+    pieces = _Segmenter(text or "").run()
+    visible = sum(len(piece) for protected, piece in pieces if not protected)
+    body = "".join(piece if protected or not accent else piece.translate(_ACCENTS)
+                   for protected, piece in pieces)
+    body += "·" * max(0, round(visible * float(expansion)))
+    return f"⟦{body}⟧" if brackets else body
 
 
 def pseudo_localize_catalog(mapping: Dict[str, Any],
@@ -89,7 +151,46 @@ def check_overflow(elements: List[Any], *,
 
 
 def _placeholders(value: Any) -> set:
-    return set(_PLACEHOLDER.findall(str(value)))
+    """Printf conversions and ``{argument}`` names -- not ICU case keywords,
+    which legitimately differ between languages."""
+    text = str(value)
+    return set(_PRINTF_ONLY.findall(text)) | {
+        "{" + name + "}" for name in _argument_names(text)}
+
+
+def _argument_names(text: str) -> List[str]:
+    """Names of the ``{arguments}`` in ``text``, skipping ICU case bodies.
+
+    ``male {He}`` inside a select is a case body, not an argument; matching
+    every ``{word`` reported "He" / "Il" as a placeholder mismatch.
+    """
+    names: List[str] = []
+    stack: List[bool] = []   # True: an ICU argument whose "{" opens case bodies
+    index = 0
+    while index < len(text):
+        char = text[index]
+        if char == "}":
+            if stack:
+                stack.pop()
+        elif char == "{":
+            index = _open_brace(text, index, stack, names)
+            continue
+        index += 1
+    return names
+
+
+def _open_brace(text: str, index: int, stack: List[bool], names: List[str]) -> int:
+    """Handle the ``{`` at ``index``; return where scanning resumes."""
+    if stack and stack[-1]:
+        stack.append(False)          # a case body: its text is a message
+        return index + 1
+    match = _ARGUMENT.match(text, index)
+    if match is None:
+        stack.append(False)
+        return index + 1
+    names.append(match.group(1))
+    stack.append(bool(_ICU_HEAD.match(text, index)))
+    return match.end()
 
 
 def _empty_keys(base: Dict[str, Any], target: Dict[str, Any]) -> List[str]:

@@ -71,13 +71,31 @@ def render_overlay_frame(frame: Any, caption: str, status: str = "",
 
 
 def _default_loader(image: Any) -> Any:
-    if isinstance(image, str):
+    if isinstance(image, (str, bytes)) or hasattr(image, "__fspath__"):
+        # read_image, not cv2.imread: imread cannot open a non-ASCII path on
+        # Windows, and a pathlib.Path was treated as an array and copied.
         import cv2
-        frame = cv2.imread(image)
-        if frame is None:
-            raise FileNotFoundError(f"could not read image: {image!r}")
+        from je_auto_control.utils.cv2_utils.image_file import read_image
+        try:
+            return read_image(image, cv2.IMREAD_COLOR)
+        except ValueError as error:
+            raise FileNotFoundError(f"could not read image: {image!r}") from error
+    if hasattr(image, "convert") and not hasattr(image, "shape"):
+        # A PIL image (RGB) becomes the BGR array the drawer and writer use.
+        import numpy as np
+        return np.asarray(image.convert("RGB"))[:, :, ::-1].copy()
+    # A copy: the caption is drawn onto the frame, and a caller's array (or
+    # one reused for two steps) used to get every caption burned into it.
+    return image.copy() if hasattr(image, "copy") else image
+
+
+def _fit(frame: Any, size: Any) -> Any:
+    """``frame`` at ``size``; OpenCV silently drops frames of another size."""
+    # Injected loaders may hand back non-array frames; only arrays are resized.
+    if size is None or not hasattr(frame, "shape") or _frame_size(frame) == tuple(size):
         return frame
-    return image
+    import cv2
+    return cv2.resize(frame, tuple(size))
 
 
 def _default_writer_factory(path: str, fps: int, size: Any) -> Any:
@@ -104,6 +122,9 @@ def write_step_video(steps: Sequence[Any], output_path: str, *,
     makes the assembly testable without cv2.
     """
     load = loader or _default_loader
+    # Read twice below: a generator was spent by the plan, and the video came
+    # out empty without an error.
+    steps = list(steps)
     plan = build_overlay_plan(steps, fps, seconds_per_step)
     coerced = [_coerce_step(step) for step in steps]
     rendered = [render_overlay_frame(load(step.image), entry["caption"],
@@ -111,14 +132,31 @@ def write_step_video(steps: Sequence[Any], output_path: str, *,
                 for step, entry in zip(coerced, plan)]
     if size is None and rendered:
         size = _frame_size(rendered[0])
-    writer = (writer_factory or _default_writer_factory)(output_path, fps, size)
-    frame_count = 0
+    writer = _open_writer(writer_factory or _default_writer_factory, output_path, fps, size)
     try:
-        for frame, entry in zip(rendered, plan):
-            for _ in range(entry["frames"]):
-                writer.write(frame)
-                frame_count += 1
+        frame_count = _write_frames(writer, rendered, plan, size)
     finally:
         writer.release()
     return {"output": output_path, "steps": len(plan), "fps": fps,
             "frame_count": frame_count}
+
+
+def _open_writer(factory: Callable[..., Any], output_path: str, fps: int, size: Any) -> Any:
+    """A writer that is really open: an unwritable path used to report frames it never wrote."""
+    writer = factory(output_path, fps, size)
+    if hasattr(writer, "isOpened") and not writer.isOpened():
+        writer.release()
+        raise OSError(f"could not open a video writer for {output_path!r}")
+    return writer
+
+
+def _write_frames(writer: Any, rendered: Sequence[Any], plan: Sequence[Dict[str, Any]],
+                  size: Any) -> int:
+    """Write each step's frame its planned number of times, at ``size``; return the count."""
+    frame_count = 0
+    for frame, entry in zip(rendered, plan):
+        fitted = _fit(frame, size)
+        for _ in range(entry["frames"]):
+            writer.write(fitted)
+            frame_count += 1
+    return frame_count

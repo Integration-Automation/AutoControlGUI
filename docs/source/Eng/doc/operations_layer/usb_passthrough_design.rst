@@ -280,8 +280,11 @@ a random key file is generated next to the ACL (``0o600`` on POSIX).
 Note: a same-user process can still read the key file and forge a
 signature, so keychain-derived keys are recommended for high-assurance
 deployments (see operator guide). Files written before signing existed
-are treated as legacy (still load, signed on next save); pass
-``require_signature=True`` to reject unsigned files.
+are treated as legacy (still load, signed on next save) -- only while no
+signing key exists: once there is a key, a missing signature fails closed
+like a wrong one. Pass ``require_signature=True`` to reject unsigned files
+always. A file that cannot be parsed is moved aside as
+``usb_acl.json.corrupt-<time>`` and the ACL falls back to deny-all.
 
 Audit
 -----

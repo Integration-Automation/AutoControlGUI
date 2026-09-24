@@ -66,4 +66,4 @@ redaction is screenshot-only)::
     # ssn -> "*****6789", token -> "***", name -> sha256 hex
 
 Modes: ``redact`` (``***``), ``hash`` (SHA-256 hex), ``partial`` (keep the
-last 4 chars). Exposed as ``AC_mask_rows`` / ``ac_mask_rows``.
+last 4 chars of a value at least 8 long; shorter values are fully masked). Exposed as ``AC_mask_rows`` / ``ac_mask_rows``.

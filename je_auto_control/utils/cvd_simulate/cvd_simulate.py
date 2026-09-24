@@ -20,20 +20,34 @@ from typing import Any, Dict, List, Sequence, Tuple
 
 RGB = Tuple[int, int, int]
 
-# Dichromat simulation matrices (sRGB-space approximation, Brettel/Viénot
-# lineage as used by daltonize tooling). Applied at severity 1.0; lower
-# severities interpolate toward the identity.
+# Machado, Oliveira & Fernandes (2009) dichromat matrices at severity 1.0.
+# They act on *linear* RGB, so colours are linearised first and re-encoded
+# after; lower severities interpolate toward the identity in linear space.
+# (The old matrices were Coblis-style and applied to gamma-encoded values:
+# deuteranope green (0, 128, 0) came out (48, 38, 38) instead of about
+# (119, 106, 24).)
 _MATRICES: Dict[str, List[List[float]]] = {
-    "protanopia": [[0.567, 0.433, 0.000],
-                   [0.558, 0.442, 0.000],
-                   [0.000, 0.242, 0.758]],
-    "deuteranopia": [[0.625, 0.375, 0.000],
-                     [0.700, 0.300, 0.000],
-                     [0.000, 0.300, 0.700]],
-    "tritanopia": [[0.950, 0.050, 0.000],
-                   [0.000, 0.433, 0.567],
-                   [0.000, 0.475, 0.525]],
+    "protanopia": [[0.152286, 1.052583, -0.204868],
+                   [0.114503, 0.786281, 0.099216],
+                   [-0.003882, -0.048116, 1.051998]],
+    "deuteranopia": [[0.367322, 0.860646, -0.227968],
+                     [0.280085, 0.672501, 0.047413],
+                     [-0.011820, 0.042940, 0.968881]],
+    "tritanopia": [[1.255528, -0.076749, -0.178779],
+                   [-0.078411, 0.930809, 0.147602],
+                   [0.004733, 0.691367, 0.303900]],
 }
+
+
+def _to_linear(channel: float) -> float:
+    value = max(0.0, min(255.0, channel)) / 255.0
+    return value / 12.92 if value <= 0.04045 else ((value + 0.055) / 1.055) ** 2.4
+
+
+def _to_srgb(linear: float) -> float:
+    value = max(0.0, min(1.0, linear))
+    encoded = value * 12.92 if value <= 0.0031308 else 1.055 * value ** (1 / 2.4) - 0.055
+    return encoded * 255.0
 
 # Friendly aliases for the canonical CVD kinds.
 _ALIASES = {
@@ -69,14 +83,15 @@ def simulate_cvd(rgb: Sequence[float], kind: str = "deuteranopia",
     """
     matrix = _MATRICES[_canonical_kind(kind)]
     strength = max(0.0, min(1.0, float(severity)))
-    channels = [float(rgb[0]), float(rgb[1]), float(rgb[2])]
+    channels = [_to_linear(float(rgb[0])), _to_linear(float(rgb[1])),
+                _to_linear(float(rgb[2]))]
     result = []
     for index in range(3):
         row = matrix[index]
         simulated = row[0] * channels[0] + row[1] * channels[1] \
             + row[2] * channels[2]
         blended = channels[index] * (1.0 - strength) + simulated * strength
-        result.append(_clamp_byte(blended))
+        result.append(_clamp_byte(_to_srgb(blended)))
     return result[0], result[1], result[2]
 
 

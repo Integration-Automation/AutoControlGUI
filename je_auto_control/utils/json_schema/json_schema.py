@@ -15,15 +15,16 @@ Supported keywords: ``type`` (incl. ``integer`` matching integral floats),
 ``maxProperties``/``properties``/``patternProperties``/
 ``additionalProperties``), the combinators (``allOf``/``anyOf``/``oneOf``/
 ``not``), boolean schemas (``True``/``False``) and local ``$ref``
-(``#/$defs/...`` JSON Pointer). Remote ``$ref`` and format assertions are out
-of scope.
+(``#/$defs/...`` JSON Pointer, applied together with the keywords beside it).
+Remote ``$ref`` and format assertions are out of scope. An invalid regular
+expression raises :class:`AutoControlJsonException`.
 
 Pure standard library (``re``); imports no ``PySide6``.
 """
 import json
 import re
 from dataclasses import dataclass, field
-from typing import Any, Callable, Dict, List
+from typing import Any, Callable, Dict, List, Set, Tuple
 
 from je_auto_control.utils.exception.exceptions import (
     AutoControlAssertionException, AutoControlJsonException)
@@ -41,6 +42,20 @@ class SchemaValidationResult:
     def to_dict(self) -> Dict[str, Any]:
         """Return a plain-dict view for JSON/executor/MCP responses."""
         return {"ok": self.ok, "errors": list(self.errors)}
+
+
+class _Root:
+    """The root schema plus the (schema, instance) checks still in progress.
+
+    Validating the same instance against the same schema while that check is
+    still running can only recurse forever -- through a ``$ref`` chain or
+    through a sub-schema such as ``{"allOf": [{"$ref": "#"}]}`` -- so that is
+    reported as a cyclic ``$ref`` instead of raising ``RecursionError``.
+    """
+
+    def __init__(self, schema: Schema) -> None:
+        self.schema = schema
+        self.active: Set[Tuple[int, int]] = set()
 
 
 def _err(path: str, keyword: str, message: str) -> Dict[str, str]:
@@ -71,23 +86,46 @@ _TYPE_CHECKS: Dict[str, Callable[[Any], bool]] = {
 
 
 def _json_equal(left: Any, right: Any) -> bool:
-    """Equality that keeps ``True``/``1`` and ``False``/``0`` distinct."""
+    """Equality that keeps ``True``/``1`` and ``False``/``0`` distinct.
+
+    Recursive: ``==`` on containers compares their members with Python's own
+    equality, so ``{"a": 1}`` used to equal ``{"a": true}``.
+    """
     if isinstance(left, bool) or isinstance(right, bool):
         return left is right
+    if isinstance(left, dict) and isinstance(right, dict):
+        return left.keys() == right.keys() and all(
+            _json_equal(left[key], right[key]) for key in left)
+    if isinstance(left, list) and isinstance(right, list):
+        return len(left) == len(right) and all(map(_json_equal, left, right))
     return left == right
 
 
 def _is_multiple(value: float, factor: float) -> bool:
     if factor == 0:
         return False
+    if isinstance(value, int) and isinstance(factor, int):
+        # Exact: float division rounded 10**17 + 1 into a multiple of 2.
+        return value % factor == 0
     quotient = value / factor
     return abs(quotient - round(quotient)) < 1e-9
+
+
+def _canonical(item: Any) -> Any:
+    """``item`` with integral floats as ints, so ``1`` and ``1.0`` compare equal."""
+    if isinstance(item, float) and item.is_integer():
+        return int(item)
+    if isinstance(item, dict):
+        return {key: _canonical(value) for key, value in item.items()}
+    if isinstance(item, list):
+        return [_canonical(value) for value in item]
+    return item
 
 
 def _has_duplicates(items: List[Any]) -> bool:
     seen = set()
     for item in items:
-        key = json.dumps(item, sort_keys=True, default=str)
+        key = json.dumps(_canonical(item), sort_keys=True, default=str)
         if key in seen:
             return True
         seen.add(key)
@@ -96,7 +134,7 @@ def _has_duplicates(items: List[Any]) -> bool:
 
 # --- keyword checkers (each returns a list of error dicts) ----------------
 
-def _check_type(instance: Any, schema: Dict, path: str, _root: Schema) -> List[Dict]:
+def _check_type(instance: Any, schema: Dict, path: str, _root: _Root) -> List[Dict]:
     if "type" not in schema:
         return []
     types = schema["type"]
@@ -106,7 +144,7 @@ def _check_type(instance: Any, schema: Dict, path: str, _root: Schema) -> List[D
     return [_err(path, "type", f"expected type {schema['type']}")]
 
 
-def _check_enum_const(instance: Any, schema: Dict, path: str, _root: Schema) -> List[Dict]:
+def _check_enum_const(instance: Any, schema: Dict, path: str, _root: _Root) -> List[Dict]:
     errors: List[Dict] = []
     if "const" in schema and not _json_equal(instance, schema["const"]):
         errors.append(_err(path, "const", f"must equal {schema['const']!r}"))
@@ -124,7 +162,7 @@ _NUMBER_BOUNDS = (
 )
 
 
-def _check_number(instance: Any, schema: Dict, path: str, _root: Schema) -> List[Dict]:
+def _check_number(instance: Any, schema: Dict, path: str, _root: _Root) -> List[Dict]:
     if not _is_number(instance):
         return []
     errors: List[Dict] = []
@@ -137,7 +175,7 @@ def _check_number(instance: Any, schema: Dict, path: str, _root: Schema) -> List
     return errors
 
 
-def _check_string(instance: Any, schema: Dict, path: str, _root: Schema) -> List[Dict]:
+def _check_string(instance: Any, schema: Dict, path: str, _root: _Root) -> List[Dict]:
     if not isinstance(instance, str):
         return []
     errors: List[Dict] = []
@@ -145,9 +183,23 @@ def _check_string(instance: Any, schema: Dict, path: str, _root: Schema) -> List
         errors.append(_err(path, "minLength", f"shorter than {schema['minLength']}"))
     if "maxLength" in schema and len(instance) > schema["maxLength"]:
         errors.append(_err(path, "maxLength", f"longer than {schema['maxLength']}"))
-    if "pattern" in schema and not re.search(schema["pattern"], instance):
+    if "pattern" in schema and not _search(schema["pattern"], instance):
         errors.append(_err(path, "pattern", f"does not match /{schema['pattern']}/"))
     return errors
+
+
+def _search(pattern: str, text: str) -> bool:
+    """``re.search`` whose invalid pattern is a schema error, not a crash.
+
+    ``re.error`` derives from ``Exception`` directly, so it escaped the
+    executor's containment and aborted a script run with
+    ``raise_on_error=False``.
+    """
+    try:
+        return re.search(pattern, text) is not None
+    except re.error as error:
+        raise AutoControlJsonException(
+            f"invalid pattern {pattern!r} in schema: {error}") from error
 
 
 def _array_size_errors(instance: List, schema: Dict, path: str) -> List[Dict]:
@@ -161,7 +213,7 @@ def _array_size_errors(instance: List, schema: Dict, path: str) -> List[Dict]:
     return errors
 
 
-def _array_item_errors(instance: List, schema: Dict, path: str, root: Schema) -> List[Dict]:
+def _array_item_errors(instance: List, schema: Dict, path: str, root: _Root) -> List[Dict]:
     errors: List[Dict] = []
     prefix = schema.get("prefixItems")
     start = 0
@@ -176,7 +228,7 @@ def _array_item_errors(instance: List, schema: Dict, path: str, root: Schema) ->
     return errors
 
 
-def _array_contains_errors(instance: List, schema: Dict, path: str, root: Schema) -> List[Dict]:
+def _array_contains_errors(instance: List, schema: Dict, path: str, root: _Root) -> List[Dict]:
     if "contains" not in schema:
         return []
     subschema = schema["contains"]
@@ -185,7 +237,7 @@ def _array_contains_errors(instance: List, schema: Dict, path: str, root: Schema
     return [_err(path, "contains", "no items match the 'contains' schema")]
 
 
-def _check_array(instance: Any, schema: Dict, path: str, root: Schema) -> List[Dict]:
+def _check_array(instance: Any, schema: Dict, path: str, root: _Root) -> List[Dict]:
     if not isinstance(instance, list):
         return []
     errors = _array_size_errors(instance, schema, path)
@@ -208,7 +260,7 @@ def _object_size_required_errors(instance: Dict, schema: Dict, path: str) -> Lis
     return errors
 
 
-def _additional_property_errors(value: Any, additional: Any, path: str, root: Schema) -> List[Dict]:
+def _additional_property_errors(value: Any, additional: Any, path: str, root: _Root) -> List[Dict]:
     if additional is None or additional is True:
         return []
     if additional is False:
@@ -216,14 +268,14 @@ def _additional_property_errors(value: Any, additional: Any, path: str, root: Sc
     return _validate(value, additional, path, root)
 
 
-def _one_property_errors(key: str, value: Any, schema: Dict, path: str, root: Schema) -> List[Dict]:
+def _one_property_errors(key: str, value: Any, schema: Dict, path: str, root: _Root) -> List[Dict]:
     child = f"{path}.{key}"
     matched: List[Schema] = []
     if key in schema.get("properties", {}):
         matched.append(schema["properties"][key])
     matched.extend(
         sub for pattern, sub in schema.get("patternProperties", {}).items()
-        if re.search(pattern, key))
+        if _search(pattern, key))
     if matched:
         errors: List[Dict] = []
         for subschema in matched:
@@ -233,7 +285,7 @@ def _one_property_errors(key: str, value: Any, schema: Dict, path: str, root: Sc
         value, schema.get("additionalProperties"), child, root)
 
 
-def _check_object(instance: Any, schema: Dict, path: str, root: Schema) -> List[Dict]:
+def _check_object(instance: Any, schema: Dict, path: str, root: _Root) -> List[Dict]:
     if not isinstance(instance, dict):
         return []
     errors = _object_size_required_errors(instance, schema, path)
@@ -242,14 +294,14 @@ def _check_object(instance: Any, schema: Dict, path: str, root: Schema) -> List[
     return errors
 
 
-def _check_all_of(instance: Any, schema: Dict, path: str, root: Schema) -> List[Dict]:
+def _check_all_of(instance: Any, schema: Dict, path: str, root: _Root) -> List[Dict]:
     errors: List[Dict] = []
     for subschema in schema.get("allOf", []):
         errors.extend(_validate(instance, subschema, path, root))
     return errors
 
 
-def _check_any_of(instance: Any, schema: Dict, path: str, root: Schema) -> List[Dict]:
+def _check_any_of(instance: Any, schema: Dict, path: str, root: _Root) -> List[Dict]:
     options = schema.get("anyOf")
     if not options:
         return []
@@ -258,7 +310,7 @@ def _check_any_of(instance: Any, schema: Dict, path: str, root: Schema) -> List[
     return [_err(path, "anyOf", "does not match any schema in anyOf")]
 
 
-def _check_one_of(instance: Any, schema: Dict, path: str, root: Schema) -> List[Dict]:
+def _check_one_of(instance: Any, schema: Dict, path: str, root: _Root) -> List[Dict]:
     options = schema.get("oneOf")
     if not options:
         return []
@@ -268,7 +320,7 @@ def _check_one_of(instance: Any, schema: Dict, path: str, root: Schema) -> List[
     return [_err(path, "oneOf", f"matched {matches} schemas in oneOf, expected 1")]
 
 
-def _check_not(instance: Any, schema: Dict, path: str, root: Schema) -> List[Dict]:
+def _check_not(instance: Any, schema: Dict, path: str, root: _Root) -> List[Dict]:
     if "not" not in schema:
         return []
     if _validate(instance, schema["not"], path, root):
@@ -276,7 +328,7 @@ def _check_not(instance: Any, schema: Dict, path: str, root: Schema) -> List[Dic
     return [_err(path, "not", "must not match the 'not' schema")]
 
 
-def _check_combinators(instance: Any, schema: Dict, path: str, root: Schema) -> List[Dict]:
+def _check_combinators(instance: Any, schema: Dict, path: str, root: _Root) -> List[Dict]:
     errors = _check_all_of(instance, schema, path, root)
     errors.extend(_check_any_of(instance, schema, path, root))
     errors.extend(_check_one_of(instance, schema, path, root))
@@ -311,36 +363,29 @@ def _resolve_ref(ref: str, root: Schema) -> Schema:
     return node
 
 
-def _resolve_ref_chain(schema: Schema, root: Schema, path: str):
-    """Follow chained ``$ref``s to a concrete schema, detecting cycles.
-
-    Returns ``(resolved_schema, None)`` normally, or ``(None, error)`` when the
-    ``$ref`` chain loops back on itself (e.g. ``{"$ref": "#"}``) so the caller
-    reports a clean schema error instead of hitting ``RecursionError``.
-    """
-    seen: set = set()
-    current = schema
-    while isinstance(current, dict) and "$ref" in current:
-        ref = current["$ref"]
-        if ref in seen:
-            return None, _err(path, "$ref", f"cyclic $ref {ref!r}")
-        seen.add(ref)
-        current = _resolve_ref(ref, root)
-    return current, None
-
-
-def _validate(instance: Any, schema: Schema, path: str, root: Schema) -> List[Dict]:
-    if isinstance(schema, dict) and "$ref" in schema:
-        schema, ref_error = _resolve_ref_chain(schema, root, path)
-        if ref_error is not None:
-            return [ref_error]
+def _validate(instance: Any, schema: Schema, path: str, root: _Root) -> List[Dict]:
     if schema is True:
         return []
     if schema is False:
         return [_err(path, "schema", "no value is allowed here")]
     if not isinstance(schema, dict):
         return []
+    key = (id(schema), id(instance))
+    if key in root.active:
+        return [_err(path, "$ref", f"cyclic $ref {schema.get('$ref', '#')!r}")]
+    root.active.add(key)
+    try:
+        return _validate_keywords(instance, schema, path, root)
+    finally:
+        root.active.discard(key)
+
+
+def _validate_keywords(instance: Any, schema: Dict, path: str, root: _Root) -> List[Dict]:
     errors: List[Dict] = []
+    if "$ref" in schema:
+        # Draft 2020-12 applies the keywords next to a $ref as well.
+        errors.extend(_validate(instance, _resolve_ref(schema["$ref"], root.schema),
+                                path, root))
     for checker in _CHECKERS:
         errors.extend(checker(instance, schema, path, root))
     return errors
@@ -348,13 +393,13 @@ def _validate(instance: Any, schema: Schema, path: str, root: Schema) -> List[Di
 
 def validate_json(instance: Any, schema: Schema) -> SchemaValidationResult:
     """Validate ``instance`` against ``schema``; collect every violation."""
-    errors = _validate(instance, schema, "$", schema)
+    errors = _validate(instance, schema, "$", _Root(schema))
     return SchemaValidationResult(ok=not errors, errors=errors)
 
 
 def is_valid(instance: Any, schema: Schema) -> bool:
     """Return ``True`` when ``instance`` satisfies ``schema``."""
-    return not _validate(instance, schema, "$", schema)
+    return not _validate(instance, schema, "$", _Root(schema))
 
 
 def assert_schema(instance: Any, schema: Schema) -> None:

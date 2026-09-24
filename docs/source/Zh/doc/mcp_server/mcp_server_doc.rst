@@ -86,12 +86,24 @@ list-changed 通知與 elicitation。
 ``openWorldHint``),client 可以據此自動允許唯讀查詢,並在執行破壞
 性動作前要求使用者確認。
 
+會送出輸入、執行 action 清單／腳本／程式碼(當下執行,或之後由排程、
+觸發器、熱鍵、監看、語音指令執行)、刪除資料、把資料送出本機,或放寬安全
+控制(對外連線、USB ACL、核准、秘密租借、開放遠端工作階段)的工具,都標為
+破壞性。會寫入呼叫端指定路徑的工具一律不是唯讀;唯讀工具拿到不存在的
+``db`` 時回傳空結果,不會建立檔案。``ac_assert_http`` 只送 ``GET`` 或
+``HEAD``。
+
+``tools/call`` 帶了工具輸入 schema 沒宣告的參數時,會在工具執行前以
+``-32602``(參數無效)拒絕。
+
 Resources、Prompts、Sampling
 ============================
 
 Resources
   - ``autocontrol://files/<name>`` — workspace 根目錄底下的所有
     JSON action 檔(client 推送 ``roots/list`` 後會自動切換根目錄)。
+    只讀得到單純的 ``*.json`` 檔名;根目錄裡的其他檔案、子目錄和含
+    ``:`` 的串流名稱都讀不到。
   - ``autocontrol://history`` — 最近的執行歷程快照。
   - ``autocontrol://commands`` — 完整 ``AC_*`` 執行器目錄。
   - ``autocontrol://screen/live`` — base64 PNG 直播,
@@ -240,6 +252,15 @@ HTTP 傳輸(含 SSE / Auth / TLS)
 
 Bearer token 也可從 ``JE_AUTOCONTROL_MCP_TOKEN`` 環境變數讀取。
 
+瀏覽器送來的請求只接受本機來源：``Origin`` 不是 loopback 的一律回 403；伺服器綁在
+loopback 時，``Host`` 不是 loopback 名稱的也回 403（防 DNS rebinding）。非瀏覽器的
+客戶端不送 ``Origin``，不受影響。要讓其他來源的瀏覽器客戶端連線，把完整來源列在
+``JE_AUTOCONTROL_MCP_ALLOWED_ORIGINS``（逗號分隔，例如 ``https://tool.example:8443``）。
+
+設定 ``JE_AUTOCONTROL_MCP_CONFIRM_DESTRUCTIVE=1`` 時，宣告了 ``elicitation`` 的客戶端
+必須先開著該 session 的事件串流，破壞性工具才能確認；沒有串流就拒絕執行，而不是直接放行。
+確認提示只接受它被送往的那個 session 的回覆。
+
 Session
 =======
 
@@ -318,8 +339,9 @@ scope——包含你在 ``initialize`` 聲明的能力,以及進行中呼叫佔�
 
 設定 ``JE_AUTOCONTROL_MCP_AUDIT=/path/to/audit.jsonl``,每次
 ``tools/call`` 都會寫一筆 JSONL:時間戳、工具名稱、過濾過的參數
-(``password`` / ``token`` / ``secret`` / ``api_key`` /
-``authorization`` 會被替換成 ``<redacted>``)、狀態(``ok`` /
+(``password`` / ``passphrase`` / ``token`` / ``secret`` / ``api_key`` /
+``key`` / ``authorization`` 等名稱在任何層級都會被替換成 ``<redacted>``,
+動作清單照執行器 log 的規則遮罩)、狀態(``ok`` /
 ``error`` / ``cancelled``)、執行時間、錯誤訊息與
 auto-screenshot 路徑(見下)。
 
@@ -406,4 +428,5 @@ CI runner 也能走完所有 MCP 工具:
   正規化;FileSystem resource provider 也會在邊界擋住 path
   traversal。
 - 子程序呼叫(``ac_launch_process`` / ``ac_shell``)只接受 argv list
-  或 ``shlex.split`` 的解析結果,從不啟用 OS shell。
+  或指令字串(POSIX 規則切分;Windows 上原樣交給 ``CreateProcess``),
+  從不啟用 OS shell。

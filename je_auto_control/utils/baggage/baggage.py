@@ -14,6 +14,7 @@ from typing import Dict, List, Mapping, Optional, Tuple
 from urllib.parse import quote, unquote
 
 _MAX_ENTRIES = 180
+_MAX_BYTES = 8192
 
 
 class Baggage:
@@ -79,8 +80,16 @@ def parse_baggage(header: Optional[str]) -> Baggage:
 def format_baggage(baggage: Baggage) -> str:
     """Serialise a :class:`Baggage` into a percent-encoded header value."""
     parts: List[str] = []
+    size = 0
     for key, value in list(baggage.to_dict().items())[:_MAX_ENTRIES]:
-        parts.append(f"{quote(key, safe='')}={quote(value, safe='')}")
+        member = f"{quote(key, safe='')}={quote(value, safe='')}"
+        # W3C Baggage caps the header at 8192 bytes; only the member count
+        # was enforced, so 150 long members made a 15 KB header.
+        added = len(member) + (1 if parts else 0)
+        if size + added > _MAX_BYTES:
+            continue
+        parts.append(member)
+        size += added
     return ",".join(parts)
 
 

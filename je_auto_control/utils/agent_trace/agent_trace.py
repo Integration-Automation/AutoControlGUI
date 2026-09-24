@@ -6,8 +6,9 @@ model, and status. ``AgentTrace`` records spans whose attributes follow the
 OTel **GenAI semantic conventions** (``gen_ai.operation.name``,
 ``gen_ai.system``, ``gen_ai.request.model``, ``gen_ai.usage.input_tokens`` /
 ``output_tokens``, ``gen_ai.tool.name``) and the convention span name
-``"{operation} {model}"`` — so :meth:`AgentTrace.to_otel` output drops straight
-into an OTLP exporter, while :meth:`summary` rolls up cost/latency for a run.
+``"{operation} {model}"`` — :meth:`AgentTrace.to_otel` emits OTLP/JSON span
+objects (ids, nanosecond times, typed attributes), while :meth:`summary` rolls up
+cost/latency for a run.
 
 It pairs with trajectory evaluation: record the run here, score it there. Pure
 standard library (no ``opentelemetry`` dependency); the clock is injectable so
@@ -17,8 +18,15 @@ import time
 from contextlib import contextmanager
 from typing import Any, Callable, Dict, Iterator, List, Optional
 
+from je_auto_control.utils.otlp_export.otlp_export import attributes_to_otlp
+from je_auto_control.utils.trace_context.trace_context import new_span_id, new_trace_id
+
 STATUS_OK = "ok"
 STATUS_ERROR = "error"
+# OTLP enum values (OTLP/JSON encodes enums as integers).
+_SPAN_KIND_CLIENT = 3
+_STATUS_CODE_OK, _STATUS_CODE_ERROR = 1, 2
+
 
 
 def _genai_attributes(operation: str, model: Optional[str],
@@ -27,6 +35,9 @@ def _genai_attributes(operation: str, model: Optional[str],
                       extra: Dict[str, Any]) -> Dict[str, Any]:
     attributes: Dict[str, Any] = {"gen_ai.operation.name": operation}
     if system is not None:
+        # gen_ai.provider.name is the current convention; gen_ai.system is kept
+        # for backends that still read the older name.
+        attributes["gen_ai.provider.name"] = system
         attributes["gen_ai.system"] = system
     if model is not None:
         attributes["gen_ai.request.model"] = model
@@ -40,6 +51,8 @@ def _genai_attributes(operation: str, model: Optional[str],
     return attributes
 
 
+_RECORD_ARGUMENTS = frozenset({"model", "system", "input_tokens", "output_tokens", "tool_name"})
+
 class AgentTrace:
     """Collects GenAI-convention spans for one agent run."""
 
@@ -47,6 +60,7 @@ class AgentTrace:
         """``clock`` returns a monotonic time; injectable for tests."""
         self._clock = clock
         self._spans: List[Dict[str, Any]] = []
+        self._trace_id = new_trace_id()
 
     def record(self, operation: str, *, model: Optional[str] = None,
                system: Optional[str] = None,
@@ -59,8 +73,11 @@ class AgentTrace:
         attrs = _genai_attributes(operation, model, system, input_tokens,
                                   output_tokens, tool_name, attributes or {})
         name = f"{operation} {model}" if model else operation
+        end_ns = time.time_ns()
         span = {"name": name, "attributes": attrs,
-                "duration_s": float(duration_s), "status": status}
+                "duration_s": float(duration_s), "status": status,
+                "span_id": new_span_id(), "end_ns": end_ns,
+                "start_ns": end_ns - int(float(duration_s) * 1e9)}
         self._spans.append(span)
         return span
 
@@ -78,11 +95,24 @@ class AgentTrace:
         try:
             yield fields
         except Exception:
-            self.record(operation, duration_s=self._clock() - start,
-                        status=STATUS_ERROR, **kwargs, **fields)
+            self._record_block(operation, start, STATUS_ERROR, kwargs, fields)
             raise
-        self.record(operation, duration_s=self._clock() - start,
-                    status=STATUS_OK, **kwargs, **fields)
+        self._record_block(operation, start, STATUS_OK, kwargs, fields)
+
+    def _record_block(self, operation: str, start: float, status: str,
+                      kwargs: Dict[str, Any], fields: Dict[str, Any]) -> None:
+        """Record an :meth:`operation` span; ``fields`` win and extras become attributes.
+
+        ``**kwargs, **fields`` raised TypeError when a field repeated an
+        argument (``model``) or was not one (``cost_usd``) -- after the work
+        was done, and on the error path in place of the caller's exception.
+        """
+        merged = {**kwargs, **fields}
+        attributes = dict(merged.pop("attributes", None) or {})
+        for key in [key for key in merged if key not in _RECORD_ARGUMENTS]:
+            attributes[key] = merged.pop(key)
+        self.record(operation, duration_s=self._clock() - start, status=status,
+                    attributes=attributes or None, **merged)
 
     def spans(self) -> List[Dict[str, Any]]:
         """Return a copy of the recorded spans."""
@@ -102,12 +132,21 @@ class AgentTrace:
         }
 
     def to_otel(self) -> List[Dict[str, Any]]:
-        """Export spans in an OTLP-friendly shape with an OTel status code."""
+        """Export the spans as OTLP/JSON span objects.
+
+        Every span shares this run's ``traceId`` and has its own ``spanId``;
+        times are wall-clock nanoseconds (strings, as OTLP/JSON encodes
+        64-bit integers), ``kind`` and ``status.code`` are the OTLP enum
+        integers, and attributes are typed ``{key, value}`` pairs.
+        """
         return [{
-            "name": s["name"], "kind": "CLIENT", "attributes": s["attributes"],
-            "duration_s": s["duration_s"],
-            "status": {"code": "ERROR" if s["status"] == STATUS_ERROR
-                       else "OK"},
+            "traceId": self._trace_id, "spanId": s["span_id"],
+            "name": s["name"], "kind": _SPAN_KIND_CLIENT,
+            "startTimeUnixNano": str(s["start_ns"]),
+            "endTimeUnixNano": str(s["end_ns"]),
+            "attributes": attributes_to_otlp(s["attributes"]),
+            "status": {"code": _STATUS_CODE_ERROR if s["status"] == STATUS_ERROR
+                       else _STATUS_CODE_OK},
         } for s in self._spans]
 
     def reset(self) -> None:

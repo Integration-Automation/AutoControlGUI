@@ -27,7 +27,8 @@ variables::
     result = run_resumable(actions, run_id="nightly-invoices", store=store)
     result["resumed_from"]   # 0 on a fresh run, N when resuming after a crash
 
-On normal completion the checkpoint is cleared. The store is injectable, so
+On normal completion the checkpoint is cleared. A failing step raises and
+leaves the checkpoint on that step, so the next call runs it again. The store is injectable, so
 resume is unit-tested deterministically without a real crash:
 ``CheckpointStore.save`` / ``load`` / ``clear``.
 

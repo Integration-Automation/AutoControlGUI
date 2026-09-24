@@ -84,13 +84,23 @@ def _type_match(left: Any, right: Any) -> bool:
     return type(left) is type(right)
 
 
+def _is_ignored(path: str, ignored: set) -> bool:
+    """Whether ``path`` is an ignored path or lies under one.
+
+    Only exact paths were ignored, so ``ignore=["$.ts"]`` did not cover a
+    difference reported at ``$.ts.s``.
+    """
+    return any(path == prefix or path.startswith((prefix + ".", prefix + "["))
+               for prefix in ignored)
+
+
 def match_json(actual: Any, expected: Any, *, ignore: Iterable[str] = (),
                match_type: bool = False, partial: bool = False) -> MatchReport:
     """Match ``actual`` against ``expected`` with optional relaxed rules."""
     ignored = set(ignore)
     kept: List[Dict[str, Any]] = []
     for diff in diff_json(actual, expected):
-        if diff["path"] in ignored:
+        if _is_ignored(diff["path"], ignored):
             continue
         if partial and diff["kind"] == "extra":
             continue

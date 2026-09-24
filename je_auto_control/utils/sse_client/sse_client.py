@@ -40,9 +40,23 @@ class SSEParser:
         self._data: List[str] = []
         self._last_id: Optional[str] = None
         self._retry: Optional[int] = None
+        self._started = False
+        self._after_cr = False
 
     def feed(self, chunk: str) -> List[SSEEvent]:
-        """Feed a chunk of stream text; return any complete events."""
+        """Feed a chunk of stream text; return any complete events.
+
+        A ``\\r\\n`` split across two chunks is one line break, not two (the
+        second would dispatch the event early), and a leading BOM is dropped
+        as WHATWG requires.
+        """
+        if not self._started and chunk:
+            self._started = True
+            chunk = chunk[1:] if chunk.startswith("\ufeff") else chunk
+        if self._after_cr and chunk.startswith("\n"):
+            chunk = chunk[1:]
+        if chunk:
+            self._after_cr = chunk.endswith("\r")
         lines = _LINE_SPLIT.split(self._buffer + chunk)
         self._buffer = lines.pop()          # trailing partial line
         events = [event for event in (self._process_line(line)
@@ -80,7 +94,7 @@ class SSEParser:
             self._data.append(value)
         elif field == "id" and "\x00" not in value:
             self._last_id = value
-        elif field == "retry" and value.isdigit():
+        elif field == "retry" and value.isascii() and value.isdigit():
             self._retry = int(value)
 
     def _dispatch(self) -> Optional[SSEEvent]:

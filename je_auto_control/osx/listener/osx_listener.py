@@ -120,9 +120,13 @@ class OSXInputTap:
     # -- public ------------------------------------------------------------
     def start(self) -> None:
         """Create the tap and record. Raises if the tap cannot be created."""
-        self._stop.clear()
+        # A fresh event per run, never clear() on the old one: a tap thread
+        # that outlived stop()'s join would see it cleared and keep a second
+        # live tap on the session, recording into the same list.
+        self._stop = threading.Event()
         self._ready.clear()
-        self._thread = threading.Thread(target=self._run, daemon=True)
+        self._thread = threading.Thread(
+            target=self._run, args=(self._stop,), daemon=True)
         self._thread.start()
         self._ready.wait(timeout=START_TIMEOUT)
         if self.error:
@@ -143,7 +147,7 @@ class OSXInputTap:
         return self.events
 
     # -- tap thread --------------------------------------------------------
-    def _run(self) -> None:
+    def _run(self, stop: threading.Event) -> None:
         from CoreFoundation import CFRunLoopRunInMode, kCFRunLoopDefaultMode
 
         tap = source = run_loop = None
@@ -175,7 +179,7 @@ class OSXInputTap:
         finally:
             self._ready.set()
         try:
-            while not self._stop.is_set():
+            while not stop.is_set():
                 CFRunLoopRunInMode(kCFRunLoopDefaultMode, POLL_SECONDS, False)
         finally:
             # Both, and in this order: an enabled tap whose source is already

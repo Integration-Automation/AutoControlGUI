@@ -34,8 +34,10 @@ exporter,而 :meth:`AgentTrace.summary` 則彙整一次執行的成本與延遲�
     exporter.export(trace.to_otel())        # OTLP 友善的 span dict
 
 ``summary`` 彙整 ``span_count``、``error_count``、``input_tokens``、
-``output_tokens`` 與總 ``duration_s``。``to_otel`` 將每個 span 回傳為
-``{name, kind, attributes, duration_s, status:{code}}``,帶有 OTel 狀態碼。
+``output_tokens`` 與總 ``duration_s``。``to_otel`` 將每個 span 回傳為 OTLP/JSON span:
+整次執行共用的 ``traceId``、各自的 ``spanId``、wall clock 的 ``startTimeUnixNano`` /
+``endTimeUnixNano``(字串)、以 OTLP 列舉整數表示的 ``kind`` 與 ``status.code``,以及帶型別的
+``{key, value}`` ``attributes``。供應商同時記為 ``gen_ai.provider.name`` 與 ``gen_ai.system``。
 
 執行器指令
 ----------

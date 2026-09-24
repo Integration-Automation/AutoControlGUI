@@ -168,6 +168,14 @@ class AccessibilityBackend:
         """Set keyboard focus on the matched control (SetFocus); True on success."""
         self._unsupported("set_focus", name, role, app_name, automation_id)
 
+    def focused_element(self) -> Optional[AccessibilityElement]:
+        """Return the element holding keyboard focus, or None when none does.
+
+        Nothing focused is an answer, not an error: a desktop with no active
+        window, or a toolkit that reports no focus, returns None.
+        """
+        self._unsupported("focused_element")
+
     # --- virtualized items (realize off-screen list / grid items) -----------
 
     def find_virtual_item(self, item_name: Optional[str] = None, by: str = "name",

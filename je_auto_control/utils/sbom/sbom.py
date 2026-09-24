@@ -11,6 +11,7 @@ Pure standard library (``importlib.metadata`` + ``json``); imports no
 ``PySide6``.
 """
 import json
+import re
 from importlib import metadata
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set
@@ -21,7 +22,15 @@ _SPEC_VERSION = "1.6"
 
 
 def _purl(name: str, version: str) -> str:
-    return f"pkg:pypi/{name}@{version}"
+    """A pypi purl: the name normalised (PEP 503) and the version percent-encoded.
+
+    ``PySide6_Essentials`` must be ``pyside6-essentials`` and the ``+`` of a
+    local version ``%2B``, or tools matching purls miss the component.
+    """
+    import re
+    import urllib.parse
+    normalized = re.sub(r"[-_.]+", "-", name).lower()
+    return f"pkg:pypi/{normalized}@{urllib.parse.quote(version, safe='.-_~!')}"
 
 
 def _component(dist: "metadata.Distribution") -> Dict[str, Any]:
@@ -48,7 +57,9 @@ def _iter_distributions(root: Optional[str]):
     queue = [root]
     while queue:
         name = queue.pop()
-        key = name.lower()
+        # PEP 503: typing_extensions and typing-extensions are one package,
+        # and both spellings put it in the SBOM twice.
+        key = re.sub(r"[-_.]+", "-", name).lower()
         if key in seen:
             continue
         seen.add(key)
@@ -58,7 +69,29 @@ def _iter_distributions(root: Optional[str]):
             continue
         yield dist
         for req in (dist.requires or []):
-            queue.append(_requirement_name(req))
+            if _applies(req):
+                queue.append(_requirement_name(req))
+
+
+def _applies(requirement: str) -> bool:
+    """Whether a requirement is in force here: not an extra, markers true.
+
+    Every installed optional extra (``extra == "gui"``) and every marker for
+    another platform used to be listed as a dependency.
+    """
+    _, sep, marker = requirement.partition(";")
+    if not sep:
+        return True
+    if "extra" in marker:
+        return False
+    try:
+        from packaging.markers import InvalidMarker, Marker  # type: ignore[import-not-found]
+    except ImportError:
+        return True
+    try:
+        return bool(Marker(marker.strip()).evaluate())
+    except InvalidMarker:
+        return True
 
 
 def _requirement_name(requirement: str) -> str:

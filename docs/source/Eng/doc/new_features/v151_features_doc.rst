@@ -33,8 +33,13 @@ Headless API
 ``{type, x, y, text, …}`` (clicks, double/right/middle click, move, type, key, scroll,
 screenshot). ``to_ac_command`` maps a canonical action to a ``[command_name, params]``
 AC action (``AC_click_mouse`` / ``AC_set_mouse_position`` / ``AC_write`` / ``AC_hotkey``
-/ ``AC_mouse_scroll`` / ``AC_screenshot``), applying ``scale`` to coordinates; an
-unmapped type raises ``AutoControlActionException``. ``canonical_action`` builds a
+/ ``AC_mouse_scroll`` / ``AC_screenshot``; a double click becomes ``AC_loop`` over
+two clicks), applying ``scale`` to coordinates; an unmapped type raises
+``AutoControlActionException``. Key names are resolved to the running platform's
+spelling (``Return`` / ``ENTER`` is ``return`` on Windows and ``enter`` on X11 and
+macOS; the same for Esc, paging, Backspace, Alt and Super) by
+``resolve_key_name``. Scrolls carry ``scroll_direction``; a sideways scroll needs
+a horizontal wheel axis (X11 / Wayland) and raises elsewhere. ``canonical_action`` builds a
 canonical dict directly.
 
 Executor command

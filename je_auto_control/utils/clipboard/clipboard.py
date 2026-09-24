@@ -128,42 +128,9 @@ def _win_get() -> str:
 
 
 def _win_set(text: str) -> None:
-    import ctypes
-    from ctypes import wintypes
-
-    from je_auto_control.utils.clipboard.win32_clipboard_api import open_clipboard
-
-    user32 = ctypes.WinDLL("user32", use_last_error=True)  # type: ignore[attr-defined]  # reason: win32-only ctypes
-    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)  # type: ignore[attr-defined]  # reason: win32-only ctypes
+    from je_auto_control.utils.clipboard.win32_clipboard_api import set_clipboard_format
     cf_unicodetext = 13
-    gmem_moveable = 0x0002
-
-    user32.OpenClipboard.argtypes = [wintypes.HWND]
-    user32.OpenClipboard.restype = wintypes.BOOL
-    user32.EmptyClipboard.restype = wintypes.BOOL
-    user32.SetClipboardData.argtypes = [wintypes.UINT, wintypes.HANDLE]
-    user32.SetClipboardData.restype = wintypes.HANDLE
-    user32.CloseClipboard.restype = wintypes.BOOL
-    kernel32.GlobalAlloc.argtypes = [wintypes.UINT, ctypes.c_size_t]
-    kernel32.GlobalAlloc.restype = wintypes.HGLOBAL
-    kernel32.GlobalLock.argtypes = [wintypes.HGLOBAL]
-    kernel32.GlobalLock.restype = ctypes.c_void_p
-    kernel32.GlobalUnlock.argtypes = [wintypes.HGLOBAL]
-
-    data = ctypes.create_unicode_buffer(text)
-    size = ctypes.sizeof(data)  # NOSONAR S5655 false positive — Array is accepted by sizeof
-    handle = kernel32.GlobalAlloc(gmem_moveable, size)
-    if not handle:
-        raise RuntimeError("GlobalAlloc failed")
-    pointer = kernel32.GlobalLock(handle)
-    if not pointer:
-        raise RuntimeError("GlobalLock failed")
-    ctypes.memmove(pointer, ctypes.addressof(data), size)  # NOSONAR S5655 false positive — Array is accepted by addressof
-    kernel32.GlobalUnlock(handle)
-    with open_clipboard(user32):
-        user32.EmptyClipboard()
-        if not user32.SetClipboardData(cf_unicodetext, handle):
-            raise RuntimeError("SetClipboardData failed")
+    set_clipboard_format(cf_unicodetext, str(text).encode("utf-16-le") + b"\x00\x00")
 
 
 # === macOS backend ===========================================================
@@ -255,42 +222,11 @@ def _win_set_image(png_bytes: bytes) -> None:
     # CF_DIB excludes the 14-byte BITMAPFILEHEADER prefix that BMP files use.
     dib = bmp_buf.getvalue()[14:]
 
-    import ctypes  # noqa: PLC0415
-    from ctypes import wintypes  # noqa: PLC0415
-
     from je_auto_control.utils.clipboard.win32_clipboard_api import (  # noqa: PLC0415
-        open_clipboard,
+        set_clipboard_format,
     )
-
-    user32 = ctypes.WinDLL("user32", use_last_error=True)  # type: ignore[attr-defined]  # reason: win32-only ctypes
-    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)  # type: ignore[attr-defined]  # reason: win32-only ctypes
     cf_dib = 8
-    gmem_moveable = 0x0002
-
-    user32.OpenClipboard.argtypes = [wintypes.HWND]
-    user32.OpenClipboard.restype = wintypes.BOOL
-    user32.EmptyClipboard.restype = wintypes.BOOL
-    user32.SetClipboardData.argtypes = [wintypes.UINT, wintypes.HANDLE]
-    user32.SetClipboardData.restype = wintypes.HANDLE
-    user32.CloseClipboard.restype = wintypes.BOOL
-    kernel32.GlobalAlloc.argtypes = [wintypes.UINT, ctypes.c_size_t]
-    kernel32.GlobalAlloc.restype = wintypes.HGLOBAL
-    kernel32.GlobalLock.argtypes = [wintypes.HGLOBAL]
-    kernel32.GlobalLock.restype = ctypes.c_void_p
-    kernel32.GlobalUnlock.argtypes = [wintypes.HGLOBAL]
-
-    handle = kernel32.GlobalAlloc(gmem_moveable, len(dib))
-    if not handle:
-        raise RuntimeError("GlobalAlloc failed")
-    pointer = kernel32.GlobalLock(handle)
-    if not pointer:
-        raise RuntimeError("GlobalLock failed")
-    ctypes.memmove(pointer, dib, len(dib))
-    kernel32.GlobalUnlock(handle)
-    with open_clipboard(user32):
-        user32.EmptyClipboard()
-        if not user32.SetClipboardData(cf_dib, handle):
-            raise RuntimeError("SetClipboardData(CF_DIB) failed")
+    set_clipboard_format(cf_dib, dib)
 
 
 def _mac_get_image() -> Optional[bytes]:

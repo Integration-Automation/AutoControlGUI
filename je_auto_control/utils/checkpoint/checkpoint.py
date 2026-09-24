@@ -13,9 +13,9 @@ without a real crash.
 import json
 import time
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, ContextManager, Dict, List, Optional
 
-from je_auto_control.utils.sqlite_support import require_sqlite3
+from je_auto_control.utils.sqlite_support import autocommit_connection
 
 if TYPE_CHECKING:  # reason: sqlite3 types are named only in annotations
     import sqlite3
@@ -37,12 +37,8 @@ class CheckpointStore:
         self._db_path = db_path
         self._ensure_schema()
 
-    def _connect(self) -> "sqlite3.Connection":
-        driver = require_sqlite3()
-        conn = driver.connect(self._db_path, timeout=30.0,
-                              isolation_level=None)
-        conn.row_factory = driver.Row
-        return conn
+    def _connect(self) -> ContextManager["sqlite3.Connection"]:
+        return autocommit_connection(self._db_path)
 
     def _ensure_schema(self) -> None:
         with self._connect() as conn:
@@ -96,7 +92,8 @@ def run_resumable(actions: List[Any], *, run_id: str, store: CheckpointStore,
     On entry, any saved checkpoint for ``run_id`` fast-forwards past
     completed steps and rehydrates variables. On normal completion the
     checkpoint is cleared. Returns ``{completed, total, resumed_from,
-    record}``.
+    record}``. A failing step raises and leaves the checkpoint on that step,
+    so the next call retries it.
     """
     runner = executor or _new_executor()
     existing = store.load(run_id)
@@ -107,7 +104,10 @@ def run_resumable(actions: List[Any], *, run_id: str, store: CheckpointStore,
         runner.variables.update_many(variables)
     record: Dict[str, Any] = {}
     for index in range(start, len(actions)):
-        record.update(runner.execute_action([actions[index]]))
+        # Without raise_on_error a failed step is recorded and returned
+        # normally, so it was checkpointed as done and never run again.
+        record.update(runner.execute_action([actions[index]],
+                                            raise_on_error=True))
         store.save(run_id, index + 1, runner.variables.as_dict())
     store.clear(run_id)
     return {"completed": True, "total": len(actions),

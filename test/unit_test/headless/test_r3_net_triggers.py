@@ -115,7 +115,7 @@ def test_email_fire_marks_uid_seen_and_records_error_on_missing_script(
     def missing_script(_path):
         raise AutoControlJsonActionException("script gone")
 
-    monkeypatch.setattr(et, "read_action_json", missing_script)
+    monkeypatch.setattr(et, "read_executable_action_json", missing_script)
     monkeypatch.setattr(et, "_fetch_message", lambda client, uid: object())
     monkeypatch.setattr(et, "_build_payload",
                         lambda uid, msg: {"email.uid": uid})
@@ -144,7 +144,7 @@ def test_webhook_fire_records_failure_and_returns_when_script_raises(
     fake_hist = _FakeHistory()
     monkeypatch.setattr(ws, "default_history_store", fake_hist)
     monkeypatch.setattr(ws, "capture_error_snapshot", lambda run_id: None)
-    monkeypatch.setattr(ws, "read_action_json", lambda path: [{"AC_x": {}}])
+    monkeypatch.setattr(ws, "read_executable_action_json", lambda path: [{"AC_x": {}}])
 
     def boom(actions, variables):
         raise AutoControlActionException("unknown command")

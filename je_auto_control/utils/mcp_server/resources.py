@@ -101,7 +101,11 @@ class FileSystemProvider(ResourceProvider):
         if not uri.startswith(prefix):
             return None
         rel = uri[len(prefix):]
-        if "/" in rel or rel.startswith(".") or not rel:
+        # Only what list() offers: a plain *.json name. ``\\`` and ``:``
+        # (drive-relative paths, NTFS ``a.json::$DATA`` streams) are refused
+        # along with ``/``; any other extension (``creds.txt``) was readable.
+        if (not rel or rel.startswith(".") or not rel.lower().endswith(".json")
+                or any(char in rel for char in "/\\:")):
             return None
         path = os.path.realpath(os.path.join(self.root, rel))
         if not path.startswith(self.root + os.sep) and path != self.root:

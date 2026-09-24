@@ -29,6 +29,8 @@ import threading
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
+from je_auto_control.utils.exception.exceptions import AutoControlException
+
 
 _VERIFIER_PLAINTEXT = b"autocontrol-vault-v1"
 _KEY_ITERATIONS = 600_000
@@ -53,8 +55,13 @@ def _fernet_types() -> tuple:
     return Fernet, InvalidToken
 
 
-class SecretStoreError(RuntimeError):
-    """Raised when the vault file is corrupt or a passphrase is wrong."""
+class SecretStoreError(AutoControlException, RuntimeError):
+    """Raised when the vault file is corrupt or a passphrase is wrong.
+
+    Part of the ``AutoControlException`` family like every framework error, so
+    the containment boundaries catch it; still a ``RuntimeError`` for callers
+    that caught it as one.
+    """
 
 
 class SecretStoreLocked(SecretStoreError):
@@ -83,13 +90,38 @@ def _load_vault(path: Path) -> Optional[dict]:
         raise SecretStoreError(f"vault unreadable: {error!r}") from error
     if not isinstance(data, dict) or data.get("version") != 1:
         raise SecretStoreError("vault format unsupported")
+    _check_vault_fields(data)
     return data
+
+
+def _check_vault_fields(data: dict) -> None:
+    """Raise ``SecretStoreError`` for a vault whose fields cannot be used.
+
+    A missing salt raised ``KeyError`` from :meth:`SecretManager.unlock`, and
+    ``iterations: 0`` a ``ValueError``, both outside the family.
+    """
+    iterations = data.get("iterations", _KEY_ITERATIONS)
+    fields_ok = (
+        isinstance(data.get("salt"), str)
+        and isinstance(data.get("verifier"), str)
+        and isinstance(data.get("items", {}), dict)
+        and isinstance(iterations, int) and not isinstance(iterations, bool)
+        and iterations > 0
+    )
+    if not fields_ok:
+        raise SecretStoreError("vault fields are missing or invalid")
+    try:
+        base64.b64decode(data["salt"], validate=True)
+    except ValueError as error:  # binascii.Error is a ValueError
+        raise SecretStoreError("vault salt is not base64") from error
 
 
 def _atomic_write(path: Path, payload: dict) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_suffix(path.suffix + ".tmp")
-    with tmp.open("w", encoding="utf-8") as handle:
+    # Created 0600, so the file is never readable by others before chmod.
+    descriptor = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with os.fdopen(descriptor, "w", encoding="utf-8") as handle:
         json.dump(payload, handle, indent=2, sort_keys=True)
     os.replace(tmp, path)
     try:
@@ -99,14 +131,37 @@ def _atomic_write(path: Path, payload: dict) -> None:
         pass
 
 
+def _new_vault(passphrase: str) -> Tuple[Any, dict]:
+    """Return ``(fernet, payload)`` for an empty vault keyed by ``passphrase``."""
+    fernet_cls, _ = _fernet_types()
+    salt = os.urandom(_SALT_BYTES)
+    fernet = fernet_cls(_derive_key(passphrase, salt, _KEY_ITERATIONS))
+    payload = {
+        "version": 1,
+        "salt": base64.b64encode(salt).decode("ascii"),
+        "iterations": _KEY_ITERATIONS,
+        "verifier": fernet.encrypt(_VERIFIER_PLAINTEXT).decode("ascii"),
+        "items": {},
+    }
+    return fernet, payload
+
+
 class SecretManager:
     """In-memory cache around a Fernet-encrypted JSON vault."""
 
     def __init__(self, path: Optional[Path] = None) -> None:
-        self._path = Path(path) if path is not None else default_secret_store_path()
+        # Only an explicit path is kept; the default is resolved on every
+        # use, because this module builds a shared instance while the
+        # package imports -- before a test suite's conftest.py can set HOME.
+        self._explicit_path: Optional[Path] = (
+            Path(path) if path is not None else None)
         self._lock = threading.RLock()
         self._fernet = None  # type: ignore[assignment]
         self._vault: Optional[dict] = None
+
+    @property
+    def _path(self) -> Path:
+        return self._explicit_path or default_secret_store_path()
 
     @property
     def path(self) -> Path:
@@ -133,18 +188,7 @@ class SecretManager:
         with self._lock:
             if self._path.exists():
                 raise SecretStoreError("vault already exists")
-            fernet_cls, _ = _fernet_types()
-            salt = os.urandom(_SALT_BYTES)
-            key = _derive_key(passphrase, salt, _KEY_ITERATIONS)
-            fernet = fernet_cls(key)
-            verifier = fernet.encrypt(_VERIFIER_PLAINTEXT).decode("ascii")
-            payload = {
-                "version": 1,
-                "salt": base64.b64encode(salt).decode("ascii"),
-                "iterations": _KEY_ITERATIONS,
-                "verifier": verifier,
-                "items": {},
-            }
+            fernet, payload = _new_vault(passphrase)
             _atomic_write(self._path, payload)
             self._fernet = fernet
             self._vault = payload
@@ -220,7 +264,13 @@ class SecretManager:
             return True
 
     def change_passphrase(self, old: str, new: str) -> None:
-        """Re-encrypt the entire vault under a new passphrase."""
+        """Re-encrypt the entire vault under a new passphrase.
+
+        The new vault is built in memory and replaces the old file in one
+        atomic write: it used to delete the vault and re-add each secret with
+        its own write, so an error or crash part-way lost every secret not
+        yet re-added.
+        """
         if not isinstance(new, str) or not new:
             raise ValueError("new passphrase must be a non-empty string")
         with self._lock:
@@ -230,11 +280,14 @@ class SecretManager:
                 name: self.get(name) or ""
                 for name in self.list_names()
             }
-            self.lock()
-            self._path.unlink()
-            self.initialize(new)
-            for name, value in plaintexts.items():
-                self.set(name, value)
+            fernet, payload = _new_vault(new)
+            payload["items"] = {
+                name: fernet.encrypt(value.encode("utf-8")).decode("ascii")
+                for name, value in plaintexts.items()
+            }
+            _atomic_write(self._path, payload)
+            self._fernet = fernet
+            self._vault = payload
 
     def destroy(self) -> None:
         """Delete the vault file (after confirming via direct call)."""
@@ -246,11 +299,26 @@ class SecretManager:
                 pass
 
     def _require_unlocked(self) -> Tuple[Any, dict]:
-        """Return the live ``(fernet, vault)`` pair, or raise if locked."""
+        """Return the key and the vault as it is on disk now, or raise if locked.
+
+        Every operation re-reads the file: each manager used to write back its
+        own cached copy, so two of them on one vault (the GUI and a service
+        process) silently undid each other's changes. A vault re-keyed
+        elsewhere locks this manager again.
+        """
         fernet, vault = self._fernet, self._vault
         if fernet is None or vault is None:
             raise SecretStoreLocked("secret vault is locked")
-        return fernet, vault
+        fresh = _load_vault(self._path)
+        if fresh is None:
+            self.lock()
+            raise SecretStoreLocked("secret vault no longer exists")
+        if (fresh.get("salt"), fresh.get("verifier")) != (vault.get("salt"), vault.get("verifier")):
+            self.lock()
+            raise SecretStoreLocked("secret vault was re-keyed; unlock it again")
+        fresh.setdefault("items", {})
+        self._vault = fresh
+        return fernet, fresh
 
 
 default_secret_manager = SecretManager()

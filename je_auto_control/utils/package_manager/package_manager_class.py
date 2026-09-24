@@ -35,14 +35,17 @@ class PackageManager:
             autocontrol_logger.error("rejected invalid package name: %r", package)
             return None
         if package not in self.installed_package_dict:
-            found_spec = find_spec(package)
-            if found_spec is not None:
-                try:
+            try:
+                # find_spec imports the parent package, so it raises too
+                # ("no_such_parent.child"); and a module that fails to
+                # compile raises SyntaxError, which is no ImportError.
+                found_spec = find_spec(package)
+                if found_spec is not None:
                     # nosemgrep: python.lang.security.audit.non-literal-import.non-literal-import
                     installed_package = importlib.import_module(found_spec.name)
                     self.installed_package_dict[found_spec.name] = installed_package
-                except ModuleNotFoundError as error:
-                    autocontrol_logger.error("import %s failed: %r", package, error)
+            except (ImportError, SyntaxError) as error:
+                autocontrol_logger.error("import %s failed: %r", package, error)
         return self.installed_package_dict.get(package)
 
     def add_package_to_executor(self, package: str) -> None:

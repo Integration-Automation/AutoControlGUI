@@ -12,13 +12,22 @@ imports no ``PySide6``.
 import hashlib
 import json
 import os
-import re
 from dataclasses import dataclass, field
 from typing import Any, Dict, Mapping, Optional
 
+from je_auto_control.utils.vuln_scan.vuln_scan import version_key
+
 
 def _semver(value: Any) -> tuple:
-    return tuple(int(part) for part in re.findall(r"\d+", str(value))[:3])
+    # The digit groups alone made 1.2 < 1.2.0 and 1.0.0-rc.1 == 1.0.0.
+    return version_key(str(value))
+
+
+def _flag_enabled(value: Any) -> bool:
+    """``enabled`` from JSON or an env-sourced string; "false" is off."""
+    if isinstance(value, str):
+        return value.strip().lower() not in ("false", "0", "no", "off", "")
+    return bool(value)
 
 
 _OPS = {
@@ -68,7 +77,7 @@ class FlagStore:
                 default_variant=body.get("default_variant", ""),
                 off_variant=body.get("off_variant",
                                      body.get("default_variant", "")),
-                enabled=bool(body.get("enabled", True)),
+                enabled=_flag_enabled(body.get("enabled", True)),
                 targeting=tuple(body.get("targeting", ())),
                 fallthrough=body.get("fallthrough"),
             )

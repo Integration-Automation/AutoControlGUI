@@ -8,6 +8,7 @@ regex presets, and mask sensitive columns before export.
 Pure standard library (``re`` / ``hashlib``); imports no ``PySide6``.
 """
 import hashlib
+import json
 import re
 from typing import Any, Dict, List, Optional, Set, cast
 
@@ -92,11 +93,12 @@ def _validate_row(index: int, row: Dict[str, Any], schema: Dict[str, Any],
         if message:
             errors.append({"row": index, "field": field, "error": message})
         elif field in seen_unique:
-            if value in seen_unique[field]:
+            key = _unique_key(value)
+            if key in seen_unique[field]:
                 errors.append({"row": index, "field": field,
                                "error": "duplicate"})
             else:
-                seen_unique[field].add(value)
+                seen_unique[field].add(key)
     return errors
 
 
@@ -153,13 +155,26 @@ def extract_fields(text: str, fields: Optional[List[str]] = None,
 
 # --- masking --------------------------------------------------------------
 
+def _unique_key(value: Any) -> Any:
+    """A set key for ``value``; lists and dicts (unhashable) by their JSON."""
+    try:
+        hash(value)
+    except TypeError:
+        return ("json", json.dumps(value, sort_keys=True, default=str))
+    return value
+
+
 def _mask_value(value: str, mode: str) -> str:
     if mode == "redact":
         return "***"
     if mode == "hash":
         return hashlib.sha256(value.encode("utf-8")).hexdigest()
     if mode == "partial":
-        return "*" * max(0, len(value) - 4) + value[-4:]
+        # The last four characters are shown only when they are at most half
+        # the value: a four-digit PIN used to come back whole.
+        if len(value) < 8:
+            return "*" * len(value)
+        return "*" * (len(value) - 4) + value[-4:]
     raise ValueError(f"unknown mask mode: {mode!r}")
 
 

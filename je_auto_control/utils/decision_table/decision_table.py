@@ -18,6 +18,8 @@ HIT_UNIQUE = "UNIQUE"
 HIT_FIRST = "FIRST"
 HIT_PRIORITY = "PRIORITY"
 HIT_COLLECT = "COLLECT"
+HIT_ANY = "ANY"
+_HIT_POLICIES = (HIT_UNIQUE, HIT_FIRST, HIT_PRIORITY, HIT_COLLECT, HIT_ANY)
 _WILDCARDS = (None, "", "-", "*")
 
 
@@ -61,7 +63,11 @@ class DecisionTable:
         """``inputs`` documents the input names; ``hit_policy`` selects matches."""
         self.inputs = list(inputs)
         self.rules = list(rules)
-        self.hit_policy = hit_policy.upper()
+        self.hit_policy = str(hit_policy).upper()
+        if self.hit_policy not in _HIT_POLICIES:
+            # A typo ("COLECT") used to fall through to "every match".
+            raise ValueError(f"unknown hit policy {hit_policy!r}; "
+                             f"expected one of {', '.join(_HIT_POLICIES)}")
 
     @classmethod
     def from_dict(cls, spec: Mapping[str, Any]) -> "DecisionTable":
@@ -78,7 +84,10 @@ class DecisionTable:
         if self.hit_policy == HIT_UNIQUE and len(matches) > 1:
             raise ValueError(
                 f"UNIQUE hit policy matched {len(matches)} rules")
-        if self.hit_policy in (HIT_FIRST, HIT_PRIORITY, HIT_UNIQUE):
+        if self.hit_policy == HIT_ANY and any(m != matches[0] for m in matches):
+            # DMN ANY: several rules may match only if they agree.
+            raise ValueError("ANY hit policy matched rules with different outputs")
+        if self.hit_policy in (HIT_FIRST, HIT_PRIORITY, HIT_UNIQUE, HIT_ANY):
             return matches[:1]
         return matches
 

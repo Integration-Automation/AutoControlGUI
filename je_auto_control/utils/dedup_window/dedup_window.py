@@ -8,6 +8,7 @@ inbox that converts at-least-once delivery to exactly-once-in-window.
 Pure standard library; imports no ``PySide6``. The clock is injectable, so TTL
 eviction is fully deterministic in CI.
 """
+import threading
 import time
 from typing import Callable, Dict
 
@@ -20,6 +21,10 @@ class DedupWindow:
         self._ttl = float(ttl_s)
         self._clock = clock
         self._seen: Dict[str, float] = {}
+        # One window per name is shared by every executor thread: unlocked,
+        # two callers both saw a new id as first-seen, and a purge racing an
+        # insert raised "dictionary changed size during iteration".
+        self._lock = threading.Lock()
 
     def _purge(self, now: float) -> None:
         cutoff = now - self._ttl
@@ -29,30 +34,34 @@ class DedupWindow:
 
     def seen(self, message_id: str) -> bool:
         """Whether ``message_id`` is in the window and not expired."""
-        now = self._clock()
-        self._purge(now)
-        # Coerce on lookup exactly as mark() coerces on store, so an int id
-        # (123) matches the "123" that was stored instead of never deduping.
-        return str(message_id) in self._seen
+        with self._lock:
+            self._purge(self._clock())
+            # Coerce on lookup exactly as mark() coerces on store, so an int
+            # id (123) matches the "123" that was stored instead of never
+            # deduping.
+            return str(message_id) in self._seen
 
     def mark(self, message_id: str) -> None:
         """Record ``message_id`` as seen now."""
-        self._seen[str(message_id)] = self._clock()
+        with self._lock:
+            self._seen[str(message_id)] = self._clock()
 
     def check_and_mark(self, message_id: str) -> bool:
         """Atomically return ``True`` if first-seen (and mark), else ``False``."""
-        now = self._clock()
-        self._purge(now)
-        key = str(message_id)
-        if key in self._seen:
-            return False
-        self._seen[key] = now
-        return True
+        with self._lock:
+            now = self._clock()
+            self._purge(now)
+            key = str(message_id)
+            if key in self._seen:
+                return False
+            self._seen[key] = now
+            return True
 
     def purge_expired(self) -> int:
         """Drop expired entries; return how many remain."""
-        self._purge(self._clock())
-        return len(self._seen)
+        with self._lock:
+            self._purge(self._clock())
+            return len(self._seen)
 
     def size(self) -> int:
         """Number of live (non-expired) entries."""
