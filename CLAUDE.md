@@ -93,6 +93,10 @@ The map is only useful while it matches the tree, so **update it in the same cha
 - **`test/unit_test/headless/test_doc_counts.py` enforces this and fails CI on a mismatch.** It re-measures the command, MCP-tool, `utils/` subpackage and `examples/` counts and compares them against every place the four documents quote them, so code and docs have to move in the same commit. If you reword a sentence that holds one of those numbers, update the test's pattern — it fails loudly when a citation disappears rather than passing on a document it can no longer read. The GUI tab count is guarded the same way but from `test_actions_menu_gui.py`, whose subprocess probe already builds the widget that count needs.
 - **`test_doc_line_counts.py` does the same for every line count**, and is also the `--fix` tool above — so any change in module size reddens CI until the map is re-measured, and re-measuring is one command.
 
+### README stays current and in sync across all three languages
+
+`README.md` (English, the source), `README/README_zh-CN.md`, and `README/README_zh-TW.md` MUST stay current with the code. Any user-facing change (a feature or API surface, an `AC_*` command, a CLI flag, a GUI tab, install / setup, configuration, an env var, a requirement, or a quoted count) updates `README.md` **and both translations in the same commit**, structure and content aligned. Never update one language and leave the others stale. `test/unit_test/headless/test_doc_counts.py` guards the quoted figures across all three (see above), but everything else — new sections, changed commands, reworded setup — is on you: read the diff against all three before committing.
+
 ### Outstanding work goes in `Progress.md`
 
 Anything agreed but not done — deferred follow-ups, known gaps, half-delivered features, decisions waiting on the maintainer — is recorded in [Progress.md](Progress.md), not left in chat history or buried in a commit message.
