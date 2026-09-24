@@ -25,6 +25,7 @@ import re
 from dataclasses import dataclass
 from typing import Optional
 
+from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.remote_desktop.host_id import (
     HostIdError, parse_host_id,
 )
@@ -39,7 +40,7 @@ _MIN_PORT = 1
 _MAX_PORT = 65535
 
 
-class UnresolvableTargetError(ValueError):
+class UnresolvableTargetError(AutoControlException, ValueError):
     """The input does not match any recognised transport form."""
 
 

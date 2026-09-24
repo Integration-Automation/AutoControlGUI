@@ -13,6 +13,8 @@ from __future__ import annotations
 import struct
 from dataclasses import dataclass
 
+from je_auto_control.utils.exception.exceptions import AutoControlException
+
 _DEVICE_DESCRIPTOR_TYPE = 0x01
 _DEVICE_DESCRIPTOR_LEN = 18
 _DEVICE_DESCRIPTOR_FORMAT = "<BBHBBBBHHHBBB B"  # 18 bytes, little-endian
@@ -38,7 +40,7 @@ _USB_CLASS_NAMES = {
 }
 
 
-class DescriptorError(ValueError):
+class DescriptorError(AutoControlException, ValueError):
     """Raised when the supplied bytes are not a valid device descriptor."""
 
 

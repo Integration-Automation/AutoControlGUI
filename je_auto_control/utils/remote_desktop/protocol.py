@@ -9,17 +9,19 @@ import enum
 import struct
 from typing import Tuple
 
+from je_auto_control.utils.exception.exceptions import AutoControlException
+
 _MAGIC = b"AC"
 _HEADER_FMT = "!2sBI"
 HEADER_SIZE = struct.calcsize(_HEADER_FMT)
 MAX_PAYLOAD_BYTES = 16 * 1024 * 1024  # 16 MiB hard cap
 
 
-class ProtocolError(RuntimeError):
+class ProtocolError(AutoControlException, RuntimeError):
     """Raised when an incoming frame violates the wire format."""
 
 
-class AuthenticationError(RuntimeError):
+class AuthenticationError(AutoControlException, RuntimeError):
     """Raised when the HMAC handshake fails."""
 
 

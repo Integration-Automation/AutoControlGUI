@@ -20,6 +20,7 @@ except ImportError as exc:  # pragma: no cover - platform-dependent wheel
 from je_auto_control.utils.acme_v2.jws import (
     JwsError, csr_to_b64url, key_authorization, sign_compact,
 )
+from je_auto_control.utils.exception.exceptions import AutoControlException
 
 
 LETSENCRYPT_PRODUCTION = "https://acme-v02.api.letsencrypt.org/directory"
@@ -30,7 +31,7 @@ _JOSE_CONTENT_TYPE = "application/jose+json"
 _BAD_NONCE_ERROR = "urn:ietf:params:acme:error:badNonce"
 
 
-class AcmeError(RuntimeError):
+class AcmeError(AutoControlException, RuntimeError):
     """Raised on protocol-level failures (HTTP errors, bad responses)."""
 
 

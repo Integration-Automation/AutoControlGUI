@@ -9,14 +9,16 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import List, Optional, Sequence
 
+from je_auto_control.utils.exception.exceptions import AutoControlException
+
 _DEFAULT_TIMEOUT_S = 30.0
 
 
-class AdbError(RuntimeError):
+class AdbError(AutoControlException, RuntimeError):
     """Raised when adb returns a non-zero exit code."""
 
 
-class AdbNotAvailable(RuntimeError):
+class AdbNotAvailable(AutoControlException, RuntimeError):
     """Raised when the adb binary isn't on PATH and no path was supplied."""
 
 

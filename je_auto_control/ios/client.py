@@ -20,8 +20,10 @@ import functools
 import threading
 from typing import Any, Callable, Optional, TypeVar
 
+from je_auto_control.utils.exception.exceptions import AutoControlException
 
-class IOSUnavailableError(RuntimeError):
+
+class IOSUnavailableError(AutoControlException, RuntimeError):
     """Raised when the ``wda`` SDK is missing or the device can't be reached."""
 
 

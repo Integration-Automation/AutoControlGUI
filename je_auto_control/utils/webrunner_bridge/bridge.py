@@ -3,8 +3,10 @@ from __future__ import annotations
 
 from typing import Any, List, Mapping, Sequence
 
+from je_auto_control.utils.exception.exceptions import AutoControlException
 
-class WebRunnerBridgeError(RuntimeError):
+
+class WebRunnerBridgeError(AutoControlException, RuntimeError):
     """Raised when WebRunner isn't installed or a command is malformed."""
 
 

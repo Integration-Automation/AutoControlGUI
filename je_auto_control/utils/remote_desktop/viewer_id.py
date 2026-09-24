@@ -17,13 +17,15 @@ import secrets
 from pathlib import Path
 from typing import Optional
 
+from je_auto_control.utils.exception.exceptions import AutoControlException
+
 
 _VIEWER_ID_HEX_LEN = 32
 _DEFAULT_PATH_RELATIVE = ".je_auto_control/viewer_id"
 _VIEWER_ID_PATTERN = re.compile(r"^[0-9a-f]{32}$")
 
 
-class ViewerIdError(ValueError):
+class ViewerIdError(AutoControlException, ValueError):
     """Raised when a viewer ID is malformed."""
 
 

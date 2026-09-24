@@ -11,6 +11,8 @@ import urllib.request
 from dataclasses import asdict, dataclass, field
 from typing import Any, Dict, List, Mapping, Optional, Tuple
 
+from je_auto_control.utils.exception.exceptions import AutoControlException
+
 _DEFAULT_TIMEOUT_S = 5.0
 
 #: How long a deletion is remembered. A tombstone purged before every machine
@@ -24,7 +26,7 @@ def is_tombstone(entry: Mapping[str, Any]) -> bool:
     return entry.get("deleted") is True
 
 
-class ConfigSyncError(RuntimeError):
+class ConfigSyncError(AutoControlException, RuntimeError):
     """Raised on network errors or schema validation failures."""
 
 

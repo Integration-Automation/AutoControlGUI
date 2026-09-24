@@ -20,7 +20,7 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 | 指標 | 數值 |
 | --- | ---: |
 | Python 模組總數（含周邊子專案） | 1,049 |
-| 程式碼總行數 | 149,866 |
+| 程式碼總行數 | 149,907 |
 | `je_auto_control/utils/` 子套件數 | 310 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 775 |
 | 套件門面 `__all__` 公開名稱數 | 1,241 |
@@ -186,7 +186,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.3 平台後端
 
-#### Windows（`windows/`，23 檔／1,957 行）
+#### Windows（`windows/`，23 檔／1,959 行）
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -200,7 +200,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `screen/win32_screen.py` | 95 | 螢幕尺寸與像素讀取。**每支 Win32 函式都明寫 argtypes/restype**（HDC 是指標寬度，走預設的 c_int 會截斷，錯誤會沉默地擴散到 GetPixel／ReleaseDC），並持有自己的 user32／gdi32 handle。import 時呼叫 `SetProcessDPIAware()`——**行程層級且不可還原**，實體↔邏輯座標換算請走 `utils/monitor_layout`。 |
 | `window/windows_window_manage.py` | 374 | 視窗列舉／聚焦／關閉／最小化／幾何／所屬行程 PID／投遞式輸入（`auto_control_window` 的實作）。**每支 Win32 函式都明寫 argtypes/restype**，並持有自己的 user32 handle，避免把原型外溢到別的模組；hwnd 一律是 int。 |
 | `message/window_message.py` | 97 | 直接對視窗送 `WM_*` 訊息（背景輸入）。 |
-| `interception/_dll.py` | 230 | `interception.dll` 的延遲 ctypes 載入與結構定義。 |
+| `interception/_dll.py` | 232 | `interception.dll` 的延遲 ctypes 載入與結構定義。 |
 | `interception/keyboard.py` | 70 | 經 Interception 驅動的鍵盤輸入（繞過部分反自動化偵測）。 |
 | `interception/mouse.py` | 160 | 經 Interception 驅動的滑鼠輸入。 |
 
@@ -232,7 +232,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `uinput/keyboard.py` | 44 | uinput 鍵盤後端，介面與 X11 版一致。 |
 | `uinput/mouse.py` | 130 | uinput 滑鼠後端。 |
 
-#### Linux Wayland（`linux_wayland/`，17 檔／2,920 行）
+#### Linux Wayland（`linux_wayland/`，17 檔／2,921 行）
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -242,7 +242,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `_dbus_client.py` | 24 | 只用標準函式庫的 D-Bus session bus 客戶端（連線／認證／`Hello`／`AddMatch`／一次方法呼叫／等訊號）。portal 的回應是**指名送給發出呼叫的那條連線**,所以訂閱與呼叫必須同一條連線——這是 `gdbus monitor` + `gdbus call` 兩個行程做不到的事。 |
 | `_select_input.py` | 85 | 決定使用原生 libei 或 CLI shim；`active_backend()` 是 keyboard／mouse 的唯一入口，`emitted()` 讓被拒絕的單次發送退回 CLI。 |
 | `_layout.py` | 83 | 版面原點的共用查詢。擷取與輸入不是同一個座標空間,差的就是這個原點:libei 的 region offset 是 `uint32`（描述不了負原點）,`ydotool mousemove --absolute` 的原點是合成器夾取的那個角落——兩條路都要減掉它,所以放在這裡而不是各自複製。讀數快取一秒——擷取那一側刻意不快取,但 ydotool 每次絕對移動都會問,不快取等於每次移動多開一個 `wlr-randr` 行程。 |
-| `oeffis.py` | 196 | liboeffis 綁定：跑完 RemoteDesktop portal 交握，交出 EIS fd。 |
+| `oeffis.py` | 197 | liboeffis 綁定：跑完 RemoteDesktop portal 交握，交出 EIS fd。 |
 | `libei.py` | 655 | libei 綁定與完整握手（seat 綁定能力 → 由事件取得 device → start_emulating → 每次發送後 frame）。另負責絕對指標的座標空間:讀回裝置的 region,把版面座標映射進去,沒有任何 region 涵蓋就拒絕（libei 對這種移動是靜靜丟掉的）。 |
 | `mouse.py` | 384 | 滑鼠後端：移動、按鈕與捲動都 libei 優先，退回 ydotool；送往 libei 時垂直捲動軸取負（kernel `REL_WHEEL` 與 `wl_pointer` 正負號相反）。退到 ydotool 的絕對移動會先減掉版面原點（`--absolute` 是相對於版面左上角,不是版面座標的 `(0, 0)`),並依 `pointer_accel_mode()` 處理指標加速度——倍率讀不回來,只有操作者知道,所以由 `JE_AUTOCONTROL_WAYLAND_POINTER_ACCEL` 宣告:未設定＝每個行程警告一次後照送、`flat`＝已關掉加速度故靜靜送出、`strict`＝拒絕這次移動。 |
 | `keyboard.py` | 173 | 鍵盤後端：libei 優先，退回 ydotool／wtype。 |
@@ -256,11 +256,11 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
-| `android/adb_client.py` | 197 | `adb` CLI 的薄封裝。 |
-| `android/client.py` | 127 | `uiautomator2.Device` 的延遲封裝。 |
-| `android/find.py` | 107 | uiautomator2 widget 樹的元素查詢。 |
-| `ios/client.py` | 122 | `facebook-wda`（WebDriverAgent）封裝。 |
-| `ios/find.py` | 93 | XCUITest 無障礙查詢。 |
+| `android/adb_client.py` | 199 | `adb` CLI 的薄封裝。 |
+| `android/client.py` | 129 | `uiautomator2.Device` 的延遲封裝。 |
+| `android/find.py` | 108 | uiautomator2 widget 樹的元素查詢。 |
+| `ios/client.py` | 124 | `facebook-wda`（WebDriverAgent）封裝。 |
+| `ios/find.py` | 94 | XCUITest 無障礙查詢。 |
 | `ios/input.py` | 51 | iOS 觸控與按鍵原語。 |
 | `ios/screen.py` | 34 | iOS 裝置螢幕擷取與尺寸。 |
 
@@ -302,7 +302,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.2 框架基礎設施
 
-> 14 個套件、約 2,927 行。
+> 14 個套件、約 2,928 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -311,7 +311,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/critical_exit/` | 132 | 監看緊急停止鍵的守護執行緒，用於中止失控腳本 |
 | `utils/diagnostics/` | 330 | 跨子系統的「一切正常嗎」健檢，附 `python -m` 進入點 |
 | `utils/dbus_client/` | 703 | 只用標準函式庫的 D-Bus session bus 客戶端。原本在 `linux_wayland/` 為 portal 交握而寫，AT-SPI 無障礙後端成為第二個使用者後搬到這裡（`utils/` 在分層上在各 OS 套件之上） |
-| `utils/exception/` | 212 | **例外階層根**。所有錯誤繼承 `AutoControlException`，加上集中式錯誤訊息字串（`exception_tags`） |
+| `utils/exception/` | 213 | **例外階層根**。所有錯誤繼承 `AutoControlException`，加上集中式錯誤訊息字串（`exception_tags`） |
 | `utils/failure_bundle/` | 219 | 可攜、已遮蔽的失敗診斷 ZIP（截圖 + 診斷 + log 尾段） |
 | `utils/file_process/` | 40 | 目錄檔案列舉（`execute_dir` 的後端） |
 | `utils/logging/` | 161 | `autocontrol_logger` 單例 + 家目錄共用記錄檔 handler（`JE_AUTOCONTROL_LOG_FILE` 可改） |
@@ -513,24 +513,24 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.10 遠端桌面與 USB
 
-> 6 個套件、約 19,152 行。
+> 6 個套件、約 19,172 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
 | `utils/admin/` | 396 | 多主機管理主控台：平行輪詢 N 個 AutoControl REST 端點 |
-| `utils/config_sync/` | 323 | 透過訊令伺服器做跨機器設定同步 |
+| `utils/config_sync/` | 325 | 透過訊令伺服器做跨機器設定同步 |
 | `utils/device_matrix/` | 138 | 行動裝置矩陣：同一 action list 於多台裝置平行執行 |
-| `utils/remote_desktop/` | 12,826 | **遠端桌面子系統**（56 檔／11.7K LOC）：TCP／WebSocket／WebRTC 三條傳輸路徑、主機與檢視端、訊令伺服器、TURN／中繼、多檢視者、錄影、信任清單、TOTP、稽核鏈 |
-| `utils/usb/` | 4,522 | 跨平台 USB 列舉／熱插拔／裝置直通（WinUSB、IOKit、libusb 後端 + ACL + WebRTC DataChannel 通道） |
+| `utils/remote_desktop/` | 12,842 | **遠端桌面子系統**（56 檔／11.7K LOC）：TCP／WebSocket／WebRTC 三條傳輸路徑、主機與檢視端、訊令伺服器、TURN／中繼、多檢視者、錄影、信任清單、TOTP、稽核鏈 |
+| `utils/usb/` | 4,524 | 跨平台 USB 列舉／熱插拔／裝置直通（WinUSB、IOKit、libusb 後端 + ACL + WebRTC DataChannel 通道） |
 | `utils/usbip/` | 947 | USB/IP 線路協定主機端（協定封包、TCP 伺服器、libusb URB 後端） |
 
 ### 5.4.11 伺服器、網路協定與外部整合
 
-> 24 個套件、約 6,515 行。
+> 24 個套件、約 6,520 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
-| `utils/acme_v2/` | 614 | 完整 ACME v2 用戶端（RFC 8555），不依賴 certbot |
+| `utils/acme_v2/` | 617 | 完整 ACME v2 用戶端（RFC 8555），不依賴 certbot |
 | `utils/chatops/` | 667 | Chat-ops bot：接收 Slack／Discord／webhook 的 slash 指令並路由到動作 |
 | `utils/cookie_jar/` | 121 | RFC 6265 cookie jar |
 | `utils/email_send/` | 118 | SMTP 寄信（email 觸發器的發送端搭檔） |
@@ -553,7 +553,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/sse_client/` | 126 | Server-Sent Events 用戶端解析 |
 | `utils/tls_acme/` | 455 | TLS 自動化：HTTP-01 挑戰伺服器、金鑰／CSR、自動續期 |
 | `utils/url_canon/` | 144 | RFC 3986 URL 正規化與查詢字串工具 |
-| `utils/webrunner_bridge/` | 161 | 把 action JSON 橋接到 WebRunner（`je_web_runner`） |
+| `utils/webrunner_bridge/` | 163 | 把 action JSON 橋接到 WebRunner（`je_web_runner`） |
 
 ### 5.4.12 報表、可觀測性與測試治理
 
@@ -629,12 +629,12 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.14 安全、機密與合規
 
-> 13 個套件、約 2,795 行。
+> 13 個套件、約 2,797 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
 | `utils/config_redaction/` | 85 | 設定結構與 log 字串的機密遮蔽 |
-| `utils/egress/` | 146 | 無頭 HTTP 用戶端的網路外連允許清單守衛 |
+| `utils/egress/` | 148 | 無頭 HTTP 用戶端的網路外連允許清單守衛 |
 | `utils/governance/` | 237 | 治理：maker-checker 核准閘門與即時憑證租約 |
 | `utils/license_policy/` | 222 | 以 SBOM 元件評估 SPDX 授權允許／拒絕政策 |
 | `utils/provenance/` | 117 | SLSA 建置來源證明（in-toto v1） |
@@ -649,7 +649,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.15 韌性、流量控制與設定
 
-> 14 個套件、約 2,003 行。
+> 14 個套件、約 2,005 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -664,7 +664,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/layered_config/` | 110 | 分層設定解析 |
 | `utils/optimistic/` | 135 | 樂觀併發的版本化儲存 |
 | `utils/rate_limit/` | 204 | 用戶端限流：token bucket、滑動視窗、throttle |
-| `utils/resilience/` | 144 | 韌性原語：退避重試與斷路器 |
+| `utils/resilience/` | 146 | 韌性原語：退避重試與斷路器 |
 | `utils/retry_budget/` | 158 | 重試預算：以牆鐘期限與 full jitter 約束重試 |
 | `utils/sequence_gap/` | 90 | 逐串流的序號缺口偵測 |
 
@@ -740,7 +740,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `rate_limit.py` | 48 | 工具呼叫的 token bucket 限流。 |
 | `__main__.py` | 88 | `je_auto_control_mcp` console script 進入點。 |
 
-#### `utils/remote_desktop/`（12,826 行／56 檔）
+#### `utils/remote_desktop/`（12,842 行／56 檔）
 
 三條傳輸路徑並存：**TCP**（JPEG 影格）、**WebSocket**（同協定換傳輸）、**WebRTC**（aiortc 視訊 + DataChannel）。
 
@@ -760,8 +760,8 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `host_capture.py` | 297 | TCP 主機的影格與游標產生：螢幕列舉、監視器索引轉擷取區域、預設 JPEG／游標 provider,以及 `FrameProductionMixin`（游標輪詢、擷取迴圈、上線編碼）。 |
 | `ws_protocol.py` | 318 | 最小 RFC 6455 WebSocket 框架與握手。 |
 | `file_transfer.py` | 342 | 分塊檔案傳輸。 |
-| `relay.py` | 314 | NAT 穿透失敗時的 TCP 中繼。 |
-| `fingerprint.py` | 245 | TOFU 主機指紋驗證。 |
+| `relay.py` | 315 | NAT 穿透失敗時的 TCP 中繼。 |
+| `fingerprint.py` | 246 | TOFU 主機指紋驗證。 |
 | `turn_config.py` | 249 | coturn 設定產生器。 |
 | `presence.py` | 238 | 多檢視者的執行緒安全在場註冊表。 |
 | `jpeg_recorder_encrypted.py` | 239 | AES-GCM 加密版 session 錄影。 |
@@ -774,24 +774,24 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `webrtc_host_media.py` | 197 | 重新協商與 recvonly 軌管理。aiortc 沒有 `removeTransceiver`,所以開／關不對稱——開是加軌重新 offer,關只能設 inactive 並停掉 receiver。 |
 | `hw_codec.py` | 201 | 硬體 H.264 編碼偵測與啟用。 |
 | `webrtc_stats.py` | 167 | 把 aiortc 的 `RTCStats` 報告輪詢成精簡 dict。 |
-| `connect_coordinator.py` | 149 | 由使用者輸入的目標決定該用哪條傳輸。 |
+| `connect_coordinator.py` | 150 | 由使用者輸入的目標決定該用哪條傳輸。 |
 | `adaptive_bitrate.py` | 148 | 依統計調整主機擷取 FPS。 |
-| `signaling_client.py` | 151 | 純標準庫的訊令用戶端。 |
+| `signaling_client.py` | 152 | 純標準庫的訊令用戶端。 |
 | `trust_list.py` | 139 | 自動接受的檢視端信任清單。 |
 | `webrtc_inspector.py` | 138 | 行程級的 `StatsSnapshot` 滾動視窗。 |
-| `input_dispatch.py` | 139 | 在主機端套用輸入訊息。 |
+| `input_dispatch.py` | 141 | 在主機端套用輸入訊息。 |
 | `session_recorder.py` | 134 | 以 PyAV 把 WebRTC 影格錄成 mp4。 |
-| `totp.py` | 144 | RFC 6238 TOTP（零外部相依）。 |
+| `totp.py` | 146 | RFC 6238 TOTP（零外部相依）。 |
 | `file_sync.py` | 141 | 輪詢式資料夾鏡像。 |
 | `transport.py` | 126 | 可插拔的型別化訊息傳輸。 |
 | `host_access.py` | 112 | TCP 主機的檢視端核准與存取控制：`PendingViewer`、權限字串、分享碼的 TOTP 候選值、IP 白名單。`host` 與 `host_client` 共用,所以獨立成模組。 |
-| `protocol.py` | 96 | 長度前綴的 TCP 框架。 |
+| `protocol.py` | 98 | 長度前綴的 TCP 框架。 |
 | `resume_tokens.py` / `session_quality_cache.py` / `rate_limit.py` | 94 / 85 / 84 | 快速重連 token、每 session 品質快取、檢視端限流。 |
-| `host_id.py` / `viewer_id.py` | 81 / 77 | 主機與檢視端的持久身分。 |
-| `permissions.py` / `clipboard_sync.py` / `wake_on_lan.py` / `session_actions.py` / `auth.py` | 64 / 72 / 56 / 40 / 28 | 逐 session 權限、剪貼簿同步、WOL、SAS 注入與螢幕遮蔽、HMAC 挑戰回應。 |
+| `host_id.py` / `viewer_id.py` | 83 / 79 | 主機與檢視端的持久身分。 |
+| `permissions.py` / `clipboard_sync.py` / `wake_on_lan.py` / `session_actions.py` / `auth.py` | 64 / 74 / 56 / 40 / 28 | 逐 session 權限、剪貼簿同步、WOL、SAS 注入與螢幕遮蔽、HMAC 挑戰回應。 |
 | `ws_host.py` / `ws_viewer.py` / `jpeg_recorder.py` | 40 / 29 / 146 | WebSocket 傳輸變體與 TCP 路徑錄影。 |
 
-#### `utils/usb/`（4,522 行）與 `utils/usbip/`（947 行）
+#### `utils/usb/`（4,524 行）與 `utils/usbip/`（947 行）
 
 | 檔案 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -804,7 +804,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `usb/passthrough/webrtc_channel.py` | 180 | 把直通協定橋到 WebRTC `usb` DataChannel。 |
 | `usb/passthrough/loopback.py` | 159 | 行程內 loopback 傳輸（測試用）。 |
 | `usb/passthrough/protocol.py` | 133 | 線路框格式。 |
-| `usb/passthrough/descriptor.py` | 132 | USB 標準裝置描述元解析。 |
+| `usb/passthrough/descriptor.py` | 134 | USB 標準裝置描述元解析。 |
 | `usb/passthrough/key_provider.py` | 125 | ACL 的可插拔 HMAC 金鑰來源。 |
 | `usb/passthrough/commands.py` | 150 | 無頭直通指令（單一真實來源）。 |
 | `usb/usb_devices.py` | 296 | 跨平台 USB 裝置列舉。 |
@@ -1062,17 +1062,17 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | --- | ---: | ---: |
 | `gui/` | 91 | 26,829 |
 | `utils/mcp_server/` | 31 | 17,711 |
-| `utils/remote_desktop/` | 56 | 12,826 |
+| `utils/remote_desktop/` | 56 | 12,842 |
 | `utils/executor/` | 7 | 9,425 |
-| `utils/usb/` | 17 | 4,522 |
+| `utils/usb/` | 17 | 4,524 |
 | `je_auto_control/`（頂層 3 檔） | 3 | 2,395 |
 | `utils/accessibility/` | 14 | 3,032 |
 | `wrapper/` | 19 | 3,615 |
-| `windows/` | 23 | 1,957 |
+| `windows/` | 23 | 1,959 |
 | `utils/rest_api/` | 8 | 1,808 |
 | `utils/agent/` | 8 | 1,457 |
 | `linux_with_x11/` | 19 | 1,281 |
-| `linux_wayland/` | 17 | 2,920 |
+| `linux_wayland/` | 17 | 2,921 |
 | `utils/triggers/` | 4 | 1,300 |
 | `utils/ocr/` | 9 | 1,136 |
 | `utils/usbip/` | 5 | 947 |
@@ -1080,6 +1080,6 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `osx/` | 17 | 922 |
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 837 |
-| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 677 | 53,247 |
-| **總計** | **1,043** | **149,801** |
+| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 677 | 53,267 |
+| **總計** | **1,043** | **149,842** |
 

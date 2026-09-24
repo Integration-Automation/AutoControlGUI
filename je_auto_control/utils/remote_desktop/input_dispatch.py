@@ -9,10 +9,12 @@ without pulling in OS-specific backends.
 """
 from typing import Any, Callable, Dict, Mapping
 
+from je_auto_control.utils.exception.exceptions import AutoControlException
+
 InputDispatcher = Callable[[Mapping[str, Any]], Any]
 
 
-class InputDispatchError(ValueError):
+class InputDispatchError(AutoControlException, ValueError):
     """Raised when an input message is malformed or references an unknown action."""
 
 

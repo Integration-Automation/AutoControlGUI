@@ -16,6 +16,7 @@ import struct
 import threading
 from typing import Optional, Tuple
 
+from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.remote_desktop.protocol import ProtocolError
 
 WS_GUID = b"258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
@@ -39,8 +40,7 @@ class WsProtocolError(ProtocolError):
     # receive threads while the session stayed registered.
 
 
-
-class WsClosedError(ConnectionError):
+class WsClosedError(AutoControlException, ConnectionError):
     """Raised when the peer sends a CLOSE frame."""
 
 

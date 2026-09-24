@@ -19,8 +19,10 @@ import time
 from dataclasses import dataclass
 from typing import Any, Callable, Optional, Tuple, Type
 
+from je_auto_control.utils.exception.exceptions import AutoControlException
 
-class CircuitOpenError(RuntimeError):
+
+class CircuitOpenError(AutoControlException, RuntimeError):
     """Raised by :class:`CircuitBreaker` when the circuit is open."""
 
 

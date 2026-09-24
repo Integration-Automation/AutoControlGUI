@@ -12,6 +12,8 @@ import hashlib
 import json
 from typing import Any, Dict, Mapping, Optional
 
+from je_auto_control.utils.exception.exceptions import AutoControlException
+
 try:
     from cryptography.hazmat.primitives import hashes, serialization
     from cryptography.hazmat.primitives.asymmetric import padding, rsa
@@ -22,7 +24,7 @@ except ImportError as exc:  # pragma: no cover - platform-dependent wheel
     ) from exc
 
 
-class JwsError(ValueError):
+class JwsError(AutoControlException, ValueError):
     """Raised when the JWS payload or key is malformed."""
 
 

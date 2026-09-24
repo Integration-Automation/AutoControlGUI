@@ -21,6 +21,8 @@ import socket
 from typing import List, Optional, Sequence, Union
 from urllib.parse import unquote, urlparse
 
+from je_auto_control.utils.exception.exceptions import AutoControlException
+
 Patterns = Optional[Union[str, Sequence[str]]]
 
 
@@ -33,7 +35,7 @@ def _as_patterns(value: Patterns) -> Optional[List[str]]:
     return [_canonical_ip(pattern) or pattern for pattern in patterns if pattern]
 
 
-class EgressBlocked(ValueError):
+class EgressBlocked(AutoControlException, ValueError):
     """Raised when a URL's host is not permitted by the egress policy."""
 
 

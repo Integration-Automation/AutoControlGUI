@@ -17,6 +17,7 @@ import urllib.parse
 import urllib.request
 from typing import Optional
 
+from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 
 
@@ -24,7 +25,7 @@ _DEFAULT_TIMEOUT_S = 5.0
 _POLL_INTERVAL_S = 1.0
 
 
-class SignalingError(RuntimeError):
+class SignalingError(AutoControlException, RuntimeError):
     """Network or protocol error talking to the signaling server."""
 
 

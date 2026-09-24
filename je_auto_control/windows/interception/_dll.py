@@ -15,8 +15,10 @@ import threading
 from ctypes import wintypes
 from typing import Optional
 
+from je_auto_control.utils.exception.exceptions import AutoControlException
 
-class InterceptionUnavailable(RuntimeError):
+
+class InterceptionUnavailable(AutoControlException, RuntimeError):
     """Raised when ``interception.dll`` or the kernel driver is missing."""
 
 

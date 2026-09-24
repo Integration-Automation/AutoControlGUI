@@ -5,8 +5,9 @@ class AutoControlException(Exception):
     All framework exceptions derive from this so that containment boundaries
     (executor, background poll loops, request handlers, GUI slots) can catch
     the whole family with a single ``except AutoControlException``. Do not add
-    a sibling that inherits ``Exception`` directly — that silently escapes
-    every such boundary.
+    a sibling that inherits ``Exception`` directly, or only a builtin such as
+    ``RuntimeError`` — that silently escapes every such boundary. List this
+    class first and keep the builtin when existing callers catch it.
     """
 
 

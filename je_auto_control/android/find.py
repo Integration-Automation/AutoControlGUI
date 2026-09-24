@@ -13,9 +13,10 @@ from typing import Any, Dict, Optional, Tuple
 from je_auto_control.android.client import (
     UIAutomatorDevice, default_ui_device, translate_device_errors,
 )
+from je_auto_control.utils.exception.exceptions import AutoControlException
 
 
-class ElementNotFoundError(LookupError):
+class ElementNotFoundError(AutoControlException, LookupError):
     """Raised when no widget on screen matches the supplied selector."""
 
 

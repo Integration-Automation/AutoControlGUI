@@ -303,6 +303,11 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Fixed
 
+- **Error family**: twenty-five errors that derived only from a builtin
+  exception (the Android and iOS clients, the remote-desktop wire errors,
+  ACME, the circuit breaker, egress, the Interception loader and others) now
+  also derive from `AutoControlException`, so family-only boundaries contain
+  them; `except RuntimeError` / `except ValueError` still catch them.
 - **X11, uinput and macOS input**: the uinput backend types the intended
   keys and scrolls with the same sign rules as XTest; sending keys and clicks
   to an X window releases what it pressed; an unbound X key raises instead of

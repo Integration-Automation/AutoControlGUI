@@ -109,7 +109,7 @@ Anything agreed but not done — deferred follow-ups, known gaps, half-delivered
 
 ### Project-specific rules
 
-- **Exception hierarchy is flat by design** — every framework error derives from `AutoControlException` so containment boundaries (executor, background poll loops, request handlers, GUI slots) can catch the family in one `except`. Never add a sibling inheriting `Exception` directly; it silently escapes every boundary. Assertion failures (`AutoControlAssertionException`) must keep propagating through `raise_on_error=False`.
+- **Exception hierarchy is flat by design** — every framework error derives from `AutoControlException` so containment boundaries (executor, background poll loops, request handlers, GUI slots) can catch the family in one `except`. Never add a sibling inheriting `Exception` directly, or only a builtin such as `RuntimeError` / `ValueError`; it silently escapes every boundary. To keep a builtin for existing callers, list both: `class XError(AutoControlException, RuntimeError)`. Assertion failures (`AutoControlAssertionException`) must keep propagating through `raise_on_error=False`.
 - **Fail fast** — raise the specific typed exception at the point of failure; do not swallow errors.
 - **Validate at boundaries** — user input, file content, network data, and JSON action commands. Reject unknown command names; `realpath` and bound user-supplied paths.
 - **Least privilege** — servers bind `127.0.0.1` by default; `0.0.0.0` needs an explicit, documented opt-in.

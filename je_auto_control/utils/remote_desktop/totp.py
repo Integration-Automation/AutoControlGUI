@@ -24,13 +24,15 @@ import time
 import urllib.parse
 from typing import Optional
 
+from je_auto_control.utils.exception.exceptions import AutoControlException
+
 _DEFAULT_DIGITS = 6
 _DEFAULT_STEP = 30
 _DEFAULT_WINDOW = 1
 _SECRET_BYTES = 20  # RFC 4226 recommended size for HOTP/TOTP seeds.
 
 
-class TOTPError(ValueError):
+class TOTPError(AutoControlException, ValueError):
     """Raised for malformed secrets or codes."""
 
 
