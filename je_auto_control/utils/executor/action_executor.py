@@ -3196,22 +3196,26 @@ def _queue_next(db: str, name: str = "default",
     item = _queue(db, name).get_next(stale_after_s=stale_after_s)
     return None if item is None else {
         "id": item.id, "reference": item.reference, "data": item.data,
-        "status": item.status, "retries": item.retries}
+        "status": item.status, "retries": item.retries, "claim": item.claim}
 
 
 def _queue_complete(db: str, item_id: int, output: Any = None,
-                    name: str = "default") -> Dict[str, Any]:
-    """Adapter: mark a work item successful."""
-    _queue(db, name).complete(int(item_id), output=output)
+                    name: str = "default",
+                    claim: Optional[int] = None) -> Dict[str, Any]:
+    """Adapter: mark a work item successful (``claim`` from AC_queue_next)."""
+    _queue(db, name).complete(int(item_id), output=output,
+                              claim=None if claim is None else int(claim))
     return {"id": int(item_id), "status": "success"}
 
 
 def _queue_fail(db: str, item_id: int, error: str,
                 kind: str = "application", max_retries: int = 3,
-                name: str = "default") -> Dict[str, Any]:
+                name: str = "default",
+                claim: Optional[int] = None) -> Dict[str, Any]:
     """Adapter: fail a work item (application errors retry, business don't)."""
     status = _queue(db, name).fail(int(item_id), str(error), kind=str(kind),
-                                   max_retries=int(max_retries))
+                                   max_retries=int(max_retries),
+                                   claim=None if claim is None else int(claim))
     return {"id": int(item_id), "status": status}
 
 

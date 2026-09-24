@@ -62,12 +62,26 @@ class S3ArtifactStore:
         return str(target)
 
     def list(self, prefix: Optional[str] = None) -> List[str]:
-        """List store-relative object keys, optionally under extra ``prefix``."""
-        response = self.client.list_objects_v2(
-            Bucket=self._bucket, Prefix=self._key(prefix) if prefix
-            else self._prefix)
-        return [self._relative(item["Key"])
-                for item in response.get("Contents", [])]
+        """List store-relative object keys, optionally under extra ``prefix``.
+
+        Pages through every result: one call stops at 1000 keys. The store's
+        own prefix is matched as a directory, so ``run`` does not list
+        ``run2/...``.
+        """
+        if prefix:
+            wanted = self._key(prefix)
+        else:
+            wanted = f"{self._prefix}/" if self._prefix else ""
+        keys: List[str] = []
+        request = {"Bucket": self._bucket, "Prefix": wanted}
+        while True:
+            response = self.client.list_objects_v2(**request)
+            keys.extend(self._relative(item["Key"])
+                        for item in response.get("Contents", []))
+            token = response.get("NextContinuationToken")
+            if not response.get("IsTruncated") or not token:
+                return keys
+            request["ContinuationToken"] = token
 
     def delete(self, key: str) -> bool:
         """Delete store-relative object ``key``; return ``True``."""

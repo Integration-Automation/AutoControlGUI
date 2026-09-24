@@ -126,5 +126,7 @@ def next_delay(response: Mapping[str, Any], *,
         return delay
     info = parse_ratelimit(headers)
     if info and info.get("remaining") == 0 and info.get("reset") is not None:
-        return float(info["reset"])
+        # A negative reset (clock skew, a bad server) is "now", not a
+        # negative sleep that raises in time.sleep().
+        return max(0.0, float(info["reset"]))
     return 0.0

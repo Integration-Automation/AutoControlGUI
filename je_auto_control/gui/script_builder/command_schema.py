@@ -4363,7 +4363,8 @@ def _add_work_queue_specs(specs: List[CommandSpec]) -> None:
     ))
     specs.append(CommandSpec(
         "AC_queue_complete", "Queue", "Queue: Complete Item",
-        fields=(db, FieldSpec("item_id", FieldType.INT), name),
+        fields=(db, FieldSpec("item_id", FieldType.INT), name,
+                FieldSpec("claim", FieldType.INT, optional=True)),
         description="Mark a work item successfully processed.",
     ))
     specs.append(CommandSpec(
@@ -4375,7 +4376,7 @@ def _add_work_queue_specs(specs: List[CommandSpec]) -> None:
                           optional=True, default="application"),
                 FieldSpec("max_retries", FieldType.INT, optional=True,
                           default=3),
-                name),
+                name, FieldSpec("claim", FieldType.INT, optional=True)),
         description="Fail an item; application errors retry, business don't.",
     ))
     specs.append(CommandSpec(

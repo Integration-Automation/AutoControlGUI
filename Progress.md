@@ -275,6 +275,19 @@ socket server 的執行也都用同一個 `executor`；`for_each` 的迴圈變�
 
 ---
 
+## Idempotency 的 `release` 還沒有執行器指令
+
+`TODO` — 只有 headless API，JSON 腳本與 MCP 還放不掉失敗的鍵
+
+`utils/idempotency/idempotency.py` 的 `IdempotencyStore.release()` 讓工作失敗的 `in_progress` 鍵可以重跑，但
+`action_executor.py` 的 `_idempotency_begin`／`_idempotency_complete` 旁邊沒有對應的 `AC_idempotency_release`，
+而執行器的具名儲存沒有 TTL，所以腳本裡工作失敗的鍵仍然永遠是 `in_progress`。
+
+**做法**：加 `AC_idempotency_release`、`ac_idempotency_release` 與 Script Builder 的 **Flow** 指令，並重量指令數
+（`test_doc_counts.py` 會要求 README 三份與 `architecture_explore.md` 一起改）。
+
+---
+
 ## pytest11 進入點會把整個門面拉進每一次 pytest
 
 `DECIDE` — 要不要把進入點搬到一個精簡的頂層模組（打包層的改動，維護者拍板）

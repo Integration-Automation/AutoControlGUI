@@ -24,7 +24,7 @@
 
 ``begin`` 回傳 ``{status, response}``,status 為 ``new``(首次)、``in_progress``(完成前的重複)或
 ``completed``(重播已儲存回應);以不同 ``request`` 指紋重用同一鍵會拋出 ``IdempotencyConflict``
-(Stripe 的 HTTP-400 行為)。``complete`` 記錄回應,``get`` 讀取有效記錄,``save`` / ``load`` 以 JSON
+(Stripe 的 HTTP-400 行為)。``complete`` 記錄回應,``release`` 放掉工作失敗的 ``in_progress`` 鍵讓重試能執行,``get`` 讀取有效記錄,``save`` / ``load`` 以 JSON
 持久化。``request_fingerprint`` 是 payload 的穩定、與順序無關的 SHA-256。
 
 執行器命令

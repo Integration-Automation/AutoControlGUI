@@ -290,6 +290,11 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Fixed
 
+- **Work queue and durable state**: claims are numbered so a stale performer
+  cannot settle a reclaimed item, and repeatedly abandoned items fail instead
+  of looping; a failed `run_resumable` step is retried rather than skipped;
+  idempotency keys can be released; the dedup window and outbox are
+  thread-safe; S3 `list()` stays in its prefix and reads every page.
 - **Agent requests are bounded**: each model call times out after 120 s and
   only the three newest screenshots are resent, so long runs stay under the
   request size limit; `export_*_tools(only=[])` offers no tools instead of all

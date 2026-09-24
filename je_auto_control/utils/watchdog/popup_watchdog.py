@@ -15,8 +15,9 @@ injectable so the logic is unit-tested without a real desktop. Imports no
 """
 import threading
 import time
+from collections import deque
 from dataclasses import dataclass
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Deque, Dict, List, Optional
 
 from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
@@ -25,9 +26,13 @@ from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 # (e.g. find_window raising AutoControlException off Windows). LookupError/
 # StopIteration/ArithmeticError cover user callbacks that index/iterate/divide;
 # an uncaught one kills the daemon thread and silently stops every rule.
+# ImportError: the built-in window rules import the platform wrapper lazily,
+# and a missing backend ended the watchdog thread silently, rules and all.
 _RULE_ERRORS = (OSError, RuntimeError, ValueError, AttributeError, TypeError,
-                LookupError, StopIteration, ArithmeticError,
+                LookupError, StopIteration, ArithmeticError, ImportError,
                 AutoControlException)
+# A popup that keeps coming back adds a hit per poll; keep the recent ones.
+_MAX_HITS = 1000
 
 
 @dataclass
@@ -53,7 +58,7 @@ class PopupWatchdog:
         self._lifecycle_lock = threading.RLock()
         self._thread: Optional[threading.Thread] = None
         self._stop = threading.Event()
-        self._hits: List[Dict[str, Any]] = []
+        self._hits: Deque[Dict[str, Any]] = deque(maxlen=_MAX_HITS)
 
     def add_rule(self, rule: WatchdogRule) -> None:
         """Register a generic detector/dismisser rule."""

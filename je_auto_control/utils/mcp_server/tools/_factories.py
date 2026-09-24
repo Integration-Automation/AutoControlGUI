@@ -2648,9 +2648,12 @@ def work_queue_tools() -> List[MCPTool]:
         ),
         MCPTool(
             name="ac_queue_complete",
-            description="Mark a claimed work item successfully processed.",
+            description=("Mark a claimed work item successfully processed. "
+                         "Pass the claim from ac_queue_next so a performer "
+                         "whose item was reclaimed as stale is refused."),
             input_schema=schema({"item_id": {"type": "integer"},
-                                 "output": {}, **_Q},
+                                 "output": {}, "claim": {"type": "integer"},
+                                 **_Q},
                                 required=["db", "item_id"]),
             handler=h.queue_complete,
             annotations=SIDE_EFFECT_ONLY,
@@ -2664,7 +2667,8 @@ def work_queue_tools() -> List[MCPTool]:
             input_schema=schema({"item_id": {"type": "integer"},
                                  "error": {"type": "string"},
                                  "kind": {"type": "string"},
-                                 "max_retries": {"type": "integer"}, **_Q},
+                                 "max_retries": {"type": "integer"},
+                                 "claim": {"type": "integer"}, **_Q},
                                 required=["db", "item_id", "error"]),
             handler=h.queue_fail,
             annotations=SIDE_EFFECT_ONLY,

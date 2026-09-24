@@ -37,19 +37,21 @@ def queue_next(db, name="default", stale_after_s=None):
     item = _work_queue(db, name).get_next(stale_after_s=stale_after_s)
     return None if item is None else {
         "id": item.id, "reference": item.reference, "data": item.data,
-        "status": item.status, "retries": item.retries}
+        "status": item.status, "retries": item.retries, "claim": item.claim}
 
 
-def queue_complete(db, item_id, output=None, name="default"):
-    _work_queue(db, name).complete(int(item_id), output=output)
+def queue_complete(db, item_id, output=None, name="default", claim=None):
+    _work_queue(db, name).complete(int(item_id), output=output,
+                                   claim=None if claim is None else int(claim))
     return {"id": int(item_id), "status": "success"}
 
 
 def queue_fail(db, item_id, error, kind="application", max_retries=3,
-               name="default"):
+               name="default", claim=None):
     status = _work_queue(db, name).fail(int(item_id), str(error),
                                         kind=str(kind),
-                                        max_retries=int(max_retries))
+                                        max_retries=int(max_retries),
+                                        claim=None if claim is None else int(claim))
     return {"id": int(item_id), "status": status}
 
 
