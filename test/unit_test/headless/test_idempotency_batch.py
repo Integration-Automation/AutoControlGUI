@@ -71,15 +71,34 @@ def test_executor_round_trip():
     assert out["status"] == "completed"
 
 
+def _first_dict(record):
+    return next(v for v in record.values() if isinstance(v, dict))
+
+
+def test_executor_release_lets_a_failed_key_run_again():
+    name = "test-store-release"
+    ac.execute_action([["AC_idempotency_begin", {"name": name, "key": "o1"}]])
+    retry = ac.execute_action([["AC_idempotency_begin", {"name": name, "key": "o1"}]])
+    assert _first_dict(retry)["status"] == "in_progress"
+    released = ac.execute_action([["AC_idempotency_release", {"name": name, "key": "o1"}]])
+    assert _first_dict(released) == {"released": True}
+    again = ac.execute_action([["AC_idempotency_begin", {"name": name, "key": "o1"}]])
+    assert _first_dict(again)["status"] == "new"
+    ac.execute_action([["AC_idempotency_complete",
+                        {"name": name, "key": "o1", "response": "done"}]])
+    kept = ac.execute_action([["AC_idempotency_release", {"name": name, "key": "o1"}]])
+    assert _first_dict(kept) == {"released": False}
+
+
 def test_wiring():
     known = ac.executor.known_commands()
-    assert {"AC_idempotency_begin", "AC_idempotency_complete"} <= set(known)
+    assert {"AC_idempotency_begin", "AC_idempotency_complete", "AC_idempotency_release"} <= set(known)
     from je_auto_control.utils.mcp_server.tools import build_default_tool_registry
     names = {t.name for t in build_default_tool_registry()}
-    assert {"ac_idempotency_begin", "ac_idempotency_complete"} <= names
+    assert {"ac_idempotency_begin", "ac_idempotency_complete", "ac_idempotency_release"} <= names
     from je_auto_control.gui.script_builder.command_schema import _build_specs
     specs = {s.command for s in _build_specs()}
-    assert {"AC_idempotency_begin", "AC_idempotency_complete"} <= specs
+    assert {"AC_idempotency_begin", "AC_idempotency_complete", "AC_idempotency_release"} <= specs
 
 
 def test_facade_exports():

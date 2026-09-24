@@ -26,7 +26,7 @@
 
 | 檔案 | 行數 | 為何還沒拆 |
 | --- | ---: | --- |
-| `utils/mcp_server/tools/_handlers_executor_bridge.py` | 1,448 | 2026-09-23 拆 `_handlers.py` 時新建。252 個純委派（中位數 3 行）：`from action_executor import _x` 再 `return _x(...)`,沒有分支。**不套用 flat data tables 條款**——那一條講的是「一個對照表或清單」,這裡是 252 個函式定義。再切下去只能照 MCP 工廠領域分（159 個領域）,那會把同一種委派散進十幾個檔,而它們之間沒有語意邊界。規則照舊:只准變短。 |
+| `utils/mcp_server/tools/_handlers_executor_bridge.py` | 1,429 | 2026-09-23 拆 `_handlers.py` 時新建。253 個純委派（中位數 3 行）：`from action_executor import _x` 再 `return _x(...)`,沒有分支。**不套用 flat data tables 條款**——那一條講的是「一個對照表或清單」,這裡是 252 個函式定義。再切下去只能照 MCP 工廠領域分（159 個領域）,那會把同一種委派散進十幾個檔,而它們之間沒有語意邊界。規則照舊:只准變短。 |
 | `gui/remote_desktop/webrtc_panel.py` | 2,530 | 單一 Qt 面板,但已含連線、監視器選擇、頻寬自適應、麥克風、錄影五組互動狀態。應拆成 panel + 各控制器。 |
 | `utils/accessibility/backends/windows_backend.py` | 805 | 已拆出 `windows_query.py`（193）、`windows_state.py`（98）與 `windows_reads.py`（142,2026-09-23;拆完 801,同日加焦點查詢的委派 +4）。剩下的是同一套 UIA COM 生命週期管理,再拆會把 `CoInitialize`／介面釋放的配對邏輯切散。 |
 
@@ -272,19 +272,6 @@ socket server 的執行也都用同一個 `executor`；`for_each` 的迴圈變�
 
 **附帶**：`AC_run_agent backend="openai"` 送出全部約 740 個工具，超過 OpenAI Chat Completions 的 128 個上限，
 所以一定失敗——與「`AC_run_agent` 預設工具集」那一條 DECIDE 一起決定。
-
----
-
-## Idempotency 的 `release` 還沒有執行器指令
-
-`TODO` — 只有 headless API，JSON 腳本與 MCP 還放不掉失敗的鍵
-
-`utils/idempotency/idempotency.py` 的 `IdempotencyStore.release()` 讓工作失敗的 `in_progress` 鍵可以重跑，但
-`action_executor.py` 的 `_idempotency_begin`／`_idempotency_complete` 旁邊沒有對應的 `AC_idempotency_release`，
-而執行器的具名儲存沒有 TTL，所以腳本裡工作失敗的鍵仍然永遠是 `in_progress`。
-
-**做法**：加 `AC_idempotency_release`、`ac_idempotency_release` 與 Script Builder 的 **Flow** 指令，並重量指令數
-（`test_doc_counts.py` 會要求 README 三份與 `architecture_explore.md` 一起改）。
 
 ---
 

@@ -31,5 +31,7 @@
 ----------
 
 ``AC_idempotency_begin`` 在具名儲存中註冊/查找 ``key``(可選 ``request`` 做衝突偵測);
-``AC_idempotency_complete`` 儲存 ``response``。兩者使用具名實例登錄(如斷路器/隔艙),並以 MCP 工具
-(``ac_idempotency_begin`` / ``ac_idempotency_complete``)以及 Script Builder 中 **Flow** 分類下的命令提供。
+``AC_idempotency_complete`` 儲存 ``response``;``AC_idempotency_release`` 把工作失敗、仍是 ``in_progress``
+的鍵放掉，讓重試能再跑一次(已完成的鍵會保留)。三者使用具名實例登錄(如斷路器/隔艙，沒有 TTL),並以 MCP 工具
+(``ac_idempotency_begin`` / ``ac_idempotency_complete`` / ``ac_idempotency_release``)以及 Script Builder
+中 **Flow** 分類下的命令提供。

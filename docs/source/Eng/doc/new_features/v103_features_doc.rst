@@ -39,6 +39,9 @@ Executor commands
 
 ``AC_idempotency_begin`` registers/looks up a ``key`` in a named store (optional
 ``request`` for conflict detection); ``AC_idempotency_complete`` stores the
-``response``. Both use a named-instance registry (like circuit breakers /
-bulkheads) and are exposed as MCP tools (``ac_idempotency_begin`` /
-``ac_idempotency_complete``) and as Script Builder commands under **Flow**.
+``response``; ``AC_idempotency_release`` drops an ``in_progress`` key whose work
+failed so a retry runs it (a completed key is kept). All three use a
+named-instance registry (like circuit breakers / bulkheads), which has no TTL,
+and are exposed as MCP tools (``ac_idempotency_begin`` /
+``ac_idempotency_complete`` / ``ac_idempotency_release``) and as Script Builder
+commands under **Flow**.

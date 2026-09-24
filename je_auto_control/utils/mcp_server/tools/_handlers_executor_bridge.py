@@ -18,8 +18,7 @@ def collapse_control(name=None, role=None, app_name=None, automation_id=None):
 
 
 def control_expand_state(name=None, role=None, app_name=None, automation_id=None):
-    from je_auto_control.utils.executor.action_executor import (
-        _control_expand_state)
+    from je_auto_control.utils.executor.action_executor import _control_expand_state
     return _control_expand_state(name, role, app_name, automation_id)
 
 
@@ -41,8 +40,7 @@ def set_control_range(value, name=None, role=None, app_name=None,
 
 def scroll_control_into_view(name=None, role=None, app_name=None,
                              automation_id=None):
-    from je_auto_control.utils.executor.action_executor import (
-        _scroll_control_into_view)
+    from je_auto_control.utils.executor.action_executor import _scroll_control_into_view
     return _scroll_control_into_view(name, role, app_name, automation_id)
 
 
@@ -60,16 +58,14 @@ def find_control_text(text, ignore_case=True, name=None, role=None,
 
 def select_control_text(text, ignore_case=True, name=None, role=None,
                         app_name=None, automation_id=None):
-    from je_auto_control.utils.executor.action_executor import (
-        _select_control_text)
+    from je_auto_control.utils.executor.action_executor import _select_control_text
     return _select_control_text(text, ignore_case, name, role, app_name,
                                 automation_id)
 
 
 def control_text_attributes(name=None, role=None, app_name=None,
                             automation_id=None):
-    from je_auto_control.utils.executor.action_executor import (
-        _control_text_attributes)
+    from je_auto_control.utils.executor.action_executor import _control_text_attributes
     return _control_text_attributes(name, role, app_name, automation_id)
 
 
@@ -82,8 +78,7 @@ def realize_item(item_name, by="name", container_name=None, container_role=None,
 
 def get_element_properties(name=None, role=None, app_name=None,
                            automation_id=None):
-    from je_auto_control.utils.executor.action_executor import (
-        _get_element_properties)
+    from je_auto_control.utils.executor.action_executor import _get_element_properties
     return _get_element_properties(name, role, app_name, automation_id)
 
 
@@ -124,8 +119,7 @@ def set_window_state(state, name=None, role=None, app_name=None,
 
 def window_interaction_state(name=None, role=None, app_name=None,
                              automation_id=None):
-    from je_auto_control.utils.executor.action_executor import (
-        _window_interaction_state)
+    from je_auto_control.utils.executor.action_executor import _window_interaction_state
     return _window_interaction_state(name, role, app_name, automation_id)
 
 
@@ -136,8 +130,7 @@ def legacy_info(name=None, role=None, app_name=None, automation_id=None):
 
 def legacy_default_action(name=None, role=None, app_name=None,
                           automation_id=None):
-    from je_auto_control.utils.executor.action_executor import (
-        _legacy_default_action)
+    from je_auto_control.utils.executor.action_executor import _legacy_default_action
     return _legacy_default_action(name, role, app_name, automation_id)
 
 
@@ -157,8 +150,7 @@ def set_view(view, name=None, role=None, app_name=None, automation_id=None):
 
 
 def wait_for_focus_change(timeout=5.0):
-    from je_auto_control.utils.executor.action_executor import (
-        _wait_for_focus_change)
+    from je_auto_control.utils.executor.action_executor import _wait_for_focus_change
     return _wait_for_focus_change(timeout)
 
 
@@ -293,8 +285,7 @@ def decode_body(headers, body_base64):
 
 
 def parse_quality_values(header):
-    from je_auto_control.utils.executor.action_executor import (
-        _parse_quality_values)
+    from je_auto_control.utils.executor.action_executor import _parse_quality_values
     return _parse_quality_values(header)
 
 
@@ -309,8 +300,7 @@ def parse_set_cookie(header):
 
 
 def parse_cache_control(headers):
-    from je_auto_control.utils.executor.action_executor import (
-        _parse_cache_control)
+    from je_auto_control.utils.executor.action_executor import _parse_cache_control
     return _parse_cache_control(headers)
 
 
@@ -325,8 +315,7 @@ def redact_config(obj, mask="***"):
 
 
 def redact_secret_text(text, mask="***"):
-    from je_auto_control.utils.executor.action_executor import (
-        _redact_secret_text)
+    from je_auto_control.utils.executor.action_executor import _redact_secret_text
     return _redact_secret_text(text, mask)
 
 
@@ -371,8 +360,7 @@ def explain_config(layers, key):
 
 
 def check_compatibility(old, new, mode="backward"):
-    from je_auto_control.utils.executor.action_executor import (
-        _check_compatibility)
+    from je_auto_control.utils.executor.action_executor import _check_compatibility
     return _check_compatibility(old, new, mode)
 
 
@@ -402,15 +390,18 @@ def ewma(values, alpha=0.3):
 
 
 def idempotency_begin(name, key, request=None):
-    from je_auto_control.utils.executor.action_executor import (
-        _idempotency_begin)
+    from je_auto_control.utils.executor.action_executor import _idempotency_begin
     return _idempotency_begin(name, key, request)
 
 
 def idempotency_complete(name, key, response):
-    from je_auto_control.utils.executor.action_executor import (
-        _idempotency_complete)
+    from je_auto_control.utils.executor.action_executor import _idempotency_complete
     return _idempotency_complete(name, key, response)
+
+
+def idempotency_release(name, key):
+    from je_auto_control.utils.executor.action_executor import _idempotency_release
+    return _idempotency_release(name, key)
 
 
 def dedup_check(name, message_id, ttl_s=3600):
@@ -574,8 +565,7 @@ def match_template(template, min_score=0.8, scales=None, region=None,
 
 def match_template_all(template, min_score=0.8, max_results=20, nms_iou=0.3,
                        region=None):
-    from je_auto_control.utils.executor.action_executor import (
-        _match_template_all)
+    from je_auto_control.utils.executor.action_executor import _match_template_all
     return _match_template_all(template, min_score, max_results, nms_iou, region)
 
 
@@ -586,8 +576,7 @@ def match_masked(template, mask=None, min_score=0.9, region=None):
 
 def match_masked_all(template, mask=None, min_score=0.9, max_results=20,
                      nms_iou=0.3, region=None):
-    from je_auto_control.utils.executor.action_executor import (
-        _match_masked_all)
+    from je_auto_control.utils.executor.action_executor import _match_masked_all
     return _match_masked_all(template, mask, min_score, max_results, nms_iou,
                              region)
 
@@ -600,8 +589,7 @@ def match_rotated(template, min_score=0.8, scales=None, angles=None,
 
 def match_rotated_all(template, min_score=0.8, scales=None, angles=None,
                       max_results=20, nms_iou=0.3, region=None):
-    from je_auto_control.utils.executor.action_executor import (
-        _match_rotated_all)
+    from je_auto_control.utils.executor.action_executor import _match_rotated_all
     return _match_rotated_all(template, min_score, scales, angles, max_results,
                               nms_iou, region)
 
@@ -699,8 +687,7 @@ def column_gutters(boxes, page_width=None, min_gap=8):
 
 def detect_borderless_table(boxes, page_width=None, min_gap=8, min_cols=2,
                             min_rows=2):
-    from je_auto_control.utils.executor.action_executor import (
-        _detect_borderless_table)
+    from je_auto_control.utils.executor.action_executor import _detect_borderless_table
     return _detect_borderless_table(boxes, page_width, min_gap, min_cols, min_rows)
 
 
@@ -710,8 +697,7 @@ def associate_fields(text_boxes, directions=None, max_gap=150):
 
 
 def match_labels_to_widgets(labels, widgets):
-    from je_auto_control.utils.executor.action_executor import (
-        _match_labels_to_widgets)
+    from je_auto_control.utils.executor.action_executor import _match_labels_to_widgets
     return _match_labels_to_widgets(labels, widgets)
 
 
@@ -746,8 +732,7 @@ def outline(lines, heading_ratio=1.2):
 
 
 def find_color_region(rgb, tolerance=20, min_area=50, region=None):
-    from je_auto_control.utils.executor.action_executor import (
-        _find_color_region)
+    from je_auto_control.utils.executor.action_executor import _find_color_region
     return _find_color_region(rgb, tolerance, min_area, region)
 
 
@@ -758,8 +743,7 @@ def ssim_compare(reference, current=None, ignore=None, region=None):
 
 def ssim_changed_regions(reference, current=None, ignore=None, threshold=0.35,
                          min_area=50, region=None):
-    from je_auto_control.utils.executor.action_executor import (
-        _ssim_changed_regions)
+    from je_auto_control.utils.executor.action_executor import _ssim_changed_regions
     return _ssim_changed_regions(reference, current, ignore, threshold, min_area,
                                  region)
 
@@ -846,8 +830,7 @@ def segment_hsv(lower_hsv, upper_hsv, min_area=50, region=None):
 
 def dominant_hue_regions(hue, hue_tol=10, sat_min=80, val_min=80, min_area=50,
                          region=None):
-    from je_auto_control.utils.executor.action_executor import (
-        _dominant_hue_regions)
+    from je_auto_control.utils.executor.action_executor import _dominant_hue_regions
     return _dominant_hue_regions(hue, hue_tol, sat_min, val_min, min_area, region)
 
 
@@ -1085,8 +1068,7 @@ def cua_command(payload, source="canonical"):
 
 
 def serialize_observation(elements, viewport=None, max_elements=80):
-    from je_auto_control.utils.executor.action_executor import (
-        _serialize_observation)
+    from je_auto_control.utils.executor.action_executor import _serialize_observation
     return _serialize_observation(elements, viewport, max_elements)
 
 
@@ -1213,8 +1195,7 @@ def check_unique_key(rows, cols):
 
 
 def check_accepted_values(rows, col, allowed):
-    from je_auto_control.utils.executor.action_executor import (
-        _check_accepted_values)
+    from je_auto_control.utils.executor.action_executor import _check_accepted_values
     return _check_accepted_values(rows, col, allowed)
 
 

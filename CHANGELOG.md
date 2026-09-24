@@ -15,6 +15,9 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Added
 
+- **`AC_idempotency_release`** / MCP `ac_idempotency_release` / Script
+  Builder *Idempotency: Release*: free an in-progress idempotency key whose
+  work failed so a retry runs it.
 - `cua_action.resolve_key_name` / `split_key_combo`, and
   `compile_postcondition(before=...)`.
 - `pii_text.luhn_valid` and `normalize_text(strip_format=...)`.

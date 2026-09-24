@@ -3496,6 +3496,14 @@ def _add_resilience_specs(specs: List[CommandSpec]) -> None:
         description="Store the completed response for an idempotency key.",
     ))
     specs.append(CommandSpec(
+        "AC_idempotency_release", "Flow", "Idempotency: Release",
+        fields=(
+            FieldSpec("name", FieldType.STRING, placeholder="payments"),
+            FieldSpec("key", FieldType.STRING, placeholder="order-42"),
+        ),
+        description="Drop an in-progress idempotency key whose work failed.",
+    ))
+    specs.append(CommandSpec(
         "AC_dedup_check", "Flow", "Dedup Window: Check",
         fields=(
             FieldSpec("name", FieldType.STRING, placeholder="webhooks"),

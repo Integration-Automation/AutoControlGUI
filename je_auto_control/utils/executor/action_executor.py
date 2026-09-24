@@ -5608,6 +5608,18 @@ def _idempotency_complete(name: str, key: str,
     return {"status": "completed"}
 
 
+def _idempotency_release(name: str, key: str) -> Dict[str, Any]:
+    """Adapter: drop an ``in_progress`` key whose work failed, so a retry runs it.
+
+    The named stores have no TTL, so without this a key whose work raised
+    stayed ``in_progress`` for the life of the process. A completed key is
+    kept; ``released`` says whether anything was dropped.
+    """
+    from je_auto_control.utils.idempotency import IdempotencyStore
+    store = _IDEMPOTENCY_STORES.setdefault(name, IdempotencyStore())
+    return {"released": store.release(key)}
+
+
 def _bulkhead_run(name: str, max_concurrent: int,
                   actions: Any) -> Dict[str, Any]:
     """Adapter: run an action list under a named bulkhead permit."""
@@ -7459,6 +7471,7 @@ class Executor:
             "AC_ewma": _ewma,
             "AC_idempotency_begin": _idempotency_begin,
             "AC_idempotency_complete": _idempotency_complete,
+            "AC_idempotency_release": _idempotency_release,
             "AC_dedup_check": _dedup_check,
             "AC_sequence_observe": _sequence_observe,
             "AC_cas_put": _cas_put,

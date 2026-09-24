@@ -6897,6 +6897,17 @@ def idempotency_tools() -> List[MCPTool]:
             handler=h_exec.idempotency_complete,
             annotations=NON_DESTRUCTIVE,
         ),
+        MCPTool(
+            name="ac_idempotency_release",
+            description=("Drop an in_progress idempotency 'key' in named store "
+                         "'name' after its work failed, so a retry runs it "
+                         "(completed keys are kept). Returns {released}."),
+            input_schema=schema(
+                {"name": {"type": "string"}, "key": {"type": "string"}},
+                ["name", "key"]),
+            handler=h_exec.idempotency_release,
+            annotations=NON_DESTRUCTIVE,
+        ),
     ]
 
 
