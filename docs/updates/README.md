@@ -58,6 +58,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260924-46 | 2026-09-24 | Config and plumbing: redacted failure tickets, contained plugin directories, Unicode search terms, sturdier chatops and trace spans | #bugfix #audit #security | [2026-09](2026-09.md) |
 | U-20260924-45 | 2026-09-24 | Workflow and test tooling: merged shard reports keep errors, waits honour deadlines, strict hit policies and predicates, assert_poll is an assertion | #bugfix #audit #testing | [2026-09](2026-09.md) |
 | U-20260924-44 | 2026-09-24 | Text processing: whole phone and Amex masking, linear PII and secret scans, invisible-character-proof confusables, TR39 script mixing, fuzzy .po entries skipped | #bugfix #audit #security | [2026-09](2026-09.md) |
 | U-20260924-43 | 2026-09-24 | Locators and geometry: no fake sideways scroll, unique stable ids, points inside their cells, A/B stats that survive other writers | #bugfix #audit | [2026-09](2026-09.md) |
@@ -204,7 +205,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | File | Period | Entries |
 |---|---|---:|
-| [2026-09.md](2026-09.md) | 2026-09 | 114 |
+| [2026-09.md](2026-09.md) | 2026-09 | 115 |
 | [2026-08-f.md](2026-08-f.md) | 2026-08 | 1 |
 | [2026-08-e.md](2026-08-e.md) | 2026-08 | 2 |
 | [2026-08-d.md](2026-08-d.md) | 2026-08 | 2 |

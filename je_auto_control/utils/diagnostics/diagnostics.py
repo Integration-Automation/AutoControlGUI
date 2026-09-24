@@ -49,6 +49,12 @@ class DiagnosticsReport:
             for check in self.checks
         )
 
+    @property
+    def has_errors(self) -> bool:
+        """Whether an error-severity check failed (warnings do not count)."""
+        return any(not check.ok and check.severity == _SEVERITY_ERROR
+                   for check in self.checks)
+
     def to_dict(self) -> Dict[str, Any]:
         return {
             "ok": self.ok,

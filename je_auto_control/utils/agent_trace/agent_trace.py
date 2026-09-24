@@ -51,6 +51,8 @@ def _genai_attributes(operation: str, model: Optional[str],
     return attributes
 
 
+_RECORD_ARGUMENTS = frozenset({"model", "system", "input_tokens", "output_tokens", "tool_name"})
+
 class AgentTrace:
     """Collects GenAI-convention spans for one agent run."""
 
@@ -93,11 +95,24 @@ class AgentTrace:
         try:
             yield fields
         except Exception:
-            self.record(operation, duration_s=self._clock() - start,
-                        status=STATUS_ERROR, **kwargs, **fields)
+            self._record_block(operation, start, STATUS_ERROR, kwargs, fields)
             raise
-        self.record(operation, duration_s=self._clock() - start,
-                    status=STATUS_OK, **kwargs, **fields)
+        self._record_block(operation, start, STATUS_OK, kwargs, fields)
+
+    def _record_block(self, operation: str, start: float, status: str,
+                      kwargs: Dict[str, Any], fields: Dict[str, Any]) -> None:
+        """Record an :meth:`operation` span; ``fields`` win and extras become attributes.
+
+        ``**kwargs, **fields`` raised TypeError when a field repeated an
+        argument (``model``) or was not one (``cost_usd``) -- after the work
+        was done, and on the error path in place of the caller's exception.
+        """
+        merged = {**kwargs, **fields}
+        attributes = dict(merged.pop("attributes", None) or {})
+        for key in [key for key in merged if key not in _RECORD_ARGUMENTS]:
+            attributes[key] = merged.pop(key)
+        self.record(operation, duration_s=self._clock() - start, status=status,
+                    attributes=attributes or None, **merged)
 
     def spans(self) -> List[Dict[str, Any]]:
         """Return a copy of the recorded spans."""

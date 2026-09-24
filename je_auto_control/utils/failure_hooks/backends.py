@@ -176,7 +176,10 @@ def _generic_extract(backend_name: str, payload: Dict[str, Any], *,
 
 def _extract_linear_response(backend_name: str,
                               payload: Dict[str, Any]) -> TicketResult:
-    data = ((payload.get("data") or {}).get("issueCreate")) or {}
+    data = payload.get("data")
+    data = (data.get("issueCreate") if isinstance(data, dict) else None) or {}
+    if not isinstance(data, dict):
+        data = {}
     if not data.get("success"):
         errors = payload.get("errors") or data.get("error") or "unknown"
         return TicketResult(

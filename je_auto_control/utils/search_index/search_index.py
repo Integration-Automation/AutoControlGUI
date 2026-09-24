@@ -18,7 +18,9 @@ from typing import (
     Dict, Iterable, List, Optional, Sequence, Set, Tuple, Union,
 )
 
-_TOKEN_RE = re.compile(r"[a-z0-9]+")
+# \w: "[a-z0-9]+" dropped every non-ASCII character, so "登入" was never
+# indexed and "café" became "caf". Underscore splits terms as before.
+_TOKEN_RE = re.compile(r"[^\W_]+")
 
 Docs = Union[Dict[str, str], Iterable[Tuple[str, str]]]
 
@@ -32,8 +34,8 @@ class SearchHit:
 
 
 def tokenize(text: str) -> List[str]:
-    """Lower-case and split ``text`` into alphanumeric terms."""
-    return _TOKEN_RE.findall(str(text).lower())
+    """Case-fold and split ``text`` into alphanumeric terms (any script)."""
+    return _TOKEN_RE.findall(str(text).casefold())
 
 
 class SearchIndex:
@@ -43,7 +45,8 @@ class SearchIndex:
                  stop_words: Optional[Iterable[str]] = None) -> None:
         self._k1 = float(k1)
         self._b = float(b)
-        self._stop = set(stop_words or ())
+        # Folded like the terms: stop_words=["The"] never removed "the".
+        self._stop = {str(word).casefold() for word in (stop_words or ())}
         self._postings: Dict[str, Dict[str, int]] = {}
         self._doc_len: Dict[str, int] = {}
 

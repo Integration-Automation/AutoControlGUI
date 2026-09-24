@@ -30,6 +30,15 @@ def load_plugin_file(path: str) -> Dict[str, Callable[..., Any]]:
     return discover_plugin_commands(module)
 
 
+def _inside(root: pathlib.Path, file_path: pathlib.Path) -> bool:
+    """Whether ``file_path`` resolves to a file under ``root``."""
+    resolved = os.path.realpath(file_path)
+    try:
+        return os.path.commonpath([str(root), resolved]) == str(root)
+    except ValueError:  # another drive
+        return False
+
+
 def load_plugin_directory(directory: str) -> Dict[str, Callable[..., Any]]:
     """Load every ``*.py`` in ``directory`` and merge their AC_* callables."""
     root = pathlib.Path(os.path.realpath(directory))
@@ -38,6 +47,11 @@ def load_plugin_directory(directory: str) -> Dict[str, Callable[..., Any]]:
     merged: Dict[str, Callable[..., Any]] = {}
     for file_path in sorted(root.glob("*.py")):
         if file_path.name.startswith("_"):
+            continue
+        if not _inside(root, file_path):
+            # A symlink to /tmp/x.py was imported (run) like any plugin.
+            autocontrol_logger.error("plugin %s resolves outside %s; skipped",
+                                     file_path, root)
             continue
         try:
             commands = load_plugin_file(str(file_path))

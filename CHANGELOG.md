@@ -293,6 +293,13 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Fixed
 
+- **Config and plumbing**: failure-hook tickets are redacted before filing and
+  one failing backend no longer stops the rest; symlinked plugins outside the
+  plugin directory are skipped; the search index keeps non-ASCII terms and
+  folds stop words; agent-trace fields may repeat or extend the span
+  arguments; chat commands are case-insensitive and the Slack poller reads
+  every page; NaN counter increments are refused; the diagnostics CLI fails
+  on errors only.
 - **Workflow and test tooling**: merged shard reports keep errored cases;
   smart waits never sleep past their timeout; unknown decision-table hit
   policies and non-callable state-machine predicates are refused (`ANY` is

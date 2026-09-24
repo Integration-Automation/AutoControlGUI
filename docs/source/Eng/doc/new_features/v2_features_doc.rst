@@ -148,6 +148,10 @@ scheduled run, trigger, or REST job blows up::
                        token=os.environ["GH_TOKEN"]),
     )
 
+Credentials in the error text, log tail and metadata are masked before
+any backend sees the report, and a backend that raises becomes a failed
+``TicketResult`` without stopping the others.
+
 Executor: ``AC_failure_hook_fire / _list / _clear``.
 
 

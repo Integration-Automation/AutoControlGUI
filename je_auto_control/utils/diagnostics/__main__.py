@@ -28,7 +28,9 @@ def main(_argv: Optional[list] = None) -> int:
         f"\nSummary: {summary['count']} checks, "
         f"{summary['failed']} failed, status={'OK' if report.ok else 'FAIL'}"
     )
-    return 0 if report.ok else 1
+    # As documented: exit 1 for errors only. A failed warn-level check (no
+    # mouse on a headless box) made the smoke test fail.
+    return 1 if report.has_errors else 0
 
 
 if __name__ == "__main__":

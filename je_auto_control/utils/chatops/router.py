@@ -24,7 +24,8 @@ from je_auto_control.utils.sqlite_support import SQLITE_ERRORS
 # come back as a chat reply, not escape and kill the transport's poll loop.
 _HANDLER_ERRORS: Tuple[Type[BaseException], ...] = (
     RuntimeError, OSError, ValueError, TypeError, LookupError,
-    AttributeError, AutoControlException, *SQLITE_ERRORS,
+    AttributeError, ImportError, ArithmeticError, AutoControlException,
+    *SQLITE_ERRORS,
 )
 
 
@@ -135,7 +136,8 @@ class CommandRouter:
 
     def _dispatch_argv(self, argv: List[str],
                        context: Dict[str, Any]) -> CommandResult:
-        name, rest = argv[0], argv[1:]
+        # Names are registered lowercased; "/Help" was an unknown command.
+        name, rest = argv[0].lower(), argv[1:]
         with self._lock:
             spec = self._commands.get(name)
         if spec is None:

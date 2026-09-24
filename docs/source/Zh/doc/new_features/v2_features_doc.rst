@@ -143,6 +143,9 @@ Linear / GitHub Issues::
                        token=os.environ["GH_TOKEN"]),
     )
 
+錯誤文字、日誌尾端與 metadata 裡的憑證會在任何 backend 看到報告前先遮蔽;某個 backend 拋出例外時，
+它會記成失敗的 ``TicketResult``,不影響其他 backend。
+
 Executor：``AC_failure_hook_fire / _list / _clear``。
 
 

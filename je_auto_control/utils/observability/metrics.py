@@ -130,8 +130,9 @@ class Counter(_MetricBase):
 
     def inc(self, amount: float = 1.0,
             *, labels: Optional[Dict[str, str]] = None) -> None:
-        if amount < 0:
-            raise ValueError("Counter increment must be non-negative")
+        # "not >= 0": NaN passed "amount < 0" and left the counter NaN for good.
+        if not amount >= 0:
+            raise ValueError("Counter increment must be a non-negative number")
         key = self._labels_key(labels)
         with self._lock:
             self._values[key] = self._values.get(key, 0.0) + float(amount)

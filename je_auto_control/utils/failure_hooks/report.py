@@ -1,7 +1,7 @@
 """Failure-record data class shared by every ticket backend."""
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass, field, replace
 from datetime import datetime, timezone
 from typing import Any, Dict, Optional
 
@@ -25,6 +25,19 @@ class FailureReport:
 
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)
+
+    def redacted(self) -> "FailureReport":
+        """A copy with credentials masked in the error, log tail and metadata.
+
+        Tickets go to external trackers; a log tail holding
+        ``Authorization: Bearer ...`` was filed verbatim.
+        """
+        from je_auto_control.utils.config_redaction.config_redaction import (
+            redact_config, redact_secret_text,
+        )
+        return replace(self, error_text=redact_secret_text(self.error_text),
+                       log_tail=redact_secret_text(self.log_tail),
+                       metadata=redact_config(dict(self.metadata)))
 
     def render_summary(self) -> str:
         """Compact one-line summary suitable for a ticket title."""

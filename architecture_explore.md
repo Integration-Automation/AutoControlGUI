@@ -20,7 +20,7 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 | 指標 | 數值 |
 | --- | ---: |
 | Python 模組總數（含周邊子專案） | 1,049 |
-| 程式碼總行數 | 147,804 |
+| 程式碼總行數 | 147,883 |
 | `je_auto_control/utils/` 子套件數 | 310 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 773 |
 | 套件門面 `__all__` 公開名稱數 | 1,241 |
@@ -271,7 +271,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.1 執行引擎與腳本資產
 
-> 24 個套件、約 14,124 行。
+> 24 個套件、約 14,138 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -288,7 +288,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/json/` | 99 | action JSON 檔讀寫與正規化格式化（`fmt --check` 的後端） |
 | `utils/json_store/` | 232 | JSON 字典檔持久化的共用小工具（內部管線） |
 | `utils/loop_guard/` | 158 | 機械式卡死迴圈偵測（agent loop 用） |
-| `utils/plugin_loader/` | 128 | 掃描外部 Python 外掛目錄並註冊其 `AC_` callable |
+| `utils/plugin_loader/` | 142 | 掃描外部 Python 外掛目錄並註冊其 `AC_` callable |
 | `utils/plugin_sdk/` | 80 | 外掛 SDK：透過 entry points 發佈／載入第三方 `AC_*` 指令 |
 | `utils/project/` | 186 | 專案腳手架：建立目錄結構與範本 action 檔 |
 | `utils/recording_edit/` | 150 | 不重錄的前提下裁切／過濾／縮放已錄製的 action list |
@@ -302,14 +302,14 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.2 框架基礎設施
 
-> 14 個套件、約 2,860 行。
+> 14 個套件、約 2,868 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
 | `utils/callback/` | 204 | Observer 模式：`callback_executor` 以字串名觸發功能，執行後呼叫回呼 |
 | `utils/config_bundle/` | 424 | 使用者設定的單檔匯出／匯入 |
 | `utils/critical_exit/` | 98 | 監看緊急停止鍵的守護執行緒，用於中止失控腳本 |
-| `utils/diagnostics/` | 322 | 跨子系統的「一切正常嗎」健檢，附 `python -m` 進入點 |
+| `utils/diagnostics/` | 330 | 跨子系統的「一切正常嗎」健檢，附 `python -m` 進入點 |
 | `utils/dbus_client/` | 683 | 只用標準函式庫的 D-Bus session bus 客戶端。原本在 `linux_wayland/` 為 portal 交握而寫，AT-SPI 無障礙後端成為第二個使用者後搬到這裡（`utils/` 在分層上在各 OS 套件之上） |
 | `utils/exception/` | 212 | **例外階層根**。所有錯誤繼承 `AutoControlException`，加上集中式錯誤訊息字串（`exception_tags`） |
 | `utils/failure_bundle/` | 219 | 可攜、已遮蔽的失敗診斷 ZIP（截圖 + 診斷 + log 尾段） |
@@ -414,7 +414,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.6 OCR 與文字理解
 
-> 19 個套件、約 3,329 行。
+> 19 個套件、約 3,332 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -431,7 +431,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/pii_text/` | 119 | 自由文字中的 PII 偵測與遮蔽（email／電話／SSN／卡號／IP／IBAN） |
 | `utils/readability/` | 137 | 可讀性評分（Flesch、Flesch-Kincaid、Gunning Fog、SMOG、ARI） |
 | `utils/reading_flow/` | 119 | 以遞迴 XY-cut 推導欄位感知的閱讀順序 |
-| `utils/search_index/` | 142 | 記憶體內 BM25／TF-IDF 全文檢索 |
+| `utils/search_index/` | 145 | 記憶體內 BM25／TF-IDF 全文檢索 |
 | `utils/text_blocks/` | 88 | 把 OCR 行組成段落與項目符號／編號清單 |
 | `utils/text_diff/` | 187 | unified diff 產生、套用與三方合併 |
 | `utils/text_normalize/` | 82 | Unicode 正規化與 slug 產生 |
@@ -493,7 +493,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.9 AI / Agent / LLM
 
-> 13 個套件、約 21,265 行。
+> 13 個套件、約 21,280 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -501,7 +501,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/agent/` | 1,438 | 閉環 Computer-Use Agent 主迴圈 + Anthropic／OpenAI／Computer-Use 三後端 |
 | `utils/agent_memory/` | 152 | agent 的持久化情節記憶（goal → trajectory → outcome） |
 | `utils/agent_replay/` | 63 | 可攜的 agent 軌跡追蹤（記錄 observation→action 並重播） |
-| `utils/agent_trace/` | 153 | agent 可觀測性：OpenTelemetry GenAI 慣例的 LLM span |
+| `utils/agent_trace/` | 168 | agent 可觀測性：OpenTelemetry GenAI 慣例的 LLM span |
 | `utils/cost_telemetry/` | 307 | 每次呼叫的 LLM 成本遙測：token 數 + 估算美金 |
 | `utils/cua_action/` | 127 | 標準化 computer-use 動作結構（Anthropic／OpenAI → `AC_*`） |
 | `utils/llm/` | 365 | 自然語言 → action list 規劃器 + Anthropic／null 後端 |
@@ -526,12 +526,12 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.11 伺服器、網路協定與外部整合
 
-> 24 個套件、約 6,430 行。
+> 24 個套件、約 6,448 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
 | `utils/acme_v2/` | 614 | 完整 ACME v2 用戶端（RFC 8555），不依賴 certbot |
-| `utils/chatops/` | 649 | Chat-ops bot：接收 Slack／Discord／webhook 的 slash 指令並路由到動作 |
+| `utils/chatops/` | 667 | Chat-ops bot：接收 Slack／Discord／webhook 的 slash 指令並路由到動作 |
 | `utils/cookie_jar/` | 121 | RFC 6265 cookie jar |
 | `utils/email_send/` | 116 | SMTP 寄信（email 觸發器的發送端搭檔） |
 | `utils/events/` | 82 | 對外 CloudEvents 發送（執行生命週期事件） |
@@ -557,7 +557,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.12 報表、可觀測性與測試治理
 
-> 34 個套件、約 7,209 行。
+> 34 個套件、約 7,230 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -568,13 +568,13 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/canonical_log/` | 96 | canonical log line 與結構化 JSON 日誌 |
 | `utils/ci_annotations/` | 62 | 由執行結果輸出 CI 工作流程註記（GitHub Actions） |
 | `utils/compliance/` | 136 | 合規：把治理證據對應到 SOC2／ISO 27001 控制項 |
-| `utils/failure_hooks/` | 395 | 失敗 → 工單自動化：開 Jira／Linear／GitHub issue |
+| `utils/failure_hooks/` | 415 | 失敗 → 工單自動化：開 Jira／Linear／GitHub issue |
 | `utils/failure_signature/` | 74 | 把錯誤訊息正規化成穩定的 SHA-256 失敗簽章並分群 |
 | `utils/flake_cluster/` | 103 | 以共同失敗 Jaccard 相似度為易碎測試分群 |
 | `utils/flakiness/` | 150 | 以執行歷史分析不穩定測試 |
 | `utils/generate_report/` | 293 | HTML／JSON／XML 三種報表產生器（Template Method） |
 | `utils/media_assert/` | 233 | 媒體斷言：音訊活動與影片動態檢查 |
-| `utils/observability/` | 696 | Prometheus 格式指標 + OpenTelemetry 相容 trace + `/metrics` 匯出伺服器 |
+| `utils/observability/` | 697 | Prometheus 格式指標 + OpenTelemetry 相容 trace + `/metrics` 匯出伺服器 |
 | `utils/otlp_export/` | 81 | OTLP/JSON span 匯出 |
 | `utils/percentiles/` | 116 | 可合併的串流延遲摘要與精確百分位數 |
 | `utils/process_doc/` | 85 | 由錄製的 action list 產生逐步 SOP 文件 |
@@ -1080,6 +1080,6 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `osx/` | 17 | 919 |
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 837 |
-| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 677 | 51,966 |
-| **總計** | **1,043** | **147,739** |
+| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 677 | 52,045 |
+| **總計** | **1,043** | **147,818** |
 

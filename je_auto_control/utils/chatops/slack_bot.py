@@ -34,6 +34,7 @@ from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 _SLACK_API = "https://slack.com/api"
 _HTTP_TIMEOUT = 15.0
 _MIN_POLL_INTERVAL = 1.0
+_MAX_PAGES = 20  # 1000 messages per poll
 _MAX_BACKOFF = 60.0
 
 
@@ -126,7 +127,10 @@ class SlackBot:
                                 "slack_ts": message.get("ts"),
                                 "slack_channel": self.channel_id},
             )
-        except (RuntimeError, ValueError, AutoControlException) as error:
+        # Defence in depth, as wide as the router's own boundary: an
+        # ImportError from a handler's lazy import ended run_forever for good.
+        except (RuntimeError, ValueError, TypeError, LookupError, AttributeError,
+                ImportError, ArithmeticError, OSError, AutoControlException) as error:
             self.post_message(f"router error: {error}")
             return None
         if result is None:
@@ -144,15 +148,27 @@ class SlackBot:
         return self._api_post("chat.postMessage", payload)
 
     def _fetch_messages(self) -> list:
+        """Every message since ``last_seen_ts``, newest first, across pages.
+
+        One page of 50 was read and ``last_seen_ts`` then moved past the
+        newest, so older messages beyond the first page were never routed.
+        """
         params: Dict[str, Any] = {
             "channel": self.channel_id,
             "limit": 50,
         }
         if self.last_seen_ts:
             params["oldest"] = self.last_seen_ts
-        body = self._api_get("conversations.history", params)
-        messages = body.get("messages") or []
-        return [message for message in messages if isinstance(message, dict)]
+        messages: list = []
+        for _ in range(_MAX_PAGES):
+            body = self._api_get("conversations.history", params)
+            messages.extend(message for message in body.get("messages") or []
+                            if isinstance(message, dict))
+            cursor = (body.get("response_metadata") or {}).get("next_cursor")
+            if not body.get("has_more") or not cursor:
+                break
+            params["cursor"] = cursor
+        return messages
 
     def _is_self(self, message: Dict[str, Any]) -> bool:
         if message.get("subtype") == "bot_message":
