@@ -13,7 +13,9 @@ awkward to extract from. This adds a focused JSONPath subset:
   (``op`` ∈ == != < <= > >=; ``v`` a JSON number, quoted string, true,
   false or null);
   ``@.a.b`` reaches into nested objects and ``[?(@.k)]`` tests that ``k``
-  exists. Values of different types never compare equal (``true != 1``).
+  exists. Values of different types never compare equal (``true != 1``);
+  ``<`` / ``>`` order only two numbers or two strings (RFC 9535).
+* ``['name']``         quoted member, with RFC 9535 escapes decoded
 
 A path this subset cannot read -- an unsupported filter, an unterminated
 ``[``, a stray character -- raises ``ValueError`` rather than matching
@@ -24,11 +26,8 @@ Pure standard library (``re``); imports no ``PySide6``.
 import re
 from typing import Any, Dict, List, Mapping, Tuple
 
-_COMPARATORS = {
-    "==": lambda a, b: a == b, "!=": lambda a, b: a != b,
-    "<": lambda a, b: a < b, "<=": lambda a, b: a <= b,
-    ">": lambda a, b: a > b, ">=": lambda a, b: a >= b,
-}
+_ESCAPES = {"b": "\b", "f": "\f", "n": "\n", "r": "\r", "t": "\t",
+            "/": "/", "\\": "\\", "'": "'", '"': '"'}
 
 # The field path of a filter; the operator and value are split off by hand, so
 # no pattern has two quantifiers competing for the same characters.
@@ -40,10 +39,49 @@ _BARE_KEY = re.compile(r"[\w-]+")
 _ABSENT = object()
 
 
+def _scan_quoted(text: str, start: int) -> Tuple[str, int]:
+    """Decode the string literal whose quote is at ``start``; return it and the index after its closing quote.
+
+    RFC 9535 2.3.1.2 escapes are decoded (``\\'``, ``\\"``, ``\\uXXXX`` ...);
+    a missing closing quote raises ``ValueError``.
+    """
+    quote, index = text[start], start + 1
+    chars: List[str] = []
+    while index < len(text):
+        char = text[index]
+        if char == quote:
+            return "".join(chars), index + 1
+        if char == "\\":
+            decoded, index = _escape(text, index + 1)
+            chars.append(decoded)
+            continue
+        chars.append(char)
+        index += 1
+    raise ValueError(f"unterminated string in JSONPath {text!r}")
+
+
+def _escape(text: str, index: int) -> Tuple[str, int]:
+    """The character an escape stands for (``index`` is after the backslash) and the index after it."""
+    code = text[index:index + 1]
+    if code == "u" and re.fullmatch(r"[0-9A-Fa-f]{4}", text[index + 1:index + 5]):
+        return chr(int(text[index + 1:index + 5], 16)), index + 5
+    if code in _ESCAPES:
+        return _ESCAPES[code], index + 1
+    raise ValueError(f"invalid escape in JSONPath {text!r}")
+
+
+def _whole_string(raw: str) -> str:
+    """``raw`` as one quoted string literal; mismatched or trailing quotes raise."""
+    value, end = _scan_quoted(raw, 0)
+    if end != len(raw):   # ['a','b'] used to be the key "a','b"
+        raise ValueError(f"unsupported JSONPath string {raw!r}")
+    return value
+
+
 def _parse_value(raw: str) -> Any:
     raw = raw.strip()
-    if raw[:1] in "'\"" and raw[-1:] in "'\"":
-        return raw[1:-1]
+    if raw[:1] in ("'", '"'):
+        return _whole_string(raw)
     if _JSON_NUMBER.fullmatch(raw):
         return float(raw) if any(ch in raw for ch in ".eE") else int(raw)
     if raw in _LITERALS:
@@ -63,8 +101,8 @@ def _parse_bracket(inner: str) -> Tuple[str, Any]:
     if inner.startswith("?"):
         body = inner[1:].strip().lstrip("(").rstrip(")").strip()
         return ("filter", _parse_filter(body, inner))
-    if inner[:1] in "'\"" and inner[-1:] in "'\"":
-        return ("key", inner[1:-1])
+    if inner[:1] in ("'", '"'):
+        return ("key", _whole_string(inner))
     if re.fullmatch(r"-?\d+", inner):
         return ("index", int(inner))
     if not _BARE_KEY.fullmatch(inner):
@@ -105,9 +143,11 @@ def _read_bracket(path: str, start: int) -> Tuple[str, int]:
     opener = path[start + 1:start + 2]
     search_from = start + 1
     if opener in ("'", '"'):
-        search_from = path.find(opener, start + 2) + 1
-    closer = ")]" if opener == "?" and path.find(")]", start) != -1 else "]"
-    close = path.find(closer, search_from) if search_from else -1
+        search_from = _scan_quoted(path, start + 1)[1]
+    # Only a parenthesised filter ends at ")]": searching for it in
+    # "[?@.a==1].b[?(@.c)]" ran on into the next filter.
+    closer = ")]" if path.startswith("?(", start + 1) else "]"
+    close = path.find(closer, search_from)
     if close == -1:
         raise ValueError(f"unterminated '[' in JSONPath {path!r}")
     close += len(closer) - 1
@@ -161,17 +201,35 @@ def _field(node: Any, fields: Tuple[str, ...]) -> Any:
     return node
 
 
+def _json_equal(left: Any, right: Any) -> bool:
+    # Python has True == 1; JSON does not.
+    return isinstance(left, bool) == isinstance(right, bool) and left == right
+
+
+def _json_less(left: Any, right: Any) -> bool:
+    """RFC 9535 "<": only two numbers or two strings are ordered (Python ordered False < True)."""
+    def is_number(value: Any) -> bool:
+        return isinstance(value, (int, float)) and not isinstance(value, bool)
+    if is_number(left) and is_number(right):
+        return left < right
+    return isinstance(left, str) and isinstance(right, str) and left < right
+
+
+_COMPARATORS = {
+    "==": _json_equal, "!=": lambda a, b: not _json_equal(a, b),
+    "<": _json_less, ">": lambda a, b: _json_less(b, a),
+    # "<=" is "<" or "==", so null <= null holds.
+    "<=": lambda a, b: _json_less(a, b) or _json_equal(a, b),
+    ">=": lambda a, b: _json_less(b, a) or _json_equal(a, b),
+}
+
+
 def _match_filter(node: Any, spec: Tuple[Tuple[str, ...], Any, Any]) -> bool:
     fields, op, value = spec
     actual = _field(node, fields)
     if actual is _ABSENT or op is None:
         return actual is not _ABSENT
-    if isinstance(actual, bool) != isinstance(value, bool):
-        return op == "!="   # Python has True == 1; JSON does not
-    try:
-        return _COMPARATORS[op](actual, value)
-    except TypeError:
-        return False
+    return _COMPARATORS[op](actual, value)
 
 
 def _on_key(node: Any, arg: Any) -> List[Any]:

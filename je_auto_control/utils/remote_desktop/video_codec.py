@@ -22,6 +22,8 @@ from __future__ import annotations
 
 from typing import Any, Iterable, Optional
 
+from je_auto_control.utils.logging.logging_instance import autocontrol_logger
+
 CODEC_JPEG = "jpeg"
 CODEC_H264 = "h264"
 CODEC_HEVC = "hevc"
@@ -141,8 +143,17 @@ class H264CodecProvider(CodecProvider):
         image: Image.Image = Image.open(BytesIO(jpeg_bytes))
         if image.mode != "RGB":
             image = image.convert("RGB")
-        stream = self._ensure_stream(image.width, image.height)
+        # yuv420p needs even dimensions: libx264 refused to open for a
+        # 101x75 frame. The odd last row / column is dropped.
+        width, height = image.width & ~1, image.height & ~1
+        if width < 2 or height < 2:
+            return ()
+        if (width, height) != image.size:
+            image = image.crop((0, 0, width, height))
+        stream = self._ensure_stream(width, height)
         frame = av.VideoFrame.from_image(image)
+        if (width, height) != (stream.width, stream.height):
+            frame = frame.reformat(width=stream.width, height=stream.height)
         frame.pts = None
         return [bytes(packet) for packet in stream.encode(frame)]
 
@@ -150,19 +161,24 @@ class H264CodecProvider(CodecProvider):
         if self._closed:
             return
         self._closed = True
-        if self._stream is not None:
-            try:
+        import av
+        errors = (ValueError, RuntimeError, av.FFmpegError)
+        try:
+            if self._stream is not None:
                 # Drain remaining buffered packets — PyAV requires iterating
                 # ``encode(None)`` to flush trailing frames before close.
                 for _packet in self._stream.encode(None):
                     del _packet
-            except (ValueError, RuntimeError):
-                pass
-        if self._container is not None:
-            try:
-                self._container.close()
-            except (ValueError, RuntimeError):
-                pass
+        except errors as error:
+            autocontrol_logger.info("H.264 flush failed: %r", error)
+        finally:
+            # Closed even when the flush failed: an encoder that never
+            # opened left the container open.
+            if self._container is not None:
+                try:
+                    self._container.close()
+                except errors as error:
+                    autocontrol_logger.info("H.264 container close failed: %r", error)
 
 
 def is_h264_available() -> bool:

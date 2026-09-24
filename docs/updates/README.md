@@ -60,6 +60,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 |---|---|---|---|---|
 | U-20260924-65 | 2026-09-24 | Make the poison-email regression test independent of the CPython patch release | #ci #test | [2026-09](2026-09.md) |
 | U-20260924-64 | 2026-09-24 | Per-flow history for flow selection and sharding, depth-safe XY-cut, config env and lossless ints, null-aware uniqueness, CLDR unit lists, MIME-typed A2A modes, UIA Value / RangeValue ids | #bugfix #audit | [2026-09](2026-09.md) |
+| U-20260924-63 | 2026-09-24 | JSONPath quoting and RFC 9535 ordering, OCR fields read below their label, hardware encoders that really open, odd-sized H.264 frames | #bugfix #audit | [2026-09](2026-09.md) |
 | U-20260924-62 | 2026-09-24 | Text, config and registries: whole -or-later licences, strict REST booleans, .po entries without blank lines, CLDR plural operands, host-bound file URIs, coturn and XML injection | #bugfix #audit #security | [2026-09](2026-09.md) |
 | U-20260924-61 | 2026-09-24 | Data utilities: JWT expiry and canonical segments, bounded similarity, framework DAG errors, strict time-series and schema arguments, safe flag serves | #bugfix #audit | [2026-09](2026-09.md) |
 | U-20260924-60 | 2026-09-24 | AC_idempotency_release: scripts and MCP clients can free a key whose work failed | #feature #done | [2026-09](2026-09.md) |
@@ -223,7 +224,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | File | Period | Entries |
 |---|---|---:|
-| [2026-09.md](2026-09.md) | 2026-09 | 134 |
+| [2026-09.md](2026-09.md) | 2026-09 | 135 |
 | [2026-08-f.md](2026-08-f.md) | 2026-08 | 1 |
 | [2026-08-e.md](2026-08-e.md) | 2026-08 | 2 |
 | [2026-08-d.md](2026-08-d.md) | 2026-08 | 2 |

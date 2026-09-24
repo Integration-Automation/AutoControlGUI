@@ -314,6 +314,12 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
   stops a mailbox's polling; mailbox names with spaces or brackets work; a
   string `max_runs` stops the job; a corrupt .xlsx data source is an ordinary
   action error.
+- **JSONPath, OCR structure and H.264**: quoted unions and mismatched quotes
+  raise, quoted names decode escapes, parenless filters no longer run into the
+  next filter, and ordering follows RFC 9535; OCR field values come from the
+  cell below the label; only hardware encoders that really open are listed and
+  each gets options it accepts (NVENC works); odd-sized frames encode and
+  `close()` always closes the container.
 - **Text, config and registries**: `-or-later` licences are no longer split
   (a denylist naming one now holds); REST USB booleans must be JSON booleans;
   `.po` entries need no blank line between them and CRLF files parse;

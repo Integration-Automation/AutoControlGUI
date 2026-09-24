@@ -41,12 +41,49 @@ _original_encode_frame = None
 _active_codec: Optional[str] = None
 
 
+_OPEN_ERRORS = (av.FFmpegError, ValueError, OSError)
+# Low-latency options per encoder. libx264's "tune=zerolatency" makes NVENC
+# refuse to open, and NVENC buffers frames unless "delay=0"; an encoder not
+# listed gets FFmpeg's defaults.
+_ENCODER_OPTIONS = {
+    "libx264": {"level": "31", "tune": "zerolatency"},
+    "h264_nvenc": {"level": "31", "tune": "ull", "zerolatency": "1", "delay": "0"},
+    "h264_amf": {"level": "31", "usage": "ultralowlatency"},
+}
+_PROBE_SIZE = (640, 480)
+_PROBE_BITRATE = 1_000_000
+_PROBE_FPS = 30
+
+
 def _can_open(codec_name: str) -> bool:
+    """Whether ``codec_name`` opens with the settings the host uses.
+
+    ``CodecContext.create`` alone succeeds for any encoder FFmpeg was built
+    with, so a QuickSync encoder was listed on a machine with no Intel GPU
+    and only failed at the first frame, past the libx264 fallback.
+    """
     try:
-        av.CodecContext.create(codec_name, "w")
+        _open_configured(codec_name, *_PROBE_SIZE, _PROBE_BITRATE, _PROBE_FPS)
         return True
-    except (av.FFmpegError, ValueError, OSError):
+    except _OPEN_ERRORS:
         return False
+
+
+def _open_configured(codec_name: str, width: int, height: int,
+                     bitrate: int, fps: int):
+    """Create, configure and open an encoder context (raises when it cannot open)."""
+    from fractions import Fraction
+    ctx = av.CodecContext.create(codec_name, "w")
+    ctx.width = width
+    ctx.height = height
+    ctx.bit_rate = bitrate
+    ctx.pix_fmt = "yuv420p"
+    ctx.framerate = Fraction(fps, 1)
+    ctx.time_base = Fraction(1, fps)
+    ctx.options = dict(_ENCODER_OPTIONS.get(codec_name, {}))
+    ctx.profile = "Baseline"
+    ctx.open()
+    return ctx
 
 
 def available_hardware_codecs() -> List[str]:
@@ -72,24 +109,19 @@ def _shape_changed(self_codec, frame, target_bitrate) -> bool:
 
 def _open_codec_context(target: str, frame, target_bitrate: int,
                         max_frame_rate: int):
-    """Create a fresh CodecContext for ``target`` (or libx264 on failure)."""
+    """Open an encoder for ``target``, or libx264 when it cannot open.
+
+    Opened here, not at the first ``encode``: an encoder that fails to
+    open used to fail every frame instead of falling back.
+    """
+    shape = (frame.width, frame.height, target_bitrate, max_frame_rate)
     try:
-        ctx = av.CodecContext.create(target, "w")
-    except (av.FFmpegError, ValueError, OSError) as exc:
+        return _open_configured(target, *shape)
+    except _OPEN_ERRORS as exc:
         autocontrol_logger.warning(
-            "hw codec %s create failed, using libx264: %r", target, exc,
+            "hw codec %s open failed, using libx264: %r", target, exc,
         )
-        ctx = av.CodecContext.create("libx264", "w")
-    ctx.width = frame.width
-    ctx.height = frame.height
-    ctx.bit_rate = target_bitrate
-    ctx.pix_fmt = "yuv420p"
-    from fractions import Fraction
-    ctx.framerate = Fraction(max_frame_rate, 1)
-    ctx.time_base = Fraction(1, max_frame_rate)
-    ctx.options = {"level": "31", "tune": "zerolatency"}
-    ctx.profile = "Baseline"
-    return ctx
+        return _open_configured("libx264", *shape)
 
 
 def install_hardware_codec(codec_name: str) -> bool:
