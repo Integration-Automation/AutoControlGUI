@@ -72,7 +72,8 @@ def test_copyleft_spellings_are_denied_and_every_entry_counts():
 
 def test_only_a_whole_placeholder_is_skipped_by_the_secrets_scan():
     assert scan_secrets({"password": "${user}hunter2-real-password"})
-    assert scan_secrets({"note": "${x} AKIAIOSFODNN7EXAMPLE"})
+    aws_shaped = "AKIA" + "ABCDEFGHIJKLMNOP"   # matches the aws-access-key pattern, not real
+    assert scan_secrets({"note": "${x} " + aws_shaped})
     assert scan_secrets({"password": "${secrets.db}"}) == []
 
 
