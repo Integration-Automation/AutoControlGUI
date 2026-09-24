@@ -85,7 +85,7 @@ def _applies(requirement: str) -> bool:
     if "extra" in marker:
         return False
     try:
-        from packaging.markers import InvalidMarker, Marker
+        from packaging.markers import InvalidMarker, Marker  # type: ignore[import-not-found]
     except ImportError:
         return True
     try:
