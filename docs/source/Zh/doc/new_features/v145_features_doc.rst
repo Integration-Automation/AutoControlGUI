@@ -24,7 +24,8 @@
 
 ``image_histogram`` 回傳逐通道正規化直方圖的平面清單(``space`` = ``hsv`` / ``rgb`` / ``gray``;每通道貢獻
 ``bins`` 個值)。``compare_histograms`` 支援 ``correlation`` / ``chisqr`` / ``intersection`` /
-``bhattacharyya``(correlation / intersection 越高越相似;距離方法越高越不同)。``histogram_changed`` 比較
+``bhattacharyya``(correlation / intersection 越高越相似;距離方法越高越不同)。``intersection`` 正規化到
+``0..1``(1 = 相同),同一個門檻適用任何 bin 數。``histogram_changed`` 比較
 ``reference`` 與 ``current``(預設為螢幕)並回傳布林值,會依相似 vs 距離方法自動翻轉門檻比較方向。
 
 執行器命令

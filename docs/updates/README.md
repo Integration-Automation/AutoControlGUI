@@ -58,6 +58,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260924-51 | 2026-09-24 | Media and analysis: exact bucket edges, converged KS p-values, normalised histogram intersection, honest video motion and visual-diff percentages | #bugfix #audit | [2026-09](2026-09.md) |
 | U-20260924-50 | 2026-09-24 | Image matching: screen coordinates everywhere, masked rotated templates, flat templates refused on every path, per-blob peaks | #bugfix #audit #vision | [2026-09](2026-09.md) |
 | U-20260924-49 | 2026-09-24 | System and device helpers: keep-awake that ends with the process, real content types, strict checksums and compliance, D-Bus and window-capture fixes | #bugfix #audit | [2026-09](2026-09.md) |
 | U-20260924-48 | 2026-09-24 | Agent and action helpers: assertions are never healed, releases follow healed presses, live actionability gates, innermost grounding | #bugfix #audit #agent | [2026-09](2026-09.md) |
@@ -209,7 +210,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | File | Period | Entries |
 |---|---|---:|
-| [2026-09.md](2026-09.md) | 2026-09 | 120 |
+| [2026-09.md](2026-09.md) | 2026-09 | 121 |
 | [2026-08-f.md](2026-08-f.md) | 2026-08 | 1 |
 | [2026-08-e.md](2026-08-e.md) | 2026-08 | 2 |
 | [2026-08-d.md](2026-08-d.md) | 2026-08 | 2 |

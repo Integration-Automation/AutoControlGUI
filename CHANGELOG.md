@@ -293,6 +293,12 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Fixed
 
+- **Media and analysis**: float bucket edges land in their own bucket; KS
+  p-values for near-identical samples are 1.0; histogram intersection is
+  normalised to 0..1; unreadable or too-short videos are errors, not "no
+  motion"; negative SSIM ignore boxes and masked visual-diff pixels are
+  handled; grayscale arrays, PIL frames and non-ASCII paths load correctly;
+  pypdf's DependencyError is contained.
 - **Image matching**: rotated, trust, feature, edge, shape, line and saliency
   finders report screen coordinates (region and multi-monitor origins
   included); rotated templates are matched with a mask and `sqdiff_normed`

@@ -20,7 +20,7 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 | 指標 | 數值 |
 | --- | ---: |
 | Python 模組總數（含周邊子專案） | 1,049 |
-| 程式碼總行數 | 148,400 |
+| 程式碼總行數 | 148,481 |
 | `je_auto_control/utils/` 子套件數 | 310 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 774 |
 | 套件門面 `__all__` 公開名稱數 | 1,241 |
@@ -370,14 +370,14 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.5 影像辨識與畫面分析
 
-> 37 個套件、約 5,512 行。
+> 37 個套件、約 5,559 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
 | `utils/annotate/` | 115 | 截圖標註：畫框、highlight、箭頭、標籤 |
 | `utils/barcode/` | 53 | 一維條碼（EAN／UPC）解碼，解碼器可注入 |
 | `utils/color_match/` | 127 | 在 HSV 通道上做顏色感知的樣板比對 |
-| `utils/color_region/` | 78 | 以顏色定位畫面區域（遮罩 + 連通元件） |
+| `utils/color_region/` | 96 | 以顏色定位畫面區域（遮罩 + 連通元件） |
 | `utils/color_stats/` | 98 | 區域顏色統計：平均色與主色 |
 | `utils/coordinate_space/` | 84 | 模型網格座標與實體像素之間的座標空間對映 |
 | `utils/cv2_utils/` | 798 | OpenCV 基礎層：擷取後端選擇（`screen_grabber`，Pillow／mss 或平台後端）、截圖、樣板比對（走 `grab_logical`，涵蓋所有螢幕）、螢幕錄影、影片錄製（兩者都經 `frame_clock` 依 fps 配速）、連通元件、影像堆疊的取用口（`optional`，Windows arm64 沒有 wheel 時語意報錯）、非 ASCII 路徑也讀寫得到的影像檔存取（`image_file`） |
@@ -388,7 +388,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/icon_classify/` | 113 | 從像素形狀判斷一個框是哪一類元件 |
 | `utils/image_dedup/` | 90 | 感知雜湊影像去重（Pillow aHash/dHash） |
 | `utils/image_quality/` | 77 | 在 OCR／比對前評分影像品質（銳利度／對比／亮度） |
-| `utils/img_histogram/` | 99 | 顏色直方圖指紋與變化偵測（抗光照） |
+| `utils/img_histogram/` | 105 | 顏色直方圖指紋與變化偵測（抗光照） |
 | `utils/marks_layout/` | 124 | Set-of-Marks 標籤的不重疊排版與可讀配色 |
 | `utils/match_autothresh/` | 114 | Otsu 自動門檻，免去手動調 `min_score` |
 | `utils/match_ensemble/` | 63 | 多樣板共識比對（多張參考圖投票到同一位置） |
@@ -405,12 +405,12 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/screen_grid/` | 146 | 供 VLM 接地用的粗粒度標號網格（點 ↔ 格對映） |
 | `utils/set_of_marks/` | 154 | Set-of-Marks 疊圖：為畫面元素編號供 VLM 指認 |
 | `utils/shape_locator/` | 108 | 以邊緣／輪廓偵測定位元件（矩形／形狀，免樣板） |
-| `utils/ssim/` | 141 | 結構相似度比較：感知分數 + 變化區域 |
+| `utils/ssim/` | 143 | 結構相似度比較：感知分數 + 變化區域 |
 | `utils/subpixel_match/` | 103 | 以二次曲面擬合做次像素級比對精修 |
 | `utils/theme_normalize/` | 92 | 主題無關的影像正規化，讓亮色樣板能配對深色模式 |
-| `utils/video_report/` | 164 | 影片步驟疊圖報告：把截圖加字幕串成操作導覽影片 |
+| `utils/video_report/` | 171 | 影片步驟疊圖報告：把截圖加字幕串成操作導覽影片 |
 | `utils/visual_match/` | 515 | 會回傳信心值的樣板比對（分數、多尺度、find-all + NMS）；擷取走 `grab_logical`，命中座標已加回虛擬桌面原點，單色樣板直接拒收 |
-| `utils/visual_regression/` | 237 | 桌面 GUI 的視覺回歸測試（黃金圖比對） |
+| `utils/visual_regression/` | 251 | 桌面 GUI 的視覺回歸測試（黃金圖比對） |
 
 ### 5.4.6 OCR 與文字理解
 
@@ -557,7 +557,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.12 報表、可觀測性與測試治理
 
-> 34 個套件、約 7,252 行。
+> 34 個套件、約 7,281 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -573,7 +573,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/flake_cluster/` | 103 | 以共同失敗 Jaccard 相似度為易碎測試分群 |
 | `utils/flakiness/` | 150 | 以執行歷史分析不穩定測試 |
 | `utils/generate_report/` | 293 | HTML／JSON／XML 三種報表產生器（Template Method） |
-| `utils/media_assert/` | 233 | 媒體斷言：音訊活動與影片動態檢查 |
+| `utils/media_assert/` | 242 | 媒體斷言：音訊活動與影片動態檢查 |
 | `utils/observability/` | 697 | Prometheus 格式指標 + OpenTelemetry 相容 trace + `/metrics` 匯出伺服器 |
 | `utils/otlp_export/` | 81 | OTLP/JSON span 匯出 |
 | `utils/percentiles/` | 116 | 可合併的串流延遲摘要與精確百分位數 |
@@ -593,18 +593,18 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/test_shard/` | 98 | 以耗時為權重的套件切分與分片結果合併 |
 | `utils/test_suite/` | 527 | QA 套件編排：把扁平 action list 評分為測試案例 + CI 報表 |
 | `utils/time_travel/` | 383 | 錄製 session 的時光回溯除錯（控制器 + 播放器） |
-| `utils/timeseries/` | 143 | 時間序列轉換（rate／降採樣／重採樣） |
+| `utils/timeseries/` | 163 | 時間序列轉換（rate／降採樣／重採樣） |
 | `utils/trace_context/` | 177 | W3C Trace Context 傳遞 |
 
 ### 5.4.13 資料來源、結構驗證與 i18n
 
-> 24 個套件、約 4,332 行。
+> 24 個套件、約 4,337 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
 | `utils/checksum/` | 138 | 檢查碼演算法：Luhn、Verhoeff、Damm、ISO 7064 MOD 97-10 |
 | `utils/config_schema/` | 109 | 型別化設定結構驗證 |
-| `utils/data_drift/` | 125 | 分布漂移偵測 |
+| `utils/data_drift/` | 128 | 分布漂移偵測 |
 | `utils/data_profile/` | 121 | 資料剖析與結構推斷 |
 | `utils/data_quality/` | 201 | 資料品質：列結構驗證、欄位擷取、遮蔽 |
 | `utils/data_source/` | 192 | 資料驅動執行：從 CSV／JSON／SQLite／Excel 載入資料列 |
@@ -620,7 +620,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/locale_parse/` | 79 | 地區感知數字／貨幣／日期解析與格式化（選用 babel） |
 | `utils/message_format/` | 254 | ICU-lite MessageFormat（plural／select／selectordinal） |
 | `utils/office/` | 180 | Office 文件無頭讀寫（Excel／Word／PowerPoint） |
-| `utils/pdf/` | 115 | PDF 讀取與斷言（選用 pypdf 後端） |
+| `utils/pdf/` | 117 | PDF 讀取與斷言（選用 pypdf 後端） |
 | `utils/referential/` | 75 | 跨資料集的參照完整性檢查 |
 | `utils/schema_compat/` | 172 | JSON Schema 相容性分級 |
 | `utils/sql/` | 84 | 對 SQLite 的臨時唯讀 SQL 查詢 |
@@ -1080,6 +1080,6 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `osx/` | 17 | 919 |
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 837 |
-| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 677 | 52,365 |
-| **總計** | **1,043** | **148,335** |
+| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 677 | 52,446 |
+| **總計** | **1,043** | **148,416** |
 

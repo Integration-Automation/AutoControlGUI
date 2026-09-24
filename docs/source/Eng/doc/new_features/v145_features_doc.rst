@@ -30,7 +30,8 @@ Headless API
 (``space`` = ``hsv`` / ``rgb`` / ``gray``; each channel adds ``bins`` values).
 ``compare_histograms`` supports ``correlation`` / ``chisqr`` / ``intersection`` /
 ``bhattacharyya`` (for correlation / intersection higher is more similar; for the
-distance methods higher is more different). ``histogram_changed`` compares a
+distance methods higher is more different). ``intersection`` is normalised to
+``0..1`` (1 = identical), so one threshold works for any bin count. ``histogram_changed`` compares a
 ``reference`` against ``current`` (default: the screen) and returns a bool, flipping
 the threshold comparison automatically for similarity vs distance methods.
 

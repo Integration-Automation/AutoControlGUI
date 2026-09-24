@@ -128,6 +128,8 @@ def _read_segment_frames(video_path: str, start_s: float,
         raise FileNotFoundError(f"video not found: {resolved}")
     capture = cv2.VideoCapture(resolved)
     try:
+        if not capture.isOpened():
+            raise ValueError(f"cannot decode video: {resolved}")
         fps = capture.get(cv2.CAP_PROP_FPS) or 30.0
         start_frame = int(max(0.0, start_s) * fps)
         end_frame = int(end_s * fps) if end_s is not None else None
@@ -160,10 +162,17 @@ def video_segment_motion(video_path: str,
                          start_s: float = 0.0,
                          end_s: Optional[float] = None,
                          region: Optional[Sequence[int]] = None) -> float:
-    """Mean frame-to-frame difference over a video segment (0 = static)."""
-    return mean_frame_diff(
-        _read_segment_frames(video_path, start_s, end_s, region),
-    )
+    """Mean frame-to-frame difference over a video segment (0 = static).
+
+    A segment with fewer than two frames has no motion to measure and raises
+    ``ValueError``: it used to measure 0.0, so a corrupt file or an empty
+    range passed ``expect_motion=False``.
+    """
+    frames = _read_segment_frames(video_path, start_s, end_s, region)
+    if len(frames) < 2:
+        raise ValueError(
+            f"video segment has {len(frames)} frame(s); motion needs at least 2")
+    return mean_frame_diff(frames)
 
 
 def assert_video_changes(video_path: str,

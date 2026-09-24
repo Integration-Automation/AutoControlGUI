@@ -71,12 +71,19 @@ def render_overlay_frame(frame: Any, caption: str, status: str = "",
 
 
 def _default_loader(image: Any) -> Any:
-    if isinstance(image, str):
+    if isinstance(image, (str, bytes)) or hasattr(image, "__fspath__"):
+        # read_image, not cv2.imread: imread cannot open a non-ASCII path on
+        # Windows, and a pathlib.Path was treated as an array and copied.
         import cv2
-        frame = cv2.imread(image)
-        if frame is None:
-            raise FileNotFoundError(f"could not read image: {image!r}")
-        return frame
+        from je_auto_control.utils.cv2_utils.image_file import read_image
+        try:
+            return read_image(image, cv2.IMREAD_COLOR)
+        except ValueError as error:
+            raise FileNotFoundError(f"could not read image: {image!r}") from error
+    if hasattr(image, "convert") and not hasattr(image, "shape"):
+        # A PIL image (RGB) becomes the BGR array the drawer and writer use.
+        import numpy as np
+        return np.asarray(image.convert("RGB"))[:, :, ::-1].copy()
     # A copy: the caption is drawn onto the frame, and a caller's array (or
     # one reused for two steps) used to get every caption burned into it.
     return image.copy() if hasattr(image, "copy") else image

@@ -10,6 +10,7 @@ read — windows use the series' own timestamps — so every function is fully
 deterministic in CI.
 """
 import bisect
+import math
 from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple
 
 Point = Tuple[float, float]
@@ -80,6 +81,25 @@ def ts_idelta(series: Series) -> float:
     return (points[-1][1] - points[-2][1]) if len(points) >= 2 else 0.0
 
 
+_EPSILON = 1e-9
+
+
+def _bucket_index(ts: float, bucket_s: float) -> int:
+    """Which ``bucket_s`` bucket ``ts`` falls in, tolerant of float error.
+
+    ``0.3 // 0.1`` is 2.0, so a point exactly on a bucket edge landed in the
+    bucket before it.
+    """
+    quotient = ts / bucket_s
+    nearest = round(quotient)
+    return nearest if abs(quotient - nearest) < _EPSILON else math.floor(quotient)
+
+
+def _bucket_start(index: int, bucket_s: float) -> float:
+    """The start of bucket ``index``, without accumulated float noise (0.6, not 0.6000000000000001)."""
+    return round(index * bucket_s, 9)
+
+
 def ts_downsample(series: Series, bucket_s: float,
                   agg: str = "avg") -> List[Point]:
     """Roll the series into ``bucket_s`` tumbling buckets aggregated by ``agg``."""
@@ -90,7 +110,7 @@ def ts_downsample(series: Series, bucket_s: float,
         raise ValueError(f"unknown agg: {agg!r}")
     buckets: Dict[float, List[float]] = {}
     for ts, value in _sorted(series):
-        start = (ts // bucket_s) * bucket_s
+        start = _bucket_start(_bucket_index(ts, bucket_s), bucket_s)
         buckets.setdefault(start, []).append(value)
     return [(start, float(func(values)))
             for start, values in sorted(buckets.items())]
@@ -98,10 +118,11 @@ def ts_downsample(series: Series, bucket_s: float,
 
 def _value_at(times: List[float], values: List[float], at: float,
               fill: Optional[str]) -> Optional[float]:
-    index = bisect.bisect_right(times, at) - 1
+    # A sample within float noise of the grid point is on it.
+    index = bisect.bisect_right(times, at + _EPSILON) - 1
     if index < 0:
         return values[0] if fill in ("last", "linear") else None
-    if times[index] == at or fill == "last":
+    if abs(times[index] - at) < _EPSILON or fill == "last":
         return values[index]
     if fill == "linear" and index + 1 < len(times):
         time_0, value_0 = times[index], values[index]
@@ -126,8 +147,7 @@ def ts_resample(series: Series, bucket_s: float, *,
         return []
     times = [point[0] for point in points]
     values = [point[1] for point in points]
-    start = (times[0] // bucket_s) * bucket_s
-    steps = int((times[-1] - start) // bucket_s) + 1
-    return [(start + index * bucket_s,
-             _value_at(times, values, start + index * bucket_s, fill))
-            for index in range(steps)]
+    first = _bucket_index(times[0], bucket_s)
+    steps = _bucket_index(times[-1], bucket_s) - first + 1
+    grid = [_bucket_start(first + index, bucket_s) for index in range(steps)]
+    return [(at, _value_at(times, values, at, fill)) for at in grid]

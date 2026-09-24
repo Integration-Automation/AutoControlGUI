@@ -16,12 +16,30 @@ from typing import Any, Dict, List, Optional, Sequence
 ImageSource = Any
 
 
+def _array_as_rgb(array: Any) -> Any:
+    """An H x W x 3 view of a grayscale, single-channel or RGBA array.
+
+    A 2-D array went through unchanged, so ``image[..., 0]`` read its first
+    column: two grayscale screenshots with a changed block compared equal.
+    """
+    import numpy as np
+    if array.ndim == 2:
+        return np.stack([array] * 3, axis=-1)
+    if array.ndim == 3 and array.shape[2] == 1:
+        return np.repeat(array, 3, axis=2)
+    if array.ndim == 3 and array.shape[2] == 4:
+        return array[..., :3]
+    if array.ndim != 3 or array.shape[2] != 3:
+        raise ValueError(f"expected an image array, got shape {array.shape}")
+    return array
+
+
 def _to_rgb(source: ImageSource):
     """Load a path / ndarray / PIL image as an RGB ndarray."""
     import cv2
     import numpy as np
     if hasattr(source, "shape"):
-        return np.asarray(source)
+        return _array_as_rgb(np.asarray(source))
     if isinstance(source, (str, bytes)) or hasattr(source, "__fspath__"):
         from je_auto_control.utils.cv2_utils.image_file import read_image
         return cv2.cvtColor(read_image(source, cv2.IMREAD_COLOR), cv2.COLOR_BGR2RGB)

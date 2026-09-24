@@ -142,8 +142,22 @@ def image_difference(actual: Image.Image, expected: Image.Image,
             if max(r, g, b) > threshold:
                 differing += 1
                 overlay_draw.point((x, y), fill=(255, 0, 0))
-    total = width * height
+    # Masked pixels are excluded from the total as well: counting them made
+    # a mask over 90% of the image dilute a 100% change in the rest to 9%.
+    total = width * height - _masked_pixels(diff.size, masks)
     return differing, total, overlay
+
+
+def _masked_pixels(size: Tuple[int, int], masks: Sequence[MaskRegion]) -> int:
+    """How many pixels the masks cover (overlaps once), as ``_apply_masks`` draws them."""
+    from PIL import Image, ImageDraw
+    if not masks:
+        return 0
+    stencil = Image.new("1", size, 0)
+    draw = ImageDraw.Draw(stencil)
+    for m in masks:
+        draw.rectangle((m.left, m.top, m.right, m.bottom), fill=1)
+    return int(sum(stencil.histogram()[1:]))
 
 
 def compare_to_golden(golden_path,

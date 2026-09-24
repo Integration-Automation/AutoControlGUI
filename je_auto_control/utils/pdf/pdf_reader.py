@@ -27,14 +27,16 @@ def _pdf_errors_as_action_errors(function: Callable[..., _Result]) -> Callable[.
     @functools.wraps(function)
     def wrapper(*args: Any, **kwargs: Any) -> _Result:
         try:
-            from pypdf.errors import PyPdfError
+            from pypdf.errors import DependencyError, PyPdfError
         except ImportError:
             # Without pypdf there is nothing of its to translate: the function
             # either uses a stubbed reader or _open_pdf explains what is missing.
             return function(*args, **kwargs)
         try:
             return function(*args, **kwargs)
-        except PyPdfError as error:
+        # DependencyError (an AES-encrypted file without `cryptography`) is
+        # not a PyPdfError and escaped raw.
+        except (PyPdfError, DependencyError) as error:
             raise AutoControlActionException(f"unreadable PDF: {error}") from error
     return wrapper
 

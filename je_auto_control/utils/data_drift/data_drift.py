@@ -67,7 +67,10 @@ def _ks_statistic(reference: Sequence[float],
 
 
 def _kolmogorov(lam: float) -> float:
-    if lam <= 0:
+    # Below ~0.2 the alternating series has not converged in 100 terms and
+    # returned 0.02 at lambda=0.001 (true value 1.0), so near-identical large
+    # samples were reported as drifted. Q_KS(0.2) is 1 to ten digits.
+    if lam < 0.2:
         return 1.0
     total = 0.0
     for term_index in range(1, 101):

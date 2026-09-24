@@ -94,7 +94,9 @@ def _keep_mask(shape, ignore: IgnoreBoxes):
     keep = np.ones(shape, dtype=bool)
     for box in ignore or ():
         x, y, width, height = (int(value) for value in box[:4])
-        keep[y:y + height, x:x + width] = False
+        # Clamped at 0: a negative start sliced from the far edge, so
+        # x=-5, w=10 became keep[:, -5:5] -- empty -- and ignored nothing.
+        keep[max(0, y):max(0, y + height), max(0, x):max(0, x + width)] = False
     return keep
 
 
