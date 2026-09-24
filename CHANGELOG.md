@@ -292,6 +292,12 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Fixed
 
+- **Workflow and test tooling**: merged shard reports keep errored cases;
+  smart waits never sleep past their timeout; unknown decision-table hit
+  policies and non-callable state-machine predicates are refused (`ANY` is
+  supported); `assert_poll` raises an assertion (`PollAssertionError`); soft
+  assertion failures survive an exception; seeded test dates no longer move
+  daily; repeated debugger steps and overlapping repeats are counted right.
 - **Locators and geometry**: sideways scroll-to-find no longer scrolls
   vertically (it needs a horizontal wheel axis or `scroller=`); stable element
   ids are unique and non-overlapping boxes never match; remapped points and

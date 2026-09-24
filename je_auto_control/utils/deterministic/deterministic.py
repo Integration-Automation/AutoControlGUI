@@ -41,6 +41,15 @@ def seed_everything(seed: int) -> int:
     return int(seed)
 
 
+def _numpy_random() -> Any:
+    """``numpy.random`` when numpy is installed, else ``None``."""
+    try:
+        import numpy
+    except ImportError:
+        return None
+    return numpy.random
+
+
 class DeterministicRun:
     """Context manager pinning RNG seed and (optionally) the wall clock."""
 
@@ -50,6 +59,7 @@ class DeterministicRun:
         self._freeze_time = (None if freeze_time is None
                              else float(freeze_time))
         self._rng_state: Any = _UNSET
+        self._numpy_state: Any = None
         self._patches: list = []
 
     @property
@@ -78,6 +88,10 @@ class DeterministicRun:
 
     def __enter__(self) -> "DeterministicRun":
         self._rng_state = random.getstate()
+        numpy_random = _numpy_random()
+        # numpy is seeded too, so its state is restored on exit like random's;
+        # it used to stay seeded after the run.
+        self._numpy_state = None if numpy_random is None else numpy_random.get_state()
         seed_everything(self._seed)
         if self._freeze_time is not None:
             self._freeze_clock()
@@ -89,4 +103,8 @@ class DeterministicRun:
         if self._rng_state is not _UNSET:
             random.setstate(self._rng_state)
             self._rng_state = _UNSET
+        numpy_random = _numpy_random()
+        if numpy_random is not None and self._numpy_state is not None:
+            numpy_random.set_state(self._numpy_state)
+            self._numpy_state = None
         return False

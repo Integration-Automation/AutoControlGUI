@@ -52,6 +52,21 @@ def _command_names(actions: Sequence[Any]) -> List[str]:
     return [_command_name(action) for action in actions]
 
 
+def _non_overlapping_counts(names: List[str], length: int) -> Counter:
+    """How often each n-gram repeats without overlapping itself.
+
+    Counting every window made "A A A A" three repetitions of "A A".
+    """
+    counter: Counter = Counter()
+    next_free: Dict[Tuple[str, ...], int] = {}
+    for start in range(len(names) - length + 1):
+        gram = tuple(names[start:start + length])
+        if start >= next_free.get(gram, 0):
+            counter[gram] += 1
+            next_free[gram] = start + length
+    return counter
+
+
 def find_repeated_sequences(actions: Sequence[Any], *, min_len: int = 2,
                             max_len: int = 5, min_count: int = 3
                             ) -> List[SequencePattern]:
@@ -61,9 +76,7 @@ def find_repeated_sequences(actions: Sequence[Any], *, min_len: int = 2,
     for length in range(min_len, max_len + 1):
         if length > len(names):
             break
-        counter: Counter = Counter(
-            tuple(names[i:i + length])
-            for i in range(len(names) - length + 1))
+        counter = _non_overlapping_counts(names, length)
         patterns.extend(
             SequencePattern(gram, count)
             for gram, count in counter.items() if count >= min_count)

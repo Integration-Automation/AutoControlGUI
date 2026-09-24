@@ -53,6 +53,15 @@ class Frame:
     pixels: bytes
 
 
+def _pause(deadline: float, poll_interval_s: float) -> None:
+    """Sleep one poll interval, but not past ``deadline``.
+
+    Every wait slept its whole interval, so a 0.1 s timeout polled at
+    1.5 s returned after 1.5 s.
+    """
+    time.sleep(max(0.0, min(float(poll_interval_s), deadline - time.monotonic())))
+
+
 def _default_sampler(region: Optional[Sequence[int]]) -> Frame:
     """Snapshot once through the platform's grabber. Fails closed on missing dep."""
     from je_auto_control.utils.cv2_utils.screen_grabber import image_grabber
@@ -95,7 +104,7 @@ def wait_until_screen_stable(*,
     samples = 1
     stable_since: Optional[float] = None
     while time.monotonic() < deadline:
-        time.sleep(float(poll_interval_s))
+        _pause(deadline, poll_interval_s)
         current = grab(region)
         samples += 1
         diff = _frame_diff(previous, current)
@@ -133,7 +142,7 @@ def wait_until_pixel_changes(*, x: int, y: int,
     initial = _read_pixel(grab(None), int(x), int(y))
     samples = 1
     while time.monotonic() < deadline:
-        time.sleep(float(poll_interval_s))
+        _pause(deadline, poll_interval_s)
         current = _read_pixel(grab(None), int(x), int(y))
         samples += 1
         if _rgb_distance(initial, current) > int(rgb_tolerance):
@@ -194,7 +203,7 @@ def wait_until_clipboard_changes(*,
         samples += 1
         if _clipboard_satisfied(current, initial, target, contains):
             return _finish(True, "clipboard changed", started, samples)
-        time.sleep(float(poll_interval_s))
+        _pause(deadline, poll_interval_s)
     return _finish(False, "timeout while waiting for clipboard change",
                    started, samples)
 
@@ -237,7 +246,7 @@ def wait_until_window_closed(title: str, *, case_sensitive: bool = False,
         samples += 1
         if not exists(title, case_sensitive):
             return _finish(True, "window closed", started, samples)
-        time.sleep(float(poll_interval_s))
+        _pause(deadline, poll_interval_s)
     return _finish(False, "timeout while waiting for window to close",
                    started, samples)
 
@@ -283,7 +292,7 @@ def wait_until_window_title(pattern: str, *, present: bool = True,
         samples += 1
         if _title_matches(titles_of(), pattern, compiled) == bool(present):
             return _finish(True, "window title condition met", started, samples)
-        time.sleep(float(poll_interval_s))
+        _pause(deadline, poll_interval_s)
     return _finish(False, "timeout while waiting for window title",
                    started, samples)
 
@@ -324,7 +333,7 @@ def wait_until_file(path: str, *,
         samples += 1
         if tracker.ready(read(str(path))):
             return _finish(True, "file ready", started, samples)
-        time.sleep(float(poll_interval_s))
+        _pause(deadline, poll_interval_s)
     return _finish(False, "timeout while waiting for file", started, samples)
 
 
@@ -388,7 +397,7 @@ def wait_until_port(host: str, port: int, *,
         samples += 1
         if probe(str(host), int(port), float(connect_timeout_s)):
             return _finish(True, f"port {host}:{port} open", started, samples)
-        time.sleep(float(poll_interval_s))
+        _pause(deadline, poll_interval_s)
     return _finish(False, f"timeout waiting for {host}:{port}",
                    started, samples)
 
@@ -431,7 +440,7 @@ def wait_until_process(name: str, *, present: bool = True,
         samples += 1
         if bool(find(name)) == bool(present):
             return _finish(True, f"process {name!r} {verb}", started, samples)
-        time.sleep(float(poll_interval_s))
+        _pause(deadline, poll_interval_s)
     return _finish(False, f"timeout waiting for process {name!r} to {verb}",
                    started, samples)
 
@@ -465,7 +474,7 @@ def wait_until_gone(present: Callable[[], bool], *,
                 gone_since = time.monotonic()
             if time.monotonic() - gone_since >= float(gone_for_s):
                 return _finish(True, "target gone", started, samples)
-        time.sleep(float(poll_interval_s))
+        _pause(deadline, poll_interval_s)
     return _finish(False, "timeout while waiting for target to vanish",
                    started, samples)
 
@@ -549,7 +558,7 @@ def wait_until_color(*, region: Optional[Sequence[int]] = None,
         reached = fraction >= float(min_fraction)
         if reached == bool(present):
             return _finish(True, "colour condition met", started, samples)
-        time.sleep(float(poll_interval_s))
+        _pause(deadline, poll_interval_s)
     return _finish(False, "timeout while waiting for colour", started, samples)
 
 

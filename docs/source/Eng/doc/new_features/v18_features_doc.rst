@@ -51,5 +51,7 @@ greedy bin-packing::
 Flows with no history fall back to the mean of known flows (so new tests
 spread evenly). ``merge_results`` recombines per-shard report dicts — summing
 ``total`` / ``passed`` / ``failed`` / ``skipped`` / ``errors`` and
-concatenating ``results``. Exposed as ``AC_shard_suite`` / ``AC_merge_results``
+concatenating ``results``. A ``TestSuiteResult.to_dict()`` report's
+``errored`` and ``cases`` are read too, and the merged report carries both
+spellings. Exposed as ``AC_shard_suite`` / ``AC_merge_results``
 (and ``ac_shard_suite`` / ``ac_merge_results``).

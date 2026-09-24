@@ -20,7 +20,7 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 | 指標 | 數值 |
 | --- | ---: |
 | Python 模組總數（含周邊子專案） | 1,049 |
-| 程式碼總行數 | 147,560 |
+| 程式碼總行數 | 147,666 |
 | `je_auto_control/utils/` 子套件數 | 310 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 773 |
 | 套件門面 `__all__` 公開名稱數 | 1,241 |
@@ -271,7 +271,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.1 執行引擎與腳本資產
 
-> 24 個套件、約 14,072 行。
+> 24 個套件、約 14,124 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -280,14 +280,14 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/checkpoint/` | 120 | 流程檢查點與續跑，讓長 action list 具持久性 |
 | `utils/codegen/` | 255 | 由 action list 產生可執行的 pytest / python / robot 測試碼 |
 | `utils/dag/` | 492 | 跨主機 DAG 編排器（圖模型 + runner） |
-| `utils/decision_table/` | 103 | DMN 風格決策表：規則 + 命中策略，把分支外部化 |
-| `utils/deterministic/` | 98 | 決定性執行控制：固定亂數種子 + 凍結時鐘 |
+| `utils/decision_table/` | 112 | DMN 風格決策表：規則 + 命中策略，把分支外部化 |
+| `utils/deterministic/` | 116 | 決定性執行控制：固定亂數種子 + 凍結時鐘 |
 | `utils/executor/` | 9,402 | **核心**。`Executor` 指令分派表（773 個 `AC_*`）、參數插值、乾跑、逐步 callback；`flow_control` 提供 34 個區塊指令（迴圈／分支／try／巨集／變數） |
-| `utils/flow_debugger/` | 142 | action list 的單步除錯器與追蹤器 |
+| `utils/flow_debugger/` | 155 | action list 的單步除錯器與追蹤器 |
 | `utils/input_macro/` | 451 | 定時輸入事件：錄製結果的整形（`timeline`／`InputRecorder`，Windows 與 macOS 共用）、重播與宣告式輸入序列 DSL |
 | `utils/json/` | 99 | action JSON 檔讀寫與正規化格式化（`fmt --check` 的後端） |
 | `utils/json_store/` | 232 | JSON 字典檔持久化的共用小工具（內部管線） |
-| `utils/loop_guard/` | 154 | 機械式卡死迴圈偵測（agent loop 用） |
+| `utils/loop_guard/` | 158 | 機械式卡死迴圈偵測（agent loop 用） |
 | `utils/plugin_loader/` | 128 | 掃描外部 Python 外掛目錄並註冊其 `AC_` callable |
 | `utils/plugin_sdk/` | 80 | 外掛 SDK：透過 entry points 發佈／載入第三方 `AC_*` 指令 |
 | `utils/project/` | 186 | 專案腳手架：建立目錄結構與範本 action 檔 |
@@ -295,7 +295,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/saga/` | 100 | Saga 協調器：失敗時以 LIFO 補償動作回滾 |
 | `utils/script_vars/` | 190 | 執行期變數作用域與 `${var}` / `${secrets.*}` 插值 |
 | `utils/skill_library/` | 115 | 具名可重用 action 序列（skill）的持久化倉庫 |
-| `utils/state_machine/` | 260 | 宣告式有限狀態機驅動 action JSON |
+| `utils/state_machine/` | 268 | 宣告式有限狀態機驅動 action JSON |
 | `utils/stubs/` | 287 | 為 `AC_*` 指令面產生型別 stub |
 | `utils/test_record/` | 70 | 全域測試紀錄單例，記錄每個動作的參數與例外 |
 | `utils/work_queue/` | 268 | 交易式工作佇列（dispatcher／performer），支撐大量批次執行 |
@@ -463,7 +463,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.8 元素定位、自我修復與智慧等待
 
-> 23 個套件、約 4,141 行。
+> 23 個套件、約 4,161 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -477,7 +477,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/element_parse/` | 106 | 融合並排序畫面元素框（IoU、合併、多來源融合、閱讀順序） |
 | `utils/element_proposal/` | 86 | 免樣板、免模型地從原始像素提出乾淨元素清單 |
 | `utils/element_scoring/` | 105 | 加權候選評分（角色 + 名稱相似度 + 鄰近度 + 啟用狀態） |
-| `utils/expect_poll/` | 138 | 反覆取值直到符合條件（Playwright `expect.poll` 風格） |
+| `utils/expect_poll/` | 149 | 反覆取值直到符合條件（Playwright `expect.poll` 風格） |
 | `utils/grounding_consensus/` | 127 | 對同一目標的多個接地提案做自我一致性投票 |
 | `utils/heal_analytics/` | 77 | 自癒事件記錄的分析（治癒率、脆弱定位器） |
 | `utils/locator_chain/` | 112 | 可組合／可過濾的候選定位器（chained-locator 慣用法） |
@@ -489,7 +489,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/self_healing/` | 352 | 自癒定位器：先影像樣板、失敗改用 VLM，並留稽核記錄 |
 | `utils/semantic_recording/` | 423 | 為錄製內容加上語義錨點，支援換機重播與自癒重播 |
 | `utils/settle_detector/` | 79 | 以純函式介面判定 UI 是否已靜止 |
-| `utils/smart_waits/` | 649 | 智慧等待：以影格差異取代 `time.sleep` |
+| `utils/smart_waits/` | 658 | 智慧等待：以影格差異取代 `time.sleep` |
 
 ### 5.4.9 AI / Agent / LLM
 
@@ -557,7 +557,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.12 報表、可觀測性與測試治理
 
-> 34 個套件、約 7,180 行。
+> 34 個套件、約 7,209 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -578,7 +578,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/otlp_export/` | 81 | OTLP/JSON span 匯出 |
 | `utils/percentiles/` | 116 | 可合併的串流延遲摘要與精確百分位數 |
 | `utils/process_doc/` | 85 | 由錄製的 action list 產生逐步 SOP 文件 |
-| `utils/process_mining/` | 110 | 流程探勘：從動作日誌挖掘可自動化的候選 |
+| `utils/process_mining/` | 123 | 流程探勘：從動作日誌挖掘可自動化的候選 |
 | `utils/profiler/` | 426 | 逐動作效能剖析器 + 資源剖析器 |
 | `utils/quarantine/` | 200 | 易碎測試隔離區，讓套件執行器跳過已知不穩定案例 |
 | `utils/run_diff/` | 123 | 兩次執行軌跡的差異（LCS 對齊：新增／移除／狀態翻轉／退化） |
@@ -586,11 +586,11 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/sarif/` | 163 | 以 SARIF 2.1.0 匯出發現項，供 GitHub／Azure code scanning |
 | `utils/slo/` | 115 | SLO 評估：SLI、錯誤預算與多視窗燃燒率告警 |
 | `utils/smoothing/` | 67 | 數列移動平均平滑 |
-| `utils/soft_assert/` | 74 | 軟斷言：累積檢查並在區塊結束時一次拋出 |
+| `utils/soft_assert/` | 79 | 軟斷言：累積檢查並在區塊結束時一次拋出 |
 | `utils/stats/` | 223 | 描述統計與 A/B 顯著性檢定（純標準庫） |
 | `utils/step_timeline/` | 81 | 每次執行的步驟瀑布圖與瓶頸（關鍵路徑）步驟排名 |
 | `utils/test_select/` | 123 | 以執行歷史做風險導向的測試選取 |
-| `utils/test_shard/` | 87 | 以耗時為權重的套件切分與分片結果合併 |
+| `utils/test_shard/` | 98 | 以耗時為權重的套件切分與分片結果合併 |
 | `utils/test_suite/` | 527 | QA 套件編排：把扁平 action list 評分為測試案例 + CI 報表 |
 | `utils/time_travel/` | 383 | 錄製 session 的時光回溯除錯（控制器 + 播放器） |
 | `utils/timeseries/` | 143 | 時間序列轉換（rate／降採樣／重採樣） |
@@ -598,7 +598,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.13 資料來源、結構驗證與 i18n
 
-> 24 個套件、約 4,260 行。
+> 24 個套件、約 4,265 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -624,7 +624,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/referential/` | 75 | 跨資料集的參照完整性檢查 |
 | `utils/schema_compat/` | 172 | JSON Schema 相容性分級 |
 | `utils/sql/` | 84 | 對 SQLite 的臨時唯讀 SQL 查詢 |
-| `utils/test_data/` | 205 | 帶種子的合成測試資料產生（純標準庫） |
+| `utils/test_data/` | 210 | 帶種子的合成測試資料產生（純標準庫） |
 | `utils/xml/` | 277 | XML 檔讀寫與結構變更（`defusedxml`） |
 
 ### 5.4.14 安全、機密與合規
@@ -1080,6 +1080,6 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `osx/` | 17 | 919 |
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 837 |
-| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 677 | 51,722 |
-| **總計** | **1,043** | **147,495** |
+| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 677 | 51,828 |
+| **總計** | **1,043** | **147,601** |
 

@@ -4,8 +4,12 @@ from __future__ import annotations
 import time
 from typing import Any, Callable, Dict, Mapping, Optional
 
+from je_auto_control.utils.exception.exceptions import AutoControlException
 
-class StateMachineError(RuntimeError):
+
+# AutoControlException so `except AutoControlException` boundaries catch a
+# stuck machine; RuntimeError kept for callers that caught that.
+class StateMachineError(AutoControlException, RuntimeError):
     """Raised when the FSM spec is invalid or the run can't make progress."""
 
 
@@ -164,7 +168,11 @@ def _predicate_ok(transition: Mapping[str, Any], context: Mapping[str, Any],
                   _entered_at: float) -> bool:
     # Caller-supplied callable; the Python route to any custom check.
     pred = transition["predicate"]
-    return not callable(pred) or bool(pred(context))
+    if not callable(pred):
+        # A string from JSON ("ctx.ok == True") made the transition always
+        # fire; like an unknown if_* guard, it is a spec error.
+        raise StateMachineError(f"predicate must be callable, got {pred!r}")
+    return bool(pred(context))
 
 
 def _image_found_ok(transition: Mapping[str, Any], _context: Mapping[str, Any],

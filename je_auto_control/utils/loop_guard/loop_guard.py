@@ -56,6 +56,10 @@ class LoopGuard:
     def __init__(self, *, warn: int = 8, critical: int = 15,
                  window: int = 20) -> None:
         """``warn``/``critical`` are run-length thresholds; ``window`` caps memory."""
+        if not 1 <= int(warn) <= int(critical) <= int(window):
+            # A threshold above the window could never be reached, so the
+            # guard silently never tripped.
+            raise ValueError("need 1 <= warn <= critical <= window")
         self._warn = warn
         self._critical = critical
         self._events: Deque[Tuple[str, str]] = deque(maxlen=window)

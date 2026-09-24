@@ -31,7 +31,8 @@ def _durations(flows: List[str], history_path: Optional[str],
         seconds = record.duration_seconds
         if seconds is not None:
             samples.setdefault(record.script_path, []).append(seconds)
-    return {flow: sum(values[:window]) / len(values[:window])
+    recent = max(1, int(window))
+    return {flow: sum(values[:recent]) / len(values[:recent])
             for flow, values in samples.items() if values}
 
 
@@ -45,6 +46,9 @@ def shard_flows(flows: List[str], shards: int, *,
     """
     flows = list(flows)
     count = max(1, int(shards))
+    if int(window) < 1:
+        # window=0 divided by len(values[:0]) with a ZeroDivisionError.
+        raise ValueError("window must be at least 1")
     means = _durations(flows, history_path, int(window))
     known = list(means.values())
     if default_weight is not None:
@@ -67,7 +71,10 @@ def merge_results(reports: List[Dict[str, Any]]) -> Dict[str, Any]:
     """Merge per-shard report dicts into one consolidated report.
 
     Numeric keys (total/passed/failed/skipped/errors) are summed and
-    ``results`` lists concatenated.
+    ``results`` lists concatenated. A :class:`TestSuiteResult` report names
+    them ``errored`` and ``cases``; those are read too (they used to be
+    dropped, so a sharded run with errors merged as clean) and the merged
+    report carries both spellings.
     """
     reports = list(reports)
     merged: Dict[str, Any] = dict.fromkeys(_SUM_KEYS, 0)
@@ -75,7 +82,11 @@ def merge_results(reports: List[Dict[str, Any]]) -> Dict[str, Any]:
     for report in reports:
         for key in _SUM_KEYS:
             merged[key] += int(report.get(key, 0) or 0)
+        merged["errors"] += int(report.get("errored", 0) or 0)
         results.extend(report.get("results", []) or [])
+        results.extend(report.get("cases", []) or [])
+    merged["errored"] = merged["errors"]
     merged["shards"] = len(reports)
     merged["results"] = results
+    merged["cases"] = results
     return merged

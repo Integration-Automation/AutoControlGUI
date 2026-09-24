@@ -111,6 +111,9 @@ def _g_sentence(rng: random.Random, spec: Dict[str, Any]) -> str:
     return f"{body.capitalize()}."
 
 
+_DEFAULT_DATE_END = date(2030, 12, 31)
+
+
 def _parse_date(raw: Optional[str], fallback: date) -> date:
     if not raw:
         return fallback
@@ -119,7 +122,9 @@ def _parse_date(raw: Optional[str], fallback: date) -> date:
 
 def _g_date(rng: random.Random, spec: Dict[str, Any]) -> str:
     start = _parse_date(spec.get("start"), date(2000, 1, 1))
-    end = _parse_date(spec.get("end"), date.today())
+    # A fixed default end: date.today() widened the range daily, so the same
+    # seed produced a different date tomorrow.
+    end = _parse_date(spec.get("end"), _DEFAULT_DATE_END)
     span = max(0, (end - start).days)
     return (start + timedelta(days=rng.randint(0, span))).isoformat()
 

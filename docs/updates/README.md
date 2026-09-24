@@ -58,6 +58,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260924-45 | 2026-09-24 | Workflow and test tooling: merged shard reports keep errors, waits honour deadlines, strict hit policies and predicates, assert_poll is an assertion | #bugfix #audit #testing | [2026-09](2026-09.md) |
 | U-20260924-43 | 2026-09-24 | Locators and geometry: no fake sideways scroll, unique stable ids, points inside their cells, A/B stats that survive other writers | #bugfix #audit | [2026-09](2026-09.md) |
 | U-20260924-42 | 2026-09-24 | Data formats: workbook cells stay data, strict JSON Patch / JSONPath, ICU offsets and quoting, subtree ignores, safer masking and parsing | #bugfix #audit #security | [2026-09](2026-09.md) |
 | U-20260924-41 | 2026-09-24 | Time and statistics: bounded sequence tracking, SLO window ends at now, local UNTIL, sane digests and outlier scores | #bugfix #audit | [2026-09](2026-09.md) |
@@ -202,7 +203,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | File | Period | Entries |
 |---|---|---:|
-| [2026-09.md](2026-09.md) | 2026-09 | 113 |
+| [2026-09.md](2026-09.md) | 2026-09 | 114 |
 | [2026-08-f.md](2026-08-f.md) | 2026-08 | 1 |
 | [2026-08-e.md](2026-08-e.md) | 2026-08 | 2 |
 | [2026-08-d.md](2026-08-d.md) | 2026-08 | 2 |

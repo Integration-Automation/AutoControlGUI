@@ -64,7 +64,12 @@ class SoftAssertions:
     def __enter__(self) -> "SoftAssertions":
         return self
 
-    def __exit__(self, exc_type, _exc, _tb) -> Literal[False]:
+    def __exit__(self, exc_type, exc, _tb) -> Literal[False]:
         if exc_type is None and self._raise_on_exit:
             self.assert_all()
+        elif exc is not None and self.failures and hasattr(exc, "add_note"):
+            # The block raised: its exception wins, but the checks that had
+            # already failed were lost with it.
+            exc.add_note(f"{len(self.failures)} soft assertion(s) had failed: "
+                         + "; ".join(self.failures))
         return False

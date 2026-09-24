@@ -32,8 +32,10 @@ Headless API
     expect_poll(lambda: ocr_value(), to_be_stable(3))
 
 ``expect_poll`` returns a ``PollResult`` (``ok``, ``value``, ``attempts``,
-``waited_s``, ``description``); ``assert_poll`` raises ``AutoControlActionException``
-when it never matches. The matcher factories are ``to_equal``, ``to_contain``,
+``waited_s``, ``description``); ``assert_poll`` raises ``PollAssertionError`` when it
+never matches -- an ``AutoControlAssertionException`` (scored as a failed
+test, never swallowed by ``raise_on_error=False``) that is also an
+``AutoControlActionException``. The matcher factories are ``to_equal``, ``to_contain``,
 ``to_be_greater_than``, ``to_match_regex``, ``to_be_truthy`` and ``to_be_stable(n)``
 (matches once the value repeats ``n`` times).
 
