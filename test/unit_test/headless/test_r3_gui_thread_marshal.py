@@ -181,16 +181,19 @@ def check_thumbnail_reaped():
 
     thread = tab._thumb_thread
     assert thread is not None, "no thumbnail QThread was created"
-    assert thread in tab.findChildren(QThread), "thread is not a child of the tab"
+    import je_auto_control.gui._worker_thread as worker_mod
+    # Not a child of the tab: closing the tab mid-poll would destroy a running
+    # thread. The registry holds it until it is deleted.
+    assert thread in worker_mod._RUNNING, "the thread is not held by the registry"
 
     thread.finished.emit()  # simulate the QThread finishing
     assert tab._thumb_thread is None, "_on_thumb_thread_done did not run"
     # Flush the deferred deletions the finished signal scheduled.
     app.sendPostedEvents(None, QEvent.Type.DeferredDelete.value)
-    # Without the deleteLater wiring the QThread would linger as a child of
-    # the tab, accumulating one per poll tick.
+    # Without the deleteLater wiring the QThread would linger in the
+    # registry, accumulating one per poll tick.
     assert not shiboken6.Shiboken.isValid(thread), "the QThread outlived finish"
-    assert tab.findChildren(QThread) == [], "a QThread lingers as a child"
+    assert thread not in worker_mod._RUNNING, "a QThread lingers in the registry"
 
 
 for name, check in [

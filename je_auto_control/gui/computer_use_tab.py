@@ -9,6 +9,7 @@ from PySide6.QtWidgets import (
 )
 
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
+from je_auto_control.gui._worker_thread import start_worker
 from je_auto_control.gui.language_wrapper.multi_language_wrapper import (
     language_wrapper,
 )
@@ -62,7 +63,6 @@ class ComputerUseTab(TranslatableMixin, QWidget):
         self._output.setReadOnly(True)
         self._status = QLabel()
         self._thread: Optional[QThread] = None
-        self._worker: Optional[_ComputerUseWorker] = None
         self._build_layout()
 
     def retranslate(self) -> None:
@@ -132,19 +132,12 @@ class ComputerUseTab(TranslatableMixin, QWidget):
         self._spawn_worker(params)
 
     def _spawn_worker(self, params: dict) -> None:
-        thread = QThread(self)
-        worker = _ComputerUseWorker(params)
-        worker.moveToThread(thread)
-        thread.started.connect(worker.run)
-        worker.finished.connect(self._on_worker_finished)
-        worker.failed.connect(self._on_worker_failed)
-        worker.finished.connect(thread.quit)
-        worker.failed.connect(thread.quit)
-        thread.finished.connect(worker.deleteLater)
-        thread.finished.connect(thread.deleteLater)
-        self._thread = thread
-        self._worker = worker
-        thread.start()
+        self._thread = start_worker(
+            self, _ComputerUseWorker(params), on_done=self._on_worker_finished,
+            on_fail=self._on_worker_failed, on_thread_done=self._on_thread_done)
+
+    def _on_thread_done(self) -> None:
+        self._thread = None
 
     def _on_worker_finished(self, data: dict) -> None:
         ok = bool(data.get("succeeded"))
@@ -153,13 +146,9 @@ class ComputerUseTab(TranslatableMixin, QWidget):
         self._output.setPlainText(
             json.dumps(data, indent=2, ensure_ascii=False, default=str),
         )
-        self._thread = None
-        self._worker = None
 
     def _on_worker_failed(self, message: str) -> None:
         self._status.setText(f"{_t('computer_use_error')}: {message}")
-        self._thread = None
-        self._worker = None
 
 
 __all__ = ["ComputerUseTab"]

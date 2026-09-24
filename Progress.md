@@ -259,6 +259,16 @@ socket server 的執行也都用同一個 `executor`；`for_each` 的迴圈變�
 
 ---
 
+## Computer use、DAG 與 LLM 規劃分頁的執行不能中途停止
+
+`TODO` — 給 `AgentLoop`、`run_dag` 與 `plan_actions` 一個停止旗標，並在分頁的 Actions 選單加上「停止」
+
+`gui/computer_use_tab.py`、`gui/dag_tab.py`、`gui/llm_planner_tab.py` 經 `gui/_worker_thread.py:start_worker` 在背景執行緒跑，
+按下執行後只能等它跑完或用完預算（computer use 預設 300 秒）。關閉視窗時 `_stop_running_threads` 最多等 3 秒；
+還在 `run()` 裡的工作等不完，PySide 在結束時銷毀仍在執行的 `QThread`，行程會以 abort 結束。
+
+---
+
 ## MCP registry 的 server 名稱與專案網址還是舊組織
 
 `DECIDE` — 要發布到 MCP registry 前得先定名稱，改名會影響已發布的項目

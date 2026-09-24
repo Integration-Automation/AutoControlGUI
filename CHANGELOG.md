@@ -317,6 +317,9 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Fixed
 
+- Closing a GUI tab or the main window while its background job
+  (Admin Console poll, USB browser, computer use, DAG, LLM planner) is
+  running no longer aborts the process.
 - Closing the LAN browse dialog with Use, Cancel or Esc stops its mDNS
   browser, and a closed presence tab no longer stays registered with the
   presence registry.

@@ -9,6 +9,7 @@ from PySide6.QtWidgets import (
 )
 
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
+from je_auto_control.gui._worker_thread import start_worker
 from je_auto_control.gui.language_wrapper.multi_language_wrapper import (
     language_wrapper,
 )
@@ -57,7 +58,6 @@ class DagTab(TranslatableMixin, QWidget):
         self._status_label = QLabel()
         self._table = QTableWidget(0, len(_COLUMNS))
         self._thread: Optional[QThread] = None
-        self._worker: Optional[_DagWorker] = None
         self._build_layout()
 
     def retranslate(self) -> None:
@@ -130,19 +130,13 @@ class DagTab(TranslatableMixin, QWidget):
         self._spawn_worker(definition)
 
     def _spawn_worker(self, definition: dict) -> None:
-        thread = QThread(self)
         worker = _DagWorker(definition, int(self._max_parallel.value()))
-        worker.moveToThread(thread)
-        thread.started.connect(worker.run)
-        worker.finished.connect(self._on_worker_finished)
-        worker.failed.connect(self._on_worker_failed)
-        worker.finished.connect(thread.quit)
-        worker.failed.connect(thread.quit)
-        thread.finished.connect(worker.deleteLater)
-        thread.finished.connect(thread.deleteLater)
-        self._thread = thread
-        self._worker = worker
-        thread.start()
+        self._thread = start_worker(
+            self, worker, on_done=self._on_worker_finished,
+            on_fail=self._on_worker_failed, on_thread_done=self._on_thread_done)
+
+    def _on_thread_done(self) -> None:
+        self._thread = None
 
     def _parse_editor(self) -> Optional[dict]:
         raw = self._editor.toPlainText().strip()
@@ -156,8 +150,6 @@ class DagTab(TranslatableMixin, QWidget):
             return None
 
     def _on_worker_finished(self, result: DagRunResult) -> None:
-        self._thread = None
-        self._worker = None
         key = "dag_success" if result.succeeded else "dag_failure"
         self._status_label.setText(
             _t(key).replace("{seconds}", f"{result.elapsed_s:.2f}"),
@@ -165,8 +157,6 @@ class DagTab(TranslatableMixin, QWidget):
         self._populate_table(result)
 
     def _on_worker_failed(self, message: str) -> None:
-        self._thread = None
-        self._worker = None
         self._status_label.setText(f"{_t('dag_error')}: {message}")
 
     def _populate_table(self, result: DagRunResult) -> None:
