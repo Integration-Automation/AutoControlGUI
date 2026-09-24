@@ -30,7 +30,8 @@ from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple
 from je_auto_control.utils.agent.agent_loop import AgentBackend, AgentStep
 from je_auto_control.utils.agent.backends._computer_toolset import (
     TOOLSET_ONLY_MODELS, TOOLSET_SCHEMA, TOOLSET_TYPE, ToolsetBatch,
-    fit_screenshot, screen_region, unscale_decision, zoom_image,
+    fit_screenshot, fitted_size, image_tier, resize_png, screen_region,
+    unscale_decision, zoom_image,
 )
 from je_auto_control.utils.agent.backends.base import (
     REQUEST_TIMEOUT_S, AgentBackendError, build_default_system_prompt,
@@ -144,6 +145,10 @@ class ComputerUseAgentBackend(AgentBackend):
                                   else _DEFAULT_TOOL_TYPE)
         self._batch: Optional[ToolsetBatch] = None
         self._scale = (1.0, 1.0)
+        self._tier = image_tier(model)
+        #: Beta tool only: the display size declared to the model, which every
+        #: screenshot is resized to (``None`` for the toolset).
+        self._declared: Optional[Tuple[int, int]] = None
         #: tool_use id -> the region a queued ``zoom`` asked for, in screenshot pixels.
         self._zooms: Dict[str, Tuple[int, int, int, int]] = {}
         if tool_type == TOOLSET_TYPE:
@@ -152,10 +157,18 @@ class ComputerUseAgentBackend(AgentBackend):
             self._tool_schema: Dict[str, Any] = dict(TOOLSET_SCHEMA)
             self._beta: Optional[str] = None
         else:
+            # The API downscales a screenshot over the model's image limits and
+            # the model then answers in the smaller image's pixels, so the
+            # screen is declared (and shot) at the fitted size and coordinates
+            # are mapped back: on a 4K screen a click used to land at about
+            # two thirds of the intended position.
+            self._declared = fitted_size(*self._display, self._tier)
+            self._scale = (self._declared[0] / self._display[0],
+                           self._declared[1] / self._display[1])
             self._tool_schema = {
                 "type": tool_type, "name": "computer",
-                "display_width_px": self._display[0],
-                "display_height_px": self._display[1],
+                "display_width_px": self._declared[0],
+                "display_height_px": self._declared[1],
             }
             if display_number is not None:
                 self._tool_schema["display_number"] = int(display_number)
@@ -182,6 +195,8 @@ class ComputerUseAgentBackend(AgentBackend):
                             ) -> Dict[str, Any]:
         if self._batch is not None:
             return self._decide_with_toolset(self._batch, goal, screenshot, history)
+        if screenshot and self._declared is not None:
+            screenshot = resize_png(screenshot, self._declared)
         self._ingest_history(history, screenshot)
         if not self._conversation:
             self._conversation.append({
@@ -241,7 +256,7 @@ class ComputerUseAgentBackend(AgentBackend):
         """``screenshot`` within the toolset's image limits; remembers the scale."""
         if not screenshot:
             return screenshot
-        fitted, self._scale = fit_screenshot(screenshot)
+        fitted, self._scale = fit_screenshot(screenshot, self._tier)
         return fitted
 
     def _toolset_result_content(self, step: AgentStep, screenshot: Optional[bytes],
@@ -251,7 +266,8 @@ class ComputerUseAgentBackend(AgentBackend):
             return _tool_result_content(step, screenshot)
         # A zoom is answered from the full-resolution frame; the scale of the
         # full screenshot stays, since later coordinates are still in its space.
-        image = zoom_image(screenshot, region) if region is not None else self._fit(screenshot)
+        image = (zoom_image(screenshot, region, self._tier) if region is not None
+                 else self._fit(screenshot))
         return _tool_result_content(step, image)
 
     def _handle_toolset_response(self, response: Any,
@@ -307,8 +323,8 @@ class ComputerUseAgentBackend(AgentBackend):
                 )
             payload = _attr(block, "input") or {}
             self._pending_tool_use_id = _attr(block, "id")
-            return _clamp_decision(
-                _decision_from_computer_action(payload), *self._display)
+            decision = unscale_decision(_decision_from_computer_action(payload), self._scale)
+            return _clamp_decision(decision, *self._display)
         return _final_answer(response, content)
 
     def _ingest_history(self, history: Sequence[AgentStep],

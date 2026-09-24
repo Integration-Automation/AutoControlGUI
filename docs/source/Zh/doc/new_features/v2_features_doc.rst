@@ -213,7 +213,8 @@ Computer-use 高階 API
         max_steps=15, wall_seconds=120.0,
     )
 
-自動偵測螢幕大小；以 ``max_steps`` + ``wall_seconds`` 為預算上限，
+自動偵測螢幕大小。截圖會縮到模型的影像層級內(Claude 4.7 以後:2576 px／4784 visual tokens;較舊的模型:1568 px／1568 tokens),
+beta 工具也一樣:它宣告縮放後的大小為螢幕大小,再把模型給的座標換算回螢幕。以 ``max_steps`` + ``wall_seconds`` 為預算上限，
 避免失控的 loop 把 API 額度耗光；設定 ``stop_event=``（``threading.Event``）會在下一步之前結束，
 ``final_message`` 為 ``"stopped"``。Executor：``AC_computer_use``。
 GUI：**Computer Use** 分頁，Actions 選單有 **停止**。關閉視窗時會請執行中的工作停止，最多等 10 秒。

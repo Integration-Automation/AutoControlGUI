@@ -225,7 +225,10 @@ full-resolution crop of the region it names::
         max_steps=15, wall_seconds=120.0,
     )
 
-Auto-detects display size; takes ``max_steps`` + ``wall_seconds``
+Auto-detects display size. Screenshots are fitted into the model's image tier
+(Claude 4.7 and later: 2576 px / 4784 visual tokens; older models: 1568 px /
+1568 tokens) on the beta tool as well, which declares that fitted size as its
+display and maps the model's coordinates back to the screen. Takes ``max_steps`` + ``wall_seconds``
 budgets so a runaway loop can't drain the API; setting ``stop_event=`` (a
 ``threading.Event``) ends the run before its next step, with
 ``final_message`` ``"stopped"``. Executor: ``AC_computer_use``. GUI:

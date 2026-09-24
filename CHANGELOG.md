@@ -350,6 +350,10 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Fixed
 
+- Computer use on the beta tool fits screenshots into the model's image
+  tier, declares that size and maps coordinates back, so clicks land
+  correctly on screens above the model's image limits (4K, or 1080p on
+  standard-tier models).
 - `ssim_compare` accepts single-channel HxWx1 arrays.
 - Heading detection uses the true median line height.
 - Element matching never pairs boxes that do not overlap.

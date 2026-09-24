@@ -24,6 +24,7 @@ from __future__ import annotations
 
 import io
 import math
+import re
 from typing import Any, Dict, List, Optional, Tuple
 
 TOOLSET_TYPE = "computer_toolset_20260801"
@@ -37,13 +38,31 @@ TOOLSET_ONLY_MODELS = frozenset({"claude-opus-5-5"})
 #: is enabled by default.
 TOOLSET_SCHEMA: Dict[str, Any] = {"type": TOOLSET_TYPE}
 
-#: Image limits of the models the toolset runs on (Claude 4.7 and later, the
-#: high-resolution tier): a long edge of 2576 px and 4784 visual tokens, one
-#: token per started 28 x 28 patch. The API rejects a larger tool_result image
-#: instead of downscaling it.
-MAX_LONG_EDGE_PX = 2576
-MAX_VISUAL_TOKENS = 4784
+#: Image limits per tier, as (long edge px, visual tokens), one token per
+#: started 28 x 28 patch (vision docs). Claude 4.7 and later -- every model the
+#: toolset runs on -- are high-resolution; older models are standard. The
+#: toolset rejects a larger tool_result image; for the beta tool the API
+#: downscales it and the model's coordinates then no longer match the screen.
+HIGH_RES_TIER = (2576, 4784)
+STANDARD_TIER = (1568, 1568)
+MAX_LONG_EDGE_PX, MAX_VISUAL_TOKENS = HIGH_RES_TIER
 PATCH_PX = 28
+
+#: "claude-<family>-<major>[-<minor>]", minor being one or two digits (a date
+#: suffix is eight), anywhere in the id so Bedrock / Vertex ids match too.
+_MODEL_VERSION = re.compile(r"claude-[a-z]+-(\d+)(?:-(\d{1,2}))?(?![0-9])")
+
+
+def image_tier(model: Optional[str]) -> Tuple[int, int]:
+    """The image tier of ``model``: high-resolution from Claude 4.7 on, else standard.
+
+    An id this cannot read gets the standard tier, whose limits every model accepts.
+    """
+    match = _MODEL_VERSION.search(model or "")
+    if match is None:
+        return STANDARD_TIER
+    version = (int(match.group(1)), int(match.group(2) or 0))
+    return HIGH_RES_TIER if version >= (4, 7) else STANDARD_TIER
 
 _SKIPPED = "not run: an earlier action in this batch failed"
 
@@ -53,20 +72,23 @@ def visual_tokens(width: int, height: int) -> int:
     return math.ceil(width / PATCH_PX) * math.ceil(height / PATCH_PX)
 
 
-def fitted_size(width: int, height: int) -> Tuple[int, int]:
-    """The largest size, aspect ratio kept, inside both image limits."""
-    scale = min(1.0, MAX_LONG_EDGE_PX / max(width, height),
-                math.sqrt(MAX_VISUAL_TOKENS * PATCH_PX * PATCH_PX / float(width * height)))
+def fitted_size(width: int, height: int,
+                tier: Tuple[int, int] = HIGH_RES_TIER) -> Tuple[int, int]:
+    """The largest size, aspect ratio kept, inside both limits of ``tier``."""
+    long_edge, max_tokens = tier
+    scale = min(1.0, long_edge / max(width, height),
+                math.sqrt(max_tokens * PATCH_PX * PATCH_PX / float(width * height)))
     size = (max(1, int(width * scale)), max(1, int(height * scale)))
     # Patches round up, so the pixel bound can still be a few tokens over.
-    while visual_tokens(*size) > MAX_VISUAL_TOKENS:
+    while visual_tokens(*size) > max_tokens:
         scale *= 0.995
         size = (max(1, int(width * scale)), max(1, int(height * scale)))
     return size
 
 
-def fit_screenshot(png: bytes) -> Tuple[bytes, Tuple[float, float]]:
-    """Downscale ``png`` into the toolset's limits; return it and the ``(sx, sy)`` scale.
+def fit_screenshot(png: bytes, tier: Tuple[int, int] = HIGH_RES_TIER,
+                   ) -> Tuple[bytes, Tuple[float, float]]:
+    """Downscale ``png`` into ``tier``'s limits; return it and the ``(sx, sy)`` scale.
 
     The scale maps screen pixels to screenshot pixels, so a coordinate the
     model gives is divided by it to reach the screen. An image already inside
@@ -75,20 +97,34 @@ def fit_screenshot(png: bytes) -> Tuple[bytes, Tuple[float, float]]:
     from PIL import Image
     with Image.open(io.BytesIO(png)) as image:
         width, height = image.size
-        size = fitted_size(width, height)
+        size = fitted_size(width, height, tier)
         if size == (width, height):
             return png, (1.0, 1.0)
         resized = image.resize(size, Image.Resampling.LANCZOS)
     return _png_bytes(resized), (size[0] / width, size[1] / height)
 
 
-def zoom_image(png: bytes, region: Tuple[int, int, int, int]) -> bytes:
-    """The ``(x0, y0, x1, y1)`` part of ``png`` at full resolution, fitted into the limits."""
+def resize_png(png: bytes, size: Tuple[int, int]) -> bytes:
+    """``png`` at exactly ``size``; unchanged when it already is, or is not an image."""
+    from PIL import Image
+    try:
+        image = Image.open(io.BytesIO(png))
+    except OSError:   # PIL.UnidentifiedImageError: nothing to resize, send as is
+        return png
+    with image:
+        if image.size == tuple(size):
+            return png
+        return _png_bytes(image.resize(tuple(size), Image.Resampling.LANCZOS))
+
+
+def zoom_image(png: bytes, region: Tuple[int, int, int, int],
+               tier: Tuple[int, int] = HIGH_RES_TIER) -> bytes:
+    """The ``(x0, y0, x1, y1)`` part of ``png`` at full resolution, fitted into ``tier``."""
     from PIL import Image
     with Image.open(io.BytesIO(png)) as image:
         x0, y0, x1, y1 = _clip_region(region, image.size)
         crop = image.crop((x0, y0, x1, y1))
-        size = fitted_size(*crop.size)
+        size = fitted_size(*crop.size, tier)
         if size != crop.size:
             crop = crop.resize(size, Image.Resampling.LANCZOS)
         return _png_bytes(crop)
