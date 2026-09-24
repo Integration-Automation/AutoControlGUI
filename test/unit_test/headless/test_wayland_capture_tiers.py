@@ -337,3 +337,11 @@ def test_portal_captures_end_to_end_from_a_response_signal(tmp_path):
     assert seen == [_URI]
     assert data == _png()
     assert not target.exists()
+
+
+def test_an_unbalanced_capture_override_is_a_screen_error(monkeypatch):
+    from je_auto_control.linux_wayland import capture
+    from je_auto_control.utils.exception.exceptions import AutoControlScreenException
+    monkeypatch.setenv(capture.CAPTURE_COMMAND_ENV, 'grim "{output}')
+    with pytest.raises(AutoControlScreenException):
+        capture._override_argv("/tmp/out.png")

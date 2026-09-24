@@ -58,6 +58,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260924-71 | 2026-09-24 | Wayland: libei devices survive a pause and are released once, wlr-randr sizes follow rotation and scale, a bad capture override is a screen error | #bugfix #audit | [2026-09](2026-09.md) |
 | U-20260924-70 | 2026-09-24 | WebRTC media: screen frames stamped at their real rate, host voice mixed down for mono players, audio device errors contained, a reusable viewer, mDNS and bridge cleanup | #bugfix #audit | [2026-09](2026-09.md) |
 | U-20260924-69 | 2026-09-24 | USB passthrough opens identical devices by serial, checks endpoint direction and releases interfaces; agent, self-heal, anchor, USB/IP and a11y fixes | #bugfix #audit | [2026-09](2026-09.md) |
 | U-20260924-68 | 2026-09-24 | MCP requests that always get a reply, a drag that releases, sampling over HTTP, waits that look once; USB credits and claims without races; assertions through callbacks; gamepad, clipboard and volume errors in the family | #bugfix #audit | [2026-09](2026-09.md) |
@@ -229,7 +230,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | File | Period | Entries |
 |---|---|---:|
-| [2026-09.md](2026-09.md) | 2026-09 | 140 |
+| [2026-09.md](2026-09.md) | 2026-09 | 141 |
 | [2026-08-f.md](2026-08-f.md) | 2026-08 | 1 |
 | [2026-08-e.md](2026-08-e.md) | 2026-08 | 2 |
 | [2026-08-d.md](2026-08-d.md) | 2026-08 | 2 |

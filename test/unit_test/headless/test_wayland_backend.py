@@ -638,3 +638,25 @@ def test_platform_wayland_wrapper_exports_expected_names():
         assert hasattr(wrapper, name)
     assert wrapper.mouse_keys_table["mouse_left"] == \
         wayland_mouse.wayland_mouse_left
+
+
+def test_wlr_randr_uses_each_outputs_layout_size():
+    """A rotated or scaled output takes its logical size, not its mode, in the layout."""
+    from je_auto_control.linux_wayland.screen import parse_wlr_randr
+    text = (
+        'DP-1 "Monitor"\n'
+        "  Enabled: yes\n"
+        "  Modes:\n"
+        "    1920x1080 px, 60.000000 Hz (preferred, current)\n"
+        "  Position: 0,0\n"
+        "  Transform: 90\n"
+        "  Scale: 1.000000\n"
+        'HDMI-A-1 "TV"\n'
+        "  Enabled: yes\n"
+        "  Modes:\n"
+        "    3840x2160 px, 60.000000 Hz (current)\n"
+        "  Position: 1080,0\n"
+        "  Transform: normal\n"
+        "  Scale: 2.000000\n"
+    )
+    assert parse_wlr_randr(text) == [(0, 0, 1080, 1920), (1080, 0, 1920, 1080)]

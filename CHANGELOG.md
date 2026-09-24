@@ -303,6 +303,9 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Fixed
 
+- **Wayland**: libei input keeps working after a screen lock or VT switch
+  and releases each device reference once; screen size follows rotated and
+  scaled outputs; a malformed capture-command override is a screen error.
 - **WebRTC media**: screen frames are stamped at the rate they are sent and
   frame rates above 30 fps take effect; host voice plays at the right speed on
   a mono output; an audio device that fails no longer aborts the connection or
