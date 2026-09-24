@@ -58,6 +58,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260924-73 | 2026-09-24 | Audit tests import their subjects explicitly, which Codacy's import-injection rule accepts | #test #ci | [2026-09](2026-09.md) |
 | U-20260924-72 | 2026-09-24 | X11, uinput and macOS backends: uinput types the right keys, send-to-window releases, unbound keys fail, wheel events recorded cleanly, media keys press and release, tap re-enabled | #bugfix #audit | [2026-09](2026-09.md) |
 | U-20260924-71 | 2026-09-24 | Wayland: libei devices survive a pause and are released once, wlr-randr sizes follow rotation and scale, a bad capture override is a screen error | #bugfix #audit | [2026-09](2026-09.md) |
 | U-20260924-70 | 2026-09-24 | WebRTC media: screen frames stamped at their real rate, host voice mixed down for mono players, audio device errors contained, a reusable viewer, mDNS and bridge cleanup | #bugfix #audit | [2026-09](2026-09.md) |
@@ -231,7 +232,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | File | Period | Entries |
 |---|---|---:|
-| [2026-09.md](2026-09.md) | 2026-09 | 142 |
+| [2026-09.md](2026-09.md) | 2026-09 | 143 |
 | [2026-08-f.md](2026-08-f.md) | 2026-08 | 1 |
 | [2026-08-e.md](2026-08-e.md) | 2026-08 | 2 |
 | [2026-08-d.md](2026-08-d.md) | 2026-08 | 2 |

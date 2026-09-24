@@ -73,15 +73,12 @@ def test_close_releases_the_claimed_interfaces():
     assert disposed == [device]
 
 
-@pytest.mark.parametrize("dotted", [
-    "je_auto_control.utils.usbip.protocol.UsbIpError",
-    "je_auto_control.utils.self_healing.locator.SelfHealError",
-    "je_auto_control.utils.anchor_locator.locator.AnchorLocatorError",
-])
-def test_the_errors_are_in_the_framework_family(dotted):
-    import importlib
-    module, name = dotted.rsplit(".", 1)
-    assert issubclass(getattr(importlib.import_module(module), name), AutoControlException)
+def test_the_errors_are_in_the_framework_family():
+    from je_auto_control.utils.anchor_locator.locator import AnchorLocatorError
+    from je_auto_control.utils.self_healing.locator import SelfHealError
+    from je_auto_control.utils.usbip.protocol import UsbIpError
+    for error in (UsbIpError, SelfHealError, AnchorLocatorError):
+        assert issubclass(error, AutoControlException), error
 
 
 class _Backend:

@@ -7,7 +7,6 @@ keys used the shift flag as the key-down flag; a failing Quartz call was
 swallowed; an unknown button posted nothing silently; the event tap was
 re-enabled through the wrong handle.
 """
-import importlib
 import sys
 import types
 
@@ -29,11 +28,12 @@ def test_uinput_types_the_evdev_code_for_an_x_keycode(monkeypatch):
         keyboard.press_key(3)         # below the X server's reserved range
 
 
-def _x11_module(name):
+def _needs_x11():
+    """Skip unless the X11 backend can load (Linux with a reachable X server)."""
     if not sys.platform.startswith("linux"):
         pytest.skip("X11 backend")
     try:
-        return importlib.import_module(f"je_auto_control.linux_with_x11.{name}")
+        from je_auto_control.linux_with_x11.keyboard import x11_linux_keyboard_control  # noqa: F401
     except Exception as error:  # noqa: BLE001  # reason: no X server here; the skip says why
         pytest.skip(f"X11 backend not importable: {error!r}")
 
@@ -47,9 +47,10 @@ class _Window:
 
 
 def test_x11_send_to_window_sends_press_then_release(monkeypatch):
-    keyboard = _x11_module("keyboard.x11_linux_keyboard_control")
-    mouse = _x11_module("mouse.x11_linux_mouse_control")
+    _needs_x11()
     from Xlib import X
+    from je_auto_control.linux_with_x11.keyboard import x11_linux_keyboard_control as keyboard
+    from je_auto_control.linux_with_x11.mouse import x11_linux_mouse_control as mouse
     window = _Window()
     for module in (keyboard, mouse):
         monkeypatch.setattr(module.display, "create_resource_object", lambda _kind, _id: window)
@@ -62,14 +63,16 @@ def test_x11_send_to_window_sends_press_then_release(monkeypatch):
 
 
 def test_x11_refuses_an_unbound_keycode():
-    keyboard = _x11_module("keyboard.x11_linux_keyboard_control")
+    _needs_x11()
+    from je_auto_control.linux_with_x11.keyboard import x11_linux_keyboard_control as keyboard
     with pytest.raises(AutoControlKeyboardException):
         keyboard.press_key(0)
 
 
 def test_recorded_wheel_events_are_not_none_actions(monkeypatch):
-    record = _x11_module("record.x11_linux_record")
+    _needs_x11()
     from queue import Queue
+    from je_auto_control.linux_with_x11.record import x11_linux_record as record
     raw = Queue()
     for event in ((5, 4, 10, 20), (5, 5, 10, 20), (5, 1, 30, 40)):
         raw.put(event)
@@ -79,7 +82,8 @@ def test_recorded_wheel_events_are_not_none_actions(monkeypatch):
 
 
 def test_uinput_scroll_follows_the_sign(monkeypatch):
-    mouse = _x11_module("uinput.mouse")
+    _needs_x11()
+    from je_auto_control.linux_with_x11.uinput import mouse
     emitted = []
     monkeypatch.setattr(mouse, "emit", lambda *args: emitted.append(args))
     mouse.scroll(-2, int(mouse.x11_linux_scroll_direction_up))
@@ -87,16 +91,16 @@ def test_uinput_scroll_follows_the_sign(monkeypatch):
     assert emitted == [(mouse.EV_REL, mouse.REL_WHEEL, -1)] * 2
 
 
-def _osx(name):
+def _needs_macos():
     if sys.platform != "darwin":
         pytest.skip("macOS backend")
-    return importlib.import_module(f"je_auto_control.osx.{name}")
 
 
 def test_a_media_key_press_and_release_are_different_events(monkeypatch):
-    keyboard = _osx("keyboard.osx_keyboard")
+    _needs_macos()
     import AppKit
     import Quartz
+    from je_auto_control.osx.keyboard import osx_keyboard as keyboard
     posted = []
     monkeypatch.setattr(Quartz, "CGEventPost", lambda _tap, event: posted.append(event))
     keyboard.press_key("key_play", False)
@@ -106,8 +110,9 @@ def test_a_media_key_press_and_release_are_different_events(monkeypatch):
 
 
 def test_a_failing_quartz_call_is_a_keyboard_error(monkeypatch):
-    keyboard = _osx("keyboard.osx_keyboard")
+    _needs_macos()
     import Quartz
+    from je_auto_control.osx.keyboard import osx_keyboard as keyboard
 
     def refuse(*_args):
         raise ValueError("bad keycode")
@@ -118,14 +123,16 @@ def test_a_failing_quartz_call_is_a_keyboard_error(monkeypatch):
 
 
 def test_an_unknown_mouse_button_is_refused():
-    mouse = _osx("mouse.osx_mouse")
+    _needs_macos()
+    from je_auto_control.osx.mouse import osx_mouse as mouse
     with pytest.raises(AutoControlMouseException):
         mouse.press_mouse(10, 10, 99)
 
 
 def test_the_tap_is_re_enabled_through_its_own_handle(monkeypatch):
-    listener = _osx("listener.osx_listener")
+    _needs_macos()
     import Quartz
+    from je_auto_control.osx.listener import osx_listener as listener
     enabled = []
     monkeypatch.setattr(Quartz, "CGEventTapEnable", lambda tap, on: enabled.append((tap, on)))
     tap = listener.OSXInputTap()
