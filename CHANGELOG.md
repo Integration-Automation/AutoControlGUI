@@ -290,6 +290,11 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Fixed
 
+- **Agent requests are bounded**: each model call times out after 120 s and
+  only the three newest screenshots are resent, so long runs stay under the
+  request size limit; `export_*_tools(only=[])` offers no tools instead of all
+  of them; an empty LLM plan raises `LLMPlanError`; VLM coordinates are no
+  longer read out of longer numbers or accepted off the screenshot.
 - **Computer use reaches the API**: the `computer` tool is sent under its
   beta (it was rejected on every request), now `computer_20251124` on
   `claude-opus-5` by default; model-chosen scrolls and waits are bounded and a

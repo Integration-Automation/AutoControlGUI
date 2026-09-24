@@ -24,7 +24,8 @@ from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple
 
 from je_auto_control.utils.agent.agent_loop import AgentBackend, AgentStep
 from je_auto_control.utils.agent.backends.base import (
-    AgentBackendError, build_default_system_prompt, encode_screenshot_b64,
+    REQUEST_TIMEOUT_S, AgentBackendError, build_default_system_prompt,
+    encode_screenshot_b64, prune_old_screenshots,
 )
 
 
@@ -152,9 +153,11 @@ class ComputerUseAgentBackend(AgentBackend):
                 "role": "user",
                 "content": _initial_user_content(goal, screenshot),
             })
+        prune_old_screenshots(self._conversation)
         client = self._resolve_client()
         try:
             response = client.beta.messages.create(
+                timeout=REQUEST_TIMEOUT_S,
                 betas=[self._beta],
                 model=self._model,
                 system=self._build_system(goal),

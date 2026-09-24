@@ -5,8 +5,9 @@ from typing import Any, Dict, List, Optional, Sequence
 
 from je_auto_control.utils.agent.agent_loop import AgentBackend, AgentStep
 from je_auto_control.utils.agent.backends.base import (
-    AgentBackendError, build_default_system_prompt, encode_screenshot_b64,
-    offered_tool_names, require_offered,
+    REQUEST_TIMEOUT_S, AgentBackendError, build_default_system_prompt,
+    encode_screenshot_b64, offered_tool_names, prune_old_screenshots,
+    require_offered,
 )
 
 
@@ -65,9 +66,11 @@ class AnthropicAgentBackend(AgentBackend):
         # state — text-only context drifts quickly during a long run.
         user_content = _build_user_content(screenshot)
         self._conversation.append({"role": "user", "content": user_content})
+        prune_old_screenshots(self._conversation)
         client = self._resolve_client()
         try:
             response = client.messages.create(
+                timeout=REQUEST_TIMEOUT_S,
                 model=self._model,
                 system=self._build_system(goal),
                 tools=self._tools,

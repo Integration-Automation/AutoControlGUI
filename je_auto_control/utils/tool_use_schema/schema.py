@@ -79,10 +79,19 @@ def _description_for(name: str, callable_obj: Callable[..., Any]) -> str:
     return f"AutoControl command {name}"
 
 
+def _allowed_names(only: Optional[List[str]]) -> Optional[set]:
+    """``None`` exports every command; any list, even an empty one, is the whole set.
+
+    An empty list used to export every command, so a filter that matched
+    nothing handed the agent all of them, AC_shell_command included.
+    """
+    return None if only is None else set(only)
+
+
 def export_anthropic_tools(*, only: Optional[List[str]] = None,
                            ) -> List[Dict[str, Any]]:
     """Return the AC_* commands as Anthropic ``tools`` payload list."""
-    allowed = set(only) if only else None
+    allowed = _allowed_names(only)
     tools: List[Dict[str, Any]] = []
     for name, fn in sorted(_ac_callables().items()):
         if allowed is not None and name not in allowed:
@@ -105,7 +114,7 @@ def export_anthropic_tools(*, only: Optional[List[str]] = None,
 def export_openai_tools(*, only: Optional[List[str]] = None,
                         ) -> List[Dict[str, Any]]:
     """Return the AC_* commands as OpenAI ``tools`` payload list."""
-    allowed = set(only) if only else None
+    allowed = _allowed_names(only)
     tools: List[Dict[str, Any]] = []
     for name, fn in sorted(_ac_callables().items()):
         if allowed is not None and name not in allowed:

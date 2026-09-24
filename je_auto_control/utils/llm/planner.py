@@ -132,6 +132,10 @@ def _parse_actions(raw: str) -> List[list]:
         raise LLMPlanError(
             f"LLM output must be a JSON array, got {type(actions).__name__}"
         )
+    if not actions:
+        # run_from_description would hand [] to the executor, which fails
+        # with an unrelated "JSON action is null".
+        raise LLMPlanError("LLM returned an empty plan")
     return actions
 
 

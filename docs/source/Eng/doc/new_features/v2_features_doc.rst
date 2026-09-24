@@ -374,6 +374,11 @@ language and the MCP tool registry. Parameters:
 * ``max_steps`` (default 25) and ``wall_seconds`` (default 300.0).
 * ``model`` / ``max_tokens`` — backend-specific overrides.
 
+Each model request times out after 120 s, and only the three newest
+screenshots are resent (older ones become a text note), so a long run stays
+under the API's request size limit. ``export_anthropic_tools(only=[...])``
+offers exactly the listed commands — an empty list offers none.
+
 The Anthropic-only Computer-Use raw path (``computer_20251124``) is
 still available via ``AC_computer_use`` / ``ac_computer_use`` and is
 the right choice when the agent needs to drive a desktop the model

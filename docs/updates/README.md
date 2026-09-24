@@ -58,6 +58,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260924-35 | 2026-09-24 | Agent requests time out and resend only recent screenshots; empty tool filters, empty plans and stray VLM coordinates refused | #bugfix #audit #agent #llm #vision | [2026-09](2026-09.md) |
 | U-20260924-34 | 2026-09-24 | Computer use: sent under its beta, bounded scrolls and waits, scroll at the model's coordinate | #bugfix #audit #agent | [2026-09](2026-09.md) |
 | U-20260924-33 | 2026-09-24 | CLI: -d runs files in sorted order inside the directory only, the legacy entry point explains failures, dry-run vars, validate, failed suites, start-server port; pytest plugin robustness | #bugfix #audit #cli | [2026-09](2026-09.md) |
 | U-20260924-32 | 2026-09-24 | Screen recordings play back at their real length; unusable writers are refused; iOS find_element honours its timeout | #bugfix #audit | [2026-09](2026-09.md) |
@@ -193,7 +194,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | File | Period | Entries |
 |---|---|---:|
-| [2026-09.md](2026-09.md) | 2026-09 | 104 |
+| [2026-09.md](2026-09.md) | 2026-09 | 105 |
 | [2026-08-f.md](2026-08-f.md) | 2026-08 | 1 |
 | [2026-08-e.md](2026-08-e.md) | 2026-08 | 2 |
 | [2026-08-d.md](2026-08-d.md) | 2026-08 | 2 |

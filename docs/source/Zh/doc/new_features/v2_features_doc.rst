@@ -357,6 +357,10 @@ helper（``je_auto_control.gui.flow_editor.layout_steps``）可單元
 * ``max_steps``（預設 25）、``wall_seconds``（預設 300.0）。
 * ``model`` / ``max_tokens`` — backend 專屬覆寫。
 
+每次向模型發出的請求 120 秒逾時，對話裡只重送最新的三張截圖（較早的換成一行文字），
+長時間執行也不會超過 API 的請求大小上限。``export_anthropic_tools(only=[...])``
+只提供列出的指令——空清單就是一個都不提供。
+
 Anthropic 原生 Computer-Use 路徑（``computer_20251124``）仍透過
 ``AC_computer_use`` / ``ac_computer_use`` 提供，適合需要由模型
 直接看見桌面像素的場景。

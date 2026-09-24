@@ -41,17 +41,31 @@ def locate_by_description(description: str,
     coords = bound.locate(image_bytes, description, model=model)
     if coords is None:
         return None
+    return _to_screen(coords, image_bytes, screen_region)
+
+
+def _to_screen(coords: Tuple[int, int], image_bytes: bytes,
+               screen_region: Optional[List[int]]) -> Optional[Tuple[int, int]]:
+    """Check a reply lies on the captured image and translate it to screen space."""
     x, y = coords
-    if screen_region is not None:
-        # A reply outside the region is a misread, not a location: it was
-        # translated and clicked anyway (region 100x100 -> a point at y=5100).
-        width = int(screen_region[2]) - int(screen_region[0])
-        height = int(screen_region[3]) - int(screen_region[1])
-        if not (0 <= x < width and 0 <= y < height):
-            return None
-        x += int(screen_region[0])
-        y += int(screen_region[1])
-    return (int(x), int(y))
+    size = _png_size(image_bytes)
+    if size is not None and not _inside(x, y, size[0], size[1]):
+        # Off the captured image, so not a location either; with no region
+        # this reply went straight to the mouse.
+        return None
+    if screen_region is None:
+        return (int(x), int(y))
+    # A reply outside the region is a misread, not a location: it was
+    # translated and clicked anyway (region 100x100 -> a point at y=5100).
+    left, top = int(screen_region[0]), int(screen_region[1])
+    if not _inside(x, y, int(screen_region[2]) - left, int(screen_region[3]) - top):
+        return None
+    return (int(x) + left, int(y) + top)
+
+
+def _inside(x: int, y: int, width: int, height: int) -> bool:
+    """Whether ``(x, y)`` lies within a ``width`` x ``height`` image."""
+    return 0 <= x < width and 0 <= y < height
 
 
 def click_by_description(description: str,
@@ -99,6 +113,16 @@ def verify_description(description: str,
         )
     image_bytes = _capture_screenshot_bytes(screen_region)
     return bool(bound.verify(image_bytes, description, model=model))
+
+
+_PNG_SIGNATURE = bytes.fromhex("89504e470d0a1a0a")
+
+
+def _png_size(data: bytes) -> Optional[Tuple[int, int]]:
+    """Width and height from a PNG's IHDR chunk, or None for anything else."""
+    if len(data) < 24 or not data.startswith(_PNG_SIGNATURE):
+        return None
+    return int.from_bytes(data[16:20], "big"), int.from_bytes(data[20:24], "big")
 
 
 def _capture_screenshot_bytes(

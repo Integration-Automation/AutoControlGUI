@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import base64
-from typing import Any, FrozenSet, Iterable, Mapping, Optional
+from typing import Any, Dict, FrozenSet, Iterable, List, Mapping, Optional
 
 from je_auto_control.utils.exception.exceptions import AutoControlException
 
@@ -65,7 +65,53 @@ def encode_screenshot_b64(screenshot: Optional[bytes]) -> Optional[str]:
     return base64.b64encode(screenshot).decode("ascii")
 
 
+# One agent request: a screenshot in, one tool call out. The SDKs' default is
+# 600 s per attempt with two retries, so a stalled connection held a step for
+# up to half an hour while the run's wall_seconds is checked only between steps.
+REQUEST_TIMEOUT_S = 120.0
+
+# Screenshots kept in the replayed conversation. Every step attaches a fresh
+# capture and the whole conversation is resent, so a default 25-step run
+# carried 25 full-screen PNGs — past the Messages API's 32 MB request limit
+# for ordinary desktop captures — and paid for every earlier frame each step.
+SCREENSHOTS_KEPT = 3
+
+_IMAGE_BLOCK_TYPES = frozenset({"image", "image_url"})
+_OMITTED = {"type": "text", "text": "[earlier screenshot omitted]"}
+
+
+def prune_old_screenshots(messages: List[Dict[str, Any]],
+                          keep: int = SCREENSHOTS_KEPT) -> None:
+    """Replace all but the newest ``keep`` image blocks with a text note, in place.
+
+    Images nested in ``tool_result`` content count too; the blocks around
+    them are left as they were, so every tool_use keeps its answer.
+    """
+    seen = 0
+    for message in reversed(messages):
+        if isinstance(message, dict):
+            seen = _prune_blocks(message.get("content"), keep, seen)
+
+
+def _prune_blocks(content: Any, keep: int, seen: int) -> int:
+    """Prune images in one content list, newest first; return images seen so far."""
+    if not isinstance(content, list):
+        return seen
+    for index in range(len(content) - 1, -1, -1):
+        block = content[index]
+        if not isinstance(block, dict):
+            continue
+        if block.get("type") not in _IMAGE_BLOCK_TYPES:
+            seen = _prune_blocks(block.get("content"), keep, seen)
+            continue
+        seen += 1
+        if seen > keep:
+            content[index] = dict(_OMITTED)
+    return seen
+
+
 __all__ = [
-    "AgentBackendError", "build_default_system_prompt",
-    "encode_screenshot_b64",
+    "AgentBackendError", "REQUEST_TIMEOUT_S", "SCREENSHOTS_KEPT",
+    "build_default_system_prompt", "encode_screenshot_b64",
+    "prune_old_screenshots",
 ]

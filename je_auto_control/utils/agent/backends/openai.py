@@ -6,7 +6,8 @@ from typing import Any, Dict, List, Optional, Sequence
 
 from je_auto_control.utils.agent.agent_loop import AgentBackend, AgentStep
 from je_auto_control.utils.agent.backends.base import (
-    AgentBackendError, build_default_system_prompt, encode_screenshot_b64,
+    REQUEST_TIMEOUT_S, AgentBackendError, build_default_system_prompt,
+    encode_screenshot_b64, prune_old_screenshots,
     offered_tool_names, require_offered,
 )
 
@@ -65,9 +66,11 @@ class OpenAIAgentBackend(AgentBackend):
         self._messages.append(
             {"role": "user", "content": _build_user_content(screenshot)},
         )
+        prune_old_screenshots(self._messages)
         client = self._resolve_client()
         try:
             response = client.chat.completions.create(
+                timeout=REQUEST_TIMEOUT_S,
                 model=self._model,
                 messages=self._messages,
                 tools=self._tools,
