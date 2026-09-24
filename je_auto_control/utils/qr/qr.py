@@ -23,12 +23,11 @@ def _load_np(source: ImageSource, region: Optional[Sequence[int]]):
     import numpy as np
     from PIL import Image
     if isinstance(source, Image.Image):
-        image = source
-    elif isinstance(source, bytes):
-        image = Image.open(io.BytesIO(source))
+        image = source.convert("RGB")
     else:
-        image = Image.open(str(source))
-    image = image.convert("RGB")
+        opened = Image.open(io.BytesIO(source) if isinstance(source, bytes) else str(source))
+        with opened:  # multi-frame files stay open until closed
+            image = opened.convert("RGB")
     if region is not None:
         left, top, right, bottom = (int(v) for v in region)
         image = image.crop((left, top, right, bottom))

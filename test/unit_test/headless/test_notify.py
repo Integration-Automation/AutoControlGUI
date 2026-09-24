@@ -36,6 +36,7 @@ def test_notify_runs_and_reports_shown(monkeypatch):
     def fake_run(argv, **kwargs):
         calls["argv"] = argv
         calls["env"] = kwargs.get("env")
+        return notifier.subprocess.CompletedProcess(argv, 0)
 
     monkeypatch.setattr(notifier.subprocess, "run", fake_run)
     result = notifier.notify("Done", "All good", system="Linux")

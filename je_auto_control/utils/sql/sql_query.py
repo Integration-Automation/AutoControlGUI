@@ -68,7 +68,11 @@ def query_sqlite(database: str, query: str,
     # closing(): sqlite3's own context manager only commits/rolls back the
     # transaction, it does not close the connection (leaking the handle until GC).
     driver = require_sqlite3()
-    with closing(driver.connect(uri, uri=True)) as connection:
+    try:
+        opened = driver.connect(uri, uri=True)
+    except SQLITE_ERRORS as error:   # e.g. a file that cannot be opened read-only
+        raise AutoControlActionException(f"SQLite {path}: {error}") from error
+    with closing(opened) as connection:
         connection.row_factory = driver.Row
         try:
             cursor = connection.execute(

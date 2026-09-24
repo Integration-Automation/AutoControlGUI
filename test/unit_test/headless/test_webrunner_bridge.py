@@ -248,13 +248,13 @@ def test_web_quit_invokes_wr_quit():
     quit_fn.assert_called_once_with()
 
 
-def test_web_screenshot_passes_file_name():
+def test_web_screenshot_passes_file_path():
     from je_auto_control.utils.webrunner_bridge import web_screenshot
     seen = {}
 
-    def shot(file_name=None):
-        seen["file_name"] = file_name
-        return file_name
+    def shot(file_path):   # WebRunner's save_screenshot(self, file_path)
+        seen["file_path"] = file_path
+        return file_path
 
     fake_exec = _fake_executor({"WR_save_screenshot": shot})
     with patch(
@@ -262,7 +262,7 @@ def test_web_screenshot_passes_file_name():
         return_value=fake_exec,
     ):
         assert web_screenshot("out.png") == "out.png"
-    assert seen["file_name"] == "out.png"
+    assert seen["file_path"] == "out.png"
 
 
 def test_web_screenshot_rejects_blank_path():

@@ -50,7 +50,8 @@ Vision
 * **Region colour stats** — ``region_color_stats(source, region)`` returns
   a region's ``average_rgb``, ``dominant_rgb``, and that colour's pixel
   fraction (quantise colour space → busiest bucket → average its real
-  pixels). ``AC_region_color_stats``.
+  pixels). A region reaching past the image is clipped to it.
+  ``AC_region_color_stats``.
 * **QR reading** — ``read_qr_codes(source, region)`` decodes QR codes via
   OpenCV's ``QRCodeDetector`` (no new dependency). ``AC_read_qr``.
 
@@ -147,7 +148,9 @@ Reporting & notifications
 * **Desktop notifications** — ``notify(title, message)`` shows a
   cross-platform toast (``notify-send`` / ``osascript`` / PowerShell);
   injection-safe (Linux argv, macOS / Windows a static script reading the
-  strings from environment variables). ``AC_notify``.
+  strings from environment variables). A notifier that exits non-zero
+  gives ``shown=False``; Windows toasts use PowerShell's registered app
+  id, since Windows drops toasts from an unregistered one. ``AC_notify``.
 
 
 GUI

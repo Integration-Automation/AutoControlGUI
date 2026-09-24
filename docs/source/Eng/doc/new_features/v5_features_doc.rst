@@ -116,7 +116,7 @@ Send mail — for example a flow's report — over the standard library::
          "username": "bot@x.com", "password": "..."})
 
 TLS is enabled by default (STARTTLS, or implicit SSL when ``use_ssl`` is
-set) over a verified default context; supports multiple recipients, CC,
+set; the port then defaults to 465 instead of 587) over a verified default context; supports multiple recipients, CC,
 HTML bodies, and file attachments.
 
 Executor command: ``AC_send_email``.

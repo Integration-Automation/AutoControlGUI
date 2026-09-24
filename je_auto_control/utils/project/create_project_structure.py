@@ -65,15 +65,16 @@ def create_template(parent_name: str,
         if executor_dir_path.exists() and executor_dir_path.is_dir():
             _write_file(
                 executor_dir_path / "executor_one_file.py",
-                executor_template_1.replace(_TEMPLATE_PLACEHOLDER, str(keyword_dir_path / "keyword1.json"))
+                executor_template_1.replace(_TEMPLATE_PLACEHOLDER, repr(str(keyword_dir_path / "keyword1.json")))
             )
             _write_file(
                 executor_dir_path / "executor_bad_file.py",
-                bad_executor_template_1.replace(_TEMPLATE_PLACEHOLDER, str(keyword_dir_path / "bad_keyword_1.json"))
+                bad_executor_template_1.replace(
+                    _TEMPLATE_PLACEHOLDER, repr(str(keyword_dir_path / "bad_keyword_1.json")))
             )
             _write_file(
                 executor_dir_path / "executor_folder.py",
-                executor_template_2.replace(_TEMPLATE_PLACEHOLDER, str(keyword_dir_path))
+                executor_template_2.replace(_TEMPLATE_PLACEHOLDER, repr(str(keyword_dir_path)))
             )
 
 

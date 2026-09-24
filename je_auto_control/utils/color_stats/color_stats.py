@@ -41,9 +41,9 @@ def _load_rgb(source: ImageSource) -> "Image.Image":
     from PIL import Image
     if isinstance(source, Image.Image):
         return source.convert("RGB")
-    if isinstance(source, bytes):
-        return Image.open(io.BytesIO(source)).convert("RGB")
-    return Image.open(str(source)).convert("RGB")
+    opened = Image.open(io.BytesIO(source) if isinstance(source, bytes) else str(source))
+    with opened:  # multi-frame files stay open until closed
+        return opened.convert("RGB")
 
 
 def _average_color(pixels: List[RGB], count: int) -> RGB:
@@ -79,7 +79,12 @@ def region_color_stats(source: ImageSource,
     image = _load_rgb(source)
     if region is not None:
         left, top, right, bottom = (int(v) for v in region)
-        image = image.crop((left, top, right, bottom))
+        if right < left or bottom < top:
+            raise ValueError(f"region {list(region)} is inverted")
+        # crop() pads outside the image with black, which would count.
+        width, height = image.size
+        image = image.crop((max(0, min(left, width)), max(0, min(top, height)),
+                            max(0, min(right, width)), max(0, min(bottom, height))))
     image.thumbnail((128, 128))
     # _load_rgb converted the image, so every pixel is an (r, g, b) int
     # triple; Pillow's stub types the result for every mode at once.

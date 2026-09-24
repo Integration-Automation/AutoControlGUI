@@ -44,7 +44,8 @@ Builder 項目。視覺與視窗功能的 geometry / IO 操作皆可注入,因�
   其他平台除非給了 ``scroller=``,否則拋出 ``ValueError``。``AC_scroll_to_find``。
 * **區域顏色統計** — ``region_color_stats(source, region)`` 回傳區域的
   ``average_rgb``、``dominant_rgb`` 及該色的像素占比(量化色彩空間 → 取
-  最多的 bucket → 平均其真實像素)。``AC_region_color_stats``。
+  最多的 bucket → 平均其真實像素)。超出影像的區域會裁到影像範圍內。
+  ``AC_region_color_stats``。
 * **讀取 QR code** — ``read_qr_codes(source, region)`` 以 OpenCV 的
   ``QRCodeDetector`` 解碼 QR(不需新相依)。``AC_read_qr``。
 
@@ -128,7 +129,9 @@ Builder 項目。視覺與視窗功能的 geometry / IO 操作皆可注入,因�
   標記版搭檔)。``AC_annotate_screenshot``。
 * **桌面通知** — ``notify(title, message)`` 顯示跨平台通知
   (``notify-send`` / ``osascript`` / PowerShell);防注入(Linux 用 argv,
-  macOS / Windows 用從環境變數讀字串的固定腳本)。``AC_notify``。
+  macOS / Windows 用從環境變數讀字串的固定腳本)。通知程式以非零結束碼
+  結束時回傳 ``shown=False``;Windows 通知用 PowerShell 已註冊的 app id,
+  因為 Windows 會丟掉未註冊 app id 的通知。``AC_notify``。
 
 
 GUI

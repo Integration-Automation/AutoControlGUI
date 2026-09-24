@@ -303,6 +303,13 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
   stops a mailbox's polling; mailbox names with spaces or brackets work; a
   string `max_runs` stops the job; a corrupt .xlsx data source is an ordinary
   action error.
+- **Small utilities**: `use_ssl` mail defaults to port 465; the resource
+  profiler's report stops at `stop()` and its speedscope export loads;
+  `Content-Length` must be ASCII digits and `chunked` the final coding;
+  `web_screenshot` works against WebRunner; failed notifications report
+  `shown=False` and Windows toasts appear; a dead key no longer reads as its
+  US character; inverted and off-image regions are handled in annotate and
+  colour stats.
 - **Emergency stop on Linux / macOS**: the stop key wakes a sleeping or
   waiting main thread there too (SIGINT is sent to the main thread).
 - **Image analysis and packaging**: colour-vision simulation uses Machado

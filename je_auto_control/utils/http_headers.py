@@ -33,18 +33,18 @@ class HeaderLookup(Protocol):
 def parse_content_length(headers: HeaderLookup) -> int:
     """Return the request's Content-Length, or ``INVALID_CONTENT_LENGTH``.
 
-    Never raises: a malformed, negative, or absent header yields the sentinel.
+    Never raises: a malformed, signed, or absent header yields the sentinel.
+    The value must be ASCII digits (RFC 9110 ``1*DIGIT``): ``int()`` alone
+    also takes ``+5``, ``1_000`` and non-ASCII digits, which a proxy in
+    front of the server may read differently.
     """
     raw = headers.get("Content-Length")
     if raw is None or str(raw).strip() == "":
         return 0
-    try:
-        length = int(str(raw).strip())
-    except (TypeError, ValueError):
+    text = str(raw).strip()
+    if not (text.isascii() and text.isdigit()):
         return INVALID_CONTENT_LENGTH
-    # A negative length is as unusable as a malformed one; normalise so
-    # callers only ever have to test `<= 0`.
-    return length if length >= 0 else INVALID_CONTENT_LENGTH
+    return int(text)
 
 
 #: Longest chunk-size or trailer line accepted, and most trailer lines.
@@ -75,8 +75,11 @@ def is_chunked(headers: HeaderLookup) -> bool:
 
     Such a request has no Content-Length, so a server that only reads that
     header sees an empty body -- and answers 200 for data it never read.
+    ``chunked`` has to be the final transfer coding (RFC 9112 6.1); a token
+    that merely contains the word, such as ``xchunked``, is not it.
     """
-    return "chunked" in str(headers.get("Transfer-Encoding") or "").lower()
+    codings = str(headers.get("Transfer-Encoding") or "").split(",")
+    return codings[-1].strip().lower() == "chunked"
 
 
 def read_chunked_body(rfile: BodyReader, limit: int) -> bytes:

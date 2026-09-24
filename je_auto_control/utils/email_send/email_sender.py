@@ -85,10 +85,12 @@ def _deliver(mime: EmailMessage, smtp: Mapping[str, Any]) -> None:
     host = smtp.get("host")
     if not host:
         raise ValueError("smtp 'host' is required")
-    port = int(smtp.get("port", 587))
+    use_ssl = bool(smtp.get("use_ssl", False))
+    # Implicit TLS listens on 465 (RFC 8314); 587 is the STARTTLS port.
+    port = int(smtp.get("port", 465 if use_ssl else 587))
     timeout = float(smtp.get("timeout", 30.0))
     username, password = smtp.get("username"), smtp.get("password")
-    if bool(smtp.get("use_ssl", False)):
+    if use_ssl:
         with smtplib.SMTP_SSL(str(host), port, timeout=timeout,
                               context=_tls_context()) as server:
             _login_send(server, username, password, mime)

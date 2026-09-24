@@ -3,7 +3,7 @@ executor_template_1: str = \
 
 execute_action(
     read_action_json(
-        r"{temp}"
+        {temp}
     )
 )
 """
@@ -13,7 +13,7 @@ executor_template_2: str = \
 
 execute_files(
     get_dir_files_as_list(
-        r"{temp}"
+        {temp}
     )
 )
 """
@@ -25,7 +25,7 @@ from je_auto_control import execute_action, read_action_json
     
 execute_action(
     read_action_json(
-        r"{temp}"
+        {temp}
     )
 )
 """

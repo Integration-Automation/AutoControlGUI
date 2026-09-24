@@ -111,7 +111,7 @@ def web_screenshot(file_path: str) -> Any:
         )
     return run_webrunner_action({
         "action": "WR_save_screenshot",
-        "params": {"file_name": file_path},
+        "params": {"file_path": file_path},
     })
 
 

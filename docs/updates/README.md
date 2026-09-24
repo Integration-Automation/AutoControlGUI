@@ -59,6 +59,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
 | U-20260924-59 | 2026-09-24 | Triggers, scheduler and data sources: serialised engine start/stop, poison-proof email polling, quoted mailboxes, answerable webhook verbs, numeric max_runs, contained .xlsx errors | #bugfix #audit | [2026-09](2026-09.md) |
+| U-20260924-58 | 2026-09-24 | Small utilities: implicit-SSL port, a profiler frozen at stop, strict Content-Length, WebRunner screenshots, notifications that report failure | #bugfix #audit | [2026-09](2026-09.md) |
 | U-20260924-57 | 2026-09-24 | Type-check the SBOM's optional packaging import in CI's bare install | #ci #typing | [2026-09](2026-09.md) |
 | U-20260924-56 | 2026-09-24 | Emergency stop wakes a sleeping main thread on Linux and macOS too | #bugfix #ci | [2026-09](2026-09.md) |
 | U-20260924-55 | 2026-09-24 | Image analysis and packaging: Machado CVD simulation, square-aware widget classes, repair that does not re-act, schema-valid registry manifests | #bugfix #audit | [2026-09](2026-09.md) |
@@ -217,7 +218,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | File | Period | Entries |
 |---|---|---:|
-| [2026-09.md](2026-09.md) | 2026-09 | 128 |
+| [2026-09.md](2026-09.md) | 2026-09 | 129 |
 | [2026-08-f.md](2026-08-f.md) | 2026-08 | 1 |
 | [2026-08-e.md](2026-08-e.md) | 2026-08 | 2 |
 | [2026-08-d.md](2026-08-d.md) | 2026-08 | 2 |

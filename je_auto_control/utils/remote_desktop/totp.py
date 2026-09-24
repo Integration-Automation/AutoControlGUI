@@ -84,6 +84,8 @@ def generate_code(secret: str, *, at: Optional[float] = None,
     _check_parameters(step, digits)
     now = time.time() if at is None else at
     counter = int(now) // step
+    if counter < 0:
+        raise TOTPError(f"TOTP time must not be before the epoch, got {now}")
     return _code_for_counter(_decode_secret(secret), counter, digits=digits)
 
 

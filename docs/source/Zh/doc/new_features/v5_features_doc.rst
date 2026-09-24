@@ -107,7 +107,8 @@ Email(SMTP)
         {"host": "smtp.x.com", "port": 587,
          "username": "bot@x.com", "password": "..."})
 
-預設啟用 TLS(STARTTLS,或設定 ``use_ssl`` 時用隱式 SSL),使用已驗證
+預設啟用 TLS(STARTTLS,或設定 ``use_ssl`` 時用隱式 SSL,埠號預設改為 465
+而非 587),使用已驗證
 憑證的預設 context;支援多收件人、CC、HTML 內文與檔案附件。
 
 執行器指令:``AC_send_email``。

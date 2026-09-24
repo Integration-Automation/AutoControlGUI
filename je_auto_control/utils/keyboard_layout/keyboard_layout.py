@@ -126,8 +126,12 @@ def layout_char_table(layout: Optional[int] = None
 
 
 def char_table(layout: Optional[int] = None) -> Dict[int, Tuple[str, str]]:
-    """The layout's table over the US fallback, so every known key is covered."""
-    return {**US_PRINTABLE_VK, **layout_char_table(layout)}
+    """The layout's table, or the US table when the layout cannot be read.
+
+    Not merged: a key missing from the layout's table (a dead key such as
+    the German ``^``) would otherwise get its US character.
+    """
+    return layout_char_table(layout) or dict(US_PRINTABLE_VK)
 
 
 def vk_to_char(vk: int, shifted: bool = False,
