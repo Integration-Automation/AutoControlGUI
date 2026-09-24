@@ -4,8 +4,10 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Dict, List, Mapping, Optional, Set, Tuple
 
+from je_auto_control.utils.exception.exceptions import AutoControlException
 
-class DagDefinitionError(ValueError):
+
+class DagDefinitionError(AutoControlException, ValueError):
     """Raised when a DAG definition is malformed (cycles, dangling deps, …)."""
 
 

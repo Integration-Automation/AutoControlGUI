@@ -303,6 +303,13 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
   stops a mailbox's polling; mailbox names with spaces or brackets work; a
   string `max_runs` stops the job; a corrupt .xlsx data source is an ordinary
   action error.
+- **Data utilities**: JWTs are rejected at their expiry second and only in
+  canonical base64url; malformed tokens raise `JwtError`; n-gram similarity
+  rejects `n < 1`; `DagDefinitionError` is an `AutoControlException`;
+  time-series samples sharing a timestamp keep their order and unknown fills
+  raise; NaN fails range rules; feature flags accept `{"variant": ...}` and
+  fall back on malformed serves; schema compatibility sees required-only
+  fields and rejects unknown modes; CSV test data takes rows with different keys.
 - **Small utilities**: `use_ssl` mail defaults to port 465; the resource
   profiler's report stops at `stop()` and its speedscope export loads;
   `Content-Length` must be ASCII digits and `chunked` the final coding;

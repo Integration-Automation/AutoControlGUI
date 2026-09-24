@@ -139,10 +139,19 @@ def _context_key(context: Mapping[str, Any]) -> str:
 
 def _serve(flag: Flag, serve: Any, context: Mapping[str, Any],
            reason: str) -> Dict[str, Any]:
-    if isinstance(serve, Mapping) and "rollout" in serve:
-        variant = assign_variant(flag.key, serve["rollout"],
-                                 _context_key(context))
-        return _result(flag, variant, "SPLIT")
+    """Resolve a rule's ``serve``: a variant name, ``{"rollout": {...}}`` or ``{"variant": name}``.
+
+    Anything else (an empty rollout, a list, a missing serve) gives the
+    default variant with reason ``ERROR`` rather than raising.
+    """
+    if isinstance(serve, Mapping):
+        rollout = serve.get("rollout")
+        if isinstance(rollout, Mapping) and rollout:
+            variant = assign_variant(flag.key, rollout, _context_key(context))
+            return _result(flag, variant, "SPLIT")
+        serve = serve.get("variant")
+    if not isinstance(serve, str):
+        return _result(flag, flag.default_variant, "ERROR")
     return _result(flag, serve, reason)
 
 

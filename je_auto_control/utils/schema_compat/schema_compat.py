@@ -130,12 +130,17 @@ def diff_schemas(old: Mapping[str, Any],
     for name in old_props.keys() & new_props.keys():
         changes.extend(_diff_property(name, old_props[name], new_props[name],
                                       old_req, new_req))
+    # "required" may name a field "properties" never declares.
+    for name in sorted((old_req | new_req) - old_props.keys() - new_props.keys()):
+        changes.extend(_diff_requiredness(name, old_req, new_req))
     return changes
 
 
 def check_compatibility(old: Mapping[str, Any], new: Mapping[str, Any],
                         mode: str = "backward") -> Dict[str, Any]:
     """Report compatibility for ``mode`` (``backward`` / ``forward`` / ``full``)."""
+    if mode not in ("backward", "forward", "full"):   # an unknown mode failed open
+        raise ValueError(f"unknown mode: {mode!r}; use 'backward', 'forward' or 'full'")
     modes = _BOTH if mode == "full" else frozenset({mode})
     changes = diff_schemas(old, new)
     breaking = [change for change in changes if change.breaks & modes]

@@ -14,7 +14,7 @@ base OpenCV, no contrib). Imports no ``PySide6``.
 """
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
-from je_auto_control.utils.visual_match.visual_match import _haystack_gray
+from je_auto_control.utils.visual_match.visual_match import _contain_cv2_error, _haystack_gray
 
 ImageSource = Any
 Rect = Tuple[int, int, int, int]
@@ -113,6 +113,7 @@ def _merge_overlapping(rects: Sequence[Rect]) -> List[Rect]:
     return result
 
 
+@_contain_cv2_error
 def find_text_regions(haystack: Optional[ImageSource] = None, *,
                       region: Optional[Sequence[int]] = None, min_area: int = 60,
                       max_area: Optional[int] = None, merge: bool = True,
@@ -133,6 +134,7 @@ def find_text_regions(haystack: Optional[ImageSource] = None, *,
     return [_box_dict(rect) for rect in rects]
 
 
+@_contain_cv2_error
 def find_text_lines(haystack: Optional[ImageSource] = None, *,
                     region: Optional[Sequence[int]] = None,
                     y_tolerance: int = 8) -> List[Dict[str, Any]]:

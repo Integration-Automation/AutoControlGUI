@@ -103,7 +103,12 @@ def jaro(a: str, b: str) -> float:
 
 
 def jaro_winkler(a: str, b: str, *, prefix_weight: float = 0.1) -> float:
-    """Jaro-Winkler similarity (boosts a common prefix up to 4 chars)."""
+    """Jaro-Winkler similarity (boosts a common prefix up to 4 chars).
+
+    ``prefix_weight`` is at most 0.25, the bound that keeps the score in ``[0, 1]``.
+    """
+    if not 0 <= prefix_weight <= 0.25:
+        raise ValueError(f"prefix_weight must be in [0, 0.25], got {prefix_weight!r}")
     score = jaro(a, b)
     prefix = 0
     for char_a, char_b in zip(a, b):
@@ -114,6 +119,8 @@ def jaro_winkler(a: str, b: str, *, prefix_weight: float = 0.1) -> float:
 
 
 def _ngrams(text: str, n: int) -> Set[str]:
+    if n < 1:   # n=0 made every pair of strings a perfect match
+        raise ValueError(f"n must be at least 1, got {n!r}")
     text = text or ""
     if len(text) < n:
         return {text} if text else set()

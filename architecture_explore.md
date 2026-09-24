@@ -20,7 +20,7 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 | 指標 | 數值 |
 | --- | ---: |
 | Python 模組總數（含周邊子專案） | 1,049 |
-| 程式碼總行數 | 149,061 |
+| 程式碼總行數 | 149,125 |
 | `je_auto_control/utils/` 子套件數 | 310 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 774 |
 | 套件門面 `__all__` 公開名稱數 | 1,241 |
@@ -271,7 +271,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.1 執行引擎與腳本資產
 
-> 24 個套件、約 14,248 行。
+> 24 個套件、約 14,250 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -279,7 +279,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/action_signing/` | 380 | action 檔 HMAC-SHA256 簽章與 Fernet 加密，`execute_files` 會強制驗簽 |
 | `utils/checkpoint/` | 120 | 流程檢查點與續跑，讓長 action list 具持久性 |
 | `utils/codegen/` | 255 | 由 action list 產生可執行的 pytest / python / robot 測試碼 |
-| `utils/dag/` | 492 | 跨主機 DAG 編排器（圖模型 + runner） |
+| `utils/dag/` | 494 | 跨主機 DAG 編排器（圖模型 + runner） |
 | `utils/decision_table/` | 112 | DMN 風格決策表：規則 + 命中策略，把分支外部化 |
 | `utils/deterministic/` | 116 | 決定性執行控制：固定亂數種子 + 凍結時鐘 |
 | `utils/executor/` | 9,412 | **核心**。`Executor` 指令分派表（774 個 `AC_*`）、參數插值、乾跑、逐步 callback；`flow_control` 提供 34 個區塊指令（迴圈／分支／try／巨集／變數） |
@@ -414,7 +414,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.6 OCR 與文字理解
 
-> 19 個套件、約 3,336 行。
+> 19 個套件、約 3,345 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -435,8 +435,8 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/text_blocks/` | 88 | 把 OCR 行組成段落與項目符號／編號清單 |
 | `utils/text_diff/` | 187 | unified diff 產生、套用與三方合併 |
 | `utils/text_normalize/` | 82 | Unicode 正規化與 slug 產生 |
-| `utils/text_regions/` | 161 | 免模型的畫面文字區域偵測（MSER）：區域與行 |
-| `utils/text_similarity/` | 165 | 字串距離度量（文字比對用） |
+| `utils/text_regions/` | 163 | 免模型的畫面文字區域偵測（MSER）：區域與行 |
+| `utils/text_similarity/` | 172 | 字串距離度量（文字比對用） |
 
 ### 5.4.7 無障礙樹與原生控制項
 
@@ -526,7 +526,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.11 伺服器、網路協定與外部整合
 
-> 24 個套件、約 6,485 行。
+> 24 個套件、約 6,500 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -540,7 +540,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/http_conditional/` | 108 | 條件式 HTTP 請求與快取驗證器 |
 | `utils/http_content/` | 148 | HTTP 內容協商與回應解壓縮 |
 | `utils/http_problem/` | 117 | RFC 9457 problem+json 解析 |
-| `utils/jwt/` | 219 | JWT（HMAC 家族）編碼、解碼與 claim 驗證 |
+| `utils/jwt/` | 234 | JWT（HMAC 家族）編碼、解碼與 claim 驗證 |
 | `utils/link_header/` | 146 | RFC 8288 Link header 解析與分頁 |
 | `utils/multipart/` | 175 | multipart/form-data 建構與解析 |
 | `utils/notify/` | 106 | 跨平台桌面通知 |
@@ -557,7 +557,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.12 報表、可觀測性與測試治理
 
-> 34 個套件、約 7,299 行。
+> 34 個套件、約 7,307 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -593,12 +593,12 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/test_shard/` | 98 | 以耗時為權重的套件切分與分片結果合併 |
 | `utils/test_suite/` | 527 | QA 套件編排：把扁平 action list 評分為測試案例 + CI 報表 |
 | `utils/time_travel/` | 383 | 錄製 session 的時光回溯除錯（控制器 + 播放器） |
-| `utils/timeseries/` | 163 | 時間序列轉換（rate／降採樣／重採樣） |
+| `utils/timeseries/` | 171 | 時間序列轉換（rate／降採樣／重採樣） |
 | `utils/trace_context/` | 177 | W3C Trace Context 傳遞 |
 
 ### 5.4.13 資料來源、結構驗證與 i18n
 
-> 24 個套件、約 4,346 行。
+> 24 個套件、約 4,367 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -606,7 +606,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/config_schema/` | 109 | 型別化設定結構驗證 |
 | `utils/data_drift/` | 128 | 分布漂移偵測 |
 | `utils/data_profile/` | 121 | 資料剖析與結構推斷 |
-| `utils/data_quality/` | 201 | 資料品質：列結構驗證、欄位擷取、遮蔽 |
+| `utils/data_quality/` | 216 | 資料品質：列結構驗證、欄位擷取、遮蔽 |
 | `utils/data_source/` | 197 | 資料驅動執行：從 CSV／JSON／SQLite／Excel 載入資料列 |
 | `utils/dataset_diff/` | 89 | 表格資料列差異比對（CDC 風格） |
 | `utils/gettext_catalog/` | 322 | GNU gettext 目錄 I/O（解析 .po、編譯／讀取 .mo、訊息查詢） |
@@ -622,9 +622,9 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/office/` | 180 | Office 文件無頭讀寫（Excel／Word／PowerPoint） |
 | `utils/pdf/` | 117 | PDF 讀取與斷言（選用 pypdf 後端） |
 | `utils/referential/` | 75 | 跨資料集的參照完整性檢查 |
-| `utils/schema_compat/` | 172 | JSON Schema 相容性分級 |
+| `utils/schema_compat/` | 177 | JSON Schema 相容性分級 |
 | `utils/sql/` | 88 | 對 SQLite 的臨時唯讀 SQL 查詢 |
-| `utils/test_data/` | 210 | 帶種子的合成測試資料產生（純標準庫） |
+| `utils/test_data/` | 211 | 帶種子的合成測試資料產生（純標準庫） |
 | `utils/xml/` | 277 | XML 檔讀寫與結構變更（`defusedxml`） |
 
 ### 5.4.14 安全、機密與合規
@@ -649,7 +649,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.15 韌性、流量控制與設定
 
-> 14 個套件、約 1,994 行。
+> 14 個套件、約 2,003 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -659,7 +659,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/chaos/` | 153 | 決定性混沌實驗（穩態假說 + 故障注入） |
 | `utils/dedup_window/` | 72 | 時間視窗內的訊息去重 |
 | `utils/dotenv/` | 157 | `.env` 檔解析與序列化 |
-| `utils/feature_flags/` | 182 | 功能旗標評估，含目標規則與決定性灰度 |
+| `utils/feature_flags/` | 191 | 功能旗標評估，含目標規則與決定性灰度 |
 | `utils/idempotency/` | 142 | 冪等鍵儲存與已存回應重放 |
 | `utils/layered_config/` | 110 | 分層設定解析 |
 | `utils/optimistic/` | 135 | 樂觀併發的版本化儲存 |
@@ -1080,6 +1080,6 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `osx/` | 17 | 919 |
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 837 |
-| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 677 | 52,957 |
-| **總計** | **1,043** | **148,996** |
+| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 677 | 53,021 |
+| **總計** | **1,043** | **149,060** |
 
