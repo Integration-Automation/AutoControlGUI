@@ -87,9 +87,11 @@ def merge_results(reports: List[Dict[str, Any]]) -> Dict[str, Any]:
     for report in reports:
         for key in _SUM_KEYS:
             merged[key] += int(report.get(key, 0) or 0)
-        merged["errors"] += int(report.get("errored", 0) or 0)
-        results.extend(report.get("results", []) or [])
-        results.extend(report.get("cases", []) or [])
+        # A merged report carries both spellings of one count and one list;
+        # reading both doubled them when merged reports were merged again.
+        if "errors" not in report:
+            merged["errors"] += int(report.get("errored", 0) or 0)
+        results.extend(report.get("results") or report.get("cases") or [])
     merged["errored"] = merged["errors"]
     merged["shards"] = len(reports)
     merged["results"] = results

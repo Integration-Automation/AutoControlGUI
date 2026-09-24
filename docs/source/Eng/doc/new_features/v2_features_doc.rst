@@ -120,7 +120,11 @@ Per-call LLM token + USD log with day / model / provider roll-up::
     summary = summarise_llm_costs()
     print(summary.total_usd, summary.by_model)
 
-Pricing table covers Claude 4.x and OpenAI; override per-call.
+``summarise_llm_costs()`` with no argument summarises the calls recorded in
+``default_cost_store``. The pricing table carries Anthropic's current list
+prices for Claude (Fable 5.x, Opus 5.x / 4.x, Sonnet 5 / 4.x, Haiku 4.5 and
+older lines; a dated or ``anthropic.``-prefixed id is looked up by its base id)
+and OpenAI; override per-call.
 Executor: ``AC_costs_record / _summary / _list / _clear``.
 
 

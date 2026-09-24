@@ -100,7 +100,11 @@ def _bucket_index(ts: float, bucket_s: float) -> int:
     """
     quotient = ts / bucket_s
     nearest = round(quotient)
-    return nearest if abs(quotient - nearest) < _EPSILON else math.floor(quotient)
+    # Relative as well as absolute: at Unix-time magnitudes the quotient's
+    # float error is ~1e-6, so 1700000000.3 fell into the 0.2 bucket.
+    on_edge = (abs(quotient - nearest) < _EPSILON
+               or abs(ts - nearest * bucket_s) <= 4 * math.ulp(abs(ts)))
+    return nearest if on_edge else math.floor(quotient)
 
 
 def _bucket_start(index: int, bucket_s: float) -> float:

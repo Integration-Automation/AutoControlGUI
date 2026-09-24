@@ -18,6 +18,7 @@ without instantiating Qt.
 """
 from __future__ import annotations
 
+import re
 import time
 from dataclasses import asdict, dataclass
 from pathlib import Path
@@ -112,8 +113,11 @@ def assert_text(text: str,
     """
     if regex:
         from je_auto_control.utils.ocr.ocr_engine import find_text_regex
+        # ignore_case (default True) applies to a pattern too, as it does
+        # in assert_clipboard; the regex branch matched case-sensitively.
         found = bool(find_text_regex(
             text, lang=lang, region=region, min_confidence=min_confidence,
+            flags=re.IGNORECASE if ignore_case else 0,
         ))
         observed = _region_text(region, lang, min_confidence)
     else:

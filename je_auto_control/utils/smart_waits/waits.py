@@ -101,21 +101,26 @@ def wait_until_screen_stable(*,
     started = time.monotonic()
     deadline = started + float(timeout_s)
     previous = grab(region)
+    previous_at = time.monotonic()
     samples = 1
     stable_since: Optional[float] = None
     while time.monotonic() < deadline:
         _pause(deadline, poll_interval_s)
         current = grab(region)
+        current_at = time.monotonic()
         samples += 1
         diff = _frame_diff(previous, current)
         if diff <= int(max_pixel_diff):
+            # Quiet since the first of the matching frames was taken, not
+            # since the second: the clock started one poll late and a screen
+            # still for 0.5 s failed stable_for_s=0.4.
             if stable_since is None:
-                stable_since = time.monotonic()
-            if time.monotonic() - stable_since >= float(stable_for_s):
+                stable_since = previous_at
+            if current_at - stable_since >= float(stable_for_s):
                 return _finish(True, "screen stable", started, samples)
         else:
             stable_since = None
-        previous = current
+        previous, previous_at = current, current_at
     return _finish(False, "timeout while waiting for stable screen",
                    started, samples)
 

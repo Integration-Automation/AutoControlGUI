@@ -47,7 +47,9 @@ def _matches_type(value: Any, kind: str) -> bool:
 
 def _number_range_error(value: Any, rule: Dict[str, Any]) -> Optional[str]:
     # NaN compares false with every bound and inf passes a lone min.
-    if ("min" in rule or "max" in rule) and not math.isfinite(value):
+    # An int is always finite, and math.isfinite(10**400) raised OverflowError.
+    if (("min" in rule or "max" in rule) and not isinstance(value, int)
+            and not math.isfinite(value)):
         return "not a finite number"
     if "min" in rule and value < rule["min"]:
         return f"below min {rule['min']}"

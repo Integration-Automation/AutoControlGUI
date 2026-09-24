@@ -74,6 +74,8 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Changed
 
+- The LLM cost table carries current Claude list prices (Opus 4.7 is
+  $5/$25, not $15/$75) and resolves dated or provider-prefixed ids.
 - `vex_statement` takes `action_statement=` and requires it for
   `affected` (OpenVEX).
 - The SBOM prefers PEP 639 `License-Expression`; licence evaluation
@@ -361,6 +363,16 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Fixed
 
+- `merge_results` no longer doubles errors and cases when merging merged
+  reports.
+- Time-series buckets place edge points correctly at Unix-time
+  magnitudes.
+- `assert_text(regex=True)` honours `ignore_case`.
+- `wait_until_screen_stable` measures the quiet time from the first
+  matching frame.
+- `summarise_llm_costs()` works without arguments.
+- `validate_rows` reports huge integers instead of raising.
+- Welch confidence intervals at tiny alpha and df near 1.
 - MCP `initialize` answers with a protocol version the server supports
   (not whatever the client sent) and declares only server capabilities;
   an unsupported `MCP-Protocol-Version` header gets 400;

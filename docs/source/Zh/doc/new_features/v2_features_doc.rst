@@ -116,7 +116,9 @@ Executor：``AC_ab_locate / _report / _best_strategy / _clear``。
     summary = summarise_llm_costs()
     print(summary.total_usd, summary.by_model)
 
-內建價格表涵蓋 Claude 4.x 與 OpenAI；可單次呼叫覆寫。
+``summarise_llm_costs()`` 不帶參數時彙總 ``default_cost_store`` 記錄的呼叫。內建價格表是 Anthropic
+目前的 Claude 牌價(Fable 5.x、Opus 5.x / 4.x、Sonnet 5 / 4.x、Haiku 4.5 與較舊的系列;帶日期或
+``anthropic.`` 前綴的 id 會以基本 id 查價)與 OpenAI；可單次呼叫覆寫。
 Executor：``AC_costs_record / _summary / _list / _clear``。
 
 

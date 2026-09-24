@@ -20,7 +20,7 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 | 指標 | 數值 |
 | --- | ---: |
 | Python 模組總數（含周邊子專案） | 1,051 |
-| 程式碼總行數 | 151,415 |
+| 程式碼總行數 | 151,472 |
 | `je_auto_control/utils/` 子套件數 | 310 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 775 |
 | 套件門面 `__all__` 公開名稱數 | 1,244 |
@@ -463,7 +463,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.8 元素定位、自我修復與智慧等待
 
-> 23 個套件、約 4,239 行。
+> 23 個套件、約 4,244 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -489,11 +489,11 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/self_healing/` | 356 | 自癒定位器：先影像樣板、失敗改用 VLM，並留稽核記錄 |
 | `utils/semantic_recording/` | 460 | 為錄製內容加上語義錨點，支援換機重播與自癒重播 |
 | `utils/settle_detector/` | 79 | 以純函式介面判定 UI 是否已靜止 |
-| `utils/smart_waits/` | 658 | 智慧等待：以影格差異取代 `time.sleep` |
+| `utils/smart_waits/` | 663 | 智慧等待：以影格差異取代 `time.sleep` |
 
 ### 5.4.9 AI / Agent / LLM
 
-> 13 個套件、約 21,909 行。
+> 13 個套件、約 21,945 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -502,7 +502,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/agent_memory/` | 154 | agent 的持久化情節記憶（goal → trajectory → outcome） |
 | `utils/agent_replay/` | 67 | 可攜的 agent 軌跡追蹤（記錄 observation→action 並重播） |
 | `utils/agent_trace/` | 168 | agent 可觀測性：OpenTelemetry GenAI 慣例的 LLM span |
-| `utils/cost_telemetry/` | 307 | 每次呼叫的 LLM 成本遙測：token 數 + 估算美金 |
+| `utils/cost_telemetry/` | 343 | 每次呼叫的 LLM 成本遙測：token 數 + 估算美金 |
 | `utils/cua_action/` | 204 | 標準化 computer-use 動作結構（Anthropic／OpenAI → `AC_*`） |
 | `utils/llm/` | 365 | 自然語言 → action list 規劃器 + Anthropic／null 後端 |
 | `utils/mcp_registry/` | 97 | MCP registry `server.json` 資訊清單產生（可被發現） |
@@ -557,13 +557,13 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.12 報表、可觀測性與測試治理
 
-> 34 個套件、約 7,396 行。
+> 34 個套件、約 7,410 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
 | `utils/anomaly/` | 114 | 單一序列異常偵測 |
 | `utils/approval/` | 118 | Approval testing：以核可基準線驗證產出物 |
-| `utils/assertion/` | 890 | 斷言 DSL：畫面狀態驗證 + 組合子 |
+| `utils/assertion/` | 894 | 斷言 DSL：畫面狀態驗證 + 組合子 |
 | `utils/baggage/` | 120 | W3C Baggage 傳遞 |
 | `utils/canonical_log/` | 96 | canonical log line 與結構化 JSON 日誌 |
 | `utils/ci_annotations/` | 65 | 由執行結果輸出 CI 工作流程註記（GitHub Actions） |
@@ -587,18 +587,18 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/slo/` | 115 | SLO 評估：SLI、錯誤預算與多視窗燃燒率告警 |
 | `utils/smoothing/` | 67 | 數列移動平均平滑 |
 | `utils/soft_assert/` | 79 | 軟斷言：累積檢查並在區塊結束時一次拋出 |
-| `utils/stats/` | 223 | 描述統計與 A/B 顯著性檢定（純標準庫） |
+| `utils/stats/` | 227 | 描述統計與 A/B 顯著性檢定（純標準庫） |
 | `utils/step_timeline/` | 81 | 每次執行的步驟瀑布圖與瓶頸（關鍵路徑）步驟排名 |
 | `utils/test_select/` | 129 | 以執行歷史做風險導向的測試選取 |
-| `utils/test_shard/` | 103 | 以耗時為權重的套件切分與分片結果合併 |
+| `utils/test_shard/` | 105 | 以耗時為權重的套件切分與分片結果合併 |
 | `utils/test_suite/` | 527 | QA 套件編排：把扁平 action list 評分為測試案例 + CI 報表 |
 | `utils/time_travel/` | 383 | 錄製 session 的時光回溯除錯（控制器 + 播放器） |
-| `utils/timeseries/` | 171 | 時間序列轉換（rate／降採樣／重採樣） |
+| `utils/timeseries/` | 175 | 時間序列轉換（rate／降採樣／重採樣） |
 | `utils/trace_context/` | 183 | W3C Trace Context 傳遞 |
 
 ### 5.4.13 資料來源、結構驗證與 i18n
 
-> 24 個套件、約 4,627 行。
+> 24 個套件、約 4,629 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -606,7 +606,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/config_schema/` | 130 | 型別化設定結構驗證 |
 | `utils/data_drift/` | 128 | 分布漂移偵測 |
 | `utils/data_profile/` | 129 | 資料剖析與結構推斷 |
-| `utils/data_quality/` | 216 | 資料品質：列結構驗證、欄位擷取、遮蔽 |
+| `utils/data_quality/` | 218 | 資料品質：列結構驗證、欄位擷取、遮蔽 |
 | `utils/data_source/` | 229 | 資料驅動執行：從 CSV／JSON／SQLite／Excel 載入資料列 |
 | `utils/dataset_diff/` | 89 | 表格資料列差異比對（CDC 風格） |
 | `utils/gettext_catalog/` | 362 | GNU gettext 目錄 I/O（解析 .po、編譯／讀取 .mo、訊息查詢） |
@@ -1077,10 +1077,10 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `utils/triggers/` | 4 | 1,300 |
 | `utils/ocr/` | 9 | 1,136 |
 | `utils/usbip/` | 5 | 947 |
-| `utils/assertion/` | 3 | 890 |
+| `utils/assertion/` | 3 | 894 |
 | `osx/` | 17 | 925 |
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 837 |
-| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 677 | 54,045 |
-| **總計** | **1,045** | **151,350** |
+| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 677 | 54,098 |
+| **總計** | **1,045** | **151,407** |
 

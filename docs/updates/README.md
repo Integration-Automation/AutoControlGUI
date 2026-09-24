@@ -58,6 +58,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260925-15 | 2026-09-25 | Test-infrastructure and statistics helpers at their edges: re-merged shard reports, bucket edges at Unix time, regex assert_text ignore_case, the screen-stable clock, the documented cost summary and current Claude prices, huge ints in validate_rows, the t quantile for tiny alpha | #bugfix #testing #data | [2026-09](2026-09.md) |
 | U-20260925-14 | 2026-09-25 | The MCP server negotiates only versions it speaks, declares only server capabilities, refuses an unsupported MCP-Protocol-Version header with 400, and asks for sampling only from a client that declared it | #bugfix #mcp | [2026-09](2026-09.md) |
 | U-20260925-13 | 2026-09-25 | Screenshots are fitted with the vision docs' exact resize rule, and AC_run_agent's Anthropic backend fits its screenshots and maps tool-call x / y back | #bugfix #agent | [2026-09](2026-09.md) |
 | U-20260925-12 | 2026-09-25 | Supply-chain formats follow their specs: OpenVEX affected needs an action statement, SLSA provenance omits empty metadata and reports nameless subjects, PEP 440 orders post/dev releases and implicit numbers, redaction boxes merge transitively | #bugfix #security | [2026-09](2026-09.md) |
@@ -257,7 +258,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | File | Period | Entries |
 |---|---|---:|
-| [2026-09.md](2026-09.md) | 2026-09 | 168 |
+| [2026-09.md](2026-09.md) | 2026-09 | 169 |
 | [2026-08-f.md](2026-08-f.md) | 2026-08 | 1 |
 | [2026-08-e.md](2026-08-e.md) | 2026-08 | 2 |
 | [2026-08-d.md](2026-08-d.md) | 2026-08 | 2 |
