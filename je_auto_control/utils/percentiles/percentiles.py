@@ -34,8 +34,12 @@ class LatencyDigest:
         self._max: Optional[float] = None
 
     def _bucket(self, value: float) -> float:
-        if value <= 0:
+        if value == 0:
             return 0.0
+        if value < 0:
+            # Mirrors the positive buckets: every negative value used to share
+            # bucket 0, so p0 of -100, -50, -5 came out as -5.
+            return -self._bucket(-value)
         digits = self._sig - 1 - math.floor(math.log10(value))
         return round(value, digits)
 
@@ -72,8 +76,7 @@ class LatencyDigest:
     def _clamp(self, bucket: float) -> float:
         """Keep a rounded bucket inside what was recorded.
 
-        Rounding (and the single bucket for values <= 0) put p99 of a lone
-        1234.5 at 1230.0, below the minimum.
+        Rounding put p99 of a lone 1234.5 at 1230.0, below the minimum.
         """
         low = self._min if self._min is not None else bucket
         high = self._max if self._max is not None else bucket

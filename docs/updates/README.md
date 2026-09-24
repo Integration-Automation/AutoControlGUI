@@ -58,6 +58,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260925-01 | 2026-09-25 | Data-format helpers follow their specs: multipart keeps binary file bytes and backslashes in filenames, JSONPath != matches a missing member and filter strings may hold )], RRULE refuses parts it would ignore, LatencyDigest orders negative values | #bugfix #data | [2026-09](2026-09.md) |
 | U-20260924-84 | 2026-09-24 | Protocol helpers follow their specs at the edges: JWT list alg and crit, SSE split CRLF, escaped quotes in Link and Cache-Control, newer traceparent versions, typed problem members, escaped unreserved URL characters, empty cookie values | #bugfix #http #security | [2026-09](2026-09.md) |
 | U-20260924-83 | 2026-09-24 | Closing a tab or the window while its background job runs no longer aborts the process; the computer-use, DAG and LLM planner tabs share start_worker | #bugfix #gui | [2026-09](2026-09.md) |
 | U-20260924-82 | 2026-09-24 | LAN browse dialogs stop their zeroconf browser however they close; the presence tab leaves the registry when destroyed | #bugfix #gui | [2026-09](2026-09.md) |
@@ -243,7 +244,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | File | Period | Entries |
 |---|---|---:|
-| [2026-09.md](2026-09.md) | 2026-09 | 154 |
+| [2026-09.md](2026-09.md) | 2026-09 | 155 |
 | [2026-08-f.md](2026-08-f.md) | 2026-08 | 1 |
 | [2026-08-e.md](2026-08-e.md) | 2026-08 | 2 |
 | [2026-08-d.md](2026-08-d.md) | 2026-08 | 2 |

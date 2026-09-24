@@ -27,7 +27,8 @@ multipart/form-data 建立與解析
 ``build_multipart`` 接受 ``fields``(dict 或 ``(name, value)`` 清單)與 ``files``(``MultipartFile``
 實例或 ``{name, filename, content, content_type?}`` dict),回傳 ``(content_type, body_bytes)``。傳入明確
 的 ``boundary`` 可得位元組穩定的內文,或呼叫 ``new_boundary`` 取得新 token。``parse_multipart`` 把內文讀回
-``{fields, files}``(每個檔案為 ``{name, filename, content_type, content}``)。
+``{fields, files}``(每個檔案為 ``{name, filename, content_type, content, content_base64}``:``content``
+是以 UTF-8 解碼的內容,``content_base64`` 是原始位元組,二進位檔請用它)。
 
 執行器命令
 ----------

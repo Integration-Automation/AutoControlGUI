@@ -9,7 +9,8 @@ Supported rule parts: ``FREQ`` (DAILY/WEEKLY/MONTHLY/YEARLY), ``INTERVAL``,
 ``COUNT``, ``UNTIL``, ``BYDAY`` (incl. ordinals like ``2MO`` / ``-1FR``),
 ``BYMONTHDAY`` (incl. negatives), ``BYMONTH``, ``BYSETPOS`` and ``WKST``.
 Time-level parts (BYHOUR/BYMINUTE/BYSECOND) and BYWEEKNO/BYYEARDAY are out of
-scope. The clock is injectable so ``next_occurrence`` is deterministic.
+scope and rejected, as is a rule with both ``COUNT`` and ``UNTIL``. The clock is
+injectable so ``next_occurrence`` is deterministic.
 
 Pure standard library (``datetime`` + ``calendar``); imports no ``PySide6``.
 """
@@ -22,6 +23,8 @@ from je_auto_control.utils.exception.exceptions import AutoControlException
 
 _WEEKDAYS = {"MO": 0, "TU": 1, "WE": 2, "TH": 3, "FR": 4, "SA": 5, "SU": 6}
 _FREQS = {"DAILY", "WEEKLY", "MONTHLY", "YEARLY"}
+_SUPPORTED_PARTS = frozenset({"FREQ", "INTERVAL", "COUNT", "UNTIL", "BYDAY",
+                              "BYMONTHDAY", "BYMONTH", "BYSETPOS", "WKST"})
 
 ByDay = Tuple[Optional[int], int]
 
@@ -120,6 +123,13 @@ def parse_rrule(text: str) -> Recurrence:
         if "=" in token:
             key, value = token.split("=", 1)
             parts[key.strip().upper()] = value.strip()
+    # An unsupported part used to be dropped, so BYHOUR=9,17 fired once a day
+    # and BYYEARDAY=100 fired on 1 January: a wrong schedule, silently.
+    unsupported = sorted(set(parts) - _SUPPORTED_PARTS)
+    if unsupported:
+        raise AutoControlException(f"unsupported RRULE parts: {', '.join(unsupported)}")
+    if "COUNT" in parts and "UNTIL" in parts:
+        raise AutoControlException("COUNT and UNTIL must not both be given (RFC 5545 3.3.10)")
     freq = parts.get("FREQ", "").upper()
     if freq not in _FREQS:
         raise AutoControlException(f"unsupported or missing FREQ {freq!r}")

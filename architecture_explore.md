@@ -20,7 +20,7 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 | 指標 | 數值 |
 | --- | ---: |
 | Python 模組總數（含周邊子專案） | 1,051 |
-| 程式碼總行數 | 150,524 |
+| 程式碼總行數 | 150,565 |
 | `je_auto_control/utils/` 子套件數 | 310 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 775 |
 | 套件門面 `__all__` 公開名稱數 | 1,241 |
@@ -323,7 +323,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.3 排程、觸發與背景監看
 
-> 11 個套件、約 4,040 行。
+> 11 個套件、約 4,050 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -331,7 +331,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/idle_keepawake/` | 245 | 偵測使用者閒置時間並在無人值守執行期間阻止系統睡眠 |
 | `utils/lock_session/` | 166 | 鎖定工作站、等待解鎖並分類鎖定狀態轉換 |
 | `utils/observer/` | 234 | 反應式畫面觀察者，在出現／消失／變化時觸發 |
-| `utils/recurrence/` | 388 | RFC 5545 重複規則解析與發生時間展開 |
+| `utils/recurrence/` | 398 | RFC 5545 重複規則解析與發生時間展開 |
 | `utils/scheduler/` | 448 | 間隔式與 cron 式的 action JSON 排程器 |
 | `utils/session_guard/` | 62 | 驅動輸入前先偵測工作階段是否已鎖定／非互動 |
 | `utils/triggers/` | 1,300 | 事件驅動觸發引擎：影像／視窗／像素／檔案／webhook／IMAP 郵件 |
@@ -526,7 +526,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.11 伺服器、網路協定與外部整合
 
-> 24 個套件、約 6,585 行。
+> 24 個套件、約 6,591 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -542,7 +542,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/http_problem/` | 118 | RFC 9457 problem+json 解析 |
 | `utils/jwt/` | 240 | JWT（HMAC 家族）編碼、解碼與 claim 驗證 |
 | `utils/link_header/` | 150 | RFC 8288 Link header 解析與分頁 |
-| `utils/multipart/` | 175 | multipart/form-data 建構與解析 |
+| `utils/multipart/` | 181 | multipart/form-data 建構與解析 |
 | `utils/notify/` | 106 | 跨平台桌面通知 |
 | `utils/notify_channels/` | 100 | 對外聊天／webhook 通知（Slack／Discord／Teams／raw） |
 | `utils/otp/` | 37 | TOTP 一次性密碼產生（自動化 2FA 登入） |
@@ -557,7 +557,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.12 報表、可觀測性與測試治理
 
-> 34 個套件、約 7,389 行。
+> 34 個套件、約 7,392 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -576,7 +576,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/media_assert/` | 242 | 媒體斷言：音訊活動與影片動態檢查 |
 | `utils/observability/` | 705 | Prometheus 格式指標 + OpenTelemetry 相容 trace + `/metrics` 匯出伺服器 |
 | `utils/otlp_export/` | 109 | OTLP/JSON span 匯出 |
-| `utils/percentiles/` | 116 | 可合併的串流延遲摘要與精確百分位數 |
+| `utils/percentiles/` | 119 | 可合併的串流延遲摘要與精確百分位數 |
 | `utils/process_doc/` | 102 | 由錄製的 action list 產生逐步 SOP 文件 |
 | `utils/process_mining/` | 123 | 流程探勘：從動作日誌挖掘可自動化的候選 |
 | `utils/profiler/` | 444 | 逐動作效能剖析器 + 資源剖析器 |
@@ -598,7 +598,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.13 資料來源、結構驗證與 i18n
 
-> 24 個套件、約 4,524 行。
+> 24 個套件、約 4,546 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -614,7 +614,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/json_contract/` | 145 | JSON 契約／快照比對：`match_json`、`diff_json`、`snapshot_json` |
 | `utils/json_patch/` | 352 | JSON Pointer（6901）、JSON Patch（6902）與 Merge Patch（7386） |
 | `utils/json_schema/` | 419 | JSON Schema（Draft 2020-12 子集）驗證 |
-| `utils/jsonpath/` | 300 | 精簡 JSONPath 查詢 |
+| `utils/jsonpath/` | 322 | 精簡 JSONPath 查詢 |
 | `utils/list_format/` | 82 | 地區感知清單格式化（CLDR 風格的「A、B 和 C」） |
 | `utils/locale_collation/` | 135 | 地區感知字串排序（決定性多層排序鍵） |
 | `utils/locale_parse/` | 79 | 地區感知數字／貨幣／日期解析與格式化（選用 babel） |
@@ -1081,6 +1081,6 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `osx/` | 17 | 925 |
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 837 |
-| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 677 | 53,482 |
-| **總計** | **1,045** | **150,459** |
+| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 677 | 53,523 |
+| **總計** | **1,045** | **150,500** |
 

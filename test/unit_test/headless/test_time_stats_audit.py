@@ -69,7 +69,9 @@ def test_the_latency_digest_refuses_non_finite_values_and_stays_in_range():
     negative = LatencyDigest()
     for value in (-5, -3, -1):
         negative.record(value)
-    assert negative.percentile(50) == -1
+    # The median of -5, -3, -1; every negative once shared one bucket, and
+    # the clamp then reported the maximum.
+    assert negative.percentile(50) == -3
 
 
 def test_a_lone_outlier_among_identical_values_is_found():

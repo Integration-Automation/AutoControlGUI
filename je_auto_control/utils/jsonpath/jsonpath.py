@@ -146,12 +146,30 @@ def _read_bracket(path: str, start: int) -> Tuple[str, int]:
         search_from = _scan_quoted(path, start + 1)[1]
     # Only a parenthesised filter ends at ")]": searching for it in
     # "[?@.a==1].b[?(@.c)]" ran on into the next filter.
-    closer = ")]" if path.startswith("?(", start + 1) else "]"
-    close = path.find(closer, search_from)
+    if path.startswith("?(", start + 1):
+        close = _filter_close(path, start + 3)
+    else:
+        close = path.find("]", search_from)
     if close == -1:
         raise ValueError(f"unterminated '[' in JSONPath {path!r}")
-    close += len(closer) - 1
+    if path.startswith("?(", start + 1):
+        close += 1
     return path[start + 1:close], close + 1
+
+
+def _filter_close(path: str, index: int) -> int:
+    """Index of the ``)]`` that ends a filter, skipping string literals.
+
+    A plain search stopped at ``)]`` inside ``[?(@.k == "a)]")]``.
+    """
+    while index < len(path):
+        if path[index] in ("'", '"'):
+            index = _scan_quoted(path, index)[1]
+        elif path.startswith(")]", index):
+            return index
+        else:
+            index += 1
+    return -1
 
 
 def _tokenize(path: str) -> List[Tuple[str, Any]]:
@@ -227,8 +245,12 @@ _COMPARATORS = {
 def _match_filter(node: Any, spec: Tuple[Tuple[str, ...], Any, Any]) -> bool:
     fields, op, value = spec
     actual = _field(node, fields)
-    if actual is _ABSENT or op is None:
+    if op is None:
         return actual is not _ABSENT
+    if actual is _ABSENT:
+        # RFC 9535 2.3.5.2.2: a missing member is Nothing, which equals no
+        # value and orders against none, so only "!=" holds.
+        return op == "!="
     return _COMPARATORS[op](actual, value)
 
 

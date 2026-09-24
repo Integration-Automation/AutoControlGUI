@@ -15,6 +15,7 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Added
 
+- `parse_multipart` files carry `content_base64` (the exact bytes).
 - Computer use speaks the GA `computer_toolset_20260801`, used
   automatically for `claude-opus-5-5` (which rejects the beta tool); pass
   `tool_type="computer_toolset_20260801"` to use it with other models.
@@ -66,6 +67,9 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Changed
 
+- `parse_rrule` raises `AutoControlException` for RRULE parts it does
+  not support (`BYHOUR`, `BYWEEKNO`, `BYYEARDAY`…) and for `COUNT` with
+  `UNTIL`, instead of silently ignoring them.
 - `CookieJar.update` keeps a cookie with an empty value (only
   `Max-Age<=0` or a past `Expires` deletes one), and `parse_traceparent`
   accepts a newer version (read as `00`); only `ff` is rejected.
@@ -322,6 +326,10 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Fixed
 
+- JSONPath `!=` keeps nodes that lack the member; a filter string may
+  contain `)]`.
+- `parse_multipart` keeps a backslash in a filename.
+- `LatencyDigest` percentiles over negative values.
 - `decode_jwt` raises `JwtError` for a non-string `alg` (was
   `TypeError`) and rejects any `crit` header.
 - The SSE parser no longer drops an event when a CRLF is split so the

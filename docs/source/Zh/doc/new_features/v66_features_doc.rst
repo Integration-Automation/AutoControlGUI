@@ -7,7 +7,8 @@
 
 支援的規則部分:``FREQ``(DAILY/WEEKLY/MONTHLY/YEARLY)、``INTERVAL``、``COUNT``、``UNTIL``、
 ``BYDAY``(含序數如 ``2MO`` / ``-1FR``)、``BYMONTHDAY``(含負數)、``BYMONTH``、``BYSETPOS``
-與 ``WKST``。時間層級部分以及 BYWEEKNO/BYYEARDAY 不在範圍內。純標準函式庫(``datetime`` +
+與 ``WKST``。時間層級部分以及 BYWEEKNO/BYYEARDAY 不在範圍內:``parse_rrule`` 遇到它們、
+或同時給了 ``COUNT`` 與 ``UNTIL`` 時拋出 ``AutoControlException``。純標準函式庫(``datetime`` +
 ``calendar``);時鐘可注入,因此 ``next_occurrence`` 具決定性。不匯入 ``PySide6``。
 
 無頭 API
