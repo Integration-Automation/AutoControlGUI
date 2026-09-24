@@ -7,6 +7,10 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
+from je_auto_control.utils.json_store.json_store import (
+    _file_lock, quarantine_file,
+)
+
 
 @dataclass
 class ABStrategyStats:
@@ -92,8 +96,14 @@ class ABStore:
 
     def record(self, *, target_id: str, strategy: str,
                succeeded: bool, elapsed_ms: float) -> ABStrategyStats:
-        with self._lock:
-            self._load_if_needed()
+        """Count one run; the file is re-read under its lock first.
+
+        The file used to be read once and the whole cache written back on
+        every record, so two processes (or two stores on one file) erased
+        each other's counts.
+        """
+        with self._lock, _file_lock(self._path):
+            self._reload()
             key = (target_id, strategy)
             stats = self._cache.get(key) or ABStrategyStats(
                 target_id=target_id, strategy=strategy,
@@ -130,21 +140,20 @@ class ABStore:
                 pass
 
     def _load_if_needed(self) -> None:
-        if self._loaded:
-            return
-        try:
-            raw = self._path.read_text(encoding="utf-8")
-        except FileNotFoundError:
-            self._loaded = True
-            return
-        # Marked loaded only once the read worked: set before it, one
-        # transient PermissionError left the cache empty for good, and the
-        # next record() overwrote every stored count.
+        if not self._loaded:
+            self._reload()
+
+    def _reload(self) -> None:
+        """Replace the cache with the file; an unreadable file is set aside.
+
+        A damaged file used to be read as empty and then overwritten by the
+        next record(), losing every count. A read error other than a missing
+        file (a transient PermissionError) propagates and leaves the cache
+        unloaded rather than empty.
+        """
+        payload = self._read_payload()
+        self._cache.clear()
         self._loaded = True
-        try:
-            payload = json.loads(raw)
-        except ValueError:
-            return
         if not isinstance(payload, list):
             return
         for row in payload:
@@ -153,6 +162,23 @@ class ABStore:
             except TypeError:
                 continue
             self._cache[(stats.target_id, stats.strategy)] = stats
+
+    def _read_payload(self) -> Any:
+        """The parsed file, ``None`` when missing; unparseable JSON is set aside.
+
+        Only bad content is quarantined: a read error (a file locked by an
+        antivirus scan) propagates, since moving the file aside then would
+        drop counts that are fine.
+        """
+        try:
+            raw = self._path.read_text(encoding="utf-8-sig")
+        except FileNotFoundError:
+            return None
+        try:
+            return json.loads(raw)
+        except ValueError as error:
+            quarantine_file(self._path, "A/B locator stats", repr(error))
+            return None
 
     def _save(self) -> None:
         self._path.parent.mkdir(parents=True, exist_ok=True)

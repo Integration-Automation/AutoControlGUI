@@ -72,9 +72,14 @@ def assign_stable_ids(elements: Sequence[Element],
         return [dict(element, id=index) for index, element in enumerate(elements)]
     next_id = max((int(p.get("id", -1)) for p in prior), default=-1) + 1
     result: List[Element] = []
+    # Each prior id is inherited once: two elements overlapping the same
+    # prior element both took its id, so "stable" ids repeated.
+    used: set = set()
     for element in elements:
-        match = _best_prior(element, prior, float(iou_threshold))
-        if match is not None and "id" in match:
+        available = [p for p in prior if "id" in p and int(p["id"]) not in used]
+        match = _best_prior(element, available, float(iou_threshold))
+        if match is not None:
+            used.add(int(match["id"]))
             result.append(dict(element, id=int(match["id"])))
         else:
             result.append(dict(element, id=next_id))

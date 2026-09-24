@@ -20,7 +20,7 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 | 指標 | 數值 |
 | --- | ---: |
 | Python 模組總數（含周邊子專案） | 1,049 |
-| 程式碼總行數 | 147,496 |
+| 程式碼總行數 | 147,560 |
 | `je_auto_control/utils/` 子套件數 | 310 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 773 |
 | 套件門面 `__all__` 公開名稱數 | 1,241 |
@@ -370,7 +370,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.5 影像辨識與畫面分析
 
-> 37 個套件、約 5,403 行。
+> 37 個套件、約 5,409 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -394,7 +394,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/match_ensemble/` | 63 | 多樣板共識比對（多張參考圖投票到同一位置） |
 | `utils/match_stability/` | 68 | 比對前的靜止閘門與跨影格的比對持續性 |
 | `utils/match_trust/` | 136 | 樣板比對可信度評分（次峰比 + peak-to-sidelobe） |
-| `utils/monitor_layout/` | 317 | 多螢幕／虛擬桌面幾何（在哪個螢幕、位置、重映射）＋ `logical_frame` 以滑鼠座標空間擷取畫面 |
+| `utils/monitor_layout/` | 320 | 多螢幕／虛擬桌面幾何（在哪個螢幕、位置、重映射）＋ `logical_frame` 以滑鼠座標空間擷取畫面 |
 | `utils/motion_regions/` | 73 | 兩影格間的局部變化／活動偵測（absdiff） |
 | `utils/perceptual_diff/` | 100 | 感知式（YIQ）影像差異，抑制反鋸齒邊緣誤報 |
 | `utils/preprocess/` | 219 | OCR／比對前的影像前處理（灰階、二值化、去傾斜…） |
@@ -402,7 +402,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/rotated_match/` | 145 | 容忍旋轉與縮放的樣板比對（尺度空間 × 角度掃描） |
 | `utils/saliency/` | 107 | 頻譜殘差視覺顯著性：顯著圖與排序後的顯著區域 |
 | `utils/scale_detect/` | 84 | 偵測樣板實際渲染的顯示縮放／視覺 DPI |
-| `utils/screen_grid/` | 143 | 供 VLM 接地用的粗粒度標號網格（點 ↔ 格對映） |
+| `utils/screen_grid/` | 146 | 供 VLM 接地用的粗粒度標號網格（點 ↔ 格對映） |
 | `utils/set_of_marks/` | 154 | Set-of-Marks 疊圖：為畫面元素編號供 VLM 指認 |
 | `utils/shape_locator/` | 105 | 以邊緣／輪廓偵測定位元件（矩形／形狀，免樣板） |
 | `utils/ssim/` | 141 | 結構相似度比較：感知分數 + 變化區域 |
@@ -463,17 +463,17 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.8 元素定位、自我修復與智慧等待
 
-> 23 個套件、約 4,086 行。
+> 23 個套件、約 4,141 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
-| `utils/ab_locator/` | 351 | A/B 定位器框架：同時競速 N 種策略並記錄各自勝率 |
+| `utils/ab_locator/` | 382 | A/B 定位器框架：同時競速 N 種策略並記錄各自勝率 |
 | `utils/adaptive_timeout/` | 84 | 由觀測到的步驟耗時推導等待逾時，而非硬猜 |
 | `utils/anchor_locator/` | 457 | 錨點定位器：以空間關係組合 影像／OCR／VLM／a11y 四種來源 |
 | `utils/app_idle/` | 109 | 等應用程式不再忙碌，再驅動下一步 |
 | `utils/change_localize/` | 80 | 把畫面變化歸因到實際改變的元素框 |
 | `utils/critic_features/` | 85 | 每步的 critic 特徵集合與規則式步驟評分 |
-| `utils/element_diff/` | 88 | 跨影格的幾何感知元素比對（穩定 ID、移動追蹤） |
+| `utils/element_diff/` | 93 | 跨影格的幾何感知元素比對（穩定 ID、移動追蹤） |
 | `utils/element_parse/` | 106 | 融合並排序畫面元素框（IoU、合併、多來源融合、閱讀順序） |
 | `utils/element_proposal/` | 86 | 免樣板、免模型地從原始像素提出乾淨元素清單 |
 | `utils/element_scoring/` | 105 | 加權候選評分（角色 + 名稱相似度 + 鄰近度 + 啟用狀態） |
@@ -485,7 +485,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/observation/` | 92 | 供 VLM／agent 接地用的 token 預算內、帶索引的 a11y 文字觀察 |
 | `utils/observation_delta/` | 103 | token 預算內的觀察差異：兩個 UI 影格之間變了什麼 |
 | `utils/screen_state/` | 182 | 語義畫面狀態：快照／差異與結構化畫面描述 |
-| `utils/scroll_find/` | 84 | 捲動直到目標影像／文字可見 |
+| `utils/scroll_find/` | 103 | 捲動直到目標影像／文字可見 |
 | `utils/self_healing/` | 352 | 自癒定位器：先影像樣板、失敗改用 VLM，並留稽核記錄 |
 | `utils/semantic_recording/` | 423 | 為錄製內容加上語義錨點，支援換機重播與自癒重播 |
 | `utils/settle_detector/` | 79 | 以純函式介面判定 UI 是否已靜止 |
@@ -670,7 +670,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.16 系統、視窗與剪貼簿
 
-> 16 個套件、約 2,448 行。
+> 16 個套件、約 2,451 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -688,7 +688,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/trash/` | 93 | 把檔案移到系統資源回收筒（可復原刪除） |
 | `utils/window_capture/` | 292 | 逐視窗截圖、視窗版面儲存／還原、貼齊與排列 |
 | `utils/window_geometry/` | 81 | 視窗客戶區幾何（外框內縮、client→screen 對映） |
-| `utils/window_layout/` | 134 | 視窗拼貼／版面規劃器（左右半、四象限、網格、層疊） |
+| `utils/window_layout/` | 137 | 視窗拼貼／版面規劃器（左右半、四象限、網格、層疊） |
 | `utils/window_zorder/` | 76 | 視窗 z 序控制（最上層／移到最前／送到最後） |
 
 ### 5.4.17 大型子系統的檔案級剖析
@@ -1080,6 +1080,6 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `osx/` | 17 | 919 |
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 837 |
-| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 677 | 51,658 |
-| **總計** | **1,043** | **147,431** |
+| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 677 | 51,722 |
+| **總計** | **1,043** | **147,495** |
 

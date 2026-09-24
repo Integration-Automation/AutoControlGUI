@@ -292,6 +292,11 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Fixed
 
+- **Locators and geometry**: sideways scroll-to-find no longer scrolls
+  vertically (it needs a horizontal wheel axis or `scroller=`); stable element
+  ids are unique and non-overlapping boxes never match; remapped points and
+  grid cells contain their points; window grid cells meet exactly; A/B locator
+  stats survive concurrent writers and damaged files.
 - **Data formats**: `write_workbook` stores formula-looking strings as text
   and writes every key's column; malformed JSON Patch operations and pointer
   escapes raise `PatchError`; unsupported JSONPath selectors and filter values

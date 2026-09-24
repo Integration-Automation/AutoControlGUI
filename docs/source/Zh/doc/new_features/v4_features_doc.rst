@@ -40,7 +40,8 @@ Builder 項目。視覺與視窗功能的 geometry / IO 操作皆可注入,因�
   ``verify()`` 搭檔)。``AC_assert_vlm``。
 * **捲動找元素** — ``scroll_until_visible(target, kind="image",
   direction="down", max_scrolls=10)`` 往某方向捲動直到樣板圖或 OCR 文字
-  出現,回傳 ``{found, coords, scrolls}``。``AC_scroll_to_find``。
+  出現,回傳 ``{found, coords, scrolls}``。``left`` / ``right`` 需要水平滾輪軸(X11 / Wayland),
+  其他平台除非給了 ``scroller=``,否則拋出 ``ValueError``。``AC_scroll_to_find``。
 * **區域顏色統計** — ``region_color_stats(source, region)`` 回傳區域的
   ``average_rgb``、``dominant_rgb`` 及該色的像素占比(量化色彩空間 → 取
   最多的 bucket → 平均其真實像素)。``AC_region_color_stats``。

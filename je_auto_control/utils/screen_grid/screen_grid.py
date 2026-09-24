@@ -14,6 +14,7 @@ unit-testable by passing an explicit region. Imports no ``PySide6``.
 """
 import re
 from dataclasses import asdict, dataclass
+import bisect
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 _LABEL_RE = re.compile(r"([A-Za-z]+)(\d+)")
@@ -113,10 +114,12 @@ def cell_for_point(x: int, y: int, rows: int, cols: int, *,
     left, top, right, bottom = _bounds(region, screen_size)
     if not (left <= x < right and top <= y < bottom):
         return None
-    col = min(cols - 1, int((x - left) * cols / (right - left)))
-    row = min(rows - 1, int((y - top) * rows / (bottom - top)))
     xs = _edges(left, right - left, cols)
     ys = _edges(top, bottom - top, rows)
+    # Located by the same rounded edges the cell is built from: truncating
+    # the ratio put x=3 of a 10 px, 3-column grid in A1, whose right edge is 3.
+    col = min(cols - 1, bisect.bisect_right(xs, x) - 1)
+    row = min(rows - 1, bisect.bisect_right(ys, y) - 1)
     return _make_cell(row, col, xs, ys)
 
 

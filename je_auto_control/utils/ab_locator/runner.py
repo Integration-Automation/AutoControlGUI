@@ -12,6 +12,7 @@ from concurrent.futures import ThreadPoolExecutor
 from dataclasses import asdict, dataclass
 from typing import Any, Dict, Mapping, Optional, Tuple
 
+from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.ab_locator.store import (
     ABReport, ABStore, default_ab_store,
 )
@@ -104,7 +105,11 @@ def _run_one(item) -> Tuple[str, StrategyResult]:
     started = time.monotonic()
     try:
         coords = _resolve_single(locator)
-    except (RuntimeError, OSError, ValueError) as error:
+    # TypeError / AttributeError: the image locator re-raises them for a
+    # malformed locator (no template_path), and one bad strategy ended the
+    # whole pool.map instead of being recorded as a failure.
+    except (RuntimeError, OSError, ValueError, TypeError, AttributeError,
+            AutoControlException) as error:
         return name, StrategyResult(
             strategy=name, succeeded=False, coordinates=None,
             elapsed_ms=_ms_since(started), error=repr(error),

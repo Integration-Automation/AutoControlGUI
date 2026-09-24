@@ -44,8 +44,9 @@ Vision
   ``locate_by_description``). ``AC_assert_vlm``.
 * **Scroll-to-find** — ``scroll_until_visible(target, kind="image",
   direction="down", max_scrolls=10)`` scrolls until a template image or
-  OCR text appears, returning ``{found, coords, scrolls}``.
-  ``AC_scroll_to_find``.
+  OCR text appears, returning ``{found, coords, scrolls}``. ``left`` /
+  ``right`` need a horizontal wheel axis (X11 / Wayland); elsewhere they
+  raise ``ValueError`` unless ``scroller=`` is given. ``AC_scroll_to_find``.
 * **Region colour stats** — ``region_color_stats(source, region)`` returns
   a region's ``average_rgb``, ``dominant_rgb``, and that colour's pixel
   fraction (quantise colour space → busiest bucket → average its real

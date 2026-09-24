@@ -96,9 +96,12 @@ def grid_rects(screen: Screen, rows: int, cols: int, *,
     rects: List[WindowRect] = []
     for row in range(rows):
         for col in range(cols):
-            rect = _apply_gap(screen_x + round(col * cell_w),
-                              screen_y + round(row * cell_h),
-                              round(cell_w), round(cell_h), int(gap))
+            # Widths from consecutive rounded edges: round(cell_w) left a
+            # 1 px column (666 of 1000 / 3) that no cell covered.
+            left, top = round(col * cell_w), round(row * cell_h)
+            rect = _apply_gap(screen_x + left, screen_y + top,
+                              round((col + 1) * cell_w) - left,
+                              round((row + 1) * cell_h) - top, int(gap))
             rects.append(WindowRect(*rect))
     return rects
 
