@@ -25,7 +25,7 @@ def check_fps(fps: Any) -> float:
 
 
 def record_paced(running: Callable[[], bool], grab: Callable[[], Any],
-                 write: Callable[[Any], None], fps: float, *,
+                 write: Callable[[Any], object], fps: float, *,
                  clock: Callable[[], float] = time.monotonic,
                  sleep: Callable[[float], None] = time.sleep) -> int:
     """Capture with ``grab`` and ``write`` frames at ``fps`` while ``running()``; return the count.
