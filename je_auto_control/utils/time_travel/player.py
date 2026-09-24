@@ -170,17 +170,15 @@ class TimelinePlayer:
             idx = 0
         return self._snapshot(idx)
 
-    def actions_in_window(self, start_ts: float,
-                          end_ts: float) -> List[ActionEvent]:
-        """Return every action whose timestamp falls inside ``[start, end]``."""
+    def actions_in_window(self, start_ts: float, end_ts: float, *,
+                          include_end: bool = True) -> List[ActionEvent]:
+        """Return every action in ``[start, end]`` (``[start, end)`` without ``include_end``)."""
         if not self._actions:
             return []
-        low = bisect.bisect_left(
-            [a.timestamp for a in self._actions], float(start_ts),
-        )
-        high = bisect.bisect_right(
-            [a.timestamp for a in self._actions], float(end_ts),
-        )
+        timestamps = [a.timestamp for a in self._actions]
+        low = bisect.bisect_left(timestamps, float(start_ts))
+        upper = bisect.bisect_right if include_end else bisect.bisect_left
+        high = upper(timestamps, float(end_ts))
         return list(self._actions[low:high])
 
     def load_frame_bytes(self, frame: FrameRef) -> bytes:
@@ -211,7 +209,11 @@ class TimelinePlayer:
             window_end = max(frame.timestamp, self._actions[-1].timestamp + 1e-3)
         else:
             window_end = frame.timestamp + 1.0
-        actions = self.actions_in_window(frame.timestamp, window_end)
+        # Half-open between frames: an action exactly on the next frame's
+        # timestamp was listed in both snapshots.
+        actions = self.actions_in_window(
+            frame.timestamp, window_end,
+            include_end=step + 1 >= len(self._frames))
         return TimelineSnapshot(
             step=step, frame=frame,
             actions=actions,

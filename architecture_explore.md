@@ -20,7 +20,7 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 | 指標 | 數值 |
 | --- | ---: |
 | Python 模組總數（含周邊子專案） | 1,049 |
-| 程式碼總行數 | 147,289 |
+| 程式碼總行數 | 147,360 |
 | `je_auto_control/utils/` 子套件數 | 310 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 773 |
 | 套件門面 `__all__` 公開名稱數 | 1,241 |
@@ -323,7 +323,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.3 排程、觸發與背景監看
 
-> 11 個套件、約 3,910 行。
+> 11 個套件、約 3,925 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -331,7 +331,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/idle_keepawake/` | 216 | 偵測使用者閒置時間並在無人值守執行期間阻止系統睡眠 |
 | `utils/lock_session/` | 164 | 鎖定工作站、等待解鎖並分類鎖定狀態轉換 |
 | `utils/observer/` | 229 | 反應式畫面觀察者，在出現／消失／變化時觸發 |
-| `utils/recurrence/` | 373 | RFC 5545 重複規則解析與發生時間展開 |
+| `utils/recurrence/` | 388 | RFC 5545 重複規則解析與發生時間展開 |
 | `utils/scheduler/` | 439 | 間隔式與 cron 式的 action JSON 排程器 |
 | `utils/session_guard/` | 62 | 驅動輸入前先偵測工作階段是否已鎖定／非互動 |
 | `utils/triggers/` | 1,241 | 事件驅動觸發引擎：影像／視窗／像素／檔案／webhook／IMAP 郵件 |
@@ -463,7 +463,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.8 元素定位、自我修復與智慧等待
 
-> 23 個套件、約 4,083 行。
+> 23 個套件、約 4,086 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -488,7 +488,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/scroll_find/` | 84 | 捲動直到目標影像／文字可見 |
 | `utils/self_healing/` | 352 | 自癒定位器：先影像樣板、失敗改用 VLM，並留稽核記錄 |
 | `utils/semantic_recording/` | 423 | 為錄製內容加上語義錨點，支援換機重播與自癒重播 |
-| `utils/settle_detector/` | 76 | 以純函式介面判定 UI 是否已靜止 |
+| `utils/settle_detector/` | 79 | 以純函式介面判定 UI 是否已靜止 |
 | `utils/smart_waits/` | 649 | 智慧等待：以影格差異取代 `time.sleep` |
 
 ### 5.4.9 AI / Agent / LLM
@@ -557,11 +557,11 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.12 報表、可觀測性與測試治理
 
-> 34 個套件、約 7,152 行。
+> 34 個套件、約 7,180 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
-| `utils/anomaly/` | 107 | 單一序列異常偵測 |
+| `utils/anomaly/` | 114 | 單一序列異常偵測 |
 | `utils/approval/` | 118 | Approval testing：以核可基準線驗證產出物 |
 | `utils/assertion/` | 881 | 斷言 DSL：畫面狀態驗證 + 組合子 |
 | `utils/baggage/` | 120 | W3C Baggage 傳遞 |
@@ -576,7 +576,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/media_assert/` | 233 | 媒體斷言：音訊活動與影片動態檢查 |
 | `utils/observability/` | 696 | Prometheus 格式指標 + OpenTelemetry 相容 trace + `/metrics` 匯出伺服器 |
 | `utils/otlp_export/` | 81 | OTLP/JSON span 匯出 |
-| `utils/percentiles/` | 103 | 可合併的串流延遲摘要與精確百分位數 |
+| `utils/percentiles/` | 116 | 可合併的串流延遲摘要與精確百分位數 |
 | `utils/process_doc/` | 85 | 由錄製的 action list 產生逐步 SOP 文件 |
 | `utils/process_mining/` | 110 | 流程探勘：從動作日誌挖掘可自動化的候選 |
 | `utils/profiler/` | 426 | 逐動作效能剖析器 + 資源剖析器 |
@@ -584,15 +584,15 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/run_diff/` | 123 | 兩次執行軌跡的差異（LCS 對齊：新增／移除／狀態翻轉／退化） |
 | `utils/run_history/` | 405 | 執行歷史儲存與產出物管理 |
 | `utils/sarif/` | 163 | 以 SARIF 2.1.0 匯出發現項，供 GitHub／Azure code scanning |
-| `utils/slo/` | 112 | SLO 評估：SLI、錯誤預算與多視窗燃燒率告警 |
+| `utils/slo/` | 115 | SLO 評估：SLI、錯誤預算與多視窗燃燒率告警 |
 | `utils/smoothing/` | 67 | 數列移動平均平滑 |
 | `utils/soft_assert/` | 74 | 軟斷言：累積檢查並在區塊結束時一次拋出 |
-| `utils/stats/` | 220 | 描述統計與 A/B 顯著性檢定（純標準庫） |
+| `utils/stats/` | 223 | 描述統計與 A/B 顯著性檢定（純標準庫） |
 | `utils/step_timeline/` | 81 | 每次執行的步驟瀑布圖與瓶頸（關鍵路徑）步驟排名 |
 | `utils/test_select/` | 123 | 以執行歷史做風險導向的測試選取 |
 | `utils/test_shard/` | 87 | 以耗時為權重的套件切分與分片結果合併 |
 | `utils/test_suite/` | 527 | QA 套件編排：把扁平 action list 評分為測試案例 + CI 報表 |
-| `utils/time_travel/` | 381 | 錄製 session 的時光回溯除錯（控制器 + 播放器） |
+| `utils/time_travel/` | 383 | 錄製 session 的時光回溯除錯（控制器 + 播放器） |
 | `utils/timeseries/` | 143 | 時間序列轉換（rate／降採樣／重採樣） |
 | `utils/trace_context/` | 177 | W3C Trace Context 傳遞 |
 
@@ -649,7 +649,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.15 韌性、流量控制與設定
 
-> 14 個套件、約 1,969 行。
+> 14 個套件、約 1,994 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -666,7 +666,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/rate_limit/` | 204 | 用戶端限流：token bucket、滑動視窗、throttle |
 | `utils/resilience/` | 144 | 韌性原語：退避重試與斷路器 |
 | `utils/retry_budget/` | 158 | 重試預算：以牆鐘期限與 full jitter 約束重試 |
-| `utils/sequence_gap/` | 65 | 逐串流的序號缺口偵測 |
+| `utils/sequence_gap/` | 90 | 逐串流的序號缺口偵測 |
 
 ### 5.4.16 系統、視窗與剪貼簿
 
@@ -1080,6 +1080,6 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `osx/` | 17 | 919 |
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 837 |
-| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 677 | 51,451 |
-| **總計** | **1,043** | **147,224** |
+| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 677 | 51,522 |
+| **總計** | **1,043** | **147,295** |
 

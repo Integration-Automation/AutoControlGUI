@@ -25,6 +25,9 @@ def percentile(values: Sequence[float], q: float,
     if not values:
         raise AutoControlException("percentile of empty data")
     data = sorted(float(value) for value in values)
+    if any(math.isnan(value) for value in data):
+        # NaN breaks the sort, so the answer depended on where it sat.
+        raise AutoControlException("percentile of data containing NaN")
     if q <= 0:
         return data[0]
     if q >= 100:

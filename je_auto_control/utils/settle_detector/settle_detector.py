@@ -34,6 +34,9 @@ class SettleTracker:
 
     def __init__(self, quiet_samples: int = 3, max_churn: float = 1.0) -> None:
         """Settle after ``quiet_samples`` consecutive churns <= ``max_churn``."""
+        if int(quiet_samples) < 1:
+            # 0 made every sample "settled", a spike included.
+            raise ValueError("quiet_samples must be at least 1")
         self.quiet_samples = int(quiet_samples)
         self.max_churn = float(max_churn)
         self.quiet_run = 0

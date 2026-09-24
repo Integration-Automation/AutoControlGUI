@@ -22,7 +22,8 @@
 
 ``observe`` 回傳 ``{status, seq, missing}``,status 為 ``ok``(順序下一個或首次)、``duplicate``(已看過)、
 ``gap``(序號被跳過 —— 記為遺漏)或 ``reorder``(較早的遲到序號,可填補間隙)。``gaps`` 列出未決遺漏序號,
-``high_water`` 為最高已見序號。各串流以 ``stream_id`` 獨立追蹤。
+``high_water`` 為最高已見序號。各串流以 ``stream_id`` 獨立追蹤。只儲存未決的遺漏序號，上限是
+``SequenceTracker(max_gap=100_000)``:跳號後遺漏數會超過這個上限時(通常是重置或錯誤的值)會拋出 ``ValueError``。
 
 執行器命令
 ----------

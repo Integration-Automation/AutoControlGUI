@@ -292,6 +292,12 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Fixed
 
+- **Time and statistics**: sequence tracking stores only outstanding gaps and
+  refuses jumps beyond `max_gap`; the SLO window ends at `now`; a UTC `UNTIL`
+  is converted to local time and huge `INTERVAL`s are rule errors; the latency
+  digest refuses NaN/inf and stays within the recorded range; a lone outlier
+  among identical values is detected; NaN percentiles are refused; frame
+  snapshots no longer share a boundary action.
 - **Governance and supply chain**: license expressions are parsed (AND/OR
   precedence, parentheses, WITH, case-insensitive ids, `+`); VEX statements
   match the product's version and PEP 503 name; approvers are compared

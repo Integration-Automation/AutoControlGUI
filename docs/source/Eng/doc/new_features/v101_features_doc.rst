@@ -27,7 +27,9 @@ Headless API
 ``detect_anomalies`` scores each value (``mad`` default, or ``zscore``) and flags
 those past the threshold (3.5 for MAD, 3.0 for z-score). ``mad_anomalies`` /
 ``zscore_anomalies`` return just the flagged indices, and ``mad_scores`` /
-``zscore_scores`` the raw scores. MAD (Iglewicz-Hoaglin modified z-score) is
+``zscore_scores`` the raw scores. When more than half the values are identical
+(MAD is 0) the scores fall back to the mean absolute deviation, so a lone
+outlier is still found. MAD (Iglewicz-Hoaglin modified z-score) is
 robust to outliers inflating the spread, so it stays sensitive where a plain
 z-score would not. ``ewma_control`` is an EWMA control chart for sustained
 level shifts — pass ``target_mean`` / ``target_sigma`` for an in-control

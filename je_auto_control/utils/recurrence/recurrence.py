@@ -16,7 +16,7 @@ Pure standard library (``datetime`` + ``calendar``); imports no ``PySide6``.
 import datetime as _dt
 from calendar import monthrange
 from dataclasses import dataclass
-from typing import Iterator, List, Optional, Tuple
+from typing import Dict, Iterator, List, Optional, Tuple
 
 from je_auto_control.utils.exception.exceptions import AutoControlException
 
@@ -24,6 +24,9 @@ _WEEKDAYS = {"MO": 0, "TU": 1, "WE": 2, "TH": 3, "FR": 4, "SA": 5, "SU": 6}
 _FREQS = {"DAILY", "WEEKLY", "MONTHLY", "YEARLY"}
 
 ByDay = Tuple[Optional[int], int]
+
+
+_MAX_INTERVAL = 9999
 
 
 @dataclass(frozen=True)
@@ -91,6 +94,22 @@ def _parse_until(value: str) -> _dt.datetime:
     return parsed.replace(tzinfo=_dt.timezone.utc) if is_utc else parsed
 
 
+def _parse_limits(parts: Dict[str, str]) -> Tuple[int, Optional[int]]:
+    """Validated ``(INTERVAL, COUNT)`` of a rule's parts."""
+    # INTERVAL=0 repeated the same date forever, and BYMONTH=13 or
+    # BYMONTHDAY=40 could never match -- the expansion then ran until the
+    # calendar overflowed.
+    interval = _parse_int("INTERVAL", parts.get("INTERVAL", "1"))
+    count = _parse_int("COUNT", parts["COUNT"]) if "COUNT" in parts else None
+    if interval < 1 or (count is not None and count < 1):
+        raise AutoControlException("INTERVAL and COUNT must be at least 1")
+    if interval > _MAX_INTERVAL:
+        # A huge INTERVAL overflowed timedelta / date arithmetic with an
+        # OverflowError instead of a rule error.
+        raise AutoControlException(f"INTERVAL must be at most {_MAX_INTERVAL}")
+    return interval, count
+
+
 def parse_rrule(text: str) -> Recurrence:
     """Parse an RRULE string (with or without the ``RRULE:`` prefix)."""
     body = text.strip()
@@ -104,13 +123,7 @@ def parse_rrule(text: str) -> Recurrence:
     freq = parts.get("FREQ", "").upper()
     if freq not in _FREQS:
         raise AutoControlException(f"unsupported or missing FREQ {freq!r}")
-    # INTERVAL=0 repeated the same date forever, and BYMONTH=13 or
-    # BYMONTHDAY=40 could never match -- the expansion then ran until the
-    # calendar overflowed.
-    interval = _parse_int("INTERVAL", parts.get("INTERVAL", "1"))
-    count = _parse_int("COUNT", parts["COUNT"]) if "COUNT" in parts else None
-    if interval < 1 or (count is not None and count < 1):
-        raise AutoControlException("INTERVAL and COUNT must be at least 1")
+    interval, count = _parse_limits(parts)
     return Recurrence(
         freq=freq,
         interval=interval,
@@ -331,7 +344,9 @@ def _normalize_until(until: Optional[_dt.datetime],
     if aware_start and not aware_until:
         return until.replace(tzinfo=dtstart.tzinfo)
     if not aware_start and aware_until:
-        return until.replace(tzinfo=None)
+        # A naive DTSTART is local time: convert a UTC UNTIL to it rather
+        # than dropping the offset (20240103T050000Z is 13:00 at +0800).
+        return until.astimezone().replace(tzinfo=None)
     return until
 
 
