@@ -20,7 +20,7 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 | 指標 | 數值 |
 | --- | ---: |
 | Python 模組總數（含周邊子專案） | 1,049 |
-| 程式碼總行數 | 147,101 |
+| 程式碼總行數 | 147,289 |
 | `je_auto_control/utils/` 子套件數 | 310 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 773 |
 | 套件門面 `__all__` 公開名稱數 | 1,241 |
@@ -414,7 +414,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.6 OCR 與文字理解
 
-> 19 個套件、約 3,252 行。
+> 19 個套件、約 3,260 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -424,7 +424,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/form_fields/` | 128 | 多方向關聯表單標籤與值，並讀取核取方塊狀態 |
 | `utils/fuzzy/` | 96 | 模糊字串比對與去重（預設 difflib，有 rapidfuzz 則優先） |
 | `utils/grid_locator/` | 71 | 以 (row, column) 從邊界框定址表格／網格儲存格 |
-| `utils/guardrail/` | 108 | 針對畫面／OCR 文字的啟發式 prompt-injection 防護 |
+| `utils/guardrail/` | 116 | 針對畫面／OCR 文字的啟發式 prompt-injection 防護 |
 | `utils/heading_segment/` | 69 | 判定 OCR 行是標題或內文，建出文件大綱 |
 | `utils/near_dup/` | 105 | 近似重複文字偵測（SimHash／MinHash） |
 | `utils/ocr/` | 1,126 | OCR 引擎門面 + 三個後端（Tesseract／EasyOCR／PaddleOCR）、版面結構化與跨詞比對（`text_span`） |
@@ -557,15 +557,15 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.12 報表、可觀測性與測試治理
 
-> 34 個套件、約 7,128 行。
+> 34 個套件、約 7,152 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
 | `utils/anomaly/` | 107 | 單一序列異常偵測 |
 | `utils/approval/` | 118 | Approval testing：以核可基準線驗證產出物 |
 | `utils/assertion/` | 881 | 斷言 DSL：畫面狀態驗證 + 組合子 |
-| `utils/baggage/` | 111 | W3C Baggage 傳遞 |
-| `utils/canonical_log/` | 90 | canonical log line 與結構化 JSON 日誌 |
+| `utils/baggage/` | 120 | W3C Baggage 傳遞 |
+| `utils/canonical_log/` | 96 | canonical log line 與結構化 JSON 日誌 |
 | `utils/ci_annotations/` | 62 | 由執行結果輸出 CI 工作流程註記（GitHub Actions） |
 | `utils/compliance/` | 136 | 合規：把治理證據對應到 SOC2／ISO 27001 控制項 |
 | `utils/failure_hooks/` | 395 | 失敗 → 工單自動化：開 Jira／Linear／GitHub issue |
@@ -594,7 +594,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/test_suite/` | 527 | QA 套件編排：把扁平 action list 評分為測試案例 + CI 報表 |
 | `utils/time_travel/` | 381 | 錄製 session 的時光回溯除錯（控制器 + 播放器） |
 | `utils/timeseries/` | 143 | 時間序列轉換（rate／降採樣／重採樣） |
-| `utils/trace_context/` | 168 | W3C Trace Context 傳遞 |
+| `utils/trace_context/` | 177 | W3C Trace Context 傳遞 |
 
 ### 5.4.13 資料來源、結構驗證與 i18n
 
@@ -629,14 +629,14 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.14 安全、機密與合規
 
-> 13 個套件、約 2,600 行。
+> 13 個套件、約 2,747 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
 | `utils/config_redaction/` | 85 | 設定結構與 log 字串的機密遮蔽 |
 | `utils/egress/` | 146 | 無頭 HTTP 用戶端的網路外連允許清單守衛 |
-| `utils/governance/` | 231 | 治理：maker-checker 核准閘門與即時憑證租約 |
-| `utils/license_policy/` | 139 | 以 SBOM 元件評估 SPDX 授權允許／拒絕政策 |
+| `utils/governance/` | 237 | 治理：maker-checker 核准閘門與即時憑證租約 |
+| `utils/license_policy/` | 220 | 以 SBOM 元件評估 SPDX 授權允許／拒絕政策 |
 | `utils/provenance/` | 104 | SLSA 建置來源證明（in-toto v1） |
 | `utils/rbac/` | 299 | 角色型存取控制：使用者、角色與權杖驗證（尚未接到 REST／MCP） |
 | `utils/redaction/` | 499 | 截圖遮蔽層：規則偵測 + 政策 + 協調器（上傳 VLM 前先遮） |
@@ -644,12 +644,12 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/secret_ref/` | 143 | URI scheme 形式的值參照解析 |
 | `utils/secrets/` | 340 | 加密機密儲存庫，供 `${secrets.NAME}` 解析 |
 | `utils/secrets_scan/` | 130 | 掃描 action JSON／資料中應入庫卻硬編碼的機密 |
-| `utils/vex/` | 143 | OpenVEX 陳述撰寫與漏洞分類處置 |
-| `utils/vuln_scan/` | 223 | 以 OSV 比對 SBOM 元件的漏洞（純標準庫） |
+| `utils/vex/` | 167 | OpenVEX 陳述撰寫與漏洞分類處置 |
+| `utils/vuln_scan/` | 259 | 以 OSV 比對 SBOM 元件的漏洞（純標準庫） |
 
 ### 5.4.15 韌性、流量控制與設定
 
-> 14 個套件、約 1,960 行。
+> 14 個套件、約 1,969 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -659,7 +659,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/chaos/` | 153 | 決定性混沌實驗（穩態假說 + 故障注入） |
 | `utils/dedup_window/` | 72 | 時間視窗內的訊息去重 |
 | `utils/dotenv/` | 157 | `.env` 檔解析與序列化 |
-| `utils/feature_flags/` | 173 | 功能旗標評估，含目標規則與決定性灰度 |
+| `utils/feature_flags/` | 182 | 功能旗標評估，含目標規則與決定性灰度 |
 | `utils/idempotency/` | 142 | 冪等鍵儲存與已存回應重放 |
 | `utils/layered_config/` | 110 | 分層設定解析 |
 | `utils/optimistic/` | 135 | 樂觀併發的版本化儲存 |
@@ -1080,6 +1080,6 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `osx/` | 17 | 919 |
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 837 |
-| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 677 | 51,263 |
-| **總計** | **1,043** | **147,036** |
+| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 677 | 51,451 |
+| **總計** | **1,043** | **147,224** |
 

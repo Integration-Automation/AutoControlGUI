@@ -58,6 +58,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260924-40 | 2026-09-24 | Governance and supply chain: parsed license expressions, version-exact VEX, case-folded approvers, newline-proof traceparent | #bugfix #audit #security #supply-chain | [2026-09](2026-09.md) |
 | U-20260924-39 | 2026-09-24 | Code Quality back to green: recorder pacing typed for OpenCV's stubs, redaction key pattern renamed past bandit | #ci #typing | [2026-09](2026-09.md) |
 | U-20260924-38 | 2026-09-24 | HTTP family: egress matches the connected host, bounded bodies and decompression, safe multipart, RFC-correct Link and URL handling | #bugfix #audit #security #http | [2026-09](2026-09.md) |
 | U-20260924-37 | 2026-09-24 | Process, secret and file boundaries: links recycled not targets, base-relative secret refs, batch-file arguments, fuller log redaction | #bugfix #audit #security | [2026-09](2026-09.md) |
@@ -198,7 +199,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | File | Period | Entries |
 |---|---|---:|
-| [2026-09.md](2026-09.md) | 2026-09 | 109 |
+| [2026-09.md](2026-09.md) | 2026-09 | 110 |
 | [2026-08-f.md](2026-08-f.md) | 2026-08 | 1 |
 | [2026-08-e.md](2026-08-e.md) | 2026-08 | 2 |
 | [2026-08-d.md](2026-08-d.md) | 2026-08 | 2 |

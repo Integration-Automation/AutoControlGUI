@@ -81,4 +81,10 @@ class JSONLogFormatter(logging.Formatter):
         for key, value in vars(record).items():
             if key not in _STANDARD and not key.startswith("_"):
                 payload[key] = value
+        # logger.exception() lost its traceback: exc_info is a standard
+        # attribute, so the loop above skips it.
+        if record.exc_info:
+            payload["exc_info"] = self.formatException(record.exc_info)
+        if record.stack_info:
+            payload["stack_info"] = self.formatStack(record.stack_info)
         return json.dumps(payload, default=str)

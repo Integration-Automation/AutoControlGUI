@@ -12,6 +12,7 @@ Pure standard library; imports no ``PySide6``. Tokens use :mod:`secrets`.
 import functools
 import secrets
 import time
+import unicodedata
 from typing import Dict, List, Optional
 
 from je_auto_control.utils.json_store import SharedJsonDict
@@ -20,6 +21,11 @@ STATUS_PENDING = "pending"
 STATUS_APPROVED = "approved"
 STATUS_REJECTED = "rejected"
 
+
+
+def _principal(user: object) -> str:
+    """Compare user ids as one person: "Alice" approving "alice" is self-approval."""
+    return unicodedata.normalize("NFKC", str(user or "")).strip().casefold()
 
 class ApprovalGate:
     """A maker-checker approval registry backed by an optional JSON file.
@@ -44,7 +50,7 @@ class ApprovalGate:
         return token
 
     def _decide(self, token: str, approver: str, status: str) -> bool:
-        checker = str(approver or "").strip()
+        checker = _principal(approver)
 
         def decide(items: Dict[str, Dict[str, object]]) -> bool:
             record = items.get(token)
@@ -52,7 +58,7 @@ class ApprovalGate:
                 return False
             # Segregation of duties: a named checker who is not the maker. An
             # empty approver skipped the check (anonymous approved anonymous).
-            if not checker or checker == str(record["requester"] or "").strip():
+            if not checker or checker == _principal(record["requester"]):
                 return False
             record["status"] = status
             record["approver"] = approver

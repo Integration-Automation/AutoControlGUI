@@ -30,7 +30,8 @@ Headless API
 
 ``reject(token, approver)`` blocks an action; a request that has already been
 decided cannot be re-decided. The approver must be named and must not be the
-requester (surrounding spaces ignored), so an anonymous approval is refused. ``status(token)`` returns
+requester, compared after trimming, NFKC normalisation and case folding (so
+``Alice`` cannot approve ``alice``'s request), and an anonymous approval is refused. ``status(token)`` returns
 ``pending`` / ``approved`` / ``rejected`` (or ``None`` for an unknown token),
 ``get(token)`` returns the full record, and ``pending()`` lists every request
 still awaiting a decision.

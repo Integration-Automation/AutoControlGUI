@@ -292,6 +292,14 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Fixed
 
+- **Governance and supply chain**: license expressions are parsed (AND/OR
+  precedence, parentheses, WITH, case-insensitive ids, `+`); VEX statements
+  match the product's version and PEP 503 name; approvers are compared
+  case-folded; `traceparent` ids with a trailing newline are refused and an
+  invalid header extracts as `None`; PEP 440 epochs and dev pre-releases
+  sort correctly and findings name their own package's fix; `semver_*` flag
+  operators follow SemVer; JSON logs keep tracebacks; baggage stays under
+  8192 bytes.
 - **HTTP family**: the egress policy matches the host urllib connects to
   (percent-decoded, trailing dot, IP literals in any spelling); response
   bodies and gzip/deflate decoding are capped at 64 MiB; repeated headers are

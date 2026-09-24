@@ -10,7 +10,7 @@ lane beside the OSV vulnerability lane.
 Pure standard library (``re``); imports no ``PySide6``.
 """
 import re
-from typing import Any, Dict, List, Mapping, Optional, Sequence, Set
+from typing import Any, Dict, List, Mapping, Optional, Sequence, Set, Tuple, Union
 
 from je_auto_control.utils.sarif import make_finding
 
@@ -37,7 +37,19 @@ _ALIAS_GROUPS = {
 _ALIASES = {alias: spdx for spdx, names in _ALIAS_GROUPS.items()
             for alias in names}
 
-_OPERATOR_RE = re.compile(r"\b(?:OR|AND|WITH)\b|[()]", re.IGNORECASE)
+_TOKEN_SPLIT = re.compile(r"(\bOR\b|\bAND\b|\bWITH\b|[()])", re.IGNORECASE)
+_OPERATORS = ("OR", "AND", "WITH", "(", ")")
+# GPL / LGPL / AGPL ids, whose "+" and deprecated bare forms have SPDX names.
+_GNU_ID = re.compile(r"(?i)((?:A|L)?GPL-\d\.\d)(\+|-only|-or-later)?")
+
+
+def _gnu_id(text: str) -> Optional[str]:
+    """``GPL-2.0+`` -> ``GPL-2.0-or-later``; deprecated ``GPL-2.0`` -> ``-only``."""
+    match = _GNU_ID.fullmatch(text)
+    if match is None:
+        return None
+    later = (match.group(2) or "").lower() in ("+", "-or-later")
+    return f"{match.group(1).upper()}-{'or-later' if later else 'only'}"
 
 
 def normalize_spdx(raw: str) -> str:
@@ -52,38 +64,107 @@ def normalize_spdx(raw: str) -> str:
     for suffix in (" license", " licence"):
         if lowered.endswith(suffix):
             return text[:-len(suffix)].strip()
-    return text
+    return _gnu_id(text) or text.rstrip("+")
 
 
-def _extract_ids(license_str: str) -> List[str]:
-    parts = _OPERATOR_RE.split(str(license_str))
-    return [spdx for spdx in (normalize_spdx(part) for part in parts) if spdx]
+# A parsed expression: ("id", spdx) or ("and" / "or", [children]).
+_Node = Tuple[str, Union[str, List[Any]]]
 
 
-def _norm_set(values: Optional[Sequence[str]]) -> Set[str]:
-    return {normalize_spdx(value) for value in values} if values else set()
+class _ExpressionParser:
+    """Recursive descent over an SPDX expression: OR binds loosest, then AND.
+
+    The old check switched to "any" whenever the text held " or ", so
+    ``(MIT OR Apache-2.0) AND Proprietary`` passed an MIT-only allowlist.
+    """
+
+    def __init__(self, text: str) -> None:
+        self._tokens = [part.strip() for part in _TOKEN_SPLIT.split(text) if part.strip()]
+        self._pos = 0
+
+    def parse(self) -> _Node:
+        node = self._either()
+        if self._pos != len(self._tokens):
+            raise ValueError("unexpected token in license expression")
+        return node
+
+    def _peek(self) -> Optional[str]:
+        if self._pos >= len(self._tokens):
+            return None
+        return self._tokens[self._pos].upper()
+
+    def _take(self) -> str:
+        token = self._tokens[self._pos]
+        self._pos += 1
+        return token
+
+    def _either(self) -> _Node:
+        children = [self._both()]
+        while self._peek() == "OR":
+            self._take()
+            children.append(self._both())
+        return ("or", children) if len(children) > 1 else children[0]
+
+    def _both(self) -> _Node:
+        children = [self._atom()]
+        while self._peek() == "AND":
+            self._take()
+            children.append(self._atom())
+        return ("and", children) if len(children) > 1 else children[0]
+
+    def _atom(self) -> _Node:
+        if self._peek() == "(":
+            self._take()
+            node = self._either()
+            if self._peek() != ")":
+                raise ValueError("unbalanced parenthesis in license expression")
+            self._take()
+            return node
+        if self._peek() in (None,) + _OPERATORS:
+            raise ValueError("missing license id in license expression")
+        license_id = normalize_spdx(self._take())
+        if self._peek() == "WITH":
+            # An exception only relaxes the license it is attached to; the
+            # verdict is the license's.
+            self._take()
+            if self._peek() in (None,) + _OPERATORS:
+                raise ValueError("missing exception after WITH")
+            self._take()
+        return ("id", license_id)
 
 
-def _allow_status(ids: Sequence[str], allow: Sequence[str],
-                  license_str: str) -> str:
-    allow_set = _norm_set(allow)
-    matcher = any if " or " in f" {str(license_str).lower()} " else all
-    return "allowed" if matcher(spdx in allow_set for spdx in ids) else "denied"
+def _key_set(values: Optional[Sequence[str]]) -> Set[str]:
+    """SPDX ids compare case-insensitively: ``gpl-3.0-only`` is ``GPL-3.0-only``."""
+    return {normalize_spdx(value).lower() for value in values} if values else set()
+
+
+def _satisfied(node: _Node, allow: Optional[Set[str]], deny: Set[str]) -> bool:
+    kind, value = node
+    if isinstance(value, str):  # an ("id", spdx) leaf
+        key = value.lower()
+        return key not in deny and (allow is None or key in allow)
+    results = [_satisfied(child, allow, deny) for child in value]
+    return any(results) if kind == "or" else all(results)
 
 
 def evaluate_license(license_str: str, *,
                      allow: Optional[Sequence[str]] = None,
                      deny: Optional[Sequence[str]] = None) -> str:
-    """Return ``allowed`` / ``denied`` / ``unknown`` for a license string."""
-    ids = _extract_ids(license_str)
-    if not ids:
+    """Return ``allowed`` / ``denied`` / ``unknown`` for a license string.
+
+    The expression is parsed: ``OR`` needs one acceptable choice, ``AND``
+    needs all of them, and ``WITH`` is judged by its license. An empty or
+    malformed expression is ``unknown``.
+    """
+    text = str(license_str or "")
+    if not text.strip():
         return "unknown"
-    deny_set = _norm_set(deny)
-    if deny_set and any(spdx in deny_set for spdx in ids):
-        return "denied"
-    if allow is None:
-        return "allowed"
-    return _allow_status(ids, allow, license_str)
+    try:
+        tree = _ExpressionParser(text).parse()
+    except ValueError:
+        return "unknown"
+    allow_set = None if allow is None else _key_set(allow)
+    return "allowed" if _satisfied(tree, allow_set, _key_set(deny)) else "denied"
 
 
 def _component_license(component: Mapping[str, Any]) -> str:

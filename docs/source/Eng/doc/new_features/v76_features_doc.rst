@@ -37,7 +37,8 @@ keeps the trace id and inherited state but allocates a new span id.
 header (rejecting bad versions, malformed or all-zero IDs with
 ``TraceContextError``); ``parse_tracestate`` / ``format_tracestate`` handle the
 vendor list. ``inject_context`` writes the headers; ``extract_context`` reads
-them back (case-insensitively).
+them back (case-insensitively) and returns ``None`` for a missing or invalid
+``traceparent``, so the receiver starts a new trace as W3C Trace Context says.
 
 Executor commands
 -----------------

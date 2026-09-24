@@ -28,7 +28,8 @@ Maker-Checker 審批閘門
         run_high_risk_action()
 
 ``reject(token, approver)`` 會封鎖動作;已決議的請求無法再次決議。核准者必須具名且不可是
-申請者(前後空白不計),所以匿名核准會被拒絕。
+申請者(去掉前後空白、做 NFKC 正規化並忽略大小寫後比較，所以 ``Alice`` 不能核准 ``alice`` 的請求),
+匿名核准也會被拒絕。
 ``status(token)`` 回傳 ``pending`` / ``approved`` / ``rejected``(未知 token 為
 ``None``),``get(token)`` 回傳完整紀錄,``pending()`` 則列出所有仍待決議的請求。
 

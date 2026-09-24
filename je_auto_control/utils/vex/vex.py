@@ -14,9 +14,12 @@ Pure standard library (``hashlib`` + ``json`` + ``datetime``); imports no
 import datetime
 import hashlib
 import json
-from typing import Any, Dict, List, Mapping, Optional, Sequence
+import re
+from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple
+from urllib.parse import unquote
 
 from je_auto_control.utils.exception.exceptions import AutoControlException
+from je_auto_control.utils.vuln_scan.vuln_scan import version_key
 
 _CONTEXT = "https://openvex.dev/ns/v0.2.0"
 
@@ -83,12 +86,31 @@ def build_vex(statements: Sequence[Mapping[str, Any]], *,
     }
 
 
-def _product_name(product_id: str) -> str:
-    """Package name of a purl (``pkg:pypi/requests@2.0`` -> ``requests``), else the id."""
+def _normal_name(name: str) -> str:
+    """PEP 503 form: ``PySide6_Essentials`` and ``pyside6-essentials`` are one package."""
+    return re.sub(r"[-_.]+", "-", unquote(name).strip().lower())
+
+
+def _product_parts(product_id: str) -> Tuple[str, Optional[str]]:
+    """``(name, version)`` of a purl (``pkg:pypi/requests@2.0``), else ``(id, None)``."""
     if not product_id.startswith("pkg:"):
-        return product_id.lower()
-    path = product_id[4:].split("?", 1)[0].split("#", 1)[0].split("@", 1)[0]
-    return path.rsplit("/", 1)[-1].lower()
+        return _normal_name(product_id), None
+    path = product_id[4:].split("?", 1)[0].split("#", 1)[0]
+    path, _, version = path.partition("@")
+    return _normal_name(path.rsplit("/", 1)[-1]), (unquote(version) or None)
+
+
+def _product_matches(product_id: str, package: str, version: str) -> bool:
+    """Whether a statement's product is this finding's package (and version).
+
+    The purl's version was dropped, so ``not_affected`` for requests 2.0.0
+    also silenced the finding in requests 2.31.0.
+    """
+    name, product_version = _product_parts(product_id)
+    if name != _normal_name(package):
+        return False
+    return (product_version is None or not version
+            or version_key(product_version) == version_key(version))
 
 
 def _statement_matches(statement: Mapping[str, Any],
@@ -104,8 +126,10 @@ def _statement_matches(statement: Mapping[str, Any],
         return True
     # By name, not substring: a statement about ``requests-toolbelt`` must not
     # suppress a finding in ``requests``.
-    package = str(finding.get("package", "")).lower()
-    return bool(package) and any(_product_name(product) == package for product in products)
+    package = str(finding.get("package", ""))
+    version = str(finding.get("version", "") or "")
+    return bool(package) and any(_product_matches(product, package, version)
+                                 for product in products)
 
 
 def _resolve_status(finding: Mapping[str, Any],

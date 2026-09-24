@@ -33,10 +33,15 @@ Headless API
 
 ``normalize_spdx`` maps loose names (``"MIT License"`` → ``MIT``, ``"Apache
 2.0"`` → ``Apache-2.0``) to SPDX ids. ``evaluate_license`` returns ``allowed`` /
-``denied`` / ``unknown``: ``deny`` takes precedence; an empty ``allow`` means
-"not constrained"; a missing license is ``unknown``. SPDX **expressions** are
-understood — ``"MIT OR GPL-3.0-only"`` is a *choice* (allowed if any operand is
-allowed), while ``"MIT AND GPL-3.0-only"`` requires every operand. Each
+``denied`` / ``unknown``: a license in ``deny`` is never acceptable; without
+``allow`` every other license is, and an empty ``allow`` list accepts none; a
+missing or malformed expression is ``unknown``. SPDX **expressions** are
+parsed — ``"MIT OR GPL-3.0-only"`` is a *choice* (allowed if any operand is
+allowed, even when another is denied), ``"MIT AND GPL-3.0-only"`` requires
+every operand, ``AND`` binds tighter than ``OR``, parentheses group, and
+``X WITH exception`` is judged as ``X``. Ids compare case-insensitively, and
+``GPL-2.0+`` / a deprecated bare ``GPL-2.0`` read as ``GPL-2.0-or-later`` /
+``GPL-2.0-only``. Each
 violation is ``{name, version, license, status}``; ``denied`` maps to a SARIF
 ``error`` and ``unknown`` to a ``warning``.
 

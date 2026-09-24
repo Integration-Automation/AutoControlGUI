@@ -38,7 +38,8 @@
 評估順序對齊 OpenFeature/Unleash/LaunchDarkly:停用的旗標提供 ``off_variant``(原因
 ``DISABLED``);未知旗標回傳呼叫端預設(原因 ``ERROR``);目標規則依序嘗試(``TARGETING_MATCH``);
 否則套用 fallthrough(``DEFAULT`` / ``SPLIT``)。目標運算子包含 ``eq``/``ne``/``lt``/``gt``/
-``in``/``not_in``/``contains`` 與 ``semver_*``。百分比推出是
+``in``/``not_in``/``contains`` 與 ``semver_*``(依 SemVer / PEP 440 的先後:``1.2`` 等於 ``1.2.0``,
+``1.0.0-rc.1`` 低於 ``1.0.0``)。百分比推出是
 ``sha256("{key}.{salt}.{context_key}")`` 的一致雜湊分桶,因此主體具**黏性** —— 永遠得到相同變體。
 ``percentage_bucket`` 與 ``assign_variant`` 亦可直接使用。
 

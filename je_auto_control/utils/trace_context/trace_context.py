@@ -94,7 +94,7 @@ def parse_tracestate(header: Optional[str]) -> List[Tuple[str, str]]:
             continue
         key, sep, value = member.partition("=")
         key = key.strip()
-        if not sep or not _TRACESTATE_KEY_RE.match(key):
+        if not sep or not _TRACESTATE_KEY_RE.fullmatch(key):
             continue
         if any(existing == key for existing, _ in items):
             return []           # a duplicated key makes the whole header invalid
@@ -121,11 +121,13 @@ def _validate_traceparent_fields(version: str, trace_id: str, span_id: str,
                                  flags: str) -> None:
     if version != _VERSION:
         raise TraceContextError(f"unsupported traceparent version: {version!r}")
-    if not _TRACE_ID_RE.match(trace_id) or trace_id == "0" * 32:
+    # fullmatch: "$" also matches before a trailing newline, so an id ending
+    # in "\n" passed and was written back into an outgoing header.
+    if not _TRACE_ID_RE.fullmatch(trace_id) or trace_id == "0" * 32:
         raise TraceContextError(f"invalid trace id: {trace_id!r}")
-    if not _SPAN_ID_RE.match(span_id) or span_id == "0" * 16:
+    if not _SPAN_ID_RE.fullmatch(span_id) or span_id == "0" * 16:
         raise TraceContextError(f"invalid span id: {span_id!r}")
-    if not _FLAGS_RE.match(flags):
+    if not _FLAGS_RE.fullmatch(flags):
         raise TraceContextError(f"invalid trace flags: {flags!r}")
 
 
@@ -145,11 +147,18 @@ def inject_context(headers: Optional[Dict[str, str]],
 
 
 def extract_context(headers: Optional[Dict[str, str]]) -> Optional[SpanContext]:
-    """Extract a :class:`SpanContext` from request headers, or ``None``."""
+    """Extract a :class:`SpanContext` from request headers, or ``None``.
+
+    An invalid ``traceparent`` is ``None`` too -- W3C Trace Context says to
+    ignore it and start a new trace; it used to raise out of the handler.
+    """
     lookup = {str(key).lower(): value for key, value in (headers or {}).items()}
     raw = lookup.get("traceparent")
     if not raw:
         return None
-    ctx = parse_traceparent(raw)
+    try:
+        ctx = parse_traceparent(raw)
+    except TraceContextError:
+        return None
     state = parse_tracestate(lookup.get("tracestate"))
     return SpanContext(ctx.trace_id, ctx.span_id, ctx.trace_flags, state)
