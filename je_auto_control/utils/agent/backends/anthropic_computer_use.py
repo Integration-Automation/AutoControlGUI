@@ -1,10 +1,15 @@
 """Anthropic Computer-Use tool backend.
 
-Bridges Anthropic's computer-use tool (``computer_20251124`` by default) to AutoControl's
-executor: the model issues one ``computer`` tool call per turn with an
-``action`` field (``screenshot`` / ``left_click`` / ``type`` / ...)
-and this backend translates it into the equivalent ``AC_*`` action
-invocation.
+Bridges Anthropic's computer-use tool to AutoControl's executor, in either of
+its two request shapes:
+
+* the beta ``computer_20251124`` tool (the default): one ``computer`` call per
+  turn with an ``action`` field (``screenshot`` / ``left_click`` / ...);
+* the GA ``computer_toolset_20260801`` (chosen automatically for models that
+  accept nothing else, such as ``claude-opus-5-5``): one call per member name,
+  possibly several per turn; see :mod:`._computer_toolset`.
+
+Either way each action becomes the equivalent ``AC_*`` invocation.
 
 Why a second backend? :mod:`anthropic.py` exposes our full ``AC_*``
 schema and lets the model pick any of ~100 tools. That works, but it
@@ -23,6 +28,10 @@ import math
 from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple
 
 from je_auto_control.utils.agent.agent_loop import AgentBackend, AgentStep
+from je_auto_control.utils.agent.backends._computer_toolset import (
+    TOOLSET_ONLY_MODELS, TOOLSET_SCHEMA, TOOLSET_TYPE, ToolsetBatch,
+    fit_screenshot, unscale_decision,
+)
 from je_auto_control.utils.agent.backends.base import (
     REQUEST_TIMEOUT_S, AgentBackendError, build_default_system_prompt,
     encode_screenshot_b64, prune_old_screenshots,
@@ -45,6 +54,7 @@ _TOOL_BETAS = {
 #: step an agent needs, and an unbounded scroll overflowed the platform call.
 _MAX_WAIT_S = 100.0
 _MAX_SCROLL_NOTCHES = 100
+_MAX_KEY_REPEAT = 100
 
 
 # Map xdotool-style key names (used by Anthropic's tool spec) to the
@@ -102,11 +112,11 @@ def _click_repeats(action: str) -> int:
 
 
 class ComputerUseAgentBackend(AgentBackend):
-    """Drive ``AgentLoop`` through Anthropic's native ``computer_20250124``.
+    """Drive ``AgentLoop`` through Anthropic's native computer-use tool.
 
-    The backend exposes one tool to the model, translates its action
-    verbs into ``AC_*`` calls via the executor, and threads each
-    ``tool_result`` back so the model can continue the loop.
+    The backend exposes the beta ``computer`` tool or the GA computer
+    toolset, translates each action into ``AC_*`` calls via the executor, and
+    threads each ``tool_result`` back so the model can continue the loop.
     """
 
     def __init__(self,
@@ -117,27 +127,40 @@ class ComputerUseAgentBackend(AgentBackend):
                  client: Optional[Any] = None,
                  api_key: Optional[str] = None,
                  model: str = _DEFAULT_MODEL,
-                 tool_type: str = _DEFAULT_TOOL_TYPE,
+                 tool_type: Optional[str] = None,
                  beta: Optional[str] = None,
                  max_tokens: int = 1024,
                  system_prompt_builder: Optional[Callable[[str], str]] = None,
                  ) -> None:
+        """``tool_type`` defaults to the toolset for models that take only
+        that (``claude-opus-5-5``) and to ``computer_20251124`` otherwise; the
+        display size still bounds every coordinate in toolset mode."""
         if display_width_px <= 0 or display_height_px <= 0:
             raise AgentBackendError(
                 "display_width_px / display_height_px must be positive",
             )
-        self._tool_schema: Dict[str, Any] = {
-            "type": tool_type,
-            "name": "computer",
-            "display_width_px": int(display_width_px),
-            "display_height_px": int(display_height_px),
-        }
-        if display_number is not None:
-            self._tool_schema["display_number"] = int(display_number)
-        self._beta = beta or _TOOL_BETAS.get(tool_type)
-        if not self._beta:
-            raise AgentBackendError(
-                f"no known beta for computer-use tool {tool_type!r}; pass beta=")
+        self._display = (int(display_width_px), int(display_height_px))
+        tool_type = tool_type or (TOOLSET_TYPE if model in TOOLSET_ONLY_MODELS
+                                  else _DEFAULT_TOOL_TYPE)
+        self._batch: Optional[ToolsetBatch] = None
+        self._scale = (1.0, 1.0)
+        if tool_type == TOOLSET_TYPE:
+            # GA: no beta, no name, no display size.
+            self._batch = ToolsetBatch()
+            self._tool_schema: Dict[str, Any] = dict(TOOLSET_SCHEMA)
+            self._beta: Optional[str] = None
+        else:
+            self._tool_schema = {
+                "type": tool_type, "name": "computer",
+                "display_width_px": self._display[0],
+                "display_height_px": self._display[1],
+            }
+            if display_number is not None:
+                self._tool_schema["display_number"] = int(display_number)
+            self._beta = beta or _TOOL_BETAS.get(tool_type)
+            if not self._beta:
+                raise AgentBackendError(
+                    f"no known beta for computer-use tool {tool_type!r}; pass beta=")
         self._client = client
         self._api_key = api_key
         self._model = model
@@ -155,6 +178,8 @@ class ComputerUseAgentBackend(AgentBackend):
                             screenshot: Optional[bytes],
                             history: Sequence[AgentStep],
                             ) -> Dict[str, Any]:
+        if self._batch is not None:
+            return self._decide_with_toolset(self._batch, goal, screenshot, history)
         self._ingest_history(history, screenshot)
         if not self._conversation:
             self._conversation.append({
@@ -162,31 +187,86 @@ class ComputerUseAgentBackend(AgentBackend):
                 "content": _initial_user_content(goal, screenshot),
             })
         prune_old_screenshots(self._conversation)
+        return self._handle_response(self._create(goal, beta=True))
+
+    def _create(self, goal: str, *, beta: bool) -> Any:
+        """One Messages API call with the current conversation."""
         client = self._resolve_client()
+        request: Dict[str, Any] = {
+            "timeout": REQUEST_TIMEOUT_S, "model": self._model,
+            "system": self._build_system(goal), "tools": [self._tool_schema],
+            "messages": self._conversation, "max_tokens": self._max_tokens,
+        }
         try:
-            response = client.beta.messages.create(
-                timeout=REQUEST_TIMEOUT_S,
+            if not beta:
+                return client.messages.create(**request)
+            # This path answers exactly one tool_use per turn, so parallel
+            # tool use must stay off: a second computer tool_use would be left
+            # unanswered and the next create() would 400 on the dangling id.
+            return client.beta.messages.create(
                 betas=[self._beta],
-                model=self._model,
-                system=self._build_system(goal),
-                tools=[self._tool_schema],
-                messages=self._conversation,
-                max_tokens=self._max_tokens,
-                # This loop answers exactly one tool_use per turn, so parallel
-                # tool use must stay off: a response with two computer tool_use
-                # blocks would leave the second unanswered and the next
-                # create() would 400 on the dangling tool_use id, aborting the
-                # run. Mirror AnthropicAgentBackend's fix.
-                tool_choice={
-                    "type": "auto",
-                    "disable_parallel_tool_use": True,
-                },
-            )
-        except Exception as exc:  # noqa: BLE001  rewrap to backend error
+                tool_choice={"type": "auto", "disable_parallel_tool_use": True},
+                **request)
+        except Exception as exc:  # noqa: BLE001  # reason: rewrap to backend error
             raise AgentBackendError(
                 f"anthropic computer-use call failed: {exc}",
             ) from exc
-        return self._handle_response(response)
+
+    # --- toolset (computer_toolset_20260801) ---------------------------
+
+    def _decide_with_toolset(self, batch: ToolsetBatch, goal: str,
+                             screenshot: Optional[bytes],
+                             history: Sequence[AgentStep]) -> Dict[str, Any]:
+        """Run the turn's queued calls first; ask the model once all are answered."""
+        if batch.inflight is not None and history:
+            last = history[-1]
+            batch.record(self._toolset_result_content(last, screenshot), bool(last.error))
+        if batch.has_next():
+            return batch.next_decision()
+        results = batch.drain_results()
+        if results:
+            self._conversation.append({"role": "user", "content": results})
+        if not self._conversation:
+            self._conversation.append({
+                "role": "user",
+                "content": _initial_user_content(goal, self._fit(screenshot)),
+            })
+        prune_old_screenshots(self._conversation)
+        return self._handle_toolset_response(self._create(goal, beta=False), batch)
+
+    def _fit(self, screenshot: Optional[bytes]) -> Optional[bytes]:
+        """``screenshot`` within the toolset's image limits; remembers the scale."""
+        if not screenshot:
+            return screenshot
+        fitted, self._scale = fit_screenshot(screenshot)
+        return fitted
+
+    def _toolset_result_content(self, step: AgentStep,
+                                screenshot: Optional[bytes]) -> List[Dict[str, Any]]:
+        fitted = self._fit(screenshot) if step.tool == "AC_screenshot" else screenshot
+        return _tool_result_content(step, fitted)
+
+    def _handle_toolset_response(self, response: Any,
+                                 batch: ToolsetBatch) -> Dict[str, Any]:
+        content = list(getattr(response, "content", []) or [])
+        self._conversation.append({"role": "assistant", "content": content})
+        calls = [(_attr(block, "id"), self._toolset_decision(block))
+                 for block in content if _block_type(block) == "tool_use"]
+        if not calls:
+            return _final_answer(response, content)
+        batch.load(calls)
+        return batch.next_decision()
+
+    def _toolset_decision(self, block: Any) -> Dict[str, Any]:
+        """A member call as a decision, in screen pixels and on the display."""
+        name = str(_attr(block, "name") or "")
+        if name not in _CLICK_ACTIONS and name not in _ACTION_HANDLERS:
+            raise AgentBackendError(
+                f"model called tool {name!r}; only computer toolset members were offered")
+        payload = dict(_attr(block, "input") or {})
+        payload["action"] = name       # the member name is the action
+        decision = unscale_decision(_decision_from_computer_action(payload), self._scale)
+        return _clamp_decision(decision, *self._display)
 
     # --- response → AgentLoop decision -------------------------------
 
@@ -206,19 +286,8 @@ class ComputerUseAgentBackend(AgentBackend):
             payload = _attr(block, "input") or {}
             self._pending_tool_use_id = _attr(block, "id")
             return _clamp_decision(
-                _decision_from_computer_action(payload),
-                self._tool_schema["display_width_px"],
-                self._tool_schema["display_height_px"],
-            )
-        # No tool_use → final answer + stop, unless the turn was cut short
-        # (default max_tokens can be hit mid-plan, or the model may refuse):
-        # a truncated reply must not be reported as a successful final answer.
-        _raise_if_truncated(response)
-        text_parts: List[str] = [
-            _attr(b, "text") or ""
-            for b in content if _block_type(b) == "text"
-        ]
-        return {"stop": True, "message": "\n".join(text_parts).strip()}
+                _decision_from_computer_action(payload), *self._display)
+        return _final_answer(response, content)
 
     def _ingest_history(self, history: Sequence[AgentStep],
                         screenshot: Optional[bytes]) -> None:
@@ -251,6 +320,20 @@ class ComputerUseAgentBackend(AgentBackend):
 
 
 # --- action translation ---------------------------------------------
+
+def _final_answer(response: Any, content: List[Any]) -> Dict[str, Any]:
+    """A turn without tool calls: the final answer, unless it was cut short.
+
+    The default max_tokens can be hit mid-plan, or the model may refuse; a
+    truncated reply must not be reported as a successful final answer.
+    """
+    _raise_if_truncated(response)
+    text_parts: List[str] = [
+        _attr(b, "text") or ""
+        for b in content if _block_type(b) == "text"
+    ]
+    return {"stop": True, "message": "\n".join(text_parts).strip()}
+
 
 def _action_screenshot(_payload):
     return {"tool": "AC_screenshot", "input": {}}
@@ -298,13 +381,34 @@ def _decision_from_computer_action(payload: Dict[str, Any]) -> Dict[str, Any]:
     """Turn one ``computer`` tool payload into an ``AgentLoop`` decision."""
     action = str(payload.get("action") or "").lower()
     if action in _CLICK_ACTIONS:
-        return _click_decision(action, payload.get("coordinate"))
-    handler = _ACTION_HANDLERS.get(action)
-    if handler is None:
-        raise AgentBackendError(
-            f"computer-use action {action!r} is not recognised",
-        )
-    return handler(payload)
+        decision = _click_decision(action, payload.get("coordinate"))
+    else:
+        handler = _ACTION_HANDLERS.get(action)
+        if handler is None:
+            raise AgentBackendError(
+                f"computer-use action {action!r} is not recognised",
+            )
+        decision = handler(payload)
+    if action in _MODIFIER_ACTIONS and payload.get("text"):
+        return _with_modifiers(decision, str(payload["text"]))
+    return decision
+
+
+#: Actions whose ``text`` names modifier keys to hold (``shift`` for a
+#: shift-click). The field was ignored, so a ctrl-click was a plain click.
+_MODIFIER_ACTIONS = _CLICK_ACTIONS | {"left_click_drag", "scroll"}
+
+
+def _with_modifiers(decision: Dict[str, Any], combo: str) -> Dict[str, Any]:
+    """Run ``decision`` with the keys of ``combo`` held; they are released even on failure."""
+    keys = _parse_combo(combo)
+    if not keys:
+        return decision
+    inner = decision["input"]
+    actions = (inner["action_list"] if decision["tool"] == "AC_execute_action"
+               else [[decision["tool"], inner]])
+    return {"tool": "AC_with_modifiers",
+            "input": {"modifiers": keys, "actions": actions}}
 
 
 def _click_decision(action: str, coordinate) -> Dict[str, Any]:
@@ -330,11 +434,13 @@ def _sequence(actions: List[List[Any]]) -> Dict[str, Any]:
 
 
 def _drag_decision(payload: Dict[str, Any]) -> Dict[str, Any]:
-    start = payload.get("start_coordinate") or payload.get("coordinate")
-    end = payload.get("end_coordinate")
+    # The spec's end point is ``coordinate`` (``start_coordinate`` is the
+    # start); reading only ``end_coordinate`` failed every drag the model made.
+    start = payload.get("start_coordinate")
+    end = payload.get("end_coordinate") or payload.get("coordinate")
     if start is None or end is None:
         raise AgentBackendError(
-            "left_click_drag requires start_coordinate + end_coordinate",
+            "left_click_drag requires start_coordinate and coordinate",
         )
     sx, sy = _xy(start)
     ex, ey = _xy(end)
@@ -366,9 +472,15 @@ def _key_decision(payload: Dict[str, Any]) -> Dict[str, Any]:
     keys = _parse_combo(combo)
     if not keys:
         raise AgentBackendError("key action missing 'text'")
-    if len(keys) == 1:
-        return {"tool": "AC_type_keyboard", "input": {"keycode": keys[0]}}
-    return {"tool": "AC_hotkey", "input": {"key_code_list": keys}}
+    press = ({"tool": "AC_type_keyboard", "input": {"keycode": keys[0]}} if len(keys) == 1
+             else {"tool": "AC_hotkey", "input": {"key_code_list": keys}})
+    raw_repeat = payload.get("repeat")
+    repeat = int(_number(raw_repeat, "repeat")) if raw_repeat is not None else 1
+    repeat = min(max(repeat, 1), _MAX_KEY_REPEAT)
+    if repeat == 1:
+        return press
+    # ``repeat`` (1..100) was ignored, so "press Down 5 times" pressed once.
+    return _sequence([[press["tool"], press["input"]]] * repeat)
 
 
 def _hold_key_decision(payload: Dict[str, Any]) -> Dict[str, Any]:
@@ -462,9 +574,10 @@ def _clamp_decision(decision: Dict[str, Any], width: int, height: int) -> Dict[s
     """
     inputs = decision.get("input") or {}
     _clamp_inputs(inputs, width, height)
-    for action in inputs.get("action_list") or []:
-        if len(action) == 2 and isinstance(action[1], dict):
-            _clamp_inputs(action[1], width, height)
+    for key in ("action_list", "actions"):
+        for action in inputs.get(key) or []:
+            if len(action) == 2 and isinstance(action[1], dict):
+                _clamp_inputs(action[1], width, height)
     return decision
 
 

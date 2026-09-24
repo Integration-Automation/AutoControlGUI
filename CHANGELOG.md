@@ -15,6 +15,9 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Added
 
+- Computer use speaks the GA `computer_toolset_20260801`, used
+  automatically for `claude-opus-5-5` (which rejects the beta tool); pass
+  `tool_type="computer_toolset_20260801"` to use it with other models.
 - REST `POST /execute` accepts `"raise_on_error": true`: the run stops at
   the first failing action and answers `{"ok": false, "error": ...}`.
   `AdminConsoleClient.broadcast_execute(raise_on_error=True)` reports such a
@@ -314,6 +317,10 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Fixed
 
+- Computer use:
+  - drags end at the model's `coordinate`;
+  - `key` honours `repeat`;
+  - modifier keys on clicks, drags and scrolls are held.
 - A DAG remote node whose actions failed on the host no longer counts as
   succeeded, and the Admin Console broadcast shows a remote action failure
   as a failed host.

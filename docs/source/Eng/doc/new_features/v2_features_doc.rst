@@ -208,7 +208,11 @@ Computer-use high-level API
 Wraps :class:`ComputerUseAgentBackend` + :class:`AgentLoop` so a
 single call drives Anthropic's computer-use tool (``computer_20251124`` on
 ``claude-opus-5`` by default, sent under its ``computer-use-2025-11-24`` beta;
-``tool_type=`` picks another version and ``beta=`` names its beta)::
+``tool_type=`` picks another version and ``beta=`` names its beta). With
+``model="claude-opus-5-5"``, which accepts nothing else, the backend sends the
+GA ``computer_toolset_20260801`` instead: no beta, several actions per turn,
+and screenshots scaled into the model's image limits with the model's
+coordinates mapped back to the screen::
 
     from je_auto_control import run_computer_use
     result = run_computer_use(

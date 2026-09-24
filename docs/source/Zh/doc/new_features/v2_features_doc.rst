@@ -200,7 +200,9 @@ Computer-use 高階 API
 
 封裝 :class:`ComputerUseAgentBackend` + :class:`AgentLoop`，一次呼叫
 即可驅動 Anthropic 的 computer-use tool(預設是 ``claude-opus-5`` 上的 ``computer_20251124``,
-以對應的 ``computer-use-2025-11-24`` beta 送出;``tool_type=`` 可換版本,``beta=`` 指定它的 beta)::
+以對應的 ``computer-use-2025-11-24`` beta 送出;``tool_type=`` 可換版本,``beta=`` 指定它的 beta)。
+``model="claude-opus-5-5"`` 只接受 GA 的 ``computer_toolset_20260801``,backend 會改送這個形式:不帶 beta、
+一回合可有多個動作,截圖先縮到模型的影像上限內,模型給的座標再換算回螢幕座標::
 
     from je_auto_control import run_computer_use
     result = run_computer_use(
