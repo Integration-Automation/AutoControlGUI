@@ -21,14 +21,14 @@ import urllib.parse
 import urllib.request
 from typing import Any, Callable, Dict, List, Optional
 
-from PySide6.QtCore import QObject, QThread, Signal
+from PySide6.QtCore import QObject, Signal
 from PySide6.QtWidgets import (
     QGroupBox, QHBoxLayout, QHeaderView, QLabel, QLineEdit, QMessageBox,
     QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget,
 )
 
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
-from je_auto_control.gui._worker_thread import start_worker
+from je_auto_control.gui._worker_thread import WorkerHandle, start_worker
 from je_auto_control.gui.language_wrapper.multi_language_wrapper import (
     language_wrapper,
 )
@@ -165,8 +165,8 @@ class UsbBrowserTab(TranslatableMixin, QWidget):
         self._table.horizontalHeader().setSectionResizeMode(
             QHeaderView.ResizeMode.ResizeToContents,
         )
-        self._fetch_thread: Optional[QThread] = None
-        self._open_thread: Optional[QThread] = None
+        self._fetch_thread: Optional[WorkerHandle] = None
+        self._open_thread: Optional[WorkerHandle] = None
         self._build_layout()
         self._apply_table_headers()
 

@@ -30,7 +30,9 @@ _PROBE = textwrap.dedent("""
         finished = Signal(object)
 
         def run(self):
-            time.sleep(0.5)
+            # "stuck": one step far longer than exit's grace, with no way to
+            # stop it -- a slow LLM request.
+            time.sleep(60 if sys.argv[1] == "stuck" else 0.5)
             self.finished.emit(1)
 
     calls = []
@@ -50,6 +52,7 @@ _PROBE = textwrap.dedent("""
             time.sleep(0.02)
         print("left", wt.running_threads(), "calls", calls)
     else:
+        wt._EXIT_GRACE_S = 0.5
         print("exiting")
 """)
 
@@ -72,6 +75,15 @@ def test_exiting_while_a_worker_runs_lets_it_finish():
     done = _run_probe("exit")
     assert done.returncode == 0, done.stderr
     assert "exiting" in done.stdout
+
+
+def test_exiting_during_a_step_longer_than_the_grace_still_exits_cleanly():
+    started = time.monotonic()
+    done = _run_probe("stuck")
+    # Destroying the running QThread at exit aborted here; a daemon thread
+    # just ends with the process once the grace is over.
+    assert done.returncode == 0, done.stderr
+    assert time.monotonic() - started < 30
 
 
 def _pump_until(app, predicate, seconds=10.0):

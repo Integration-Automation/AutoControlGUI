@@ -70,13 +70,6 @@ def test_the_worker_registry_asks_workers_to_stop_at_exit(monkeypatch):
     pytest.importorskip("PySide6.QtCore", exc_type=ImportError)
     from je_auto_control.gui import _worker_thread as registry
 
-    class _Thread:
-        def quit(self):
-            pass
-
-        def wait(self, _ms):
-            return True
-
     class _Worker:
         stopped = False
 
@@ -84,6 +77,6 @@ def test_the_worker_registry_asks_workers_to_stop_at_exit(monkeypatch):
             self.stopped = True
 
     worker = _Worker()
-    monkeypatch.setattr(registry, "_RUNNING", {_Thread(): worker})
-    registry._stop_running_threads()  # noqa: SLF001
+    monkeypatch.setattr(registry, "_RUNNING", {registry.WorkerHandle(worker): worker})
+    registry._stop_running_workers()  # noqa: SLF001
     assert worker.stopped

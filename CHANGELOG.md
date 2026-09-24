@@ -339,6 +339,8 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Fixed
 
+- Closing the window while a GUI job is inside a long step (an LLM
+  request) no longer aborts the process.
 - `format_message` accepts `offset: 1` and reports an infinite count
   as not a number.
 - `read_mo` decodes a catalogue in the charset its header declares.

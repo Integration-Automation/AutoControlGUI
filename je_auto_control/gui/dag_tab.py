@@ -3,14 +3,14 @@ import json
 import threading
 from typing import Optional
 
-from PySide6.QtCore import QObject, Qt, QThread, Signal
+from PySide6.QtCore import QObject, Qt, Signal
 from PySide6.QtWidgets import (
     QFileDialog, QHBoxLayout, QLabel, QSpinBox,
     QTableWidget, QTableWidgetItem, QTextEdit, QVBoxLayout, QWidget,
 )
 
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
-from je_auto_control.gui._worker_thread import start_worker
+from je_auto_control.gui._worker_thread import WorkerHandle, start_worker
 from je_auto_control.gui.language_wrapper.multi_language_wrapper import (
     language_wrapper,
 )
@@ -65,7 +65,7 @@ class DagTab(TranslatableMixin, QWidget):
         self._max_parallel.setValue(4)
         self._status_label = QLabel()
         self._table = QTableWidget(0, len(_COLUMNS))
-        self._thread: Optional[QThread] = None
+        self._thread: Optional[WorkerHandle] = None
         self._stop_event = threading.Event()
         self._build_layout()
 

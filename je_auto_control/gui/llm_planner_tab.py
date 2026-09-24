@@ -2,20 +2,20 @@
 
 The tab calls the headless ``plan_actions`` helper, shows the resulting
 JSON action list for review, and lets the user execute it through the
-shared global executor. Long calls run on a background ``QThread`` so the
+shared global executor. Long calls run on a background worker thread so the
 UI stays responsive.
 """
 import json
 from typing import List, Optional
 
-from PySide6.QtCore import QObject, QThread, Signal
+from PySide6.QtCore import QObject, Signal
 from PySide6.QtWidgets import (
     QGroupBox, QHBoxLayout, QLabel, QLineEdit, QMessageBox,
     QTextEdit, QVBoxLayout, QWidget,
 )
 
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
-from je_auto_control.gui._worker_thread import start_worker
+from je_auto_control.gui._worker_thread import WorkerHandle, start_worker
 from je_auto_control.gui.language_wrapper.multi_language_wrapper import (
     language_wrapper,
 )
@@ -70,7 +70,7 @@ class LLMPlannerTab(TranslatableMixin, QWidget):
         self._result_view.setReadOnly(True)
         self._status = QLabel()
         self._planned_actions: Optional[list] = None
-        self._plan_thread: Optional[QThread] = None
+        self._plan_thread: Optional[WorkerHandle] = None
         self._build_layout()
         self._apply_placeholders()
 

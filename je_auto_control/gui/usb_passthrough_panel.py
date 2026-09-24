@@ -19,7 +19,7 @@ from __future__ import annotations
 
 from typing import Any, Callable, List, Optional
 
-from PySide6.QtCore import QObject, QThread, QTimer, Signal
+from PySide6.QtCore import QObject, QTimer, Signal
 from PySide6.QtWidgets import (
     QCheckBox, QComboBox, QFileDialog, QGroupBox, QHBoxLayout, QHeaderView,
     QLabel, QLineEdit, QMessageBox, QTableWidget,
@@ -27,7 +27,7 @@ from PySide6.QtWidgets import (
 )
 
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
-from je_auto_control.gui._worker_thread import start_worker
+from je_auto_control.gui._worker_thread import WorkerHandle, start_worker
 from je_auto_control.gui.language_wrapper.multi_language_wrapper import (
     language_wrapper,
 )
@@ -89,7 +89,7 @@ class UsbPassthroughPanel(TranslatableMixin, QWidget):
             remote_client_provider or _default_remote_client
         )
         self._loopback: Optional[UsbLoopback] = None
-        self._thread: Optional[QThread] = None
+        self._thread: Optional[WorkerHandle] = None
         self._host_badge = _StatusBadge()
         self._viewer_status = QLabel("")
         self._source_combo = QComboBox()

@@ -2,7 +2,7 @@
 import json
 from typing import Dict, List, Optional
 
-from PySide6.QtCore import QObject, QSize, QThread, QTimer, Qt, Signal
+from PySide6.QtCore import QObject, QSize, QTimer, Qt, Signal
 from PySide6.QtGui import QIcon, QImage, QPixmap
 from PySide6.QtWidgets import (
     QGroupBox, QHBoxLayout, QHeaderView, QLabel, QLineEdit, QListWidget,
@@ -11,7 +11,7 @@ from PySide6.QtWidgets import (
 )
 
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
-from je_auto_control.gui._worker_thread import start_worker
+from je_auto_control.gui._worker_thread import WorkerHandle, start_worker
 from je_auto_control.gui.language_wrapper.multi_language_wrapper import (
     language_wrapper,
 )
@@ -86,7 +86,7 @@ class AdminConsoleTab(TranslatableMixin, QWidget):
         self._actions_input.setPlaceholderText('[["AC_get_mouse_position"]]')
         self._broadcast_output = QTextEdit()
         self._broadcast_output.setReadOnly(True)
-        self._poll_thread: Optional[QThread] = None
+        self._poll_thread: Optional[WorkerHandle] = None
         # Phase 6.5: live-thumbnail grid + auto-poll timer.
         self._thumbnails = QListWidget()
         self._thumbnails.setViewMode(QListWidget.ViewMode.IconMode)
@@ -101,7 +101,7 @@ class AdminConsoleTab(TranslatableMixin, QWidget):
         self._thumb_interval.valueChanged.connect(self._on_thumb_interval_changed)
         self._thumb_timer = QTimer(self)
         self._thumb_timer.timeout.connect(self._refresh_thumbnails)
-        self._thumb_thread: Optional[QThread] = None
+        self._thumb_thread: Optional[WorkerHandle] = None
         self._build_layout()
         self._refresh_table()
         self._apply_thumb_interval()
@@ -225,7 +225,7 @@ class AdminConsoleTab(TranslatableMixin, QWidget):
     def _refresh_thumbnails(self) -> None:
         if self._thumb_thread is not None:
             return
-        # start_worker deletes the QThread, worker and relay on finish, so one
+        # start_worker releases the worker and its relay on finish, so one
         # poll tick no longer leaves one of each behind.
         self._thumb_thread = start_worker(
             self, _ThumbnailWorker(self._client),

@@ -58,6 +58,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260925-06 | 2026-09-25 | GUI workers run on daemon threads, so exiting during a long step no longer aborts the process: start_worker returns a WorkerHandle and there is no QThread left to destroy | #bugfix #gui #done | [2026-09](2026-09.md) |
 | U-20260925-05 | 2026-09-25 | Computer toolset screenshots use the high-resolution image tier (2576 px, 4784 visual tokens) and zoom is implemented with a full-resolution crop | #feature #agent | [2026-09](2026-09.md) |
 | U-20260925-04 | 2026-09-25 | Text-format helpers follow their references: ICU quoting, offset: 1 and infinite counts, French many, .mo charsets, single-quote escapes in .env, RFC 6901 $ref tokens, ; inside SQL literals, Infinity in parse_number | #bugfix #i18n #data | [2026-09](2026-09.md) |
 | U-20260925-03 | 2026-09-25 | Stores keep data and secrets under contention and odd input: the secret vault locks across processes, JSON stores read a BOM and wait out a reader, cassettes redact set_cookie, truncated deflate is refused, x-gzip is gzip, WorkQueue and CheckpointStore raise their own errors | #bugfix #security #storage | [2026-09](2026-09.md) |
@@ -248,7 +249,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | File | Period | Entries |
 |---|---|---:|
-| [2026-09.md](2026-09.md) | 2026-09 | 159 |
+| [2026-09.md](2026-09.md) | 2026-09 | 160 |
 | [2026-08-f.md](2026-08-f.md) | 2026-08 | 1 |
 | [2026-08-e.md](2026-08-e.md) | 2026-08 | 2 |
 | [2026-08-d.md](2026-08-d.md) | 2026-08 | 2 |

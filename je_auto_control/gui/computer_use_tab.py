@@ -3,14 +3,14 @@ import json
 import threading
 from typing import Optional
 
-from PySide6.QtCore import QObject, QThread, Signal
+from PySide6.QtCore import QObject, Signal
 from PySide6.QtWidgets import (
     QFormLayout, QLabel, QLineEdit, QMessageBox,
     QSpinBox, QTextEdit, QVBoxLayout, QWidget,
 )
 
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
-from je_auto_control.gui._worker_thread import start_worker
+from je_auto_control.gui._worker_thread import WorkerHandle, start_worker
 from je_auto_control.gui.language_wrapper.multi_language_wrapper import (
     language_wrapper,
 )
@@ -68,7 +68,7 @@ class ComputerUseTab(TranslatableMixin, QWidget):
         self._output = QTextEdit()
         self._output.setReadOnly(True)
         self._status = QLabel()
-        self._thread: Optional[QThread] = None
+        self._thread: Optional[WorkerHandle] = None
         self._stop_event = threading.Event()
         self._build_layout()
 
