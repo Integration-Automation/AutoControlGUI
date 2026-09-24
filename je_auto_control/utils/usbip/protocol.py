@@ -14,6 +14,8 @@ import struct
 from dataclasses import dataclass, field
 from typing import List, Optional, Tuple
 
+from je_auto_control.utils.exception.exceptions import AutoControlException
+
 
 PROTOCOL_VERSION = 0x0111  # kernel constant; stable since 2010
 
@@ -65,7 +67,7 @@ _RET_UNLINK_FMT = "!i24x"
 _RET_UNLINK_SIZE = struct.calcsize(_RET_UNLINK_FMT)
 
 
-class UsbIpError(ValueError):
+class UsbIpError(AutoControlException, ValueError):
     """Raised when the wire bytes don't match the expected layout."""
 
 

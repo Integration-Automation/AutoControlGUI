@@ -80,8 +80,12 @@ class AuditReport:
 
 
 def is_interactive(role: str) -> bool:
-    """Return True when ``role`` names an actionable control."""
-    lowered = (role or "").lower()
+    """Return True when ``role`` names an actionable control.
+
+    "table" is removed first: the "tab" hint matched table, table cell and
+    DataTable, so every unnamed table cell was reported as a missing label.
+    """
+    lowered = (role or "").lower().replace("table", " ")
     return any(hint in lowered for hint in INTERACTIVE_ROLE_HINTS)
 
 

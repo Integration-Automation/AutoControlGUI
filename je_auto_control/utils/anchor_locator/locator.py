@@ -46,7 +46,7 @@ KIND_A11Y = "a11y"
 _VALID_KINDS = frozenset({KIND_IMAGE, KIND_OCR, KIND_VLM, KIND_A11Y})
 
 
-class AnchorLocatorError(ValueError):
+class AnchorLocatorError(AutoControlException, ValueError):
     """Raised when a locator spec is invalid or an anchor cannot be resolved."""
 
 

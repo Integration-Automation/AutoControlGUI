@@ -132,6 +132,9 @@ class AgentLoop:
         decision = self._backend.decide_next_action(
             goal, self._screenshot_fn(), result.steps,
         )
+        if not isinstance(decision, dict):   # None crashed at .get()
+            result.final_message = f"backend returned a non-object decision: {decision!r}"
+            return True
         if decision.get("stop"):
             result.succeeded = True
             result.final_message = decision.get("message")
@@ -144,7 +147,15 @@ class AgentLoop:
         if not isinstance(tool, str):
             result.final_message = f"backend returned no tool: {decision!r}"
             return True
-        step = self._dispatch_tool(index, tool, decision.get("input") or {})
+        arguments = decision.get("input") or {}
+        if not isinstance(arguments, dict):
+            # dict("hello") raised out of run(); the step records it instead.
+            result.steps.append(AgentStep(
+                index=index, tool=tool, arguments=None,
+                error=f"backend returned non-object input: {arguments!r}",
+            ))
+            return False
+        step = self._dispatch_tool(index, tool, arguments)
         result.steps.append(step)
         if metrics:
             outcome = "error" if step.error else "ok"

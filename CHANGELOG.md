@@ -303,6 +303,12 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Fixed
 
+- **USB passthrough, agent loop and locators**: the second of two identical
+  USB devices opens by serial, a transfer whose direction contradicts the
+  endpoint is refused and closing gives the device back to the kernel; a
+  malformed agent decision no longer ends the run; a screenshot failure in
+  self-heal is a miss; USB/IP, self-heal and anchor errors are
+  `AutoControlException`s; the a11y audit no longer flags table cells.
 - **Layout and data checks**: flow selection and sharding see a flow's own
   history however many other runs followed it; column reading order survives
   long runs of paragraphs; `ConfigField.env` is honoured and lossy int
