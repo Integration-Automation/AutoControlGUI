@@ -17,7 +17,9 @@ both, behind injectable seams so all logic is testable without touching the OS:
 
 Imports no ``PySide6``.
 """
+import atexit
 import ctypes
+import os
 import sys
 import threading
 from contextlib import contextmanager
@@ -109,16 +111,35 @@ def plan_keep_awake(*, display: bool = True,
 
 
 def _win_keep_awake(flags: int) -> Callable[[], None]:
+    """Hold ``flags`` on a thread of its own until released.
+
+    SetThreadExecutionState is per thread: set from one executor thread and
+    released from another, the release cleared nothing, and the request ended
+    silently when the setting thread did. A dedicated holder thread makes the
+    request independent of the caller's thread; each request has its own
+    thread, so nested requests do not cancel each other.
+    """
     kernel32 = ctypes.windll.kernel32  # type: ignore[attr-defined]  # reason: win32-only ctypes
-    # The DWORD comes back through ctypes' default c_int: mask it back to 32 bits.
-    previous = int(kernel32.SetThreadExecutionState(ctypes.c_uint(flags)) or 0) & 0xFFFFFFFF
+    held, stop = threading.Event(), threading.Event()
+
+    def hold() -> None:
+        kernel32.SetThreadExecutionState(ctypes.c_uint(flags))
+        held.set()
+        stop.wait()
+        kernel32.SetThreadExecutionState(ctypes.c_uint(_ES_CONTINUOUS))
+
+    holder = threading.Thread(target=hold, name="keep-awake", daemon=True)
+    holder.start()
+    held.wait(_HOLDER_START_S)
 
     def _release() -> None:
-        # Back to what was in force before, not to plain ES_CONTINUOUS: that
-        # cancelled an enclosing keep_awake() when a nested one ended.
-        kernel32.SetThreadExecutionState(ctypes.c_uint(previous or _ES_CONTINUOUS))
+        stop.set()
+        holder.join(_HOLDER_START_S)
 
     return _release
+
+
+_HOLDER_START_S = 5.0
 
 
 def _proc_keep_awake(argv: List[str]) -> Callable[[], None]:
@@ -133,7 +154,9 @@ def _proc_keep_awake(argv: List[str]) -> Callable[[], None]:
 
 
 def _caffeinate_argv(plan: Dict[str, Any]) -> List[str]:
-    argv = ["caffeinate", "-i"]
+    # -w: caffeinate exits with this process, so a script that ends without
+    # allow_sleep() does not keep the machine awake for ever.
+    argv = ["caffeinate", "-i", "-w", str(os.getpid())]
     if plan["system"]:
         argv.append("-s")
     if plan["display"]:
@@ -143,8 +166,11 @@ def _caffeinate_argv(plan: Dict[str, Any]) -> List[str]:
 
 def _systemd_argv(plan: Dict[str, Any]) -> List[str]:
     what = "idle:sleep" if plan["display"] else "sleep"
+    # The inhibitor lasts as long as its child; "sleep infinity" outlived
+    # this process, "tail --pid" ends with it.
     return ["systemd-inhibit", f"--what={what}",
-            "--why=AutoControl unattended run", "sleep", "infinity"]
+            "--why=AutoControl unattended run",
+            "tail", f"--pid={os.getpid()}", "-f", "/dev/null"]
 
 
 def _default_driver(plan: Dict[str, Any]) -> Callable[[], None]:
@@ -194,6 +220,9 @@ def keep_awake_on(*, display: bool = True, system: bool = True,
             old()
         _ACTIVE.append(acquire(plan))
     return plan
+
+
+atexit.register(lambda: allow_sleep())
 
 
 def allow_sleep() -> bool:

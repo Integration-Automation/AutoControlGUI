@@ -12,8 +12,9 @@
 * :func:`keep_awake_on` / :func:`allow_sleep` ——供 JSON 動作流程使用的行程全域開 / 關配對。
 
 三個 keep-awake 入口皆透過可注入的 ``driver`` 套用計畫(預設 Windows 用
-``SetThreadExecutionState``、macOS 用 ``caffeinate``、Linux 用 ``systemd-inhibit``)。不匯入
-``PySide6``。
+``SetThreadExecutionState``、macOS 用 ``caffeinate``、Linux 用 ``systemd-inhibit``)。Windows 上每個請求由專屬
+執行緒持有，與由哪個執行緒關閉無關;macOS 與 Linux 的輔助程序會隨本程序結束，程序結束時也會執行
+:func:`allow_sleep`。不匯入 ``PySide6``。
 
 無頭 API
 --------

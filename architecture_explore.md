@@ -20,7 +20,7 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 | 指標 | 數值 |
 | --- | ---: |
 | Python 模組總數（含周邊子專案） | 1,049 |
-| 程式碼總行數 | 147,967 |
+| 程式碼總行數 | 148,056 |
 | `je_auto_control/utils/` 子套件數 | 310 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 773 |
 | 套件門面 `__all__` 公開名稱數 | 1,241 |
@@ -302,7 +302,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.2 框架基礎設施
 
-> 14 個套件、約 2,868 行。
+> 14 個套件、約 2,888 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -310,7 +310,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/config_bundle/` | 424 | 使用者設定的單檔匯出／匯入 |
 | `utils/critical_exit/` | 98 | 監看緊急停止鍵的守護執行緒，用於中止失控腳本 |
 | `utils/diagnostics/` | 330 | 跨子系統的「一切正常嗎」健檢，附 `python -m` 進入點 |
-| `utils/dbus_client/` | 683 | 只用標準函式庫的 D-Bus session bus 客戶端。原本在 `linux_wayland/` 為 portal 交握而寫，AT-SPI 無障礙後端成為第二個使用者後搬到這裡（`utils/` 在分層上在各 OS 套件之上） |
+| `utils/dbus_client/` | 703 | 只用標準函式庫的 D-Bus session bus 客戶端。原本在 `linux_wayland/` 為 portal 交握而寫，AT-SPI 無障礙後端成為第二個使用者後搬到這裡（`utils/` 在分層上在各 OS 套件之上） |
 | `utils/exception/` | 212 | **例外階層根**。所有錯誤繼承 `AutoControlException`，加上集中式錯誤訊息字串（`exception_tags`） |
 | `utils/failure_bundle/` | 219 | 可攜、已遮蔽的失敗診斷 ZIP（截圖 + 診斷 + log 尾段） |
 | `utils/file_process/` | 40 | 目錄檔案列舉（`execute_dir` 的後端） |
@@ -323,12 +323,12 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.3 排程、觸發與背景監看
 
-> 11 個套件、約 3,925 行。
+> 11 個套件、約 3,954 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
 | `utils/hotkey/` | 837 | 全域熱鍵守護行程，把 OS 層熱鍵綁到 action 檔（Win/macOS/X11 三後端） |
-| `utils/idle_keepawake/` | 216 | 偵測使用者閒置時間並在無人值守執行期間阻止系統睡眠 |
+| `utils/idle_keepawake/` | 245 | 偵測使用者閒置時間並在無人值守執行期間阻止系統睡眠 |
 | `utils/lock_session/` | 164 | 鎖定工作站、等待解鎖並分類鎖定狀態轉換 |
 | `utils/observer/` | 229 | 反應式畫面觀察者，在出現／消失／變化時觸發 |
 | `utils/recurrence/` | 388 | RFC 5545 重複規則解析與發生時間展開 |
@@ -557,7 +557,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.12 報表、可觀測性與測試治理
 
-> 34 個套件、約 7,235 行。
+> 34 個套件、約 7,252 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -567,7 +567,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/baggage/` | 120 | W3C Baggage 傳遞 |
 | `utils/canonical_log/` | 96 | canonical log line 與結構化 JSON 日誌 |
 | `utils/ci_annotations/` | 62 | 由執行結果輸出 CI 工作流程註記（GitHub Actions） |
-| `utils/compliance/` | 136 | 合規：把治理證據對應到 SOC2／ISO 27001 控制項 |
+| `utils/compliance/` | 153 | 合規：把治理證據對應到 SOC2／ISO 27001 控制項 |
 | `utils/failure_hooks/` | 415 | 失敗 → 工單自動化：開 Jira／Linear／GitHub issue |
 | `utils/failure_signature/` | 74 | 把錯誤訊息正規化成穩定的 SHA-256 失敗簽章並分群 |
 | `utils/flake_cluster/` | 103 | 以共同失敗 Jaccard 相似度為易碎測試分群 |
@@ -598,11 +598,11 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.13 資料來源、結構驗證與 i18n
 
-> 24 個套件、約 4,326 行。
+> 24 個套件、約 4,332 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
-| `utils/checksum/` | 132 | 檢查碼演算法：Luhn、Verhoeff、Damm、ISO 7064 MOD 97-10 |
+| `utils/checksum/` | 138 | 檢查碼演算法：Luhn、Verhoeff、Damm、ISO 7064 MOD 97-10 |
 | `utils/config_schema/` | 109 | 型別化設定結構驗證 |
 | `utils/data_drift/` | 125 | 分布漂移偵測 |
 | `utils/data_profile/` | 121 | 資料剖析與結構推斷 |
@@ -670,7 +670,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.16 系統、視窗與剪貼簿
 
-> 16 個套件、約 2,451 行。
+> 16 個套件、約 2,468 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -684,9 +684,9 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/file_drop/` | 96 | 以 WM_DROPFILES 把檔案拖放到視窗 |
 | `utils/rich_clipboard/` | 131 | 豐富剪貼簿格式 — HTML（CF_HTML）建構／解析／存取 |
 | `utils/shell_open/` | 97 | 以預設應用開啟檔案，或以預設瀏覽器開啟 URL |
-| `utils/system_volume/` | 194 | 讀取與控制系統主音量與靜音狀態 |
+| `utils/system_volume/` | 199 | 讀取與控制系統主音量與靜音狀態 |
 | `utils/trash/` | 93 | 把檔案移到系統資源回收筒（可復原刪除） |
-| `utils/window_capture/` | 292 | 逐視窗截圖、視窗版面儲存／還原、貼齊與排列 |
+| `utils/window_capture/` | 304 | 逐視窗截圖、視窗版面儲存／還原、貼齊與排列 |
 | `utils/window_geometry/` | 81 | 視窗客戶區幾何（外框內縮、client→screen 對映） |
 | `utils/window_layout/` | 137 | 視窗拼貼／版面規劃器（左右半、四象限、網格、層疊） |
 | `utils/window_zorder/` | 76 | 視窗 z 序控制（最上層／移到最前／送到最後） |
@@ -1080,6 +1080,6 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `osx/` | 17 | 919 |
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 837 |
-| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 677 | 52,129 |
-| **總計** | **1,043** | **147,902** |
+| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 677 | 52,218 |
+| **總計** | **1,043** | **147,991** |
 

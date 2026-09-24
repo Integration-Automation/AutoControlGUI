@@ -224,10 +224,24 @@ def _guess_variant(value: Any) -> Variant:
     if isinstance(value, bool):
         return Variant("b", value)
     if isinstance(value, int):
-        return Variant("u", value)
+        return Variant(_int_signature(value), value)
     if isinstance(value, str):
         return Variant("s", value)
     raise DBusError(f"no obvious D-Bus type for {type(value).__name__}")
+
+
+def _int_signature(value: int) -> str:
+    """The D-Bus integer type for ``value``; every int used to be ``u``,
+    so -1 or 2**32 raised struct.error instead of a DBusError."""
+    if 0 <= value < 2 ** 32:
+        return "u"
+    if -2 ** 31 <= value < 0:
+        return "i"
+    if -2 ** 63 <= value < 2 ** 63:
+        return "x"
+    if 0 <= value < 2 ** 64:
+        return "t"
+    raise DBusError(f"integer {value} does not fit a D-Bus integer type")
 
 
 def _write_array(writer: _Writer, reader: _SignatureReader, value: Any) -> None:
@@ -460,9 +474,15 @@ class SessionBus:
         except OSError as error:
             self.close()
             raise DBusError(f"cannot reach the session bus: {error}") from error
-        self._authenticate()
-        self.unique_name = self.call(
-            BUS_NAME, BUS_PATH, BUS_INTERFACE, "Hello", "", [])[0]
+        try:
+            self._authenticate()
+            self.unique_name = self.call(
+                BUS_NAME, BUS_PATH, BUS_INTERFACE, "Hello", "", [])[0]
+        except (DBusError, OSError):
+            # The socket stayed open when authentication or Hello failed,
+            # and inside ``with SessionBus()`` __exit__ never ran.
+            self.close()
+            raise
 
     def close(self) -> None:
         """Drop the connection; never raise from teardown."""

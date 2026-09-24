@@ -293,6 +293,13 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Fixed
 
+- **System and device helpers**: keep-awake ends with the process and no
+  longer depends on the calling thread on Windows; file associations report
+  the real content type; checksums reject input with no digits and mod-97
+  check digits follow ISO 7064; compliance reports reject unknown frameworks
+  and treat "false" as a gap; D-Bus closes its socket on a failed handshake;
+  window capture uses the visible frame and skips minimized windows; newer
+  pycaw versions work.
 - **Agent and action helpers**: self-healing replay no longer heals a failed
   assertion and moves a release with its healed press; list-form entries pass
   relocation; zero-size boxes are not actionable and an unknown enabled state

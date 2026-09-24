@@ -13,6 +13,8 @@ faked except child processes the tests start themselves.
 import os
 import sys
 
+import threading
+
 import pytest
 
 from je_auto_control.utils.dotenv.dotenv import dump_dotenv, parse_dotenv
@@ -70,15 +72,30 @@ class _FakeProcess:
 
 
 class _Kernel32:
-    """SetThreadExecutionState that returns the previous state, like the real one."""
+    """SetThreadExecutionState as Windows keeps it: one state per thread.
+
+    ``state`` is what the system honours -- the OR of every thread's request
+    (ES_CONTINUOUS alone when none is held). The fake used to keep a single
+    global state, which a per-thread holder design overwrites.
+    """
 
     def __init__(self):
-        self.state, self.calls = 0x80000000, []
+        self._per_thread, self.calls = {}, []
 
     def SetThreadExecutionState(self, flags):  # noqa: N802 - Win32 name
-        previous, self.state = self.state, int(getattr(flags, "value", flags))
-        self.calls.append(self.state)
+        value = int(getattr(flags, "value", flags))
+        ident = threading.get_ident()
+        previous = self._per_thread.get(ident, 0x80000000)
+        self._per_thread[ident] = value
+        self.calls.append(value)
         return previous
+
+    @property
+    def state(self):
+        combined = 0x80000000
+        for value in self._per_thread.values():
+            combined |= value
+        return combined
 
 
 @pytest.fixture

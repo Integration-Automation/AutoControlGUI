@@ -45,8 +45,9 @@ ISO 27001        A.8.30        維護軟體物料清單                         
     print(report["summary"])         # {satisfied, gap, not_assessed, total}
     write_compliance_report(report, "build/compliance.html", fmt="html")
 
-當控制項的證據鍵為真時為 ``satisfied``,明確為假時為 ``gap``,鍵不存在時為
-``not_assessed`` —— 因此部分證據字典會產生誠實的缺口分析。``render_compliance_html``
+當控制項的證據鍵為真時為 ``satisfied``,明確為假時(包含字串 ``"false"``、``"0"``、``"no"``、``"off"``)為 ``gap``,
+鍵不存在時為 ``not_assessed`` —— 因此部分證據字典會產生誠實的缺口分析。框架名稱不分大小寫、忽略空白與連字號
+(``"SOC 2"`` 即 ``SOC2``);不認得的名稱會拋出 ``ValueError``,不會產生一份看似乾淨的空報告。``render_compliance_html``
 回傳獨立的 HTML 表格;``write_compliance_report`` 寫出 ``json`` 或 ``html``。
 
 執行器指令

@@ -53,10 +53,22 @@ CONTROL_CATALOGUE: Sequence[Control] = (
 )
 
 
+_FALSE_WORDS = frozenset({"", "false", "0", "no", "off", "none", "null"})
+
+
 def _status_for(evidence: Mapping[str, Any], key: str) -> str:
     if key not in evidence:
         return STATUS_NOT_ASSESSED
-    return STATUS_SATISFIED if evidence[key] else STATUS_GAP
+    value = evidence[key]
+    # "false" typed into a GUI or CLI field is not evidence of a control.
+    if isinstance(value, str) and value.strip().lower() in _FALSE_WORDS:
+        return STATUS_GAP
+    return STATUS_SATISFIED if value else STATUS_GAP
+
+
+def _framework_key(name: str) -> str:
+    """``SOC 2`` / ``soc-2`` / ``SOC2`` all name one framework."""
+    return "".join(ch for ch in str(name).upper() if ch.isalnum())
 
 
 def build_compliance_report(evidence: Mapping[str, Any],
@@ -68,11 +80,16 @@ def build_compliance_report(evidence: Mapping[str, Any],
     all. Each control is ``satisfied`` (truthy evidence), ``gap`` (explicitly
     falsy), or ``not_assessed`` (key absent).
     """
-    wanted = {f.upper() for f in frameworks} if frameworks else None
+    wanted = {_framework_key(f) for f in frameworks} if frameworks else None
+    known = {_framework_key(control.framework) for control in CONTROL_CATALOGUE}
+    if wanted is not None and wanted - known:
+        # A misspelt framework produced an empty report that looked clean.
+        raise ValueError(f"unknown compliance framework(s): {sorted(wanted - known)}; "
+                         f"known: {sorted(known)}")
     controls: List[Dict[str, Any]] = []
     summary = {STATUS_SATISFIED: 0, STATUS_GAP: 0, STATUS_NOT_ASSESSED: 0}
     for control in CONTROL_CATALOGUE:
-        if wanted is not None and control.framework.upper() not in wanted:
+        if wanted is not None and _framework_key(control.framework) not in wanted:
             continue
         status = _status_for(evidence, control.evidence_key)
         summary[status] += 1

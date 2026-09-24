@@ -21,7 +21,7 @@ _ASSOC_FIELDS = {
     "command": 1,        # ASSOCSTR_COMMAND
     "exe": 2,            # ASSOCSTR_EXECUTABLE
     "friendly": 4,       # ASSOCSTR_FRIENDLYAPPNAME
-    "content_type": 12,  # ASSOCSTR_CONTENTTYPE
+    "content_type": 14,  # ASSOCSTR_CONTENTTYPE (12 is ASSOCSTR_QUICKTIP)
 }
 
 # A resolver: ext (".pdf") -> {command, exe, friendly, content_type}.

@@ -42,10 +42,22 @@ def _win32_geometry(hwnd: int) -> Optional[Rect]:
     from ctypes import wintypes
     rect = wintypes.RECT()
     user32 = ctypes.windll.user32  # type: ignore[attr-defined]  # reason: win32-only ctypes
-    if not user32.GetWindowRect(hwnd, ctypes.byref(rect)):
+    if user32.IsIconic(hwnd):
+        # A minimized window sits at (-32000, -32000); capturing that rect
+        # returned whatever was there instead of the window.
+        return None
+    # The DWM frame bounds are the visible window; GetWindowRect includes
+    # the ~7 px invisible resize borders on Windows 10 / 11.
+    dwmapi = ctypes.windll.dwmapi  # type: ignore[attr-defined]  # reason: win32-only ctypes
+    if dwmapi.DwmGetWindowAttribute(hwnd, _DWMWA_EXTENDED_FRAME_BOUNDS, ctypes.byref(rect),
+                                    ctypes.sizeof(rect)) != 0 \
+            and not user32.GetWindowRect(hwnd, ctypes.byref(rect)):
         return None
     return (rect.left, rect.top,
             rect.right - rect.left, rect.bottom - rect.top)
+
+
+_DWMWA_EXTENDED_FRAME_BOUNDS = 9
 
 
 def _default_capture(output_path: str, rect: Rect) -> None:

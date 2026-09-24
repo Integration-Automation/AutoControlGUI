@@ -48,8 +48,11 @@ Headless API
     write_compliance_report(report, "build/compliance.html", fmt="html")
 
 A control is ``satisfied`` when its evidence key is truthy, ``gap`` when
-explicitly falsy, and ``not_assessed`` when the key is absent — so a partial
-evidence dict produces an honest gap analysis. ``render_compliance_html`` returns
+explicitly falsy (including the strings ``"false"``, ``"0"``, ``"no"``,
+``"off"``), and ``not_assessed`` when the key is absent — so a partial
+evidence dict produces an honest gap analysis. Framework names ignore case,
+spaces and hyphens (``"SOC 2"`` is ``SOC2``); an unknown one raises
+``ValueError`` instead of producing an empty, clean-looking report. ``render_compliance_html`` returns
 a standalone HTML table; ``write_compliance_report`` writes ``json`` or ``html``.
 
 Executor command

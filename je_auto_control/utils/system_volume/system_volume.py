@@ -143,6 +143,11 @@ class _PycawDriver:
         from comtypes import CLSCTX_ALL
         from pycaw.pycaw import AudioUtilities, IAudioEndpointVolume
         speakers = AudioUtilities.GetSpeakers()
+        if hasattr(speakers, "EndpointVolume"):
+            # pycaw 2025+ wraps the device in an AudioDevice with no
+            # Activate(); the AttributeError escaped the documented error.
+            self._volume = speakers.EndpointVolume
+            return
         interface = speakers.Activate(
             IAudioEndpointVolume._iid_, CLSCTX_ALL, None)
         self._volume = cast(interface, POINTER(IAudioEndpointVolume))
