@@ -90,7 +90,10 @@ def special_key(keycode: str, is_down: bool) -> None:
 
     mapped_code = special_key_table[keycode]
 
-    event = AppKit.NSEvent.otherEventWithType_location_modifierFlags_timestamp_windowNumber_context_subtype_data1_data2(
+    # The selector ends in ``data2:``, so its PyObjC name ends in ``_``; without
+    # it every media key raised AttributeError.
+    ns_event = AppKit.NSEvent
+    event = ns_event.otherEventWithType_location_modifierFlags_timestamp_windowNumber_context_subtype_data1_data2_(
         Quartz.NSSystemDefined,
         (0, 0),
         0xa00 if is_down else 0xb00,

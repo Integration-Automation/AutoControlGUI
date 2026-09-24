@@ -222,6 +222,9 @@ def test_a_disabled_tap_is_re_armed_rather_than_left_deaf(monkeypatch):
     monkeypatch.setattr(Quartz, "CGEventTapEnable",
                         lambda tap, state: enabled.append((tap, state)))
     tap = OSXInputTap()
+    tap._tap = "the tap's CFMachPort"
     tap._callback("proxy", Quartz.kCGEventTapDisabledByTimeout, None, None)
-    assert enabled == [("proxy", True)]
+    # The tap itself, not the callback's CGEventTapProxy: CGEventTapEnable
+    # takes the CFMachPort, and handed the proxy it left the tap off.
+    assert enabled == [("the tap's CFMachPort", True)]
     assert tap.events == []

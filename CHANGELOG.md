@@ -303,6 +303,8 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Fixed
 
+- **macOS media keys**: pressing a media key no longer raises
+  `AttributeError`; the PyObjC selector name was missing its trailing `_`.
 - **Error family**: twenty-five errors that derived only from a builtin
   exception (the Android and iOS clients, the remote-desktop wire errors,
   ACME, the circuit breaker, egress, the Interception loader and others) now

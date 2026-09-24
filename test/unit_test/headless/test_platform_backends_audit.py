@@ -8,7 +8,6 @@ swallowed; an unknown button posted nothing silently; the event tap was
 re-enabled through the wrong handle.
 """
 import sys
-import types
 
 import pytest
 
@@ -18,6 +17,8 @@ from je_auto_control.utils.exception.exceptions import (
 
 
 def test_uinput_types_the_evdev_code_for_an_x_keycode(monkeypatch):
+    if not sys.platform.startswith("linux"):
+        pytest.skip("uinput is Linux-only (its module loads libc.so.6)")
     from je_auto_control.linux_with_x11.uinput import keyboard
     emitted = []
     monkeypatch.setattr(keyboard, "emit", lambda *args: emitted.append(args))
@@ -39,8 +40,15 @@ def _needs_x11():
 
 
 class _Window:
+    """Stands in for the X window: python-xlib packs it through ``__resource__``."""
+
     def __init__(self):
         self.sent = []
+
+    def __resource__(self):
+        return 7
+
+    __window__ = __resource__
 
     def send_event(self, event, propagate=False, event_mask=0):
         self.sent.append((event.type, event_mask))
@@ -127,15 +135,3 @@ def test_an_unknown_mouse_button_is_refused():
     from je_auto_control.osx.mouse import osx_mouse as mouse
     with pytest.raises(AutoControlMouseException):
         mouse.press_mouse(10, 10, 99)
-
-
-def test_the_tap_is_re_enabled_through_its_own_handle(monkeypatch):
-    _needs_macos()
-    import Quartz
-    from je_auto_control.osx.listener import osx_listener as listener
-    enabled = []
-    monkeypatch.setattr(Quartz, "CGEventTapEnable", lambda tap, on: enabled.append((tap, on)))
-    tap = listener.OSXInputTap()
-    tap._tap = types.SimpleNamespace(name="the tap")
-    tap._callback("proxy", Quartz.kCGEventTapDisabledByTimeout, None, None)
-    assert enabled == [(tap._tap, True)]

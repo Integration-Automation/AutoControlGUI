@@ -20,7 +20,7 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 | 指標 | 數值 |
 | --- | ---: |
 | Python 模組總數（含周邊子專案） | 1,049 |
-| 程式碼總行數 | 149,907 |
+| 程式碼總行數 | 149,910 |
 | `je_auto_control/utils/` 子套件數 | 310 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 775 |
 | 套件門面 `__all__` 公開名稱數 | 1,241 |
@@ -204,13 +204,13 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `interception/keyboard.py` | 70 | 經 Interception 驅動的鍵盤輸入（繞過部分反自動化偵測）。 |
 | `interception/mouse.py` | 160 | 經 Interception 驅動的滑鼠輸入。 |
 
-#### macOS（`osx/`，17 檔／922 行）
+#### macOS（`osx/`，17 檔／925 行）
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
 | `core/utils/osx_vk.py` | 113 | macOS 虛擬鍵碼表。 |
 | `mouse/osx_mouse.py` | 143 | Quartz `CGEvent` 滑鼠事件。 |
-| `keyboard/osx_keyboard.py` | 141 | Quartz 鍵盤事件。 |
+| `keyboard/osx_keyboard.py` | 144 | Quartz 鍵盤事件。 |
 | `keyboard/osx_keyboard_check.py` | 24 | 按鍵狀態查詢。 |
 | `listener/osx_listener.py` | 261 | 專屬執行緒上的 listen-only `CGEventTap`＋自己的 `CFRunLoopRunInMode` 切片；不在 import 時建 `NSApplication`，也不用會卡住呼叫緒的 `AppHelper.runEventLoop()`。修飾鍵由 `flagsChanged` 的旗標還原成 press／release，座標取 `CGEventGetLocation`（左上原點，與重播送出的座標同一空間）。 |
 | `record/osx_record.py` | 41 | 錄製。捕捉後的整形（舊版按下事件 Queue、時間軸、只錄滑鼠／只錄鍵盤）走共用的 `utils/input_macro/recorder_base.py`。 |
@@ -1077,9 +1077,9 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `utils/ocr/` | 9 | 1,136 |
 | `utils/usbip/` | 5 | 947 |
 | `utils/assertion/` | 3 | 890 |
-| `osx/` | 17 | 922 |
+| `osx/` | 17 | 925 |
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 837 |
 | 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 677 | 53,267 |
-| **總計** | **1,043** | **149,842** |
+| **總計** | **1,043** | **149,845** |
 
