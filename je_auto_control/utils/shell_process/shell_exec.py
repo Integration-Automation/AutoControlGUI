@@ -25,6 +25,27 @@ def command_args(shell_command: Union[str, List[str]]) -> Union[str, List[str]]:
     return shlex.split(shell_command)
 
 
+_BATCH_SUFFIXES = (".bat", ".cmd")
+_CMD_METACHARACTERS = frozenset('&|<>^%!"\r\n')
+
+
+def refuse_batch_metacharacters(args: Union[str, List[str]]) -> None:
+    """Refuse an argv list for a .bat / .cmd file whose arguments hold cmd syntax.
+
+    Windows runs a batch file through cmd.exe, which parses the command line
+    again: ``subprocess`` quotes each argument for CreateProcess but not for
+    cmd, so ``["run.bat", "x&calc"]`` also started calc. A string command is
+    the caller's own command line and is left alone.
+    """
+    if sys.platform != "win32" or not isinstance(args, list) or not args:
+        return
+    if not args[0].lower().endswith(_BATCH_SUFFIXES):
+        return
+    for arg in args[1:]:
+        if _CMD_METACHARACTERS.intersection(arg):
+            raise ValueError(f"batch file argument {arg!r} contains cmd metacharacters")
+
+
 class ShellManager:
     """
     ShellManager
@@ -64,6 +85,7 @@ class ShellManager:
         try:
             self.exit_program()
             args = command_args(shell_command)
+            refuse_batch_metacharacters(args)
             # nosemgrep: python.lang.security.audit.dangerous-subprocess-use-audit.dangerous-subprocess-use-audit
             self.process = subprocess.Popen(  # nosec B603  # reason: shell=False, argv list validated via _normalize_command
                 args,

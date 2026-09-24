@@ -20,7 +20,7 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 | 指標 | 數值 |
 | --- | ---: |
 | Python 模組總數（含周邊子專案） | 1,049 |
-| 程式碼總行數 | 146,823 |
+| 程式碼總行數 | 146,893 |
 | `je_auto_control/utils/` 子套件數 | 310 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 773 |
 | 套件門面 `__all__` 公開名稱數 | 1,241 |
@@ -302,7 +302,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.2 框架基礎設施
 
-> 14 個套件、約 2,836 行。
+> 14 個套件、約 2,860 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -318,8 +318,8 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/package_manager/` | 101 | 動態載入套件並把 executor 注入其中 |
 | `utils/path_guard/` | 99 | 命令列傳入路徑的正規化與邊界檢查（防路徑穿越） |
 | `utils/platform_id/` | 62 | 作業系統家族的單一判定點。`sys.platform` 原本在一百多處跟字面清單比對，而那些清單都沒有 BSD；`is_x11_unix()` 問的是「這是不是 X11 unix」，這才是守衛一直想問的問題 |
-| `utils/shell_process/` | 172 | `ShellManager`：以 argv list 執行外部命令（禁用 `shell=True`） |
-| `utils/start_exe/` | 39 | 啟動另一個執行檔行程 |
+| `utils/shell_process/` | 194 | `ShellManager`：以 argv list 執行外部命令（禁用 `shell=True`） |
+| `utils/start_exe/` | 41 | 啟動另一個執行檔行程 |
 
 ### 5.4.3 排程、觸發與背景監看
 
@@ -513,24 +513,24 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.10 遠端桌面與 USB
 
-> 6 個套件、約 18,791 行。
+> 6 個套件、約 18,793 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
 | `utils/admin/` | 398 | 多主機管理主控台：平行輪詢 N 個 AutoControl REST 端點 |
 | `utils/config_sync/` | 279 | 透過訊令伺服器做跨機器設定同步 |
 | `utils/device_matrix/` | 138 | 行動裝置矩陣：同一 action list 於多台裝置平行執行 |
-| `utils/remote_desktop/` | 12,559 | **遠端桌面子系統**（56 檔／11.7K LOC）：TCP／WebSocket／WebRTC 三條傳輸路徑、主機與檢視端、訊令伺服器、TURN／中繼、多檢視者、錄影、信任清單、TOTP、稽核鏈 |
+| `utils/remote_desktop/` | 12,561 | **遠端桌面子系統**（56 檔／11.7K LOC）：TCP／WebSocket／WebRTC 三條傳輸路徑、主機與檢視端、訊令伺服器、TURN／中繼、多檢視者、錄影、信任清單、TOTP、稽核鏈 |
 | `utils/usb/` | 4,472 | 跨平台 USB 列舉／熱插拔／裝置直通（WinUSB、IOKit、libusb 後端 + ACL + WebRTC DataChannel 通道） |
 | `utils/usbip/` | 945 | USB/IP 線路協定主機端（協定封包、TCP 伺服器、libusb URB 後端） |
 
 ### 5.4.11 伺服器、網路協定與外部整合
 
-> 24 個套件、約 6,250 行。
+> 24 個套件、約 6,254 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
-| `utils/acme_v2/` | 610 | 完整 ACME v2 用戶端（RFC 8555），不依賴 certbot |
+| `utils/acme_v2/` | 614 | 完整 ACME v2 用戶端（RFC 8555），不依賴 certbot |
 | `utils/chatops/` | 649 | Chat-ops bot：接收 Slack／Discord／webhook 的 slash 指令並路由到動作 |
 | `utils/cookie_jar/` | 121 | RFC 6265 cookie jar |
 | `utils/email_send/` | 116 | SMTP 寄信（email 觸發器的發送端搭檔） |
@@ -629,11 +629,11 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.14 安全、機密與合規
 
-> 13 個套件、約 2,545 行。
+> 13 個套件、約 2,568 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
-| `utils/config_redaction/` | 79 | 設定結構與 log 字串的機密遮蔽 |
+| `utils/config_redaction/` | 85 | 設定結構與 log 字串的機密遮蔽 |
 | `utils/egress/` | 114 | 無頭 HTTP 用戶端的網路外連允許清單守衛 |
 | `utils/governance/` | 231 | 治理：maker-checker 核准閘門與即時憑證租約 |
 | `utils/license_policy/` | 139 | 以 SBOM 元件評估 SPDX 授權允許／拒絕政策 |
@@ -641,7 +641,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/rbac/` | 299 | 角色型存取控制：使用者、角色與權杖驗證（尚未接到 REST／MCP） |
 | `utils/redaction/` | 499 | 截圖遮蔽層：規則偵測 + 政策 + 協調器（上傳 VLM 前先遮） |
 | `utils/sbom/` | 118 | SBOM（CycloneDX）產生 |
-| `utils/secret_ref/` | 126 | URI scheme 形式的值參照解析 |
+| `utils/secret_ref/` | 143 | URI scheme 形式的值參照解析 |
 | `utils/secrets/` | 340 | 加密機密儲存庫，供 `${secrets.NAME}` 解析 |
 | `utils/secrets_scan/` | 130 | 掃描 action JSON／資料中應入庫卻硬編碼的機密 |
 | `utils/vex/` | 143 | OpenVEX 陳述撰寫與漏洞分類處置 |
@@ -649,7 +649,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.15 韌性、流量控制與設定
 
-> 14 個套件、約 1,952 行。
+> 14 個套件、約 1,960 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -658,7 +658,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/bulkhead/` | 141 | Bulkhead 併發隔離 + 伺服器限流標頭解析 |
 | `utils/chaos/` | 153 | 決定性混沌實驗（穩態假說 + 故障注入） |
 | `utils/dedup_window/` | 72 | 時間視窗內的訊息去重 |
-| `utils/dotenv/` | 149 | `.env` 檔解析與序列化 |
+| `utils/dotenv/` | 157 | `.env` 檔解析與序列化 |
 | `utils/feature_flags/` | 173 | 功能旗標評估，含目標規則與決定性灰度 |
 | `utils/idempotency/` | 142 | 冪等鍵儲存與已存回應重放 |
 | `utils/layered_config/` | 110 | 分層設定解析 |
@@ -670,12 +670,12 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.16 系統、視窗與剪貼簿
 
-> 16 個套件、約 2,439 行。
+> 16 個套件、約 2,448 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
 | `utils/clipboard/` | 446 | 跨平台無頭剪貼簿存取（文字 + 影像）＋ `win32_clipboard_api.py`：**所有剪貼簿格式共用的 Win32 原型與 open/alloc/lock 流程**（`open_clipboard()` 會等過短暫被別的行程佔住的剪貼簿——Win32 一次只允許一個行程開啟，別人正在複製就必然失敗）（`argtypes` 只宣告一半曾讓四支 writer 在 64 位元上必然丟 `OverflowError`，見 CHANGELOG）。`set_clipboard_image` 同時接受 PNG 位元組與檔案路徑——先前這個名字在本子套件裡有**兩份不同簽章的實作**（`clipboard.py` 吃 bytes、`clipboard_image.py` 吃路徑），匯錯來源只會在執行期才炸，已合併成一支 |
-| `utils/clipboard_files/` | 106 | 剪貼簿檔案清單（CF_HDROP）：純 DROPFILES 封裝 + Win32 存取 |
+| `utils/clipboard_files/` | 112 | 剪貼簿檔案清單（CF_HDROP）：純 DROPFILES 封裝 + Win32 存取 |
 | `utils/clipboard_formats/` | 151 | 檢視與分類剪貼簿可用格式（純分類／差異 + Win32 列舉） |
 | `utils/clipboard_history/` | 111 | 剪貼簿歷史：環形緩衝 + 背景輪詢器 |
 | `utils/clipboard_rich_formats/` | 282 | 豐富剪貼簿格式 — RTF 與 CSV/TSV 編解碼 + Windows 存取 |
@@ -685,7 +685,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/rich_clipboard/` | 131 | 豐富剪貼簿格式 — HTML（CF_HTML）建構／解析／存取 |
 | `utils/shell_open/` | 97 | 以預設應用開啟檔案，或以預設瀏覽器開啟 URL |
 | `utils/system_volume/` | 194 | 讀取與控制系統主音量與靜音狀態 |
-| `utils/trash/` | 90 | 把檔案移到系統資源回收筒（可復原刪除） |
+| `utils/trash/` | 93 | 把檔案移到系統資源回收筒（可復原刪除） |
 | `utils/window_capture/` | 292 | 逐視窗截圖、視窗版面儲存／還原、貼齊與排列 |
 | `utils/window_geometry/` | 81 | 視窗客戶區幾何（外框內縮、client→screen 對映） |
 | `utils/window_layout/` | 134 | 視窗拼貼／版面規劃器（左右半、四象限、網格、層疊） |
@@ -740,7 +740,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `rate_limit.py` | 48 | 工具呼叫的 token bucket 限流。 |
 | `__main__.py` | 88 | `je_auto_control_mcp` console script 進入點。 |
 
-#### `utils/remote_desktop/`（12,559 行／56 檔）
+#### `utils/remote_desktop/`（12,561 行／56 檔）
 
 三條傳輸路徑並存：**TCP**（JPEG 影格）、**WebSocket**（同協定換傳輸）、**WebRTC**（aiortc 視訊 + DataChannel）。
 
@@ -781,7 +781,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `webrtc_inspector.py` | 138 | 行程級的 `StatsSnapshot` 滾動視窗。 |
 | `input_dispatch.py` | 139 | 在主機端套用輸入訊息。 |
 | `session_recorder.py` | 134 | 以 PyAV 把 WebRTC 影格錄成 mp4。 |
-| `totp.py` | 140 | RFC 6238 TOTP（零外部相依）。 |
+| `totp.py` | 142 | RFC 6238 TOTP（零外部相依）。 |
 | `file_sync.py` | 141 | 輪詢式資料夾鏡像。 |
 | `transport.py` | 123 | 可插拔的型別化訊息傳輸。 |
 | `host_access.py` | 112 | TCP 主機的檢視端核准與存取控制：`PendingViewer`、權限字串、分享碼的 TOTP 候選值、IP 白名單。`host` 與 `host_client` 共用,所以獨立成模組。 |
@@ -1062,7 +1062,7 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | --- | ---: | ---: |
 | `gui/` | 91 | 26,795 |
 | `utils/mcp_server/` | 31 | 17,656 |
-| `utils/remote_desktop/` | 56 | 12,559 |
+| `utils/remote_desktop/` | 56 | 12,561 |
 | `utils/executor/` | 7 | 9,402 |
 | `utils/usb/` | 17 | 4,472 |
 | `je_auto_control/`（頂層 3 檔） | 3 | 2,395 |
@@ -1080,6 +1080,6 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `osx/` | 17 | 919 |
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 837 |
-| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 677 | 50,987 |
-| **總計** | **1,043** | **146,758** |
+| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 677 | 51,055 |
+| **總計** | **1,043** | **146,828** |
 

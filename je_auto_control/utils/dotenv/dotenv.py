@@ -29,9 +29,13 @@ def _unescape(value: str) -> str:
     return "".join(out)
 
 
+_INLINE_COMMENT = re.compile(r"[ \t]#")
+
+
 def _strip_inline_comment(value: str) -> str:
-    marker = value.find(" #")
-    return value[:marker] if marker != -1 else value
+    # A tab before the # starts a comment too: "A=b\t# c" read as "b\t# c".
+    match = _INLINE_COMMENT.search(value)
+    return value[:match.start()] if match else value
 
 
 def _unquoted(value: str) -> str:
@@ -79,12 +83,16 @@ def _parse_entry(lines: List[str], index: int) -> Tuple[Optional[Tuple[str, str]
     return (key, inner if quote == "'" else _unescape(inner)), end
 
 
+_EXPORT = re.compile(r"export[ \t]")
+
+
 def _parse_line(line: str) -> Optional[Tuple[str, str]]:
     stripped = line.strip()
     if not stripped or stripped.startswith("#"):
         return None
-    if stripped.startswith("export "):
-        stripped = stripped[len("export "):].lstrip()
+    if _EXPORT.match(stripped):
+        # "export\tKEY=1" is an export too; it was dropped as an unknown key.
+        stripped = stripped[len("export"):].lstrip()
     key, sep, raw = stripped.partition("=")
     key = key.strip()
     if not sep or not _KEY_RE.match(key):

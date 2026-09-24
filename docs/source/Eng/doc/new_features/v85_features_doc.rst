@@ -28,7 +28,8 @@ Headless API
 
 ``resolve_ref`` resolves one reference: ``env://`` reads an environment variable
 (from an injectable mapping, falling back to ``os.environ``), ``file://`` reads a
-file (with an optional ``base_dir`` realpath guard against traversal), and
+file (a relative path is relative to the optional ``base_dir``, which also
+refuses any path that resolves outside it), and
 ``secret://`` delegates to an injectable resolver or the governance credential
 broker. ``resolve_refs_in`` walks a nested dict/list and resolves every
 reference in place, leaving non-reference values untouched. ``is_ref`` tests a

@@ -9,6 +9,7 @@ with the undo flag. It never deletes permanently here; callers that truly
 want that should use ``Path.unlink``. The backend is injectable so the
 dispatch is unit-testable without touching a real recycle bin.
 """
+import os
 import sys
 from pathlib import Path
 from typing import Callable, Optional, Union
@@ -74,13 +75,15 @@ def move_to_trash(path: Union[str, Path], *,
     ``send2trash`` for macOS / Linux).
     """
     target = Path(path)
-    if not target.exists():
+    if not target.exists() and not target.is_symlink():
         raise FileNotFoundError(str(path))
     chosen = backend or _select_backend()
     if chosen is None:
         raise RuntimeError(
             "no recycle-bin backend available; pip install send2trash",
         )
-    chosen(str(target.resolve()))
+    # abspath, not resolve(): resolving followed a symlink or junction and
+    # recycled the file it pointed to, leaving the link behind.
+    chosen(os.path.abspath(target))
     autocontrol_logger.info("moved to trash: %s", target)
     return True

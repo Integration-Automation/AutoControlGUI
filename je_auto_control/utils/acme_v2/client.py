@@ -228,6 +228,10 @@ class AcmeClient:
         order = self.new_order(domains)
         for auth_url in order.authorizations:
             auth = self.fetch_authorization(auth_url)
+            if auth.status == "valid":
+                # A reused authorization lists only the challenge that
+                # validated it -- perhaps dns-01, so http_challenge() raised.
+                continue
             challenge = auth.http_challenge()
             key_auth = key_authorization(challenge.token, self._account_key)
             http_publisher(challenge.token, key_auth)

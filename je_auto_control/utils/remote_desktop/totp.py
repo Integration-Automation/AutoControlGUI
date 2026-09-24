@@ -97,7 +97,9 @@ def verify_code(secret: str, code: str, *,
     if not isinstance(code, str):
         return False
     cleaned = code.strip()
-    if len(cleaned) != digits or not cleaned.isdigit():
+    # isdigit() also accepts other scripts' digits, which compare_digest
+    # rejects with a TypeError instead of the code simply not matching.
+    if len(cleaned) != digits or not (cleaned.isascii() and cleaned.isdigit()):
         return False
     decoded = _decode_secret(secret)
     now = time.time() if at is None else at

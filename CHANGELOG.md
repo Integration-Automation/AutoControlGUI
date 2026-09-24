@@ -290,6 +290,12 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Fixed
 
+- **Process, secret and file boundaries**: recycling a symlink recycles the
+  link, not its target; relative `file://` secret refs resolve under
+  `base_dir`; cmd metacharacters in a `.bat` / `.cmd` argument list are
+  refused on Windows; `start_exe` launches the file it checked; log redaction
+  masks quoted values, `pwd=` and `--password <value>`; non-ASCII TOTP codes,
+  negative drop points, dotenv tabs and reused ACME authorizations are handled.
 - **Work queue and durable state**: claims are numbered so a stale performer
   cannot settle a reclaimed item, and repeatedly abandoned items fail instead
   of looping; a failed `run_resumable` step is retried rather than skipped;

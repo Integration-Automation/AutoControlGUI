@@ -42,14 +42,20 @@ def redact_config(obj: Any, *, mask: str = _DEFAULT_MASK) -> Any:
     return _redact_node(obj, "$", _secret_paths(obj), mask)
 
 
+_SECRET_KEYS = r"(?:api[_-]?key|access[_-]?token|token|password|passwd|pwd|passphrase|secret)"
+
 #: Each pattern's group 1 is kept and the rest of the match masked.
 _TEXT_PATTERNS = (
     # Authorization: Bearer|Basic|Token|Digest <credential>
     re.compile(r"(?i)(\bauthorization[\"']?\s*[=:]\s*[\"']?(?:bearer|basic|token|digest)\s+)[^\s,;\"']+"),
+    # key="a quoted value with spaces" -- the whole quoted value, not its
+    # first word.
+    re.compile(r"(?i)(" + _SECRET_KEYS + r"[\"']?\s*[=:]\s*([\"']))(?:(?!\2).)+"),
     # key=value / key: value / "key": "value" -- the key may carry a prefix
     # (db_password, client_secret), which the old leading \b refused.
-    re.compile(r"(?i)((?:api[_-]?key|access[_-]?token|token|password|passwd|passphrase|secret)"
-               r"[\"']?\s*[=:]\s*[\"']?)[^\s,;\"']+"),
+    re.compile(r"(?i)(" + _SECRET_KEYS + r"[\"']?\s*[=:]\s*[\"']?)[^\s,;\"']+"),
+    # --password hunter2 (a CLI flag followed by its value)
+    re.compile(r"(?i)(--(?:[a-z0-9]+[_-])*" + _SECRET_KEYS + r"\s+)(?!-)[^\s\"']+"),
     # scheme://user:password@host
     re.compile(r"(?i)(\b[a-z][a-z0-9+.-]*://[^/\s:@]+:)[^/\s@]+(?=@)"),
 )
