@@ -363,6 +363,9 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Fixed
 
+- Exiting while a WebRTC signaling poll is running, or closing the
+  remote-desktop viewer during a file transfer, no longer aborts the
+  process.
 - `merge_results` no longer doubles errors and cases when merging merged
   reports.
 - Time-series buckets place edge points correctly at Unix-time

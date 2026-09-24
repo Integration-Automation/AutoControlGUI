@@ -3,7 +3,7 @@ import ssl
 from pathlib import Path
 from typing import Optional
 
-from PySide6.QtCore import QThread, Signal
+from PySide6.QtCore import Signal
 from PySide6.QtGui import QGuiApplication, QImage
 from PySide6.QtWidgets import (
     QCheckBox, QComboBox, QFileDialog, QGroupBox, QHBoxLayout, QInputDialog,
@@ -11,6 +11,7 @@ from PySide6.QtWidgets import (
     QVBoxLayout, QWidget,
 )
 
+from je_auto_control.gui._daemon_thread import DaemonThread
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
 from je_auto_control.gui.remote_desktop._helpers import (
     _CollapsibleSection, _StatusBadge, _build_insecure_client_context,
@@ -513,7 +514,7 @@ class _ViewerPanel(TranslatableMixin, QWidget):
         thread.start()
 
 
-class _FileSendThread(QThread):
+class _FileSendThread(DaemonThread):
     """Run send_file off the GUI thread; bridge progress via signals."""
 
     progress = Signal(str, int, int)
