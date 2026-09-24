@@ -104,6 +104,14 @@ class QuickConnectScreen(TranslatableMixin, QWidget):
     # the GUI sets after the operator clicks Allow / Deny.
     _approval_requested = Signal(object)
 
+    # The viewer calls its callbacks on its receiver thread; these carry
+    # them to the GUI thread. They were passed straight in, so every frame
+    # repainted, and a dropped connection opened a QMessageBox, off the GUI
+    # thread.
+    _frame_arrived = Signal(object)
+    _error_arrived = Signal(str)
+    _cursor_moved = Signal(int, int)
+
     def __init__(self, parent: Optional[QWidget] = None) -> None:
         super().__init__(parent)
         self._tr_init()
@@ -144,6 +152,10 @@ class QuickConnectScreen(TranslatableMixin, QWidget):
         self._approval_requested.connect(
             self._show_approval_dialog, Qt.ConnectionType.QueuedConnection,
         )
+        queued = Qt.ConnectionType.QueuedConnection
+        self._frame_arrived.connect(self._on_frame, queued)
+        self._error_arrived.connect(self._on_error, queued)
+        self._cursor_moved.connect(self._on_remote_cursor, queued)
         self._build_layout()
         self._apply_placeholders()
         self._refresh_recent()
@@ -401,9 +413,9 @@ class QuickConnectScreen(TranslatableMixin, QWidget):
         try:
             viewer = RemoteDesktopViewer(
                 host=host, port=port, token=token,
-                on_frame=self._on_frame,
-                on_error=lambda exc: self._on_error(str(exc)),
-                on_cursor=self._on_remote_cursor,
+                on_frame=self._frame_arrived.emit,
+                on_error=lambda exc: self._error_arrived.emit(str(exc)),
+                on_cursor=self._cursor_moved.emit,
             )
             viewer.connect(timeout=5.0)
         except (OSError, RuntimeError) as error:
@@ -424,9 +436,9 @@ class QuickConnectScreen(TranslatableMixin, QWidget):
         try:
             viewer = WebSocketDesktopViewer(
                 host=host, port=port, token=token, path=path,
-                on_frame=self._on_frame,
-                on_error=lambda exc: self._on_error(str(exc)),
-                on_cursor=self._on_remote_cursor,
+                on_frame=self._frame_arrived.emit,
+                on_error=lambda exc: self._error_arrived.emit(str(exc)),
+                on_cursor=self._cursor_moved.emit,
             )
             viewer.connect(timeout=5.0)
         except (OSError, RuntimeError) as error:
@@ -441,13 +453,10 @@ class QuickConnectScreen(TranslatableMixin, QWidget):
         self._refresh_status()
 
     def _on_remote_cursor(self, x: int, y: int) -> None:
-        """Network-thread cursor update; forward to the popup display."""
+        """Cursor update, delivered on the GUI thread by ``_cursor_moved``."""
         window = self._screen_window
         if window is None:
             return
-        # ``set_remote_cursor`` calls ``update()`` which is thread-safe
-        # on the QWidget API surface — internally Qt marshals the paint
-        # request to the GUI thread for us.
         try:
             window.display.set_remote_cursor(x, y)
         except RuntimeError:

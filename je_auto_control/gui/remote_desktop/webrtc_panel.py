@@ -52,7 +52,7 @@ from je_auto_control.gui.remote_desktop.webrtc_dialogs import (
 )
 from je_auto_control.gui.remote_desktop.webrtc_workers import (
     HostPublishLoopWorker, ViewerAnswerPushWorker, ViewerSignalingWorker,
-    generate_host_id,
+    generate_host_id, retire_worker,
 )
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.remote_desktop import (
@@ -220,6 +220,7 @@ class _WebRTCHostPanel(TranslatableMixin, QWidget):
         self._signals.session_count.connect(self._on_session_count)
         self._signals.viewer_video_frame.connect(self._on_viewer_video_image)
         self._signals.annotation.connect(self._on_annotation_event)
+        self._signals.stats.connect(self._update_host_quality_dot)
         self._build_ui()
         self._refresh_trusted_list()
         self._update_availability()
@@ -1077,7 +1078,7 @@ class _WebRTCHostPanel(TranslatableMixin, QWidget):
                 self._adaptive_controller.on_stats(snapshot)
             except (RuntimeError, OSError) as error:
                 autocontrol_logger.debug("adaptive on_stats: %r", error)
-        self._update_host_quality_dot(snapshot)
+        self._signals.stats.emit(snapshot)
 
     def _update_host_quality_dot(self, snapshot: StatsSnapshot) -> None:
         rtt = snapshot.rtt_ms
@@ -1233,9 +1234,8 @@ class _WebRTCHostPanel(TranslatableMixin, QWidget):
             poller.stop()
         self._session_pollers.clear()
         self._session_cache.reset()
-        if self._publish_loop is not None:
-            self._publish_loop.requestInterruption()
-            self._publish_loop = None
+        retire_worker(self._publish_loop)
+        self._publish_loop = None
         if self._viewer_screen_window is not None:
             self._viewer_screen_window.set_image(None)
             self._viewer_screen_window.hide()
@@ -2244,11 +2244,12 @@ class _WebRTCViewerPanel(TranslatableMixin, QWidget):
             secret=self._secret_edit.text() or None,
             answer_sdp=answer,
         )
-        self._answer_worker.pushed.connect(
-            lambda: self._status_label.setText(_t("rd_webrtc_waiting_auth")),
-        )
+        self._answer_worker.pushed.connect(self._on_answer_pushed)
         self._answer_worker.failed.connect(self._on_signaling_failed)
         self._answer_worker.start()
+
+    def _on_answer_pushed(self) -> None:
+        self._status_label.setText(_t("rd_webrtc_waiting_auth"))
 
     def _on_signaling_failed(self, message: str) -> None:
         QMessageBox.warning(self, "WebRTC", message)
@@ -2376,8 +2377,7 @@ class _WebRTCViewerPanel(TranslatableMixin, QWidget):
 
     def _stop_viewer_if_any(self) -> None:
         for worker in (self._offer_worker, self._answer_worker):
-            if worker is not None:
-                worker.requestInterruption()
+            retire_worker(worker)
         self._offer_worker = None
         self._answer_worker = None
         if self._sync_engine is not None:

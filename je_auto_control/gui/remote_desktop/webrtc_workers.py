@@ -7,7 +7,7 @@ emit thread-safe signals carrying the SDP strings or any error message.
 from __future__ import annotations
 
 import secrets
-from typing import Optional
+from typing import Optional, Set
 
 from PySide6.QtCore import QThread, Signal
 
@@ -193,3 +193,40 @@ __all__ = [
     "ViewerAnswerPushWorker",
     "HostPublishLoopWorker",
 ]
+
+
+#: Stopped workers that were still running, kept until their thread ends.
+_RETIRED: Set[QThread] = set()
+
+#: Result signals a retired worker must no longer deliver.
+_RESULT_SIGNALS = ("answer_ready", "offer_ready", "offer_published",
+                   "session_connected", "pushed", "failed")
+
+
+def retire_worker(worker: Optional[QThread]) -> None:
+    """Stop ``worker`` without destroying it while its thread still runs.
+
+    A stopped worker is usually blocked in a signaling long-poll (up to ten
+    minutes), which ``requestInterruption`` cannot cut short. Dropping the last
+    reference to it there aborted the whole process with "QThread: Destroyed
+    while thread is still running", from the Stop button, a second Publish or
+    Connect click, or an auto-reconnect. The worker is kept here, cut off from
+    its result slots so a late answer cannot reach a newer session, and
+    deleted on the GUI thread once it finishes.
+    """
+    if worker is None:
+        return
+    worker.requestInterruption()
+    if not worker.isRunning():
+        return
+    for name in _RESULT_SIGNALS:
+        signal = getattr(worker, name, None)
+        if signal is None:
+            continue
+        try:
+            signal.disconnect()
+        except (RuntimeError, TypeError):
+            pass    # reason: nothing was connected to this signal
+    _RETIRED.add(worker)
+    worker.finished.connect(worker.deleteLater)
+    worker.destroyed.connect(lambda *_args: _RETIRED.discard(worker))

@@ -310,6 +310,11 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Fixed
 
+- **GUI threads**:
+  - Admin Console refresh and thumbnails, and the USB Browser and passthrough actions, now run; their workers were collected before starting.
+  - Worker results are applied on the GUI thread.
+  - The Quick Connect viewer no longer repaints or opens dialogs from its network thread.
+  - Stopping or restarting a WebRTC signaling session no longer aborts the application.
 - **Traces and reports**:
   - Replay traces with Unicode line separators read back.
   - `match_persistence` requires every frame to agree.

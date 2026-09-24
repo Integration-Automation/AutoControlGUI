@@ -11,6 +11,7 @@ from PySide6.QtWidgets import (
 )
 
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
+from je_auto_control.gui._worker_thread import start_worker
 from je_auto_control.gui.language_wrapper.multi_language_wrapper import (
     language_wrapper,
 )
@@ -180,19 +181,10 @@ class AdminConsoleTab(TranslatableMixin, QWidget):
     def _on_refresh(self) -> None:
         if self._poll_thread is not None:
             return
-        thread = QThread(self)
-        worker = _PollWorker(self._client)
-        worker.moveToThread(thread)
-        thread.started.connect(worker.run)
-        worker.finished.connect(self._apply_poll_result)
-        worker.failed.connect(self._apply_poll_failure)
-        worker.finished.connect(thread.quit)
-        worker.failed.connect(thread.quit)
-        thread.finished.connect(self._on_poll_thread_done)
-        thread.finished.connect(worker.deleteLater)
-        thread.finished.connect(thread.deleteLater)
-        self._poll_thread = thread
-        thread.start()
+        self._poll_thread = start_worker(
+            self, _PollWorker(self._client),
+            on_done=self._apply_poll_result, on_fail=self._apply_poll_failure,
+            on_thread_done=self._on_poll_thread_done)
 
     def _on_broadcast(self) -> None:
         text = self._actions_input.toPlainText().strip()
@@ -232,19 +224,12 @@ class AdminConsoleTab(TranslatableMixin, QWidget):
     def _refresh_thumbnails(self) -> None:
         if self._thumb_thread is not None:
             return
-        thread = QThread(self)
-        worker = _ThumbnailWorker(self._client)
-        worker.moveToThread(thread)
-        thread.started.connect(worker.run)
-        worker.finished.connect(self._apply_thumbnails)
-        worker.finished.connect(thread.quit)
-        thread.finished.connect(self._on_thumb_thread_done)
-        # Without deleteLater the QThread (parented to self) and its worker
-        # accumulate one per poll tick — a fresh handle leak every interval.
-        thread.finished.connect(worker.deleteLater)
-        thread.finished.connect(thread.deleteLater)
-        self._thumb_thread = thread
-        thread.start()
+        # start_worker deletes the QThread, worker and relay on finish, so one
+        # poll tick no longer leaves one of each behind.
+        self._thumb_thread = start_worker(
+            self, _ThumbnailWorker(self._client),
+            on_done=self._apply_thumbnails,
+            on_thread_done=self._on_thumb_thread_done)
 
     def _on_thumb_thread_done(self) -> None:
         self._thumb_thread = None

@@ -27,6 +27,7 @@ from PySide6.QtWidgets import (
 )
 
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
+from je_auto_control.gui._worker_thread import start_worker
 from je_auto_control.gui.language_wrapper.multi_language_wrapper import (
     language_wrapper,
 )
@@ -443,17 +444,10 @@ class UsbPassthroughPanel(TranslatableMixin, QWidget):
                    on_fail: Callable[[str], None]) -> None:
         if self._thread is not None:
             return
-        thread = QThread(self)
-        worker = _CallWorker(fn)
-        worker.moveToThread(thread)
-        thread.started.connect(worker.run)
-        worker.finished.connect(on_done)
-        worker.failed.connect(on_fail)
-        worker.finished.connect(thread.quit)
-        worker.failed.connect(thread.quit)
-        thread.finished.connect(self._on_thread_done)
-        self._thread = thread
-        thread.start()
+        # on_done / on_fail are often lambdas; start_worker runs them on the
+        # GUI thread, where they may touch widgets.
+        self._thread = start_worker(self, _CallWorker(fn), on_done=on_done,
+                                    on_fail=on_fail, on_thread_done=self._on_thread_done)
 
     def _on_thread_done(self) -> None:
         self._thread = None

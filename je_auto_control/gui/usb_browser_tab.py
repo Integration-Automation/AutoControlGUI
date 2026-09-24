@@ -28,6 +28,7 @@ from PySide6.QtWidgets import (
 )
 
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
+from je_auto_control.gui._worker_thread import start_worker
 from je_auto_control.gui.language_wrapper.multi_language_wrapper import (
     language_wrapper,
 )
@@ -209,21 +210,14 @@ class UsbBrowserTab(TranslatableMixin, QWidget):
     def _on_fetch(self) -> None:
         if self._fetch_thread is not None:
             return
-        thread = QThread(self)
-        worker = _FetchWorker(
-            base_url=self._url_input.text().strip(),
-            token=self._token_input.text().strip(),
-        )
-        worker.moveToThread(thread)
-        thread.started.connect(worker.run)
-        worker.finished.connect(self._apply_devices)
-        worker.failed.connect(self._apply_failure)
-        worker.finished.connect(thread.quit)
-        worker.failed.connect(thread.quit)
-        thread.finished.connect(self._on_fetch_done)
-        self._fetch_thread = thread
         self._status_label.setText(_t("usb_browser_fetching"))
-        thread.start()
+        self._fetch_thread = start_worker(
+            self, _FetchWorker(
+                base_url=self._url_input.text().strip(),
+                token=self._token_input.text().strip(),
+            ),
+            on_done=self._apply_devices, on_fail=self._apply_failure,
+            on_thread_done=self._on_fetch_done)
 
     def _on_fetch_done(self) -> None:
         self._fetch_thread = None
@@ -275,21 +269,13 @@ class UsbBrowserTab(TranslatableMixin, QWidget):
 
     def _start_local_open(self, vid: str, pid: str,
                           serial: Optional[str]) -> None:
-        thread = QThread(self)
-        worker = _CallWorker(lambda: open_local_descriptor(
-            vendor_id=vid, product_id=pid, serial=serial,
-        ))
-        worker.moveToThread(thread)
-        thread.started.connect(worker.run)
-        worker.finished.connect(
-            lambda descriptor: self._on_local_opened(vid, pid, descriptor),
-        )
-        worker.failed.connect(self._apply_failure)
-        worker.finished.connect(thread.quit)
-        worker.failed.connect(thread.quit)
-        thread.finished.connect(self._on_open_done)
-        self._open_thread = thread
-        thread.start()
+        # The lambda below runs on the GUI thread: start_worker relays it.
+        self._open_thread = start_worker(
+            self, _CallWorker(lambda: open_local_descriptor(
+                vendor_id=vid, product_id=pid, serial=serial,
+            )),
+            on_done=lambda descriptor: self._on_local_opened(vid, pid, descriptor),
+            on_fail=self._apply_failure, on_thread_done=self._on_open_done)
 
     def _on_open_done(self) -> None:
         self._open_thread = None

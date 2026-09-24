@@ -19,8 +19,8 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 
 | 指標 | 數值 |
 | --- | ---: |
-| Python 模組總數（含周邊子專案） | 1,049 |
-| 程式碼總行數 | 150,069 |
+| Python 模組總數（含周邊子專案） | 1,050 |
+| 程式碼總行數 | 150,151 |
 | `je_auto_control/utils/` 子套件數 | 310 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 775 |
 | 套件門面 `__all__` 公開名稱數 | 1,241 |
@@ -884,6 +884,7 @@ GUI 是**選用 extra**（`pip install je_auto_control[gui]`，PySide6 + qt-mate
 | `_record_tab.py` | 110 | 錄製／回放分頁 mixin。 |
 | `_report_tab.py` | 88 | 報表分頁 mixin。 |
 | `_i18n_helpers.py` | 66 | 需要即時語言切換的分頁共用的翻譯註冊 mixin。 |
+| `_worker_thread.py` | 71 | `start_worker()`：把 `QObject` worker 放到 `QThread` 上執行，並經由 GUI 執行緒上的中繼物件回報結果（保住 worker 不被回收、回呼一律在 GUI 執行緒）。 |
 | `language_wrapper/` | 5,007 | 四語系字典（英／日／簡中／繁中）+ `multi_language_wrapper` 執行期切換器與監聽註冊表。 |
 | `selector/` | 179 | 拖曳選取螢幕區域的半透明全螢幕覆蓋層與樣板裁切工具（互動式，但都有對應的程式化 API）。 |
 
@@ -944,7 +945,7 @@ GUI 是**選用 extra**（`pip install je_auto_control[gui]`，PySide6 + qt-mate
 | diagnostics | `diagnostics_tab.py` | 91 | 執行子系統檢查並顯示結果。 |
 | report | `_report_tab.py` | 81 | 產生 HTML／JSON／XML 報表。 |
 
-#### 遠端桌面 GUI（`gui/remote_desktop/`，19 檔／6,393 行）
+#### 遠端桌面 GUI（`gui/remote_desktop/`，19 檔／6,439 行）
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -952,12 +953,12 @@ GUI 是**選用 extra**（`pip install je_auto_control[gui]`，PySide6 + qt-mate
 | `webrtc_dialogs.py` | 493 | WebRTC GUI 用的自訂對話框與清單元件（待審檢視者、信任清單、通訊錄、遠端檔案表、稽核記錄、LAN 瀏覽）。 |
 | `advanced_group.py` | 92 | 兩個 WebRTC 面板共用的 Advanced STUN／TURN（含選用硬體編碼器）群組，含它寫回面板的 Protocol。 |
 | `trusted_group.py` | 70 | WebRTC host 面板的信任 viewer 清單群組（移除／清空／匯入／匯出），含它寫回面板的 Protocol。 |
-| `connection_screen.py` | 672 | Quick Connect —— AnyDesk 風格單畫面入口。 |
+| `connection_screen.py` | 681 | Quick Connect —— AnyDesk 風格單畫面入口。 |
 | `viewer_panel.py` | 542 | 「控制另一台機器」子分頁。 |
 | `webrtc_known_hosts.py` | 342 | TOFU 釘選庫瀏覽器：`KnownHostsDialog` 與帶外釘選用的小表單。由 `webrtc_dialogs` 再匯出。 |
 | `host_panel.py` | 334 | 「分享這台機器」子分頁。 |
 | `frame_display.py` | 228 | 繪製 JPEG 影格並發出遠端輸入事件的元件。 |
-| `webrtc_workers.py` | 195 | 訊令流程的背景 `QThread` worker。 |
+| `webrtc_workers.py` | 232 | 訊令流程的背景 `QThread` worker。 |
 | `tab.py` | 165 | 外層容器分頁。 |
 | `_helpers.py` | 189 | 面板共用輔助：翻譯、Qt→AC 鍵滑鼠對應、TLS context、狀態徽章、指紋與時間格式化。 |
 | `remote_screen_window.py` | 140 | 檢視端的彈出視窗。 |
@@ -1060,7 +1061,7 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 
 | 層／子系統 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `gui/` | 91 | 26,829 |
+| `gui/` | 92 | 26,911 |
 | `utils/mcp_server/` | 31 | 17,711 |
 | `utils/remote_desktop/` | 56 | 12,842 |
 | `utils/executor/` | 7 | 9,425 |
@@ -1081,5 +1082,5 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 837 |
 | 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 677 | 53,426 |
-| **總計** | **1,043** | **150,004** |
+| **總計** | **1,044** | **150,086** |
 
