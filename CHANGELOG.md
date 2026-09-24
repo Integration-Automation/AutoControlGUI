@@ -293,6 +293,12 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Fixed
 
+- **Agent and action helpers**: self-healing replay no longer heals a failed
+  assertion and moves a release with its healed press; list-form entries pass
+  relocation; zero-size boxes are not actionable and an unknown enabled state
+  is not "disabled"; `act_in_view` gates on the live target; grounding snaps to
+  the innermost element; non-string memory tags, the key-file creation race and
+  pruning of in-progress runs are handled.
 - **Config and plumbing**: failure-hook tickets are redacted before filing and
   one failing backend no longer stops the rest; symlinked plugins outside the
   plugin directory are skipped; the search index keeps non-ASCII terms and

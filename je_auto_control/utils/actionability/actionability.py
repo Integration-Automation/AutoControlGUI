@@ -95,9 +95,11 @@ class _StabilityTracker:
 
 def _evaluate(bbox, tracker, now, enabled_probe, hit_tester):
     """Return ``(visible, stable, enabled, receives, point)`` for one poll."""
-    visible = bbox is not None
+    # A zero-size box (a collapsed or hidden element) is not visible.
+    visible = bbox is not None and len(bbox) >= 4 and bbox[2] > 0 and bbox[3] > 0
     stable = tracker.update(bbox, now)
-    enabled = enabled_probe is None or bool(enabled_probe())
+    # The probe is Optional[bool]: None means "unknown", not "disabled".
+    enabled = enabled_probe is None or enabled_probe() is not False
     point = _center(bbox) if visible else None
     receives = hit_tester is None or point is None or bool(hit_tester(point))
     return visible, stable, enabled, receives, point

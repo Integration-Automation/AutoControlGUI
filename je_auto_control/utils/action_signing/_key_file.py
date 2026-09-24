@@ -7,10 +7,28 @@ key file shorter than ``min_length`` is refused -- an empty file left by a
 crash would otherwise become an empty HMAC key that anyone can reproduce.
 """
 import os
+import time
 from pathlib import Path
 from typing import Callable
 
 from je_auto_control.utils.exception.exceptions import AutoControlException
+
+
+def _read_when_written(path: Path, min_length: int) -> bytes:
+    """Read the key, waiting briefly for a concurrent creator to finish writing.
+
+    A process that lost the O_EXCL race read the file at once, often empty,
+    and was told to delete it -- which would invalidate the winner's key.
+    """
+    deadline = time.monotonic() + _CREATOR_WAIT_S
+    key = path.read_bytes()
+    while len(key) < min_length and time.monotonic() < deadline:
+        time.sleep(0.02)
+        key = path.read_bytes()
+    return key
+
+
+_CREATOR_WAIT_S = 2.0
 
 
 def load_or_create_key_file(path: Path, generate: Callable[[], bytes],
@@ -29,7 +47,7 @@ def load_or_create_key_file(path: Path, generate: Callable[[], bytes],
         else:
             with os.fdopen(descriptor, "wb") as key_file:
                 key_file.write(generate())
-    key = path.read_bytes()
+    key = _read_when_written(path, min_length)
     if len(key) < min_length:
         raise AutoControlException(
             f"key file {str(path)!r} holds {len(key)} bytes, fewer than {min_length}; "

@@ -75,6 +75,10 @@ def relocate_action(action: Mapping[str, Any],
     No-op when the action has no anchor or the lookup failed. Adds a
     ``relocated`` boolean so logs / tests can distinguish the path.
     """
+    if not isinstance(action, Mapping):
+        # ["AC_x", {...}] entries of an executor script pass through, as in
+        # enrich_action; dict() on them aborted the whole recording.
+        return action  # type: ignore[return-value]
     out = dict(action)
     if action.get("action") not in _CLICK_ACTIONS:
         return out

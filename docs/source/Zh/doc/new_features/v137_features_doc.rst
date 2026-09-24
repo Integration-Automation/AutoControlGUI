@@ -7,7 +7,7 @@
 按鈕上,而非動畫中、停用、或被對話框擋住的狀態。
 
 每個訊號都是可注入的 callable——``bbox_provider``(定位目標)、``region_sampler``(像素穩定 token)、
-``enabled_probe``、``hit_tester``——再加上透過 :class:`GateConfig` 注入的 ``clock`` / ``sleep``,因此閘門完全
+``enabled_probe``(回傳 ``None`` 代表未知，不當成停用)、``hit_tester``——再加上透過 :class:`GateConfig` 注入的 ``clock`` / ``sleep``,因此閘門完全
 決定性且可無頭測試。不匯入 ``PySide6``。
 
 無頭 API

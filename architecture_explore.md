@@ -20,7 +20,7 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 | 指標 | 數值 |
 | --- | ---: |
 | Python 模組總數（含周邊子專案） | 1,049 |
-| 程式碼總行數 | 147,890 |
+| 程式碼總行數 | 147,967 |
 | `je_auto_control/utils/` 子套件數 | 310 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 773 |
 | 套件門面 `__all__` 公開名稱數 | 1,241 |
@@ -271,12 +271,12 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.1 執行引擎與腳本資產
 
-> 24 個套件、約 14,147 行。
+> 24 個套件、約 14,165 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
 | `utils/action_lint/` | 328 | action 檔 linter 與 JSON Schema 產生器（CI 用 `python -m` 進入點） |
-| `utils/action_signing/` | 362 | action 檔 HMAC-SHA256 簽章與 Fernet 加密，`execute_files` 會強制驗簽 |
+| `utils/action_signing/` | 380 | action 檔 HMAC-SHA256 簽章與 Fernet 加密，`execute_files` 會強制驗簽 |
 | `utils/checkpoint/` | 120 | 流程檢查點與續跑，讓長 action list 具持久性 |
 | `utils/codegen/` | 255 | 由 action list 產生可執行的 pytest / python / robot 測試碼 |
 | `utils/dag/` | 492 | 跨主機 DAG 編排器（圖模型 + runner） |
@@ -341,15 +341,15 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.4 輸入模擬與動作品質
 
-> 22 個套件、約 2,665 行。
+> 22 個套件、約 2,680 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
-| `utils/act_in_view/` | 76 | 先把目標捲進視野，待其可操作後再動作 |
+| `utils/act_in_view/` | 86 | 先把目標捲進視野，待其可操作後再動作 |
 | `utils/act_modes/` | 68 | actionability 閘門之上的 trial／force 動作模式 |
 | `utils/action_effect/` | 110 | 判定一個動作是否真的產生效果，並歸因到目標區域 |
-| `utils/action_grounding/` | 80 | 動作前的接地守衛（邊界檢查 + 吸附到元素） |
-| `utils/actionability/` | 166 | 動作前就緒閘門（可見 + 穩定 + 啟用 + 未被遮擋） |
+| `utils/action_grounding/` | 83 | 動作前的接地守衛（邊界檢查 + 吸附到元素） |
+| `utils/actionability/` | 168 | 動作前就緒閘門（可見 + 穩定 + 啟用 + 未被遮擋） |
 | `utils/ensure_state/` | 74 | 冪等地把控制項／設定帶到期望狀態 |
 | `utils/field_entry/` | 76 | 清空再輸入的欄位填寫慣用法（Playwright `fill`） |
 | `utils/gamepad/` | 311 | 虛擬遊戲手把後端（Windows ViGEmBus 驅動） |
@@ -463,7 +463,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.8 元素定位、自我修復與智慧等待
 
-> 23 個套件、約 4,161 行。
+> 23 個套件、約 4,198 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -487,19 +487,19 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/screen_state/` | 182 | 語義畫面狀態：快照／差異與結構化畫面描述 |
 | `utils/scroll_find/` | 103 | 捲動直到目標影像／文字可見 |
 | `utils/self_healing/` | 352 | 自癒定位器：先影像樣板、失敗改用 VLM，並留稽核記錄 |
-| `utils/semantic_recording/` | 423 | 為錄製內容加上語義錨點，支援換機重播與自癒重播 |
+| `utils/semantic_recording/` | 460 | 為錄製內容加上語義錨點，支援換機重播與自癒重播 |
 | `utils/settle_detector/` | 79 | 以純函式介面判定 UI 是否已靜止 |
 | `utils/smart_waits/` | 658 | 智慧等待：以影格差異取代 `time.sleep` |
 
 ### 5.4.9 AI / Agent / LLM
 
-> 13 個套件、約 21,280 行。
+> 13 個套件、約 21,282 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
 | `utils/a2a/` | 92 | A2A（agent-to-agent）agent card 產生 |
 | `utils/agent/` | 1,438 | 閉環 Computer-Use Agent 主迴圈 + Anthropic／OpenAI／Computer-Use 三後端 |
-| `utils/agent_memory/` | 152 | agent 的持久化情節記憶（goal → trajectory → outcome） |
+| `utils/agent_memory/` | 154 | agent 的持久化情節記憶（goal → trajectory → outcome） |
 | `utils/agent_replay/` | 63 | 可攜的 agent 軌跡追蹤（記錄 observation→action 並重播） |
 | `utils/agent_trace/` | 168 | agent 可觀測性：OpenTelemetry GenAI 慣例的 LLM span |
 | `utils/cost_telemetry/` | 307 | 每次呼叫的 LLM 成本遙測：token 數 + 估算美金 |
@@ -557,7 +557,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.12 報表、可觀測性與測試治理
 
-> 34 個套件、約 7,230 行。
+> 34 個套件、約 7,235 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -582,7 +582,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/profiler/` | 426 | 逐動作效能剖析器 + 資源剖析器 |
 | `utils/quarantine/` | 200 | 易碎測試隔離區，讓套件執行器跳過已知不穩定案例 |
 | `utils/run_diff/` | 123 | 兩次執行軌跡的差異（LCS 對齊：新增／移除／狀態翻轉／退化） |
-| `utils/run_history/` | 405 | 執行歷史儲存與產出物管理 |
+| `utils/run_history/` | 410 | 執行歷史儲存與產出物管理 |
 | `utils/sarif/` | 163 | 以 SARIF 2.1.0 匯出發現項，供 GitHub／Azure code scanning |
 | `utils/slo/` | 115 | SLO 評估：SLI、錯誤預算與多視窗燃燒率告警 |
 | `utils/smoothing/` | 67 | 數列移動平均平滑 |
@@ -1080,6 +1080,6 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `osx/` | 17 | 919 |
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 837 |
-| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 677 | 52,052 |
-| **總計** | **1,043** | **147,825** |
+| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 677 | 52,129 |
+| **總計** | **1,043** | **147,902** |
 

@@ -10,7 +10,8 @@ gate, so a click lands on a button that is genuinely ready rather than mid-anima
 disabled, or behind a dialog.
 
 Every signal is an injectable callable — ``bbox_provider`` (locate the target),
-``region_sampler`` (pixel-stability token), ``enabled_probe``, ``hit_tester`` — plus
+``region_sampler`` (pixel-stability token), ``enabled_probe`` (``None`` means
+unknown, not disabled), ``hit_tester`` — plus
 an injectable ``clock`` / ``sleep`` via :class:`GateConfig`, so the gate is fully
 deterministic and headless-testable. Imports no ``PySide6``.
 

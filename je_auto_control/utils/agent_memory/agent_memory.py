@@ -85,7 +85,9 @@ class AgentMemory:
                 "VALUES (?, ?, ?, ?, ?)",
                 (str(goal), json.dumps(steps or []), str(outcome),
                  # A bare string is one tag, not its letters.
-                 json.dumps([tags] if isinstance(tags, str) else list(tags or [])),
+                 # Stored as text: a non-string tag broke every later recall.
+                 json.dumps([tags] if isinstance(tags, str)
+                            else [str(tag) for tag in (tags or [])]),
                  time.time()))
             return last_row_id(cur)
 
@@ -139,7 +141,7 @@ class AgentMemory:
 
 def _relevance(row: "sqlite3.Row", terms: List[str]) -> float:
     haystack = " ".join([row["goal"] or "", row["outcome"] or "",
-                         " ".join(json.loads(row["tags"] or "[]"))])
+                         " ".join(str(tag) for tag in json.loads(row["tags"] or "[]"))])
     counts = _tokens(haystack)
     if not counts:
         return 0.0

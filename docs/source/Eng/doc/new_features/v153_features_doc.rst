@@ -26,9 +26,9 @@ Headless API
         x, y = check["snapped"] or (model_action["x"], model_action["y"])
         click(x, y)                                  # snapped onto the real button
 
-``in_bounds(x, y, screen_size)`` is the screen-bounds predicate; ``snap_to_element``
-returns the centre of the element at (or nearest within ``max_dist`` of) a point, or
-``None``; ``validate_action`` combines them, returning ``{ok, reason, snapped}`` —
+``in_bounds(x, y, screen_size)`` is the screen-bounds predicate (fractional
+coordinates compare exactly); ``snap_to_element`` returns the centre of the
+innermost element at (or nearest within ``max_dist`` of) a point, or ``None``; ``validate_action`` combines them, returning ``{ok, reason, snapped}`` —
 rejecting out-of-bounds coordinates and snapping near-misses when ``targets`` are
 supplied. Actions without a coordinate always pass.
 

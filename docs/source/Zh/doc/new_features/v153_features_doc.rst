@@ -22,8 +22,8 @@
         x, y = check["snapped"] or (model_action["x"], model_action["y"])
         click(x, y)                                  # 已吸附到真正的按鈕
 
-``in_bounds(x, y, screen_size)`` 是螢幕邊界判斷式;``snap_to_element`` 回傳某點所在(或在 ``max_dist`` 內最近)
-元素的中心,否則 ``None``;``validate_action`` 結合兩者,回傳 ``{ok, reason, snapped}``——拒絕越界座標,並在提供
+``in_bounds(x, y, screen_size)`` 是螢幕邊界判斷式(小數座標照實比較);``snap_to_element`` 回傳某點所在的最內層
+(或在 ``max_dist`` 內最近)元素的中心,否則 ``None``;``validate_action`` 結合兩者,回傳 ``{ok, reason, snapped}``——拒絕越界座標,並在提供
 ``targets`` 時吸附接近偏離者。沒有座標的動作一律通過。
 
 執行器命令

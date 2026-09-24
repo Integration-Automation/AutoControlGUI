@@ -28,6 +28,7 @@ SOURCE_MANUAL = "manual"
 SOURCE_REST = "rest"
 
 STATUS_RUNNING = "running"
+_LIVE_RUN_WINDOW_S = 24 * 3600
 STATUS_OK = "ok"
 STATUS_ERROR = "error"
 
@@ -273,17 +274,21 @@ class HistoryStore:
         if keep_latest < 0:
             raise ValueError("keep_latest must be >= 0")
         with self._lock:
+            # A run still in progress is kept (finish_run would find no row
+            # and its result was lost) unless it started over a day ago, when
+            # it is an orphan of a process that died mid-run.
+            live_since = time.time() - _LIVE_RUN_WINDOW_S
             paths = [r[0] for r in self._connection().execute(
                 "SELECT artifact_path FROM runs WHERE artifact_path IS NOT NULL"
-                " AND id NOT IN ("
+                " AND (status != ? OR started_at < ?) AND id NOT IN ("
                 "SELECT id FROM runs ORDER BY started_at DESC, id DESC LIMIT ?)",
-                (int(keep_latest),),
+                (STATUS_RUNNING, live_since, int(keep_latest)),
             ).fetchall()]
             cursor = self._connection().execute(
-                "DELETE FROM runs WHERE id NOT IN ("
+                "DELETE FROM runs WHERE (status != ? OR started_at < ?) AND id NOT IN ("
                 "SELECT id FROM runs ORDER BY started_at DESC, id DESC LIMIT ?"
                 ")",
-                (int(keep_latest),),
+                (STATUS_RUNNING, live_since, int(keep_latest)),
             )
             removed = int(cursor.rowcount)
         _remove_artifact_files(paths)

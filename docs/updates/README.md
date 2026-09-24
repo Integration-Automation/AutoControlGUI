@@ -58,6 +58,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260924-48 | 2026-09-24 | Agent and action helpers: assertions are never healed, releases follow healed presses, live actionability gates, innermost grounding | #bugfix #audit #agent | [2026-09](2026-09.md) |
 | U-20260924-47 | 2026-09-24 | Stores set a file aside only when its content is damaged, not when a read fails | #bugfix #audit #remote-desktop | [2026-09](2026-09.md) |
 | U-20260924-46 | 2026-09-24 | Config and plumbing: redacted failure tickets, contained plugin directories, Unicode search terms, sturdier chatops and trace spans | #bugfix #audit #security | [2026-09](2026-09.md) |
 | U-20260924-45 | 2026-09-24 | Workflow and test tooling: merged shard reports keep errors, waits honour deadlines, strict hit policies and predicates, assert_poll is an assertion | #bugfix #audit #testing | [2026-09](2026-09.md) |
@@ -206,7 +207,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | File | Period | Entries |
 |---|---|---:|
-| [2026-09.md](2026-09.md) | 2026-09 | 117 |
+| [2026-09.md](2026-09.md) | 2026-09 | 118 |
 | [2026-08-f.md](2026-08-f.md) | 2026-08 | 1 |
 | [2026-08-e.md](2026-08-e.md) | 2026-08 | 2 |
 | [2026-08-d.md](2026-08-d.md) | 2026-08 | 2 |

@@ -21,7 +21,9 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, List, Mapping, Optional, Sequence, Tuple
 
-from je_auto_control.utils.exception.exceptions import AutoControlException
+from je_auto_control.utils.exception.exceptions import (
+    AutoControlAssertionException, AutoControlException,
+)
 
 
 _CLICK_ACTIONS = frozenset({
@@ -77,8 +79,10 @@ class SelfHealingReplayer:
     def replay(self,
                actions: Sequence[Mapping[str, Any]]) -> ReplayResult:
         out = ReplayResult()
+        moved_presses: Dict[Tuple[Any, Any], Tuple[Any, Any]] = {}
         for idx, action in enumerate(actions):
-            step = self._run_step(idx, action)
+            step = self._run_step(idx, _follow_moved_press(action, moved_presses))
+            _remember_moved_press(action, step, moved_presses)
             out.steps.append(step)
             if step.healed:
                 out.healed_count += 1
@@ -103,6 +107,10 @@ class SelfHealingReplayer:
                         attempts=attempts, healed=healed,
                     )
                 last_error = "verify_step returned False"
+            except AutoControlAssertionException:
+                # A failed assertion is a verdict, not a mislocated element:
+                # it was "healed" to a new position and could end in success.
+                raise
             except (AutoControlException, LookupError,
                     RuntimeError, OSError, ValueError) as error:
                 # A framework failure (locate / assert / action) is a step
@@ -153,6 +161,31 @@ class SelfHealingReplayer:
         if app:
             text = f"{text} in {app}".strip()
         return text
+
+
+def _follow_moved_press(action: Mapping[str, Any],
+                        moved: Dict[Tuple[Any, Any], Tuple[Any, Any]]) -> Mapping[str, Any]:
+    """Send a release to where its healed press went.
+
+    Only the failing step was healed, so the paired release still used the
+    recorded point: press at the healed spot, release at the old one -- a
+    drag instead of a click.
+    """
+    if action.get("action") != "mouse_release":
+        return action
+    target = moved.pop((action.get("x"), action.get("y")), None)
+    if target is None:
+        return action
+    followed = dict(action)
+    followed["x"], followed["y"] = target
+    followed["healed"] = True
+    return followed
+
+
+def _remember_moved_press(action: Mapping[str, Any], step: StepResult,
+                          moved: Dict[Tuple[Any, Any], Tuple[Any, Any]]) -> None:
+    if action.get("action") == "mouse_press" and step.healed and step.success:
+        moved[(action.get("x"), action.get("y"))] = (step.action["x"], step.action["y"])
 
 
 def self_healing_replay(actions: Sequence[Mapping[str, Any]],
