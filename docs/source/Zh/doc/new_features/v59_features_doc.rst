@@ -33,7 +33,8 @@ eXchange)正是這個分級訊號的標準。本功能撰寫 `OpenVEX <https://o
 
 ``vex_statement`` 會驗證輸入:``status`` 必須是 ``VEX_STATUSES`` 之一(``not_affected`` /
 ``affected`` / ``fixed`` / ``under_investigation``);``not_affected`` 陳述必須帶有
-``justification``(``VEX_JUSTIFICATIONS`` 其一)或 ``impact_statement``。``build_vex`` 把
+``justification``(``VEX_JUSTIFICATIONS`` 其一)或 ``impact_statement``,``affected`` 陳述則必須帶有
+``action_statement``(補救方式,OpenVEX 的要求)。``build_vex`` 把
 陳述包成 OpenVEX 文件(傳入明確的 ``timestamp`` 可得到可重現的 ``@id``)。``apply_vex`` 回傳
 存活的發現項目,每個未被抑制的配對都會標註 ``vex_status``。
 

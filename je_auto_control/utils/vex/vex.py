@@ -36,12 +36,16 @@ _SUPPRESSED = frozenset({"not_affected", "fixed"})
 
 
 def _check_statement(status: str, justification: Optional[str],
-                     impact_statement: Optional[str]) -> None:
+                     impact_statement: Optional[str],
+                     action_statement: Optional[str]) -> None:
     if status not in VEX_STATUSES:
         raise AutoControlException(f"invalid VEX status {status!r}")
     if status == "not_affected" and not (justification or impact_statement):
         raise AutoControlException(
             "not_affected requires a justification or impact_statement")
+    # OpenVEX: an "affected" statement MUST say what to do about it.
+    if status == "affected" and not action_statement:
+        raise AutoControlException("affected requires an action_statement")
     if justification and justification not in VEX_JUSTIFICATIONS:
         raise AutoControlException(f"invalid VEX justification {justification!r}")
 
@@ -49,9 +53,14 @@ def _check_statement(status: str, justification: Optional[str],
 def vex_statement(vuln_id: str, status: str, *,
                   products: Optional[Sequence[str]] = None,
                   justification: Optional[str] = None,
-                  impact_statement: Optional[str] = None) -> Dict[str, Any]:
-    """Build one validated OpenVEX statement for ``vuln_id``."""
-    _check_statement(status, justification, impact_statement)
+                  impact_statement: Optional[str] = None,
+                  action_statement: Optional[str] = None) -> Dict[str, Any]:
+    """Build one validated OpenVEX statement for ``vuln_id``.
+
+    ``not_affected`` needs a ``justification`` or ``impact_statement`` and
+    ``affected`` an ``action_statement`` (the remediation), as OpenVEX requires.
+    """
+    _check_statement(status, justification, impact_statement, action_statement)
     statement: Dict[str, Any] = {
         "vulnerability": {"name": str(vuln_id)},
         "products": [{"@id": str(product)} for product in (products or [])],
@@ -61,6 +70,8 @@ def vex_statement(vuln_id: str, status: str, *,
         statement["justification"] = justification
     if impact_statement:
         statement["impact_statement"] = impact_statement
+    if action_statement:
+        statement["action_statement"] = action_statement
     return statement
 
 

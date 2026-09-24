@@ -20,7 +20,7 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 | 指標 | 數值 |
 | --- | ---: |
 | Python 模組總數（含周邊子專案） | 1,051 |
-| 程式碼總行數 | 151,306 |
+| 程式碼總行數 | 151,343 |
 | `je_auto_control/utils/` 子套件數 | 310 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 775 |
 | 套件門面 `__all__` 公開名稱數 | 1,244 |
@@ -629,7 +629,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.14 安全、機密與合規
 
-> 13 個套件、約 2,876 行。
+> 13 個套件、約 2,913 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -637,15 +637,15 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/egress/` | 169 | 無頭 HTTP 用戶端的網路外連允許清單守衛 |
 | `utils/governance/` | 242 | 治理：maker-checker 核准閘門與即時憑證租約 |
 | `utils/license_policy/` | 240 | 以 SBOM 元件評估 SPDX 授權允許／拒絕政策 |
-| `utils/provenance/` | 117 | SLSA 建置來源證明（in-toto v1） |
+| `utils/provenance/` | 126 | SLSA 建置來源證明（in-toto v1） |
 | `utils/rbac/` | 299 | 角色型存取控制：使用者、角色與權杖驗證（尚未接到 REST／MCP） |
-| `utils/redaction/` | 504 | 截圖遮蔽層：規則偵測 + 政策 + 協調器（上傳 VLM 前先遮） |
+| `utils/redaction/` | 508 | 截圖遮蔽層：規則偵測 + 政策 + 協調器（上傳 VLM 前先遮） |
 | `utils/sbom/` | 148 | SBOM（CycloneDX）產生 |
 | `utils/secret_ref/` | 143 | URI scheme 形式的值參照解析 |
 | `utils/secrets/` | 360 | 加密機密儲存庫，供 `${secrets.NAME}` 解析 |
 | `utils/secrets_scan/` | 138 | 掃描 action JSON／資料中應入庫卻硬編碼的機密 |
-| `utils/vex/` | 167 | OpenVEX 陳述撰寫與漏洞分類處置 |
-| `utils/vuln_scan/` | 263 | 以 OSV 比對 SBOM 元件的漏洞（純標準庫） |
+| `utils/vex/` | 178 | OpenVEX 陳述撰寫與漏洞分類處置 |
+| `utils/vuln_scan/` | 276 | 以 OSV 比對 SBOM 元件的漏洞（純標準庫） |
 
 ### 5.4.15 韌性、流量控制與設定
 
@@ -1081,6 +1081,6 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `osx/` | 17 | 925 |
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 837 |
-| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 677 | 54,008 |
-| **總計** | **1,045** | **151,241** |
+| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 677 | 54,045 |
+| **總計** | **1,045** | **151,278** |
 

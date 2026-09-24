@@ -74,6 +74,8 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Changed
 
+- `vex_statement` takes `action_statement=` and requires it for
+  `affected` (OpenVEX).
 - The SBOM prefers PEP 639 `License-Expression`; licence evaluation
   reads every `licenses` entry.
 - `perceptual_diff` discounts anti-aliasing with pixelmatch's test
@@ -359,6 +361,10 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Fixed
 
+- SLSA provenance omits empty metadata timestamps; verification reports
+  a subject without a name instead of raising.
+- PEP 440 ordering of `.postN.devM` and of omitted numbers.
+- Redaction boxes merge until none overlap.
 - OSV ranges with several introduced/fixed pairs match every pair.
 - In-memory approval gates and the credential broker are thread-safe.
 - Print-format IBANs are detected (mod-97 checked).

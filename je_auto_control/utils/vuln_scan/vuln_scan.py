@@ -56,14 +56,26 @@ _PRE_FINAL = (-1, 0)
 
 def _pep440_pre(tokens: List[str]) -> Tuple[Tuple[int, Any], ...]:
     """Identifiers of a PEP 440 pre-release such as ``a1`` or ``rc2.dev3``."""
-    rest = tokens[1:]
-    marker = _PRE_FINAL
-    if "dev" in rest:
-        at = rest.index("dev")
-        dev = rest[at + 1:]
-        marker = (-2, int(dev[0]) if dev and dev[0].isdigit() else 0)
-        rest = rest[:at]
+    rest, marker = _split_dev(tokens[1:])
+    if not rest or not rest[0].isdigit():
+        rest = ["0"] + rest     # PEP 440: an omitted number is 0, so 1.0b is 1.0b0
     return ((0, _PRE_LETTERS[tokens[0]]),) + tuple(_identifier(t) for t in rest) + (marker,)
+
+
+def _split_dev(tokens: List[str]) -> Tuple[List[str], Tuple[int, int]]:
+    """``tokens`` before a ``devN``, and the marker ending the key (``.devN`` sorts first)."""
+    if "dev" not in tokens:
+        return tokens, _PRE_FINAL
+    at = tokens.index("dev")
+    dev = tokens[at + 1:]
+    return tokens[:at], (-2, int(dev[0]) if dev and dev[0].isdigit() else 0)
+
+
+def _pep440_post(tokens: List[str]) -> Tuple[Tuple[int, Any], ...]:
+    """Identifiers of a PEP 440 post-release: ``post1`` above ``post1.dev1``."""
+    rest, marker = _split_dev(tokens[1:])
+    number = int(rest[0]) if rest and rest[0].isdigit() else 0
+    return ((0, number), marker)
 
 
 def _suffix_key(suffix: str) -> Tuple[int, Tuple[Tuple[int, Any], ...]]:
@@ -77,9 +89,10 @@ def _suffix_key(suffix: str) -> Tuple[int, Tuple[Tuple[int, Any], ...]]:
         return _PHASE_FINAL, ()
     head = tokens[0]
     if head == "dev":
-        return _PHASE_DEV, tuple(_identifier(t) for t in tokens[1:])
+        number = tokens[1] if len(tokens) > 1 and tokens[1].isdigit() else "0"
+        return _PHASE_DEV, (_identifier(number),)
     if head in ("post", "rev", "r"):
-        return _PHASE_POST, tuple(_identifier(t) for t in tokens[1:])
+        return _PHASE_POST, _pep440_post(tokens)
     if head in _PRE_LETTERS:
         return _PHASE_PRE, _pep440_pre(tokens)
     return _PHASE_PRE, tuple(_identifier(t) for t in re.split(r"[.]", suffix.lower()) if t)

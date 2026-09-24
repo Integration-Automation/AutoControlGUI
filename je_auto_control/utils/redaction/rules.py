@@ -124,23 +124,27 @@ def build_detector_chain(detectors: Iterable[str],
 
 
 def merge_boxes(boxes: Iterable[BoundingBox]) -> List[BoundingBox]:
-    """Merge overlapping boxes so the blur step does one pass per region."""
-    sorted_boxes = sorted(boxes, key=lambda b: (b[1], b[0]))
-    merged: List[BoundingBox] = []
-    for box in sorted_boxes:
-        if not merged:
-            merged.append(box)
-            continue
-        last = merged[-1]
-        if _overlap(last, box):
-            merged[-1] = (
-                min(last[0], box[0]),
-                min(last[1], box[1]),
-                max(last[2], box[2]),
-                max(last[3], box[3]),
-            )
-        else:
-            merged.append(box)
+    """Merge overlapping boxes so the blur step does one pass per region.
+
+    Merging repeats until no two boxes overlap: comparing each box with the
+    last one only left a box that grew into an earlier one (a long bar
+    joining two others) overlapping it.
+    """
+    merged = sorted(boxes, key=lambda b: (b[1], b[0]))
+    changed = True
+    while changed:
+        changed = False
+        result: List[BoundingBox] = []
+        for box in merged:
+            for index, kept in enumerate(result):
+                if _overlap(kept, box):
+                    result[index] = (min(kept[0], box[0]), min(kept[1], box[1]),
+                                     max(kept[2], box[2]), max(kept[3], box[3]))
+                    changed = True
+                    break
+            else:
+                result.append(box)
+        merged = sorted(result, key=lambda b: (b[1], b[0]))
     return merged
 
 
