@@ -476,13 +476,26 @@ class LanBrowseDialog(QDialog):
                     self.accept()
                     return
 
-    def closeEvent(self, event) -> None:  # noqa: N802 Qt override
+    def _stop_browser(self) -> None:
         if self._browser is not None:
             try:
                 self._browser.stop()
             except (RuntimeError, OSError):
-                pass
+                pass    # reason: the browser is being discarded either way
             self._browser = None
+
+    def done(self, result: int) -> None:  # noqa: D401  # Qt override
+        """Stop browsing however the dialog ends.
+
+        ``accept()`` / ``reject()`` (Use, Cancel, Esc) end in ``done()`` and
+        never reach ``closeEvent``, so each dialog closed that way left a
+        zeroconf browser thread running.
+        """
+        self._stop_browser()
+        super().done(result)
+
+    def closeEvent(self, event) -> None:  # noqa: N802 Qt override
+        self._stop_browser()
         super().closeEvent(event)
 
 

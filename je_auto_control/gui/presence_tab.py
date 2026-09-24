@@ -48,6 +48,10 @@ class PresenceTab(TranslatableMixin, QWidget):
         # Listener fires on every change; the timer is a belt-and-braces
         # refresh in case a listener exception drops us off.
         self._registry.add_listener(self._on_registry_event)
+        # The registry outlives the tab; left registered, it kept calling a
+        # deleted widget after every change.
+        registry, listener = self._registry, self._on_registry_event
+        self.destroyed.connect(lambda *_args: registry.remove_listener(listener))
         self._timer = QTimer(self)
         self._timer.setInterval(5000)
         self._timer.timeout.connect(self.refresh)

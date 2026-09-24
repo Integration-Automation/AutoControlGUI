@@ -317,6 +317,9 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Fixed
 
+- Closing the LAN browse dialog with Use, Cancel or Esc stops its mDNS
+  browser, and a closed presence tab no longer stays registered with the
+  presence registry.
 - Computer use:
   - drags end at the model's `coordinate`;
   - `key` honours `repeat`;
