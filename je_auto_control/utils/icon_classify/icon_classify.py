@@ -16,20 +16,30 @@ geometric features (no model):
 numpy lazily (the module stays importable without them) and reuses
 :func:`visual_match._to_gray`. Imports no ``PySide6``.
 """
-from typing import Any, Dict, Sequence
+from typing import Any, Dict, Sequence, Tuple
 
 # The widget types this classifier can return.
 WIDGET_TYPES = ("radio", "toggle", "checkbox", "text_field", "button", "icon")
 
 
-def _is_round(aspect: float, circ: float) -> bool:
-    """Near-square and circular (a radio button / round dot)."""
-    return 0.7 <= aspect <= 1.4 and circ >= 0.7
+def _is_round(aspect: float, circ: float, vertices: float) -> bool:
+    """Near-square and circular (a radio button / round dot).
+
+    A square's circularity is pi/4 = 0.785, inside the circle range measured
+    on drawn circles (0.80-0.86), so every checkbox read as a radio; a square
+    approximates to 4 polygon vertices and a circle to more.
+    """
+    return 0.7 <= aspect <= 1.4 and circ >= 0.7 and vertices != 4
 
 
-def _is_pill(aspect: float, circ: float) -> bool:
-    """Wide and rounded (a toggle switch)."""
-    return 1.8 <= aspect <= 3.5 and circ >= 0.55
+def _is_pill(aspect: float, circ: float, fill: float) -> bool:
+    """Wide, rounded and filled (a toggle switch's track).
+
+    A hollow rectangle of the same aspect has nearly the same circularity
+    (0.59 vs 0.59, measured), so text fields read as toggles; the track is
+    filled, a text field is not.
+    """
+    return 1.8 <= aspect <= 3.5 and circ >= 0.55 and fill >= 0.3
 
 
 def classify_widget(features: Dict[str, float]) -> str:
@@ -43,38 +53,45 @@ def classify_widget(features: Dict[str, float]) -> str:
     aspect = float(features.get("aspect", 1.0))
     circ = float(features.get("circularity", 0.0))
     fill = float(features.get("fill", 0.0))
-    if _is_round(aspect, circ):
+    vertices = float(features.get("vertices", 0.0))
+    if _is_round(aspect, circ, vertices):
         return "radio"
-    if _is_pill(aspect, circ):
+    if _is_pill(aspect, circ, fill):
         return "toggle"
     if 0.7 <= aspect <= 1.4 and fill <= 0.6:
         return "checkbox"
-    if aspect >= 2.5 and fill <= 0.2:
+    if aspect >= 1.8 and fill <= 0.2:
         return "text_field"
     if aspect >= 1.5 and fill >= 0.2:
         return "button"
     return "icon"
 
 
-def _circularity(binary: Any) -> float:
-    """Circularity (``4*pi*A / P^2``, 1 = circle) of the largest blob."""
+def _shape(binary: Any) -> Tuple[float, int]:
+    """``(circularity, polygon vertices)`` of the largest blob.
+
+    Circularity is ``4*pi*A / P^2`` (1 = circle); the vertices come from
+    ``approxPolyDP`` at 2 % of the perimeter (4 for a square, 8 for a circle,
+    measured on drawn shapes of 5-30 px).
+    """
     import math
 
     import cv2
     contours, _ = cv2.findContours(binary, cv2.RETR_EXTERNAL,
                                    cv2.CHAIN_APPROX_SIMPLE)
     if not contours:
-        return 0.0
+        return 0.0, 0
     largest = max(contours, key=cv2.contourArea)
     area = float(cv2.contourArea(largest))
     perimeter = float(cv2.arcLength(largest, True))
     if perimeter <= 0.0:
-        return 0.0
-    return min(1.0, 4.0 * math.pi * area / (perimeter * perimeter))
+        return 0.0, 0
+    vertices = len(cv2.approxPolyDP(largest, 0.02 * perimeter, True))
+    return min(1.0, 4.0 * math.pi * area / (perimeter * perimeter)), vertices
 
 
 def box_features(source: Any, box: Sequence[int]) -> Dict[str, float]:
-    """Extract ``{aspect, fill, edge_density, circularity}`` for a box (cv2).
+    """Extract ``{aspect, fill, edge_density, circularity, vertices}`` for a box (cv2).
 
     ``aspect`` is width/height, ``fill`` the ink fraction (Otsu foreground),
     ``edge_density`` the Canny-edge fraction, ``circularity`` the largest blob's
@@ -87,17 +104,19 @@ def box_features(source: Any, box: Sequence[int]) -> Dict[str, float]:
     patch = gray[max(0, y):y + h, max(0, x):x + w]
     if patch.size == 0:
         return {"aspect": 0.0, "fill": 0.0, "edge_density": 0.0,
-                "circularity": 0.0}
+                "circularity": 0.0, "vertices": 0}
     _, binary = cv2.threshold(patch, 0, 255,
                               cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
     fill = float((binary > 0).sum()) / patch.size
     edges = cv2.Canny(patch, 50, 150)
     edge_density = float((edges > 0).sum()) / patch.size
+    circularity, vertices = _shape(binary)
     return {
         "aspect": round(w / h, 3) if h else 0.0,
         "fill": round(fill, 3),
         "edge_density": round(edge_density, 3),
-        "circularity": round(_circularity(binary), 3),
+        "circularity": round(circularity, 3),
+        "vertices": vertices,
     }
 
 

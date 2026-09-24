@@ -33,7 +33,8 @@ Headless API
 does the same for in-memory data); ``build_provenance`` wraps the subjects in
 the in-toto v1 / SLSA v1 envelope (``buildDefinition`` + ``runDetails``);
 ``verify_provenance`` re-hashes each named file and returns any digest
-mismatch. It complements ``action_signing`` (which signs action JSON) and
+mismatch; a subject no file was given for is reported too (``actual`` is
+``None``), and ``build_provenance`` refuses two subjects with one name. It complements ``action_signing`` (which signs action JSON) and
 ``sbom`` (which inventories dependencies) — attest the SBOM and signed
 artifacts together.
 

@@ -103,10 +103,31 @@ def write_pyi(target: Path,
 def _render_parameters(sig: Optional[inspect.Signature]) -> str:
     if sig is None:
         return "*args: Any, **kwargs: Any"
+    # The "/" and bare "*" markers inspect.Signature prints: without them a
+    # keyword-only parameter with no default after a defaulted one was a
+    # SyntaxError in the stub, and keyword-only parameters read as positional.
     parts: List[str] = []
-    for param in sig.parameters.values():
+    kinds = [param.kind for param in sig.parameters.values()]
+    for index, param in enumerate(sig.parameters.values()):
+        if _opens_keyword_only(kinds, index):
+            parts.append("*")
         parts.append(_render_param(param))
+        if _closes_positional_only(kinds, index):
+            parts.append("/")
     return ", ".join(parts)
+
+
+def _opens_keyword_only(kinds: List[Any], index: int) -> bool:
+    """A bare ``*`` goes before the first keyword-only parameter (unless ``*args`` is there)."""
+    return (kinds[index] == inspect.Parameter.KEYWORD_ONLY
+            and inspect.Parameter.VAR_POSITIONAL not in kinds
+            and (index == 0 or kinds[index - 1] != inspect.Parameter.KEYWORD_ONLY))
+
+
+def _closes_positional_only(kinds: List[Any], index: int) -> bool:
+    """A ``/`` goes after the last positional-only parameter."""
+    return (kinds[index] == inspect.Parameter.POSITIONAL_ONLY
+            and (index + 1 == len(kinds) or kinds[index + 1] != inspect.Parameter.POSITIONAL_ONLY))
 
 
 def _render_param(param: inspect.Parameter) -> str:
@@ -223,6 +244,9 @@ def _render_docstring(text: str) -> str:
     The stub is checked by the same ``E501`` rule as the package, and a
     handler's first docstring line is not bounded by anything.
     """
+    # Escaped so a backslash, a quote at the end or a """ cannot end the
+    # docstring early and break the stub.
+    text = text.replace("\\", "\\\\").replace('"', '\\"')
     single = f'    """{text}"""\n'
     if len(single) - 1 <= MAX_LINE_LENGTH:
         return single

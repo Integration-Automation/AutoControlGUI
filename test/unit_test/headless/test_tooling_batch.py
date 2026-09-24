@@ -53,7 +53,9 @@ def test_build_server_manifest_core_fields():
 
 def test_manifest_include_tools_embeds_live_list(tmp_path):
     m = build_server_manifest(include_tools=True)
-    meta = m["_meta"][m["name"]]
+    # The registry schema reserves this one key for publisher data (it used to
+    # be the server name).
+    meta = m["_meta"]["io.modelcontextprotocol.registry/publisher-provided"]
     assert meta["toolCount"] == len(meta["tools"]) > 0
     assert any(t.startswith("ac_") for t in meta["tools"])
     path = write_server_manifest(str(tmp_path / "server.json"))

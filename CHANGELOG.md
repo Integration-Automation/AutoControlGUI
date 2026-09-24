@@ -295,6 +295,12 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Fixed
 
+- **Image analysis and packaging**: colour-vision simulation uses Machado
+  (2009) in linear RGB; squares are checkboxes and hollow boxes text fields,
+  not radios / toggles; step repair stops after escalating and does not repeat
+  an action that already changed the screen; the SBOM lists each package once
+  and skips extras; the MCP registry manifest fits the schema; generated stubs
+  keep `*` / `/` markers; provenance verification reports unchecked subjects.
 - **Observation and state**: the emergency-stop key interrupts a sleeping or
   waiting script at once, ignores a press made before it started and works
   more than once; mark labels never overlap or leave the screen; nested

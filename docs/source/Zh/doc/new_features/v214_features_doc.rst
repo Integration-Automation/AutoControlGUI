@@ -6,7 +6,8 @@
 所需的兩個原語。
 
 * :func:`simulate_cvd` ——把 ``(r, g, b)`` 顏色透過二色覺模擬矩陣(``protanopia`` /
-  ``deuteranopia`` / ``tritanopia``)在給定 ``severity``(0 = 不受影響,1 = 完全二色覺)下映射。
+  ``deuteranopia`` / ``tritanopia``)在給定 ``severity``(0 = 不受影響,1 = 完全二色覺)下映射。矩陣採
+  Machado 等人(2009),在線性 RGB 中套用(先把 sRGB 線性化，套用後再編碼回去)。
 * :func:`colors_collide` ——在某 CVD 類型下模擬兩個顏色,並回報它們是否變得太相似而難以區分
   (模擬後的感知 ``redmean`` 距離低於 ``threshold``)。
 * :func:`color_distance` ——底層的 ``redmean`` 色差度量。

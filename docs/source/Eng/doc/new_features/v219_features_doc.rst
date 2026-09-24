@@ -7,7 +7,7 @@ gap is the typing step before it — is this box a checkbox, a radio button, a p
 button, a text field or a toggle? ``icon_classify`` answers that from cheap
 geometric features (no model).
 
-* :func:`box_features` — extract ``{aspect, fill, edge_density, circularity}``
+* :func:`box_features` — extract ``{aspect, fill, edge_density, circularity, vertices}``
   for a box region (the objective measurements).
 * :func:`classify_widget` — pure: map a feature dict to a widget type by
   documented heuristics.
@@ -31,8 +31,8 @@ Headless API
     # From features you already have:
     classify_widget({"aspect": 1.0, "circularity": 0.9, "fill": 0.4})  # 'radio'
 
-The heuristics: a round box (aspect ≈ 1, high circularity) is a ``radio``; a wide
-rounded box is a ``toggle``; a near-square sparse box is a ``checkbox``; a wide
+The heuristics: a round box (aspect ≈ 1, high circularity, not a 4-vertex
+polygon) is a ``radio``; a wide rounded filled box is a ``toggle``; a near-square sparse box is a ``checkbox``; a wide
 hollow box is a ``text_field``; a wide filled box is a ``button``; anything else
 is an ``icon``. Tune by reading ``features`` and applying your own rules where
 the defaults misfire — the measurements are the durable part.

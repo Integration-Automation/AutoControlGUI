@@ -65,8 +65,9 @@ def test_classify_icon_detects_radio_from_pixels():
     cv2.circle(canvas, (20, 20), 13, 0, -1)   # filled round dot
     result = classify_icon(canvas, [4, 4, 32, 32])
     assert result["type"] == "radio"
+    # "vertices" tells a square (4) from a circle; squares used to read as radios.
     assert set(result["features"]) == {"aspect", "fill", "edge_density",
-                                       "circularity"}
+                                       "circularity", "vertices"}
 
 
 def test_box_features_empty_box():
@@ -76,7 +77,7 @@ def test_box_features_empty_box():
     canvas = np.zeros((10, 10), dtype="uint8")
     feats = box_features(canvas, [0, 0, 0, 0])
     assert feats == {"aspect": 0.0, "fill": 0.0, "edge_density": 0.0,
-                     "circularity": 0.0}
+                     "circularity": 0.0, "vertices": 0}
 
 
 # --- wiring (cv2-free) ----------------------------------------------------

@@ -29,7 +29,8 @@ SLSA 建置來源證明(Provenance)
 
 ``subject_for`` 把檔案雜湊成 in-toto subject(``subject_for_bytes`` 對記憶體資料做同樣的事);
 ``build_provenance`` 把 subjects 包進 in-toto v1 / SLSA v1 信封(``buildDefinition`` +
-``runDetails``);``verify_provenance`` 重新雜湊每個具名檔案並回傳任何摘要不符。它與
+``runDetails``);``verify_provenance`` 重新雜湊每個具名檔案並回傳任何摘要不符;沒有提供檔案的 subject 也會列出(``actual`` 為
+``None``),``build_provenance`` 也會拒絕兩個同名的 subject。它與
 ``action_signing``(簽署動作 JSON)及 ``sbom``(盤點相依套件)互補 —— 可一併證明 SBOM 與已簽署的
 產物。
 

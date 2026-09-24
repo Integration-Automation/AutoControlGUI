@@ -20,7 +20,7 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 | 指標 | 數值 |
 | --- | ---: |
 | Python 模組總數（含周邊子專案） | 1,049 |
-| 程式碼總行數 | 148,795 |
+| 程式碼總行數 | 148,917 |
 | `je_auto_control/utils/` 子套件數 | 310 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 774 |
 | 套件門面 `__all__` 公開名稱數 | 1,241 |
@@ -271,7 +271,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.1 執行引擎與腳本資產
 
-> 24 個套件、約 14,223 行。
+> 24 個套件、約 14,247 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -296,7 +296,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/script_vars/` | 197 | 執行期變數作用域與 `${var}` / `${secrets.*}` 插值 |
 | `utils/skill_library/` | 115 | 具名可重用 action 序列（skill）的持久化倉庫 |
 | `utils/state_machine/` | 268 | 宣告式有限狀態機驅動 action JSON |
-| `utils/stubs/` | 287 | 為 `AC_*` 指令面產生型別 stub |
+| `utils/stubs/` | 311 | 為 `AC_*` 指令面產生型別 stub |
 | `utils/test_record/` | 70 | 全域測試紀錄單例，記錄每個動作的參數與例外 |
 | `utils/work_queue/` | 268 | 交易式工作佇列（dispatcher／performer），支撐大量批次執行 |
 
@@ -341,7 +341,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.4 輸入模擬與動作品質
 
-> 22 個套件、約 2,705 行。
+> 22 個套件、約 2,722 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -360,7 +360,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/mouse_path/` | 106 | 多路徑點滑鼠手勢（沿折線移動或拖曳） |
 | `utils/mouse_relative/` | 59 | 相對位移滑鼠移動 |
 | `utils/postcondition/` | 146 | 宣告式的動作預期結果規格，對照畫面驗證 |
-| `utils/step_repair/` | 117 | 失敗／無效動作的修復策略（自我修正迴圈） |
+| `utils/step_repair/` | 134 | 失敗／無效動作的修復策略（自我修正迴圈） |
 | `utils/table_grid_fill/` | 143 | 以 OCR 文字填滿格線表格，取得可定址的表格 |
 | `utils/input_reach/` | 111 | 送出去的輸入到不到得了：桌面鎖定查詢（免費）＋ 實際送一個 F13 確認沒有被過濾（有副作用，只給診斷用） |
 | `utils/keyboard_layout/` | 148 | 向系統問「這個鍵盤配置下每個鍵印出什麼字」（`ToUnicodeEx`），問不到退回 US 對照表 |
@@ -370,7 +370,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.5 影像辨識與畫面分析
 
-> 37 個套件、約 5,593 行。
+> 37 個套件、約 5,612 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -385,7 +385,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/edge_match/` | 115 | 邊緣形狀（Chamfer／距離轉換）樣板比對 |
 | `utils/feature_match/` | 143 | ORB 特徵比對：在旋轉／縮放／主題變更下定位樣板 |
 | `utils/hsv_segment/` | 91 | HSV 色彩空間分割（抗光照的顏色遮罩 + blob 框） |
-| `utils/icon_classify/` | 113 | 從像素形狀判斷一個框是哪一類元件 |
+| `utils/icon_classify/` | 132 | 從像素形狀判斷一個框是哪一類元件 |
 | `utils/image_dedup/` | 90 | 感知雜湊影像去重（Pillow aHash/dHash） |
 | `utils/image_quality/` | 77 | 在 OCR／比對前評分影像品質（銳利度／對比／亮度） |
 | `utils/img_histogram/` | 105 | 顏色直方圖指紋與變化偵測（抗光照） |
@@ -414,7 +414,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.6 OCR 與文字理解
 
-> 19 個套件、約 3,332 行。
+> 19 個套件、約 3,336 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -426,10 +426,10 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/grid_locator/` | 71 | 以 (row, column) 從邊界框定址表格／網格儲存格 |
 | `utils/guardrail/` | 116 | 針對畫面／OCR 文字的啟發式 prompt-injection 防護 |
 | `utils/heading_segment/` | 69 | 判定 OCR 行是標題或內文，建出文件大綱 |
-| `utils/near_dup/` | 105 | 近似重複文字偵測（SimHash／MinHash） |
+| `utils/near_dup/` | 108 | 近似重複文字偵測（SimHash／MinHash） |
 | `utils/ocr/` | 1,126 | OCR 引擎門面 + 三個後端（Tesseract／EasyOCR／PaddleOCR）、版面結構化與跨詞比對（`text_span`） |
 | `utils/pii_text/` | 119 | 自由文字中的 PII 偵測與遮蔽（email／電話／SSN／卡號／IP／IBAN） |
-| `utils/readability/` | 137 | 可讀性評分（Flesch、Flesch-Kincaid、Gunning Fog、SMOG、ARI） |
+| `utils/readability/` | 138 | 可讀性評分（Flesch、Flesch-Kincaid、Gunning Fog、SMOG、ARI） |
 | `utils/reading_flow/` | 119 | 以遞迴 XY-cut 推導欄位感知的閱讀順序 |
 | `utils/search_index/` | 145 | 記憶體內 BM25／TF-IDF 全文檢索 |
 | `utils/text_blocks/` | 88 | 把 OCR 行組成段落與項目符號／編號清單 |
@@ -440,7 +440,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.7 無障礙樹與原生控制項
 
-> 16 個套件、約 4,501 行。
+> 16 個套件、約 4,516 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -452,7 +452,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/ax_tree_walk/` | 118 | 可讀、可定址的無障礙樹後處理（角色名 + 節點路徑） |
 | `utils/contrast_map/` | 120 | 取樣實際顏色以評定畫面文字的可讀性（WCAG） |
 | `utils/control_patterns/` | 88 | 延伸 UIA 控制項模式動作（Expand／Select／Range／Scroll） |
-| `utils/cvd_simulate/` | 125 | 模擬色覺缺陷並標示在該狀況下會撞色的顏色 |
+| `utils/cvd_simulate/` | 140 | 模擬色覺缺陷並標示在該狀況下會撞色的顏色 |
 | `utils/element_repository/` | 113 | 原生 UI 元素的具名定位器倉庫（object repository） |
 | `utils/focus_order/` | 95 | 鍵盤焦點順序：預期 Tab 序列、WCAG 稽核與設定焦點 |
 | `utils/legacy_accessible/` | 45 | MSAA 橋接，處理 UIA 無法建模的舊控制項 |
@@ -493,7 +493,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.9 AI / Agent / LLM
 
-> 13 個套件、約 21,386 行。
+> 13 個套件、約 21,391 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -505,7 +505,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/cost_telemetry/` | 307 | 每次呼叫的 LLM 成本遙測：token 數 + 估算美金 |
 | `utils/cua_action/` | 204 | 標準化 computer-use 動作結構（Anthropic／OpenAI → `AC_*`） |
 | `utils/llm/` | 365 | 自然語言 → action list 規劃器 + Anthropic／null 後端 |
-| `utils/mcp_registry/` | 92 | MCP registry `server.json` 資訊清單產生（可被發現） |
+| `utils/mcp_registry/` | 97 | MCP registry `server.json` 資訊清單產生（可被發現） |
 | `utils/mcp_server/` | 17,675 | **無頭 MCP 伺服器**（16K LOC，預設註冊 677 個工具＝658 個 `ac_*` + 19 個別名）：stdio + HTTP 傳輸、工具工廠與處理器、資源、prompt、稽核、限流、外掛熱重載 |
 | `utils/tool_use_schema/` | 189 | 把 `AC_*` 指令匯出成 Claude／OpenAI 的 tool-use schema |
 | `utils/trajectory_eval/` | 113 | agent 軌跡評估：依評分規準為一次執行打分 |
@@ -629,7 +629,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.14 安全、機密與合規
 
-> 13 個套件、約 2,755 行。
+> 13 個套件、約 2,793 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -637,10 +637,10 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/egress/` | 146 | 無頭 HTTP 用戶端的網路外連允許清單守衛 |
 | `utils/governance/` | 237 | 治理：maker-checker 核准閘門與即時憑證租約 |
 | `utils/license_policy/` | 220 | 以 SBOM 元件評估 SPDX 授權允許／拒絕政策 |
-| `utils/provenance/` | 104 | SLSA 建置來源證明（in-toto v1） |
+| `utils/provenance/` | 117 | SLSA 建置來源證明（in-toto v1） |
 | `utils/rbac/` | 299 | 角色型存取控制：使用者、角色與權杖驗證（尚未接到 REST／MCP） |
 | `utils/redaction/` | 504 | 截圖遮蔽層：規則偵測 + 政策 + 協調器（上傳 VLM 前先遮） |
-| `utils/sbom/` | 118 | SBOM（CycloneDX）產生 |
+| `utils/sbom/` | 143 | SBOM（CycloneDX）產生 |
 | `utils/secret_ref/` | 143 | URI scheme 形式的值參照解析 |
 | `utils/secrets/` | 340 | 加密機密儲存庫，供 `${secrets.NAME}` 解析 |
 | `utils/secrets_scan/` | 133 | 掃描 action JSON／資料中應入庫卻硬編碼的機密 |
@@ -1080,6 +1080,6 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `osx/` | 17 | 919 |
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 837 |
-| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 677 | 52,752 |
-| **總計** | **1,043** | **148,730** |
+| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 677 | 52,874 |
+| **總計** | **1,043** | **148,852** |
 

@@ -58,6 +58,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260924-55 | 2026-09-24 | Image analysis and packaging: Machado CVD simulation, square-aware widget classes, repair that does not re-act, schema-valid registry manifests | #bugfix #audit | [2026-09](2026-09.md) |
 | U-20260924-54 | 2026-09-24 | Observation and state: an emergency stop that wakes a sleeping script, non-overlapping mark labels, strict placeholders, CloudEvents and coordinate spaces | #bugfix #audit | [2026-09](2026-09.md) |
 | U-20260924-53 | 2026-09-24 | File-dialog confirm and popup-watchdog keys resolve to the platform's key names | #bugfix #audit | [2026-09](2026-09.md) |
 | U-20260924-52 | 2026-09-24 | Input and form helpers: platform key names for computer use, linted flow bodies, working gamepad clicks and dpad, RTF code pages | #bugfix #audit #agent | [2026-09](2026-09.md) |
@@ -213,7 +214,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | File | Period | Entries |
 |---|---|---:|
-| [2026-09.md](2026-09.md) | 2026-09 | 124 |
+| [2026-09.md](2026-09.md) | 2026-09 | 125 |
 | [2026-08-f.md](2026-08-f.md) | 2026-08 | 1 |
 | [2026-08-e.md](2026-08-e.md) | 2026-08 | 2 |
 | [2026-08-d.md](2026-08-d.md) | 2026-08 | 2 |

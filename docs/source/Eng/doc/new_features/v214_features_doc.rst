@@ -8,7 +8,9 @@ be indistinguishable, and nothing in the framework could check it.
 
 * :func:`simulate_cvd` — map an ``(r, g, b)`` colour through a dichromat
   simulation matrix (``protanopia`` / ``deuteranopia`` / ``tritanopia``) at a
-  given ``severity`` (0 = unaffected, 1 = full dichromacy).
+  given ``severity`` (0 = unaffected, 1 = full dichromacy). The matrices are
+  Machado et al. (2009), applied in linear RGB (sRGB is linearised first and
+  re-encoded after).
 * :func:`colors_collide` — simulate two colours under a CVD type and report
   whether they become too similar to tell apart (a perceptual ``redmean``
   distance below ``threshold``).
