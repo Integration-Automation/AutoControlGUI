@@ -110,6 +110,11 @@ def _refusal(name: Any, func: Any, event_dict: Dict[str, Any], allow_override: b
         return f"{type(func).__name__} is not a function"
     if name in event_dict and name not in _PLUGIN_OWNED and not allow_override:
         return "it would replace a built-in command"
+    from je_auto_control.utils.executor.flow_control import BLOCK_COMMANDS
+    if name in BLOCK_COMMANDS:
+        # The executor looks block commands up first, so such a plugin was
+        # "registered" and never ran -- allow_override cannot change that.
+        return "it is the name of a block command"
     return ""
 
 

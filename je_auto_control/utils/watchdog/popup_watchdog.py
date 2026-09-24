@@ -134,7 +134,10 @@ class PopupWatchdog:
             if not rule.matcher():
                 return False
             rule.action()
-        except _RULE_ERRORS as error:
+        # Any rule error, as ScreenObserver does: a matcher raising something
+        # off the list (subprocess.TimeoutExpired, sqlite3.Error) killed the
+        # guard thread and every other rule with it.
+        except Exception as error:  # noqa: BLE001  # reason: logged; one rule must not stop the others
             autocontrol_logger.info(
                 "popup watchdog rule %r error: %r", rule.name, error)
             return False

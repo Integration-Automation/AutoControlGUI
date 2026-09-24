@@ -44,6 +44,7 @@ from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.run_history.artifact_manager import (
     capture_error_snapshot,
 )
+from je_auto_control.utils.run_history.run_outcome import run_counting_failures
 from je_auto_control.utils.run_history.history_store import (
     SOURCE_TRIGGER, STATUS_ERROR, STATUS_OK, default_history_store,
 )
@@ -380,7 +381,7 @@ class WebhookTriggerServer:
             # error and _dispatch still answers the request.
             try:
                 actions = read_executable_action_json(trigger.script_path)
-                self._executor(actions, payload)
+                run_counting_failures(lambda: self._executor(actions, payload))
             except Exception as error:  # noqa: BLE001  # reason: any script failure must be recorded and answered
                 status = STATUS_ERROR
                 error_text = repr(error)

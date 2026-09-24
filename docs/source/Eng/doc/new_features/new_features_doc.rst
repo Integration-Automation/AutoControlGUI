@@ -1259,7 +1259,8 @@ Action-JSON commands::
 
 Each fire is recorded in run history as ``trigger`` with source id
 ``webhook:<id>`` so the dashboard surfaces webhook activity alongside
-other triggers. The body is capped at 1 MiB and bearer-token comparison
+other triggers; a fire in which any action failed is recorded as an error
+(with an error snapshot), as scheduled, triggered and hotkey runs are. The body is capped at 1 MiB and bearer-token comparison
 uses :func:`hmac.compare_digest`. Bind to ``127.0.0.1`` unless the
 listener genuinely needs to be reachable from elsewhere on the network.
 

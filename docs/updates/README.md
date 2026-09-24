@@ -58,6 +58,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260925-21 | 2026-09-25 | Runtime flow at its edges: runs with a failed action are recorded as errors, macro parameters are restored after a call, */15 keeps its pace through the repeated DST hour, watchdog rules are contained, re-enabled jobs wait, interval jobs do not drift, replaced triggers, hotkey start/stop, retry backoff, plugin names | #bugfix #scheduler #flow | [2026-09](2026-09.md) |
 | U-20260925-20 | 2026-09-25 | A viewer that disconnects while its upload's FILE_BEGIN is opening the part file no longer leaves the .part file and its handle behind | #bugfix #remote-desktop | [2026-09](2026-09.md) |
 | U-20260925-19 | 2026-09-25 | The action JSON Schema lists block commands and types parameters from their resolved annotations; the linter checks block commands' required arguments | #bugfix #tooling | [2026-09](2026-09.md) |
 | U-20260925-18 | 2026-09-25 | Scripting, recording and locator helpers at their edges: dotted trigger variables resolve, repair verdicts in every form, torn heal-log lines, A/B stats across stores, actions before the first frame, CJK recall, BOM variable files, a new trace per reset | #bugfix #scripting | [2026-09](2026-09.md) |
@@ -263,7 +264,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | File | Period | Entries |
 |---|---|---:|
-| [2026-09.md](2026-09.md) | 2026-09 | 174 |
+| [2026-09.md](2026-09.md) | 2026-09 | 175 |
 | [2026-08-f.md](2026-08-f.md) | 2026-08 | 1 |
 | [2026-08-e.md](2026-08-e.md) | 2026-08 | 2 |
 | [2026-08-d.md](2026-08-d.md) | 2026-08 | 2 |

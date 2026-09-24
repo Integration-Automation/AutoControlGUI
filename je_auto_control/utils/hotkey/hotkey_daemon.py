@@ -23,6 +23,7 @@ from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.run_history.artifact_manager import (
     capture_error_snapshot,
 )
+from je_auto_control.utils.run_history.run_outcome import run_counting_failures
 from je_auto_control.utils.run_history.history_store import (
     SOURCE_HOTKEY, STATUS_ERROR, STATUS_OK, default_history_store,
 )
@@ -137,6 +138,9 @@ class HotkeyDaemon:
         self._execute = executor or execute_action
         self._bindings: Dict[str, HotkeyBinding] = {}
         self._lock = threading.Lock()
+        # start()/stop() from two threads made two backend loops, one of
+        # which could never be stopped (its stop event had been replaced).
+        self._lifecycle_lock = threading.RLock()
         self._thread: Optional[threading.Thread] = None
         self._stop = threading.Event()
 
@@ -169,6 +173,10 @@ class HotkeyDaemon:
     _snapshot = list_bindings
 
     def start(self) -> None:
+        with self._lifecycle_lock:
+            self._start_locked()
+
+    def _start_locked(self) -> None:
         if self._thread is not None and self._thread.is_alive():
             return
         from je_auto_control.utils.hotkey.backends import get_backend
@@ -189,10 +197,11 @@ class HotkeyDaemon:
         self._thread.start()
 
     def stop(self, timeout: float = 2.0) -> None:
-        self._stop.set()
-        if self._thread is not None:
-            self._thread.join(timeout=timeout)
-            self._thread = None
+        with self._lifecycle_lock:
+            self._stop.set()
+            if self._thread is not None:
+                self._thread.join(timeout=timeout)
+                self._thread = None
 
     def _fire_binding(self, binding_id: str) -> None:
         with self._lock:
@@ -204,7 +213,7 @@ class HotkeyDaemon:
         error_text: Optional[str] = None
         try:
             actions = read_executable_action_json(match.script_path)
-            self._execute(actions)
+            run_counting_failures(lambda: self._execute(actions))
         except Exception as error:  # noqa: BLE001  # reason: this runs on the backend's listener thread; any escape ends every hotkey
             # AutoControlException covers the common cases — a missing/renamed
             # script (AutoControlJsonActionException) or an action that raises

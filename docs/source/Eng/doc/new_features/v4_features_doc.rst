@@ -62,7 +62,9 @@ Flow control & variables
 * **Reusable macros** — ``AC_define_macro`` registers a named,
   parameterised action sub-routine; ``AC_call_macro`` invokes it with
   ``${arg}`` bindings — the callable function the loop / if primitives
-  couldn't express.
+  couldn't express. Parameters are the call's own: after the call (a nested
+  or recursive one included) the caller's variables of the same names are
+  back as they were.
 * **In-process parallel** — ``AC_parallel`` runs branch action lists
   concurrently, each on a fresh isolated executor so branches never race
   on shared variables (the in-process complement to the cross-host DAG).

@@ -1181,7 +1181,7 @@ Action JSON 指令::
 
 每次觸發以 ``trigger`` 來源寫入 run history,source id 為
 ``webhook:<id>``,讓 dashboard 把 webhook 活動和其他 trigger 並排
-顯示。Body 上限 1 MiB,bearer token 比對用
+顯示;只要有任何動作失敗,這次觸發就記為錯誤(並附錯誤截圖),排程、觸發器與熱鍵的執行也一樣。Body 上限 1 MiB,bearer token 比對用
 :func:`hmac.compare_digest`。除非你真的需要從網路其他地方連入,
 否則綁定 ``127.0.0.1``。
 

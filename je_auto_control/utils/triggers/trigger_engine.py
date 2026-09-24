@@ -21,6 +21,7 @@ from je_auto_control.utils.timeouts import clamp_poll_interval
 from je_auto_control.utils.run_history.artifact_manager import (
     capture_error_snapshot,
 )
+from je_auto_control.utils.run_history.run_outcome import run_counting_failures
 from je_auto_control.utils.run_history.history_store import (
     SOURCE_TRIGGER, STATUS_ERROR, STATUS_OK, default_history_store,
 )
@@ -358,7 +359,7 @@ class TriggerEngine:
         error_text: Optional[str] = None
         try:
             actions = read_executable_action_json(trigger.script_path)
-            self._execute(actions)
+            run_counting_failures(lambda: self._execute(actions))
         # 這裡刻意攔截所有例外：一個 trigger 失敗必須記錄成 STATUS_ERROR
         # 並繼續，而不是拖垮輪詢執行緒。原本的 tuple 漏掉
         # AutoControlJsonActionException，所以光是改名 script 檔就會讓
@@ -382,7 +383,9 @@ class TriggerEngine:
             )
         with self._lock:
             live = self._triggers.get(trigger.trigger_id)
-            if live is None:
+            # Not just "some trigger with this id": one removed and replaced
+            # under the same id while this run went on is not ours to count.
+            if live is not trigger:
                 return
             live.fired += 1
             live._last_fire = now

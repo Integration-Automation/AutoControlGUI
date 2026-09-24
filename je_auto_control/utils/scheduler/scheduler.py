@@ -15,6 +15,7 @@ from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.run_history.artifact_manager import (
     capture_error_snapshot,
 )
+from je_auto_control.utils.run_history.run_outcome import run_counting_failures
 from je_auto_control.utils.run_history.history_store import (
     SOURCE_SCHEDULER, STATUS_ERROR, STATUS_OK, default_history_store,
 )
@@ -129,8 +130,19 @@ class Scheduler:
             job = self._jobs.get(job_id)
             if job is None:
                 return False
-            job.enabled = bool(enabled)
+            was_enabled, job.enabled = job.enabled, bool(enabled)
+            if job.enabled and not was_enabled:
+                # Its deadline passed while it was paused: without a fresh
+                # one it fired at the moment it was re-enabled.
+                job.next_run_ts = self._fresh_deadline(job)
             return True
+
+    @staticmethod
+    def _fresh_deadline(job: "ScheduledJob") -> float:
+        """The next deadline of ``job`` counted from now."""
+        if job.is_cron and job.cron_expression is not None:
+            return _next_cron_ts(job.cron_expression, time.time())
+        return time.monotonic() + job.interval_seconds
 
     def list_jobs(self) -> List[ScheduledJob]:
         with self._lock:
@@ -213,7 +225,7 @@ class Scheduler:
         error_text: Optional[str] = None
         try:
             actions = read_executable_action_json(job.script_path)
-            self._execute(actions)
+            run_counting_failures(lambda: self._execute(actions))
         # 一個排程工作失敗必須記錄為 STATUS_ERROR 並繼續輪詢,絕不能拖垮
         # 排程執行緒。原本的 tuple 漏掉 AutoControlException——它是幾乎所有
         # action 失敗(找不到視窗/圖片、輸入錯誤)的基底,直接繼承
@@ -261,7 +273,9 @@ class Scheduler:
             if not live.repeat:
                 self._jobs.pop(job.job_id, None)
                 return
-            live.next_run_ts = now_mono + live.interval_seconds
+            # From the previous deadline, not from this tick: each run's
+            # lateness added up, and a 0.7 s job on 0.5 s ticks ran every 1 s.
+            live.next_run_ts = max(live.next_run_ts + live.interval_seconds, now_mono)
 
 
 def _next_cron_ts(expression: CronExpression, now_wall: float) -> float:
@@ -275,11 +289,49 @@ def _next_cron_ts(expression: CronExpression, now_wall: float) -> float:
     its pace through the repeated hour; a slot past in both is skipped.
     """
     candidate = next_match(expression, _dt.datetime.fromtimestamp(now_wall))
-    while True:
+    first: Optional[float] = None
+    while first is None:
         for instant in (candidate, candidate.replace(fold=1)):
             if instant.timestamp() > now_wall:
-                return instant.timestamp()
+                first = instant.timestamp()
+                break
         candidate = next_match(expression, candidate)
+    repeated = _repeated_hour_slot(expression, now_wall)
+    return first if repeated is None else min(first, repeated)
+
+
+_MINUTE = _dt.timedelta(minutes=1)
+
+
+def _is_repeated(moment: "_dt.datetime") -> bool:
+    """Whether ``moment``'s wall time names two instants (clocks fall back)."""
+    return moment.replace(fold=1).timestamp() > moment.replace(fold=0).timestamp()
+
+
+def _repeated_hour_slot(expression: CronExpression, now_wall: float) -> Optional[float]:
+    """In the first pass of an hour about to repeat, the next slot in its second pass.
+
+    Only for a job whose hour field is ``*``, as Vixie cron does: ``*/15``
+    keeps its pace through the repeated hour (next_match walked past it and
+    left a 75-minute gap), while a fixed-hour job still runs once that night.
+    """
+    if len(expression.hours) < 24:
+        return None
+    now = _dt.datetime.fromtimestamp(now_wall)
+    if now.fold or not _is_repeated(now):
+        return None
+    start = now.replace(second=0, microsecond=0)
+    for _ in range(240):
+        if not _is_repeated(start - _MINUTE):
+            break
+        start -= _MINUTE
+    candidate = next_match(expression, start - _MINUTE)
+    while _is_repeated(candidate):
+        instant = candidate.replace(fold=1).timestamp()
+        if instant > now_wall:
+            return instant
+        candidate = next_match(expression, candidate)
+    return None
 
 
 def _check_max_runs(max_runs: Optional[int]) -> Optional[int]:

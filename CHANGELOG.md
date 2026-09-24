@@ -74,6 +74,9 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Changed
 
+- `AC_call_macro` restores the caller's variables of the parameters'
+  names after the call.
+- A plugin command named like a block command is refused.
 - The LLM cost table carries current Claude list prices (Opus 4.7 is
   $5/$25, not $15/$75) and resolves dated or provider-prefixed ids.
 - `vex_statement` takes `action_statement=` and requires it for
@@ -363,6 +366,15 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Fixed
 
+- Scheduled, triggered, hotkey, webhook and e-mail runs in which an
+  action failed are recorded as errors, with an error snapshot.
+- `*/15`-style cron jobs keep their pace through the repeated DST hour.
+- Re-enabled scheduler jobs wait for their next slot; interval jobs no
+  longer drift.
+- A trigger replaced under the same id is not charged for the old run.
+- One popup-watchdog rule's error no longer stops the others.
+- Concurrent hotkey daemon start/stop no longer leaves a loop running.
+- `AC_retry` backoff is capped at 300 s.
 - A remote-desktop upload aborted while it was starting no longer leaves
   its `.part` file and open handle behind.
 - The action JSON Schema lists every command, block commands included,
