@@ -117,12 +117,15 @@ def test_multi_frame_files_are_closed(tmp_path):
     path = tmp_path / "two.gif"
     frames = [Image.new("RGB", (20, 20), c) for c in ("red", "blue")]
     frames[0].save(path, save_all=True, append_images=frames[1:])
+    gc.collect()   # garbage other tests left behind warns here, not below
     with warnings.catch_warnings(record=True) as caught:
         warnings.simplefilter("always", ResourceWarning)
         read_qr_codes(str(path), decoder=lambda _img: [])
         annotate_screenshot(str(path), [], tmp_path / "out.png")
         gc.collect()
-    assert not [w for w in caught if issubclass(w.category, ResourceWarning)]
+    # Only this file counts: a collection can still finalise another test's leak.
+    assert not [w for w in caught if issubclass(w.category, ResourceWarning)
+                and path.name in str(w.message)]
 
 
 def test_generated_executors_survive_a_quote_in_the_path():
@@ -141,13 +144,10 @@ def test_a_log_record_that_cannot_be_formatted_stays_in_the_handler(monkeypatch)
     import logging
     from je_auto_control.utils.watcher.watcher import LogTail
     monkeypatch.setattr(logging, "raiseExceptions", False)
-    logger = logging.getLogger("small_utils_audit")
-    tail = LogTail()
-    logger.addHandler(tail)
-    try:
-        logger.warning("bad %s %s", "only-one")   # must not raise here
-    finally:
-        logger.removeHandler(tail)
+    # A record whose arguments do not fill its format, as a bad logging call makes.
+    record = logging.LogRecord("small_utils_audit", logging.WARNING, __file__, 1,
+                               "bad %s %s", ("only-one",), None)
+    LogTail().handle(record)   # must not raise here
 
 
 def test_a_pixel_the_backend_cannot_read_is_none(monkeypatch):
@@ -163,10 +163,10 @@ def test_a_pixel_the_backend_cannot_read_is_none(monkeypatch):
 
 
 def test_a_failing_notifier_is_not_shown(monkeypatch):
-    import subprocess
+    import types
     from je_auto_control.utils.notify import notifier
     monkeypatch.setattr(notifier.subprocess, "run",
-                        lambda argv, **_kw: subprocess.CompletedProcess(argv, 1))
+                        lambda _argv, **_kw: types.SimpleNamespace(returncode=1))
     assert notifier.notify("t", "m", system="Linux").shown is False
     _argv, env = notifier._notify_spec("Windows", "t", "m")
     assert env["AC_NOTIFY_APP_ID"].endswith("powershell.exe") and "WindowsPowerShell" in env["AC_NOTIFY_APP_ID"]

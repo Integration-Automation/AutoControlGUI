@@ -123,10 +123,12 @@ def test_schema_compat_sees_required_only_fields_and_rejects_unknown_modes():
 
 @pytest.mark.parametrize("finder", [find_text_regions, find_text_lines])
 def test_a_tiny_image_is_contained(finder):
+    # Either no regions or the framework's error; cv2.error must not escape.
     try:
-        assert finder(np.zeros((1, 1), np.uint8)) == []
+        regions = finder(np.zeros((1, 1), np.uint8))
     except AutoControlException:
-        pass
+        return
+    assert regions == []
 
 
 def test_csv_rows_with_different_keys(tmp_path):
