@@ -22,11 +22,16 @@ Sink = Callable[[Dict[str, Any]], None]
 def plan_with_modifiers(steps: Sequence[Dict[str, Any]],
                         modifiers: Sequence[str]) -> List[Dict[str, Any]]:
     """Wrap ``steps`` with press-modifiers (in order) … release-modifiers (reversed)."""
-    mods = list(modifiers)
+    mods = _modifier_list(modifiers)
     plan: List[Dict[str, Any]] = [{"op": "press", "key": mod} for mod in mods]
     plan.extend(dict(step) for step in steps)
     plan.extend({"op": "release", "key": mod} for mod in reversed(mods))
     return plan
+
+
+def _modifier_list(modifiers: Sequence[str]) -> List[str]:
+    """One name is one modifier: ``list("shift")`` pressed s, h, i, f, t."""
+    return [modifiers] if isinstance(modifiers, str) else list(modifiers)
 
 
 def _default_sink(event: Dict[str, Any]) -> None:
@@ -49,7 +54,7 @@ def hold_modifiers(modifiers: Sequence[str], *,
     goes through ``sink`` (default: the real keyboard backend).
     """
     dispatch = sink or _default_sink
-    mods = list(modifiers)
+    mods = _modifier_list(modifiers)
     pressed: List[str] = []
     try:
         # Presses live inside the try so a failure part-way through still

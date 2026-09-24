@@ -59,6 +59,10 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Changed
 
+- `format_annotation` / `emit_annotations` / `AC_ci_annotations` raise
+  `ValueError` for an unknown level instead of emitting `error`.
+  `generate_sop` raises `ValueError` for a step that is neither a list nor a
+  command string.
 - `compare_field_value` / `verify_field_value` / `fill_and_verify` raise
   `ValueError` for an unknown `mode` and accept any case. Profiles of numeric
   columns carry a `non_finite` count.
@@ -306,6 +310,13 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Fixed
 
+- **Traces and reports**:
+  - Replay traces with Unicode line separators read back.
+  - `match_persistence` requires every frame to agree.
+  - `hold_modifiers("shift")` presses Shift, not five letters.
+  - Change boxes off the frame score nothing.
+  - OTLP output is strict JSON with typed array and map values.
+  - `generate_sop` reads the wrapped action-file form.
 - **Utilities**:
   - Dropping files onto a window no longer leaks memory on failure and no longer reports success for window 0.
   - A zero-weight grounding candidate no longer divides by zero.

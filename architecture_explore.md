@@ -20,7 +20,7 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 | 指標 | 數值 |
 | --- | ---: |
 | Python 模組總數（含周邊子專案） | 1,049 |
-| 程式碼總行數 | 150,007 |
+| 程式碼總行數 | 150,069 |
 | `je_auto_control/utils/` 子套件數 | 310 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 775 |
 | 套件門面 `__all__` 公開名稱數 | 1,241 |
@@ -341,7 +341,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.4 輸入模擬與動作品質
 
-> 22 個套件、約 2,761 行。
+> 22 個套件、約 2,766 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -356,7 +356,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/humanize/` | 191 | 擬人輸入：貝茲曲線滑鼠路徑 + 抖動打字節奏 |
 | `utils/ime_state/` | 146 | 讀取即時 IME 組字／轉換狀態，確保 CJK 輸入安全 |
 | `utils/key_hold/` | 109 | 按住按鍵一段時間，或以固定頻率自動重複 |
-| `utils/modifier_state/` | 76 | 跨一組動作按住修飾鍵，並保證安全釋放 |
+| `utils/modifier_state/` | 81 | 跨一組動作按住修飾鍵，並保證安全釋放 |
 | `utils/mouse_path/` | 106 | 多路徑點滑鼠手勢（沿折線移動或拖曳） |
 | `utils/mouse_relative/` | 59 | 相對位移滑鼠移動 |
 | `utils/postcondition/` | 146 | 宣告式的動作預期結果規格，對照畫面驗證 |
@@ -370,7 +370,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.5 影像辨識與畫面分析
 
-> 37 個套件、約 5,635 行。
+> 37 個套件、約 5,637 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -392,7 +392,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/marks_layout/` | 149 | Set-of-Marks 標籤的不重疊排版與可讀配色 |
 | `utils/match_autothresh/` | 114 | Otsu 自動門檻，免去手動調 `min_score` |
 | `utils/match_ensemble/` | 63 | 多樣板共識比對（多張參考圖投票到同一位置） |
-| `utils/match_stability/` | 68 | 比對前的靜止閘門與跨影格的比對持續性 |
+| `utils/match_stability/` | 70 | 比對前的靜止閘門與跨影格的比對持續性 |
 | `utils/match_trust/` | 144 | 樣板比對可信度評分（次峰比 + peak-to-sidelobe） |
 | `utils/monitor_layout/` | 320 | 多螢幕／虛擬桌面幾何（在哪個螢幕、位置、重映射）＋ `logical_frame` 以滑鼠座標空間擷取畫面 |
 | `utils/motion_regions/` | 73 | 兩影格間的局部變化／活動偵測（absdiff） |
@@ -463,7 +463,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.8 元素定位、自我修復與智慧等待
 
-> 23 個套件、約 4,235 行。
+> 23 個套件、約 4,238 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -471,7 +471,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/adaptive_timeout/` | 84 | 由觀測到的步驟耗時推導等待逾時，而非硬猜 |
 | `utils/anchor_locator/` | 457 | 錨點定位器：以空間關係組合 影像／OCR／VLM／a11y 四種來源 |
 | `utils/app_idle/` | 109 | 等應用程式不再忙碌，再驅動下一步 |
-| `utils/change_localize/` | 80 | 把畫面變化歸因到實際改變的元素框 |
+| `utils/change_localize/` | 83 | 把畫面變化歸因到實際改變的元素框 |
 | `utils/critic_features/` | 85 | 每步的 critic 特徵集合與規則式步驟評分 |
 | `utils/element_diff/` | 93 | 跨影格的幾何感知元素比對（穩定 ID、移動追蹤） |
 | `utils/element_parse/` | 106 | 融合並排序畫面元素框（IoU、合併、多來源融合、閱讀順序） |
@@ -493,14 +493,14 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.9 AI / Agent / LLM
 
-> 13 個套件、約 21,438 行。
+> 13 個套件、約 21,442 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
 | `utils/a2a/` | 92 | A2A（agent-to-agent）agent card 產生 |
 | `utils/agent/` | 1,457 | 閉環 Computer-Use Agent 主迴圈 + Anthropic／OpenAI／Computer-Use 三後端 |
 | `utils/agent_memory/` | 154 | agent 的持久化情節記憶（goal → trajectory → outcome） |
-| `utils/agent_replay/` | 63 | 可攜的 agent 軌跡追蹤（記錄 observation→action 並重播） |
+| `utils/agent_replay/` | 67 | 可攜的 agent 軌跡追蹤（記錄 observation→action 並重播） |
 | `utils/agent_trace/` | 168 | agent 可觀測性：OpenTelemetry GenAI 慣例的 LLM span |
 | `utils/cost_telemetry/` | 307 | 每次呼叫的 LLM 成本遙測：token 數 + 估算美金 |
 | `utils/cua_action/` | 204 | 標準化 computer-use 動作結構（Anthropic／OpenAI → `AC_*`） |
@@ -557,7 +557,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.12 報表、可觀測性與測試治理
 
-> 34 個套件、約 7,335 行。
+> 34 個套件、約 7,383 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -566,7 +566,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/assertion/` | 890 | 斷言 DSL：畫面狀態驗證 + 組合子 |
 | `utils/baggage/` | 120 | W3C Baggage 傳遞 |
 | `utils/canonical_log/` | 96 | canonical log line 與結構化 JSON 日誌 |
-| `utils/ci_annotations/` | 62 | 由執行結果輸出 CI 工作流程註記（GitHub Actions） |
+| `utils/ci_annotations/` | 65 | 由執行結果輸出 CI 工作流程註記（GitHub Actions） |
 | `utils/compliance/` | 153 | 合規：把治理證據對應到 SOC2／ISO 27001 控制項 |
 | `utils/failure_hooks/` | 415 | 失敗 → 工單自動化：開 Jira／Linear／GitHub issue |
 | `utils/failure_signature/` | 74 | 把錯誤訊息正規化成穩定的 SHA-256 失敗簽章並分群 |
@@ -575,9 +575,9 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/generate_report/` | 293 | HTML／JSON／XML 三種報表產生器（Template Method） |
 | `utils/media_assert/` | 242 | 媒體斷言：音訊活動與影片動態檢查 |
 | `utils/observability/` | 705 | Prometheus 格式指標 + OpenTelemetry 相容 trace + `/metrics` 匯出伺服器 |
-| `utils/otlp_export/` | 81 | OTLP/JSON span 匯出 |
+| `utils/otlp_export/` | 109 | OTLP/JSON span 匯出 |
 | `utils/percentiles/` | 116 | 可合併的串流延遲摘要與精確百分位數 |
-| `utils/process_doc/` | 85 | 由錄製的 action list 產生逐步 SOP 文件 |
+| `utils/process_doc/` | 102 | 由錄製的 action list 產生逐步 SOP 文件 |
 | `utils/process_mining/` | 123 | 流程探勘：從動作日誌挖掘可自動化的候選 |
 | `utils/profiler/` | 444 | 逐動作效能剖析器 + 資源剖析器 |
 | `utils/quarantine/` | 200 | 易碎測試隔離區，讓套件執行器跳過已知不穩定案例 |
@@ -1080,6 +1080,6 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `osx/` | 17 | 925 |
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 837 |
-| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 677 | 53,364 |
-| **總計** | **1,043** | **149,942** |
+| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 677 | 53,426 |
+| **總計** | **1,043** | **150,004** |
 

@@ -28,11 +28,13 @@ def format_annotation(annotation: Dict[str, Any]) -> str:
     """Format one annotation as a GitHub Actions workflow command.
 
     ``{level, message, file?, line?, col?, title?}``; ``level`` is
-    ``error`` / ``warning`` / ``notice`` (defaults to ``error``).
+    ``error`` / ``warning`` / ``notice`` (defaults to ``error`` when absent).
+    Any other level raises ``ValueError``: it used to become ``error``, so a
+    misspelt ``"warn"`` silently escalated the annotation.
     """
-    level = str(annotation.get("level", "error")).lower()
+    level = str(annotation.get("level") or "error").lower()
     if level not in _LEVELS:
-        level = "error"
+        raise ValueError(f"unknown annotation level {level!r}; expected one of {sorted(_LEVELS)}")
     props = []
     for key, prop in (("file", "file"), ("line", "line"), ("col", "col"),
                       ("title", "title")):
@@ -40,7 +42,8 @@ def format_annotation(annotation: Dict[str, Any]) -> str:
         if value not in (None, ""):
             props.append(f"{prop}={_escape(value)}")
     prefix = f"::{level} " + ",".join(props) if props else f"::{level}"
-    return f"{prefix}::{_escape_message(annotation.get('message', ''))}"
+    message = annotation.get("message")
+    return f"{prefix}::{_escape_message('' if message is None else message)}"
 
 
 def emit_annotations(annotations: List[Dict[str, Any]], *,
