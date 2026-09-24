@@ -116,6 +116,13 @@ def _process_dict_entry(root: ElementTree.Element, key: str, value: Any) -> None
 
 
 def _to_elements_tree(json_dict: Any, root: ElementTree.Element) -> None:
+    if json_dict is None:
+        # <b/> reads back as None; writing it raised TypeError, so the
+        # conversion could not round-trip an empty element.
+        return
+    if isinstance(json_dict, (int, float)) and not isinstance(json_dict, bool):
+        root.text = str(json_dict)
+        return
     if isinstance(json_dict, str):
         root.text = xml_safe_text(json_dict)
         return

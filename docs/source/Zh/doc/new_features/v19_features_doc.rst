@@ -63,5 +63,5 @@
                             "name": "hash"})
     # ssn -> "*****6789"、token -> "***"、name -> sha256 hex
 
-模式:``redact``(``***``)、``hash``(SHA-256 hex)、``partial``(保留末 4
-字)。對應 ``AC_mask_rows`` / ``ac_mask_rows``。
+模式:``redact``(``***``)、``hash``(SHA-256 hex)、``partial``(長度至少 8 的值保留末 4
+字，較短的值全部遮蔽)。對應 ``AC_mask_rows`` / ``ac_mask_rows``。

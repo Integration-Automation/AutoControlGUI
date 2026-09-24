@@ -29,7 +29,8 @@ Excel
     write_workbook("people.xlsx", [{"name": "Ada", "age": 36}], sheet="P")
     rows = read_workbook("people.xlsx", sheet="P")   # [{'name': 'Ada', ...}]
 
-第一列作為 dict 的鍵;``sheet`` 預設為作用中工作表。指令:
+第一列作為 dict 的鍵;``sheet`` 預設為作用中工作表。``write_workbook`` 為每個鍵(依首次出現順序)寫一欄，
+每個值都當資料存：以 ``=`` 開頭的字串是文字，不是 Excel 開檔時會執行的公式。指令:
 ``AC_read_workbook`` / ``AC_write_workbook``(以及 ``ac_read_workbook`` /
 ``ac_write_workbook``)。
 

@@ -12,6 +12,7 @@ imports no ``PySide6``. Each function is pure (two schema dicts in, report out),
 so it is fully deterministic in CI.
 """
 from dataclasses import dataclass
+import json
 from typing import Any, Dict, FrozenSet, List, Mapping
 
 _BACKWARD = frozenset({"backward"})
@@ -53,7 +54,10 @@ def _is_subset(narrow: FrozenSet[str], wide: FrozenSet[str]) -> bool:
         return True
     if not narrow:                               # "any" is not a subset of specific
         return False
-    return narrow <= wide
+    # Every integer is a number, so integer -> number widens rather than
+    # changing the type in both directions.
+    return all(kind in wide or (kind == "integer" and "number" in wide)
+               for kind in narrow)
 
 
 def _diff_requiredness(name: str, old_req: set,
@@ -87,11 +91,17 @@ def _diff_enum(name: str, old_prop: Mapping[str, Any],
     if new_enum is None:
         return [SchemaChange(name, "enum_removed", _FORWARD)]
     changes: List[SchemaChange] = []
-    if set(old_enum) - set(new_enum):
+    old_values, new_values = _enum_keys(old_enum), _enum_keys(new_enum)
+    if old_values - new_values:
         changes.append(SchemaChange(name, "enum_value_removed", _BACKWARD))
-    if set(new_enum) - set(old_enum):
+    if new_values - old_values:
         changes.append(SchemaChange(name, "enum_value_added", _FORWARD))
     return changes
+
+
+def _enum_keys(values: Any) -> set:
+    """Enum members as canonical JSON: objects and arrays are hashable, and true is not 1."""
+    return {json.dumps(value, sort_keys=True) for value in values}
 
 
 def _diff_property(name: str, old_prop: Mapping[str, Any],

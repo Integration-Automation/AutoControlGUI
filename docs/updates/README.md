@@ -58,6 +58,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260924-42 | 2026-09-24 | Data formats: workbook cells stay data, strict JSON Patch / JSONPath, ICU offsets and quoting, subtree ignores, safer masking and parsing | #bugfix #audit #security | [2026-09](2026-09.md) |
 | U-20260924-41 | 2026-09-24 | Time and statistics: bounded sequence tracking, SLO window ends at now, local UNTIL, sane digests and outlier scores | #bugfix #audit | [2026-09](2026-09.md) |
 | U-20260924-40 | 2026-09-24 | Governance and supply chain: parsed license expressions, version-exact VEX, case-folded approvers, newline-proof traceparent | #bugfix #audit #security #supply-chain | [2026-09](2026-09.md) |
 | U-20260924-39 | 2026-09-24 | Code Quality back to green: recorder pacing typed for OpenCV's stubs, redaction key pattern renamed past bandit | #ci #typing | [2026-09](2026-09.md) |
@@ -200,7 +201,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | File | Period | Entries |
 |---|---|---:|
-| [2026-09.md](2026-09.md) | 2026-09 | 111 |
+| [2026-09.md](2026-09.md) | 2026-09 | 112 |
 | [2026-08-f.md](2026-08-f.md) | 2026-08 | 1 |
 | [2026-08-e.md](2026-08-e.md) | 2026-08 | 2 |
 | [2026-08-d.md](2026-08-d.md) | 2026-08 | 2 |

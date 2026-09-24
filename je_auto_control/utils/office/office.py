@@ -77,20 +77,38 @@ def read_workbook(path: str, sheet: str = "") -> List[Dict[str, Any]]:
 
 def write_workbook(path: str, rows: List[Dict[str, Any]],
                    sheet: str = "Sheet1") -> str:
-    """Write ``rows`` (list of dicts) to an ``.xlsx`` file; return the path."""
+    """Write ``rows`` (list of dicts) to an ``.xlsx`` file; return the path.
+
+    The columns are every key, in order of first appearance. Every value is
+    written as data: a string starting with ``=`` is stored as text, not as
+    a formula Excel would run when the file is opened.
+    """
     openpyxl = _openpyxl()
     workbook = openpyxl.Workbook()
     worksheet = workbook.active
     worksheet.title = sheet
     rows = list(rows)
     if rows:
-        keys = list(rows[0].keys())
-        worksheet.append(keys)
+        # Keys missing from the first row were dropped from every row.
+        keys = list(dict.fromkeys(key for row in rows for key in row))
+        _append_as_data(worksheet, keys)
         for row in rows:
-            worksheet.append([row.get(key) for key in keys])
+            _append_as_data(worksheet, [row.get(key) for key in keys])
     target = Path(path).expanduser()
     workbook.save(str(target))
     return str(target.resolve())
+
+
+def _append_as_data(worksheet: Any, values: List[Any]) -> None:
+    """Append a row, keeping strings that look like formulas as text.
+
+    openpyxl turns any string starting with "=" into a formula, so a scraped
+    value such as ``=HYPERLINK(...)`` or ``=cmd|...`` ran in the spreadsheet.
+    """
+    worksheet.append(values)
+    for cell in worksheet[worksheet.max_row]:
+        if cell.data_type == "f":
+            cell.data_type = "s"
 
 
 # --- Word (.docx) ---------------------------------------------------------

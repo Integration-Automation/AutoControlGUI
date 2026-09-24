@@ -292,6 +292,13 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Fixed
 
+- **Data formats**: `write_workbook` stores formula-looking strings as text
+  and writes every key's column; malformed JSON Patch operations and pointer
+  escapes raise `PatchError`; unsupported JSONPath selectors and filter values
+  raise, and object filters select member values; ICU plural offsets, quoted
+  apostrophes, empty branches and stray braces are handled; XML empty elements
+  round-trip; `integer` -> `number` is a widening; `ignore` covers subtrees;
+  short values are fully masked; locale parsing is strict.
 - **Time and statistics**: sequence tracking stores only outstanding gaps and
   refuses jumps beyond `max_gap`; the SLO window ends at `now`; a UTC `UNTIL`
   is converted to local time and huge `INTERVAL`s are rule errors; the latency

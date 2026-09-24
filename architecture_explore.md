@@ -20,7 +20,7 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 | 指標 | 數值 |
 | --- | ---: |
 | Python 模組總數（含周邊子專案） | 1,049 |
-| 程式碼總行數 | 147,360 |
+| 程式碼總行數 | 147,496 |
 | `je_auto_control/utils/` 子套件數 | 310 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 773 |
 | 套件門面 `__all__` 公開名稱數 | 1,241 |
@@ -598,7 +598,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.13 資料來源、結構驗證與 i18n
 
-> 24 個套件、約 4,124 行。
+> 24 個套件、約 4,260 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -606,26 +606,26 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/config_schema/` | 109 | 型別化設定結構驗證 |
 | `utils/data_drift/` | 125 | 分布漂移偵測 |
 | `utils/data_profile/` | 121 | 資料剖析與結構推斷 |
-| `utils/data_quality/` | 186 | 資料品質：列結構驗證、欄位擷取、遮蔽 |
+| `utils/data_quality/` | 201 | 資料品質：列結構驗證、欄位擷取、遮蔽 |
 | `utils/data_source/` | 192 | 資料驅動執行：從 CSV／JSON／SQLite／Excel 載入資料列 |
 | `utils/dataset_diff/` | 89 | 表格資料列差異比對（CDC 風格） |
 | `utils/gettext_catalog/` | 296 | GNU gettext 目錄 I/O（解析 .po、編譯／讀取 .mo、訊息查詢） |
 | `utils/i18n_test/` | 196 | 國際化／在地化測試輔助 |
-| `utils/json_contract/` | 135 | JSON 契約／快照比對：`match_json`、`diff_json`、`snapshot_json` |
-| `utils/json_patch/` | 322 | JSON Pointer（6901）、JSON Patch（6902）與 Merge Patch（7386） |
+| `utils/json_contract/` | 145 | JSON 契約／快照比對：`match_json`、`diff_json`、`snapshot_json` |
+| `utils/json_patch/` | 352 | JSON Pointer（6901）、JSON Patch（6902）與 Merge Patch（7386） |
 | `utils/json_schema/` | 419 | JSON Schema（Draft 2020-12 子集）驗證 |
-| `utils/jsonpath/` | 225 | 精簡 JSONPath 查詢 |
+| `utils/jsonpath/` | 242 | 精簡 JSONPath 查詢 |
 | `utils/list_format/` | 72 | 地區感知清單格式化（CLDR 風格的「A、B 和 C」） |
 | `utils/locale_collation/` | 128 | 地區感知字串排序（決定性多層排序鍵） |
-| `utils/locale_parse/` | 68 | 地區感知數字／貨幣／日期解析與格式化（選用 babel） |
-| `utils/message_format/` | 236 | ICU-lite MessageFormat（plural／select／selectordinal） |
-| `utils/office/` | 162 | Office 文件無頭讀寫（Excel／Word／PowerPoint） |
+| `utils/locale_parse/` | 79 | 地區感知數字／貨幣／日期解析與格式化（選用 babel） |
+| `utils/message_format/` | 254 | ICU-lite MessageFormat（plural／select／selectordinal） |
+| `utils/office/` | 180 | Office 文件無頭讀寫（Excel／Word／PowerPoint） |
 | `utils/pdf/` | 115 | PDF 讀取與斷言（選用 pypdf 後端） |
 | `utils/referential/` | 75 | 跨資料集的參照完整性檢查 |
-| `utils/schema_compat/` | 162 | JSON Schema 相容性分級 |
+| `utils/schema_compat/` | 172 | JSON Schema 相容性分級 |
 | `utils/sql/` | 84 | 對 SQLite 的臨時唯讀 SQL 查詢 |
 | `utils/test_data/` | 205 | 帶種子的合成測試資料產生（純標準庫） |
-| `utils/xml/` | 270 | XML 檔讀寫與結構變更（`defusedxml`） |
+| `utils/xml/` | 277 | XML 檔讀寫與結構變更（`defusedxml`） |
 
 ### 5.4.14 安全、機密與合規
 
@@ -1080,6 +1080,6 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `osx/` | 17 | 919 |
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 837 |
-| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 677 | 51,522 |
-| **總計** | **1,043** | **147,295** |
+| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 677 | 51,658 |
+| **總計** | **1,043** | **147,431** |
 

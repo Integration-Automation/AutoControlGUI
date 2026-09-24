@@ -9,7 +9,9 @@ awkward to extract from. This adds a focused JSONPath subset:
 * ``[n]`` / ``[-n]``   list index (negative from the end)
 * ``*`` / ``[*]``      wildcard (all members / all elements)
 * ``..``               recursive descent
-* ``[?(@.k op v)]``    filter array elements (``op`` ∈ == != < <= > >=);
+* ``[?(@.k op v)]``    filter array elements or object member values
+  (``op`` ∈ == != < <= > >=; ``v`` a JSON number, quoted string, true,
+  false or null);
   ``@.a.b`` reaches into nested objects and ``[?(@.k)]`` tests that ``k``
   exists. Values of different types never compare equal (``true != 1``).
 
@@ -32,6 +34,9 @@ _COMPARATORS = {
 # no pattern has two quantifiers competing for the same characters.
 _FILTER_FIELD = re.compile(r"@\.([\w-]+(?:\.[\w-]+)*)")
 _OPERATORS = ("==", "!=", "<=", ">=", "<", ">")
+_JSON_NUMBER = re.compile(r"-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?")
+_LITERALS = {"true": True, "false": False, "null": None}
+_BARE_KEY = re.compile(r"[\w-]+")
 _ABSENT = object()
 
 
@@ -39,17 +44,20 @@ def _parse_value(raw: str) -> Any:
     raw = raw.strip()
     if raw[:1] in "'\"" and raw[-1:] in "'\"":
         return raw[1:-1]
-    for caster in (int, float):
-        try:
-            return caster(raw)
-        except ValueError:
-            continue
-    return {"true": True, "false": False, "null": None}.get(raw, raw)
+    if _JSON_NUMBER.fullmatch(raw):
+        return float(raw) if any(ch in raw for ch in ".eE") else int(raw)
+    if raw in _LITERALS:
+        return _LITERALS[raw]
+    # "1 && @.b==2" used to be compared as that string and match nothing,
+    # and Python-only spellings (1_000, nan, inf) were accepted.
+    raise ValueError(f"unsupported JSONPath filter value {raw!r}")
 
 
 def _parse_bracket(inner: str) -> Tuple[str, Any]:
     """Turn the text inside ``[...]`` into a token."""
     inner = inner.strip()
+    if not inner:
+        raise ValueError("empty JSONPath selector []")
     if inner == "*":
         return ("wild", None)
     if inner.startswith("?"):
@@ -57,10 +65,12 @@ def _parse_bracket(inner: str) -> Tuple[str, Any]:
         return ("filter", _parse_filter(body, inner))
     if inner[:1] in "'\"" and inner[-1:] in "'\"":
         return ("key", inner[1:-1])
-    try:
+    if re.fullmatch(r"-?\d+", inner):
         return ("index", int(inner))
-    except ValueError:
-        return ("key", inner)
+    if not _BARE_KEY.fullmatch(inner):
+        # Slices ([0:2]), unions ([0,1]) and [] were looked up as keys.
+        raise ValueError(f"unsupported JSONPath selector [{inner}]")
+    return ("key", inner)
 
 
 def _parse_filter(body: str, inner: str) -> Tuple[Tuple[str, ...], Any, Any]:
@@ -181,7 +191,14 @@ def _on_wild(node: Any, _arg: Any) -> List[Any]:
 
 
 def _on_filter(node: Any, arg: Any) -> List[Any]:
-    elements = node if isinstance(node, list) else [node]
+    # RFC 9535: a filter selects among an array's elements or an object's
+    # member values; it used to test the object itself.
+    if isinstance(node, dict):
+        elements = list(node.values())
+    elif isinstance(node, list):
+        elements = node
+    else:
+        return []
     return [item for item in elements if _match_filter(item, arg)]
 
 
