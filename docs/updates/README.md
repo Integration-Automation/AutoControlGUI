@@ -58,6 +58,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260925-35 | 2026-09-25 | SonarCloud's reliability gate failed on the OpenAI backend's first-choice read; it now takes the choice without indexing | #ci #agent | [2026-09-d](2026-09-d.md) |
 | U-20260925-34 | 2026-09-25 | Window and OS helpers at their edges: file dialogs need the exact title and the front before typing, watchdog keys go to the popup, psutil and regex errors are framework errors, empty needles are refused, file drops use absolute paths, the Window Manager acts on the selected window; input paths Jeffrey_RPA runs are recorded, not changed | #bugfix #windows #gui | [2026-09-d](2026-09-d.md) |
 | U-20260925-33 | 2026-09-25 | Integration helpers at their edges: secrets nested in arguments are masked, credentials stay behind on redirects, assert_http and config sync go through http_client, Office / S3 / SQLite errors stay in the framework family, the IMAP trigger fires once per message and names any mailbox, cassettes keep no credentials | #bugfix #security #integration | [2026-09-d](2026-09-d.md) |
 | U-20260925-32 | 2026-09-25 | Two new audit tests failed CI: the window probe needs qt_material, which the headless jobs lack, and 3.14 on Linux and macOS parses JSON nested 50,000 deep | #testing #ci | [2026-09-d](2026-09-d.md) |
@@ -277,7 +278,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | File | Period | Entries |
 |---|---|---:|
-| [2026-09-d.md](2026-09-d.md) | 2026-09 | 3 |
+| [2026-09-d.md](2026-09-d.md) | 2026-09 | 4 |
 | [2026-09-c.md](2026-09-c.md) | 2026-09 | 38 |
 | [2026-09-b.md](2026-09-b.md) | 2026-09 | 68 |
 | [2026-09.md](2026-09.md) | 2026-09 | 79 |

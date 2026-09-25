@@ -122,10 +122,9 @@ class OpenAIAgentBackend(AgentBackend):
         self._pending_tool_call_id = None
 
     def _handle_response(self, response: Any) -> Dict[str, Any]:
-        choices = list(getattr(response, "choices", None) or [])
-        if not choices:
+        choice = next(iter(getattr(response, "choices", None) or ()), None)
+        if choice is None:
             raise AgentBackendError("openai returned no choices")
-        choice = choices[0]
         message = choice.message
         _raise_if_refused(choice)
         tool_calls = getattr(message, "tool_calls", None) or []
