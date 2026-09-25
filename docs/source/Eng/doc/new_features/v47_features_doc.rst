@@ -35,6 +35,7 @@ Executor command
 ----------------
 
 ``AC_mine_actions`` takes ``actions`` (a list, or a JSON-string list from the
-visual builder) plus ``min_len`` / ``max_len`` / ``min_count`` and returns
+visual builder) plus ``min_len`` / ``max_len`` / ``min_count`` (``min_len`` and
+``min_count`` at least 1, ``max_len`` at least ``min_len``, else ``ValueError``) and returns
 ``{total_actions, patterns, candidates}``. The same operation is exposed as the
 MCP tool ``ac_mine_actions`` and as a Script Builder command under **Report**.

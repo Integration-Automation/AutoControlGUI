@@ -173,7 +173,13 @@ def extract_fields(text: str, fields: Optional[List[str]] = None,
 # --- masking --------------------------------------------------------------
 
 def _unique_key(value: Any) -> Any:
-    """A set key for ``value``; lists and dicts (unhashable) by their JSON."""
+    """A set key for ``value``; lists and dicts (unhashable) by their JSON.
+
+    A bool is kept apart from the number it equals: ``True`` and ``1`` were
+    reported as duplicates of each other.
+    """
+    if isinstance(value, bool):
+        return ("bool", value)
     try:
         hash(value)
     except TypeError:

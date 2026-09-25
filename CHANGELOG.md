@@ -15,6 +15,7 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Added
 
+- `HistoryStore.list_runs(statuses=...)` and `FINISHED_STATUSES`.
 - `element_box()` (`utils.accessibility.element`): an element's
   `(left, top, width, height)` from `bbox`, `bounds` or `x/y/width/height`.
 - The MCP server speaks the stateless protocol revision 2026-07-28 over
@@ -89,6 +90,13 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 - `find_color_regions`, `segment_hsv` and `dominant_hue_regions` return
   screen coordinates for blobs found in a grabbed `region` (they were
   relative to the region's corner); a supplied `haystack` keeps its pixels.
+- `psi` / `ks_two_sample` / `detect_drift` raise `ValueError` for NaN.
+- `profile_rows` reports `mixed` for a column with no single type, and
+  `infer_schema` gives it no `type` rule; int columns have exact bounds.
+- `diff_runs` compares a 0 s step as 0.1 s (`ratio` `None`) and skips
+  non-finite durations.
+- `find_repeated_sequences` / `mine_action_log` and `Baggage` refuse empty
+  lengths, counts and keys with `ValueError`.
 - `validate_config` / `ConfigSchema.from_dict` raise `ValueError` for an
   unknown field type, and a `str` field rejects `None` and containers.
 - Search terms: runs of kana, CJK ideographs and Hangul are indexed as
@@ -441,6 +449,11 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Fixed
 
+- Test selection, sharding and flakiness read finished runs, so runs
+  killed mid-flight no longer hide a flow's history.
+- `find_lines` finds lines shorter than 50 px and reads 16-bit images;
+  `annotate_screenshot` keeps 16-bit and float tones; profiles survive huge
+  values; `True` and `1` are distinct values.
 - Script Builder `region` hints name the convention each command reads:
   `[x, y, width, height]` for the matchers, OCR and most vision commands,
   `[left, top, right, bottom]` for the colour, histogram, SSIM and QR

@@ -15,13 +15,17 @@ on synthetic arrays. ``cv2.HoughLinesP`` is base OpenCV; OpenCV + NumPy come in 
 import math
 from typing import Any, Dict, List, Optional, Sequence
 
+from je_auto_control.utils.preprocess.preprocess import _as_uint8
 from je_auto_control.utils.visual_match.visual_match import (
-    _haystack_gray_with_origin, _to_screen,
+    _contain_cv2_error, _haystack_gray_with_origin, _to_screen,
 )
 
 ImageSource = Any
 _CANNY_LOW = 50
 _CANNY_HIGH = 150
+# Hough accumulator votes a segment needs, bounded around min_length / 2.
+_MIN_VOTES = 10
+_MAX_VOTES = 50
 
 
 def _orientation(angle: float) -> str:
@@ -36,11 +40,16 @@ def _orientation(angle: float) -> str:
 def _segments(gray, min_length: int, max_gap: int):
     import cv2
     import numpy as np
-    edges = cv2.Canny(gray, _CANNY_LOW, _CANNY_HIGH)
-    return cv2.HoughLinesP(edges, 1, np.pi / 180, threshold=50,
+    # Canny takes 8-bit only: a 16-bit or float image raised cv2.error.
+    edges = cv2.Canny(_as_uint8(gray), _CANNY_LOW, _CANNY_HIGH)
+    # A fixed 50-vote threshold dropped every line under ~50 px whatever
+    # min_length asked for; half the requested length allows for gaps.
+    threshold = max(_MIN_VOTES, min(_MAX_VOTES, int(min_length) // 2))
+    return cv2.HoughLinesP(edges, 1, np.pi / 180, threshold=threshold,
                            minLineLength=int(min_length), maxLineGap=int(max_gap))
 
 
+@_contain_cv2_error
 def find_lines(haystack: Optional[ImageSource] = None, *,
                region: Optional[Sequence[int]] = None, min_length: int = 80,
                max_gap: int = 10, orientation: str = "any"

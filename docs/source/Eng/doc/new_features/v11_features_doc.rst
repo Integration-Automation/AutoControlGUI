@@ -68,6 +68,8 @@ store, then run the riskiest first (or only the top-k)::
     risky = select_flows(["login", "checkout", "report"], k=2)
 
 The score is ``0.5*failure_rate + 0.2*last_failed + 0.2*flakiness +
-0.1*staleness``; a never-run flow scores ``0.8`` (untested is risky).
+0.1*staleness`` over the newest ``window`` finished runs (runs still marked
+running are not counted); a never-run flow scores ``0.8`` (untested is risky),
+and a flow listed twice is ranked once.
 Exposed as ``AC_rank_tests`` / ``AC_select_tests`` and the
 ``ac_rank_tests`` / ``ac_select_tests`` MCP tools.

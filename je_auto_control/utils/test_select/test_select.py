@@ -26,9 +26,6 @@ _WEIGHT_STALE = 0.1
 _UNTESTED_SCORE = 0.8
 _STALE_DAYS = 30.0
 _SECONDS_PER_DAY = 86400.0
-_FINISHED = ("ok", "error")
-#: Extra rows read per flow past ``window``: running rows are not scored.
-_RUNNING_HEADROOM = 16
 
 
 def _open_store(history_path: Optional[str]):
@@ -46,10 +43,13 @@ def _runs_by_flow(store: Any, flows: List[str], limit: int) -> Dict[str, List[An
     """Each flow's newest runs, read per flow.
 
     One global newest-N read let a flow's runs fall behind N unrelated runs,
-    and the flow then scored as never run.
+    and the flow then scored as never run. Only finished runs are read: runs
+    killed mid-flight stay ``running`` forever, and more of them than a fixed
+    head-room hid the flow's real history the same way.
     """
-    return {flow: store.list_runs(limit=limit, script_path=flow)
-            for flow in dict.fromkeys(flows)}
+    from je_auto_control.utils.run_history.history_store import FINISHED_STATUSES
+    return {flow: store.list_runs(limit=limit, script_path=flow, statuses=FINISHED_STATUSES)
+            for flow in flows}
 
 
 def _flaky(chrono: List[str]) -> tuple:
@@ -62,7 +62,7 @@ def _flaky(chrono: List[str]) -> tuple:
 
 def _score_flow(records: List[Any], window: int,
                 now: float) -> Dict[str, Any]:
-    finished = [r for r in records if r.status in _FINISHED][:window]
+    finished = records[:window]
     if not finished:
         return {"runs": 0, "failures": 0, "last_status": None,
                 "flaky": False, "score": _UNTESTED_SCORE}
@@ -88,12 +88,14 @@ def rank_flows(flows: List[str], *, history_path: Optional[str] = None,
     A flow absent from history scores ``0.8`` (untested is treated as
     risky). ``window`` caps how many recent runs per flow are considered.
     """
-    flows = list(flows)
+    flows = list(dict.fromkeys(flows))   # a flow listed twice ran twice
+    window = int(window)
+    if window < 1:
+        raise ValueError(f"window must be at least 1, got {window}")
     store, owned = _open_store(history_path)
     now = time.time()
     try:
-        # Head-room past ``window`` for rows still running, which are skipped.
-        grouped = _runs_by_flow(store, flows, int(window) + _RUNNING_HEADROOM)
+        grouped = _runs_by_flow(store, flows, window)
     finally:
         if owned:
             store.close()

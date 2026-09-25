@@ -20,7 +20,7 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 | 指標 | 數值 |
 | --- | ---: |
 | Python 模組總數（含周邊子專案） | 1,061 |
-| 程式碼總行數 | 155,195 |
+| 程式碼總行數 | 155,327 |
 | `je_auto_control/utils/` 子套件數 | 310 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 775 |
 | 套件門面 `__all__` 公開名稱數 | 1,244 |
@@ -371,18 +371,18 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.5 影像辨識與畫面分析
 
-> 37 個套件、約 5,988 行。
+> 37 個套件、約 6,014 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
-| `utils/annotate/` | 121 | 截圖標註：畫框、highlight、箭頭、標籤 |
+| `utils/annotate/` | 138 | 截圖標註：畫框、highlight、箭頭、標籤 |
 | `utils/barcode/` | 59 | 一維條碼（EAN／UPC）解碼，解碼器可注入 |
 | `utils/color_match/` | 151 | 在 HSV 通道上做顏色感知的樣板比對 |
 | `utils/color_region/` | 107 | 以顏色定位畫面區域（遮罩 + 連通元件） |
 | `utils/color_stats/` | 103 | 區域顏色統計：平均色與主色 |
 | `utils/coordinate_space/` | 93 | 模型網格座標與實體像素之間的座標空間對映 |
 | `utils/cv2_utils/` | 838 | OpenCV 基礎層：擷取後端選擇（`screen_grabber`，Pillow／mss 或平台後端）、截圖、`[left, top, right, bottom]` 區域擷取（`region_capture`，Windows 經 `grab_logical` 涵蓋所有螢幕）、樣板比對（走 `grab_logical`，涵蓋所有螢幕）、螢幕錄影、影片錄製（兩者都經 `frame_clock` 依 fps 配速）、連通元件、影像堆疊的取用口（`optional`，Windows arm64 沒有 wheel 時語意報錯）、非 ASCII 路徑也讀寫得到的影像檔存取（`image_file`） |
-| `utils/edge_lines/` | 122 | 以 Hough 轉換偵測線條／格線／分隔線 |
+| `utils/edge_lines/` | 131 | 以 Hough 轉換偵測線條／格線／分隔線 |
 | `utils/edge_match/` | 115 | 邊緣形狀（Chamfer／距離轉換）樣板比對 |
 | `utils/feature_match/` | 143 | ORB 特徵比對：在旋轉／縮放／主題變更下定位樣板 |
 | `utils/hsv_segment/` | 104 | HSV 色彩空間分割（抗光照的顏色遮罩 + blob 框） |
@@ -558,40 +558,40 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.12 報表、可觀測性與測試治理
 
-> 34 個套件、約 7,546 行。
+> 34 個套件、約 7,591 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
 | `utils/anomaly/` | 114 | 單一序列異常偵測 |
 | `utils/approval/` | 118 | Approval testing：以核可基準線驗證產出物 |
 | `utils/assertion/` | 887 | 斷言 DSL：畫面狀態驗證 + 組合子 |
-| `utils/baggage/` | 120 | W3C Baggage 傳遞 |
+| `utils/baggage/` | 123 | W3C Baggage 傳遞 |
 | `utils/canonical_log/` | 96 | canonical log line 與結構化 JSON 日誌 |
 | `utils/ci_annotations/` | 65 | 由執行結果輸出 CI 工作流程註記（GitHub Actions） |
 | `utils/compliance/` | 166 | 合規：把治理證據對應到 SOC2／ISO 27001 控制項 |
 | `utils/failure_hooks/` | 415 | 失敗 → 工單自動化：開 Jira／Linear／GitHub issue |
 | `utils/failure_signature/` | 76 | 把錯誤訊息正規化成穩定的 SHA-256 失敗簽章並分群 |
 | `utils/flake_cluster/` | 103 | 以共同失敗 Jaccard 相似度為易碎測試分群 |
-| `utils/flakiness/` | 150 | 以執行歷史分析不穩定測試 |
+| `utils/flakiness/` | 151 | 以執行歷史分析不穩定測試 |
 | `utils/generate_report/` | 294 | HTML／JSON／XML 三種報表產生器（Template Method） |
 | `utils/media_assert/` | 268 | 媒體斷言：音訊活動與影片動態檢查 |
 | `utils/observability/` | 710 | Prometheus 格式指標 + OpenTelemetry 相容 trace + `/metrics` 匯出伺服器 |
 | `utils/otlp_export/` | 109 | OTLP/JSON span 匯出 |
 | `utils/percentiles/` | 119 | 可合併的串流延遲摘要與精確百分位數 |
 | `utils/process_doc/` | 108 | 由錄製的 action list 產生逐步 SOP 文件 |
-| `utils/process_mining/` | 123 | 流程探勘：從動作日誌挖掘可自動化的候選 |
+| `utils/process_mining/` | 131 | 流程探勘：從動作日誌挖掘可自動化的候選 |
 | `utils/profiler/` | 451 | 逐動作效能剖析器 + 資源剖析器 |
 | `utils/quarantine/` | 200 | 易碎測試隔離區，讓套件執行器跳過已知不穩定案例 |
-| `utils/run_diff/` | 123 | 兩次執行軌跡的差異（LCS 對齊：新增／移除／狀態翻轉／退化） |
-| `utils/run_history/` | 439 | 執行歷史儲存與產出物管理 |
+| `utils/run_diff/` | 143 | 兩次執行軌跡的差異（LCS 對齊：新增／移除／狀態翻轉／退化） |
+| `utils/run_history/` | 449 | 執行歷史儲存與產出物管理 |
 | `utils/sarif/` | 187 | 以 SARIF 2.1.0 匯出發現項，供 GitHub／Azure code scanning |
 | `utils/slo/` | 115 | SLO 評估：SLI、錯誤預算與多視窗燃燒率告警 |
 | `utils/smoothing/` | 67 | 數列移動平均平滑 |
 | `utils/soft_assert/` | 79 | 軟斷言：累積檢查並在區塊結束時一次拋出 |
 | `utils/stats/` | 236 | 描述統計與 A/B 顯著性檢定（純標準庫） |
 | `utils/step_timeline/` | 81 | 每次執行的步驟瀑布圖與瓶頸（關鍵路徑）步驟排名 |
-| `utils/test_select/` | 129 | 以執行歷史做風險導向的測試選取 |
-| `utils/test_shard/` | 105 | 以耗時為權重的套件切分與分片結果合併 |
+| `utils/test_select/` | 131 | 以執行歷史做風險導向的測試選取 |
+| `utils/test_shard/` | 106 | 以耗時為權重的套件切分與分片結果合併 |
 | `utils/test_suite/` | 547 | QA 套件編排：把扁平 action list 評分為測試案例 + CI 報表 |
 | `utils/time_travel/` | 388 | 錄製 session 的時光回溯除錯（控制器 + 播放器） |
 | `utils/timeseries/` | 175 | 時間序列轉換（rate／降採樣／重採樣） |
@@ -599,15 +599,15 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.13 資料來源、結構驗證與 i18n
 
-> 24 個套件、約 4,707 行。
+> 24 個套件、約 4,768 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
 | `utils/checksum/` | 160 | 檢查碼演算法：Luhn、Verhoeff、Damm、ISO 7064 MOD 97-10 |
 | `utils/config_schema/` | 144 | 型別化設定結構驗證 |
-| `utils/data_drift/` | 128 | 分布漂移偵測 |
-| `utils/data_profile/` | 129 | 資料剖析與結構推斷 |
-| `utils/data_quality/` | 218 | 資料品質：列結構驗證、欄位擷取、遮蔽 |
+| `utils/data_drift/` | 143 | 分布漂移偵測 |
+| `utils/data_profile/` | 169 | 資料剖析與結構推斷 |
+| `utils/data_quality/` | 224 | 資料品質：列結構驗證、欄位擷取、遮蔽 |
 | `utils/data_source/` | 235 | 資料驅動執行：從 CSV／JSON／SQLite／Excel 載入資料列 |
 | `utils/dataset_diff/` | 89 | 表格資料列差異比對（CDC 風格） |
 | `utils/gettext_catalog/` | 362 | GNU gettext 目錄 I/O（解析 .po、編譯／讀取 .mo、訊息查詢） |
@@ -1089,6 +1089,6 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `osx/` | 17 | 925 |
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 846 |
-| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 680 | 55,546 |
-| **總計** | **1,055** | **155,130** |
+| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 680 | 55,678 |
+| **總計** | **1,055** | **155,262** |
 

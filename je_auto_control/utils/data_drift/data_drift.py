@@ -24,6 +24,20 @@ def _require(reference: Sequence[Any], current: Sequence[Any]) -> None:
         raise ValueError("reference and current must both be non-empty")
 
 
+def _sample(values: Sequence[Any], name: str) -> List[float]:
+    """``values`` as floats; NaN is a ``ValueError`` naming its index.
+
+    NaN compares false with everything, so sorting and bisecting left it
+    wherever it fell: a NaN in ``current`` moved the KS statistic from 0.01 to
+    0.49 depending only on its position, and landed in PSI's last bucket.
+    """
+    sample = [float(value) for value in values]
+    missing = next((index for index, value in enumerate(sample) if math.isnan(value)), None)
+    if missing is not None:
+        raise ValueError(f"{name}[{missing}] is NaN; drop or impute missing values first")
+    return sample
+
+
 def _bin_edges(reference: Sequence[float], bins: int) -> List[float]:
     return [percentile(reference, index * 100.0 / bins)
             for index in range(1, bins)]
@@ -42,9 +56,10 @@ def psi(reference: Sequence[float], current: Sequence[float],
         bins: int = 10) -> float:
     """Population Stability Index of ``current`` against ``reference`` bins."""
     _require(reference, current)
-    edges = _bin_edges([float(value) for value in reference], bins)
-    ref_fractions = _bucket_fractions([float(v) for v in reference], edges)
-    cur_fractions = _bucket_fractions([float(v) for v in current], edges)
+    ref_sample, cur_sample = _sample(reference, "reference"), _sample(current, "current")
+    edges = _bin_edges(ref_sample, bins)
+    ref_fractions = _bucket_fractions(ref_sample, edges)
+    cur_fractions = _bucket_fractions(cur_sample, edges)
     score = 0.0
     for ref_part, cur_part in zip(ref_fractions, cur_fractions):
         ref_part = max(ref_part, _EPSILON)
@@ -55,8 +70,8 @@ def psi(reference: Sequence[float], current: Sequence[float],
 
 def _ks_statistic(reference: Sequence[float],
                   current: Sequence[float]) -> float:
-    ref_sorted = sorted(float(value) for value in reference)
-    cur_sorted = sorted(float(value) for value in current)
+    ref_sorted = sorted(_sample(reference, "reference"))
+    cur_sorted = sorted(_sample(current, "current"))
     n_ref, n_cur = len(ref_sorted), len(cur_sorted)
     statistic = 0.0
     for value in sorted(set(ref_sorted) | set(cur_sorted)):
