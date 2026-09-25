@@ -216,12 +216,25 @@ def _set_file_value(editor: QWidget, value: Any) -> None:
         _set_text_value(line, value)
 
 
+def _set_enum_value(editor: QWidget, value: Any) -> None:
+    """Select ``value``, adding it when it is not one of the choices.
+
+    ``setCurrentText`` ignores a value the combo does not hold, so the next
+    edit of any field wrote ``choices[0]`` back: ``mouse_x1``, which the
+    executor accepts, became ``mouse_left`` on save.
+    """
+    text = "" if value is None else str(value)
+    if text and editor.findText(text) < 0:
+        editor.addItem(text)
+    editor.setCurrentText(text)
+
+
 _SETTERS = {
     FieldType.STRING: _set_text_value,
     FieldType.INT: _set_text_value,
     FieldType.FLOAT: _set_text_value,
     FieldType.BOOL: lambda e, v: e.setChecked(bool(v)),
-    FieldType.ENUM: lambda e, v: e.setCurrentText(str(v) if v is not None else ""),
+    FieldType.ENUM: _set_enum_value,
     FieldType.FILE_PATH: _set_file_value,
     FieldType.RGB: _set_rgb_value,
 }

@@ -89,6 +89,7 @@ class _Relay(QObject):
     """GUI-thread receiver for a worker's outcome, owned by the tab."""
 
     thread_ended = Signal()
+    crashed = Signal(str)
 
     def __init__(self, parent: QObject,
                  on_done: Callable[[Any], None],
@@ -99,6 +100,7 @@ class _Relay(QObject):
         self._on_thread_done = on_thread_done
         self._on_fail = on_fail
         self.thread_ended.connect(self.thread_done)
+        self.crashed.connect(self.fail)
 
     def done(self, value: Any) -> None:
         """Forward the worker's result (runs on the GUI thread)."""
@@ -140,20 +142,27 @@ def running_threads() -> int:
     return len(_RUNNING)
 
 
-def _run(handle: WorkerHandle, relay_ended: Any, reaper: _Reaper) -> None:
+def _run(handle: WorkerHandle, relay: Any, reaper: _Reaper) -> None:
     """The worker thread's body: run the worker, then report its end."""
     try:
         handle.worker.run()
-    # The worker's own errors go out through its "failed" signal; anything
-    # else must not stop the end from being reported.
-    except Exception as error:  # noqa: BLE001  # reason: logged; the end below must still be reported
+    # The worker's own errors go out through its "failed" signal. Anything
+    # else goes to on_fail too -- only logging it left a tab showing
+    # "Fetching..." for good -- and must not stop the end being reported.
+    except Exception as error:  # noqa: BLE001  # reason: reported to on_fail; the end below must still be reported
         autocontrol_logger.error(f"GUI worker {type(handle.worker).__name__} raised: {error!r}")
+        _emit_to(relay.crashed, f"{type(error).__name__}: {error}")
     finally:
-        try:
-            relay_ended.emit()
-        except RuntimeError:  # reason: the tab, and its relay with it, is already gone
-            pass
+        _emit_to(relay.thread_ended)
         reaper.ended.emit(handle)
+
+
+def _emit_to(signal: Any, *args: Any) -> None:
+    """Emit on the tab's relay unless the tab, and the relay with it, is gone."""
+    try:
+        signal.emit(*args)
+    except RuntimeError:  # reason: the relay was deleted with its tab
+        pass
 
 
 def start_worker(owner: QObject, worker: QObject, *,
@@ -176,7 +185,7 @@ def start_worker(owner: QObject, worker: QObject, *,
         failed.connect(relay.fail)
     handle = WorkerHandle(worker)
     _RUNNING[handle] = worker
-    thread = threading.Thread(target=_run, args=(handle, relay.thread_ended, reaper),
+    thread = threading.Thread(target=_run, args=(handle, relay, reaper),
                               name=f"gui-worker-{type(worker).__name__}", daemon=True)
     handle._thread = thread  # noqa: SLF001  # reason: set once, before start
     thread.start()

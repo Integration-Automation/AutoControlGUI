@@ -13,6 +13,7 @@ from je_auto_control.gui.language_wrapper.multi_language_wrapper import (
     language_wrapper,
 )
 from je_auto_control.utils.codegen.codegen import generate_code_file
+from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.json.json_file import read_action_json, write_action_json
 from je_auto_control.utils.recording_edit.editor import (
     adjust_delays, filter_actions, remove_action, scale_coordinates, trim_actions,
@@ -137,7 +138,7 @@ class RecordingEditorTab(TranslatableMixin, QWidget):
             return
         try:
             self._actions = read_action_json(path)
-        except (OSError, ValueError) as error:
+        except (AutoControlException, OSError, ValueError) as error:
             QMessageBox.warning(self, "Error", str(error))
             return
         self._undo_stack.clear()  # a freshly loaded recording starts clean
@@ -153,7 +154,7 @@ class RecordingEditorTab(TranslatableMixin, QWidget):
             return
         try:
             write_action_json(path, self._actions)
-        except (OSError, ValueError) as error:
+        except (AutoControlException, OSError, ValueError) as error:
             QMessageBox.warning(self, "Error", str(error))
             return
         self._status.setText(f"Saved to {path}")
@@ -181,7 +182,7 @@ class RecordingEditorTab(TranslatableMixin, QWidget):
             return
         try:
             generate_code_file(self._actions, path, target=target)
-        except (OSError, ValueError) as error:
+        except (AutoControlException, OSError, ValueError) as error:
             QMessageBox.warning(self, "Error", str(error))
             return
         self._status.setText(f"Exported {target} code to {path}")

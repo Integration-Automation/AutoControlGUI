@@ -74,6 +74,8 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Changed
 
+- The Live HUD samples only while it is on screen; its log tail keeps
+  collecting while it is hidden.
 - The MCP HTTP transport answers a wrong bearer token 401 (was 403),
   as the MCP authorization spec requires; every 401 from it and the REST
   API carries a `WWW-Authenticate: Bearer` challenge.
@@ -374,6 +376,14 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Fixed
 
+- USB sharing, its hotplug watcher and the passthrough flag it turned on
+  are released when the USB Sharing panel is destroyed.
+- GUI slots show missing or malformed files, images not on screen, bad
+  regions, unknown commands and closed windows instead of raising.
+- Hidden tabs, the Live HUD's log tail, the main window's language
+  listener and USB prompt dialogs no longer outlive their window.
+- A GUI worker's unexpected exception reaches its failure callback.
+- The Script Builder keeps a choice value it does not list.
 - REST and MCP replies holding a lone surrogate, REST replies that cannot
   be serialised, huge `/history` limits and JSON nested too deeply no
   longer drop the connection without a response.

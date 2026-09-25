@@ -11,6 +11,7 @@ from je_auto_control.gui._i18n_helpers import TranslatableMixin
 from je_auto_control.gui.language_wrapper.multi_language_wrapper import (
     language_wrapper,
 )
+from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.wrapper.auto_control_window import (
     close_window_by_title, focus_window, list_windows,
 )
@@ -113,7 +114,7 @@ class WindowManagerTab(TranslatableMixin, QWidget):
             return
         try:
             focus_window(title, case_sensitive=True)
-        except (RuntimeError, OSError) as error:
+        except (AutoControlException, RuntimeError, OSError) as error:
             QMessageBox.warning(self, "Error", str(error))
 
     def _on_close(self) -> None:
@@ -123,5 +124,5 @@ class WindowManagerTab(TranslatableMixin, QWidget):
         try:
             close_window_by_title(title, case_sensitive=True)
             self.refresh()
-        except (RuntimeError, OSError) as error:
+        except (AutoControlException, RuntimeError, OSError) as error:
             QMessageBox.warning(self, "Error", str(error))

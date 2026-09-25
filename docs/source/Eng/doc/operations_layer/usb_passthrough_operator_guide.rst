@@ -320,7 +320,9 @@ What is *not* shipped yet
   right, list the shared devices over the in-process channel and *Open*
   one (a descriptor read proves the full stack). The *USB Browser* tab's
   *Open* button now also works against a **localhost** target via the
-  same loopback path.
+  same loopback path. Sharing lasts as long as the panel: when the window
+  holding it is destroyed, its loopback and hotplug watcher close and the
+  feature flag it turned on goes back off.
 - Cross-machine is fully wired: the WebRTC host creates a ``usb``
   DataChannel and the viewer exposes ``viewer.usb_client()`` (a
   ``UsbChannelClient`` with ``list_devices`` / ``open`` / ``resume``).

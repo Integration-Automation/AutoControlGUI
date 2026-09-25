@@ -298,7 +298,8 @@ JSON action 範例::
 - *USB 分享* 分頁是簡易的 AnyDesk 風介面：左側啟用分享並對本機裝置
   做 ACL 允許／封鎖；右側經 in-process channel 列出分享裝置並 *開啟*
   其中一個（讀描述元即證明整條堆疊運作）。*USB Browser* 分頁的 *Open*
-  按鈕現在對 **localhost** 目標也會走同一條 loopback 路徑。
+  按鈕現在對 **localhost** 目標也會走同一條 loopback 路徑。分享只跟著面板存在：
+  容納它的視窗被銷毀時，它的 loopback 與熱插拔監看會關閉，它開啟的功能旗標也會關回去。
 - 跨機器已完整串接：WebRTC host 建立 ``usb`` DataChannel，viewer 以
   ``viewer.usb_client()`` 暴露 ``UsbChannelClient``\ （含 ``list_devices``
   / ``open`` / ``resume``\ ）。*USB 分享* 面板有 **來源** 下拉：選

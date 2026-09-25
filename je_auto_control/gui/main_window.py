@@ -69,6 +69,10 @@ class AutoControlGUIUI(QMainWindow, QtStyleTools):
             self._rebuild_actions_menu,
         )
         language_wrapper.add_listener(self._on_language_changed)
+        # Left registered, a language switch after the window was destroyed
+        # called into the deleted C++ object.
+        listener = self._on_language_changed
+        self.destroyed.connect(lambda *_args: language_wrapper.remove_listener(listener))
 
     # --- menu construction ---------------------------------------------------
 

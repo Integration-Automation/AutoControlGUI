@@ -37,6 +37,11 @@ class LiveHUDTab(TranslatableMixin, QWidget):
         self._timer = QTimer(self)
         self._timer.setInterval(250)
         self._timer.timeout.connect(self._tick)
+        self._running = False
+        # closeEvent never reaches a tab: the tail stayed on the global
+        # logger, buffering, after the HUD was gone. Captures the tail only.
+        tail = self._log_tail
+        self.destroyed.connect(lambda *_args: tail.detach(autocontrol_logger))
         self._build_layout()
 
     def _apply_position_labels(self) -> None:
@@ -70,10 +75,13 @@ class LiveHUDTab(TranslatableMixin, QWidget):
         ]
 
     def _start(self) -> None:
+        self._running = True
         self._log_tail.attach(autocontrol_logger)
-        self._timer.start()
+        if self.isVisible():
+            self._timer.start()
 
     def _stop(self) -> None:
+        self._running = False
         self._timer.stop()
         self._log_tail.detach(autocontrol_logger)
 
@@ -93,6 +101,14 @@ class LiveHUDTab(TranslatableMixin, QWidget):
         scrollbar = self._log_view.verticalScrollBar()
         scrollbar.setValue(scrollbar.maximum())
 
-    def closeEvent(self, event) -> None:  # noqa: N802  # reason: Qt override
-        self._stop()
-        super().closeEvent(event)
+    # The HUD samples the cursor and a pixel four times a second only while
+    # it is on screen: a closed or switched-away tab kept polling. The log
+    # tail stays attached, so lines logged meanwhile are there on return.
+    def hideEvent(self, event) -> None:  # noqa: N802  # reason: Qt override
+        self._timer.stop()
+        super().hideEvent(event)
+
+    def showEvent(self, event) -> None:  # noqa: N802  # reason: Qt override
+        if self._running:
+            self._timer.start()
+        super().showEvent(event)

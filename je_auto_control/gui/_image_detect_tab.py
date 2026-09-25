@@ -9,6 +9,7 @@ from PySide6.QtWidgets import (
 
 from je_auto_control.gui.language_wrapper.multi_language_wrapper import language_wrapper
 from je_auto_control.gui.selector import crop_template_to_file
+from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.wrapper.auto_control_image import (
     locate_all_image, locate_image_center, locate_and_click,
 )
@@ -77,7 +78,7 @@ class ImageDetectTabMixin:
                 return
             self.img_path_input.setText(save_path)
             self.detect_result_text.setText(f"Template saved: {save_path} region={region}")
-        except (OSError, ValueError, RuntimeError) as error:
+        except (AutoControlException, OSError, ValueError, RuntimeError) as error:
             QMessageBox.warning(self, "Error", str(error))
 
     def _get_detect_params(self):
@@ -93,7 +94,7 @@ class ImageDetectTabMixin:
             path, th, draw = self._get_detect_params()
             result = locate_image_center(path, th, draw)
             self.detect_result_text.setText(f"Center: {result}")
-        except (OSError, ValueError, TypeError, RuntimeError) as error:
+        except (AutoControlException, OSError, ValueError, TypeError, RuntimeError) as error:
             self.detect_result_text.setText(f"Error: {error}")
 
     def _locate_all(self):
@@ -101,7 +102,7 @@ class ImageDetectTabMixin:
             path, th, draw = self._get_detect_params()
             result = locate_all_image(path, th, draw)
             self.detect_result_text.setText(f"Found {len(result)} matches:\n{result}")
-        except (OSError, ValueError, TypeError, RuntimeError) as error:
+        except (AutoControlException, OSError, ValueError, TypeError, RuntimeError) as error:
             self.detect_result_text.setText(f"Error: {error}")
 
     def _locate_click(self):
@@ -110,5 +111,5 @@ class ImageDetectTabMixin:
             btn = self.mouse_button_combo.currentText() if hasattr(self, "mouse_button_combo") else "mouse_left"
             result = locate_and_click(path, btn, th, draw)
             self.detect_result_text.setText(f"Clicked at: {result}")
-        except (OSError, ValueError, TypeError, RuntimeError) as error:
+        except (AutoControlException, OSError, ValueError, TypeError, RuntimeError) as error:
             self.detect_result_text.setText(f"Error: {error}")

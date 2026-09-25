@@ -9,6 +9,7 @@ from PySide6.QtWidgets import (
 
 from je_auto_control.gui.language_wrapper.multi_language_wrapper import language_wrapper
 from je_auto_control.gui.selector import open_region_selector
+from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.wrapper.auto_control_screen import screen_size, screenshot, get_pixel
 
 
@@ -90,7 +91,7 @@ class ScreenshotTabMixin:
         try:
             w, h = screen_size()
             self.screen_size_label.setText(f"{w} x {h}")
-        except (OSError, ValueError, TypeError, RuntimeError) as error:
+        except (AutoControlException, OSError, ValueError, TypeError, RuntimeError) as error:
             QMessageBox.warning(self, "Error", str(error))
 
     def _browse_ss_path(self):
@@ -114,7 +115,7 @@ class ScreenshotTabMixin:
                 region = [int(x.strip()) for x in region_text.split(",")]
             screenshot(file_path=path, screen_region=region)
             self.ss_result_text.setText(f"Screenshot saved: {path or '(not saved)'}")
-        except (OSError, ValueError, TypeError, RuntimeError) as error:
+        except (AutoControlException, OSError, ValueError, TypeError, RuntimeError) as error:
             self.ss_result_text.setText(f"Error: {error}")
 
     def _get_pixel_color(self):
@@ -126,7 +127,7 @@ class ScreenshotTabMixin:
             self.pixel_result_label.setText(
                 self._translate("pixel_result") + self._pixel_result_suffix,
             )
-        except (OSError, ValueError, TypeError, RuntimeError) as error:
+        except (AutoControlException, OSError, ValueError, TypeError, RuntimeError) as error:
             self.pixel_result_label.setText(f"Error: {error}")
 
     def _screenshot_retranslate(self) -> None:
