@@ -454,6 +454,9 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 - `find_lines` finds lines shorter than 50 px and reads 16-bit images;
   `annotate_screenshot` keeps 16-bit and float tones; profiles survive huge
   values; `True` and `1` are distinct values.
+- On a Retina Mac, `[left, top, right, bottom]` region captures (colour,
+  HSV, histogram, SSIM, contrast, colour waits, QR, VLM) are taken in points,
+  so region results line up with the mouse instead of doubling.
 - Script Builder `region` hints name the convention each command reads:
   `[x, y, width, height]` for the matchers, OCR and most vision commands,
   `[left, top, right, bottom]` for the colour, histogram, SSIM and QR

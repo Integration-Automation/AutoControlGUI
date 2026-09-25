@@ -15,7 +15,7 @@ import pytest
 from PIL import Image
 
 from je_auto_control.utils.color_region import color_region
-from je_auto_control.utils.cv2_utils import blobs, region_capture, screenshot
+from je_auto_control.utils.cv2_utils import blobs, region_capture, screen_grabber, screenshot
 from je_auto_control.utils.exception.exceptions import AutoControlScreenException
 from je_auto_control.utils.executor import action_executor
 from je_auto_control.utils.hsv_segment import hsv_segment
@@ -110,15 +110,33 @@ def test_the_vlm_and_the_mcp_screenshot_see_the_left_monitor(desktop):
     assert _has_red(Image.open(io.BytesIO(base64.b64decode(block.to_dict()["data"]))))
 
 
-def test_other_platforms_keep_pil_screenshot(monkeypatch):
+def test_x11_and_wayland_keep_pil_screenshot(monkeypatch):
     calls = []
-    monkeypatch.setattr(sys, "platform", "darwin")
+    monkeypatch.setattr(sys, "platform", "linux")
     monkeypatch.setattr(screenshot, "pil_screenshot",
                         lambda screen_region=None: calls.append(screen_region) or Image.new("RGB", (2, 2)))
     monkeypatch.setattr(logical_frame, "grab_logical", lambda *_a, **_k: pytest.fail("grab_logical used off Windows"))
     region_capture.grab_screen_region([-1920, 0, -1720, 100])
     region_capture.grab_screen_region(None)
     assert calls == [[-1920, 0, -1720, 100], None]
+
+
+def test_a_macos_region_is_grabbed_in_points(monkeypatch):
+    """Pillow returns a Retina region at 2x unless ``scale_down`` is passed."""
+    grabs = []
+
+    class _Retina:
+        @staticmethod
+        def grab(bbox=None, scale_down=False, **_kwargs):
+            grabs.append((bbox, scale_down))
+            left, top, right, bottom = bbox
+            scale = 1 if scale_down else 2
+            return Image.new("RGB", ((right - left) * scale, (bottom - top) * scale))
+
+    monkeypatch.setattr(sys, "platform", "darwin")
+    monkeypatch.setattr(screen_grabber, "image_grabber", lambda: _Retina)
+    assert region_capture.grab_screen_region([-1920, 0, -1720, 100]).size == (200, 100)
+    assert grabs == [((-1920, 0, -1720, 100), True)]
 
 
 def test_connected_boxes_add_the_origin():

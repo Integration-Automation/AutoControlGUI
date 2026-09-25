@@ -5,9 +5,14 @@ which on Windows captures the primary monitor only and crops that, filling
 the rest with black. A colour, histogram, SSIM, contrast or colour-wait
 region on any other monitor therefore measured a black image. On Windows the
 region goes through ``grab_logical`` instead, which captures every monitor
-in mouse coordinates as the matchers do. Elsewhere ``pil_screenshot`` already
-reaches every display (macOS ``screencapture -R``, the X11 root, the Wayland
-layout) and is used unchanged, as is a whole-screen capture.
+in mouse coordinates as the matchers do.
+
+On macOS ``screencapture -R`` reaches every display, but a Retina region
+comes back at twice its size in points, the unit the mouse takes, so a blob
+found in it was placed twice as far from the region's corner. The region is
+grabbed with ``scale_down=True``, which keeps it in points. Elsewhere (the X11
+root, the Wayland layout) and for a whole-screen capture ``pil_screenshot``
+is used unchanged.
 """
 from __future__ import annotations
 
@@ -26,10 +31,14 @@ def grab_screen_region(region: Optional[Sequence[int]] = None) -> Image.Image:
     ``AutoControlScreenException``.
     """
     from je_auto_control.utils.cv2_utils.screenshot import _validate_region, pil_screenshot
-    if not region or not sys.platform.startswith("win"):
-        return pil_screenshot(screen_region=list(region) if region else None)
+    if not region:
+        return pil_screenshot(screen_region=None)
     _validate_region(list(region))
-    from je_auto_control.utils.monitor_layout.logical_frame import grab_logical
     left, top, right, bottom = (int(value) for value in region)
-    return grab_logical((left, top, right - left, bottom - top))[0]
-
+    if sys.platform.startswith("win"):
+        from je_auto_control.utils.monitor_layout.logical_frame import grab_logical
+        return grab_logical((left, top, right - left, bottom - top))[0]
+    if sys.platform == "darwin":
+        from je_auto_control.utils.cv2_utils.screen_grabber import image_grabber
+        return image_grabber().grab(bbox=(left, top, right, bottom), scale_down=True)
+    return pil_screenshot(screen_region=[left, top, right, bottom])
