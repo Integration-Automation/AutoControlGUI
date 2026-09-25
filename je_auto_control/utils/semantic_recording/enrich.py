@@ -40,10 +40,13 @@ def _default_a11y_backend(x: int, y: int) -> Optional[Dict[str, Any]]:
         from je_auto_control.utils.accessibility import (
             AccessibilityNotAvailableError, list_accessibility_elements,
         )
+        from je_auto_control.utils.accessibility.accessibility_api import SCAN_LIMIT
     except ImportError:
         return None
     try:
-        elements = list_accessibility_elements()
+        # The default 200 stopped a walk that starts at the window before the
+        # clicked control was reached, and the window became the anchor.
+        elements = list_accessibility_elements(max_results=SCAN_LIMIT)
     except AccessibilityNotAvailableError:
         return None
     best = _smallest_containing(elements, x, y)
@@ -58,14 +61,25 @@ def _default_a11y_backend(x: int, y: int) -> Optional[Dict[str, Any]]:
     }
 
 
+# Containers, not click targets: around a click on empty space the smallest
+# element was the window, and replay moved the click to the window's centre.
+_CONTAINER_ROLES = frozenset({
+    "window", "frame", "dialog", "application", "pane", "desktop frame",
+    "axwindow", "axapplication", "axsheet",
+})
+
+
 def _smallest_containing(elements, x: int, y: int):
     """Pick the smallest element whose bounding box covers ``(x, y)``.
 
     "Smallest" because a click usually lands on a button nested inside
     a window — we want the button, not the window.
     """
+    from je_auto_control.utils.ax_tree_walk.ax_tree_walk import humanize_role
     candidates = []
     for el in elements:
+        if humanize_role(el.role).lower() in _CONTAINER_ROLES:
+            continue
         left, top, width, height = el.bounds
         if left <= x < left + width and top <= y < top + height:
             candidates.append((width * height, el))

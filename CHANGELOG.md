@@ -439,6 +439,15 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
   the captured frame's origin, so clicks land correctly on a second monitor,
   a capture region, or a virtual desktop that extends above or left of the
   primary screen. `dispatch_input` takes an optional `origin`.
+- Semantic replay keeps the recorded point for an unnamed or off-screen
+  anchor, and recording anchors on the clicked control, not its window.
+- A failed self-healing lookup is a failed step instead of aborting replay.
+- Video motion checks clip their region and stream frames; preprocessing
+  handles 16-bit, single-channel and float images; OpenCV errors in both are
+  recorded as step failures.
+- HTML report generation is linear in the number of records.
+- D-Bus socket addresses are unescaped, and unmarshallable values raise
+  `DBusError`.
 - The Flow Editor opens action files saved with a BOM, keeps a wrapped
   file's other keys on save, and writes atomically.
 - The region selector (template cropping, OCR / screenshot / WebRTC regions)

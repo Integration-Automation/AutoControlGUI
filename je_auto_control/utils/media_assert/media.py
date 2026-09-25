@@ -18,7 +18,7 @@ from __future__ import annotations
 import math
 import os
 from dataclasses import asdict, dataclass
-from typing import Any, Dict, List, Optional, Sequence
+from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 from je_auto_control.utils.exception.exceptions import (
     AutoControlAssertionException,
@@ -118,10 +118,10 @@ def mean_frame_diff(frames: Sequence[Any]) -> float:
     return float(sum(diffs) / len(diffs)) if diffs else 0.0
 
 
-def _read_segment_frames(video_path: str, start_s: float,
-                         end_s: Optional[float],
-                         region: Optional[Sequence[int]]) -> List[Any]:
-    """Read grayscale frames of ``video_path`` within [start_s, end_s]."""
+def _segment_motion(video_path: str, start_s: float,
+                    end_s: Optional[float],
+                    region: Optional[Sequence[int]]) -> Tuple[int, float]:
+    """Frame count and summed consecutive-frame difference within [start_s, end_s]."""
     import cv2
     resolved = os.path.realpath(os.path.expanduser(video_path))
     if not os.path.isfile(resolved):
@@ -134,28 +134,48 @@ def _read_segment_frames(video_path: str, start_s: float,
         start_frame = int(max(0.0, start_s) * fps)
         end_frame = int(end_s * fps) if end_s is not None else None
         capture.set(cv2.CAP_PROP_POS_FRAMES, start_frame)
-        return _collect_gray_frames(capture, cv2, start_frame, end_frame,
-                                    region)
+        return _sum_frame_diffs(capture, cv2, start_frame, end_frame, region)
     finally:
         capture.release()
 
 
-def _collect_gray_frames(capture, cv2, start_frame: int,
-                         end_frame: Optional[int],
-                         region: Optional[Sequence[int]]) -> List[Any]:
-    """Pull and grayscale frames until ``end_frame`` or end of stream."""
-    frames: List[Any] = []
+def _clipped(region: Sequence[int], frame) -> Tuple[int, int, int, int]:
+    """``region`` (x1, y1, x2, y2) clipped to ``frame``; ``ValueError`` if nothing is left.
+
+    An off-frame, negative or zero-width region sliced an empty frame, and
+    OpenCV's error escaped the executor.
+    """
+    height, width = frame.shape[:2]
+    x1, y1, x2, y2 = (int(v) for v in region)
+    x1, x2 = max(0, x1), min(width, x2)
+    y1, y2 = max(0, y1), min(height, y2)
+    if x1 >= x2 or y1 >= y2:
+        raise ValueError(f"region {list(region)} is outside the {width}x{height} video frame")
+    return x1, y1, x2, y2
+
+
+def _sum_frame_diffs(capture, cv2, start_frame: int, end_frame: Optional[int],
+                     region: Optional[Sequence[int]]) -> Tuple[int, float]:
+    """Read frames until ``end_frame`` or the end, keeping only the previous one.
+
+    Every frame used to be kept, about 37 GB for ten minutes of 1080p30.
+    """
+    import numpy as np
+    count, total, previous, bounds = 0, 0.0, None, None
     index = start_frame
     while end_frame is None or index < end_frame:
         ok, frame = capture.read()
         if not ok:
             break
         if region:
-            x1, y1, x2, y2 = (int(v) for v in region)
-            frame = frame[y1:y2, x1:x2]
-        frames.append(cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY))
+            bounds = bounds or _clipped(region, frame)
+            frame = frame[bounds[1]:bounds[3], bounds[0]:bounds[2]]
+        current = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY).astype("float64")
+        if previous is not None:
+            total += float(np.mean(np.abs(current - previous)))
+        previous, count = current, count + 1
         index += 1
-    return frames
+    return count, total
 
 
 def video_segment_motion(video_path: str,
@@ -168,11 +188,17 @@ def video_segment_motion(video_path: str,
     ``ValueError``: it used to measure 0.0, so a corrupt file or an empty
     range passed ``expect_motion=False``.
     """
-    frames = _read_segment_frames(video_path, start_s, end_s, region)
-    if len(frames) < 2:
+    count, total = _contained(_segment_motion, video_path, start_s, end_s, region)
+    if count < 2:
         raise ValueError(
-            f"video segment has {len(frames)} frame(s); motion needs at least 2")
-    return mean_frame_diff(frames)
+            f"video segment has {count} frame(s); motion needs at least 2")
+    return total / (count - 1)
+
+
+def _contained(function, *args):
+    """Call ``function``, with OpenCV's ``cv2.error`` as a framework error the executor records."""
+    from je_auto_control.utils.visual_match.visual_match import _contain_cv2_error
+    return _contain_cv2_error(function)(*args)
 
 
 def assert_video_changes(video_path: str,
