@@ -5707,17 +5707,19 @@ def _validate_config(schema: Any, config: Any) -> Dict[str, Any]:
 
 
 def _resolve_ref(ref: str) -> Dict[str, Any]:
-    """Adapter: resolve an env:// / file:// / secret:// reference."""
-    from je_auto_control.utils.secret_ref import resolve_ref
+    """Adapter: resolve an env:// / file:// reference; secret:// is refused (it would be recorded)."""
+    from je_auto_control.utils.secret_ref import refuse_secret_refs, resolve_ref
+    refuse_secret_refs(ref)
     return {"value": resolve_ref(ref)}
 
 
 def _resolve_refs(obj: Any) -> Dict[str, Any]:
-    """Adapter: recursively resolve references in a structure (or JSON str)."""
+    """Adapter: recursively resolve references in a structure (or JSON str); no secret://."""
     import json
-    from je_auto_control.utils.secret_ref import resolve_refs_in
+    from je_auto_control.utils.secret_ref import refuse_secret_refs, resolve_refs_in
     if isinstance(obj, str):
         obj = json.loads(obj)
+    refuse_secret_refs(obj)
     return {"resolved": resolve_refs_in(obj)}
 
 

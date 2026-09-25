@@ -43,12 +43,32 @@ def is_ref(value: Any) -> bool:
     return isinstance(value, str) and _REF_RE.match(value) is not None
 
 
+def refuse_secret_refs(obj: Any) -> None:
+    """Raise ``SecretRefError`` if ``obj`` holds a ``secret://`` reference anywhere.
+
+    For surfaces whose results are recorded -- the executor and MCP: the
+    credential broker's contract is that secret values never enter those
+    records, and ``AC_resolve_ref`` returned them there as ``{value}``.
+    """
+    if isinstance(obj, dict):
+        for value in obj.values():
+            refuse_secret_refs(value)
+    elif isinstance(obj, list):
+        for item in obj:
+            refuse_secret_refs(item)
+    elif isinstance(obj, str) and obj.startswith("secret://"):
+        raise SecretRefError(
+            "secret:// values are not returned into executor records or MCP results; "
+            "reference ${secrets.NAME} in the step that needs the value")
+
+
 def _default_secret(name: str) -> str:
     from je_auto_control.utils.governance import default_broker
     token = default_broker.lease(name, ttl=1.0)
     try:
         return default_broker.redeem(token)
-    except AutoControlException as error:
+    # LookupError: a resolver that looks names up in a mapping misses with KeyError.
+    except (AutoControlException, LookupError) as error:
         raise SecretRefError(f"secret {name!r} not resolvable: {error}") from error
     finally:
         default_broker.revoke(token)
@@ -66,7 +86,9 @@ class RefResolver:
 
     def resolve(self, ref: str) -> str:
         """Resolve a single reference string to its value."""
-        match = _REF_RE.match(ref or "")
+        if not isinstance(ref, str):
+            raise SecretRefError(f"not a value reference: {ref!r}")
+        match = _REF_RE.match(ref)
         if match is None:
             raise SecretRefError(f"not a value reference: {ref!r}")
         scheme, target = match.group(1), match.group(2)
@@ -95,6 +117,8 @@ class RefResolver:
     def _resolve_file(self, path: str) -> str:
         if _DRIVE_URL_PATH.match(path):
             path = path[1:]  # file:///C:/x names C:/x, not the drive-relative /C:/x
+        if "\0" in path:
+            raise SecretRefError(f"path contains a NUL byte: {path!r}")
         if self._base_dir is None:
             resolved = os.path.realpath(path)
         else:
@@ -106,7 +130,8 @@ class RefResolver:
                 raise SecretRefError(f"path escapes base dir: {path!r}")
         try:
             return Path(resolved).read_text(encoding="utf-8")
-        except OSError as error:
+        # ValueError: an embedded NUL, or a file that is not UTF-8.
+        except (OSError, ValueError) as error:
             raise SecretRefError(f"cannot read {path!r}: {error}") from error
 
     def _resolve_secret(self, name: str) -> str:

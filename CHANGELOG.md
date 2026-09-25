@@ -86,6 +86,8 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Changed
 
+- `validate_config` / `ConfigSchema.from_dict` raise `ValueError` for an
+  unknown field type, and a `str` field rejects `None` and containers.
 - An MCP HTTP request whose `MCP-Protocol-Version` header names an
   unsupported version is still a 400, now with a JSON-RPC
   `UnsupportedProtocolVersion` (`-32022`) body listing the supported
@@ -325,6 +327,10 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Security
 
+- `AC_resolve_ref` / `AC_resolve_refs` and the MCP tools `ac_resolve_ref` /
+  `ac_resolve_refs` refuse `secret://` references: the resolved secret was
+  returned into executor records and MCP results. Use `${secrets.NAME}` in
+  the step that needs the value, or `resolve_ref` from Python.
 - The egress policy matches hosts by their IDNA encoding, so soft
   hyphens, fullwidth characters and ideographic full stops no longer
   slip past a deny list.
@@ -429,6 +435,12 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Fixed
 
+- `match_color` / `match_color_all` return screen coordinates for a region
+  search, score only a template's coloured pixels, and cap their candidates.
+- Mark labels stay beside marks at negative coordinates and inside bounds
+  when crowded.
+- `snapshot_json` matches its own payload; `match_json` takes one ignored
+  path as a string.
 - Set-of-marks numbers OCR boxes, and grounding consensus votes by each
   element's real geometry; consensus refuses non-finite points.
 - Borderless tables are found left of x = 0 (monitors left of the primary).

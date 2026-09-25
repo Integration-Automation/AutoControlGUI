@@ -432,6 +432,27 @@ MCP 工具的檔案參數（`path`、`file_path`、`db`、`image_path`、`golden
 **為什麼要拍板**：根目錄從哪來（新的環境變數、沿用 `roots/list`、或兩者），唯讀模式要不要預設開啟；
 預設開啟會讓現有讀取工作區外檔案的用法失效。
 
+同一個問題也在 `ac_resolve_ref`／`ac_resolve_refs`（`_factories.py:7182`，標為 `READ_ONLY`）：`file://` 沒有
+`base_dir` 限制，`env://` 可讀任何環境變數，包括放 API 金鑰的那些，結果直接回給模型。`secret://` 已經拒絕；
+`env://` 要不要改成允許清單、`file://` 要不要套同一個根目錄，跟上面一起決定。
+
+---
+
+## Windows 的 DPI 感知是系統層級，混合 DPI 的螢幕座標被虛擬化
+
+`DECIDE` — 改成 per-monitor 會移動那些螢幕上的所有座標，Jeffrey_RPA 在那些螢幕上錄的座標與樣板要重錄
+
+`windows/screen/win32_screen.py:50` 在 import 時呼叫 `SetProcessDPIAware()`，那是系統 DPI 感知，不是
+per-monitor。DPI 與主螢幕不同的螢幕會被 Windows 虛擬化：本機第二螢幕 125%，實際 1920×1080，但 Win32、
+`mss` 與 Qt 都回報 `(1920, -164, 1536, 864)`，截圖是 Windows 縮小過的影像，那個螢幕上的樣板比對與 OCR
+用的是模糊的畫面。同檔註解說之後「所有 Win32 座標查詢都會拿到實體像素」，只在主螢幕 DPI 的螢幕上成立。
+
+**做法**：先呼叫 `SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2)`，失敗再退回
+`SetProcessDPIAware()`，並改正註解；`utils/monitor_layout` 的換算與 `gui/_screen_geometry.py` 一起檢查。
+
+**為什麼要拍板**：這個檔在 Jeffrey_RPA 正在跑的截圖路徑上。換成 per-monitor 之後，縮放螢幕上的座標與截圖
+尺寸都會變，既有的樣板和錄好的座標在那些螢幕上會失準。
+
 ---
 
 ## 遠端桌面的 viewer 槽位由各面板共用
