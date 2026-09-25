@@ -20,7 +20,7 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 | 指標 | 數值 |
 | --- | ---: |
 | Python 模組總數（含周邊子專案） | 1,060 |
-| 程式碼總行數 | 154,705 |
+| 程式碼總行數 | 154,794 |
 | `je_auto_control/utils/` 子套件數 | 310 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 775 |
 | 套件門面 `__all__` 公開名稱數 | 1,244 |
@@ -272,7 +272,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.1 執行引擎與腳本資產
 
-> 24 個套件、約 14,552 行。
+> 24 個套件、約 14,548 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -291,7 +291,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/loop_guard/` | 158 | 機械式卡死迴圈偵測（agent loop 用） |
 | `utils/plugin_loader/` | 147 | 掃描外部 Python 外掛目錄並註冊其 `AC_` callable |
 | `utils/plugin_sdk/` | 80 | 外掛 SDK：透過 entry points 發佈／載入第三方 `AC_*` 指令 |
-| `utils/project/` | 187 | 專案腳手架：建立目錄結構與範本 action 檔 |
+| `utils/project/` | 183 | 專案腳手架：建立目錄結構與範本 action 檔 |
 | `utils/recording_edit/` | 150 | 不重錄的前提下裁切／過濾／縮放已錄製的 action list |
 | `utils/saga/` | 100 | Saga 協調器：失敗時以 LIFO 補償動作回滾 |
 | `utils/script_vars/` | 211 | 執行期變數作用域與 `${var}` / `${secrets.*}` 插值 |
@@ -342,7 +342,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.4 輸入模擬與動作品質
 
-> 22 個套件、約 2,768 行。
+> 22 個套件、約 2,815 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -350,7 +350,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/act_modes/` | 68 | actionability 閘門之上的 trial／force 動作模式 |
 | `utils/action_effect/` | 110 | 判定一個動作是否真的產生效果，並歸因到目標區域 |
 | `utils/action_grounding/` | 83 | 動作前的接地守衛（邊界檢查 + 吸附到元素） |
-| `utils/actionability/` | 168 | 動作前就緒閘門（可見 + 穩定 + 啟用 + 未被遮擋） |
+| `utils/actionability/` | 191 | 動作前就緒閘門（可見 + 穩定 + 啟用 + 未被遮擋） |
 | `utils/ensure_state/` | 74 | 冪等地把控制項／設定帶到期望狀態 |
 | `utils/field_entry/` | 76 | 清空再輸入的欄位填寫慣用法（Playwright `fill`） |
 | `utils/gamepad/` | 333 | 虛擬遊戲手把後端（Windows ViGEmBus 驅動） |
@@ -362,7 +362,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/mouse_relative/` | 59 | 相對位移滑鼠移動 |
 | `utils/postcondition/` | 146 | 宣告式的動作預期結果規格，對照畫面驗證 |
 | `utils/step_repair/` | 136 | 失敗／無效動作的修復策略（自我修正迴圈） |
-| `utils/table_grid_fill/` | 163 | 以 OCR 文字填滿格線表格，取得可定址的表格 |
+| `utils/table_grid_fill/` | 187 | 以 OCR 文字填滿格線表格，取得可定址的表格 |
 | `utils/input_reach/` | 111 | 送出去的輸入到不到得了：桌面鎖定查詢（免費）＋ 實際送一個 F13 確認沒有被過濾（有副作用，只給診斷用） |
 | `utils/keyboard_layout/` | 152 | 向系統問「這個鍵盤配置下每個鍵印出什麼字」（`ToUnicodeEx`），問不到退回 US 對照表 |
 | `utils/text_unicode/` | 151 | 輸入任意 Unicode（emoji／CJK／重音字）：優先送字元按鍵事件，不支援時退回剪貼簿貼上 |
@@ -371,7 +371,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.5 影像辨識與畫面分析
 
-> 37 個套件、約 5,819 行。
+> 37 個套件、約 5,860 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -397,10 +397,10 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/match_trust/` | 144 | 樣板比對可信度評分（次峰比 + peak-to-sidelobe） |
 | `utils/monitor_layout/` | 320 | 多螢幕／虛擬桌面幾何（在哪個螢幕、位置、重映射）＋ `logical_frame` 以滑鼠座標空間擷取畫面 |
 | `utils/motion_regions/` | 73 | 兩影格間的局部變化／活動偵測（absdiff） |
-| `utils/perceptual_diff/` | 196 | 感知式（YIQ）影像差異，抑制反鋸齒邊緣誤報 |
+| `utils/perceptual_diff/` | 202 | 感知式（YIQ）影像差異，抑制反鋸齒邊緣誤報 |
 | `utils/preprocess/` | 256 | OCR／比對前的影像前處理（灰階、二值化、去傾斜…） |
 | `utils/qr/` | 59 | 從影像或螢幕區域解碼 QR code（OpenCV） |
-| `utils/rotated_match/` | 166 | 容忍旋轉與縮放的樣板比對（尺度空間 × 角度掃描） |
+| `utils/rotated_match/` | 201 | 容忍旋轉與縮放的樣板比對（尺度空間 × 角度掃描） |
 | `utils/saliency/` | 114 | 頻譜殘差視覺顯著性：顯著圖與排序後的顯著區域 |
 | `utils/scale_detect/` | 84 | 偵測樣板實際渲染的顯示縮放／視覺 DPI |
 | `utils/screen_grid/` | 146 | 供 VLM 接地用的粗粒度標號網格（點 ↔ 格對映） |
@@ -415,7 +415,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.6 OCR 與文字理解
 
-> 19 個套件、約 3,469 行。
+> 19 個套件、約 3,474 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -436,7 +436,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/text_blocks/` | 88 | 把 OCR 行組成段落與項目符號／編號清單 |
 | `utils/text_diff/` | 202 | unified diff 產生、套用與三方合併 |
 | `utils/text_normalize/` | 84 | Unicode 正規化與 slug 產生 |
-| `utils/text_regions/` | 163 | 免模型的畫面文字區域偵測（MSER）：區域與行 |
+| `utils/text_regions/` | 168 | 免模型的畫面文字區域偵測（MSER）：區域與行 |
 | `utils/text_similarity/` | 172 | 字串距離度量（文字比對用） |
 
 ### 5.4.7 無障礙樹與原生控制項
@@ -1089,6 +1089,6 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `osx/` | 17 | 925 |
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 846 |
-| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 679 | 55,110 |
-| **總計** | **1,054** | **154,640** |
+| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 679 | 55,199 |
+| **總計** | **1,054** | **154,729** |
 

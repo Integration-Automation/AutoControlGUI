@@ -58,6 +58,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260926-01 | 2026-09-26 | Perceptual diff keeps an empty image in the executor and fails a zero budget on one pixel, text regions answer in screen coordinates, match_rotated_all finds every copy, actionability reads falsy probes and NumPy tokens, the generated project's example validates, and grid fill counts a spanning box once | #bugfix #audit #vision | [2026-09-d](2026-09-d.md) |
 | U-20260925-55 | 2026-09-25 | Semantic replay no longer moves clicks to the wrong control, a failed heal is a failed step, OpenCV errors from video regions and odd images stay in the executor, 16-bit scans are not blackened, the HTML report is linear, and D-Bus unescapes addresses and rejects values it cannot marshal | #bugfix #audit #recording #vision | [2026-09-d](2026-09-d.md) |
 | U-20260925-52 | 2026-09-25 | Screen-coordinate conversions no longer scale by the device pixel ratio on macOS, where captures and the pointer take points; and measured: importing the package makes a Windows process system-DPI-aware | #bugfix #hidpi #macos | [2026-09-d](2026-09-d.md) |
 | U-20260925-51 | 2026-09-25 | Python 3.15 readiness: Windows console output is decoded in its code page under the default UTF-8 mode, and the SBOM skips distributions that have no metadata | #bugfix #compat | [2026-09-d](2026-09-d.md) |
@@ -295,6 +296,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | File | Period | Entries |
 |---|---|---:|
+| [2026-09-d.md](2026-09-d.md) | 2026-09 | 18 |
 | [2026-09-d.md](2026-09-d.md) | 2026-09 | 17 |
 | [2026-09-d.md](2026-09-d.md) | 2026-09 | 20 |
 | [2026-09-c.md](2026-09-c.md) | 2026-09 | 38 |

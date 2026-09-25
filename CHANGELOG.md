@@ -439,6 +439,14 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
   the captured frame's origin, so clicks land correctly on a second monitor,
   a capture region, or a virtual desktop that extends above or left of the
   primary screen. `dispatch_input` takes an optional `origin`.
+- Perceptual diff contains OpenCV errors and checks its budget unrounded.
+- `find_text_regions` / `find_text_lines` return screen coordinates for a
+  region search; `match_rotated_all` returns every match, not one per pose.
+- Actionability treats a falsy enabled probe as disabled, accepts NumPy
+  stability tokens, and can pass with no stability wait.
+- The generated project's keyword example validates and runs.
+- Grid fill counts a spanning box once, at its anchor cell, and reads
+  Tesseract's box shape.
 - Semantic replay keeps the recorded point for an unnamed or off-screen
   anchor, and recording anchors on the clicked control, not its window.
 - A failed self-healing lookup is a failed step instead of aborting replay.
