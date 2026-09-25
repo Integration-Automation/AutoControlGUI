@@ -10,6 +10,7 @@ Pure standard library (``json`` + ``os``); deterministic; imports no
 ``PySide6``.
 """
 import json
+import math
 import os
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -28,10 +29,14 @@ class MatchReport:
         return {"ok": self.ok, "mismatches": list(self.mismatches)}
 
 
+def _is_nan(value: Any) -> bool:
+    return isinstance(value, float) and math.isnan(value)
+
+
 def _json_equal(left: Any, right: Any) -> bool:
     if isinstance(left, bool) or isinstance(right, bool):
         return left is right
-    if left != left and right != right:     # NaN, which json writes and reads back
+    if _is_nan(left) and _is_nan(right):     # NaN, which json writes and reads back
         return True
     return left == right
 

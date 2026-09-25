@@ -58,6 +58,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260926-08 | 2026-09-26 | json_contract checks NaN with math.isnan instead of a self-comparison, which SonarCloud read as a constant-false condition and failed PR #490's reliability gate on | #quality #sonar | [2026-09-d](2026-09-d.md) |
 | U-20260926-07 | 2026-09-26 | Drift tests refuse NaN; profiles keep mixed, huge and bool columns honest so inferred schemas accept their rows; short and 16-bit lines are found; 16-bit screenshots annotate in tone; runs killed mid-flight no longer hide history from test selection, sharding and flakiness; 0 s steps can regress; mining and baggage refuse empty inputs | #bugfix #audit #data | [2026-09-d](2026-09-d.md) |
 | U-20260926-06 | 2026-09-26 | Region captures reach every monitor on Windows (colour, HSV, histogram, SSIM, contrast, preprocess, colour waits, QR, colour stats, VLM, MCP screenshot) and colour blobs found in a region are in screen coordinates; AC_wait_actionable samples stability where the match is | #bugfix #multi-monitor #vision | [2026-09-d](2026-09-d.md) |
 | U-20260926-05 | 2026-09-26 | Script Builder region hints name the convention each command reads: [x, y, width, height] for the 27 that capture through grab_logical, [left, top, right, bottom] for AC_region_contrast, AC_read_qr and AC_region_color_stats | #bugfix #gui #script-builder | [2026-09-d](2026-09-d.md) |
@@ -302,7 +303,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | File | Period | Entries |
 |---|---|---:|
-| [2026-09-d.md](2026-09-d.md) | 2026-09 | 28 |
+| [2026-09-d.md](2026-09-d.md) | 2026-09 | 29 |
 | [2026-09-c.md](2026-09-c.md) | 2026-09 | 38 |
 | [2026-09-b.md](2026-09-b.md) | 2026-09 | 68 |
 | [2026-09.md](2026-09.md) | 2026-09 | 79 |

@@ -20,7 +20,7 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 | 指標 | 數值 |
 | --- | ---: |
 | Python 模組總數（含周邊子專案） | 1,061 |
-| 程式碼總行數 | 155,327 |
+| 程式碼總行數 | 155,332 |
 | `je_auto_control/utils/` 子套件數 | 310 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 775 |
 | 套件門面 `__all__` 公開名稱數 | 1,244 |
@@ -599,7 +599,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.13 資料來源、結構驗證與 i18n
 
-> 24 個套件、約 4,768 行。
+> 24 個套件、約 4,773 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -612,7 +612,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/dataset_diff/` | 89 | 表格資料列差異比對（CDC 風格） |
 | `utils/gettext_catalog/` | 362 | GNU gettext 目錄 I/O（解析 .po、編譯／讀取 .mo、訊息查詢） |
 | `utils/i18n_test/` | 228 | 國際化／在地化測試輔助 |
-| `utils/json_contract/` | 153 | JSON 契約／快照比對：`match_json`、`diff_json`、`snapshot_json` |
+| `utils/json_contract/` | 158 | JSON 契約／快照比對：`match_json`、`diff_json`、`snapshot_json` |
 | `utils/json_patch/` | 352 | JSON Pointer（6901）、JSON Patch（6902）與 Merge Patch（7386） |
 | `utils/json_schema/` | 426 | JSON Schema（Draft 2020-12 子集）驗證 |
 | `utils/jsonpath/` | 322 | 精簡 JSONPath 查詢 |
@@ -1089,6 +1089,6 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `osx/` | 17 | 925 |
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 846 |
-| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 680 | 55,678 |
-| **總計** | **1,055** | **155,262** |
+| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 680 | 55,683 |
+| **總計** | **1,055** | **155,267** |
 
