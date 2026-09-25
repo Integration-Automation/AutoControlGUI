@@ -21,7 +21,7 @@ except ImportError as exc:  # pragma: no cover
     ) from exc
 
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
-from je_auto_control.utils.remote_desktop.input_dispatch import dispatch_input
+from je_auto_control.utils.remote_desktop.input_dispatch import dispatcher_at
 from je_auto_control.utils.remote_desktop.permissions import SessionPermissions
 from je_auto_control.utils.remote_desktop.trust_list import TrustList
 from je_auto_control.utils.remote_desktop.webrtc_host import WebRTCDesktopHost
@@ -49,6 +49,11 @@ class _ScreenSource:
 
     def subscribe(self):
         return self._relay.subscribe(self._track)
+
+    @property
+    def capture_origin(self) -> Tuple[int, int]:
+        """The shared track's frame origin on screen."""
+        return self._track.capture_origin
 
     def stop(self) -> None:
         self._track.stop()
@@ -84,7 +89,8 @@ class MultiViewerHost:
             permissions if permissions is not None
             else SessionPermissions.from_read_only(read_only)
         )
-        self._dispatch = input_dispatcher or dispatch_input
+        # The sessions relay one shared track, so they map input by its origin.
+        self._dispatch = input_dispatcher or dispatcher_at(self._capture_origin)
         self._ip_whitelist = list(ip_whitelist) if ip_whitelist else []
         self._on_annotation = on_annotation
         self._on_session_state = on_session_state
@@ -94,6 +100,10 @@ class MultiViewerHost:
         self._session_meta: Dict[str, dict] = {}
         self._source: Optional[_ScreenSource] = None
         self._lock = threading.Lock()
+
+    def _capture_origin(self) -> Tuple[int, int]:
+        source = self._source
+        return source.capture_origin if source is not None else (0, 0)
 
     # --- session lifecycle --------------------------------------------------
 

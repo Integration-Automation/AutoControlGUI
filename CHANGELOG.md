@@ -433,6 +433,10 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
   instead of as UTF-8: `sc query` raised, and the others returned
   replacement characters. The SBOM skips a distribution that has no
   metadata instead of failing on 3.15, or listing it as `unknown` before.
+- Remote desktop hosts map viewer input and the broadcast cursor through
+  the captured frame's origin, so clicks land correctly on a second monitor,
+  a capture region, or a virtual desktop that extends above or left of the
+  primary screen. `dispatch_input` takes an optional `origin`.
 - The Flow Editor opens action files saved with a BOM, keeps a wrapped
   file's other keys on save, and writes atomically.
 - The region selector (template cropping, OCR / screenshot / WebRTC regions)

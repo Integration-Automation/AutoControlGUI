@@ -4,6 +4,7 @@ import socket
 import ssl
 import threading
 import time
+from functools import partial
 from typing import Any, Callable, List, Mapping, Optional, Sequence
 
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
@@ -44,7 +45,7 @@ from je_auto_control.utils.remote_desktop.host_access import (
 from je_auto_control.utils.remote_desktop.host_capture import (
     CursorProvider, FrameProductionMixin, FrameProvider,
     _DEFAULT_QUALITY, _default_frame_provider,
-    _resolve_cursor_provider, _resolve_monitor_region,
+    _resolve_cursor_provider, _resolve_monitor_region, capture_origin,
 )
 from je_auto_control.utils.remote_desktop.host_client import (
     _ClientHandler,
@@ -134,14 +135,17 @@ class RemoteDesktopHost(FrameProductionMixin):
         self._frame_provider: FrameProvider = (
             frame_provider or _default_frame_provider(region, int(quality))
         )
-        self._dispatch: InputDispatcher = input_dispatcher or dispatch_input
+        # Viewer input and the broadcast cursor are in frame coordinates; the
+        # default frame starts at the region's or the virtual desktop's corner.
+        origin = capture_origin(region) if frame_provider is None else (0, 0)
+        self._dispatch: InputDispatcher = input_dispatcher or partial(dispatch_input, origin=origin)
         self._file_receiver: Optional[FileReceiver] = None
         self._audio_config = audio_config
         self._audio_capture_override = audio_capture
         self._audio_capture: Optional[AudioCapture] = None
         self._on_pending_viewer = on_pending_viewer
         self._cursor_provider: Optional[CursorProvider] = _resolve_cursor_provider(
-            cursor_provider, enable_cursor_broadcast,
+            cursor_provider, enable_cursor_broadcast, origin,
         )
         self._cursor_thread: Optional[threading.Thread] = None
         # Latest broadcast cursor payload, kept so newly-authenticated

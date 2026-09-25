@@ -276,6 +276,10 @@ class ScreenVideoTrack(VideoStreamTrack):
         self._region = region
         self._show_cursor = show_cursor
         self._monitor: Optional[dict] = None
+        # The last resolved monitor's corner, kept across set_target_monitor
+        # so input in between still maps somewhere sensible.
+        self._origin: Tuple[int, int] = (
+            (int(region[0]), int(region[1])) if region is not None else (0, 0))
         self._executor = ThreadPoolExecutor(
             max_workers=1, thread_name_prefix="rd-capture",
         )
@@ -286,6 +290,11 @@ class ScreenVideoTrack(VideoStreamTrack):
     @property
     def fps(self) -> int:
         return self._fps
+
+    @property
+    def capture_origin(self) -> Tuple[int, int]:
+        """Screen position of the frame's top-left pixel, for mapping viewer input."""
+        return self._origin
 
     def set_target_fps(self, fps: int) -> None:
         """Tune capture rate at runtime; clamped to 1..60. Used by the
@@ -321,6 +330,7 @@ class ScreenVideoTrack(VideoStreamTrack):
                 sct = mss_grabber()
                 _capture_local.sct = sct
             self._monitor = _resolve_monitor(sct, self._monitor_index)
+        self._origin = (int(self._monitor.get("left", 0)), int(self._monitor.get("top", 0)))
         return self._monitor
 
     def _timestamp(self) -> Tuple[int, fractions.Fraction]:
