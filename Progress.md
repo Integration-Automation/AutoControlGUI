@@ -474,6 +474,22 @@ per-monitor。DPI 與主螢幕不同的螢幕會被 Windows 虛擬化：本機�
 
 ---
 
+## macOS 的 `grab_logical` 在 Retina 上是像素座標，而且只看得到主螢幕
+
+`BLOCKED` — `utils/monitor_layout/logical_frame.py` 在 Jeffrey_RPA 正在跑的截圖路徑上，依工作區規則在它執行期間不動
+
+`grab_logical` 在 macOS 呼叫 `ImageGrab.grab(all_screens=True)`。讀 Pillow 12.3.0 的 darwin 分支：`all_screens`
+不被使用，`screencapture -x` 只擷取主螢幕；Retina 螢幕的影像是點座標的 2 倍（Pillow 文件：「screen captures will
+be at 2x if on a Retina screen」，`scale_down=True` 只在帶 `bbox` 時生效）。`logical_virtual_rect` 只讀 Windows 的
+`GetSystemMetrics`，所以 macOS 不縮放：樣板比對、OCR 與其他走 `grab_logical` 的定位，在 Retina 上回傳的座標是
+滑鼠（Quartz，點座標）的 2 倍，副螢幕上的目標則找不到。GitHub 的 macOS runner 是 1x 虛擬螢幕，CI 測不到。
+
+**做法**：darwin 上以 `CGDisplayBounds`／`CGGetActiveDisplayList` 取得各螢幕的點座標範圍；有 `region` 時交給
+`ImageGrab.grab(bbox=..., scale_down=True)`（`screencapture -R` 接受全域點座標，包括負值），整個桌面則逐螢幕擷取、
+各自縮到點座標後拼接，原點取所有螢幕的最小 x／y。需要在 Retina Mac 上實測。
+
+---
+
 ## 遠端桌面的 viewer 槽位由各面板共用
 
 `DECIDE` — 要改 `registry` 的擁有權模型
