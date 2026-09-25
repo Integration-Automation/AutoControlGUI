@@ -74,7 +74,7 @@ _TOOL_INVOKE_ERRORS: Tuple[Type[BaseException], ...] = (
 )
 
 
-class _InvalidToolArguments(Exception):
+class _InvalidToolArguments(AutoControlException):
     """A ``tools/call`` whose arguments fail the tool's input schema.
 
     Answered as a tool execution error (``isError: true``), not a JSON-RPC
