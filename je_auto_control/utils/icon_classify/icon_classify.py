@@ -18,6 +18,8 @@ numpy lazily (the module stays importable without them) and reuses
 """
 from typing import Any, Dict, Sequence, Tuple
 
+from je_auto_control.utils.visual_match.visual_match import _contain_cv2_error
+
 # The widget types this classifier can return.
 WIDGET_TYPES = ("radio", "toggle", "checkbox", "text_field", "button", "icon")
 
@@ -90,6 +92,19 @@ def _shape(binary: Any) -> Tuple[float, int]:
     return min(1.0, 4.0 * math.pi * area / (perimeter * perimeter)), vertices
 
 
+def _foreground(binary):
+    """The widget's pixels: the Otsu ink, flipped when it is the background.
+
+    ``THRESH_BINARY_INV`` takes dark ink on a light background, so on a dark
+    theme the background was the "ink": a checkbox read as an icon and a text
+    field as a button. The patch border is background in both themes.
+    """
+    import numpy as np
+    border = np.concatenate([binary[0, :], binary[-1, :], binary[:, 0], binary[:, -1]])
+    return 255 - binary if (border > 0).mean() > 0.5 else binary
+
+
+@_contain_cv2_error
 def box_features(source: Any, box: Sequence[int]) -> Dict[str, float]:
     """Extract ``{aspect, fill, edge_density, circularity, vertices}`` for a box (cv2).
 
@@ -107,12 +122,15 @@ def box_features(source: Any, box: Sequence[int]) -> Dict[str, float]:
                 "circularity": 0.0, "vertices": 0}
     _, binary = cv2.threshold(patch, 0, 255,
                               cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
+    binary = _foreground(binary)
     fill = float((binary > 0).sum()) / patch.size
     edges = cv2.Canny(patch, 50, 150)
     edge_density = float((edges > 0).sum()) / patch.size
     circularity, vertices = _shape(binary)
     return {
-        "aspect": round(w / h, 3) if h else 0.0,
+        # The clipped patch's: a box reaching past the image edge measured
+        # its requested width, and a checkbox at the edge read as an icon.
+        "aspect": round(patch.shape[1] / patch.shape[0], 3),
         "fill": round(fill, 3),
         "edge_density": round(edge_density, 3),
         "circularity": round(circularity, 3),
@@ -120,6 +138,7 @@ def box_features(source: Any, box: Sequence[int]) -> Dict[str, float]:
     }
 
 
+@_contain_cv2_error
 def classify_icon(source: Any, box: Sequence[int]) -> Dict[str, Any]:
     """Classify the widget in a box from its pixels: ``{type, features}``."""
     features = box_features(source, box)

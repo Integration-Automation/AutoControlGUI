@@ -58,6 +58,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260926-04 | 2026-09-26 | Nested action lists run on the executor running them; dark-theme widgets classify; ß collates as ss; checksums take whole floats and any length; the IME wait keeps its deadline; TF-IDF keeps common terms and CJK words are searchable; unique ccorr matches are trusted; OCR text satisfies postconditions; reading flow takes every element shape | #bugfix #audit | [2026-09-d](2026-09-d.md) |
 | U-20260926-03 | 2026-09-26 | AC_resolve_ref / ac_resolve_ref no longer return secret:// values into executor records and MCP results; colour matches are in screen coordinates and ignore blank backgrounds; mark labels stay beside their marks; JSON snapshots match their own payload; config schemas reject null, containers and typo'd types | #security #bugfix #audit | [2026-09-d](2026-09-d.md) |
 | U-20260926-02 | 2026-09-26 | One reader for element geometry in every shape (set-of-marks dropped OCR boxes, consensus put accessibility elements at (0, 0)), finite consensus points, columns left of x = 0, ${var} sleeps in the recording editors, wrapped files in the flow debugger, and a framework name as a string | #bugfix #audit #vision | [2026-09-d](2026-09-d.md) |
 | U-20260926-01 | 2026-09-26 | Perceptual diff keeps an empty image in the executor and fails a zero budget on one pixel, text regions answer in screen coordinates, match_rotated_all finds every copy, actionability reads falsy probes and NumPy tokens, the generated project's example validates, and grid fill counts a spanning box once | #bugfix #audit #vision | [2026-09-d](2026-09-d.md) |
@@ -298,10 +299,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | File | Period | Entries |
 |---|---|---:|
-| [2026-09-d.md](2026-09-d.md) | 2026-09 | 24 |
-| [2026-09-d.md](2026-09-d.md) | 2026-09 | 18 |
-| [2026-09-d.md](2026-09-d.md) | 2026-09 | 17 |
-| [2026-09-d.md](2026-09-d.md) | 2026-09 | 20 |
+| [2026-09-d.md](2026-09-d.md) | 2026-09 | 25 |
 | [2026-09-c.md](2026-09-c.md) | 2026-09 | 38 |
 | [2026-09-b.md](2026-09-b.md) | 2026-09 | 68 |
 | [2026-09.md](2026-09.md) | 2026-09 | 79 |

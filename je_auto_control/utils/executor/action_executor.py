@@ -3450,7 +3450,7 @@ def _observe_handler(actions: List[Any]) -> Callable[[str, Any], None]:
     """Build an observer callback that runs an action list on each event."""
     def handler(_event: str, _value: Any) -> None:
         if actions:
-            executor.execute_action(list(actions))
+            _running_executor().execute_action(list(actions))
     return handler
 
 
@@ -3678,7 +3678,7 @@ def _circuit_call(name: str, actions: List[Any], threshold: int = 5,
     breaker = _CIRCUIT_BREAKERS.setdefault(
         name, CircuitBreaker(int(threshold), float(reset_s)))
     record = breaker.call(
-        lambda: executor.execute_action(list(actions), raise_on_error=True))
+        lambda: _running_executor().execute_action(list(actions), raise_on_error=True))
     return {"state": breaker.state, "record": record}
 
 
@@ -4785,7 +4785,7 @@ def _expect_poll(action: Any, key: Any = None, op: str = "truthy",
 
     def getter():
         try:
-            record = executor.execute_action([list(action)], raise_on_error=True)
+            record = _running_executor().execute_action([list(action)], raise_on_error=True)
         except (AutoControlException, OSError, RuntimeError, ValueError,
                 LookupError):
             # A failed polled action is "not yet satisfied", not a value.
@@ -5463,7 +5463,7 @@ def _replay_trace(trace: Any) -> Dict[str, Any]:
                  else from_jsonl(trace))
 
     def runner(action):
-        record = executor.execute_action([list(action)])
+        record = _running_executor().execute_action([list(action)])
         return next(iter(record.values()), None)
 
     results = replay_trace(list(trace), runner)
@@ -5549,7 +5549,7 @@ def _with_modifiers(modifiers: Any, actions: Any) -> Dict[str, Any]:
     if isinstance(actions, str):
         actions = json.loads(actions)
     with hold_modifiers(list(modifiers)):
-        record = executor.execute_action(list(actions), raise_on_error=True)
+        record = _running_executor().execute_action(list(actions), raise_on_error=True)
     return {"modifiers": list(modifiers), "record": record}
 
 
@@ -5637,7 +5637,7 @@ def _bulkhead_run(name: str, max_concurrent: int,
         name, Bulkhead(int(max_concurrent), name=name))
     try:
         with bulkhead:
-            record = executor.execute_action(list(actions), raise_on_error=True)
+            record = _running_executor().execute_action(list(actions), raise_on_error=True)
     except BulkheadFullError:
         return {"entered": False, "in_flight": bulkhead.in_flight}
     return {"entered": True, "in_flight": bulkhead.in_flight, "record": record}
@@ -6160,14 +6160,14 @@ def _burn_alerts(records: Any, target: float) -> Dict[str, Any]:
 
 def _chaos_probe_call(actions: List[Any]) -> Any:
     def call() -> bool:
-        executor.execute_action(list(actions), raise_on_error=True)
+        _running_executor().execute_action(list(actions), raise_on_error=True)
         return True
     return call
 
 
 def _chaos_fault_apply(actions: List[Any]) -> Any:
     def apply() -> Dict[str, Any]:
-        return executor.execute_action(list(actions), raise_on_error=True)
+        return _running_executor().execute_action(list(actions), raise_on_error=True)
     return apply
 
 
@@ -7064,6 +7064,17 @@ def _export_sarif(findings: Any, path: Optional[str] = None,
 #: error; nested bodies (``_validated=True``) inherit it. Thread-local, so
 #: AC_parallel branches -- their own threads and executors -- are unaffected.
 _STRICT_BODIES = threading.local()
+
+#: The executor running an action list on this thread. Adapters that run a
+#: nested list (AC_circuit_call, AC_with_modifiers, AC_bulkhead_run, ...) used
+#: the module's executor, so a list run on another Executor -- device_matrix's
+#: per-device one -- lost its variables inside them.
+_RUNNING = threading.local()
+
+
+def _running_executor() -> "Executor":
+    """The executor running the current action list on this thread, else the module's."""
+    return getattr(_RUNNING, "value", None) or executor
 
 
 class Executor:
@@ -8094,11 +8105,14 @@ class Executor:
         inherited = getattr(_STRICT_BODIES, "value", False)
         raise_on_error = bool(raise_on_error) or inherited
         _STRICT_BODIES.value = raise_on_error
+        running = getattr(_RUNNING, "value", None)
+        _RUNNING.value = self
         try:
             return self._execute_list(action_list, raise_on_error, _validated,
                                       dry_run, step_callback)
         finally:
             _STRICT_BODIES.value = inherited
+            _RUNNING.value = running
 
     def _execute_list(self, action_list: Union[list, dict], raise_on_error: bool,
                       _validated: bool, dry_run: bool,

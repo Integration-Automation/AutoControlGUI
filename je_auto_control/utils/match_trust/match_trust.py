@@ -56,8 +56,13 @@ def _safe_psr(value: float) -> Optional[float]:
     return round(value, 4) if math.isfinite(value) else None
 
 
-def _peak_stats(score_map, exclude_radius: int):
-    """Return ``(loc, best, second, peak_ratio, psr)`` for one correlation surface."""
+def _peak_stats(score_map, exclude_radius: int, rebase: bool = False):
+    """Return ``(loc, best, second, peak_ratio, psr)`` for one correlation surface.
+
+    With ``rebase`` (``ccorr_normed``) the ratio is taken above the surface's
+    mean: that surface sits near 1 everywhere, so second / best was about 0.98
+    for a unique match, which read as ambiguous.
+    """
     import numpy as np
     height, width = score_map.shape
     best_y, best_x = divmod(int(np.argmax(score_map)), width)
@@ -74,9 +79,14 @@ def _peak_stats(score_map, exclude_radius: int):
         second, mean, std = 0.0, 0.0, 0.0
     # Only a positive peak has a meaningful ratio: best -0.2 / second -0.5 gave
     # 2.5 ("ambiguous"), and a negative second made any match look unique.
-    peak_ratio = max(second, 0.0) / best if best > 1e-9 else 1.0
+    floor = mean if rebase else 0.0
+    peak_ratio = max(second - floor, 0.0) / (best - floor) if best - floor > 1e-9 else 1.0
     psr = (best - mean) / std if std > 1e-9 else float("inf")
     return (best_x, best_y), best, second, peak_ratio, psr
+
+
+def _is_ccorr(method: str) -> bool:
+    return str(method).lower().startswith("ccorr")
 
 
 def _default_radius(template_shape, exclude_radius: Optional[int]) -> int:
@@ -102,7 +112,7 @@ def score_peaks(template: ImageSource, *, haystack: Optional[ImageSource] = None
     if score_map is None:
         return None
     radius = _default_radius(tmpl.shape, exclude_radius)
-    (peak_x, peak_y), best, second, ratio, psr = _peak_stats(score_map, radius)
+    (peak_x, peak_y), best, second, ratio, psr = _peak_stats(score_map, radius, _is_ccorr(method))
     return {"best": round(best, 4), "second": round(second, 4),
             "peak_ratio": round(ratio, 4), "psr": _safe_psr(psr),
             "ambiguous": ratio >= ambiguous_ratio,
@@ -128,7 +138,7 @@ def match_with_trust(template: ImageSource, *,
         if score_map is None:
             continue
         radius = _default_radius(tmpl.shape, exclude_radius)
-        (peak_x, peak_y), best, second, ratio, psr = _peak_stats(score_map, radius)
+        (peak_x, peak_y), best, second, ratio, psr = _peak_stats(score_map, radius, _is_ccorr(method))
         if best < min_score or (best_match is not None and best <= best_match.score):
             continue
         best_match = TrustedMatch(int(peak_x) + origin_x, int(peak_y) + origin_y, tmpl.shape[1],

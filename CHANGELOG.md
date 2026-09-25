@@ -88,6 +88,9 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 - `validate_config` / `ConfigSchema.from_dict` raise `ValueError` for an
   unknown field type, and a `str` field rejects `None` and containers.
+- Search terms: runs of kana, CJK ideographs and Hangul are indexed as
+  character bigrams, so a word is found inside a sentence. `mode="tfidf"`
+  uses a smoothed IDF, so a term in every document still matches.
 - An MCP HTTP request whose `MCP-Protocol-Version` header names an
   unsupported version is still a 400, now with a JSON-RPC
   `UnsupportedProtocolVersion` (`-32022`) body listing the supported
@@ -441,6 +444,14 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
   when crowded.
 - `snapshot_json` matches its own payload; `match_json` takes one ignored
   path as a string.
+- Action lists nested in `AC_circuit_call`, `AC_with_modifiers`,
+  `AC_bulkhead_run` and similar commands run on the executor running the
+  outer list, so `run_on_devices` keeps each device's variables.
+- Dark-theme widgets classify correctly in `classify_icon`; `ß` collates as
+  `ss`; checksums accept whole floats and numbers past 4,300 digits;
+  `wait_for_composition_commit` never sleeps past its timeout; a unique
+  `ccorr_normed` match is no longer reported ambiguous; OCR text satisfies
+  `text_present`; `flow_order` reads `bbox`, `bounds` and match objects.
 - Set-of-marks numbers OCR boxes, and grounding consensus votes by each
   element's real geometry; consensus refuses non-finite points.
 - Borderless tables are found left of x = 0 (monitors left of the primary).
