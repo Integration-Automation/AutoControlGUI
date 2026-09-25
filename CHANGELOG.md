@@ -421,6 +421,9 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Fixed
 
+- The region selector (template cropping, OCR / screenshot / WebRTC regions)
+  covers every screen and returns native pixels: it was offset by the
+  virtual desktop's origin and did not cover screens with display scaling.
 - Numeric fields in the Image Detect, Auto Click and Screenshot tabs accept
   a decimal point and refuse grouped digits under any locale.
 - Script Builder: shown defaults equal the executor's (an edit no longer

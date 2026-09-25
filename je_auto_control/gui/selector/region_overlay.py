@@ -1,18 +1,42 @@
-"""Full-screen translucent overlay for drawing a selection rectangle."""
-from typing import Optional, Tuple
+"""Full-screen translucent overlays for drawing a selection rectangle.
 
-from PySide6.QtCore import QPoint, QRect, Qt, Signal
-from PySide6.QtGui import QColor, QKeyEvent, QMouseEvent, QPainter, QPen
+One overlay covers each screen. A single window sized to the whole virtual
+desktop did not work: ``showFullScreen`` put it on one screen, while the
+result was still offset by the virtual desktop's origin, and Qt's logical
+coordinates are not the native pixels screenshots use on a scaled screen.
+"""
+from typing import List, Optional, Tuple
+
+from PySide6.QtCore import QEventLoop, QPoint, QRect, Qt, Signal
+from PySide6.QtGui import QColor, QKeyEvent, QMouseEvent, QPainter, QPen, QScreen
 from PySide6.QtWidgets import QApplication, QWidget
+
+Region = Tuple[int, int, int, int]
+
+
+def native_region(screen: QScreen, rect: QRect) -> Region:
+    """``rect`` (in logical pixels, relative to ``screen``) as native (x, y, w, h).
+
+    Qt keeps a screen's top-left corner the same in logical and native
+    coordinates and scales within the screen by its device pixel ratio.
+    """
+    origin = screen.geometry().topLeft()
+    ratio = screen.devicePixelRatio()
+    return (origin.x() + round(rect.x() * ratio), origin.y() + round(rect.y() * ratio),
+            round(rect.width() * ratio), round(rect.height() * ratio))
 
 
 class RegionOverlay(QWidget):
-    """Frameless full-screen widget for selecting a rectangular region."""
+    """Frameless full-screen widget on one screen for selecting a rectangle.
+
+    ``region_selected`` carries native screen pixels; ``cancelled`` fires on
+    Escape, a too-small drag, or the overlay closing any other way.
+    """
 
     region_selected = Signal(int, int, int, int)
     cancelled = Signal()
 
-    def __init__(self) -> None:
+    def __init__(self, screen: Optional[QScreen] = None) -> None:
         super().__init__(
             None,
             Qt.WindowType.FramelessWindowHint
@@ -21,19 +45,17 @@ class RegionOverlay(QWidget):
         )
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
         self.setCursor(Qt.CursorShape.CrossCursor)
-        virtual = self._virtual_geometry()
-        self.setGeometry(virtual)
-        self._virtual_origin = virtual.topLeft()
+        self._target = screen or QApplication.primaryScreen()
+        self.setScreen(self._target)
+        self.setGeometry(self._target.geometry())
         self._origin: Optional[QPoint] = None
         self._current: Optional[QPoint] = None
+        self._finished = False
 
-    @staticmethod
-    def _virtual_geometry() -> QRect:
-        screens = QApplication.screens()
-        geom = screens[0].geometry()
-        for screen in screens[1:]:
-            geom = geom.united(screen.geometry())
-        return geom
+    @property
+    def target_screen(self) -> QScreen:
+        """The screen this overlay covers."""
+        return self._target
 
     def _rect(self) -> QRect:
         if self._origin is None or self._current is None:
@@ -70,38 +92,64 @@ class RegionOverlay(QWidget):
             return
         self._current = event.position().toPoint()
         rect = self._rect()
-        self.close()
         if rect.width() < 2 or rect.height() < 2:
-            self.cancelled.emit()
+            self._finish(None)
             return
-        screen_x = rect.x() + self._virtual_origin.x()
-        screen_y = rect.y() + self._virtual_origin.y()
-        self.region_selected.emit(screen_x, screen_y, rect.width(), rect.height())
+        self._finish(native_region(self._target, rect))
 
     def keyPressEvent(self, event: QKeyEvent) -> None:  # noqa: N802
         if event.key() == Qt.Key.Key_Escape:
-            self.close()
-            self.cancelled.emit()
+            self._finish(None)
         else:
             super().keyPressEvent(event)
 
+    def closeEvent(self, event) -> None:  # noqa: N802 Qt override
+        # Closed some other way (Alt+F4, the window manager): a cancel, so a
+        # caller waiting for an answer is not left waiting.
+        if not self._finished:
+            self._finished = True
+            self.cancelled.emit()
+        super().closeEvent(event)
 
-def pick_region_blocking(parent: Optional[QWidget] = None
-                         ) -> Optional[Tuple[int, int, int, int]]:
-    """Open overlay and block until the user selects a region or cancels."""
+    def _finish(self, region: Optional[Region]) -> None:
+        if self._finished:
+            return
+        self._finished = True
+        if region is None:
+            self.cancelled.emit()
+        else:
+            self.region_selected.emit(*region)
+        self.close()
+
+
+def pick_region_blocking(parent: Optional[QWidget] = None) -> Optional[Region]:
+    """Cover every screen, wait for a selection, and return it in native pixels.
+
+    Returns ``(x, y, width, height)``, or ``None`` when cancelled. The wait is
+    a local event loop, not a ``processEvents`` spin that kept a core busy.
+    """
     del parent
-    overlay = RegionOverlay()
-    result: dict = {"region": None}
+    overlays: List[RegionOverlay] = [RegionOverlay(screen) for screen in QApplication.screens()]
+    result: dict = {"region": None, "done": False}
+    loop = QEventLoop()
 
-    def on_selected(x: int, y: int, w: int, h: int) -> None:
-        result["region"] = (x, y, w, h)
+    def finish(region: Optional[Region] = None) -> None:
+        if result["done"]:
+            return
+        result["done"] = True
+        result["region"] = region
+        for overlay in overlays:
+            overlay.close()
+        loop.quit()
 
-    overlay.region_selected.connect(on_selected)
-    overlay.cancelled.connect(lambda: None)
-    overlay.showFullScreen()
-    overlay.activateWindow()
-    overlay.raise_()
-    # Spin the local event loop until the overlay closes.
-    while overlay.isVisible():
-        QApplication.processEvents()
+    for overlay in overlays:
+        overlay.region_selected.connect(lambda x, y, w, h: finish((x, y, w, h)))
+        overlay.cancelled.connect(finish)
+        overlay.showFullScreen()
+    overlays[0].activateWindow()
+    overlays[0].raise_()
+    if not result["done"]:
+        loop.exec()
+    for overlay in overlays:
+        overlay.deleteLater()
     return result["region"]

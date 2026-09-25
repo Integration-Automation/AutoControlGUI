@@ -12,6 +12,6 @@ def open_region_selector(parent: Optional[QWidget] = None
     Display a full-screen overlay and return the chosen (x, y, w, h) region.
 
     :param parent: optional parent widget (currently unused; the overlay is top-level)
-    :return: (x, y, width, height) in virtual-desktop coordinates, or None if cancelled
+    :return: (x, y, width, height) in native screen pixels (what screenshots use), or None if cancelled
     """
     return pick_region_blocking(parent)
