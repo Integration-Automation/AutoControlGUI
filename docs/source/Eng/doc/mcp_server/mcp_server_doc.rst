@@ -97,8 +97,12 @@ read-only, and a read-only tool given a ``db`` that does not exist answers
 with an empty result instead of creating the file. ``ac_assert_http`` only
 sends ``GET`` or ``HEAD``.
 
-A ``tools/call`` argument that the tool's input schema does not declare is
-refused with ``-32602`` (invalid params) before the tool runs.
+Arguments that fail the tool's input schema -- a missing or mistyped
+property, a value outside an ``enum``, or one the schema does not declare --
+are refused before the tool runs, as a tool execution error: a result with
+``isError: true`` whose text says what was wrong, so the model can retry with
+corrected arguments (MCP 2025-11-25). An unknown tool or a request that is not
+a ``tools/call`` at all is still a ``-32602`` protocol error.
 
 Resources, prompts, sampling
 ============================
@@ -285,8 +289,10 @@ Sessions
 ========
 
 ``initialize`` agrees on a protocol version: the client's, when it is one the
-server speaks (``2025-06-18``, ``2025-03-26``, ``2024-11-05``), otherwise the
-newest of those. Over HTTP a request whose ``MCP-Protocol-Version`` header names
+server speaks (``2025-11-25``, ``2025-06-18``, ``2025-03-26``, ``2024-11-05``),
+otherwise the newest of those. A 2025-11-25 client also gets a ``description``
+in ``serverInfo``. 2026-07-28, which drops ``initialize`` altogether, is not
+spoken yet. Over HTTP a request whose ``MCP-Protocol-Version`` header names
 any other version is refused with 400. The server declares only server
 capabilities (tools, resources, prompts, logging); it sends
 ``sampling/createMessage``, ``roots/list`` and ``elicitation/create`` only to a

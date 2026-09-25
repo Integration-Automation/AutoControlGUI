@@ -369,6 +369,25 @@ viewer 端的 `FileReceiver`（`utils/remote_desktop/file_transfer.py`）照單�
 
 ---
 
+## MCP 2026-07-28（無狀態協定）還沒支援
+
+`TODO` — 伺服器目前支援到 2025-11-25；2026-07-28 不是加一個版本常數就好
+
+2026-07-28 拿掉了 `initialize` 握手與 `Mcp-Session-Id`：每個請求在 `_meta` 帶協定版本與 client
+能力，伺服器必須實作 `server/discover`；`subscriptions/listen` 取代 GET 串流與
+`resources/subscribe`；`ping`、`logging/setLevel` 移除；每個結果都要有 `resultType`；
+伺服器主動發出的請求（`elicitation/create`、`sampling/createMessage`、`roots/list`）改成
+Multi Round-Trip Requests（回 `input_required`，client 帶 `inputResponses` 重送）；
+list 結果要有 `ttlMs`／`cacheScope`；POST 要有 `Mcp-Method`／`Mcp-Name` 標頭；
+找不到 resource 改回 `-32602`。
+
+**要動的地方**：`utils/mcp_server/server.py`（分派、每請求的版本與能力）、
+`http_transport.py` 與 `http_sessions.py`（session 模型）、`_client_requests.py`
+（破壞性工具的確認目前靠 `elicitation/create`，要改成 MRTR）。舊版 client 仍要能用
+`initialize`，兩種模式得並存。
+
+---
+
 ## MCP 工具的檔案路徑參數要不要限制在工作區根目錄裡
 
 `DECIDE` — 限制範圍與預設值由維護者決定
@@ -382,7 +401,7 @@ MCP 工具的檔案參數（`path`、`file_path`、`db`、`image_path`、`golden
 **做法**：在 `utils/mcp_server/tools/_factories.py` 的 schema 裡把真正是檔案路徑的屬性標上
 `"format": "path"`（不能照名字判斷：`ac_json_query` 的 `path` 是 JSON 路徑，`template`／`source`／
 `target` 有時是檔案有時不是），`server.py` 的 `_prepare_tool_call` 在設定了根目錄時先 `realpath`
-再檢查是否落在根目錄內，不在就回 `-32602`。
+再檢查是否落在根目錄內，不在就回工具執行錯誤（`isError`，和其他參數驗證失敗一樣）。
 
 **為什麼要拍板**：根目錄從哪來（新的環境變數、沿用 `roots/list`、或兩者），唯讀模式要不要預設開啟；
 預設開啟會讓現有讀取工作區外檔案的用法失效。

@@ -93,8 +93,10 @@ list-changed 通知與 elicitation。
 ``db`` 時回傳空結果,不會建立檔案。``ac_assert_http`` 只送 ``GET`` 或
 ``HEAD``。
 
-``tools/call`` 帶了工具輸入 schema 沒宣告的參數時,會在工具執行前以
-``-32602``(參數無效)拒絕。
+參數不符合工具的輸入 schema 時(缺少或型別錯誤的屬性、不在 ``enum`` 裡的值、schema
+沒宣告的參數),會在工具執行前拒絕,並以工具執行錯誤回報:結果帶 ``isError: true``,
+文字說明哪裡不對,讓模型能修正參數再試(MCP 2025-11-25)。未知的工具或根本不是
+``tools/call`` 的請求,仍是 ``-32602`` 協定錯誤。
 
 Resources、Prompts、Sampling
 ============================
@@ -266,8 +268,10 @@ loopback 時，``Host`` 不是 loopback 名稱的也回 403（防 DNS rebinding�
 Session
 =======
 
-``initialize`` 會協商協定版本:client 提出的版本若是伺服器支援的(``2025-06-18``、
-``2025-03-26``、``2024-11-05``)就用它,否則用其中最新的。走 HTTP 時,``MCP-Protocol-Version``
+``initialize`` 會協商協定版本:client 提出的版本若是伺服器支援的(``2025-11-25``、
+``2025-06-18``、``2025-03-26``、``2024-11-05``)就用它,否則用其中最新的。2025-11-25 的
+client 還會在 ``serverInfo`` 拿到 ``description``。完全拿掉 ``initialize`` 的 2026-07-28
+目前還不支援。走 HTTP 時,``MCP-Protocol-Version``
 標頭寫的若是其他版本,請求會以 400 拒絕。伺服器只宣告伺服器端能力(tools、resources、
 prompts、logging);``sampling/createMessage``、``roots/list`` 與 ``elicitation/create``
 只會送給在 initialize 時宣告了對應能力的 client。

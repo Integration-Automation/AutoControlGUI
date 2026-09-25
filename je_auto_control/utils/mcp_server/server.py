@@ -41,9 +41,9 @@ from je_auto_control.utils.mcp_server._client_requests import (
 )
 from je_auto_control.utils.mcp_server._protocol import (
     PROTOCOL_VERSION,  # noqa: F401  # reason: re-exported; callers import it from server
-    SERVER_NAME, SERVER_VERSION, _capture_error_screenshot, negotiate_protocol_version,
-    _coerce_params, _DISPATCH_ERRORS, _error_response, _is_hashable,
-    _MCPError, _notification_message, _result_response, _to_content_blocks,
+    _capture_error_screenshot, negotiate_protocol_version,
+    _coerce_params, _DISPATCH_ERRORS, _error_response, _InvalidToolArguments, _is_hashable,
+    _MCPError, _notification_message, _result_response, _server_info, _to_content_blocks,
     _TOOL_INVOKE_ERRORS, _TOOLS_CALL_METHOD,
 )
 
@@ -549,10 +549,11 @@ class MCPServer(ClientRequestMixin):
             "prompts": {"listChanged": False},
             "logging": {},
         }
+        version = negotiate_protocol_version(params.get("protocolVersion"))
         return {
-            "protocolVersion": negotiate_protocol_version(params.get("protocolVersion")),
+            "protocolVersion": version,
             "capabilities": capabilities,
-            "serverInfo": {"name": SERVER_NAME, "version": SERVER_VERSION},
+            "serverInfo": _server_info(version),
         }
 
     def _handle_resources_read(self,
@@ -628,7 +629,8 @@ class MCPServer(ClientRequestMixin):
         """Validate a tools/call request; return ``(name, tool, arguments)``.
 
         Raises :class:`_MCPError` when the request is malformed, the tool is
-        unknown, arguments fail schema validation, or the rate limit is hit.
+        unknown or the rate limit is hit, and :class:`_InvalidToolArguments`
+        when the arguments fail the tool's schema.
         """
         name = params.get("name")
         arguments = params.get("arguments") or {}
@@ -642,7 +644,7 @@ class MCPServer(ClientRequestMixin):
         violation = (validate_arguments(tool.input_schema, arguments)
                      or undeclared_arguments(tool.input_schema, arguments))
         if violation is not None:
-            raise _MCPError(-32602, f"Invalid arguments for {name}: {violation}")
+            raise _InvalidToolArguments(f"Invalid arguments for {name}: {violation}")
         if self._rate_limiter is not None and not self._rate_limiter.try_acquire():
             raise _MCPError(-32000, f"Rate limit exceeded for tool {name!r}")
         self._maybe_confirm_destructive(name, tool, arguments)
@@ -650,7 +652,10 @@ class MCPServer(ClientRequestMixin):
 
     def _handle_tools_call(self, msg_id: Any,
                            params: Dict[str, Any]) -> Dict[str, Any]:
-        name, tool, arguments = self._prepare_tool_call(params)
+        try:
+            name, tool, arguments = self._prepare_tool_call(params)
+        except _InvalidToolArguments as error:
+            return {"content": [{"type": "text", "text": str(error)}], "isError": True}
         ctx = self._build_call_context(msg_id, params)
         call_key = (self._connection_id, msg_id)
         with self._calls_lock:

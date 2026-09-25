@@ -22,10 +22,16 @@ from je_auto_control.utils.mcp_server.tools import MCPContent
 from je_auto_control.utils.sqlite_support import SQLITE_ERRORS
 
 
-PROTOCOL_VERSION = "2025-06-18"
+PROTOCOL_VERSION = "2025-11-25"
 #: Every revision this server speaks, newest first. ``initialize`` answers with
 #: the client's version when it is one of these, else with the newest.
-SUPPORTED_PROTOCOL_VERSIONS = ("2025-06-18", "2025-03-26", "2024-11-05")
+#: 2025-11-25's server-side changes are optional features this server does not
+#: offer (icons, tasks, URL elicitation, sampling with tools) plus rules it
+#: follows for every version: input validation errors are tool execution
+#: errors, tool names use ``[A-Za-z0-9_.-]``, and input schemas read as
+#: JSON Schema 2020-12. 2026-07-28 (stateless, ``server/discover``) is not
+#: spoken: see Progress.md.
+SUPPORTED_PROTOCOL_VERSIONS = ("2025-11-25", "2025-06-18", "2025-03-26", "2024-11-05")
 
 
 def negotiate_protocol_version(requested: Any) -> str:
@@ -37,6 +43,11 @@ def negotiate_protocol_version(requested: Any) -> str:
     return requested if requested in SUPPORTED_PROTOCOL_VERSIONS else PROTOCOL_VERSION
 SERVER_NAME = "je_auto_control"
 SERVER_VERSION = "0.1.0"
+#: ``Implementation.description``, sent to clients that negotiated 2025-11-25 or later.
+SERVER_DESCRIPTION = ("Cross-platform GUI automation: mouse and keyboard control, image, OCR "
+                      "and accessibility-tree location, and action scripts.")
+#: The first revision whose ``Implementation`` carries ``description``.
+_DESCRIPTION_SINCE = "2025-11-25"
 _TOOLS_CALL_METHOD = "tools/call"
 
 # Framework and external-library errors a tool handler may raise. They all
@@ -61,6 +72,23 @@ _DISPATCH_ERRORS: Tuple[Type[BaseException], ...] = (
 _TOOL_INVOKE_ERRORS: Tuple[Type[BaseException], ...] = (
     _BUILTIN_DISPATCH_ERRORS + (AttributeError,) + _FRAMEWORK_TOOL_ERRORS
 )
+
+
+class _InvalidToolArguments(Exception):
+    """A ``tools/call`` whose arguments fail the tool's input schema.
+
+    Answered as a tool execution error (``isError: true``), not a JSON-RPC
+    error: the model can read it and retry with corrected arguments (MCP
+    2025-11-25, SEP-1303; 2025-06-18 already listed invalid input there).
+    """
+
+
+def _server_info(protocol_version: str) -> Dict[str, Any]:
+    """The ``serverInfo`` for ``initialize``, as the negotiated revision defines it."""
+    info: Dict[str, Any] = {"name": SERVER_NAME, "version": SERVER_VERSION}
+    if protocol_version >= _DESCRIPTION_SINCE:
+        info["description"] = SERVER_DESCRIPTION
+    return info
 
 
 class _MCPError(Exception):

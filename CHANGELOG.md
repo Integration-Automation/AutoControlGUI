@@ -15,6 +15,8 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Added
 
+- The MCP server negotiates protocol version 2025-11-25 and sends its
+  `description` in `serverInfo` to clients of that revision.
 - Computer use with `computer_toolset_20260801` answers `zoom` with a
   full-resolution crop of the region.
 - `WorkQueueError` and `CheckpointStoreError` (both
@@ -76,6 +78,9 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 - The Live HUD samples only while it is on screen; its log tail keeps
   collecting while it is hidden.
+- MCP `tools/call` arguments that fail the tool's input schema are
+  answered as a tool execution error (`isError: true`), not a `-32602`
+  JSON-RPC error, so the model can correct them.
 - The MCP HTTP transport answers a wrong bearer token 401 (was 403),
   as the MCP authorization spec requires; every 401 from it and the REST
   API carries a `WWW-Authenticate: Bearer` challenge.

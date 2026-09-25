@@ -813,8 +813,8 @@ def test_tools_call_rejects_missing_required_field():
     response = _decode(server.handle_line(_request("tools/call", params={
         "name": "needs_x", "arguments": {},
     })))
-    assert response["error"]["code"] == -32602
-    assert "missing required property 'x'" in response["error"]["message"]
+    assert response["result"]["isError"] is True
+    assert "missing required property 'x'" in response["result"]["content"][0]["text"]
 
 
 def test_tools_call_rejects_wrong_type():
@@ -831,8 +831,8 @@ def test_tools_call_rejects_wrong_type():
     response = _decode(server.handle_line(_request("tools/call", params={
         "name": "needs_int", "arguments": {"x": "not-int"},
     })))
-    assert response["error"]["code"] == -32602
-    assert "expected integer" in response["error"]["message"]
+    assert response["result"]["isError"] is True
+    assert "expected integer" in response["result"]["content"][0]["text"]
 
 
 def test_tools_call_rejects_value_outside_enum():
@@ -850,7 +850,7 @@ def test_tools_call_rejects_value_outside_enum():
     response = _decode(server.handle_line(_request("tools/call", params={
         "name": "enum_only", "arguments": {"mode": "c"},
     })))
-    assert response["error"]["code"] == -32602
+    assert response["result"]["isError"] is True
 
 
 def test_tools_call_passes_valid_args():
