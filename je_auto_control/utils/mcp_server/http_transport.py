@@ -27,7 +27,9 @@ from urllib.parse import urlsplit
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any, Callable, Dict, Optional, Tuple
 
-from je_auto_control.utils.http_headers import parse_content_length
+from je_auto_control.utils.http_headers import (
+    bearer_challenge, log_safe, parse_content_length, wire_json_text,
+)
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.mcp_server._protocol import (
     SUPPORTED_PROTOCOL_VERSIONS,
@@ -62,7 +64,7 @@ def _is_initialize(line: str) -> bool:
     """True when ``line`` is an ``initialize`` request; tolerant of junk."""
     try:
         message = json.loads(line)
-    except ValueError:
+    except (ValueError, RecursionError):
         return False
     return isinstance(message, dict) and message.get("method") == "initialize"
 
@@ -101,7 +103,7 @@ class _MCPHttpHandler(BaseHTTPRequestHandler):
     # Suppress default stderr access logs — route through project logger.
     def log_message(self, format, *args) -> None:  # noqa: A002  # pylint: disable=redefined-builtin  # reason: stdlib override
         autocontrol_logger.info("mcp-http %s - %s",
-                                self.address_string(), format % args)
+                                self.address_string(), log_safe(format % args))
 
     def do_POST(self) -> None:  # noqa: N802  # reason: stdlib API
         if not self._authorize():
@@ -205,8 +207,13 @@ class _MCPHttpHandler(BaseHTTPRequestHandler):
         # The scheme is case-insensitive (RFC 7235 2.1): "bearer tok" was
         # refused here while the REST gate accepted it.
         scheme, _, provided = self.headers.get("Authorization", "").strip().partition(" ")
+        # 401 with a challenge for a missing *and* a wrong token: the MCP
+        # authorization spec requires both, and RFC 9110 the header.
+        challenge = {"WWW-Authenticate": bearer_challenge(
+            "autocontrol-mcp", self.headers.get("Authorization"))}
         if scheme.lower() != "bearer":
-            self._send_json({"error": "missing bearer token"}, status=401)
+            self._send_json({"error": "missing bearer token"}, status=401,
+                            extra_headers=challenge)
             return False
         provided = provided.strip()
         # Bytes: compare_digest raises TypeError on a non-ASCII str, and
@@ -214,7 +221,8 @@ class _MCPHttpHandler(BaseHTTPRequestHandler):
         # kill the request thread instead of being refused.
         if not hmac.compare_digest(provided.encode("utf-8"),
                                    expected.encode("utf-8")):
-            self._send_json({"error": "invalid bearer token"}, status=403)
+            self._send_json({"error": "invalid bearer token"}, status=401,
+                            extra_headers=challenge)
             return False
         return True
 
@@ -406,7 +414,7 @@ class _MCPHttpHandler(BaseHTTPRequestHandler):
 
     def _send_json(self, payload: Any, status: int = 200,
                    extra_headers: Optional[Dict[str, str]] = None) -> None:
-        body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
+        body = wire_json_text(payload).encode("utf-8")
         self._write_headers(status, body, extra_headers)
         self.wfile.write(body)
         if status >= 400:

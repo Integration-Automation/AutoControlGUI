@@ -36,8 +36,8 @@ from urllib.parse import parse_qs, urlparse
 
 from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.http_headers import (
-    INVALID_CONTENT_LENGTH, ChunkedBodyError, is_chunked, parse_content_length,
-    read_chunked_body,
+    INVALID_CONTENT_LENGTH, ChunkedBodyError, is_chunked, log_safe,
+    parse_content_length, read_chunked_body,
 )
 from je_auto_control.utils.json.json_file import read_executable_action_json
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
@@ -119,7 +119,7 @@ def _maybe_parse_json(content_type: str, body: str) -> Optional[Any]:
         return None
     try:
         return json.loads(body)
-    except ValueError:
+    except (ValueError, RecursionError):
         return None
 
 
@@ -137,7 +137,7 @@ class _WebhookHandler(BaseHTTPRequestHandler):
     # the parent class's choice, not ours.
     # pylint: disable=redefined-builtin
     def log_message(self, format, *args):  # noqa: A002
-        autocontrol_logger.debug("webhook %s", format % args)
+        autocontrol_logger.debug("webhook %s", log_safe(format % args))
     # pylint: enable=redefined-builtin
 
     def _read_body(self) -> Optional[str]:

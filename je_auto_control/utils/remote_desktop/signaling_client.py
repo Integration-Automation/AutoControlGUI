@@ -58,7 +58,7 @@ def _request(method: str, url: str, *,
         return {}
     try:
         return json.loads(payload.decode("utf-8"))
-    except (UnicodeDecodeError, json.JSONDecodeError) as error:
+    except (UnicodeDecodeError, json.JSONDecodeError, RecursionError) as error:
         raise SignalingError("signaling: bad JSON response") from error
 
 

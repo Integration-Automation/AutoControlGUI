@@ -108,6 +108,9 @@ REST API 圍繞三個面向重建：bearer token 認證、稽核軌跡、以及 
   ``locked_out``\ （回 429）；正確的 token 永遠不會被鎖，鎖定也不會是全域的。
 - POST 的內文要等路徑與 token 檢查通過才讀取，未認證的請求直接得到 401／429，
   不會被解析。
+- 401 會帶 ``WWW-Authenticate: Bearer realm="autocontrol"``\ （送了錯誤 token
+  時加上 ``error="invalid_token"``）。已知路徑用了另一個方法會得到 405 與
+  ``Allow`` 標頭；未知路徑仍是 404。
 
 Headless::
 

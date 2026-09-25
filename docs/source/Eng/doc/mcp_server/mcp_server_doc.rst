@@ -256,8 +256,10 @@ box), start the same dispatcher behind HTTP:
   ``application/json`` by default; if ``Accept`` includes
   ``text/event-stream`` the response streams progress notifications
   followed by the final result as SSE events.
-- Missing / wrong ``Authorization: Bearer <token>`` returns 401 /
-  403 (constant-time compare via ``hmac.compare_digest``).
+- A missing or wrong ``Authorization: Bearer <token>`` returns 401
+  with a ``WWW-Authenticate: Bearer`` challenge (``error="invalid_token"``
+  when a wrong token was sent), as the MCP authorization specification
+  requires; the compare is constant-time (``hmac.compare_digest``).
 - ``ssl_context`` wraps the listening socket so the same transport
   can serve HTTPS.
 - The default bind is ``127.0.0.1`` per the project's

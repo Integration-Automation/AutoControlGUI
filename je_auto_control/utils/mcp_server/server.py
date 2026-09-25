@@ -333,7 +333,8 @@ class MCPServer(ClientRequestMixin):
         """Process one JSON-RPC line; return the response line or ``None``."""
         try:
             message = json.loads(line)
-        except ValueError as error:
+        # RecursionError: a message nested thousands deep ended the stdio loop.
+        except (ValueError, RecursionError) as error:
             autocontrol_logger.warning("MCP parse error: %r", error)
             return _error_response(None, -32700, "Parse error")
         if not isinstance(message, dict):

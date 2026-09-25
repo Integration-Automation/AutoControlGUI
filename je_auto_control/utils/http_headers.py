@@ -1,4 +1,4 @@
-"""Shared, defensive parsing for inbound HTTP headers and chunked bodies.
+"""Shared, defensive helpers for this package's servers: headers, bodies, replies, logs.
 
 ``http.server`` does not validate header values, so a client is free to send
 ``Content-Length: abc``. Every server in this package read it with a bare
@@ -6,7 +6,8 @@
 died and the connection was closed with no response at all — the client saw a
 reset instead of the 400 each server already had code to send.
 """
-from typing import Any, Protocol
+import json
+from typing import Any, Callable, Optional, Protocol
 
 from je_auto_control.utils.exception.exceptions import AutoControlException
 
@@ -42,9 +43,72 @@ def parse_content_length(headers: HeaderLookup) -> int:
     if raw is None or str(raw).strip() == "":
         return 0
     text = str(raw).strip()
-    if not (text.isascii() and text.isdigit()):
+    if not (text.isascii() and text.isdigit()) or _has_conflicting_copy(headers, int(text)):
         return INVALID_CONTENT_LENGTH
     return int(text)
+
+
+def _has_conflicting_copy(headers: HeaderLookup, length: int) -> bool:
+    """Whether another Content-Length header disagrees with the first.
+
+    RFC 9112 6.3 makes such a message's framing invalid: ``get`` returns the
+    first copy only, and a proxy that honours the second one splits the
+    stream somewhere else (request smuggling). Identical copies are fine.
+    """
+    get_all = getattr(headers, "get_all", None)
+    if get_all is None:
+        return False
+    for value in get_all("Content-Length") or ():
+        other = str(value).strip()
+        if not (other.isascii() and other.isdigit()) or int(other) != length:
+            return True
+    return False
+
+
+#: C0 and C1 controls, and the backslash that escapes them, written as
+#: ``BaseHTTPRequestHandler.log_message`` writes them since Python 3.12.
+_LOG_ESCAPES = {code: fr"\x{code:02x}" for code in (*range(0x20), *range(0x7F, 0xA0))}
+_LOG_ESCAPES[ord("\\")] = r"\\"
+_LOG_TABLE = str.maketrans(_LOG_ESCAPES)
+
+
+def log_safe(text: str) -> str:
+    """``text`` with its control characters escaped, for one access-log line.
+
+    The stdlib's ``log_message`` escapes the request line; every server here
+    overrides it, so a client could write a carriage return, a terminal
+    escape sequence or a fake log line into the log before it authenticated.
+    """
+    return text.translate(_LOG_TABLE)
+
+
+def wire_json_text(value: Any, *, default: Optional[Callable[[Any], Any]] = None) -> str:
+    """``value`` as JSON text that always encodes as UTF-8.
+
+    Non-ASCII text stays as it is unless the value holds a lone surrogate (a
+    file name read with ``surrogateescape``, say). UTF-8 cannot encode that,
+    so the reply was never sent and the connection dropped; the text is then
+    ASCII-escaped as a whole, which JSON readers decode to the same value.
+    Raises what ``json.dumps`` raises for a value it cannot serialise.
+    """
+    text = json.dumps(value, ensure_ascii=False, default=default)
+    try:
+        text.encode("utf-8")
+    except UnicodeEncodeError:
+        return json.dumps(value, ensure_ascii=True, default=default)
+    return text
+
+
+def bearer_challenge(realm: str, authorization: Optional[str]) -> str:
+    """The ``WWW-Authenticate`` value a 401 must carry (RFC 9110 15.5.2, RFC 6750 3).
+
+    ``error="invalid_token"`` only when a Bearer token was sent; a request
+    with none, or with another scheme, gets the bare challenge.
+    """
+    scheme = str(authorization or "").strip().partition(" ")[0]
+    if scheme.lower() == "bearer":
+        return f'Bearer realm="{realm}", error="invalid_token"'
+    return f'Bearer realm="{realm}"'
 
 
 #: Longest chunk-size or trailer line accepted, and most trailer lines.

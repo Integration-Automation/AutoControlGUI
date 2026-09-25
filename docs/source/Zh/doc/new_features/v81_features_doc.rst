@@ -1,7 +1,7 @@
 分層設定解析器
 ============
 
-``json_patch.merge_patch`` 只合併兩份文件,``config_sync`` 以 last-write-wins 時間戳解析,
+``json_patch.merge_patch`` 只合併兩份文件,``config_sync`` 以 last-write-wins 時間戳解析(時間戳相同時刪除優先,其餘每個客戶端都選同一筆,並記為衝突),
 ``AssetStore`` 則是每環境的扁平結構。它們都無法組成一個有序的 ``defaults < file < env < CLI`` 優先序
 堆疊並做深度 dict 合併,也無法回報*每個鍵由哪一層勝出*。本功能補上這個 12-factor 解析器。
 

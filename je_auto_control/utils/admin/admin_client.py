@@ -189,7 +189,9 @@ class AdminConsoleClient:
             )) + missing
 
     def _resolve_targets(self, labels: Optional[List[str]]) -> List[AdminHost]:
-        if not labels:
+        # None is "every host"; an empty list is no host -- it ran a
+        # broadcast on every host when a caller's filter matched nothing.
+        if labels is None:
             return self.list_hosts()
         with self._lock:
             return [self._hosts[label] for label in labels
@@ -284,7 +286,12 @@ class AdminConsoleClient:
             raw = self._read_bounded(response)
         if not raw:
             return {}
-        return json.loads(raw.decode("utf-8"))
+        try:
+            return json.loads(raw.decode("utf-8"))
+        except RecursionError as error:
+            # Every caller catches ValueError; this escaped pool.map and
+            # failed the whole round because of one host's reply.
+            raise ValueError(f"{host.label}: reply nested too deeply") from error
 
     def _read_bounded(self, response: Any) -> bytes:
         """Read the body within the timeout as a whole and a size cap.

@@ -89,8 +89,10 @@ def test_merge_handles_disjoint_entries():
     assert conflicts == []
 
 
-def test_merge_tie_breaks_in_favour_of_local():
-    """Identical timestamps shouldn't ping-pong — local wins by convention."""
+def test_merge_tie_picks_the_same_entry_on_both_sides():
+    """Identical timestamps must not ping-pong: "local wins" had each client
+    push its own copy on every sync. Both sides now pick the same entry and
+    report the one it beat."""
     local = ConfigBucket(user_id="u")
     local.upsert("hotkeys", "hk1",
                  {"combo": "ctrl+local", "last_modified": 100.0})
@@ -98,8 +100,9 @@ def test_merge_tie_breaks_in_favour_of_local():
     remote.upsert("hotkeys", "hk1",
                   {"combo": "ctrl+remote", "last_modified": 100.0})
     merged, conflicts = merge_buckets(local, remote)
-    assert merged.sections["hotkeys"]["hk1"]["combo"] == "ctrl+local"
-    assert conflicts == []  # tie not counted as a conflict
+    mirrored, mirrored_conflicts = merge_buckets(remote, local)
+    assert merged.sections["hotkeys"]["hk1"] == mirrored.sections["hotkeys"]["hk1"]
+    assert len(conflicts) == len(mirrored_conflicts) == 1
 
 
 def test_merge_rejects_user_id_mismatch():

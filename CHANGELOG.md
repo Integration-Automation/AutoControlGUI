@@ -74,6 +74,14 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Changed
 
+- The MCP HTTP transport answers a wrong bearer token 401 (was 403),
+  as the MCP authorization spec requires; every 401 from it and the REST
+  API carries a `WWW-Authenticate: Bearer` challenge.
+- The REST API answers a known path asked with the other method 405 with
+  `Allow` (was 404).
+- `AdminConsoleClient` treats `labels=[]` as no host (was every host).
+- Config sync breaks timestamp ties the same way on every client and
+  reports them as conflicts.
 - `AC_call_macro` restores the caller's variables of the parameters'
   names after the call.
 - A plugin command named like a block command is refused.
@@ -366,6 +374,14 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Fixed
 
+- REST and MCP replies holding a lone surrogate, REST replies that cannot
+  be serialised, huge `/history` limits and JSON nested too deeply no
+  longer drop the connection without a response.
+- Requests with conflicting `Content-Length` headers are refused.
+- Access-log lines of the REST, MCP HTTP and webhook servers escape
+  control characters.
+- A histogram given a `+Inf` bucket renders it once.
+- `ResourceProfiler.is_running` is right without psutil.
 - Scheduled, triggered, hotkey, webhook and e-mail runs in which an
   action failed are recorded as errors, with an error snapshot.
 - `*/15`-style cron jobs keep their pace through the repeated DST hour.

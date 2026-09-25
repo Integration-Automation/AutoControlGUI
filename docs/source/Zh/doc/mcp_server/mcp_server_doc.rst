@@ -244,8 +244,10 @@ HTTP 傳輸(含 SSE / Auth / TLS)
 - ``POST /mcp`` 接受 JSON-RPC 主體。預設回 ``application/json``;
   如果 ``Accept`` 包含 ``text/event-stream``,會以 SSE 串流推送進
   度通知,然後送出最終結果。
-- 缺少或錯誤的 ``Authorization: Bearer <token>`` 會回 401 / 403
-  (透過 ``hmac.compare_digest`` 做常數時間比對)。
+- 缺少或錯誤的 ``Authorization: Bearer <token>`` 都回 401，並帶
+  ``WWW-Authenticate: Bearer`` 挑戰（送了錯誤 token 時加上
+  ``error="invalid_token"``），這是 MCP 授權規格的要求；比對透過
+  ``hmac.compare_digest`` 以常數時間進行。
 - ``ssl_context`` 會包住 socket,讓同一條傳輸支援 HTTPS。
 - 預設綁定 ``127.0.0.1``;若要對外,務必同時設定 ``auth_token``
   與(非 localhost 場景)``ssl_context``。

@@ -90,7 +90,14 @@ class ResourceProfiler:
 
     @property
     def is_running(self) -> bool:
-        return self._thread is not None and self._thread.is_alive()
+        """Whether a run has started and not been stopped, psutil or not.
+
+        Not the sampling thread's state: without psutil there is none, so a
+        running FPS-only profiler said it was stopped and a second
+        ``start()`` wiped the frames it had recorded.
+        """
+        with self._lock:
+            return self._started_at is not None and self._stopped_at is None
 
     @property
     def has_psutil(self) -> bool:

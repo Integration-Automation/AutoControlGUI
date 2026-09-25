@@ -172,26 +172,42 @@ def merge_buckets(local: ConfigBucket,
             if remote_entry is None:
                 merged_section[entry_id] = local_entry
                 continue
-            local_ts = float(local_entry.get("last_modified", 0))
-            remote_ts = float(remote_entry.get("last_modified", 0))
-            if remote_ts > local_ts:
-                merged_section[entry_id] = remote_entry
+            kept, dropped = _winner(local_entry, remote_entry)
+            merged_section[entry_id] = kept
+            if dropped is not None:
                 conflicts.append(ConflictRecord(
-                    section=name, entry_id=entry_id,
-                    dropped=local_entry, kept=remote_entry,
+                    section=name, entry_id=entry_id, dropped=dropped, kept=kept,
                 ))
-            elif local_ts > remote_ts:
-                merged_section[entry_id] = local_entry
-                conflicts.append(ConflictRecord(
-                    section=name, entry_id=entry_id,
-                    dropped=remote_entry, kept=local_entry,
-                ))
-            else:
-                merged_section[entry_id] = local_entry  # tie — local wins
         merged.sections[name] = _without_expired(
             merged_section, (time.time() if now is None else now) - tombstone_retention_s)
     merged.revision = max(local.revision, remote.revision) + 1
     return merged, conflicts
+
+
+def _winner(local_entry: Dict[str, Any], remote_entry: Dict[str, Any],
+            ) -> Tuple[Dict[str, Any], Optional[Dict[str, Any]]]:
+    """The entry that wins and the one it beat (``None`` when they are equal).
+
+    The later ``last_modified`` wins. At a tie a deletion wins -- ``delete``
+    stamps its tombstone no earlier than the entry it removes -- and then the
+    larger canonical JSON, so both sides pick the same entry: "local wins"
+    had two clients each push their own copy on every sync, never agreeing
+    and never reporting the conflict.
+    """
+    local_ts = float(local_entry.get("last_modified", 0))
+    remote_ts = float(remote_entry.get("last_modified", 0))
+    if local_ts != remote_ts:
+        if remote_ts > local_ts:
+            return remote_entry, local_entry
+        return local_entry, remote_entry
+    if local_entry == remote_entry:
+        return local_entry, None
+    loser, winner = sorted((local_entry, remote_entry), key=_tie_rank)
+    return winner, loser
+
+
+def _tie_rank(entry: Dict[str, Any]) -> Tuple[bool, str]:
+    return is_tombstone(entry), json.dumps(entry, sort_keys=True, default=str)
 
 
 def _without_expired(section: Dict[str, Dict[str, Any]],
@@ -257,7 +273,7 @@ class ConfigSyncClient:
             return {}
         try:
             return json.loads(payload.decode("utf-8"))
-        except (UnicodeDecodeError, json.JSONDecodeError) as error:
+        except (UnicodeDecodeError, json.JSONDecodeError, RecursionError) as error:
             raise ConfigSyncError("config sync: invalid JSON reply") from error
 
     def fetch(self) -> Optional[ConfigBucket]:

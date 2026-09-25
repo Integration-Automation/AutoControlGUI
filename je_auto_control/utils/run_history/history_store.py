@@ -33,6 +33,8 @@ STATUS_OK = "ok"
 STATUS_ERROR = "error"
 
 _IN_MEMORY_DB = ":memory:"
+#: The largest integer SQLite can bind.
+_SQLITE_MAX_INT = 2 ** 63 - 1
 
 _VALID_SOURCES = frozenset({
     SOURCE_SCHEDULER, SOURCE_TRIGGER, SOURCE_HOTKEY,
@@ -228,7 +230,8 @@ class HistoryStore:
                 "WHERE (? IS NULL OR source_type = ?) "
                 "AND (? IS NULL OR script_path = ?) "
                 "ORDER BY started_at DESC, id DESC LIMIT ?",
-                (source_type, source_type, path, path, int(limit)),
+                # Clamped: a larger int raised OverflowError binding it.
+                (source_type, source_type, path, path, min(int(limit), _SQLITE_MAX_INT)),
             ).fetchall()
         return [_row_to_record(row) for row in rows]
 

@@ -54,6 +54,10 @@ def _is_complete(buffer: bytes) -> bool:
     except ValueError as error:
         position = getattr(error, "pos", None)
         return position is None or position < len(text)
+    except RecursionError:
+        # Too deep to parse: complete, and answered with the error. It used
+        # to escape the read and drop the client without a reply.
+        return True
     return True
 
 

@@ -116,6 +116,10 @@ Auth gate
   never locked out, and the lockout is never global.
 - A POST body is read only after the route and the token check pass, so
   unauthenticated requests get 401 / 429 without being parsed.
+- A 401 carries ``WWW-Authenticate: Bearer realm="autocontrol"`` (with
+  ``error="invalid_token"`` when a wrong token was sent). A known path
+  asked with the other method gets 405 and an ``Allow`` header; an unknown
+  path gets 404.
 
 Headless::
 

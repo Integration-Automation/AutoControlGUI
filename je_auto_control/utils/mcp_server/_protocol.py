@@ -16,6 +16,7 @@ import time
 from typing import Any, Dict, List, Optional, Tuple, Type
 
 from je_auto_control.utils.exception.exceptions import AutoControlException
+from je_auto_control.utils.http_headers import wire_json_text
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.mcp_server.tools import MCPContent
 from je_auto_control.utils.sqlite_support import SQLITE_ERRORS
@@ -167,20 +168,20 @@ def _coerce_params(raw: Any, msg_id: Any) -> tuple:
     return {}, _error_response(msg_id, -32602, "Invalid params: expected an object")
 
 
+# wire_json_text: a lone surrogate (a tool listing an undecodable file name)
+# could not be written as UTF-8, and the reply never reached the client.
 def _notification_message(method: str, params: Dict[str, Any]) -> str:
-    return json.dumps({"jsonrpc": "2.0", "method": method, "params": params},
-                      ensure_ascii=False, default=str)
+    return wire_json_text({"jsonrpc": "2.0", "method": method, "params": params},
+                          default=str)
 
 
 def _result_response(msg_id: Any, result: Any) -> str:
-    return json.dumps(
-        {"jsonrpc": "2.0", "id": msg_id, "result": result},
-        ensure_ascii=False, default=str,
-    )
+    return wire_json_text({"jsonrpc": "2.0", "id": msg_id, "result": result},
+                          default=str)
 
 
 def _error_response(msg_id: Any, code: int, message: str) -> str:
-    return json.dumps({
+    return wire_json_text({
         "jsonrpc": "2.0", "id": msg_id,
         "error": {"code": code, "message": message},
-    }, ensure_ascii=False)
+    })

@@ -14,11 +14,13 @@ import re
 import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from typing import Any, Callable, Dict, Optional, Tuple, Type
+from typing import Any, Callable, Dict, List, Optional, Tuple, Type
 from urllib.parse import urlparse
 
 from je_auto_control.utils.exception.exceptions import AutoControlException
-from je_auto_control.utils.http_headers import parse_content_length
+from je_auto_control.utils.http_headers import (
+    bearer_challenge, log_safe, parse_content_length, wire_json_text,
+)
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.rest_api.rest_auth import RestAuthGate, generate_token
 from je_auto_control.utils.rest_api.rest_handlers import (
@@ -46,9 +48,11 @@ from je_auto_control.utils.sqlite_support import SQLITE_ERRORS
 # locked or corrupt DB otherwise escaped the handler thread and dropped the
 # connection with no response. That tuple is empty on a Python built without
 # sqlite3, which catches exactly the right amount there: nothing.
+# ArithmeticError: an OverflowError from a huge query parameter (an int too
+# large for SQLite) dropped the connection the same way.
 _HANDLER_ERRORS: Tuple[Type[BaseException], ...] = (
-    OSError, RuntimeError, ValueError, TypeError, AutoControlException,
-    *SQLITE_ERRORS,
+    OSError, RuntimeError, ValueError, TypeError, ArithmeticError,
+    AutoControlException, *SQLITE_ERRORS,
 )
 
 HandlerFn = Callable[[RouteContext], HandlerResult]
@@ -113,7 +117,7 @@ class _RestRequestHandler(BaseHTTPRequestHandler):
 
     def log_message(self, format, *args) -> None:  # noqa: A002  # pylint: disable=redefined-builtin  # reason: stdlib BaseHTTPRequestHandler override
         autocontrol_logger.info("rest-api %s - %s",
-                                self.address_string(), format % args)
+                                self.address_string(), log_safe(format % args))
 
     def do_GET(self) -> None:  # noqa: N802  # reason: stdlib API
         parsed = urlparse(self.path)
@@ -185,7 +189,7 @@ class _RestRequestHandler(BaseHTTPRequestHandler):
         handler = routes.get(parsed.path)
         if handler is None:
             self._drain_unread_body(body)
-            self._send_json({"error": "unknown path"}, status=404)
+            self._answer_unrouted(parsed.path)
             return
         client_ip = self.client_address[0] if self.client_address else "?"
         if parsed.path not in _PUBLIC_PATHS:
@@ -218,7 +222,7 @@ class _RestRequestHandler(BaseHTTPRequestHandler):
             self._audit(method, parsed.path, client_ip, "error")
             self._metrics().record_request(method, parsed.path, 500)
             return
-        self._send_json(payload, status=status, default=str)
+        status = self._send_json(payload, status=status, default=str)
         if parsed.path not in _PUBLIC_PATHS:
             self._audit(method, parsed.path, client_ip, f"ok:{status}")
         self._metrics().record_request(method, parsed.path, status)
@@ -242,6 +246,15 @@ class _RestRequestHandler(BaseHTTPRequestHandler):
         except (OSError, RuntimeError) as error:
             autocontrol_logger.warning("rest-api audit write failed: %r", error)
 
+    def _answer_unrouted(self, path: str) -> None:
+        """404 for an unknown path; 405 and ``Allow`` for a known path's other method."""
+        allowed = _allowed_methods(path)
+        if not allowed:
+            self._send_json({"error": "unknown path"}, status=404)
+            return
+        self._send_json({"error": "method not allowed"}, status=405,
+                        headers={"Allow": ", ".join(allowed)})
+
     def _reject(self, verdict: str) -> None:
         if verdict == "rate_limited":
             self._send_json({"error": "rate limited"}, status=429)
@@ -249,7 +262,9 @@ class _RestRequestHandler(BaseHTTPRequestHandler):
             self._send_json({"error": "too many failed auth attempts"},
                             status=429)
         else:
-            self._send_json({"error": "unauthorized"}, status=401)
+            challenge = bearer_challenge("autocontrol", self.headers.get("Authorization"))
+            self._send_json({"error": "unauthorized"}, status=401,
+                            headers={"WWW-Authenticate": challenge})
 
     def _drain_unread_body(self, body: Any) -> None:
         """Discard a body nobody will read before answering, up to a cap.
@@ -274,23 +289,49 @@ class _RestRequestHandler(BaseHTTPRequestHandler):
         raw = self.rfile.read(length)
         try:
             return json.loads(raw.decode("utf-8"))
-        except ValueError:
+        # RecursionError: a body nested a few thousand levels deep escaped
+        # here, outside the handler's guard, and dropped the connection.
+        except (ValueError, RecursionError):
             self._send_json({"error": "invalid JSON"}, status=400)
             return _BODY_ERROR_SENT
 
     def _send_json(self, payload: Dict[str, Any], status: int = 200,
-                   default=None) -> None:
-        body = json.dumps(payload, ensure_ascii=False, default=default).encode("utf-8")
+                   default=None, headers: Optional[Dict[str, str]] = None) -> int:
+        """Write ``payload`` as the response; return the status actually sent.
+
+        A payload that cannot be serialised (a circular reference, nesting
+        too deep) is answered 500: it raised after the handler had returned,
+        where nothing caught it, and the client got no response at all.
+        """
+        try:
+            body = wire_json_text(payload, default=default).encode("utf-8")
+        except (TypeError, ValueError, RecursionError) as error:
+            autocontrol_logger.error("rest-api reply not serialisable: %r", error)
+            status, headers = 500, None
+            body = b'{"error": "reply not serialisable"}'
         self.send_response(status)
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Content-Length", str(len(body)))
+        for name, value in (headers or {}).items():
+            self.send_header(name, value)
         self.end_headers()
         self.wfile.write(body)
+        return status
 
 
 _BODY_ERROR_SENT = object()
 #: A POST whose body is still on the socket, read once the request is allowed.
 _BODY_PENDING = object()
+
+
+def _allowed_methods(path: str) -> List[str]:
+    """The methods ``path`` answers, or none when it is not a path of this server."""
+    if (path in _GET_ROUTES or path in (_PATH_METRICS, _PATH_DASHBOARD, "/docs")
+            or path.startswith(_PATH_DASHBOARD + "/")):
+        return ["GET"]
+    if path in _POST_ROUTES:
+        return ["POST"]
+    return []
 
 
 def _verdict_to_status(verdict: str) -> int:
