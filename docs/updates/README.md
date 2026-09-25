@@ -58,6 +58,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260925-28 | 2026-09-25 | Shell, clipboard, adb and USB/IP helpers at their edges: AC_shell_to_var refuses cmd syntax for batch files, timeouts end the whole process tree, launch failures fail the action, secrets stay out of logs, an empty Linux clipboard is empty, USB/IP device lists, speeds, idle devices and isochronous URBs | #bugfix #security #usbip | [2026-09-c](2026-09-c.md) |
 | U-20260925-27 | 2026-09-25 | Code generation, the command-line tools and report writers at their edges: MCP --read-only reaches the server, MCP stdio and CLI output are UTF-8, generated tests fail with their actions, ${var} goes through the executor, action shapes are checked, SARIF / SOP / Allure output | #bugfix #codegen #mcp #cli | [2026-09-c](2026-09-c.md) |
 | U-20260925-26 | 2026-09-25 | The package imports cleanly when warnings are errors, and SARIF file URIs no longer use PurePath.as_uri(), deprecated in Python 3.14 | #bugfix #compat | [2026-09-c](2026-09-c.md) |
 | U-20260925-25 | 2026-09-25 | The September update log is split at 800 lines into 2026-09.md, -b and -c, as the batch rules ask | #docs | [2026-09-c](2026-09-c.md) |
@@ -270,7 +271,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | File | Period | Entries |
 |---|---|---:|
-| [2026-09-c.md](2026-09-c.md) | 2026-09 | 34 |
+| [2026-09-c.md](2026-09-c.md) | 2026-09 | 35 |
 | [2026-09-b.md](2026-09-b.md) | 2026-09 | 68 |
 | [2026-09.md](2026-09.md) | 2026-09 | 79 |
 | [2026-08-f.md](2026-08-f.md) | 2026-08 | 1 |

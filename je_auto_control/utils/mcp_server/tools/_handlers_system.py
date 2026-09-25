@@ -247,20 +247,19 @@ def shell_command(command: str, timeout: float = 30.0
     protects against the command injection classes Bandit B602 / B605
     cover.
     """
-    import subprocess  # nosec B404  # reason: required for child execution
+    import locale
 
-    from je_auto_control.utils.shell_process.shell_exec import command_args
+    from je_auto_control.utils.shell_process.shell_exec import command_args, run_captured
     if not command or not command.strip():
         raise ValueError("command must be a non-empty string")
-    argv = command_args(command)
-    # nosemgrep: python.lang.security.audit.dangerous-subprocess-use-audit.dangerous-subprocess-use-audit
-    proc = subprocess.run(  # nosec B603  # reason: argv from command_args, no shell
-        argv, capture_output=True, text=True,
-        timeout=float(timeout), check=False,
-    )
+    proc = run_captured(command_args(command), float(timeout))
+    # Bytes, decoded leniently: strict decoding failed in the reader thread
+    # on output the locale's code page cannot read, and stdout came back None.
+    encoding = locale.getpreferredencoding(False)
     return {
         "exit_code": int(proc.returncode),
-        "stdout": proc.stdout, "stderr": proc.stderr,
+        "stdout": proc.stdout.decode(encoding, errors="replace"),
+        "stderr": proc.stderr.decode(encoding, errors="replace"),
     }
 
 

@@ -1216,6 +1216,10 @@ land in the variable bag::
    [["AC_shell_command",
      {"command": "curl -H \"Authorization: Bearer ${secrets.github_token}\" ..."}]]
 
+``AC_shell_command`` logs only the program it starts, never its arguments,
+so a filled-in secret stays out of the log; a program that cannot start
+fails the action.
+
 GUI: **Secrets** tab — initialize the vault, unlock it, add / remove
 entries, change passphrase. The vault file is created with mode 0o600
 on POSIX systems; on Windows the default ACL already restricts

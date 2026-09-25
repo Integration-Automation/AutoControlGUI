@@ -4857,11 +4857,8 @@ def _get_clipboard_html() -> Dict[str, Any]:
 
 def _set_clipboard_files(paths: Any) -> Dict[str, Any]:
     """Adapter: put a file-drop list (CF_HDROP) on the clipboard (Windows)."""
-    import json
     from je_auto_control.utils.clipboard_files import set_clipboard_files
-    if isinstance(paths, str):
-        paths = json.loads(paths) if paths.strip().startswith("[") else [paths]
-    paths = [str(p) for p in paths]
+    paths = _coerce_paths(paths)
     set_clipboard_files(paths)
     return {"set": True, "count": len(paths)}
 
@@ -4931,10 +4928,20 @@ def _diff_formats(before: Any, after: Any) -> Dict[str, Any]:
 
 
 def _coerce_paths(paths: Any) -> list:
-    """Normalise a paths argument (JSON list string / single path / list)."""
+    """Normalise a paths argument (JSON list string / single path / list).
+
+    A string is a JSON list only if it parses as one: "[draft] notes.txt"
+    is a file name, and raised JSONDecodeError.
+    """
     import json
     if isinstance(paths, str):
-        paths = json.loads(paths) if paths.strip().startswith("[") else [paths]
+        parsed = None
+        if paths.strip().startswith("["):
+            try:
+                parsed = json.loads(paths)
+            except ValueError:
+                parsed = None
+        paths = parsed if isinstance(parsed, list) else [paths]
     return [str(p) for p in paths]
 
 

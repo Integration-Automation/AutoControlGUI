@@ -71,9 +71,6 @@ _NEEDS_MORE_THAN_THE_CONTRACT = {
     # Needs an interaction recorded into the cassette first; a fresh one
     # misses by design.
     "ac_http_replay",
-    # Launches a real child from what ``command_args`` returns; the empty
-    # command line its annotation yields is not a program to run.
-    "ac_shell",
 }
 
 

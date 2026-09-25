@@ -1140,6 +1140,9 @@ Action JSON 指令::
    [["AC_shell_command",
      {"command": "curl -H \"Authorization: Bearer ${secrets.github_token}\" ..."}]]
 
+``AC_shell_command`` 只記錄它啟動的程式,從不記錄參數,所以填入的 secret 不會進到 log;
+程式無法啟動時該動作會失敗。
+
 GUI: **Secrets** 分頁 — 建立 vault、解鎖、新增 / 移除條目、變更
 通行碼。POSIX 系統上 vault 檔以 0o600 建立;Windows 預設 ACL 已限制
 只有擁有者能讀取。

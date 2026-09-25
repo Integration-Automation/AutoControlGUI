@@ -30,18 +30,20 @@ def test_start_exe_passes_argv_list_not_split_string(tmp_path, monkeypatch):
 
 
 def test_start_exe_raises_when_launch_fails(tmp_path, monkeypatch):
-    from je_auto_control.utils.shell_process.shell_exec import ShellManager
+    from je_auto_control.utils.shell_process import shell_exec
     from je_auto_control.utils.start_exe.start_another_process import start_exe
     from je_auto_control.utils.exception.exceptions import AutoControlException
 
     exe = tmp_path / "app.exe"
     exe.write_text("stub")
 
-    def fake_exec(self, _command):
-        self.process = None  # exec_shell swallowed the launch failure
+    def cannot_start(*args, **kwargs):
+        raise OSError("not a valid Win32 application")
 
-    monkeypatch.setattr(ShellManager, "exec_shell", fake_exec)
-    with pytest.raises(AutoControlException):
+    # The real exec_shell: it raises a launch failure now, which start_exe
+    # passes on as the AutoControlException it documents.
+    monkeypatch.setattr(shell_exec.subprocess, "Popen", cannot_start)
+    with pytest.raises(AutoControlException, match="could not start"):
         start_exe(str(exe))
 
 

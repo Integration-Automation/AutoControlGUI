@@ -80,6 +80,9 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
   `ac.executor.execute_action(..., raise_on_error=True)`, so they fail at
   the first failed action; actions holding `${...}` go through the executor.
 - Several `je_auto_control_mcp --list-*` flags print one JSON object.
+- `AC_shell_command` fails when its program cannot start (it reported
+  success) and logs only the program, not its arguments.
+- `AC_read_file_to_var` reads `utf-8-sig` by default.
 - The Live HUD samples only while it is on screen; its log tail keeps
   collecting while it is hidden.
 - MCP `tools/call` arguments that fail the tool's input schema are
@@ -394,6 +397,16 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
   and takes lone surrogates and sigil runs in Robot output.
 - SARIF and SOP writers take lone surrogates; SOP creates its folder and
   writes atomically; Allure results carry start and stop times.
+- `AC_shell_to_var` refuses cmd metacharacters in a batch file's
+  arguments, and its timeout, like MCP `shell_command`'s, ends everything
+  the command started.
+- MCP `shell_command` keeps output the code page cannot decode strictly.
+- An empty Linux clipboard reads as empty; clipboard tool failures are
+  `ClipboardError`.
+- adb errors no longer carry the command's arguments; `no permissions`
+  devices get that state.
+- USB/IP: device lists on Windows and with alternate settings, speed codes,
+  idle attached devices, and isochronous URBs.
 - `import je_auto_control` no longer emits a DeprecationWarning from
   defusedxml, so it works in test suites that turn warnings into errors.
 - SARIF export no longer calls `PurePath.as_uri()`, deprecated in Python

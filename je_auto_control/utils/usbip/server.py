@@ -1,9 +1,10 @@
 """USB/IP host-side TCP server."""
 from __future__ import annotations
 
+import select
 import socket
 import threading
-from typing import Optional
+from typing import Any, Optional
 
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.usbip.backend import (
@@ -13,7 +14,7 @@ from je_auto_control.utils.usbip.protocol import (
     OP_REQ_DEVLIST, OP_REQ_IMPORT, USBIP_CMD_SUBMIT, USBIP_CMD_UNLINK,
     UsbIpError, decode_cmd_submit, decode_op_request,
     encode_op_rep_devlist, encode_op_rep_import, encode_ret_submit,
-    encode_ret_unlink, parse_op_header, peek_transfer_length,
+    encode_ret_unlink, parse_op_header, peek_iso_packets, peek_transfer_length,
 )
 
 _OP_HEADER_BYTES = 8  # version + command + status
@@ -130,7 +131,7 @@ class UsbIpServer:
     def _handle_client(self, client_sock: socket.socket,
                        stop: threading.Event) -> None:
         try:
-            client_sock.settimeout(30.0)
+            client_sock.settimeout(_CLIENT_READ_TIMEOUT_S)
             self._serve(client_sock, stop)
         except (OSError, UsbIpError) as error:
             autocontrol_logger.info("usbip client error: %r", error)
@@ -171,6 +172,15 @@ class UsbIpServer:
         # access to every device the backend had enumerated.
         imported_devid = (device.busnum << 16) | device.devnum
         while not stop.is_set():
+            # Wait for the next URB without the 30 s read timeout: an attached
+            # device that is simply quiet (idle storage, a suspended device)
+            # was detached after 30 s. stop() is still seen within a second.
+            try:
+                readable, _, _ = select.select([sock], [], [], _URB_IDLE_POLL_S)
+            except (OSError, ValueError):
+                return
+            if not readable:
+                continue
             try:
                 header = _recv_exact(sock, _URB_HEADER_BYTES)
             except OSError:
@@ -195,6 +205,24 @@ class UsbIpServer:
                     f"unexpected URB command 0x{command:08x}",
                 )
 
+    @staticmethod
+    def _refuse_isochronous(sock: socket.socket, submit: Any, packets: int) -> None:
+        """Read an isochronous URB's packet descriptors and refuse it.
+
+        The descriptors (16 bytes a packet) follow the buffer; left unread,
+        the next command was read from the middle of them and the connection
+        was lost ("unexpected URB command 0x00000000").
+        """
+        if packets > _MAX_ISO_PACKETS:
+            raise UsbIpError(f"CMD_SUBMIT number_of_packets {packets} exceeds {_MAX_ISO_PACKETS}")
+        _recv_exact(sock, packets * _ISO_DESCRIPTOR_BYTES)
+        sock.sendall(encode_ret_submit(
+            seqnum=submit.seqnum, devid=submit.devid,
+            direction=submit.direction, ep=submit.ep,
+            status=_EOPNOTSUPP, actual_length=0, data=b"",
+            setup=submit.setup,
+        ))
+
     def _serve_cmd_submit(self, sock: socket.socket,
                           header: bytes, imported_devid: int) -> None:
         body = _recv_exact(sock, _CMD_SUBMIT_BODY_BYTES)
@@ -211,6 +239,10 @@ class UsbIpServer:
         if direction == 0 and tlen > 0:
             extra = _recv_exact(sock, tlen)
         submit = decode_cmd_submit(header + body + extra)
+        packets = peek_iso_packets(body)
+        if packets > 0:
+            self._refuse_isochronous(sock, submit, packets)
+            return
         if submit.devid != imported_devid:
             sock.sendall(encode_ret_submit(
                 seqnum=submit.seqnum, devid=submit.devid,
@@ -238,6 +270,13 @@ class UsbIpServer:
 
 
 _ENODEV = -19  # Linux errno, as usbip reports a URB for a device it lacks
+_EOPNOTSUPP = -95  # an isochronous URB, which this server does not carry
+_MAX_ISO_PACKETS = 1024
+_ISO_DESCRIPTOR_BYTES = 16
+#: A read that stalls mid-message longer than this drops the client.
+_CLIENT_READ_TIMEOUT_S = 30.0
+#: How often a URB loop waiting for its client looks at the stop event.
+_URB_IDLE_POLL_S = 1.0
 
 
 def _recv_exact(sock: socket.socket, n: int) -> bytes:

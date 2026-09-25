@@ -267,6 +267,16 @@ def peek_transfer_length(header: bytes, body: bytes) -> Tuple[int, int]:
     return direction, tlen
 
 
+def peek_iso_packets(body: bytes) -> int:
+    """``number_of_packets`` of a CMD_SUBMIT body, signed: -1 or 0 for a non-isochronous URB."""
+    if len(body) < _CMD_SUBMIT_SIZE:
+        raise UsbIpError(f"CMD_SUBMIT body needs {_CMD_SUBMIT_SIZE} bytes, got {len(body)}")
+    _flags, _tlen, _sframe, npkt, _interval, _setup = struct.unpack(
+        _CMD_SUBMIT_FMT, body[:_CMD_SUBMIT_SIZE],
+    )
+    return npkt - (1 << 32) if npkt >= (1 << 31) else npkt
+
+
 # --- URB response encoder ------------------------------------------
 
 def encode_ret_submit(*, seqnum: int, devid: int, direction: int,
