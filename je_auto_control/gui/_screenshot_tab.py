@@ -1,12 +1,12 @@
 """Screenshot / pixel-probe tab builder (extracted mixin)."""
 from typing import TYPE_CHECKING, Any, Callable
 
-from PySide6.QtGui import QIntValidator
 from PySide6.QtWidgets import (
     QFileDialog, QGridLayout, QGroupBox, QHBoxLayout, QLabel, QLineEdit,
     QMessageBox, QTextEdit, QVBoxLayout, QWidget,
 )
 
+from je_auto_control.gui._validators import int_validator
 from je_auto_control.gui.language_wrapper.multi_language_wrapper import language_wrapper
 from je_auto_control.gui.selector import open_region_selector
 from je_auto_control.utils.exception.exceptions import AutoControlException
@@ -64,11 +64,11 @@ class ScreenshotTabMixin:
         px_grid = QGridLayout()
         px_grid.addWidget(self._tr(QLabel(), "pixel_x"), 0, 0)
         self.pixel_x_input = QLineEdit("0")
-        self.pixel_x_input.setValidator(QIntValidator())
+        self.pixel_x_input.setValidator(int_validator())
         px_grid.addWidget(self.pixel_x_input, 0, 1)
         px_grid.addWidget(self._tr(QLabel(), "pixel_y"), 0, 2)
         self.pixel_y_input = QLineEdit("0")
-        self.pixel_y_input.setValidator(QIntValidator())
+        self.pixel_y_input.setValidator(int_validator())
         px_grid.addWidget(self.pixel_y_input, 0, 3)
         self.pixel_result_label = QLabel()
         self._pixel_result_suffix = " --"

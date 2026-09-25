@@ -415,6 +415,8 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Fixed
 
+- Numeric fields in the Image Detect, Auto Click and Screenshot tabs accept
+  a decimal point and refuse grouped digits under any locale.
 - Script Builder: shown defaults equal the executor's (an edit no longer
   writes `detect_threshold: 0.8` into an exact image match, nor a file path
   for agent-card / SBOM / MCP manifest steps); grid and annotation fields are

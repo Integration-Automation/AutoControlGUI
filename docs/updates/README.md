@@ -58,6 +58,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260925-42 | 2026-09-25 | Every numeric line edit validates in the C locale through one helper: under French or German the Image Detect threshold could not be changed, and a grouped integer passed the validator but not int() | #bugfix #gui #i18n | [2026-09-d](2026-09-d.md) |
 | U-20260925-41 | 2026-09-25 | Script Builder: shown defaults match the executor (an edit no longer loosened an exact image match), required fields are required, positional arguments and wrapped files survive load and save, decimals can be typed under comma locales, odd RGB values load, and a new loop takes children | #bugfix #gui #script-builder | [2026-09-d](2026-09-d.md) |
 | U-20260925-39 | 2026-09-25 | WebRTC panels and Quick Connect sessions: remote annotations are checked and bounded, the tray keeps the app alive only while hosting, a host stopped under the approval dialog or the stats thread is not an error, imports survive files of the wrong shape, Stop cancels a pending reconnect, a new window keeps the pen, empty recordings are not called saved, and Quick Connect treats ws:// sessions, errors and approval timeouts properly | #bugfix #remote-desktop #gui | [2026-09-d](2026-09-d.md) |
 | U-20260925-38 | 2026-09-25 | Codacy's gate on PR #489 had seven findings: subprocess rules on building a CompletedProcess or TimeoutExpired, a taskkill call reported one line below its marker, exec in a codegen test, a stdlib xml import that the test needs, and an unassigned QApplication | #ci #codacy | [2026-09-d](2026-09-d.md) |
@@ -283,7 +284,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | File | Period | Entries |
 |---|---|---:|
-| [2026-09-d.md](2026-09-d.md) | 2026-09 | 9 |
+| [2026-09-d.md](2026-09-d.md) | 2026-09 | 10 |
 | [2026-09-c.md](2026-09-c.md) | 2026-09 | 38 |
 | [2026-09-b.md](2026-09-b.md) | 2026-09 | 68 |
 | [2026-09.md](2026-09.md) | 2026-09 | 79 |

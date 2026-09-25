@@ -1,12 +1,12 @@
 from typing import TYPE_CHECKING, Any, Callable
 
-from PySide6.QtGui import QIntValidator
 from PySide6.QtWidgets import (
     QWidget, QLineEdit, QComboBox, QVBoxLayout, QLabel,
     QGridLayout, QHBoxLayout, QRadioButton, QButtonGroup, QMessageBox,
     QGroupBox,
 )
 
+from je_auto_control.gui._validators import int_validator
 from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.wrapper.auto_control_keyboard import (
     type_keyboard, hotkey, write, get_keyboard_keys_table,
@@ -56,19 +56,19 @@ class AutoClickTabMixin:
         row += 1
         grid.addWidget(self._tr(QLabel(), "interval_time"), row, 0)
         self.interval_input = QLineEdit("1000")
-        self.interval_input.setValidator(QIntValidator(1, 999999999))
+        self.interval_input.setValidator(int_validator(1, 999999999))
         grid.addWidget(self.interval_input, row, 1)
 
         row += 1
         grid.addWidget(self._tr(QLabel(), "cursor_x"), row, 0)
         self.cursor_x_input = QLineEdit()
-        self.cursor_x_input.setValidator(QIntValidator())
+        self.cursor_x_input.setValidator(int_validator())
         grid.addWidget(self.cursor_x_input, row, 1)
 
         row += 1
         grid.addWidget(self._tr(QLabel(), "cursor_y"), row, 0)
         self.cursor_y_input = QLineEdit()
-        self.cursor_y_input.setValidator(QIntValidator())
+        self.cursor_y_input.setValidator(int_validator())
         grid.addWidget(self.cursor_y_input, row, 1)
 
         row += 1
@@ -100,7 +100,7 @@ class AutoClickTabMixin:
         )
         self.repeat_count_times = self._tr(QRadioButton(), "repeat_radio")
         self.repeat_count_input = self._tr(QLineEdit(), "times")
-        self.repeat_count_input.setValidator(QIntValidator(1, 999999999))
+        self.repeat_count_input.setValidator(int_validator(1, 999999999))
         rg = QButtonGroup(tab)
         rg.addButton(self.repeat_until_stopped)
         rg.addButton(self.repeat_count_times)
@@ -145,7 +145,7 @@ class AutoClickTabMixin:
         scroll_group = self._tr(QGroupBox(), "mouse_scroll_label")
         sc_layout = QHBoxLayout()
         self.scroll_value_input = QLineEdit("3")
-        self.scroll_value_input.setValidator(QIntValidator())
+        self.scroll_value_input.setValidator(int_validator())
         sc_layout.addWidget(self._tr(QLabel(), "mouse_scroll_label"))
         sc_layout.addWidget(self.scroll_value_input)
         if special_mouse_keys_table:

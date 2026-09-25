@@ -1,13 +1,13 @@
 """Schema-driven form for editing a Step's parameters."""
 from typing import Any, Callable, Dict, Optional
 
-from PySide6.QtCore import QLocale, Signal
-from PySide6.QtGui import QDoubleValidator, QIntValidator
+from PySide6.QtCore import Signal
 from PySide6.QtWidgets import (
     QCheckBox, QComboBox, QFileDialog, QFormLayout, QHBoxLayout, QLabel,
     QLineEdit, QPushButton, QWidget,
 )
 
+from je_auto_control.gui._validators import double_validator, int_validator
 from je_auto_control.gui.language_wrapper.multi_language_wrapper import (
     language_wrapper,
 )
@@ -100,15 +100,7 @@ class StepFormView(QWidget):
 
     def _build_int(self, spec: FieldSpec) -> QWidget:
         editor = QLineEdit()
-        validator = QIntValidator()
-        # The C locale, as int() reads it: with a German locale "1.000" passed
-        # the validator as 1000 and never parsed.
-        validator.setLocale(QLocale.c())
-        if spec.min_value is not None:
-            validator.setBottom(int(spec.min_value))
-        if spec.max_value is not None:
-            validator.setTop(int(spec.max_value))
-        editor.setValidator(validator)
+        editor.setValidator(int_validator(spec.min_value, spec.max_value))
         editor.setPlaceholderText(spec.placeholder)
         editor.textChanged.connect(self._commit_field)
         return editor
@@ -117,12 +109,7 @@ class StepFormView(QWidget):
         editor = QLineEdit()
         low = -1e9 if spec.min_value is None else float(spec.min_value)
         high = 1e9 if spec.max_value is None else float(spec.max_value)
-        validator = QDoubleValidator(low, high, 4)
-        # The C locale, as float() reads it: with a French or German locale
-        # the validator refused "0.8" and accepted "0,8", which float() rejects,
-        # so a decimal could not be entered at all.
-        validator.setLocale(QLocale.c())
-        editor.setValidator(validator)
+        editor.setValidator(double_validator(low, high, 4))
         editor.setPlaceholderText(spec.placeholder)
         editor.textChanged.connect(self._commit_field)
         return editor

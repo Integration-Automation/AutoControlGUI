@@ -1,12 +1,12 @@
 """Image-detection tab builder (extracted mixin)."""
 from typing import TYPE_CHECKING, Any, Callable
 
-from PySide6.QtGui import QDoubleValidator
 from PySide6.QtWidgets import (
     QCheckBox, QFileDialog, QGridLayout, QLabel, QLineEdit, QMessageBox,
     QTextEdit, QVBoxLayout, QWidget,
 )
 
+from je_auto_control.gui._validators import double_validator
 from je_auto_control.gui.language_wrapper.multi_language_wrapper import language_wrapper
 from je_auto_control.gui.selector import crop_template_to_file
 from je_auto_control.utils.exception.exceptions import AutoControlException
@@ -47,7 +47,7 @@ class ImageDetectTabMixin:
 
         grid.addWidget(self._tr(QLabel(), "threshold_label"), 1, 0)
         self.threshold_input = QLineEdit("0.8")
-        self.threshold_input.setValidator(QDoubleValidator(0.0, 1.0, 2))
+        self.threshold_input.setValidator(double_validator(0.0, 1.0, 2))
         grid.addWidget(self.threshold_input, 1, 1)
         self.draw_check = self._tr(QCheckBox(), "draw_image_check")
         grid.addWidget(self.draw_check, 1, 2)
