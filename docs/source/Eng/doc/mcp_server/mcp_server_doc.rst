@@ -134,7 +134,10 @@ Logging notifications, progress, cancellation
 
 - The project logger is forwarded to the client as
   ``notifications/message`` while a stdio session is active.
-  Clients can retune the level with ``logging/setLevel``.
+  Clients can retune the level with ``logging/setLevel``. A 2026-07-28
+  request gets the records it produces, and only when it sets
+  ``io.modelcontextprotocol/logLevel`` (see `Stateless requests
+  (2026-07-28)`_).
 - Long-running tools that accept a ``ctx`` parameter receive a
   :class:`ToolCallContext` and can call
   ``ctx.progress(value, total, message)`` to push
@@ -285,9 +288,9 @@ and are unaffected. To let a browser-based client on another origin in, list
 its exact origins in ``JE_AUTOCONTROL_MCP_ALLOWED_ORIGINS``
 (comma-separated, e.g. ``https://tool.example:8443``).
 
-With ``JE_AUTOCONTROL_MCP_CONFIRM_DESTRUCTIVE=1``, a client that advertised
-``elicitation`` must have its session's event stream open for a destructive
-call to be confirmed; without one the call is refused rather than run. Only
+With ``JE_AUTOCONTROL_MCP_CONFIRM_DESTRUCTIVE=1``, a handshake-era client that
+advertised ``elicitation`` must have its session's event stream open for a
+destructive call to be confirmed; without one the call is refused rather than run. Only
 the session a prompt was sent to can answer it.
 
 Sessions
@@ -296,9 +299,10 @@ Sessions
 ``initialize`` agrees on a protocol version: the client's, when it is one the
 server speaks (``2025-11-25``, ``2025-06-18``, ``2025-03-26``, ``2024-11-05``),
 otherwise the newest of those. A 2025-11-25 client also gets a ``description``
-in ``serverInfo``. 2026-07-28, which drops ``initialize`` altogether, is not
-spoken yet. Over HTTP a request whose ``MCP-Protocol-Version`` header names
-any other version is refused with 400. The server declares only server
+in ``serverInfo``. 2026-07-28 drops ``initialize`` altogether and is served
+per request instead (see `Stateless requests (2026-07-28)`_); an
+``initialize`` naming it gets 2025-11-25. Over HTTP a request whose
+``MCP-Protocol-Version`` header names any other version is refused with 400. The server declares only server
 capabilities (tools, resources, prompts, logging); it sends
 ``sampling/createMessage``, ``roots/list`` and ``elicitation/create`` only to a
 client that declared the matching capability.
@@ -331,6 +335,45 @@ offer.
 - Sessions are bounded. They are swept after ten minutes untouched
   (a standing stream keeps its own session fresh), and the registry
   evicts the least recently seen once it holds 128.
+
+Stateless requests (2026-07-28)
+===============================
+
+The server speaks both protocol eras and decides per request. A request
+whose ``params._meta`` carries ``io.modelcontextprotocol/protocolVersion``
+is served statelessly, from that request alone; ``initialize``, and every
+request without the key, is served as described under `Sessions`_. So an
+existing client keeps working unchanged next to a 2026-07-28 one.
+
+- **Per-request fields.** ``io.modelcontextprotocol/clientCapabilities``
+  (an object) is required next to the version; ``clientInfo`` and
+  ``logLevel`` are optional. A missing or malformed field is ``-32602``.
+  A version the server does not serve statelessly is ``-32022``, whose
+  ``data`` lists ``supported`` (``2026-07-28`` first, then the
+  handshake-era versions, which need ``initialize``) and ``requested``.
+- **``server/discover``** answers ``supportedVersions``, the server's
+  ``capabilities`` and its identity. Without the per-request fields it is
+  ``-32602``.
+- **Methods.** ``tools/list``, ``tools/call``, ``resources/list``,
+  ``resources/read``, ``prompts/list`` and ``prompts/get``. The revision
+  removed ``ping``, ``logging/setLevel`` and ``resources/(un)subscribe``;
+  they are ``-32601`` in a stateless request.
+- **Results.** Every result carries ``resultType`` (``complete``, or
+  ``input_required`` below) and the server's name, version and description
+  under ``_meta["io.modelcontextprotocol/serverInfo"]``. ``server/discover``,
+  the three lists and ``resources/read`` also carry caching hints:
+  ``cacheScope`` is always ``private``; ``ttlMs`` is an hour for
+  ``server/discover``, a minute for the lists, and ``0`` for
+  ``resources/read``, whose content is live.
+- **Nothing the client did not ask for.** The capabilities the gates read
+  are the request's own, not a connection's; the server sends no request of
+  its own (``request_sampling`` and ``refresh_roots`` raise inside a
+  stateless request); log records go out only for a request that set
+  ``logLevel``, at that level or above; and a stdio peer whose first
+  request was stateless is sent no background log records or list-change
+  notifications.
+- **Confirmation** of destructive tools is a multi round-trip: see
+  `Confirmation prompts (elicitation)`_.
 
 Read-only / safe mode
 =====================
@@ -376,6 +419,20 @@ at that moment. What that means per transport:
   ``elicitation/create`` before the result. Either way the answer
   comes back as a separate ``POST`` — the client is busy reading the
   stream it asked on.
+
+A **2026-07-28** request is never sent ``elicitation/create``. The first
+call is answered with ``resultType: "input_required"``: the question under
+``inputRequests["confirm"]`` and a ``requestState``. The client asks the
+user and retries the same call, with the same arguments, the answer in
+``inputResponses["confirm"]`` (for example ``{"action": "accept"}``) and the
+``requestState`` echoed back. The state is signed with a key that lives only
+in the server process, names the tool and a digest of its arguments,
+expires after five minutes and is accepted once; a state that fails any of
+that is ``-32602``. ``decline`` or ``cancel`` is a tool execution error
+(``isError: true``) and the tool does not run; a retry without an answer is
+asked again. A stateless client that did not declare ``elicitation`` gets
+``-32021`` with ``data.requiredCapabilities`` naming it, instead of the
+handshake era's unprompted run.
 
 .. warning::
 

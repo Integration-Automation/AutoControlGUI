@@ -6,7 +6,7 @@
 > 擷取每個模組的 docstring 與頂層公開名稱；統計數字取自實際檔案，非估算。
 > 指令數與公開 API 數以 `executor.known_commands()` 與 `je_auto_control.__all__` 在工作樹上實測取得。
 >
-> **掃描時間**：2026-09-22　**版本**：`pyproject.toml` version `0.0.221`　**分支**：`feat/coverage-to-80`
+> **掃描時間**：2026-09-25　**版本**：`pyproject.toml` version `0.0.221`　**分支**：`feat/coverage-to-80`
 
 ---
 
@@ -19,8 +19,8 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 
 | 指標 | 數值 |
 | --- | ---: |
-| Python 模組總數（含周邊子專案） | 1,055 |
-| 程式碼總行數 | 153,325 |
+| Python 模組總數（含周邊子專案） | 1,057 |
+| 程式碼總行數 | 153,800 |
 | `je_auto_control/utils/` 子套件數 | 310 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 775 |
 | 套件門面 `__all__` 公開名稱數 | 1,244 |
@@ -494,7 +494,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.9 AI / Agent / LLM
 
-> 13 個套件、約 22,143 行。
+> 13 個套件、約 22,617 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -507,7 +507,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/cua_action/` | 204 | 標準化 computer-use 動作結構（Anthropic／OpenAI → `AC_*`） |
 | `utils/llm/` | 365 | 自然語言 → action list 規劃器 + Anthropic／null 後端 |
 | `utils/mcp_registry/` | 97 | MCP registry `server.json` 資訊清單產生（可被發現） |
-| `utils/mcp_server/` | 17,814 | **無頭 MCP 伺服器**（16K LOC，預設註冊 678 個工具＝659 個 `ac_*` + 19 個別名）：stdio + HTTP 傳輸、工具工廠與處理器、資源、prompt、稽核、限流、外掛熱重載 |
+| `utils/mcp_server/` | 18,288 | **無頭 MCP 伺服器**（16K LOC，預設註冊 678 個工具＝659 個 `ac_*` + 19 個別名）：stdio + HTTP 傳輸、工具工廠與處理器、資源、prompt、稽核、限流、外掛熱重載 |
 | `utils/tool_use_schema/` | 195 | 把 `AC_*` 指令匯出成 Claude／OpenAI 的 tool-use schema |
 | `utils/trajectory_eval/` | 113 | agent 軌跡評估：依評分規準為一次執行打分 |
 | `utils/vision/` | 538 | VLM 元素定位器（依描述找元素）+ Anthropic／OpenAI／null 後端 |
@@ -671,7 +671,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.16 系統、視窗與剪貼簿
 
-> 16 個套件、約 2,596 行。
+> 16 個套件、約 2,597 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -682,7 +682,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/clipboard_rich_formats/` | 328 | 豐富剪貼簿格式 — RTF 與 CSV/TSV 編解碼 + Windows 存取 |
 | `utils/file_assoc/` | 98 | 解析哪個應用程式被註冊來開啟某副檔名 |
 | `utils/file_dialog/` | 77 | 驅動原生檔案 開啟／儲存／資料夾選擇 對話框 |
-| `utils/file_drop/` | 110 | 以 WM_DROPFILES 把檔案拖放到視窗 |
+| `utils/file_drop/` | 111 | 以 WM_DROPFILES 把檔案拖放到視窗 |
 | `utils/rich_clipboard/` | 133 | 豐富剪貼簿格式 — HTML（CF_HTML）建構／解析／存取 |
 | `utils/shell_open/` | 99 | 以預設應用開啟檔案，或以預設瀏覽器開啟 URL |
 | `utils/system_volume/` | 212 | 讀取與控制系統主音量與靜音狀態 |
@@ -707,7 +707,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `action_redaction.py` | 83 | 記錄與紀錄鍵用的遮蔽：`AC_secret_*` 的參數（金庫通行碼、機密值）在寫進 log、當成結果紀錄的鍵之前換成 `***`，巢狀在區塊指令裡的也一樣。 |
 | `mouse_aliases.py` | 39 | 單鍵點擊別名（`AC_click_left` 等），executor 與 callback executor 共用。 |
 
-#### `utils/mcp_server/`（17,814 行，678 個工具）— 最大子系統
+#### `utils/mcp_server/`（18,288 行，678 個工具）— 最大子系統
 
 | 檔案 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -723,11 +723,13 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `tools/_handlers_executor_bridge.py` | 1,429 | 252 個純委派（中位數 3 行，最長的 16 行全是參數簽章）：每個都是 `from action_executor import _x` 再 `return _x(...)`，沒有分支邏輯。超過 750 行,理由記在 `Progress.md` 的豁免表（再切只能照 MCP 工廠領域分,會把同一種委派散進十幾個沒有語意邊界的檔）。 |
 | `tools/_handlers_locators.py` | 436 | 同一種 adapter，定位主題：無障礙樹、智慧等待、自我修復、螢幕觀察、座標空間、視覺與 OCR、影像去重、元件倉庫、A/B 定位。 |
 | `tools/_handlers_operations.py` | 647 | 同一種 adapter，營運主題：agent 與其記憶／追蹤、治理與合規、成本與遙測、失敗掛鉤、看門狗、速率限制、檢查點、核可、產物與資產、測試選擇與分片、佇列與 saga。 |
-| `server.py` | 732 | JSON-RPC 2.0 over stdio 的最小 MCP 伺服器：連線範圍狀態、行內／併發分派、工具與 resource／prompt 處理器。 |
+| `server.py` | 744 | JSON-RPC 2.0 over stdio 的最小 MCP 伺服器：連線範圍狀態、行內／併發分派、工具與 resource／prompt 處理器；握手時代的方法表（`_run_method`），兩個協定時代的逐請求分派在 `_stateless.py`。 |
 | `http_transport.py` | 614 | MCP 的 HTTP 傳輸。 |
 | `http_sessions.py` | 247 | MCP 的 HTTP 傳輸用的 session 身分:`Mcp-Session-Id` 註冊表,以及每個 session 那條常駐的 server→client SSE 串流。 |
-| `_client_requests.py` | 239 | 伺服器主動送出的請求：`roots/list`／`elicitation/create`／`sampling/createMessage`,對應表與回應路由,以及破壞性工具的確認交握。 |
-| `_protocol.py` | 215 | JSON-RPC 線路格式：版本與識別常數、`_MCPError`、決定失敗工具行為的錯誤 tuple、envelope 產生器、工具回傳值轉 `content` 區塊。不碰伺服器狀態。 |
+| `_client_requests.py` | 254 | 伺服器主動送出的請求：`roots/list`／`elicitation/create`／`sampling/createMessage`,對應表與回應路由,以及破壞性工具的確認交握。只屬於握手時代：無狀態請求裡送出會丟例外。 |
+| `_stateless.py` | 255 | MCP 2026-07-28 無狀態版本，與以 `initialize` 握手的版本並存：逐請求的 `_meta`（版本、client 能力、`logLevel`）、`server/discover`、結果的 `resultType`／`serverInfo`／快取提示、`-32020`～`-32022` 錯誤碼，以及兩個時代逐請求分派的 mixin。 |
+| `_input_required.py` | 160 | 多輪往返請求（MRTR）：`input_required` 結果，與 HMAC 簽章、會過期、只兌換一次的 `requestState`；破壞性工具確認在無狀態請求裡的形式。 |
+| `_protocol.py` | 219 | JSON-RPC 線路格式：版本與識別常數、`_MCPError`、決定失敗工具行為的錯誤 tuple、envelope 產生器、工具回傳值轉 `content` 區塊。不碰伺服器狀態。 |
 | `resources.py` | 307 | MCP resource 提供者。 |
 | `prompts.py` | 220 | MCP prompt 目錄。 |
 | `fake_backend.py` | 184 | CI／無頭測試用的記憶體內假後端。 |
@@ -735,7 +737,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `tools/_base.py` | 146 | 工具註冊表的共用型別與輔助。 |
 | `tools/_validation.py` | 122 | MCP 工具用到的 JSON Schema 子集驗證器。 |
 | `tools/plugin_tools.py` | 89 | 把外掛載入的 `AC_*` callable 包成 `MCPTool`。 |
-| `log_bridge.py` | 90 | 把 Python logging 記錄橋接成 MCP `notifications/message`。 |
+| `log_bridge.py` | 118 | 把 Python logging 記錄橋接成 MCP `notifications/message`；2026-07-28 的請求只收到自己設了 `logLevel` 時產生的記錄。 |
 | `audit.py` | 87 | MCP 工具呼叫稽核記錄。 |
 | `context.py` | 71 | 傳給 opt-in 工具處理器的每次呼叫上下文。 |
 | `rate_limit.py` | 48 | 工具呼叫的 token bucket 限流。 |
@@ -1065,7 +1067,7 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | 層／子系統 | 檔案數 | 行數 |
 | --- | ---: | ---: |
 | `gui/` | 94 | 27,459 |
-| `utils/mcp_server/` | 31 | 17,814 |
+| `utils/mcp_server/` | 33 | 18,288 |
 | `utils/remote_desktop/` | 56 | 12,912 |
 | `utils/executor/` | 7 | 9,504 |
 | `utils/usb/` | 17 | 4,524 |
@@ -1084,6 +1086,6 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `osx/` | 17 | 925 |
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 846 |
-| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 679 | 54,945 |
-| **總計** | **1,049** | **153,260** |
+| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 679 | 54,946 |
+| **總計** | **1,051** | **153,735** |
 

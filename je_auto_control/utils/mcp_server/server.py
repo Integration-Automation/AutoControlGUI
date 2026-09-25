@@ -1,10 +1,10 @@
 """Minimal MCP server speaking JSON-RPC 2.0 over stdio.
 
-Implements the subset of the Model Context Protocol that Claude clients
-(Claude Desktop, Claude Code, Claude API) use to discover and invoke
-tools: ``initialize``, ``tools/list``, ``tools/call``, ``ping``, and
-``notifications/initialized``. Each transport line is one JSON-RPC
-message — no Content-Length framing — matching the MCP stdio spec.
+Serves tools, resources and prompts to MCP clients of both protocol eras:
+the handshake-based revisions (``initialize``, up to 2025-11-25) and the
+stateless 2026-07-28, chosen per request (see :mod:`._stateless`). Each
+stdio line is one JSON-RPC message — no Content-Length framing — matching
+the MCP stdio spec.
 """
 import contextlib
 import functools
@@ -40,6 +40,10 @@ from je_auto_control.utils.mcp_server.tools._validation import (
 from je_auto_control.utils.mcp_server._client_requests import (
     ClientRequestMixin,
 )
+from je_auto_control.utils.mcp_server._input_required import (
+    AnsweredByGate, RequestStateSigner,
+)
+from je_auto_control.utils.mcp_server._stateless import StatelessDispatchMixin
 from je_auto_control.utils.mcp_server._protocol import (
     PROTOCOL_VERSION,  # noqa: F401  # reason: re-exported; callers import it from server
     _capture_error_screenshot, negotiate_protocol_version,
@@ -53,7 +57,7 @@ from je_auto_control.utils.mcp_server._protocol import (
 WORKER_DRAIN_TIMEOUT = 10.0
 
 
-class MCPServer(ClientRequestMixin):
+class MCPServer(StatelessDispatchMixin, ClientRequestMixin):
     """JSON-RPC 2.0 MCP server with a configurable tool registry."""
 
     def __init__(self, tools: Optional[List[MCPTool]] = None,
@@ -78,6 +82,8 @@ class MCPServer(ClientRequestMixin):
         self._log_bridge = log_bridge
         self._stop = threading.Event()
         self._initialized = False
+        self._peer_era: Optional[str] = None  # the stdio peer's; see _note_peer_era
+        self._request_states = RequestStateSigner()
         # tools/call runs on a worker thread under the stdio transport, so a
         # reply can still be in flight when the loop reaches EOF. Tracking the
         # workers is what lets the transport wait for them instead of pulling
@@ -156,6 +162,8 @@ class MCPServer(ClientRequestMixin):
     @property
     def _client_capabilities(self) -> Dict[str, Any]:
         """Capabilities advertised by the peer served on this thread."""
+        if self._stateless_request is not None:
+            return self._stateless_request.capabilities
         conn = self._connection_id
         if conn is None:
             return self._default_client_capabilities
@@ -231,7 +239,7 @@ class MCPServer(ClientRequestMixin):
         return True
 
     def _notify_tools_list_changed(self) -> None:
-        notifier = self._notifier
+        notifier = self._unsolicited_notifier()
         if notifier is None:
             return
         try:
@@ -309,6 +317,7 @@ class MCPServer(ClientRequestMixin):
         if self._log_bridge is None:
             self._log_bridge = MCPLogBridge()
         self._log_bridge.set_notifier(self._notifier)
+        self._log_bridge.forward_unscoped = self._peer_era != "stateless"
         if self._log_bridge not in autocontrol_logger.handlers:
             autocontrol_logger.addHandler(self._log_bridge)
 
@@ -433,7 +442,7 @@ class MCPServer(ClientRequestMixin):
         try:
             result = self._dispatch(msg_id, method, params)
         except _MCPError as error:
-            return _error_response(msg_id, error.code, error.message)
+            return _error_response(msg_id, error.code, error.message, error.data)
         except OperationCancelledError as error:
             autocontrol_logger.info("MCP call %s cancelled by client", msg_id)
             return _error_response(msg_id, -32800, str(error))
@@ -472,8 +481,8 @@ class MCPServer(ClientRequestMixin):
                 "MCP cancel signalled for call %r", request_id,
             )
 
-    def _dispatch(self, msg_id: Any, method: Optional[str],
-                  params: Dict[str, Any]) -> Any:
+    def _run_method(self, msg_id: Any, method: Optional[str],
+                    params: Dict[str, Any]) -> Any:
         if method == _TOOLS_CALL_METHOD:
             return self._handle_tools_call(msg_id, params)
         if method is None:
@@ -538,6 +547,7 @@ class MCPServer(ClientRequestMixin):
         return {}
 
     def _handle_initialize(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        self._note_peer_era("handshake")
         client_caps = params.get("capabilities") or {}
         if isinstance(client_caps, dict):
             self._client_capabilities = client_caps
@@ -600,7 +610,7 @@ class MCPServer(ClientRequestMixin):
         return {}
 
     def _notify_resource_updated(self, uri: str) -> None:
-        notifier = self._notifier
+        notifier = self._unsolicited_notifier()
         if notifier is None:
             return
         try:
@@ -658,6 +668,8 @@ class MCPServer(ClientRequestMixin):
             name, tool, arguments = self._prepare_tool_call(params)
         except _InvalidToolArguments as error:
             return {"content": [{"type": "text", "text": str(error)}], "isError": True}
+        except AnsweredByGate as answered:
+            return answered.result
         ctx = self._build_call_context(msg_id, params)
         call_key = (self._connection_id, msg_id)
         with self._calls_lock:

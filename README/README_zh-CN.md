@@ -191,7 +191,7 @@ je_auto_control version
 
 | 接口 | 启动方式 | 说明 |
 |---|---|---|
-| **MCP 服务器** | `je_auto_control_mcp`（stdio）或 `AC_start_mcp_http_server` | 678 个工具，供 Claude Desktop／Claude Code／自定义 tool loop 使用。Bearer 认证、TLS、审计日志、限流、插件热重载、CI 假后端。 |
+| **MCP 服务器** | `je_auto_control_mcp`（stdio）或 `AC_start_mcp_http_server` | 678 个工具，供 Claude Desktop／Claude Code／自定义 tool loop 使用。除了以 `initialize` 握手的各版协议，也支持无状态的 MCP 2026-07-28（stdio）。Bearer 认证、TLS、审计日志、限流、插件热重载、CI 假后端。 |
 | **REST API** | `je_auto_control start-rest` | Bearer token、按 IP 限流与锁定、SQLite 审计 hook、`/metrics`、`/openapi.json`、`/docs` Swagger UI、`/dashboard`。 |
 | **TCP socket 服务器** | `je_auto_control start-server` | 以换行分隔的 JSON 动作列表。默认绑定 `127.0.0.1`。 |
 | **pytest 插件** | 安装后自动生效 | 提供 fixture 与供 pytest-bdd／behave 使用的 Gherkin step library。 |

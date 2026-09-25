@@ -23,14 +23,14 @@ from je_auto_control.utils.sqlite_support import SQLITE_ERRORS
 
 
 PROTOCOL_VERSION = "2025-11-25"
-#: Every revision this server speaks, newest first. ``initialize`` answers with
-#: the client's version when it is one of these, else with the newest.
-#: 2025-11-25's server-side changes are optional features this server does not
-#: offer (icons, tasks, URL elicitation, sampling with tools) plus rules it
-#: follows for every version: input validation errors are tool execution
-#: errors, tool names use ``[A-Za-z0-9_.-]``, and input schemas read as
-#: JSON Schema 2020-12. 2026-07-28 (stateless, ``server/discover``) is not
-#: spoken: see Progress.md.
+#: Every handshake-era revision this server speaks, newest first. ``initialize``
+#: answers with the client's version when it is one of these, else with the
+#: newest. 2025-11-25's server-side changes are optional features this server
+#: does not offer (icons, tasks, URL elicitation, sampling with tools) plus
+#: rules it follows for every version: input validation errors are tool
+#: execution errors, tool names use ``[A-Za-z0-9_.-]``, and input schemas read
+#: as JSON Schema 2020-12. The stateless 2026-07-28, which has no
+#: ``initialize``, is served per request by :mod:`._stateless`.
 SUPPORTED_PROTOCOL_VERSIONS = ("2025-11-25", "2025-06-18", "2025-03-26", "2024-11-05")
 
 
@@ -92,12 +92,16 @@ def _server_info(protocol_version: str) -> Dict[str, Any]:
 
 
 class _MCPError(Exception):
-    """Raised inside the dispatcher to surface a JSON-RPC error response."""
+    """Raised inside the dispatcher to surface a JSON-RPC error response.
 
-    def __init__(self, code: int, message: str) -> None:
+    ``data`` becomes the error's ``data`` member when it is not ``None``.
+    """
+
+    def __init__(self, code: int, message: str, data: Any = None) -> None:
         super().__init__(message)
         self.code = code
         self.message = message
+        self.data = data
 
 
 def _to_content_blocks(result: Any) -> List[Dict[str, Any]]:
@@ -208,8 +212,8 @@ def _result_response(msg_id: Any, result: Any) -> str:
                           default=str)
 
 
-def _error_response(msg_id: Any, code: int, message: str) -> str:
-    return wire_json_text({
-        "jsonrpc": "2.0", "id": msg_id,
-        "error": {"code": code, "message": message},
-    })
+def _error_response(msg_id: Any, code: int, message: str, data: Any = None) -> str:
+    error: Dict[str, Any] = {"code": code, "message": message}
+    if data is not None:
+        error["data"] = data
+    return wire_json_text({"jsonrpc": "2.0", "id": msg_id, "error": error})

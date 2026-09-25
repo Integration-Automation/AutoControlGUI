@@ -15,6 +15,12 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Added
 
+- The MCP server speaks the stateless protocol revision 2026-07-28 over
+  stdio, per request, beside the `initialize`-based ones: `server/discover`,
+  `resultType` and caching hints on results, the `-32020`–`-32022` error
+  codes, and destructive-tool confirmation as a multi round-trip
+  (`input_required` with a signed `requestState`). Existing clients are
+  served as before.
 - The MCP server negotiates protocol version 2025-11-25 and sends its
   `description` in `serverInfo` to clients of that revision.
 - Computer use with `computer_toolset_20260801` answers `zoom` with a

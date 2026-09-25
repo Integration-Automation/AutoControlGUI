@@ -125,7 +125,9 @@ Logging 通知 / Progress / Cancellation
 
 - stdio session 期間,專案 logger 會以 ``notifications/message``
   的形式即時推給 client。Client 可用 ``logging/setLevel`` 動態調整
-  等級。
+  等級。2026-07-28 的請求只收到它自己產生的記錄,而且只在它設了
+  ``io.modelcontextprotocol/logLevel`` 時才收到(見 `無狀態請求
+  (2026-07-28)`_)。
 - 接受 ``ctx`` 參數的長時間工具會收到
   :class:`ToolCallContext`:呼叫
   ``ctx.progress(value, total, message)`` 推送
@@ -265,7 +267,7 @@ loopback 時，``Host`` 不是 loopback 名稱的也回 403（防 DNS rebinding�
 客戶端不送 ``Origin``，不受影響。要讓其他來源的瀏覽器客戶端連線，把完整來源列在
 ``JE_AUTOCONTROL_MCP_ALLOWED_ORIGINS``（逗號分隔，例如 ``https://tool.example:8443``）。
 
-設定 ``JE_AUTOCONTROL_MCP_CONFIRM_DESTRUCTIVE=1`` 時，宣告了 ``elicitation`` 的客戶端
+設定 ``JE_AUTOCONTROL_MCP_CONFIRM_DESTRUCTIVE=1`` 時，宣告了 ``elicitation`` 的握手時代客戶端
 必須先開著該 session 的事件串流，破壞性工具才能確認；沒有串流就拒絕執行，而不是直接放行。
 確認提示只接受它被送往的那個 session 的回覆。
 
@@ -275,7 +277,8 @@ Session
 ``initialize`` 會協商協定版本:client 提出的版本若是伺服器支援的(``2025-11-25``、
 ``2025-06-18``、``2025-03-26``、``2024-11-05``)就用它,否則用其中最新的。2025-11-25 的
 client 還會在 ``serverInfo`` 拿到 ``description``。完全拿掉 ``initialize`` 的 2026-07-28
-目前還不支援。走 HTTP 時,``MCP-Protocol-Version``
+改成逐請求服務(見 `無狀態請求 (2026-07-28)`_);``initialize`` 若指名它,拿到的是
+2025-11-25。走 HTTP 時,``MCP-Protocol-Version``
 標頭寫的若是其他版本,請求會以 400 拒絕。伺服器只宣告伺服器端能力(tools、resources、
 prompts、logging);``sampling/createMessage``、``roots/list`` 與 ``elicitation/create``
 只會送給在 initialize 時宣告了對應能力的 client。
@@ -301,6 +304,34 @@ scope——包含你在 ``initialize`` 聲明的能力,以及進行中呼叫佔�
   client 手上有伺服器沒有的狀態,它需要知道自己該重新 initialize。
 - session 有上下界。十分鐘沒被碰過就會被掃掉(常駐串流會讓自己的
   session 保持新鮮),而註冊表滿 128 個時,最久沒動的那個會被淘汰。
+
+無狀態請求 (2026-07-28)
+=======================
+
+伺服器同時支援兩個協定時代,逐請求決定。``params._meta`` 帶著
+``io.modelcontextprotocol/protocolVersion`` 的請求以無狀態方式服務,只看這個請求本身;
+``initialize`` 與所有不帶這個鍵的請求,照 `Session`_ 一節的方式服務。所以既有的
+client 不用改,可以和 2026-07-28 的 client 並存。
+
+- **逐請求欄位。** 除了版本,還必須有 ``io.modelcontextprotocol/clientCapabilities``
+  (物件);``clientInfo`` 與 ``logLevel`` 可省略。欄位缺少或格式不對是 ``-32602``。
+  伺服器不以無狀態方式服務的版本是 ``-32022``,它的 ``data`` 列出 ``supported``
+  (``2026-07-28`` 在前,接著是需要 ``initialize`` 的握手時代版本)與 ``requested``。
+- **``server/discover``** 回覆 ``supportedVersions``、伺服器的 ``capabilities`` 與
+  身分。沒有逐請求欄位時是 ``-32602``。
+- **方法。** ``tools/list``、``tools/call``、``resources/list``、``resources/read``、
+  ``prompts/list`` 與 ``prompts/get``。這個版本移除了 ``ping``、``logging/setLevel``
+  與 ``resources/(un)subscribe``,在無狀態請求裡它們是 ``-32601``。
+- **結果。** 每個結果都帶 ``resultType`` (``complete``,或下面的 ``input_required``),
+  並在 ``_meta["io.modelcontextprotocol/serverInfo"]`` 放伺服器的名稱、版本與說明。
+  ``server/discover``、三個清單與 ``resources/read`` 另帶快取提示:``cacheScope``
+  一律是 ``private``;``ttlMs`` 在 ``server/discover`` 是一小時、清單是一分鐘、
+  ``resources/read`` 是 ``0``(內容是即時的)。
+- **不送 client 沒要的東西。** 關卡讀的能力是這個請求自己的,不是某條連線的;伺服器
+  不主動送請求(``request_sampling`` 與 ``refresh_roots`` 在無狀態請求裡會丟例外);
+  記錄只送給設了 ``logLevel`` 的請求,而且只送該等級以上;第一個請求就是無狀態的
+  stdio 對端,不會收到背景記錄或清單變更通知。
+- 破壞性工具的**確認**改用多輪往返:見 `破壞性動作確認(Elicitation)`_。
 
 唯讀 / 安全模式
 ===============
@@ -339,6 +370,16 @@ scope——包含你在 ``initialize`` 聲明的能力,以及進行中呼叫佔�
   串流,或是一個 SSE ``POST``——它自己的回應串流會在結果之前先送出
   ``elicitation/create``。兩種情況下,答案都要用另一個 ``POST`` 送
   回來,因為 client 正忙著讀它問過去的那條串流。
+
+**2026-07-28** 的請求不會收到 ``elicitation/create``。第一次呼叫的回覆是
+``resultType: "input_required"``:問題放在 ``inputRequests["confirm"]``,另有一個
+``requestState``。client 問過使用者之後,以同樣的參數重送同一個呼叫,把答案放在
+``inputResponses["confirm"]``(例如 ``{"action": "accept"}``),並原樣帶回
+``requestState``。這個 state 以只存在於伺服器行程裡的金鑰簽章,寫明工具與參數摘要,
+五分鐘後過期,而且只接受一次;任何一項不符都是 ``-32602``。``decline`` 或 ``cancel``
+是工具執行錯誤(``isError: true``),工具不會執行;沒帶答案的重送會再問一次。沒有
+宣告 ``elicitation`` 的無狀態 client 會收到 ``-32021``,``data.requiredCapabilities``
+寫明缺的能力,而不是像握手時代那樣不經詢問直接執行。
 
 .. warning::
 

@@ -9,6 +9,9 @@ router belong together with the senders that populate it.
 
 Destructive-tool confirmation lives here too: it is an elicitation
 round-trip, not a tool-execution step.
+
+All of this is the handshake era's. A 2026-07-28 request never gets a
+server-initiated request: :mod:`._stateless` asks by multi round-trip instead.
 """
 import itertools
 import json
@@ -23,6 +26,14 @@ from je_auto_control.utils.mcp_server._protocol import (
     _confirm_destructive_enabled, _file_uri_to_path, _MCPError,
 )
 from je_auto_control.utils.mcp_server.tools import MCPTool
+
+
+def needs_confirmation(tool: MCPTool) -> bool:
+    """True when the operator gates ``tool`` behind a user confirmation."""
+    if not _confirm_destructive_enabled():
+        return False
+    annotations = tool.annotations
+    return not annotations.read_only and bool(annotations.destructive)
 
 
 class ClientRequestMixin:
@@ -47,6 +58,10 @@ class ClientRequestMixin:
         @property
         def _connection_id(self) -> Any:
             """Identity of the connection the current request arrived on."""
+
+        @property
+        def _stateless_request(self) -> Any:
+            """The 2026-07-28 request being served on this thread, if any."""
 
     @staticmethod
     def _is_outbound_response(method: Optional[str], msg_id: Any,
@@ -118,6 +133,9 @@ class ClientRequestMixin:
                                params: Dict[str, Any],
                                timeout: float = 10.0) -> Dict[str, Any]:
         """Send a server-initiated request and wait for the response."""
+        if self._stateless_request is not None:
+            raise RuntimeError(f"{method} cannot be sent in a 2026-07-28 request: "
+                               "that revision has no server-initiated requests")
         writer = self._writer
         if writer is None:
             raise RuntimeError(f"{method} requires an outbound writer")
@@ -200,10 +218,7 @@ class ClientRequestMixin:
     def _maybe_confirm_destructive(self, name: str, tool: MCPTool,
                                     arguments: Dict[str, Any]) -> None:
         """Ask the client to confirm before running a destructive tool."""
-        if not _confirm_destructive_enabled():
-            return
-        annotations = tool.annotations
-        if annotations.read_only or not annotations.destructive:
+        if not needs_confirmation(tool):
             return
         if "elicitation" not in self._client_capabilities:
             autocontrol_logger.info(
