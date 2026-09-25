@@ -34,7 +34,7 @@ def test_the_flow_editor_opens_a_file_with_a_bom_and_saves_its_keys(monkeypatch,
     pytest.importorskip("PySide6.QtWidgets", exc_type=ImportError)
     from PySide6.QtWidgets import QApplication, QFileDialog, QMessageBox
     from je_auto_control.gui.flow_editor.tab import FlowEditorTab
-    QApplication.instance() or QApplication([])
+    app = QApplication.instance() or QApplication([])
     source, target = tmp_path / "in.json", tmp_path / "out.json"
     source.write_text(chr(0xFEFF) + json.dumps(_WRAPPED), encoding="utf-8")
     warnings = []
@@ -46,3 +46,5 @@ def test_the_flow_editor_opens_a_file_with_a_bom_and_saves_its_keys(monkeypatch,
     tab._on_save()
     assert warnings == []
     assert json.loads(target.read_text(encoding="utf-8")) == _WRAPPED
+    tab.deleteLater()
+    app.processEvents()
