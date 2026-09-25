@@ -85,7 +85,7 @@ class MCPLogBridge(logging.Handler):
         level = getattr(self._scope, "level", _NO_SCOPE)
         if level is _NO_SCOPE:
             return self.forward_unscoped
-        return level is not None and record.levelno >= level
+        return isinstance(level, int) and record.levelno >= level
 
     def emit(self, record: logging.LogRecord) -> None:
         notifier = self._notifier
