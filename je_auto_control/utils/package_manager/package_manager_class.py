@@ -44,7 +44,9 @@ class PackageManager:
                     # nosemgrep: python.lang.security.audit.non-literal-import.non-literal-import
                     installed_package = importlib.import_module(found_spec.name)
                     self.installed_package_dict[found_spec.name] = installed_package
-            except (ImportError, SyntaxError) as error:
+            # A plugin's module body can raise anything ("missing config"), and
+            # find_spec raises ValueError for "__main__"; all are "not loaded".
+            except Exception as error:  # noqa: BLE001  # reason: third-party import code, reported and not raised
                 autocontrol_logger.error("import %s failed: %r", package, error)
         return self.installed_package_dict.get(package)
 
@@ -93,7 +95,7 @@ class PackageManager:
         try:
             for predicate in (isfunction, isbuiltin, isclass):
                 self.get_member(package, predicate, target)
-        except (ImportError, AttributeError, TypeError) as error:
+        except Exception as error:  # noqa: BLE001  # reason: third-party members, reported and not raised
             autocontrol_logger.error("add_package_to_target failed: %r", error)
 
 

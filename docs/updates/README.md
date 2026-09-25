@@ -58,6 +58,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260926-13 | 2026-09-26 | Repair commands without a db share one store per process; approval artifacts store numbers and lists as JSON; two quarantine stores on one file keep each other's names; renewal intervals must be positive and renewals never overlap; NumPy bboxes work in force mode; failing plugin imports are reported; timelines refuse NaN and negative durations | #bugfix #audit #infra | [2026-09-d](2026-09-d.md) |
 | U-20260926-12 | 2026-09-26 | AC_grid_cell reads locate_all_image's [left, top, right, bottom] boxes with box_format="ltrb"; macOS field clearing uses Backspace; dataset diffs refuse a missing key column and agree cell by cell; runs given as one name and pairs that never failed together no longer cluster; unknown critic effects, bad TOTP times and negative windows are refused; deep_merge shares nothing with its inputs | #bugfix #audit #data | [2026-09-d](2026-09-d.md) |
 | U-20260926-11 | 2026-09-26 | Every executor adapter and flow command reads on / off flags by their spelling through one as_bool, so "false" means off (it turned on ignore_case, pasted over the clipboard, and re-raised) | #bugfix #executor | [2026-09-d](2026-09-d.md) |
 | U-20260926-10 | 2026-09-26 | Element geometry is read in any shape and equal zero-area boxes match; interactive roles are known in UIA, AT-SPI, macOS AX and ARIA spelling and Tab skips disabled controls; quality and motion are measured on 8-bit frames; minimized windows have no client point; a NaN focus wait is refused | #bugfix #audit #accessibility #vision | [2026-09-d](2026-09-d.md) |
@@ -307,7 +308,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | File | Period | Entries |
 |---|---|---:|
-| [2026-09-d.md](2026-09-d.md) | 2026-09 | 33 |
+| [2026-09-d.md](2026-09-d.md) | 2026-09 | 34 |
 | [2026-09-c.md](2026-09-c.md) | 2026-09 | 38 |
 | [2026-09-b.md](2026-09-b.md) | 2026-09 | 68 |
 | [2026-09.md](2026-09.md) | 2026-09 | 79 |

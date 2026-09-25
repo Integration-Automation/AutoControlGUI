@@ -234,26 +234,26 @@ def to_model(x, y, physical_w, physical_h, model_w, model_h):
 
 def repair_record(key, method, coordinates=None, description=None,
                   confidence=1.0, auto_threshold=0.9, db=None):
-    from je_auto_control.utils.locator_repair import RepairStore
-    sug = RepairStore(db).record(
+    from je_auto_control.utils.locator_repair import repair_store
+    sug = repair_store(db).record(
         key, method=method, coordinates=coordinates, description=description,
-        confidence=confidence, auto_threshold=auto_threshold)
+        confidence=float(confidence), auto_threshold=float(auto_threshold))
     return {"id": sug.id, "status": sug.status}
 
 
 def repair_resolved(key, db=None):
-    from je_auto_control.utils.locator_repair import RepairStore
-    return {"locator": RepairStore(db).resolved(key)}
+    from je_auto_control.utils.locator_repair import repair_store
+    return {"locator": repair_store(db).resolved(key)}
 
 
 def repair_pending(db=None):
-    from je_auto_control.utils.locator_repair import RepairStore
-    return {"pending": RepairStore(db).pending()}
+    from je_auto_control.utils.locator_repair import repair_store
+    return {"pending": repair_store(db).pending()}
 
 
 def repair_approve(suggestion_id, db=None):
-    from je_auto_control.utils.locator_repair import RepairStore
-    return {"approved": RepairStore(db).approve(suggestion_id)}
+    from je_auto_control.utils.locator_repair import repair_store
+    return {"approved": repair_store(db).approve(suggestion_id)}
 
 
 def vlm_locate(description: str,

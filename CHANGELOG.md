@@ -17,6 +17,8 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 - `box_format` (`"xywh"` / `"ltrb"`) on `cluster_grid`, `locate_cell`,
   `AC_grid_cell` and `ac_grid_cell`, so `locate_all_image` boxes address cells.
+- `repair_store(db=None)`: the repair store in `db`, or the one the process
+  shares.
 - `HistoryStore.list_runs(statuses=...)` and `FINISHED_STATUSES`.
 - `element_box()` (`utils.accessibility.element`): an element's
   `(left, top, width, height)` from `bbox`, `bounds` or `x/y/width/height`.
@@ -95,6 +97,9 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 - `diff_rows` / `cell_changes` raise `ValueError` for an empty key or a row
   without a key column; `score_step_rule_based` raises for an unknown effect;
   `verify_totp` raises `TOTPError` for a negative window.
+- `RenewalScheduler` rejects a `check_interval_s` that is not finite and
+  positive; `build_timeline` / `critical_steps` reject NaN, infinite and
+  negative durations; `verify_artifact` stores non-text values as JSON.
 - `find_color_regions`, `segment_hsv` and `dominant_hue_regions` return
   screen coordinates for blobs found in a grabbed `region` (they were
   relative to the region's corner); a supplied `haystack` keeps its pixels.
@@ -470,6 +475,11 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 - `set_field_text` clears with Backspace on macOS; `deep_merge` no longer
   shares nested values with its inputs; co-failure clustering keeps a
   one-name run whole; TOTP time errors are `TOTPError`.
+- `AC_repair_*` commands and MCP tools without `db` see each other's
+  suggestions.
+- Quarantine stores sharing a file no longer overwrite each other's names.
+- ACME renewals never overlap after a restart; force mode accepts NumPy
+  bboxes; a plugin that fails to import is reported, not raised.
 - Test selection, sharding and flakiness read finished runs, so runs
   killed mid-flight no longer hide a flow's history.
 - `find_lines` finds lines shorter than 50 px and reads 16-bit images;

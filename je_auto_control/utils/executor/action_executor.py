@@ -6994,10 +6994,10 @@ def _repair_record(key: str, method: str, coordinates: Any = None,
                    db: Optional[str] = None) -> Dict[str, Any]:
     """Adapter: record a corrected locator from a heal (auto-apply or queue)."""
     import json
-    from je_auto_control.utils.locator_repair import RepairStore
+    from je_auto_control.utils.locator_repair import repair_store
     if isinstance(coordinates, str):
         coordinates = json.loads(coordinates)
-    sug = RepairStore(db).record(
+    sug = repair_store(db).record(
         key, method=method, coordinates=coordinates, description=description,
         confidence=confidence, auto_threshold=auto_threshold)
     return {"id": sug.id, "status": sug.status}
@@ -7005,21 +7005,21 @@ def _repair_record(key: str, method: str, coordinates: Any = None,
 
 def _repair_resolved(key: str, db: Optional[str] = None) -> Dict[str, Any]:
     """Adapter: return the learned corrected locator for a key (or null)."""
-    from je_auto_control.utils.locator_repair import RepairStore
-    return {"locator": RepairStore(db).resolved(key)}
+    from je_auto_control.utils.locator_repair import repair_store
+    return {"locator": repair_store(db).resolved(key)}
 
 
 def _repair_pending(db: Optional[str] = None) -> Dict[str, Any]:
     """Adapter: list locator-repair suggestions awaiting review."""
-    from je_auto_control.utils.locator_repair import RepairStore
-    return {"pending": RepairStore(db).pending()}
+    from je_auto_control.utils.locator_repair import repair_store
+    return {"pending": repair_store(db).pending()}
 
 
 def _repair_approve(suggestion_id: str,
                     db: Optional[str] = None) -> Dict[str, Any]:
     """Adapter: approve a pending locator-repair suggestion."""
-    from je_auto_control.utils.locator_repair import RepairStore
-    return {"approved": RepairStore(db).approve(suggestion_id)}
+    from je_auto_control.utils.locator_repair import repair_store
+    return {"approved": repair_store(db).approve(suggestion_id)}
 
 
 def _detect_pii(text: str, kinds: Any = None) -> Dict[str, Any]:

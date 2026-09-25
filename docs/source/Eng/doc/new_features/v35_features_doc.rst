@@ -30,8 +30,9 @@ Headless API
         # .received file, then bless it:
         approve_artifact("invoice_render", approvals_dir="tests/.approvals")
 
-``content`` may be ``str`` or ``bytes`` (pass ``extension="png"`` for binary
-snapshots). A verified run clears any stale received file.
+``content`` may be ``bytes`` (pass ``extension="png"`` for binary snapshots),
+``str`` (stored as UTF-8) or any other JSON value (stored as sorted, indented
+JSON). A verified run clears any stale received file.
 ``pending_artifacts(dir)`` lists names still awaiting approval. ``ApprovalResult``
 carries ``status`` (``verified`` / ``mismatch`` / ``new``), ``match``, and both
 file paths.

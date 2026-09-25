@@ -55,7 +55,9 @@ class ActionabilityReport:
 
 
 def _center(bbox: Bbox) -> List[int]:
-    return [bbox[0] + bbox[2] // 2, bbox[1] + bbox[3] // 2]
+    """Plain ints: NumPy coordinates gave ``np.int64`` points ``json.dumps`` rejects."""
+    left, top, width, height = (int(value) for value in bbox[:4])
+    return [left + width // 2, top + height // 2]
 
 
 def _reason(visible: bool, stable: bool, enabled: bool, receives: bool) -> str:

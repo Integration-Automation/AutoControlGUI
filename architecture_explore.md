@@ -20,7 +20,7 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 | 指標 | 數值 |
 | --- | ---: |
 | Python 模組總數（含周邊子專案） | 1,062 |
-| 程式碼總行數 | 155,510 |
+| 程式碼總行數 | 155,586 |
 | `je_auto_control/utils/` 子套件數 | 310 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 775 |
 | 套件門面 `__all__` 公開名稱數 | 1,244 |
@@ -303,7 +303,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.2 框架基礎設施
 
-> 14 個套件、約 3,041 行。
+> 14 個套件、約 3,043 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -316,7 +316,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/failure_bundle/` | 219 | 可攜、已遮蔽的失敗診斷 ZIP（截圖 + 診斷 + log 尾段） |
 | `utils/file_process/` | 40 | 目錄檔案列舉（`execute_dir` 的後端） |
 | `utils/logging/` | 168 | `autocontrol_logger` 單例 + 家目錄共用記錄檔 handler（`JE_AUTOCONTROL_LOG_FILE` 可改） |
-| `utils/package_manager/` | 101 | 動態載入套件並把 executor 注入其中 |
+| `utils/package_manager/` | 103 | 動態載入套件並把 executor 注入其中 |
 | `utils/path_guard/` | 114 | 命令列傳入路徑的正規化與邊界檢查（防路徑穿越） |
 | `utils/platform_id/` | 62 | 作業系統家族的單一判定點。`sys.platform` 原本在一百多處跟字面清單比對，而那些清單都沒有 BSD；`is_x11_unix()` 問的是「這是不是 X11 unix」，這才是守衛一直想問的問題 |
 | `utils/shell_process/` | 279 | `ShellManager`：以 argv list 執行外部命令（禁用 `shell=True`） |
@@ -342,15 +342,15 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.4 輸入模擬與動作品質
 
-> 22 個套件、約 2,831 行。
+> 22 個套件、約 2,834 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
 | `utils/act_in_view/` | 86 | 先把目標捲進視野，待其可操作後再動作 |
-| `utils/act_modes/` | 68 | actionability 閘門之上的 trial／force 動作模式 |
+| `utils/act_modes/` | 69 | actionability 閘門之上的 trial／force 動作模式 |
 | `utils/action_effect/` | 109 | 判定一個動作是否真的產生效果，並歸因到目標區域 |
 | `utils/action_grounding/` | 83 | 動作前的接地守衛（邊界檢查 + 吸附到元素） |
-| `utils/actionability/` | 191 | 動作前就緒閘門（可見 + 穩定 + 啟用 + 未被遮擋） |
+| `utils/actionability/` | 193 | 動作前就緒閘門（可見 + 穩定 + 啟用 + 未被遮擋） |
 | `utils/ensure_state/` | 74 | 冪等地把控制項／設定帶到期望狀態 |
 | `utils/field_entry/` | 79 | 清空再輸入的欄位填寫慣用法（Playwright `fill`） |
 | `utils/gamepad/` | 333 | 虛擬遊戲手把後端（Windows ViGEmBus 驅動） |
@@ -464,7 +464,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.8 元素定位、自我修復與智慧等待
 
-> 23 個套件、約 4,393 行。
+> 23 個套件、約 4,423 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -482,7 +482,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/grounding_consensus/` | 173 | 對同一目標的多個接地提案做自我一致性投票 |
 | `utils/heal_analytics/` | 77 | 自癒事件記錄的分析（治癒率、脆弱定位器） |
 | `utils/locator_chain/` | 112 | 可組合／可過濾的候選定位器（chained-locator 慣用法） |
-| `utils/locator_repair/` | 117 | 自癒回寫：把修正後的定位器持久化 |
+| `utils/locator_repair/` | 147 | 自癒回寫：把修正後的定位器持久化 |
 | `utils/observation/` | 89 | 供 VLM／agent 接地用的 token 預算內、帶索引的 a11y 文字觀察 |
 | `utils/observation_delta/` | 122 | token 預算內的觀察差異：兩個 UI 影格之間變了什麼 |
 | `utils/screen_state/` | 191 | 語義畫面狀態：快照／差異與結構化畫面描述 |
@@ -527,7 +527,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.11 伺服器、網路協定與外部整合
 
-> 24 個套件、約 6,721 行。
+> 24 個套件、約 6,739 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -552,18 +552,18 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/rest_api/` | 1,881 | 純標準庫 REST 前端：路由、Bearer 驗證、限流、Prometheus 指標、OpenAPI 3.1 產生 |
 | `utils/socket_server/` | 160 | 執行 action JSON 的執行緒式 TCP 指令伺服器（預設綁 127.0.0.1） |
 | `utils/sse_client/` | 128 | Server-Sent Events 用戶端解析 |
-| `utils/tls_acme/` | 455 | TLS 自動化：HTTP-01 挑戰伺服器、金鑰／CSR、自動續期 |
+| `utils/tls_acme/` | 473 | TLS 自動化：HTTP-01 挑戰伺服器、金鑰／CSR、自動續期 |
 | `utils/url_canon/` | 156 | RFC 3986 URL 正規化與查詢字串工具 |
 | `utils/webrunner_bridge/` | 169 | 把 action JSON 橋接到 WebRunner（`je_web_runner`） |
 
 ### 5.4.12 報表、可觀測性與測試治理
 
-> 34 個套件、約 7,600 行。
+> 34 個套件、約 7,623 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
 | `utils/anomaly/` | 114 | 單一序列異常偵測 |
-| `utils/approval/` | 118 | Approval testing：以核可基準線驗證產出物 |
+| `utils/approval/` | 131 | Approval testing：以核可基準線驗證產出物 |
 | `utils/assertion/` | 887 | 斷言 DSL：畫面狀態驗證 + 組合子 |
 | `utils/baggage/` | 123 | W3C Baggage 傳遞 |
 | `utils/canonical_log/` | 96 | canonical log line 與結構化 JSON 日誌 |
@@ -581,7 +581,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/process_doc/` | 108 | 由錄製的 action list 產生逐步 SOP 文件 |
 | `utils/process_mining/` | 131 | 流程探勘：從動作日誌挖掘可自動化的候選 |
 | `utils/profiler/` | 451 | 逐動作效能剖析器 + 資源剖析器 |
-| `utils/quarantine/` | 200 | 易碎測試隔離區，讓套件執行器跳過已知不穩定案例 |
+| `utils/quarantine/` | 204 | 易碎測試隔離區，讓套件執行器跳過已知不穩定案例 |
 | `utils/run_diff/` | 143 | 兩次執行軌跡的差異（LCS 對齊：新增／移除／狀態翻轉／退化） |
 | `utils/run_history/` | 449 | 執行歷史儲存與產出物管理 |
 | `utils/sarif/` | 187 | 以 SARIF 2.1.0 匯出發現項，供 GitHub／Azure code scanning |
@@ -589,7 +589,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/smoothing/` | 67 | 數列移動平均平滑 |
 | `utils/soft_assert/` | 79 | 軟斷言：累積檢查並在區塊結束時一次拋出 |
 | `utils/stats/` | 236 | 描述統計與 A/B 顯著性檢定（純標準庫） |
-| `utils/step_timeline/` | 81 | 每次執行的步驟瀑布圖與瓶頸（關鍵路徑）步驟排名 |
+| `utils/step_timeline/` | 87 | 每次執行的步驟瀑布圖與瓶頸（關鍵路徑）步驟排名 |
 | `utils/test_select/` | 131 | 以執行歷史做風險導向的測試選取 |
 | `utils/test_shard/` | 106 | 以耗時為權重的套件切分與分片結果合併 |
 | `utils/test_suite/` | 547 | QA 套件編排：把扁平 action list 評分為測試案例 + CI 報表 |
@@ -1090,6 +1090,6 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `osx/` | 17 | 925 |
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 846 |
-| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 680 | 55,833 |
-| **總計** | **1,056** | **155,445** |
+| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 680 | 55,909 |
+| **總計** | **1,056** | **155,521** |
 

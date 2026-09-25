@@ -11,6 +11,7 @@ A step is any dict with a name (default ``"name"``) and a ``duration``; an optio
 ``start`` places it on an absolute timeline (overlapping / parallel steps), else
 steps are laid out back-to-back. Pure standard library; no device, no ``PySide6``.
 """
+import math
 from typing import Any, Dict, List, Sequence
 
 Step = Dict[str, Any]
@@ -20,10 +21,15 @@ def _normalize(steps: Sequence[Step], name_key: str, start_key: str,
                duration_key: str) -> List[Dict[str, Any]]:
     """Resolve each step to ``{name, start, end, duration}`` (sequential if no start)."""
     resolved, cursor = [], 0.0
-    for step in steps:
+    for index, step in enumerate(steps):
         duration = float(step.get(duration_key, 0.0) or 0.0)
         raw_start = step.get(start_key)
         start = float(raw_start) if raw_start is not None else cursor
+        # NaN / inf put NaN into busy / parallelism / pct (not JSON), and a
+        # negative duration gave -50 % and critical steps at 200 %.
+        if not (math.isfinite(duration) and duration >= 0 and math.isfinite(start)):
+            raise ValueError(f"step {index}: {duration_key} must be a finite number >= 0 "
+                             f"and {start_key} finite, got {duration!r} / {start!r}")
         end = start + duration
         cursor = max(cursor, end)
         resolved.append({"name": str(step.get(name_key, "")), "start": start,
