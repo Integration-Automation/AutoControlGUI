@@ -415,6 +415,14 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Fixed
 
+- WebRTC host annotations from a viewer are validated and bounded.
+- The tray icon keeps the application running only while a host runs.
+- Stopping a host while its approval dialog is open no longer raises.
+- Trust-list and address-book imports report files of the wrong shape.
+- Stop cancels a pending WebRTC auto-reconnect; a new remote window keeps
+  the pen mode; an empty recording is no longer reported as saved.
+- Quick Connect handles ws:// sessions on close and in its status badge,
+  ends the session on an error, and closes a timed-out approval box.
 - The Quick Connect popup forwards mouse and keyboard input.
 - Closing a remote screen window no longer aborts the process when its
   panel is deleted first.

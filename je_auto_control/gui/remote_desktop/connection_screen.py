@@ -336,6 +336,9 @@ class QuickConnectScreen(TranslatableMixin, QWidget):
                 QMessageBox.ButtonRole.RejectRole,
             )
             box.setDefaultButton(allow_btn)
+            # The host stops waiting after the timeout and denies; the box
+            # stayed up, and an Allow clicked after that admitted nobody.
+            QTimer.singleShot(int(_APPROVAL_TIMEOUT_S * 1000), box, box.reject)
             box.exec()
             clicked = box.clickedButton()
             if clicked is allow_btn:
@@ -494,6 +497,9 @@ class QuickConnectScreen(TranslatableMixin, QWidget):
             window.set_image(image)
 
     def _on_error(self, message: str) -> None:
+        # The session is over: the popup stayed open on its last frame and
+        # the badge kept saying connected.
+        self._disconnect()
         QMessageBox.warning(self, _t("rd_quick_connect_btn"), message)
 
     def _open_screen_window(self, title: str) -> None:
@@ -554,7 +560,8 @@ class QuickConnectScreen(TranslatableMixin, QWidget):
         window.deleteLater()
 
     def _on_window_closed(self) -> None:
-        if registry.viewer is not None:
+        # Either transport: closing a ws:// popup left its session running.
+        if registry.viewer is not None or registry._ws_viewer is not None:  # noqa: SLF001
             self._disconnect()
 
     # --- recent connections ------------------------------------------
@@ -685,8 +692,8 @@ class QuickConnectScreen(TranslatableMixin, QWidget):
             )
 
     def _refresh_viewer_status(self) -> None:
-        status = registry.viewer_status()
-        if status["connected"]:
+        # A ws:// session read as disconnected: only the TCP slot was asked.
+        if registry.viewer_status()["connected"] or registry.ws_viewer_status()["connected"]:
             self._viewer_badge.set_state("live", _t("rd_quick_connected"))
         else:
             self._viewer_badge.set_state(

@@ -58,6 +58,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260925-39 | 2026-09-25 | WebRTC panels and Quick Connect sessions: remote annotations are checked and bounded, the tray keeps the app alive only while hosting, a host stopped under the approval dialog or the stats thread is not an error, imports survive files of the wrong shape, Stop cancels a pending reconnect, a new window keeps the pen, empty recordings are not called saved, and Quick Connect treats ws:// sessions, errors and approval timeouts properly | #bugfix #remote-desktop #gui | [2026-09-d](2026-09-d.md) |
 | U-20260925-38 | 2026-09-25 | Codacy's gate on PR #489 had seven findings: subprocess rules on building a CompletedProcess or TimeoutExpired, a taskkill call reported one line below its marker, exec in a codegen test, a stdlib xml import that the test needs, and an unassigned QApplication | #ci #codacy | [2026-09-d](2026-09-d.md) |
 | U-20260925-37 | 2026-09-25 | Remote desktop panels: Quick Connect verifies wss:// and forwards input, closing a session window no longer aborts the process, connect slots report every error, audio follows its box with the section collapsed, the share text quotes the running host, signaling and the USB browser go through http_client | #bugfix #remote-desktop #gui #security | [2026-09-d](2026-09-d.md) |
 | U-20260925-36 | 2026-09-25 | A sweep of less-visited utils subpackages: three locators answer in screen coordinates, the voice router is thread-safe, failure signatures ignore unit-glued numbers, delta counts match their summary, no home directory is survivable, infinite samples and clipped checkboxes, dominant contrast colours, opaque URL schemes | #bugfix #vision #audit | [2026-09-d](2026-09-d.md) |
@@ -281,7 +282,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | File | Period | Entries |
 |---|---|---:|
-| [2026-09-d.md](2026-09-d.md) | 2026-09 | 7 |
+| [2026-09-d.md](2026-09-d.md) | 2026-09 | 8 |
 | [2026-09-c.md](2026-09-c.md) | 2026-09 | 38 |
 | [2026-09-b.md](2026-09-b.md) | 2026-09 | 68 |
 | [2026-09.md](2026-09.md) | 2026-09 | 79 |

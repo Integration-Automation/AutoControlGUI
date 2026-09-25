@@ -316,6 +316,7 @@ traditional_chinese_word_dict = {
     "rd_webrtc_stop_recording": "停止錄製",
     "rd_webrtc_recording_save_as": "錄製存檔為",
     "rd_webrtc_recording_saved": "錄製已儲存：{path}",
+    "rd_webrtc_recording_empty": "沒有錄到任何畫面（未收到影格）：未建立 {path}",
     "rd_webrtc_stats_idle": "（尚無統計資料）",
     # (B) batch
     "rd_webrtc_hw_codec_label": "硬體編碼器：",

@@ -7,11 +7,36 @@ annotations the viewer is drawing in real time.
 """
 from __future__ import annotations
 
+import math
 from typing import List, Optional, Tuple
 
 from PySide6.QtCore import QPointF, Qt
 from PySide6.QtGui import QColor, QGuiApplication, QPainter, QPen, QPolygonF
 from PySide6.QtWidgets import QWidget
+
+# A viewer could send strokes and points without end, each one repainting
+# every earlier one: the host's memory and paint time grew with it.
+_MAX_STROKES = 200
+_MAX_POINTS_PER_STROKE = 5000
+_MAX_WIDTH = 32
+_DEFAULT_WIDTH = 3
+
+
+def _point(event: dict) -> Optional[Tuple[float, float]]:
+    """The event's finite (x, y), or ``None``."""
+    try:
+        x, y = float(event.get("x", 0)), float(event.get("y", 0))
+    except (TypeError, ValueError):
+        return None
+    return (x, y) if math.isfinite(x) and math.isfinite(y) else None
+
+
+def _width(value) -> int:
+    """A pen width between 1 and ``_MAX_WIDTH``."""
+    try:
+        return min(_MAX_WIDTH, max(1, int(value or _DEFAULT_WIDTH)))
+    except (TypeError, ValueError, OverflowError):
+        return _DEFAULT_WIDTH
 
 
 class HostAnnotationOverlay(QWidget):
@@ -38,18 +63,41 @@ class HostAnnotationOverlay(QWidget):
         if not self.isVisible():
             self.showFullScreen()
 
+    def apply(self, event: dict) -> None:
+        """Apply one ``begin`` / ``point`` / ``end`` / ``clear`` event from a viewer.
+
+        The event comes from the remote viewer: a coordinate or width that is
+        not a number raised ``ValueError`` out of the host panel's slot, and
+        is now dropped (a width is clamped to 1..32).
+        """
+        action = event.get("action")
+        if action == "clear":
+            self.clear()
+        elif action == "end":
+            self.end_stroke()
+        elif action in ("begin", "point"):
+            point = _point(event)
+            if point is None:
+                return
+            if action == "point":
+                self.add_point(*point)
+                return
+            self.begin_stroke(*point, color=str(event.get("color") or "#ff0000"),
+                              width=_width(event.get("width")))
+
     def begin_stroke(self, x: float, y: float, *,
-                     color: str = "#ff0000", width: int = 3) -> None:
+                     color: str = "#ff0000", width: int = _DEFAULT_WIDTH) -> None:
         self._current = {
             "color": color, "width": int(width),
             "points": [(float(x), float(y))],
         }
         self._strokes.append(self._current)
+        del self._strokes[:-_MAX_STROKES]
         self.show_overlay()
         self.update()
 
     def add_point(self, x: float, y: float) -> None:
-        if self._current is None:
+        if self._current is None or len(self._current["points"]) >= _MAX_POINTS_PER_STROKE:
             return
         self._current["points"].append((float(x), float(y)))
         self.update()

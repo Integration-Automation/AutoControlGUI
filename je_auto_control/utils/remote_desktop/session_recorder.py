@@ -127,6 +127,11 @@ class SessionRecorder:
         return self._started and not self._closed
 
     @property
+    def has_output(self) -> bool:
+        """Whether a frame arrived, so that the output file was created."""
+        return self._started
+
+    @property
     def output_path(self) -> Path:
         return self._path
 

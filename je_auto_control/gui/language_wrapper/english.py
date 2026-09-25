@@ -443,6 +443,7 @@ english_word_dict = {
     "rd_webrtc_stop_recording": "Stop recording",
     "rd_webrtc_recording_save_as": "Save recording as",
     "rd_webrtc_recording_saved": "Recording saved: {path}",
+    "rd_webrtc_recording_empty": "Nothing was recorded (no frame arrived): {path} was not created",
     "rd_webrtc_stats_idle": "(no stats yet)",
     # (B) batch
     "rd_webrtc_hw_codec_label": "Hardware codec:",

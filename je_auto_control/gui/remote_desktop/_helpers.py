@@ -106,6 +106,25 @@ def wire_remote_input(window: QWidget, send: Callable[[dict], None]) -> None:
     window.type_text.connect(lambda text: forward({"action": "type", "text": text}))
 
 
+def _read_import_entries(path: str, key: str) -> list:
+    """The object entries of an exported JSON file: ``{key: [...]}`` or a bare list.
+
+    Raises ``OSError`` or ``ValueError`` for a file that cannot be read or has
+    another shape. A binary file raised ``UnicodeDecodeError``, ``{key: 5}`` a
+    ``TypeError`` and deep nesting ``RecursionError`` out of the import slots.
+    """
+    import json
+    try:
+        with open(path, "r", encoding="utf-8") as handle:
+            data = json.load(handle)
+    except RecursionError as error:
+        raise ValueError(f"{path}: nested too deeply") from error
+    entries = data.get(key) if isinstance(data, dict) else data
+    if not isinstance(entries, list):
+        raise ValueError(f"{path}: expected a list under {key!r}")
+    return [entry for entry in entries if isinstance(entry, dict)]
+
+
 def _build_verifying_client_context() -> ssl.SSLContext:
     """TLS client context with full hostname + cert verification enabled."""
     ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)

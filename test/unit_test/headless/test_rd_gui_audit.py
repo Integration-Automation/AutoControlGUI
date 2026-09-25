@@ -38,6 +38,7 @@ def qapp(monkeypatch):
 
 class _FakeViewer:
     connected = True
+    remote_host_id = None
 
     def __init__(self, **kwargs):
         self.kwargs, self.sent = kwargs, []
