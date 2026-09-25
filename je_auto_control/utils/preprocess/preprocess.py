@@ -58,6 +58,26 @@ def _resolve(haystack: Optional[ImageSource], region: Optional[Sequence[int]]):
     return _pil_to_bgr(grab_screen_region(region))
 
 
+def _eight_bit(source: Any) -> Any:
+    """A 16-bit, 32-bit or float image (PIL or ndarray) as 8 bits; anything else unchanged.
+
+    ``convert()`` clips PIL's ``I;16`` / ``I`` / ``F`` modes to 0..255, so a
+    16-bit screenshot read as black and white and a 0..1 float image as black;
+    OpenCV rejects most non-uint8 arrays outright.
+    """
+    import numpy as np
+    if hasattr(source, "dtype"):
+        return _as_uint8(np.asarray(source))
+    mode = getattr(source, "mode", None)
+    if not isinstance(mode, str) or (mode not in ("I", "F") and not mode.startswith("I;16")):
+        return source
+    from PIL import Image
+    array = np.asarray(source)
+    if array.dtype.kind in "iu" and array.size and array.max() > 255:
+        array = np.clip(array, 0, 65535).astype(np.uint16)
+    return Image.fromarray(_as_uint8(array))
+
+
 def _as_uint8(array):
     """``array`` as uint8, which every step assumes.
 

@@ -46,11 +46,17 @@ def _default_client_reader(title: str) -> Optional[Rect]:
     import ctypes
     from ctypes import wintypes
     hwnd = int(hit[0])
+    user32 = ctypes.windll.user32
+    # Minimized, the client area is (-32000, -32000, 0, 0): a click there
+    # lands off-screen. window_capture.get_window_geometry says None too.
+    if user32.IsIconic(hwnd):
+        return None
     rect = wintypes.RECT()
-    if not ctypes.windll.user32.GetClientRect(hwnd, ctypes.byref(rect)):
+    if not user32.GetClientRect(hwnd, ctypes.byref(rect)):
         return None
     origin = wintypes.POINT(0, 0)
-    ctypes.windll.user32.ClientToScreen(hwnd, ctypes.byref(origin))
+    if not user32.ClientToScreen(hwnd, ctypes.byref(origin)):
+        return None
     return (origin.x, origin.y, rect.right - rect.left, rect.bottom - rect.top)
 
 

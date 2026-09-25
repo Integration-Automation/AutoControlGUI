@@ -585,8 +585,8 @@ class WindowsAccessibilityBackend(AccessibilityBackend):
                 automation.AddFocusChangedEventHandler(None, handler)
         except _UIA_ERRORS:
             return None
-        try:
-            return events.get(timeout=float(timeout))
+        try:  # Queue.get(inf) raises OverflowError on Windows; None waits for good.
+            return events.get(timeout=None if float(timeout) == float("inf") else float(timeout))
         except queue.Empty:
             return None
         finally:

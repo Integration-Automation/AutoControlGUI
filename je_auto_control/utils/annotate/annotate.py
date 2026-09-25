@@ -28,26 +28,10 @@ if TYPE_CHECKING:  # pragma: no cover - annotations only
 ImageSource = Union[str, Path, bytes, "Image.Image"]
 
 
-def _eight_bit(image: "Image.Image") -> "Image.Image":
-    """A 16-bit or float image scaled into 8 bits; others unchanged.
-
-    ``convert("RGBA")`` clips those modes to 0..255, so a 16-bit screenshot
-    came out as pure black and white, and a 0..1 float image as black.
-    """
-    if image.mode not in ("I", "F") and not image.mode.startswith("I;16"):
-        return image
-    import numpy as np
-    from PIL import Image
-    from je_auto_control.utils.preprocess.preprocess import _as_uint8
-    array = np.asarray(image)
-    if array.dtype.kind in "iu" and array.size and array.max() > 255:
-        array = np.clip(array, 0, 65535).astype(np.uint16)
-    return Image.fromarray(_as_uint8(array))
-
-
 def _load_image(source: ImageSource) -> "Image.Image":
     """Load ``source`` (path / bytes / PIL image) as an RGBA image."""
     from PIL import Image
+    from je_auto_control.utils.preprocess.preprocess import _eight_bit
     if isinstance(source, Image.Image):
         return _eight_bit(source).convert("RGBA")
     opened = Image.open(io.BytesIO(source) if isinstance(source, bytes) else str(source))

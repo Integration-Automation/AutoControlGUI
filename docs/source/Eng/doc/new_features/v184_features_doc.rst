@@ -38,7 +38,10 @@ Headless API
 
 Focusability is role-based (the interactive roles: Button, Edit, CheckBox,
 ComboBox, RadioButton, Hyperlink, ListItem, MenuItem, Slider, Tab/TabItem,
-TreeItem, …). ``focus_control`` locates by ``name`` / ``role`` / ``app_name`` /
+TreeItem, …), read in any platform's spelling: UIA (``CheckBox``, or the raw
+``ControlType_50002``), AT-SPI (``push button``), macOS AX (``AXTextField``) and
+ARIA (``textbox``). A disabled control is left out of the Tab order, as ``Tab``
+skips it. ``focus_control`` locates by ``name`` / ``role`` / ``app_name`` /
 ``automation_id`` like the other native-control actions and returns ``bool``.
 
 Executor commands

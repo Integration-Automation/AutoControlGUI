@@ -20,7 +20,7 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 | 指標 | 數值 |
 | --- | ---: |
 | Python 模組總數（含周邊子專案） | 1,061 |
-| 程式碼總行數 | 155,341 |
+| 程式碼總行數 | 155,406 |
 | `je_auto_control/utils/` 子套件數 | 310 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 775 |
 | 套件門面 `__all__` 公開名稱數 | 1,244 |
@@ -342,13 +342,13 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.4 輸入模擬與動作品質
 
-> 22 個套件、約 2,829 行。
+> 22 個套件、約 2,828 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
 | `utils/act_in_view/` | 86 | 先把目標捲進視野，待其可操作後再動作 |
 | `utils/act_modes/` | 68 | actionability 閘門之上的 trial／force 動作模式 |
-| `utils/action_effect/` | 110 | 判定一個動作是否真的產生效果，並歸因到目標區域 |
+| `utils/action_effect/` | 109 | 判定一個動作是否真的產生效果，並歸因到目標區域 |
 | `utils/action_grounding/` | 83 | 動作前的接地守衛（邊界檢查 + 吸附到元素） |
 | `utils/actionability/` | 191 | 動作前就緒閘門（可見 + 穩定 + 啟用 + 未被遮擋） |
 | `utils/ensure_state/` | 74 | 冪等地把控制項／設定帶到期望狀態 |
@@ -371,11 +371,11 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.5 影像辨識與畫面分析
 
-> 37 個套件、約 6,023 行。
+> 37 個套件、約 6,037 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
-| `utils/annotate/` | 138 | 截圖標註：畫框、highlight、箭頭、標籤 |
+| `utils/annotate/` | 122 | 截圖標註：畫框、highlight、箭頭、標籤 |
 | `utils/barcode/` | 59 | 一維條碼（EAN／UPC）解碼，解碼器可注入 |
 | `utils/color_match/` | 151 | 在 HSV 通道上做顏色感知的樣板比對 |
 | `utils/color_region/` | 107 | 以顏色定位畫面區域（遮罩 + 連通元件） |
@@ -388,7 +388,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/hsv_segment/` | 104 | HSV 色彩空間分割（抗光照的顏色遮罩 + blob 框） |
 | `utils/icon_classify/` | 151 | 從像素形狀判斷一個框是哪一類元件 |
 | `utils/image_dedup/` | 100 | 感知雜湊影像去重（Pillow aHash/dHash） |
-| `utils/image_quality/` | 77 | 在 OCR／比對前評分影像品質（銳利度／對比／亮度） |
+| `utils/image_quality/` | 82 | 在 OCR／比對前評分影像品質（銳利度／對比／亮度） |
 | `utils/img_histogram/` | 112 | 顏色直方圖指紋與變化偵測（抗光照） |
 | `utils/marks_layout/` | 175 | Set-of-Marks 標籤的不重疊排版與可讀配色 |
 | `utils/match_autothresh/` | 114 | Otsu 自動門檻，免去手動調 `min_score` |
@@ -396,9 +396,9 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/match_stability/` | 70 | 比對前的靜止閘門與跨影格的比對持續性 |
 | `utils/match_trust/` | 154 | 樣板比對可信度評分（次峰比 + peak-to-sidelobe） |
 | `utils/monitor_layout/` | 320 | 多螢幕／虛擬桌面幾何（在哪個螢幕、位置、重映射）＋ `logical_frame` 以滑鼠座標空間擷取畫面 |
-| `utils/motion_regions/` | 73 | 兩影格間的局部變化／活動偵測（absdiff） |
+| `utils/motion_regions/` | 78 | 兩影格間的局部變化／活動偵測（absdiff） |
 | `utils/perceptual_diff/` | 202 | 感知式（YIQ）影像差異，抑制反鋸齒邊緣誤報 |
-| `utils/preprocess/` | 256 | OCR／比對前的影像前處理（灰階、二值化、去傾斜…） |
+| `utils/preprocess/` | 276 | OCR／比對前的影像前處理（灰階、二值化、去傾斜…） |
 | `utils/qr/` | 59 | 從影像或螢幕區域解碼 QR code（OpenCV） |
 | `utils/rotated_match/` | 201 | 容忍旋轉與縮放的樣板比對（尺度空間 × 角度掃描） |
 | `utils/saliency/` | 114 | 頻譜殘差視覺顯著性：顯著圖與排序後的顯著區域 |
@@ -441,13 +441,13 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.7 無障礙樹與原生控制項
 
-> 16 個套件、約 4,645 行。
+> 16 個套件、約 4,673 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
 | `utils/a11y_audit/` | 362 | 以無障礙樹 + OCR 進行無障礙與 i18n 稽核 |
 | `utils/accessibility/` | 3,143 | 跨平台無障礙樹定位與錄製；Windows UIA／macOS AX／null 三後端。支援限定視窗（換搜尋起點，不是過濾）、逐節點可中斷走訪、`IUIAutomation2` 連線逾時、名稱子字串比對與排序、`control_get_state` 一次讀完值／勾選／選取／數值（密碼欄位不回內容） |
-| `utils/ax_events/` | 29 | 反應式 UIA 事件等待（focus-changed） |
+| `utils/ax_events/` | 35 | 反應式 UIA 事件等待（focus-changed） |
 | `utils/ax_props/` | 44 | 讀取豐富 UIA 屬性（enabled／offscreen／help／status／快捷鍵） |
 | `utils/ax_text/` | 102 | 透過 UIA TextPattern 取得原生文字（讀取／尋找／選取／屬性） |
 | `utils/ax_tree_walk/` | 119 | 可讀、可定址的無障礙樹後處理（角色名 + 節點路徑） |
@@ -455,7 +455,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/control_patterns/` | 88 | 延伸 UIA 控制項模式動作（Expand／Select／Range／Scroll） |
 | `utils/cvd_simulate/` | 140 | 模擬色覺缺陷並標示在該狀況下會撞色的顏色 |
 | `utils/element_repository/` | 113 | 原生 UI 元素的具名定位器倉庫（object repository） |
-| `utils/focus_order/` | 95 | 鍵盤焦點順序：預期 Tab 序列、WCAG 稽核與設定焦點 |
+| `utils/focus_order/` | 117 | 鍵盤焦點順序：預期 Tab 序列、WCAG 稽核與設定焦點 |
 | `utils/legacy_accessible/` | 45 | MSAA 橋接，處理 UIA 無法建模的舊控制項 |
 | `utils/selection_view/` | 57 | 容器選取狀態與檢視切換（Selection／MultipleView 模式） |
 | `utils/table_pattern/` | 65 | 原生表格的表頭與儲存格定址（UIA TablePattern／GridItem） |
@@ -464,7 +464,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.8 元素定位、自我修復與智慧等待
 
-> 23 個套件、約 4,372 行。
+> 23 個套件、約 4,390 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -475,7 +475,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/change_localize/` | 83 | 把畫面變化歸因到實際改變的元素框 |
 | `utils/critic_features/` | 85 | 每步的 critic 特徵集合與規則式步驟評分 |
 | `utils/element_diff/` | 94 | 跨影格的幾何感知元素比對（穩定 ID、移動追蹤） |
-| `utils/element_parse/` | 106 | 融合並排序畫面元素框（IoU、合併、多來源融合、閱讀順序） |
+| `utils/element_parse/` | 127 | 融合並排序畫面元素框（IoU、合併、多來源融合、閱讀順序） |
 | `utils/element_proposal/` | 92 | 免樣板、免模型地從原始像素提出乾淨元素清單 |
 | `utils/element_scoring/` | 105 | 加權候選評分（角色 + 名稱相似度 + 鄰近度 + 啟用狀態） |
 | `utils/expect_poll/` | 149 | 反覆取值直到符合條件（Playwright `expect.poll` 風格） |
@@ -483,7 +483,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/heal_analytics/` | 77 | 自癒事件記錄的分析（治癒率、脆弱定位器） |
 | `utils/locator_chain/` | 112 | 可組合／可過濾的候選定位器（chained-locator 慣用法） |
 | `utils/locator_repair/` | 117 | 自癒回寫：把修正後的定位器持久化 |
-| `utils/observation/` | 92 | 供 VLM／agent 接地用的 token 預算內、帶索引的 a11y 文字觀察 |
+| `utils/observation/` | 89 | 供 VLM／agent 接地用的 token 預算內、帶索引的 a11y 文字觀察 |
 | `utils/observation_delta/` | 122 | token 預算內的觀察差異：兩個 UI 影格之間變了什麼 |
 | `utils/screen_state/` | 191 | 語義畫面狀態：快照／差異與結構化畫面描述 |
 | `utils/scroll_find/` | 103 | 捲動直到目標影像／文字可見 |
@@ -671,7 +671,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.16 系統、視窗與剪貼簿
 
-> 16 個套件、約 2,610 行。
+> 16 個套件、約 2,616 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -688,7 +688,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/system_volume/` | 212 | 讀取與控制系統主音量與靜音狀態 |
 | `utils/trash/` | 93 | 把檔案移到系統資源回收筒（可復原刪除） |
 | `utils/window_capture/` | 304 | 逐視窗截圖、視窗版面儲存／還原、貼齊與排列 |
-| `utils/window_geometry/` | 81 | 視窗客戶區幾何（外框內縮、client→screen 對映） |
+| `utils/window_geometry/` | 87 | 視窗客戶區幾何（外框內縮、client→screen 對映） |
 | `utils/window_layout/` | 137 | 視窗拼貼／版面規劃器（左右半、四象限、網格、層疊） |
 | `utils/window_zorder/` | 76 | 視窗 z 序控制（最上層／移到最前／送到最後） |
 
@@ -1089,6 +1089,6 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `osx/` | 17 | 925 |
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 846 |
-| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 680 | 55,692 |
-| **總計** | **1,055** | **155,276** |
+| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 680 | 55,757 |
+| **總計** | **1,055** | **155,341** |
 

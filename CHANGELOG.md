@@ -87,6 +87,9 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Changed
 
+- `is_interactive_role` and `flatten_tree` recognise AT-SPI, macOS AX and ARIA
+  role names as well as UIA; `tab_order` leaves out disabled controls.
+- `effect_near_point` / `classify_effect` measure `radius` as a circle.
 - `find_color_regions`, `segment_hsv` and `dominant_hue_regions` return
   screen coordinates for blobs found in a grabbed `region` (they were
   relative to the region's corner); a supplied `haystack` keeps its pixels.
@@ -449,6 +452,13 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Fixed
 
+- `fuse_elements`, `observation_index` and `classify_effect` read elements
+  with `bounds` or without a size; unchanged zero-area elements are no
+  longer reported as changes.
+- `image_quality` and `motion_regions` measure 16-bit and float frames in
+  8 bits and contain OpenCV errors.
+- `client_point` / `get_client_rect` return `None` for a minimized window;
+  `wait_for_focus_change` refuses a NaN timeout.
 - Test selection, sharding and flakiness read finished runs, so runs
   killed mid-flight no longer hide a flow's history.
 - `find_lines` finds lines shorter than 50 px and reads 16-bit images;
