@@ -8,16 +8,14 @@ the suite.
 """
 import os
 import subprocess  # nosec B404  # reason: runs this test's own probe script
-import sys
 import textwrap
 import time
-from pathlib import Path
 
 import pytest
 
-pytest.importorskip("PySide6.QtWidgets", exc_type=ImportError)
+from headless._exit_probe import exit_seconds, run_probe
 
-_REPO_ROOT = Path(__file__).resolve().parents[3]
+pytest.importorskip("PySide6.QtWidgets", exc_type=ImportError)
 
 _PROBE = textwrap.dedent("""
     import os, sys, time
@@ -53,15 +51,12 @@ _PROBE = textwrap.dedent("""
         print("left", wt.running_threads(), "calls", calls)
     else:
         wt._EXIT_GRACE_S = 0.5
-        print("exiting")
+        print("exiting", time.time(), flush=True)
 """)
 
 
 def _run_probe(mode: str) -> subprocess.CompletedProcess:
-    env = dict(os.environ, PYTHONPATH=str(_REPO_ROOT))
-    argv = [sys.executable, "-c", _PROBE, mode]   # a literal probe; these tests set mode
-    return subprocess.run(argv, env=env, timeout=60,  # nosec B603  # nosemgrep  # reason: literal argv
-                          capture_output=True, text=True, check=False)
+    return run_probe(_PROBE, mode)
 
 
 def test_destroying_the_owner_mid_run_neither_aborts_nor_calls_back():
@@ -78,12 +73,12 @@ def test_exiting_while_a_worker_runs_lets_it_finish():
 
 
 def test_exiting_during_a_step_longer_than_the_grace_still_exits_cleanly():
-    started = time.monotonic()
     done = _run_probe("stuck")
     # Destroying the running QThread at exit aborted here; a daemon thread
-    # just ends with the process once the grace is over.
+    # just ends with the process once the grace is over -- well before its
+    # 60 s step would.
     assert done.returncode == 0, done.stderr
-    assert time.monotonic() - started < 30
+    assert exit_seconds(done) < 30
 
 
 def _pump_until(app, predicate, seconds=10.0):
