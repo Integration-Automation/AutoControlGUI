@@ -3,6 +3,7 @@ from dataclasses import dataclass, field
 from typing import Any, Dict, List, Mapping, Optional, Tuple
 
 from je_auto_control.gui.script_builder.command_schema import COMMAND_SPECS
+from je_auto_control.utils.json.json_file import read_action_json, write_action_json
 
 
 @dataclass(eq=False)
@@ -113,6 +114,26 @@ def _unwrap_action_list(actions: Any) -> list:
 def steps_to_actions(steps: List[Step]) -> list:
     """Convert a list of Steps back to an AC action list."""
     return [step_to_action(step) for step in steps]
+
+
+def load_action_file(path: str) -> Tuple[List[Step], Optional[Dict[str, Any]]]:
+    """Read an action file as Steps, with the other keys of a wrapped file.
+
+    The second value is ``None`` for a bare list, and otherwise everything but
+    ``auto_control``, for :func:`save_action_file` to write back. Raises the
+    reader's ``AutoControlException`` or ``ValueError`` for a bad file.
+    """
+    actions = read_action_json(path)
+    steps = actions_to_steps(actions)
+    if not isinstance(actions, dict):
+        return steps, None
+    return steps, {key: value for key, value in actions.items() if key != "auto_control"}
+
+
+def save_action_file(path: str, steps: List[Step], extras: Optional[Dict[str, Any]] = None) -> None:
+    """Write ``steps`` to ``path``, wrapped with ``extras`` when a file had them."""
+    actions = steps_to_actions(steps)
+    write_action_json(path, actions if extras is None else {**extras, "auto_control": actions})
 
 
 def _summarise_args(args: List[Any]) -> str:

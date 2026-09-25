@@ -421,6 +421,8 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Fixed
 
+- The Flow Editor opens action files saved with a BOM, keeps a wrapped
+  file's other keys on save, and writes atomically.
 - The region selector (template cropping, OCR / screenshot / WebRTC regions)
   covers every screen and returns native pixels: it was offset by the
   virtual desktop's origin and did not cover screens with display scaling.

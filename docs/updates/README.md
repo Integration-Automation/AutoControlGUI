@@ -58,6 +58,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260925-45 | 2026-09-25 | The Flow Editor reads and writes action files through the Script Builder's helpers: files with a BOM open, wrapped files keep their other keys, and saves are atomic | #bugfix #gui | [2026-09-d](2026-09-d.md) |
 | U-20260925-44 | 2026-09-25 | The region selector answers in native pixels on every screen: one overlay per screen, where a single overlay offset every region by the virtual desktop's origin and left scaled screens uncovered and in logical pixels | #bugfix #gui #hidpi | [2026-09-d](2026-09-d.md) |
 | U-20260925-42 | 2026-09-25 | Every numeric line edit validates in the C locale through one helper: under French or German the Image Detect threshold could not be changed, and a grouped integer passed the validator but not int() | #bugfix #gui #i18n | [2026-09-d](2026-09-d.md) |
 | U-20260925-41 | 2026-09-25 | Script Builder: shown defaults match the executor (an edit no longer loosened an exact image match), required fields are required, positional arguments and wrapped files survive load and save, decimals can be typed under comma locales, odd RGB values load, and a new loop takes children | #bugfix #gui #script-builder | [2026-09-d](2026-09-d.md) |
@@ -286,7 +287,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | File | Period | Entries |
 |---|---|---:|
-| [2026-09-d.md](2026-09-d.md) | 2026-09 | 12 |
+| [2026-09-d.md](2026-09-d.md) | 2026-09 | 13 |
 | [2026-09-c.md](2026-09-c.md) | 2026-09 | 38 |
 | [2026-09-b.md](2026-09-b.md) | 2026-09 | 68 |
 | [2026-09.md](2026-09.md) | 2026-09 | 79 |

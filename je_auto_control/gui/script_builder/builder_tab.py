@@ -19,11 +19,10 @@ from je_auto_control.gui.script_builder.command_schema import (
 from je_auto_control.gui.script_builder.step_form_view import StepFormView
 from je_auto_control.gui.script_builder.step_list_view import StepTreeView
 from je_auto_control.gui.script_builder.step_model import (
-    Step, actions_to_steps, steps_to_actions,
+    Step, load_action_file, save_action_file, steps_to_actions,
 )
 from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.executor.action_executor import execute_action
-from je_auto_control.utils.json.json_file import read_action_json, write_action_json
 
 
 def _t(key: str) -> str:
@@ -130,9 +129,7 @@ class ScriptBuilderTab(TranslatableMixin, QWidget):
         if not path:
             return
         try:
-            actions = steps_to_actions(self._tree.root_steps())
-            extras = self._file_extras
-            write_action_json(path, actions if extras is None else {**extras, "auto_control": actions})
+            save_action_file(path, self._tree.root_steps(), self._file_extras)
             self._result.setPlainText(f"Saved: {path}")
         except (AutoControlException, OSError, ValueError, TypeError) as error:
             QMessageBox.warning(self, "Error", str(error))
@@ -144,12 +141,8 @@ class ScriptBuilderTab(TranslatableMixin, QWidget):
         if not path:
             return
         try:
-            actions = read_action_json(path)
-            self._tree.load_steps(actions_to_steps(actions))
-            # Save wrote only the list, dropping the file's other keys.
-            self._file_extras = (
-                {key: value for key, value in actions.items() if key != "auto_control"}
-                if isinstance(actions, dict) else None)
+            steps, self._file_extras = load_action_file(path)
+            self._tree.load_steps(steps)
             self._form.load_step(None)
             self._result.setPlainText(f"Loaded: {path}")
         except (AutoControlException, OSError, ValueError, TypeError) as error:
