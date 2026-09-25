@@ -411,18 +411,13 @@ OpenAI 後端沒有這個綁定，照舊。
 
 ---
 
-## MCP 2026-07-28（無狀態協定）：HTTP 傳輸與 `subscriptions/listen` 還沒做
+## MCP 2026-07-28（無狀態協定）：`subscriptions/listen` 還沒做
 
-`WIP` — stdio 已逐請求服務 2026-07-28（`utils/mcp_server/_stateless.py`、`_input_required.py`），HTTP 與訂閱還沒有
+`WIP` — stdio 與 HTTP 已逐請求服務 2026-07-28（`utils/mcp_server/_stateless.py`、`_input_required.py`、`_http_stateless.py`），訂閱還沒有
 
-- **HTTP 傳輸**（`http_transport.py`）：`MCP-Protocol-Version: 2026-07-28` 目前在
-  `_protocol_version_supported` 就被 400 擋掉。要做的是：帶 `_meta` 協定版本的 POST 要求
-  `Mcp-Method`（全部）與 `Mcp-Name`（`tools/call`、`resources/read`、`prompts/get`，
-  `=?base64?…?=` 要先解碼）並和 body 比對，不符回 400＋`-32020`；`-32022`、`-32021`、
-  缺欄位的 `-32602` 回 400，`-32601` 回 404；這類請求忽略 `Mcp-Session-Id`、不發 session。
-- **`subscriptions/listen`**（`_stateless.py`）：取代 GET 串流與 `resources/subscribe`。
-  先送 `notifications/subscriptions/acknowledged`（`_meta` 帶訂閱 id＝請求 id，`notifications`
-  只列伺服器會送的種類），之後的 `tools/list_changed`、`resources/updated` 都標上同一個 id；
+- **`subscriptions/listen`**（`_stateless.py`）：取代 GET 串流與 `resources/subscribe`，目前在無狀態請求裡是
+  `-32601`（HTTP 404）。先送 `notifications/subscriptions/acknowledged`（`_meta` 帶訂閱 id＝請求 id，
+  `notifications` 只列伺服器會送的種類），之後的 `tools/list_changed`、`resources/updated` 都標上同一個 id；
   stdio 以 `notifications/cancelled` 結束、HTTP 以關閉 SSE 結束，伺服器關閉時回完成結果。
   做完後 `STATELESS_CAPABILITIES` 才能宣告 `listChanged`／`subscribe`。
 

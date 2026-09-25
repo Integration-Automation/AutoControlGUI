@@ -1,6 +1,6 @@
-================================
+=======================================
 MCP 伺服器 (讓 Claude 使用 AutoControl)
-================================
+=======================================
 
 MCP 伺服器把 AutoControl 包裝成 Model Context Protocol 服務,讓任何
 支援 MCP 的客戶端(Claude Desktop、Claude Code、自製 Anthropic /
@@ -279,7 +279,8 @@ Session
 client 還會在 ``serverInfo`` 拿到 ``description``。完全拿掉 ``initialize`` 的 2026-07-28
 改成逐請求服務(見 `無狀態請求 (2026-07-28)`_);``initialize`` 若指名它,拿到的是
 2025-11-25。走 HTTP 時,``MCP-Protocol-Version``
-標頭寫的若是其他版本,請求會以 400 拒絕。伺服器只宣告伺服器端能力(tools、resources、
+標頭寫的若是伺服器不支援的版本,請求會以 400 拒絕,回覆的是列出支援版本的
+``UnsupportedProtocolVersion``(``-32022``)錯誤。伺服器只宣告伺服器端能力(tools、resources、
 prompts、logging);``sampling/createMessage``、``roots/list`` 與 ``elicitation/create``
 只會送給在 initialize 時宣告了對應能力的 client。
 
@@ -326,12 +327,21 @@ client 不用改,可以和 2026-07-28 的 client 並存。
   並在 ``_meta["io.modelcontextprotocol/serverInfo"]`` 放伺服器的名稱、版本與說明。
   ``server/discover``、三個清單與 ``resources/read`` 另帶快取提示:``cacheScope``
   一律是 ``private``;``ttlMs`` 在 ``server/discover`` 是一小時、清單是一分鐘、
-  ``resources/read`` 是 ``0``(內容是即時的)。
+  ``resources/read`` 是 ``0`` (內容是即時的)。
 - **不送 client 沒要的東西。** 關卡讀的能力是這個請求自己的,不是某條連線的;伺服器
   不主動送請求(``request_sampling`` 與 ``refresh_roots`` 在無狀態請求裡會丟例外);
   記錄只送給設了 ``logLevel`` 的請求,而且只送該等級以上;第一個請求就是無狀態的
   stdio 對端,不會收到背景記錄或清單變更通知。
-- 破壞性工具的**確認**改用多輪往返:見 `破壞性動作確認(Elicitation)`_。
+- 破壞性工具的確認改用多輪往返:見 `破壞性動作確認(Elicitation)`_。
+- **走 HTTP 時**,``MCP-Protocol-Version`` 標頭或 ``_meta`` 寫 2026-07-28 的請求就是無狀態
+  請求。它必須把 body 映到標頭:``MCP-Protocol-Version`` 等於 ``_meta`` 的版本、
+  ``Mcp-Method`` 等於 ``method``,``tools/call``/``prompts/get``/``resources/read`` 還要
+  ``Mcp-Name`` 等於工具或 prompt 名稱、或 resource URI(不是純 ASCII 的值用
+  ``=?base64?...?=``)。標頭缺少或與 body 不符是 400 加 ``HeaderMismatch``(``-32020``);
+  版本不對、缺中繼資料或缺 client 能力是 400;未知方法是 404。不保留 session:
+  ``Mcp-Session-Id`` 會被忽略、也不會發新的;指名 2026-07-28 的 ``GET``/``DELETE`` 是 405。
+  普通的 JSON ``POST`` 就能做所有事,確認也一樣(問題放在結果裡回來);SSE ``POST``
+  另外會送出呼叫的進度通知。
 
 唯讀 / 安全模式
 ===============
@@ -376,7 +386,8 @@ client 不用改,可以和 2026-07-28 的 client 並存。
 ``requestState``。client 問過使用者之後,以同樣的參數重送同一個呼叫,把答案放在
 ``inputResponses["confirm"]``(例如 ``{"action": "accept"}``),並原樣帶回
 ``requestState``。這個 state 以只存在於伺服器行程裡的金鑰簽章,寫明工具與參數摘要,
-五分鐘後過期,而且只接受一次;任何一項不符都是 ``-32602``。``decline`` 或 ``cancel``
+五分鐘後過期,而且只接受一次;任何一項不符都是 ``-32602``。走 HTTP 時不需要 session,
+也不需要開著串流。``decline`` 或 ``cancel``
 是工具執行錯誤(``isError: true``),工具不會執行;沒帶答案的重送會再問一次。沒有
 宣告 ``elicitation`` 的無狀態 client 會收到 ``-32021``,``data.requiredCapabilities``
 寫明缺的能力,而不是像握手時代那樣不經詢問直接執行。
@@ -445,7 +456,7 @@ Plugin Hot-Reload
 ``notifications/tools/list_changed``,client 會自動更新工具目錄。
 
 CI 煙霧測試 (Fake Backend)
-=========================
+==========================
 
 Fake backend 把 wrapper 層換成記憶體版的紀錄器,讓沒有顯示伺服器的
 CI runner 也能走完所有 MCP 工具:

@@ -16,11 +16,12 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 ### Added
 
 - The MCP server speaks the stateless protocol revision 2026-07-28 over
-  stdio, per request, beside the `initialize`-based ones: `server/discover`,
+  stdio and HTTP, per request, beside the `initialize`-based ones: `server/discover`,
   `resultType` and caching hints on results, the `-32020`–`-32022` error
   codes, and destructive-tool confirmation as a multi round-trip
-  (`input_required` with a signed `requestState`). Existing clients are
-  served as before.
+  (`input_required` with a signed `requestState`). Over HTTP a stateless
+  request needs the `Mcp-Method` / `Mcp-Name` headers and is served without
+  a session. Existing clients are served as before.
 - The MCP server negotiates protocol version 2025-11-25 and sends its
   `description` in `serverInfo` to clients of that revision.
 - Computer use with `computer_toolset_20260801` answers `zoom` with a
@@ -82,6 +83,10 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Changed
 
+- An MCP HTTP request whose `MCP-Protocol-Version` header names an
+  unsupported version is still a 400, now with a JSON-RPC
+  `UnsupportedProtocolVersion` (`-32022`) body listing the supported
+  versions instead of `{"error": ...}`.
 - Quick Connect verifies the host certificate for `wss://` targets (use the
   Advanced viewer with *Skip cert verification* for self-signed hosts).
 - The signaling client and the USB browser's device fetch go through

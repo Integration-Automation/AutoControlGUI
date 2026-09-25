@@ -5,19 +5,25 @@ metadata alone: ``server/discover``, ``resultType`` and caching hints on every
 result, the reserved error codes, the removed methods, per-request
 capabilities, and destructive-tool confirmation by multi round-trip instead
 of a server-initiated ``elicitation/create``. ``initialize`` still selects the
-handshake era. No network.
+handshake era. Over HTTP that revision's header rules and status codes apply
+and no session is kept. No network beyond loopback.
 """
+import base64
 import json
 import logging
+import urllib.error
+import urllib.request
 
 import pytest
 
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
+from je_auto_control.utils.mcp_server._http_stateless import decode_header_value
 from je_auto_control.utils.mcp_server._input_required import RequestStateSigner
 from je_auto_control.utils.mcp_server._protocol import SUPPORTED_PROTOCOL_VERSIONS
 from je_auto_control.utils.mcp_server._stateless import (
     META_SERVER_INFO, STATELESS_PROTOCOL_VERSION,
 )
+from je_auto_control.utils.mcp_server.http_transport import DEFAULT_PATH, HttpMCPServer
 from je_auto_control.utils.mcp_server.log_bridge import MCPLogBridge
 from je_auto_control.utils.mcp_server.server import MCPServer
 from je_auto_control.utils.mcp_server.tools import MCPTool
@@ -301,3 +307,126 @@ def test_list_changes_are_not_pushed_to_a_stateless_peer():
     handshake.handle_line(json.dumps({"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {}}))
     handshake.register_tool(_tool(name="late"))
     assert sent == ["notifications/tools/list_changed"]
+
+
+# --- Streamable HTTP ---------------------------------------------------------
+
+_TEST_SCHEME = "http"  # NOSONAR localhost-only ephemeral test server; TLS out of scope
+
+
+@pytest.fixture()
+def http_server(monkeypatch):
+    monkeypatch.setenv("JE_AUTOCONTROL_MCP_CONFIRM_DESTRUCTIVE", "1")
+    server = HttpMCPServer(mcp=MCPServer(tools=[_tool(), _tool(name="read", annotations=READ_ONLY)]),
+                           host="127.0.0.1", port=0)
+    server.start()
+    yield server
+    server.stop(timeout=1.0)
+
+
+def _headers_for(method, name=None, version=STATELESS_PROTOCOL_VERSION):
+    headers = {"MCP-Protocol-Version": version, "Mcp-Method": method}
+    if name is not None:
+        headers["Mcp-Name"] = name
+    return headers
+
+
+def _http(server, body, headers, http_method="POST"):
+    host, port = server.address
+    data = None if body is None else json.dumps(body).encode("utf-8")
+    request = urllib.request.Request(
+        f"{_TEST_SCHEME}://{host}:{port}{DEFAULT_PATH}", data=data, method=http_method,
+        headers={"Content-Type": "application/json", "Accept": "application/json", **headers})
+    try:
+        with urllib.request.urlopen(request, timeout=5) as response:  # nosec B310  # reason: loopback test server
+            return response.status, json.loads(response.read() or b"null"), dict(response.headers)
+    except urllib.error.HTTPError as error:
+        raw = error.read()
+        return error.code, (json.loads(raw) if raw else None), dict(error.headers)
+
+
+def _request(method, params=None, capabilities=None, msg_id=1):
+    return {"jsonrpc": "2.0", "id": msg_id, "method": method,
+            "params": {**(params or {}), "_meta": _meta(capabilities)}}
+
+
+def test_a_stateless_http_request_is_served_without_a_session(http_server):
+    status, body, headers = _http(http_server, _request("tools/list"), _headers_for("tools/list"))
+    assert status == 200 and body["result"]["resultType"] == "complete"
+    assert "Mcp-Session-Id" not in headers
+    # An unknown session id is ignored rather than a 404: there are no sessions.
+    status, body, _ = _http(http_server, _request("server/discover"),
+                            {**_headers_for("server/discover"), "Mcp-Session-Id": "nope"})
+    assert status == 200 and STATELESS_PROTOCOL_VERSION in body["result"]["supportedVersions"]
+
+
+@pytest.mark.parametrize("headers, detail", [
+    ({"MCP-Protocol-Version": STATELESS_PROTOCOL_VERSION}, "Mcp-Method"),
+    (_headers_for("tools/call"), "Mcp-Method"),
+    (_headers_for("tools/list", version="2025-11-25"), "MCP-Protocol-Version"),
+    ({"Mcp-Method": "tools/list"}, "MCP-Protocol-Version"),
+])
+def test_headers_that_disagree_with_the_body_are_a_header_mismatch(http_server, headers, detail):
+    status, body, _ = _http(http_server, _request("tools/list"), headers)
+    assert status == 400 and body["error"]["code"] == -32020 and detail in body["error"]["message"]
+
+
+def test_mcp_name_mirrors_the_tool_name(http_server):
+    call = _request("tools/call", {"name": "read", "arguments": {"x": 1}})
+    assert _http(http_server, call, _headers_for("tools/call"))[1]["error"]["code"] == -32020
+    assert _http(http_server, call, _headers_for("tools/call", "act"))[1]["error"]["code"] == -32020
+    status, body, _ = _http(http_server, call, _headers_for("tools/call", "read"))
+    assert status == 200 and body["result"]["isError"] is False
+    encoded = "=?base64?" + base64.b64encode(b"read").decode() + "?="
+    assert _http(http_server, call, _headers_for("tools/call", encoded))[0] == 200
+
+
+def test_version_and_metadata_errors_are_400_and_unknown_methods_404(http_server):
+    status, body, _ = _http(http_server, {"jsonrpc": "2.0", "id": 1, "method": "tools/list", "params": {}},
+                            _headers_for("tools/list"))
+    assert status == 400 and body["error"]["code"] == -32602
+    status, body, _ = _http(http_server, _request("ping"), _headers_for("ping"))
+    assert status == 404 and body["error"]["code"] == -32601
+    status, body, _ = _http(http_server, _request("tools/list"),
+                            _headers_for("tools/list", version="2099-01-01"))
+    assert status == 400 and body["error"]["code"] == -32022 and body["id"] == 1
+    assert STATELESS_PROTOCOL_VERSION in body["error"]["data"]["supported"]
+
+
+def test_confirmation_over_http_is_a_multi_round_trip(http_server):
+    call = _request("tools/call", {"name": "act", "arguments": {"x": 2}}, {"elicitation": {}})
+    status, body, _ = _http(http_server, call, _headers_for("tools/call", "act"))
+    assert status == 200 and body["result"]["resultType"] == "input_required"
+    retry = _request("tools/call", {"name": "act", "arguments": {"x": 2},
+                                    "requestState": body["result"]["requestState"],
+                                    "inputResponses": {"confirm": {"action": "accept"}}},
+                     {"elicitation": {}}, msg_id=2)
+    status, body, _ = _http(http_server, retry, _headers_for("tools/call", "act"))
+    assert status == 200 and body["result"]["isError"] is False
+    bare = _request("tools/call", {"name": "act", "arguments": {"x": 2}})
+    status, body, _ = _http(http_server, bare, _headers_for("tools/call", "act"))
+    assert status == 400 and body["error"]["code"] == -32021
+
+
+def test_get_and_delete_are_not_part_of_the_stateless_revision(http_server):
+    headers = {"MCP-Protocol-Version": STATELESS_PROTOCOL_VERSION, "Accept": "text/event-stream"}
+    assert _http(http_server, None, headers, http_method="GET")[0] == 405
+    assert _http(http_server, None, headers, http_method="DELETE")[0] == 405
+
+
+def test_the_handshake_era_still_gets_a_session(http_server):
+    status, body, headers = _http(http_server, {"jsonrpc": "2.0", "id": 1, "method": "initialize",
+                                                "params": {"protocolVersion": "2025-11-25"}}, {})
+    assert status == 200 and body["result"]["protocolVersion"] == "2025-11-25"
+    assert headers.get("Mcp-Session-Id")
+
+
+@pytest.mark.parametrize("value, decoded", [
+    ("plain", "plain"),
+    ("=?base64?SGVsbG8sIOS4lueVjA==?=", "Hello, " + chr(0x4E16) + chr(0x754C)),
+    ("=?base64?!!?=", None),
+    ("caf" + chr(0xE9), None),
+    ("line" + chr(10) + "break", None),
+])
+def test_header_values_decode_as_the_spec_says(value, decoded):
+    assert decode_header_value(value) == decoded

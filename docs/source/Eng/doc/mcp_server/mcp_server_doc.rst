@@ -302,7 +302,9 @@ otherwise the newest of those. A 2025-11-25 client also gets a ``description``
 in ``serverInfo``. 2026-07-28 drops ``initialize`` altogether and is served
 per request instead (see `Stateless requests (2026-07-28)`_); an
 ``initialize`` naming it gets 2025-11-25. Over HTTP a request whose
-``MCP-Protocol-Version`` header names any other version is refused with 400. The server declares only server
+``MCP-Protocol-Version`` header names a version the server does not speak is
+refused with 400 and an ``UnsupportedProtocolVersion`` (``-32022``) error
+listing the ones it does. The server declares only server
 capabilities (tools, resources, prompts, logging); it sends
 ``sampling/createMessage``, ``roots/list`` and ``elicitation/create`` only to a
 client that declared the matching capability.
@@ -374,6 +376,19 @@ existing client keeps working unchanged next to a 2026-07-28 one.
   notifications.
 - **Confirmation** of destructive tools is a multi round-trip: see
   `Confirmation prompts (elicitation)`_.
+- **Over HTTP** a request is stateless when its ``MCP-Protocol-Version``
+  header or its ``_meta`` says 2026-07-28. It must mirror its body into
+  headers: ``MCP-Protocol-Version`` equal to the ``_meta`` version,
+  ``Mcp-Method`` equal to ``method``, and for ``tools/call`` / ``prompts/get``
+  / ``resources/read`` also ``Mcp-Name`` equal to the tool or prompt name or
+  the resource URI (``=?base64?...?=`` for a value that is not plain ASCII).
+  A missing or disagreeing header is 400 with ``HeaderMismatch``
+  (``-32020``); a bad version, missing metadata or a missing client
+  capability is 400; an unknown method is 404. No session is kept:
+  ``Mcp-Session-Id`` is ignored and none is minted, and ``GET`` / ``DELETE``
+  naming 2026-07-28 are 405. A plain JSON ``POST`` works for everything,
+  confirmation included, since the question comes back in the result; an
+  SSE ``POST`` additionally carries the call's progress notifications.
 
 Read-only / safe mode
 =====================
@@ -428,7 +443,7 @@ user and retries the same call, with the same arguments, the answer in
 ``requestState`` echoed back. The state is signed with a key that lives only
 in the server process, names the tool and a digest of its arguments,
 expires after five minutes and is accepted once; a state that fails any of
-that is ``-32602``. ``decline`` or ``cancel`` is a tool execution error
+that is ``-32602``. Over HTTP this needs no session and no open stream. ``decline`` or ``cancel`` is a tool execution error
 (``isError: true``) and the tool does not run; a retry without an answer is
 asked again. A stateless client that did not declare ``elicitation`` gets
 ``-32021`` with ``data.requiredCapabilities`` naming it, instead of the

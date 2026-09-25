@@ -49,7 +49,7 @@ DISCOVER_METHOD = "server/discover"
 #: Methods a stateless request may call besides ``server/discover``. The
 #: handshake era's ``initialize``, ``ping``, ``logging/setLevel`` and
 #: ``resources/(un)subscribe`` are gone from 2026-07-28.
-_STATELESS_METHODS = frozenset({
+STATELESS_METHODS = frozenset({
     "tools/list", "tools/call", "resources/list", "resources/read",
     "prompts/list", "prompts/get",
 })
@@ -192,7 +192,7 @@ class StatelessDispatchMixin:
                 raise _invalid(f"{DISCOVER_METHOD} needs _meta {META_PROTOCOL_VERSION} "
                                f"and {META_CLIENT_CAPABILITIES}")
             return self._run_method(msg_id, method, params)
-        if method != DISCOVER_METHOD and method not in _STATELESS_METHODS:
+        if method != DISCOVER_METHOD and method not in STATELESS_METHODS:
             raise _MCPError(-32601, f"Method not found: {method}")
         self._note_peer_era("stateless")
         with self._stateless_scope(request):
