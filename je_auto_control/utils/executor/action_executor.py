@@ -2245,14 +2245,14 @@ def _read_qr(region: Optional[Union[List[int], str]] = None) -> Dict[str, Any]:
     import json
     import os
     import tempfile
+    from je_auto_control.utils.cv2_utils.region_capture import grab_screen_region
     from je_auto_control.utils.qr import read_qr_codes
-    from je_auto_control.wrapper.auto_control_screen import screenshot
     if isinstance(region, str):
         region = json.loads(region) if region.strip() else None
     handle, tmp = tempfile.mkstemp(prefix="qr_", suffix=".png")
     os.close(handle)
     try:
-        screenshot(tmp, screen_region=region)
+        grab_screen_region(region).save(tmp)
         return {"codes": read_qr_codes(tmp)}
     finally:
         try:
@@ -2334,13 +2334,13 @@ def _region_color_stats(region: Optional[Union[List[int], str]] = None,
     import os
     import tempfile
     from je_auto_control.utils.color_stats import region_color_stats
-    from je_auto_control.wrapper.auto_control_screen import screenshot
+    from je_auto_control.utils.cv2_utils.region_capture import grab_screen_region
     if isinstance(region, str):
         region = json.loads(region) if region.strip() else None
     handle, tmp = tempfile.mkstemp(prefix="colorstats_", suffix=".png")
     os.close(handle)
     try:
-        screenshot(tmp, screen_region=region)
+        grab_screen_region(region).save(tmp)
         return region_color_stats(tmp, buckets=int(buckets)).to_dict()
     finally:
         try:
@@ -4623,10 +4623,14 @@ def _monitor_at_point(x: Any, y: Any) -> Dict[str, Any]:
 
 
 def _region_pixel_token(bbox):
-    """Stability token: a hash of the bbox region's pixels (changes on movement)."""
-    from je_auto_control.utils.cv2_utils.screenshot import pil_screenshot
-    left, top, width, height = bbox
-    image = pil_screenshot(screen_region=[left, top, left + width, top + height])
+    """Stability token: a hash of the bbox region's pixels (changes on movement).
+
+    Sampled where the match was found, through ``grab_logical``: the bbox is in
+    its coordinates, and ``pil_screenshot`` saw only the primary monitor, so a
+    target on another one hashed black every time and read as stable.
+    """
+    from je_auto_control.utils.monitor_layout.logical_frame import grab_logical
+    image, _x, _y = grab_logical(tuple(int(value) for value in bbox))
     return hash(image.tobytes())
 
 

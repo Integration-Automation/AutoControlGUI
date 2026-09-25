@@ -17,7 +17,7 @@ solid colour blobs use ``color_region``. ``color_match`` is for targets with col
 """
 from typing import Any, List, Optional, Sequence
 
-from je_auto_control.utils.color_region.color_region import _grab_rgb, _to_rgb
+from je_auto_control.utils.color_region.color_region import _grab_rgb, _origin, _to_rgb
 from je_auto_control.utils.visual_match.visual_match import (
     Match, _contain_cv2_error, _nms, _resize, _select_candidates,
 )
@@ -35,18 +35,6 @@ def _hsv(source, region, is_haystack: bool):
     else:
         rgb = _to_rgb(source)
     return cv2.cvtColor(rgb, cv2.COLOR_RGB2HSV)
-
-
-def _origin(haystack: Optional[ImageSource], region: Optional[Sequence[int]]):
-    """Screen position of the haystack's top-left pixel.
-
-    A grabbed ``region`` (left, top, right, bottom) starts at its corner; a
-    supplied haystack is its own space. Matches were region-local, so
-    ``AC_match_color``'s ``center`` clicked that far off.
-    """
-    if haystack is None and region:
-        return int(region[0]), int(region[1])
-    return 0, 0
 
 
 def _chromatic_mask(template_hsv):

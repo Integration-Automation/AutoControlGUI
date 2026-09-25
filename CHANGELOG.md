@@ -86,6 +86,9 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Changed
 
+- `find_color_regions`, `segment_hsv` and `dominant_hue_regions` return
+  screen coordinates for blobs found in a grabbed `region` (they were
+  relative to the region's corner); a supplied `haystack` keeps its pixels.
 - `validate_config` / `ConfigSchema.from_dict` raise `ValueError` for an
   unknown field type, and a `str` field rejects `None` and containers.
 - Search terms: runs of kana, CJK ideographs and Hangul are indexed as
@@ -442,6 +445,13 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
   `[x, y, width, height]` for the matchers, OCR and most vision commands,
   `[left, top, right, bottom]` for the colour, histogram, SSIM and QR
   commands. Most said left, top, right, bottom whatever the command read.
+- On Windows, `[left, top, right, bottom]` regions on a monitor other than
+  the primary one were captured black by the colour, HSV, histogram, SSIM,
+  contrast, preprocess, colour-wait, QR, colour-stats, VLM and MCP screenshot
+  paths. They capture every monitor through the new
+  `cv2_utils.region_capture.grab_screen_region`.
+- `AC_wait_actionable` samples stability on the monitor where the target was
+  matched, instead of reading a target off the primary monitor as stable.
 - `match_color` / `match_color_all` return screen coordinates for a region
   search, score only a template's coloured pixels, and cap their candidates.
 - Mark labels stay beside marks at negative coordinates and inside bounds

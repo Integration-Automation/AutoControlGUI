@@ -62,8 +62,8 @@ def test_a_region_match_is_in_screen_coordinates(monkeypatch):
     from je_auto_control.utils.color_region import color_region
     frame = np.full((160, 200, 3), 255, dtype=np.uint8)
     frame[30:50, 20:40] = _plus((255, 0, 0))
-    monkeypatch.setattr("je_auto_control.utils.cv2_utils.screenshot.pil_screenshot",
-                        lambda screen_region=None: Image.fromarray(frame))
+    monkeypatch.setattr("je_auto_control.utils.cv2_utils.region_capture.grab_screen_region",
+                        lambda region=None: Image.fromarray(frame))
     assert color_region._grab_rgb([500, 300, 700, 460]).shape == (160, 200, 3)
     match = match_color(_plus((255, 0, 0)), region=[500, 300, 700, 460], min_score=0.9)
     assert (match.x, match.y) == (520, 330)

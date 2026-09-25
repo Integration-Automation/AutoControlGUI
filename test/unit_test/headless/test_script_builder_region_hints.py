@@ -2,7 +2,8 @@
 
 The matchers, OCR and most vision commands capture through ``grab_logical``,
 which takes ``[x, y, width, height]``; the colour, histogram and SSIM commands
-through ``pil_screenshot``, which takes ``[left, top, right, bottom]``. The
+through ``region_capture.grab_screen_region`` or ``pil_screenshot``, which take
+``[left, top, right, bottom]``. The
 hints said left, top, right, bottom for 25 of the first kind (and x, y, w, h
 for one of the second), so a region typed as the hint asked searched another
 rectangle. Each command is run here with both captures stubbed, and the
@@ -16,7 +17,7 @@ from PIL import Image
 
 from je_auto_control.gui.script_builder import command_schema
 from je_auto_control.gui.script_builder.command_schema import COMMAND_SPECS, FieldType
-from je_auto_control.utils.cv2_utils import screenshot
+from je_auto_control.utils.cv2_utils import region_capture, screenshot
 from je_auto_control.utils.executor.action_executor import Executor
 from je_auto_control.utils.monitor_layout import logical_frame
 from je_auto_control.utils.ocr import ocr_engine
@@ -89,9 +90,13 @@ def captures(monkeypatch, tmp_path):
             calls.append("ltrb")
         return frame
 
+    def grab_screen_region(region=None):
+        return pil_screenshot(screen_region=region)
+
     monkeypatch.setattr(logical_frame, "grab_logical", grab_logical)
     monkeypatch.setattr(ocr_engine, "grab_logical", grab_logical)
     monkeypatch.setattr(screenshot, "pil_screenshot", pil_screenshot)
+    monkeypatch.setattr(region_capture, "grab_screen_region", grab_screen_region)
     template = tmp_path / "template.png"
     Image.fromarray(np.asarray(frame)[20:40, 20:40]).save(template)
     yield calls, str(template)

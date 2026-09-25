@@ -455,6 +455,25 @@ per-monitor。DPI 與主螢幕不同的螢幕會被 Windows 虛擬化：本機�
 
 ---
 
+## `pil_screenshot`／`screenshot` 的區域擷取在 Windows 只看得到主螢幕
+
+`BLOCKED` — 要改的是 Jeffrey_RPA 正在跑的截圖路徑（`cv2_utils/screenshot.py`、`wrapper/auto_control_screen.py`、`utils/window_capture/window_capture.py`），依工作區規則在它執行期間不動
+
+`cv2_utils/screenshot.py:58` 把 `screen_region` 交給 `ImageGrab.grab(bbox=...)`，Pillow 在 Windows 沒帶
+`all_screens=True` 時只擷取主螢幕再裁切，主螢幕外的部分補黑。分析類指令已改走
+`cv2_utils/region_capture.grab_screen_region`（顏色、直方圖、SSIM、對比、顏色等待、QR、VLM、MCP 截圖），
+下面這些仍是舊路徑，在主螢幕左側或上方的螢幕得到全黑影像：
+
+- `pil_screenshot(screen_region=...)`、`screenshot(screen_region=...)` 與 `AC_screenshot`。
+- `utils/pytest_plugin/keywords.py:41` `keyword_screenshot`（與 `AC_screenshot` 同一語意，一起改）。
+- `utils/window_capture/window_capture.py:66` `capture_window`：視窗在副螢幕時截到黑的。
+- `utils/set_of_marks/set_of_marks.py:121` 把標記畫在 `pil_screenshot()`（只有主螢幕）上，副螢幕的元件沒有標記。
+
+**做法**：`pil_screenshot` 的區域路徑在 Windows 改走 `grab_screen_region`（它已處理 DPI 與負座標），
+`capture_window` 同樣；set-of-marks 改用 `grab_logical(None)` 並把原點加回標記座標。
+
+---
+
 ## 遠端桌面的 viewer 槽位由各面板共用
 
 `DECIDE` — 要改 `registry` 的擁有權模型

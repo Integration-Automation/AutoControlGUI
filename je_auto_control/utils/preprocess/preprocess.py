@@ -54,8 +54,8 @@ def _to_array(source: ImageSource):
 def _resolve(haystack: Optional[ImageSource], region: Optional[Sequence[int]]):
     if haystack is not None:
         return _as_uint8(_to_array(haystack))
-    from je_auto_control.utils.cv2_utils.screenshot import pil_screenshot
-    return _pil_to_bgr(pil_screenshot(screen_region=list(region) if region else None))
+    from je_auto_control.utils.cv2_utils.region_capture import grab_screen_region
+    return _pil_to_bgr(grab_screen_region(region))
 
 
 def _as_uint8(array):
