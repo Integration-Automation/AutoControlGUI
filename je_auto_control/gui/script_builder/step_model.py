@@ -1,6 +1,6 @@
 """Step data model and (de)serialisation between the tree view and AC JSON."""
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Mapping, Tuple
+from typing import Any, Dict, List, Mapping, Optional, Tuple
 
 from je_auto_control.gui.script_builder.command_schema import COMMAND_SPECS
 
@@ -16,22 +16,28 @@ class Step:
     plain lists and locates the *selected* one with ``list.remove``/``index``/
     ``in``. Value equality would match the first structurally-equal Step, so
     deleting or moving one of several duplicate steps corrupted the model.
+
+    ``args`` holds positional arguments (``[command, [arg, ...]]``, which the
+    executor accepts). The form does not edit them; they are kept verbatim.
     """
     command: str
     params: Dict[str, Any] = field(default_factory=dict)
     bodies: Dict[str, List["Step"]] = field(default_factory=dict)
+    args: Optional[List[Any]] = None
 
     @property
     def label(self) -> str:
         """Human-readable label derived from the command and key params."""
         spec = COMMAND_SPECS.get(self.command)
         base = spec.label if spec else self.command
-        detail = _summarise_params(self.params)
+        detail = _summarise_params(self.params) if self.args is None else _summarise_args(self.args)
         return f"{base}  {detail}" if detail else base
 
 
 def step_to_action(step: Step) -> list:
     """Convert a Step to the executor's action list entry."""
+    if step.args is not None:
+        return [step.command, list(step.args)]
     params: Dict[str, Any] = dict(step.params)
     for body_key, children in step.bodies.items():
         params[body_key] = [step_to_action(child) for child in children]
@@ -47,11 +53,20 @@ def action_to_step(action: list) -> Step:
     list. Without the ``isinstance(action, list)`` guard a string entry was
     silently mis-parsed (``"auto_control"`` became command ``"a"``) and a dict
     entry raised a bare ``KeyError`` instead of a clear message.
+
+    Positional arguments (``[command, [arg, ...]]``) become ``Step.args``. They
+    used to be dropped, as was anything after the second entry, so Save wrote
+    ``[command]`` back over the user's file.
     """
-    if not isinstance(action, list) or not action or not isinstance(action[0], str):
+    if (not isinstance(action, list) or not 1 <= len(action) <= 2
+            or not isinstance(action[0], str)):
         raise ValueError(f"Invalid action: {action!r}")
     command = action[0]
-    raw_params: Mapping[str, Any] = action[1] if len(action) > 1 and isinstance(action[1], dict) else {}
+    if len(action) == 2 and isinstance(action[1], list):
+        return Step(command=command, args=list(action[1]))
+    if len(action) == 2 and not isinstance(action[1], dict):
+        raise ValueError(f"Arguments of {command} must be an object or a list: {action[1]!r}")
+    raw_params: Mapping[str, Any] = action[1] if len(action) == 2 else {}
     spec = COMMAND_SPECS.get(command)
     body_keys: Tuple[str, ...] = spec.body_keys if spec else ()
     params, bodies = _split_params(raw_params, body_keys)
@@ -98,6 +113,12 @@ def _unwrap_action_list(actions: Any) -> list:
 def steps_to_actions(steps: List[Step]) -> list:
     """Convert a list of Steps back to an AC action list."""
     return [step_to_action(step) for step in steps]
+
+
+def _summarise_args(args: List[Any]) -> str:
+    """One-line summary of positional arguments."""
+    text = ", ".join(str(value) for value in args[:3])
+    return f"({text[:40]}...)" if len(text) > 40 else f"({text})"
 
 
 def _summarise_params(params: Mapping[str, Any]) -> str:

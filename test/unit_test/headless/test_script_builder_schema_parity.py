@@ -78,3 +78,35 @@ def test_the_two_repaired_commands_bind_cleanly():
     spec = next(s for s in _build_specs() if s.command == "AC_execute_process")
     field = spec.fields[0].name
     inspect.signature(start).bind(**{field: "notepad.exe"})
+
+
+def test_field_defaults_match_the_dispatch_target():
+    """The form shows a default for a missing param and writes it on the next edit
+    of any field, so it has to be the callable's own: ``detect_threshold`` showed
+    0.8 against the matchers' 1.0 and loosened an exact match."""
+    from je_auto_control.gui.script_builder.command_schema import FieldType
+    offenders = []
+    for spec, sig in _dispatch_targets():
+        for field in spec.fields:
+            param = sig.parameters.get(field.name)
+            if param is None or param.default is inspect.Parameter.empty:
+                continue
+            if field.field_type == FieldType.BOOL:
+                shown, real = bool(field.default), bool(param.default)
+            elif field.default is None:
+                continue
+            else:
+                shown, real = field.default, param.default
+            if shown != real:
+                offenders.append(f"{spec.command}.{field.name}: schema {field.default!r}, callable {param.default!r}")
+    assert offenders == []
+
+
+def test_optional_fields_are_optional_in_the_dispatch_target():
+    """An optional field is left out of a new step: required by the callable, the
+    step failed on its first run (``AC_grid_cells`` without rows and cols)."""
+    offenders = [f"{spec.command}.{field.name}"
+                 for spec, sig in _dispatch_targets() for field in spec.fields
+                 if field.optional and field.name in sig.parameters
+                 and sig.parameters[field.name].default is inspect.Parameter.empty]
+    assert offenders == []

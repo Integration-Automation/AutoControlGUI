@@ -695,6 +695,7 @@ simplified_chinese_word_dict = {
     "sb_dialog_save": "保存脚本",
     "sb_dialog_load": "载入脚本",
     "sb_no_step_selected": "尚未选取步骤",
+    "sb_positional_args": "位置参数（按原样保留）",
 
     # Language
     "language_label": "语言:",

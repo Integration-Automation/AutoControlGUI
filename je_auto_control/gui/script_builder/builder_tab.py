@@ -42,6 +42,9 @@ class ScriptBuilderTab(TranslatableMixin, QWidget):
         self._result.setReadOnly(True)
         self._result.setMaximumHeight(140)
         self._add_btn: Optional[QToolButton] = None
+        # The other top-level keys of a loaded {"auto_control": [...]} file,
+        # written back on Save; None for a bare list.
+        self._file_extras: Optional[dict] = None
         self._build_layout()
         self._wire_signals()
 
@@ -128,7 +131,8 @@ class ScriptBuilderTab(TranslatableMixin, QWidget):
             return
         try:
             actions = steps_to_actions(self._tree.root_steps())
-            write_action_json(path, actions)
+            extras = self._file_extras
+            write_action_json(path, actions if extras is None else {**extras, "auto_control": actions})
             self._result.setPlainText(f"Saved: {path}")
         except (AutoControlException, OSError, ValueError, TypeError) as error:
             QMessageBox.warning(self, "Error", str(error))
@@ -142,6 +146,10 @@ class ScriptBuilderTab(TranslatableMixin, QWidget):
         try:
             actions = read_action_json(path)
             self._tree.load_steps(actions_to_steps(actions))
+            # Save wrote only the list, dropping the file's other keys.
+            self._file_extras = (
+                {key: value for key, value in actions.items() if key != "auto_control"}
+                if isinstance(actions, dict) else None)
             self._form.load_step(None)
             self._result.setPlainText(f"Loaded: {path}")
         except (AutoControlException, OSError, ValueError, TypeError) as error:

@@ -415,6 +415,11 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Fixed
 
+- Script Builder: shown defaults equal the executor's (an edit no longer
+  writes `detect_threshold: 0.8` into an exact image match, nor a file path
+  for agent-card / SBOM / MCP manifest steps); grid and annotation fields are
+  required; positional arguments and the other keys of a wrapped file
+  survive load and save; decimals can be typed under comma locales.
 - WebRTC host annotations from a viewer are validated and bounded.
 - The tray icon keeps the application running only while a host runs.
 - Stopping a host while its approval dialog is open no longer raises.

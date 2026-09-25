@@ -1,7 +1,7 @@
 """Schema-driven form for editing a Step's parameters."""
 from typing import Any, Callable, Dict, Optional
 
-from PySide6.QtCore import Signal
+from PySide6.QtCore import QLocale, Signal
 from PySide6.QtGui import QDoubleValidator, QIntValidator
 from PySide6.QtWidgets import (
     QCheckBox, QComboBox, QFileDialog, QFormLayout, QHBoxLayout, QLabel,
@@ -64,6 +64,10 @@ class StepFormView(QWidget):
             self._title.setText(f"Unknown command: {step.command}")
             return
         self._title.setText(f"{spec.label}  ({spec.command})")
+        if step.args is not None:
+            # Positional arguments have no field names to edit by.
+            self._layout.addRow(QLabel(_t("sb_positional_args")), QLabel(repr(step.args)))
+            return
         for field_spec in spec.fields:
             editor = self._build_editor(field_spec)
             self._editors[field_spec.name] = editor
@@ -97,6 +101,9 @@ class StepFormView(QWidget):
     def _build_int(self, spec: FieldSpec) -> QWidget:
         editor = QLineEdit()
         validator = QIntValidator()
+        # The C locale, as int() reads it: with a German locale "1.000" passed
+        # the validator as 1000 and never parsed.
+        validator.setLocale(QLocale.c())
         if spec.min_value is not None:
             validator.setBottom(int(spec.min_value))
         if spec.max_value is not None:
@@ -110,7 +117,12 @@ class StepFormView(QWidget):
         editor = QLineEdit()
         low = -1e9 if spec.min_value is None else float(spec.min_value)
         high = 1e9 if spec.max_value is None else float(spec.max_value)
-        editor.setValidator(QDoubleValidator(low, high, 4))
+        validator = QDoubleValidator(low, high, 4)
+        # The C locale, as float() reads it: with a French or German locale
+        # the validator refused "0.8" and accepted "0,8", which float() rejects,
+        # so a decimal could not be entered at all.
+        validator.setLocale(QLocale.c())
+        editor.setValidator(validator)
         editor.setPlaceholderText(spec.placeholder)
         editor.textChanged.connect(self._commit_field)
         return editor
@@ -205,9 +217,14 @@ def _set_text_value(editor: QWidget, value: Any) -> None:
 
 def _set_rgb_value(editor: QWidget, value: Any) -> None:
     if isinstance(value, (list, tuple)):
-        editor.setText(",".join(str(int(v)) for v in value))
-    else:
-        _set_text_value(editor, value)
+        try:
+            editor.setText(",".join(str(int(v)) for v in value))
+            return
+        # Not all numbers: shown as written, where the ValueError used to
+        # escape the selection slot and leave the form empty.
+        except (TypeError, ValueError, OverflowError):
+            pass
+    _set_text_value(editor, value)
 
 
 def _set_file_value(editor: QWidget, value: Any) -> None:

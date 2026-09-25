@@ -826,6 +826,7 @@ english_word_dict = {
     "sb_dialog_save": "Save script",
     "sb_dialog_load": "Load script",
     "sb_no_step_selected": "No step selected",
+    "sb_positional_args": "Positional arguments (kept as written)",
 
     # Run History Tab
     "rh_filter_label": "Source:",

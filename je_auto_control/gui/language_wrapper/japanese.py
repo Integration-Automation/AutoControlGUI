@@ -712,6 +712,7 @@ japanese_word_dict = {
     "sb_dialog_save": "スクリプト保存",
     "sb_dialog_load": "スクリプト読込",
     "sb_no_step_selected": "ステップ未選択",
+    "sb_positional_args": "位置引数（書かれたまま保持）",
 
     # Language
     "language_label": "言語:",

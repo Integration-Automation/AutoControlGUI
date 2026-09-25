@@ -699,6 +699,7 @@ traditional_chinese_word_dict = {
     "sb_dialog_save": "儲存腳本",
     "sb_dialog_load": "載入腳本",
     "sb_no_step_selected": "尚未選取步驟",
+    "sb_positional_args": "位置參數（照原樣保留）",
 
     # Run History Tab
     "rh_filter_label": "來源：",

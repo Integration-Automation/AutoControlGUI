@@ -2,7 +2,7 @@ import json
 import os
 from pathlib import Path
 from threading import Lock
-from typing import List, Dict
+from typing import Dict, List, Union
 
 from je_auto_control.utils.exception.exception_tags import cant_find_json_error_message, cant_save_json_error_message
 from je_auto_control.utils.exception.exceptions import AutoControlJsonActionException
@@ -55,7 +55,7 @@ def read_executable_action_json(json_file_path: str) -> List[List[Dict[str, Dict
         raise AutoControlJsonActionException(f"{cant_find_json_error_message}: {repr(error)}") from error
 
 
-def write_action_json(json_save_path: str, action_json: list) -> None:
+def write_action_json(json_save_path: str, action_json: Union[list, dict]) -> None:
     """
     Write action JSON file.
     寫入動作 JSON 檔案
