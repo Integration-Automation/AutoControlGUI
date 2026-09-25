@@ -20,7 +20,7 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 | 指標 | 數值 |
 | --- | ---: |
 | Python 模組總數（含周邊子專案） | 1,057 |
-| 程式碼總行數 | 153,866 |
+| 程式碼總行數 | 153,879 |
 | `je_auto_control/utils/` 子套件數 | 310 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 775 |
 | 套件門面 `__all__` 公開名稱數 | 1,244 |
@@ -671,7 +671,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.16 系統、視窗與剪貼簿
 
-> 16 個套件、約 2,597 行。
+> 16 個套件、約 2,610 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -682,7 +682,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/clipboard_rich_formats/` | 328 | 豐富剪貼簿格式 — RTF 與 CSV/TSV 編解碼 + Windows 存取 |
 | `utils/file_assoc/` | 98 | 解析哪個應用程式被註冊來開啟某副檔名 |
 | `utils/file_dialog/` | 77 | 驅動原生檔案 開啟／儲存／資料夾選擇 對話框 |
-| `utils/file_drop/` | 111 | 以 WM_DROPFILES 把檔案拖放到視窗 |
+| `utils/file_drop/` | 124 | 以 WM_DROPFILES 把檔案拖放到視窗 |
 | `utils/rich_clipboard/` | 133 | 豐富剪貼簿格式 — HTML（CF_HTML）建構／解析／存取 |
 | `utils/shell_open/` | 99 | 以預設應用開啟檔案，或以預設瀏覽器開啟 URL |
 | `utils/system_volume/` | 212 | 讀取與控制系統主音量與靜音狀態 |
@@ -1086,6 +1086,6 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `osx/` | 17 | 925 |
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 846 |
-| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 679 | 54,946 |
-| **總計** | **1,051** | **153,801** |
+| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 679 | 54,959 |
+| **總計** | **1,051** | **153,814** |
 
