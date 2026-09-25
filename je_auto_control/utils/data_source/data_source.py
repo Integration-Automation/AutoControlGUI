@@ -137,7 +137,13 @@ def _load_sqlite(source: Dict[str, Any]) -> List[Dict[str, Any]]:
     # closing(): the sqlite3 context manager commits/rolls back but never closes
     # the connection, so the file handle leaks until GC. Close it explicitly.
     driver = require_sqlite3()
-    with closing(driver.connect(uri, uri=True)) as conn:
+    try:
+        connection = driver.connect(uri, uri=True)
+    except SQLITE_ERRORS as error:
+        # A file that exists but cannot be opened (locked, not a database)
+        # raised sqlite3.OperationalError past every caller.
+        raise AutoControlActionException(f"SQLite {path}: {error}") from error
+    with closing(connection) as conn:
         conn.row_factory = driver.Row
         try:
             rows = conn.execute(query).fetchall()

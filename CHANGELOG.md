@@ -76,6 +76,11 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Changed
 
+- `assert_http` and config sync send their requests through `http_client`:
+  the egress policy and the body cap apply, and config sync no longer
+  follows redirects.
+- S3 store failures raise `ArtifactStoreError`; unreadable Office files raise
+  `AutoControlActionException`.
 - VLM locate / click raise `VLMRequestError` when the request fails,
   instead of reporting the element as not found.
 - Agent tool schemas carry resolved parameter types and omit private and
@@ -396,6 +401,15 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Fixed
 
+- Secrets nested inside action arguments, and webhook URLs, are masked in
+  logs and run records.
+- `X-Api-Key` and `X-Auth-Token` are dropped on redirects to another origin.
+- A truncated HTTP error body or a deeply nested reply no longer aborts a
+  script.
+- The IMAP trigger fires once per message, honours UIDVALIDITY and accepts
+  non-ASCII mailbox names.
+- HTTP cassettes mask credentials in query strings and bodies.
+- SQLite data sources that cannot be opened raise an action error.
 - Agent turns cut short by `max_tokens` or a refusal no longer run their
   tool calls; OpenAI refusals and filtered replies are not final answers.
 - Computer-use scrolls keep their direction, the cursor position is in

@@ -14,6 +14,8 @@ from pathlib import Path
 from typing import Any, Callable, Dict, List, Mapping, Optional, Sequence
 
 from je_auto_control.utils.exception.exceptions import AutoControlException
+from je_auto_control.utils.executor.action_redaction import SENSITIVE_ARGUMENT_NAMES
+from je_auto_control.utils.http_headers import CREDENTIAL_HEADERS
 
 Transport = Callable[[Mapping[str, Any]], Dict[str, Any]]
 
@@ -31,10 +33,7 @@ def _decode_body(body: Any) -> Optional[str]:
 
 
 #: Headers whose values are credentials: never written to a cassette.
-SENSITIVE_HEADERS = frozenset({
-    "authorization", "proxy-authorization", "cookie", "set-cookie",
-    "x-api-key", "x-auth-token",
-})
+SENSITIVE_HEADERS = CREDENTIAL_HEADERS
 REDACTED = "<redacted>"
 _MATCH_FIELDS = ("method", "url", "body", "headers")
 
@@ -45,11 +44,52 @@ def _redacted(headers: Any) -> Dict[str, Any]:
             for name, value in dict(headers or {}).items()}
 
 
+#: Query parameters that carry a credential ("key" is an API key in a URL).
+_SENSITIVE_QUERY = SENSITIVE_ARGUMENT_NAMES | {"key", "apikey", "sig", "signature"}
+
+
 def _request_view(call: Mapping[str, Any]) -> Dict[str, Any]:
+    """The request as recorded: credentials masked in headers, query and body.
+
+    Only headers were masked, so a query-string key, a password in a JSON
+    body and a token in the response went into the saved file. A live call
+    is matched against its own view, so masked fields still match.
+    """
     return {"method": str(call.get("method", "GET")).upper(),
-            "url": call.get("url"),
+            "url": _redacted_url(call.get("url")),
             "headers": _redacted(call.get("headers")),
-            "body": _decode_body(call.get("body"))}
+            "body": _redacted_text(_decode_body(call.get("body")))}
+
+
+def _redacted_url(url: Any) -> Any:
+    """``url`` with the values of credential query parameters masked."""
+    if not isinstance(url, str) or "?" not in url:
+        return url
+    import urllib.parse
+    parts = urllib.parse.urlsplit(url)
+    query = [(name, REDACTED if name.lower() in _SENSITIVE_QUERY else value)
+             for name, value in urllib.parse.parse_qsl(parts.query, keep_blank_values=True)]
+    return urllib.parse.urlunsplit(parts._replace(query=urllib.parse.urlencode(query, safe="<>")))
+
+
+def _redacted_text(text: Optional[str]) -> Optional[str]:
+    """A JSON body with credential members masked; anything else as it came."""
+    if not text:
+        return text
+    try:
+        data = json.loads(text)
+    except (ValueError, RecursionError):
+        return text
+    return json.dumps(_redacted_json(data), sort_keys=True)
+
+
+def _redacted_json(value: Any) -> Any:
+    if isinstance(value, dict):
+        return {key: REDACTED if str(key).lower() in SENSITIVE_ARGUMENT_NAMES else _redacted_json(item)
+                for key, item in value.items()}
+    if isinstance(value, list):
+        return [_redacted_json(item) for item in value]
+    return value
 
 
 def _headers_match(recorded: Mapping[str, Any], live: Mapping[str, Any]) -> bool:
@@ -122,6 +162,10 @@ class Cassette:
         # http_request also hands every Set-Cookie back in its own list.
         if isinstance(recorded_response.get("set_cookie"), list):
             recorded_response["set_cookie"] = [REDACTED] * len(recorded_response["set_cookie"])
+        if "json" in recorded_response:
+            recorded_response["json"] = _redacted_json(recorded_response["json"])
+        if isinstance(recorded_response.get("text"), str):
+            recorded_response["text"] = _redacted_text(recorded_response["text"])
         self._interactions.append({"request": _request_view(call),
                                    "response": recorded_response})
 

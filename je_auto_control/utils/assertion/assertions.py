@@ -325,26 +325,16 @@ def assert_file(path: str,
 def _http_probe(url: str, timeout: float, method: str
                 ) -> tuple[int, str]:
     """Issue an HTTP(S) request, returning (status_code, body_text)."""
-    import urllib.error
-    import urllib.request
+    from je_auto_control.utils.http_client.http_client import build_call, perform_call
     scheme = url.split("://", 1)[0].lower() if "://" in url else ""
     if scheme not in ("http", "https"):
         raise AutoControlAssertionException(
             f"assert_http: only http/https URLs allowed, got {url!r}"
         )
-    request = urllib.request.Request(url, method=method.upper())
-    try:
-        with urllib.request.urlopen(  # nosec B310  # reason: scheme allow-listed
-                request, timeout=float(timeout)) as response:
-            body = response.read().decode("utf-8", errors="replace")
-            return int(response.status), body
-    except urllib.error.HTTPError as error:
-        body = ""
-        try:
-            body = error.read().decode("utf-8", errors="replace")
-        except (OSError, ValueError):
-            body = ""
-        return int(error.code), body
+    # The package's one outbound path: it bypassed the egress policy, the
+    # redirect checks and the 64 MiB body cap.
+    response = perform_call(build_call(url, method=method, timeout=float(timeout)))
+    return int(response["status"]), str(response.get("text") or "")
 
 
 def assert_http(url: str,

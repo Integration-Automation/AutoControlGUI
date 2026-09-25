@@ -12,8 +12,10 @@ once: by default the watcher marks the message as ``\\Seen`` after a
 successful fire so the same email is not handled twice across
 restarts.
 """
+import base64
 import email
 import email.policy
+import re
 import imaplib
 import ssl as ssl_module
 import threading
@@ -58,6 +60,8 @@ class EmailTrigger:
     fired: int = 0
     last_error: Optional[str] = None
     _seen_uids: set = field(default_factory=set, repr=False)
+    _inflight: set = field(default_factory=set, repr=False)
+    _uidvalidity: Optional[str] = field(default=None, repr=False)
 
 
 def _decode_header_value(value: Optional[str]) -> str:
@@ -189,8 +193,39 @@ def _quote_mailbox(name: str) -> str:
     """
     if len(name) >= 2 and name.startswith('"') and name.endswith('"'):
         return name
-    escaped = name.replace("\\", "\\\\").replace('"', '\\"')
+    escaped = _modified_utf7(name).replace("\\", "\\\\").replace('"', '\\"')
     return f'"{escaped}"'
+
+
+#: An ASCII name that already holds modified UTF-7 shifts (``&-``, ``&ZeVnLIqe-``).
+_ENCODED_MAILBOX = re.compile(r"&[A-Za-z0-9+,]*-")
+
+
+def _modified_utf7(name: str) -> str:
+    """``name`` in IMAP's modified UTF-7 (RFC 3501 5.1.3), unless it already is.
+
+    ``已處理`` raised UnicodeEncodeError before any command was sent, and
+    ``R&D`` went out as ``R&D`` where the protocol needs ``R&-D``.
+    """
+    if name.isascii() and _ENCODED_MAILBOX.search(name):
+        return name
+    out: List[str] = []
+    pending: List[str] = []
+
+    def flush() -> None:
+        if pending:
+            encoded = base64.b64encode("".join(pending).encode("utf-16-be")).decode("ascii")
+            out.append("&" + encoded.rstrip("=").replace("/", ",") + "-")
+            pending.clear()
+
+    for char in name:
+        if 0x20 <= ord(char) <= 0x7E:
+            flush()
+            out.append("&-" if char == "&" else char)
+        else:
+            pending.append(char)
+    flush()
+    return "".join(out)
 
 
 def _mark_seen(client: imaplib.IMAP4, uid: str) -> None:
@@ -339,8 +374,9 @@ class EmailTriggerWatcher:
             if typ != "OK":
                 trigger.last_error = f"select {trigger.mailbox} failed"
                 return 0
+            self._check_uidvalidity(client, trigger)
             for uid in self._iter_unprocessed_uids(client, trigger):
-                fired += self._fire_for_uid(client, trigger, uid)
+                fired += self._fire_claimed(client, trigger, uid)
         # 只有 _connect 有防護，select / search / fetch 沒有。連線在指令
         # 途中斷掉時 imaplib 會拋 IMAP4.abort，逸出 _run 後直接殺掉輪詢
         # 執行緒——而這個模組的文件正說它能撐過不穩定的網路。
@@ -361,9 +397,45 @@ class EmailTriggerWatcher:
     def _iter_unprocessed_uids(self, client: imaplib.IMAP4,
                                trigger: EmailTrigger) -> Iterable[str]:
         for uid in _search_uids(client, trigger.search_criteria):
-            if uid in trigger._seen_uids:
-                continue
-            yield uid
+            if self._claim(trigger, uid):
+                yield uid
+
+    def _claim(self, trigger: EmailTrigger, uid: str) -> bool:
+        """Take ``uid`` for this poll, atomically; ``False`` when seen or taken.
+
+        The check came before the fire and the mark after it, so two polls
+        running together (the watcher and AC_email_trigger_poll_once) both
+        fired the same message.
+        """
+        with self._lock:
+            if uid in trigger._seen_uids or uid in trigger._inflight:
+                return False
+            trigger._inflight.add(uid)
+            return True
+
+    def _fire_claimed(self, client: imaplib.IMAP4, trigger: EmailTrigger, uid: str) -> int:
+        try:
+            return self._fire_for_uid(client, trigger, uid)
+        finally:
+            with self._lock:
+                trigger._inflight.discard(uid)
+
+    def _check_uidvalidity(self, client: imaplib.IMAP4, trigger: EmailTrigger) -> None:
+        """Forget the seen UIDs when the mailbox's UIDVALIDITY changes.
+
+        A new UIDVALIDITY means UIDs were reassigned, and a new message that
+        reused an old UID was skipped for good.
+        """
+        _typ, data = client.response("UIDVALIDITY")
+        value = data[0] if data else None
+        if isinstance(value, (bytes, bytearray)):
+            value = bytes(value).decode("ascii", errors="replace")
+        if value is None:
+            return
+        with self._lock:
+            if trigger._uidvalidity is not None and value != trigger._uidvalidity:
+                trigger._seen_uids.clear()
+            trigger._uidvalidity = str(value)
 
     def _record_connect_error(self, trigger: EmailTrigger,
                               error: Exception) -> None:

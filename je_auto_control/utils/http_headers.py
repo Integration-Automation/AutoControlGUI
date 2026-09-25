@@ -111,6 +111,13 @@ def bearer_challenge(realm: str, authorization: Optional[str]) -> str:
     return f'Bearer realm="{realm}"'
 
 
+#: Headers whose values are credentials (lower case): stripped from a redirect
+#: to another origin, masked in logs and never written to a cassette.
+CREDENTIAL_HEADERS = frozenset({
+    "authorization", "proxy-authorization", "cookie", "set-cookie",
+    "x-api-key", "x-auth-token",
+})
+
 #: Longest chunk-size or trailer line accepted, and most trailer lines.
 _MAX_CHUNK_LINE = 1024
 _MAX_TRAILERS = 64

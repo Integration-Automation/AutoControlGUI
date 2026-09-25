@@ -12,7 +12,27 @@ or :func:`set_default_store`) backs the executor/MCP commands. Object keys are
 prefixed and normalised to forward slashes. Imports no ``PySide6``.
 """
 from pathlib import Path
-from typing import Any, List, Optional
+from typing import Any, Callable, List, Optional
+
+from je_auto_control.utils.exception.exceptions import AutoControlException
+
+
+class ArtifactStoreError(AutoControlException, RuntimeError):
+    """An S3 request failed (denied, missing bucket or object, throttled, offline)."""
+
+
+def _s3(what: str, call: Callable[[], Any]) -> Any:
+    """``call()``, with the client's errors as :class:`ArtifactStoreError`.
+
+    botocore's ``ClientError`` / ``BotoCoreError`` derive from ``Exception``
+    only, so an AccessDenied aborted the whole script.
+    """
+    try:
+        return call()
+    except OSError:
+        raise
+    except Exception as error:  # noqa: BLE001  # reason: botocore errors share no builtin base; re-raised in the framework family
+        raise ArtifactStoreError(f"S3 {what} failed: {error}") from error
 
 
 def _build_boto3_client() -> Any:  # pragma: no cover - requires boto3 + creds
@@ -51,14 +71,14 @@ class S3ArtifactStore:
     def upload(self, local_path: str, key: Optional[str] = None) -> str:
         """Upload ``local_path``; return the store-relative key."""
         relative = key or Path(local_path).name
-        self.client.upload_file(local_path, self._bucket, self._key(relative))
+        _s3("upload", lambda: self.client.upload_file(local_path, self._bucket, self._key(relative)))
         return relative
 
     def download(self, key: str, local_path: str) -> str:
         """Download store-relative object ``key`` to ``local_path``."""
         target = Path(local_path)
         target.parent.mkdir(parents=True, exist_ok=True)
-        self.client.download_file(self._bucket, self._key(key), str(target))
+        _s3("download", lambda: self.client.download_file(self._bucket, self._key(key), str(target)))
         return str(target)
 
     def list(self, prefix: Optional[str] = None) -> List[str]:
@@ -75,7 +95,7 @@ class S3ArtifactStore:
         keys: List[str] = []
         request = {"Bucket": self._bucket, "Prefix": wanted}
         while True:
-            response = self.client.list_objects_v2(**request)
+            response = _s3("list", lambda: self.client.list_objects_v2(**request))
             keys.extend(self._relative(item["Key"])
                         for item in response.get("Contents", []))
             token = response.get("NextContinuationToken")
@@ -85,7 +105,7 @@ class S3ArtifactStore:
 
     def delete(self, key: str) -> bool:
         """Delete store-relative object ``key``; return ``True``."""
-        self.client.delete_object(Bucket=self._bucket, Key=self._key(key))
+        _s3("delete", lambda: self.client.delete_object(Bucket=self._bucket, Key=self._key(key)))
         return True
 
     def url(self, key: str) -> str:

@@ -13,6 +13,8 @@ import json
 import urllib.error
 import urllib.parse
 import urllib.request
+
+from je_auto_control.utils.http_headers import CREDENTIAL_HEADERS
 from typing import Any, Dict, Mapping, Optional
 
 # NOSONAR python:S5332 — http is allow-listed deliberately (other schemes
@@ -67,7 +69,9 @@ def _encode_body(json_body: Any, data: Any) -> Optional[bytes]:
 def _try_json(text: str) -> Any:
     try:
         return json.loads(text)
-    except (ValueError, TypeError):
+    # RecursionError: a reply nested thousands deep raised it out of every
+    # http_request -- a server's body could crash the caller.
+    except (ValueError, TypeError, RecursionError):
         return None
 
 
@@ -146,8 +150,9 @@ class _CheckedRedirectHandler(urllib.request.HTTPRedirectHandler):
             # urllib carries every header over, so a redirect to another host
             # received the Authorization meant for this one -- and a redirect
             # from https to http on the same host sent it in the clear.
-            for name in _CREDENTIAL_HEADERS:
-                new_request.remove_header(name)
+            for name in CREDENTIAL_HEADERS:
+                # Request stores header names capitalize()d.
+                new_request.remove_header(name.capitalize())
         return new_request
 
 
@@ -163,8 +168,6 @@ def _origin(url: str) -> "tuple[str, str]":
     return parts.scheme.lower(), (parts.netloc or "").lower()
 
 
-# Request.remove_header matches the capitalize()d spelling urllib stores.
-_CREDENTIAL_HEADERS = ("Authorization", "Cookie", "Proxy-authorization")
 _OPENER = urllib.request.build_opener(_CheckedRedirectHandler)
 _NO_REDIRECT_OPENER = urllib.request.build_opener(_RefusingRedirectHandler)
 
@@ -187,9 +190,23 @@ def urllib_transport(call: Mapping[str, Any]) -> Dict[str, Any]:
                 as response:
             return _read_response(response)
     except urllib.error.HTTPError as error:
-        return _read_response(error)
+        return _read_error_response(error)
     except http.client.HTTPException as error:
         raise urllib.error.URLError(f"malformed HTTP response: {error!r}") from error
+
+
+def _read_error_response(error: urllib.error.HTTPError) -> Dict[str, Any]:
+    """A 4xx / 5xx response, read and closed like any other.
+
+    Read inside the ``except HTTPError`` clause, a truncated error body raised
+    ``http.client.IncompleteRead`` past the clause below it -- no OSError, so
+    it aborted the script -- and the response was never closed.
+    """
+    try:
+        with error:
+            return _read_response(error)
+    except http.client.HTTPException as bad:
+        raise urllib.error.URLError(f"malformed HTTP response: {bad!r}") from bad
 
 
 def http_request(url: str, method: str = "GET",

@@ -20,7 +20,7 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 | 指標 | 數值 |
 | --- | ---: |
 | Python 模組總數（含周邊子專案） | 1,054 |
-| 程式碼總行數 | 152,685 |
+| 程式碼總行數 | 152,861 |
 | `je_auto_control/utils/` 子套件數 | 310 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 775 |
 | 套件門面 `__all__` 公開名稱數 | 1,244 |
@@ -161,7 +161,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `je_auto_control/api/core.py` | 19 | **穩定無頭 API 門面**：只暴露 `execute_action`、`execute_action_with_vars`、`generate_code`、`run_diagnostics`、`create_failure_bundle`、`failure_bundle_on_error`、`FailureBundleOptions`。mypy 型別契約以此為起點，現已擴到整包（見「設定基線」）。 |
 | `je_auto_control/utils/cli_output.py` | 44 | 本套件命令列工具與 stdio 伺服器的標準串流：不論碼頁一律 UTF-8。 |
 | `je_auto_control/utils/deprecation.py` | 35 | 公開 API 的一致性棄用警告。 |
-| `je_auto_control/utils/http_headers.py` | 182 | 本套件各伺服器共用的防禦式輔助：標頭、內文、回應與日誌。 |
+| `je_auto_control/utils/http_headers.py` | 189 | 本套件各伺服器共用的防禦式輔助：標頭、內文、回應與日誌。 |
 | `je_auto_control/utils/sqlite_support.py` | 112 | 選用標準函式庫 `sqlite3` 的取用點：`require_sqlite3()`／`sqlite3_available()`／`SQLITE_ERRORS`。十個以 SQLite 存放狀態的子系統都經由這裡，所以 FreeBSD 這種把 `sqlite3` 另外包成 `databases/py-sqlite3` 的 Python 仍然 import 得起門面。 |
 | `je_auto_control/utils/timeouts.py` | 33 | 把使用者給的逾時換成截止時間：`deadline_after()` 拒絕 NaN（`json` 接受它，而 `clock() >= NaN` 永遠不成立，輪詢迴圈會永遠跑下去），負值與無限大維持原意；`clamp_poll_interval()` 把背景迴圈的輪詢間隔夾在 0.05 秒到 1 小時之間（`Event.wait(inf)` 在 Windows 會丟 `OverflowError`）。 |
 
@@ -272,7 +272,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.1 執行引擎與腳本資產
 
-> 24 個套件、約 14,543 行。
+> 24 個套件、約 14,554 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -283,7 +283,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/dag/` | 536 | 跨主機 DAG 編排器（圖模型 + runner） |
 | `utils/decision_table/` | 112 | DMN 風格決策表：規則 + 命中策略，把分支外部化 |
 | `utils/deterministic/` | 116 | 決定性執行控制：固定亂數種子 + 凍結時鐘 |
-| `utils/executor/` | 9,494 | **核心**。`Executor` 指令分派表（775 個 `AC_*`）、參數插值、乾跑、逐步 callback；`flow_control` 提供 34 個區塊指令（迴圈／分支／try／巨集／變數） |
+| `utils/executor/` | 9,505 | **核心**。`Executor` 指令分派表（775 個 `AC_*`）、參數插值、乾跑、逐步 callback；`flow_control` 提供 34 個區塊指令（迴圈／分支／try／巨集／變數） |
 | `utils/flow_debugger/` | 155 | action list 的單步除錯器與追蹤器 |
 | `utils/input_macro/` | 451 | 定時輸入事件：錄製結果的整形（`timeline`／`InputRecorder`，Windows 與 macOS 共用）、重播與宣告式輸入序列 DSL |
 | `utils/json/` | 99 | action JSON 檔讀寫與正規化格式化（`fmt --check` 的後端） |
@@ -324,7 +324,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.3 排程、觸發與背景監看
 
-> 11 個套件、約 4,119 行。
+> 11 個套件、約 4,191 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -335,7 +335,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/recurrence/` | 398 | RFC 5545 重複規則解析與發生時間展開 |
 | `utils/scheduler/` | 500 | 間隔式與 cron 式的 action JSON 排程器 |
 | `utils/session_guard/` | 62 | 驅動輸入前先偵測工作階段是否已鎖定／非互動 |
-| `utils/triggers/` | 1,305 | 事件驅動觸發引擎：影像／視窗／像素／檔案／webhook／IMAP 郵件 |
+| `utils/triggers/` | 1,377 | 事件驅動觸發引擎：影像／視窗／像素／檔案／webhook／IMAP 郵件 |
 | `utils/voice/` | 87 | 語音指令路由：把辨識到的語句對應到 `AC_*` action list |
 | `utils/watchdog/` | 186 | 背景彈窗／中斷看門狗，供無人值守自動化 |
 | `utils/watcher/` | 90 | 無頭輪詢原語：滑鼠位置、像素顏色、log tail |
@@ -514,12 +514,12 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.10 遠端桌面與 USB
 
-> 6 個套件、約 19,300 行。
+> 6 個套件、約 19,291 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
 | `utils/admin/` | 418 | 多主機管理主控台：平行輪詢 N 個 AutoControl REST 端點 |
-| `utils/config_sync/` | 341 | 透過訊令伺服器做跨機器設定同步 |
+| `utils/config_sync/` | 332 | 透過訊令伺服器做跨機器設定同步 |
 | `utils/device_matrix/` | 138 | 行動裝置矩陣：同一 action list 於多台裝置平行執行 |
 | `utils/remote_desktop/` | 12,871 | **遠端桌面子系統**（56 檔／11.7K LOC）：TCP／WebSocket／WebRTC 三條傳輸路徑、主機與檢視端、訊令伺服器、TURN／中繼、多檢視者、錄影、信任清單、TOTP、稽核鏈 |
 | `utils/usb/` | 4,524 | 跨平台 USB 列舉／熱插拔／裝置直通（WinUSB、IOKit、libusb 後端 + ACL + WebRTC DataChannel 通道） |
@@ -527,7 +527,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.11 伺服器、網路協定與外部整合
 
-> 24 個套件、約 6,649 行。
+> 24 個套件、約 6,710 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -536,8 +536,8 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/cookie_jar/` | 122 | RFC 6265 cookie jar |
 | `utils/email_send/` | 118 | SMTP 寄信（email 觸發器的發送端搭檔） |
 | `utils/events/` | 106 | 對外 CloudEvents 發送（執行生命週期事件） |
-| `utils/http_cassette/` | 156 | 錄製／重播 HTTP 互動，做離線決定性 API 測試 |
-| `utils/http_client/` | 228 | 零依賴 HTTP(S) 用戶端，供 action 步驟呼叫 API |
+| `utils/http_cassette/` | 200 | 錄製／重播 HTTP 互動，做離線決定性 API 測試 |
+| `utils/http_client/` | 245 | 零依賴 HTTP(S) 用戶端，供 action 步驟呼叫 API |
 | `utils/http_conditional/` | 115 | 條件式 HTTP 請求與快取驗證器 |
 | `utils/http_content/` | 158 | HTTP 內容協商與回應解壓縮 |
 | `utils/http_problem/` | 118 | RFC 9457 problem+json 解析 |
@@ -558,13 +558,13 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.12 報表、可觀測性與測試治理
 
-> 34 個套件、約 7,502 行。
+> 34 個套件、約 7,492 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
 | `utils/anomaly/` | 114 | 單一序列異常偵測 |
 | `utils/approval/` | 118 | Approval testing：以核可基準線驗證產出物 |
-| `utils/assertion/` | 894 | 斷言 DSL：畫面狀態驗證 + 組合子 |
+| `utils/assertion/` | 884 | 斷言 DSL：畫面狀態驗證 + 組合子 |
 | `utils/baggage/` | 120 | W3C Baggage 傳遞 |
 | `utils/canonical_log/` | 96 | canonical log line 與結構化 JSON 日誌 |
 | `utils/ci_annotations/` | 65 | 由執行結果輸出 CI 工作流程註記（GitHub Actions） |
@@ -599,7 +599,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.13 資料來源、結構驗證與 i18n
 
-> 24 個套件、約 4,638 行。
+> 24 個套件、約 4,662 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -608,7 +608,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/data_drift/` | 128 | 分布漂移偵測 |
 | `utils/data_profile/` | 129 | 資料剖析與結構推斷 |
 | `utils/data_quality/` | 218 | 資料品質：列結構驗證、欄位擷取、遮蔽 |
-| `utils/data_source/` | 229 | 資料驅動執行：從 CSV／JSON／SQLite／Excel 載入資料列 |
+| `utils/data_source/` | 235 | 資料驅動執行：從 CSV／JSON／SQLite／Excel 載入資料列 |
 | `utils/dataset_diff/` | 89 | 表格資料列差異比對（CDC 風格） |
 | `utils/gettext_catalog/` | 362 | GNU gettext 目錄 I/O（解析 .po、編譯／讀取 .mo、訊息查詢） |
 | `utils/i18n_test/` | 231 | 國際化／在地化測試輔助 |
@@ -620,7 +620,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/locale_collation/` | 135 | 地區感知字串排序（決定性多層排序鍵） |
 | `utils/locale_parse/` | 80 | 地區感知數字／貨幣／日期解析與格式化（選用 babel） |
 | `utils/message_format/` | 288 | ICU-lite MessageFormat（plural／select／selectordinal） |
-| `utils/office/` | 180 | Office 文件無頭讀寫（Excel／Word／PowerPoint） |
+| `utils/office/` | 198 | Office 文件無頭讀寫（Excel／Word／PowerPoint） |
 | `utils/pdf/` | 117 | PDF 讀取與斷言（選用 pypdf 後端） |
 | `utils/referential/` | 83 | 跨資料集的參照完整性檢查 |
 | `utils/schema_compat/` | 177 | JSON Schema 相容性分級 |
@@ -650,11 +650,11 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.15 韌性、流量控制與設定
 
-> 14 個套件、約 2,013 行。
+> 14 個套件、約 2,033 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
-| `utils/artifact_store/` | 128 | S3 相容產出物儲存（報表／截圖／錄影） |
+| `utils/artifact_store/` | 148 | S3 相容產出物儲存（報表／截圖／錄影） |
 | `utils/assets/` | 178 | 環境範圍的型別化資產／設定儲存（UiPath Assets 風格） |
 | `utils/bulkhead/` | 141 | Bulkhead 併發隔離 + 伺服器限流標頭解析 |
 | `utils/chaos/` | 153 | 決定性混沌實驗（穩態假說 + 故障注入） |
@@ -696,7 +696,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 上表以子套件為單位；以下把行數最大的幾個子系統展開到檔案層。
 
-#### `utils/executor/`（9,494 行）— 執行核心
+#### `utils/executor/`（9,505 行）— 執行核心
 
 | 檔案 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -704,7 +704,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `flow_control.py` | 643 | 真正的流程控制：`AC_loop`／`AC_for_each`／`AC_while_*`／`AC_if_*`／`AC_try`／`AC_retry`／`AC_parallel`／`AC_define_macro`／`AC_call_macro`／變數指令（`AC_set_var`／`AC_get_var`／`AC_inc_var`）。`LoopBreak`／`LoopContinue` 以例外實作。34 個區塊指令的分派表 `BLOCK_COMMANDS` 也在這裡，含下一列匯入的資料來源指令。 |
 | `flow_data_commands.py` | 272 | `AC_*_to_var` 資料來源與轉換指令：shell、時鐘、亂數、PDF、TOTP、SQL、檔案、HTTP、OCR，加上 `AC_assert_var`／`AC_assert_db`／`AC_assert_duration`／`AC_transform_var`。都不執行巢狀 action list，所以沒有迴圈／分支語意。 |
 | `action_schema.py` | 159 | action list 的結構驗證：形狀、參數型別、未知指令拒絕。單一走訪同時支援兩種消費方式：`validate_actions()` 遇到第一個問題就拋、`unknown_command_names()` 收齊全部不認得的名字（REST `/execute` 用它回 400）。 |
-| `action_redaction.py` | 72 | 記錄與紀錄鍵用的遮蔽：`AC_secret_*` 的參數（金庫通行碼、機密值）在寫進 log、當成結果紀錄的鍵之前換成 `***`，巢狀在區塊指令裡的也一樣。 |
+| `action_redaction.py` | 83 | 記錄與紀錄鍵用的遮蔽：`AC_secret_*` 的參數（金庫通行碼、機密值）在寫進 log、當成結果紀錄的鍵之前換成 `***`，巢狀在區塊指令裡的也一樣。 |
 | `mouse_aliases.py` | 39 | 單鍵點擊別名（`AC_click_left` 等），executor 與 callback executor 共用。 |
 
 #### `utils/mcp_server/`（17,804 行，678 個工具）— 最大子系統
@@ -1066,7 +1066,7 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `gui/` | 93 | 27,226 |
 | `utils/mcp_server/` | 31 | 17,804 |
 | `utils/remote_desktop/` | 56 | 12,871 |
-| `utils/executor/` | 7 | 9,494 |
+| `utils/executor/` | 7 | 9,505 |
 | `utils/usb/` | 17 | 4,524 |
 | `je_auto_control/`（頂層 3 檔） | 3 | 2,410 |
 | `utils/accessibility/` | 14 | 3,117 |
@@ -1076,13 +1076,13 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `utils/agent/` | 9 | 1,976 |
 | `linux_with_x11/` | 19 | 1,281 |
 | `linux_wayland/` | 17 | 2,921 |
-| `utils/triggers/` | 4 | 1,305 |
+| `utils/triggers/` | 4 | 1,377 |
 | `utils/ocr/` | 9 | 1,140 |
 | `utils/usbip/` | 5 | 1,008 |
-| `utils/assertion/` | 3 | 894 |
+| `utils/assertion/` | 3 | 884 |
 | `osx/` | 17 | 925 |
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 846 |
-| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 679 | 54,679 |
-| **總計** | **1,048** | **152,620** |
+| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 679 | 54,782 |
+| **總計** | **1,048** | **152,796** |
 

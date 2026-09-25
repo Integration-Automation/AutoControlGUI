@@ -167,14 +167,16 @@ class _FakeResp:
 
 
 def _patch_urlopen(monkeypatch, resp_or_exc):
-    import urllib.request
+    # assert_http goes through http_client's transport (egress policy,
+    # redirect checks, body cap), so that is what stands in for the network.
+    from je_auto_control.utils.http_client import http_client
 
-    def _fake(request, timeout=None):
+    def _fake(call):
         if isinstance(resp_or_exc, Exception):
             raise resp_or_exc
-        return resp_or_exc
+        return {"status": resp_or_exc.status, "text": resp_or_exc.read().decode("utf-8")}
 
-    monkeypatch.setattr(urllib.request, "urlopen", _fake)
+    monkeypatch.setattr(http_client, "urllib_transport", _fake)
 
 
 def test_assert_http_status_ok(monkeypatch):
