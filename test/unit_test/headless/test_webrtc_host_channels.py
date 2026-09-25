@@ -265,7 +265,8 @@ def test_an_annotation_reaches_the_gui_callback():
     host._wire_control_channel(channel)
     host._authenticated = True
     _deliver(host, {"type": "annotate", "shape": "arrow"})
-    assert seen == [{"type": "annotate", "shape": "arrow"}]
+    # The viewer's fields, plus where the host's frame starts on screen.
+    assert seen == [{"type": "annotate", "shape": "arrow", "screen_origin": (0, 0)}]
 
 
 def test_an_annotation_with_no_listener_is_dropped(host):

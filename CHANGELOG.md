@@ -433,6 +433,8 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
   instead of as UTF-8: `sc query` raised, and the others returned
   replacement characters. The SBOM skips a distribution that has no
   metadata instead of failing on 3.15, or listing it as `unknown` before.
+- WebRTC host annotations are drawn at the viewer's position on the
+  captured screen, including other monitors and scaled displays.
 - Remote desktop hosts map viewer input and the broadcast cursor through
   the captured frame's origin, so clicks land correctly on a second monitor,
   a capture region, or a virtual desktop that extends above or left of the

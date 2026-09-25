@@ -5,25 +5,13 @@ desktop did not work: ``showFullScreen`` put it on one screen, while the
 result was still offset by the virtual desktop's origin, and Qt's logical
 coordinates are not the native pixels screenshots use on a scaled screen.
 """
-from typing import List, Optional, Tuple
+from typing import List, Optional
 
 from PySide6.QtCore import QEventLoop, QPoint, QRect, Qt, Signal
 from PySide6.QtGui import QColor, QKeyEvent, QMouseEvent, QPainter, QPen, QScreen
 from PySide6.QtWidgets import QApplication, QWidget
 
-Region = Tuple[int, int, int, int]
-
-
-def native_region(screen: QScreen, rect: QRect) -> Region:
-    """``rect`` (in logical pixels, relative to ``screen``) as native (x, y, w, h).
-
-    Qt keeps a screen's top-left corner the same in logical and native
-    coordinates and scales within the screen by its device pixel ratio.
-    """
-    origin = screen.geometry().topLeft()
-    ratio = screen.devicePixelRatio()
-    return (origin.x() + round(rect.x() * ratio), origin.y() + round(rect.y() * ratio),
-            round(rect.width() * ratio), round(rect.height() * ratio))
+from je_auto_control.gui._screen_geometry import Region, native_region
 
 
 class RegionOverlay(QWidget):

@@ -105,6 +105,14 @@ class MultiViewerHost:
         source = self._source
         return source.capture_origin if source is not None else (0, 0)
 
+    def _annotate(self, data: dict) -> None:
+        """Pass a session's annotation on with the shared track's origin.
+
+        A session relays the shared track, so its own origin is (0, 0).
+        """
+        if self._on_annotation is not None:
+            self._on_annotation({**data, "screen_origin": self._capture_origin()})
+
     # --- session lifecycle --------------------------------------------------
 
     def create_session_offer(self) -> Tuple[str, str]:
@@ -120,7 +128,7 @@ class MultiViewerHost:
                 permissions=self._permissions,
                 input_dispatcher=self._dispatch,
                 ip_whitelist=self._ip_whitelist,
-                on_annotation=self._on_annotation,
+                on_annotation=self._annotate if self._on_annotation is not None else None,
                 external_video_track=self._source.subscribe(),
                 on_state_change=self._wrap_state_callback(session_id),
                 on_authenticated=self._wrap_auth_callback(session_id),

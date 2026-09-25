@@ -557,7 +557,9 @@ class WebRTCDesktopHost(ViewerAuthMixin, MediaNegotiationMixin):
         if self._on_annotation is None:
             return
         try:
-            self._on_annotation(dict(data))
+            # Where the frame the viewer drew on starts on screen; a value the
+            # viewer sent is overwritten.
+            self._on_annotation({**data, "screen_origin": self._capture_origin()})
         except (RuntimeError, OSError) as error:
             autocontrol_logger.debug("annotation cb: %r", error)
 
