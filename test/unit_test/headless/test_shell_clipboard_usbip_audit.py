@@ -99,7 +99,7 @@ def test_an_empty_linux_clipboard_is_empty_and_other_failures_are_framework_erro
         clipboard._linux_get()  # noqa: SLF001
 
     def hangs(*args, **kwargs):
-        raise subprocess.TimeoutExpired(cmd="xclip", timeout=5)
+        raise subprocess.TimeoutExpired(cmd="xclip", timeout=5)  # nosemgrep  # reason: runs nothing
 
     monkeypatch.setattr(clipboard.subprocess, "run", hangs)
     with pytest.raises(AutoControlException):

@@ -190,7 +190,7 @@ def test_a_watchdog_rule_error_of_any_kind_is_contained():
     from je_auto_control.utils.watchdog.popup_watchdog import PopupWatchdog, WatchdogRule
 
     def matcher():
-        raise subprocess.TimeoutExpired(cmd="x", timeout=1)
+        raise subprocess.TimeoutExpired(cmd="x", timeout=1)  # nosemgrep  # reason: runs nothing
 
     watchdog = PopupWatchdog()
     assert watchdog._apply(WatchdogRule(name="a", matcher=matcher, action=lambda: None)) is False  # noqa: SLF001

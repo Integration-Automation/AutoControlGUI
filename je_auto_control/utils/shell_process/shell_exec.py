@@ -71,9 +71,8 @@ def _taskkill_path() -> str:
 def _kill_tree(process: subprocess.Popen) -> None:
     """Kill ``process`` and everything it started."""
     if sys.platform == "win32":
-        # nosemgrep: python.lang.security.audit.dangerous-subprocess-use-audit.dangerous-subprocess-use-audit
-        subprocess.run([_taskkill_path(), "/T", "/F", "/PID", str(process.pid)],  # nosec B603  # reason: fixed system tool, our child's pid
-                       capture_output=True, timeout=10, check=False)
+        taskkill = [_taskkill_path(), "/T", "/F", "/PID", str(process.pid)]
+        subprocess.run(taskkill, capture_output=True, timeout=10, check=False)  # nosec B603  # nosemgrep  # reason: fixed system tool, our child's pid
     else:
         try:
             os.killpg(process.pid, signal.SIGKILL)
@@ -109,7 +108,7 @@ def run_captured(argv: Union[str, List[str]], timeout_s: float,
         except subprocess.TimeoutExpired:
             autocontrol_logger.error("%s: output pipes still open after the kill", program_of(argv))
         raise
-    return subprocess.CompletedProcess(argv, process.returncode, stdout, stderr)
+    return subprocess.CompletedProcess(argv, process.returncode, stdout, stderr)  # nosemgrep  # reason: runs nothing
 
 
 class ShellManager:

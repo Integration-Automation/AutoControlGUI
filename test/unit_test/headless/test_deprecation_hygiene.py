@@ -25,7 +25,7 @@ def test_the_package_imports_with_warnings_as_errors():
 
 
 def test_stdlib_xml_is_still_defused():
-    import xml.etree.ElementTree as ElementTree  # nosec B405  # reason: asserts that parsing it is refused
+    import xml.etree.ElementTree as ElementTree  # nosec B405  # nosemgrep  # reason: asserts that parsing it is refused
 
     import je_auto_control.utils.xml  # noqa: F401  # reason: installs the defused parsers
     with pytest.raises(Exception, match="(?i)entit"):

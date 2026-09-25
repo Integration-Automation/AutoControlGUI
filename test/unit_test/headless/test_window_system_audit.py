@@ -149,7 +149,7 @@ def test_the_window_manager_acts_on_the_selected_window(monkeypatch):
     import os
     os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
     from PySide6.QtWidgets import QApplication, QTableWidgetItem
-    QApplication.instance() or QApplication([])
+    _app = QApplication.instance() or QApplication([])
     from je_auto_control.gui import window_tab
     monkeypatch.setattr(window_tab, "list_windows", lambda: [])
     backend = _Backend([])

@@ -3,6 +3,7 @@
 No real input: the generated code is run only on actions that fail before
 touching the screen, and the servers are not started.
 """
+import importlib.util
 import io
 import json
 import sys
@@ -89,11 +90,14 @@ _FAILING = [["AC_execute_files", {"execute_files_list": ["does_not_exist.json"]}
 
 
 @pytest.mark.parametrize("style", ["calls", "actions"])
-def test_a_generated_test_fails_when_an_action_fails(style):
-    namespace = {}
-    exec(compile(generate_code(_FAILING, style=style), "t.py", "exec"), namespace)  # nosec B102  # nosemgrep  # reason: runs the code under test, from a fixed action list
+def test_a_generated_test_fails_when_an_action_fails(style, tmp_path):
+    script = tmp_path / "recorded_flow.py"
+    script.write_text(generate_code(_FAILING, style=style), encoding="utf-8")
+    spec = importlib.util.spec_from_file_location("recorded_flow", script)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
     with pytest.raises(AutoControlException):
-        namespace["test_recorded_flow"]()
+        module.test_recorded_flow()
 
 
 def test_placeholders_go_through_the_executor():
