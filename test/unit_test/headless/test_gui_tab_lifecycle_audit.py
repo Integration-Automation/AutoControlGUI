@@ -292,6 +292,9 @@ _WINDOW_PROBE = textwrap.dedent("""
 
 
 def test_destroying_the_window_removes_its_listeners():
+    # The main window styles itself with qt_material, which the headless CI
+    # jobs do not install; the probe imports the real window.
+    pytest.importorskip("qt_material", exc_type=ImportError)
     env = dict(os.environ, PYTHONPATH=str(_REPO_ROOT), QT_QPA_PLATFORM="offscreen")
     argv = [sys.executable, "-c", _WINDOW_PROBE]
     done = subprocess.run(argv, capture_output=True, text=True, timeout=180, env=env, cwd=str(_REPO_ROOT), check=False)  # nosec B603  # nosemgrep  # reason: this test's own probe, fixed argv

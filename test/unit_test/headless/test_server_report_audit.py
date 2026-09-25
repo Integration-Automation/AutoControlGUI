@@ -22,6 +22,25 @@ from je_auto_control.utils.rest_api import rest_server as rs
 from je_auto_control.utils.rest_api.rest_server import RestApiServer
 
 _DEEP = "[" * 50_000 + "]" * 50_000
+
+
+@pytest.fixture()
+def too_deep(monkeypatch):
+    """``json.loads`` raising ``RecursionError`` for ``_DEEP``, as it does on most builds.
+
+    How deep the C parser goes first depends on the build and the stack --
+    3.14 on Linux and macOS parsed all 50,000 levels -- so the depth is
+    simulated: the handling of the error is what these tests check.
+    """
+    real = json.loads
+
+    def loads(text, *args, **kwargs):
+        head = text[:64]
+        if head in ("[" * 64, b"[" * 64):
+            raise RecursionError("maximum recursion depth exceeded while decoding a JSON array")
+        return real(text, *args, **kwargs)
+
+    monkeypatch.setattr(json, "loads", loads)
 _LONE_SURROGATE = chr(0xDCFF)
 
 
@@ -72,7 +91,7 @@ def test_a_history_limit_too_large_for_sqlite_is_answered(rest):
     assert status == 200 and isinstance(json.loads(raw)["runs"], list)
 
 
-def test_a_body_nested_too_deeply_is_a_400(rest):
+def test_a_body_nested_too_deeply_is_a_400(rest, too_deep):
     status, _, raw = _call(rest, "POST", "/execute", body=_DEEP.encode(),
                            headers={"Content-Type": "application/json"})
     assert status == 400 and json.loads(raw) == {"error": "invalid JSON"}
@@ -157,12 +176,12 @@ def test_log_safe_and_wire_json_text():
 
 # --- socket, MCP, webhook ------------------------------------------------------------------------
 
-def test_the_socket_server_answers_a_command_nested_too_deeply():
+def test_the_socket_server_answers_a_command_nested_too_deeply(too_deep):
     from je_auto_control.utils.socket_server.auto_control_socket_server import _is_complete
     assert _is_complete((_DEEP + "\n").encode()) is True
 
 
-def test_mcp_answers_a_line_nested_too_deeply_and_a_lone_surrogate():
+def test_mcp_answers_a_line_nested_too_deeply_and_a_lone_surrogate(too_deep):
     from je_auto_control.utils.mcp_server._protocol import _result_response
     from je_auto_control.utils.mcp_server.http_transport import _is_initialize
     from je_auto_control.utils.mcp_server.prompts import StaticPromptProvider
@@ -203,7 +222,7 @@ def test_mcp_http_answers_missing_and_wrong_tokens_401_with_a_challenge():
         server.stop(timeout=1.0)
 
 
-def test_a_webhook_body_nested_too_deeply_is_not_json():
+def test_a_webhook_body_nested_too_deeply_is_not_json(too_deep):
     from je_auto_control.utils.triggers.webhook_server import _maybe_parse_json
     assert _maybe_parse_json("application/json", _DEEP) is None
 
@@ -235,7 +254,7 @@ def deep_server():
     server.server_close()
 
 
-def test_clients_turn_a_reply_nested_too_deeply_into_their_own_error(deep_server, tmp_path):
+def test_clients_turn_a_reply_nested_too_deeply_into_their_own_error(deep_server, tmp_path, too_deep):
     from je_auto_control.utils.admin.admin_client import AdminConsoleClient
     from je_auto_control.utils.config_sync.client import ConfigSyncClient, ConfigSyncError
     from je_auto_control.utils.remote_desktop.signaling_client import SignalingError, _request
