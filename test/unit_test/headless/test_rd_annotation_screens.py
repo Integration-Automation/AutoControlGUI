@@ -25,8 +25,10 @@ os.environ["QT_QPA_PLATFORM"] = "offscreen:configfile=screens.json"
 from PySide6.QtWidgets import QApplication
 app = QApplication([])
 from je_auto_control.gui.remote_desktop.annotation_overlay import HostAnnotationOverlay
+# Pinned both ways, as the plain cases read darwin on a macOS runner.
+sys.platform = "darwin" if sys.argv[1].endswith("-mac") else "linux"
 overlay = HostAnnotationOverlay()
-origin = [1920, -164] if sys.argv[1] == "scaled" else [0, 0]
+origin = [1920, -164] if sys.argv[1].startswith("scaled") else [0, 0]
 overlay.apply({"action": "begin", "x": 10, "y": 20, "screen_origin": origin})
 print(overlay._target.name(), overlay._strokes[-1]["points"][0], flush=True)
 '''
@@ -36,6 +38,8 @@ print(overlay._target.name(), overlay._strokes[-1]["points"][0], flush=True)
     ("primary", "primary (10.0, 20.0)"),
     # native (1930, -144) on the 125% screen: 1920 + 10 / 1.25, -164 + 20 / 1.25, less its corner
     ("scaled", "scaled (8.0, 16.0)"),
+    # macOS: captures and Qt both take points, so the frame pixel is the logical pixel
+    ("scaled-mac", "scaled (10.0, 20.0)"),
 ])
 def test_a_point_is_drawn_on_its_screen_in_its_pixels(screen, expected):
     done = run_probe(_PROBE, screen)

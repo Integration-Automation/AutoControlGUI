@@ -26,8 +26,9 @@ from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QApplication
 app = QApplication([])
 from je_auto_control.gui.selector.region_overlay import RegionOverlay, pick_region_blocking
-if sys.argv[1].endswith("-mac"):
-    sys.platform = "darwin"      # captures and the pointer take points there
+# Pinned both ways: on a macOS runner the plain cases read darwin and did not
+# scale, so they failed there while passing everywhere else.
+sys.platform = "darwin" if sys.argv[1].endswith("-mac") else "linux"
 
 def drag():
     overlays = [w for w in QApplication.topLevelWidgets() if isinstance(w, RegionOverlay) and w.isVisible()]
