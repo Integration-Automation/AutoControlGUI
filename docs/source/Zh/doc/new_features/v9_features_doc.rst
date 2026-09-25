@@ -44,8 +44,9 @@ Enter」。``handle_file_dialog`` 一次搞定::
     handle_file_dialog("C:/reports/out.csv", action="save")
 
 ``action`` 為 ``open`` / ``save`` / ``folder``(自動選預設對話框標題),
-或傳明確的 ``window_title``;它會等對話框、輸入路徑、按 ``confirm_key``
-(預設 Enter)。等視窗/輸入/確認三步透過可注入的 :class:`FileDialogDriver`。
+或傳明確的 ``window_title``;它會等標題完全相同(不分大小寫)的視窗、把它帶到前景、
+輸入路徑、按 ``confirm_key``(預設 Enter)。只是標題含有該字串的視窗,或 Windows
+拒絕帶到前景的視窗,都不算處理成功,也不會輸入任何東西。等視窗/輸入/確認三步透過可注入的 :class:`FileDialogDriver`。
 執行器指令:``AC_handle_file_dialog``。
 
 

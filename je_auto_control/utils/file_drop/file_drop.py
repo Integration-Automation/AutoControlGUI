@@ -9,6 +9,7 @@ an injectable *driver* seam, so the build-and-dispatch logic is unit-testable on
 any platform by passing a fake driver; the real ``GlobalAlloc`` + ``PostMessage``
 lives in the default Win32 driver. Imports no ``PySide6``.
 """
+import os
 from typing import Any, Callable, Dict, Optional, Sequence, Tuple
 
 from je_auto_control.utils.clipboard_files import build_dropfiles
@@ -97,6 +98,9 @@ def drop_files(hwnd: int, paths: Sequence[str], *,
     """
     if not paths:
         raise ValueError("at least one path is required")
-    blob = build_dropfiles(paths, point=point, wide=wide)
+    # Absolute: the target resolved a relative path against its own
+    # working directory.
+    blob = build_dropfiles([os.path.abspath(path) if path else path for path in paths],
+                           point=point, wide=wide)
     send = driver if driver is not None else _default_driver
     return bool(send(int(hwnd), blob, (int(point[0]), int(point[1]))))

@@ -777,7 +777,7 @@ class _WebRTCHostPanel(TranslatableMixin, QWidget):
             return
         self._status_label.setText(_t("rd_webrtc_generating_offer"))
         self._offer_view.setPlainText("")
-        QTimer.singleShot(0, self._produce_offer)
+        QTimer.singleShot(0, self, self._produce_offer)
 
     def _require_multi_host(self) -> MultiViewerHost:
         """Return the running host, or say the session is not up yet."""
@@ -1551,7 +1551,7 @@ class _WebRTCViewerPanel(TranslatableMixin, QWidget):
             self._status_label.setText(
                 _t("rd_webrtc_upload_done").format(n=sent),
             )
-            QTimer.singleShot(500, self._on_browse_refresh)
+            QTimer.singleShot(500, self, self._on_browse_refresh)
         if last_error is not None and sent == 0:
             QMessageBox.warning(self, "WebRTC", str(last_error))
 
@@ -2216,7 +2216,7 @@ class _WebRTCViewerPanel(TranslatableMixin, QWidget):
             self._show_error(error)
             return
         self._status_label.setText(_t("rd_webrtc_creating_answer"))
-        QTimer.singleShot(0, lambda: self._answer_and_push(offer_sdp))
+        QTimer.singleShot(0, self, lambda: self._answer_and_push(offer_sdp))
 
     def _answer_and_push(self, offer_sdp: str) -> None:
         host_id = self._host_id_edit.text().strip()
@@ -2269,7 +2269,7 @@ class _WebRTCViewerPanel(TranslatableMixin, QWidget):
             self._show_error(error)
             return
         self._status_label.setText(_t("rd_webrtc_creating_answer"))
-        QTimer.singleShot(0, lambda: self._produce_answer(offer))
+        QTimer.singleShot(0, self, lambda: self._produce_answer(offer))
 
     def _require_viewer(self) -> WebRTCDesktopViewer:
         """Return the live viewer, or say it is not connected yet."""
@@ -2482,7 +2482,7 @@ class _WebRTCViewerPanel(TranslatableMixin, QWidget):
                 n=self._auto_reconnect_attempts, max=max_attempts,
             ),
         )
-        QTimer.singleShot(delay_ms, self._on_connect_via_server)
+        QTimer.singleShot(delay_ms, self, self._on_connect_via_server)
 
     def _start_stats_polling(self) -> None:
         if self._viewer is None or self._viewer._pc is None:

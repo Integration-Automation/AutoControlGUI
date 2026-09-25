@@ -34,8 +34,11 @@ Quick start
     default_popup_watchdog.stop()
 
 ``action`` is ``"close"`` (close the matching window) or a key name to
-press (``"enter"`` / ``"esc"`` / ...). The guard polls on a background
-thread and records every dismissal in ``default_popup_watchdog.hits``.
+press (``"enter"`` / ``"esc"`` / ...). A key is pressed only after the popup
+has been brought to the front; if Windows refuses that, the rule records an
+error rather than press the key in whatever window is active. The guard polls
+on a background thread and records every dismissal in
+``default_popup_watchdog.hits``.
 
 
 Custom rules

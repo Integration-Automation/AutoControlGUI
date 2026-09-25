@@ -9,6 +9,7 @@ The window-wait / type / confirm steps go through an injectable
 real dialog; the default driver uses the window + keyboard wrappers.
 Imports no ``PySide6``.
 """
+import time
 from typing import Dict, Optional
 
 _DEFAULT_TITLES = {"open": "Open", "save": "Save As", "folder": "Select Folder"}
@@ -18,15 +19,25 @@ class FileDialogDriver:
     """Pluggable window-wait / type / confirm steps for a file dialog."""
 
     def wait_window(self, title: str, timeout_s: float) -> bool:
-        from je_auto_control.utils.exception.exceptions import AutoControlException
-        from je_auto_control.wrapper.auto_control_window import wait_for_window
-        try:
-            wait_for_window(title, timeout=float(timeout_s))
-            return True
-        # wait_for_window reports a timeout as AutoControlActionException,
-        # which escaped instead of becoming {"handled": False}.
-        except (OSError, RuntimeError, ValueError, AutoControlException):
-            return False
+        """Wait for a window titled exactly ``title`` and bring it to the front.
+
+        A substring match took "How to reopen closed tabs - Google Chrome" for
+        the Open dialog, and nothing was focused: the path and Enter went to
+        whatever window was active. ``False`` (not handled) when no such
+        window appears or it cannot be brought to the front.
+        """
+        from je_auto_control.wrapper.window_backends import get_backend
+        backend = get_backend()
+        deadline = time.monotonic() + max(0.0, float(timeout_s))
+        wanted = title.strip().casefold()
+        while True:
+            window_id = next((window for window, name in backend.list_windows()
+                              if name.strip().casefold() == wanted), None)
+            if window_id is not None:
+                return backend.bring_to_front(window_id)
+            if time.monotonic() >= deadline:
+                return False
+            time.sleep(0.2)
 
     def type_path(self, path: str) -> None:
         from je_auto_control.wrapper.auto_control_keyboard import write

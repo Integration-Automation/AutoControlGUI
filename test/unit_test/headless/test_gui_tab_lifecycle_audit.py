@@ -135,9 +135,9 @@ def test_focusing_a_window_that_has_closed_is_shown(qapp, monkeypatch):
 
     boxes = _Boxes()
     monkeypatch.setattr(window_tab, "QMessageBox", boxes)
-    monkeypatch.setattr(window_tab, "focus_window", gone)
-    monkeypatch.setattr(window_tab, "close_window_by_title", gone)
-    fake = types.SimpleNamespace(_selected_title=lambda: "Gone", refresh=lambda: None)
+    monkeypatch.setattr(window_tab, "get_backend",
+                        lambda: types.SimpleNamespace(bring_to_front=gone, close=gone))
+    fake = types.SimpleNamespace(_selected_window=lambda: 4242, refresh=lambda: None)
     window_tab.WindowManagerTab._on_focus(fake)
     window_tab.WindowManagerTab._on_close(fake)
     assert len(boxes.shown) == 2

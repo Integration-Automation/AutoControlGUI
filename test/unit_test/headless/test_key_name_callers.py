@@ -26,6 +26,13 @@ def test_the_file_dialog_confirm_key_is_resolved(typed):
     assert typed == ["return"]
 
 
-def test_a_watchdog_key_action_is_resolved(typed):
+def test_a_watchdog_key_action_is_resolved(typed, monkeypatch):
+    from types import SimpleNamespace
+
+    from je_auto_control.wrapper import auto_control_window, window_backends
+    # The key goes to the popup, brought to the front first.
+    monkeypatch.setattr(auto_control_window, "find_window", lambda *a, **k: (7, "Popup"))
+    monkeypatch.setattr(window_backends, "get_backend",
+                        lambda: SimpleNamespace(bring_to_front=lambda window_id: window_id == 7))
     popup_watchdog._window_action("Popup", "esc", False)()
     assert typed == ["escape"]

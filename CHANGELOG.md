@@ -76,6 +76,11 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Changed
 
+- `handle_file_dialog` waits for a window titled exactly like the dialog and
+  types only after bringing it to the front; watchdog key rules press their
+  key only in the popup.
+- Empty process names and window-title patterns are refused by the waits
+  and process assertions.
 - `assert_http` and config sync send their requests through `http_client`:
   the egress policy and the body cap apply, and config sync no longer
   follows redirects.
@@ -401,6 +406,12 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Fixed
 
+- MCP `ac_kill_process` and `wait_until_window_title` no longer let psutil
+  or regex errors escape.
+- File associations report `None` for an unregistered type; file drops and
+  clipboard file lists carry absolute paths.
+- The Window Manager tab focuses and closes the selected window, not the
+  first title match.
 - Secrets nested inside action arguments, and webhook URLs, are masked in
   logs and run records.
 - `X-Api-Key` and `X-Auth-Token` are dropped on redirects to another origin.

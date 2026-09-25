@@ -12,6 +12,7 @@ This isolates that error-prone packing into pure, fully unit-testable ``build_dr
 ``rich_clipboard`` uses for ``CF_HTML``. The pure functions import no ``PySide6`` and run
 on any platform; only the clipboard wrappers touch Win32.
 """
+import os
 import struct
 import sys
 from typing import Any, Dict, List, Optional, Sequence, Tuple
@@ -68,8 +69,13 @@ def parse_dropfiles(data: bytes) -> Dict[str, Any]:
 
 def set_clipboard_files(paths: Sequence[str], *, point: Tuple[int, int] = (0, 0),
                         non_client: bool = False) -> None:
-    """Put ``paths`` on the clipboard as a ``CF_HDROP`` file-drop list (Windows)."""
-    blob = build_dropfiles(paths, point=point, wide=True, non_client=non_client)
+    """Put ``paths`` on the clipboard as a ``CF_HDROP`` file-drop list (Windows).
+
+    Relative paths are made absolute here: the pasting program resolved them
+    against its own working directory.
+    """
+    blob = build_dropfiles([os.path.abspath(path) for path in paths],
+                           point=point, wide=True, non_client=non_client)
     _win_set_hdrop(blob)
 
 

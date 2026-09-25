@@ -163,6 +163,11 @@ pip install --dry-run --only-binary=:all: --platform win_arm64 --python-version 
 - **X11 預設滾動方向與 Windows／macOS 相反**：`wrapper/auto_control_mouse.py` `mouse_scroll(..., scroll_direction="scroll_down")`，正值在 X11 往下、其他平台往上，與 docstring「一份寫法各平台通用」不符。做法：預設改 `scroll_up`，或改 docstring 講清楚（重播路徑已在 U-20260924-14 明確傳 `scroll_up`）。
 - **`mouse_scroll` 的 NaN 座標被悄悄夾到桌面邊緣**：`auto_control_mouse.py` 的夾限在 `_coordinate()` 驗證之前，`mouse_scroll(3, x=nan, y=100)` 移到 `(-1920, 100)` 才滾；`set_mouse_position(nan, …)` 則正確丟例外。做法：夾限前先過 `_coordinate()`。
 - **座標截斷而非四捨五入**：`set_mouse_position(-0.6, 10.9)` 得到 `(0, 10)`，註解寫的是「rounded point」。做法：`int(round(value))`。
+- **`post_key` 打出三次同一字元**：`windows/window/windows_window_manage.py:347` 自己送 `WM_CHAR`，而目標的 `TranslateMessage` 又從 `WM_KEYDOWN` 與（`lParam=0` 被當成按下的）`WM_KEYUP` 各產生一次，`post_key_to_window(title, "a")` 打出 `aaa`。做法：可列印字元只送 `WM_CHAR`，其他鍵送 `WM_KEYDOWN`（`lParam = 1 | scan<<16`）與 `WM_KEYUP`（`0xC0000001 | scan<<16`）。`post_key_to_window(title, "enter")`／`"esc"` 在 Windows 丟 `unknown key name`（`wrapper/auto_control_window.py:170`），一併改走 `resolve_key_name`。
+- **焦點、顯示、z-order 失敗仍回報成功**：`windows_window_manage.py:191-229` 丟掉 `SetForegroundWindow`／`ShowWindow` 的回傳值，`window_zorder.py:50` 永遠回 `True`；Windows 的前景鎖常拒絕背景程序。做法：回傳 BOOL，`focus_window` 以 `GetForegroundWindow() == hwnd` 確認，否則丟 `AutoControlActionException`（`WindowManageBackend.bring_to_front` 已經這樣做）。
+- **列出看不見的視窗**：`windows_window_manage.py:88` 只看 `IsWindowVisible`，被 DWM cloak 的視窗（`Windows 輸入體驗`、背景的「設定」）與零面積視窗都算，`find_window` 可能選到它們。做法：略過 `DWMWA_CLOAKED` 非零與空矩形的視窗。
+- **視窗版面每次還原都偏移**：`utils/window_capture/window_capture.py:115` 存 DWM 可見框、還原時交給 `MoveWindow`（它定位的是含隱形邊框的完整矩形），每輪右移 7 px、縮小 14×7 px；最大化視窗與不同 DPI 的第二螢幕偏得更多。做法：存 `GetWindowRect`，或改用 `GetWindowPlacement`／`SetWindowPlacement`。同一檔的 snap／grid／cascade 用整個螢幕而非工作區，最底下 48 px 落在工作列下，一併改用 `SPI_GETWORKAREA`。
+- **`wait_for_window` 睡過逾時**：`wrapper/auto_control_window.py:79` 以 `poll` 整段睡，`poll=30` 就睡 30 秒，`poll=inf` 丟 `OverflowError`。做法：`clamp_poll_interval`，並只睡到截止時間。
 - **Windows 鍵表沒有標點鍵**：`plus`、`minus`、`comma`、`period`、`slash` 等沒有對應的 `VK_OEM_*`，computer use 的 `ctrl+minus` 在 Windows 失敗。做法：在 Windows 鍵表補上 `VK_OEM_PLUS`／`VK_OEM_MINUS`／`VK_OEM_COMMA`／`VK_OEM_PERIOD`／`VK_OEM_2` 等。
 
 同一次稽核的影像與 OCR 部分也在它的路徑上（Discord bot 的 `!find_image`／`!find_text`），一併等：
@@ -371,6 +376,19 @@ viewer 端的 `FileReceiver`（`utils/remote_desktop/file_transfer.py`）照單�
 `backend="openai"` 超過 Chat Completions 的 128 個工具上限，現在建 backend 時就明確拒絕；
 Anthropic 每一步送約 202 KB 的工具 schema、沒有 `cache_control`。拍板後一併決定上限與快取。
 
+
+---
+
+## macOS 無法還原最小化的視窗
+
+`TODO` — 需要在 macOS 上驗證，離線的 pyobjc 替身抓不到
+
+`wrapper/window_backends/macos_backend.py` 的 `_info_for` 只搜「在螢幕上」的視窗，最小化的不在其中：
+`minimize(77)` 成功後 `list_windows` 看不到它、`restore(77)` 丟「請授權 Accessibility」（即使已授權）。
+Windows 的 `list_windows` 則包含最小化視窗。
+
+**做法**：`_info_for` 改用 `CGWindowListCopyWindowInfo(kCGWindowListOptionIncludingWindow, window_id)`；
+在 macOS CI（TCC 已授權）加一個真的最小化再還原的測試。
 
 ---
 

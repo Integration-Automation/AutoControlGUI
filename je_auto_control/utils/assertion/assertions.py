@@ -396,6 +396,9 @@ def _running_process_names(name_contains: str) -> List[str]:
         raise AutoControlException(
             "process checks require psutil — pip install psutil"
         ) from error
+    if not str(name_contains).strip():
+        # "" is in every name: assert_process("") always passed.
+        raise ValueError("a process check needs a non-empty name")
     needle = name_contains.lower()
     names: List[str] = []
     for proc in psutil.process_iter(["name"]):

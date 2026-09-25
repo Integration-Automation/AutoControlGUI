@@ -218,14 +218,24 @@ def kill_process(pid: int, timeout: float = 5.0) -> str:
         raise RuntimeError(
             "ac_kill_process requires psutil — pip install psutil"
         ) from error
+    from je_auto_control.utils.exception.exceptions import AutoControlActionException
     try:
-        proc = psutil.Process(int(pid))
+        return _terminate(psutil, int(pid), float(timeout))
+    # AccessDenied / ZombieProcess derive from psutil.Error, an Exception
+    # only: it ended the MCP worker thread and the client never got a reply.
+    except psutil.Error as error:
+        raise AutoControlActionException(f"cannot end process {pid}: {error}") from error
+
+
+def _terminate(psutil: Any, pid: int, timeout: float) -> str:
+    try:
+        proc = psutil.Process(pid)
     except psutil.NoSuchProcess:
         return "not-found"
     # The process may exit between any two of these calls.
     try:
         proc.terminate()
-        proc.wait(timeout=float(timeout))
+        proc.wait(timeout=timeout)
         return "terminated"
     except psutil.NoSuchProcess:
         return "terminated"

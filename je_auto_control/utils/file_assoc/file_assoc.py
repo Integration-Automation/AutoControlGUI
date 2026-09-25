@@ -46,15 +46,21 @@ def normalize_ext(target: str) -> str:
     return ext
 
 
+_ASSOCF_INIT_IGNOREUNKNOWN = 0x400
+
+
 def _assoc_query(ext: str, assoc_str: int) -> Optional[str]:
     """Run one AssocQueryStringW lookup; return the string or None."""
     shlwapi = ctypes.windll.shlwapi  # type: ignore[attr-defined]  # reason: win32-only ctypes
     size = ctypes.c_ulong(0)
-    shlwapi.AssocQueryStringW(0, assoc_str, ext, None, None, ctypes.byref(size))
+    # ASSOCF_INIT_IGNOREUNKNOWN: without it an unregistered extension
+    # answered with the "Open With" picker (OpenWith.exe) instead of None.
+    shlwapi.AssocQueryStringW(_ASSOCF_INIT_IGNOREUNKNOWN, assoc_str, ext, None, None,
+                              ctypes.byref(size))
     if size.value == 0:
         return None
     buf = ctypes.create_unicode_buffer(size.value)
-    result = shlwapi.AssocQueryStringW(0, assoc_str, ext, None, buf,
+    result = shlwapi.AssocQueryStringW(_ASSOCF_INIT_IGNOREUNKNOWN, assoc_str, ext, None, buf,
                                        ctypes.byref(size))
     return buf.value if result == 0 else None
 

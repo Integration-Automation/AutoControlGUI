@@ -72,6 +72,22 @@ class WindowManageBackend:
         """Raise the window and give it the keyboard focus."""
         self._unsupported("set_foreground")
 
+    def bring_to_front(self, window_id: int, settle_s: float = 1.0) -> bool:
+        """Raise ``window_id`` and wait until it is the foreground window; ``False`` if it never is.
+
+        Windows' foreground lock refuses a background process often, and
+        typing after a refusal goes to whatever window the user has active.
+        """
+        import time
+        self.set_foreground(window_id)
+        deadline = time.monotonic() + max(0.0, float(settle_s))
+        while True:
+            if self.foreground_window() == window_id:
+                return True
+            if time.monotonic() >= deadline:
+                return False
+            time.sleep(0.05)
+
     def restore(self, window_id: int) -> None:
         """Un-minimise the window without changing anything else.
 
