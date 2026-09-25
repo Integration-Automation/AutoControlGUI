@@ -34,8 +34,12 @@ class _Layer:
 
 def deep_merge(base: Mapping[str, Any],
                override: Mapping[str, Any]) -> Dict[str, Any]:
-    """Recursively merge ``override`` onto ``base``; ``override`` wins leaves."""
-    result: Dict[str, Any] = dict(base)
+    """Recursively merge ``override`` onto ``base``; ``override`` wins leaves.
+
+    The result shares no nested value with either input: ``base``'s untouched
+    sub-dicts were shared, so editing the merged config edited the defaults.
+    """
+    result: Dict[str, Any] = copy.deepcopy(dict(base))
     for key, value in override.items():
         current = result.get(key)
         if isinstance(value, Mapping) and isinstance(current, Mapping):

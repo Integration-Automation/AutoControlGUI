@@ -15,6 +15,8 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Added
 
+- `box_format` (`"xywh"` / `"ltrb"`) on `cluster_grid`, `locate_cell`,
+  `AC_grid_cell` and `ac_grid_cell`, so `locate_all_image` boxes address cells.
 - `HistoryStore.list_runs(statuses=...)` and `FINISHED_STATUSES`.
 - `element_box()` (`utils.accessibility.element`): an element's
   `(left, top, width, height)` from `bbox`, `bounds` or `x/y/width/height`.
@@ -90,6 +92,9 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 - `is_interactive_role` and `flatten_tree` recognise AT-SPI, macOS AX and ARIA
   role names as well as UIA; `tab_order` leaves out disabled controls.
 - `effect_near_point` / `classify_effect` measure `radius` as a circle.
+- `diff_rows` / `cell_changes` raise `ValueError` for an empty key or a row
+  without a key column; `score_step_rule_based` raises for an unknown effect;
+  `verify_totp` raises `TOTPError` for a negative window.
 - `find_color_regions`, `segment_hsv` and `dominant_hue_regions` return
   screen coordinates for blobs found in a grabbed `region` (they were
   relative to the region's corner); a supplied `haystack` keeps its pixels.
@@ -462,6 +467,9 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 - Every `AC_*` flag parameter reads a string by its spelling: `"false"`,
   `"no"`, `"off"` and `"0"` are off. 85 adapters and two flow commands
   took any non-empty string as on.
+- `set_field_text` clears with Backspace on macOS; `deep_merge` no longer
+  shares nested values with its inputs; co-failure clustering keeps a
+  one-name run whole; TOTP time errors are `TOTPError`.
 - Test selection, sharding and flakiness read finished runs, so runs
   killed mid-flight no longer hide a flow's history.
 - `find_lines` finds lines shorter than 50 px and reads 16-bit images;

@@ -29,7 +29,8 @@ Headless API
 ``diff_rows`` keys both row-sets and returns ``{added, removed, changed,
 unchanged}``: ``added`` / ``removed`` / ``unchanged`` are row lists, while
 ``changed`` holds ``{key, old, new}`` entries (the key is a scalar for a single
-column or a list for a composite key). On duplicate keys the last row wins.
+column or a list for a composite key). On duplicate keys the last row wins; an empty
+key, or a row without a key column, raises ``ValueError``. NaN cells equal NaN.
 ``cell_changes`` expands the changed rows into ``{key, column, old, new}``
 records. ``summarize_diff`` counts each bucket.
 

@@ -20,7 +20,7 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 | 指標 | 數值 |
 | --- | ---: |
 | Python 模組總數（含周邊子專案） | 1,062 |
-| 程式碼總行數 | 155,416 |
+| 程式碼總行數 | 155,510 |
 | `je_auto_control/utils/` 子套件數 | 310 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 775 |
 | 套件門面 `__all__` 公開名稱數 | 1,244 |
@@ -342,7 +342,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.4 輸入模擬與動作品質
 
-> 22 個套件、約 2,828 行。
+> 22 個套件、約 2,831 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -352,7 +352,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/action_grounding/` | 83 | 動作前的接地守衛（邊界檢查 + 吸附到元素） |
 | `utils/actionability/` | 191 | 動作前就緒閘門（可見 + 穩定 + 啟用 + 未被遮擋） |
 | `utils/ensure_state/` | 74 | 冪等地把控制項／設定帶到期望狀態 |
-| `utils/field_entry/` | 76 | 清空再輸入的欄位填寫慣用法（Playwright `fill`） |
+| `utils/field_entry/` | 79 | 清空再輸入的欄位填寫慣用法（Playwright `fill`） |
 | `utils/gamepad/` | 333 | 虛擬遊戲手把後端（Windows ViGEmBus 驅動） |
 | `utils/humanize/` | 191 | 擬人輸入：貝茲曲線滑鼠路徑 + 抖動打字節奏 |
 | `utils/ime_state/` | 149 | 讀取即時 IME 組字／轉換狀態，確保 CJK 輸入安全 |
@@ -415,7 +415,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.6 OCR 與文字理解
 
-> 19 個套件、約 3,546 行。
+> 19 個套件、約 3,576 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -424,7 +424,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/confusables/` | 146 | 易混淆／同形字偵測（Unicode 欺騙骨架） |
 | `utils/form_fields/` | 134 | 多方向關聯表單標籤與值，並讀取核取方塊狀態 |
 | `utils/fuzzy/` | 111 | 模糊字串比對與去重（預設 difflib，有 rapidfuzz 則優先） |
-| `utils/grid_locator/` | 71 | 以 (row, column) 從邊界框定址表格／網格儲存格 |
+| `utils/grid_locator/` | 100 | 以 (row, column) 從邊界框定址表格／網格儲存格 |
 | `utils/guardrail/` | 117 | 針對畫面／OCR 文字的啟發式 prompt-injection 防護 |
 | `utils/heading_segment/` | 71 | 判定 OCR 行是標題或內文，建出文件大綱 |
 | `utils/near_dup/` | 108 | 近似重複文字偵測（SimHash／MinHash） |
@@ -433,7 +433,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/readability/` | 140 | 可讀性評分（Flesch、Flesch-Kincaid、Gunning Fog、SMOG、ARI） |
 | `utils/reading_flow/` | 165 | 以遞迴 XY-cut 推導欄位感知的閱讀順序 |
 | `utils/search_index/` | 183 | 記憶體內 BM25／TF-IDF 全文檢索 |
-| `utils/text_blocks/` | 88 | 把 OCR 行組成段落與項目符號／編號清單 |
+| `utils/text_blocks/` | 89 | 把 OCR 行組成段落與項目符號／編號清單 |
 | `utils/text_diff/` | 202 | unified diff 產生、套用與三方合併 |
 | `utils/text_normalize/` | 84 | Unicode 正規化與 slug 產生 |
 | `utils/text_regions/` | 168 | 免模型的畫面文字區域偵測（MSER）：區域與行 |
@@ -464,7 +464,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.8 元素定位、自我修復與智慧等待
 
-> 23 個套件、約 4,390 行。
+> 23 個套件、約 4,393 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -473,7 +473,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/anchor_locator/` | 476 | 錨點定位器：以空間關係組合 影像／OCR／VLM／a11y 四種來源 |
 | `utils/app_idle/` | 109 | 等應用程式不再忙碌，再驅動下一步 |
 | `utils/change_localize/` | 83 | 把畫面變化歸因到實際改變的元素框 |
-| `utils/critic_features/` | 85 | 每步的 critic 特徵集合與規則式步驟評分 |
+| `utils/critic_features/` | 88 | 每步的 critic 特徵集合與規則式步驟評分 |
 | `utils/element_diff/` | 94 | 跨影格的幾何感知元素比對（穩定 ID、移動追蹤） |
 | `utils/element_parse/` | 127 | 融合並排序畫面元素框（IoU、合併、多來源融合、閱讀順序） |
 | `utils/element_proposal/` | 92 | 免樣板、免模型地從原始像素提出乾淨元素清單 |
@@ -494,7 +494,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.9 AI / Agent / LLM
 
-> 13 個套件、約 23,131 行。
+> 13 個套件、約 23,133 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -507,21 +507,21 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/cua_action/` | 204 | 標準化 computer-use 動作結構（Anthropic／OpenAI → `AC_*`） |
 | `utils/llm/` | 365 | 自然語言 → action list 規劃器 + Anthropic／null 後端 |
 | `utils/mcp_registry/` | 97 | MCP registry `server.json` 資訊清單產生（可被發現） |
-| `utils/mcp_server/` | 18,802 | **無頭 MCP 伺服器**（16K LOC，預設註冊 678 個工具＝659 個 `ac_*` + 19 個別名）：stdio + HTTP 傳輸、工具工廠與處理器、資源、prompt、稽核、限流、外掛熱重載 |
+| `utils/mcp_server/` | 18,804 | **無頭 MCP 伺服器**（16K LOC，預設註冊 678 個工具＝659 個 `ac_*` + 19 個別名）：stdio + HTTP 傳輸、工具工廠與處理器、資源、prompt、稽核、限流、外掛熱重載 |
 | `utils/tool_use_schema/` | 195 | 把 `AC_*` 指令匯出成 Claude／OpenAI 的 tool-use schema |
 | `utils/trajectory_eval/` | 113 | agent 軌跡評估：依評分規準為一次執行打分 |
 | `utils/vision/` | 538 | VLM 元素定位器（依描述找元素）+ Anthropic／OpenAI／null 後端 |
 
 ### 5.4.10 遠端桌面與 USB
 
-> 6 個套件、約 19,425 行。
+> 6 個套件、約 19,439 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
 | `utils/admin/` | 418 | 多主機管理主控台：平行輪詢 N 個 AutoControl REST 端點 |
 | `utils/config_sync/` | 332 | 透過訊令伺服器做跨機器設定同步 |
 | `utils/device_matrix/` | 143 | 行動裝置矩陣：同一 action list 於多台裝置平行執行 |
-| `utils/remote_desktop/` | 13,000 | **遠端桌面子系統**（56 檔／11.7K LOC）：TCP／WebSocket／WebRTC 三條傳輸路徑、主機與檢視端、訊令伺服器、TURN／中繼、多檢視者、錄影、信任清單、TOTP、稽核鏈 |
+| `utils/remote_desktop/` | 13,014 | **遠端桌面子系統**（56 檔／11.7K LOC）：TCP／WebSocket／WebRTC 三條傳輸路徑、主機與檢視端、訊令伺服器、TURN／中繼、多檢視者、錄影、信任清單、TOTP、稽核鏈 |
 | `utils/usb/` | 4,524 | 跨平台 USB 列舉／熱插拔／裝置直通（WinUSB、IOKit、libusb 後端 + ACL + WebRTC DataChannel 通道） |
 | `utils/usbip/` | 1,008 | USB/IP 線路協定主機端（協定封包、TCP 伺服器、libusb URB 後端） |
 
@@ -558,7 +558,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.12 報表、可觀測性與測試治理
 
-> 34 個套件、約 7,591 行。
+> 34 個套件、約 7,600 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -571,7 +571,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/compliance/` | 166 | 合規：把治理證據對應到 SOC2／ISO 27001 控制項 |
 | `utils/failure_hooks/` | 415 | 失敗 → 工單自動化：開 Jira／Linear／GitHub issue |
 | `utils/failure_signature/` | 76 | 把錯誤訊息正規化成穩定的 SHA-256 失敗簽章並分群 |
-| `utils/flake_cluster/` | 103 | 以共同失敗 Jaccard 相似度為易碎測試分群 |
+| `utils/flake_cluster/` | 112 | 以共同失敗 Jaccard 相似度為易碎測試分群 |
 | `utils/flakiness/` | 151 | 以執行歷史分析不穩定測試 |
 | `utils/generate_report/` | 294 | HTML／JSON／XML 三種報表產生器（Template Method） |
 | `utils/media_assert/` | 268 | 媒體斷言：音訊活動與影片動態檢查 |
@@ -599,7 +599,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.13 資料來源、結構驗證與 i18n
 
-> 24 個套件、約 4,773 行。
+> 24 個套件、約 4,800 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -609,7 +609,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/data_profile/` | 169 | 資料剖析與結構推斷 |
 | `utils/data_quality/` | 224 | 資料品質：列結構驗證、欄位擷取、遮蔽 |
 | `utils/data_source/` | 235 | 資料驅動執行：從 CSV／JSON／SQLite／Excel 載入資料列 |
-| `utils/dataset_diff/` | 89 | 表格資料列差異比對（CDC 風格） |
+| `utils/dataset_diff/` | 116 | 表格資料列差異比對（CDC 風格） |
 | `utils/gettext_catalog/` | 362 | GNU gettext 目錄 I/O（解析 .po、編譯／讀取 .mo、訊息查詢） |
 | `utils/i18n_test/` | 228 | 國際化／在地化測試輔助 |
 | `utils/json_contract/` | 158 | JSON 契約／快照比對：`match_json`、`diff_json`、`snapshot_json` |
@@ -650,7 +650,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.15 韌性、流量控制與設定
 
-> 14 個套件、約 2,033 行。
+> 14 個套件、約 2,037 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -662,7 +662,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/dotenv/` | 165 | `.env` 檔解析與序列化 |
 | `utils/feature_flags/` | 191 | 功能旗標評估，含目標規則與決定性灰度 |
 | `utils/idempotency/` | 142 | 冪等鍵儲存與已存回應重放 |
-| `utils/layered_config/` | 110 | 分層設定解析 |
+| `utils/layered_config/` | 114 | 分層設定解析 |
 | `utils/optimistic/` | 135 | 樂觀併發的版本化儲存 |
 | `utils/rate_limit/` | 204 | 用戶端限流：token bucket、滑動視窗、throttle |
 | `utils/resilience/` | 146 | 韌性原語：退避重試與斷路器 |
@@ -708,11 +708,11 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `mouse_aliases.py` | 39 | 單鍵點擊別名（`AC_click_left` 等），executor 與 callback executor 共用。 |
 | `flags.py` | 19 | 旗標讀取 `as_bool`：依拼法（`"true"`／`"yes"`／`"on"`／`"1"`）而非 Python 真值判斷，所以 JSON、CLI、MCP 傳來的 `"false"` 是關；所有 adapter 與流程指令共用。 |
 
-#### `utils/mcp_server/`（18,802 行，678 個工具）— 最大子系統
+#### `utils/mcp_server/`（18,804 行，678 個工具）— 最大子系統
 
 | 檔案 | 行數 | 職責 |
 | --- | ---: | --- |
-| `tools/_factories.py` | 9,023 | 工具工廠：每個函式回傳一個領域的 `MCPTool` 清單（把 `AC_*` 能力包成 MCP 工具）。 |
+| `tools/_factories.py` | 9,025 | 工具工廠：每個函式回傳一個領域的 `MCPTool` 清單（把 `AC_*` 能力包成 MCP 工具）。 |
 | `tools/_handlers.py` | 545 | 把 MCP 工具呼叫橋接到 AutoControl 無頭 API 的 adapter；主題模組拆完之後這裡留的是資料／文字／HTTP 那一類與 WebRunner 橋接。 |
 | `tools/_handlers_qa.py` | 419 | 同一種 adapter，QA 主題：斷言 DSL、資料驅動、SQL／PDF／郵件／HTTP 步驟、codegen、視覺回歸、狀態機、flaky 偵測與隔離、suite runner、無障礙稽核、裝置矩陣、媒體斷言。從 `_handlers.py` 依主題拆出的第一塊（750 行上限）；兩者互不引用。 |
 | `tools/_handlers_input.py` | 218 | 同一種 adapter，輸入主題：滑鼠、鍵盤、虛擬手把（ViGEm）。 |
@@ -746,7 +746,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `rate_limit.py` | 48 | 工具呼叫的 token bucket 限流。 |
 | `__main__.py` | 92 | `je_auto_control_mcp` console script 進入點。 |
 
-#### `utils/remote_desktop/`（13,000 行／56 檔）
+#### `utils/remote_desktop/`（13,014 行／56 檔）
 
 三條傳輸路徑並存：**TCP**（JPEG 影格）、**WebSocket**（同協定換傳輸）、**WebRTC**（aiortc 視訊 + DataChannel）。
 
@@ -787,7 +787,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `webrtc_inspector.py` | 138 | 行程級的 `StatsSnapshot` 滾動視窗。 |
 | `input_dispatch.py` | 161 | 在主機端套用輸入訊息。 |
 | `session_recorder.py` | 139 | 以 PyAV 把 WebRTC 影格錄成 mp4。 |
-| `totp.py` | 146 | RFC 6238 TOTP（零外部相依）。 |
+| `totp.py` | 160 | RFC 6238 TOTP（零外部相依）。 |
 | `file_sync.py` | 141 | 輪詢式資料夾鏡像。 |
 | `transport.py` | 126 | 可插拔的型別化訊息傳輸。 |
 | `host_access.py` | 112 | TCP 主機的檢視端核准與存取控制：`PendingViewer`、權限字串、分享碼的 TOTP 候選值、IP 白名單。`host` 與 `host_client` 共用,所以獨立成模組。 |
@@ -1070,9 +1070,9 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 
 | 層／子系統 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `gui/` | 95 | 27,607 |
-| `utils/mcp_server/` | 35 | 18,802 |
-| `utils/remote_desktop/` | 56 | 13,000 |
+| `gui/` | 95 | 27,609 |
+| `utils/mcp_server/` | 35 | 18,804 |
+| `utils/remote_desktop/` | 56 | 13,014 |
 | `utils/executor/` | 8 | 9,533 |
 | `utils/usb/` | 17 | 4,524 |
 | `je_auto_control/`（頂層 3 檔） | 3 | 2,410 |
@@ -1090,6 +1090,6 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `osx/` | 17 | 925 |
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 846 |
-| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 680 | 55,757 |
-| **總計** | **1,056** | **155,351** |
+| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 680 | 55,833 |
+| **總計** | **1,056** | **155,445** |
 

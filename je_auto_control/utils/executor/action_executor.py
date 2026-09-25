@@ -4015,14 +4015,14 @@ def _type_unicode_text(text: str, modifier: str = "ctrl") -> Dict[str, Any]:
 
 
 def _grid_cell(boxes: Any, row: Any, col: Any,
-               row_tolerance: Any = 10) -> Dict[str, Any]:
+               row_tolerance: Any = 10, box_format: str = "xywh") -> Dict[str, Any]:
     """Adapter: address a grid cell by (row, col) from a JSON list of boxes."""
     import json
     from je_auto_control.utils.grid_locator import locate_cell
     if isinstance(boxes, str):
         boxes = json.loads(boxes)
     return locate_cell(list(boxes), int(row), int(col),
-                       row_tolerance=int(row_tolerance))
+                       row_tolerance=int(row_tolerance), box_format=str(box_format))
 
 
 def _match_template(template: str, min_score: Any = 0.8, scales: Any = None,

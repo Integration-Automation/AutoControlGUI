@@ -26,7 +26,7 @@
 
 ``diff_rows`` 為兩個資料列集合建立鍵索引,回傳 ``{added, removed, changed, unchanged}``:``added`` /
 ``removed`` / ``unchanged`` 是資料列清單,而 ``changed`` 收錄 ``{key, old, new}``(單欄鍵為純量,複合鍵
-為 list)。鍵重複時以最後一列為準。``cell_changes`` 把變更的列展開成 ``{key, column, old, new}`` 記錄。
+為 list)。鍵重複時以最後一列為準;鍵為空或某列缺少鍵欄位時丟出 ``ValueError``。NaN 儲存格視為等於 NaN。``cell_changes`` 把變更的列展開成 ``{key, column, old, new}`` 記錄。
 ``summarize_diff`` 統計每個分類的數量。
 
 執行器命令

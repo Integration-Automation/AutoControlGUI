@@ -31,6 +31,7 @@
 執行器命令
 ----------
 
-``AC_grid_cell`` 接受 ``boxes``(JSON ``[[x, y, w, h], ...]`` 清單,例如來自前一個 ``AC_locate_all_image`` 步驟)
-以及 ``row`` / ``col`` / ``row_tolerance``,並回傳儲存格 dict。它以 MCP 工具 ``ac_grid_cell`` 以及 Script Builder
+``AC_grid_cell`` 接受 ``boxes``(JSON ``[[x, y, w, h], ...]`` 清單)以及 ``row`` / ``col`` / ``row_tolerance``,
+並回傳儲存格 dict。``AC_locate_all_image`` 回傳的是 ``[left, top, right, bottom]``,所以把它的輸出傳進來時請加
+``"box_format": "ltrb"``(``cluster_grid`` / ``locate_cell`` 也接受同樣的 ``box_format``;dict 與 OCR 比對物件依欄位讀取)。它以 MCP 工具 ``ac_grid_cell`` 以及 Script Builder
 中 **Mouse** 分類下的命令提供。

@@ -5404,8 +5404,9 @@ def grid_locator_tools() -> List[MCPTool]:
     return [
         MCPTool(
             name="ac_grid_cell",
-            description=("Address a table cell: cluster 'boxes' ([[x,y,w,h],...] "
-                         "from an image/OCR enumeration) into a grid and return "
+            description=("Address a table cell: cluster 'boxes' ([[x,y,w,h],...], or "
+                         "[[left,top,right,bottom],...] with box_format='ltrb' as "
+                         "ac_locate_all_image returns) into a grid and return "
                          "the centre of cell ('row','col') (0-based). "
                          "Returns {found, center, row, col, rows, cols}."),
             input_schema=schema({
@@ -5413,7 +5414,8 @@ def grid_locator_tools() -> List[MCPTool]:
                           "items": {"type": "array",
                                     "items": {"type": "integer"}}},
                 "row": {"type": "integer"}, "col": {"type": "integer"},
-                "row_tolerance": {"type": "integer"}},
+                "row_tolerance": {"type": "integer"},
+                "box_format": {"type": "string", "enum": ["xywh", "ltrb"]}},
                 required=["boxes", "row", "col"]),
             handler=h_exec.grid_cell,
             annotations=READ_ONLY,

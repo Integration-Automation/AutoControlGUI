@@ -2067,6 +2067,8 @@ def _add_misc_specs(specs: List[CommandSpec]) -> None:
             FieldSpec("row", FieldType.INT, placeholder="0"),
             FieldSpec("col", FieldType.INT, placeholder="0"),
             FieldSpec("row_tolerance", FieldType.INT, optional=True, default=10),
+            FieldSpec("box_format", FieldType.ENUM, optional=True, default="xywh",
+                      choices=("xywh", "ltrb")),
         ),
         description="Resolve a table cell centre by row/col from cell boxes.",
     ))
