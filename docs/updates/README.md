@@ -58,6 +58,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260925-47 | 2026-09-25 | The MCP server's subscription handlers move from server.py into _subscriptions.py, before subscriptions/listen joins them; no behaviour change | #refactor #mcp | [2026-09-d](2026-09-d.md) |
 | U-20260925-46 | 2026-09-25 | MCP 2026-07-28 over Streamable HTTP: a stateless POST mirrors its body into MCP-Protocol-Version, Mcp-Method and Mcp-Name, a disagreeing header is 400 HeaderMismatch, version and metadata errors are 400 and unknown methods 404, and no session is kept | #feature #mcp | [2026-09-d](2026-09-d.md) |
 | U-20260925-45 | 2026-09-25 | The Flow Editor reads and writes action files through the Script Builder's helpers: files with a BOM open, wrapped files keep their other keys, and saves are atomic | #bugfix #gui | [2026-09-d](2026-09-d.md) |
 | U-20260925-44 | 2026-09-25 | The region selector answers in native pixels on every screen: one overlay per screen, where a single overlay offset every region by the virtual desktop's origin and left scaled screens uncovered and in logical pixels | #bugfix #gui #hidpi | [2026-09-d](2026-09-d.md) |
@@ -288,7 +289,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | File | Period | Entries |
 |---|---|---:|
-| [2026-09-d.md](2026-09-d.md) | 2026-09 | 14 |
+| [2026-09-d.md](2026-09-d.md) | 2026-09 | 15 |
 | [2026-09-c.md](2026-09-c.md) | 2026-09 | 38 |
 | [2026-09-b.md](2026-09-b.md) | 2026-09 | 68 |
 | [2026-09.md](2026-09.md) | 2026-09 | 79 |

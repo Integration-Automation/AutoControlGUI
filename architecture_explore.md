@@ -19,8 +19,8 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 
 | 指標 | 數值 |
 | --- | ---: |
-| Python 模組總數（含周邊子專案） | 1,058 |
-| 程式碼總行數 | 154,107 |
+| Python 模組總數（含周邊子專案） | 1,059 |
+| 程式碼總行數 | 154,137 |
 | `je_auto_control/utils/` 子套件數 | 310 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 775 |
 | 套件門面 `__all__` 公開名稱數 | 1,244 |
@@ -494,7 +494,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.9 AI / Agent / LLM
 
-> 13 個套件、約 22,845 行。
+> 13 個套件、約 22,875 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -507,7 +507,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/cua_action/` | 204 | 標準化 computer-use 動作結構（Anthropic／OpenAI → `AC_*`） |
 | `utils/llm/` | 365 | 自然語言 → action list 規劃器 + Anthropic／null 後端 |
 | `utils/mcp_registry/` | 97 | MCP registry `server.json` 資訊清單產生（可被發現） |
-| `utils/mcp_server/` | 18,516 | **無頭 MCP 伺服器**（16K LOC，預設註冊 678 個工具＝659 個 `ac_*` + 19 個別名）：stdio + HTTP 傳輸、工具工廠與處理器、資源、prompt、稽核、限流、外掛熱重載 |
+| `utils/mcp_server/` | 18,546 | **無頭 MCP 伺服器**（16K LOC，預設註冊 678 個工具＝659 個 `ac_*` + 19 個別名）：stdio + HTTP 傳輸、工具工廠與處理器、資源、prompt、稽核、限流、外掛熱重載 |
 | `utils/tool_use_schema/` | 195 | 把 `AC_*` 指令匯出成 Claude／OpenAI 的 tool-use schema |
 | `utils/trajectory_eval/` | 113 | agent 軌跡評估：依評分規準為一次執行打分 |
 | `utils/vision/` | 538 | VLM 元素定位器（依描述找元素）+ Anthropic／OpenAI／null 後端 |
@@ -707,7 +707,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `action_redaction.py` | 83 | 記錄與紀錄鍵用的遮蔽：`AC_secret_*` 的參數（金庫通行碼、機密值）在寫進 log、當成結果紀錄的鍵之前換成 `***`，巢狀在區塊指令裡的也一樣。 |
 | `mouse_aliases.py` | 39 | 單鍵點擊別名（`AC_click_left` 等），executor 與 callback executor 共用。 |
 
-#### `utils/mcp_server/`（18,516 行，678 個工具）— 最大子系統
+#### `utils/mcp_server/`（18,546 行，678 個工具）— 最大子系統
 
 | 檔案 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -723,13 +723,14 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `tools/_handlers_executor_bridge.py` | 1,429 | 252 個純委派（中位數 3 行，最長的 16 行全是參數簽章）：每個都是 `from action_executor import _x` 再 `return _x(...)`，沒有分支邏輯。超過 750 行,理由記在 `Progress.md` 的豁免表（再切只能照 MCP 工廠領域分,會把同一種委派散進十幾個沒有語意邊界的檔）。 |
 | `tools/_handlers_locators.py` | 436 | 同一種 adapter，定位主題：無障礙樹、智慧等待、自我修復、螢幕觀察、座標空間、視覺與 OCR、影像去重、元件倉庫、A/B 定位。 |
 | `tools/_handlers_operations.py` | 647 | 同一種 adapter，營運主題：agent 與其記憶／追蹤、治理與合規、成本與遙測、失敗掛鉤、看門狗、速率限制、檢查點、核可、產物與資產、測試選擇與分片、佇列與 saga。 |
-| `server.py` | 744 | JSON-RPC 2.0 over stdio 的最小 MCP 伺服器：連線範圍狀態、行內／併發分派、工具與 resource／prompt 處理器；握手時代的方法表（`_run_method`），兩個協定時代的逐請求分派在 `_stateless.py`。 |
+| `server.py` | 691 | JSON-RPC 2.0 over stdio 的最小 MCP 伺服器：連線範圍狀態、行內／併發分派、工具與 resource／prompt 處理器；握手時代的方法表（`_run_method`），兩個協定時代的逐請求分派在 `_stateless.py`。 |
 | `http_transport.py` | 657 | MCP 的 HTTP 傳輸；宣告 2026-07-28 的請求走 `_http_stateless.py` 的標頭規則，不發 session。 |
 | `_http_stateless.py` | 185 | MCP 2026-07-28 在 Streamable HTTP 上的規則：`MCP-Protocol-Version`／`Mcp-Method`／`Mcp-Name` 必須與 body 相符（`=?base64?…?=` 先解碼），不符是 400＋`HeaderMismatch`；版本與中繼資料錯誤 400、未知方法 404。純函式，由 `http_transport.py` 回覆。 |
 | `http_sessions.py` | 247 | MCP 的 HTTP 傳輸用的 session 身分:`Mcp-Session-Id` 註冊表,以及每個 session 那條常駐的 server→client SSE 串流。 |
 | `_client_requests.py` | 254 | 伺服器主動送出的請求：`roots/list`／`elicitation/create`／`sampling/createMessage`,對應表與回應路由,以及破壞性工具的確認交握。只屬於握手時代：無狀態請求裡送出會丟例外。 |
 | `_stateless.py` | 255 | MCP 2026-07-28 無狀態版本，與以 `initialize` 握手的版本並存：逐請求的 `_meta`（版本、client 能力、`logLevel`）、`server/discover`、結果的 `resultType`／`serverInfo`／快取提示、`-32020`～`-32022` 錯誤碼，以及兩個時代逐請求分派的 mixin。 |
 | `_input_required.py` | 160 | 多輪往返請求（MRTR）：`input_required` 結果，與 HMAC 簽章、會過期、只兌換一次的 `requestState`；破壞性工具確認在無狀態請求裡的形式。 |
+| `_subscriptions.py` | 83 | 變更通知：握手時代的 `resources/subscribe`／`unsubscribe`，以及 `resources/updated`、`tools/list_changed` 的送出（不送給無狀態的對端）。 |
 | `_protocol.py` | 219 | JSON-RPC 線路格式：版本與識別常數、`_MCPError`、決定失敗工具行為的錯誤 tuple、envelope 產生器、工具回傳值轉 `content` 區塊。不碰伺服器狀態。 |
 | `resources.py` | 307 | MCP resource 提供者。 |
 | `prompts.py` | 220 | MCP prompt 目錄。 |
@@ -1068,7 +1069,7 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | 層／子系統 | 檔案數 | 行數 |
 | --- | ---: | ---: |
 | `gui/` | 94 | 27,525 |
-| `utils/mcp_server/` | 34 | 18,516 |
+| `utils/mcp_server/` | 35 | 18,546 |
 | `utils/remote_desktop/` | 56 | 12,912 |
 | `utils/executor/` | 7 | 9,504 |
 | `utils/usb/` | 17 | 4,524 |
@@ -1088,5 +1089,5 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 846 |
 | 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 679 | 54,959 |
-| **總計** | **1,052** | **154,042** |
+| **總計** | **1,053** | **154,072** |
 

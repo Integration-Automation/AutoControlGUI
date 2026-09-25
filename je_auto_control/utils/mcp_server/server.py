@@ -7,7 +7,6 @@ stdio line is one JSON-RPC message — no Content-Length framing — matching
 the MCP stdio spec.
 """
 import contextlib
-import functools
 import itertools
 import json
 import sys
@@ -44,6 +43,7 @@ from je_auto_control.utils.mcp_server._input_required import (
     AnsweredByGate, RequestStateSigner,
 )
 from je_auto_control.utils.mcp_server._stateless import StatelessDispatchMixin
+from je_auto_control.utils.mcp_server._subscriptions import SubscriptionMixin
 from je_auto_control.utils.mcp_server._protocol import (
     PROTOCOL_VERSION,  # noqa: F401  # reason: re-exported; callers import it from server
     _capture_error_screenshot, negotiate_protocol_version,
@@ -57,7 +57,7 @@ from je_auto_control.utils.mcp_server._protocol import (
 WORKER_DRAIN_TIMEOUT = 10.0
 
 
-class MCPServer(StatelessDispatchMixin, ClientRequestMixin):
+class MCPServer(StatelessDispatchMixin, SubscriptionMixin, ClientRequestMixin):
     """JSON-RPC 2.0 MCP server with a configurable tool registry."""
 
     def __init__(self, tools: Optional[List[MCPTool]] = None,
@@ -237,17 +237,6 @@ class MCPServer(StatelessDispatchMixin, ClientRequestMixin):
             del self._tools[name]
         self._notify_tools_list_changed()
         return True
-
-    def _notify_tools_list_changed(self) -> None:
-        notifier = self._unsolicited_notifier()
-        if notifier is None:
-            return
-        try:
-            notifier("notifications/tools/list_changed", {})
-        except (OSError, RuntimeError, ValueError):
-            autocontrol_logger.exception(
-                "MCP failed to send tools/list_changed",
-            )
 
     def stop(self) -> None:
         """Request the stdio loop to exit at its next iteration."""
@@ -577,48 +566,6 @@ class MCPServer(StatelessDispatchMixin, ClientRequestMixin):
         if content is None:
             raise _MCPError(-32602, f"Unknown resource: {uri}")
         return {"contents": [content]}
-
-    def _handle_resources_subscribe(self,
-                                    params: Dict[str, Any]) -> Dict[str, Any]:
-        uri = params.get("uri")
-        if not isinstance(uri, str) or not uri:
-            raise _MCPError(-32602, "resources/subscribe requires 'uri'")
-        # Hold the lock across the check *and* the subscribe so two concurrent
-        # requests for the same uri cannot both create a provider handle and
-        # leak the loser (a TOCTOU that left an orphaned subscription running).
-        with self._subscriptions_lock:
-            if uri in self._resource_subscriptions:
-                return {}
-            handle = self._resources.subscribe(
-                uri,
-                functools.partial(self._notify_resource_updated, uri),
-            )
-            if handle is None:
-                raise _MCPError(-32602, f"Unsubscribable resource: {uri}")
-            self._resource_subscriptions[uri] = handle
-        return {}
-
-    def _handle_resources_unsubscribe(self,
-                                      params: Dict[str, Any]) -> Dict[str, Any]:
-        uri = params.get("uri")
-        if not isinstance(uri, str) or not uri:
-            raise _MCPError(-32602, "resources/unsubscribe requires 'uri'")
-        with self._subscriptions_lock:
-            handle = self._resource_subscriptions.pop(uri, None)
-        if handle is not None:
-            self._resources.unsubscribe(uri, handle)
-        return {}
-
-    def _notify_resource_updated(self, uri: str) -> None:
-        notifier = self._unsolicited_notifier()
-        if notifier is None:
-            return
-        try:
-            notifier("notifications/resources/updated", {"uri": uri})
-        except (OSError, RuntimeError, ValueError):
-            autocontrol_logger.exception(
-                "MCP failed to send resources/updated for %s", uri,
-            )
 
     def _handle_prompts_get(self, params: Dict[str, Any]) -> Dict[str, Any]:
         name = params.get("name")
