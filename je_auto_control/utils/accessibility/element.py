@@ -49,10 +49,23 @@ def _role_matches(actual: str, wanted: str) -> bool:
     types that. Without accepting the friendly name, ``role="button"`` matches
     nothing on Windows and reports it as "not found" rather than as a mistake.
     """
+    # str(): a role may be a UIA control-type id (50000), which humanize_role
+    # documents -- and ``.lower()`` of an int raised AttributeError.
+    actual, wanted = str(actual), str(wanted)
     if actual.lower() == wanted.lower():
         return True
     from je_auto_control.utils.ax_tree_walk.ax_tree_walk import humanize_role
     return humanize_role(actual).lower() == humanize_role(wanted).lower()
+
+
+def has_area(element: AccessibilityElement) -> bool:
+    """Whether ``element`` has an on-screen rectangle to click.
+
+    A control on a hidden tab page reports ``(0, 0, 0, 0)``; its centre is
+    the corner of the screen.
+    """
+    _left, _top, width, height = element.bounds
+    return width > 0 and height > 0
 
 
 def element_matches(element: AccessibilityElement,
@@ -96,6 +109,8 @@ def rank_by_name(elements: List[AccessibilityElement],
 
     def _key(element: AccessibilityElement):
         left, top, _width, _height = element.bounds
-        return (element.name.strip().lower() != needle, top, left)
+        # Nothing to click first: an empty rectangle sorted ahead of every
+        # visible match on (top, left) = (0, 0).
+        return (not has_area(element), element.name.strip().lower() != needle, top, left)
 
     return sorted(elements, key=_key)

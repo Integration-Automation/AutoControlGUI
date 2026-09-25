@@ -9,7 +9,7 @@ from typing import Any, Dict, List, Optional, Tuple
 from je_auto_control.utils.accessibility.backends import get_backend
 from je_auto_control.utils.accessibility.element import (
     AccessibilityElement, AccessibilityNotAvailableError, element_matches,
-    rank_by_name,
+    has_area, rank_by_name,
 )
 from je_auto_control.utils.accessibility.tree import AXTreeNode
 
@@ -78,6 +78,8 @@ def find_accessibility_elements(name: Optional[str] = None,
                            contains=contains)]
     if contains and name:
         found = rank_by_name(found, name)
+    else:
+        found.sort(key=lambda element: not has_area(element))   # stable: tree order otherwise
     return found[:max(0, int(max_results))]
 
 
@@ -131,7 +133,9 @@ def click_accessibility_element(name: Optional[str] = None,
         name=name, role=role, app_name=app_name, window_title=window_title,
         contains=contains,
     )
-    if element is None:
+    if element is None or not has_area(element):
+        # A match with no on-screen rectangle (a hidden tab page) would be
+        # clicked at its centre, (0, 0).
         return False
     cx, cy = element.center
     from je_auto_control.wrapper.auto_control_mouse import (

@@ -242,6 +242,9 @@ Accessibility 元件搜尋
 沒有焦點時回傳 ``None``；指定 ``app_name`` 時，焦點元素不屬於該應用程式就回傳
 ``None``。無障礙錄製器追蹤的就是這個元素。
 
+有螢幕矩形的相符元素排在前面；沒有矩形的（隱藏分頁上的控制項回報 ``(0, 0, 0, 0)``）
+排在最後，``click_accessibility_element`` 對它回傳 ``False``，不會點到螢幕角落。
+
 當前平台若沒有可用後端會拋出 ``AccessibilityNotAvailableError``。
 Action-JSON 指令：``AC_a11y_list``、``AC_a11y_find``、``AC_a11y_find_all``、
 ``AC_a11y_focused``、``AC_a11y_click``。GUI：**Accessibility** 分頁

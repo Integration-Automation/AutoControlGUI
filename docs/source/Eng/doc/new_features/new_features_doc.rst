@@ -256,6 +256,11 @@ keyboard focus, or ``None`` when nothing is focused; with ``app_name`` it is
 ``None`` unless the focused element belongs to that application. The
 accessibility recorder follows this element.
 
+Matches with an on-screen rectangle come first; one without (a control on a
+hidden tab page reports ``(0, 0, 0, 0)``) comes last, and
+``click_accessibility_element`` returns ``False`` rather than click it at the
+corner of the screen.
+
 Raises ``AccessibilityNotAvailableError`` on platforms where no backend
 is installed. Action-JSON commands: ``AC_a11y_list``, ``AC_a11y_find``,
 ``AC_a11y_find_all``, ``AC_a11y_focused``, ``AC_a11y_click``. GUI:

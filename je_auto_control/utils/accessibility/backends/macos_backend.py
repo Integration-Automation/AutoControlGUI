@@ -135,7 +135,7 @@ def _convert_ax(ax_module, element, app_name: str, pid: int,
         return None
     if role is None and title is None:
         return None
-    bounds = _extract_bounds(position, size)
+    bounds = _extract_bounds(position, size, ax_module)
     return AccessibilityElement(
         name=str(title or ""),
         role=str(role or ""),
@@ -143,12 +143,35 @@ def _convert_ax(ax_module, element, app_name: str, pid: int,
     )
 
 
-def _extract_bounds(position, size) -> tuple:
-    try:
-        if position is None or size is None:
-            return (0, 0, 0, 0)
-        x, y = position
-        w, h = size
-        return (int(x), int(y), int(w), int(h))
-    except (TypeError, ValueError):
+def _extract_bounds(position, size, ax_module=None) -> tuple:
+    """``(x, y, width, height)`` from ``AXPosition`` / ``AXSize``; zeros when unreadable.
+
+    The attributes come back as opaque ``AXValueRef`` objects, not pairs:
+    unpacking them raised ``TypeError``, so every element had the bounds
+    ``(0, 0, 0, 0)`` and a click on it went to the corner of the screen.
+    """
+    point = _ax_pair(ax_module, position, "kAXValueCGPointType", ("x", "y"))
+    extent = _ax_pair(ax_module, size, "kAXValueCGSizeType", ("width", "height"))
+    if point is None or extent is None:
         return (0, 0, 0, 0)
+    return (int(point[0]), int(point[1]), int(extent[0]), int(extent[1]))
+
+
+def _ax_pair(ax_module, value, value_type: str, fields: tuple) -> Optional[tuple]:
+    """Two numbers out of an ``AXValue`` (or a plain pair); ``None`` when unreadable."""
+    if value is None:
+        return None
+    getter = getattr(ax_module, "AXValueGetValue", None)
+    kind = getattr(ax_module, value_type, None)
+    if getter is not None and kind is not None and not isinstance(value, (tuple, list)):
+        try:
+            ok, unwrapped = getter(value, kind, None)
+        except (TypeError, ValueError, AttributeError):
+            ok, unwrapped = False, None
+        if ok and unwrapped is not None:
+            return tuple(float(getattr(unwrapped, field)) for field in fields)
+    try:
+        first, second = value
+        return (float(first), float(second))
+    except (TypeError, ValueError):
+        return None

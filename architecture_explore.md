@@ -20,7 +20,7 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 | 指標 | 數值 |
 | --- | ---: |
 | Python 模組總數（含周邊子專案） | 1,054 |
-| 程式碼總行數 | 152,453 |
+| 程式碼總行數 | 152,566 |
 | `je_auto_control/utils/` 子套件數 | 310 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 775 |
 | 套件門面 `__all__` 公開名稱數 | 1,244 |
@@ -415,7 +415,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.6 OCR 與文字理解
 
-> 19 個套件、約 3,459 行。
+> 19 個套件、約 3,463 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -428,7 +428,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/guardrail/` | 117 | 針對畫面／OCR 文字的啟發式 prompt-injection 防護 |
 | `utils/heading_segment/` | 71 | 判定 OCR 行是標題或內文，建出文件大綱 |
 | `utils/near_dup/` | 108 | 近似重複文字偵測（SimHash／MinHash） |
-| `utils/ocr/` | 1,136 | OCR 引擎門面 + 三個後端（Tesseract／EasyOCR／PaddleOCR）、版面結構化與跨詞比對（`text_span`） |
+| `utils/ocr/` | 1,140 | OCR 引擎門面 + 三個後端（Tesseract／EasyOCR／PaddleOCR）、版面結構化與跨詞比對（`text_span`） |
 | `utils/pii_text/` | 141 | 自由文字中的 PII 偵測與遮蔽（email／電話／SSN／卡號／IP／IBAN） |
 | `utils/readability/` | 140 | 可讀性評分（Flesch、Flesch-Kincaid、Gunning Fog、SMOG、ARI） |
 | `utils/reading_flow/` | 145 | 以遞迴 XY-cut 推導欄位感知的閱讀順序 |
@@ -441,12 +441,12 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.7 無障礙樹與原生控制項
 
-> 16 個套件、約 4,521 行。
+> 16 個套件、約 4,609 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
-| `utils/a11y_audit/` | 359 | 以無障礙樹 + OCR 進行無障礙與 i18n 稽核 |
-| `utils/accessibility/` | 3,032 | 跨平台無障礙樹定位與錄製；Windows UIA／macOS AX／null 三後端。支援限定視窗（換搜尋起點，不是過濾）、逐節點可中斷走訪、`IUIAutomation2` 連線逾時、名稱子字串比對與排序、`control_get_state` 一次讀完值／勾選／選取／數值（密碼欄位不回內容） |
+| `utils/a11y_audit/` | 362 | 以無障礙樹 + OCR 進行無障礙與 i18n 稽核 |
+| `utils/accessibility/` | 3,117 | 跨平台無障礙樹定位與錄製；Windows UIA／macOS AX／null 三後端。支援限定視窗（換搜尋起點，不是過濾）、逐節點可中斷走訪、`IUIAutomation2` 連線逾時、名稱子字串比對與排序、`control_get_state` 一次讀完值／勾選／選取／數值（密碼欄位不回內容） |
 | `utils/ax_events/` | 29 | 反應式 UIA 事件等待（focus-changed） |
 | `utils/ax_props/` | 44 | 讀取豐富 UIA 屬性（enabled／offscreen／help／status／快捷鍵） |
 | `utils/ax_text/` | 102 | 透過 UIA TextPattern 取得原生文字（讀取／尋找／選取／屬性） |
@@ -464,13 +464,13 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.8 元素定位、自我修復與智慧等待
 
-> 23 個套件、約 4,251 行。
+> 23 個套件、約 4,272 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
 | `utils/ab_locator/` | 386 | A/B 定位器框架：同時競速 N 種策略並記錄各自勝率 |
 | `utils/adaptive_timeout/` | 84 | 由觀測到的步驟耗時推導等待逾時，而非硬猜 |
-| `utils/anchor_locator/` | 457 | 錨點定位器：以空間關係組合 影像／OCR／VLM／a11y 四種來源 |
+| `utils/anchor_locator/` | 476 | 錨點定位器：以空間關係組合 影像／OCR／VLM／a11y 四種來源 |
 | `utils/app_idle/` | 109 | 等應用程式不再忙碌，再驅動下一步 |
 | `utils/change_localize/` | 83 | 把畫面變化歸因到實際改變的元素框 |
 | `utils/critic_features/` | 85 | 每步的 critic 特徵集合與規則式步驟評分 |
@@ -485,7 +485,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/locator_repair/` | 117 | 自癒回寫：把修正後的定位器持久化 |
 | `utils/observation/` | 92 | 供 VLM／agent 接地用的 token 預算內、帶索引的 a11y 文字觀察 |
 | `utils/observation_delta/` | 103 | token 預算內的觀察差異：兩個 UI 影格之間變了什麼 |
-| `utils/screen_state/` | 189 | 語義畫面狀態：快照／差異與結構化畫面描述 |
+| `utils/screen_state/` | 191 | 語義畫面狀態：快照／差異與結構化畫面描述 |
 | `utils/scroll_find/` | 103 | 捲動直到目標影像／文字可見 |
 | `utils/self_healing/` | 359 | 自癒定位器：先影像樣板、失敗改用 VLM，並留稽核記錄 |
 | `utils/semantic_recording/` | 460 | 為錄製內容加上語義錨點，支援換機重播與自癒重播 |
@@ -1069,7 +1069,7 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `utils/executor/` | 7 | 9,494 |
 | `utils/usb/` | 17 | 4,524 |
 | `je_auto_control/`（頂層 3 檔） | 3 | 2,410 |
-| `utils/accessibility/` | 14 | 3,032 |
+| `utils/accessibility/` | 14 | 3,117 |
 | `wrapper/` | 19 | 3,615 |
 | `windows/` | 23 | 1,959 |
 | `utils/rest_api/` | 8 | 1,881 |
@@ -1077,12 +1077,12 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `linux_with_x11/` | 19 | 1,281 |
 | `linux_wayland/` | 17 | 2,921 |
 | `utils/triggers/` | 4 | 1,305 |
-| `utils/ocr/` | 9 | 1,136 |
+| `utils/ocr/` | 9 | 1,140 |
 | `utils/usbip/` | 5 | 1,008 |
 | `utils/assertion/` | 3 | 894 |
 | `osx/` | 17 | 925 |
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 846 |
-| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 679 | 54,627 |
-| **總計** | **1,048** | **152,388** |
+| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 679 | 54,651 |
+| **總計** | **1,048** | **152,501** |
 

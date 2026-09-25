@@ -85,7 +85,10 @@ def is_interactive(role: str) -> bool:
     "table" is removed first: the "tab" hint matched table, table cell and
     DataTable, so every unnamed table cell was reported as a missing label.
     """
-    lowered = (role or "").lower().replace("table", " ")
+    # humanize_role: the Windows backend reports ControlType_50000, which
+    # matched no hint, so nothing on Windows was ever audited.
+    from je_auto_control.utils.ax_tree_walk.ax_tree_walk import humanize_role
+    lowered = humanize_role(role or "").lower().replace("table", " ")
     return any(hint in lowered for hint in INTERACTIVE_ROLE_HINTS)
 
 

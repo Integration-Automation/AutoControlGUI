@@ -35,10 +35,16 @@ TOGGLE_STATES = {0: "off", 1: "on", 2: "mixed"}
 
 
 def _prop(raw, property_id: int) -> Any:
-    """Read one UIA property; ``None`` when it cannot be read."""
+    """Read one UIA property; ``None`` when it cannot be read.
+
+    ``UIA_ERRORS`` as every other UIA read uses: it holds ``COMError``
+    (element no longer available -- its window closed), which no containment
+    boundary catches and which aborted a whole action script.
+    """
+    from je_auto_control.utils.accessibility.backends.windows_query import UIA_ERRORS
     try:
         return raw.GetCurrentPropertyValue(property_id)
-    except (OSError, AttributeError, ValueError):
+    except UIA_ERRORS:
         return None
 
 

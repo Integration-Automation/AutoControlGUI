@@ -17,7 +17,10 @@ import math
 from dataclasses import asdict, dataclass
 from typing import Any, Dict, List, Optional, Tuple
 
+from je_auto_control.utils.accessibility.element import AccessibilityNotAvailableError
 from je_auto_control.utils.exception.exceptions import AutoControlException
+from je_auto_control.utils.ocr.backends.base import OCRBackendNotAvailableError
+from je_auto_control.utils.vision.backends.base import VLMNotAvailableError
 
 
 # Errors a backend adapter treats as "simply not on screen" and turns into an
@@ -26,6 +29,10 @@ from je_auto_control.utils.exception.exceptions import AutoControlException
 # (from locate_text_center) — without it a plain not-found would crash the
 # whole anchor locate instead of returning found=False.
 _LOCATE_ERRORS = (OSError, RuntimeError, ValueError, AutoControlException)
+# ...except a backend that is not set up, which is a configuration error: no
+# OCR engine came back as {"found": False, "error": "anchor not found"}.
+_UNAVAILABLE = (AccessibilityNotAvailableError, OCRBackendNotAvailableError,
+                VLMNotAvailableError)
 
 
 # Spatial relations the wrapper understands.
@@ -337,6 +344,8 @@ def _image_center(locator: Locator) -> Optional[Tuple[int, int]]:
             locator.template_path,
             detect_threshold=locator.detect_threshold,
         )
+    except _UNAVAILABLE:
+        raise
     except _LOCATE_ERRORS:
         return None
 
@@ -350,6 +359,8 @@ def _image_candidates(locator: Locator) -> List[_Bbox]:
             locator.template_path,
             detect_threshold=locator.detect_threshold,
         )
+    except _UNAVAILABLE:
+        raise
     except _LOCATE_ERRORS:
         return []
     return [_Bbox(*map(int, row[:4])) for row in rows
@@ -364,6 +375,8 @@ def _ocr_center(locator: Locator) -> Optional[Tuple[int, int]]:
             region=list(locator.region) if locator.region else None,
             min_confidence=locator.min_confidence,
         )
+    except _UNAVAILABLE:
+        raise
     except _LOCATE_ERRORS:
         return None
 
@@ -376,6 +389,8 @@ def _ocr_candidates(locator: Locator) -> List[_Bbox]:
             region=list(locator.region) if locator.region else None,
             min_confidence=locator.min_confidence,
         )
+    except _UNAVAILABLE:
+        raise
     except _LOCATE_ERRORS:
         return []
     return [_Bbox(x1=m.x, y1=m.y, x2=m.x + m.width, y2=m.y + m.height)
@@ -389,6 +404,8 @@ def _vlm_point(locator: Locator) -> Optional[Tuple[int, int]]:
             _require(locator.description, locator, "description"),
             model=locator.model,
         )
+    except _UNAVAILABLE:
+        raise
     except _LOCATE_ERRORS:
         return None
 
@@ -401,6 +418,8 @@ def _a11y_point(locator: Locator) -> Optional[Tuple[int, int]]:
         element = find_accessibility_element(
             name=locator.name, role=locator.role, app_name=locator.app_name,
         )
+    except _UNAVAILABLE:
+        raise
     except _LOCATE_ERRORS:
         return None
     if element is None:

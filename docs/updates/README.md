@@ -58,6 +58,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260925-30 | 2026-09-25 | Accessibility and OCR at their edges: a closed window's COMError is contained, FindText's NULL range is not found, macOS bounds are real, elements with no rectangle are not clicked, audits read Windows roles, the recorder survives framework errors, the Linux search has a node budget | #bugfix #accessibility #ocr | [2026-09-c](2026-09-c.md) |
 | U-20260925-29 | 2026-09-25 | The GUI exit probes time the exit itself, not interpreter start-up, so a loaded machine no longer fails them | #testing #gui | [2026-09-c](2026-09-c.md) |
 | U-20260925-28 | 2026-09-25 | Shell, clipboard, adb and USB/IP helpers at their edges: AC_shell_to_var refuses cmd syntax for batch files, timeouts end the whole process tree, launch failures fail the action, secrets stay out of logs, an empty Linux clipboard is empty, USB/IP device lists, speeds, idle devices and isochronous URBs | #bugfix #security #usbip | [2026-09-c](2026-09-c.md) |
 | U-20260925-27 | 2026-09-25 | Code generation, the command-line tools and report writers at their edges: MCP --read-only reaches the server, MCP stdio and CLI output are UTF-8, generated tests fail with their actions, ${var} goes through the executor, action shapes are checked, SARIF / SOP / Allure output | #bugfix #codegen #mcp #cli | [2026-09-c](2026-09-c.md) |
@@ -272,7 +273,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | File | Period | Entries |
 |---|---|---:|
-| [2026-09-c.md](2026-09-c.md) | 2026-09 | 35 |
+| [2026-09-c.md](2026-09-c.md) | 2026-09 | 37 |
 | [2026-09-b.md](2026-09-b.md) | 2026-09 | 68 |
 | [2026-09.md](2026-09.md) | 2026-09 | 79 |
 | [2026-08-f.md](2026-08-f.md) | 2026-08 | 1 |

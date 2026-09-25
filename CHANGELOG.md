@@ -80,6 +80,10 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
   `ac.executor.execute_action(..., raise_on_error=True)`, so they fail at
   the first failed action; actions holding `${...}` go through the executor.
 - Several `je_auto_control_mcp --list-*` flags print one JSON object.
+- Accessibility matches with an on-screen rectangle come first, and
+  `click_accessibility_element` returns `False` for a match without one.
+- Anchor locate raises when its OCR, accessibility or VLM backend is not
+  set up, instead of reporting the anchor as not found.
 - `AC_shell_command` fails when its program cannot start (it reported
   success) and logs only the program, not its arguments.
 - `AC_read_file_to_var` reads `utf-8-sig` by default.
@@ -397,6 +401,14 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
   and takes lone surrogates and sigil runs in Robot output.
 - SARIF and SOP writers take lone surrogates; SOP creates its folder and
   writes atomically; Allure results carry start and stop times.
+- A closed window's `COMError` no longer escapes UIA state reads; `find_text`
+  no longer finds absent text.
+- macOS accessibility elements report their real bounds.
+- Accessibility audits and `describe_screen` work on Windows.
+- The accessibility recorder keeps running after a backend error; the
+  Linux control search is bounded.
+- Mixed text formatting reads as unknown; Tesseract errors other than a
+  missing binary say what failed; integer roles match.
 - `AC_shell_to_var` refuses cmd metacharacters in a batch file's
   arguments, and its timeout, like MCP `shell_command`'s, ends everything
   the command started.
