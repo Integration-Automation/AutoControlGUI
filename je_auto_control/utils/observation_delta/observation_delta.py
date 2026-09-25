@@ -74,7 +74,10 @@ def summarize_delta(delta: Dict[str, List[Any]], *, max_lines: int = 40) -> str:
     lines = [_line("+", element) for element in delta["added"]]
     lines += [_line("~", item["after"], f' ({"/".join(item["fields"])})')
               for item in delta["changed"]]
-    lines += [_line("-", element) for element in delta["removed"]]
+    # No index on a removed element: it was the previous frame's, which now
+    # names a different element, and an agent acting on it hit that one.
+    lines += [_line("-", {key: value for key, value in element.items() if key != "index"})
+              for element in delta["removed"]]
     if len(lines) > max_lines:
         hidden = len(lines) - max_lines
         lines = lines[:max_lines] + [f"… (+{hidden} more)"]
@@ -87,11 +90,27 @@ def delta_observation(prev: Sequence[Element], curr: Sequence[Element], *,
                       iou_threshold: float = 0.5, move_threshold: int = 5,
                       max_lines: int = 40) -> str:
     """Index both frames, diff them and render the budget-capped change summary."""
+    delta = observation_delta_index(prev, curr, viewport=viewport, max_elements=max_elements,
+                                    interactive_only=interactive_only,
+                                    iou_threshold=iou_threshold, move_threshold=move_threshold)
+    return summarize_delta(delta, max_lines=max_lines)
+
+
+def observation_delta_index(prev: Sequence[Element], curr: Sequence[Element], *,
+                            viewport: Optional[Sequence[int]] = None,
+                            max_elements: int = 80, interactive_only: bool = True,
+                            iou_threshold: float = 0.5,
+                            move_threshold: int = 5) -> Dict[str, List[Any]]:
+    """The :func:`delta_index` of both frames as observed (flattened, filtered, clipped).
+
+    The counts a summary reports must come from the same frames as the summary:
+    diffing the raw lists said ``added: 0`` beside a ``+`` line for a nested
+    button, and ``changed: 1`` for a label the summary left out.
+    """
     from je_auto_control.utils.observation import observation_index
     prev_idx = observation_index(prev, viewport=viewport, max_elements=max_elements,
                                  interactive_only=interactive_only)
     curr_idx = observation_index(curr, viewport=viewport, max_elements=max_elements,
                                  interactive_only=interactive_only)
-    delta = delta_index(prev_idx, curr_idx, iou_threshold=iou_threshold,
-                        move_threshold=move_threshold)
-    return summarize_delta(delta, max_lines=max_lines)
+    return delta_index(prev_idx, curr_idx, iou_threshold=iou_threshold,
+                       move_threshold=move_threshold)

@@ -20,6 +20,7 @@ _VERSION = "00"
 _TRACE_ID_RE = re.compile(r"^[0-9a-f]{32}$")
 _SPAN_ID_RE = re.compile(r"^[0-9a-f]{16}$")
 _FLAGS_RE = re.compile(r"^[0-9a-f]{2}$")
+_VERSION_RE = re.compile(r"^[0-9a-f]{2}$")
 # A simple key, or a multi-tenant ``tenant@system`` key (W3C Trace Context).
 _TRACESTATE_KEY_RE = re.compile(
     r"^(?:[a-z0-9][_0-9a-z\-*/]{0,240}@[a-z][_0-9a-z\-*/]{0,13}|[a-z][_0-9a-z\-*/]{0,255})$")
@@ -108,19 +109,24 @@ def format_tracestate(items: List[Tuple[str, str]]) -> str:
 
 
 def parse_traceparent(header: str) -> SpanContext:
-    """Parse a ``traceparent`` header into a :class:`SpanContext`."""
+    """Parse a ``traceparent`` header into a :class:`SpanContext`.
+
+    A version above ``00`` is read as ``00`` and any fields after the flags
+    are ignored (W3C Trace Context 4.3), so a newer caller's trace continues
+    instead of a new one starting; ``ff`` is invalid.
+    """
     parts = (header or "").strip().split("-")
-    if len(parts) != 4:
+    version = parts[0]
+    if not _VERSION_RE.fullmatch(version) or version == "ff":
+        raise TraceContextError(f"invalid traceparent version: {version!r}")
+    if len(parts) < 4 or (version == _VERSION and len(parts) != 4):
         raise TraceContextError(f"traceparent must have 4 fields: {header!r}")
-    version, trace_id, span_id, flags = parts
-    _validate_traceparent_fields(version, trace_id, span_id, flags)
+    trace_id, span_id, flags = parts[1:4]
+    _validate_traceparent_fields(trace_id, span_id, flags)
     return SpanContext(trace_id, span_id, int(flags, 16))
 
 
-def _validate_traceparent_fields(version: str, trace_id: str, span_id: str,
-                                 flags: str) -> None:
-    if version != _VERSION:
-        raise TraceContextError(f"unsupported traceparent version: {version!r}")
+def _validate_traceparent_fields(trace_id: str, span_id: str, flags: str) -> None:
     # fullmatch: "$" also matches before a trailing newline, so an id ending
     # in "\n" passed and was written back into an outgoing header.
     if not _TRACE_ID_RE.fullmatch(trace_id) or trace_id == "0" * 32:

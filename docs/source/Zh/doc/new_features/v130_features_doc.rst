@@ -24,7 +24,7 @@ SSIM 是標準的視覺回歸度量:容忍輕微光照變化,對結構變化(文
     for box in ssim_changed_regions("golden.png", ignore=[[0, 0, 120, 30]]):
         print(box["x"], box["y"], box["width"], box["height"])
 
-``ssim_compare`` 回傳整張影像的平均 SSIM(``1.0`` = 完全相同);``current`` 預設為對選用 ``region`` 的螢幕擷取。
+``ssim_compare`` 回傳整張影像的平均 SSIM,範圍 ``-1..1``(``1.0`` = 完全相同),常數依影像的動態範圍縮放(8 位元為 255、0..1 浮點為 1.0);``current`` 預設為對選用 ``region`` 的螢幕擷取。
 ``ignore`` 是一組從分數與變化偵測中排除的 ``[x, y, w, h]`` 方框。``ssim_changed_regions`` 標記局部不相似度
 ``1 - SSIM`` 超過 ``threshold`` 的像素,將相連者(``min_area`` 以上)分群,回傳 ``{x, y, width, height, area,
 center}``,由大到小。比較兩張不同尺寸的影像會丟出 ``ValueError``。

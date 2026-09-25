@@ -77,6 +77,15 @@ class HostTrayIcon(QObject):
         if reason == QSystemTrayIcon.ActivationReason.Trigger:
             self.open_requested.emit()
 
+    def set_hosting(self, hosting: bool) -> None:
+        """Keep the application running without a window while a host runs.
+
+        Closing the last window quits the application again once the host
+        stops. Installing the tray used to switch that off for good, so
+        closing the main window left the process running with no host.
+        """
+        QApplication.setQuitOnLastWindowClosed(not hosting)
+
     def hide(self) -> None:
         self._tray.hide()
 
@@ -87,7 +96,6 @@ def install_host_tray(*, on_open: Callable, on_stop: Callable,
     """Build a tray icon if the system supports it; return None otherwise."""
     if not QSystemTrayIcon.isSystemTrayAvailable():
         return None
-    QApplication.setQuitOnLastWindowClosed(False)
     tray = HostTrayIcon(parent=parent)
     tray.open_requested.connect(on_open)
     tray.stop_requested.connect(on_stop)

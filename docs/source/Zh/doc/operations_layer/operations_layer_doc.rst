@@ -60,6 +60,9 @@ coturn TURN 設定包
 - ``README.txt`` — 含 ``turn:`` / ``turns:`` URL、使用者名稱、密鑰的
   快速參考
 
+含換行的欄位，或含 ``:`` 的 ``user``，會以 ``ValueError`` 拒絕（命令列回傳
+結束碼 2）；否則它會在 ``turnserver.conf`` 裡加入自己的指令。
+
 Headless::
 
    from pathlib import Path
@@ -105,6 +108,9 @@ REST API 圍繞三個面向重建：bearer token 認證、稽核軌跡、以及 
   ``locked_out``\ （回 429）；正確的 token 永遠不會被鎖，鎖定也不會是全域的。
 - POST 的內文要等路徑與 token 檢查通過才讀取，未認證的請求直接得到 401／429，
   不會被解析。
+- 401 會帶 ``WWW-Authenticate: Bearer realm="autocontrol"``\ （送了錯誤 token
+  時加上 ``error="invalid_token"``）。已知路徑用了另一個方法會得到 405 與
+  ``Allow`` 標頭；未知路徑仍是 404。
 
 Headless::
 
@@ -143,7 +149,9 @@ CLI::
 
 動作（POST）：
 
-- ``/execute`` — body ``{"actions": [...]}`` — 執行動作清單
+- ``/execute`` — body ``{"actions": [...], "raise_on_error": false}`` — 執行動作清單；
+  ``raise_on_error`` 為 true 時在第一個失敗的動作停下，回 ``{"ok": false, "error": ...}``
+  （成功則回 ``{"ok": true, "result": ...}``）
 - ``/execute_file`` — body ``{"path": "..."}`` — 執行 JSON 動作檔
 
 Executor 指令::
@@ -200,6 +208,10 @@ Headless::
    results = client.broadcast_execute(
        actions=[["AC_get_mouse_position"]],
    )
+
+傳 ``raise_on_error=True`` 時，每台主機在第一個失敗的動作停下，並以
+``ok: false`` 附上錯誤回報；否則 ``ok`` 只代表主機有回應，動作失敗記在
+``result`` 裡。DAG runner 的遠端節點與 Admin Console 分頁都會傳這個參數。
 
 持久化：主機儲存在 ``~/.je_auto_control/admin_hosts.json``\ （POSIX 上
 模式 0600）。建構時自動 reload。

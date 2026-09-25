@@ -5,7 +5,8 @@ The image-redaction module blurs PII in screenshots, but text scraped from a UI,
 OCR, the clipboard, an LLM prompt/response, or a log line had no string-level
 equivalent — so PII could leak into action records, audit logs, or a model call.
 ``detect_pii`` / ``redact_pii_text`` find and mask emails, phone numbers, SSNs,
-credit-card numbers, IPv4 addresses, and IBANs over plain text.
+credit-card numbers (Luhn-checked), IPv4 addresses, and IBANs (compact or in the
+printed groups of four, mod-97-checked) over plain text.
 
 Patterns are deliberately simple (no nested quantifiers → no catastrophic
 backtracking). Pure standard library (``re`` + ``hashlib``); imports no

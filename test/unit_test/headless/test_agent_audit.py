@@ -143,7 +143,10 @@ def test_a_vlm_provider_error_is_contained(monkeypatch):
     backend = AnthropicVLMBackend.__new__(AnthropicVLMBackend)
     backend.available = True
     backend._client = SimpleNamespace(messages=SimpleNamespace(create=rate_limited))
-    assert backend.locate(b"png", "the button") is None
+    from je_auto_control.utils.vision.backends.base import VLMRequestError
+    with pytest.raises(VLMRequestError, match="429"):
+        backend.locate(b"png", "the button")
+    assert issubclass(VLMRequestError, AutoControlException)
 
 
 def test_backend_errors_are_in_the_framework_family():

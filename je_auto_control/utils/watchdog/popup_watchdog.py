@@ -21,6 +21,7 @@ from typing import Any, Callable, Deque, Dict, List, Optional
 
 from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
+from je_auto_control.utils.timeouts import clamp_poll_interval
 
 # Errors a rule's matcher/action may raise that must not kill the guard loop
 # (e.g. find_window raising AutoControlException off Windows). LookupError/
@@ -47,7 +48,8 @@ class PopupWatchdog:
     """Poll for registered popups on a background thread and dismiss them."""
 
     def __init__(self, poll_interval_s: float = 1.0) -> None:
-        self._poll = max(0.05, float(poll_interval_s))
+        # Clamped: an infinite interval raised OverflowError in the poll thread.
+        self._poll = clamp_poll_interval(poll_interval_s)
         self._rules: List[WatchdogRule] = []
         self._lock = threading.Lock()
         # 序列化 start()/stop():兩者原本無互斥,交錯的 stop() 會在 start()
@@ -134,7 +136,10 @@ class PopupWatchdog:
             if not rule.matcher():
                 return False
             rule.action()
-        except _RULE_ERRORS as error:
+        # Any rule error, as ScreenObserver does: a matcher raising something
+        # off the list (subprocess.TimeoutExpired, sqlite3.Error) killed the
+        # guard thread and every other rule with it.
+        except Exception as error:  # noqa: BLE001  # reason: logged; one rule must not stop the others
             autocontrol_logger.info(
                 "popup watchdog rule %r error: %r", rule.name, error)
             return False
@@ -167,7 +172,14 @@ def _window_action(title: str, action: str,
 
     def press_key() -> None:
         from je_auto_control.utils.cua_action.cua_action import resolve_key_name
+        from je_auto_control.utils.exception.exceptions import AutoControlActionException
         from je_auto_control.wrapper.auto_control_keyboard import type_keyboard
+        from je_auto_control.wrapper.auto_control_window import find_window
+        from je_auto_control.wrapper.window_backends import get_backend
+        # Into the popup: the key went to whatever window the user had active.
+        found = find_window(title, case_sensitive=case_sensitive)
+        if found is None or not get_backend().bring_to_front(found[0]):
+            raise AutoControlActionException(f"popup {title!r} could not be brought to the front")
         # "esc" / "enter" dismiss rules name keys the Windows table spells
         # "escape" / "return".
         type_keyboard(resolve_key_name(action))

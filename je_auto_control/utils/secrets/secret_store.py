@@ -26,10 +26,12 @@ import hashlib
 import json
 import os
 import threading
+from contextlib import contextmanager
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, Iterator, List, Optional, Tuple
 
 from je_auto_control.utils.exception.exceptions import AutoControlException
+from je_auto_control.utils.json_store.json_store import _file_lock, atomic_write_text
 
 
 _VERIFIER_PLAINTEXT = b"autocontrol-vault-v1"
@@ -117,13 +119,13 @@ def _check_vault_fields(data: dict) -> None:
 
 
 def _atomic_write(path: Path, payload: dict) -> None:
+    """Replace the vault file; the temp file is unique and 0600 from creation.
+
+    A fixed ``vault.json.tmp`` let two writers truncate each other's temp file
+    and fail the rename on Windows.
+    """
     path.parent.mkdir(parents=True, exist_ok=True)
-    tmp = path.with_suffix(path.suffix + ".tmp")
-    # Created 0600, so the file is never readable by others before chmod.
-    descriptor = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
-    with os.fdopen(descriptor, "w", encoding="utf-8") as handle:
-        json.dump(payload, handle, indent=2, sort_keys=True)
-    os.replace(tmp, path)
+    atomic_write_text(path, json.dumps(payload, indent=2, sort_keys=True))
     try:
         os.chmod(path, 0o600)
     except OSError:
@@ -185,7 +187,7 @@ class SecretManager:
         """
         if not isinstance(passphrase, str) or not passphrase:
             raise ValueError("passphrase must be a non-empty string")
-        with self._lock:
+        with self._lock, self._vault_locked():
             if self._path.exists():
                 raise SecretStoreError("vault already exists")
             fernet, payload = _new_vault(passphrase)
@@ -226,7 +228,7 @@ class SecretManager:
             raise ValueError("secret name must be a non-empty string")
         if not isinstance(value, str):
             raise ValueError("secret value must be a string")
-        with self._lock:
+        with self._lock, self._vault_locked():
             fernet, vault = self._require_unlocked()
             token = fernet.encrypt(value.encode("utf-8")).decode("ascii")
             vault["items"][name] = token
@@ -255,7 +257,7 @@ class SecretManager:
 
     def remove(self, name: str) -> bool:
         """Delete ``name`` from the vault; return False if it was absent."""
-        with self._lock:
+        with self._lock, self._vault_locked():
             self._require_unlocked()
             if name not in self._vault["items"]:  # type: ignore[index]
                 return False
@@ -273,7 +275,7 @@ class SecretManager:
         """
         if not isinstance(new, str) or not new:
             raise ValueError("new passphrase must be a non-empty string")
-        with self._lock:
+        with self._lock, self._vault_locked():
             if not self.unlock(old):
                 raise SecretStoreError("current passphrase incorrect")
             plaintexts: Dict[str, str] = {
@@ -297,6 +299,24 @@ class SecretManager:
                 self._path.unlink()
             except FileNotFoundError:
                 pass
+
+    @contextmanager
+    def _vault_locked(self) -> Iterator[None]:
+        """Hold the vault's lock file across a read-modify-write.
+
+        Re-reading before each write was not enough: two managers (the GUI
+        and a service) could both read, both change and both write, and the
+        second write dropped the first one's secret.
+        """
+        try:
+            lock = _file_lock(self._path)
+            lock.__enter__()
+        except TimeoutError as error:
+            raise SecretStoreError("the vault is locked by another process") from error
+        try:
+            yield
+        finally:
+            lock.__exit__(None, None, None)
 
     def _require_unlocked(self) -> Tuple[Any, dict]:
         """Return the key and the vault as it is on disk now, or raise if locked.

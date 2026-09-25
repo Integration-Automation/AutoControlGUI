@@ -1,14 +1,16 @@
 """DAG Runner tab: edit, validate, and execute cross-host DAGs."""
 import json
+import threading
 from typing import Optional
 
-from PySide6.QtCore import QObject, Qt, QThread, Signal
+from PySide6.QtCore import QObject, Qt, Signal
 from PySide6.QtWidgets import (
     QFileDialog, QHBoxLayout, QLabel, QSpinBox,
     QTableWidget, QTableWidgetItem, QTextEdit, QVBoxLayout, QWidget,
 )
 
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
+from je_auto_control.gui._worker_thread import WorkerHandle, start_worker
 from je_auto_control.gui.language_wrapper.multi_language_wrapper import (
     language_wrapper,
 )
@@ -28,15 +30,22 @@ class _DagWorker(QObject):
     finished = Signal(object)
     failed = Signal(str)
 
-    def __init__(self, definition: dict, max_parallel: int) -> None:
+    def __init__(self, definition: dict, max_parallel: int,
+                 stop_event: threading.Event) -> None:
         super().__init__()
         self._definition = definition
         self._max_parallel = max_parallel
+        self._stop_event = stop_event
+
+    def request_stop(self) -> None:
+        """Start no further node (thread-safe); running nodes finish."""
+        self._stop_event.set()
 
     def run(self) -> None:
         try:
             result = run_dag(self._definition,
-                             max_parallel=self._max_parallel)
+                             max_parallel=self._max_parallel,
+                             stop_event=self._stop_event)
         except (DagDefinitionError, RuntimeError) as error:
             self.failed.emit(f"{type(error).__name__}: {error}")
             return
@@ -56,8 +65,8 @@ class DagTab(TranslatableMixin, QWidget):
         self._max_parallel.setValue(4)
         self._status_label = QLabel()
         self._table = QTableWidget(0, len(_COLUMNS))
-        self._thread: Optional[QThread] = None
-        self._worker: Optional[_DagWorker] = None
+        self._thread: Optional[WorkerHandle] = None
+        self._stop_event = threading.Event()
         self._build_layout()
 
     def retranslate(self) -> None:
@@ -84,6 +93,7 @@ class DagTab(TranslatableMixin, QWidget):
             ("dag_load_btn", self._on_load),
             ("dag_validate_btn", self._on_validate),
             ("dag_run_btn", self._on_run),
+            ("dag_stop_btn", self._on_stop),
         ]
 
     def _apply_translations(self) -> None:
@@ -130,19 +140,21 @@ class DagTab(TranslatableMixin, QWidget):
         self._spawn_worker(definition)
 
     def _spawn_worker(self, definition: dict) -> None:
-        thread = QThread(self)
-        worker = _DagWorker(definition, int(self._max_parallel.value()))
-        worker.moveToThread(thread)
-        thread.started.connect(worker.run)
-        worker.finished.connect(self._on_worker_finished)
-        worker.failed.connect(self._on_worker_failed)
-        worker.finished.connect(thread.quit)
-        worker.failed.connect(thread.quit)
-        thread.finished.connect(worker.deleteLater)
-        thread.finished.connect(thread.deleteLater)
-        self._thread = thread
-        self._worker = worker
-        thread.start()
+        self._stop_event = threading.Event()
+        worker = _DagWorker(definition, int(self._max_parallel.value()),
+                            self._stop_event)
+        self._thread = start_worker(
+            self, worker, on_done=self._on_worker_finished,
+            on_fail=self._on_worker_failed, on_thread_done=self._on_thread_done)
+
+    def _on_stop(self) -> None:
+        if self._thread is None:
+            return
+        self._stop_event.set()
+        self._status_label.setText(_t("dag_stopping"))
+
+    def _on_thread_done(self) -> None:
+        self._thread = None
 
     def _parse_editor(self) -> Optional[dict]:
         raw = self._editor.toPlainText().strip()
@@ -156,8 +168,6 @@ class DagTab(TranslatableMixin, QWidget):
             return None
 
     def _on_worker_finished(self, result: DagRunResult) -> None:
-        self._thread = None
-        self._worker = None
         key = "dag_success" if result.succeeded else "dag_failure"
         self._status_label.setText(
             _t(key).replace("{seconds}", f"{result.elapsed_s:.2f}"),
@@ -165,8 +175,6 @@ class DagTab(TranslatableMixin, QWidget):
         self._populate_table(result)
 
     def _on_worker_failed(self, message: str) -> None:
-        self._thread = None
-        self._worker = None
         self._status_label.setText(f"{_t('dag_error')}: {message}")
 
     def _populate_table(self, result: DagRunResult) -> None:

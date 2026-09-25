@@ -111,5 +111,5 @@ class ScriptTabMixin:
             data = json.loads(text)
             result = execute_action(data)
             self.script_result_text.setText(json.dumps(result, indent=2, default=str, ensure_ascii=False))
-        except (OSError, ValueError, TypeError, RuntimeError) as error:
+        except (AutoControlException, OSError, ValueError, TypeError, RuntimeError) as error:
             self.script_result_text.setText(f"Error: {error}")

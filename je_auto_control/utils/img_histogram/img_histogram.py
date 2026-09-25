@@ -48,7 +48,9 @@ def image_histogram(haystack: Optional[ImageSource] = None, *,
     out: List[float] = []
     for channel in range(channels):
         hist = cv2.calcHist([image], [channel], None, [int(bins)], ranges[channel])
-        cv2.normalize(hist, hist, 0.0, 1.0, cv2.NORM_MINMAX)
+        # Each channel sums to 1 (NORM_L1). Min-max scaling turned an evenly
+        # spread channel -- a full grey ramp -- into all zeros.
+        cv2.normalize(hist, hist, 1.0, 0.0, cv2.NORM_L1)
         out.extend(float(value) for value in hist.flatten())
     return out
 
@@ -70,11 +72,16 @@ def compare_histograms(hist_a: Sequence[float], hist_b: Sequence[float], *,
         raise ValueError(f"unknown method: {method!r}")
     array_a = np.asarray(hist_a, dtype=np.float32)
     array_b = np.asarray(hist_b, dtype=np.float32)
+    if method == "correlation" and (array_a.std() == 0 or array_b.std() == 0):
+        # A flat histogram has no correlation; OpenCV reports 1.0 for it, so a
+        # full grey ramp read as identical to a black frame.
+        return 1.0 if np.array_equal(array_a, array_b) else 0.0
     score = float(cv2.compareHist(array_a, array_b, methods[method]))
     if method == "intersection":
-        # Normalised to 0..1 (1 = identical): the raw sum of minima ran up to
-        # about 3 * bins, so red vs blue scored 2.0 and passed a 0.9 threshold.
-        mass = min(float(array_a.sum()), float(array_b.sum()))
+        # Normalised to 0..1 (1 = identical). Dividing by the larger mass keeps
+        # it symmetric; the smaller made it a containment test, and a red
+        # frame "intersected" a half-red one completely.
+        mass = max(float(array_a.sum()), float(array_b.sum()))
         score = score / mass if mass > 0 else 1.0
     return round(score, 4)
 

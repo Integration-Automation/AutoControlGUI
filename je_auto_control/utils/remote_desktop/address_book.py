@@ -36,6 +36,22 @@ def default_address_book_path() -> Path:
     return home / _DEFAULT_PATH_RELATIVE
 
 
+def _normalised(entry: dict) -> dict:
+    """Keep the tag and timestamp shapes the address book writes itself.
+
+    From a hand-edited file, ``"tags": "work"`` matched the tag filter by
+    substring and was listed as ``w, o, r, k``, and a numeric tag raised
+    ``TypeError`` out of the GUI list.
+    """
+    tags = entry.get("tags")
+    if tags is not None:
+        entry["tags"] = ([tag.strip() for tag in tags if isinstance(tag, str) and tag.strip()]
+                         if isinstance(tags, list) else [])
+    if not isinstance(entry.get("last_used", ""), str):
+        del entry["last_used"]
+    return entry
+
+
 class AddressBook:
     """Thread-safe JSON-backed list of host endpoints."""
 
@@ -57,7 +73,7 @@ class AddressBook:
         if not isinstance(entries, list):
             quarantine_file(self._path, "address book", "no 'entries' list")
             return
-        self._entries = [e for e in entries if isinstance(e, dict)
+        self._entries = [_normalised(e) for e in entries if isinstance(e, dict)
                          and isinstance(e.get("host_id"), str)]
 
     def _save(self) -> None:

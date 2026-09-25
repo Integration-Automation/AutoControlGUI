@@ -79,10 +79,18 @@ _TEXT_ATTR_IS_ITALIC = 40014
 
 
 def _attr(text_range, attribute_id, cast):
+    """One text attribute, or ``None`` when unreadable, mixed or unsupported.
+
+    For a range with mixed formatting UIA returns a sentinel object, not a
+    value: ``str`` of it became the font name and ``bool`` of it "italic".
+    """
     try:
-        return cast(text_range.GetAttributeValue(attribute_id))
+        value = text_range.GetAttributeValue(attribute_id)
     except _UIA_ERRORS:
         return None
+    if not isinstance(value, (str, int, float, bool)):
+        return None
+    return cast(value)
 
 
 def _read_text_attributes(text_range) -> Dict[str, Any]:

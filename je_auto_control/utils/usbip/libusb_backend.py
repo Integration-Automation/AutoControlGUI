@@ -19,7 +19,7 @@ address" byte that libusb wants is ``ep | (direction << 7)``.
 """
 from __future__ import annotations
 
-from typing import List
+from typing import Any, List
 
 from je_auto_control.utils.usbip.backend import (
     UrbBackend, UrbRequest, UrbResponse,
@@ -77,21 +77,24 @@ class LibUsbBackend(UrbBackend):
         import usb.util
         out: List[UsbIpDevice] = []
         for dev in usb.core.find(find_all=True):
-            try:
-                manufacturer = usb.util.get_string(dev, dev.iManufacturer) or ""
-            except (usb.core.USBError, ValueError):
-                manufacturer = ""
+            # No string descriptors: reading one raised NotImplementedError
+            # for every device libusb cannot open (all non-WinUSB devices on
+            # Windows), which ended the device list; the value was unused.
             try:
                 cfg = dev.get_active_configuration()
+                # Alternate setting 0 only: PyUSB lists every alternate
+                # setting, and the device record announces bNumInterfaces
+                # records -- a webcam's extra settings shifted every later
+                # device in the list.
                 interfaces = [
                     UsbIpInterface(
                         bInterfaceClass=int(intf.bInterfaceClass),
                         bInterfaceSubClass=int(intf.bInterfaceSubClass),
                         bInterfaceProtocol=int(intf.bInterfaceProtocol),
                     )
-                    for intf in cfg
+                    for intf in cfg if int(getattr(intf, "bAlternateSetting", 0)) == 0
                 ]
-                num_interfaces = int(cfg.bNumInterfaces)
+                num_interfaces = len(interfaces)
                 cfg_value = int(cfg.bConfigurationValue)
             except (usb.core.USBError, NotImplementedError):
                 interfaces = []
@@ -105,7 +108,7 @@ class LibUsbBackend(UrbBackend):
                 busid=busid,
                 busnum=int(dev.bus),
                 devnum=int(dev.address),
-                speed=int(getattr(dev, "speed", 0) or 0),
+                speed=_kernel_speed(getattr(dev, "speed", 0)),
                 vendor_id=int(dev.idVendor),
                 product_id=int(dev.idProduct),
                 bcd_device=int(getattr(dev, "bcdDevice", 0)),
@@ -117,7 +120,6 @@ class LibUsbBackend(UrbBackend):
                 num_interfaces=num_interfaces,
                 interfaces=interfaces,
             ))
-            del manufacturer  # placeholder for future iManufacturer plumbing
         return out
 
     def submit_urb(self, request: UrbRequest) -> UrbResponse:
@@ -187,6 +189,16 @@ class LibUsbBackend(UrbBackend):
             timeout=_USB_TIMEOUT_MS,
         )
         return UrbResponse(status=0, actual_length=int(written or 0))
+
+
+#: libusb's speed codes to the kernel's ``enum usb_device_speed``, which USB/IP
+#: carries: libusb's SUPER (4) is the kernel's WIRELESS; SUPER is 5 there.
+_KERNEL_SPEED = {0: 0, 1: 1, 2: 2, 3: 3, 4: 5, 5: 6}
+
+
+def _kernel_speed(libusb_speed: Any) -> int:
+    """The USB/IP speed value for a libusb speed code (unknown: 0)."""
+    return _KERNEL_SPEED.get(int(libusb_speed or 0), 0)
 
 
 def _translate_error(error: BaseException) -> int:

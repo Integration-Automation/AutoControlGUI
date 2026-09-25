@@ -106,12 +106,14 @@ class LibusbBackend(UsbBackend):
     def __init__(self) -> None:
         try:
             import usb.core  # type: ignore[import-not-found]
+            import usb.util  # type: ignore[import-not-found]
         except ImportError as error:
             raise RuntimeError(
                 "pyusb not installed; run 'pip install pyusb' to enable "
                 "the libusb passthrough backend",
             ) from error
         self._usb_core = usb.core
+        self._usb_util = usb.util
 
     def list(self) -> List[BackendDevice]:
         devices = list(self._usb_core.find(find_all=True))
@@ -129,25 +131,29 @@ class LibusbBackend(UsbBackend):
              serial: Optional[str] = None) -> "UsbHandle":
         vid_int = int(vendor_id, 16)
         pid_int = int(product_id, 16)
-        match = self._usb_core.find(
-            find_all=False, idVendor=vid_int, idProduct=pid_int,
-        )
-        if match is None:
+        # Every device with these ids: asking for the first one only made
+        # the second of two identical devices unreachable by serial.
+        candidates = list(self._usb_core.find(
+            find_all=True, idVendor=vid_int, idProduct=pid_int,
+        ))
+        if not candidates:
             raise RuntimeError(
                 f"no USB device matches {vendor_id}:{product_id}",
             )
-        if serial is not None:
-            actual = _safe_string(match, "serial_number")
-            if actual != serial:
-                raise RuntimeError(
-                    f"serial mismatch: requested {serial!r}, found {actual!r}",
-                )
-        return _LibusbHandle(match)
+        if serial is None:
+            return _LibusbHandle(candidates[0], self._usb_util)
+        for device in candidates:
+            if _safe_string(device, "serial_number") == serial:
+                return _LibusbHandle(device, self._usb_util)
+        raise RuntimeError(
+            f"no {vendor_id}:{product_id} device has serial {serial!r}",
+        )
 
 
 class _LibusbHandle(UsbHandle):
-    def __init__(self, device: Any) -> None:
+    def __init__(self, device: Any, usb_util: Any = None) -> None:
         self._device = device
+        self._usb_util = usb_util
         self._closed = False
         self._lock = threading.Lock()
         # OQ7 — on Linux the kernel's usbhid driver claims anything that
@@ -202,6 +208,10 @@ class _LibusbHandle(UsbHandle):
         with self._lock:
             if self._closed:
                 return
+            # pyusb claims interfaces on the first transfer; the kernel
+            # driver cannot be reattached (LIBUSB_ERROR_BUSY) while they
+            # are still claimed, so the host kept losing its own device.
+            self._release_interfaces()
             self._reattach_kernel_drivers()
             try:
                 self._device.reset()
@@ -250,10 +260,25 @@ class _LibusbHandle(UsbHandle):
             data=data, length=length, timeout_ms=timeout_ms,
         )
 
+    def _release_interfaces(self) -> None:
+        if self._usb_util is None:
+            return
+        try:
+            self._usb_util.dispose_resources(self._device)
+        except Exception as error:  # noqa: BLE001  # pylint: disable=broad-except  # reason: best-effort cleanup before reattaching; logged
+            autocontrol_logger.debug("libusb close: dispose_resources raised %r", error)
+
     def _endpoint_transfer(self, kind: str, *, endpoint: int,
                            direction: str, data: bytes, length: int,
                            timeout_ms: int) -> bytes:
         self._raise_if_closed()
+        # libusb takes the direction from the address, so "in" on an OUT
+        # endpoint wrote zeros to the device and "out" on an IN endpoint
+        # discarded what it read.
+        if direction in ("in", "out") and bool(int(endpoint) & 0x80) != (direction == "in"):
+            raise RuntimeError(
+                f"endpoint 0x{int(endpoint):02x} is not an {direction.upper()} endpoint",
+            )
         if direction == "in":
             try:
                 result = self._device.read(

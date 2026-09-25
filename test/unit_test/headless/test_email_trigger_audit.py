@@ -31,6 +31,9 @@ class _Imap:
     def select(self, *_args, **_kwargs):
         return "OK", [b"1"]
 
+    def response(self, code):
+        return code, [b"1"] if code == "UIDVALIDITY" else [None]
+
     def uid(self, command, *args):
         if command == "SEARCH":
             return "OK", [b"7"]

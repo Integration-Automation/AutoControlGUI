@@ -19,6 +19,7 @@ real vault.
 """
 import math
 import secrets
+import threading
 import time
 from typing import Any, Callable, Dict, List, Optional
 
@@ -39,6 +40,9 @@ class CredentialBroker:
         self._resolver = resolver
         self._clock = clock
         self._leases: Dict[str, Dict[str, Any]] = {}
+        # default_broker is shared by every thread; active() iterating while
+        # another thread leased raised "dictionary changed size".
+        self._lock = threading.Lock()
 
     def set_resolver(self, resolver: Callable[[str], Optional[str]]) -> None:
         """Configure the function that maps a secret name to its value."""
@@ -54,18 +58,20 @@ class CredentialBroker:
         if not math.isfinite(lifetime) or lifetime <= 0:
             raise CredentialBrokerError(f"lease ttl must be a positive number, got {ttl!r}")
         token = secrets.token_hex(8)
-        self._leases[token] = {"name": name,
-                               "expires_at": self._clock() + lifetime}
+        with self._lock:
+            self._leases[token] = {"name": name,
+                                   "expires_at": self._clock() + lifetime}
         return token
 
     def _valid_lease(self, token: str) -> Optional[Dict[str, object]]:
-        lease = self._leases.get(token)
-        if lease is None:
-            return None
-        if self._clock() >= float(lease["expires_at"]):
-            self._leases.pop(token, None)  # opportunistic expiry cleanup
-            return None
-        return lease
+        with self._lock:
+            lease = self._leases.get(token)
+            if lease is None:
+                return None
+            if self._clock() >= float(lease["expires_at"]):
+                self._leases.pop(token, None)  # opportunistic expiry cleanup
+                return None
+            return lease
 
     def is_valid(self, token: str) -> bool:
         """Return ``True`` while ``token``'s lease exists and has not expired."""
@@ -90,22 +96,21 @@ class CredentialBroker:
 
     def revoke(self, token: str) -> bool:
         """Revoke ``token`` immediately; return whether it existed."""
-        return self._leases.pop(token, None) is not None
+        with self._lock:
+            return self._leases.pop(token, None) is not None
 
     def active(self) -> List[Dict[str, object]]:
         """List non-expired leases as ``{token, name, ttl_remaining}`` (no values)."""
         now = self._clock()
         result: List[Dict[str, object]] = []
-        expired: List[str] = []
-        for token, lease in self._leases.items():
-            remaining = float(lease["expires_at"]) - now
-            if remaining > 0:
-                result.append({"token": token, "name": lease["name"],
-                               "ttl_remaining": remaining})
-            else:
-                expired.append(token)
-        for token in expired:
-            self._leases.pop(token, None)
+        with self._lock:
+            for token, lease in list(self._leases.items()):
+                remaining = float(lease["expires_at"]) - now
+                if remaining > 0:
+                    result.append({"token": token, "name": lease["name"],
+                                   "ttl_remaining": remaining})
+                else:
+                    self._leases.pop(token, None)
         return result
 
 

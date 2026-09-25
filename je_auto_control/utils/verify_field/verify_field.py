@@ -27,6 +27,7 @@ MATCH_TRIM = "trim"
 MATCH_CI = "ci"
 MATCH_NORMALIZED = "normalized"
 MATCH_CONTAINS = "contains"
+_MODES = frozenset({MATCH_EXACT, MATCH_TRIM, MATCH_CI, MATCH_NORMALIZED, MATCH_CONTAINS})
 
 # A reader returns the field's current value; a filler types a value into it.
 FieldReader = Callable[[], Optional[str]]
@@ -56,7 +57,12 @@ def compare_field_value(expected: Any, actual: Any, *,
 
     Returns ``{match, mode, expected, actual}``. ``contains`` is a (trimmed,
     case-insensitive) substring test; the others compare canonical equality.
+    ``mode`` is case-insensitive; an unknown one raises ``ValueError`` rather
+    than silently comparing exactly, which made ``"CI"`` case-sensitive.
     """
+    mode = str(mode).lower()
+    if mode not in _MODES:
+        raise ValueError(f"unknown match mode {mode!r}; expected one of {sorted(_MODES)}")
     expected_text = _as_text(expected)
     actual_text = _as_text(actual)
     if mode == MATCH_CONTAINS:

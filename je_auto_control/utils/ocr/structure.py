@@ -211,7 +211,7 @@ def _detect_tables(rows: List[OCRRow], *,
 
 
 def _flush_table(rows: List[OCRRow], min_rows: int) -> List[OCRTable]:
-    if len(rows) < min_rows:
+    if not rows or len(rows) < min_rows:   # min_rows <= 0 reached min() of nothing
         return []
     x1 = min(row.bbox[0] for row in rows)
     y1 = min(row.bbox[1] for row in rows)
@@ -249,15 +249,25 @@ def _detect_fields(rows: List[OCRRow]) -> List[OCRField]:
     return fields
 
 
+def _is_label(cell: TextMatch) -> bool:
+    return cell.text.strip().endswith(":")
+
+
 def _find_field_value(rows: List[OCRRow], row_index: int,
                        cell_index: int) -> Optional[TextMatch]:
-    """First try the next cell on the same row; otherwise the next row's first cell."""
+    """The next cell on the same row, else the next row's cell nearest below the label.
+
+    Another label is never a value. Taking the next row's *first* cell gave
+    every label in a two-column form the left column's value.
+    """
     row = rows[row_index]
-    if cell_index + 1 < len(row.cells):
+    if cell_index + 1 < len(row.cells) and not _is_label(row.cells[cell_index + 1]):
         return row.cells[cell_index + 1]
-    if row_index + 1 < len(rows) and rows[row_index + 1].cells:
-        return rows[row_index + 1].cells[0]
-    return None
+    if row_index + 1 >= len(rows):
+        return None
+    label = row.cells[cell_index]
+    below = [cell for cell in rows[row_index + 1].cells if not _is_label(cell)]
+    return min(below, key=lambda cell: abs(cell.x - label.x), default=None)
 
 
 def _match_to_dict(match: TextMatch) -> Dict[str, Any]:

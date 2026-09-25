@@ -2,12 +2,12 @@
 from typing import Any, Callable, Dict, Optional
 
 from PySide6.QtCore import Signal
-from PySide6.QtGui import QDoubleValidator, QIntValidator
 from PySide6.QtWidgets import (
     QCheckBox, QComboBox, QFileDialog, QFormLayout, QHBoxLayout, QLabel,
     QLineEdit, QPushButton, QWidget,
 )
 
+from je_auto_control.gui._validators import double_validator, int_validator
 from je_auto_control.gui.language_wrapper.multi_language_wrapper import (
     language_wrapper,
 )
@@ -64,6 +64,10 @@ class StepFormView(QWidget):
             self._title.setText(f"Unknown command: {step.command}")
             return
         self._title.setText(f"{spec.label}  ({spec.command})")
+        if step.args is not None:
+            # Positional arguments have no field names to edit by.
+            self._layout.addRow(QLabel(_t("sb_positional_args")), QLabel(repr(step.args)))
+            return
         for field_spec in spec.fields:
             editor = self._build_editor(field_spec)
             self._editors[field_spec.name] = editor
@@ -96,12 +100,7 @@ class StepFormView(QWidget):
 
     def _build_int(self, spec: FieldSpec) -> QWidget:
         editor = QLineEdit()
-        validator = QIntValidator()
-        if spec.min_value is not None:
-            validator.setBottom(int(spec.min_value))
-        if spec.max_value is not None:
-            validator.setTop(int(spec.max_value))
-        editor.setValidator(validator)
+        editor.setValidator(int_validator(spec.min_value, spec.max_value))
         editor.setPlaceholderText(spec.placeholder)
         editor.textChanged.connect(self._commit_field)
         return editor
@@ -110,7 +109,7 @@ class StepFormView(QWidget):
         editor = QLineEdit()
         low = -1e9 if spec.min_value is None else float(spec.min_value)
         high = 1e9 if spec.max_value is None else float(spec.max_value)
-        editor.setValidator(QDoubleValidator(low, high, 4))
+        editor.setValidator(double_validator(low, high, 4))
         editor.setPlaceholderText(spec.placeholder)
         editor.textChanged.connect(self._commit_field)
         return editor
@@ -205,9 +204,14 @@ def _set_text_value(editor: QWidget, value: Any) -> None:
 
 def _set_rgb_value(editor: QWidget, value: Any) -> None:
     if isinstance(value, (list, tuple)):
-        editor.setText(",".join(str(int(v)) for v in value))
-    else:
-        _set_text_value(editor, value)
+        try:
+            editor.setText(",".join(str(int(v)) for v in value))
+            return
+        # Not all numbers: shown as written, where the ValueError used to
+        # escape the selection slot and leave the form empty.
+        except (TypeError, ValueError, OverflowError):
+            pass
+    _set_text_value(editor, value)
 
 
 def _set_file_value(editor: QWidget, value: Any) -> None:
@@ -216,12 +220,25 @@ def _set_file_value(editor: QWidget, value: Any) -> None:
         _set_text_value(line, value)
 
 
+def _set_enum_value(editor: QWidget, value: Any) -> None:
+    """Select ``value``, adding it when it is not one of the choices.
+
+    ``setCurrentText`` ignores a value the combo does not hold, so the next
+    edit of any field wrote ``choices[0]`` back: ``mouse_x1``, which the
+    executor accepts, became ``mouse_left`` on save.
+    """
+    text = "" if value is None else str(value)
+    if text and editor.findText(text) < 0:
+        editor.addItem(text)
+    editor.setCurrentText(text)
+
+
 _SETTERS = {
     FieldType.STRING: _set_text_value,
     FieldType.INT: _set_text_value,
     FieldType.FLOAT: _set_text_value,
     FieldType.BOOL: lambda e, v: e.setChecked(bool(v)),
-    FieldType.ENUM: lambda e, v: e.setCurrentText(str(v) if v is not None else ""),
+    FieldType.ENUM: _set_enum_value,
     FieldType.FILE_PATH: _set_file_value,
     FieldType.RGB: _set_rgb_value,
 }

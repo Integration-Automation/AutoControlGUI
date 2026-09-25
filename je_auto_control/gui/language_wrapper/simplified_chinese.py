@@ -315,6 +315,7 @@ simplified_chinese_word_dict = {
     "rd_webrtc_stop_recording": "停止录制",
     "rd_webrtc_recording_save_as": "录制保存为",
     "rd_webrtc_recording_saved": "录制已保存: {path}",
+    "rd_webrtc_recording_empty": "没有录到任何画面（未收到帧）：未创建 {path}",
     "rd_webrtc_stats_idle": "(暂无统计数据)",
     # (B) batch
     "rd_webrtc_hw_codec_label": "硬件编码器:",
@@ -694,6 +695,7 @@ simplified_chinese_word_dict = {
     "sb_dialog_save": "保存脚本",
     "sb_dialog_load": "载入脚本",
     "sb_no_step_selected": "尚未选取步骤",
+    "sb_positional_args": "位置参数（按原样保留）",
 
     # Language
     "language_label": "语言:",
@@ -921,6 +923,8 @@ simplified_chinese_word_dict = {
     "computer_use_max_tokens_label": "每轮 token 上限：",
     "computer_use_output_label": "追踪：",
     "computer_use_run_btn": "运行",
+    "computer_use_stop_btn": "停止",
+    "computer_use_stopping": "当前步骤结束后停止…",
     "computer_use_running": "运行中...",
     "computer_use_already_running": "已有任务正在运行，请稍候。",
     "computer_use_success": "成功达成目标。",
@@ -932,6 +936,8 @@ simplified_chinese_word_dict = {
     "dag_load_btn": "加载 JSON...",
     "dag_validate_btn": "验证",
     "dag_run_btn": "执行 DAG",
+    "dag_stop_btn": "停止 DAG",
+    "dag_stopping": "停止中：不再启动新的节点…",
     "dag_parallel_label": "最大并行：",
     "dag_running": "DAG 执行中...",
     "dag_already_running": "已有 DAG 在运行中，请稍候。",

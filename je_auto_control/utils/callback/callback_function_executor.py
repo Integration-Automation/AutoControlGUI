@@ -5,7 +5,9 @@ from je_auto_control.utils.cv2_utils.screenshot import pil_screenshot
 from je_auto_control.utils.exception.exception_tags import (
     get_bad_trigger_function_error_message, get_bad_trigger_method_error_message,
 )
-from je_auto_control.utils.exception.exceptions import CallbackExecutorException
+from je_auto_control.utils.exception.exceptions import (
+    AutoControlAssertionException, CallbackExecutorException,
+)
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 # executor
 from je_auto_control.utils.executor.action_executor import execute_action, execute_files
@@ -154,6 +156,7 @@ class CallbackFunctionExecutor:
         :param callback_param_method: 回呼函式參數傳遞方式 ("kwargs" 或 "args")
         :param kwargs: 傳給 trigger_function 的參數
         :return: trigger_function 的回傳值 (若 trigger 失敗則為 None)
+        :raises AutoControlAssertionException: trigger 的斷言失敗會往上拋，不會變成 None
         """
         try:
             if trigger_function_name not in self.event_dict:
@@ -172,6 +175,8 @@ class CallbackFunctionExecutor:
         # LookupError...) is the documented None, not an escaping exception.
         try:
             execute_return_value = self.event_dict[trigger_function_name](**kwargs)
+        except AutoControlAssertionException:
+            raise   # an assertion failure is the script's verdict, never a None
         except Exception as error:  # noqa: BLE001  # reason: documented to return None
             autocontrol_logger.error("callback_function trigger failed: %r", error)
             return None

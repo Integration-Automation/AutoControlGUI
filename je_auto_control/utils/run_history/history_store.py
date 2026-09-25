@@ -33,6 +33,8 @@ STATUS_OK = "ok"
 STATUS_ERROR = "error"
 
 _IN_MEMORY_DB = ":memory:"
+#: The largest integer SQLite can bind.
+_SQLITE_MAX_INT = 2 ** 63 - 1
 
 _VALID_SOURCES = frozenset({
     SOURCE_SCHEDULER, SOURCE_TRIGGER, SOURCE_HOTKEY,
@@ -210,26 +212,27 @@ class HistoryStore:
     @sqlite_errors_as(HistoryStoreError)
     def list_runs(self, limit: int = 100,
                   source_type: Optional[str] = None,
+                  script_path: Optional[str] = None,
                   ) -> List[RunRecord]:
-        """Return the most recent runs (newest first)."""
+        """Return the most recent runs (newest first).
+
+        ``source_type`` and ``script_path`` narrow the rows before ``limit``
+        applies, so one script's history is not crowded out by other runs.
+        """
         if limit <= 0:
             return []
-        bound_limit = int(limit)
-        if source_type is None:
-            with self._lock:
-                rows = self._connection().execute(
-                    "SELECT * FROM runs "
-                    "ORDER BY started_at DESC, id DESC LIMIT ?",
-                    (bound_limit,),
-                ).fetchall()
-        else:
+        if source_type is not None:
             _validate_source(source_type)
-            with self._lock:
-                rows = self._connection().execute(
-                    "SELECT * FROM runs WHERE source_type = ? "
-                    "ORDER BY started_at DESC, id DESC LIMIT ?",
-                    (source_type, bound_limit),
-                ).fetchall()
+        path = None if script_path is None else str(script_path)
+        with self._lock:
+            rows = self._connection().execute(
+                "SELECT * FROM runs "
+                "WHERE (? IS NULL OR source_type = ?) "
+                "AND (? IS NULL OR script_path = ?) "
+                "ORDER BY started_at DESC, id DESC LIMIT ?",
+                # Clamped: a larger int raised OverflowError binding it.
+                (source_type, source_type, path, path, min(int(limit), _SQLITE_MAX_INT)),
+            ).fetchall()
         return [_row_to_record(row) for row in rows]
 
     @sqlite_errors_as(HistoryStoreError)

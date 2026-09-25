@@ -52,7 +52,7 @@ def _signal_parts(element: Element, want_role: Optional[str],
                          == str(want_role).lower() else 0.0)
     if want_name is not None:
         parts["name"] = float(similarity(want_name,
-                                         str(element.get("name", ""))))
+                                         str(element.get("name") or "")))
     if anchor is not None:
         parts["proximity"] = _proximity(element, anchor)
     if prefer_enabled:

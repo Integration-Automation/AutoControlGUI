@@ -443,6 +443,7 @@ english_word_dict = {
     "rd_webrtc_stop_recording": "Stop recording",
     "rd_webrtc_recording_save_as": "Save recording as",
     "rd_webrtc_recording_saved": "Recording saved: {path}",
+    "rd_webrtc_recording_empty": "Nothing was recorded (no frame arrived): {path} was not created",
     "rd_webrtc_stats_idle": "(no stats yet)",
     # (B) batch
     "rd_webrtc_hw_codec_label": "Hardware codec:",
@@ -825,6 +826,7 @@ english_word_dict = {
     "sb_dialog_save": "Save script",
     "sb_dialog_load": "Load script",
     "sb_no_step_selected": "No step selected",
+    "sb_positional_args": "Positional arguments (kept as written)",
 
     # Run History Tab
     "rh_filter_label": "Source:",
@@ -1049,6 +1051,8 @@ english_word_dict = {
     "computer_use_max_tokens_label": "Max tokens / turn:",
     "computer_use_output_label": "Trace:",
     "computer_use_run_btn": "Run",
+    "computer_use_stop_btn": "Stop",
+    "computer_use_stopping": "Stopping after the current step…",
     "computer_use_running": "Running...",
     "computer_use_already_running": "Already running — wait for the previous run.",
     "computer_use_success": "Succeeded.",
@@ -1060,6 +1064,8 @@ english_word_dict = {
     "dag_load_btn": "Load JSON...",
     "dag_validate_btn": "Validate",
     "dag_run_btn": "Run DAG",
+    "dag_stop_btn": "Stop DAG",
+    "dag_stopping": "Stopping: no further node will start…",
     "dag_parallel_label": "Max parallel:",
     "dag_running": "Running DAG...",
     "dag_already_running": "A DAG is already running — wait for it to finish.",

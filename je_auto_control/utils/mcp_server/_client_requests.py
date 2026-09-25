@@ -9,6 +9,9 @@ router belong together with the senders that populate it.
 
 Destructive-tool confirmation lives here too: it is an elicitation
 round-trip, not a tool-execution step.
+
+All of this is the handshake era's. A 2026-07-28 request never gets a
+server-initiated request: :mod:`._stateless` asks by multi round-trip instead.
 """
 import itertools
 import json
@@ -25,12 +28,20 @@ from je_auto_control.utils.mcp_server._protocol import (
 from je_auto_control.utils.mcp_server.tools import MCPTool
 
 
+def needs_confirmation(tool: MCPTool) -> bool:
+    """True when the operator gates ``tool`` behind a user confirmation."""
+    if not _confirm_destructive_enabled():
+        return False
+    annotations = tool.annotations
+    return not annotations.read_only and bool(annotations.destructive)
+
+
 class ClientRequestMixin:
     """Outbound half of the MCP session, mixed into :class:`MCPServer`.
 
     Requires the host to provide ``_writer``, ``_client_capabilities``,
     ``_resources``, ``_outbound_lock``, ``_pending_outbound``,
-    ``_outbound_id_counter``, ``_sampling_id_counter`` and ``_connection_id``.
+    ``_outbound_id_counter`` and ``_connection_id``.
     """
 
     if TYPE_CHECKING:
@@ -43,11 +54,14 @@ class ClientRequestMixin:
         _outbound_lock: threading.Lock
         _pending_outbound: Dict[Any, Dict[str, Any]]
         _outbound_id_counter: "itertools.count[int]"
-        _sampling_id_counter: "itertools.count[int]"
 
         @property
         def _connection_id(self) -> Any:
             """Identity of the connection the current request arrived on."""
+
+        @property
+        def _stateless_request(self) -> Any:
+            """The 2026-07-28 request being served on this thread, if any."""
 
     @staticmethod
     def _is_outbound_response(method: Optional[str], msg_id: Any,
@@ -119,6 +133,9 @@ class ClientRequestMixin:
                                params: Dict[str, Any],
                                timeout: float = 10.0) -> Dict[str, Any]:
         """Send a server-initiated request and wait for the response."""
+        if self._stateless_request is not None:
+            raise RuntimeError(f"{method} cannot be sent in a 2026-07-28 request: "
+                               "that revision has no server-initiated requests")
         writer = self._writer
         if writer is None:
             raise RuntimeError(f"{method} requires an outbound writer")
@@ -178,7 +195,11 @@ class ClientRequestMixin:
                 "request_sampling requires an outbound writer; "
                 "start serve_stdio or call set_writer() first",
             )
-        request_id = f"sampling-{next(self._sampling_id_counter)}"
+        # MCP: only a client that declared "sampling" at initialize takes
+        # sampling/createMessage; anyone else left the tool waiting out the
+        # whole timeout for a reply that could not come.
+        if "sampling" not in self._client_capabilities:
+            raise RuntimeError("the client did not declare the sampling capability")
         params: Dict[str, Any] = {
             "messages": list(messages),
             "maxTokens": int(max_tokens),
@@ -187,33 +208,17 @@ class ClientRequestMixin:
             params["systemPrompt"] = str(system_prompt)
         if model_preferences is not None:
             params["modelPreferences"] = dict(model_preferences)
-        slot: Dict[str, Any] = {"event": threading.Event()}
-        with self._outbound_lock:
-            self._pending_outbound[request_id] = slot
-        envelope = json.dumps({
-            "jsonrpc": "2.0", "id": request_id,
-            "method": "sampling/createMessage", "params": params,
-        }, ensure_ascii=False, default=str)
-        try:
-            writer(envelope)
-            if not slot["event"].wait(timeout=timeout):
-                raise TimeoutError(
-                    f"sampling request {request_id} timed out after {timeout}s"
-                )
-        finally:
-            with self._outbound_lock:
-                self._pending_outbound.pop(request_id, None)
-        if "error" in slot:
-            raise RuntimeError(f"sampling failed: {slot['error']}")
-        return slot.get("result") or {}
+        # The shared path records the connection: a slot without one had
+        # every reply over HTTP discarded as another session's, and its
+        # sequential id was guessable.
+        return self._send_outbound_request(
+            "sampling/createMessage", params=params, timeout=timeout,
+        )
 
     def _maybe_confirm_destructive(self, name: str, tool: MCPTool,
                                     arguments: Dict[str, Any]) -> None:
         """Ask the client to confirm before running a destructive tool."""
-        if not _confirm_destructive_enabled():
-            return
-        annotations = tool.annotations
-        if annotations.read_only or not annotations.destructive:
+        if not needs_confirmation(tool):
             return
         if "elicitation" not in self._client_capabilities:
             autocontrol_logger.info(

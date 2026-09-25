@@ -17,7 +17,9 @@ def test_char_table_prefers_the_layout_over_the_fallback(monkeypatch):
     monkeypatch.setattr(kl, "layout_char_table", lambda layout=None: {0xBC: (";", ":")})
     table = kl.char_table()
     assert table[0xBC] == (";", ":")
-    assert table[0x41] == ("a", "A")      # untouched keys still come from US
+    # A key the layout left out (a dead key such as the German ^) must not
+    # take its US character; the US table only stands in for an empty layout.
+    assert 0x41 not in table
 
 
 def test_char_table_falls_back_when_the_os_says_nothing(monkeypatch):

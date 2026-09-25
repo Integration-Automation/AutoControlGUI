@@ -9,6 +9,7 @@ Pure standard library (``re`` / ``hashlib``); imports no ``PySide6``.
 """
 import hashlib
 import json
+import math
 import re
 from typing import Any, Dict, List, Optional, Set, cast
 
@@ -21,8 +22,12 @@ _TYPES = {
 _PRESETS = {
     "email": r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}",
     "url": r"https?://[^\s,)]+",
-    "ipv4": r"\b(?:\d{1,3}\.){3}\d{1,3}\b",
-    "phone": r"\+?\d[\d\s().-]{6,}\d",
+    # Octets 0-255, not part of a longer dotted run.
+    "ipv4": r"(?<![\d.])(?:(?:25[0-5]|2[0-4]\d|1?\d?\d)\.){3}"
+            r"(?:25[0-5]|2[0-4]\d|1?\d?\d)(?!\.?\d)",
+    # Not an ISO date or a dotted IPv4 address, which the digit run also fits.
+    "phone": r"(?<![\d.-])(?!\d{4}-\d{2}-\d{2}\b)(?!(?:\d{1,3}\.){3}\d{1,3}\b)"
+             r"\+?\d[\d\s().-]{6,}\d(?![\d.]?\d)",
     "date_iso": r"\b\d{4}-\d{2}-\d{2}\b",
     "amount": r"[$€£]\s?\d[\d,]*(?:\.\d+)?",
     "hashtag": r"#\w+",
@@ -41,6 +46,11 @@ def _matches_type(value: Any, kind: str) -> bool:
 
 
 def _number_range_error(value: Any, rule: Dict[str, Any]) -> Optional[str]:
+    # NaN compares false with every bound and inf passes a lone min.
+    # An int is always finite, and math.isfinite(10**400) raised OverflowError.
+    if (("min" in rule or "max" in rule) and not isinstance(value, int)
+            and not math.isfinite(value)):
+        return "not a finite number"
     if "min" in rule and value < rule["min"]:
         return f"below min {rule['min']}"
     if "max" in rule and value > rule["max"]:
@@ -74,9 +84,16 @@ def _field_error(value: Any, rule: Dict[str, Any]) -> Optional[str]:
     if range_msg:
         return range_msg
     allowed = rule.get("allowed")
-    if allowed is not None and value not in allowed:
+    if allowed is not None and not _is_allowed(value, allowed):
         return "not in allowed set"
     return None
+
+
+def _is_allowed(value: Any, allowed: Any) -> bool:
+    try:
+        return value in allowed
+    except TypeError:   # an unhashable value against a set
+        return False
 
 
 def _validate_row(index: int, row: Dict[str, Any], schema: Dict[str, Any],

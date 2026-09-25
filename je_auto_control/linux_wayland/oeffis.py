@@ -25,6 +25,7 @@ import time
 from typing import Optional, Tuple
 
 from je_auto_control.linux_wayland._ctypes_bind import BoundSymbols, bind
+from je_auto_control.utils.exception.exceptions import AutoControlException
 
 
 _LIBRARY_CANDIDATES = ("oeffis", "liboeffis", "liboeffis.so.1", "liboeffis.so.0")
@@ -63,7 +64,7 @@ _PROTOTYPES = (
 )
 
 
-class OeffisUnavailable(RuntimeError):
+class OeffisUnavailable(AutoControlException, RuntimeError):
     """liboeffis is missing, or the portal refused to hand over an EIS fd."""
 
 

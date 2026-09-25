@@ -38,7 +38,8 @@ Headless API
 ``vex_statement`` validates the inputs: ``status`` must be one of
 ``VEX_STATUSES`` (``not_affected`` / ``affected`` / ``fixed`` /
 ``under_investigation``); a ``not_affected`` statement must carry a
-``justification`` (one of ``VEX_JUSTIFICATIONS``) or an ``impact_statement``.
+``justification`` (one of ``VEX_JUSTIFICATIONS``) or an ``impact_statement``, and an
+``affected`` statement an ``action_statement`` (the remediation, as OpenVEX requires).
 ``build_vex`` wraps statements in an OpenVEX document (pass an explicit
 ``timestamp`` for a reproducible ``@id``). ``apply_vex`` returns the surviving
 findings, each non-suppressed match annotated with ``vex_status``.

@@ -57,6 +57,8 @@ def match_persistence(template: ImageSource, frames: Sequence[ImageSource], *,
         return {"persisted": False, "n_hits": 0, "jitter": None}
     result = consensus_point(centers, cluster_radius=float(agree_px))
     jitter: Optional[float] = result.spread if result else None
+    # Every hit in one cluster: a 90% share let one frame in ten match
+    # somewhere else and still count, so the answer depended on frame count.
     persisted = (len(centers) == len(frame_list) and result is not None
-                 and result.agreement >= 0.9)
+                 and result.n_clusters == 1)
     return {"persisted": persisted, "n_hits": len(centers), "jitter": jitter}

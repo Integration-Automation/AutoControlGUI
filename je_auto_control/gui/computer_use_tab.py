@@ -1,14 +1,16 @@
 """Computer-Use tab: launch Anthropic's closed-loop agent from the GUI."""
 import json
+import threading
 from typing import Optional
 
-from PySide6.QtCore import QObject, QThread, Signal
+from PySide6.QtCore import QObject, Signal
 from PySide6.QtWidgets import (
     QFormLayout, QLabel, QLineEdit, QMessageBox,
     QSpinBox, QTextEdit, QVBoxLayout, QWidget,
 )
 
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
+from je_auto_control.gui._worker_thread import WorkerHandle, start_worker
 from je_auto_control.gui.language_wrapper.multi_language_wrapper import (
     language_wrapper,
 )
@@ -28,13 +30,18 @@ class _ComputerUseWorker(QObject):
     finished = Signal(dict)
     failed = Signal(str)
 
-    def __init__(self, params: dict) -> None:
+    def __init__(self, params: dict, stop_event: threading.Event) -> None:
         super().__init__()
         self._params = dict(params)
+        self._stop_event = stop_event
+
+    def request_stop(self) -> None:
+        """End the run before its next step (thread-safe)."""
+        self._stop_event.set()
 
     def run(self) -> None:
         try:
-            result = run_computer_use(**self._params)
+            result = run_computer_use(**self._params, stop_event=self._stop_event)
         except (AgentBackendError, ValueError, RuntimeError) as error:
             self.failed.emit(f"{type(error).__name__}: {error}")
             return
@@ -61,8 +68,8 @@ class ComputerUseTab(TranslatableMixin, QWidget):
         self._output = QTextEdit()
         self._output.setReadOnly(True)
         self._status = QLabel()
-        self._thread: Optional[QThread] = None
-        self._worker: Optional[_ComputerUseWorker] = None
+        self._thread: Optional[WorkerHandle] = None
+        self._stop_event = threading.Event()
         self._build_layout()
 
     def retranslate(self) -> None:
@@ -106,6 +113,7 @@ class ComputerUseTab(TranslatableMixin, QWidget):
         """Expose tab commands to the window-level Actions menu."""
         return [
             ("computer_use_run_btn", self._on_run),
+            ("computer_use_stop_btn", self._on_stop),
         ]
 
     # --- run path --------------------------------------------------
@@ -132,19 +140,20 @@ class ComputerUseTab(TranslatableMixin, QWidget):
         self._spawn_worker(params)
 
     def _spawn_worker(self, params: dict) -> None:
-        thread = QThread(self)
-        worker = _ComputerUseWorker(params)
-        worker.moveToThread(thread)
-        thread.started.connect(worker.run)
-        worker.finished.connect(self._on_worker_finished)
-        worker.failed.connect(self._on_worker_failed)
-        worker.finished.connect(thread.quit)
-        worker.failed.connect(thread.quit)
-        thread.finished.connect(worker.deleteLater)
-        thread.finished.connect(thread.deleteLater)
-        self._thread = thread
-        self._worker = worker
-        thread.start()
+        self._stop_event = threading.Event()
+        self._thread = start_worker(
+            self, _ComputerUseWorker(params, self._stop_event),
+            on_done=self._on_worker_finished,
+            on_fail=self._on_worker_failed, on_thread_done=self._on_thread_done)
+
+    def _on_stop(self) -> None:
+        if self._thread is None:
+            return
+        self._stop_event.set()
+        self._status.setText(_t("computer_use_stopping"))
+
+    def _on_thread_done(self) -> None:
+        self._thread = None
 
     def _on_worker_finished(self, data: dict) -> None:
         ok = bool(data.get("succeeded"))
@@ -153,13 +162,9 @@ class ComputerUseTab(TranslatableMixin, QWidget):
         self._output.setPlainText(
             json.dumps(data, indent=2, ensure_ascii=False, default=str),
         )
-        self._thread = None
-        self._worker = None
 
     def _on_worker_failed(self, message: str) -> None:
         self._status.setText(f"{_t('computer_use_error')}: {message}")
-        self._thread = None
-        self._worker = None
 
 
 __all__ = ["ComputerUseTab"]

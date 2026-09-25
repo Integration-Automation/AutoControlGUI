@@ -36,7 +36,8 @@ def match_elements(before: Sequence[Element], after: Sequence[Element], *,
             if index in taken:
                 continue
             score = iou(element, candidate)
-            if score >= best_score:
+            # score > 0: at iou_threshold=0 a box nowhere near matched.
+            if score >= best_score and score > 0:
                 best_index, best_score = index, score
         if best_index >= 0:
             taken.add(best_index)
@@ -54,7 +55,7 @@ def _best_prior(element: Element, prior: Sequence[Element],
     best, best_score = None, float(iou_threshold)
     for candidate in prior:
         score = iou(element, candidate)
-        if score >= best_score:
+        if score >= best_score and score > 0:
             best, best_score = candidate, score
     return best
 

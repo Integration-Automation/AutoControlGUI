@@ -65,7 +65,13 @@ def drag(start_x: int, start_y: int, end_x: int, end_y: int,
     )
     _move(int(start_x), int(start_y))
     press_mouse(mouse_keycode, int(start_x), int(start_y))
-    _move(int(end_x), int(end_y))
+    try:
+        _move(int(end_x), int(end_y))
+    except BaseException:
+        # An end point the move refuses (off screen) left the button held
+        # down; it is released where it was pressed.
+        release_mouse(mouse_keycode, int(start_x), int(start_y))
+        raise
     release_mouse(mouse_keycode, int(end_x), int(end_y))
     return [int(end_x), int(end_y)]
 

@@ -1,7 +1,9 @@
 import time
 
 from je_auto_control.utils.exception.exception_tags import linux_import_error_message
-from je_auto_control.utils.exception.exceptions import AutoControlException
+from je_auto_control.utils.exception.exceptions import (
+    AutoControlException, AutoControlKeyboardException,
+)
 from je_auto_control.utils.platform_id import is_x11_unix
 
 # === 平台檢查 Platform Check ===
@@ -19,6 +21,20 @@ from Xlib import X, protocol
 _KEYCODE_INT_ERROR = "Keycode must be an integer 鍵盤代碼必須是整數"
 
 
+def _check_keycode(keycode: int) -> None:
+    """Refuse a keycode X cannot send.
+
+    ``keysym_to_keycode`` gives 0 for a keysym the keymap does not bind; the
+    server rejects it with an error python-xlib only prints, so the key was
+    reported pressed and nothing happened.
+    """
+    if not isinstance(keycode, int):
+        raise ValueError(_KEYCODE_INT_ERROR)
+    if not 8 <= keycode <= 255:
+        raise AutoControlKeyboardException(
+            f"keycode {keycode} is not bound in this X keymap")
+
+
 def press_key(keycode: int) -> None:
     """
     Press a key using X11 fake_input
@@ -26,8 +42,7 @@ def press_key(keycode: int) -> None:
 
     :param keycode: (int) The keycode to press 要按下的鍵盤代碼
     """
-    if not isinstance(keycode, int):
-        raise ValueError(_KEYCODE_INT_ERROR)
+    _check_keycode(keycode)
 
     time.sleep(0.01)  # Small delay to ensure event stability 確保事件穩定的小延遲
     fake_input(display, X.KeyPress, keycode)
@@ -41,8 +56,7 @@ def release_key(keycode: int) -> None:
 
     :param keycode: (int) The keycode to release 要釋放的鍵盤代碼
     """
-    if not isinstance(keycode, int):
-        raise ValueError(_KEYCODE_INT_ERROR)
+    _check_keycode(keycode)
 
     time.sleep(0.01)
     fake_input(display, X.KeyRelease, keycode)
@@ -65,24 +79,21 @@ def send_key_event_to_window(window_id: int, keycode: int) -> None:
     # 建立目標視窗物件 Create target window object
     window = display.create_resource_object("window", window_id)
 
-    # 建立 KeyPress 事件 Create KeyPress event
-    event = protocol.event.KeyPress(
-        time=X.CurrentTime,
-        root=display.screen().root,
-        window=window,
-        same_screen=1,
-        child=X.NONE,
-        root_x=0, root_y=0, event_x=0, event_y=0,
-        state=0,
-        detail=keycode
-    )
-
-    # 傳送 KeyPress 事件 Send KeyPress event
-    window.send_event(event, propagate=True)
-
-    # 修改為 KeyRelease 並傳送 Modify to KeyRelease and send
-    event.type = X.KeyRelease
-    window.send_event(event, propagate=True)
+    # A separate event object for each: python-xlib encodes the bytes when
+    # the event is built, so changing ``type`` afterwards sent a second
+    # KeyPress. The mask makes XSendEvent deliver beyond the window's owner.
+    for factory, mask in ((protocol.event.KeyPress, X.KeyPressMask),
+                          (protocol.event.KeyRelease, X.KeyReleaseMask)):
+        window.send_event(factory(
+            time=X.CurrentTime,
+            root=display.screen().root,
+            window=window,
+            same_screen=1,
+            child=X.NONE,
+            root_x=0, root_y=0, event_x=0, event_y=0,
+            state=0,
+            detail=keycode,
+        ), propagate=True, event_mask=mask)
 
     # 刷新事件 Flush events
     display.flush()

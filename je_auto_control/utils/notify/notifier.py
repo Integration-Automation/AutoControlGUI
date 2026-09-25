@@ -23,6 +23,14 @@ _MAC_SCRIPT = (
     'with title (system attribute "AC_NOTIFY_TITLE")'
 )
 
+# Windows drops toasts from an app id that has no registration, silently, so
+# the unregistered 'AutoControl' never showed. PowerShell's own id is
+# registered on every Windows install.
+_WINDOWS_APP_ID = (
+    "{1AC14E77-02E7-4E5D-B744-2EB1AE5198B7}"
+    "\\WindowsPowerShell\\v1.0\\powershell.exe"
+)
+
 _WINDOWS_SCRIPT = (
     "$t=$env:AC_NOTIFY_TITLE; $m=$env:AC_NOTIFY_MSG; "
     "[void][Windows.UI.Notifications.ToastNotificationManager,"
@@ -34,7 +42,7 @@ _WINDOWS_SCRIPT = (
     "[void]$n.Item(1).AppendChild($x.CreateTextNode($m)); "
     "$toast=[Windows.UI.Notifications.ToastNotification]::new($x); "
     "[Windows.UI.Notifications.ToastNotificationManager]::"
-    "CreateToastNotifier('AutoControl').Show($toast)"
+    "CreateToastNotifier($env:AC_NOTIFY_APP_ID).Show($toast)"
 )
 
 
@@ -65,7 +73,8 @@ def _notify_spec(system: str, title: str, message: str
     if system == "Windows":
         return (["powershell", "-NoProfile", "-NonInteractive",
                  "-Command", _WINDOWS_SCRIPT],
-                {"AC_NOTIFY_TITLE": title, "AC_NOTIFY_MSG": message})
+                {"AC_NOTIFY_TITLE": title, "AC_NOTIFY_MSG": message,
+                 "AC_NOTIFY_APP_ID": _WINDOWS_APP_ID})
     return (None, {})
 
 
@@ -81,10 +90,12 @@ def notify(title: str, message: str,
     if argv is None:
         return NotifyResult(False, system, "no notifier for platform")
     try:
-        subprocess.run(  # nosec B603 B607 — argv list, static script, env-passed strings  # nosemgrep: python.lang.security.audit.dangerous-subprocess-use-audit.dangerous-subprocess-use-audit
+        completed = subprocess.run(  # nosec B603 B607 — argv list, static script, env-passed strings  # nosemgrep: python.lang.security.audit.dangerous-subprocess-use-audit.dangerous-subprocess-use-audit
             argv, env={**os.environ, **env_extra}, timeout=10, check=False,
             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
         )
+        if completed.returncode != 0:
+            return NotifyResult(False, system, f"notifier exited {completed.returncode}")
         return NotifyResult(True, system, "sent")
     except (OSError, subprocess.SubprocessError) as error:
         autocontrol_logger.warning("notify failed: %r", error)

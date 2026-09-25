@@ -15,7 +15,7 @@ import re
 import struct
 from gettext import c2py
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, Iterator, List, Optional, Tuple
 
 _MO_MAGIC_LE = 0x950412DE
 _MO_MAGIC_BE = 0xDE120495
@@ -195,9 +195,26 @@ def read_mo(data: bytes) -> GettextCatalog:
     """Parse GNU ``.mo`` binary ``data`` into a catalog; damaged data is ``ValueError``."""
     try:
         return _read_mo(data)
-    except (struct.error, UnicodeDecodeError) as error:
+    except (struct.error, UnicodeDecodeError, LookupError) as error:
         # A truncated file raised struct.error from deep inside the parser.
         raise ValueError(f"damaged .mo data: {error}") from error
+
+
+_MO_CHARSET = re.compile(rb"charset=([^\s;]+)", re.IGNORECASE)
+
+
+def _mo_charset(entries: List[Tuple[bytes, bytes]]) -> str:
+    """The charset the header entry (msgid "") declares; UTF-8 without one.
+
+    GNU gettext decodes every string with it, as Python's ``gettext`` does,
+    so a Latin-1 catalogue read as "damaged" when decoded as UTF-8.
+    """
+    for original, translation in entries:
+        if original == b"":
+            match = _MO_CHARSET.search(translation)
+            if match:
+                return match.group(1).decode("ascii")
+    return "utf-8"
 
 
 def _read_mo(data: bytes) -> GettextCatalog:
@@ -206,15 +223,17 @@ def _read_mo(data: bytes) -> GettextCatalog:
         raise ValueError("not a .mo file (bad magic)")
     endian = "<" if magic == _MO_MAGIC_LE else ">"
     count, orig_off, trans_off = struct.unpack(endian + "III", data[8:20])
-    catalog = GettextCatalog()
+    entries: List[Tuple[bytes, bytes]] = []
     for index in range(count):
         olen, ostart = struct.unpack(
             endian + "II", data[orig_off + 8 * index:orig_off + 8 * index + 8])
         tlen, tstart = struct.unpack(
             endian + "II", data[trans_off + 8 * index:trans_off + 8 * index + 8])
-        original = data[ostart:ostart + olen].decode("utf-8")
-        translation = data[tstart:tstart + tlen].decode("utf-8")
-        _store_mo_entry(catalog, original, translation)
+        entries.append((data[ostart:ostart + olen], data[tstart:tstart + tlen]))
+    charset = _mo_charset(entries)
+    catalog = GettextCatalog()
+    for original, translation in entries:
+        _store_mo_entry(catalog, original.decode(charset), translation.decode(charset))
     catalog.finalize()
     return catalog
 
@@ -241,7 +260,7 @@ def _append(entry: Dict[str, object], field: Optional[object],
 
 
 def _parse_block(block: str) -> Optional[Dict[str, object]]:
-    """Parse one blank-line-delimited ``.po`` block into a field dict."""
+    """Parse one ``.po`` entry into a field dict."""
     entry: Dict[str, object] = {}
     field: Optional[object] = None
     fuzzy = False
@@ -298,10 +317,31 @@ def _store_block(catalog: GettextCatalog, entry: Dict[str, object]) -> None:
         catalog.add(msgid, plurals.get(0, ""), context=ctx)
 
 
+def _entry_blocks(text: str) -> Iterator[str]:
+    """Split ``.po`` source into entries.
+
+    An entry ends at a blank line, a comment or a new ``msgctxt``/``msgid``
+    once it has a ``msgstr``: msgfmt needs no blank line between entries,
+    and splitting on blank lines alone merged such entries (and every entry
+    of a CRLF file) into one.
+    """
+    block: List[str] = []
+    has_msgstr = False
+    for line in text.splitlines():
+        stripped = line.strip()
+        if has_msgstr and (not stripped or stripped.startswith(("#", "msgctxt ", "msgid "))):
+            yield "\n".join(block)
+            block, has_msgstr = [], False
+        has_msgstr = has_msgstr or stripped.startswith("msgstr")
+        block.append(line)
+    if block:
+        yield "\n".join(block)
+
+
 def parse_po(text: str) -> GettextCatalog:
     """Parse ``.po`` source ``text`` into a :class:`GettextCatalog`."""
     catalog = GettextCatalog()
-    for block in re.split(r"\n[ \t]*\n", text or ""):
+    for block in _entry_blocks(text or ""):
         entry = _parse_block(block)
         if entry is not None:
             _store_block(catalog, entry)

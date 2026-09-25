@@ -22,6 +22,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Dict, Optional
 
+from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.json_store.json_store import (
     atomic_write_text, load_json_or_quarantine, quarantine_file,
 )
@@ -195,7 +196,7 @@ _DTLS_FP_RE = __import__("re").compile(
 )
 
 
-class FingerprintMismatchError(RuntimeError):
+class FingerprintMismatchError(AutoControlException, RuntimeError):
     """Raised when a DTLS fingerprint doesn't match the pinned value."""
 
 

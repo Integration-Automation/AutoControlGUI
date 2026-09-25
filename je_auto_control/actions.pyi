@@ -837,7 +837,7 @@ def AC_delta_observation(
     max_lines: Any = ...,
     interactive_only: Any = ...,
 ) -> Dict[str, Any]:
-    """Adapter: token-budgeted "what changed" delta between two element frames."""
+    """Adapter: token-budgeted \"what changed\" delta between two element frames."""
 
 def AC_describe_screen(app_name: str | None = ...) -> Dict[str, Any]:
     """Adapter: structured 'where am I' description of the live screen."""
@@ -1459,6 +1459,9 @@ def AC_idempotency_begin(name: str, key: str, request: Any = ...) -> Dict[str, A
 
 def AC_idempotency_complete(name: str, key: str, response: Any) -> Dict[str, Any]:
     """Adapter: store the completed response for an idempotency key."""
+
+def AC_idempotency_release(name: str, key: str) -> Dict[str, Any]:
+    """Adapter: drop an ``in_progress`` key whose work failed, so a retry runs it."""
 
 def AC_idle_point(busy_samples: Any, quiet_samples: Any = ...) -> Dict[str, Any]:
     """Adapter: index where a busy/idle sample series first settles idle (pure)."""
@@ -2146,8 +2149,14 @@ def AC_quarantine_remove(name: str) -> Dict[str, Any]:
 def AC_queue_add(db: str, data: Any, reference: str | None = ..., name: str = ...) -> Dict[str, Any]:
     """Adapter: enqueue a work item (skips live duplicate references)."""
 
-def AC_queue_complete(db: str, item_id: int, output: Any = ..., name: str = ...) -> Dict[str, Any]:
-    """Adapter: mark a work item successful."""
+def AC_queue_complete(
+    db: str,
+    item_id: int,
+    output: Any = ...,
+    name: str = ...,
+    claim: int | None = ...,
+) -> Dict[str, Any]:
+    """Adapter: mark a work item successful (``claim`` from AC_queue_next)."""
 
 def AC_queue_fail(
     db: str,
@@ -2156,6 +2165,7 @@ def AC_queue_fail(
     kind: str = ...,
     max_retries: int = ...,
     name: str = ...,
+    claim: int | None = ...,
 ) -> Dict[str, Any]:
     """Adapter: fail a work item (application errors retry, business don't)."""
 
@@ -2656,7 +2666,7 @@ def AC_shard_suite(
 ) -> Dict[str, Any]:
     """Adapter: balance flows into duration-aware shards."""
 
-def AC_shell_command(shell_command: str | List[str]) -> None:
+def AC_shell_command(shell_command: str | List[str] | None = ..., *, command: str | List[str] | None = ...) -> None:
     """Execute shell command with shell=False."""
 
 def AC_sign_action_file(path: str, key: str | None = ...) -> Dict[str, Any]:

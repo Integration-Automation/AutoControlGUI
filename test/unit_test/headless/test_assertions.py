@@ -151,7 +151,7 @@ def test_assert_text_regex(monkeypatch):
     _patch_ocr_text(monkeypatch, "Order 12345 placed")
     monkeypatch.setattr(
         ocr, "find_text_regex",
-        lambda pattern, lang="eng", region=None, min_confidence=60.0:
+        lambda pattern, lang="eng", region=None, min_confidence=60.0, flags=0:
         [SimpleNamespace(text="12345")],
     )
     result = assert_text(r"\d{5}", regex=True, present=True)

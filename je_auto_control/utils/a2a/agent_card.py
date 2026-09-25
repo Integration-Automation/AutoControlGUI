@@ -68,8 +68,8 @@ def build_agent_card(*, name: str = _DEFAULT_NAME, url: str = _DEFAULT_URL,
         "version": version or _package_version(),
         "preferredTransport": "JSONRPC",
         "capabilities": {"streaming": False, "pushNotifications": False},
-        "defaultInputModes": ["text"],
-        "defaultOutputModes": ["text"],
+        "defaultInputModes": ["text/plain"],
+        "defaultOutputModes": ["text/plain"],
         "skills": _skills(),
     }
 

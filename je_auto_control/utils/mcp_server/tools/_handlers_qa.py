@@ -349,6 +349,11 @@ def audit_accessibility(app_name: Optional[str] = None,
 def audit_contrast(foreground: List[int], background: List[int],
                    min_ratio: float = 4.5) -> Dict[str, Any]:
     from je_auto_control.utils.a11y_audit import contrast_ratio
+    for name, colour in (("foreground", foreground), ("background", background)):
+        if not isinstance(colour, (list, tuple)) or len(colour) != 3 or not all(
+                isinstance(c, (int, float)) and not isinstance(c, bool) and 0 <= c <= 255
+                for c in colour):
+            raise ValueError(f"{name} must be three numbers in 0..255, got {colour!r}")
     ratio = contrast_ratio(foreground, background)
     return {
         "ratio": round(ratio, 2),

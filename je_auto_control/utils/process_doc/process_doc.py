@@ -9,7 +9,9 @@ Pure standard library (``html`` escaping); imports no ``PySide6``.
 """
 import html
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Tuple
+
+from je_auto_control.utils.json_store.json_store import atomic_write_text
 
 # Command -> human verb phrase.
 _VERBS = {
@@ -47,17 +49,34 @@ def describe_step(command: str, args: Dict[str, Any]) -> str:
 
 def generate_sop(actions: List[Any], *,
                  title: str = "Automation Procedure") -> Dict[str, Any]:
-    """Return a structured SOP for ``actions`` plus an HTML rendering."""
+    """Return a structured SOP for ``actions`` plus an HTML rendering.
+
+    Takes the shapes the executor runs: a list of ``[command, args?]`` steps,
+    or ``{"auto_control": [...]}``. A bare command string is a step with no
+    arguments. The wrapped form used to be read as its keys and a string step
+    letter by letter; any other step shape raises ``ValueError``.
+    """
+    if isinstance(actions, dict):
+        actions = actions.get("auto_control", [])
     steps: List[Dict[str, Any]] = []
     for index, action in enumerate(actions, start=1):
-        command = action[0] if action and isinstance(action[0], str) else "?"
-        args = (action[1] if len(action) > 1 and isinstance(action[1], dict)
-                else {})
+        command, args = _step_parts(action, index)
         steps.append({"n": index, "command": command,
                       "description": describe_step(command, args),
                       "args": args})
     return {"title": title, "step_count": len(steps), "steps": steps,
             "html": _render_html(title, steps)}
+
+
+def _step_parts(action: Any, index: int) -> Tuple[str, Dict[str, Any]]:
+    """``(command, args)`` for one step of an action list."""
+    if isinstance(action, str):
+        return action, {}
+    if not isinstance(action, (list, tuple)):
+        raise ValueError(f"step {index} is not an action: {action!r}")
+    command = action[0] if action and isinstance(action[0], str) else "?"
+    args = action[1] if len(action) > 1 and isinstance(action[1], dict) else {}
+    return command, args
 
 
 def _render_html(title: str, steps: List[Dict[str, Any]]) -> str:
@@ -75,5 +94,9 @@ def write_sop(actions: List[Any], path: str, *,
     """Write the SOP HTML for ``actions`` to ``path``; return the path."""
     document = generate_sop(actions, title=title)
     target = Path(path)
-    target.write_text(document["html"], encoding="utf-8")
+    # Its folder is made, as the SARIF and JUnit writers do; atomically, as a
+    # failed write (a lone surrogate) left the previous SOP truncated to 0.
+    target.parent.mkdir(parents=True, exist_ok=True)
+    html_text = document["html"].encode("utf-8", "replace").decode("utf-8")
+    atomic_write_text(str(target), html_text)
     return str(target.resolve())

@@ -25,20 +25,26 @@ _UIA_LEGACY_VALUE_PROPERTY = 30093
 
 # ``key -> (is-this-pattern-available id, value id)``
 _STATE_READS = (
-    ("value", 30029, 30045),        # IsValuePatternAvailable, Value.Value
+    ("value", 30043, 30045),        # IsValuePatternAvailable, Value.Value
     ("toggle", 30041, 30086),       # IsTogglePatternAvailable, ToggleState
     ("selected", 30036, 30079),     # IsSelectionItemPatternAvailable, IsSelected
-    ("number", 30034, 30047),       # IsRangeValuePatternAvailable, RangeValue
+    ("number", 30033, 30047),       # IsRangeValuePatternAvailable, RangeValue
 )
 
 TOGGLE_STATES = {0: "off", 1: "on", 2: "mixed"}
 
 
 def _prop(raw, property_id: int) -> Any:
-    """Read one UIA property; ``None`` when it cannot be read."""
+    """Read one UIA property; ``None`` when it cannot be read.
+
+    ``UIA_ERRORS`` as every other UIA read uses: it holds ``COMError``
+    (element no longer available -- its window closed), which no containment
+    boundary catches and which aborted a whole action script.
+    """
+    from je_auto_control.utils.accessibility.backends.windows_query import UIA_ERRORS
     try:
         return raw.GetCurrentPropertyValue(property_id)
-    except (OSError, AttributeError, ValueError):
+    except UIA_ERRORS:
         return None
 
 

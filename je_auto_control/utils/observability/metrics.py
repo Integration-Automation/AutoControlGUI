@@ -221,12 +221,17 @@ class Histogram(_MetricBase):
             _validate_name(lname, "label")
         if "le" in label_names:
             raise ValueError("'le' is the histogram's own bucket label")
+        # The +Inf bucket is always rendered; passing it too rendered it twice,
+        # which Prometheus rejects as a duplicate series.
+        buckets = tuple(buckets)
+        if buckets and buckets[-1] == math.inf:
+            buckets = buckets[:-1]
         if not buckets:
             raise ValueError("Histogram requires at least one bucket")
-        # Buckets must be strictly increasing.
+        # Buckets must be strictly increasing (NaN compares false to all).
         last = -math.inf
         for boundary in buckets:
-            if boundary <= last:
+            if math.isnan(boundary) or boundary <= last:
                 raise ValueError("Histogram buckets must be strictly increasing")
             last = boundary
         super().__init__(name=name, help_text=help_text,

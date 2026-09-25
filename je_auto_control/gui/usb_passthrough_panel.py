@@ -19,7 +19,7 @@ from __future__ import annotations
 
 from typing import Any, Callable, List, Optional
 
-from PySide6.QtCore import QObject, QThread, QTimer, Signal
+from PySide6.QtCore import QObject, QTimer, Signal
 from PySide6.QtWidgets import (
     QCheckBox, QComboBox, QFileDialog, QGroupBox, QHBoxLayout, QHeaderView,
     QLabel, QLineEdit, QMessageBox, QTableWidget,
@@ -27,6 +27,7 @@ from PySide6.QtWidgets import (
 )
 
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
+from je_auto_control.gui._worker_thread import WorkerHandle, start_worker
 from je_auto_control.gui.language_wrapper.multi_language_wrapper import (
     language_wrapper,
 )
@@ -87,8 +88,9 @@ class UsbPassthroughPanel(TranslatableMixin, QWidget):
         self._remote_client_provider = (
             remote_client_provider or _default_remote_client
         )
-        self._loopback: Optional[UsbLoopback] = None
-        self._thread: Optional[QThread] = None
+        self._share = _ShareState()
+        self.destroyed.connect(self._share.release)
+        self._thread: Optional[WorkerHandle] = None
         self._host_badge = _StatusBadge()
         self._viewer_status = QLabel("")
         self._source_combo = QComboBox()
@@ -109,6 +111,11 @@ class UsbPassthroughPanel(TranslatableMixin, QWidget):
         self._apply_shared_headers()
         self._refresh_local_devices()
         self._refresh_host_badge()
+
+    @property
+    def _loopback(self) -> Optional[UsbLoopback]:
+        """The open local loopback, or ``None`` while sharing is off."""
+        return self._share.loopback
 
     def _default_loopback(self) -> UsbLoopback:
         return UsbLoopback(acl=self._acl, viewer_id="gui-local")
@@ -221,7 +228,7 @@ class UsbPassthroughPanel(TranslatableMixin, QWidget):
             return
         enable_usb_passthrough(True)
         try:
-            self._loopback = self._loopback_factory()
+            self._share.loopback = self._loopback_factory()
         except (RuntimeError, OSError) as error:
             enable_usb_passthrough(False)
             QMessageBox.warning(self, _t("usb_share_host_group"), str(error))
@@ -229,8 +236,7 @@ class UsbPassthroughPanel(TranslatableMixin, QWidget):
         self._refresh_host_badge()
 
     def _disable_sharing(self) -> None:
-        loop = self._loopback
-        self._loopback = None
+        loop, self._share.loopback = self._share.loopback, None
         if loop is not None:
             loop.close()
         enable_usb_passthrough(False)
@@ -266,6 +272,7 @@ class UsbPassthroughPanel(TranslatableMixin, QWidget):
 
     def _on_auto_toggled(self, on: bool) -> None:
         watcher = default_usb_watcher()
+        self._share.watching = on
         if on:
             watcher.start()
             self._hotplug_timer.start()
@@ -297,11 +304,16 @@ class UsbPassthroughPanel(TranslatableMixin, QWidget):
         vid = self._cell(self._local_table, row, 0)
         pid = self._cell(self._local_table, row, 1)
         serial = self._cell(self._local_table, row, 3) or None
-        self._acl.remove_rule(vendor_id=vid, product_id=pid, serial=serial)
-        self._acl.add_rule(AclRule(
-            vendor_id=vid, product_id=pid, serial=serial,
-            label=f"gui {vid}:{pid}", allow=allow, prompt_on_open=False,
-        ))
+        # Built first, as it validates: root hubs and controllers list no
+        # vendor or product id, and the ValueError escaped the slot.
+        try:
+            rule = AclRule(vendor_id=vid, product_id=pid, serial=serial,
+                           label=f"gui {vid}:{pid}", allow=allow, prompt_on_open=False)
+            self._acl.remove_rule(vendor_id=vid, product_id=pid, serial=serial)
+            self._acl.add_rule(rule)
+        except (ValueError, OSError) as error:
+            self._viewer_status.setText(str(error))
+            return
         key = "usb_share_allowed" if allow else "usb_share_blocked"
         self._viewer_status.setText(_t(key).format(vid=vid, pid=pid))
         self._refresh_local_devices()
@@ -443,17 +455,10 @@ class UsbPassthroughPanel(TranslatableMixin, QWidget):
                    on_fail: Callable[[str], None]) -> None:
         if self._thread is not None:
             return
-        thread = QThread(self)
-        worker = _CallWorker(fn)
-        worker.moveToThread(thread)
-        thread.started.connect(worker.run)
-        worker.finished.connect(on_done)
-        worker.failed.connect(on_fail)
-        worker.finished.connect(thread.quit)
-        worker.failed.connect(thread.quit)
-        thread.finished.connect(self._on_thread_done)
-        self._thread = thread
-        thread.start()
+        # on_done / on_fail are often lambdas; start_worker runs them on the
+        # GUI thread, where they may touch widgets.
+        self._thread = start_worker(self, _CallWorker(fn), on_done=on_done,
+                                    on_fail=on_fail, on_thread_done=self._on_thread_done)
 
     def _on_thread_done(self) -> None:
         self._thread = None
@@ -469,12 +474,29 @@ class UsbPassthroughPanel(TranslatableMixin, QWidget):
         text = item.text() if item is not None else ""
         return "" if text == "-" else text
 
-    def closeEvent(self, event) -> None:  # noqa: N802  # Qt override name
-        self._hotplug_timer.stop()
-        if self._auto_check.isChecked():
+
+class _ShareState:
+    """What the panel must release when it goes, held apart from the panel.
+
+    The panel lives in a tab, which never receives ``closeEvent``: destroying
+    it left the loopback open, the hotplug watcher running and the
+    process-wide passthrough flag -- off by default, pending review -- on.
+    ``destroyed`` runs :meth:`release`, which must not reach the panel.
+    """
+
+    def __init__(self) -> None:
+        self.loopback: Optional[UsbLoopback] = None
+        self.watching = False
+
+    def release(self, *_args: Any) -> None:
+        """Close this panel's loopback and watcher; turn passthrough off if it had turned it on."""
+        if self.watching:
+            self.watching = False
             default_usb_watcher().stop()
-        self._disable_sharing()
-        super().closeEvent(event)
+        loop, self.loopback = self.loopback, None
+        if loop is not None:
+            loop.close()
+            enable_usb_passthrough(False)
 
 
 def _make_table(columns: int) -> QTableWidget:

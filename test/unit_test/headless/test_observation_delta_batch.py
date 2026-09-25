@@ -23,7 +23,9 @@ def test_added_removed_changed_stable_classification():
 
 def test_moved_is_a_change():
     prev = [_el(0, 0, name="X")]
-    curr = [_el(50, 0, name="X")]  # same identity (overlap), moved > threshold
+    # 30 px along a 40 px box: still overlapping (same identity), moved > threshold.
+    # At x=50 the boxes no longer touch, and IoU 0 is no match.
+    curr = [_el(30, 0, name="X")]
     delta = delta_index(prev, curr, iou_threshold=0.0)
     assert delta["changed"] and "moved" in delta["changed"][0]["fields"]
 

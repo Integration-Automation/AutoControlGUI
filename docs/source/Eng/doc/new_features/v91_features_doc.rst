@@ -7,7 +7,7 @@ login-then-call REST flow could not carry a session headlessly. This parses
 header; the jar is JSON-serialisable so a session can be saved and reloaded.
 
 Pure standard library (``json``); imports no ``PySide6``. The jar is a simple
-in-memory name-value store (cookies cleared on ``Max-Age<=0`` / empty value),
+in-memory name-value store (cookies cleared on ``Max-Age<=0`` or a past ``Expires``; an empty value is kept),
 so behaviour is fully deterministic in CI.
 
 Headless API
@@ -27,7 +27,7 @@ Headless API
 
 ``parse_set_cookie`` parses one ``Set-Cookie`` value into ``{name, value,
 attributes}``. ``CookieJar.update`` applies one or many ``Set-Cookie`` headers
-(removing a cookie on an empty value or ``Max-Age<=0``); ``set`` assigns
+(removing a cookie on ``Max-Age<=0`` or a past ``Expires``); ``set`` assigns
 directly; ``cookie_header`` builds the request header; ``to_dict`` / ``from_dict``
 and ``save`` / ``load`` persist the jar as JSON. (Domain/path matching is
 simplified — this is a session-carry jar, not a full RFC 6265 policy engine.)

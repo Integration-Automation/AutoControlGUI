@@ -28,6 +28,7 @@ import threading
 import time
 from typing import Dict, Optional, Tuple
 
+from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 
 _HANDSHAKE_BYTES = 33  # 1 role + 32 session_id
@@ -47,7 +48,7 @@ _ACCEPT_POLL_TIMEOUT_S = 0.5
 _PIPE_POLL_TIMEOUT_S = 0.5
 
 
-class RelayError(RuntimeError):
+class RelayError(AutoControlException, RuntimeError):
     """Raised for handshake or pairing errors."""
 
 

@@ -149,7 +149,8 @@ def test_paginate_resolves_a_relative_next_link():
     ("http://h/a//b", "http://h/a//b"),
     ("mailto:a@b", "mailto:a@b"),
     ("http://h/?q=%ff&flag", "http://h/?q=%FF&flag"),
-    ("HTTP://H:80/./a/%7e", "http://h/a/%7E"),
+    ("HTTP://H:80/./a/%7e", "http://h/a/~"),   # unreserved: decoded (6.2.2.2)
+    ("http://h/a%2fb", "http://h/a%2Fb"),   # reserved: kept, hex upper-cased
 ])
 def test_url_normalisation_follows_rfc_3986(url, expected):
     assert normalize_url(url) == expected

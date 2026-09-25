@@ -15,6 +15,36 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Added
 
+- The MCP server speaks the stateless protocol revision 2026-07-28 over
+  stdio and HTTP, per request, beside the `initialize`-based ones: `server/discover`,
+  `resultType` and caching hints on results, the `-32020`–`-32022` error
+  codes, `subscriptions/listen` for tool-list changes and resource updates,
+  and destructive-tool confirmation as a multi round-trip
+  (`input_required` with a signed `requestState`). Over HTTP a stateless
+  request needs the `Mcp-Method` / `Mcp-Name` headers and is served without
+  a session. Existing clients are served as before.
+- The MCP server negotiates protocol version 2025-11-25 and sends its
+  `description` in `serverInfo` to clients of that revision.
+- Computer use with `computer_toolset_20260801` answers `zoom` with a
+  full-resolution crop of the region.
+- `WorkQueueError` and `CheckpointStoreError` (both
+  `AutoControlException`) for a database that cannot be opened or used.
+- `stop_event=` on `AgentLoop`, `run_computer_use` and `run_dag`; the
+  Computer Use and DAG Runner tabs have a Stop action, and closing the
+  window asks a running job to stop.
+- `parse_multipart` files carry `content_base64` (the exact bytes).
+- Computer use speaks the GA `computer_toolset_20260801`, used
+  automatically for `claude-opus-5-5` (which rejects the beta tool); pass
+  `tool_type="computer_toolset_20260801"` to use it with other models.
+- REST `POST /execute` accepts `"raise_on_error": true`: the run stops at
+  the first failing action and answers `{"ok": false, "error": ...}`.
+  `AdminConsoleClient.broadcast_execute(raise_on_error=True)` reports such a
+  host as `ok: false`.
+- `HistoryStore.list_runs(script_path=...)`, and `environ=` on
+  `validate_config` / `ConfigSchema.validate`.
+- **`AC_idempotency_release`** / MCP `ac_idempotency_release` / Script
+  Builder *Idempotency: Release*: free an in-progress idempotency key whose
+  work failed so a retry runs it.
 - `cua_action.resolve_key_name` / `split_key_combo`, and
   `compile_postcondition(before=...)`.
 - `pii_text.luhn_valid` and `normalize_text(strip_format=...)`.
@@ -54,6 +84,101 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Changed
 
+- An MCP HTTP request whose `MCP-Protocol-Version` header names an
+  unsupported version is still a 400, now with a JSON-RPC
+  `UnsupportedProtocolVersion` (`-32022`) body listing the supported
+  versions instead of `{"error": ...}`.
+- Quick Connect verifies the host certificate for `wss://` targets (use the
+  Advanced viewer with *Skip cert verification* for self-signed hosts).
+- The signaling client and the USB browser's device fetch go through
+  `http_client`: http(s) only, the egress policy applies, and credentials
+  do not follow a redirect to another host.
+- `match_theme`, `propose_elements` and `read_barcodes` return screen
+  coordinates for a screen grab (they were relative to `region`).
+- `plan_open` / `open_path` refuse opaque URL schemes off the allow list;
+  webhook transports are case-insensitive and unknown ones are refused.
+- `handle_file_dialog` waits for a window titled exactly like the dialog and
+  types only after bringing it to the front; watchdog key rules press their
+  key only in the popup.
+- Empty process names and window-title patterns are refused by the waits
+  and process assertions.
+- `assert_http` and config sync send their requests through `http_client`:
+  the egress policy and the body cap apply, and config sync no longer
+  follows redirects.
+- S3 store failures raise `ArtifactStoreError`; unreadable Office files raise
+  `AutoControlActionException`.
+- VLM locate / click raise `VLMRequestError` when the request fails,
+  instead of reporting the element as not found.
+- Agent tool schemas carry resolved parameter types and omit private and
+  callback parameters; the OpenAI agent backend refuses more than 128 tools.
+- Generated tests and scripts replay actions with
+  `ac.executor.execute_action(..., raise_on_error=True)`, so they fail at
+  the first failed action; actions holding `${...}` go through the executor.
+- Several `je_auto_control_mcp --list-*` flags print one JSON object.
+- Accessibility matches with an on-screen rectangle come first, and
+  `click_accessibility_element` returns `False` for a match without one.
+- Anchor locate raises when its OCR, accessibility or VLM backend is not
+  set up, instead of reporting the anchor as not found.
+- `AC_shell_command` fails when its program cannot start (it reported
+  success) and logs only the program, not its arguments.
+- `AC_read_file_to_var` reads `utf-8-sig` by default.
+- The Live HUD samples only while it is on screen; its log tail keeps
+  collecting while it is hidden.
+- MCP `tools/call` arguments that fail the tool's input schema are
+  answered as a tool execution error (`isError: true`), not a `-32602`
+  JSON-RPC error, so the model can correct them.
+- The MCP HTTP transport answers a wrong bearer token 401 (was 403),
+  as the MCP authorization spec requires; every 401 from it and the REST
+  API carries a `WWW-Authenticate: Bearer` challenge.
+- The REST API answers a known path asked with the other method 405 with
+  `Allow` (was 404).
+- `AdminConsoleClient` treats `labels=[]` as no host (was every host).
+- Config sync breaks timestamp ties the same way on every client and
+  reports them as conflicts.
+- `AC_call_macro` restores the caller's variables of the parameters'
+  names after the call.
+- A plugin command named like a block command is refused.
+- The LLM cost table carries current Claude list prices (Opus 4.7 is
+  $5/$25, not $15/$75) and resolves dated or provider-prefixed ids.
+- `vex_statement` takes `action_statement=` and requires it for
+  `affected` (OpenVEX).
+- The SBOM prefers PEP 639 `License-Expression`; licence evaluation
+  reads every `licenses` entry.
+- `perceptual_diff` discounts anti-aliasing with pixelmatch's test
+  instead of a morphological open, so thin real changes (small text,
+  1 px rules) now count.
+- `image_histogram` channels are L1-normalised; histogram intersection
+  divides by the larger mass.
+- `ssim_compare` scales its constants to the images' dynamic range and
+  reports -1..1.
+- `confusable_skeleton` follows UTS #39 (NFKD, map, NFD); `×` and `÷`
+  count as Common script.
+- Without rapidfuzz, fuzzy scores are the symmetric Indel ratio (the
+  same as the rapidfuzz backend).
+- Toolset screenshots are fitted into the high-resolution tier (2576 px
+  long edge, 4784 visual tokens) instead of 1568 px / 1.15 MP.
+- `parse_dotenv` decodes `\'` and `\\` inside single-quoted values, as
+  python-dotenv does.
+- `format_message` keeps an apostrophe before `#` outside a plural and
+  before `|` (ICU); French has the CLDR `many` category.
+- `parse_rrule` raises `AutoControlException` for RRULE parts it does
+  not support (`BYHOUR`, `BYWEEKNO`, `BYYEARDAY`…) and for `COUNT` with
+  `UNTIL`, instead of silently ignoring them.
+- `CookieJar.update` keeps a cookie with an empty value (only
+  `Max-Age<=0` or a past `Expires` deletes one), and `parse_traceparent`
+  accepts a newer version (read as `00`); only `ff` is rejected.
+- `parse_problem` ignores `title` / `status` / `detail` / `instance` of
+  the wrong JSON type instead of keeping or coercing them.
+- `format_annotation` / `emit_annotations` / `AC_ci_annotations` raise
+  `ValueError` for an unknown level instead of emitting `error`.
+  `generate_sop` raises `ValueError` for a step that is neither a list nor a
+  command string.
+- `compare_field_value` / `verify_field_value` / `fill_and_verify` raise
+  `ValueError` for an unknown `mode` and accept any case. Profiles of numeric
+  columns carry a `non_finite` count.
+- **Webhook methods**: `PATCH` webhooks are served; verbs the server cannot
+  answer (e.g. `HEAD`) are refused when the webhook is added instead of
+  returning 501 on every request.
 - **Golden-image capture (`take_golden` / `compare_to_golden`) reads its
   region in mouse coordinates**, like every other capture; region goldens
   taken on a scaled display need re-taking.
@@ -198,6 +323,13 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Security
 
+- The egress policy matches hosts by their IDNA encoding, so soft
+  hyphens, fullwidth characters and ideographic full stops no longer
+  slip past a deny list.
+- `GPLv3+`, `GPL-3.0 License` and `LGPL-2.1-or-later` are caught by the
+  copyleft deny list.
+- The secrets scan skips only values that are a single placeholder.
+- Secret redaction no longer stops at an escaped quote.
 - **HTTP cassettes no longer record credential headers**, and a `match_on`
   field they cannot compare raises instead of matching every request.
 - **JWT decoding rejects characters outside base64url** (which made tokens
@@ -295,6 +427,323 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Fixed
 
+- The Flow Editor opens action files saved with a BOM, keeps a wrapped
+  file's other keys on save, and writes atomically.
+- The region selector (template cropping, OCR / screenshot / WebRTC regions)
+  covers every screen and returns native pixels: it was offset by the
+  virtual desktop's origin and did not cover screens with display scaling.
+- Numeric fields in the Image Detect, Auto Click and Screenshot tabs accept
+  a decimal point and refuse grouped digits under any locale.
+- Script Builder: shown defaults equal the executor's (an edit no longer
+  writes `detect_threshold: 0.8` into an exact image match, nor a file path
+  for agent-card / SBOM / MCP manifest steps); grid and annotation fields are
+  required; positional arguments and the other keys of a wrapped file
+  survive load and save; decimals can be typed under comma locales.
+- WebRTC host annotations from a viewer are validated and bounded.
+- The tray icon keeps the application running only while a host runs.
+- Stopping a host while its approval dialog is open no longer raises.
+- Trust-list and address-book imports report files of the wrong shape.
+- Stop cancels a pending WebRTC auto-reconnect; a new remote window keeps
+  the pen mode; an empty recording is no longer reported as saved.
+- Quick Connect handles ws:// sessions on close and in its status badge,
+  ends the session on an error, and closes a timed-out approval box.
+- The Quick Connect popup forwards mouse and keyboard input.
+- Closing a remote screen window no longer aborts the process when its
+  panel is deleted first.
+- Remote desktop connect errors (such as an invalid host name) are reported.
+- Audio follows its checkbox while the Advanced section is collapsed.
+- The host share text quotes the settings the host started with.
+- Address-book, known-hosts and remote-inbox data of the wrong shape no
+  longer raise in the GUI.
+- The voice router is safe under concurrent use; `match_ensemble` votes on
+  one frame.
+- Failure signatures group failures that differ only in timings.
+- `AC_delta_observation` counts match its summary, and removed elements
+  carry no stale index.
+- The package imports without a home directory; the path guard reports a
+  missing home as `PathNotAllowedError`.
+- Adaptive timeouts, checkbox reads and contrast checks handle infinite
+  samples, clipped boxes and anti-aliased edges.
+- MCP `ac_kill_process` and `wait_until_window_title` no longer let psutil
+  or regex errors escape.
+- File associations report `None` for an unregistered type; file drops and
+  clipboard file lists carry absolute paths.
+- The Window Manager tab focuses and closes the selected window, not the
+  first title match.
+- Secrets nested inside action arguments, and webhook URLs, are masked in
+  logs and run records.
+- `X-Api-Key` and `X-Auth-Token` are dropped on redirects to another origin.
+- A truncated HTTP error body or a deeply nested reply no longer aborts a
+  script.
+- The IMAP trigger fires once per message, honours UIDVALIDITY and accepts
+  non-ASCII mailbox names.
+- HTTP cassettes mask credentials in query strings and bodies.
+- SQLite data sources that cannot be opened raise an action error.
+- Agent turns cut short by `max_tokens` or a refusal no longer run their
+  tool calls; OpenAI refusals and filtered replies are not final answers.
+- Computer-use scrolls keep their direction, the cursor position is in
+  screenshot pixels, and `ctrl++` keeps its plus key.
+- The Anthropic VLM backend reads replies in the pixels of the image the
+  model saw, and replies such as `x=512, y=300` or decimals are read.
+- A reused agent backend starts each run afresh; the agent loop records
+  more command errors as step errors instead of ending the run.
+- Bedrock `global.` ids and dated OpenAI ids are priced.
+- `je_auto_control_mcp --read-only` restricts the server's tools, not
+  only the listings.
+- The MCP stdio server and the CLIs write UTF-8 whatever the console code
+  page.
+- `--port` outside 0-65535 is a usage error instead of a traceback.
+- Codegen refuses action shapes the executor refuses, keeps dict key order,
+  and takes lone surrogates and sigil runs in Robot output.
+- SARIF and SOP writers take lone surrogates; SOP creates its folder and
+  writes atomically; Allure results carry start and stop times.
+- A closed window's `COMError` no longer escapes UIA state reads; `find_text`
+  no longer finds absent text.
+- macOS accessibility elements report their real bounds.
+- Accessibility audits and `describe_screen` work on Windows.
+- The accessibility recorder keeps running after a backend error; the
+  Linux control search is bounded.
+- Mixed text formatting reads as unknown; Tesseract errors other than a
+  missing binary say what failed; integer roles match.
+- `AC_shell_to_var` refuses cmd metacharacters in a batch file's
+  arguments, and its timeout, like MCP `shell_command`'s, ends everything
+  the command started.
+- MCP `shell_command` keeps output the code page cannot decode strictly.
+- An empty Linux clipboard reads as empty; clipboard tool failures are
+  `ClipboardError`.
+- adb errors no longer carry the command's arguments; `no permissions`
+  devices get that state.
+- USB/IP: device lists on Windows and with alternate settings, speed codes,
+  idle attached devices, and isochronous URBs.
+- `import je_auto_control` no longer emits a DeprecationWarning from
+  defusedxml, so it works in test suites that turn warnings into errors.
+- SARIF export no longer calls `PurePath.as_uri()`, deprecated in Python
+  3.14.
+- USB sharing, its hotplug watcher and the passthrough flag it turned on
+  are released when the USB Sharing panel is destroyed.
+- GUI slots show missing or malformed files, images not on screen, bad
+  regions, unknown commands and closed windows instead of raising.
+- Hidden tabs, the Live HUD's log tail, the main window's language
+  listener and USB prompt dialogs no longer outlive their window.
+- A GUI worker's unexpected exception reaches its failure callback.
+- The Script Builder keeps a choice value it does not list.
+- REST and MCP replies holding a lone surrogate, REST replies that cannot
+  be serialised, huge `/history` limits and JSON nested too deeply no
+  longer drop the connection without a response.
+- Requests with conflicting `Content-Length` headers are refused.
+- Access-log lines of the REST, MCP HTTP and webhook servers escape
+  control characters.
+- A histogram given a `+Inf` bucket renders it once.
+- `ResourceProfiler.is_running` is right without psutil.
+- Scheduled, triggered, hotkey, webhook and e-mail runs in which an
+  action failed are recorded as errors, with an error snapshot.
+- `*/15`-style cron jobs keep their pace through the repeated DST hour.
+- Re-enabled scheduler jobs wait for their next slot; interval jobs no
+  longer drift.
+- A trigger replaced under the same id is not charged for the old run.
+- One popup-watchdog rule's error no longer stops the others.
+- Concurrent hotkey daemon start/stop no longer leaves a loop running.
+- `AC_retry` backoff is capped at 300 s.
+- A remote-desktop upload aborted while it was starting no longer leaves
+  its `.part` file and open handle behind.
+- The action JSON Schema lists every command, block commands included,
+  and types parameters from their annotations instead of "string".
+- The linter reports a block command's missing required arguments
+  (e.g. `AC_sleep` without `seconds`).
+- `${webhook.body}`, `${email.subject}` and other dotted trigger
+  variables resolve in scripts.
+- Step repair repeats a no-op action whatever form the verdict takes.
+- The self-healing log survives a torn multi-byte line.
+- A/B locator reports see other stores' records; a strategy that never
+  succeeded is not recommended.
+- Time-travel replay shows actions logged before the first frame.
+- Agent memory recalls CJK keywords.
+- Variable files with a UTF-8 BOM load.
+- `AC_trace_reset` starts a new trace id.
+- Exiting while a WebRTC signaling poll is running, or closing the
+  remote-desktop viewer during a file transfer, no longer aborts the
+  process.
+- `merge_results` no longer doubles errors and cases when merging merged
+  reports.
+- Time-series buckets place edge points correctly at Unix-time
+  magnitudes.
+- `assert_text(regex=True)` honours `ignore_case`.
+- `wait_until_screen_stable` measures the quiet time from the first
+  matching frame.
+- `summarise_llm_costs()` works without arguments.
+- `validate_rows` reports huge integers instead of raising.
+- Welch confidence intervals at tiny alpha and df near 1.
+- MCP `initialize` answers with a protocol version the server supports
+  (not whatever the client sent) and declares only server capabilities;
+  an unsupported `MCP-Protocol-Version` header gets 400;
+  `request_sampling` needs the client's sampling capability.
+- `AC_run_agent` with the Anthropic backend fits screenshots into the
+  model's image tier and maps tool-call `x` / `y` back to the screen.
+- Screenshot fitting follows the documented resize rule exactly.
+- SLSA provenance omits empty metadata timestamps; verification reports
+  a subject without a name instead of raising.
+- PEP 440 ordering of `.postN.devM` and of omitted numbers.
+- Redaction boxes merge until none overlap.
+- OSV ranges with several introduced/fixed pairs match every pair.
+- In-memory approval gates and the credential broker are thread-safe.
+- Print-format IBANs are detected (mod-97 checked).
+- SARIF findings without a severity are warnings; the name "Dan" is
+  not a jailbreak marker.
+- Computer use on the beta tool fits screenshots into the model's image
+  tier, declares that size and maps coordinates back, so clicks land
+  correctly on screens above the model's image limits (4K, or 1080p on
+  standard-tier models).
+- `ssim_compare` accepts single-channel HxWx1 arrays.
+- Heading detection uses the true median line height.
+- Element matching never pairs boxes that do not overlap.
+- `average_hash` / `dhash` accept NumPy arrays.
+- `apply_unified`, `unified_diff` and `three_way_merge` split lines at
+  line feeds only, so form feeds and U+2028 inside a line survive and
+  CRLF text keeps its endings.
+- Readability counts only sentences that hold a word.
+- `normalize_text(casefold=True)` stays in the requested form.
+- `is_balanced` checks bidi controls per paragraph.
+- Closing the window while a GUI job is inside a long step (an LLM
+  request) no longer aborts the process.
+- `format_message` accepts `offset: 1` and reports an infinite count
+  as not a number.
+- `read_mo` decodes a catalogue in the charset its header declares.
+- JSON Schema `$ref` tokens follow RFC 6901 (ASCII indexes,
+  percent-decoded fragment).
+- A `;` inside an SQL string literal no longer counts as a second
+  statement.
+- `parse_number("Infinity")` raises `ValueError`.
+- The secret vault no longer loses a secret when two managers write
+  it at once.
+- JSON stores read a file with a UTF-8 BOM, and a write waits for a
+  Windows reader instead of failing.
+- HTTP cassettes redact `set_cookie`.
+- A truncated deflate body raises instead of returning a prefix;
+  `x-gzip` is accepted.
+- JSONPath `!=` keeps nodes that lack the member; a filter string may
+  contain `)]`.
+- `parse_multipart` keeps a backslash in a filename.
+- `LatencyDigest` percentiles over negative values.
+- `decode_jwt` raises `JwtError` for a non-string `alg` (was
+  `TypeError`) and rejects any `crit` header.
+- The SSE parser no longer drops an event when a CRLF is split so the
+  `\n` arrives alone.
+- An escaped quote inside a quoted Link or Cache-Control parameter no
+  longer ends the string (a Link header's `rel` could be lost).
+- `urls_equal` / URL normalisation decode escaped unreserved characters
+  (`%7E` is `~`).
+- Closing a GUI tab or the main window while its background job
+  (Admin Console poll, USB browser, computer use, DAG, LLM planner) is
+  running no longer aborts the process.
+- Closing the LAN browse dialog with Use, Cancel or Esc stops its mDNS
+  browser, and a closed presence tab no longer stays registered with the
+  presence registry.
+- Computer use:
+  - drags end at the model's `coordinate`;
+  - `key` honours `repeat`;
+  - modifier keys on clicks, drags and scrolls are held.
+- A DAG remote node whose actions failed on the host no longer counts as
+  succeeded, and the Admin Console broadcast shows a remote action failure
+  as a failed host.
+- **GUI threads**:
+  - Admin Console refresh and thumbnails, and the USB Browser and passthrough actions, now run; their workers were collected before starting.
+  - Worker results are applied on the GUI thread.
+  - The Quick Connect viewer no longer repaints or opens dialogs from its network thread.
+  - Stopping or restarting a WebRTC signaling session no longer aborts the application.
+- **Traces and reports**:
+  - Replay traces with Unicode line separators read back.
+  - `match_persistence` requires every frame to agree.
+  - `hold_modifiers("shift")` presses Shift, not five letters.
+  - Change boxes off the frame score nothing.
+  - OTLP output is strict JSON with typed array and map values.
+  - `generate_sop` reads the wrapped action-file form.
+- **Utilities**:
+  - Dropping files onto a window no longer leaks memory on failure and no longer reports success for window 0.
+  - A zero-weight grounding candidate no longer divides by zero.
+  - Table cells and borderless rows read in reading order.
+  - A data profile survives `inf` / `nan`.
+  - An unknown verify mode is refused.
+  - Collation distinguishes accent position and handles decomposed text.
+  - `parse_cf_html` applies header offsets to `str` input.
+  - A superscript digit no longer crashes role parsing.
+  - Out-of-range HSV bounds are clamped or wrapped.
+- **macOS media keys**: pressing a media key no longer raises
+  `AttributeError`; the PyObjC selector name was missing its trailing `_`.
+- **Error family**: twenty-five errors that derived only from a builtin
+  exception (the Android and iOS clients, the remote-desktop wire errors,
+  ACME, the circuit breaker, egress, the Interception loader and others) now
+  also derive from `AutoControlException`, so family-only boundaries contain
+  them; `except RuntimeError` / `except ValueError` still catch them.
+- **X11, uinput and macOS input**: the uinput backend types the intended
+  keys and scrolls with the same sign rules as XTest; sending keys and clicks
+  to an X window releases what it pressed; an unbound X key raises instead of
+  pretending; recorded wheel events no longer break replay; macOS media keys
+  press and release; a timed-out macOS recording tap is re-enabled.
+- **Wayland**: libei input keeps working after a screen lock or VT switch
+  and releases each device reference once; screen size follows rotated and
+  scaled outputs; a malformed capture-command override is a screen error.
+- **WebRTC media**: screen frames are stamped at the rate they are sent and
+  frame rates above 30 fps take effect; host voice plays at the right speed on
+  a mono output; an audio device that fails no longer aborts the connection or
+  wedges later starts; a viewer reused for a second session shows video;
+  mDNS and the asyncio bridge release their resources on failure and stop.
+- **USB passthrough, agent loop and locators**: the second of two identical
+  USB devices opens by serial, a transfer whose direction contradicts the
+  endpoint is refused and closing gives the device back to the kernel; a
+  malformed agent decision no longer ends the run; a screenshot failure in
+  self-heal is a miss; USB/IP, self-heal and anchor errors are
+  `AutoControlException`s; the a11y audit no longer flags table cells.
+- **Layout and data checks**: flow selection and sharding see a flow's own
+  history however many other runs followed it; column reading order survives
+  long runs of paragraphs; `ConfigField.env` is honoured and lossy int
+  coercion refused; single-column uniqueness ignores nulls; unit lists follow
+  CLDR outside English; A2A card modes are MIME types; `within` excludes the
+  pixel past its region; Windows accessibility reads edit and slider values.
+- **MCP, USB passthrough and device helpers**: an overflowing or short
+  argument no longer leaves an MCP request unanswered; a failed drag releases
+  the button; sampling works over HTTP; waits look once at `timeout=0` and
+  survive an infinite poll; USB credits are never missed and transfers on one
+  claim no longer swap data; assertion failures propagate through callbacks;
+  gamepad, clipboard and volume errors stay in the `AutoControlException`
+  family.
+- **Remote desktop**: WebSocket frames follow RFC 6455 masking and
+  control-frame limits and a malformed handshake key no longer kills the
+  handshake thread; a transfer to a path naming no file fails cleanly; the
+  encrypted recorder's frame count matches its entries and a tampered manifest
+  verifies as `False`; a mic whose device failed to start can start again;
+  turning off viewer audio keeps the host's voice.
+- **Triggers and scheduler**: concurrent trigger-engine start / stop no
+  longer doubles the polling thread or raises; one malformed email no longer
+  stops a mailbox's polling; mailbox names with spaces or brackets work; a
+  string `max_runs` stops the job; a corrupt .xlsx data source is an ordinary
+  action error.
+- **JSONPath, OCR structure and H.264**: quoted unions and mismatched quotes
+  raise, quoted names decode escapes, parenless filters no longer run into the
+  next filter, and ordering follows RFC 9535; OCR field values come from the
+  cell below the label; only hardware encoders that really open are listed and
+  each gets options it accepts (NVENC works); odd-sized frames encode and
+  `close()` always closes the container.
+- **Text, config and registries**: `-or-later` licences are no longer split
+  (a denylist naming one now holds); REST USB booleans must be JSON booleans;
+  `.po` entries need no blank line between them and CRLF files parse;
+  negative numbers take CLDR's plural category and large counts keep their
+  digits; `file://` URIs naming another host are refused; coturn fields and
+  XML names cannot inject directives or markup; presence ids are matched as
+  registered and its errors are `AutoControlException`s.
+- **Data utilities**: JWTs are rejected at their expiry second and only in
+  canonical base64url; malformed tokens raise `JwtError`; n-gram similarity
+  rejects `n < 1`; `DagDefinitionError` is an `AutoControlException`;
+  time-series samples sharing a timestamp keep their order and unknown fills
+  raise; NaN fails range rules; feature flags accept `{"variant": ...}` and
+  fall back on malformed serves; schema compatibility sees required-only
+  fields and rejects unknown modes; CSV test data takes rows with different keys.
+- **Small utilities**: `use_ssl` mail defaults to port 465; the resource
+  profiler's report stops at `stop()` and its speedscope export loads;
+  `Content-Length` must be ASCII digits and `chunked` the final coding;
+  `web_screenshot` works against WebRunner; failed notifications report
+  `shown=False` and Windows toasts appear; a dead key no longer reads as its
+  US character; inverted and off-image regions are handled in annotate and
+  colour stats.
 - **Emergency stop on Linux / macOS**: the stop key wakes a sleeping or
   waiting main thread there too (SIGINT is sent to the main thread).
 - **Image analysis and packaging**: colour-vision simulation uses Machado

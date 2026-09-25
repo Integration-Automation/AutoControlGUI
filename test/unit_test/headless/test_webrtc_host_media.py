@@ -16,6 +16,7 @@ module level without aiortc.
 and `_Host` supplies exactly the list the mixin's own docstring asks for.
 """
 import asyncio
+import types
 
 import pytest
 
@@ -36,9 +37,10 @@ class _Receiver:
 
 
 class _Transceiver:
-    def __init__(self, kind, track=None, direction="sendrecv"):
+    def __init__(self, kind, track=None, direction="sendrecv", sending=None):
         self.kind = kind
         self.receiver = _Receiver(track) if track is not None else None
+        self.sender = types.SimpleNamespace(track=sending)
         self.direction = direction
 
 
@@ -345,3 +347,10 @@ def test_renegotiating_without_a_connection_is_a_no_op():
     host = _Host(pc=None)
     asyncio.run(host._async_renegotiate())
     assert host.sent == []
+
+def test_disabling_viewer_audio_keeps_the_host_voice_sending():
+    # aiortc reuses the host-voice transceiver as the viewer's audio slot.
+    audio = _Transceiver("audio", sending=object())
+    host = _Host(_PeerConnection(_Transceiver("video"), audio), _Config())
+    host._deactivate_recvonly_audio()
+    assert audio.direction == "sendonly"

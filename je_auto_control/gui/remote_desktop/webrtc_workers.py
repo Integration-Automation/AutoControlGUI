@@ -1,15 +1,20 @@
-"""Background QThread workers for the WebRTC signaling-server flow.
+"""Background workers for the WebRTC signaling-server flow.
 
 The signaling client is sync (urllib + polling), so we can't call it from
 the Qt thread without freezing the UI. These workers wrap the calls and
 emit thread-safe signals carrying the SDP strings or any error message.
+They are :class:`DaemonThread`s, not ``QThread``s: a signaling long-poll can
+outlast its panel or the whole application, and destroying a running
+``QThread`` aborts the process.
 """
 from __future__ import annotations
 
 import secrets
-from typing import Optional
+from typing import Optional, Set
 
-from PySide6.QtCore import QThread, Signal
+from PySide6.QtCore import Signal
+
+from je_auto_control.gui._daemon_thread import DaemonThread
 
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.remote_desktop import signaling_client
@@ -20,7 +25,7 @@ def generate_host_id() -> str:
     return secrets.token_hex(4)
 
 
-class HostSignalingWorker(QThread):
+class HostSignalingWorker(DaemonThread):
     """Host side: push an offer, poll for an answer."""
 
     answer_ready = Signal(str)
@@ -53,7 +58,7 @@ class HostSignalingWorker(QThread):
         self.answer_ready.emit(answer)
 
 
-class ViewerSignalingWorker(QThread):
+class ViewerSignalingWorker(DaemonThread):
     """Viewer side: poll for the host's offer (so the host can prepare it)."""
 
     offer_ready = Signal(str)
@@ -80,7 +85,7 @@ class ViewerSignalingWorker(QThread):
         self.offer_ready.emit(offer)
 
 
-class ViewerAnswerPushWorker(QThread):
+class ViewerAnswerPushWorker(DaemonThread):
     """Viewer side: push the generated answer back to the signaling server."""
 
     pushed = Signal()
@@ -109,7 +114,7 @@ class ViewerAnswerPushWorker(QThread):
         self.pushed.emit()
 
 
-class HostPublishLoopWorker(QThread):
+class HostPublishLoopWorker(DaemonThread):
     """Multi-viewer host loop: publish offer → wait answer → accept → repeat.
 
     Each iteration mints a fresh ``session_id`` via
@@ -193,3 +198,40 @@ __all__ = [
     "ViewerAnswerPushWorker",
     "HostPublishLoopWorker",
 ]
+
+
+#: Stopped workers that were still running, kept until their thread ends.
+_RETIRED: Set[DaemonThread] = set()
+
+#: Result signals a retired worker must no longer deliver.
+_RESULT_SIGNALS = ("answer_ready", "offer_ready", "offer_published",
+                   "session_connected", "pushed", "failed")
+
+
+def retire_worker(worker: Optional[DaemonThread]) -> None:
+    """Stop ``worker`` without destroying it while its thread still runs.
+
+    A stopped worker is usually blocked in a signaling long-poll (up to ten
+    minutes), which ``requestInterruption`` cannot cut short. Dropping the last
+    reference to it there aborted the whole process with "QThread: Destroyed
+    while thread is still running", from the Stop button, a second Publish or
+    Connect click, or an auto-reconnect. The worker is kept here, cut off from
+    its result slots so a late answer cannot reach a newer session, and
+    deleted on the GUI thread once it finishes.
+    """
+    if worker is None:
+        return
+    worker.requestInterruption()
+    if not worker.isRunning():
+        return
+    for name in _RESULT_SIGNALS:
+        signal = getattr(worker, name, None)
+        if signal is None:
+            continue
+        try:
+            signal.disconnect()
+        except (RuntimeError, TypeError):
+            pass    # reason: nothing was connected to this signal
+    _RETIRED.add(worker)
+    worker.finished.connect(worker.deleteLater)
+    worker.destroyed.connect(lambda *_args: _RETIRED.discard(worker))

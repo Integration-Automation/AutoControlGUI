@@ -1,15 +1,14 @@
 """HTTP client + deterministic merge for the config-sync bucket."""
 from __future__ import annotations
 
-import http.client
 import json
 import math
 import time
-import urllib.error
 import urllib.parse
-import urllib.request
 from dataclasses import asdict, dataclass, field
 from typing import Any, Dict, List, Mapping, Optional, Tuple
+
+from je_auto_control.utils.exception.exceptions import AutoControlException
 
 _DEFAULT_TIMEOUT_S = 5.0
 
@@ -24,7 +23,7 @@ def is_tombstone(entry: Mapping[str, Any]) -> bool:
     return entry.get("deleted") is True
 
 
-class ConfigSyncError(RuntimeError):
+class ConfigSyncError(AutoControlException, RuntimeError):
     """Raised on network errors or schema validation failures."""
 
 
@@ -170,26 +169,42 @@ def merge_buckets(local: ConfigBucket,
             if remote_entry is None:
                 merged_section[entry_id] = local_entry
                 continue
-            local_ts = float(local_entry.get("last_modified", 0))
-            remote_ts = float(remote_entry.get("last_modified", 0))
-            if remote_ts > local_ts:
-                merged_section[entry_id] = remote_entry
+            kept, dropped = _winner(local_entry, remote_entry)
+            merged_section[entry_id] = kept
+            if dropped is not None:
                 conflicts.append(ConflictRecord(
-                    section=name, entry_id=entry_id,
-                    dropped=local_entry, kept=remote_entry,
+                    section=name, entry_id=entry_id, dropped=dropped, kept=kept,
                 ))
-            elif local_ts > remote_ts:
-                merged_section[entry_id] = local_entry
-                conflicts.append(ConflictRecord(
-                    section=name, entry_id=entry_id,
-                    dropped=remote_entry, kept=local_entry,
-                ))
-            else:
-                merged_section[entry_id] = local_entry  # tie — local wins
         merged.sections[name] = _without_expired(
             merged_section, (time.time() if now is None else now) - tombstone_retention_s)
     merged.revision = max(local.revision, remote.revision) + 1
     return merged, conflicts
+
+
+def _winner(local_entry: Dict[str, Any], remote_entry: Dict[str, Any],
+            ) -> Tuple[Dict[str, Any], Optional[Dict[str, Any]]]:
+    """The entry that wins and the one it beat (``None`` when they are equal).
+
+    The later ``last_modified`` wins. At a tie a deletion wins -- ``delete``
+    stamps its tombstone no earlier than the entry it removes -- and then the
+    larger canonical JSON, so both sides pick the same entry: "local wins"
+    had two clients each push their own copy on every sync, never agreeing
+    and never reporting the conflict.
+    """
+    local_ts = float(local_entry.get("last_modified", 0))
+    remote_ts = float(remote_entry.get("last_modified", 0))
+    if local_ts != remote_ts:
+        if remote_ts > local_ts:
+            return remote_entry, local_entry
+        return local_entry, remote_entry
+    if local_entry == remote_entry:
+        return local_entry, None
+    loser, winner = sorted((local_entry, remote_entry), key=_tie_rank)
+    return winner, loser
+
+
+def _tie_rank(entry: Dict[str, Any]) -> Tuple[bool, str]:
+    return is_tombstone(entry), json.dumps(entry, sort_keys=True, default=str)
 
 
 def _without_expired(section: Dict[str, Dict[str, Any]],
@@ -225,37 +240,31 @@ class ConfigSyncClient:
     def _request(self, method: str, *,
                  body: Optional[Mapping[str, Any]] = None,
                  ) -> Optional[Dict[str, Any]]:
+        from je_auto_control.utils.http_client.http_client import build_call, perform_call
         headers = {"Content-Type": "application/json"}
         if self._secret:
             headers["X-Signaling-Secret"] = self._secret
         data = json.dumps(body).encode("utf-8") if body is not None else None
-        request = urllib.request.Request(
-            self._endpoint(), data=data, method=method, headers=headers,
-        )
         try:
-            with urllib.request.urlopen(  # nosec B310  # NOSONAR python:S5332  # reason: scheme allowlisted by caller config
-                    request, timeout=self._timeout,
-            ) as response:
-                payload = response.read()
-        except urllib.error.HTTPError as error:
-            if error.code == 404:
-                return None
-            raise ConfigSyncError(
-                f"config sync {method} returned HTTP {error.code}",
-            ) from error
-        except urllib.error.URLError as error:
-            raise ConfigSyncError(
-                f"config sync {method} failed: {error.reason}",
-            ) from error
-        except (OSError, http.client.HTTPException) as error:
-            # A server hanging up (RemoteDisconnected) or a stalled body
-            # (TimeoutError from read) is no URLError.
-            raise ConfigSyncError(f"config sync {method} failed: {error!r}") from error
-        if not payload:
+            call = build_call(self._endpoint(), method=method, headers=headers,
+                              data=data, timeout=self._timeout)
+            # Through http_client for the egress policy and the body cap, and
+            # without following redirects: urlopen carried X-Signaling-Secret
+            # to whatever host a redirect named.
+            call["follow_redirects"] = False
+            response = perform_call(call)
+        except (OSError, ValueError, AutoControlException) as error:
+            raise ConfigSyncError(f"config sync {method} failed: {error}") from error
+        status = int(response["status"])
+        if status == 404:
+            return None
+        if not 200 <= status < 300:
+            raise ConfigSyncError(f"config sync {method} returned HTTP {status}")
+        if not response.get("text"):
             return {}
         try:
-            return json.loads(payload.decode("utf-8"))
-        except (UnicodeDecodeError, json.JSONDecodeError) as error:
+            return json.loads(response["text"])
+        except (json.JSONDecodeError, RecursionError) as error:
             raise ConfigSyncError("config sync: invalid JSON reply") from error
 
     def fetch(self) -> Optional[ConfigBucket]:

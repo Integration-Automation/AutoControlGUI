@@ -40,7 +40,8 @@ def parse_number(text: str, locale: str = "en_US") -> int:
     "1.5" used to come back as 1.
     """
     value = _numbers().parse_decimal(text, locale=locale, strict=True)
-    if value != value.to_integral_value():
+    # "Infinity" parses, and int() of it raised OverflowError.
+    if not value.is_finite() or value != value.to_integral_value():
         raise ValueError(f"{text!r} is not an integer")
     return int(value)
 

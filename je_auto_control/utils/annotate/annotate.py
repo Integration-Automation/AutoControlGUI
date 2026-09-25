@@ -33,9 +33,9 @@ def _load_image(source: ImageSource) -> "Image.Image":
     from PIL import Image
     if isinstance(source, Image.Image):
         return source.convert("RGBA")
-    if isinstance(source, bytes):
-        return Image.open(io.BytesIO(source)).convert("RGBA")
-    return Image.open(str(source)).convert("RGBA")
+    opened = Image.open(io.BytesIO(source) if isinstance(source, bytes) else str(source))
+    with opened:  # multi-frame files stay open until closed
+        return opened.convert("RGBA")
 
 
 def _color(value: Optional[Sequence[int]],
@@ -46,8 +46,14 @@ def _color(value: Optional[Sequence[int]],
     return (int(value[0]), int(value[1]), int(value[2]))
 
 
+def _rect(ann: Dict[str, Any]) -> List[int]:
+    """Return ``ann["rect"]`` as ``[left, top, right, bottom]`` whichever corners it names."""
+    x0, y0, x1, y1 = (int(v) for v in ann["rect"])
+    return [min(x0, x1), min(y0, y1), max(x0, x1), max(y0, y1)]
+
+
 def _draw_box(draw: ImageDraw.ImageDraw, ann: Dict[str, Any]) -> None:
-    rect = [int(v) for v in ann["rect"]]
+    rect = _rect(ann)
     color = _color(ann.get("color"))
     draw.rectangle(rect, outline=color, width=int(ann.get("width", 3)))
     label = ann.get("label")
@@ -56,7 +62,7 @@ def _draw_box(draw: ImageDraw.ImageDraw, ann: Dict[str, Any]) -> None:
 
 
 def _draw_highlight(overlay: ImageDraw.ImageDraw, ann: Dict[str, Any]) -> None:
-    rect = [int(v) for v in ann["rect"]]
+    rect = _rect(ann)
     color = _color(ann.get("color"), (255, 235, 0))
     alpha = max(0, min(255, int(ann.get("alpha", 80))))
     overlay.rectangle(rect, fill=(color[0], color[1], color[2], alpha))

@@ -642,6 +642,35 @@ def test_a_paused_device_stops_accepting_emissions():
         backend.press_key(30)
 
 
+def test_a_paused_device_works_again_after_it_resumes():
+    """A pause is temporary (screen lock, VT switch); dropping the device
+    threw away the resume, and libei was refused for good."""
+    backend, fake = _connected()
+    fake.pending = [(libei_mod.EI_EVENT_DEVICE_PAUSED, KEYBOARD_DEVICE),
+                    (libei_mod.EI_EVENT_DEVICE_RESUMED, KEYBOARD_DEVICE)]
+    backend.press_key(30)
+    assert ("key", KEYBOARD_DEVICE, 30, True) in fake.calls
+    assert ("device_unref", KEYBOARD_DEVICE) not in fake.calls
+
+
+def test_a_removed_device_is_released_exactly_once():
+    backend, fake = _connected()
+    fake.pending = [(libei_mod.EI_EVENT_DEVICE_PAUSED, KEYBOARD_DEVICE),
+                    (libei_mod.EI_EVENT_DEVICE_REMOVED, KEYBOARD_DEVICE),
+                    (libei_mod.EI_EVENT_DEVICE_REMOVED, KEYBOARD_DEVICE)]
+    with pytest.raises(LibeiUnavailable):
+        backend.press_key(30)
+    assert fake.calls.count(("device_unref", KEYBOARD_DEVICE)) == 1
+
+
+def test_a_device_that_was_never_kept_is_never_released():
+    stranger = 0xD0099
+    backend, fake = _connected()
+    fake.pending = [(libei_mod.EI_EVENT_DEVICE_REMOVED, stranger)]
+    backend.press_key(30)
+    assert ("device_unref", stranger) not in fake.calls
+
+
 def test_emitting_before_connect_raises():
     backend = LibeiBackend(symbols=FakeLibei())
     with pytest.raises(LibeiUnavailable, match="not connected"):

@@ -58,7 +58,9 @@ def normalize_text(text: str, *, form: str = "NFKC", casefold: bool = True,
         source = "".join(ch for ch in source if unicodedata.category(ch) != "Cf")
     result = unicodedata.normalize(cast(_NormalForm, form), source)
     if casefold:
-        result = result.casefold()
+        # Case folding can take text out of the form (Unicode D145), so two
+        # canonical-caseless-equal strings came out different; normalise again.
+        result = unicodedata.normalize(cast(_NormalForm, form), result.casefold())
     if collapse_ws:
         result = fold_whitespace(result)
     return result

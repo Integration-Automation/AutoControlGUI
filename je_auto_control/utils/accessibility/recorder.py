@@ -21,6 +21,8 @@ from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
+from je_auto_control.utils.exception.exceptions import AutoControlException
+
 
 _DEFAULT_POLL_S = 0.25
 _DEFAULT_MIN_MOVEMENT = 8
@@ -118,7 +120,9 @@ class AccessibilityRecorder:
         while not stop.is_set():
             try:
                 self.sample_once()
-            except (RuntimeError, OSError, ValueError):
+            # AutoControlException too: a backend's DBusError is one, and it
+            # ended the poll thread -- the recorder stopped without a word.
+            except (AutoControlException, RuntimeError, OSError, ValueError):
                 pass
             stop.wait(self._poll)
 
@@ -206,7 +210,7 @@ def _observed_element(app_name: Optional[str]) -> Any:
 def _default_fetcher(app_name: Optional[str]) -> Optional[Dict[str, Any]]:
     try:
         element = _observed_element(app_name)
-    except (RuntimeError, OSError, ValueError):
+    except (AutoControlException, RuntimeError, OSError, ValueError):
         return None
     if element is None:
         return None

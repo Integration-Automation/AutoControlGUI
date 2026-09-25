@@ -11,6 +11,8 @@ Imports no ``PySide6``.
 from typing import Any, Dict, List, Optional
 
 _SUM_KEYS = ("total", "passed", "failed", "skipped", "errors")
+#: Extra rows read per flow past ``window``: running rows have no duration.
+_RUNNING_HEADROOM = 16
 
 
 def _durations(flows: List[str], history_path: Optional[str],
@@ -20,9 +22,12 @@ def _durations(flows: List[str], history_path: Optional[str],
         HistoryStore, default_history_store)
     store, owned = ((HistoryStore(history_path), True) if history_path
                     else (default_history_store, False))
+    # Read per flow: one global newest-N read let a flow's runs fall behind
+    # N unrelated runs, and the flow then got the default weight.
     try:
-        records = store.list_runs(
-            limit=max(100, int(window) * max(1, len(flows))))
+        records = [record for flow in dict.fromkeys(flows)
+                   for record in store.list_runs(
+                       limit=int(window) + _RUNNING_HEADROOM, script_path=flow)]
     finally:
         if owned:
             store.close()
@@ -82,9 +87,11 @@ def merge_results(reports: List[Dict[str, Any]]) -> Dict[str, Any]:
     for report in reports:
         for key in _SUM_KEYS:
             merged[key] += int(report.get(key, 0) or 0)
-        merged["errors"] += int(report.get("errored", 0) or 0)
-        results.extend(report.get("results", []) or [])
-        results.extend(report.get("cases", []) or [])
+        # A merged report carries both spellings of one count and one list;
+        # reading both doubled them when merged reports were merged again.
+        if "errors" not in report:
+            merged["errors"] += int(report.get("errored", 0) or 0)
+        results.extend(report.get("results") or report.get("cases") or [])
     merged["errored"] = merged["errors"]
     merged["shards"] = len(reports)
     merged["results"] = results

@@ -306,7 +306,8 @@ The same operations are exposed over two more surfaces:
 * **REST API** — ``GET/POST /usb/passthrough/...``, ``/usb/acl...``,
   ``/usb/loopback/...``, ``/usb/remote/...`` (bearer-token gated; see
   ``/openapi.json``). ACL export/import are intentionally *not* on REST
-  (server-side file paths).
+  (server-side file paths). ``enabled``, ``allow`` and ``prompt_on_open`` must be JSON
+  booleans; a string such as ``"false"`` is a 400.
 * **MCP** — first-class ``ac_usb_*`` tools (``ac_usb_loopback_open`` …)
   with JSON Schemas, so an agent can call them directly.
 
@@ -319,7 +320,9 @@ What is *not* shipped yet
   right, list the shared devices over the in-process channel and *Open*
   one (a descriptor read proves the full stack). The *USB Browser* tab's
   *Open* button now also works against a **localhost** target via the
-  same loopback path.
+  same loopback path. Sharing lasts as long as the panel: when the window
+  holding it is destroyed, its loopback and hotplug watcher close and the
+  feature flag it turned on goes back off.
 - Cross-machine is fully wired: the WebRTC host creates a ``usb``
   DataChannel and the viewer exposes ``viewer.usb_client()`` (a
   ``UsbChannelClient`` with ``list_devices`` / ``open`` / ``resume``).

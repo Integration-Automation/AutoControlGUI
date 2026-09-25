@@ -42,8 +42,13 @@ def _component(dist: "metadata.Distribution") -> Dict[str, Any]:
     }
     # `dist.metadata` is an `email.message.Message`: it answers `get`,
     # but is not declared as a mapping.
+    # PEP 639 License-Expression first (Core Metadata 2.4); a distribution
+    # that only has it used to get no licence and read as "unknown".
+    expression = dist.metadata.get("License-Expression")  # type: ignore[attr-defined]  # reason: Message.get
     license_name = dist.metadata.get("License")  # type: ignore[attr-defined]  # reason: Message.get
-    if license_name and license_name != "UNKNOWN":
+    if expression:
+        component["licenses"] = [{"expression": str(expression)}]
+    elif license_name and license_name != "UNKNOWN":
         component["licenses"] = [{"license": {"name": license_name}}]
     return component
 

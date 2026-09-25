@@ -9,14 +9,16 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import List, Optional, Sequence
 
+from je_auto_control.utils.exception.exceptions import AutoControlException
+
 _DEFAULT_TIMEOUT_S = 30.0
 
 
-class AdbError(RuntimeError):
+class AdbError(AutoControlException, RuntimeError):
     """Raised when adb returns a non-zero exit code."""
 
 
-class AdbNotAvailable(RuntimeError):
+class AdbNotAvailable(AutoControlException, RuntimeError):
     """Raised when the adb binary isn't on PATH and no path was supplied."""
 
 
@@ -31,6 +33,17 @@ class AndroidDevice:
 
     def is_ready(self) -> bool:
         return self.state == "device"
+
+
+def _describe(args: Sequence[str]) -> str:
+    """The adb subcommand, for an error message: never its arguments.
+
+    ``adb shell input text <text>`` put the typed text -- a filled-in
+    ``${secrets.*}`` value -- into the exception, the run record and the log.
+    """
+    if not args:
+        return "adb"
+    return f"adb {args[0]}" + (" ..." if len(args) > 1 else "")
 
 
 class AdbClient:
@@ -78,11 +91,11 @@ class AdbClient:
                 check=False,
             )
         except (OSError, subprocess.SubprocessError) as error:
-            raise AdbError(f"adb {' '.join(args)} failed: {error}") from error
+            raise AdbError(f"{_describe(args)} failed: {error}") from error
         if check and result.returncode != 0:
             stderr = result.stderr.decode("utf-8", errors="replace").strip()
             raise AdbError(
-                f"adb {' '.join(args)} exited {result.returncode}: {stderr}",
+                f"{_describe(args)} exited {result.returncode}: {stderr}",
             )
         return result
 
@@ -108,10 +121,13 @@ class AdbClient:
             parts = line.split()
             if len(parts) < 2:
                 continue
-            serial, state = parts[0], parts[1]
+            serial, state, rest = parts[0], parts[1], parts[2:]
+            if line[len(serial):].lstrip().startswith("no permissions"):
+                # "no permissions (user in plugdev group; ...)": not the state "no".
+                state = "no permissions"
             metadata = {
                 key: value
-                for token in parts[2:]
+                for token in rest
                 if ":" in token
                 for key, _, value in [token.partition(":")]
             }

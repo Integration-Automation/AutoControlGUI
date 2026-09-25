@@ -30,18 +30,20 @@ def test_start_exe_passes_argv_list_not_split_string(tmp_path, monkeypatch):
 
 
 def test_start_exe_raises_when_launch_fails(tmp_path, monkeypatch):
-    from je_auto_control.utils.shell_process.shell_exec import ShellManager
+    from je_auto_control.utils.shell_process import shell_exec
     from je_auto_control.utils.start_exe.start_another_process import start_exe
     from je_auto_control.utils.exception.exceptions import AutoControlException
 
     exe = tmp_path / "app.exe"
     exe.write_text("stub")
 
-    def fake_exec(self, _command):
-        self.process = None  # exec_shell swallowed the launch failure
+    def cannot_start(*args, **kwargs):
+        raise OSError("not a valid Win32 application")
 
-    monkeypatch.setattr(ShellManager, "exec_shell", fake_exec)
-    with pytest.raises(AutoControlException):
+    # The real exec_shell: it raises a launch failure now, which start_exe
+    # passes on as the AutoControlException it documents.
+    monkeypatch.setattr(shell_exec.subprocess, "Popen", cannot_start)
+    with pytest.raises(AutoControlException, match="could not start"):
         start_exe(str(exe))
 
 
@@ -57,24 +59,15 @@ class _FakeLib:
             setattr(self, name, _FakeFn())
 
 
-def test_declare_win32_signatures_sets_all_argtypes():
-    import ctypes
+def test_declare_post_message_sets_all_argtypes():
+    # The Global* prototypes now come from the shared clipboard API.
     from ctypes import wintypes
-    from je_auto_control.utils.file_drop.file_drop import (
-        _declare_win32_signatures,
-    )
-    kernel32 = _FakeLib(["GlobalAlloc", "GlobalLock", "GlobalUnlock"])
-    user32 = _FakeLib(["PostMessageW"])
+    from je_auto_control.utils.file_drop.file_drop import _declare_post_message
+    user32 = _FakeLib(["IsWindow", "PostMessageW"])
 
-    _declare_win32_signatures(kernel32, user32)
+    _declare_post_message(user32)
 
-    assert kernel32.GlobalAlloc.argtypes == [wintypes.UINT, ctypes.c_size_t]
-    assert kernel32.GlobalAlloc.restype is wintypes.HGLOBAL
-    # These three previously had NO argtypes → 64-bit handle truncation.
-    assert kernel32.GlobalLock.argtypes == [wintypes.HGLOBAL]
-    assert kernel32.GlobalLock.restype is ctypes.c_void_p
-    assert kernel32.GlobalUnlock.argtypes == [wintypes.HGLOBAL]
-    assert kernel32.GlobalUnlock.restype is wintypes.BOOL
+    assert user32.IsWindow.argtypes == [wintypes.HWND]
     assert user32.PostMessageW.argtypes == [
         wintypes.HWND, wintypes.UINT, wintypes.WPARAM, wintypes.LPARAM,
     ]

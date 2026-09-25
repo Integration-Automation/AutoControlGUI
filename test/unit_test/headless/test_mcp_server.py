@@ -740,6 +740,7 @@ def test_request_sampling_round_trips_via_writer():
     )
     server = MCPServer(tools=[tool], concurrent_tools=True)
     server.set_writer(captured_lines.append)
+    server._client_capabilities = {"sampling": {}}  # noqa: SLF001
 
     server.handle_line(_request("tools/call", msg_id=10, params={
         "name": "ask_model", "arguments": {"prompt": "ping?"},
@@ -787,10 +788,15 @@ def test_request_sampling_without_writer_raises():
         raise AssertionError("expected RuntimeError")
 
 
-def test_initialize_advertises_sampling_capability():
+def test_initialize_does_not_claim_client_capabilities():
+    # "sampling" and "roots" are capabilities a client declares; the server
+    # uses them (sampling/createMessage, roots/list) but does not offer them.
     server = MCPServer(tools=[])
-    response = _decode(server.handle_line(_request("initialize", params={})))
-    assert "sampling" in response["result"]["capabilities"]
+    response = _decode(server.handle_line(_request("initialize", params={
+        "capabilities": {"roots": {"listChanged": True}, "sampling": {}},
+    })))
+    capabilities = response["result"]["capabilities"]
+    assert "sampling" not in capabilities and "roots" not in capabilities
 
 
 def test_tools_call_rejects_missing_required_field():
@@ -807,8 +813,8 @@ def test_tools_call_rejects_missing_required_field():
     response = _decode(server.handle_line(_request("tools/call", params={
         "name": "needs_x", "arguments": {},
     })))
-    assert response["error"]["code"] == -32602
-    assert "missing required property 'x'" in response["error"]["message"]
+    assert response["result"]["isError"] is True
+    assert "missing required property 'x'" in response["result"]["content"][0]["text"]
 
 
 def test_tools_call_rejects_wrong_type():
@@ -825,8 +831,8 @@ def test_tools_call_rejects_wrong_type():
     response = _decode(server.handle_line(_request("tools/call", params={
         "name": "needs_int", "arguments": {"x": "not-int"},
     })))
-    assert response["error"]["code"] == -32602
-    assert "expected integer" in response["error"]["message"]
+    assert response["result"]["isError"] is True
+    assert "expected integer" in response["result"]["content"][0]["text"]
 
 
 def test_tools_call_rejects_value_outside_enum():
@@ -844,7 +850,7 @@ def test_tools_call_rejects_value_outside_enum():
     response = _decode(server.handle_line(_request("tools/call", params={
         "name": "enum_only", "arguments": {"mode": "c"},
     })))
-    assert response["error"]["code"] == -32602
+    assert response["result"]["isError"] is True
 
 
 def test_tools_call_passes_valid_args():
@@ -1176,12 +1182,12 @@ def test_rate_limiter_zero_rate_means_unlimited():
         assert limiter.try_acquire() is True
 
 
-def test_initialize_advertises_roots_when_client_supports_it():
+def test_initialize_records_the_clients_roots_capability():
     server = MCPServer(tools=[])
-    response = _decode(server.handle_line(_request("initialize", params={
+    server.handle_line(_request("initialize", params={
         "capabilities": {"roots": {"listChanged": True}},
-    })))
-    assert "roots" in response["result"]["capabilities"]
+    }))
+    assert "roots" in server._client_capabilities  # noqa: SLF001
 
 
 def test_initialize_omits_roots_when_client_lacks_capability():
@@ -1279,7 +1285,6 @@ def test_logging_set_level_rejects_unknown_name():
 
 
 def test_wait_for_image_returns_center_when_template_found(monkeypatch):
-    import je_auto_control.utils.mcp_server.tools._handlers_system as handlers
     import je_auto_control.wrapper.auto_control_image as image_module
     monkeypatch.setattr(image_module, "locate_image_center",
                         lambda image_path, detect_threshold=1.0: (42, 84))
@@ -1351,7 +1356,6 @@ def test_window_geometry_tools_present_in_default_registry():
     reason="windows_window_manage uses ctypes.WINFUNCTYPE; Win32-only.",
 )
 def test_window_move_calls_into_windows_manager(monkeypatch):
-    import je_auto_control.utils.mcp_server.tools._handlers_system as handlers
     import je_auto_control.wrapper.auto_control_window as window_module
     monkeypatch.setattr(window_module, "find_window",
                         lambda title, case_sensitive=False: (123, title))

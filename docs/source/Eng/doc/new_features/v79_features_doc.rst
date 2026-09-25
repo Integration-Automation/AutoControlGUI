@@ -26,7 +26,7 @@ Headless API
 
 ``parse_dotenv`` skips blanks and ``#`` comment lines, strips an optional
 ``export`` prefix, validates keys, and resolves values: single-quoted values
-are literal, double-quoted values process ``\n`` / ``\t`` / ``\\`` / ``\"``
+are literal apart from ``\'`` and ``\\`` (as python-dotenv reads them), double-quoted values process ``\n`` / ``\t`` / ``\\`` / ``\"``
 escapes, and unquoted values drop a trailing `` #`` comment and surrounding
 whitespace. A quoted value ends at its closing quote, so a comment after it is
 dropped, and it may span several lines. ``dotenv_values`` reads and parses a file; ``load_dotenv`` merges a

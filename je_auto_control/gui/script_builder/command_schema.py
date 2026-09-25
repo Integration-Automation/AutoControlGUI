@@ -258,7 +258,7 @@ def _add_image_specs(specs: List[CommandSpec]) -> None:
         fields=(
             FieldSpec("image", FieldType.FILE_PATH),
             FieldSpec("detect_threshold", FieldType.FLOAT, optional=True,
-                      default=0.8, min_value=0.0, max_value=1.0),
+                      default=1.0, min_value=0.0, max_value=1.0),
             FieldSpec("draw_image", FieldType.BOOL, optional=True, default=False),
         ),
     ))
@@ -269,7 +269,7 @@ def _add_image_specs(specs: List[CommandSpec]) -> None:
             FieldSpec("mouse_keycode", FieldType.ENUM, choices=_MOUSE_BUTTONS,
                       default="mouse_left"),
             FieldSpec("detect_threshold", FieldType.FLOAT, optional=True,
-                      default=0.8, min_value=0.0, max_value=1.0),
+                      default=1.0, min_value=0.0, max_value=1.0),
             FieldSpec("draw_image", FieldType.BOOL, optional=True, default=False),
         ),
     ))
@@ -278,7 +278,7 @@ def _add_image_specs(specs: List[CommandSpec]) -> None:
         fields=(
             FieldSpec("image", FieldType.FILE_PATH),
             FieldSpec("detect_threshold", FieldType.FLOAT, optional=True,
-                      default=0.8, min_value=0.0, max_value=1.0),
+                      default=1.0, min_value=0.0, max_value=1.0),
         ),
     ))
     specs.append(CommandSpec(
@@ -510,8 +510,8 @@ def _add_image_specs(specs: List[CommandSpec]) -> None:
     specs.append(CommandSpec(
         "AC_grid_cells", "Image", "Grid Cells (coarse grounding)",
         fields=(
-            FieldSpec("rows", FieldType.INT, optional=True, default=3),
-            FieldSpec("cols", FieldType.INT, optional=True, default=3),
+            FieldSpec("rows", FieldType.INT, default=3),
+            FieldSpec("cols", FieldType.INT, default=3),
             FieldSpec("region", FieldType.STRING, optional=True,
                       placeholder=_REGION_PLACEHOLDER),
         ),
@@ -522,8 +522,8 @@ def _add_image_specs(specs: List[CommandSpec]) -> None:
         fields=(
             FieldSpec("x", FieldType.INT),
             FieldSpec("y", FieldType.INT),
-            FieldSpec("rows", FieldType.INT, optional=True, default=3),
-            FieldSpec("cols", FieldType.INT, optional=True, default=3),
+            FieldSpec("rows", FieldType.INT, default=3),
+            FieldSpec("cols", FieldType.INT, default=3),
             FieldSpec("region", FieldType.STRING, optional=True,
                       placeholder=_REGION_PLACEHOLDER),
         ),
@@ -533,8 +533,8 @@ def _add_image_specs(specs: List[CommandSpec]) -> None:
         "AC_point_for_cell", "Image", "Point For Cell",
         fields=(
             FieldSpec("label", FieldType.STRING, placeholder="C3"),
-            FieldSpec("rows", FieldType.INT, optional=True, default=3),
-            FieldSpec("cols", FieldType.INT, optional=True, default=3),
+            FieldSpec("rows", FieldType.INT, default=3),
+            FieldSpec("cols", FieldType.INT, default=3),
             FieldSpec("region", FieldType.STRING, optional=True,
                       placeholder=_REGION_PLACEHOLDER),
         ),
@@ -3496,6 +3496,14 @@ def _add_resilience_specs(specs: List[CommandSpec]) -> None:
         description="Store the completed response for an idempotency key.",
     ))
     specs.append(CommandSpec(
+        "AC_idempotency_release", "Flow", "Idempotency: Release",
+        fields=(
+            FieldSpec("name", FieldType.STRING, placeholder="payments"),
+            FieldSpec("key", FieldType.STRING, placeholder="order-42"),
+        ),
+        description="Drop an in-progress idempotency key whose work failed.",
+    ))
+    specs.append(CommandSpec(
         "AC_dedup_check", "Flow", "Dedup Window: Check",
         fields=(
             FieldSpec("name", FieldType.STRING, placeholder="webhooks"),
@@ -4045,7 +4053,7 @@ def _add_ops_specs(specs: List[CommandSpec]) -> None:
         "AC_generate_sbom", "Tools", "Generate SBOM (CycloneDX)",
         fields=(
             FieldSpec("path", FieldType.FILE_PATH, optional=True,
-                      default="sbom.cdx.json"),
+                      placeholder="sbom.cdx.json"),
             FieldSpec("root", FieldType.STRING, optional=True,
                       default="je_auto_control"),
         ),
@@ -4303,7 +4311,7 @@ def _add_agent_specs(specs: List[CommandSpec]) -> None:
     specs.append(CommandSpec(
         "AC_agent_card", "Agent", "A2A Agent Card",
         fields=(FieldSpec("path", FieldType.FILE_PATH, optional=True,
-                          default="agent-card.json"),),
+                          placeholder="agent-card.json"),),
         description="Write an A2A agent card describing AutoControl's skills.",
     ))
 
@@ -4325,7 +4333,7 @@ def _add_tooling_specs(specs: List[CommandSpec]) -> None:
         "AC_mcp_manifest", "Tools", "MCP Registry Manifest",
         fields=(
             FieldSpec("path", FieldType.FILE_PATH, optional=True,
-                      default="server.json"),
+                      placeholder="server.json"),
             FieldSpec("include_tools", FieldType.BOOL, optional=True,
                       default=False),
         ),
@@ -5023,7 +5031,7 @@ def _add_work_queue_specs(specs: List[CommandSpec]) -> None:
         fields=(
             FieldSpec("source", FieldType.FILE_PATH),
             FieldSpec("output_path", FieldType.STRING),
-            FieldSpec("annotations", FieldType.STRING, optional=True,
+            FieldSpec("annotations", FieldType.STRING,
                       placeholder='[{"type":"box","rect":[10,10,80,40]}]'),
         ),
         description="Draw boxes / highlights / arrows / labels onto an image.",

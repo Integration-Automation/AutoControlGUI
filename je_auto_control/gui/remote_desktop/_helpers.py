@@ -1,6 +1,8 @@
 """Shared helpers for the remote-desktop GUI panels."""
+import inspect
 import ssl
-from typing import Optional
+import weakref
+from typing import Callable, Optional
 
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QKeyEvent
@@ -70,6 +72,57 @@ def _scroll_amount(angle_delta: int) -> int:
     if angle_delta < 0:
         return -1
     return 0
+
+
+def wire_remote_input(window: QWidget, send: Callable[[dict], None]) -> None:
+    """Forward a remote screen window's mouse and keyboard signals to ``send``.
+
+    Every viewer that opens a ``RemoteScreenWindow`` wires it here, so one
+    cannot drift from another: the Quick Connect popup wired none of them,
+    and its remote screen ignored every click and key.
+
+    A bound-method ``send`` is held weakly. Held strongly, the connections
+    kept the window's owner alive until the window's own deferred delete
+    released it, and deleting the owner from inside that delete aborted the
+    process.
+    """
+    sink = weakref.WeakMethod(send) if inspect.ismethod(send) else (lambda: send)
+
+    def forward(*actions: dict) -> None:
+        target = sink()
+        if target is None:
+            return
+        for action in actions:
+            target(action)
+
+    window.mouse_moved.connect(lambda x, y: forward({"action": "mouse_move", "x": x, "y": y}))
+    window.mouse_pressed.connect(lambda x, y, button: forward(
+        {"action": "mouse_move", "x": x, "y": y}, {"action": "mouse_press", "button": button}))
+    window.mouse_released.connect(lambda _x, _y, button: forward({"action": "mouse_release", "button": button}))
+    window.mouse_scrolled.connect(
+        lambda x, y, amount: forward({"action": "mouse_scroll", "x": x, "y": y, "amount": amount}))
+    window.key_pressed.connect(lambda key: forward({"action": "key_press", "keycode": key}))
+    window.key_released.connect(lambda key: forward({"action": "key_release", "keycode": key}))
+    window.type_text.connect(lambda text: forward({"action": "type", "text": text}))
+
+
+def _read_import_entries(path: str, key: str) -> list:
+    """The object entries of an exported JSON file: ``{key: [...]}`` or a bare list.
+
+    Raises ``OSError`` or ``ValueError`` for a file that cannot be read or has
+    another shape. A binary file raised ``UnicodeDecodeError``, ``{key: 5}`` a
+    ``TypeError`` and deep nesting ``RecursionError`` out of the import slots.
+    """
+    import json
+    try:
+        with open(path, "r", encoding="utf-8") as handle:
+            data = json.load(handle)
+    except RecursionError as error:
+        raise ValueError(f"{path}: nested too deeply") from error
+    entries = data.get(key) if isinstance(data, dict) else data
+    if not isinstance(entries, list):
+        raise ValueError(f"{path}: expected a list under {key!r}")
+    return [entry for entry in entries if isinstance(entry, dict)]
 
 
 def _build_verifying_client_context() -> ssl.SSLContext:
@@ -151,18 +204,26 @@ class _CollapsibleSection(QGroupBox):
 def _short_fp(fp: Optional[str]) -> str:
     if not fp:
         return ""
+    fp = str(fp)
     return fp[:16] + ("..." if len(fp) > 16 else "")
 
 
 def _iso_to_epoch(value: Optional[str]) -> float:
-    """Parse ISO; return Unix epoch (or 0 if invalid)."""
+    """Parse ISO; return Unix epoch (or 0 if invalid).
+
+    A naive value is read as UTC: through local time, Windows raised
+    ``OSError`` for any date before 1970, out of the address book's sort.
+    """
     if not value:
         return 0.0
-    from datetime import datetime
+    from datetime import datetime, timezone
     try:
-        return datetime.fromisoformat(value).timestamp()
+        parsed = datetime.fromisoformat(value)
     except (TypeError, ValueError):
         return 0.0
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    return parsed.timestamp()
 
 
 def _format_short_time(value: Optional[str]) -> str:
@@ -170,10 +231,10 @@ def _format_short_time(value: Optional[str]) -> str:
         return ""
     from datetime import datetime
     try:
-        dt = datetime.fromisoformat(value)
-    except (TypeError, ValueError):
+        return datetime.fromisoformat(value).astimezone().strftime("%m-%d %H:%M")
+    # astimezone() raises OSError on Windows for a date before 1970.
+    except (TypeError, ValueError, OSError, OverflowError):
         return ""
-    return dt.astimezone().strftime("%m-%d %H:%M")
 
 
 def _format_last_seen(value: Optional[str]) -> str:
@@ -182,8 +243,7 @@ def _format_last_seen(value: Optional[str]) -> str:
     # Stored as ISO 8601 (UTC); render as local-readable "YYYY-MM-DD HH:MM"
     from datetime import datetime
     try:
-        dt = datetime.fromisoformat(value)
-    except (TypeError, ValueError):
-        return value
-    return dt.astimezone().strftime("%Y-%m-%d %H:%M")
+        return datetime.fromisoformat(value).astimezone().strftime("%Y-%m-%d %H:%M")
+    except (TypeError, ValueError, OSError, OverflowError):
+        return str(value)
 

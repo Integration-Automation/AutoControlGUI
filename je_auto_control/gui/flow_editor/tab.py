@@ -20,8 +20,9 @@ from je_auto_control.gui.language_wrapper.multi_language_wrapper import (
     language_wrapper,
 )
 from je_auto_control.gui.script_builder.step_model import (
-    Step, actions_to_steps, steps_to_actions,
+    Step, load_action_file, save_action_file,
 )
+from je_auto_control.utils.exception.exceptions import AutoControlException
 
 
 def _t(key: str) -> str:
@@ -39,6 +40,8 @@ class FlowEditorTab(TranslatableMixin, QWidget):
         self._view.setRenderHints(self._view.renderHints())
         self._view.setDragMode(QGraphicsView.RubberBandDrag)
         self._steps: List[Step] = []
+        # The other keys of a wrapped file, written back by Save.
+        self._file_extras: Optional[dict] = None
         self._inspector = QTextEdit()
         self._inspector.setReadOnly(True)
         self._status = QLabel()
@@ -80,6 +83,7 @@ class FlowEditorTab(TranslatableMixin, QWidget):
     def load_steps(self, steps: List[Step]) -> None:
         """Replace the visible graph from a pre-parsed step list."""
         self._steps = list(steps)
+        self._file_extras = None
         layout = self._scene.load(self._steps)
         self._status.setText(
             _t("flow_loaded").replace("{count}", str(len(layout.nodes))),
@@ -96,14 +100,15 @@ class FlowEditorTab(TranslatableMixin, QWidget):
         )
         if not path:
             return
+        # Through the Script Builder's reader: a file saved with a BOM (Notepad)
+        # did not open here, and Save dropped a wrapped file's other keys.
         try:
-            with open(path, "r", encoding="utf-8") as fp:
-                actions = json.load(fp)
-            steps = actions_to_steps(actions)
-        except (OSError, ValueError, TypeError) as error:
+            steps, extras = load_action_file(path)
+        except (AutoControlException, OSError, ValueError, TypeError) as error:
             QMessageBox.warning(self, _t("flow_open_btn"), str(error))
             return
         self.load_steps(steps)
+        self._file_extras = extras
 
     def _on_save(self) -> None:
         if not self._steps:
@@ -115,10 +120,8 @@ class FlowEditorTab(TranslatableMixin, QWidget):
         if not path:
             return
         try:
-            actions = steps_to_actions(self._steps)
-            with open(path, "w", encoding="utf-8") as fp:
-                json.dump(actions, fp, indent=2, ensure_ascii=False)
-        except (OSError, ValueError, TypeError) as error:
+            save_action_file(path, self._steps, self._file_extras)
+        except (AutoControlException, OSError, ValueError, TypeError) as error:
             QMessageBox.warning(self, _t("flow_save_btn"), str(error))
             return
         self._status.setText(
@@ -142,9 +145,10 @@ class FlowEditorTab(TranslatableMixin, QWidget):
         if step is None:
             return
         body_keys = list(step.bodies.keys())
+        arguments = step.params if step.args is None else step.args
         self._inspector.setPlainText(
             f"command: {step.command}\n"
-            f"params: {json.dumps(step.params, indent=2, ensure_ascii=False)}\n"
+            f"params: {json.dumps(arguments, indent=2, ensure_ascii=False)}\n"
             f"bodies: {body_keys}",
         )
 

@@ -19,8 +19,16 @@ from je_auto_control.utils.cost_telemetry.pricing import (
 )
 from je_auto_control.utils.cost_telemetry.store import (
     CostEvent, CostStore, CostSummary, default_cost_store,
-    summarise_events as summarise_llm_costs,
 )
+
+
+def summarise_llm_costs(events=None) -> CostSummary:
+    """Summarise ``events``, or ``default_cost_store``'s recorded calls when omitted.
+
+    It was an alias of ``summarise_events(events)``, whose argument is
+    required, so the documented ``summarise_llm_costs()`` raised TypeError.
+    """
+    return default_cost_store.summarise(events=events)
 
 
 def record_llm_call(*, provider: str, model: str,

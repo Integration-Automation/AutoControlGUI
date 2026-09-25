@@ -5,8 +5,8 @@
 綁定成具型別的物件,並做必填欄位強制與選項約束。本功能依宣告的欄位驗證一個 mapping,轉換型別並回報可
 據以行動的錯誤 —— 標準函式庫版的 pydantic-settings。
 
-純標準函式庫(``dataclasses``);不匯入 ``PySide6``。驗證為純函式(輸入 mapping、輸出報告),因此在 CI
-中完全具決定性。
+純標準函式庫(``dataclasses``);不匯入 ``PySide6``。驗證只取決於 mapping 與傳入的 ``environ``(預設
+``os.environ``);在 CI 中傳 ``environ={}`` 即完全具決定性。
 
 無頭 API
 --------
@@ -24,7 +24,9 @@
     # {"ok": True, "config": {"port": 8080, "env": "dev", "debug": True}, "errors": []}
 
 ``ConfigField`` 宣告 ``type``(``str`` / ``int`` / ``float`` / ``bool``)、選用的 ``default``、``required``
-旗標、``choices`` 與 ``env`` 提示。``ConfigSchema.validate`` 轉換每個存在的值、套用預設、強制必填與選項,
+旗標、``choices`` 與 ``env`` 環境變數名稱。值先取 mapping,沒有再取該環境變數，最後才用預設(與
+pydantic-settings 相同的順序);``int`` 欄位遇到帶小數的浮點數會報錯，不會截斷。``ConfigSchema.validate``
+轉換每個值、套用預設、強制必填與選項,
 回傳 ``{ok, config, errors}``(錯誤為 ``{field, error}``)。``ConfigSchema.from_dict`` 從純 spec 建立結構,
 ``validate_config`` 一次完成 spec 加 mapping,``coerce`` 公開值轉換(布林接受 ``true``/``yes``/``on`` 等)。
 

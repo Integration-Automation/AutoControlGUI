@@ -25,7 +25,8 @@ Headless API
     format_list(["A", "B", "C", "D"], locale="fr")        # 'A, B, C et D'
 
 ``style`` is ``"and"`` (conjunction), ``"or"`` (disjunction) or ``"unit"``
-(comma-separated, no conjunction). ``locale`` selects the conjunction word and
+(measurements such as "3 ft, 7 in": commas only in English; CLDR's unit
+pattern, which ends with the conjunction, in ``es`` / ``fr`` / ``pt`` / ``de``). ``locale`` selects the conjunction word and
 the serial-comma rule (``en`` / ``es`` / ``fr`` / ``de`` / ``pt``; English uses
 the Oxford comma, the others do not; an unknown locale falls back to English).
 One and two element lists, and the empty list, are handled as special cases.

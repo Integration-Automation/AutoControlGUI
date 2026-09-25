@@ -2,19 +2,20 @@
 
 The tab calls the headless ``plan_actions`` helper, shows the resulting
 JSON action list for review, and lets the user execute it through the
-shared global executor. Long calls run on a background ``QThread`` so the
+shared global executor. Long calls run on a background worker thread so the
 UI stays responsive.
 """
 import json
 from typing import List, Optional
 
-from PySide6.QtCore import QObject, QThread, Signal
+from PySide6.QtCore import QObject, Signal
 from PySide6.QtWidgets import (
     QGroupBox, QHBoxLayout, QLabel, QLineEdit, QMessageBox,
     QTextEdit, QVBoxLayout, QWidget,
 )
 
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
+from je_auto_control.gui._worker_thread import WorkerHandle, start_worker
 from je_auto_control.gui.language_wrapper.multi_language_wrapper import (
     language_wrapper,
 )
@@ -69,8 +70,7 @@ class LLMPlannerTab(TranslatableMixin, QWidget):
         self._result_view.setReadOnly(True)
         self._status = QLabel()
         self._planned_actions: Optional[list] = None
-        self._plan_thread: Optional[QThread] = None
-        self._plan_worker: Optional[_PlanWorker] = None
+        self._plan_thread: Optional[WorkerHandle] = None
         self._build_layout()
         self._apply_placeholders()
 
@@ -130,17 +130,9 @@ class LLMPlannerTab(TranslatableMixin, QWidget):
         self._actions_view.clear()
         self._planned_actions = None
         worker = _PlanWorker(description, model, sorted(executor.known_commands()))
-        thread = QThread(self)
-        worker.moveToThread(thread)
-        thread.started.connect(worker.run)
-        worker.finished.connect(self._on_plan_finished)
-        worker.failed.connect(self._on_plan_failed)
-        worker.finished.connect(thread.quit)
-        worker.failed.connect(thread.quit)
-        thread.finished.connect(self._on_thread_done)
-        self._plan_worker = worker
-        self._plan_thread = thread
-        thread.start()
+        self._plan_thread = start_worker(
+            self, worker, on_done=self._on_plan_finished,
+            on_fail=self._on_plan_failed, on_thread_done=self._on_thread_done)
 
     def _on_plan_finished(self, actions: list) -> None:
         self._planned_actions = actions
@@ -157,12 +149,7 @@ class LLMPlannerTab(TranslatableMixin, QWidget):
         self._status.setText(message)
 
     def _on_thread_done(self) -> None:
-        if self._plan_thread is not None:
-            self._plan_thread.deleteLater()
-        if self._plan_worker is not None:
-            self._plan_worker.deleteLater()
         self._plan_thread = None
-        self._plan_worker = None
 
     def _on_run(self) -> None:
         if not self._planned_actions:

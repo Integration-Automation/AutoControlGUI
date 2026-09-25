@@ -637,7 +637,7 @@ def test_a_non_ascii_token_is_refused_not_crashed(monkeypatch):
             body = json.dumps(_INIT).encode("utf-8")
             conn.putheader("Content-Length", str(len(body)))
             conn.endheaders(body)
-            assert conn.getresponse().status == 403
+            assert conn.getresponse().status == 401
         finally:
             conn.close()
     finally:

@@ -13,8 +13,10 @@ import functools
 import threading
 from typing import Any, Callable, Optional, TypeVar
 
+from je_auto_control.utils.exception.exceptions import AutoControlException
 
-class UIAutomatorUnavailableError(RuntimeError):
+
+class UIAutomatorUnavailableError(AutoControlException, RuntimeError):
     """Raised when the ``uiautomator2`` SDK or a target device is missing."""
 
 

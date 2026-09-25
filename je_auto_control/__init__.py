@@ -253,7 +253,7 @@ from je_auto_control.utils.session_guard import (
 )
 # Transactional work queue (dispatcher/performer)
 from je_auto_control.utils.work_queue import (
-    BusinessError, WorkItem, WorkQueue,
+    BusinessError, WorkItem, WorkQueue, WorkQueueError,
 )
 # Seeded synthetic test-data generation
 from je_auto_control.utils.test_data import generate_rows, write_dataset
@@ -324,7 +324,7 @@ from je_auto_control.utils.i18n_test import (
 )
 # Flow checkpoint & resume (durable execution for long action lists)
 from je_auto_control.utils.checkpoint import (
-    Checkpoint, CheckpointStore, run_resumable,
+    Checkpoint, CheckpointStore, CheckpointStoreError, run_resumable,
 )
 # Set-of-Marks overlay (number elements for VLM grounding)
 from je_auto_control.utils.set_of_marks import (
@@ -1343,7 +1343,7 @@ __all__ = [
     "generate_totp", "verify_totp", "generate_secret", "TOTPError",
     "handle_file_dialog", "FileDialogDriver",
     "ensure_interactive_session", "is_session_locked",
-    "WorkQueue", "WorkItem", "BusinessError",
+    "WorkQueue", "WorkItem", "BusinessError", "WorkQueueError",
     "generate_rows", "write_dataset",
     "rank_flows", "select_flows",
     "build_server_manifest", "write_server_manifest",
@@ -1371,7 +1371,7 @@ __all__ = [
     "check_unique_key",
     "check_catalog", "check_overflow", "pseudo_localize",
     "pseudo_localize_catalog",
-    "Checkpoint", "CheckpointStore", "run_resumable",
+    "Checkpoint", "CheckpointStore", "CheckpointStoreError", "run_resumable",
     "mark_click", "mark_elements", "mark_screen", "render_marks",
     "resolve_mark",
     "describe_screen", "diff_snapshots", "screen_changed", "snapshot",

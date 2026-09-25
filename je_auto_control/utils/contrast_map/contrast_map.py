@@ -85,8 +85,18 @@ def dominant_pair(pixels: Sequence[Sequence[int]]) -> Dict[str, RGB]:
         return {"foreground": mean, "background": mean}
     background, foreground = (high, low) if len(high) >= len(low) else (low,
                                                                         high)
-    return {"foreground": _mean_color(foreground),
-            "background": _mean_color(background)}
+    # The most frequent colour of each group: the mean was pulled toward the
+    # other side by anti-aliased edge pixels, and #767676 on white (4.54:1)
+    # read 3.23:1, an AA failure.
+    return {"foreground": _mode_color(foreground),
+            "background": _mode_color(background)}
+
+
+def _mode_color(pixels: Sequence[Sequence[int]]) -> RGB:
+    """The most frequent RGB colour of a non-empty list of pixels (pure)."""
+    from collections import Counter
+    colour, _count = Counter(tuple(int(v) for v in pixel[:3]) for pixel in pixels).most_common(1)[0]
+    return [colour[0], colour[1], colour[2]]
 
 
 def _default_sampler(region: Optional[Sequence[int]]) -> List[RGB]:

@@ -48,7 +48,10 @@ def rank_changes(scored_boxes: Sequence[Any], *,
 def _box_mean(diff: Any, box: Sequence[int]) -> float:
     """Mean change (0..1) of the diff map inside ``box`` (numpy)."""
     x, y, w, h = (int(box[0]), int(box[1]), int(box[2]), int(box[3]))
-    patch = diff[max(0, y):y + h, max(0, x):x + w]
+    # Clamp both ends: a negative end counts back from the far edge, so a box
+    # wholly off the left or top scored a slab of the frame as changed.
+    x0, y0 = max(0, x), max(0, y)
+    patch = diff[y0:max(y0, y + h), x0:max(x0, x + w)]
     return float(patch.mean()) if patch.size else 0.0
 
 

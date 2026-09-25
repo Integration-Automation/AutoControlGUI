@@ -1,9 +1,11 @@
 """Per-model token pricing table (USD per 1M tokens).
 
-Numbers are list prices for the public API tier as of mid-2025; treat
-them as an estimate, not an invoice. ``estimate_usd`` returns 0.0 for
-any unknown model rather than raising — the goal is best-effort
-visibility, not strict accounting.
+Numbers are list prices for the public API tier (Claude: the Anthropic
+pricing page as of September 2026); treat them as an estimate, not an
+invoice. A dated or provider-prefixed Claude id (``claude-haiku-4-5-20251001``,
+``anthropic.claude-opus-5``, ``claude-opus-4-5@20251101``) is looked up by its
+base id. ``estimate_usd`` returns 0.0 for any unknown model rather than
+raising — the goal is best-effort visibility, not strict accounting.
 
 Override per call by passing an explicit ``Pricing`` dict to
 :func:`estimate_usd`, e.g. when reading negotiated rates from a config
@@ -11,6 +13,7 @@ bundle.
 """
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from typing import Dict, Optional
 
@@ -24,13 +27,27 @@ class Pricing:
 
 
 _DEFAULT_PRICING: Dict[str, Pricing] = {
-    # Anthropic Claude 4 family
-    "claude-opus-4-7": Pricing(15.0, 75.0),
+    # Anthropic Claude, current list prices (Opus 4.7 was listed at the
+    # Opus 4.1 price, three times too high).
+    "claude-fable-5-1": Pricing(10.0, 50.0),
+    "claude-fable-5": Pricing(10.0, 50.0),
+    "claude-opus-5-5": Pricing(4.0, 20.0),
+    "claude-opus-5": Pricing(5.0, 25.0),
+    "claude-opus-4-8": Pricing(5.0, 25.0),
+    "claude-opus-4-7": Pricing(5.0, 25.0),
+    "claude-opus-4-6": Pricing(5.0, 25.0),
+    "claude-opus-4-5": Pricing(5.0, 25.0),
+    "claude-opus-4-1": Pricing(15.0, 75.0),
+    "claude-opus-4": Pricing(15.0, 75.0),
+    "claude-sonnet-5": Pricing(2.0, 10.0),
     "claude-sonnet-4-6": Pricing(3.0, 15.0),
-    "claude-haiku-4-5-20251001": Pricing(1.0, 5.0),
+    "claude-sonnet-4-5": Pricing(3.0, 15.0),
+    "claude-sonnet-4": Pricing(3.0, 15.0),
+    "claude-haiku-4-5": Pricing(1.0, 5.0),
     # Earlier Claude lines, kept so old scripts still report something.
+    "claude-3-7-sonnet": Pricing(3.0, 15.0),
     "claude-3-5-sonnet": Pricing(3.0, 15.0),
-    "claude-3-5-haiku": Pricing(1.0, 5.0),
+    "claude-3-5-haiku": Pricing(0.8, 4.0),
     "claude-3-opus": Pricing(15.0, 75.0),
     # OpenAI
     "gpt-4o": Pricing(2.5, 10.0),
@@ -47,7 +64,20 @@ def pricing_for(model: str,
     """Return ``Pricing`` for ``model`` or ``None`` when unknown."""
     if override and model in override:
         return override[model]
-    return _DEFAULT_PRICING.get(model)
+    return _DEFAULT_PRICING.get(model) or _DEFAULT_PRICING.get(_base_model_id(model))
+
+
+#: A provider prefix ("anthropic.", "us.anthropic."), a date or version
+#: suffix ("-20251001", "@20251101", "-v1:0") around a Claude id.
+# "global." as well as the two-to-four-letter regions, and OpenAI's
+# "-YYYY-MM-DD" snapshots: both priced at $0.00.
+_PROVIDER_PREFIX = re.compile(r"^(?:[a-z]+\.)?anthropic\.")
+_ID_SUFFIX = re.compile(r"(?:[-@]\d{8}|-\d{4}-\d{2}-\d{2})?(?:-v\d+(?::\d+)?)?$")
+
+
+def _base_model_id(model: str) -> str:
+    """``model`` without a provider prefix or a date / version suffix."""
+    return _ID_SUFFIX.sub("", _PROVIDER_PREFIX.sub("", str(model)), count=1)
 
 
 def estimate_usd(model: str, input_tokens: int, output_tokens: int,

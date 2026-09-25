@@ -118,11 +118,13 @@ def set_clipboard_format(format_id: int, payload: bytes, *,
     On success the clipboard owns the handle and must not free it here.
     """
     user32, kernel32 = clipboard_api()
-    handle = kernel32.GlobalAlloc(GMEM_MOVEABLE, len(payload))
+    # At least one byte: a zero-byte GMEM_MOVEABLE block is discarded, and
+    # GlobalLock on it fails, so an empty payload could never be set.
+    handle = kernel32.GlobalAlloc(GMEM_MOVEABLE, max(1, len(payload)))
     if not handle:
         raise RuntimeError("GlobalAlloc failed")
     try:
-        _fill(kernel32, handle, payload)
+        fill_global(kernel32, handle, payload)
         with open_clipboard(user32):
             if empty_first:
                 user32.EmptyClipboard()
@@ -135,7 +137,8 @@ def set_clipboard_format(format_id: int, payload: bytes, *,
         raise
 
 
-def _fill(kernel32: Any, handle: Any, payload: bytes) -> None:
+def fill_global(kernel32: Any, handle: Any, payload: bytes) -> None:
+    """Copy ``payload`` into the movable global block ``handle``."""
     pointer = kernel32.GlobalLock(handle)
     if not pointer:
         raise RuntimeError("GlobalLock failed")

@@ -166,7 +166,15 @@ class AdminConsoleClient:
 
     def broadcast_execute(self, actions: List[Any],
                           *, labels: Optional[List[str]] = None,
+                          raise_on_error: bool = False,
                           ) -> List[Dict[str, Any]]:
+        """Run ``actions`` on every host (or ``labels``); one row per host.
+
+        With ``raise_on_error`` each host stops at its first failing action
+        and that host's row is ``ok: false`` with the error. Otherwise
+        ``ok`` only means the host answered, and action failures sit inside
+        ``result``. A host too old to know the flag ignores it.
+        """
         targets = self._resolve_targets(labels)
         # A label that names no host is a failure to report, not a host to
         # skip: a typo used to make the broadcast look complete.
@@ -177,11 +185,13 @@ class AdminConsoleClient:
             return missing
         with ThreadPoolExecutor(max_workers=self._max_parallel) as pool:
             return list(pool.map(
-                lambda host: self._execute_one(host, actions), targets,
+                lambda host: self._execute_one(host, actions, raise_on_error), targets,
             )) + missing
 
     def _resolve_targets(self, labels: Optional[List[str]]) -> List[AdminHost]:
-        if not labels:
+        # None is "every host"; an empty list is no host -- it ran a
+        # broadcast on every host when a caller's filter matched nothing.
+        if labels is None:
             return self.list_hosts()
         with self._lock:
             return [self._hosts[label] for label in labels
@@ -226,10 +236,17 @@ class AdminConsoleClient:
             )
             return None
 
-    def _execute_one(self, host: AdminHost,
-                     actions: List[Any]) -> Dict[str, Any]:
+    def _execute_one(self, host: AdminHost, actions: List[Any],
+                     raise_on_error: bool = False) -> Dict[str, Any]:
+        body: Dict[str, Any] = {"actions": actions}
+        if raise_on_error:
+            body["raise_on_error"] = True
         try:
-            payload = self._http_post(host, "/execute", {"actions": actions})
+            payload = self._http_post(host, "/execute", body)
+            if isinstance(payload, dict) and payload.get("ok") is False:
+                return {"label": host.label, "ok": False,
+                        "error": str(payload.get("error", "action failed")),
+                        "result": payload}
             return {"label": host.label, "ok": True, "result": payload}
         # Not redundant: TimeoutError is not an OSError on Python 3.10,
         # the lowest supported version.
@@ -269,7 +286,12 @@ class AdminConsoleClient:
             raw = self._read_bounded(response)
         if not raw:
             return {}
-        return json.loads(raw.decode("utf-8"))
+        try:
+            return json.loads(raw.decode("utf-8"))
+        except RecursionError as error:
+            # Every caller catches ValueError; this escaped pool.map and
+            # failed the whole round because of one host's reply.
+            raise ValueError(f"{host.label}: reply nested too deeply") from error
 
     def _read_bounded(self, response: Any) -> bytes:
         """Read the body within the timeout as a whole and a size cap.

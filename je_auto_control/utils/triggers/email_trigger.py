@@ -12,8 +12,10 @@ once: by default the watcher marks the message as ``\\Seen`` after a
 successful fire so the same email is not handled twice across
 restarts.
 """
+import base64
 import email
 import email.policy
+import re
 import imaplib
 import ssl as ssl_module
 import threading
@@ -28,6 +30,7 @@ from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.run_history.artifact_manager import (
     capture_error_snapshot,
 )
+from je_auto_control.utils.run_history.run_outcome import run_counting_failures
 from je_auto_control.utils.run_history.history_store import (
     SOURCE_TRIGGER, STATUS_ERROR, STATUS_OK, default_history_store,
 )
@@ -57,6 +60,8 @@ class EmailTrigger:
     fired: int = 0
     last_error: Optional[str] = None
     _seen_uids: set = field(default_factory=set, repr=False)
+    _inflight: set = field(default_factory=set, repr=False)
+    _uidvalidity: Optional[str] = field(default=None, repr=False)
 
 
 def _decode_header_value(value: Optional[str]) -> str:
@@ -102,14 +107,30 @@ def _extract_text_body(msg) -> str:
     return _part_text(msg) or ""
 
 
+def _header(msg, name: str) -> str:
+    """A header's decoded value, or its raw text when it does not parse.
+
+    ``email.policy.default`` parses a header when it is read, and a
+    malformed address (``From: <"``) raises IndexError, HeaderParseError or
+    AttributeError from inside the email package -- which escaped the poll
+    and blocked the mailbox on that message for good.
+    """
+    try:
+        value = msg.get(name)
+    except Exception:  # noqa: BLE001  # reason: the email package's parse errors have no common base; fall back to the raw header
+        value = next((str(raw) for key, raw in msg.raw_items()
+                      if key.lower() == name.lower()), None)
+    return _decode_header_value(value)
+
+
 def _build_payload(uid: str, msg) -> Dict[str, Any]:
     return {
         "email.uid": uid,
-        "email.from": _decode_header_value(msg.get("From")),
-        "email.to": _decode_header_value(msg.get("To")),
-        "email.subject": _decode_header_value(msg.get("Subject")),
-        "email.message_id": msg.get("Message-ID", ""),
-        "email.date": msg.get("Date", ""),
+        "email.from": _header(msg, "From"),
+        "email.to": _header(msg, "To"),
+        "email.subject": _header(msg, "Subject"),
+        "email.message_id": _header(msg, "Message-ID"),
+        "email.date": _header(msg, "Date"),
         "email.body": _extract_text_body(msg),
     }
 
@@ -161,6 +182,50 @@ def _fetch_message(client: imaplib.IMAP4, uid: str):
     if not isinstance(raw, (bytes, bytearray)):
         return None
     return email.message_from_bytes(bytes(raw), policy=email.policy.default)
+
+
+def _quote_mailbox(name: str) -> str:
+    """``name`` as an IMAP quoted string.
+
+    imaplib sends ``select``'s argument as-is, so ``Sent Items`` went out as
+    two atoms (``SELECT Sent Items``), a BAD command; ``[Gmail]/All Mail``
+    likewise.
+    """
+    if len(name) >= 2 and name.startswith('"') and name.endswith('"'):
+        return name
+    escaped = _modified_utf7(name).replace("\\", "\\\\").replace('"', '\\"')
+    return f'"{escaped}"'
+
+
+#: An ASCII name that already holds modified UTF-7 shifts (``&-``, ``&ZeVnLIqe-``).
+_ENCODED_MAILBOX = re.compile(r"&[A-Za-z0-9+,]*-")
+
+
+def _modified_utf7(name: str) -> str:
+    """``name`` in IMAP's modified UTF-7 (RFC 3501 5.1.3), unless it already is.
+
+    ``已處理`` raised UnicodeEncodeError before any command was sent, and
+    ``R&D`` went out as ``R&D`` where the protocol needs ``R&-D``.
+    """
+    if name.isascii() and _ENCODED_MAILBOX.search(name):
+        return name
+    out: List[str] = []
+    pending: List[str] = []
+
+    def flush() -> None:
+        if pending:
+            encoded = base64.b64encode("".join(pending).encode("utf-16-be")).decode("ascii")
+            out.append("&" + encoded.rstrip("=").replace("/", ",") + "-")
+            pending.clear()
+
+    for char in name:
+        if 0x20 <= ord(char) <= 0x7E:
+            flush()
+            out.append("&-" if char == "&" else char)
+        else:
+            pending.append(char)
+    flush()
+    return "".join(out)
 
 
 def _mark_seen(client: imaplib.IMAP4, uid: str) -> None:
@@ -253,11 +318,13 @@ class EmailTriggerWatcher:
             self._thread.start()
 
     def stop(self, timeout: float = 5.0) -> None:
-        self._stop.set()
-        thread = self._thread
-        if thread is not None:
-            thread.join(timeout=timeout)
-        self._thread = None
+        """Stop polling; under start()'s lock so it never joins an unstarted thread."""
+        with self._lock:
+            self._stop.set()
+            thread = self._thread
+            if thread is not None and thread.is_alive():
+                thread.join(timeout=timeout)
+            self._thread = None
 
     def poll_once(self) -> int:
         """Run exactly one polling pass; return total messages fired."""
@@ -303,12 +370,13 @@ class EmailTriggerWatcher:
             return 0
         fired = 0
         try:
-            typ, _ = client.select(trigger.mailbox, readonly=False)
+            typ, _ = client.select(_quote_mailbox(trigger.mailbox), readonly=False)
             if typ != "OK":
                 trigger.last_error = f"select {trigger.mailbox} failed"
                 return 0
+            self._check_uidvalidity(client, trigger)
             for uid in self._iter_unprocessed_uids(client, trigger):
-                fired += self._fire_for_uid(client, trigger, uid)
+                fired += self._fire_claimed(client, trigger, uid)
         # 只有 _connect 有防護，select / search / fetch 沒有。連線在指令
         # 途中斷掉時 imaplib 會拋 IMAP4.abort，逸出 _run 後直接殺掉輪詢
         # 執行緒——而這個模組的文件正說它能撐過不穩定的網路。
@@ -329,9 +397,45 @@ class EmailTriggerWatcher:
     def _iter_unprocessed_uids(self, client: imaplib.IMAP4,
                                trigger: EmailTrigger) -> Iterable[str]:
         for uid in _search_uids(client, trigger.search_criteria):
-            if uid in trigger._seen_uids:
-                continue
-            yield uid
+            if self._claim(trigger, uid):
+                yield uid
+
+    def _claim(self, trigger: EmailTrigger, uid: str) -> bool:
+        """Take ``uid`` for this poll, atomically; ``False`` when seen or taken.
+
+        The check came before the fire and the mark after it, so two polls
+        running together (the watcher and AC_email_trigger_poll_once) both
+        fired the same message.
+        """
+        with self._lock:
+            if uid in trigger._seen_uids or uid in trigger._inflight:
+                return False
+            trigger._inflight.add(uid)
+            return True
+
+    def _fire_claimed(self, client: imaplib.IMAP4, trigger: EmailTrigger, uid: str) -> int:
+        try:
+            return self._fire_for_uid(client, trigger, uid)
+        finally:
+            with self._lock:
+                trigger._inflight.discard(uid)
+
+    def _check_uidvalidity(self, client: imaplib.IMAP4, trigger: EmailTrigger) -> None:
+        """Forget the seen UIDs when the mailbox's UIDVALIDITY changes.
+
+        A new UIDVALIDITY means UIDs were reassigned, and a new message that
+        reused an old UID was skipped for good.
+        """
+        _typ, data = client.response("UIDVALIDITY")
+        value = data[0] if data else None
+        if isinstance(value, (bytes, bytearray)):
+            value = bytes(value).decode("ascii", errors="replace")
+        if value is None:
+            return
+        with self._lock:
+            if trigger._uidvalidity is not None and value != trigger._uidvalidity:
+                trigger._seen_uids.clear()
+            trigger._uidvalidity = str(value)
 
     def _record_connect_error(self, trigger: EmailTrigger,
                               error: Exception) -> None:
@@ -344,7 +448,14 @@ class EmailTriggerWatcher:
         msg = _fetch_message(client, uid)
         if msg is None:
             return 0
-        payload = _build_payload(uid, msg)
+        try:
+            payload = _build_payload(uid, msg)
+        except Exception as error:  # noqa: BLE001  # reason: a message the email package cannot read is skipped, not retried forever
+            trigger.last_error = repr(error)
+            autocontrol_logger.error("imap %s unreadable message %s: %r",
+                                     trigger.trigger_id, uid, error)
+            trigger._seen_uids.add(uid)
+            return 0
         # A missing/renamed script raises AutoControlJsonActionException (an
         # AutoControlException). Missing the base here let it escape *before*
         # the uid was marked seen below, so the same message re-fired every
@@ -376,7 +487,7 @@ class EmailTriggerWatcher:
             error_text: Optional[str] = None
             try:
                 actions = read_executable_action_json(trigger.script_path)
-                self._executor(actions, payload)
+                run_counting_failures(lambda: self._executor(actions, payload))
             # Any failure is recorded as STATUS_ERROR -- not a bogus
             # STATUS_OK from the finally below -- before re-raising.
             except Exception as error:  # noqa: BLE001  # reason: re-raised

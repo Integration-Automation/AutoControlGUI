@@ -38,8 +38,12 @@ def to_jsonl(trace: Sequence[Mapping[str, Any]]) -> str:
 
 
 def from_jsonl(text: str) -> List[Step]:
-    """Parse a JSONL trace back into a list of step dicts."""
-    return [json.loads(line) for line in text.splitlines() if line.strip()]
+    """Parse a JSONL trace back into a list of step dicts.
+
+    Split on ``"\\n"`` only: :func:`to_jsonl` leaves U+2028 / U+2029 / U+0085
+    unescaped inside strings, and ``str.splitlines()`` broke a step there.
+    """
+    return [json.loads(line) for line in text.split("\n") if line.strip()]
 
 
 def replay_trace(trace: Sequence[Mapping[str, Any]],

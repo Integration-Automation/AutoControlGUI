@@ -137,7 +137,12 @@ def _override_argv(output_path: str) -> List[str]:
     spaces or quotes stays one argument.
     """
     template = _override_template()
-    argv = shlex.split(template)
+    try:
+        argv = shlex.split(template)
+    except ValueError as error:   # an unbalanced quote escaped as ValueError
+        raise AutoControlScreenException(
+            f"{CAPTURE_COMMAND_ENV} is not a valid command line: {error}",
+        ) from error
     if not argv:
         raise AutoControlScreenException(
             f"{CAPTURE_COMMAND_ENV} is set but empty",

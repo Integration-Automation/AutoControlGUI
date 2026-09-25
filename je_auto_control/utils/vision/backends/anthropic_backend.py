@@ -7,7 +7,7 @@ from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.vision.backends._parse import (
     LOCATE_PROMPT, parse_coords,
 )
-from je_auto_control.utils.vision.backends.base import VLMBackend
+from je_auto_control.utils.vision.backends.base import VLMBackend, VLMRequestError
 
 _DEFAULT_MODEL = "claude-opus-4-7"
 _REQUEST_TIMEOUT_S = 30.0
@@ -48,6 +48,16 @@ class AnthropicVLMBackend(VLMBackend):
         chosen_model = (model
                         or os.environ.get("AUTOCONTROL_VLM_MODEL")
                         or _DEFAULT_MODEL)
+        # Fitted to what the model sees (1568 px on the long edge, 2576 on
+        # the high-resolution tier): sent whole, the reply was in the pixels of
+        # the downscaled image and read as screen pixels -- (1436, 799) for
+        # an element near (1894, 1054) on a 1920x1080 screen.
+        from je_auto_control.utils.agent.backends._computer_toolset import (
+            fit_screenshot, image_tier,
+        )
+        scale = (1.0, 1.0)
+        if image_mime == "image/png":
+            image_bytes, scale = fit_screenshot(image_bytes, image_tier(chosen_model))
         b64 = base64.standard_b64encode(image_bytes).decode("ascii")
         prompt = LOCATE_PROMPT.format(description=description)
         try:
@@ -71,12 +81,13 @@ class AnthropicVLMBackend(VLMBackend):
         # anthropic.AnthropicError, a bare Exception, so they escaped here while
         # the LLM backend already caught them.
         except (*_sdk_errors(), OSError, ValueError, RuntimeError) as error:
-            autocontrol_logger.warning(
-                "Anthropic VLM request failed: %r", error,
-            )
+            raise VLMRequestError(f"Anthropic VLM request failed: {error!r}") from error
+        coords = parse_coords(_first_text_block(response))
+        if coords is None:
             return None
-        text = _first_text_block(response)
-        return parse_coords(text)
+        # Back to the pixels of the image given: the model answers in the
+        # pixels of the image it saw, which was fitted to its limits.
+        return (int(round(coords[0] / scale[0])), int(round(coords[1] / scale[1])))
 
 
 def _first_text_block(response) -> str:

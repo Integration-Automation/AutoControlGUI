@@ -1,11 +1,13 @@
 """Closed-loop driver: observe → plan → act → verify → loop."""
 from __future__ import annotations
 
+import threading
 import time
 from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, List, Optional, Sequence
 
 from je_auto_control.utils.exception.exceptions import AutoControlException
+from je_auto_control.utils.executor.flow_control import LoopBreak, LoopContinue
 
 
 @dataclass
@@ -92,11 +94,14 @@ class AgentLoop:
                  backend: AgentBackend,
                  *, tool_runner: Optional[Callable[[str, Dict[str, Any]], Any]] = None,
                  screenshot_fn: Optional[Callable[[], Optional[bytes]]] = None,
-                 budget: Optional[AgentBudget] = None) -> None:
+                 budget: Optional[AgentBudget] = None,
+                 stop_event: Optional[threading.Event] = None) -> None:
+        """``stop_event``, once set, ends the run before its next step."""
         self._backend = backend
         self._tool_runner = tool_runner or _default_tool_runner
         self._screenshot_fn = screenshot_fn or _default_screenshot
         self._budget = budget or AgentBudget()
+        self._stop_event = stop_event
 
     def run(self, goal: str) -> AgentResult:
         started_at = time.monotonic()
@@ -119,6 +124,9 @@ class AgentLoop:
     def _run_loop(self, goal: str, started_at: float,
                   result: AgentResult, metrics) -> None:
         for index in range(self._budget.max_steps):
+            if self._stop_event is not None and self._stop_event.is_set():
+                result.final_message = "stopped"
+                return
             if time.monotonic() - started_at > self._budget.wall_seconds:
                 result.final_message = "wall_seconds budget exhausted"
                 return
@@ -132,6 +140,9 @@ class AgentLoop:
         decision = self._backend.decide_next_action(
             goal, self._screenshot_fn(), result.steps,
         )
+        if not isinstance(decision, dict):   # None crashed at .get()
+            result.final_message = f"backend returned a non-object decision: {decision!r}"
+            return True
         if decision.get("stop"):
             result.succeeded = True
             result.final_message = decision.get("message")
@@ -144,7 +155,15 @@ class AgentLoop:
         if not isinstance(tool, str):
             result.final_message = f"backend returned no tool: {decision!r}"
             return True
-        step = self._dispatch_tool(index, tool, decision.get("input") or {})
+        arguments = decision.get("input") or {}
+        if not isinstance(arguments, dict):
+            # dict("hello") raised out of run(); the step records it instead.
+            result.steps.append(AgentStep(
+                index=index, tool=tool, arguments=None,
+                error=f"backend returned non-object input: {arguments!r}",
+            ))
+            return False
+        step = self._dispatch_tool(index, tool, arguments)
         result.steps.append(step)
         if metrics:
             outcome = "error" if step.error else "ok"
@@ -164,8 +183,12 @@ class AgentLoop:
             # AutoControlException), and a hallucinated kwarg raises TypeError.
             # Record the error per-step so the loop keeps going instead of
             # crashing the whole run.
-            except (AutoControlException, TypeError,
-                    ValueError, RuntimeError, OSError) as error:
+            # The executor's own set too: a bad argument raised KeyError,
+            # IndexError or AttributeError from a real command and ended the
+            # whole run, and a stray AC_break escaped the loop.
+            except (AutoControlException, TypeError, ValueError, RuntimeError, OSError,
+                    LookupError, AttributeError, ArithmeticError,
+                    LoopBreak, LoopContinue) as error:
                 step.error = f"{type(error).__name__}: {error}"
         return step
 

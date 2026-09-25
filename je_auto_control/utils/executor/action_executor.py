@@ -4857,11 +4857,8 @@ def _get_clipboard_html() -> Dict[str, Any]:
 
 def _set_clipboard_files(paths: Any) -> Dict[str, Any]:
     """Adapter: put a file-drop list (CF_HDROP) on the clipboard (Windows)."""
-    import json
     from je_auto_control.utils.clipboard_files import set_clipboard_files
-    if isinstance(paths, str):
-        paths = json.loads(paths) if paths.strip().startswith("[") else [paths]
-    paths = [str(p) for p in paths]
+    paths = _coerce_paths(paths)
     set_clipboard_files(paths)
     return {"set": True, "count": len(paths)}
 
@@ -4931,10 +4928,20 @@ def _diff_formats(before: Any, after: Any) -> Dict[str, Any]:
 
 
 def _coerce_paths(paths: Any) -> list:
-    """Normalise a paths argument (JSON list string / single path / list)."""
+    """Normalise a paths argument (JSON list string / single path / list).
+
+    A string is a JSON list only if it parses as one: "[draft] notes.txt"
+    is a file name, and raised JSONDecodeError.
+    """
     import json
     if isinstance(paths, str):
-        paths = json.loads(paths) if paths.strip().startswith("[") else [paths]
+        parsed = None
+        if paths.strip().startswith("["):
+            try:
+                parsed = json.loads(paths)
+            except ValueError:
+                parsed = None
+        paths = parsed if isinstance(parsed, list) else [paths]
     return [str(p) for p in paths]
 
 
@@ -5297,19 +5304,18 @@ def _delta_observation(prev: Any, curr: Any, viewport: Any = None,
                        interactive_only: Any = True) -> Dict[str, Any]:
     """Adapter: token-budgeted "what changed" delta between two element frames."""
     import json
-    from je_auto_control.utils.observation_delta import (delta_index,
-                                                         delta_observation)
+    from je_auto_control.utils.observation_delta.observation_delta import (
+        observation_delta_index, summarize_delta)
     if isinstance(prev, str):
         prev = json.loads(prev)
     if isinstance(curr, str):
         curr = json.loads(curr)
     if isinstance(viewport, str):
         viewport = json.loads(viewport) if viewport.strip() else None
-    text = delta_observation(list(prev), list(curr), viewport=viewport,
-                             max_elements=int(max_elements),
-                             interactive_only=bool(interactive_only),
-                             max_lines=int(max_lines))
-    delta = delta_index(list(prev), list(curr))
+    delta = observation_delta_index(list(prev), list(curr), viewport=viewport,
+                                    max_elements=int(max_elements),
+                                    interactive_only=bool(interactive_only))
+    text = summarize_delta(delta, max_lines=int(max_lines))
     return {"summary": text, "added": len(delta["added"]),
             "removed": len(delta["removed"]), "changed": len(delta["changed"])}
 
@@ -5606,6 +5612,18 @@ def _idempotency_complete(name: str, key: str,
     store = _IDEMPOTENCY_STORES.setdefault(name, IdempotencyStore())
     store.complete(key, response)
     return {"status": "completed"}
+
+
+def _idempotency_release(name: str, key: str) -> Dict[str, Any]:
+    """Adapter: drop an ``in_progress`` key whose work failed, so a retry runs it.
+
+    The named stores have no TTL, so without this a key whose work raised
+    stayed ``in_progress`` for the life of the process. A completed key is
+    kept; ``released`` says whether anything was dropped.
+    """
+    from je_auto_control.utils.idempotency import IdempotencyStore
+    store = _IDEMPOTENCY_STORES.setdefault(name, IdempotencyStore())
+    return {"released": store.release(key)}
 
 
 def _bulkhead_run(name: str, max_concurrent: int,
@@ -7459,6 +7477,7 @@ class Executor:
             "AC_ewma": _ewma,
             "AC_idempotency_begin": _idempotency_begin,
             "AC_idempotency_complete": _idempotency_complete,
+            "AC_idempotency_release": _idempotency_release,
             "AC_dedup_check": _dedup_check,
             "AC_sequence_observe": _sequence_observe,
             "AC_cas_put": _cas_put,

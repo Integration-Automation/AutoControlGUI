@@ -88,12 +88,17 @@ def _classify_scalar(secret_key: bool, value: Any) -> Tuple[Optional[str], str]:
     return ("hardcoded-secret-key", "***") if flagged else (None, "")
 
 
+_PLACEHOLDER = re.compile(r"\$\{[^{}]+\}")
+
+
 def _classify(key: Optional[str], value: Any) -> Tuple[Optional[str], str]:
     """``(kind, preview)`` for a scalar that looks like a secret, else ``(None, "")``."""
     secret_key = bool(key) and is_secret_key(key)
     if not isinstance(value, str):
         return _classify_scalar(secret_key, value)
-    if not value or value.startswith("${"):   # already a vault / variable ref
+    # Only a value that is one placeholder and nothing else is a vault /
+    # variable reference; "${user}hunter2" merely starts like one.
+    if not value or _PLACEHOLDER.fullmatch(value.strip()):
         return None, ""
     if secret_key and value.strip():
         return "hardcoded-secret-key", _preview(value)

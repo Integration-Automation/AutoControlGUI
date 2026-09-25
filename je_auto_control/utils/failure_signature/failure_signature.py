@@ -24,7 +24,9 @@ _NORMALIZERS = [
                 r"-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\b"), "<uuid>"),
     (re.compile(r"\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2}(?:\.\d+)?"), "<ts>"),
     (re.compile(r"\bline\s+\d+\b", re.IGNORECASE), "line <n>"),
-    (re.compile(r"\b\d+\b"), "<n>"),                               # any leftover int
+    # A number glued to a unit ("5s", "1532ms") is a number too; the "0" of
+    # the address rule's "0x<addr>" is not.
+    (re.compile(r"(?<![A-Za-z])\d+(?:\.\d+)?(?!x<addr>)"), "<n>"),
 ]
 _WHITESPACE = re.compile(r"\s+")
 

@@ -34,11 +34,27 @@ def test_solid_block_is_counted():
     assert result.diff_ratio == pytest.approx(0.1)
 
 
-def test_thin_fringe_suppressed_as_antialiasing():
-    fringe = _base()
-    fringe[:, 60:61] = (200, 200, 200)   # 1px-wide vertical edge difference
-    assert perceptual_diff(_base(), fringe, include_aa=False).diff_pixels == 0
-    assert perceptual_diff(_base(), fringe, include_aa=True).diff_pixels == 100
+def _edge(aa_value):
+    """Black left half, white right half, one anti-aliased column between."""
+    img = np.zeros((100, 120, 3), dtype=np.uint8)
+    img[:, 61:] = 255
+    img[:, 60] = aa_value
+    return img
+
+
+def test_an_anti_aliased_edge_is_not_counted():
+    # The same edge rendered with a different AA shade: pixelmatch's
+    # antialiased() test discounts it; include_aa counts it.
+    assert perceptual_diff(_edge(128), _edge(90), include_aa=False).diff_pixels == 0
+    assert perceptual_diff(_edge(128), _edge(90), include_aa=True).diff_pixels == 100
+
+
+def test_a_thin_solid_change_is_counted():
+    # A 1 px rule on a flat background is a real change, not anti-aliasing;
+    # the morphological open that stood in for the AA test erased it.
+    rule = _base()
+    rule[:, 60:61] = (200, 200, 200)
+    assert perceptual_diff(_base(), rule, include_aa=False).diff_pixels == 100
 
 
 def test_threshold_tolerates_small_colour_shift():

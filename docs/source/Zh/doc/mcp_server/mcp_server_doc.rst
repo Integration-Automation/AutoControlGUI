@@ -1,6 +1,6 @@
-================================
+=======================================
 MCP 伺服器 (讓 Claude 使用 AutoControl)
-================================
+=======================================
 
 MCP 伺服器把 AutoControl 包裝成 Model Context Protocol 服務,讓任何
 支援 MCP 的客戶端(Claude Desktop、Claude Code、自製 Anthropic /
@@ -93,8 +93,10 @@ list-changed 通知與 elicitation。
 ``db`` 時回傳空結果,不會建立檔案。``ac_assert_http`` 只送 ``GET`` 或
 ``HEAD``。
 
-``tools/call`` 帶了工具輸入 schema 沒宣告的參數時,會在工具執行前以
-``-32602``(參數無效)拒絕。
+參數不符合工具的輸入 schema 時(缺少或型別錯誤的屬性、不在 ``enum`` 裡的值、schema
+沒宣告的參數),會在工具執行前拒絕,並以工具執行錯誤回報:結果帶 ``isError: true``,
+文字說明哪裡不對,讓模型能修正參數再試(MCP 2025-11-25)。未知的工具或根本不是
+``tools/call`` 的請求,仍是 ``-32602`` 協定錯誤。
 
 Resources、Prompts、Sampling
 ============================
@@ -123,7 +125,9 @@ Logging 通知 / Progress / Cancellation
 
 - stdio session 期間,專案 logger 會以 ``notifications/message``
   的形式即時推給 client。Client 可用 ``logging/setLevel`` 動態調整
-  等級。
+  等級。2026-07-28 的請求只收到它自己產生的記錄,而且只在它設了
+  ``io.modelcontextprotocol/logLevel`` 時才收到(見 `無狀態請求
+  (2026-07-28)`_)。
 - 接受 ``ctx`` 參數的長時間工具會收到
   :class:`ToolCallContext`:呼叫
   ``ctx.progress(value, total, message)`` 推送
@@ -180,7 +184,11 @@ CLI 檢視旗標
    je_auto_control_mcp --list-tools --read-only
    je_auto_control_mcp --list-resources
    je_auto_control_mcp --list-prompts
+   je_auto_control_mcp --read-only          # 伺服器只提供唯讀工具
    je_auto_control_mcp --fake-backend       # 切換成記憶體版 backend
+
+只給一個 ``--list-*`` 旗標時輸出該陣列;給多個時輸出一個以 ``tools`` / ``resources`` /
+``prompts`` 為鍵的物件。不論主控台的碼頁為何,輸出與 stdio 伺服器的訊息一律是 UTF-8。
 
 註冊到 Claude Desktop
 =====================
@@ -244,8 +252,10 @@ HTTP 傳輸(含 SSE / Auth / TLS)
 - ``POST /mcp`` 接受 JSON-RPC 主體。預設回 ``application/json``;
   如果 ``Accept`` 包含 ``text/event-stream``,會以 SSE 串流推送進
   度通知,然後送出最終結果。
-- 缺少或錯誤的 ``Authorization: Bearer <token>`` 會回 401 / 403
-  (透過 ``hmac.compare_digest`` 做常數時間比對)。
+- 缺少或錯誤的 ``Authorization: Bearer <token>`` 都回 401，並帶
+  ``WWW-Authenticate: Bearer`` 挑戰（送了錯誤 token 時加上
+  ``error="invalid_token"``），這是 MCP 授權規格的要求；比對透過
+  ``hmac.compare_digest`` 以常數時間進行。
 - ``ssl_context`` 會包住 socket,讓同一條傳輸支援 HTTPS。
 - 預設綁定 ``127.0.0.1``;若要對外,務必同時設定 ``auth_token``
   與(非 localhost 場景)``ssl_context``。
@@ -257,12 +267,22 @@ loopback 時，``Host`` 不是 loopback 名稱的也回 403（防 DNS rebinding�
 客戶端不送 ``Origin``，不受影響。要讓其他來源的瀏覽器客戶端連線，把完整來源列在
 ``JE_AUTOCONTROL_MCP_ALLOWED_ORIGINS``（逗號分隔，例如 ``https://tool.example:8443``）。
 
-設定 ``JE_AUTOCONTROL_MCP_CONFIRM_DESTRUCTIVE=1`` 時，宣告了 ``elicitation`` 的客戶端
+設定 ``JE_AUTOCONTROL_MCP_CONFIRM_DESTRUCTIVE=1`` 時，宣告了 ``elicitation`` 的握手時代客戶端
 必須先開著該 session 的事件串流，破壞性工具才能確認；沒有串流就拒絕執行，而不是直接放行。
 確認提示只接受它被送往的那個 session 的回覆。
 
 Session
 =======
+
+``initialize`` 會協商協定版本:client 提出的版本若是伺服器支援的(``2025-11-25``、
+``2025-06-18``、``2025-03-26``、``2024-11-05``)就用它,否則用其中最新的。2025-11-25 的
+client 還會在 ``serverInfo`` 拿到 ``description``。完全拿掉 ``initialize`` 的 2026-07-28
+改成逐請求服務(見 `無狀態請求 (2026-07-28)`_);``initialize`` 若指名它,拿到的是
+2025-11-25。走 HTTP 時,``MCP-Protocol-Version``
+標頭寫的若是伺服器不支援的版本,請求會以 400 拒絕,回覆的是列出支援版本的
+``UnsupportedProtocolVersion``(``-32022``)錯誤。伺服器只宣告伺服器端能力(tools、resources、
+prompts、logging);``sampling/createMessage``、``roots/list`` 與 ``elicitation/create``
+只會送給在 initialize 時宣告了對應能力的 client。
 
 ``initialize`` 會產生一個 session,並用 ``Mcp-Session-Id`` 回應標頭
 交給 client。之後每個請求都帶上這個標頭,伺服器就會把它們視為同一個
@@ -286,11 +306,59 @@ scope——包含你在 ``initialize`` 聲明的能力,以及進行中呼叫佔�
 - session 有上下界。十分鐘沒被碰過就會被掃掉(常駐串流會讓自己的
   session 保持新鮮),而註冊表滿 128 個時,最久沒動的那個會被淘汰。
 
+無狀態請求 (2026-07-28)
+=======================
+
+伺服器同時支援兩個協定時代,逐請求決定。``params._meta`` 帶著
+``io.modelcontextprotocol/protocolVersion`` 的請求以無狀態方式服務,只看這個請求本身;
+``initialize`` 與所有不帶這個鍵的請求,照 `Session`_ 一節的方式服務。所以既有的
+client 不用改,可以和 2026-07-28 的 client 並存。
+
+- **逐請求欄位。** 除了版本,還必須有 ``io.modelcontextprotocol/clientCapabilities``
+  (物件);``clientInfo`` 與 ``logLevel`` 可省略。欄位缺少或格式不對是 ``-32602``。
+  伺服器不以無狀態方式服務的版本是 ``-32022``,它的 ``data`` 列出 ``supported``
+  (``2026-07-28`` 在前,接著是需要 ``initialize`` 的握手時代版本)與 ``requested``。
+- **``server/discover``** 回覆 ``supportedVersions``、伺服器的 ``capabilities``
+  (工具清單變更與 resource 訂閱,都經由 ``subscriptions/listen``)與身分。沒有逐請求欄位時是 ``-32602``。
+- **方法。** ``tools/list``、``tools/call``、``resources/list``、``resources/read``、
+  ``prompts/list``、``prompts/get`` 與 ``subscriptions/listen``。這個版本移除了 ``ping``、``logging/setLevel``
+  與 ``resources/(un)subscribe``,在無狀態請求裡它們是 ``-32601``。
+- **``subscriptions/listen``** 每個請求開一個訂閱。它的 ``notifications`` 篩選可以要
+  ``toolsListChanged`` 與 ``resourceSubscriptions`` (URI 清單;可訂閱的是
+  ``autocontrol://screen/live``)。第一則訊息是 ``notifications/subscriptions/acknowledged``,
+  列出伺服器會送的部分:``promptsListChanged`` 與 ``resourcesListChanged`` 不列(這兩個清單
+  不會變),無法訂閱的 URI 也不列。之後每則通知都在
+  ``_meta["io.modelcontextprotocol/subscriptionId"]`` 帶這個請求的 id。只有伺服器結束訂閱時
+  (``serve_stdio`` 結束、``HttpMCPServer.stop()``)這個請求才會收到回覆:一個 ``complete``
+  結果,帶同樣的 ``_meta``。client 在 stdio 用 ``notifications/cancelled`` 結束它,走 HTTP
+  則關掉串流;HTTP 需要 ``Accept: text/event-stream``,否則是 406。已經在監聽的 id 是
+  ``-32600``,篩選格式錯誤是 ``-32602``。
+- **結果。** 每個結果都帶 ``resultType`` (``complete``,或下面的 ``input_required``),
+  並在 ``_meta["io.modelcontextprotocol/serverInfo"]`` 放伺服器的名稱、版本與說明。
+  ``server/discover``、三個清單與 ``resources/read`` 另帶快取提示:``cacheScope``
+  一律是 ``private``;``ttlMs`` 在 ``server/discover`` 是一小時、清單是一分鐘、
+  ``resources/read`` 是 ``0`` (內容是即時的)。
+- **不送 client 沒要的東西。** 關卡讀的能力是這個請求自己的,不是某條連線的;伺服器
+  不主動送請求(``request_sampling`` 與 ``refresh_roots`` 在無狀態請求裡會丟例外);
+  記錄只送給設了 ``logLevel`` 的請求,而且只送該等級以上;第一個請求就是無狀態的
+  stdio 對端,不會收到背景記錄,清單變更與 resource 更新也只經由它的
+  ``subscriptions/listen`` 送達。
+- 破壞性工具的確認改用多輪往返:見 `破壞性動作確認(Elicitation)`_。
+- **走 HTTP 時**,``MCP-Protocol-Version`` 標頭或 ``_meta`` 寫 2026-07-28 的請求就是無狀態
+  請求。它必須把 body 映到標頭:``MCP-Protocol-Version`` 等於 ``_meta`` 的版本、
+  ``Mcp-Method`` 等於 ``method``,``tools/call``/``prompts/get``/``resources/read`` 還要
+  ``Mcp-Name`` 等於工具或 prompt 名稱、或 resource URI(不是純 ASCII 的值用
+  ``=?base64?...?=``)。標頭缺少或與 body 不符是 400 加 ``HeaderMismatch``(``-32020``);
+  版本不對、缺中繼資料或缺 client 能力是 400;未知方法是 404。不保留 session:
+  ``Mcp-Session-Id`` 會被忽略、也不會發新的;指名 2026-07-28 的 ``GET``/``DELETE`` 是 405。
+  普通的 JSON ``POST`` 就能做所有事,確認也一樣(問題放在結果裡回來);SSE ``POST``
+  另外會送出呼叫的進度通知。
+
 唯讀 / 安全模式
 ===============
 
-設定 ``JE_AUTOCONTROL_MCP_READONLY=1``(或呼叫
-:func:`build_default_tool_registry` 時傳 ``read_only=True``)只暴
+設定 ``JE_AUTOCONTROL_MCP_READONLY=1``(或對 ``je_auto_control_mcp`` 加上
+``--read-only``,或呼叫 :func:`build_default_tool_registry` 時傳 ``read_only=True``)只暴
 露 ``readOnlyHint`` 為 true 的工具(座標、OCR 查詢、剪貼簿讀取、歷
 程等):
 
@@ -323,6 +391,17 @@ scope——包含你在 ``initialize`` 聲明的能力,以及進行中呼叫佔�
   串流,或是一個 SSE ``POST``——它自己的回應串流會在結果之前先送出
   ``elicitation/create``。兩種情況下,答案都要用另一個 ``POST`` 送
   回來,因為 client 正忙著讀它問過去的那條串流。
+
+**2026-07-28** 的請求不會收到 ``elicitation/create``。第一次呼叫的回覆是
+``resultType: "input_required"``:問題放在 ``inputRequests["confirm"]``,另有一個
+``requestState``。client 問過使用者之後,以同樣的參數重送同一個呼叫,把答案放在
+``inputResponses["confirm"]``(例如 ``{"action": "accept"}``),並原樣帶回
+``requestState``。這個 state 以只存在於伺服器行程裡的金鑰簽章,寫明工具與參數摘要,
+五分鐘後過期,而且只接受一次;任何一項不符都是 ``-32602``。走 HTTP 時不需要 session,
+也不需要開著串流。``decline`` 或 ``cancel``
+是工具執行錯誤(``isError: true``),工具不會執行;沒帶答案的重送會再問一次。沒有
+宣告 ``elicitation`` 的無狀態 client 會收到 ``-32021``,``data.requiredCapabilities``
+寫明缺的能力,而不是像握手時代那樣不經詢問直接執行。
 
 .. warning::
 
@@ -388,7 +467,7 @@ Plugin Hot-Reload
 ``notifications/tools/list_changed``,client 會自動更新工具目錄。
 
 CI 煙霧測試 (Fake Backend)
-=========================
+==========================
 
 Fake backend 把 wrapper 層換成記憶體版的紀錄器,讓沒有顯示伺服器的
 CI runner 也能走完所有 MCP 工具:

@@ -42,7 +42,9 @@ Evaluation order mirrors OpenFeature/Unleash/LaunchDarkly: a disabled flag
 serves ``off_variant`` (reason ``DISABLED``); an unknown flag returns the
 caller default (reason ``ERROR``); targeting rules are tried in order
 (``TARGETING_MATCH``); otherwise the fallthrough applies (``DEFAULT`` /
-``SPLIT``). Targeting operators include ``eq``/``ne``/``lt``/``gt``/``in``/
+``SPLIT``). A ``serve`` is a variant name, ``{"rollout": {...}}`` or
+``{"variant": name}``; anything else (an empty rollout, a missing serve)
+serves ``default_variant`` with reason ``ERROR``. Targeting operators include ``eq``/``ne``/``lt``/``gt``/``in``/
 ``not_in``/``contains`` and ``semver_*`` (SemVer / PEP 440 precedence:
 ``1.2`` equals ``1.2.0`` and ``1.0.0-rc.1`` is below ``1.0.0``). Percentage rollout is a
 consistent-hash bucket of ``sha256("{key}.{salt}.{context_key}")`` so a subject

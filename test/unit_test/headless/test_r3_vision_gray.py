@@ -53,7 +53,7 @@ def test_disk_bgr_template_and_rgb_haystack_agree(tmp_path):
 
 
 def test_ssim_gray_uses_rgb_weights_for_ndarray():
-    gray = ssim_mod._to_gray_f(_rgb_red())
+    gray, _data_range = ssim_mod._to_gray_f(_rgb_red())
     assert float(gray.mean()) == pytest.approx(_RED_GRAY, abs=1.0)
 
 

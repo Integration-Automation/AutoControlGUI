@@ -132,8 +132,8 @@ def from_openai_cua(item: Mapping[str, Any]) -> Dict[str, Any]:
     return canonical_action(kind, **fields)
 
 
-def _scroll_params(action: Mapping[str, Any]) -> Dict[str, Any]:
-    """``AC_mouse_scroll`` arguments for a canonical scroll.
+def scroll_params(action: Mapping[str, Any]) -> Dict[str, Any]:
+    """``AC_mouse_scroll`` arguments for a canonical scroll (``direction`` / ``amount`` or OpenAI's deltas).
 
     A positive count scrolls ``scroll_direction``; negative reverses it. The
     direction used to be left out, so X11 / Wayland scrolled their default
@@ -189,7 +189,7 @@ def to_ac_command(action: Mapping[str, Any], *,
         "move": lambda: ["AC_set_mouse_position", point],
         "type": lambda: ["AC_write", {"write_string": str(action.get("text", ""))}],
         "key": lambda: ["AC_hotkey", {"key_code_list": keys}],
-        "scroll": lambda: ["AC_mouse_scroll", {**_scroll_params(action), **point}],
+        "scroll": lambda: ["AC_mouse_scroll", {**scroll_params(action), **point}],
         "screenshot": lambda: ["AC_screenshot", {}],
     }
     if kind in builders:

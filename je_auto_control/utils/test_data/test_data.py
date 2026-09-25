@@ -197,7 +197,8 @@ def write_dataset(rows: List[Dict[str, Any]], path: str,
 
 
 def _write_csv(rows: List[Dict[str, Any]], target: Path) -> None:
-    fields = list(rows[0].keys()) if rows else []
+    # Every key in first-seen order: rows need not share their keys.
+    fields = list(dict.fromkeys(key for row in rows for key in row))
     with target.open("w", encoding="utf-8", newline="") as handle:
         writer = csv.DictWriter(handle, fieldnames=fields)
         writer.writeheader()

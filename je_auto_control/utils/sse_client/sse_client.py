@@ -53,9 +53,11 @@ class SSEParser:
         if not self._started and chunk:
             self._started = True
             chunk = chunk[1:] if chunk.startswith("\ufeff") else chunk
-        if self._after_cr and chunk.startswith("\n"):
-            chunk = chunk[1:]
         if chunk:
+            if self._after_cr and chunk.startswith("\n"):
+                chunk = chunk[1:]
+            # Cleared even when that "\n" was the whole chunk, or the next
+            # "\n" -- the blank line that dispatches -- was dropped as well.
             self._after_cr = chunk.endswith("\r")
         lines = _LINE_SPLIT.split(self._buffer + chunk)
         self._buffer = lines.pop()          # trailing partial line

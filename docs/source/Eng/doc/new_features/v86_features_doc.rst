@@ -30,7 +30,7 @@ Headless API
 
 ``check_foreign_key`` flags non-null child values absent from the parent column
 (dbt ``relationships``). ``check_unique_key`` reports duplicate single or
-composite keys. ``check_accepted_values`` lists non-null values outside the
+composite keys; a single-column key ignores nulls, as dbt's ``unique`` does. ``check_accepted_values`` lists non-null values outside the
 allowed set. ``check_row_count`` verifies the count falls within optional
 ``minimum`` / ``maximum`` bounds. Each returns an ``ok`` flag plus details.
 

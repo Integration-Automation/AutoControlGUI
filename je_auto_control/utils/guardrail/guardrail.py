@@ -28,7 +28,8 @@ _PATTERNS = [
      r"(?:system\s+prompt|initial\s+instructions|the\s+prompt)",
      "reveal-system-prompt", _HIGH),
     (r"you\s+are\s+now\s+(?:a|an|in|the)\b", "role-reassignment", _MEDIUM),
-    (r"developer\s+mode|jailbreak|do\s+anything\s+now\b|\bDAN\b",
+    # "DAN" only in capitals: under IGNORECASE a colleague called Dan was a jailbreak.
+    (r"developer\s+mode|jailbreak|do\s+anything\s+now\b|(?-i:\bDAN\b)",
      "jailbreak", _HIGH),
     (r"<\|?im_start\|?>|<\|?system\|?>|###\s*system\b|\[/?INST\]",
      "chat-template-marker", _HIGH),

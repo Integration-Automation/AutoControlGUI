@@ -67,6 +67,7 @@ from je_auto_control.gui.variables_tab import VariablesTab
 from je_auto_control.gui.vlm_tab import VLMTab
 from je_auto_control.gui.webrunner_tab import WebRunnerTab
 from je_auto_control.gui.window_tab import WindowManagerTab
+from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.json.json_file import read_action_json
 
 
@@ -295,6 +296,12 @@ class AutoControlGUIWidget(
         ))
         if default_visible:
             self.tabs.addTab(widget, language_wrapper.translate(title_key, title_key))
+        else:
+            # Owned from the start: an unparented hidden tab outlived this
+            # widget, and one a registry held a listener of (Presence) kept
+            # its timer running after every window that built it was gone.
+            widget.setParent(self)
+            widget.hide()
 
     def _on_current_tab_changed(self, _index: int) -> None:
         self.current_tab_changed.emit()
@@ -407,7 +414,7 @@ class AutoControlGUIWidget(
         try:
             data = read_action_json(path)
             self.script_editor.setText(json.dumps(data, indent=2, ensure_ascii=False))
-        except (OSError, ValueError, TypeError, RuntimeError) as error:
+        except (AutoControlException, OSError, ValueError, TypeError, RuntimeError) as error:
             self.script_result_text.setText(f"Error loading: {error}")
             return
         if entry is not None:

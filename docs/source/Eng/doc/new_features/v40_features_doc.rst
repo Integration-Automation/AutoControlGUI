@@ -6,8 +6,9 @@ These helpers score similarity, pick the best candidate from a list, and collaps
 near-duplicates — so a flow can act on "the button that *looks like* Submit"
 rather than an exact label.
 
-The default backend is the standard library :mod:`difflib`, so the feature works
-with **zero extra dependencies**. If the optional ``rapidfuzz`` package is
+The default backend is pure Python (named ``difflib`` for compatibility), so the
+feature works with **zero extra dependencies**; it computes the same symmetric
+Indel ratio as rapidfuzz, ``2 * LCS / (len(a) + len(b))``. If the optional ``rapidfuzz`` package is
 installed (``pip install je_auto_control[fuzzy]``) it is used instead for speed;
 scores are normalised to ``0.0..1.0`` either way, so callers never depend on
 which backend ran. ``BACKEND`` names the active one. Imports no ``PySide6``.

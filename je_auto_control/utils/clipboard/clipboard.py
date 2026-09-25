@@ -17,6 +17,8 @@ import sys
 from io import BytesIO
 from typing import Optional, Union
 
+from je_auto_control.utils.exception.exceptions import AutoControlException
+
 
 def get_clipboard() -> str:
     """Return the current clipboard text (empty string if empty)."""
@@ -136,17 +138,35 @@ def _win_set(text: str) -> None:
 # === macOS backend ===========================================================
 
 def _mac_get() -> str:
-    result = subprocess.run(  # nosec B603 B607  # reason: hard-coded macOS clipboard tool, argv list
-        ["pbpaste"], capture_output=True, check=True, timeout=5,
-    )
-    return result.stdout.decode("utf-8", errors="replace")
+    return _checked(_run_tool(["pbpaste"])).stdout.decode("utf-8", errors="replace")
 
 
 def _mac_set(text: str) -> None:
-    subprocess.run(  # nosec B603 B607  # reason: hard-coded macOS clipboard tool, argv list
-        ["pbcopy"], input=text.encode("utf-8"),
-        check=True, timeout=5,
-    )
+    _checked(_run_tool(["pbcopy"], text.encode("utf-8")))
+
+
+class ClipboardError(AutoControlException, RuntimeError):
+    """A clipboard tool (pbcopy, pbpaste, xclip, xsel) failed or timed out.
+
+    ``CalledProcessError`` and ``TimeoutExpired`` are neither, so they
+    escaped the executor and the MCP server and ended the whole run.
+    """
+
+
+def _run_tool(argv: list, data: Optional[bytes] = None) -> "subprocess.CompletedProcess":
+    """Run a clipboard tool with a 5 s limit; its failure is a :class:`ClipboardError`."""
+    try:
+        # nosemgrep: python.lang.security.audit.dangerous-subprocess-use-audit.dangerous-subprocess-use-audit
+        return subprocess.run(argv, input=data, capture_output=True, check=False, timeout=5)  # nosec B603  # reason: fixed clipboard tool argv
+    except (OSError, subprocess.TimeoutExpired) as error:
+        raise ClipboardError(f"{argv[0]} failed: {error!r}") from error
+
+
+def _checked(result: "subprocess.CompletedProcess") -> "subprocess.CompletedProcess":
+    if result.returncode != 0:
+        detail = result.stderr.decode("utf-8", errors="replace").strip()
+        raise ClipboardError(f"{result.args[0]} exited {result.returncode}: {detail}")
+    return result
 
 
 # === Linux backend ===========================================================
@@ -164,11 +184,11 @@ def _linux_get() -> str:
     if cmd is None:
         raise RuntimeError("Install xclip or xsel for Linux clipboard support")
     read_cmd = cmd + ["-o"] if cmd[0] == "xclip" else cmd + ["--output"]
-    # nosemgrep: python.lang.security.audit.dangerous-subprocess-use-audit.dangerous-subprocess-use-audit
-    result = subprocess.run(  # nosec B603  # reason: argv from allowlist (xclip/xsel) discovered via shutil.which
-        read_cmd, capture_output=True, check=True, timeout=5,
-    )
-    return result.stdout.decode("utf-8", errors="replace")
+    result = _run_tool(read_cmd)
+    if result.returncode != 0 and b"not available" in result.stderr:
+        # xclip exits 1 when the clipboard holds no text: that is empty.
+        return ""
+    return _checked(result).stdout.decode("utf-8", errors="replace")
 
 
 def _linux_set(text: str) -> None:
@@ -176,11 +196,7 @@ def _linux_set(text: str) -> None:
     if cmd is None:
         raise RuntimeError("Install xclip or xsel for Linux clipboard support")
     write_cmd = cmd + ["-i"] if cmd[0] == "xclip" else cmd + ["--input"]
-    # nosemgrep: python.lang.security.audit.dangerous-subprocess-use-audit.dangerous-subprocess-use-audit
-    subprocess.run(  # nosec B603  # reason: argv from allowlist (xclip/xsel) discovered via shutil.which
-        write_cmd, input=text.encode("utf-8"),
-        check=True, timeout=5,
-    )
+    _checked(_run_tool(write_cmd, text.encode("utf-8")))
 
 
 # === Image clipboard backends ===============================================

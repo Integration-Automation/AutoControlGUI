@@ -17,6 +17,13 @@ something mid-call — the ``elicitation/create`` behind the destructive-action
 confirmation gate. A client that ignores the header still works exactly as
 before, scoped to its TCP connection, but cannot be prompted: there is no
 channel to carry the question. See :mod:`.http_sessions`.
+
+**2026-07-28.** A request that declares the stateless revision, in its
+``MCP-Protocol-Version`` header or its ``_meta``, is checked against that
+revision's header rules (:mod:`._http_stateless`) and served without a
+session: its ``Mcp-Session-Id`` is ignored and none is minted. Its
+``subscriptions/listen`` holds the response stream open for the change
+notifications it asked for, until the client closes it or the server stops.
 """
 import hmac
 import json
@@ -27,10 +34,20 @@ from urllib.parse import urlsplit
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any, Callable, Dict, Optional, Tuple
 
-from je_auto_control.utils.http_headers import parse_content_length
+from je_auto_control.utils.http_headers import (
+    bearer_challenge, log_safe, parse_content_length, wire_json_text,
+)
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
+from je_auto_control.utils.mcp_server._http_stateless import (
+    PROTOCOL_VERSION_HEADER, is_stateless, read_message, stateless_refusal,
+    status_for, unsupported_header_refusal,
+)
 from je_auto_control.utils.mcp_server._protocol import (
-    _notification_message,
+    SUPPORTED_PROTOCOL_VERSIONS,
+    _error_response, _notification_message,
+)
+from je_auto_control.utils.mcp_server._stateless import (
+    LISTEN_METHOD, STATELESS_PROTOCOL_VERSIONS,
 )
 from je_auto_control.utils.mcp_server.http_sessions import (
     HttpSession, SESSION_HEADER, SessionRegistry, session_id_from_headers,
@@ -59,7 +76,7 @@ def _is_initialize(line: str) -> bool:
     """True when ``line`` is an ``initialize`` request; tolerant of junk."""
     try:
         message = json.loads(line)
-    except ValueError:
+    except (ValueError, RecursionError):
         return False
     return isinstance(message, dict) and message.get("method") == "initialize"
 
@@ -98,10 +115,10 @@ class _MCPHttpHandler(BaseHTTPRequestHandler):
     # Suppress default stderr access logs — route through project logger.
     def log_message(self, format, *args) -> None:  # noqa: A002  # pylint: disable=redefined-builtin  # reason: stdlib override
         autocontrol_logger.info("mcp-http %s - %s",
-                                self.address_string(), format % args)
+                                self.address_string(), log_safe(format % args))
 
     def do_POST(self) -> None:  # noqa: N802  # reason: stdlib API
-        if not self._authorize():
+        if not self._caller_allowed():
             return
         if self.path != DEFAULT_PATH:
             self._send_json({"error": "unknown path"}, status=404)
@@ -110,6 +127,18 @@ class _MCPHttpHandler(BaseHTTPRequestHandler):
         if line is None:
             return
         bridge: MCPServer = self.server.mcp  # type: ignore[attr-defined]
+        message = read_message(line)
+        refused = unsupported_header_refusal(self.headers, message)
+        if refused is not None:
+            self._send_raw_json(refused.body, status=refused.status)
+            return
+        if is_stateless(self.headers, message):
+            self._serve_stateless(bridge, line, message)
+            return
+        self._serve_in_session(bridge, line)
+
+    def _serve_in_session(self, bridge: MCPServer, line: str) -> None:
+        """Serve a handshake-era request under its session, or its connection."""
         session, resolved = self._resolve_session(line)
         if not resolved:
             return
@@ -136,6 +165,75 @@ class _MCPHttpHandler(BaseHTTPRequestHandler):
             self._send_blank(status=202)
             return
         self._send_raw_json(response, extra_headers=extra)
+
+    def _serve_stateless(self, bridge: MCPServer, line: str,
+                         message: Optional[Dict[str, Any]]) -> None:
+        """Serve a 2026-07-28 request: header rules first, and no session."""
+        refused = stateless_refusal(self.headers, message)
+        if refused is not None:
+            self._send_raw_json(refused.body, status=refused.status)
+            return
+        if message is not None and message.get("method") == LISTEN_METHOD:
+            self._stream_listen(bridge, line, message)
+            return
+        if self._client_accepts_sse():
+            self._dispatch_sse(bridge, line, id(self))
+            return
+        with bridge.connection_scope(connection_id=id(self)):
+            response = bridge.handle_line(line)
+        if response is None:
+            self._send_blank(status=202)
+            return
+        self._send_raw_json(response, status=status_for(response))
+
+    def _stream_listen(self, bridge: MCPServer, line: str,
+                       message: Dict[str, Any]) -> None:
+        """Hold a ``subscriptions/listen`` response stream open until it ends."""
+        if not self._client_accepts_sse():
+            self._send_raw_json(_error_response(
+                message.get("id"), -32600,
+                f"Invalid Request: {LISTEN_METHOD} needs Accept: {_SSE_MEDIA_TYPE}"), status=406)
+            return
+        send_lock = threading.Lock()
+        emit = self._open_event_stream(send_lock)
+        with bridge.connection_scope(writer=emit, notifier=_notifier_for(emit),
+                                     concurrent_tools=False, connection_id=id(self)):
+            response = bridge.handle_line(line)
+        if response is not None:
+            # Refused: the error is the whole answer.
+            emit(response)
+            return
+        closed = bridge.subscription(id(self), message["id"])
+        try:
+            while closed is not None and not closed.wait(timeout=_STREAM_HEARTBEAT):
+                with send_lock:
+                    self.wfile.write(b": keep-alive\n\n")
+                    self.wfile.flush()
+        except OSError as error:
+            autocontrol_logger.info("MCP subscription stream ended: %r", error)
+        finally:
+            # Closing the stream is how an HTTP client cancels; no answer then.
+            bridge.end_subscription(id(self), message["id"])
+
+    def _open_event_stream(self, send_lock: threading.Lock) -> Callable[[str], None]:
+        """Send the headers of an SSE response; return a writer of its events."""
+        self.close_connection = True
+        with send_lock:
+            self.send_response(200)
+            self.send_header("Content-Type", f"{_SSE_MEDIA_TYPE}; charset=utf-8")
+            self.send_header("Cache-Control", "no-cache")
+            self.send_header("Connection", "close")
+            self.send_header("X-Accel-Buffering", "no")
+            self.end_headers()
+            self.wfile.flush()
+
+        def emit(payload: str) -> None:
+            with send_lock:
+                self.wfile.write(b"data: ")
+                self.wfile.write(payload.encode("utf-8"))
+                self.wfile.write(b"\n\n")
+                self.wfile.flush()
+        return emit
 
     def _resolve_session(self, line: str) -> Tuple[Optional[HttpSession],
                                                     bool]:
@@ -174,6 +272,29 @@ class _MCPHttpHandler(BaseHTTPRequestHandler):
                 bridge.forget_connection(id(self))
 
     def _authorize(self) -> bool:
+        """Refuse cross-site callers and bad tokens, then unsupported protocol versions."""
+        return self._caller_allowed() and self._protocol_version_supported()
+
+    def _protocol_version_supported(self) -> bool:
+        """For GET and DELETE: an unsupported ``MCP-Protocol-Version`` header is a 400.
+
+        A request without the header is served as before (the spec assumes
+        2025-03-26 then); one naming a version this server does not speak
+        used to be served as if it matched. 2026-07-28 has no GET stream and
+        no session to delete, so a request naming it is a 405.
+        """
+        version = self.headers.get(PROTOCOL_VERSION_HEADER)
+        if version is None or version.strip() in SUPPORTED_PROTOCOL_VERSIONS:
+            return True
+        if version.strip() in STATELESS_PROTOCOL_VERSIONS:
+            self._send_json({"error": f"{self.command} is not part of MCP {version.strip()}"},
+                            status=405, extra_headers={"Allow": "POST"})
+            return False
+        self._send_json({"error": f"unsupported MCP-Protocol-Version {version!r}"},
+                        status=400)
+        return False
+
+    def _caller_allowed(self) -> bool:
         """Refuse browser cross-site requests, then check the bearer token."""
         if not self._origin_allowed():
             self._send_json({"error": "origin not allowed"}, status=403)
@@ -184,8 +305,13 @@ class _MCPHttpHandler(BaseHTTPRequestHandler):
         # The scheme is case-insensitive (RFC 7235 2.1): "bearer tok" was
         # refused here while the REST gate accepted it.
         scheme, _, provided = self.headers.get("Authorization", "").strip().partition(" ")
+        # 401 with a challenge for a missing *and* a wrong token: the MCP
+        # authorization spec requires both, and RFC 9110 the header.
+        challenge = {"WWW-Authenticate": bearer_challenge(
+            "autocontrol-mcp", self.headers.get("Authorization"))}
         if scheme.lower() != "bearer":
-            self._send_json({"error": "missing bearer token"}, status=401)
+            self._send_json({"error": "missing bearer token"}, status=401,
+                            extra_headers=challenge)
             return False
         provided = provided.strip()
         # Bytes: compare_digest raises TypeError on a non-ASCII str, and
@@ -193,7 +319,8 @@ class _MCPHttpHandler(BaseHTTPRequestHandler):
         # kill the request thread instead of being refused.
         if not hmac.compare_digest(provided.encode("utf-8"),
                                    expected.encode("utf-8")):
-            self._send_json({"error": "invalid bearer token"}, status=403)
+            self._send_json({"error": "invalid bearer token"}, status=401,
+                            extra_headers=challenge)
             return False
         return True
 
@@ -385,7 +512,7 @@ class _MCPHttpHandler(BaseHTTPRequestHandler):
 
     def _send_json(self, payload: Any, status: int = 200,
                    extra_headers: Optional[Dict[str, str]] = None) -> None:
-        body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
+        body = wire_json_text(payload).encode("utf-8")
         self._write_headers(status, body, extra_headers)
         self.wfile.write(body)
         if status >= 400:
@@ -416,9 +543,10 @@ class _MCPHttpHandler(BaseHTTPRequestHandler):
             autocontrol_logger.debug("MCP drain aborted: %r", error)
 
     def _send_raw_json(self, raw_json: str,
-                       extra_headers: Optional[Dict[str, str]] = None) -> None:
+                       extra_headers: Optional[Dict[str, str]] = None,
+                       status: int = 200) -> None:
         body = raw_json.encode("utf-8")
-        self._write_headers(200, body, extra_headers)
+        self._write_headers(status, body, extra_headers)
         self.wfile.write(body)
 
     def _send_blank(self, status: int) -> None:
@@ -557,8 +685,10 @@ class HttpMCPServer:
     def stop(self, timeout: float = 2.0) -> None:
         if self._server is None:
             return
-        # Close the sessions first: a standing GET stream parks a worker on
-        # its heartbeat, and terminating releases it without waiting one out.
+        # Close the sessions and subscriptions first: a standing GET stream or
+        # a subscriptions/listen parks a worker on its heartbeat, and ending
+        # them releases it without waiting one out.
+        self._mcp.end_subscriptions(stdio=False)
         self._server.sessions.terminate_all()
         self._server.shutdown()
         self._server.server_close()

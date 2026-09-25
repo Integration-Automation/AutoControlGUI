@@ -7,7 +7,6 @@ executor / MCP wiring without touching real hardware.
 """
 from __future__ import annotations
 
-from types import SimpleNamespace
 from typing import Any, Dict, List
 
 import pytest

@@ -256,6 +256,11 @@ keyboard focus, or ``None`` when nothing is focused; with ``app_name`` it is
 ``None`` unless the focused element belongs to that application. The
 accessibility recorder follows this element.
 
+Matches with an on-screen rectangle come first; one without (a control on a
+hidden tab page reports ``(0, 0, 0, 0)``) comes last, and
+``click_accessibility_element`` returns ``False`` rather than click it at the
+corner of the screen.
+
 Raises ``AccessibilityNotAvailableError`` on platforms where no backend
 is installed. Action-JSON commands: ``AC_a11y_list``, ``AC_a11y_find``,
 ``AC_a11y_find_all``, ``AC_a11y_focused``, ``AC_a11y_click``. GUI:
@@ -276,6 +281,12 @@ pixel coordinates::
        "the cookie-banner 'Accept all' button",
        screen_region=[0, 800, 1920, 1080],  # optional crop
    )
+
+``None`` / ``False`` means the model did not find the element. A request that
+fails (network, authentication, rate limit) raises ``VLMRequestError`` instead
+of reading as "not found". The Anthropic backend sends the capture fitted to
+the model's image limits and maps the reply back to its pixels; replies such as
+``x=512, y=300``, ``{"x": 512, "y": 300}`` or ``512.4, 300.6`` are all read.
 
 Backends (loaded lazily, zero imports at package import time):
 
@@ -525,7 +536,10 @@ GUI: **Remote Desktop** tab opens to the **Quick Connect** screen
 (AnyDesk-style) by default — huge Host ID on one side, a single input
 that accepts ``host:port``, ``ws://``, ``wss://``, or a 9-digit Host
 ID on the other, with *Connect* and *Start hosting* as the two primary
-buttons. Recent connections are remembered across sessions. Advanced
+buttons. The session opens in a popup window that forwards your mouse
+and keyboard to the host. A ``wss://`` target verifies the host's
+certificate against the system trust store; for a self-signed host, use
+the Advanced viewer and tick *Skip cert verification (self-signed)*. Recent connections are remembered across sessions. Advanced
 per-transport sub-tabs (legacy TCP / WS host + viewer, WebRTC host +
 viewer with manual SDP / custom codecs / TLS pinning) stay one click
 away. WebRTC sub-tabs lazy-load so a stock install without the
@@ -1216,6 +1230,10 @@ land in the variable bag::
    [["AC_shell_command",
      {"command": "curl -H \"Authorization: Bearer ${secrets.github_token}\" ..."}]]
 
+``AC_shell_command`` logs only the program it starts, never its arguments,
+so a filled-in secret stays out of the log; a program that cannot start
+fails the action.
+
 GUI: **Secrets** tab — initialize the vault, unlock it, add / remove
 entries, change passphrase. The vault file is created with mode 0o600
 on POSIX systems; on Windows the default ACL already restricts
@@ -1227,7 +1245,8 @@ Webhook (HTTP push) trigger
 
 A bundled :mod:`http.server` dispatcher fires an action script when an
 external service POSTs to a registered path. Configure path, allowed
-methods, and an optional bearer token; the request method, path, query,
+methods (``GET``, ``POST``, ``PUT``, ``PATCH``, ``DELETE``; any other verb
+is refused when the webhook is added), and an optional bearer token; the request method, path, query,
 headers, raw body, and parsed JSON are seeded into the variable scope::
 
    import je_auto_control as ac
@@ -1258,7 +1277,8 @@ Action-JSON commands::
 
 Each fire is recorded in run history as ``trigger`` with source id
 ``webhook:<id>`` so the dashboard surfaces webhook activity alongside
-other triggers. The body is capped at 1 MiB and bearer-token comparison
+other triggers; a fire in which any action failed is recorded as an error
+(with an error snapshot), as scheduled, triggered and hotkey runs are. The body is capped at 1 MiB and bearer-token comparison
 uses :func:`hmac.compare_digest`. Bind to ``127.0.0.1`` unless the
 listener genuinely needs to be reachable from elsewhere on the network.
 

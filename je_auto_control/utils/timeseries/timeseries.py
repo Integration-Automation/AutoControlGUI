@@ -28,7 +28,10 @@ _AGGS: Dict[str, Callable[[List[float]], float]] = {
 
 
 def _sorted(series: Series) -> List[Point]:
-    return sorted((float(ts), float(value)) for ts, value in series)
+    # By time only: sorting whole tuples reordered samples sharing a
+    # timestamp by value, which made up counter resets.
+    return sorted(((float(ts), float(value)) for ts, value in series),
+                  key=lambda point: point[0])
 
 
 def ts_increase(series: Series) -> float:
@@ -84,6 +87,11 @@ def ts_idelta(series: Series) -> float:
 _EPSILON = 1e-9
 
 
+def _check_bucket(bucket_s: float) -> None:
+    if not (math.isfinite(bucket_s) and bucket_s > 0):
+        raise ValueError(f"bucket_s must be a positive finite number, got {bucket_s!r}")
+
+
 def _bucket_index(ts: float, bucket_s: float) -> int:
     """Which ``bucket_s`` bucket ``ts`` falls in, tolerant of float error.
 
@@ -92,7 +100,11 @@ def _bucket_index(ts: float, bucket_s: float) -> int:
     """
     quotient = ts / bucket_s
     nearest = round(quotient)
-    return nearest if abs(quotient - nearest) < _EPSILON else math.floor(quotient)
+    # Relative as well as absolute: at Unix-time magnitudes the quotient's
+    # float error is ~1e-6, so 1700000000.3 fell into the 0.2 bucket.
+    on_edge = (abs(quotient - nearest) < _EPSILON
+               or abs(ts - nearest * bucket_s) <= 4 * math.ulp(abs(ts)))
+    return nearest if on_edge else math.floor(quotient)
 
 
 def _bucket_start(index: int, bucket_s: float) -> float:
@@ -103,8 +115,7 @@ def _bucket_start(index: int, bucket_s: float) -> float:
 def ts_downsample(series: Series, bucket_s: float,
                   agg: str = "avg") -> List[Point]:
     """Roll the series into ``bucket_s`` tumbling buckets aggregated by ``agg``."""
-    if bucket_s <= 0:
-        raise ValueError("bucket_s must be positive")
+    _check_bucket(bucket_s)
     func = _AGGS.get(agg)
     if func is None:
         raise ValueError(f"unknown agg: {agg!r}")
@@ -140,8 +151,9 @@ def ts_resample(series: Series, bucket_s: float, *,
     ``fill`` is ``"last"`` (carry forward), ``"linear"`` (interpolate), or
     ``None`` (gaps become ``None``).
     """
-    if bucket_s <= 0:
-        raise ValueError("bucket_s must be positive")
+    _check_bucket(bucket_s)
+    if fill not in ("last", "linear", None):   # a typo made every gap None
+        raise ValueError(f"unknown fill: {fill!r}; use 'last', 'linear' or None")
     points = _sorted(series)
     if not points:
         return []

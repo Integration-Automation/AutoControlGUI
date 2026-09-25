@@ -3,8 +3,8 @@
 * ``QTimer.singleShot`` fired from a non-Qt thread never runs (no event loop
   there); the LAN browser, presence roster and WebRTC file-received callbacks
   must marshal via a Qt Signal instead (finding 8);
-* the admin-console thumbnail poll must ``deleteLater`` its QThread/worker each
-  tick instead of leaking one per interval (finding 9).
+* the admin-console thumbnail poll must release its worker each tick instead
+  of leaking one per interval (finding 9).
 
 Each test drives the real method from a background ``threading.Thread`` and
 pumps the GUI event loop, so a queued signal is required for the effect to
@@ -171,26 +171,26 @@ def check_thumbnail_reaped():
     tmp = pathlib.Path(tempfile.mkdtemp())
     client = AdminConsoleClient(persist_path=tmp / "hosts.json")
     admin_mod.default_admin_console = lambda: client
-    # Don't run a real background thread: the reaping wiring is what matters,
-    # and this keeps the check deterministic (no timing, no dangling threads).
-    admin_mod.QThread.start = lambda self: None
+    import je_auto_control.gui._worker_thread as worker_mod
+    before = worker_mod.running_threads()
 
     tab = admin_mod.AdminConsoleTab()
     tab._thumb_timer.stop()
     tab._refresh_thumbnails()
 
-    thread = tab._thumb_thread
-    assert thread is not None, "no thumbnail QThread was created"
-    assert thread in tab.findChildren(QThread), "thread is not a child of the tab"
+    handle = tab._thumb_thread
+    assert handle is not None, "no thumbnail worker was started"
+    # The registry holds the worker until the GUI thread has seen it end, so
+    # closing the tab mid-poll cannot collect it.
+    assert handle in worker_mod._RUNNING, "the worker is not held by the registry"
 
-    thread.finished.emit()  # simulate the QThread finishing
-    assert tab._thumb_thread is None, "_on_thumb_thread_done did not run"
-    # Flush the deferred deletions the finished signal scheduled.
+    # With no hosts the poll returns at once; the end is queued to the GUI thread.
+    assert pump_until(lambda: tab._thumb_thread is None), "_on_thumb_thread_done did not run"
     app.sendPostedEvents(None, QEvent.Type.DeferredDelete.value)
-    # Without the deleteLater wiring the QThread would linger as a child of
-    # the tab, accumulating one per poll tick.
-    assert not shiboken6.Shiboken.isValid(thread), "the QThread outlived finish"
-    assert tab.findChildren(QThread) == [], "a QThread lingers as a child"
+    # Without the release the registry would grow by one worker per poll tick.
+    released = pump_until(lambda: worker_mod.running_threads() == before)
+    assert released, "a worker lingers in the registry"
+    assert not handle.isRunning()
 
 
 for name, check in [
@@ -255,5 +255,5 @@ def test_webrtc_received_file_marshaled_to_gui(marshal_report):
 
 
 def test_thumbnail_poll_thread_is_reaped(marshal_report):
-    """The thumbnail poll deletes its QThread per tick instead of leaking one."""
+    """The thumbnail poll releases its worker per tick instead of leaking one."""
     _verdict(marshal_report, "thumbnail_reaped")

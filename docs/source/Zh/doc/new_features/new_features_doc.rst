@@ -242,6 +242,9 @@ Accessibility 元件搜尋
 沒有焦點時回傳 ``None``；指定 ``app_name`` 時，焦點元素不屬於該應用程式就回傳
 ``None``。無障礙錄製器追蹤的就是這個元素。
 
+有螢幕矩形的相符元素排在前面；沒有矩形的（隱藏分頁上的控制項回報 ``(0, 0, 0, 0)``）
+排在最後，``click_accessibility_element`` 對它回傳 ``False``，不會點到螢幕角落。
+
 當前平台若沒有可用後端會拋出 ``AccessibilityNotAvailableError``。
 Action-JSON 指令：``AC_a11y_list``、``AC_a11y_find``、``AC_a11y_find_all``、
 ``AC_a11y_focused``、``AC_a11y_click``。GUI：**Accessibility** 分頁
@@ -261,6 +264,10 @@ VLM（AI）元件定位
        "Cookie 橫幅中的『全部接受』按鈕",
        screen_region=[0, 800, 1920, 1080],   # 可選：只在此區域搜尋
    )
+
+``None`` / ``False`` 表示模型沒找到元素。請求本身失敗（網路、驗證、速率限制）時會拋出
+``VLMRequestError``，不再當成「找不到」。Anthropic 後端送出的畫面會先縮到模型的影像上限，
+回覆再換算回原圖像素；``x=512, y=300``、``{"x": 512, "y": 300}``、``512.4, 300.6`` 這類回覆都讀得到。
 
 後端（延遲載入，import ``je_auto_control`` 時不會引入）：
 
@@ -494,7 +501,9 @@ GUI：\ **Remote Desktop**\ 分頁預設打開的是 **快速連線** （AnyDesk
 風格）— 一邊是超大本機 Host ID，另一邊一個輸入框接受
 ``host:port``、
 ``ws://``、``wss://`` 或 9 位數 Host ID，搭配 *連線* 與 *開始被遠端*
-兩個主要按鈕。近期連線會跨 session 記住。進階的逐傳輸子分頁（既有
+兩個主要按鈕。連線後會開一個彈出視窗，把你的滑鼠與鍵盤轉送到 host。
+``wss://`` 目標會用系統信任的憑證驗證 host；自簽憑證的 host 請改用進階
+viewer，並勾選 *忽略憑證驗證（自簽用）*。近期連線會跨 session 記住。進階的逐傳輸子分頁（既有
 TCP / WS host + viewer、WebRTC host + viewer 含手動 SDP / 自訂編碼器
 / TLS pinning）仍只差一個 click。WebRTC 子分頁採延遲載入,沒裝
 ``[webrtc]`` extra 也能正常開啟整個分頁。
@@ -1140,6 +1149,9 @@ Action JSON 指令::
    [["AC_shell_command",
      {"command": "curl -H \"Authorization: Bearer ${secrets.github_token}\" ..."}]]
 
+``AC_shell_command`` 只記錄它啟動的程式,從不記錄參數,所以填入的 secret 不會進到 log;
+程式無法啟動時該動作會失敗。
+
 GUI: **Secrets** 分頁 — 建立 vault、解鎖、新增 / 移除條目、變更
 通行碼。POSIX 系統上 vault 檔以 0o600 建立;Windows 預設 ACL 已限制
 只有擁有者能讀取。
@@ -1149,7 +1161,8 @@ Webhook(HTTP push)觸發
 =======================
 
 內建的 :mod:`http.server` dispatcher 在外部服務 POST 到註冊路徑時
-觸發腳本。可設定路徑、允許的方法、可選 bearer token;請求方法、
+觸發腳本。可設定路徑、允許的方法(``GET``、``POST``、``PUT``、``PATCH``、
+``DELETE``;其他方法在註冊時就會被拒絕)、可選 bearer token;請求方法、
 路徑、query、headers、原始 body、解析後 JSON 都會種到變數作用域::
 
    import je_auto_control as ac
@@ -1180,7 +1193,7 @@ Action JSON 指令::
 
 每次觸發以 ``trigger`` 來源寫入 run history,source id 為
 ``webhook:<id>``,讓 dashboard 把 webhook 活動和其他 trigger 並排
-顯示。Body 上限 1 MiB,bearer token 比對用
+顯示;只要有任何動作失敗,這次觸發就記為錯誤(並附錯誤截圖),排程、觸發器與熱鍵的執行也一樣。Body 上限 1 MiB,bearer token 比對用
 :func:`hmac.compare_digest`。除非你真的需要從網路其他地方連入,
 否則綁定 ``127.0.0.1``。
 

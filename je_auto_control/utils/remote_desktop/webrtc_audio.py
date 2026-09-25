@@ -18,7 +18,7 @@ from __future__ import annotations
 import asyncio
 import fractions
 import threading
-from typing import Optional
+from typing import Any, Optional
 
 try:
     import av  # type: ignore
@@ -147,6 +147,7 @@ class OpusMicReceiver:
         self._player.start()
         self._task: Optional[asyncio.Task] = None
         self._stopped = False
+        self._resampler: Optional[Any] = None
 
     def consume(self, track) -> None:
         """Spawn a background task that drains ``track.recv()`` into the player."""
@@ -161,19 +162,36 @@ class OpusMicReceiver:
                 frame = await track.recv()
                 if not bool(self._player.is_running):
                     return
-                # av.AudioFrame -> int16 PCM bytes
-                try:
-                    arr = frame.to_ndarray()
-                except (ValueError, RuntimeError) as error:
-                    autocontrol_logger.debug("audio frame to_ndarray: %r", error)
-                    continue
-                if arr.dtype != np.int16:
-                    arr = arr.astype(np.int16)
-                self._player.play(arr.tobytes())
+                for chunk in self._to_player_pcm(frame):
+                    self._player.play(chunk)
         except (asyncio.CancelledError, MediaStreamError):
             autocontrol_logger.info("opus mic receiver ended")
         except (OSError, RuntimeError) as error:
             autocontrol_logger.info("opus mic receiver ended: %r", error)
+
+    def _to_player_pcm(self, frame) -> list:
+        """int16 PCM in the player's layout and rate.
+
+        aiortc's Opus decoder always yields 48 kHz stereo; written as is to a
+        mono player it played at half speed and twice the length.
+        """
+        if self._resampler is None:
+            self._resampler = av.AudioResampler(
+                format="s16", layout="mono" if self._channels == 1 else "stereo",
+                rate=self._sample_rate,
+            )
+        try:
+            converted = self._resampler.resample(frame)
+        except (TypeError, ValueError, RuntimeError, av.FFmpegError) as error:  # TypeError: not an AudioFrame
+            autocontrol_logger.debug("audio frame resample: %r", error)
+            return []
+        chunks = []
+        for out in converted:
+            arr = out.to_ndarray()
+            if arr.dtype != np.int16:
+                arr = arr.astype(np.int16)
+            chunks.append(arr.tobytes())
+        return chunks
 
     def stop(self) -> None:
         self._stopped = True

@@ -1,13 +1,12 @@
 """Minimal MCP server speaking JSON-RPC 2.0 over stdio.
 
-Implements the subset of the Model Context Protocol that Claude clients
-(Claude Desktop, Claude Code, Claude API) use to discover and invoke
-tools: ``initialize``, ``tools/list``, ``tools/call``, ``ping``, and
-``notifications/initialized``. Each transport line is one JSON-RPC
-message — no Content-Length framing — matching the MCP stdio spec.
+Serves tools, resources and prompts to MCP clients of both protocol eras:
+the handshake-based revisions (``initialize``, up to 2025-11-25) and the
+stateless 2026-07-28, chosen per request (see :mod:`._stateless`). Each
+stdio line is one JSON-RPC message — no Content-Length framing — matching
+the MCP stdio spec.
 """
 import contextlib
-import functools
 import itertools
 import json
 import sys
@@ -15,6 +14,7 @@ import threading
 import time
 from typing import Any, Callable, Dict, List, Optional, TextIO
 
+from je_auto_control.utils.cli_output import utf8_stream
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.mcp_server.audit import AuditLogger
 from je_auto_control.utils.mcp_server.context import (
@@ -39,10 +39,16 @@ from je_auto_control.utils.mcp_server.tools._validation import (
 from je_auto_control.utils.mcp_server._client_requests import (
     ClientRequestMixin,
 )
+from je_auto_control.utils.mcp_server._input_required import (
+    AnsweredByGate, RequestStateSigner,
+)
+from je_auto_control.utils.mcp_server._stateless import StatelessDispatchMixin
+from je_auto_control.utils.mcp_server._subscriptions import NO_RESPONSE, SubscriptionMixin
 from je_auto_control.utils.mcp_server._protocol import (
-    PROTOCOL_VERSION, SERVER_NAME, SERVER_VERSION, _capture_error_screenshot,
-    _coerce_params, _DISPATCH_ERRORS, _error_response, _is_hashable,
-    _MCPError, _notification_message, _result_response, _to_content_blocks,
+    PROTOCOL_VERSION,  # noqa: F401  # reason: re-exported; callers import it from server
+    _capture_error_screenshot, negotiate_protocol_version,
+    _coerce_params, _DISPATCH_ERRORS, _error_response, _InvalidToolArguments, _is_hashable,
+    _MCPError, _notification_message, _result_response, _server_info, _to_content_blocks,
     _TOOL_INVOKE_ERRORS, _TOOLS_CALL_METHOD,
 )
 
@@ -51,7 +57,7 @@ from je_auto_control.utils.mcp_server._protocol import (
 WORKER_DRAIN_TIMEOUT = 10.0
 
 
-class MCPServer(ClientRequestMixin):
+class MCPServer(StatelessDispatchMixin, SubscriptionMixin, ClientRequestMixin):
     """JSON-RPC 2.0 MCP server with a configurable tool registry."""
 
     def __init__(self, tools: Optional[List[MCPTool]] = None,
@@ -76,6 +82,8 @@ class MCPServer(ClientRequestMixin):
         self._log_bridge = log_bridge
         self._stop = threading.Event()
         self._initialized = False
+        self._peer_era: Optional[str] = None  # the stdio peer's; see _note_peer_era
+        self._request_states = RequestStateSigner()
         # tools/call runs on a worker thread under the stdio transport, so a
         # reply can still be in flight when the loop reaches EOF. Tracking the
         # workers is what lets the transport wait for them instead of pulling
@@ -98,7 +106,6 @@ class MCPServer(ClientRequestMixin):
         self._active_calls: Dict[Any, ToolCallContext] = {}
         self._calls_lock = threading.Lock()
         self._write_lock = threading.Lock()
-        self._sampling_id_counter = itertools.count(1)
         self._outbound_id_counter = itertools.count(1)
         self._pending_outbound: Dict[Any, Dict[str, Any]] = {}
         self._outbound_lock = threading.Lock()
@@ -111,6 +118,8 @@ class MCPServer(ClientRequestMixin):
         self._caps_lock = threading.Lock()
         self._resource_subscriptions: Dict[str, Any] = {}
         self._subscriptions_lock = threading.Lock()
+        self._listeners: Dict[Any, Any] = {}  # open subscriptions/listen, by (connection, id)
+        self._listeners_lock = threading.Lock()
 
     # --- connection-scoped state ------------------------------------------
     #
@@ -155,6 +164,8 @@ class MCPServer(ClientRequestMixin):
     @property
     def _client_capabilities(self) -> Dict[str, Any]:
         """Capabilities advertised by the peer served on this thread."""
+        if self._stateless_request is not None:
+            return self._stateless_request.capabilities
         conn = self._connection_id
         if conn is None:
             return self._default_client_capabilities
@@ -204,6 +215,7 @@ class MCPServer(ClientRequestMixin):
             return
         with self._caps_lock:
             self._client_caps_by_conn.pop(connection_id, None)
+        self._end_listeners(lambda conn: conn == connection_id, graceful=False)
         with self._calls_lock:
             stale = [key for key in self._active_calls
                      if isinstance(key, tuple) and key[0] == connection_id]
@@ -229,17 +241,6 @@ class MCPServer(ClientRequestMixin):
         self._notify_tools_list_changed()
         return True
 
-    def _notify_tools_list_changed(self) -> None:
-        notifier = self._notifier
-        if notifier is None:
-            return
-        try:
-            notifier("notifications/tools/list_changed", {})
-        except (OSError, RuntimeError, ValueError):
-            autocontrol_logger.exception(
-                "MCP failed to send tools/list_changed",
-            )
-
     def stop(self) -> None:
         """Request the stdio loop to exit at its next iteration."""
         self._stop.set()
@@ -247,8 +248,9 @@ class MCPServer(ClientRequestMixin):
     def serve_stdio(self, stdin: Optional[TextIO] = None,
                     stdout: Optional[TextIO] = None) -> None:
         """Run the message loop until EOF on stdin or :meth:`stop`."""
-        in_stream = stdin if stdin is not None else sys.stdin
-        out_stream = stdout if stdout is not None else sys.stdout
+        # UTF-8, as the MCP stdio transport requires (see utf8_stream).
+        in_stream = stdin if stdin is not None else utf8_stream(sys.stdin, reading=True)
+        out_stream = stdout if stdout is not None else utf8_stream(sys.stdout, reading=False)
         autocontrol_logger.info(
             "MCP server starting (stdio, %d tools)", len(self._tools),
         )
@@ -279,6 +281,7 @@ class MCPServer(ClientRequestMixin):
             # EOF is still running, and its reply has nowhere to go once the
             # writer is swapped back.
             self._join_workers()
+            self.end_subscriptions(stdio=True)
             self._detach_log_bridge_if_configured()
             self._notifier = prior_notifier
             self._writer = prior_writer
@@ -307,6 +310,7 @@ class MCPServer(ClientRequestMixin):
         if self._log_bridge is None:
             self._log_bridge = MCPLogBridge()
         self._log_bridge.set_notifier(self._notifier)
+        self._log_bridge.forward_unscoped = self._peer_era != "stateless"
         if self._log_bridge not in autocontrol_logger.handlers:
             autocontrol_logger.addHandler(self._log_bridge)
 
@@ -333,7 +337,8 @@ class MCPServer(ClientRequestMixin):
         """Process one JSON-RPC line; return the response line or ``None``."""
         try:
             message = json.loads(line)
-        except ValueError as error:
+        # RecursionError: a message nested thousands deep ended the stdio loop.
+        except (ValueError, RecursionError) as error:
             autocontrol_logger.warning("MCP parse error: %r", error)
             return _error_response(None, -32700, "Parse error")
         if not isinstance(message, dict):
@@ -390,6 +395,8 @@ class MCPServer(ClientRequestMixin):
 
         def worker() -> None:
             payload = self._build_response(msg_id, _TOOLS_CALL_METHOD, params)
+            if payload is None:
+                return
             if writer is None:
                 autocontrol_logger.warning(
                     "MCP async tool reply with no writer; dropping %s", msg_id,
@@ -425,12 +432,14 @@ class MCPServer(ClientRequestMixin):
             thread.join(remaining)
 
     def _build_response(self, msg_id: Any, method: Optional[str],
-                        params: Dict[str, Any]) -> str:
-        """Dispatch a request and serialise the result or error."""
+                        params: Dict[str, Any]) -> Optional[str]:
+        """Dispatch a request and serialise the result or error; ``None`` answers later."""
         try:
             result = self._dispatch(msg_id, method, params)
+            if result is NO_RESPONSE:
+                return None
         except _MCPError as error:
-            return _error_response(msg_id, error.code, error.message)
+            return _error_response(msg_id, error.code, error.message, error.data)
         except OperationCancelledError as error:
             autocontrol_logger.info("MCP call %s cancelled by client", msg_id)
             return _error_response(msg_id, -32800, str(error))
@@ -461,6 +470,7 @@ class MCPServer(ClientRequestMixin):
         if request_id is None or not _is_hashable(request_id):
             return
         call_key = (self._connection_id, request_id)
+        self._end_listener(call_key, graceful=False)
         with self._calls_lock:
             ctx = self._active_calls.get(call_key)
         if ctx is not None:
@@ -469,8 +479,8 @@ class MCPServer(ClientRequestMixin):
                 "MCP cancel signalled for call %r", request_id,
             )
 
-    def _dispatch(self, msg_id: Any, method: Optional[str],
-                  params: Dict[str, Any]) -> Any:
+    def _run_method(self, msg_id: Any, method: Optional[str],
+                    params: Dict[str, Any]) -> Any:
         if method == _TOOLS_CALL_METHOD:
             return self._handle_tools_call(msg_id, params)
         if method is None:
@@ -535,23 +545,25 @@ class MCPServer(ClientRequestMixin):
         return {}
 
     def _handle_initialize(self, params: Dict[str, Any]) -> Dict[str, Any]:
-        client_version = params.get("protocolVersion", PROTOCOL_VERSION)
+        self._note_peer_era("handshake")
         client_caps = params.get("capabilities") or {}
         if isinstance(client_caps, dict):
             self._client_capabilities = client_caps
+        # Only server capabilities: "sampling" and "roots" are ones a *client*
+        # declares (the server then sends it sampling/createMessage or
+        # roots/list), and advertising them from here claimed features the
+        # server does not offer.
         capabilities: Dict[str, Any] = {
             "tools": {"listChanged": True},
             "resources": {"listChanged": False, "subscribe": True},
             "prompts": {"listChanged": False},
-            "sampling": {},
             "logging": {},
         }
-        if "roots" in self._client_capabilities:
-            capabilities["roots"] = {"listChanged": True}
+        version = negotiate_protocol_version(params.get("protocolVersion"))
         return {
-            "protocolVersion": client_version or PROTOCOL_VERSION,
+            "protocolVersion": version,
             "capabilities": capabilities,
-            "serverInfo": {"name": SERVER_NAME, "version": SERVER_VERSION},
+            "serverInfo": _server_info(version),
         }
 
     def _handle_resources_read(self,
@@ -563,48 +575,6 @@ class MCPServer(ClientRequestMixin):
         if content is None:
             raise _MCPError(-32602, f"Unknown resource: {uri}")
         return {"contents": [content]}
-
-    def _handle_resources_subscribe(self,
-                                    params: Dict[str, Any]) -> Dict[str, Any]:
-        uri = params.get("uri")
-        if not isinstance(uri, str) or not uri:
-            raise _MCPError(-32602, "resources/subscribe requires 'uri'")
-        # Hold the lock across the check *and* the subscribe so two concurrent
-        # requests for the same uri cannot both create a provider handle and
-        # leak the loser (a TOCTOU that left an orphaned subscription running).
-        with self._subscriptions_lock:
-            if uri in self._resource_subscriptions:
-                return {}
-            handle = self._resources.subscribe(
-                uri,
-                functools.partial(self._notify_resource_updated, uri),
-            )
-            if handle is None:
-                raise _MCPError(-32602, f"Unsubscribable resource: {uri}")
-            self._resource_subscriptions[uri] = handle
-        return {}
-
-    def _handle_resources_unsubscribe(self,
-                                      params: Dict[str, Any]) -> Dict[str, Any]:
-        uri = params.get("uri")
-        if not isinstance(uri, str) or not uri:
-            raise _MCPError(-32602, "resources/unsubscribe requires 'uri'")
-        with self._subscriptions_lock:
-            handle = self._resource_subscriptions.pop(uri, None)
-        if handle is not None:
-            self._resources.unsubscribe(uri, handle)
-        return {}
-
-    def _notify_resource_updated(self, uri: str) -> None:
-        notifier = self._notifier
-        if notifier is None:
-            return
-        try:
-            notifier("notifications/resources/updated", {"uri": uri})
-        except (OSError, RuntimeError, ValueError):
-            autocontrol_logger.exception(
-                "MCP failed to send resources/updated for %s", uri,
-            )
 
     def _handle_prompts_get(self, params: Dict[str, Any]) -> Dict[str, Any]:
         name = params.get("name")
@@ -627,7 +597,8 @@ class MCPServer(ClientRequestMixin):
         """Validate a tools/call request; return ``(name, tool, arguments)``.
 
         Raises :class:`_MCPError` when the request is malformed, the tool is
-        unknown, arguments fail schema validation, or the rate limit is hit.
+        unknown or the rate limit is hit, and :class:`_InvalidToolArguments`
+        when the arguments fail the tool's schema.
         """
         name = params.get("name")
         arguments = params.get("arguments") or {}
@@ -641,7 +612,7 @@ class MCPServer(ClientRequestMixin):
         violation = (validate_arguments(tool.input_schema, arguments)
                      or undeclared_arguments(tool.input_schema, arguments))
         if violation is not None:
-            raise _MCPError(-32602, f"Invalid arguments for {name}: {violation}")
+            raise _InvalidToolArguments(f"Invalid arguments for {name}: {violation}")
         if self._rate_limiter is not None and not self._rate_limiter.try_acquire():
             raise _MCPError(-32000, f"Rate limit exceeded for tool {name!r}")
         self._maybe_confirm_destructive(name, tool, arguments)
@@ -649,7 +620,12 @@ class MCPServer(ClientRequestMixin):
 
     def _handle_tools_call(self, msg_id: Any,
                            params: Dict[str, Any]) -> Dict[str, Any]:
-        name, tool, arguments = self._prepare_tool_call(params)
+        try:
+            name, tool, arguments = self._prepare_tool_call(params)
+        except _InvalidToolArguments as error:
+            return {"content": [{"type": "text", "text": str(error)}], "isError": True}
+        except AnsweredByGate as answered:
+            return answered.result
         ctx = self._build_call_context(msg_id, params)
         call_key = (self._connection_id, msg_id)
         with self._calls_lock:
@@ -711,8 +687,14 @@ class MCPServer(ClientRequestMixin):
         )
 
 
-def start_mcp_stdio_server() -> MCPServer:
-    """Start a stdio MCP server in the foreground; blocks until EOF."""
-    server = MCPServer()
+def start_mcp_stdio_server(read_only: Optional[bool] = None) -> MCPServer:
+    """Start a stdio MCP server in the foreground; blocks until EOF.
+
+    ``read_only=True`` offers only tools marked read-only; ``None`` leaves
+    the choice to ``JE_AUTOCONTROL_MCP_READONLY``. ``je_auto_control_mcp
+    --read-only`` used to reach only its ``--list-*`` output, so the server
+    it started offered every tool, clicks and typing included.
+    """
+    server = MCPServer(tools=build_default_tool_registry(read_only=read_only))
     server.serve_stdio()
     return server

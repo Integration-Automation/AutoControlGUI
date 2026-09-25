@@ -26,7 +26,7 @@ def _build_tailoring(tailoring: Optional[str]) -> Optional[Dict[str, int]]:
     if not tailoring:
         return None
     ranks: Dict[str, int] = {}
-    for index, char in enumerate(tailoring):
+    for index, char in enumerate(unicodedata.normalize("NFC", tailoring)):
         folded = char.casefold()
         if folded not in ranks:
             ranks[folded] = index
@@ -48,10 +48,14 @@ def _char_weights(char: str, ranks: Optional[Dict[str, int]],
     A tailored character is treated atomically (no decomposition) so a
     precomposed letter like ``"å"`` keeps its alphabet rank; everything else is
     NFKD-decomposed so diacritics fall to the secondary level.
+
+    Every base letter contributes a ``0`` secondary weight ahead of its marks,
+    as UCA's "common" weight does. Without it the secondary level held only
+    the marks, so ``"éa"`` and ``"eá"`` got identical keys at every strength.
     """
     folded = char.casefold()
     if ranks is not None and folded in ranks:
-        return [ranks[folded]], [], [1 if char != folded else 0]
+        return [ranks[folded]], [0], [1 if char != folded else 0]
     primary: List[int] = []
     secondary: List[int] = []
     tertiary: List[int] = []
@@ -61,6 +65,7 @@ def _char_weights(char: str, ranks: Optional[Dict[str, int]],
             continue
         subfold = sub.casefold()
         primary.append(_untailored_weight(subfold, ranks, offset))
+        secondary.append(0)
         tertiary.append(1 if sub != subfold else 0)
     return primary, secondary, tertiary
 
@@ -73,7 +78,9 @@ def collation_key(text: str, *, strength: str = "tertiary",
     lowercase before uppercase). ``strength`` (``primary`` / ``secondary`` /
     ``tertiary``) caps the levels compared. ``tailoring`` is an ordered alphabet
     whose characters sort in the given order and before any unlisted character
-    (so a Swedish ``"...xyzåäö"`` puts ``å`` after ``z``).
+    (so a Swedish ``"...xyzåäö"`` puts ``å`` after ``z``). Both are read in
+    NFC, so a decomposed ``a`` + U+030A (as macOS file names arrive) is the
+    tailored ``å`` rather than an ``a`` with a ring.
     """
     level = _STRENGTHS.get(strength)
     if level is None:
@@ -83,7 +90,7 @@ def collation_key(text: str, *, strength: str = "tertiary",
     primary: List[int] = []
     secondary: List[int] = []
     tertiary: List[int] = []
-    for char in text or "":
+    for char in unicodedata.normalize("NFC", text or ""):
         char_primary, char_secondary, char_tertiary = _char_weights(
             char, ranks, offset)
         primary.extend(char_primary)

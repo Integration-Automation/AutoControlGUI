@@ -155,6 +155,9 @@ class PromptBridge(QObject):
             result["remember"] = dialog.remember
         finally:
             done.set()
+            # Parented to dialog_parent, each prompt's dialog stayed alive
+            # with it: one more per prompt.
+            dialog.deleteLater()
 
 
 def attach_prompt_to_session(session, *,

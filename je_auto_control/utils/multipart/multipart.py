@@ -8,6 +8,7 @@ with a deterministic boundary, and parses one back.
 Pure standard library (``re`` / ``secrets``); imports no ``PySide6``. The
 boundary is injectable, so a built body is byte-stable and CI-testable.
 """
+import base64
 import re
 import secrets
 from dataclasses import dataclass
@@ -123,7 +124,9 @@ def _disposition_params(disposition: str) -> Dict[str, str]:
     for match in _DISPOSITION_PARAM.finditer(disposition):
         value = match.group(2).strip()
         if len(value) >= 2 and value[0] == '"' and value[-1] == '"':
-            value = re.sub(r"\\(.)", r"\1", value[1:-1])
+            # Only an escaped quote or backslash is unescaped: browsers send a
+            # backslash as itself, so a\b.txt must stay a\b.txt.
+            value = re.sub(r'\\(["\\])', r"\1", value[1:-1])
         params.setdefault(match.group(1).lower(), _unquote_param(value))
     return params
 
@@ -133,9 +136,12 @@ def _assign_part(headers: Mapping[str, str], content: bytes,
     params = _disposition_params(headers.get("content-disposition", ""))
     name = params.get("name", "")
     if "filename" in params:
+        # "content" is text for convenience; binary data (an image, a zip)
+        # does not survive that decode, so the exact bytes ride along.
         files.append({"name": name, "filename": params["filename"],
                       "content_type": headers.get("content-type", ""),
-                      "content": content.decode("utf-8", "replace")})
+                      "content": content.decode("utf-8", "replace"),
+                      "content_base64": base64.b64encode(content).decode("ascii")})
     else:
         fields[name] = content.decode("utf-8", "replace")
 

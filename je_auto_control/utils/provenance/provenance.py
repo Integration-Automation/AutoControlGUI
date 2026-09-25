@@ -70,15 +70,22 @@ def build_provenance(subjects: Sequence[Mapping[str, Any]], *,
             },
             "runDetails": {
                 "builder": {"id": builder_id},
-                "metadata": {
-                    "invocationId": meta.get("invocation_id", ""),
-                    "startedOn": meta.get("started_on", ""),
-                    "finishedOn": meta.get("finished_on", ""),
-                },
+                "metadata": _run_metadata(meta),
                 "byproducts": [],
             },
         },
     }
+
+
+def _run_metadata(meta: Mapping[str, Any]) -> Dict[str, Any]:
+    """SLSA ``runDetails.metadata`` with only the fields that have a value.
+
+    An empty ``startedOn`` / ``finishedOn`` is not an RFC 3339 timestamp, and
+    SLSA v1 marks all three fields optional, so absent ones are left out.
+    """
+    fields = (("invocationId", "invocation_id"), ("startedOn", "started_on"),
+              ("finishedOn", "finished_on"))
+    return {name: meta[key] for name, key in fields if meta.get(key)}
 
 
 def write_provenance(statement: Mapping[str, Any], path: str) -> str:
@@ -92,7 +99,9 @@ def write_provenance(statement: Mapping[str, Any], path: str) -> str:
 def verify_provenance(statement: Mapping[str, Any],
                       files: Mapping[str, str]) -> List[Dict[str, Any]]:
     """Re-hash ``files`` (name->path) and return digest mismatches."""
-    expected = {subject["name"]: subject.get("digest", {}).get("sha256")
+    # in-toto Statement v1 requires only "digest"; a nameless subject raised
+    # KeyError here instead of being reported as unverifiable.
+    expected = {subject.get("name"): subject.get("digest", {}).get("sha256")
                 for subject in statement.get("subject", [])}
     mismatches: List[Dict[str, Any]] = []
     for name, path in files.items():

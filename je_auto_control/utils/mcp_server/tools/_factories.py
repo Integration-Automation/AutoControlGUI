@@ -6897,6 +6897,17 @@ def idempotency_tools() -> List[MCPTool]:
             handler=h_exec.idempotency_complete,
             annotations=NON_DESTRUCTIVE,
         ),
+        MCPTool(
+            name="ac_idempotency_release",
+            description=("Drop an in_progress idempotency 'key' in named store "
+                         "'name' after its work failed, so a retry runs it "
+                         "(completed keys are kept). Returns {released}."),
+            input_schema=schema(
+                {"name": {"type": "string"}, "key": {"type": "string"}},
+                ["name", "key"]),
+            handler=h_exec.idempotency_release,
+            annotations=NON_DESTRUCTIVE,
+        ),
     ]
 
 
@@ -8134,6 +8145,13 @@ def gamepad_tools() -> List[MCPTool]:
     ]
 
 
+# An sRGB colour: exactly three channels, each 0..255.
+_RGB_SCHEMA = {
+    "type": "array", "minItems": 3, "maxItems": 3,
+    "items": {"type": "integer", "minimum": 0, "maximum": 255},
+}
+
+
 _VID_PID = {
     "vendor_id": {"type": "string"},
     "product_id": {"type": "string"},
@@ -8848,8 +8866,8 @@ def a11y_audit_tools() -> List[MCPTool]:
                          "and background RGB colour; reports pass/fail against "
                          "the AA threshold."),
             input_schema=schema({
-                "foreground": {"type": "array", "items": {"type": "integer"}},
-                "background": {"type": "array", "items": {"type": "integer"}},
+                "foreground": _RGB_SCHEMA,
+                "background": _RGB_SCHEMA,
                 "min_ratio": {"type": "number"},
             }, required=["foreground", "background"]),
             handler=hq.audit_contrast,

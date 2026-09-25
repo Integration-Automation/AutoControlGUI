@@ -22,6 +22,7 @@ from typing import TYPE_CHECKING, Any, ContextManager, Dict, List, Optional
 
 from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.sqlite_support import (
+    sqlite_errors_as,
     autocommit_connection, last_row_id,
 )
 
@@ -36,6 +37,10 @@ STATUS_FAILED = "failed"
 
 class BusinessError(AutoControlException):
     """A non-retryable, data-level failure of a work item."""
+
+
+class WorkQueueError(AutoControlException):
+    """The queue's database could not be opened or used."""
 
 
 @dataclass
@@ -78,6 +83,7 @@ def _require_in_progress(item_id: int, row: Any,
 class WorkQueue:
     """A named, SQLite-backed queue of work items."""
 
+    @sqlite_errors_as(WorkQueueError)
     def __init__(self, db_path: str, name: str = "default") -> None:
         self._db_path = db_path
         self._name = name
@@ -101,6 +107,7 @@ class WorkQueue:
                 conn.execute("ALTER TABLE work_items ADD COLUMN "
                              "claim INTEGER NOT NULL DEFAULT 0")
 
+    @sqlite_errors_as(WorkQueueError)
     def add(self, data: Dict[str, Any], *, reference: Optional[str] = None,
             dedupe: bool = True) -> Optional[int]:
         """Enqueue an item; skip (return None) on a live duplicate reference."""
@@ -126,6 +133,7 @@ class WorkQueue:
             (self._name, reference, STATUS_NEW, STATUS_IN_PROGRESS)).fetchone()
         return row is not None
 
+    @sqlite_errors_as(WorkQueueError)
     def get_next(self, *, stale_after_s: Optional[float] = None,
                  max_retries: int = 3) -> Optional[WorkItem]:
         """Atomically claim the oldest ``new`` item, marking it in-progress.
@@ -178,12 +186,14 @@ class WorkQueue:
             "(status=? AND updated<?)) ORDER BY id LIMIT 1",
             (self._name, STATUS_NEW, STATUS_IN_PROGRESS, cutoff)).fetchone()
 
+    @sqlite_errors_as(WorkQueueError)
     def complete(self, item_id: int, *, output: Any = None,
                  claim: Optional[int] = None) -> None:
         """Mark an item successfully processed (refused if ``claim`` is stale)."""
         self._set_status(item_id, STATUS_SUCCESS, claim=claim,
                          output=json.dumps(output) if output is not None else "")
 
+    @sqlite_errors_as(WorkQueueError)
     def fail(self, item_id: int, error: str, *, kind: str = "application",
              max_retries: int = 3, claim: Optional[int] = None) -> str:
         """Fail an item; application errors retry, business errors don't.
@@ -225,6 +235,7 @@ class WorkQueue:
                     (item_id,)).fetchone()
                 _require_in_progress(item_id, row, claim)
 
+    @sqlite_errors_as(WorkQueueError)
     def stats(self) -> Dict[str, int]:
         """Return a count of items per status for this queue."""
         with self._connect() as conn:
@@ -237,6 +248,7 @@ class WorkQueue:
             counts[row["status"]] = int(row["c"])
         return counts
 
+    @sqlite_errors_as(WorkQueueError)
     def list_items(self, *, status: Optional[str] = None,
                    limit: int = 100) -> List[WorkItem]:
         """List items, optionally filtered by status."""

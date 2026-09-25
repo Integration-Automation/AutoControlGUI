@@ -51,10 +51,12 @@ class ABReport:
     def best_strategy(self) -> Optional[ABStrategyStats]:
         if not self.strategies:
             return None
-        return max(
+        best = max(
             self.strategies,
             key=lambda s: (s.success_rate, -s.average_ms),
         )
+        # A strategy that never succeeded is no recommendation, however fast.
+        return best if best.success_rate > 0 else None
 
     def to_dict(self) -> Dict[str, Any]:
         winner = self.best_strategy()
@@ -118,16 +120,18 @@ class ABStore:
             return stats
 
     def report(self, target_id: str) -> ABReport:
-        with self._lock:
-            self._load_if_needed()
+        """The target's stats as the file holds them now (another store may have written)."""
+        with self._lock, _file_lock(self._path):
+            self._reload()
             rows = [s for (tid, _), s in self._cache.items()
                     if tid == target_id]
         rows.sort(key=lambda s: s.strategy)
         return ABReport(target_id=target_id, strategies=rows)
 
     def all_reports(self) -> List[ABReport]:
-        with self._lock:
-            self._load_if_needed()
+        """A report per target, read afresh like :meth:`report`."""
+        with self._lock, _file_lock(self._path):
+            self._reload()
             target_ids = sorted({tid for tid, _ in self._cache})
         return [self.report(tid) for tid in target_ids]
 

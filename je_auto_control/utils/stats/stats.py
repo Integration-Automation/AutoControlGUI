@@ -12,7 +12,7 @@ reference implementations without SciPy. Imports no ``PySide6``.
 """
 import math
 import statistics
-from typing import Any, Dict, Sequence
+from typing import Any, Dict, List, Sequence
 
 from je_auto_control.utils.exception.exceptions import AutoControlException
 
@@ -34,9 +34,18 @@ def percentile(values: Sequence[float], q: float,
         return data[-1]
     if method == "nearest":
         return data[max(0, math.ceil(q / 100 * len(data)) - 1)]
+    return _interpolated(data, q)
+
+
+def _interpolated(data: List[float], q: float) -> float:
+    """The linearly interpolated ``q``-th percentile of sorted ``data``.
+
+    Not interpolated when it need not be: inf + f*(inf - inf) is NaN, so two
+    infinite samples made the percentile NaN.
+    """
     pos = (q / 100) * (len(data) - 1)
     low = math.floor(pos)
-    if low + 1 >= len(data):
+    if low + 1 >= len(data) or pos == low or data[low] == data[low + 1]:
         return data[low]
     return data[low] + (pos - low) * (data[low + 1] - data[low])
 
@@ -123,6 +132,10 @@ def _z_critical(alpha: float) -> float:
 
 def _t_critical(alpha: float, df: float) -> float:
     low, high = 0.0, 1000.0
+    # At df near 1 and a small alpha the quantile is far above 1000 (6366 at
+    # alpha 1e-4, df 1): grow the bracket before bisecting.
+    while _t_two_sided_p(high, df) > alpha and high < 1e12:
+        high *= 2
     for _ in range(100):
         mid = (low + high) / 2
         if _t_two_sided_p(mid, df) > alpha:

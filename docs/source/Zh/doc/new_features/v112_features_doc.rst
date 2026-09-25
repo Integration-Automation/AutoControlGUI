@@ -20,7 +20,7 @@
     format_list(["manzana", "pera", "uva"], locale="es")  # 'manzana, pera y uva'
     format_list(["A", "B", "C", "D"], locale="fr")        # 'A, B, C et D'
 
-``style`` 為 ``"and"``(連接)、``"or"``(選擇)或 ``"unit"``(僅以逗號分隔、無連接詞)。``locale`` 選擇連接詞與
+``style`` 為 ``"and"``(連接)、``"or"``(選擇)或 ``"unit"``(度量值，如 "3 ft, 7 in":英文只用逗號;``es`` / ``fr`` / ``pt`` / ``de`` 依 CLDR 單位樣式，結尾用連接詞)。``locale`` 選擇連接詞與
 序列逗號規則(``en`` / ``es`` / ``fr`` / ``de`` / ``pt``;英文使用牛津逗號,其餘不使用;未知地區回退為英文)。
 一項、兩項與空清單皆以特例處理。未知的 ``style`` 會拋出 ``ValueError``。
 

@@ -192,6 +192,7 @@ class UsbPassthroughClient:
         self._pending: Dict[int, _PendingRequest] = {}
         self._credits: Dict[int, int] = {}
         self._credit_events: Dict[int, threading.Event] = {}
+        self._claim_locks: Dict[int, threading.Lock] = {}
         self._open_pending: Optional[_PendingRequest] = None
         self._list_pending: Optional[_PendingRequest] = None
         # Reassembly buffers for fragmented replies, keyed by claim_id
@@ -340,7 +341,10 @@ class UsbPassthroughClient:
         return self._bind_claim(body)
 
     def _bind_claim(self, body: Dict[str, Any]) -> ClientHandle:
-        claim_id = int(body["claim_id"])
+        try:
+            claim_id = int(body["claim_id"])
+        except (KeyError, TypeError, ValueError) as error:
+            raise UsbClientError(f"host reply has no valid claim_id: {body!r}") from error
         with self._lock:
             self._credits[claim_id] = self._initial_credit_guess
             self._credit_events[claim_id] = threading.Event()
@@ -378,40 +382,56 @@ class UsbPassthroughClient:
         request = _PendingRequest(
             expected_op=Opcode.CLOSED, event=threading.Event(),
         )
+        with self._claim_lock(claim_id):
+            self._round_trip(claim_id, request,
+                             Frame(op=Opcode.CLOSE, claim_id=int(claim_id)), "CLOSE")
+        self._forget_claim(claim_id)
+
+    def _claim_lock(self, claim_id: int) -> threading.Lock:
+        """One exchange per claim at a time: replies carry only the claim id."""
+        with self._lock:
+            return self._claim_locks.setdefault(int(claim_id), threading.Lock())
+
+    def _round_trip(self, claim_id: int, request: "_PendingRequest",
+                    frame: Frame, label: str) -> None:
+        """Register ``request``, send ``frame`` and wait for its reply.
+
+        The entry is removed on every failure (a failed send or a missing
+        credit left it behind), and only if it is still this request's.
+        """
+        cid = int(claim_id)
         with self._lock:
             if self._closed:
                 raise UsbClientClosed(_CLIENT_SHUT_DOWN_MSG)
-            self._pending[int(claim_id)] = request
-        self._consume_credit(claim_id)
-        self._send(Frame(op=Opcode.CLOSE, claim_id=int(claim_id)))
+            self._pending[cid] = request
+        try:
+            self._consume_credit(cid)
+            self._send(frame)
+        except BaseException:
+            self._drop_pending(cid, request)
+            raise
         if not request.event.wait(timeout=self._reply_timeout):
-            with self._lock:
-                self._pending.pop(int(claim_id), None)
-            raise UsbClientTimeout(f"CLOSE timed out for claim {claim_id}")
+            self._drop_pending(cid, request)
+            raise UsbClientTimeout(f"{label} timed out for claim {cid}")
         if request.cancelled:
-            raise UsbClientClosed("client shut down before CLOSE reply")
-        self._forget_claim(claim_id)
+            raise UsbClientClosed(f"client shut down before {label} reply")
+
+    def _drop_pending(self, claim_id: int, request: "_PendingRequest") -> None:
+        with self._lock:
+            if self._pending.get(claim_id) is request:
+                self._pending.pop(claim_id, None)
 
     # --- Outbound: transfers ------------------------------------------------
 
     def _exchange_transfer(self, claim_id: int, op: Opcode,
                            body: Dict[str, Any]) -> bytes:
         request = _PendingRequest(expected_op=op, event=threading.Event())
-        with self._lock:
-            if self._closed:
-                raise UsbClientClosed(_CLIENT_SHUT_DOWN_MSG)
-            self._pending[int(claim_id)] = request
-        self._consume_credit(claim_id)
-        self._send(Frame(
-            op=op, claim_id=int(claim_id),
-            payload=json.dumps(body).encode("utf-8"),
-        ))
-        if not request.event.wait(timeout=self._reply_timeout):
-            with self._lock:
-                self._pending.pop(int(claim_id), None)
-            raise UsbClientTimeout(f"{op.name} timed out for claim {claim_id}")
-        if request.cancelled:
-            raise UsbClientClosed("client shut down before reply")
+        frame = Frame(op=op, claim_id=int(claim_id),
+                      payload=json.dumps(body).encode("utf-8"))
+        # Serialised per claim: a second transfer overwrote the first's
+        # pending entry, and one caller received the other's data.
+        with self._claim_lock(claim_id):
+            self._round_trip(claim_id, request, frame, op.name)
         if request.reply_op is None:
             raise UsbClientError("event signalled without a reply")
         if request.reply_op == Opcode.ERROR:
@@ -420,7 +440,10 @@ class UsbPassthroughClient:
         body = _decode_json(request.reply_payload)
         if not body.get("ok"):
             raise UsbClientError(body.get("error", "transfer failed"))
-        return base64.b64decode(body.get("data") or "")
+        try:
+            return base64.b64decode(body.get("data") or "", validate=True)
+        except (TypeError, ValueError) as error:   # binascii.Error is a ValueError
+            raise UsbClientError(f"host sent undecodable transfer data: {error}") from error
 
     # --- Inbound dispatch helpers ------------------------------------------
 
@@ -448,7 +471,7 @@ class UsbPassthroughClient:
     def _on_credit(self, frame: Frame) -> None:
         try:
             grant = int(_decode_json(frame.payload).get("credits", 0))
-        except (ValueError, KeyError):
+        except (TypeError, ValueError, OverflowError):   # null, a list, 1e999
             return
         if grant <= 0:
             return
@@ -457,9 +480,10 @@ class UsbPassthroughClient:
                 self._credits.get(int(frame.claim_id), 0) + grant
             )
             event = self._credit_events.get(int(frame.claim_id))
-        if event is not None:
-            event.set()
-            event.clear()
+            # Left set: a waiter clears it under the lock before it looks,
+            # so a grant between its check and its wait is never missed.
+            if event is not None:
+                event.set()
 
     def _on_error(self, frame: Frame) -> None:
         # An unsolicited ERROR — route to whichever pending request matches
@@ -504,9 +528,10 @@ class UsbPassthroughClient:
                 if available > 0:
                     self._credits[int(claim_id)] = available - 1
                     return
-            if event is None:
-                # No tracked claim — proceed without credit accounting.
-                return
+                if event is None:
+                    # No tracked claim — proceed without credit accounting.
+                    return
+                event.clear()
             if not event.wait(timeout=deadline_per_wait):
                 raise UsbClientTimeout(
                     f"timed out waiting for credit on claim {claim_id}",

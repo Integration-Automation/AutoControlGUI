@@ -41,6 +41,10 @@ from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 
 #: Where the session bus publishes the accessibility bus's address.
 _BUS_NAME = "org.a11y.Bus"
+#: Nodes a control search visits at most: the Windows backend's scan limits,
+#: for a search of every window and for one named window.
+_SEARCH_BUDGET = 1500
+_SEARCH_SCOPED_BUDGET = 20000
 _BUS_PATH = "/org/a11y/bus"
 
 #: The registry that owns the tree's root.
@@ -281,12 +285,14 @@ class LinuxAccessibilityBackend(AccessibilityBackend):
               window_title: Optional[str] = None,
               contains: bool = False) -> Optional[Reference]:
         """The reference behind the first element that matches."""
+        # One budget for the whole search, as the Windows backend's scan limits.
+        budget = [_SEARCH_SCOPED_BUDGET if window_title else _SEARCH_BUDGET]
         for application in connection.children(connection.root):
             owner = _safe_name(connection, application)
             if app_name is not None and owner != app_name:
                 continue
             found = self._search(connection, application, owner, name, role,
-                                 contains, window_title=window_title)
+                                 contains, window_title=window_title, budget=budget)
             if found is not None:
                 return found
         return None
@@ -294,28 +300,47 @@ class LinuxAccessibilityBackend(AccessibilityBackend):
     def _search(self, connection: _AtspiConnection, reference: Reference,
                 app_name: str, name: Optional[str], role: Optional[str],
                 contains: bool, depth: int = 0,
-                window_title: Optional[str] = None) -> Optional[Reference]:
-        if depth > 32:
+                window_title: Optional[str] = None,
+                budget: Optional[List[int]] = None) -> Optional[Reference]:
+        """Depth-first search for a match, within ``budget`` nodes in all.
+
+        Bounded by depth only, a window holding a 20,000-cell table made
+        100,000 bus calls (each with a 10 s timeout) to report "not found";
+        the Windows backend stops at the same limits.
+        """
+        budget = [_SEARCH_BUDGET] if budget is None else budget
+        if depth > 32 or budget[0] <= 0:
             return None
         try:
             children = connection.children(reference)
         except DBusError:
             return None
         for child in children:
-            converted = _convert(connection, child, app_name)
-            # The same window scoping _walk applies: window_title was
-            # dropped here, so get_value('Name', window_title='Firefox')
-            # read the first 'Name' of whichever app came first.
-            if depth == 0 and _outside_window(converted, window_title):
-                continue
-            if converted is not None and element_matches(
-                    converted, name, role, app_name, contains):
-                return child
-            deeper = self._search(connection, child, app_name, name, role,
-                                  contains, depth + 1)
-            if deeper is not None:
-                return deeper
+            found = self._search_child(connection, child, app_name,
+                                       (name, role, contains), depth, window_title, budget)
+            if found is not None or budget[0] < 0:
+                return found
         return None
+
+    def _search_child(self, connection: _AtspiConnection, child: Reference,
+                      app_name: str, query: Tuple[Optional[str], Optional[str], bool],
+                      depth: int, window_title: Optional[str],
+                      budget: List[int]) -> Optional[Reference]:
+        """``child`` if it matches ``(name, role, contains)``, else the first match below it."""
+        budget[0] -= 1
+        if budget[0] < 0:
+            return None
+        name, role, contains = query
+        converted = _convert(connection, child, app_name)
+        # The same window scoping _walk applies: window_title was dropped
+        # here, so get_value('Name', window_title='Firefox') read the first
+        # 'Name' of whichever app came first.
+        if depth == 0 and _outside_window(converted, window_title):
+            return None
+        if converted is not None and element_matches(converted, name, role, app_name, contains):
+            return child
+        return self._search(connection, child, app_name, name, role, contains,
+                            depth + 1, budget=budget)
 
     def get_value(self, name: Optional[str] = None, role: Optional[str] = None,
                   app_name: Optional[str] = None,

@@ -21,7 +21,9 @@ from datetime import datetime, timezone
 from time import monotonic
 from typing import Any, Dict, List, Optional, Tuple
 
-from je_auto_control.utils.exception.exceptions import ImageNotFoundException
+from je_auto_control.utils.exception.exceptions import (
+    AutoControlException, ImageNotFoundException,
+)
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.self_healing.heal_log import (
     HealEvent, HealEventLog, default_heal_log,
@@ -33,7 +35,7 @@ METHOD_VLM = "vlm"
 METHOD_MISS = "miss"
 
 
-class SelfHealError(RuntimeError):
+class SelfHealError(AutoControlException, RuntimeError):
     """Raised by self-heal calls when ``raise_on_miss=True`` and both
     locator strategies (template match and VLM) come up empty.
     """
@@ -149,7 +151,7 @@ def _try_image(template_path: Optional[str],
         return (int(cx), int(cy)), None
     except ImageNotFoundException as exc:
         return None, str(exc)
-    except (OSError, RuntimeError, ValueError, TypeError) as exc:
+    except (AutoControlException, OSError, RuntimeError, ValueError, TypeError) as exc:
         return None, repr(exc)
 
 
@@ -164,7 +166,9 @@ def _try_vlm(description: Optional[str],
         coords = locate_by_description(
             description, screen_region=screen_region, model=model,
         )
-    except (OSError, RuntimeError, ValueError, TypeError) as exc:
+    # AutoControlException: a failed screenshot (AutoControlScreenException)
+    # escaped the self-heal and left no heal-log entry.
+    except (AutoControlException, OSError, RuntimeError, ValueError, TypeError) as exc:
         return None, repr(exc)
     if coords is None:
         return None, "vlm returned no match"

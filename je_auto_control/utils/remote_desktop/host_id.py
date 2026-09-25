@@ -17,12 +17,14 @@ import secrets
 from pathlib import Path
 from typing import Optional
 
+from je_auto_control.utils.exception.exceptions import AutoControlException
+
 _HOST_ID_DIGITS = 9
 _DEFAULT_PATH_RELATIVE = ".je_auto_control/remote_host_id"
 _HOST_ID_PATTERN = re.compile(r"^\d{9}$")
 
 
-class HostIdError(ValueError):
+class HostIdError(AutoControlException, ValueError):
     """Raised when a host ID is malformed."""
 
 

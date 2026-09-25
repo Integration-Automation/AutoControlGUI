@@ -14,6 +14,8 @@ import struct
 from dataclasses import dataclass, field
 from typing import List, Optional, Tuple
 
+from je_auto_control.utils.exception.exceptions import AutoControlException
+
 
 PROTOCOL_VERSION = 0x0111  # kernel constant; stable since 2010
 
@@ -65,7 +67,7 @@ _RET_UNLINK_FMT = "!i24x"
 _RET_UNLINK_SIZE = struct.calcsize(_RET_UNLINK_FMT)
 
 
-class UsbIpError(ValueError):
+class UsbIpError(AutoControlException, ValueError):
     """Raised when the wire bytes don't match the expected layout."""
 
 
@@ -263,6 +265,16 @@ def peek_transfer_length(header: bytes, body: bytes) -> Tuple[int, int]:
         _CMD_SUBMIT_FMT, body[:_CMD_SUBMIT_SIZE],
     )
     return direction, tlen
+
+
+def peek_iso_packets(body: bytes) -> int:
+    """``number_of_packets`` of a CMD_SUBMIT body, signed: -1 or 0 for a non-isochronous URB."""
+    if len(body) < _CMD_SUBMIT_SIZE:
+        raise UsbIpError(f"CMD_SUBMIT body needs {_CMD_SUBMIT_SIZE} bytes, got {len(body)}")
+    _flags, _tlen, _sframe, npkt, _interval, _setup = struct.unpack(
+        _CMD_SUBMIT_FMT, body[:_CMD_SUBMIT_SIZE],
+    )
+    return npkt - (1 << 32) if npkt >= (1 << 31) else npkt
 
 
 # --- URB response encoder ------------------------------------------

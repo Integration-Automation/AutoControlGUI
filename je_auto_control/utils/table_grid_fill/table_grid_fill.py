@@ -73,6 +73,26 @@ def _placed(box: Box, col_spans, row_spans, overlap: float):
     return row, col
 
 
+def _in_reading_order(boxes: Sequence[Box]) -> List[Box]:
+    """Order a cell's boxes line by line, left to right within a line.
+
+    A box joins a line when its vertical centre is within half that line's
+    first box height. Sorting on ``(left, top, ...)`` alone interleaved a
+    two-line cell by x: "Hello world" over "foo" came out "Hello foo world".
+    """
+    lines: List[Tuple[float, float, List[Box]]] = []
+    for box in sorted(boxes, key=lambda item: _box_bounds(item)[1]):
+        _left, top, _right, bottom = _box_bounds(box)
+        center = (top + bottom) / 2
+        line = next((entry for entry in lines if abs(center - entry[0]) <= entry[1]), None)
+        if line is None:
+            lines.append((center, max(1.0, (bottom - top) / 2), [box]))
+        else:
+            line[2].append(box)
+    return [box for _center, _half, items in lines
+            for box in sorted(items, key=lambda item: _box_bounds(item)[0])]
+
+
 def assign_text_to_grid(grid: Dict[str, Any], text_boxes: Sequence[Box], *,
                         overlap: float = 0.4) -> List[List[str]]:
     """Return an ``R x C`` table of cell text from a grid + OCR boxes (reading order)."""
@@ -86,7 +106,7 @@ def assign_text_to_grid(grid: Dict[str, Any], text_boxes: Sequence[Box], *,
     for row in range(len(row_spans)):
         cells = []
         for col in range(len(col_spans)):
-            ordered = sorted(buckets.get((row, col), []), key=_box_bounds)
+            ordered = _in_reading_order(buckets.get((row, col), []))
             cells.append(" ".join(str(b.get("text", "")) for b in ordered).strip())
         table.append(cells)
     return table

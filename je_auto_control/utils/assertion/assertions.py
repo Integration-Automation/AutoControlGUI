@@ -18,6 +18,7 @@ without instantiating Qt.
 """
 from __future__ import annotations
 
+import re
 import time
 from dataclasses import asdict, dataclass
 from pathlib import Path
@@ -112,8 +113,11 @@ def assert_text(text: str,
     """
     if regex:
         from je_auto_control.utils.ocr.ocr_engine import find_text_regex
+        # ignore_case (default True) applies to a pattern too, as it does
+        # in assert_clipboard; the regex branch matched case-sensitively.
         found = bool(find_text_regex(
             text, lang=lang, region=region, min_confidence=min_confidence,
+            flags=re.IGNORECASE if ignore_case else 0,
         ))
         observed = _region_text(region, lang, min_confidence)
     else:
@@ -321,26 +325,16 @@ def assert_file(path: str,
 def _http_probe(url: str, timeout: float, method: str
                 ) -> tuple[int, str]:
     """Issue an HTTP(S) request, returning (status_code, body_text)."""
-    import urllib.error
-    import urllib.request
+    from je_auto_control.utils.http_client.http_client import build_call, perform_call
     scheme = url.split("://", 1)[0].lower() if "://" in url else ""
     if scheme not in ("http", "https"):
         raise AutoControlAssertionException(
             f"assert_http: only http/https URLs allowed, got {url!r}"
         )
-    request = urllib.request.Request(url, method=method.upper())
-    try:
-        with urllib.request.urlopen(  # nosec B310  # reason: scheme allow-listed
-                request, timeout=float(timeout)) as response:
-            body = response.read().decode("utf-8", errors="replace")
-            return int(response.status), body
-    except urllib.error.HTTPError as error:
-        body = ""
-        try:
-            body = error.read().decode("utf-8", errors="replace")
-        except (OSError, ValueError):
-            body = ""
-        return int(error.code), body
+    # The package's one outbound path: it bypassed the egress policy, the
+    # redirect checks and the 64 MiB body cap.
+    response = perform_call(build_call(url, method=method, timeout=float(timeout)))
+    return int(response["status"]), str(response.get("text") or "")
 
 
 def assert_http(url: str,
@@ -402,6 +396,9 @@ def _running_process_names(name_contains: str) -> List[str]:
         raise AutoControlException(
             "process checks require psutil — pip install psutil"
         ) from error
+    if not str(name_contains).strip():
+        # "" is in every name: assert_process("") always passed.
+        raise ValueError("a process check needs a non-empty name")
     needle = name_contains.lower()
     names: List[str] = []
     for proc in psutil.process_iter(["name"]):

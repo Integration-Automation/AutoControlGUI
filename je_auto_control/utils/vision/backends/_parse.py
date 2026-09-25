@@ -3,9 +3,13 @@ import re
 from typing import Optional, Tuple
 
 # Anchored so a pair is never cut out of a longer number: "123456, 7" read as
-# (23456, 7) and "1.5, 2" as (5, 2).
+# (23456, 7). Decimals are read whole and rounded, and "x=", "x:", '"x":'
+# labels are allowed: "x=512, y=300", '{"x": 512, "y": 300}' and
+# "512.4, 300.6" all came back as "not found".
+_NUMBER = r"-?\d{1,5}(?:\.\d+)?"
+_LABEL = r"""(?:["']?[xy]["']?\s*[:=]\s*)?"""
 _COORDS_RE = re.compile(
-    r"(?<![\d.])(-?\d{1,5})(?:\s*,\s*|\s+)(-?\d{1,5})(?!\d)(?!\.\d)")
+    rf"(?<![\d.]){_LABEL}({_NUMBER})(?:\s*,\s*|\s+){_LABEL}({_NUMBER})(?!\d)(?!\.\d)")
 
 
 def parse_coords(text: str) -> Optional[Tuple[int, int]]:
@@ -25,7 +29,7 @@ def parse_coords(text: str) -> Optional[Tuple[int, int]]:
     if match is None:
         return None
     try:
-        return int(match.group(1)), int(match.group(2))
+        return int(round(float(match.group(1)))), int(round(float(match.group(2))))
     except ValueError:
         return None
 

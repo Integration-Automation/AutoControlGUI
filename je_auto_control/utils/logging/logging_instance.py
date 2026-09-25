@@ -22,6 +22,7 @@ later record.
 """
 import logging
 import os
+import tempfile
 import warnings
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
@@ -54,7 +55,13 @@ def default_log_file() -> Path:
     configured = os.environ.get(LOG_FILE_ENV, "").strip()
     if configured:
         return Path(configured).expanduser()
-    return Path.home() / ".je_auto_control" / "logs" / "AutoControlGUI.log"
+    try:
+        home = Path.home()
+    except RuntimeError:
+        # No home directory (a service account, a scrubbed environment): the
+        # module-level handler raised here and `import je_auto_control` failed.
+        home = Path(tempfile.gettempdir())
+    return home / ".je_auto_control" / "logs" / "AutoControlGUI.log"
 
 
 def _rotate_if_large(path: Path, limit: int) -> None:

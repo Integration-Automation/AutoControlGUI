@@ -14,8 +14,18 @@ from typing import Any, Callable, List, Optional, Sequence
 
 
 def _gray_resized(image: Any, size: tuple) -> Any:
+    """``image`` (PIL, RGB ndarray or path) as a resized grayscale PIL image.
+
+    An ndarray was passed to ``Image.open`` and failed with a bare
+    ``AttributeError``, although every other image helper accepts arrays.
+    """
     from PIL import Image
-    img = image if hasattr(image, "convert") else Image.open(image)
+    if hasattr(image, "convert"):
+        img = image
+    elif hasattr(image, "__array_interface__"):
+        img = Image.fromarray(image)
+    else:
+        img = Image.open(image)
     return img.convert("L").resize(size)
 
 

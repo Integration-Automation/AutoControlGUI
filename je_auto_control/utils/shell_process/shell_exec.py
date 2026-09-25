@@ -1,10 +1,14 @@
+import locale
+import os
 import queue
 import shlex
+import signal
 import subprocess  # nosec B404  # reason: ShellManager intentionally invokes user-supplied subprocesses without shell
 import sys
 from threading import Thread
-from typing import List, Union
+from typing import List, Optional, Union
 
+from je_auto_control.utils.exception.exceptions import AutoControlActionException
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 
 
@@ -46,6 +50,67 @@ def refuse_batch_metacharacters(args: Union[str, List[str]]) -> None:
             raise ValueError(f"batch file argument {arg!r} contains cmd metacharacters")
 
 
+def program_of(shell_command: Union[str, List[str], None]) -> str:
+    """The program a command runs, which is all of it that may be logged.
+
+    The arguments can hold a ``${secrets.*}`` value already filled in, and
+    the whole command used to be logged, and written to the log file.
+    """
+    if isinstance(shell_command, list):
+        return str(shell_command[0]) if shell_command else ""
+    text = str(shell_command or "").strip()
+    if text.startswith('"'):
+        return text[1:].split('"', 1)[0]
+    return text.split(" ", 1)[0]
+
+
+def _taskkill_path() -> str:
+    return os.path.join(os.environ.get("SystemRoot", r"C:\Windows"), "System32", "taskkill.exe")
+
+
+def _kill_tree(process: subprocess.Popen) -> None:
+    """Kill ``process`` and everything it started."""
+    if sys.platform == "win32":
+        taskkill = [_taskkill_path(), "/T", "/F", "/PID", str(process.pid)]
+        subprocess.run(taskkill, capture_output=True, timeout=10, check=False)  # nosec B603  # nosemgrep  # reason: fixed system tool, our child's pid
+    else:
+        try:
+            os.killpg(process.pid, signal.SIGKILL)
+        except (ProcessLookupError, PermissionError):
+            pass
+    try:
+        process.kill()
+    except OSError:
+        pass
+
+
+def run_captured(argv: Union[str, List[str]], timeout_s: float,
+                 input_bytes: Optional[bytes] = None) -> subprocess.CompletedProcess:
+    """Run ``argv`` (no shell), capturing stdout and stderr as bytes, for at most ``timeout_s``.
+
+    ``subprocess.run(timeout=...)`` kills only the program itself and then
+    waits, without a limit, for everything still holding its pipes: a
+    program that started one of its own (``cmd /c ping -n 9 ...`` took 8 s
+    with a 1 s timeout) held the caller until it ended. On timeout the
+    whole process tree is killed, then ``TimeoutExpired`` is raised.
+    """
+    # nosemgrep: python.lang.security.audit.dangerous-subprocess-use-audit.dangerous-subprocess-use-audit
+    process = subprocess.Popen(argv, stdin=subprocess.PIPE if input_bytes is not None else None,  # nosec B603  # reason: argv list or CreateProcess line, never a shell
+                               stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                               # its own process group on POSIX, so the timeout can end all of it
+                               start_new_session=sys.platform != "win32")
+    try:
+        stdout, stderr = process.communicate(input_bytes, timeout=timeout_s)
+    except subprocess.TimeoutExpired:
+        _kill_tree(process)
+        try:
+            process.communicate(timeout=5)
+        except subprocess.TimeoutExpired:
+            autocontrol_logger.error("%s: output pipes still open after the kill", program_of(argv))
+        raise
+    return subprocess.CompletedProcess(argv, process.returncode, stdout, stderr)  # nosemgrep  # reason: runs nothing
+
+
 class ShellManager:
     """
     ShellManager
@@ -55,9 +120,11 @@ class ShellManager:
     - 將輸出放入 queue，供 pull_text() 取出
     """
 
-    def __init__(self, shell_encoding: str = "utf-8", program_buffer: int = 10240000):
+    def __init__(self, shell_encoding: Optional[str] = None, program_buffer: int = 10240000):
         """
-        :param shell_encoding: shell command read output encoding
+        :param shell_encoding: shell command read output encoding; by default
+            the locale's, which is what a console program writes on Windows
+            (UTF-8 turned ``磁碟區`` into replacement characters)
         :param program_buffer: buffer size
         """
         self.read_program_error_output_from_thread: Union[Thread, None] = None
@@ -66,7 +133,7 @@ class ShellManager:
         self.process: Union[subprocess.Popen, None] = None
         self.run_output_queue: queue.Queue = queue.Queue()
         self.run_error_queue: queue.Queue = queue.Queue()
-        self.program_encoding: str = shell_encoding
+        self.program_encoding: str = shell_encoding or locale.getpreferredencoding(False)
         self.program_buffer: int = program_buffer
 
     def exec_shell(self, shell_command: Union[str, List[str], None] = None, *,
@@ -76,12 +143,15 @@ class ShellManager:
         執行 shell 指令 (shell=False，呼叫端需自備 argv 或可被 shlex 切分的字串)
 
         ``command`` is accepted as another name for ``shell_command`` -- the
-        name ``AC_shell_to_var`` and the documented examples use.
+        name ``AC_shell_to_var`` and the documented examples use. The manager
+        runs one program at a time: starting another ends the one before.
+        A program that cannot start raises ``AutoControlActionException``;
+        it used to be logged and reported as success.
         """
         shell_command = shell_command if shell_command is not None else command
         if shell_command is None:
             raise ValueError("exec_shell needs shell_command")
-        autocontrol_logger.info(f"exec_shell, shell_command: {shell_command}")
+        autocontrol_logger.info("exec_shell: %s", program_of(shell_command))
         try:
             self.exit_program()
             args = command_args(shell_command)
@@ -111,9 +181,8 @@ class ShellManager:
             self.read_program_error_output_from_thread.start()
 
         except (OSError, ValueError) as error:
-            autocontrol_logger.error(
-                f"exec_shell failed, shell_command: {shell_command}, error: {repr(error)}"
-            )
+            raise AutoControlActionException(
+                f"exec_shell: {program_of(shell_command)} could not start: {error}") from error
 
     def pull_text(self) -> None:
         """

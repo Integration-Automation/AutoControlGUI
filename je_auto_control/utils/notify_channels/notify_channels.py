@@ -17,6 +17,7 @@ TRANSPORT_RAW = "raw"
 TRANSPORT_SLACK = "slack"
 TRANSPORT_DISCORD = "discord"
 TRANSPORT_TEAMS = "teams"
+_TRANSPORTS = frozenset({TRANSPORT_RAW, TRANSPORT_SLACK, TRANSPORT_DISCORD, TRANSPORT_TEAMS})
 
 _STATE: Dict[str, Any] = {"poster": None}
 
@@ -73,7 +74,11 @@ class WebhookChannel:
                  ) -> None:
         """``transport`` shapes the payload; ``poster`` overrides the sender."""
         self._url = url
-        self._transport = transport
+        # Lower-cased and checked: "Discord" fell back to the raw payload,
+        # which Discord rejects, with no error.
+        self._transport = str(transport).strip().lower()
+        if self._transport not in _TRANSPORTS:
+            raise ValueError(f"unknown webhook transport {transport!r}; use one of {sorted(_TRANSPORTS)}")
         self._poster = poster
 
     def send(self, text: str, *, title: Optional[str] = None) -> WebhookResult:

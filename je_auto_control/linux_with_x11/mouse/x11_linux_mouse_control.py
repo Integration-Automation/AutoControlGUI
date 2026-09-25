@@ -139,8 +139,13 @@ def send_mouse_event_to_window(window_id: int, mouse_keycode: int,
     :param y: optional y position 選擇性 Y 座標
     """
     window = display.create_resource_object("window", window_id)
-    for ev_type in (X.ButtonPress, X.ButtonRelease):
-        ev = protocol.event.ButtonPress(
+    # The defaults: None packed into the event raised struct.error.
+    x, y = (int(x) if x is not None else 0), (int(y) if y is not None else 0)
+    # One event object per type: python-xlib encodes the bytes when the event
+    # is built, so setting ``type`` afterwards sent two ButtonPress events.
+    for factory, mask in ((protocol.event.ButtonPress, X.ButtonPressMask),
+                          (protocol.event.ButtonRelease, X.ButtonReleaseMask)):
+        window.send_event(factory(
             time=X.CurrentTime,
             root=display.screen().root,
             window=window,
@@ -148,8 +153,6 @@ def send_mouse_event_to_window(window_id: int, mouse_keycode: int,
             child=X.NONE,
             root_x=x, root_y=y, event_x=x, event_y=y,
             state=0,
-            detail=mouse_keycode
-        )
-        ev.type = ev_type
-        window.send_event(ev, propagate=True)
+            detail=mouse_keycode,
+        ), propagate=True, event_mask=mask)
     display.flush()

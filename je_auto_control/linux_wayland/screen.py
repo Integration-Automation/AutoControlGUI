@@ -33,6 +33,10 @@ from je_auto_control.utils.exception.exceptions import AutoControlScreenExceptio
 _MODE_RE = re.compile(r"(\d{1,5})x(\d{1,5})")
 _POSITION_RE = re.compile(r"^\s*Position:\s*(-?\d{1,5}),(-?\d{1,5})")
 _ENABLED_RE = re.compile(r"^\s*Enabled:\s*(\w+)")
+_TRANSFORM_RE = re.compile(r"^\s*Transform:\s*(\S+)")
+_SCALE_RE = re.compile(r"^\s*Scale:\s*(\d+(?:\.\d+)?)")
+# Transforms that turn the output on its side, so width and height swap.
+_SIDEWAYS = frozenset({"90", "270", "flipped-90", "flipped-270"})
 
 
 def _validate_region(screen_region: Sequence[int]) -> Tuple[int, int, int, int]:
@@ -182,17 +186,33 @@ class _OutputBlock(NamedTuple):
     mode: Optional[Tuple[int, int]] = None
     position: Optional[Tuple[int, int]] = None
     enabled: bool = True
+    transform: str = "normal"
+    scale: float = 1.0
+
+    def logical_size(self) -> Tuple[int, int]:
+        """The space the output takes in the layout: mode, rotated, divided by the scale."""
+        width, height = self.mode or (0, 0)
+        if self.transform in _SIDEWAYS:
+            width, height = height, width
+        scale = self.scale if self.scale > 0 else 1.0
+        return round(width / scale), round(height / scale)
 
 
 def _read_field(block: _OutputBlock, line: str) -> _OutputBlock:
     """Fold one indented ``wlr-randr`` field line into the block it belongs to.
 
-    Lines that name none of the three fields leave the block untouched, which
-    is most of them — modes other than the current one, refresh rates, scale.
+    Lines that name none of the fields leave the block untouched, which is
+    most of them — modes other than the current one, refresh rates.
     """
     enabled_match = _ENABLED_RE.match(line)
     if enabled_match:
         return block._replace(enabled=enabled_match.group(1).lower() == "yes")
+    transform_match = _TRANSFORM_RE.match(line)
+    if transform_match:
+        return block._replace(transform=transform_match.group(1).lower())
+    scale_match = _SCALE_RE.match(line)
+    if scale_match:
+        return block._replace(scale=float(scale_match.group(1)))
     position_match = _POSITION_RE.match(line)
     if position_match:
         return block._replace(position=(int(position_match.group(1)),
@@ -226,8 +246,10 @@ def parse_wlr_randr(text: str) -> List[Tuple[int, int, int, int]]:
 
     def flush(finished: _OutputBlock) -> None:
         if finished.enabled and finished.mode is not None:
+            # The layout size, not the mode: a rotated 1920x1080 output is
+            # 1080 wide and a scale-2 4K output 1920.
             x, y = finished.position or (0, 0)
-            rects.append((x, y, finished.mode[0], finished.mode[1]))
+            rects.append((x, y, *finished.logical_size()))
 
     for line in text.splitlines():
         if line and not line[0].isspace():

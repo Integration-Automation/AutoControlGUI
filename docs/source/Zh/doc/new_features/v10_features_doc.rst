@@ -57,7 +57,8 @@ Dispatcher / performer
   :class:`BusinessError` 或傳 ``kind="business"``。
 
 ``stats()`` 回傳各狀態計數(``new`` / ``in_progress`` / ``success`` /
-``failed``),供儀表板與執行報告使用。
+``failed``),供儀表板與執行報告使用。資料庫無法開啟或使用(不是 SQLite 檔、鎖定逾時)時丟出
+``WorkQueueError``(屬於 ``AutoControlException``)。
 
 
 執行器指令

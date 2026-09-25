@@ -10,9 +10,10 @@ from __future__ import annotations
 from typing import Any, Dict, Optional, Tuple
 
 from je_auto_control.ios.client import IOSDevice, default_ios_device, translate_device_errors
+from je_auto_control.utils.exception.exceptions import AutoControlException
 
 
-class ElementNotFoundError(LookupError):
+class ElementNotFoundError(AutoControlException, LookupError):
     """Raised when no XCUITest element matches the supplied selector."""
 
 

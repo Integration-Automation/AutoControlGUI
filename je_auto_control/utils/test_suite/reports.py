@@ -16,7 +16,7 @@ import uuid
 # Write-only XML generation; never parses untrusted input.
 import xml.etree.ElementTree as ET  # nosemgrep  # nosec B405  # reason: see above
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Tuple
 
 from je_auto_control.utils.test_suite.result import (
     STATUS_ERROR, STATUS_FAILED, STATUS_SKIPPED, TestSuiteResult,
@@ -100,7 +100,8 @@ def _utf8(text: str) -> str:
 
 
 def _allure_payload(result: TestSuiteResult, name: str, status: str,
-                    message: str, tags: List[str]) -> Dict[str, Any]:
+                    message: str, tags: List[str],
+                    span_ms: Tuple[int, int] = (0, 0)) -> Dict[str, Any]:
     labels = [{"name": "suite", "value": _utf8(result.name)}]
     labels.extend({"name": "tag", "value": _utf8(tag)} for tag in tags)
     payload: Dict[str, Any] = {
@@ -109,17 +110,33 @@ def _allure_payload(result: TestSuiteResult, name: str, status: str,
         "fullName": _utf8(f"{result.name}#{name}"),
         "status": status,
         "labels": labels,
+        # Allure reads a result's duration from start/stop (epoch ms); without
+        # them every case showed no duration.
+        "start": span_ms[0],
+        "stop": span_ms[1],
     }
     if message:
         payload["statusDetails"] = {"message": _utf8(message)}
     return payload
 
 
-def _allure_case(result: TestSuiteResult, case: Any) -> Dict[str, Any]:
-    """Build one Allure-2 result dict for a case."""
+def _allure_case(result: TestSuiteResult, case: Any,
+                 start_s: float) -> Dict[str, Any]:
+    """Build one Allure-2 result dict for a case that started at ``start_s`` (epoch)."""
+    stop_s = start_s + max(float(case.duration_s or 0.0), 0.0)
     return _allure_payload(result, case.name,
                            _ALLURE_STATUS.get(case.status, "unknown"),
-                           case.message, list(case.tags))
+                           case.message, list(case.tags),
+                           (round(start_s * 1000), round(stop_s * 1000)))
+
+
+def _case_starts(result: TestSuiteResult) -> List[float]:
+    """Each case's start (epoch seconds): the cases run one after another from ``started_at``."""
+    starts, clock = [], float(result.started_at)
+    for case in result.cases:
+        starts.append(clock)
+        clock += max(float(case.duration_s or 0.0), 0.0)
+    return starts
 
 
 def to_allure_results(result: TestSuiteResult) -> List[Dict[str, Any]]:
@@ -128,10 +145,13 @@ def to_allure_results(result: TestSuiteResult) -> List[Dict[str, Any]]:
     A setup failure is a ``broken`` ``<setup>`` result, as in the JUnit
     report; it used to produce no result at all, so Allure showed nothing.
     """
-    payloads = [_allure_case(result, case) for case in result.cases]
+    payloads = [_allure_case(result, case, start)
+                for case, start in zip(result.cases, _case_starts(result))]
     if result.setup_error:
+        started_ms = round(float(result.started_at) * 1000)
         payloads.insert(0, _allure_payload(result, "<setup>", "broken",
-                                           result.setup_error, []))
+                                           result.setup_error, [],
+                                           (started_ms, started_ms)))
     return payloads
 
 

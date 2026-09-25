@@ -141,6 +141,14 @@ def default_tracer() -> Tracer:
         return _default_tracer
 
 
+def _safe_repr(value: Any) -> str:
+    """``repr`` for a span attribute; a failing ``__repr__`` must not fail the traced call."""
+    try:
+        return repr(value)[:120]
+    except Exception:  # noqa: BLE001  # reason: any __repr__ error; the attribute is diagnostic only
+        return f"<{type(value).__name__}>"
+
+
 def traced(span_name: Optional[str] = None,
            *, tracer: Optional[Tracer] = None,
            record_args: bool = False) -> Callable[..., Callable[..., Any]]:
@@ -155,10 +163,10 @@ def traced(span_name: Optional[str] = None,
             attrs = None
             if record_args:
                 attrs = {
-                    f"arg.{i}": repr(a)[:120] for i, a in enumerate(args)
+                    f"arg.{i}": _safe_repr(a) for i, a in enumerate(args)
                 }
                 attrs.update({
-                    f"kwarg.{k}": repr(v)[:120] for k, v in kwargs.items()
+                    f"kwarg.{k}": _safe_repr(v) for k, v in kwargs.items()
                 })
             with real_tracer.start_as_current_span(name, attrs):
                 return fn(*args, **kwargs)

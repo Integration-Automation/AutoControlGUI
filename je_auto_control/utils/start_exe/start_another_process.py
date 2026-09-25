@@ -25,14 +25,9 @@ def start_exe(exe_path: str) -> None:
         # space ("C:\\Program Files\\...\\foo.exe") into the wrong argv.
         # The resolved path: a bare "myapp" passed the check against the
         # working directory and then launched whatever PATH found first.
+        # A launch failure raises AutoControlActionException, an
+        # AutoControlException as documented.
         process_manager.exec_shell([str(exe_path_obj.resolve())])
-        if process_manager.process is None:
-            # exec_shell swallows launch failures (OSError) internally and
-            # leaves process unset; surface it as the documented exception.
-            autocontrol_logger.error(
-                f"start_exe, exe_path: {exe_path_obj}, launch failed"
-            )
-            raise AutoControlException(f"Failed to execute {exe_path_obj}")
         autocontrol_logger.info(f"Successfully started executable: {exe_path_obj}")
     else:
         autocontrol_logger.error(

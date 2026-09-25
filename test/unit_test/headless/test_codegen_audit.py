@@ -41,7 +41,7 @@ def test_finite_values_need_no_math_import():
 def test_execute_action_keeps_the_executor_arguments():
     code = generate_code([["AC_execute_action", {"action_list": [], "raise_on_error": True}]],
                          target="python")
-    assert "ac.execute_action([['AC_execute_action'" in code
+    assert "ac.executor.execute_action([['AC_execute_action'" in code
 
 
 def test_other_commands_still_become_direct_calls():

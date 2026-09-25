@@ -30,7 +30,8 @@ Headless API
 content_type?}`` dicts), returning ``(content_type, body_bytes)``. Pass an
 explicit ``boundary`` for a byte-stable body, or call ``new_boundary`` for a
 fresh token. ``parse_multipart`` reads a body back into ``{fields, files}`` (each
-file as ``{name, filename, content_type, content}``).
+file as ``{name, filename, content_type, content, content_base64}``: ``content``
+is the part decoded as UTF-8, ``content_base64`` its exact bytes for binary files).
 
 Executor commands
 -----------------

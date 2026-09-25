@@ -5,9 +5,18 @@ configured level is forwarded to the MCP client as a notification so
 the client can mirror server-side activity in its UI. The handler is
 no-op when the server's notifier is not yet connected — useful for
 unit tests that don't actually start a transport.
+
+MCP 2026-07-28 ties log records to requests: a server sends them only for a
+request that set ``io.modelcontextprotocol/logLevel``, at that level or above.
+:meth:`MCPLogBridge.request_scope` applies that to the records of the thread
+serving such a request; ``forward_unscoped`` decides the rest.
 """
+import contextlib
 import logging
-from typing import Any, Callable, Dict, Optional
+import threading
+from typing import Any, Callable, Dict, Iterator, Optional
+
+_NO_SCOPE = object()
 
 # MCP log levels (RFC 5424 syslog names) mapped from stdlib logging levels.
 _LEVEL_NAME_FROM_LEVEL = {
@@ -54,14 +63,33 @@ class MCPLogBridge(logging.Handler):
         super().__init__(level=level)
         self._notifier = notifier
         self._logger_name = str(logger_name)
+        self._scope = threading.local()
+        #: Whether records from outside any request scope are forwarded.
+        self.forward_unscoped = True
 
     def set_notifier(self, notifier: Optional[
             Callable[[str, Dict[str, Any]], None]]) -> None:
         self._notifier = notifier
 
+    @contextlib.contextmanager
+    def request_scope(self, level: Optional[int]) -> Iterator[None]:
+        """Forward this thread's records at ``level`` or above only; none for ``None``."""
+        prior = getattr(self._scope, "level", _NO_SCOPE)
+        self._scope.level = level
+        try:
+            yield
+        finally:
+            self._scope.level = prior
+
+    def _forwards(self, record: logging.LogRecord) -> bool:
+        level = getattr(self._scope, "level", _NO_SCOPE)
+        if level is _NO_SCOPE:
+            return self.forward_unscoped
+        return isinstance(level, int) and record.levelno >= level
+
     def emit(self, record: logging.LogRecord) -> None:
         notifier = self._notifier
-        if notifier is None:
+        if notifier is None or not self._forwards(record):
             return
         try:
             text = record.getMessage()

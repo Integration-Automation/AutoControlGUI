@@ -44,7 +44,8 @@ Builder 項目。視覺與視窗功能的 geometry / IO 操作皆可注入,因�
   其他平台除非給了 ``scroller=``,否則拋出 ``ValueError``。``AC_scroll_to_find``。
 * **區域顏色統計** — ``region_color_stats(source, region)`` 回傳區域的
   ``average_rgb``、``dominant_rgb`` 及該色的像素占比(量化色彩空間 → 取
-  最多的 bucket → 平均其真實像素)。``AC_region_color_stats``。
+  最多的 bucket → 平均其真實像素)。超出影像的區域會裁到影像範圍內。
+  ``AC_region_color_stats``。
 * **讀取 QR code** — ``read_qr_codes(source, region)`` 以 OpenCV 的
   ``QRCodeDetector`` 解碼 QR(不需新相依)。``AC_read_qr``。
 
@@ -54,7 +55,8 @@ Builder 項目。視覺與視窗功能的 geometry / IO 操作皆可注入,因�
 
 * **可重用巨集** — ``AC_define_macro`` 註冊具名、帶參數的動作子程序;
   ``AC_call_macro`` 以 ``${arg}`` 綁定呼叫它——補上 loop / if 原語表達
-  不了的「可呼叫函式」。
+  不了的「可呼叫函式」。參數只屬於這次呼叫:呼叫結束後(包括巢狀或遞迴呼叫),
+  呼叫端同名的變數會恢復原值。
 * **同進程平行** — ``AC_parallel`` 讓多個分支動作清單並行執行,各自在
   獨立的全新 executor 上,因此分支不會在共享變數上互相 race(跨主機 DAG
   的同進程版)。
@@ -62,8 +64,9 @@ Builder 項目。視覺與視窗功能的 geometry / IO 操作皆可注入,因�
   ``AC_assert_duration`` 在區塊耗時超過預算時判失敗——銜接 profiler 與
   斷言 DSL 的延遲回歸守門。
 * **讀進變數** — 把外部資料綁進流程範圍供後續 ``${var}`` 使用:
-  ``AC_ocr_to_var``(區域文字)、``AC_shell_to_var``(命令 stdout,以 ``encoding`` 解碼,預設為系統地區設定的編碼)、
-  ``AC_read_file_to_var``(檔案文字)、``AC_http_to_var``(GET body 或
+  ``AC_ocr_to_var``(區域文字)、``AC_shell_to_var``(命令 stdout,以 ``encoding`` 解碼,預設為系統地區設定的編碼;
+  逾時會結束該命令及它啟動的所有程序,``.bat`` / ``.cmd`` 的參數含 cmd 語法時會拒絕)、
+  ``AC_read_file_to_var``(檔案文字;除非以 ``encoding`` 指定,否則讀 UTF-8,有無 BOM 皆可)、``AC_http_to_var``(GET body 或
   dotted JSON path)、``AC_now_to_var``(strftime)、``AC_random_to_var``
   (seeded int / float / choice)。
 * **變數轉換** — ``AC_transform_var`` 套用 upper / lower / strip / title /
@@ -128,7 +131,9 @@ Builder 項目。視覺與視窗功能的 geometry / IO 操作皆可注入,因�
   標記版搭檔)。``AC_annotate_screenshot``。
 * **桌面通知** — ``notify(title, message)`` 顯示跨平台通知
   (``notify-send`` / ``osascript`` / PowerShell);防注入(Linux 用 argv,
-  macOS / Windows 用從環境變數讀字串的固定腳本)。``AC_notify``。
+  macOS / Windows 用從環境變數讀字串的固定腳本)。通知程式以非零結束碼
+  結束時回傳 ``shown=False``;Windows 通知用 PowerShell 已註冊的 app id,
+  因為 Windows 會丟掉未註冊 app id 的通知。``AC_notify``。
 
 
 GUI

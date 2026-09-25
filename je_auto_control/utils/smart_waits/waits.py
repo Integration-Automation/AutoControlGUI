@@ -101,21 +101,26 @@ def wait_until_screen_stable(*,
     started = time.monotonic()
     deadline = started + float(timeout_s)
     previous = grab(region)
+    previous_at = time.monotonic()
     samples = 1
     stable_since: Optional[float] = None
     while time.monotonic() < deadline:
         _pause(deadline, poll_interval_s)
         current = grab(region)
+        current_at = time.monotonic()
         samples += 1
         diff = _frame_diff(previous, current)
         if diff <= int(max_pixel_diff):
+            # Quiet since the first of the matching frames was taken, not
+            # since the second: the clock started one poll late and a screen
+            # still for 0.5 s failed stable_for_s=0.4.
             if stable_since is None:
-                stable_since = time.monotonic()
-            if time.monotonic() - stable_since >= float(stable_for_s):
+                stable_since = previous_at
+            if current_at - stable_since >= float(stable_for_s):
                 return _finish(True, "screen stable", started, samples)
         else:
             stable_since = None
-        previous = current
+        previous, previous_at = current, current_at
     return _finish(False, "timeout while waiting for stable screen",
                    started, samples)
 
@@ -283,8 +288,16 @@ def wait_until_window_title(pattern: str, *, present: bool = True,
         raise ValueError(_TIMEOUT_POSITIVE)
     if not poll_interval_s > 0:
         raise ValueError(_POLL_POSITIVE)
+    if not pattern:
+        # "" is in every title: the wait succeeded at once.
+        raise ValueError("wait_until_window_title needs a non-empty pattern")
     titles_of = title_lister or _default_title_lister
-    compiled = re.compile(pattern) if regex else None
+    try:
+        compiled = re.compile(pattern) if regex else None
+    # re.error derives from Exception only; it aborted the script and ended
+    # an MCP worker without a reply.
+    except re.error as error:
+        raise ValueError(f"invalid window-title pattern {pattern!r}: {error}") from error
     started = time.monotonic()
     deadline = started + float(timeout_s)
     samples = 0
@@ -431,6 +444,9 @@ def wait_until_process(name: str, *, present: bool = True,
         raise ValueError(_TIMEOUT_POSITIVE)
     if not poll_interval_s > 0:
         raise ValueError(_POLL_POSITIVE)
+    if not str(name).strip():
+        # "" is in every process name: "process '' appeared" at once.
+        raise ValueError("wait_until_process needs a non-empty name")
     find = lister or _default_process_lister
     started = time.monotonic()
     deadline = started + float(timeout_s)

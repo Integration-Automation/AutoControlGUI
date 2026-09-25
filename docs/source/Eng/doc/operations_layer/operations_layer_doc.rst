@@ -65,6 +65,10 @@ without paying a relay service. Outputs four files:
 - ``README.txt`` — quick reference with ``turn:`` / ``turns:`` URL,
   username, secret
 
+A field holding a line break, or a ``user`` holding ``:``, is refused with
+``ValueError`` (exit code 2 from the command line): it would otherwise add
+its own directives to ``turnserver.conf``.
+
 Headless::
 
    from pathlib import Path
@@ -112,6 +116,10 @@ Auth gate
   never locked out, and the lockout is never global.
 - A POST body is read only after the route and the token check pass, so
   unauthenticated requests get 401 / 429 without being parsed.
+- A 401 carries ``WWW-Authenticate: Bearer realm="autocontrol"`` (with
+  ``error="invalid_token"`` when a wrong token was sent). A known path
+  asked with the other method gets 405 and an ``Allow`` header; an unknown
+  path gets 404.
 
 Headless::
 
@@ -150,7 +158,9 @@ Read-only (GET):
 
 Action (POST):
 
-- ``/execute`` — body ``{"actions": [...]}`` — runs an action list
+- ``/execute`` — body ``{"actions": [...], "raise_on_error": false}`` — runs an action list;
+  with ``raise_on_error`` it stops at the first failing action and answers
+  ``{"ok": false, "error": ...}`` (success: ``{"ok": true, "result": ...}``)
 - ``/execute_file`` — body ``{"path": "..."}`` — runs a JSON action file
 
 Executor commands::
@@ -208,6 +218,11 @@ Headless::
    results = client.broadcast_execute(
        actions=[["AC_get_mouse_position"]],
    )
+
+Pass ``raise_on_error=True`` to have each host stop at its first failing
+action and report ``ok: false`` with the error; otherwise ``ok`` only means
+the host answered, and action failures are recorded inside ``result``. The
+DAG runner's remote nodes and the Admin Console tab both pass it.
 
 Persistence: hosts are saved to ``~/.je_auto_control/admin_hosts.json``
 (mode 0600 on POSIX). Reload happens automatically on construction.

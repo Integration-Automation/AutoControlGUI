@@ -86,8 +86,8 @@ def salient_regions(source: Optional[ImageSource] = None, *,
                     min_area: int = 4) -> List[Dict[str, Any]]:
     """Return salient regions as ``[{x, y, width, height, center, score}]``.
 
-    Boxes are thresholded from the saliency map (default cut = 3x the mean,
-    per Hou & Zhang), extracted with ``connected_boxes`` and scaled back to the
+    Boxes are thresholded from the saliency map (default cut = mean + 2
+    standard deviations), extracted with ``connected_boxes`` and scaled back to the
     source's pixel coordinates, ranked most-salient first.
     """
     from je_auto_control.utils.visual_match.visual_match import _to_screen

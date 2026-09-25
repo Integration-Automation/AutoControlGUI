@@ -14,6 +14,8 @@ package stays lean and import-time stays Qt-free / dependency-free.
 from pathlib import Path
 from typing import Any, Dict, List
 
+from je_auto_control.utils.exception.exceptions import AutoControlActionException
+
 _HINT = "pip install je_auto_control[office]"
 
 
@@ -53,6 +55,22 @@ def _existing(path: str) -> Path:
     return resolved
 
 
+def _opened(kind: str, path: str, loader: Any) -> Any:
+    """``loader(existing path)``, with the library's errors as the action family.
+
+    A CSV saved as .xlsx, or any file that is not the format, raised
+    ``zipfile.BadZipFile`` or python-docx's ``PackageNotFoundError`` --
+    ``Exception`` subclasses only -- and aborted the whole script.
+    """
+    existing = str(_existing(path))
+    try:
+        return loader(existing)
+    except OSError:
+        raise
+    except Exception as error:  # noqa: BLE001  # reason: openpyxl / python-docx / python-pptx errors derive from Exception only; re-raised as the action family
+        raise AutoControlActionException(f"cannot read {kind} {existing}: {error}") from error
+
+
 # --- Excel (.xlsx) --------------------------------------------------------
 
 def read_workbook(path: str, sheet: str = "") -> List[Dict[str, Any]]:
@@ -61,8 +79,8 @@ def read_workbook(path: str, sheet: str = "") -> List[Dict[str, Any]]:
     ``sheet`` defaults to the active sheet.
     """
     openpyxl = _openpyxl()
-    workbook = openpyxl.load_workbook(filename=str(_existing(path)),
-                                      read_only=True, data_only=True)
+    workbook = _opened("workbook", path, lambda existing: openpyxl.load_workbook(
+        filename=existing, read_only=True, data_only=True))
     try:
         worksheet = workbook[sheet] if sheet else workbook.active
         rows_iter = worksheet.iter_rows(values_only=True)
@@ -116,7 +134,7 @@ def _append_as_data(worksheet: Any, values: List[Any]) -> None:
 def read_document(path: str) -> Dict[str, List[str]]:
     """Read a ``.docx`` file's paragraph texts."""
     docx = _docx()
-    document = docx.Document(str(_existing(path)))
+    document = _opened("document", path, docx.Document)
     return {"paragraphs": [para.text for para in document.paragraphs]}
 
 
@@ -136,7 +154,7 @@ def write_document(path: str, paragraphs: List[str]) -> str:
 def read_presentation(path: str) -> Dict[str, List[List[str]]]:
     """Read a ``.pptx`` file's per-slide text runs."""
     pptx = _pptx()
-    presentation = pptx.Presentation(str(_existing(path)))
+    presentation = _opened("presentation", path, pptx.Presentation)
     slides = []
     for slide in presentation.slides:
         slides.append([shape.text for shape in slide.shapes

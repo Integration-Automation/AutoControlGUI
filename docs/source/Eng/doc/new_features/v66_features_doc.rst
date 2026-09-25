@@ -9,7 +9,8 @@ expander, the calendar layer above cron.
 Supported rule parts: ``FREQ`` (DAILY/WEEKLY/MONTHLY/YEARLY), ``INTERVAL``,
 ``COUNT``, ``UNTIL``, ``BYDAY`` (incl. ordinals like ``2MO`` / ``-1FR``),
 ``BYMONTHDAY`` (incl. negatives), ``BYMONTH``, ``BYSETPOS`` and ``WKST``.
-Time-level parts and BYWEEKNO/BYYEARDAY are out of scope. Pure standard library
+Time-level parts and BYWEEKNO/BYYEARDAY are out of scope: ``parse_rrule`` raises
+``AutoControlException`` for them, and for a rule with both ``COUNT`` and ``UNTIL``. Pure standard library
 (``datetime`` + ``calendar``); the clock is injectable so ``next_occurrence`` is
 deterministic. Imports no ``PySide6``.
 

@@ -20,7 +20,13 @@ _MASK = "***"
 SENSITIVE_ARGUMENT_NAMES: FrozenSet[str] = frozenset({
     "password", "passphrase", "token", "secret", "api_key", "private_key",
     "client_secret", "authorization", "access_token", "refresh_token",
+    # The credential headers, which arrive as the keys of a ``headers`` dict.
+    "proxy-authorization", "cookie", "set-cookie", "x-api-key", "x-auth-token",
 })
+
+#: Commands whose ``url`` argument is itself a credential: a Slack, Discord or
+#: Teams webhook URL is the key that posts to the channel.
+_URL_SECRET_COMMANDS: FrozenSet[str] = frozenset({"AC_notify_webhook"})
 
 #: Commands whose ``key`` argument is a cryptographic key.
 _KEYED_COMMANDS: FrozenSet[str] = frozenset({
@@ -35,7 +41,11 @@ def redact_actions(value: Any) -> Any:
     Anything that is not an action keeps its shape; nothing is mutated.
     """
     if isinstance(value, dict):
-        return {key: redact_actions(item) for key, item in value.items()}
+        # By name at every depth: only top-level arguments were masked, so
+        # {"smtp": {"password": ...}} and {"headers": {"Authorization": ...}}
+        # reached the log and the run record.
+        return {key: _MASK if str(key).lower() in SENSITIVE_ARGUMENT_NAMES else redact_actions(item)
+                for key, item in value.items()}
     if not isinstance(value, list):
         return value
     if value and isinstance(value[0], str) and value[0].startswith("AC_"):
@@ -47,7 +57,8 @@ def is_sensitive_argument(command: str, name: str) -> bool:
     """Whether argument ``name`` of ``command`` holds a secret."""
     lowered = str(name).lower()
     return lowered in SENSITIVE_ARGUMENT_NAMES or (
-        lowered == "key" and command in _KEYED_COMMANDS)
+        lowered == "key" and command in _KEYED_COMMANDS) or (
+        lowered == "url" and command in _URL_SECRET_COMMANDS)
 
 
 def _redact_argument(command: str, argument: Any) -> Any:

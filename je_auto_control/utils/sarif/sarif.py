@@ -25,6 +25,10 @@ _LEVELS = {
 
 
 def _level(severity: Any) -> str:
+    # No severity is a warning: str(None) is "none", a level SARIF 2.1.0
+    # 3.27.10 reserves for results whose kind is not "fail".
+    if severity is None:
+        return "warning"
     return _LEVELS.get(str(severity).lower(), "warning")
 
 
@@ -51,7 +55,8 @@ def result_fingerprint(finding: Mapping[str, Any]) -> str:
     """Stable short hash of a finding (for SARIF partialFingerprints/dedupe)."""
     basis = "|".join(str(finding.get(k, "")) for k in
                      ("rule_id", "message", "file", "line"))
-    return hashlib.sha256(basis.encode("utf-8")).hexdigest()[:16]
+    # surrogatepass: a lone surrogate in a message raised UnicodeEncodeError.
+    return hashlib.sha256(basis.encode("utf-8", "surrogatepass")).hexdigest()[:16]
 
 
 def _artifact_uri(path: Any) -> str:
@@ -67,8 +72,26 @@ def _artifact_uri(path: Any) -> str:
         return text
     pure = PureWindowsPath(text) if "\\" in text else PurePath(text)
     if pure.is_absolute():
-        return pure.as_uri()
+        return _file_uri(pure)
     return urllib.parse.quote(pure.as_posix())
+
+
+def _file_uri(pure: Any) -> str:
+    """The ``file:`` URI of an absolute path, as ``PurePath.as_uri()`` wrote it.
+
+    That method is deprecated since Python 3.14 (removal in 3.19), and
+    ``Path.as_uri()`` cannot take a Windows path on another platform, which a
+    finding from a Windows run read elsewhere is.
+    """
+    import urllib.parse
+    drive, posix = pure.drive, pure.as_posix()
+    if len(drive) == 2 and drive[1] == ":":
+        prefix, path = "file:///" + drive, posix[2:]   # C:/a/b -> file:///C:/a/b
+    elif drive:
+        prefix, path = "file:", posix                   # //host/share/a -> file://host/share/a
+    else:
+        prefix, path = "file://", posix                 # /etc/hosts -> file:///etc/hosts
+    return prefix + urllib.parse.quote(path)
 
 
 def _start_line(line: Any) -> Any:
@@ -85,7 +108,8 @@ def _result(finding: Mapping[str, Any]) -> Dict[str, Any]:
         "ruleId": str(finding.get("rule_id", "AC0000")),
         # SARIF allows only none / note / warning / error.
         "level": _level(finding.get("level", "warning")),
-        "message": {"text": finding.get("message", "")},
+        # SARIF requires a string; a None message was written as null.
+        "message": {"text": "" if finding.get("message") is None else str(finding.get("message"))},
         "partialFingerprints": {"primaryLocationLineHash":
                                 result_fingerprint(finding)},
     }
@@ -118,13 +142,13 @@ def to_sarif(findings: Sequence[Mapping[str, Any]], *,
 def write_sarif(findings: Sequence[Mapping[str, Any]], path: str,
                 **kwargs: Any) -> str:
     """Write a SARIF document for ``findings`` to ``path``; return the path."""
-    import json
     from pathlib import Path
     output = Path(path)
     output.parent.mkdir(parents=True, exist_ok=True)
-    output.write_text(
-        json.dumps(to_sarif(findings, **kwargs), ensure_ascii=False, indent=2),
-        encoding="utf-8")
+    from je_auto_control.utils.http_headers import wire_json_text
+    from je_auto_control.utils.json_store.json_store import atomic_write_text
+    # wire_json_text: escaped only if a lone surrogate would not encode.
+    atomic_write_text(str(output), wire_json_text(to_sarif(findings, **kwargs)))
     return str(output)
 
 

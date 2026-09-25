@@ -218,14 +218,24 @@ def kill_process(pid: int, timeout: float = 5.0) -> str:
         raise RuntimeError(
             "ac_kill_process requires psutil — pip install psutil"
         ) from error
+    from je_auto_control.utils.exception.exceptions import AutoControlActionException
     try:
-        proc = psutil.Process(int(pid))
+        return _terminate(psutil, int(pid), float(timeout))
+    # AccessDenied / ZombieProcess derive from psutil.Error, an Exception
+    # only: it ended the MCP worker thread and the client never got a reply.
+    except psutil.Error as error:
+        raise AutoControlActionException(f"cannot end process {pid}: {error}") from error
+
+
+def _terminate(psutil: Any, pid: int, timeout: float) -> str:
+    try:
+        proc = psutil.Process(pid)
     except psutil.NoSuchProcess:
         return "not-found"
     # The process may exit between any two of these calls.
     try:
         proc.terminate()
-        proc.wait(timeout=float(timeout))
+        proc.wait(timeout=timeout)
         return "terminated"
     except psutil.NoSuchProcess:
         return "terminated"
@@ -247,20 +257,19 @@ def shell_command(command: str, timeout: float = 30.0
     protects against the command injection classes Bandit B602 / B605
     cover.
     """
-    import subprocess  # nosec B404  # reason: required for child execution
+    import locale
 
-    from je_auto_control.utils.shell_process.shell_exec import command_args
+    from je_auto_control.utils.shell_process.shell_exec import command_args, run_captured
     if not command or not command.strip():
         raise ValueError("command must be a non-empty string")
-    argv = command_args(command)
-    # nosemgrep: python.lang.security.audit.dangerous-subprocess-use-audit.dangerous-subprocess-use-audit
-    proc = subprocess.run(  # nosec B603  # reason: argv from command_args, no shell
-        argv, capture_output=True, text=True,
-        timeout=float(timeout), check=False,
-    )
+    proc = run_captured(command_args(command), float(timeout))
+    # Bytes, decoded leniently: strict decoding failed in the reader thread
+    # on output the locale's code page cannot read, and stdout came back None.
+    encoding = locale.getpreferredencoding(False)
     return {
         "exit_code": int(proc.returncode),
-        "stdout": proc.stdout, "stderr": proc.stderr,
+        "stdout": proc.stdout.decode(encoding, errors="replace"),
+        "stderr": proc.stderr.decode(encoding, errors="replace"),
     }
 
 

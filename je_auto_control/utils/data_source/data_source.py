@@ -82,10 +82,42 @@ def _load_json(source: Dict[str, Any]) -> List[Dict[str, Any]]:
         return _coerce_json_rows(json.load(handle))
 
 
+_SQL_QUOTES = {"'": "'", '"': '"', "`": "`", "[": "]"}
+
+
+def _skip_sql_literal(sql: str, index: int) -> int:
+    """Index after the quoted literal, identifier or comment starting at ``index``."""
+    if sql.startswith("--", index):
+        end = sql.find("\n", index)
+        return len(sql) if end == -1 else end + 1
+    if sql.startswith("/*", index):
+        end = sql.find("*/", index + 2)
+        return len(sql) if end == -1 else end + 2
+    end = sql.find(_SQL_QUOTES[sql[index]], index + 1)
+    return len(sql) if end == -1 else end + 1   # '' re-enters as a new literal
+
+
+def _has_statement_separator(sql: str) -> bool:
+    """Whether ``sql`` has a ``;`` outside quotes and comments.
+
+    A plain ``";" in`` refused ``WHERE name = 'a;b'``.
+    """
+    index = 0
+    while index < len(sql):
+        char = sql[index]
+        if char in _SQL_QUOTES or sql.startswith(("--", "/*"), index):
+            index = _skip_sql_literal(sql, index)
+        elif char == ";":
+            return True
+        else:
+            index += 1
+    return False
+
+
 def _validate_select(query: str) -> str:
     """Reject anything but a single read-only SELECT/WITH statement."""
     cleaned = query.strip().rstrip(";").strip()
-    if ";" in cleaned:
+    if _has_statement_separator(cleaned):
         raise ValueError("sqlite data source allows a single statement only")
     if not cleaned.lower().startswith(_READ_ONLY_SQL_PREFIXES):
         raise ValueError("sqlite data source query must start with SELECT/WITH")
@@ -105,7 +137,13 @@ def _load_sqlite(source: Dict[str, Any]) -> List[Dict[str, Any]]:
     # closing(): the sqlite3 context manager commits/rolls back but never closes
     # the connection, so the file handle leaks until GC. Close it explicitly.
     driver = require_sqlite3()
-    with closing(driver.connect(uri, uri=True)) as conn:
+    try:
+        connection = driver.connect(uri, uri=True)
+    except SQLITE_ERRORS as error:
+        # A file that exists but cannot be opened (locked, not a database)
+        # raised sqlite3.OperationalError past every caller.
+        raise AutoControlActionException(f"SQLite {path}: {error}") from error
+    with closing(connection) as conn:
         conn.row_factory = driver.Row
         try:
             rows = conn.execute(query).fetchall()
@@ -123,7 +161,12 @@ def _load_excel(source: Dict[str, Any]) -> List[Dict[str, Any]]:
             "Excel data sources require openpyxl (pip install openpyxl).",
         ) from error
     path = _resolve_path(source["path"])
-    workbook = load_workbook(filename=str(path), read_only=True, data_only=True)
+    try:
+        workbook = load_workbook(filename=str(path), read_only=True, data_only=True)
+    except OSError:
+        raise
+    except Exception as error:  # noqa: BLE001  # reason: openpyxl's BadZipFile / InvalidFileException derive from Exception only; re-raised as the action family
+        raise AutoControlActionException(f"Excel {path}: {error}") from error
     try:
         sheet_name = source.get("sheet")
         worksheet = workbook[sheet_name] if sheet_name else workbook.active

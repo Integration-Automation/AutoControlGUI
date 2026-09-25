@@ -26,7 +26,8 @@ variables}`` 存入可抽換的儲存後端;之後以相同 ``run_id`` 再執行
     result["resumed_from"]   # 全新執行為 0;當機後續跑則為 N
 
 正常完成後檢查點會被清除。某一步失敗時會拋出例外，檢查點停在那一步，下次呼叫會重跑它。儲存後端可注入,因此續跑邏輯可在不真的當機的
-情況下做決定性單元測試:``CheckpointStore.save`` / ``load`` / ``clear``。
+情況下做決定性單元測試:``CheckpointStore.save`` / ``load`` / ``clear``。資料庫無法開啟或使用時丟出
+``CheckpointStoreError``(屬於 ``AutoControlException``)。
 
 執行器 / MCP 指令:
 

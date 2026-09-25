@@ -218,7 +218,9 @@ def exec_retry(executor: Any, args: Mapping[str, Any]) -> Any:
                 attempt + 1, max_attempts, repr(error)
             )
             if attempt + 1 < max_attempts:
-                time.sleep(backoff * (2 ** attempt))
+                # Capped: 2 ** attempt overflowed float after ~1000 attempts,
+                # and attempt 20 already slept 36 hours at the default 0.5 s.
+                time.sleep(min(backoff * (2 ** min(attempt, 30)), _MAX_RETRY_BACKOFF_S))
     # A failed assertion is a deliberate fail signal that must propagate
     # even under raise_on_error=False; wrapping it would neutralise it.
     if isinstance(last_error, AutoControlAssertionException):
@@ -571,17 +573,36 @@ def exec_call_macro(executor: Any, args: Mapping[str, Any]) -> Any:
     raw_args = args.get("args") or {}
     if isinstance(raw_args, str):
         raw_args = json.loads(raw_args) if raw_args.strip() else {}
-    for param in macro["params"]:
-        executor.variables.set(param, raw_args.get(param))
     depth = getattr(_MACRO_DEPTH, "value", 0)
     if depth >= MAX_MACRO_DEPTH:
         raise MacroDepthExceeded(
             f"AC_call_macro: {name!r} nested deeper than {MAX_MACRO_DEPTH}")
+    # Parameters are the call's own: a nested call (or recursion) overwrote
+    # the caller's ${param}, and a caller's variable of the same name was
+    # left replaced after the call.
+    saved = {param: executor.variables[param] for param in macro["params"]
+             if param in executor.variables}
+    for param in macro["params"]:
+        executor.variables.set(param, raw_args.get(param))
     _MACRO_DEPTH.value = depth + 1
     try:
         return _run_branch(executor, macro["body"])
     finally:
         _MACRO_DEPTH.value = depth
+        _restore_params(executor.variables, macro["params"], saved)
+
+
+def _restore_params(variables: Any, params: Any, saved: Mapping[str, Any]) -> None:
+    """Put the caller's values of ``params`` back; drop the ones it did not have."""
+    for param in params:
+        if param in saved:
+            variables.set(param, saved[param])
+        elif param in variables:
+            del variables[param]
+
+
+#: The longest single wait between AC_retry attempts.
+_MAX_RETRY_BACKOFF_S = 300.0
 
 
 BLOCK_COMMANDS: Dict[str, Callable[[Any, Mapping[str, Any]], Any]] = {

@@ -77,9 +77,14 @@ def _b64url_decode(segment: str) -> bytes:
         raise JwtError("malformed base64url segment")
     padding = "=" * (-len(segment) % 4)
     try:
-        return base64.urlsafe_b64decode(segment + padding)
+        raw = base64.urlsafe_b64decode(segment + padding)
     except (ValueError, TypeError) as exc:
         raise JwtError("malformed base64url segment") from exc
+    # The last character's unused low bits are ignored by the decoder, so a
+    # segment is only accepted in its one canonical spelling.
+    if _b64url_encode(raw) != segment:
+        raise JwtError("non-canonical base64url segment")
+    return raw
 
 
 def _as_bytes(key: Key) -> bytes:
@@ -117,7 +122,7 @@ def _json_object(segment: str, what: str) -> Dict[str, Any]:
     """Decode a JSON-object segment; anything else is a :class:`JwtError`."""
     try:
         value = json.loads(_b64url_decode(segment))
-    except ValueError as exc:  # JSONDecodeError, UnicodeDecodeError
+    except (ValueError, RecursionError) as exc:  # JSONDecodeError, UnicodeDecodeError, deep nesting
         raise JwtError(f"{what} is not valid JSON") from exc
     if not isinstance(value, dict):
         raise JwtError(f"{what} must be a JSON object")
@@ -130,6 +135,10 @@ def _split_token(token: str) -> tuple:
     parts = token.split(".")
     if len(parts) != 3:
         raise JwtError("token must have three segments")
+    # Checked up front: the signing input is encoded as ASCII before the
+    # signature segment is ever decoded.
+    if not all(_B64URL_SEGMENT.fullmatch(part) for part in parts):
+        raise JwtError("malformed base64url segment")
     return parts[0], parts[1], parts[2]
 
 
@@ -137,8 +146,14 @@ def _verify_signature(header_seg: str, payload_seg: str, signature_seg: str,
                       key: Key, algorithms: Iterable[str]) -> Dict[str, Any]:
     header = _json_object(header_seg, "header")
     alg = header.get("alg")
-    if alg == "none" or alg not in _ALGORITHMS:
+    # A list or object "alg" is unhashable: the membership test raised a bare
+    # TypeError that escaped every ``except JwtError``.
+    if not isinstance(alg, str) or alg == "none" or alg not in _ALGORITHMS:
         raise JwtError(f"algorithm {alg!r} is not allowed")
+    # RFC 7515 4.1.11: a token naming critical extensions must be rejected
+    # unless every one is understood, and none are.
+    if "crit" in header:
+        raise JwtError(f"unsupported critical header parameters: {header['crit']!r}")
     if alg not in set(algorithms):
         raise JwtError(f"algorithm {alg!r} is not in the allowed set")
     signing_input = f"{header_seg}.{payload_seg}".encode("ascii")
@@ -155,16 +170,22 @@ def _numeric_claim(claims: Mapping[str, Any], name: str) -> float:
     Python's JSON) compared false with every time, so the token never expired.
     """
     value = claims[name]
-    if isinstance(value, bool) or not isinstance(value, (int, float)) \
-            or not math.isfinite(value):
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
         raise JwtError(f"{name} claim must be a finite number")
-    return float(value)
+    try:
+        number = float(value)   # an int past float range raises OverflowError
+    except OverflowError as exc:
+        raise JwtError(f"{name} claim must be a finite number") from exc
+    if not math.isfinite(number):
+        raise JwtError(f"{name} claim must be a finite number")
+    return number
 
 
 def _check_time_claims(claims: Mapping[str, Any], now: float,
                        policy: "ClaimsPolicy") -> None:
     if policy.verify_exp and "exp" in claims and \
-            now > _numeric_claim(claims, "exp") + policy.leeway:
+            now >= _numeric_claim(claims, "exp") + policy.leeway:
+        # RFC 7519 4.1.4: not accepted "on or after" the expiration time.
         raise ExpiredTokenError("token has expired")
     if policy.verify_nbf and "nbf" in claims and \
             now < _numeric_claim(claims, "nbf") - policy.leeway:

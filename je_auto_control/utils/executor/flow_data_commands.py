@@ -28,15 +28,23 @@ def exec_shell_to_var(executor: Any, args: Mapping[str, Any]) -> Dict[str, Any]:
     """
     import locale
     import subprocess  # nosec B404 — argv list only, no shell
-    from je_auto_control.utils.shell_process.shell_exec import command_args
+    from je_auto_control.utils.shell_process.shell_exec import (
+        command_args, refuse_batch_metacharacters, run_captured,
+    )
     command = args.get("command", args.get("shell_command"))
+    if command is None or command == "" or command == []:
+        # str(None) ran a program named "None".
+        raise AutoControlActionException("AC_shell_to_var needs 'command'")
     argv = command_args(command if isinstance(command, list) else str(command))
+    # As AC_shell_command does: cmd.exe re-parses a .bat's arguments, so a
+    # ${var} holding "x&ver" ran a second command.
+    refuse_batch_metacharacters(argv)
     encoding = str(args.get("encoding") or locale.getpreferredencoding(False))
     timeout_s = float(args.get("timeout", 30.0))
     try:
-        completed = subprocess.run(  # nosec B603 — argv list, no shell  # nosemgrep: python.lang.security.audit.dangerous-subprocess-use-audit.dangerous-subprocess-use-audit
-            argv, capture_output=True, check=False, timeout=timeout_s,
-        )
+        completed = run_captured(argv, timeout_s)
+    except OSError as error:
+        raise AutoControlActionException(f"AC_shell_to_var: could not start: {error}") from error
     except subprocess.TimeoutExpired as error:
         # TimeoutExpired subclasses SubprocessError (not AutoControlException
         # nor OSError), so without this it escapes every executor containment
@@ -145,7 +153,9 @@ def exec_read_file_to_var(executor: Any,
                           args: Mapping[str, Any]) -> Dict[str, Any]:
     """Read a file's text content into a flow variable."""
     from pathlib import Path
-    text = Path(args["path"]).read_text(encoding=args.get("encoding", "utf-8"))
+    # utf-8-sig by default: Notepad and PowerShell write a BOM, which stayed
+    # at the front of the variable and failed an equality check.
+    text = Path(args["path"]).read_text(encoding=args.get("encoding", "utf-8-sig"))
     var_name = args.get("var", "file_content")
     executor.variables.set(var_name, text)
     return {"var": var_name, "length": len(text)}

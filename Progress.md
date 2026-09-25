@@ -26,8 +26,8 @@
 
 | 檔案 | 行數 | 為何還沒拆 |
 | --- | ---: | --- |
-| `utils/mcp_server/tools/_handlers_executor_bridge.py` | 1,448 | 2026-09-23 拆 `_handlers.py` 時新建。252 個純委派（中位數 3 行）：`from action_executor import _x` 再 `return _x(...)`,沒有分支。**不套用 flat data tables 條款**——那一條講的是「一個對照表或清單」,這裡是 252 個函式定義。再切下去只能照 MCP 工廠領域分（159 個領域）,那會把同一種委派散進十幾個檔,而它們之間沒有語意邊界。規則照舊:只准變短。 |
-| `gui/remote_desktop/webrtc_panel.py` | 2,530 | 單一 Qt 面板,但已含連線、監視器選擇、頻寬自適應、麥克風、錄影五組互動狀態。應拆成 panel + 各控制器。 |
+| `utils/mcp_server/tools/_handlers_executor_bridge.py` | 1,429 | 2026-09-23 拆 `_handlers.py` 時新建。253 個純委派（中位數 3 行）：`from action_executor import _x` 再 `return _x(...)`,沒有分支。**不套用 flat data tables 條款**——那一條講的是「一個對照表或清單」,這裡是 252 個函式定義。再切下去只能照 MCP 工廠領域分（159 個領域）,那會把同一種委派散進十幾個檔,而它們之間沒有語意邊界。規則照舊:只准變短。 |
+| `gui/remote_desktop/webrtc_panel.py` | 2,527 | 單一 Qt 面板,但已含連線、監視器選擇、頻寬自適應、麥克風、錄影五組互動狀態。應拆成 panel + 各控制器。 |
 | `utils/accessibility/backends/windows_backend.py` | 805 | 已拆出 `windows_query.py`（193）、`windows_state.py`（98）與 `windows_reads.py`（142,2026-09-23;拆完 801,同日加焦點查詢的委派 +4）。剩下的是同一套 UIA COM 生命週期管理,再拆會把 `CoInitialize`／介面釋放的配對邏輯切散。 |
 
 **本質豁免（依 `CLAUDE.md` 的「flat data tables」條款,不算既有豁免）**:
@@ -163,6 +163,12 @@ pip install --dry-run --only-binary=:all: --platform win_arm64 --python-version 
 - **X11 預設滾動方向與 Windows／macOS 相反**：`wrapper/auto_control_mouse.py` `mouse_scroll(..., scroll_direction="scroll_down")`，正值在 X11 往下、其他平台往上，與 docstring「一份寫法各平台通用」不符。做法：預設改 `scroll_up`，或改 docstring 講清楚（重播路徑已在 U-20260924-14 明確傳 `scroll_up`）。
 - **`mouse_scroll` 的 NaN 座標被悄悄夾到桌面邊緣**：`auto_control_mouse.py` 的夾限在 `_coordinate()` 驗證之前，`mouse_scroll(3, x=nan, y=100)` 移到 `(-1920, 100)` 才滾；`set_mouse_position(nan, …)` 則正確丟例外。做法：夾限前先過 `_coordinate()`。
 - **座標截斷而非四捨五入**：`set_mouse_position(-0.6, 10.9)` 得到 `(0, 10)`，註解寫的是「rounded point」。做法：`int(round(value))`。
+- **`post_key` 打出三次同一字元**：`windows/window/windows_window_manage.py:347` 自己送 `WM_CHAR`，而目標的 `TranslateMessage` 又從 `WM_KEYDOWN` 與（`lParam=0` 被當成按下的）`WM_KEYUP` 各產生一次，`post_key_to_window(title, "a")` 打出 `aaa`。做法：可列印字元只送 `WM_CHAR`，其他鍵送 `WM_KEYDOWN`（`lParam = 1 | scan<<16`）與 `WM_KEYUP`（`0xC0000001 | scan<<16`）。`post_key_to_window(title, "enter")`／`"esc"` 在 Windows 丟 `unknown key name`（`wrapper/auto_control_window.py:170`），一併改走 `resolve_key_name`。
+- **焦點、顯示、z-order 失敗仍回報成功**：`windows_window_manage.py:191-229` 丟掉 `SetForegroundWindow`／`ShowWindow` 的回傳值，`window_zorder.py:50` 永遠回 `True`；Windows 的前景鎖常拒絕背景程序。做法：回傳 BOOL，`focus_window` 以 `GetForegroundWindow() == hwnd` 確認，否則丟 `AutoControlActionException`（`WindowManageBackend.bring_to_front` 已經這樣做）。
+- **列出看不見的視窗**：`windows_window_manage.py:88` 只看 `IsWindowVisible`，被 DWM cloak 的視窗（`Windows 輸入體驗`、背景的「設定」）與零面積視窗都算，`find_window` 可能選到它們。做法：略過 `DWMWA_CLOAKED` 非零與空矩形的視窗。
+- **視窗版面每次還原都偏移**：`utils/window_capture/window_capture.py:115` 存 DWM 可見框、還原時交給 `MoveWindow`（它定位的是含隱形邊框的完整矩形），每輪右移 7 px、縮小 14×7 px；最大化視窗與不同 DPI 的第二螢幕偏得更多。做法：存 `GetWindowRect`，或改用 `GetWindowPlacement`／`SetWindowPlacement`。同一檔的 snap／grid／cascade 用整個螢幕而非工作區，最底下 48 px 落在工作列下，一併改用 `SPI_GETWORKAREA`。
+- **`wait_for_window` 睡過逾時**：`wrapper/auto_control_window.py:79` 以 `poll` 整段睡，`poll=30` 就睡 30 秒，`poll=inf` 丟 `OverflowError`。做法：`clamp_poll_interval`，並只睡到截止時間。
+- **Windows 鍵表沒有標點鍵**：`plus`、`minus`、`comma`、`period`、`slash` 等沒有對應的 `VK_OEM_*`，computer use 的 `ctrl+minus` 在 Windows 失敗。做法：在 Windows 鍵表補上 `VK_OEM_PLUS`／`VK_OEM_MINUS`／`VK_OEM_COMMA`／`VK_OEM_PERIOD`／`VK_OEM_2` 等。
 
 同一次稽核的影像與 OCR 部分也在它的路徑上（Discord bot 的 `!find_image`／`!find_text`），一併等：
 
@@ -215,19 +221,6 @@ claim 標成需排空，丟掉下一個回覆——但 host 若根本沒回，�
 
 ---
 
-## Admin console 廣播的 `ok` 只代表 HTTP 200
-
-`TODO` — 讓遠端 `/execute` 的動作失敗也能回報成失敗
-
-`utils/admin/admin_client.py`（`_execute_one`）在 host 回 200 時一律 `ok: True`；遠端 `/execute` 以
-`raise_on_error=False` 執行，動作失敗只出現在結果內容裡（例如 `{"execute: [...]": "TypeError(...)"}`）。
-`utils/dag/runner.py:270` 的遠端節點因此把失敗的節點算成成功，本機路徑早已用 `raise_on_error=True` 修正過。
-
-**做法**：REST `/execute` 接受並轉交 `raise_on_error`（失敗時回非 200 或 `ok: false`），admin client 與 DAG 遠端
-節點帶上它；同時更新 REST 的 OpenAPI 描述與 `architecture.md` §6（其他工具也會呼叫 `/execute`）。
-
----
-
 ## 全域 executor 的變數會留到下一次執行
 
 `DECIDE` — 每次頂層執行要不要有自己的變數範圍（行為改動，維護者拍板）
@@ -258,33 +251,16 @@ socket server 的執行也都用同一個 `executor`；`for_each` 的迴圈變�
 
 ---
 
-## Computer use 改走 GA 的 `computer_toolset_20260801`
+## Computer use 的預設還是 beta 的 `computer_20251124`
 
-`TODO` — 換成新的工具形式需要改 agent 迴圈，不只是換一個 tool 型別
+`TODO` — 在 `claude-opus-5`（兩種形式都接受）上實測 GA toolset 後，把它設成所有模型的預設
 
-`utils/agent/backends/anthropic_computer_use.py` 現在以 beta 送 `computer_20251124`（2026-09-24 修正：原本沒帶 beta，
-每個請求都被 API 拒絕）。GA 的 `computer_toolset_20260801` 不需要 beta，但每個動作是一個名稱為成員名的 `tool_use`
-（`screenshot`、`left_click`…），可能一回合好幾個，每個 `tool_result` 都要帶回 `"toolset_name": "computer"`；
-截圖要先縮到模型的影像上限內。Claude Opus 5.5 只接受這個形式。
-
-**做法**：`_decision_from_computer_action` 改讀區塊的 `name`，一回合允許多個呼叫並逐一回覆，`_ingest_history` 帶上
-`toolset_name`；在 `claude-opus-5`（兩種都接受）上測過再換預設。
+`utils/agent/backends/anthropic_computer_use.py` 已支援 `computer_toolset_20260801`（`_computer_toolset.py`：成員名即動作、
+一回合多個呼叫逐一執行後一次回覆、每個 `tool_result` 帶 `toolset_name`、截圖縮到高解析度層級的 2576 px／4784 visual tokens 內並換算座標、`zoom` 以全解析度裁切回覆），
+`claude-opus-5-5` 自動使用它；其他模型仍預設 beta 形式，因為 toolset 只以假 client 測過、還沒對真的 API 跑過。
 
 **附帶**：`AC_run_agent backend="openai"` 送出全部約 740 個工具，超過 OpenAI Chat Completions 的 128 個上限，
 所以一定失敗——與「`AC_run_agent` 預設工具集」那一條 DECIDE 一起決定。
-
----
-
-## Idempotency 的 `release` 還沒有執行器指令
-
-`TODO` — 只有 headless API，JSON 腳本與 MCP 還放不掉失敗的鍵
-
-`utils/idempotency/idempotency.py` 的 `IdempotencyStore.release()` 讓工作失敗的 `in_progress` 鍵可以重跑，但
-`action_executor.py` 的 `_idempotency_begin`／`_idempotency_complete` 旁邊沒有對應的 `AC_idempotency_release`，
-而執行器的具名儲存沒有 TTL，所以腳本裡工作失敗的鍵仍然永遠是 `in_progress`。
-
-**做法**：加 `AC_idempotency_release`、`ac_idempotency_release` 與 Script Builder 的 **Flow** 指令，並重量指令數
-（`test_doc_counts.py` 會要求 README 三份與 `architecture_explore.md` 一起改）。
 
 ---
 
@@ -381,20 +357,6 @@ viewer 端的 `FileReceiver`（`utils/remote_desktop/file_transfer.py`）照單�
 
 ---
 
-## Config sync 刪掉的項目會在下次同步時回來
-
-`TODO` — 同步格式要加 tombstone，伺服器端與舊版客戶端的相容要一起想
-
-`utils/config_sync/client.py` 的 `ConfigBucket.remove()` 直接把項目從本機 dict 拿掉；`merge_buckets` 把
-「只有遠端有」的項目照收，所以 `remove()` 之後 `sync()` 會把它從伺服器拿回來（2026-09-23 稽核重現）。
-
-**做法**：`remove()` 留下 `{"deleted": True, "last_modified": now}`，merge 照一般 last-write-wins 比較，
-合併完再把 tombstone 從對外的檢視濾掉；過了保留期（例如 30 天）才真正清掉。
-
-**要先想清楚**：已經在跑的舊版客戶端看不懂 `deleted`，會把 tombstone 當成一般項目；伺服器是否要認得它。
-
----
-
 ## `AC_run_agent` 預設把每個 AC_* 指令都交給模型
 
 `DECIDE` — 預設工具集要不要排除高風險指令
@@ -410,6 +372,42 @@ viewer 端的 `FileReceiver`（`utils/remote_desktop/file_transfer.py`）照單�
 
 **為什麼要拍板**：這會縮小既有的 agent 能力，依賴它跑 shell 的腳本會改變行為。
 
+實測數字（2026-09-25）：預設清單有 741 個指令，含 `AC_run_agent` 本身（模型可以遞迴開 agent）；
+`backend="openai"` 超過 Chat Completions 的 128 個工具上限，現在建 backend 時就明確拒絕；
+Anthropic 每一步送約 202 KB 的工具 schema、沒有 `cache_control`。拍板後一併決定上限與快取。
+
+
+---
+
+## macOS 無法還原最小化的視窗
+
+`TODO` — 需要在 macOS 上驗證，離線的 pyobjc 替身抓不到
+
+`wrapper/window_backends/macos_backend.py` 的 `_info_for` 只搜「在螢幕上」的視窗，最小化的不在其中：
+`minimize(77)` 成功後 `list_windows` 看不到它、`restore(77)` 丟「請授權 Accessibility」（即使已授權）。
+Windows 的 `list_windows` 則包含最小化視窗。
+
+**做法**：`_info_for` 改用 `CGWindowListCopyWindowInfo(kCGWindowListOptionIncludingWindow, window_id)`；
+在 macOS CI（TCC 已授權）加一個真的最小化再還原的測試。
+
+---
+
+## Agent 的截圖修剪會改寫較早的回合
+
+`TODO` — 需要付費實機跑一次多步驟任務驗證，不能只靠離線測試
+
+`utils/agent/backends/base.py` 的 `prune_old_screenshots` 每一步把較舊的截圖換成文字，改的是已送出過的訊息。
+Claude Fable 5.1 與 Opus 5.5 的 thinking 區塊綁定它之前的整段對話，2026-08-31 之後建立的帳號會直接回 400
+（"block is bound to a different conversation"），約在第 4 步中斷；其他模型則是每一步都讓 prompt cache 失效。
+不修剪也不行：每步重送全部截圖會超過 32 MB 的請求上限。
+
+**做法（擇一，依 claude-api 文件的 append-only 對照表）**：用戶端「簡單壓縮」——截圖數超過上限時，以一則摘要
+（目標、已執行的動作）加最新截圖開新對話，不重播舊回合；或送
+`thinking.block_binding.prefix_mismatch_behavior: "drop_block"`（beta `thinking-binding-controls-2026-08-01`），
+讓被改到的 thinking 區塊被丟棄而不是 400。伺服器端 tool-result clearing 不會縮小請求本身，擋不住 32 MB。
+
+**要動的地方**：`anthropic.py`、`anthropic_computer_use.py`（兩條路徑）呼叫 `prune_old_screenshots` 之處；
+OpenAI 後端沒有這個綁定，照舊。
 
 ---
 
@@ -426,7 +424,23 @@ MCP 工具的檔案參數（`path`、`file_path`、`db`、`image_path`、`golden
 **做法**：在 `utils/mcp_server/tools/_factories.py` 的 schema 裡把真正是檔案路徑的屬性標上
 `"format": "path"`（不能照名字判斷：`ac_json_query` 的 `path` 是 JSON 路徑，`template`／`source`／
 `target` 有時是檔案有時不是），`server.py` 的 `_prepare_tool_call` 在設定了根目錄時先 `realpath`
-再檢查是否落在根目錄內，不在就回 `-32602`。
+再檢查是否落在根目錄內，不在就回工具執行錯誤（`isError`，和其他參數驗證失敗一樣）。
 
 **為什麼要拍板**：根目錄從哪來（新的環境變數、沿用 `roots/list`、或兩者），唯讀模式要不要預設開啟；
 預設開啟會讓現有讀取工作區外檔案的用法失效。
+
+---
+
+## 遠端桌面的 viewer 槽位由各面板共用
+
+`DECIDE` — 要改 `registry` 的擁有權模型
+
+`utils/remote_desktop/registry.py` 的 TCP 與 WS viewer 各只有一個槽位，快速連線（`gui/remote_desktop/connection_screen.py`）、
+舊式 viewer 分頁（`viewer_panel.py`）與 `AC_remote_connect` 都寫同一格。每一方連線前先 `registry.disconnect_viewer()`，
+於是在一邊連線會切斷另一邊的連線，被切斷的面板卻不知道：它的彈出視窗仍停在最後一格畫面，
+「中斷」按鈕則會切斷別人的連線。快速連線的「開始被遠端」也一樣會停掉主機分頁開的 host。
+
+**做法**：registry 記錄每個 viewer／host 由誰開的（owner token），`disconnect_*` 只在 owner 相符時動作；
+被別人取代時通知原本的面板收掉自己的視窗。或是反過來讓每個面板持有自己的 viewer，不經 registry。
+
+**為什麼要拍板**：`AC_remote_*` 指令與 MCP 工具依賴「registry 裡就是那一個 viewer」，改成多槽位要一起改它們的語意。

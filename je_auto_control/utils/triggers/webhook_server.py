@@ -36,14 +36,15 @@ from urllib.parse import parse_qs, urlparse
 
 from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.http_headers import (
-    INVALID_CONTENT_LENGTH, ChunkedBodyError, is_chunked, parse_content_length,
-    read_chunked_body,
+    INVALID_CONTENT_LENGTH, ChunkedBodyError, is_chunked, log_safe,
+    parse_content_length, read_chunked_body,
 )
 from je_auto_control.utils.json.json_file import read_executable_action_json
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.run_history.artifact_manager import (
     capture_error_snapshot,
 )
+from je_auto_control.utils.run_history.run_outcome import run_counting_failures
 from je_auto_control.utils.run_history.history_store import (
     SOURCE_TRIGGER, STATUS_ERROR, STATUS_OK, default_history_store,
 )
@@ -83,12 +84,20 @@ class WebhookTrigger:
     last_status: int = 0
 
 
+#: Verbs the request handler answers; anything else gets a 501 before routing.
+SUPPORTED_METHODS = ("GET", "POST", "PUT", "PATCH", "DELETE")
+
+
 def _normalize_methods(methods: Optional[List[str]]) -> Tuple[str, ...]:
+    """Upper-cased, de-duplicated verbs; one the server cannot receive raises."""
     if not methods:
         return ("POST",)
     seen: List[str] = []
     for raw in methods:
         method = str(raw).upper().strip()
+        if method and method not in SUPPORTED_METHODS:
+            raise ValueError(
+                f"webhook method {method!r} is not supported; use one of {SUPPORTED_METHODS}")
         if method and method not in seen:
             seen.append(method)
     return tuple(seen) or ("POST",)
@@ -110,7 +119,7 @@ def _maybe_parse_json(content_type: str, body: str) -> Optional[Any]:
         return None
     try:
         return json.loads(body)
-    except ValueError:
+    except (ValueError, RecursionError):
         return None
 
 
@@ -128,7 +137,7 @@ class _WebhookHandler(BaseHTTPRequestHandler):
     # the parent class's choice, not ours.
     # pylint: disable=redefined-builtin
     def log_message(self, format, *args):  # noqa: A002
-        autocontrol_logger.debug("webhook %s", format % args)
+        autocontrol_logger.debug("webhook %s", log_safe(format % args))
     # pylint: enable=redefined-builtin
 
     def _read_body(self) -> Optional[str]:
@@ -243,6 +252,9 @@ class _WebhookHandler(BaseHTTPRequestHandler):
 
     def do_PUT(self) -> None:  # noqa: N802
         self._dispatch("PUT")
+
+    def do_PATCH(self) -> None:  # noqa: N802
+        self._dispatch("PATCH")
 
     def do_DELETE(self) -> None:  # noqa: N802
         self._dispatch("DELETE")
@@ -369,7 +381,7 @@ class WebhookTriggerServer:
             # error and _dispatch still answers the request.
             try:
                 actions = read_executable_action_json(trigger.script_path)
-                self._executor(actions, payload)
+                run_counting_failures(lambda: self._executor(actions, payload))
             except Exception as error:  # noqa: BLE001  # reason: any script failure must be recorded and answered
                 status = STATUS_ERROR
                 error_text = repr(error)

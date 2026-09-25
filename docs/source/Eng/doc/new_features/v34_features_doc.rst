@@ -12,7 +12,9 @@ The policy supports an **allow** list (default-deny — only matching hosts pass
 and/or a **deny** list (block these even when otherwise allowed). Patterns are
 case-insensitive :mod:`fnmatch` globs over the URL hostname, e.g.
 ``*.example.com`` or ``localhost``. The hostname is matched as urllib will
-connect to it: percent-decoded, without a trailing dot, and with an IP literal
+connect to it: percent-decoded, IDNA-encoded (a soft hyphen, fullwidth characters
+or an ideographic full stop fold away; patterns are encoded the same way), without
+a trailing dot, and with an IP literal
 in any spelling (``2130706433``, ``0x7f.1``, ``[::ffff:127.0.0.1]``) reduced to
 its usual form. Names are not resolved, so a name that resolves to a denied
 address is not caught. The module-level policy starts in

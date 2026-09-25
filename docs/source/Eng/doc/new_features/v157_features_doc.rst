@@ -30,8 +30,10 @@ Headless API
 
 ``read_barcodes(source=None, *, region=None, decoder=None)`` returns a list of
 ``{"text", "type", "points"}`` dicts, one per detected barcode (``points`` is the
-four-corner polygon in image coordinates). ``source`` may be an image path or an
-array; when omitted the screen (optionally cropped to ``region``) is grabbed. The
+four-corner polygon: in the image's coordinates for a given ``source``, in screen
+coordinates for a screen grab, ``region`` included). ``source`` may be an image
+path or an array; when omitted the screen (optionally cropped to ``region``) is
+grabbed. The
 grayscale conversion reuses the shared ``visual_match`` haystack loader, so no new
 image-loading code is added.
 

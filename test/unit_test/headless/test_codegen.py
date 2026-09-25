@@ -31,14 +31,14 @@ def test_calls_style_maps_commands_to_facade_calls():
     assert "ac.click_mouse(mouse_keycode='mouse_left', x=500, y=500)" in code
     assert "ac.type_keyboard(keycode='a')" in code
     # flow-control falls back to the executor
-    assert "ac.execute_action([['AC_loop'," in code
+    assert "ac.executor.execute_action([['AC_loop'," in code
     assert _compiles(code)
 
 
 def test_actions_style_embeds_and_replays():
     code = generate_code(_ACTIONS, target="python", style="actions")
     assert "actions = [" in code
-    assert "ac.execute_action(actions)" in code
+    assert "ac.executor.execute_action(actions, raise_on_error=True)" in code
     assert 'if __name__ == "__main__":' in code
     assert _compiles(code)
 

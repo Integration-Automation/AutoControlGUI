@@ -16,18 +16,19 @@ panel.
 """
 from __future__ import annotations
 
-import json
+import urllib.error
 import urllib.parse
-import urllib.request
+from email.message import Message
 from typing import Any, Callable, Dict, List, Optional
 
-from PySide6.QtCore import QObject, QThread, Signal
+from PySide6.QtCore import QObject, Signal
 from PySide6.QtWidgets import (
     QGroupBox, QHBoxLayout, QHeaderView, QLabel, QLineEdit, QMessageBox,
     QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget,
 )
 
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
+from je_auto_control.gui._worker_thread import WorkerHandle, start_worker
 from je_auto_control.gui.language_wrapper.multi_language_wrapper import (
     language_wrapper,
 )
@@ -113,15 +114,17 @@ def fetch_remote_devices(*, base_url: str,
     if not base.startswith(("http://", "https://")):  # NOSONAR — scheme allowlist check, not a URL emission
         base = f"{_TEST_SCHEME}://{base}"
     url = f"{base}/usb/devices"
-    headers = {"Authorization": f"Bearer {token}"} if token else {}
-    request = urllib.request.Request(url, headers=headers, method="GET")
-    with urllib.request.urlopen(  # nosec B310  # reason: scheme validated above
-            request, timeout=float(timeout_s),
-    ) as response:
-        body = json.loads(response.read().decode("utf-8"))
-    devices = body.get("devices", [])
+    headers = {"Authorization": f"Bearer {token}"} if token else None
+    from je_auto_control.utils.http_client.http_client import build_call, perform_call
+    # Through http_client for the egress policy and the body cap, and so a
+    # redirect to another host no longer receives the bearer token.
+    response = perform_call(build_call(url, "GET", headers=headers, timeout=float(timeout_s)))
+    if not 200 <= response["status"] < 300:
+        raise urllib.error.HTTPError(url, response["status"], response["text"][:200], Message(), None)
+    body = response["json"]
+    devices = body.get("devices", []) if isinstance(body, dict) else None
     if not isinstance(devices, list):
-        raise ValueError(f"unexpected response shape: {body!r}")
+        raise ValueError(f"unexpected response shape: {response['text'][:200]!r}")
     return devices
 
 
@@ -164,8 +167,8 @@ class UsbBrowserTab(TranslatableMixin, QWidget):
         self._table.horizontalHeader().setSectionResizeMode(
             QHeaderView.ResizeMode.ResizeToContents,
         )
-        self._fetch_thread: Optional[QThread] = None
-        self._open_thread: Optional[QThread] = None
+        self._fetch_thread: Optional[WorkerHandle] = None
+        self._open_thread: Optional[WorkerHandle] = None
         self._build_layout()
         self._apply_table_headers()
 
@@ -209,21 +212,14 @@ class UsbBrowserTab(TranslatableMixin, QWidget):
     def _on_fetch(self) -> None:
         if self._fetch_thread is not None:
             return
-        thread = QThread(self)
-        worker = _FetchWorker(
-            base_url=self._url_input.text().strip(),
-            token=self._token_input.text().strip(),
-        )
-        worker.moveToThread(thread)
-        thread.started.connect(worker.run)
-        worker.finished.connect(self._apply_devices)
-        worker.failed.connect(self._apply_failure)
-        worker.finished.connect(thread.quit)
-        worker.failed.connect(thread.quit)
-        thread.finished.connect(self._on_fetch_done)
-        self._fetch_thread = thread
         self._status_label.setText(_t("usb_browser_fetching"))
-        thread.start()
+        self._fetch_thread = start_worker(
+            self, _FetchWorker(
+                base_url=self._url_input.text().strip(),
+                token=self._token_input.text().strip(),
+            ),
+            on_done=self._apply_devices, on_fail=self._apply_failure,
+            on_thread_done=self._on_fetch_done)
 
     def _on_fetch_done(self) -> None:
         self._fetch_thread = None
@@ -275,21 +271,13 @@ class UsbBrowserTab(TranslatableMixin, QWidget):
 
     def _start_local_open(self, vid: str, pid: str,
                           serial: Optional[str]) -> None:
-        thread = QThread(self)
-        worker = _CallWorker(lambda: open_local_descriptor(
-            vendor_id=vid, product_id=pid, serial=serial,
-        ))
-        worker.moveToThread(thread)
-        thread.started.connect(worker.run)
-        worker.finished.connect(
-            lambda descriptor: self._on_local_opened(vid, pid, descriptor),
-        )
-        worker.failed.connect(self._apply_failure)
-        worker.finished.connect(thread.quit)
-        worker.failed.connect(thread.quit)
-        thread.finished.connect(self._on_open_done)
-        self._open_thread = thread
-        thread.start()
+        # The lambda below runs on the GUI thread: start_worker relays it.
+        self._open_thread = start_worker(
+            self, _CallWorker(lambda: open_local_descriptor(
+                vendor_id=vid, product_id=pid, serial=serial,
+            )),
+            on_done=lambda descriptor: self._on_local_opened(vid, pid, descriptor),
+            on_fail=self._apply_failure, on_thread_done=self._on_open_done)
 
     def _on_open_done(self) -> None:
         self._open_thread = None

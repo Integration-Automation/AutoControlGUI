@@ -46,8 +46,11 @@ call::
     handle_file_dialog("C:/reports/out.csv", action="save")
 
 ``action`` is ``open`` / ``save`` / ``folder`` (picking a default dialog
-title) or pass an explicit ``window_title``; it waits for the dialog,
-types the path, and presses ``confirm_key`` (default Enter). The
+title) or pass an explicit ``window_title``; it waits for a window with
+exactly that title (case-insensitive), brings it to the front, types the
+path, and presses ``confirm_key`` (default Enter). A window that only
+contains the title, or one Windows will not bring forward, is not handled:
+nothing is typed. The
 window-wait / type / confirm steps go through an injectable
 :class:`FileDialogDriver`. Executor command: ``AC_handle_file_dialog``.
 

@@ -91,10 +91,25 @@ def click_mouse(mouse_keycode: int,
     ])
 
 
+_OPPOSITE = {
+    int(x11_linux_scroll_direction_up): int(x11_linux_scroll_direction_down),
+    int(x11_linux_scroll_direction_down): int(x11_linux_scroll_direction_up),
+    int(x11_linux_scroll_direction_left): int(x11_linux_scroll_direction_right),
+    int(x11_linux_scroll_direction_right): int(x11_linux_scroll_direction_left),
+}
+
+
 def scroll(scroll_value: int, scroll_direction: int) -> None:
-    """Wheel-scroll; positive scroll_value scrolls in ``direction``."""
+    """Wheel-scroll; positive scroll_value scrolls in ``direction``.
+
+    As on the XTest backend, a negative count reverses the direction and 0
+    scrolls nothing (both used to scroll the named direction at least once).
+    """
     direction = int(scroll_direction)
-    magnitude = max(1, abs(int(scroll_value)))
+    count = int(scroll_value)
+    if count < 0:
+        direction = _OPPOSITE.get(direction, direction)
+    magnitude = abs(count)
     if direction in (int(x11_linux_scroll_direction_up),
                      int(x11_linux_scroll_direction_down)):
         sign = +1 if direction == int(x11_linux_scroll_direction_up) else -1

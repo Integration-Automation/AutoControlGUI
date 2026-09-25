@@ -34,7 +34,8 @@ Supported: simple ``{name}`` arguments, ``select`` (e.g. gender), ``plural`` and
 ``selectordinal`` with the CLDR categories (``zero``/``one``/``two``/``few``/
 ``many``/``other``), exact ``=N`` selectors that win over a category, the ``#``
 count placeholder, a plural ``offset:`` (``#`` becomes count − offset), nested
-arguments, and ICU apostrophe quoting (``''`` → ``'``; ``'{'`` → literal brace).
+arguments, and ICU apostrophe quoting (``''`` → ``'``; ``'{'`` → literal brace;
+``'#'`` only inside a plural, elsewhere the apostrophes stay).
 ``plural_rules`` / ``ordinal_rules`` let you inject custom category functions;
 ``locale`` selects the built-ins (``en``, ``fr``).
 

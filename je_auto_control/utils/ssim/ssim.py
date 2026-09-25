@@ -18,8 +18,7 @@ ImageSource = Any
 IgnoreBoxes = Optional[Sequence[Sequence[int]]]
 _WINDOW = (11, 11)
 _SIGMA = 1.5
-_C1 = (0.01 * 255) ** 2
-_C2 = (0.03 * 255) ** 2
+_K1, _K2 = 0.01, 0.03
 
 
 def _gray_code(channels: int, is_bgr: bool) -> int:
@@ -30,8 +29,18 @@ def _gray_code(channels: int, is_bgr: bool) -> int:
     return cv2.COLOR_BGR2GRAY if is_bgr else cv2.COLOR_RGB2GRAY
 
 
+def _data_range(array) -> float:
+    """The dynamic range L of an image (Wang et al. 2004): 255 for 8-bit, 1 for 0..1 floats."""
+    import numpy as np
+    if np.issubdtype(array.dtype, np.integer):
+        return float(np.iinfo(array.dtype).max)
+    if np.issubdtype(array.dtype, np.bool_):
+        return 1.0
+    return 1.0 if array.size and float(np.nanmax(array)) <= 1.0 else 255.0
+
+
 def _to_gray_f(source: ImageSource):
-    """Load a path / ndarray / PIL image as a 2-D float64 grayscale image.
+    """Load a path / ndarray / PIL image as ``(2-D float64 grayscale, dynamic range)``.
 
     Channel order is tracked so luminance weights stay correct: ``cv2.imread``
     paths are BGR, while ndarray / PIL sources (the live ``pil_screenshot``
@@ -52,9 +61,14 @@ def _to_gray_f(source: ImageSource):
         is_bgr = True
     else:
         array = np.asarray(source)
+    data_range = _data_range(array)
+    if array.ndim == 3 and array.shape[2] == 1:
+        array = array[..., 0]            # cvtColor has no 1-channel-to-gray code
     if array.ndim == 3:
+        if array.dtype == np.float64:
+            array = array.astype(np.float32)   # cvtColor takes 8U / 16U / 32F
         array = cv2.cvtColor(array, _gray_code(array.shape[2], is_bgr))
-    return array.astype(np.float64)
+    return array.astype(np.float64), data_range
 
 
 def _grab_gray_f(region: Optional[Sequence[int]]):
@@ -65,26 +79,31 @@ def _grab_gray_f(region: Optional[Sequence[int]]):
 
 def _resolve_pair(reference: ImageSource, current: Optional[ImageSource],
                   region: Optional[Sequence[int]]):
-    reference_gray = _to_gray_f(reference)
-    current_gray = (_to_gray_f(current) if current is not None
-                    else _grab_gray_f(region))
+    reference_gray, reference_range = _to_gray_f(reference)
+    current_gray, current_range = (_to_gray_f(current) if current is not None
+                                   else _grab_gray_f(region))
     if reference_gray.shape != current_gray.shape:
         raise ValueError(f"reference {reference_gray.shape} and current "
                          f"{current_gray.shape} must be the same size")
-    return reference_gray, current_gray
+    return reference_gray, current_gray, max(reference_range, current_range)
 
 
-def _ssim_map(reference, current):
-    """Per-pixel SSIM map via an 11x11 Gaussian window (sigma 1.5)."""
+def _ssim_map(reference, current, data_range: float):
+    """Per-pixel SSIM map via an 11x11 Gaussian window (sigma 1.5).
+
+    C1 and C2 scale with the images' dynamic range: fixed at 255, two 0..1
+    float images of independent noise scored 0.996.
+    """
     import cv2
+    c1, c2 = (_K1 * data_range) ** 2, (_K2 * data_range) ** 2
     mu_ref = cv2.GaussianBlur(reference, _WINDOW, _SIGMA)
     mu_cur = cv2.GaussianBlur(current, _WINDOW, _SIGMA)
     mu_ref2, mu_cur2, mu_cross = mu_ref * mu_ref, mu_cur * mu_cur, mu_ref * mu_cur
     var_ref = cv2.GaussianBlur(reference * reference, _WINDOW, _SIGMA) - mu_ref2
     var_cur = cv2.GaussianBlur(current * current, _WINDOW, _SIGMA) - mu_cur2
     cov = cv2.GaussianBlur(reference * current, _WINDOW, _SIGMA) - mu_cross
-    numerator = (2 * mu_cross + _C1) * (2 * cov + _C2)
-    denominator = (mu_ref2 + mu_cur2 + _C1) * (var_ref + var_cur + _C2)
+    numerator = (2 * mu_cross + c1) * (2 * cov + c2)
+    denominator = (mu_ref2 + mu_cur2 + c1) * (var_ref + var_cur + c2)
     return numerator / denominator
 
 
@@ -103,16 +122,17 @@ def _keep_mask(shape, ignore: IgnoreBoxes):
 def ssim_compare(reference: ImageSource, current: Optional[ImageSource] = None,
                  *, ignore: IgnoreBoxes = None,
                  region: Optional[Sequence[int]] = None) -> float:
-    """Return the mean SSIM (0..1) between ``reference`` and ``current``.
+    """Return the mean SSIM (-1..1) between ``reference`` and ``current``.
 
     ``current`` defaults to a screen grab of the optional ``region``. ``ignore``
     is a list of ``[x, y, w, h]`` boxes excluded from the score (dynamic clocks,
     blinking cursors). ``1.0`` means structurally identical; lower means more
-    change. Raises ``ValueError`` if the two images differ in size.
+    change, and a negative score an inverted structure. Raises ``ValueError``
+    if the two images differ in size.
     """
     import numpy as np
-    reference_gray, current_gray = _resolve_pair(reference, current, region)
-    smap = _ssim_map(reference_gray, current_gray)
+    reference_gray, current_gray, data_range = _resolve_pair(reference, current, region)
+    smap = _ssim_map(reference_gray, current_gray, data_range)
     keep = _keep_mask(smap.shape, ignore)
     return round(float(np.mean(smap[keep])), 4) if keep.any() else 1.0
 
@@ -132,8 +152,8 @@ def ssim_changed_regions(reference: ImageSource,
     """
     import numpy as np
     from je_auto_control.utils.cv2_utils.blobs import connected_boxes
-    reference_gray, current_gray = _resolve_pair(reference, current, region)
-    smap = _ssim_map(reference_gray, current_gray)
+    reference_gray, current_gray, data_range = _resolve_pair(reference, current, region)
+    smap = _ssim_map(reference_gray, current_gray, data_range)
     changed = (1.0 - smap) > float(threshold)
     changed &= _keep_mask(smap.shape, ignore)
     return connected_boxes(changed.astype(np.uint8), int(min_area))

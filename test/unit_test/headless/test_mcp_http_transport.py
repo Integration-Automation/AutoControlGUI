@@ -225,9 +225,12 @@ def test_authentication_rejects_wrong_bearer():
         try:
             urllib.request.urlopen(req, timeout=3)  # nosec B310
         except urllib.error.HTTPError as error:
-            assert error.code == 403
+            # 401, not 403: the MCP authorization spec answers an invalid
+            # token 401, with a WWW-Authenticate challenge.
+            assert error.code == 401
+            assert 'error="invalid_token"' in error.headers["WWW-Authenticate"]
         else:
-            pytest.fail("expected 403 response")
+            pytest.fail("expected 401 response")
     finally:
         server.stop(timeout=1.0)
 

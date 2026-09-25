@@ -9,6 +9,8 @@ import logging
 import threading
 from typing import Deque, List, Optional, Tuple
 
+from je_auto_control.utils.exception.exceptions import AutoControlException
+
 
 class MouseWatcher:
     """Sample the current mouse position on demand."""
@@ -18,7 +20,7 @@ class MouseWatcher:
         from je_auto_control.wrapper.auto_control_mouse import get_mouse_position
         try:
             position = get_mouse_position()
-        except (OSError, RuntimeError, ValueError, TypeError) as error:
+        except (OSError, RuntimeError, ValueError, TypeError, AutoControlException) as error:
             raise RuntimeError(f"MouseWatcher.sample failed: {error!r}") from error
         if position is None:
             # The Windows backend reports a failed GetCursorPos this way.
@@ -35,7 +37,7 @@ class PixelWatcher:
         from je_auto_control.wrapper.auto_control_screen import get_pixel
         try:
             raw = get_pixel(int(x), int(y))
-        except (OSError, RuntimeError, ValueError, TypeError):
+        except (OSError, RuntimeError, ValueError, TypeError, AutoControlException):
             return None
         if raw is None or len(raw) < 3:
             return None
@@ -53,10 +55,16 @@ class LogTail(logging.Handler):
         self.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(message)s"))
 
     def emit(self, record: logging.LogRecord) -> None:
+        """Append the formatted record; a record that cannot be formatted goes to ``handleError``.
+
+        Falling back to ``getMessage()`` failed the same way, and the error
+        then reached whoever made the logging call.
+        """
         try:
             text = self.format(record)
         except (ValueError, TypeError):
-            text = record.getMessage()
+            self.handleError(record)
+            return
         with self._lock:
             self._buffer.append(text)
 

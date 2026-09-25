@@ -19,23 +19,44 @@ PluralRule = Callable[[Any], str]
 
 _WHITESPACE = " \t\r\n"
 _TOKEN_STOP = set(_WHITESPACE) | {",", "{", "}"}
-_QUOTABLE = "{}#|"
+#: Characters an apostrophe quotes (ICU ApostropheMode.DOUBLE_OPTIONAL): braces
+#: everywhere, "#" only in a plural sub-message. ("|" belongs to ChoiceFormat,
+#: which is not supported, so it is never quoted.)
+_QUOTABLE = "{}"
+_QUOTABLE_IN_PLURAL = "{}#"
 
 
 # --- CLDR plural / ordinal categories -------------------------------------
 
 def _to_operands(value: Any) -> Tuple[float, int, bool]:
-    """Return ``(number, integer_part, is_integer)`` for a numeric value."""
+    """Return ``(number, integer_part, is_integer)`` for a numeric value.
+
+    An ``int`` stays an ``int``: through ``float`` a 17-digit count lost
+    its last digit in ``#``.
+    """
+    if isinstance(value, int) and not isinstance(value, bool):
+        return value, value, True
     number = float(value)
     return number, int(number), number.is_integer()
+
+
+def _category_operands(value: Any) -> Tuple[float, int, bool]:
+    """Operands for a plural rule: CLDR's n and i are absolute values, so -1 is ``one``."""
+    number, integer, is_int = _to_operands(value)
+    return abs(number), abs(integer), is_int
 
 
 def _cardinal_en(_number: float, integer: int, is_int: bool) -> str:
     return "one" if (is_int and integer == 1) else "other"
 
 
-def _cardinal_fr(_number: float, integer: int, _is_int: bool) -> str:
-    return "one" if integer in (0, 1) else "other"
+def _cardinal_fr(_number: float, integer: int, is_int: bool) -> str:
+    if integer in (0, 1):
+        return "one"
+    # CLDR: "many" is i != 0 and i % 1000000 = 0 and v = 0 ("1 000 000 de").
+    if is_int and integer % 1_000_000 == 0:
+        return "many"
+    return "other"
 
 
 def _ordinal_en(_number: float, integer: int, is_int: bool) -> str:
@@ -58,13 +79,13 @@ _ORDINAL = {"en": _ordinal_en}
 def plural_category(number: Any, locale: str = "en") -> str:
     """Return the CLDR cardinal plural category (``one``/``other``/...)."""
     rule = _CARDINAL.get(locale, _cardinal_en)
-    return rule(*_to_operands(number))
+    return rule(*_category_operands(number))
 
 
 def ordinal_category(number: Any, locale: str = "en") -> str:
     """Return the CLDR ordinal plural category (``one``/``two``/``few``/...)."""
     rule = _ORDINAL.get(locale, _ordinal_en)
-    return rule(*_to_operands(number))
+    return rule(*_category_operands(number))
 
 
 def _format_number(value: Any) -> str:
@@ -95,13 +116,17 @@ def _flush(buffer: List[str], nodes: List[Node]) -> None:
         buffer.clear()
 
 
-def _consume_quote(text: str, index: int, buffer: List[str]) -> int:
-    """Handle an ICU apostrophe at ``index``; append literal text to buffer."""
+def _consume_quote(text: str, index: int, buffer: List[str], quotable: str) -> int:
+    """Handle an ICU apostrophe at ``index``; append literal text to buffer.
+
+    An apostrophe before a character that is not special where it stands is
+    itself literal: ``'#'`` outside a plural read as ``#``.
+    """
     nxt = text[index + 1] if index + 1 < len(text) else ""
     if nxt == "'":
         buffer.append("'")
         return index + 2
-    if nxt in _QUOTABLE:
+    if nxt and nxt in quotable:
         index += 1
         while index < len(text):
             if text[index] == "'":
@@ -115,8 +140,10 @@ def _consume_quote(text: str, index: int, buffer: List[str]) -> int:
     return index + 1
 
 
-def _parse_message(text: str, index: int) -> Tuple[List[Node], int]:
+def _parse_message(text: str, index: int,
+                   in_plural: bool = False) -> Tuple[List[Node], int]:
     """Parse a (sub)message until end of string or an unescaped ``}``."""
+    quotable = _QUOTABLE_IN_PLURAL if in_plural else _QUOTABLE
     nodes: List[Node] = []
     buffer: List[str] = []
     while index < len(text) and text[index] != "}":
@@ -130,7 +157,7 @@ def _parse_message(text: str, index: int) -> Tuple[List[Node], int]:
             nodes.append(("hash",))
             index += 1
         elif char == "'":
-            index = _consume_quote(text, index, buffer)
+            index = _consume_quote(text, index, buffer, quotable)
         else:
             buffer.append(char)
             index += 1
@@ -138,7 +165,8 @@ def _parse_message(text: str, index: int) -> Tuple[List[Node], int]:
     return nodes, index
 
 
-def _parse_options(text: str, index: int) -> Tuple[Dict[str, List[Node]], int, int]:
+def _parse_options(text: str, index: int,
+                   in_plural: bool) -> Tuple[Dict[str, List[Node]], int, int]:
     """Parse ``selector {submessage}`` pairs (and an optional ``offset:``)."""
     options: Dict[str, List[Node]] = {}
     offset = 0
@@ -147,9 +175,13 @@ def _parse_options(text: str, index: int) -> Tuple[Dict[str, List[Node]], int, i
         selector, index = _read_token(text, index)
         index = _skip_ws(text, index)
         if selector.startswith("offset:"):
-            offset = int(selector[len("offset:"):])
+            value = selector[len("offset:"):]
+            if not value:   # ICU allows "offset: 1"
+                value, index = _read_token(text, index)
+                index = _skip_ws(text, index)
+            offset = int(value)
             continue
-        submessage, index = _parse_message(text, index + 1)
+        submessage, index = _parse_message(text, index + 1, in_plural)
         options[selector] = submessage
         index = _skip_ws(text, index + 1)
     return options, offset, index
@@ -167,7 +199,8 @@ def _parse_argument(text: str, index: int) -> Tuple[Node, int]:
     index = _skip_ws(text, index)
     if arg_type not in ("plural", "selectordinal", "select"):
         raise ValueError(f"unknown argument type: {arg_type!r}")
-    options, offset, index = _parse_options(text, index + 1)   # skip the comma
+    options, offset, index = _parse_options(   # skip the comma
+        text, index + 1, arg_type != "select")
     index += 1                                    # skip the closing brace
     if arg_type == "select":
         return ("select", name, options), index
@@ -192,7 +225,8 @@ def _render_plural(node: Node, args: Mapping[str, Any],
     value = args.get(name, 0)
     try:
         number, integer, is_int = _to_operands(value)
-    except (TypeError, ValueError) as error:
+    # OverflowError: int(float("inf")).
+    except (TypeError, ValueError, OverflowError) as error:
         raise ValueError(f"plural argument {name!r} is not a number: {value!r}") from error
     exact = "=" + (str(integer) if is_int else _format_number(number))
     chosen = options.get(exact)

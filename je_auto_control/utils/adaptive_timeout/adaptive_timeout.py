@@ -16,11 +16,19 @@ to ``default_s`` (or ``min_s``). Imports no ``PySide6``.
 """
 from typing import Any, Dict, List, Optional, Sequence
 
+import math
+
 from je_auto_control.utils.stats.stats import percentile
 
 
 def _clamp(value: float, min_s: float, max_s: Optional[float]) -> float:
-    """Clamp ``value`` to ``[min_s, max_s]`` (``max_s`` None = no upper cap)."""
+    """Clamp ``value`` to ``[min_s, max_s]`` (``max_s`` None = no upper cap).
+
+    NaN is treated as the upper cap: ``max(min_s, nan)`` returned the floor, so
+    the slowest samples gave the shortest timeout.
+    """
+    if math.isnan(float(value)):
+        return float(max_s) if max_s is not None else float("inf")
     bounded = max(float(min_s), float(value))
     if max_s is not None:
         bounded = min(float(max_s), bounded)

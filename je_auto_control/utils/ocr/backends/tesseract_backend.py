@@ -55,10 +55,14 @@ class TesseractBackend:
         try:
             data = pt.image_to_data(image, lang=lang, output_type=pt.Output.DICT)
         except (OSError, RuntimeError) as error:
-            raise OCRBackendNotAvailableError(
-                "Tesseract binary not found. Install it and/or call "
-                "set_tesseract_cmd()."
-            ) from error
+            if type(error).__name__ == "TesseractNotFoundError":
+                raise OCRBackendNotAvailableError(
+                    "Tesseract binary not found. Install it and/or call "
+                    "set_tesseract_cmd()."
+                ) from error
+            # Anything else -- a missing language pack ("Failed loading
+            # language 'chi_tra'") -- was reported as a missing binary.
+            raise OCRBackendNotAvailableError(f"Tesseract failed: {error}") from error
 
         matches: List[TextMatch] = []
         count = len(data.get("text", []))

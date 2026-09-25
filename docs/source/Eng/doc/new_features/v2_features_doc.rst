@@ -120,7 +120,11 @@ Per-call LLM token + USD log with day / model / provider roll-up::
     summary = summarise_llm_costs()
     print(summary.total_usd, summary.by_model)
 
-Pricing table covers Claude 4.x and OpenAI; override per-call.
+``summarise_llm_costs()`` with no argument summarises the calls recorded in
+``default_cost_store``. The pricing table carries Anthropic's current list
+prices for Claude (Fable 5.x, Opus 5.x / 4.x, Sonnet 5 / 4.x, Haiku 4.5 and
+older lines; a dated or ``anthropic.``-prefixed id is looked up by its base id)
+and OpenAI; override per-call.
 Executor: ``AC_costs_record / _summary / _list / _clear``.
 
 
@@ -185,7 +189,10 @@ node is reported as ``skipped`` instead of attempted::
         ],
     })
 
-Executor: ``AC_run_dag``. GUI: **DAG Runner** tab.
+Pass ``stop_event=`` (a ``threading.Event``) to stop a run from another
+thread: running nodes finish, and every node not yet started is ``skipped``
+with the error ``"stopped"``. Executor: ``AC_run_dag``. GUI: **DAG Runner**
+tab, whose Actions menu has **Stop DAG**.
 
 
 Multi-viewer presence
@@ -208,7 +215,13 @@ Computer-use high-level API
 Wraps :class:`ComputerUseAgentBackend` + :class:`AgentLoop` so a
 single call drives Anthropic's computer-use tool (``computer_20251124`` on
 ``claude-opus-5`` by default, sent under its ``computer-use-2025-11-24`` beta;
-``tool_type=`` picks another version and ``beta=`` names its beta)::
+``tool_type=`` picks another version and ``beta=`` names its beta). With
+``model="claude-opus-5-5"``, which accepts nothing else, the backend sends the
+GA ``computer_toolset_20260801`` instead: no beta, several actions per turn,
+and screenshots scaled into the model's image limits (2576 px on the long
+edge and 4784 visual tokens, so a 1080p screen goes unscaled) with the
+model's coordinates mapped back to the screen. ``zoom`` is answered with a
+full-resolution crop of the region it names::
 
     from je_auto_control import run_computer_use
     result = run_computer_use(
@@ -216,9 +229,15 @@ single call drives Anthropic's computer-use tool (``computer_20251124`` on
         max_steps=15, wall_seconds=120.0,
     )
 
-Auto-detects display size; takes ``max_steps`` + ``wall_seconds``
-budgets so a runaway loop can't drain the API. Executor:
-``AC_computer_use``. GUI: **Computer Use** tab.
+Auto-detects display size. Screenshots are fitted into the model's image tier
+(Claude 4.7 and later: 2576 px / 4784 visual tokens; older models: 1568 px /
+1568 tokens) on the beta tool as well, which declares that fitted size as its
+display and maps the model's coordinates back to the screen. Takes ``max_steps`` + ``wall_seconds``
+budgets so a runaway loop can't drain the API; setting ``stop_event=`` (a
+``threading.Event``) ends the run before its next step, with
+``final_message`` ``"stopped"``. Executor: ``AC_computer_use``. GUI:
+**Computer Use** tab, whose Actions menu has **Stop**. Closing the window
+asks a running job to stop and waits up to 10 seconds for it.
 
 
 WebRunner executor + MCP integration
@@ -373,7 +392,8 @@ language and the MCP tool registry. Parameters:
 
 * ``goal`` — natural-language objective.
 * ``backend`` — ``"anthropic"`` (uses ``export_anthropic_tools()``
-  with tool-use messages) or ``"openai"`` (uses ``export_openai_tools()``
+  with tool-use messages; each screenshot is fitted into the model's image
+  tier and the ``x`` / ``y`` of a tool call mapped back to the screen) or ``"openai"`` (uses ``export_openai_tools()``
   with Chat Completions function calling).
 * ``max_steps`` (default 25) and ``wall_seconds`` (default 300.0).
 * ``model`` / ``max_tokens`` — backend-specific overrides.

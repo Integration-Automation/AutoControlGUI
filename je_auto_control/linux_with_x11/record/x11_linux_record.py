@@ -61,9 +61,11 @@ class X11LinuxRecorder:
         # 將原始事件轉換成可讀格式
         for details in self.result_queue.queue:
             if details[0] == 5:  # 滑鼠事件
-                action_queue.put(
-                    (detail_dict.get(details[1]), details[2], details[3])
-                )
+                action = detail_dict.get(details[1])
+                # Wheel buttons 4..7 have no entry: they became (None, x, y),
+                # a command replay refuses.
+                if action is not None:
+                    action_queue.put((action, details[2], details[3]))
             elif details[0] == 3:  # 鍵盤事件
                 action_queue.put(
                     (type_dict.get(details[0]), details[1])

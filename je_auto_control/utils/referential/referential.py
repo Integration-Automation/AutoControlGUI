@@ -38,9 +38,17 @@ def check_foreign_key(child_rows: Sequence[Dict[str, Any]], child_col: str,
 
 def check_unique_key(rows: Sequence[Dict[str, Any]],
                      cols: Columns) -> Dict[str, Any]:
-    """A single or composite key must be unique across ``rows``."""
+    """A single or composite key must be unique across ``rows``.
+
+    A single-column key skips null rows, as dbt's ``unique`` test does
+    (``where col is not null``); a composite key groups nulls like SQL's
+    ``GROUP BY`` in ``unique_combination_of_columns``.
+    """
     columns = _columns(cols)
-    counts = Counter(tuple(row.get(col) for col in columns) for row in rows)
+    keys = (tuple(row.get(col) for col in columns) for row in rows)
+    if len(columns) == 1:
+        keys = (key for key in keys if key[0] is not None)
+    counts = Counter(keys)
     duplicates = [{"key": _key_view(key_tuple), "count": count}
                   for key_tuple, count in counts.items() if count > 1]
     return {"ok": not duplicates, "duplicates": duplicates}

@@ -26,10 +26,13 @@ from PySide6.QtWidgets import (
 )
 
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
-from je_auto_control.gui.remote_desktop._helpers import _StatusBadge, _t
+from je_auto_control.gui.remote_desktop._helpers import (
+    _StatusBadge, _build_verifying_client_context, _t, wire_remote_input,
+)
 from je_auto_control.gui.remote_desktop.remote_screen_window import (
     RemoteScreenWindow,
 )
+from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.remote_desktop import (
     PendingViewer, RemoteDesktopHost, RemoteDesktopViewer,
     WebSocketDesktopViewer,
@@ -104,6 +107,14 @@ class QuickConnectScreen(TranslatableMixin, QWidget):
     # the GUI sets after the operator clicks Allow / Deny.
     _approval_requested = Signal(object)
 
+    # The viewer calls its callbacks on its receiver thread; these carry
+    # them to the GUI thread. They were passed straight in, so every frame
+    # repainted, and a dropped connection opened a QMessageBox, off the GUI
+    # thread.
+    _frame_arrived = Signal(object)
+    _error_arrived = Signal(str)
+    _cursor_moved = Signal(int, int)
+
     def __init__(self, parent: Optional[QWidget] = None) -> None:
         super().__init__(parent)
         self._tr_init()
@@ -144,6 +155,10 @@ class QuickConnectScreen(TranslatableMixin, QWidget):
         self._approval_requested.connect(
             self._show_approval_dialog, Qt.ConnectionType.QueuedConnection,
         )
+        queued = Qt.ConnectionType.QueuedConnection
+        self._frame_arrived.connect(self._on_frame, queued)
+        self._error_arrived.connect(self._on_error, queued)
+        self._cursor_moved.connect(self._on_remote_cursor, queued)
         self._build_layout()
         self._apply_placeholders()
         self._refresh_recent()
@@ -321,6 +336,9 @@ class QuickConnectScreen(TranslatableMixin, QWidget):
                 QMessageBox.ButtonRole.RejectRole,
             )
             box.setDefaultButton(allow_btn)
+            # The host stops waiting after the timeout and denies; the box
+            # stayed up, and an Allow clicked after that admitted nobody.
+            QTimer.singleShot(int(_APPROVAL_TIMEOUT_S * 1000), box, box.reject)
             box.exec()
             clicked = box.clickedButton()
             if clicked is allow_btn:
@@ -401,14 +419,14 @@ class QuickConnectScreen(TranslatableMixin, QWidget):
         try:
             viewer = RemoteDesktopViewer(
                 host=host, port=port, token=token,
-                on_frame=self._on_frame,
-                on_error=lambda exc: self._on_error(str(exc)),
-                on_cursor=self._on_remote_cursor,
+                on_frame=self._frame_arrived.emit,
+                on_error=lambda exc: self._error_arrived.emit(str(exc)),
+                on_cursor=self._cursor_moved.emit,
             )
             viewer.connect(timeout=5.0)
-        except (OSError, RuntimeError) as error:
-            # AuthenticationError is a subclass of RuntimeError; the
-            # tuple above already catches it.
+        # ValueError: a host such as "a..b" fails IDNA encoding with
+        # UnicodeError, which escaped the slot and left the click unanswered.
+        except (OSError, RuntimeError, ValueError, AutoControlException) as error:
             QMessageBox.warning(self, _t("rd_quick_connect_btn"), str(error))
             return
         registry._viewer = viewer  # noqa: SLF001  centralised lifecycle ownership
@@ -421,17 +439,19 @@ class QuickConnectScreen(TranslatableMixin, QWidget):
         port = target.port or 0
         path = target.path or "/"
         registry.disconnect_ws_viewer()
+        # wss:// was dialled as plain ws://: the session went unencrypted to
+        # a host the operator took for TLS, and a real TLS host was unreachable.
+        ssl_context = _build_verifying_client_context() if target.kind == "wss" else None
         try:
             viewer = WebSocketDesktopViewer(
                 host=host, port=port, token=token, path=path,
-                on_frame=self._on_frame,
-                on_error=lambda exc: self._on_error(str(exc)),
-                on_cursor=self._on_remote_cursor,
+                on_frame=self._frame_arrived.emit,
+                on_error=lambda exc: self._error_arrived.emit(str(exc)),
+                on_cursor=self._cursor_moved.emit,
+                ssl_context=ssl_context,
             )
             viewer.connect(timeout=5.0)
-        except (OSError, RuntimeError) as error:
-            # AuthenticationError is a subclass of RuntimeError; the
-            # tuple above already catches it.
+        except (OSError, RuntimeError, ValueError, AutoControlException) as error:
             QMessageBox.warning(self, _t("rd_quick_connect_btn"), str(error))
             return
         registry._ws_viewer = viewer  # noqa: SLF001  centralised lifecycle ownership
@@ -441,13 +461,10 @@ class QuickConnectScreen(TranslatableMixin, QWidget):
         self._refresh_status()
 
     def _on_remote_cursor(self, x: int, y: int) -> None:
-        """Network-thread cursor update; forward to the popup display."""
+        """Cursor update, delivered on the GUI thread by ``_cursor_moved``."""
         window = self._screen_window
         if window is None:
             return
-        # ``set_remote_cursor`` calls ``update()`` which is thread-safe
-        # on the QWidget API surface — internally Qt marshals the paint
-        # request to the GUI thread for us.
         try:
             window.display.set_remote_cursor(x, y)
         except RuntimeError:
@@ -480,12 +497,16 @@ class QuickConnectScreen(TranslatableMixin, QWidget):
             window.set_image(image)
 
     def _on_error(self, message: str) -> None:
+        # The session is over: the popup stayed open on its last frame and
+        # the badge kept saying connected.
+        self._disconnect()
         QMessageBox.warning(self, _t("rd_quick_connect_btn"), message)
 
     def _open_screen_window(self, title: str) -> None:
         if self._screen_window is None:
             window = RemoteScreenWindow(title, parent=self)
             window.closed.connect(self._on_window_closed)
+            wire_remote_input(window, self._send_input)
             # Phase 1.4: drop a local file onto the remote screen window
             # and the viewer uploads it straight to the host.
             window.files_dropped.connect(self._on_files_dropped)
@@ -499,6 +520,16 @@ class QuickConnectScreen(TranslatableMixin, QWidget):
         self._screen_window.show()
         self._screen_window.raise_()
         self._screen_window.activateWindow()
+
+    def _send_input(self, action: dict) -> None:
+        """Forward one input action from the popup to the live viewer."""
+        viewer = registry.viewer or registry._ws_viewer  # noqa: SLF001
+        if viewer is None or not viewer.connected:
+            return
+        try:
+            viewer.send_input(action)
+        except OSError as error:
+            self._error_arrived.emit(str(error))
 
     def _on_files_dropped(self, paths) -> None:
         """Upload each dropped file to the host's home directory."""
@@ -529,7 +560,8 @@ class QuickConnectScreen(TranslatableMixin, QWidget):
         window.deleteLater()
 
     def _on_window_closed(self) -> None:
-        if registry.viewer is not None:
+        # Either transport: closing a ws:// popup left its session running.
+        if registry.viewer is not None or registry._ws_viewer is not None:  # noqa: SLF001
             self._disconnect()
 
     # --- recent connections ------------------------------------------
@@ -660,8 +692,8 @@ class QuickConnectScreen(TranslatableMixin, QWidget):
             )
 
     def _refresh_viewer_status(self) -> None:
-        status = registry.viewer_status()
-        if status["connected"]:
+        # A ws:// session read as disconnected: only the TCP slot was asked.
+        if registry.viewer_status()["connected"] or registry.ws_viewer_status()["connected"]:
             self._viewer_badge.set_state("live", _t("rd_quick_connected"))
         else:
             self._viewer_badge.set_state(

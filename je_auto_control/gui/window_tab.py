@@ -11,9 +11,9 @@ from je_auto_control.gui._i18n_helpers import TranslatableMixin
 from je_auto_control.gui.language_wrapper.multi_language_wrapper import (
     language_wrapper,
 )
-from je_auto_control.wrapper.auto_control_window import (
-    close_window_by_title, focus_window, list_windows,
-)
+from je_auto_control.utils.exception.exceptions import AutoControlException
+from je_auto_control.wrapper.auto_control_window import list_windows
+from je_auto_control.wrapper.window_backends import get_backend
 
 
 def _t(key: str) -> str:
@@ -91,7 +91,9 @@ class WindowManagerTab(TranslatableMixin, QWidget):
             self._table.setItem(row, 1, QTableWidgetItem(title))
         self._status_count = len(windows)
         self._apply_status()
-        QTimer.singleShot(0, self._apply_filter)
+        # With the tab as context: cancelled if the tab is deleted first, where
+        # it read the deleted filter box.
+        QTimer.singleShot(0, self, self._apply_filter)
 
     def _apply_filter(self) -> None:
         needle = self._filter.text().strip().lower()
@@ -100,28 +102,36 @@ class WindowManagerTab(TranslatableMixin, QWidget):
             visible = not needle or (item is not None and needle in item.text().lower())
             self._table.setRowHidden(row, not visible)
 
-    def _selected_title(self) -> Optional[str]:
+    def _selected_window(self) -> Optional[int]:
+        """The selected row's window id (column 0), or ``None``.
+
+        By id, not title: a title match picked the first window containing
+        the text, so closing ``notes.txt - Notepad`` closed
+        ``*notes.txt - Notepad`` -- the unsaved one.
+        """
         row = self._table.currentRow()
-        if row < 0:
+        item = self._table.item(row, 0) if row >= 0 else None
+        try:
+            return int(item.text()) if item is not None else None
+        except ValueError:
             return None
-        item = self._table.item(row, 1)
-        return item.text() if item is not None else None
 
     def _on_focus(self) -> None:
-        title = self._selected_title()
-        if not title:
+        window_id = self._selected_window()
+        if window_id is None:
             return
         try:
-            focus_window(title, case_sensitive=True)
-        except (RuntimeError, OSError) as error:
+            if not get_backend().bring_to_front(window_id):
+                QMessageBox.warning(self, "Error", "The window could not be brought to the front.")
+        except (AutoControlException, RuntimeError, OSError) as error:
             QMessageBox.warning(self, "Error", str(error))
 
     def _on_close(self) -> None:
-        title = self._selected_title()
-        if not title:
+        window_id = self._selected_window()
+        if window_id is None:
             return
         try:
-            close_window_by_title(title, case_sensitive=True)
+            get_backend().close(window_id)
             self.refresh()
-        except (RuntimeError, OSError) as error:
+        except (AutoControlException, RuntimeError, OSError) as error:
             QMessageBox.warning(self, "Error", str(error))

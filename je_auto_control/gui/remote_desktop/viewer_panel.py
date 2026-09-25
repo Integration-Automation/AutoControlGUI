@@ -3,7 +3,7 @@ import ssl
 from pathlib import Path
 from typing import Optional
 
-from PySide6.QtCore import QThread, Signal
+from PySide6.QtCore import Signal
 from PySide6.QtGui import QGuiApplication, QImage
 from PySide6.QtWidgets import (
     QCheckBox, QComboBox, QFileDialog, QGroupBox, QHBoxLayout, QInputDialog,
@@ -11,14 +11,16 @@ from PySide6.QtWidgets import (
     QVBoxLayout, QWidget,
 )
 
+from je_auto_control.gui._daemon_thread import DaemonThread
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
 from je_auto_control.gui.remote_desktop._helpers import (
     _CollapsibleSection, _StatusBadge, _build_insecure_client_context,
-    _build_verifying_client_context, _t,
+    _build_verifying_client_context, _t, wire_remote_input,
 )
 from je_auto_control.gui.remote_desktop.remote_screen_window import (
     RemoteScreenWindow,
 )
+from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.remote_desktop import (
     FileReceiver, RemoteDesktopViewer, WebSocketDesktopViewer,
 )
@@ -27,9 +29,6 @@ from je_auto_control.utils.remote_desktop.audio import (
 )
 from je_auto_control.utils.remote_desktop.host_id import (
     HostIdError, parse_host_id,
-)
-from je_auto_control.utils.remote_desktop.protocol import (
-    AuthenticationError,
 )
 from je_auto_control.utils.remote_desktop.registry import registry
 
@@ -49,7 +48,9 @@ class _ViewerPanel(TranslatableMixin, QWidget):
         self._tr_init()
         self._host_field = QLineEdit("127.0.0.1")
         self._port = QSpinBox()
-        self._port.setRange(1, 65535)
+        # 0 is "not entered yet", which _connect refuses; with a minimum of 1
+        # the box opened on port 1 and that check could never fire.
+        self._port.setRange(0, 65535)
         self._port.setValue(0)
         self._token = QLineEdit()
         self._host_id = QLineEdit()
@@ -63,7 +64,11 @@ class _ViewerPanel(TranslatableMixin, QWidget):
         self._tls_insecure.setChecked(True)
         self._enable_audio = QCheckBox()
         self._enable_audio.setChecked(False)
-        if not is_audio_backend_available():
+        # Kept as a flag, not read back with isEnabled(): the box sits in the
+        # collapsible Advanced section, which disables its children while
+        # collapsed, so a ticked box was ignored once the section was closed.
+        self._audio_available = is_audio_backend_available()
+        if not self._audio_available:
             self._enable_audio.setEnabled(False)
         self._badge = _StatusBadge()
         self._status = QLabel()
@@ -236,10 +241,9 @@ class _ViewerPanel(TranslatableMixin, QWidget):
                     ),
             ))
             viewer.connect(timeout=5.0)
-        except AuthenticationError as error:
-            QMessageBox.warning(self, _t("rd_viewer_connect"), str(error))
-            return
-        except (OSError, RuntimeError) as error:
+        # ValueError: a host such as "a..b" fails IDNA encoding with
+        # UnicodeError, which escaped the slot and left the click unanswered.
+        except (OSError, RuntimeError, ValueError, AutoControlException) as error:
             QMessageBox.warning(self, _t("rd_viewer_connect"), str(error))
             return
         registry._viewer = viewer  # noqa: SLF001  centralised lifecycle ownership
@@ -269,8 +273,9 @@ class _ViewerPanel(TranslatableMixin, QWidget):
         return _build_verifying_client_context()
 
     def _start_audio_player_if_requested(self) -> None:
-        if not (self._enable_audio.isChecked()
-                and self._enable_audio.isEnabled()):
+        # A reconnect without Disconnect replaced the player unstopped.
+        self._stop_audio_player()
+        if not (self._audio_available and self._enable_audio.isChecked()):
             return
         try:
             player = AudioPlayer()
@@ -311,19 +316,7 @@ class _ViewerPanel(TranslatableMixin, QWidget):
             if host_id else _t("rd_remote_screen_title")
         )
         window = RemoteScreenWindow(title, parent=self)
-        window.mouse_moved.connect(self._send_mouse_move)
-        window.mouse_pressed.connect(self._send_mouse_press)
-        window.mouse_released.connect(self._send_mouse_release)
-        window.mouse_scrolled.connect(self._send_mouse_scroll)
-        window.key_pressed.connect(
-            lambda k: self._send({"action": "key_press", "keycode": k})
-        )
-        window.key_released.connect(
-            lambda k: self._send({"action": "key_release", "keycode": k})
-        )
-        window.type_text.connect(
-            lambda text: self._send({"action": "type", "text": text})
-        )
+        wire_remote_input(window, self._send)
         window.files_dropped.connect(self._on_files_dropped)
         # If the operator closes the popup, mirror the action by
         # disconnecting — same behaviour AnyDesk has when you ✕ the
@@ -366,8 +359,9 @@ class _ViewerPanel(TranslatableMixin, QWidget):
         self._screen_window.set_image(image)
 
     def _on_error_main(self, message: str) -> None:
-        self._connected = False
-        self._refresh_status()
+        # The session is over: the window stayed open on its last frame and
+        # the audio player kept running until the operator clicked Disconnect.
+        self._disconnect()
         QMessageBox.warning(self, _t("rd_viewer_error"), message)
 
     def _on_audio_main(self, payload: bytes) -> None:
@@ -438,21 +432,6 @@ class _ViewerPanel(TranslatableMixin, QWidget):
         except OSError as error:
             self._error_signal.emit(str(error))
 
-    def _send_mouse_move(self, x: int, y: int) -> None:
-        self._send({"action": "mouse_move", "x": x, "y": y})
-
-    def _send_mouse_press(self, x: int, y: int, button: str) -> None:
-        self._send({"action": "mouse_move", "x": x, "y": y})
-        self._send({"action": "mouse_press", "button": button})
-
-    def _send_mouse_release(self, x: int, y: int, button: str) -> None:
-        self._send({"action": "mouse_release", "button": button})
-
-    def _send_mouse_scroll(self, x: int, y: int, amount: int) -> None:
-        self._send({
-            "action": "mouse_scroll", "x": x, "y": y, "amount": amount,
-        })
-
     # --- clipboard / file transfer (viewer -> host) -------------------
 
     def _push_clipboard_to_host(self) -> None:
@@ -513,7 +492,7 @@ class _ViewerPanel(TranslatableMixin, QWidget):
         thread.start()
 
 
-class _FileSendThread(QThread):
+class _FileSendThread(DaemonThread):
     """Run send_file off the GUI thread; bridge progress via signals."""
 
     progress = Signal(str, int, int)

@@ -21,6 +21,7 @@ from je_auto_control.utils.timeouts import clamp_poll_interval
 from je_auto_control.utils.run_history.artifact_manager import (
     capture_error_snapshot,
 )
+from je_auto_control.utils.run_history.run_outcome import run_counting_failures
 from je_auto_control.utils.run_history.history_store import (
     SOURCE_TRIGGER, STATUS_ERROR, STATUS_OK, default_history_store,
 )
@@ -115,7 +116,6 @@ class PixelColorTrigger(_TriggerBase):
 
 @dataclass
 class FilePathTrigger(_TriggerBase):
-    consumes_on_check: ClassVar[bool] = True
     """Fire when ``watch_path`` is created or its mtime changes.
 
     The first poll only records a baseline. After that, the path appearing
@@ -123,6 +123,7 @@ class FilePathTrigger(_TriggerBase):
     a copied-in replacement keeps its source's timestamp. Deleting the file
     re-arms the creation check.
     """
+    consumes_on_check: ClassVar[bool] = True
     watch_path: str = ""
     _baseline: Optional[float] = None
     _primed: bool = False
@@ -240,6 +241,11 @@ class TriggerEngine:
         self._tick = clamp_poll_interval(tick_seconds)
         self._triggers: Dict[str, _TriggerBase] = {}
         self._lock = threading.Lock()
+        # start() / stop() race without it: two starts made two polling
+        # threads (every trigger fired twice) and a stop() between creating
+        # and starting the thread raised "cannot join thread before it is
+        # started". Same lock as the Scheduler's.
+        self._lifecycle_lock = threading.RLock()
         self._thread: Optional[threading.Thread] = None
         self._stop = threading.Event()
 
@@ -268,20 +274,25 @@ class TriggerEngine:
             return True
 
     def start(self) -> None:
-        if self._thread is not None and self._thread.is_alive():
-            return
-        # A fresh event per run, never clear() on the old one: a thread that
-        # outlived stop()'s join would see it cleared and keep running.
-        self._stop = threading.Event()
-        self._thread = threading.Thread(
-            target=self._run, args=(self._stop,), daemon=True, name="AutoControlTriggers",
-        )
-        self._thread.start()
+        """Start the polling thread if it is not already running."""
+        with self._lifecycle_lock:
+            if self._thread is not None and self._thread.is_alive():
+                return
+            # A fresh event per run, never clear() on the old one: a thread that
+            # outlived stop()'s join would see it cleared and keep running.
+            self._stop = threading.Event()
+            self._thread = threading.Thread(
+                target=self._run, args=(self._stop,), daemon=True, name="AutoControlTriggers",
+            )
+            self._thread.start()
 
     def stop(self, timeout: float = 2.0) -> None:
-        self._stop.set()
-        if self._thread is not None:
-            self._thread.join(timeout=timeout)
+        """Stop polling and wait up to ``timeout`` seconds for the thread."""
+        with self._lifecycle_lock:
+            self._stop.set()
+            thread = self._thread
+            if thread is not None and thread.is_alive():
+                thread.join(timeout=timeout)
             self._thread = None
 
     def _run(self, stop: threading.Event) -> None:
@@ -348,7 +359,7 @@ class TriggerEngine:
         error_text: Optional[str] = None
         try:
             actions = read_executable_action_json(trigger.script_path)
-            self._execute(actions)
+            run_counting_failures(lambda: self._execute(actions))
         # 這裡刻意攔截所有例外：一個 trigger 失敗必須記錄成 STATUS_ERROR
         # 並繼續，而不是拖垮輪詢執行緒。原本的 tuple 漏掉
         # AutoControlJsonActionException，所以光是改名 script 檔就會讓
@@ -372,7 +383,9 @@ class TriggerEngine:
             )
         with self._lock:
             live = self._triggers.get(trigger.trigger_id)
-            if live is None:
+            # Not just "some trigger with this id": one removed and replaced
+            # under the same id while this run went on is not ours to count.
+            if live is not trigger:
                 return
             live.fired += 1
             live._last_fire = now

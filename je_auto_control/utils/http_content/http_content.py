@@ -85,14 +85,21 @@ def decode_body(headers: Optional[Mapping[str, Any]], raw: bytes, *,
     encoding = _content_encoding(headers)
     if encoding in ("", "identity"):
         return raw
-    if encoding == "gzip":
+    if encoding in ("gzip", "x-gzip"):   # RFC 9110 8.4.1.3: x-gzip is gzip
         return _gunzip(raw, max_bytes)
     if encoding == "deflate":
-        try:
-            return _inflate(raw, zlib.MAX_WBITS, max_bytes)
-        except ValueError:
-            return _inflate(raw, -zlib.MAX_WBITS, max_bytes)   # raw deflate stream
+        # RFC 9110 says zlib-wrapped, but some servers send a raw stream; the
+        # two-byte header tells them apart. Retrying raw on any error turned
+        # a truncated zlib body into a misleading "corrupt" one.
+        wbits = zlib.MAX_WBITS if _has_zlib_header(raw) else -zlib.MAX_WBITS
+        return _inflate(raw, wbits, max_bytes)
     raise ValueError(f"unsupported content-encoding: {encoding!r}")
+
+
+def _has_zlib_header(raw: bytes) -> bool:
+    """Whether ``raw`` starts with a zlib header (RFC 1950 2.2: CM 8, FCHECK)."""
+    return (len(raw) >= 2 and raw[0] & 0x0F == 8
+            and (raw[0] << 8 | raw[1]) % 31 == 0)
 
 
 def _inflate(raw: bytes, wbits: int, limit: int) -> bytes:
@@ -104,6 +111,9 @@ def _inflate(raw: bytes, wbits: int, limit: int) -> bytes:
         raise ValueError(f"corrupt deflate body: {error}") from error
     if len(out) > limit:
         raise ValueError(f"decoded body exceeds {limit} bytes")
+    if not inflater.eof:
+        # A cut-off stream inflated to a prefix and was returned as the body.
+        raise ValueError("truncated deflate body")
     return out
 
 

@@ -31,6 +31,36 @@ FLOW_BODY_KEYS = {
     "AC_define_macro": ("body",),
 }
 
+# Arguments a block command reads unconditionally (``args["key"]`` in its
+# handler in flow_control.py); a missing one is a KeyError at run time.
+# ``test_action_lint_blocks`` re-derives this table from the handlers' source
+# so the two cannot drift apart.
+BLOCK_REQUIRED_KEYS = {
+    "AC_if_image_found": ("image",),
+    "AC_if_pixel": ("x", "y", "rgb"),
+    "AC_if_var": ("name",),
+    "AC_wait_image": ("image",),
+    "AC_wait_pixel": ("x", "y", "rgb"),
+    "AC_sleep": ("seconds",),
+    "AC_loop": ("times",),
+    "AC_while_image": ("image",),
+    "AC_while_var": ("name",),
+    "AC_set_var": ("name",),
+    "AC_get_var": ("name",),
+    "AC_inc_var": ("name",),
+    "AC_for_each": ("items",),
+    "AC_define_macro": ("name",),
+    "AC_call_macro": ("name",),
+    "AC_read_file_to_var": ("path",),
+    "AC_pdf_to_var": ("path",),
+    "AC_otp_to_var": ("secret",),
+    "AC_sql_to_var": ("database", "query"),
+    "AC_assert_db": ("database", "query"),
+    "AC_http_to_var": ("url",),
+    "AC_transform_var": ("name",),
+    "AC_assert_var": ("name",),
+}
+
 # Keys whose value is a LIST OF action lists — one nesting level deeper than
 # FLOW_BODY_KEYS. Validating these as if they were flat would reject every
 # valid action, since each element is itself a list rather than a name.
@@ -123,6 +153,7 @@ def _iter_nested_actions(name: Any, action: list,
 
 
 __all__ = [
+    "BLOCK_REQUIRED_KEYS",
     "FLOW_BODY_KEYS", "FLOW_BRANCH_LIST_KEYS",
     "validate_actions", "unknown_command_names",
 ]

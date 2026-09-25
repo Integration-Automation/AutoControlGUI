@@ -84,9 +84,9 @@ def _echo_server() -> MCPServer:
 
 
 @pytest.mark.parametrize("extra", ["bogus", "ctx"])
-def test_an_undeclared_argument_is_invalid_params(extra):
+def test_an_undeclared_argument_is_a_tool_execution_error(extra):
     reply = _call(_echo_server(), "echo", {"text": "hi", extra: 1})
-    assert reply["error"]["code"] == -32602 and extra in reply["error"]["message"]
+    assert reply["result"]["isError"] is True and extra in reply["result"]["content"][0]["text"]
 
 
 def test_declared_arguments_still_work():

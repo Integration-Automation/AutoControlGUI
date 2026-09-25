@@ -116,7 +116,9 @@ Executor：``AC_ab_locate / _report / _best_strategy / _clear``。
     summary = summarise_llm_costs()
     print(summary.total_usd, summary.by_model)
 
-內建價格表涵蓋 Claude 4.x 與 OpenAI；可單次呼叫覆寫。
+``summarise_llm_costs()`` 不帶參數時彙總 ``default_cost_store`` 記錄的呼叫。內建價格表是 Anthropic
+目前的 Claude 牌價(Fable 5.x、Opus 5.x / 4.x、Sonnet 5 / 4.x、Haiku 4.5 與較舊的系列;帶日期或
+``anthropic.`` 前綴的 id 會以基本 id 查價)與 OpenAI；可單次呼叫覆寫。
 Executor：``AC_costs_record / _summary / _list / _clear``。
 
 
@@ -178,7 +180,9 @@ Executor：``AC_failure_hook_fire / _list / _clear``。
         ],
     })
 
-Executor：``AC_run_dag``。GUI：**DAG Runner** 分頁。
+從別的執行緒設定 ``stop_event=``（``threading.Event``）即可停止：執行中的節點會跑完，
+尚未開始的節點一律為 ``skipped``、錯誤為 ``"stopped"``。Executor：``AC_run_dag``。
+GUI：**DAG Runner** 分頁，Actions 選單有 **停止 DAG**。
 
 
 多 viewer 名單
@@ -200,7 +204,10 @@ Computer-use 高階 API
 
 封裝 :class:`ComputerUseAgentBackend` + :class:`AgentLoop`，一次呼叫
 即可驅動 Anthropic 的 computer-use tool(預設是 ``claude-opus-5`` 上的 ``computer_20251124``,
-以對應的 ``computer-use-2025-11-24`` beta 送出;``tool_type=`` 可換版本,``beta=`` 指定它的 beta)::
+以對應的 ``computer-use-2025-11-24`` beta 送出;``tool_type=`` 可換版本,``beta=`` 指定它的 beta)。
+``model="claude-opus-5-5"`` 只接受 GA 的 ``computer_toolset_20260801``,backend 會改送這個形式:不帶 beta、
+一回合可有多個動作,截圖先縮到模型的影像上限內(長邊 2576 px、4784 visual tokens,1080p 螢幕不必縮),
+模型給的座標再換算回螢幕座標;``zoom`` 以該區域的全解析度裁切回覆::
 
     from je_auto_control import run_computer_use
     result = run_computer_use(
@@ -208,9 +215,11 @@ Computer-use 高階 API
         max_steps=15, wall_seconds=120.0,
     )
 
-自動偵測螢幕大小；以 ``max_steps`` + ``wall_seconds`` 為預算上限，
-避免失控的 loop 把 API 額度耗光。Executor：``AC_computer_use``。
-GUI：**Computer Use** 分頁。
+自動偵測螢幕大小。截圖會縮到模型的影像層級內(Claude 4.7 以後:2576 px／4784 visual tokens;較舊的模型:1568 px／1568 tokens),
+beta 工具也一樣:它宣告縮放後的大小為螢幕大小,再把模型給的座標換算回螢幕。以 ``max_steps`` + ``wall_seconds`` 為預算上限，
+避免失控的 loop 把 API 額度耗光；設定 ``stop_event=``（``threading.Event``）會在下一步之前結束，
+``final_message`` 為 ``"stopped"``。Executor：``AC_computer_use``。
+GUI：**Computer Use** 分頁，Actions 選單有 **停止**。關閉視窗時會請執行中的工作停止，最多等 10 秒。
 
 
 WebRunner 接入 executor + MCP
@@ -355,7 +364,7 @@ helper（``je_auto_control.gui.flow_editor.layout_steps``）可單元
 
 * ``goal`` — 自然語言目標。
 * ``backend`` — ``"anthropic"``（透過 ``export_anthropic_tools()``
-  以 tool-use messages 驅動）或 ``"openai"``（``export_openai_tools()``
+  以 tool-use messages 驅動；每張截圖先縮到模型的影像層級內，工具呼叫的 ``x`` / ``y`` 再換算回螢幕）或 ``"openai"``（``export_openai_tools()``
   + Chat Completions function calling）。
 * ``max_steps``（預設 25）、``wall_seconds``（預設 300.0）。
 * ``model`` / ``max_tokens`` — backend 專屬覆寫。

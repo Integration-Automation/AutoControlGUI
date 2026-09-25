@@ -90,7 +90,10 @@ class WsMessageChannel(MessageChannel):
             ws_send_binary(self._sock, data, mask=self._mask)
 
     def read_typed(self) -> Tuple[MessageType, bytes]:
-        ws_payload = ws_recv_message(self._sock)
+        # A client (masking) channel reads unmasked server frames and vice versa.
+        ws_payload = ws_recv_message(self._sock, mask=self._mask,
+                                     expect_masked=not self._mask,
+                                     send_lock=self._send_lock)
         if len(ws_payload) < HEADER_SIZE:
             raise ProtocolError("WS payload too short to contain typed header")
         msg_type, length = decode_frame_header(ws_payload[:HEADER_SIZE])

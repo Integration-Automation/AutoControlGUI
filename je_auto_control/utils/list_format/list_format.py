@@ -23,16 +23,25 @@ _CONJUNCTIONS: Dict[str, Dict[str, str]] = {
 }
 # Locales that place a serial (Oxford) comma before the final conjunction.
 _SERIAL_COMMA = {"en"}
+# CLDR unit-list ``two`` / ``end`` patterns (cldr-json listPatterns); start and
+# middle are "{0}, {1}" everywhere. Only English is comma-only.
+_UNIT_PATTERNS: Dict[str, Dict[str, str]] = {
+    "en": {"two": "{0}, {1}", "end": "{0}, {1}"},
+    "es": {"two": "{0} y {1}", "end": "{0} y {1}"},
+    "fr": {"two": "{0} et {1}", "end": "{0} et {1}"},
+    "de": {"two": "{0}, {1}", "end": "{0} und {1}"},
+    "pt": {"two": "{0} e {1}", "end": "{0} e {1}"},
+}
 _VALID_STYLES = ("and", "or", "unit")
 
 
 def _patterns(locale: str, style: str) -> Dict[str, str]:
     """Return the ``two``/``start``/``middle``/``end`` patterns for a locale."""
     pair = "{0}, {1}"
-    if style == "unit":
-        return {"two": pair, "start": pair, "middle": pair, "end": pair}
     if locale not in _CONJUNCTIONS:   # unknown locale -> behave as English
         locale = "en"
+    if style == "unit":
+        return {"start": pair, "middle": pair, **_UNIT_PATTERNS[locale]}
     word = _CONJUNCTIONS[locale][style]
     separator = ", " if locale in _SERIAL_COMMA else " "
     return {
@@ -48,7 +57,8 @@ def format_list(items: Sequence[object], *, style: str = "and",
     """Join ``items`` into a localised list string.
 
     ``style`` is ``"and"`` (conjunction), ``"or"`` (disjunction) or ``"unit"``
-    (comma-separated, no conjunction). ``locale`` selects the conjunction word
+    (measurements such as "3 ft, 7 in": comma-only in English, CLDR's unit
+    pattern elsewhere). ``locale`` selects the conjunction word
     and serial-comma rule (``en``/``es``/``fr``/``de``/``pt``; unknown falls back
     to English). Raises ``ValueError`` on an unknown ``style``.
     """

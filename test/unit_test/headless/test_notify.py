@@ -1,4 +1,6 @@
 """Tests for cross-platform desktop notifications."""
+import types
+
 from je_auto_control.utils.notify import notifier
 
 
@@ -36,6 +38,7 @@ def test_notify_runs_and_reports_shown(monkeypatch):
     def fake_run(argv, **kwargs):
         calls["argv"] = argv
         calls["env"] = kwargs.get("env")
+        return types.SimpleNamespace(returncode=0)
 
     monkeypatch.setattr(notifier.subprocess, "run", fake_run)
     result = notifier.notify("Done", "All good", system="Linux")

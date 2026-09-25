@@ -24,7 +24,7 @@ import threading
 import time
 from contextlib import contextmanager
 from dataclasses import dataclass, field
-from typing import Any, Dict, Iterator, List, Optional
+from typing import Any, Dict, Iterator, List, Optional, Tuple
 
 
 @dataclass
@@ -79,18 +79,34 @@ class ResourceProfiler:
         self._lock = threading.Lock()
         self._samples: List[_Sample] = []
         self._frames: List[float] = []
-        self._current_action: Optional[str] = None
+        # Open spans in entry order as (token, action); the newest open one
+        # tags samples. Removing each span's own entry (not restoring the
+        # value it saw) keeps spans on two threads from leaving a stale tag.
+        self._open_spans: List[Tuple[object, str]] = []
         self._stop = threading.Event()
         self._thread: Optional[threading.Thread] = None
         self._started_at: Optional[float] = None
+        self._stopped_at: Optional[float] = None
 
     @property
     def is_running(self) -> bool:
-        return self._thread is not None and self._thread.is_alive()
+        """Whether a run has started and not been stopped, psutil or not.
+
+        Not the sampling thread's state: without psutil there is none, so a
+        running FPS-only profiler said it was stopped and a second
+        ``start()`` wiped the frames it had recorded.
+        """
+        with self._lock:
+            return self._started_at is not None and self._stopped_at is None
 
     @property
     def has_psutil(self) -> bool:
         return self._psutil is not None
+
+    @property
+    def _current_action(self) -> Optional[str]:
+        """The newest open span's action, which tags the next sample; read under ``_lock``."""
+        return self._open_spans[-1][1] if self._open_spans else None
 
     def start(self) -> None:
         """Spawn the sampling thread (no-op when already running)."""
@@ -102,6 +118,7 @@ class ResourceProfiler:
         self._samples = []
         self._frames = []
         self._started_at = time.monotonic()
+        self._stopped_at = None
         if self._psutil is None:
             return  # FPS-only mode; no sampling thread needed
         # Warm up cpu_percent so the first real call returns a real number.
@@ -117,8 +134,11 @@ class ResourceProfiler:
         self._thread.start()
 
     def stop(self, *, timeout: float = 2.0) -> None:
-        """Stop the sampling thread; idempotent."""
+        """Stop the sampling thread and freeze the report's duration; idempotent."""
         self._stop.set()
+        with self._lock:
+            if self._started_at is not None and self._stopped_at is None:
+                self._stopped_at = time.monotonic()
         if self._thread is not None:
             self._thread.join(timeout=timeout)
             self._thread = None
@@ -126,15 +146,14 @@ class ResourceProfiler:
     @contextmanager
     def span(self, action_name: str) -> Iterator[None]:
         """Tag the samples taken while the ``with`` block runs."""
-        previous: Optional[str]
+        entry = (object(), action_name)
         with self._lock:
-            previous = self._current_action
-            self._current_action = action_name
+            self._open_spans.append(entry)
         try:
             yield
         finally:
             with self._lock:
-                self._current_action = previous
+                self._open_spans.remove(entry)
 
     def tick_frame(self) -> None:
         """Record one frame timestamp for FPS aggregation."""
@@ -146,8 +165,11 @@ class ResourceProfiler:
         with self._lock:
             samples = list(self._samples)
             frames = list(self._frames)
-            started = self._started_at
-        duration = max(time.monotonic() - (started or 0.0), 0.0001)
+            started, stopped = self._started_at, self._stopped_at
+        if started is None:
+            duration = 0.0
+        else:
+            duration = max((stopped or time.monotonic()) - started, 0.0001)
         if samples:
             cpus = [s.cpu_percent for s in samples]
             rsses = [s.rss_bytes for s in samples]
@@ -164,7 +186,7 @@ class ResourceProfiler:
             cpu_percent_max=round(cpu_max, 2),
             rss_bytes_avg=int(rss_avg),
             rss_bytes_max=int(rss_max),
-            fps_avg=round(len(frames) / duration, 2),
+            fps_avg=round(len(frames) / duration, 2) if duration else 0.0,
             per_action=_aggregate_per_action(samples),
         )
 
@@ -191,6 +213,9 @@ class ResourceProfiler:
             else:
                 weights.append(self._interval)
         return {
+            # speedscope only recognises its format by this key (or a
+            # ``.speedscope.json`` file name).
+            "$schema": "https://www.speedscope.app/file-format-schema.json",
             "exporter": "autocontrol-resource-profiler",
             "shared": {"frames": [{"name": n} for n in names]},
             "profiles": [{

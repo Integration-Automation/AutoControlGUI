@@ -46,6 +46,10 @@ class _FakeIMAP:
         self.selected = (mailbox, readonly)
         return ("OK", [b"1"])
 
+    def response(self, code):
+        # imaplib's untagged-response lookup; the trigger reads UIDVALIDITY.
+        return (code, [b"1"] if code == "UIDVALIDITY" else [None])
+
     def uid(self, command, *args):
         # Normalise the way ``imaplib._command`` does before anything reaches
         # the wire: skip ``None`` (the optional charset slot) and ASCII-encode

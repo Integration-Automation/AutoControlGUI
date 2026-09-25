@@ -58,26 +58,52 @@ def _choose_axis(boxes: Sequence[Box], min_gap: int):
     return axis, position
 
 
-def _cut(boxes: List[Box], min_gap: int, depth: int) -> Dict[str, Any]:
-    """Recursively XY-cut ``boxes`` into a region tree."""
-    if len(boxes) <= 1 or depth <= 0:
-        return {"type": "leaf", "boxes": list(boxes)}
-    chosen = _choose_axis(boxes, min_gap)
+def _cut(boxes: List[Box], min_gap: int, depth: int,
+         parent_axis: Optional[str] = None) -> Dict[str, Any]:
+    """Recursively XY-cut ``boxes`` into a region tree.
+
+    Only a change of axis costs depth. Each cut is binary, so a stack of
+    equally spaced paragraphs is peeled off one per cut; when every cut
+    cost a level, eight paragraphs used up ``max_depth=8`` and the columns
+    below them fell back to the plain top/left sort -- interleaved.
+    Consecutive cuts on one axis are merged into one n-ary node.
+    """
+    leaf = {"type": "leaf", "boxes": list(boxes)}
+    chosen = _choose_axis(boxes, min_gap) if len(boxes) > 1 else None
     if chosen is None:
-        return {"type": "leaf", "boxes": list(boxes)}
+        return leaf
     axis, position = chosen
+    remaining = depth if axis == parent_axis else depth - 1
+    parts = _partition(boxes, axis, position)
+    if remaining < 0 or not all(parts):
+        return leaf
+    children: List[Dict[str, Any]] = []
+    for part in parts:
+        children.extend(_same_axis_children(_cut(part, min_gap, remaining, axis), axis))
+    return {"type": "split", "axis": axis, "children": children}
+
+
+def _partition(boxes: List[Box], axis: str, position: float) -> Tuple[List[Box], List[Box]]:
+    """The boxes whose centre is before / at-or-after ``position`` on ``axis``."""
     first = [box for box in boxes if _center_on(box, axis) < position]
     second = [box for box in boxes if _center_on(box, axis) >= position]
-    if not first or not second:
-        return {"type": "leaf", "boxes": list(boxes)}
-    return {"type": "split", "axis": axis,
-            "children": [_cut(first, min_gap, depth - 1),
-                         _cut(second, min_gap, depth - 1)]}
+    return first, second
+
+
+def _same_axis_children(child: Dict[str, Any], axis: str) -> List[Dict[str, Any]]:
+    """``child``'s own children when it cuts on ``axis`` too, else ``[child]``."""
+    if child["type"] == "split" and child["axis"] == axis:
+        return list(child["children"])
+    return [child]
 
 
 def xy_cut(boxes: Sequence[Box], *, min_gap: int = 12,
            max_depth: int = 8) -> Dict[str, Any]:
-    """Return the recursive XY-cut region tree of ``boxes``."""
+    """Return the recursive XY-cut region tree of ``boxes``.
+
+    ``max_depth`` bounds the nesting of alternating column / row cuts; any
+    number of cuts on one axis form a single level.
+    """
     if not boxes:
         return {"type": "leaf", "boxes": []}
     return _cut(list(boxes), int(min_gap), int(max_depth))

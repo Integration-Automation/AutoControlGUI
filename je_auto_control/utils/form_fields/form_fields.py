@@ -115,7 +115,13 @@ def checkbox_state(image: Any, box: Box, *, fill_threshold: float = 0.15) -> str
     import numpy as np
     from je_auto_control.utils.visual_match.visual_match import _to_gray
     left, top, right, bottom = _box_bounds(box)
-    patch = _to_gray(image)[top:bottom, left:right]
+    gray = _to_gray(image)
+    height, width = gray.shape[:2]
+    # Clamped: a negative edge wrapped around (or emptied the slice), so a
+    # checked box one pixel off the frame read "unchecked".
+    left, right = max(0, left), min(width, right)
+    top, bottom = max(0, top), min(height, bottom)
+    patch = gray[top:bottom, left:right]
     if patch.size == 0:
         return "unchecked"
     filled = float(np.count_nonzero(patch < 128)) / patch.size

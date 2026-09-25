@@ -164,15 +164,38 @@ def _reject_bad_action_list(actions: Any) -> Optional[HandlerResult]:
     return None
 
 
+def _execute_strict(actions: Any) -> HandlerResult:
+    """Run ``actions`` so the first failing action stops the run and is reported.
+
+    A failed action is the caller's result rather than a server fault, so it
+    comes back as ``200 {"ok": false, "error": ...}``. Without this a remote
+    run whose every action failed still read as a success to its caller:
+    the default run records failures inside ``result`` and returns 200.
+    """
+    from je_auto_control.utils.executor.action_executor import executor
+    try:
+        result = executor.execute_action(actions, raise_on_error=True)
+    except Exception as error:  # noqa: BLE001  # pylint: disable=broad-except  # reason: REST boundary; the failure is the response
+        autocontrol_logger.info("rest execute stopped on a failed action: %r", error)
+        return 200, {"ok": False, "error": f"{type(error).__name__}: {error}"}
+    return 200, {"ok": True, "result": result}
+
+
 def handle_execute(ctx: RouteContext) -> HandlerResult:
     if not isinstance(ctx.body, dict):
         return 400, {"error": "body must be JSON object"}
     actions = ctx.body.get("actions")
     if actions is None:
         return 400, {"error": "missing 'actions' field"}
+    try:
+        strict = _body_bool(ctx.body, "raise_on_error", False)
+    except ValueError as error:
+        return 400, {"error": str(error)}
     rejection = _reject_bad_action_list(actions)
     if rejection is not None:
         return rejection
+    if strict:
+        return _execute_strict(actions)
     try:
         from je_auto_control.utils.executor.action_executor import execute_action
         result = execute_action(actions)
@@ -363,9 +386,23 @@ def handle_usb_passthrough_status(_ctx: RouteContext) -> HandlerResult:
     return _usb_command(commands.passthrough_status)
 
 
+def _body_bool(body: Dict[str, Any], key: str, default: bool) -> bool:
+    """A JSON boolean from ``body``; anything else is a ``ValueError``.
+
+    ``bool("false")`` is True, so a string used to switch passthrough on.
+    """
+    value = body.get(key, default)
+    if not isinstance(value, bool):
+        raise ValueError(f"{key} must be a JSON boolean")
+    return value
+
+
 def handle_usb_passthrough_enable(ctx: RouteContext) -> HandlerResult:
     from je_auto_control.utils.usb.passthrough import commands
-    enabled = bool(_usb_body(ctx).get("enabled", True))
+    try:
+        enabled = _body_bool(_usb_body(ctx), "enabled", True)
+    except ValueError as error:
+        return 400, {"error": str(error)}
     return _usb_command(lambda: commands.passthrough_enable(enabled))
 
 
@@ -379,12 +416,13 @@ def handle_usb_acl_add(ctx: RouteContext) -> HandlerResult:
     body = _usb_body(ctx)
     try:
         vendor_id, product_id, serial = _usb_vid_pid(body)
+        allow = _body_bool(body, "allow", True)
+        prompt_on_open = _body_bool(body, "prompt_on_open", False)
     except ValueError as error:
         return 400, {"error": str(error)}
     return _usb_command(lambda: commands.acl_add(
         vendor_id, product_id, serial=serial,
-        allow=bool(body.get("allow", True)),
-        prompt_on_open=bool(body.get("prompt_on_open", False)),
+        allow=allow, prompt_on_open=prompt_on_open,
         label=str(body.get("label", "")),
     ))
 

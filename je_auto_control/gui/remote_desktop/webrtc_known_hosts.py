@@ -118,11 +118,15 @@ class KnownHostsDialog(QDialog):
     def _is_stale(last_seen, *, now, stale_after) -> bool:
         if not last_seen:
             return False
-        from datetime import datetime
+        from datetime import datetime, timezone
         try:
             dt = datetime.fromisoformat(last_seen)
         except (TypeError, ValueError):
             return False
+        if dt.tzinfo is None:
+            # Against the aware "now" a naive time raised TypeError and
+            # stopped the table half-filled.
+            dt = dt.replace(tzinfo=timezone.utc)
         return now - dt > stale_after
 
     def _on_forget(self) -> None:

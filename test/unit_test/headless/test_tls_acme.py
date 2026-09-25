@@ -1,6 +1,5 @@
 """Phase 7.6: tests for the TLS ACME helper layer."""
 import socket
-import threading
 import urllib.error
 import urllib.request
 from datetime import datetime, timedelta, timezone
@@ -13,7 +12,7 @@ from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.x509.oid import NameOID
 
 from je_auto_control.utils.tls_acme import (
-    HttpChallengeServer, KeyMaterial, RenewalScheduler,
+    HttpChallengeServer, RenewalScheduler,
     generate_account_key, generate_certificate_key,
     parse_certificate_expiry, renewal_due,
 )

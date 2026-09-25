@@ -32,7 +32,8 @@
     default_popup_watchdog.stop()
 
 ``action`` 為 ``"close"``(關閉相符視窗)或要按的鍵名(``"enter"`` /
-``"esc"`` / ...)。守衛在背景執行緒輪詢,並把每次關閉記錄在
+``"esc"`` / ...)。按鍵前會先把彈出視窗帶到前景;Windows 拒絕時,這條規則記錄錯誤,
+不會把按鍵送進使用者正在用的視窗。守衛在背景執行緒輪詢,並把每次關閉記錄在
 ``default_popup_watchdog.hits``。
 
 

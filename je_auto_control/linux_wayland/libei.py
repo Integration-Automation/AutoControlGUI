@@ -39,7 +39,7 @@ import select
 import threading
 import time
 from functools import partial
-from typing import Callable, Dict, List, Optional, Sequence, Tuple
+from typing import Callable, Dict, List, Optional, Sequence, Set, Tuple
 
 from je_auto_control.linux_wayland import oeffis
 from je_auto_control.linux_wayland._ctypes_bind import BoundSymbols, bind
@@ -188,6 +188,9 @@ class LibeiBackend:
         self._handshake_complete = False
         self._session = None
         self._devices: Dict[int, int] = {}
+        # Every device this sender holds a reference to, whichever
+        # capability currently points at it.
+        self._refs: Set[int] = set()
         self._emulating: Dict[int, bool] = {}
         self._sequence = 0
         self._lock = threading.RLock()
@@ -372,7 +375,9 @@ class LibeiBackend:
             self._remember_device(self._api.ei_event_get_device(event))
         elif event_type == EI_EVENT_DEVICE_RESUMED:
             self._start_emulating(self._api.ei_event_get_device(event))
-        elif event_type in (EI_EVENT_DEVICE_PAUSED, EI_EVENT_DEVICE_REMOVED):
+        elif event_type == EI_EVENT_DEVICE_PAUSED:
+            self._pause_device(self._api.ei_event_get_device(event))
+        elif event_type == EI_EVENT_DEVICE_REMOVED:
             self._forget_device(self._api.ei_event_get_device(event))
         elif event_type == EI_EVENT_DISCONNECT:
             raise LibeiUnavailable("the compositor disconnected the sender")
@@ -400,9 +405,10 @@ class LibeiBackend:
         for cap in _WANTED_CAPS:
             if not self._api.ei_device_has_capability(device, cap):
                 continue
-            if not kept:
+            if not kept and device not in self._refs:
                 self._api.ei_device_ref(device)
-                kept = True
+                self._refs.add(device)
+            kept = True
             self._devices[cap] = device
 
     def _start_emulating(self, device: int) -> None:
@@ -413,15 +419,31 @@ class LibeiBackend:
         self._api.ei_device_start_emulating(device, self._sequence)
         self._emulating[device] = True
 
+    def _pause_device(self, device: int) -> None:
+        """Stop emitting to a paused device until it resumes.
+
+        A pause is temporary (a screen lock, a VT switch). Dropping the device
+        here threw away the resume that follows, so libei was refused for the
+        rest of the process.
+        """
+        if device in self._refs:
+            self._emulating[device] = False
+
     def _forget_device(self, device: int) -> None:
-        """Drop a paused or removed device; emissions then fail closed."""
+        """Drop a removed device; emissions then fail closed.
+
+        Only a reference this sender took is released: unreffing a device it
+        never kept (or one already dropped) freed memory libei still owned.
+        """
         if not device:
             return
         self._emulating.pop(device, None)
         stale = [cap for cap, known in self._devices.items() if known == device]
         for cap in stale:
             del self._devices[cap]
-        self._api.ei_device_unref(device)
+        if device in self._refs:
+            self._refs.discard(device)
+            self._api.ei_device_unref(device)
 
     def _has_required_devices(self) -> bool:
         return all(self._emulating.get(self._devices.get(cap, 0), False)
@@ -543,10 +565,11 @@ class LibeiBackend:
         # replace the real failure with a complaint about the symbol table.
         symbols = self._symbols
         if symbols is not None and self._ei is not None and self._safe_to_unref():
-            for device in set(self._devices.values()):
+            for device in set(self._refs):
                 _quietly(partial(symbols.ei_device_unref, device))
             _quietly(partial(symbols.ei_unref, self._ei))
         self._devices.clear()
+        self._refs.clear()
         self._emulating.clear()
         self._ei = None
         self._backend_open = False

@@ -68,6 +68,19 @@ class HostAdvertiser:
             )
         self._host_id = host_id
         self._zc = Zeroconf()
+        try:
+            ip = self._register(host_id, port, signaling_url, server_name)
+        except BaseException:
+            # A taken name (NonUniqueNameException) left this instance's
+            # sockets and thread running.
+            self._zc.close()
+            raise
+        autocontrol_logger.info(
+            "lan discovery: advertised host_id=%s on %s", host_id, ip,
+        )
+
+    def _register(self, host_id: str, port: int, signaling_url: Optional[str],
+                  server_name: Optional[str]) -> str:
         ip = _local_ip()
         props = {b"host_id": host_id.encode("utf-8")}
         if signaling_url:
@@ -82,9 +95,7 @@ class HostAdvertiser:
             server=f"{name}.local.",
         )
         self._zc.register_service(self._info)
-        autocontrol_logger.info(
-            "lan discovery: advertised host_id=%s on %s", host_id, ip,
-        )
+        return ip
 
     def stop(self) -> None:
         try:
@@ -154,9 +165,13 @@ class HostBrowser:
             )
         self._zc = Zeroconf()
         self._listener = _BrowseListener(on_change)
-        self._browser = ServiceBrowser(
-            self._zc, _SERVICE_TYPE, listener=self._listener,
-        )
+        try:
+            self._browser = ServiceBrowser(
+                self._zc, _SERVICE_TYPE, listener=self._listener,
+            )
+        except BaseException:
+            self._zc.close()
+            raise
 
     def stop(self) -> None:
         try:

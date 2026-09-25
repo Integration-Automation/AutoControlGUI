@@ -19,7 +19,7 @@ from je_auto_control.utils.accessibility.element import (
     AccessibilityElement, AccessibilityNotAvailableError, element_matches,
 )
 from je_auto_control.utils.accessibility.backends.windows_query import (
-    UIA_ERRORS, focused_raw, search_roots, walk_elements,
+    UIA_ERRORS, _is_null, focused_raw, search_roots, walk_elements,
 )
 from je_auto_control.utils.accessibility.backends.windows_state import (
     is_password, read_state,
@@ -684,8 +684,8 @@ class WindowsAccessibilityBackend(AccessibilityBackend):
 
     def find_text(self, text="", ignore_case=True, name=None, role=None,
                   app_name=None, automation_id=None) -> bool:
-        return self._find_range(text, ignore_case, name, role, app_name,
-                                automation_id) is not None
+        return not _is_null(self._find_range(text, ignore_case, name, role, app_name,
+                                             automation_id))
 
     def select_text(self, text="", ignore_case=True, name=None, role=None,
                     app_name=None, automation_id=None) -> bool:

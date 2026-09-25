@@ -156,7 +156,9 @@ def screen_changed(app_name: Optional[str] = None) -> Dict[str, Any]:
 
 
 def _is_interactive(role: str) -> bool:
-    lowered = role.lower()
+    # humanize_role: Windows reports ControlType_50000, which matched no hint.
+    from je_auto_control.utils.ax_tree_walk.ax_tree_walk import humanize_role
+    lowered = humanize_role(role or "").lower()
     return any(hint in lowered for hint in _INTERACTIVE_HINTS)
 
 

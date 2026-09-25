@@ -332,6 +332,7 @@ japanese_word_dict = {
     "rd_webrtc_stop_recording": "録画停止",
     "rd_webrtc_recording_save_as": "録画ファイル保存先",
     "rd_webrtc_recording_saved": "録画を保存しました: {path}",
+    "rd_webrtc_recording_empty": "録画されたフレームがありません: {path} は作成されませんでした",
     "rd_webrtc_stats_idle": "（統計データなし）",
     # (B) batch
     "rd_webrtc_hw_codec_label": "ハードウェアコーデック:",
@@ -711,6 +712,7 @@ japanese_word_dict = {
     "sb_dialog_save": "スクリプト保存",
     "sb_dialog_load": "スクリプト読込",
     "sb_no_step_selected": "ステップ未選択",
+    "sb_positional_args": "位置引数（書かれたまま保持）",
 
     # Language
     "language_label": "言語:",
@@ -938,6 +940,8 @@ japanese_word_dict = {
     "computer_use_max_tokens_label": "1 ターンの最大トークン:",
     "computer_use_output_label": "トレース:",
     "computer_use_run_btn": "実行",
+    "computer_use_stop_btn": "停止",
+    "computer_use_stopping": "現在のステップの後で停止します…",
     "computer_use_running": "実行中...",
     "computer_use_already_running": "既に実行中です。少々お待ちください。",
     "computer_use_success": "目標達成しました。",
@@ -949,6 +953,8 @@ japanese_word_dict = {
     "dag_load_btn": "JSON を読み込み...",
     "dag_validate_btn": "検証",
     "dag_run_btn": "DAG 実行",
+    "dag_stop_btn": "DAG 停止",
+    "dag_stopping": "停止中：新しいノードは開始しません…",
     "dag_parallel_label": "最大並列数:",
     "dag_running": "DAG 実行中...",
     "dag_already_running": "DAG が実行中です。少々お待ちください。",

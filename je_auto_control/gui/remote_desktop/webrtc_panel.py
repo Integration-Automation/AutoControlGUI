@@ -25,7 +25,7 @@ from PySide6.QtWidgets import (
 
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
 from je_auto_control.gui.remote_desktop._helpers import (
-    _CollapsibleSection, _t,
+    _CollapsibleSection, _read_import_entries, _t,
 )
 from je_auto_control.gui.remote_desktop.advanced_group import (
     build_advanced_group,
@@ -52,7 +52,7 @@ from je_auto_control.gui.remote_desktop.webrtc_dialogs import (
 )
 from je_auto_control.gui.remote_desktop.webrtc_workers import (
     HostPublishLoopWorker, ViewerAnswerPushWorker, ViewerSignalingWorker,
-    generate_host_id,
+    generate_host_id, retire_worker,
 )
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.remote_desktop import (
@@ -220,6 +220,7 @@ class _WebRTCHostPanel(TranslatableMixin, QWidget):
         self._signals.session_count.connect(self._on_session_count)
         self._signals.viewer_video_frame.connect(self._on_viewer_video_image)
         self._signals.annotation.connect(self._on_annotation_event)
+        self._signals.stats.connect(self._update_host_quality_dot)
         self._build_ui()
         self._refresh_trusted_list()
         self._update_availability()
@@ -353,27 +354,21 @@ class _WebRTCHostPanel(TranslatableMixin, QWidget):
             QMessageBox.warning(self, "WebRTC", str(error))
 
     def _on_import_trust(self) -> None:
-        import json as _json
         path, _filter = QFileDialog.getOpenFileName(
             self, _t("rd_webrtc_trust_import"), "", _JSON_FILE_FILTER,
         )
         if not path:
             return
         try:
-            with open(path, "r", encoding="utf-8") as fh:
-                data = _json.load(fh)
-        except (OSError, _json.JSONDecodeError) as error:
+            viewers = _read_import_entries(path, "viewers")
+        except (OSError, ValueError) as error:
             QMessageBox.warning(self, "WebRTC", str(error))
             return
-        viewers = data.get("viewers") if isinstance(data, dict) else data
         added = 0
-        for entry in viewers or []:
-            if not isinstance(entry, dict):
-                continue
-            vid = entry.get("viewer_id")
-            label = entry.get("label", "") or ""
+        for entry in viewers:
+            vid, label = entry.get("viewer_id"), entry.get("label")
             if isinstance(vid, str) and vid:
-                self._trust_list.add(vid, label=label)
+                self._trust_list.add(vid, label=label if isinstance(label, str) else "")
                 added += 1
         QMessageBox.information(
             self, "WebRTC",
@@ -711,6 +706,7 @@ class _WebRTCHostPanel(TranslatableMixin, QWidget):
         except (ValueError, RuntimeError, OSError) as error:
             self._show_error(error)
             return
+        self._set_hosting(True)
         self._publish_loop = HostPublishLoopWorker(
             multi_host=self._multi_host,
             server_url=self._server_edit.text().strip(),
@@ -774,9 +770,10 @@ class _WebRTCHostPanel(TranslatableMixin, QWidget):
         except (ValueError, RuntimeError, OSError) as error:
             self._show_error(error)
             return
+        self._set_hosting(True)
         self._status_label.setText(_t("rd_webrtc_generating_offer"))
         self._offer_view.setPlainText("")
-        QTimer.singleShot(0, self._produce_offer)
+        QTimer.singleShot(0, self, self._produce_offer)
 
     def _require_multi_host(self) -> MultiViewerHost:
         """Return the running host, or say the session is not up yet."""
@@ -823,18 +820,23 @@ class _WebRTCHostPanel(TranslatableMixin, QWidget):
                                      parent=self)
         dialog.exec()
         choice = dialog.choice()
+        # The host can stop while the dialog is open (Stop, the tray): the
+        # answer then raised AttributeError on a host that was gone.
+        host = self._multi_host
+        if host is None:
+            return
         try:
             if choice == PendingViewerDialog.AcceptAndTrust:
-                self._multi_host.trust_pending_viewer(session_id)
+                host.trust_pending_viewer(session_id)
                 self._refresh_trusted_list()
             elif choice == PendingViewerDialog.AcceptOnce:
-                self._multi_host.approve_pending_viewer(session_id)
+                host.approve_pending_viewer(session_id)
             else:
-                self._multi_host.reject_pending_viewer(session_id)
+                host.reject_pending_viewer(session_id)
         except KeyError:
             # Session may have been torn down between prompt and decision.
             return
-        self._signals.session_count.emit(self._multi_host.session_count())
+        self._signals.session_count.emit(host.session_count())
 
     def _on_session_count(self, count: int) -> None:
         self._sessions_label.setText(
@@ -902,9 +904,10 @@ class _WebRTCHostPanel(TranslatableMixin, QWidget):
             self._session_cache.set(
                 session_id, color=color, snapshot=snapshot,
             )
-            # Re-paint just the dot cell for this session_id (avoid full reflow)
-            self._signals.session_count.emit(self._multi_host.session_count()
-                                              if self._multi_host else 0)
+            # Re-paint just the dot cell for this session_id (avoid full reflow).
+            # One read: the GUI thread can clear it between a check and a call.
+            host = self._multi_host
+            self._signals.session_count.emit(host.session_count() if host else 0)
         return _handle
 
     @staticmethod
@@ -1077,7 +1080,7 @@ class _WebRTCHostPanel(TranslatableMixin, QWidget):
                 self._adaptive_controller.on_stats(snapshot)
             except (RuntimeError, OSError) as error:
                 autocontrol_logger.debug("adaptive on_stats: %r", error)
-        self._update_host_quality_dot(snapshot)
+        self._signals.stats.emit(snapshot)
 
     def _update_host_quality_dot(self, snapshot: StatsSnapshot) -> None:
         rtt = snapshot.rtt_ms
@@ -1175,21 +1178,7 @@ class _WebRTCHostPanel(TranslatableMixin, QWidget):
             return
         if self._annotation_overlay is None:
             self._annotation_overlay = HostAnnotationOverlay(parent=self)
-        action = data.get("action")
-        x = float(data.get("x", 0))
-        y = float(data.get("y", 0))
-        if action == "begin":
-            self._annotation_overlay.begin_stroke(
-                x, y,
-                color=data.get("color") or "#ff0000",
-                width=int(data.get("width") or 3),
-            )
-        elif action == "point":
-            self._annotation_overlay.add_point(x, y)
-        elif action == "end":
-            self._annotation_overlay.end_stroke()
-        elif action == "clear":
-            self._annotation_overlay.clear()
+        self._annotation_overlay.apply(data)
 
     def _on_session_authed(self, session_id: str) -> None:
         self._signals.auth.emit(True)
@@ -1233,9 +1222,8 @@ class _WebRTCHostPanel(TranslatableMixin, QWidget):
             poller.stop()
         self._session_pollers.clear()
         self._session_cache.reset()
-        if self._publish_loop is not None:
-            self._publish_loop.requestInterruption()
-            self._publish_loop = None
+        retire_worker(self._publish_loop)
+        self._publish_loop = None
         if self._viewer_screen_window is not None:
             self._viewer_screen_window.set_image(None)
             self._viewer_screen_window.hide()
@@ -1248,6 +1236,11 @@ class _WebRTCHostPanel(TranslatableMixin, QWidget):
         finally:
             self._multi_host = None
             self._manual_session_id = None
+            self._set_hosting(False)
+
+    def _set_hosting(self, hosting: bool) -> None:
+        if self._tray is not None:
+            self._tray.set_hosting(hosting)
 
     def _on_state(self, state: str) -> None:
         self._status_label.setText(f"{_t('rd_webrtc_state_label')} {state}")
@@ -1286,6 +1279,11 @@ class _WebRTCViewerPanel(TranslatableMixin, QWidget):
         self._sync_engine: Optional["FolderSyncEngine"] = None
         self._auto_reconnect_attempts = 0
         self._user_initiated_disconnect = False
+        # One timer, so Stop can cancel a reconnect that is waiting out its
+        # back-off: a singleShot could not be, and reconnected after Stop.
+        self._reconnect_timer = QTimer(self)
+        self._reconnect_timer.setSingleShot(True)
+        self._reconnect_timer.timeout.connect(self._on_connect_via_server)
         # AnyDesk-style pop-out: created on auth_ok, hidden on stop.
         # Set by _ensure_screen_window().
         self._screen_window: Optional[RemoteScreenWindow] = None
@@ -1551,7 +1549,7 @@ class _WebRTCViewerPanel(TranslatableMixin, QWidget):
             self._status_label.setText(
                 _t("rd_webrtc_upload_done").format(n=sent),
             )
-            QTimer.singleShot(500, self._on_browse_refresh)
+            QTimer.singleShot(500, self, self._on_browse_refresh)
         if last_error is not None and sent == 0:
             QMessageBox.warning(self, "WebRTC", str(last_error))
 
@@ -1570,7 +1568,7 @@ class _WebRTCViewerPanel(TranslatableMixin, QWidget):
                 return datetime.fromtimestamp(float(value)).strftime(
                     "%Y-%m-%d %H:%M:%S",
                 )
-            except (TypeError, ValueError, OSError):
+            except (TypeError, ValueError, OSError, OverflowError):
                 return str(value)
         self._remote_files_table.populate(files, _format_mtime)
 
@@ -1715,11 +1713,10 @@ class _WebRTCViewerPanel(TranslatableMixin, QWidget):
         else:
             if self._recorder is not None:
                 self._recorder.stop()
+                # "Saved" was reported for a file that no frame ever created.
+                key = "rd_webrtc_recording_saved" if self._recorder.has_output else "rd_webrtc_recording_empty"
                 QMessageBox.information(
-                    self, "WebRTC",
-                    _t("rd_webrtc_recording_saved").format(
-                        path=str(self._recorder.output_path),
-                    ),
+                    self, "WebRTC", _t(key).format(path=str(self._recorder.output_path)),
                 )
                 self._recorder = None
             self._record_btn.setText(_t("rd_webrtc_start_recording"))
@@ -1846,33 +1843,29 @@ class _WebRTCViewerPanel(TranslatableMixin, QWidget):
             QMessageBox.warning(self, "WebRTC", str(error))
 
     def _on_ab_import(self) -> None:
-        import json as _json
         path, _filter = QFileDialog.getOpenFileName(
             self, _t("rd_webrtc_ab_import"), "", _JSON_FILE_FILTER,
         )
         if not path:
             return
         try:
-            with open(path, "r", encoding="utf-8") as fh:
-                data = _json.load(fh)
-        except (OSError, _json.JSONDecodeError) as error:
+            entries = _read_import_entries(path, "entries")
+        except (OSError, ValueError) as error:
             QMessageBox.warning(self, "WebRTC", str(error))
             return
-        entries = data.get("entries") if isinstance(data, dict) else data
         added = 0
-        for entry in entries or []:
-            if not isinstance(entry, dict):
-                continue
-            host_id = entry.get("host_id")
-            server_url = entry.get("server_url")
-            if not (host_id and server_url):
+        for entry in entries:
+            # Strings only: a numeric host_id was saved, then dropped on the
+            # next load, and a numeric MAC reached Wake-on-LAN.
+            text = {key: value for key, value in entry.items() if isinstance(value, str) and value}
+            if not ("host_id" in text and "server_url" in text):
                 continue
             try:
                 self._address_book.upsert(
-                    host_id=host_id, server_url=server_url,
-                    label=entry.get("label", ""),
-                    mac_address=entry.get("mac_address"),
-                    broadcast_address=entry.get("broadcast_address"),
+                    host_id=text["host_id"], server_url=text["server_url"],
+                    label=text.get("label", ""),
+                    mac_address=text.get("mac_address"),
+                    broadcast_address=text.get("broadcast_address"),
                 )
                 added += 1
             except (ValueError, OSError) as error:
@@ -2216,7 +2209,7 @@ class _WebRTCViewerPanel(TranslatableMixin, QWidget):
             self._show_error(error)
             return
         self._status_label.setText(_t("rd_webrtc_creating_answer"))
-        QTimer.singleShot(0, lambda: self._answer_and_push(offer_sdp))
+        QTimer.singleShot(0, self, lambda: self._answer_and_push(offer_sdp))
 
     def _answer_and_push(self, offer_sdp: str) -> None:
         host_id = self._host_id_edit.text().strip()
@@ -2244,11 +2237,12 @@ class _WebRTCViewerPanel(TranslatableMixin, QWidget):
             secret=self._secret_edit.text() or None,
             answer_sdp=answer,
         )
-        self._answer_worker.pushed.connect(
-            lambda: self._status_label.setText(_t("rd_webrtc_waiting_auth")),
-        )
+        self._answer_worker.pushed.connect(self._on_answer_pushed)
         self._answer_worker.failed.connect(self._on_signaling_failed)
         self._answer_worker.start()
+
+    def _on_answer_pushed(self) -> None:
+        self._status_label.setText(_t("rd_webrtc_waiting_auth"))
 
     def _on_signaling_failed(self, message: str) -> None:
         QMessageBox.warning(self, "WebRTC", message)
@@ -2268,7 +2262,7 @@ class _WebRTCViewerPanel(TranslatableMixin, QWidget):
             self._show_error(error)
             return
         self._status_label.setText(_t("rd_webrtc_creating_answer"))
-        QTimer.singleShot(0, lambda: self._produce_answer(offer))
+        QTimer.singleShot(0, self, lambda: self._produce_answer(offer))
 
     def _require_viewer(self) -> WebRTCDesktopViewer:
         """Return the live viewer, or say it is not connected yet."""
@@ -2289,6 +2283,7 @@ class _WebRTCViewerPanel(TranslatableMixin, QWidget):
     def _on_stop(self) -> None:
         self._user_initiated_disconnect = True
         self._auto_reconnect_attempts = 0
+        self._reconnect_timer.stop()
         self._stop_viewer_if_any()
         self._frame_display.clear()
         self._close_screen_window()
@@ -2309,6 +2304,9 @@ class _WebRTCViewerPanel(TranslatableMixin, QWidget):
         # popup feed the WebRTC control channel just like the hidden
         # inline display would.
         self._wire_display_input(window)
+        # With the pen already on, a new window drew nothing: every stroke
+        # reached the host as real clicks and drags.
+        window.set_pen_mode(self._pen_btn.isChecked())
         window.closed.connect(self._on_screen_window_closed)
         self._screen_window = window
         return window
@@ -2376,8 +2374,7 @@ class _WebRTCViewerPanel(TranslatableMixin, QWidget):
 
     def _stop_viewer_if_any(self) -> None:
         for worker in (self._offer_worker, self._answer_worker):
-            if worker is not None:
-                worker.requestInterruption()
+            retire_worker(worker)
         self._offer_worker = None
         self._answer_worker = None
         if self._sync_engine is not None:
@@ -2482,7 +2479,7 @@ class _WebRTCViewerPanel(TranslatableMixin, QWidget):
                 n=self._auto_reconnect_attempts, max=max_attempts,
             ),
         )
-        QTimer.singleShot(delay_ms, self._on_connect_via_server)
+        self._reconnect_timer.start(delay_ms)
 
     def _start_stats_polling(self) -> None:
         if self._viewer is None or self._viewer._pc is None:

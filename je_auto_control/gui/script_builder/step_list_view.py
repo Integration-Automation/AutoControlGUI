@@ -140,9 +140,11 @@ class StepTreeView(QTreeWidget):
         if body_key is not None:
             return item.parent(), body_key
         step = item.data(0, ROLE_STEP)
-        if isinstance(step, Step) and step.bodies:
-            first_key = next(iter(step.bodies))
-            return item, first_key
+        # The schema's body keys, not the ones filled in so far: a new loop
+        # has none, and a step added with it selected went to the top level.
+        spec = COMMAND_SPECS.get(step.command) if isinstance(step, Step) else None
+        if spec is not None and spec.body_keys:
+            return item, spec.body_keys[0]
         return None, None
 
     def _emit_selection(self) -> None:

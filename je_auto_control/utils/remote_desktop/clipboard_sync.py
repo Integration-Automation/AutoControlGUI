@@ -10,8 +10,10 @@ import base64
 import json
 from typing import Any, Dict, Tuple
 
+from je_auto_control.utils.exception.exceptions import AutoControlException
 
-class ClipboardSyncError(ValueError):
+
+class ClipboardSyncError(AutoControlException, ValueError):
     """Raised when a CLIPBOARD payload is malformed or unsupported."""
 
 

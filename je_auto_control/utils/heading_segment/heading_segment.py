@@ -10,6 +10,7 @@ a flat document outline.
 Pure-stdlib over plain line dicts (text + bbox); fully unit-testable with no image and no OCR
 engine. Reuses ``table_grid_fill``'s box-bounds reader. Imports no ``PySide6``.
 """
+import statistics
 from typing import Any, Dict, List, Sequence
 
 from je_auto_control.utils.table_grid_fill.table_grid_fill import _box_bounds
@@ -37,8 +38,9 @@ def classify_lines(lines: Sequence[Line], *,
     """
     if not lines:
         return []
-    heights = sorted(_height(line) for line in lines)
-    threshold = heights[len(heights) // 2] * float(heading_ratio)
+    # The true median: the upper middle of an even count put a title and one
+    # body line at the title's height, so the title was never a heading.
+    threshold = statistics.median(_height(line) for line in lines) * float(heading_ratio)
     heading_heights = sorted({_height(line) for line in lines
                               if _height(line) > threshold}, reverse=True)
     level_of = {height: index + 1 for index, height in enumerate(heading_heights)}
