@@ -34,6 +34,11 @@ class OpenAIAgentBackend(AgentBackend):
                 "OpenAIAgentBackend requires a non-empty tool list "
                 "(see export_openai_tools()).",
             )
+        if len(tools) > _MAX_OPENAI_TOOLS:
+            # Every request was rejected: AC_run_agent offered all 741 commands.
+            raise AgentBackendError(
+                f"OpenAI accepts at most {_MAX_OPENAI_TOOLS} tools; got {len(tools)} "
+                "(narrow them with only=[...])")
         self._tools = list(tools)
         self._offered = offered_tool_names(self._tools)
         self._client = client
@@ -61,6 +66,10 @@ class OpenAIAgentBackend(AgentBackend):
                            screenshot: Optional[bytes],
                            history: Sequence[AgentStep],
                            ) -> Dict[str, Any]:
+        if not history:
+            # A new run: the last run's system prompt named the last goal.
+            self._messages = []
+            self._pending_tool_call_id = None
         self._seed_system(goal)
         self._ingest_history(history)
         self._messages.append(
@@ -102,7 +111,9 @@ class OpenAIAgentBackend(AgentBackend):
         last = history[-1]
         if last.tool is None:
             return
-        body = str(last.error) if last.error else str(last.result)
+        # Capped, as the computer-use backend does: the whole result went
+        # into the history and was resent every step.
+        body = (str(last.error) if last.error else str(last.result))[:_MAX_RESULT_CHARS]
         self._messages.append({
             "role": "tool",
             "tool_call_id": self._pending_tool_call_id,
@@ -111,8 +122,12 @@ class OpenAIAgentBackend(AgentBackend):
         self._pending_tool_call_id = None
 
     def _handle_response(self, response: Any) -> Dict[str, Any]:
-        choice = response.choices[0]
+        choices = list(getattr(response, "choices", None) or [])
+        if not choices:
+            raise AgentBackendError("openai returned no choices")
+        choice = choices[0]
         message = choice.message
+        _raise_if_refused(choice)
         tool_calls = getattr(message, "tool_calls", None) or []
         # Persist the assistant message so the next turn can chain a
         # ``role: tool`` message back to the right tool_call_id.
@@ -132,6 +147,12 @@ class OpenAIAgentBackend(AgentBackend):
         return {"stop": True, "message": text.strip() if isinstance(text, str) else ""}
 
 
+#: The Chat Completions API's documented tool limit.
+_MAX_OPENAI_TOOLS = 128
+#: The longest tool result kept in the conversation.
+_MAX_RESULT_CHARS = 4000
+
+
 def _parse_arguments(name: str, raw: Any) -> Dict[str, Any]:
     """The tool call's JSON arguments, which must be an object.
 
@@ -148,6 +169,15 @@ def _parse_arguments(name: str, raw: Any) -> Dict[str, Any]:
     if not isinstance(args, dict):
         raise AgentBackendError(f"arguments for {name!r} must be a JSON object")
     return args
+
+
+def _raise_if_refused(choice: Any) -> None:
+    """A refusal or a filtered reply is not a final answer: it counted as success."""
+    refusal = getattr(choice.message, "refusal", None)
+    if refusal:
+        raise AgentBackendError(f"openai refused: {refusal}")
+    if getattr(choice, "finish_reason", None) == "content_filter":
+        raise AgentBackendError("openai response withheld by its content filter")
 
 
 def _raise_if_truncated(choice: Any) -> None:

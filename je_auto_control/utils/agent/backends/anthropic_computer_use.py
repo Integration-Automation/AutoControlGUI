@@ -28,6 +28,7 @@ import math
 from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple
 
 from je_auto_control.utils.agent.agent_loop import AgentBackend, AgentStep
+from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.agent.backends._computer_toolset import (
     TOOLSET_ONLY_MODELS, TOOLSET_SCHEMA, TOOLSET_TYPE, ToolsetBatch,
     fit_screenshot, fitted_size, image_tier, resize_png, screen_region,
@@ -94,8 +95,12 @@ def _normalise_key(name: str) -> str:
 
 
 def _parse_combo(combo: str) -> List[str]:
-    """Split an xdotool-style hotkey (``ctrl+shift+T``) into key names."""
-    return [_normalise_key(p) for p in combo.split("+") if p.strip()]
+    """Split an xdotool-style hotkey (``ctrl+shift+T``) into key names.
+
+    ``ctrl++`` is Ctrl and the plus key: splitting on "+" dropped the plus.
+    """
+    from je_auto_control.utils.cua_action.cua_action import split_key_combo
+    return [_normalise_key(part) for part in split_key_combo(combo)]
 
 
 def _click_button(action: str) -> str:
@@ -193,6 +198,8 @@ class ComputerUseAgentBackend(AgentBackend):
                             screenshot: Optional[bytes],
                             history: Sequence[AgentStep],
                             ) -> Dict[str, Any]:
+        if not history:
+            self._new_run()
         if self._batch is not None:
             return self._decide_with_toolset(self._batch, goal, screenshot, history)
         if screenshot and self._declared is not None:
@@ -205,6 +212,14 @@ class ComputerUseAgentBackend(AgentBackend):
             })
         prune_old_screenshots(self._conversation)
         return self._handle_response(self._create(goal, beta=True))
+
+    def _new_run(self) -> None:
+        """Forget the previous run: its conversation ended on an unanswered tool_use."""
+        self._conversation = []
+        self._pending_tool_use_id = None
+        self._zooms.clear()
+        if self._batch is not None:
+            self._batch = ToolsetBatch()
 
     def _create(self, goal: str, *, beta: bool) -> Any:
         """One Messages API call with the current conversation."""
@@ -263,7 +278,7 @@ class ComputerUseAgentBackend(AgentBackend):
                                 tool_use_id: str) -> List[Dict[str, Any]]:
         region = self._zooms.pop(tool_use_id, None)
         if step.tool != "AC_screenshot" or not screenshot:
-            return _tool_result_content(step, screenshot)
+            return _tool_result_content(step, screenshot, self._scale)
         # A zoom is answered from the full-resolution frame; the scale of the
         # full screenshot stays, since later coordinates are still in its space.
         image = (zoom_image(screenshot, region, self._tier) if region is not None
@@ -275,6 +290,7 @@ class ComputerUseAgentBackend(AgentBackend):
         content = list(getattr(response, "content", []) or [])
         self._conversation.append({"role": "assistant", "content": content})
         self._zooms.clear()
+        _raise_if_truncated(response)     # before running any call it holds
         calls = [(_attr(block, "id"), self._toolset_decision(block))
                  for block in content if _block_type(block) == "tool_use"]
         if not calls:
@@ -311,6 +327,7 @@ class ComputerUseAgentBackend(AgentBackend):
     def _handle_response(self, response: Any) -> Dict[str, Any]:
         content = list(getattr(response, "content", []) or [])
         self._conversation.append({"role": "assistant", "content": content})
+        _raise_if_truncated(response)     # before running any call it holds
         for block in content:
             if _block_type(block) != "tool_use":
                 continue
@@ -332,7 +349,7 @@ class ComputerUseAgentBackend(AgentBackend):
         if not history or self._pending_tool_use_id is None:
             return
         last = history[-1]
-        content = _tool_result_content(last, screenshot)
+        content = _tool_result_content(last, screenshot, self._scale)
         self._conversation.append({
             "role": "user",
             "content": [{
@@ -360,12 +377,7 @@ class ComputerUseAgentBackend(AgentBackend):
 # --- action translation ---------------------------------------------
 
 def _final_answer(response: Any, content: List[Any]) -> Dict[str, Any]:
-    """A turn without tool calls: the final answer, unless it was cut short.
-
-    The default max_tokens can be hit mid-plan, or the model may refuse; a
-    truncated reply must not be reported as a successful final answer.
-    """
-    _raise_if_truncated(response)
+    """A turn without tool calls: the final answer (a truncated turn was refused earlier)."""
     text_parts: List[str] = [
         _attr(b, "text") or ""
         for b in content if _block_type(b) == "text"
@@ -496,8 +508,14 @@ def _scroll_decision(payload: Dict[str, Any]) -> Dict[str, Any]:
     # An explicit 0 means "no scroll" — only default when the key is absent.
     amount = int(_number(raw_amount, "scroll_amount")) if raw_amount is not None else 3
     amount = min(max(amount, 0), _MAX_SCROLL_NOTCHES)
-    delta = amount if direction == "up" else -amount
-    inputs: Dict[str, Any] = {"scroll_value": delta}
+    # The direction goes to AC_mouse_scroll as cua_action sends it: left out,
+    # X11 and Wayland scrolled their default way ("up" went down there), and
+    # left / right became a vertical scroll everywhere.
+    from je_auto_control.utils.cua_action.cua_action import scroll_params
+    try:
+        inputs: Dict[str, Any] = scroll_params({"direction": direction, "amount": amount})
+    except AutoControlException as error:
+        raise AgentBackendError(str(error)) from error
     # The scroll happens where the model pointed, not wherever the cursor was;
     # _clamp_decision keeps the point on the display.
     if payload.get("coordinate") is not None:
@@ -614,7 +632,7 @@ def _clamp_decision(decision: Dict[str, Any], width: int, height: int) -> Dict[s
     _clamp_inputs(inputs, width, height)
     for key in ("action_list", "actions"):
         for action in inputs.get(key) or []:
-            if len(action) == 2 and isinstance(action[1], dict):
+            if isinstance(action, (list, tuple)) and len(action) == 2 and isinstance(action[1], dict):
                 _clamp_inputs(action[1], width, height)
     return decision
 
@@ -655,13 +673,17 @@ def _initial_user_content(goal: str,
     return blocks
 
 
-def _tool_result_content(step: AgentStep,
-                         screenshot: Optional[bytes]) -> List[Dict[str, Any]]:
+def _tool_result_content(step: AgentStep, screenshot: Optional[bytes],
+                         scale: Tuple[float, float] = (1.0, 1.0)) -> List[Dict[str, Any]]:
     """Build a ``tool_result`` content payload for the last ``AC_*`` call.
 
     Anthropic's spec expects the screenshot tool to return the image
-    *itself* — text-only results just describe what happened.
+    *itself* — text-only results just describe what happened. The cursor
+    position is given in the screenshot's pixels, where the model works:
+    in screen pixels it named a point off the image it was shown.
     """
+    if not step.error and step.tool == "AC_get_mouse_position":
+        return [{"type": "text", "text": _scaled_point(step.result, scale)}]
     if step.error:
         return [{"type": "text", "text": f"error: {step.error}"}]
     if step.tool == "AC_screenshot":
@@ -677,6 +699,14 @@ def _tool_result_content(step: AgentStep,
             }]
     text = repr(step.result) if step.result is not None else "ok"
     return [{"type": "text", "text": text[:4000]}]
+
+
+def _scaled_point(point: Any, scale: Tuple[float, float]) -> str:
+    """A screen point in screenshot pixels, as text; anything else as it came."""
+    if (isinstance(point, (list, tuple)) and len(point) == 2
+            and all(isinstance(v, (int, float)) and not isinstance(v, bool) for v in point)):
+        return repr((int(round(point[0] * scale[0])), int(round(point[1] * scale[1]))))
+    return repr(point)
 
 
 __all__ = ["ComputerUseAgentBackend"]

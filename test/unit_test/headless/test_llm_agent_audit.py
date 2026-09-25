@@ -73,9 +73,12 @@ class _Recorder:
 def test_agent_requests_carry_a_timeout_and_bounded_screenshots(backend_cls, tools):
     client = _Recorder()
     backend = backend_cls(tools=tools, client=client)
-    for _ in range(base.SCREENSHOTS_KEPT + 4):
+    from je_auto_control.utils.agent.agent_loop import AgentStep
+    history = []
+    for index in range(base.SCREENSHOTS_KEPT + 4):
         with pytest.raises(base.AgentBackendError):
-            backend.decide_next_action("goal", b"png", [])
+            backend.decide_next_action("goal", b"png", history)
+        history = [AgentStep(index=index, tool=None, arguments={})]   # an empty one starts a new run
     assert all(call["timeout"] == base.REQUEST_TIMEOUT_S for call in client.calls)
     assert client.calls[-1]["image_count"] == base.SCREENSHOTS_KEPT
 
@@ -104,7 +107,7 @@ def test_an_empty_plan_is_refused():
 
 @pytest.mark.parametrize("reply, expected", [
     ("123456, 7", None),
-    ("1.5, 2", None),
+    ("1.5, 2", (2, 2)),
     ("at 40, 60.", (40, 60)),
     ("-3, 8", (-3, 8)),
 ])

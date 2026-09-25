@@ -282,6 +282,12 @@ pixel coordinates::
        screen_region=[0, 800, 1920, 1080],  # optional crop
    )
 
+``None`` / ``False`` means the model did not find the element. A request that
+fails (network, authentication, rate limit) raises ``VLMRequestError`` instead
+of reading as "not found". The Anthropic backend sends the capture fitted to
+the model's image limits and maps the reply back to its pixels; replies such as
+``x=512, y=300``, ``{"x": 512, "y": 300}`` or ``512.4, 300.6`` are all read.
+
 Backends (loaded lazily, zero imports at package import time):
 
 - Anthropic (``anthropic`` SDK, ``ANTHROPIC_API_KEY``)

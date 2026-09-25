@@ -4,18 +4,6 @@ from __future__ import annotations
 import inspect
 from typing import Any, Callable, Dict, List, Mapping, Optional, Tuple
 
-_TYPE_TO_JSON_SCHEMA = {
-    int: "integer",
-    float: "number",
-    bool: "boolean",
-    str: "string",
-    bytes: "string",
-    list: "array",
-    tuple: "array",
-    dict: "object",
-}
-
-
 def _executor():
     """Lazy import to keep this module dependency-free at import time."""
     from je_auto_control.utils.executor.action_executor import executor
@@ -42,16 +30,18 @@ def infer_parameters(callable_obj: Callable[..., Any]
         sig = inspect.signature(callable_obj)
     except (TypeError, ValueError):
         return {}, []
+    from je_auto_control.utils.action_lint.schema import _json_type, _resolved_hints
     properties: Dict[str, Any] = {}
     required: List[str] = []
+    hints = _resolved_hints(callable_obj)
     for name, param in sig.parameters.items():
-        if name == "self" or param.kind in (
-                inspect.Parameter.VAR_POSITIONAL,
-                inspect.Parameter.VAR_KEYWORD,
-        ):
+        hint = hints.get(name, param.annotation)
+        if _not_for_the_model(name, param, hint):
             continue
-        json_type = _annotation_to_json_type(param.annotation)
-        prop: Dict[str, Any] = {"type": json_type}
+        # Resolved, unions included: postponed annotations reached here as
+        # strings, so Optional[int] -- AC_click_mouse's x -- was "string".
+        json_type = _json_type(hint)
+        prop: Dict[str, Any] = {} if json_type is None else {"type": json_type}
         if param.default is inspect.Parameter.empty:
             required.append(name)
         else:
@@ -63,12 +53,28 @@ def infer_parameters(callable_obj: Callable[..., Any]
     return properties, required
 
 
-def _annotation_to_json_type(annotation: Any) -> str:
-    """Best-effort map a Python type annotation to a JSON-schema type."""
-    if annotation is inspect.Parameter.empty:
-        return "string"
-    base = getattr(annotation, "__origin__", None) or annotation
-    return _TYPE_TO_JSON_SCHEMA.get(base, "string")
+def _not_for_the_model(name: str, param: inspect.Parameter, hint: Any) -> bool:
+    """Parameters a tool call must not set: ``self``, ``*args``, private ones, callbacks.
+
+    ``AC_execute_action``'s ``_validated`` let the model skip validation (a
+    stray AC_break then escaped the agent loop), and ``step_callback`` is a
+    function no JSON can give.
+    """
+    if name == "self" or name.startswith("_"):
+        return True
+    if param.kind in (inspect.Parameter.VAR_POSITIONAL, inspect.Parameter.VAR_KEYWORD):
+        return True
+    return _is_callable_type(hint)
+
+
+def _is_callable_type(hint: Any) -> bool:
+    """Whether ``hint`` is ``Callable`` or a union holding one."""
+    import collections.abc
+    import typing
+    origin = typing.get_origin(hint)
+    if hint is collections.abc.Callable or origin is collections.abc.Callable:
+        return True
+    return any(_is_callable_type(arg) for arg in typing.get_args(hint)) if origin is typing.Union else False
 
 
 def _description_for(name: str, callable_obj: Callable[..., Any]) -> str:

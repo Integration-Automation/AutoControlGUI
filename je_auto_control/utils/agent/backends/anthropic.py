@@ -68,6 +68,10 @@ class AnthropicAgentBackend(AgentBackend):
                            screenshot: Optional[bytes],
                            history: Sequence[AgentStep],
                            ) -> Dict[str, Any]:
+        if not history:
+            # A new run: the last run's conversation ended on an unanswered
+            # tool_use, which the API rejects.
+            self._conversation = []
         # Track the previous turn's tool_result, if any.
         self._ingest_history(history)
         # Always attach the latest screenshot so the model has fresh
@@ -114,6 +118,10 @@ class AnthropicAgentBackend(AgentBackend):
         """Pull the first tool_use / final text out of a Messages reply."""
         content = list(getattr(response, "content", []) or [])
         self._conversation.append({"role": "assistant", "content": content})
+        # Before any tool call: a turn cut short by max_tokens, or refused,
+        # may hold a half-written tool_use -- a click with no coordinates ran
+        # wherever the cursor was.
+        _raise_if_truncated(response)
         for block in content:
             block_type = (
                 block.get("type") if isinstance(block, dict)
@@ -125,11 +133,8 @@ class AnthropicAgentBackend(AgentBackend):
                     "input": _attr(block, "input") or {},
                     "_tool_use_id": _attr(block, "id"),
                 }, self._scale)
-        # No tool_use — interpret the text as a final answer + stop, unless
-        # the turn was cut short (default max_tokens can be hit mid-plan, or
-        # the model may refuse). Surfacing a truncated reply as a successful
-        # final answer would silently end the run with a half-formed message.
-        _raise_if_truncated(response)
+        # No tool_use: the text is the final answer (a truncated turn was
+        # refused above).
         text_parts: List[str] = []
         for block in content:
             block_type = (
@@ -154,8 +159,10 @@ class AnthropicAgentBackend(AgentBackend):
         tool_use_id = _last_tool_use_id(self._conversation)
         if tool_use_id is None:
             return
+        # Capped, as the computer-use backend does: the whole result went
+        # into the history and was resent every step.
         result_content = (
-            str(last.error) if last.error else str(last.result),
+            (str(last.error) if last.error else str(last.result))[:_MAX_RESULT_CHARS],
         )
         self._conversation.append({
             "role": "user",
@@ -194,6 +201,8 @@ def _attr(block: Any, name: str) -> Any:
 
 
 _TRUNCATION_STOP_REASONS = frozenset({"max_tokens", "refusal"})
+#: The longest tool result kept in the conversation.
+_MAX_RESULT_CHARS = 4000
 
 
 def _raise_if_truncated(response: Any) -> None:

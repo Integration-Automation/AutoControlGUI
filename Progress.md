@@ -163,6 +163,7 @@ pip install --dry-run --only-binary=:all: --platform win_arm64 --python-version 
 - **X11 預設滾動方向與 Windows／macOS 相反**：`wrapper/auto_control_mouse.py` `mouse_scroll(..., scroll_direction="scroll_down")`，正值在 X11 往下、其他平台往上，與 docstring「一份寫法各平台通用」不符。做法：預設改 `scroll_up`，或改 docstring 講清楚（重播路徑已在 U-20260924-14 明確傳 `scroll_up`）。
 - **`mouse_scroll` 的 NaN 座標被悄悄夾到桌面邊緣**：`auto_control_mouse.py` 的夾限在 `_coordinate()` 驗證之前，`mouse_scroll(3, x=nan, y=100)` 移到 `(-1920, 100)` 才滾；`set_mouse_position(nan, …)` 則正確丟例外。做法：夾限前先過 `_coordinate()`。
 - **座標截斷而非四捨五入**：`set_mouse_position(-0.6, 10.9)` 得到 `(0, 10)`，註解寫的是「rounded point」。做法：`int(round(value))`。
+- **Windows 鍵表沒有標點鍵**：`plus`、`minus`、`comma`、`period`、`slash` 等沒有對應的 `VK_OEM_*`，computer use 的 `ctrl+minus` 在 Windows 失敗。做法：在 Windows 鍵表補上 `VK_OEM_PLUS`／`VK_OEM_MINUS`／`VK_OEM_COMMA`／`VK_OEM_PERIOD`／`VK_OEM_2` 等。
 
 同一次稽核的影像與 OCR 部分也在它的路徑上（Discord bot 的 `!find_image`／`!find_text`），一併等：
 
@@ -366,6 +367,29 @@ viewer 端的 `FileReceiver`（`utils/remote_desktop/file_transfer.py`）照單�
 
 **為什麼要拍板**：這會縮小既有的 agent 能力，依賴它跑 shell 的腳本會改變行為。
 
+實測數字（2026-09-25）：預設清單有 741 個指令，含 `AC_run_agent` 本身（模型可以遞迴開 agent）；
+`backend="openai"` 超過 Chat Completions 的 128 個工具上限，現在建 backend 時就明確拒絕；
+Anthropic 每一步送約 202 KB 的工具 schema、沒有 `cache_control`。拍板後一併決定上限與快取。
+
+
+---
+
+## Agent 的截圖修剪會改寫較早的回合
+
+`TODO` — 需要付費實機跑一次多步驟任務驗證，不能只靠離線測試
+
+`utils/agent/backends/base.py` 的 `prune_old_screenshots` 每一步把較舊的截圖換成文字，改的是已送出過的訊息。
+Claude Fable 5.1 與 Opus 5.5 的 thinking 區塊綁定它之前的整段對話，2026-08-31 之後建立的帳號會直接回 400
+（"block is bound to a different conversation"），約在第 4 步中斷；其他模型則是每一步都讓 prompt cache 失效。
+不修剪也不行：每步重送全部截圖會超過 32 MB 的請求上限。
+
+**做法（擇一，依 claude-api 文件的 append-only 對照表）**：用戶端「簡單壓縮」——截圖數超過上限時，以一則摘要
+（目標、已執行的動作）加最新截圖開新對話，不重播舊回合；或送
+`thinking.block_binding.prefix_mismatch_behavior: "drop_block"`（beta `thinking-binding-controls-2026-08-01`），
+讓被改到的 thinking 區塊被丟棄而不是 400。伺服器端 tool-result clearing 不會縮小請求本身，擋不住 32 MB。
+
+**要動的地方**：`anthropic.py`、`anthropic_computer_use.py`（兩條路徑）呼叫 `prune_old_screenshots` 之處；
+OpenAI 後端沒有這個綁定，照舊。
 
 ---
 

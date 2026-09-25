@@ -76,6 +76,10 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Changed
 
+- VLM locate / click raise `VLMRequestError` when the request fails,
+  instead of reporting the element as not found.
+- Agent tool schemas carry resolved parameter types and omit private and
+  callback parameters; the OpenAI agent backend refuses more than 128 tools.
 - Generated tests and scripts replay actions with
   `ac.executor.execute_action(..., raise_on_error=True)`, so they fail at
   the first failed action; actions holding `${...}` go through the executor.
@@ -392,6 +396,15 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Fixed
 
+- Agent turns cut short by `max_tokens` or a refusal no longer run their
+  tool calls; OpenAI refusals and filtered replies are not final answers.
+- Computer-use scrolls keep their direction, the cursor position is in
+  screenshot pixels, and `ctrl++` keeps its plus key.
+- The Anthropic VLM backend reads replies in the pixels of the image the
+  model saw, and replies such as `x=512, y=300` or decimals are read.
+- A reused agent backend starts each run afresh; the agent loop records
+  more command errors as step errors instead of ending the run.
+- Bedrock `global.` ids and dated OpenAI ids are priced.
 - `je_auto_control_mcp --read-only` restricts the server's tools, not
   only the listings.
 - The MCP stdio server and the CLIs write UTF-8 whatever the console code

@@ -8,6 +8,14 @@ class VLMNotAvailableError(AutoControlException, RuntimeError):
     """Raised when no VLM backend can be initialised."""
 
 
+class VLMRequestError(AutoControlException, RuntimeError):
+    """A VLM request failed (network, authentication, rate limit, server error).
+
+    Not "not found": a connection reset used to read as the element being
+    absent, and ``click_by_description`` quietly returned False.
+    """
+
+
 class VLMBackend:
     """Each backend turns a screenshot + description into pixel coordinates."""
 

@@ -265,6 +265,10 @@ VLM（AI）元件定位
        screen_region=[0, 800, 1920, 1080],   # 可選：只在此區域搜尋
    )
 
+``None`` / ``False`` 表示模型沒找到元素。請求本身失敗（網路、驗證、速率限制）時會拋出
+``VLMRequestError``，不再當成「找不到」。Anthropic 後端送出的畫面會先縮到模型的影像上限，
+回覆再換算回原圖像素；``x=512, y=300``、``{"x": 512, "y": 300}``、``512.4, 300.6`` 這類回覆都讀得到。
+
 後端（延遲載入，import ``je_auto_control`` 時不會引入）：
 
 - Anthropic (``anthropic`` SDK，``ANTHROPIC_API_KEY``)

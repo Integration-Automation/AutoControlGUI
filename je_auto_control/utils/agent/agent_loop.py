@@ -7,6 +7,7 @@ from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, List, Optional, Sequence
 
 from je_auto_control.utils.exception.exceptions import AutoControlException
+from je_auto_control.utils.executor.flow_control import LoopBreak, LoopContinue
 
 
 @dataclass
@@ -182,8 +183,12 @@ class AgentLoop:
             # AutoControlException), and a hallucinated kwarg raises TypeError.
             # Record the error per-step so the loop keeps going instead of
             # crashing the whole run.
-            except (AutoControlException, TypeError,
-                    ValueError, RuntimeError, OSError) as error:
+            # The executor's own set too: a bad argument raised KeyError,
+            # IndexError or AttributeError from a real command and ended the
+            # whole run, and a stray AC_break escaped the loop.
+            except (AutoControlException, TypeError, ValueError, RuntimeError, OSError,
+                    LookupError, AttributeError, ArithmeticError,
+                    LoopBreak, LoopContinue) as error:
                 step.error = f"{type(error).__name__}: {error}"
         return step
 

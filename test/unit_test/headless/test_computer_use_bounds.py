@@ -29,7 +29,8 @@ def test_the_older_tool_version_keeps_its_own_beta():
 def test_a_huge_scroll_is_bounded_and_goes_where_the_model_pointed():
     decision = cu._scroll_decision({"scroll_direction": "down", "scroll_amount": 10 ** 12,
                                     "coordinate": [5, 7]})
-    assert decision["input"] == {"scroll_value": -cu._MAX_SCROLL_NOTCHES, "x": 5, "y": 7}
+    assert decision["input"] == {"scroll_value": -cu._MAX_SCROLL_NOTCHES,
+                                 "scroll_direction": "scroll_up", "x": 5, "y": 7}
 
 
 @pytest.mark.parametrize("duration", [10 ** 9, -5])

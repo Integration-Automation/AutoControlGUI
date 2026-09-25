@@ -186,11 +186,27 @@ def unscale_decision(decision: Dict[str, Any], scale: Tuple[float, float]) -> Di
         return decision
     for inputs in _all_inputs(decision):
         for key, factor in (("x", sx), ("y", sy)):
-            value = inputs.get(key)
-            # Only numbers: a generic tool call's x may be anything the model sent.
-            if isinstance(value, (int, float)) and not isinstance(value, bool):
+            value = _coordinate(inputs.get(key))
+            # Only numbers, or numeric strings -- a model following a schema
+            # that said "string" sent "1400", which went to the screen
+            # unscaled: a generic tool call's x may be anything else too.
+            if value is not None:
                 inputs[key] = int(round(value / factor))
     return decision
+
+
+def _coordinate(value: Any) -> Optional[float]:
+    """``value`` as a finite number if it is one or spells one; else ``None``."""
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, str):
+        try:
+            value = float(value.strip())
+        except ValueError:
+            return None
+    if isinstance(value, (int, float)) and math.isfinite(value):
+        return float(value)
+    return None
 
 
 def _all_inputs(decision: Dict[str, Any]) -> List[Dict[str, Any]]:
@@ -199,7 +215,8 @@ def _all_inputs(decision: Dict[str, Any]) -> List[Dict[str, Any]]:
     found = [inputs]
     for key in ("action_list", "actions"):
         for action in inputs.get(key) or []:
-            if len(action) == 2 and isinstance(action[1], dict):
+            # A malformed action (a dict, [None], [5]) raised KeyError / TypeError.
+            if isinstance(action, (list, tuple)) and len(action) == 2 and isinstance(action[1], dict):
                 found.append(action[1])
     return found
 

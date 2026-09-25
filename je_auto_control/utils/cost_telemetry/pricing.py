@@ -69,8 +69,10 @@ def pricing_for(model: str,
 
 #: A provider prefix ("anthropic.", "us.anthropic."), a date or version
 #: suffix ("-20251001", "@20251101", "-v1:0") around a Claude id.
-_PROVIDER_PREFIX = re.compile(r"^(?:[a-z]{2,4}\.)?anthropic\.")
-_ID_SUFFIX = re.compile(r"(?:[-@]\d{8})?(?:-v\d+(?::\d+)?)?$")
+# "global." as well as the two-to-four-letter regions, and OpenAI's
+# "-YYYY-MM-DD" snapshots: both priced at $0.00.
+_PROVIDER_PREFIX = re.compile(r"^(?:[a-z]+\.)?anthropic\.")
+_ID_SUFFIX = re.compile(r"(?:[-@]\d{8}|-\d{4}-\d{2}-\d{2})?(?:-v\d+(?::\d+)?)?$")
 
 
 def _base_model_id(model: str) -> str:

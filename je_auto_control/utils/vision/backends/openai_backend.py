@@ -7,7 +7,7 @@ from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.vision.backends._parse import (
     LOCATE_PROMPT, parse_coords,
 )
-from je_auto_control.utils.vision.backends.base import VLMBackend
+from je_auto_control.utils.vision.backends.base import VLMBackend, VLMRequestError
 
 _DEFAULT_MODEL = "gpt-4o-mini"
 _REQUEST_TIMEOUT_S = 30.0
@@ -69,10 +69,7 @@ class OpenAIVLMBackend(VLMBackend):
         # openai.OpenAIError, a bare Exception, so they escaped here while
         # the LLM backend already caught them.
         except (*_sdk_errors(), OSError, ValueError, RuntimeError) as error:
-            autocontrol_logger.warning(
-                "OpenAI VLM request failed: %r", error,
-            )
-            return None
+            raise VLMRequestError(f"OpenAI VLM request failed: {error!r}") from error
         try:
             text = response.choices[0].message.content or ""
         except (AttributeError, IndexError):
