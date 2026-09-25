@@ -58,6 +58,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260925-26 | 2026-09-25 | The package imports cleanly when warnings are errors, and SARIF file URIs no longer use PurePath.as_uri(), deprecated in Python 3.14 | #bugfix #compat | [2026-09-c](2026-09-c.md) |
 | U-20260925-25 | 2026-09-25 | The September update log is split at 800 lines into 2026-09.md, -b and -c, as the batch rules ask | #docs | [2026-09-c](2026-09-c.md) |
 | U-20260925-24 | 2026-09-25 | The MCP server speaks 2025-11-25: it negotiates the revision, describes itself to its clients, and reports input validation errors as tool execution errors the model can correct | #feature #mcp | [2026-09-c](2026-09-c.md) |
 | U-20260925-23 | 2026-09-25 | GUI tabs at their edges: slots show framework errors, USB sharing and the Live HUD are released when their tab goes, hidden tabs are owned, a worker's unexpected exception reaches on_fail, the Script Builder keeps a choice it does not list, the window's language listener and each USB prompt's dialog go with their owners | #bugfix #gui #security | [2026-09-c](2026-09-c.md) |
@@ -268,7 +269,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | File | Period | Entries |
 |---|---|---:|
-| [2026-09-c.md](2026-09-c.md) | 2026-09 | 32 |
+| [2026-09-c.md](2026-09-c.md) | 2026-09 | 33 |
 | [2026-09-b.md](2026-09-b.md) | 2026-09 | 68 |
 | [2026-09.md](2026-09.md) | 2026-09 | 79 |
 | [2026-08-f.md](2026-08-f.md) | 2026-08 | 1 |

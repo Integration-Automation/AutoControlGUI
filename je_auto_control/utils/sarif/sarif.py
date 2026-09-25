@@ -71,8 +71,26 @@ def _artifact_uri(path: Any) -> str:
         return text
     pure = PureWindowsPath(text) if "\\" in text else PurePath(text)
     if pure.is_absolute():
-        return pure.as_uri()
+        return _file_uri(pure)
     return urllib.parse.quote(pure.as_posix())
+
+
+def _file_uri(pure: Any) -> str:
+    """The ``file:`` URI of an absolute path, as ``PurePath.as_uri()`` wrote it.
+
+    That method is deprecated since Python 3.14 (removal in 3.19), and
+    ``Path.as_uri()`` cannot take a Windows path on another platform, which a
+    finding from a Windows run read elsewhere is.
+    """
+    import urllib.parse
+    drive, posix = pure.drive, pure.as_posix()
+    if len(drive) == 2 and drive[1] == ":":
+        prefix, path = "file:///" + drive, posix[2:]   # C:/a/b -> file:///C:/a/b
+    elif drive:
+        prefix, path = "file:", posix                   # //host/share/a -> file://host/share/a
+    else:
+        prefix, path = "file://", posix                 # /etc/hosts -> file:///etc/hosts
+    return prefix + urllib.parse.quote(path)
 
 
 def _start_line(line: Any) -> Any:

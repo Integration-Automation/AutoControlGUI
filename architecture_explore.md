@@ -20,7 +20,7 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 | 指標 | 數值 |
 | --- | ---: |
 | Python 模組總數（含周邊子專案） | 1,053 |
-| 程式碼總行數 | 152,116 |
+| 程式碼總行數 | 152,143 |
 | `je_auto_control/utils/` 子套件數 | 310 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 775 |
 | 套件門面 `__all__` 公開名稱數 | 1,244 |
@@ -557,7 +557,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.12 報表、可觀測性與測試治理
 
-> 34 個套件、約 7,456 行。
+> 34 個套件、約 7,474 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -583,7 +583,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/quarantine/` | 200 | 易碎測試隔離區，讓套件執行器跳過已知不穩定案例 |
 | `utils/run_diff/` | 123 | 兩次執行軌跡的差異（LCS 對齊：新增／移除／狀態翻轉／退化） |
 | `utils/run_history/` | 439 | 執行歷史儲存與產出物管理 |
-| `utils/sarif/` | 167 | 以 SARIF 2.1.0 匯出發現項，供 GitHub／Azure code scanning |
+| `utils/sarif/` | 185 | 以 SARIF 2.1.0 匯出發現項，供 GitHub／Azure code scanning |
 | `utils/slo/` | 115 | SLO 評估：SLI、錯誤預算與多視窗燃燒率告警 |
 | `utils/smoothing/` | 67 | 數列移動平均平滑 |
 | `utils/soft_assert/` | 79 | 軟斷言：累積檢查並在區塊結束時一次拋出 |
@@ -598,7 +598,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.13 資料來源、結構驗證與 i18n
 
-> 24 個套件、約 4,629 行。
+> 24 個套件、約 4,638 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -625,7 +625,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/schema_compat/` | 177 | JSON Schema 相容性分級 |
 | `utils/sql/` | 88 | 對 SQLite 的臨時唯讀 SQL 查詢 |
 | `utils/test_data/` | 211 | 帶種子的合成測試資料產生（純標準庫） |
-| `utils/xml/` | 289 | XML 檔讀寫與結構變更（`defusedxml`） |
+| `utils/xml/` | 298 | XML 檔讀寫與結構變更（`defusedxml`） |
 
 ### 5.4.14 安全、機密與合規
 
@@ -1082,6 +1082,6 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `osx/` | 17 | 925 |
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 846 |
-| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 678 | 54,394 |
-| **總計** | **1,047** | **152,051** |
+| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 678 | 54,421 |
+| **總計** | **1,047** | **152,078** |
 

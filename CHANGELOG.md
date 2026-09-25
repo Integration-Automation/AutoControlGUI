@@ -381,6 +381,10 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Fixed
 
+- `import je_auto_control` no longer emits a DeprecationWarning from
+  defusedxml, so it works in test suites that turn warnings into errors.
+- SARIF export no longer calls `PurePath.as_uri()`, deprecated in Python
+  3.14.
 - USB sharing, its hotplug watcher and the passthrough flag it turned on
   are released when the USB Sharing panel is destroyed.
 - GUI slots show missing or malformed files, images not on screen, bad
