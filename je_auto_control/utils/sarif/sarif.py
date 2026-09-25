@@ -55,7 +55,8 @@ def result_fingerprint(finding: Mapping[str, Any]) -> str:
     """Stable short hash of a finding (for SARIF partialFingerprints/dedupe)."""
     basis = "|".join(str(finding.get(k, "")) for k in
                      ("rule_id", "message", "file", "line"))
-    return hashlib.sha256(basis.encode("utf-8")).hexdigest()[:16]
+    # surrogatepass: a lone surrogate in a message raised UnicodeEncodeError.
+    return hashlib.sha256(basis.encode("utf-8", "surrogatepass")).hexdigest()[:16]
 
 
 def _artifact_uri(path: Any) -> str:
@@ -107,7 +108,8 @@ def _result(finding: Mapping[str, Any]) -> Dict[str, Any]:
         "ruleId": str(finding.get("rule_id", "AC0000")),
         # SARIF allows only none / note / warning / error.
         "level": _level(finding.get("level", "warning")),
-        "message": {"text": finding.get("message", "")},
+        # SARIF requires a string; a None message was written as null.
+        "message": {"text": "" if finding.get("message") is None else str(finding.get("message"))},
         "partialFingerprints": {"primaryLocationLineHash":
                                 result_fingerprint(finding)},
     }
@@ -140,13 +142,13 @@ def to_sarif(findings: Sequence[Mapping[str, Any]], *,
 def write_sarif(findings: Sequence[Mapping[str, Any]], path: str,
                 **kwargs: Any) -> str:
     """Write a SARIF document for ``findings`` to ``path``; return the path."""
-    import json
     from pathlib import Path
     output = Path(path)
     output.parent.mkdir(parents=True, exist_ok=True)
-    output.write_text(
-        json.dumps(to_sarif(findings, **kwargs), ensure_ascii=False, indent=2),
-        encoding="utf-8")
+    from je_auto_control.utils.http_headers import wire_json_text
+    from je_auto_control.utils.json_store.json_store import atomic_write_text
+    # wire_json_text: escaped only if a lone surrogate would not encode.
+    atomic_write_text(str(output), wire_json_text(to_sarif(findings, **kwargs)))
     return str(output)
 
 

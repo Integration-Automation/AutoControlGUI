@@ -76,6 +76,10 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Changed
 
+- Generated tests and scripts replay actions with
+  `ac.executor.execute_action(..., raise_on_error=True)`, so they fail at
+  the first failed action; actions holding `${...}` go through the executor.
+- Several `je_auto_control_mcp --list-*` flags print one JSON object.
 - The Live HUD samples only while it is on screen; its log tail keeps
   collecting while it is hidden.
 - MCP `tools/call` arguments that fail the tool's input schema are
@@ -381,6 +385,15 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Fixed
 
+- `je_auto_control_mcp --read-only` restricts the server's tools, not
+  only the listings.
+- The MCP stdio server and the CLIs write UTF-8 whatever the console code
+  page.
+- `--port` outside 0-65535 is a usage error instead of a traceback.
+- Codegen refuses action shapes the executor refuses, keeps dict key order,
+  and takes lone surrogates and sigil runs in Robot output.
+- SARIF and SOP writers take lone surrogates; SOP creates its folder and
+  writes atomically; Allure results carry start and stop times.
 - `import je_auto_control` no longer emits a DeprecationWarning from
   defusedxml, so it works in test suites that turn warnings into errors.
 - SARIF export no longer calls `PurePath.as_uri()`, deprecated in Python

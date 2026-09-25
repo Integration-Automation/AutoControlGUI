@@ -15,6 +15,7 @@ import threading
 import time
 from typing import Any, Callable, Dict, List, Optional, TextIO
 
+from je_auto_control.utils.cli_output import utf8_stream
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.mcp_server.audit import AuditLogger
 from je_auto_control.utils.mcp_server.context import (
@@ -247,8 +248,9 @@ class MCPServer(ClientRequestMixin):
     def serve_stdio(self, stdin: Optional[TextIO] = None,
                     stdout: Optional[TextIO] = None) -> None:
         """Run the message loop until EOF on stdin or :meth:`stop`."""
-        in_stream = stdin if stdin is not None else sys.stdin
-        out_stream = stdout if stdout is not None else sys.stdout
+        # UTF-8, as the MCP stdio transport requires (see utf8_stream).
+        in_stream = stdin if stdin is not None else utf8_stream(sys.stdin, reading=True)
+        out_stream = stdout if stdout is not None else utf8_stream(sys.stdout, reading=False)
         autocontrol_logger.info(
             "MCP server starting (stdio, %d tools)", len(self._tools),
         )
@@ -717,8 +719,14 @@ class MCPServer(ClientRequestMixin):
         )
 
 
-def start_mcp_stdio_server() -> MCPServer:
-    """Start a stdio MCP server in the foreground; blocks until EOF."""
-    server = MCPServer()
+def start_mcp_stdio_server(read_only: Optional[bool] = None) -> MCPServer:
+    """Start a stdio MCP server in the foreground; blocks until EOF.
+
+    ``read_only=True`` offers only tools marked read-only; ``None`` leaves
+    the choice to ``JE_AUTOCONTROL_MCP_READONLY``. ``je_auto_control_mcp
+    --read-only`` used to reach only its ``--list-*`` output, so the server
+    it started offered every tool, clicks and typing included.
+    """
+    server = MCPServer(tools=build_default_tool_registry(read_only=read_only))
     server.serve_stdio()
     return server

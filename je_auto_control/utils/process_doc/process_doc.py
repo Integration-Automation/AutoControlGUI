@@ -11,6 +11,8 @@ import html
 from pathlib import Path
 from typing import Any, Dict, List, Tuple
 
+from je_auto_control.utils.json_store.json_store import atomic_write_text
+
 # Command -> human verb phrase.
 _VERBS = {
     "AC_click_mouse": "Click the mouse",
@@ -92,5 +94,9 @@ def write_sop(actions: List[Any], path: str, *,
     """Write the SOP HTML for ``actions`` to ``path``; return the path."""
     document = generate_sop(actions, title=title)
     target = Path(path)
-    target.write_text(document["html"], encoding="utf-8")
+    # Its folder is made, as the SARIF and JUnit writers do; atomically, as a
+    # failed write (a lone surrogate) left the previous SOP truncated to 0.
+    target.parent.mkdir(parents=True, exist_ok=True)
+    html_text = document["html"].encode("utf-8", "replace").decode("utf-8")
+    atomic_write_text(str(target), html_text)
     return str(target.resolve())

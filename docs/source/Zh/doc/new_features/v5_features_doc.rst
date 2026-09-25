@@ -45,8 +45,10 @@
 
 ``target`` 可為 ``pytest`` / ``python`` / ``robot``。預設的 ``calls``
 風格會把每個 ``AC_*`` 指令對應到 facade 呼叫(``ac.click_mouse(...)``),
-流程控制與私有 adapter 則退回 ``ac.execute_action([...])``;``actions``
-風格則直接嵌入動作清單並透過執行器重播。
+流程控制、私有 adapter 與任何含 ``${...}`` 佔位符的動作(只有執行器會解析)則交給執行器;
+``actions`` 風格則直接嵌入動作清單並透過執行器重播。每次重播都是
+``ac.executor.execute_action(..., raise_on_error=True)``,所以產生的測試會在第一個失敗的動作停下並失敗。
+執行器會拒絕的動作清單(``[1]``、多了第三個元素的動作)這裡也會拒絕。
 
 執行器指令:``AC_generate_code``。CLI:``je_auto_control codegen``。
 

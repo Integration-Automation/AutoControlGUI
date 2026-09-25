@@ -182,7 +182,11 @@ CLI 檢視旗標
    je_auto_control_mcp --list-tools --read-only
    je_auto_control_mcp --list-resources
    je_auto_control_mcp --list-prompts
+   je_auto_control_mcp --read-only          # 伺服器只提供唯讀工具
    je_auto_control_mcp --fake-backend       # 切換成記憶體版 backend
+
+只給一個 ``--list-*`` 旗標時輸出該陣列;給多個時輸出一個以 ``tools`` / ``resources`` /
+``prompts`` 為鍵的物件。不論主控台的碼頁為何,輸出與 stdio 伺服器的訊息一律是 UTF-8。
 
 註冊到 Claude Desktop
 =====================
@@ -301,8 +305,8 @@ scope——包含你在 ``initialize`` 聲明的能力,以及進行中呼叫佔�
 唯讀 / 安全模式
 ===============
 
-設定 ``JE_AUTOCONTROL_MCP_READONLY=1``(或呼叫
-:func:`build_default_tool_registry` 時傳 ``read_only=True``)只暴
+設定 ``JE_AUTOCONTROL_MCP_READONLY=1``(或對 ``je_auto_control_mcp`` 加上
+``--read-only``,或呼叫 :func:`build_default_tool_registry` 時傳 ``read_only=True``)只暴
 露 ``readOnlyHint`` 為 true 的工具(座標、OCR 查詢、剪貼簿讀取、歷
 程等):
 

@@ -312,19 +312,34 @@ def build_parser() -> argparse.ArgumentParser:
 
     p_srv = sub.add_parser("start-server", help="Start the TCP socket server")
     p_srv.add_argument("--host", default="127.0.0.1")
-    p_srv.add_argument("--port", type=int, default=9938)
+    p_srv.add_argument("--port", type=_port, default=9938)
     p_srv.set_defaults(func=cmd_start_server)
 
     p_rest = sub.add_parser("start-rest", help="Start the REST API server")
     p_rest.add_argument("--host", default="127.0.0.1")
-    p_rest.add_argument("--port", type=int, default=9939)
+    p_rest.add_argument("--port", type=_port, default=9939)
     p_rest.set_defaults(func=cmd_start_rest)
     return parser
+
+
+def _port(text: str) -> int:
+    """A TCP port for argparse: 0 (any free port) to 65535."""
+    try:
+        port = int(text)
+    except ValueError as error:
+        raise argparse.ArgumentTypeError(f"not a port number: {text!r}") from error
+    if not 0 <= port <= 65535:
+        # bind() raised OverflowError, which the error handling below does
+        # not catch: a traceback instead of a message.
+        raise argparse.ArgumentTypeError(f"port must be 0-65535, got {port}")
+    return port
 
 
 def main(argv: Optional[List[str]] = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
+    from je_auto_control.utils.cli_output import utf8_stdout
+    utf8_stdout()
     try:
         return args.func(args)
     except (AutoControlActionException, AutoControlException,

@@ -194,7 +194,12 @@ exits — useful in CI smoke tests and prompt prep:
    je_auto_control_mcp --list-tools --read-only
    je_auto_control_mcp --list-resources
    je_auto_control_mcp --list-prompts
+   je_auto_control_mcp --read-only          # serve only the read-only tools
    je_auto_control_mcp --fake-backend       # swap in the in-memory backend
+
+One ``--list-*`` flag prints its array; several print one object keyed
+``tools`` / ``resources`` / ``prompts``. Output, and the stdio server's
+messages, are UTF-8 whatever the console's code page.
 
 Registering with Claude Desktop
 ===============================
@@ -330,7 +335,8 @@ offer.
 Read-only / safe mode
 =====================
 
-Set ``JE_AUTOCONTROL_MCP_READONLY=1`` (or pass ``read_only=True`` to
+Set ``JE_AUTOCONTROL_MCP_READONLY=1`` (or pass ``--read-only`` to
+``je_auto_control_mcp``, or ``read_only=True`` to
 :func:`build_default_tool_registry`) to drop every tool whose
 ``readOnlyHint`` is false. Only observers (positions, OCR queries,
 clipboard reads, history, ...) survive:

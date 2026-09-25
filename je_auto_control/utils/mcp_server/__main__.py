@@ -9,6 +9,7 @@ import json
 import sys
 from typing import Optional
 
+from je_auto_control.utils.cli_output import utf8_stdout
 from je_auto_control.utils.mcp_server.fake_backend import (
     install_fake_backend, maybe_install_from_env,
 )
@@ -63,25 +64,28 @@ def main(argv: Optional[list] = None) -> None:
     if any(listing_modes):
         _print_listings(args)
         return
-    start_mcp_stdio_server()
+    start_mcp_stdio_server(read_only=True if args.read_only else None)
 
 
 def _print_listings(args: argparse.Namespace) -> None:
+    """Print the requested catalogues as one JSON document.
+
+    One flag prints its array, as before; several print an object keyed by
+    catalogue -- two arrays back to back were not one JSON document. The
+    output is UTF-8 whatever the console's code page.
+    """
+    listings = {}
     if args.list_tools:
-        registry = build_default_tool_registry(read_only=args.read_only)
-        json.dump([tool.to_descriptor() for tool in registry],
-                   sys.stdout, ensure_ascii=False, indent=2)
-        sys.stdout.write("\n")
+        listings["tools"] = [tool.to_descriptor() for tool in
+                             build_default_tool_registry(read_only=True if args.read_only else None)]
     if args.list_resources:
-        resources = default_resource_provider()
-        json.dump([resource.to_descriptor() for resource in resources.list()],
-                   sys.stdout, ensure_ascii=False, indent=2)
-        sys.stdout.write("\n")
+        listings["resources"] = [item.to_descriptor() for item in default_resource_provider().list()]
     if args.list_prompts:
-        prompts = default_prompt_provider()
-        json.dump([prompt.to_descriptor() for prompt in prompts.list()],
-                   sys.stdout, ensure_ascii=False, indent=2)
-        sys.stdout.write("\n")
+        listings["prompts"] = [item.to_descriptor() for item in default_prompt_provider().list()]
+    document = next(iter(listings.values())) if len(listings) == 1 else listings
+    utf8_stdout()
+    json.dump(document, sys.stdout, ensure_ascii=False, indent=2)
+    sys.stdout.write("\n")
 
 
 if __name__ == "__main__":

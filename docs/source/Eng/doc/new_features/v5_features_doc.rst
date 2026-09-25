@@ -48,9 +48,13 @@ Turn a recording or an action file into committable, runnable source::
 
 ``target`` is ``pytest`` / ``python`` / ``robot``. The default ``calls``
 style maps each ``AC_*`` command to its facade call
-(``ac.click_mouse(...)``) and falls back to ``ac.execute_action([...])``
-for flow control and private adapters; the ``actions`` style embeds the
-list and replays it through the executor.
+(``ac.click_mouse(...)``) and falls back to the executor for flow control,
+private adapters and any action holding a ``${...}`` placeholder (only the
+executor resolves them); the ``actions`` style embeds the list and replays it
+through the executor. Every replay is
+``ac.executor.execute_action(..., raise_on_error=True)``, so a generated test
+fails at the first failed action. An action list the executor would refuse
+(``[1]``, an action with a third element) is refused here too.
 
 Executor command: ``AC_generate_code``. CLI: ``je_auto_control codegen``.
 

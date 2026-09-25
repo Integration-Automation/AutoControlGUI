@@ -24,14 +24,14 @@ def test_a_parameter_name_cannot_inject_statements():
     code = generate_code([["AC_type_keyboard", {_EVIL_KEY: "a"}]], target="pytest")
     compile(code, "<generated>", "exec")
     assert _imported_modules(code) == {"je_auto_control"}, code
-    assert "ac.execute_action(" in code, "an unsafe key takes the executor fall-back"
+    assert "ac.executor.execute_action(" in code, "an unsafe key takes the executor fall-back"
 
 
 def test_a_keyword_or_spaced_name_takes_the_fallback():
     for key in ("class", "two words"):
         code = generate_code([["AC_type_keyboard", {key: "a"}]], target="pytest")
         compile(code, "<generated>", "exec")
-        assert "ac.execute_action(" in code
+        assert "ac.executor.execute_action(" in code
 
 
 def test_a_robot_value_cannot_close_the_payload():

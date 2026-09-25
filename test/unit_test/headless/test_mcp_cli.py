@@ -52,6 +52,8 @@ def test_no_flags_starts_stdio_server(monkeypatch):
     started = []
     import je_auto_control.utils.mcp_server.__main__ as cli_mod
     monkeypatch.setattr(cli_mod, "start_mcp_stdio_server",
-                        lambda: started.append(True))
+                        lambda read_only=None: started.append(read_only))
     main([])
-    assert started == [True]
+    main(["--read-only"])
+    # None leaves JE_AUTOCONTROL_MCP_READONLY in charge; the flag forces it on.
+    assert started == [None, True]
