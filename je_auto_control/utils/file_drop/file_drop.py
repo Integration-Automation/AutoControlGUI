@@ -10,6 +10,7 @@ any platform by passing a fake driver; the real ``GlobalAlloc`` + ``PostMessage`
 lives in the default Win32 driver. Imports no ``PySide6``.
 """
 import ntpath
+import os
 from typing import Any, Callable, Dict, Optional, Sequence, Tuple
 
 from je_auto_control.utils.clipboard_files import build_dropfiles
@@ -87,6 +88,19 @@ def _default_driver(hwnd: int, blob: bytes, point: Tuple[int, int]) -> bool:
     return True
 
 
+def _absolute(path: str) -> str:
+    """``path`` made absolute for the receiver; an empty path stays empty.
+
+    A path that is absolute only by Windows rules (``C:\\x`` on Linux or
+    macOS) is left as it is: the receiver is a Windows window, and the host's
+    rules would read it as relative and prefix the cwd. Everything else goes
+    through the host's ``os.path.abspath``, as before.
+    """
+    if not path or (ntpath.isabs(path) and not os.path.isabs(path)):
+        return path
+    return os.path.abspath(path)
+
+
 def drop_files(hwnd: int, paths: Sequence[str], *,
                point: Tuple[int, int] = (0, 0), wide: bool = True,
                driver: Optional[DropDriver] = None) -> bool:
@@ -99,9 +113,8 @@ def drop_files(hwnd: int, paths: Sequence[str], *,
     if not paths:
         raise ValueError("at least one path is required")
     # Absolute: the target resolved a relative path against its own
-    # working directory. Windows rules on every host (the receiver is a Windows
-    # window): posixpath would treat ``C:\x`` as relative and prefix the cwd.
-    blob = build_dropfiles([ntpath.abspath(path) if path else path for path in paths],
+    # working directory.
+    blob = build_dropfiles([_absolute(path) for path in paths],
                            point=point, wide=wide)
     send = driver if driver is not None else _default_driver
     return bool(send(int(hwnd), blob, (int(point[0]), int(point[1]))))
