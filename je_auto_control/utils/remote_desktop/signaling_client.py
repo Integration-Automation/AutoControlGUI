@@ -5,16 +5,14 @@ removing the manual copy/paste of Phase 1. Network errors raise
 :class:`SignalingError`; 404s on poll endpoints return ``None`` so callers
 can re-poll cleanly.
 
-No third-party HTTP dep — everything goes through ``urllib.request``.
+No third-party HTTP dep — everything goes through the package's
+``http_client``, so the scheme allow-list and the egress policy apply.
 """
 from __future__ import annotations
 
-import http.client
 import json
 import time
-import urllib.error
 import urllib.parse
-import urllib.request
 from typing import Optional
 
 from je_auto_control.utils.exception.exceptions import AutoControlException
@@ -33,33 +31,49 @@ def _request(method: str, url: str, *,
              body: Optional[dict] = None,
              secret: Optional[str] = None,
              timeout: float = _DEFAULT_TIMEOUT_S) -> Optional[dict]:
-    headers = {"Content-Type": "application/json"}
-    if secret:
-        headers["X-Signaling-Secret"] = secret
-    data = json.dumps(body).encode("utf-8") if body is not None else None
-    req = urllib.request.Request(url, data=data, method=method, headers=headers)
+    from je_auto_control.utils.http_client.http_client import build_call, perform_call
+    headers = {"X-Signaling-Secret": secret} if secret else None
     try:
-        with urllib.request.urlopen(req, timeout=timeout) as response:  # nosec B310  # reason: caller-supplied URL is the configured signaling server
-            payload = response.read()
-    except urllib.error.HTTPError as error:
-        if error.code == 404:
-            return None
-        raise SignalingError(
-            f"signaling {method} {url} -> HTTP {error.code}",
-        ) from error
-    except urllib.error.URLError as error:
-        raise SignalingError(f"signaling {method} {url} failed: {error.reason}") from error
-    except (OSError, http.client.HTTPException) as error:
-        # A read timeout (TimeoutError) or a server that hangs up
-        # (RemoteDisconnected) is no URLError, and the GUI workers catch
-        # only SignalingError, so these ended their threads.
+        call = build_call(url, method, headers=headers, json_body=body, timeout=timeout)
+        # Without following redirects, as config sync does: urlopen carried
+        # X-Signaling-Secret to whatever host a redirect named. It also read
+        # file:// URLs, and raised ValueError for a URL with no scheme.
+        call["follow_redirects"] = False
+        response = perform_call(call)
+    except (OSError, ValueError) as error:
+        # A timeout, a hang-up, a refused scheme or egress host: the GUI
+        # workers catch only SignalingError, so these ended their threads.
         raise SignalingError(f"signaling {method} {url} failed: {error!r}") from error
-    if not payload:
+    return _json_reply(method, url, response)
+
+
+def _json_reply(method: str, url: str, response: dict) -> Optional[dict]:
+    """The reply's JSON object: ``None`` for a 404, ``{}`` for an empty body."""
+    status = int(response["status"])
+    if status == 404:
+        return None
+    if not 200 <= status < 300:
+        raise SignalingError(f"signaling {method} {url} -> HTTP {status}")
+    if not response.get("text"):
         return {}
     try:
-        return json.loads(payload.decode("utf-8"))
-    except (UnicodeDecodeError, json.JSONDecodeError, RecursionError) as error:
+        payload = json.loads(response["text"])
+    except (ValueError, RecursionError) as error:
         raise SignalingError("signaling: bad JSON response") from error
+    if not isinstance(payload, dict):
+        # The fetchers read .get("sdp") from it: a list raised AttributeError.
+        raise SignalingError("signaling: the reply is not a JSON object")
+    return payload
+
+
+def _sdp(response: Optional[dict]) -> Optional[str]:
+    """The ``sdp`` field of a fetch reply, which must be a string when present."""
+    if response is None:
+        return None
+    sdp = response.get("sdp")
+    if sdp is not None and not isinstance(sdp, str):
+        raise SignalingError("signaling: 'sdp' is not a string")
+    return sdp
 
 
 def _build_url(server_url: str, host_id: str, suffix: str) -> str:
@@ -80,9 +94,8 @@ def fetch_offer(server_url: str, host_id: str, *,
                 secret: Optional[str] = None,
                 timeout: float = _DEFAULT_TIMEOUT_S) -> Optional[str]:
     """Viewer → server: pull the host's pending offer (None if not posted)."""
-    response = _request("GET", _build_url(server_url, host_id, "offer"),
-                        secret=secret, timeout=timeout)
-    return None if response is None else response.get("sdp")
+    return _sdp(_request("GET", _build_url(server_url, host_id, "offer"),
+                         secret=secret, timeout=timeout))
 
 
 def push_answer(server_url: str, host_id: str, answer_sdp: str, *,
@@ -99,9 +112,8 @@ def fetch_answer(server_url: str, host_id: str, *,
                  secret: Optional[str] = None,
                  timeout: float = _DEFAULT_TIMEOUT_S) -> Optional[str]:
     """Host → server: poll for the viewer's answer."""
-    response = _request("GET", _build_url(server_url, host_id, "answer"),
-                        secret=secret, timeout=timeout)
-    return None if response is None else response.get("sdp")
+    return _sdp(_request("GET", _build_url(server_url, host_id, "answer"),
+                         secret=secret, timeout=timeout))
 
 
 def wait_for_answer(server_url: str, host_id: str, *,

@@ -57,8 +57,12 @@ class _HostPanel(TranslatableMixin, QWidget):
         self._tls_key = QLineEdit()
         self._enable_audio = QCheckBox()
         self._enable_audio.setChecked(False)
-        if not is_audio_backend_available():
+        # A flag, not isEnabled(): the collapsed Advanced section disables it.
+        self._audio_available = is_audio_backend_available()
+        if not self._audio_available:
             self._enable_audio.setEnabled(False)
+        # What the share text quotes, taken at Start (see _copy_share_text).
+        self._shared: Optional[dict] = None
         self._preview = _FrameDisplay()
         # Preview is read-only — a host watching their own stream shouldn't
         # trigger fake input on themselves through the local widget.
@@ -208,9 +212,16 @@ class _HostPanel(TranslatableMixin, QWidget):
         QGuiApplication.clipboard().setText(format_host_id(host.host_id))
 
     def _copy_share_text(self) -> None:
-        """Copy a one-line bundle of address / port / token / id (token leak risk)."""
+        """Copy a one-line bundle of address / port / token / id (token leak risk).
+
+        The details are the ones this panel started the host with. Read from
+        the fields at copy time, an edited token or transport sent a viewer
+        details the running host refuses, and a host started elsewhere was
+        shared with this panel's token.
+        """
         host = registry.host
-        if host is None:
+        shared = self._shared
+        if host is None or shared is None or shared["host"] is not host:
             QMessageBox.information(
                 self, _t("rd_host_copy_share"),
                 _t("rd_host_copy_share_unavailable"),
@@ -226,10 +237,10 @@ class _HostPanel(TranslatableMixin, QWidget):
         bundle = (
             f"AutoControl Remote Desktop\n"
             f"Host ID: {format_host_id(host.host_id)}\n"
-            f"Address: {self._bind.text().strip() or '127.0.0.1'}\n"
+            f"Address: {shared['bind']}\n"
             f"Port:    {host.port}\n"
-            f"Transport: {self._transport.currentText()}\n"
-            f"Token:   {self._token.text().strip()}"
+            f"Transport: {shared['transport']}\n"
+            f"Token:   {shared['token']}"
         )
         QGuiApplication.clipboard().setText(bundle)
 
@@ -271,22 +282,22 @@ class _HostPanel(TranslatableMixin, QWidget):
         except (OSError, ValueError) as error:
             QMessageBox.warning(self, _t("rd_host_start"), str(error))
             return
-        host_cls = (WebSocketDesktopHost
-                    if self._transport.currentText() == "WebSocket"
+        transport = self._transport.currentText()
+        host_cls = (WebSocketDesktopHost if transport == "WebSocket"
                     else RemoteDesktopHost)
+        bind = self._bind.text().strip() or "127.0.0.1"
         registry.disconnect_viewer()
         registry.stop_host()
         try:
             host = host_cls(
                 token=token,
-                bind=self._bind.text().strip() or "127.0.0.1",
+                bind=bind,
                 port=self._port.value(),
                 fps=float(self._fps.value()),
                 quality=self._quality.value(),
                 ssl_context=ssl_context,
                 audio_config=AudioCaptureConfig(
-                    enabled=self._enable_audio.isChecked()
-                    and self._enable_audio.isEnabled(),
+                    enabled=self._audio_available and self._enable_audio.isChecked(),
                 ),
             )
             host.start()
@@ -294,6 +305,11 @@ class _HostPanel(TranslatableMixin, QWidget):
             QMessageBox.warning(self, _t("rd_host_start"), str(error))
             return
         registry._host = host  # noqa: SLF001  centralised lifecycle ownership
+        # The transport a viewer picks: with a certificate, TCP is TLS and
+        # WebSocket is WSS, which the share text used to call TCP / WebSocket.
+        if ssl_context is not None:
+            transport = {"TCP": "TLS", "WebSocket": "WSS"}[transport]
+        self._shared = {"host": host, "bind": bind, "transport": transport, "token": token}
         self._refresh_status()
 
     def _stop(self) -> None:
@@ -322,6 +338,9 @@ class _HostPanel(TranslatableMixin, QWidget):
             self._badge.set_state("stopped", _t("rd_badge_stopped"))
 
     def _refresh_preview(self) -> None:
+        # Four JPEG decodes a second for a panel nobody can see.
+        if not self.isVisible():
+            return
         host = registry.host
         if host is None or not host.is_running:
             self._preview.clear()

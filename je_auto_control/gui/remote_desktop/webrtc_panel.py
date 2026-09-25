@@ -1570,7 +1570,7 @@ class _WebRTCViewerPanel(TranslatableMixin, QWidget):
                 return datetime.fromtimestamp(float(value)).strftime(
                     "%Y-%m-%d %H:%M:%S",
                 )
-            except (TypeError, ValueError, OSError):
+            except (TypeError, ValueError, OSError, OverflowError):
                 return str(value)
         self._remote_files_table.populate(files, _format_mtime)
 

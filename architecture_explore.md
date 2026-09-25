@@ -20,7 +20,7 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 | 指標 | 數值 |
 | --- | ---: |
 | Python 模組總數（含周邊子專案） | 1,054 |
-| 程式碼總行數 | 153,061 |
+| 程式碼總行數 | 153,170 |
 | `je_auto_control/utils/` 子套件數 | 310 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 775 |
 | 套件門面 `__all__` 公開名稱數 | 1,244 |
@@ -514,14 +514,14 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.10 遠端桌面與 USB
 
-> 6 個套件、約 19,291 行。
+> 6 個套件、約 19,327 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
 | `utils/admin/` | 418 | 多主機管理主控台：平行輪詢 N 個 AutoControl REST 端點 |
 | `utils/config_sync/` | 332 | 透過訊令伺服器做跨機器設定同步 |
 | `utils/device_matrix/` | 138 | 行動裝置矩陣：同一 action list 於多台裝置平行執行 |
-| `utils/remote_desktop/` | 12,871 | **遠端桌面子系統**（56 檔／11.7K LOC）：TCP／WebSocket／WebRTC 三條傳輸路徑、主機與檢視端、訊令伺服器、TURN／中繼、多檢視者、錄影、信任清單、TOTP、稽核鏈 |
+| `utils/remote_desktop/` | 12,907 | **遠端桌面子系統**（56 檔／11.7K LOC）：TCP／WebSocket／WebRTC 三條傳輸路徑、主機與檢視端、訊令伺服器、TURN／中繼、多檢視者、錄影、信任清單、TOTP、稽核鏈 |
 | `utils/usb/` | 4,524 | 跨平台 USB 列舉／熱插拔／裝置直通（WinUSB、IOKit、libusb 後端 + ACL + WebRTC DataChannel 通道） |
 | `utils/usbip/` | 1,008 | USB/IP 線路協定主機端（協定封包、TCP 伺服器、libusb URB 後端） |
 
@@ -741,7 +741,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `rate_limit.py` | 48 | 工具呼叫的 token bucket 限流。 |
 | `__main__.py` | 92 | `je_auto_control_mcp` console script 進入點。 |
 
-#### `utils/remote_desktop/`（12,871 行／56 檔）
+#### `utils/remote_desktop/`（12,907 行／56 檔）
 
 三條傳輸路徑並存：**TCP**（JPEG 影格）、**WebSocket**（同協定換傳輸）、**WebRTC**（aiortc 視訊 + DataChannel）。
 
@@ -766,7 +766,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `turn_config.py` | 249 | coturn 設定產生器。 |
 | `presence.py` | 238 | 多檢視者的執行緒安全在場註冊表。 |
 | `jpeg_recorder_encrypted.py` | 239 | AES-GCM 加密版 session 錄影。 |
-| `address_book.py` | 213 | 檢視端的主機通訊錄。 |
+| `address_book.py` | 229 | 檢視端的主機通訊錄。 |
 | `audio.py` / `webrtc_audio.py` / `webrtc_mic.py` | 243 / 207 / 155 | 音訊擷取播放、音訊軌、麥克風上行。 |
 | `webrtc_files.py` | 249 | 專屬 DataChannel 的分塊檔案傳輸。 |
 | `webrtc_host_auth.py` | 239 | 檢視端認證與核准：token 檢查、信任清單／IP 白名單自動放行、手動接受／拒絕、SAS、逾時關閉。 |
@@ -775,9 +775,9 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `webrtc_host_media.py` | 197 | 重新協商與 recvonly 軌管理。aiortc 沒有 `removeTransceiver`,所以開／關不對稱——開是加軌重新 offer,關只能設 inactive 並停掉 receiver。 |
 | `hw_codec.py` | 201 | 硬體 H.264 編碼偵測與啟用。 |
 | `webrtc_stats.py` | 167 | 把 aiortc 的 `RTCStats` 報告輪詢成精簡 dict。 |
-| `connect_coordinator.py` | 150 | 由使用者輸入的目標決定該用哪條傳輸。 |
+| `connect_coordinator.py` | 158 | 由使用者輸入的目標決定該用哪條傳輸。 |
 | `adaptive_bitrate.py` | 148 | 依統計調整主機擷取 FPS。 |
-| `signaling_client.py` | 152 | 純標準庫的訊令用戶端。 |
+| `signaling_client.py` | 164 | 純標準庫的訊令用戶端。 |
 | `trust_list.py` | 139 | 自動接受的檢視端信任清單。 |
 | `webrtc_inspector.py` | 138 | 行程級的 `StatsSnapshot` 滾動視窗。 |
 | `input_dispatch.py` | 141 | 在主機端套用輸入訊息。 |
@@ -947,22 +947,22 @@ GUI 是**選用 extra**（`pip install je_auto_control[gui]`，PySide6 + qt-mate
 | diagnostics | `diagnostics_tab.py` | 91 | 執行子系統檢查並顯示結果。 |
 | report | `_report_tab.py` | 81 | 產生 HTML／JSON／XML 報表。 |
 
-#### 遠端桌面 GUI（`gui/remote_desktop/`，19 檔／6,458 行）
+#### 遠端桌面 GUI（`gui/remote_desktop/`，19 檔／6,529 行）
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
 | `webrtc_panel.py` | 2,530 | WebRTC 子分頁主體。 |
-| `webrtc_dialogs.py` | 506 | WebRTC GUI 用的自訂對話框與清單元件（待審檢視者、信任清單、通訊錄、遠端檔案表、稽核記錄、LAN 瀏覽）。 |
+| `webrtc_dialogs.py` | 519 | WebRTC GUI 用的自訂對話框與清單元件（待審檢視者、信任清單、通訊錄、遠端檔案表、稽核記錄、LAN 瀏覽）。 |
 | `advanced_group.py` | 92 | 兩個 WebRTC 面板共用的 Advanced STUN／TURN（含選用硬體編碼器）群組，含它寫回面板的 Protocol。 |
 | `trusted_group.py` | 70 | WebRTC host 面板的信任 viewer 清單群組（移除／清空／匯入／匯出），含它寫回面板的 Protocol。 |
-| `connection_screen.py` | 681 | Quick Connect —— AnyDesk 風格單畫面入口。 |
-| `viewer_panel.py` | 543 | 「控制另一台機器」子分頁。 |
-| `webrtc_known_hosts.py` | 342 | TOFU 釘選庫瀏覽器：`KnownHostsDialog` 與帶外釘選用的小表單。由 `webrtc_dialogs` 再匯出。 |
-| `host_panel.py` | 334 | 「分享這台機器」子分頁。 |
+| `connection_screen.py` | 697 | Quick Connect —— AnyDesk 風格單畫面入口。 |
+| `viewer_panel.py` | 521 | 「控制另一台機器」子分頁。 |
+| `webrtc_known_hosts.py` | 346 | TOFU 釘選庫瀏覽器：`KnownHostsDialog` 與帶外釘選用的小表單。由 `webrtc_dialogs` 再匯出。 |
+| `host_panel.py` | 353 | 「分享這台機器」子分頁。 |
 | `frame_display.py` | 228 | 繪製 JPEG 影格並發出遠端輸入事件的元件。 |
 | `webrtc_workers.py` | 237 | 訊令流程的背景 worker（`DaemonThread`，長輪詢比面板或程式活得久也不會中止行程）。 |
 | `tab.py` | 165 | 外層容器分頁。 |
-| `_helpers.py` | 189 | 面板共用輔助：翻譯、Qt→AC 鍵滑鼠對應、TLS context、狀態徽章、指紋與時間格式化。 |
+| `_helpers.py` | 230 | 面板共用輔助：翻譯、Qt→AC 鍵滑鼠對應、TLS context、狀態徽章、指紋與時間格式化。 |
 | `remote_screen_window.py` | 140 | 檢視端的彈出視窗。 |
 | `tray_icon.py` | 98 | WebRTC 主機的系統匣圖示。 |
 | `annotation_overlay.py` | 88 | 主機端標註的透明最上層覆蓋。 |
@@ -1063,9 +1063,9 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 
 | 層／子系統 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `gui/` | 93 | 27,235 |
+| `gui/` | 93 | 27,308 |
 | `utils/mcp_server/` | 31 | 17,814 |
-| `utils/remote_desktop/` | 56 | 12,871 |
+| `utils/remote_desktop/` | 56 | 12,907 |
 | `utils/executor/` | 7 | 9,504 |
 | `utils/usb/` | 17 | 4,524 |
 | `je_auto_control/`（頂層 3 檔） | 3 | 2,410 |
@@ -1084,5 +1084,5 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 846 |
 | 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 679 | 54,946 |
-| **總計** | **1,048** | **152,996** |
+| **總計** | **1,048** | **153,105** |
 

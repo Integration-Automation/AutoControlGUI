@@ -16,9 +16,9 @@ panel.
 """
 from __future__ import annotations
 
-import json
+import urllib.error
 import urllib.parse
-import urllib.request
+from email.message import Message
 from typing import Any, Callable, Dict, List, Optional
 
 from PySide6.QtCore import QObject, Signal
@@ -114,15 +114,17 @@ def fetch_remote_devices(*, base_url: str,
     if not base.startswith(("http://", "https://")):  # NOSONAR — scheme allowlist check, not a URL emission
         base = f"{_TEST_SCHEME}://{base}"
     url = f"{base}/usb/devices"
-    headers = {"Authorization": f"Bearer {token}"} if token else {}
-    request = urllib.request.Request(url, headers=headers, method="GET")
-    with urllib.request.urlopen(  # nosec B310  # reason: scheme validated above
-            request, timeout=float(timeout_s),
-    ) as response:
-        body = json.loads(response.read().decode("utf-8"))
-    devices = body.get("devices", [])
+    headers = {"Authorization": f"Bearer {token}"} if token else None
+    from je_auto_control.utils.http_client.http_client import build_call, perform_call
+    # Through http_client for the egress policy and the body cap, and so a
+    # redirect to another host no longer receives the bearer token.
+    response = perform_call(build_call(url, "GET", headers=headers, timeout=float(timeout_s)))
+    if not 200 <= response["status"] < 300:
+        raise urllib.error.HTTPError(url, response["status"], response["text"][:200], Message(), None)
+    body = response["json"]
+    devices = body.get("devices", []) if isinstance(body, dict) else None
     if not isinstance(devices, list):
-        raise ValueError(f"unexpected response shape: {body!r}")
+        raise ValueError(f"unexpected response shape: {response['text'][:200]!r}")
     return devices
 
 

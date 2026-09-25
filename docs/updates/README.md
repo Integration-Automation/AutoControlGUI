@@ -58,6 +58,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260925-37 | 2026-09-25 | Remote desktop panels: Quick Connect verifies wss:// and forwards input, closing a session window no longer aborts the process, connect slots report every error, audio follows its box with the section collapsed, the share text quotes the running host, signaling and the USB browser go through http_client | #bugfix #remote-desktop #gui #security | [2026-09-d](2026-09-d.md) |
 | U-20260925-36 | 2026-09-25 | A sweep of less-visited utils subpackages: three locators answer in screen coordinates, the voice router is thread-safe, failure signatures ignore unit-glued numbers, delta counts match their summary, no home directory is survivable, infinite samples and clipped checkboxes, dominant contrast colours, opaque URL schemes | #bugfix #vision #audit | [2026-09-d](2026-09-d.md) |
 | U-20260925-35 | 2026-09-25 | SonarCloud's reliability gate failed on the OpenAI backend's first-choice read; it now takes the choice without indexing | #ci #agent | [2026-09-d](2026-09-d.md) |
 | U-20260925-34 | 2026-09-25 | Window and OS helpers at their edges: file dialogs need the exact title and the front before typing, watchdog keys go to the popup, psutil and regex errors are framework errors, empty needles are refused, file drops use absolute paths, the Window Manager acts on the selected window; input paths Jeffrey_RPA runs are recorded, not changed | #bugfix #windows #gui | [2026-09-d](2026-09-d.md) |
@@ -279,7 +280,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | File | Period | Entries |
 |---|---|---:|
-| [2026-09-d.md](2026-09-d.md) | 2026-09 | 5 |
+| [2026-09-d.md](2026-09-d.md) | 2026-09 | 6 |
 | [2026-09-c.md](2026-09-c.md) | 2026-09 | 38 |
 | [2026-09-b.md](2026-09-b.md) | 2026-09 | 68 |
 | [2026-09.md](2026-09.md) | 2026-09 | 79 |

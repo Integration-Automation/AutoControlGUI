@@ -95,7 +95,7 @@ class TrustedViewersList(QListWidget):
             label = entry.get("label", "") or "(unlabeled)"
             last_used = _format_short_time(entry.get("last_used"))
             suffix = f"  ({last_used})" if last_used else ""
-            display = f"{label} - {viewer_id[:8]}...{suffix}"
+            display = f"{label} - {str(viewer_id)[:8]}...{suffix}"
             item = QListWidgetItem(display)
             item.setData(Qt.ItemDataRole.UserRole, viewer_id)
             self.addItem(item)
@@ -109,6 +109,14 @@ class TrustedViewersList(QListWidget):
                     self.removed.emit(viewer_id)
                     return
         super().keyPressEvent(event)
+
+
+def _format_size(value) -> str:
+    """``1,234`` for a byte count, or the value as the host sent it."""
+    try:
+        return f"{int(value):,}"
+    except (TypeError, ValueError, OverflowError):
+        return str(value)
 
 
 class AddressBookList(QListWidget):
@@ -248,14 +256,19 @@ class RemoteFilesTable(QTableWidget):
         return names
 
     def populate(self, files: list, format_mtime) -> None:
-        """Replace contents. ``format_mtime(value) -> str`` formats the column."""
-        self.setRowCount(len(files))
-        for row, entry in enumerate(files):
+        """Replace contents. ``format_mtime(value) -> str`` formats the column.
+
+        ``files`` comes from the remote host: an entry that is not an object
+        is skipped, and a size that is not a number is shown as sent. Either
+        used to raise out of the listing and leave the table half-filled.
+        """
+        rows = [entry for entry in files if isinstance(entry, dict)]
+        self.setRowCount(len(rows))
+        for row, entry in enumerate(rows):
             name = str(entry.get("name", ""))
-            size = int(entry.get("size", 0))
             mtime_str = format_mtime(entry.get("mtime"))
             self.setItem(row, 0, QTableWidgetItem(name))
-            self.setItem(row, 1, QTableWidgetItem(f"{size:,}"))
+            self.setItem(row, 1, QTableWidgetItem(_format_size(entry.get("size", 0))))
             self.setItem(row, 2, QTableWidgetItem(mtime_str))
 
     # --- drag-and-drop ------------------------------------------------------

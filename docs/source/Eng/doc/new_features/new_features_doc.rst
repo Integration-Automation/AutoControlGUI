@@ -536,7 +536,10 @@ GUI: **Remote Desktop** tab opens to the **Quick Connect** screen
 (AnyDesk-style) by default — huge Host ID on one side, a single input
 that accepts ``host:port``, ``ws://``, ``wss://``, or a 9-digit Host
 ID on the other, with *Connect* and *Start hosting* as the two primary
-buttons. Recent connections are remembered across sessions. Advanced
+buttons. The session opens in a popup window that forwards your mouse
+and keyboard to the host. A ``wss://`` target verifies the host's
+certificate against the system trust store; for a self-signed host, use
+the Advanced viewer and tick *Skip cert verification (self-signed)*. Recent connections are remembered across sessions. Advanced
 per-transport sub-tabs (legacy TCP / WS host + viewer, WebRTC host +
 viewer with manual SDP / custom codecs / TLS pinning) stay one click
 away. WebRTC sub-tabs lazy-load so a stock install without the

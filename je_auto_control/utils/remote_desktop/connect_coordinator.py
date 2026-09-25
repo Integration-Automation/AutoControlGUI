@@ -79,6 +79,9 @@ def _parse_host_port(rest: str) -> tuple:
         )
     host, _sep, port_text = authority.rpartition(":")
     host = host.strip()
+    if host.startswith("[") and host.endswith("]"):
+        # [::1]:5555 -- the brackets only delimit the address in a URL.
+        host = host[1:-1]
     try:
         port = int(port_text.strip())
     except ValueError as exc:
@@ -104,14 +107,19 @@ def _try_parse_webrtc_id(text: str) -> Optional[ConnectTarget]:
 
 
 def _parse_scheme(text: str) -> Optional[ConnectTarget]:
-    """Return a transport target if ``text`` begins with a known scheme."""
-    if text.startswith(_TCP_SCHEMES):
+    """Return a transport target if ``text`` begins with a known scheme.
+
+    Schemes are case-insensitive (RFC 3986), so ``WSS://`` is not read as a
+    bare host named ``WSS``.
+    """
+    lowered = text.lower()
+    if lowered.startswith(_TCP_SCHEMES):
         host, port, _path = _parse_host_port(text[len("tcp://"):])
         return ConnectTarget(kind="tcp", host=host, port=port)
-    if text.startswith(_WSS_SCHEME):
+    if lowered.startswith(_WSS_SCHEME):
         host, port, path = _parse_host_port(text[len(_WSS_SCHEME):])
         return ConnectTarget(kind="wss", host=host, port=port, path=path)
-    if text.startswith(_WS_SCHEME):
+    if lowered.startswith(_WS_SCHEME):
         host, port, path = _parse_host_port(text[len(_WS_SCHEME):])
         return ConnectTarget(kind="ws", host=host, port=port, path=path)
     return None

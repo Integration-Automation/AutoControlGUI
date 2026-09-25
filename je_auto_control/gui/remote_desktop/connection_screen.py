@@ -26,10 +26,13 @@ from PySide6.QtWidgets import (
 )
 
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
-from je_auto_control.gui.remote_desktop._helpers import _StatusBadge, _t
+from je_auto_control.gui.remote_desktop._helpers import (
+    _StatusBadge, _build_verifying_client_context, _t, wire_remote_input,
+)
 from je_auto_control.gui.remote_desktop.remote_screen_window import (
     RemoteScreenWindow,
 )
+from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.remote_desktop import (
     PendingViewer, RemoteDesktopHost, RemoteDesktopViewer,
     WebSocketDesktopViewer,
@@ -418,9 +421,9 @@ class QuickConnectScreen(TranslatableMixin, QWidget):
                 on_cursor=self._cursor_moved.emit,
             )
             viewer.connect(timeout=5.0)
-        except (OSError, RuntimeError) as error:
-            # AuthenticationError is a subclass of RuntimeError; the
-            # tuple above already catches it.
+        # ValueError: a host such as "a..b" fails IDNA encoding with
+        # UnicodeError, which escaped the slot and left the click unanswered.
+        except (OSError, RuntimeError, ValueError, AutoControlException) as error:
             QMessageBox.warning(self, _t("rd_quick_connect_btn"), str(error))
             return
         registry._viewer = viewer  # noqa: SLF001  centralised lifecycle ownership
@@ -433,17 +436,19 @@ class QuickConnectScreen(TranslatableMixin, QWidget):
         port = target.port or 0
         path = target.path or "/"
         registry.disconnect_ws_viewer()
+        # wss:// was dialled as plain ws://: the session went unencrypted to
+        # a host the operator took for TLS, and a real TLS host was unreachable.
+        ssl_context = _build_verifying_client_context() if target.kind == "wss" else None
         try:
             viewer = WebSocketDesktopViewer(
                 host=host, port=port, token=token, path=path,
                 on_frame=self._frame_arrived.emit,
                 on_error=lambda exc: self._error_arrived.emit(str(exc)),
                 on_cursor=self._cursor_moved.emit,
+                ssl_context=ssl_context,
             )
             viewer.connect(timeout=5.0)
-        except (OSError, RuntimeError) as error:
-            # AuthenticationError is a subclass of RuntimeError; the
-            # tuple above already catches it.
+        except (OSError, RuntimeError, ValueError, AutoControlException) as error:
             QMessageBox.warning(self, _t("rd_quick_connect_btn"), str(error))
             return
         registry._ws_viewer = viewer  # noqa: SLF001  centralised lifecycle ownership
@@ -495,6 +500,7 @@ class QuickConnectScreen(TranslatableMixin, QWidget):
         if self._screen_window is None:
             window = RemoteScreenWindow(title, parent=self)
             window.closed.connect(self._on_window_closed)
+            wire_remote_input(window, self._send_input)
             # Phase 1.4: drop a local file onto the remote screen window
             # and the viewer uploads it straight to the host.
             window.files_dropped.connect(self._on_files_dropped)
@@ -508,6 +514,16 @@ class QuickConnectScreen(TranslatableMixin, QWidget):
         self._screen_window.show()
         self._screen_window.raise_()
         self._screen_window.activateWindow()
+
+    def _send_input(self, action: dict) -> None:
+        """Forward one input action from the popup to the live viewer."""
+        viewer = registry.viewer or registry._ws_viewer  # noqa: SLF001
+        if viewer is None or not viewer.connected:
+            return
+        try:
+            viewer.send_input(action)
+        except OSError as error:
+            self._error_arrived.emit(str(error))
 
     def _on_files_dropped(self, paths) -> None:
         """Upload each dropped file to the host's home directory."""

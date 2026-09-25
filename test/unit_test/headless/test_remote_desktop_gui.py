@@ -109,6 +109,7 @@ def test_host_preview_shows_streamed_frame(qapp):
     registry._host = host  # noqa: SLF001
     try:
         panel = _HostPanel()
+        panel.show()  # the preview only refreshes while visible
         # Speed the preview poll up so the test does not need to wait 250ms+.
         panel._preview_timer.setInterval(20)  # noqa: SLF001
         assert _process_until(qapp, panel._preview.has_image)  # noqa: SLF001
@@ -142,8 +143,9 @@ def test_viewer_input_round_trips_to_dispatcher(qapp):
             qapp, panel._screen_window.display.has_image,  # noqa: SLF001
         )
 
-        panel._send_mouse_move(11, 13)  # noqa: SLF001
-        panel._send_mouse_press(11, 13, "mouse_left")  # noqa: SLF001
+        window = panel._screen_window  # noqa: SLF001
+        window.mouse_moved.emit(11, 13)
+        window.mouse_pressed.emit(11, 13, "mouse_left")
 
         assert _process_until(
             qapp,

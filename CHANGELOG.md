@@ -76,6 +76,11 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Changed
 
+- Quick Connect verifies the host certificate for `wss://` targets (use the
+  Advanced viewer with *Skip cert verification* for self-signed hosts).
+- The signaling client and the USB browser's device fetch go through
+  `http_client`: http(s) only, the egress policy applies, and credentials
+  do not follow a redirect to another host.
 - `match_theme`, `propose_elements` and `read_barcodes` return screen
   coordinates for a screen grab (they were relative to `region`).
 - `plan_open` / `open_path` refuse opaque URL schemes off the allow list;
@@ -410,6 +415,14 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Fixed
 
+- The Quick Connect popup forwards mouse and keyboard input.
+- Closing a remote screen window no longer aborts the process when its
+  panel is deleted first.
+- Remote desktop connect errors (such as an invalid host name) are reported.
+- Audio follows its checkbox while the Advanced section is collapsed.
+- The host share text quotes the settings the host started with.
+- Address-book, known-hosts and remote-inbox data of the wrong shape no
+  longer raise in the GUI.
 - The voice router is safe under concurrent use; `match_ensemble` votes on
   one frame.
 - Failure signatures group failures that differ only in timings.

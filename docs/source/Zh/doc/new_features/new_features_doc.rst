@@ -501,7 +501,9 @@ GUI：\ **Remote Desktop**\ 分頁預設打開的是 **快速連線** （AnyDesk
 風格）— 一邊是超大本機 Host ID，另一邊一個輸入框接受
 ``host:port``、
 ``ws://``、``wss://`` 或 9 位數 Host ID，搭配 *連線* 與 *開始被遠端*
-兩個主要按鈕。近期連線會跨 session 記住。進階的逐傳輸子分頁（既有
+兩個主要按鈕。連線後會開一個彈出視窗，把你的滑鼠與鍵盤轉送到 host。
+``wss://`` 目標會用系統信任的憑證驗證 host；自簽憑證的 host 請改用進階
+viewer，並勾選 *忽略憑證驗證（自簽用）*。近期連線會跨 session 記住。進階的逐傳輸子分頁（既有
 TCP / WS host + viewer、WebRTC host + viewer 含手動 SDP / 自訂編碼器
 / TLS pinning）仍只差一個 click。WebRTC 子分頁採延遲載入,沒裝
 ``[webrtc]`` extra 也能正常開啟整個分頁。
