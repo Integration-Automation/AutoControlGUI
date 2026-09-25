@@ -20,7 +20,7 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 | 指標 | 數值 |
 | --- | ---: |
 | Python 模組總數（含周邊子專案） | 1,060 |
-| 程式碼總行數 | 154,794 |
+| 程式碼總行數 | 154,889 |
 | `je_auto_control/utils/` 子套件數 | 310 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 775 |
 | 套件門面 `__all__` 公開名稱數 | 1,244 |
@@ -272,7 +272,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.1 執行引擎與腳本資產
 
-> 24 個套件、約 14,548 行。
+> 24 個套件、約 14,574 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -284,7 +284,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/decision_table/` | 112 | DMN 風格決策表：規則 + 命中策略，把分支外部化 |
 | `utils/deterministic/` | 116 | 決定性執行控制：固定亂數種子 + 凍結時鐘 |
 | `utils/executor/` | 9,503 | **核心**。`Executor` 指令分派表（775 個 `AC_*`）、參數插值、乾跑、逐步 callback；`flow_control` 提供 34 個區塊指令（迴圈／分支／try／巨集／變數） |
-| `utils/flow_debugger/` | 155 | action list 的單步除錯器與追蹤器 |
+| `utils/flow_debugger/` | 166 | action list 的單步除錯器與追蹤器 |
 | `utils/input_macro/` | 451 | 定時輸入事件：錄製結果的整形（`timeline`／`InputRecorder`，Windows 與 macOS 共用）、重播與宣告式輸入序列 DSL |
 | `utils/json/` | 99 | action JSON 檔讀寫與正規化格式化（`fmt --check` 的後端） |
 | `utils/json_store/` | 271 | JSON 字典檔持久化的共用小工具（內部管線） |
@@ -292,7 +292,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/plugin_loader/` | 147 | 掃描外部 Python 外掛目錄並註冊其 `AC_` callable |
 | `utils/plugin_sdk/` | 80 | 外掛 SDK：透過 entry points 發佈／載入第三方 `AC_*` 指令 |
 | `utils/project/` | 183 | 專案腳手架：建立目錄結構與範本 action 檔 |
-| `utils/recording_edit/` | 150 | 不重錄的前提下裁切／過濾／縮放已錄製的 action list |
+| `utils/recording_edit/` | 165 | 不重錄的前提下裁切／過濾／縮放已錄製的 action list |
 | `utils/saga/` | 100 | Saga 協調器：失敗時以 LIFO 補償動作回滾 |
 | `utils/script_vars/` | 211 | 執行期變數作用域與 `${var}` / `${secrets.*}` 插值 |
 | `utils/skill_library/` | 115 | 具名可重用 action 序列（skill）的持久化倉庫 |
@@ -371,7 +371,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.5 影像辨識與畫面分析
 
-> 37 個套件、約 5,860 行。
+> 37 個套件、約 5,859 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -404,7 +404,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/saliency/` | 114 | 頻譜殘差視覺顯著性：顯著圖與排序後的顯著區域 |
 | `utils/scale_detect/` | 84 | 偵測樣板實際渲染的顯示縮放／視覺 DPI |
 | `utils/screen_grid/` | 146 | 供 VLM 接地用的粗粒度標號網格（點 ↔ 格對映） |
-| `utils/set_of_marks/` | 154 | Set-of-Marks 疊圖：為畫面元素編號供 VLM 指認 |
+| `utils/set_of_marks/` | 153 | Set-of-Marks 疊圖：為畫面元素編號供 VLM 指認 |
 | `utils/shape_locator/` | 108 | 以邊緣／輪廓偵測定位元件（矩形／形狀，免樣板） |
 | `utils/ssim/` | 163 | 結構相似度比較：感知分數 + 變化區域 |
 | `utils/subpixel_match/` | 103 | 以二次曲面擬合做次像素級比對精修 |
@@ -415,12 +415,12 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.6 OCR 與文字理解
 
-> 19 個套件、約 3,474 行。
+> 19 個套件、約 3,488 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
 | `utils/bidi_check/` | 138 | 雙向文字 QA（bidi 控制碼、巢狀平衡、Trojan-source 掃描） |
-| `utils/column_layout/` | 153 | 從垂直空白推斷欄位，處理無框線表格 |
+| `utils/column_layout/` | 167 | 從垂直空白推斷欄位，處理無框線表格 |
 | `utils/confusables/` | 146 | 易混淆／同形字偵測（Unicode 欺騙骨架） |
 | `utils/form_fields/` | 134 | 多方向關聯表單標籤與值，並讀取核取方塊狀態 |
 | `utils/fuzzy/` | 111 | 模糊字串比對與去重（預設 difflib，有 rapidfuzz 則優先） |
@@ -441,12 +441,12 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.7 無障礙樹與原生控制項
 
-> 16 個套件、約 4,619 行。
+> 16 個套件、約 4,645 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
 | `utils/a11y_audit/` | 362 | 以無障礙樹 + OCR 進行無障礙與 i18n 稽核 |
-| `utils/accessibility/` | 3,117 | 跨平台無障礙樹定位與錄製；Windows UIA／macOS AX／null 三後端。支援限定視窗（換搜尋起點，不是過濾）、逐節點可中斷走訪、`IUIAutomation2` 連線逾時、名稱子字串比對與排序、`control_get_state` 一次讀完值／勾選／選取／數值（密碼欄位不回內容） |
+| `utils/accessibility/` | 3,143 | 跨平台無障礙樹定位與錄製；Windows UIA／macOS AX／null 三後端。支援限定視窗（換搜尋起點，不是過濾）、逐節點可中斷走訪、`IUIAutomation2` 連線逾時、名稱子字串比對與排序、`control_get_state` 一次讀完值／勾選／選取／數值（密碼欄位不回內容） |
 | `utils/ax_events/` | 29 | 反應式 UIA 事件等待（focus-changed） |
 | `utils/ax_props/` | 44 | 讀取豐富 UIA 屬性（enabled／offscreen／help／status／快捷鍵） |
 | `utils/ax_text/` | 102 | 透過 UIA TextPattern 取得原生文字（讀取／尋找／選取／屬性） |
@@ -464,7 +464,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.8 元素定位、自我修復與智慧等待
 
-> 23 個套件、約 4,354 行。
+> 23 個套件、約 4,374 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -479,7 +479,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/element_proposal/` | 92 | 免樣板、免模型地從原始像素提出乾淨元素清單 |
 | `utils/element_scoring/` | 105 | 加權候選評分（角色 + 名稱相似度 + 鄰近度 + 啟用狀態） |
 | `utils/expect_poll/` | 149 | 反覆取值直到符合條件（Playwright `expect.poll` 風格） |
-| `utils/grounding_consensus/` | 153 | 對同一目標的多個接地提案做自我一致性投票 |
+| `utils/grounding_consensus/` | 173 | 對同一目標的多個接地提案做自我一致性投票 |
 | `utils/heal_analytics/` | 77 | 自癒事件記錄的分析（治癒率、脆弱定位器） |
 | `utils/locator_chain/` | 112 | 可組合／可過濾的候選定位器（chained-locator 慣用法） |
 | `utils/locator_repair/` | 117 | 自癒回寫：把修正後的定位器持久化 |
@@ -558,7 +558,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.12 報表、可觀測性與測試治理
 
-> 34 個套件、約 7,533 行。
+> 34 個套件、約 7,546 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -568,7 +568,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/baggage/` | 120 | W3C Baggage 傳遞 |
 | `utils/canonical_log/` | 96 | canonical log line 與結構化 JSON 日誌 |
 | `utils/ci_annotations/` | 65 | 由執行結果輸出 CI 工作流程註記（GitHub Actions） |
-| `utils/compliance/` | 153 | 合規：把治理證據對應到 SOC2／ISO 27001 控制項 |
+| `utils/compliance/` | 166 | 合規：把治理證據對應到 SOC2／ISO 27001 控制項 |
 | `utils/failure_hooks/` | 415 | 失敗 → 工單自動化：開 Jira／Linear／GitHub issue |
 | `utils/failure_signature/` | 76 | 把錯誤訊息正規化成穩定的 SHA-256 失敗簽章並分群 |
 | `utils/flake_cluster/` | 103 | 以共同失敗 Jaccard 相似度為易碎測試分群 |
@@ -599,7 +599,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.13 資料來源、結構驗證與 i18n
 
-> 24 個套件、約 4,662 行。
+> 24 個套件、約 4,659 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -611,7 +611,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/data_source/` | 235 | 資料驅動執行：從 CSV／JSON／SQLite／Excel 載入資料列 |
 | `utils/dataset_diff/` | 89 | 表格資料列差異比對（CDC 風格） |
 | `utils/gettext_catalog/` | 362 | GNU gettext 目錄 I/O（解析 .po、編譯／讀取 .mo、訊息查詢） |
-| `utils/i18n_test/` | 231 | 國際化／在地化測試輔助 |
+| `utils/i18n_test/` | 228 | 國際化／在地化測試輔助 |
 | `utils/json_contract/` | 145 | JSON 契約／快照比對：`match_json`、`diff_json`、`snapshot_json` |
 | `utils/json_patch/` | 352 | JSON Pointer（6901）、JSON Patch（6902）與 Merge Patch（7386） |
 | `utils/json_schema/` | 426 | JSON Schema（Draft 2020-12 子集）驗證 |
@@ -1075,7 +1075,7 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `utils/executor/` | 7 | 9,503 |
 | `utils/usb/` | 17 | 4,524 |
 | `je_auto_control/`（頂層 3 檔） | 3 | 2,410 |
-| `utils/accessibility/` | 14 | 3,117 |
+| `utils/accessibility/` | 14 | 3,143 |
 | `wrapper/` | 19 | 3,631 |
 | `windows/` | 23 | 1,959 |
 | `utils/rest_api/` | 8 | 1,881 |
@@ -1089,6 +1089,6 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `osx/` | 17 | 925 |
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 846 |
-| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 679 | 55,199 |
-| **總計** | **1,054** | **154,729** |
+| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 679 | 55,268 |
+| **總計** | **1,054** | **154,824** |
 

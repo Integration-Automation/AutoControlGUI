@@ -15,6 +15,8 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Added
 
+- `element_box()` (`utils.accessibility.element`): an element's
+  `(left, top, width, height)` from `bbox`, `bounds` or `x/y/width/height`.
 - The MCP server speaks the stateless protocol revision 2026-07-28 over
   stdio and HTTP, per request, beside the `initialize`-based ones: `server/discover`,
   `resultType` and caching hints on results, the `-32020`–`-32022` error
@@ -427,6 +429,12 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Fixed
 
+- Set-of-marks numbers OCR boxes, and grounding consensus votes by each
+  element's real geometry; consensus refuses non-finite points.
+- Borderless tables are found left of x = 0 (monitors left of the primary).
+- The recording editors leave `${var}` sleeps alone; the flow debugger takes
+  an `{"auto_control": [...]}` file; a compliance framework can be passed
+  as one string.
 - Python 3.15 turns UTF-8 mode on by default. `AC_shell_to_var`, the MCP
   `shell_command` tool, `ShellManager` and the remote host's `status` still
   decode a Windows console program's output in its code page there,

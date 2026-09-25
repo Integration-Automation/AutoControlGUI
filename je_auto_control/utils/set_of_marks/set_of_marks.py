@@ -16,16 +16,15 @@ import io
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+from je_auto_control.utils.accessibility.element import element_box
+
 _OUTLINE = (255, 0, 0)
 _last_marks: List[Dict[str, Any]] = []
 
 
 def _bbox_of(element: Any) -> List[int]:
-    if isinstance(element, dict):
-        raw = element.get("bbox") or element.get("bounds") or []
-    else:
-        raw = getattr(element, "bounds", []) or []
-    return list(raw)
+    # Every shape, so OCR matches and fused elements are marked too.
+    return list(element_box(element) or [])
 
 
 def _text_of(element: Any) -> str:

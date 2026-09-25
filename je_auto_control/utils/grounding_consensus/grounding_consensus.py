@@ -15,6 +15,8 @@ import math
 from dataclasses import asdict, dataclass
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
+from je_auto_control.utils.accessibility.element import element_box
+
 Candidate = Any
 Element = Dict[str, Any]
 
@@ -45,6 +47,9 @@ def _xyw(candidate: Candidate) -> Tuple[float, float, float]:
         seq = list(candidate)
         x, y = float(seq[0]), float(seq[1])
         weight = float(seq[2]) if len(seq) > 2 else 1.0
+    if not (math.isfinite(x) and math.isfinite(y)):
+        # int(round(inf)) raised OverflowError, and NaN ValueError, from the centroid.
+        raise ValueError(f"candidate point must be finite, got ({x!r}, {y!r})")
     if not math.isfinite(weight) or weight < 0:
         raise ValueError(f"candidate weight must be finite and >= 0, got {weight!r}")
     return x, y, weight
@@ -104,16 +109,28 @@ def consensus_point(candidates: Sequence[Candidate], *,
                            round(agreement, 4), round(spread, 2), len(clusters))
 
 
-def _center(element: Element) -> Tuple[float, float]:
-    return (float(element.get("x", 0)) + float(element.get("width", 0)) / 2.0,
-            float(element.get("y", 0)) + float(element.get("height", 0)) / 2.0)
+def _center(element: Element) -> Optional[Tuple[float, float]]:
+    """The element's centre, or ``None`` without geometry.
+
+    Only ``x/y/width/height`` used to be read: accessibility elements
+    (``bounds``) and set-of-marks output (``bbox``) all sat at (0, 0), and the
+    first of them won with full agreement.
+    """
+    box = element_box(element)
+    if box is None:
+        return None
+    left, top, width, height = box
+    return left + width / 2.0, top + height / 2.0
 
 
-def _nearest_index(x: float, y: float, elements: Sequence[Element]) -> int:
-    """Index of the element whose centre is closest (Manhattan) to ``(x, y)``."""
-    best_index, best_distance = 0, None
+def _nearest_index(x: float, y: float, elements: Sequence[Element]) -> Optional[int]:
+    """Index of the element whose centre is closest (Manhattan) to ``(x, y)``, or ``None``."""
+    best_index, best_distance = None, None
     for index, element in enumerate(elements):
-        cx, cy = _center(element)
+        center = _center(element)
+        if center is None:
+            continue
+        cx, cy = center
         distance = abs(cx - x) + abs(cy - y)
         if best_distance is None or distance < best_distance:
             best_index, best_distance = index, distance
@@ -134,7 +151,10 @@ def consensus_element(candidates: Sequence[Candidate],
         points = [(x, y, 1.0) for x, y, _ in points]
     votes = [0.0] * len(elements)
     for x, y, weight in points:
-        votes[_nearest_index(x, y, elements)] += weight
+        nearest = _nearest_index(x, y, elements)
+        if nearest is None:
+            return None                  # no element has geometry to vote for
+        votes[nearest] += weight
     best = max(range(len(votes)), key=votes.__getitem__)
     return elements[best], round(votes[best] / sum(votes), 4)
 
