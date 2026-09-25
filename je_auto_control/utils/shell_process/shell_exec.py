@@ -12,6 +12,22 @@ from je_auto_control.utils.exception.exceptions import AutoControlActionExceptio
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 
 
+def console_encoding() -> str:
+    """The encoding a console program writes in: on Windows the ANSI code page.
+
+    ``locale.getpreferredencoding(False)`` answers ``utf-8`` in UTF-8 mode,
+    which Python 3.15 turns on by default (PEP 686), while ``cmd``, ``sc`` or
+    ``ipconfig`` keep writing the code page (cp950 on Traditional Chinese
+    Windows), so their output came back as replacement characters.
+    ``locale.getencoding`` (3.11+) ignores UTF-8 mode. Elsewhere the preferred
+    encoding stays: a UTF-8 locale gives the same answer either way.
+    """
+    getencoding = getattr(locale, "getencoding", None)
+    if sys.platform == "win32" and getencoding is not None:
+        return getencoding()
+    return locale.getpreferredencoding(False)
+
+
 def command_args(shell_command: Union[str, List[str]]) -> Union[str, List[str]]:
     """What to hand ``subprocess`` for ``shell_command``, never through a shell.
 
@@ -133,7 +149,7 @@ class ShellManager:
         self.process: Union[subprocess.Popen, None] = None
         self.run_output_queue: queue.Queue = queue.Queue()
         self.run_error_queue: queue.Queue = queue.Queue()
-        self.program_encoding: str = shell_encoding or locale.getpreferredencoding(False)
+        self.program_encoding: str = shell_encoding or console_encoding()
         self.program_buffer: int = program_buffer
 
     def exec_shell(self, shell_command: Union[str, List[str], None] = None, *,

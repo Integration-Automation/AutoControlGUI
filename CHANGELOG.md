@@ -427,6 +427,12 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Fixed
 
+- Python 3.15 turns UTF-8 mode on by default. `AC_shell_to_var`, the MCP
+  `shell_command` tool, `ShellManager` and the remote host's `status` still
+  decode a Windows console program's output in its code page there,
+  instead of as UTF-8: `sc query` raised, and the others returned
+  replacement characters. The SBOM skips a distribution that has no
+  metadata instead of failing on 3.15, or listing it as `unknown` before.
 - The Flow Editor opens action files saved with a BOM, keeps a wrapped
   file's other keys on save, and writes atomically.
 - The region selector (template cropping, OCR / screenshot / WebRTC regions)

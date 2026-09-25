@@ -26,10 +26,9 @@ def exec_shell_to_var(executor: Any, args: Mapping[str, Any]) -> Dict[str, Any]:
     which is what a console program writes on Windows) and bound under
     ``var`` (default ``shell_output``) for later ``${var}`` use.
     """
-    import locale
     import subprocess  # nosec B404 — argv list only, no shell
     from je_auto_control.utils.shell_process.shell_exec import (
-        command_args, refuse_batch_metacharacters, run_captured,
+        command_args, console_encoding, refuse_batch_metacharacters, run_captured,
     )
     command = args.get("command", args.get("shell_command"))
     if command is None or command == "" or command == []:
@@ -39,7 +38,7 @@ def exec_shell_to_var(executor: Any, args: Mapping[str, Any]) -> Dict[str, Any]:
     # As AC_shell_command does: cmd.exe re-parses a .bat's arguments, so a
     # ${var} holding "x&ver" ran a second command.
     refuse_batch_metacharacters(argv)
-    encoding = str(args.get("encoding") or locale.getpreferredencoding(False))
+    encoding = str(args.get("encoding") or console_encoding())
     timeout_s = float(args.get("timeout", 30.0))
     try:
         completed = run_captured(argv, timeout_s)
