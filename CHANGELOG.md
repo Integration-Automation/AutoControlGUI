@@ -438,6 +438,10 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Fixed
 
+- Script Builder `region` hints name the convention each command reads:
+  `[x, y, width, height]` for the matchers, OCR and most vision commands,
+  `[left, top, right, bottom]` for the colour, histogram, SSIM and QR
+  commands. Most said left, top, right, bottom whatever the command read.
 - `match_color` / `match_color_all` return screen coordinates for a region
   search, score only a template's coloured pixels, and cap their candidates.
 - Mark labels stay beside marks at negative coordinates and inside bounds
