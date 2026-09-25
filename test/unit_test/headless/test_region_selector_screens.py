@@ -26,6 +26,8 @@ from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QApplication
 app = QApplication([])
 from je_auto_control.gui.selector.region_overlay import RegionOverlay, pick_region_blocking
+if sys.argv[1].endswith("-mac"):
+    sys.platform = "darwin"      # captures and the pointer take points there
 
 def drag():
     overlays = [w for w in QApplication.topLevelWidgets() if isinstance(w, RegionOverlay) and w.isVisible()]
@@ -33,7 +35,7 @@ def drag():
         overlays[0].close()              # closed without a selection
         return
     for overlay in overlays:
-        if overlay.screen().name() == sys.argv[1]:
+        if overlay.screen().name() == sys.argv[1].split("-")[0]:
             QTest.mousePress(overlay, Qt.MouseButton.LeftButton, pos=QPoint(100, 100))
             QTest.mouseRelease(overlay, Qt.MouseButton.LeftButton, pos=QPoint(300, 200))
             return
@@ -49,6 +51,8 @@ print("region", pick_region_blocking(), flush=True)
     ("primary", "(100, 100, 201, 101)"),
     # (1920 + 100 * 1.25, -164 + 100 * 1.25, 201 * 1.25, 101 * 1.25), rounded
     ("scaled", "(2045, -39, 251, 126)"),
+    # macOS: Qt's logical pixels are the points captures take, so no scaling
+    ("scaled-mac", "(2020, -64, 201, 101)"),
 ])
 def test_a_drag_answers_in_native_pixels_on_its_screen(screen, region):
     done = run_probe(_PROBE, screen)

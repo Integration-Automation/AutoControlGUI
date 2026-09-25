@@ -58,9 +58,10 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260925-52 | 2026-09-25 | Screen-coordinate conversions no longer scale by the device pixel ratio on macOS, where captures and the pointer take points; and measured: importing the package makes a Windows process system-DPI-aware | #bugfix #hidpi #macos | [2026-09-d](2026-09-d.md) |
+| U-20260925-51 | 2026-09-25 | Python 3.15 readiness: Windows console output is decoded in its code page under the default UTF-8 mode, and the SBOM skips distributions that have no metadata | #bugfix #compat | [2026-09-d](2026-09-d.md) |
 | U-20260925-50 | 2026-09-25 | Host annotations are drawn where the viewer drew them: the hosts stamp each event with the frame's screen origin, and the overlay moves to that screen and converts native pixels to its logical ones | #bugfix #remote-desktop #hidpi | [2026-09-d](2026-09-d.md) |
 | U-20260925-49 | 2026-09-25 | Remote desktop input lands where the viewer clicked: both hosts dispatch viewer coordinates relative to the captured frame's origin, and the legacy host broadcasts its cursor in frame coordinates | #bugfix #remote-desktop #multi-monitor | [2026-09-d](2026-09-d.md) |
-| U-20260925-51 | 2026-09-25 | Python 3.15 readiness: Windows console output is decoded in its code page under the default UTF-8 mode, and the SBOM skips distributions that have no metadata | #bugfix #compat | [2026-09-d](2026-09-d.md) |
 | U-20260925-48 | 2026-09-25 | MCP 2026-07-28 subscriptions/listen over stdio and HTTP: an acknowledgement of what the server will send, notifications tagged with the subscription id, cancellation by notifications/cancelled or a closed stream, and a completion answer when the server ends it; the 2026-07-28 Progress item is done | #done #mcp | [2026-09-d](2026-09-d.md) |
 | U-20260925-47 | 2026-09-25 | The MCP server's subscription handlers move from server.py into _subscriptions.py, before subscriptions/listen joins them; no behaviour change | #refactor #mcp | [2026-09-d](2026-09-d.md) |
 | U-20260925-46 | 2026-09-25 | MCP 2026-07-28 over Streamable HTTP: a stateless POST mirrors its body into MCP-Protocol-Version, Mcp-Method and Mcp-Name, a disagreeing header is 400 HeaderMismatch, version and metadata errors are 400 and unknown methods 404, and no session is kept | #feature #mcp | [2026-09-d](2026-09-d.md) |
@@ -293,9 +294,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | File | Period | Entries |
 |---|---|---:|
-| [2026-09-d.md](2026-09-d.md) | 2026-09 | 15 |
-| [2026-09-d.md](2026-09-d.md) | 2026-09 | 14 |
-| [2026-09-d.md](2026-09-d.md) | 2026-09 | 17 |
+| [2026-09-d.md](2026-09-d.md) | 2026-09 | 20 |
 | [2026-09-c.md](2026-09-c.md) | 2026-09 | 38 |
 | [2026-09-b.md](2026-09-b.md) | 2026-09 | 68 |
 | [2026-09.md](2026-09.md) | 2026-09 | 79 |
