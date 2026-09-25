@@ -43,7 +43,7 @@ from je_auto_control.utils.mcp_server._input_required import (
     AnsweredByGate, RequestStateSigner,
 )
 from je_auto_control.utils.mcp_server._stateless import StatelessDispatchMixin
-from je_auto_control.utils.mcp_server._subscriptions import SubscriptionMixin
+from je_auto_control.utils.mcp_server._subscriptions import NO_RESPONSE, SubscriptionMixin
 from je_auto_control.utils.mcp_server._protocol import (
     PROTOCOL_VERSION,  # noqa: F401  # reason: re-exported; callers import it from server
     _capture_error_screenshot, negotiate_protocol_version,
@@ -118,6 +118,8 @@ class MCPServer(StatelessDispatchMixin, SubscriptionMixin, ClientRequestMixin):
         self._caps_lock = threading.Lock()
         self._resource_subscriptions: Dict[str, Any] = {}
         self._subscriptions_lock = threading.Lock()
+        self._listeners: Dict[Any, Any] = {}  # open subscriptions/listen, by (connection, id)
+        self._listeners_lock = threading.Lock()
 
     # --- connection-scoped state ------------------------------------------
     #
@@ -213,6 +215,7 @@ class MCPServer(StatelessDispatchMixin, SubscriptionMixin, ClientRequestMixin):
             return
         with self._caps_lock:
             self._client_caps_by_conn.pop(connection_id, None)
+        self._end_listeners(lambda conn: conn == connection_id, graceful=False)
         with self._calls_lock:
             stale = [key for key in self._active_calls
                      if isinstance(key, tuple) and key[0] == connection_id]
@@ -278,6 +281,7 @@ class MCPServer(StatelessDispatchMixin, SubscriptionMixin, ClientRequestMixin):
             # EOF is still running, and its reply has nowhere to go once the
             # writer is swapped back.
             self._join_workers()
+            self.end_subscriptions(stdio=True)
             self._detach_log_bridge_if_configured()
             self._notifier = prior_notifier
             self._writer = prior_writer
@@ -391,6 +395,8 @@ class MCPServer(StatelessDispatchMixin, SubscriptionMixin, ClientRequestMixin):
 
         def worker() -> None:
             payload = self._build_response(msg_id, _TOOLS_CALL_METHOD, params)
+            if payload is None:
+                return
             if writer is None:
                 autocontrol_logger.warning(
                     "MCP async tool reply with no writer; dropping %s", msg_id,
@@ -426,10 +432,12 @@ class MCPServer(StatelessDispatchMixin, SubscriptionMixin, ClientRequestMixin):
             thread.join(remaining)
 
     def _build_response(self, msg_id: Any, method: Optional[str],
-                        params: Dict[str, Any]) -> str:
-        """Dispatch a request and serialise the result or error."""
+                        params: Dict[str, Any]) -> Optional[str]:
+        """Dispatch a request and serialise the result or error; ``None`` answers later."""
         try:
             result = self._dispatch(msg_id, method, params)
+            if result is NO_RESPONSE:
+                return None
         except _MCPError as error:
             return _error_response(msg_id, error.code, error.message, error.data)
         except OperationCancelledError as error:
@@ -462,6 +470,7 @@ class MCPServer(StatelessDispatchMixin, SubscriptionMixin, ClientRequestMixin):
         if request_id is None or not _is_hashable(request_id):
             return
         call_key = (self._connection_id, request_id)
+        self._end_listener(call_key, graceful=False)
         with self._calls_lock:
             ctx = self._active_calls.get(call_key)
         if ctx is not None:

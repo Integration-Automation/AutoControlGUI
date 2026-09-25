@@ -354,12 +354,29 @@ existing client keeps working unchanged next to a 2026-07-28 one.
   ``data`` lists ``supported`` (``2026-07-28`` first, then the
   handshake-era versions, which need ``initialize``) and ``requested``.
 - **``server/discover``** answers ``supportedVersions``, the server's
-  ``capabilities`` and its identity. Without the per-request fields it is
+  ``capabilities`` (tool-list changes and resource subscriptions, both
+  through ``subscriptions/listen``) and its identity. Without the per-request fields it is
   ``-32602``.
 - **Methods.** ``tools/list``, ``tools/call``, ``resources/list``,
-  ``resources/read``, ``prompts/list`` and ``prompts/get``. The revision
-  removed ``ping``, ``logging/setLevel`` and ``resources/(un)subscribe``;
-  they are ``-32601`` in a stateless request.
+  ``resources/read``, ``prompts/list``, ``prompts/get`` and
+  ``subscriptions/listen``. The revision removed ``ping``,
+  ``logging/setLevel`` and ``resources/(un)subscribe``; they are ``-32601``
+  in a stateless request.
+- **``subscriptions/listen``** opens one subscription per request. Its
+  ``notifications`` filter may ask for ``toolsListChanged`` and for
+  ``resourceSubscriptions`` (a list of URIs; ``autocontrol://screen/live`` is
+  the subscribable one). The first message is
+  ``notifications/subscriptions/acknowledged`` with the part the server
+  will send: ``promptsListChanged`` and ``resourcesListChanged`` are left
+  out, since those lists never change, and so is a URI that cannot be
+  subscribed. Every notification after it carries the request's id under
+  ``_meta["io.modelcontextprotocol/subscriptionId"]``. The request gets an
+  answer only when the server ends the subscription (``serve_stdio``
+  finishing, ``HttpMCPServer.stop()``): a ``complete`` result with the same
+  ``_meta``. The client ends it with ``notifications/cancelled`` on stdio or
+  by closing the stream over HTTP, which needs ``Accept: text/event-stream``
+  (406 otherwise). An id that is already listening is ``-32600``, and a
+  malformed filter is ``-32602``.
 - **Results.** Every result carries ``resultType`` (``complete``, or
   ``input_required`` below) and the server's name, version and description
   under ``_meta["io.modelcontextprotocol/serverInfo"]``. ``server/discover``,
@@ -372,8 +389,8 @@ existing client keeps working unchanged next to a 2026-07-28 one.
   its own (``request_sampling`` and ``refresh_roots`` raise inside a
   stateless request); log records go out only for a request that set
   ``logLevel``, at that level or above; and a stdio peer whose first
-  request was stateless is sent no background log records or list-change
-  notifications.
+  request was stateless is sent no background log records, and list changes
+  and resource updates only through its ``subscriptions/listen``.
 - **Confirmation** of destructive tools is a multi round-trip: see
   `Confirmation prompts (elicitation)`_.
 - **Over HTTP** a request is stateless when its ``MCP-Protocol-Version``

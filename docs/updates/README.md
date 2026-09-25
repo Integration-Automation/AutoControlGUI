@@ -58,6 +58,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260925-48 | 2026-09-25 | MCP 2026-07-28 subscriptions/listen over stdio and HTTP: an acknowledgement of what the server will send, notifications tagged with the subscription id, cancellation by notifications/cancelled or a closed stream, and a completion answer when the server ends it; the 2026-07-28 Progress item is done | #done #mcp | [2026-09-d](2026-09-d.md) |
 | U-20260925-47 | 2026-09-25 | The MCP server's subscription handlers move from server.py into _subscriptions.py, before subscriptions/listen joins them; no behaviour change | #refactor #mcp | [2026-09-d](2026-09-d.md) |
 | U-20260925-46 | 2026-09-25 | MCP 2026-07-28 over Streamable HTTP: a stateless POST mirrors its body into MCP-Protocol-Version, Mcp-Method and Mcp-Name, a disagreeing header is 400 HeaderMismatch, version and metadata errors are 400 and unknown methods 404, and no session is kept | #feature #mcp | [2026-09-d](2026-09-d.md) |
 | U-20260925-45 | 2026-09-25 | The Flow Editor reads and writes action files through the Script Builder's helpers: files with a BOM open, wrapped files keep their other keys, and saves are atomic | #bugfix #gui | [2026-09-d](2026-09-d.md) |
@@ -289,7 +290,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | File | Period | Entries |
 |---|---|---:|
-| [2026-09-d.md](2026-09-d.md) | 2026-09 | 15 |
+| [2026-09-d.md](2026-09-d.md) | 2026-09 | 16 |
 | [2026-09-c.md](2026-09-c.md) | 2026-09 | 38 |
 | [2026-09-b.md](2026-09-b.md) | 2026-09 | 68 |
 | [2026-09.md](2026-09.md) | 2026-09 | 79 |

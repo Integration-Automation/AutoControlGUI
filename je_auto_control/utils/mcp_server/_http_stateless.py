@@ -21,7 +21,7 @@ from typing import Any, Dict, Optional, Protocol
 
 from je_auto_control.utils.mcp_server._protocol import _error_response, _MCPError
 from je_auto_control.utils.mcp_server._stateless import (
-    DISCOVER_METHOD, HEADER_MISMATCH, META_PROTOCOL_VERSION,
+    HEADER_MISMATCH, META_PROTOCOL_VERSION,
     MISSING_REQUIRED_CLIENT_CAPABILITY, STATELESS_METHODS, STATELESS_PROTOCOL_VERSIONS,
     UNSUPPORTED_PROTOCOL_VERSION, all_supported_versions, stateless_request,
 )
@@ -151,7 +151,7 @@ def stateless_refusal(headers: Headers,
                or _header_refusal(headers, msg_id, method, params))
     if refused is not None:
         return refused
-    if method != DISCOVER_METHOD and method not in STATELESS_METHODS:
+    if method not in STATELESS_METHODS:
         return Refusal(404, _error_response(msg_id, -32601, f"Method not found: {method}"))
     return None
 

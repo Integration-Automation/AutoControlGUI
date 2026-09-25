@@ -318,11 +318,21 @@ client 不用改,可以和 2026-07-28 的 client 並存。
   (物件);``clientInfo`` 與 ``logLevel`` 可省略。欄位缺少或格式不對是 ``-32602``。
   伺服器不以無狀態方式服務的版本是 ``-32022``,它的 ``data`` 列出 ``supported``
   (``2026-07-28`` 在前,接著是需要 ``initialize`` 的握手時代版本)與 ``requested``。
-- **``server/discover``** 回覆 ``supportedVersions``、伺服器的 ``capabilities`` 與
-  身分。沒有逐請求欄位時是 ``-32602``。
+- **``server/discover``** 回覆 ``supportedVersions``、伺服器的 ``capabilities``
+  (工具清單變更與 resource 訂閱,都經由 ``subscriptions/listen``)與身分。沒有逐請求欄位時是 ``-32602``。
 - **方法。** ``tools/list``、``tools/call``、``resources/list``、``resources/read``、
-  ``prompts/list`` 與 ``prompts/get``。這個版本移除了 ``ping``、``logging/setLevel``
+  ``prompts/list``、``prompts/get`` 與 ``subscriptions/listen``。這個版本移除了 ``ping``、``logging/setLevel``
   與 ``resources/(un)subscribe``,在無狀態請求裡它們是 ``-32601``。
+- **``subscriptions/listen``** 每個請求開一個訂閱。它的 ``notifications`` 篩選可以要
+  ``toolsListChanged`` 與 ``resourceSubscriptions`` (URI 清單;可訂閱的是
+  ``autocontrol://screen/live``)。第一則訊息是 ``notifications/subscriptions/acknowledged``,
+  列出伺服器會送的部分:``promptsListChanged`` 與 ``resourcesListChanged`` 不列(這兩個清單
+  不會變),無法訂閱的 URI 也不列。之後每則通知都在
+  ``_meta["io.modelcontextprotocol/subscriptionId"]`` 帶這個請求的 id。只有伺服器結束訂閱時
+  (``serve_stdio`` 結束、``HttpMCPServer.stop()``)這個請求才會收到回覆:一個 ``complete``
+  結果,帶同樣的 ``_meta``。client 在 stdio 用 ``notifications/cancelled`` 結束它,走 HTTP
+  則關掉串流;HTTP 需要 ``Accept: text/event-stream``,否則是 406。已經在監聽的 id 是
+  ``-32600``,篩選格式錯誤是 ``-32602``。
 - **結果。** 每個結果都帶 ``resultType`` (``complete``,或下面的 ``input_required``),
   並在 ``_meta["io.modelcontextprotocol/serverInfo"]`` 放伺服器的名稱、版本與說明。
   ``server/discover``、三個清單與 ``resources/read`` 另帶快取提示:``cacheScope``
@@ -331,7 +341,8 @@ client 不用改,可以和 2026-07-28 的 client 並存。
 - **不送 client 沒要的東西。** 關卡讀的能力是這個請求自己的,不是某條連線的;伺服器
   不主動送請求(``request_sampling`` 與 ``refresh_roots`` 在無狀態請求裡會丟例外);
   記錄只送給設了 ``logLevel`` 的請求,而且只送該等級以上;第一個請求就是無狀態的
-  stdio 對端,不會收到背景記錄或清單變更通知。
+  stdio 對端,不會收到背景記錄,清單變更與 resource 更新也只經由它的
+  ``subscriptions/listen`` 送達。
 - 破壞性工具的確認改用多輪往返:見 `破壞性動作確認(Elicitation)`_。
 - **走 HTTP 時**,``MCP-Protocol-Version`` 標頭或 ``_meta`` 寫 2026-07-28 的請求就是無狀態
   請求。它必須把 body 映到標頭:``MCP-Protocol-Version`` 等於 ``_meta`` 的版本、

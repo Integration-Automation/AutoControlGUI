@@ -21,7 +21,9 @@ channel to carry the question. See :mod:`.http_sessions`.
 **2026-07-28.** A request that declares the stateless revision, in its
 ``MCP-Protocol-Version`` header or its ``_meta``, is checked against that
 revision's header rules (:mod:`._http_stateless`) and served without a
-session: its ``Mcp-Session-Id`` is ignored and none is minted.
+session: its ``Mcp-Session-Id`` is ignored and none is minted. Its
+``subscriptions/listen`` holds the response stream open for the change
+notifications it asked for, until the client closes it or the server stops.
 """
 import hmac
 import json
@@ -42,9 +44,11 @@ from je_auto_control.utils.mcp_server._http_stateless import (
 )
 from je_auto_control.utils.mcp_server._protocol import (
     SUPPORTED_PROTOCOL_VERSIONS,
-    _notification_message,
+    _error_response, _notification_message,
 )
-from je_auto_control.utils.mcp_server._stateless import STATELESS_PROTOCOL_VERSIONS
+from je_auto_control.utils.mcp_server._stateless import (
+    LISTEN_METHOD, STATELESS_PROTOCOL_VERSIONS,
+)
 from je_auto_control.utils.mcp_server.http_sessions import (
     HttpSession, SESSION_HEADER, SessionRegistry, session_id_from_headers,
 )
@@ -169,6 +173,9 @@ class _MCPHttpHandler(BaseHTTPRequestHandler):
         if refused is not None:
             self._send_raw_json(refused.body, status=refused.status)
             return
+        if message is not None and message.get("method") == LISTEN_METHOD:
+            self._stream_listen(bridge, line, message)
+            return
         if self._client_accepts_sse():
             self._dispatch_sse(bridge, line, id(self))
             return
@@ -178,6 +185,55 @@ class _MCPHttpHandler(BaseHTTPRequestHandler):
             self._send_blank(status=202)
             return
         self._send_raw_json(response, status=status_for(response))
+
+    def _stream_listen(self, bridge: MCPServer, line: str,
+                       message: Dict[str, Any]) -> None:
+        """Hold a ``subscriptions/listen`` response stream open until it ends."""
+        if not self._client_accepts_sse():
+            self._send_raw_json(_error_response(
+                message.get("id"), -32600,
+                f"Invalid Request: {LISTEN_METHOD} needs Accept: {_SSE_MEDIA_TYPE}"), status=406)
+            return
+        send_lock = threading.Lock()
+        emit = self._open_event_stream(send_lock)
+        with bridge.connection_scope(writer=emit, notifier=_notifier_for(emit),
+                                     concurrent_tools=False, connection_id=id(self)):
+            response = bridge.handle_line(line)
+        if response is not None:
+            # Refused: the error is the whole answer.
+            emit(response)
+            return
+        closed = bridge.subscription(id(self), message["id"])
+        try:
+            while closed is not None and not closed.wait(timeout=_STREAM_HEARTBEAT):
+                with send_lock:
+                    self.wfile.write(b": keep-alive\n\n")
+                    self.wfile.flush()
+        except OSError as error:
+            autocontrol_logger.info("MCP subscription stream ended: %r", error)
+        finally:
+            # Closing the stream is how an HTTP client cancels; no answer then.
+            bridge.end_subscription(id(self), message["id"])
+
+    def _open_event_stream(self, send_lock: threading.Lock) -> Callable[[str], None]:
+        """Send the headers of an SSE response; return a writer of its events."""
+        self.close_connection = True
+        with send_lock:
+            self.send_response(200)
+            self.send_header("Content-Type", f"{_SSE_MEDIA_TYPE}; charset=utf-8")
+            self.send_header("Cache-Control", "no-cache")
+            self.send_header("Connection", "close")
+            self.send_header("X-Accel-Buffering", "no")
+            self.end_headers()
+            self.wfile.flush()
+
+        def emit(payload: str) -> None:
+            with send_lock:
+                self.wfile.write(b"data: ")
+                self.wfile.write(payload.encode("utf-8"))
+                self.wfile.write(b"\n\n")
+                self.wfile.flush()
+        return emit
 
     def _resolve_session(self, line: str) -> Tuple[Optional[HttpSession],
                                                     bool]:
@@ -629,8 +685,10 @@ class HttpMCPServer:
     def stop(self, timeout: float = 2.0) -> None:
         if self._server is None:
             return
-        # Close the sessions first: a standing GET stream parks a worker on
-        # its heartbeat, and terminating releases it without waiting one out.
+        # Close the sessions and subscriptions first: a standing GET stream or
+        # a subscriptions/listen parks a worker on its heartbeat, and ending
+        # them releases it without waiting one out.
+        self._mcp.end_subscriptions(stdio=False)
         self._server.sessions.terminate_all()
         self._server.shutdown()
         self._server.server_close()

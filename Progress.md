@@ -411,18 +411,6 @@ OpenAI 後端沒有這個綁定，照舊。
 
 ---
 
-## MCP 2026-07-28（無狀態協定）：`subscriptions/listen` 還沒做
-
-`WIP` — stdio 與 HTTP 已逐請求服務 2026-07-28（`utils/mcp_server/_stateless.py`、`_input_required.py`、`_http_stateless.py`），訂閱還沒有
-
-- **`subscriptions/listen`**（`_stateless.py`）：取代 GET 串流與 `resources/subscribe`，目前在無狀態請求裡是
-  `-32601`（HTTP 404）。先送 `notifications/subscriptions/acknowledged`（`_meta` 帶訂閱 id＝請求 id，
-  `notifications` 只列伺服器會送的種類），之後的 `tools/list_changed`、`resources/updated` 都標上同一個 id；
-  stdio 以 `notifications/cancelled` 結束、HTTP 以關閉 SSE 結束，伺服器關閉時回完成結果。
-  做完後 `STATELESS_CAPABILITIES` 才能宣告 `listChanged`／`subscribe`。
-
----
-
 ## MCP 工具的檔案路徑參數要不要限制在工作區根目錄裡
 
 `DECIDE` — 限制範圍與預設值由維護者決定

@@ -46,10 +46,13 @@ MISSING_REQUIRED_CLIENT_CAPABILITY = -32021
 UNSUPPORTED_PROTOCOL_VERSION = -32022
 
 DISCOVER_METHOD = "server/discover"
-#: Methods a stateless request may call besides ``server/discover``. The
-#: handshake era's ``initialize``, ``ping``, ``logging/setLevel`` and
-#: ``resources/(un)subscribe`` are gone from 2026-07-28.
+LISTEN_METHOD = "subscriptions/listen"
+META_SUBSCRIPTION_ID = "io.modelcontextprotocol/subscriptionId"
+#: Every method a stateless request may call. The handshake era's
+#: ``initialize``, ``ping``, ``logging/setLevel`` and ``resources/(un)subscribe``
+#: are gone from 2026-07-28; ``subscriptions/listen`` replaces the last two.
 STATELESS_METHODS = frozenset({
+    DISCOVER_METHOD, LISTEN_METHOD,
     "tools/list", "tools/call", "resources/list", "resources/read",
     "prompts/list", "prompts/get",
 })
@@ -61,8 +64,11 @@ _CACHE_TTL_MS = {
     "tools/list": 60_000, "prompts/list": 60_000, "resources/list": 60_000,
     "resources/read": 0,
 }
-#: The server's capabilities as a stateless client sees them.
-STATELESS_CAPABILITIES: Dict[str, Any] = {"tools": {}, "resources": {}, "prompts": {}}
+#: The server's capabilities as a stateless client sees them: tool-list
+#: changes and resource updates arrive through ``subscriptions/listen``.
+STATELESS_CAPABILITIES: Dict[str, Any] = {
+    "tools": {"listChanged": True}, "resources": {"subscribe": True}, "prompts": {},
+}
 
 
 def all_supported_versions() -> Tuple[str, ...]:
@@ -157,7 +163,8 @@ class StatelessDispatchMixin:
 
     Requires the host to provide ``_local`` (thread-local storage),
     ``_log_bridge``, ``_peer_era``, ``_request_states``, ``_connection_id``,
-    ``_notifier`` and ``_run_method`` (the handshake-era method table).
+    ``_notifier``, ``_run_method`` (the handshake-era method table) and
+    ``_listen`` (see :mod:`._subscriptions`).
     """
 
     if TYPE_CHECKING:
@@ -178,6 +185,9 @@ class StatelessDispatchMixin:
                         params: Dict[str, Any]) -> Any:
             """Run a method from the handshake-era table."""
 
+        def _listen(self, msg_id: Any, params: Dict[str, Any]) -> Any:
+            """Open a ``subscriptions/listen``."""
+
     @property
     def _stateless_request(self) -> Optional[StatelessRequest]:
         """The 2026-07-28 request being served on this thread, if any."""
@@ -192,10 +202,12 @@ class StatelessDispatchMixin:
                 raise _invalid(f"{DISCOVER_METHOD} needs _meta {META_PROTOCOL_VERSION} "
                                f"and {META_CLIENT_CAPABILITIES}")
             return self._run_method(msg_id, method, params)
-        if method != DISCOVER_METHOD and method not in STATELESS_METHODS:
+        if method not in STATELESS_METHODS:
             raise _MCPError(-32601, f"Method not found: {method}")
         self._note_peer_era("stateless")
         with self._stateless_scope(request):
+            if method == LISTEN_METHOD:
+                return self._listen(msg_id, params)
             result = (discover_result() if method == DISCOVER_METHOD
                       else self._run_method(msg_id, method, params))
         return shape_result(method, result)

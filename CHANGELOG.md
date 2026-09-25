@@ -18,7 +18,8 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 - The MCP server speaks the stateless protocol revision 2026-07-28 over
   stdio and HTTP, per request, beside the `initialize`-based ones: `server/discover`,
   `resultType` and caching hints on results, the `-32020`–`-32022` error
-  codes, and destructive-tool confirmation as a multi round-trip
+  codes, `subscriptions/listen` for tool-list changes and resource updates,
+  and destructive-tool confirmation as a multi round-trip
   (`input_required` with a signed `requestState`). Over HTTP a stateless
   request needs the `Mcp-Method` / `Mcp-Name` headers and is served without
   a session. Existing clients are served as before.

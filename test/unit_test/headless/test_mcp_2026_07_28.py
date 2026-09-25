@@ -6,11 +6,16 @@ result, the reserved error codes, the removed methods, per-request
 capabilities, and destructive-tool confirmation by multi round-trip instead
 of a server-initiated ``elicitation/create``. ``initialize`` still selects the
 handshake era. Over HTTP that revision's header rules and status codes apply
-and no session is kept. No network beyond loopback.
+and no session is kept. ``subscriptions/listen`` delivers only the change
+notifications asked for, tagged with its id, over stdio and over HTTP. No
+network beyond loopback.
 """
 import base64
+import http.client
+import io
 import json
 import logging
+import time
 import urllib.error
 import urllib.request
 
@@ -25,6 +30,7 @@ from je_auto_control.utils.mcp_server._stateless import (
 )
 from je_auto_control.utils.mcp_server.http_transport import DEFAULT_PATH, HttpMCPServer
 from je_auto_control.utils.mcp_server.log_bridge import MCPLogBridge
+from je_auto_control.utils.mcp_server.resources import ResourceProvider
 from je_auto_control.utils.mcp_server.server import MCPServer
 from je_auto_control.utils.mcp_server.tools import MCPTool
 from je_auto_control.utils.mcp_server.tools._base import DESTRUCTIVE, READ_ONLY
@@ -60,7 +66,8 @@ def test_discover_names_every_version_and_the_servers_identity():
     result = _send(MCPServer(tools=[]), "server/discover")["result"]
     assert result["resultType"] == "complete"
     assert result["supportedVersions"] == [STATELESS_PROTOCOL_VERSION, *SUPPORTED_PROTOCOL_VERSIONS]
-    assert set(result["capabilities"]) == {"tools", "resources", "prompts"}
+    assert result["capabilities"] == {"tools": {"listChanged": True},
+                                      "resources": {"subscribe": True}, "prompts": {}}
     assert result["_meta"][META_SERVER_INFO]["name"] == "je_auto_control"
     assert result["ttlMs"] > 0 and result["cacheScope"] == "private"
 
@@ -430,3 +437,182 @@ def test_the_handshake_era_still_gets_a_session(http_server):
 ])
 def test_header_values_decode_as_the_spec_says(value, decoded):
     assert decode_header_value(value) == decoded
+
+
+# --- subscriptions/listen ------------------------------------------------------
+
+class _Updates(ResourceProvider):
+    """A resource provider whose one resource updates when the test says so."""
+
+    URI = "test://live"
+
+    def __init__(self):
+        self.callbacks = {}
+        self.unsubscribed = []
+
+    def list(self):
+        return []
+
+    def read(self, uri):
+        return None
+
+    def subscribe(self, uri, on_update):
+        if uri != self.URI:
+            return None
+        handle = len(self.callbacks) + len(self.unsubscribed) + 1
+        self.callbacks[handle] = on_update
+        return handle
+
+    def unsubscribe(self, uri, handle):
+        self.unsubscribed.append(handle)
+        self.callbacks.pop(handle, None)
+
+    def update(self):
+        for callback in list(self.callbacks.values()):
+            callback()
+
+
+def _listening(filter_, msg_id=7):
+    provider = _Updates()
+    server = MCPServer(tools=[], resource_provider=provider)
+    written = []
+    server.set_writer(lambda line: written.append(json.loads(line)))
+    unsolicited = []
+    server.set_notifier(lambda method, params: unsolicited.append(method))
+    reply = server.handle_line(json.dumps({"jsonrpc": "2.0", "id": msg_id, "method": "subscriptions/listen",
+                                           "params": {"_meta": _meta(), "notifications": filter_}}))
+    return server, provider, written, unsolicited, reply
+
+
+def test_listen_acknowledges_what_it_will_send_and_answers_nothing_yet():
+    _, _, written, _, reply = _listening({
+        "toolsListChanged": True, "promptsListChanged": True, "resourcesListChanged": True,
+        "resourceSubscriptions": [_Updates.URI, "test://nothing", _Updates.URI]})
+    assert reply is None
+    assert written == [{"jsonrpc": "2.0", "method": "notifications/subscriptions/acknowledged", "params": {
+        "_meta": {"io.modelcontextprotocol/subscriptionId": 7},
+        "notifications": {"toolsListChanged": True, "resourceSubscriptions": [_Updates.URI]}}}]
+
+
+def test_listen_delivers_only_what_was_asked_for_tagged_with_its_id():
+    server, provider, written, unsolicited, _ = _listening({"resourceSubscriptions": [_Updates.URI]})
+    server.register_tool(_tool(name="late"))
+    provider.update()
+    assert [message["method"] for message in written] == [
+        "notifications/subscriptions/acknowledged", "notifications/resources/updated"]
+    assert written[1]["params"] == {"uri": _Updates.URI,
+                                    "_meta": {"io.modelcontextprotocol/subscriptionId": 7}}
+    assert unsolicited == []
+    tools_only, _, tool_written, _, _ = _listening({"toolsListChanged": True}, msg_id="s")
+    tools_only.register_tool(_tool(name="late"))
+    assert tool_written[1] == {"jsonrpc": "2.0", "method": "notifications/tools/list_changed",
+                               "params": {"_meta": {"io.modelcontextprotocol/subscriptionId": "s"}}}
+
+
+def test_a_cancelled_subscription_stops_silently_and_releases_its_resources():
+    server, provider, written, _, _ = _listening({"toolsListChanged": True,
+                                                  "resourceSubscriptions": [_Updates.URI]})
+    server.handle_line(json.dumps({"jsonrpc": "2.0", "method": "notifications/cancelled",
+                                   "params": {"requestId": 7}}))
+    assert provider.unsubscribed == [1] and provider.callbacks == {}
+    server.register_tool(_tool(name="late"))
+    assert len(written) == 1 and server.subscription(None, 7) is None
+
+
+def test_the_server_ending_a_subscription_answers_the_listen_request():
+    server, provider, written, _, _ = _listening({"resourceSubscriptions": [_Updates.URI]})
+    closed = server.subscription(None, 7)
+    server.end_subscriptions(stdio=True)
+    assert written[-1] == {"jsonrpc": "2.0", "id": 7, "result": {
+        "resultType": "complete", "_meta": {"io.modelcontextprotocol/subscriptionId": 7}}}
+    assert closed.is_set() and provider.unsubscribed == [1]
+
+
+@pytest.mark.parametrize("filter_, code", [
+    (None, -32602), ({"toolsListChanged": "yes"}, -32602),
+    ({"resourceSubscriptions": "test://live"}, -32602), ({"resourceSubscriptions": [1]}, -32602),
+])
+def test_a_malformed_filter_is_invalid_params(filter_, code):
+    _, _, written, _, reply = _listening(filter_)
+    assert json.loads(reply)["error"]["code"] == code and written == []
+
+
+def test_one_id_listens_once():
+    server, _, _, _, _ = _listening({"toolsListChanged": True})
+    again = server.handle_line(json.dumps({"jsonrpc": "2.0", "id": 7, "method": "subscriptions/listen",
+                                           "params": {"_meta": _meta(), "notifications": {}}}))
+    assert json.loads(again)["error"]["code"] == -32600
+
+
+def test_listen_over_stdio_is_answered_when_the_loop_ends():
+    server = MCPServer(tools=[], resource_provider=_Updates())
+    request = json.dumps({"jsonrpc": "2.0", "id": 3, "method": "subscriptions/listen",
+                          "params": {"_meta": _meta(), "notifications": {"toolsListChanged": True}}})
+    out = io.StringIO()
+    server.serve_stdio(stdin=io.StringIO(request + "\n"), stdout=out)
+    lines = [json.loads(line) for line in out.getvalue().splitlines()]
+    assert [line.get("method", "result") for line in lines] == [
+        "notifications/subscriptions/acknowledged", "result"]
+    assert lines[1]["id"] == 3 and lines[1]["result"]["resultType"] == "complete"
+
+
+def _open_listen(server, filter_):
+    host, port = server.address
+    connection = http.client.HTTPConnection(host, port, timeout=5)
+    body = json.dumps(_request("subscriptions/listen", {"notifications": filter_}, msg_id=11))
+    connection.request("POST", DEFAULT_PATH, body=body, headers={
+        "Content-Type": "application/json", "Accept": "application/json, text/event-stream",
+        **_headers_for("subscriptions/listen")})
+    return connection, connection.getresponse()
+
+
+def _next_event(response):
+    while True:
+        line = response.fp.readline()
+        if not line:
+            return None
+        if line.startswith(b"data: "):
+            return json.loads(line[len(b"data: "):])
+
+
+def test_listen_over_http_streams_until_the_server_stops():
+    server = HttpMCPServer(mcp=MCPServer(tools=[]), host="127.0.0.1", port=0)
+    server.start()
+    try:
+        connection, response = _open_listen(server, {"toolsListChanged": True})
+        assert response.status == 200 and response.getheader("X-Accel-Buffering") == "no"
+        assert "Mcp-Session-Id" not in dict(response.getheaders())
+        assert _next_event(response)["params"]["notifications"] == {"toolsListChanged": True}
+        server.mcp.register_tool(_tool(name="late"))
+        changed = _next_event(response)
+        assert changed["method"] == "notifications/tools/list_changed"
+        assert changed["params"]["_meta"] == {"io.modelcontextprotocol/subscriptionId": 11}
+    finally:
+        server.stop(timeout=2.0)
+    assert _next_event(response) == {"jsonrpc": "2.0", "id": 11, "result": {
+        "resultType": "complete", "_meta": {"io.modelcontextprotocol/subscriptionId": 11}}}
+    assert _next_event(response) is None
+    connection.close()
+
+
+def test_listen_over_http_ends_when_the_client_goes_away():
+    server = HttpMCPServer(mcp=MCPServer(tools=[]), host="127.0.0.1", port=0)
+    server.start()
+    try:
+        connection, response = _open_listen(server, {"toolsListChanged": True})
+        _next_event(response)
+        response.close()  # the connection handed its socket to the response
+        connection.close()
+        deadline = time.monotonic() + 10
+        while server.mcp._listeners and time.monotonic() < deadline:  # noqa: SLF001  # reason: the registry is the observable
+            server.mcp.register_tool(_tool(name=f"late{time.monotonic_ns()}"))
+            time.sleep(0.05)
+        assert not server.mcp._listeners  # noqa: SLF001
+    finally:
+        server.stop(timeout=2.0)
+
+
+def test_listen_over_http_needs_an_event_stream(http_server):
+    body = _request("subscriptions/listen", {"notifications": {"toolsListChanged": True}})
+    status, reply, _ = _http(http_server, body, _headers_for("subscriptions/listen"))
+    assert status == 406 and reply["error"]["code"] == -32600
