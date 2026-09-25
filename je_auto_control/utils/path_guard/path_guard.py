@@ -37,7 +37,10 @@ def default_allowed_roots() -> List[Path]:
         if entry.strip():
             roots.append(_canonical(entry.strip()))
     roots.append(_canonical(Path.cwd()))
-    roots.append(_canonical(Path.home()))
+    try:
+        roots.append(_canonical(_home()))
+    except PathNotAllowedError:
+        pass   # no home directory: it is simply not a root
     roots.append(_canonical(tempfile.gettempdir()))
     return roots
 
@@ -71,8 +74,20 @@ def validate_path(raw: os.PathLike | str, *,
 
 # --- internals ----------------------------------------------------
 
+def _home() -> Path:
+    try:
+        return Path.home()
+    except RuntimeError as error:
+        raise PathNotAllowedError(f"no home directory: {error}") from error
+
+
 def _canonical(value: os.PathLike | str) -> Path:
-    return Path(os.path.realpath(Path(value).expanduser()))
+    try:
+        return Path(os.path.realpath(Path(value).expanduser()))
+    except RuntimeError as error:
+        # "~" with no home directory: a builtin RuntimeError escaped the
+        # callers, which catch PathNotAllowedError.
+        raise PathNotAllowedError(f"cannot resolve {value!s}: {error}") from error
 
 
 def _check_suffix(candidate: Path,

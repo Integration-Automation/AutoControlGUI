@@ -27,8 +27,8 @@ UPC-A / Code-128）的功能——這些正是商品、庫存標籤與物流面�
     read_barcodes("label.png")
 
 ``read_barcodes(source=None, *, region=None, decoder=None)`` 回傳
-``{"text", "type", "points"}`` 字典清單，每偵測到一個條碼一筆（``points`` 為影像
-座標中的四角多邊形）。``source`` 可為影像路徑或陣列；省略時擷取螢幕（可選擇以
+``{"text", "type", "points"}`` 字典清單，每偵測到一個條碼一筆（``points`` 為四角多邊形：
+給定 ``source`` 時是該影像的座標，擷取螢幕時是螢幕座標，含 ``region`` 的位移）。``source`` 可為影像路徑或陣列；省略時擷取螢幕（可選擇以
 ``region`` 裁切）。灰階轉換重用共用的 ``visual_match`` haystack 載入器，不新增
 影像載入程式碼。
 

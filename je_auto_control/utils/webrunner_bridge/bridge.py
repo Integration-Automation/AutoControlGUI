@@ -64,12 +64,18 @@ def run_webrunner_action(action: Mapping[str, Any]) -> Any:
     callable_obj = executor.event_dict.get(name)
     if callable_obj is None:
         raise WebRunnerBridgeError(f"unknown WR_ command: {name}")
+    import inspect
     try:
-        return callable_obj(**dict(params))
+        inspect.signature(callable_obj).bind(**dict(params))
     except TypeError as error:
         raise WebRunnerBridgeError(
             f"{name} rejected params: {error}",
         ) from error
+    except ValueError:
+        pass   # no signature to check (a builtin): let the call decide
+    # A TypeError from inside the command is its own failure, not a
+    # parameter problem as it was reported.
+    return callable_obj(**dict(params))
 
 
 def run_webrunner_actions(actions: Sequence[Mapping[str, Any]]) -> List[Any]:

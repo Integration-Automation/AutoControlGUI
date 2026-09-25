@@ -48,10 +48,14 @@ def match_ensemble(templates: Sequence[ImageSource], *,
     ``None`` if too few references agree.
     """
     from je_auto_control.utils.visual_match import match_template
+    from je_auto_control.utils.visual_match.visual_match import _haystack_gray_with_origin
+    # One frame for every template: each match took its own screenshot, so on
+    # an animated target the votes were cast on different frames.
+    frame, origin_x, origin_y = _haystack_gray_with_origin(haystack, region)
     centers: List[List[int]] = []
     for template in templates:
-        match = match_template(template, haystack=haystack, region=region,
+        match = match_template(template, haystack=frame,
                                scales=tuple(scales), min_score=float(min_score))
         if match is not None:
-            centers.append(match.center)
+            centers.append([int(match.center[0]) + origin_x, int(match.center[1]) + origin_y])
     return vote_centers(centers, agree_px=agree_px, min_votes=min_votes)

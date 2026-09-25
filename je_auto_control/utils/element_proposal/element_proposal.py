@@ -71,10 +71,16 @@ def propose_elements(source: Optional[Any] = None, *,
     """
     from je_auto_control.utils.element_parse import fuse_elements, reading_order
     from je_auto_control.utils.text_regions import find_text_regions
-    from je_auto_control.utils.visual_match.visual_match import _haystack_gray
-    gray = _haystack_gray(source, region)
+    from je_auto_control.utils.visual_match.visual_match import _haystack_gray_with_origin
+    gray, origin_x, origin_y = _haystack_gray_with_origin(source, region)
     text = find_text_regions(gray, min_area=int(min_area))
     widgets = _widget_boxes(gray, int(min_area))
     fused = fuse_elements(ocr_boxes=text, icon_boxes=widgets,
                           iou_threshold=float(iou_threshold))
-    return tag_kinds(reading_order(fused))
+    proposals = tag_kinds(reading_order(fused))
+    # Boxes in screen coordinates: they were relative to the captured region.
+    for proposal in proposals:
+        box = proposal.get("box")
+        if isinstance(box, list) and len(box) >= 2:
+            box[0], box[1] = int(box[0]) + origin_x, int(box[1]) + origin_y
+    return proposals

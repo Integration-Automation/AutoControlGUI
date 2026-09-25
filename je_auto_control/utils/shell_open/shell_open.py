@@ -20,7 +20,9 @@ from typing import Any, Callable, Dict, Optional
 # URL schemes we will hand to the browser / OS — the safety allowlist.
 _URL_SCHEMES = frozenset({"http", "https", "ftp", "file", "mailto", "tel"})
 _SCHEME_AUTHORITY = re.compile(r"([a-zA-Z][a-zA-Z0-9+.\-]+)://")
-_SCHEME_OPAQUE = re.compile(r"(mailto|tel):", re.IGNORECASE)
+# Any other "name:" (two letters or more, so not a drive letter) is a scheme
+# too: "ms-settings:display" or "javascript:alert(1)" was resolved as a file.
+_SCHEME_OPAQUE = re.compile(r"([a-zA-Z][a-zA-Z0-9+.\-]+):(?![\\/])")
 
 # A plan dispatcher: maps a plan dict to the real open call → bool.
 Opener = Callable[[Dict[str, Any]], bool]

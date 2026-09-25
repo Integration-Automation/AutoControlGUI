@@ -74,13 +74,15 @@ def match_theme(template: Any, *, haystack: Optional[Any] = None,
     defeats raw :func:`visual_match.match_template`.
     """
     from je_auto_control.utils.visual_match import match_template
-    from je_auto_control.utils.visual_match.visual_match import _grab_gray
-    raw_haystack = haystack if haystack is not None else _grab_gray(region)
+    from je_auto_control.utils.visual_match.visual_match import _haystack_gray_with_origin
+    # With the capture's origin: the match was region-local, (55, 35) for a
+    # target at (555, 335) on screen, where every other matcher answers.
+    raw_haystack, origin_x, origin_y = _haystack_gray_with_origin(haystack, region)
     norm_template = normalize_theme(template, method=method)
     norm_haystack = normalize_theme(raw_haystack, method=method)
     match = match_template(norm_template, haystack=norm_haystack,
                            min_score=float(min_score))
     if match is None:
         return None
-    return {"x": match.x, "y": match.y, "width": match.width,
+    return {"x": match.x + origin_x, "y": match.y + origin_y, "width": match.width,
             "height": match.height, "score": round(float(match.score), 4)}

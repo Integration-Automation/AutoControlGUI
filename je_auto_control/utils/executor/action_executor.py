@@ -5304,19 +5304,18 @@ def _delta_observation(prev: Any, curr: Any, viewport: Any = None,
                        interactive_only: Any = True) -> Dict[str, Any]:
     """Adapter: token-budgeted "what changed" delta between two element frames."""
     import json
-    from je_auto_control.utils.observation_delta import (delta_index,
-                                                         delta_observation)
+    from je_auto_control.utils.observation_delta.observation_delta import (
+        observation_delta_index, summarize_delta)
     if isinstance(prev, str):
         prev = json.loads(prev)
     if isinstance(curr, str):
         curr = json.loads(curr)
     if isinstance(viewport, str):
         viewport = json.loads(viewport) if viewport.strip() else None
-    text = delta_observation(list(prev), list(curr), viewport=viewport,
-                             max_elements=int(max_elements),
-                             interactive_only=bool(interactive_only),
-                             max_lines=int(max_lines))
-    delta = delta_index(list(prev), list(curr))
+    delta = observation_delta_index(list(prev), list(curr), viewport=viewport,
+                                    max_elements=int(max_elements),
+                                    interactive_only=bool(interactive_only))
+    text = summarize_delta(delta, max_lines=int(max_lines))
     return {"summary": text, "added": len(delta["added"]),
             "removed": len(delta["removed"]), "changed": len(delta["changed"])}
 

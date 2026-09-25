@@ -76,6 +76,10 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Changed
 
+- `match_theme`, `propose_elements` and `read_barcodes` return screen
+  coordinates for a screen grab (they were relative to `region`).
+- `plan_open` / `open_path` refuse opaque URL schemes off the allow list;
+  webhook transports are case-insensitive and unknown ones are refused.
 - `handle_file_dialog` waits for a window titled exactly like the dialog and
   types only after bringing it to the front; watchdog key rules press their
   key only in the popup.
@@ -406,6 +410,15 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Fixed
 
+- The voice router is safe under concurrent use; `match_ensemble` votes on
+  one frame.
+- Failure signatures group failures that differ only in timings.
+- `AC_delta_observation` counts match its summary, and removed elements
+  carry no stale index.
+- The package imports without a home directory; the path guard reports a
+  missing home as `PathNotAllowedError`.
+- Adaptive timeouts, checkbox reads and contrast checks handle infinite
+  samples, clipped boxes and anti-aliased edges.
 - MCP `ac_kill_process` and `wait_until_window_title` no longer let psutil
   or regex errors escape.
 - File associations report `None` for an unregistered type; file drops and

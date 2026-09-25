@@ -12,7 +12,7 @@ NumPy come in via ``je_open_cv``. Imports no ``PySide6``.
 """
 from typing import Any, Callable, Dict, List, Optional, Sequence
 
-from je_auto_control.utils.visual_match.visual_match import _haystack_gray
+from je_auto_control.utils.visual_match.visual_match import _haystack_gray_with_origin
 
 ImageSource = Any
 Decoder = Callable[[Any], List[Dict[str, Any]]]
@@ -45,5 +45,11 @@ def read_barcodes(source: Optional[ImageSource] = None, *,
     loaded image and returns the result list); the default uses ``cv2.barcode`` and
     returns ``[]`` when that backend is unavailable.
     """
-    image = _haystack_gray(source, region)
-    return (decoder or _default_decoder)(image)
+    image, origin_x, origin_y = _haystack_gray_with_origin(source, region)
+    found = (decoder or _default_decoder)(image)
+    # Points in screen coordinates: they were relative to the captured region.
+    if origin_x or origin_y:
+        for result in found:
+            result["points"] = [[int(x) + origin_x, int(y) + origin_y]
+                                for x, y in result.get("points") or []]
+    return found

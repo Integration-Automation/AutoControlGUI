@@ -11,6 +11,7 @@ already-recognised *text*. A real microphone/Vosk recogniser is supplied as a
 routing logic fully unit-testable without audio or any speech dependency. Imports
 no ``PySide6``.
 """
+import threading
 from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, List, Optional
 
@@ -30,26 +31,35 @@ class VoiceRouter:
         """``threshold`` is the minimum fuzzy score (0..1) for a phrase match."""
         self._commands: List[VoiceCommand] = []
         self._threshold = threshold
+        # The default router is shared by the executor and the MCP handlers:
+        # match() scored one snapshot and indexed another, so a concurrent
+        # register ran the wrong command, and clear() raised IndexError.
+        self._lock = threading.Lock()
 
     def register(self, phrase: str, actions: List[Any]) -> None:
         """Register (or replace) the command for ``phrase``."""
-        self._commands = [c for c in self._commands if c.phrase != phrase]
-        self._commands.append(VoiceCommand(phrase, list(actions)))
+        with self._lock:
+            self._commands = [c for c in self._commands if c.phrase != phrase] + [
+                VoiceCommand(phrase, list(actions))]
 
     def phrases(self) -> List[str]:
         """Return the registered trigger phrases."""
-        return [command.phrase for command in self._commands]
+        with self._lock:
+            return [command.phrase for command in self._commands]
 
     def clear(self) -> None:
         """Remove all registered commands."""
-        self._commands.clear()
+        with self._lock:
+            self._commands = []
 
     def match(self, text: str) -> Optional[VoiceCommand]:
         """Return the command whose phrase best matches ``text`` (or ``None``)."""
         from je_auto_control.utils.fuzzy import fuzzy_best_match
-        best = fuzzy_best_match(text, self.phrases(),
+        with self._lock:
+            commands = list(self._commands)
+        best = fuzzy_best_match(text, [command.phrase for command in commands],
                                 score_cutoff=self._threshold)
-        return self._commands[best[2]] if best else None
+        return commands[best[2]] if best else None
 
     def dispatch(self, text: str,
                  runner: Optional[Callable[[List[Any]], Any]] = None
