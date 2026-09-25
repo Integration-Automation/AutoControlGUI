@@ -14,6 +14,7 @@ from je_auto_control.utils.exception.exceptions import (
     AutoControlActionException, AutoControlAssertionException,
     AutoControlException, ImageNotFoundException,
 )
+from je_auto_control.utils.executor.flags import as_bool
 from je_auto_control.utils.executor.flow_data_commands import (
     exec_assert_db, exec_assert_duration, exec_assert_var, exec_http_to_var,
     exec_now_to_var, exec_ocr_to_var, exec_otp_to_var, exec_pdf_to_var,
@@ -255,7 +256,7 @@ def exec_try(executor: Any, args: Mapping[str, Any]) -> Dict[str, Any]:
             if error_var:
                 executor.variables.set(str(error_var), caught_repr)
             _run_branch(executor, args.get("catch"))
-            if bool(args.get("reraise", False)):
+            if as_bool(args.get("reraise", False)):
                 raise
     finally:
         _run_branch(executor, args.get("finally"))

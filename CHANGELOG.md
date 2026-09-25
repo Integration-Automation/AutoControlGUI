@@ -459,6 +459,9 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
   8 bits and contain OpenCV errors.
 - `client_point` / `get_client_rect` return `None` for a minimized window;
   `wait_for_focus_change` refuses a NaN timeout.
+- Every `AC_*` flag parameter reads a string by its spelling: `"false"`,
+  `"no"`, `"off"` and `"0"` are off. 85 adapters and two flow commands
+  took any non-empty string as on.
 - Test selection, sharding and flakiness read finished runs, so runs
   killed mid-flight no longer hide a flow's history.
 - `find_lines` finds lines shorter than 50 px and reads 16-bit images;

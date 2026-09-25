@@ -28,6 +28,7 @@ from je_auto_control.utils.clipboard.clipboard import (
 from je_auto_control.utils.executor.action_schema import (
     unknown_command_names, validate_actions,
 )
+from je_auto_control.utils.executor.flags import as_bool as _as_bool
 from je_auto_control.utils.executor.flow_control import (
     BLOCK_COMMANDS, LoopBreak, LoopContinue, MacroDepthExceeded,
 )
@@ -91,18 +92,6 @@ from je_auto_control.wrapper.auto_control_window import (
     post_key_to_window, wait_for_window, window_process_id, window_rect,
     windows_for_process_id,
 )
-
-
-def _as_bool(value: Any) -> bool:
-    """Coerce a JSON-action flag to bool, accepting the usual string spellings.
-
-    A value read from a JSON action file, a CLI argument or an MCP call can
-    arrive as the string ``"false"``, which is truthy — so a plain ``bool()``
-    would turn "off" into "on".
-    """
-    if isinstance(value, str):
-        return value.strip().lower() in ("1", "true", "yes", "on")
-    return bool(value)
 
 
 def _a11y_list_as_dicts(app_name: Optional[str] = None,
@@ -182,7 +171,7 @@ def _self_heal_locate(template_path: Optional[str] = None,
         template_path=template_path, description=description,
         detect_threshold=float(detect_threshold),
         screen_region=screen_region, model=model,
-        raise_on_miss=bool(raise_on_miss),
+        raise_on_miss=_as_bool(raise_on_miss),
     )
     return outcome.to_dict()
 
@@ -200,7 +189,7 @@ def _self_heal_click(template_path: Optional[str] = None,
         mouse_keycode=mouse_keycode,
         detect_threshold=float(detect_threshold),
         screen_region=screen_region, model=model,
-        raise_on_miss=bool(raise_on_miss),
+        raise_on_miss=_as_bool(raise_on_miss),
     )
     return outcome.to_dict()
 
@@ -330,7 +319,7 @@ def _ab_locate(target_id: str,
                 for name, spec in strategies.items()}
     return ab_locate(
         target_id=target_id, strategies=locators,
-        max_parallel=int(max_parallel), record=bool(record),
+        max_parallel=int(max_parallel), record=_as_bool(record),
     ).to_dict()
 
 
@@ -456,7 +445,7 @@ def _wait_clipboard_change(baseline: Optional[str] = None,
     """Executor adapter: wait until the clipboard changes (or matches target)."""
     from je_auto_control.utils.smart_waits import wait_until_clipboard_changes
     return wait_until_clipboard_changes(
-        baseline=baseline, target=target, contains=bool(contains),
+        baseline=baseline, target=target, contains=_as_bool(contains),
         timeout_s=float(timeout_s), poll_interval_s=float(poll_interval_s),
     ).to_dict()
 
@@ -490,7 +479,7 @@ def _wait_window_title(pattern: str, present: bool = True, regex: bool = True,
     """Executor adapter: wait for a window title (regex) to appear / vanish."""
     from je_auto_control.utils.smart_waits import wait_until_window_title
     return wait_until_window_title(
-        pattern, present=bool(present), regex=bool(regex),
+        pattern, present=_as_bool(present), regex=_as_bool(regex),
         timeout_s=float(timeout_s), poll_interval_s=float(poll_interval_s),
     ).to_dict()
 
@@ -508,7 +497,7 @@ def _wait_color(target_rgb: Any, region: Any = None,
         region = json.loads(region) if region.strip() else None
     return wait_until_color(
         region=region, target_rgb=target_rgb, tolerance=int(tolerance),
-        min_fraction=float(min_fraction), present=bool(present),
+        min_fraction=float(min_fraction), present=_as_bool(present),
         timeout_s=float(timeout_s), poll_interval_s=float(poll_interval_s),
     ).to_dict()
 
@@ -519,7 +508,7 @@ def _wait_window_closed(title: str, case_sensitive: bool = False,
     """Executor adapter: wait until a window matching ``title`` disappears."""
     from je_auto_control.utils.smart_waits import wait_until_window_closed
     return wait_until_window_closed(
-        title, case_sensitive=bool(case_sensitive),
+        title, case_sensitive=_as_bool(case_sensitive),
         timeout_s=float(timeout_s), poll_interval_s=float(poll_interval_s),
     ).to_dict()
 
@@ -569,7 +558,7 @@ def _wait_for_process(name: str, present: bool = True, timeout_s: float = 30.0,
     """Executor adapter: wait until a process appears or exits."""
     from je_auto_control.utils.smart_waits import wait_until_process
     return wait_until_process(
-        name, present=bool(present), timeout_s=float(timeout_s),
+        name, present=_as_bool(present), timeout_s=float(timeout_s),
         poll_interval_s=float(poll_interval_s),
     ).to_dict()
 
@@ -813,11 +802,11 @@ def _assert_text(text: str,
     """Executor adapter: assert OCR text is (not) on screen."""
     from je_auto_control.utils.assertion import assert_text
     return assert_text(
-        text, region=region, lang=lang, regex=bool(regex),
-        present=bool(present), ignore_case=bool(ignore_case),
+        text, region=region, lang=lang, regex=_as_bool(regex),
+        present=_as_bool(present), ignore_case=_as_bool(ignore_case),
         min_confidence=float(min_confidence),
-        raise_on_fail=bool(raise_on_fail),
-        capture_on_fail=bool(capture_on_fail),
+        raise_on_fail=_as_bool(raise_on_fail),
+        capture_on_fail=_as_bool(capture_on_fail),
     ).to_dict()
 
 
@@ -829,9 +818,9 @@ def _assert_image(template_path: str,
     """Executor adapter: assert a template image is (not) on screen."""
     from je_auto_control.utils.assertion import assert_image
     return assert_image(
-        template_path, threshold=float(threshold), present=bool(present),
-        raise_on_fail=bool(raise_on_fail),
-        capture_on_fail=bool(capture_on_fail),
+        template_path, threshold=float(threshold), present=_as_bool(present),
+        raise_on_fail=_as_bool(raise_on_fail),
+        capture_on_fail=_as_bool(capture_on_fail),
     ).to_dict()
 
 
@@ -843,9 +832,9 @@ def _assert_pixel(x: int, y: int, rgb: List[int],
     """Executor adapter: assert a pixel matches (or differs from) ``rgb``."""
     from je_auto_control.utils.assertion import assert_pixel
     return assert_pixel(
-        int(x), int(y), rgb, tolerance=int(tolerance), match=bool(match),
-        raise_on_fail=bool(raise_on_fail),
-        capture_on_fail=bool(capture_on_fail),
+        int(x), int(y), rgb, tolerance=int(tolerance), match=_as_bool(match),
+        raise_on_fail=_as_bool(raise_on_fail),
+        capture_on_fail=_as_bool(capture_on_fail),
     ).to_dict()
 
 
@@ -857,9 +846,9 @@ def _assert_window(title: str,
     """Executor adapter: assert a window matching ``title`` does (not) exist."""
     from je_auto_control.utils.assertion import assert_window
     return assert_window(
-        title, exists=bool(exists), ignore_case=bool(ignore_case),
-        raise_on_fail=bool(raise_on_fail),
-        capture_on_fail=bool(capture_on_fail),
+        title, exists=_as_bool(exists), ignore_case=_as_bool(ignore_case),
+        raise_on_fail=_as_bool(raise_on_fail),
+        capture_on_fail=_as_bool(capture_on_fail),
     ).to_dict()
 
 
@@ -872,9 +861,9 @@ def _assert_vlm(description: str,
     """Executor adapter: assert the screen matches a description (VLM judged)."""
     from je_auto_control.utils.assertion import assert_by_description
     return assert_by_description(
-        description, present=bool(present), screen_region=screen_region,
-        model=model, raise_on_fail=bool(raise_on_fail),
-        capture_on_fail=bool(capture_on_fail),
+        description, present=_as_bool(present), screen_region=screen_region,
+        model=model, raise_on_fail=_as_bool(raise_on_fail),
+        capture_on_fail=_as_bool(capture_on_fail),
     ).to_dict()
 
 
@@ -887,9 +876,9 @@ def _assert_clipboard(text: str,
     """Executor adapter: assert clipboard text matches ``text``."""
     from je_auto_control.utils.assertion import assert_clipboard
     return assert_clipboard(
-        text, mode=mode, ignore_case=bool(ignore_case),
-        present=bool(present), raise_on_fail=bool(raise_on_fail),
-        capture_on_fail=bool(capture_on_fail),
+        text, mode=mode, ignore_case=_as_bool(ignore_case),
+        present=_as_bool(present), raise_on_fail=_as_bool(raise_on_fail),
+        capture_on_fail=_as_bool(capture_on_fail),
     ).to_dict()
 
 
@@ -900,8 +889,8 @@ def _assert_process(name: str,
     """Executor adapter: assert a process matching ``name`` is (not) running."""
     from je_auto_control.utils.assertion import assert_process
     return assert_process(
-        name, running=bool(running), raise_on_fail=bool(raise_on_fail),
-        capture_on_fail=bool(capture_on_fail),
+        name, running=_as_bool(running), raise_on_fail=_as_bool(raise_on_fail),
+        capture_on_fail=_as_bool(capture_on_fail),
     ).to_dict()
 
 
@@ -914,9 +903,9 @@ def _assert_file(path: str,
     """Executor adapter: assert a file's existence / content / hash / size."""
     from je_auto_control.utils.assertion import assert_file
     return assert_file(
-        path, exists=bool(exists), contains=contains, sha256=sha256,
+        path, exists=_as_bool(exists), contains=contains, sha256=sha256,
         min_size=None if min_size is None else int(min_size),
-        raise_on_fail=bool(raise_on_fail),
+        raise_on_fail=_as_bool(raise_on_fail),
     ).to_dict()
 
 
@@ -930,7 +919,7 @@ def _assert_http(url: str,
     from je_auto_control.utils.assertion import assert_http
     return assert_http(
         url, status=int(status), contains=contains, timeout=float(timeout),
-        method=method, raise_on_fail=bool(raise_on_fail),
+        method=method, raise_on_fail=_as_bool(raise_on_fail),
     ).to_dict()
 
 
@@ -938,14 +927,14 @@ def _assert_all(specs: List[Dict[str, Any]],
                 raise_on_fail: bool = True) -> Dict[str, Any]:
     """Executor adapter: run a batch of assertion specs (soft assertions)."""
     from je_auto_control.utils.assertion import assert_all
-    return assert_all(specs, raise_on_fail=bool(raise_on_fail)).to_dict()
+    return assert_all(specs, raise_on_fail=_as_bool(raise_on_fail)).to_dict()
 
 
 def _assert_any(specs: List[Dict[str, Any]],
                 raise_on_fail: bool = True) -> Dict[str, Any]:
     """Executor adapter: pass when at least one assertion spec passes."""
     from je_auto_control.utils.assertion import assert_any
-    return assert_any(specs, raise_on_fail=bool(raise_on_fail)).to_dict()
+    return assert_any(specs, raise_on_fail=_as_bool(raise_on_fail)).to_dict()
 
 
 def _assert_eventually(spec: Dict[str, Any],
@@ -956,7 +945,7 @@ def _assert_eventually(spec: Dict[str, Any],
     from je_auto_control.utils.assertion import assert_eventually
     return assert_eventually(
         spec, timeout=float(timeout), interval=float(interval),
-        raise_on_fail=bool(raise_on_fail),
+        raise_on_fail=_as_bool(raise_on_fail),
     ).to_dict()
 
 
@@ -987,7 +976,7 @@ def _run_suite(spec: Dict[str, Any],
     )
     result = run_suite(
         spec, executor=executor, tags=tags,
-        respect_quarantine=bool(respect_quarantine),
+        respect_quarantine=_as_bool(respect_quarantine),
     )
     payload = result.to_dict()
     reports: Dict[str, Any] = {}
@@ -1096,8 +1085,8 @@ def _assert_audio(duration_s: float = 1.0,
     from je_auto_control.utils.media_assert import assert_audio_activity
     return assert_audio_activity(
         duration_s=float(duration_s), threshold=float(threshold),
-        expect_sound=bool(expect_sound), samplerate=int(samplerate),
-        channels=int(channels), raise_on_fail=bool(raise_on_fail),
+        expect_sound=_as_bool(expect_sound), samplerate=int(samplerate),
+        channels=int(channels), raise_on_fail=_as_bool(raise_on_fail),
     ).to_dict()
 
 
@@ -1113,8 +1102,8 @@ def _assert_video_changes(video_path: str,
     return assert_video_changes(
         video_path, start_s=float(start_s),
         end_s=None if end_s is None else float(end_s),
-        threshold=float(threshold), expect_motion=bool(expect_motion),
-        region=region, raise_on_fail=bool(raise_on_fail),
+        threshold=float(threshold), expect_motion=_as_bool(expect_motion),
+        region=region, raise_on_fail=_as_bool(raise_on_fail),
     ).to_dict()
 
 
@@ -1241,7 +1230,7 @@ def _webrtc_start_host(token: str,
     ``AC_webrtc_accept_answer`` once the viewer's answer SDP arrives.
     """
     return remote_desktop_registry.start_webrtc_host(
-        token=token, read_only=bool(read_only),
+        token=token, read_only=_as_bool(read_only),
     )
 
 
@@ -1353,7 +1342,7 @@ def _rest_api_start(host: str = "127.0.0.1",
     """Executor adapter: start the singleton REST API server."""
     return rest_api_registry.start(
         host=host, port=int(port), token=token,
-        enable_audit=bool(enable_audit),
+        enable_audit=_as_bool(enable_audit),
     )
 
 
@@ -1473,7 +1462,7 @@ def _config_import(bundle: Dict[str, Any],
                    dry_run: bool = False) -> Dict[str, Any]:
     """Executor adapter: apply a config bundle dict to the user config root."""
     from je_auto_control.utils.config_bundle import import_config_bundle
-    return import_config_bundle(bundle, dry_run=bool(dry_run)).to_dict()
+    return import_config_bundle(bundle, dry_run=_as_bool(dry_run)).to_dict()
 
 
 def _usb_watch_start(poll_interval_s: float = 2.0) -> Dict[str, Any]:
@@ -1894,9 +1883,9 @@ def _email_trigger_add(host: str, username: str, password: str,
     )
     trigger = default_email_trigger_watcher.add(
         host=host, username=username, password=password,
-        script_path=script_path, port=port, use_ssl=bool(use_ssl),
+        script_path=script_path, port=port, use_ssl=_as_bool(use_ssl),
         mailbox=mailbox, search_criteria=search_criteria,
-        mark_seen=bool(mark_seen), poll_seconds=float(poll_seconds),
+        mark_seen=_as_bool(mark_seen), poll_seconds=float(poll_seconds),
     )
     return {
         "id": trigger.trigger_id, "host": trigger.host,
@@ -2191,7 +2180,7 @@ def _verify_action_file(path: str, key: Optional[str] = None,
     """Executor adapter: verify an action file against its signature sidecar."""
     from je_auto_control.utils.action_signing import verify_action_file
     return verify_action_file(
-        path, key, raise_on_fail=bool(raise_on_fail),
+        path, key, raise_on_fail=_as_bool(raise_on_fail),
     ).to_dict()
 
 
@@ -2374,9 +2363,9 @@ def _assert_pdf_text(path: str, text: str, present: bool = True,
                      raise_on_fail: bool = True) -> Dict[str, Any]:
     """Adapter: assert text is present/absent in a PDF document."""
     from je_auto_control.utils.pdf.pdf_reader import assert_pdf_text
-    return assert_pdf_text(path, text, present=bool(present), page=page,
-                           case_sensitive=bool(case_sensitive),
-                           raise_on_fail=bool(raise_on_fail))
+    return assert_pdf_text(path, text, present=_as_bool(present), page=page,
+                           case_sensitive=_as_bool(case_sensitive),
+                           raise_on_fail=_as_bool(raise_on_fail))
 
 
 def _take_golden(path: str, region: Optional[List[int]] = None) -> str:
@@ -2706,13 +2695,13 @@ def _is_idle(threshold: Any) -> Dict[str, Any]:
 def _plan_keep_awake(display: Any = True, system: Any = True) -> Dict[str, Any]:
     """Adapter: describe a keep-awake request (pure, no OS call)."""
     from je_auto_control.utils.idle_keepawake import plan_keep_awake
-    return plan_keep_awake(display=bool(display), system=bool(system))
+    return plan_keep_awake(display=_as_bool(display), system=_as_bool(system))
 
 
 def _keep_awake_on(display: Any = True, system: Any = True) -> Dict[str, Any]:
     """Adapter: keep the machine awake until ``AC_allow_sleep``."""
     from je_auto_control.utils.idle_keepawake import keep_awake_on
-    return keep_awake_on(display=bool(display), system=bool(system))
+    return keep_awake_on(display=_as_bool(display), system=_as_bool(system))
 
 
 def _allow_sleep() -> Dict[str, Any]:
@@ -2742,7 +2731,7 @@ def _change_volume(delta: Any) -> Dict[str, Any]:
 def _set_mute(muted: Any = True) -> Dict[str, Any]:
     """Adapter: set the master mute flag."""
     from je_auto_control.utils.system_volume import set_mute
-    return {"muted": bool(set_mute(bool(muted)))}
+    return {"muted": bool(set_mute(_as_bool(muted)))}
 
 
 def _toggle_mute() -> Dict[str, Any]:
@@ -3086,7 +3075,7 @@ def _find_control_text(text: str, ignore_case: Any = True,
                        automation_id: Optional[str] = None) -> bool:
     """Adapter: whether text occurs in a control (TextPattern.FindText)."""
     from je_auto_control.utils.ax_text import find_control_text
-    return find_control_text(str(text), ignore_case=bool(ignore_case), name=name,
+    return find_control_text(str(text), ignore_case=_as_bool(ignore_case), name=name,
                              role=role, app_name=app_name,
                              automation_id=automation_id)
 
@@ -3097,7 +3086,7 @@ def _select_control_text(text: str, ignore_case: Any = True,
                          automation_id: Optional[str] = None) -> bool:
     """Adapter: find + select text in a control (TextPattern.FindText + Select)."""
     from je_auto_control.utils.ax_text import select_control_text
-    return select_control_text(str(text), ignore_case=bool(ignore_case),
+    return select_control_text(str(text), ignore_case=_as_bool(ignore_case),
                                name=name, role=role, app_name=app_name,
                                automation_id=automation_id)
 
@@ -3145,7 +3134,7 @@ def _watchdog_add(title: str, action: str = "close",
     """Adapter: register a popup-dismissal rule on the default watchdog."""
     from je_auto_control.utils.watchdog import default_popup_watchdog
     default_popup_watchdog.add_window_rule(
-        title, action=str(action), case_sensitive=bool(case_sensitive),
+        title, action=str(action), case_sensitive=_as_bool(case_sensitive),
         name=name)
     return {"rules": default_popup_watchdog.rule_names()}
 
@@ -3251,9 +3240,9 @@ def _mcp_manifest(path: Optional[str] = None,
         build_server_manifest, write_server_manifest)
     if path:
         return {"path": write_server_manifest(
-            path, include_tools=bool(include_tools))}
+            path, include_tools=_as_bool(include_tools))}
     return {"manifest": build_server_manifest(
-        include_tools=bool(include_tools))}
+        include_tools=_as_bool(include_tools))}
 
 
 def _rank_tests(flows: List[str], history_path: Optional[str] = None,
@@ -3311,7 +3300,7 @@ def _element_list(path: str) -> Dict[str, Any]:
 def _debug_trace(actions: List[Any], dry_run: bool = False) -> Dict[str, Any]:
     """Adapter: run an action list and return a per-step trace."""
     from je_auto_control.utils.flow_debugger import trace_actions
-    return {"trace": trace_actions(actions, dry_run=bool(dry_run))}
+    return {"trace": trace_actions(actions, dry_run=_as_bool(dry_run))}
 
 
 def _skill_lib(path: str):
@@ -3838,7 +3827,7 @@ def _collation_sort(items: Any, strength: str = "tertiary",
     if isinstance(items, str):
         items = json.loads(items)
     ordered = sort_strings(list(items), strength=strength,
-                           tailoring=tailoring or None, reverse=bool(reverse))
+                           tailoring=tailoring or None, reverse=_as_bool(reverse))
     return {"sorted": ordered}
 
 
@@ -3970,7 +3959,7 @@ def _set_field_text(text: str, clear: str = "select_all", paste: Any = False,
                     modifier: str = "ctrl") -> Dict[str, Any]:
     """Adapter: clear the focused field and enter text."""
     from je_auto_control.utils.field_entry import set_field_text
-    return set_field_text(text, clear=clear, paste=bool(paste),
+    return set_field_text(text, clear=clear, paste=_as_bool(paste),
                           modifier=modifier)
 
 
@@ -4722,7 +4711,7 @@ def _find_text_regions(min_area: Any = 60, max_area: Any = None, merge: Any = Tr
     regions = find_text_regions(
         region=region, min_area=int(min_area),
         max_area=int(max_area) if max_area is not None else None,
-        merge=bool(merge), max_aspect=float(max_aspect))
+        merge=_as_bool(merge), max_aspect=float(max_aspect))
     return {"count": len(regions), "regions": regions}
 
 
@@ -5181,7 +5170,7 @@ def _resolve_after(after: Any):
 def _set_topmost(title: str, on: Any = True) -> Dict[str, Any]:
     """Adapter: pin a window always-on-top (or release it)."""
     from je_auto_control.utils.window_zorder import set_topmost
-    return {"applied": set_topmost(title, bool(on))}
+    return {"applied": set_topmost(title, _as_bool(on))}
 
 
 def _bring_to_front(title: str) -> Dict[str, Any]:
@@ -5233,7 +5222,7 @@ def _perceptual_diff(actual: str, expected: str, threshold: Any = 0.1,
     """Adapter: perceptual (YIQ) image diff with anti-alias suppression."""
     from je_auto_control.utils.perceptual_diff import perceptual_diff
     result = perceptual_diff(actual, expected, threshold=float(threshold),
-                             include_aa=bool(include_aa))
+                             include_aa=_as_bool(include_aa))
     if max_diff_ratio is not None and result.diff_ratio > float(max_diff_ratio):
         raise AutoControlActionException(
             f"perceptual diff {result.diff_ratio} exceeds {max_diff_ratio}")
@@ -5318,7 +5307,7 @@ def _delta_observation(prev: Any, curr: Any, viewport: Any = None,
         viewport = json.loads(viewport) if viewport.strip() else None
     delta = observation_delta_index(list(prev), list(curr), viewport=viewport,
                                     max_elements=int(max_elements),
-                                    interactive_only=bool(interactive_only))
+                                    interactive_only=_as_bool(interactive_only))
     text = summarize_delta(delta, max_lines=int(max_lines))
     return {"summary": text, "added": len(delta["added"]),
             "removed": len(delta["removed"]), "changed": len(delta["changed"])}
@@ -5843,8 +5832,8 @@ def _normalize_text(text: str, form: str = "NFKC", casefold: Any = True,
                     collapse_ws: Any = True) -> Dict[str, Any]:
     """Adapter: Unicode-normalise text into {text}."""
     from je_auto_control.utils.text_normalize import normalize_text
-    return {"text": normalize_text(text, form=form, casefold=bool(casefold),
-                                   collapse_ws=bool(collapse_ws))}
+    return {"text": normalize_text(text, form=form, casefold=_as_bool(casefold),
+                                   collapse_ws=_as_bool(collapse_ws))}
 
 
 def _slugify(text: str, sep: str = "-") -> Dict[str, Any]:
@@ -5946,7 +5935,7 @@ def _parse_dotenv(text: str) -> Dict[str, Any]:
 def _load_dotenv(path: str, override: Any = False) -> Dict[str, Any]:
     """Adapter: load a .env file into a fresh {values} dict."""
     from je_auto_control.utils.dotenv import load_dotenv
-    return {"values": load_dotenv(path, {}, override=bool(override))}
+    return {"values": load_dotenv(path, {}, override=_as_bool(override))}
 
 
 def _parse_sse(text: str) -> Dict[str, Any]:
@@ -6202,8 +6191,8 @@ def _match_json(actual: Any, expected: Any, partial: bool = False,
         actual = json.loads(actual)
     if isinstance(expected, str):
         expected = json.loads(expected)
-    return match_json(actual, expected, partial=bool(partial),
-                      match_type=bool(match_type)).to_dict()
+    return match_json(actual, expected, partial=_as_bool(partial),
+                      match_type=_as_bool(match_type)).to_dict()
 
 
 def _diff_json(actual: Any, expected: Any) -> Dict[str, Any]:
@@ -6263,7 +6252,7 @@ def _flag_enabled(flags: Any, key: str, context: Any = None,
     if isinstance(context, str):
         context = json.loads(context)
     store = FlagStore.from_dict(flags)
-    return {"enabled": is_enabled(store, key, context or {}, bool(default))}
+    return {"enabled": is_enabled(store, key, context or {}, _as_bool(default))}
 
 
 def _unified_diff(a: str, b: str) -> Dict[str, Any]:
@@ -6718,7 +6707,7 @@ def _foreground_window() -> Dict[str, Any]:
 def _window_rect(title_substring: str,
                  case_sensitive: bool = False) -> Dict[str, Any]:
     """Adapter: a window's screen rectangle as ``{rect: [l, t, r, b]}``."""
-    rect = window_rect(title_substring, bool(case_sensitive))
+    rect = window_rect(title_substring, _as_bool(case_sensitive))
     return {"rect": list(rect) if rect is not None else None}
 
 
@@ -6730,13 +6719,13 @@ def _foreground_window_process_id() -> Dict[str, Any]:
 def _window_process_id(title_substring: str,
                        case_sensitive: bool = False) -> Dict[str, Any]:
     """Adapter: the PID owning the first matching window (``0`` when none)."""
-    return {"pid": window_process_id(title_substring, bool(case_sensitive)) or 0}
+    return {"pid": window_process_id(title_substring, _as_bool(case_sensitive)) or 0}
 
 
 def _windows_for_process_id(pid: int,
                             titled_only: bool = False) -> Dict[str, Any]:
     """Adapter: every visible top-level window owned by a process."""
-    found = windows_for_process_id(int(pid), bool(titled_only))
+    found = windows_for_process_id(int(pid), _as_bool(titled_only))
     return {"windows": [{"hwnd": hwnd, "title": title}
                         for hwnd, title in found]}
 
@@ -6750,7 +6739,7 @@ def _post_key_to_window(title_substring: str, key: str,
                         case_sensitive: bool = False) -> Dict[str, Any]:
     """Adapter: post one key to a window without focusing it."""
     return {"posted": bool(post_key_to_window(title_substring, key,
-                                              bool(case_sensitive)))}
+                                              _as_bool(case_sensitive)))}
 
 
 def _post_click_to_window(title_substring: str, button: str = "left",
@@ -6759,7 +6748,7 @@ def _post_click_to_window(title_substring: str, button: str = "left",
     """Adapter: post one click into a window without focusing it."""
     return {"posted": bool(post_click_to_window(title_substring, button,
                                                 int(x), int(y),
-                                                bool(case_sensitive)))}
+                                                _as_bool(case_sensitive)))}
 
 
 def _canonicalize_url(url: str) -> Dict[str, Any]:
@@ -6774,8 +6763,8 @@ def _normalize_url(url: str, sort_query: bool = False,
     from je_auto_control.utils.url_canon import normalize_url
     # `drop_fragment` is the AC_ surface's name; url_canon calls the
     # same flag `strip_fragment`.
-    return {"url": normalize_url(url, sort_query=bool(sort_query),
-                                 strip_fragment=bool(drop_fragment))}
+    return {"url": normalize_url(url, sort_query=_as_bool(sort_query),
+                                 strip_fragment=_as_bool(drop_fragment))}
 
 
 def _urls_equal(first: str, second: str) -> Dict[str, Any]:
@@ -8107,7 +8096,7 @@ class Executor:
         # AC_try body it ran non-strict and its failures never reached catch.
         # A top-level call always sees False -- the finally below restores it.
         inherited = getattr(_STRICT_BODIES, "value", False)
-        raise_on_error = bool(raise_on_error) or inherited
+        raise_on_error = _as_bool(raise_on_error) or inherited
         _STRICT_BODIES.value = raise_on_error
         running = getattr(_RUNNING, "value", None)
         _RUNNING.value = self

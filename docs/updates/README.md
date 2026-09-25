@@ -58,6 +58,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260926-11 | 2026-09-26 | Every executor adapter and flow command reads on / off flags by their spelling through one as_bool, so "false" means off (it turned on ignore_case, pasted over the clipboard, and re-raised) | #bugfix #executor | [2026-09-d](2026-09-d.md) |
 | U-20260926-10 | 2026-09-26 | Element geometry is read in any shape and equal zero-area boxes match; interactive roles are known in UIA, AT-SPI, macOS AX and ARIA spelling and Tab skips disabled controls; quality and motion are measured on 8-bit frames; minimized windows have no client point; a NaN focus wait is refused | #bugfix #audit #accessibility #vision | [2026-09-d](2026-09-d.md) |
 | U-20260926-09 | 2026-09-26 | Region captures on macOS stay in points on Retina (scale_down=True), so colour blobs and other region results line up with the mouse; the matchers' grab_logical gap is recorded as BLOCKED | #bugfix #macos #vision | [2026-09-d](2026-09-d.md) |
 | U-20260926-08 | 2026-09-26 | json_contract checks NaN with math.isnan instead of a self-comparison, which SonarCloud read as a constant-false condition and failed PR #490's reliability gate on | #quality #sonar | [2026-09-d](2026-09-d.md) |
@@ -305,7 +306,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | File | Period | Entries |
 |---|---|---:|
-| [2026-09-d.md](2026-09-d.md) | 2026-09 | 31 |
+| [2026-09-d.md](2026-09-d.md) | 2026-09 | 32 |
 | [2026-09-c.md](2026-09-c.md) | 2026-09 | 38 |
 | [2026-09-b.md](2026-09-b.md) | 2026-09 | 68 |
 | [2026-09.md](2026-09.md) | 2026-09 | 79 |

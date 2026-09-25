@@ -27,6 +27,10 @@ JSON 陣列（關鍵字），由執行者解析並執行。
        ["AC_write", {"write_string": "Hello"}]
    ]
 
+開關類參數(``ignore_case``、``present``、``raise_on_fail``、``paste`` 等)接受 JSON 的 ``true`` / ``false``,
+或依拼法判讀的字串:``"true"``、``"yes"``、``"on"``、``"1"`` 為開,其他字串(``"false"``、``"no"``、``"off"``、
+``"0"``)為關。
+
 可用的動作指令
 ==============
 
