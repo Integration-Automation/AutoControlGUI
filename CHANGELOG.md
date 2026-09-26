@@ -489,6 +489,10 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Fixed
 
+- JSON Schema `pattern` / `patternProperties` match as ECMA-262 does: `$` no
+  longer matches before a trailing newline, `\d` / `\w` / `\b` are ASCII, and
+  `\p{...}`, `\cX`, `\u{...}`, `[]` / `[^]` and named groups are understood.
+  `multipleOf` no longer raises `OverflowError` past float range.
 - The VLM tab no longer freezes the window while the model answers, and the
   Hotkeys, Scheduler and Triggers tabs show an engine started from Tools > Start
   or a script as running.

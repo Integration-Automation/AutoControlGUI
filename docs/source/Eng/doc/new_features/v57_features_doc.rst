@@ -21,7 +21,16 @@ Supported keywords
   depth).
 * numbers — ``minimum`` / ``maximum`` / ``exclusiveMinimum`` /
   ``exclusiveMaximum`` / ``multipleOf``.
-* strings — ``minLength`` / ``maxLength`` / ``pattern``.
+* strings — ``minLength`` / ``maxLength`` / ``pattern``. ``pattern`` and
+  ``patternProperties`` match as ECMA-262 does, which is what the
+  specification says: ``$`` does not match before a trailing newline;
+  ``\d``, ``\w`` and ``\b`` are ASCII, so ``^\d+$`` rejects Arabic-Indic
+  digits; ``.`` stops at every line terminator; ``\s`` is ECMA-262
+  whitespace. ``\cX``, ``\u{...}``, ``[]`` / ``[^]``, ``(?<name>...)`` /
+  ``\k<name>`` and ``\p{...}`` / ``\P{...}`` for the General_Category
+  values (``L``, ``Letter``, ``Nd``, ``digit``, ``gc=Lu``...) plus ``Any``,
+  ``ASCII`` and ``Assigned`` are understood; script properties raise
+  ``AutoControlJsonException``.
 * arrays — ``minItems`` / ``maxItems`` / ``uniqueItems`` / ``items`` /
   ``prefixItems`` / ``contains``.
 * objects — ``required`` / ``minProperties`` / ``maxProperties`` /
