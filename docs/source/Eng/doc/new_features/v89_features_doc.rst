@@ -29,7 +29,12 @@ Headless API
 ``files`` (``MultipartFile`` instances or ``{name, filename, content,
 content_type?}`` dicts), returning ``(content_type, body_bytes)``. Pass an
 explicit ``boundary`` for a byte-stable body, or call ``new_boundary`` for a
-fresh token. ``parse_multipart`` reads a body back into ``{fields, files}`` (each
+fresh token. A boundary must be 1-70 of letters, digits and ``'()+_,-./:=?``
+or space, not ending in a space (RFC 2046 5.1.1), and no part may contain it:
+either raises ``MultipartError`` (an ``AutoControlException`` and a
+``ValueError``), and a generated boundary is redrawn until no part contains it.
+A boundary that is not a token is quoted in the returned content type.
+``parse_multipart`` reads a body back into ``{fields, files}`` (each
 file as ``{name, filename, content_type, content, content_base64}``: ``content``
 is the part decoded as UTF-8, ``content_base64`` its exact bytes for binary files).
 

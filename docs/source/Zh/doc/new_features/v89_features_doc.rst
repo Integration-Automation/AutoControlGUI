@@ -26,7 +26,10 @@ multipart/form-data 建立與解析
 
 ``build_multipart`` 接受 ``fields``(dict 或 ``(name, value)`` 清單)與 ``files``(``MultipartFile``
 實例或 ``{name, filename, content, content_type?}`` dict),回傳 ``(content_type, body_bytes)``。傳入明確
-的 ``boundary`` 可得位元組穩定的內文,或呼叫 ``new_boundary`` 取得新 token。``parse_multipart`` 把內文讀回
+的 ``boundary`` 可得位元組穩定的內文,或呼叫 ``new_boundary`` 取得新 token。boundary 必須是 1-70 個英文字母、數字、
+``'()+_,-./:=?`` 或空格組成且不以空格結尾(RFC 2046 5.1.1),而且任何部分的內容都不能包含它;違反任一條都會拋出
+``MultipartError``(同時是 ``AutoControlException`` 與 ``ValueError``),自動產生的 boundary 則會重抽到沒有部分包含它為止。
+不是 token 的 boundary 在回傳的 content type 中會加上引號。``parse_multipart`` 把內文讀回
 ``{fields, files}``(每個檔案為 ``{name, filename, content_type, content, content_base64}``:``content``
 是以 UTF-8 解碼的內容,``content_base64`` 是原始位元組,二進位檔請用它)。
 

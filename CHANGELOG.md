@@ -15,6 +15,7 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Added
 
+- `multipart.MultipartError` (an `AutoControlException` and a `ValueError`).
 - `dotenv.DotenvError`, raised by `dump_dotenv` for a key the parser would not
   read back.
 - `HotkeyDaemon.is_running`, `Scheduler.is_running` and
@@ -494,6 +495,9 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Fixed
 
+- `build_multipart` refuses a boundary RFC 2046 does not allow or that a part
+  contains (a field value could inject a part), redraws a generated one, and
+  `parse_multipart` reads only the `boundary` parameter.
 - `SSEParser.feed` no longer re-splits the whole partial line on every chunk:
   a 2 MB `data` line in 1 KB chunks took 10.75 s and now takes 0.02 s.
 - `parse_dotenv` keeps a value that starts with `#` (`COLOR=#ff0000`), keeps
