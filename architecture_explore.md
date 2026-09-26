@@ -20,7 +20,7 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 | 指標 | 數值 |
 | --- | ---: |
 | Python 模組總數（含周邊子專案） | 1,063 |
-| 程式碼總行數 | 156,475 |
+| 程式碼總行數 | 156,544 |
 | `je_auto_control/utils/` 子套件數 | 310 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 775 |
 | 套件門面 `__all__` 公開名稱數 | 1,244 |
@@ -527,13 +527,13 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.11 伺服器、網路協定與外部整合
 
-> 24 個套件、約 6,840 行。
+> 24 個套件、約 6,909 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
 | `utils/acme_v2/` | 617 | 完整 ACME v2 用戶端（RFC 8555），不依賴 certbot |
 | `utils/chatops/` | 667 | Chat-ops bot：接收 Slack／Discord／webhook 的 slash 指令並路由到動作 |
-| `utils/cookie_jar/` | 122 | RFC 6265 cookie jar |
+| `utils/cookie_jar/` | 191 | RFC 6265 cookie jar |
 | `utils/email_send/` | 118 | SMTP 寄信（email 觸發器的發送端搭檔） |
 | `utils/events/` | 106 | 對外 CloudEvents 發送（執行生命週期事件） |
 | `utils/http_cassette/` | 200 | 錄製／重播 HTTP 互動，做離線決定性 API 測試 |
@@ -1090,6 +1090,6 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `osx/` | 17 | 925 |
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 852 |
-| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 681 | 56,506 |
-| **總計** | **1,057** | **156,410** |
+| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 681 | 56,575 |
+| **總計** | **1,057** | **156,479** |
 

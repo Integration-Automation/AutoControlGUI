@@ -492,6 +492,10 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Fixed
 
+- `CookieJar`: `Expires` follows the RFC 6265 5.1.1 date algorithm (an
+  out-of-range year no longer raises `OverflowError`), the last valid `Max-Age`
+  or `Expires` decides, `Max-Age` takes ASCII digits only, and a `Set-Cookie`
+  with a control character is ignored instead of reaching the `Cookie` header.
 - `normalize_url` / `canonicalize_url` resolve a percent-encoded `..`, never
   turn a path that begins with `//` into a host, normalise the query before
   sorting it, and keep an empty `?` or `#` (RFC 3986 6.2.2, 3.3, 6.2.3).
