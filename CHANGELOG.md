@@ -489,6 +489,9 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Fixed
 
+- `json_query`: a surrogate pair written as two `\u` escapes finds its key;
+  `[01]`, `[-0]`, an index past 2**53-1, a bald `..`, an unpaired surrogate and a
+  raw control character in a quoted name raise `ValueError` (RFC 9535).
 - JSON Schema `pattern` / `patternProperties` match as ECMA-262 does: `$` no
   longer matches before a trailing newline, `\d` / `\w` / `\b` are ASCII, and
   `\p{...}`, `\cX`, `\u{...}`, `[]` / `[^]` and named groups are understood.

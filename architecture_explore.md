@@ -20,7 +20,7 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 | 指標 | 數值 |
 | --- | ---: |
 | Python 模組總數（含周邊子專案） | 1,063 |
-| 程式碼總行數 | 156,335 |
+| 程式碼總行數 | 156,373 |
 | `je_auto_control/utils/` 子套件數 | 310 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 775 |
 | 套件門面 `__all__` 公開名稱數 | 1,244 |
@@ -599,7 +599,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.13 資料來源、結構驗證與 i18n
 
-> 24 個套件、約 5,048 行。
+> 24 個套件、約 5,086 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -615,7 +615,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/json_contract/` | 158 | JSON 契約／快照比對：`match_json`、`diff_json`、`snapshot_json` |
 | `utils/json_patch/` | 352 | JSON Pointer（6901）、JSON Patch（6902）與 Merge Patch（7386） |
 | `utils/json_schema/` | 666 | JSON Schema（Draft 2020-12 子集）驗證 |
-| `utils/jsonpath/` | 322 | 精簡 JSONPath 查詢 |
+| `utils/jsonpath/` | 360 | 精簡 JSONPath 查詢 |
 | `utils/list_format/` | 82 | 地區感知清單格式化（CLDR 風格的「A、B 和 C」） |
 | `utils/locale_collation/` | 139 | 地區感知字串排序（決定性多層排序鍵） |
 | `utils/locale_parse/` | 80 | 地區感知數字／貨幣／日期解析與格式化（選用 babel） |
@@ -1090,6 +1090,6 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `osx/` | 17 | 925 |
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 852 |
-| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 681 | 56,367 |
-| **總計** | **1,057** | **156,270** |
+| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 681 | 56,405 |
+| **總計** | **1,057** | **156,308** |
 

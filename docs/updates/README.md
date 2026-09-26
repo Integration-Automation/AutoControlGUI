@@ -58,6 +58,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260926-26 | 2026-09-26 | Decode a JSONPath surrogate pair written as two escapes into one character, and refuse the strings and indices RFC 9535 forbids | #bugfix #jsonpath | [2026-09-d](2026-09-d.md) |
 | U-20260926-25 | 2026-09-26 | Match JSON Schema patterns as ECMA-262 does, so ^\d+$ no longer accepts "123\n" or Arabic-Indic digits, and answer multipleOf past float range instead of raising OverflowError | #bugfix #json-schema #security | [2026-09-d](2026-09-d.md) |
 | U-20260926-24 | 2026-09-26 | Skip the tabs-menu leak test where qt_material is not installed, and catch the next main-window import that forgets to | #ci #test | [2026-09-d](2026-09-d.md) |
 | U-20260926-23 | 2026-09-26 | Call the VLM off the GUI thread, and show each engine's own running state in the Hotkeys, Scheduler and Triggers tabs, including after Tools > Start | #bugfix #gui | [2026-09-d](2026-09-d.md) |
@@ -320,7 +321,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | File | Period | Entries |
 |---|---|---:|
-| [2026-09-d.md](2026-09-d.md) | 2026-09 | 46 |
+| [2026-09-d.md](2026-09-d.md) | 2026-09 | 47 |
 | [2026-09-c.md](2026-09-c.md) | 2026-09 | 38 |
 | [2026-09-b.md](2026-09-b.md) | 2026-09 | 68 |
 | [2026-09.md](2026-09.md) | 2026-09 | 79 |
