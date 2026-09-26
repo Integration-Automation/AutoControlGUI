@@ -69,8 +69,9 @@ def test_a_zero_interval_is_refused(monkeypatch):
                      "_click_check": types.SimpleNamespace(isChecked=lambda: True)})[1]),
 ])
 def test_framework_errors_are_shown_by_the_slot(module_name, cls_name, setup, monkeypatch):
-    import importlib
-    module = importlib.import_module(f"je_auto_control.gui.{module_name}")
+    from je_auto_control.gui import assertions_tab, data_source_tab, self_healing_tab
+    module = {"assertions_tab": assertions_tab, "data_source_tab": data_source_tab,
+              "self_healing_tab": self_healing_tab}[module_name]
     stub = types.SimpleNamespace(**setup(module, monkeypatch))
     cls = getattr(module, cls_name)
     slot = cls._run if cls_name == "SelfHealingTab" else cls._on_load if cls_name == "DataSourceTab" else cls._on_run

@@ -490,17 +490,6 @@ be at 2x if on a Retina screen」，`scale_down=True` 只在帶 `bbox` 時生效
 
 ---
 
-## GUI 執行緒上剩下的阻塞呼叫與分頁狀態
-
-`TODO` — 2026-09-26 GUI 稽核找到、還沒做的部分（USB 列舉、USB 監看器、Poll now、Admin broadcast 已改走 `start_worker`）
-
-- **VLM 在 GUI 執行緒**：`gui/vlm_tab.py:246,269` 的定位與點擊呼叫 VLM API（網路、數秒）。做法：`start_worker(CallWorker(...))`，
-  點擊在結果回到 GUI 執行緒後再做。
-- **Tools > Start 與分頁狀態不同步**：Hotkeys／Scheduler／Triggers 分頁用自己的 `_running` 旗標，`main_window.py:271-286`
-  從選單啟動同一個引擎後分頁仍顯示「已停止」。做法：分頁讀引擎的狀態。
-
----
-
 ## 遠端桌面的 viewer 槽位由各面板共用
 
 `DECIDE` — 要改 `registry` 的擁有權模型

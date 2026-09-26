@@ -172,6 +172,12 @@ class HotkeyDaemon:
 
     _snapshot = list_bindings
 
+    @property
+    def is_running(self) -> bool:
+        """Whether the engine's thread is alive (whoever started it: its tab, Tools > Start, a script)."""
+        thread = self._thread
+        return thread is not None and thread.is_alive()
+
     def start(self) -> None:
         with self._lifecycle_lock:
             self._start_locked()

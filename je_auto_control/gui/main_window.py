@@ -279,16 +279,19 @@ class AutoControlGUIUI(QMainWindow, QtStyleTools):
             default_hotkey_daemon.start()
         except NotImplementedError as error:
             QMessageBox.warning(self, "Error", str(error))
+        self.auto_control_gui_widget.sync_engine_tabs()
 
     def _start_scheduler(self) -> None:
         from je_auto_control.utils.scheduler.scheduler import default_scheduler
         default_scheduler.start()
+        self.auto_control_gui_widget.sync_engine_tabs()
 
     def _start_triggers(self) -> None:
         from je_auto_control.utils.triggers.trigger_engine import (
             default_trigger_engine,
         )
         default_trigger_engine.start()
+        self.auto_control_gui_widget.sync_engine_tabs()
 
 
 if "__main__" == __name__:

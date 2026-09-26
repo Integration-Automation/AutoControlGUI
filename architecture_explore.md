@@ -20,7 +20,7 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 | 指標 | 數值 |
 | --- | ---: |
 | Python 模組總數（含周邊子專案） | 1,062 |
-| 程式碼總行數 | 156,020 |
+| 程式碼總行數 | 156,095 |
 | `je_auto_control/utils/` 子套件數 | 310 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 775 |
 | 套件門面 `__all__` 公開名稱數 | 1,244 |
@@ -324,18 +324,18 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.3 排程、觸發與背景監看
 
-> 11 個套件、約 4,210 行。
+> 11 個套件、約 4,228 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
-| `utils/hotkey/` | 846 | 全域熱鍵守護行程，把 OS 層熱鍵綁到 action 檔（Win/macOS/X11 三後端） |
+| `utils/hotkey/` | 852 | 全域熱鍵守護行程，把 OS 層熱鍵綁到 action 檔（Win/macOS/X11 三後端） |
 | `utils/idle_keepawake/` | 245 | 偵測使用者閒置時間並在無人值守執行期間阻止系統睡眠 |
 | `utils/lock_session/` | 166 | 鎖定工作站、等待解鎖並分類鎖定狀態轉換 |
 | `utils/observer/` | 234 | 反應式畫面觀察者，在出現／消失／變化時觸發 |
 | `utils/recurrence/` | 398 | RFC 5545 重複規則解析與發生時間展開 |
-| `utils/scheduler/` | 500 | 間隔式與 cron 式的 action JSON 排程器 |
+| `utils/scheduler/` | 506 | 間隔式與 cron 式的 action JSON 排程器 |
 | `utils/session_guard/` | 62 | 驅動輸入前先偵測工作階段是否已鎖定／非互動 |
-| `utils/triggers/` | 1,377 | 事件驅動觸發引擎：影像／視窗／像素／檔案／webhook／IMAP 郵件 |
+| `utils/triggers/` | 1,383 | 事件驅動觸發引擎：影像／視窗／像素／檔案／webhook／IMAP 郵件 |
 | `utils/voice/` | 97 | 語音指令路由：把辨識到的語句對應到 `AC_*` action list |
 | `utils/watchdog/` | 195 | 背景彈窗／中斷看門狗，供無人值守自動化 |
 | `utils/watcher/` | 90 | 無頭輪詢原語：滑鼠位置、像素顏色、log tail |
@@ -881,8 +881,8 @@ GUI 是**選用 extra**（`pip install je_auto_control[gui]`，PySide6 + qt-mate
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
 | `gui/__init__.py` | 23 | `start_autocontrol_gui()`：**唯一**會延遲匯入 PySide6 的地方，維持頂層套件 Qt-free。 |
-| `main_window.py` | 298 | `QMainWindow`：選單列（File／Actions／View／…）、可關閉分頁、即時語言切換、字級預設、qt-material 主題。分頁分為 core／editing／detection／automation／system 五類。 |
-| `main_widget.py` | 430 | 擁有 `QTabWidget`，註冊 48 個分頁，並暴露 show/hide/list API 給選單列。核心分頁在註冊時直接宣告 `(label_key, handler)` 動作對；分頁本體都在下列 mixin。 |
+| `main_window.py` | 301 | `QMainWindow`：選單列（File／Actions／View／…）、可關閉分頁、即時語言切換、字級預設、qt-material 主題。分頁分為 core／editing／detection／automation／system 五類。 |
+| `main_widget.py` | 437 | 擁有 `QTabWidget`，註冊 48 個分頁，並暴露 show/hide/list API 給選單列。核心分頁在註冊時直接宣告 `(label_key, handler)` 動作對；分頁本體都在下列 mixin。 |
 | `_auto_click_tab.py` | 291 | 自動點擊分頁的 mixin 建構器。 |
 | `_screenshot_tab.py` | 137 | 截圖／取像素分頁 mixin。 |
 | `_image_detect_tab.py` | 115 | 影像偵測分頁 mixin。 |
@@ -1070,7 +1070,7 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 
 | 層／子系統 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `gui/` | 95 | 27,736 |
+| `gui/` | 95 | 27,793 |
 | `utils/mcp_server/` | 35 | 18,845 |
 | `utils/remote_desktop/` | 56 | 13,014 |
 | `utils/executor/` | 8 | 9,539 |
@@ -1083,13 +1083,13 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `utils/agent/` | 9 | 1,975 |
 | `linux_with_x11/` | 19 | 1,281 |
 | `linux_wayland/` | 17 | 2,921 |
-| `utils/triggers/` | 4 | 1,377 |
+| `utils/triggers/` | 4 | 1,383 |
 | `utils/ocr/` | 9 | 1,140 |
 | `utils/usbip/` | 5 | 1,008 |
 | `utils/assertion/` | 3 | 887 |
 | `osx/` | 17 | 925 |
 | `autocontrol-lsp/` | 8 | 744 |
-| `utils/hotkey/` | 7 | 846 |
-| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 680 | 56,121 |
-| **總計** | **1,056** | **155,955** |
+| `utils/hotkey/` | 7 | 852 |
+| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 680 | 56,127 |
+| **總計** | **1,056** | **156,030** |
 

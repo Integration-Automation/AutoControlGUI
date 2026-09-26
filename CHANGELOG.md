@@ -15,6 +15,8 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Added
 
+- `HotkeyDaemon.is_running`, `Scheduler.is_running` and
+  `TriggerEngine.is_running`: whether the engine's thread is alive.
 - `usb_watcher.hold_default_watcher()` / `release_default_watcher()`: share
   the default USB hotplug watcher by count.
 - `rate_limit.named_bucket(name, rate, capacity)`, the named token buckets
@@ -487,6 +489,9 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Fixed
 
+- The VLM tab no longer freezes the window while the model answers, and the
+  Hotkeys, Scheduler and Triggers tabs show an engine started from Tools > Start
+  or a script as running.
 - The USB Devices tab and the passthrough panel no longer run a ~5 s device
   enumeration on the GUI thread, and one no longer stops the other's hotplug
   watcher; email Poll now and Admin broadcast no longer freeze the window.

@@ -64,7 +64,6 @@ class TriggersTab(TranslatableMixin, QWidget):
         self._pixel_widgets = self._build_pixel_form()
         self._file_widgets = self._build_file_form()
         self._cron_widgets = self._build_cron_form()
-        self._running = False
         self._status = QLabel()
         self._apply_status()
         self._table = QTableWidget(0, 5)
@@ -94,8 +93,26 @@ class TriggersTab(TranslatableMixin, QWidget):
             _t("tr_col_detail"), _t("tr_col_fired"), _t("tr_col_enabled"),
         ])
 
+    def sync_with_engine(self) -> None:
+        """Show the engine's own state and poll while it runs.
+
+        The tab kept its own running flag, so an engine started from
+        Tools > Start (or a script) still read "stopped" and was not polled.
+        """
+        running = default_trigger_engine.is_running
+        if running and not self._timer.isActive():
+            self._timer.start()
+        elif not running and self._timer.isActive():
+            self._timer.stop()
+        self._apply_status()
+
+    def showEvent(self, event) -> None:  # noqa: N802  # reason: Qt override
+        """Catch up with an engine started or stopped elsewhere while hidden."""
+        super().showEvent(event)
+        self.sync_with_engine()
+
     def _apply_status(self) -> None:
-        key = "tr_engine_running" if self._running else "tr_engine_stopped"
+        key = "tr_engine_running" if default_trigger_engine.is_running else "tr_engine_stopped"
         self._status.setText(_t(key))
 
     def retranslate(self) -> None:
@@ -304,13 +321,11 @@ class TriggersTab(TranslatableMixin, QWidget):
     def _on_start(self) -> None:
         default_trigger_engine.start()
         self._timer.start()
-        self._running = True
         self._apply_status()
 
     def _on_stop(self) -> None:
         default_trigger_engine.stop()
         self._timer.stop()
-        self._running = False
         self._apply_status()
 
     def _refresh(self) -> None:
