@@ -15,6 +15,9 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Added
 
+- `message_format.MessageFormatError` (an `AutoControlException` and a
+  `ValueError`); locales other than en/fr use Babel's CLDR plural rules when
+  Babel is installed.
 - `multipart.MultipartError` (an `AutoControlException` and a `ValueError`).
 - `dotenv.DotenvError`, raised by `dump_dotenv` for a key the parser would not
   read back.
@@ -100,6 +103,10 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Changed
 
+- `format_message` raises `MessageFormatError` for patterns ICU rejects
+  (unterminated argument, selector without `{...}`, no `other`, duplicate
+  selector, late `offset:`), and an unsupported locale raises instead of
+  getting English rules.
 - `occurrences(count=, until=)` narrows the rule's own COUNT / UNTIL instead of
   replacing it, and `parse_rrule` refuses `BYMONTHDAY` with `WEEKLY`, a numbered
   `BYDAY` with `DAILY` / `WEEKLY`, and an unknown `WKST` (RFC 5545 3.3.10).
@@ -498,6 +505,8 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Fixed
 
+- French `selectordinal` follows CLDR (`21e`, not `21er`), `fr_FR` / `fr-CA`
+  use the French rules, and `=1.0` matches 1.
 - `attributes_to_otlp` / `spans_to_otlp` write a `bytes` attribute as OTLP
   `bytesValue` (base64), and `is_problem` / `parse_problem` match the
   `application/problem+json` media type exactly instead of as a substring.
