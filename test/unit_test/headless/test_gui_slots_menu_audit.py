@@ -183,6 +183,8 @@ def test_the_hud_does_not_log_its_own_sampling():
 
 
 def test_rebuilding_the_tabs_menu_does_not_leak():
+    # main_window imports qt_material (its theme), which the headless CI job does not install.
+    pytest.importorskip("qt_material", exc_type=ImportError)
     app = _app()
     from PySide6.QtCore import QCoreApplication, QEvent
     from PySide6.QtWidgets import QMenu, QWidget

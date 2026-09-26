@@ -58,6 +58,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260926-24 | 2026-09-26 | Skip the tabs-menu leak test where qt_material is not installed, and catch the next main-window import that forgets to | #ci #test | [2026-09-d](2026-09-d.md) |
 | U-20260926-22 | 2026-09-26 | The USB tabs enumerate devices off the GUI thread and only once shown, and share the hotplug watcher by count; email Poll now and Admin broadcast run off the GUI thread; one CallWorker replaces two copies | #bugfix #gui #usb | [2026-09-d](2026-09-d.md) |
 | U-20260926-21 | 2026-09-26 | Auto-click refuses a 0 ms interval; Actions-menu slots show framework and decode errors instead of leaking them; a recording that did not start is reported; template crops write into non-ASCII folders; the live HUD no longer logs its own sampling; rebuilding the View > Tabs menu no longer leaks menus and actions | #bugfix #gui #audit | [2026-09-d](2026-09-d.md) |
 | U-20260926-20 | 2026-09-26 | Every MCP tools/call is answered whatever the tool raises; plain HTTP POSTs answer in their body on a concurrent server; ac_egress_reset and ac_approve_artifact need confirmation; an unwritable audit log no longer fails a tool that ran; the JSON document tools take root arrays; malformed JSON-RPC envelopes are -32600 and an id of null is a request | #bugfix #security #mcp #audit | [2026-09-d](2026-09-d.md) |
@@ -317,7 +318,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | File | Period | Entries |
 |---|---|---:|
-| [2026-09-d.md](2026-09-d.md) | 2026-09 | 43 |
+| [2026-09-d.md](2026-09-d.md) | 2026-09 | 44 |
 | [2026-09-c.md](2026-09-c.md) | 2026-09 | 38 |
 | [2026-09-b.md](2026-09-b.md) | 2026-09 | 68 |
 | [2026-09.md](2026-09.md) | 2026-09 | 79 |
