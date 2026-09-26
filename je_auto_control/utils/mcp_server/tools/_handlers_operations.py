@@ -5,7 +5,6 @@ they survive the JSON-RPC boundary, with every project import lazy -- split out
 by theme because ``_handlers.py`` is over the 750-line limit.
 """
 import os
-import threading
 from typing import Any, Dict, List, Optional
 
 
@@ -14,8 +13,6 @@ from typing import Any, Dict, List, Optional
 _DEFAULT_APPROVALS_DIR = ".approvals"
 
 #: Named token buckets shared by every ``rate_limit`` call.
-_RATE_LIMITERS: Dict[str, Any] = {}
-_RATE_LIMITERS_LOCK = threading.Lock()
 
 
 def watchdog_add(title, action="close", case_sensitive=False, name=None):
@@ -445,22 +442,8 @@ def jwt_decode(token, key, algorithms=None, audience=None, leeway=0.0):
 
 
 def rate_limit(name, rate=1.0, capacity=1.0, n=1.0):
-    from je_auto_control.utils.rate_limit import TokenBucket
-    rate = float(rate)
-    capacity = float(capacity)
-    with _RATE_LIMITERS_LOCK:
-        existing = _RATE_LIMITERS.get(name)
-        # setdefault silently ignored a changed rate/capacity for a reused
-        # name; rebuild the bucket when either parameter differs so the caller
-        # actually gets the limit they asked for.
-        if existing is None or existing[0] != rate or existing[1] != capacity:
-            bucket = TokenBucket(rate, capacity)
-            _RATE_LIMITERS[name] = (rate, capacity, bucket)
-        else:
-            bucket = existing[2]
-    acquired = bucket.try_acquire(float(n))
-    return {"acquired": acquired, "tokens": round(bucket.tokens, 4),
-            "wait": round(bucket.time_until_available(float(n)), 4)}
+    from je_auto_control.utils.executor.action_executor import _rate_limit
+    return _rate_limit(name, rate, capacity, n)
 
 
 def describe_stats(values):
@@ -530,11 +513,10 @@ def flag_enabled(flags, key, context=None, default=False):
 
 
 def run_saga(steps):
-    from je_auto_control.utils.saga import run_saga as _run
-    result = _run(steps)
-    return {"ok": result.ok, "completed": result.completed,
-            "compensated": result.compensated,
-            "failed_step": result.failed_step, "error": result.error}
+    # The executor's adapter: this copy dropped compensation_errors, so a
+    # failed rollback read as "no compensation defined".
+    from je_auto_control.utils.executor.action_executor import _run_saga
+    return _run_saga(steps)
 
 
 def decision_table(spec, context):

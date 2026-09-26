@@ -10,6 +10,7 @@ Pure standard library (JSON storage); imports no ``PySide6``. The
 executor is imported lazily so storage and search work headless on any
 platform.
 """
+import threading
 import time
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
@@ -30,7 +31,7 @@ class Skill:
 def _to_skill(name: str, raw: Dict[str, Any]) -> Skill:
     return Skill(name=name, actions=list(raw.get("actions") or []),
                  description=str(raw.get("description") or ""),
-                 tags=list(raw.get("tags") or []),
+                 tags=_as_tags(raw.get("tags")),
                  updated=float(raw.get("updated") or 0.0))
 
 
@@ -55,7 +56,9 @@ class SkillLibrary:
 
     @property
     def _items(self) -> Dict[str, Dict[str, Any]]:
-        return {str(key): dict(value) for key, value in self._state.read().items()}
+        # Hand-edited entries that are not objects are skipped, not fatal.
+        return {str(key): dict(value) for key, value in self._state.read().items()
+                if isinstance(value, dict)}
 
     def save(self, name: str, actions: List[Any], *, description: str = "",
              tags: Optional[List[str]] = None) -> Skill:
@@ -95,15 +98,42 @@ class SkillLibrary:
             raise KeyError(f"no skill named {name!r}")
         runner = executor
         if runner is None:
-            from je_auto_control.utils.executor.action_executor import executor \
-                as default_executor
-            runner = default_executor
-        return runner.execute_action(skill.actions)
+            from je_auto_control.utils.executor.action_executor import _running_executor
+            runner = _running_executor()
+        depth = getattr(_SKILL_DEPTH, "value", 0)
+        if depth >= _max_depth():
+            from je_auto_control.utils.executor.flow_control import MacroDepthExceeded
+            _SKILL_DEPTH.exceeded = MacroDepthExceeded(
+                f"skill {name!r} nested deeper than {_max_depth()}")
+            raise _SKILL_DEPTH.exceeded
+        _SKILL_DEPTH.value = depth + 1
+        try:
+            record = runner.execute_action(skill.actions)
+        finally:
+            _SKILL_DEPTH.value = depth
+        # Each nested run records the error in its own list and returns, so
+        # every level raises it again until the outermost skill call does.
+        exceeded = getattr(_SKILL_DEPTH, "exceeded", None)
+        if exceeded is not None:
+            if depth == 0:
+                _SKILL_DEPTH.exceeded = None
+            raise exceeded
+        return record
+
+
+# Per thread, as macros count theirs: a skill calling itself recursed until
+# RecursionError, which was recorded as an ordinary failure and the script went on.
+_SKILL_DEPTH = threading.local()
+
+
+def _max_depth() -> int:
+    from je_auto_control.utils.executor.flow_control import MAX_MACRO_DEPTH
+    return MAX_MACRO_DEPTH
 
 
 def _skill_matches(name: str, raw: Dict[str, Any], needle: str) -> bool:
     if not needle:
         return True
     haystack = " ".join([name, str(raw.get("description") or ""),
-                         " ".join(raw.get("tags") or [])]).lower()
+                         " ".join(_as_tags(raw.get("tags")))]).lower()
     return needle in haystack

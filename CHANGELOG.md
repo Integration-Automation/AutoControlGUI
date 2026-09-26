@@ -15,6 +15,8 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Added
 
+- `rate_limit.named_bucket(name, rate, capacity)`, the named token buckets
+  `AC_rate_limit` and `ac_rate_limit` share.
 - `box_format` (`"xywh"` / `"ltrb"`) on `cluster_grid`, `locate_cell`,
   `AC_grid_cell` and `ac_grid_cell`, so `locate_all_image` boxes address cells.
 - `repair_store(db=None)`: the repair store in `db`, or the one the process
@@ -96,6 +98,11 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
   non-finite or non-positive scales; `rbac.UserRecord` is frozen.
 - `match_subpixel` reports `cx` / `cy` as the pixel-index centre plus the
   fitted offset (half a pixel less than before).
+- `RetryBudget` validates `jitter` (case-insensitive), `base_delay_s` and
+  `max_delay_s`; `AC_plan_retry_delays` accepts at most 10,000 attempts.
+- Asset types refuse values they cannot hold (`3.7` or `True` as an `int`,
+  `"enabled"` as a `bool`); element locators refuse blank filters.
+- Skills nested deeper than 50 fail the outermost `AC_skill_run`.
 - `is_interactive_role` and `flatten_tree` recognise AT-SPI, macOS AX and ARIA
   role names as well as UIA; `tab_order` leaves out disabled controls.
 - `effect_near_point` / `classify_effect` measure `radius` as a circle.
@@ -476,6 +483,11 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
   OpenCV errors; one unscorable scale no longer aborts a sweep.
 - An aborted `drag_path` releases where the pointer stopped; a `click` step
   without a point clicks in place instead of at (0, 0).
+- `AC_rate_limit` takes a changed rate or capacity for a reused name.
+- `wait_until_app_idle` never sleeps past its timeout or spins.
+- Reading an in-memory store while another thread writes it no longer
+  raises; hand-written skill tags given as a string stay one tag.
+- `ac_run_saga` reports `compensation_errors`.
 - `fuse_elements`, `observation_index` and `classify_effect` read elements
   with `bounds` or without a size; unchanged zero-area elements are no
   longer reported as changes.

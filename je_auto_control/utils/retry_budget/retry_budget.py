@@ -47,8 +47,9 @@ def backoff_delay(attempt: int, *, base: float, max_delay: float,
     try:
         raw = float(base) * (float(multiplier) ** (attempt - 1))
     except OverflowError:
-        # A large attempt number overflowed instead of hitting the cap.
-        raw = float("inf")
+        # A large attempt number overflowed instead of hitting the cap; with
+        # base 0 every delay is 0, not the cap.
+        raw = float("inf") if float(base) > 0 else 0.0
     return max(0.0, min(float(max_delay), raw))
 
 
@@ -84,6 +85,16 @@ class RetryBudget:
         # ignored it, so the budget retried forever.
         if self.deadline_s is not None and math.isnan(float(self.deadline_s)):
             raise ValueError("deadline_s must be a number, not NaN")
+        # An unknown spelling ("None", "nnone") fell through to full jitter,
+        # and an infinite cap put inf into executor and MCP results.
+        jitter = str(self.jitter).strip().lower()
+        if jitter not in (JITTER_FULL, JITTER_EQUAL, JITTER_NONE):
+            raise ValueError(f"jitter must be one of full / equal / none, got {self.jitter!r}")
+        self.jitter = jitter
+        for name in ("base_delay_s", "max_delay_s"):
+            value = float(getattr(self, name))
+            if not (math.isfinite(value) and value >= 0):
+                raise ValueError(f"{name} must be a finite number >= 0, got {value!r}")
 
     def raw_delay(self, attempt: int) -> float:
         """Capped exponential backoff for ``attempt`` (no jitter; pure)."""

@@ -2800,7 +2800,8 @@ def _make_retry_budget(base: Any, max_delay: Any, multiplier: Any,
     """Build a RetryBudget from executor scalars (helper for the adapters)."""
     from je_auto_control.utils.retry_budget import RetryBudget
     return RetryBudget(base_delay_s=float(base), max_delay_s=float(max_delay),
-                       multiplier=float(multiplier), jitter=str(jitter))
+                       multiplier=float(multiplier),
+                       jitter="none" if jitter is None else str(jitter))
 
 
 def _retry_delay(attempt: Any, base: Any = 0.1, max_delay: Any = 5.0,
@@ -2814,8 +2815,15 @@ def _plan_retry_delays(attempts: Any, base: Any = 0.1, max_delay: Any = 5.0,
                        multiplier: Any = 2.0, jitter: Any = "none"
                        ) -> Dict[str, Any]:
     """Adapter: the backoff delay schedule for the first N retries (pure)."""
+    count = int(attempts)
+    if count > _MAX_PLANNED_RETRIES:
+        # 10**9 built a list until memory ran out.
+        raise ValueError(f"attempts must be at most {_MAX_PLANNED_RETRIES}, got {count}")
     budget = _make_retry_budget(base, max_delay, multiplier, jitter)
-    return {"delays": [float(d) for d in budget.plan(int(attempts))]}
+    return {"delays": [float(d) for d in budget.plan(count)]}
+
+
+_MAX_PLANNED_RETRIES = 10_000
 
 
 def _compare_field_value(expected: Any, actual: Any,
@@ -3777,15 +3785,13 @@ def _check_licenses(components: Any, allow: Any = None,
     return {"violations": violations, "count": len(violations)}
 
 
-_RATE_LIMITERS: Dict[str, Any] = {}
 
 
 def _rate_limit(name: str, rate: float = 1.0, capacity: float = 1.0,
                 n: float = 1.0) -> Dict[str, Any]:
     """Adapter: try to take ``n`` tokens from a named token-bucket limiter."""
-    from je_auto_control.utils.rate_limit import TokenBucket
-    bucket = _RATE_LIMITERS.setdefault(
-        name, TokenBucket(float(rate), float(capacity)))
+    from je_auto_control.utils.rate_limit import named_bucket
+    bucket = named_bucket(name, rate, capacity)
     acquired = bucket.try_acquire(float(n))
     return {"acquired": acquired, "tokens": round(bucket.tokens, 4),
             "wait": round(bucket.time_until_available(float(n)), 4)}

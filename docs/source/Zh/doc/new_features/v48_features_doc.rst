@@ -32,7 +32,8 @@ JSON 後端(或記憶體內);純標準函式庫;不匯入 ``PySide6``。
 型別為 ``text`` / ``int`` / ``bool`` / ``credential``;``get`` 會轉成宣告型別,並在未停用
 時退回 ``default`` 環境。``active_environment()`` 讀取 ``JE_AUTOCONTROL_ENV``。``list`` /
 ``delete`` 補齊整個儲存體。``set`` 在寫入時就拒絕未知型別,以及該型別讀不懂的值(例如把
-``"eighty"`` 當 ``int``)。
+``"eighty"`` 當 ``int``)。``int`` 只接受整數(不接受 ``3.7`` 或 ``True``),``bool`` 字串必須是 true / false / yes /
+no / on / off / 1 / 0 之一。
 
 執行器指令
 ----------
