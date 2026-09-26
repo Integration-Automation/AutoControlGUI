@@ -359,7 +359,7 @@ class ScreenVideoTrack(VideoStreamTrack):
                 await asyncio.sleep(sleep_for)
             self._last_emit = time.monotonic()
         pts, time_base = self._timestamp()
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         monitor = self._resolve()
         frame_array = await loop.run_in_executor(
             self._executor, _capture_frame, monitor,
@@ -391,7 +391,7 @@ async def wait_for_ice_gathering(
     """Block until the PeerConnection has gathered all local ICE candidates."""
     if pc.iceGatheringState == "complete":
         return
-    future: asyncio.Future = asyncio.get_event_loop().create_future()
+    future: asyncio.Future = asyncio.get_running_loop().create_future()
 
     @pc.on("icegatheringstatechange")
     def _on_change() -> None:

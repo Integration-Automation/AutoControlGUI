@@ -220,7 +220,7 @@ class WebRTCDesktopHost(ViewerAuthMixin, MediaNegotiationMixin):
             raise RuntimeError("call create_offer() first")
         answer = RTCSessionDescription(sdp=answer_sdp, type="answer")
         await self._pc.setRemoteDescription(answer)
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         self._auth_deadline_handle = loop.call_later(
             _AUTH_GRACE_S, self._enforce_auth_deadline,
         )
