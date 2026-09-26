@@ -494,6 +494,8 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Fixed
 
+- `SSEParser.feed` no longer re-splits the whole partial line on every chunk:
+  a 2 MB `data` line in 1 KB chunks took 10.75 s and now takes 0.02 s.
 - `parse_dotenv` keeps a value that starts with `#` (`COLOR=#ff0000`), keeps
   the trailing whitespace of a multi-line quoted value's lines, skips a leading
   BOM, and parses an unclosed quote in linear time (20k lines took 190 s).
