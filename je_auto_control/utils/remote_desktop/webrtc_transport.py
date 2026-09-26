@@ -276,6 +276,10 @@ class ScreenVideoTrack(VideoStreamTrack):
         self._region = region
         self._show_cursor = show_cursor
         self._monitor: Optional[dict] = None
+        # The last resolved monitor's corner, kept across set_target_monitor
+        # so input in between still maps somewhere sensible.
+        self._origin: Tuple[int, int] = (
+            (int(region[0]), int(region[1])) if region is not None else (0, 0))
         self._executor = ThreadPoolExecutor(
             max_workers=1, thread_name_prefix="rd-capture",
         )
@@ -286,6 +290,11 @@ class ScreenVideoTrack(VideoStreamTrack):
     @property
     def fps(self) -> int:
         return self._fps
+
+    @property
+    def capture_origin(self) -> Tuple[int, int]:
+        """Screen position of the frame's top-left pixel, for mapping viewer input."""
+        return self._origin
 
     def set_target_fps(self, fps: int) -> None:
         """Tune capture rate at runtime; clamped to 1..60. Used by the
@@ -321,6 +330,7 @@ class ScreenVideoTrack(VideoStreamTrack):
                 sct = mss_grabber()
                 _capture_local.sct = sct
             self._monitor = _resolve_monitor(sct, self._monitor_index)
+        self._origin = (int(self._monitor.get("left", 0)), int(self._monitor.get("top", 0)))
         return self._monitor
 
     def _timestamp(self) -> Tuple[int, fractions.Fraction]:
@@ -349,7 +359,7 @@ class ScreenVideoTrack(VideoStreamTrack):
                 await asyncio.sleep(sleep_for)
             self._last_emit = time.monotonic()
         pts, time_base = self._timestamp()
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         monitor = self._resolve()
         frame_array = await loop.run_in_executor(
             self._executor, _capture_frame, monitor,
@@ -381,7 +391,7 @@ async def wait_for_ice_gathering(
     """Block until the PeerConnection has gathered all local ICE candidates."""
     if pc.iceGatheringState == "complete":
         return
-    future: asyncio.Future = asyncio.get_event_loop().create_future()
+    future: asyncio.Future = asyncio.get_running_loop().create_future()
 
     @pc.on("icegatheringstatechange")
     def _on_change() -> None:

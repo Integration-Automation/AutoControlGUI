@@ -23,6 +23,9 @@ class Baggage:
     def __init__(self, items: Optional[Mapping[str, str]] = None) -> None:
         self._items: Dict[str, str] = {str(key): str(value)
                                        for key, value in (items or {}).items()}
+        # An empty key formats as the member "=value", which no parser reads.
+        if "" in self._items:
+            raise ValueError("baggage keys must not be empty")
 
     def to_dict(self) -> Dict[str, str]:
         """Return the entries as a plain dict."""

@@ -51,5 +51,7 @@ Command                          Effect
 ``AC_repair_approve``            Approve a pending suggestion.
 ================================ ===================================================
 
-The same operations are exposed as MCP tools (``ac_repair_*``) and as Script
-Builder commands under **Tools**.
+Each takes an optional ``db`` (a JSON path); without one, the commands share one
+in-memory store per process (``repair_store()``), so a suggestion recorded by
+``AC_repair_record`` is found by the others. The same operations are exposed as MCP
+tools (``ac_repair_*``) and as Script Builder commands under **Tools**.

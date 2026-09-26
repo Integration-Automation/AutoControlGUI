@@ -127,13 +127,13 @@ def _png_size(data: bytes) -> Optional[Tuple[int, int]]:
 
 def _capture_screenshot_bytes(
         screen_region: Optional[List[int]] = None) -> bytes:
-    """Take a screenshot (optionally cropped) and return PNG bytes."""
+    """Take a screenshot (optionally of ``[left, top, right, bottom]``, on any monitor) as PNG bytes."""
     fd, tmp = tempfile.mkstemp(prefix="vlm_", suffix=".png")
     os.close(fd)
     tmp_path = Path(tmp)
     try:
-        from je_auto_control.wrapper.auto_control_screen import screenshot
-        screenshot(str(tmp_path), screen_region=screen_region)
+        from je_auto_control.utils.cv2_utils.region_capture import grab_screen_region
+        grab_screen_region(screen_region).save(str(tmp_path), format="PNG")
         return tmp_path.read_bytes()
     finally:
         try:

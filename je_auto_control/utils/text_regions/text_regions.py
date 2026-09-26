@@ -14,7 +14,9 @@ base OpenCV, no contrib). Imports no ``PySide6``.
 """
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
-from je_auto_control.utils.visual_match.visual_match import _contain_cv2_error, _haystack_gray
+from je_auto_control.utils.visual_match.visual_match import (
+    _contain_cv2_error, _haystack_gray_with_origin, _to_screen,
+)
 
 ImageSource = Any
 Rect = Tuple[int, int, int, int]
@@ -125,13 +127,15 @@ def find_text_regions(haystack: Optional[ImageSource] = None, *,
     rejects long thin lines that are rules rather than text. Each result is
     ``{x, y, width, height, area, center}``.
     """
-    rects = _filtered_boxes(_haystack_gray(haystack, region), int(min_area),
+    # With the capture's origin: region searches answered region-local boxes.
+    gray, origin_x, origin_y = _haystack_gray_with_origin(haystack, region)
+    rects = _filtered_boxes(gray, int(min_area),
                             int(max_area) if max_area is not None else None,
                             float(max_aspect))
     if merge:
         rects = _merge_overlapping(rects)
     rects.sort(key=lambda rect: rect[2] * rect[3], reverse=True)
-    return [_box_dict(rect) for rect in rects]
+    return [_to_screen(_box_dict(rect), origin_x, origin_y) for rect in rects]
 
 
 @_contain_cv2_error
@@ -143,7 +147,8 @@ def find_text_lines(haystack: Optional[ImageSource] = None, *,
     Glyph boxes whose vertical centres are within ``y_tolerance`` pixels are grouped
     into a line spanning their combined extent — ready to crop and feed to OCR.
     """
-    boxes = _filtered_boxes(_haystack_gray(haystack, region), 40, None, 20.0)
+    gray, origin_x, origin_y = _haystack_gray_with_origin(haystack, region)
+    boxes = _filtered_boxes(gray, 40, None, 20.0)
     rows: List[Dict[str, Any]] = []
     for rect in sorted(boxes, key=lambda item: item[1]):
         center_y = rect[1] + rect[3] // 2
@@ -153,5 +158,5 @@ def find_text_lines(haystack: Optional[ImageSource] = None, *,
             rows.append({"cy": center_y, "rect": rect})
         else:
             row["rect"] = _union(row["rect"], rect)
-    return [_box_dict(row["rect"])
+    return [_to_screen(_box_dict(row["rect"]), origin_x, origin_y)
             for row in sorted(rows, key=lambda item: item["cy"])]

@@ -14,7 +14,7 @@ connected-component helper. Imports no ``PySide6``.
 """
 from typing import Any, Dict, List
 
-from je_auto_control.utils.visual_match.visual_match import _to_gray
+from je_auto_control.utils.visual_match.visual_match import _contain_cv2_error, _to_gray
 
 ImageSource = Any
 
@@ -22,8 +22,11 @@ ImageSource = Any
 def _diff_mask(before: ImageSource, after: ImageSource, threshold: int, blur: int):
     """Return the binary motion mask between two frames (same size required)."""
     import cv2
-    first = _to_gray(before)
-    second = _to_gray(after)
+    from je_auto_control.utils.preprocess.preprocess import _as_uint8, _eight_bit
+    # 8-bit, so ``threshold`` means the same for every input: a uint16 frame
+    # raised in connectedComponents and a 0..1 float one never moved.
+    first = _as_uint8(_to_gray(_eight_bit(before)))
+    second = _as_uint8(_to_gray(_eight_bit(after)))
     if first.shape != second.shape:
         raise ValueError(f"frames must be the same size: {first.shape} vs "
                          f"{second.shape}")
@@ -36,6 +39,7 @@ def _diff_mask(before: ImageSource, after: ImageSource, threshold: int, blur: in
     return mask
 
 
+@_contain_cv2_error
 def changed_regions(before: ImageSource, after: ImageSource, *,
                     threshold: int = 25, min_area: int = 80,
                     blur: int = 5) -> List[Dict[str, Any]]:
@@ -60,6 +64,7 @@ def has_motion(before: ImageSource, after: ImageSource, *, threshold: int = 25,
                                 min_area=min_area))
 
 
+@_contain_cv2_error
 def activity_score(before: ImageSource, after: ImageSource, *,
                    threshold: int = 25) -> float:
     """Return the fraction (0..1) of pixels that moved between the two frames."""

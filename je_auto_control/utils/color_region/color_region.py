@@ -11,7 +11,7 @@ The masking + connected-components run on an injectable ``haystack`` image
 screen. OpenCV + NumPy come in via the project's ``je_open_cv`` dependency and are
 imported lazily. Imports no ``PySide6``.
 """
-from typing import Any, Dict, List, Optional, Sequence
+from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 ImageSource = Any
 
@@ -49,9 +49,20 @@ def _to_rgb(source: ImageSource):
 
 def _grab_rgb(region: Optional[Sequence[int]]):
     import numpy as np
-    from je_auto_control.utils.cv2_utils.screenshot import pil_screenshot
-    image = pil_screenshot(screen_region=list(region) if region else None)
-    return np.asarray(image.convert("RGB"))
+    from je_auto_control.utils.cv2_utils.region_capture import grab_screen_region
+    return np.asarray(grab_screen_region(region).convert("RGB"))
+
+
+def _origin(haystack: Optional[ImageSource], region: Optional[Sequence[int]]) -> Tuple[int, int]:
+    """Screen position of the haystack's top-left pixel.
+
+    A grabbed ``region`` (left, top, right, bottom) starts at its corner; a
+    supplied haystack is its own space. Blobs were region-local, so
+    ``AC_find_color_region``'s ``center`` clicked that far off.
+    """
+    if haystack is None and region:
+        return int(region[0]), int(region[1])
+    return 0, 0
 
 
 def find_color_regions(rgb: Sequence[int], *,
@@ -76,7 +87,7 @@ def find_color_regions(rgb: Sequence[int], *,
     upper = np.array([min(255, red + tol), min(255, green + tol),
                       min(255, blue + tol)], dtype=np.uint8)
     mask = cv2.inRange(image, lower, upper)
-    return connected_boxes(mask, int(min_area))
+    return connected_boxes(mask, int(min_area), origin=_origin(haystack, region))
 
 
 def find_color_region(rgb: Sequence[int], *,

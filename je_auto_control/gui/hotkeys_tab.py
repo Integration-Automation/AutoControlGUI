@@ -27,7 +27,6 @@ class HotkeysTab(TranslatableMixin, QWidget):
         self._combo_input = QLineEdit()
         self._combo_input.setPlaceholderText("ctrl+alt+1")
         self._script_input = QLineEdit()
-        self._daemon_running = False
         self._status = QLabel()
         self._table = QTableWidget(0, 4)
         self._apply_status_label()
@@ -61,8 +60,26 @@ class HotkeysTab(TranslatableMixin, QWidget):
             ("hk_stop_daemon", self._on_stop),
         ]
 
+    def sync_with_engine(self) -> None:
+        """Show the engine's own state and poll while it runs.
+
+        The tab kept its own running flag, so an engine started from
+        Tools > Start (or a script) still read "stopped" and was not polled.
+        """
+        running = default_hotkey_daemon.is_running
+        if running and not self._timer.isActive():
+            self._timer.start()
+        elif not running and self._timer.isActive():
+            self._timer.stop()
+        self._apply_status_label()
+
+    def showEvent(self, event) -> None:  # noqa: N802  # reason: Qt override
+        """Catch up with an engine started or stopped elsewhere while hidden."""
+        super().showEvent(event)
+        self.sync_with_engine()
+
     def _apply_status_label(self) -> None:
-        key = "hk_daemon_running" if self._daemon_running else "hk_daemon_stopped"
+        key = "hk_daemon_running" if default_hotkey_daemon.is_running else "hk_daemon_stopped"
         self._status.setText(_t(key))
 
     def _apply_table_headers(self) -> None:
@@ -111,13 +128,11 @@ class HotkeysTab(TranslatableMixin, QWidget):
             QMessageBox.warning(self, "Error", str(error))
             return
         self._timer.start()
-        self._daemon_running = True
         self._apply_status_label()
 
     def _on_stop(self) -> None:
         default_hotkey_daemon.stop()
         self._timer.stop()
-        self._daemon_running = False
         self._apply_status_label()
 
     def _refresh(self) -> None:

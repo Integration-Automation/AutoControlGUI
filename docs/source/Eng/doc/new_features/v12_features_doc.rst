@@ -30,7 +30,7 @@ at every call site, and a UI change is fixed in one place::
     info = repo.find_info("login.user")  # {found, name, role, center}
 
 A locator is a small set of accessibility filters (``name`` / ``role`` /
-``app_name``); resolving finds the live element through the accessibility
+``app_name``; a blank value filters nothing and is refused); resolving finds the live element through the accessibility
 backend. Storage is a JSON file and works on any platform; resolution
 needs a platform accessibility backend.
 

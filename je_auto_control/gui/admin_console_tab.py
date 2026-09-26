@@ -11,7 +11,7 @@ from PySide6.QtWidgets import (
 )
 
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
-from je_auto_control.gui._worker_thread import WorkerHandle, start_worker
+from je_auto_control.gui._worker_thread import CallWorker, WorkerHandle, start_worker
 from je_auto_control.gui.language_wrapper.multi_language_wrapper import (
     language_wrapper,
 )
@@ -87,6 +87,7 @@ class AdminConsoleTab(TranslatableMixin, QWidget):
         self._broadcast_output = QTextEdit()
         self._broadcast_output.setReadOnly(True)
         self._poll_thread: Optional[WorkerHandle] = None
+        self._broadcast_thread: Optional[WorkerHandle] = None
         # Phase 6.5: live-thumbnail grid + auto-poll timer.
         self._thumbnails = QListWidget()
         self._thumbnails.setViewMode(QListWidget.ViewMode.IconMode)
@@ -196,10 +197,21 @@ class AdminConsoleTab(TranslatableMixin, QWidget):
             QMessageBox.warning(self, _t("admin_broadcast_run"), str(error))
             return
         # Each host stops at its first failing action and its row says so.
-        results = self._client.broadcast_execute(actions=actions, raise_on_error=True)
+        # Off the GUI thread: every host is an HTTP round trip.
+        if self._broadcast_thread is not None:
+            return
+        self._broadcast_thread = start_worker(
+            self, CallWorker(lambda: self._client.broadcast_execute(actions=actions, raise_on_error=True)),
+            on_done=self._show_broadcast, on_fail=self._broadcast_output.setPlainText,
+            on_thread_done=self._on_broadcast_thread_done)
+
+    def _show_broadcast(self, results) -> None:
         self._broadcast_output.setPlainText(
             json.dumps(results, indent=2, ensure_ascii=False, default=str),
         )
+
+    def _on_broadcast_thread_done(self) -> None:
+        self._broadcast_thread = None
 
     def _apply_poll_result(self, statuses: list) -> None:
         self._refresh_table(statuses=statuses)

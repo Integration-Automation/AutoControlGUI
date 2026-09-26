@@ -14,7 +14,7 @@ testable on synthetic arrays. OpenCV + NumPy come in via ``je_open_cv``. Imports
 from typing import Any, Dict, List, Optional, Sequence
 
 # Reuse the RGB loader / screen grab from color_region (single source of truth).
-from je_auto_control.utils.color_region.color_region import _grab_rgb, _to_rgb
+from je_auto_control.utils.color_region.color_region import _grab_rgb, _origin, _to_rgb
 
 ImageSource = Any
 
@@ -53,7 +53,7 @@ def segment_hsv(haystack: Optional[ImageSource] = None, *,
     from je_auto_control.utils.cv2_utils.blobs import connected_boxes
     mask = color_mask(haystack, region=region, lower_hsv=lower_hsv,
                       upper_hsv=upper_hsv)
-    return connected_boxes(mask, int(min_area))
+    return connected_boxes(mask, int(min_area), origin=_origin(haystack, region))
 
 
 def _hue_mask(hsv, hue: int, hue_tol: int, sat_min: int, val_min: int):
@@ -95,4 +95,4 @@ def dominant_hue_regions(haystack: Optional[ImageSource] = None, *,
     from je_auto_control.utils.cv2_utils.blobs import connected_boxes
     mask = _hue_mask(_hsv(haystack, region), int(hue), int(hue_tol),
                      int(sat_min), int(val_min))
-    return connected_boxes(mask, int(min_area))
+    return connected_boxes(mask, int(min_area), origin=_origin(haystack, region))

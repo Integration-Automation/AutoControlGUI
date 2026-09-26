@@ -193,6 +193,11 @@ class AutoClickTabMixin:
         except ValueError:
             QMessageBox.warning(self, "Warning", "Interval must be a number")
             return
+        # The validator's bottom of 1 is a hint only: "0" set a 0 ms timer,
+        # which clicked on every event-loop pass (18,579 clicks in 0.5 s).
+        if interval < 1:
+            QMessageBox.warning(self, "Warning", "Interval must be at least 1 ms")
+            return
         self.repeat_count = 0
         try:
             self.repeat_max = int(self.repeat_count_input.text())

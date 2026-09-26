@@ -12,6 +12,7 @@ from pathlib import Path
 import pytest
 
 from je_auto_control.utils.ab_locator.store import ABStore
+from je_auto_control.utils.json_store import json_store
 from je_auto_control.utils.json_store.json_store import append_json_line
 from je_auto_control.utils.quarantine import store as quarantine_store
 from je_auto_control.utils.rbac import users
@@ -37,7 +38,8 @@ def test_a_file_that_is_not_utf8_loads_empty(tmp_path, build):
 
 
 @pytest.mark.parametrize("module, save", [
-    (quarantine_store, lambda path: quarantine_store.QuarantineStore(path).add("t1")),
+    # The quarantine store writes through SharedJsonDict, i.e. json_store's writer.
+    (json_store, lambda path: quarantine_store.QuarantineStore(path).add("t1")),
     (trust_list, lambda path: trust_list.TrustList(path).add("viewer-1")),
     (fingerprint, lambda path: fingerprint.KnownHosts(path).remember("host", "ab" * 32)),
 ], ids=["quarantine", "trust-list", "known-hosts"])

@@ -9,6 +9,7 @@ from PySide6.QtWidgets import (
 )
 
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
+from je_auto_control.gui._worker_thread import CallWorker, WorkerHandle, start_worker
 from je_auto_control.gui.language_wrapper.multi_language_wrapper import (
     language_wrapper,
 )
@@ -30,6 +31,7 @@ class EmailTriggersTab(TranslatableMixin, QWidget):
     def __init__(self, parent: Optional[QWidget] = None) -> None:
         super().__init__(parent)
         self._tr_init()
+        self._poll_thread: Optional[WorkerHandle] = None
         self._host_input = QLineEdit()
         self._host_input.setPlaceholderText("imap.example.com")
         self._port_input = QSpinBox()
@@ -146,16 +148,29 @@ class EmailTriggersTab(TranslatableMixin, QWidget):
         self._refresh()
 
     def _on_poll_now(self) -> None:
-        try:
-            fired = default_email_trigger_watcher.poll_once()
-        except (OSError, RuntimeError) as error:
-            QMessageBox.warning(self, _t("eml_poll_now"), str(error))
+        # Off the GUI thread: an IMAP server that never greets froze the
+        # window for the full 30 s socket timeout.
+        if self._poll_thread is not None:
             return
-        QMessageBox.information(
-            self, _t("eml_poll_now"),
-            _t("eml_poll_done").replace("{n}", str(fired)),
-        )
+        self._poll_thread = start_worker(
+            self, CallWorker(default_email_trigger_watcher.poll_once),
+            on_done=self._on_polled, on_fail=self._on_poll_failed,
+            on_thread_done=self._on_poll_thread_done)
+
+    def _on_polled(self, fired: int) -> None:
+        # Per-trigger errors too: a timeout was reported as "Fired 0".
+        errors = [f"{trigger.trigger_id}: {trigger.last_error}"
+                  for trigger in default_email_trigger_watcher.list_triggers()
+                  if getattr(trigger, "last_error", None)]
+        text = _t("eml_poll_done").replace("{n}", str(fired))
+        QMessageBox.information(self, _t("eml_poll_now"), "\n".join([text, *errors]))
         self._refresh()
+
+    def _on_poll_failed(self, message: str) -> None:
+        QMessageBox.warning(self, _t("eml_poll_now"), message)
+
+    def _on_poll_thread_done(self) -> None:
+        self._poll_thread = None
 
     def _on_browse(self) -> None:
         path, _ = QFileDialog.getOpenFileName(

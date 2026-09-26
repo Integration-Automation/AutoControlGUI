@@ -13,6 +13,7 @@ import json
 from typing import Any, Callable, Dict, Mapping
 
 from je_auto_control.utils.exception.exceptions import AutoControlActionException
+from je_auto_control.utils.executor.flags import as_bool
 
 
 def exec_shell_to_var(executor: Any, args: Mapping[str, Any]) -> Dict[str, Any]:
@@ -26,10 +27,9 @@ def exec_shell_to_var(executor: Any, args: Mapping[str, Any]) -> Dict[str, Any]:
     which is what a console program writes on Windows) and bound under
     ``var`` (default ``shell_output``) for later ``${var}`` use.
     """
-    import locale
     import subprocess  # nosec B404 — argv list only, no shell
     from je_auto_control.utils.shell_process.shell_exec import (
-        command_args, refuse_batch_metacharacters, run_captured,
+        command_args, console_encoding, refuse_batch_metacharacters, run_captured,
     )
     command = args.get("command", args.get("shell_command"))
     if command is None or command == "" or command == []:
@@ -39,7 +39,7 @@ def exec_shell_to_var(executor: Any, args: Mapping[str, Any]) -> Dict[str, Any]:
     # As AC_shell_command does: cmd.exe re-parses a .bat's arguments, so a
     # ${var} holding "x&ver" ran a second command.
     refuse_batch_metacharacters(argv)
-    encoding = str(args.get("encoding") or locale.getpreferredencoding(False))
+    encoding = str(args.get("encoding") or console_encoding())
     timeout_s = float(args.get("timeout", 30.0))
     try:
         completed = run_captured(argv, timeout_s)
@@ -97,7 +97,7 @@ def exec_assert_var(executor: Any, args: Mapping[str, Any]) -> Dict[str, Any]:
     return assert_variable(
         executor.variables.get_value(name), op=str(args.get("op", "eq")),
         expected=args.get("value"), name=name,
-        raise_on_fail=bool(args.get("raise_on_fail", True)),
+        raise_on_fail=as_bool(args.get("raise_on_fail", True)),
     ).to_dict()
 
 
@@ -145,7 +145,7 @@ def exec_assert_db(_executor: Any,
     return assert_variable(
         value, op=str(args.get("op", "eq")), expected=args.get("expected"),
         name="AC_assert_db",
-        raise_on_fail=bool(args.get("raise_on_fail", True)),
+        raise_on_fail=as_bool(args.get("raise_on_fail", True)),
     ).to_dict()
 
 
@@ -268,5 +268,5 @@ def exec_assert_duration(executor: Any, args: Mapping[str, Any]) -> Dict[str, An
         lambda: executor.execute_action(body, _validated=True) if body else None,
         max_ms=float(args.get("max_ms", 1000.0)),
         min_ms=float(args.get("min_ms", 0.0)),
-        raise_on_fail=bool(args.get("raise_on_fail", True)),
+        raise_on_fail=as_bool(args.get("raise_on_fail", True)),
     ).to_dict()

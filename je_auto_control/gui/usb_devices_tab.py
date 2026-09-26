@@ -8,11 +8,14 @@ from PySide6.QtWidgets import (
 )
 
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
+from je_auto_control.gui._worker_thread import CallWorker, WorkerHandle, start_worker
 from je_auto_control.gui.language_wrapper.multi_language_wrapper import (
     language_wrapper,
 )
 from je_auto_control.utils.usb.usb_devices import list_usb_devices
-from je_auto_control.utils.usb.usb_watcher import default_usb_watcher
+from je_auto_control.utils.usb.usb_watcher import (
+    default_usb_watcher, hold_default_watcher, release_default_watcher,
+)
 
 
 def _t(key: str) -> str:
@@ -39,9 +42,14 @@ class UsbDevicesTab(TranslatableMixin, QWidget):
         self._timer.setInterval(2000)
         self._timer.timeout.connect(self._refresh)
         self._last_seen_seq = 0
+        # Enumerated off the GUI thread, first when the tab is shown: the
+        # PowerShell query took ~5 s and ran at start-up for a hidden tab.
+        self._list_thread: Optional[WorkerHandle] = None
+        self._listed = False
+        self._hold = _WatcherHold()
+        self.destroyed.connect(self._hold.release)
         self._build_layout()
         self._apply_table_headers()
-        self._refresh()
 
     def _build_layout(self) -> None:
         # The refresh command runs from the Actions menu; the tab keeps
@@ -64,14 +72,19 @@ class UsbDevicesTab(TranslatableMixin, QWidget):
             ("usb_refresh", self._refresh),
         ]
 
+    def showEvent(self, event) -> None:  # noqa: N802  # reason: Qt override
+        """List the devices the first time the tab is shown."""
+        super().showEvent(event)
+        if not self._listed:
+            self._refresh()
+
     def _on_auto_toggled(self, on: bool) -> None:
-        watcher = default_usb_watcher()
         if on:
-            watcher.start()
+            self._hold.take()
             self._timer.start()
         else:
             self._timer.stop()
-            watcher.stop()
+            self._hold.release()
 
     def _apply_table_headers(self) -> None:
         self._table.setHorizontalHeaderLabels([
@@ -81,7 +94,17 @@ class UsbDevicesTab(TranslatableMixin, QWidget):
         ])
 
     def _refresh(self) -> None:
-        result = list_usb_devices()
+        if self._list_thread is not None:
+            return          # one enumeration at a time; a tick during one is skipped
+        self._listed = True
+        self._list_thread = start_worker(
+            self, CallWorker(list_usb_devices), on_done=self._apply_devices,
+            on_fail=self._error_label.setText, on_thread_done=self._on_list_done)
+
+    def _on_list_done(self) -> None:
+        self._list_thread = None
+
+    def _apply_devices(self, result) -> None:
         self._backend_label.setText(result.backend)
         self._error_label.setText(result.error or "")
         self._update_event_summary()
@@ -115,6 +138,23 @@ class UsbDevicesTab(TranslatableMixin, QWidget):
         self._events_label.setText(
             _t("usb_events_recent").format(text=" / ".join(summary_parts)),
         )
+
+
+class _WatcherHold:
+    """This tab's share of the default USB watcher, given back once."""
+
+    def __init__(self) -> None:
+        self.held = False
+
+    def take(self) -> None:
+        if not self.held:
+            hold_default_watcher()
+            self.held = True
+
+    def release(self, *_args) -> None:
+        if self.held:
+            self.held = False
+            release_default_watcher(background=True)
 
 
 __all__ = ["UsbDevicesTab"]

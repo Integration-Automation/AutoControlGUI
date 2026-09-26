@@ -65,12 +65,18 @@ def test_real_loopback_listener():
     server.listen(1)
     port = server.getsockname()[1]
     accepted = []
-    threading.Thread(
-        target=lambda: accepted.append(server.accept()), daemon=True).start()
+    accepter = threading.Thread(
+        target=lambda: accepted.append(server.accept()), daemon=True)
+    accepter.start()
     try:
         outcome = wait_until_port("127.0.0.1", port, timeout_s=2.0)
         assert outcome.succeeded is True
+        # The probe's connection is in the backlog: let accept() take it
+        # before closing, or the thread raises on a closed socket.
+        accepter.join(timeout=2.0)
     finally:
+        for connection, _address in accepted:
+            connection.close()
         server.close()
 
 

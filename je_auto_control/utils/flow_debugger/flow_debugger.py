@@ -40,13 +40,23 @@ def _merge_record(record: Dict[str, Any], result: Dict[str, Any]) -> None:
             unique, number = f"{key} #{number}", number + 1
         record[unique] = value
 
+def _action_list(actions: Any) -> List[Any]:
+    """The bare action list, unwrapping ``{"auto_control": [...]}`` as the executor does.
+
+    ``list()`` on the wrapper gave ``["auto_control"]``, which failed validation.
+    """
+    if isinstance(actions, dict) and "auto_control" in actions:
+        actions = actions["auto_control"]
+    return list(actions)
+
+
 class FlowDebugger:
     """Step through an action list with breakpoints and variable inspection."""
 
     def __init__(self, actions: List[Any], *,
                  breakpoints: Optional[List[int]] = None,
                  executor: Any = None) -> None:
-        self._actions = list(actions)
+        self._actions = _action_list(actions)
         self._breakpoints = {int(b) for b in (breakpoints or ())}
         self._executor = executor
         self._index = 0
@@ -139,8 +149,9 @@ def trace_actions(actions: List[Any], *, dry_run: bool = False,
     Each entry is ``{index, command, result}``. With ``dry_run`` the
     actions are planned but not executed.
     """
+    actions = _action_list(actions)
     runner = executor or _new_executor()
-    record = runner.execute_action(list(actions), dry_run=dry_run)
+    record = runner.execute_action(actions, dry_run=dry_run)
     values = list(record.values())
     trace: List[Dict[str, Any]] = []
     for i, action in enumerate(actions):

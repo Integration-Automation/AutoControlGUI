@@ -35,7 +35,9 @@ longest first; pass ``orientation`` other than ``any`` to keep only that kind.
 ``find_grid`` clusters the horizontal rules into row coordinates and the vertical rules
 into columns, returning ``{rows, cols, cells}`` (cells are the rectangles between
 consecutive rules). ``find_separators`` returns the merged coordinates of long divider
-lines along ``axis``. A blank screen yields no lines / cells.
+lines along ``axis``. A blank screen yields no lines / cells. Lines down to
+``min_length`` are found (the Hough vote threshold follows it), and 16-bit or
+float images are read as 8-bit.
 
 Executor commands
 -----------------

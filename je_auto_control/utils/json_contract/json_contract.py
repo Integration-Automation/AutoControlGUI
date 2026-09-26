@@ -10,6 +10,7 @@ Pure standard library (``json`` + ``os``); deterministic; imports no
 ``PySide6``.
 """
 import json
+import math
 import os
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -28,9 +29,15 @@ class MatchReport:
         return {"ok": self.ok, "mismatches": list(self.mismatches)}
 
 
+def _is_nan(value: Any) -> bool:
+    return isinstance(value, float) and math.isnan(value)
+
+
 def _json_equal(left: Any, right: Any) -> bool:
     if isinstance(left, bool) or isinstance(right, bool):
         return left is right
+    if _is_nan(left) and _is_nan(right):     # NaN, which json writes and reads back
+        return True
     return left == right
 
 
@@ -68,8 +75,9 @@ def diff_json(actual: Any, expected: Any, *,
     diffs: List[Dict[str, Any]] = []
     if isinstance(expected, dict) and isinstance(actual, dict):
         _diff_dict(actual, expected, path, diffs)
-    elif isinstance(expected, list) and isinstance(actual, list):
-        _diff_list(actual, expected, path, diffs)
+    elif isinstance(expected, (list, tuple)) and isinstance(actual, (list, tuple)):
+        # A tuple is a JSON array: (1, 2) against [1, 2] reported "changed".
+        _diff_list(list(actual), list(expected), path, diffs)
     elif not _json_equal(actual, expected):
         diffs.append({"path": path, "kind": "changed", "actual": actual,
                       "expected": expected})
@@ -97,7 +105,9 @@ def _is_ignored(path: str, ignored: set) -> bool:
 def match_json(actual: Any, expected: Any, *, ignore: Iterable[str] = (),
                match_type: bool = False, partial: bool = False) -> MatchReport:
     """Match ``actual`` against ``expected`` with optional relaxed rules."""
-    ignored = set(ignore)
+    # One path as a string: set("$.ts") held "$", which every path starts
+    # with, so every difference was ignored and the contract always passed.
+    ignored = {ignore} if isinstance(ignore, str) else set(ignore)
     kept: List[Dict[str, Any]] = []
     for diff in diff_json(actual, expected):
         if _is_ignored(diff["path"], ignored):
@@ -128,6 +138,9 @@ def normalize_json(value: Any, *, drop: Iterable[str] = ()) -> Any:
 def snapshot_json(actual: Any, path: str) -> bool:
     """Golden-master: write ``actual`` if absent, else match the saved copy."""
     target = Path(os.path.realpath(path))
+    # Compared in the form the file holds: tuples, integer keys and NaN made
+    # a payload differ from its own snapshot.
+    actual = json.loads(json.dumps(actual))
     if not target.exists():
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_text(json.dumps(actual, indent=2, sort_keys=True),

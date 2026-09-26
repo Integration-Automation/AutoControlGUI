@@ -13,7 +13,7 @@ Pure-stdlib over plain box dicts (no numpy needed — a difference-array project
 fully unit-testable with no image and no OCR engine. Reuses ``table_grid_fill``'s box-bounds
 reader. Imports no ``PySide6``.
 """
-from typing import Any, Dict, List, Optional, Sequence
+from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 from je_auto_control.utils.table_grid_fill.table_grid_fill import _box_bounds
 
@@ -30,15 +30,28 @@ def _center_y(box: Box) -> int:
     return (top + bottom) // 2
 
 
+def _origin(bounds: Sequence[Tuple[int, int, int, int]]) -> int:
+    """Where the profile starts: x = 0, or the leftmost edge when a box lies left of it.
+
+    Screen coordinates are negative on a monitor left of the primary one, and
+    clamping them to 0 lost the ink or took the real gutter for a margin.
+    """
+    return min([0] + [left for left, _, _, _ in bounds])
+
+
 def vertical_projection(boxes: Sequence[Box], *,
                         page_width: Optional[int] = None) -> List[int]:
-    """Return the per-column ink-density profile (how many boxes cover each x)."""
+    """Return the per-column ink-density profile (how many boxes cover each x).
+
+    Index ``i`` is ``x = i`` -- or ``x = min_left + i`` when a box lies left of 0.
+    """
     bounds = [_box_bounds(box) for box in boxes]
-    width = int(page_width) if page_width else max((r for _, _, r, _ in bounds),
-                                                   default=0)
+    origin = _origin(bounds)
+    right_edge = int(page_width) if page_width else max((r for _, _, r, _ in bounds), default=0)
+    width = right_edge - origin
     diff = [0] * (width + 1)
     for left, _, right, _ in bounds:
-        left, right = max(0, min(width, left)), max(0, min(width, right))
+        left, right = max(0, min(width, left - origin)), max(0, min(width, right - origin))
         if right > left:
             diff[left] += 1
             diff[right] -= 1
@@ -53,6 +66,7 @@ def column_gutters(boxes: Sequence[Box], *, page_width: Optional[int] = None,
                    min_gap: int = 8) -> List[Dict[str, int]]:
     """Return the interior empty vertical bands (column separators) >= ``min_gap`` wide."""
     profile = vertical_projection(boxes, page_width=page_width)
+    origin = _origin([_box_bounds(box) for box in boxes])
     gutters: List[Dict[str, int]] = []
     start: Optional[int] = None
     for x, value in enumerate(profile):
@@ -60,7 +74,7 @@ def column_gutters(boxes: Sequence[Box], *, page_width: Optional[int] = None,
             start = x if start is None else start
             continue
         if start is not None and start > 0 and x - start >= int(min_gap):
-            gutters.append({"start": start, "end": x, "width": x - start})
+            gutters.append({"start": origin + start, "end": origin + x, "width": x - start})
         start = None
     return gutters
 

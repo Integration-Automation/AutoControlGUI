@@ -255,6 +255,54 @@ def default_usb_watcher() -> UsbHotplugWatcher:
         return _default_watcher
 
 
+_holders = 0
+_holders_started = False
+_holders_lock = threading.Lock()
+
+
+def hold_default_watcher() -> UsbHotplugWatcher:
+    """Take a share of the default watcher, starting it for the first holder.
+
+    For views that each want the watcher on while they are: the USB Devices
+    tab and the passthrough panel each called ``start()`` / ``stop()``, so
+    one turning auto-refresh off stopped the watcher under the other. The
+    last :func:`release_default_watcher` stops it only if a holder started it,
+    never a watcher the executor or REST started.
+    """
+    global _holders, _holders_started
+    watcher = default_usb_watcher()
+    with _holders_lock:
+        if _holders == 0 and not watcher.is_running:
+            watcher.start()
+            _holders_started = True
+        _holders += 1
+    return watcher
+
+
+def release_default_watcher(*, background: bool = False) -> None:
+    """Give back a share; the last one stops a watcher the holders started.
+
+    ``background`` stops it on a daemon thread: ``stop()`` waits for the
+    enumeration in flight, up to its subprocess timeout, which froze the GUI.
+    """
+    global _holders, _holders_started
+    with _holders_lock:
+        if _holders == 0:
+            return
+        _holders -= 1
+        stop = _holders == 0 and _holders_started
+        if stop:
+            _holders_started = False
+    if not stop:
+        return
+    watcher = default_usb_watcher()
+    if background:
+        threading.Thread(target=watcher.stop, name="usb-hotplug-stop", daemon=True).start()
+    else:
+        watcher.stop()
+
+
 __all__ = [
-    "UsbEvent", "UsbHotplugWatcher", "default_usb_watcher",
+    "UsbEvent", "UsbHotplugWatcher", "default_usb_watcher", "hold_default_watcher",
+    "release_default_watcher",
 ]

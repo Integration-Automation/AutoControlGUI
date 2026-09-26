@@ -118,7 +118,8 @@ class SelfHealingReplayer:
                 last_error = f"{type(error).__name__}: {error}"
             if attempts > self._max_retries:
                 break
-            healed_action = self._heal(current)
+            healed_action, heal_error = self._try_heal(current)
+            last_error = heal_error or last_error
             if healed_action is None:
                 break
             current = healed_action
@@ -127,6 +128,21 @@ class SelfHealingReplayer:
             index=idx, action=current, success=False,
             attempts=attempts, last_error=last_error, healed=healed,
         )
+
+    def _try_heal(self, action: Mapping[str, Any]
+                  ) -> Tuple[Optional[Dict[str, Any]], Optional[str]]:
+        """``_heal``, with a failure as "cannot heal" rather than an escape.
+
+        A VLM request error, or a position of NaN, escaped ``replay()`` and
+        lost every result gathered so far.
+        """
+        try:
+            return self._heal(action), None
+        except AutoControlAssertionException:
+            raise
+        except (AutoControlException, LookupError, RuntimeError, OSError,
+                ValueError, TypeError, OverflowError) as error:
+            return None, f"heal failed: {type(error).__name__}: {error}"
 
     def _heal(self,
               action: Mapping[str, Any]) -> Optional[Dict[str, Any]]:

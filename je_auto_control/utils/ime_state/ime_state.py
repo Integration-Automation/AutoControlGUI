@@ -24,7 +24,7 @@ import sys
 import time
 from typing import Any, Callable, Dict, Optional
 
-from je_auto_control.utils.timeouts import deadline_after
+from je_auto_control.utils.timeouts import clamp_poll_interval, deadline_after
 
 # IMM32 conversion-mode (IME_CMODE_*) bit flags.
 IME_CMODE_NATIVE = 0x0001
@@ -90,9 +90,12 @@ def wait_for_composition_commit(
     while True:
         if not is_composing(reader=reader):
             return True
-        if clock() >= deadline:
+        now = clock()
+        if now >= deadline:
             return False
-        sleep(float(interval_s))
+        # As lock_session does: a 10 s interval made a 1 s wait take 10 s, a
+        # negative one raised, and 0 spun on IMM32.
+        sleep(min(clamp_poll_interval(interval_s), deadline - now))
 
 
 # IMM32 composition-string flag: read the in-progress composition (GCS_COMPSTR).

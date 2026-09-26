@@ -25,7 +25,8 @@ HSV 色彩空間分割
 
 ``dominant_hue_regions`` 只限制色相(± ``hue_tol``)再加 ``sat_min`` / ``val_min`` 下限以略過灰階,為每個區塊回傳
 ``{x, y, width, height, area, center}``,由大到小——因此能在任何亮度下找到某顏色,不像 RGB 框。``segment_hsv`` 接受
-明確的 ``lower_hsv`` / ``upper_hsv`` 帶;``color_mask`` 回傳原始 uint8 遮罩。
+明確的 ``lower_hsv`` / ``upper_hsv`` 帶;``color_mask`` 回傳原始 uint8 遮罩。``region`` 是
+``[left, top, right, bottom]``(任何螢幕皆可),在其中找到的區塊是螢幕座標;傳入 ``haystack`` 時則是該影像的像素座標。
 
 執行器命令
 ----------

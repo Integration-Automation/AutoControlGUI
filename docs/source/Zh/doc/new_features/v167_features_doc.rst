@@ -33,7 +33,7 @@
 
 ``classify_effect`` 回傳 ``EffectVerdict``(``effect`` / ``changed_near_target`` /
 ``changed_count`` / ``changed_centers`` / ``reason``)。``effect_near_point`` 回答任一變化是否
-落在任意點的 ``radius`` 內;``is_no_op`` 是布林捷徑。
+落在任意點的 ``radius``(圓形)內;``is_no_op`` 是布林捷徑。
 
 執行器指令
 ----------

@@ -1,6 +1,9 @@
 """Live HUD: mouse position, pixel colour under cursor and log tail."""
 from typing import Optional
 
+import logging
+import threading
+
 from PySide6.QtCore import QTimer
 from PySide6.QtWidgets import (
     QGroupBox, QLabel, QTextEdit, QVBoxLayout, QWidget,
@@ -27,6 +30,11 @@ class LiveHUDTab(TranslatableMixin, QWidget):
         self._mouse = MouseWatcher()
         self._pixel = PixelWatcher()
         self._log_tail = LogTail(capacity=400)
+        # Records the HUD's own sampling logs on the GUI thread are dropped:
+        # at 4 ticks a second they were every line in the pane.
+        self._sampling = False
+        self._gui_thread = threading.get_ident()
+        self._log_tail.addFilter(self._not_own_sampling)
         self._pos_suffix = " --"
         self._color_suffix = " --"
         self._pos_label = QLabel()
@@ -85,15 +93,21 @@ class LiveHUDTab(TranslatableMixin, QWidget):
         self._timer.stop()
         self._log_tail.detach(autocontrol_logger)
 
+    def _not_own_sampling(self, record: logging.LogRecord) -> bool:
+        return not (self._sampling and record.thread == self._gui_thread)
+
     def _tick(self) -> None:
+        self._sampling = True
         try:
             x, y = self._mouse.sample()
+            rgb = self._pixel.sample(x, y)
         except RuntimeError as error:
             self._pos_suffix = f" {error}"
             self._apply_position_labels()
             return
+        finally:
+            self._sampling = False
         self._pos_suffix = f" ({x}, {y})"
-        rgb = self._pixel.sample(x, y)
         self._color_suffix = f" {rgb}" if rgb is not None else " n/a"
         self._apply_position_labels()
         lines = self._log_tail.snapshot()

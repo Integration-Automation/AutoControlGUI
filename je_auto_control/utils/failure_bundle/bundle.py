@@ -39,8 +39,10 @@ class FailureBundleOptions:
 
 
 def _json_bytes(value: Any) -> bytes:
-    return json.dumps(value, ensure_ascii=False, indent=2,
-                      sort_keys=True, default=repr).encode("utf-8")
+    # Redacted repr: an object the redactors cannot walk ("Conn(password=...)")
+    # was written through repr in clear text.
+    return json.dumps(value, ensure_ascii=False, indent=2, sort_keys=True,
+                      default=lambda item: redact_secret_text(repr(item))).encode("utf-8")
 
 
 def _safe_name(path: Path, used: set[str]) -> str:
@@ -135,9 +137,17 @@ def _collect_all(archive: zipfile.ZipFile, opts: FailureBundleOptions,
     _collect_attachments(archive, opts, failures)
 
 
-def _plain(event: Any) -> Any:
-    """A Mapping event as a dict, so the redaction walk (dict / list only) enters it."""
-    return dict(event) if isinstance(event, Mapping) else event
+def _plain(value: Any) -> Any:
+    """``value`` with every Mapping as a dict and every tuple or set as a list, at any depth.
+
+    The redaction walk enters dicts and lists only: a ``mappingproxy`` of
+    headers and a tuple ``AC_secret_set`` action reached the manifest unmasked.
+    """
+    if isinstance(value, Mapping):
+        return {key: _plain(item) for key, item in value.items()}
+    if isinstance(value, (list, tuple, set, frozenset)):
+        return [_plain(item) for item in value]
+    return value
 
 
 def create_failure_bundle(
@@ -164,7 +174,7 @@ def create_failure_bundle(
             "platform": platform.platform(),
             "executable": Path(sys.executable).name,
         },
-        "context": _redact(dict(context or {})),
+        "context": _redact(_plain(dict(context or {}))),
         "events": _redact([_plain(event) for event in events]),
         "collector_failures": failures,
     }

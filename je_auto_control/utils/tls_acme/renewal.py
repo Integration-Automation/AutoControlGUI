@@ -1,6 +1,7 @@
 """Auto-renewal scheduler for TLS certificates."""
 from __future__ import annotations
 
+import math
 import os
 import threading
 from datetime import datetime, timedelta, timezone
@@ -57,10 +58,19 @@ class RenewalScheduler:
         self._path = Path(os.path.expanduser(str(certificate_path)))
         self._renew = renew
         self._threshold = threshold
-        self._check_interval_s = float(check_interval_s)
+        interval = float(check_interval_s)
+        # 0, a negative or a NaN interval made stop.wait() return at once, so a
+        # failing renewal ran certbot ~20,000 times a second (Let's Encrypt
+        # rate-limits failed validations); inf raises in wait() on Windows.
+        if not (math.isfinite(interval) and interval > 0):
+            raise ValueError(f"check_interval_s must be a positive number, got {check_interval_s!r}")
+        self._check_interval_s = interval
         self._on_failure = on_failure
         self._stop = threading.Event()
         self._thread: Optional[threading.Thread] = None
+        # A run stopped while inside renew() finishes that call; a restart
+        # beside it ran a second renewal at the same time.
+        self._renew_lock = threading.Lock()
 
     @property
     def is_running(self) -> bool:
@@ -84,7 +94,15 @@ class RenewalScheduler:
             self._thread = None
 
     def tick(self) -> bool:
-        """Single iteration: returns True iff a renewal was attempted."""
+        """Single iteration: returns True iff a renewal was attempted.
+
+        Renewals never overlap, and whether one is due is decided after any
+        renewal in progress has finished.
+        """
+        with self._renew_lock:
+            return self._tick_locked()
+
+    def _tick_locked(self) -> bool:
         if not renewal_due(self._path, threshold=self._threshold):
             return False
         try:

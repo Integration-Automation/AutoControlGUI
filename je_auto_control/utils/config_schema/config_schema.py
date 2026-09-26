@@ -41,20 +41,30 @@ def _to_bool(value: Any) -> bool:
     raise ValueError(f"not a boolean: {value!r}")
 
 
+_KINDS = ("str", "int", "float", "bool")
+
+
 def coerce(value: Any, kind: str) -> Any:
-    """Coerce ``value`` to ``kind`` (``str`` / ``int`` / ``float`` / ``bool``)."""
+    """Coerce ``value`` to ``kind`` (``str`` / ``int`` / ``float`` / ``bool``).
+
+    ``ValueError`` for an unknown ``kind``, which used to return the value
+    unchecked (``"integer"`` passed ``"abc"``), and ``TypeError`` for a list,
+    dict or ``None``, which ``str`` turned into ``"[1, 2]"`` / ``"None"``.
+    """
+    if kind not in _KINDS:
+        raise ValueError(f"unknown config type {kind!r}; known: {list(_KINDS)}")
+    if value is None or isinstance(value, (list, tuple, dict, set)):
+        raise TypeError(f"not a {kind}: {value!r}")
     if kind == "int":
-        # int(2.9) is 2: a silent loss the caller never sees.
-        if isinstance(value, float) and not value.is_integer():
+        # int(2.9) is 2, and int(Decimal("2.9")) too: a silent loss.
+        if not isinstance(value, (int, str)) and not float(value).is_integer():
             raise ValueError(f"not an integer: {value!r}")
         return int(value)
     if kind == "float":
         return float(value)
     if kind == "bool":
         return _to_bool(value)
-    if kind == "str":
-        return str(value)
-    return value
+    return str(value)
 
 
 @dataclass
@@ -66,10 +76,14 @@ class ConfigSchema:
     @classmethod
     def from_dict(cls, spec: Mapping[str, Mapping[str, Any]]) -> "ConfigSchema":
         """Build a schema from a ``{name: {type, default, required, ...}}`` spec."""
+        for name, raw in spec.items():
+            if raw.get("type", "str") not in _KINDS:
+                raise ValueError(f"field {name!r}: unknown type {raw.get('type')!r}; known: {list(_KINDS)}")
         fields = {name: ConfigField(
             type=raw.get("type", "str"),
             default=raw.get("default", _MISSING),
-            required=bool(raw.get("required", False)),
+            # _to_bool: bool("false") is True, so "false" made a field required.
+            required=_to_bool(raw.get("required", False)),
             choices=raw.get("choices"),
             env=raw.get("env")) for name, raw in spec.items()}
         return cls(fields)

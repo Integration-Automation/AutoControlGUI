@@ -27,6 +27,11 @@ For example:
        ["AC_write", {"write_string": "Hello"}]
    ]
 
+An on / off parameter (``ignore_case``, ``present``, ``raise_on_fail``, ``paste`` …)
+takes a JSON ``true`` / ``false``, or a string read by its spelling: ``"true"``,
+``"yes"``, ``"on"`` and ``"1"`` are on, and any other string (``"false"``, ``"no"``,
+``"off"``, ``"0"``) is off.
+
 Available Action Commands
 =========================
 

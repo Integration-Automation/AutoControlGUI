@@ -27,7 +27,8 @@ OpenCV 核心;OpenCV + NumPy 透過 ``je_open_cv`` 引入。不匯入 ``PySide6`
 
 ``find_lines`` 為每段回傳 ``{x1, y1, x2, y2, angle, length, orientation}``,最長者優先;傳入非 ``any`` 的
 ``orientation`` 只保留該類。``find_grid`` 將水平格線分群為列座標、垂直格線分群為欄,回傳 ``{rows, cols, cells}``
-(儲存格為相鄰格線之間的矩形)。``find_separators`` 回傳沿 ``axis`` 的長分隔線合併後座標。空白畫面不產生線條 / 儲存格。
+(儲存格為相鄰格線之間的矩形)。``find_separators`` 回傳沿 ``axis`` 的長分隔線合併後座標。空白畫面不產生線條 / 儲存格。短至 ``min_length`` 的線條都找得到(Hough 投票門檻跟著它調整),16 位元或浮點影像
+以 8 位元讀取。
 
 執行器命令
 ----------

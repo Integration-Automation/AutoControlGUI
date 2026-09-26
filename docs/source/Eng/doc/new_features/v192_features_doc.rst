@@ -10,7 +10,9 @@ instead of mis-pairing everything — and classifies the differences:
 * **added** / **removed** — steps present in only one run,
 * **status_flips** — an aligned step whose status changed, with the new failure's
   :func:`failure_signature` when it carries an ``error``,
-* **timing_regressions** — an aligned step that got ``regress_factor`` x slower.
+* **timing_regressions** — an aligned step that got ``regress_factor`` x slower. A
+  step recorded at 0 s is compared as 0.1 s and reported with ``ratio`` ``None``;
+  non-finite or negative durations are not compared.
 
 A step is any dict with a name key (default ``"name"``) and optional ``status`` /
 ``duration`` / ``error``. Pure standard library; no device, no ``PySide6``.

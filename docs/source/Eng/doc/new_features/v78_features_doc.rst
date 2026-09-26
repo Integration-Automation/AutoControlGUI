@@ -26,7 +26,8 @@ Headless API
     # or convert a problem response into an exception:
     raise_for_problem(response)              # raises HttpProblemError
 
-``is_problem`` checks the ``Content-Type`` (case-insensitively).
+``is_problem`` checks that the ``Content-Type`` media type is
+``application/problem+json`` (case-insensitively, parameters ignored).
 ``parse_problem`` returns a ``ProblemDetails`` (``type`` defaulting to
 ``about:blank``, an integer ``status`` when coercible, and all non-registered
 keys collected into ``extensions``) or ``None`` when the response is not a

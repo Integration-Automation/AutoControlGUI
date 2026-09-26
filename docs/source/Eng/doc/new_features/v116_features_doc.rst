@@ -31,7 +31,9 @@ steps (``easing`` is any name from ``path_easings()`` — ``linear`` /
 ``ease_in_out_quad`` / ``ease_out_cubic`` / ``ease_in_cubic``) and does not
 duplicate the shared junction points. ``move_along_path`` emits move events
 through the path; ``drag_path`` presses at the first waypoint, moves through the
-whole path, and releases at the last — for multi-stop drags. Both take a ``sink``
+whole path, and releases at the last — for multi-stop drags. If a move fails
+partway, the button is released where the pointer stopped, so an aborted drag
+does not drop at its target. Both take a ``sink``
 override for headless testing.
 
 Executor commands

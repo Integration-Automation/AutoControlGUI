@@ -552,9 +552,9 @@ def with_modifiers(modifiers, actions):
     return _with_modifiers(modifiers, actions)
 
 
-def grid_cell(boxes, row, col, row_tolerance=10):
+def grid_cell(boxes, row, col, row_tolerance=10, box_format="xywh"):
     from je_auto_control.utils.executor.action_executor import _grid_cell
-    return _grid_cell(boxes, row, col, row_tolerance)
+    return _grid_cell(boxes, row, col, row_tolerance, box_format)
 
 
 def match_template(template, min_score=0.8, scales=None, region=None,

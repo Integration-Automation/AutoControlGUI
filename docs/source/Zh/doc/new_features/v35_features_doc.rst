@@ -26,7 +26,8 @@
         # 首次執行為 "new",輸出變更為 "mismatch";審查 .received 檔後再核可:
         approve_artifact("invoice_render", approvals_dir="tests/.approvals")
 
-``content`` 可為 ``str`` 或 ``bytes``(二進位快照請傳 ``extension="png"``)。相符的執
+``content`` 可為 ``bytes``(二進位快照請傳 ``extension="png"``)、``str``(以 UTF-8 儲存)或其他任何 JSON 值
+(以排序、縮排的 JSON 儲存)。相符的執
 行會清除任何過期的 received 檔。``pending_artifacts(dir)`` 列出仍待核准的名稱。
 ``ApprovalResult`` 帶有 ``status``(``verified`` / ``mismatch`` / ``new``)、
 ``match`` 及兩個檔案路徑。

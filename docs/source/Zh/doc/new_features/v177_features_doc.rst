@@ -30,7 +30,8 @@ LLM-as-judge 留給整合者。
 ``build_critic_record`` 回傳 ``{action, effect, delta_counts}``,並在給定規格時附上
 ``postcondition`` 報告。``score_step_rule_based`` 回傳 ``{outcome, process_score, reasons}``
 ——``outcome`` 為二元成功(動作有效果*且*任何後置條件成立),``process_score`` 為依效果類別的
-0..1 品質(後置條件失敗時減半)。``to_judge_prompt`` 把記錄渲染給外部評審。
+0..1 品質(後置條件失敗時減半)。``no_op`` / ``changed`` / ``changed_near_target`` / ``changed_elsewhere``
+以外的效果丟出 ``ValueError``。``to_judge_prompt`` 把記錄渲染給外部評審。
 
 執行器指令
 ----------

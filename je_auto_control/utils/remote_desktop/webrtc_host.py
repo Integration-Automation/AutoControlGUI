@@ -17,11 +17,11 @@ from __future__ import annotations
 import asyncio
 import json
 import threading
-from typing import TYPE_CHECKING, Any, Callable, Mapping, Optional
+from typing import TYPE_CHECKING, Any, Callable, Mapping, Optional, Tuple
 
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.remote_desktop.audit_log import default_audit_log
-from je_auto_control.utils.remote_desktop.input_dispatch import dispatch_input
+from je_auto_control.utils.remote_desktop.input_dispatch import dispatcher_at
 from je_auto_control.utils.remote_desktop.permissions import SessionPermissions
 from je_auto_control.utils.remote_desktop.rate_limit import (
     RateLimitConfig, RateLimiter,
@@ -93,7 +93,7 @@ class WebRTCDesktopHost(ViewerAuthMixin, MediaNegotiationMixin):
         self._on_state_change = on_state_change
         self._on_authenticated = on_authenticated
         self._on_pending_viewer = on_pending_viewer
-        self._dispatch = input_dispatcher or dispatch_input
+        self._dispatch = input_dispatcher or dispatcher_at(self._capture_origin)
         self._offer_consent = offer_consent or (lambda peer: True)
         self._trust_list = trust_list
         # permissions argument wins; otherwise derive from read_only shorthand
@@ -220,7 +220,7 @@ class WebRTCDesktopHost(ViewerAuthMixin, MediaNegotiationMixin):
             raise RuntimeError("call create_offer() first")
         answer = RTCSessionDescription(sdp=answer_sdp, type="answer")
         await self._pc.setRemoteDescription(answer)
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         self._auth_deadline_handle = loop.call_later(
             _AUTH_GRACE_S, self._enforce_auth_deadline,
         )
@@ -557,7 +557,9 @@ class WebRTCDesktopHost(ViewerAuthMixin, MediaNegotiationMixin):
         if self._on_annotation is None:
             return
         try:
-            self._on_annotation(dict(data))
+            # Where the frame the viewer drew on starts on screen; a value the
+            # viewer sent is overwritten.
+            self._on_annotation({**data, "screen_origin": self._capture_origin()})
         except (RuntimeError, OSError) as error:
             autocontrol_logger.debug("annotation cb: %r", error)
 
@@ -689,6 +691,10 @@ class WebRTCDesktopHost(ViewerAuthMixin, MediaNegotiationMixin):
     @property
     def permissions(self) -> SessionPermissions:
         return self._permissions
+
+    def _capture_origin(self) -> Tuple[int, int]:
+        """Where this host's own screen track starts; (0, 0) for a relayed track."""
+        return getattr(self._video_track, "capture_origin", (0, 0))
 
     def _dispatch_input_safely(self, payload: Any) -> None:
         if not isinstance(payload, dict):

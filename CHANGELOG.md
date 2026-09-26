@@ -15,6 +15,25 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Added
 
+- `message_format.MessageFormatError` (an `AutoControlException` and a
+  `ValueError`); locales other than en/fr use Babel's CLDR plural rules when
+  Babel is installed.
+- `multipart.MultipartError` (an `AutoControlException` and a `ValueError`).
+- `dotenv.DotenvError`, raised by `dump_dotenv` for a key the parser would not
+  read back.
+- `HotkeyDaemon.is_running`, `Scheduler.is_running` and
+  `TriggerEngine.is_running`: whether the engine's thread is alive.
+- `usb_watcher.hold_default_watcher()` / `release_default_watcher()`: share
+  the default USB hotplug watcher by count.
+- `rate_limit.named_bucket(name, rate, capacity)`, the named token buckets
+  `AC_rate_limit` and `ac_rate_limit` share.
+- `box_format` (`"xywh"` / `"ltrb"`) on `cluster_grid`, `locate_cell`,
+  `AC_grid_cell` and `ac_grid_cell`, so `locate_all_image` boxes address cells.
+- `repair_store(db=None)`: the repair store in `db`, or the one the process
+  shares.
+- `HistoryStore.list_runs(statuses=...)` and `FINISHED_STATUSES`.
+- `element_box()` (`utils.accessibility.element`): an element's
+  `(left, top, width, height)` from `bbox`, `bounds` or `x/y/width/height`.
 - The MCP server speaks the stateless protocol revision 2026-07-28 over
   stdio and HTTP, per request, beside the `initialize`-based ones: `server/discover`,
   `resultType` and caching hints on results, the `-32020`–`-32022` error
@@ -84,6 +103,53 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Changed
 
+- `format_message` raises `MessageFormatError` for patterns ICU rejects
+  (unterminated argument, selector without `{...}`, no `other`, duplicate
+  selector, late `offset:`), and an unsupported locale raises instead of
+  getting English rules.
+- `occurrences(count=, until=)` narrows the rule's own COUNT / UNTIL instead of
+  replacing it, and `parse_rrule` refuses `BYMONTHDAY` with `WEEKLY`, a numbered
+  `BYDAY` with `DAILY` / `WEEKLY`, and an unknown `WKST` (RFC 5545 3.3.10).
+- `decode_jwt` / `AC_jwt_decode` refuse a token that carries `aud` unless the
+  policy's `audience` names one of its values (RFC 7519 4.1.3); pass the
+  audience to keep accepting such tokens.
+- The JSON document MCP tools accept a root array as well as an object.
+- Malformed JSON-RPC envelopes are answered `-32600`; `"id": null` is a
+  request, answered with `"id": null`.
+- `evaluate_trajectory` raises `ValueError` for a rubric that is not an
+  object or has unknown keys; `scale_sweep` / `detect_scale` reject
+  non-finite or non-positive scales; `rbac.UserRecord` is frozen.
+- `match_subpixel` reports `cx` / `cy` as the pixel-index centre plus the
+  fitted offset (half a pixel less than before).
+- `RetryBudget` validates `jitter` (case-insensitive), `base_delay_s` and
+  `max_delay_s`; `AC_plan_retry_delays` accepts at most 10,000 attempts.
+- Asset types refuse values they cannot hold (`3.7` or `True` as an `int`,
+  `"enabled"` as a `bool`); element locators refuse blank filters.
+- Skills nested deeper than 50 fail the outermost `AC_skill_run`.
+- `is_interactive_role` and `flatten_tree` recognise AT-SPI, macOS AX and ARIA
+  role names as well as UIA; `tab_order` leaves out disabled controls.
+- `effect_near_point` / `classify_effect` measure `radius` as a circle.
+- `diff_rows` / `cell_changes` raise `ValueError` for an empty key or a row
+  without a key column; `score_step_rule_based` raises for an unknown effect;
+  `verify_totp` raises `TOTPError` for a negative window.
+- `RenewalScheduler` rejects a `check_interval_s` that is not finite and
+  positive; `build_timeline` / `critical_steps` reject NaN, infinite and
+  negative durations; `verify_artifact` stores non-text values as JSON.
+- `find_color_regions`, `segment_hsv` and `dominant_hue_regions` return
+  screen coordinates for blobs found in a grabbed `region` (they were
+  relative to the region's corner); a supplied `haystack` keeps its pixels.
+- `psi` / `ks_two_sample` / `detect_drift` raise `ValueError` for NaN.
+- `profile_rows` reports `mixed` for a column with no single type, and
+  `infer_schema` gives it no `type` rule; int columns have exact bounds.
+- `diff_runs` compares a 0 s step as 0.1 s (`ratio` `None`) and skips
+  non-finite durations.
+- `find_repeated_sequences` / `mine_action_log` and `Baggage` refuse empty
+  lengths, counts and keys with `ValueError`.
+- `validate_config` / `ConfigSchema.from_dict` raise `ValueError` for an
+  unknown field type, and a `str` field rejects `None` and containers.
+- Search terms: runs of kana, CJK ideographs and Hangul are indexed as
+  character bigrams, so a word is found inside a sentence. `mode="tfidf"`
+  uses a smoothed IDF, so a term in every document still matches.
 - An MCP HTTP request whose `MCP-Protocol-Version` header names an
   unsupported version is still a 400, now with a JSON-RPC
   `UnsupportedProtocolVersion` (`-32022`) body listing the supported
@@ -323,6 +389,18 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Security
 
+- `ac_egress_reset` and `ac_approve_artifact` are destructive, so the
+  confirmation gate asks before loosening egress or overwriting an approved
+  baseline.
+- The rbac user store saves a change before applying it, so a refused or
+  failed save no longer takes effect in memory, and it hands out copies of
+  its records.
+- Failure bundles mask secrets inside nested mappings, tuple actions and
+  objects serialised through `repr`.
+- `AC_resolve_ref` / `AC_resolve_refs` and the MCP tools `ac_resolve_ref` /
+  `ac_resolve_refs` refuse `secret://` references: the resolved secret was
+  returned into executor records and MCP results. Use `${secrets.NAME}` in
+  the step that needs the value, or `resolve_ref` from Python.
 - The egress policy matches hosts by their IDNA encoding, so soft
   hyphens, fullwidth characters and ideographic full stops no longer
   slip past a deny list.
@@ -427,6 +505,165 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Fixed
 
+- French `selectordinal` follows CLDR (`21e`, not `21er`), `fr_FR` / `fr-CA`
+  use the French rules, and `=1.0` matches 1.
+- `attributes_to_otlp` / `spans_to_otlp` write a `bytes` attribute as OTLP
+  `bytesValue` (base64), and `is_problem` / `parse_problem` match the
+  `application/problem+json` media type exactly instead of as a substring.
+- RRULE: a yearly `BYDAY` ordinal counts within the year when `BYMONTHDAY` is
+  present and `BYMONTH` is not, DTSTART with microseconds stays the first
+  occurrence, DAILY applies `BYSETPOS`, long intervals and large counts are no
+  longer cut short, and year 9999, a malformed `UNTIL` or a naive `now` no
+  longer raise builtin errors.
+- `GettextCatalog.compile_mo` / `to_mo_bytes` leave untranslated entries out
+  of the `.mo`, as `msgfmt` does, so readers fall back to the `msgid` instead
+  of showing an empty string.
+- `build_multipart` refuses a boundary RFC 2046 does not allow or that a part
+  contains (a field value could inject a part), redraws a generated one, and
+  `parse_multipart` reads only the `boundary` parameter.
+- `SSEParser.feed` no longer re-splits the whole partial line on every chunk:
+  a 2 MB `data` line in 1 KB chunks took 10.75 s and now takes 0.02 s.
+- `parse_dotenv` keeps a value that starts with `#` (`COLOR=#ff0000`), keeps
+  the trailing whitespace of a multi-line quoted value's lines, skips a leading
+  BOM, and parses an unclosed quote in linear time (20k lines took 190 s).
+- W3C trace context: a tracestate value keeps its leading spaces, a member that
+  breaks the value grammar (including a CR LF) is discarded on parse and refused
+  on format, a 16k-member header parses in linear time, `format_traceparent`
+  validates a hand-built context, and `child_context` clears unknown flag bits.
+- `parse_link_header` / `next_url` follow RFC 8288 Appendix B: a `<` in an
+  unquoted parameter value no longer swallows the next link, a valueless
+  parameter is kept as `""`, and relations split on space and tab only.
+- `CookieJar`: `Expires` follows the RFC 6265 5.1.1 date algorithm (an
+  out-of-range year no longer raises `OverflowError`), the last valid `Max-Age`
+  or `Expires` decides, `Max-Age` takes ASCII digits only, and a `Set-Cookie`
+  with a control character is ignored instead of reaching the `Cookie` header.
+- `normalize_url` / `canonicalize_url` resolve a percent-encoded `..`, never
+  turn a path that begins with `//` into a host, normalise the query before
+  sorting it, and keep an empty `?` or `#` (RFC 3986 6.2.2, 3.3, 6.2.3).
+- JWT: an empty or non-string key raises `JwtError` instead of signing and
+  verifying (or raising `TypeError`), and non-JSON claims such as a `datetime`
+  or `NaN` raise `JwtError`.
+- `is_fresh` counts the `Age` header `store_validators` now records (RFC 9111
+  4.2.3), a repeated `Cache-Control` directive keeps its first value, and
+  `is_not_modified` answers `False` for a non-numeric status.
+- `json_query`: a surrogate pair written as two `\u` escapes finds its key;
+  `[01]`, `[-0]`, an index past 2**53-1, a bald `..`, an unpaired surrogate and a
+  raw control character in a quoted name raise `ValueError` (RFC 9535).
+- JSON Schema `pattern` / `patternProperties` match as ECMA-262 does: `$` no
+  longer matches before a trailing newline, `\d` / `\w` / `\b` are ASCII, and
+  `\p{...}`, `\cX`, `\u{...}`, `[]` / `[^]` and named groups are understood.
+  `multipleOf` no longer raises `OverflowError` past float range.
+- The VLM tab no longer freezes the window while the model answers, and the
+  Hotkeys, Scheduler and Triggers tabs show an engine started from Tools > Start
+  or a script as running.
+- The USB Devices tab and the passthrough panel no longer run a ~5 s device
+  enumeration on the GUI thread, and one no longer stops the other's hotplug
+  watcher; email Poll now and Admin broadcast no longer freeze the window.
+- Every MCP `tools/call` is answered with `isError: true` whatever the
+  tool raises; a plain HTTP POST answers in its body even on a concurrent
+  server; an unwritable audit log no longer fails a tool that ran.
+- Auto-click refuses an interval below 1 ms; the Assertions, Data Source,
+  LLM Planner, Self-Healing, Media Checks, Trace Replay and Variables tabs
+  show framework and decode errors instead of leaking them; a recording that
+  did not start is reported; template crops write into non-ASCII folders;
+  the Live HUD no longer logs its own sampling; the View > Tabs menu no
+  longer leaks on every rebuild.
+- `VariableScope.update_many` sets nothing when any name is invalid.
+- Sub-pixel and scale matching accept 16-bit and float images and contain
+  OpenCV errors; one unscorable scale no longer aborts a sweep.
+- An aborted `drag_path` releases where the pointer stopped; a `click` step
+  without a point clicks in place instead of at (0, 0).
+- `AC_rate_limit` takes a changed rate or capacity for a reused name.
+- `wait_until_app_idle` never sleeps past its timeout or spins.
+- Reading an in-memory store while another thread writes it no longer
+  raises; hand-written skill tags given as a string stay one tag.
+- `ac_run_saga` reports `compensation_errors`.
+- `fuse_elements`, `observation_index` and `classify_effect` read elements
+  with `bounds` or without a size; unchanged zero-area elements are no
+  longer reported as changes.
+- `image_quality` and `motion_regions` measure 16-bit and float frames in
+  8 bits and contain OpenCV errors.
+- `client_point` / `get_client_rect` return `None` for a minimized window;
+  `wait_for_focus_change` refuses a NaN timeout.
+- Every `AC_*` flag parameter reads a string by its spelling: `"false"`,
+  `"no"`, `"off"` and `"0"` are off. 85 adapters and two flow commands
+  took any non-empty string as on.
+- `set_field_text` clears with Backspace on macOS; `deep_merge` no longer
+  shares nested values with its inputs; co-failure clustering keeps a
+  one-name run whole; TOTP time errors are `TOTPError`.
+- `AC_repair_*` commands and MCP tools without `db` see each other's
+  suggestions.
+- Quarantine stores sharing a file no longer overwrite each other's names.
+- ACME renewals never overlap after a restart; force mode accepts NumPy
+  bboxes; a plugin that fails to import is reported, not raised.
+- Test selection, sharding and flakiness read finished runs, so runs
+  killed mid-flight no longer hide a flow's history.
+- `find_lines` finds lines shorter than 50 px and reads 16-bit images;
+  `annotate_screenshot` keeps 16-bit and float tones; profiles survive huge
+  values; `True` and `1` are distinct values.
+- On a Retina Mac, `[left, top, right, bottom]` region captures (colour,
+  HSV, histogram, SSIM, contrast, colour waits, QR, VLM) are taken in points,
+  so region results line up with the mouse instead of doubling.
+- Script Builder `region` hints name the convention each command reads:
+  `[x, y, width, height]` for the matchers, OCR and most vision commands,
+  `[left, top, right, bottom]` for the colour, histogram, SSIM and QR
+  commands. Most said left, top, right, bottom whatever the command read.
+- On Windows, `[left, top, right, bottom]` regions on a monitor other than
+  the primary one were captured black by the colour, HSV, histogram, SSIM,
+  contrast, preprocess, colour-wait, QR, colour-stats, VLM and MCP screenshot
+  paths. They capture every monitor through the new
+  `cv2_utils.region_capture.grab_screen_region`.
+- `AC_wait_actionable` samples stability on the monitor where the target was
+  matched, instead of reading a target off the primary monitor as stable.
+- `match_color` / `match_color_all` return screen coordinates for a region
+  search, score only a template's coloured pixels, and cap their candidates.
+- Mark labels stay beside marks at negative coordinates and inside bounds
+  when crowded.
+- `snapshot_json` matches its own payload; `match_json` takes one ignored
+  path as a string.
+- Action lists nested in `AC_circuit_call`, `AC_with_modifiers`,
+  `AC_bulkhead_run` and similar commands run on the executor running the
+  outer list, so `run_on_devices` keeps each device's variables.
+- Dark-theme widgets classify correctly in `classify_icon`; `ß` collates as
+  `ss`; checksums accept whole floats and numbers past 4,300 digits;
+  `wait_for_composition_commit` never sleeps past its timeout; a unique
+  `ccorr_normed` match is no longer reported ambiguous; OCR text satisfies
+  `text_present`; `flow_order` reads `bbox`, `bounds` and match objects.
+- Set-of-marks numbers OCR boxes, and grounding consensus votes by each
+  element's real geometry; consensus refuses non-finite points.
+- Borderless tables are found left of x = 0 (monitors left of the primary).
+- The recording editors leave `${var}` sleeps alone; the flow debugger takes
+  an `{"auto_control": [...]}` file; a compliance framework can be passed
+  as one string.
+- Python 3.15 turns UTF-8 mode on by default. `AC_shell_to_var`, the MCP
+  `shell_command` tool, `ShellManager` and the remote host's `status` still
+  decode a Windows console program's output in its code page there,
+  instead of as UTF-8: `sc query` raised, and the others returned
+  replacement characters. The SBOM skips a distribution that has no
+  metadata instead of failing on 3.15, or listing it as `unknown` before.
+- WebRTC host annotations are drawn at the viewer's position on the
+  captured screen, including other monitors and scaled displays.
+- Remote desktop hosts map viewer input and the broadcast cursor through
+  the captured frame's origin, so clicks land correctly on a second monitor,
+  a capture region, or a virtual desktop that extends above or left of the
+  primary screen. `dispatch_input` takes an optional `origin`.
+- Perceptual diff contains OpenCV errors and checks its budget unrounded.
+- `find_text_regions` / `find_text_lines` return screen coordinates for a
+  region search; `match_rotated_all` returns every match, not one per pose.
+- Actionability treats a falsy enabled probe as disabled, accepts NumPy
+  stability tokens, and can pass with no stability wait.
+- The generated project's keyword example validates and runs.
+- Grid fill counts a spanning box once, at its anchor cell, and reads
+  Tesseract's box shape.
+- Semantic replay keeps the recorded point for an unnamed or off-screen
+  anchor, and recording anchors on the clicked control, not its window.
+- A failed self-healing lookup is a failed step instead of aborting replay.
+- Video motion checks clip their region and stream frames; preprocessing
+  handles 16-bit, single-channel and float images; OpenCV errors in both are
+  recorded as step failures.
+- HTML report generation is linear in the number of records.
+- D-Bus socket addresses are unescaped, and unmarshallable values raise
+  `DBusError`.
 - The Flow Editor opens action files saved with a BOM, keeps a wrapped
   file's other keys on save, and writes atomically.
 - The region selector (template cropping, OCR / screenshot / WebRTC regions)

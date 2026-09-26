@@ -43,3 +43,7 @@ Executor commands
 ``AC_resolve_refs`` resolves every reference inside ``obj`` and returns
 ``{resolved}``. Both are exposed as MCP tools (``ac_resolve_ref`` /
 ``ac_resolve_refs``) and as Script Builder commands under **Security**.
+Their results are recorded (the executor record, the MCP result), so they
+refuse ``secret://`` with ``SecretRefError``: secret values never enter those
+records. Reference ``${secrets.NAME}`` in the step that needs the value, or call
+``resolve_ref`` from Python.

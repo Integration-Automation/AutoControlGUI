@@ -36,7 +36,9 @@ Types are ``text`` / ``int`` / ``bool`` / ``credential``; ``get`` coerces to the
 declared type and falls back to the ``default`` environment unless disabled.
 ``active_environment()`` reads ``JE_AUTOCONTROL_ENV``. ``list`` / ``delete`` round
 out the store. ``set`` refuses an unknown type and a value the type cannot read
-(``"eighty"`` as an ``int``) at write time.
+(``"eighty"`` as an ``int``) at write time. An ``int`` takes whole numbers only (not
+``3.7`` or ``True``), and a ``bool`` string must be one of true / false / yes / no /
+on / off / 1 / 0.
 
 Executor commands
 -----------------

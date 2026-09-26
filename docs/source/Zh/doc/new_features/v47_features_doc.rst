@@ -31,6 +31,7 @@ AutoControl 一直錄製豐富的動作日誌卻從未分析;``mine_action_log``
 ----------
 
 ``AC_mine_actions`` 接受 ``actions``(清單,或視覺化建構器傳入的 JSON 字串清單)以及
-``min_len`` / ``max_len`` / ``min_count``,並回傳 ``{total_actions, patterns,
+``min_len`` / ``max_len`` / ``min_count``(``min_len`` 與 ``min_count`` 至少為 1,``max_len`` 不小於
+``min_len``,否則丟出 ``ValueError``),並回傳 ``{total_actions, patterns,
 candidates}``。相同操作亦提供為 MCP 工具 ``ac_mine_actions``,以及 Script Builder 中
 **Report** 分類下的指令。

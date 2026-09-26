@@ -17,6 +17,7 @@ from je_auto_control.gui.language_wrapper.multi_language_wrapper import (
     language_wrapper,
 )
 from je_auto_control.utils.data_source import data_source_kinds, load_rows
+from je_auto_control.utils.exception.exceptions import AutoControlException
 
 
 def _t(key: str) -> str:
@@ -113,7 +114,7 @@ class DataSourceTab(TranslatableMixin, QWidget):
         try:
             limit = self._limit.value() or None
             rows = load_rows(self._build_source(), limit=limit)
-        except (ValueError, OSError, RuntimeError) as error:
+        except (AutoControlException, ValueError, OSError, RuntimeError) as error:
             self._status.setText(_t("ds_error").replace("{error}", str(error)))
             return
         self._render_rows(rows)

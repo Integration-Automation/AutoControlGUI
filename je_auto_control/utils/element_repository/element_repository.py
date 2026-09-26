@@ -31,15 +31,20 @@ class ElementRepository:
 
     @property
     def _items(self) -> Dict[str, Dict[str, str]]:
-        return {str(key): dict(value) for key, value in self._state.read().items()}
+        # A hand-edited entry that is not an object ("cancel": "Cancel") made
+        # every read raise; it is skipped.
+        return {str(key): dict(value) for key, value in self._state.read().items()
+                if isinstance(value, dict)}
 
     def save(self, key: str, *, name: Optional[str] = None,
              role: Optional[str] = None,
              app_name: Optional[str] = None) -> Dict[str, str]:
         """Store a locator under ``key``; needs at least one filter."""
+        # Blank values filter nothing: name="" found the first unnamed element,
+        # the desktop, and click() would have clicked it.
         locator = {field: value for field, value in
                    (("name", name), ("role", role), ("app_name", app_name))
-                   if value is not None}
+                   if value is not None and str(value).strip()}
         if not locator:
             raise ValueError("a locator needs at least one of name/role/"
                              "app_name")

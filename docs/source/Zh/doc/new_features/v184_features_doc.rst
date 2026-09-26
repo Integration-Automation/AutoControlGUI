@@ -33,7 +33,9 @@
     focus_control(name="Username", role="edit")   # 把游標放進該欄位
 
 可聚焦性以角色判定(互動角色:Button、Edit、CheckBox、ComboBox、RadioButton、Hyperlink、
-ListItem、MenuItem、Slider、Tab/TabItem、TreeItem……)。``focus_control`` 與其他原生控制
+ListItem、MenuItem、Slider、Tab/TabItem、TreeItem……),各平台的寫法都認得:UIA(``CheckBox``,或原始的
+``ControlType_50002``)、AT-SPI(``push button``)、macOS AX(``AXTextField``)與 ARIA(``textbox``)。停用的控制項
+不列入 Tab 順序,因為 ``Tab`` 會跳過它。``focus_control`` 與其他原生控制
 動作一樣以 ``name`` / ``role`` / ``app_name`` / ``automation_id`` 定位,回傳 ``bool``。
 
 執行器指令

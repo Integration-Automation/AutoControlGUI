@@ -31,11 +31,12 @@ ImageSource = Union[str, Path, bytes, "Image.Image"]
 def _load_image(source: ImageSource) -> "Image.Image":
     """Load ``source`` (path / bytes / PIL image) as an RGBA image."""
     from PIL import Image
+    from je_auto_control.utils.preprocess.preprocess import _eight_bit
     if isinstance(source, Image.Image):
-        return source.convert("RGBA")
+        return _eight_bit(source).convert("RGBA")
     opened = Image.open(io.BytesIO(source) if isinstance(source, bytes) else str(source))
     with opened:  # multi-frame files stay open until closed
-        return opened.convert("RGBA")
+        return _eight_bit(opened).convert("RGBA")
 
 
 def _color(value: Optional[Sequence[int]],

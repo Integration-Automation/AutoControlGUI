@@ -24,7 +24,7 @@ RFC 9457 Problem Details 解析
     # 或把 problem 回應轉成例外:
     raise_for_problem(response)              # 拋出 HttpProblemError
 
-``is_problem`` 檢查 ``Content-Type``(不分大小寫)。``parse_problem`` 回傳 ``ProblemDetails``
+``is_problem`` 檢查 ``Content-Type`` 的媒體類型是否為 ``application/problem+json``(不分大小寫，忽略參數)。``parse_problem`` 回傳 ``ProblemDetails``
 (``type`` 預設 ``about:blank``,可轉換時 ``status`` 為整數,所有非註冊鍵收進 ``extensions``),
 回應非 problem 文件時回傳 ``None``;當 ``json`` 缺席時會回退去解析 ``text``。``ProblemDetails.summary``
 給出一行描述,``to_dict`` 把文件攤平並併回擴充欄位。``raise_for_problem`` 對 problem 回應拋出

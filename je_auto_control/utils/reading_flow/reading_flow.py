@@ -9,19 +9,39 @@ order with recursive XY-cut: it repeatedly splits the boxes at the widest whites
 order; the public flattener is named ``flow_order`` to sit beside (not shadow)
 ``reading_order``.
 
-Pure-stdlib geometry over plain box dicts (no image, no OCR engine); reuses ``table_grid_fill``'s
-box-bounds reader. Imports no ``PySide6``.
+Pure-stdlib geometry over plain boxes (no image, no OCR engine); reads each
+box through ``accessibility.element_box``, so dicts and match objects both work. Imports no ``PySide6``.
 """
+import dataclasses
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
-from je_auto_control.utils.table_grid_fill.table_grid_fill import _box_bounds
+from je_auto_control.utils.accessibility.element import element_box
 
 Box = Dict[str, Any]
 
 
 def _axis_bounds(box: Box, axis: str) -> Tuple[int, int]:
-    left, top, right, bottom = _box_bounds(box)
-    return (left, right) if axis == "x" else (top, bottom)
+    # element_box: {bbox}, {bounds} and OCR match objects raised ValueError or
+    # AttributeError here.
+    found = element_box(box)
+    if found is None:
+        raise ValueError(f"element has no bbox, bounds or x/y/width/height: {box!r}")
+    left, top, width, height = found
+    return (left, left + width) if axis == "x" else (top, top + height)
+
+
+def _as_mapping(box: Any) -> Dict[str, Any]:
+    """A dict view of a box: an OCR match or other object becomes its fields."""
+    if isinstance(box, dict):
+        return box
+    if dataclasses.is_dataclass(box) and not isinstance(box, type):
+        return dataclasses.asdict(box)
+    return dict(vars(box))
+
+
+def _reading_key(box: Box) -> Tuple[int, int]:
+    """Top, then left: the order boxes are read in within one block."""
+    return _axis_bounds(box, "y")[0], _axis_bounds(box, "x")[0]
 
 
 def _center_on(box: Box, axis: str) -> float:
@@ -112,7 +132,7 @@ def xy_cut(boxes: Sequence[Box], *, min_gap: int = 12,
 def _flatten(tree: Dict[str, Any]) -> List[Box]:
     if tree["type"] == "leaf":
         return sorted(tree["boxes"],
-                      key=lambda b: (_box_bounds(b)[1], _box_bounds(b)[0]))
+                      key=_reading_key)
     flat: List[Box] = []
     for child in tree["children"]:
         flat.extend(_flatten(child))
@@ -123,7 +143,7 @@ def flow_order(boxes: Sequence[Box], *, min_gap: int = 12,
                max_depth: int = 8) -> List[Box]:
     """Return ``boxes`` in column-aware reading order, each tagged with an ``index``."""
     flat = _flatten(xy_cut(boxes, min_gap=min_gap, max_depth=max_depth))
-    return [dict(box, index=i) for i, box in enumerate(flat)]
+    return [dict(_as_mapping(box), index=i) for i, box in enumerate(flat)]
 
 
 def to_blocks(tree: Dict[str, Any]) -> List[List[Box]]:
@@ -132,7 +152,7 @@ def to_blocks(tree: Dict[str, Any]) -> List[List[Box]]:
         if not tree["boxes"]:
             return []
         return [sorted(tree["boxes"],
-                       key=lambda b: (_box_bounds(b)[1], _box_bounds(b)[0]))]
+                       key=_reading_key)]
     blocks: List[List[Box]] = []
     for child in tree["children"]:
         blocks.extend(to_blocks(child))

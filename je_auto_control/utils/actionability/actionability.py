@@ -55,7 +55,9 @@ class ActionabilityReport:
 
 
 def _center(bbox: Bbox) -> List[int]:
-    return [bbox[0] + bbox[2] // 2, bbox[1] + bbox[3] // 2]
+    """Plain ints: NumPy coordinates gave ``np.int64`` points ``json.dumps`` rejects."""
+    left, top, width, height = (int(value) for value in bbox[:4])
+    return [left + width // 2, top + height // 2]
 
 
 def _reason(visible: bool, stable: bool, enabled: bool, receives: bool) -> str:
@@ -84,13 +86,37 @@ class _StabilityTracker:
             self._since = None
             self._prev = object()
             return False
-        token = (bbox, self._sampler(bbox) if self._sampler else None)
+        token = _frozen((bbox, self._sampler(bbox) if self._sampler else None))
         since = self._since
         if token != self._prev or since is None:
             self._prev = token
             self._since = now
-            return False
+            # No stability required: one sample is enough, so a zero timeout
+            # can succeed.
+            return self._stable_for_s <= 0
         return (now - since) >= self._stable_for_s
+
+
+def _frozen(value: Any) -> Any:
+    """``value`` with arrays turned into comparable tuples.
+
+    A NumPy pixel sample (or bbox) in the token raised "truth value of an
+    array is ambiguous" on the second poll.
+    """
+    if hasattr(value, "tobytes") and hasattr(value, "shape"):
+        return ("array", tuple(value.shape), str(value.dtype), value.tobytes())
+    if isinstance(value, (list, tuple)):
+        return tuple(_frozen(item) for item in value)
+    return value
+
+
+def _probe_says_enabled(answer: Any) -> bool:
+    """``None`` is "unknown", so enabled; anything else by its truth value.
+
+    ``is not False`` read NumPy's ``False_`` and a Win32 0 as enabled, and a
+    greyed-out control was clicked.
+    """
+    return answer is None or bool(answer)
 
 
 def _evaluate(bbox, tracker, now, enabled_probe, hit_tester):
@@ -98,8 +124,7 @@ def _evaluate(bbox, tracker, now, enabled_probe, hit_tester):
     # A zero-size box (a collapsed or hidden element) is not visible.
     visible = bbox is not None and len(bbox) >= 4 and bbox[2] > 0 and bbox[3] > 0
     stable = tracker.update(bbox, now)
-    # The probe is Optional[bool]: None means "unknown", not "disabled".
-    enabled = enabled_probe is None or enabled_probe() is not False
+    enabled = enabled_probe is None or _probe_says_enabled(enabled_probe())
     point = _center(bbox) if visible else None
     receives = hit_tester is None or point is None or bool(hit_tester(point))
     return visible, stable, enabled, receives, point

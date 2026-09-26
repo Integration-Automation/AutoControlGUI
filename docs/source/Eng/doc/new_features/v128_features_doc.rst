@@ -30,7 +30,10 @@ Headless API
 ``find_color_regions`` returns ``{x, y, width, height, area, center}`` for each
 blob within ``tolerance`` (per channel) of ``rgb`` and at least ``min_area``
 pixels, largest first; ``find_color_region`` returns just the largest (or
-``None``). ``haystack`` defaults to a screen grab of the optional ``region``.
+``None``). ``haystack`` defaults to a screen grab of the optional ``region``,
+``[left, top, right, bottom]`` on any monitor. Blobs found in a grabbed region
+are in screen coordinates, so ``center`` can be clicked as it is; blobs in a
+supplied ``haystack`` are in that image's pixels.
 
 Executor commands
 -----------------

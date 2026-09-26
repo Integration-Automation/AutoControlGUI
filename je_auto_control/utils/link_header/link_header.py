@@ -11,12 +11,12 @@ without a live server.
 """
 import re
 from dataclasses import dataclass, field
-from typing import Any, Callable, Dict, List, Mapping, Optional, Union
+from typing import Any, Callable, Dict, List, Mapping, Optional, Tuple, Union
 from urllib.parse import urljoin
 
-from je_auto_control.utils.http_conditional.http_conditional import split_outside_quotes
-
-_LINK_VALUE = re.compile(r"\s*<([^>]*)>(.*)", re.DOTALL)
+_OWS = " \t"
+_RWS = re.compile(r"[ \t]+")
+_NAME_END = frozenset(" \t=;,")
 
 Links = Union[str, List["Link"]]
 Fetch = Callable[[str], Mapping[str, Any]]
@@ -35,65 +35,91 @@ class Link:
         return {"uri": self.uri, "rel": self.rel, "params": dict(self.params)}
 
 
-_QUOTED_PAIR = re.compile(r"\\(.)")
+def _skip_ows(text: str, index: int) -> int:
+    while index < len(text) and text[index] in _OWS:
+        index += 1
+    return index
 
 
-def _strip_quotes(value: str) -> str:
-    """Unquote a quoted-string, resolving its quoted-pairs (RFC 9110 5.6.4)."""
-    if len(value) >= 2 and value[0] == '"' and value[-1] == '"':
-        return _QUOTED_PAIR.sub(r"\1", value[1:-1])
-    return value
+def _quoted_string(text: str, index: int) -> Tuple[str, int]:
+    """RFC 8288 B.4 from the ``"`` at ``index``: the unquoted value and the index after it."""
+    out: List[str] = []
+    index += 1
+    while index < len(text):
+        char = text[index]
+        if char == '"':
+            return "".join(out), index + 1
+        if char == "\\":
+            index += 1
+            if index >= len(text):
+                break
+            char = text[index]
+        out.append(char)
+        index += 1
+    return "".join(out), index
 
 
-def _parse_params(chunk: Optional[str]) -> Dict[str, str]:
+def _parameter_value(text: str, index: int) -> Tuple[str, int]:
+    """B.3 step 7: a quoted string, or everything up to the next ``;`` or ``,``."""
+    if text.startswith('"', index):
+        return _quoted_string(text, index)
+    end = index
+    while end < len(text) and text[end] not in ";,":
+        end += 1
+    return text[index:end].rstrip(_OWS), end
+
+
+def _parse_parameters(text: str, index: int) -> Tuple[List[Tuple[str, str]], int]:
+    """RFC 8288 B.3: the ``(name, value)`` pairs after a ``<target>``; a valueless one is ``""``."""
+    params: List[Tuple[str, str]] = []
+    while True:
+        index = _skip_ows(text, index)
+        if not text.startswith(";", index):
+            return params, index
+        start = end = _skip_ows(text, index + 1)
+        while end < len(text) and text[end] not in _NAME_END:
+            end += 1
+        index = _skip_ows(text, end)
+        value = ""
+        if text.startswith("=", index):
+            value, index = _parameter_value(text, _skip_ows(text, index + 1))
+        params.append((text[start:end].lower(), value))
+
+
+def _first_of_each(pairs: List[Tuple[str, str]]) -> Dict[str, str]:
+    """RFC 8288 3.3: occurrences of a parameter after the first are ignored."""
     params: Dict[str, str] = {}
-    # Quote-aware: a semicolon inside a quoted value stays in that value.
-    for part in split_outside_quotes(chunk or "", ";"):
-        cleaned = part.strip().rstrip(",").strip()
-        if not cleaned:
-            continue
-        key, sep, value = cleaned.partition("=")
-        key = key.strip().lower()
-        # RFC 8288 3.3: occurrences after the first are ignored -- the last
-        # used to win, so rel="next"; rel="prev" lost its next link.
-        if key and sep and key not in params:
-            params[key] = _strip_quotes(value.strip().rstrip(",").strip())
+    for name, value in pairs:
+        if name and name not in params:
+            params[name] = value
     return params
 
 
-# A quoted string or a <URI> is one token, so the commas inside them do not
-# separate links.
-_LINK_TOKEN = re.compile(r'"(?:[^"\\]|\\.)*"|<[^>]*>|[^",<]+|[<"]|,')
-
-
-def _split_links(value: str) -> List[str]:
-    """Split a Link header on the commas between links.
-
-    Commas inside a quoted parameter or inside ``<...>`` do not separate
-    links; a "<" inside a quoted title used to end the parameters there.
-    """
-    pieces: List[str] = []
-    current: List[str] = []
-    for lexeme in _LINK_TOKEN.findall(value):
-        if lexeme == ",":
-            pieces.append("".join(current))
-            current = []
-        else:
-            current.append(lexeme)
-    pieces.append("".join(current))
-    return pieces
-
-
 def parse_link_header(value: Optional[str]) -> List[Link]:
-    """Parse a ``Link`` header value into a list of :class:`Link`."""
-    links: List[Link] = []
-    for piece in _split_links(value or ""):
-        match = _LINK_VALUE.match(piece)
-        if match is None:
+    """Parse a ``Link`` header value into a list of :class:`Link` (RFC 8288 Appendix B.2).
+
+    The value is read left to right: a ``<`` inside an unquoted parameter
+    (``title=x<y``) or a comma inside a quoted one belongs to that parameter.
+    The splitting regex used before took ``<y, <b>`` for a target, so the link
+    after it vanished and ``next_url`` answered with the wrong page.
+    Parsing stops at the first link that does not start with ``<``.
+    """
+    text, links, index = value or "", [], 0
+    while index < len(text):
+        index = _skip_ows(text, index)
+        if text.startswith(",", index):          # an empty list element
+            index += 1
             continue
-        params = _parse_params(match.group(2))
-        links.append(Link(uri=match.group(1).strip(),
-                          rel=params.get("rel"), params=params))
+        start = index + 1
+        end = text.find(">", start) if text.startswith("<", index) else -1
+        if end < 0:
+            break
+        pairs, index = _parse_parameters(text, end + 1)
+        params = _first_of_each(pairs)
+        links.append(Link(uri=text[start:end].strip(), rel=params.get("rel"), params=params))
+        index = _skip_ows(text, index)
+        if text.startswith(",", index):
+            index += 1
     return links
 
 
@@ -105,7 +131,7 @@ def links_by_rel(links: Links) -> Dict[str, Link]:
     """Index links by each (possibly space-separated) relation; last wins."""
     indexed: Dict[str, Link] = {}
     for link in _as_links(links):
-        for token in (link.rel or "").split():
+        for token in filter(None, _RWS.split(link.rel or "")):
             indexed[token.lower()] = link   # relation types are case-insensitive
     return indexed
 

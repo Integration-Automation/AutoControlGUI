@@ -26,8 +26,12 @@ Headless API
     pages = paginate(start_url, fetch, max_pages=50)
 
 ``parse_link_header`` returns a list of ``Link`` (``uri``, ``rel``, and all
-``params``), tolerating quoted values that contain commas and multiple links in
-one header. ``links_by_rel`` indexes by each (space-separated) relation,
+``params``), reading the header with the RFC 8288 Appendix B algorithm: quoted
+values keep their commas, semicolons and escapes, an unquoted value runs to the
+next ``;`` or ``,`` (so ``title=x<y`` does not swallow the following link), a
+valueless parameter is ``""``, the first occurrence of a parameter wins, and
+parsing stops at the first element that does not start with ``<``.
+``links_by_rel`` indexes by each relation (split on space and tab),
 ``next_url`` is the ``rel="next"`` convenience, and ``paginate`` fetches a URL
 and follows ``next`` links via the supplied ``fetch`` callable up to
 ``max_pages``.

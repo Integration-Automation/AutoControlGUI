@@ -28,11 +28,16 @@ Headless API
 ``export`` prefix, validates keys, and resolves values: single-quoted values
 are literal apart from ``\'`` and ``\\`` (as python-dotenv reads them), double-quoted values process ``\n`` / ``\t`` / ``\\`` / ``\"``
 escapes, and unquoted values drop a trailing `` #`` comment and surrounding
-whitespace. A quoted value ends at its closing quote, so a comment after it is
-dropped, and it may span several lines. ``dotenv_values`` reads and parses a file; ``load_dotenv`` merges a
+whitespace; ``#`` starts a comment only after whitespace, so ``COLOR=#ff0000``
+keeps its value while ``KEY= # note`` is empty. A quoted value ends at its
+closing quote, so a comment after it is dropped, and it may span several lines,
+keeping each line's trailing whitespace. A leading byte-order mark is skipped.
+``dotenv_values`` reads and parses a file; ``load_dotenv`` merges a
 file into an explicit ``env`` mapping (keeping existing keys unless
 ``override``); ``dump_dotenv`` serialises a mapping back to ``.env`` text,
-quoting values that need it.
+quoting values that need it, and raises ``DotenvError`` (an
+``AutoControlException`` and a ``ValueError``) for a key the parser would not
+read back, such as one holding a line break or ``=``.
 
 Executor commands
 -----------------

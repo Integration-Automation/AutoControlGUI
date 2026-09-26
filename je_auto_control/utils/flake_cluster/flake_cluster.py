@@ -24,9 +24,18 @@ def _fail_runs(runs: Sequence[Sequence[str]]) -> Dict[str, Set[int]]:
     """Map each test name to the set of run indices in which it failed."""
     fails: Dict[str, Set[int]] = {}
     for index, run in enumerate(runs):
-        for test in set(run):
+        # A run given as one name was split into its characters.
+        for test in ({run} if isinstance(run, str) else set(run)):
             fails.setdefault(str(test), set()).add(index)
     return fails
+
+
+def _linked(score: float, threshold: float) -> bool:
+    """A pair that failed together at least once and meets ``threshold``.
+
+    At ``threshold=0`` tests that never failed together were paired.
+    """
+    return score > 0 and score >= threshold
 
 
 def cofailure_pairs(runs: Sequence[Sequence[str]], *,
@@ -39,7 +48,7 @@ def cofailure_pairs(runs: Sequence[Sequence[str]], *,
     pairs: List[Dict[str, Any]] = []
     for left, right in combinations(sorted(fails), 2):
         score = _set_jaccard(fails[left], fails[right])
-        if score >= float(threshold):
+        if _linked(score, float(threshold)):
             pairs.append({"tests": [left, right], "jaccard": round(score, 3),
                           "co_failures": len(fails[left] & fails[right])})
     pairs.sort(key=lambda pair: pair["jaccard"], reverse=True)
@@ -84,7 +93,7 @@ def failure_clusters(runs: Sequence[Sequence[str]], *, threshold: float = 0.5,
     tests = sorted(fails)
     adjacency: Dict[str, Set[str]] = {test: set() for test in tests}
     for left, right in combinations(tests, 2):
-        if _set_jaccard(fails[left], fails[right]) >= float(threshold):
+        if _linked(_set_jaccard(fails[left], fails[right]), float(threshold)):
             adjacency[left].add(right)
             adjacency[right].add(left)
     clusters = []

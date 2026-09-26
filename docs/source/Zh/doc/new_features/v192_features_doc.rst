@@ -8,7 +8,8 @@
 * **added** / **removed** ——只存在於其中一次執行的步驟,
 * **status_flips** ——某個已對齊步驟的狀態改變,若帶有 ``error`` 則附上新失敗的
   :func:`failure_signature`,
-* **timing_regressions** ——某個已對齊步驟變慢了 ``regress_factor`` 倍。
+* **timing_regressions** ——某個已對齊步驟變慢了 ``regress_factor`` 倍。記錄為 0 秒的步驟以 0.1 秒比較,
+  回報的 ``ratio`` 為 ``None``;非有限值或負數的時間不比較。
 
 步驟可為任何帶有名稱鍵(預設 ``"name"``)與選填 ``status`` / ``duration`` / ``error`` 的字典。
 純標準庫;不涉及裝置,不匯入 ``PySide6``。

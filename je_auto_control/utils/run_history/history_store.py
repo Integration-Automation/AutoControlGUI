@@ -10,7 +10,7 @@ import threading
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING, Callable, List, Optional, Union
+from typing import TYPE_CHECKING, Callable, List, Optional, Sequence, Union
 
 from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
@@ -31,6 +31,8 @@ STATUS_RUNNING = "running"
 _LIVE_RUN_WINDOW_S = 24 * 3600
 STATUS_OK = "ok"
 STATUS_ERROR = "error"
+#: The statuses a run ends in; a run killed mid-flight stays ``running``.
+FINISHED_STATUSES = (STATUS_OK, STATUS_ERROR)
 
 _IN_MEMORY_DB = ":memory:"
 #: The largest integer SQLite can bind.
@@ -213,25 +215,33 @@ class HistoryStore:
     def list_runs(self, limit: int = 100,
                   source_type: Optional[str] = None,
                   script_path: Optional[str] = None,
+                  statuses: Optional[Sequence[str]] = None,
                   ) -> List[RunRecord]:
         """Return the most recent runs (newest first).
 
-        ``source_type`` and ``script_path`` narrow the rows before ``limit``
-        applies, so one script's history is not crowded out by other runs.
+        ``source_type``, ``script_path`` and ``statuses`` narrow the rows
+        before ``limit`` applies, so one script's history is not crowded out
+        by other runs, or by its own runs that never finished.
         """
         if limit <= 0:
             return []
         if source_type is not None:
             _validate_source(source_type)
         path = None if script_path is None else str(script_path)
+        wanted = None if statuses is None else [str(status) for status in statuses]
+        status_clause = "" if wanted is None else f"AND status IN ({', '.join('?' * len(wanted))}) "
+        if wanted == []:
+            return []
         with self._lock:
             rows = self._connection().execute(
                 "SELECT * FROM runs "
                 "WHERE (? IS NULL OR source_type = ?) "
                 "AND (? IS NULL OR script_path = ?) "
-                "ORDER BY started_at DESC, id DESC LIMIT ?",
+                + status_clause  # nosec B608  # reason: only "?" placeholders are interpolated
+                + "ORDER BY started_at DESC, id DESC LIMIT ?",
                 # Clamped: a larger int raised OverflowError binding it.
-                (source_type, source_type, path, path, min(int(limit), _SQLITE_MAX_INT)),
+                (source_type, source_type, path, path, *(wanted or ()),
+                 min(int(limit), _SQLITE_MAX_INT)),
             ).fetchall()
         return [_row_to_record(row) for row in rows]
 

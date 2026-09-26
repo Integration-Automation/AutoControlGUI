@@ -156,8 +156,12 @@ class _MCPHttpHandler(BaseHTTPRequestHandler):
         # one there is no writer, rather than whichever other peer's socket
         # happens to be open.
         writer = session.stream_writer if session is not None else None
+        # concurrent_tools=False: a plain POST answers in its own body; with
+        # the server's concurrent mode a tools/call went to a worker and the
+        # POST was acknowledged 202 with nothing in it.
         with bridge.connection_scope(connection_id=conn_id, writer=writer,
-                                      notifier=_notifier_for(writer)):
+                                      notifier=_notifier_for(writer),
+                                      concurrent_tools=False):
             response = bridge.handle_line(line)
         _forget_if_dropped(bridge, session)
         if response is None:
@@ -179,7 +183,7 @@ class _MCPHttpHandler(BaseHTTPRequestHandler):
         if self._client_accepts_sse():
             self._dispatch_sse(bridge, line, id(self))
             return
-        with bridge.connection_scope(connection_id=id(self)):
+        with bridge.connection_scope(connection_id=id(self), concurrent_tools=False):
             response = bridge.handle_line(line)
         if response is None:
             self._send_blank(status=202)

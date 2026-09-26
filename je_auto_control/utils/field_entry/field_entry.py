@@ -11,6 +11,7 @@ single "focus → clear → set value" primitive, and no paste strategy for text
 :func:`set_field_text` dispatches it through an injectable ``sink`` so it is
 tested without real input. Imports no ``PySide6``.
 """
+import sys
 from typing import Any, Callable, Dict, List, Optional
 
 _CLEAR_MODES = ("select_all", "none")
@@ -33,7 +34,9 @@ def plan_field_set(text: str, *, clear: str = "select_all", paste: bool = False,
     plan: List[Dict[str, Any]] = []
     if clear == "select_all":
         plan.append({"op": "hotkey", "keys": [modifier, "a"]})
-        plan.append({"op": "key", "key": "delete"})
+        # The macOS key table has "backspace" and no "delete": the clear
+        # step raised after selecting everything, and nothing was typed.
+        plan.append({"op": "key", "key": "backspace" if sys.platform == "darwin" else "delete"})
     if paste:
         plan.append({"op": "set_clipboard", "text": text})
         plan.append({"op": "hotkey", "keys": [modifier, "v"]})

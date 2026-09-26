@@ -14,7 +14,8 @@ bottleneck steps, so you can read a single slow run instead of an average.
 
 A step is any dict with a name (default ``"name"``) and a ``duration``; an
 optional ``start`` places it on an absolute timeline (overlapping / parallel
-steps), else steps are laid out back-to-back. Pure standard library; no device,
+steps), else steps are laid out back-to-back. A duration must be finite and not
+negative and a start finite, or ``ValueError`` names the step. Pure standard library; no device,
 no ``PySide6``.
 
 Headless API

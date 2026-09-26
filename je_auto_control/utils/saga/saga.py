@@ -81,15 +81,18 @@ def run_saga(steps: Any) -> SagaResult:
     [...]}`` mappings; each ``action`` / ``compensation`` is an AutoControl
     action list run through the executor.
     """
-    from je_auto_control.utils.executor.action_executor import executor
+    from je_auto_control.utils.executor.action_executor import _running_executor
 
     def _runner(action_list: Any) -> Callable[[], Any]:
         # raise_on_error: a failed action is otherwise recorded and swallowed,
-        # so the saga never saw a failing step and never rolled back.
-        return lambda: executor.execute_action(list(action_list), raise_on_error=True)
+        # so the saga never saw a failing step and never rolled back. Passed
+        # as given: list() broke the {"auto_control": [...]} form.
+        return lambda: _running_executor().execute_action(action_list, raise_on_error=True)
 
     saga = Saga()
-    for spec in steps:
+    for index, spec in enumerate(steps):
+        if not isinstance(spec, dict):
+            raise ValueError(f"saga step {index} must be an object with an 'action', got {spec!r}")
         comp = spec.get("compensation")
         saga.step(str(spec.get("name", "")), _runner(spec.get("action", [])),
                   _runner(comp) if comp else None)

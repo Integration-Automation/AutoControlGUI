@@ -55,7 +55,10 @@ def score_step_rule_based(record: Dict[str, Any]) -> Dict[str, Any]:
     failed.
     """
     effect = record["effect"]["effect"]
-    process = _EFFECT_SCORE.get(effect, 0.0)
+    if effect not in _EFFECT_SCORE:
+        # "error" or a typo such as "noop" scored as a successful step.
+        raise ValueError(f"unknown effect {effect!r}; expected one of {sorted(_EFFECT_SCORE)}")
+    process = _EFFECT_SCORE[effect]
     report = record.get("postcondition")
     postcondition_ok = report["ok"] if report else True
     reasons = [f"effect={effect}"]

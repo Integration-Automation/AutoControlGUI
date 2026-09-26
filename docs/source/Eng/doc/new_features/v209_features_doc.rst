@@ -13,7 +13,8 @@ contended UI automation needs:
 ``retry_budget`` adds both. :class:`RetryBudget` is bounded by ``max_attempts``
 *and / or* ``deadline_s``; :func:`run_with_budget` honours whichever is hit
 first and never sleeps past the deadline. Delays use capped exponential backoff
-with a selectable jitter strategy (``full`` / ``equal`` / ``none``). The
+with a selectable jitter strategy (``full`` / ``equal`` / ``none``, any case; another
+value raises ``ValueError``, as does a delay that is not finite and >= 0). The
 randomness source (``uniform``), the clock and the sleeper are all injectable,
 so every delay and decision is deterministic in tests. Imports no ``PySide6``.
 

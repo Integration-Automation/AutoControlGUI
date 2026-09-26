@@ -14,8 +14,11 @@ Pure-stdlib over element dicts + the action record; reuses ``element_diff.match_
 the overlap join and ``observation_delta``'s field-change check. Fully deterministic and
 unit-testable with no device. Imports no ``PySide6``.
 """
+import math
 from dataclasses import asdict, dataclass
 from typing import Any, Dict, List, Optional, Sequence
+
+from je_auto_control.utils.element_parse.element_parse import _center
 
 Element = Dict[str, Any]
 
@@ -35,16 +38,12 @@ class EffectVerdict:
         return asdict(self)
 
 
-def _center(element: Element) -> List[int]:
-    return [int(element.get("x", 0)) + int(element.get("width", 0)) // 2,
-            int(element.get("y", 0)) + int(element.get("height", 0)) // 2]
-
-
 def _action_point(action: Any) -> Optional[List[int]]:
     """Extract the (x, y) the action targets, or ``None`` if it has no coordinate."""
     if not isinstance(action, dict):
         return None
-    if "x" in action and "y" in action:
+    # ``{"x": None}`` is how a cua action says "no coordinate"; it raised TypeError.
+    if action.get("x") is not None and action.get("y") is not None:
         return [int(action["x"]), int(action["y"])]
     point = action.get("point") or action.get("center")
     return [int(point[0]), int(point[1])] if point else None
@@ -63,8 +62,8 @@ def _changed_elements(before: Sequence[Element], after: Sequence[Element],
 
 
 def _near(centers: Sequence[List[int]], point: Sequence[int], radius: int) -> bool:
-    return any(abs(cx - point[0]) <= radius and abs(cy - point[1]) <= radius
-               for cx, cy in centers)
+    # A circle: the square it replaced reached 1.41 x radius at the corners.
+    return any(math.hypot(cx - point[0], cy - point[1]) <= radius for cx, cy in centers)
 
 
 def classify_effect(before: Sequence[Element], after: Sequence[Element], action: Any,

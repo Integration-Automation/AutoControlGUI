@@ -47,5 +47,7 @@ Input-sequence DSL
 A declarative mini-language for press-hold-release chords and repeated
 input: action ops (``press`` / ``release`` / ``key`` / ``click`` / ``move``
 / ``scroll``) plus control ops ``{op: wait, ms}`` and
-``{op: repeat, times, steps:[...]}``. Returns the flattened executed log.
+``{op: repeat, times, steps:[...]}``. A ``click`` without ``x`` / ``y`` clicks where
+the pointer is; a ``move`` needs both. A negative ``wait`` is 0 and a non-finite
+one raises ``ValueError``. Returns the flattened executed log.
 Exposed as ``AC_input_sequence`` / ``ac_input_sequence``.

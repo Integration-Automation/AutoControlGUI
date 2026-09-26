@@ -9,13 +9,17 @@ and per-cell changes.
 Pure standard library; imports no ``PySide6``. Every function is pure (rows in,
 dict/list out) so it is fully deterministic in CI.
 """
+import math
 from typing import Any, Dict, List, Sequence, Tuple, Union
 
 Key = Union[str, Sequence[str]]
 
 
 def _key_columns(key: Key) -> List[str]:
-    return [key] if isinstance(key, str) else list(key)
+    columns = [key] if isinstance(key, str) else list(key)
+    if not columns:
+        raise ValueError("key must name at least one column")
+    return columns
 
 
 def _key_of(row: Dict[str, Any], columns: Sequence[str]) -> Tuple[Any, ...]:
@@ -28,7 +32,27 @@ def _key_view(key_tuple: Tuple[Any, ...]) -> Any:
 
 def _index(rows: Sequence[Dict[str, Any]],
            columns: Sequence[str]) -> Dict[Tuple[Any, ...], Dict[str, Any]]:
+    """Rows by key; a row without a key column is a ``ValueError``.
+
+    A misspelt key (``"ID"`` for ``"id"``) keyed every row as ``None``, so
+    the diff compared two arbitrary rows and reported them as one change.
+    """
+    for index, row in enumerate(rows):
+        missing = [column for column in columns if column not in row]
+        if missing:
+            raise ValueError(f"row {index} has no key column {missing[0]!r}")
     return {_key_of(row, columns): dict(row) for row in rows}
+
+
+def _same(left: Any, right: Any) -> bool:
+    """Equal, NaN included: NaN is not equal to itself."""
+    if left is right or left == right:
+        return True
+    return isinstance(left, float) and isinstance(right, float) and math.isnan(left) and math.isnan(right)
+
+
+def _rows_same(old_row: Dict[str, Any], new_row: Dict[str, Any]) -> bool:
+    return old_row.keys() == new_row.keys() and all(_same(old_row[k], new_row[k]) for k in old_row)
 
 
 def diff_rows(old_rows: Sequence[Dict[str, Any]],
@@ -53,7 +77,7 @@ def diff_rows(old_rows: Sequence[Dict[str, Any]],
         old_row = old_index.get(key_tuple)
         if old_row is None:
             continue
-        if old_row == new_row:
+        if _rows_same(old_row, new_row):
             unchanged.append(new_row)
         else:
             changed.append({"key": _key_view(key_tuple),
@@ -70,7 +94,10 @@ def cell_changes(old_rows: Sequence[Dict[str, Any]],
     for entry in diff_rows(old_rows, new_rows, key)["changed"]:
         old_row, new_row = entry["old"], entry["new"]
         for column in sorted(set(old_row) | set(new_row), key=str):
-            if old_row.get(column) != new_row.get(column):
+            # A column only one side has is a change even when its value is
+            # None, as diff_rows counts it; NaN on both sides is not.
+            if (column in old_row) != (column in new_row) or not _same(
+                    old_row.get(column), new_row.get(column)):
                 changes.append({"key": entry["key"], "column": column,
                                 "old": old_row.get(column),
                                 "new": new_row.get(column)})

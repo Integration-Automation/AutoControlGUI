@@ -47,9 +47,16 @@ class VariableScope(MutableMapping[str, Any]):
         return self._vars.get(name, default)
 
     def update_many(self, mapping: Mapping[str, Any]) -> None:
-        """Bulk-assign from a mapping."""
-        for key, value in mapping.items():
-            self[key] = value
+        """Bulk-assign from a mapping; nothing is assigned when any name is invalid.
+
+        A ``""`` key raised after the names before it were already set.
+        """
+        items = list(mapping.items())
+        for key, _value in items:
+            if not isinstance(key, str) or not key:
+                raise ValueError("variable name must be a non-empty string")
+        for key, value in items:
+            self._vars[key] = value
 
     def as_dict(self) -> Dict[str, Any]:
         """Return a shallow copy as a plain dict (safe for interpolation)."""

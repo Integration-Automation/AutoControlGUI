@@ -20,7 +20,7 @@ from dataclasses import asdict, dataclass, field
 from typing import Any, Dict, List, Optional
 
 from je_auto_control.utils.run_history.history_store import (
-    HistoryStore, STATUS_ERROR, STATUS_OK, default_history_store,
+    FINISHED_STATUSES, STATUS_ERROR, STATUS_OK, HistoryStore, default_history_store,
 )
 
 _GROUP_KEYS = ("script_path", "source_id")
@@ -96,7 +96,7 @@ def _grouped_statuses(records: List[Any], group_by: str
     """
     buckets: Dict[str, List[str]] = {}
     for record in records:
-        if record.status not in (STATUS_OK, STATUS_ERROR):
+        if record.status not in FINISHED_STATUSES:
             continue
         key = getattr(record, group_by)
         buckets.setdefault(key, []).append(record.status)
@@ -119,7 +119,8 @@ def analyze_flakiness(store: Optional[HistoryStore] = None,
             f"group_by must be one of {list(_GROUP_KEYS)}, got {group_by!r}"
         )
     active_store = store if store is not None else default_history_store
-    records = active_store.list_runs(limit=int(limit))
+    # ``limit`` counts finished runs: running rows were read, then dropped.
+    records = active_store.list_runs(limit=int(limit), statuses=FINISHED_STATUSES)
     grouped = _grouped_statuses(records, group_by)
     entries = [
         _entry_for_group(key, statuses)

@@ -34,4 +34,6 @@ governance 憑證 broker。``resolve_refs_in`` 走訪巢狀 dict/list 並就地�
 
 ``AC_resolve_ref`` 把單一 ``ref`` 解析成 ``{value}``;``AC_resolve_refs`` 解析 ``obj`` 內每個參照並回傳
 ``{resolved}``。兩者皆以 MCP 工具(``ac_resolve_ref`` / ``ac_resolve_refs``)以及 Script Builder 中
-**Security** 分類下的命令提供。
+**Security** 分類下的命令提供。它們的結果會被記錄（executor 紀錄、MCP 回應），所以遇到 ``secret://``
+會丟 ``SecretRefError``：祕密的值不進這些紀錄。需要值的步驟請引用 ``${secrets.NAME}``，或在 Python
+裡呼叫 ``resolve_ref``。

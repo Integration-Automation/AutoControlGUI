@@ -23,17 +23,38 @@ from je_auto_control.utils.accessibility.element import AccessibilityElement
 from je_auto_control.utils.ax_tree_walk import humanize_role
 from je_auto_control.utils.element_parse import reading_order
 
-# Roles that conventionally participate in keyboard tab navigation.
-_INTERACTIVE_ROLES = frozenset({
-    "Button", "Calendar", "CheckBox", "ComboBox", "Edit", "Hyperlink",
-    "ListItem", "MenuItem", "RadioButton", "ScrollBar", "Slider", "Spinner",
-    "SplitButton", "Tab", "TabItem", "TreeItem", "DataItem", "Thumb",
+# Roles that conventionally take keyboard focus, as lower-case keys with
+# spaces removed: UIA ("CheckBox"), AT-SPI ("push button", what the Linux
+# backend reports), macOS AX with its prefix dropped ("AXTextField") and ARIA.
+# Only the UIA names were known, so Linux and macOS trees had no tab order.
+_INTERACTIVE_KEYS = frozenset({
+    # UIA
+    "button", "calendar", "checkbox", "combobox", "edit", "hyperlink",
+    "listitem", "menuitem", "radiobutton", "scrollbar", "slider", "spinner",
+    "splitbutton", "tab", "tabitem", "treeitem", "dataitem", "thumb",
+    # AT-SPI
+    "pushbutton", "togglebutton", "entry", "passwordtext", "spinbutton",
+    "pagetab", "checkmenuitem", "radiomenuitem", "link",
+    # macOS AX
+    "textfield", "textarea", "popupbutton", "menubutton", "incrementor",
+    "disclosuretriangle",
+    # ARIA
+    "textbox", "searchbox", "radio", "switch", "option", "menu", "menuitemcheckbox",
+    "menuitemradio",
 })
 
 
+def _role_key(role: Union[str, int]) -> str:
+    """``role`` as a lookup key: humanized, AX prefix dropped, lower case, no spaces."""
+    text = humanize_role(role)
+    if text.startswith("AX") and text[2:3].isupper():
+        text = text[2:]
+    return "".join(text.lower().split()).replace("_", "")
+
+
 def is_interactive_role(role: Union[str, int]) -> bool:
-    """Return True if ``role`` is one that normally accepts keyboard focus."""
-    return humanize_role(role) in _INTERACTIVE_ROLES
+    """Return True if ``role`` is one that normally accepts keyboard focus (any platform's spelling)."""
+    return _role_key(role) in _INTERACTIVE_KEYS
 
 
 def _box(element: AccessibilityElement, index: int) -> Dict[str, Any]:
@@ -45,10 +66,11 @@ def tab_order(elements: Sequence[AccessibilityElement], *,
               row_tol: int = 12) -> List[AccessibilityElement]:
     """Return the focusable elements in the order ``Tab`` would visit them.
 
-    Filters to :func:`is_interactive_role` then orders by reading order (rows
-    within ``row_tol`` px share a row, ordered left-to-right).
+    Filters to enabled elements of an :func:`is_interactive_role` role, then
+    orders by reading order (rows within ``row_tol`` px share a row, ordered
+    left-to-right). A disabled control is skipped, as ``Tab`` skips it.
     """
-    interactive = [el for el in elements if is_interactive_role(el.role)]
+    interactive = [el for el in elements if el.enabled and is_interactive_role(el.role)]
     boxes = [_box(el, index) for index, el in enumerate(interactive)]
     ordered = reading_order(boxes, row_tol=int(row_tol))
     return [interactive[box["_idx"]] for box in ordered]

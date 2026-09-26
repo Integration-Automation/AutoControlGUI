@@ -29,10 +29,10 @@ bearer JWT。本功能補上一個聚焦、純標準函式庫的 JWT 編解碼�
     token = encode_jwt({"sub": "user1", "aud": "api", "exp": 1893456000}, secret)
     # -> "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...."
 
-    # 預設政策:僅 HS256、驗證 exp/nbf、不檢查 audience/issuer
-    claims = decode_jwt(token, secret)
+    # token 帶有 "aud",所以政策必須指名要接受的 audience
+    claims = decode_jwt(token, secret, ClaimsPolicy(audience="api"))
 
-    # 以 ClaimsPolicy 收緊 audience / issuer / leeway / algorithms
+    # 再以 ClaimsPolicy 收緊 issuer / leeway / algorithms
     policy = ClaimsPolicy(algorithms=("HS256",), audience="api",
                           issuer="my-service", leeway=30)
     claims = decode_jwt(token, secret, policy)
@@ -40,7 +40,10 @@ bearer JWT。本功能補上一個聚焦、純標準函式庫的 JWT 編解碼�
 ``encode_jwt`` 以 ``HS256`` / ``HS384`` / ``HS512`` 簽出精簡的
 ``header.payload.signature`` token。``decode_jwt`` 先驗證簽章,再以一份 :class:`ClaimsPolicy`
 (含 ``leeway`` 的 ``exp`` / ``nbf``、``aud`` 成員資格、``iss`` 比對)使用可注入的 ``now`` 驗證
-標準宣告;失敗時拋出 ``ExpiredTokenError`` / ``InvalidSignatureError`` / ``JwtError``。簽出的
+標準宣告;失敗時拋出 ``ExpiredTokenError`` / ``InvalidSignatureError`` / ``JwtError``。預設政策只接受
+HS256 並檢查 ``exp`` / ``nbf``;帶有 ``aud`` 的 token,除非 ``ClaimsPolicy.audience`` 指名其中一個值，否則一律拒絕
+(RFC 7519 4.1.3),所以發給某個服務的 token 不會在共用同一把金鑰的另一個服務上驗證通過。空的或非字串的金鑰，
+以及不是 JSON 的宣告或標頭(``datetime``、``NaN``),都會拋出 ``JwtError``。簽出的
 token 可直接接上 HTTP 用戶端:
 
 .. code-block:: python

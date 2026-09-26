@@ -14,9 +14,14 @@ of mis-pairing everything) and classifies the differences:
 A step is any dict with a name key (default ``"name"``) and optional ``status`` /
 ``duration`` / ``error``. Pure standard library; no device, no ``PySide6``.
 """
-from typing import Any, Dict, List, Sequence
+import math
+from typing import Any, Dict, List, Optional, Sequence
 
 Step = Dict[str, Any]
+
+
+#: What a step recorded as taking 0 s is compared as (seconds).
+_ZERO_BASELINE_S = 0.1
 
 
 def _lcs_pairs(left: Sequence[str], right: Sequence[str]) -> List[tuple]:
@@ -52,15 +57,30 @@ def _status_flip(before: Step, after: Step, name: str) -> Dict[str, Any]:
     return flip
 
 
+def _duration(step: Step) -> Optional[float]:
+    """A step's duration if it is a finite, non-negative number; else ``None``."""
+    value = step.get("duration")
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return None
+    return float(value) if math.isfinite(value) and value >= 0 else None
+
+
 def _regression(before: Step, after: Step, name: str,
                 factor: float) -> Dict[str, Any]:
-    """Return a timing-regression record, or ``{}`` if not a regression."""
-    prev, curr = before.get("duration"), after.get("duration")
-    if not isinstance(prev, (int, float)) or not isinstance(curr, (int, float)):
+    """Return a timing-regression record, or ``{}`` if not a regression.
+
+    A step recorded as taking no time is compared as if it took
+    ``_ZERO_BASELINE_S`` (reports round short steps to 0), and its ``ratio``
+    is ``None``: 0 s to 30 s was never flagged. Non-finite durations are not
+    compared, so no ``inf`` ratio reaches a JSON report.
+    """
+    prev, curr = _duration(before), _duration(after)
+    if prev is None or curr is None:
         return {}
-    if prev > 0 and curr >= prev * float(factor):
-        return {"name": name, "before": float(prev), "after": float(curr),
-                "ratio": round(curr / prev, 3)}
+    baseline = prev if prev > 0 else _ZERO_BASELINE_S
+    if curr >= baseline * float(factor):
+        return {"name": name, "before": prev, "after": curr,
+                "ratio": round(curr / prev, 3) if prev > 0 else None}
     return {}
 
 

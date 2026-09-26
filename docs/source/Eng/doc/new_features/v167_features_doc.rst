@@ -36,7 +36,7 @@ Headless API
 
 ``classify_effect`` returns an ``EffectVerdict`` (``effect`` / ``changed_near_target`` /
 ``changed_count`` / ``changed_centers`` / ``reason``). ``effect_near_point`` answers whether any
-change landed within ``radius`` of an arbitrary point; ``is_no_op`` is the boolean shortcut.
+change landed within ``radius`` (a circle) of an arbitrary point; ``is_no_op`` is the boolean shortcut.
 
 Executor commands
 -----------------

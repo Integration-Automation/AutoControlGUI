@@ -14,6 +14,7 @@ from dataclasses import dataclass
 from typing import List, Optional
 
 _LINE_SPLIT = re.compile(r"\r\n|\r|\n")
+_BOM = chr(0xFEFF)
 
 
 @dataclass(frozen=True)
@@ -35,7 +36,10 @@ class SSEParser:
     """Incremental WHATWG ``text/event-stream`` parser."""
 
     def __init__(self) -> None:
-        self._buffer = ""
+        # The unterminated line so far, in pieces: joining and re-splitting the
+        # whole of it on every chunk made one 2 MB data line fed in 1 KB chunks
+        # take 10.75 s.
+        self._pending: List[str] = []
         self._event = ""
         self._data: List[str] = []
         self._last_id: Optional[str] = None
@@ -50,27 +54,37 @@ class SSEParser:
         second would dispatch the event early), and a leading BOM is dropped
         as WHATWG requires.
         """
+        chunk = self._normalise(chunk)
+        if "\n" not in chunk and "\r" not in chunk:
+            if chunk:
+                self._pending.append(chunk)     # no line can complete yet
+            return []
+        lines = _LINE_SPLIT.split("".join(self._pending) + chunk)
+        tail = lines.pop()                      # trailing partial line
+        self._pending = [tail] if tail else []
+        events = [event for event in (self._process_line(line)
+                                      for line in lines) if event is not None]
+        return events
+
+    def _normalise(self, chunk: str) -> str:
+        """Drop the stream's BOM and the LF that completes a CR the last chunk ended with."""
         if not self._started and chunk:
             self._started = True
-            chunk = chunk[1:] if chunk.startswith("\ufeff") else chunk
+            chunk = chunk[1:] if chunk.startswith(_BOM) else chunk
         if chunk:
             if self._after_cr and chunk.startswith("\n"):
                 chunk = chunk[1:]
             # Cleared even when that "\n" was the whole chunk, or the next
             # "\n" -- the blank line that dispatches -- was dropped as well.
             self._after_cr = chunk.endswith("\r")
-        lines = _LINE_SPLIT.split(self._buffer + chunk)
-        self._buffer = lines.pop()          # trailing partial line
-        events = [event for event in (self._process_line(line)
-                                      for line in lines) if event is not None]
-        return events
+        return chunk
 
     def close(self) -> List[SSEEvent]:
         """Flush a trailing line and any pending event at end of stream."""
         events: List[SSEEvent] = []
-        if self._buffer:
-            trailing = self._process_line(self._buffer)
-            self._buffer = ""
+        if self._pending:
+            trailing = self._process_line("".join(self._pending))
+            self._pending = []
             if trailing is not None:
                 events.append(trailing)
         final = self._dispatch()

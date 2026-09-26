@@ -19,7 +19,13 @@ def wait_for_focus_change(*, timeout: float = 5.0) -> Optional[Dict[str, Any]]:
     """Block until the keyboard focus moves, then return the newly-focused element.
 
     Returns the focused element as ``{name, role, app_name, bounds, ...}``, or
-    ``None`` if no focus change occurs within ``timeout`` seconds.
+    ``None`` if no focus change occurs within ``timeout`` seconds. A negative
+    timeout looks once, an infinite one waits for good, and NaN raises
+    ``ValueError`` (it blocked forever with the UIA handler still registered).
     """
+    import math
     from je_auto_control.utils.accessibility.backends import get_backend
-    return get_backend().wait_for_focus_change(float(timeout))
+    seconds = float(timeout)
+    if math.isnan(seconds):
+        raise ValueError("timeout must be a number, not NaN")
+    return get_backend().wait_for_focus_change(max(0.0, seconds))

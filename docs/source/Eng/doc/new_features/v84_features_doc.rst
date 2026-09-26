@@ -27,7 +27,8 @@ Headless API
 ``Baggage`` wraps an immutable key-value map: ``get`` reads, ``set`` / ``remove``
 return new instances, and ``to_dict`` exports the entries. ``parse_baggage``
 reads the header (dropping optional ``;metadata`` and rejecting empty keys),
-``format_baggage`` percent-encodes keys and values back into a header value,
+``format_baggage`` percent-encodes keys and values back into a header value
+(``Baggage`` refuses an empty key with ``ValueError``, since no parser reads it back),
 and ``inject_baggage`` / ``extract_baggage`` write and read the ``baggage``
 header on a request dict (extraction is case-insensitive). Pairs naturally with
 ``trace_context`` to carry context alongside the trace.

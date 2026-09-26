@@ -65,7 +65,11 @@ class RecordTabMixin:
 
     def _start_record(self):
         try:
-            record()
+            if not record():
+                # record() logs its failure and returns False; the status
+                # said "Recording..." while nothing was recorded.
+                QMessageBox.warning(self, "Error", "Recording could not start; see the log")
+                return
             self._record_status_key = "record_recording"
             self._apply_record_status_label()
         except (AutoControlException, OSError, ValueError, TypeError, RuntimeError) as error:

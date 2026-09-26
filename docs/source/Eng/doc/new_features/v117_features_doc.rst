@@ -29,7 +29,8 @@ Headless API
     #  {'op': 'key', 'key': 'delete'},
     #  {'op': 'type', 'text': 'hi'}]
 
-``clear`` is ``"select_all"`` (the ``modifier``+A then Delete clear) or
+``clear`` is ``"select_all"`` (the ``modifier``+A then Delete clear; Backspace on
+macOS, whose key table has no Delete) or
 ``"none"``. ``paste=True`` enters the text through the clipboard (``modifier``+V)
 — the reliable path for Unicode / emoji / CJK that ``write`` cannot type — rather
 than typing key by key. ``modifier`` is the platform command key (``"ctrl"``; use

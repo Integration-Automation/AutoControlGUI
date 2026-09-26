@@ -33,6 +33,7 @@ import os
 import socket
 import struct
 import time
+import urllib.parse
 from typing import Any, Dict, List, Optional, Tuple
 
 from je_auto_control.utils.exception.exceptions import AutoControlException
@@ -52,6 +53,8 @@ SIGNAL = 4
 #: primary one is at a negative coordinate. Without it the accessibility
 #: backend could read a tree but not where anything was.
 _FIXED = {
+    # "y" is written here too, range-checked: byte() masks, so 300 went out as 44.
+    "y": ("<B", 1),
     "n": ("<h", 2), "q": ("<H", 2),
     "i": ("<i", 4), "u": ("<I", 4),
     "x": ("<q", 8), "t": ("<Q", 8),
@@ -136,7 +139,11 @@ class _Writer:
         """Write one fixed-width number, aligned to its own width."""
         fmt, width = _FIXED[code]
         self.align(width)
-        self.raw(struct.pack(fmt, float(value) if fmt == "<d" else int(value)))
+        try:
+            packed = struct.pack(fmt, float(value) if fmt == "<d" else int(value))
+        except (struct.error, TypeError, ValueError, OverflowError) as error:
+            raise DBusError(f"{value!r} does not fit D-Bus type {code!r}") from error
+        self.raw(packed)
 
     def string(self, value: str) -> None:
         encoded = value.encode("utf-8")
@@ -171,9 +178,13 @@ class _SignatureReader:
         return self.index >= len(self.text)
 
     def peek(self) -> str:
+        if self.index >= len(self.text):
+            raise DBusError(f"signature {self.text!r} ends inside a type")
         return self.text[self.index]
 
     def take(self) -> str:
+        if self.index >= len(self.text):
+            raise DBusError(f"signature {self.text!r} ends inside a type")
         code = self.text[self.index]
         self.index += 1
         return code
@@ -194,9 +205,7 @@ class _SignatureReader:
 
 def _write_value(writer: _Writer, reader: _SignatureReader, value: Any) -> None:
     code = reader.take()
-    if code == "y":
-        writer.byte(int(value))
-    elif code == "b":
+    if code == "b":
         writer.uint32(1 if value else 0)
     elif code in _FIXED:
         writer.fixed(code, value)
@@ -425,7 +434,9 @@ def _socket_target(address: str) -> Tuple[str, bool]:
         fields = [part.split("=", 1)
                   for part in candidate[len("unix:"):].split(",")
                   if "=" in part]
-        options = dict(fields)
+        # Values are percent-escaped (the D-Bus spec): /run/bus-for-%3A0 is
+        # the socket /run/bus-for-:0.
+        options = {key: urllib.parse.unquote(value) for key, value in fields}
         if "path" in options:
             return options["path"], False
         if "abstract" in options:

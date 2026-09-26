@@ -14,7 +14,7 @@ unit-testable on synthetic arrays. Imports no ``PySide6``.
 from dataclasses import asdict, dataclass
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
-from je_auto_control.utils.visual_match.visual_match import _score_map_with_origin
+from je_auto_control.utils.visual_match.visual_match import _contain_cv2_error, _score_map_with_origin
 
 ImageSource = Any
 
@@ -70,6 +70,7 @@ def refine_peak(score_map, peak_xy: Tuple[int, int]) -> Tuple[float, float]:
     return offset_x, offset_y
 
 
+@_contain_cv2_error
 def match_subpixel(template: ImageSource, *, haystack: Optional[ImageSource] = None,
                    region: Optional[Sequence[int]] = None,
                    method: str = "ccoeff_normed",
@@ -77,11 +78,14 @@ def match_subpixel(template: ImageSource, *, haystack: Optional[ImageSource] = N
     """Return the best match with a sub-pixel-refined centre, or ``None``.
 
     The integer top-left and score come from the correlation peak; ``cx`` / ``cy`` add the
-    quadratic-fit offset to the integer centre for fractional-pixel click placement.
+    quadratic-fit offset to the matched box's centre in pixel indices (``x + (w - 1) / 2``),
+    for fractional-pixel click placement. 16-bit and float images are matched in 8 bits.
     """
     import cv2
+    from je_auto_control.utils.preprocess.preprocess import _eight_bit
     score_map, tmpl, origin_x, origin_y = _score_map_with_origin(
-        template, haystack, region=region, method=method)
+        _eight_bit(template), None if haystack is None else _eight_bit(haystack),
+        region=region, method=method)
     if score_map is None:
         return None
     _, max_val, _, max_loc = cv2.minMaxLoc(score_map)
@@ -91,7 +95,9 @@ def match_subpixel(template: ImageSource, *, haystack: Optional[ImageSource] = N
     offset_x, offset_y = refine_peak(score_map, (local_x, local_y))
     peak_x, peak_y = local_x + origin_x, local_y + origin_y
     height, width = tmpl.shape[:2]
+    # (w - 1) / 2: w / 2 put an exact 25 px match half a pixel right of its
+    # centre column, the error this refinement exists to remove.
     return SubPixelMatch(peak_x, peak_y, width, height, round(float(max_val), 4),
-                         round(peak_x + width / 2.0 + offset_x, 3),
-                         round(peak_y + height / 2.0 + offset_y, 3),
+                         round(peak_x + (width - 1) / 2.0 + offset_x, 3),
+                         round(peak_y + (height - 1) / 2.0 + offset_y, 3),
                          round(offset_x, 4), round(offset_y, 4))

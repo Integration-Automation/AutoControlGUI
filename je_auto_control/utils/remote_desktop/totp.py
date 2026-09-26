@@ -19,6 +19,7 @@ import base64
 import binascii
 import hashlib
 import hmac
+import math
 import secrets
 import time
 import urllib.parse
@@ -79,16 +80,27 @@ def _check_parameters(step: int, digits: int) -> None:
         raise TOTPError(f"TOTP digits must be 1..10, got {digits}")
 
 
+def _counter(at: Optional[float], step: int) -> int:
+    """The time-step counter for ``at`` (now when ``None``); ``TOTPError`` outside the epoch range.
+
+    NaN raised ``ValueError`` and inf / 1e21 ``OverflowError``, outside the
+    framework's exception family.
+    """
+    now = time.time() if at is None else float(at)
+    if not math.isfinite(now) or now < 0:
+        raise TOTPError(f"TOTP time must be a finite time after the epoch, got {now}")
+    counter = int(now) // step
+    if counter >= 2 ** 64:
+        raise TOTPError(f"TOTP time is out of range, got {now}")
+    return counter
+
+
 def generate_code(secret: str, *, at: Optional[float] = None,
                   step: int = _DEFAULT_STEP,
                   digits: int = _DEFAULT_DIGITS) -> str:
     """Return the current TOTP for ``secret``. Pass ``at`` to spoof time."""
     _check_parameters(step, digits)
-    now = time.time() if at is None else at
-    counter = int(now) // step
-    if counter < 0:
-        raise TOTPError(f"TOTP time must not be before the epoch, got {now}")
-    return _code_for_counter(_decode_secret(secret), counter, digits=digits)
+    return _code_for_counter(_decode_secret(secret), _counter(at, step), digits=digits)
 
 
 def verify_code(secret: str, code: str, *,
@@ -98,6 +110,9 @@ def verify_code(secret: str, code: str, *,
                 window: int = _DEFAULT_WINDOW) -> bool:
     """Constant-time check of ``code`` against ``secret`` within ±``window`` steps."""
     _check_parameters(step, digits)
+    if window < 0:
+        # range(1, 0) is empty, so every code, even the current one, failed.
+        raise TOTPError(f"TOTP window must be >= 0, got {window}")
     if not isinstance(code, str):
         return False
     cleaned = code.strip()
@@ -106,8 +121,7 @@ def verify_code(secret: str, code: str, *,
     if len(cleaned) != digits or not (cleaned.isascii() and cleaned.isdigit()):
         return False
     decoded = _decode_secret(secret)
-    now = time.time() if at is None else at
-    base_counter = int(now) // step
+    base_counter = _counter(at, step)
     for delta in range(-window, window + 1):
         counter = base_counter + delta
         if counter < 0:  # near the epoch the lower window can go negative

@@ -14,11 +14,12 @@ It works for any artifact — rendered text, JSON, OCR output, screenshot bytes 
 complementing pixel diffing with a review-gated baseline. Pure standard
 library; imports no ``PySide6``.
 """
+import json
 import os
 import re
 from dataclasses import dataclass
 from pathlib import Path
-from typing import List, Union
+from typing import Any, List
 
 DEFAULT_DIR = ".approvals"
 
@@ -63,14 +64,27 @@ def _paths(name: str, approvals_dir: str, extension: str):
             base / f"{name}.received.{ext}")
 
 
-def _as_bytes(content: Union[str, bytes]) -> bytes:
-    return content.encode("utf-8") if isinstance(content, str) else bytes(content)
+def _as_bytes(content: Any) -> bytes:
+    """The artifact's bytes: bytes as-is, text as UTF-8, anything else as sorted JSON.
+
+    ``bytes(3)`` is three NUL bytes and ``bytes([104, 105])`` is ``b"hi"``, so
+    a number or a list from an action file was stored as the wrong artifact,
+    and a dict raised ``TypeError``.
+    """
+    if isinstance(content, (bytes, bytearray, memoryview)):
+        return bytes(content)
+    if isinstance(content, str):
+        return content.encode("utf-8")
+    return json.dumps(content, ensure_ascii=False, sort_keys=True, indent=2).encode("utf-8")
 
 
-def verify_artifact(name: str, content: Union[str, bytes],
+def verify_artifact(name: str, content: Any,
                     approvals_dir: str = DEFAULT_DIR,
                     extension: str = "txt") -> ApprovalResult:
     """Compare ``content`` to the approved baseline for ``name``.
+
+    ``content`` is bytes, text (stored as UTF-8) or any JSON value (stored as
+    sorted, indented JSON).
 
     On match the received file is cleared and ``match`` is ``True``; otherwise
     the produced bytes are written to the received file for review.
@@ -104,6 +118,5 @@ def pending_artifacts(approvals_dir: str = DEFAULT_DIR) -> List[str]:
     base = Path(approvals_dir)
     if not base.is_dir():
         return []
-    names = [path.name.split(".received.", 1)[0]
-             for path in base.glob("*.received.*")]
-    return sorted(names)
+    # A set: "dup.received.txt" and "dup.received.json" listed "dup" twice.
+    return sorted({path.name.split(".received.", 1)[0] for path in base.glob("*.received.*")})

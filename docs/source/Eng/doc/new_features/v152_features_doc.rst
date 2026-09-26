@@ -31,7 +31,9 @@ Headless API
     click(*[target["x"] + target["width"] // 2, target["y"] + target["height"] // 2])
 
 ``flatten_tree`` flattens a nested element tree, keeping only interactive roles by
-default. ``observation_index`` clips to the ``viewport``, orders top-to-bottom /
+default (the same roles, in any platform's spelling, as ``focus_order``). Elements
+are placed by ``x`` / ``y`` / ``width`` / ``height`` or ``bounds``. ``observation_index``
+clips to the ``viewport`` (an element centred on its right or bottom edge is outside), orders top-to-bottom /
 left-to-right, caps at ``max_elements`` and assigns a stable ``index``.
 ``serialize_observation`` renders those as ``[i] role "name" @(cx,cy)`` lines.
 

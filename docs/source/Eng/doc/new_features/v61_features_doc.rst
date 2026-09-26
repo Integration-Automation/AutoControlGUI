@@ -34,10 +34,10 @@ Headless API
     token = encode_jwt({"sub": "user1", "aud": "api", "exp": 1893456000}, secret)
     # -> "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...."
 
-    # default policy: HS256 only, verify exp/nbf, no audience/issuer check
-    claims = decode_jwt(token, secret)
+    # the token carries "aud", so the policy must name the audience to accept
+    claims = decode_jwt(token, secret, ClaimsPolicy(audience="api"))
 
-    # tighten the policy for audience / issuer / leeway / algorithms
+    # tighten the policy for issuer / leeway / algorithms as well
     policy = ClaimsPolicy(algorithms=("HS256",), audience="api",
                           issuer="my-service", leeway=30)
     claims = decode_jwt(token, secret, policy)
@@ -47,7 +47,11 @@ Headless API
 validates the standard claims against a :class:`ClaimsPolicy` (``exp`` / ``nbf``
 with ``leeway``, ``aud`` membership, ``iss`` match) using an injectable ``now``;
 it raises ``ExpiredTokenError`` / ``InvalidSignatureError`` / ``JwtError`` on
-failure. The minted token drops straight into the HTTP client:
+failure. The default policy is HS256 only with ``exp`` / ``nbf`` checked; a
+token that carries ``aud`` is refused unless ``ClaimsPolicy.audience`` names
+one of its values (RFC 7519 4.1.3), so a token minted for one service does not
+verify at another that shares the key. An empty or non-string key, and claims
+or headers that are not JSON (a ``datetime``, ``NaN``), raise ``JwtError``. The minted token drops straight into the HTTP client:
 
 .. code-block:: python
 

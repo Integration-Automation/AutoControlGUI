@@ -26,7 +26,8 @@
     target = observation_index(a11y_tree)[1]      # [1] 背後的結構化元素
     click(*[target["x"] + target["width"] // 2, target["y"] + target["height"] // 2])
 
-``flatten_tree`` 扁平化巢狀元素樹,預設只保留互動角色。``observation_index`` 裁切到 ``viewport``、由上到下 /
+``flatten_tree`` 扁平化巢狀元素樹,預設只保留互動角色(與 ``focus_order`` 相同,各平台寫法皆可)。元素以
+``x`` / ``y`` / ``width`` / ``height`` 或 ``bounds`` 定位,中心落在 ``viewport`` 右緣或下緣上的元素算在外面。``observation_index`` 裁切到 ``viewport``、由上到下 /
 由左到右排序、上限 ``max_elements`` 並指派穩定 ``index``。``serialize_observation`` 將其渲染為
 ``[i] role "name" @(cx,cy)`` 行。
 

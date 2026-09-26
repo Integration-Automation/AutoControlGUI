@@ -37,7 +37,14 @@ count placeholder, a plural ``offset:`` (``#`` becomes count − offset), nested
 arguments, and ICU apostrophe quoting (``''`` → ``'``; ``'{'`` → literal brace;
 ``'#'`` only inside a plural, elsewhere the apostrophes stay).
 ``plural_rules`` / ``ordinal_rules`` let you inject custom category functions;
-``locale`` selects the built-ins (``en``, ``fr``).
+``locale`` selects the rules by its language (``fr_FR`` and ``fr-CA`` use
+``fr``): English and French are built in, any other locale uses Babel's CLDR
+data when Babel is installed (``je_auto_control[locale]``) and raises
+otherwise instead of falling back to English. ``=N`` selectors compare as
+numbers (``=1.0`` matches 1). A pattern ICU rejects -- an unterminated
+argument, a selector without ``{...}``, no ``other``, a duplicate selector,
+``offset:`` anywhere but first -- raises ``MessageFormatError`` (an
+``AutoControlException`` and a ``ValueError``).
 
 Executor commands
 -----------------

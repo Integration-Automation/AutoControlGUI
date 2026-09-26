@@ -19,7 +19,7 @@ from __future__ import annotations
 
 from typing import Any, Callable, List, Optional
 
-from PySide6.QtCore import QObject, QTimer, Signal
+from PySide6.QtCore import QTimer
 from PySide6.QtWidgets import (
     QCheckBox, QComboBox, QFileDialog, QGroupBox, QHBoxLayout, QHeaderView,
     QLabel, QLineEdit, QMessageBox, QTableWidget,
@@ -27,7 +27,7 @@ from PySide6.QtWidgets import (
 )
 
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
-from je_auto_control.gui._worker_thread import WorkerHandle, start_worker
+from je_auto_control.gui._worker_thread import CallWorker as _CallWorker, WorkerHandle, start_worker
 from je_auto_control.gui.language_wrapper.multi_language_wrapper import (
     language_wrapper,
 )
@@ -38,7 +38,9 @@ from je_auto_control.utils.usb.passthrough import (
     export_acl_to_file, import_acl_from_file,
 )
 from je_auto_control.utils.usb.usb_devices import list_usb_devices
-from je_auto_control.utils.usb.usb_watcher import default_usb_watcher
+from je_auto_control.utils.usb.usb_watcher import (
+    default_usb_watcher, hold_default_watcher, release_default_watcher,
+)
 
 
 def _t(key: str) -> str:
@@ -52,23 +54,6 @@ _DESC_VALUE = 0x0100
 _DESC_LENGTH = 18
 
 
-class _CallWorker(QObject):
-    """Runs one callable off the GUI thread and reports the outcome."""
-
-    finished = Signal(object)
-    failed = Signal(str)
-
-    def __init__(self, fn: Callable[[], Any]) -> None:
-        super().__init__()
-        self._fn = fn
-
-    def run(self) -> None:
-        try:
-            result = self._fn()
-        except Exception as error:  # noqa: BLE001  # pylint: disable=broad-except  # reason: surface any backend/transport error to the status line
-            self.failed.emit(str(error))
-            return
-        self.finished.emit(result)
 
 
 class UsbPassthroughPanel(TranslatableMixin, QWidget):
@@ -109,7 +94,9 @@ class UsbPassthroughPanel(TranslatableMixin, QWidget):
         self._populate_source_combo()
         self._apply_local_headers()
         self._apply_shared_headers()
-        self._refresh_local_devices()
+        # Listed off the GUI thread when first shown (see UsbDevicesTab).
+        self._list_thread: Optional[WorkerHandle] = None
+        self._listed = False
         self._refresh_host_badge()
 
     @property
@@ -253,8 +240,24 @@ class UsbPassthroughPanel(TranslatableMixin, QWidget):
 
     # --- local devices + ACL ----------------------------------------------
 
+    def showEvent(self, event) -> None:  # noqa: N802  # reason: Qt override
+        """List the local devices the first time the panel is shown."""
+        super().showEvent(event)
+        if not self._listed:
+            self._refresh_local_devices()
+
     def _refresh_local_devices(self) -> None:
-        result = list_usb_devices()
+        if self._list_thread is not None:
+            return
+        self._listed = True
+        self._list_thread = start_worker(
+            self, _CallWorker(list_usb_devices), on_done=self._show_local_devices,
+            on_fail=self._viewer_status.setText, on_thread_done=self._on_list_done)
+
+    def _on_list_done(self) -> None:
+        self._list_thread = None
+
+    def _show_local_devices(self, result) -> None:
         devices = result.devices
         self._local_table.setRowCount(len(devices))
         for row, device in enumerate(devices):
@@ -271,14 +274,12 @@ class UsbPassthroughPanel(TranslatableMixin, QWidget):
                 self._local_table.setItem(row, col, QTableWidgetItem(text))
 
     def _on_auto_toggled(self, on: bool) -> None:
-        watcher = default_usb_watcher()
-        self._share.watching = on
         if on:
-            watcher.start()
+            self._share.watch()
             self._hotplug_timer.start()
         else:
             self._hotplug_timer.stop()
-            watcher.stop()
+            self._share.unwatch()
 
     def _poll_hotplug(self) -> None:
         watcher = default_usb_watcher()
@@ -488,11 +489,21 @@ class _ShareState:
         self.loopback: Optional[UsbLoopback] = None
         self.watching = False
 
-    def release(self, *_args: Any) -> None:
-        """Close this panel's loopback and watcher; turn passthrough off if it had turned it on."""
+    def watch(self) -> None:
+        """Take this panel's share of the default USB watcher (once)."""
+        if not self.watching:
+            hold_default_watcher()
+            self.watching = True
+
+    def unwatch(self) -> None:
+        """Give this panel's share back; the watcher stops only with its last holder."""
         if self.watching:
             self.watching = False
-            default_usb_watcher().stop()
+            release_default_watcher(background=True)
+
+    def release(self, *_args: Any) -> None:
+        """Close this panel's loopback and watcher; turn passthrough off if it had turned it on."""
+        self.unwatch()
         loop, self.loopback = self.loopback, None
         if loop is not None:
             loop.close()

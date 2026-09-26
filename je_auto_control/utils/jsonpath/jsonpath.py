@@ -6,7 +6,8 @@ awkward to extract from. This adds a focused JSONPath subset:
 
 * ``$``               root (optional prefix)
 * ``.name`` / ``name``  member access
-* ``[n]`` / ``[-n]``   list index (negative from the end)
+* ``[n]`` / ``[-n]``   list index (negative from the end); an RFC 9535
+  integer, so ``[01]``, ``[-0]`` and anything past 2**53-1 raise
 * ``*`` / ``[*]``      wildcard (all members / all elements)
 * ``..``               recursive descent
 * ``[?(@.k op v)]``    filter array elements or object member values
@@ -15,7 +16,9 @@ awkward to extract from. This adds a focused JSONPath subset:
   ``@.a.b`` reaches into nested objects and ``[?(@.k)]`` tests that ``k``
   exists. Values of different types never compare equal (``true != 1``);
   ``<`` / ``>`` order only two numbers or two strings (RFC 9535).
-* ``['name']``         quoted member, with RFC 9535 escapes decoded
+* ``['name']``         quoted member, with RFC 9535 escapes decoded (a
+  surrogate pair written as two ``\\u`` escapes is one character); an
+  unpaired surrogate, a raw control character or the other quote escaped raises
 
 A path this subset cannot read -- an unsupported filter, an unterminated
 ``[``, a stray character -- raises ``ValueError`` rather than matching
@@ -36,6 +39,11 @@ _OPERATORS = ("==", "!=", "<=", ">=", "<", ">")
 _JSON_NUMBER = re.compile(r"-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?")
 _LITERALS = {"true": True, "false": False, "null": None}
 _BARE_KEY = re.compile(r"[\w-]+")
+_HEX4 = re.compile(r"[0-9A-Fa-f]{4}")
+_INDEX = re.compile(r"0|-?[1-9][0-9]*")
+_DIGITS = re.compile(r"-?[0-9]+")
+_MAX_INDEX = 2 ** 53 - 1          # RFC 9535 2.1: the I-JSON exact integer range
+_QUOTES = "'\""
 _ABSENT = object()
 
 
@@ -43,7 +51,8 @@ def _scan_quoted(text: str, start: int) -> Tuple[str, int]:
     """Decode the string literal whose quote is at ``start``; return it and the index after its closing quote.
 
     RFC 9535 2.3.1.2 escapes are decoded (``\\'``, ``\\"``, ``\\uXXXX`` ...);
-    a missing closing quote raises ``ValueError``.
+    a missing closing quote, an unescaped control character, and an escaped
+    quote of the other kind raise ``ValueError``.
     """
     quote, index = text[start], start + 1
     chars: List[str] = []
@@ -51,8 +60,10 @@ def _scan_quoted(text: str, start: int) -> Tuple[str, int]:
         char = text[index]
         if char == quote:
             return "".join(chars), index + 1
+        if char < " ":
+            raise ValueError(f"unescaped control character in JSONPath string {text!r}")
         if char == "\\":
-            decoded, index = _escape(text, index + 1)
+            decoded, index = _escape(text, index + 1, quote)
             chars.append(decoded)
             continue
         chars.append(char)
@@ -60,14 +71,36 @@ def _scan_quoted(text: str, start: int) -> Tuple[str, int]:
     raise ValueError(f"unterminated string in JSONPath {text!r}")
 
 
-def _escape(text: str, index: int) -> Tuple[str, int]:
+def _escape(text: str, index: int, quote: str) -> Tuple[str, int]:
     """The character an escape stands for (``index`` is after the backslash) and the index after it."""
     code = text[index:index + 1]
-    if code == "u" and re.fullmatch(r"[0-9A-Fa-f]{4}", text[index + 1:index + 5]):
-        return chr(int(text[index + 1:index + 5], 16)), index + 5
-    if code in _ESCAPES:
+    if code == "u":
+        return _unicode_escape(text, index)
+    if code in _ESCAPES and code not in _QUOTES.replace(quote, ""):
         return _ESCAPES[code], index + 1
     raise ValueError(f"invalid escape in JSONPath {text!r}")
+
+
+def _hex4(text: str, start: int) -> int:
+    digits = text[start:start + 4]
+    return int(digits, 16) if _HEX4.fullmatch(digits) else -1
+
+
+def _unicode_escape(text: str, index: int) -> Tuple[str, int]:
+    """``\\uXXXX`` at ``index`` (the ``u``); a surrogate pair spelled as two escapes is one character.
+
+    Each half used to become its own lone surrogate, so ``$["\\uD83D\\uDE00"]``
+    looked for a two-character key and silently matched nothing.
+    """
+    code, end = _hex4(text, index + 1), index + 5
+    if code < 0 or 0xDC00 <= code <= 0xDFFF:
+        raise ValueError(f"invalid unicode escape in JSONPath {text!r}")
+    if not 0xD800 <= code <= 0xDBFF:
+        return chr(code), end
+    low = _hex4(text, end + 2) if text.startswith("\\u", end) else -1
+    if not 0xDC00 <= low <= 0xDFFF:
+        raise ValueError(f"unpaired surrogate escape in JSONPath {text!r}")
+    return chr(0x10000 + ((code - 0xD800) << 10) + (low - 0xDC00)), end + 6
 
 
 def _whole_string(raw: str) -> str:
@@ -103,8 +136,11 @@ def _parse_bracket(inner: str) -> Tuple[str, Any]:
         return ("filter", _parse_filter(body, inner))
     if inner[:1] in ("'", '"'):
         return ("key", _whole_string(inner))
-    if re.fullmatch(r"-?\d+", inner):
+    if _INDEX.fullmatch(inner) and abs(int(inner)) <= _MAX_INDEX:
         return ("index", int(inner))
+    if _DIGITS.fullmatch(inner):
+        # [01] and [-0] read as 1 and 0, and \d let [\u0663] (Arabic-Indic 3) read as 3.
+        raise ValueError(f"invalid JSONPath index [{inner}]: no leading zero or -0, at most 2**53-1")
     if not _BARE_KEY.fullmatch(inner):
         # Slices ([0:2]), unions ([0,1]) and [] were looked up as keys.
         raise ValueError(f"unsupported JSONPath selector [{inner}]")
@@ -197,6 +233,8 @@ def _tokenize(path: str) -> List[Tuple[str, Any]]:
             if not name:
                 raise ValueError(f"unexpected {char!r} in JSONPath {path!r}")
             tokens.append(("key", name))
+    if tokens and tokens[-1][0] == "recurse":
+        raise ValueError(f"'..' must be followed by a name, '*' or '[...]' in JSONPath {path!r}")
     return tokens
 
 
