@@ -11,10 +11,8 @@ Every function is pure (URL in, URL/bool/list out), so it is fully deterministic
 in CI.
 """
 import re
-from typing import List, Mapping, Sequence, Tuple, Union
-from urllib.parse import (
-    SplitResult, parse_qsl, urlencode, urlsplit, urlunsplit,
-)
+from typing import List, Mapping, Optional, Sequence, Tuple, Union
+from urllib.parse import SplitResult, parse_qsl, urlencode, urlsplit
 
 _DEFAULT_PORTS = {"http": 80, "https": 443, "ftp": 21, "ws": 80, "wss": 443}
 _PERCENT = re.compile(r"%[0-9a-fA-F]{2}")
@@ -38,6 +36,14 @@ def _normalize_percent(text: str) -> str:
     return _PERCENT.sub(lambda match: _normalize_escape(match.group(0)), text)
 
 
+def _lower_outside_escapes(text: str) -> str:
+    """Lower-case ``text`` but keep the hex digits of its percent-escapes upper-case."""
+    pieces = _PERCENT.split(text)
+    escapes = _PERCENT.findall(text)
+    return "".join(piece.lower() + (escapes[index] if index < len(escapes) else "")
+                   for index, piece in enumerate(pieces))
+
+
 def _remove_dot_segments(path: str) -> str:
     """RFC 3986 5.2.4: resolve ``.`` / ``..``; empty segments stay.
 
@@ -58,17 +64,20 @@ def _remove_dot_segments(path: str) -> str:
 
 
 def _normalize_path(path: str, has_authority: bool) -> str:
-    """Resolve dot segments; with an authority the path is absolute (``/``)."""
+    """Resolve dot segments; with an authority the path is absolute (``/``).
+
+    Escapes are normalised first (RFC 3986 6.2.2.2 before 6.2.2.3): resolving
+    first left ``/public/%2E%2E/admin`` as ``/public/../admin``, a traversal
+    a ``/public/`` prefix allowlist accepted.
+    """
+    path = _normalize_percent(path)
     if not has_authority:
         # mailto:a@b has no authority and no leading slash to add.
-        resolved = _remove_dot_segments(path) if path.startswith("/") else path
-        return _normalize_percent(resolved)
+        return _remove_dot_segments(path) if path.startswith("/") else path
     if not path:
         return "/"
     resolved = _remove_dot_segments(path)
-    if not resolved.startswith("/"):
-        resolved = "/" + resolved
-    return _normalize_percent(resolved)
+    return resolved if resolved.startswith("/") else "/" + resolved
 
 
 def _normalize_query(query: str, sort: bool) -> str:
@@ -77,10 +86,12 @@ def _normalize_query(query: str, sort: bool) -> str:
     Pairs are kept as written: decoding and re-encoding them turned a
     non-UTF-8 escape into U+FFFD and a bare key ``flag`` into ``flag=``.
     """
-    pairs = query.split("&")
+    # Normalised before sorting: ``k=%7A&k=b`` sorted as written and never
+    # matched ``k=z&k=b``.
+    pairs = _normalize_percent(query).split("&")
     if sort:
         pairs = sorted(pairs)
-    return _normalize_percent("&".join(pairs))
+    return "&".join(pairs)
 
 
 def _build_netloc(parts: SplitResult, host: str, scheme: str,
@@ -89,7 +100,7 @@ def _build_netloc(parts: SplitResult, host: str, scheme: str,
     # The raw userinfo: parts.username is "" for ":pw@h", which lost the
     # password, and the parsed fields are already percent-decoded.
     raw_userinfo, at, _ = parts.netloc.rpartition("@")
-    userinfo = raw_userinfo + at
+    userinfo = _normalize_percent(raw_userinfo) + at
     if ":" in host:
         host = f"[{host}]"  # hostname drops an IPv6 literal's brackets
     port = parts.port
@@ -102,18 +113,45 @@ def _build_netloc(parts: SplitResult, host: str, scheme: str,
     return netloc
 
 
+def _recompose(scheme: str, authority: Optional[str], path: str,
+               query: Optional[str], fragment: Optional[str]) -> str:
+    """RFC 3986 5.3 recomposition; a ``None`` component is absent, ``""`` is present but empty.
+
+    ``urlunsplit`` dropped an empty ``?`` / ``#`` (``http://h/?`` is not
+    ``http://h/``, 6.2.3), and a path that begins with ``//`` without an
+    authority became one: ``http:/a/..//evil.com/`` came out as
+    ``http://evil.com/`` or ``http:////evil.com/`` depending on the CPython
+    version. Such a path is written ``/.//...``, as the WHATWG URL serializer does.
+    """
+    out = f"{scheme}:" if scheme else ""
+    if authority is not None:
+        out += "//" + authority
+    elif path.startswith("//"):
+        out += "/."
+    out += path
+    if query is not None:
+        out += "?" + query
+    if fragment is not None:
+        out += "#" + fragment
+    return out
+
+
 def normalize_url(url: str, *, sort_query: bool = False,
                   strip_default_port: bool = True,
                   strip_fragment: bool = False) -> str:
     """Return a normalised form of ``url`` (RFC 3986 syntax-based)."""
-    parts = urlsplit((url or "").strip())
+    text = (url or "").strip()
+    parts = urlsplit(text)
     scheme = parts.scheme.lower()
-    host = (parts.hostname or "").lower()
-    netloc = _build_netloc(parts, host, scheme, strip_default_port)
-    path = _normalize_path(parts.path, bool(netloc))
-    query = _normalize_query(parts.query, sort_query) if parts.query else ""
-    fragment = "" if strip_fragment else parts.fragment
-    return urlunsplit((scheme, netloc, path, query, fragment))
+    before_fragment, hash_sign, _ = text.partition("#")
+    has_authority = (text[len(parts.scheme) + 1:] if parts.scheme else text).startswith("//")
+    # hostname lower-cases escapes too; decode the unreserved ones, then lower the rest.
+    host = _lower_outside_escapes(_normalize_percent(parts.hostname or ""))
+    authority = _build_netloc(parts, host, scheme, strip_default_port) if has_authority else None
+    path = _normalize_path(parts.path, has_authority)
+    query = _normalize_query(parts.query, sort_query) if "?" in before_fragment else None
+    fragment = None if strip_fragment or not hash_sign else _normalize_percent(parts.fragment)
+    return _recompose(scheme, authority, path, query, fragment)
 
 
 def canonicalize_url(url: str) -> str:
