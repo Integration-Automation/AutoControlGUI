@@ -29,9 +29,13 @@ W3C Trace Context 傳播
         span = child_context(parent)        # 相同 trace_id,新的 span_id
 
 ``SpanContext`` 是不可變的(``trace_id``、``span_id``、``trace_flags``、``tracestate``)組合。
-``new_root_context`` 鑄造新 trace;``child_context`` 保留 trace id 與繼承狀態但配置新的 span id。
+``new_root_context`` 鑄造新 trace;``child_context`` 保留 trace id 與繼承狀態但配置新的 span id,並清掉 sampled 與 random
+以外的旗標位元。
 ``parse_traceparent`` / ``format_traceparent`` 來回轉換 version-``00`` 標頭(較新的版本當作 ``00`` 讀取、忽略多出的欄位;
-版本 ``ff``、格式不符或全零 ID 拋出 ``TraceContextError``);``parse_tracestate`` / ``format_tracestate`` 處理 vendor 清單。
+版本 ``ff``、格式不符或全零 ID 拋出 ``TraceContextError``,``format_traceparent`` 寫出前也會驗證手工建立的 context);
+``parse_tracestate`` / ``format_tracestate`` 處理 vendor 清單。解析時只去掉逗號兩側的空格與 tab、保留值開頭的空格，捨棄鍵或值
+不合文法的成員(空值、含 ``=`` 或 ``,``、超過 256 字元、控制字元),讀滿 32 個成員就停，鍵重複時回傳 ``[]``;格式化遇到這種成員會拋出
+``TraceContextError``,不會寫出去。
 ``inject_context`` 寫入標頭;``extract_context`` 將其讀回(不分大小寫),``traceparent`` 缺少或無效時回傳
 ``None``,讓接收端依 W3C Trace Context 開一條新的 trace。
 

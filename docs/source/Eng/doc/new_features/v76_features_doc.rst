@@ -32,11 +32,19 @@ Headless API
 
 ``SpanContext`` is the immutable (``trace_id``, ``span_id``, ``trace_flags``,
 ``tracestate``) tuple. ``new_root_context`` mints a fresh trace; ``child_context``
-keeps the trace id and inherited state but allocates a new span id.
+keeps the trace id and inherited state but allocates a new span id, clearing
+flag bits other than sampled and random.
 ``parse_traceparent`` / ``format_traceparent`` round-trip the version-``00``
 header (a newer version is read as ``00`` with any extra fields ignored; version
-``ff``, malformed or all-zero IDs raise ``TraceContextError``); ``parse_tracestate`` / ``format_tracestate`` handle the
-vendor list. ``inject_context`` writes the headers; ``extract_context`` reads
+``ff``, malformed or all-zero IDs raise ``TraceContextError``, and
+``format_traceparent`` validates a hand-built context before writing it);
+``parse_tracestate`` / ``format_tracestate`` handle the vendor list. Parsing
+trims only the spaces and tabs around commas, keeps a value's leading spaces,
+discards a member whose key or value breaks the grammar (an empty value, ``=``
+or ``,`` inside, over 256 characters, a control character), stops after 32
+members, and returns ``[]`` for a duplicated key; formatting raises
+``TraceContextError`` for such a member instead of writing it out.
+``inject_context`` writes the headers; ``extract_context`` reads
 them back (case-insensitively) and returns ``None`` for a missing or invalid
 ``traceparent``, so the receiver starts a new trace as W3C Trace Context says.
 

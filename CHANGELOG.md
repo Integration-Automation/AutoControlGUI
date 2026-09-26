@@ -492,6 +492,10 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Fixed
 
+- W3C trace context: a tracestate value keeps its leading spaces, a member that
+  breaks the value grammar (including a CR LF) is discarded on parse and refused
+  on format, a 16k-member header parses in linear time, `format_traceparent`
+  validates a hand-built context, and `child_context` clears unknown flag bits.
 - `parse_link_header` / `next_url` follow RFC 8288 Appendix B: a `<` in an
   unquoted parameter value no longer swallows the next link, a valueless
   parameter is kept as `""`, and relations split on space and tab only.

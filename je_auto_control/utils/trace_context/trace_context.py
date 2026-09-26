@@ -24,7 +24,12 @@ _VERSION_RE = re.compile(r"^[0-9a-f]{2}$")
 # A simple key, or a multi-tenant ``tenant@system`` key (W3C Trace Context).
 _TRACESTATE_KEY_RE = re.compile(
     r"^(?:[a-z0-9][_0-9a-z\-*/]{0,240}@[a-z][_0-9a-z\-*/]{0,13}|[a-z][_0-9a-z\-*/]{0,255})$")
+# value = 0*255(chr) nblk-chr; chr = %x20 / nblk-chr; nblk-chr = printable ASCII but "," and "=".
+_TRACESTATE_VALUE_RE = re.compile(r"[\x20-\x2b\x2d-\x3c\x3e-\x7e]{0,255}[\x21-\x2b\x2d-\x3c\x3e-\x7e]")
+_MAX_MEMBERS = 32
+_OWS = " \t"
 _FLAG_SAMPLED = 0x01
+_KNOWN_FLAGS = 0x03             # sampled, and Level 2's random-trace-id bit
 
 RandBytes = Callable[[int], bytes]
 
@@ -81,31 +86,59 @@ def new_root_context(rng: Optional[RandBytes] = None, *,
 
 def child_context(parent: SpanContext,
                   rng: Optional[RandBytes] = None) -> SpanContext:
-    """Create a child context: same trace, new span id, inherited state."""
-    return SpanContext(parent.trace_id, new_span_id(rng), parent.trace_flags,
+    """Create a child context: same trace, new span id, inherited state.
+
+    Flag bits this implementation does not know are cleared, as W3C Trace
+    Context 3.2.2.5 requires of a vendor that propagates them (``ff`` was
+    passed on unchanged).
+    """
+    return SpanContext(parent.trace_id, new_span_id(rng), parent.trace_flags & _KNOWN_FLAGS,
                        list(parent.tracestate))
 
 
+def _valid_member(key: str, value: str) -> bool:
+    return bool(_TRACESTATE_KEY_RE.fullmatch(key) and _TRACESTATE_VALUE_RE.fullmatch(value))
+
+
 def parse_tracestate(header: Optional[str]) -> List[Tuple[str, str]]:
-    """Parse a ``tracestate`` header into an ordered list of (key, value)."""
+    """Parse a ``tracestate`` header into an ordered list of (key, value).
+
+    Only optional whitespace around the commas is trimmed: a value may begin
+    with spaces (W3C Trace Context 3.3.1.3.2), which used to be stripped. A
+    member whose value breaks the grammar -- empty, ``=`` or ``,`` inside, over
+    256 characters, a control character such as the CR LF that used to be
+    written back out -- is discarded. Parsing stops after 32 members, and a
+    duplicated key makes the whole header invalid.
+    """
     items: List[Tuple[str, str]] = []
+    seen = set()
     for member in (header or "").split(","):
-        member = member.strip()
+        member = member.strip(_OWS)
         if not member:
             continue
         key, sep, value = member.partition("=")
-        key = key.strip()
-        if not sep or not _TRACESTATE_KEY_RE.fullmatch(key):
+        if not sep or not _valid_member(key, value):
             continue
-        if any(existing == key for existing, _ in items):
-            return []           # a duplicated key makes the whole header invalid
-        items.append((key, value.strip()))
-    return items[:32]
+        if key in seen:
+            return []
+        seen.add(key)
+        items.append((key, value))
+        if len(items) == _MAX_MEMBERS:
+            break               # 3.3.1.1: at most 32; a set and this stop keep the work linear
+    return items
 
 
 def format_tracestate(items: List[Tuple[str, str]]) -> str:
-    """Serialise (key, value) pairs into a ``tracestate`` header value."""
-    return ",".join(f"{key}={value}" for key, value in items[:32])
+    """Serialise (key, value) pairs into a ``tracestate`` header value.
+
+    A pair that breaks the key or value grammar raises
+    :class:`TraceContextError` rather than reaching an outgoing header.
+    """
+    members = list(items)[:_MAX_MEMBERS]
+    for key, value in members:
+        if not (isinstance(key, str) and isinstance(value, str) and _valid_member(key, value)):
+            raise TraceContextError(f"invalid tracestate member: {key!r}={value!r}")
+    return ",".join(f"{key}={value}" for key, value in members)
 
 
 def parse_traceparent(header: str) -> SpanContext:
@@ -115,7 +148,7 @@ def parse_traceparent(header: str) -> SpanContext:
     are ignored (W3C Trace Context 4.3), so a newer caller's trace continues
     instead of a new one starting; ``ff`` is invalid.
     """
-    parts = (header or "").strip().split("-")
+    parts = (header or "").strip(_OWS).split("-")          # only HTTP OWS, not a line break or NBSP
     version = parts[0]
     if not _VERSION_RE.fullmatch(version) or version == "ff":
         raise TraceContextError(f"invalid traceparent version: {version!r}")
@@ -138,8 +171,16 @@ def _validate_traceparent_fields(trace_id: str, span_id: str, flags: str) -> Non
 
 
 def format_traceparent(ctx: SpanContext) -> str:
-    """Serialise a :class:`SpanContext` into a ``traceparent`` header value."""
-    return f"{_VERSION}-{ctx.trace_id}-{ctx.span_id}-{ctx.trace_flags:02x}"
+    """Serialise a :class:`SpanContext` into a ``traceparent`` header value.
+
+    The fields are validated first: a hand-built context wrote a CR LF in its
+    trace id, or flags of 256 as ``-100``, straight into the header.
+    """
+    flags = ctx.trace_flags
+    if isinstance(flags, bool) or not isinstance(flags, int) or not 0 <= flags <= 0xFF:
+        raise TraceContextError(f"invalid trace flags: {flags!r}")
+    _validate_traceparent_fields(str(ctx.trace_id), str(ctx.span_id), f"{flags:02x}")
+    return f"{_VERSION}-{ctx.trace_id}-{ctx.span_id}-{flags:02x}"
 
 
 def inject_context(headers: Optional[Dict[str, str]],
