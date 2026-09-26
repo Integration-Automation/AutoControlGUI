@@ -6384,7 +6384,8 @@ def jwt_tools() -> List[MCPTool]:
             name="ac_jwt_decode",
             description=("Verify a JWT 'token' with 'key' and an 'algorithms' "
                          "allowlist (rejects alg=none/confusion), checking exp/"
-                         "nbf/aud. Returns {ok, claims} or {ok:false, error}."),
+                         "nbf/aud (a token with aud needs 'audience'). Returns "
+                         "{ok, claims} or {ok:false, error}."),
             input_schema=schema(
                 {"token": {"type": "string"}, "key": {"type": "string"},
                  "algorithms": {"type": "array"},

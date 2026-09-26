@@ -20,7 +20,7 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 | 指標 | 數值 |
 | --- | ---: |
 | Python 模組總數（含周邊子專案） | 1,063 |
-| 程式碼總行數 | 156,406 |
+| 程式碼總行數 | 156,437 |
 | `je_auto_control/utils/` 子套件數 | 310 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 775 |
 | 套件門面 `__all__` 公開名稱數 | 1,244 |
@@ -494,7 +494,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.9 AI / Agent / LLM
 
-> 13 個套件、約 23,193 行。
+> 13 個套件、約 23,194 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -507,7 +507,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/cua_action/` | 204 | 標準化 computer-use 動作結構（Anthropic／OpenAI → `AC_*`） |
 | `utils/llm/` | 365 | 自然語言 → action list 規劃器 + Anthropic／null 後端 |
 | `utils/mcp_registry/` | 97 | MCP registry `server.json` 資訊清單產生（可被發現） |
-| `utils/mcp_server/` | 18,845 | **無頭 MCP 伺服器**（16K LOC，預設註冊 678 個工具＝659 個 `ac_*` + 19 個別名）：stdio + HTTP 傳輸、工具工廠與處理器、資源、prompt、稽核、限流、外掛熱重載 |
+| `utils/mcp_server/` | 18,846 | **無頭 MCP 伺服器**（16K LOC，預設註冊 678 個工具＝659 個 `ac_*` + 19 個別名）：stdio + HTTP 傳輸、工具工廠與處理器、資源、prompt、稽核、限流、外掛熱重載 |
 | `utils/tool_use_schema/` | 195 | 把 `AC_*` 指令匯出成 Claude／OpenAI 的 tool-use schema |
 | `utils/trajectory_eval/` | 132 | agent 軌跡評估：依評分規準為一次執行打分 |
 | `utils/vision/` | 538 | VLM 元素定位器（依描述找元素）+ Anthropic／OpenAI／null 後端 |
@@ -527,7 +527,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.11 伺服器、網路協定與外部整合
 
-> 24 個套件、約 6,772 行。
+> 24 個套件、約 6,802 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -541,7 +541,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/http_conditional/` | 148 | 條件式 HTTP 請求與快取驗證器 |
 | `utils/http_content/` | 158 | HTTP 內容協商與回應解壓縮 |
 | `utils/http_problem/` | 118 | RFC 9457 problem+json 解析 |
-| `utils/jwt/` | 240 | JWT（HMAC 家族）編碼、解碼與 claim 驗證 |
+| `utils/jwt/` | 270 | JWT（HMAC 家族）編碼、解碼與 claim 驗證 |
 | `utils/link_header/` | 150 | RFC 8288 Link header 解析與分頁 |
 | `utils/multipart/` | 181 | multipart/form-data 建構與解析 |
 | `utils/notify/` | 106 | 跨平台桌面通知 |
@@ -708,11 +708,11 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `mouse_aliases.py` | 39 | 單鍵點擊別名（`AC_click_left` 等），executor 與 callback executor 共用。 |
 | `flags.py` | 19 | 旗標讀取 `as_bool`：依拼法（`"true"`／`"yes"`／`"on"`／`"1"`）而非 Python 真值判斷，所以 JSON、CLI、MCP 傳來的 `"false"` 是關；所有 adapter 與流程指令共用。 |
 
-#### `utils/mcp_server/`（18,845 行，678 個工具）— 最大子系統
+#### `utils/mcp_server/`（18,846 行，678 個工具）— 最大子系統
 
 | 檔案 | 行數 | 職責 |
 | --- | ---: | --- |
-| `tools/_factories.py` | 9,028 | 工具工廠：每個函式回傳一個領域的 `MCPTool` 清單（把 `AC_*` 能力包成 MCP 工具）。 |
+| `tools/_factories.py` | 9,029 | 工具工廠：每個函式回傳一個領域的 `MCPTool` 清單（把 `AC_*` 能力包成 MCP 工具）。 |
 | `tools/_handlers.py` | 545 | 把 MCP 工具呼叫橋接到 AutoControl 無頭 API 的 adapter；主題模組拆完之後這裡留的是資料／文字／HTTP 那一類與 WebRunner 橋接。 |
 | `tools/_handlers_qa.py` | 419 | 同一種 adapter，QA 主題：斷言 DSL、資料驅動、SQL／PDF／郵件／HTTP 步驟、codegen、視覺回歸、狀態機、flaky 偵測與隔離、suite runner、無障礙稽核、裝置矩陣、媒體斷言。從 `_handlers.py` 依主題拆出的第一塊（750 行上限）；兩者互不引用。 |
 | `tools/_handlers_input.py` | 218 | 同一種 adapter，輸入主題：滑鼠、鍵盤、虛擬手把（ViGEm）。 |
@@ -1071,7 +1071,7 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | 層／子系統 | 檔案數 | 行數 |
 | --- | ---: | ---: |
 | `gui/` | 95 | 27,793 |
-| `utils/mcp_server/` | 35 | 18,845 |
+| `utils/mcp_server/` | 35 | 18,846 |
 | `utils/remote_desktop/` | 56 | 13,014 |
 | `utils/executor/` | 8 | 9,539 |
 | `utils/usb/` | 17 | 4,572 |
@@ -1090,6 +1090,6 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `osx/` | 17 | 925 |
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 852 |
-| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 681 | 56,438 |
-| **總計** | **1,057** | **156,341** |
+| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 681 | 56,468 |
+| **總計** | **1,057** | **156,372** |
 

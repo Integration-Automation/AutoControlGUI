@@ -97,6 +97,9 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Changed
 
+- `decode_jwt` / `AC_jwt_decode` refuse a token that carries `aud` unless the
+  policy's `audience` names one of its values (RFC 7519 4.1.3); pass the
+  audience to keep accepting such tokens.
 - The JSON document MCP tools accept a root array as well as an object.
 - Malformed JSON-RPC envelopes are answered `-32600`; `"id": null` is a
   request, answered with `"id": null`.
@@ -489,6 +492,9 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Fixed
 
+- JWT: an empty or non-string key raises `JwtError` instead of signing and
+  verifying (or raising `TypeError`), and non-JSON claims such as a `datetime`
+  or `NaN` raise `JwtError`.
 - `is_fresh` counts the `Age` header `store_validators` now records (RFC 9111
   4.2.3), a repeated `Cache-Control` directive keeps its first value, and
   `is_not_modified` answers `False` for a non-numeric status.
