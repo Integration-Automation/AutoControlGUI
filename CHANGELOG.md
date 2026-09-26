@@ -15,6 +15,8 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Added
 
+- `usb_watcher.hold_default_watcher()` / `release_default_watcher()`: share
+  the default USB hotplug watcher by count.
 - `rate_limit.named_bucket(name, rate, capacity)`, the named token buckets
   `AC_rate_limit` and `ac_rate_limit` share.
 - `box_format` (`"xywh"` / `"ltrb"`) on `cluster_grid`, `locate_cell`,
@@ -485,6 +487,9 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Fixed
 
+- The USB Devices tab and the passthrough panel no longer run a ~5 s device
+  enumeration on the GUI thread, and one no longer stops the other's hotplug
+  watcher; email Poll now and Admin broadcast no longer freeze the window.
 - Every MCP `tools/call` is answered with `isError: true` whatever the
   tool raises; a plain HTTP POST answers in its body even on a concurrent
   server; an unwritable audit log no longer fails a tool that ran.
