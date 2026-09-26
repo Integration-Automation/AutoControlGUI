@@ -20,7 +20,7 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 | 指標 | 數值 |
 | --- | ---: |
 | Python 模組總數（含周邊子專案） | 1,063 |
-| 程式碼總行數 | 156,544 |
+| 程式碼總行數 | 156,570 |
 | `je_auto_control/utils/` 子套件數 | 310 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 775 |
 | 套件門面 `__all__` 公開名稱數 | 1,244 |
@@ -527,7 +527,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.11 伺服器、網路協定與外部整合
 
-> 24 個套件、約 6,909 行。
+> 24 個套件、約 6,935 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -542,7 +542,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/http_content/` | 158 | HTTP 內容協商與回應解壓縮 |
 | `utils/http_problem/` | 118 | RFC 9457 problem+json 解析 |
 | `utils/jwt/` | 270 | JWT（HMAC 家族）編碼、解碼與 claim 驗證 |
-| `utils/link_header/` | 150 | RFC 8288 Link header 解析與分頁 |
+| `utils/link_header/` | 176 | RFC 8288 Link header 解析與分頁 |
 | `utils/multipart/` | 181 | multipart/form-data 建構與解析 |
 | `utils/notify/` | 106 | 跨平台桌面通知 |
 | `utils/notify_channels/` | 105 | 對外聊天／webhook 通知（Slack／Discord／Teams／raw） |
@@ -1090,6 +1090,6 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `osx/` | 17 | 925 |
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 852 |
-| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 681 | 56,575 |
-| **總計** | **1,057** | **156,479** |
+| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 681 | 56,601 |
+| **總計** | **1,057** | **156,505** |
 

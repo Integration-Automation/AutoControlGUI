@@ -58,6 +58,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260926-32 | 2026-09-26 | Parse Link headers with the RFC 8288 Appendix B algorithm, so a < in an unquoted parameter no longer swallows the next link | #bugfix #http | [2026-09-d](2026-09-d.md) |
 | U-20260926-31 | 2026-09-26 | Read cookie Expires with the RFC 6265 date algorithm, let the last valid Max-Age or Expires decide, take Max-Age as ASCII digits only, and ignore a Set-Cookie with a control character | #bugfix #security #http | [2026-09-d](2026-09-d.md) |
 | U-20260926-30 | 2026-09-26 | Resolve an encoded ../ in URL canonicalisation, never turn a //path into a host, normalise the query before sorting it, and keep an empty ? or # | #bugfix #security #url | [2026-09-d](2026-09-d.md) |
 | U-20260926-29 | 2026-09-26 | Count the Age header in HTTP cache freshness, keep the first of duplicate Cache-Control directives, and answer is_not_modified for any status | #bugfix #http | [2026-09-d](2026-09-d.md) |
@@ -326,7 +327,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | File | Period | Entries |
 |---|---|---:|
-| [2026-09-d.md](2026-09-d.md) | 2026-09 | 52 |
+| [2026-09-d.md](2026-09-d.md) | 2026-09 | 53 |
 | [2026-09-c.md](2026-09-c.md) | 2026-09 | 38 |
 | [2026-09-b.md](2026-09-b.md) | 2026-09 | 68 |
 | [2026-09.md](2026-09.md) | 2026-09 | 79 |

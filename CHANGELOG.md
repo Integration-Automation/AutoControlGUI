@@ -492,6 +492,9 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Fixed
 
+- `parse_link_header` / `next_url` follow RFC 8288 Appendix B: a `<` in an
+  unquoted parameter value no longer swallows the next link, a valueless
+  parameter is kept as `""`, and relations split on space and tab only.
 - `CookieJar`: `Expires` follows the RFC 6265 5.1.1 date algorithm (an
   out-of-range year no longer raises `OverflowError`), the last valid `Max-Age`
   or `Expires` decides, `Max-Age` takes ASCII digits only, and a `Set-Cookie`
