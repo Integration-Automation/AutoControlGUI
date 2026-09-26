@@ -58,6 +58,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260926-21 | 2026-09-26 | Auto-click refuses a 0 ms interval; Actions-menu slots show framework and decode errors instead of leaking them; a recording that did not start is reported; template crops write into non-ASCII folders; the live HUD no longer logs its own sampling; rebuilding the View > Tabs menu no longer leaks menus and actions | #bugfix #gui #audit | [2026-09-d](2026-09-d.md) |
 | U-20260926-20 | 2026-09-26 | Every MCP tools/call is answered whatever the tool raises; plain HTTP POSTs answer in their body on a concurrent server; ac_egress_reset and ac_approve_artifact need confirmation; an unwritable audit log no longer fails a tool that ran; the JSON document tools take root arrays; malformed JSON-RPC envelopes are -32600 and an id of null is a request | #bugfix #security #mcp #audit | [2026-09-d](2026-09-d.md) |
 | U-20260926-19 | 2026-09-26 | The WebRTC host, transport and Opus track take the running event loop with asyncio.get_running_loop() instead of the deprecated-outside-a-loop get_event_loop() | #maintenance #remote-desktop #python | [2026-09-d](2026-09-d.md) |
 | U-20260926-18 | 2026-09-26 | test_field_entry_batch pins sys.platform, so macOS runners check the default clear plan instead of failing on the Backspace key U-20260926-12 gave macOS | #tests #ci #macos | [2026-09-d](2026-09-d.md) |
@@ -315,7 +316,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | File | Period | Entries |
 |---|---|---:|
-| [2026-09-d.md](2026-09-d.md) | 2026-09 | 41 |
+| [2026-09-d.md](2026-09-d.md) | 2026-09 | 42 |
 | [2026-09-c.md](2026-09-c.md) | 2026-09 | 38 |
 | [2026-09-b.md](2026-09-b.md) | 2026-09 | 68 |
 | [2026-09.md](2026-09.md) | 2026-09 | 79 |

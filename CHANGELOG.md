@@ -488,6 +488,13 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 - Every MCP `tools/call` is answered with `isError: true` whatever the
   tool raises; a plain HTTP POST answers in its body even on a concurrent
   server; an unwritable audit log no longer fails a tool that ran.
+- Auto-click refuses an interval below 1 ms; the Assertions, Data Source,
+  LLM Planner, Self-Healing, Media Checks, Trace Replay and Variables tabs
+  show framework and decode errors instead of leaking them; a recording that
+  did not start is reported; template crops write into non-ASCII folders;
+  the Live HUD no longer logs its own sampling; the View > Tabs menu no
+  longer leaks on every rebuild.
+- `VariableScope.update_many` sets nothing when any name is invalid.
 - Sub-pixel and scale matching accept 16-bit and float images and contain
   OpenCV errors; one unscorable scale no longer aborts a sweep.
 - An aborted `drag_path` releases where the pointer stopped; a `click` step

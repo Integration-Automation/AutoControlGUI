@@ -15,6 +15,7 @@ from je_auto_control.gui._i18n_helpers import TranslatableMixin
 from je_auto_control.gui.language_wrapper.multi_language_wrapper import (
     language_wrapper,
 )
+from je_auto_control.utils.exception.exceptions import AutoControlException
 import je_auto_control as ac
 
 _KINDS = ("text", "image", "pixel", "window", "vlm")
@@ -130,7 +131,7 @@ class AssertionsTab(TranslatableMixin, QWidget):
     def _on_run(self) -> None:
         try:
             result = self._run_assertion()
-        except (ValueError, OSError, RuntimeError, TypeError) as error:
+        except (AutoControlException, ValueError, OSError, RuntimeError, TypeError) as error:
             self._result.setText(f"{_t('assert_failed')}: {error}")
             return
         label = _t("assert_passed") if result["passed"] else _t("assert_failed")

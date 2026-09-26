@@ -490,6 +490,22 @@ be at 2x if on a Retina screen」，`scale_down=True` 只在帶 `bbox` 時生效
 
 ---
 
+## GUI 執行緒上的阻塞呼叫與共用的 USB 監看器
+
+`TODO` — 2026-09-26 GUI 稽核找到、這批沒做的部分（需要把呼叫搬到 `gui/_worker_thread.start_worker`）
+
+- **USB 列舉在 GUI 執行緒**：`gui/usb_devices_tab.py:44,84` 與 `gui/usb_passthrough_panel.py:112,257` 的建構子與每 2 秒的
+  自動重新整理直接呼叫 `list_usb_devices()`，它跑 PowerShell `Get-PnpDevice`（逾時 10 秒）；量到建構 4.94 秒、一次刷新
+  5.42 秒。兩個分頁在啟動時就建構。做法：改走 `start_worker`，第一次顯示時才列舉。
+- **兩個分頁共用 `default_usb_watcher()`**：`usb_devices_tab.py:67-74` 關掉自動刷新時會停掉面板（`usb_passthrough_panel.py:273-281`）
+  還在用的同一個監看器，面板的核取方塊仍勾著但 `_poll_hotplug` 從此不動。做法：監看器改成計數使用者，或各分頁只停自己啟動的。
+- **網路呼叫在 GUI 執行緒**：`email_triggers_tab.py:148-157` 的 Poll now（量到卡 30.1 秒）、`vlm_tab.py:246,269`、
+  `admin_console_tab.py:199`。做法：`start_worker`，並顯示每個觸發器的錯誤。
+- **Tools > Start 與分頁狀態不同步**：Hotkeys／Scheduler／Triggers 分頁用自己的 `_running` 旗標，`main_window.py:271-286`
+  從選單啟動同一個引擎後分頁仍顯示「已停止」。做法：分頁讀引擎的狀態。
+
+---
+
 ## 遠端桌面的 viewer 槽位由各面板共用
 
 `DECIDE` — 要改 `registry` 的擁有權模型

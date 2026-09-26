@@ -63,9 +63,14 @@ def measure_audio_rms(duration_s: float = 1.0,
             "(pip install sounddevice numpy).",
         ) from error
     frames = max(1, int(float(duration_s) * int(samplerate)))
-    recording = sd.rec(frames, samplerate=int(samplerate),
-                       channels=int(channels), device=device)
-    sd.wait()
+    try:
+        recording = sd.rec(frames, samplerate=int(samplerate),
+                           channels=int(channels), device=device)
+        sd.wait()
+    except sd.PortAudioError as error:
+        # No input device: PortAudioError is a bare Exception, outside every
+        # caller's except clause.
+        raise RuntimeError(f"audio capture failed: {error}") from error
     return float(np.sqrt(np.mean(np.square(recording))))
 
 
