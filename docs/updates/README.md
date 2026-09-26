@@ -58,6 +58,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260926-37 | 2026-09-26 | Leave untranslated entries out of a compiled .mo, as msgfmt does, so gettext readers fall back to the msgid instead of showing an empty string | #bugfix #i18n | [2026-09-e](2026-09-e.md) |
 | U-20260926-36 | 2026-09-26 | Validate a multipart boundary, refuse or redraw one a part contains so a field value cannot inject a part, and read only the boundary parameter | #bugfix #security #http | [2026-09-e](2026-09-e.md) |
 | U-20260926-35 | 2026-09-26 | Buffer an unterminated SSE line in pieces instead of re-splitting the whole buffer on every chunk | #bugfix #performance #http | [2026-09-e](2026-09-e.md) |
 | U-20260926-34 | 2026-09-26 | Keep a .env value that starts with #, keep the trailing whitespace of a multi-line value's lines, parse an unclosed quote in linear time, skip a BOM, and refuse to dump a key the parser cannot read back | #bugfix #config | [2026-09-d](2026-09-d.md) |
@@ -331,7 +332,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | File | Period | Entries |
 |---|---|---:|
-| [2026-09-e.md](2026-09-e.md) | 2026-09 | 2 |
+| [2026-09-e.md](2026-09-e.md) | 2026-09 | 3 |
 | [2026-09-d.md](2026-09-d.md) | 2026-09 | 55 |
 | [2026-09-c.md](2026-09-c.md) | 2026-09 | 38 |
 | [2026-09-b.md](2026-09-b.md) | 2026-09 | 68 |

@@ -495,6 +495,9 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Fixed
 
+- `GettextCatalog.compile_mo` / `to_mo_bytes` leave untranslated entries out
+  of the `.mo`, as `msgfmt` does, so readers fall back to the `msgid` instead
+  of showing an empty string.
 - `build_multipart` refuses a boundary RFC 2046 does not allow or that a part
   contains (a field value could inject a part), redraws a generated one, and
   `parse_multipart` reads only the `boundary` parameter.
