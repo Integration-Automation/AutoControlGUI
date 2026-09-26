@@ -9,9 +9,9 @@ for a notification and malformed envelopes got the wrong error codes.
 import json
 import re
 import urllib.request
-import xml.etree.ElementTree as ET
 
 import pytest
+from defusedxml.ElementTree import ParseError
 
 from je_auto_control.utils.mcp_server.audit import AuditLogger
 from je_auto_control.utils.mcp_server.server import MCPServer
@@ -37,7 +37,7 @@ class _PluginError(Exception):
     """An error type no containment list knows."""
 
 
-@pytest.mark.parametrize("error", [re.error("missing )"), ET.ParseError("bad xml"), _PluginError("custom")])
+@pytest.mark.parametrize("error", [re.error("missing )"), ParseError("bad xml"), _PluginError("custom")])
 def test_a_tool_error_of_any_type_is_answered_with_is_error(error):
     reply = _call(MCPServer(tools=[_raising(error)]), "boom")
     assert reply["result"]["isError"] is True

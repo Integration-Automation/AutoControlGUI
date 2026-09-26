@@ -62,10 +62,11 @@ def test_ignore_case_false_reaches_the_backend_as_false(monkeypatch):
         name = "fake"
         available = True
 
-        def list_elements(self, app_name=None, max_results=200):
+        def list_elements(self, app_name=None, max_results=200, window_title=None):
             return []
 
-        def find_text(self, text, ignore_case, **_kwargs):
+        def find_text(self, text="", ignore_case=True, name=None, role=None, app_name=None,
+                      automation_id=None):
             seen.append(ignore_case)
             return True
 
