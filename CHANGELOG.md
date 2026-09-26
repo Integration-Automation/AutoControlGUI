@@ -15,6 +15,8 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Added
 
+- `dotenv.DotenvError`, raised by `dump_dotenv` for a key the parser would not
+  read back.
 - `HotkeyDaemon.is_running`, `Scheduler.is_running` and
   `TriggerEngine.is_running`: whether the engine's thread is alive.
 - `usb_watcher.hold_default_watcher()` / `release_default_watcher()`: share
@@ -492,6 +494,9 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Fixed
 
+- `parse_dotenv` keeps a value that starts with `#` (`COLOR=#ff0000`), keeps
+  the trailing whitespace of a multi-line quoted value's lines, skips a leading
+  BOM, and parses an unclosed quote in linear time (20k lines took 190 s).
 - W3C trace context: a tracestate value keeps its leading spaces, a member that
   breaks the value grammar (including a CR LF) is discarded on parse and refused
   on format, a 16k-member header parses in linear time, `format_traceparent`

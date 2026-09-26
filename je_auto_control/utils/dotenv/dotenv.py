@@ -11,10 +11,17 @@ rather than mutating ``os.environ``, so it is safe and deterministic in CI.
 """
 import re
 from pathlib import Path
-from typing import Dict, List, MutableMapping, Optional, Tuple
+from typing import Dict, List, Mapping, MutableMapping, Optional, Tuple
 
+from je_auto_control.utils.exception.exceptions import AutoControlException
+
+_BOM = chr(0xFEFF)
 _KEY_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_.]*$")
 _ESCAPES = {"n": "\n", "t": "\t", "r": "\r", '"': '"', "\\": "\\", "'": "'"}
+
+
+class DotenvError(AutoControlException, ValueError):
+    """A mapping cannot be written as ``.env`` text (a key the parser would not read back)."""
 
 
 def _unescape(value: str) -> str:
@@ -38,48 +45,82 @@ def _strip_inline_comment(value: str) -> str:
     return value[:match.start()] if match else value
 
 
-def _unquoted(value: str) -> str:
-    if value.startswith("#"):          # ``KEY= # comment`` is an empty value
-        return ""
-    return _strip_inline_comment(value).strip()
+def _unquoted(raw: str) -> str:
+    """The unquoted value after ``=``: ``#`` starts a comment only after whitespace.
+
+    ``KEY= # comment`` is empty, but ``COLOR=#ff0000`` is ``#ff0000``; the
+    value used to be stripped first, which lost that difference and read it as
+    empty.
+    """
+    return _strip_inline_comment(raw).strip()
 
 
-def _closing_quote(value: str, quote: str) -> int:
-    """Index of the quote closing ``value[0]``, or -1; an escaped quote does not close."""
-    index = 1
-    while index < len(value):
-        if value[index] == "\\":
+def _line_close(line: str, quote: str, start: int) -> int:
+    """Column of the first unescaped ``quote`` in ``line`` from ``start``, or -1.
+
+    A backslash escapes the next character; at the end of a line it escapes
+    the line break, so every line is scanned from a fresh state.
+    """
+    index = start
+    while index < len(line):
+        if line[index] == "\\":
             index += 2
             continue
-        if value[index] == quote:
+        if line[index] == quote:
             return index
         index += 1
     return -1
 
 
-def _parse_entry(lines: List[str], index: int) -> Tuple[Optional[Tuple[str, str]], int]:
+class _Closers:
+    """Per quote character, the first line at or after each line that holds an unescaped quote.
+
+    Built once per parse: an unclosed quote rescanned every following line
+    for each line it added, and each later unclosed quote did the same --
+    ``A="x`` followed by 20,000 lines took 190 s.
+    """
+
+    def __init__(self, lines: List[str]) -> None:
+        self._lines = lines
+        self._next: Dict[str, List[int]] = {}
+
+    def next_line(self, quote: str, start: int) -> int:
+        """The index of the first line at or after ``start`` with an unescaped ``quote``, or -1."""
+        if quote not in self._next:
+            following = [-1] * (len(self._lines) + 1)
+            for line_index in range(len(self._lines) - 1, -1, -1):
+                has_quote = _line_close(self._lines[line_index], quote, 0) >= 0
+                following[line_index] = line_index if has_quote else following[line_index + 1]
+            self._next[quote] = following
+        return self._next[quote][start]
+
+
+def _parse_entry(lines: List[str], index: int, closers: _Closers) -> Tuple[Optional[Tuple[str, str]], int]:
     """Parse the entry starting at ``lines[index]``; return it and the next index.
 
     A quoted value ends at its closing quote -- anything after it (an inline
-    comment) is ignored, and it may run over several lines. One that is never
-    closed is read as plain text of its own line, as before.
+    comment) is ignored, and it may run over several lines, keeping each
+    line's trailing whitespace. One that is never closed is read as plain text
+    of its own line.
     """
     head = _parse_line(lines[index])
     if head is None:
         return None, index + 1
     key, raw = head
-    value = raw.strip()
+    value = raw.lstrip(" \t")
     quote = value[:1]
     if quote not in ("'", '"'):
-        return (key, _unquoted(value)), index + 1
-    end, close = index + 1, _closing_quote(value, quote)
-    while close == -1 and end < len(lines):
-        value += "\n" + lines[end]
-        end += 1
-        close = _closing_quote(value, quote)
-    if close == -1:
-        return (key, _unquoted(raw.strip())), index + 1
-    inner = value[1:close]
+        return (key, _unquoted(raw)), index + 1
+    close, end = _line_close(value, quote, 1), index + 1
+    if close >= 0:
+        inner = value[1:close]
+    else:
+        last = closers.next_line(quote, index + 1)
+        if last < 0:
+            return (key, _unquoted(value)), index + 1
+        tail = lines[last][:_line_close(lines[last], quote, 0)]
+        inner = "\n".join([value[1:], *lines[index + 1:last], tail])
+        end = last + 1
     return (key, _unescape_single(inner) if quote == "'" else _unescape(inner)), end
 
 
@@ -95,8 +136,9 @@ _EXPORT = re.compile(r"export[ \t]")
 
 
 def _parse_line(line: str) -> Optional[Tuple[str, str]]:
-    stripped = line.strip()
-    if not stripped or stripped.startswith("#"):
+    # Only the left side: the right is part of a quoted value that runs on.
+    stripped = line.lstrip()
+    if not stripped.strip() or stripped.startswith("#"):
         return None
     if _EXPORT.match(stripped):
         # "export\tKEY=1" is an export too; it was dropped as an unknown key.
@@ -109,14 +151,22 @@ def _parse_line(line: str) -> Optional[Tuple[str, str]]:
 
 
 def parse_dotenv(text: str) -> Dict[str, str]:
-    """Parse ``.env`` ``text`` into an ordered ``{key: value}`` dict."""
+    """Parse ``.env`` ``text`` into an ordered ``{key: value}`` dict.
+
+    A leading byte-order mark is skipped, as :func:`dotenv_values` does for
+    files; it used to make the first key invalid and drop it.
+    """
     result: Dict[str, str] = {}
+    text = text or ""
+    if text.startswith(_BOM):
+        text = text[1:]
     # Only CR / LF end a line: str.splitlines() also splits on \\v, \\f and
     # U+2028, which dump_dotenv leaves unquoted, so such values were cut.
-    lines = re.split(r"\r\n|\r|\n", text or "")
+    lines = re.split(r"\r\n|\r|\n", text)
+    closers = _Closers(lines)
     index = 0
     while index < len(lines):
-        item, index = _parse_entry(lines, index)
+        item, index = _parse_entry(lines, index, closers)
         if item is not None:
             result[item[0]] = item[1]
     return result
@@ -145,10 +195,17 @@ def load_dotenv(path: str, env: MutableMapping[str, str], *,
     return env
 
 
-def dump_dotenv(mapping: MutableMapping[str, str]) -> str:
-    """Serialise ``mapping`` to ``.env`` text, quoting values when needed."""
+def dump_dotenv(mapping: Mapping[str, str]) -> str:
+    """Serialise ``mapping`` to ``.env`` text, quoting values when needed.
+
+    A key the parser would not read back raises :class:`DotenvError`: a key of
+    ``"X\\nPATH"`` wrote a second line that set ``PATH``, ``"A=B"`` read back as
+    ``A`` with ``B=`` in its value, and ``"1A"`` / ``"A B"`` vanished.
+    """
     lines = []
     for key, value in mapping.items():
+        if not isinstance(key, str) or not _KEY_RE.fullmatch(key):
+            raise DotenvError(f"not a .env key: {key!r}")
         text = str(value)
         # Quote anything parsing would otherwise change: surrounding spaces,
         # ``#``, line breaks (``\\r`` too -- the parser splits on it) and quotes.
