@@ -1,9 +1,14 @@
 """Headless tests for clear-then-type field entry. No Qt."""
+import sys
+
 import je_auto_control as ac
 from je_auto_control.utils.field_entry import plan_field_set, set_field_text
 
 
-def test_default_plan_clears_then_types():
+def test_default_plan_clears_then_types(monkeypatch):
+    # Pinned: macOS clears with backspace, which its key table has instead
+    # of delete, so on a macOS runner the unpinned plan differed.
+    monkeypatch.setattr(sys, "platform", "win32")
     plan = plan_field_set("hello")
     assert plan == [
         {"op": "hotkey", "keys": ["ctrl", "a"]},

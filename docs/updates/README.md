@@ -60,6 +60,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 |---|---|---|---|---|
 | U-20260926-20 | 2026-09-26 | Every MCP tools/call is answered whatever the tool raises; plain HTTP POSTs answer in their body on a concurrent server; ac_egress_reset and ac_approve_artifact need confirmation; an unwritable audit log no longer fails a tool that ran; the JSON document tools take root arrays; malformed JSON-RPC envelopes are -32600 and an id of null is a request | #bugfix #security #mcp #audit | [2026-09-d](2026-09-d.md) |
 | U-20260926-19 | 2026-09-26 | The WebRTC host, transport and Opus track take the running event loop with asyncio.get_running_loop() instead of the deprecated-outside-a-loop get_event_loop() | #maintenance #remote-desktop #python | [2026-09-d](2026-09-d.md) |
+| U-20260926-18 | 2026-09-26 | test_field_entry_batch pins sys.platform, so macOS runners check the default clear plan instead of failing on the Backspace key U-20260926-12 gave macOS | #tests #ci #macos | [2026-09-d](2026-09-d.md) |
 | U-20260926-17 | 2026-09-26 | AC_rate_limit takes a changed rate for a reused name; the app-idle wait keeps its deadline; retry jitter and caps are validated; asset types refuse values they cannot hold; memory stores can be read while written; hand-written skills keep their tags and self-calling skills are bounded; blank locators are refused; the MCP saga reports rollback errors | #bugfix #audit #infra | [2026-09-d](2026-09-d.md) |
 | U-20260926-16 | 2026-09-26 | The headless suite records any input that reaches the real mouse or keyboard backend and fails that test; the recorder replay test no longer moves the real cursor | #tests #safety | [2026-09-d](2026-09-d.md) |
 | U-20260926-15 | 2026-09-26 | Sub-pixel and scale matching take 16-bit and float images and centre on the right pixel; one unscorable scale no longer aborts a sweep; rbac saves before it changes and hands out frozen copies; failure bundles mask secrets in nested mappings, tuples and reprs; malformed rubrics are refused; an aborted drag releases where it stopped and a click without a point clicks in place | #bugfix #security #audit #vision | [2026-09-d](2026-09-d.md) |
@@ -314,7 +315,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | File | Period | Entries |
 |---|---|---:|
-| [2026-09-d.md](2026-09-d.md) | 2026-09 | 40 |
+| [2026-09-d.md](2026-09-d.md) | 2026-09 | 41 |
 | [2026-09-c.md](2026-09-c.md) | 2026-09 | 38 |
 | [2026-09-b.md](2026-09-b.md) | 2026-09 | 68 |
 | [2026-09.md](2026-09.md) | 2026-09 | 79 |

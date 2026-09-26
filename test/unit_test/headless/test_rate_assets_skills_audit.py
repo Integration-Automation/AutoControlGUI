@@ -18,9 +18,10 @@ from je_auto_control.utils.exception.exceptions import AutoControlException
 def test_a_reused_limiter_name_takes_the_new_rate_on_both_surfaces():
     from je_auto_control.utils.executor.action_executor import _rate_limit
     from je_auto_control.utils.mcp_server.tools._handlers_operations import rate_limit
-    _rate_limit("audit-bucket", rate=1, capacity=1)
-    assert _rate_limit("audit-bucket", rate=1, capacity=5)["acquired"]
-    assert rate_limit("audit-bucket", rate=1, capacity=5)["tokens"] == 3.0
+    # A slow rate: the bucket refills between calls (3.0001 on a busy machine).
+    _rate_limit("audit-bucket", rate=0.001, capacity=1)
+    assert _rate_limit("audit-bucket", rate=0.001, capacity=5)["acquired"]
+    assert rate_limit("audit-bucket", rate=0.001, capacity=5)["tokens"] == pytest.approx(3.0, abs=0.01)
 
 
 @pytest.mark.parametrize("interval, bound", [(3600.0, 1.0), (0.0, 0.05), (float("nan"), 0.05), (-1.0, 0.05)])
