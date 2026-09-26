@@ -58,6 +58,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260926-15 | 2026-09-26 | Sub-pixel and scale matching take 16-bit and float images and centre on the right pixel; one unscorable scale no longer aborts a sweep; rbac saves before it changes and hands out frozen copies; failure bundles mask secrets in nested mappings, tuples and reprs; malformed rubrics are refused; an aborted drag releases where it stopped and a click without a point clicks in place | #bugfix #security #audit #vision | [2026-09-d](2026-09-d.md) |
 | U-20260926-14 | 2026-09-26 | The offscreen screen-probe tests pin sys.platform, so macOS runners check the scaled case as other platforms do instead of failing it | #tests #ci #macos | [2026-09-d](2026-09-d.md) |
 | U-20260926-13 | 2026-09-26 | Repair commands without a db share one store per process; approval artifacts store numbers and lists as JSON; two quarantine stores on one file keep each other's names; renewal intervals must be positive and renewals never overlap; NumPy bboxes work in force mode; failing plugin imports are reported; timelines refuse NaN and negative durations | #bugfix #audit #infra | [2026-09-d](2026-09-d.md) |
 | U-20260926-12 | 2026-09-26 | AC_grid_cell reads locate_all_image's [left, top, right, bottom] boxes with box_format="ltrb"; macOS field clearing uses Backspace; dataset diffs refuse a missing key column and agree cell by cell; runs given as one name and pairs that never failed together no longer cluster; unknown critic effects, bad TOTP times and negative windows are refused; deep_merge shares nothing with its inputs | #bugfix #audit #data | [2026-09-d](2026-09-d.md) |
@@ -309,7 +310,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | File | Period | Entries |
 |---|---|---:|
-| [2026-09-d.md](2026-09-d.md) | 2026-09 | 35 |
+| [2026-09-d.md](2026-09-d.md) | 2026-09 | 36 |
 | [2026-09-c.md](2026-09-c.md) | 2026-09 | 38 |
 | [2026-09-b.md](2026-09-b.md) | 2026-09 | 68 |
 | [2026-09.md](2026-09.md) | 2026-09 | 79 |

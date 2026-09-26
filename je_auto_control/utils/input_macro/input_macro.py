@@ -21,15 +21,17 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 
 def _sink_move(event: Dict[str, Any]) -> None:
     from je_auto_control.wrapper.auto_control_mouse import set_mouse_position
-    set_mouse_position(int(event.get("x", 0)), int(event.get("y", 0)))
+    if "x" not in event or "y" not in event:
+        # It moved to (0, 0), the top-left hot corner.
+        raise ValueError(f"a move needs x and y: {event!r}")
+    set_mouse_position(int(event["x"]), int(event["y"]))
 
 
 def _sink_click(event: Dict[str, Any]) -> None:
-    from je_auto_control.wrapper.auto_control_mouse import (
-        click_mouse, set_mouse_position)
-    x, y = int(event.get("x", 0)), int(event.get("y", 0))
-    set_mouse_position(x, y)
-    click_mouse(event.get("button", "mouse_left"), x, y)
+    """Click at the event's point, or where the pointer is when it gives none (it clicked (0, 0))."""
+    from je_auto_control.wrapper.auto_control_mouse import click_mouse
+    _move_to_event(event)
+    click_mouse(event.get("button", "mouse_left"), *_event_point(event))
 
 
 def _move_to_event(event: Dict[str, Any]) -> None:
@@ -191,6 +193,14 @@ def _playback_factor(speed: float) -> float:
     return factor
 
 
+def _finite_seconds(milliseconds: Any, name: str) -> float:
+    """``milliseconds`` as seconds; NaN or infinity is a ``ValueError`` (sleep(inf) never returns)."""
+    value = float(milliseconds)
+    if not math.isfinite(value):
+        raise ValueError(f"{name} must be a finite number, got {milliseconds!r}")
+    return value / 1000.0
+
+
 def replay_timeline(events: List[Dict[str, Any]], *, speed: float = 1.0,
                     sink: Optional[Callable] = None,
                     sleep: Optional[Callable] = None,
@@ -211,7 +221,7 @@ def replay_timeline(events: List[Dict[str, Any]], *, speed: float = 1.0,
     played = 0
     try:
         for event in events:
-            gap = float(event.get("delta_ms", 0)) / 1000.0 / factor
+            gap = _finite_seconds(event.get("delta_ms", 0), "delta_ms") / factor
             gap = max(float(min_gap), gap)
             if max_gap is not None:
                 gap = min(gap, float(max_gap))
@@ -233,7 +243,8 @@ def _run_steps(steps: List[Dict[str, Any]], dispatch: Callable,
             for _ in range(int(step.get("times", 1))):
                 _run_steps(step.get("steps", []), dispatch, sleeper, log)
         elif op == "wait":
-            sleeper(float(step.get("ms", 0)) / 1000.0)
+            # Clamped at 0 as replay_timeline's gaps are; time.sleep(-1) raised.
+            sleeper(max(0.0, _finite_seconds(step.get("ms", 0), "ms")))
             log.append({"op": "wait", "ms": step.get("ms", 0)})
         else:
             dispatch(step)

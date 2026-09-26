@@ -7,7 +7,7 @@ import json
 import os
 import secrets
 import threading
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass, field, replace
 from pathlib import Path
 from typing import Dict, List, Optional, Set
 
@@ -52,9 +52,9 @@ class UserAuthError(AutoControlException, RuntimeError):
     """Raised when a token doesn't match any known user."""
 
 
-@dataclass
+@dataclass(frozen=True)
 class UserRecord:
-    """One persisted user."""
+    """One persisted user; frozen, and handed out as copies, so a caller cannot edit the store."""
     user_id: str
     display_name: str
     role: str
@@ -112,7 +112,7 @@ class UserStore:
 
     def list_users(self) -> List[UserRecord]:
         with self._lock:
-            return list(self._users.values())
+            return [_copy(record) for record in self._users.values()]
 
     def add_user(self, *, user_id: str, display_name: str, role: str,
                  token: Optional[str] = None,
@@ -138,16 +138,15 @@ class UserStore:
             if any(hmac.compare_digest(existing.token_hash, record.token_hash)
                    for existing in self._users.values()):
                 raise UserAuthError("that token is already in use")
-            self._users[user_id] = record
-            self._save_locked()
+            self._commit_locked({**self._users, user_id: record})
         return plain_token
 
     def remove_user(self, user_id: str) -> bool:
         with self._lock:
-            removed = self._users.pop(user_id, None) is not None
-            if removed:
-                self._save_locked()
-        return removed
+            if user_id not in self._users:
+                return False
+            self._commit_locked({key: record for key, record in self._users.items() if key != user_id})
+        return True
 
     def rotate_token(self, user_id: str) -> str:
         """Generate a fresh token for an existing user; returns the plain token."""
@@ -156,14 +155,8 @@ class UserStore:
             existing = self._users.get(user_id)
             if existing is None:
                 raise UserAuthError(f"unknown user_id: {user_id!r}")
-            self._users[user_id] = UserRecord(
-                user_id=existing.user_id,
-                display_name=existing.display_name,
-                role=existing.role,
-                token_hash=_hash_token(plain_token),
-                tags=list(existing.tags),
-            )
-            self._save_locked()
+            self._commit_locked({**self._users, user_id: replace(
+                existing, token_hash=_hash_token(plain_token), tags=list(existing.tags))})
         return plain_token
 
     def set_role(self, user_id: str, role: str) -> None:
@@ -173,14 +166,8 @@ class UserStore:
             existing = self._users.get(user_id)
             if existing is None:
                 raise UserAuthError(f"unknown user_id: {user_id!r}")
-            self._users[user_id] = UserRecord(
-                user_id=existing.user_id,
-                display_name=existing.display_name,
-                role=role,
-                token_hash=existing.token_hash,
-                tags=list(existing.tags),
-            )
-            self._save_locked()
+            self._commit_locked({**self._users, user_id: replace(
+                existing, role=role, tags=list(existing.tags))})
 
     def authenticate(self, token: str) -> UserRecord:
         """Constant-time match a token to its user record. Raises on miss."""
@@ -190,12 +177,13 @@ class UserStore:
         with self._lock:
             for record in self._users.values():
                 if hmac.compare_digest(record.token_hash, expected_hash):
-                    return record
+                    return _copy(record)
         raise UserAuthError("invalid token")
 
     def get(self, user_id: str) -> Optional[UserRecord]:
         with self._lock:
-            return self._users.get(user_id)
+            record = self._users.get(user_id)
+            return None if record is None else _copy(record)
 
     def _load(self) -> None:
         if not self._path.exists():
@@ -229,16 +217,31 @@ class UserStore:
             "user store %s unreadable (%s); no user can sign in and it will not be overwritten",
             self._path, reason)
 
-    def _save_locked(self) -> None:
+    def _commit_locked(self, users: Dict[str, UserRecord]) -> None:
+        """Save ``users``, then make them the store's; on any failure nothing changes.
+
+        The store was changed first and saved after, so a refused or failed
+        save still took effect in memory: a user added to an unreadable
+        store could sign in as admin, and a rotated token locked its user out.
+        """
         if self._unreadable is not None:
             raise UserAuthError(
                 f"user store {self._path} is unreadable ({self._unreadable}); "
                 "refusing to overwrite it -- repair or remove the file first")
-        self._path.parent.mkdir(parents=True, exist_ok=True)
-        body = {"users": [u.to_dict() for u in self._users.values()]}
-        # atomic_write_text: a concurrent reader saw a half-written file, and
-        # its mkstemp file is 0600 from the start instead of after a chmod.
-        atomic_write_text(self._path, json.dumps(body, indent=2, ensure_ascii=False))
+        body = {"users": [u.to_dict() for u in users.values()]}
+        try:
+            self._path.parent.mkdir(parents=True, exist_ok=True)
+            # atomic_write_text: a concurrent reader saw a half-written file, and
+            # its mkstemp file is 0600 from the start instead of after a chmod.
+            atomic_write_text(self._path, json.dumps(body, indent=2, ensure_ascii=False))
+        except OSError as error:
+            raise UserAuthError(f"could not save user store {self._path}: {error}") from error
+        self._users = users
+
+
+def _copy(record: UserRecord) -> UserRecord:
+    """A copy with its own tag list."""
+    return replace(record, tags=list(record.tags))
 
 
 def _tags(value: object) -> List[str]:

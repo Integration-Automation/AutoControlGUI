@@ -91,6 +91,11 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Changed
 
+- `evaluate_trajectory` raises `ValueError` for a rubric that is not an
+  object or has unknown keys; `scale_sweep` / `detect_scale` reject
+  non-finite or non-positive scales; `rbac.UserRecord` is frozen.
+- `match_subpixel` reports `cx` / `cy` as the pixel-index centre plus the
+  fitted offset (half a pixel less than before).
 - `is_interactive_role` and `flatten_tree` recognise AT-SPI, macOS AX and ARIA
   role names as well as UIA; `tab_order` leaves out disabled controls.
 - `effect_near_point` / `classify_effect` measure `radius` as a circle.
@@ -354,6 +359,11 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Security
 
+- The rbac user store saves a change before applying it, so a refused or
+  failed save no longer takes effect in memory, and it hands out copies of
+  its records.
+- Failure bundles mask secrets inside nested mappings, tuple actions and
+  objects serialised through `repr`.
 - `AC_resolve_ref` / `AC_resolve_refs` and the MCP tools `ac_resolve_ref` /
   `ac_resolve_refs` refuse `secret://` references: the resolved secret was
   returned into executor records and MCP results. Use `${secrets.NAME}` in
@@ -462,6 +472,10 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Fixed
 
+- Sub-pixel and scale matching accept 16-bit and float images and contain
+  OpenCV errors; one unscorable scale no longer aborts a sweep.
+- An aborted `drag_path` releases where the pointer stopped; a `click` step
+  without a point clicks in place instead of at (0, 0).
 - `fuse_elements`, `observation_index` and `classify_effect` read elements
   with `bounds` or without a size; unchanged zero-area elements are no
   longer reported as changes.

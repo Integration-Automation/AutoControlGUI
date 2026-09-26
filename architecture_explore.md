@@ -20,7 +20,7 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 | 指標 | 數值 |
 | --- | ---: |
 | Python 模組總數（含周邊子專案） | 1,062 |
-| 程式碼總行數 | 155,586 |
+| 程式碼總行數 | 155,665 |
 | `je_auto_control/utils/` 子套件數 | 310 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 775 |
 | 套件門面 `__all__` 公開名稱數 | 1,244 |
@@ -272,7 +272,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.1 執行引擎與腳本資產
 
-> 24 個套件、約 14,604 行。
+> 24 個套件、約 14,615 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -285,7 +285,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/deterministic/` | 116 | 決定性執行控制：固定亂數種子 + 凍結時鐘 |
 | `utils/executor/` | 9,533 | **核心**。`Executor` 指令分派表（775 個 `AC_*`）、參數插值、乾跑、逐步 callback；`flow_control` 提供 34 個區塊指令（迴圈／分支／try／巨集／變數） |
 | `utils/flow_debugger/` | 166 | action list 的單步除錯器與追蹤器 |
-| `utils/input_macro/` | 451 | 定時輸入事件：錄製結果的整形（`timeline`／`InputRecorder`，Windows 與 macOS 共用）、重播與宣告式輸入序列 DSL |
+| `utils/input_macro/` | 462 | 定時輸入事件：錄製結果的整形（`timeline`／`InputRecorder`，Windows 與 macOS 共用）、重播與宣告式輸入序列 DSL |
 | `utils/json/` | 99 | action JSON 檔讀寫與正規化格式化（`fmt --check` 的後端） |
 | `utils/json_store/` | 271 | JSON 字典檔持久化的共用小工具（內部管線） |
 | `utils/loop_guard/` | 158 | 機械式卡死迴圈偵測（agent loop 用） |
@@ -303,7 +303,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.2 框架基礎設施
 
-> 14 個套件、約 3,043 行。
+> 14 個套件、約 3,053 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -313,7 +313,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/diagnostics/` | 330 | 跨子系統的「一切正常嗎」健檢，附 `python -m` 進入點 |
 | `utils/dbus_client/` | 714 | 只用標準函式庫的 D-Bus session bus 客戶端。原本在 `linux_wayland/` 為 portal 交握而寫，AT-SPI 無障礙後端成為第二個使用者後搬到這裡（`utils/` 在分層上在各 OS 套件之上） |
 | `utils/exception/` | 213 | **例外階層根**。所有錯誤繼承 `AutoControlException`，加上集中式錯誤訊息字串（`exception_tags`） |
-| `utils/failure_bundle/` | 219 | 可攜、已遮蔽的失敗診斷 ZIP（截圖 + 診斷 + log 尾段） |
+| `utils/failure_bundle/` | 229 | 可攜、已遮蔽的失敗診斷 ZIP（截圖 + 診斷 + log 尾段） |
 | `utils/file_process/` | 40 | 目錄檔案列舉（`execute_dir` 的後端） |
 | `utils/logging/` | 168 | `autocontrol_logger` 單例 + 家目錄共用記錄檔 handler（`JE_AUTOCONTROL_LOG_FILE` 可改） |
 | `utils/package_manager/` | 103 | 動態載入套件並把 executor 注入其中 |
@@ -342,7 +342,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.4 輸入模擬與動作品質
 
-> 22 個套件、約 2,834 行。
+> 22 個套件、約 2,843 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -358,7 +358,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/ime_state/` | 149 | 讀取即時 IME 組字／轉換狀態，確保 CJK 輸入安全 |
 | `utils/key_hold/` | 109 | 按住按鍵一段時間，或以固定頻率自動重複 |
 | `utils/modifier_state/` | 81 | 跨一組動作按住修飾鍵，並保證安全釋放 |
-| `utils/mouse_path/` | 106 | 多路徑點滑鼠手勢（沿折線移動或拖曳） |
+| `utils/mouse_path/` | 115 | 多路徑點滑鼠手勢（沿折線移動或拖曳） |
 | `utils/mouse_relative/` | 59 | 相對位移滑鼠移動 |
 | `utils/postcondition/` | 157 | 宣告式的動作預期結果規格，對照畫面驗證 |
 | `utils/step_repair/` | 136 | 失敗／無效動作的修復策略（自我修正迴圈） |
@@ -371,7 +371,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.5 影像辨識與畫面分析
 
-> 37 個套件、約 6,037 行。
+> 37 個套件、約 6,064 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -402,12 +402,12 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/qr/` | 59 | 從影像或螢幕區域解碼 QR code（OpenCV） |
 | `utils/rotated_match/` | 201 | 容忍旋轉與縮放的樣板比對（尺度空間 × 角度掃描） |
 | `utils/saliency/` | 114 | 頻譜殘差視覺顯著性：顯著圖與排序後的顯著區域 |
-| `utils/scale_detect/` | 84 | 偵測樣板實際渲染的顯示縮放／視覺 DPI |
+| `utils/scale_detect/` | 105 | 偵測樣板實際渲染的顯示縮放／視覺 DPI |
 | `utils/screen_grid/` | 146 | 供 VLM 接地用的粗粒度標號網格（點 ↔ 格對映） |
 | `utils/set_of_marks/` | 153 | Set-of-Marks 疊圖：為畫面元素編號供 VLM 指認 |
 | `utils/shape_locator/` | 108 | 以邊緣／輪廓偵測定位元件（矩形／形狀，免樣板） |
 | `utils/ssim/` | 162 | 結構相似度比較：感知分數 + 變化區域 |
-| `utils/subpixel_match/` | 103 | 以二次曲面擬合做次像素級比對精修 |
+| `utils/subpixel_match/` | 109 | 以二次曲面擬合做次像素級比對精修 |
 | `utils/theme_normalize/` | 94 | 主題無關的影像正規化，讓亮色樣板能配對深色模式 |
 | `utils/video_report/` | 171 | 影片步驟疊圖報告：把截圖加字幕串成操作導覽影片 |
 | `utils/visual_match/` | 515 | 會回傳信心值的樣板比對（分數、多尺度、find-all + NMS）；擷取走 `grab_logical`，命中座標已加回虛擬桌面原點，單色樣板直接拒收 |
@@ -494,7 +494,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.9 AI / Agent / LLM
 
-> 13 個套件、約 23,133 行。
+> 13 個套件、約 23,152 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -509,7 +509,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/mcp_registry/` | 97 | MCP registry `server.json` 資訊清單產生（可被發現） |
 | `utils/mcp_server/` | 18,804 | **無頭 MCP 伺服器**（16K LOC，預設註冊 678 個工具＝659 個 `ac_*` + 19 個別名）：stdio + HTTP 傳輸、工具工廠與處理器、資源、prompt、稽核、限流、外掛熱重載 |
 | `utils/tool_use_schema/` | 195 | 把 `AC_*` 指令匯出成 Claude／OpenAI 的 tool-use schema |
-| `utils/trajectory_eval/` | 113 | agent 軌跡評估：依評分規準為一次執行打分 |
+| `utils/trajectory_eval/` | 132 | agent 軌跡評估：依評分規準為一次執行打分 |
 | `utils/vision/` | 538 | VLM 元素定位器（依描述找元素）+ Anthropic／OpenAI／null 後端 |
 
 ### 5.4.10 遠端桌面與 USB
@@ -630,7 +630,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.14 安全、機密與合規
 
-> 13 個套件、約 2,961 行。
+> 13 個套件、約 2,964 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -639,7 +639,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/governance/` | 242 | 治理：maker-checker 核准閘門與即時憑證租約 |
 | `utils/license_policy/` | 240 | 以 SBOM 元件評估 SPDX 授權允許／拒絕政策 |
 | `utils/provenance/` | 126 | SLSA 建置來源證明（in-toto v1） |
-| `utils/rbac/` | 299 | 角色型存取控制：使用者、角色與權杖驗證（尚未接到 REST／MCP） |
+| `utils/rbac/` | 302 | 角色型存取控制：使用者、角色與權杖驗證（尚未接到 REST／MCP） |
 | `utils/redaction/` | 508 | 截圖遮蔽層：規則偵測 + 政策 + 協調器（上傳 VLM 前先遮） |
 | `utils/sbom/` | 170 | SBOM（CycloneDX）產生 |
 | `utils/secret_ref/` | 169 | URI scheme 形式的值參照解析 |
@@ -1090,6 +1090,6 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `osx/` | 17 | 925 |
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 846 |
-| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 680 | 55,909 |
-| **總計** | **1,056** | **155,521** |
+| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 680 | 55,988 |
+| **總計** | **1,056** | **155,600** |
 
