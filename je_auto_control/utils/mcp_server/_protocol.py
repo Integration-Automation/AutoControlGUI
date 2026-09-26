@@ -69,9 +69,6 @@ _BUILTIN_DISPATCH_ERRORS = (
 _DISPATCH_ERRORS: Tuple[Type[BaseException], ...] = (
     _BUILTIN_DISPATCH_ERRORS + _FRAMEWORK_TOOL_ERRORS
 )
-_TOOL_INVOKE_ERRORS: Tuple[Type[BaseException], ...] = (
-    _BUILTIN_DISPATCH_ERRORS + (AttributeError,) + _FRAMEWORK_TOOL_ERRORS
-)
 
 
 class _InvalidToolArguments(AutoControlException):
@@ -210,6 +207,33 @@ def _notification_message(method: str, params: Dict[str, Any]) -> str:
 def _result_response(msg_id: Any, result: Any) -> str:
     return wire_json_text({"jsonrpc": "2.0", "id": msg_id, "result": result},
                           default=str)
+
+
+def _valid_id(value: Any) -> bool:
+    """A JSON-RPC id: a string, a number or null (not a bool, object or array)."""
+    return value is None or isinstance(value, str) or (
+        isinstance(value, (int, float)) and not isinstance(value, bool))
+
+
+def _invalid_envelope(message: Dict[str, Any]) -> Optional[str]:
+    """The ``-32600`` reply for a malformed envelope, or ``None`` when it is well formed.
+
+    A list ``method`` was answered -32603 "cannot use 'list' as a dict key",
+    an object or array ``id`` was echoed back, and neither a missing nor a
+    wrong ``jsonrpc`` version was noticed.
+    """
+    if "method" not in message and ("result" in message or "error" in message):
+        return None     # a reply to the server's own request is never answered
+    msg_id = message.get("id")
+    reply_id = msg_id if _valid_id(msg_id) else None
+    if message.get("jsonrpc") != "2.0":
+        return _error_response(reply_id, -32600, 'Invalid Request: "jsonrpc" must be "2.0"')
+    if not _valid_id(msg_id):
+        return _error_response(None, -32600, "Invalid Request: 'id' must be a string, a number or null")
+    method = message.get("method")
+    if method is not None and not isinstance(method, str):
+        return _error_response(reply_id, -32600, "Invalid Request: 'method' must be a string")
+    return None
 
 
 def _error_response(msg_id: Any, code: int, message: str, data: Any = None) -> str:

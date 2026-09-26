@@ -78,7 +78,7 @@ def _field_error(value: Any, rule: Dict[str, Any]) -> Optional[str]:
     kind = rule.get("type")
     if kind and not _matches_type(value, kind):
         return f"expected {kind}"
-    if "regex" in rule and not re.search(rule["regex"], str(value)):
+    if "regex" in rule and not _regex(rule["regex"]).search(str(value)):
         return f"does not match {rule['regex']}"
     range_msg = _range_error(value, rule)
     if range_msg:
@@ -166,8 +166,16 @@ def extract_fields(text: str, fields: Optional[List[str]] = None,
             chosen[name] = _PRESETS[name]
     for name, pattern in (patterns or {}).items():
         chosen[name] = pattern
-    return {name: re.findall(pattern, haystack)
+    return {name: _regex(pattern).findall(haystack)
             for name, pattern in chosen.items()}
+
+
+def _regex(pattern: Any) -> "re.Pattern[str]":
+    """``pattern`` compiled; a bad one is a ``ValueError`` (``re.error`` is no ValueError)."""
+    try:
+        return re.compile(str(pattern))
+    except re.error as error:
+        raise ValueError(f"invalid regex {pattern!r}: {error}") from error
 
 
 # --- masking --------------------------------------------------------------

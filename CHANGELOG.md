@@ -93,6 +93,9 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Changed
 
+- The JSON document MCP tools accept a root array as well as an object.
+- Malformed JSON-RPC envelopes are answered `-32600`; `"id": null` is a
+  request, answered with `"id": null`.
 - `evaluate_trajectory` raises `ValueError` for a rubric that is not an
   object or has unknown keys; `scale_sweep` / `detect_scale` reject
   non-finite or non-positive scales; `rbac.UserRecord` is frozen.
@@ -366,6 +369,9 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Security
 
+- `ac_egress_reset` and `ac_approve_artifact` are destructive, so the
+  confirmation gate asks before loosening egress or overwriting an approved
+  baseline.
 - The rbac user store saves a change before applying it, so a refused or
   failed save no longer takes effect in memory, and it hands out copies of
   its records.
@@ -479,6 +485,9 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Fixed
 
+- Every MCP `tools/call` is answered with `isError: true` whatever the
+  tool raises; a plain HTTP POST answers in its body even on a concurrent
+  server; an unwritable audit log no longer fails a tool that ran.
 - Sub-pixel and scale matching accept 16-bit and float images and contain
   OpenCV errors; one unscorable scale no longer aborts a sweep.
 - An aborted `drag_path` releases where the pointer stopped; a `click` step

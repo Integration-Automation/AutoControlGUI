@@ -23,6 +23,9 @@ from je_auto_control.utils.mcp_server.tools._base import (
     SIDE_EFFECT_ONLY, schema,
 )
 
+#: A JSON document argument: an object or an array (a root array was refused).
+_JSON_DOCUMENT = {"type": ["object", "array"]}
+
 
 def mouse_tools() -> List[MCPTool]:
     return [
@@ -5716,7 +5719,7 @@ def egress_tools() -> List[MCPTool]:
             description="Clear the egress policy back to allow-all.",
             input_schema=schema({}),
             handler=h_ops.egress_reset,
-            annotations=SIDE_EFFECT_ONLY,
+            annotations=DESTRUCTIVE,
         ),
     ]
 
@@ -5745,7 +5748,7 @@ def approval_testing_tools() -> List[MCPTool]:
                          "approved baseline. Returns {approved} path."),
             input_schema=schema(dict(_ND), ["name"]),
             handler=h_ops.approve_artifact,
-            annotations=SIDE_EFFECT_ONLY,
+            annotations=DESTRUCTIVE,
         ),
         MCPTool(
             name="ac_pending_artifacts",
@@ -6275,7 +6278,7 @@ def jsonpath_tools() -> List[MCPTool]:
                          "[n]/[-n], * / [*], .. recursive, [?(@.k op v)] "
                          "filter). Returns {matches} (all matches)."),
             input_schema=schema(
-                {"data": {"type": "object"}, "path": {"type": "string"}},
+                {"data": _JSON_DOCUMENT, "path": {"type": "string"}},
                 ["data", "path"]),
             handler=h.json_query,
             annotations=READ_ONLY,
@@ -6285,7 +6288,7 @@ def jsonpath_tools() -> List[MCPTool]:
             description=("Extract a {key: jsonpath} 'mapping' from 'data' into a "
                          "flat object (first match per path). Returns {result}."),
             input_schema=schema(
-                {"data": {"type": "object"}, "mapping": {"type": "object"}},
+                {"data": _JSON_DOCUMENT, "mapping": {"type": "object"}},
                 ["data", "mapping"]),
             handler=h.json_extract,
             annotations=READ_ONLY,
@@ -6303,7 +6306,7 @@ def json_schema_tools() -> List[MCPTool]:
                          "oneOf/not, local $ref). Returns {ok, errors:[{path, "
                          "keyword, message}]}."),
             input_schema=schema(
-                {"data": {"type": "object"}, "schema": {"type": "object"}},
+                {"data": _JSON_DOCUMENT, "schema": {"type": "object"}},
                 ["data", "schema"]),
             handler=h.validate_json,
             annotations=READ_ONLY,
@@ -7460,7 +7463,7 @@ def json_contract_tools() -> List[MCPTool]:
                          "'partial' (ignore extra keys) and 'match_type' "
                          "(type-only). Returns {ok, mismatches}."),
             input_schema=schema(
-                {"actual": {"type": "object"}, "expected": {"type": "object"},
+                {"actual": _JSON_DOCUMENT, "expected": _JSON_DOCUMENT,
                  "partial": {"type": "boolean"},
                  "match_type": {"type": "boolean"}},
                 ["actual", "expected"]),
@@ -7472,7 +7475,7 @@ def json_contract_tools() -> List[MCPTool]:
             description=("Path-tagged diff between 'actual' and 'expected' JSON "
                          "(missing/extra/changed). Returns {diffs}."),
             input_schema=schema(
-                {"actual": {"type": "object"}, "expected": {"type": "object"}},
+                {"actual": _JSON_DOCUMENT, "expected": _JSON_DOCUMENT},
                 ["actual", "expected"]),
             handler=h.diff_json,
             annotations=READ_ONLY,
@@ -7649,7 +7652,7 @@ def json_patch_tools() -> List[MCPTool]:
             description=("Resolve an RFC 6901 JSON Pointer ('pointer' like "
                          "'/a/b/0') in 'doc'. Returns {value}."),
             input_schema=schema(
-                {"doc": {"type": "object"}, "pointer": {"type": "string"}},
+                {"doc": _JSON_DOCUMENT, "pointer": {"type": "string"}},
                 ["doc", "pointer"]),
             handler=h.resolve_pointer,
             annotations=READ_ONLY,
@@ -7659,7 +7662,7 @@ def json_patch_tools() -> List[MCPTool]:
             description=("Apply an RFC 6902 JSON Patch 'patch' (add/remove/"
                          "replace/move/copy/test) to 'doc'. Returns {result}."),
             input_schema=schema(
-                {"doc": {"type": "object"}, "patch": {"type": "array"}},
+                {"doc": _JSON_DOCUMENT, "patch": {"type": "array"}},
                 ["doc", "patch"]),
             handler=h.apply_json_patch,
             annotations=READ_ONLY,
