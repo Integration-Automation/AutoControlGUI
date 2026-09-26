@@ -8,6 +8,7 @@ OpenTelemetry collector ingests directly via its file exporter.
 Pure standard library (``json``); imports no ``PySide6``. Times are supplied by
 the caller (no wall clock), so the envelope is byte-stable and CI-testable.
 """
+import base64
 import json
 import math
 from pathlib import Path
@@ -38,6 +39,10 @@ def _attr_value(value: Any) -> Dict[str, Any]:
         return {"intValue": str(value)}        # int64 encoded as string
     if isinstance(value, float):
         return {"doubleValue": _double(value)}
+    if isinstance(value, (bytes, bytearray)):
+        # AnyValue.bytes_value, base64 in the protobuf JSON mapping; bytes were
+        # written as their Python repr ("b'\\x00'") in a stringValue.
+        return {"bytesValue": base64.b64encode(bytes(value)).decode("ascii")}
     if isinstance(value, (list, tuple)):
         return {"arrayValue": {"values": [_attr_value(item) for item in value]}}
     if isinstance(value, Mapping):

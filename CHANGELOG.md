@@ -498,6 +498,9 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Fixed
 
+- `attributes_to_otlp` / `spans_to_otlp` write a `bytes` attribute as OTLP
+  `bytesValue` (base64), and `is_problem` / `parse_problem` match the
+  `application/problem+json` media type exactly instead of as a substring.
 - RRULE: a yearly `BYDAY` ordinal counts within the year when `BYMONTHDAY` is
   present and `BYMONTH` is not, DTSTART with microseconds stays the first
   occurrence, DAILY applies `BYSETPOS`, long intervals and large counts are no

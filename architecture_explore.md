@@ -20,7 +20,7 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 | 指標 | 數值 |
 | --- | ---: |
 | Python 模組總數（含周邊子專案） | 1,063 |
-| 程式碼總行數 | 156,806 |
+| 程式碼總行數 | 156,815 |
 | `je_auto_control/utils/` 子套件數 | 310 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 775 |
 | 套件門面 `__all__` 公開名稱數 | 1,244 |
@@ -527,7 +527,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.11 伺服器、網路協定與外部整合
 
-> 24 個套件、約 6,992 行。
+> 24 個套件、約 6,996 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -540,7 +540,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/http_client/` | 245 | 零依賴 HTTP(S) 用戶端，供 action 步驟呼叫 API |
 | `utils/http_conditional/` | 148 | 條件式 HTTP 請求與快取驗證器 |
 | `utils/http_content/` | 158 | HTTP 內容協商與回應解壓縮 |
-| `utils/http_problem/` | 118 | RFC 9457 problem+json 解析 |
+| `utils/http_problem/` | 122 | RFC 9457 problem+json 解析 |
 | `utils/jwt/` | 270 | JWT（HMAC 家族）編碼、解碼與 claim 驗證 |
 | `utils/link_header/` | 176 | RFC 8288 Link header 解析與分頁 |
 | `utils/multipart/` | 224 | multipart/form-data 建構與解析 |
@@ -558,7 +558,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.12 報表、可觀測性與測試治理
 
-> 34 個套件、約 7,669 行。
+> 34 個套件、約 7,674 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -576,7 +576,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/generate_report/` | 294 | HTML／JSON／XML 三種報表產生器（Template Method） |
 | `utils/media_assert/` | 273 | 媒體斷言：音訊活動與影片動態檢查 |
 | `utils/observability/` | 710 | Prometheus 格式指標 + OpenTelemetry 相容 trace + `/metrics` 匯出伺服器 |
-| `utils/otlp_export/` | 109 | OTLP/JSON span 匯出 |
+| `utils/otlp_export/` | 114 | OTLP/JSON span 匯出 |
 | `utils/percentiles/` | 119 | 可合併的串流延遲摘要與精確百分位數 |
 | `utils/process_doc/` | 108 | 由錄製的 action list 產生逐步 SOP 文件 |
 | `utils/process_mining/` | 131 | 流程探勘：從動作日誌挖掘可自動化的候選 |
@@ -1090,6 +1090,6 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `osx/` | 17 | 925 |
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 852 |
-| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 681 | 56,837 |
-| **總計** | **1,057** | **156,741** |
+| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 681 | 56,846 |
+| **總計** | **1,057** | **156,750** |
 
