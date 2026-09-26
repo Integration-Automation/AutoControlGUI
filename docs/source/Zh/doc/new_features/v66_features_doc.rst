@@ -8,7 +8,9 @@
 支援的規則部分:``FREQ``(DAILY/WEEKLY/MONTHLY/YEARLY)、``INTERVAL``、``COUNT``、``UNTIL``、
 ``BYDAY``(含序數如 ``2MO`` / ``-1FR``)、``BYMONTHDAY``(含負數)、``BYMONTH``、``BYSETPOS``
 與 ``WKST``。時間層級部分以及 BYWEEKNO/BYYEARDAY 不在範圍內:``parse_rrule`` 遇到它們、
-或同時給了 ``COUNT`` 與 ``UNTIL`` 時拋出 ``AutoControlException``。純標準函式庫(``datetime`` +
+同時給了 ``COUNT`` 與 ``UNTIL``,或出現 RFC 5545 禁止的組合(``WEEKLY`` 搭配 ``BYMONTHDAY``、``DAILY`` / ``WEEKLY``
+搭配有序數的 ``BYDAY``、未知的 ``WKST``)時拋出 ``AutoControlException``。沒有 ``BYMONTH`` 時,``YEARLY`` 的 ``BYDAY``
+序數以整年計算。純標準函式庫(``datetime`` +
 ``calendar``);時鐘可注入,因此 ``next_occurrence`` 具決定性。不匯入 ``PySide6``。
 
 無頭 API
@@ -33,7 +35,9 @@
 
 ``parse_rrule`` 接受帶或不帶 ``RRULE:`` 前綴的規則,回傳凍結的 ``Recurrence``。``occurrences``
 產生以 ``dtstart`` 為錨點的 datetime(其時刻與時區會套用到每一次發生),受 ``COUNT`` / ``UNTIL``
-(或 ``count=`` / ``until=`` 覆寫)及安全上限約束。僅含日期的 ``UNTIL`` 會包含整天。
+約束;``count=`` / ``until=`` 參數再進一步收窄(取較小者),沒有次數限制的規則由 ``max_iter`` 設上限。序列在
+9999-12-31 結束，或在連續 400 年(間隔較長時等比放大)沒有任何發生時結束，所以永遠不會成立的規則也會停止。
+僅含日期的 ``UNTIL`` 會包含整天。
 ``next_occurrence`` 回傳在 ``now`` 當下或之後的第一次發生。
 
 執行器命令

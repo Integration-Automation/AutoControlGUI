@@ -10,7 +10,10 @@ Supported rule parts: ``FREQ`` (DAILY/WEEKLY/MONTHLY/YEARLY), ``INTERVAL``,
 ``COUNT``, ``UNTIL``, ``BYDAY`` (incl. ordinals like ``2MO`` / ``-1FR``),
 ``BYMONTHDAY`` (incl. negatives), ``BYMONTH``, ``BYSETPOS`` and ``WKST``.
 Time-level parts and BYWEEKNO/BYYEARDAY are out of scope: ``parse_rrule`` raises
-``AutoControlException`` for them, and for a rule with both ``COUNT`` and ``UNTIL``. Pure standard library
+``AutoControlException`` for them, for a rule with both ``COUNT`` and ``UNTIL``,
+and for combinations RFC 5545 forbids (``BYMONTHDAY`` with ``WEEKLY``, a numbered
+``BYDAY`` with ``DAILY`` / ``WEEKLY``, an unknown ``WKST``). Without ``BYMONTH``
+a ``YEARLY`` ``BYDAY`` ordinal counts within the year. Pure standard library
 (``datetime`` + ``calendar``); the clock is injectable so ``next_occurrence`` is
 deterministic. Imports no ``PySide6``.
 
@@ -37,8 +40,11 @@ Headless API
 ``parse_rrule`` accepts the rule with or without the ``RRULE:`` prefix and
 returns a frozen ``Recurrence``. ``occurrences`` yields datetimes anchored at
 ``dtstart`` (its time-of-day and timezone are applied to every occurrence),
-bounded by ``COUNT`` / ``UNTIL`` (or the ``count=`` / ``until=`` overrides) and
-a safety cap. A date-only ``UNTIL`` bounds the whole day inclusively.
+bounded by ``COUNT`` / ``UNTIL``; the ``count=`` / ``until=`` arguments narrow
+them further (the smaller wins) and ``max_iter`` caps a rule without a count.
+A series ends at 9999-12-31, or once 400 years (scaled up for longer
+intervals) pass without an occurrence, so a rule that can never match still
+ends. A date-only ``UNTIL`` bounds the whole day inclusively.
 ``next_occurrence`` returns the first occurrence at or after ``now``.
 
 Executor commands

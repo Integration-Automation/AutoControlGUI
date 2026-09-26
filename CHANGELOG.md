@@ -100,6 +100,9 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Changed
 
+- `occurrences(count=, until=)` narrows the rule's own COUNT / UNTIL instead of
+  replacing it, and `parse_rrule` refuses `BYMONTHDAY` with `WEEKLY`, a numbered
+  `BYDAY` with `DAILY` / `WEEKLY`, and an unknown `WKST` (RFC 5545 3.3.10).
 - `decode_jwt` / `AC_jwt_decode` refuse a token that carries `aud` unless the
   policy's `audience` names one of its values (RFC 7519 4.1.3); pass the
   audience to keep accepting such tokens.
@@ -495,6 +498,11 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Fixed
 
+- RRULE: a yearly `BYDAY` ordinal counts within the year when `BYMONTHDAY` is
+  present and `BYMONTH` is not, DTSTART with microseconds stays the first
+  occurrence, DAILY applies `BYSETPOS`, long intervals and large counts are no
+  longer cut short, and year 9999, a malformed `UNTIL` or a naive `now` no
+  longer raise builtin errors.
 - `GettextCatalog.compile_mo` / `to_mo_bytes` leave untranslated entries out
   of the `.mo`, as `msgfmt` does, so readers fall back to the `msgid` instead
   of showing an empty string.

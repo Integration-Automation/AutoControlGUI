@@ -88,13 +88,32 @@ def _parse_until(value: str) -> _dt.datetime:
     text = value.strip()
     is_utc = text.endswith("Z")
     bare = text[:-1] if is_utc else text
-    if "T" in bare:
-        parsed = _dt.datetime.strptime(bare, "%Y%m%dT%H%M%S")
-    else:
-        # A date-only UNTIL bounds the whole day inclusively.
-        parsed = _dt.datetime.strptime(bare, "%Y%m%d").replace(
-            hour=23, minute=59, second=59)
+    try:
+        if "T" in bare:
+            parsed = _dt.datetime.strptime(bare, "%Y%m%dT%H%M%S")
+        else:
+            # A date-only UNTIL bounds the whole day inclusively.
+            parsed = _dt.datetime.strptime(bare, "%Y%m%d").replace(
+                hour=23, minute=59, second=59)
+    except ValueError as error:      # "2024-01-03" raised a bare ValueError
+        raise AutoControlException(f"UNTIL must be YYYYMMDD or YYYYMMDDTHHMMSS[Z], got {value!r}") from error
     return parsed.replace(tzinfo=_dt.timezone.utc) if is_utc else parsed
+
+
+def _parse_wkst(value: str) -> int:
+    wkst = value.strip().upper()
+    if wkst not in _WEEKDAYS:        # WKST=XX silently became MO
+        raise AutoControlException(f"invalid WKST {value!r}")
+    return _WEEKDAYS[wkst]
+
+
+def _check_combination(freq: str, by_day: Tuple[ByDay, ...], by_month_day: Tuple[int, ...]) -> None:
+    """RFC 5545 3.3.10: rule parts that must not appear with this FREQ."""
+    if freq == "WEEKLY" and by_month_day:
+        raise AutoControlException("BYMONTHDAY must not be given with FREQ=WEEKLY (RFC 5545 3.3.10)")
+    if freq in ("DAILY", "WEEKLY") and any(ordinal is not None for ordinal, _ in by_day):
+        raise AutoControlException(
+            f"a numbered BYDAY (such as 2MO) needs FREQ=MONTHLY or YEARLY, not {freq} (RFC 5545 3.3.10)")
 
 
 def _parse_limits(parts: Dict[str, str]) -> Tuple[int, Optional[int]]:
@@ -134,24 +153,29 @@ def parse_rrule(text: str) -> Recurrence:
     if freq not in _FREQS:
         raise AutoControlException(f"unsupported or missing FREQ {freq!r}")
     interval, count = _parse_limits(parts)
+    by_day = _parse_byday(parts.get("BYDAY", ""))
+    by_month_day = _parse_ints(parts.get("BYMONTHDAY", ""), "BYMONTHDAY", -31, 31)
+    _check_combination(freq, by_day, by_month_day)
     return Recurrence(
         freq=freq,
         interval=interval,
         count=count,
         until=_parse_until(parts["UNTIL"]) if "UNTIL" in parts else None,
-        by_day=_parse_byday(parts.get("BYDAY", "")),
-        by_month_day=_parse_ints(parts.get("BYMONTHDAY", ""), "BYMONTHDAY", -31, 31),
+        by_day=by_day,
+        by_month_day=by_month_day,
         by_month=_parse_ints(parts.get("BYMONTH", ""), "BYMONTH", 1, 12),
         by_set_pos=_parse_ints(parts.get("BYSETPOS", ""), "BYSETPOS"),
-        wkst=_WEEKDAYS.get(parts.get("WKST", "MO").upper(), 0),
+        wkst=_parse_wkst(parts.get("WKST", "MO")),
     )
 
 
 # --- candidate selection ---------------------------------------------------
 
 def _apply_time(day: _dt.date, dtstart: _dt.datetime) -> _dt.datetime:
-    return _dt.datetime(day.year, day.month, day.day, dtstart.hour,
-                        dtstart.minute, dtstart.second, tzinfo=dtstart.tzinfo)
+    # With the microseconds too: dropping them put the first occurrence just
+    # before DTSTART, which then lost it (RFC 5545: DTSTART is the first).
+    return _dt.datetime(day.year, day.month, day.day, dtstart.hour, dtstart.minute,
+                        dtstart.second, dtstart.microsecond, tzinfo=dtstart.tzinfo)
 
 
 def _month_dates(year: int, month: int) -> List[_dt.date]:
@@ -226,7 +250,8 @@ def _weekday_set(dtstart: _dt.datetime, rule: Recurrence) -> set:
 def _weekly_dates(week_start: _dt.date, dtstart: _dt.datetime,
                   rule: Recurrence) -> List[_dt.date]:
     weekdays = _weekday_set(dtstart, rule)
-    days = [week_start + _dt.timedelta(days=offset) for offset in range(7)]
+    days = [week_start + _dt.timedelta(days=offset)
+            for offset in range(min(7, (_dt.date.max - week_start).days + 1))]
     chosen = [d for d in days if d.weekday() in weekdays]
     if rule.by_month:
         chosen = [d for d in chosen if d.month in rule.by_month]
@@ -240,7 +265,9 @@ def _daily_dates(day: _dt.date, rule: Recurrence) -> List[_dt.date]:
         return []
     if rule.by_day and day.weekday() not in {wd for _, wd in rule.by_day}:
         return []
-    return [day]
+    # The set of one interval is this day: BYSETPOS=1 or -1 keeps it, BYSETPOS=2
+    # selects nothing (it was ignored).
+    return _setpos([day], rule.by_set_pos)
 
 
 def _safe_date(year: int, month: int, day: int) -> Optional[_dt.date]:
@@ -251,10 +278,15 @@ def _safe_date(year: int, month: int, day: int) -> Optional[_dt.date]:
 
 def _yearly_dates(year: int, dtstart: _dt.datetime,
                   rule: Recurrence) -> List[_dt.date]:
-    if not rule.by_month and rule.by_day and not rule.by_month_day:
-        # BYDAY ordinals count within the year here: -1FR is the year's
-        # last Friday, 20MO its 20th Monday.
-        return _setpos(_select_in_year(year, rule.by_day), rule.by_set_pos)
+    if not rule.by_month and rule.by_day:
+        # Without BYMONTH a BYDAY ordinal counts within the year (RFC 5545
+        # 3.3.10): -1FR is the year's last Friday, 20MO its 20th Monday -- also
+        # when BYMONTHDAY narrows the days, where 1MO used to mean the first
+        # Monday of every month.
+        days = _select_in_year(year, rule.by_day)
+        if rule.by_month_day:
+            days = [day for day in days if _monthday_ok(day, rule.by_month_day)]
+        return _setpos(days, rule.by_set_pos)
     # Without BYMONTH, BYMONTHDAY / BYDAY apply to every month of the year;
     # restricting them to dtstart's month gave one date a year.
     return _setpos(sorted(set(_yearly_month_dates(year, dtstart, rule))), rule.by_set_pos)
@@ -283,81 +315,97 @@ def _select_in_year(year: int, by_day: Tuple[ByDay, ...]) -> List[_dt.date]:
     return sorted(set(chosen))
 
 
-# --- period series (bounded: _MAX_SCAN_YEARS past dtstart, never past 9999)
+# --- period series ---------------------------------------------------------
 
-#: A rule that can never match (BYMONTH=2;BYMONTHDAY=30) used to scan until
-#: the calendar overflowed and let OverflowError out of the executor.
-_MAX_SCAN_YEARS = 400
+#: A rule is exhausted after this many years without an occurrence, scaled up
+#: for a period longer than a year. A fixed 400 years after DTSTART cut real
+#: series short (YEARLY;INTERVAL=100 from a 29 February lost 2800); the gap
+#: still ends a rule that can never match (BYMONTH=2;BYMONTHDAY=30).
+_MAX_GAP_YEARS = 400
+_PERIOD_DAYS = {"DAILY": 1, "WEEKLY": 7, "MONTHLY": 31, "YEARLY": 366}
+_Period = Tuple[int, List[_dt.date]]
 
-
-def _scan_end(dtstart: _dt.datetime) -> int:
-    return min(dtstart.year + _MAX_SCAN_YEARS, _dt.MAXYEAR - 1)
 
 def _add_months(year: int, month: int, delta: int) -> Tuple[int, int]:
     index = year * 12 + (month - 1) + delta
     return index // 12, index % 12 + 1
 
 
-def _daily_series(rule: Recurrence,
-                  dtstart: _dt.datetime) -> Iterator[_dt.datetime]:
-    cursor = dtstart.date()
-    step = _dt.timedelta(days=rule.interval)
-    while cursor.year <= _scan_end(dtstart):
-        for day in _daily_dates(cursor, rule):
-            yield _apply_time(day, dtstart)
+def _gap_years(rule: Recurrence) -> int:
+    period_years = -(-_PERIOD_DAYS[rule.freq] * rule.interval // 365)
+    return _MAX_GAP_YEARS * max(1, period_years)
+
+
+def _daily_periods(rule: Recurrence, dtstart: _dt.datetime) -> Iterator[_Period]:
+    cursor, step = dtstart.date(), _dt.timedelta(days=rule.interval)
+    while True:
+        yield cursor.year, _daily_dates(cursor, rule)
+        if (_dt.date.max - cursor).days < rule.interval:
+            return                    # stepping past 9999-12-31 raised OverflowError
         cursor += step
 
 
-def _weekly_series(rule: Recurrence,
-                   dtstart: _dt.datetime) -> Iterator[_dt.datetime]:
+def _weekly_periods(rule: Recurrence, dtstart: _dt.datetime) -> Iterator[_Period]:
     offset = (dtstart.weekday() - rule.wkst) % 7
-    cursor = dtstart.date() - _dt.timedelta(days=offset)
-    step = _dt.timedelta(weeks=rule.interval)
-    while cursor.year <= _scan_end(dtstart):
-        for day in _weekly_dates(cursor, dtstart, rule):
-            yield _apply_time(day, dtstart)
-        cursor += step
+    cursor = dtstart.date() - _dt.timedelta(days=min(offset, (dtstart.date() - _dt.date.min).days))
+    while True:
+        yield cursor.year, _weekly_dates(cursor, dtstart, rule)
+        if (_dt.date.max - cursor).days < 7 * rule.interval:
+            return
+        cursor += _dt.timedelta(weeks=rule.interval)
 
 
-def _monthly_series(rule: Recurrence,
-                    dtstart: _dt.datetime) -> Iterator[_dt.datetime]:
+def _monthly_periods(rule: Recurrence, dtstart: _dt.datetime) -> Iterator[_Period]:
     year, month = dtstart.year, dtstart.month
-    while year <= _scan_end(dtstart):
-        for day in _monthly_dates(year, month, dtstart, rule):
-            yield _apply_time(day, dtstart)
+    while year <= _dt.MAXYEAR:
+        yield year, _monthly_dates(year, month, dtstart, rule)
         year, month = _add_months(year, month, rule.interval)
 
 
-def _yearly_series(rule: Recurrence,
-                   dtstart: _dt.datetime) -> Iterator[_dt.datetime]:
+def _yearly_periods(rule: Recurrence, dtstart: _dt.datetime) -> Iterator[_Period]:
     year = dtstart.year
-    while year <= _scan_end(dtstart):
-        for day in _yearly_dates(year, dtstart, rule):
-            yield _apply_time(day, dtstart)
+    while year <= _dt.MAXYEAR:
+        yield year, _yearly_dates(year, dtstart, rule)
         year += rule.interval
 
 
-_SERIES = {
-    "DAILY": _daily_series, "WEEKLY": _weekly_series,
-    "MONTHLY": _monthly_series, "YEARLY": _yearly_series,
+_PERIODS = {
+    "DAILY": _daily_periods, "WEEKLY": _weekly_periods,
+    "MONTHLY": _monthly_periods, "YEARLY": _yearly_periods,
 }
+
+
+def _series(rule: Recurrence, dtstart: _dt.datetime) -> Iterator[_dt.datetime]:
+    """Every candidate of ``rule`` in order, until the gap since the last occurrence is too long."""
+    gap, last = _gap_years(rule), dtstart.year
+    for year, dates in _PERIODS[rule.freq](rule, dtstart):
+        if year > last + gap:
+            return
+        for day in dates:
+            moment = _apply_time(day, dtstart)
+            if moment >= dtstart:
+                last = day.year
+            yield moment
 
 
 # --- public expansion ------------------------------------------------------
 
-def _normalize_until(until: Optional[_dt.datetime],
-                     dtstart: _dt.datetime) -> Optional[_dt.datetime]:
-    if until is None:
-        return None
+def _align(moment: _dt.datetime, dtstart: _dt.datetime) -> _dt.datetime:
+    """``moment`` made comparable with ``dtstart``: naive and aware are not."""
     aware_start = dtstart.tzinfo is not None
-    aware_until = until.tzinfo is not None
-    if aware_start and not aware_until:
-        return until.replace(tzinfo=dtstart.tzinfo)
-    if not aware_start and aware_until:
+    aware_moment = moment.tzinfo is not None
+    if aware_start and not aware_moment:
+        return moment.replace(tzinfo=dtstart.tzinfo)
+    if not aware_start and aware_moment:
         # A naive DTSTART is local time: convert a UTC UNTIL to it rather
         # than dropping the offset (20240103T050000Z is 13:00 at +0800).
-        return until.astimezone().replace(tzinfo=None)
-    return until
+        return moment.astimezone().replace(tzinfo=None)
+    return moment
+
+
+def _normalize_until(until: Optional[_dt.datetime],
+                     dtstart: _dt.datetime) -> Optional[_dt.datetime]:
+    return None if until is None else _align(until, dtstart)
 
 
 def _after_until(moment: _dt.datetime,
@@ -365,28 +413,52 @@ def _after_until(moment: _dt.datetime,
     return limit_until is not None and moment > limit_until
 
 
+def _smaller(*limits: Optional[int]) -> Optional[int]:
+    given = [limit for limit in limits if limit is not None]
+    return min(given) if given else None
+
+
+def _earlier(*limits: Optional[_dt.datetime]) -> Optional[_dt.datetime]:
+    given = [limit for limit in limits if limit is not None]
+    return min(given) if given else None
+
+
 def occurrences(rule: Recurrence, dtstart: _dt.datetime, *,
                 count: Optional[int] = None, until: Optional[_dt.datetime] = None,
-                max_iter: int = 100000) -> Iterator[_dt.datetime]:
-    """Yield occurrence datetimes for ``rule`` anchored at ``dtstart``."""
-    limit_count = rule.count if count is None else count
-    limit_until = _normalize_until(rule.until if until is None else until,
-                                   dtstart)
+                max_iter: Optional[int] = 100000) -> Iterator[_dt.datetime]:
+    """Yield occurrence datetimes for ``rule`` anchored at ``dtstart``.
+
+    ``count`` and ``until`` narrow the rule's own ``COUNT`` / ``UNTIL`` (the
+    smaller wins); they used to replace them, so ``AC_rrule_occurrences``'
+    ``count=10`` listed ten dates of a ``COUNT=3`` rule. ``max_iter`` caps a
+    rule without a count (``None``: no cap); an explicit count is never cut
+    short by it.
+    """
+    limit_count = _smaller(rule.count, count)
+    limit_until = _earlier(_normalize_until(rule.until, dtstart), _normalize_until(until, dtstart))
     # count=0 used to yield one date before checking the limit.
     remaining = limit_count if limit_count is not None else max_iter
-    for index, moment in enumerate(_SERIES[rule.freq](rule, dtstart)):
-        if remaining < 1 or index >= max_iter or _after_until(moment, limit_until):
+    for moment in _series(rule, dtstart):
+        if (remaining is not None and remaining < 1) or _after_until(moment, limit_until):
             return
         if moment >= dtstart:
             yield moment
-            remaining -= 1
+            if remaining is not None:
+                remaining -= 1
 
 
 def next_occurrence(rule: Recurrence, dtstart: _dt.datetime, *,
                     now: Optional[_dt.datetime] = None) -> Optional[_dt.datetime]:
-    """Return the first occurrence at or after ``now`` (or ``None``)."""
+    """Return the first occurrence at or after ``now`` (or ``None`` when the rule has ended).
+
+    A naive ``now`` against an aware ``dtstart`` (or the reverse) is read the
+    way ``UNTIL`` is, instead of raising ``TypeError``; and a long-running
+    rule is walked to ``now`` however far away it is (DTSTART 1750 used to
+    answer ``None`` after 100,000 candidates).
+    """
     moment = now if now is not None else _dt.datetime.now(dtstart.tzinfo)
-    for occurrence in occurrences(rule, dtstart):
+    moment = _align(moment, dtstart)
+    for occurrence in occurrences(rule, dtstart, max_iter=None):
         if occurrence >= moment:
             return occurrence
     return None
