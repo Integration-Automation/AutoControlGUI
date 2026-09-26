@@ -47,7 +47,11 @@ def split_outside_quotes(text: str, separator: str) -> List[str]:
 
 
 def parse_cache_control(headers: Optional[Mapping[str, Any]]) -> Dict[str, Any]:
-    """Parse a ``Cache-Control`` header into a directive dict."""
+    """Parse a ``Cache-Control`` header into a directive dict.
+
+    A repeated directive keeps its first value (RFC 9111 4.2.1): the last one
+    won, so ``max-age=10, max-age=86400`` stayed fresh for a day.
+    """
     directives: Dict[str, Any] = {}
     for part in split_outside_quotes(_header(headers, "cache-control"), ","):
         cleaned = part.strip()
@@ -55,6 +59,8 @@ def parse_cache_control(headers: Optional[Mapping[str, Any]]) -> Dict[str, Any]:
             continue
         key, sep, value = cleaned.partition("=")
         name = key.strip().lower()
+        if name in directives:
+            continue
         if not sep:
             directives[name] = True
             continue
@@ -66,12 +72,28 @@ def parse_cache_control(headers: Optional[Mapping[str, Any]]) -> Dict[str, Any]:
     return directives
 
 
+_MAX_AGE_SECONDS = 2 ** 31      # RFC 9111 1.2.2: the value an overflowing delta-seconds becomes
+
+
+def _age_header(headers: Mapping[str, Any]) -> int:
+    """The ``Age`` header in seconds (RFC 9111 5.1); 0 when absent or not a delta-seconds."""
+    value = _header(headers, "age").strip()
+    if not (value.isascii() and value.isdigit()):
+        return 0
+    return min(int(value), _MAX_AGE_SECONDS)
+
+
 def store_validators(response: Mapping[str, Any]) -> Dict[str, Any]:
-    """Extract cache validators from an ``http_request`` response."""
+    """Extract cache validators from an ``http_request`` response.
+
+    ``age`` is the response's ``Age`` header: how long upstream caches already
+    held it, which :func:`is_fresh` adds to the local age.
+    """
     headers = response.get("headers") or {}
     return {"etag": _header(headers, "etag") or None,
             "last_modified": _header(headers, "last-modified") or None,
             "date": _header(headers, "date") or None,
+            "age": _age_header(headers),
             "cache_control": parse_cache_control(headers)}
 
 
@@ -89,17 +111,28 @@ def conditioned_call(call: Mapping[str, Any],
 
 
 def is_fresh(validators: Mapping[str, Any], age_seconds: float) -> bool:
-    """Whether a cached entry is still fresh ``age_seconds`` after storing."""
+    """Whether a cached entry is still fresh ``age_seconds`` after storing.
+
+    The entry's age is ``age_seconds`` plus the ``Age`` the response arrived
+    with (RFC 9111 4.2.3): a response a CDN had held for 50 s under
+    ``max-age=60`` read as fresh for another whole minute.
+    """
     cache_control = validators.get("cache_control") or {}
     if cache_control.get("no-store") or cache_control.get("no-cache"):
         return False
     max_age = cache_control.get("max-age")
+    upstream = validators.get("age") or 0
+    if isinstance(upstream, bool) or not isinstance(upstream, (int, float)):
+        upstream = 0
     # A bare "max-age" parses as True, and bool is an int.
     if isinstance(max_age, int) and not isinstance(max_age, bool):
-        return age_seconds < max_age
+        return age_seconds + upstream < max_age
     return False
 
 
 def is_not_modified(response: Mapping[str, Any]) -> bool:
     """Whether ``response`` is a ``304 Not Modified``."""
-    return int(response.get("status", 0)) == 304
+    try:
+        return int(response.get("status", 0)) == 304
+    except (TypeError, ValueError):   # a status of None or "OK" raised outside the framework's family
+        return False

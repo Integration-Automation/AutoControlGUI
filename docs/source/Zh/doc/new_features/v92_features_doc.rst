@@ -28,10 +28,12 @@
         if is_not_modified(fresh):
             use_cached()           # 304 → 已儲存的內文仍有效
 
-``store_validators`` 從回應取出 ``etag`` / ``last_modified`` / ``date`` 與解析後的 ``cache_control``。
-``parse_cache_control`` 把標頭轉成 directive dict(``max-age`` 為 int,旗標為 ``True``)。``conditioned_call``
-把 ``If-None-Match`` / ``If-Modified-Since`` 加到 ``build_call`` dict。``is_fresh`` 在給定 age 下回報快取項
-是否仍新鮮(``no-store`` / ``no-cache`` 永不新鮮)。``is_not_modified`` 偵測 ``304`` 回應。
+``store_validators`` 從回應取出 ``etag`` / ``last_modified`` / ``date``、以 ``age`` 表示的 ``Age`` 標頭
+(秒數，沒有時為 0)與解析後的 ``cache_control``。``parse_cache_control`` 把標頭轉成 directive dict
+(``max-age`` 為 int,旗標為 ``True``;重複的 directive 保留第一個值,RFC 9111 4.2.1)。``conditioned_call``
+把 ``If-None-Match`` / ``If-Modified-Since`` 加到 ``build_call`` dict。``is_fresh`` 在給定的本地 age 下回報快取項
+是否仍新鮮，並加上回應抵達時帶的 ``age``(RFC 9111 4.2.3);``no-store`` / ``no-cache`` 永不新鮮。
+``is_not_modified`` 偵測 ``304`` 回應。
 
 執行器命令
 ----------

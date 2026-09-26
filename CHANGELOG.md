@@ -489,6 +489,9 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Fixed
 
+- `is_fresh` counts the `Age` header `store_validators` now records (RFC 9111
+  4.2.3), a repeated `Cache-Control` directive keeps its first value, and
+  `is_not_modified` answers `False` for a non-numeric status.
 - `json_query`: a surrogate pair written as two `\u` escapes finds its key;
   `[01]`, `[-0]`, an index past 2**53-1, a bald `..`, an unpaired surrogate and a
   raw control character in a quoted name raise `ValueError` (RFC 9535).
