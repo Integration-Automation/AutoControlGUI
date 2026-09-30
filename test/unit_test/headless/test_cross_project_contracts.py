@@ -227,3 +227,19 @@ def test_commands_webrunner_refuses_keep_their_names():
                  "AC_execute_files", "AC_run_agent", "AC_web_run"):
         assert name in commands, name
     assert any(name.startswith("AC_add_package_") for name in commands)
+
+
+def test_commands_webrunner_sends_keep_their_parameters():
+    """WebRunner's native ``WR_ac_*`` commands send these by keyword (its ``autocontrol_bridge/native.py``)."""
+    import inspect
+
+    from je_auto_control.utils.executor.action_executor import executor
+
+    sent = {"AC_write": {"write_string"}, "AC_type_keyboard": {"keycode"},
+            "AC_locate_image_center": {"image", "detect_threshold"},
+            "AC_click_mouse": {"mouse_keycode", "x", "y"}, "AC_get_keyboard_keys_table": set()}
+    for name, keywords in sent.items():
+        parameters = inspect.signature(executor.event_dict[name]).parameters
+        assert keywords <= set(parameters), (name, keywords - set(parameters))
+    keys = executor.event_dict["AC_get_keyboard_keys_table"]()
+    assert "enter" in keys or "return" in keys

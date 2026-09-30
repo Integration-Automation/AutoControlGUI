@@ -58,6 +58,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261001-02 | 2026-10-01 | Pin the AC commands WebRunner's native WR_ac_* send; record the missing secret typing | #contract #webrunner | [2026-10](2026-10.md) |
 | U-20261001-01 | 2026-10-01 | Run AC_web_run's documented form, record WebRunner failures, gate through execute_one | #bugfix #webrunner | [2026-10](2026-10.md) |
 | U-20260926-41 | 2026-09-26 | Pin ruff's rule set in pyproject.toml so a ruff upgrade does not change what CI enforces | #ci #tooling | [2026-09-e](2026-09-e.md) |
 | U-20260926-40 | 2026-09-26 | Give French its CLDR ordinals, match a locale by language and fall back to Babel instead of English, compare =N selectors as numbers, and reject the patterns ICU rejects | #bugfix #i18n | [2026-09-e](2026-09-e.md) |
@@ -337,7 +338,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | File | Period | Entries |
 |---|---|---:|
-| [2026-10.md](2026-10.md) | 2026-10 | 1 |
+| [2026-10.md](2026-10.md) | 2026-10 | 2 |
 | [2026-09-e.md](2026-09-e.md) | 2026-09 | 7 |
 | [2026-09-d.md](2026-09-d.md) | 2026-09 | 55 |
 | [2026-09-c.md](2026-09-c.md) | 2026-09 | 38 |
