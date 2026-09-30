@@ -504,3 +504,9 @@ be at 2x if on a Retina screen」，`scale_down=True` 只在帶 `bbox` 時生效
 被別人取代時通知原本的面板收掉自己的視窗。或是反過來讓每個面板持有自己的 viewer，不經 registry。
 
 **為什麼要拍板**：`AC_remote_*` 指令與 MCP 工具依賴「registry 裡就是那一個 viewer」，改成多槽位要一起改它們的語意。
+
+---
+
+## `test_usb_acl_prompt.py` 讓 Python 3.10 的 headless 測試間歇 segfault
+
+`TODO` — `test/unit_test/headless/test_usb_acl_prompt.py::test_bridge_remember_persists_acl_rule` 在 `coverage run -m pytest` 下讓行程 SIGSEGV（exit 139），整個 `pytest-headless` job 因此失敗：2026-09-26 連續三次 AutoControl Code Quality（ubuntu-22.04／3.10），2026-09-30 一次（macos-14／3.10）；同一次其他版本都過，之後的 run 又過，所以是間歇的。原因還沒查：先在 3.10 開 `faulthandler` 重跑這一支，看崩在哪個原生呼叫。
