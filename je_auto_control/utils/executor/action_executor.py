@@ -1567,13 +1567,15 @@ def _ac_web_run(action: Optional[Dict[str, Any]] = None,
 
     Accepts ``{"action": "WR_*", "params": {...}}`` either as a positional
     dict or unpacked kwargs so it composes with the existing AC_ schema.
+    Unpacked, ``action`` arrives as the command name and ``params`` in
+    ``action_kwargs``.
     """
     from je_auto_control.utils.webrunner_bridge import run_webrunner_action
-    payload = action if isinstance(action, dict) else action_kwargs
+    payload = action if isinstance(action, dict) else {"action": action, **action_kwargs}
     return run_webrunner_action(payload)
 
 
-def _ac_web_run_actions(actions: list) -> list:
+def _ac_web_run_actions(actions: List[Dict[str, Any]]) -> list:
     """Bridge a list of WR_* actions through the WebRunner executor."""
     from je_auto_control.utils.webrunner_bridge import run_webrunner_actions
     return run_webrunner_actions(actions)

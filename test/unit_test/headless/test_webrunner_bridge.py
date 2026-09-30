@@ -3,10 +3,22 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from je_auto_control.utils.exception.exceptions import AutoControlException
+from je_auto_control.utils.webrunner_bridge import bridge as bridge_module
 from je_auto_control.utils.webrunner_bridge import (
     WebRunnerBridgeError, is_webrunner_available, list_webrunner_commands,
     run_webrunner_action, run_webrunner_actions,
 )
+
+_BRIDGE = "je_auto_control.utils.webrunner_bridge.bridge"
+_REAL_EXECUTE_ONE = bridge_module._execute_one
+
+
+@pytest.fixture(autouse=True)
+def _webrunner_without_execute_one():
+    """Run the fake-executor tests on the event_dict path, installed WebRunner or not."""
+    with patch(f"{_BRIDGE}._execute_one", return_value=None):
+        yield
 
 
 # --- availability check ----------------------------------------------
@@ -19,6 +31,17 @@ def test_is_available_false_when_import_fails():
     with patch.dict("sys.modules", {"je_web_runner": None}):
         # patch.dict with None forces ImportError on import
         assert is_webrunner_available() is False
+
+
+def test_is_available_does_not_import_webrunner():
+    """Importing je_web_runner writes WEBRunner.log into the cwd; the probe only looks it up."""
+    import sys
+    with patch("importlib.util.find_spec", return_value=object()) as find_spec, \
+            patch.dict("sys.modules"):
+        sys.modules.pop("je_web_runner", None)
+        assert is_webrunner_available() is True
+        assert "je_web_runner" not in sys.modules
+    find_spec.assert_called_once_with("je_web_runner")
 
 
 # --- run_webrunner_action --------------------------------------------
@@ -200,6 +223,72 @@ def test_ac_web_run_dispatches_to_bridge():
             {"action": "WR_quit", "params": {}},
         ) == {"done": True}
     fake.assert_called_once_with()
+
+
+def test_ac_web_run_accepts_the_documented_keyword_form():
+    """``["AC_web_run", {"action": "WR_*", "params": {...}}]`` binds ``action`` to a str, not a dict."""
+    from je_auto_control.utils.executor.action_executor import executor
+    to_url = MagicMock(return_value="navigated")
+    with patch(f"{_BRIDGE}._executor", return_value=_fake_executor({"WR_to_url": to_url})):
+        record = executor.execute_action(
+            [["AC_web_run", {"action": "WR_to_url", "params": {"url": "https://example.com"}}]],
+            raise_on_error=True)
+    assert list(record.values()) == ["navigated"]
+    to_url.assert_called_once_with(url="https://example.com")
+
+
+def test_a_failing_webrunner_command_is_recorded_not_fatal():
+    """A non-AutoControl error from WebRunner used to escape the executor and abort the script."""
+    from je_auto_control.utils.executor.action_executor import executor
+
+    class DriverError(Exception):
+        """Stands in for Selenium's WebDriverException, which is no AutoControl error."""
+
+    broken = MagicMock(side_effect=DriverError("no such window"))
+    after = MagicMock(return_value="ran")
+    fake_exec = _fake_executor({"WR_broken": broken, "WR_after": after})
+    with patch(f"{_BRIDGE}._executor", return_value=fake_exec):
+        record = executor.execute_action([
+            ["AC_web_run", {"action": "WR_broken"}],
+            ["AC_web_run", {"action": "WR_after"}],
+        ])
+    values = list(record.values())
+    assert "no such window" in values[0]
+    assert values[1] == "ran"
+
+
+def test_the_error_is_wrapped_with_its_cause():
+    boom = RuntimeError("boom")
+    fake_exec = _fake_executor({"WR_x": MagicMock(side_effect=boom)})
+    with patch(f"{_BRIDGE}._executor", return_value=fake_exec):
+        with pytest.raises(WebRunnerBridgeError, match="WR_x failed") as caught:
+            run_webrunner_action({"action": "WR_x"})
+    assert caught.value.__cause__ is boom
+
+
+def test_autocontrol_errors_pass_through_unwrapped():
+    error = AutoControlException("from a nested AutoControl call")
+    fake_exec = _fake_executor({"WR_x": MagicMock(side_effect=error)})
+    with patch(f"{_BRIDGE}._executor", return_value=fake_exec):
+        with pytest.raises(AutoControlException) as caught:
+            run_webrunner_action({"action": "WR_x"})
+    assert caught.value is error
+
+
+def test_execute_one_runs_the_command_when_webrunner_has_it():
+    """WebRunner's execute_one applies its gates, retries and failure screenshots."""
+    direct = MagicMock(return_value="direct")
+    execute_one = MagicMock(return_value="gated")
+    with patch(f"{_BRIDGE}._executor", return_value=_fake_executor({"WR_to_url": direct})), \
+            patch(f"{_BRIDGE}._execute_one", return_value=execute_one):
+        assert run_webrunner_action({"action": "WR_to_url", "params": {"url": "u"}}) == "gated"
+    execute_one.assert_called_once_with(["WR_to_url", {"url": "u"}])
+    direct.assert_not_called()
+
+
+def test_execute_one_is_none_on_a_webrunner_without_it():
+    with patch.dict("sys.modules", {"je_web_runner": None}):  # fails before importing anything
+        assert _REAL_EXECUTE_ONE() is None
 
 
 # --- convenience helpers --------------------------------------------

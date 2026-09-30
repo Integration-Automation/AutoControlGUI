@@ -199,3 +199,31 @@ def test_windows_key_names_jeffrey_rpa_sends():
     for name in ("return", "escape", "control", "menu", "back", "delete",
                  "home", "end", "insert", "capital", "vk_down"):
         assert name in platform_wrapper.keyboard_keys_table, name
+
+
+def test_executor_api_webrunner_calls():
+    """WebRunner's ``WR_ac_*`` bridge (``je_web_runner/utils/autocontrol_bridge``).
+
+    It runs ``execute_action(actions, raise_on_error=True)`` and reads the record's
+    values in action order, and lists ``known_commands()``.
+    """
+    import inspect
+
+    from je_auto_control.utils.executor.action_executor import executor
+
+    assert "raise_on_error" in inspect.signature(executor.execute_action).parameters
+    record = executor.execute_action([["AC_get_keyboard_keys_table"], ["AC_get_keyboard_keys_table"]],
+                                     raise_on_error=True)
+    assert len(record) == 2
+    assert isinstance(executor.known_commands(), (set, frozenset))
+
+
+def test_commands_webrunner_refuses_keep_their_names():
+    """WebRunner refuses these by name; renamed, one would pass its bridge unrefused."""
+    from je_auto_control.utils.executor.action_executor import executor
+
+    commands = executor.known_commands()
+    for name in ("AC_shell_command", "AC_execute_process", "AC_execute_action",
+                 "AC_execute_files", "AC_run_agent", "AC_web_run"):
+        assert name in commands, name
+    assert any(name.startswith("AC_add_package_") for name in commands)

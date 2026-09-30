@@ -1155,7 +1155,7 @@ def webrunner_tools() -> List[MCPTool]:
         MCPTool(
             name="ac_web_list_commands",
             description=("List every WR_* command exposed by the installed "
-                         "WebRunner (~440 Selenium / Playwright actions)."),
+                         "WebRunner (its Selenium / Playwright actions)."),
             input_schema=schema({}),
             handler=h.web_list_commands,
             annotations=READ_ONLY,

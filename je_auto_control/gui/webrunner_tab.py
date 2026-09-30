@@ -2,7 +2,7 @@
 
 A thin wrapper over :mod:`je_auto_control.utils.webrunner_bridge` — the
 convenience actions (open / quit / screenshot) cover the common flow,
-and a free-form ``WR_*`` runner exposes the full 440-command surface.
+and a free-form ``WR_*`` runner exposes every command WebRunner registers.
 """
 import json
 from typing import Optional

@@ -79,7 +79,8 @@ the CLI, the scheduler, triggers, hotkeys, webhooks, the MCP run tool, the GUI) 
 TCP socket_server | REST rest_api | MCP mcp_server | utils/scheduler | utils/triggers | utils/chatops
   → execute_action → same Executor instance → flow A
 AC_web_run / AC_web_run_actions → utils/webrunner_bridge/bridge.py
-  → je_web_runner.utils.executor.action_executor.executor.event_dict["WR_*"]
+  → je_web_runner.utils.executor.action_executor.execute_one(["WR_*", params])
+    (event_dict["WR_*"] on a WebRunner without execute_one); a failure → WebRunnerBridgeError
 ```
 
 **C. Record → edit → generate code**
@@ -129,18 +130,25 @@ wrapper/auto_control_record.record → OS listener (e.g. windows/record/win32_in
 | Jeffrey_RPA | Editable install of **this working tree**: uncommitted changes here reach it immediately. Single facade `JeffreyRPA/_gui_control.py`. | Top-level names (e.g. `click_mouse`, `hotkey`, `write`, `screen_size`, `get_pixel`, `post_click_to_window`) and internal paths `je_auto_control.wrapper.auto_control_window`, `je_auto_control.wrapper.auto_control_keyboard.WRITE_CONTROL_KEYS`, `je_auto_control.utils.monitor_layout` (`logical_virtual_rect`, `enumerate_monitors`), and `wrapper.platform_wrapper.keyboard_keys_table` / `mouse_keys_table` — it validates every key name a user types against the keyboard table and reverse-looks-up recorded virtual keys through it, so a name removed there becomes a rejected hotkey over in that repo. |
 | PyBreeze | Subprocess `python -m je_auto_control --execute_str <json>` / `--execute_file <path>`; on Windows the JSON string arrives double-encoded. | Legacy CLI flags; also embeds `je_auto_control.gui.main_widget.AutoControlGUIWidget` and calls `record` / `stop_record` in-process. |
 | TestPioneer | Optional extra `gui = ["je_auto_control"]`; `parallel_run` starts `python -m je_auto_control --execute_file <path>`. | `execute_action`, `execute_files`, `RecordingThread`; the `--execute_file` flag. |
+| WebRunner | Optional extra `autocontrol = ["je_auto_control>=0.0.224"]`; `je_web_runner/utils/autocontrol_bridge/` (`WR_ac_*`) imports this package only when one of those commands runs. | `je_auto_control.utils.executor.action_executor.executor`: `execute_action(actions, raise_on_error=True)`, whose record values it reads in action order, and `known_commands()`. It refuses `AC_shell_command`, `AC_execute_process`, `AC_add_package_*`, `AC_execute_action`, `AC_execute_files`, `AC_run_agent` and `AC_web_*` by name, so renaming one of them would let it through WebRunner's bridge. |
 
 **Guarded by** `test/unit_test/headless/test_cross_project_contracts.py`: every legacy CLI flag (short and long, run as a
-real child process, including PyBreeze's double-encoded `--execute_str`), the facade names in the three rows above
+real child process, including PyBreeze's double-encoded `--execute_str`), the facade names in the rows above
 (Jeffrey_RPA's list is every `ac.<name>` in `_gui_control.py`), the `auto_control_window` functions Jeffrey_RPA calls,
-its three internal imports, the two key tables (shape everywhere, Windows key names on Windows), and
-`AutoControlGUIWidget`. The test only knows what this table knows: when a consumer starts relying on something
+its three internal imports, the two key tables (shape everywhere, Windows key names on Windows),
+`AutoControlGUIWidget`, and the executor API and refused command names WebRunner's bridge relies on. The test only knows what this table knows: when a consumer starts relying on something
 new, add it to both.
 
-**Outbound (optional):** `utils/webrunner_bridge/bridge.py` imports WebRunner's *internal*
-`je_web_runner.utils.executor.action_executor.executor` lazily, for `AC_web_*` commands and `gui/webrunner_tab.py`.
-`je_web_runner` is not a declared dependency; when it is missing the bridge raises `WebRunnerBridgeError`.
-Moving that WebRunner module breaks the bridge.
+**Outbound (optional):** `utils/webrunner_bridge/bridge.py` imports WebRunner's supported module
+`je_web_runner.utils.executor.action_executor` lazily, for `AC_web_*` commands and `gui/webrunner_tab.py`: `executor`
+(its `event_dict` lists and checks the `WR_*` names) and `execute_one`, which runs each command through WebRunner's
+gates, retries and failure screenshots; a WebRunner without `execute_one` gets the `event_dict` callable directly.
+The helpers send `WR_get_webdriver_manager`, `WR_to_url`, `WR_quit`, `WR_save_screenshot`, `WR_get_current_url`;
+WebRunner's `test_public_api.py` guards those names and `execute_one`, and `test_webrunner_contract.py` here checks
+them against the installed package. `je_web_runner` is not a declared dependency: `is_webrunner_available` looks it
+up with `importlib.util.find_spec`, because importing it writes `WEBRunner.log` into the cwd, and a missing package
+raises `WebRunnerBridgeError`. Any error from a `WR_*` command is re-raised as `WebRunnerBridgeError` (an
+`AutoControlException`), so the executor records it instead of aborting the script.
 
 **Wire contract between AutoControl versions:** the Admin Console and DAG remote nodes drive other hosts through
 REST `POST /execute` (`{"actions": [...], "raise_on_error": bool}`), and those hosts may run an older release.

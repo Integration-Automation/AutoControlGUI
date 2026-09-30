@@ -198,8 +198,12 @@ def test_only_a_parameter_mismatch_is_reported_as_one(monkeypatch):
         raise TypeError("'NoneType' object is not subscriptable")
 
     monkeypatch.setattr(bridge, "_executor", lambda: types.SimpleNamespace(event_dict={"WR_to_url": to_url}))
-    with pytest.raises(TypeError, match="subscriptable"):
+    monkeypatch.setattr(bridge, "_execute_one", lambda: None)
+    # The command's own TypeError is its failure, wrapped so the executor records it, not a parameter mismatch.
+    with pytest.raises(bridge.WebRunnerBridgeError, match="subscriptable") as caught:
         bridge.run_webrunner_action({"action": "WR_to_url", "params": {"url": "x"}})
+    assert "rejected params" not in str(caught.value)
+    assert isinstance(caught.value.__cause__, TypeError)
     with pytest.raises(bridge.WebRunnerBridgeError, match="rejected params"):
         bridge.run_webrunner_action({"action": "WR_to_url", "params": {"link": "x"}})
 

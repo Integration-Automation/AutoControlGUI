@@ -2007,6 +2007,7 @@ def _add_misc_specs(specs: List[CommandSpec]) -> None:
     _add_resilience_specs(specs)
     _add_devex_specs(specs)
     _add_audit_specs(specs)
+    _add_webrunner_specs(specs)
     specs.append(CommandSpec(
         "AC_tween_drag", "Mouse", "Tweened Drag",
         fields=(
@@ -4364,6 +4365,36 @@ def _add_tooling_specs(specs: List[CommandSpec]) -> None:
         description="Pick riskiest 'flows' (JSON view): top-k or threshold.",
     ))
 
+
+
+def _add_webrunner_specs(specs: List[CommandSpec]) -> None:
+    """Browser automation through the optional ``je_web_runner`` bridge."""
+    specs.append(CommandSpec(
+        "AC_web_open", "Browser", "Open Browser at URL",
+        fields=(
+            FieldSpec("url", FieldType.STRING, placeholder="https://example.com"),
+            FieldSpec("browser", FieldType.ENUM, optional=True, default="chrome",
+                      choices=("chrome", "chromium", "firefox", "edge", "safari")),
+        ),
+        description="Start a WebRunner Selenium browser and open the URL (needs je_web_runner).",
+    ))
+    specs.append(CommandSpec(
+        "AC_web_run", "Browser", "Run WebRunner Command",
+        fields=(FieldSpec("action", FieldType.STRING, placeholder="WR_to_url"),),
+        description="Run one WR_* command; its arguments go in 'params' (JSON view).",
+    ))
+    specs.append(CommandSpec(
+        "AC_web_run_actions", "Browser", "Run WebRunner Commands",
+        description="Run 'actions' (JSON view), a list of {action, params}; stops at the first failure.",
+    ))
+    specs.append(CommandSpec(
+        "AC_web_screenshot", "Browser", "Browser Screenshot",
+        fields=(FieldSpec("file_path", FieldType.FILE_PATH, placeholder="page.png"),),
+    ))
+    specs.append(CommandSpec("AC_web_current_url", "Browser", "Current Browser URL"))
+    specs.append(CommandSpec("AC_web_quit", "Browser", "Quit Browser"))
+    specs.append(CommandSpec("AC_web_available", "Browser", "Is WebRunner Installed"))
+    specs.append(CommandSpec("AC_web_list_commands", "Browser", "List WebRunner Commands"))
 
 def _add_work_queue_specs(specs: List[CommandSpec]) -> None:
     db = FieldSpec("db", FieldType.FILE_PATH)

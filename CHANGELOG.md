@@ -505,6 +505,14 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Fixed
 
+- `AC_web_run` in its documented keyword form
+  (`{"action": "WR_to_url", "params": {...}}`) runs the command; it failed with
+  "action name must start with WR_". A failing `WR_*` command now raises
+  `WebRunnerBridgeError`, so the executor records it and runs the next action
+  instead of aborting the script, and the command runs through WebRunner's
+  `execute_one` (its command gates, retry policy and failure screenshots) when
+  the installed WebRunner has it. `is_webrunner_available()` no longer imports
+  `je_web_runner`, which wrote `WEBRunner.log` into the current directory.
 - French `selectordinal` follows CLDR (`21e`, not `21er`), `fr_FR` / `fr-CA`
   use the French rules, and `=1.0` matches 1.
 - `attributes_to_otlp` / `spans_to_otlp` write a `bytes` attribute as OTLP

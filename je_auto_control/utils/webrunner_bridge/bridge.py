@@ -1,13 +1,15 @@
 """Delegate ``WR_*`` browser-automation commands to ``je_web_runner``."""
 from __future__ import annotations
 
-from typing import Any, List, Mapping, Sequence
+import importlib.util
+import inspect
+from typing import Any, Callable, List, Mapping, Optional, Sequence
 
 from je_auto_control.utils.exception.exceptions import AutoControlException
 
 
 class WebRunnerBridgeError(AutoControlException, RuntimeError):
-    """Raised when WebRunner isn't installed or a command is malformed."""
+    """Raised when WebRunner isn't installed, a command is malformed, or a WR_* command fails."""
 
 
 _HINT = (
@@ -17,12 +19,15 @@ _HINT = (
 
 
 def is_webrunner_available() -> bool:
-    """True iff ``je_web_runner`` can be imported in the current process."""
+    """True iff ``je_web_runner`` is installed; found without importing it.
+
+    Importing WebRunner opens ``WEBRunner.log`` in the current directory, so a
+    probe (the GUI tab, ``AC_web_available``) must not import it.
+    """
     try:
-        import je_web_runner  # noqa: F401
-    except ImportError:
+        return importlib.util.find_spec("je_web_runner") is not None
+    except (ImportError, ValueError):  # a broken install or a half-imported module
         return False
-    return True
 
 
 def _executor():
@@ -31,6 +36,35 @@ def _executor():
     except ImportError as exc:  # pragma: no cover - optional dep
         raise WebRunnerBridgeError(_HINT) from exc
     return executor
+
+
+def _execute_one() -> Optional[Callable[[list], Any]]:
+    """WebRunner's ``execute_one``, or None on a release that predates it."""
+    try:
+        from je_web_runner.utils.executor.action_executor import execute_one
+    except ImportError:
+        return None
+    return execute_one
+
+
+def _call(name: str, callable_obj: Callable[..., Any], params: dict) -> Any:
+    """Run the command through ``execute_one`` when WebRunner has it, else directly.
+
+    ``execute_one`` applies WebRunner's command gates, retry policy and failure
+    screenshots, which calling ``event_dict`` directly skips. Either way a failure
+    leaves as :class:`WebRunnerBridgeError`: WebRunner's and its drivers' errors are
+    not in the AutoControl family, so the executor did not contain them and one
+    failing ``AC_web_run`` aborted the rest of the script.
+    """
+    execute_one = _execute_one()
+    try:
+        if execute_one is not None:
+            return execute_one([name, params])
+        return callable_obj(**params)
+    except AutoControlException:
+        raise
+    except Exception as error:  # noqa: BLE001 - any WebRunner / Selenium / Playwright error; wrapped, not swallowed
+        raise WebRunnerBridgeError(f"{name} failed: {error!r}") from error
 
 
 def list_webrunner_commands() -> List[str]:
@@ -64,7 +98,6 @@ def run_webrunner_action(action: Mapping[str, Any]) -> Any:
     callable_obj = executor.event_dict.get(name)
     if callable_obj is None:
         raise WebRunnerBridgeError(f"unknown WR_ command: {name}")
-    import inspect
     try:
         inspect.signature(callable_obj).bind(**dict(params))
     except TypeError as error:
@@ -75,7 +108,7 @@ def run_webrunner_action(action: Mapping[str, Any]) -> Any:
         pass   # no signature to check (a builtin): let the call decide
     # A TypeError from inside the command is its own failure, not a
     # parameter problem as it was reported.
-    return callable_obj(**dict(params))
+    return _call(name, callable_obj, dict(params))
 
 
 def run_webrunner_actions(actions: Sequence[Mapping[str, Any]]) -> List[Any]:
