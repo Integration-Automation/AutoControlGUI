@@ -169,7 +169,8 @@ def test_the_workflow_uploads_only_a_changed_build_and_keeps_no_credentials():
 def test_dev_is_tested_the_way_main_is():
     dev, quality = _workflow("dev.yml"), _workflow("quality.yml")
     squares = {line.strip() for line in SQUARE.findall(dev)}
-    assert squares and squares <= {line.strip() for line in SQUARE.findall(quality)}
+    assert squares, "dev.yml names no matrix square"
+    assert squares <= {line.strip() for line in SQUARE.findall(quality)}
     assert _line_with(dev, "pytest==") == _line_with(quality, "pytest==")
     assert _line_with(dev, 'pip install -e "') == _line_with(quality, 'pip install -e "')
     assert "python -m pytest -v --tb=short --timeout=120" in dev
