@@ -33,7 +33,7 @@ import math
 import sys
 import time
 import warnings
-from typing import Optional, Tuple, Union
+from typing import Any, Dict, Optional, Tuple, Union
 
 from je_auto_control.utils.exception.exception_tags import (
     mouse_click_mouse_error_message, mouse_get_position_error_message, mouse_press_mouse_error_message,
@@ -302,7 +302,7 @@ def click_mouse(mouse_keycode: Union[int, str], x: Optional[int] = None,
     """
     autocontrol_logger.info(
         f"click_mouse, keycode={mouse_keycode}, x={x}, y={y}, clicks={clicks}, interval={interval}")
-    param = {"keycode": mouse_keycode, "x": x, "y": y}
+    param: Dict[str, Any] = {"keycode": mouse_keycode, "x": x, "y": y}
     if clicks != 1 or interval:
         # Only when used, so a single click records exactly what it always did.
         param.update(clicks=clicks, interval=interval)
