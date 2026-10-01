@@ -20,7 +20,7 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 | 指標 | 數值 |
 | --- | ---: |
 | Python 模組總數（含周邊子專案） | 1,063 |
-| 程式碼總行數 | 157,030 |
+| 程式碼總行數 | 157,034 |
 | `je_auto_control/utils/` 子套件數 | 310 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 776 |
 | 套件門面 `__all__` 公開名稱數 | 1,244 |
@@ -178,7 +178,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `wrapper/_platform_linux.py` | 275 | X11 後端組裝（python-Xlib + 選用 uinput）。 |
 | `wrapper/_platform_wayland.py` | 58 | Wayland 後端組裝（libei／ydotool／grim）。 |
 | `wrapper/auto_control_mouse.py` | 491 | 滑鼠 API：位置讀寫、按下／放開／點擊、捲動、座標前處理、送訊息給指定視窗。 |
-| `wrapper/auto_control_keyboard.py` | 400 | 鍵盤 API：鍵表查詢、按下／放開／敲擊、`write` 字串、`hotkey` 組合鍵、按鍵狀態偵測。**`type_keyboard` 與 `hotkey` 的放開走 `finally`**（見下）。 |
+| `wrapper/auto_control_keyboard.py` | 404 | 鍵盤 API：鍵表查詢、按下／放開／敲擊、`write` 字串、`hotkey` 組合鍵、按鍵狀態偵測。**`type_keyboard` 與 `hotkey` 的放開走 `finally`**（見下）。 |
 | `wrapper/auto_control_screen.py` | 111 | 螢幕 API：`screen_size`、`screenshot`（可指定區域）、`get_pixel`。 |
 | `wrapper/auto_control_image.py` | 83 | 影像 API：`locate_all_image`、`locate_image_center`、`locate_and_click`。 |
 | `wrapper/auto_control_record.py` | 124 | 錄製 API：`record`／`stop_record`／`record_to_json`（支援 stop event 與逾時）。 |
@@ -1077,7 +1077,7 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `utils/usb/` | 17 | 4,572 |
 | `je_auto_control/`（頂層 3 檔） | 3 | 2,411 |
 | `utils/accessibility/` | 14 | 3,143 |
-| `wrapper/` | 19 | 3,663 |
+| `wrapper/` | 19 | 3,667 |
 | `windows/` | 23 | 1,959 |
 | `utils/rest_api/` | 8 | 1,881 |
 | `utils/agent/` | 9 | 1,975 |
@@ -1091,5 +1091,5 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 852 |
 | 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 681 | 56,986 |
-| **總計** | **1,057** | **156,965** |
+| **總計** | **1,057** | **156,969** |
 

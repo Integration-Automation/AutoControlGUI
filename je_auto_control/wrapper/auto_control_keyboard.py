@@ -277,6 +277,10 @@ def write(write_string: str, is_shift: bool = False) -> Optional[str]:
         raise AutoControlKeyboardException(f"{keyboard_write_error_message} {repr(error)}") from error
 
 
+# What the test record keeps in place of the typed text.
+_RECORD_MASK = "***"
+
+
 def write_secret(secret: str) -> None:
     """
     輸入機密字串：不寫 log、不記錄、不回傳原文
@@ -306,7 +310,7 @@ def write_secret(secret: str) -> None:
         # The cause is dropped on purpose: its text could carry part of the secret.
         autocontrol_logger.error(f"write_secret failed: {type(error).__name__}")
         raise AutoControlKeyboardException(f"{keyboard_write_error_message} {type(error).__name__}") from None
-    record_action_to_list("write_secret", {"secret": "***"})
+    record_action_to_list("write_secret", {"secret": _RECORD_MASK})
 
 
 def hotkey(key_code_list: list, is_shift: bool = False) -> Tuple[str, str]:
