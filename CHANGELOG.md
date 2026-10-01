@@ -18,6 +18,11 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 - `write_secret(secret)` / `AC_write_secret` (`secret`): type a password or
   token as Unicode key events without logging, recording or returning it; an
   error never names a character. Refuses on a backend without Unicode typing.
+- A package gate in front of `AC_add_package_to_executor` and
+  `AC_add_package_to_callback_executor`: `executor.allow_packages(*names)` (submodules
+  included) and `executor.set_allow_arbitrary_packages(enabled)` (also on
+  `package_manager`). A refused package raises `AutoControlExecuteActionException`
+  before it is imported.
 - `message_format.MessageFormatError` (an `AutoControlException` and a
   `ValueError`); locales other than en/fr use Babel's CLDR plural rules when
   Babel is installed.
@@ -103,6 +108,13 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
   the descriptions already said in prose and the schema did not. A client
   generating values from the schema alone used to produce a plain string and
   get a `ValueError` out of `datetime.fromisoformat`.
+
+### Deprecated
+
+- Loading a package that is not on the allowlist while the package gate is unconfigured.
+  It still works, with a `DeprecationWarning`; a future release will refuse it by default.
+  Migration: call `executor.allow_packages(...)` for the packages your action lists load,
+  or `executor.set_allow_arbitrary_packages(True)` to keep loading any package.
 
 ### Changed
 

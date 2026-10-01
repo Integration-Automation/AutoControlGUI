@@ -200,6 +200,8 @@ je_auto_control version
 
 除非明确指定，所有服务器都绑定在 `127.0.0.1`。
 
+**包闸门。** `AC_add_package_to_executor` 与 `AC_add_package_to_callback_executor` 会导入 Python 包并把成员注册成命令，所以从上面任何一个入口送来的动作列表都可能加载 `os` 或 `subprocess`。哪些包可以加载，由宿主程序决定：`executor.allow_packages("name", …)` 列出可以加载的包（含子模块），`executor.set_allow_arbitrary_packages(False)` 会在导入前拒绝其他包。这两个都不是 `AC_*` 命令，所以动作列表不能自己打开闸门。被拒绝的包会让该动作以 `AutoControlExecuteActionException` 失败。宿主程序调用任一个开关之前，任何包仍会加载，但会发出 `DeprecationWarning`：之后的版本会默认拒绝清单以外的包。
+
 ### 远程桌面的线路协议
 
 把主机开放出去之前值得先了解，而且这一段在其他文档里都没有写。默认传输是**裸

@@ -58,6 +58,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261001-08 | 2026-10-01 | Package gate in front of AC_add_package_to_executor | #security #X-12 | [2026-10](2026-10.md) |
 | U-20261001-07 | 2026-10-01 | write_secret / AC_write_secret: type a password without logging, recording or returning it | #done #keyboard #security #webrunner | [2026-10](2026-10.md) |
 | U-20261001-02 | 2026-10-01 | Pin the AC commands WebRunner's native WR_ac_* send; record the missing secret typing | #contract #webrunner | [2026-10](2026-10.md) |
 | U-20261001-01 | 2026-10-01 | Run AC_web_run's documented form, record WebRunner failures, gate through execute_one | #bugfix #webrunner | [2026-10](2026-10.md) |

@@ -509,3 +509,13 @@ be at 2x if on a Retina screen」，`scale_down=True` 只在帶 `bbox` 時生效
 ## `test_usb_acl_prompt.py` 讓 Python 3.10 的 headless 測試間歇 segfault
 
 `TODO` — `test/unit_test/headless/test_usb_acl_prompt.py::test_bridge_remember_persists_acl_rule` 在 `coverage run -m pytest` 下讓行程 SIGSEGV（exit 139），整個 `pytest-headless` job 因此失敗：2026-09-26 連續三次 AutoControl Code Quality（ubuntu-22.04／3.10），2026-09-30 一次（macos-14／3.10）；同一次其他版本都過，之後的 run 又過，所以是間歇的。原因還沒查：先在 3.10 開 `faulthandler` 重跑這一支，看崩在哪個原生呼叫。
+
+---
+
+## 套件閘門的預設改成拒絕
+
+`BLOCKED` — 等含警告的版本出去之後再發兩版
+
+`AC_add_package_to_executor`／`AC_add_package_to_callback_executor` 前面已有套件閘門（工作區 X-12），但沒設定時仍會載入任何套件、只發 `DeprecationWarning`。兩個版本之後，在 `utils/package_manager/package_manager_class.py` 的 `PackageManager.__init__` 把 `allow_arbitrary_packages` 改成 `False`，拿掉 `_check_allowed` 裡的警告分支，並更新三份 README 的「Package gate」段落、`docs/source/{Eng,Zh}/doc/keyword_and_executor/keyword_and_executor_doc.rst` 與 `docs/source/API/utils/package_manager.rst`，`CHANGELOG.md` 記成破壞性變更。
+
+**先決定**：只跑動作檔、沒有 Python 宿主程式的使用者（`je_auto_control` CLI、socket／REST／MCP server、排程器）要怎麼放行套件。

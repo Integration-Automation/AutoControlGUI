@@ -20,7 +20,7 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 | 指標 | 數值 |
 | --- | ---: |
 | Python 模組總數（含周邊子專案） | 1,063 |
-| 程式碼總行數 | 157,034 |
+| 程式碼總行數 | 157,101 |
 | `je_auto_control/utils/` 子套件數 | 310 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 776 |
 | 套件門面 `__all__` 公開名稱數 | 1,244 |
@@ -272,7 +272,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.1 執行引擎與腳本資產
 
-> 24 個套件、約 14,674 行。
+> 24 個套件、約 14,689 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -283,7 +283,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/dag/` | 536 | 跨主機 DAG 編排器（圖模型 + runner） |
 | `utils/decision_table/` | 112 | DMN 風格決策表：規則 + 命中策略，把分支外部化 |
 | `utils/deterministic/` | 116 | 決定性執行控制：固定亂數種子 + 凍結時鐘 |
-| `utils/executor/` | 9,545 | **核心**。`Executor` 指令分派表（776 個 `AC_*`）、參數插值、乾跑、逐步 callback；`flow_control` 提供 34 個區塊指令（迴圈／分支／try／巨集／變數） |
+| `utils/executor/` | 9,560 | **核心**。`Executor` 指令分派表（776 個 `AC_*`）、參數插值、乾跑、逐步 callback；`flow_control` 提供 34 個區塊指令（迴圈／分支／try／巨集／變數） |
 | `utils/flow_debugger/` | 166 | action list 的單步除錯器與追蹤器 |
 | `utils/input_macro/` | 462 | 定時輸入事件：錄製結果的整形（`timeline`／`InputRecorder`，Windows 與 macOS 共用）、重播與宣告式輸入序列 DSL |
 | `utils/json/` | 99 | action JSON 檔讀寫與正規化格式化（`fmt --check` 的後端） |
@@ -303,7 +303,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.2 框架基礎設施
 
-> 14 個套件、約 3,053 行。
+> 14 個套件、約 3,105 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -316,7 +316,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/failure_bundle/` | 229 | 可攜、已遮蔽的失敗診斷 ZIP（截圖 + 診斷 + log 尾段） |
 | `utils/file_process/` | 40 | 目錄檔案列舉（`execute_dir` 的後端） |
 | `utils/logging/` | 168 | `autocontrol_logger` 單例 + 家目錄共用記錄檔 handler（`JE_AUTOCONTROL_LOG_FILE` 可改） |
-| `utils/package_manager/` | 103 | 動態載入套件並把 executor 注入其中 |
+| `utils/package_manager/` | 155 | 動態載入套件並把 executor 注入其中；載入前先過套件閘門（允許清單加上只能從 Python 呼叫的開關，工作區 X-12） |
 | `utils/path_guard/` | 114 | 命令列傳入路徑的正規化與邊界檢查（防路徑穿越） |
 | `utils/platform_id/` | 62 | 作業系統家族的單一判定點。`sys.platform` 原本在一百多處跟字面清單比對，而那些清單都沒有 BSD；`is_x11_unix()` 問的是「這是不是 X11 unix」，這才是守衛一直想問的問題 |
 | `utils/shell_process/` | 279 | `ShellManager`：以 argv list 執行外部命令（禁用 `shell=True`） |
@@ -696,11 +696,11 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 上表以子套件為單位；以下把行數最大的幾個子系統展開到檔案層。
 
-#### `utils/executor/`（9,545 行）— 執行核心
+#### `utils/executor/`（9,560 行）— 執行核心
 
 | 檔案 | 行數 | 職責 |
 | --- | ---: | --- |
-| `action_executor.py` | 8,326 | `Executor` 類別與 `event_dict` 分派表（776 個指令），另含數百個把 utils 能力接成指令的 adapter 函式；全域單例 `executor` 與 `add_command_to_executor()` 擴充點。 |
+| `action_executor.py` | 8,341 | `Executor` 類別與 `event_dict` 分派表（776 個指令），另含數百個把 utils 能力接成指令的 adapter 函式；全域單例 `executor` 與 `add_command_to_executor()` 擴充點。 |
 | `flow_control.py` | 644 | 真正的流程控制：`AC_loop`／`AC_for_each`／`AC_while_*`／`AC_if_*`／`AC_try`／`AC_retry`／`AC_parallel`／`AC_define_macro`／`AC_call_macro`／變數指令（`AC_set_var`／`AC_get_var`／`AC_inc_var`）。`LoopBreak`／`LoopContinue` 以例外實作。34 個區塊指令的分派表 `BLOCK_COMMANDS` 也在這裡，含下一列匯入的資料來源指令。 |
 | `flow_data_commands.py` | 272 | `AC_*_to_var` 資料來源與轉換指令：shell、時鐘、亂數、PDF、TOTP、SQL、檔案、HTTP、OCR，加上 `AC_assert_var`／`AC_assert_db`／`AC_assert_duration`／`AC_transform_var`。都不執行巢狀 action list，所以沒有迴圈／分支語意。 |
 | `action_schema.py` | 159 | action list 的結構驗證：形狀、參數型別、未知指令拒絕。單一走訪同時支援兩種消費方式：`validate_actions()` 遇到第一個問題就拋、`unknown_command_names()` 收齊全部不認得的名字（REST `/execute` 用它回 400）。 |
@@ -1073,7 +1073,7 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `gui/` | 95 | 27,829 |
 | `utils/mcp_server/` | 35 | 18,846 |
 | `utils/remote_desktop/` | 56 | 13,014 |
-| `utils/executor/` | 8 | 9,545 |
+| `utils/executor/` | 8 | 9,560 |
 | `utils/usb/` | 17 | 4,572 |
 | `je_auto_control/`（頂層 3 檔） | 3 | 2,411 |
 | `utils/accessibility/` | 14 | 3,143 |
@@ -1090,6 +1090,6 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `osx/` | 17 | 925 |
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 852 |
-| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 681 | 56,986 |
-| **總計** | **1,057** | **156,969** |
+| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 681 | 57,038 |
+| **總計** | **1,057** | **157,036** |
 
