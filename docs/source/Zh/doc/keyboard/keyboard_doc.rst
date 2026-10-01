@@ -24,6 +24,17 @@ AutoControl 提供模擬鍵盤輸入的功能，包括按鍵按下/釋放、輸�
 
    完整的鍵盤按鍵列表請參考 :doc:`/API/special/keyboard_keys`。
 
+Windows 的按鍵表也收常見的別名（``ctrl``、``alt``、``enter``、``esc``、``win``、``backspace``、
+``del``、``pgup``、``capslock``、``prtsc``、``numpad0``……）。要把錄到的鍵碼換回名字，用
+``keyboard_key_name``；它一律回標準名稱，不會回別名：
+
+.. code-block:: python
+
+   from je_auto_control import keyboard_key_name
+
+   keyboard_key_name(27)     # Windows 上是 "escape"
+   keyboard_key_name(0xBB)   # "oem_plus"
+
 按下與釋放
 ==========
 

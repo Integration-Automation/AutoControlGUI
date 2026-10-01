@@ -58,6 +58,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261001-06 | 2026-10-01 | Windows OEM keys, browser_home, launch_app2 and key aliases; canonical reverse lookup | #feature #input #contract | [2026-10](2026-10.md) |
 | U-20261001-05 | 2026-10-01 | Drag pacing for tween_drag / drag_path; an aborted drag lets go where it stopped | #feature #bugfix #input | [2026-10](2026-10.md) |
 | U-20261001-04 | 2026-10-01 | click_mouse(clicks=, interval=): a double-click in one call | #feature #input | [2026-10](2026-10.md) |
 | U-20261001-03 | 2026-10-01 | Tesseract setup helpers: find the engine, set tessdata, report status and languages | #feature #ocr #contract | [2026-10](2026-10.md) |
@@ -219,7 +220,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | File | Period | Entries |
 |---|---|---:|
-| [2026-10.md](2026-10.md) | 2026-10 | 3 |
+| [2026-10.md](2026-10.md) | 2026-10 | 4 |
 | [2026-09.md](2026-09.md) | 2026-09 | 127 |
 | [2026-08-f.md](2026-08-f.md) | 2026-08 | 1 |
 | [2026-08-e.md](2026-08-e.md) | 2026-08 | 2 |

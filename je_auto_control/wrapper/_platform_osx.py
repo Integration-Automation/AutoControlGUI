@@ -1,3 +1,5 @@
+from typing import Dict
+
 from je_auto_control.osx.core.utils.osx_vk import (
     osx_key_a, osx_key_A, osx_key_b, osx_key_B, osx_key_c, osx_key_C,
     osx_key_d, osx_key_D, osx_key_e, osx_key_E, osx_key_f, osx_key_F,
@@ -152,6 +154,9 @@ keyboard_check: KeyboardCheckBackend = osx_keyboard_check
 mouse: DarwinMouseBackend = osx_mouse
 screen: ScreenBackend = osx_screen
 recorder: RecorderBackend = osx_recorder
+
+#: Aliases of canonical key names; none on this backend (see ``_platform_windows``).
+keyboard_key_aliases: Dict[str, str] = {}
 
 if None in [keyboard_keys_table, mouse_keys_table, keyboard_check, keyboard, mouse, screen, recorder]:
     raise AutoControlException("Can't init auto control")

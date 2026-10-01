@@ -37,6 +37,19 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
   motion. Both must be finite and non-negative (`ValueError` otherwise,
   before anything is sent). `AC_tween_drag`, `AC_drag_path`, their MCP tools
   and the Script Builder take both.
+- **Windows key names.** The OEM keys (`oem_1` .. `oem_8`, `oem_102`,
+  `oem_plus`, `oem_comma`, `oem_minus`, `oem_period`, `oem_clear`),
+  `browser_home`, a lower-case `launch_app2` (`LAUNCH_APP2` stays) and
+  common aliases: `ctrl` / `lctrl` / `rctrl`, `alt` / `lalt` / `ralt`,
+  `enter`, `esc`, `win` / `super` / `cmd` / `meta`, `backspace` / `bksp`,
+  `del`, `ins`, `pgup` / `pageup`, `pgdn` / `pagedown`, `caps` /
+  `capslock`, `printscreen` / `prtsc` / `prtscr`, `scrolllock`,
+  `numpad0` .. `numpad9`, and `plus` / `comma` / `minus` / `period` for the
+  four OEM keys that are the same on every layout. Aliases are listed in
+  `platform_wrapper.keyboard_key_aliases` (empty on other platforms).
+- **`keyboard_key_name(keycode)`** returns a code's canonical name and never
+  an alias, so a recorder's output does not change when an alias is added;
+  `None` when the table has no name for the code.
 - `cua_action.resolve_key_name` / `split_key_combo`, and
   `compile_postcondition(before=...)`.
 - `pii_text.luhn_valid` and `normalize_text(strip_format=...)`.
@@ -76,6 +89,12 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Changed
 
+- **Windows `keyboard_keys_table` lists its aliases after the canonical
+  names**, `ctrl` included (it moved from beside `control` into
+  `keyboard_key_aliases`; same code). A reverse lookup that takes the
+  shortest name from the raw table now meets aliases such as `esc` or
+  `prtsc`; skip the names in `keyboard_key_aliases`, or call
+  `keyboard_key_name`, to keep getting the canonical ones.
 - **Golden-image capture (`take_golden` / `compare_to_golden`) reads its
   region in mouse coordinates**, like every other capture; region goldens
   taken on a scaled display need re-taking.

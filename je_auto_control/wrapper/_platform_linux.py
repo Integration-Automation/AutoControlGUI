@@ -1,4 +1,4 @@
-from typing import Tuple
+from typing import Dict, Tuple
 
 from je_auto_control.linux_with_x11.core.utils.x11_linux_vk import (
     x11_linux_key_backspace, x11_linux_key_slash_b, x11_linux_key_tab,
@@ -270,6 +270,9 @@ keyboard, mouse = _select_input_backend()
 keyboard_check: KeyboardCheckBackend = x11_linux_listener
 screen: ScreenBackend = x11_linux_screen
 recorder: RecorderBackend = x11_linux_recorder
+
+#: Aliases of canonical key names; none on this backend (see ``_platform_windows``).
+keyboard_key_aliases: Dict[str, str] = {}
 
 if None in [keyboard_keys_table, mouse_keys_table, special_mouse_keys_table, keyboard, mouse, screen, recorder]:
     raise AutoControlException("Can't init auto control")

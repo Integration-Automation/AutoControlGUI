@@ -146,7 +146,7 @@ desktop app; tab commands live in the window's **Actions** menu.
 | Capability | Python API | `AC_*` command | GUI tab |
 |---|---|---|---|
 | Mouse | `click_mouse` (`clicks=2` double-clicks), `set_mouse_position`, `mouse_scroll`, `tween_drag` / `drag_path` (paced by `step_delay_s`, `settle_s`) | `AC_click_mouse`, `AC_tween_drag`, `AC_drag_path` | Auto Click |
-| Keyboard | `write`, `hotkey`, `type_keyboard` | `AC_write`, `AC_hotkey` | Auto Click |
+| Keyboard | `write`, `hotkey`, `type_keyboard`, `keyboard_key_name` (code → canonical name; Windows also takes aliases such as `ctrl`, `esc`, `enter`) | `AC_write`, `AC_hotkey` | Auto Click |
 | Screen & pixels | `screenshot`, `screen_size`, `get_pixel` | `AC_screenshot` | Screenshot |
 | Image matching | `locate_image_center`, `locate_and_click` | `AC_locate_and_click` | Image Detect |
 | OCR text | `click_text`, `wait_for_text`, `read_text_in_region`, `ocr_status` | `AC_click_text`, `AC_wait_text`, `AC_ocr_status` | OCR Reader |

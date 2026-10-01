@@ -127,6 +127,7 @@ def test_no_flag_exits_non_zero(tmp_path):
     "wait_until_port", "wait_until_process", "write",
     # Jeffrey_RPA: added so it can drop its own copies of the same logic.
     "find_tesseract_cmd", "ocr_languages", "ocr_status", "set_tessdata_dir",
+    "keyboard_key_name",
 ])
 def test_facade_name_other_repositories_call(name):
     assert name in je_auto_control.__all__, f"{name} left the facade"
@@ -197,6 +198,8 @@ def test_key_tables_jeffrey_rpa_reads():
     for name in ("up", "down", "left", "right", "space", "tab", "shift",
                  "a", "z", "0", "9", "f1", "f12"):
         assert name in keyboard, name
+    # Reverse lookups skip these, so a recorder never writes an alias.
+    assert isinstance(platform_wrapper.keyboard_key_aliases, dict)
 
 
 @pytest.mark.skipif(not sys.platform.startswith("win"),
@@ -212,4 +215,8 @@ def test_windows_key_names_jeffrey_rpa_sends():
 
     for name in ("return", "escape", "control", "menu", "back", "delete",
                  "home", "end", "insert", "capital", "vk_down"):
+        assert name in platform_wrapper.keyboard_keys_table, name
+    # Added so it can drop its own alias and extra-key tables.
+    for name in ("ctrl", "alt", "enter", "esc", "win", "pgup", "numpad0", "plus",
+                 "oem_1", "oem_plus", "oem_102", "oem_clear", "browser_home", "launch_app2"):
         assert name in platform_wrapper.keyboard_keys_table, name

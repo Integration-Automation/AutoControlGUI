@@ -32,6 +32,26 @@ get_keyboard_keys_table
 
 ----
 
+keyboard_key_name
+=================
+
+.. function:: keyboard_key_name(keycode)
+
+   Returns the canonical name of a key code, for recorders and anything else
+   that turns a captured virtual key back into a name. A code often has
+   several names in the table; aliases (``esc`` for ``escape``, listed in
+   ``platform_wrapper.keyboard_key_aliases``) never answer, so adding one
+   cannot change the names a recording writes. Among the rest, a name of
+   lower-case letters, digits and underscores wins, then the shortest, then
+   the alphabetically first.
+
+   :param int keycode: Platform key code (a Win32 virtual key on Windows).
+   :returns: The name, e.g. ``"escape"`` for 27 on Windows, or ``None`` when
+      the table has no name for the code.
+   :rtype: str or None
+
+----
+
 press_keyboard_key
 ==================
 
