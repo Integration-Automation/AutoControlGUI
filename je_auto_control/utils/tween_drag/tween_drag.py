@@ -9,8 +9,13 @@ drags (PyAutoGUI-style ``tween``).
 The point math is pure and unit-testable; dispatch goes through an
 injectable ``sink`` so the drag is tested without real input. Imports no
 ``PySide6``.
+
+The press / move / release sequence itself is :func:`_drag_through`, shared
+with ``mouse_path.drag_path``.
 """
 from typing import Any, Callable, Dict, List, Optional, Tuple
+
+Sink = Callable[[Dict[str, Any]], None]
 
 
 def _linear(t: float) -> float:
@@ -76,14 +81,8 @@ def _default_sink(event: Dict[str, Any]) -> None:
         release_mouse(event.get("button", "mouse_left"), x, y)
 
 
-def tween_drag(start: Tuple[int, int], end: Tuple[int, int], *,
-               steps: int = 30, easing: str = "ease_in_out_quad",
-               button: str = "mouse_left",
-               sink: Optional[Callable[[Dict[str, Any]], None]] = None
-               ) -> Dict[str, Any]:
-    """Drag from ``start`` to ``end`` along an eased path; return point count."""
-    points = tween_points(start, end, steps, easing)
-    dispatch = sink or _default_sink
+def _drag_through(points: List[List[int]], button: str, dispatch: Sink) -> None:
+    """Press at ``points[0]``, move through every point, release at ``points[-1]``."""
     first, last = points[0], points[-1]
     dispatch({"op": "press", "button": button, "x": first[0], "y": first[1]})
     try:
@@ -92,4 +91,14 @@ def tween_drag(start: Tuple[int, int], end: Tuple[int, int], *,
     finally:
         # A failed move used to leave the button held down.
         dispatch({"op": "release", "button": button, "x": last[0], "y": last[1]})
+
+
+def tween_drag(start: Tuple[int, int], end: Tuple[int, int], *,
+               steps: int = 30, easing: str = "ease_in_out_quad",
+               button: str = "mouse_left",
+               sink: Optional[Sink] = None
+               ) -> Dict[str, Any]:
+    """Drag from ``start`` to ``end`` along an eased path; return point count."""
+    points = tween_points(start, end, steps, easing)
+    _drag_through(points, button, sink or _default_sink)
     return {"points": len(points), "path": points}

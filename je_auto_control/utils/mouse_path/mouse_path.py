@@ -12,7 +12,7 @@ tested without real input. Imports no ``PySide6``.
 """
 from typing import Any, Callable, Dict, List, Optional, Sequence
 
-from je_auto_control.utils.tween_drag.tween_drag import easing_names, tween_points
+from je_auto_control.utils.tween_drag.tween_drag import _drag_through, easing_names, tween_points
 
 Point = Sequence[int]
 Sink = Callable[[Dict[str, Any]], None]
@@ -83,15 +83,7 @@ def drag_path(waypoints: Sequence[Point], *, button: str = "mouse_left",
                        per_segment_steps=per_segment_steps)
     if not points:
         return {"points": 0, "path": points}
-    dispatch = sink or _default_sink
-    first, last = points[0], points[-1]
-    dispatch({"op": "press", "button": button, "x": first[0], "y": first[1]})
-    try:
-        for x, y in points:
-            dispatch({"op": "move", "x": x, "y": y})
-    finally:
-        # A failed move used to leave the button held down.
-        dispatch({"op": "release", "button": button, "x": last[0], "y": last[1]})
+    _drag_through(points, button, sink or _default_sink)
     return {"points": len(points), "path": points}
 
 
