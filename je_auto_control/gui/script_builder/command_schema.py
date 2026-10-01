@@ -78,6 +78,10 @@ def _add_mouse_specs(specs: List[CommandSpec]) -> None:
                       default="mouse_left"),
             FieldSpec("x", FieldType.INT, optional=True),
             FieldSpec("y", FieldType.INT, optional=True),
+            FieldSpec("clicks", FieldType.INT, optional=True, default=1,
+                      min_value=1),
+            FieldSpec("interval", FieldType.FLOAT, optional=True, default=0.0,
+                      min_value=0.0),
         ),
     ))
     specs.append(CommandSpec(

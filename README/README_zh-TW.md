@@ -132,7 +132,7 @@ python -c "import je_auto_control; je_auto_control.start_autocontrol_gui()"
 
 | 能力 | Python API | `AC_*` 指令 | GUI 分頁 |
 |---|---|---|---|
-| 滑鼠 | `click_mouse`、`set_mouse_position`、`mouse_scroll` | `AC_click_mouse` | Auto Click |
+| 滑鼠 | `click_mouse`（`clicks=2` 就是雙擊）、`set_mouse_position`、`mouse_scroll` | `AC_click_mouse` | Auto Click |
 | 鍵盤 | `write`、`hotkey`、`type_keyboard` | `AC_write`、`AC_hotkey` | Auto Click |
 | 螢幕與像素 | `screenshot`、`screen_size`、`get_pixel` | `AC_screenshot` | Screenshot |
 | 影像比對 | `locate_image_center`、`locate_and_click` | `AC_locate_and_click` | Image Detect |

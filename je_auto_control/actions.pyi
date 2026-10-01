@@ -591,8 +591,14 @@ def AC_classify_lock_transitions(states: Any) -> Dict[str, Any]:
 def AC_classify_widget(features: Any) -> Dict[str, Any]:
     """Adapter: map geometric features to a widget type (pure)."""
 
-def AC_click_mouse(mouse_keycode: int | str, x: int | None = ..., y: int | None = ...) -> Tuple[Any, int, int]:
-    """在指定座標按下並放開滑鼠按鍵"""
+def AC_click_mouse(
+    mouse_keycode: int | str,
+    x: int | None = ...,
+    y: int | None = ...,
+    clicks: int = ...,
+    interval: float = ...,
+) -> Tuple[Any, int, int]:
+    """在指定座標按下並放開滑鼠按鍵；``clicks=2`` 就是雙擊"""
 
 def AC_click_text(
     target: str,

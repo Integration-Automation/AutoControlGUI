@@ -24,6 +24,12 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
   `no_language_data`. `TesseractBackend` gained `cmd`, `version()` and
   `languages()`. Commands `AC_ocr_status` / `AC_ocr_languages`, MCP tools
   `ac_ocr_status` / `ac_ocr_languages`.
+- **`click_mouse(..., clicks=1, interval=0.0)`.** `clicks=2` double-clicks
+  in one call: the clicks land on one point, `interval` seconds apart.
+  Defaults keep the single click, and a single click records the same
+  action as before. `AC_click_mouse`, the `ac_click_mouse` MCP tool and the
+  Script Builder take both parameters. On macOS the clicks still arrive as
+  separate single clicks (`Progress.md`).
 - `cua_action.resolve_key_name` / `split_key_combo`, and
   `compile_postcondition(before=...)`.
 - `pii_text.luhn_valid` and `normalize_text(strip_format=...)`.

@@ -156,6 +156,16 @@ def test_internal_names_jeffrey_rpa_imports():
     assert isinstance(WRITE_CONTROL_KEYS, dict) and WRITE_CONTROL_KEYS
 
 
+@pytest.mark.parametrize("name, keywords", [
+    ("click_mouse", {"clicks", "interval"}),
+])
+def test_keywords_jeffrey_rpa_passes(name, keywords):
+    """Keyword parameters added so Jeffrey_RPA can drop its own loops."""
+    import inspect
+    parameters = inspect.signature(getattr(je_auto_control, name)).parameters
+    assert keywords <= set(parameters), (name, keywords - set(parameters))
+
+
 def test_gui_widget_pybreeze_embeds_is_still_there():
     """Read, not imported: importing it needs PySide6, which CI lacks here."""
     source = (REPO_ROOT / "je_auto_control" / "gui" / "main_widget.py"

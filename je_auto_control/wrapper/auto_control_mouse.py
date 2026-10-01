@@ -29,7 +29,9 @@ here are load-bearing and neither is arbitrary:
   belt-and-braces half of the same statement.
 """
 import ctypes
+import math
 import sys
+import time
 import warnings
 from typing import Optional, Tuple, Union
 
@@ -251,30 +253,74 @@ def release_mouse(mouse_keycode: Union[int, str], x: Optional[int] = None,
         raise
 
 
-def click_mouse(mouse_keycode: Union[int, str], x: Optional[int] = None,
-                y: Optional[int] = None) -> Tuple[MouseKeycode, int, int]:
+def _click_plan(clicks: object, interval: object) -> Tuple[int, float]:
+    """``(clicks, interval)`` checked, else raise ``AutoControlMouseException``.
+
+    ``clicks`` takes an int or an integer string (an action file's variable
+    may arrive as text) but not a float, which would be silently truncated,
+    nor a ``bool``: ``clicks=True`` is a caller's mistake, not one click. A
+    NaN interval would pass a plain ``< 0`` test, so finiteness is checked
+    explicitly.
     """
-    在指定座標按下並放開滑鼠按鍵
-    Click mouse button at given position
+    problem = f"clicks must be an integer >= 1, got {clicks!r}"
+    if isinstance(clicks, bool):
+        raise AutoControlMouseException(problem)
+    try:
+        count = int(str(clicks).strip())
+    except ValueError as error:
+        raise AutoControlMouseException(problem) from error
+    if count < 1:
+        raise AutoControlMouseException(problem)
+    try:
+        pause = float(interval)  # type: ignore[arg-type]
+    except (TypeError, ValueError) as error:
+        raise AutoControlMouseException(f"interval must be a number, got {interval!r}") from error
+    if not math.isfinite(pause) or pause < 0:
+        raise AutoControlMouseException(f"interval must be a finite number >= 0, got {interval!r}")
+    return count, pause
+
+
+def click_mouse(mouse_keycode: Union[int, str], x: Optional[int] = None,
+                y: Optional[int] = None, clicks: int = 1,
+                interval: float = 0.0) -> Tuple[MouseKeycode, int, int]:
+    """
+    在指定座標按下並放開滑鼠按鍵；``clicks=2`` 就是雙擊
+    Click mouse button at given position; ``clicks=2`` double-clicks
+
+    All clicks land on the same point, ``interval`` seconds apart. Windows and
+    X11 recognise a double-click from the timing and distance of two clicks,
+    so keep ``interval`` under the system double-click time (500 ms by
+    default on Windows). macOS apps read a click count this backend does not
+    set, so there the clicks arrive as separate single clicks.
 
     :param mouse_keycode: 滑鼠按鍵代碼 Mouse keycode
     :param x: X 座標 X position
     :param y: Y 座標 Y position
+    :param clicks: 連點次數 Number of clicks (>= 1)
+    :param interval: 兩次點擊之間的秒數 Seconds between clicks (>= 0)
     :return: (keycode, x, y)
     """
-    autocontrol_logger.info(f"click_mouse, keycode={mouse_keycode}, x={x}, y={y}")
+    autocontrol_logger.info(
+        f"click_mouse, keycode={mouse_keycode}, x={x}, y={y}, clicks={clicks}, interval={interval}")
     param = {"keycode": mouse_keycode, "x": x, "y": y}
+    if clicks != 1 or interval:
+        # Only when used, so a single click records exactly what it always did.
+        param.update(clicks=clicks, interval=interval)
     try:
+        count, pause = _click_plan(clicks, interval)
         keycode, x, y = mouse_preprocess(mouse_keycode, x, y)
-        # macOS orders its mouse backend as (x, y, button) — same convention as
-        # press_mouse/release_mouse above. Without this branch the arguments
-        # bind as x=<keycode>, y=<x>, button=<y>; the osx button table holds
-        # strings, so the int never matches any branch and the click is
-        # silently dropped with no exception.
-        if sys.platform == "darwin":
-            mouse.click_mouse(x, y, keycode)
-        else:
-            mouse.click_mouse(keycode, x, y)
+        for index in range(count):
+            if index and pause:
+                time.sleep(pause)
+            # macOS orders its mouse backend as (x, y, button) — same convention as
+            # press_mouse/release_mouse above. Without this branch the arguments
+            # bind as x=<keycode>, y=<x>, button=<y>; the osx button table holds
+            # strings, so the int never matches any branch and the click is
+            # silently dropped with no exception.
+            if sys.platform == "darwin":
+                mouse.click_mouse(x, y, keycode)
+            else:
+                mouse.click_mouse(keycode, x, y)
         record_action_to_list("click_mouse", param)
         return keycode, x, y
     except AutoControlMouseException as error:

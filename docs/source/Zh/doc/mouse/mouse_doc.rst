@@ -48,6 +48,12 @@ AutoControl 提供模擬滑鼠操作的功能，包括點擊、定位、捲動�
    # 在指定座標左鍵點擊
    click_mouse("mouse_left", x=500, y=300)
 
+   # 雙擊：在同一點連點兩下，間隔 60 毫秒
+   click_mouse("mouse_left", x=500, y=300, clicks=2, interval=0.06)
+
+Windows 與 X11 依兩次點擊的時間差與位移判定雙擊，所以 ``interval`` 要小於系統的雙擊判定時間
+（Windows 預設 500 毫秒）。macOS 上這些點擊會被當成各自獨立的單擊。
+
 游標位置
 ========
 

@@ -30,12 +30,16 @@ def mouse_tools() -> List[MCPTool]:
             name="ac_click_mouse",
             description=("Click a mouse button at (x, y). "
                          "mouse_keycode: mouse_left, mouse_right, mouse_middle. "
-                         "If x/y are omitted, clicks at the current cursor."),
+                         "If x/y are omitted, clicks at the current cursor. "
+                         "clicks=2 double-clicks; interval is the pause in "
+                         "seconds between clicks."),
             input_schema=schema({
                 "mouse_keycode": {"type": "string",
                                    "description": "mouse_left | mouse_right | mouse_middle"},
                 "x": {"type": "integer"},
                 "y": {"type": "integer"},
+                "clicks": {"type": "integer", "minimum": 1},
+                "interval": {"type": "number", "minimum": 0},
             }),
             handler=h_input.click_mouse,
             annotations=DESTRUCTIVE,
