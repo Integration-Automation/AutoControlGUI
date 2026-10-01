@@ -1362,7 +1362,7 @@ def AC_gettext_translate(po: str, msgid: str, context: Any = ...) -> Dict[str, A
 def AC_grade_contrast(foreground: Any, background: Any) -> Dict[str, Any]:
     """Adapter: grade a foreground/background colour pair vs WCAG (pure)."""
 
-def AC_grid_cell(boxes: Any, row: Any, col: Any, row_tolerance: Any = ...) -> Dict[str, Any]:
+def AC_grid_cell(boxes: Any, row: Any, col: Any, row_tolerance: Any = ..., box_format: str = ...) -> Dict[str, Any]:
     """Adapter: address a grid cell by (row, col) from a JSON list of boxes."""
 
 def AC_grid_cells(rows: Any, cols: Any, region: Any = ...) -> Dict[str, Any]:
@@ -2321,10 +2321,10 @@ def AC_resolve_pointer(doc: Any, pointer: str) -> Dict[str, Any]:
     """Adapter: resolve a JSON Pointer in doc (a dict/list or JSON string)."""
 
 def AC_resolve_ref(ref: str) -> Dict[str, Any]:
-    """Adapter: resolve an env:// / file:// / secret:// reference."""
+    """Adapter: resolve an env:// / file:// reference; secret:// is refused (it would be recorded)."""
 
 def AC_resolve_refs(obj: Any) -> Dict[str, Any]:
-    """Adapter: recursively resolve references in a structure (or JSON str)."""
+    """Adapter: recursively resolve references in a structure (or JSON str); no secret://."""
 
 def AC_rest_api_start(
     host: str = ...,
@@ -2736,7 +2736,7 @@ def AC_start_mcp_http_server(
 ) -> Any:
     """Start and return an :class:`HttpMCPServer`; convenience wrapper."""
 
-def AC_start_mcp_server() -> Any:
+def AC_start_mcp_server(read_only: bool | None = ...) -> Any:
     """Start a stdio MCP server in the foreground; blocks until EOF."""
 
 def AC_start_remote_host(
@@ -3202,7 +3202,7 @@ def AC_web_quit() -> Any:
 def AC_web_run(action: Dict[str, Any] | None = ..., **action_kwargs: Any) -> Any:
     """Bridge one WR_* action into the WebRunner executor (Phase 7.7)."""
 
-def AC_web_run_actions(actions: list) -> list:
+def AC_web_run_actions(actions: List[Dict[str, Any]]) -> list:
     """Bridge a list of WR_* actions through the WebRunner executor."""
 
 def AC_web_screenshot(file_path: str) -> Any:
@@ -3277,6 +3277,9 @@ def AC_write_document(path: str, paragraphs: List[str]) -> Dict[str, Any]:
 
 def AC_write_presentation(path: str, slides: List[Any]) -> Dict[str, Any]:
     """Adapter: write slides to a .pptx file."""
+
+def AC_write_secret(secret: str) -> None:
+    """輸入機密字串：不寫 log、不記錄、不回傳原文"""
 
 def AC_write_step_video(steps: Any, output: str, fps: int = ..., seconds_per_step: float = ...) -> Dict[str, Any]:
     """Adapter: render captioned screenshots into a walkthrough video."""

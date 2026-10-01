@@ -72,6 +72,20 @@ AutoControl 提供模擬鍵盤輸入的功能，包括按鍵按下/釋放、輸�
 
    write("Hello World")
 
+``write`` 會把文字寫進 log、記進測試紀錄並回傳。密碼或 token 請用
+``write_secret``\ （命令是 ``AC_write_secret``，參數 ``secret``）：log 只記長度、
+紀錄只留遮蔽值、不回傳任何東西，錯誤訊息也不會帶出任何字元。它把每個字元都以
+Unicode 按鍵事件送出，所以送到的文字一字不差（``write`` 在 Windows 上會把大寫打
+成小寫）；鍵盤後端不支援 Unicode 輸入時（目前只有 Windows 支援），在打任何字之前
+就拒絕。
+
+.. code-block:: python
+
+   import os
+   from je_auto_control import write_secret
+
+   write_secret(os.environ["APP_PASSWORD"])
+
 熱鍵組合
 ========
 

@@ -235,7 +235,7 @@ def test_commands_webrunner_sends_keep_their_parameters():
 
     from je_auto_control.utils.executor.action_executor import executor
 
-    sent = {"AC_write": {"write_string"}, "AC_type_keyboard": {"keycode"},
+    sent = {"AC_write": {"write_string"}, "AC_write_secret": {"secret"}, "AC_type_keyboard": {"keycode"},
             "AC_locate_image_center": {"image", "detect_threshold"},
             "AC_click_mouse": {"mouse_keycode", "x", "y"}, "AC_get_keyboard_keys_table": set()}
     for name, keywords in sent.items():
@@ -243,3 +243,4 @@ def test_commands_webrunner_sends_keep_their_parameters():
         assert keywords <= set(parameters), (name, keywords - set(parameters))
     keys = executor.event_dict["AC_get_keyboard_keys_table"]()
     assert "enter" in keys or "return" in keys
+    assert "tab" in keys  # WR_ac_basic_auth moves from the username to the password field with it

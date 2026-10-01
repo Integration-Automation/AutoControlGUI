@@ -277,6 +277,38 @@ def write(write_string: str, is_shift: bool = False) -> Optional[str]:
         raise AutoControlKeyboardException(f"{keyboard_write_error_message} {repr(error)}") from error
 
 
+def write_secret(secret: str) -> None:
+    """
+    輸入機密字串：不寫 log、不記錄、不回傳原文
+    Type ``secret`` exactly, as Unicode key events, without logging, recording or
+    returning it.
+
+    ``write`` logs the text it types, records it in the test record and returns it,
+    so a password typed through it lands in the log and in every run record. Here the
+    log gets the length only and the record a masked argument. Every character goes
+    through Unicode key events, which type the exact character: the virtual-key path
+    of ``write`` types a capital letter as lower case on Windows. A backend without
+    Unicode typing (Windows has it) raises before typing anything, rather than risk a
+    wrong character. A failure never names the character.
+
+    :param secret: 要輸入的機密字串 The secret text to type
+    """
+    if not isinstance(secret, str):
+        raise AutoControlKeyboardException("write_secret needs a string")
+    if not callable(getattr(keyboard, "type_unicode_unit", None)):
+        raise AutoControlKeyboardException(
+            "write_secret: this platform's keyboard backend cannot type Unicode text exactly")
+    autocontrol_logger.info(f"write_secret, {len(secret)} characters")
+    try:
+        for single_char in secret:
+            _write_char_via_unicode(single_char)
+    except (OSError, RuntimeError, AttributeError, TypeError, ValueError) as error:
+        # The cause is dropped on purpose: its text could carry part of the secret.
+        autocontrol_logger.error(f"write_secret failed: {type(error).__name__}")
+        raise AutoControlKeyboardException(f"{keyboard_write_error_message} {type(error).__name__}") from None
+    record_action_to_list("write_secret", {"secret": "***"})
+
+
 def hotkey(key_code_list: list, is_shift: bool = False) -> Tuple[str, str]:
     """
     模擬組合鍵 (依序按下，再反向放開)

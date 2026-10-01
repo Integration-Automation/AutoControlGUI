@@ -1239,6 +1239,7 @@ from je_auto_control.wrapper.auto_control_keyboard import release_keyboard_key
 from je_auto_control.wrapper.auto_control_keyboard import send_key_event_to_window
 from je_auto_control.wrapper.auto_control_keyboard import type_keyboard
 from je_auto_control.wrapper.auto_control_keyboard import write
+from je_auto_control.wrapper.auto_control_keyboard import write_secret
 # Mouse wrappers
 from je_auto_control.wrapper.auto_control_mouse import click_mouse
 from je_auto_control.wrapper.auto_control_mouse import get_mouse_position
@@ -1296,7 +1297,7 @@ __all__ = [
     "HumanizedMotion", "humanized_path", "move_mouse_humanized",
     "humanized_key_delays", "type_text_humanized",
     "keyboard_keys_table", "press_keyboard_key", "release_keyboard_key", "type_keyboard", "check_key_is_press",
-    "write", "hotkey", "start_exe", "get_keyboard_keys_table",
+    "write", "write_secret", "hotkey", "start_exe", "get_keyboard_keys_table",
     "screen_size", "screenshot", "locate_all_image", "locate_image_center", "locate_and_click",
     "CriticalExit", "AutoControlException", "AutoControlKeyboardException",
     "AutoControlMouseException", "AutoControlCantFindKeyException",
