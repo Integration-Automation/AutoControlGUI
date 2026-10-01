@@ -126,14 +126,14 @@ wrapper/auto_control_record.record → OS listener (e.g. windows/record/win32_in
 
 | Consumer | How it uses this repo | What it relies on |
 | --- | --- | --- |
-| Jeffrey_RPA | Editable install of **this working tree**: uncommitted changes here reach it immediately. Single facade `JeffreyRPA/_gui_control.py`. | Top-level names (e.g. `click_mouse`, `hotkey`, `write`, `screen_size`, `get_pixel`, `post_click_to_window`) and internal paths `je_auto_control.wrapper.auto_control_window`, `je_auto_control.wrapper.auto_control_keyboard.WRITE_CONTROL_KEYS`, `je_auto_control.utils.monitor_layout` (`logical_virtual_rect`, `enumerate_monitors`), and `wrapper.platform_wrapper.keyboard_keys_table` / `mouse_keys_table` — it validates every key name a user types against the keyboard table and reverse-looks-up recorded virtual keys through it, so a name removed there becomes a rejected hotkey over in that repo. |
+| Jeffrey_RPA | Editable install of **this working tree**: uncommitted changes here reach it immediately. Single facade `JeffreyRPA/_gui_control.py`. | Top-level names (e.g. `click_mouse`, `hotkey`, `write`, `screen_size`, `get_pixel`, `post_click_to_window`) and internal paths `je_auto_control.wrapper.auto_control_window`, `je_auto_control.wrapper.auto_control_keyboard.WRITE_CONTROL_KEYS`, `je_auto_control.utils.monitor_layout` (`logical_virtual_rect`, `enumerate_monitors`), and `wrapper.platform_wrapper.keyboard_keys_table` / `mouse_keys_table` — it validates every key name a user types against the keyboard table and reverse-looks-up recorded virtual keys through it, so a name removed there becomes a rejected hotkey over in that repo. Added so it can drop its own copies: the Tesseract setup helpers `find_tesseract_cmd`, `set_tessdata_dir`, `ocr_languages` (`None` when the engine cannot be asked, `[]` when it has no language data) and `ocr_status`. |
 | PyBreeze | Subprocess `python -m je_auto_control --execute_str <json>` / `--execute_file <path>`; on Windows the JSON string arrives double-encoded. | Legacy CLI flags; also embeds `je_auto_control.gui.main_widget.AutoControlGUIWidget` and calls `record` / `stop_record` in-process. |
 | TestPioneer | Optional extra `gui = ["je_auto_control"]`; `parallel_run` starts `python -m je_auto_control --execute_file <path>`. | `execute_action`, `execute_files`, `RecordingThread`; the `--execute_file` flag. |
 
 **Guarded by** `test/unit_test/headless/test_cross_project_contracts.py`: every legacy CLI flag (short and long, run as a
 real child process, including PyBreeze's double-encoded `--execute_str`), the facade names in the three rows above
-(Jeffrey_RPA's list is every `ac.<name>` in `_gui_control.py`), the `auto_control_window` functions Jeffrey_RPA calls,
-its three internal imports, the two key tables (shape everywhere, Windows key names on Windows), and
+(Jeffrey_RPA's list is every `ac.<name>` in `_gui_control.py`, plus the names added so it can drop its own copies),
+the `auto_control_window` functions Jeffrey_RPA calls, its three internal imports, the two key tables (shape everywhere, Windows key names on Windows), and
 `AutoControlGUIWidget`. The test only knows what this table knows: when a consumer starts relying on something
 new, add it to both.
 

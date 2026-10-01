@@ -125,6 +125,8 @@ def test_no_flag_exits_non_zero(tmp_path):
     "save_window_layout", "screen_size", "set_clipboard",
     "set_mouse_position", "snap_window", "wait_until_clipboard_changes",
     "wait_until_port", "wait_until_process", "write",
+    # Jeffrey_RPA: added so it can drop its own copies of the same logic.
+    "find_tesseract_cmd", "ocr_languages", "ocr_status", "set_tessdata_dir",
 ])
 def test_facade_name_other_repositories_call(name):
     assert name in je_auto_control.__all__, f"{name} left the facade"

@@ -257,6 +257,24 @@ def image_and_ocr_tools() -> List[MCPTool]:
             handler=h_screen.click_text,
             annotations=DESTRUCTIVE,
         ),
+        MCPTool(
+            name="ac_ocr_status",
+            description=("Report whether Tesseract OCR can work here: "
+                         "{ok, reason}. reason is ready | missing_package | "
+                         "missing_engine | engine_unusable | no_language_data."),
+            input_schema=schema({}),
+            handler=h_screen.ocr_status,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_ocr_languages",
+            description=("List the installed Tesseract language codes: "
+                         "{languages}. languages is null when the engine "
+                         "cannot be asked and [] when it has no language data."),
+            input_schema=schema({}),
+            handler=h_screen.ocr_languages,
+            annotations=READ_ONLY,
+        ),
     ]
 
 

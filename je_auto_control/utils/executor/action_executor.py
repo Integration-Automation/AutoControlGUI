@@ -1880,6 +1880,19 @@ def _ocr_find_regex_as_dicts(pattern: str,
     ]
 
 
+def _ocr_status() -> Dict[str, Any]:
+    """Executor adapter: whether Tesseract OCR can work here, as a dict."""
+    from je_auto_control.utils.ocr.tesseract_setup import ocr_status
+    ok, reason = ocr_status()
+    return {"ok": ok, "reason": reason}
+
+
+def _ocr_languages() -> Dict[str, Any]:
+    """Executor adapter: installed Tesseract languages; ``None`` when unknown."""
+    from je_auto_control.utils.ocr.tesseract_setup import ocr_languages
+    return {"languages": ocr_languages()}
+
+
 def _email_trigger_add(host: str, username: str, password: str,
                        script_path: str,
                        port: Optional[int] = None,
@@ -7166,6 +7179,8 @@ class Executor:
             "AC_click_text": ocr_click_text,
             "AC_read_text_in_region": _ocr_read_region_as_dicts,
             "AC_find_text_regex": _ocr_find_regex_as_dicts,
+            "AC_ocr_status": _ocr_status,
+            "AC_ocr_languages": _ocr_languages,
 
             # Window management
             "AC_list_windows": list_windows,

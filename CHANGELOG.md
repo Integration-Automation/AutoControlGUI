@@ -15,6 +15,15 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Added
 
+- **Tesseract setup helpers.** `find_tesseract_cmd()` (`$TESSERACT_CMD`,
+  `PATH`, then the installers' default folders), `set_tessdata_dir(path)`
+  (sets `TESSDATA_PREFIX`; `None` clears it), `ocr_languages()` (sorted
+  codes; `[]` when the engine has no language data, `None` when it cannot be
+  asked) and `ocr_status()`, an `OCRStatus(ok, reason)` tuple whose reason is
+  `ready`, `missing_package`, `missing_engine`, `engine_unusable` or
+  `no_language_data`. `TesseractBackend` gained `cmd`, `version()` and
+  `languages()`. Commands `AC_ocr_status` / `AC_ocr_languages`, MCP tools
+  `ac_ocr_status` / `ac_ocr_languages`.
 - `cua_action.resolve_key_name` / `split_key_combo`, and
   `compile_postcondition(before=...)`.
 - `pii_text.luhn_valid` and `normalize_text(strip_format=...)`.

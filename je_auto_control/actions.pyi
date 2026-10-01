@@ -837,7 +837,7 @@ def AC_delta_observation(
     max_lines: Any = ...,
     interactive_only: Any = ...,
 ) -> Dict[str, Any]:
-    """Adapter: token-budgeted "what changed" delta between two element frames."""
+    """Adapter: token-budgeted \"what changed\" delta between two element frames."""
 
 def AC_describe_screen(app_name: str | None = ...) -> Dict[str, Any]:
     """Adapter: structured 'where am I' description of the live screen."""
@@ -1943,12 +1943,18 @@ def AC_observe_start() -> Dict[str, Any]:
 def AC_observe_stop() -> Dict[str, Any]:
     """Adapter: stop the background observer thread."""
 
+def AC_ocr_languages() -> Dict[str, Any]:
+    """Executor adapter: installed Tesseract languages; ``None`` when unknown."""
+
 def AC_ocr_read_structure(
     region: List[int] | None = ...,
     lang: str = ...,
     min_confidence: float = ...,
 ) -> Dict[str, Any]:
     """Executor adapter: structured OCR (rows / tables / form fields)."""
+
+def AC_ocr_status() -> Dict[str, Any]:
+    """Executor adapter: whether Tesseract OCR can work here, as a dict."""
 
 def AC_open_path(target: str, verb: str = ...) -> Dict[str, Any]:
     """Adapter: open a file with its default app / a URL in the browser."""
@@ -2146,8 +2152,14 @@ def AC_quarantine_remove(name: str) -> Dict[str, Any]:
 def AC_queue_add(db: str, data: Any, reference: str | None = ..., name: str = ...) -> Dict[str, Any]:
     """Adapter: enqueue a work item (skips live duplicate references)."""
 
-def AC_queue_complete(db: str, item_id: int, output: Any = ..., name: str = ...) -> Dict[str, Any]:
-    """Adapter: mark a work item successful."""
+def AC_queue_complete(
+    db: str,
+    item_id: int,
+    output: Any = ...,
+    name: str = ...,
+    claim: int | None = ...,
+) -> Dict[str, Any]:
+    """Adapter: mark a work item successful (``claim`` from AC_queue_next)."""
 
 def AC_queue_fail(
     db: str,
@@ -2156,6 +2168,7 @@ def AC_queue_fail(
     kind: str = ...,
     max_retries: int = ...,
     name: str = ...,
+    claim: int | None = ...,
 ) -> Dict[str, Any]:
     """Adapter: fail a work item (application errors retry, business don't)."""
 
@@ -2656,7 +2669,7 @@ def AC_shard_suite(
 ) -> Dict[str, Any]:
     """Adapter: balance flows into duration-aware shards."""
 
-def AC_shell_command(shell_command: str | List[str]) -> None:
+def AC_shell_command(shell_command: str | List[str] | None = ..., *, command: str | List[str] | None = ...) -> None:
     """Execute shell command with shell=False."""
 
 def AC_sign_action_file(path: str, key: str | None = ...) -> Dict[str, Any]:

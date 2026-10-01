@@ -1,6 +1,11 @@
-"""Tesseract OCR backend (preserves the original ``ocr_engine`` behaviour)."""
+"""Tesseract OCR backend (preserves the original ``ocr_engine`` behaviour).
+
+This is the only module that imports :mod:`pytesseract` and the only writer of
+its ``tesseract_cmd`` global (:meth:`TesseractBackend.set_cmd`).
+"""
 from __future__ import annotations
 
+from subprocess import SubprocessError  # nosec B404  # reason: exception type only
 from typing import List
 
 from je_auto_control.utils.ocr.backends.base import OCRBackendNotAvailableError
@@ -45,6 +50,49 @@ class TesseractBackend:
         """Override the Tesseract executable location."""
         pt = _load()
         pt.pytesseract.tesseract_cmd = path
+
+    @property
+    def cmd(self) -> str:
+        """The engine command OCR runs: a path, or a name looked up on ``PATH``.
+
+        Raises :class:`OCRBackendNotAvailableError` without ``pytesseract``.
+        """
+        return str(_load().pytesseract.tesseract_cmd)
+
+    def version(self) -> str:
+        """Return the engine's version string by running it.
+
+        Raises :class:`OCRBackendNotAvailableError` when the engine cannot run:
+        missing, not executable, exiting non-zero, or printing a version
+        ``pytesseract`` cannot parse. ``pytesseract`` reports that last case
+        with ``SystemExit``, which is caught here so a broken binary cannot end
+        the calling process.
+        """
+        pt = _load()
+        try:
+            return str(pt.get_tesseract_version())
+        except (OSError, RuntimeError, ValueError, SubprocessError) as error:
+            raise OCRBackendNotAvailableError(f"Tesseract cannot run: {error!r}") from error
+        except SystemExit as error:
+            raise OCRBackendNotAvailableError(
+                f"Tesseract printed a version pytesseract cannot read: {error}") from error
+
+    def languages(self) -> List[str]:
+        """Return the installed language codes, sorted, by asking the engine.
+
+        Asked afresh on every call (``pytesseract`` caches only when told to),
+        so language data added while the process runs is seen. An empty list
+        is a real answer: the engine ran and found no language data. Names
+        ``pytesseract`` filters out (upper-case script models such as
+        ``Latin``) are not listed. Raises :class:`OCRBackendNotAvailableError`
+        when the engine cannot be asked.
+        """
+        pt = _load()
+        try:
+            return sorted(pt.get_languages(config=""))
+        except (OSError, RuntimeError, ValueError) as error:
+            raise OCRBackendNotAvailableError(
+                f"Tesseract cannot list its languages: {error!r}") from error
 
     def image_to_matches(self, image, lang: str,
                          min_confidence: float) -> List:

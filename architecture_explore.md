@@ -6,7 +6,7 @@
 > 擷取每個模組的 docstring 與頂層公開名稱；統計數字取自實際檔案，非估算。
 > 指令數與公開 API 數以 `executor.known_commands()` 與 `je_auto_control.__all__` 在工作樹上實測取得。
 >
-> **掃描時間**：2026-09-22　**版本**：`pyproject.toml` version `0.0.221`　**分支**：`feat/coverage-to-80`
+> **掃描時間**：2026-10-01　**版本**：`pyproject.toml` version `0.0.223`　**分支**：`feat/jeffrey-rpa-gui-apis`
 
 ---
 
@@ -19,13 +19,13 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 
 | 指標 | 數值 |
 | --- | ---: |
-| Python 模組總數（含周邊子專案） | 1,049 |
-| 程式碼總行數 | 148,925 |
+| Python 模組總數（含周邊子專案） | 1,050 |
+| 程式碼總行數 | 149,214 |
 | `je_auto_control/utils/` 子套件數 | 310 |
-| `AC_*` 動作指令數（`known_commands()` 實測） | 774 |
-| 套件門面 `__all__` 公開名稱數 | 1,241 |
+| `AC_*` 動作指令數（`known_commands()` 實測） | 776 |
+| 套件門面 `__all__` 公開名稱數 | 1,247 |
 | GUI 分頁數（`main_widget` 註冊） | 48 |
-| MCP 工具數（`build_default_tool_registry()` 實測） | 677 |
+| MCP 工具數（`build_default_tool_registry()` 實測） | 679 |
 | `test_*.py` 測試檔／測試函式 | 478 / 4,654 |
 | 範例腳本 | 27 |
 
@@ -49,7 +49,7 @@ USB/IP 協定、Prometheus 指標），以維持這條輕相依基線。
                                 │  全部只呼叫下面這一層，不含業務邏輯
 ┌───────────────────────────────▼──────────────────────────────────────────┐
 │  執行核心 Execution Core                                                  │
-│  utils/executor/action_executor.py  ── Executor.event_dict（774 個 AC_*） │
+│  utils/executor/action_executor.py  ── Executor.event_dict（776 個 AC_*） │
 │  utils/executor/flow_control.py     ── 34 個區塊指令（迴圈/分支/try/巨集） │
 │  utils/script_vars ── ${var} 插值   │ utils/json ── action 檔 I/O          │
 └───────────────────────────────┬──────────────────────────────────────────┘
@@ -154,7 +154,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
-| `je_auto_control/__init__.py` | 1,970 | **套件門面**。集中匯入並再匯出 1,200 個公開名稱，以功能區塊註解分段（callback／exception／executor／a11y／vision／clipboard…）。 |
+| `je_auto_control/__init__.py` | 1,976 | **套件門面**。集中匯入並再匯出 1,200 個公開名稱，以功能區塊註解分段（callback／exception／executor／a11y／vision／clipboard…）。 |
 | `je_auto_control/__main__.py` | 87 | 舊版 argparse 進入點：`-e` 執行單檔、`-d` 執行整個目錄、`--execute_str` 執行 JSON 字串、`-c` 建立專案。 |
 | `je_auto_control/cli.py` | 338 | **主 CLI**（`je_auto_control` console script）。子命令：`run`（含 `--var`／`--dry-run`）、`validate`／`lint`、`list-commands`、`fmt`、`record`、`codegen`、`failure-bundle`、`list-jobs`、`start-server`、`start-rest`、`version`。所有子命令延遲匯入，確保不碰 Qt。 |
 | `je_auto_control/api/__init__.py` | 22 | 版本化整合進入點。 |
@@ -271,7 +271,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.1 執行引擎與腳本資產
 
-> 24 個套件、約 14,247 行。
+> 24 個套件、約 14,262 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -282,7 +282,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/dag/` | 492 | 跨主機 DAG 編排器（圖模型 + runner） |
 | `utils/decision_table/` | 112 | DMN 風格決策表：規則 + 命中策略，把分支外部化 |
 | `utils/deterministic/` | 116 | 決定性執行控制：固定亂數種子 + 凍結時鐘 |
-| `utils/executor/` | 9,412 | **核心**。`Executor` 指令分派表（774 個 `AC_*`）、參數插值、乾跑、逐步 callback；`flow_control` 提供 34 個區塊指令（迴圈／分支／try／巨集／變數） |
+| `utils/executor/` | 9,427 | **核心**。`Executor` 指令分派表（776 個 `AC_*`）、參數插值、乾跑、逐步 callback；`flow_control` 提供 34 個區塊指令（迴圈／分支／try／巨集／變數） |
 | `utils/flow_debugger/` | 155 | action list 的單步除錯器與追蹤器 |
 | `utils/input_macro/` | 451 | 定時輸入事件：錄製結果的整形（`timeline`／`InputRecorder`，Windows 與 macOS 共用）、重播與宣告式輸入序列 DSL |
 | `utils/json/` | 99 | action JSON 檔讀寫與正規化格式化（`fmt --check` 的後端） |
@@ -414,7 +414,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.6 OCR 與文字理解
 
-> 19 個套件、約 3,336 行。
+> 19 個套件、約 3,563 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -427,7 +427,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/guardrail/` | 116 | 針對畫面／OCR 文字的啟發式 prompt-injection 防護 |
 | `utils/heading_segment/` | 69 | 判定 OCR 行是標題或內文，建出文件大綱 |
 | `utils/near_dup/` | 108 | 近似重複文字偵測（SimHash／MinHash） |
-| `utils/ocr/` | 1,126 | OCR 引擎門面 + 三個後端（Tesseract／EasyOCR／PaddleOCR）、版面結構化與跨詞比對（`text_span`） |
+| `utils/ocr/` | 1,353 | OCR 引擎門面 + 三個後端（Tesseract／EasyOCR／PaddleOCR）、版面結構化與跨詞比對（`text_span`）、Tesseract 的尋找／設定／健康檢查（`tesseract_setup`） |
 | `utils/pii_text/` | 119 | 自由文字中的 PII 偵測與遮蔽（email／電話／SSN／卡號／IP／IBAN） |
 | `utils/readability/` | 138 | 可讀性評分（Flesch、Flesch-Kincaid、Gunning Fog、SMOG、ARI） |
 | `utils/reading_flow/` | 119 | 以遞迴 XY-cut 推導欄位感知的閱讀順序 |
@@ -493,7 +493,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.9 AI / Agent / LLM
 
-> 13 個套件、約 21,391 行。
+> 13 個套件、約 21,422 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -506,7 +506,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/cua_action/` | 204 | 標準化 computer-use 動作結構（Anthropic／OpenAI → `AC_*`） |
 | `utils/llm/` | 365 | 自然語言 → action list 規劃器 + Anthropic／null 後端 |
 | `utils/mcp_registry/` | 97 | MCP registry `server.json` 資訊清單產生（可被發現） |
-| `utils/mcp_server/` | 17,675 | **無頭 MCP 伺服器**（16K LOC，預設註冊 677 個工具＝658 個 `ac_*` + 19 個別名）：stdio + HTTP 傳輸、工具工廠與處理器、資源、prompt、稽核、限流、外掛熱重載 |
+| `utils/mcp_server/` | 17,706 | **無頭 MCP 伺服器**（16K LOC，預設註冊 679 個工具＝660 個 `ac_*` + 19 個別名）：stdio + HTTP 傳輸、工具工廠與處理器、資源、prompt、稽核、限流、外掛熱重載 |
 | `utils/tool_use_schema/` | 189 | 把 `AC_*` 指令匯出成 Claude／OpenAI 的 tool-use schema |
 | `utils/trajectory_eval/` | 113 | agent 軌跡評估：依評分規準為一次執行打分 |
 | `utils/vision/` | 518 | VLM 元素定位器（依描述找元素）+ Anthropic／OpenAI／null 後端 |
@@ -695,26 +695,26 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 上表以子套件為單位；以下把行數最大的幾個子系統展開到檔案層。
 
-#### `utils/executor/`（9,412 行）— 執行核心
+#### `utils/executor/`（9,427 行）— 執行核心
 
 | 檔案 | 行數 | 職責 |
 | --- | ---: | --- |
-| `action_executor.py` | 8,289 | `Executor` 類別與 `event_dict` 分派表（774 個指令），另含數百個把 utils 能力接成指令的 adapter 函式；全域單例 `executor` 與 `add_command_to_executor()` 擴充點。 |
+| `action_executor.py` | 8,304 | `Executor` 類別與 `event_dict` 分派表（776 個指令），另含數百個把 utils 能力接成指令的 adapter 函式；全域單例 `executor` 與 `add_command_to_executor()` 擴充點。 |
 | `flow_control.py` | 622 | 真正的流程控制：`AC_loop`／`AC_for_each`／`AC_while_*`／`AC_if_*`／`AC_try`／`AC_retry`／`AC_parallel`／`AC_define_macro`／`AC_call_macro`／變數指令（`AC_set_var`／`AC_get_var`／`AC_inc_var`）。`LoopBreak`／`LoopContinue` 以例外實作。34 個區塊指令的分派表 `BLOCK_COMMANDS` 也在這裡，含下一列匯入的資料來源指令。 |
 | `flow_data_commands.py` | 262 | `AC_*_to_var` 資料來源與轉換指令：shell、時鐘、亂數、PDF、TOTP、SQL、檔案、HTTP、OCR，加上 `AC_assert_var`／`AC_assert_db`／`AC_assert_duration`／`AC_transform_var`。都不執行巢狀 action list，所以沒有迴圈／分支語意。 |
 | `action_schema.py` | 128 | action list 的結構驗證：形狀、參數型別、未知指令拒絕。單一走訪同時支援兩種消費方式：`validate_actions()` 遇到第一個問題就拋、`unknown_command_names()` 收齊全部不認得的名字（REST `/execute` 用它回 400）。 |
 | `action_redaction.py` | 72 | 記錄與紀錄鍵用的遮蔽：`AC_secret_*` 的參數（金庫通行碼、機密值）在寫進 log、當成結果紀錄的鍵之前換成 `***`，巢狀在區塊指令裡的也一樣。 |
 | `mouse_aliases.py` | 39 | 單鍵點擊別名（`AC_click_left` 等），executor 與 callback executor 共用。 |
 
-#### `utils/mcp_server/`（17,675 行，677 個工具）— 最大子系統
+#### `utils/mcp_server/`（17,706 行，679 個工具）— 最大子系統
 
 | 檔案 | 行數 | 職責 |
 | --- | ---: | --- |
-| `tools/_factories.py` | 9,005 | 工具工廠：每個函式回傳一個領域的 `MCPTool` 清單（把 `AC_*` 能力包成 MCP 工具）。 |
+| `tools/_factories.py` | 9,023 | 工具工廠：每個函式回傳一個領域的 `MCPTool` 清單（把 `AC_*` 能力包成 MCP 工具）。 |
 | `tools/_handlers.py` | 545 | 把 MCP 工具呼叫橋接到 AutoControl 無頭 API 的 adapter；主題模組拆完之後這裡留的是資料／文字／HTTP 那一類與 WebRunner 橋接。 |
 | `tools/_handlers_qa.py` | 414 | 同一種 adapter，QA 主題：斷言 DSL、資料驅動、SQL／PDF／郵件／HTTP 步驟、codegen、視覺回歸、狀態機、flaky 偵測與隔離、suite runner、無障礙稽核、裝置矩陣、媒體斷言。從 `_handlers.py` 依主題拆出的第一塊（750 行上限）；兩者互不引用。 |
 | `tools/_handlers_input.py` | 212 | 同一種 adapter，輸入主題：滑鼠、鍵盤、虛擬手把（ViGEm）。 |
-| `tools/_handlers_screen.py` | 305 | 同一種 adapter，螢幕主題：擷取、像素、影像與文字搜尋、螢幕錄影。 |
+| `tools/_handlers_screen.py` | 318 | 同一種 adapter，螢幕主題：擷取、像素、影像與文字搜尋、螢幕錄影。 |
 | `tools/_handlers_system.py` | 566 | 同一種 adapter，桌面工作階段：視窗、行程與 shell、開檔、閒置與睡眠、音量、鎖定、輸入法狀態、欄位驗證與重試、色彩對比、變更排序、元件分類、剪貼簿。 |
 | `tools/_handlers_runs.py` | 110 | 同一種 adapter，執行主題：executor、執行歷史、錄製、動作檔。 |
 | `tools/_handlers_scheduling.py` | 200 | 同一種 adapter，排程主題：排程器、觸發器、熱鍵常駐。 |
@@ -832,7 +832,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | --- | --- |
 | `accessibility/` | `accessibility_api.py`（公開 API）、`element.py`（dataclass）、`tree.py`（遞迴樹傾印）、`recorder.py`（輪詢式事件錄製）、`backends/`：`base.py` 330 行抽象、`windows_backend.py` 801 行（comtypes UIA）、`windows_reads.py` 142 行（pattern／文字範圍／表頭／元素屬性的純讀取與 `UIA_READ_ERRORS`）、`windows_query.py` 176 行（UIA 搜尋起點、可中斷走訪、快取請求、NULL COM 指標判定與 `UIA_ERRORS`）、`windows_state.py` 98 行（控制項狀態讀取與密碼欄位判定）、`macos_backend.py` 125 行（pyobjc AX）、`null_backend.py` fallback |
 | `agent/` | `agent_loop.py`、`computer_use.py`、`backends/`：`anthropic.py`、`anthropic_computer_use.py`（435 行）、`openai.py`、`base.py` |
-| `ocr/` | `ocr_engine.py`（門面）、`structure.py`（版面）、`backends/`：`tesseract_backend.py`、`easyocr_backend.py`、`paddleocr_backend.py`、`base.py` |
+| `ocr/` | `ocr_engine.py`（門面）、`structure.py`（版面）、`tesseract_setup.py`（找執行檔、`TESSDATA_PREFIX`、`ocr_status`／`ocr_languages`；`None` 與 `[]` 分開回報）、`backends/`：`tesseract_backend.py`、`easyocr_backend.py`、`paddleocr_backend.py`、`base.py` |
 | `vision/` | `vlm_api.py`、`backends/`：`anthropic_backend.py`、`openai_backend.py`、`null_backend.py`、`_parse.py`、`base.py` |
 | `llm/` | `planner.py`、`backends/`：`anthropic_backend.py`、`null_backend.py`、`base.py` |
 | `hotkey/` | `hotkey_daemon.py`、`backends/`：`windows_backend.py`（RegisterHotKey + 訊息幫浦）、`linux_backend.py`（XGrabKey）、`macos_backend.py`（CGEventTap）、`base.py` |
@@ -1060,12 +1060,12 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 
 | 層／子系統 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `gui/` | 91 | 26,821 |
-| `utils/mcp_server/` | 31 | 17,675 |
+| `gui/` | 91 | 26,831 |
+| `utils/mcp_server/` | 31 | 17,706 |
 | `utils/remote_desktop/` | 56 | 12,561 |
-| `utils/executor/` | 7 | 9,412 |
+| `utils/executor/` | 7 | 9,427 |
 | `utils/usb/` | 17 | 4,472 |
-| `je_auto_control/`（頂層 3 檔） | 3 | 2,395 |
+| `je_auto_control/`（頂層 3 檔） | 3 | 2,401 |
 | `utils/accessibility/` | 14 | 3,032 |
 | `wrapper/` | 19 | 3,615 |
 | `windows/` | 23 | 1,957 |
@@ -1074,12 +1074,12 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `linux_with_x11/` | 19 | 1,236 |
 | `linux_wayland/` | 17 | 2,870 |
 | `utils/triggers/` | 4 | 1,241 |
-| `utils/ocr/` | 9 | 1,126 |
+| `utils/ocr/` | 10 | 1,353 |
 | `utils/usbip/` | 5 | 945 |
 | `utils/assertion/` | 3 | 881 |
 | `osx/` | 17 | 919 |
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 837 |
 | 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 677 | 52,882 |
-| **總計** | **1,043** | **148,860** |
+| **總計** | **1,044** | **149,149** |
 
