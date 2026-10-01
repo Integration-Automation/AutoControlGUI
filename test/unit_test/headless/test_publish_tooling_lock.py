@@ -134,7 +134,8 @@ def test_the_lock_pins_everything_publish_in_names():
 def test_the_lock_is_resolved_for_the_python_the_jobs_set_up():
     # The lock holds the wheels of one Python version; a job on another one may find none that match.
     header = (REQUIREMENTS / "publish.txt").read_text(encoding="utf-8").splitlines()[1]
-    assert "--generate-hashes" in header and "--only-binary :all:" in header
+    assert "--generate-hashes" in header
+    assert "--only-binary :all:" in header
     locked_for = re.search(r"--python-version (\S+)", header).group(1)
     set_up = {version for _name, body in TOKEN_JOBS
               for version in re.findall(r"python-version:\s*\"([^\"]+)\"", body)}
