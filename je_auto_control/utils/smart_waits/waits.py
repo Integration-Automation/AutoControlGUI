@@ -63,16 +63,14 @@ def _pause(deadline: float, poll_interval_s: float) -> None:
 
 
 def _default_sampler(region: Optional[Sequence[int]]) -> Frame:
-    """Snapshot once through the platform's grabber. Fails closed on missing dep."""
-    from je_auto_control.utils.cv2_utils.screen_grabber import image_grabber
+    """Snapshot ``[left, top, right, bottom]`` once, on any monitor. Fails closed on missing dep."""
+    from je_auto_control.utils.cv2_utils.region_capture import grab_screen_region
     try:
-        grabber = image_grabber()
+        image = grab_screen_region(region).convert("RGB")
     except ImportError as error:
         raise RuntimeError(
             "Smart waits require Pillow for screen capture.",
         ) from error
-    bbox = tuple(int(v) for v in region) if region else None
-    image = grabber.grab(bbox=bbox).convert("RGB")
     return Frame(width=image.width, height=image.height,
                   pixels=image.tobytes())
 

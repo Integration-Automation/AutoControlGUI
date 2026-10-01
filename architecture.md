@@ -36,6 +36,7 @@ entry points → execution core (`utils/executor/`) → headless capabilities (`
 | `examples/`, `benchmarks/` | Runnable example scripts; latency smoke benchmark. |
 | `docker/`, `k8s/helm/`, `ci_templates/` | Container images and backend verification harnesses, Helm chart, GitLab CI template. |
 | `browser-extension/`, `AutoControl/`, `exe/`, `autocontrol_driver/` | Manifest v3 companion extension, project-template sample, packaged GUI launcher, driver build script. |
+| `scripts/` | Release tooling, not shipped: `dev_release.py` numbers and gates the dev-channel package (§3). |
 
 ## 3. Entry points and public interfaces
 
@@ -52,6 +53,7 @@ entry points → execution core (`utils/executor/`) → headless capabilities (`
 | LSP | `autocontrol-lsp` → `autocontrol_lsp.server.server:run`; `python -m autocontrol_lsp.server` | Command list is read from the live executor. |
 | GUI | `start_autocontrol_gui()` in `gui/__init__.py`; `exe/start_autocontrol_gui.py` | Needs `pip install je_auto_control[gui]`; PySide6 is imported only under `gui/`. |
 | Action lint | `python -m je_auto_control.utils.action_lint` | Used by `.github/workflows/action-json-lint.yml`. |
+| PyPI packages | `je_auto_control` (stable), `je_auto_control_dev` (dev channel) | Both ship the same `je_auto_control` import package. Stable: a push to `main` runs the `publish` job of `stable.yml`, which bumps `pyproject.toml`, uploads and tags. Dev: the `publish-dev` job of `dev.yml` runs after the headless suite on a push to `dev`, builds from `dev.toml` and uploads when the commit is still the tip of `dev` and the wheel differs from the newest published one; `scripts/dev_release.py` takes the version from PyPI (newest release plus one patch), so nothing is committed back. `dev.toml` declares what `pyproject.toml` declares (`test_dev_toml_parity.py`). |
 
 ## 4. Main flows
 
@@ -79,7 +81,8 @@ the CLI, the scheduler, triggers, hotkeys, webhooks, the MCP run tool, the GUI) 
 TCP socket_server | REST rest_api | MCP mcp_server | utils/scheduler | utils/triggers | utils/chatops
   → execute_action → same Executor instance → flow A
 AC_web_run / AC_web_run_actions → utils/webrunner_bridge/bridge.py
-  → je_web_runner.utils.executor.action_executor.executor.event_dict["WR_*"]
+  → je_web_runner.utils.executor.action_executor.execute_one(["WR_*", params])
+    (event_dict["WR_*"] on a WebRunner without execute_one); a failure → WebRunnerBridgeError
 ```
 
 **C. Record → edit → generate code**
@@ -129,18 +132,25 @@ wrapper/auto_control_record.record → OS listener (e.g. windows/record/win32_in
 | Jeffrey_RPA | Editable install of **this working tree**: uncommitted changes here reach it immediately. Single facade `JeffreyRPA/_gui_control.py`. | Top-level names (e.g. `click_mouse`, `hotkey`, `write`, `screen_size`, `get_pixel`, `post_click_to_window`) and internal paths `je_auto_control.wrapper.auto_control_window`, `je_auto_control.wrapper.auto_control_keyboard.WRITE_CONTROL_KEYS`, `je_auto_control.utils.monitor_layout` (`logical_virtual_rect`, `enumerate_monitors`), and `wrapper.platform_wrapper.keyboard_keys_table` / `mouse_keys_table` — it validates every key name a user types against the keyboard table and reverse-looks-up recorded virtual keys through it, so a name removed there becomes a rejected hotkey over in that repo. |
 | PyBreeze | Subprocess `python -m je_auto_control --execute_str <json>` / `--execute_file <path>`; on Windows the JSON string arrives double-encoded. | Legacy CLI flags; also embeds `je_auto_control.gui.main_widget.AutoControlGUIWidget` and calls `record` / `stop_record` in-process. |
 | TestPioneer | Optional extra `gui = ["je_auto_control"]`; `parallel_run` starts `python -m je_auto_control --execute_file <path>`. | `execute_action`, `execute_files`, `RecordingThread`; the `--execute_file` flag. |
+| WebRunner | Optional extra `autocontrol = ["je_auto_control>=0.0.224"]`; `je_web_runner/utils/autocontrol_bridge/` (`WR_ac_*`) imports this package only when one of those commands runs. | `je_auto_control.utils.executor.action_executor.executor`: `execute_action(actions, raise_on_error=True)`, whose record values it reads in action order, and `known_commands()`; its native commands send `AC_write` (`write_string`), `AC_write_secret` (`secret`, from `WR_ac_basic_auth`), `AC_type_keyboard` (`keycode`), `AC_get_keyboard_keys_table` (the `enter` or `return` key), `AC_locate_image_center` (`image`, `detect_threshold`) and `AC_click_mouse` (`mouse_keycode`, `x`, `y` in this DPI-aware process's coordinates). It refuses `AC_shell_command`, `AC_execute_process`, `AC_add_package_*`, `AC_execute_action`, `AC_execute_files`, `AC_run_agent` and `AC_web_*` by name, so renaming one of them would let it through WebRunner's bridge. |
 
 **Guarded by** `test/unit_test/headless/test_cross_project_contracts.py`: every legacy CLI flag (short and long, run as a
-real child process, including PyBreeze's double-encoded `--execute_str`), the facade names in the three rows above
+real child process, including PyBreeze's double-encoded `--execute_str`), the facade names in the rows above
 (Jeffrey_RPA's list is every `ac.<name>` in `_gui_control.py`), the `auto_control_window` functions Jeffrey_RPA calls,
-its three internal imports, the two key tables (shape everywhere, Windows key names on Windows), and
-`AutoControlGUIWidget`. The test only knows what this table knows: when a consumer starts relying on something
+its three internal imports, the two key tables (shape everywhere, Windows key names on Windows),
+`AutoControlGUIWidget`, and the executor API and refused command names WebRunner's bridge relies on. The test only knows what this table knows: when a consumer starts relying on something
 new, add it to both.
 
-**Outbound (optional):** `utils/webrunner_bridge/bridge.py` imports WebRunner's *internal*
-`je_web_runner.utils.executor.action_executor.executor` lazily, for `AC_web_*` commands and `gui/webrunner_tab.py`.
-`je_web_runner` is not a declared dependency; when it is missing the bridge raises `WebRunnerBridgeError`.
-Moving that WebRunner module breaks the bridge.
+**Outbound (optional):** `utils/webrunner_bridge/bridge.py` imports WebRunner's supported module
+`je_web_runner.utils.executor.action_executor` lazily, for `AC_web_*` commands and `gui/webrunner_tab.py`: `executor`
+(its `event_dict` lists and checks the `WR_*` names) and `execute_one`, which runs each command through WebRunner's
+gates, retries and failure screenshots; a WebRunner without `execute_one` gets the `event_dict` callable directly.
+The helpers send `WR_get_webdriver_manager`, `WR_to_url`, `WR_quit`, `WR_save_screenshot`, `WR_get_current_url`;
+WebRunner's `test_public_api.py` guards those names and `execute_one`, and `test_webrunner_contract.py` here checks
+them against the installed package. `je_web_runner` is not a declared dependency: `is_webrunner_available` looks it
+up with `importlib.util.find_spec`, because importing it writes `WEBRunner.log` into the cwd, and a missing package
+raises `WebRunnerBridgeError`. Any error from a `WR_*` command is re-raised as `WebRunnerBridgeError` (an
+`AutoControlException`), so the executor records it instead of aborting the script.
 
 **Wire contract between AutoControl versions:** the Admin Console and DAG remote nodes drive other hosts through
 REST `POST /execute` (`{"actions": [...], "raise_on_error": bool}`), and those hosts may run an older release.
@@ -180,6 +190,10 @@ first. `AC_*` command names and the legacy CLI flags are public too (action file
 - Flat exception hierarchy: every framework error derives from `AutoControlException`; assertion failures keep
   propagating. → CLAUDE.md › Coding Standards › Project-specific rules
 - Validate at boundaries and reject unknown command names; servers bind `127.0.0.1` unless explicitly opted in. → same
+- `AC_add_package_to_executor` / `AC_add_package_to_callback_executor` pass the package gate in
+  `utils/package_manager/package_manager_class.py` before importing: `executor.allow_packages(...)` and
+  `executor.set_allow_arbitrary_packages(...)` are Python-only switches, never `AC_*` commands, so an action list
+  cannot open its own gate. Unconfigured, any package loads with a `DeprecationWarning` (workspace X-12).
 - No `print()` or runtime `assert` in library code; lazy imports for optional and platform deps; release platform
   resources in `finally` / `with`; guard shared state with locks or queues; pin dependency versions. → same
 - Size limits (cyclomatic ≤ 10, cognitive ≤ 15, function ≤ 75 lines, file ≤ 750 lines, line ≤ 120) are a review

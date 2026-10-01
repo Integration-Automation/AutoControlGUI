@@ -64,7 +64,7 @@ Builder 項目。視覺與視窗功能的 geometry / IO 操作皆可注入,因�
   ``AC_assert_duration`` 在區塊耗時超過預算時判失敗——銜接 profiler 與
   斷言 DSL 的延遲回歸守門。
 * **讀進變數** — 把外部資料綁進流程範圍供後續 ``${var}`` 使用:
-  ``AC_ocr_to_var``(區域文字)、``AC_shell_to_var``(命令 stdout,以 ``encoding`` 解碼,預設為系統地區設定的編碼;
+  ``AC_ocr_to_var``(區域文字)、``AC_shell_to_var``(命令 stdout,以 ``encoding`` 解碼,預設為系統地區設定的字碼頁,Python 3.15 的 UTF-8 模式下也是;
   逾時會結束該命令及它啟動的所有程序,``.bat`` / ``.cmd`` 的參數含 cmd 語法時會拒絕)、
   ``AC_read_file_to_var``(檔案文字;除非以 ``encoding`` 指定,否則讀 UTF-8,有無 BOM 皆可)、``AC_http_to_var``(GET body 或
   dotted JSON path)、``AC_now_to_var``(strftime)、``AC_random_to_var``

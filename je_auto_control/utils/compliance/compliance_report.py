@@ -71,6 +71,22 @@ def _framework_key(name: str) -> str:
     return "".join(ch for ch in str(name).upper() if ch.isalnum())
 
 
+def _wanted_frameworks(frameworks: Optional[Sequence[str]]) -> Optional[set]:
+    """The requested framework keys, or ``None`` for all; unknown names are a ``ValueError``."""
+    if isinstance(frameworks, str):
+        # "SOC2" was walked letter by letter: unknown frameworks 2, C, O, S.
+        frameworks = [frameworks]
+    if not frameworks:
+        return None
+    wanted = {_framework_key(name) for name in frameworks}
+    known = {_framework_key(control.framework) for control in CONTROL_CATALOGUE}
+    if wanted - known:
+        # A misspelt framework produced an empty report that looked clean.
+        raise ValueError(f"unknown compliance framework(s): {sorted(wanted - known)}; "
+                         f"known: {sorted(known)}")
+    return wanted
+
+
 def build_compliance_report(evidence: Mapping[str, Any],
                             frameworks: Optional[Sequence[str]] = None
                             ) -> Dict[str, Any]:
@@ -80,12 +96,9 @@ def build_compliance_report(evidence: Mapping[str, Any],
     all. Each control is ``satisfied`` (truthy evidence), ``gap`` (explicitly
     falsy), or ``not_assessed`` (key absent).
     """
-    wanted = {_framework_key(f) for f in frameworks} if frameworks else None
-    known = {_framework_key(control.framework) for control in CONTROL_CATALOGUE}
-    if wanted is not None and wanted - known:
-        # A misspelt framework produced an empty report that looked clean.
-        raise ValueError(f"unknown compliance framework(s): {sorted(wanted - known)}; "
-                         f"known: {sorted(known)}")
+    if not isinstance(evidence, Mapping):
+        raise ValueError(f"evidence must be a mapping of evidence keys, got {type(evidence).__name__}")
+    wanted = _wanted_frameworks(frameworks)
     controls: List[Dict[str, Any]] = []
     summary = {STATUS_SATISFIED: 0, STATUS_GAP: 0, STATUS_NOT_ASSESSED: 0}
     for control in CONTROL_CATALOGUE:

@@ -54,9 +54,14 @@ def _default_sink(event: Dict[str, Any]) -> None:
     """Default dispatch: drive the real mouse backend."""
     from je_auto_control.wrapper.auto_control_mouse import (
         press_mouse, release_mouse, set_mouse_position)
+    op = event["op"]
+    if "x" not in event:
+        # The cleanup release of an aborted drag: where the pointer is.
+        if op == "release":
+            release_mouse(event.get("button", "mouse_left"))
+        return
     x, y = int(event["x"]), int(event["y"])
     set_mouse_position(x, y)
-    op = event["op"]
     if op == "press":
         press_mouse(event.get("button", "mouse_left"), x, y)
     elif op == "release":
@@ -89,9 +94,13 @@ def drag_path(waypoints: Sequence[Point], *, button: str = "mouse_left",
     try:
         for x, y in points:
             dispatch({"op": "move", "x": x, "y": y})
-    finally:
-        # A failed move used to leave the button held down.
-        dispatch({"op": "release", "button": button, "x": last[0], "y": last[1]})
+    except BaseException:
+        # A failed move used to leave the button held down; releasing at the
+        # last waypoint, as it then did, completed the drop the drag never
+        # reached. The button is let go where the pointer stopped.
+        dispatch({"op": "release", "button": button})
+        raise
+    dispatch({"op": "release", "button": button, "x": last[0], "y": last[1]})
     return {"points": len(points), "path": points}
 
 

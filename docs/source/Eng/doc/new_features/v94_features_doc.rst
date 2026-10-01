@@ -29,7 +29,8 @@ Headless API
 ``spans_to_otlp`` wraps spans in the ``resourceSpans → scopeSpans → spans``
 structure: trace/span IDs stay hex, times become uint64 strings, and attributes
 are encoded as OTLP ``KeyValue`` entries (``stringValue`` / ``intValue`` /
-``boolValue`` / ``doubleValue``). ``attributes_to_otlp`` exposes that attribute
+``boolValue`` / ``doubleValue``, ``bytesValue`` in base64 for ``bytes``, and
+``arrayValue`` / ``kvlistValue`` for lists and dicts). ``attributes_to_otlp`` exposes that attribute
 conversion, and ``write_otlp`` writes the payload as JSON. The result is what an
 OpenTelemetry collector's file exporter reads — pairing with ``trace_context``
 for the IDs and ``agent_trace`` for the span data.

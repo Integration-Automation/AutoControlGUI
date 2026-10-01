@@ -9,7 +9,8 @@
 
 ``retry_budget`` 兩者皆補上。:class:`RetryBudget` 由 ``max_attempts`` *與 / 或* ``deadline_s``
 界定;:func:`run_with_budget` 以先達到者為準,且絕不會睡過截止時間。延遲採用有上限的指數退避,
-搭配可選的抖動策略(``full`` / ``equal`` / ``none``)。隨機來源(``uniform``)、時鐘與睡眠器
+搭配可選的抖動策略(``full`` / ``equal`` / ``none``,大小寫皆可;其他值丟出 ``ValueError``,不是有限且 >= 0 的
+延遲也一樣)。隨機來源(``uniform``)、時鐘與睡眠器
 皆可注入,故每個延遲與決策在測試中都是確定的。不匯入 ``PySide6``。
 
 無頭 API

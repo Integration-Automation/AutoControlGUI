@@ -19,6 +19,7 @@ from typing import Any, Dict, List
 
 # Reuse the RGB loader (single source of truth, no copy).
 from je_auto_control.utils.color_region.color_region import _to_rgb
+from je_auto_control.utils.visual_match.visual_match import _contain_cv2_error
 
 ImageSource = Any
 _MAX_YIQ_DELTA = 35215.0          # pixelmatch: max possible YIQ delta for 255 diff
@@ -146,6 +147,7 @@ def _drop_antialiased(mask, first, second) -> None:
         mask[y[aa], x[aa]] = 0
 
 
+@_contain_cv2_error
 def perceptual_diff(actual: ImageSource, expected: ImageSource, *,
                     threshold: float = 0.1, include_aa: bool = False,
                     min_area: int = 1) -> PerceptualDiffResult:
@@ -175,6 +177,7 @@ def perceptual_diff(actual: ImageSource, expected: ImageSource, *,
                                 regions)
 
 
+@_contain_cv2_error
 def assert_perceptual(actual: ImageSource, expected: ImageSource, *,
                       threshold: float = 0.1, include_aa: bool = False,
                       max_diff_ratio: float = 0.0) -> PerceptualDiffResult:
@@ -183,8 +186,11 @@ def assert_perceptual(actual: ImageSource, expected: ImageSource, *,
         AutoControlActionException)
     result = perceptual_diff(actual, expected, threshold=threshold,
                              include_aa=include_aa)
-    if result.diff_ratio > float(max_diff_ratio):
+    # Unrounded: diff_ratio has six decimals, so one changed pixel in a 1080p
+    # frame (and up to four at 4K) read 0.0 and passed a zero budget.
+    exact = result.diff_pixels / result.total_pixels if result.total_pixels else 0.0
+    if exact > float(max_diff_ratio):
         raise AutoControlActionException(
-            f"perceptual diff {result.diff_ratio} exceeds {max_diff_ratio} "
+            f"perceptual diff {exact:.3g} exceeds {max_diff_ratio} "
             f"({result.diff_pixels} pixels changed)")
     return result

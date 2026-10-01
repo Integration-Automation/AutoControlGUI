@@ -43,6 +43,7 @@
 ----------
 
 ``AC_rate_limit`` 接受限制器 ``name`` 以及 ``rate`` / ``capacity`` / ``n``,嘗試從該具名 token
-bucket(首次使用時建立)取用 ``n`` 個 token,回傳 ``{acquired, tokens, wait}``,讓流程可閘控或
+bucket(首次使用時建立,呼叫給出不同的 ``rate`` 或 ``capacity`` 時重建;executor 與 MCP 共用同一組 bucket,
+即 ``named_bucket``)取用 ``n`` 個 token,回傳 ``{acquired, tokens, wait}``,讓流程可閘控或
 延後某個動作。同一操作亦以 MCP 工具 ``ac_rate_limit`` 以及 Script Builder 中 **Flow** 分類下的
 命令提供。

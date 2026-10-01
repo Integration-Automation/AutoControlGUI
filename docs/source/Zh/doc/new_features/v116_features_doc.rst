@@ -25,7 +25,7 @@
 ``plan_path`` 以 ``per_segment_steps`` 個緩動步驟對每個相鄰點對插值(``easing`` 為 ``path_easings()`` 中任一
 名稱——``linear`` / ``ease_in_out_quad`` / ``ease_out_cubic`` / ``ease_in_cubic``),且不重複共用的交接點。
 ``move_along_path`` 沿路徑發出移動事件;``drag_path`` 在第一個路徑點按下、移動經過整段路徑、在最後一點放開——
-用於多停靠點拖曳。兩者皆可傳入 ``sink`` 以供無頭測試。
+用於多停靠點拖曳。途中某次移動失敗時,會在指標停下的位置放開,所以中斷的拖曳不會在目標上放下。兩者皆可傳入 ``sink`` 以供無頭測試。
 
 執行器命令
 ----------

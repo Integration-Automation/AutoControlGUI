@@ -70,7 +70,15 @@ def _non_overlapping_counts(names: List[str], length: int) -> Counter:
 def find_repeated_sequences(actions: Sequence[Any], *, min_len: int = 2,
                             max_len: int = 5, min_count: int = 3
                             ) -> List[SequencePattern]:
-    """Return command n-grams (``min_len``..``max_len``) seen >= ``min_count``."""
+    """Return command n-grams (``min_len``..``max_len``) seen >= ``min_count``.
+
+    ``min_len`` and ``min_count`` must be at least 1 and ``max_len`` at least
+    ``min_len``: 0 or less counted the empty sequence as a pattern.
+    """
+    min_len, max_len, min_count = int(min_len), int(max_len), int(min_count)
+    if min_len < 1 or min_count < 1 or max_len < min_len:
+        raise ValueError(f"need 1 <= min_len <= max_len and min_count >= 1; got "
+                         f"min_len={min_len}, max_len={max_len}, min_count={min_count}")
     names = _command_names(actions)
     patterns: List[SequencePattern] = []
     for length in range(min_len, max_len + 1):

@@ -26,6 +26,8 @@ Agent 會累積各種 playbook——「登入」、「匯出報表」、「關�
     lib.search("auth")        # 依名稱 / 說明 / 標籤搜尋技能
     lib.run("login")          # 透過執行器重播
 
+會執行其他技能的技能與巨集一樣有深度上限:巢狀超過 50 層時,最外層的 ``AC_skill_run`` 失敗,而不是無限遞迴。
+
 執行器 / MCP 指令:``AC_skill_save`` / ``AC_skill_run`` /
 ``AC_skill_list`` / ``AC_skill_remove`` / ``AC_skill_search``(以及對應的
 ``ac_skill_*`` MCP 工具)。這是記憶體內巨集登錄的持久化對應物。

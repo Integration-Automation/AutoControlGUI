@@ -48,6 +48,7 @@ Executor command
 
 ``AC_rate_limit`` takes a limiter ``name`` plus ``rate`` / ``capacity`` / ``n``
 and tries to take ``n`` tokens from that named token bucket (created on first
-use), returning ``{acquired, tokens, wait}`` so a flow can gate or defer an
+use, and rebuilt when a call names a different ``rate`` or ``capacity``; the
+executor and MCP share one set of buckets, ``named_bucket``), returning ``{acquired, tokens, wait}`` so a flow can gate or defer an
 action. The same operation is exposed as the MCP tool ``ac_rate_limit`` and as a
 Script Builder command under **Flow**.

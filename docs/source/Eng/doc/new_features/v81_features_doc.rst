@@ -34,7 +34,8 @@ defaults to insertion order, so later layers override earlier ones).
 merged recursively while scalars and lists are replaced. ``get`` reads a dotted
 key from the resolved config with a default; ``explain`` returns a
 ``SourceTrace`` naming the winning layer for a dotted key (raising ``KeyError``
-when absent). ``deep_merge`` is exposed as a standalone two-mapping helper.
+when absent). ``deep_merge`` is exposed as a standalone two-mapping helper; its
+result shares no nested value with either input.
 
 Executor commands
 -----------------

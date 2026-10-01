@@ -126,6 +126,12 @@ def test_replaying_a_recording_drives_the_matching_input_calls(monkeypatch):
     monkeypatch.setattr(
         "je_auto_control.wrapper.auto_control_mouse.release_mouse",
         lambda button, x, y: calls.append(("release_mouse", button, x, y)))
+    # The replay moves to the event before pressing; unfaked, that moved the
+    # real cursor to (1, 2) on every run.
+    moves = []
+    monkeypatch.setattr(
+        "je_auto_control.wrapper.auto_control_mouse.set_mouse_position",
+        lambda x, y: moves.append((x, y)))
 
     replay_timeline(timeline([
         {"op": "key_down", "vk": 65, "time": 1.0},

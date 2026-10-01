@@ -26,7 +26,6 @@ from je_auto_control.utils.mcp_server.tools._handlers_qa import audit_contrast
 
 @pytest.mark.parametrize("error", [OverflowError, IndexError, ZeroDivisionError])
 def test_a_tool_error_from_an_argument_is_contained(error):
-    assert issubclass(error, _protocol._TOOL_INVOKE_ERRORS)
     assert issubclass(error, _protocol._DISPATCH_ERRORS)
 
 

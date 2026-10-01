@@ -20,7 +20,7 @@
 
 - **一套 API，七個平台。** `wrapper/platform_wrapper.py` 在匯入時挑選後端；同一份腳本在
   Windows、macOS、X11 與 Wayland 上都不需要改寫。
-- **不寫 Python 也能腳本化。** 775 個 `AC_*` 指令涵蓋全部功能，因此一個 JSON 檔能做到函式庫
+- **不寫 Python 也能腳本化。** 776 個 `AC_*` 指令涵蓋全部功能，因此一個 JSON 檔能做到函式庫
   能做的任何事——包含迴圈、分支、try/catch、巨集與變數。
 - **預設無頭執行。** `import je_auto_control` 絕不會載入 Qt。GUI 是選用套件，包在同一個無頭核心之外。
 - **四種定位方式。** 樣板比對、OCR、無障礙樹、視覺語言模型——可透過錨點定位器與自癒後備串接組合。
@@ -131,7 +131,7 @@ python -c "import je_auto_control; je_auto_control.start_autocontrol_gui()"
 | 能力 | Python API | `AC_*` 指令 | GUI 分頁 |
 |---|---|---|---|
 | 滑鼠 | `click_mouse`、`set_mouse_position`、`mouse_scroll` | `AC_click_mouse` | Auto Click |
-| 鍵盤 | `write`、`hotkey`、`type_keyboard` | `AC_write`、`AC_hotkey` | Auto Click |
+| 鍵盤 | `write`、`write_secret`、`hotkey`、`type_keyboard` | `AC_write`、`AC_write_secret`、`AC_hotkey` | Auto Click |
 | 螢幕與像素 | `screenshot`、`screen_size`、`get_pixel` | `AC_screenshot` | Screenshot |
 | 影像比對 | `locate_image_center`、`locate_and_click` | `AC_locate_and_click` | Image Detect |
 | OCR 文字 | `click_text`、`wait_for_text`、`read_text_in_region` | `AC_click_text`、`AC_wait_text` | OCR Reader |
@@ -142,7 +142,7 @@ python -c "import je_auto_control; je_auto_control.start_autocontrol_gui()"
 | 自然語言規劃 | `plan_actions`、`run_from_description` | `AC_llm_plan` | LLM Planner |
 | Computer-use agent | `AgentLoop`、`run_agent` | `AC_run_agent` | Computer Use |
 | 錄製與重播 | `record`、`stop_record` | `AC_record`、`AC_stop_record` | Record |
-| JSON 腳本 | `execute_action`、`execute_files` | 全部 775 個指令 | Script、Script Builder |
+| JSON 腳本 | `execute_action`、`execute_files` | 全部 776 個指令 | Script、Script Builder |
 | 變數與流程控制 | `execute_action_with_vars` | `AC_set_var`、`AC_loop`、`AC_for_each`、`AC_try`、`AC_retry` | Variables |
 | 資料驅動執行 | — | `AC_for_each_row`（CSV／JSON／SQLite／Excel） | Data Sources |
 | 斷言 | `assert_text`、`assert_image` | `AC_assert_text` 等 21 個 | Assertions |
@@ -199,6 +199,8 @@ je_auto_control version
 | **遠端桌面** | `RemoteDesktopHost` 或 GUI | TCP、WebSocket 或 WebRTC；TOTP、信任清單、TURN 設定、檔案／剪貼簿／音訊同步。 |
 
 除非明確指定，所有伺服器都綁在 `127.0.0.1`。
+
+**套件閘門。** `AC_add_package_to_executor` 與 `AC_add_package_to_callback_executor` 會匯入 Python 套件並把成員註冊成命令，所以從上面任何一個入口送來的動作清單都可能載入 `os` 或 `subprocess`。哪些套件可以載入，由宿主程式決定：`executor.allow_packages("name", …)` 列出可以載入的套件（含子模組），`executor.set_allow_arbitrary_packages(False)` 會在匯入前拒絕其他套件。這兩個都不是 `AC_*` 命令，所以動作清單不能自己打開閘門。被拒絕的套件會讓該動作以 `AutoControlExecuteActionException` 失敗。宿主程式呼叫任一個開關之前，任何套件仍會載入，但會發出 `DeprecationWarning`：之後的版本會預設拒絕清單以外的套件。
 
 ### 遠端桌面的線路協定
 

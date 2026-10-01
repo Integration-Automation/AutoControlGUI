@@ -24,7 +24,8 @@
 
 ``find_color_regions`` 為每個在 ``tolerance``(各通道)內接近 ``rgb`` 且至少 ``min_area`` 像素的區塊回傳
 ``{x, y, width, height, area, center}``,由大到小;``find_color_region`` 僅回傳最大的(或 ``None``)。
-``haystack`` 預設為對選用 ``region`` 的螢幕擷取。
+``haystack`` 預設為對選用 ``region``(``[left, top, right, bottom]``,任何螢幕皆可)的螢幕擷取。
+在擷取的區域中找到的區塊是螢幕座標,``center`` 可以直接點擊;傳入 ``haystack`` 時則是該影像的像素座標。
 
 執行器命令
 ----------

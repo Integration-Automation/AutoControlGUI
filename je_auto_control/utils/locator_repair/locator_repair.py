@@ -11,6 +11,7 @@ JSON-backed via the shared ``json_store`` helper; pure standard library; imports
 no ``PySide6``. Confidence/threshold are explicit, so behavior is deterministic
 and fully unit-testable.
 """
+import functools
 import secrets
 from dataclasses import asdict, dataclass
 from typing import Any, Dict, List, Optional
@@ -46,13 +47,15 @@ class RepairStore:
         self._state = SharedJsonDict(db_path)
 
     def _items(self) -> List[Dict[str, Any]]:
-        return list(self._state.read().get("suggestions", []))
+        return _rows(self._state.read())
 
     def record(self, key: str, *, method: str,
                coordinates: Optional[List[int]] = None,
                description: Optional[str] = None, confidence: float = 1.0,
                auto_threshold: float = 0.9) -> RepairSuggestion:
         """Record a corrected locator; auto-apply if ``confidence`` clears bar."""
+        # float(): "0.95" from an action file raised TypeError comparing.
+        confidence, auto_threshold = float(confidence), float(auto_threshold)
         status = STATUS_APPLIED if confidence >= auto_threshold \
             else STATUS_PENDING
         suggestion = RepairSuggestion(
@@ -61,14 +64,13 @@ class RepairStore:
             coordinates=list(coordinates) if coordinates else None,
             description=description)
         row = asdict(suggestion)
-        self._state.update(
-            lambda data: data.setdefault("suggestions", []).append(row))
+        self._state.update(lambda data: _writable_rows(data).append(row))
         return suggestion
 
     def _set_status(self, suggestion_id: str, new_status: str) -> bool:
         def set_status(data: Dict[str, Any]) -> bool:
-            for item in data.get("suggestions", []):
-                if item["id"] == suggestion_id and item["status"] == STATUS_PENDING:
+            for item in _rows(data):
+                if item.get("id") == suggestion_id and item.get("status") == STATUS_PENDING:
                     item["status"] = new_status
                     return True
             return False
@@ -84,16 +86,44 @@ class RepairStore:
 
     def pending(self) -> List[Dict[str, Any]]:
         """Return suggestions awaiting review."""
-        return [dict(i) for i in self._items() if i["status"] == STATUS_PENDING]
+        return [dict(i) for i in self._items() if i.get("status") == STATUS_PENDING]
 
     def resolved(self, key: str) -> Optional[Dict[str, Any]]:
         """Return the latest applied/approved corrected locator for ``key``."""
         for item in reversed(self._items()):
-            if item["key"] == key and item["status"] in _USABLE:
-                return {"method": item["method"],
-                        "coordinates": item["coordinates"],
-                        "description": item["description"]}
+            if item.get("key") == key and item.get("status") in _USABLE:
+                return {"method": item.get("method"),
+                        "coordinates": item.get("coordinates"),
+                        "description": item.get("description")}
         return None
+
+
+def _rows(data: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """The suggestion rows that are objects; a hand-edited file raised ``KeyError`` / ``AttributeError``."""
+    rows = data.get("suggestions")
+    return [row for row in rows if isinstance(row, dict)] if isinstance(rows, list) else []
+
+
+def _writable_rows(data: Dict[str, Any]) -> List[Any]:
+    """``data["suggestions"]`` as a list to append to, replacing anything else there."""
+    if not isinstance(data.get("suggestions"), list):
+        data["suggestions"] = []
+    return data["suggestions"]
+
+
+@functools.lru_cache(maxsize=1)
+def _process_store() -> RepairStore:
+    return RepairStore(None)
+
+
+def repair_store(db: Optional[str] = None) -> RepairStore:
+    """The store saved in ``db`` or, without ``db``, the one this process shares.
+
+    The repair commands built a fresh in-memory store per call, so without a
+    ``db`` a suggestion from ``AC_repair_record`` was unknown to
+    ``AC_repair_resolved`` / ``AC_repair_pending`` / ``AC_repair_approve``.
+    """
+    return RepairStore(db) if db else _process_store()
 
 
 def repair_from_heal(heal_event: Any, key: str, *, store: RepairStore,

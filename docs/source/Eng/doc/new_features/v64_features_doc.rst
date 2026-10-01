@@ -34,12 +34,15 @@ Headless API
 ``SearchIndex.add`` / ``remove`` keep the index up to date incrementally;
 ``build`` indexes a ``{doc_id: text}`` map (or ``(id, text)`` pairs). ``search``
 returns ranked ``SearchHit(doc_id, score)`` results — by default BM25
-(``k1=1.5``, ``b=0.75``), or ``mode="tfidf"``. The scoring is the standard
+(``k1=1.5``, ``b=0.75``), or ``mode="tfidf"`` (log-scaled term frequency
+times ``ln(N / df) + 1``, so a term in every document still counts). The BM25 scoring is the standard
 Okapi formula with ``IDF = ln(1 + (N − df + 0.5) / (df + 0.5))``, so a rare term
 out-ranks a common one, term-frequency saturates (``k1``), and long documents
 are normalized down (``b``). A ``stop_words`` set can be supplied to drop noise
 terms. Terms are case-folded runs of letters and digits in any script, so
-``登入`` and ``café`` are indexed whole; stop words are folded the same way. Results are deterministic (ties broken by ``doc_id``).
+``café`` is indexed whole; a run of kana, CJK ideographs or Hangul, written
+without spaces, is indexed as its character bigrams, so ``登入`` is found inside
+``請先登入系統``. Stop words are folded the same way. Results are deterministic (ties broken by ``doc_id``).
 
 Executor command
 ----------------

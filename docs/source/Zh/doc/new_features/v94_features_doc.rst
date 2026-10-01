@@ -27,7 +27,7 @@ span 物件;本模組則從一般的 span dict 建出封套)。
 
 ``spans_to_otlp`` 把 span 包進 ``resourceSpans → scopeSpans → spans`` 結構:trace/span ID 維持 hex、
 時間轉成 uint64 字串、屬性編碼為 OTLP ``KeyValue``(``stringValue`` / ``intValue`` / ``boolValue`` /
-``doubleValue``)。``attributes_to_otlp`` 公開該屬性轉換,``write_otlp`` 把 payload 寫成 JSON。結果即為
+``doubleValue``,``bytes`` 以 base64 的 ``bytesValue``,串列與 dict 為 ``arrayValue`` / ``kvlistValue``)。``attributes_to_otlp`` 公開該屬性轉換,``write_otlp`` 把 payload 寫成 JSON。結果即為
 OpenTelemetry collector file exporter 讀取的格式 —— 與 ``trace_context``(提供 ID)及 ``agent_trace``
 (提供 span 資料)搭配。
 

@@ -19,7 +19,7 @@ from __future__ import annotations
 import urllib.error
 import urllib.parse
 from email.message import Message
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 from PySide6.QtCore import QObject, Signal
 from PySide6.QtWidgets import (
@@ -28,7 +28,7 @@ from PySide6.QtWidgets import (
 )
 
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
-from je_auto_control.gui._worker_thread import WorkerHandle, start_worker
+from je_auto_control.gui._worker_thread import CallWorker as _CallWorker, WorkerHandle, start_worker
 from je_auto_control.gui.language_wrapper.multi_language_wrapper import (
     language_wrapper,
 )
@@ -79,25 +79,6 @@ def open_local_descriptor(*, vendor_id: str, product_id: str,
             )
         finally:
             handle.close()
-
-
-class _CallWorker(QObject):
-    """Runs one callable off the GUI thread and reports the outcome."""
-
-    finished = Signal(object)
-    failed = Signal(str)
-
-    def __init__(self, fn: Callable[[], Any]) -> None:
-        super().__init__()
-        self._fn = fn
-
-    def run(self) -> None:
-        try:
-            result = self._fn()
-        except Exception as error:  # noqa: BLE001  # pylint: disable=broad-except  # reason: surface any backend/transport error to the status line
-            self.failed.emit(str(error))
-            return
-        self.finished.emit(result)
 
 
 def fetch_remote_devices(*, base_url: str,

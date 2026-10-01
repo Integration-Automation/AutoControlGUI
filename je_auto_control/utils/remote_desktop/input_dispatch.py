@@ -7,7 +7,7 @@ ever reaches platform code. Wrappers are imported lazily so the module
 can be imported on non-host systems (e.g. inside the viewer process)
 without pulling in OS-specific backends.
 """
-from typing import Any, Callable, Dict, Mapping
+from typing import Any, Callable, Dict, Mapping, Tuple
 
 from je_auto_control.utils.exception.exceptions import AutoControlException
 
@@ -47,8 +47,15 @@ def _import_wrappers():
     }
 
 
-def dispatch_input(message: Mapping[str, Any]) -> Any:
-    """Validate ``message`` and call the matching wrapper function."""
+def dispatch_input(message: Mapping[str, Any], *, origin: Tuple[int, int] = (0, 0)) -> Any:
+    """Validate ``message`` and call the matching wrapper function.
+
+    ``x`` / ``y`` are positions in the frame the viewer sees; ``origin`` is
+    the screen position of that frame's top-left pixel, added before the
+    pointer moves. Without it a click on a captured monitor or region other
+    than one starting at (0, 0) -- or on a virtual desktop reaching above or
+    left of the primary screen -- landed that far off.
+    """
     if not isinstance(message, Mapping):
         raise InputDispatchError(
             f"input message must be a mapping, got {type(message).__name__}"
@@ -60,6 +67,9 @@ def dispatch_input(message: Mapping[str, Any]) -> Any:
         return None
     wrappers = _import_wrappers()
     try:
+        if "x" in message and "y" in message and tuple(origin) != (0, 0):
+            message = {**message, "x": int(message["x"]) + int(origin[0]),
+                       "y": int(message["y"]) + int(origin[1])}
         return _APPLIERS[action](message, wrappers)
     except (KeyError, TypeError, ValueError, OverflowError) as error:
         # A missing field (KeyError), a non-numeric or infinite coordinate
@@ -126,6 +136,16 @@ def _apply_type(message: Mapping[str, Any], wrappers: Dict[str, Any]) -> Any:
     if not isinstance(text, str):
         raise InputDispatchError("'type' message requires string 'text'")
     return wrappers["write"](text)
+
+
+def dispatcher_at(origin_of: Callable[[], Tuple[int, int]]) -> InputDispatcher:
+    """An :data:`InputDispatcher` that asks ``origin_of()`` for the capture origin per message.
+
+    Hosts pass a callable, not a value: the captured monitor can change mid-session.
+    """
+    def dispatch(message: Mapping[str, Any]) -> Any:
+        return dispatch_input(message, origin=origin_of())
+    return dispatch
 
 
 _APPLIERS: Dict[str, Callable[[Mapping[str, Any], Dict[str, Any]], Any]] = {

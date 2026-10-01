@@ -30,8 +30,8 @@ GNU gettext 目錄 I/O(.po / .mo)
 
 ``gettext`` 回傳翻譯(未翻譯時回傳原始 ``msgid``);``ngettext`` 評估目錄的 ``Plural-Forms`` 運算式
 (透過 ``gettext.c2py``)以為 ``n`` 選擇正確形式;``pgettext`` 加入消歧上下文。``to_mo_bytes`` / ``compile_mo``
-產生符合標準、可被 Python 內建 ``gettext.GNUTranslations`` 載入的 ``.mo``,而 ``read_mo`` / ``read_mo_file``
-可反向解析(小端或大端)。
+產生符合標準、可被 Python 內建 ``gettext.GNUTranslations`` 載入的 ``.mo``,並像 ``msgfmt`` 一樣略過未翻譯
+(第一個 ``msgstr`` 為空)與 fuzzy 的條目，讓每個讀取端都退回 ``msgid``;``read_mo`` / ``read_mo_file`` 可反向解析(小端或大端)。
 
 執行器命令
 ----------

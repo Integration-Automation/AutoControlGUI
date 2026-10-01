@@ -117,8 +117,12 @@ audio = ["pycaw>=20240210"]
 [tool.ruff]
 line-length = 120
 
+# The rule set is written out rather than taken from ruff's default: ruff 0.16
+# widened its default to pyupgrade, isort, RUF, SIM, DTZ and more, and the same
+# tree then reported 13,934 findings instead of none. E4/E7/E9/F is the default
+# this project was linted against; E501 is the documented line limit.
 [tool.ruff.lint]
-extend-select = ["E501"]
+select = ["E4", "E7", "E9", "F", "E501"]
 
 [tool.bandit]
 exclude_dirs = [

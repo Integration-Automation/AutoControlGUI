@@ -28,7 +28,7 @@ repository)與動作清單的**步進除錯器 / 追蹤器**。
     info = repo.find_info("login.user")   # {found, name, role, center}
 
 定位器是一組小的 accessibility 過濾條件(``name`` / ``role`` /
-``app_name``);解析時透過 accessibility 後端找到實際元素。儲存為 JSON
+``app_name``;空白值什麼都過濾不到,會被拒絕);解析時透過 accessibility 後端找到實際元素。儲存為 JSON
 檔、跨平台可用;解析需要平台的 accessibility 後端。
 
 執行器 / MCP 指令:``AC_element_save`` / ``AC_element_find`` /

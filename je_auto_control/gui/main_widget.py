@@ -333,6 +333,13 @@ class AutoControlGUIWidget(
                 return entry
         return None
 
+    def sync_engine_tabs(self) -> None:
+        """Let every tab that mirrors an engine re-read its state (after Tools > Start)."""
+        for entry in self._tab_entries:
+            sync = getattr(entry.widget, "sync_with_engine", None)
+            if callable(sync):
+                sync()
+
     def list_registered_tabs(self) -> list:
         """Return metadata for the View → Tabs menu."""
         return [

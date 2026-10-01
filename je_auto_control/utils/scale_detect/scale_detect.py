@@ -13,7 +13,13 @@ oriented higher = better) for each scale, so the source is any ndarray / path /
 PIL image (or the live screen). cv2 / numpy are lazily imported. Imports no
 ``PySide6``.
 """
+import math
 from typing import Any, Dict, List, Optional, Sequence
+
+from je_auto_control.utils.exception.exceptions import AutoControlFlatTemplateException
+from je_auto_control.utils.logging.logging_instance import autocontrol_logger
+from je_auto_control.utils.preprocess.preprocess import _eight_bit
+from je_auto_control.utils.visual_match.visual_match import _contain_cv2_error
 
 ImageSource = Any
 # Common Windows display scales (100% / 125% / 150% / 175% / 200%).
@@ -25,8 +31,14 @@ def _score_at(template: ImageSource, haystack: Optional[ImageSource],
               scale: float) -> Optional[Dict[str, Any]]:
     import cv2
     from je_auto_control.utils.visual_match.visual_match import _score_map_with_origin
-    score_map, tmpl, origin_x, origin_y = _score_map_with_origin(
-        template, haystack, region=region, method=method, scale=scale)
+    try:
+        score_map, tmpl, origin_x, origin_y = _score_map_with_origin(
+            template, haystack, region=region, method=method, scale=scale)
+    except (cv2.error, AutoControlFlatTemplateException) as error:
+        # One scale that cannot be scored (a huge resize, a pattern that
+        # blurs flat) aborted the whole sweep; it is skipped instead.
+        autocontrol_logger.info("scale %s skipped: %r", scale, error)
+        return None
     if score_map is None:
         return None  # template larger than haystack at this scale
     _min_v, max_v, _min_loc, max_loc = cv2.minMaxLoc(score_map)
@@ -37,6 +49,7 @@ def _score_at(template: ImageSource, haystack: Optional[ImageSource],
             "center": [x + width // 2, y + height // 2]}
 
 
+@_contain_cv2_error
 def scale_sweep(template: ImageSource, haystack: Optional[ImageSource] = None, *,
                 region: Optional[Sequence[int]] = None,
                 scales: Optional[Sequence[float]] = None,
@@ -44,9 +57,17 @@ def scale_sweep(template: ImageSource, haystack: Optional[ImageSource] = None, *
     """Score ``template`` against the haystack at each scale.
 
     Returns ``[{scale, score, x, y, width, height, center}]`` (best match per
-    scale), skipping scales at which the template is larger than the haystack.
+    scale), skipping scales at which the template is larger than the haystack
+    or cannot be scored. Scales must be finite and positive. 16-bit and float
+    images are matched in 8 bits.
     """
-    chosen = tuple(scales) if scales else _DEFAULT_SCALES
+    # ``is None``: a NumPy array of scales has no truth value.
+    chosen = _DEFAULT_SCALES if scales is None else tuple(float(scale) for scale in scales)
+    bad = [scale for scale in chosen if not (math.isfinite(scale) and scale > 0)]
+    if bad:
+        raise ValueError(f"scales must be finite and positive, got {bad}")
+    template = _eight_bit(template)
+    haystack = None if haystack is None else _eight_bit(haystack)
     results = []
     for scale in chosen:
         entry = _score_at(template, haystack, region, method, float(scale))

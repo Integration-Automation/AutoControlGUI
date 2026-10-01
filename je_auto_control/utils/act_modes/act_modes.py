@@ -27,7 +27,8 @@ def _force_act(action: Callable[[List[int]], Any],
                bbox_provider: Callable[[], Any]) -> Dict[str, Any]:
     """Act at the target centre with no actionability checks."""
     bbox = bbox_provider()
-    if not bbox:
+    # ``not bbox`` raised on a NumPy array, which the other modes accept.
+    if bbox is None or len(bbox) < 4:
         return {"mode": "force", "acted": False, "actionable": True,
                 "reason": "no target", "point": None, "result": None}
     point = _center(bbox)

@@ -12,7 +12,7 @@ from typing import Optional
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QPixmap
 from PySide6.QtWidgets import (
-    QFileDialog, QLabel, QSlider,
+    QFileDialog, QLabel, QMessageBox, QSlider,
     QSplitter, QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget,
 )
 
@@ -23,6 +23,7 @@ from je_auto_control.gui.language_wrapper.multi_language_wrapper import (
 from je_auto_control.utils.time_travel import (
     ReplayState, TimelinePlayer, TraceReplayController,
 )
+from je_auto_control.utils.exception.exceptions import AutoControlException
 
 
 def _t(key: str) -> str:
@@ -104,8 +105,13 @@ class TraceReplayTab(TranslatableMixin, QWidget):
         directory = QFileDialog.getExistingDirectory(
             self, _t("trace_open_btn"),
         )
-        if directory:
+        if not directory:
+            return
+        try:
             self.load_recording(directory)
+        except (AutoControlException, OSError, ValueError) as error:
+            # A truncated manifest.json escaped the slot as JSONDecodeError.
+            QMessageBox.warning(self, _t("trace_open_btn"), str(error))
 
     def _on_first(self) -> None:
         if self._controller is None:

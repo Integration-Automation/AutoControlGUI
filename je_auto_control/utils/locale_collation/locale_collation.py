@@ -63,10 +63,14 @@ def _char_weights(char: str, ranks: Optional[Dict[str, int]],
         if unicodedata.combining(sub):
             secondary.append(ord(sub))
             continue
-        subfold = sub.casefold()
-        primary.append(_untailored_weight(subfold, ranks, offset))
-        secondary.append(0)
-        tertiary.append(1 if sub != subfold else 0)
+        # Every character of the fold: "ß" folds to "ss" and weighed as one
+        # "s" (so "Maß" equalled "MaS"). Case is whether it lowers, since a
+        # fold that changes length is not an uppercase letter.
+        upper = 1 if sub != sub.lower() else 0
+        for piece in sub.casefold():
+            primary.append(_untailored_weight(piece, ranks, offset))
+            secondary.append(0)
+            tertiary.append(upper)
     return primary, secondary, tertiary
 
 

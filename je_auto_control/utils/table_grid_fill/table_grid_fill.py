@@ -23,13 +23,32 @@ Bounds = Tuple[int, int, int, int]
 
 
 def _box_bounds(box: Box) -> Bounds:
-    """Return ``(left, top, right, bottom)`` from an ``x/y/w/h`` or ``l/t/r/b`` box."""
-    if "width" in box and "height" in box:
-        left, top = int(box["x"]), int(box["y"])
-        return left, top, left + int(box["width"]), top + int(box["height"])
+    """Return ``(left, top, right, bottom)`` from an ``x/y/w/h``, ``left/top/w/h`` or ``l/t/r/b`` box.
+
+    Tesseract's ``left/top/width/height`` shape, or a box missing ``y``, raised
+    ``KeyError`` instead of the documented ``ValueError``.
+    """
     if {"left", "top", "right", "bottom"} <= box.keys():
         return int(box["left"]), int(box["top"]), int(box["right"]), int(box["bottom"])
-    raise ValueError("box needs x/y/width/height or left/top/right/bottom")
+    left, top = box.get("x", box.get("left")), box.get("y", box.get("top"))
+    if left is None or top is None or "width" not in box or "height" not in box:
+        raise ValueError("box needs x/y/width/height, left/top/width/height or left/top/right/bottom")
+    return int(left), int(top), int(left) + int(box["width"]), int(top) + int(box["height"])
+
+
+def _covered(bounds: Bounds, col_spans, row_spans):
+    """``(r0, c0, r1, c1)``: the cells under the middle half of a box, or ``None`` off the grid.
+
+    The middle half, so a box crossing a rule by a sliver stays in its cell,
+    and one really spanning two cells is a span.
+    """
+    left, top, right, bottom = bounds
+    quarter_x, quarter_y = (right - left) / 4, (bottom - top) / 4
+    c0, c1 = _index_of(left + quarter_x, col_spans), _index_of(right - quarter_x, col_spans)
+    r0, r1 = _index_of(top + quarter_y, row_spans), _index_of(bottom - quarter_y, row_spans)
+    if None in (c0, c1, r0, r1):
+        return None
+    return r0, c0, r1, c1
 
 
 def _intervals(edges: Sequence[int]) -> List[Tuple[int, int]]:
@@ -61,8 +80,16 @@ def _grid_spans(grid: Dict[str, Any]) -> Tuple[List[Tuple[int, int]], List[Tuple
 
 
 def _placed(box: Box, col_spans, row_spans, overlap: float):
-    """Return ``(row, col)`` for a box, or ``None`` if it misses every cell."""
+    """Return ``(row, col)`` for a box, or ``None`` if it misses every cell.
+
+    A spanning box goes to its anchor (top-left) cell, where its span is
+    reported: it used to land in the cell under its centre as well, counted
+    twice.
+    """
     left, top, right, bottom = _box_bounds(box)
+    covered = _covered((left, top, right, bottom), col_spans, row_spans)
+    if covered is not None and covered[:2] != covered[2:]:
+        return covered[0], covered[1]
     col = _index_of((left + right) / 2, col_spans)
     row = _index_of((top + bottom) / 2, row_spans)
     if row is None or col is None:
@@ -117,13 +144,10 @@ def _spans(grid: Dict[str, Any], text_boxes: Sequence[Box]) -> List[Dict[str, An
     col_spans, row_spans = _grid_spans(grid)
     found: List[Dict[str, Any]] = []
     for box in text_boxes:
-        left, top, right, bottom = _box_bounds(box)
-        c0, c1 = _index_of(left, col_spans), _index_of(right - 1, col_spans)
-        r0, r1 = _index_of(top, row_spans), _index_of(bottom - 1, row_spans)
-        if c0 is None or c1 is None or r0 is None or r1 is None:
+        covered = _covered(_box_bounds(box), col_spans, row_spans)
+        if covered is None or covered[:2] == covered[2:]:
             continue
-        if c0 == c1 and r0 == r1:
-            continue
+        r0, c0, r1, c1 = covered
         found.append({"row": r0, "col": c0, "row_span": r1 - r0 + 1,
                       "col_span": c1 - c0 + 1, "text": str(box.get("text", ""))})
     return found

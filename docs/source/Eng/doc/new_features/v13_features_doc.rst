@@ -28,6 +28,9 @@ runs, instead of re-deriving the steps every time::
     lib.search("auth")        # find skills by name / description / tags
     lib.run("login")          # replay through the executor
 
+A skill that runs skills is bounded like a macro: nesting deeper than 50 fails
+the outermost ``AC_skill_run`` instead of recursing.
+
 Executor / MCP commands: ``AC_skill_save`` / ``AC_skill_run`` /
 ``AC_skill_list`` / ``AC_skill_remove`` / ``AC_skill_search`` (and the
 matching ``ac_skill_*`` MCP tools). This is the durable counterpart to the

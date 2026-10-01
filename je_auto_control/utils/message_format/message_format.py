@@ -8,14 +8,29 @@ arguments, ``select`` (e.g. gender), ``plural`` and ``selectordinal`` with CLDR
 plural categories, exact ``=N`` selectors, the ``#`` count placeholder, an
 ``offset:`` and ICU apostrophe quoting.
 
-Pure standard library; imports no ``PySide6``. The plural/ordinal category
-functions are pure and the rule callables are injectable, so rendering is fully
-deterministic in CI.
+English and French rules are built in; any other locale uses Babel's CLDR
+data when Babel is installed (``je_auto_control[locale]``) and is refused
+otherwise, rather than silently getting English rules. A pattern ICU would
+reject -- an unterminated argument, a selector without ``{...}``, no
+``other``, a duplicate selector, ``offset:`` anywhere but first -- raises
+:class:`MessageFormatError`.
+
+Pure standard library (Babel only for the locales above); imports no
+``PySide6``. The plural/ordinal category functions are pure and the rule
+callables are injectable, so rendering is fully deterministic in CI.
 """
+import math
 from typing import Any, Callable, Dict, List, Mapping, Optional, Tuple
+
+from je_auto_control.utils.exception.exceptions import AutoControlException
 
 Node = Tuple
 PluralRule = Callable[[Any], str]
+_Operands = Callable[[float, int, bool], str]
+
+
+class MessageFormatError(AutoControlException, ValueError):
+    """A message pattern ICU would reject, or an argument it cannot render."""
 
 _WHITESPACE = " \t\r\n"
 _TOKEN_STOP = set(_WHITESPACE) | {",", "{", "}"}
@@ -37,6 +52,8 @@ def _to_operands(value: Any) -> Tuple[float, int, bool]:
     if isinstance(value, int) and not isinstance(value, bool):
         return value, value, True
     number = float(value)
+    if not math.isfinite(number):      # int(inf) raised OverflowError
+        return number, 0, False
     return number, int(number), number.is_integer()
 
 
@@ -72,20 +89,53 @@ def _ordinal_en(_number: float, integer: int, is_int: bool) -> str:
     return "other"
 
 
-_CARDINAL = {"en": _cardinal_en, "fr": _cardinal_fr}
-_ORDINAL = {"en": _ordinal_en}
+def _ordinal_fr(_number: float, integer: int, is_int: bool) -> str:
+    # CLDR: one is n = 1 only ("1er", "2e", "21e"); French used the English rules.
+    return "one" if (is_int and integer == 1) else "other"
+
+
+_CARDINAL: Dict[str, _Operands] = {"en": _cardinal_en, "fr": _cardinal_fr}
+_ORDINAL: Dict[str, _Operands] = {"en": _ordinal_en, "fr": _ordinal_fr}
+
+
+def _language(locale: str) -> str:
+    """``fr_FR`` / ``fr-CA`` / ``FR`` -> ``fr``: only an exact key used to match."""
+    return str(locale or "en").replace("-", "_").split("_", 1)[0].lower()
+
+
+def _babel_rule(locale: str, ordinal: bool) -> Optional[_Operands]:
+    """CLDR rules for ``locale`` from Babel, or ``None`` when Babel is not installed."""
+    try:
+        from babel import Locale, UnknownLocaleError
+    except ImportError:
+        return None
+    try:
+        parsed = Locale.parse(str(locale).replace("-", "_"))
+    except (UnknownLocaleError, ValueError, TypeError) as error:
+        raise MessageFormatError(f"unknown locale {locale!r}") from error
+    form = parsed.ordinal_form if ordinal else parsed.plural_form
+    return lambda number, integer, is_int: form(integer if is_int else number)
+
+
+def _rule_for(locale: str, ordinal: bool) -> _Operands:
+    table = _ORDINAL if ordinal else _CARDINAL
+    rule = table.get(_language(locale)) or _babel_rule(locale, ordinal)
+    if rule is None:
+        # "ru" used to get English rules: 2 was "other", CLDR says "few".
+        raise MessageFormatError(
+            f"no {'ordinal' if ordinal else 'plural'} rules for locale {locale!r}: en and fr are "
+            "built in, other locales need Babel (pip install je_auto_control[locale])")
+    return rule
 
 
 def plural_category(number: Any, locale: str = "en") -> str:
     """Return the CLDR cardinal plural category (``one``/``other``/...)."""
-    rule = _CARDINAL.get(locale, _cardinal_en)
-    return rule(*_category_operands(number))
+    return _rule_for(locale, False)(*_category_operands(number))
 
 
 def ordinal_category(number: Any, locale: str = "en") -> str:
     """Return the CLDR ordinal plural category (``one``/``two``/``few``/...)."""
-    rule = _ORDINAL.get(locale, _ordinal_en)
-    return rule(*_category_operands(number))
+    return _rule_for(locale, True)(*_category_operands(number))
 
 
 def _format_number(value: Any) -> str:
@@ -165,25 +215,58 @@ def _parse_message(text: str, index: int,
     return nodes, index
 
 
+def _read_offset(selector: str, text: str, index: int) -> Tuple[int, int]:
+    value = selector[len("offset:"):]
+    if not value:   # ICU allows "offset: 1"
+        value, index = _read_token(text, index)
+        index = _skip_ws(text, index)
+    try:
+        return int(value), index
+    except ValueError as error:
+        raise MessageFormatError(f"offset must be an integer, got {value!r}") from error
+
+
+def _check_selector(selector: str, options: Dict[str, List[Node]], in_plural: bool) -> None:
+    if not selector:
+        raise MessageFormatError("a selector is missing before '{'")
+    if selector in options:
+        raise MessageFormatError(f"duplicate selector {selector!r}")
+    if in_plural and selector.startswith("="):
+        try:
+            float(selector[1:])
+        except ValueError as error:
+            raise MessageFormatError(f"{selector!r} is not an =number selector") from error
+
+
 def _parse_options(text: str, index: int,
                    in_plural: bool) -> Tuple[Dict[str, List[Node]], int, int]:
-    """Parse ``selector {submessage}`` pairs (and an optional ``offset:``)."""
+    """Parse ``selector {submessage}`` pairs (and an optional leading ``offset:``).
+
+    Malformed options raised nothing: ``{n, plural, one {x}`` rendered ``x``
+    and ``one x other {y}`` rendered " other ". ICU rejects both, a message
+    without ``other``, a duplicate selector and a late ``offset:``.
+    """
     options: Dict[str, List[Node]] = {}
     offset = 0
     index = _skip_ws(text, index)
     while index < len(text) and text[index] != "}":
         selector, index = _read_token(text, index)
         index = _skip_ws(text, index)
-        if selector.startswith("offset:"):
-            value = selector[len("offset:"):]
-            if not value:   # ICU allows "offset: 1"
-                value, index = _read_token(text, index)
-                index = _skip_ws(text, index)
-            offset = int(value)
+        if selector.startswith("offset:") and in_plural and not options:
+            offset, index = _read_offset(selector, text, index)
             continue
+        _check_selector(selector, options, in_plural)
+        if not text.startswith("{", index):
+            raise MessageFormatError(f"expected '{{' after selector {selector!r} at position {index}")
         submessage, index = _parse_message(text, index + 1, in_plural)
+        if not text.startswith("}", index):
+            raise MessageFormatError(f"unterminated sub-message for {selector!r}")
         options[selector] = submessage
         index = _skip_ws(text, index + 1)
+    if index >= len(text):
+        raise MessageFormatError("unterminated argument: missing '}'")
+    if "other" not in options:
+        raise MessageFormatError("a plural or select argument needs an 'other' selector")
     return options, offset, index
 
 
@@ -192,13 +275,20 @@ def _parse_argument(text: str, index: int) -> Tuple[Node, int]:
     index = _skip_ws(text, index + 1)
     name, index = _read_token(text, index)
     index = _skip_ws(text, index)
+    if not name:
+        raise MessageFormatError(f"an argument needs a name at position {index}")
     if index < len(text) and text[index] == "}":
         return ("arg", name), index + 1
+    if not text.startswith(",", index):
+        raise MessageFormatError(f"expected ',' or '}}' after argument {name!r}")
     index = _skip_ws(text, index + 1)            # skip the comma
     arg_type, index = _read_token(text, index)
     index = _skip_ws(text, index)
     if arg_type not in ("plural", "selectordinal", "select"):
-        raise ValueError(f"unknown argument type: {arg_type!r}")
+        raise MessageFormatError(f"unknown argument type: {arg_type!r}")
+    if not text.startswith(",", index):
+        # "{n, plural} tail {x}" read " tail {x}" as its options.
+        raise MessageFormatError(f"the {arg_type} argument {name!r} needs a ',' and its options")
     options, offset, index = _parse_options(   # skip the comma
         text, index + 1, arg_type != "select")
     index += 1                                    # skip the closing brace
@@ -219,17 +309,28 @@ def _render_select(node: Node, args: Mapping[str, Any],
     return _render(chosen, args, rules)
 
 
+def _exact_option(options: Dict[str, List[Node]], number: float) -> Optional[List[Node]]:
+    """The ``=N`` sub-message whose N equals ``number``, compared as numbers.
+
+    It was compared as text, so ``=1.0`` never matched 1.
+    """
+    for selector, nodes in options.items():
+        if selector.startswith("=") and float(selector[1:]) == number:
+            return nodes
+    return None
+
+
 def _render_plural(node: Node, args: Mapping[str, Any],
                    rules: Tuple[PluralRule, PluralRule]) -> str:
     _, name, options, is_ordinal, offset = node
     value = args.get(name, 0)
     try:
         number, integer, is_int = _to_operands(value)
-    # OverflowError: int(float("inf")).
-    except (TypeError, ValueError, OverflowError) as error:
-        raise ValueError(f"plural argument {name!r} is not a number: {value!r}") from error
-    exact = "=" + (str(integer) if is_int else _format_number(number))
-    chosen = options.get(exact)
+    except (TypeError, ValueError) as error:
+        raise MessageFormatError(f"plural argument {name!r} is not a number: {value!r}") from error
+    if not math.isfinite(number):
+        raise MessageFormatError(f"plural argument {name!r} is not a number: {value!r}")
+    chosen = _exact_option(options, number)
     if chosen is None:
         rule = rules[1] if is_ordinal else rules[0]
         # ICU picks the keyword from the value minus the offset.
@@ -276,7 +377,7 @@ def format_message(pattern: str, arguments: Optional[Mapping[str, Any]] = None,
     nodes, end = _parse_message(text, 0)
     if end < len(text):
         # A stray "}" silently cut the rest of the message off.
-        raise ValueError(f"unmatched '}}' at position {end} in message pattern")
+        raise MessageFormatError(f"unmatched '}}' at position {end} in message pattern")
     cardinal = plural_rules or (lambda value: plural_category(value, locale))
     ordinal = ordinal_rules or (lambda value: ordinal_category(value, locale))
     return _render(nodes, args, (cardinal, ordinal))

@@ -7,6 +7,7 @@ import numpy as np
 from PySide6.QtWidgets import QWidget
 
 from je_auto_control.gui.selector.region_selector import open_region_selector
+from je_auto_control.utils.cv2_utils.image_file import write_image
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 
 
@@ -44,7 +45,7 @@ def crop_template_to_file(save_path: str,
         return None
     resolved = _validate_output_path(save_path)
     frame = _capture_region(region)
-    if not cv2.imwrite(resolved, frame):
-        raise OSError(f"cv2.imwrite failed: {resolved}")
+    # write_image: cv2.imwrite returns False for a non-ASCII path on Windows.
+    write_image(resolved, frame)
     autocontrol_logger.info("template cropped: region=%s path=%s", region, resolved)
     return region

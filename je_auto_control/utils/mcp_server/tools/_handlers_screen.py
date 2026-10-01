@@ -43,8 +43,12 @@ def screenshot(file_path: Optional[str] = None,
         if saved_path is not None:
             image.save(saved_path)
     else:
-        from je_auto_control.utils.cv2_utils.screenshot import pil_screenshot
-        image = pil_screenshot(file_path=saved_path, screen_region=screen_region)
+        # A region on a monitor other than the primary one came back black
+        # through pil_screenshot on Windows.
+        from je_auto_control.utils.cv2_utils.region_capture import grab_screen_region
+        image = grab_screen_region(screen_region)
+        if saved_path is not None:
+            image.save(saved_path)
     buffer = io.BytesIO()
     image.save(buffer, format="PNG")
     encoded = base64.b64encode(buffer.getvalue()).decode("ascii")

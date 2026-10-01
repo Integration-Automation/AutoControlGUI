@@ -48,21 +48,29 @@ def _default_a11y_locator(anchor: Mapping[str, Any]
     """Find an accessibility element matching the anchor's name / role."""
     if anchor.get("kind") not in (None, "a11y"):
         return None
+    name = anchor.get("name")
+    if not name:
+        # An unnamed element is not identified by its role: "any button in
+        # the app" moved a click on an icon to the app's Close button.
+        return None
     try:
         from je_auto_control.utils.accessibility import (
             AccessibilityNotAvailableError, find_accessibility_element,
         )
+        from je_auto_control.utils.accessibility.element import has_area
     except ImportError:
         return None
     try:
         element = find_accessibility_element(
-            name=anchor.get("name") or None,
+            name=name,
             role=anchor.get("role") or None,
             app_name=anchor.get("app_name") or None,
         )
     except AccessibilityNotAvailableError:
         return None
-    if element is None:
+    if element is None or not has_area(element):
+        # No rectangle (a hidden tab page): its centre is the screen's corner,
+        # and the recorded coordinates are the better guess.
         return None
     return element.center
 

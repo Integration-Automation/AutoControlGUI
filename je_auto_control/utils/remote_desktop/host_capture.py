@@ -12,7 +12,7 @@ import threading
 import time
 from io import BytesIO
 from typing import (
-    TYPE_CHECKING, Any, Callable, Dict, List, Optional, Sequence,
+    TYPE_CHECKING, Any, Callable, Dict, List, Optional, Sequence, Tuple,
 )
 
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
@@ -88,15 +88,38 @@ def _resolve_monitor_region(
             int(mon["width"]), int(mon["height"]),
         )
 
+def capture_origin(region: Optional[Sequence[int]]) -> Tuple[int, int]:
+    """Screen position of the default frame provider's top-left pixel.
+
+    The region's corner, or for a full capture the virtual desktop's, which
+    is negative when a monitor sits above or left of the primary one.
+    ``(0, 0)`` when ``mss`` is unavailable to say.
+    """
+    if region is not None:
+        return int(region[0]), int(region[1])
+    try:
+        monitors = list_host_monitors()
+    except Exception as error:  # noqa: BLE001  # reason: mss raises its own ScreenShotError (no display, no permission); the host still starts, as it did before the origin was read
+        autocontrol_logger.warning("remote_desktop: monitor layout unavailable, input unshifted: %r", error)
+        return 0, 0
+    if not monitors:
+        return 0, 0
+    return monitors[0]["left"], monitors[0]["top"]
+
+
 def _resolve_cursor_provider(
         explicit: Optional[CursorProvider],
-        enabled: bool) -> Optional[CursorProvider]:
-    """Pick the cursor provider — explicit > default > disabled."""
+        enabled: bool, origin: Tuple[int, int] = (0, 0)) -> Optional[CursorProvider]:
+    """Pick the cursor provider — explicit > default > disabled.
+
+    The default one reports the pointer relative to ``origin``, the frame's
+    top-left: the viewer draws it in frame coordinates.
+    """
     if explicit is not None:
         return explicit
-    return _default_cursor_provider() if enabled else None
+    return _default_cursor_provider(origin) if enabled else None
 
-def _default_cursor_provider() -> CursorProvider:
+def _default_cursor_provider(origin: Tuple[int, int] = (0, 0)) -> CursorProvider:
     """Build a cursor-position poller using the project's mouse wrapper.
 
     The wrapper is imported lazily inside the closure so importing this
@@ -112,9 +135,12 @@ def _default_cursor_provider() -> CursorProvider:
         except ImportError:
             return None
         try:
-            return get_mouse_position()
+            position = get_mouse_position()
         except (OSError, RuntimeError, AttributeError):
             return None
+        if position is None:
+            return None
+        return int(position[0]) - origin[0], int(position[1]) - origin[1]
     return provide
 
 def _default_frame_provider(region: Optional[Sequence[int]] = None,

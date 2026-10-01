@@ -93,7 +93,10 @@ class TokenBucket:
                 sleep: Callable[[float], None] = time.sleep) -> bool:
         """Block until ``n`` tokens are taken or ``timeout`` elapses."""
         self._check_request(n)
-        deadline = None if timeout is None else self._clock() + timeout
+        # A NaN deadline is never reached, so the wait never timed out.
+        if timeout is not None and math.isnan(float(timeout)):
+            raise AutoControlException("timeout must be a number, not NaN")
+        deadline = None if timeout is None else self._clock() + float(timeout)
         while True:
             if self.try_acquire(n):
                 return True
@@ -108,8 +111,10 @@ class SlidingWindowLimiter:
 
     def __init__(self, limit: int, window_s: float, *,
                  clock: Callable[[], float] = time.monotonic) -> None:
-        if not (limit > 0 and _positive_finite(window_s)):
-            raise AutoControlException("limit and window_s must be positive (window_s finite)")
+        # int(limit) after the check: 0.5 passed "> 0" and became 0, so every
+        # call raised; inf passed it and int() raised OverflowError.
+        if not (_positive_finite(limit) and float(limit).is_integer() and _positive_finite(window_s)):
+            raise AutoControlException("limit must be a positive whole number and window_s positive and finite")
         self._limit = int(limit)
         self._window = float(window_s)
         self._clock = clock
@@ -177,8 +182,12 @@ def throttle(interval_s: float, *,
     """Decorator: call the wrapped function at most once per ``interval_s``.
 
     Leading-edge — the first call fires immediately; calls within the interval
-    are dropped (the wrapper returns ``None``).
+    are dropped (the wrapper returns ``None``). ``interval_s`` must be a
+    number >= 0: NaN compared false with every elapsed time and never throttled.
     """
+    if not float(interval_s) >= 0:
+        raise AutoControlException(f"interval_s must be a number >= 0, got {interval_s!r}")
+
     def decorator(func: Callable) -> Callable:
         state: Dict[str, Optional[float]] = {"last": None}
         lock = threading.Lock()
@@ -196,3 +205,23 @@ def throttle(interval_s: float, *,
         return wrapper
 
     return decorator
+
+
+_NAMED_BUCKETS: Dict[str, "tuple"] = {}
+_NAMED_LOCK = threading.Lock()
+
+
+def named_bucket(name: str, rate: float, capacity: float) -> TokenBucket:
+    """The process's token bucket called ``name``, rebuilt when its rate or capacity changes.
+
+    Shared by ``AC_rate_limit`` and ``ac_rate_limit``. The executor kept its
+    own ``setdefault`` table, so a reused name ignored a new rate or capacity
+    (the MCP side had been fixed alone).
+    """
+    rate, capacity = float(rate), float(capacity)
+    with _NAMED_LOCK:
+        existing = _NAMED_BUCKETS.get(name)
+        if existing is None or existing[0] != rate or existing[1] != capacity:
+            existing = (rate, capacity, TokenBucket(rate, capacity))
+            _NAMED_BUCKETS[name] = existing
+        return existing[2]

@@ -14,6 +14,7 @@ from je_auto_control.gui._i18n_helpers import TranslatableMixin
 from je_auto_control.gui.language_wrapper.multi_language_wrapper import (
     language_wrapper,
 )
+from je_auto_control.utils.exception.exceptions import AutoControlException
 import je_auto_control as ac
 
 
@@ -96,7 +97,7 @@ class MediaChecksTab(TranslatableMixin, QWidget):
                 expect_sound=self._audio_expect.isChecked(),
                 raise_on_fail=False,
             )
-        except (RuntimeError, OSError, ValueError) as error:
+        except (AutoControlException, RuntimeError, OSError, ValueError) as error:
             self._result.setText(str(error))
             return
         self._result.setText(result.message)
@@ -109,7 +110,7 @@ class MediaChecksTab(TranslatableMixin, QWidget):
                 expect_motion=self._video_expect.isChecked(),
                 raise_on_fail=False,
             )
-        except (RuntimeError, OSError, ValueError) as error:
+        except (AutoControlException, RuntimeError, OSError, ValueError) as error:
             self._result.setText(str(error))
             return
         self._result.setText(result.message)

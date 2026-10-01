@@ -12,7 +12,32 @@ real screen. Imports no ``PySide6``.
 """
 from typing import Any, Dict, List, Sequence, Tuple
 
-Box = Sequence[int]
+Box = Any
+#: How a list box is laid out: ``locate_all_image`` answers ``ltrb``.
+BOX_FORMATS = ("xywh", "ltrb")
+
+
+def _as_xywh(box: Box, box_format: str) -> List[int]:
+    """``[x, y, w, h]`` of a list box in ``box_format``, or of a dict / match object.
+
+    ``AC_locate_all_image`` answers ``[left, top, right, bottom]`` but every
+    box was read as ``[x, y, w, h]``, so its cell centres came out wrong; a
+    ``find_text_matches`` object or a dict raised ``TypeError`` / ``KeyError``.
+    """
+    if isinstance(box, (list, tuple)):
+        a, b, c, d = (int(value) for value in box[:4])
+        return [a, b, c - a, d - b] if box_format == "ltrb" else [a, b, c, d]
+    from je_auto_control.utils.accessibility.element import element_box
+    found = element_box(box)
+    if found is None:
+        raise ValueError(f"not a box: {box!r}")
+    return list(found)
+
+
+def _checked_format(box_format: str) -> str:
+    if box_format not in BOX_FORMATS:
+        raise ValueError(f"box_format must be one of {BOX_FORMATS}, got {box_format!r}")
+    return box_format
 
 
 def _center(box: Box) -> Tuple[int, int]:
@@ -21,15 +46,19 @@ def _center(box: Box) -> Tuple[int, int]:
     return x + width // 2, y + height // 2
 
 
-def cluster_grid(boxes: Sequence[Box], *,
-                 row_tolerance: int = 10) -> List[List[List[int]]]:
-    """Cluster ``(x, y, w, h)`` boxes into rows (top-down), cells left-to-right.
+def cluster_grid(boxes: Sequence[Box], *, row_tolerance: int = 10,
+                 box_format: str = "xywh") -> List[List[List[int]]]:
+    """Cluster boxes into rows (top-down), cells left-to-right.
 
-    Boxes whose centre-y values are within ``row_tolerance`` of the previous
-    box (after sorting by y) share a row; within a row the cells are ordered by
-    centre-x. Returns a list of rows, each a list of ``[x, y, w, h]`` boxes.
+    List boxes are ``[x, y, w, h]``, or ``[left, top, right, bottom]`` with
+    ``box_format="ltrb"`` (what ``locate_all_image`` answers); dicts and match
+    objects are read by their fields. Boxes whose centre-y values are within
+    ``row_tolerance`` of the previous box (after sorting by y) share a row;
+    within a row the cells are ordered by centre-x. Returns a list of rows,
+    each a list of ``[x, y, w, h]`` boxes.
     """
-    items = sorted((list(map(int, box[:4])) for box in boxes),
+    box_format = _checked_format(box_format)
+    items = sorted((_as_xywh(box, box_format) for box in boxes),
                    key=lambda box: _center(box)[1])
     rows: List[List[List[int]]] = []
     current: List[List[int]] = []
@@ -49,9 +78,9 @@ def cluster_grid(boxes: Sequence[Box], *,
 
 
 def locate_cell(boxes: Sequence[Box], row: int, col: int, *,
-                row_tolerance: int = 10) -> Dict[str, Any]:
-    """Return the cell at ``(row, col)`` (both 0-based) of the clustered grid."""
-    grid = cluster_grid(boxes, row_tolerance=row_tolerance)
+                row_tolerance: int = 10, box_format: str = "xywh") -> Dict[str, Any]:
+    """Return the cell at ``(row, col)`` (both 0-based) of the clustered grid; ``box`` is ``[x, y, w, h]``."""
+    grid = cluster_grid(boxes, row_tolerance=row_tolerance, box_format=box_format)
     if not 0 <= row < len(grid):
         return {"found": False, "reason": "row out of range",
                 "rows": len(grid), "cols": 0}

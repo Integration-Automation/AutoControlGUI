@@ -13,15 +13,10 @@ Pure-stdlib over plain element dicts (``role`` / ``name`` / ``x`` / ``y`` / ``wi
 """
 from typing import Any, Dict, List, Optional, Sequence
 
+from je_auto_control.utils.element_parse.element_parse import _center
+from je_auto_control.utils.focus_order.focus_order import is_interactive_role
+
 Element = Dict[str, Any]
-_INTERACTIVE = {"button", "link", "textbox", "edit", "textfield", "checkbox",
-                "radio", "menuitem", "tab", "combobox", "listitem", "switch",
-                "slider", "menu", "option"}
-
-
-def _center(element: Element) -> List[int]:
-    return [int(element.get("x", 0)) + int(element.get("width", 0)) // 2,
-            int(element.get("y", 0)) + int(element.get("height", 0)) // 2]
 
 
 def flatten_tree(elements: Sequence[Element], *,
@@ -29,7 +24,8 @@ def flatten_tree(elements: Sequence[Element], *,
     """Flatten a (possibly nested ``children``) element tree to a flat list.
 
     With ``interactive_only`` (default) only actionable roles (button, link, textbox,
-    …) survive. Each returned node drops its ``children`` key.
+    …) survive, in UIA, AT-SPI, macOS AX or ARIA spelling. Each returned node
+    drops its ``children`` key.
     """
     flat: List[Element] = []
 
@@ -42,7 +38,7 @@ def flatten_tree(elements: Sequence[Element], *,
 
     walk(elements)
     if interactive_only:
-        flat = [e for e in flat if str(e.get("role", "")).lower() in _INTERACTIVE]
+        flat = [e for e in flat if is_interactive_role(e.get("role", ""))]
     return flat
 
 
@@ -51,7 +47,8 @@ def _in_viewport(element: Element, viewport: Optional[Sequence[int]]) -> bool:
         return True
     vx, vy, vw, vh = (int(v) for v in viewport[:4])
     cx, cy = _center(element)
-    return vx <= cx <= vx + vw and vy <= cy <= vy + vh
+    # Half-open: x = 1920 is the first column of the next monitor.
+    return vx <= cx < vx + vw and vy <= cy < vy + vh
 
 
 def observation_index(elements: Sequence[Element], *,

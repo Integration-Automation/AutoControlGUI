@@ -44,6 +44,10 @@ class CommandSpec:
 
 
 _MOUSE_BUTTONS = ("mouse_left", "mouse_right", "mouse_middle")
+# A region hint names what the command's capture reads: grab_logical (the
+# matchers, OCR and most vision commands) takes x, y, width, height, and a PIL
+# grab's bbox (colour, histogram, SSIM, QR commands) left, top, right, bottom.
+# test_script_builder_region_hints.py measures each command against its hint.
 _REGION_PLACEHOLDER = "[left, top, right, bottom]"
 _NATIVE_UI = "Native UI"
 _SCALES_PLACEHOLDER = "[0.9, 1.0, 1.1]"
@@ -157,6 +161,11 @@ def _add_keyboard_specs(specs: List[CommandSpec]) -> None:
         fields=(
             FieldSpec("write_string", FieldType.STRING, placeholder="Hello, world"),
         ),
+    ))
+    specs.append(CommandSpec(
+        "AC_write_secret", "Keyboard", "Write Secret Text",
+        fields=(FieldSpec("secret", FieldType.STRING),),
+        description="Type a password or token exactly; never logged, recorded or returned.",
     ))
     specs.append(CommandSpec(
         "AC_human_type", "Keyboard", "Human-like Type",
@@ -290,7 +299,7 @@ def _add_image_specs(specs: List[CommandSpec]) -> None:
             FieldSpec("scales", FieldType.STRING, optional=True,
                       placeholder=_SCALES_PLACEHOLDER),
             FieldSpec("region", FieldType.STRING, optional=True,
-                      placeholder=_REGION_PLACEHOLDER),
+                      placeholder=_RECT_PLACEHOLDER),
         ),
         description="Locate a template and return its confidence score + scale.",
     ))
@@ -314,7 +323,7 @@ def _add_image_specs(specs: List[CommandSpec]) -> None:
             FieldSpec("min_score", FieldType.FLOAT, optional=True, default=0.9,
                       min_value=0.0, max_value=1.0),
             FieldSpec("region", FieldType.STRING, optional=True,
-                      placeholder=_REGION_PLACEHOLDER),
+                      placeholder=_RECT_PLACEHOLDER),
         ),
         description="Match counting only opaque/masked pixels (alpha or mask).",
     ))
@@ -342,7 +351,7 @@ def _add_image_specs(specs: List[CommandSpec]) -> None:
             FieldSpec("scales", FieldType.STRING, optional=True,
                       placeholder=_SCALES_PLACEHOLDER),
             FieldSpec("region", FieldType.STRING, optional=True,
-                      placeholder=_REGION_PLACEHOLDER),
+                      placeholder=_RECT_PLACEHOLDER),
         ),
         description="Locate a template tolerating rotation + scale; reports angle.",
     ))
@@ -373,7 +382,7 @@ def _add_image_specs(specs: List[CommandSpec]) -> None:
             FieldSpec("scales", FieldType.STRING, optional=True,
                       placeholder=_SCALES_PLACEHOLDER),
             FieldSpec("region", FieldType.STRING, optional=True,
-                      placeholder=_REGION_PLACEHOLDER),
+                      placeholder=_RECT_PLACEHOLDER),
         ),
         description="Match a template and flag if it is ambiguous (duplicate peak).",
     ))
@@ -385,7 +394,7 @@ def _add_image_specs(specs: List[CommandSpec]) -> None:
                       min_value=0.0, max_value=1.0),
             FieldSpec("max_results", FieldType.INT, optional=True, default=20),
             FieldSpec("region", FieldType.STRING, optional=True,
-                      placeholder=_REGION_PLACEHOLDER),
+                      placeholder=_RECT_PLACEHOLDER),
         ),
         description="Find a template with an Otsu auto-threshold (no min_score).",
     ))
@@ -394,7 +403,7 @@ def _add_image_specs(specs: List[CommandSpec]) -> None:
         fields=(
             FieldSpec("template", FieldType.FILE_PATH),
             FieldSpec("region", FieldType.STRING, optional=True,
-                      placeholder=_REGION_PLACEHOLDER),
+                      placeholder=_RECT_PLACEHOLDER),
         ),
         description="Derive a match threshold + separability from the score map.",
     ))
@@ -407,7 +416,7 @@ def _add_image_specs(specs: List[CommandSpec]) -> None:
             FieldSpec("scales", FieldType.STRING, optional=True,
                       placeholder=_SCALES_PLACEHOLDER),
             FieldSpec("region", FieldType.STRING, optional=True,
-                      placeholder=_REGION_PLACEHOLDER),
+                      placeholder=_RECT_PLACEHOLDER),
         ),
         description="Locate by edge shape (Chamfer) — robust to fill / theme / AA.",
     ))
@@ -430,7 +439,7 @@ def _add_image_specs(specs: List[CommandSpec]) -> None:
             FieldSpec("min_score", FieldType.FLOAT, optional=True, default=0.0,
                       min_value=0.0, max_value=1.0),
             FieldSpec("region", FieldType.STRING, optional=True,
-                      placeholder=_REGION_PLACEHOLDER),
+                      placeholder=_RECT_PLACEHOLDER),
         ),
         description="Match with a sub-pixel-refined centre (drag / slider precision).",
     ))
@@ -444,7 +453,7 @@ def _add_image_specs(specs: List[CommandSpec]) -> None:
             FieldSpec("agree_px", FieldType.INT, optional=True, default=10),
             FieldSpec("min_votes", FieldType.INT, optional=True, default=2),
             FieldSpec("region", FieldType.STRING, optional=True,
-                      placeholder=_REGION_PLACEHOLDER),
+                      placeholder=_RECT_PLACEHOLDER),
         ),
         description="Vote several reference crops onto one consensus location.",
     ))
@@ -583,7 +592,7 @@ def _add_image_specs(specs: List[CommandSpec]) -> None:
         fields=(
             FieldSpec("template", FieldType.FILE_PATH),
             FieldSpec("region", FieldType.STRING, optional=True,
-                      placeholder=_REGION_PLACEHOLDER),
+                      placeholder=_RECT_PLACEHOLDER),
             FieldSpec("max_features", FieldType.INT, optional=True, default=500),
             FieldSpec("ratio", FieldType.FLOAT, optional=True, default=0.75,
                       min_value=0.0, max_value=1.0),
@@ -595,7 +604,7 @@ def _add_image_specs(specs: List[CommandSpec]) -> None:
         "AC_find_shapes", "Image", "Find Shapes",
         fields=(
             FieldSpec("region", FieldType.STRING, optional=True,
-                      placeholder=_REGION_PLACEHOLDER),
+                      placeholder=_RECT_PLACEHOLDER),
             FieldSpec("min_area", FieldType.INT, optional=True, default=400),
             FieldSpec("max_area", FieldType.INT, optional=True),
         ),
@@ -605,7 +614,7 @@ def _add_image_specs(specs: List[CommandSpec]) -> None:
         "AC_find_rectangles", "Image", "Find Rectangles",
         fields=(
             FieldSpec("region", FieldType.STRING, optional=True,
-                      placeholder=_REGION_PLACEHOLDER),
+                      placeholder=_RECT_PLACEHOLDER),
             FieldSpec("min_area", FieldType.INT, optional=True, default=400),
             FieldSpec("max_area", FieldType.INT, optional=True),
             FieldSpec("aspect_range", FieldType.STRING, optional=True,
@@ -660,7 +669,7 @@ def _add_image_specs(specs: List[CommandSpec]) -> None:
             FieldSpec("merge", FieldType.BOOL, optional=True, default=True),
             FieldSpec("max_aspect", FieldType.FLOAT, optional=True, default=12.0),
             FieldSpec("region", FieldType.STRING, optional=True,
-                      placeholder=_REGION_PLACEHOLDER),
+                      placeholder=_RECT_PLACEHOLDER),
         ),
         description="Locate text regions without OCR (crop to feed an OCR engine).",
     ))
@@ -669,7 +678,7 @@ def _add_image_specs(specs: List[CommandSpec]) -> None:
         fields=(
             FieldSpec("y_tolerance", FieldType.INT, optional=True, default=8),
             FieldSpec("region", FieldType.STRING, optional=True,
-                      placeholder=_REGION_PLACEHOLDER),
+                      placeholder=_RECT_PLACEHOLDER),
         ),
         description="Locate horizontal text lines without OCR.",
     ))
@@ -681,7 +690,7 @@ def _add_image_specs(specs: List[CommandSpec]) -> None:
             FieldSpec("orientation", FieldType.ENUM, optional=True, default="any",
                       choices=("any", "horizontal", "vertical", "diagonal")),
             FieldSpec("region", FieldType.STRING, optional=True,
-                      placeholder=_REGION_PLACEHOLDER),
+                      placeholder=_RECT_PLACEHOLDER),
         ),
         description="Detect straight line segments on raw pixels.",
     ))
@@ -691,7 +700,7 @@ def _add_image_specs(specs: List[CommandSpec]) -> None:
             FieldSpec("min_length", FieldType.INT, optional=True, default=120),
             FieldSpec("tol", FieldType.INT, optional=True, default=10),
             FieldSpec("region", FieldType.STRING, optional=True,
-                      placeholder=_REGION_PLACEHOLDER),
+                      placeholder=_RECT_PLACEHOLDER),
         ),
         description="Recover a table's rows / columns / cells from its lines.",
     ))
@@ -703,7 +712,7 @@ def _add_image_specs(specs: List[CommandSpec]) -> None:
             FieldSpec("min_length", FieldType.INT, optional=True, default=120),
             FieldSpec("tol", FieldType.INT, optional=True, default=10),
             FieldSpec("region", FieldType.STRING, optional=True,
-                      placeholder=_REGION_PLACEHOLDER),
+                      placeholder=_RECT_PLACEHOLDER),
         ),
         description="Coordinates of long divider lines along an axis.",
     ))
@@ -773,7 +782,7 @@ def _add_image_specs(specs: List[CommandSpec]) -> None:
         fields=(
             FieldSpec("source", FieldType.FILE_PATH, optional=True),
             FieldSpec("region", FieldType.STRING, optional=True,
-                      placeholder=_REGION_PLACEHOLDER),
+                      placeholder=_RECT_PLACEHOLDER),
         ),
         description="Sharpness / contrast / brightness of an image or the screen.",
     ))
@@ -782,7 +791,7 @@ def _add_image_specs(specs: List[CommandSpec]) -> None:
         fields=(
             FieldSpec("source", FieldType.FILE_PATH, optional=True),
             FieldSpec("region", FieldType.STRING, optional=True,
-                      placeholder=_REGION_PLACEHOLDER),
+                      placeholder=_RECT_PLACEHOLDER),
             FieldSpec("min_sharpness", FieldType.FLOAT, optional=True,
                       default=100.0),
             FieldSpec("min_contrast", FieldType.FLOAT, optional=True,
@@ -796,7 +805,7 @@ def _add_image_specs(specs: List[CommandSpec]) -> None:
             FieldSpec("template", FieldType.FILE_PATH),
             FieldSpec("haystack", FieldType.FILE_PATH, optional=True),
             FieldSpec("region", FieldType.STRING, optional=True,
-                      placeholder=_REGION_PLACEHOLDER),
+                      placeholder=_RECT_PLACEHOLDER),
             FieldSpec("scales", FieldType.STRING, optional=True,
                       placeholder="[1.0, 1.25, 1.5, 1.75, 2.0]"),
         ),
@@ -808,7 +817,7 @@ def _add_image_specs(specs: List[CommandSpec]) -> None:
             FieldSpec("template", FieldType.FILE_PATH),
             FieldSpec("haystack", FieldType.FILE_PATH, optional=True),
             FieldSpec("region", FieldType.STRING, optional=True,
-                      placeholder=_REGION_PLACEHOLDER),
+                      placeholder=_RECT_PLACEHOLDER),
             FieldSpec("scales", FieldType.STRING, optional=True,
                       placeholder="[1.0, 1.25, 1.5, 1.75, 2.0]"),
         ),
@@ -817,7 +826,7 @@ def _add_image_specs(specs: List[CommandSpec]) -> None:
     saliency_fields = (
         FieldSpec("source", FieldType.FILE_PATH, optional=True),
         FieldSpec("region", FieldType.STRING, optional=True,
-                  placeholder=_REGION_PLACEHOLDER),
+                  placeholder=_RECT_PLACEHOLDER),
         FieldSpec("size", FieldType.INT, optional=True, default=64),
         FieldSpec("threshold", FieldType.FLOAT, optional=True),
         FieldSpec("min_area", FieldType.INT, optional=True, default=4),
@@ -882,7 +891,7 @@ def _add_ocr_specs(specs: List[CommandSpec]) -> None:
         "AC_read_qr", "OCR", "Read QR Codes",
         fields=(
             FieldSpec("region", FieldType.STRING, optional=True,
-                      placeholder="[0, 0, 400, 400]"),
+                      placeholder=_REGION_PLACEHOLDER),
         ),
         description="Decode QR codes in a screen region (OpenCV).",
     ))
@@ -891,7 +900,7 @@ def _add_ocr_specs(specs: List[CommandSpec]) -> None:
         fields=(
             FieldSpec("source", FieldType.FILE_PATH, optional=True),
             FieldSpec("region", FieldType.STRING, optional=True,
-                      placeholder=_REGION_PLACEHOLDER),
+                      placeholder=_RECT_PLACEHOLDER),
         ),
         description="Decode 1-D barcodes (EAN / UPC) in an image / screen region.",
     ))
@@ -1031,7 +1040,7 @@ def _add_ocr_specs(specs: List[CommandSpec]) -> None:
         fields=(
             FieldSpec("var", FieldType.STRING, default="ocr_text"),
             FieldSpec("region", FieldType.STRING, optional=True,
-                      placeholder="[0, 0, 400, 80]"),
+                      placeholder=_RECT_PLACEHOLDER),
             FieldSpec("lang", FieldType.STRING, optional=True, default="eng"),
             FieldSpec("min_confidence", FieldType.FLOAT, optional=True,
                       default=60.0, min_value=0.0, max_value=100.0),
@@ -1381,7 +1390,7 @@ def _add_flow_specs(specs: List[CommandSpec]) -> None:
             FieldSpec("min_score", FieldType.FLOAT, optional=True, default=0.8,
                       min_value=0.0, max_value=1.0),
             FieldSpec("region", FieldType.STRING, optional=True,
-                      placeholder=_REGION_PLACEHOLDER),
+                      placeholder=_RECT_PLACEHOLDER),
         ),
         description="Wait until a target is visible + stable before acting.",
     ))
@@ -2003,6 +2012,7 @@ def _add_misc_specs(specs: List[CommandSpec]) -> None:
     _add_resilience_specs(specs)
     _add_devex_specs(specs)
     _add_audit_specs(specs)
+    _add_webrunner_specs(specs)
     specs.append(CommandSpec(
         "AC_tween_drag", "Mouse", "Tweened Drag",
         fields=(
@@ -2063,6 +2073,8 @@ def _add_misc_specs(specs: List[CommandSpec]) -> None:
             FieldSpec("row", FieldType.INT, placeholder="0"),
             FieldSpec("col", FieldType.INT, placeholder="0"),
             FieldSpec("row_tolerance", FieldType.INT, optional=True, default=10),
+            FieldSpec("box_format", FieldType.ENUM, optional=True, default="xywh",
+                      choices=("xywh", "ltrb")),
         ),
         description="Resolve a table cell centre by row/col from cell boxes.",
     ))
@@ -4359,6 +4371,36 @@ def _add_tooling_specs(specs: List[CommandSpec]) -> None:
     ))
 
 
+
+def _add_webrunner_specs(specs: List[CommandSpec]) -> None:
+    """Browser automation through the optional ``je_web_runner`` bridge."""
+    specs.append(CommandSpec(
+        "AC_web_open", "Browser", "Open Browser at URL",
+        fields=(
+            FieldSpec("url", FieldType.STRING, placeholder="https://example.com"),
+            FieldSpec("browser", FieldType.ENUM, optional=True, default="chrome",
+                      choices=("chrome", "chromium", "firefox", "edge", "safari")),
+        ),
+        description="Start a WebRunner Selenium browser and open the URL (needs je_web_runner).",
+    ))
+    specs.append(CommandSpec(
+        "AC_web_run", "Browser", "Run WebRunner Command",
+        fields=(FieldSpec("action", FieldType.STRING, placeholder="WR_to_url"),),
+        description="Run one WR_* command; its arguments go in 'params' (JSON view).",
+    ))
+    specs.append(CommandSpec(
+        "AC_web_run_actions", "Browser", "Run WebRunner Commands",
+        description="Run 'actions' (JSON view), a list of {action, params}; stops at the first failure.",
+    ))
+    specs.append(CommandSpec(
+        "AC_web_screenshot", "Browser", "Browser Screenshot",
+        fields=(FieldSpec("file_path", FieldType.FILE_PATH, placeholder="page.png"),),
+    ))
+    specs.append(CommandSpec("AC_web_current_url", "Browser", "Current Browser URL"))
+    specs.append(CommandSpec("AC_web_quit", "Browser", "Quit Browser"))
+    specs.append(CommandSpec("AC_web_available", "Browser", "Is WebRunner Installed"))
+    specs.append(CommandSpec("AC_web_list_commands", "Browser", "List WebRunner Commands"))
+
 def _add_work_queue_specs(specs: List[CommandSpec]) -> None:
     db = FieldSpec("db", FieldType.FILE_PATH)
     name = FieldSpec("name", FieldType.STRING, optional=True, default="default")
@@ -4757,7 +4799,7 @@ def _add_work_queue_specs(specs: List[CommandSpec]) -> None:
         "AC_region_contrast", "Image", "Region Text Contrast",
         fields=(
             FieldSpec("region", FieldType.STRING, optional=True,
-                      placeholder="[x, y, w, h]"),
+                      placeholder=_REGION_PLACEHOLDER),
         ),
         description="Sample a screen region and grade its text contrast.",
     ))
@@ -5048,7 +5090,7 @@ def _add_work_queue_specs(specs: List[CommandSpec]) -> None:
         "AC_region_color_stats", "Report", "Region Colour Stats",
         fields=(
             FieldSpec("region", FieldType.STRING, optional=True,
-                      placeholder="[0, 0, 200, 100]"),
+                      placeholder=_REGION_PLACEHOLDER),
             FieldSpec("buckets", FieldType.INT, optional=True, default=8,
                       min_value=1),
         ),

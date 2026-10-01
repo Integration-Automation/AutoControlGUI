@@ -45,6 +45,18 @@ PackageManager
       :param predicate: Inspection predicate (e.g., ``isfunction``, ``isclass``).
       :param target: Target executor whose ``event_dict`` will be updated.
 
+   .. method:: allow_packages(*packages)
+
+      Adds packages, and their submodules, to the package gate's allowlist.
+
+   .. method:: set_allow_arbitrary_packages(enabled)
+
+      Allows (``True``) or refuses (``False``) packages outside the allowlist. Until either switch
+      is called, any package loads with a ``DeprecationWarning``. ``add_package_to_executor`` and
+      ``add_package_to_callback_executor`` check the gate before importing and raise
+      ``AutoControlExecuteActionException`` for a refused package. The ``Executor`` has the same two
+      static methods; neither is an ``AC_*`` command.
+
    .. method:: add_package_to_target(package, target)
 
       Loads functions, built-ins, and classes from a package into the specified target executor.

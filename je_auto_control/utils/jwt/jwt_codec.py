@@ -88,7 +88,19 @@ def _b64url_decode(segment: str) -> bytes:
 
 
 def _as_bytes(key: Key) -> bytes:
-    return key.encode("utf-8") if isinstance(key, str) else key
+    """The HMAC key as bytes; an empty or non-string key is a :class:`JwtError`.
+
+    An empty key signed and verified, so a secret read from an unset
+    environment variable let anyone mint tokens the decoder accepted; ``None``
+    raised a bare ``TypeError`` from ``hmac``.
+    """
+    if isinstance(key, str):
+        key = key.encode("utf-8")
+    if not isinstance(key, (bytes, bytearray)):
+        raise JwtError(f"key must be str or bytes, not {type(key).__name__}")
+    if not key:
+        raise JwtError("key must not be empty")
+    return bytes(key)
 
 
 def _sign(signing_input: bytes, key: Key, alg: str) -> bytes:
@@ -96,6 +108,19 @@ def _sign(signing_input: bytes, key: Key, alg: str) -> bytes:
     if digest is None:
         raise JwtError(f"unsupported algorithm {alg!r}")
     return hmac.new(_as_bytes(key), signing_input, digest).digest()
+
+
+def _json_segment(value: Dict[str, Any], what: str) -> str:
+    """``value`` as a base64url JSON segment.
+
+    A ``datetime`` or other non-JSON value raised a bare ``TypeError``, and
+    ``NaN`` was written as the non-JSON token ``NaN`` other decoders reject.
+    """
+    try:
+        text = json.dumps(value, separators=(",", ":"), sort_keys=True, allow_nan=False)
+    except (TypeError, ValueError) as exc:
+        raise JwtError(f"the {what} must be JSON-serialisable: {exc}") from exc
+    return _b64url_encode(text.encode("utf-8"))
 
 
 def encode_jwt(claims: Mapping[str, Any], key: Key, *, alg: str = "HS256",
@@ -109,10 +134,8 @@ def encode_jwt(claims: Mapping[str, Any], key: Key, *, alg: str = "HS256",
     # Set last: an "alg" in ``headers`` labelled an HS256 token "none" (or
     # HS512, which then could not be decoded).
     header["alg"] = alg
-    header_segment = _b64url_encode(json.dumps(
-        header, separators=(",", ":"), sort_keys=True).encode("utf-8"))
-    payload_segment = _b64url_encode(json.dumps(
-        dict(claims), separators=(",", ":"), sort_keys=True).encode("utf-8"))
+    header_segment = _json_segment(header, "header")
+    payload_segment = _json_segment(dict(claims), "claims")
     signing_input = f"{header_segment}.{payload_segment}".encode("ascii")
     signature = _b64url_encode(_sign(signing_input, key, alg))
     return f"{header_segment}.{payload_segment}.{signature}"
@@ -193,10 +216,15 @@ def _check_time_claims(claims: Mapping[str, Any], now: float,
 
 
 def _check_audience(claims: Mapping[str, Any], audience: Any) -> None:
+    actual = claims.get("aud")
     if audience is None:
+        # RFC 7519 4.1.3: a recipient that does not identify itself with a value
+        # in a present "aud" MUST reject the token. It was accepted, so a token
+        # minted for one service verified at another sharing the key.
+        if actual is not None:
+            raise JwtError("token has an aud claim; set ClaimsPolicy.audience to the audience to accept")
         return
     allowed = {audience} if isinstance(audience, str) else set(audience)
-    actual = claims.get("aud")
     if isinstance(actual, str):
         actual_set = {actual}
     elif actual is None:
@@ -215,7 +243,9 @@ def decode_jwt(token: str, key: Key, policy: Optional[ClaimsPolicy] = None, *,
     """Verify ``token`` against ``policy`` and return its claims.
 
     Raises a :class:`JwtError` subclass on any failure. ``policy`` defaults to
-    HS256-only with ``exp``/``nbf`` verification and no audience/issuer check.
+    HS256-only with ``exp``/``nbf`` verification and no issuer check; a token
+    that carries ``aud`` is refused unless ``policy.audience`` names one of its
+    values (RFC 7519 4.1.3).
     """
     policy = policy or ClaimsPolicy()
     header_seg, payload_seg, signature_seg = _split_token(token)

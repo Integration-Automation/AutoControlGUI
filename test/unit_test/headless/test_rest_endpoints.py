@@ -12,7 +12,11 @@ _TEST_SCHEME = "http"  # NOSONAR localhost-only ephemeral test server; TLS is ou
 
 
 @pytest.fixture()
-def server():
+def server(monkeypatch):
+    # The real pointer read fails while the input desktop is not current (a
+    # locked screen): the endpoint answered 500 and the round trip failed.
+    from je_auto_control.wrapper import auto_control_mouse
+    monkeypatch.setattr(auto_control_mouse, "get_mouse_position", lambda: (12, 34))
     s = RestApiServer(host="127.0.0.1", port=0, enable_audit=False)
     s.start()
     yield s

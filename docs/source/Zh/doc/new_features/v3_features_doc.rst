@@ -174,7 +174,8 @@ GUI：**Flaky Tests** 分頁。
 
 被隔離的案例名稱會被套件執行器*跳過*（記為 ``skipped``，原因 ``quarantined``），
 讓已知不穩定的案例在修好前不再污染套件的紅 / 綠狀態。隔離區是一個小型 JSON
-檔（POSIX 上為 0600 權限），可跨重啟保存::
+檔（POSIX 上為 0600 權限），可跨重啟保存；每次變更都會取得檔案鎖並重新讀取，所以執行器、CLI 與 GUI 可以共用同一個
+檔案而不互相覆蓋::
 
     from je_auto_control import (
         default_quarantine_store, auto_quarantine_from_flakiness,

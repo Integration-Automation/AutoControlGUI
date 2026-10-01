@@ -27,6 +27,10 @@ JSON 陣列（關鍵字），由執行者解析並執行。
        ["AC_write", {"write_string": "Hello"}]
    ]
 
+開關類參數(``ignore_case``、``present``、``raise_on_fail``、``paste`` 等)接受 JSON 的 ``true`` / ``false``,
+或依拼法判讀的字串:``"true"``、``"yes"``、``"on"``、``"1"`` 為開,其他字串(``"false"``、``"no"``、``"off"``、
+``"0"``)為關。
+
 可用的動作指令
 ==============
 
@@ -39,7 +43,7 @@ JSON 陣列（關鍵字），由執行者解析並執行。
    * - 滑鼠
      - ``AC_click_mouse``, ``AC_set_mouse_position``, ``AC_get_mouse_position``, ``AC_press_mouse``, ``AC_release_mouse``, ``AC_mouse_scroll``
    * - 鍵盤
-     - ``AC_type_keyboard``, ``AC_press_keyboard_key``, ``AC_release_keyboard_key``, ``AC_write``, ``AC_hotkey``, ``AC_check_key_is_press``
+     - ``AC_type_keyboard``, ``AC_press_keyboard_key``, ``AC_release_keyboard_key``, ``AC_write``, ``AC_write_secret``, ``AC_hotkey``, ``AC_check_key_is_press``
    * - 圖片
      - ``AC_locate_all_image``, ``AC_locate_image_center``, ``AC_locate_and_click``
    * - 螢幕
@@ -77,6 +81,21 @@ JSON 陣列（關鍵字），由執行者解析並執行。
 ==========
 
 你可以動態載入外部 Python 套件到執行者中：
+
+哪些套件可以載入由套件閘門決定。``AC_add_package_to_executor`` 能替任何動作清單匯入 ``os`` 或
+``subprocess``，所以由宿主程式列出它需要的套件：
+
+.. code-block:: python
+
+   from je_auto_control import executor
+
+   executor.allow_packages("time")                # 這些套件與其子模組
+   executor.set_allow_arbitrary_packages(False)   # 其他套件在匯入前就拒絕
+
+這兩個開關都不是 ``AC_*`` 命令，所以動作清單不能自己打開閘門；被拒絕的套件會讓該動作以
+``AutoControlExecuteActionException`` 失敗。宿主程式呼叫任一個開關之前，任何套件仍會載入，但會發出
+``DeprecationWarning``；之後的版本會預設拒絕允許清單以外的套件。
+
 
 .. code-block:: python
 

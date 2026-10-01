@@ -33,8 +33,23 @@ def _purl(name: str, version: str) -> str:
     return f"pkg:pypi/{normalized}@{urllib.parse.quote(version, safe='.-_~!')}"
 
 
+def _name(dist: "metadata.Distribution") -> Optional[str]:
+    """The distribution's name; ``None`` when it has no metadata to read it from.
+
+    A directory left behind by an interrupted uninstall has none. Python 3.15
+    raises ``MetadataNotFound`` (a ``FileNotFoundError``) for it, which ended
+    the whole SBOM; earlier versions return empty metadata, which listed an
+    ``unknown`` component at version ``0``.
+    """
+    try:
+        name = dist.metadata.get("Name")  # type: ignore[attr-defined]  # reason: Message.get
+    except FileNotFoundError:
+        return None
+    return str(name) if name else None
+
+
 def _component(dist: "metadata.Distribution") -> Dict[str, Any]:
-    name = dist.metadata["Name"] or "unknown"
+    name = _name(dist) or "unknown"
     version = dist.version or "0"
     component: Dict[str, Any] = {
         "type": "library", "name": name, "version": version,
@@ -54,10 +69,15 @@ def _component(dist: "metadata.Distribution") -> Dict[str, Any]:
 
 
 def _iter_distributions(root: Optional[str]):
-    """Yield distributions: all installed, or the closure of ``root``."""
+    """Yield distributions that have metadata: all installed, or the closure of ``root``."""
     if root is None:
-        yield from metadata.distributions()
+        yield from (dist for dist in metadata.distributions() if _name(dist) is not None)
         return
+    yield from _closure(root)
+
+
+def _closure(root: str):
+    """Yield ``root`` and every distribution it requires here, each once."""
     seen: Set[str] = set()
     queue = [root]
     while queue:
@@ -71,6 +91,8 @@ def _iter_distributions(root: Optional[str]):
         try:
             dist = metadata.distribution(name)
         except metadata.PackageNotFoundError:
+            continue
+        if _name(dist) is None:
             continue
         yield dist
         for req in (dist.requires or []):

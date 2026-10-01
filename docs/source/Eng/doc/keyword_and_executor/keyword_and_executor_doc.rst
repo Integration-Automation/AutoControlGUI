@@ -27,6 +27,11 @@ For example:
        ["AC_write", {"write_string": "Hello"}]
    ]
 
+An on / off parameter (``ignore_case``, ``present``, ``raise_on_fail``, ``paste`` …)
+takes a JSON ``true`` / ``false``, or a string read by its spelling: ``"true"``,
+``"yes"``, ``"on"`` and ``"1"`` are on, and any other string (``"false"``, ``"no"``,
+``"off"``, ``"0"``) is off.
+
 Available Action Commands
 =========================
 
@@ -39,7 +44,7 @@ Available Action Commands
    * - Mouse
      - ``AC_click_mouse``, ``AC_set_mouse_position``, ``AC_get_mouse_position``, ``AC_press_mouse``, ``AC_release_mouse``, ``AC_mouse_scroll``
    * - Keyboard
-     - ``AC_type_keyboard``, ``AC_press_keyboard_key``, ``AC_release_keyboard_key``, ``AC_write``, ``AC_hotkey``, ``AC_check_key_is_press``
+     - ``AC_type_keyboard``, ``AC_press_keyboard_key``, ``AC_release_keyboard_key``, ``AC_write``, ``AC_write_secret``, ``AC_hotkey``, ``AC_check_key_is_press``
    * - Image
      - ``AC_locate_all_image``, ``AC_locate_image_center``, ``AC_locate_and_click``
    * - Screen
@@ -77,6 +82,22 @@ Extending the Executor
 ======================
 
 You can dynamically load external Python packages into the executor:
+
+The package gate decides which packages may load. ``AC_add_package_to_executor`` can import ``os`` or
+``subprocess`` for any action list, so the host program lists what it needs:
+
+.. code-block:: python
+
+   from je_auto_control import executor
+
+   executor.allow_packages("time")                # these, and their submodules
+   executor.set_allow_arbitrary_packages(False)   # refuse everything else before importing it
+
+Neither switch is an ``AC_*`` command, so an action list cannot open its own gate; a refused package fails
+its action with ``AutoControlExecuteActionException``. Until the host calls either switch, any package still
+loads but raises a ``DeprecationWarning``; a future release will refuse packages outside the allowlist by
+default.
+
 
 .. code-block:: python
 

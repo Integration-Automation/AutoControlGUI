@@ -27,7 +27,7 @@
 ``add_layer`` 註冊一個具名層;``priority`` 越高越勝出(預設為插入順序,因此後加的層覆蓋先前的)。
 ``resolve`` 依優先序由低到高深度合併每一層 —— 巢狀 dict 遞迴合併,而純量與 list 直接取代。``get`` 以
 點分鍵從解析後設定讀取並帶預設值;``explain`` 回傳 ``SourceTrace``,標明點分鍵的勝出層(不存在時拋
-``KeyError``)。``deep_merge`` 另以獨立的雙 mapping 輔助函式提供。
+``KeyError``)。``deep_merge`` 另以獨立的雙 mapping 輔助函式提供,結果不與任一輸入共用巢狀值。
 
 執行器命令
 ----------

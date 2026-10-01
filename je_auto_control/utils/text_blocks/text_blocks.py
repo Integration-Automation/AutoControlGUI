@@ -31,7 +31,8 @@ def _make_paragraph(lines: Sequence[Line]) -> Dict[str, Any]:
     top = min(b[1] for b in bounds)
     right = max(b[2] for b in bounds)
     bottom = max(b[3] for b in bounds)
-    text = " ".join(str(line.get("text", "")).strip() for line in lines).strip()
+    # ``or ""``: a line with text None read as the word "None".
+    text = " ".join(str(line.get("text") or "").strip() for line in lines).strip()
     return {"left": left, "top": top, "right": right, "bottom": bottom,
             "text": text, "n_lines": len(lines)}
 

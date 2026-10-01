@@ -19,6 +19,7 @@ from je_auto_control.gui.language_wrapper.multi_language_wrapper import (
 from je_auto_control.utils.self_healing import (
     HealOutcome, default_heal_log, self_heal_click, self_heal_locate,
 )
+from je_auto_control.utils.exception.exceptions import AutoControlException
 
 
 _COLUMNS = ("timestamp", "method", "coordinates",
@@ -142,7 +143,7 @@ class SelfHealingTab(TranslatableMixin, QWidget):
                     template_path=template, description=description,
                     detect_threshold=threshold,
                 )
-        except (OSError, ValueError, RuntimeError) as error:
+        except (AutoControlException, OSError, ValueError, RuntimeError) as error:
             self._status.setText(f"{_t('self_heal_error')}: {error}")
             return
         self._report_outcome(outcome)

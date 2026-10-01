@@ -161,5 +161,9 @@ class VariablesTab(TranslatableMixin, QWidget):
         if not isinstance(data, dict):
             self._status.setText(_t("vars_seed_not_object"))
             return
-        executor.variables.update_many(data)
+        try:
+            executor.variables.update_many(data)
+        except ValueError as error:
+            self._status.setText(f"{_t('vars_seed_invalid')}: {error}")
+            return
         self._refresh()

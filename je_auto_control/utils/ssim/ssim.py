@@ -72,9 +72,8 @@ def _to_gray_f(source: ImageSource):
 
 
 def _grab_gray_f(region: Optional[Sequence[int]]):
-    from je_auto_control.utils.cv2_utils.screenshot import pil_screenshot
-    image = pil_screenshot(screen_region=list(region) if region else None)
-    return _to_gray_f(image)
+    from je_auto_control.utils.cv2_utils.region_capture import grab_screen_region
+    return _to_gray_f(grab_screen_region(region))
 
 
 def _resolve_pair(reference: ImageSource, current: Optional[ImageSource],

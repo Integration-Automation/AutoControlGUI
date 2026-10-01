@@ -233,7 +233,13 @@ WebRunner 接入 executor + MCP
 
 Executor：``AC_web_open / _quit / _screenshot / _current_url``
 （加上既有的 ``AC_web_run``）。MCP 同步以 ``ac_web_*`` 暴露。
-GUI：**WebRunner** 分頁。
+GUI：**WebRunner** 分頁；Script Builder：**Browser** 分類。
+
+``["AC_web_run", {"action": "WR_to_url", "params": {"url": "..."}}]``
+在安裝的 WebRunner 有 ``execute_one`` 時，經由它執行單一 ``WR_*`` 命令
+（WebRunner 的命令閘門、重試策略與失敗截圖）。命令失敗時拋出
+``WebRunnerBridgeError``，executor 會像其他失敗的動作一樣記下它，
+腳本繼續執行。
 
 
 Chat-ops 機器人

@@ -1,6 +1,7 @@
 """Top-level window with menu bar, closable tabs, and live language switching."""
 import sys
 
+from PySide6.QtCore import Qt
 from PySide6.QtGui import QAction, QActionGroup
 from PySide6.QtWidgets import (
     QApplication, QFileDialog, QMainWindow, QMenu, QMessageBox,
@@ -132,6 +133,10 @@ class AutoControlGUIUI(QMainWindow, QtStyleTools):
     def _rebuild_tabs_menu(self) -> None:
         if self._view_menu is None:
             return
+        # clear() only detaches: the submenus (and, parented to them, their
+        # actions) stayed alive, 51 more actions and a menu per rebuild.
+        for submenu in self._view_menu.findChildren(QMenu, options=Qt.FindChildOption.FindDirectChildrenOnly):
+            submenu.deleteLater()
         self._view_menu.clear()
         self._tab_actions = []
         entries_by_cat: dict = {}
@@ -148,7 +153,7 @@ class AutoControlGUIUI(QMainWindow, QtStyleTools):
     def _add_category_submenu(self, label: str, entries: list) -> None:
         sub = self._view_menu.addMenu(label)
         for entry in entries:
-            action = QAction(entry["title"], self, checkable=True)
+            action = QAction(entry["title"], sub, checkable=True)
             action.setChecked(entry["visible"])
             action.setData(entry["key"])
             action.toggled.connect(self._on_tab_action_toggled)
@@ -274,16 +279,19 @@ class AutoControlGUIUI(QMainWindow, QtStyleTools):
             default_hotkey_daemon.start()
         except NotImplementedError as error:
             QMessageBox.warning(self, "Error", str(error))
+        self.auto_control_gui_widget.sync_engine_tabs()
 
     def _start_scheduler(self) -> None:
         from je_auto_control.utils.scheduler.scheduler import default_scheduler
         default_scheduler.start()
+        self.auto_control_gui_widget.sync_engine_tabs()
 
     def _start_triggers(self) -> None:
         from je_auto_control.utils.triggers.trigger_engine import (
             default_trigger_engine,
         )
         default_trigger_engine.start()
+        self.auto_control_gui_widget.sync_engine_tabs()
 
 
 if "__main__" == __name__:

@@ -199,3 +199,48 @@ def test_windows_key_names_jeffrey_rpa_sends():
     for name in ("return", "escape", "control", "menu", "back", "delete",
                  "home", "end", "insert", "capital", "vk_down"):
         assert name in platform_wrapper.keyboard_keys_table, name
+
+
+def test_executor_api_webrunner_calls():
+    """WebRunner's ``WR_ac_*`` bridge (``je_web_runner/utils/autocontrol_bridge``).
+
+    It runs ``execute_action(actions, raise_on_error=True)`` and reads the record's
+    values in action order, and lists ``known_commands()``.
+    """
+    import inspect
+
+    from je_auto_control.utils.executor.action_executor import executor
+
+    assert "raise_on_error" in inspect.signature(executor.execute_action).parameters
+    record = executor.execute_action([["AC_get_keyboard_keys_table"], ["AC_get_keyboard_keys_table"]],
+                                     raise_on_error=True)
+    assert len(record) == 2
+    assert isinstance(executor.known_commands(), (set, frozenset))
+
+
+def test_commands_webrunner_refuses_keep_their_names():
+    """WebRunner refuses these by name; renamed, one would pass its bridge unrefused."""
+    from je_auto_control.utils.executor.action_executor import executor
+
+    commands = executor.known_commands()
+    for name in ("AC_shell_command", "AC_execute_process", "AC_execute_action",
+                 "AC_execute_files", "AC_run_agent", "AC_web_run"):
+        assert name in commands, name
+    assert any(name.startswith("AC_add_package_") for name in commands)
+
+
+def test_commands_webrunner_sends_keep_their_parameters():
+    """WebRunner's native ``WR_ac_*`` commands send these by keyword (its ``autocontrol_bridge/native.py``)."""
+    import inspect
+
+    from je_auto_control.utils.executor.action_executor import executor
+
+    sent = {"AC_write": {"write_string"}, "AC_write_secret": {"secret"}, "AC_type_keyboard": {"keycode"},
+            "AC_locate_image_center": {"image", "detect_threshold"},
+            "AC_click_mouse": {"mouse_keycode", "x", "y"}, "AC_get_keyboard_keys_table": set()}
+    for name, keywords in sent.items():
+        parameters = inspect.signature(executor.event_dict[name]).parameters
+        assert keywords <= set(parameters), (name, keywords - set(parameters))
+    keys = executor.event_dict["AC_get_keyboard_keys_table"]()
+    assert "enter" in keys or "return" in keys
+    assert "tab" in keys  # WR_ac_basic_auth moves from the username to the password field with it

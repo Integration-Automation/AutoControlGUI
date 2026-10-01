@@ -30,13 +30,15 @@ Headless API
         if is_not_modified(fresh):
             use_cached()           # 304 → the stored body is still valid
 
-``store_validators`` pulls ``etag`` / ``last_modified`` / ``date`` and the parsed
-``cache_control`` from a response. ``parse_cache_control`` turns the header into
-a directive dict (``max-age`` as an int, flags as ``True``). ``conditioned_call``
-adds ``If-None-Match`` / ``If-Modified-Since`` to a ``build_call`` dict.
-``is_fresh`` reports whether a cached entry is still fresh for a given age
-(``no-store`` / ``no-cache`` are never fresh). ``is_not_modified`` detects a
-``304`` response.
+``store_validators`` pulls ``etag`` / ``last_modified`` / ``date``, the ``Age``
+header as ``age`` (seconds, 0 when absent) and the parsed ``cache_control`` from
+a response. ``parse_cache_control`` turns the header into a directive dict
+(``max-age`` as an int, flags as ``True``; a repeated directive keeps its first
+value, RFC 9111 4.2.1). ``conditioned_call`` adds ``If-None-Match`` /
+``If-Modified-Since`` to a ``build_call`` dict. ``is_fresh`` reports whether a
+cached entry is still fresh for a given local age, adding the ``age`` the
+response arrived with (RFC 9111 4.2.3); ``no-store`` / ``no-cache`` are never
+fresh. ``is_not_modified`` detects a ``304`` response.
 
 Executor commands
 -----------------

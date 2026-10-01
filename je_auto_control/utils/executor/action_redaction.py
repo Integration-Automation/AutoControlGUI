@@ -1,7 +1,8 @@
 """Mask secret arguments before an action is logged or recorded.
 
-``AC_secret_init`` / ``AC_secret_unlock`` take the vault passphrase and
-``AC_secret_set`` the secret itself; every argument of those is masked. Any
+``AC_secret_init`` / ``AC_secret_unlock`` take the vault passphrase,
+``AC_secret_set`` the secret itself and ``AC_write_secret`` the text it types;
+every argument of those is masked. Any
 other command has the arguments masked whose name says they are secret
 (``password``, ``token``...), and the signing, encryption and JWT commands
 their ``key`` -- elsewhere ``key`` is a keyboard key. The executor logs every
@@ -14,6 +15,8 @@ parent.
 from typing import Any, FrozenSet
 
 _VAULT_COMMAND_PREFIX = "AC_secret_"
+#: Commands outside the vault whose every argument is a secret.
+_ALL_SECRET_COMMANDS: FrozenSet[str] = frozenset({"AC_write_secret"})
 _MASK = "***"
 
 #: Argument names that hold a secret whatever the command.
@@ -62,7 +65,7 @@ def is_sensitive_argument(command: str, name: str) -> bool:
 
 
 def _redact_argument(command: str, argument: Any) -> Any:
-    if command.startswith(_VAULT_COMMAND_PREFIX):
+    if command.startswith(_VAULT_COMMAND_PREFIX) or command in _ALL_SECRET_COMMANDS:
         return _mask(argument)
     if isinstance(argument, dict):
         return {name: _MASK if is_sensitive_argument(command, name) else redact_actions(item)

@@ -1,6 +1,6 @@
 """Shared dataclasses and exceptions for the accessibility API."""
 from dataclasses import dataclass
-from typing import List, Optional, Tuple
+from typing import Any, List, Optional, Tuple
 
 from je_auto_control.utils.exception.exceptions import AutoControlException
 
@@ -56,6 +56,32 @@ def _role_matches(actual: str, wanted: str) -> bool:
         return True
     from je_auto_control.utils.ax_tree_walk.ax_tree_walk import humanize_role
     return humanize_role(actual).lower() == humanize_role(wanted).lower()
+
+
+def element_box(element: Any) -> Optional[Tuple[int, int, int, int]]:
+    """``(left, top, width, height)`` of an element in any of the package's shapes, or ``None``.
+
+    Reads ``bbox`` / ``bounds`` (set-of-marks dicts, ``AccessibilityElement``)
+    and ``x`` / ``y`` / ``width`` / ``height`` (OCR matches, parsed and fused
+    elements), as dict keys or attributes. Readers that knew only the first
+    shape dropped OCR output, and one that knew only the second put every
+    accessibility element at (0, 0).
+    """
+    def read(key: str) -> Any:
+        return element.get(key) if isinstance(element, dict) else getattr(element, key, None)
+
+    raw = read("bbox") or read("bounds")
+    keys = ("x", "y", "width", "height")
+    try:
+        if raw:
+            left, top, width, height = (int(value) for value in list(raw)[:4])
+        elif all(read(key) is not None for key in keys):
+            left, top, width, height = (int(read(key)) for key in keys)
+        else:
+            return None
+    except (TypeError, ValueError, OverflowError):
+        return None
+    return left, top, width, height
 
 
 def has_area(element: AccessibilityElement) -> bool:

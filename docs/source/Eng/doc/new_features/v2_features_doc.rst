@@ -252,7 +252,15 @@ Brand-new convenience commands on top of the existing
 
 Executor: ``AC_web_open / _quit / _screenshot / _current_url``
 (joining the existing ``AC_web_run``). MCP exposes the same surface
-as ``ac_web_*``. GUI: **WebRunner** tab.
+as ``ac_web_*``. GUI: **WebRunner** tab; Script Builder: the
+**Browser** category.
+
+``["AC_web_run", {"action": "WR_to_url", "params": {"url": "..."}}]``
+runs one ``WR_*`` command through WebRunner's ``execute_one`` (its
+command gates, retry policy and failure screenshots) when the
+installed WebRunner has it. A failing command raises
+``WebRunnerBridgeError``, so the executor records it and the script
+goes on, as with any other failed action.
 
 
 Chat-ops bot

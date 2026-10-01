@@ -35,7 +35,9 @@ cell, or ``{found: False, reason}`` when the index is out of range.
 Executor commands
 -----------------
 
-``AC_grid_cell`` takes ``boxes`` (a JSON ``[[x, y, w, h], ...]`` list, e.g. from a
-prior ``AC_locate_all_image`` step) plus ``row`` / ``col`` / ``row_tolerance`` and
-returns the cell dict. It is exposed as the MCP tool ``ac_grid_cell`` and as a
+``AC_grid_cell`` takes ``boxes`` (a JSON ``[[x, y, w, h], ...]`` list) plus ``row`` /
+``col`` / ``row_tolerance`` and returns the cell dict. ``AC_locate_all_image`` answers
+``[left, top, right, bottom]`` boxes, so pass its output with ``"box_format": "ltrb"``
+(``cluster_grid`` / ``locate_cell`` take the same ``box_format``; dicts and OCR match
+objects are read by their fields). It is exposed as the MCP tool ``ac_grid_cell`` and as a
 Script Builder command under **Mouse**.

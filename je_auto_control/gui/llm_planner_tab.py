@@ -22,6 +22,7 @@ from je_auto_control.gui.language_wrapper.multi_language_wrapper import (
 from je_auto_control.utils.executor.action_executor import execute_action, executor
 from je_auto_control.utils.llm.backends.base import LLMNotAvailableError
 from je_auto_control.utils.llm.planner import LLMPlanError, plan_actions
+from je_auto_control.utils.exception.exceptions import AutoControlException
 
 
 def _t(key: str) -> str:
@@ -158,7 +159,7 @@ class LLMPlannerTab(TranslatableMixin, QWidget):
         self._status.setText(_t("llm_running"))
         try:
             record = execute_action(self._planned_actions)
-        except (OSError, ValueError, TypeError, RuntimeError) as error:
+        except (AutoControlException, OSError, ValueError, TypeError, RuntimeError) as error:
             QMessageBox.warning(self, _t("llm_run_btn"), str(error))
             self._status.setText(str(error))
             return

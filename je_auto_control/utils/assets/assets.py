@@ -12,6 +12,7 @@ value through an injected resolver — so the secret never lands in a plain
 JSON-backed (or in-memory); pure standard library; imports no ``PySide6``.
 """
 import functools
+import math
 import os
 from dataclasses import dataclass
 from typing import Any, Callable, Dict, List, Optional
@@ -51,13 +52,37 @@ def active_environment() -> str:
     return os.environ.get(ENV_VAR, DEFAULT_ENV)
 
 
+_TRUE_WORDS = ("1", "true", "yes", "on")
+_FALSE_WORDS = ("0", "false", "no", "off", "")
+
+
+def _as_int(value: Any) -> int:
+    """An int, refusing bools and fractions: 3.7 was stored as 3 and True as 1."""
+    if isinstance(value, bool):
+        raise ValueError("a bool is not an int asset")
+    if isinstance(value, float) and not (math.isfinite(value) and value.is_integer()):
+        raise ValueError(f"{value!r} is not a whole number")
+    try:
+        return int(value)
+    except OverflowError as error:
+        raise ValueError(str(error)) from error
+
+
+def _as_flag(value: Any) -> bool:
+    """A bool from a known spelling: "enabled" was silently False."""
+    if isinstance(value, str):
+        word = value.strip().lower()
+        if word in _TRUE_WORDS or word in _FALSE_WORDS:
+            return word in _TRUE_WORDS
+        raise ValueError(f"{value!r} is not a bool asset; use true / false")
+    return bool(value)
+
+
 def _coerce(value: Any, type_name: str) -> Any:
     if type_name == TYPE_INT:
-        return int(value)
+        return _as_int(value)
     if type_name == TYPE_BOOL:
-        if isinstance(value, str):
-            return value.strip().lower() in ("1", "true", "yes", "on")
-        return bool(value)
+        return _as_flag(value)
     return value if type_name == TYPE_CREDENTIAL else str(value)
 
 

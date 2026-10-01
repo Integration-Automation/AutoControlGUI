@@ -2,15 +2,14 @@
 from typing import Optional
 
 from PySide6.QtWidgets import (
-    QHBoxLayout, QLabel, QLineEdit, QMessageBox,
-    QVBoxLayout, QWidget,
+    QHBoxLayout, QLabel, QLineEdit, QVBoxLayout, QWidget,
 )
 
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
+from je_auto_control.gui._worker_thread import CallWorker, WorkerHandle, start_worker
 from je_auto_control.gui.language_wrapper.multi_language_wrapper import (
     language_wrapper,
 )
-from je_auto_control.utils.vision.backends.base import VLMNotAvailableError
 from je_auto_control.utils.vision.vlm_api import (
     click_by_description, locate_by_description,
 )
@@ -30,6 +29,7 @@ class VLMTab(TranslatableMixin, QWidget):
         self._model = QLineEdit()
         self._status = QLabel()
         self._last_result = QLabel()
+        self._vlm_thread: Optional[WorkerHandle] = None
         self._apply_placeholders()
         self._build_layout()
 
@@ -72,19 +72,27 @@ class VLMTab(TranslatableMixin, QWidget):
         model = self._model.text().strip() or None
         return description, model
 
+    def _run_off_gui_thread(self, call, on_done) -> None:
+        """The VLM round trip (network, seconds) froze the window on the GUI thread."""
+        if self._vlm_thread is not None:
+            return
+        self._vlm_thread = start_worker(self, CallWorker(call), on_done=on_done,
+                                        on_fail=self._show_error, on_thread_done=self._on_vlm_done)
+
+    def _on_vlm_done(self) -> None:
+        self._vlm_thread = None
+
+    def _show_error(self, message: str) -> None:
+        self._status.setText(f"{_t('vlm_error')}: {message}")
+
     def _on_locate(self) -> None:
         inputs = self._collect_inputs()
         if inputs is None:
             return
         description, model = inputs
-        try:
-            coords = locate_by_description(description, model=model)
-        except VLMNotAvailableError as error:
-            QMessageBox.warning(self, _t("vlm_locate"), str(error))
-            return
-        except (OSError, ValueError, RuntimeError) as error:
-            self._status.setText(f"{_t('vlm_error')}: {error}")
-            return
+        self._run_off_gui_thread(lambda: locate_by_description(description, model=model), self._show_located)
+
+    def _show_located(self, coords) -> None:
         if coords is None:
             self._status.setText(_t("vlm_not_found"))
             self._last_result.setText("")
@@ -100,12 +108,6 @@ class VLMTab(TranslatableMixin, QWidget):
         if inputs is None:
             return
         description, model = inputs
-        try:
-            ok = click_by_description(description, model=model)
-        except VLMNotAvailableError as error:
-            QMessageBox.warning(self, _t("vlm_click"), str(error))
-            return
-        except (OSError, ValueError, RuntimeError) as error:
-            self._status.setText(f"{_t('vlm_error')}: {error}")
-            return
-        self._status.setText(_t("vlm_ok") if ok else _t("vlm_not_found"))
+        self._run_off_gui_thread(
+            lambda: click_by_description(description, model=model),
+            lambda ok: self._status.setText(_t("vlm_ok") if ok else _t("vlm_not_found")))

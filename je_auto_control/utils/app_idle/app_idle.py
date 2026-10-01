@@ -22,7 +22,7 @@ import time
 from typing import Any, Callable, Dict, Optional, Sequence
 
 from je_auto_control.utils.settle_detector import SettleTracker, settle_point
-from je_auto_control.utils.timeouts import deadline_after
+from je_auto_control.utils.timeouts import clamp_poll_interval, deadline_after
 
 # A busy probe returns truthy while the application is busy.
 BusyProbe = Callable[[], bool]
@@ -68,10 +68,13 @@ def wait_until_app_idle(*, busy_probe: Optional[BusyProbe] = None,
         if state.settled:
             return {"idle": True, "polls": polls, "quiet_run": quiet_run,
                     "elapsed_s": round(clock() - start, 4)}
-        if clock() >= deadline:
+        now = clock()
+        if now >= deadline:
             return {"idle": False, "polls": polls, "quiet_run": quiet_run,
                     "elapsed_s": round(clock() - start, 4)}
-        sleep(float(interval_s))
+        # As ime_state and lock_session do: a 3600 s interval made a 1 s wait
+        # take an hour, NaN or a negative raised, and 0 spun on the cursor.
+        sleep(min(clamp_poll_interval(interval_s), deadline - now))
 
 
 def _cursor_is_busy() -> bool:

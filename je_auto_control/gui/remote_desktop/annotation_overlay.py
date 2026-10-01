@@ -4,6 +4,10 @@ Receives stroke deltas from the viewer (begin / point / end / clear) via
 ``WebRTCDesktopHost.on_annotation`` and paints them on a click-through
 fullscreen window over the host's screen — so the host user sees the same
 annotations the viewer is drawing in real time.
+
+The viewer draws in frame pixels; the host stamps each event with the frame's
+``screen_origin``, and the overlay moves to the screen holding the point and
+converts native pixels to that screen's logical ones.
 """
 from __future__ import annotations
 
@@ -13,6 +17,8 @@ from typing import List, Optional, Tuple
 from PySide6.QtCore import QPointF, Qt
 from PySide6.QtGui import QColor, QGuiApplication, QPainter, QPen, QPolygonF
 from PySide6.QtWidgets import QWidget
+
+from je_auto_control.gui._screen_geometry import logical_point, screen_at_native
 
 # A viewer could send strokes and points without end, each one repainting
 # every earlier one: the host's memory and paint time grew with it.
@@ -29,6 +35,15 @@ def _point(event: dict) -> Optional[Tuple[float, float]]:
     except (TypeError, ValueError):
         return None
     return (x, y) if math.isfinite(x) and math.isfinite(y) else None
+
+
+def _origin(value) -> Tuple[int, int]:
+    """The host-stamped frame origin; (0, 0) when missing or malformed."""
+    try:
+        x, y = value
+        return int(x), int(y)
+    except (TypeError, ValueError, OverflowError):
+        return 0, 0
 
 
 def _width(value) -> int:
@@ -54,10 +69,10 @@ class HostAnnotationOverlay(QWidget):
         self.setAttribute(Qt.WidgetAttribute.WA_ShowWithoutActivating)
         self._strokes: List[dict] = []
         self._current: Optional[dict] = None
-        # Cover the primary screen (multi-monitor case: caller can move/resize)
-        screen = QGuiApplication.primaryScreen()
-        if screen is not None:
-            self.setGeometry(screen.geometry())
+        # The primary screen until a point lands on another one.
+        self._target = QGuiApplication.primaryScreen()
+        if self._target is not None:
+            self.setGeometry(self._target.geometry())
 
     def show_overlay(self) -> None:
         if not self.isVisible():
@@ -79,11 +94,34 @@ class HostAnnotationOverlay(QWidget):
             point = _point(event)
             if point is None:
                 return
+            point = self._local_point(point, _origin(event.get("screen_origin")))
             if action == "point":
                 self.add_point(*point)
                 return
             self.begin_stroke(*point, color=str(event.get("color") or "#ff0000"),
                               width=_width(event.get("width")))
+
+    def _local_point(self, point: Tuple[float, float],
+                     origin: Tuple[int, int]) -> Tuple[float, float]:
+        """A frame point as a position in this overlay.
+
+        Frame pixels used to be drawn as the overlay's logical pixels: off by
+        the frame's origin on screen, and on a scaled screen by its ratio.
+        """
+        native_x, native_y = point[0] + origin[0], point[1] + origin[1]
+        screen = screen_at_native(native_x, native_y) or self._target
+        if screen is None:
+            return point
+        if screen is not self._target:
+            # Strokes on the old screen would be drawn at the new one's positions.
+            self.hide()
+            self.clear()
+            self._target = screen
+            self.setScreen(screen)
+            self.setGeometry(screen.geometry())
+        logical = logical_point(screen, native_x, native_y)
+        corner = self.geometry().topLeft()
+        return logical.x() - corner.x(), logical.y() - corner.y()
 
     def begin_stroke(self, x: float, y: float, *,
                      color: str = "#ff0000", width: int = _DEFAULT_WIDTH) -> None:

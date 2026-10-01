@@ -104,6 +104,15 @@ are refused before the tool runs, as a tool execution error: a result with
 corrected arguments (MCP 2025-11-25). An unknown tool or a request that is not
 a ``tools/call`` at all is still a ``-32602`` protocol error.
 
+A tool that fails with any exception is answered the same way, ``isError: true``
+with the error's type and message, so no call is left without a reply. A tool
+that ran is not reported as failed because the audit log could not be written;
+that is logged instead. A message that is not a JSON-RPC 2.0 request -- no or a
+wrong ``jsonrpc``, a ``method`` that is not a string, an ``id`` that is not a
+string, a number or ``null`` -- is ``-32600``. A request with ``"id": null`` is
+answered with ``"id": null``; only a message without an ``id`` member is a
+notification.
+
 Resources, prompts, sampling
 ============================
 

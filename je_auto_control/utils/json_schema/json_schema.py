@@ -16,19 +16,24 @@ Supported keywords: ``type`` (incl. ``integer`` matching integral floats),
 ``additionalProperties``), the combinators (``allOf``/``anyOf``/``oneOf``/
 ``not``), boolean schemas (``True``/``False``) and local ``$ref``
 (``#/$defs/...`` JSON Pointer, applied together with the keywords beside it).
-Remote ``$ref`` and format assertions are out of scope. An invalid regular
-expression raises :class:`AutoControlJsonException`.
+Remote ``$ref`` and format assertions are out of scope. ``pattern`` and
+``patternProperties`` match with ECMA-262 meaning (:mod:`.ecma_regex`), as the
+specification says; an invalid or unsupported regular expression raises
+:class:`AutoControlJsonException`.
 
 Pure standard library (``re``); imports no ``PySide6``.
 """
 import json
+import math
 import re
 from dataclasses import dataclass, field
+from fractions import Fraction
 from typing import Any, Callable, Dict, List, Set, Tuple
 from urllib.parse import unquote
 
 from je_auto_control.utils.exception.exceptions import (
     AutoControlAssertionException, AutoControlJsonException)
+from je_auto_control.utils.json_schema.ecma_regex import compile_ecma_pattern
 
 Schema = Any  # a dict, or a bool (a boolean schema)
 
@@ -108,8 +113,16 @@ def _is_multiple(value: float, factor: float) -> bool:
     if isinstance(value, int) and isinstance(factor, int):
         # Exact: float division rounded 10**17 + 1 into a multiple of 2.
         return value % factor == 0
-    quotient = value / factor
-    return abs(quotient - round(quotient)) < 1e-9
+    try:
+        quotient = value / factor
+    except OverflowError:                              # an int too large for a float
+        quotient = math.inf
+    if math.isfinite(quotient):
+        return abs(quotient - round(quotient)) < 1e-9
+    # Past float range round() raised OverflowError (1e308 / 0.123); exact arithmetic still answers.
+    if any(isinstance(number, float) and not math.isfinite(number) for number in (value, factor)):
+        return False
+    return (Fraction(value) / Fraction(factor)).denominator == 1
 
 
 def _canonical(item: Any) -> Any:
@@ -190,17 +203,14 @@ def _check_string(instance: Any, schema: Dict, path: str, _root: _Root) -> List[
 
 
 def _search(pattern: str, text: str) -> bool:
-    """``re.search`` whose invalid pattern is a schema error, not a crash.
+    """Search ``text`` for the ECMA-262 ``pattern``; an invalid pattern is a schema error, not a crash.
 
     ``re.error`` derives from ``Exception`` directly, so it escaped the
     executor's containment and aborted a script run with
-    ``raise_on_error=False``.
+    ``raise_on_error=False``; :func:`compile_ecma_pattern` raises
+    ``AutoControlJsonException`` instead.
     """
-    try:
-        return re.search(pattern, text) is not None
-    except re.error as error:
-        raise AutoControlJsonException(
-            f"invalid pattern {pattern!r} in schema: {error}") from error
+    return compile_ecma_pattern(pattern).search(text) is not None
 
 
 def _array_size_errors(instance: List, schema: Dict, path: str) -> List[Dict]:

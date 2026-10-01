@@ -3,7 +3,7 @@
 All functions return new lists rather than mutating the input so callers can
 preserve the original recording.
 """
-from typing import Callable, List, Optional
+from typing import Any, Callable, List, Optional
 
 
 def trim_actions(actions: List[list], start: int = 0,
@@ -45,8 +45,8 @@ def adjust_delays(actions: List[list], factor: float = 1.0,
     floor_seconds = max(0.0, float(clamp_ms) / 1000.0)
     adjusted: List[list] = []
     for action in actions:
-        if _is_sleep(action):
-            original = float(action[1].get("seconds", 0.0))
+        original = _numeric_seconds(action)
+        if original is not None:
             new_seconds = max(floor_seconds, original * float(factor))
             params = dict(action[1])
             params["seconds"] = new_seconds
@@ -120,15 +120,30 @@ def merge_sleeps(actions: List[list]) -> List[list]:
     """
     result: List[list] = []
     for action in actions:
-        if _is_sleep(action) and result and _is_sleep(result[-1]):
-            merged = float(result[-1][1].get("seconds", 0.0)) + \
-                float(action[1].get("seconds", 0.0))
+        seconds = _numeric_seconds(action)
+        previous = _numeric_seconds(result[-1]) if result else None
+        if seconds is not None and previous is not None:
+            merged = previous + seconds
             params = dict(result[-1][1])
             params["seconds"] = merged
             result[-1] = [result[-1][0], params]
         else:
             result.append(action)
     return result
+
+
+def _numeric_seconds(action: Any) -> Optional[float]:
+    """An ``AC_sleep``'s delay, or ``None`` for other actions and non-numeric delays.
+
+    ``${wait}`` is interpolated by the executor at run time, so it is a valid
+    delay: float() on it raised ValueError out of both editors.
+    """
+    if not _is_sleep(action):
+        return None
+    try:
+        return float(action[1].get("seconds", 0.0))
+    except (TypeError, ValueError):
+        return None
 
 
 def _is_sleep(action: list) -> bool:

@@ -25,8 +25,14 @@ jar 可序列化為 JSON,因此工作階段可存檔與重新載入。
 
 ``parse_set_cookie`` 把單一 ``Set-Cookie`` 值解析成 ``{name, value, attributes}``。``CookieJar.update``
 套用一或多個 ``Set-Cookie`` 標頭(``Max-Age<=0`` 或 ``Expires`` 已過時移除 cookie);``set`` 直接指定;``cookie_header``
-建立請求標頭;``to_dict`` / ``from_dict`` 與 ``save`` / ``load`` 以 JSON 持久化 jar。(網域/路徑比對為簡化版
-—— 這是工作階段攜帶用的 jar,而非完整 RFC 6265 政策引擎。)
+建立請求標頭;``to_dict`` / ``from_dict`` 與 ``save`` / ``load`` 以 JSON 持久化 jar。
+
+``Expires`` 以 RFC 6265 5.1.1 的 cookie-date 演算法解析(兩位數年份 70-99 為 19xx、00-69 為 20xx;無法解析的日期會被忽略),
+``Max-Age`` 只能是 ASCII 數字(可帶 ``-``),同一屬性出現多次時由最後一個*有效*的值決定(``Max-Age`` 優先於 ``Expires``)。
+含有 tab 以外控制字元的標頭整個忽略。
+
+jar 不理會 ``Domain``、``Path`` 與 ``Secure``:存下的每個 cookie 都會放進它建立的每個 ``Cookie`` 標頭。它是工作階段攜帶用的 jar,
+不是 RFC 6265 政策引擎，所以請**每個來源(origin)用一個 jar**;共用一個 jar 會把某個主機的 cookie 送給流程呼叫的每個其他主機。
 
 執行器命令
 ----------

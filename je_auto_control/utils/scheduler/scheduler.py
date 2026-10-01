@@ -148,6 +148,12 @@ class Scheduler:
         with self._lock:
             return list(self._jobs.values())
 
+    @property
+    def is_running(self) -> bool:
+        """Whether the engine's thread is alive (whoever started it: its tab, Tools > Start, a script)."""
+        thread = self._thread
+        return thread is not None and thread.is_alive()
+
     def start(self) -> None:
         """Start the polling thread if it is not already running."""
         with self._lifecycle_lock:

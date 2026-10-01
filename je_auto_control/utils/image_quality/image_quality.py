@@ -18,14 +18,19 @@ to a live-screen grab. cv2 / numpy are lazily imported. Imports no ``PySide6``.
 """
 from typing import Any, Dict, Optional, Sequence, Tuple
 
+from je_auto_control.utils.visual_match.visual_match import _contain_cv2_error
+
 ImageSource = Any
 
 
 def _gray(source: Optional[ImageSource], region: Optional[Sequence[int]]):
+    """An 8-bit gray frame: a uint16 mid-gray read as brightness 32028 and ``too_bright``."""
+    from je_auto_control.utils.preprocess.preprocess import _as_uint8, _eight_bit
     from je_auto_control.utils.visual_match.visual_match import _haystack_gray
-    return _haystack_gray(source, region)
+    return _as_uint8(_haystack_gray(None if source is None else _eight_bit(source), region))
 
 
+@_contain_cv2_error
 def image_quality(source: Optional[ImageSource] = None, *,
                   region: Optional[Sequence[int]] = None) -> Dict[str, float]:
     """Return ``{sharpness, contrast, brightness}`` for an image (or live screen).

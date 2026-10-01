@@ -28,11 +28,14 @@ Headless API
 
 ``profile_rows`` returns ``{row_count, columns}`` where each column carries its
 count, null count and fraction, distinct count, a uniqueness flag, the inferred
-type (``int`` / ``number`` / ``bool`` / ``str``), the top values with counts,
-and ``min`` / ``max`` / ``mean`` for numeric columns. ``infer_schema`` turns
+type (``int`` / ``number`` / ``bool`` / ``str``, or ``mixed`` when no one type
+holds), the top values with counts (``True`` and ``1`` count apart), and
+``min`` / ``max`` / ``mean`` for numeric columns (exact for ``int`` columns,
+over the finite values otherwise). ``infer_schema`` turns
 that profile into a schema the existing ``validate_rows`` understands: a column
 is ``required`` when it has no nulls, ``unique`` when every non-null value is
-distinct, and carries numeric bounds. Pass an explicit ``columns`` list to
+distinct, and carries numeric bounds; a ``mixed`` column gets no ``type`` rule.
+Pass an explicit ``columns`` list to
 restrict either function to a subset.
 
 Executor commands

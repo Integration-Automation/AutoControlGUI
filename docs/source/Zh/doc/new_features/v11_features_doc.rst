@@ -67,6 +67,7 @@ agent 與 IDE 能發現並安裝它。清單由即時套件中繼資料建構,�
     risky = select_flows(["login", "checkout", "report"], k=2)
 
 分數為 ``0.5*失敗率 + 0.2*上次失敗 + 0.2*不穩定度 + 0.1*陳舊度``;
-從未跑過的流程得 ``0.8``(未測試即高風險)。提供 ``AC_rank_tests`` /
+以最近 ``window`` 次已結束的執行計算(仍標為執行中的不算);從未跑過的流程得 ``0.8``(未測試即高風險),
+重複列出的流程只排一次。提供 ``AC_rank_tests`` /
 ``AC_select_tests`` 以及 ``ac_rank_tests`` / ``ac_select_tests`` MCP
 工具。

@@ -24,7 +24,7 @@ W3C Baggage 傳播
 
 ``Baggage`` 包裝一個不可變的鍵值對應:``get`` 讀取,``set`` / ``remove`` 回傳新實例,``to_dict`` 匯出
 條目。``parse_baggage`` 解析標頭(去除選用的 ``;metadata`` 並拒絕空鍵),``format_baggage`` 將鍵與值
-percent-encode 回標頭值,``inject_baggage`` / ``extract_baggage`` 在請求 dict 上寫入與讀取 ``baggage``
+percent-encode 回標頭值(``Baggage`` 以 ``ValueError`` 拒絕空鍵,因為沒有解析器讀得回來),``inject_baggage`` / ``extract_baggage`` 在請求 dict 上寫入與讀取 ``baggage``
 標頭(讀取不分大小寫)。與 ``trace_context`` 自然搭配,在 trace 之外攜帶脈絡。
 
 執行器命令

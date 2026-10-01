@@ -193,7 +193,9 @@ Quarantine (closing the loop)
 A quarantined case name is *skipped* by the suite runner (recorded as
 ``skipped`` with reason ``quarantined``) so a known-flaky case stops
 poisoning the suite's red/green status until it is fixed. The store is a
-small JSON file (mode 0600 on POSIX) that persists across restarts::
+small JSON file (mode 0600 on POSIX) that persists across restarts; every change
+takes the file's lock and re-reads it, so a runner, the CLI and the GUI can share
+one file without overwriting each other::
 
     from je_auto_control import (
         default_quarantine_store, auto_quarantine_from_flakiness,

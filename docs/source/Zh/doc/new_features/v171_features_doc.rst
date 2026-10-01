@@ -26,7 +26,8 @@
 
 ``match_subpixel`` 回傳 ``SubPixelMatch``(整數 ``x`` / ``y`` / ``width`` / ``height`` /
 ``score`` 加上浮點 ``cx`` / ``cy`` 與套用的 ``offset_x`` / ``offset_y``),或在低於
-``min_score`` 時回傳 ``None``。``refine_peak`` 回傳峰值相對鄰點的 ``[-0.5, 0.5]`` 拋物線擬合
+``min_score`` 時回傳 ``None``。``cx`` 是比對框以像素索引計的中心 ``x + (width - 1) / 2`` 再加上偏移。16 位元與浮點
+影像以 8 位元比對。``refine_peak`` 回傳峰值相對鄰點的 ``[-0.5, 0.5]`` 拋物線擬合
 偏移——可用於任何相關性曲面。
 
 執行器指令

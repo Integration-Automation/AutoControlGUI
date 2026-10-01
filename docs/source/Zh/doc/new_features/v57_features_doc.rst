@@ -18,7 +18,13 @@ JSON Schema 驗證
   ``enum`` / ``const``(讓 ``True`` 與 ``1`` 保持相異,巢狀內也一樣)。
 * 數字 —— ``minimum`` / ``maximum`` / ``exclusiveMinimum`` / ``exclusiveMaximum`` /
   ``multipleOf``。
-* 字串 —— ``minLength`` / ``maxLength`` / ``pattern``。
+* 字串 —— ``minLength`` / ``maxLength`` / ``pattern``。``pattern`` 與
+  ``patternProperties`` 照規格用 ECMA-262 的語意比對:``$`` 不會在結尾換行之前成立;
+  ``\d``、``\w``、``\b`` 只認 ASCII,所以 ``^\d+$`` 不接受阿拉伯-印度數字;``.`` 遇到
+  任何行終止字元都停;``\s`` 是 ECMA-262 的空白。``\cX``、``\u{...}``、``[]`` / ``[^]``、
+  ``(?<name>...)`` / ``\k<name>``,以及 General_Category 值(``L``、``Letter``、``Nd``、
+  ``digit``、``gc=Lu``……)與 ``Any``、``ASCII``、``Assigned`` 的 ``\p{...}`` /
+  ``\P{...}`` 都看得懂;文字系統(script)屬性會丟出 ``AutoControlJsonException``。
 * 陣列 —— ``minItems`` / ``maxItems`` / ``uniqueItems`` / ``items`` /
   ``prefixItems`` / ``contains``。
 * 物件 —— ``required`` / ``minProperties`` / ``maxProperties`` / ``properties`` /

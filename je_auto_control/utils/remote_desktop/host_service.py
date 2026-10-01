@@ -258,10 +258,14 @@ def _print_status() -> int:
         print(f"No config at {_default_config_path()} — run 'configure' or 'init'.")
     if sys.platform == "win32":
         import subprocess  # nosec B404  # reason: only invoke fixed sc query argv
+        from je_auto_control.utils.shell_process.shell_exec import console_encoding
         try:
+            # sc writes the code page; text=True alone decodes UTF-8 from
+            # Python 3.15 on and raised on a localised Windows.
             result = subprocess.run(  # nosec B603 B607  # reason: fixed argv list, no shell
                 ["sc", "query", "JeAutoControlRemoteHost"],
                 capture_output=True, text=True, timeout=5, check=False,
+                encoding=console_encoding(), errors="replace",
             )
             if result.returncode == 0:
                 print("Windows service status:")

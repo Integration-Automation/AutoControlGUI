@@ -34,7 +34,8 @@ Headless API
 report when a spec is given. ``score_step_rule_based`` returns ``{outcome, process_score,
 reasons}`` — ``outcome`` is a binary success (the action did something *and* any postcondition
 held), ``process_score`` is a 0..1 quality from the effect class (halved if the postcondition
-failed). ``to_judge_prompt`` renders the record for an external judge.
+failed). An effect other than ``no_op`` / ``changed`` / ``changed_near_target`` /
+``changed_elsewhere`` raises ``ValueError``. ``to_judge_prompt`` renders the record for an external judge.
 
 Executor commands
 -----------------

@@ -37,6 +37,30 @@ from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 _EXIT_GRACE_S = 10.0
 
 
+class CallWorker(QObject):
+    """Runs one callable off the GUI thread and reports the outcome.
+
+    For :func:`start_worker`: ``finished`` carries the return value and
+    ``failed`` the error text.
+    """
+
+    finished = Signal(object)
+    failed = Signal(str)
+
+    def __init__(self, fn: Callable[[], Any]) -> None:
+        super().__init__()
+        self._fn = fn
+
+    def run(self) -> None:
+        """Call the function; emit ``finished`` with its result or ``failed`` with the error."""
+        try:
+            result = self._fn()
+        except Exception as error:  # noqa: BLE001  # pylint: disable=broad-except  # reason: surface any backend/transport error to the status line
+            self.failed.emit(str(error))
+            return
+        self.finished.emit(result)
+
+
 class WorkerHandle:
     """A started worker: running until its thread has returned from ``run()``."""
 

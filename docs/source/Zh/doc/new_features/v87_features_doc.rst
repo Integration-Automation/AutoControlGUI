@@ -22,8 +22,10 @@ RFC 8288 Link 標頭與分頁
     # 透過注入的 fetch(傳輸 / 卡帶)走訪每一頁:
     pages = paginate(start_url, fetch, max_pages=50)
 
-``parse_link_header`` 回傳 ``Link`` 清單(``uri``、``rel`` 與所有 ``params``),容許含逗號的引號值與單一
-標頭中的多個連結。``links_by_rel`` 依每個(以空白分隔的)關係索引,``next_url`` 是 ``rel="next"`` 的便利
+``parse_link_header`` 回傳 ``Link`` 清單(``uri``、``rel`` 與所有 ``params``),以 RFC 8288 附錄 B 的演算法讀取標頭:
+引號值保留其中的逗號、分號與跳脫字元，未加引號的值一直到下一個 ``;`` 或 ``,`` 為止(所以 ``title=x<y`` 不會吞掉後面的連結),
+沒有值的參數是 ``""``,同名參數以第一次出現為準，遇到第一個不是以 ``<`` 開頭的元素就停止解析。
+``links_by_rel`` 依每個關係(以空格與 tab 分隔)索引,``next_url`` 是 ``rel="next"`` 的便利
 函式,``paginate`` 抓取一個 URL 並透過提供的 ``fetch`` callable 跟隨 ``next`` 連結,上限為 ``max_pages``。
 
 執行器命令

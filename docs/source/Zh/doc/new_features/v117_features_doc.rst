@@ -26,7 +26,7 @@
     #  {'op': 'key', 'key': 'delete'},
     #  {'op': 'type', 'text': 'hi'}]
 
-``clear`` 為 ``"select_all"``(``modifier``+A 再 Delete 的清空)或 ``"none"``。``paste=True`` 透過剪貼簿
+``clear`` 為 ``"select_all"``(``modifier``+A 再 Delete 的清空;macOS 的按鍵表沒有 Delete,改用 Backspace)或 ``"none"``。``paste=True`` 透過剪貼簿
 (``modifier``+V)輸入文字——這是 ``write`` 無法輸入之 Unicode / emoji / CJK 的可靠途徑——而非逐鍵輸入。
 ``modifier`` 為平台指令鍵(``"ctrl"``;macOS 用 ``"command"``)。未知的 ``clear`` 模式會拋出 ``ValueError``。
 

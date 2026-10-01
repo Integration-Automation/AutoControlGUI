@@ -45,5 +45,6 @@
 
 用於按住-放開組合鍵與重複輸入的宣告式迷你語言:動作 op(``press`` /
 ``release`` / ``key`` / ``click`` / ``move`` / ``scroll``)加上控制 op
-``{op: wait, ms}`` 與 ``{op: repeat, times, steps:[...]}``。回傳攤平後的
+``{op: wait, ms}`` 與 ``{op: repeat, times, steps:[...]}``。沒有 ``x`` / ``y`` 的 ``click`` 在指標所在處點擊;
+``move`` 兩者都要有。負的 ``wait`` 視為 0,非有限值丟出 ``ValueError``。回傳攤平後的
 執行記錄。對應 ``AC_input_sequence`` / ``ac_input_sequence``。

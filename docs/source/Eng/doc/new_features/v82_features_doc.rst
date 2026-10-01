@@ -30,7 +30,8 @@ diverge). ``ks_two_sample`` returns the maximum empirical-CDF gap and a p-value
 from the Kolmogorov distribution. ``categorical_drift`` compares label
 frequencies via a chi-square statistic and the total-variation distance.
 ``detect_drift`` wraps the numeric path into one report with a ``drifted``
-verdict at ``threshold`` (default ``0.25``).
+verdict at ``threshold`` (default ``0.25``). A NaN in either numeric sample raises
+``ValueError`` naming its index: drop or impute missing values first.
 
 Executor commands
 -----------------

@@ -40,7 +40,8 @@ Rubric 鍵                        意義
     assert result["passed"]            # 所有適用的檢查都通過
     print(result["score"], result["checks"])
 
-``score`` 為通過的適用檢查佔比;``passed`` 僅在全部通過時為真;空 rubric 直接通過。
+``score`` 為通過的適用檢查佔比;``passed`` 僅在全部通過時為真;空 rubric 直接通過。rubric 不是物件,或含有未知的鍵(``"forbiden_actions"``)
+時丟出 ``ValueError``,而不是在沒有任何檢查的情況下通過。
 ``checks`` 中每個項目為 ``{name, passed, detail}``,因此失敗時可精準指出被違反的期望。
 
 執行器指令

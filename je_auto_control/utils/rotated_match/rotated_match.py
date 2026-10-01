@@ -19,8 +19,9 @@ from dataclasses import asdict, dataclass
 from typing import Any, Dict, List, Optional, Sequence
 
 from je_auto_control.utils.visual_match.visual_match import (
-    _contain_cv2_error, _haystack_gray_with_origin, _method, _nms,
-    _reject_flat_template, _resize, _to_gray, _to_screen,
+    _NMS_CANDIDATE_FACTOR, _NMS_CANDIDATE_MIN, _contain_cv2_error,
+    _haystack_gray_with_origin, _method, _nms, _reject_flat_template, _resize,
+    _to_gray, _to_screen,
 )
 
 ImageSource = Any
@@ -86,8 +87,8 @@ def scale_space(min_scale: float = 0.8, max_scale: float = 1.25,
             for s in np.linspace(float(min_scale), float(max_scale), int(steps))]
 
 
-def _best_at(hay, tmpl, scale: float, angle: float, metric: int):
-    """Return the best ``RotatedMatch`` for one (scale, angle), or ``None``."""
+def _scores_at(hay, tmpl, scale: float, angle: float, metric: int):
+    """The score map (higher is better) for one (scale, angle) and the warped size, or ``None``."""
     import cv2
     import numpy as np
     warped, mask = _rotate_with_mask(_resize(tmpl, float(scale)), float(angle))
@@ -97,17 +98,47 @@ def _best_at(hay, tmpl, scale: float, angle: float, metric: int):
     if metric == cv2.TM_SQDIFF_NORMED:
         scores = 1.0 - scores  # lower is better for sqdiff; the maximum was the worst spot
     # Masked correlation over a flat window divides by zero.
-    scores = np.nan_to_num(scores, nan=-1.0, posinf=-1.0, neginf=-1.0)
+    return np.nan_to_num(scores, nan=-1.0, posinf=-1.0, neginf=-1.0), warped.shape[1], warped.shape[0]
+
+
+def _best_at(hay, tmpl, scale: float, angle: float, metric: int):
+    """Return the best ``RotatedMatch`` for one (scale, angle), or ``None``."""
+    import cv2
+    found = _scores_at(hay, tmpl, scale, angle, metric)
+    if found is None:
+        return None
+    scores, width, height = found
     _, max_val, _, max_loc = cv2.minMaxLoc(scores)
-    return RotatedMatch(int(max_loc[0]), int(max_loc[1]), warped.shape[1],
-                        warped.shape[0], round(float(max_val), 4),
-                        float(scale), float(angle))
+    return RotatedMatch(int(max_loc[0]), int(max_loc[1]), width, height,
+                        round(float(max_val), 4), float(scale), float(angle))
+
+
+def _hits_at(hay, tmpl, scale: float, angle: float, metric: int,
+             min_score: float, cap: int) -> List[RotatedMatch]:
+    """Every position of one (scale, angle) scoring >= ``min_score``, the best ``cap`` of them.
+
+    ``match_rotated_all`` kept only each pose's single peak, so three copies of
+    a button on screen came back as one.
+    """
+    import numpy as np
+    found = _scores_at(hay, tmpl, scale, angle, metric)
+    if found is None:
+        return []
+    scores, width, height = found
+    ys, xs = np.nonzero(scores >= float(min_score))
+    values = scores[ys, xs]
+    if values.size > cap:
+        top = np.argpartition(values, values.size - cap)[-cap:]
+        xs, ys, values = xs[top], ys[top], values[top]
+    return [RotatedMatch(int(x), int(y), width, height, round(float(value), 4),
+                         float(scale), float(angle)) for x, y, value in zip(xs, ys, values)]
 
 
 def _sweep(template: ImageSource, haystack: Optional[ImageSource],
            region: Optional[Sequence[int]], scales: Sequence[float],
-           angles: Sequence[float], method: str) -> List[RotatedMatch]:
-    """Correlate every (scale, angle) candidate and return them all."""
+           angles: Sequence[float], method: str,
+           min_score: Optional[float] = None, cap: int = 0) -> List[RotatedMatch]:
+    """Correlate every (scale, angle): each pose's best, or with ``min_score`` all its hits."""
     tmpl = _to_gray(template)
     _reject_flat_template(tmpl)
     hay, origin_x, origin_y = _haystack_gray_with_origin(haystack, region)
@@ -115,10 +146,13 @@ def _sweep(template: ImageSource, haystack: Optional[ImageSource],
     found: List[RotatedMatch] = []
     for scale in scales:
         for angle in angles:
+            if min_score is not None:
+                found.extend(_hits_at(hay, tmpl, scale, angle, metric, min_score, cap))
+                continue
             candidate = _best_at(hay, tmpl, scale, angle, metric)
             if candidate is not None:
-                found.append(_to_screen(candidate, origin_x, origin_y))
-    return found
+                found.append(candidate)
+    return [_to_screen(candidate, origin_x, origin_y) for candidate in found]
 
 
 @_contain_cv2_error
@@ -155,6 +189,7 @@ def match_rotated_all(template: ImageSource, *,
     non-maximum suppression (highest score kept), ordered by score and capped at
     ``max_results``.
     """
-    hits = [c for c in _sweep(template, haystack, region, scales, angles, method)
-            if c.score >= min_score]
+    cap = max(int(max_results) * _NMS_CANDIDATE_FACTOR, _NMS_CANDIDATE_MIN)
+    hits = _sweep(template, haystack, region, scales, angles, method,
+                  min_score=float(min_score), cap=cap)
     return _nms(hits, float(nms_iou))[:int(max_results)]

@@ -34,7 +34,8 @@ Headless API
     cofailure_pairs(runs, threshold=0.6)
     # [{"tests": ["test_a", "test_b"], "jaccard": 1.0, "co_failures": 3}]
 
-``threshold`` is the minimum co-failure Jaccard to link two tests; ``min_size``
+``threshold`` is the minimum co-failure Jaccard to link two tests, which must also
+have failed together at least once; a run given as one string is one test. ``min_size``
 (default ``2``) drops singletons so only genuine clusters surface. Clusters come
 back largest / most cohesive first.
 

@@ -30,7 +30,7 @@
     cofailure_pairs(runs, threshold=0.6)
     # [{"tests": ["test_a", "test_b"], "jaccard": 1.0, "co_failures": 3}]
 
-``threshold`` 是連結兩測試所需的最小共同失敗 Jaccard;``min_size``(預設 ``2``)會丟棄單例,
+``threshold`` 是連結兩測試所需的最小共同失敗 Jaccard,兩者也必須至少一起失敗過一次;以單一字串給出的一次執行視為一個測試。``min_size``(預設 ``2``)會丟棄單例,
 讓只有真正的群集浮現。群集以最大 / 最凝聚者在前回傳。
 
 執行器指令

@@ -74,7 +74,8 @@ Flow control & variables
   assertion DSL.
 * **Read into a variable** — bind external data into the flow scope for
   later ``${var}`` use: ``AC_ocr_to_var`` (region text), ``AC_shell_to_var``
-  (command stdout, decoded with ``encoding`` -- default the locale's; a
+  (command stdout, decoded with ``encoding`` -- default the locale's code
+  page, also under Python 3.15's UTF-8 mode; a
   timeout ends the command and everything it started, and a ``.bat`` /
   ``.cmd`` argument holding cmd syntax is refused), ``AC_read_file_to_var``
   (file text; UTF-8 with or without a byte-order mark unless ``encoding``

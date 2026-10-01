@@ -43,7 +43,9 @@ Headless API
     print(result["score"], result["checks"])
 
 ``score`` is the fraction of applicable checks that passed; ``passed`` is true
-only when all pass; an empty rubric trivially passes. Each entry in ``checks``
+only when all pass; an empty rubric trivially passes. A rubric that is not an
+object, or that has an unknown key (``"forbiden_actions"``), raises ``ValueError``
+rather than passing with no checks. Each entry in ``checks``
 is ``{name, passed, detail}`` so a failure pinpoints the violated expectation.
 
 Executor command

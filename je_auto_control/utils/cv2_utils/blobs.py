@@ -5,16 +5,20 @@ an image into a binary mask and then need the bounding boxes of the connected
 blobs. OpenCV + NumPy come in via ``je_open_cv`` and are imported lazily. Imports
 no ``PySide6``.
 """
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Tuple
 
 
-def connected_boxes(mask, min_area: int = 1) -> List[Dict[str, Any]]:
+def connected_boxes(mask, min_area: int = 1, *,
+                    origin: Tuple[int, int] = (0, 0)) -> List[Dict[str, Any]]:
     """Return ``{x, y, width, height, area, center}`` per blob, largest first.
 
     ``mask`` is a uint8 binary image (non-zero = foreground). Components whose
     area is below ``min_area`` are dropped; ``center`` is the component centroid
     (truncated to int). Uses 8-connectivity; the background label (0) is skipped.
+    ``origin`` is the screen position of the mask's top-left pixel, added to
+    every box and centre.
     """
+    origin_x, origin_y = (int(value) for value in origin)
     import cv2
     count, _labels, stats, centroids = cv2.connectedComponentsWithStats(
         mask, connectivity=8)
@@ -23,7 +27,8 @@ def connected_boxes(mask, min_area: int = 1) -> List[Dict[str, Any]]:
         x, y, width, height, area = (int(v) for v in stats[index])
         if area >= int(min_area):
             cx, cy = centroids[index]
-            boxes.append({"x": x, "y": y, "width": width, "height": height,
-                          "area": area, "center": [int(cx), int(cy)]})
+            boxes.append({"x": x + origin_x, "y": y + origin_y, "width": width,
+                          "height": height, "area": area,
+                          "center": [int(cx) + origin_x, int(cy) + origin_y]})
     boxes.sort(key=lambda item: item["area"], reverse=True)
     return boxes

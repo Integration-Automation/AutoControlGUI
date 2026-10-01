@@ -4,6 +4,7 @@ Several stores (asset store, approval gate, …) persist a single JSON dict to
 disk with identical boilerplate; this centralises it so they don't duplicate the
 load/flush logic. Pure standard library; imports no ``PySide6``.
 """
+import copy
 import json
 import os
 import tempfile
@@ -202,9 +203,15 @@ class SharedJsonDict:
         return _read_json_object(path) if self._strict else read_json_dict(path)
 
     def read(self) -> Dict[str, Any]:
-        """Return the current contents (a fresh copy when file-backed)."""
+        """Return the current contents, always a copy the caller may keep.
+
+        In memory the live dict was returned outside the lock, so a reader
+        iterating it while another thread updated it raised "dictionary
+        changed size during iteration".
+        """
         if self._path is None:
-            return self._memory
+            with self._memory_lock:
+                return copy.deepcopy(self._memory)
         return self._load(self._path)
 
     def update(self, mutate: Callable[[Dict[str, Any]], _Result]) -> _Result:

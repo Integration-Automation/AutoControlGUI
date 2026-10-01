@@ -29,7 +29,8 @@ Headless API
 
 ``match_subpixel`` returns a ``SubPixelMatch`` (integer ``x`` / ``y`` / ``width`` / ``height`` /
 ``score`` plus float ``cx`` / ``cy`` and the ``offset_x`` / ``offset_y`` applied), or ``None``
-below ``min_score``. ``refine_peak`` returns the ``[-0.5, 0.5]`` quadratic-fit offset of a peak
+below ``min_score``. ``cx`` is the matched box's centre in pixel indices, ``x + (width - 1) / 2``,
+plus the offset. 16-bit and float images are matched in 8 bits. ``refine_peak`` returns the ``[-0.5, 0.5]`` quadratic-fit offset of a peak
 from its neighbours — usable on any correlation surface.
 
 Executor command

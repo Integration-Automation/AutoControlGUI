@@ -87,6 +87,25 @@ def _collect_checks(trajectory: Sequence[Mapping[str, Any]],
     return checks
 
 
+#: The checks a rubric can ask for.
+RUBRIC_KEYS = frozenset({"required_actions", "ordered", "forbidden_actions", "max_steps",
+                         "success_contains"})
+
+
+def _checked_rubric(rubric: Any) -> Mapping[str, Any]:
+    """``rubric`` if it is a mapping of known checks; ``ValueError`` otherwise.
+
+    A list rubric, or a misspelt key (``"forbiden_actions"``), made no checks,
+    and an empty check list passed with a perfect score.
+    """
+    if not isinstance(rubric, Mapping):
+        raise ValueError(f"rubric must be an object, got {type(rubric).__name__}")
+    unknown = sorted(set(map(str, rubric)) - RUBRIC_KEYS)
+    if unknown:
+        raise ValueError(f"unknown rubric keys {unknown}; expected some of {sorted(RUBRIC_KEYS)}")
+    return rubric
+
+
 def evaluate_trajectory(trajectory: Sequence[Mapping[str, Any]],
                         rubric: Mapping[str, Any]) -> Dict[str, Any]:
     """Score ``trajectory`` against ``rubric``; return passed/score/checks.
@@ -96,7 +115,7 @@ def evaluate_trajectory(trajectory: Sequence[Mapping[str, Any]],
     passes with a score of ``1.0``.
     """
     actions = _actions(trajectory)
-    checks = _collect_checks(trajectory, actions, rubric)
+    checks = _collect_checks(trajectory, actions, _checked_rubric(rubric))
     passed_count = sum(1 for check in checks if check["passed"])
     score = 1.0 if not checks else passed_count / len(checks)
     return {

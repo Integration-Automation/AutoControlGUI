@@ -31,7 +31,9 @@ Headless API
 ``val_min`` floor to skip greys, returning ``{x, y, width, height, area, center}`` per
 blob largest first — so it finds a colour at any brightness, unlike the RGB box.
 ``segment_hsv`` takes an explicit ``lower_hsv`` / ``upper_hsv`` band; ``color_mask``
-returns the raw uint8 mask.
+returns the raw uint8 mask. ``region`` is ``[left, top, right, bottom]`` on any
+monitor, and blobs found in it are in screen coordinates; blobs in a supplied
+``haystack`` are in that image's pixels.
 
 Executor commands
 -----------------

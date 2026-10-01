@@ -13,6 +13,7 @@ import time
 from typing import Any, Dict, Optional
 
 from je_auto_control.utils.executor.action_redaction import SENSITIVE_ARGUMENT_NAMES, redact_actions
+from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 
 
 class AuditLogger:
@@ -54,9 +55,15 @@ class AuditLogger:
         if artifact_path is not None:
             entry["artifact_path"] = artifact_path
         line = json.dumps(entry, ensure_ascii=False, default=str)
-        with self._lock:
-            with open(self._path, "a", encoding="utf-8") as handle:
-                handle.write(line + "\n")
+        try:
+            with self._lock:
+                with open(self._path, "a", encoding="utf-8") as handle:
+                    handle.write(line + "\n")
+        except OSError as error:
+            # Recorded after the tool ran: raising here turned a click that
+            # happened into an internal error, inviting a retry, and put the
+            # log's absolute path in the reply.
+            autocontrol_logger.warning("MCP audit log not written (%s): %r", tool, error)
 
 
 REDACTED_KEYS = SENSITIVE_ARGUMENT_NAMES

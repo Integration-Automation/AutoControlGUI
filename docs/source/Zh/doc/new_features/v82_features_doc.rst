@@ -25,7 +25,8 @@ Kolmogorov-Smirnov 雙樣本檢定來做經典的「今天的資料形狀是否�
 ``psi`` 以 ``reference`` 的分位邊界將 ``current`` 分箱,並加總每箱的 log-ratio 貢獻(分布相同為 0,
 分歧越大值越大)。``ks_two_sample`` 回傳最大經驗 CDF 差距與 Kolmogorov 分布的 p 值。``categorical_drift``
 以卡方統計量與 total-variation 距離比較類別頻率。``detect_drift`` 把數值路徑包成一份報告,並以 ``threshold``
-(預設 ``0.25``)給出 ``drifted`` 判定。
+(預設 ``0.25``)給出 ``drifted`` 判定。任一數值樣本含 NaN 時丟出指明索引的 ``ValueError``:
+請先移除或補值。
 
 執行器命令
 ----------

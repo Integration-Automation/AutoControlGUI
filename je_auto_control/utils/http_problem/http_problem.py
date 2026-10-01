@@ -54,10 +54,14 @@ class ProblemDetails:
 
 
 def is_problem(headers: Optional[Mapping[str, Any]]) -> bool:
-    """Whether ``headers`` advertise an ``application/problem+json`` body."""
+    """Whether ``headers`` advertise an ``application/problem+json`` body.
+
+    The media type is compared, not searched for: ``text/plain;
+    note=application/problem+json`` matched as a substring.
+    """
     for key, value in (headers or {}).items():
         if str(key).lower() == "content-type":
-            return _PROBLEM_MEDIA_TYPE in str(value).lower()
+            return str(value).split(";", 1)[0].strip().lower() == _PROBLEM_MEDIA_TYPE
     return False
 
 

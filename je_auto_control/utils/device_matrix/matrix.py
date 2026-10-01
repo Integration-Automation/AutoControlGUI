@@ -113,6 +113,11 @@ def run_on_devices(actions: List[Any],
         raise ValueError("devices must be a non-empty list of device specs")
     if not isinstance(actions, list):
         raise ValueError("actions must be a list")
+    bad = [index for index, device in enumerate(devices) if not isinstance(device, dict)]
+    if bad:
+        # Checked before any device runs: one string spec raised AttributeError
+        # after earlier devices had run, and their results were lost.
+        raise ValueError(f"device specs must be objects; not at index {bad}")
     workers = max(1, min(int(max_parallel), len(devices)))
     report = MatrixReport()
     with ThreadPoolExecutor(max_workers=workers) as pool:

@@ -33,9 +33,45 @@ class SearchHit:
     score: float
 
 
+# Scripts written without spaces: kana, CJK ideographs, Hangul syllables.
+_CJK_RANGES = ((0x3040, 0x30FF), (0x3400, 0x4DBF), (0x4E00, 0x9FFF),
+               (0xAC00, 0xD7AF), (0xF900, 0xFAFF))
+
+
+def _is_cjk(char: str) -> bool:
+    code = ord(char)
+    return any(low <= code <= high for low, high in _CJK_RANGES)
+
+
+def _split_cjk(token: str) -> List[str]:
+    """Other runs stay whole; a CJK run becomes its character bigrams (one character stays itself).
+
+    Written without spaces, a whole sentence was one term, so a word inside
+    it ("登入" in "請先登入系統") was never found.
+    """
+    pieces: List[str] = []
+    run = ""
+    for char in token:
+        if run and _is_cjk(char) != _is_cjk(run[-1]):
+            pieces.extend(_run_terms(run))
+            run = ""
+        run += char
+    if run:
+        pieces.extend(_run_terms(run))
+    return pieces
+
+
+def _run_terms(run: str) -> List[str]:
+    return _bigrams(run) if _is_cjk(run[-1]) else [run]
+
+
+def _bigrams(run: str) -> List[str]:
+    return [run] if len(run) < 2 else [run[index:index + 2] for index in range(len(run) - 1)]
+
+
 def tokenize(text: str) -> List[str]:
-    """Case-fold and split ``text`` into alphanumeric terms (any script)."""
-    return _TOKEN_RE.findall(str(text).casefold())
+    """Case-fold and split ``text`` into terms (any script; CJK runs as bigrams)."""
+    return [piece for token in _TOKEN_RE.findall(str(text).casefold()) for piece in _split_cjk(token)]
 
 
 class SearchIndex:
@@ -114,7 +150,9 @@ class SearchIndex:
             freq = postings.get(doc_id)
             if not freq:
                 continue
-            score += (1 + math.log(freq)) * math.log(total / len(postings))
+            # Smoothed: log(N/df) is 0 for a term every document has, and the
+            # score > 0 filter then dropped every match.
+            score += (1 + math.log(freq)) * (math.log(total / len(postings)) + 1.0)
         return score
 
     def search(self, query: str, *, top_k: int = 10,
@@ -128,7 +166,7 @@ class SearchIndex:
         scorer = self._tfidf if mode == "tfidf" else self._bm25
         ranked = ((doc_id, scorer(terms, doc_id, avgdl)) for doc_id in candidates)
         hits = [(doc_id, score) for doc_id, score in ranked if score > 0]
-        hits.sort(key=lambda item: (-item[1], item[0]))
+        hits.sort(key=lambda item: (-item[1], str(item[0])))   # ids may mix types
         return [SearchHit(doc_id=doc_id, score=round(score, 6))
                 for doc_id, score in hits[:top_k]]
 

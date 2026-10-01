@@ -27,7 +27,12 @@ def _is_number(value: Any) -> bool:
 
 
 def _infer_type(non_null: Sequence[Any]) -> str:
-    if not non_null:
+    """``int`` / ``number`` / ``bool`` / ``str``, or ``mixed`` when no one type holds.
+
+    A mixed column (``30``, ``"unknown"``, ``41``) read as ``str``, so the
+    inferred schema rejected the very rows it was inferred from.
+    """
+    if not non_null or all(isinstance(value, str) for value in non_null):
         return "str"
     if all(_is_int(value) for value in non_null):
         return "int"
@@ -35,7 +40,15 @@ def _infer_type(non_null: Sequence[Any]) -> str:
         return "number"
     if all(isinstance(value, bool) for value in non_null):
         return "bool"
-    return "str"
+    return "mixed"
+
+
+def _as_float(value: Any) -> float:
+    """``float(value)``, with an int past the float range as a signed infinity."""
+    try:
+        return float(value)
+    except OverflowError:
+        return math.inf if value > 0 else -math.inf
 
 
 def _numeric_summary(kind: str, non_null: Sequence[Any]) -> Dict[str, Any]:
@@ -46,12 +59,29 @@ def _numeric_summary(kind: str, non_null: Sequence[Any]) -> Dict[str, Any]:
     """
     if kind not in ("int", "number") or not non_null:
         return {}
-    finite = [float(value) for value in non_null if math.isfinite(float(value))]
+    if kind == "int":
+        return _int_summary(non_null)
+    finite = [value for value in map(_as_float, non_null) if math.isfinite(value)]
     summary: Dict[str, Any] = {"min": None, "max": None, "mean": None,
                                "non_finite": len(non_null) - len(finite)}
     if finite:
-        summary.update(min=min(finite), max=max(finite), mean=math.fsum(finite) / len(finite))
+        # Each term divided first: fsum of two 1e308 overflowed and aborted the profile.
+        mean = math.fsum(value / len(finite) for value in finite)
+        summary.update(min=min(finite), max=max(finite), mean=mean)
     return summary
+
+
+def _int_summary(values: Sequence[int]) -> Dict[str, Any]:
+    """Exact ``min`` / ``max`` of an int column; ``mean`` is ``None`` past the float range.
+
+    Through ``float`` the bounds rounded past 2**53 and overflowed past 1e308,
+    so the inferred schema rejected the column's own largest values.
+    """
+    try:
+        mean: Optional[float] = sum(values) / len(values)
+    except OverflowError:
+        mean = None
+    return {"min": min(values), "max": max(values), "mean": mean, "non_finite": 0}
 
 
 def _column_profile(name: str, rows: List[Dict[str, Any]]) -> Dict[str, Any]:
@@ -59,8 +89,10 @@ def _column_profile(name: str, rows: List[Dict[str, Any]]) -> Dict[str, Any]:
     non_null = [value for value in values if value not in _NULLS]
     null_count = len(values) - len(non_null)
     kind = _infer_type(non_null)
-    distinct = len({_hashable(value) for value in non_null})
-    top = Counter(_hashable(value) for value in non_null).most_common(_TOP_N)
+    counts = Counter(_hashable(value) for value in non_null)
+    distinct = len(counts)
+    top = [(key[1] if isinstance(key, tuple) else key, count)
+           for key, count in counts.most_common(_TOP_N)]
     profile = {
         "count": len(values), "null_count": null_count,
         "null_fraction": (null_count / len(values)) if values else 0.0,
@@ -75,7 +107,10 @@ def _column_profile(name: str, rows: List[Dict[str, Any]]) -> Dict[str, Any]:
 
 
 def _hashable(value: Any) -> Any:
-    return value if isinstance(value, (str, int, float, bool)) else repr(value)
+    """A counting key; ``True`` is kept apart from ``1``, which it equals and hashes as."""
+    if isinstance(value, bool):
+        return ("bool", value)
+    return value if isinstance(value, (str, int, float)) else repr(value)
 
 
 def _column_names(rows: List[Dict[str, Any]],
@@ -106,17 +141,22 @@ def infer_schema(rows: List[Dict[str, Any]],
     """Infer a ``validate_rows``-compatible schema from observed ``rows``.
 
     A column is ``required`` when it has no nulls, ``unique`` when every
-    non-null value is distinct, and carries numeric ``min``/``max`` bounds.
+    non-null value is distinct, and carries numeric ``min``/``max`` bounds
+    over its finite values (so an ``inf`` or ``NaN`` fails them). A ``mixed``
+    column has no ``type`` rule.
     """
     profile = profile_rows(rows, columns)
     schema: Dict[str, Any] = {}
     for name, column in profile["columns"].items():
-        rule: Dict[str, Any] = {"type": column["inferred_type"]}
+        rule: Dict[str, Any] = {}
+        if column["inferred_type"] != "mixed":
+            rule["type"] = column["inferred_type"]
         if column["null_count"] == 0 and column["count"] > 0:
             rule["required"] = True
         if column.get("unique"):
             rule["unique"] = True
-        if "min" in column:
+        # A column with no finite value has bounds of None, which crashed validate_rows.
+        if column.get("min") is not None:
             rule["min"] = column["min"]
             rule["max"] = column["max"]
         schema[name] = rule

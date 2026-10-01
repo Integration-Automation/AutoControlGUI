@@ -11,14 +11,15 @@ Two ways to call:
        je_auto_control.web_screenshot("loaded.png")
        je_auto_control.web_quit()
 
-2. Bridge mode — any of WebRunner's ~440 ``WR_*`` commands by name,
+2. Bridge mode — any of WebRunner's ``WR_*`` commands by name,
    so JSON action files (and the scheduler / triggers / MCP) can
    compose browser actions with native UI automation::
 
        je_auto_control.execute_action([
            ["AC_web_open", {"url": "https://example.com"}],
-           ["AC_web_run", {"action": "WR_left_click",
-                             "params": {"element_name": "#submit"}}],
+           ["AC_web_run", {"action": "WR_find_element_by",
+                           "params": {"selector": "#submit"}}],
+           ["AC_web_run", {"action": "WR_element_click"}],
            ["AC_screenshot", {"file_path": "after-click.png"}],
            ["AC_web_quit", {}],
        ])

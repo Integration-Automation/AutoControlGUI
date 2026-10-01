@@ -121,11 +121,8 @@ def _text_of(element: Any) -> str:
 
 
 def _bounds_of(element: Any) -> List[int]:
-    if isinstance(element, dict):
-        raw = element.get("bbox") or element.get("bounds") or []
-    else:
-        raw = getattr(element, "bounds", []) or []
-    return list(raw)
+    from je_auto_control.utils.accessibility.element import element_box
+    return list(element_box(element) or [])
 
 
 def check_overflow(elements: List[Any], *,

@@ -17,6 +17,8 @@ Imports no ``PySide6``.
 import math
 from typing import Any, Callable, Dict, Optional, Sequence
 
+from je_auto_control.utils.visual_match.visual_match import _contain_cv2_error
+
 ImageSource = Any
 _INTERP = ("nearest", "linear", "cubic", "lanczos")
 
@@ -51,25 +53,67 @@ def _to_array(source: ImageSource):
 
 def _resolve(haystack: Optional[ImageSource], region: Optional[Sequence[int]]):
     if haystack is not None:
-        return _to_array(haystack)
-    from je_auto_control.utils.cv2_utils.screenshot import pil_screenshot
-    return _pil_to_bgr(pil_screenshot(screen_region=list(region) if region else None))
+        return _as_uint8(_to_array(haystack))
+    from je_auto_control.utils.cv2_utils.region_capture import grab_screen_region
+    return _pil_to_bgr(grab_screen_region(region))
+
+
+def _eight_bit(source: Any) -> Any:
+    """A 16-bit, 32-bit or float image (PIL or ndarray) as 8 bits; anything else unchanged.
+
+    ``convert()`` clips PIL's ``I;16`` / ``I`` / ``F`` modes to 0..255, so a
+    16-bit screenshot read as black and white and a 0..1 float image as black;
+    OpenCV rejects most non-uint8 arrays outright.
+    """
+    import numpy as np
+    if hasattr(source, "dtype"):
+        return _as_uint8(np.asarray(source))
+    mode = getattr(source, "mode", None)
+    if not isinstance(mode, str) or (mode not in ("I", "F") and not mode.startswith("I;16")):
+        return source
+    from PIL import Image
+    array = np.asarray(source)
+    if array.dtype.kind in "iu" and array.size and array.max() > 255:
+        array = np.clip(array, 0, 65535).astype(np.uint16)
+    return Image.fromarray(_as_uint8(array))
+
+
+def _as_uint8(array):
+    """``array`` as uint8, which every step assumes.
+
+    A 16-bit PNG stayed 16-bit: Otsu then wrote 0 and 255 into a uint16 image,
+    which is black, and adaptive thresholding raised. Floats are taken as 0..1
+    when they fit there, else as 0..255.
+    """
+    import numpy as np
+    if array.dtype == np.uint8:
+        return array
+    if array.dtype == np.uint16:
+        return (array >> 8).astype(np.uint8)
+    values = np.nan_to_num(np.asarray(array, dtype="float64"))
+    if np.issubdtype(array.dtype, np.floating) and values.size and values.max() <= 1.0:
+        values = values * 255.0
+    return np.clip(np.rint(values), 0, 255).astype(np.uint8)
 
 
 def _gray(array):
     import cv2
+    if array.ndim == 3 and array.shape[2] == 1:
+        array = array[:, :, 0]
     if array.ndim == 2:
         return array
     code = cv2.COLOR_BGRA2GRAY if array.shape[2] == 4 else cv2.COLOR_BGR2GRAY
     return cv2.cvtColor(array, code)
 
 
+@_contain_cv2_error
 def to_grayscale(haystack: Optional[ImageSource] = None, *,
                  region: Optional[Sequence[int]] = None):
     """Return the image as a single-channel grayscale ndarray."""
     return _gray(_resolve(haystack, region))
 
 
+@_contain_cv2_error
 def upscale(haystack: Optional[ImageSource] = None, *,
             region: Optional[Sequence[int]] = None, scale: float = 2.0,
             interp: str = "cubic"):
@@ -89,6 +133,7 @@ def upscale(haystack: Optional[ImageSource] = None, *,
     return cv2.resize(array, size, interpolation=table[interp])
 
 
+@_contain_cv2_error
 def binarize(haystack: Optional[ImageSource] = None, *,
              region: Optional[Sequence[int]] = None, method: str = "otsu",
              block_size: int = 31, c: int = 11):
@@ -104,10 +149,13 @@ def binarize(haystack: Optional[ImageSource] = None, *,
     if method not in table:
         raise ValueError(f"unknown method: {method!r}")
     block = int(block_size) | 1                      # adaptiveThreshold needs odd
+    if block < 3:
+        raise ValueError(f"block_size must be at least 3, got {block_size!r}")
     return cv2.adaptiveThreshold(gray, 255, table[method], cv2.THRESH_BINARY,
                                  block, int(c))
 
 
+@_contain_cv2_error
 def denoise(haystack: Optional[ImageSource] = None, *,
             region: Optional[Sequence[int]] = None, strength: int = 7):
     """Return a denoised grayscale image (non-local means)."""
@@ -116,16 +164,20 @@ def denoise(haystack: Optional[ImageSource] = None, *,
                                     float(strength), 7, 21)
 
 
+@_contain_cv2_error
 def enhance_contrast(haystack: Optional[ImageSource] = None, *,
                      region: Optional[Sequence[int]] = None, clip: float = 2.0,
                      grid: int = 8):
     """Return a CLAHE contrast-enhanced grayscale image (rescues dark/low-contrast UI)."""
     import cv2
+    if int(grid) < 1:
+        raise ValueError(f"grid must be at least 1, got {grid!r}")
     clahe = cv2.createCLAHE(clipLimit=float(clip),
                             tileGridSize=(int(grid), int(grid)))
     return clahe.apply(_gray(_resolve(haystack, region)))
 
 
+@_contain_cv2_error
 def detect_skew_angle(haystack: Optional[ImageSource] = None, *,
                       region: Optional[Sequence[int]] = None,
                       max_angle: float = 15.0) -> float:
@@ -147,6 +199,7 @@ def detect_skew_angle(haystack: Optional[ImageSource] = None, *,
     return round(float(angle), 3) if abs(angle) <= float(max_angle) else 0.0
 
 
+@_contain_cv2_error
 def deskew(haystack: Optional[ImageSource] = None, *,
            region: Optional[Sequence[int]] = None, max_angle: float = 15.0):
     """Return the image rotated to remove text skew (no-op when none is detected)."""
@@ -192,6 +245,7 @@ _STEPS: Dict[str, Callable[..., Any]] = {
 }
 
 
+@_contain_cv2_error
 def preprocess_image(haystack: Optional[ImageSource] = None, *,
                      region: Optional[Sequence[int]] = None,
                      steps: Sequence[str] = ("grayscale", "upscale", "binarize"),
@@ -204,6 +258,9 @@ def preprocess_image(haystack: Optional[ImageSource] = None, *,
     Unknown step names raise ``ValueError``.
     """
     array = _resolve(haystack, region)
+    if isinstance(steps, str):
+        # "deskew" was walked letter by letter: unknown step 'd'.
+        steps = [step.strip() for step in steps.split(",") if step.strip()]
     for step in steps:
         if step not in _STEPS:
             raise ValueError(f"unknown step: {step!r}")

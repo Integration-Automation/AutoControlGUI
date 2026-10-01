@@ -16,6 +16,8 @@ without rendering. Imports no ``PySide6``.
 """
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
+from je_auto_control.utils.accessibility.element import element_box
+
 Rect = Tuple[int, int, int, int]
 
 _BLACK = (0, 0, 0)
@@ -61,48 +63,68 @@ def _clamp_to_bounds(rect: Rect, bounds: Tuple[int, int]) -> Rect:
     return (x, y, w, h)
 
 
+def _allowed(rect: Rect, floor: Tuple[int, int], bounds: Optional[Tuple[int, int]]) -> bool:
+    """Whether ``rect`` is at or past ``floor`` and, when given, inside ``bounds``."""
+    if rect[0] < floor[0] or rect[1] < floor[1]:
+        return False
+    return bounds is None or _in_bounds(rect, bounds)
+
+
 def _pick_position(bbox: Sequence[int], label_w: int, label_h: int,
                    bounds: Optional[Tuple[int, int]],
                    placed: List[Rect]) -> Rect:
-    """Pick the first candidate that is in bounds and clears placed labels."""
+    """Pick the first candidate that is in bounds and clears placed labels.
+
+    Labels go below 0 only where their mark does: without bounds a mark at
+    y=0 got its label at y=-16, but a mark on a monitor left of or above the
+    primary one had its label clamped to 0, up to 1,500 px away.
+    """
+    floor = (min(0, bbox[0]), min(0, bbox[1]))
+    if bounds is not None and not _in_bounds((bbox[0], bbox[1], 1, 1), bounds):
+        bounds = None                # the mark itself is outside: keep the label beside it
     fallback: Optional[Rect] = None
     for cx, cy in _candidates(bbox, label_w, label_h):
         rect = (cx, cy, label_w, label_h)
         if fallback is None:
             fallback = rect
-        # Without bounds the screen still starts at 0: a mark at y=0 got its
-        # label at y=-16.
-        if cx < 0 or cy < 0 or (bounds is not None and not _in_bounds(rect, bounds)):
+        if not _allowed(rect, floor, bounds):
             continue
         if any(_overlap(rect, other) for other in placed):
             continue
         return rect
     start = fallback if fallback is not None else (0, 0, label_w, label_h)
-    return _free_spot(start, bounds, placed)
+    return _free_spot(start, floor, bounds, placed)
 
 
-def _free_spot(rect: Rect, bounds: Optional[Tuple[int, int]], placed: List[Rect]) -> Rect:
-    """Step ``rect`` down, then across, until it clears every placed label.
+def _ring(radius: int) -> List[Tuple[int, int]]:
+    """Grid steps at Chebyshev distance ``radius`` from the origin, nearest first."""
+    steps = [(dx, dy) for dx in range(-radius, radius + 1) for dy in range(-radius, radius + 1)
+             if max(abs(dx), abs(dy)) == radius]
+    return sorted(steps, key=lambda step: (abs(step[0]) + abs(step[1]), step[1], step[0]))
 
-    The fallback used to be clamped and returned as is, so crowded marks got
-    identical, overlapping labels.
+
+def _free_spot(rect: Rect, floor: Tuple[int, int], bounds: Optional[Tuple[int, int]],
+               placed: List[Rect]) -> Rect:
+    """The nearest label-sized step from ``rect``, in any direction, that is free and allowed.
+
+    The fallback only stepped down and then right: past the right edge it
+    returned the same out-of-bounds rect for every remaining mark, 1,000 px
+    from them and on top of each other.
     """
     x, y, w, h = rect
-    x, y = max(0, x), max(0, y)
+    x, y = max(floor[0], x), max(floor[1], y)
     if bounds is not None:
         x, y, w, h = _clamp_to_bounds((x, y, w, h), bounds)
-    for _ in range(_MAX_NUDGES):
-        if not any(_overlap((x, y, w, h), other) for other in placed):
-            break
-        y += h
-        if bounds is not None and y + h > bounds[1]:
-            x, y = x + w, 0
-            if x + w > bounds[0]:
-                break
+    for radius in range(_MAX_RINGS + 1):
+        for dx, dy in _ring(radius):
+            candidate = (x + dx * w, y + dy * h, w, h)
+            if _allowed(candidate, floor, bounds) and \
+                    not any(_overlap(candidate, other) for other in placed):
+                return candidate
     return (x, y, w, h)
 
 
-_MAX_NUDGES = 256
+_MAX_RINGS = 16
 
 
 def place_labels(marks: Sequence[Dict[str, Any]], *, label_width: int = 22,
@@ -121,7 +143,11 @@ def place_labels(marks: Sequence[Dict[str, Any]], *, label_width: int = 22,
     placed: List[Rect] = []
     results: List[Dict[str, Any]] = []
     for mark in marks:
-        bbox = [int(value) for value in mark["bbox"][:4]]
+        box = element_box(mark)
+        if box is None:
+            # {bounds: ...} and {x, y, width, height} marks raised KeyError('bbox').
+            raise ValueError(f"mark {mark.get('id')!r} has no bbox, bounds or x/y/width/height")
+        bbox = list(box)
         rect = _pick_position(bbox, size[0], size[1], limit, placed)
         placed.append(rect)
         results.append({"id": mark.get("id"), "label": list(rect),

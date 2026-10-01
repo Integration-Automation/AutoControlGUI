@@ -33,14 +33,25 @@ class PostconditionReport:
         return asdict(self)
 
 
+def _label(element: Element) -> str:
+    """An element's visible text: ``name`` (accessibility), else ``text`` (OCR) or ``value``.
+
+    Only ``name`` was read, so an OCR frame never satisfied ``text_present``.
+    """
+    for key in ("name", "text", "value"):
+        if element.get(key):
+            return str(element[key])
+    return ""
+
+
 def _matches(element: Element, criteria: Dict[str, Any]) -> bool:
     """Whether an element matches a ``{role?, name?, name_contains?}`` criteria dict."""
     if "role" in criteria and element.get("role") != criteria["role"]:
         return False
-    if "name" in criteria and element.get("name") != criteria["name"]:
+    if "name" in criteria and _label(element) != criteria["name"]:
         return False
     contains = criteria.get("name_contains")
-    return not contains or contains in str(element.get("name", ""))
+    return not contains or contains in _label(element)
 
 
 def _appears(after: Sequence[Element], before: Optional[Sequence[Element]],
@@ -78,7 +89,7 @@ def _disabled(after, before, param):
 
 
 def _text(after: Sequence[Element], text: Any, want_present: bool) -> Report:
-    found = any(str(text) in str(e.get("name", "")) for e in after)
+    found = any(str(text) in _label(e) for e in after)
     return found == want_present, "present" if found else "absent"
 
 

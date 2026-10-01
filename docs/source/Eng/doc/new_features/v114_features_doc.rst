@@ -35,8 +35,10 @@ Headless API
 ``ngettext`` evaluates the catalog's ``Plural-Forms`` expression (via
 ``gettext.c2py``) to pick the right form for ``n``; ``pgettext`` adds a
 disambiguation context. ``to_mo_bytes`` / ``compile_mo`` emit a standards-
-compliant ``.mo`` that Python's own ``gettext.GNUTranslations`` can load, and
-``read_mo`` / ``read_mo_file`` parse one back (little- or big-endian).
+compliant ``.mo`` that Python's own ``gettext.GNUTranslations`` can load,
+leaving out untranslated entries (an empty first ``msgstr``) and fuzzy ones as
+``msgfmt`` does, so every reader falls back to the ``msgid``; ``read_mo`` /
+``read_mo_file`` parse one back (little- or big-endian).
 
 Executor commands
 -----------------

@@ -23,7 +23,11 @@ compared value is a JSON number, a quoted string, ``true``, ``false`` or
 ``null``. Values of different types never compare equal (``true != 1``),
 and ``<`` / ``>`` order only two numbers or two strings (``<=`` is ``<`` or
 ``==``, so ``null <= null``). Quoted names and strings decode RFC 9535
-escapes (``['a\'b']`` is the key ``a'b``).
+escapes (``['a\'b']`` is the key ``a'b``, and ``["\uD83D\uDE00"]`` the
+one-character key it spells); an unpaired surrogate, a raw control character
+or the other kind of quote escaped raises. An index is an RFC 9535 integer:
+``[01]``, ``[-0]`` and indices past 2**53-1 raise, and ``..`` must be followed
+by a name, ``*`` or ``[...]``.
 A path the subset cannot read -- an unsupported filter or value, a slice
 (``[0:2]``) or union (``[0,1]``, ``['a','b']``), an empty ``[]``, an unterminated ``[``, a
 stray character -- raises ``ValueError`` instead of matching something else.

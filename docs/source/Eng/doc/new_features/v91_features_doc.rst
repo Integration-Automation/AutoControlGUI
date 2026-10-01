@@ -29,8 +29,18 @@ Headless API
 attributes}``. ``CookieJar.update`` applies one or many ``Set-Cookie`` headers
 (removing a cookie on ``Max-Age<=0`` or a past ``Expires``); ``set`` assigns
 directly; ``cookie_header`` builds the request header; ``to_dict`` / ``from_dict``
-and ``save`` / ``load`` persist the jar as JSON. (Domain/path matching is
-simplified — this is a session-carry jar, not a full RFC 6265 policy engine.)
+and ``save`` / ``load`` persist the jar as JSON.
+
+``Expires`` is read with the RFC 6265 5.1.1 cookie-date algorithm (two-digit
+years 70-99 are 19xx and 00-69 are 20xx; an unparseable date is ignored), a
+``Max-Age`` must be ASCII digits with an optional ``-``, and when an attribute
+repeats, the last *valid* one decides (``Max-Age`` over ``Expires``). A header
+with a control character other than tab is ignored whole.
+
+The jar ignores ``Domain``, ``Path`` and ``Secure``: every stored cookie goes
+into every ``Cookie`` header it builds. It is a session-carry jar, not an
+RFC 6265 policy engine, so keep **one jar per origin**; a shared jar sends one
+host's cookies to every other host the flow calls.
 
 Executor commands
 -----------------

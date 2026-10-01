@@ -30,7 +30,9 @@ _RUN_ACTIONS = ["ac_bulkhead_run", "ac_run_chaos", "ac_run_saga", "ac_skill_run"
 _SEND_INPUT = ["ac_input_sequence", "ac_element_click", "ac_set_field_text", "ac_type_unicode",
                "ac_post_key_to_window", "ac_drag_path"]
 _OUTWARD = ["ac_s3_delete", "ac_egress_allow", "ac_lease_secret", "ac_approval_approve",
-            "ac_remote_host_start", "ac_usb_acl_set_default", "ac_http_request", "ac_send_email"]
+            "ac_remote_host_start", "ac_usb_acl_set_default", "ac_http_request", "ac_send_email",
+            # Same effect as ac_egress_allow({}) / ac_approval_approve: they skipped the prompt.
+            "ac_egress_reset", "ac_approve_artifact"]
 
 
 @pytest.mark.parametrize("name", _RUN_ACTIONS + _SEND_INPUT + _OUTWARD)

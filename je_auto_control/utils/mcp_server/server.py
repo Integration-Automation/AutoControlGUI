@@ -47,9 +47,10 @@ from je_auto_control.utils.mcp_server._subscriptions import NO_RESPONSE, Subscri
 from je_auto_control.utils.mcp_server._protocol import (
     PROTOCOL_VERSION,  # noqa: F401  # reason: re-exported; callers import it from server
     _capture_error_screenshot, negotiate_protocol_version,
-    _coerce_params, _DISPATCH_ERRORS, _error_response, _InvalidToolArguments, _is_hashable,
+    _coerce_params, _DISPATCH_ERRORS, _error_response, _invalid_envelope, _InvalidToolArguments,
+    _is_hashable,
     _MCPError, _notification_message, _result_response, _server_info, _to_content_blocks,
-    _TOOL_INVOKE_ERRORS, _TOOLS_CALL_METHOD,
+    _TOOLS_CALL_METHOD,
 )
 
 #: How long a transport waits for in-flight tool replies before it gives up
@@ -335,41 +336,46 @@ class MCPServer(StatelessDispatchMixin, SubscriptionMixin, ClientRequestMixin):
 
     def handle_line(self, line: str) -> Optional[str]:
         """Process one JSON-RPC line; return the response line or ``None``."""
-        try:
-            message = json.loads(line)
-        # RecursionError: a message nested thousands deep ended the stdio loop.
-        except (ValueError, RecursionError) as error:
-            autocontrol_logger.warning("MCP parse error: %r", error)
-            return _error_response(None, -32700, "Parse error")
-        if not isinstance(message, dict):
-            return _error_response(None, -32600, "Invalid Request")
+        message, refusal = _parse_request(line)
+        if message is None:
+            return refusal
 
         method = message.get("method")
         msg_id = message.get("id")
 
         if self._is_outbound_response(method, msg_id, message):
-            # An inbound reply's id is used as a dict key; a non-hashable id
-            # (e.g. a JSON array) would raise TypeError here and, with no guard
-            # in the stdio read loop, take the whole server down.
-            if _is_hashable(msg_id):
-                self._dispatch_outbound_response(msg_id, message)
-            else:
-                autocontrol_logger.warning(
-                    "MCP dropping outbound response with non-hashable id %r",
-                    msg_id,
-                )
+            self._accept_outbound_response(msg_id, message)
             return None
 
+        if method is None:
+            # It was answered -32601 "Method not found: None".
+            return _error_response(msg_id, -32600, "Invalid Request: 'method' is required")
         params, params_error = _coerce_params(message.get("params"), msg_id)
         if params_error is not None:
             return params_error
-        if msg_id is None:
+        # A notification has no id member; "id": null is a request, and was
+        # treated as a notification, so the client waited for ever.
+        if "id" not in message:
             self._handle_notification(method, params)
             return None
         if method == _TOOLS_CALL_METHOD and self._concurrent_tools:
             self._dispatch_tools_call_async(msg_id, params)
             return None
         return self._build_response(msg_id, method, params)
+
+    def _accept_outbound_response(self, msg_id: Any, message: Dict[str, Any]) -> None:
+        """Route a client's reply to a server request; drop one whose id cannot be a key.
+
+        An inbound reply's id is used as a dict key; a non-hashable id (e.g. a
+        JSON array) would raise TypeError and, with no guard in the stdio read
+        loop, take the whole server down.
+        """
+        if _is_hashable(msg_id):
+            self._dispatch_outbound_response(msg_id, message)
+            return
+        autocontrol_logger.warning(
+            "MCP dropping outbound response with non-hashable id %r", msg_id,
+        )
 
     def _handle_line_safely(self, line: str) -> Optional[str]:
         """Call :meth:`handle_line`, swallowing any leak so the loop survives.
@@ -639,11 +645,12 @@ class MCPServer(StatelessDispatchMixin, SubscriptionMixin, ClientRequestMixin):
                 duration_seconds=time.monotonic() - started_at,
             )
             raise
-        except _TOOL_INVOKE_ERRORS as error:
-            # NotImplementedError subclasses RuntimeError so it's already covered;
-            # AutoControlException / subprocess timeouts / sqlite3 errors are
-            # added via _FRAMEWORK_TOOL_ERRORS so a failing tool returns an
-            # isError result instead of killing the worker / aborting the socket.
+        except _MCPError:
+            raise
+        # Any exception, not a list: re.PatternError, ET.ParseError, cv2.error or
+        # a plugin's own error escaped the list, killed the worker thread and
+        # left the call unanswered (stdio) or dropped the connection (HTTP).
+        except Exception as error:  # noqa: BLE001  # reason: a tool's failure of any type must answer the call with isError
             autocontrol_logger.warning("MCP tool %s failed: %r", name, error)
             artifact = _capture_error_screenshot(name)
             self._audit.record(
@@ -685,6 +692,20 @@ class MCPServer(StatelessDispatchMixin, SubscriptionMixin, ClientRequestMixin):
             request_id=msg_id, progress_token=progress_token,
             notifier=self._notifier,
         )
+
+
+def _parse_request(line: str) -> "tuple[Optional[Dict[str, Any]], Optional[str]]":
+    """``(message, None)`` for a well-formed JSON-RPC object, else ``(None, error reply)``."""
+    try:
+        message = json.loads(line)
+    # RecursionError: a message nested thousands deep ended the stdio loop.
+    except (ValueError, RecursionError) as error:
+        autocontrol_logger.warning("MCP parse error: %r", error)
+        return None, _error_response(None, -32700, "Parse error")
+    if not isinstance(message, dict):
+        return None, _error_response(None, -32600, "Invalid Request")
+    refusal = _invalid_envelope(message)
+    return (None, refusal) if refusal is not None else (message, None)
 
 
 def start_mcp_stdio_server(read_only: Optional[bool] = None) -> MCPServer:

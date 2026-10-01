@@ -14,7 +14,16 @@ import secrets
 from dataclasses import dataclass
 from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple, Union
 
+from je_auto_control.utils.exception.exceptions import AutoControlException
+
 Fields = Union[Mapping[str, str], Sequence[Tuple[str, str]], None]
+# RFC 2046 5.1.1: 1-70 bchars, not ending in a space.
+_BOUNDARY = re.compile(r"[0-9A-Za-z'()+_,\-./:=? ]{0,69}[0-9A-Za-z'()+_,\-./:=?]")
+_TOKEN = re.compile(r"[0-9A-Za-z'+_\-.]+")
+
+
+class MultipartError(AutoControlException, ValueError):
+    """A multipart body cannot be built or read safely (bad boundary, a part that contains it)."""
 
 
 @dataclass
@@ -59,7 +68,7 @@ def _unquote_param(value: str) -> str:
     return re.sub(r"%(22|0D|0A)", lambda match: _PARAM_UNESCAPES[match.group(0)], value)
 
 
-def _field_part(boundary: str, name: str, value: str) -> bytes:
+def _field_part(boundary: str, name: str, value: Union[str, bytes]) -> bytes:
     head = (f"--{boundary}\r\n"
             f'Content-Disposition: form-data; name="{_quote_param(name)}"\r\n\r\n')
     return head.encode("utf-8") + _to_bytes(value) + b"\r\n"
@@ -76,7 +85,7 @@ def _as_file(spec: Union[MultipartFile, Mapping[str, Any]]) -> MultipartFile:
 
 def _file_part(boundary: str, spec: MultipartFile) -> bytes:
     if "\r" in spec.content_type or "\n" in spec.content_type:
-        raise ValueError(f"content_type contains a line break: {spec.content_type!r}")
+        raise MultipartError(f"content_type contains a line break: {spec.content_type!r}")
     head = (f"--{boundary}\r\n"
             f'Content-Disposition: form-data; name="{_quote_param(spec.name)}"; '
             f'filename="{_quote_param(spec.filename)}"\r\n'
@@ -84,21 +93,55 @@ def _file_part(boundary: str, spec: MultipartFile) -> bytes:
     return head.encode("utf-8") + _to_bytes(spec.content) + b"\r\n"
 
 
+def _collides(boundary: str, contents: Sequence[bytes]) -> bool:
+    """Whether a part's content holds the delimiter, which would end the part there (RFC 2046 5.1.1)."""
+    delimiter = b"\r\n--" + boundary.encode("ascii")
+    return any(delimiter in b"\r\n" + content for content in contents)
+
+
+def _choose_boundary(requested: Optional[str], contents: Sequence[bytes]) -> str:
+    """The requested boundary, validated, or a fresh one no part contains.
+
+    A caller's boundary was used as given: one with a line break wrote a
+    header into the returned Content-Type, and a value containing
+    ``\\r\\n--<boundary>`` injected a part of its own.
+    """
+    if requested:
+        if not isinstance(requested, str) or not _BOUNDARY.fullmatch(requested):
+            raise MultipartError(f"invalid multipart boundary {requested!r}: RFC 2046 allows 1-70 of "
+                                 "letters, digits and '()+_,-./:=? (not ending in a space)")
+        if _collides(requested, contents):
+            raise MultipartError(f"a part contains the multipart boundary {requested!r}")
+        return requested
+    boundary = new_boundary()
+    while _collides(boundary, contents):
+        boundary = new_boundary()
+    return boundary
+
+
 def build_multipart(fields: Fields = None,
                     files: Optional[Sequence[Any]] = None, *,
                     boundary: Optional[str] = None) -> Tuple[str, bytes]:
-    """Build a ``multipart/form-data`` body; return ``(content_type, body)``."""
-    boundary = boundary or new_boundary()
-    parts = [_field_part(boundary, name, value)
-             for name, value in _iter_fields(fields)]
-    parts.extend(_file_part(boundary, _as_file(spec)) for spec in (files or []))
+    """Build a ``multipart/form-data`` body; return ``(content_type, body)``.
+
+    Raises :class:`MultipartError` for a ``boundary`` RFC 2046 does not allow
+    or one a part's content contains.
+    """
+    pairs = [(name, _to_bytes(value)) for name, value in _iter_fields(fields)]
+    specs = [_as_file(spec) for spec in (files or [])]
+    boundary = _choose_boundary(boundary, [value for _, value in pairs] + [_to_bytes(spec.content)
+                                                                          for spec in specs])
+    parts = [_field_part(boundary, name, value) for name, value in pairs]
+    parts.extend(_file_part(boundary, spec) for spec in specs)
     body = b"".join(parts) + f"--{boundary}--\r\n".encode("utf-8")
-    return f"multipart/form-data; boundary={boundary}", body
+    parameter = boundary if _TOKEN.fullmatch(boundary) else f'"{boundary}"'
+    return f"multipart/form-data; boundary={parameter}", body
 
 
 def _boundary_of(content_type: str) -> Optional[str]:
     # Parameter names are case-insensitive: "Boundary=B" is the boundary too.
-    match = re.search(r'(?i)boundary=("[^"]*"|[^;]+)', content_type or "")
+    # Anchored to a parameter start: "notboundary=x; boundary=y" read x.
+    match = re.search(r'(?i)(?:^|;)\s*boundary\s*=\s*("[^"]*"|[^;]+)', content_type or "")
     return match.group(1).strip().strip('"') if match else None
 
 
@@ -150,7 +193,7 @@ def parse_multipart(content_type: str, body: bytes) -> Dict[str, Any]:
     """Parse a ``multipart/form-data`` body into ``{fields, files}``."""
     boundary = _boundary_of(content_type)
     if not boundary:
-        raise ValueError("content_type has no multipart boundary")
+        raise MultipartError("content_type has no multipart boundary")
     fields: Dict[str, str] = {}
     files: List[Dict[str, Any]] = []
     # A delimiter is CRLF + "--" + boundary; the CRLF belongs to it, not to

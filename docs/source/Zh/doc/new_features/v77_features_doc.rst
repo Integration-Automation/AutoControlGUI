@@ -24,9 +24,9 @@ dict),因此在 CI 中完全具決定性。
     report = validate_rows(rows, schema)
 
 ``profile_rows`` 回傳 ``{row_count, columns}``,每欄帶有其筆數、空值數與比例、相異值數、唯一性旗標、
-推斷型別(``int`` / ``number`` / ``bool`` / ``str``)、最常見值與其次數,以及數值欄的 ``min`` /
-``max`` / ``mean``。``infer_schema`` 把該剖析轉成既有 ``validate_rows`` 能理解的結構:無空值的欄位
-標為 ``required``,每個非空值皆相異則標為 ``unique``,並帶上數值邊界。傳入明確的 ``columns`` 清單可將
+推斷型別(``int`` / ``number`` / ``bool`` / ``str``,沒有單一型別時為 ``mixed``)、最常見值與其次數
+(``True`` 與 ``1`` 分開計),以及數值欄的 ``min`` / ``max`` / ``mean``(``int`` 欄為精確值,其他以有限值計算)。``infer_schema`` 把該剖析轉成既有 ``validate_rows`` 能理解的結構:無空值的欄位
+標為 ``required``,每個非空值皆相異則標為 ``unique``,並帶上數值邊界;``mixed`` 欄不加 ``type`` 規則。傳入明確的 ``columns`` 清單可將
 兩個函式限制在子集。
 
 執行器命令

@@ -19,7 +19,24 @@ _DEFAULT_PRIORITY = ("a11y", "ocr", "icon")
 
 
 def _xywh(box: Box) -> Tuple[int, int, int, int]:
-    return (int(box["x"]), int(box["y"]), int(box["width"]), int(box["height"]))
+    """``(x, y, width, height)`` of a box in any shape; missing keys read as 0.
+
+    Only ``x`` / ``y`` / ``width`` / ``height`` were read, so an
+    accessibility dict (``bounds``, what ``AC_a11y_list`` returns) raised
+    ``KeyError``, and so did an element with a point but no size.
+    """
+    from je_auto_control.utils.accessibility.element import element_box
+    found = element_box(box)
+    if found is not None:
+        return found
+    read = box.get if isinstance(box, dict) else (lambda key, default: getattr(box, key, default))
+    return tuple(int(read(key, 0) or 0) for key in ("x", "y", "width", "height"))  # type: ignore[return-value]
+
+
+def _center(box: Box) -> List[int]:
+    """The centre point of a box in any shape."""
+    x, y, width, height = _xywh(box)
+    return [x + width // 2, y + height // 2]
 
 
 def _area(box: Box) -> int:
@@ -31,6 +48,10 @@ def iou(box_a: Box, box_b: Box) -> float:
     """Return the intersection-over-union (0..1) of two ``{x,y,width,height}`` boxes."""
     ax, ay, aw, ah = _xywh(box_a)
     bx, by, bw, bh = _xywh(box_b)
+    if (ax, ay, aw, ah) == (bx, by, bw, bh):
+        # Two equal zero-area boxes (a control on a hidden tab) scored 0, so
+        # an unchanged frame read as one element removed and one added.
+        return 1.0
     left, top = max(ax, bx), max(ay, by)
     right, bottom = min(ax + aw, bx + bw), min(ay + ah, by + bh)
     inter = max(0, right - left) * max(0, bottom - top)

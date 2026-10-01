@@ -129,8 +129,17 @@ class GettextCatalog:
     # -- .mo output --------------------------------------------------------
 
     def _mo_pairs(self) -> List[Tuple[bytes, bytes]]:
+        """The ``(original, translation)`` pairs a ``.mo`` holds.
+
+        An untranslated entry (an empty first ``msgstr``) is left out, as GNU
+        ``msgfmt`` does: written with an empty translation, every ``.mo``
+        reader -- Python's ``gettext`` included -- showed an empty string
+        instead of falling back to the ``msgid``.
+        """
         pairs: List[Tuple[bytes, bytes]] = []
         for (context, msgid), forms in self._messages.items():
+            if not forms or not forms[0]:
+                continue
             original = msgid
             plural_id = self._plural_ids.get((context, msgid))
             if plural_id is not None:
