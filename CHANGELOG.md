@@ -15,6 +15,9 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Added
 
+- `write_secret(secret)` / `AC_write_secret` (`secret`): type a password or
+  token as Unicode key events without logging, recording or returning it; an
+  error never names a character. Refuses on a backend without Unicode typing.
 - `message_format.MessageFormatError` (an `AutoControlException` and a
   `ValueError`); locales other than en/fr use Babel's CLDR plural rules when
   Babel is installed.

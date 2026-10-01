@@ -72,6 +72,21 @@ Type a sequence of characters one by one:
 
    write("Hello World")
 
+``write`` logs the text, records it in the test record and returns it. For a
+password or token use ``write_secret`` (``AC_write_secret`` with ``secret``):
+the log gets the length only, the record a masked value, it returns nothing, and
+an error never names a character. It types every character as a Unicode key
+event, so the text arrives exactly (``write`` types capitals as lower case on
+Windows); a backend without Unicode typing (only Windows has it) refuses before
+typing anything.
+
+.. code-block:: python
+
+   import os
+   from je_auto_control import write_secret
+
+   write_secret(os.environ["APP_PASSWORD"])
+
 Hotkey Combinations
 ===================
 
