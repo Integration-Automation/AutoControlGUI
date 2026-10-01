@@ -882,15 +882,17 @@ def _add_ocr_specs(specs: List[CommandSpec]) -> None:
                       default=60.0, min_value=0.0, max_value=100.0),
         ),
     ))
-    specs.append(CommandSpec(
-        "AC_ocr_status", "OCR", "OCR Engine Status",
-        fields=(),
-        description="Whether Tesseract OCR can work here: {ok, reason}.",
-    ))
-    specs.append(CommandSpec(
-        "AC_ocr_languages", "OCR", "OCR Installed Languages",
-        fields=(),
-        description="Installed Tesseract languages; null when the engine cannot be asked.",
+    specs.extend((
+        CommandSpec(
+            "AC_ocr_status", "OCR", "OCR Engine Status",
+            fields=(),
+            description="Whether Tesseract OCR can work here: {ok, reason}.",
+        ),
+        CommandSpec(
+            "AC_ocr_languages", "OCR", "OCR Installed Languages",
+            fields=(),
+            description="Installed Tesseract languages; null when the engine cannot be asked.",
+        ),
     ))
     specs.append(CommandSpec(
         "AC_read_qr", "OCR", "Read QR Codes",

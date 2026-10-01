@@ -63,7 +63,8 @@ def test_every_alias_resolves_to_its_targets_code():
     aliases = platform_wrapper.keyboard_key_aliases
     assert len(aliases) >= 40, "the alias map is empty; the checks below would pass vacuously"
     for alias, target in aliases.items():
-        assert target in table and target not in aliases, (alias, target)
+        assert target in table, (alias, target)
+        assert target not in aliases, (alias, target)
         assert table[alias] == table[target], alias
         assert auto_control_keyboard._resolve_keycode(alias) == table[target], alias
 
@@ -135,7 +136,8 @@ def test_the_preference_order_on_a_synthetic_table(monkeypatch):
     name = auto_control_keyboard.keyboard_key_name
     assert [name(27), name(8), name(183), name(40), name(34)] == [
         "escape", "backspace", "launch_app2", "down", "next"]
-    assert name(99) is None and name(12345) is None
+    assert name(99) is None
+    assert name(12345) is None
 
 
 def test_every_platform_publishes_an_alias_map():
@@ -145,4 +147,5 @@ def test_every_platform_publishes_an_alias_map():
 
 
 def test_facade_export():
-    assert "keyboard_key_name" in ac.__all__ and callable(ac.keyboard_key_name)
+    assert "keyboard_key_name" in ac.__all__
+    assert callable(ac.keyboard_key_name)

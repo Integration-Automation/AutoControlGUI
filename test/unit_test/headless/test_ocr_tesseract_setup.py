@@ -96,8 +96,10 @@ def test_status_ready(fake):
     status = setup.ocr_status()
     assert status == (True, setup.OCR_READY)
     ok, reason = status
-    assert ok is True and reason == "ready"
-    assert status.ok is True and status.reason == "ready"
+    assert ok is True
+    assert reason == "ready"
+    assert status.ok is True
+    assert status.reason == "ready"
 
 
 def test_status_missing_package(no_pytesseract):
@@ -123,8 +125,9 @@ def test_an_unreadable_version_does_not_end_the_process(fake):
     """pytesseract raises SystemExit for a version string it cannot parse."""
     fake.version_error = SystemExit('Invalid tesseract version: "garbage"')
     assert setup.ocr_status() == (False, setup.OCR_ENGINE_UNUSABLE)
+    backend = TesseractBackend()
     with pytest.raises(OCRBackendNotAvailableError):
-        TesseractBackend().version()
+        backend.version()
 
 
 def test_status_no_language_data_only_when_the_engine_answered_empty(fake):
@@ -263,4 +266,5 @@ def test_mcp_handlers_return_json_friendly_dicts(fake):
 def test_facade_exports():
     for name in ("OCRStatus", "find_tesseract_cmd", "ocr_languages", "ocr_status",
                  "set_tessdata_dir"):
-        assert hasattr(ac, name) and name in ac.__all__, name
+        assert hasattr(ac, name), name
+        assert name in ac.__all__, name

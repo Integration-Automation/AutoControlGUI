@@ -280,8 +280,8 @@ def _click_plan(clicks: object, interval: object) -> Tuple[int, float]:
     return count, pause
 
 
-def click_mouse(mouse_keycode: Union[int, str], x: Optional[int] = None,
-                y: Optional[int] = None, clicks: int = 1,
+def click_mouse(mouse_keycode: int | str, x: int | None = None,
+                y: int | None = None, clicks: int = 1,
                 interval: float = 0.0) -> Tuple[MouseKeycode, int, int]:
     """
     在指定座標按下並放開滑鼠按鍵；``clicks=2`` 就是雙擊

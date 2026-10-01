@@ -18,7 +18,7 @@ Imports no ``PySide6``.
 """
 import os
 import shutil
-from typing import List, NamedTuple, Optional, Union
+from typing import List, NamedTuple, Optional
 
 from je_auto_control.utils.exception.exceptions import AutoControlActionException
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
@@ -95,7 +95,7 @@ def find_tesseract_cmd() -> Optional[str]:
     return None
 
 
-def set_tessdata_dir(path: Optional[Union[str, "os.PathLike[str]"]]) -> Optional[str]:
+def set_tessdata_dir(path: str | os.PathLike[str] | None) -> str | None:
     """Point the engine at the directory holding ``*.traineddata``; return it resolved.
 
     Sets ``$TESSDATA_PREFIX`` for this process, which every later engine run

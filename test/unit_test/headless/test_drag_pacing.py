@@ -38,7 +38,7 @@ class _Timeline:
         return [kind for kind, *_ in self.entries]
 
 
-@pytest.fixture()
+@pytest.fixture
 def timeline(monkeypatch):
     line = _Timeline()
     monkeypatch.setattr(tween_module, "time", types.SimpleNamespace(sleep=line.sleep))
@@ -165,7 +165,8 @@ def test_the_executor_adapters_forward_the_pacing(timeline, monkeypatch):
     monkeypatch.setattr(path_module, "_default_sink", timeline.sink)
     action_executor._tween_drag([0, 0], [10, 0], steps=1, easing="linear",
                                 step_delay_s=0.02, settle_s="0.03")
-    assert ("sleep", 0.02, None) in timeline.entries and ("sleep", 0.03, None) in timeline.entries
+    assert ("sleep", 0.02, None) in timeline.entries
+    assert ("sleep", 0.03, None) in timeline.entries
     timeline.entries.clear()
     action_executor._drag_path([[0, 0], [5, 5]], per_segment_steps=1, step_delay_s=0.04)
     assert ("sleep", 0.04, None) in timeline.entries

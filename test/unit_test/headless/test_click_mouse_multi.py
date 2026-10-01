@@ -23,7 +23,7 @@ class _Backend:
         self.clicks.append((mouse_keycode, x, y))
 
 
-@pytest.fixture()
+@pytest.fixture
 def env(monkeypatch):
     backend = _Backend()
     sleeps = []
@@ -51,7 +51,8 @@ def test_a_double_click_is_two_clicks_on_one_point_with_one_pause(env):
     assert env.sleeps == [0.06]
     name, param, error = env.records[-1]
     assert (name, error) == ("click_mouse", None)
-    assert param["clicks"] == 2 and param["interval"] == 0.06
+    assert param["clicks"] == 2
+    assert param["interval"] == 0.06
 
 
 def test_no_pause_between_clicks_when_interval_is_zero(env):

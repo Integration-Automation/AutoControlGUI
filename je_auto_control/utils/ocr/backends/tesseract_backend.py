@@ -73,7 +73,7 @@ class TesseractBackend:
             return str(pt.get_tesseract_version())
         except (OSError, RuntimeError, ValueError, SubprocessError) as error:
             raise OCRBackendNotAvailableError(f"Tesseract cannot run: {error!r}") from error
-        except SystemExit as error:
+        except SystemExit as error:  # NOSONAR python:S5754  # reason: see docstring
             raise OCRBackendNotAvailableError(
                 f"Tesseract printed a version pytesseract cannot read: {error}") from error
 
