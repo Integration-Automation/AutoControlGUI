@@ -77,7 +77,7 @@ from je_auto_control.utils.test_record.record_test_class import record_action_to
 from je_auto_control.wrapper.auto_control_image import locate_all_image, locate_and_click, locate_image_center
 from je_auto_control.wrapper.auto_control_keyboard import (
     check_key_is_press, get_keyboard_keys_table,
-    press_keyboard_key, release_keyboard_key, hotkey, type_keyboard, write
+    press_keyboard_key, release_keyboard_key, hotkey, type_keyboard, write, write_secret
 )
 from je_auto_control.wrapper.auto_control_mouse import (
     get_mouse_position, press_mouse, release_mouse, click_mouse,
@@ -7143,6 +7143,7 @@ class Executor:
             "AC_release_keyboard_key": release_keyboard_key,
             "AC_check_key_is_press": check_key_is_press,
             "AC_write": write,
+            "AC_write_secret": write_secret,
             "AC_hotkey": hotkey,
 
             # Image 影像辨識

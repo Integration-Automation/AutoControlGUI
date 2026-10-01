@@ -44,7 +44,7 @@ Available Action Commands
    * - Mouse
      - ``AC_click_mouse``, ``AC_set_mouse_position``, ``AC_get_mouse_position``, ``AC_press_mouse``, ``AC_release_mouse``, ``AC_mouse_scroll``
    * - Keyboard
-     - ``AC_type_keyboard``, ``AC_press_keyboard_key``, ``AC_release_keyboard_key``, ``AC_write``, ``AC_hotkey``, ``AC_check_key_is_press``
+     - ``AC_type_keyboard``, ``AC_press_keyboard_key``, ``AC_release_keyboard_key``, ``AC_write``, ``AC_write_secret``, ``AC_hotkey``, ``AC_check_key_is_press``
    * - Image
      - ``AC_locate_all_image``, ``AC_locate_image_center``, ``AC_locate_and_click``
    * - Screen

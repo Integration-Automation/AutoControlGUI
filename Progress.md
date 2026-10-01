@@ -169,7 +169,6 @@ pip install --dry-run --only-binary=:all: --platform win_arm64 --python-version 
 - **視窗版面每次還原都偏移**：`utils/window_capture/window_capture.py:115` 存 DWM 可見框、還原時交給 `MoveWindow`（它定位的是含隱形邊框的完整矩形），每輪右移 7 px、縮小 14×7 px；最大化視窗與不同 DPI 的第二螢幕偏得更多。做法：存 `GetWindowRect`，或改用 `GetWindowPlacement`／`SetWindowPlacement`。同一檔的 snap／grid／cascade 用整個螢幕而非工作區，最底下 48 px 落在工作列下，一併改用 `SPI_GETWORKAREA`。
 - **`wait_for_window` 睡過逾時**：`wrapper/auto_control_window.py:79` 以 `poll` 整段睡，`poll=30` 就睡 30 秒，`poll=inf` 丟 `OverflowError`。做法：`clamp_poll_interval`，並只睡到截止時間。
 - **Windows 鍵表沒有標點鍵**：`plus`、`minus`、`comma`、`period`、`slash` 等沒有對應的 `VK_OEM_*`，computer use 的 `ctrl+minus` 在 Windows 失敗。做法：在 Windows 鍵表補上 `VK_OEM_PLUS`／`VK_OEM_MINUS`／`VK_OEM_COMMA`／`VK_OEM_PERIOD`／`VK_OEM_2` 等。
-- **打字一定留下原文**：`write()`／`type_keyboard()`（`wrapper/auto_control_keyboard.py`）把打的字寫進 INFO log、記進測試紀錄並回傳，executor 的紀錄鍵也含原文。WebRunner 的 `WR_ac_basic_auth`（它的 `progress.md` #20，只收環境變數名稱）因此做不了：密碼會進 AutoControl 的 log 與兩邊的執行紀錄。做法：加一個不寫 log、不記錄、不回傳原文的打字呼叫（例如 `write(..., secret=True)`），WebRunner 從 Python 直接呼叫它；兩邊 `architecture.md` §6 一起改。
 
 同一次稽核的影像與 OCR 部分也在它的路徑上（Discord bot 的 `!find_image`／`!find_text`），一併等：
 

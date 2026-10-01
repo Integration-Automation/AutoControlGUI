@@ -15,12 +15,14 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Added
 
+- `write_secret(secret)` / `AC_write_secret` (`secret`): type a password or
+  token as Unicode key events without logging, recording or returning it; an
+  error never names a character. Refuses on a backend without Unicode typing.
 - A package gate in front of `AC_add_package_to_executor` and
   `AC_add_package_to_callback_executor`: `executor.allow_packages(*names)` (submodules
   included) and `executor.set_allow_arbitrary_packages(enabled)` (also on
   `package_manager`). A refused package raises `AutoControlExecuteActionException`
   before it is imported.
-
 - `message_format.MessageFormatError` (an `AutoControlException` and a
   `ValueError`); locales other than en/fr use Babel's CLDR plural rules when
   Babel is installed.

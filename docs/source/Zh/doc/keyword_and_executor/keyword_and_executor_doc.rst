@@ -43,7 +43,7 @@ JSON 陣列（關鍵字），由執行者解析並執行。
    * - 滑鼠
      - ``AC_click_mouse``, ``AC_set_mouse_position``, ``AC_get_mouse_position``, ``AC_press_mouse``, ``AC_release_mouse``, ``AC_mouse_scroll``
    * - 鍵盤
-     - ``AC_type_keyboard``, ``AC_press_keyboard_key``, ``AC_release_keyboard_key``, ``AC_write``, ``AC_hotkey``, ``AC_check_key_is_press``
+     - ``AC_type_keyboard``, ``AC_press_keyboard_key``, ``AC_release_keyboard_key``, ``AC_write``, ``AC_write_secret``, ``AC_hotkey``, ``AC_check_key_is_press``
    * - 圖片
      - ``AC_locate_all_image``, ``AC_locate_image_center``, ``AC_locate_and_click``
    * - 螢幕
