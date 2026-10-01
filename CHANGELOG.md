@@ -118,6 +118,13 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Changed
 
+- `je_auto_control_dev`, the dev-channel package, declares what
+  `je_auto_control` declares: the same pinned dependencies and platform
+  markers (`defusedxml`, `cryptography` and the `opencv-python` bound are new
+  to it), all ten extras instead of `gui` alone, the `je_auto_control` and
+  `je_auto_control_mcp` commands, the pytest plugin entry point, `py.typed`
+  and the remote desktop web viewer files. CI publishes it from the `dev`
+  branch.
 - `format_message` raises `MessageFormatError` for patterns ICU rejects
   (unterminated argument, selector without `{...}`, no `other`, duplicate
   selector, late `offset:`), and an unsupported locale raises instead of
