@@ -213,3 +213,4 @@ Workspace rule shared by every repository under `D:\Codes` (full text: `D:\Codes
 - JSON action command names use the `AC_` prefix (e.g. `AC_click_mouse`); MCP tools use `ac_`.
 - Platform backends are named `{platform}_{function}.py` (e.g. `win32_ctype_mouse_control.py`).
 - Virtual key mappings live in `core/utils/*_vk.py` per platform.
+- Two PyPI packages, both published by CI: a push to `main` releases `je_auto_control` (the `publish` job of `stable.yml`), and a push to `dev` that passes the headless suite and changes what the package ships releases `je_auto_control_dev` (the `publish-dev` job of `dev.yml`, `scripts/dev_release.py`). Never bump a version by hand; the version in `dev.toml` is only a floor. `dev.toml` must declare what `pyproject.toml` declares, so a change to dependencies, extras, scripts, entry points or `[tool.setuptools]` goes into both files (`test/unit_test/headless/test_dev_toml_parity.py` fails otherwise).
