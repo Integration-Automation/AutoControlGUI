@@ -77,13 +77,20 @@ def move_along_path(waypoints: Sequence[Point], *, easing: str = "linear",
 
 def drag_path(waypoints: Sequence[Point], *, button: str = "mouse_left",
               easing: str = "linear", per_segment_steps: int = 20,
-              sink: Optional[Sink] = None) -> Dict[str, Any]:
-    """Press at the first waypoint, move through the path, release at the last."""
+              sink: Optional[Sink] = None, step_delay_s: float = 0.0,
+              settle_s: float = 0.0) -> Dict[str, Any]:
+    """Press at the first waypoint, move through the path, release at the last.
+
+    Pacing and failure handling are ``tween_drag``'s: ``step_delay_s`` rests
+    after each move, ``settle_s`` before the press, after it and before the
+    release (default 0: no pause), and a step that raises releases the
+    button where the pointer stopped.
+    """
     points = plan_path(waypoints, easing=easing,
                        per_segment_steps=per_segment_steps)
     if not points:
         return {"points": 0, "path": points}
-    _drag_through(points, button, sink or _default_sink)
+    _drag_through(points, button, sink or _default_sink, step_delay_s, settle_s)
     return {"points": len(points), "path": points}
 
 

@@ -2027,6 +2027,10 @@ def _add_misc_specs(specs: List[CommandSpec]) -> None:
                       optional=True, default="ease_in_out_quad"),
             FieldSpec("button", FieldType.ENUM, choices=_MOUSE_BUTTONS,
                       optional=True, default="mouse_left"),
+            FieldSpec("step_delay_s", FieldType.FLOAT, optional=True,
+                      default=0.0, min_value=0.0),
+            FieldSpec("settle_s", FieldType.FLOAT, optional=True,
+                      default=0.0, min_value=0.0),
         ),
         description="Drag along an eased path; 'start'/'end' [x,y] via JSON "
                     "view.",
@@ -2058,6 +2062,10 @@ def _add_misc_specs(specs: List[CommandSpec]) -> None:
                       optional=True, default="linear"),
             FieldSpec("per_segment_steps", FieldType.INT, optional=True,
                       default=20),
+            FieldSpec("step_delay_s", FieldType.FLOAT, optional=True,
+                      default=0.0, min_value=0.0),
+            FieldSpec("settle_s", FieldType.FLOAT, optional=True,
+                      default=0.0, min_value=0.0),
         ),
         description="Press, drag through a polyline of waypoints, release.",
     ))

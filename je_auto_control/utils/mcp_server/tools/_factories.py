@@ -3528,13 +3528,18 @@ def tween_drag_tools() -> List[MCPTool]:
             name="ac_tween_drag",
             description=("Drag from 'start' [x,y] to 'end' [x,y] along an "
                          "eased path (easing: linear / ease_in_out_quad / "
-                         "ease_out_cubic / ease_in_cubic). Returns {points}."),
+                         "ease_out_cubic / ease_in_cubic). 'step_delay_s' "
+                         "pauses after each move, 'settle_s' before the "
+                         "press, after it and before the release. Returns "
+                         "{points}."),
             input_schema=schema({
                 "start": {"type": "array", "items": {"type": "integer"}},
                 "end": {"type": "array", "items": {"type": "integer"}},
                 "steps": {"type": "integer"},
                 "easing": {"type": "string"},
-                "button": {"type": "string"}},
+                "button": {"type": "string"},
+                "step_delay_s": {"type": "number", "minimum": 0},
+                "settle_s": {"type": "number", "minimum": 0}},
                 required=["start", "end"]),
             handler=h.tween_drag,
             annotations=DESTRUCTIVE,
@@ -5584,14 +5589,18 @@ def mouse_path_tools() -> List[MCPTool]:
             name="ac_drag_path",
             description=("Press at the first of 'waypoints' ([[x,y],...]), drag "
                          "through them, release at the last. 'button', 'easing', "
-                         "'per_segment_steps'. Returns {points, path}."),
+                         "'per_segment_steps'; 'step_delay_s' pauses after each "
+                         "move, 'settle_s' before the press, after it and before "
+                         "the release. Returns {points, path}."),
             input_schema=schema({
                 "waypoints": {"type": "array",
                               "items": {"type": "array",
                                         "items": {"type": "integer"}}},
                 "button": {"type": "string"},
                 "easing": {"type": "string"},
-                "per_segment_steps": {"type": "integer"}},
+                "per_segment_steps": {"type": "integer"},
+                "step_delay_s": {"type": "number", "minimum": 0},
+                "settle_s": {"type": "number", "minimum": 0}},
                 required=["waypoints"]),
             handler=h_exec.drag_path,
             annotations=DESTRUCTIVE,

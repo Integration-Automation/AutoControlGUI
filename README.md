@@ -145,7 +145,7 @@ desktop app; tab commands live in the window's **Actions** menu.
 
 | Capability | Python API | `AC_*` command | GUI tab |
 |---|---|---|---|
-| Mouse | `click_mouse` (`clicks=2` double-clicks), `set_mouse_position`, `mouse_scroll` | `AC_click_mouse` | Auto Click |
+| Mouse | `click_mouse` (`clicks=2` double-clicks), `set_mouse_position`, `mouse_scroll`, `tween_drag` / `drag_path` (paced by `step_delay_s`, `settle_s`) | `AC_click_mouse`, `AC_tween_drag`, `AC_drag_path` | Auto Click |
 | Keyboard | `write`, `hotkey`, `type_keyboard` | `AC_write`, `AC_hotkey` | Auto Click |
 | Screen & pixels | `screenshot`, `screen_size`, `get_pixel` | `AC_screenshot` | Screenshot |
 | Image matching | `locate_image_center`, `locate_and_click` | `AC_locate_and_click` | Image Detect |

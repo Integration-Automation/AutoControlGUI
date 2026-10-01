@@ -158,6 +158,8 @@ def test_internal_names_jeffrey_rpa_imports():
 
 @pytest.mark.parametrize("name, keywords", [
     ("click_mouse", {"clicks", "interval"}),
+    ("tween_drag", {"step_delay_s", "settle_s"}),
+    ("drag_path", {"step_delay_s", "settle_s"}),
 ])
 def test_keywords_jeffrey_rpa_passes(name, keywords):
     """Keyword parameters added so Jeffrey_RPA can drop its own loops."""

@@ -26,3 +26,11 @@
 ``ease_in_out_quad`` / ``ease_out_cubic`` / ``ease_in_cubic``(見
 :func:`easing_names`)。對應 ``AC_tween_drag`` / ``ac_tween_drag``
 (``start`` / ``end`` 以 ``[x, y]`` 表示)。
+
+節奏控制:有些應用程式(檔案總管、繪圖軟體、遊戲)靠游標的移動判定拖曳,而不是點擊::
+
+    tween_drag((0, 0), (300, 200), steps=24, step_delay_s=0.012, settle_s=0.08)
+
+``step_delay_s`` 是每次移動後停多久;``settle_s`` 是按下前先停在起點、按下後、放開前各停多久。
+兩者預設 0(不停),必須是有限的非負數。任何一步丟出例外時,按鍵會在 ``finally`` 裡於游標
+最後到達的位置放開,而不是終點,原本的例外照樣往外丟。

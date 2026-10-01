@@ -909,7 +909,14 @@ def AC_dominant_hue_regions(
 def AC_dominant_pair(pixels: Any) -> Dict[str, Any]:
     """Adapter: split sampled RGB pixels into fg/bg dominant colours (pure)."""
 
-def AC_drag_path(waypoints: Any, button: str = ..., easing: str = ..., per_segment_steps: Any = ...) -> Dict[str, Any]:
+def AC_drag_path(
+    waypoints: Any,
+    button: str = ...,
+    easing: str = ...,
+    per_segment_steps: Any = ...,
+    step_delay_s: Any = ...,
+    settle_s: Any = ...,
+) -> Dict[str, Any]:
     """Adapter: press, drag through a polyline of waypoints, release."""
 
 def AC_drop_files(hwnd: Any, paths: Any, point: Any = ...) -> Dict[str, Any]:
@@ -2890,6 +2897,8 @@ def AC_tween_drag(
     steps: int = ...,
     easing: str = ...,
     button: str = ...,
+    step_delay_s: Any = ...,
+    settle_s: Any = ...,
 ) -> Dict[str, Any]:
     """Adapter: drag along an eased path from start to end."""
 

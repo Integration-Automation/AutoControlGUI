@@ -514,9 +514,9 @@ def move_along_path(waypoints, easing="linear", per_segment_steps=20):
 
 
 def drag_path(waypoints, button="mouse_left", easing="linear",
-              per_segment_steps=20):
+              per_segment_steps=20, step_delay_s=0.0, settle_s=0.0):
     from je_auto_control.utils.executor.action_executor import _drag_path
-    return _drag_path(waypoints, button, easing, per_segment_steps)
+    return _drag_path(waypoints, button, easing, per_segment_steps, step_delay_s, settle_s)
 
 
 def set_field_text(text, clear="select_all", paste=False, modifier="ctrl"):

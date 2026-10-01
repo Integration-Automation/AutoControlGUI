@@ -58,6 +58,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261001-05 | 2026-10-01 | Drag pacing for tween_drag / drag_path; an aborted drag lets go where it stopped | #feature #bugfix #input | [2026-10](2026-10.md) |
 | U-20261001-04 | 2026-10-01 | click_mouse(clicks=, interval=): a double-click in one call | #feature #input | [2026-10](2026-10.md) |
 | U-20261001-03 | 2026-10-01 | Tesseract setup helpers: find the engine, set tessdata, report status and languages | #feature #ocr #contract | [2026-10](2026-10.md) |
 | U-20260924-57 | 2026-09-24 | Type-check the SBOM's optional packaging import in CI's bare install | #ci #typing | [2026-09](2026-09.md) |
@@ -218,7 +219,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | File | Period | Entries |
 |---|---|---:|
-| [2026-10.md](2026-10.md) | 2026-10 | 2 |
+| [2026-10.md](2026-10.md) | 2026-10 | 3 |
 | [2026-09.md](2026-09.md) | 2026-09 | 127 |
 | [2026-08-f.md](2026-08-f.md) | 2026-08 | 1 |
 | [2026-08-e.md](2026-08-e.md) | 2026-08 | 2 |

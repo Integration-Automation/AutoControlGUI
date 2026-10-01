@@ -30,6 +30,13 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
   action as before. `AC_click_mouse`, the `ac_click_mouse` MCP tool and the
   Script Builder take both parameters. On macOS the clicks still arrive as
   separate single clicks (`Progress.md`).
+- **Drag pacing: `tween_drag` / `drag_path` take `step_delay_s` and
+  `settle_s`** (seconds, default 0). `step_delay_s` rests after each move;
+  `settle_s` rests on the start before the press, after the press and before
+  the release, for apps that tell a drag from a click by the pointer's
+  motion. Both must be finite and non-negative (`ValueError` otherwise,
+  before anything is sent). `AC_tween_drag`, `AC_drag_path`, their MCP tools
+  and the Script Builder take both.
 - `cua_action.resolve_key_name` / `split_key_combo`, and
   `compile_postcondition(before=...)`.
 - `pii_text.luhn_valid` and `normalize_text(strip_format=...)`.
@@ -310,6 +317,11 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Fixed
 
+- **An aborted `tween_drag` / `drag_path` lets go where the pointer stopped.**
+  When a step raised, the button was released at the end of the path, which
+  completed a drop the drag never reached; it is now released in a `finally`
+  at the last point the pointer reached, and a failing cleanup release is
+  logged instead of replacing the original error.
 - **Emergency stop on Linux / macOS**: the stop key wakes a sleeping or
   waiting main thread there too (SIGINT is sent to the main thread).
 - **Image analysis and packaging**: colour-vision simulation uses Machado
