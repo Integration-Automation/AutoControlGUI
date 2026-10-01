@@ -58,6 +58,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261001-10 | 2026-10-01 | The publish jobs install hash-locked build tooling and build with the locked setuptools | #release #ci #security #X-13 | [2026-10](2026-10.md) |
 | U-20261001-09 | 2026-10-01 | CI publishes je_auto_control_dev from the dev branch; dev.toml says what pyproject.toml says | #release #ci #X-13 | [2026-10](2026-10.md) |
 | U-20261001-08 | 2026-10-01 | Package gate in front of AC_add_package_to_executor | #security #X-12 | [2026-10](2026-10.md) |
 | U-20261001-07 | 2026-10-01 | write_secret / AC_write_secret: type a password without logging, recording or returning it | #done #keyboard #security #webrunner | [2026-10](2026-10.md) |
@@ -341,7 +342,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | File | Period | Entries |
 |---|---|---:|
-| [2026-10.md](2026-10.md) | 2026-10 | 5 |
+| [2026-10.md](2026-10.md) | 2026-10 | 6 |
 | [2026-09-e.md](2026-09-e.md) | 2026-09 | 7 |
 | [2026-09-d.md](2026-09-d.md) | 2026-09 | 55 |
 | [2026-09-c.md](2026-09-c.md) | 2026-09 | 38 |

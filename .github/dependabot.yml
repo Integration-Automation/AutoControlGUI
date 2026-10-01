@@ -6,6 +6,11 @@
 version: 2
 updates:
   - package-ecosystem: "pip" # See documentation for possible values
-    directory: "/" # Location of package manifests
+    # Location of package manifests: the project's own at the root, and the
+    # hash-locked tool set the publish jobs install. From the root Dependabot
+    # does not look as deep as .github/requirements, so that directory is named.
+    directories:
+      - "/"
+      - "/.github/requirements"
     schedule:
       interval: "daily"
