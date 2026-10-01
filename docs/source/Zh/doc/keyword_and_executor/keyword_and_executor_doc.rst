@@ -82,6 +82,21 @@ JSON 陣列（關鍵字），由執行者解析並執行。
 
 你可以動態載入外部 Python 套件到執行者中：
 
+哪些套件可以載入由套件閘門決定。``AC_add_package_to_executor`` 能替任何動作清單匯入 ``os`` 或
+``subprocess``，所以由宿主程式列出它需要的套件：
+
+.. code-block:: python
+
+   from je_auto_control import executor
+
+   executor.allow_packages("time")                # 這些套件與其子模組
+   executor.set_allow_arbitrary_packages(False)   # 其他套件在匯入前就拒絕
+
+這兩個開關都不是 ``AC_*`` 命令，所以動作清單不能自己打開閘門；被拒絕的套件會讓該動作以
+``AutoControlExecuteActionException`` 失敗。宿主程式呼叫任一個開關之前，任何套件仍會載入，但會發出
+``DeprecationWarning``；之後的版本會預設拒絕允許清單以外的套件。
+
+
 .. code-block:: python
 
    from je_auto_control import package_manager

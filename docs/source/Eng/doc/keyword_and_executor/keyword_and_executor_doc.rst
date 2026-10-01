@@ -83,6 +83,22 @@ Extending the Executor
 
 You can dynamically load external Python packages into the executor:
 
+The package gate decides which packages may load. ``AC_add_package_to_executor`` can import ``os`` or
+``subprocess`` for any action list, so the host program lists what it needs:
+
+.. code-block:: python
+
+   from je_auto_control import executor
+
+   executor.allow_packages("time")                # these, and their submodules
+   executor.set_allow_arbitrary_packages(False)   # refuse everything else before importing it
+
+Neither switch is an ``AC_*`` command, so an action list cannot open its own gate; a refused package fails
+its action with ``AutoControlExecuteActionException``. Until the host calls either switch, any package still
+loads but raises a ``DeprecationWarning``; a future release will refuse packages outside the allowlist by
+default.
+
+
 .. code-block:: python
 
    from je_auto_control import package_manager

@@ -8008,6 +8008,21 @@ class Executor:
             "AC_arrange_cascade": _arrange_cascade,
         }
 
+    @staticmethod
+    def set_allow_arbitrary_packages(enabled: bool) -> None:
+        """
+        Allow (True) or refuse (False) ``AC_add_package_to_executor`` /
+        ``AC_add_package_to_callback_executor`` for packages outside the allowlist. Python only,
+        never an action command, so an action list cannot open its own gate. Until it is called,
+        any package loads with a ``DeprecationWarning``.
+        """
+        package_manager.set_allow_arbitrary_packages(enabled)
+
+    @staticmethod
+    def allow_packages(*packages: str) -> None:
+        """Add packages, and their submodules, to the allowlist of ``AC_add_package_to_executor``."""
+        package_manager.allow_packages(*packages)
+
     def known_commands(self) -> set:
         """Return the set of all command names the executor recognises."""
         return set(self.event_dict.keys()) | set(self._block_commands.keys())

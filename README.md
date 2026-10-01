@@ -215,6 +215,8 @@ still goes on to the end), so a CI step fails with it. The legacy
 
 All servers bind to `127.0.0.1` unless you opt in explicitly.
 
+**Package gate.** `AC_add_package_to_executor` and `AC_add_package_to_callback_executor` import a Python package and register its members as commands, so an action list arriving over any of these surfaces could load `os` or `subprocess`. The host program decides what may load: `executor.allow_packages("name", …)` lists the packages (submodules included) and `executor.set_allow_arbitrary_packages(False)` refuses the rest before importing them. Neither is an `AC_*` command, so an action list cannot open its own gate. A refused package fails that action with `AutoControlExecuteActionException`. Until the host calls either switch, any package still loads but raises a `DeprecationWarning`: a future release will refuse unlisted packages by default.
+
 ### How the remote-desktop wire protocol works
 
 Worth knowing before you expose a host, and described nowhere else in the

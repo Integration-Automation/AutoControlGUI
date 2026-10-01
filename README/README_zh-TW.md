@@ -200,6 +200,8 @@ je_auto_control version
 
 除非明確指定，所有伺服器都綁在 `127.0.0.1`。
 
+**套件閘門。** `AC_add_package_to_executor` 與 `AC_add_package_to_callback_executor` 會匯入 Python 套件並把成員註冊成命令，所以從上面任何一個入口送來的動作清單都可能載入 `os` 或 `subprocess`。哪些套件可以載入，由宿主程式決定：`executor.allow_packages("name", …)` 列出可以載入的套件（含子模組），`executor.set_allow_arbitrary_packages(False)` 會在匯入前拒絕其他套件。這兩個都不是 `AC_*` 命令，所以動作清單不能自己打開閘門。被拒絕的套件會讓該動作以 `AutoControlExecuteActionException` 失敗。宿主程式呼叫任一個開關之前，任何套件仍會載入，但會發出 `DeprecationWarning`：之後的版本會預設拒絕清單以外的套件。
+
 ### 遠端桌面的線路協定
 
 把主機開出去之前值得先知道，而且這段在其他文件裡都沒有寫。預設傳輸是**裸 TCP
