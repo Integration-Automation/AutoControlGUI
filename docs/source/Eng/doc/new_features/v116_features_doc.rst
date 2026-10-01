@@ -32,12 +32,15 @@ steps (``easing`` is any name from ``path_easings()`` — ``linear`` /
 duplicate the shared junction points. ``move_along_path`` emits move events
 through the path; ``drag_path`` presses at the first waypoint, moves through the
 whole path, and releases at the last — for multi-stop drags. Both take a ``sink``
-override for headless testing.
+override for headless testing. ``drag_path`` also takes ``tween_drag``'s pacing,
+``step_delay_s`` (after each move) and ``settle_s`` (before the press, after it and
+before the release), and like it releases the button where the pointer stopped if a
+step raises.
 
 Executor commands
 -----------------
 
 ``AC_move_along_path`` and ``AC_drag_path`` take ``waypoints`` (a JSON
-``[[x, y], ...]`` list) plus ``easing`` / ``per_segment_steps`` (and ``button``
-for the drag). Both are exposed as MCP tools (``ac_move_along_path`` /
+``[[x, y], ...]`` list) plus ``easing`` / ``per_segment_steps`` (and ``button``,
+``step_delay_s`` and ``settle_s`` for the drag). Both are exposed as MCP tools (``ac_move_along_path`` /
 ``ac_drag_path``) and as Script Builder commands under **Mouse**.

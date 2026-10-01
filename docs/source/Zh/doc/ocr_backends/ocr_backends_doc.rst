@@ -86,15 +86,28 @@ AutoControl 提供三個可插拔的 OCR 引擎，共用同一組公開 API。
 Tesseract 安裝注意
 ==================
 
-Windows 必須另外安裝 Tesseract 執行檔（UB-Mannheim build 最常見）。
-若 ``tesseract.exe`` 不在 ``PATH`` 上::
+Windows 必須另外安裝 Tesseract 執行檔（UB-Mannheim build 最常見），安裝程式不會把自己加進
+``PATH``。``find_tesseract_cmd()`` 依序找 ``$TESSERACT_CMD``（指向存在的檔案時）、``PATH``，
+最後是安裝程式的預設資料夾（Windows 的 ``Program Files``、``Program Files (x86)`` 與個人的
+``%LOCALAPPDATA%\\Programs``；macOS 的 Homebrew、``/usr/local`` 與 MacPorts；其他平台的
+``/usr/bin`` 與 ``/usr/local/bin``）。它只負責找，要讓 OCR 用上就把結果交給
+``set_tesseract_cmd``::
 
-   from je_auto_control import set_tesseract_cmd
-   set_tesseract_cmd(r"C:\Program Files\Tesseract-OCR\tesseract.exe")
+   from je_auto_control import find_tesseract_cmd, set_tesseract_cmd
+
+   command = find_tesseract_cmd()
+   if command:
+       set_tesseract_cmd(command)
 
 語言檔（``*.traineddata``）放在 ``Tesseract-OCR\\tessdata\\`` 底下，
 要哪個語言就從 `tessdata GitHub repo
-<https://github.com/tesseract-ocr/tessdata>`_ 抓對應檔案複製進去。
+<https://github.com/tesseract-ocr/tessdata>`_ 抓對應檔案複製進去。那個資料夾在 Windows 要
+系統管理員權限才寫得進去；想把語言檔放在可寫的地方，就把引擎指過去。這會設定本行程的
+``TESSDATA_PREFIX``，傳 ``None`` 則恢復引擎預設::
+
+   from je_auto_control import set_tessdata_dir
+
+   set_tessdata_dir("ocr_tessdata")   # 回傳解析後的絕對路徑
 
 EasyOCR / PaddleOCR 安裝注意
 ============================
@@ -128,11 +141,31 @@ OCR 也透過 executor 對 JSON 動作檔開放::
 
    {"command": "AC_locate_text", "text": "登入", "lang": "chi_tra"}
    {"command": "AC_click_text",  "text": "確定", "backend": "easyocr"}
+   {"command": "AC_ocr_status"}
+   {"command": "AC_ocr_languages"}
 
-兩個指令的參數與 Python 端完全一致。
+這些指令的參數與 Python 端完全一致。``AC_ocr_status`` 回傳 ``{"ok": ..., "reason": ...}``，
+``AC_ocr_languages`` 回傳 ``{"languages": [...]}``，問不到引擎時是 ``null``。
 
 診斷
 ====
+
+要問 Tesseract 在這裡能不能用、不能用時缺哪一塊::
+
+   from je_auto_control import ocr_languages, ocr_status
+
+   ok, reason = ocr_status()
+   # reason："ready"、"missing_package"（沒有 pytesseract）、"missing_engine"
+   # （找不到設定的執行檔）、"engine_unusable"（執行檔跑不起來），或
+   # "no_language_data"（跑起來了，但一個語言都沒列出來）
+
+   languages = ocr_languages()
+   # ["chi_tra", "eng", ...]  已安裝的語言代碼，已排序
+   # []                       引擎回答了：完全沒有語言資料
+   # None                     問不到引擎
+
+``ocr_status`` 檢查的是 OCR 實際會用的執行檔，不改動任何設定。``ocr_languages`` 每次都重新問
+引擎，所以行程執行中補上的語言檔也看得到。``None`` 與 ``[]`` 要分開處理，兩者該有相反的處置。
 
 要確認當前環境有哪些後端可用::
 

@@ -1880,6 +1880,19 @@ def _ocr_find_regex_as_dicts(pattern: str,
     ]
 
 
+def _ocr_status() -> Dict[str, Any]:
+    """Executor adapter: whether Tesseract OCR can work here, as a dict."""
+    from je_auto_control.utils.ocr.tesseract_setup import ocr_status
+    ok, reason = ocr_status()
+    return {"ok": ok, "reason": reason}
+
+
+def _ocr_languages() -> Dict[str, Any]:
+    """Executor adapter: installed Tesseract languages; ``None`` when unknown."""
+    from je_auto_control.utils.ocr.tesseract_setup import ocr_languages
+    return {"languages": ocr_languages()}
+
+
 def _email_trigger_add(host: str, username: str, password: str,
                        script_path: str,
                        port: Optional[int] = None,
@@ -3959,11 +3972,13 @@ def _move_along_path(waypoints: Any, easing: str = "linear",
 
 def _drag_path(waypoints: Any, button: str = "mouse_left",
                easing: str = "linear",
-               per_segment_steps: Any = 20) -> Dict[str, Any]:
+               per_segment_steps: Any = 20, step_delay_s: Any = 0.0,
+               settle_s: Any = 0.0) -> Dict[str, Any]:
     """Adapter: press, drag through a polyline of waypoints, release."""
     from je_auto_control.utils.mouse_path import drag_path
     return drag_path(_waypoints(waypoints), button=button, easing=easing,
-                     per_segment_steps=int(per_segment_steps))
+                     per_segment_steps=int(per_segment_steps),
+                     step_delay_s=float(step_delay_s), settle_s=float(settle_s))
 
 
 def _set_field_text(text: str, clear: str = "select_all", paste: Any = False,
@@ -6395,12 +6410,14 @@ def _generate_sop(actions: List[Any], title: str = "Automation Procedure",
 
 def _tween_drag(start: List[int], end: List[int], steps: int = 30,
                 easing: str = "ease_in_out_quad",
-                button: str = "mouse_left") -> Dict[str, Any]:
+                button: str = "mouse_left", step_delay_s: Any = 0.0,
+                settle_s: Any = 0.0) -> Dict[str, Any]:
     """Adapter: drag along an eased path from start to end."""
     from je_auto_control.utils.tween_drag import tween_drag
     result = tween_drag((int(start[0]), int(start[1])),
                         (int(end[0]), int(end[1])), steps=int(steps),
-                        easing=easing, button=button)
+                        easing=easing, button=button,
+                        step_delay_s=float(step_delay_s), settle_s=float(settle_s))
     return {"points": result["points"]}
 
 
@@ -7166,6 +7183,8 @@ class Executor:
             "AC_click_text": ocr_click_text,
             "AC_read_text_in_region": _ocr_read_region_as_dicts,
             "AC_find_text_regex": _ocr_find_regex_as_dicts,
+            "AC_ocr_status": _ocr_status,
+            "AC_ocr_languages": _ocr_languages,
 
             # Window management
             "AC_list_windows": list_windows,

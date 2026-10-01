@@ -125,6 +125,9 @@ def test_no_flag_exits_non_zero(tmp_path):
     "save_window_layout", "screen_size", "set_clipboard",
     "set_mouse_position", "snap_window", "wait_until_clipboard_changes",
     "wait_until_port", "wait_until_process", "write",
+    # Jeffrey_RPA: added so it can drop its own copies of the same logic.
+    "find_tesseract_cmd", "ocr_languages", "ocr_status", "set_tessdata_dir",
+    "keyboard_key_name",
 ])
 def test_facade_name_other_repositories_call(name):
     assert name in je_auto_control.__all__, f"{name} left the facade"
@@ -152,6 +155,18 @@ def test_internal_names_jeffrey_rpa_imports():
     assert callable(enumerate_monitors) and callable(logical_virtual_rect)
     # Jeffrey_RPA falls back to its own table unless this is a non-empty dict.
     assert isinstance(WRITE_CONTROL_KEYS, dict) and WRITE_CONTROL_KEYS
+
+
+@pytest.mark.parametrize("name, keywords", [
+    ("click_mouse", {"clicks", "interval"}),
+    ("tween_drag", {"step_delay_s", "settle_s"}),
+    ("drag_path", {"step_delay_s", "settle_s"}),
+])
+def test_keywords_jeffrey_rpa_passes(name, keywords):
+    """Keyword parameters added so Jeffrey_RPA can drop its own loops."""
+    import inspect
+    parameters = inspect.signature(getattr(je_auto_control, name)).parameters
+    assert keywords <= set(parameters), (name, keywords - set(parameters))
 
 
 def test_gui_widget_pybreeze_embeds_is_still_there():
@@ -183,6 +198,8 @@ def test_key_tables_jeffrey_rpa_reads():
     for name in ("up", "down", "left", "right", "space", "tab", "shift",
                  "a", "z", "0", "9", "f1", "f12"):
         assert name in keyboard, name
+    # Reverse lookups skip these, so a recorder never writes an alias.
+    assert isinstance(platform_wrapper.keyboard_key_aliases, dict)
 
 
 @pytest.mark.skipif(not sys.platform.startswith("win"),
@@ -198,4 +215,8 @@ def test_windows_key_names_jeffrey_rpa_sends():
 
     for name in ("return", "escape", "control", "menu", "back", "delete",
                  "home", "end", "insert", "capital", "vk_down"):
+        assert name in platform_wrapper.keyboard_keys_table, name
+    # Added so it can drop its own alias and extra-key tables.
+    for name in ("ctrl", "alt", "enter", "esc", "win", "pgup", "numpad0", "plus",
+                 "oem_1", "oem_plus", "oem_102", "oem_clear", "browser_home", "launch_app2"):
         assert name in platform_wrapper.keyboard_keys_table, name

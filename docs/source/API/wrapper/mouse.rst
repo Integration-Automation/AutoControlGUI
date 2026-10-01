@@ -98,14 +98,21 @@ release_mouse
 click_mouse
 ===========
 
-.. function:: click_mouse(mouse_keycode, x=None, y=None)
+.. function:: click_mouse(mouse_keycode, x=None, y=None, clicks=1, interval=0.0)
 
-   Presses and releases a mouse button at the specified position.
+   Presses and releases a mouse button at the specified position, ``clicks``
+   times, ``interval`` seconds apart; ``clicks=2`` double-clicks. Windows and
+   X11 recognise a double-click from the timing and distance of the clicks, so
+   keep ``interval`` under the system double-click time. On macOS the clicks
+   arrive as separate single clicks.
 
    :param mouse_keycode: Mouse button name (e.g., ``"mouse_left"``).
    :type mouse_keycode: int or str
    :param int x: X position (default: current position).
    :param int y: Y position (default: current position).
+   :param int clicks: Number of clicks, at least 1 (default: 1).
+   :param float interval: Seconds between clicks, at least 0 (default: 0.0).
+   :raises AutoControlMouseException: on an invalid ``clicks`` or ``interval``.
    :returns: Tuple of ``(keycode, x, y)``.
    :rtype: tuple
 

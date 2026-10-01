@@ -30,12 +30,16 @@ def mouse_tools() -> List[MCPTool]:
             name="ac_click_mouse",
             description=("Click a mouse button at (x, y). "
                          "mouse_keycode: mouse_left, mouse_right, mouse_middle. "
-                         "If x/y are omitted, clicks at the current cursor."),
+                         "If x/y are omitted, clicks at the current cursor. "
+                         "clicks=2 double-clicks; interval is the pause in "
+                         "seconds between clicks."),
             input_schema=schema({
                 "mouse_keycode": {"type": "string",
                                    "description": "mouse_left | mouse_right | mouse_middle"},
                 "x": {"type": "integer"},
                 "y": {"type": "integer"},
+                "clicks": {"type": "integer", "minimum": 1},
+                "interval": {"type": "number", "minimum": 0},
             }),
             handler=h_input.click_mouse,
             annotations=DESTRUCTIVE,
@@ -256,6 +260,24 @@ def image_and_ocr_tools() -> List[MCPTool]:
             }, required=["text"]),
             handler=h_screen.click_text,
             annotations=DESTRUCTIVE,
+        ),
+        MCPTool(
+            name="ac_ocr_status",
+            description=("Report whether Tesseract OCR can work here: "
+                         "{ok, reason}. reason is ready | missing_package | "
+                         "missing_engine | engine_unusable | no_language_data."),
+            input_schema=schema({}),
+            handler=h_screen.ocr_status,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_ocr_languages",
+            description=("List the installed Tesseract language codes: "
+                         "{languages}. languages is null when the engine "
+                         "cannot be asked and [] when it has no language data."),
+            input_schema=schema({}),
+            handler=h_screen.ocr_languages,
+            annotations=READ_ONLY,
         ),
     ]
 
@@ -3506,13 +3528,18 @@ def tween_drag_tools() -> List[MCPTool]:
             name="ac_tween_drag",
             description=("Drag from 'start' [x,y] to 'end' [x,y] along an "
                          "eased path (easing: linear / ease_in_out_quad / "
-                         "ease_out_cubic / ease_in_cubic). Returns {points}."),
+                         "ease_out_cubic / ease_in_cubic). 'step_delay_s' "
+                         "pauses after each move, 'settle_s' before the "
+                         "press, after it and before the release. Returns "
+                         "{points}."),
             input_schema=schema({
                 "start": {"type": "array", "items": {"type": "integer"}},
                 "end": {"type": "array", "items": {"type": "integer"}},
                 "steps": {"type": "integer"},
                 "easing": {"type": "string"},
-                "button": {"type": "string"}},
+                "button": {"type": "string"},
+                "step_delay_s": {"type": "number", "minimum": 0},
+                "settle_s": {"type": "number", "minimum": 0}},
                 required=["start", "end"]),
             handler=h.tween_drag,
             annotations=DESTRUCTIVE,
@@ -5562,14 +5589,18 @@ def mouse_path_tools() -> List[MCPTool]:
             name="ac_drag_path",
             description=("Press at the first of 'waypoints' ([[x,y],...]), drag "
                          "through them, release at the last. 'button', 'easing', "
-                         "'per_segment_steps'. Returns {points, path}."),
+                         "'per_segment_steps'; 'step_delay_s' pauses after each "
+                         "move, 'settle_s' before the press, after it and before "
+                         "the release. Returns {points, path}."),
             input_schema=schema({
                 "waypoints": {"type": "array",
                               "items": {"type": "array",
                                         "items": {"type": "integer"}}},
                 "button": {"type": "string"},
                 "easing": {"type": "string"},
-                "per_segment_steps": {"type": "integer"}},
+                "per_segment_steps": {"type": "integer"},
+                "step_delay_s": {"type": "number", "minimum": 0},
+                "settle_s": {"type": "number", "minimum": 0}},
                 required=["waypoints"]),
             handler=h_exec.drag_path,
             annotations=DESTRUCTIVE,

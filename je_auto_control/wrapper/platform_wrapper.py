@@ -15,6 +15,9 @@ from je_auto_control.wrapper.backend_contract import (
 # target.
 keyboard_check: KeyboardCheckBackend
 keyboard_keys_table: Dict[str, int]
+#: Alias -> canonical name for entries of ``keyboard_keys_table`` that are
+#: aliases (``esc`` for ``escape``); reverse lookups skip them.
+keyboard_key_aliases: Dict[str, str]
 #: Values are platform-specific button codes: a plain int on X11, Wayland and
 #: macOS, a tuple of three Win32 event flags on Windows.
 mouse_keys_table: Dict[str, MouseKeycode]
@@ -41,13 +44,13 @@ _mouse: Any
 
 if is_windows():
     from je_auto_control.wrapper._platform_windows import (  # noqa: F401  # reason: facade re-export
-        keyboard as _keyboard, keyboard_check, keyboard_keys_table,
+        keyboard as _keyboard, keyboard_check, keyboard_key_aliases, keyboard_keys_table,
         mouse as _mouse, mouse_keys_table, special_mouse_keys_table,
         screen, recorder,
     )
 elif is_macos():
     from je_auto_control.wrapper._platform_osx import (  # noqa: F401  # reason: facade re-export
-        keyboard as _keyboard, keyboard_check, keyboard_keys_table,
+        keyboard as _keyboard, keyboard_check, keyboard_key_aliases, keyboard_keys_table,
         mouse as _mouse, mouse_keys_table, special_mouse_keys_table,
         screen, recorder,
     )
@@ -60,7 +63,7 @@ elif sys.platform.startswith("linux"):
     if _DISPLAY_SERVER == "wayland":
         try:
             from je_auto_control.wrapper._platform_wayland import (  # noqa: F401  # reason: facade re-export
-                keyboard as _keyboard, keyboard_check, keyboard_keys_table,
+                keyboard as _keyboard, keyboard_check, keyboard_key_aliases, keyboard_keys_table,
                 mouse as _mouse, mouse_keys_table, special_mouse_keys_table,
                 screen, recorder,
             )
@@ -72,13 +75,13 @@ elif sys.platform.startswith("linux"):
                 "this warning.", _wayland_error,
             )
             from je_auto_control.wrapper._platform_linux import (  # noqa: F401  # reason: facade re-export
-                keyboard as _keyboard, keyboard_check, keyboard_keys_table,
+                keyboard as _keyboard, keyboard_check, keyboard_key_aliases, keyboard_keys_table,
                 mouse as _mouse, mouse_keys_table, special_mouse_keys_table,
                 screen, recorder,
             )
     else:
         from je_auto_control.wrapper._platform_linux import (  # noqa: F401  # reason: facade re-export
-            keyboard as _keyboard, keyboard_check, keyboard_keys_table,
+            keyboard as _keyboard, keyboard_check, keyboard_key_aliases, keyboard_keys_table,
             mouse as _mouse, mouse_keys_table, special_mouse_keys_table,
             screen, recorder,
         )
@@ -89,7 +92,7 @@ elif is_bsd():
     # whose socket and portal are Linux desktop infrastructure; a BSD running
     # Wayland reaches this through XWayland like any other X11 client.
     from je_auto_control.wrapper._platform_linux import (  # noqa: F401  # reason: facade re-export
-        keyboard as _keyboard, keyboard_check, keyboard_keys_table,
+        keyboard as _keyboard, keyboard_check, keyboard_key_aliases, keyboard_keys_table,
         mouse as _mouse, mouse_keys_table, special_mouse_keys_table,
         screen, recorder,
     )
@@ -110,7 +113,7 @@ if None in [keyboard_keys_table, mouse_keys_table, keyboard, mouse, screen]:
 
 
 __all__ = [
-    "keyboard", "keyboard_check", "keyboard_keys_table",
+    "keyboard", "keyboard_check", "keyboard_key_aliases", "keyboard_keys_table",
     "mouse", "mouse_keys_table", "special_mouse_keys_table",
     "screen", "recorder",
 ]

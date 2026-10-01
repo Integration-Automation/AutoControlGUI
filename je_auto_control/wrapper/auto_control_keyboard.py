@@ -8,6 +8,7 @@ nothing and reporting success), spell the macOS test as
 and the only form a type checker can prune, and raise on a platform that
 matches neither.
 """
+import re
 import sys
 import warnings
 from typing import Optional, Union, Tuple
@@ -25,7 +26,9 @@ from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.platform_id import is_windows, is_x11_unix
 from je_auto_control.utils.test_record.record_test_class import record_action_to_list
 from je_auto_control.utils.text_unicode.text_unicode import unicode_code_units
-from je_auto_control.wrapper.platform_wrapper import keyboard, keyboard_keys_table, keyboard_check
+from je_auto_control.wrapper.platform_wrapper import (
+    keyboard, keyboard_check, keyboard_key_aliases, keyboard_keys_table,
+)
 
 def get_keyboard_keys_table() -> dict:
     """
@@ -33,6 +36,31 @@ def get_keyboard_keys_table() -> dict:
     Get keyboard keys table
     """
     return keyboard_keys_table
+
+
+#: A key name a user can type back: lower case, digits, underscore.
+_TYPABLE_KEY_NAME = re.compile(r"[a-z0-9_]+")
+
+
+def keyboard_key_name(keycode: int) -> Optional[str]:
+    """
+    鍵碼反查標準鍵名；查不到回 None
+    Return the canonical key name for ``keycode``, or ``None`` if it has none.
+
+    A code often has several names in the table: aliases (``esc`` for
+    ``escape``), a legacy upper-case spelling (``LAUNCH_APP2``), a letter's
+    capital (``A``), two spellings of one key (``down`` / ``vk_down``).
+    Aliases never answer (``keyboard_key_aliases`` lists them), so adding one
+    cannot change the name a recorder writes. Among the rest, a name made of
+    lower-case letters, digits and underscores wins (it can be typed back),
+    then the shortest, then the alphabetically first, so every machine with
+    the same table gives the same answer.
+    """
+    names = [name for name, code in keyboard_keys_table.items()
+             if code == keycode and name not in keyboard_key_aliases]
+    if not names:
+        return None
+    return min(names, key=lambda name: (_TYPABLE_KEY_NAME.fullmatch(name) is None, len(name), name))
 
 
 def _resolve_keycode(keycode: Union[int, str]) -> int:
