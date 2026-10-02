@@ -198,7 +198,10 @@ je_auto_control version
 | **语言服务器** | `python -m autocontrol_lsp.server` | 为 `AC_*` 动作 JSON 提供补全与诊断，命令清单直接取自运行期的命令表。 |
 | **远程桌面** | `RemoteDesktopHost` 或 GUI | TCP、WebSocket 或 WebRTC；TOTP、信任列表、TURN 配置、文件／剪贴板／音频同步。 |
 
-除非明确指定，所有服务器都绑定在 `127.0.0.1`。
+除非明确指定，旧版 `python -m je_auto_control -e/-d/--execute_str` 与 `je_auto_control run`
+在动作失败时返回退出码 1，成功时为 0；目录执行累积所有文件的失败，stderr 报告失败数。
+
+所有服务器都绑定在 `127.0.0.1`。
 
 ### 远程桌面的线路协议
 

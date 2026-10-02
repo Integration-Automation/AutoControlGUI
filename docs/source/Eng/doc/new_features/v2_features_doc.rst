@@ -483,3 +483,11 @@ New ``je_auto_control.ios`` namespace with:
 Seven new ``AC_ios_*`` executor commands and matching ``ac_ios_*``
 MCP tools. ``facebook-wda`` is a lazy optional dependency; importing
 ``je_auto_control.ios`` on a non-Mac host does not fail.
+
+
+Legacy CLI failure status
+-------------------------
+
+``python -m je_auto_control -e/-d/--execute_str`` now returns exit code 1
+for failed actions, matching ``je_auto_control run``. Successful runs return 0.
+Directory runs accumulate failures across files; stderr reports the failure count.

@@ -20,7 +20,7 @@ entry points → execution core (`utils/executor/`) → headless capabilities (`
 | --- | --- |
 | `je_auto_control/__init__.py` | Facade: re-exports the public API and lists it in `__all__`. Must import without PySide6. |
 | `je_auto_control/api/` | Small versioned headless facade (`core.py`); the supported entry for new integrations per `docs/API_LIFECYCLE.md`. |
-| `je_auto_control/cli.py`, `__main__.py` | Main CLI and the legacy argparse entry point. |
+| `je_auto_control/cli.py`, `__main__.py` | Main CLI and legacy argparse entry point; both exit 1 for recorded action failures. |
 | `je_auto_control/utils/executor/` | Execution core: `Executor.event_dict` (`AC_*` name → callable) in `action_executor.py`, block commands in `flow_control.py`, validation in `action_schema.py`. |
 | `je_auto_control/utils/` | Headless capability layer, one subpackage per feature, zero Qt imports. Grouped by theme in `architecture_explore.md` §5.4. |
 | `je_auto_control/utils/{socket_server,rest_api,mcp_server,pytest_plugin}/` | Server and integration surfaces (§3). |

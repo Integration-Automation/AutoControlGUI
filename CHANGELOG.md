@@ -103,6 +103,10 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Changed
 
+- Legacy `python -m je_auto_control -e/-d/--execute_str` now exits 1
+  when any action fails, matching `je_auto_control run`. Directory runs and
+  combined flags accumulate failures; successful runs still exit 0. Subprocess
+  callers should treat exit 1 as a failed run and read stderr for the cause.
 - The automatic pytest plugin now uses the lightweight standalone
   `je_auto_control_pytest` module. Fixtures and explicit legacy plugin loading
   remain compatible. Reinstall editable checkouts to refresh entry-point metadata.

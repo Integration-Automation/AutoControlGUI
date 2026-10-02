@@ -213,6 +213,10 @@ still goes on to the end), so a CI step fails with it. The legacy
 | **Language server** | `python -m autocontrol_lsp.server` | Completion and diagnostics for `AC_*` action JSON, generated from the live command table. |
 | **Remote desktop** | `RemoteDesktopHost` / GUI | TCP, WebSocket, or WebRTC; TOTP, trust list, TURN config, file/clipboard/audio sync. |
 
+Legacy `python -m je_auto_control -e/-d/--execute_str` and `je_auto_control run`
+return exit code 1 for failed actions and 0 for successful runs. Directory runs
+retain failures from earlier files; stderr reports the number of failed actions.
+
 All servers bind to `127.0.0.1` unless you opt in explicitly.
 
 ### How the remote-desktop wire protocol works

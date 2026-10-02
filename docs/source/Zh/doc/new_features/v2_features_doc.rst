@@ -446,3 +446,10 @@ iOS backend（XCUITest via WebDriverAgent）
 新增 7 個 ``AC_ios_*`` executor 命令與對應 ``ac_ios_*`` MCP 工具。
 ``facebook-wda`` 為可選 pip 相依、懶載入，非 macOS 主機 import
 ``je_auto_control.ios`` 仍可成功。
+
+
+舊版 CLI 失敗狀態
+-----------------
+
+``python -m je_auto_control -e/-d/--execute_str`` 的動作失敗會回傳結束碼 1，
+與 ``je_auto_control run`` 一致；成功回傳 0。目錄執行累積所有檔案失敗，stderr 回報失敗數。
