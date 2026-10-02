@@ -125,6 +125,8 @@ dmypy.json
 /.claude
 
 # Local test/smoke artifacts
+.worktrees/
+.superpowers/
 .test-tmp/
 bundle-smoke.zip
 platform-smoke.zip
