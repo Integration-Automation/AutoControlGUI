@@ -13,11 +13,18 @@ sender writes one frame per ``send()`` call. The 16 KiB payload cap
 keeps message sizes well under the recommended SCTP boundary.
 
 This module is pure data — no I/O, no asyncio, no peer connection.
+
+JSON operations may carry a string ``request_id`` (at most 64 characters).
+New hosts echo it in replies, errors and credit grants. The four-byte frame
+header and consecutive, EOF-terminated fragment format remain unchanged.
 """
 from __future__ import annotations
 
 import enum
+import json
 import struct
+from itertools import groupby
+from typing import List
 from dataclasses import dataclass
 from je_auto_control.utils.exception.exceptions import AutoControlException
 
@@ -124,6 +131,27 @@ def decode_frame(data: bytes) -> Frame:
             f"payload {len(payload)} exceeds cap {MAX_PAYLOAD_BYTES}",
         )
     return Frame(op=op, flags=flags, claim_id=claim_id, payload=payload)
+
+
+def _correlate_replies(request: Frame, replies: List[Frame]) -> List[Frame]:
+    """Echo a JSON request identity after reassembly, then restore frame limits."""
+    try:
+        body = json.loads(request.payload.decode("utf-8"))
+    except ValueError:
+        return replies
+    request_id = body.get("request_id") if isinstance(body, dict) else None
+    if not isinstance(request_id, str) or not 1 <= len(request_id) <= 64:
+        return replies
+    correlated: List[Frame] = []
+    for (op, claim_id), group in groupby(replies, key=lambda frame: (frame.op, frame.claim_id)):
+        frames = list(group)
+        payload = json.loads(b"".join(frame.payload for frame in frames).decode("utf-8"))
+        payload["request_id"] = request_id
+        correlated.extend(fragment_payload(
+            op, claim_id, json.dumps(payload).encode("utf-8"),
+            base_flags=frames[0].flags & ~FLAG_EOF,
+        ))
+    return correlated
 
 
 __all__ = [

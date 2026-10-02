@@ -223,6 +223,11 @@ actions share it; parallel branches and DAG nodes copy it. REST/MCP requests
 always start their own scope. Explicitly owned `Executor` objects retain their
 state outside a public scope.
 
+USB passthrough uses request IDs to match replies, including fragmented data
+and errors. Late replies cannot satisfy a retry. After a timeout against a
+legacy or unconfirmed host, reconnect with a new client; its handles report
+`closed`. New hosts echo IDs while preserving the existing frame header.
+
 All servers bind to `127.0.0.1` unless you opt in explicitly.
 
 ### How the remote-desktop wire protocol works

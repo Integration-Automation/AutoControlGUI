@@ -10,6 +10,11 @@ None]`` (typically the DataChannel's ``send`` wrapped to call
 on-message handler. The client takes care of the synchronous request /
 reply correlation and credit-based outbound flow control.
 
+New requests use identities echoed by current hosts. After a timeout against
+a legacy or unconfirmed peer, the client shuts down: create a new transport
+and client before retrying. Correlated peers can continue without accepting
+late replies; an orphaned late OPEN claim is closed automatically.
+
 Public API::
 
     from je_auto_control.utils.usb.passthrough import (
@@ -35,7 +40,9 @@ from __future__ import annotations
 import base64
 import json
 import threading
-from dataclasses import dataclass
+from collections import OrderedDict
+from dataclasses import dataclass, field
+from uuid import uuid4
 from typing import Any, Callable, Dict, List, Optional
 
 from je_auto_control.utils.exception.exceptions import AutoControlException
@@ -81,6 +88,8 @@ class _PendingRequest:
     reply_op: Optional[Opcode] = None
     reply_payload: bytes = b""
     cancelled: bool = False
+    request_id: str = field(default_factory=lambda: uuid4().hex)
+    claim_id: int = 0
 
 
 # ---------------------------------------------------------------------------
@@ -115,8 +124,9 @@ class ClientHandle:
 
     @property
     def closed(self) -> bool:
+        """Whether this handle or its client can no longer issue operations."""
         with self._lock:
-            return self._closed
+            return self._closed or self._client.closed
 
     def control_transfer(self, *, bm_request_type: int, b_request: int,
                          w_value: int = 0, w_index: int = 0,
@@ -190,6 +200,10 @@ class UsbPassthroughClient:
         self._credit_timeout = float(credit_timeout_s)
         self._lock = threading.Lock()
         self._pending: Dict[int, _PendingRequest] = {}
+        self._request_ids: Dict[str, _PendingRequest] = {}
+        self._recent: OrderedDict[str, tuple[int, bool]] = OrderedDict()
+        self._expired_opens: set[str] = set()
+        self._supports_request_ids: Optional[bool] = None
         self._credits: Dict[int, int] = {}
         self._credit_events: Dict[int, threading.Event] = {}
         self._claim_locks: Dict[int, threading.Lock] = {}
@@ -197,11 +211,17 @@ class UsbPassthroughClient:
         self._list_pending: Optional[_PendingRequest] = None
         # Reassembly buffers for fragmented replies, keyed by claim_id
         # (open question 2). LIST uses claim_id 0.
-        self._reasm: Dict[int, bytearray] = {}
+        self._reasm: Dict[tuple[int, Opcode], bytearray] = {}
         self._initial_credit_guess = max(1, int(initial_credit_guess))
         self._closed = False
 
     # --- Lifecycle ----------------------------------------------------------
+
+    @property
+    def closed(self) -> bool:
+        """Whether shutdown or an ambiguous legacy timeout requires reconnect."""
+        with self._lock:
+            return self._closed
 
     def shutdown(self) -> None:
         """Cancel every outstanding request; subsequent calls raise."""
@@ -213,6 +233,9 @@ class UsbPassthroughClient:
             if self._list_pending is not None:
                 pending.append(self._list_pending)
             self._pending.clear()
+            self._request_ids.clear()
+            self._recent.clear()
+            self._expired_opens.clear()
             self._open_pending = None
             self._list_pending = None
             self._reasm.clear()
@@ -258,10 +281,13 @@ class UsbPassthroughClient:
         sending fragments without EOF grew the buffer without limit.
         """
         cid = int(frame.claim_id)
+        key = (cid, frame.op)
         with self._lock:
-            buffer = self._reasm.setdefault(cid, bytearray())
+            if self._closed:
+                return None
+            buffer = self._reasm.setdefault(key, bytearray())
             if len(buffer) + len(frame.payload) > _MAX_REASSEMBLED_BYTES:
-                self._reasm.pop(cid, None)
+                self._reasm.pop(key, None)
                 autocontrol_logger.warning(
                     "passthrough client: message on claim %d exceeds %d bytes; dropped",
                     cid, _MAX_REASSEMBLED_BYTES)
@@ -270,75 +296,52 @@ class UsbPassthroughClient:
             if not (frame.flags & FLAG_EOF):
                 return None
             full = bytes(buffer)
-            self._reasm.pop(cid, None)
+            self._reasm.pop(key, None)
         return full
 
     # --- Outbound: open / close ---------------------------------------------
 
     def open(self, *, vendor_id: str, product_id: str,
              serial: Optional[str] = None) -> ClientHandle:
-        request = _PendingRequest(
-            expected_op=Opcode.OPENED, event=threading.Event(),
-        )
-        with self._lock:
-            if self._closed:
-                raise UsbClientClosed(_CLIENT_SHUT_DOWN_MSG)
-            if self._open_pending is not None:
-                raise UsbClientError("another open is in progress")
-            self._open_pending = request
-        body: Dict[str, Any] = {
-            "vendor_id": vendor_id, "product_id": product_id,
-        }
+        """Open a device; legacy peers require reconnect after a reply timeout."""
+        body: Dict[str, Any] = {"vendor_id": vendor_id, "product_id": product_id}
         if serial is not None:
             body["serial"] = serial
-        self._send(Frame(op=Opcode.OPEN,
-                         payload=json.dumps(body).encode("utf-8")))
-        if not request.event.wait(timeout=self._reply_timeout):
-            with self._lock:
-                if self._open_pending is request:
-                    self._open_pending = None
-            raise UsbClientTimeout("OPEN timed out")
-        if request.cancelled:
-            raise UsbClientClosed("client shut down before OPEN reply")
-        if request.reply_op is None:
-            raise UsbClientError("event signalled without a reply")
-        body = _decode_json(request.reply_payload)
-        if not body.get("ok"):
-            raise UsbClientError(body.get("error", "open failed"))
-        return self._bind_claim(body)
+        reply = self._exchange_special(Opcode.OPEN, Opcode.OPENED, body)
+        if not reply.get("ok"):
+            raise UsbClientError(reply.get("error", "open failed"))
+        return self._bind_claim(reply)
 
     def resume(self, resume_token: str) -> ClientHandle:
-        """Re-bind a claim after a reconnect using a token from ``open``.
+        """Rebind a held claim on a new transport using its resume token."""
+        reply = self._exchange_special(Opcode.RESUME, Opcode.OPENED,
+                                       {"resume_token": resume_token})
+        if not reply.get("ok"):
+            raise UsbClientError(reply.get("error", "resume failed"))
+        return self._bind_claim(reply)
 
-        The host session must still hold the claim (it outlived the
-        viewer's transport drop). Returns a fresh :class:`ClientHandle`
-        for the same ``claim_id``; raises :class:`UsbClientError` if the
-        token is unknown or expired.
-        """
-        request = _PendingRequest(
-            expected_op=Opcode.OPENED, event=threading.Event(),
-        )
+    def _exchange_special(self, op: Opcode, expected: Opcode,
+                          body: Dict[str, Any]) -> Dict[str, Any]:
+        request = _PendingRequest(expected_op=expected, event=threading.Event())
+        slot = "_list_pending" if op == Opcode.LIST else "_open_pending"
+        frame = _request_frame(op, 0, body, request)
         with self._lock:
             if self._closed:
                 raise UsbClientClosed(_CLIENT_SHUT_DOWN_MSG)
-            if self._open_pending is not None:
-                raise UsbClientError("another open is in progress")
-            self._open_pending = request
-        self._send(Frame(
-            op=Opcode.RESUME,
-            payload=json.dumps({"resume_token": resume_token}).encode("utf-8"),
-        ))
-        if not request.event.wait(timeout=self._reply_timeout):
-            with self._lock:
-                if self._open_pending is request:
-                    self._open_pending = None
-            raise UsbClientTimeout("RESUME timed out")
-        if request.cancelled:
-            raise UsbClientClosed("client shut down before RESUME reply")
-        body = _decode_json(request.reply_payload)
-        if not body.get("ok"):
-            raise UsbClientError(body.get("error", "resume failed"))
-        return self._bind_claim(body)
+            if getattr(self, slot) is not None:
+                raise UsbClientError(f"another {op.name} is in progress")
+            setattr(self, slot, request)
+            self._request_ids[request.request_id] = request
+        try:
+            self._send(frame)
+        except BaseException:
+            self._drop_request(request)
+            raise
+        self._await_reply(request, op.name)
+        reply = _decode_json(request.reply_payload)
+        if request.reply_op == Opcode.ERROR:
+            raise UsbClientError(reply.get("error", "host ERROR"))
+        return reply
 
     def _bind_claim(self, body: Dict[str, Any]) -> ClientHandle:
         try:
@@ -351,30 +354,8 @@ class UsbPassthroughClient:
         return ClientHandle(self, claim_id, str(body.get("resume_token", "")))
 
     def list_devices(self) -> List[Dict[str, Any]]:
-        """Ask the host for the ACL-visible device list (open question 3).
-
-        Blocks until the host replies. Returns a list of dicts with
-        ``vendor_id`` / ``product_id`` / ``serial`` / ``bus_location``.
-        """
-        request = _PendingRequest(
-            expected_op=Opcode.LIST, event=threading.Event(),
-        )
-        with self._lock:
-            if self._closed:
-                raise UsbClientClosed(_CLIENT_SHUT_DOWN_MSG)
-            if self._list_pending is not None:
-                raise UsbClientError("another list is in progress")
-            self._list_pending = request
-        self._send(Frame(op=Opcode.LIST))
-        if not request.event.wait(timeout=self._reply_timeout):
-            with self._lock:
-                if self._list_pending is request:
-                    self._list_pending = None
-                self._reasm.pop(0, None)
-            raise UsbClientTimeout("LIST timed out")
-        if request.cancelled:
-            raise UsbClientClosed("client shut down before LIST reply")
-        body = _decode_json(request.reply_payload)
+        """Ask for the ACL-visible device list, correlating fragmented replies."""
+        body = self._exchange_special(Opcode.LIST, Opcode.LIST, {})
         devices = body.get("devices")
         return list(devices) if isinstance(devices, list) else []
 
@@ -384,11 +365,13 @@ class UsbPassthroughClient:
         )
         with self._claim_lock(claim_id):
             self._round_trip(claim_id, request,
-                             Frame(op=Opcode.CLOSE, claim_id=int(claim_id)), "CLOSE")
+                             _request_frame(Opcode.CLOSE, claim_id, {}, request), "CLOSE")
         self._forget_claim(claim_id)
+        if request.reply_op == Opcode.ERROR:
+            raise UsbClientError(_decode_json(request.reply_payload).get("error", "close failed"))
 
     def _claim_lock(self, claim_id: int) -> threading.Lock:
-        """One exchange per claim at a time: replies carry only the claim id."""
+        """Serialize exchanges per claim, including compatibility with legacy peers."""
         with self._lock:
             return self._claim_locks.setdefault(int(claim_id), threading.Lock())
 
@@ -404,30 +387,61 @@ class UsbPassthroughClient:
             if self._closed:
                 raise UsbClientClosed(_CLIENT_SHUT_DOWN_MSG)
             self._pending[cid] = request
+            request.claim_id = cid
+            self._request_ids[request.request_id] = request
         try:
             self._consume_credit(cid)
             self._send(frame)
         except BaseException:
             self._drop_pending(cid, request)
             raise
+        self._await_reply(request, f"{label} for claim {cid}")
+
+    def _await_reply(self, request: _PendingRequest, label: str) -> None:
         if not request.event.wait(timeout=self._reply_timeout):
-            self._drop_pending(cid, request)
-            raise UsbClientTimeout(f"{label} timed out for claim {cid}")
+            with self._lock:
+                timed_out = request.reply_op is None and not request.cancelled
+                reconnect = self._supports_request_ids is not True
+                if timed_out:
+                    self._forget_request_locked(request)
+                    self._reasm.pop((request.claim_id, request.expected_op), None)
+                    if request.expected_op == Opcode.OPENED and not reconnect:
+                        self._expired_opens.add(request.request_id)
+            if timed_out:
+                if reconnect:
+                    self.shutdown()
+                raise UsbClientTimeout(f"{label} timed out")
         if request.cancelled:
             raise UsbClientClosed(f"client shut down before {label} reply")
 
-    def _drop_pending(self, claim_id: int, request: "_PendingRequest") -> None:
+    def _forget_request_locked(self, request: _PendingRequest) -> None:
+        """Remove only this identity; retain bounded history for late credits."""
+        self._request_ids.pop(request.request_id, None)
+        if self._pending.get(request.claim_id) is request:
+            self._pending.pop(request.claim_id, None)
+        if self._open_pending is request:
+            self._open_pending = None
+        if self._list_pending is request:
+            self._list_pending = None
+        self._recent.setdefault(request.request_id, (request.claim_id, False))
+        self._recent.move_to_end(request.request_id)
+        if len(self._recent) > 4096:
+            identity, _ = self._recent.popitem(last=False)
+            self._expired_opens.discard(identity)
+
+    def _drop_request(self, request: _PendingRequest) -> None:
         with self._lock:
-            if self._pending.get(claim_id) is request:
-                self._pending.pop(claim_id, None)
+            self._forget_request_locked(request)
+
+    def _drop_pending(self, _claim_id: int, request: _PendingRequest) -> None:
+        self._drop_request(request)
 
     # --- Outbound: transfers ------------------------------------------------
 
     def _exchange_transfer(self, claim_id: int, op: Opcode,
                            body: Dict[str, Any]) -> bytes:
         request = _PendingRequest(expected_op=op, event=threading.Event())
-        frame = Frame(op=op, claim_id=int(claim_id),
-                      payload=json.dumps(body).encode("utf-8"))
+        frame = _request_frame(op, claim_id, body, request)
         # Serialised per claim: a second transfer overwrote the first's
         # pending entry, and one caller received the other's data.
         with self._claim_lock(claim_id):
@@ -448,34 +462,40 @@ class UsbPassthroughClient:
     # --- Inbound dispatch helpers ------------------------------------------
 
     def _on_opened(self, frame: Frame) -> None:
+        self._complete_pending(frame.claim_id, frame.payload, Opcode.OPENED)
+        body = _decode_json(frame.payload)
+        identity = body.get("request_id")
         with self._lock:
-            request = self._open_pending
-            self._open_pending = None
-        if request is not None:
-            request.reply_op = frame.op
-            request.reply_payload = frame.payload
-            request.event.set()
+            if not isinstance(identity, str) or identity not in self._expired_opens:
+                return
+            self._expired_opens.discard(identity)
+        if not body.get("ok"):
+            return
+        try:
+            claim_id = int(body["claim_id"])
+            if not 1 <= claim_id <= 0xFFFF:
+                return
+            request = _PendingRequest(expected_op=Opcode.CLOSED, event=threading.Event())
+            self._send(_request_frame(Opcode.CLOSE, claim_id, {}, request))
+        except (KeyError, TypeError, ValueError, OverflowError, UsbClientError) as error:
+            autocontrol_logger.warning("late USB claim cleanup failed: %s", error)
 
     def _on_list(self, frame: Frame) -> None:
         assembled = self._reassemble(frame)
-        if assembled is None:
-            return
-        with self._lock:
-            request = self._list_pending
-            self._list_pending = None
-        if request is not None:
-            request.reply_op = Opcode.LIST
-            request.reply_payload = assembled
-            request.event.set()
+        if assembled is not None:
+            self._complete_pending(frame.claim_id, assembled, Opcode.LIST)
 
     def _on_credit(self, frame: Frame) -> None:
         try:
-            grant = int(_decode_json(frame.payload).get("credits", 0))
+            body = _decode_json(frame.payload)
+            grant = int(body.get("credits", 0))
         except (TypeError, ValueError, OverflowError):   # null, a list, 1e999
             return
         if grant <= 0:
             return
         with self._lock:
+            if self._closed or not self._accept_credit_locked(body, int(frame.claim_id)):
+                return
             self._credits[int(frame.claim_id)] = (
                 self._credits.get(int(frame.claim_id), 0) + grant
             )
@@ -485,34 +505,73 @@ class UsbPassthroughClient:
             if event is not None:
                 event.set()
 
+    def _accept_credit_locked(self, body: Dict[str, Any], claim_id: int) -> bool:
+        identity = body.get("request_id")
+        if identity is None:
+            return self._supports_request_ids is not True
+        if not isinstance(identity, str):
+            return False
+        pending = self._request_ids.get(identity)
+        receipt = self._recent.get(identity)
+        expected_claim = (pending.claim_id if pending is not None
+                          else (receipt[0] if receipt else None))
+        if expected_claim != claim_id or (receipt is not None and receipt[1]):
+            return False
+        self._recent[identity] = (claim_id, True)
+        if len(self._recent) > 4096:
+            oldest, _ = self._recent.popitem(last=False)
+            self._expired_opens.discard(oldest)
+        return True
+
     def _on_error(self, frame: Frame) -> None:
-        # An unsolicited ERROR — route to whichever pending request matches
-        # the claim_id; if none, log and drop.
-        with self._lock:
-            request = self._pending.pop(int(frame.claim_id), None)
-            self._reasm.pop(int(frame.claim_id), None)
-        if request is None:
-            autocontrol_logger.warning(
-                "passthrough client: unsolicited ERROR for claim %s: %s",
-                frame.claim_id, frame.payload[:200],
-            )
-            return
-        request.reply_op = frame.op
-        request.reply_payload = frame.payload
-        request.event.set()
+        self._complete_pending(frame.claim_id, frame.payload, Opcode.ERROR)
+
+    def _reply_request_locked(self, claim_id: int, body: Dict[str, Any],
+                              op: Opcode) -> Optional[_PendingRequest]:
+        identity = body.get("request_id")
+        if identity is not None:
+            if not isinstance(identity, str):
+                return None
+            request = self._request_ids.get(identity)
+            if request is not None:
+                self._supports_request_ids = True
+            return request
+        if self._supports_request_ids is True:
+            return None
+        request = self._legacy_request_locked(claim_id, op)
+        if request is not None:
+            self._supports_request_ids = False
+        return request
+
+    def _legacy_request_locked(self, claim_id: int, op: Opcode) -> Optional[_PendingRequest]:
+        request = self._pending.get(int(claim_id))
+        if op == Opcode.OPENED:
+            request = self._open_pending
+        elif op == Opcode.LIST:
+            request = self._list_pending
+        elif op == Opcode.ERROR and claim_id == 0:
+            candidates = [p for p in (self._open_pending, self._list_pending) if p is not None]
+            request = candidates[0] if len(candidates) == 1 else None
+        return request
 
     def _complete_pending(self, claim_id: int, payload: bytes,
                           expected_op: Opcode) -> None:
         with self._lock:
-            request = self._pending.get(int(claim_id))
+            if self._closed:
+                return
+            request = self._reply_request_locked(claim_id, _decode_json(payload), expected_op)
             if request is None:
                 return
-            if request.expected_op != expected_op:
+            if expected_op not in (request.expected_op, Opcode.ERROR):
                 return
-            self._pending.pop(int(claim_id), None)
-        request.reply_op = expected_op
-        request.reply_payload = payload
-        request.event.set()
+            if request.claim_id and request.claim_id != int(claim_id):
+                return
+            self._forget_request_locked(request)
+            if expected_op == Opcode.ERROR:
+                self._reasm.pop((request.claim_id, request.expected_op), None)
+            request.reply_op = expected_op
+            request.reply_payload = payload
+            request.event.set()
 
     # --- Credit helpers ----------------------------------------------------
 
@@ -550,7 +609,7 @@ class UsbPassthroughClient:
 
     def pending_count(self) -> int:
         with self._lock:
-            return len(self._pending) + (1 if self._open_pending else 0)
+            return len(self._request_ids)
 
     # --- Internal ----------------------------------------------------------
 
@@ -564,6 +623,13 @@ class UsbPassthroughClient:
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
+
+def _request_frame(op: Opcode, claim_id: int, body: Dict[str, Any],
+                   request: _PendingRequest) -> Frame:
+    return Frame(op=op, claim_id=int(claim_id), payload=json.dumps(
+        dict(body, request_id=request.request_id),
+    ).encode("utf-8"))
 
 
 def _endpoint_request(*, endpoint: int, direction: str, data: bytes,

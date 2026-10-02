@@ -468,3 +468,15 @@ iOS backend（XCUITest via WebDriverAgent）
         assert scope["result"] == "hello"
 
 平行變數中的自訂物件須支援深複製。``isolated=True`` 可建立獨立巢狀範圍，離開時還原父層。
+
+
+USB 請求配對
+------------
+
+JSON 操作可攜帶最多 64 字元的 ``request_id``。新版 client 產生 ID，主機在
+OPEN／RESUME、LIST、transfer、CLOSE、ERROR 與 CREDIT 回傳同一 ID；分片重組後才配對。
+遲到回覆不能完成另一個請求。credit 必須符合請求與 claim，且只套用一次；
+遲到 OPEN 產生的未使用 claim 會自動關閉。二進位框標頭不變，仍相容舊端點。
+
+舊版或能力未確認的主機回覆逾時後，client 關閉並取消 pending，handle 的 ``closed`` 為真。
+重試前須重連傳輸並建立新的 ``UsbPassthroughClient``。已確認 ID 配對能力的端點可繼續以新 ID 重試。

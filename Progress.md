@@ -221,19 +221,6 @@ MCP 的 bearer 比對同理；稽核寫入帶上 `user_id`。
 
 ---
 
-## USB passthrough viewer 以種類配對回覆，逾時的回覆會交給下一個請求
-
-`DECIDE` — 協定要不要加請求編號（線上格式改動，新舊版本相容要一起想）
-
-`utils/usb/passthrough/viewer_client.py:413`（`_on_opened`）與 `:466`（`_complete_pending`）只按 OPEN／LIST／claim
-配對回覆，回覆沒有序號。請求逾時後，對同一種類的下一個請求會拿到遲到的舊回覆：`open(aaaa)` 逾時、`open(bbbb)`
-收到 `aaaa` 的 OPENED，claim 綁錯裝置；bulk 讀逾時後，下一次傳輸拿到上一次的資料。host 接受最長 60 秒的
-`timeout_ms`，client 預設 10 秒就放棄，正常使用就會遇到（2026-09-24 稽核重現）。
-
-**選項**：在 payload 加一個由 client 產生、host 原樣帶回的請求編號（舊 host 不帶就退回現在的配對）；或逾時後把該
-claim 標成需排空，丟掉下一個回覆——但 host 若根本沒回，會丟掉正確的回覆。
-
----
 
 
 

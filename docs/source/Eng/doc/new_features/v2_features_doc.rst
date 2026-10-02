@@ -508,3 +508,19 @@ To share a run across calls and inspect its variables::
 
 Opaque variable values used in parallel work must support deep copying.
 Use ``isolated=True`` to start an independent nested scope; exit restores the parent.
+
+
+USB request correlation
+-----------------------
+
+JSON operations carry an optional ``request_id`` string (up to 64 characters).
+Current clients generate IDs; current hosts echo them in OPEN/RESUME, LIST,
+transfer, CLOSE, ERROR and CREDIT responses, after fragment reassembly.
+Late replies cannot complete another request. Credits must match the request
+and claim and are applied once; late OPEN claims are released.
+The binary header is unchanged, and old peers still work.
+
+After a reply timeout against a legacy or unconfirmed host, the client closes
+and cancels its pending operations; handles report ``closed``. Reconnect the
+transport and create a new ``UsbPassthroughClient`` before retrying.
+A confirmed correlated peer can continue after timeout with a fresh request ID.

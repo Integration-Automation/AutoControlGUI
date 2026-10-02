@@ -70,7 +70,7 @@ from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.usb.passthrough.acl import UsbAcl, normalize_usb_id
 from je_auto_control.utils.usb.passthrough.backend import UsbBackend, UsbHandle
 from je_auto_control.utils.usb.passthrough.protocol import (
-    Frame, Opcode, fragment_payload,
+    Frame, Opcode, fragment_payload, _correlate_replies,
 )
 
 
@@ -191,14 +191,14 @@ class UsbPassthroughSession:
         return self._abuse.is_locked()
 
     def handle_frame(self, frame: Frame) -> List[Frame]:
-        """Process one frame, with abuse tracking, and return replies."""
+        """Track abuse and return replies echoing the optional request identity."""
         if self._abuse.is_locked():
-            return [_error_frame(frame.claim_id, "rate limited; locked out")]
+            return _correlate_replies(frame, [_error_frame(frame.claim_id, "rate limited; locked out")])
         replies = self._dispatch(frame)
         if _is_misbehaviour(replies) and self._abuse.record_strike():
             self._audit("usb_rate_limited", "?", "?", None,
                         detail="viewer locked out for repeated failures")
-        return replies
+        return _correlate_replies(frame, replies)
 
     def _dispatch(self, frame: Frame) -> List[Frame]:
         """Route one incoming frame; return zero or more reply frames."""

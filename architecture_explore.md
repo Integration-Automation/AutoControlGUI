@@ -20,7 +20,7 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 | 指標 | 數值 |
 | --- | ---: |
 | Python 模組總數（含周邊子專案） | 1,063 |
-| 程式碼總行數 | 156,990 |
+| 程式碼總行數 | 157,084 |
 | `je_auto_control/utils/` 子套件數 | 310 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 775 |
 | 套件門面 `__all__` 公開名稱數 | 1,244 |
@@ -515,7 +515,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.10 遠端桌面與 USB
 
-> 6 個套件、約 19,487 行。
+> 6 個套件、約 19,581 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -523,7 +523,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/config_sync/` | 332 | 透過訊令伺服器做跨機器設定同步 |
 | `utils/device_matrix/` | 143 | 行動裝置矩陣：同一 action list 於多台裝置平行執行 |
 | `utils/remote_desktop/` | 13,014 | **遠端桌面子系統**（56 檔／11.7K LOC）：TCP／WebSocket／WebRTC 三條傳輸路徑、主機與檢視端、訊令伺服器、TURN／中繼、多檢視者、錄影、信任清單、TOTP、稽核鏈 |
-| `utils/usb/` | 4,572 | 跨平台 USB 列舉／熱插拔／裝置直通（WinUSB、IOKit、libusb 後端 + ACL + WebRTC DataChannel 通道） |
+| `utils/usb/` | 4,666 | 跨平台 USB 列舉／熱插拔／裝置直通（WinUSB、IOKit、libusb 後端 + ACL + WebRTC DataChannel 通道） |
 | `utils/usbip/` | 1,008 | USB/IP 線路協定主機端（協定封包、TCP 伺服器、libusb URB 後端） |
 
 ### 5.4.11 伺服器、網路協定與外部整合
@@ -798,19 +798,19 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `permissions.py` / `clipboard_sync.py` / `wake_on_lan.py` / `session_actions.py` / `auth.py` | 64 / 74 / 56 / 40 / 28 | 逐 session 權限、剪貼簿同步、WOL、SAS 注入與螢幕遮蔽、HMAC 挑戰回應。 |
 | `ws_host.py` / `ws_viewer.py` / `jpeg_recorder.py` | 40 / 29 / 146 | WebSocket 傳輸變體與 TCP 路徑錄影。 |
 
-#### `utils/usb/`（4,572 行）與 `utils/usbip/`（1,008 行）
+#### `utils/usb/`（4,666 行）與 `utils/usbip/`（1,008 行）
 
 | 檔案 | 行數 | 職責 |
 | --- | ---: | --- |
 | `usb/passthrough/session.py` | 642 | 逐 peer 的 USB 直通 session。 |
-| `usb/passthrough/viewer_client.py` | 600 | 檢視端的直通協定用戶端。 |
+| `usb/passthrough/viewer_client.py` | 666 | 檢視端直通協定：依 request ID 配對、分片／credit 去重、舊端點逾時失效與遲到 claim 清理。 |
 | `usb/passthrough/backend.py` | 488 | 後端 ABC + libusb 實作。 |
 | `usb/passthrough/winusb_backend.py` | 488 | Windows WinUSB 後端（ctypes）。 |
 | `usb/passthrough/acl.py` | 495 | 逐裝置 ACL。 |
 | `usb/passthrough/iokit_backend.py` | 221 | macOS IOKit 後端。 |
 | `usb/passthrough/webrtc_channel.py` | 180 | 把直通協定橋到 WebRTC `usb` DataChannel。 |
 | `usb/passthrough/loopback.py` | 159 | 行程內 loopback 傳輸（測試用）。 |
-| `usb/passthrough/protocol.py` | 133 | 線路框格式。 |
+| `usb/passthrough/protocol.py` | 161 | 線路框格式。 |
 | `usb/passthrough/descriptor.py` | 134 | USB 標準裝置描述元解析。 |
 | `usb/passthrough/key_provider.py` | 125 | ACL 的可插拔 HMAC 金鑰來源。 |
 | `usb/passthrough/commands.py` | 150 | 無頭直通指令（單一真實來源）。 |
@@ -1075,7 +1075,7 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `utils/mcp_server/` | 35 | 18,850 |
 | `utils/remote_desktop/` | 56 | 13,014 |
 | `utils/executor/` | 8 | 9,570 |
-| `utils/usb/` | 17 | 4,572 |
+| `utils/usb/` | 17 | 4,666 |
 | `je_auto_control/`（頂層 3 檔） | 3 | 2,417 |
 | `utils/accessibility/` | 14 | 3,143 |
 | `wrapper/` | 19 | 3,631 |
@@ -1092,5 +1092,5 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 852 |
 | 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 681 | 56,944 |
-| **總計** | **1,057** | **156,925** |
+| **總計** | **1,057** | **157,019** |
 

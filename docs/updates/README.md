@@ -58,6 +58,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261002-04 | 2026-10-02 | Correlate USB replies and reject ambiguous retries | #done #usb | [2026-10](2026-10.md) |
 | U-20261002-03 | 2026-10-02 | Isolate execution variables and fork parallel work | #done #executor | [2026-10](2026-10.md) |
 | U-20261002-02 | 2026-10-02 | Report legacy CLI action failures via exit status | #done #cli | [2026-10](2026-10.md) |
 | U-20261002-01 | 2026-10-02 | Lightweight automatic pytest entry point | #done #pytest | [2026-10](2026-10.md) |

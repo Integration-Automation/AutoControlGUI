@@ -103,6 +103,12 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Changed
 
+- USB passthrough JSON requests now carry `request_id`, echoed by new hosts
+  in replies, errors and credit grants. Late replies cannot complete newer
+  operations; duplicate or wrong-claim credit grants are ignored and orphaned
+  late OPEN claims are closed. After a timeout with a legacy or unconfirmed
+  host, the client and handles are closed: reconnect before retrying.
+  Existing frame headers and legacy peer support remain compatible.
 - Public action runs and REST/MCP requests now isolate script variables.
   Nested actions share their run; parallel branches and DAG nodes receive deep
   copies. Use `with execution_scope(seed) as scope:` to share variables across
