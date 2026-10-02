@@ -201,6 +201,11 @@ je_auto_control version
 除非明确指定，旧版 `python -m je_auto_control -e/-d/--execute_str` 与 `je_auto_control run`
 在动作失败时返回退出码 1，成功时为 0；目录执行累积所有文件的失败，stderr 报告失败数。
 
+公开动作调用会隔离变量。需要跨调用共用时，使用
+`with je_auto_control.execution_scope({"name": "value"}) as scope:`。
+嵌套动作共用本次作用域，并行分支与 DAG 节点深复制变量；REST／MCP 请求各自隔离。
+明确持有的 `Executor` 在公开作用域外保留自己的状态。
+
 所有服务器都绑定在 `127.0.0.1`。
 
 ### 远程桌面的线路协议

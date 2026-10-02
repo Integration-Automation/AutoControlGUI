@@ -491,3 +491,20 @@ Legacy CLI failure status
 ``python -m je_auto_control -e/-d/--execute_str`` now returns exit code 1
 for failed actions, matching ``je_auto_control run``. Successful runs return 0.
 Directory runs accumulate failures across files; stderr reports the failure count.
+
+
+Execution variable scopes
+-------------------------
+
+Each public action run starts fresh. Nested calls share its scope; parallel
+branches and DAG workers deep-copy variables. REST/MCP requests are independent.
+An explicitly owned ``Executor`` retains its state outside a public scope.
+To share a run across calls and inspect its variables::
+
+    import je_auto_control as ac
+    with ac.execution_scope({"seed": "hello"}) as scope:
+        ac.execute_action([["AC_set_var", {"name": "result", "value": "${seed}"}]])
+        assert scope["result"] == "hello"
+
+Opaque variable values used in parallel work must support deep copying.
+Use ``isolated=True`` to start an independent nested scope; exit restores the parent.

@@ -103,6 +103,11 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Changed
 
+- Public action runs and REST/MCP requests now isolate script variables.
+  Nested actions share their run; parallel branches and DAG nodes receive deep
+  copies. Use `with execution_scope(seed) as scope:` to share variables across
+  multiple public calls or inspect final values. An explicitly owned `Executor`
+  retains its own state outside a public scope.
 - Legacy `python -m je_auto_control -e/-d/--execute_str` now exits 1
   when any action fails, matching `je_auto_control run`. Directory runs and
   combined flags accumulate failures; successful runs still exit 0. Subprocess

@@ -95,12 +95,14 @@ def test_execute_action_with_vars_defers_loop_body():
     The eager pre-pass previously resolved ${item} against the seed mapping —
     where it does not exist — and raised before execution.
     """
-    execute_action_with_vars(
-        [["AC_for_each", {"items": ["a", "b"], "as": "item",
-                          "body": [["AC_set_var",
-                                    {"name": "r3_last", "value": "${item}"}]]}]],
-        {"seed_only": 1})
-    assert executor.variables.get_value("r3_last") == "b"
+    from je_auto_control.utils.script_vars.scope import execution_scope
+    with execution_scope() as scope:
+        execute_action_with_vars(
+            [["AC_for_each", {"items": ["a", "b"], "as": "item",
+                              "body": [["AC_set_var",
+                                        {"name": "r3_last", "value": "${item}"}]]}]],
+            {"seed_only": 1})
+        assert scope.get_value("r3_last") == "b"
 
 
 def test_parallel_branch_sees_custom_command():

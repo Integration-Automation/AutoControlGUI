@@ -92,7 +92,7 @@ def run_dag(definition: Any,
     and every pending node is ``skipped`` with the error ``"stopped"``.
     """
     dag = _coerce_definition(definition)
-    local = local_runner or _default_local_runner
+    local = local_runner or _bound_local_runner()
     remote = remote_runner or _default_remote_runner
     if stop_event is not None:
         local = _stoppable(local, stop_event)
@@ -291,15 +291,31 @@ def _ancestor_index(dag: DagDefinition) -> Dict[str, Set[str]]:
     return ancestors
 
 
-def _default_local_runner(node: DagNode, _definition: DagDefinition) -> Any:
-    from je_auto_control.utils.executor.action_executor import executor
+def _bound_local_runner() -> NodeRunner:
+    """Capture the caller before DAG workers start and fork each node's scope."""
+    from je_auto_control.utils.executor.action_executor import _running_executor
+    from je_auto_control.utils.script_vars.scope import execution_scope
+    snapshot = _running_executor().fork()
+    variables = snapshot.variables.fork()
+
+    def run(node: DagNode, definition: DagDefinition) -> Any:
+        with execution_scope(variables, isolated=True):
+            engine = snapshot.fork()
+            return _default_local_runner(node, definition, engine=engine)
+    return run
+
+
+def _default_local_runner(node: DagNode, _definition: DagDefinition, *, engine: Any = None) -> Any:
+    if engine is None:
+        from je_auto_control.utils.executor.action_executor import executor
+        engine = executor.fork()
     from je_auto_control.utils.json.json_file import read_executable_action_json
     # raise_on_error=True: by default a failed action is only recorded, so
     # a node whose actions all failed counted as succeeded and its
     # dependants ran anyway.
     actions = (list(node.actions) if node.actions is not None
                else read_executable_action_json(str(node.action_file)))
-    return executor.execute_action(actions, raise_on_error=True)
+    return engine.execute_action(actions, raise_on_error=True)
 
 
 def _default_remote_runner(node: DagNode,

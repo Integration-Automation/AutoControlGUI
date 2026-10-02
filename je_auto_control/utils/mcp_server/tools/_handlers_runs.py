@@ -12,15 +12,19 @@ from typing import Any, Dict, List, Optional
 
 def execute_actions(actions: List[Any]) -> Dict[str, str]:
     from je_auto_control.utils.executor.action_executor import execute_action
-    result = execute_action(actions)
+    from je_auto_control.utils.script_vars.scope import execution_scope
+    with execution_scope(isolated=True):
+        result = execute_action(actions)
     return {key: str(value) for key, value in result.items()}
 
 
 def execute_action_file(file_path: str) -> Dict[str, str]:
     from je_auto_control.utils.executor.action_executor import execute_action
     from je_auto_control.utils.json.json_file import read_executable_action_json
+    from je_auto_control.utils.script_vars.scope import execution_scope
     safe_path = os.path.realpath(os.fspath(file_path))
-    result = execute_action(read_executable_action_json(safe_path))
+    with execution_scope(isolated=True):
+        result = execute_action(read_executable_action_json(safe_path))
     return {key: str(value) for key, value in result.items()}
 
 

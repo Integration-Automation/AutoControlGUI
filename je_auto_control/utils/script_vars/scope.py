@@ -7,6 +7,9 @@ state during execution — counters in loops, captured OCR/locator results,
 executor exposes to flow-control commands so those commands can read and
 write the same bag the runtime interpolator consults.
 """
+from contextlib import contextmanager
+from contextvars import ContextVar
+from copy import deepcopy
 from typing import Any, Dict, Iterator, Mapping, MutableMapping, Optional
 
 
@@ -62,6 +65,47 @@ class VariableScope(MutableMapping[str, Any]):
         """Return a shallow copy as a plain dict (safe for interpolation)."""
         return dict(self._vars)
 
+    def fork(self) -> "VariableScope":
+        """Deep-copy branch variables so mutable values cannot alter the parent."""
+        return VariableScope(deepcopy(self._vars))
+
     def clear(self) -> None:
         """Drop every stored variable."""
         self._vars.clear()
+
+
+_EXECUTION_SCOPE: ContextVar[Optional[VariableScope]] = ContextVar(
+    "autocontrol_execution_scope", default=None,
+)
+
+
+def current_execution_scope() -> Optional[VariableScope]:
+    """Return this context's active variables, or None outside a public run."""
+    return _EXECUTION_SCOPE.get()
+
+
+@contextmanager
+def execution_scope(variables: Optional[Mapping[str, object]] = None, *,
+                    isolated: bool = False) -> Iterator[VariableScope]:
+    """Isolate a public run; nested calls share its variables and restore on exit.
+
+    Each parallel worker starts its own context with a snapshot of the parent.
+    Use this boundary explicitly to share variables across several public calls.
+    ``isolated=True`` forks a worker even if its thread inherits the context.
+    """
+    active = current_execution_scope()
+    if active is not None and not isolated:
+        if variables is not None:
+            active.update_many(variables)
+        yield active
+        return
+    scope = VariableScope()
+    if variables is not None:
+        scope.update_many(variables)
+    if isolated:
+        scope = scope.fork()
+    token = _EXECUTION_SCOPE.set(scope)
+    try:
+        yield scope
+    finally:
+        _EXECUTION_SCOPE.reset(token)

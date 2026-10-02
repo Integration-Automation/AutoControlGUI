@@ -63,8 +63,9 @@ def cmd_run(args: argparse.Namespace) -> int:
         # Seeded, not interpolated over the whole tree: that failed on a loop
         # body's ${item} ("Unknown variable") and would print ${secrets.X}
         # resolved into the dry-run keys.
-        executor.variables.update_many(variables)
-        result = executor.execute_action(actions, dry_run=True)
+        from je_auto_control.utils.script_vars.scope import execution_scope
+        with execution_scope(variables):
+            result = executor.execute_action(actions, dry_run=True)
     elif variables:
         result = execute_action_with_vars(actions, variables)
     else:

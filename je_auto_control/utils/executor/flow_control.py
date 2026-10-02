@@ -459,6 +459,7 @@ class _ParallelRun:
         # parent's live command/macro maps concurrently.
         self._event_dict = dict(executor.event_dict)
         self._macros = dict(executor.macros)
+        self._variables = executor.variables.fork()
         self._strict = getattr(executor_module._STRICT_BODIES, "value", False)
         self._macro_depth = getattr(_MACRO_DEPTH, "value", 0)
         self.results: list = [None] * len(branches)
@@ -477,6 +478,7 @@ class _ParallelRun:
         for name, handler in self._event_dict.items():
             branch_executor.event_dict.setdefault(name, handler)
         branch_executor.macros.update(self._macros)
+        branch_executor.variables = self._variables.fork()
         return branch_executor
 
     def run_branch(self, index: int, branch: Any) -> None:
@@ -489,8 +491,10 @@ class _ParallelRun:
         _MACRO_DEPTH.value = self._macro_depth
         self._module.reset_recorded_failures()
         try:
-            self.results[index] = self._branch_executor().execute_action(
-                branch, raise_on_error=self._strict, _validated=True)
+            from je_auto_control.utils.script_vars.scope import execution_scope
+            with execution_scope(self._variables, isolated=True):
+                self.results[index] = self._branch_executor().execute_action(
+                    branch, raise_on_error=self._strict, _validated=True)
             self._failures[index] = self._module.recorded_failures()
         except AutoControlAssertionException as error:
             self._assertions[index] = error

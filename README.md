@@ -217,6 +217,12 @@ Legacy `python -m je_auto_control -e/-d/--execute_str` and `je_auto_control run`
 return exit code 1 for failed actions and 0 for successful runs. Directory runs
 retain failures from earlier files; stderr reports the number of failed actions.
 
+Public action runs isolate variables. To share a run across calls, use
+`with je_auto_control.execution_scope({"name": "value"}) as scope:`. Nested
+actions share it; parallel branches and DAG nodes copy it. REST/MCP requests
+always start their own scope. Explicitly owned `Executor` objects retain their
+state outside a public scope.
+
 All servers bind to `127.0.0.1` unless you opt in explicitly.
 
 ### How the remote-desktop wire protocol works

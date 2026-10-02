@@ -453,3 +453,18 @@ iOS backend（XCUITest via WebDriverAgent）
 
 ``python -m je_auto_control -e/-d/--execute_str`` 的動作失敗會回傳結束碼 1，
 與 ``je_auto_control run`` 一致；成功回傳 0。目錄執行累積所有檔案失敗，stderr 回報失敗數。
+
+
+執行變數範圍
+------------
+
+每次公開呼叫建立獨立範圍；巢狀呼叫共用當次範圍，平行分支與 DAG 工作執行緒
+深複製變數。REST／MCP 請求各自隔離。明確持有的 ``Executor`` 在公開範圍外保留狀態。
+需要跨呼叫共用並讀取結果時::
+
+    import je_auto_control as ac
+    with ac.execution_scope({"seed": "hello"}) as scope:
+        ac.execute_action([["AC_set_var", {"name": "result", "value": "${seed}"}]])
+        assert scope["result"] == "hello"
+
+平行變數中的自訂物件須支援深複製。``isolated=True`` 可建立獨立巢狀範圍，離開時還原父層。

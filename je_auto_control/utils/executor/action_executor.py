@@ -1,5 +1,6 @@
 import threading
 import types
+from contextvars import ContextVar
 from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple, Union
 
 from je_auto_control.utils.exception.exception_tags import (
@@ -60,7 +61,9 @@ from je_auto_control.utils.secrets import default_secret_manager
 from je_auto_control.utils.script_vars.interpolate import (
     interpolate_value,
 )
-from je_auto_control.utils.script_vars.scope import VariableScope
+from je_auto_control.utils.script_vars.scope import (
+    VariableScope, current_execution_scope, execution_scope,
+)
 from je_auto_control.utils.http_client.http_client import http_request
 from je_auto_control.utils.generate_report.generate_html_report import generate_html, generate_html_report
 from je_auto_control.utils.generate_report.generate_json_report import generate_json, generate_json_report
@@ -975,7 +978,7 @@ def _run_suite(spec: Dict[str, Any],
         run_suite, write_allure_results, write_junit_xml,
     )
     result = run_suite(
-        spec, executor=executor, tags=tags,
+        spec, executor=_running_executor(), tags=tags,
         respect_quarantine=_as_bool(respect_quarantine),
     )
     payload = result.to_dict()
@@ -1815,7 +1818,7 @@ def _llm_plan_for_executor(description: str,
     """Executor adapter: plan without executing, using current command set."""
     return llm_plan_actions(
         description,
-        known_commands=executor.known_commands(),
+        known_commands=_running_executor().known_commands(),
         examples=examples,
         model=model,
         max_tokens=int(max_tokens),
@@ -1829,7 +1832,7 @@ def _llm_run_for_executor(description: str,
     """Executor adapter: plan and execute against the global executor."""
     return llm_run_from_description(
         description,
-        executor=executor,
+        executor=_running_executor(),
         examples=examples,
         model=model,
         max_tokens=int(max_tokens),
@@ -7070,12 +7073,12 @@ _STRICT_BODIES = threading.local()
 #: nested list (AC_circuit_call, AC_with_modifiers, AC_bulkhead_run, ...) used
 #: the module's executor, so a list run on another Executor -- device_matrix's
 #: per-device one -- lost its variables inside them.
-_RUNNING = threading.local()
+_RUNNING: ContextVar[Optional["Executor"]] = ContextVar("autocontrol_running_executor", default=None)
 
 
 def _running_executor() -> "Executor":
     """The executor running the current action list on this thread, else the module's."""
-    return getattr(_RUNNING, "value", None) or executor
+    return _RUNNING.get() or executor
 
 
 class Executor:
@@ -8008,6 +8011,25 @@ class Executor:
             "AC_arrange_cascade": _arrange_cascade,
         }
 
+    @property
+    def variables(self) -> VariableScope:
+        """Use the current public-run scope, or this explicit executor's state."""
+        active = current_execution_scope()
+        return active if active is not None else self._variables
+
+    @variables.setter
+    def variables(self, value: VariableScope) -> None:
+        self._variables = value
+
+    def fork(self) -> "Executor":
+        """Copy variables and custom commands into an independent branch executor."""
+        branch = Executor()
+        for name, handler in self.event_dict.items():
+            branch.event_dict.setdefault(name, handler)
+        branch.macros.update(self.macros)
+        branch.variables = self.variables.fork()
+        return branch
+
     def known_commands(self) -> set:
         """Return the set of all command names the executor recognises."""
         return set(self.event_dict.keys()) | set(self._block_commands.keys())
@@ -8106,14 +8128,13 @@ class Executor:
         inherited = getattr(_STRICT_BODIES, "value", False)
         raise_on_error = _as_bool(raise_on_error) or inherited
         _STRICT_BODIES.value = raise_on_error
-        running = getattr(_RUNNING, "value", None)
-        _RUNNING.value = self
+        running = _RUNNING.set(self)
         try:
             return self._execute_list(action_list, raise_on_error, _validated,
                                       dry_run, step_callback)
         finally:
             _STRICT_BODIES.value = inherited
-            _RUNNING.value = running
+            _RUNNING.reset(running)
 
     def _execute_list(self, action_list: Union[list, dict], raise_on_error: bool,
                       _validated: bool, dry_run: bool,
@@ -8301,11 +8322,15 @@ def add_command_to_executor(command_dict: dict) -> None:
 
 
 def execute_action(action_list: list) -> Dict[str, str]:
-    return executor.execute_action(action_list)
+    """Execute in a fresh public scope, sharing it with nested helpers."""
+    with execution_scope():
+        return _running_executor().execute_action(action_list)
 
 
 def execute_files(execute_files_list: list) -> List[Dict[str, str]]:
-    return executor.execute_files(execute_files_list)
+    """Execute a file batch in one scope isolated from other public runs."""
+    with execution_scope():
+        return _running_executor().execute_files(execute_files_list)
 
 
 def execute_action_with_vars(action_list: list, variables: dict
@@ -8321,5 +8346,5 @@ def execute_action_with_vars(action_list: list, variables: dict
     landed in logs and record keys. Seeding the scope and letting the runtime
     resolver interpolate per action fixes both.
     """
-    executor.variables.update_many(variables)
-    return executor.execute_action(action_list)
+    with execution_scope(variables):
+        return _running_executor().execute_action(action_list)
