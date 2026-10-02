@@ -39,6 +39,9 @@ def load_or_create_key_file(path: Path, generate: Callable[[], bytes],
     ``min_length`` bytes.
     """
     if not path.exists():
+        generated = generate()
+        if len(generated) < min_length:
+            raise AutoControlException('generated key is shorter than the required minimum')
         path.parent.mkdir(parents=True, exist_ok=True)
         try:
             descriptor = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
@@ -46,7 +49,7 @@ def load_or_create_key_file(path: Path, generate: Callable[[], bytes],
             pass  # another process created it first; read theirs below
         else:
             with os.fdopen(descriptor, "wb") as key_file:
-                key_file.write(generate())
+                key_file.write(generated)
     key = _read_when_written(path, min_length)
     if len(key) < min_length:
         raise AutoControlException(

@@ -34,6 +34,13 @@ def _script(tmp_path, actions=None):
     return path
 
 
+def _trust_public_key(tmp_path, monkeypatch):
+    from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+    public = tmp_path / 'public.key'
+    public.write_bytes(Ed25519PrivateKey.from_private_bytes(_KEY).public_key().public_bytes_raw())
+    monkeypatch.setenv('JE_AUTOCONTROL_SIGNING_PUBLIC_KEY', str(public))
+
+
 # --- one loader for every execution path ------------------------------------
 
 def test_an_unsigned_file_is_refused_when_enforced(tmp_path, enforced):
@@ -44,14 +51,14 @@ def test_an_unsigned_file_is_refused_when_enforced(tmp_path, enforced):
 def test_a_signed_file_loads_when_enforced(tmp_path, enforced, monkeypatch):
     path = _script(tmp_path)
     signer.sign_action_file(path, _KEY)
-    monkeypatch.setattr(signer, "_load_or_create_key", lambda key: _KEY)
+    _trust_public_key(tmp_path, monkeypatch)
     assert json_file.read_executable_action_json(str(path)) == [["AC_noop"]]
 
 
 def test_the_verified_bytes_are_the_parsed_bytes(tmp_path, enforced, monkeypatch):
     path = _script(tmp_path)
     signer.sign_action_file(path, _KEY)
-    monkeypatch.setattr(signer, "_load_or_create_key", lambda key: _KEY)
+    _trust_public_key(tmp_path, monkeypatch)
     reads = []
     real_read_bytes = type(path).read_bytes
 

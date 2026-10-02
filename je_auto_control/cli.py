@@ -22,6 +22,7 @@ without ever importing PySide6.
 """
 import argparse
 import json
+from pathlib import Path
 import signal
 import sys
 import threading
@@ -168,6 +169,51 @@ def cmd_codegen(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_signing_keygen(args: argparse.Namespace) -> int:
+    """Create separate signing and verification keys without overwriting them."""
+    from je_auto_control.utils.action_signing import create_signing_keypair
+    create_signing_keypair(Path(args.private_key), Path(args.public_key))
+    return 0
+
+
+def cmd_sign(args: argparse.Namespace) -> int:
+    """Sign an action file using a configured private key."""
+    from je_auto_control.utils.action_signing import sign_action_file
+    sys.stdout.write(sign_action_file(args.script, private_key_path=args.private_key) + '\n')
+    return 0
+
+
+def cmd_verify(args: argparse.Namespace) -> int:
+    """Verify using a public key, or an explicitly enabled legacy migration key."""
+    from je_auto_control.utils.action_signing import verify_action_file
+    key = Path(args.legacy_key_file).read_bytes() if args.legacy_key_file else None
+    if key is not None and not args.allow_legacy_hmac:
+        raise ValueError('--legacy-key-file requires --allow-legacy-hmac')
+    result = verify_action_file(args.script, key, public_key_path=args.public_key,
+                                allow_legacy_hmac=args.allow_legacy_hmac)
+    sys.stdout.write(json.dumps(result.to_dict()) + '\n')
+    return 0 if result.verified else 1
+
+
+def _add_signing_parsers(sub: argparse._SubParsersAction) -> None:
+    """Register offline signing commands with separate key arguments."""
+    keygen = sub.add_parser('signing-keygen', help='Create an Ed25519 key pair')
+    keygen.add_argument('--private-key', required=True)
+    keygen.add_argument('--public-key', required=True)
+    keygen.set_defaults(func=cmd_signing_keygen)
+    sign = sub.add_parser('sign', help='Sign an action file with a private key')
+    sign.add_argument('script')
+    sign.add_argument('--private-key')
+    sign.set_defaults(func=cmd_sign)
+    verify = sub.add_parser('verify', help='Verify an action file with a public key')
+    verify.add_argument('script')
+    keys = verify.add_mutually_exclusive_group()
+    keys.add_argument('--public-key')
+    keys.add_argument('--legacy-key-file')
+    verify.add_argument('--allow-legacy-hmac', action='store_true')
+    verify.set_defaults(func=cmd_verify)
+
+
 def cmd_version(_: argparse.Namespace) -> int:
     """Print the installed ``je_auto_control`` version."""
     from importlib.metadata import PackageNotFoundError, version
@@ -248,6 +294,7 @@ def _run_until_signal(shutdown: Callable[[], None]) -> None:
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="je_auto_control")
     sub = parser.add_subparsers(dest="command", required=True)
+    _add_signing_parsers(sub)
 
     p_run = sub.add_parser("run", help="Execute an action JSON file")
     p_run.add_argument("script")

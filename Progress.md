@@ -92,7 +92,7 @@ sys_platform != 'win32' or platform_machine != 'ARM64'
 | 功能 | 缺的是 | 錯誤形式 |
 | --- | --- | --- |
 | 影像比對、截圖轉 BGR、螢幕錄影 | `opencv-python`／`je_open_cv` | `utils/cv2_utils/optional.py` 的 `require_cv2()`／`require_je_open_cv()` 拋 `RuntimeError` |
-| 動作檔加密（`action_signing`） | `cryptography` | `_fernet_types()` 拋 `RuntimeError`（簽章本身是 HMAC，不受影響） |
+| 動作檔加密（`action_signing`） | `cryptography` | `_fernet_types()` 拋 `RuntimeError`（Ed25519 簽章同樣需要 cryptography，匯入仍延遲） |
 | 秘密金庫（`${secrets.NAME}`） | `cryptography` | 同上 |
 | ACME／TLS 發證、加密錄影 | `cryptography` | 模組層 `ImportError` 轉述（照 `webrtc_transport` 慣例） |
 
@@ -209,20 +209,6 @@ MCP 的 bearer 比對同理；稽核寫入帶上 `user_id`。
 **要先想清楚**：沒有任何使用者時是否退回共用 token（相容現有部署）；viewer／operator／admin 各能呼叫哪些路由與工具。
 
 ---
-
-## 能執行動作的人也能替檔案簽章
-
-`DECIDE` — `JE_AUTOCONTROL_REQUIRE_SIGNED_ACTIONS` 要防的是誰（維護者拍板）
-
-`AC_sign_action_file` 用預設的個人金鑰簽章，所以凡是能透過 socket、REST 或 MCP 執行動作的人，都能先簽一個檔再用
-`AC_execute_files` 執行它；內嵌的動作清單本來就不驗簽。現在的強制簽章只擋得住「能改檔案、但不能執行動作」的人。
-
-**選項**：簽章指令在強制模式下只准本機 CLI 使用；或簽章金鑰與執行權限分開保存（簽章端不在執行端）。
-
----
-
-
-
 
 ## Computer use 的預設還是 beta 的 `computer_20251124`
 

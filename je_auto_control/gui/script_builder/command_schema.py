@@ -5029,12 +5029,20 @@ def _add_work_queue_specs(specs: List[CommandSpec]) -> None:
         description="Delete a file to the OS recycle bin (recoverable).",
     ))
     specs.append(CommandSpec(
+        "AC_create_signing_keypair", "Security", "Create Signing Key Pair",
+        fields=(FieldSpec('private_path', FieldType.FILE_PATH),
+                FieldSpec('public_path', FieldType.FILE_PATH)),
+        description='Create separate Ed25519 signing and verification keys without overwriting.',
+    ))
+    specs.append(CommandSpec(
         "AC_sign_action_file", "Security", "Sign Action File",
         fields=(
             FieldSpec("path", FieldType.FILE_PATH),
             FieldSpec("key", FieldType.STRING, optional=True),
+            FieldSpec('private_key_path', FieldType.FILE_PATH, optional=True),
+            FieldSpec('legacy_hmac', FieldType.BOOL, optional=True, default=False),
         ),
-        description="Write an HMAC-SHA256 signature sidecar for an action file.",
+        description="Write an Ed25519 signature sidecar using a private key.",
     ))
     specs.append(CommandSpec(
         "AC_verify_action_file", "Security", "Verify Action File",
@@ -5043,6 +5051,8 @@ def _add_work_queue_specs(specs: List[CommandSpec]) -> None:
             FieldSpec("key", FieldType.STRING, optional=True),
             FieldSpec("raise_on_fail", FieldType.BOOL, optional=True,
                       default=False),
+            FieldSpec('public_key_path', FieldType.FILE_PATH, optional=True),
+            FieldSpec('allow_legacy_hmac', FieldType.BOOL, optional=True, default=False),
         ),
         description="Verify an action file against its signature sidecar.",
     ))

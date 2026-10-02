@@ -82,8 +82,6 @@ def test_the_scanner_sees_every_import_time_form():
      "self_healing_events.jsonl"),
     ("je_auto_control.utils.action_signing.cipher", "_default_key_path",
      "action_encryption_key"),
-    ("je_auto_control.utils.action_signing.signer", "_default_key_path",
-     "action_signing_key"),
     ("je_auto_control.utils.remote_desktop.fingerprint", "_host_fingerprint_path",
      "host_fingerprint"),
     ("je_auto_control.utils.remote_desktop.fingerprint", "_known_hosts_path",

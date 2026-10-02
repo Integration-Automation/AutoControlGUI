@@ -2174,18 +2174,32 @@ def _human_type(text: str, base_delay: float = 0.05, jitter: float = 0.04,
     return {"chars": len(str(text)), "total_delay_s": round(sum(delays), 3)}
 
 
-def _sign_action_file(path: str, key: Optional[str] = None) -> Dict[str, Any]:
-    """Executor adapter: write an HMAC-SHA256 signature sidecar for a file."""
+def _create_signing_keypair(private_path: str, public_path: str) -> Dict[str, Any]:
+    """Create separate private signing and public verification key files."""
+    from pathlib import Path
+    from je_auto_control.utils.action_signing import create_signing_keypair
+    create_signing_keypair(Path(private_path), Path(public_path))
+    return {"private_path": private_path, "public_path": public_path}
+
+
+def _sign_action_file(path: str, key: Optional[str] = None,
+                      private_key_path: Optional[str] = None,
+                      legacy_hmac: bool = False) -> Dict[str, Any]:
+    """Write an Ed25519 sidecar with an explicitly configured private key."""
     from je_auto_control.utils.action_signing import sign_action_file
-    return {"signature_path": sign_action_file(path, key)}
+    return {"signature_path": sign_action_file(
+        path, key, private_key_path=private_key_path, legacy_hmac=_as_bool(legacy_hmac))}
 
 
 def _verify_action_file(path: str, key: Optional[str] = None,
-                        raise_on_fail: bool = False) -> Dict[str, Any]:
+                        raise_on_fail: bool = False,
+                        public_key_path: Optional[str] = None,
+                        allow_legacy_hmac: bool = False) -> Dict[str, Any]:
     """Executor adapter: verify an action file against its signature sidecar."""
     from je_auto_control.utils.action_signing import verify_action_file
     return verify_action_file(
         path, key, raise_on_fail=_as_bool(raise_on_fail),
+        public_key_path=public_key_path, allow_legacy_hmac=_as_bool(allow_legacy_hmac),
     ).to_dict()
 
 
@@ -7751,6 +7765,7 @@ class Executor:
 
             # Action-file integrity (HMAC-SHA256 sign / verify)
             "AC_sign_action_file": _sign_action_file,
+            "AC_create_signing_keypair": _create_signing_keypair,
             "AC_verify_action_file": _verify_action_file,
             "AC_encrypt_action_file": _encrypt_action_file,
             "AC_decrypt_action_file": _decrypt_action_file,

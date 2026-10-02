@@ -524,3 +524,52 @@ After a reply timeout against a legacy or unconfirmed host, the client closes
 and cancels its pending operations; handles report ``closed``. Reconnect the
 transport and create a new ``UsbPassthroughClient`` before retrying.
 A confirmed correlated peer can continue after timeout with a fresh request ID.
+
+Public-only action signature deployment
+---------------------------------------
+
+Signatures authenticate exact bytes with Ed25519, a version-2 JSON envelope,
+a trusted public-key fingerprint and a domain prefix. Keys are raw 32-byte or
+PEM Ed25519 material. Generation preserves existing keys and rejects mismatched
+pairs. Private files are created with mode 0600; use host ACLs on Windows.
+
+On the offline signing host::
+
+    je_auto_control signing-keygen --private-key private.pem --public-key public.pem
+    je_auto_control sign flow.json --private-key private.pem
+
+Deploy only flow.json, flow.json.sig and public.pem to the execution host.
+Set JE_AUTOCONTROL_SIGNING_PUBLIC_KEY to its absolute public.pem path and
+JE_AUTOCONTROL_REQUIRE_SIGNED_ACTIONS=1. Do not configure
+JE_AUTOCONTROL_SIGNING_PRIVATE_KEY there. Verification never creates keys::
+
+    je_auto_control verify flow.json --public-key public.pem
+    je_auto_control run flow.json
+
+The Python API mirrors the CLI::
+
+    from pathlib import Path
+    import je_auto_control as ac
+    ac.create_signing_keypair(Path('private.pem'), Path('public.pem'))
+    ac.sign_action_file('flow.json', private_key_path='private.pem')
+    assert ac.verify_action_file('flow.json', public_key_path='public.pem').verified
+
+Script Builder offers AC_create_signing_keypair, AC_sign_action_file and
+AC_verify_action_file. MCP offers the same names with the ac_ prefix; generation
+and signing mutate files and are excluded from read-only mode.
+
+Legacy plain-hex HMAC and version-1 envelopes are rejected by default. To migrate,
+verify an old file explicitly, then re-sign it on the offline signing host::
+
+    je_auto_control verify old.json --allow-legacy-hmac --legacy-key-file old.key
+    je_auto_control sign old.json --private-key private.pem
+
+Python verification requires allow_legacy_hmac=True and explicit legacy key
+material. Enforced loaders require JE_AUTOCONTROL_ALLOW_LEGACY_HMAC=1 and
+JE_AUTOCONTROL_LEGACY_SIGNING_KEY pointing to an existing key file. Remove both
+after migration. Signing in legacy mode requires legacy_hmac=True and an explicit
+key. There is no automatic personal signing key or private-key fallback.
+
+Signed-file enforcement checks file loaders, not inline action lists. It does
+not isolate scripts or prevent an authorized operator from modifying the host.
+Keep the private key off execution hosts; role authorization is a separate gate.

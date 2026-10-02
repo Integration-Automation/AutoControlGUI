@@ -1128,7 +1128,7 @@ from je_auto_control.utils.secrets import (
 # Action-file security (HMAC-SHA256 sign/verify + Fernet encrypt, headless)
 from je_auto_control.utils.action_signing import (
     VerifyResult, decrypt_action_file, encrypt_action_file,
-    require_signed_actions, sign_action_file, verify_action_file,
+    create_signing_keypair, require_signed_actions, sign_action_file, verify_action_file,
 )
 # Observability (Prometheus metrics + OpenTelemetry traces, headless)
 from je_auto_control.utils.observability import (
@@ -1774,7 +1774,7 @@ __all__ = [
     "SecretManager", "SecretStoreError", "SecretStoreLocked",
     "default_secret_manager", "default_secret_store_path",
     # Action-file security (sign + encrypt)
-    "VerifyResult", "sign_action_file", "verify_action_file",
+    "VerifyResult", "create_signing_keypair", "sign_action_file", "verify_action_file",
     "require_signed_actions", "encrypt_action_file", "decrypt_action_file",
     # Observability (Prometheus + OpenTelemetry)
     "MetricCounter", "MetricGauge", "MetricHistogram",

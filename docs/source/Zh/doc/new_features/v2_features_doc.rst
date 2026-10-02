@@ -480,3 +480,48 @@ OPEN／RESUME、LIST、transfer、CLOSE、ERROR 與 CREDIT 回傳同一 ID；分
 
 舊版或能力未確認的主機回覆逾時後，client 關閉並取消 pending，handle 的 ``closed`` 為真。
 重試前須重連傳輸並建立新的 ``UsbPassthroughClient``。已確認 ID 配對能力的端點可繼續以新 ID 重試。
+
+動作檔簽章的公鑰部署與遷移
+---------------------------
+
+Ed25519 第 2 版 JSON 側檔驗證原始檔案位元組、公鑰指紋及用途前綴。
+金鑰接受 32 位元組原始格式或 Ed25519 PEM；建立時保留既有金鑰，拒絕不匹配組合。
+新金鑰檔採 0600 模式；Windows 請使用主機 ACL 保護私鑰。
+
+離線簽署端建立金鑰並簽署::
+
+    je_auto_control signing-keygen --private-key private.pem --public-key public.pem
+    je_auto_control sign flow.json --private-key private.pem
+
+執行端只部署 flow.json、flow.json.sig、public.pem。將
+JE_AUTOCONTROL_SIGNING_PUBLIC_KEY 設為公鑰的絕對路徑，並設定
+JE_AUTOCONTROL_REQUIRE_SIGNED_ACTIONS=1。執行端不設定
+JE_AUTOCONTROL_SIGNING_PRIVATE_KEY；驗證不會建立金鑰::
+
+    je_auto_control verify flow.json --public-key public.pem
+    je_auto_control run flow.json
+
+Python API 同樣分離私鑰與公鑰::
+
+    from pathlib import Path
+    import je_auto_control as ac
+    ac.create_signing_keypair(Path('private.pem'), Path('public.pem'))
+    ac.sign_action_file('flow.json', private_key_path='private.pem')
+    assert ac.verify_action_file('flow.json', public_key_path='public.pem').verified
+
+Script Builder 提供 AC_create_signing_keypair、AC_sign_action_file 與
+AC_verify_action_file；MCP 使用對應 ac_ 名稱。產生與簽署會修改檔案，
+唯讀 MCP 不會提供這兩個工具。
+
+舊版十六進位 HMAC 與第 1 版側檔預設拒絕。遷移時先明確驗證，再離線重簽::
+
+    je_auto_control verify old.json --allow-legacy-hmac --legacy-key-file old.key
+    je_auto_control sign old.json --private-key private.pem
+
+Python 驗證需 allow_legacy_hmac=True 與明確的舊金鑰內容；強制驗簽的載入器
+另需 JE_AUTOCONTROL_ALLOW_LEGACY_HMAC=1 與指向既有金鑰檔的
+JE_AUTOCONTROL_LEGACY_SIGNING_KEY。遷移完成後移除兩項設定。
+舊版簽署需 legacy_hmac=True 及明確金鑰，不會自動建立個人金鑰或退回私鑰驗證。
+
+強制驗簽檢查檔案載入器，內嵌動作清單不驗簽；這不會隔離脚本或阻止已授權
+操作者改動主機。私鑰必須留在簽署端；使用者角色授權另行處理。

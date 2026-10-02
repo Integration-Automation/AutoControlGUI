@@ -1,4 +1,4 @@
-"""Tests for action-file signing (HMAC-SHA256) + encryption (Fernet)."""
+"""Tests for explicit legacy signing migration and Fernet encryption."""
 from pathlib import Path
 
 import pytest
@@ -21,24 +21,24 @@ def _make(tmp_path, content='[["AC_noop"]]'):
 
 def test_sign_then_verify_round_trip(tmp_path):
     path = _make(tmp_path)
-    sig = sign_action_file(path, _KEY)
+    sig = sign_action_file(path, _KEY, legacy_hmac=True)
     assert sig.endswith(".sig")
-    assert verify_action_file(path, _KEY).verified is True
+    assert verify_action_file(path, _KEY, allow_legacy_hmac=True).verified is True
 
 
 def test_tampering_is_detected(tmp_path):
     path = _make(tmp_path)
-    sign_action_file(path, _KEY)
+    sign_action_file(path, _KEY, legacy_hmac=True)
     path.write_text('[["AC_evil"]]', encoding="utf-8")  # tamper after signing
-    result = verify_action_file(path, _KEY)
+    result = verify_action_file(path, _KEY, allow_legacy_hmac=True)
     assert result.verified is False
     assert "mismatch" in result.reason
 
 
 def test_wrong_key_fails(tmp_path):
     path = _make(tmp_path)
-    sign_action_file(path, _KEY)
-    assert verify_action_file(path, b"other-key").verified is False
+    sign_action_file(path, _KEY, legacy_hmac=True)
+    assert verify_action_file(path, b"other-key", allow_legacy_hmac=True).verified is False
 
 
 def test_missing_sidecar_is_unverified(tmp_path):
@@ -62,10 +62,11 @@ def test_require_signed_actions_is_noop_without_env(tmp_path, monkeypatch):
 
 def test_require_signed_actions_enforces_when_enabled(tmp_path, monkeypatch):
     monkeypatch.setenv(_REQUIRE_ENV, "1")
+    monkeypatch.setenv('JE_AUTOCONTROL_ALLOW_LEGACY_HMAC', '1')
     path = _make(tmp_path)
     with pytest.raises(AutoControlException):
         require_signed_actions(path, _KEY)
-    sign_action_file(path, _KEY)
+    sign_action_file(path, _KEY, legacy_hmac=True)
     require_signed_actions(path, _KEY)  # now signed → no raise
 
 
