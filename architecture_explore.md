@@ -20,7 +20,7 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 | 指標 | 數值 |
 | --- | ---: |
 | Python 模組總數（含周邊子專案） | 1,063 |
-| 程式碼總行數 | 156,988 |
+| 程式碼總行數 | 156,886 |
 | `je_auto_control/utils/` 子套件數 | 310 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 775 |
 | 套件門面 `__all__` 公開名稱數 | 1,244 |
@@ -156,6 +156,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | --- | ---: | --- |
 | `je_auto_control/__init__.py` | 1,970 | **套件門面**。集中匯入並再匯出 1,200 個公開名稱，以功能區塊註解分段（callback／exception／executor／a11y／vision／clipboard…）。 |
 | `je_auto_control/__main__.py` | 87 | 舊版 argparse 進入點：`-e` 執行單檔、`-d` 執行整個目錄、`--execute_str` 執行 JSON 字串、`-c` 建立專案。 |
+| `je_auto_control_pytest.py` | 125 | 輕量 pytest11 入口；fixture／失敗截圖內才匯入自動化核心。 |
 | `je_auto_control/cli.py` | 353 | **主 CLI**（`je_auto_control` console script）。子命令：`run`（含 `--var`／`--dry-run`）、`validate`／`lint`、`list-commands`、`fmt`、`record`、`codegen`、`failure-bundle`、`list-jobs`、`start-server`、`start-rest`、`version`。所有子命令延遲匯入，確保不碰 Qt。 |
 | `je_auto_control/api/__init__.py` | 22 | 版本化整合進入點。 |
 | `je_auto_control/api/core.py` | 19 | **穩定無頭 API 門面**：只暴露 `execute_action`、`execute_action_with_vars`、`generate_code`、`run_diagnostics`、`create_failure_bundle`、`failure_bundle_on_error`、`FailureBundleOptions`。mypy 型別契約以此為起點，現已擴到整包（見「設定基線」）。 |
@@ -527,7 +528,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.11 伺服器、網路協定與外部整合
 
-> 24 個套件、約 7,035 行。
+> 24 個套件、約 6,933 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -548,7 +549,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/notify_channels/` | 105 | 對外聊天／webhook 通知（Slack／Discord／Teams／raw） |
 | `utils/otp/` | 37 | TOTP 一次性密碼產生（自動化 2FA 登入） |
 | `utils/outbox/` | 107 | 交易式 outbox，保證至少一次的事件投遞 |
-| `utils/pytest_plugin/` | 380 | pytest 外掛 + BDD step library（`pytest11` entry point） |
+| `utils/pytest_plugin/` | 278 | pytest 相容轉匯出 + BDD step library（自動入口為頂層 `je_auto_control_pytest.py`） |
 | `utils/rest_api/` | 1,881 | 純標準庫 REST 前端：路由、Bearer 驗證、限流、Prometheus 指標、OpenAPI 3.1 產生 |
 | `utils/socket_server/` | 160 | 執行 action JSON 的執行緒式 TCP 指令伺服器（預設綁 127.0.0.1） |
 | `utils/sse_client/` | 142 | Server-Sent Events 用戶端解析 |
@@ -850,7 +851,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `test_suite/` | `runner.py`、`result.py`、`reports.py` |
 | `semantic_recording/` | `enrich.py`（加錨點）、`replay.py`（換機重播）、`self_healing.py`（自癒重播） |
 | `tls_acme/` | `challenge.py`、`keys.py`、`renewal.py` |
-| `pytest_plugin/` | `plugin.py`（pytest11 進入點）、`keywords.py`、`bdd_steps.py`（Gherkin） |
+| `pytest_plugin/` | `plugin.py`（舊入口相容轉匯出）、`keywords.py`、`bdd_steps.py`（Gherkin） |
 | `cv2_utils/` | `screen_grabber.py`、`screenshot.py`、`region_capture.py`、`template_detection.py`、`screen_record.py`、`video_recording.py`、`frame_clock.py`、`blobs.py`、`optional.py`、`image_file.py` |
 | `action_lint/` | `linter.py`、`schema.py`、`__main__.py`（CI 使用） |
 | `time_travel/` | `controller.py`、`player.py` |
@@ -1090,6 +1091,6 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `osx/` | 17 | 925 |
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 852 |
-| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 681 | 56,986 |
-| **總計** | **1,057** | **156,923** |
+| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 681 | 56,884 |
+| **總計** | **1,057** | **156,821** |
 

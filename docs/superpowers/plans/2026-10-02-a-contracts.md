@@ -35,7 +35,7 @@ Step 4 通過後，該階段另外執行 ruff、相關既有回歸與三目標�
 
 ---
 
-### Task A1: 精簡 pytest 進入點
+### Task 1: [A1] 精簡 pytest 進入點
 
 **Files:** 修改：`je_auto_control/utils/pytest_plugin/plugin.py`、`pyproject.toml`、`test/unit_test/headless/test_coverage_measurement.py`；新增：`je_auto_control_pytest.py`；測試：`test/unit_test/headless/test_pytest_entrypoint_light.py`。
 
@@ -53,7 +53,7 @@ assert legacy.pytest_configure is standalone.pytest_configure
 - [ ] **Step 4:** 重跑 Step 2，預期 exit 0；再跑這些修改檔所對應的既有回歸，確認公開契約。
 - [ ] **Step 5:** 更新本 task 的型別、所有交付入口、文件、測量計數與進度，僅 stage 本 task 檔案，提交 `git commit -m 'A1: 精簡 pytest 進入點'`。
 
-### Task A2: 舊 CLI 的失敗結束碼
+### Task 2: [A2] 舊 CLI 的失敗結束碼
 
 **Files:** 修改：`je_auto_control/__main__.py`、`test/unit_test/headless/test_cli_audit_fixes.py`；測試：`test/unit_test/headless/test_legacy_cli_failure_exit.py`。
 
@@ -71,7 +71,7 @@ assert succeeded.returncode == 0
 - [ ] **Step 4:** 重跑 Step 2，預期 exit 0；再跑這些修改檔所對應的既有回歸，確認公開契約。
 - [ ] **Step 5:** 更新本 task 的型別、所有交付入口、文件、測量計數與進度，僅 stage 本 task 檔案，提交 `git commit -m 'A2: 舊 CLI 的失敗結束碼'`。
 
-### Task A3: 獨立執行變數範圍
+### Task 3: [A3] 獨立執行變數範圍
 
 **Files:** 修改：`je_auto_control/utils/executor/action_executor.py`、`je_auto_control/utils/executor/flow_control.py`、`je_auto_control/utils/script_vars/scope.py`、`je_auto_control/utils/rest_api/rest_handlers.py`、`je_auto_control/utils/mcp_server/tools/_handlers.py`；測試：`test/unit_test/headless/test_execution_scope_isolation.py`。
 
@@ -89,7 +89,7 @@ assert sorted(branch_results) == ['left', 'right']
 - [ ] **Step 4:** 重跑 Step 2，預期 exit 0；再跑這些修改檔所對應的既有回歸，確認公開契約。
 - [ ] **Step 5:** 更新本 task 的型別、所有交付入口、文件、測量計數與進度，僅 stage 本 task 檔案，提交 `git commit -m 'A3: 獨立執行變數範圍'`。
 
-### Task A4: USB 回覆的請求身分
+### Task 4: [A4] USB 回覆的請求身分
 
 **Files:** 修改：`je_auto_control/utils/usb/passthrough/protocol.py`、`je_auto_control/utils/usb/passthrough/session.py`、`je_auto_control/utils/usb/passthrough/viewer_client.py`；測試：`test/unit_test/headless/test_usb_request_correlation.py`。
 
@@ -108,7 +108,7 @@ assert legacy_claim.reusable is False
 - [ ] **Step 4:** 重跑 Step 2，預期 exit 0；再跑這些修改檔所對應的既有回歸，確認公開契約。
 - [ ] **Step 5:** 更新本 task 的型別、所有交付入口、文件、測量計數與進度，僅 stage 本 task 檔案，提交 `git commit -m 'A4: USB 回覆的請求身分'`。
 
-### Task A5: 公私鑰簽章與執行權限分離
+### Task 5: [A5] 公私鑰簽章與執行權限分離
 
 **Files:** 修改：`je_auto_control/utils/action_signing/signer.py`、`je_auto_control/utils/action_signing/_key_file.py`、`je_auto_control/utils/executor/action_executor.py`；測試：`test/unit_test/headless/test_signing_execution_roles.py`。
 
@@ -127,7 +127,7 @@ assert implicit_legacy_signature_accepted is False
 - [ ] **Step 4:** 重跑 Step 2，預期 exit 0；再跑這些修改檔所對應的既有回歸，確認公開契約。
 - [ ] **Step 5:** 更新本 task 的型別、所有交付入口、文件、測量計數與進度，僅 stage 本 task 檔案，提交 `git commit -m 'A5: 公私鑰簽章與執行權限分離'`。
 
-### Task A6: MCP 路徑與 viewer 收檔
+### Task 6: [A6] MCP 路徑與 viewer 收檔
 
 **Files:** 修改：`je_auto_control/utils/mcp_server/tools/_factories.py`、`je_auto_control/utils/mcp_server/server.py`、`je_auto_control/utils/secret_ref/secret_ref.py`、`je_auto_control/utils/remote_desktop/file_transfer.py`、`je_auto_control/utils/remote_desktop/viewer.py`、`je_auto_control/gui/remote_desktop/viewer_panel.py`；新增：`je_auto_control/utils/path_guard/policy.py`；測試：`test/unit_test/headless/test_file_boundary_policy.py`。
 
@@ -146,7 +146,7 @@ assert received_path.is_relative_to(download_root)
 - [ ] **Step 4:** 重跑 Step 2，預期 exit 0；再跑這些修改檔所對應的既有回歸，確認公開契約。
 - [ ] **Step 5:** 更新本 task 的型別、所有交付入口、文件、測量計數與進度，僅 stage 本 task 檔案，提交 `git commit -m 'A6: MCP 路徑與 viewer 收檔'`。
 
-### Task A7: 發布名稱與專案網址
+### Task 7: [A7] 發布名稱與專案網址
 
 **Files:** 修改：`je_auto_control/utils/mcp_registry/registry.py`、`pyproject.toml`、`dev.toml`、`README.md`、`README/README_zh-TW.md`、`README/README_zh-CN.md`；測試：`test/unit_test/headless/test_modernization_metadata.py`。
 
@@ -164,7 +164,7 @@ assert repo_slug == 'Integration-Automation/AutoControlGUI'
 - [ ] **Step 4:** 重跑 Step 2，預期 exit 0；再跑這些修改檔所對應的既有回歸，確認公開契約。
 - [ ] **Step 5:** 更新本 task 的型別、所有交付入口、文件、測量計數與進度，僅 stage 本 task 檔案，提交 `git commit -m 'A7: 發布名稱與專案網址'`。
 
-### Task A8: 多螢幕與 DPI 座標契約
+### Task 8: [A8] 多螢幕與 DPI 座標契約
 
 **Files:** 修改：`je_auto_control/windows/screen/win32_screen.py`、`je_auto_control/utils/monitor_layout/logical_frame.py`、`je_auto_control/utils/cv2_utils/screenshot.py`、`je_auto_control/utils/window_capture/window_capture.py`、`je_auto_control/utils/set_of_marks/set_of_marks.py`、`je_auto_control/gui/_screen_geometry.py`；測試：`test/unit_test/headless/test_platform_coordinate_contract.py`。
 
@@ -183,7 +183,7 @@ assert marked_points == expected_global_points
 - [ ] **Step 4:** 重跑 Step 2，預期 exit 0；再跑這些修改檔所對應的既有回歸，確認公開契約。
 - [ ] **Step 5:** 更新本 task 的型別、所有交付入口、文件、測量計數與進度，僅 stage 本 task 檔案，提交 `git commit -m 'A8: 多螢幕與 DPI 座標契約'`。
 
-### Task A9: Agent 歷史與真實 API 驗證
+### Task 9: [A9] Agent 歷史與真實 API 驗證
 
 **Files:** 修改：`je_auto_control/utils/agent/backends/base.py`、`je_auto_control/utils/agent/backends/anthropic.py`、`je_auto_control/utils/agent/backends/anthropic_computer_use.py`；測試：`test/unit_test/headless/test_agent_append_only_history.py`。
 
@@ -202,7 +202,7 @@ assert default_tools == original_tools
 - [ ] **Step 4:** 重跑 Step 2，預期 exit 0；再跑這些修改檔所對應的既有回歸，確認公開契約。
 - [ ] **Step 5:** 更新本 task 的型別、所有交付入口、文件、測量計數與進度，僅 stage 本 task 檔案，提交 `git commit -m 'A9: Agent 歷史與真實 API 驗證'`。
 
-### Task A10: REST/MCP 角色授權
+### Task 10: [A10] REST/MCP 角色授權
 
 **Files:** 修改：`je_auto_control/utils/rbac/users.py`、`je_auto_control/utils/rest_api/rest_auth.py`、`je_auto_control/utils/mcp_server/http_transport.py`、`je_auto_control/utils/mcp_server/audit.py`、`je_auto_control/gui/admin_console_tab.py`；測試：`test/unit_test/headless/test_rbac_server_wiring.py`。
 
@@ -221,7 +221,7 @@ assert audit_entry['user_id'] == authenticated_user
 - [ ] **Step 4:** 重跑 Step 2，預期 exit 0，再執行相關既有回歸與型別 gate。
 - [ ] **Step 5:** 更新對應交付入口、文件、測量計數與進度，僅 stage 本 task 檔案，提交 `git commit -m 'A10: REST/MCP 角色授權'`。
 
-### Task A11: 安全相依下限與安裝矩陣
+### Task 11: [A11] 安全相依下限與安裝矩陣
 
 **Files:** 修改：`pyproject.toml`、`uv.lock`、`test/unit_test/headless/test_arm64_dependency_markers.py`、`docs/CAPABILITY_MATRIX.md`；測試：`test/unit_test/headless/test_crypto_fifty_install_contract.py`。
 
@@ -240,7 +240,7 @@ assert error.has_install_instruction
 - [ ] **Step 4:** 重跑 Step 2，預期 exit 0，再執行相關既有回歸與型別 gate。
 - [ ] **Step 5:** 更新對應交付入口、文件、測量計數與進度，僅 stage 本 task 檔案，提交 `git commit -m 'A11: 安全相依下限與安裝矩陣'`。
 
-### Task A12: 視窗管理與擷取位置
+### Task 12: [A12] 視窗管理與擷取位置
 
 **Files:** 修改：`je_auto_control/wrapper/window_backends/macos_backend.py`、`je_auto_control/windows/window/windows_window_manage.py`、`je_auto_control/utils/window_capture/window_capture.py`、`je_auto_control/wrapper/auto_control_window.py`、`je_auto_control/utils/window_zorder/window_zorder.py`；測試：`test/unit_test/headless/test_window_lifecycle_contract.py`。
 
@@ -259,7 +259,7 @@ assert poll_sleep <= remaining_timeout
 - [ ] **Step 4:** 重跑 Step 2，預期 exit 0，再執行相關既有回歸與型別 gate。
 - [ ] **Step 5:** 更新對應交付入口、文件、測量計數與進度，僅 stage 本 task 檔案，提交 `git commit -m 'A12: 視窗管理與擷取位置'`。
 
-### Task A13: 鍵鼠輸入、秘密與 Unicode
+### Task 13: [A13] 鍵鼠輸入、秘密與 Unicode
 
 **Files:** 修改：`je_auto_control/wrapper/auto_control_keyboard.py`、`je_auto_control/wrapper/auto_control_mouse.py`、`je_auto_control/utils/text_unicode/text_unicode.py`、`je_auto_control/utils/keyboard_layout/keyboard_layout.py`、`je_auto_control/utils/clipboard_formats/clipboard_formats.py`、`je_auto_control/utils/executor/action_executor.py`；測試：`test/unit_test/headless/test_input_wrapper_contract.py`。
 
@@ -279,7 +279,7 @@ assert dead_key_shift_value is None
 - [ ] **Step 4:** 重跑 Step 2，預期 exit 0，再執行相關既有回歸與型別 gate。
 - [ ] **Step 5:** 更新對應交付入口、文件、測量計數與進度，僅 stage 本 task 檔案，提交 `git commit -m 'A13: 鍵鼠輸入、秘密與 Unicode'`。
 
-### Task A14: 影像讀取、OCR 與區域邊界
+### Task 14: [A14] 影像讀取、OCR 與區域邊界
 
 **Files:** 修改：`je_auto_control/utils/cv2_utils/template_detection.py`、`je_auto_control/utils/cv2_utils/image_file.py`、`je_auto_control/utils/ocr/text_span.py`、`je_auto_control/wrapper/auto_control_image.py`、`je_auto_control/utils/monitor_layout/logical_frame.py`；測試：`test/unit_test/headless/test_image_ocr_coordinate_contract.py`。
 

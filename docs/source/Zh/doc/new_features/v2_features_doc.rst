@@ -346,7 +346,9 @@ pytest plugin + Gherkin BDD
 ---------------------------
 
 安裝 ``je_auto_control`` 會註冊 ``pytest11`` entry point，plugin
-自動載入。Fixtures（``autocontrol``、``autocontrol_executor``、
+自動載入頂層 ``je_auto_control_pytest``，只匯入 pytest；使用 fixture
+或失敗截圖時才匯入自動化核心。升級 editable 工作樹後須重新安裝以更新
+入口 metadata；明確載入 ``je_auto_control.utils.pytest_plugin`` 仍相容。Fixtures（``autocontrol``、``autocontrol_executor``、
 ``autocontrol_screenshot_dir``）與 ``@pytest.mark.autocontrol``
 marker 會在失敗時自動截圖。
 ``bdd_steps.register_pytest_bdd_steps(pytest_bdd)`` 一次註冊

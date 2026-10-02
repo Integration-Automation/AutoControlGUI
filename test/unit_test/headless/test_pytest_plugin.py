@@ -154,7 +154,7 @@ def test_pyproject_registers_pytest11_entry_point():
         "pyproject.toml",
     ).read_text(encoding="utf-8")
     assert re.search(r"\[project\.entry-points\.pytest11\]", raw)
-    assert "je_auto_control.utils.pytest_plugin.plugin" in raw
+    assert 'je_auto_control = "je_auto_control_pytest"' in raw
 
 
 # === plugin via pytester ==================================================

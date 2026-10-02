@@ -372,7 +372,10 @@ pytest plugin + Gherkin BDD
 ---------------------------
 
 Installing ``je_auto_control`` now registers a ``pytest11`` entry
-point, so the plugin loads automatically. Fixtures
+point targeting ``je_auto_control_pytest``. Automatic loading imports only
+pytest; the automation facade loads when a fixture or failure screenshot needs it.
+Reinstall editable checkouts after upgrading to refresh entry-point metadata.
+Explicit ``je_auto_control.utils.pytest_plugin`` loading remains supported. Fixtures
 (``autocontrol``, ``autocontrol_executor``,
 ``autocontrol_screenshot_dir``) and a
 ``@pytest.mark.autocontrol`` marker arm a screenshot-on-failure

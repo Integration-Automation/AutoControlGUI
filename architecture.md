@@ -48,7 +48,7 @@ entry points → execution core (`utils/executor/`) → headless capabilities (`
 | MCP server | `je_auto_control_mcp` → `utils/mcp_server/__main__.py:main` | stdio; `start_mcp_stdio_server()`; HTTP transport via the `AC_start_mcp_http_server` command. |
 | REST API | `je_auto_control start-rest`, `python -m je_auto_control.utils.rest_api`, `start_rest_api_server()` | Default `127.0.0.1:9939`, bearer token + rate limit. |
 | TCP server | `je_auto_control start-server`, `start_autocontrol_socket_server()` | `utils/socket_server/auto_control_socket_server.py`, default `127.0.0.1:9938`, JSON action lists. |
-| pytest plugin | `pytest11` entry point `je_auto_control.utils.pytest_plugin.plugin` | Loaded automatically once the package is installed (see coverage rule in §7). |
+| pytest plugin | `pytest11` entry point `je_auto_control_pytest` (standalone module) | Loaded automatically once the package is installed (see coverage rule in §7). |
 | LSP | `autocontrol-lsp` → `autocontrol_lsp.server.server:run`; `python -m autocontrol_lsp.server` | Command list is read from the live executor. |
 | GUI | `start_autocontrol_gui()` in `gui/__init__.py`; `exe/start_autocontrol_gui.py` | Needs `pip install je_auto_control[gui]`; PySide6 is imported only under `gui/`. |
 | Action lint | `python -m je_auto_control.utils.action_lint` | Used by `.github/workflows/action-json-lint.yml`. |
@@ -164,7 +164,7 @@ A new body field must be optional and safe to ignore — an old host drops `rais
   (never the root logger — that would push every third-party library's DEBUG records into the host's handlers). The
   handler opens its file on the first record, and nothing logs during the import: importing writes no file at all.
   The file is `$JE_AUTOCONTROL_LOG_FILE` as read when the file is opened (so a `conftest.py` can still set it after
-  the `pytest11` plugin imported the package; a relative path resolves against the cwd then), else
+  an integration imported the package; a relative path resolves against the cwd then), else
   `~/.je_auto_control/logs/AutoControlGUI.log`, shared by every process: appended to, rotated to `.1` past 10 MB
   only when a process opens it, and swapped for `os.devnull` with one `RuntimeWarning` when it cannot be opened.
   Consumers that must keep the log out of a shared file (a test suite) set the variable before importing;
@@ -193,8 +193,8 @@ first. `AC_*` command names and the legacy CLI flags are public too (action file
 - Size limits (cyclomatic ≤ 10, cognitive ≤ 15, function ≤ 75 lines, file ≤ 750 lines, line ≤ 120) are a review
   standard; grandfathered over-limit files are listed in `Progress.md`. → CLAUDE.md › Coding Standards › Size and complexity limits
 - Run ruff, pylint, bandit and radon before committing; every suppression carries an inline reason. → CLAUDE.md › Coding Standards › Automated verification
-- Measure coverage with `python -m coverage run -m pytest`, never `pytest --cov` (the pytest11 plugin imports the
-  facade first), with the `[webrtc]` extra installed; never loosen `python_files = ["test_*.py"]`. → CLAUDE.md › Development Commands
+- Measure coverage with `python -m coverage run -m pytest`, never `pytest --cov` (coverage starts before
+  all plugins, including explicit legacy integrations), with the `[webrtc]` extra installed; never loosen `python_files = ["test_*.py"]`. → CLAUDE.md › Development Commands
 - Tests cover the headless path, avoid sleeps over 1 s, are order-independent, and keep the Qt `deleteLater()`
   flush fixture in `test/unit_test/headless/conftest.py`. → CLAUDE.md › Testing
 - Commit messages are imperative and explain why; attribution rules apply. → CLAUDE.md › Commit Conventions

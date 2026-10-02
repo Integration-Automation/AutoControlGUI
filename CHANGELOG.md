@@ -103,6 +103,9 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Changed
 
+- The automatic pytest plugin now uses the lightweight standalone
+  `je_auto_control_pytest` module. Fixtures and explicit legacy plugin loading
+  remain compatible. Reinstall editable checkouts to refresh entry-point metadata.
 - `format_message` raises `MessageFormatError` for patterns ICU rejects
   (unterminated argument, selector without `{...}`, no `other`, duplicate
   selector, late `offset:`), and an unsupported locale raises instead of

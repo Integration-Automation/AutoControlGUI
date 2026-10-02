@@ -71,7 +71,7 @@ je_auto_control = "je_auto_control.cli:main"
 je_auto_control_mcp = "je_auto_control.utils.mcp_server.__main__:main"
 
 [project.entry-points.pytest11]
-je_auto_control = "je_auto_control.utils.pytest_plugin.plugin"
+je_auto_control = "je_auto_control_pytest"
 
 [project.urls]
 Homepage = "https://github.com/Intergration-Automation-Testing/AutoControl"
@@ -81,6 +81,9 @@ Code = "https://github.com/Intergration-Automation-Testing/AutoControl"
 [project.readme]
 file = "README.md"
 content-type = "text/markdown"
+
+[tool.setuptools]
+py-modules = ["je_auto_control_pytest"]
 
 [tool.setuptools.packages]
 find = { namespaces = false }

@@ -149,16 +149,8 @@ jobs:
       # the X11 backend opens a display at import time, and offscreen
       # would hide exactly the breakage this job exists to find.
       #
-      # `coverage run -m pytest`, NOT `pytest --cov`, and that is load-bearing:
-      # this package registers a `pytest11` entry point, so pytest imports
-      # `je_auto_control.utils.pytest_plugin.plugin` while loading plugins —
-      # which executes `je_auto_control/__init__.py`, the facade, and with it
-      # several hundred modules. pytest-cov only starts measuring after that,
-      # so every one of those modules' import-time lines was recorded as never
-      # executed. Measured on this tree: 11,962 statements, 24 points, and the
-      # worst-hit files were the biggest ones (`action_executor` +786,
-      # `_handlers` +684). A package that registers a pytest plugin cannot
-      # measure itself with `pytest --cov`; `coverage run` starts first.
+      # Start coverage before all pytest plugins and explicit legacy integrations.
+      # The automatic standalone plugin itself no longer imports the facade.
       - name: Run headless pytest suite under coverage
         shell: bash
         run: >-

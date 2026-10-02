@@ -2,13 +2,13 @@
 
 ## 跨平台與 GUI 全面改版
 
-`TODO` — 重設 UI、重寫並優化 GUI、修正 Wayland 與函式庫問題、跨機器同步、
+`WIP` — 重設 UI、重寫並優化 GUI、修正 Wayland 與函式庫問題、跨機器同步、
 深化全套 mypy、補齊 iOS／Android、MCP 逐步揭露、自愈定位器量測、動作日誌 codegen、
 完整範例與文件。涉及 `gui/`、`linux_wayland/`、`android/`、`ios/`、
 `utils/{config_sync,remote_desktop,mcp_server,self_healing,codegen,executor}/` 與型別／文件驗證。
 核准設計：[跨平台自動化與 GUI 改版](docs/superpowers/specs/2026-10-02-platform-gui-modernization-design.md)。
-實作計畫：[分階段交付計畫](docs/superpowers/plans/2026-10-02-modernization-index.md)，待審閱。
-現有 `[Answer]` 決策沿用；產品實作尚未開始。
+實作計畫：[分階段交付計畫](docs/superpowers/plans/2026-10-02-modernization-index.md)，已核准，依序實作。
+現有 `[Answer]` 決策沿用；產品實作進行中。
 
 **只記未完成的事。** 完成的工作記在 [docs/updates/](docs/updates/README.md)（每月一個批次檔，
 索引與查詢指令在它的 README），相容性變更寫進 [CHANGELOG.md](CHANGELOG.md)；完成的項目
@@ -292,28 +292,6 @@ registry 以 GitHub 帳號驗證 `io.github.<org>/` 命名空間，舊組織名�
 
 ---
 
-## pytest11 進入點會把整個門面拉進每一次 pytest
-
-`DECIDE` — 要不要把進入點搬到一個精簡的頂層模組（打包層的改動，維護者拍板）
-
-`pyproject.toml` 的 `pytest11` 進入點指向 `je_auto_control.utils.pytest_plugin.plugin`。
-外掛模組本身很輕（只 import pytest，fixture 裡才 import 本套件），但它是**套件的子模組**，
-所以 Python 會先跑 `je_auto_control/__init__.py`——量到 **1,355 個模組**。機器上任何一個
-安裝了本套件的環境，每一次 pytest 啟動都付這筆成本（Jeffrey_RPA 因此在 `pytest.ini` 用
-`-p no:je_auto_control` 擋掉它）。pytest 官方文件建議的形狀正是「進入點指向只 import pytest
-的精簡模組」。
-
-改法：新增頂層模組（例如 `je_auto_control_pytest.py`，`[tool.setuptools] py-modules`），
-進入點改指它，`utils/pytest_plugin/plugin.py` 轉為 re-export 以維持
-`pytest_plugins = ["je_auto_control.utils.pytest_plugin"]` 這條路。
-
-**為什麼要拍板**：(1) 這是發佈產物的改動，會在 site-packages 多一個頂層名字；
-(2) 進入點改了要重裝才生效（本機的 editable 安裝、CI 的 `pip install -e .`）；
-(3) `test/unit_test/headless/test_coverage_measurement.py` 的前提會改變——它現在釘住
-「外掛載入時門面已經在 `sys.modules` 裡」，改完就不成立，那份說明與測試要一起改寫
-（CI 仍可繼續用 `coverage run -m pytest`）。
-
----
 
 ## libei 的 `ei_unref` 在半開交握上會 SIGSEGV
 

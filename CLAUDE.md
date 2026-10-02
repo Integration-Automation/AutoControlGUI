@@ -33,13 +33,11 @@ python -m build                             # build
 ```
 
 **Coverage is measured with `coverage run -m pytest`, never `pytest --cov`.**
-This package registers a `pytest11` entry point, so pytest imports
-`je_auto_control.utils.pytest_plugin.plugin` — and with it the whole facade —
-while loading plugins, before pytest-cov starts. Several hundred modules then
-have their import-time lines recorded as never executed: measured, that is
-11,962 statements and ~24 percentage points (52.22% vs 72.05% on the same
-suite). `test/unit_test/headless/test_coverage_measurement.py` holds CI to the
-correct spelling.
+The `pytest11` entry point is the standalone `je_auto_control_pytest` module;
+it loads the facade only when automation fixtures or failure screenshots are used.
+Keep coverage startup before pytest so explicit legacy plugins and other
+integrations are measured too. `test/unit_test/headless/test_coverage_measurement.py`
+holds CI to this command; fresh-process plugin tests enforce light imports.
 
 **Measure it with the `[webrtc]` extra installed**, which is why it is in the
 line above. Eleven modules under `utils/remote_desktop` raise `ImportError` at
