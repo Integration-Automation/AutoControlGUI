@@ -58,6 +58,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261003-12 | 2026-10-03 | Verify the complete A modernization contract suite | #snapshot #testing #modernization | [2026-10](2026-10.md) |
 | U-20261003-11 | 2026-10-03 | Close authorization, nested path and deferred execution gaps | #done #security #contracts | [2026-10](2026-10.md) |
 | U-20261003-10 | 2026-10-03 | Image/OCR boundaries and downstream test migration | #done #image #ocr | [2026-10](2026-10.md) |
 | U-20261003-09 | 2026-10-03 | Correct literal input and add confidential typing across surfaces | #done #input | [2026-10](2026-10.md) |
@@ -354,7 +355,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | File | Period | Entries |
 |---|---|---:|
-| [2026-10.md](2026-10.md) | 2026-10 | 18 |
+| [2026-10.md](2026-10.md) | 2026-10 | 19 |
 | [2026-09-e.md](2026-09-e.md) | 2026-09 | 7 |
 | [2026-09-d.md](2026-09-d.md) | 2026-09 | 55 |
 | [2026-09-c.md](2026-09-c.md) | 2026-09 | 38 |
