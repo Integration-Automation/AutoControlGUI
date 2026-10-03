@@ -255,3 +255,12 @@ retain run/parent/source identity through nested and parallel calls; run-history
 artifact links refer to the journal. Opt-in environment capture uses the same
 boundary. Inputs are sanitized before persistence, outcomes stay separate,
 and absent terminal records remain incomplete. Schema version 1 is Beta.
+
+Self-healing evaluation: `api.healing` -> JSON adapters -> immutable dataset
+samples -> frame strategies -> labelled comparison. Strategies receive identical
+bytes; reports retain geometry/frame identity and explicit metric populations.
+`report_views` provides read-only HTML/GUI metric and failure rows. GUI work runs
+through RequestBinding and CallWorker. Revision store snapshots base/candidate
+images, persists labelled validation and checks content identities under locks
+before accept/revert. Runtime capture observers record consumed bytes only
+within an attempt-scoped ContextVar; no additional screenshot is taken for logging.

@@ -36,6 +36,9 @@ def locate_by_description(description: str,
             "OPENAI_API_KEY and install the matching SDK",
         )
     image_bytes = _capture_screenshot_bytes(screen_region)
+    # pylint: disable-next=import-outside-toplevel  # reason: optional healing provenance avoids import cycles
+    from je_auto_control.utils.self_healing.healing_context import record_frame
+    record_frame(image_bytes, 'vlm', bound.name, model)
     coords = bound.locate(image_bytes, description, model=model)
     if coords is None:
         return None

@@ -328,3 +328,11 @@ Structured journals have controlled tests for secret masking before append,
 nested/parallel provenance, interrupted status, read-only GUI preview and
 shared AC/MCP/Script Builder adapters. These are fake-handler/offscreen
 contract checks, not evidence of physical-device replay.
+
+Fixed-frame self-healing comparisons and template revision controls are available
+through typed headless APIs, facade, six AC/MCP commands, Script Builder and the
+Self-Healing Actions menu. Synthetic dataset tests cover changed templates,
+negative origins, scales, expected misses and unknown labels. Root checks,
+immutable snapshots, validation and baseline hashes guard acceptance/reversion.
+Offscreen GUI and fake backend tests verify provenance and delegation, not paid
+model quality or physical-device operation success. See `benchmarks/self_healing`.

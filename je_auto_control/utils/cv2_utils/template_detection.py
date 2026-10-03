@@ -65,6 +65,9 @@ def _prepare(image: Any, detect_threshold: float,
         raise ImageNotFoundException(f"template image not found: {image}")
     cv2 = require_cv2()
     grab_image, origin_x, origin_y = grab_logical(screen_region, all_screens=all_screens)
+    # pylint: disable-next=import-outside-toplevel  # reason: optional healing provenance avoids import cycles
+    from je_auto_control.utils.self_healing.healing_context import record_image_frame
+    record_image_frame(grab_image)
     frame, scores, template = _match_frame(grab_image, image, cv2)
     effective = min(threshold, 1.0 - _SCORE_EPSILON)
     return (frame, scores), template, effective, (origin_x, origin_y)

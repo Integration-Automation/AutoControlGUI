@@ -22,7 +22,7 @@ from JSON files / CLI / servers, and a **GUI tab**. Nothing is GUI-only.
 
 - **One API, seven platforms.** `wrapper/platform_wrapper.py` picks the backend at import
   time; your script does not change between Windows, macOS, X11, and Wayland.
-- **Scriptable without Python.** 785 `AC_*` commands cover the whole feature set, so a
+- **Scriptable without Python.** 791 `AC_*` commands cover the whole feature set, so a
   JSON file can do anything the library can — including loops, branches, try/catch,
   macros, and variables.
 - **Headless by default.** `import je_auto_control` never loads Qt. The GUI is an
@@ -154,7 +154,7 @@ desktop app; tab commands live in the window's **Actions** menu.
 | Natural-language planner | `plan_actions`, `run_from_description` | `AC_llm_plan` | LLM Planner |
 | Computer-use agent | `AgentLoop`, `run_agent` | `AC_run_agent` | Computer Use |
 | Record & replay | `record`, `stop_record` | `AC_record`, `AC_stop_record` | Record |
-| JSON scripting | `execute_action`, `execute_files` | all 785 commands | Script, Script Builder |
+| JSON scripting | `execute_action`, `execute_files` | all 791 commands | Script, Script Builder |
 | Variables & flow control | `execute_action_with_vars` | `AC_set_var`, `AC_loop`, `AC_for_each`, `AC_try`, `AC_retry` | Variables |
 | Data-driven runs | — | `AC_for_each_row` (CSV / JSON / SQLite / Excel) | Data Sources |
 | Assertions | `assert_text`, `assert_image` | `AC_assert_text` + 20 more | Assertions |
@@ -206,7 +206,7 @@ still goes on to the end), so a CI step fails with it. The legacy
 
 | Surface | Start it with | Notes |
 |---|---|---|
-| **MCP server** | `je_auto_control_mcp` (stdio) or `AC_start_mcp_http_server` | 690 tools for Claude Desktop / Claude Code / custom tool loops. Speaks the stateless MCP 2026-07-28 beside the `initialize`-based revisions. Bearer auth, TLS, audit log, rate limit, plugin hot-reload, CI fake backend. |
+| **MCP server** | `je_auto_control_mcp` (stdio) or `AC_start_mcp_http_server` | 696 tools for Claude Desktop / Claude Code / custom tool loops. Speaks the stateless MCP 2026-07-28 beside the `initialize`-based revisions. Bearer auth, TLS, audit log, rate limit, plugin hot-reload, CI fake backend. |
 | **REST API** | `je_auto_control start-rest` | Bearer token, per-IP rate limit + lockout, SQLite audit hook, `/metrics`, `/openapi.json`, `/docs` Swagger UI, `/dashboard`. |
 | **TCP socket server** | `je_auto_control start-server` | Newline-framed JSON action lists. Binds `127.0.0.1` by default. |
 | **pytest plugin** | installed automatically | Lightweight `je_auto_control_pytest` entry point; fixtures plus Gherkin steps for pytest-bdd / behave. Reinstall after upgrading editable checkouts; the explicit legacy plugin path remains supported. |
@@ -583,3 +583,38 @@ For explicit recording around an executor call, use `with ActionJournal(path).ru
 Set `JE_AUTOCONTROL_ACTION_JOURNAL` to enable automatic executor recording; without
 it, existing calls keep their behavior. Reads and previews never execute actions.
 Journal paths and their lock files follow the effective filesystem policy.
+
+## Fixed-frame self-healing comparison (Beta)
+
+Use `je_auto_control.api.healing` to compare locator versions on identical saved
+frames with labelled boxes, expected misses, origins and pixel/logical scales.
+```python
+from je_auto_control.api.healing import compare_healing_versions
+report = compare_healing_versions("benchmarks/self_healing/dataset.json", {
+    "before": {"template_path": "benchmarks/self_healing/before.png"},
+    "after": {"template_path": "benchmarks/self_healing/after.png"}},
+    report_path=".test-tmp/healing-report.json")
+```
+
+JSON and HTML reports retain frame hashes, expected geometry and original run/step
+context. Counts include image hits, VLM attempts, misses, errors and unknown labels.
+Accuracy, false-positive and recovery rates include numerators/denominators;
+p50/p95 use linear interpolation over all attempts. Costs remain unknown when
+unavailable. Unlabelled samples never count as correct; wrong VLM guesses never
+count as recovery. Historical operation verification is separate from detection
+and is not attributed to a newly compared version.
+
+`create_template_candidate`, `preview_template_candidate`,
+`validate_template_candidate`, `accept_template_candidate` and
+`revert_template_revision` provide immutable snapshots and explicit review.
+Acceptance requires perfect labelled validation with a positive hit and no
+errors/false positives, plus an unchanged baseline/candidate hash. Preview never
+applies changes; revert checks that the accepted image remains current.
+
+All six operations have matching `AC_*`, MCP and Script Builder entries.
+Self-Healing's Actions menu runs comparisons/revision work in a scoped worker;
+the panel shows metric/failure tables, original steps and baseline/candidate
+thumbnails. Runtime HealEvent schema 2 retains actual capture identities,
+strategy timings, backend/model and journal IDs; legacy schema 1 remains readable.
+Unavailable evidence remains unknown. The committed synthetic benchmark is
+offline evidence; physical-device and paid-model validation remain separate.

@@ -1,4 +1,4 @@
-"""Self-healing locators: image-template first, VLM fallback.
+"""Self-healing locators, fixed-frame comparisons and reviewed template revisions.
 
 Public surface:
 
@@ -17,10 +17,24 @@ from je_auto_control.utils.self_healing.locator import (
     METHOD_IMAGE, METHOD_MISS, METHOD_VLM,
     self_heal_click, self_heal_locate,
 )
+from je_auto_control.utils.self_healing.evaluation import (
+    EvaluationSample, HealingComparison, HealingEvaluationError, LocatorPrediction,
+    LocatorStrategy, evaluate_locators,
+)
+from je_auto_control.utils.self_healing.healing_context import healing_context
+from je_auto_control.utils.self_healing.template_revisions import TemplateRevisionStore
+from je_auto_control.utils.self_healing.evaluation_api import (
+    accept_template_candidate, compare_healing_versions, create_template_candidate,
+    preview_template_candidate, revert_template_revision, validate_template_candidate,
+)
 
 
 __all__ = [
     "HealEvent", "HealEventLog", "HealOutcome", "SelfHealError",
     "METHOD_IMAGE", "METHOD_MISS", "METHOD_VLM",
     "default_heal_log", "self_heal_click", "self_heal_locate",
+    "EvaluationSample", "HealingComparison", "HealingEvaluationError", "LocatorPrediction",
+    "LocatorStrategy", "evaluate_locators", "healing_context", "TemplateRevisionStore",
+    "accept_template_candidate", "compare_healing_versions", "create_template_candidate",
+    "preview_template_candidate", "revert_template_revision", "validate_template_candidate",
 ]

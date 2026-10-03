@@ -164,6 +164,15 @@ def journal_log_value(value: object) -> object:
         return scrub_payload(payload, state.secrets)
 
 
+def current_journal_context() -> Dict[str, JSONValue]:
+    """Expose step provenance to other internal audit records, excluding secrets."""
+    state = _CURRENT.get()
+    if state is None:
+        return {}
+    return {'run_id': state.run_id, 'step_id': _PARENT.get(), 'device': state.device,
+            'session': state.session, 'source': _SOURCE.get() or state.source}
+
+
 def prime_journal_inputs(actions: object, handlers: Mapping[str, Callable[..., object]]) -> None:
     """Bind literal secret fields before any whole-script log is emitted."""
     if _CURRENT.get() is None:

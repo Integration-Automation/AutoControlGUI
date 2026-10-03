@@ -62,6 +62,10 @@ from je_auto_control.utils.ocr.ocr_engine import (
 from je_auto_control.utils.profiler.profiler import default_profiler
 from je_auto_control.utils.run_history.history_store import default_history_store
 from je_auto_control.utils.action_journal.api import execute_journaled, list_journal_runs, read_action_journal
+from je_auto_control.utils.self_healing.evaluation_api import (
+    accept_template_candidate, compare_healing_versions, create_template_candidate,
+    preview_template_candidate, revert_template_revision, validate_template_candidate,
+)
 from je_auto_control.utils.secrets import default_secret_manager
 from je_auto_control.utils.script_vars.interpolate import (
     interpolate_value,
@@ -7759,6 +7763,12 @@ class Executor:
             "AC_self_heal_click": _self_heal_click,
             "AC_self_heal_log_list": _self_heal_log_list,
             "AC_self_heal_log_clear": _self_heal_log_clear,
+            "AC_compare_healing_versions": compare_healing_versions,
+            "AC_create_template_candidate": create_template_candidate,
+            "AC_preview_template_candidate": preview_template_candidate,
+            "AC_validate_template_candidate": validate_template_candidate,
+            "AC_accept_template_candidate": accept_template_candidate,
+            "AC_revert_template_revision": revert_template_revision,
 
             # Assertion DSL (verify screen state; raise on mismatch)
             "AC_assert_text": _assert_text,

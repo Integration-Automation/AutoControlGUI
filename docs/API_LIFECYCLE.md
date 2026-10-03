@@ -28,3 +28,9 @@ for deferred work; it adds no public command or facade API.
 The legacy facade re-exports these for JSON/GUI integration compatibility;
 the stable `core.py` namespace is unchanged. Journal readers validate schema
 and ordering and do not execute records.
+
+`je_auto_control.api.healing` is Beta. It exports fixed-frame evaluation models,
+`evaluate_locators`, `healing_context`, `TemplateRevisionStore` and six JSON
+comparison/revision adapters. HealEvent writes schema 2 and reads schema 1.
+Compared location correctness and original-operation verification are separate.
+Existing `self_heal_locate`/`self_heal_click` imports and commands remain available.

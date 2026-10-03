@@ -15,6 +15,11 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Added
 
+- Beta fixed-frame self-healing comparison, labelled metrics and JSON/HTML reports,
+  immutable template candidate preview/validate/accept/revert, six AC/MCP adapters
+  and worker-based Self-Healing metric/failure/preview views. HealEvent schema 2
+  adds actual capture and journal provenance while retaining schema-one reads.
+
 - Beta structured action journals (`je_auto_control.api.journal`), three AC/MCP
   commands and Run History recording/preview. JSONL schema 1 separates inputs
   and outcomes, preserves run/parent/source provenance and incomplete steps,

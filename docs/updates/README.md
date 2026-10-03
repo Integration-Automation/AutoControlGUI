@@ -58,6 +58,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261003-14 | 2026-10-03 | Compare fixed-frame healing versions and review template revisions | #done #self-healing #modernization | [2026-10](2026-10.md) |
 | U-20261003-13 | 2026-10-03 | Record structured action journals with safe provenance and preview | #done #journal #modernization | [2026-10](2026-10.md) |
 | U-20261003-12 | 2026-10-03 | Verify the complete A modernization contract suite | #snapshot #testing #modernization | [2026-10](2026-10.md) |
 | U-20261003-11 | 2026-10-03 | Close authorization, nested path and deferred execution gaps | #done #security #contracts | [2026-10](2026-10.md) |
@@ -356,7 +357,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | File | Period | Entries |
 |---|---|---:|
-| [2026-10.md](2026-10.md) | 2026-10 | 20 |
+| [2026-10.md](2026-10.md) | 2026-10 | 21 |
 | [2026-09-e.md](2026-09-e.md) | 2026-09 | 7 |
 | [2026-09-d.md](2026-09-d.md) | 2026-09 | 55 |
 | [2026-09-c.md](2026-09-c.md) | 2026-09 | 38 |

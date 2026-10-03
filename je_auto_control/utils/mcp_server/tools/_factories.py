@@ -9,6 +9,7 @@ from typing import List
 from je_auto_control.utils.mcp_server.tools._factories_signing import signing_tools
 from je_auto_control.utils.mcp_server.tools._factories_rbac import rbac_tools
 from je_auto_control.utils.mcp_server.tools._factories_journal import journal_tools
+from je_auto_control.utils.mcp_server.tools._factories_healing_evaluation import healing_evaluation_tools
 
 from je_auto_control.utils.mcp_server.tools import _handlers as h
 from je_auto_control.utils.mcp_server.tools import _handlers_qa as hq
@@ -8976,7 +8977,7 @@ ALL_FACTORIES = (
     rbac_tools,
     mouse_tools, keyboard_tools, screen_tools, image_and_ocr_tools,
     window_tools, system_tools, recording_tools, drag_and_send_tools,
-    semantic_locator_tools, self_healing_tools, anchor_locator_tools,
+    semantic_locator_tools, self_healing_tools, healing_evaluation_tools, anchor_locator_tools,
     ab_locator_tools, a11y_tree_tools, a11y_control_tools,
     ocr_structure_tools,
     smart_wait_tools, cost_telemetry_tools, failure_hook_tools,

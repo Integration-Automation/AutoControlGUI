@@ -680,3 +680,40 @@ For explicit recording around an executor call, use ``with ActionJournal(path).r
 Set ``JE_AUTOCONTROL_ACTION_JOURNAL`` to enable automatic executor recording; without
 it, existing calls keep their behavior. Reads and previews never execute actions.
 Journal paths and their lock files follow the effective filesystem policy.
+
+Fixed-frame self-healing comparison (Beta)
+------------------------------------------
+
+Use ``je_auto_control.api.healing`` to compare locator versions on identical saved
+frames with labelled boxes, expected misses, origins and pixel/logical scales.
+.. code-block:: python
+
+    from je_auto_control.api.healing import compare_healing_versions
+    report = compare_healing_versions("benchmarks/self_healing/dataset.json", {
+        "before": {"template_path": "benchmarks/self_healing/before.png"},
+        "after": {"template_path": "benchmarks/self_healing/after.png"}},
+        report_path=".test-tmp/healing-report.json")
+
+
+JSON and HTML reports retain frame hashes, expected geometry and original run/step
+context. Counts include image hits, VLM attempts, misses, errors and unknown labels.
+Accuracy, false-positive and recovery rates include numerators/denominators;
+p50/p95 use linear interpolation over all attempts. Costs remain unknown when
+unavailable. Unlabelled samples never count as correct; wrong VLM guesses never
+count as recovery. Historical operation verification is separate from detection
+and is not attributed to a newly compared version.
+
+``create_template_candidate``, ``preview_template_candidate``,
+``validate_template_candidate``, ``accept_template_candidate`` and
+``revert_template_revision`` provide immutable snapshots and explicit review.
+Acceptance requires perfect labelled validation with a positive hit and no
+errors/false positives, plus an unchanged baseline/candidate hash. Preview never
+applies changes; revert checks that the accepted image remains current.
+
+All six operations have matching ``AC_*``, MCP and Script Builder entries.
+Self-Healing's Actions menu runs comparisons/revision work in a scoped worker;
+the panel shows metric/failure tables, original steps and baseline/candidate
+thumbnails. Runtime HealEvent schema 2 retains actual capture identities,
+strategy timings, backend/model and journal IDs; legacy schema 1 remains readable.
+Unavailable evidence remains unknown. The committed synthetic benchmark is
+offline evidence; physical-device and paid-model validation remain separate.

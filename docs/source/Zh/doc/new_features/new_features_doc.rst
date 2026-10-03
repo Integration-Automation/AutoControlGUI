@@ -1401,3 +1401,33 @@ Schema 版本 1 分開儲存輸入與結果，包含 run／step／parent ID、�
 要明確包覆 executor 呼叫，可使用 ``with ActionJournal(path).run()``。
 設定 ``JE_AUTOCONTROL_ACTION_JOURNAL`` 可啟用 executor 自動錄製；未設定時沿用既有行為。
 讀取及預覽不執行動作。日誌路徑及其鎖檔遵循有效檔案系統 policy。
+
+固定畫面自愈比較（Beta）
+--------------
+
+使用 ``je_auto_control.api.healing`` 比較相同已儲存畫面的定位版本，資料包含
+標註目標框、預期未命中、原點及像素／邏輯縮放。
+.. code-block:: python
+
+    from je_auto_control.api.healing import compare_healing_versions
+    report = compare_healing_versions("benchmarks/self_healing/dataset.json", {
+        "before": {"template_path": "benchmarks/self_healing/before.png"},
+        "after": {"template_path": "benchmarks/self_healing/after.png"}},
+        report_path=".test-tmp/healing-report.json")
+
+
+JSON 與 HTML 報告保留 frame hash、期望幾何及原始 run／step 來源，列出影像命中、
+VLM 嘗試、未命中、錯誤及未知標籤。正確率、誤判率與恢復率附分子／分母；
+p50／p95 對所有嘗試採線性插值。無成本資料時顯示 unknown；未標註不算正確，
+VLM 猜錯不算恢復。歷史操作驗證與定位結果分開，不能歸因於新比較版本。
+
+``create_template_candidate``、``preview_template_candidate``、
+``validate_template_candidate``、``accept_template_candidate``、``revert_template_revision``
+提供不可變快照及明確審閱。接受前須有正確正例、已標註資料全數正確、無錯誤／誤判，
+且原始樣板及候選 hash 未改動。預覽不套用變更；還原檢查目前仍為已接受候選。
+
+六項操作均有對應 ``AC_*``、MCP 與 Script Builder。Self-Healing 的 Actions 選單
+透過保留 scope 的背景工作執行比較／修訂，面板顯示指標、失敗及原始步驟表與兩張預覽。
+HealEvent schema 2 保留實際擷取身份、策略耗時、backend／model 及日誌 ID，仍可讀
+舊 schema 1。缺少的證據保持 unknown。版本控制中的合成 benchmark 是離線證據，
+實機及付費模型驗證分開進行。

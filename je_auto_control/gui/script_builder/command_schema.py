@@ -78,6 +78,7 @@ def _build_specs() -> List[CommandSpec]:
             FieldSpec('path', FieldType.FILE_PATH),
         )),
     ])
+    _add_healing_evaluation_specs(specs)
     _add_mouse_specs(specs)
     _add_keyboard_specs(specs)
     _add_screen_specs(specs)
@@ -88,6 +89,29 @@ def _build_specs() -> List[CommandSpec]:
     _add_misc_specs(specs)
     _add_rbac_specs(specs)
     return specs
+
+
+def _add_healing_evaluation_specs(specs: List[CommandSpec]) -> None:
+    specs.extend([
+        CommandSpec('AC_compare_healing_versions', 'Self Healing', 'Compare fixed-frame locator versions', fields=(
+            FieldSpec('dataset_path', FieldType.FILE_PATH), FieldSpec('versions', FieldType.STRING,
+                placeholder='{"before":{"template_path":"button.png"},"after":{"template_path":"new.png"}}'),
+            FieldSpec('report_path', FieldType.FILE_PATH, optional=True),
+        )),
+        CommandSpec('AC_create_template_candidate', 'Self Healing', 'Propose a template revision', fields=(
+            FieldSpec('store_path', FieldType.FILE_PATH), FieldSpec('template_path', FieldType.FILE_PATH),
+            FieldSpec('candidate_path', FieldType.FILE_PATH),
+        )),
+        CommandSpec('AC_validate_template_candidate', 'Self Healing', 'Validate candidate and baseline', fields=(
+            FieldSpec('store_path', FieldType.FILE_PATH), FieldSpec('revision_id', FieldType.STRING),
+            FieldSpec('dataset_path', FieldType.FILE_PATH),
+            FieldSpec('threshold', FieldType.FLOAT, optional=True, default=0.99),
+        )),
+    ])
+    for name in ('preview_template_candidate', 'accept_template_candidate', 'revert_template_revision'):
+        specs.append(CommandSpec('AC_' + name, 'Self Healing', name.replace('_', ' '), fields=(
+            FieldSpec('store_path', FieldType.FILE_PATH), FieldSpec('revision_id', FieldType.STRING),
+        )))
 
 
 def _add_rbac_specs(specs: List[CommandSpec]) -> None:

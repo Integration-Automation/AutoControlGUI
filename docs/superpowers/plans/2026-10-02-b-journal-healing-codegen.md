@@ -60,7 +60,7 @@ assert unfinished.status == 'incomplete'
 
 **Interfaces:** `EvaluationSample` 定義 frame/expected_box/origin/scale；`evaluate_locators(samples: Sequence[EvaluationSample], versions: Mapping[str, LocatorStrategy]) -> HealingComparison`；report 帶分子分母與 p50/p95。
 
-- [ ] **Step 1:** 定義 fake fixtures 並新增 `test_unlabelled_is_unknown, test_false_positive_is_not_recovery, test_same_frame_versions_are_comparable, test_region_passed_to_both_strategies`，驗證：
+- [x] **Step 1:** 定義 fake fixtures 並新增 `test_unlabelled_is_unknown, test_false_positive_is_not_recovery, test_same_frame_versions_are_comparable, test_region_passed_to_both_strategies`，驗證：
 
 ```python
 assert report.unknown == 1
@@ -68,10 +68,10 @@ assert report.correct == 1 and report.false_positive == 1
 assert image_region == vlm_region
 ```
 
-- [ ] **Step 2:** 執行 `.venv/Scripts/python.exe -m pytest -q --tb=short --basetemp=.test-tmp/modernization-task -o cache_dir=.test-tmp/modernization-pytest-cache test/unit_test/headless/test_self_healing_evaluation.py`，確認新測試因原有缺陷或尚未提供接口而 FAIL；不要把環境錯誤當成功的重現。
-- [ ] **Step 3:** HealEvent 增 optional version/context 欄位，讀舊格式；單一 capture 供策略比較，命中與操作後驗證分離。加入固定失敗／縮放／負座標資料集，candidate template revision 可 preview/accept/revert。
-- [ ] **Step 4:** 重跑 Step 2，預期 exit 0；再跑這些修改檔所對應的既有回歸，確認公開契約。
-- [ ] **Step 5:** 更新本 task 的型別、所有交付入口、文件、測量計數與進度，僅 stage 本 task 檔案，提交 `git commit -m 'B2: 自愈比較與候選修正'`。
+- [x] **Step 2:** 執行 `.venv/Scripts/python.exe -m pytest -q --tb=short --basetemp=.test-tmp/modernization-task -o cache_dir=.test-tmp/modernization-pytest-cache test/unit_test/headless/test_self_healing_evaluation.py`，確認新測試因原有缺陷或尚未提供接口而 FAIL；不要把環境錯誤當成功的重現。
+- [x] **Step 3:** HealEvent 增 optional version/context 欄位，讀舊格式；單一 capture 供策略比較，命中與操作後驗證分離。加入固定失敗／縮放／負座標資料集，candidate template revision 可 preview/accept/revert。
+- [x] **Step 4:** 重跑 Step 2，預期 exit 0；再跑這些修改檔所對應的既有回歸，確認公開契約。
+- [x] **Step 5:** 更新本 task 的型別、所有交付入口、文件、測量計數與進度，僅 stage 本 task 檔案，提交 `git commit -m 'B2: 自愈比較與候選修正'`。
 
 ### Task 3: B3 — 從日誌產生候選腳本
 

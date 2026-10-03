@@ -20,7 +20,7 @@
 
 - **一套 API，七個平台。** `wrapper/platform_wrapper.py` 在匯入時挑選後端；同一份腳本在
   Windows、macOS、X11 與 Wayland 上都不需要改寫。
-- **不寫 Python 也能腳本化。** 785 個 `AC_*` 指令涵蓋全部功能，因此一個 JSON 檔能做到函式庫
+- **不寫 Python 也能腳本化。** 791 個 `AC_*` 指令涵蓋全部功能，因此一個 JSON 檔能做到函式庫
   能做的任何事——包含迴圈、分支、try/catch、巨集與變數。
 - **預設無頭執行。** `import je_auto_control` 絕不會載入 Qt。GUI 是選用套件，包在同一個無頭核心之外。
 - **四種定位方式。** 樣板比對、OCR、無障礙樹、視覺語言模型——可透過錨點定位器與自癒後備串接組合。
@@ -142,7 +142,7 @@ python -c "import je_auto_control; je_auto_control.start_autocontrol_gui()"
 | 自然語言規劃 | `plan_actions`、`run_from_description` | `AC_llm_plan` | LLM Planner |
 | Computer-use agent | `AgentLoop`、`run_agent` | `AC_run_agent` | Computer Use |
 | 錄製與重播 | `record`、`stop_record` | `AC_record`、`AC_stop_record` | Record |
-| JSON 腳本 | `execute_action`、`execute_files` | 全部 785 個指令 | Script、Script Builder |
+| JSON 腳本 | `execute_action`、`execute_files` | 全部 791 個指令 | Script、Script Builder |
 | 變數與流程控制 | `execute_action_with_vars` | `AC_set_var`、`AC_loop`、`AC_for_each`、`AC_try`、`AC_retry` | Variables |
 | 資料驅動執行 | — | `AC_for_each_row`（CSV／JSON／SQLite／Excel） | Data Sources |
 | 斷言 | `assert_text`、`assert_image` | `AC_assert_text` 等 21 個 | Assertions |
@@ -191,7 +191,7 @@ je_auto_control version
 
 | 介面 | 啟動方式 | 說明 |
 |---|---|---|
-| **MCP 伺服器** | `je_auto_control_mcp`（stdio）或 `AC_start_mcp_http_server` | 690 個工具，供 Claude Desktop／Claude Code／自訂 tool loop 使用。除了以 `initialize` 握手的各版協定，也支援無狀態的 MCP 2026-07-28。Bearer 驗證、TLS、稽核記錄、限流、外掛熱重載、CI 假後端。 |
+| **MCP 伺服器** | `je_auto_control_mcp`（stdio）或 `AC_start_mcp_http_server` | 696 個工具，供 Claude Desktop／Claude Code／自訂 tool loop 使用。除了以 `initialize` 握手的各版協定，也支援無狀態的 MCP 2026-07-28。Bearer 驗證、TLS、稽核記錄、限流、外掛熱重載、CI 假後端。 |
 | **REST API** | `je_auto_control start-rest` | Bearer token、逐 IP 限流與鎖定、SQLite 稽核 hook、`/metrics`、`/openapi.json`、`/docs` Swagger UI、`/dashboard`。 |
 | **TCP socket 伺服器** | `je_auto_control start-server` | 以換行分隔的 JSON 動作清單。預設綁 `127.0.0.1`。 |
 | **pytest 外掛** | 安裝後自動生效 | 輕量 `je_auto_control_pytest` 入口，提供 fixture 與 Gherkin 步驟。升級 editable 工作樹後須重新安裝；明確指定的舊外掛路徑仍相容。 |
@@ -508,3 +508,31 @@ Schema 版本 1 分開儲存輸入與結果，包含 run／step／parent ID、�
 要明確包覆 executor 呼叫，可使用 `with ActionJournal(path).run()`。
 設定 `JE_AUTOCONTROL_ACTION_JOURNAL` 可啟用 executor 自動錄製；未設定時沿用既有行為。
 讀取及預覽不執行動作。日誌路徑及其鎖檔遵循有效檔案系統 policy。
+
+## 固定畫面自愈比較（Beta）
+
+使用 `je_auto_control.api.healing` 比較相同已儲存畫面的定位版本，資料包含
+標註目標框、預期未命中、原點及像素／邏輯縮放。
+```python
+from je_auto_control.api.healing import compare_healing_versions
+report = compare_healing_versions("benchmarks/self_healing/dataset.json", {
+    "before": {"template_path": "benchmarks/self_healing/before.png"},
+    "after": {"template_path": "benchmarks/self_healing/after.png"}},
+    report_path=".test-tmp/healing-report.json")
+```
+
+JSON 與 HTML 報告保留 frame hash、期望幾何及原始 run／step 來源，列出影像命中、
+VLM 嘗試、未命中、錯誤及未知標籤。正確率、誤判率與恢復率附分子／分母；
+p50／p95 對所有嘗試採線性插值。無成本資料時顯示 unknown；未標註不算正確，
+VLM 猜錯不算恢復。歷史操作驗證與定位結果分開，不能歸因於新比較版本。
+
+`create_template_candidate`、`preview_template_candidate`、
+`validate_template_candidate`、`accept_template_candidate`、`revert_template_revision`
+提供不可變快照及明確審閱。接受前須有正確正例、已標註資料全數正確、無錯誤／誤判，
+且原始樣板及候選 hash 未改動。預覽不套用變更；還原檢查目前仍為已接受候選。
+
+六項操作均有對應 `AC_*`、MCP 與 Script Builder。Self-Healing 的 Actions 選單
+透過保留 scope 的背景工作執行比較／修訂，面板顯示指標、失敗及原始步驟表與兩張預覽。
+HealEvent schema 2 保留實際擷取身份、策略耗時、backend／model 及日誌 ID，仍可讀
+舊 schema 1。缺少的證據保持 unknown。版本控制中的合成 benchmark 是離線證據，
+實機及付費模型驗證分開進行。

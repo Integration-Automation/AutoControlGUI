@@ -1,4 +1,4 @@
-"""Self-Healing Locator tab.
+"""Self-Healing tab: locate, browse events, compare versions and review template revisions.
 
 Fire a template-first / VLM-fallback locate from the GUI and browse the
 audit log of every healing attempt the runtime has performed.
@@ -13,6 +13,7 @@ from PySide6.QtWidgets import (
 )
 
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
+from je_auto_control.gui.self_healing_evaluation import SelfHealingEvaluationPanel
 from je_auto_control.gui.language_wrapper.multi_language_wrapper import (
     language_wrapper,
 )
@@ -45,11 +46,13 @@ class SelfHealingTab(TranslatableMixin, QWidget):
         self._click_check = QCheckBox()
         self._status = QLabel()
         self._table = QTableWidget(0, len(_COLUMNS))
+        self._evaluation = SelfHealingEvaluationPanel(self._template_input.text, self)
         self._build_layout()
 
     def retranslate(self) -> None:
         TranslatableMixin.retranslate(self)
         self._apply_translations()
+        self._evaluation.retranslate()
 
     # --- layout ----------------------------------------------------
 
@@ -60,6 +63,7 @@ class SelfHealingTab(TranslatableMixin, QWidget):
         root.addWidget(self._build_form_group())
         root.addWidget(self._table, stretch=1)
         root.addWidget(self._status)
+        root.addWidget(self._evaluation)
         self._apply_translations()
         self.refresh_log()
 
@@ -81,7 +85,7 @@ class SelfHealingTab(TranslatableMixin, QWidget):
             ("self_heal_click_btn", self._on_click),
             ("self_heal_refresh", self.refresh_log),
             ("self_heal_clear", self._on_clear_log),
-        ]
+        ] + self._evaluation.menu_actions()
 
     # --- translation -----------------------------------------------
 

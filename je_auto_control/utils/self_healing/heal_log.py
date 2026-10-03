@@ -8,10 +8,12 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from je_auto_control.utils.json_store.json_store import append_json_line
+from je_auto_control.utils.action_journal.events import JSONValue, safe_payload
+from je_auto_control.utils.self_healing.evaluation_models import HealingEvaluationError
 
 
 @dataclass(frozen=True)
-class HealEvent:
+class HealEvent:  # pylint: disable=too-many-instance-attributes  # reason: frozen backward-compatible audit schema
     """One self-healing locate attempt persisted to disk."""
 
     timestamp: str
@@ -22,6 +24,18 @@ class HealEvent:
     description: Optional[str] = None
     image_error: Optional[str] = None
     vlm_error: Optional[str] = None
+    locator_version: Optional[str] = None
+    context: Optional[Dict[str, JSONValue]] = None
+    schema_version: int = 2
+
+    def __post_init__(self) -> None:
+        if isinstance(self.schema_version, bool) or self.schema_version not in {1, 2}:
+            raise HealingEvaluationError('unsupported healing event schema')
+        if self.context is not None:
+            context, reasons = safe_payload(self.context)
+            if reasons or not isinstance(context, dict):
+                raise HealingEvaluationError('healing context must contain finite JSON data')
+            object.__setattr__(self, 'context', context)
 
     def to_dict(self) -> Dict[str, Any]:
         """Return a plain-dict snapshot safe for JSON / network transport."""
@@ -55,7 +69,9 @@ class HealEventLog:
 
     def append(self, event: HealEvent) -> None:
         """Atomically append one event as a JSON line."""
-        payload = json.dumps(event.to_dict(), ensure_ascii=False)
+        # pylint: disable-next=import-outside-toplevel  # reason: privacy registry is read after executor registration
+        from je_auto_control.utils.action_journal.store import journal_log_value
+        payload = json.dumps(journal_log_value(event.to_dict()), ensure_ascii=False, allow_nan=False)
         with self._lock:
             append_json_line(self._path, payload)
 
@@ -101,8 +117,10 @@ def _parse_line(raw: str) -> Optional[HealEvent]:
     except ValueError:
         return None
     try:
+        if isinstance(payload, dict):
+            payload.setdefault('schema_version', 1)
         return HealEvent(**payload)
-    except TypeError:
+    except (TypeError, ValueError):
         return None
 
 

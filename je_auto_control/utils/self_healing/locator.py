@@ -28,6 +28,7 @@ from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.self_healing.heal_log import (
     HealEvent, HealEventLog, default_heal_log,
 )
+from je_auto_control.utils.self_healing.healing_context import attempt_evidence, bound_locator_version, event_context
 
 
 METHOD_IMAGE = "image"
@@ -42,7 +43,7 @@ class SelfHealError(AutoControlException, RuntimeError):
 
 
 @dataclass(frozen=True)
-class HealOutcome:
+class HealOutcome:  # pylint: disable=too-many-instance-attributes  # reason: frozen backward-compatible outcome schema
     """Result of a single self-heal attempt."""
 
     found: bool
@@ -53,6 +54,7 @@ class HealOutcome:
     image_error: Optional[str] = None
     vlm_error: Optional[str] = None
     duration_ms: float = 0.0
+    strategy_durations_ms: Optional[Dict[str, float]] = None
 
     def to_dict(self) -> Dict[str, Any]:
         """JSON-safe dict (tuple → list) for executor / MCP responses."""
@@ -77,20 +79,31 @@ def self_heal_locate(template_path: Optional[str] = None,
     Provide both for full self-healing — the VLM path only runs when
     the template match fails or returns no candidates.
     """
+    with attempt_evidence():
+        return _locate(template_path, description, detect_threshold, screen_region, model, log, raise_on_miss)
+
+
+def _locate(template_path: Optional[str], description: Optional[str], detect_threshold: float,
+            screen_region: Optional[List[int]], model: Optional[str], log: Optional[HealEventLog],
+            raise_on_miss: bool) -> HealOutcome:
     if not template_path and not description:
         raise ValueError(
             "self_heal_locate requires template_path or description",
         )
     started = monotonic()
-    coords, image_error = _try_image(template_path, detect_threshold)
+    coords, image_error = (_try_image(template_path, detect_threshold, screen_region)
+                           if screen_region is not None else _try_image(template_path, detect_threshold))
+    durations = {'image': _ms_since(started)}
     if coords is not None:
         return _finish(
             HealOutcome(found=True, coordinates=coords, method=METHOD_IMAGE,
                         description=description, template_path=template_path,
-                        duration_ms=_ms_since(started)),
+                        duration_ms=_ms_since(started), strategy_durations_ms=durations),
             log,
         )
+    vlm_started = monotonic()
     coords, vlm_error = _try_vlm(description, screen_region, model)
+    durations['vlm'] = _ms_since(vlm_started)
     if coords is not None:
         autocontrol_logger.warning(
             f"self_heal: image miss ({image_error}); VLM healed → {coords}",
@@ -99,14 +112,14 @@ def self_heal_locate(template_path: Optional[str] = None,
             HealOutcome(found=True, coordinates=coords, method=METHOD_VLM,
                         description=description, template_path=template_path,
                         image_error=image_error,
-                        duration_ms=_ms_since(started)),
+                        duration_ms=_ms_since(started), strategy_durations_ms=durations),
             log,
         )
     outcome = HealOutcome(
         found=False, coordinates=None, method=METHOD_MISS,
         description=description, template_path=template_path,
         image_error=image_error, vlm_error=vlm_error,
-        duration_ms=_ms_since(started),
+        duration_ms=_ms_since(started), strategy_durations_ms=durations,
     )
     _finish(outcome, log)
     if raise_on_miss:
@@ -138,10 +151,13 @@ def self_heal_click(template_path: Optional[str] = None,
 
 def _try_image(template_path: Optional[str],
                detect_threshold: float,
+               screen_region: Optional[List[int]] = None,
                ) -> Tuple[Optional[Tuple[int, int]], Optional[str]]:
     if not template_path:
         return None, "no template_path supplied"
     try:
+        if screen_region is not None:
+            return _try_region_image(template_path, detect_threshold, screen_region), None
         from je_auto_control.wrapper.auto_control_image import (
             locate_image_center,
         )
@@ -153,6 +169,19 @@ def _try_image(template_path: Optional[str],
         return None, str(exc)
     except (AutoControlException, OSError, RuntimeError, ValueError, TypeError) as exc:
         return None, repr(exc)
+
+
+def _try_region_image(template_path: str, threshold: float, region: List[int]) -> Tuple[int, int]:
+    # pylint: disable-next=import-outside-toplevel  # reason: region capture backend stays lazy
+    from je_auto_control.utils.cv2_utils.screenshot import _validate_region
+    # pylint: disable-next=import-outside-toplevel  # reason: template capture backend stays lazy
+    from je_auto_control.utils.cv2_utils.template_detection import find_image
+    _validate_region(region)
+    left, top, right, bottom = region
+    found, box = find_image(template_path, threshold, screen_region=[left, top, right - left, bottom - top])
+    if not found:
+        raise ImageNotFoundException('template was not found in the supplied region')
+    return (int(box[0]) + int(box[2])) // 2, (int(box[1]) + int(box[3])) // 2
 
 
 def _try_vlm(description: Optional[str],
@@ -203,6 +232,8 @@ def _as_event(outcome: HealOutcome) -> HealEvent:
         [int(outcome.coordinates[0]), int(outcome.coordinates[1])]
         if outcome.coordinates is not None else None
     )
+    context = event_context(outcome.method, outcome.found, outcome.strategy_durations_ms)
+    context['candidate_coordinates'] = [int(value) for value in coords] if coords is not None else None
     return HealEvent(
         timestamp=datetime.now(timezone.utc).isoformat(timespec="seconds"),
         method=outcome.method,
@@ -212,6 +243,8 @@ def _as_event(outcome: HealOutcome) -> HealEvent:
         description=outcome.description,
         image_error=outcome.image_error,
         vlm_error=outcome.vlm_error,
+        locator_version=bound_locator_version(),
+        context=context,
     )
 
 

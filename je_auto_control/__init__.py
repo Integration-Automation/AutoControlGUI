@@ -208,6 +208,10 @@ from je_auto_control.utils.vision import (
 from je_auto_control.utils.self_healing import (
     HealEvent, HealEventLog, HealOutcome, SelfHealError,
     default_heal_log, self_heal_click, self_heal_locate,
+    EvaluationSample, HealingComparison, HealingEvaluationError, LocatorPrediction,
+    LocatorStrategy, evaluate_locators, healing_context, TemplateRevisionStore,
+    accept_template_candidate, compare_healing_versions, create_template_candidate,
+    preview_template_candidate, revert_template_revision, validate_template_candidate,
 )
 # Screenshot PII redaction (blur regions before VLM upload / audit log).
 from je_auto_control.utils.redaction import (
@@ -1990,4 +1994,8 @@ __all__ = [
     "start_autocontrol_gui",
     "ActionEvent", "ActionJournal", "JournalError", "execute_journaled",
     "list_journal_runs", "read_action_journal", "read_events",
+    "EvaluationSample", "HealingComparison", "HealingEvaluationError", "LocatorPrediction",
+    "LocatorStrategy", "evaluate_locators", "healing_context", "TemplateRevisionStore",
+    "accept_template_candidate", "compare_healing_versions", "create_template_candidate",
+    "preview_template_candidate", "revert_template_revision", "validate_template_candidate",
 ]

@@ -78,6 +78,9 @@ def AC_ab_report(target_id: str) -> Dict[str, Any]:
 def AC_ab_significance(a_conv: int, a_n: int, b_conv: int, b_n: int) -> Dict[str, Any]:
     """Adapter: two-proportion z-test on A/B conversion counts."""
 
+def AC_accept_template_candidate(store_path: str, revision_id: str) -> Dict[str, JSONValue]:
+    """Apply a validated candidate with an unchanged-baseline check."""
+
 def AC_act_in_view(
     target: Any,
     kind: Any = ...,
@@ -674,6 +677,14 @@ def AC_column_gutters(boxes: Any, page_width: Any = ..., min_gap: Any = ...) -> 
 def AC_compare_field_value(expected: Any, actual: Any, mode: Any = ...) -> Dict[str, Any]:
     """Adapter: compare an expected vs actual field value under a mode (pure)."""
 
+def AC_compare_healing_versions(
+    dataset_path: str,
+    versions: Union[Mapping[str, JSONValue], str],
+    *,
+    report_path: Optional[str] = ...,
+) -> Dict[str, JSONValue]:
+    """Compare supplied version configurations on a fixed dataset, with optional JSON/HTML export."""
+
 def AC_compliance_report(
     evidence: Any,
     frameworks: Any = ...,
@@ -805,6 +816,9 @@ def AC_create_project(project_path: str | None = ..., parent_name: str = ...) ->
 
 def AC_create_signing_keypair(private_path: str, public_path: str) -> Dict[str, Any]:
     """Create separate private signing and public verification key files."""
+
+def AC_create_template_candidate(store_path: str, template_path: str, candidate_path: str) -> Dict[str, JSONValue]:
+    """Snapshot a proposal and its baseline, preserving the current template."""
 
 def AC_critical_steps(steps: Any, top: Any = ...) -> Dict[str, Any]:
     """Adapter: the steps that dominate a run's time (bottlenecks)."""
@@ -2110,6 +2124,9 @@ def AC_press_keyboard_key(keycode: int | str, is_shift: bool = ..., skip_record:
 def AC_press_mouse(mouse_keycode: int | str, x: int | None = ..., y: int | None = ...) -> tuple[Any, int, int] | None:
     """按下滑鼠按鍵"""
 
+def AC_preview_template_candidate(store_path: str, revision_id: str) -> Dict[str, JSONValue]:
+    """Read checked candidate/base identities and preview paths without writing files."""
+
 def AC_profile_rows(rows: Any, columns: Any = ...) -> Dict[str, Any]:
     """Adapter: profile a row-set into per-column statistics."""
 
@@ -2380,6 +2397,9 @@ def AC_retry_delay(
     jitter: Any = ...,
 ) -> Dict[str, Any]:
     """Adapter: the (jittered) backoff delay before a retry attempt (pure)."""
+
+def AC_revert_template_revision(store_path: str, revision_id: str) -> Dict[str, JSONValue]:
+    """Restore the saved baseline if the accepted candidate is still current."""
 
 def AC_revoke_lease(token: str) -> Dict[str, Any]:
     """Adapter: revoke a lease token immediately."""
@@ -3011,6 +3031,14 @@ def AC_validate_json(data: Any, schema: Any) -> Dict[str, Any]:
 
 def AC_validate_rows(rows: List[Dict[str, Any]], schema: Dict[str, Any]) -> Dict[str, Any]:
     """Adapter: validate rows against a declarative schema."""
+
+def AC_validate_template_candidate(
+    store_path: str,
+    revision_id: str,
+    dataset_path: str,
+    threshold: float = ...,
+) -> Dict[str, JSONValue]:
+    """Persist a labelled base/candidate comparison; accept requires perfect labelled accuracy and a positive hit."""
 
 def AC_verify_action_file(
     path: str,

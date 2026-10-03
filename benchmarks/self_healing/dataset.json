@@ -1,0 +1,56 @@
+{
+  "schema_version": 1,
+  "samples": [
+    {
+      "sample_id": "changed-template",
+      "frame_path": "target.png",
+      "expected_box": [
+        4,
+        2,
+        4,
+        4
+      ]
+    },
+    {
+      "sample_id": "negative-origin",
+      "frame_path": "target.png",
+      "expected_box": [
+        -16,
+        -8,
+        4,
+        4
+      ],
+      "origin": [
+        -20,
+        -10
+      ]
+    },
+    {
+      "sample_id": "scaled-origin",
+      "frame_path": "target.png",
+      "expected_box": [
+        -18,
+        -9,
+        2,
+        2
+      ],
+      "origin": [
+        -20,
+        -10
+      ],
+      "scale": [
+        2,
+        2
+      ]
+    },
+    {
+      "sample_id": "expected-miss",
+      "frame_path": "negative.png",
+      "expected_miss": true
+    },
+    {
+      "sample_id": "unlabelled",
+      "frame_path": "target.png"
+    }
+  ]
+}
