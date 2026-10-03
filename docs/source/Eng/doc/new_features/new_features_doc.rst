@@ -1379,3 +1379,24 @@ GA toolset results echo toolset_name and answer the whole sequential batch.
 Compaction starts only after these results have been gathered, then omits the
 previous conversation entirely. Official-schema verification and offline tests
 do not constitute paid transport validation; no API key was configured for this run.
+
+Opt-in REST and MCP roles
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+Individual REST/MCP identities are opt-in: create a ``UserStore(Path("users.json"))``,
+add users with roles ``viewer``, ``operator`` or ``admin``, then set
+``JE_AUTOCONTROL_USERS`` to that file before starting the servers or GUI. Viewers
+observe the screen; operators also drive input and sequential action scripts;
+admins additionally manage users, hosts, files, signing, audit and background work.
+Discovery and calls enforce the same policy, including nested executor commands.
+Without this variable, existing shared-token authentication remains available;
+an empty or unreadable configured store denies access. HTTP MCP sessions belong
+to the authenticated user, and audit entries identify ``user_id``.
+
+Admin Console exposes refresh/add/remove/role/token actions in the Actions menu,
+using the same store as local servers. The facade exports ``rbac_*`` adapters and
+``UserStore``; JSON/Script Builder commands are ``AC_user_add``, ``AC_user_list``,
+``AC_user_remove``, ``AC_user_set_role``, ``AC_user_rotate_token`` (equivalent lowercase
+MCP names). Supply command tokens with ``${secrets.USER_TOKEN}``; results contain
+metadata only. Local GUI-generated tokens are shown once for saving.

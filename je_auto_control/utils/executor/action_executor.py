@@ -1,5 +1,8 @@
 import threading
 import types
+from je_auto_control.utils.rbac.user_api import (
+    rbac_add_user, rbac_list_users, rbac_remove_user, rbac_rotate_token, rbac_set_role,
+)
 from contextvars import ContextVar
 from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple, Union
 
@@ -7766,6 +7769,11 @@ class Executor:
             # Action-file integrity (HMAC-SHA256 sign / verify)
             "AC_sign_action_file": _sign_action_file,
             "AC_create_signing_keypair": _create_signing_keypair,
+            "AC_user_add": rbac_add_user,
+            "AC_user_list": rbac_list_users,
+            "AC_user_remove": rbac_remove_user,
+            "AC_user_set_role": rbac_set_role,
+            "AC_user_rotate_token": rbac_rotate_token,
             "AC_verify_action_file": _verify_action_file,
             "AC_encrypt_action_file": _encrypt_action_file,
             "AC_decrypt_action_file": _decrypt_action_file,
@@ -8093,6 +8101,8 @@ class Executor:
         Execute a single event
         """
         name = action[0]
+        from je_auto_control.utils.rbac.authorization import require_command
+        require_command(name)
         block_handler = self._block_commands.get(name)
         if block_handler is not None:
             args = action[1] if len(action) == 2 else {}

@@ -3,6 +3,12 @@ import all wrapper function
 """
 
 # callback
+from je_auto_control.utils.rbac import (
+    AuthorizationContext, AuthorizationError, Capability, Role, UserAuthError,
+    UserRecord, UserStore, authorization_scope, can, configured_user_store,
+    default_user_store, rbac_add_user, rbac_list_users, rbac_remove_user,
+    rbac_rotate_token, rbac_set_role, role_capabilities,
+)
 from je_auto_control.utils.callback.callback_function_executor import \
     callback_executor
 # Critical
@@ -1292,6 +1298,10 @@ def start_autocontrol_gui(*args, **kwargs):
     return _impl(*args, **kwargs)
 
 __all__ = [
+    "AuthorizationContext", "AuthorizationError", "Capability", "Role", "UserAuthError",
+    "UserRecord", "UserStore", "authorization_scope", "can", "configured_user_store",
+    "default_user_store", "rbac_add_user", "rbac_list_users", "rbac_remove_user",
+    "rbac_rotate_token", "rbac_set_role", "role_capabilities",
     "click_mouse", "mouse_keys_table", "get_mouse_position", "press_mouse", "release_mouse",
     "mouse_scroll", "mouse_scroll_error_message", "set_mouse_position", "special_mouse_keys_table",
     "HumanizedMotion", "humanized_path", "move_mouse_humanized",

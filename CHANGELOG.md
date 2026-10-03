@@ -15,6 +15,11 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Added
 
+- Opt-in REST/MCP user roles via `JE_AUTOCONTROL_USERS`, authenticated audit
+  identities and owner-bound HTTP MCP sessions. Unconfigured servers keep their
+  shared tokens; a configured store never falls back. Admin Console, facade,
+  five `AC_user_*` commands, MCP and Script Builder share user management.
+
 - `message_format.MessageFormatError` (an `AutoControlException` and a
   `ValueError`); locales other than en/fr use Babel's CLDR plural rules when
   Babel is installed.

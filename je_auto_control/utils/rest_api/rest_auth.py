@@ -24,6 +24,11 @@ import time
 from dataclasses import dataclass
 from typing import Dict, Optional
 
+from je_auto_control.utils.rbac.authorization import (
+    AuthorizationContext, authenticate_header, configured_user_store,
+)
+from je_auto_control.utils.rbac.users import UserAuthError, UserStore
+
 
 _DEFAULT_TOKEN_BYTES = 24
 _REQUESTS_PER_MINUTE = 120.0
@@ -67,12 +72,17 @@ class RestAuthGate:
 
     def __init__(self, expected_token: str,
                  *, requests_per_minute: float = _REQUESTS_PER_MINUTE,
-                 burst: float = _BURST) -> None:
+                 burst: float = _BURST, user_store: Optional[UserStore] = None) -> None:
         self._token = expected_token
         self._rate_per_s = float(requests_per_minute) / 60.0
         self._burst = float(burst)
         self._buckets: Dict[str, _Bucket] = {}
         self._lock = threading.Lock()
+        self.user_store = user_store if user_store is not None else configured_user_store()
+
+    def identity(self, header_value: Optional[str]) -> Optional[AuthorizationContext]:
+        """Authenticated identity, or None when using the legacy shared token."""
+        return authenticate_header(header_value, self.user_store) if self.user_store is not None else None
 
     @property
     def expected_token(self) -> str:
@@ -88,13 +98,22 @@ class RestAuthGate:
         """
         if not self._consume_token(client_ip):
             return "rate_limited"
-        if _matches_bearer(header_value, self._token):
+        if self._matches(header_value):
             self._reset_failures(client_ip)
             return "ok"
         if self._is_locked_out(client_ip):
             return "locked_out"
         self._note_failure(client_ip)
         return "unauthorized"
+
+    def _matches(self, header_value: Optional[str]) -> bool:
+        if self.user_store is None:
+            return _matches_bearer(header_value, self._token)
+        try:
+            self.identity(header_value)
+            return True
+        except UserAuthError:
+            return False
 
     def _consume_token(self, client_ip: str) -> bool:
         now = time.monotonic()

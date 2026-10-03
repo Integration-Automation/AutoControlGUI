@@ -1288,3 +1288,22 @@ beta 路徑傳入 computer-use beta 標頭並配對 tool_use/tool_result ID；
 GA toolset 結果帶 toolset_name，整批循序動作完成後一起回覆。
 摘要新對話只在結果收齊後建立，完全不重播先前的對話。
 官方 schema 核對與離線測試不能取代付費傳輸驗證；本次未配置 API key。
+
+REST 與 MCP 個人角色
+~~~~~~~~~~~~~~~
+
+
+REST／MCP 個人身分採 opt-in：以 ``UserStore(Path("users.json"))`` 建立使用者，
+角色可選 ``viewer``、``operator``、``admin``，啟動伺服器或 GUI 前將
+``JE_AUTOCONTROL_USERS`` 設為該檔案。viewer 可觀察畫面；operator 可操作輸入與
+循序動作腳本；admin 可額外管理使用者、主機、檔案、簽章、稽核與背景工作。
+工具搜尋與呼叫使用相同權限，巢狀 executor 指令也檢查。
+未設定變數時保留共用 token；已設定但使用者檔為空或不可讀時拒絕登入。
+HTTP MCP 會話僅屬於已驗證的使用者，稽核記錄包含 ``user_id``。
+
+Admin Console 的 Actions 選單提供重新整理、新增、移除、角色與 token 輪替，
+與本機伺服器共用同一 UserStore。門面公開 ``rbac_*`` 與 ``UserStore``；
+JSON／Script Builder 提供 ``AC_user_add``、``AC_user_list``、``AC_user_remove``、
+``AC_user_set_role``、``AC_user_rotate_token``，MCP 使用相應小寫名称。
+命令 token 可由 ``${secrets.USER_TOKEN}`` 提供，結果僅含使用者資料。
+GUI 產生的 token 僅顯示一次供保存。

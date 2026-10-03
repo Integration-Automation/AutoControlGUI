@@ -7,6 +7,7 @@ stdio line is one JSON-RPC message — no Content-Length framing — matching
 the MCP stdio spec.
 """
 import contextlib
+import contextvars
 import itertools
 import json
 import sys
@@ -17,6 +18,10 @@ from typing import Any, Callable, Dict, List, Optional, TextIO
 from je_auto_control.utils.cli_output import utf8_stream
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.mcp_server.audit import AuditLogger
+from je_auto_control.utils.mcp_server._tool_calls import handle_tool_call
+from je_auto_control.utils.rbac.authorization import (
+    AuthorizationContext, authorization_scope, permitted, require_command, resource_permitted,
+)
 from je_auto_control.utils.mcp_server.context import (
     OperationCancelledError, ToolCallContext,
 )
@@ -37,23 +42,23 @@ from je_auto_control.utils.mcp_server.tools._validation import (
     undeclared_arguments, validate_arguments,
 )
 from je_auto_control.utils.mcp_server.tools._path_metadata import validate_path_arguments
-from je_auto_control.utils.path_guard.policy import PathPolicy, path_policy_scope
+from je_auto_control.utils.path_guard.policy import PathPolicy
 from je_auto_control.utils.path_guard.path_guard import PathNotAllowedError
 from je_auto_control.utils.mcp_server._client_requests import (
     ClientRequestMixin,
 )
 from je_auto_control.utils.mcp_server._resource_policy import bounded_resources
 from je_auto_control.utils.mcp_server._input_required import (
-    AnsweredByGate, RequestStateSigner,
+    RequestStateSigner,
 )
 from je_auto_control.utils.mcp_server._stateless import StatelessDispatchMixin
 from je_auto_control.utils.mcp_server._subscriptions import NO_RESPONSE, SubscriptionMixin
 from je_auto_control.utils.mcp_server._protocol import (
     PROTOCOL_VERSION,  # noqa: F401  # reason: re-exported; callers import it from server
-    _capture_error_screenshot, negotiate_protocol_version,
+    negotiate_protocol_version,
     _coerce_params, _DISPATCH_ERRORS, _error_response, _invalid_envelope, _InvalidToolArguments,
     _is_hashable,
-    _MCPError, _notification_message, _result_response, _server_info, _to_content_blocks,
+    _MCPError, _notification_message, _result_response, _server_info,
     _TOOLS_CALL_METHOD,
 )
 
@@ -214,7 +219,8 @@ class MCPServer(StatelessDispatchMixin, SubscriptionMixin, ClientRequestMixin):
 
     @contextlib.contextmanager
     def connection_scope(self, *, notifier=None, writer=None,
-                         concurrent_tools=None, connection_id=None):
+                         concurrent_tools=None, connection_id=None,
+                         authorization: Optional[AuthorizationContext] = None):
         """Bind notifier/writer/concurrency/identity to the calling thread only.
 
         Transports that serve more than one peer must wrap each request in
@@ -231,7 +237,8 @@ class MCPServer(StatelessDispatchMixin, SubscriptionMixin, ClientRequestMixin):
         self._local.concurrent_tools = concurrent_tools
         self._local.connection_id = connection_id
         try:
-            yield self
+            with authorization_scope(authorization):
+                yield self
         finally:
             (self._local.notifier, self._local.writer,
              self._local.concurrent_tools, self._local.connection_id) = prior
@@ -441,8 +448,9 @@ class MCPServer(StatelessDispatchMixin, SubscriptionMixin, ClientRequestMixin):
                 )
                 return
             writer(payload)
+        context = contextvars.copy_context()
         thread = threading.Thread(
-            target=worker, daemon=True, name=f"MCPCall-{msg_id}",
+            target=context.run, args=(worker,), daemon=True, name=f"MCPCall-{msg_id}",
         )
         with self._workers_lock:
             self._workers = [live for live in self._workers if live.is_alive()]
@@ -519,6 +527,7 @@ class MCPServer(StatelessDispatchMixin, SubscriptionMixin, ClientRequestMixin):
 
     def _run_method(self, msg_id: Any, method: Optional[str],
                     params: Dict[str, Any]) -> Any:
+        self._check_method_authorization(method, params)
         if method == _TOOLS_CALL_METHOD:
             return self._handle_tools_call(msg_id, params)
         if method is None:
@@ -554,13 +563,26 @@ class MCPServer(StatelessDispatchMixin, SubscriptionMixin, ClientRequestMixin):
         # client as "-32603 dictionary changed size during iteration".
         with self._tools_lock:
             tools = list(self._tools.values())
-        return {"tools": [tool.to_descriptor() for tool in tools]}
+        return {"tools": [tool.to_descriptor() for tool in tools
+                          if permitted(tool.name, read_only=tool.annotations.read_only)]}
 
     def _handle_resources_list(self) -> Dict[str, Any]:
         """List descriptors for every registered resource."""
         return {"resources": [resource.to_descriptor()
                               for resource in bounded_resources(
-                                  self._resources, self._current_path_policy()).list()]}
+                                  self._resources, self._current_path_policy()).list()
+                              if resource_permitted(resource.uri)]}
+
+    def _check_resource_authorization(self, params: Dict[str, Any]) -> None:
+        uri = params.get('uri')
+        if isinstance(uri, str) and not resource_permitted(uri):
+            raise _MCPError(-32003, 'permission denied for resource')
+
+    def _check_method_authorization(self, method: Optional[str], params: Dict[str, Any]) -> None:
+        if method == 'logging/setLevel' and not permitted('logs_read'):
+            raise _MCPError(-32003, 'permission denied for logging')
+        if method in {'resources/read', 'resources/subscribe', 'resources/unsubscribe'}:
+            self._check_resource_authorization(params)
 
     def _handle_prompts_list(self) -> Dict[str, Any]:
         """List descriptors for every registered prompt."""
@@ -648,6 +670,7 @@ class MCPServer(StatelessDispatchMixin, SubscriptionMixin, ClientRequestMixin):
         tool = self._tools.get(name)
         if tool is None:
             raise _MCPError(-32602, f"Unknown tool: {name}")
+        require_command(name, read_only=tool.annotations.read_only)
         violation = (validate_arguments(tool.input_schema, arguments)
                      or undeclared_arguments(tool.input_schema, arguments))
         if violation is not None:
@@ -664,63 +687,7 @@ class MCPServer(StatelessDispatchMixin, SubscriptionMixin, ClientRequestMixin):
 
     def _handle_tools_call(self, msg_id: Any,
                            params: Dict[str, Any]) -> Dict[str, Any]:
-        try:
-            name, tool, arguments = self._prepare_tool_call(params)
-        except _InvalidToolArguments as error:
-            return {"content": [{"type": "text", "text": str(error)}], "isError": True}
-        except AnsweredByGate as answered:
-            return answered.result
-        ctx = self._build_call_context(msg_id, params)
-        call_key = (self._connection_id, msg_id)
-        with self._calls_lock:
-            self._active_calls[call_key] = ctx
-        started_at = time.monotonic()
-        try:
-            with path_policy_scope(self._current_path_policy()):
-                result = tool.invoke(arguments, ctx=ctx)
-        except OperationCancelledError:
-            self._audit.record(
-                tool=name, arguments=arguments, status="cancelled",
-                duration_seconds=time.monotonic() - started_at,
-            )
-            raise
-        except _MCPError:
-            raise
-        # Any exception, not a list: re.PatternError, ET.ParseError, cv2.error or
-        # a plugin's own error escaped the list, killed the worker thread and
-        # left the call unanswered (stdio) or dropped the connection (HTTP).
-        except Exception as error:  # noqa: BLE001  # reason: a tool's failure of any type must answer the call with isError
-            autocontrol_logger.warning("MCP tool %s failed: %r", name, error)
-            artifact = _capture_error_screenshot(name)
-            self._audit.record(
-                tool=name, arguments=arguments, status="error",
-                duration_seconds=time.monotonic() - started_at,
-                error_text=f"{type(error).__name__}: {error}",
-                artifact_path=artifact,
-            )
-            error_text = f"{type(error).__name__}: {error}"
-            if artifact is not None:
-                error_text += f"\n(error screenshot saved to {artifact})"
-            return {
-                "content": [{"type": "text", "text": error_text}],
-                "isError": True,
-            }
-        finally:
-            with self._calls_lock:
-                self._active_calls.pop(call_key, None)
-        self._audit.record(
-            tool=name, arguments=arguments, status="ok",
-            duration_seconds=time.monotonic() - started_at,
-        )
-        response: Dict[str, Any] = {
-            "content": _to_content_blocks(result),
-            "isError": False,
-        }
-        # 2025-06-18 spec: tools with an outputSchema return their dict result
-        # as structuredContent for typed, token-cheap client consumption.
-        if tool.output_schema is not None and isinstance(result, dict):
-            response["structuredContent"] = result
-        return response
+        return handle_tool_call(self, msg_id, params)
 
     def _build_call_context(self, msg_id: Any,
                             params: Dict[str, Any]) -> ToolCallContext:

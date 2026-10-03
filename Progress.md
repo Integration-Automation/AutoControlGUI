@@ -195,21 +195,6 @@ pip install --dry-run --only-binary=:all: --platform win_arm64 --python-version 
 
 ---
 
-## RBAC 還沒接到 REST API 與 MCP server
-
-`DECIDE` — 要不要把 `utils/rbac` 接上兩個伺服器，以及現有單一共用 token 怎麼過渡（維護者拍板）
-
-`utils/rbac/users.py` 有使用者、角色與權杖驗證（2026-09-24 已補上：壞檔不覆寫、權杖不得重複），但沒有任何程式
-import 它：`rest_api/rest_auth.py` 與 `mcp_server/http_transport.py` 都只比對一個共用 token，稽核 log 也沒有
-`user_id`。模組 docstring 已改成照實描述。
-
-**做法**：`RestAuthGate.check` 改成先查 `UserStore.authenticate`、再依路由對應的 `Capability` 呼叫 `can()`；
-MCP 的 bearer 比對同理；稽核寫入帶上 `user_id`。
-
-**要先想清楚**：沒有任何使用者時是否退回共用 token（相容現有部署）；viewer／operator／admin 各能呼叫哪些路由與工具。
-
----
-
 ## Computer use 的預設還是 beta 的 `computer_20251124`
 
 `TODO` — 在 `claude-opus-5`（兩種形式都接受）上實測 GA toolset 後，把它設成所有模型的預設

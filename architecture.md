@@ -73,11 +73,11 @@ the CLI, the scheduler, triggers, hotkeys, webhooks, the MCP run tool, the GUI) 
 `read_executable_action_json`, which reads it once and verifies those bytes against the `.sig` sidecar when
 `JE_AUTOCONTROL_REQUIRE_SIGNED_ACTIONS` is set (`utils/action_signing/`).
 
-**B. Remote and external drivers** all feed the single global `executor`:
+**B. Remote and external drivers** bind request scopes before executor dispatch:
 
 ```
 TCP socket_server | REST rest_api | MCP mcp_server | utils/scheduler | utils/triggers | utils/chatops
-  → execute_action → same Executor instance → flow A
+  → execution_scope → execute_action → isolated script state → flow A
 AC_web_run / AC_web_run_actions → utils/webrunner_bridge/bridge.py
   → je_web_runner.utils.executor.action_executor.execute_one(["WR_*", params])
     (event_dict["WR_*"] on a WebRunner without execute_one); a failure → WebRunnerBridgeError
@@ -219,3 +219,14 @@ Anthropic Agent requests append history up to three screenshots, then start
 a separate goal/action-summary conversation with the latest image. Completed
 toolset batches are summarized after all results are collected; submitted
 request snapshots remain immutable. OpenAI and default tool exports are unchanged.
+
+REST/MCP HTTP optionally resolve `JE_AUTOCONTROL_USERS` through the process-wide
+`configured_user_store()` cache. Bearer authentication binds an immutable
+`AuthorizationContext`; route/tool capability checks and nested executor guards
+share it. MCP workers copy the context, discovery uses the same policy as calls,
+and HTTP sessions require their authenticated owner. Absent configuration retains
+shared-token behavior; configured empty/unreadable stores never fall back.
+REST hash-chain records expose `user_id` using their existing actor column, and
+MCP JSONL entries include `user_id`. Local Admin Console user actions use the same
+store instance; the headless facade, five AC commands, MCP tools and Script Builder
+provide equivalent management surfaces.

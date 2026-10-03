@@ -148,15 +148,20 @@ class UserStore:
             self._commit_locked({key: record for key, record in self._users.items() if key != user_id})
         return True
 
-    def rotate_token(self, user_id: str) -> str:
-        """Generate a fresh token for an existing user; returns the plain token."""
-        plain_token = secrets.token_urlsafe(24)
+    def rotate_token(self, user_id: str, token: Optional[str] = None) -> str:
+        """Install or generate a token for an existing user; return it once."""
+        plain_token = secrets.token_urlsafe(24) if token is None else token
+        token_hash = _hash_token(plain_token)
         with self._lock:
             existing = self._users.get(user_id)
             if existing is None:
                 raise UserAuthError(f"unknown user_id: {user_id!r}")
+            if any(record.user_id != user_id and
+                   hmac.compare_digest(record.token_hash, token_hash)
+                   for record in self._users.values()):
+                raise UserAuthError("that token is already in use")
             self._commit_locked({**self._users, user_id: replace(
-                existing, token_hash=_hash_token(plain_token), tags=list(existing.tags))})
+                existing, token_hash=token_hash, tags=list(existing.tags))})
         return plain_token
 
     def set_role(self, user_id: str, role: str) -> None:

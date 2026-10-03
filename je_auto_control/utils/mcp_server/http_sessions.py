@@ -53,6 +53,7 @@ class HttpSession:
 
     def __init__(self, session_id: str, now: float) -> None:
         self.id = session_id
+        self.user_id: Optional[str] = None
         self.created_at = now
         self.last_seen = now
         self.closed = threading.Event()

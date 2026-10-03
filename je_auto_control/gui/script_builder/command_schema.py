@@ -71,7 +71,22 @@ def _build_specs() -> List[CommandSpec]:
     _add_window_specs(specs)
     _add_flow_specs(specs)
     _add_misc_specs(specs)
+    _add_rbac_specs(specs)
     return specs
+
+
+def _add_rbac_specs(specs: List[CommandSpec]) -> None:
+    identifier = FieldSpec("user_id", FieldType.STRING)
+    role = FieldSpec("role", FieldType.ENUM, choices=("viewer", "operator", "admin"))
+    token = FieldSpec("token", FieldType.STRING, placeholder="${secrets.USER_TOKEN}")
+    specs.extend([
+        CommandSpec("AC_user_add", "Security", "Add User",
+                    fields=(identifier, FieldSpec("display_name", FieldType.STRING), role, token)),
+        CommandSpec("AC_user_list", "Security", "List Users"),
+        CommandSpec("AC_user_remove", "Security", "Remove User", fields=(identifier,)),
+        CommandSpec("AC_user_set_role", "Security", "Set User Role", fields=(identifier, role)),
+        CommandSpec("AC_user_rotate_token", "Security", "Rotate User Token", fields=(identifier, token)),
+    ])
 
 
 def _add_mouse_specs(specs: List[CommandSpec]) -> None:

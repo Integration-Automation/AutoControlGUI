@@ -186,7 +186,13 @@ class AuditLog:
     def log(self, event_type: str, *,
             host_id: Optional[str] = None,
             viewer_id: Optional[str] = None,
-            detail: Optional[str] = None) -> None:
+            detail: Optional[str] = None,
+            user_id: Optional[str] = None) -> None:
+        """Append a chained event; REST identities use the existing actor column."""
+        if user_id is not None:
+            if event_type != 'rest_api':
+                raise AuditLogError('user_id is supported for rest_api events only')
+            viewer_id = user_id
         ts = datetime.now(timezone.utc).isoformat()
         with self._lock:
             try:
@@ -249,7 +255,8 @@ class AuditLog:
                 return []
         return [
             {"id": r[0], "ts": r[1], "event_type": r[2], "host_id": r[3],
-             "viewer_id": r[4], "detail": r[5]}
+             "viewer_id": r[4], "detail": r[5],
+             **({'user_id': r[4]} if r[2] == 'rest_api' else {})}
             for r in rows
         ]
 

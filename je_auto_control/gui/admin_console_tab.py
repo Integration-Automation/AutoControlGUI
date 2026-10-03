@@ -11,6 +11,7 @@ from PySide6.QtWidgets import (
 )
 
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
+from je_auto_control.gui._user_admin_panel import UserAdminPanel
 from je_auto_control.gui._worker_thread import CallWorker, WorkerHandle, start_worker
 from je_auto_control.gui.language_wrapper.multi_language_wrapper import (
     language_wrapper,
@@ -103,6 +104,7 @@ class AdminConsoleTab(TranslatableMixin, QWidget):
         self._thumb_timer = QTimer(self)
         self._thumb_timer.timeout.connect(self._refresh_thumbnails)
         self._thumb_thread: Optional[WorkerHandle] = None
+        self._users_panel = UserAdminPanel(self)
         self._build_layout()
         self._refresh_table()
         self._apply_thumb_interval()
@@ -115,6 +117,7 @@ class AdminConsoleTab(TranslatableMixin, QWidget):
         root.addWidget(self._table, stretch=1)
         root.addWidget(self._build_thumbnails_group(), stretch=1)
         root.addWidget(self._build_broadcast_group(), stretch=1)
+        root.addWidget(self._users_panel)
 
     def menu_actions(self) -> list:
         """Expose tab commands to the window-level Actions menu."""
@@ -124,7 +127,7 @@ class AdminConsoleTab(TranslatableMixin, QWidget):
             ("admin_refresh", self._on_refresh),
             ("admin_thumb_refresh_now", self._refresh_thumbnails),
             ("admin_broadcast_run", self._on_broadcast),
-        ]
+        ] + self._users_panel.menu_actions()
 
     def _build_thumbnails_group(self) -> QGroupBox:
         group = self._tr(QGroupBox(), "admin_thumb_group")

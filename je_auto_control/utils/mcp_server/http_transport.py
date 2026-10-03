@@ -25,7 +25,6 @@ session: its ``Mcp-Session-Id`` is ignored and none is minted. Its
 ``subscriptions/listen`` holds the response stream open for the change
 notifications it asked for, until the client closes it or the server stops.
 """
-import hmac
 import json
 import os
 import ssl
@@ -35,9 +34,12 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any, Callable, Dict, Optional, Tuple
 
 from je_auto_control.utils.http_headers import (
-    bearer_challenge, log_safe, parse_content_length, wire_json_text,
+    log_safe, parse_content_length, wire_json_text,
 )
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
+from je_auto_control.utils.mcp_server._http_auth import caller_allowed, session_allowed
+from je_auto_control.utils.rbac.authorization import AuthorizationContext, configured_user_store
+from je_auto_control.utils.rbac.users import UserStore
 from je_auto_control.utils.mcp_server._http_stateless import (
     PROTOCOL_VERSION_HEADER, is_stateless, read_message, stateless_refusal,
     status_for, unsupported_header_refusal,
@@ -104,6 +106,7 @@ def _notifier_for(writer: Optional[Callable[[str], None]]):
 class _MCPHttpHandler(BaseHTTPRequestHandler):
     """Bridges HTTP requests onto :meth:`MCPServer.handle_line`."""
 
+    _authorization: Optional[AuthorizationContext] = None
     server_version = "AutoControlMCP/1.0"
     # Set once this request's body has been read off the socket, so a later
     # error response knows there is nothing left to drain.
@@ -159,7 +162,7 @@ class _MCPHttpHandler(BaseHTTPRequestHandler):
         # concurrent_tools=False: a plain POST answers in its own body; with
         # the server's concurrent mode a tools/call went to a worker and the
         # POST was acknowledged 202 with nothing in it.
-        with bridge.connection_scope(connection_id=conn_id, writer=writer,
+        with bridge.connection_scope(authorization=self._authorization, connection_id=conn_id, writer=writer,
                                       notifier=_notifier_for(writer),
                                       concurrent_tools=False):
             response = bridge.handle_line(line)
@@ -183,7 +186,7 @@ class _MCPHttpHandler(BaseHTTPRequestHandler):
         if self._client_accepts_sse():
             self._dispatch_sse(bridge, line, id(self))
             return
-        with bridge.connection_scope(connection_id=id(self), concurrent_tools=False):
+        with bridge.connection_scope(authorization=self._authorization, connection_id=id(self), concurrent_tools=False):
             response = bridge.handle_line(line)
         if response is None:
             self._send_blank(status=202)
@@ -200,7 +203,7 @@ class _MCPHttpHandler(BaseHTTPRequestHandler):
             return
         send_lock = threading.Lock()
         emit = self._open_event_stream(send_lock)
-        with bridge.connection_scope(writer=emit, notifier=_notifier_for(emit),
+        with bridge.connection_scope(authorization=self._authorization, writer=emit, notifier=_notifier_for(emit),
                                      concurrent_tools=False, connection_id=id(self)):
             response = bridge.handle_line(line)
         if response is not None:
@@ -251,14 +254,16 @@ class _MCPHttpHandler(BaseHTTPRequestHandler):
         header_id = session_id_from_headers(self.headers)
         if header_id is not None:
             session = registry.get(header_id)
-            if session is None:
+            if session is None or not session_allowed(self, session):
                 self._send_json(
                     {"error": "unknown or expired session"}, status=404,
                 )
                 return None, False
             return session, True
         if _is_initialize(line):
-            return registry.create(), True
+            session = registry.create()
+            session.user_id = self._authorization.user_id if self._authorization is not None else None
+            return session, True
         return None, True
 
     def finish(self) -> None:
@@ -299,34 +304,7 @@ class _MCPHttpHandler(BaseHTTPRequestHandler):
         return False
 
     def _caller_allowed(self) -> bool:
-        """Refuse browser cross-site requests, then check the bearer token."""
-        if not self._origin_allowed():
-            self._send_json({"error": "origin not allowed"}, status=403)
-            return False
-        expected: Optional[str] = self.server.auth_token  # type: ignore[attr-defined]
-        if expected is None:
-            return True
-        # The scheme is case-insensitive (RFC 7235 2.1): "bearer tok" was
-        # refused here while the REST gate accepted it.
-        scheme, _, provided = self.headers.get("Authorization", "").strip().partition(" ")
-        # 401 with a challenge for a missing *and* a wrong token: the MCP
-        # authorization spec requires both, and RFC 9110 the header.
-        challenge = {"WWW-Authenticate": bearer_challenge(
-            "autocontrol-mcp", self.headers.get("Authorization"))}
-        if scheme.lower() != "bearer":
-            self._send_json({"error": "missing bearer token"}, status=401,
-                            extra_headers=challenge)
-            return False
-        provided = provided.strip()
-        # Bytes: compare_digest raises TypeError on a non-ASCII str, and
-        # http.server decodes headers as latin-1, so a crafted token used to
-        # kill the request thread instead of being refused.
-        if not hmac.compare_digest(provided.encode("utf-8"),
-                                   expected.encode("utf-8")):
-            self._send_json({"error": "invalid bearer token"}, status=401,
-                            extra_headers=challenge)
-            return False
-        return True
+        return caller_allowed(self)
 
     def _origin_allowed(self) -> bool:
         """True unless a browser on another site, or a rebound name, sent this.
@@ -385,7 +363,7 @@ class _MCPHttpHandler(BaseHTTPRequestHandler):
         # server-global notifier, and so emitted its progress down whichever
         # SSE socket happened to be open — delivering one client's payload to
         # another. connection_scope keeps it thread-local instead.
-        with bridge.connection_scope(
+        with bridge.connection_scope(authorization=self._authorization,
             notifier=lambda method, params: emit(
                 _notification_message(method, params),
             ),
@@ -412,7 +390,7 @@ class _MCPHttpHandler(BaseHTTPRequestHandler):
             return
         registry: SessionRegistry = self.server.sessions  # type: ignore[attr-defined]
         session = registry.get(session_id_from_headers(self.headers))
-        if session is None:
+        if session is None or not session_allowed(self, session):
             self._send_json(
                 {"error": "unknown or expired session"}, status=404,
             )
@@ -488,11 +466,13 @@ class _MCPHttpHandler(BaseHTTPRequestHandler):
             # still run their cleanup unchanged.
             self._send_json({"status": "session terminated"})
             return
-        if registry.terminate(header_id) is None:
+        session = registry.get(header_id)
+        if session is None or not session_allowed(self, session):
             self._send_json(
                 {"error": "unknown or expired session"}, status=404,
             )
             return
+        registry.terminate(header_id)
         self._send_json({"status": "session terminated"})
 
     # --- helpers -------------------------------------------------------------
@@ -574,10 +554,12 @@ class _MCPHttpServer(ThreadingHTTPServer):
 
     def __init__(self, server_address: Tuple[str, int],
                  mcp: MCPServer,
-                 auth_token: Optional[str] = None) -> None:
+                 auth_token: Optional[str] = None,
+                 user_store: Optional[UserStore] = None) -> None:
         super().__init__(server_address, _MCPHttpHandler)
         self.mcp = mcp
         self.auth_token = auth_token
+        self.user_store = user_store
         # Dropping a session releases the dispatcher state scoped to its id —
         # the same release a closing socket used to perform, moved to the
         # identity that actually owns that state.
@@ -631,6 +613,7 @@ class HttpMCPServer:
                  host: str = "127.0.0.1", port: int = 9940,
                  auth_token: Optional[str] = None,
                  ssl_context: Optional[ssl.SSLContext] = None,
+                 user_store: Optional[UserStore] = None,
                  ) -> None:
         self._mcp = mcp if mcp is not None else MCPServer()
         self._address: Tuple[str, int] = (host, port)
@@ -638,6 +621,7 @@ class HttpMCPServer:
             os.environ.get("JE_AUTOCONTROL_MCP_TOKEN") or None
         )
         self._ssl_context = ssl_context
+        self._user_store = user_store if user_store is not None else configured_user_store()
         self._server: Optional[_MCPHttpServer] = None
         self._thread: Optional[threading.Thread] = None
 
@@ -660,7 +644,7 @@ class HttpMCPServer:
         if self._server is not None:
             return
         self._server = _MCPHttpServer(
-            self._address, self._mcp, auth_token=self._auth_token,
+            self._address, self._mcp, auth_token=self._auth_token, user_store=self._user_store,
         )
         if self._ssl_context is not None:
             # Defer the handshake so it runs in get_request() under a timeout

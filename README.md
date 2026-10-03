@@ -22,7 +22,7 @@ from JSON files / CLI / servers, and a **GUI tab**. Nothing is GUI-only.
 
 - **One API, seven platforms.** `wrapper/platform_wrapper.py` picks the backend at import
   time; your script does not change between Windows, macOS, X11, and Wayland.
-- **Scriptable without Python.** 776 `AC_*` commands cover the whole feature set, so a
+- **Scriptable without Python.** 781 `AC_*` commands cover the whole feature set, so a
   JSON file can do anything the library can — including loops, branches, try/catch,
   macros, and variables.
 - **Headless by default.** `import je_auto_control` never loads Qt. The GUI is an
@@ -154,7 +154,7 @@ desktop app; tab commands live in the window's **Actions** menu.
 | Natural-language planner | `plan_actions`, `run_from_description` | `AC_llm_plan` | LLM Planner |
 | Computer-use agent | `AgentLoop`, `run_agent` | `AC_run_agent` | Computer Use |
 | Record & replay | `record`, `stop_record` | `AC_record`, `AC_stop_record` | Record |
-| JSON scripting | `execute_action`, `execute_files` | all 776 commands | Script, Script Builder |
+| JSON scripting | `execute_action`, `execute_files` | all 781 commands | Script, Script Builder |
 | Variables & flow control | `execute_action_with_vars` | `AC_set_var`, `AC_loop`, `AC_for_each`, `AC_try`, `AC_retry` | Variables |
 | Data-driven runs | — | `AC_for_each_row` (CSV / JSON / SQLite / Excel) | Data Sources |
 | Assertions | `assert_text`, `assert_image` | `AC_assert_text` + 20 more | Assertions |
@@ -206,7 +206,7 @@ still goes on to the end), so a CI step fails with it. The legacy
 
 | Surface | Start it with | Notes |
 |---|---|---|
-| **MCP server** | `je_auto_control_mcp` (stdio) or `AC_start_mcp_http_server` | 681 tools for Claude Desktop / Claude Code / custom tool loops. Speaks the stateless MCP 2026-07-28 beside the `initialize`-based revisions. Bearer auth, TLS, audit log, rate limit, plugin hot-reload, CI fake backend. |
+| **MCP server** | `je_auto_control_mcp` (stdio) or `AC_start_mcp_http_server` | 686 tools for Claude Desktop / Claude Code / custom tool loops. Speaks the stateless MCP 2026-07-28 beside the `initialize`-based revisions. Bearer auth, TLS, audit log, rate limit, plugin hot-reload, CI fake backend. |
 | **REST API** | `je_auto_control start-rest` | Bearer token, per-IP rate limit + lockout, SQLite audit hook, `/metrics`, `/openapi.json`, `/docs` Swagger UI, `/dashboard`. |
 | **TCP socket server** | `je_auto_control start-server` | Newline-framed JSON action lists. Binds `127.0.0.1` by default. |
 | **pytest plugin** | installed automatically | Lightweight `je_auto_control_pytest` entry point; fixtures plus Gherkin steps for pytest-bdd / behave. Reinstall after upgrading editable checkouts; the explicit legacy plugin path remains supported. |
@@ -452,3 +452,21 @@ messages and signed thinking blocks are retained unchanged in their original
 request. This applies to regular tools, beta computer-use and the GA toolset.
 `AC_run_agent` retains its existing default tool export. Paid API validation
 requires a configured key and remains tracked in `Progress.md`.
+
+
+Individual REST/MCP identities are opt-in: create a `UserStore(Path("users.json"))`,
+add users with roles `viewer`, `operator` or `admin`, then set
+`JE_AUTOCONTROL_USERS` to that file before starting the servers or GUI. Viewers
+observe the screen; operators also drive input and sequential action scripts;
+admins additionally manage users, hosts, files, signing, audit and background work.
+Discovery and calls enforce the same policy, including nested executor commands.
+Without this variable, existing shared-token authentication remains available;
+an empty or unreadable configured store denies access. HTTP MCP sessions belong
+to the authenticated user, and audit entries identify `user_id`.
+
+Admin Console exposes refresh/add/remove/role/token actions in the Actions menu,
+using the same store as local servers. The facade exports `rbac_*` adapters and
+`UserStore`; JSON/Script Builder commands are `AC_user_add`, `AC_user_list`,
+`AC_user_remove`, `AC_user_set_role`, `AC_user_rotate_token` (equivalent lowercase
+MCP names). Supply command tokens with `${secrets.USER_TOKEN}`; results contain
+metadata only. Local GUI-generated tokens are shown once for saving.

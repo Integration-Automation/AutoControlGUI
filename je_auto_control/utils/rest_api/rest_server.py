@@ -23,6 +23,8 @@ from je_auto_control.utils.http_headers import (
 )
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.rest_api.rest_auth import RestAuthGate, generate_token
+from je_auto_control.utils.rbac.authorization import AuthorizationContext, authorization_scope, route_capability
+from je_auto_control.utils.rbac.users import UserAuthError, UserStore, can
 from je_auto_control.utils.rest_api.rest_handlers import (
     HandlerResult, RouteContext,
     handle_audit_list, handle_audit_verify,
@@ -149,18 +151,7 @@ class _RestRequestHandler(BaseHTTPRequestHandler):
         self._metrics().record_request("GET", _PATH_DASHBOARD, status)
 
     def _serve_metrics(self) -> None:
-        client_ip = self.client_address[0] if self.client_address else "?"
-        verdict = self._gate().check(
-            client_ip=client_ip,
-            header_value=self.headers.get("Authorization"),
-        )
-        if verdict != "ok":
-            if verdict == "unauthorized":
-                self._metrics().record_failed_auth()
-            self._reject(verdict)
-            self._metrics().record_request(
-                "GET", "/metrics", _verdict_to_status(verdict),
-            )
+        if not self._authorize_route('GET', '/metrics', None):
             return
         body = self._metrics().render(
             audit_row_count=_count_audit_rows(getattr(self.server, "audit_log", None)),
@@ -183,8 +174,42 @@ class _RestRequestHandler(BaseHTTPRequestHandler):
         # against the rate limit or the lockout.
         self._dispatch("POST", _POST_ROUTES, body=_BODY_PENDING)
 
+    def _authorize_route(self, method: str, path: str, body: Any) -> bool:
+        """Authenticate and authorize before reading bodies or invoking routes."""
+        self._authorization: Optional[AuthorizationContext] = None
+        client_ip = self.client_address[0] if self.client_address else '?'
+        verdict = self._gate().check(
+            client_ip=client_ip,
+            header_value=self.headers.get("Authorization"),
+        )
+        if verdict != "ok":
+            if verdict == "unauthorized":
+                self._metrics().record_failed_auth()
+            self._drain_unread_body(body)
+            self._reject(verdict)
+            self._audit(method, path, client_ip, verdict)
+            self._metrics().record_request(
+                method, path, _verdict_to_status(verdict),
+            )
+            return False
+        try:
+            self._authorization = self._gate().identity(self.headers.get('Authorization'))
+        except UserAuthError:
+            self._drain_unread_body(body)
+            self._reject('unauthorized')
+            return False
+        if self._authorization is not None and not can(
+                self._authorization.role, route_capability(method, path)):
+            self._drain_unread_body(body)
+            self._send_json({'error': 'permission denied'}, status=403)
+            self._audit(method, path, client_ip, 'denied')
+            self._metrics().record_request(method, path, 403)
+            return False
+        return True
+
     def _dispatch(self, method: str, routes: Dict[str, HandlerFn],
                   body: Any) -> None:
+        self._authorization = None
         parsed = urlparse(self.path)
         handler = routes.get(parsed.path)
         if handler is None:
@@ -192,28 +217,16 @@ class _RestRequestHandler(BaseHTTPRequestHandler):
             self._answer_unrouted(parsed.path)
             return
         client_ip = self.client_address[0] if self.client_address else "?"
-        if parsed.path not in _PUBLIC_PATHS:
-            verdict = self._gate().check(
-                client_ip=client_ip,
-                header_value=self.headers.get("Authorization"),
-            )
-            if verdict != "ok":
-                if verdict == "unauthorized":
-                    self._metrics().record_failed_auth()
-                self._drain_unread_body(body)
-                self._reject(verdict)
-                self._audit(method, parsed.path, client_ip, verdict)
-                self._metrics().record_request(
-                    method, parsed.path, _verdict_to_status(verdict),
-                )
-                return
+        if parsed.path not in _PUBLIC_PATHS and not self._authorize_route(method, parsed.path, body):
+            return
         if body is _BODY_PENDING:
             body = self._read_json_body()
             if body is _BODY_ERROR_SENT:
                 return
         ctx = RouteContext(query=parsed.query, body=body, client_ip=client_ip)
         try:
-            status, payload = handler(ctx)
+            with authorization_scope(self._authorization):
+                status, payload = handler(ctx)
         except _HANDLER_ERRORS as error:
             autocontrol_logger.error(
                 "rest-api %s %s handler raised: %r", method, parsed.path, error,
@@ -242,6 +255,7 @@ class _RestRequestHandler(BaseHTTPRequestHandler):
             audit.log(
                 "rest_api", host_id=client_ip,
                 detail=f"{method} {path} -> {outcome}",
+                user_id=self._authorization.user_id if self._authorization is not None else None,
             )
         except (OSError, RuntimeError) as error:
             autocontrol_logger.warning("rest-api audit write failed: %r", error)
@@ -410,12 +424,12 @@ class RestApiServer:
 
     def __init__(self, host: str = "127.0.0.1", port: int = 9939,
                  *, token: Optional[str] = None,
-                 enable_audit: bool = True) -> None:
+                 enable_audit: bool = True, user_store: Optional[UserStore] = None) -> None:
         self._address: Tuple[str, int] = (host, port)
         self._server: Optional[ThreadingHTTPServer] = None
         self._thread: Optional[threading.Thread] = None
         self._token = token if token else generate_token()
-        self._auth = RestAuthGate(expected_token=self._token)
+        self._auth = RestAuthGate(expected_token=self._token, user_store=user_store)
         self._audit_log = self._open_audit_log() if enable_audit else None
         self._metrics = RestMetrics()
 

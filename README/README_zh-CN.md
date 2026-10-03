@@ -20,7 +20,7 @@
 
 - **一套 API，七个平台。** `wrapper/platform_wrapper.py` 在导入时挑选后端；同一份脚本在
   Windows、macOS、X11 与 Wayland 上都不需要改写。
-- **不写 Python 也能脚本化。** 776 个 `AC_*` 命令覆盖全部功能，因此一个 JSON 文件能做到库
+- **不写 Python 也能脚本化。** 781 个 `AC_*` 命令覆盖全部功能，因此一个 JSON 文件能做到库
   能做的任何事——包含循环、分支、try/catch、宏与变量。
 - **默认无头运行。** `import je_auto_control` 绝不会加载 Qt。GUI 是可选包，包在同一个无头内核之外。
 - **四种定位方式。** 模板匹配、OCR、无障碍树、视觉语言模型——可通过锚点定位器与自愈回退串接组合。
@@ -142,7 +142,7 @@ python -c "import je_auto_control; je_auto_control.start_autocontrol_gui()"
 | 自然语言规划 | `plan_actions`、`run_from_description` | `AC_llm_plan` | LLM Planner |
 | Computer-use agent | `AgentLoop`、`run_agent` | `AC_run_agent` | Computer Use |
 | 录制与回放 | `record`、`stop_record` | `AC_record`、`AC_stop_record` | Record |
-| JSON 脚本 | `execute_action`、`execute_files` | 全部 776 个命令 | Script、Script Builder |
+| JSON 脚本 | `execute_action`、`execute_files` | 全部 781 个命令 | Script、Script Builder |
 | 变量与流程控制 | `execute_action_with_vars` | `AC_set_var`、`AC_loop`、`AC_for_each`、`AC_try`、`AC_retry` | Variables |
 | 数据驱动执行 | — | `AC_for_each_row`（CSV／JSON／SQLite／Excel） | Data Sources |
 | 断言 | `assert_text`、`assert_image` | `AC_assert_text` 等 21 个 | Assertions |
@@ -191,7 +191,7 @@ je_auto_control version
 
 | 接口 | 启动方式 | 说明 |
 |---|---|---|
-| **MCP 服务器** | `je_auto_control_mcp`（stdio）或 `AC_start_mcp_http_server` | 681 个工具，供 Claude Desktop／Claude Code／自定义 tool loop 使用。除了以 `initialize` 握手的各版协议，也支持无状态的 MCP 2026-07-28。Bearer 认证、TLS、审计日志、限流、插件热重载、CI 假后端。 |
+| **MCP 服务器** | `je_auto_control_mcp`（stdio）或 `AC_start_mcp_http_server` | 686 个工具，供 Claude Desktop／Claude Code／自定义 tool loop 使用。除了以 `initialize` 握手的各版协议，也支持无状态的 MCP 2026-07-28。Bearer 认证、TLS、审计日志、限流、插件热重载、CI 假后端。 |
 | **REST API** | `je_auto_control start-rest` | Bearer token、按 IP 限流与锁定、SQLite 审计 hook、`/metrics`、`/openapi.json`、`/docs` Swagger UI、`/dashboard`。 |
 | **TCP socket 服务器** | `je_auto_control start-server` | 以换行分隔的 JSON 动作列表。默认绑定 `127.0.0.1`。 |
 | **pytest 插件** | 安装后自动生效 | 轻量 `je_auto_control_pytest` 入口，提供 fixture 与 Gherkin 步骤。升级 editable 工作树后须重新安装；明确指定的旧插件路径仍兼容。 |
@@ -404,3 +404,19 @@ Anthropic Agent 历史在三张截图上限内只追加；超过时以目标、�
 最近五十个动作及结果、最新截图建立新对话。已发送的消息与签署 thinking 区块
 保持原样，不移入新对话。常规工具、beta computer-use 与 GA toolset 都适用。
 `AC_run_agent` 沿用现有默认工具导出。付费 API 验证需配置 key，待办见 `Progress.md`。
+
+
+REST／MCP 个人身份采用 opt-in：以 `UserStore(Path("users.json"))` 创建用户，
+角色可选 `viewer`、`operator`、`admin`，启动服务器或 GUI 前将
+`JE_AUTOCONTROL_USERS` 设为该文件。viewer 可观察画面；operator 可操作输入与
+顺序动作脚本；admin 可额外管理用户、主机、文件、签名、审计与后台工作。
+工具搜索与调用使用相同权限，嵌套 executor 命令也检查。
+未设置变量时保留共享 token；已设置但用户文件为空或不可读时拒绝登录。
+HTTP MCP 会话仅属于已验证的用户，审计记录包含 `user_id`。
+
+Admin Console 的 Actions 菜单提供刷新、新增、移除、角色与 token 轮替，
+与本机服务器共用同一 UserStore。门面公开 `rbac_*` 与 `UserStore`；
+JSON／Script Builder 提供 `AC_user_add`、`AC_user_list`、`AC_user_remove`、
+`AC_user_set_role`、`AC_user_rotate_token`，MCP 使用对应小写名称。
+命令 token 可由 `${secrets.USER_TOKEN}` 提供，结果仅含用户资料。
+GUI 生成的 token 仅显示一次供保存。
