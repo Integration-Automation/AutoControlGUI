@@ -38,7 +38,8 @@ def locate_by_description(description: str,
     image_bytes = _capture_screenshot_bytes(screen_region)
     # pylint: disable-next=import-outside-toplevel  # reason: optional healing provenance avoids import cycles
     from je_auto_control.utils.self_healing.healing_context import record_frame
-    record_frame(image_bytes, 'vlm', bound.name, model)
+    backend_name = getattr(bound, 'name', None)
+    record_frame(image_bytes, 'vlm', backend_name if isinstance(backend_name, str) else None, model)
     coords = bound.locate(image_bytes, description, model=model)
     if coords is None:
         return None

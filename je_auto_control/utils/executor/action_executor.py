@@ -61,7 +61,8 @@ from je_auto_control.utils.ocr.ocr_engine import (
 )
 from je_auto_control.utils.profiler.profiler import default_profiler
 from je_auto_control.utils.run_history.history_store import default_history_store
-from je_auto_control.utils.action_journal.api import execute_journaled, list_journal_runs, read_action_journal
+from je_auto_control.utils.action_journal.api import list_journal_runs, read_action_journal
+from je_auto_control.utils.action_journal.wire_api import record_actions as execute_journaled
 from je_auto_control.utils.self_healing.evaluation_api import (
     accept_template_candidate, compare_healing_versions, create_template_candidate,
     preview_template_candidate, revert_template_revision, validate_template_candidate,
@@ -8116,7 +8117,7 @@ class Executor:
         if isinstance(args, list):
             resolved_list = self._resolve_positional_args(args, command)
             from je_auto_control.utils.action_journal.store import observe_resolved_arguments
-            observe_resolved_arguments(command, args, resolved_list)
+            observe_resolved_arguments(command, args, resolved_list, event=self.event_dict.get(command))
             return resolved_list
         return args
 

@@ -759,3 +759,12 @@ shows a sanitized diff, source and provenance in a readonly view using a scoped
 worker. Import is a separate editing operation; export saves the reviewed
 candidate and sidecars. Neither preview nor import runs generated actions.
 The synthetic ``benchmarks/journal_codegen`` example is offline contract evidence.
+
+Ordinary ``${var}`` inputs without recorded resolved bindings are omitted with
+a warning; they cannot silently reuse a new executor's variables. Validation
+also checks block command objects and required fields. Journal recording binds
+positional sensitive parameters, masks sensitive variable getter results and
+marks unhandled descendant failures as errors. Successfully caught/retried
+failures retain successful container/run status.
+Interpolated variable names are conservatively private before recording.
+Known private scalar values, including numeric PINs, are masked in result/log copies.

@@ -1051,7 +1051,7 @@ def AC_execute_files(execute_files_list: list) -> List[Dict[str, str]]:
     """執行 action files"""
 
 def AC_execute_journaled(
-    actions: Sequence[object] | Mapping[str, object] | str,
+    actions: str | List[object] | Dict[str, object],
     path: str,
     *,
     run_id: str | None = ...,
@@ -1059,7 +1059,7 @@ def AC_execute_journaled(
     device: str | None = ...,
     session: str | None = ...,
 ) -> Dict[str, None | bool | int | float | str | List[JSONValue] | Dict[str, JSONValue]]:
-    """Execute actions with a journal and linked run history; return safe run metadata."""
+    """Delegate recording to the full headless journal/history/execution boundary."""
 
 def AC_execute_process(exe_path: str) -> None:
     """Start an external executable file."""

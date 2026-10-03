@@ -15,7 +15,7 @@ from pathlib import Path
 from typing import Callable, Dict, Iterator, List, Mapping, Optional, Sequence, Set, Union
 
 from je_auto_control.utils.action_journal.events import ActionEvent, JSONValue, JournalError, safe_payload
-from je_auto_control.utils.action_journal.privacy import private_input, scrub_payload, secret_values
+from je_auto_control.utils.action_journal.privacy import private_input, private_output, scrub_payload, secret_values
 from je_auto_control.utils.executor.flow_control import LoopBreak, LoopContinue
 from je_auto_control.utils.json_store.json_store import _file_lock, append_json_line
 from je_auto_control.utils.path_guard.policy import scoped_path
@@ -154,10 +154,13 @@ def execution_journal() -> Iterator[None]:
         yield
 
 
-def observe_resolved_arguments(command: str, raw: object, resolved: object) -> None:
+def observe_resolved_arguments(command: str, raw: object, resolved: object, *,
+                               event: Optional[Callable[..., object]] = None) -> None:
     """Retain confidential strings in memory for sanitizing subsequent outcomes."""
     state = _CURRENT.get()
     if state is not None:
+        raw = _raw_input([command, raw], event)
+        resolved = _raw_input([command, resolved], event)
         with state.lock:
             state.secrets.update(secret_values(command, raw, resolved))
 
@@ -269,7 +272,10 @@ def execute_recorded(action: Sequence[object], function: Callable[[], object], *
     state = _CURRENT.get()
     if state is None:
         return function()
+    # pylint: disable-next=import-outside-toplevel  # reason: dispatch is running after executor initialization
+    from je_auto_control.utils.executor.action_executor import recorded_failures
     step = _start_step(state, action, event)
+    failures_before = recorded_failures()
     parent = _PARENT.set(step.step_id)
     try:
         result = function()
@@ -280,7 +286,13 @@ def execute_recorded(action: Sequence[object], function: Callable[[], object], *
         raise
     else:
         outcome, found = safe_payload(result)
-        state.emit(replace(step, finished_at=max(time.time(), step.started_at), status='ok', outcome=outcome,
+        outcome, secrets = private_output(step.command, step.arguments, outcome)
+        with state.lock:
+            state.secrets.update(secrets)
+        failed = recorded_failures() > failures_before
+        state.emit(replace(step, finished_at=max(time.time(), step.started_at),
+                           status='error' if failed else 'ok', outcome=outcome,
+                           error='UnhandledDescendantFailure' if failed else None,
                            replayable=step.replayable and not found,
                            replay_reasons=tuple((*step.replay_reasons, *found))))
         return result

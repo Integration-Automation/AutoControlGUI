@@ -1,7 +1,8 @@
 """Explicit journal recording and validated read tools."""
 from typing import List
 
-from je_auto_control.utils.action_journal.api import execute_journaled, list_journal_runs, read_action_journal
+from je_auto_control.utils.action_journal.api import list_journal_runs, read_action_journal
+from je_auto_control.utils.action_journal.wire_api import record_actions as execute_journaled
 from je_auto_control.utils.mcp_server.tools._base import DESTRUCTIVE, MCPTool, READ_ONLY, schema
 
 

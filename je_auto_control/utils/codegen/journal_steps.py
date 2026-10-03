@@ -7,6 +7,7 @@ from typing import Dict, List, Optional, Sequence, Set, Tuple
 from je_auto_control.utils.action_journal.events import ActionEvent, JSONValue
 from je_auto_control.utils.action_journal.privacy import private_input
 from je_auto_control.utils.executor.action_schema import FLOW_BODY_KEYS, FLOW_BRANCH_LIST_KEYS
+from je_auto_control.utils.script_vars.interpolate import _PLACEHOLDER
 
 _CONTAINERS = frozenset(FLOW_BODY_KEYS) | frozenset(FLOW_BRANCH_LIST_KEYS) | {
     'AC_execute_action', 'AC_execute_files', 'AC_execute_journaled', 'AC_call_macro',
@@ -48,6 +49,27 @@ def _step_row(event: ActionEvent, reason: Optional[str], retry: Optional[str], a
             'retry_parent_id': retry, 'observed_attempt': attempt}
 
 
+def _requires_binding(value: JSONValue) -> bool:
+    """Recognize runtime references using the executor's interpolation grammar."""
+    if isinstance(value, str):
+        return any(not match.group(1).startswith('secrets.') for match in _PLACEHOLDER.finditer(value))
+    if isinstance(value, dict):
+        return any(_requires_binding(item) for item in value.values())
+    if isinstance(value, list):
+        return any(_requires_binding(item) for item in value)
+    return False
+
+
+def _replay_input(event: ActionEvent, parents: Set[str]) -> Tuple[JSONValue, Optional[str]]:
+    arguments, privacy_reasons = private_input(event.command, event.arguments)
+    reason = _reason(event, parents)
+    if reason is None and privacy_reasons:
+        reason = 'not replayed: ' + '; '.join(privacy_reasons)
+    if reason is None and _requires_binding(arguments):
+        reason = 'not replayed: runtime variable input lacks a recorded resolved binding'
+    return arguments, reason
+
+
 def observed_actions(events: Sequence[ActionEvent]
                      ) -> Tuple[List[List[JSONValue]], List[Dict[str, JSONValue]], List[str]]:
     """Return sanitized actions and all provenance rows in observed start order."""
@@ -58,10 +80,7 @@ def observed_actions(events: Sequence[ActionEvent]
     warnings: List[str] = []
     occurrences: Dict[Tuple[Optional[str], str, Optional[int], str], int] = {}
     for event in events:
-        reason = _reason(event, parents)
-        arguments, privacy_reasons = private_input(event.command, event.arguments)
-        if reason is None and privacy_reasons:
-            reason = 'not replayed: ' + '; '.join(privacy_reasons)
+        arguments, reason = _replay_input(event, parents)
         retry = _retry_parent(event, by_id)
         key = (retry, event.command, event.source_index, json.dumps(arguments, sort_keys=True))
         occurrences[key] = occurrences.get(key, 0) + 1

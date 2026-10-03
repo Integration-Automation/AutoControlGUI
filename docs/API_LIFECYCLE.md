@@ -41,3 +41,5 @@ Manifest schema 1 identifies the exact source snapshot and observed-only replay.
 Existing list-based codegen and CLI flags remain supported. Generation validates
 but never executes the candidate; masked/incomplete/failed steps are omitted
 from replay inputs and retained as provenance and warnings.
+
+Candidate replay excludes ordinary runtime variable references without recorded resolved binding evidence. Block fields are validated without dispatch. Journal privacy includes signature-bound positional values and sensitive getter results; unhandled contained errors propagate to terminal container status while handled errors remain distinguishable.

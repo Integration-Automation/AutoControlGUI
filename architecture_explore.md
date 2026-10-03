@@ -19,14 +19,14 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 
 | 指標 | 數值 |
 | --- | ---: |
-| Python 模組總數（含周邊子專案） | 1,105 |
-| 程式碼總行數 | 161,957 |
+| Python 模組總數（含周邊子專案） | 1,106 |
+| 程式碼總行數 | 162,047 |
 | `je_auto_control/utils/` 子套件數 | 311 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 792 |
 | 套件門面 `__all__` 公開名稱數 | 1,293 |
 | GUI 分頁數（`main_widget` 註冊） | 48 |
 | MCP 工具數（`build_default_tool_registry()` 實測） | 697 |
-| `test_*.py` 測試檔／測試函式 | 739 / 7,648 |
+| `test_*.py` 測試檔／測試函式 | 740 / 7,656 |
 | 範例腳本 | 27 |
 
 **技術基線**：Python ≥ 3.10、MIT 授權、必要相依只有 `je_open_cv`／`opencv-python`／`pillow`／`mss`／
@@ -274,19 +274,19 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.1 執行引擎與腳本資產
 
-> 25 個套件、約 16,075 行。
+> 25 個套件、約 16,163 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
 | `utils/action_lint/` | 429 | action 檔 linter 與 JSON Schema 產生器（CI 用 `python -m` 進入點） |
 | `utils/action_signing/` | 488 | action 檔 Ed25519 v2 公鑰驗簽、私鑰離線簽署與 Fernet 加密；所有執行檔案載入器可強制驗簽，HMAC 只允許明確遷移 |
 | `utils/checkpoint/` | 129 | 流程檢查點與續跑，讓長 action list 具持久性 |
-| `utils/action_journal/` | 695 | 版本一 JSONL 動作日誌、先遮罩再追加、run／step／parent 與來源追溯；typed API 與 run-history artifact adapters |
-| `utils/codegen/` | 581 | 由 action list 產碼；日誌快照驗證、observed path 候選／來源 manifest、遮罩差異及安全匯出 |
+| `utils/action_journal/` | 751 | 版本一 JSONL 動作日誌、先遮罩再追加、run／step／parent 與來源追溯；typed API 與 run-history artifact adapters；`wire_api.py` 為 AC／MCP 薄轉接層 |
+| `utils/codegen/` | 612 | 由 action list 產碼；日誌快照驗證、observed path 候選／來源 manifest、遮罩差異及安全匯出 |
 | `utils/dag/` | 554 | 跨主機 DAG 編排器（圖模型 + runner） |
 | `utils/decision_table/` | 112 | DMN 風格決策表：規則 + 命中策略，把分支外部化 |
 | `utils/deterministic/` | 116 | 決定性執行控制：固定亂數種子 + 凍結時鐘 |
-| `utils/executor/` | 9,787 | **核心**。`Executor` 指令分派表（792 個 `AC_*`）、參數插值、乾跑、逐步 callback、日誌與來源追蹤；`flow_control` 提供 34 個區塊指令（迴圈／分支／try／巨集／變數） |
+| `utils/executor/` | 9,788 | **核心**。`Executor` 指令分派表（792 個 `AC_*`）、參數插值、乾跑、逐步 callback、日誌與來源追蹤；`flow_control` 提供 34 個區塊指令（迴圈／分支／try／巨集／變數） |
 | `utils/flow_debugger/` | 166 | action list 的單步除錯器與追蹤器 |
 | `utils/input_macro/` | 462 | 定時輸入事件：錄製結果的整形（`timeline`／`InputRecorder`，Windows 與 macOS 共用）、重播與宣告式輸入序列 DSL |
 | `utils/json/` | 103 | action JSON 檔讀寫與正規化格式化（`fmt --check` 的後端） |
@@ -498,7 +498,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.9 AI / Agent / LLM
 
-> 13 個套件、約 23,862 行。
+> 13 個套件、約 23,864 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -511,10 +511,10 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/cua_action/` | 204 | 標準化 computer-use 動作結構（Anthropic／OpenAI → `AC_*`） |
 | `utils/llm/` | 365 | 自然語言 → action list 規劃器 + Anthropic／null 後端 |
 | `utils/mcp_registry/` | 97 | MCP registry 資訊清單產生；預設 io.github.integration-automation/autocontrol，專案 Integration-Automation/AutoControlGUI |
-| `utils/mcp_server/` | 19,446 | **無頭 MCP 伺服器**（16K LOC，預設註冊 697 個工具＝678 個 `ac_*` + 19 個別名）：stdio + HTTP 傳輸、工具工廠與處理器、資源、prompt、稽核、限流、外掛熱重載 |
+| `utils/mcp_server/` | 19,447 | **無頭 MCP 伺服器**（16K LOC，預設註冊 697 個工具＝678 個 `ac_*` + 19 個別名）：stdio + HTTP 傳輸、工具工廠與處理器、資源、prompt、稽核、限流、外掛熱重載 |
 | `utils/tool_use_schema/` | 195 | 把 `AC_*` 指令匯出成 Claude／OpenAI 的 tool-use schema |
 | `utils/trajectory_eval/` | 132 | agent 軌跡評估：依評分規準為一次執行打分 |
-| `utils/vision/` | 549 | VLM 元素定位器（依描述找元素）+ Anthropic／OpenAI／null 後端 |
+| `utils/vision/` | 550 | VLM 元素定位器（依描述找元素）+ Anthropic／OpenAI／null 後端 |
 
 ### 5.4.10 遠端桌面與 USB
 
@@ -700,11 +700,11 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 上表以子套件為單位；以下把行數最大的幾個子系統展開到檔案層。
 
-#### `utils/executor/`（9,787 行）— 執行核心
+#### `utils/executor/`（9,788 行）— 執行核心
 
 | 檔案 | 行數 | 職責 |
 | --- | ---: | --- |
-| `action_executor.py` | 8,428 | `Executor` 類別與 `event_dict` 分派表（792 個指令），另含數百個把 utils 能力接成指令的 adapter 函式；全域單例 `executor` 與 `add_command_to_executor()` 擴充點。 |
+| `action_executor.py` | 8,429 | `Executor` 類別與 `event_dict` 分派表（792 個指令），另含數百個把 utils 能力接成指令的 adapter 函式；全域單例 `executor` 與 `add_command_to_executor()` 擴充點。 |
 | `flow_control.py` | 650 | 真正的流程控制：`AC_loop`／`AC_for_each`／`AC_while_*`／`AC_if_*`／`AC_try`／`AC_retry`／`AC_parallel`／`AC_define_macro`／`AC_call_macro`／變數指令（`AC_set_var`／`AC_get_var`／`AC_inc_var`）。`LoopBreak`／`LoopContinue` 以例外實作。34 個區塊指令的分派表 `BLOCK_COMMANDS` 也在這裡，含下一列匯入的資料來源指令。 |
 | `flow_data_commands.py` | 272 | `AC_*_to_var` 資料來源與轉換指令：shell、時鐘、亂數、PDF、TOTP、SQL、檔案、HTTP、OCR，加上 `AC_assert_var`／`AC_assert_db`／`AC_assert_duration`／`AC_transform_var`。都不執行巢狀 action list，所以沒有迴圈／分支語意。 |
 | `action_schema.py` | 159 | action list 的結構驗證：形狀、參數型別、未知指令拒絕。單一走訪同時支援兩種消費方式：`validate_actions()` 遇到第一個問題就拋、`unknown_command_names()` 收齊全部不認得的名字（REST `/execute` 用它回 400）。 |
@@ -714,7 +714,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `path_arguments.py` | 58 | Scoped dispatch: reviewed filesystem fields after interpolation and positional/default binding; includes flow-block arguments. |
 | `request_context.py` | 40 | Deferred registration snapshots: identity, roots and independent variables for each delivery. |
 
-#### `utils/mcp_server/`（19,446 行，697 個工具）— 最大子系統
+#### `utils/mcp_server/`（19,447 行，697 個工具）— 最大子系統
 
 | 檔案 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -726,7 +726,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `tools/_handlers_system.py` | 575 | 同一種 adapter，桌面工作階段：視窗、行程與 shell、開檔、閒置與睡眠、音量、鎖定、輸入法狀態、欄位驗證與重試、色彩對比、變更排序、元件分類、剪貼簿。 |
 | `_tool_calls.py` | 98 | 授權後執行工具、取消與錯誤處理；每筆稽核攜帶 user_id。 |
 | `_http_auth.py` | 50 | HTTP bearer 個人驗證、舊 token 相容、SSE session 擁有者檢查。 |
-| `tools/_factories_journal.py` | 23 | 三項動作日誌工具與路徑 metadata；預覽唯讀，錄製經 executor dispatch。 |
+| `tools/_factories_journal.py` | 24 | 三項動作日誌工具與路徑 metadata；預覽唯讀，錄製經 executor dispatch。 |
 | `tools/_factories_rbac.py` | 35 | 五個 admin-only 使用者管理工具；回傳資料不含 token 或 hash。 |
 | `tools/_handlers_runs.py` | 114 | 同一種 adapter，執行主題：executor、執行歷史、錄製、動作檔。 |
 | `tools/_handlers_scheduling.py` | 200 | 同一種 adapter，排程主題：排程器、觸發器、熱鍵常駐。 |
@@ -939,7 +939,7 @@ GUI 是**選用 extra**（`pip install je_auto_control[gui]`，PySide6 + qt-mate
 | screenshot | `_screenshot_tab.py` | 127 | 截圖、選區、螢幕尺寸、取像素色。 |
 | image_detect | `_image_detect_tab.py` | 106 | 樣板裁切、定位、定位全部、定位並點擊。 |
 | record | `_record_tab.py` | 101 | 錄製／停止／回放／存檔／載入。 |
-| script_builder | `script_builder/` | 5,708 | **視覺化腳本編輯器**：`command_schema.py`（4,924 行 `AC_*` 參數綱要）、`step_model.py`（步驟模型與 AC JSON 序列化）、`step_list_view.py`（含巢狀 body 的樹狀檢視）、`step_form_view.py`（綱要驅動表單）、`builder_tab.py`。 |
+| script_builder | `script_builder/` | 5,708 | **視覺化腳本編輯器**：`command_schema.py`（4,924 行 `AC_*` 參數綱要）、`step_model.py`（步驟模型與 AC JSON 序列化）、`step_list_view.py`（含巢狀 body 的樹狀檢視）、`step_form_view.py`（綱要驅動表單）、`builder_tab.py` 接共用 `journal_candidate_panel.py` 唯讀差異／匯入。 |
 | flow_editor | `flow_editor/` | 490 | 節點式流程圖檢視：`layout.py`（純 Python 佈局演算法，可單測）、`scene.py`（Qt 場景繪製）、`tab.py`。 |
 | script | `_script_tab.py` | 105 | 載入／執行單檔或整個目錄、內建編輯器執行。 |
 | recording_editor | `recording_editor_tab.py` | 244 | 裁切、過濾、縮放錄製內容；共用日誌候選面板預覽差異、明確匯入／匯出。 |
@@ -1101,9 +1101,9 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | 層／子系統 | 檔案數 | 行數 |
 | --- | ---: | ---: |
 | `gui/` | 98 | 28,623 |
-| `utils/mcp_server/` | 43 | 19,446 |
+| `utils/mcp_server/` | 43 | 19,447 |
 | `utils/remote_desktop/` | 56 | 13,050 |
-| `utils/executor/` | 10 | 9,787 |
+| `utils/executor/` | 10 | 9,788 |
 | `utils/usb/` | 17 | 4,666 |
 | `je_auto_control/`（頂層 3 檔） | 3 | 2,523 |
 | `utils/accessibility/` | 14 | 3,143 |
@@ -1120,8 +1120,8 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `osx/` | 17 | 925 |
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 860 |
-| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 708 | 59,670 |
-| **總計** | **1,097** | **161,827** |
+| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 709 | 59,758 |
+| **總計** | **1,098** | **161,917** |
 
 
 Crypto optional-dependency failures use CryptoDependencyError from utils/exception:

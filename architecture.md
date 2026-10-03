@@ -255,6 +255,9 @@ retain run/parent/source identity through nested and parallel calls; run-history
 artifact links refer to the journal. Opt-in environment capture uses the same
 boundary. Inputs are sanitized before persistence, outcomes stay separate,
 and absent terminal records remain incomplete. Schema version 1 is Beta.
+Thin `wire_api` adapters delegate AC/MCP recording to the full journal/history
+orchestrator. Sensitive getter outputs and signature-bound positional credentials
+are masked before append; unhandled recorded failures propagate to containers.
 
 Self-healing evaluation: `api.healing` -> JSON adapters -> immutable dataset
 samples -> frame strategies -> labelled comparison. Strategies receive identical
@@ -273,3 +276,5 @@ paths and preserves the input journal. Shared headless diff logic masks current
 editor literals. Recording Editor and Script Builder use one scoped worker panel
 for readonly preview and separate explicit import/export; neither dispatches
 candidate actions. Raw outcomes never become replay arguments.
+Ordinary runtime references without resolved binding evidence are omitted with
+warnings; block object shapes and required keys are validated without dispatch.

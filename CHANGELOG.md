@@ -592,6 +592,12 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Fixed
 
+- Structured journals bind resolved positional credentials and mask sensitive
+  variable getter results before persistence/logging. Unhandled descendant
+  failures mark containers/runs as failed; caught/retried failures retain
+  success. Journal candidates omit runtime-variable inputs without binding
+  evidence and reject missing or malformed block arguments without dispatch.
+
 - `AC_web_run` in its documented keyword form
   (`{"action": "WR_to_url", "params": {...}}`) runs the command; it failed with
   "action name must start with WR_". A failing `WR_*` command now raises

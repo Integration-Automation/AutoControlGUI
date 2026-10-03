@@ -343,3 +343,5 @@ masked/incomplete/failed omissions, input-as-data safety, installed plugin
 validation, CLI export and separate GUI preview/import. API, facade, AC, MCP,
 Script Builder and Recording Editor use the same core. These tests and
 `benchmarks/journal_codegen` do not certify physical replay or unobserved paths.
+
+Whole-B review regressions cover positional resolved credentials and sensitive getter outputs before append/logging, unhandled loop/parallel/catch failures versus successful recovery, omitted variable-dependent candidates and required block arguments without dispatch. These remain controlled headless checks.

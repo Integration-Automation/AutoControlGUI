@@ -28,7 +28,7 @@ def attempt_evidence() -> Iterator[None]:
         _EVIDENCE.reset(token)
 
 
-def record_frame(frame: bytes, method: str, backend: str, model: Optional[str] = None) -> None:
+def record_frame(frame: bytes, method: str, backend: Optional[str], model: Optional[str] = None) -> None:
     """Record actual consumed bytes only during an active healing attempt."""
     evidence = _EVIDENCE.get()
     if evidence is None:

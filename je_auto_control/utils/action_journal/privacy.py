@@ -40,7 +40,10 @@ def _serialized_arguments(command: str, payload: JSONValue) -> Tuple[JSONValue, 
 
 def _private_variable(command: str, arguments: Dict[str, JSONValue]) -> bool:
     name = arguments.get('name')
-    return command in {'AC_set_var', 'AC_get_var'} and isinstance(name, str) and is_sensitive_argument(command, name)
+    if command not in {'AC_set_var', 'AC_get_var'} or not isinstance(name, str):
+        return False
+    # Dynamic names cannot establish a public classification before the start append.
+    return '${' in name or is_sensitive_argument(command, name)
 
 
 def _private_field(command: str, name: str, forced: bool) -> bool:
@@ -91,6 +94,8 @@ def secret_values(command: str, raw: object, resolved: object) -> Set[str]:
 
 
 def _collect(command: str, raw: JSONValue, resolved: JSONValue, forced: bool) -> Set[str]:
+    if forced and isinstance(resolved, (bool, int, float)):
+        return {str(resolved)}
     if isinstance(raw, str):
         return _collect_text(raw, resolved, forced)
     if isinstance(raw, dict) and isinstance(resolved, dict):
@@ -128,6 +133,31 @@ def _collect_mapping(command: str, raw: Dict[str, JSONValue], resolved: Dict[str
     return values
 
 
+def private_output(command: str, arguments: JSONValue, outcome: JSONValue) -> Tuple[JSONValue, Set[str]]:
+    """Mask sensitive variable results and retain their strings for later echoes."""
+    if isinstance(arguments, dict) and _private_variable(command, arguments):
+        return _MASK, _output_strings(outcome)
+    return outcome, set()
+
+
+def _output_strings(value: JSONValue) -> Set[str]:
+    if isinstance(value, str):
+        return {value} if value else set()
+    if isinstance(value, (bool, int, float)):
+        return {str(value)}
+    if isinstance(value, dict):
+        result = {key for key in value if key}
+        for item in value.values():
+            result.update(_output_strings(item))
+        return result
+    if isinstance(value, list):
+        result = set()
+        for item in value:
+            result.update(_output_strings(item))
+        return result
+    return set()
+
+
 def scrub_payload(value: JSONValue, secrets: Set[str], *, redact_fields: bool = True) -> JSONValue:
     """Mask known resolved strings and sensitive mapping fields in outputs."""
     if isinstance(value, str):
@@ -136,7 +166,7 @@ def scrub_payload(value: JSONValue, secrets: Set[str], *, redact_fields: bool = 
         return [scrub_payload(item, secrets, redact_fields=redact_fields) for item in value]
     if isinstance(value, dict):
         return _scrub_mapping(value, secrets, redact_fields)
-    return value
+    return _MASK if value is not None and str(value) in secrets else value
 
 
 def _scrub_mapping(value: Dict[str, JSONValue], secrets: Set[str], redact_fields: bool) -> JSONValue:
