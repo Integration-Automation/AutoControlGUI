@@ -460,3 +460,22 @@ Windows 列舉略過 DWM 隱藏及零面積視窗；投遞文字只送一次字�
 `mouse_scroll` 預設改為 `scroll_up`，各平台正值都往上滾動。依賴舊預設向下的 X11
 腳本請明確傳 `scroll_direction="scroll_down"`。座標使用 `int(round(value))`，
 移動前拒絕 NaN／無限值，包括滾動目標。剪貼簿格式描述中缺少的名稱統一為空字串。
+
+其他區域鍵使用 `oem_1` 至 `oem_8`、`oem_102` 等實體鍵名，
+不保證在所有配置上輸入相同字元。
+
+## 影像與 OCR 邊界
+
+影像匹配先讀檔案位元組再解碼，因此 Windows 支援非 ASCII 路徑。二維陣列與
+Pillow `L` 樣板保留灰階；解碼／匹配失敗拋出 `ImageNotFoundException`。空白或損毀
+的影像檔維持 `read_image` 文件所述的 `ValueError` 契約。OCR 會保留長的左框，
+讓從框內開始、在下一框結束的片語仍可匹配。
+
+影像及點擊中心使用整數向下取整，包含負螢幕座標。區域擷取拒絕空白／非有限矩形，
+並與桌面取交集，不將螢幕外像素補黑。`grab_logical` 回傳裁切後的左上原點；影像
+匹配與 OCR 加上此實際原點。Windows、macOS 全域 point 與 Linux 區域截圖共用
+此行為。無法預先取得桌面邊界時，使用已擷取畫面的邊界。
+
+Jeffrey_RPA 原有拒絕 slash 的測試需要配合已核准的 OEM 快捷鍵契約更新。
+可攜測試遷移補丁位於 `docs/compatibility/jeffrey-rpa-oem-test-migration.patch`；
+驗證使用測試副本搭配目前的下游程式碼。等正式 editable 批次停止、整合此分支時再套用。

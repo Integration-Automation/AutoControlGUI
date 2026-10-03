@@ -225,6 +225,15 @@ def test_windows_oem_shortcut_names():
         'plus': 0xbb, 'minus': 0xbd, 'comma': 0xbc, 'period': 0xbe, 'slash': 0xbf}
 
 
+@pytest.mark.skipif(sys.platform != 'win32', reason='Windows-only key table')
+def test_regional_oem_names_do_not_claim_a_literal_character():
+    from je_auto_control.wrapper._platform_windows import keyboard_keys_table
+    assert keyboard_keys_table.get('oem_1') == 0xba
+    assert keyboard_keys_table.get('oem_2') == 0xbf
+    for name in ('semicolon', 'grave', 'bracketleft', 'backslash', 'bracketright', 'apostrophe'):
+        assert name not in keyboard_keys_table
+
+
 def test_mcp_secret_tool_types_without_audit_or_response_text(keys, tmp_path):
     from je_auto_control.utils.mcp_server.tools import build_default_tool_registry
     from je_auto_control.utils.mcp_server.audit import AuditLogger

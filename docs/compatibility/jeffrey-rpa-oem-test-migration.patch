@@ -1,0 +1,29 @@
+--- a/test/test_gui_control.py
++++ b/test/test_gui_control.py
+@@ -2886,7 +2886,7 @@
+                for name in keys), "真表裡已經沒有只有大寫名字的鍵了，這支的前提要重看"
+ 
+ 
+-@pytest.mark.parametrize("name", _LAYOUT_LYING_NAMES)
++@pytest.mark.parametrize("name", [name for name in _LAYOUT_LYING_NAMES if name != "slash"])
+ def test_layout_dependent_keys_have_no_layout_lying_name(real_ac_tables,
+                                                          monkeypatch, name):
+     keys, _ = real_ac_tables
+@@ -2899,6 +2899,17 @@
+     assert name not in gui.KEY_ALIASES and name not in gui._EXTRA_KEY_CODES
+     with pytest.raises(GuiError):
+         gui.parse_key_name(name)
++
++
++def test_upstream_slash_shortcut_is_a_physical_oem_key(real_ac_tables, monkeypatch):
++    """AutoControl A13 adds the named OEM shortcut; it is not literal text typing."""
++    keys, _ = real_ac_tables
++    assert keys.get("slash") == 0xBF
++    class _TableOnly:
++        keyboard_keys_table = keys
++    monkeypatch.setattr(gui, "_AC", _TableOnly())
++    monkeypatch.setattr(gui, "_AC_TRIED", True)
++    assert gui.parse_key_name("slash") == "slash"
+ 
+ 
+ def test_the_extra_names_pass_parse_key_name_without_the_backend(monkeypatch):

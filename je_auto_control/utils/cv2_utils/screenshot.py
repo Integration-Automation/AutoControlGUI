@@ -22,7 +22,7 @@ def _validate_region(screen_region: List[int]) -> None:
     """
     try:
         left, top, right, bottom = (int(value) for value in screen_region)
-    except (TypeError, ValueError) as error:
+    except (TypeError, ValueError, OverflowError) as error:
         raise AutoControlScreenException(
             f"screen_region must be 4 ints [left, top, right, bottom]; "
             f"got {screen_region!r}"
@@ -56,12 +56,9 @@ def pil_screenshot(file_path: Optional[str] = None, screen_region: Optional[List
     grabber = image_grabber()
     if screen_region is not None:
         _validate_region(screen_region)
-        if sys.platform.startswith('win') or sys.platform == 'darwin':
-            from je_auto_control.utils.monitor_layout.logical_frame import grab_logical
-            left, top, right, bottom = (int(value) for value in screen_region)
-            image = grab_logical((left, top, right - left, bottom - top), grabber=grabber)[0]
-        else:
-            image = grabber.grab(bbox=screen_region)
+        from je_auto_control.utils.monitor_layout.logical_frame import grab_logical
+        left, top, right, bottom = (int(value) for value in screen_region)
+        image = grab_logical((left, top, right - left, bottom - top), grabber=grabber)[0]
     elif sys.platform == 'darwin':
         from je_auto_control.utils.monitor_layout.logical_frame import grab_logical
         image = grab_logical(all_screens=False, grabber=grabber)[0]

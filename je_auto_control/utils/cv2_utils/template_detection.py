@@ -9,7 +9,8 @@ pixels, so a hit read off it can be clicked directly on a mixed-DPI desktop.
 import os
 from typing import Any, List, Optional, Sequence, Tuple
 
-from je_auto_control.utils.cv2_utils.optional import require_cv2, require_je_open_cv
+from je_auto_control.utils.cv2_utils.optional import require_cv2
+from je_auto_control.utils.cv2_utils.image_file import read_image
 from je_auto_control.utils.exception.exceptions import ImageNotFoundException
 from je_auto_control.utils.monitor_layout.logical_frame import grab_logical
 
@@ -26,6 +27,30 @@ def _shift(box: Sequence[int], origin: Tuple[int, int]) -> List[int]:
 _SCORE_EPSILON = 1e-5
 
 
+def _to_gray(image: Any, cv2: Any) -> Any:
+    """Decode paths without locale assumptions and preserve 2-D templates."""
+    if isinstance(image, (str, os.PathLike)):
+        return read_image(image, cv2.IMREAD_GRAYSCALE)
+    import numpy as np
+    if hasattr(image, 'convert') and getattr(image, 'mode', 'RGB') not in ('RGB', 'RGBA', 'L'):
+        image = image.convert('RGB')
+    array = np.asarray(image)
+    if array.ndim == 2:
+        return array
+    return cv2.cvtColor(array, cv2.COLOR_RGB2GRAY)
+
+
+def _match_frame(grab_image: Any, image: Any, cv2: Any) -> Tuple[Any, Any, Any]:
+    try:
+        frame, template = _to_gray(grab_image, cv2), _to_gray(image, cv2)
+        if template.shape[0] > frame.shape[0] or template.shape[1] > frame.shape[1]:
+            raise ImageNotFoundException('template is larger than the searched area')
+        scores = cv2.matchTemplate(frame, template, cv2.TM_CCOEFF_NORMED)
+    except (cv2.error, ValueError) as error:
+        raise ImageNotFoundException('cannot decode or match template image') from error
+    return frame, scores, template
+
+
 def _prepare(image: Any, detect_threshold: float,
              screen_region: Optional[Sequence[int]],
              all_screens: bool) -> Tuple[Any, Any, float, Tuple[int, int]]:
@@ -38,18 +63,9 @@ def _prepare(image: Any, detect_threshold: float,
             f"detect_threshold must be between 0 and 1, got {detect_threshold!r}")
     if isinstance(image, (str, os.PathLike)) and not os.path.isfile(image):
         raise ImageNotFoundException(f"template image not found: {image}")
-    open_cv = require_je_open_cv()
     cv2 = require_cv2()
     grab_image, origin_x, origin_y = grab_logical(screen_region, all_screens=all_screens)
-    frame, template = open_cv.image_translate(grab_image, os.fspath(image)
-                                              if isinstance(image, os.PathLike) else image)
-    if template is None:
-        # cv2.imread returns None for an unreadable file; that used to surface
-        # as "'NoneType' object has no attribute 'shape'".
-        raise ImageNotFoundException(f"cannot read template image: {image}")
-    if template.shape[0] > frame.shape[0] or template.shape[1] > frame.shape[1]:
-        raise ImageNotFoundException("template is larger than the searched area")
-    scores = cv2.matchTemplate(frame, template, cv2.TM_CCOEFF_NORMED)
+    frame, scores, template = _match_frame(grab_image, image, cv2)
     effective = min(threshold, 1.0 - _SCORE_EPSILON)
     return (frame, scores), template, effective, (origin_x, origin_y)
 

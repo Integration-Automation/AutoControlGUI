@@ -235,3 +235,9 @@ Window lifecycle: focus verifies foreground ownership; waits bound each sleep.
 Windows capture reads visible bounds without mutation, while saved layouts use
 native placement/show state and arrangement uses the primary work area. Legacy
 geometry snapshots and public command/import names remain compatible.
+
+Image/OCR: template paths decode file bytes; grayscale sources remain 2-D and
+cv2 failures become ImageNotFoundException. Regions intersect the desktop before
+cropping, returning the actual origin to match/OCR callers; negative centres use
+integer floor division. The Jeffrey_RPA OEM test migration is delivered as a
+portable patch without changing its live editable source.

@@ -27,6 +27,8 @@ unit-testable; the OS reader and the grabber are both injectable. Imports no
 import sys
 from typing import Any, Callable, List, Optional, Sequence, Tuple
 
+from je_auto_control.utils.exception.exceptions import AutoControlScreenException
+
 Rect = Tuple[int, int, int, int]
 MetricsReader = Callable[[int], int]
 
@@ -108,7 +110,6 @@ def _resample():
 
 def _mac_display_rects() -> List[Rect]:
     """Active Quartz display bounds in global points, primary first."""
-    from je_auto_control.utils.exception.exceptions import AutoControlScreenException
     try:
         import Quartz
     except ImportError as error:
@@ -163,6 +164,45 @@ def _grab_mac(grabber: Any, region: Optional[Sequence[int]],
     return canvas, left, top
 
 
+def _validated_region(region: Sequence[int]) -> Rect:
+    """Reject malformed or empty regions before capture."""
+    try:
+        left, top, width, height = (int(value) for value in region)
+    except (TypeError, ValueError, OverflowError) as error:
+        raise AutoControlScreenException('region must contain four finite coordinates') from error
+    if width <= 0 or height <= 0:
+        raise AutoControlScreenException('region width and height must be positive')
+    return left, top, width, height
+
+
+def _clip_region(region: Rect, bounds: Rect) -> Rect:
+    """Intersect a region with desktop bounds and reject an empty result."""
+    left, top = max(region[0], bounds[0]), max(region[1], bounds[1])
+    right = min(region[0] + region[2], bounds[0] + bounds[2])
+    bottom = min(region[1] + region[3], bounds[1] + bounds[3])
+    if right <= left or bottom <= top:
+        raise AutoControlScreenException('region does not intersect the captured desktop')
+    return left, top, right - left, bottom - top
+
+
+def _grab_virtual(image_grab: Any, requested: Optional[Rect],
+                  rect: Optional[Rect], metrics: Optional[MetricsReader]) -> Tuple[Any, int, int]:
+    """Capture/rescale the virtual frame, then intersect a requested region."""
+    image = image_grab.grab(all_screens=True)
+    if requested is None:
+        rect = logical_virtual_rect(metrics)
+    origin_x, origin_y = (rect[0], rect[1]) if rect else _backend_frame_origin()
+    if rect and needs_rescale((image.width, image.height), (rect[2], rect[3])):
+        image = image.resize((rect[2], rect[3]), _resample())
+    if requested is None:
+        return image, origin_x, origin_y
+    left, top, width, height = _clip_region(
+        requested, (origin_x, origin_y, image.width, image.height))
+    image = image.crop((left - origin_x, top - origin_y,
+                        left - origin_x + width, top - origin_y + height))
+    return image, left, top
+
+
 def grab_logical(region: Optional[Sequence[int]] = None, *,
                  all_screens: bool = True,
                  grabber: Optional[Any] = None,
@@ -177,24 +217,17 @@ def grab_logical(region: Optional[Sequence[int]] = None, *,
     :return: ``(image, origin_x, origin_y)`` — add the origin to any hit found in
         the image to get a coordinate the mouse can be sent to.
     """
+    requested = None if region is None else _validated_region(region)
+    rect = logical_virtual_rect(metrics) if requested is not None else None
+    if requested is not None and rect is not None:
+        requested = _clip_region(requested, rect)
     image_grab = grabber or _load_image_grab()
     if sys.platform == 'darwin':
-        return _grab_mac(image_grab, region, all_screens)
+        return _grab_mac(image_grab, requested, all_screens)
     if region is None and not all_screens:
         # The primary-only grab is already in logical pixels and starts at (0, 0).
         return image_grab.grab(), 0, 0
 
-    image = image_grab.grab(all_screens=True)
-    rect = logical_virtual_rect(metrics)
-    origin_x, origin_y = (rect[0], rect[1]) if rect else _backend_frame_origin()
-    if rect and needs_rescale((image.width, image.height), (rect[2], rect[3])):
-        image = image.resize((rect[2], rect[3]), _resample())
-    if region is None:
-        return image, origin_x, origin_y
-
     # Crop on the rescaled frame, never through ImageGrab's bbox: that crop
     # happens in physical pixels and would cut the wrong place on a scaled screen.
-    left, top, width, height = (int(value) for value in region)
-    image = image.crop((left - origin_x, top - origin_y,
-                        left - origin_x + width, top - origin_y + height))
-    return image, left, top
+    return _grab_virtual(image_grab, requested, rect, metrics)

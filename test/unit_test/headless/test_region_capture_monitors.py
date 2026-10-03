@@ -134,6 +134,8 @@ def test_a_macos_region_is_grabbed_in_points(monkeypatch):
             return Image.new("RGB", ((right - left) * scale, (bottom - top) * scale))
 
     monkeypatch.setattr(sys, "platform", "darwin")
+    monkeypatch.setattr(logical_frame, '_mac_display_rects',
+                        lambda: [(0, 0, 1920, 1080), (-1920, 0, 1920, 1080)])
     monkeypatch.setattr(screen_grabber, "image_grabber", lambda: _Retina)
     assert region_capture.grab_screen_region([-1920, 0, -1720, 100]).size == (200, 100)
     assert grabs == [((-1920, 0, -1720, 100), False)]

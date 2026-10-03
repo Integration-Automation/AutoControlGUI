@@ -112,6 +112,15 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Changed
 
+- Image matching accepts non-ASCII paths and grayscale arrays/Pillow templates;
+  decoding and cv2 failures raise ImageNotFoundException. Empty image reads raise
+  the documented ValueError. OCR preserves phrases starting inside long boxes.
+- Negative image/click centres floor correctly. Captures clip regions to the
+  desktop and return the clipped origin, rejecting empty/nonfinite regions.
+  Linux region screenshots use the shared capture path as well.
+- Regional Windows OEM aliases use physical oem_* names. The explicitly approved
+  slash shortcut remains; a portable Jeffrey_RPA test migration accompanies it.
+
 - Literal typing preserves case and CRLF enters once. Shift works and releases
   on Windows/X11; Windows shortcuts gain OEM names. Unicode control whitespace
   uses actual keys; layout dead-key halves return None and use private WinDLLs.

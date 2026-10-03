@@ -21,7 +21,10 @@ def read_image(path: Any, flags: int) -> Any:
             buffer = np.frombuffer(handle.read(), dtype=np.uint8)
     except OSError as error:
         raise ValueError(f"could not read image: {path!r}") from error
-    image = cv2.imdecode(buffer, flags)
+    try:
+        image = cv2.imdecode(buffer, flags)
+    except cv2.error as error:
+        raise ValueError(f"could not decode image: {path!r}") from error
     if image is None:
         raise ValueError(f"could not read image: {path!r}")
     return image

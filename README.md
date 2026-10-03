@@ -522,3 +522,27 @@ every platform. X11 scripts relying on the old downward default should pass
 `scroll_direction="scroll_down"`. Coordinate conversion uses `int(round(value))`
 and rejects NaN/infinity before moving, including scroll targets. Clipboard
 format descriptors normalize a missing name to an empty string.
+
+Other regional keys use physical names `oem_1` through `oem_8` and `oem_102`,
+which do not promise a literal character on every layout.
+
+## Image and OCR boundaries
+
+Image matching reads file bytes before decoding, so non-ASCII paths work on
+Windows. Two-dimensional arrays and Pillow `L` templates stay grayscale;
+decode/matching failures raise `ImageNotFoundException`. Empty/corrupt image
+files retain `read_image`'s documented `ValueError` contract. OCR keeps a long
+left box when a phrase starts within it and finishes in the next box.
+
+Image and click centres use integer floor division, including negative screen
+coordinates. Region captures reject empty/nonfinite rectangles and intersect
+the desktop instead of filling outside pixels with black. `grab_logical`
+returns the clipped top-left origin; matching and OCR add that actual origin.
+Windows, macOS global points and Linux region screenshots share this behavior.
+When desktop bounds are unavailable, the captured frame provides the bounds.
+
+Jeffrey_RPA's existing slash rejection test needs the approved new OEM shortcut
+contract. The portable test migration is in
+`docs/compatibility/jeffrey-rpa-oem-test-migration.patch`; validation uses a copied
+test suite against the current consumer code. Apply it when integrating this
+branch after the live editable batch stops.

@@ -94,7 +94,8 @@ def _next_span(line: Sequence[Any], index: int, needle: str,
         accumulated += normalize(line[end].text, case_sensitive)
         if needle in accumulated:
             return _shrink_left(line, index, end, needle, case_sensitive), end
-        if len(accumulated) > len(needle) + MAX_OVERSHOOT:
+        if (len(accumulated) > len(needle) + MAX_OVERSHOOT and index < end
+                and len(_joined(line, index + 1, end, case_sensitive)) >= len(needle)):
             # This start can no longer produce a shortest match; drop the
             # leftmost box and keep scanning instead of restarting the line.
             index += 1

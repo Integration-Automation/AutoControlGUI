@@ -59,7 +59,7 @@ def test_mixed_retina_and_negative_secondary_are_stitched_per_display(monkeypatc
 def test_public_mac_capture_supports_older_pillow_in_points(monkeypatch, primary_only):
     from je_auto_control.utils.cv2_utils import screenshot, region_capture, screen_grabber
     monkeypatch.setattr(__import__('sys'), 'platform', 'darwin')
-    monkeypatch.setattr(frame, '_mac_display_rects', lambda: [(0, 0, 200, 100)])
+    monkeypatch.setattr(frame, '_mac_display_rects', lambda: [(0, 0, 200, 100), (-100, 0, 100, 100)])
     class OlderPillow:
         def grab(self, *, bbox=None):
             width, height = (200, 100) if bbox is None else (bbox[2] - bbox[0], bbox[3] - bbox[1])

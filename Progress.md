@@ -161,18 +161,13 @@ pip install --dry-run --only-binary=:all: --platform win_arm64 --python-version 
 
 ---
 
-## 影像與 OCR 修正：在隔離工作樹完成後驗證下游
+## 隔離改版的下游整合驗收
 
-`TODO` — A13 已完成鍵鼠、Unicode、秘密輸入、配置表與剪貼簿格式修正；仍在隔離的
-modernization 工作樹，Jeffrey_RPA 執行中的 editable 原始碼未變更。以下影像／OCR
-修正由 A14 處理；整合前確認正式批次已停止，再跑下游介面測試。
-
-- **非 ASCII 路徑與灰階樣板**：`cv2_utils/template_detection.py:126` 經 `je_open_cv` 的 `cv2.imread` 讀樣板，`測試\t.png` 讀不到；2-D 陣列或 PIL `"L"` 樣板丟出 `cv2.error`，不在 `wrapper/auto_control_image.py` 的例外清單裡。做法：路徑改走 `cv2_utils/image_file.read_image`，2-D 直接用，`cv2.error` 包成 `ImageNotFoundException`。
-- **部分超出螢幕的 `screen_region` 被補黑**：`monitor_layout/logical_frame.py:143` 沒有先和畫面取交集，PIL `crop` 補零，可能回傳螢幕外的命中；寬或高為負時丟裸 `ValueError`。做法：先取交集（回傳裁過的原點），非正的寬高丟框架例外。
-- **OCR 跨框比對漏掉從長框中段開始的字串**：`ocr/text_span.py:330` 的視窗超過「目標長度＋40」就整個丟掉最左框，即使目標從那框開始；`"Save As"` 在長句框之後就找不到。做法：只有剩下的部分仍不短於目標時才丟左框。
-- **負座標的中心點差一**：`wrapper/auto_control_image.py:48`、`:73` 的 `int((x1 + x2) / 2)` 向零截斷。做法：`(x1 + x2) // 2`。
-
-**解除條件**：Jeffrey_RPA 沒有批次在跑（`webrunner.pid` 的行程不在、Discord bot 停止）；改完在 Jeffrey_RPA 跑 `test/test_je_facade.py`。
+`TODO` — 合併 modernization 隔離分支前，先確認 Jeffrey_RPA 的正式 editable 批次
+及 Discord bot 已停止；保留目前執行中的原始碼。整合時套用
+`docs/compatibility/jeffrey-rpa-oem-test-migration.patch` 更新 slash 快捷鍵測試契約，
+再跑下游 `test/test_gui_facade.py`、`test/test_gui_control.py` 與
+`test/test_je_facade.py`，並完成 H3 的真實平台驗收。
 
 ---
 
