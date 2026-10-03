@@ -298,3 +298,9 @@ cached until explicit retry, and text input observes the same refusal. GUI
 Diagnostics and `AC_diagnose` use passive checks; Python keeps its active
 default. CLI input requires explicit selection. Stop/retry operations own the
 native portal grant; the compositor owns cleanup of revoked devices.
+
+Native EI verification runs independent half-open and live-peer subprocess
+sentinels. Exit status plus markers around `ei_unref` distinguish cleanup
+results from probe setup failures; a bounded child and faulthandler preserve
+crash evidence. The EIS image supplies both probes without a compositor, and
+Docker CI retains the EI/Wayland logs even when a verification step fails.

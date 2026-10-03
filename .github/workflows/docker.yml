@@ -153,7 +153,19 @@ jobs:
       #
       # The container exits with the number of failed checks.
       - name: Verify against headless sway and the real libei
-        run: docker run --rm autocontrol-wayland:ci
+        run: |
+          set -o pipefail
+          docker run --rm autocontrol-wayland:ci 2>&1 | tee wayland-verification.log
+
+      - name: Preserve Wayland native verification output
+        if: always()
+        # nosemgrep: yaml.github-actions.security.third-party-action-not-pinned-to-commit-sha.third-party-action-not-pinned-to-commit-sha
+        uses: actions/upload-artifact@v4  # NOSONAR githubactions:S7637
+        with:
+          name: wayland-native-verification
+          path: wayland-verification.log
+          if-no-files-found: ignore
+          retention-days: 14
 
   eis-verification:
     name: libei sender against a real EIS server
@@ -192,7 +204,28 @@ jobs:
       #
       # The container exits with the number of failed checks.
       - name: Verify the libei sender against libeis
-        run: docker run --rm autocontrol-eis:ci
+        run: |
+          set -o pipefail
+          docker run --rm autocontrol-eis:ci 2>&1 | tee eis-verification.log
+
+      - name: Verify half-open native connections without a compositor
+        if: always()
+        run: |
+          set -o pipefail
+          docker run --rm --entrypoint python autocontrol-eis:ci \
+            /opt/verify/libei_verify.py 2>&1 | tee libei-verification.log
+
+      - name: Preserve EI native verification output
+        if: always()
+        # nosemgrep: yaml.github-actions.security.third-party-action-not-pinned-to-commit-sha.third-party-action-not-pinned-to-commit-sha
+        uses: actions/upload-artifact@v4  # NOSONAR githubactions:S7637
+        with:
+          name: ei-native-verification
+          path: |
+            eis-verification.log
+            libei-verification.log
+          if-no-files-found: ignore
+          retention-days: 14
 
   portal-verification:
     name: RemoteDesktop portal handshake against a real liboeffis

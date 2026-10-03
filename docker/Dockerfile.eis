@@ -72,6 +72,7 @@ RUN pip install --no-cache-dir --only-binary :all: --upgrade "pip==26.0.1" \
 
 COPY docker/eis_server.py /opt/verify/eis_server.py
 COPY docker/eis_verify.py /opt/verify/eis_verify.py
+COPY docker/libei_verify.py /opt/verify/libei_verify.py
 
 # Runs as root on purpose: one verification, then exit. Not a service image.
 ENV PYTHONUNBUFFERED=1 \

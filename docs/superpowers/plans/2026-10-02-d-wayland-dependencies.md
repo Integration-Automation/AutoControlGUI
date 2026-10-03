@@ -62,6 +62,13 @@ D1 實作與本機／替身驗證已交付；原生 GNOME/KDE、EI 與 restore-t
 
 **Interfaces:** `EiWorkerClient.send(batch: Sequence[InputEvent], *, timeout_s: float) -> InputAck`、`close() -> None`；有界 batch、request IDs 與 cancellation。
 
+原生驗證 checkpoint：半開連線對 libei `1.3.901-1` 的 `ei_unref` 仍為 SIGSEGV（rc=-11）。
+兩支 sentinel 現在要求到達清理前／後的 marker，將 probe 設定錯誤及其他訊號視為失敗，
+並有 60 秒上限與 faulthandler 輸出。EIS 映像同時提供半開探針，CI 保留驗證輸出。
+本機原生執行結果：libei 9/9、EIS 20/20 檢查成功；完整交握後釋放 device refs 再
+`ei_unref` 安全。EIS 未公告 pause，因此 paused-device 與完整序號傳遞不列為實測證據。
+這是 D2 的驗證前置交付；以下 helper／arm64 task 尚未完成，不能因此標示 D2 已交付。
+
 - [ ] **Step 1:** 定義 fake fixtures 並新增 `test_half_open_worker_exit_reclaims_resources, test_worker_death_releases_pressed_keys, test_missing_dependency_is_typed`，驗證：
 
 ```python

@@ -367,3 +367,20 @@ wide; restore tokens are unsupported by the current liboeffis binding.
 Cancellation, timeout, live grant revocation and paused/removed devices are
 covered by fake-library/headless tests. Those tests do not establish GNOME/KDE
 acceptance or native libei teardown safety; real Linux evidence remains D2/D3/H3.
+
+Native EI teardown verification (D2 checkpoint)
+--------------------------------------------
+
+Subprocess probes in `docker/libei_verify.py` and `docker/eis_verify.py`
+require markers around `ei_unref`, distinguish setup failures from native
+crashes, and enforce a 60-second deadline. Docker CI keeps their output as
+`ei-native-verification` and preserves sway output as
+`wayland-native-verification`, including failures.
+The EIS image also ships the half-open probe; it can run independently with
+`docker run --rm --entrypoint python autocontrol-eis:latest /opt/verify/libei_verify.py`.
+The isolated Linux measurement of libei `1.3.901-1` confirms SIGSEGV on
+half-open cleanup; completed sessions release device references and the
+sender safely. Local runs pass 9/9 libei and 20/20 EIS checks; the EIS peer
+does not announce pause or preserve the emulation sequence number, so those
+conditions remain unverified. Helper isolation and desktop grant/device lifecycle
+acceptance remain open in `Progress.md`; this checkpoint is not completion of D2.

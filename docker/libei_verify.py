@@ -9,7 +9,7 @@ every mock and only surface on a user's machine.
 So: resolve every prototype against the installed library, then drive
 ``connect()`` at a socket that accepts the connection but speaks no EI. The
 handshake cannot complete, and that is the point — the fail-closed promise
-("anything short of a live device means use the ydotool CLI") is checked
+("anything short of a live device stops native input") is checked
 here against the real library rather than asserted about a mock.
 
 What this half cannot answer is anything a peer has to *agree* with: the
@@ -164,34 +164,40 @@ def _check_each_call_in_isolation(socket_path: str) -> str:
 def _check_unref_sentinel(socket_path: str) -> str:
     """Is the upstream ei_unref crash this binding works around still there?"""
     import subprocess  # nosec B404  # reason: argv list, no shell
-    program = (
-        "import ctypes, ctypes.util, os, socket, threading;"
-        "lib = ctypes.CDLL(ctypes.util.find_library('ei'));"
-        "lib.ei_new_sender.restype = ctypes.c_void_p;"
-        "lib.ei_new_sender.argtypes = (ctypes.c_void_p,);"
-        "lib.ei_setup_backend_socket.restype = ctypes.c_int;"
-        "lib.ei_setup_backend_socket.argtypes = "
-        "(ctypes.c_void_p, ctypes.c_char_p);"
-        "lib.ei_unref.restype = ctypes.c_void_p;"
-        "lib.ei_unref.argtypes = (ctypes.c_void_p,);"
-        f"p = {socket_path!r};"
-        "s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM);"
-        "s.connect(p);"
-        "h = lib.ei_new_sender(None);"
-        "rc = lib.ei_setup_backend_socket(h, p.encode());"
-        "assert rc == 0, rc;"
-        "lib.ei_unref(h)"
-    )
+    program = "\n".join([
+        "import ctypes, ctypes.util, faulthandler",
+        "faulthandler.enable()",
+        "lib = ctypes.CDLL(ctypes.util.find_library('ei'))",
+        "lib.ei_new_sender.restype = ctypes.c_void_p",
+        "lib.ei_new_sender.argtypes = (ctypes.c_void_p,)",
+        "lib.ei_setup_backend_socket.restype = ctypes.c_int",
+        "lib.ei_setup_backend_socket.argtypes = (ctypes.c_void_p, ctypes.c_char_p)",
+        "lib.ei_unref.restype = ctypes.c_void_p",
+        "lib.ei_unref.argtypes = (ctypes.c_void_p,)",
+        f"p = {socket_path!r}",
+        "h = lib.ei_new_sender(None)",
+        "rc = lib.ei_setup_backend_socket(h, p.encode())",
+        "assert rc == 0, rc",
+        "print('before_unref', flush=True)",
+        "lib.ei_unref(h)",
+        "print('survived', flush=True)",
+    ])
     # This interpreter, running a program built from literals above; no shell.
     finished = subprocess.run([sys.executable, "-c", program],  # nosec B603  # nosemgrep
-                              capture_output=True)
-    if finished.returncode == -11:
+                              capture_output=True, check=False, timeout=60)
+    markers = finished.stdout.decode("utf-8", "replace").splitlines()
+    if finished.returncode == -11 and "before_unref" in markers:
+        print("        half-open ei_unref subprocess traceback:")
+        print(finished.stderr.decode("utf-8", "replace").strip())
         return ("still segfaults (rc=-11), so the abandon-on-teardown "
                 "workaround in libei.py::_teardown is still required")
+    if finished.returncode != 0 or "survived" not in markers:
+        detail = finished.stderr.decode("utf-8", "replace").strip()
+        raise AssertionError(
+            f"ei_unref probe did not reach 'survived' (rc={finished.returncode}): {detail}")
     print()
     print("      *** REVISIT ***  ei_unref no longer crashes on this")
-    print("      libei (rc=%s). The workaround in LibeiBackend._teardown"
-          % finished.returncode)
+    print(f"      libei (rc={finished.returncode}). The workaround in LibeiBackend._teardown")
     print("      can probably go; see Progress.md.")
     print()
     return f"no longer crashes (rc={finished.returncode}) — see above"
@@ -225,21 +231,43 @@ def _check_teardown_survives(socket_path: str) -> str:
     return "teardown survived a failed connect, twice"
 
 
-def _check_keyboard_falls_back() -> str:
-    """With no libei and no ydotool, the CLI path must surface its hint.
-
-    ydotool is deliberately not installed in this image, so what comes back
-    must be the install hint — not a libei error and not a silent no-op.
-    """
+def _check_native_failure_stops_input() -> str:
+    """A failed native handshake cannot implicitly select the CLI path."""
     from je_auto_control.linux_wayland import keyboard as wl_keyboard
+    from je_auto_control.linux_wayland.permission import WaylandPermissionRequired
     try:
         wl_keyboard.press_key(30)
-    except Exception as error:  # noqa: BLE001  # reason: any type is informative
-        if "ydotool" in str(error):
-            return f"{type(error).__name__}: {str(error)[:60]}"
-        raise
-    raise AssertionError("press_key claimed success with no libei and no "
-                         "ydotool")
+    except WaylandPermissionRequired as error:
+        return f"{type(error).__name__}: {str(error)[:90]}"
+    raise AssertionError("press_key did not preserve the native authorization failure")
+
+
+def _check_explicit_cli_selection() -> str:
+    """Only explicit CLI selection returns no native backend."""
+    from je_auto_control.linux_wayland import _select_input
+    name = "JE_AUTOCONTROL_WAYLAND_INPUT_BACKEND"
+    previous = os.environ.get(name)
+    try:
+        os.environ[name] = "cli"
+        if _select_input.active_backend() is not None:
+            raise AssertionError("explicit cli selection returned a native backend")
+    finally:
+        if previous is None:
+            os.environ.pop(name, None)
+        else:
+            os.environ[name] = previous
+    return "CLI transport requires explicit operator configuration"
+
+
+def _check_native_backend_failure() -> str:
+    """The default connection failure remains a typed permission error."""
+    from je_auto_control.linux_wayland import _select_input
+    from je_auto_control.linux_wayland.permission import WaylandPermissionRequired
+    try:
+        _select_input.active_backend()
+    except WaylandPermissionRequired as error:
+        return f"{type(error).__name__}: {str(error)[:90]}"
+    raise AssertionError("active_backend() did not fail closed without a live native peer")
 
 
 def main() -> int:
@@ -252,7 +280,7 @@ def main() -> int:
     print(f"find_library('oeffis')   = {ctypes.util.find_library('oeffis')!r}")
     print("-" * 72)
 
-    from je_auto_control.linux_wayland import _select_input, libei, oeffis
+    from je_auto_control.linux_wayland import libei, oeffis
 
     # --- a real sender against a socket that speaks no EI ----------------
     runtime = _scratch_dir()
@@ -289,14 +317,14 @@ def main() -> int:
     check("teardown after a failed handshake does not crash the process",
           lambda: _check_teardown_survives(socket_path))
 
-    # --- the fallback the whole design rests on --------------------------
+    # --- native refusal and explicit CLI selection -----------------------
     libei.reset_default_backend()
-    check("active_backend() gives up and hands over to the CLI",
-          lambda: _assert_true(_select_input.active_backend() is None,
-                               "active_backend() returned a backend that "
-                               "cannot emit"))
-    check("press_key falls through to the ydotool CLI path",
-          _check_keyboard_falls_back)
+    check("active_backend() preserves the native connection failure",
+          _check_native_backend_failure)
+    check("press_key cannot bypass that failure through the CLI",
+          _check_native_failure_stops_input)
+    check("an explicitly configured CLI backend remains selectable",
+          _check_explicit_cli_selection)
 
     server.close()
 

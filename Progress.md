@@ -257,8 +257,12 @@ Anthropic 每一步送約 202 KB 的工具 schema、沒有 `cache_control`。拍
 
 ## Wayland 原生生命周期與能力驗收
 
-`TODO` — D2 先在可用 Linux runtime 重跑 `docker/libei_verify.py`、
-`docker/eis_verify.py`，再依 unsafe teardown 結果交付 helper 隔離與 cleanup。
-本機 Docker Linux engine 目前未啟動；D1 的授權／撤銷／XWayland scope 測試
-只有替身及 offscreen Qt 證據。GNOME/KDE 的允許／拒絕、合成器重啟、裝置 pause/remove
+`WIP` — D2 的原生 teardown 分類已開始；在隔離 Linux 容器對
+libei `1.3.901-1` 的合法半開連線呼叫 `ei_unref`，仍得到 SIGSEGV（子程序 rc=-11）。
+`docker/libei_verify.py` 9/9、`docker/eis_verify.py` 20/20 檢查通過；完整交握後
+釋放 device refs 再 `ei_unref` 安全。libeis 未送 pause 事件，因此該 lifecycle 仍未實測。
+接續交付 helper 隔離、
+有界 IPC、逾時／取消、按鍵生命週期與 fd/process 回收，並驗證 arm64 backend 相依矩陣。
+Docker Linux engine 已啟動供本機驗證；D1 的授權／撤銷／XWayland scope 測試
+仍只有替身及 offscreen Qt 證據。GNOME/KDE 的允許／拒絕、合成器重啟、裝置 pause/remove
 與 restore-token 替代接口仍需 D2/D3/H3 原生驗收。

@@ -396,25 +396,34 @@ def _live_teardown_sentinel(path: str) -> str:
     and it runs in a subprocess because the answer is a signal, not an
     exception.
     """
-    program = (
-        "import sys; sys.path.insert(0, '/opt/verify');"
-        "from eis_server import RecordingEisServer;"
-        "from je_auto_control.linux_wayland import libei;"
-        f"srv = RecordingEisServer({path + '-teardown'!r}); srv.start();"
-        "b = libei.LibeiBackend();"
-        f"b.connect(timeout=5.0, socket_path={(path + '-teardown').encode()!r});"
-        "assert b.is_connected;"
-        "sym = libei._load_symbols();"
-        "sym.ei_unref(b._ei);"
-        "print('survived')"
-    )
+    program = "\n".join([
+        "import faulthandler, sys",
+        "faulthandler.enable()",
+        f"sys.path.insert(0, {os.path.dirname(os.path.abspath(__file__))!r})",
+        "from eis_server import RecordingEisServer",
+        "from je_auto_control.linux_wayland import libei",
+        f"srv = RecordingEisServer({path + '-teardown'!r})",
+        "srv.start()",
+        "b = libei.LibeiBackend()",
+        f"b.connect(timeout=5.0, socket_path={(path + '-teardown').encode()!r})",
+        "assert b.is_connected",
+        "sym = libei._load_symbols()",
+        "for device in set(b._refs):",
+        "    sym.ei_device_unref(device)",
+        "print('before_unref', flush=True)",
+        "sym.ei_unref(b._ei)",
+        "print('survived', flush=True)",
+    ])
     # This interpreter, running a program built from literals above; no shell.
     finished = subprocess.run([sys.executable, "-c", program],  # nosec B603  # nosemgrep
-                              capture_output=True, timeout=60)
-    if finished.returncode == 0:
+                              capture_output=True, check=False, timeout=60)
+    markers = finished.stdout.decode("utf-8", "replace").splitlines()
+    if finished.returncode == 0 and "survived" in markers:
         return ("safe, which is what _teardown now relies on to release a "
                 "completed session instead of leaking its context")
-    if finished.returncode == -11:
+    if finished.returncode == -11 and "before_unref" in markers:
+        print("        live ei_unref subprocess traceback:")
+        print(finished.stderr.decode("utf-8", "replace").strip())
         print()
         print("      *** REVISIT ***  ei_unref now SEGFAULTS on a live")
         print("      context too. LibeiBackend._teardown releases completed")
@@ -425,8 +434,9 @@ def _live_teardown_sentinel(path: str) -> str:
         raise AssertionError(
             "ei_unref segfaults on a live context (rc=-11); _teardown's "
             "release path is no longer safe on this libei")
-    detail = finished.stderr.decode("utf-8", "replace").strip().splitlines()
-    return f"inconclusive (rc={finished.returncode}): {detail[-1] if detail else ''}"
+    detail = finished.stderr.decode("utf-8", "replace").strip()
+    raise AssertionError(
+        f"ei_unref probe did not reach 'survived' (rc={finished.returncode}): {detail}")
 
 
 #: An offset region layout: the shape a compositor must advertise for a
@@ -501,7 +511,7 @@ def _check_libei_drops_out_of_region_motion(backend, server, libei) -> str:
 
 
 def _check_out_of_region_move_is_refused(backend, server, libei) -> str:
-    """AutoControl turns that silence into something the CLI path can act on."""
+    """AutoControl refuses motion outside the authorized native regions."""
     before = len(server.recording.absolute_motions)
     try:
         backend.set_position(9000, 9000)
@@ -511,8 +521,7 @@ def _check_out_of_region_move_is_refused(backend, server, libei) -> str:
         time.sleep(0.3)
         _require(len(server.recording.absolute_motions) == before,
                  "the refusal still put a motion on the wire")
-        return f"refused with {str(error)[:60]}... — _select_input.emitted "\
-               "hands it to ydotool"
+        return f"refused with {str(error)[:60]}... — no alternate input transport"
     raise AssertionError(
         "set_position(9000, 9000) returned as though the pointer had moved; "
         "libei dropped it and nobody was told")
