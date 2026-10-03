@@ -276,23 +276,6 @@ pip install --dry-run --only-binary=:all: --platform macosx_10_9_x86_64 \
 
 ---
 
-## Viewer 端要不要把 host 推來的檔案關在一個目錄裡
-
-`DECIDE` — 這是改一個已寫進文件的功能，由維護者決定
-
-`host.send_file_to_viewers(source, dest_path)` 由 **host** 指定 viewer 機器上的完整路徑
-（`docs/source/{Eng,Zh}/doc/new_features/new_features_doc.rst` 的範例是 `/tmp/from_host.bin`），
-viewer 端的 `FileReceiver`（`utils/remote_desktop/file_transfer.py`）照單全收：`expanduser`、
-建立父目錄、寫入。也就是被控端可以在控制端機器的任何可寫位置放檔案。模組說明的
-「trusted token holders == trusted users」只涵蓋 host 端；viewer 連上一台被入侵的 host 時沒有這層保護。
-
-**做法**：`FileReceiver` 加 `base_dir`，viewer（`viewer.py` 的 `_ensure_file_receiver`、GUI 的
-`viewer_panel.py`）預設給一個下載目錄，只保留相對路徑並拒絕跳出 `base_dir`；host 端維持現狀。
-
-**為什麼要拍板**：`dest_path` 的語意會從「viewer 上的絕對路徑」變成「viewer 下載目錄裡的相對路徑」，
-現有腳本與文件範例都要跟著改。
-
----
 
 ## `AC_run_agent` 預設把每個 AC_* 指令都交給模型
 
@@ -348,29 +331,6 @@ OpenAI 後端沒有這個綁定，照舊。
 
 ---
 
-## MCP 工具的檔案路徑參數要不要限制在工作區根目錄裡
-
-`DECIDE` — 限制範圍與預設值由維護者決定
-
-MCP 工具的檔案參數（`path`、`file_path`、`db`、`image_path`、`golden_path`、`output_path`… 約 100 個）
-不受任何根目錄限制；只有 `resources/read` 關在 `roots/list` 的根目錄裡。完整模式下這不是新的權限
-（`ac_execute_actions` 本來就能做任何事），但 `JE_AUTOCONTROL_MCP_READONLY=1` 的部署仍能讀到根目錄外的
-任意檔案：例如 `ac_load_dotenv` 會把任何檔案解析成 KEY=VALUE 回給模型，`ac_read_document`、
-`ac_extract_pdf_text` 也一樣。2026 年 MCP 伺服器通報最多的一類就是這種路徑越界。
-
-**做法**：在 `utils/mcp_server/tools/_factories.py` 的 schema 裡把真正是檔案路徑的屬性標上
-`"format": "path"`（不能照名字判斷：`ac_json_query` 的 `path` 是 JSON 路徑，`template`／`source`／
-`target` 有時是檔案有時不是），`server.py` 的 `_prepare_tool_call` 在設定了根目錄時先 `realpath`
-再檢查是否落在根目錄內，不在就回工具執行錯誤（`isError`，和其他參數驗證失敗一樣）。
-
-**為什麼要拍板**：根目錄從哪來（新的環境變數、沿用 `roots/list`、或兩者），唯讀模式要不要預設開啟；
-預設開啟會讓現有讀取工作區外檔案的用法失效。
-
-同一個問題也在 `ac_resolve_ref`／`ac_resolve_refs`（`_factories.py:7182`，標為 `READ_ONLY`）：`file://` 沒有
-`base_dir` 限制，`env://` 可讀任何環境變數，包括放 API 金鑰的那些，結果直接回給模型。`secret://` 已經拒絕；
-`env://` 要不要改成允許清單、`file://` 要不要套同一個根目錄，跟上面一起決定。
-
----
 
 ## Windows 的 DPI 感知是系統層級，混合 DPI 的螢幕座標被虛擬化
 

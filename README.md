@@ -419,3 +419,20 @@ receive only the public key: set `JE_AUTOCONTROL_SIGNING_PUBLIC_KEY` and
 `JE_AUTOCONTROL_REQUIRE_SIGNED_ACTIONS=1`. Keep private keys on the offline signer.
 Verification never creates keys. Legacy HMAC requires explicit migration opt-in;
 see the signing deployment example in the English/Chinese Sphinx feature guide.
+
+MCP file arguments use semantic schema metadata: JSONPath, distribution names
+and other text stay unchanged. Set `JE_AUTOCONTROL_MCP_ROOTS` to allowed roots
+separated by the OS path separator (`;` on Windows, `:` on Unix). Client
+`roots/list` narrows these roots by intersection, per connection. An empty root
+list denies filesystem arguments; absent configuration preserves file access
+until client roots arrive. This does not enable read-only mode automatically.
+`env://` references from MCP are denied by default; allow exact names with
+`JE_AUTOCONTROL_MCP_ALLOWED_ENV=PUBLIC_SETTING,BUILD_ID`. `file://` references use
+the same roots. Local Python reference resolution remains unrestricted unless
+you pass `policy=je_auto_control.PathPolicy(...)`.
+
+TCP/WebSocket viewers receive files inside `~/Downloads/AutoControl` by default;
+override locally with `JE_AUTOCONTROL_DOWNLOAD_DIR`. Hosts must send relative
+destinations such as `reports/result.txt`; absolute, drive/UNC, traversal and
+symlink escapes are rejected. An explicit `FileReceiver(base_dir=Path(...))`
+selects another bounded root. Host receivers retain their existing behavior.

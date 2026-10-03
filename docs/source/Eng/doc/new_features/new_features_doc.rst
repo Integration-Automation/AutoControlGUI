@@ -894,7 +894,7 @@ locally on both sides without an extra wire message::
    viewer.set_file_receiver(FileReceiver(
        on_progress=..., on_complete=...,
    ))
-   host.send_file_to_viewers("local.bin", "/tmp/from_host.bin")
+   host.send_file_to_viewers("local.bin", "from_host.bin")
 
 GUI: *Send file...* opens a file picker + destination-path prompt and
 runs the upload on a ``QThread`` with a ``QProgressBar`` bound to the

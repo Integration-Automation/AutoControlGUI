@@ -838,7 +838,7 @@ GUI：Viewer 分頁有 *把本機剪貼簿文字送到 Host* 按鈕；host 收�
    viewer.set_file_receiver(FileReceiver(
        on_progress=..., on_complete=...,
    ))
-   host.send_file_to_viewers("local.bin", "/tmp/from_host.bin")
+   host.send_file_to_viewers("local.bin", "from_host.bin")
 
 GUI：*傳送檔案...* 按鈕開啟檔案選擇器 + 目的路徑提示，上傳跑在
 ``QThread`` 上，底下 ``QProgressBar`` 綁到 sender 的 progress 事

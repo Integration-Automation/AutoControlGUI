@@ -525,3 +525,49 @@ JE_AUTOCONTROL_LEGACY_SIGNING_KEY。遷移完成後移除兩項設定。
 
 強制驗簽檢查檔案載入器，內嵌動作清單不驗簽；這不會隔離脚本或阻止已授權
 操作者改動主機。私鑰必須留在簽署端；使用者角色授權另行處理。
+
+MCP 檔案與引用邊界
+------------------
+
+JE_AUTOCONTROL_MCP_ROOTS 使用 OS 路徑分隔符列出允許根目錄；client 的
+roots/list 只會與部署設定取交集，不能擴權。多根目錄與 HTTP 連線各自獨立，
+檔案資源也使用同一有效根目錄。明確空清單拒絕檔案參數；未配置、也沒有
+client roots 時保留相容檔案存取。唯讀模式需另外設定，不會自動開啟。
+
+真正的檔案欄位使用 format=path 與讀寫語意標記；巢狀附件、DAG action_file、
+定位樣板與輸出路徑同樣檢查。圖片模式的 target 才是路徑；文字、JSONPath、
+SBOM 套件名稱及 URL 保留原義。相對路徑從第一個有效根目錄解析；realpath
+拒絕 symlink 越界，尚未建立的輸出路徑也會檢查。
+
+MCP 預設拒絕 env://，需在 JE_AUTOCONTROL_MCP_ALLOWED_ENV 以逗號列出明確名稱。
+巢狀 env:// 與 file:// 使用同一呼叫策略；記錄型入口繼續拒絕 secret://。
+本機無頭 API 可明確套用限制::
+
+    from pathlib import Path
+    import je_auto_control as ac
+    policy = ac.PathPolicy(roots=[Path('workspace')], allowed_env=['BUILD_ID'])
+    value = ac.resolve_ref('file://settings.txt', policy=policy)
+
+本機 Python 未指定策略時保留原行為；遠端呼叫經 executor 引用 adapter 仍受
+同一策略限制。此檢查限制已標記參數及引用；任意腳本／程序工具與可信預設儲存
+仍需使用者授權，並非防止本機檔案系統競態的 OS 沙箱。外掛須用同一 schema
+metadata 標記自己的檔案欄位。
+
+Viewer 收檔遷移
+----------------
+
+TCP／WebSocket viewer 收檔預設使用 ~/Downloads/AutoControl，本機可用
+JE_AUTOCONTROL_DOWNLOAD_DIR 改變目錄。Host 使用相對目的地::
+
+    host.send_file_to_viewers('local.bin', 'reports/from_host.bin')
+
+絕對路徑、磁碟相對路徑、UNC、上層穿越、NUL、替代串流及 symlink 越界在
+開啟 part 檔之前被拒絕，完成時在替換目的檔前再次檢查；不完整傳輸的既有
+保護仍保留。Host 的 FileReceiver() 保留原行為。本機可指定其他受限目錄::
+
+    from pathlib import Path
+    from je_auto_control import FileReceiver
+    viewer.set_file_receiver(FileReceiver(base_dir=Path('downloads')))
+
+GUI 使用相同預設邊界；WebRTC 保留既有受限 inbox 與檔名協定。舊 host 絕對
+目的地範例須改為相對檔名；本機仍可明確選擇自訂、不限制根目錄的 receiver。

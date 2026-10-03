@@ -379,3 +379,17 @@ bandit -c pyproject.toml -r je_auto_control/
 设置 `JE_AUTOCONTROL_SIGNING_PUBLIC_KEY` 与 `JE_AUTOCONTROL_REQUIRE_SIGNED_ACTIONS=1`；
 私钥保留在离线签署端。验证不会创建密钥；旧 HMAC 必须明确开启迁移选项。
 完整部署和迁移示例见中英文 Sphinx 功能文档。
+
+MCP 使用 schema 语义标记真正的文件字段，JSONPath、包名称和普通文本保留原义。
+`JE_AUTOCONTROL_MCP_ROOTS` 指定允许根目录，以 OS 路径分隔符分开
+（Windows 用 `;`，Unix 用 `:`）。各连接的 `roots/list` 与部署设置取交集；
+空列表拒绝文件参数，未设置时在收到 client roots 前保留原有文件访问。
+这不会自动开启只读模式。MCP 默认拒绝 `env://`，使用
+`JE_AUTOCONTROL_MCP_ALLOWED_ENV=PUBLIC_SETTING,BUILD_ID` 明确允许名称；
+`file://` 使用同一根目录策略。本机 Python 解析保留原行为，可明确传入
+`policy=je_auto_control.PathPolicy(...)`。
+
+TCP／WebSocket viewer 默认收文件到 `~/Downloads/AutoControl`，本机可用
+`JE_AUTOCONTROL_DOWNLOAD_DIR` 指定目录。Host 必须传入 `reports/result.txt` 等相对
+目的地；绝对路径、磁盘／UNC、目录穿越和 symlink 越界会被拒绝。
+可用 `FileReceiver(base_dir=Path(...))` 选择其他受限目录；host 收文件保留原行为。

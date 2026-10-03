@@ -573,3 +573,59 @@ key. There is no automatic personal signing key or private-key fallback.
 Signed-file enforcement checks file loaders, not inline action lists. It does
 not isolate scripts or prevent an authorized operator from modifying the host.
 Keep the private key off execution hosts; role authorization is a separate gate.
+
+MCP filesystem and reference boundaries
+---------------------------------------
+
+JE_AUTOCONTROL_MCP_ROOTS is an OS-path-separator list of allowed roots.
+Client roots/list narrows deployment roots by intersection, never widens them.
+Multiple roots and HTTP peers are isolated; filesystem resources use the same
+effective roots. An explicitly empty list denies filesystem arguments. With
+no configured or client roots, file access remains compatible. Read-only mode
+is a separate setting and is not enabled automatically.
+
+Schemas mark actual file arguments with format=path and their read/write
+operation. Nested attachments, DAG action files, locator templates and output
+paths are checked too. Conditional image targets are checked only in image
+mode; text targets, JSONPath, SBOM distribution names and URLs retain their
+meaning. Relative file paths resolve against the first effective root; symlink
+escapes are rejected by realpath checks, including nonexistent write targets.
+
+MCP env:// references default to deny; set the comma-separated exact-name
+JE_AUTOCONTROL_MCP_ALLOWED_ENV allowlist. Recursive env:// and file:// references
+use the same per-call policy. secret:// is still refused in recorded surfaces.
+For a local headless call with explicit limits::
+
+    from pathlib import Path
+    import je_auto_control as ac
+    policy = ac.PathPolicy(roots=[Path('workspace')], allowed_env=['BUILD_ID'])
+    value = ac.resolve_ref('file://settings.txt', policy=policy)
+
+Local Python resolvers without a policy preserve existing behavior. A remote
+call always retains its policy even through the executor's reference adapters.
+These checks constrain declared file arguments and value references; arbitrary
+script/process tools and trusted default stores still require authorized users.
+They are not an operating-system sandbox against local filesystem races.
+Plugins must mark filesystem fields using the same schema metadata.
+
+Viewer download migration
+-------------------------
+
+TCP and WebSocket viewers now use ~/Downloads/AutoControl, or the locally set
+JE_AUTOCONTROL_DOWNLOAD_DIR. Hosts send relative destination names::
+
+    host.send_file_to_viewers('local.bin', 'reports/from_host.bin')
+
+Absolute paths, drive-relative paths, UNC paths, parent traversal, NULs, alternate
+streams and symlink escapes are rejected before opening a part file. Transfer
+completion re-checks the boundary before replacing the destination. Existing
+partial-transfer integrity checks remain in force. Host FileReceiver() behavior
+is preserved. A local client can choose a different bounded receiver::
+
+    from pathlib import Path
+    from je_auto_control import FileReceiver
+    viewer.set_file_receiver(FileReceiver(base_dir=Path('downloads')))
+
+GUI viewers use the same default boundary. WebRTC retains its existing bounded
+inbox and file-name protocol. Absolute host-to-viewer examples must migrate to
+relative names; a deliberately unbounded custom receiver remains a local choice.

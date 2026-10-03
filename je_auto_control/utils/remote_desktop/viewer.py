@@ -13,7 +13,7 @@ from je_auto_control.utils.remote_desktop.clipboard_sync import (
     ClipboardSyncError, decode as decode_clipboard, encode_image, encode_text,
 )
 from je_auto_control.utils.remote_desktop.file_transfer import (
-    FileReceiver, FileTransferError, send_file,
+    FileReceiver, FileTransferError, default_download_dir, send_file,
 )
 from je_auto_control.utils.remote_desktop.host_id import validate_host_id
 from je_auto_control.utils.remote_desktop.protocol import (
@@ -298,7 +298,7 @@ class RemoteDesktopViewer:
 
     def _ensure_file_receiver(self) -> FileReceiver:
         if self._file_receiver is None:
-            self._file_receiver = FileReceiver()
+            self._file_receiver = FileReceiver(base_dir=default_download_dir())
         return self._file_receiver
 
     def send_file(self, source_path: str, dest_path: str,

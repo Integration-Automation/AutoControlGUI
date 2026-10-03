@@ -27,10 +27,11 @@ import threading
 from collections import OrderedDict
 import uuid
 from dataclasses import dataclass
-from pathlib import Path
+from pathlib import Path, PurePosixPath, PureWindowsPath
 from typing import Any, Callable, Dict, Optional, Tuple
 
 from je_auto_control.utils.exception.exceptions import AutoControlException
+from je_auto_control.utils.path_guard.policy import PathPolicy
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.remote_desktop.protocol import MessageType
 
@@ -150,11 +151,18 @@ def _discard(part: Path) -> None:
 _CANCELLED_MAX = 1024
 
 
+def default_download_dir() -> Path:
+    """Return the local viewer download root; resolve HOME at use time."""
+    configured = os.environ.get('JE_AUTOCONTROL_DOWNLOAD_DIR')
+    return Path(configured).expanduser() if configured else Path.home() / 'Downloads' / 'AutoControl'
+
+
 class FileReceiver:
     """Demultiplex incoming FILE_* messages into one or more file writes."""
 
     def __init__(self, on_progress: Optional[ProgressCallback] = None,
-                 on_complete: Optional[CompleteCallback] = None) -> None:
+                 on_complete: Optional[CompleteCallback] = None, *,
+                 base_dir: Optional[Path] = None) -> None:
         self._on_progress = on_progress
         self._on_complete = on_complete
         self._active: Dict[str, _Incoming] = {}
@@ -164,6 +172,7 @@ class FileReceiver:
         # handle were left behind for good.
         self._cancelled: "OrderedDict[str, bool]" = OrderedDict()
         self._lock = threading.Lock()
+        self._policy = PathPolicy([base_dir]) if base_dir is not None else None
 
     def handle_begin(self, payload: bytes) -> None:
         transfer_id, dest_path, total_size = decode_begin(payload)
@@ -180,7 +189,11 @@ class FileReceiver:
         if cancelled:
             self._fire_complete(transfer_id, False, "cancelled before it began", str(dest_path))
             return
-        path = Path(os.path.expanduser(dest_path))
+        try:
+            path = self._destination(dest_path)
+        except AutoControlException as error:
+            self._fire_complete(transfer_id, False, str(error), dest_path)
+            return
         if not path.name:   # ".", "/" or "C:\\": with_name raised ValueError past the handler
             self._fire_complete(transfer_id, False, "dest_path names no file", str(path))
             return
@@ -189,8 +202,10 @@ class FileReceiver:
             # mkdir inside the try: a NUL in the name (ValueError) or a
             # protected directory killed the connection's receive thread.
             path.parent.mkdir(parents=True, exist_ok=True)
+            if self._policy is not None:
+                self._policy.validate(str(part), operation='write')
             handle = open(part, "wb")  # noqa: SIM115  managed manually
-        except (OSError, ValueError) as error:
+        except (OSError, ValueError, AutoControlException) as error:
             self._fire_complete(transfer_id, False, str(error), str(path))
             return
         incoming = _Incoming(transfer_id=transfer_id, dest_path=path, part_path=part,
@@ -248,8 +263,7 @@ class FileReceiver:
             transfer_id, ok, message, str(incoming.dest_path),
         )
 
-    @staticmethod
-    def _commit(incoming: _Incoming, sender_ok: bool,
+    def _commit(self, incoming: _Incoming, sender_ok: bool,
                 sender_error: Optional[str]) -> Tuple[bool, Optional[str]]:
         """Close the part file and rename it into place, or discard it."""
         message = sender_error or incoming.error
@@ -263,12 +277,25 @@ class FileReceiver:
                 f"received {incoming.bytes_done} of {incoming.total_size} bytes")
         if ok:
             try:
+                if self._policy is not None:
+                    self._policy.validate(str(incoming.dest_path), operation='write')
                 os.replace(incoming.part_path, incoming.dest_path)
                 return True, None
-            except OSError as replace_error:
+            except (OSError, AutoControlException) as replace_error:
                 ok, message = False, str(replace_error)
         _discard(incoming.part_path)
         return ok, message
+
+    def _destination(self, raw: str) -> Path:
+        """Keep bounded receiver destinations relative on every sender OS."""
+        if self._policy is None:
+            return Path(os.path.expanduser(raw))
+        windows = PureWindowsPath(raw)
+        parts = PurePosixPath(raw.replace('\\', '/')).parts
+        if (windows.drive or windows.root or raw.startswith('~') or '..' in parts
+                or ':' in raw or any(ord(char) < 32 for char in raw)):
+            raise FileTransferError('viewer destination must be a relative path inside downloads')
+        return self._policy.validate('/'.join(parts), operation='write')
 
     def abort(self, transfer_id: str, reason: str) -> None:
         """Abandon an in-flight transfer: close it and delete its part file."""

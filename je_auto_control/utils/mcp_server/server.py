@@ -36,9 +36,13 @@ from je_auto_control.utils.mcp_server.tools import (
 from je_auto_control.utils.mcp_server.tools._validation import (
     undeclared_arguments, validate_arguments,
 )
+from je_auto_control.utils.mcp_server.tools._path_metadata import validate_path_arguments
+from je_auto_control.utils.path_guard.policy import PathPolicy, path_policy_scope
+from je_auto_control.utils.path_guard.path_guard import PathNotAllowedError
 from je_auto_control.utils.mcp_server._client_requests import (
     ClientRequestMixin,
 )
+from je_auto_control.utils.mcp_server._resource_policy import bounded_resources
 from je_auto_control.utils.mcp_server._input_required import (
     AnsweredByGate, RequestStateSigner,
 )
@@ -121,8 +125,34 @@ class MCPServer(StatelessDispatchMixin, SubscriptionMixin, ClientRequestMixin):
         self._subscriptions_lock = threading.Lock()
         self._listeners: Dict[Any, Any] = {}  # open subscriptions/listen, by (connection, id)
         self._listeners_lock = threading.Lock()
+        self._path_policy = PathPolicy.for_mcp()
+        self._roots_by_conn: Dict[Any, List[str]] = {}
+        self._roots_lock = threading.Lock()
 
     # --- connection-scoped state ------------------------------------------
+    def _current_path_policy(self) -> PathPolicy:
+        """Apply deployment roots and client roots by intersection for this peer."""
+        with self._roots_lock:
+            roots = self._roots_by_conn.get(self._connection_id)
+        return self._path_policy if roots is None else self._path_policy.restrict(roots)
+
+    def _apply_roots(self, roots: List[Dict[str, Any]]) -> None:
+        """Bind client roots without widening administrator-configured limits."""
+        from je_auto_control.utils.mcp_server._protocol import _file_uri_to_path
+        paths = []
+        for root in roots:
+            uri = root.get('uri') if isinstance(root, dict) else None
+            path = _file_uri_to_path(uri) if isinstance(uri, str) else None
+            if path:
+                paths.append(path)
+        with self._roots_lock:
+            self._roots_by_conn[self._connection_id] = paths
+        policy = self._current_path_policy()
+        if self._connection_id is None and policy.roots:
+            # Keep the stdio custom-provider hook compatible. HTTP resources
+            # are adapted per call instead of re-targeting a shared provider.
+            self._resources.set_workspace_root(str(policy.roots[0]))
+
     #
     # Each property prefers a value set for the current thread (one HTTP
     # request = one thread) and falls back to the server-wide default that
@@ -216,6 +246,8 @@ class MCPServer(StatelessDispatchMixin, SubscriptionMixin, ClientRequestMixin):
             return
         with self._caps_lock:
             self._client_caps_by_conn.pop(connection_id, None)
+        with self._roots_lock:
+            self._roots_by_conn.pop(connection_id, None)
         self._end_listeners(lambda conn: conn == connection_id, graceful=False)
         with self._calls_lock:
             stale = [key for key in self._active_calls
@@ -527,7 +559,8 @@ class MCPServer(StatelessDispatchMixin, SubscriptionMixin, ClientRequestMixin):
     def _handle_resources_list(self) -> Dict[str, Any]:
         """List descriptors for every registered resource."""
         return {"resources": [resource.to_descriptor()
-                              for resource in self._resources.list()]}
+                              for resource in bounded_resources(
+                                  self._resources, self._current_path_policy()).list()]}
 
     def _handle_prompts_list(self) -> Dict[str, Any]:
         """List descriptors for every registered prompt."""
@@ -577,7 +610,7 @@ class MCPServer(StatelessDispatchMixin, SubscriptionMixin, ClientRequestMixin):
         uri = params.get("uri")
         if not isinstance(uri, str) or not uri:
             raise _MCPError(-32602, "resources/read requires string 'uri'")
-        content = self._resources.read(uri)
+        content = bounded_resources(self._resources, self._current_path_policy()).read(uri)
         if content is None:
             raise _MCPError(-32602, f"Unknown resource: {uri}")
         return {"contents": [content]}
@@ -619,6 +652,11 @@ class MCPServer(StatelessDispatchMixin, SubscriptionMixin, ClientRequestMixin):
                      or undeclared_arguments(tool.input_schema, arguments))
         if violation is not None:
             raise _InvalidToolArguments(f"Invalid arguments for {name}: {violation}")
+        try:
+            arguments = validate_path_arguments(arguments, tool.input_schema,
+                                                 self._current_path_policy())
+        except PathNotAllowedError as error:
+            raise _InvalidToolArguments(str(error)) from error
         if self._rate_limiter is not None and not self._rate_limiter.try_acquire():
             raise _MCPError(-32000, f"Rate limit exceeded for tool {name!r}")
         self._maybe_confirm_destructive(name, tool, arguments)
@@ -638,7 +676,8 @@ class MCPServer(StatelessDispatchMixin, SubscriptionMixin, ClientRequestMixin):
             self._active_calls[call_key] = ctx
         started_at = time.monotonic()
         try:
-            result = tool.invoke(arguments, ctx=ctx)
+            with path_policy_scope(self._current_path_policy()):
+                result = tool.invoke(arguments, ctx=ctx)
         except OperationCancelledError:
             self._audit.record(
                 tool=name, arguments=arguments, status="cancelled",

@@ -745,6 +745,7 @@ from je_auto_control.utils.config_schema import (
 from je_auto_control.utils.secret_ref import (
     RefResolver, SecretRefError, is_ref, resolve_ref, resolve_refs_in,
 )
+from je_auto_control.utils.path_guard import PathPolicy
 # Secret redaction for config structures and log strings
 from je_auto_control.utils.config_redaction import (
     redact_config, redact_secret_text,
@@ -1667,6 +1668,7 @@ __all__ = [
     "LayeredConfig", "SourceTrace", "deep_merge",
     "ConfigField", "ConfigSchema", "coerce", "validate_config",
     "RefResolver", "SecretRefError", "is_ref", "resolve_ref", "resolve_refs_in",
+    "PathPolicy",
     "redact_config", "redact_secret_text",
     "EventEmitter", "post_cloudevent", "to_cloudevent",
     "WebhookChannel", "WebhookResult", "notify_webhook", "set_default_poster",

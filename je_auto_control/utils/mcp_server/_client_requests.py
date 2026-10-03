@@ -23,7 +23,7 @@ from typing import (
 
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.mcp_server._protocol import (
-    _confirm_destructive_enabled, _file_uri_to_path, _MCPError,
+    _confirm_destructive_enabled, _MCPError,
 )
 from je_auto_control.utils.mcp_server.tools import MCPTool
 
@@ -51,9 +51,17 @@ class ClientRequestMixin:
         _writer: Optional[Callable[[str], None]]
         _client_capabilities: Dict[str, Any]
         _resources: Any
+        _notifier: Optional[Callable[[str, Dict[str, Any]], None]]
         _outbound_lock: threading.Lock
         _pending_outbound: Dict[Any, Dict[str, Any]]
         _outbound_id_counter: "itertools.count[int]"
+
+        def connection_scope(self, *, connection_id=None, writer=None,
+                             notifier=None) -> Any:
+            """Bind the outbound writer and connection identity for a worker."""
+
+        def _apply_roots(self, roots: List[Dict[str, Any]]) -> None:
+            """Bind all client roots through the server's filesystem policy."""
 
         @property
         def _connection_id(self) -> Any:
@@ -102,31 +110,28 @@ class ClientRequestMixin:
         if self._writer is None:
             return
         threading.Thread(
-            target=self._refresh_roots_safely, daemon=True,
+            target=self._refresh_roots_safely,
+            args=(self._connection_id, self._writer, self._notifier), daemon=True,
             name="MCPRootsRefresh",
         ).start()
 
-    def _refresh_roots_safely(self) -> None:
+    def _refresh_roots_safely(self, connection_id=None, writer=None, notifier=None) -> None:
         try:
-            self.refresh_roots(timeout=5.0)
+            with self.connection_scope(connection_id=connection_id, writer=writer,
+                                       notifier=notifier):
+                self.refresh_roots(timeout=5.0)
         except (RuntimeError, TimeoutError) as error:
             autocontrol_logger.info("MCP roots refresh skipped: %r", error)
 
     def refresh_roots(self, timeout: float = 10.0) -> List[Dict[str, Any]]:
-        """Send ``roots/list`` to the client and apply the first root."""
+        """Send roots/list and bind all valid roots to this connection's policy."""
         result = self._send_outbound_request(
             "roots/list", params={}, timeout=timeout,
         )
         roots_list = (result or {}).get("roots") or []
-        if not isinstance(roots_list, list) or not roots_list:
+        if not isinstance(roots_list, list):
             return []
-        first_uri = roots_list[0].get("uri") if isinstance(roots_list[0],
-                                                            dict) else None
-        if isinstance(first_uri, str):
-            local_path = _file_uri_to_path(first_uri)
-            if local_path:
-                self._resources.set_workspace_root(local_path)
-                autocontrol_logger.info("MCP workspace root → %s", local_path)
+        self._apply_roots(roots_list)
         return roots_list
 
     def _send_outbound_request(self, method: str,

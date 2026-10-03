@@ -16,6 +16,7 @@ from pathlib import Path
 from typing import Any, Callable, Mapping, Optional
 
 from je_auto_control.utils.exception.exceptions import AutoControlException
+from je_auto_control.utils.path_guard.policy import PathPolicy, current_path_policy
 
 _REF_RE = re.compile(r"^(env|file|secret)://(.*)$", re.DOTALL)
 
@@ -79,10 +80,12 @@ class RefResolver:
 
     def __init__(self, *, env: Optional[EnvReader] = None,
                  secret_resolver: Optional[SecretResolver] = None,
-                 base_dir: Optional[str] = None) -> None:
+                 base_dir: Optional[str] = None,
+                 policy: Optional[PathPolicy] = None) -> None:
         self._env = env
         self._secret_resolver = secret_resolver
         self._base_dir = base_dir
+        self._policy = policy
 
     def resolve(self, ref: str) -> str:
         """Resolve a single reference string to its value."""
@@ -109,6 +112,9 @@ class RefResolver:
         return obj
 
     def _resolve_env(self, name: str) -> str:
+        policy = self._policy or current_path_policy()
+        if policy is not None:
+            policy.validate_env(name)
         source = self._env if self._env is not None else os.environ
         if name not in source:
             raise SecretRefError(f"env var {name!r} is not set")
@@ -119,7 +125,10 @@ class RefResolver:
             path = path[1:]  # file:///C:/x names C:/x, not the drive-relative /C:/x
         if "\0" in path:
             raise SecretRefError(f"path contains a NUL byte: {path!r}")
-        if self._base_dir is None:
+        policy = self._policy or current_path_policy()
+        if self._base_dir is None and policy is not None:
+            resolved = str(policy.validate(path, operation='read'))
+        elif self._base_dir is None:
             resolved = os.path.realpath(path)
         else:
             # A relative ref is relative to base_dir: it used to resolve
@@ -128,6 +137,8 @@ class RefResolver:
             resolved = os.path.realpath(os.path.join(base, path))
             if not _is_within(base, resolved):
                 raise SecretRefError(f"path escapes base dir: {path!r}")
+        if policy is not None:
+            policy.validate(resolved, operation='read')
         try:
             return Path(resolved).read_text(encoding="utf-8")
         # ValueError: an embedded NUL, or a file that is not UTF-8.
@@ -146,15 +157,17 @@ class RefResolver:
 
 def resolve_ref(ref: str, *, env: Optional[EnvReader] = None,
                 secret_resolver: Optional[SecretResolver] = None,
-                base_dir: Optional[str] = None) -> str:
+                base_dir: Optional[str] = None,
+                policy: Optional[PathPolicy] = None) -> str:
     """Resolve a single ``env://`` / ``file://`` / ``secret://`` reference."""
     return RefResolver(env=env, secret_resolver=secret_resolver,
-                       base_dir=base_dir).resolve(ref)
+                       base_dir=base_dir, policy=policy).resolve(ref)
 
 
 def resolve_refs_in(obj: Any, *, env: Optional[EnvReader] = None,
                     secret_resolver: Optional[SecretResolver] = None,
-                    base_dir: Optional[str] = None) -> Any:
+                    base_dir: Optional[str] = None,
+                    policy: Optional[PathPolicy] = None) -> Any:
     """Recursively resolve every reference within a nested structure."""
     return RefResolver(env=env, secret_resolver=secret_resolver,
-                       base_dir=base_dir).resolve_all(obj)
+                       base_dir=base_dir, policy=policy).resolve_all(obj)

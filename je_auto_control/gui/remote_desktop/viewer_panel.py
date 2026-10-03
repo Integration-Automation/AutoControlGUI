@@ -24,6 +24,7 @@ from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.remote_desktop import (
     FileReceiver, RemoteDesktopViewer, WebSocketDesktopViewer,
 )
+from je_auto_control.utils.remote_desktop.file_transfer import default_download_dir
 from je_auto_control.utils.remote_desktop.audio import (
     AudioPlayer, is_audio_backend_available,
 )
@@ -233,6 +234,7 @@ class _ViewerPanel(TranslatableMixin, QWidget):
                 ssl_context=ssl_context,
             )
             viewer.set_file_receiver(FileReceiver(
+                base_dir=default_download_dir(),
                 on_progress=lambda tid, done, total:
                     self._file_progress_signal.emit(tid, done, total),
                 on_complete=lambda tid, ok, err, dst:
