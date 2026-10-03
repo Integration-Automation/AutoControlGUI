@@ -15,6 +15,11 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Added
 
+- Beta selected-run journal candidate generation with observed-only source,
+  actions, provenance manifest and warnings; command/argument/dry-run and Python
+  AST validation, `codegen --from-log --run-id`, AC/MCP adapters and separate
+  Recording Editor/Script Builder diff preview, import and artifact export.
+
 - Beta fixed-frame self-healing comparison, labelled metrics and JSON/HTML reports,
   immutable template candidate preview/validate/accept/revert, six AC/MCP adapters
   and worker-based Self-Healing metric/failure/preview views. HealEvent schema 2

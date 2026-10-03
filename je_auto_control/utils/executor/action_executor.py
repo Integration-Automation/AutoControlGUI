@@ -66,6 +66,7 @@ from je_auto_control.utils.self_healing.evaluation_api import (
     accept_template_candidate, compare_healing_versions, create_template_candidate,
     preview_template_candidate, revert_template_revision, validate_template_candidate,
 )
+from je_auto_control.utils.codegen.journal_api import generate_journal_candidate
 from je_auto_control.utils.secrets import default_secret_manager
 from je_auto_control.utils.script_vars.interpolate import (
     interpolate_value,
@@ -7194,6 +7195,7 @@ class Executor:
             "AC_generate_json_report": generate_json_report,
             "AC_generate_xml_report": generate_xml_report,
             "AC_generate_code": _generate_code,
+            'AC_generate_journal_candidate': generate_journal_candidate,
             "AC_send_email": _send_email,
             "AC_assert_pdf_text": _assert_pdf_text,
             "AC_take_golden": _take_golden,

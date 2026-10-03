@@ -1242,4 +1242,11 @@ simplified_chinese_word_dict = {
     'heal_metric_step_id': '原始步骤',
     'heal_metric_coordinates': '坐标',
     'heal_metric_error': '错误',
+    'journal_candidate_path': '动作日志',
+    'journal_candidate_run': '指定 run ID',
+    'journal_candidate_target': '候选目标格式',
+    'journal_candidate_style': '候选样式',
+    'journal_candidate_preview': '预览日志候选与差异',
+    'journal_candidate_import': '导入已审阅候选动作',
+    'journal_candidate_export': '导出已审阅候选',
 }

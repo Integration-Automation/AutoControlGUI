@@ -8655,6 +8655,14 @@ def state_machine_tools() -> List[MCPTool]:
 
 def codegen_tools() -> List[MCPTool]:
     return [
+        MCPTool('ac_generate_journal_candidate',
+                'Generate an observed-only candidate with provenance and warnings; never execute the journal.',
+                schema({'journal_path': {'type': 'string'}, 'run_id': {'type': 'string'},
+                        'target': {'type': 'string', 'enum': ['pytest', 'python', 'robot']},
+                        'style': {'type': 'string', 'enum': ['actions', 'calls']},
+                        'name': {'type': 'string'}, 'failure_bundle': {'type': 'boolean'},
+                        'output_path': {'type': 'string'}}, required=['journal_path', 'run_id']),
+                hq.generate_journal_candidate, SIDE_EFFECT_ONLY),
         MCPTool(
             name="ac_generate_code",
             description=("Generate runnable test code from an action list or a "

@@ -336,3 +336,10 @@ negative origins, scales, expected misses and unknown labels. Root checks,
 immutable snapshots, validation and baseline hashes guard acceptance/reversion.
 Offscreen GUI and fake backend tests verify provenance and delegation, not paid
 model quality or physical-device operation success. See `benchmarks/self_healing`.
+
+Journal candidate generation has controlled tests for selected-run provenance,
+observed branches/parallel ordering/retry occurrences, secret reference retention,
+masked/incomplete/failed omissions, input-as-data safety, installed plugin
+validation, CLI export and separate GUI preview/import. API, facade, AC, MCP,
+Script Builder and Recording Editor use the same core. These tests and
+`benchmarks/journal_codegen` do not certify physical replay or unobserved paths.

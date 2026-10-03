@@ -1218,6 +1218,9 @@ from je_auto_control.utils.codegen.codegen import (
     generate_code,
     generate_code_file,
 )
+from je_auto_control.api.codegen import (
+    CandidateError, CandidateScript, generate_candidate_from_log, generate_journal_candidate,
+)
 # HTTP/API request action (dependency-free, stdlib urllib)
 from je_auto_control.utils.http_client.http_client import http_request
 # Ad-hoc read-only SQL query against SQLite
@@ -1332,6 +1335,7 @@ __all__ = [
     "execute_action", "execute_files", "executor",
     "execute_action_with_vars", "record_to_json",
     "generate_code", "generate_code_file", "http_request", "query_sqlite",
+    'CandidateError', 'CandidateScript', 'generate_candidate_from_log', 'generate_journal_candidate',
     "send_email", "assert_pdf_text", "extract_pdf_text", "pdf_metadata",
     "pdf_page_count",
     "add_command_to_executor", "test_record_instance", "pil_screenshot",

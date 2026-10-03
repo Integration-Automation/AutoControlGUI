@@ -1,6 +1,6 @@
-"""Composite widget that ties the step tree and form into a Script Builder tab."""
+"""Script Builder step tree, form and reviewed journal candidate import/export."""
 import json
-from typing import Optional
+from typing import List, Optional
 
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QAction
@@ -10,6 +10,7 @@ from PySide6.QtWidgets import (
 )
 
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
+from je_auto_control.gui.journal_candidate_panel import JournalCandidatePanel
 from je_auto_control.gui.language_wrapper.multi_language_wrapper import (
     language_wrapper,
 )
@@ -19,9 +20,10 @@ from je_auto_control.gui.script_builder.command_schema import (
 from je_auto_control.gui.script_builder.step_form_view import StepFormView
 from je_auto_control.gui.script_builder.step_list_view import StepTreeView
 from je_auto_control.gui.script_builder.step_model import (
-    Step, load_action_file, save_action_file, steps_to_actions,
+    Step, actions_to_steps, load_action_file, save_action_file, steps_to_actions,
 )
 from je_auto_control.utils.exception.exceptions import AutoControlException
+from je_auto_control.utils.action_journal.events import JSONValue
 from je_auto_control.utils.executor.action_executor import execute_action
 
 
@@ -44,11 +46,14 @@ class ScriptBuilderTab(TranslatableMixin, QWidget):
         # The other top-level keys of a loaded {"auto_control": [...]} file,
         # written back on Save; None for a bare list.
         self._file_extras: Optional[dict] = None
+        self._journal_candidate = JournalCandidatePanel(
+            lambda: steps_to_actions(self._tree.root_steps()), self._import_candidate, self)
         self._build_layout()
         self._wire_signals()
 
     def retranslate(self) -> None:
         TranslatableMixin.retranslate(self)
+        self._journal_candidate.retranslate()
         if self._add_btn is not None:
             self._add_btn.setText(_t("sb_add_step"))
         if hasattr(self._form, "retranslate"):
@@ -63,6 +68,16 @@ class ScriptBuilderTab(TranslatableMixin, QWidget):
         splitter.setSizes([320, 480])
         root.addWidget(splitter, stretch=1)
         root.addWidget(self._result)
+        root.addWidget(self._journal_candidate)
+
+    def menu_actions(self) -> list:
+        """Expose journal review operations through the window Actions menu."""
+        return self._journal_candidate.menu_actions()
+
+    def _import_candidate(self, actions: List[List[JSONValue]]) -> None:
+        self._tree.load_steps(actions_to_steps(actions))
+        self._file_extras = None
+        self._form.load_step(None)
 
     def _build_toolbar(self) -> QHBoxLayout:
         bar = QHBoxLayout()

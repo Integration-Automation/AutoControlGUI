@@ -3,12 +3,12 @@
 ## 跨平台與 GUI 全面改版
 
 `WIP` — 重設 UI、重寫並優化 GUI、修正 Wayland 與函式庫問題、跨機器同步、
-深化全套 mypy、補齊 iOS／Android、MCP 逐步揭露、動作日誌 codegen、
+深化全套 mypy、補齊 iOS／Android、MCP 逐步揭露、
 完整範例與文件。涉及 `gui/`、`linux_wayland/`、`android/`、`ios/`、
 `utils/{config_sync,remote_desktop,mcp_server,self_healing,codegen,executor}/` 與型別／文件驗證。
 核准設計：[跨平台自動化與 GUI 改版](docs/superpowers/specs/2026-10-02-platform-gui-modernization-design.md)。
 實作計畫：[分階段交付計畫](docs/superpowers/plans/2026-10-02-modernization-index.md)，已核准，依序實作。
-現有 `[Answer]` 決策沿用；後續交付包含 B3 日誌產碼與 C–H 各階段。
+現有 `[Answer]` 決策沿用；後續交付包含 C–H 各階段與完整整合驗收。
 
 **只記未完成的事。** 完成的工作記在 [docs/updates/](docs/updates/README.md)（每月一個批次檔，
 索引與查詢指令在它的 README），相容性變更寫進 [CHANGELOG.md](CHANGELOG.md)；完成的項目

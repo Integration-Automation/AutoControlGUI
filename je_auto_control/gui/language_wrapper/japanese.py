@@ -1263,4 +1263,11 @@ japanese_word_dict = {
     'heal_metric_step_id': '元のステップ',
     'heal_metric_coordinates': '座標',
     'heal_metric_error': 'エラー',
+    'journal_candidate_path': 'アクションログ',
+    'journal_candidate_run': '選択する run ID',
+    'journal_candidate_target': '候補の形式',
+    'journal_candidate_style': '候補のスタイル',
+    'journal_candidate_preview': 'ログ候補と差分をプレビュー',
+    'journal_candidate_import': '確認済みの候補アクションを取り込む',
+    'journal_candidate_export': '確認済みの候補を保存',
 }

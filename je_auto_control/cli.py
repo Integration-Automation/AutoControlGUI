@@ -151,19 +151,21 @@ def _set_on_enter(stop_event: threading.Event) -> None:
 
 
 def cmd_codegen(args: argparse.Namespace) -> int:
-    """Generate pytest/python/robot source from an action file."""
+    """Generate source from an action file or a reviewed selected-run journal."""
+    if args.from_log:
+        return _cmd_journal_codegen(args)
     from je_auto_control.utils.codegen.codegen import (
         generate_code, generate_code_file,
     )
     from je_auto_control.utils.json.json_file import read_action_json
     if args.output:
         generate_code_file(args.script, args.output, target=args.target,
-                           name=args.name, style=args.style,
+                           name=args.name, style=args.style or 'calls',
                            failure_bundle=args.failure_bundle)
         sys.stderr.write(f"Wrote {args.target} code to {args.output}\n")
     else:
         code = generate_code(read_action_json(args.script), target=args.target,
-                             name=args.name, style=args.style,
+                             name=args.name, style=args.style or 'calls',
                              failure_bundle=args.failure_bundle)
         sys.stdout.write(code)
     return 0
@@ -173,6 +175,25 @@ def cmd_signing_keygen(args: argparse.Namespace) -> int:
     """Create separate signing and verification keys without overwriting them."""
     from je_auto_control.utils.action_signing import create_signing_keypair
     create_signing_keypair(Path(args.private_key), Path(args.public_key))
+    return 0
+
+
+def _cmd_journal_codegen(args: argparse.Namespace) -> int:
+    # pylint: disable-next=import-outside-toplevel  # reason: journal generation loads only for its CLI mode
+    from je_auto_control.utils.codegen.journal_api import generate_journal_candidate
+    if not args.run_id:
+        raise ValueError('--from-log requires --run-id')
+    artifact = generate_journal_candidate(args.from_log, args.run_id, target=args.target,
+                                         style=args.style or 'actions', name=args.name,
+                                         failure_bundle=args.failure_bundle, output_path=args.output)
+    if args.output:
+        sys.stderr.write(f'Wrote candidate source, manifest and actions beside {args.output}\n')
+    else:
+        sys.stdout.write(str(artifact['code']))
+    warnings = artifact.get('warnings')
+    if isinstance(warnings, list):
+        for warning in warnings:
+            sys.stderr.write(str(warning) + '\n')
     return 0
 
 
@@ -328,11 +349,14 @@ def build_parser() -> argparse.ArgumentParser:
 
     p_codegen = sub.add_parser(
         "codegen", help="Generate test code from an action file")
-    p_codegen.add_argument("script")
+    source = p_codegen.add_mutually_exclusive_group(required=True)
+    source.add_argument('script', nargs='?')
+    source.add_argument('--from-log', metavar='JOURNAL', help='Generate a reviewed journal candidate')
+    p_codegen.add_argument('--run-id', help='Selected journal run; required with --from-log')
     p_codegen.add_argument("--target", choices=("pytest", "python", "robot"),
                            default="pytest")
     p_codegen.add_argument("--style", choices=("calls", "actions"),
-                           default="calls")
+                           default=None)
     p_codegen.add_argument("--name", default="recorded_flow")
     p_codegen.add_argument("-o", "--output", help="Write to file instead of stdout")
     p_codegen.add_argument(

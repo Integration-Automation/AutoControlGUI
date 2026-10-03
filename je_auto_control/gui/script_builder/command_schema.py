@@ -65,6 +65,14 @@ _BOXES_JSON_PLACEHOLDER = '[{"role":"button","x":0,"y":0}]'
 def _build_specs() -> List[CommandSpec]:
     specs: List[CommandSpec] = []
     specs.extend([
+        CommandSpec('AC_generate_journal_candidate', 'Journals', 'Generate observed journal candidate', fields=(
+            FieldSpec('journal_path', FieldType.FILE_PATH), FieldSpec('run_id', FieldType.STRING),
+            FieldSpec('target', FieldType.STRING, default='pytest'),
+            FieldSpec('style', FieldType.STRING, default='actions'),
+            FieldSpec('name', FieldType.STRING, default='observed_run'),
+            FieldSpec('failure_bundle', FieldType.BOOL, default=False),
+            FieldSpec('output_path', FieldType.FILE_PATH, optional=True),
+        )),
         CommandSpec('AC_execute_journaled', 'Journals', 'Record actions', fields=(
             FieldSpec('actions', FieldType.STRING, placeholder='[["AC_sleep", {"seconds": 0}]]'),
             FieldSpec('path', FieldType.FILE_PATH), FieldSpec('run_id', FieldType.STRING, optional=True),

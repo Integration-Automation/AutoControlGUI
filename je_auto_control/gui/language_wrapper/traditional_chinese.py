@@ -1243,4 +1243,11 @@ traditional_chinese_word_dict = {
     'heal_metric_step_id': '原始步驟',
     'heal_metric_coordinates': '座標',
     'heal_metric_error': '錯誤',
+    'journal_candidate_path': '動作日誌',
+    'journal_candidate_run': '指定 run ID',
+    'journal_candidate_target': '候選目標格式',
+    'journal_candidate_style': '候選樣式',
+    'journal_candidate_preview': '預覽日誌候選與差異',
+    'journal_candidate_import': '匯入已審閱候選動作',
+    'journal_candidate_export': '匯出已審閱候選',
 }

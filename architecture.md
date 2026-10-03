@@ -264,3 +264,12 @@ through RequestBinding and CallWorker. Revision store snapshots base/candidate
 images, persists labelled validation and checks content identities under locks
 before accept/revert. Runtime capture observers record consumed bytes only
 within an attempt-scoped ContextVar; no additional screenshot is taken for logging.
+
+Journal candidates: capture bytes once -> shared journal schema/order parser ->
+observed leaf selection with parent/retry provenance -> installed registry and
+argument/dry-run validation -> existing code generator -> Python AST validation
+-> CandidateScript (code/actions/manifest/warnings). Export pre-checks all derived
+paths and preserves the input journal. Shared headless diff logic masks current
+editor literals. Recording Editor and Script Builder use one scoped worker panel
+for readonly preview and separate explicit import/export; neither dispatches
+candidate actions. Raw outcomes never become replay arguments.

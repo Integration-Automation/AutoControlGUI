@@ -22,7 +22,7 @@ from JSON files / CLI / servers, and a **GUI tab**. Nothing is GUI-only.
 
 - **One API, seven platforms.** `wrapper/platform_wrapper.py` picks the backend at import
   time; your script does not change between Windows, macOS, X11, and Wayland.
-- **Scriptable without Python.** 791 `AC_*` commands cover the whole feature set, so a
+- **Scriptable without Python.** 792 `AC_*` commands cover the whole feature set, so a
   JSON file can do anything the library can — including loops, branches, try/catch,
   macros, and variables.
 - **Headless by default.** `import je_auto_control` never loads Qt. The GUI is an
@@ -154,7 +154,7 @@ desktop app; tab commands live in the window's **Actions** menu.
 | Natural-language planner | `plan_actions`, `run_from_description` | `AC_llm_plan` | LLM Planner |
 | Computer-use agent | `AgentLoop`, `run_agent` | `AC_run_agent` | Computer Use |
 | Record & replay | `record`, `stop_record` | `AC_record`, `AC_stop_record` | Record |
-| JSON scripting | `execute_action`, `execute_files` | all 791 commands | Script, Script Builder |
+| JSON scripting | `execute_action`, `execute_files` | all 792 commands | Script, Script Builder |
 | Variables & flow control | `execute_action_with_vars` | `AC_set_var`, `AC_loop`, `AC_for_each`, `AC_try`, `AC_retry` | Variables |
 | Data-driven runs | — | `AC_for_each_row` (CSV / JSON / SQLite / Excel) | Data Sources |
 | Assertions | `assert_text`, `assert_image` | `AC_assert_text` + 20 more | Assertions |
@@ -206,7 +206,7 @@ still goes on to the end), so a CI step fails with it. The legacy
 
 | Surface | Start it with | Notes |
 |---|---|---|
-| **MCP server** | `je_auto_control_mcp` (stdio) or `AC_start_mcp_http_server` | 696 tools for Claude Desktop / Claude Code / custom tool loops. Speaks the stateless MCP 2026-07-28 beside the `initialize`-based revisions. Bearer auth, TLS, audit log, rate limit, plugin hot-reload, CI fake backend. |
+| **MCP server** | `je_auto_control_mcp` (stdio) or `AC_start_mcp_http_server` | 697 tools for Claude Desktop / Claude Code / custom tool loops. Speaks the stateless MCP 2026-07-28 beside the `initialize`-based revisions. Bearer auth, TLS, audit log, rate limit, plugin hot-reload, CI fake backend. |
 | **REST API** | `je_auto_control start-rest` | Bearer token, per-IP rate limit + lockout, SQLite audit hook, `/metrics`, `/openapi.json`, `/docs` Swagger UI, `/dashboard`. |
 | **TCP socket server** | `je_auto_control start-server` | Newline-framed JSON action lists. Binds `127.0.0.1` by default. |
 | **pytest plugin** | installed automatically | Lightweight `je_auto_control_pytest` entry point; fixtures plus Gherkin steps for pytest-bdd / behave. Reinstall after upgrading editable checkouts; the explicit legacy plugin path remains supported. |
@@ -618,3 +618,42 @@ thumbnails. Runtime HealEvent schema 2 retains actual capture identities,
 strategy timings, backend/model and journal IDs; legacy schema 1 remains readable.
 Unavailable evidence remains unknown. The committed synthetic benchmark is
 offline evidence; physical-device and paid-model validation remain separate.
+
+## Journal candidate code generation (Beta)
+
+Generate a selected-run candidate through `je_auto_control.api.codegen`:
+```python
+from pathlib import Path
+from je_auto_control.api.codegen import generate_candidate_from_log
+candidate = generate_candidate_from_log(Path("benchmarks/journal_codegen/actions.jsonl"), run_id="demo")
+print(candidate.code, candidate.manifest, candidate.warnings)
+```
+
+Generation validates one journal snapshot and preserves its content hash, all
+step/parent/source identities, statuses and observed retry occurrences. Only
+completed replayable leaf actions are rendered with the existing code generator.
+Failed, interrupted and masked steps remain in the manifest and warnings.
+Exact `${secrets.NAME}` references survive; literal secrets and outcomes are not
+turned into replay inputs. No input repr is evaluated and no result is executed.
+
+Candidates are explicitly **observed path only** and serial in start order;
+they do not reconstruct original branch/loop/retry/parallel semantics. Validate
+installed command names, required Python arguments and executor dry-run; Python
+targets also pass AST validation. Robot's Python AST result is not applicable.
+Review the candidate before executing or extending it.
+```powershell
+python -m je_auto_control.cli codegen --from-log benchmarks/journal_codegen/actions.jsonl --run-id demo -o .test-tmp/test_observed.py
+```
+
+`-o` saves source plus `.manifest.json` and `.actions.json` sidecars; output
+cannot replace the input journal. Without it, CLI emits source to stdout and
+warnings to stderr. Existing target/style/name/failure-bundle flags remain usable;
+journal mode defaults to `actions`, ordinary action-file mode retains `calls`.
+`generate_journal_candidate`, `AC_generate_journal_candidate` and
+`ac_generate_journal_candidate` return the same structured JSON artifact.
+
+Recording Editor and Script Builder expose candidate review in Actions. Preview
+shows a sanitized diff, source and provenance in a readonly view using a scoped
+worker. Import is a separate editing operation; export saves the reviewed
+candidate and sidecars. Neither preview nor import runs generated actions.
+The synthetic `benchmarks/journal_codegen` example is offline contract evidence.

@@ -1431,3 +1431,38 @@ VLM 猜錯不算恢復。歷史操作驗證與定位結果分開，不能歸因�
 HealEvent schema 2 保留實際擷取身份、策略耗時、backend／model 及日誌 ID，仍可讀
 舊 schema 1。缺少的證據保持 unknown。版本控制中的合成 benchmark 是離線證據，
 實機及付費模型驗證分開進行。
+
+日誌候選腳本產碼（Beta）
+--------------
+
+使用 ``je_auto_control.api.codegen`` 產生指定 run 的候選：
+.. code-block:: python
+
+    from pathlib import Path
+    from je_auto_control.api.codegen import generate_candidate_from_log
+    candidate = generate_candidate_from_log(Path("benchmarks/journal_codegen/actions.jsonl"), run_id="demo")
+    print(candidate.code, candidate.manifest, candidate.warnings)
+
+
+產碼驗證單一日誌快照，保留內容 hash、所有 step／parent／source 身份、狀態及
+已觀察到的 retry 次序。僅完成且可重播的葉節點交給既有產碼器；失敗、中斷及
+遮罩步驟仍留在 manifest 與警告。完整 ``${secrets.NAME}`` 參照保留，秘密字面值及
+結果不轉成重播輸入；不求值輸入 repr，也不執行產物。
+
+候選明確標示為 **observed path only**，按開始順序串行排列，不重建原本分支／
+迴圈／retry／parallel 語意。檢查已安裝指令、必要 Python 參數及 executor dry-run，
+Python 目標另通過 AST 驗證；Robot 的 Python AST 指標不適用。執行或擴充前須審閱。
+.. code-block:: powershell
+
+    python -m je_auto_control.cli codegen --from-log benchmarks/journal_codegen/actions.jsonl --run-id demo -o .test-tmp/test_observed.py
+
+
+``-o`` 儲存原始碼及 ``.manifest.json``、``.actions.json`` 附檔，不能覆寫輸入日誌。
+省略時 CLI 將原始碼輸出至 stdout，警告至 stderr。既有 target／style／name／
+failure-bundle 旗標可用；日誌模式預設 ``actions``，一般動作檔仍為 ``calls``。
+``generate_journal_candidate``、``AC_generate_journal_candidate``、
+``ac_generate_journal_candidate`` 回傳相同結構化 JSON 產物。
+
+Recording Editor 與 Script Builder 的 Actions 提供候選審閱，保留 scope 的背景工作
+產生遮罩後差異、原始碼及來源唯讀預覽。匯入是獨立編輯操作；匯出儲存已審閱候選
+及附檔。預覽與匯入均不執行候選動作。``benchmarks/journal_codegen`` 合成範例是離線契約證據。

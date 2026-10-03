@@ -1,4 +1,4 @@
-"""Recording Editor tab: trim, filter and rescale recorded action lists."""
+"""Recording Editor: edit recorded actions and review journal candidates before import/export."""
 import json
 from typing import Optional
 
@@ -9,6 +9,7 @@ from PySide6.QtWidgets import (
 )
 
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
+from je_auto_control.gui.journal_candidate_panel import JournalCandidatePanel
 from je_auto_control.gui.language_wrapper.multi_language_wrapper import (
     language_wrapper,
 )
@@ -43,6 +44,7 @@ class RecordingEditorTab(TranslatableMixin, QWidget):
         self._delay_clamp = QLineEdit("0")
         self._scale_x = QLineEdit("1.0")
         self._scale_y = QLineEdit("1.0")
+        self._journal_candidate = JournalCandidatePanel(lambda: self._actions, self._mutate, self)
         self._build_layout()
         # Ctrl+Z restores the action list to before the last edit.
         self._undo_shortcut = QShortcut(
@@ -51,6 +53,7 @@ class RecordingEditorTab(TranslatableMixin, QWidget):
 
     def retranslate(self) -> None:
         TranslatableMixin.retranslate(self)
+        self._journal_candidate.retranslate()
 
     def _mutate(self, new_actions: list) -> None:
         """Apply an edit, snapshotting the prior state for undo (Ctrl+Z)."""
@@ -99,6 +102,7 @@ class RecordingEditorTab(TranslatableMixin, QWidget):
         root.addWidget(self._tr(QLabel(), "re_preview"))
         root.addWidget(self._preview, stretch=1)
         root.addWidget(self._status)
+        root.addWidget(self._journal_candidate)
 
     def menu_actions(self) -> list:
         """Expose tab commands to the window-level Actions menu."""
@@ -114,7 +118,7 @@ class RecordingEditorTab(TranslatableMixin, QWidget):
             ("re_apply_scale", self._apply_scale),
             ("re_keep_mouse", self._keep_mouse),
             ("re_keep_keyboard", self._keep_keyboard),
-        ]
+        ] + self._journal_candidate.menu_actions()
 
     def _keep_mouse(self) -> None:
         self._filter_prefix("AC_mouse")

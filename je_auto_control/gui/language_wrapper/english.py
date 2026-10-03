@@ -1376,4 +1376,11 @@ english_word_dict = {
     'heal_metric_step_id': 'Original step',
     'heal_metric_coordinates': 'Coordinates',
     'heal_metric_error': 'Error',
+    'journal_candidate_path': 'Action journal',
+    'journal_candidate_run': 'Selected run ID',
+    'journal_candidate_target': 'Candidate target',
+    'journal_candidate_style': 'Candidate style',
+    'journal_candidate_preview': 'Preview journal candidate and diff',
+    'journal_candidate_import': 'Import reviewed candidate actions',
+    'journal_candidate_export': 'Export reviewed candidate',
 }

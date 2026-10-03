@@ -79,7 +79,7 @@ assert image_region == vlm_region
 
 **Interfaces:** `generate_candidate_from_log(path: Path, *, run_id: str, target: str = 'pytest', style: str = 'actions') -> CandidateScript`；包含 code、manifest、warnings。
 
-- [ ] **Step 1:** 定義 fake fixtures 並新增 `test_run_filter_and_provenance, test_observed_branch_is_labelled, test_secret_reference_survives_codegen, test_generation_has_no_device_effect`，驗證：
+- [x] **Step 1:** 定義 fake fixtures 並新增 `test_run_filter_and_provenance, test_observed_branch_is_labelled, test_secret_reference_survives_codegen, test_generation_has_no_device_effect`，驗證：
 
 ```python
 assert candidate.manifest['run_id'] == selected_run
@@ -87,7 +87,7 @@ assert candidate.observed_path_only is True
 assert device_calls == []
 ```
 
-- [ ] **Step 2:** 執行 `.venv/Scripts/python.exe -m pytest -q --tb=short --basetemp=.test-tmp/modernization-task -o cache_dir=.test-tmp/modernization-pytest-cache test/unit_test/headless/test_codegen_from_journal.py`，確認新測試因原有缺陷或尚未提供接口而 FAIL；不要把環境錯誤當成功的重現。
-- [ ] **Step 3:** 驗證 JSONL schema，重建 step/parent 與 retries，控制流程不足時標示 observed path。呼叫既有 generate_code，產物 AST/command/dry-run 驗證，GUI diff 與匯入 builder、CLI --from-log 同步交付；不解析任意 repr 執行。
-- [ ] **Step 4:** 重跑 Step 2，預期 exit 0；再跑這些修改檔所對應的既有回歸，確認公開契約。
-- [ ] **Step 5:** 更新本 task 的型別、所有交付入口、文件、測量計數與進度，僅 stage 本 task 檔案，提交 `git commit -m 'B3: 從日誌產生候選腳本'`。
+- [x] **Step 2:** 執行 `.venv/Scripts/python.exe -m pytest -q --tb=short --basetemp=.test-tmp/modernization-task -o cache_dir=.test-tmp/modernization-pytest-cache test/unit_test/headless/test_codegen_from_journal.py`，確認新測試因原有缺陷或尚未提供接口而 FAIL；不要把環境錯誤當成功的重現。
+- [x] **Step 3:** 驗證 JSONL schema，重建 step/parent 與 retries，控制流程不足時標示 observed path。呼叫既有 generate_code，產物 AST/command/dry-run 驗證，GUI diff 與匯入 builder、CLI --from-log 同步交付；不解析任意 repr 執行。
+- [x] **Step 4:** 重跑 Step 2，預期 exit 0；再跑這些修改檔所對應的既有回歸，確認公開契約。
+- [x] **Step 5:** 更新本 task 的型別、所有交付入口、文件、測量計數與進度，僅 stage 本 task 檔案，提交 `git commit -m 'B3: 從日誌產生候選腳本'`。

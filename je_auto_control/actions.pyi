@@ -1294,6 +1294,17 @@ def AC_generate_html() -> str:
 def AC_generate_html_report(html_name: str = ...) -> None:
     """輸出 HTML 報告檔案"""
 
+def AC_generate_journal_candidate(
+    journal_path: str,
+    run_id: str,
+    target: str = ...,
+    style: str = ...,
+    name: str = ...,
+    failure_bundle: bool = ...,
+    output_path: Optional[str] = ...,
+) -> Dict[str, JSONValue]:
+    """Generate a selected-run candidate without executing it; optionally export three artifacts."""
+
 def AC_generate_json() -> Tuple[Dict[str, Dict[str, str]], Dict[str, Dict[str, str]]]:
     """Generate JSON data from test records."""
 

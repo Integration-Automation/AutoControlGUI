@@ -34,3 +34,10 @@ and ordering and do not execute records.
 comparison/revision adapters. HealEvent writes schema 2 and reads schema 1.
 Compared location correctness and original-operation verification are separate.
 Existing `self_heal_locate`/`self_heal_click` imports and commands remain available.
+
+`je_auto_control.api.codegen` is Beta. It exports `CandidateScript`,
+`CandidateError`, `generate_candidate_from_log` and `generate_journal_candidate`.
+Manifest schema 1 identifies the exact source snapshot and observed-only replay.
+Existing list-based codegen and CLI flags remain supported. Generation validates
+but never executes the candidate; masked/incomplete/failed steps are omitted
+from replay inputs and retained as provenance and warnings.

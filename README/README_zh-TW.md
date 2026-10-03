@@ -20,7 +20,7 @@
 
 - **一套 API，七個平台。** `wrapper/platform_wrapper.py` 在匯入時挑選後端；同一份腳本在
   Windows、macOS、X11 與 Wayland 上都不需要改寫。
-- **不寫 Python 也能腳本化。** 791 個 `AC_*` 指令涵蓋全部功能，因此一個 JSON 檔能做到函式庫
+- **不寫 Python 也能腳本化。** 792 個 `AC_*` 指令涵蓋全部功能，因此一個 JSON 檔能做到函式庫
   能做的任何事——包含迴圈、分支、try/catch、巨集與變數。
 - **預設無頭執行。** `import je_auto_control` 絕不會載入 Qt。GUI 是選用套件，包在同一個無頭核心之外。
 - **四種定位方式。** 樣板比對、OCR、無障礙樹、視覺語言模型——可透過錨點定位器與自癒後備串接組合。
@@ -142,7 +142,7 @@ python -c "import je_auto_control; je_auto_control.start_autocontrol_gui()"
 | 自然語言規劃 | `plan_actions`、`run_from_description` | `AC_llm_plan` | LLM Planner |
 | Computer-use agent | `AgentLoop`、`run_agent` | `AC_run_agent` | Computer Use |
 | 錄製與重播 | `record`、`stop_record` | `AC_record`、`AC_stop_record` | Record |
-| JSON 腳本 | `execute_action`、`execute_files` | 全部 791 個指令 | Script、Script Builder |
+| JSON 腳本 | `execute_action`、`execute_files` | 全部 792 個指令 | Script、Script Builder |
 | 變數與流程控制 | `execute_action_with_vars` | `AC_set_var`、`AC_loop`、`AC_for_each`、`AC_try`、`AC_retry` | Variables |
 | 資料驅動執行 | — | `AC_for_each_row`（CSV／JSON／SQLite／Excel） | Data Sources |
 | 斷言 | `assert_text`、`assert_image` | `AC_assert_text` 等 21 個 | Assertions |
@@ -191,7 +191,7 @@ je_auto_control version
 
 | 介面 | 啟動方式 | 說明 |
 |---|---|---|
-| **MCP 伺服器** | `je_auto_control_mcp`（stdio）或 `AC_start_mcp_http_server` | 696 個工具，供 Claude Desktop／Claude Code／自訂 tool loop 使用。除了以 `initialize` 握手的各版協定，也支援無狀態的 MCP 2026-07-28。Bearer 驗證、TLS、稽核記錄、限流、外掛熱重載、CI 假後端。 |
+| **MCP 伺服器** | `je_auto_control_mcp`（stdio）或 `AC_start_mcp_http_server` | 697 個工具，供 Claude Desktop／Claude Code／自訂 tool loop 使用。除了以 `initialize` 握手的各版協定，也支援無狀態的 MCP 2026-07-28。Bearer 驗證、TLS、稽核記錄、限流、外掛熱重載、CI 假後端。 |
 | **REST API** | `je_auto_control start-rest` | Bearer token、逐 IP 限流與鎖定、SQLite 稽核 hook、`/metrics`、`/openapi.json`、`/docs` Swagger UI、`/dashboard`。 |
 | **TCP socket 伺服器** | `je_auto_control start-server` | 以換行分隔的 JSON 動作清單。預設綁 `127.0.0.1`。 |
 | **pytest 外掛** | 安裝後自動生效 | 輕量 `je_auto_control_pytest` 入口，提供 fixture 與 Gherkin 步驟。升級 editable 工作樹後須重新安裝；明確指定的舊外掛路徑仍相容。 |
@@ -536,3 +536,35 @@ VLM 猜錯不算恢復。歷史操作驗證與定位結果分開，不能歸因�
 HealEvent schema 2 保留實際擷取身份、策略耗時、backend／model 及日誌 ID，仍可讀
 舊 schema 1。缺少的證據保持 unknown。版本控制中的合成 benchmark 是離線證據，
 實機及付費模型驗證分開進行。
+
+## 日誌候選腳本產碼（Beta）
+
+使用 `je_auto_control.api.codegen` 產生指定 run 的候選：
+```python
+from pathlib import Path
+from je_auto_control.api.codegen import generate_candidate_from_log
+candidate = generate_candidate_from_log(Path("benchmarks/journal_codegen/actions.jsonl"), run_id="demo")
+print(candidate.code, candidate.manifest, candidate.warnings)
+```
+
+產碼驗證單一日誌快照，保留內容 hash、所有 step／parent／source 身份、狀態及
+已觀察到的 retry 次序。僅完成且可重播的葉節點交給既有產碼器；失敗、中斷及
+遮罩步驟仍留在 manifest 與警告。完整 `${secrets.NAME}` 參照保留，秘密字面值及
+結果不轉成重播輸入；不求值輸入 repr，也不執行產物。
+
+候選明確標示為 **observed path only**，按開始順序串行排列，不重建原本分支／
+迴圈／retry／parallel 語意。檢查已安裝指令、必要 Python 參數及 executor dry-run，
+Python 目標另通過 AST 驗證；Robot 的 Python AST 指標不適用。執行或擴充前須審閱。
+```powershell
+python -m je_auto_control.cli codegen --from-log benchmarks/journal_codegen/actions.jsonl --run-id demo -o .test-tmp/test_observed.py
+```
+
+`-o` 儲存原始碼及 `.manifest.json`、`.actions.json` 附檔，不能覆寫輸入日誌。
+省略時 CLI 將原始碼輸出至 stdout，警告至 stderr。既有 target／style／name／
+failure-bundle 旗標可用；日誌模式預設 `actions`，一般動作檔仍為 `calls`。
+`generate_journal_candidate`、`AC_generate_journal_candidate`、
+`ac_generate_journal_candidate` 回傳相同結構化 JSON 產物。
+
+Recording Editor 與 Script Builder 的 Actions 提供候選審閱，保留 scope 的背景工作
+產生遮罩後差異、原始碼及來源唯讀預覽。匯入是獨立編輯操作；匯出儲存已審閱候選
+及附檔。預覽與匯入均不執行候選動作。`benchmarks/journal_codegen` 合成範例是離線契約證據。

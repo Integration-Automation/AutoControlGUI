@@ -1,7 +1,7 @@
 """MCP adapters for the QA surface: assertions, data-driven runs and reports.
 
 Same contract as :mod:`._handlers` -- normalise arguments and return values so
-they survive the JSON-RPC boundary, with every project import lazy -- split out
+they survive the JSON-RPC boundary, with runtime implementations imported lazily -- split out
 by theme because ``_handlers.py`` is over the 750-line limit and this block was
 already self-contained: it reads nothing from ``_handlers`` and ``_handlers``
 reads nothing from it. Covers the assertion DSL, data sources, SQL / PDF /
@@ -10,6 +10,7 @@ flaky detection and quarantine, the suite runner, accessibility audits, the
 device matrix and media assertions.
 """
 from typing import Any, Dict, List, Optional
+from je_auto_control.utils.action_journal.events import JSONValue
 
 
 # --- Assertion DSL ---------------------------------------------------------
@@ -220,6 +221,15 @@ def http_request(url: str, method: str = "GET",
 
 
 # --- Codegen: action list -> source code -----------------------------------
+
+def generate_journal_candidate(journal_path: str, run_id: str, target: str = 'pytest', style: str = 'actions',
+                               name: str = 'observed_run', failure_bundle: bool = False,
+                               output_path: Optional[str] = None) -> Dict[str, JSONValue]:
+    """Generate a reviewed selected-run artifact without executing observed actions."""
+    # pylint: disable-next=import-outside-toplevel  # reason: candidate validation uses the registered executor
+    from je_auto_control.utils.codegen.journal_api import generate_journal_candidate as generate
+    return generate(journal_path, run_id, target, style, name, failure_bundle, output_path)
+
 
 def generate_code(source: Any, target: str = "pytest",
                   name: str = "recorded_flow", style: str = "calls",

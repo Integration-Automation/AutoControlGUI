@@ -717,3 +717,45 @@ thumbnails. Runtime HealEvent schema 2 retains actual capture identities,
 strategy timings, backend/model and journal IDs; legacy schema 1 remains readable.
 Unavailable evidence remains unknown. The committed synthetic benchmark is
 offline evidence; physical-device and paid-model validation remain separate.
+
+Journal candidate code generation (Beta)
+----------------------------------------
+
+Generate a selected-run candidate through ``je_auto_control.api.codegen``:
+.. code-block:: python
+
+    from pathlib import Path
+    from je_auto_control.api.codegen import generate_candidate_from_log
+    candidate = generate_candidate_from_log(Path("benchmarks/journal_codegen/actions.jsonl"), run_id="demo")
+    print(candidate.code, candidate.manifest, candidate.warnings)
+
+
+Generation validates one journal snapshot and preserves its content hash, all
+step/parent/source identities, statuses and observed retry occurrences. Only
+completed replayable leaf actions are rendered with the existing code generator.
+Failed, interrupted and masked steps remain in the manifest and warnings.
+Exact ``${secrets.NAME}`` references survive; literal secrets and outcomes are not
+turned into replay inputs. No input repr is evaluated and no result is executed.
+
+Candidates are explicitly **observed path only** and serial in start order;
+they do not reconstruct original branch/loop/retry/parallel semantics. Validate
+installed command names, required Python arguments and executor dry-run; Python
+targets also pass AST validation. Robot's Python AST result is not applicable.
+Review the candidate before executing or extending it.
+.. code-block:: powershell
+
+    python -m je_auto_control.cli codegen --from-log benchmarks/journal_codegen/actions.jsonl --run-id demo -o .test-tmp/test_observed.py
+
+
+``-o`` saves source plus ``.manifest.json`` and ``.actions.json`` sidecars; output
+cannot replace the input journal. Without it, CLI emits source to stdout and
+warnings to stderr. Existing target/style/name/failure-bundle flags remain usable;
+journal mode defaults to ``actions``, ordinary action-file mode retains ``calls``.
+``generate_journal_candidate``, ``AC_generate_journal_candidate`` and
+``ac_generate_journal_candidate`` return the same structured JSON artifact.
+
+Recording Editor and Script Builder expose candidate review in Actions. Preview
+shows a sanitized diff, source and provenance in a readonly view using a scoped
+worker. Import is a separate editing operation; export saves the reviewed
+candidate and sidecars. Neither preview nor import runs generated actions.
+The synthetic ``benchmarks/journal_codegen`` example is offline contract evidence.

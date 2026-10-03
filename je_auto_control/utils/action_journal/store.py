@@ -96,17 +96,25 @@ class ActionJournal:
 def read_events(path: Path, *, run_id: Optional[str] = None) -> List[ActionEvent]:
     """Validate JSONL and return the latest state of each step in start order."""
     source = scoped_path(path, operation='read')
+    try:
+        text = source.read_text(encoding='utf-8')
+    except (OSError, UnicodeError) as error:
+        raise JournalError('cannot read a complete valid action journal') from error
+    return events_from_text(text, run_id=run_id)
+
+
+def events_from_text(text: str, *, run_id: Optional[str] = None) -> List[ActionEvent]:
+    """Validate one captured JSONL snapshot using the same ordering/schema contract."""
     steps: Dict[tuple[str, str], ActionEvent] = {}
     order: Dict[tuple[str, str], int] = {}
     sequences: Dict[str, int] = {}
     try:
-        with source.open(encoding='utf-8') as stream:
-            for line in stream:
-                if not line.strip():
-                    continue
-                event = ActionEvent.from_dict(json.loads(line))
-                _merge_event(event, steps, order, sequences)
-    except (OSError, UnicodeError, json.JSONDecodeError) as error:
+        for line in text.splitlines():
+            if not line.strip():
+                continue
+            event = ActionEvent.from_dict(json.loads(line))
+            _merge_event(event, steps, order, sequences)
+    except json.JSONDecodeError as error:
         raise JournalError('cannot read a complete valid action journal') from error
     return [replace(event, sequence=order[key]) for key, event in steps.items()
             if run_id is None or event.run_id == run_id]
