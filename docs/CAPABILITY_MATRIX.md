@@ -347,3 +347,5 @@ Script Builder and Recording Editor use the same core. These tests and
 Whole-B review regressions cover positional resolved credentials and sensitive getter outputs before append/logging, unhandled loop/parallel/catch failures versus successful recovery, omitted variable-dependent candidates and required block arguments without dispatch. These remain controlled headless checks.
 
 Persistent config server is Beta with controlled SQLite/TestClient/loopback tests for restart, concurrent writers, idempotent retries, account isolation and migration guards. Physical multi-device convergence, config GUI and offline causal client are not claimed by this server-only increment.
+
+Causal config sync and durable outbox are Beta. Controlled HTTP/SQLite tests cover real interleaved CAS writes, clock skew, preserved conflicts, lost replies/restart, bounded retry/cancellation, shared peer acknowledgements and explicit retired-device full resync. No physical multi-machine or GUI delivery is claimed by this increment.

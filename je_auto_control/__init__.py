@@ -1223,6 +1223,9 @@ from je_auto_control.api.codegen import (
 )
 from je_auto_control.api.config_sync import (
     ConfigBucket, ConfigRevisionConflict, ConfigStore, ConfigStoreCapacityError, ConfigSyncError,
+    ConfigSyncClient, SyncClientOptions, MergeDecision, PeerState, SyncEntry, can_collect_tombstone, merge_entries,
+    OutboxReport, SyncOperation, SyncOutbox, BucketConflict, bucket_peer_states, causal_remove, causal_upsert,
+    collect_acknowledged_tombstones, merge_causal_buckets,
 )
 # HTTP/API request action (dependency-free, stdlib urllib)
 from je_auto_control.utils.http_client.http_client import http_request
@@ -1317,6 +1320,9 @@ def start_autocontrol_gui(*args, **kwargs):
 
 __all__ = [
     'ConfigBucket', 'ConfigRevisionConflict', 'ConfigStore', 'ConfigStoreCapacityError', 'ConfigSyncError',
+    'ConfigSyncClient', 'SyncClientOptions', 'MergeDecision', 'PeerState', 'SyncEntry', 'can_collect_tombstone',
+    'merge_entries', 'OutboxReport', 'SyncOperation', 'SyncOutbox', 'BucketConflict', 'bucket_peer_states',
+    'causal_remove', 'causal_upsert', 'collect_acknowledged_tombstones', 'merge_causal_buckets',
     "CryptoDependencyError", "CryptoImportError", "CryptoUnavailableError",
     "AuthorizationContext", "AuthorizationError", "Capability", "Role", "UserAuthError",
     "UserRecord", "UserStore", "authorization_scope", "can", "configured_user_store",

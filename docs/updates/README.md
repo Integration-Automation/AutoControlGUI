@@ -58,6 +58,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261003-18 | 2026-10-03 | Causal config conflicts and durable offline retry | #done #sync #modernization | [2026-10](2026-10.md) |
 | U-20261003-17 | 2026-10-03 | Persistent config CAS server | #done #sync #modernization | [2026-10](2026-10.md) |
 | U-20261003-16 | 2026-10-03 | Close whole-B review with confidentiality and replay regressions | #done #review #modernization | [2026-10](2026-10.md) |
 | U-20261003-15 | 2026-10-03 | Generate reviewed observed journal candidates with provenance | #done #codegen #modernization | [2026-10](2026-10.md) |
@@ -360,7 +361,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | File | Period | Entries |
 |---|---|---:|
-| [2026-10.md](2026-10.md) | 2026-10 | 24 |
+| [2026-10.md](2026-10.md) | 2026-10 | 25 |
 | [2026-09-e.md](2026-09-e.md) | 2026-09 | 7 |
 | [2026-09-d.md](2026-09-d.md) | 2026-09 | 55 |
 | [2026-09-c.md](2026-09-c.md) | 2026-09 | 38 |

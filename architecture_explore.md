@@ -19,14 +19,14 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 
 | 指標 | 數值 |
 | --- | ---: |
-| Python 模組總數（含周邊子專案） | 1,108 |
-| 程式碼總行數 | 162,261 |
+| Python 模組總數（含周邊子專案） | 1,113 |
+| 程式碼總行數 | 163,037 |
 | `je_auto_control/utils/` 子套件數 | 311 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 792 |
-| 套件門面 `__all__` 公開名稱數 | 1,298 |
+| 套件門面 `__all__` 公開名稱數 | 1,314 |
 | GUI 分頁數（`main_widget` 註冊） | 48 |
 | MCP 工具數（`build_default_tool_registry()` 實測） | 697 |
-| `test_*.py` 測試檔／測試函式 | 741 / 7,671 |
+| `test_*.py` 測試檔／測試函式 | 742 / 7,690 |
 | 範例腳本 | 27 |
 
 **技術基線**：Python ≥ 3.10、MIT 授權、必要相依只有 `je_open_cv`／`opencv-python`／`pillow`／`mss`／
@@ -92,7 +92,7 @@ USB/IP 協定、Prometheus 指標），以維持這條輕相依基線。
 | 模式 | 落點 | 說明 |
 | --- | --- | --- |
 | **Strategy** | `wrapper/platform_wrapper.py` | 依 `sys.platform` 只匯入當前 OS 的 `keyboard`／`mouse`／`screen`／`recorder` 實作；Linux 再細分 Wayland／X11，Wayland 後端不可用時自動退回 XWayland 並記警告。新增平台不需要改 wrapper。 |
-| **Facade** | `je_auto_control/__init__.py` | 把 1,298 個公開名稱集中再匯出，使用者只 `import je_auto_control`。`api/core.py` 另提供一個小而穩定的版本化門面（7 個名稱）給新整合使用。 |
+| **Facade** | `je_auto_control/__init__.py` | 把 1,314 個公開名稱集中再匯出，使用者只 `import je_auto_control`。`api/core.py` 另提供一個小而穩定的版本化門面（7 個名稱）給新整合使用。 |
 | **Command** | `utils/executor/action_executor.py` | `Executor.event_dict` 是字串 → callable 的分派表；JSON 動作檔即指令序列，因此可錄製、序列化、重播、簽章。 |
 | **Observer** | `utils/callback/`、`utils/observer/`、`utils/triggers/` | 動作完成後觸發回呼；畫面出現／消失／變化與外部事件（webhook／IMAP／檔案）驅動腳本。 |
 | **Template Method** | `utils/generate_report/` | HTML／JSON／XML 三個產生器共用「收集紀錄 → 格式化 → 寫檔」骨架，各自實作渲染。 |
@@ -154,11 +154,11 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
-| `je_auto_control/__init__.py` | 2,009 | **套件門面**。集中匯入並再匯出 1,298 個公開名稱，以功能區塊註解分段（callback／exception／executor／a11y／vision／clipboard…）。 |
+| `je_auto_control/__init__.py` | 2,015 | **套件門面**。集中匯入並再匯出 1,314 個公開名稱，以功能區塊註解分段（callback／exception／executor／a11y／vision／clipboard…）。 |
 | `je_auto_control/__main__.py` | 93 | 舊版 argparse 進入點：`-e` 執行單檔、`-d` 執行整個目錄、`--execute_str` 執行 JSON 字串、`-c` 建立專案。 |
 | `je_auto_control_pytest.py` | 125 | 輕量 pytest11 入口；fixture／失敗截圖內才匯入自動化核心。 |
 | `je_auto_control/cli.py` | 425 | **主 CLI**（`je_auto_control` console script）。子命令：`run`（含 `--var`／`--dry-run`）、`validate`／`lint`、`list-commands`、`fmt`、`record`、`codegen`、`failure-bundle`、`list-jobs`、`start-server`、`start-rest`、`version`、`signing-keygen`、`sign`、`verify`。所有子命令延遲匯入，確保不碰 Qt。 |
-| `je_auto_control/api/__init__.py` | 45 | 版本化整合進入點。 |
+| `je_auto_control/api/__init__.py` | 51 | 版本化整合進入點。 |
 | `je_auto_control/api/journal.py` | 8 | Beta typed 動作日誌入口：錄製、驗證及 run 預覽。 |
 | `je_auto_control/api/core.py` | 19 | **穩定無頭 API 門面**：只暴露 `execute_action`、`execute_action_with_vars`、`generate_code`、`run_diagnostics`、`create_failure_bundle`、`failure_bundle_on_error`、`FailureBundleOptions`。mypy 型別契約以此為起點，現已擴到整包（見「設定基線」）。 |
 | `je_auto_control/utils/cli_output.py` | 44 | 本套件命令列工具與 stdio 伺服器的標準串流：不論碼頁一律 UTF-8。 |
@@ -518,12 +518,12 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.10 遠端桌面與 USB
 
-> 6 個套件、約 19,821 行。
+> 6 個套件、約 20,579 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
 | `utils/admin/` | 418 | 多主機管理主控台：平行輪詢 N 個 AutoControl REST 端點 |
-| `utils/config_sync/` | 512 | 持久化 CAS bucket 與設定同步用戶端 |
+| `utils/config_sync/` | 1,270 | SQLite CAS、因果衝突、離線 outbox 與設定同步 |
 | `utils/device_matrix/` | 147 | 行動裝置矩陣：同一 action list 於多台裝置平行執行 |
 | `utils/remote_desktop/` | 13,070 | **遠端桌面子系統**（56 檔／11.7K LOC）：TCP／WebSocket／WebRTC 三條傳輸路徑、主機與檢視端、訊令伺服器、TURN／中繼、多檢視者、錄影、信任清單、TOTP、稽核鏈 |
 | `utils/usb/` | 4,666 | 跨平台 USB 列舉／熱插拔／裝置直通（WinUSB、IOKit、libusb 後端 + ACL + WebRTC DataChannel 通道） |
@@ -1023,9 +1023,24 @@ GUI 是**選用 extra**（`pip install je_auto_control[gui]`，PySide6 + qt-mate
 | `ci_templates/.gitlab-ci.yml` | — | 供使用者專案複製的 GitLab CI 範本。 |
 | `docs/` | Sphinx（`API`／`Eng`／`Zh`／`getting_started`） | Read the Docs 文件。 |
 | `architecture_diagram/` | drawio + png | 既有的架構圖原始檔。 |
-| `test/` | `unit_test/headless`（主要）、`unit_test/flow_control`、`integrated_test`、`gui_test`、`manual_test`、`verify`、`test_source` | 741 個 `test_*.py`／7,671 個測試函式。**注意**：`test/unit_test/` 下的 `*_test.py` 是會真的驅動滑鼠鍵盤的手動示範腳本，因此 `pyproject.toml` 把 `python_files` 釘成 `test_*.py`。`unit_test/headless/conftest.py` 有一個 autouse fixture，每個測試結束都沖掉 Qt 排隊中的 `deleteLater()`——不沖會讓殘留的 widget 在後面某個不相干的測試裡被銷毀，曾經整個直譯器 `__fastfail`。`test_doc_counts.py` 守住文件引用的指令／工具／子套件／範例數,`test_doc_line_counts.py` 守住所有行數（`--fix` 可一次重新產生）。 `verify/macos_verify.py` 是在真的 `macos-14` runner 上量測 TCC 到底允許什麼的探針（macOS 是唯一沒有容器可用的支援平台），不被 pytest 收集。 |
+| `test/` | `unit_test/headless`（主要）、`unit_test/flow_control`、`integrated_test`、`gui_test`、`manual_test`、`verify`、`test_source` | 742 個 `test_*.py`／7,690 個測試函式。**注意**：`test/unit_test/` 下的 `*_test.py` 是會真的驅動滑鼠鍵盤的手動示範腳本，因此 `pyproject.toml` 把 `python_files` 釘成 `test_*.py`。`unit_test/headless/conftest.py` 有一個 autouse fixture，每個測試結束都沖掉 Qt 排隊中的 `deleteLater()`——不沖會讓殘留的 widget 在後面某個不相干的測試裡被銷毀，曾經整個直譯器 `__fastfail`。`test_doc_counts.py` 守住文件引用的指令／工具／子套件／範例數,`test_doc_line_counts.py` 守住所有行數（`--fix` 可一次重新產生）。 `verify/macos_verify.py` 是在真的 `macos-14` runner 上量測 TCC 到底允許什麼的探針（macOS 是唯一沒有容器可用的支援平台），不被 pytest 收集。 |
 
 ---
+
+
+#### 因果設定同步（`utils/config_sync/`，8 檔／1,270 行）
+
+| 檔案 | 行數 | 職責 |
+|---|---:|---|
+| `__init__.py` | 33 | Persistent protected config synchronization with causal conflicts and offline retries. |
+| `causal_bucket.py` | 185 | Merge versioned buckets without clock-based winners or lost conflict alternatives. |
+| `client.py` | 352 | Config HTTP client and compatible legacy timestamp merge. |
+| `database.py` | 47 | Shared lazy SQLite connection lifecycle for config persistence. |
+| `models.py` | 132 | Compatible config bucket shapes and legacy timestamp editing helpers. |
+| `outbox.py` | 262 | Durable account/endpoint-scoped config retries and device acknowledgements. |
+| `store.py` | 157 | Persistent config buckets with atomic revision checks and operation deduplication. |
+| `versions.py` | 102 | Causal entry comparison and acknowledgement-based tombstone collection. |
+| `api/config_sync.py` | 12 | Beta typed facade。 |
 
 ## 6. 擴充點
 
@@ -1105,7 +1120,7 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `utils/remote_desktop/` | 56 | 13,070 |
 | `utils/executor/` | 10 | 9,788 |
 | `utils/usb/` | 17 | 4,666 |
-| `je_auto_control/`（頂層 3 檔） | 3 | 2,527 |
+| `je_auto_control/`（頂層 3 檔） | 3 | 2,533 |
 | `utils/accessibility/` | 14 | 3,143 |
 | `wrapper/` | 19 | 3,705 |
 | `windows/` | 23 | 2,101 |
@@ -1120,8 +1135,8 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `osx/` | 17 | 925 |
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 860 |
-| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 711 | 59,948 |
-| **總計** | **1,100** | **162,131** |
+| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 716 | 60,718 |
+| **總計** | **1,105** | **162,907** |
 
 
 Crypto optional-dependency failures use CryptoDependencyError from utils/exception:
@@ -1129,10 +1144,3 @@ CryptoUnavailableError preserves RuntimeError handling for lazy operations;
 CryptoImportError preserves ImportError handling for optional TLS/ACME/recording
 modules. All three names are exported by the Qt-free facade, and messages name
 the cryptography>=50.0.0 installation requirement.
-
-### 持久化設定 store
-
-| Module | Responsibility |
-|---|---|
-| `utils/config_sync/store.py` | Lazy SQLite CAS、operation receipt、account cap、close。 |
-| `api/config_sync.py` | Beta storage facade，匯入不建立資料庫。 |

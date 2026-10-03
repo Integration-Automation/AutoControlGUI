@@ -684,6 +684,30 @@ Browser preflight supports PUT. Pending WebRTC rendezvous sessions retain their 
 
 `je_auto_control.api.config_sync` exports `ConfigStore`, `ConfigBucket`,
 `ConfigSyncError`, `ConfigRevisionConflict` and `ConfigStoreCapacityError`.
-The existing timestamp-based client requires the explicit
-`--allow-legacy-config-writes` migration option; blind writes are disabled by default.
-The config client GUI, causal conflicts and offline outbox are still pending.
+ConfigSyncClient defaults to protected causal synchronization and a durable outbox.
+Explicit `SyncClientOptions(legacy_writes=True)` also requires the server's
+`--allow-legacy-config-writes` migration option. The config GUI is still pending.
+
+## Causal sync and offline retries (Beta)
+
+Use `causal_upsert`/`causal_remove` with the client's stable `device_id` to edit
+definitions. `SyncEntry` carries version vectors, origin and operation ID;
+`merge_entries` keeps concurrent alternatives rather than selecting by wall clock.
+`ConfigBucket.entries()` excludes unresolved conflicts and tombstones. Explicit
+causal edits can resolve a conflict after review. Legacy timestamp helpers remain available.
+
+`ConfigSyncClient.sync()` refetches and merges after a confirmed HTTP 409, with
+bounded CAS retries. Its SQLite `SyncOutbox` persists exact envelopes by endpoint
+and account; uncertain success retries the original operation ID after restart.
+Authentication remains in memory. Pending, conflict and exhausted-retry data is retained.
+`retry_pending(cancel=...)` uses bounded backoff and checks cancellation between sends.
+`close()` releases the database without losing queued data.
+
+The shared `__sync_devices__` registry records acknowledgements and retirement.
+New deletions get a committed revision only in their CAS envelope; collection
+requires every known active device to acknowledge that revision, never elapsed days.
+Retired or unresolved registration state blocks incremental sync and push;
+`full_resync()` explicitly fetches a complete protected snapshot before rejoining.
+Pending operations require review before full resync. `retire_device()` is explicit.
+Local `SyncOutbox` peer methods preserve retirement across restart.
+These are controlled SQLite/HTTP tests; physical multi-machine checks remain pending.

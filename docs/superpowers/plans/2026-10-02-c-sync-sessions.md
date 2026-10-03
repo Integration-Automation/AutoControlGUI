@@ -60,7 +60,7 @@ assert repeated.revision == original.revision
 
 **Interfaces:** `SyncEntry` 帶 version vector/operation/origin；`merge_entries(left: SyncEntry, right: SyncEntry) -> MergeDecision`；`SyncOutbox.enqueue(operation: SyncOperation) -> None`。
 
-- [ ] **Step 1:** 定義 fake fixtures 並新增 `test_parallel_edits_preserve_conflict, test_restart_retries_outbox, test_retired_peer_requires_full_sync, test_clock_skew_does_not_choose_winner`，驗證：
+- [x] **Step 1:** 定義 fake fixtures 並新增 `test_parallel_edits_preserve_conflict, test_restart_retries_outbox, test_retired_peer_requires_full_sync, test_clock_skew_does_not_choose_winner`，驗證：
 
 ```python
 assert conflict.local == left and conflict.remote == right
@@ -68,10 +68,10 @@ assert tombstone.is_deleted is True
 assert wall_clock_does_not_change_merge is True
 ```
 
-- [ ] **Step 2:** 執行 `.venv/Scripts/python.exe -m pytest -q --tb=short --basetemp=.test-tmp/modernization-task -o cache_dir=.test-tmp/modernization-pytest-cache test/unit_test/headless/test_config_sync_convergence.py`，確認新測試因原有缺陷或尚未提供接口而 FAIL；不要把環境錯誤當成功的重現。
-- [ ] **Step 3:** 同 key 並行變更保留 conflict；outbox SQLite 以 operation ID 重送，有限退避與取消。tombstone 依 peer acknowledged revision 回收；退休 peer 明確 full resync。修掉 __init__ 的過期 endpoint 說明。
-- [ ] **Step 4:** 重跑 Step 2，預期 exit 0；再跑這些修改檔所對應的既有回歸，確認公開契約。
-- [ ] **Step 5:** 更新本 task 的型別、所有交付入口、文件、測量計數與進度，僅 stage 本 task 檔案，提交 `git commit -m 'C2: 因果合併、刪除與離線 outbox'`。
+- [x] **Step 2:** 執行 `.venv/Scripts/python.exe -m pytest -q --tb=short --basetemp=.test-tmp/modernization-task -o cache_dir=.test-tmp/modernization-pytest-cache test/unit_test/headless/test_config_sync_convergence.py`，確認新測試因原有缺陷或尚未提供接口而 FAIL；不要把環境錯誤當成功的重現。
+- [x] **Step 3:** 同 key 並行變更保留 conflict；outbox SQLite 以 operation ID 重送，有限退避與取消。tombstone 依 peer acknowledged revision 回收；退休 peer 明確 full resync。修掉 __init__ 的過期 endpoint 說明。
+- [x] **Step 4:** 重跑 Step 2，預期 exit 0；再跑這些修改檔所對應的既有回歸，確認公開契約。
+- [x] **Step 5:** 更新本 task 的型別、所有交付入口、文件、測量計數與進度，僅 stage 本 task 檔案，提交 `git commit -m 'C2: 因果合併、刪除與離線 outbox'`。
 
 ### Task 3: C3 設定／資產 adapter 與同步 UI
 

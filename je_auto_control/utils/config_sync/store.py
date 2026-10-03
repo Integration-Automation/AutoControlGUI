@@ -7,15 +7,15 @@ import os
 import threading
 import uuid
 from pathlib import Path
-from typing import TYPE_CHECKING, Callable, Optional, Union
+from typing import TYPE_CHECKING, Optional
 
-from je_auto_control.utils.sqlite_support import SQLITE_ERRORS, require_sqlite3, sqlite_errors_as
-from .client import ConfigBucket, ConfigSyncError
+from je_auto_control.utils.sqlite_support import sqlite_errors_as
+from .database import LazyConfigDatabase, StorePath
+from .models import ConfigBucket, ConfigSyncError
 
 if TYPE_CHECKING:
     import sqlite3
 
-StorePath = Union[str, Path, Callable[[], Path]]
 _SCHEMA = """
 CREATE TABLE IF NOT EXISTS config_buckets (
     user_id TEXT PRIMARY KEY, revision INTEGER NOT NULL, payload TEXT NOT NULL
@@ -81,28 +81,12 @@ class ConfigStore:
     def __init__(self, path: StorePath = default_config_store_path, *, max_users: int = 1024) -> None:
         if not isinstance(max_users, int) or isinstance(max_users, bool) or max_users < 1:
             raise ConfigSyncError('max_users must be a positive integer')
-        self._path_source = path
-        self._resolved_path: Optional[str] = None
+        self._database = LazyConfigDatabase(path, _SCHEMA)
         self._max_users = max_users
         self._lock = threading.RLock()
-        self._conn: Optional[sqlite3.Connection] = None
 
     def _connection(self) -> sqlite3.Connection:
-        if self._conn is not None:
-            return self._conn
-        if self._resolved_path is None:
-            source = self._path_source() if callable(self._path_source) else self._path_source
-            self._resolved_path = str(source)
-        if self._resolved_path != ':memory:':
-            Path(self._resolved_path).parent.mkdir(parents=True, exist_ok=True)
-        conn = require_sqlite3().connect(self._resolved_path, isolation_level=None, check_same_thread=False)
-        try:
-            conn.executescript(_SCHEMA)
-        except SQLITE_ERRORS:
-            conn.close()
-            raise
-        self._conn = conn
-        return conn
+        return self._database.connection()
 
     @sqlite_errors_as(ConfigSyncError)
     def get(self, user_id: str) -> Optional[ConfigBucket]:
@@ -170,6 +154,4 @@ class ConfigStore:
     def close(self) -> None:
         """Release the connection; a subsequent operation reopens the same resolved path."""
         with self._lock:
-            if self._conn is not None:
-                self._conn.close()
-                self._conn = None
+            self._database.close()

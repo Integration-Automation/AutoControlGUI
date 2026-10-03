@@ -280,3 +280,5 @@ Ordinary runtime references without resolved binding evidence are omitted with
 warnings; block object shapes and required keys are validated without dispatch.
 
 Config storage: `utils/config_sync/store.py` atomically checks server revisions, writes buckets and records operation receipts in SQLite. `remote_desktop/signaling_server.py` exposes protected version-2 HTTP envelopes and explicit legacy compatibility; app lifespan closes the connection. The Beta `api/config_sync.py` and historical facade expose the same typed storage API without Qt or database creation at import.
+
+Config synchronization: models.py retains compatible bucket/error aliases, database.py owns shared lazy SQLite lifecycle, versions.py compares causal entries, causal_bucket.py preserves conflict alternatives and the shared device registry, outbox.py persists scoped envelopes/peer acknowledgements, and client.py performs protected HTTP/CAS retries. Authentication is never put in retry envelopes. Only explicit full_resync can reactivate retired/unresolved device registration; received definitions are not executed.

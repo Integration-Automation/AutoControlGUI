@@ -15,6 +15,8 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Added
 
+- Protected causal config synchronization preserves concurrent alternatives and uses stable SQLite outbox envelopes for uncertain retries. Shared device acknowledgements govern deletion GC; retired devices require explicit full resync. Legacy timestamp/blind writes are opt-in compatibility behavior.
+
 - Persistent config SQLite storage and version-2 CAS envelopes with idempotent operation receipts. Signaling adds --config-store / AC_CONFIG_STORE_PATH and --allow-legacy-config-writes; blind PUT is disabled by default.
 
 - Beta selected-run journal candidate generation with observed-only source,

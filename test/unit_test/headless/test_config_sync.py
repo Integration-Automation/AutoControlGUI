@@ -3,6 +3,8 @@ from unittest.mock import patch
 
 import pytest
 
+from je_auto_control.utils.config_sync.client import SyncClientOptions
+
 from je_auto_control.utils.config_sync import (
     ConfigBucket, ConfigSyncClient, ConfigSyncError, merge_buckets,
 )
@@ -123,15 +125,15 @@ def test_merge_bumps_revision():
 
 def test_client_requires_server_url_and_user_id():
     with pytest.raises(ConfigSyncError):
-        ConfigSyncClient("", user_id="u")
+        ConfigSyncClient("", user_id="u", options=SyncClientOptions(legacy_writes=True))
     with pytest.raises(ConfigSyncError):
-        ConfigSyncClient("https://signaling.example", user_id="")
+        ConfigSyncClient("https://signaling.example", user_id="", options=SyncClientOptions(legacy_writes=True))
 
 
 def test_push_rejects_user_id_mismatch():
     client = ConfigSyncClient(
         "https://signaling.example", user_id="alice",
-    )
+     options=SyncClientOptions(legacy_writes=True))
     bucket = ConfigBucket(user_id="bob")
     with pytest.raises(ConfigSyncError, match="user_id"):
         client.push(bucket)
@@ -149,13 +151,13 @@ def _patch_request(reply, *, calls=None):
 
 
 def test_fetch_returns_none_when_server_404():
-    client = ConfigSyncClient("https://x", user_id="alice")
+    client = ConfigSyncClient("https://x", user_id="alice", options=SyncClientOptions(legacy_writes=True))
     with _patch_request(None):
         assert client.fetch() is None
 
 
 def test_fetch_returns_bucket_from_server_body():
-    client = ConfigSyncClient("https://x", user_id="alice")
+    client = ConfigSyncClient("https://x", user_id="alice", options=SyncClientOptions(legacy_writes=True))
     reply = {
         "user_id": "alice", "revision": 5,
         "sections": {"hotkeys": {
@@ -170,7 +172,7 @@ def test_fetch_returns_bucket_from_server_body():
 
 
 def test_push_round_trip_uses_put():
-    client = ConfigSyncClient("https://x", user_id="alice")
+    client = ConfigSyncClient("https://x", user_id="alice", options=SyncClientOptions(legacy_writes=True))
     calls: list = []
     local = ConfigBucket(user_id="alice")
     local.upsert("hotkeys", "hk1", {"combo": "ctrl+a"})
@@ -185,7 +187,7 @@ def test_push_round_trip_uses_put():
 
 def test_sync_merges_remote_into_local_and_pushes_result():
     """End-to-end: pull → merge → push, all stubbed."""
-    client = ConfigSyncClient("https://x", user_id="alice")
+    client = ConfigSyncClient("https://x", user_id="alice", options=SyncClientOptions(legacy_writes=True))
     local = ConfigBucket(user_id="alice")
     local.upsert("hotkeys", "hk1",
                  {"combo": "ctrl+a", "last_modified": 100.0})

@@ -591,5 +591,26 @@ WebRTC 待配對連線仍採 TTL。
 
 `je_auto_control.api.config_sync` 提供 `ConfigStore`、`ConfigBucket`、
 `ConfigSyncError`、`ConfigRevisionConflict`、`ConfigStoreCapacityError`。
-現有時間戳記用戶端需要明確開啟 `--allow-legacy-config-writes` 遷移選項，
-預設禁止無條件寫入。設定同步 GUI、因果衝突與離線 outbox 尚待交付。
+ConfigSyncClient 預設使用受保護的因果同步與持久化 outbox。
+明確使用 `SyncClientOptions(legacy_writes=True)` 時，也必須開啟伺服器的
+`--allow-legacy-config-writes` 遷移選項。設定同步 GUI 尚待交付。
+
+## 因果同步與離線重送（Beta）
+
+使用 `causal_upsert`／`causal_remove` 搭配用戶端穩定的 `device_id` 編輯定義。
+`SyncEntry` 帶有版本向量、來源及操作 ID；`merge_entries` 保留並行修改的雙方資料，
+不依本機時鐘挑選勝方。`ConfigBucket.entries()` 排除未解決衝突與刪除項目。
+審閱後可明確做因果編輯解決衝突；舊版時間戳記 helpers 仍保留。
+
+`ConfigSyncClient.sync()` 收到確認的 HTTP 409 後重新讀取、合併並有限次重試。
+SQLite `SyncOutbox` 依 endpoint 與帳號保存原 envelope，成功與否不確定時，
+重啟後仍以原操作 ID 重送。認證僅留在記憶體；pending、衝突與重試耗盡的資料不丟棄。
+`retry_pending(cancel=...)` 使用有限退避並在傳送間檢查取消；`close()` 釋放資料庫，
+保留佇列資料。
+
+共用 `__sync_devices__` 登錄記錄確認版本與退休狀態。新刪除只在 CAS envelope
+取得提交版本，所有已知有效裝置確認後才回收，不因經過幾天而移除。
+退休或登錄衝突會阻擋增量同步及 push；`full_resync()` 明確取得完整受保護快照後再加入。
+完整同步前必須審閱待送操作；`retire_device()` 也須明確呼叫。
+本機 `SyncOutbox` peer 介面可跨重啟保留退休狀態。
+目前證據是受控 SQLite／HTTP 測試，實體多機驗證仍待完成。

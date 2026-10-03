@@ -9,6 +9,8 @@ from unittest.mock import patch
 
 import pytest
 
+from je_auto_control.utils.config_sync.client import SyncClientOptions
+
 from je_auto_control.utils.config_sync import (
     ConfigBucket, ConfigSyncClient, ConfigSyncError, merge_buckets,
 )
@@ -29,7 +31,8 @@ class _Server:
 
 
 def _sync(bucket, server):
-    client = ConfigSyncClient("https://sync.invalid", user_id=bucket.user_id)
+    client = ConfigSyncClient("https://sync.invalid", user_id=bucket.user_id,
+                              options=SyncClientOptions(legacy_writes=True))
     with patch.object(ConfigSyncClient, "_request",
                       new=lambda _client, method, body=None: server.request(method, body)):
         merged, _conflicts = client.sync(bucket)
