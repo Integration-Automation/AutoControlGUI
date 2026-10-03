@@ -1151,6 +1151,10 @@ from je_auto_control.utils.observability import (
     default_tracer, render_metrics_text, traced,
 )
 # Run history (headless)
+from je_auto_control.utils.action_journal import (
+    ActionEvent, ActionJournal, JournalError, execute_journaled,
+    list_journal_runs, read_action_journal, read_events,
+)
 from je_auto_control.utils.run_history.history_store import (
     HistoryStore, RunRecord, default_history_store,
 )
@@ -1983,5 +1987,7 @@ __all__ = [
     "callback_executor", "package_manager", "ShellManager", "default_shell_manager",
     "RecordingThread", "send_key_event_to_window", "send_mouse_event_to_window", "windows_window_manage",
     "ScreenRecorder", "get_pixel",
-    "start_autocontrol_gui"
+    "start_autocontrol_gui",
+    "ActionEvent", "ActionJournal", "JournalError", "execute_journaled",
+    "list_journal_runs", "read_action_journal", "read_events",
 ]

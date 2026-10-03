@@ -1227,4 +1227,11 @@ japanese_word_dict = {
     'admin_user_set_role': 'ロールを設定',
     'admin_user_rotate': 'トークンを更新',
     'admin_user_token_once': 'このトークンを保存してください。一度だけ表示されます。',
+    'journal_path_label': 'アクションログ：',
+    'journal_run_label': '実行 ID：',
+    'journal_path_hint': '記録またはプレビューする JSONL ファイル',
+    'journal_run_hint': '空欄：新しい ID／すべての実行を表示',
+    'journal_record': 'アクションファイルを実行して記録',
+    'journal_preview': 'アクションログをプレビュー',
+    'journal_select_script': '実行して記録するアクションファイルを選択',
 }

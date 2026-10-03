@@ -8,6 +8,7 @@ MCP client surfaces to the model.
 from typing import List
 from je_auto_control.utils.mcp_server.tools._factories_signing import signing_tools
 from je_auto_control.utils.mcp_server.tools._factories_rbac import rbac_tools
+from je_auto_control.utils.mcp_server.tools._factories_journal import journal_tools
 
 from je_auto_control.utils.mcp_server.tools import _handlers as h
 from je_auto_control.utils.mcp_server.tools import _handlers_qa as hq
@@ -9037,5 +9038,5 @@ ALL_FACTORIES = (
     sql_tools, http_tools, email_tools, pdf_tools,
     visual_regression_tools, state_machine_tools, codegen_tools,
     flakiness_tools, suite_tools, quarantine_tools,
-    a11y_audit_tools, device_matrix_tools, media_assert_tools,
+    a11y_audit_tools, device_matrix_tools, media_assert_tools, journal_tools,
 )

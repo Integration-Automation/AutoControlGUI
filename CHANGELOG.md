@@ -15,6 +15,12 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Added
 
+- Beta structured action journals (`je_auto_control.api.journal`), three AC/MCP
+  commands and Run History recording/preview. JSONL schema 1 separates inputs
+  and outcomes, preserves run/parent/source provenance and incomplete steps,
+  and masks literal secrets before persistence. Exact secret references remain
+  available for subsequent candidate generation.
+
 - Typed optional crypto failures: `CryptoDependencyError`, with
   `CryptoUnavailableError` preserving RuntimeError and `CryptoImportError`
   preserving ImportError compatibility. Messages include installation guidance.

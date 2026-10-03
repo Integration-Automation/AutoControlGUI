@@ -1206,4 +1206,11 @@ simplified_chinese_word_dict = {
     'admin_user_set_role': '设置用户角色',
     'admin_user_rotate': '更换用户 token',
     'admin_user_token_once': '请立即保存 token，仅显示一次。',
+    'journal_path_label': '动作日志：',
+    'journal_run_label': '运行 ID：',
+    'journal_path_hint': '录制或预览的 JSONL 文件',
+    'journal_run_hint': '留空：新 ID／预览所有运行',
+    'journal_record': '执行动作文件并记录日志',
+    'journal_preview': '预览动作日志',
+    'journal_select_script': '选择要执行及录制的动作文件',
 }

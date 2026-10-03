@@ -5,6 +5,7 @@ from typing import (
     Any, Callable, Dict, List, Mapping, Optional,
     Sequence, Tuple, Union,
 )
+from je_auto_control.utils.action_journal.events import JSONValue
 
 def AC_a11y_click(
     name: str | None = ...,
@@ -1035,6 +1036,17 @@ def AC_execute_action(
 def AC_execute_files(execute_files_list: list) -> List[Dict[str, str]]:
     """執行 action files"""
 
+def AC_execute_journaled(
+    actions: Sequence[object] | Mapping[str, object] | str,
+    path: str,
+    *,
+    run_id: str | None = ...,
+    raise_on_error: bool = ...,
+    device: str | None = ...,
+    session: str | None = ...,
+) -> Dict[str, None | bool | int | float | str | List[JSONValue] | Dict[str, JSONValue]]:
+    """Execute actions with a journal and linked run history; return safe run metadata."""
+
 def AC_execute_process(exe_path: str) -> None:
     """Start an external executable file."""
 
@@ -1592,6 +1604,11 @@ def AC_legacy_info(
 
 def AC_list_assets(environment: str | None = ..., db: str | None = ...) -> Dict[str, Any]:
     """Adapter: list assets, optionally restricted to one environment."""
+
+def AC_list_journal_runs(
+    path: str,
+) -> List[Dict[str, None | bool | int | float | str | List[JSONValue] | Dict[str, JSONValue]]]:
+    """List recorded runs with status, timing and step denominators."""
 
 def AC_list_plugins(group: str = ...) -> Dict[str, Any]:
     """Adapter: discover third-party plugin command names (no register)."""
@@ -2186,6 +2203,12 @@ def AC_rank_tests(flows: List[str], history_path: str | None = ..., window: int 
 
 def AC_rate_limit(name: str, rate: float = ..., capacity: float = ..., n: float = ...) -> Dict[str, Any]:
     """Adapter: try to take ``n`` tokens from a named token-bucket limiter."""
+
+def AC_read_action_journal(
+    path: str,
+    run_id: str | None = ...,
+) -> List[Dict[str, None | bool | int | float | str | List[JSONValue] | Dict[str, JSONValue]]]:
+    """Return validated, materialized step records for a selected run or all runs."""
 
 def AC_read_barcodes(source: Any = ..., region: Any = ...) -> Dict[str, Any]:
     """Adapter: decode 1-D barcodes on screen / in an image."""

@@ -1340,4 +1340,11 @@ english_word_dict = {
     'admin_user_set_role': 'Set user role',
     'admin_user_rotate': 'Rotate user token',
     'admin_user_token_once': 'Save this token now; it is displayed once.',
+    'journal_path_label': 'Action journal:',
+    'journal_run_label': 'Run ID:',
+    'journal_path_hint': 'JSONL file to record or preview',
+    'journal_run_hint': 'Empty: new ID / preview all runs',
+    'journal_record': 'Execute action file and record journal',
+    'journal_preview': 'Preview action journal',
+    'journal_select_script': 'Select action file to execute and record',
 }

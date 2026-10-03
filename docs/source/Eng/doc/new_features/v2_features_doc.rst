@@ -652,3 +652,31 @@ Configured signing and encryption keys must also lie within the effective roots,
 or use an explicit in-memory key. Local calls without a policy retain existing behavior.
 Color/HSV and VLM results use the actual clipped capture origin. Windows restore
 accepts a minimized window returning to its previous maximized state.
+
+Structured action journals (Beta)
+---------------------------------
+
+Use the typed ``je_auto_control.api.journal`` entry point to record actions and
+read selected runs. The same three operations are available through the facade,
+``AC_execute_journaled``, ``AC_read_action_journal``, ``AC_list_journal_runs``, MCP
+and Script Builder. Run History offers recording and read-only preview in Actions.
+
+.. code-block:: python
+
+    from je_auto_control.api.journal import execute_journaled, read_action_journal
+    run = execute_journaled([["AC_sleep", {"seconds": 0}]], "actions.jsonl", run_id="demo")
+    events = read_action_journal("actions.jsonl", run_id=run["run_id"])
+
+
+Schema version 1 stores separate inputs and outcomes, run/step/parent IDs, source
+file paths and step indices. Start and terminal records are appended under a
+shared run lock; reads retain start order and materialize each step's latest
+status. Interrupted steps remain ``incomplete``. Exact ``${secrets.NAME}`` input
+references survive; secret literals are masked before logging or append and
+marked non-replayable. Unknown payload objects are omitted with reasons, without
+calling their repr/str hooks during journal serialization.
+
+For explicit recording around an executor call, use ``with ActionJournal(path).run()``.
+Set ``JE_AUTOCONTROL_ACTION_JOURNAL`` to enable automatic executor recording; without
+it, existing calls keep their behavior. Reads and previews never execute actions.
+Journal paths and their lock files follow the effective filesystem policy.

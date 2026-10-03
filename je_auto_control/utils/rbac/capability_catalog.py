@@ -17,7 +17,8 @@ set_var get_var inc_var append_var loop for_each while if_var if_image if_pixel 
 try retry break continue sleep wait pause input_sequence focus_window show_window
 minimize_window maximize_window restore_window set_foreground_window'''.split()
 _AUDIT = '''history_list history_clear list_run_history clear_run_history
-history_read audit_read audit_list audit_query logs_read log_read'''.split()
+history_read audit_read audit_list audit_query logs_read log_read
+read_action_journal list_journal_runs'''.split()
 _USERS = '''user_add user_list user_remove user_set_role user_rotate_token'''.split()
 
 CAPABILITY_CATALOG: Dict[str, str] = {

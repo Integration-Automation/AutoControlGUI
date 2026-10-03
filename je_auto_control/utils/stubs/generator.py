@@ -37,6 +37,7 @@ _HEADER = (
     "    Any, Callable, Dict, List, Mapping, Optional,\n"
     "    Sequence, Tuple, Union,\n"
     ")\n"
+    "from je_auto_control.utils.action_journal.events import JSONValue\n"
     "\n"
 )
 
@@ -172,6 +173,8 @@ def _annotation_str(annotation: Any, *, default: str) -> str:
     # name only resolves if ``types.NoneType`` is imported. ``None``
     # works as a type annotation everywhere and reads cleaner.
     text = text.replace("NoneType", "None")
+    # This recursive wire type is explicitly imported by the generated stub.
+    text = text.replace("ForwardRef('JSONValue')", "JSONValue")
     # Any dotted reference that isn't a typing builtin would need the
     # owning module imported into the stub. Rather than transitively
     # import the world, fall back to ``Any``; the function name still

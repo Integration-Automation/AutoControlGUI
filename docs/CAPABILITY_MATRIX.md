@@ -323,3 +323,8 @@ deferred deliveries isolate variables. Filesystem roots constrain declared
 arguments and configured signing/encryption key paths; process tools require
 admin and remain outside an operating-system sandbox. Physical mixed-DPI,
 Retina, keyboard-layout, USB and macOS accessibility checks remain in Progress.md.
+
+Structured journals have controlled tests for secret masking before append,
+nested/parallel provenance, interrupted status, read-only GUI preview and
+shared AC/MCP/Script Builder adapters. These are fake-handler/offscreen
+contract checks, not evidence of physical-device replay.

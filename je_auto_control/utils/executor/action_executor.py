@@ -1,3 +1,4 @@
+import os
 import threading
 import types
 from je_auto_control.utils.rbac.user_api import (
@@ -60,6 +61,7 @@ from je_auto_control.utils.ocr.ocr_engine import (
 )
 from je_auto_control.utils.profiler.profiler import default_profiler
 from je_auto_control.utils.run_history.history_store import default_history_store
+from je_auto_control.utils.action_journal.api import execute_journaled, list_journal_runs, read_action_journal
 from je_auto_control.utils.secrets import default_secret_manager
 from je_auto_control.utils.script_vars.interpolate import (
     interpolate_value,
@@ -7246,6 +7248,9 @@ class Executor:
 
             # Run history
             "AC_history_list": _history_list_as_dicts,
+            "AC_execute_journaled": execute_journaled,
+            "AC_read_action_journal": read_action_journal,
+            "AC_list_journal_runs": list_journal_runs,
             "AC_history_clear": default_history_store.clear,
 
             # Profiler
@@ -8093,12 +8098,28 @@ class Executor:
                     resolved[key] = value
                 else:
                     resolved[key] = interpolate_value(value, self.variables)
+            from je_auto_control.utils.action_journal.store import observe_resolved_arguments
+            observe_resolved_arguments(command, args, resolved)
             return resolved
         if isinstance(args, list):
-            return [interpolate_value(item, self.variables) for item in args]
+            resolved_list = self._resolve_positional_args(args, command)
+            from je_auto_control.utils.action_journal.store import observe_resolved_arguments
+            observe_resolved_arguments(command, args, resolved_list)
+            return resolved_list
         return args
 
+    def _resolve_positional_args(self, args: List[object], command: str) -> List[object]:
+        """Keep a journalled action source raw until its own step resolves variables."""
+        return [item if command == 'AC_execute_journaled' and index == 0
+                else interpolate_value(item, self.variables)
+                for index, item in enumerate(args)]
+
     def _execute_event(self, action: list) -> Any:
+        """Dispatch one step through the optional structured journal boundary."""
+        from je_auto_control.utils.action_journal.store import execute_recorded
+        return execute_recorded(action, lambda: self._dispatch_event(action), event=self.event_dict.get(action[0]))
+
+    def _dispatch_event(self, action: list) -> Any:
         """
         執行單一事件
         Execute a single event
@@ -8151,7 +8172,6 @@ class Executor:
         :param step_callback: 每個 action 開始前，以遮蔽秘密後的副本呼叫 hook。
         :return: 執行紀錄字典
         """
-        autocontrol_logger.info(f"execute_action, action_list: {redact_actions(action_list)}")
         # A nested body inherits the strictness of the list that runs it, so
         # a failure inside an AC_loop / AC_if_* / macro under raise_on_error
         # reaches the enclosing AC_try / AC_retry / caller instead of being
@@ -8164,8 +8184,15 @@ class Executor:
         _STRICT_BODIES.value = raise_on_error
         running = _RUNNING.set(self)
         try:
-            return self._execute_list(action_list, raise_on_error, _validated,
-                                      dry_run, step_callback)
+            from je_auto_control.utils.action_journal.store import (
+                execution_journal, journal_log_value, prime_journal_inputs,
+            )
+            with execution_journal():
+                prime_journal_inputs(action_list, self.event_dict)
+                autocontrol_logger.info("execute_action, action_list: %s",
+                                        journal_log_value(redact_actions(action_list)))
+                return self._execute_list(action_list, raise_on_error, _validated,
+                                          dry_run, step_callback)
         finally:
             _STRICT_BODIES.value = inherited
             _RUNNING.reset(running)
@@ -8180,7 +8207,7 @@ class Executor:
             validate_actions(action_list, self.known_commands())
 
         execute_record_dict: Dict[str, Any] = {}
-        for action in action_list:
+        for source_index, action in enumerate(action_list):
             if step_callback is not None:
                 step_callback(redact_actions(action))
             if dry_run:
@@ -8189,7 +8216,9 @@ class Executor:
                 continue
             key = _unique_key(execute_record_dict, "execute: " + describe_action(action))
             try:
-                self._run_one_action(action, execute_record_dict, raise_on_error, key)
+                from je_auto_control.utils.action_journal.store import journal_index
+                with journal_index(source_index):
+                    self._run_one_action(action, execute_record_dict, raise_on_error, key)
             except (LoopBreak, LoopContinue, MacroDepthExceeded) as signal:
                 if _validated:
                     raise  # a nested body: the enclosing block handles it
@@ -8197,7 +8226,8 @@ class Executor:
                     signal, execute_record_dict, raise_on_error, key)
 
         for key, value in execute_record_dict.items():
-            autocontrol_logger.info("%s -> %s", key, value)
+            from je_auto_control.utils.action_journal.store import journal_log_value
+            autocontrol_logger.info("%s -> %s", journal_log_value(key), journal_log_value(value))
         return execute_record_dict
 
     @staticmethod
@@ -8272,9 +8302,9 @@ class Executor:
             if raise_on_error or isinstance(
                     error, (AutoControlAssertionException, MacroDepthExceeded)):
                 raise
-            autocontrol_logger.info(
-                f"execute_action failed, action: {describe_action(action)}, error: {repr(error)}"
-            )
+            from je_auto_control.utils.action_journal.store import journal_log_value
+            autocontrol_logger.info("execute_action failed, action: %s, error: %s",
+                                    journal_log_value(describe_action(action)), journal_log_value(repr(error)))
             record_action_to_list("AC_execute_action", None, repr(error))
             record[key] = repr(error)
             _count_recorded_failure()
@@ -8291,8 +8321,10 @@ class Executor:
         from je_auto_control.utils.json.json_file import read_executable_action_json
         execute_detail_list = []
         for file in execute_files_list:
-            execute_detail_list.append(
-                self.execute_action(read_executable_action_json(file)))
+            from je_auto_control.utils.action_journal.store import journal_source
+            with journal_source(os.fspath(file)):
+                execute_detail_list.append(
+                    self.execute_action(read_executable_action_json(file)))
         return execute_detail_list
 
 

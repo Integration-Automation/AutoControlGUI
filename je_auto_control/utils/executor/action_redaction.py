@@ -11,6 +11,7 @@ socket server, run history) in plain text. The walk is recursive because a
 command nested in a block (``AC_loop``, ``AC_if``...) is logged with its
 parent.
 """
+import json
 from typing import Any, FrozenSet
 
 _VAULT_COMMAND_PREFIX = "AC_secret_"
@@ -84,9 +85,28 @@ def _redact_argument(command: str, argument: Any) -> Any:
     if command.startswith(_VAULT_COMMAND_PREFIX):
         return _mask(argument)
     if isinstance(argument, dict):
-        return {name: _MASK if is_sensitive_argument(command, name) else redact_actions(item)
+        return {name: _redact_named_argument(command, name, item)
                 for name, item in argument.items()}
+    if command == 'AC_execute_journaled' and isinstance(argument, list) and argument:
+        return [_redact_serialized_actions(argument[0]), *(redact_actions(item) for item in argument[1:])]
     return redact_actions(argument)
+
+
+def _redact_named_argument(command: str, name: str, value: Any) -> Any:
+    if is_sensitive_argument(command, name):
+        return _MASK
+    if command == 'AC_execute_journaled' and name == 'actions':
+        return _redact_serialized_actions(value)
+    return redact_actions(value)
+
+
+def _redact_serialized_actions(value: Any) -> Any:
+    if not isinstance(value, str):
+        return redact_actions(value)
+    try:
+        return json.dumps(redact_actions(json.loads(value)), ensure_ascii=False)
+    except json.JSONDecodeError:
+        return _MASK
 
 
 def describe_action(action: Any) -> str:

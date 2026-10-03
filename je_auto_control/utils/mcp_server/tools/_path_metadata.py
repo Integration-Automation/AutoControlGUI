@@ -12,6 +12,8 @@ from je_auto_control.utils.path_guard.path_guard import PathNotAllowedError
 # '*' addresses array items / mapping values. Mixed string/action-list 'source'
 # is validated only when it is a string. Optional omitted fields stay omitted.
 _READ_FIELDS = {
+    'ac_read_action_journal': 'path',
+    'ac_list_journal_runs': 'path',
     'ac_read_file_to_var': 'path',
     'ac_pdf_to_var': 'path',
     'ac_sql_to_var': 'database',
@@ -98,6 +100,7 @@ _READ_FIELDS = {
     'ac_assert_video_changes': 'video_path',
 }
 _WRITE_FIELDS = {
+    'ac_execute_journaled': 'path',
     'ac_clipboard_get_image': 'path',
     'ac_encrypt_action_file': 'path',
     'ac_decrypt_action_file': 'output_path',

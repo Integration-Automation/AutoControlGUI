@@ -1,4 +1,4 @@
-# B：動作日誌、自愈量測與候選腳本 Implementation Plan
+﻿# B：動作日誌、自愈量測與候選腳本 Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans for native execution, or superpowers:subagent-driven-development if the user chooses delegation. Steps use checkbox syntax for tracking.
 
@@ -35,13 +35,13 @@ Step 4 通過後，該階段另外執行 ruff、相關既有回歸與三目標�
 
 ---
 
-### Task B1: 結構化動作日誌
+### Task 1: B1 — 結構化動作日誌
 
 **Files:** 修改：`je_auto_control/utils/executor/action_executor.py`、`je_auto_control/utils/executor/action_redaction.py`、`je_auto_control/utils/run_history/history_store.py`；新增：`je_auto_control/utils/action_journal/__init__.py`、`je_auto_control/utils/action_journal/events.py`、`je_auto_control/utils/action_journal/store.py`；測試：`test/unit_test/headless/test_action_journal.py`。
 
 **Interfaces:** `ActionEvent` frozen dataclass，schema_version=1；`ActionJournal.append(event: ActionEvent) -> None`；`read_events(path: Path, *, run_id: str | None = None) -> list[ActionEvent]`。
 
-- [ ] **Step 1:** 定義 fake fixtures 並新增 `test_redaction_precedes_append, test_parallel_parent_and_order, test_incomplete_step_stays_incomplete`，驗證：
+- [x] **Step 1:** 定義 fake fixtures 並新增 `test_redaction_precedes_append, test_parallel_parent_and_order, test_incomplete_step_stays_incomplete`，驗證：
 
 ```python
 assert password not in journal_text
@@ -49,12 +49,12 @@ assert all(event.run_id == run_id for event in events)
 assert unfinished.status == 'incomplete'
 ```
 
-- [ ] **Step 2:** 執行 `.venv/Scripts/python.exe -m pytest -q --tb=short --basetemp=.test-tmp/modernization-task -o cache_dir=.test-tmp/modernization-pytest-cache test/unit_test/headless/test_action_journal.py`，確認新測試因原有缺陷或尚未提供接口而 FAIL；不要把環境錯誤當成功的重現。
-- [ ] **Step 3:** 在 executor 動作邊界記錄 typed input/outcome 與 parent ID，先 redaction 再持久化，保留不可重播欄位的原因。沿用 atomic/json-store 邊界；完整 typed public/export/AC/GUI 入口同步交付。
-- [ ] **Step 4:** 重跑 Step 2，預期 exit 0；再跑這些修改檔所對應的既有回歸，確認公開契約。
-- [ ] **Step 5:** 更新本 task 的型別、所有交付入口、文件、測量計數與進度，僅 stage 本 task 檔案，提交 `git commit -m 'B1: 結構化動作日誌'`。
+- [x] **Step 2:** 執行 `.venv/Scripts/python.exe -m pytest -q --tb=short --basetemp=.test-tmp/modernization-task -o cache_dir=.test-tmp/modernization-pytest-cache test/unit_test/headless/test_action_journal.py`，確認新測試因原有缺陷或尚未提供接口而 FAIL；不要把環境錯誤當成功的重現。
+- [x] **Step 3:** 在 executor 動作邊界記錄 typed input/outcome 與 parent ID，先 redaction 再持久化，保留不可重播欄位的原因。沿用 atomic/json-store 邊界；完整 typed public/export/AC/GUI 入口同步交付。
+- [x] **Step 4:** 重跑 Step 2，預期 exit 0；再跑這些修改檔所對應的既有回歸，確認公開契約。
+- [x] **Step 5:** 更新本 task 的型別、所有交付入口、文件、測量計數與進度，僅 stage 本 task 檔案，提交 `git commit -m 'B1: 結構化動作日誌'`。
 
-### Task B2: 自愈比較與候選修正
+### Task 2: B2 — 自愈比較與候選修正
 
 **Files:** 修改：`je_auto_control/utils/self_healing/heal_log.py`、`je_auto_control/utils/self_healing/locator.py`、`je_auto_control/gui/self_healing_tab.py`；新增：`je_auto_control/utils/self_healing/evaluation.py`、`benchmarks/self_healing`；測試：`test/unit_test/headless/test_self_healing_evaluation.py`。
 
@@ -73,7 +73,7 @@ assert image_region == vlm_region
 - [ ] **Step 4:** 重跑 Step 2，預期 exit 0；再跑這些修改檔所對應的既有回歸，確認公開契約。
 - [ ] **Step 5:** 更新本 task 的型別、所有交付入口、文件、測量計數與進度，僅 stage 本 task 檔案，提交 `git commit -m 'B2: 自愈比較與候選修正'`。
 
-### Task B3: 從日誌產生候選腳本
+### Task 3: B3 — 從日誌產生候選腳本
 
 **Files:** 修改：`je_auto_control/utils/codegen/codegen.py`、`je_auto_control/cli.py`、`je_auto_control/gui/recording_editor_tab.py`、`je_auto_control/gui/script_builder/builder_tab.py`、`je_auto_control/utils/mcp_server/tools/_handlers_qa.py`；新增：`je_auto_control/utils/codegen/journal_import.py`；測試：`test/unit_test/headless/test_codegen_from_journal.py`。
 

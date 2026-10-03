@@ -5,6 +5,10 @@ prefer this namespace so importing core automation does not eagerly import
 hundreds of optional integrations.
 """
 
+from je_auto_control.api.journal import (
+    ActionEvent, ActionJournal, JournalError, execute_journaled,
+    list_journal_runs, read_action_journal, read_events,
+)
 from je_auto_control.api.core import (
     FailureBundleOptions,
     create_failure_bundle,
@@ -18,5 +22,6 @@ from je_auto_control.api.core import (
 __all__ = [
     "FailureBundleOptions", "create_failure_bundle", "execute_action",
     "execute_action_with_vars", "failure_bundle_on_error", "generate_code",
-    "run_diagnostics",
+    "run_diagnostics", "ActionEvent", "ActionJournal", "JournalError",
+    "execute_journaled", "list_journal_runs", "read_action_journal", "read_events",
 ]

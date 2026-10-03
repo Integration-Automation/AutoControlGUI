@@ -1207,4 +1207,11 @@ traditional_chinese_word_dict = {
     'admin_user_set_role': '設定使用者角色',
     'admin_user_rotate': '更換使用者 token',
     'admin_user_token_once': '請立即保存 token，僅顯示一次。',
+    'journal_path_label': '動作日誌：',
+    'journal_run_label': '執行 ID：',
+    'journal_path_hint': '錄製或預覽的 JSONL 檔案',
+    'journal_run_hint': '留空：新 ID／預覽所有執行',
+    'journal_record': '執行動作檔並記錄日誌',
+    'journal_preview': '預覽動作日誌',
+    'journal_select_script': '選擇要執行及錄製的動作檔',
 }

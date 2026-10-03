@@ -19,7 +19,7 @@ entry points → execution core (`utils/executor/`) → headless capabilities (`
 | Path | Responsibility |
 | --- | --- |
 | `je_auto_control/__init__.py` | Facade: re-exports the public API and lists it in `__all__`. Must import without PySide6. |
-| `je_auto_control/api/` | Small versioned headless facade (`core.py`); the supported entry for new integrations per `docs/API_LIFECYCLE.md`. |
+| `je_auto_control/api/` | Versioned headless facade (`core.py`) and Beta structured journals (`journal.py`); the supported entry for new integrations per `docs/API_LIFECYCLE.md`. |
 | `je_auto_control/cli.py`, `__main__.py` | Main CLI and legacy argparse entry point; both exit 1 for recorded action failures. |
 | `je_auto_control/utils/executor/` | Execution core with ContextVar public-run scopes and copied parallel/DAG variables: `Executor.event_dict` (`AC_*` name → callable) in `action_executor.py`, block commands in `flow_control.py`, validation in `action_schema.py`. |
 | `je_auto_control/utils/` | Headless capability layer, one subpackage per feature, zero Qt imports. Grouped by theme in `architecture_explore.md` §5.4. |
@@ -248,3 +248,10 @@ after interpolation, including flow blocks and loaded scripts. RequestBinding
 retains registration identity, roots and variable snapshots for deferred work;
 thread workers inherit authorization/path contexts and fork execution variables.
 Color/HSV and VLM coordinates share capture's actual clipped origin.
+
+Structured journal flow: facade/API, AC/MCP and Run History → scoped executor
+→ append-only action_journal JSONL → validated run/event adapters. ContextVars
+retain run/parent/source identity through nested and parallel calls; run-history
+artifact links refer to the journal. Opt-in environment capture uses the same
+boundary. Inputs are sanitized before persistence, outcomes stay separate,
+and absent terminal records remain incomplete. Schema version 1 is Beta.

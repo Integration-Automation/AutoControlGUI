@@ -1,17 +1,23 @@
-"""Run History tab: browse past scheduler / trigger / hotkey fires."""
+"""Run History tab: browse executions and record or preview structured journals."""
 import datetime as _dt
+import json
 from pathlib import Path
-from typing import List, Optional
+from typing import Callable, List, Optional
 
 from PySide6.QtCore import QTimer, Qt, QUrl
 from PySide6.QtGui import QDesktopServices, QPixmap
 from PySide6.QtWidgets import (
     QAbstractItemView, QComboBox, QFrame, QHBoxLayout, QHeaderView, QLabel,
-    QMessageBox, QSplitter, QTableWidget, QTableWidgetItem,
+    QFileDialog, QLineEdit, QMessageBox, QPlainTextEdit, QSplitter, QTableWidget, QTableWidgetItem,
     QVBoxLayout, QWidget,
 )
 
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
+from je_auto_control.gui._worker_thread import CallWorker, WorkerHandle, start_worker
+from je_auto_control.utils.action_journal import execute_journaled, list_journal_runs, read_action_journal
+from je_auto_control.utils.action_journal.store import journal_source
+from je_auto_control.utils.executor.request_context import RequestBinding
+from je_auto_control.utils.json.json_file import read_executable_action_json
 from je_auto_control.gui.language_wrapper.multi_language_wrapper import (
     language_wrapper,
 )
@@ -92,6 +98,13 @@ class RunHistoryTab(TranslatableMixin, QWidget):
         self._timer.setInterval(_REFRESH_INTERVAL_MS)
         self._timer.timeout.connect(self._refresh)
         self._auto_refresh = True
+        self._journal_path = QLineEdit()
+        self._journal_run = QLineEdit()
+        self._journal_view = QPlainTextEdit()
+        self._journal_view.setReadOnly(True)
+        self._journal_view.setMaximumHeight(180)
+        self._journal_worker: Optional[WorkerHandle] = None
+        self._journal_hints()
         self._build_layout()
         self._refresh()
         self._timer.start()
@@ -100,6 +113,7 @@ class RunHistoryTab(TranslatableMixin, QWidget):
         TranslatableMixin.retranslate(self)
         self._apply_table_headers()
         self._repopulate_filter_labels()
+        self._journal_hints()
         self._refresh()
 
     def resizeEvent(self, event) -> None:
@@ -158,6 +172,13 @@ class RunHistoryTab(TranslatableMixin, QWidget):
         self._table.cellDoubleClicked.connect(self._on_cell_double_clicked)
         self._table.itemSelectionChanged.connect(self._on_selection_changed)
         root.addWidget(self._count_label)
+        journal_inputs = QHBoxLayout()
+        journal_inputs.addWidget(self._tr(QLabel(), 'journal_path_label'))
+        journal_inputs.addWidget(self._journal_path, stretch=2)
+        journal_inputs.addWidget(self._tr(QLabel(), 'journal_run_label'))
+        journal_inputs.addWidget(self._journal_run, stretch=1)
+        root.addLayout(journal_inputs)
+        root.addWidget(self._journal_view)
 
     def menu_actions(self) -> list:
         """Expose tab commands to the window-level Actions menu."""
@@ -165,7 +186,62 @@ class RunHistoryTab(TranslatableMixin, QWidget):
             ("rh_refresh", self._refresh),
             ("rh_clear", self._on_clear),
             ("rh_open_artifact", self._open_selected_artifact),
+            ('journal_record', self._record_journal),
+            ('journal_preview', self._preview_journal),
         ]
+
+    def _journal_hints(self) -> None:
+        self._journal_path.setPlaceholderText(_t('journal_path_hint'))
+        self._journal_run.setPlaceholderText(_t('journal_run_hint'))
+
+    def _record_journal(self) -> None:
+        if self._journal_worker is not None:
+            return
+        script, _ = QFileDialog.getOpenFileName(self, _t('journal_select_script'), '', 'JSON (*.json)')
+        if not script:
+            return
+        path = self._journal_path.text().strip()
+        if not path:
+            path, _ = QFileDialog.getSaveFileName(self, _t('journal_record'), '', 'JSONL (*.jsonl)')
+        if not path:
+            return
+        self._journal_path.setText(path)
+        identifier = self._journal_run.text().strip() or None
+        def record() -> object:
+            with journal_source(script):
+                return execute_journaled(read_executable_action_json(script), path, run_id=identifier)
+
+        self._start_journal_worker(record)
+
+    def _preview_journal(self) -> None:
+        if self._journal_worker is not None:
+            return
+        path = self._journal_path.text().strip()
+        if not path:
+            path, _ = QFileDialog.getOpenFileName(self, _t('journal_preview'), '', 'JSONL (*.jsonl)')
+        if not path:
+            return
+        self._journal_path.setText(path)
+        identifier = self._journal_run.text().strip() or None
+        self._start_journal_worker(lambda: {'runs': list_journal_runs(path),
+                                           'events': read_action_journal(path, run_id=identifier)})
+
+    def _start_journal_worker(self, function: Callable[[], object]) -> None:
+        binding = RequestBinding.capture()
+        worker = CallWorker(lambda: binding.run(function))
+        self._journal_worker = start_worker(self, worker, on_done=self._journal_done,
+                                            on_fail=self._journal_failed, on_thread_done=self._journal_finished)
+
+    def _journal_done(self, result: object) -> None:
+        self._journal_view.setPlainText(json.dumps(result, indent=2, ensure_ascii=False, allow_nan=False))
+        self._refresh()
+
+    def _journal_failed(self, error: str) -> None:
+        self._journal_view.setPlainText(error)
+
+    def _journal_finished(self) -> None:
+        self._journal_worker = None
+        self._refresh()
 
     def _on_clear(self) -> None:
         reply = QMessageBox.question(

@@ -64,6 +64,20 @@ _BOXES_JSON_PLACEHOLDER = '[{"role":"button","x":0,"y":0}]'
 
 def _build_specs() -> List[CommandSpec]:
     specs: List[CommandSpec] = []
+    specs.extend([
+        CommandSpec('AC_execute_journaled', 'Journals', 'Record actions', fields=(
+            FieldSpec('actions', FieldType.STRING, placeholder='[["AC_sleep", {"seconds": 0}]]'),
+            FieldSpec('path', FieldType.FILE_PATH), FieldSpec('run_id', FieldType.STRING, optional=True),
+            FieldSpec('raise_on_error', FieldType.BOOL, optional=True, default=False),
+            FieldSpec('device', FieldType.STRING, optional=True), FieldSpec('session', FieldType.STRING, optional=True),
+        )),
+        CommandSpec('AC_read_action_journal', 'Journals', 'Read journal', fields=(
+            FieldSpec('path', FieldType.FILE_PATH), FieldSpec('run_id', FieldType.STRING, optional=True),
+        )),
+        CommandSpec('AC_list_journal_runs', 'Journals', 'List journal runs', fields=(
+            FieldSpec('path', FieldType.FILE_PATH),
+        )),
+    ])
     _add_mouse_specs(specs)
     _add_keyboard_specs(specs)
     _add_screen_specs(specs)

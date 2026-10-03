@@ -1378,3 +1378,26 @@ provider 的 ``readOnly`` 提示不會授予權限；儲存截圖至檔案也需
 有效根目錄內，或改用明確的記憶體金鑰。未設定 policy 的本機呼叫沿用既有行為。
 色彩／HSV 與 VLM 結果使用實際裁切後的擷取原點。Windows 還原接受最小化視窗
 回到先前最大化狀態。
+
+結構化動作日誌（Beta）
+----------------------------------------
+
+使用具型別的 ``je_auto_control.api.journal`` 入口錄製動作及讀取指定 run。
+相同三項操作也提供於門面、``AC_execute_journaled``、``AC_read_action_journal``、
+``AC_list_journal_runs``、MCP 與 Script Builder。Run History 的 Actions 選單提供錄製及唯讀預覽。
+
+.. code-block:: python
+
+    from je_auto_control.api.journal import execute_journaled, read_action_journal
+    run = execute_journaled([["AC_sleep", {"seconds": 0}]], "actions.jsonl", run_id="demo")
+    events = read_action_journal("actions.jsonl", run_id=run["run_id"])
+
+
+Schema 版本 1 分開儲存輸入與結果，包含 run／step／parent ID、來源檔案路徑及步驟索引。
+開始與結束記錄在共用 run 鎖內追加；讀取時保留開始順序並彙整各步驟最新狀態。
+中斷步驟維持 ``incomplete``。完整 ``${secrets.NAME}`` 輸入參照會保留；秘密字面值在一般 log
+或追加日誌前遮罩，並標示不可重播。未知 payload 物件省略並附原因，日誌序列化不呼叫其 repr／str。
+
+要明確包覆 executor 呼叫，可使用 ``with ActionJournal(path).run()``。
+設定 ``JE_AUTOCONTROL_ACTION_JOURNAL`` 可啟用 executor 自動錄製；未設定時沿用既有行為。
+讀取及預覽不執行動作。日誌路徑及其鎖檔遵循有效檔案系統 policy。

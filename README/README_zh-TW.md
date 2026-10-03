@@ -20,7 +20,7 @@
 
 - **一套 API，七個平台。** `wrapper/platform_wrapper.py` 在匯入時挑選後端；同一份腳本在
   Windows、macOS、X11 與 Wayland 上都不需要改寫。
-- **不寫 Python 也能腳本化。** 782 個 `AC_*` 指令涵蓋全部功能，因此一個 JSON 檔能做到函式庫
+- **不寫 Python 也能腳本化。** 785 個 `AC_*` 指令涵蓋全部功能，因此一個 JSON 檔能做到函式庫
   能做的任何事——包含迴圈、分支、try/catch、巨集與變數。
 - **預設無頭執行。** `import je_auto_control` 絕不會載入 Qt。GUI 是選用套件，包在同一個無頭核心之外。
 - **四種定位方式。** 樣板比對、OCR、無障礙樹、視覺語言模型——可透過錨點定位器與自癒後備串接組合。
@@ -142,7 +142,7 @@ python -c "import je_auto_control; je_auto_control.start_autocontrol_gui()"
 | 自然語言規劃 | `plan_actions`、`run_from_description` | `AC_llm_plan` | LLM Planner |
 | Computer-use agent | `AgentLoop`、`run_agent` | `AC_run_agent` | Computer Use |
 | 錄製與重播 | `record`、`stop_record` | `AC_record`、`AC_stop_record` | Record |
-| JSON 腳本 | `execute_action`、`execute_files` | 全部 782 個指令 | Script、Script Builder |
+| JSON 腳本 | `execute_action`、`execute_files` | 全部 785 個指令 | Script、Script Builder |
 | 變數與流程控制 | `execute_action_with_vars` | `AC_set_var`、`AC_loop`、`AC_for_each`、`AC_try`、`AC_retry` | Variables |
 | 資料驅動執行 | — | `AC_for_each_row`（CSV／JSON／SQLite／Excel） | Data Sources |
 | 斷言 | `assert_text`、`assert_image` | `AC_assert_text` 等 21 個 | Assertions |
@@ -161,7 +161,7 @@ python -c "import je_auto_control; je_auto_control.start_autocontrol_gui()"
 | 系統診斷 | `run_diagnostics` | `AC_diagnose` | Diagnostics |
 | 測試碼產生 | `generate_code` | — | — |
 
-除了這張表，`utils/` 底下還有 310 個無頭套件，涵蓋斷言、韌性、資料品質、i18n 稽核、遮蔽、
+除了這張表，`utils/` 底下還有 311 個無頭套件，涵蓋斷言、韌性、資料品質、i18n 稽核、遮蔽、
 治理、可觀測性等等。完整的逐模組地圖在 **[architecture_explore.md](../architecture_explore.md)**。
 
 ---
@@ -191,7 +191,7 @@ je_auto_control version
 
 | 介面 | 啟動方式 | 說明 |
 |---|---|---|
-| **MCP 伺服器** | `je_auto_control_mcp`（stdio）或 `AC_start_mcp_http_server` | 687 個工具，供 Claude Desktop／Claude Code／自訂 tool loop 使用。除了以 `initialize` 握手的各版協定，也支援無狀態的 MCP 2026-07-28。Bearer 驗證、TLS、稽核記錄、限流、外掛熱重載、CI 假後端。 |
+| **MCP 伺服器** | `je_auto_control_mcp`（stdio）或 `AC_start_mcp_http_server` | 690 個工具，供 Claude Desktop／Claude Code／自訂 tool loop 使用。除了以 `initialize` 握手的各版協定，也支援無狀態的 MCP 2026-07-28。Bearer 驗證、TLS、稽核記錄、限流、外掛熱重載、CI 假後端。 |
 | **REST API** | `je_auto_control start-rest` | Bearer token、逐 IP 限流與鎖定、SQLite 稽核 hook、`/metrics`、`/openapi.json`、`/docs` Swagger UI、`/dashboard`。 |
 | **TCP socket 伺服器** | `je_auto_control start-server` | 以換行分隔的 JSON 動作清單。預設綁 `127.0.0.1`。 |
 | **pytest 外掛** | 安裝後自動生效 | 輕量 `je_auto_control_pytest` 入口，提供 fixture 與 Gherkin 步驟。升級 editable 工作樹後須重新安裝；明確指定的舊外掛路徑仍相容。 |
@@ -487,3 +487,24 @@ provider 的 `readOnly` 提示不會授予權限；儲存截圖至檔案也需 a
 有效根目錄內，或改用明確的記憶體金鑰。未設定 policy 的本機呼叫沿用既有行為。
 色彩／HSV 與 VLM 結果使用實際裁切後的擷取原點。Windows 還原接受最小化視窗
 回到先前最大化狀態。
+
+## 結構化動作日誌（Beta）
+
+使用具型別的 `je_auto_control.api.journal` 入口錄製動作及讀取指定 run。
+相同三項操作也提供於門面、`AC_execute_journaled`、`AC_read_action_journal`、
+`AC_list_journal_runs`、MCP 與 Script Builder。Run History 的 Actions 選單提供錄製及唯讀預覽。
+
+```python
+from je_auto_control.api.journal import execute_journaled, read_action_journal
+run = execute_journaled([["AC_sleep", {"seconds": 0}]], "actions.jsonl", run_id="demo")
+events = read_action_journal("actions.jsonl", run_id=run["run_id"])
+```
+
+Schema 版本 1 分開儲存輸入與結果，包含 run／step／parent ID、來源檔案路徑及步驟索引。
+開始與結束記錄在共用 run 鎖內追加；讀取時保留開始順序並彙整各步驟最新狀態。
+中斷步驟維持 `incomplete`。完整 `${secrets.NAME}` 輸入參照會保留；秘密字面值在一般 log
+或追加日誌前遮罩，並標示不可重播。未知 payload 物件省略並附原因，日誌序列化不呼叫其 repr／str。
+
+要明確包覆 executor 呼叫，可使用 `with ActionJournal(path).run()`。
+設定 `JE_AUTOCONTROL_ACTION_JOURNAL` 可啟用 executor 自動錄製；未設定時沿用既有行為。
+讀取及預覽不執行動作。日誌路徑及其鎖檔遵循有效檔案系統 policy。

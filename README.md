@@ -22,7 +22,7 @@ from JSON files / CLI / servers, and a **GUI tab**. Nothing is GUI-only.
 
 - **One API, seven platforms.** `wrapper/platform_wrapper.py` picks the backend at import
   time; your script does not change between Windows, macOS, X11, and Wayland.
-- **Scriptable without Python.** 782 `AC_*` commands cover the whole feature set, so a
+- **Scriptable without Python.** 785 `AC_*` commands cover the whole feature set, so a
   JSON file can do anything the library can — including loops, branches, try/catch,
   macros, and variables.
 - **Headless by default.** `import je_auto_control` never loads Qt. The GUI is an
@@ -154,7 +154,7 @@ desktop app; tab commands live in the window's **Actions** menu.
 | Natural-language planner | `plan_actions`, `run_from_description` | `AC_llm_plan` | LLM Planner |
 | Computer-use agent | `AgentLoop`, `run_agent` | `AC_run_agent` | Computer Use |
 | Record & replay | `record`, `stop_record` | `AC_record`, `AC_stop_record` | Record |
-| JSON scripting | `execute_action`, `execute_files` | all 782 commands | Script, Script Builder |
+| JSON scripting | `execute_action`, `execute_files` | all 785 commands | Script, Script Builder |
 | Variables & flow control | `execute_action_with_vars` | `AC_set_var`, `AC_loop`, `AC_for_each`, `AC_try`, `AC_retry` | Variables |
 | Data-driven runs | — | `AC_for_each_row` (CSV / JSON / SQLite / Excel) | Data Sources |
 | Assertions | `assert_text`, `assert_image` | `AC_assert_text` + 20 more | Assertions |
@@ -173,7 +173,7 @@ desktop app; tab commands live in the window's **Actions** menu.
 | Diagnostics | `run_diagnostics` | `AC_diagnose` | Diagnostics |
 | Test-code generation | `generate_code` | — | — |
 
-Beyond this table, `utils/` holds 310 headless packages covering assertions, resilience,
+Beyond this table, `utils/` holds 311 headless packages covering assertions, resilience,
 data quality, i18n auditing, redaction, governance, observability, and more. The full
 per-module map is in **[architecture_explore.md](architecture_explore.md)**.
 
@@ -206,7 +206,7 @@ still goes on to the end), so a CI step fails with it. The legacy
 
 | Surface | Start it with | Notes |
 |---|---|---|
-| **MCP server** | `je_auto_control_mcp` (stdio) or `AC_start_mcp_http_server` | 687 tools for Claude Desktop / Claude Code / custom tool loops. Speaks the stateless MCP 2026-07-28 beside the `initialize`-based revisions. Bearer auth, TLS, audit log, rate limit, plugin hot-reload, CI fake backend. |
+| **MCP server** | `je_auto_control_mcp` (stdio) or `AC_start_mcp_http_server` | 690 tools for Claude Desktop / Claude Code / custom tool loops. Speaks the stateless MCP 2026-07-28 beside the `initialize`-based revisions. Bearer auth, TLS, audit log, rate limit, plugin hot-reload, CI fake backend. |
 | **REST API** | `je_auto_control start-rest` | Bearer token, per-IP rate limit + lockout, SQLite audit hook, `/metrics`, `/openapi.json`, `/docs` Swagger UI, `/dashboard`. |
 | **TCP socket server** | `je_auto_control start-server` | Newline-framed JSON action lists. Binds `127.0.0.1` by default. |
 | **pytest plugin** | installed automatically | Lightweight `je_auto_control_pytest` entry point; fixtures plus Gherkin steps for pytest-bdd / behave. Reinstall after upgrading editable checkouts; the explicit legacy plugin path remains supported. |
@@ -557,3 +557,29 @@ Configured signing and encryption keys must also lie within the effective roots,
 or use an explicit in-memory key. Local calls without a policy retain existing behavior.
 Color/HSV and VLM results use the actual clipped capture origin. Windows restore
 accepts a minimized window returning to its previous maximized state.
+
+## Structured action journals (Beta)
+
+Use the typed `je_auto_control.api.journal` entry point to record actions and
+read selected runs. The same three operations are available through the facade,
+`AC_execute_journaled`, `AC_read_action_journal`, `AC_list_journal_runs`, MCP
+and Script Builder. Run History offers recording and read-only preview in Actions.
+
+```python
+from je_auto_control.api.journal import execute_journaled, read_action_journal
+run = execute_journaled([["AC_sleep", {"seconds": 0}]], "actions.jsonl", run_id="demo")
+events = read_action_journal("actions.jsonl", run_id=run["run_id"])
+```
+
+Schema version 1 stores separate inputs and outcomes, run/step/parent IDs, source
+file paths and step indices. Start and terminal records are appended under a
+shared run lock; reads retain start order and materialize each step's latest
+status. Interrupted steps remain `incomplete`. Exact `${secrets.NAME}` input
+references survive; secret literals are masked before logging or append and
+marked non-replayable. Unknown payload objects are omitted with reasons, without
+calling their repr/str hooks during journal serialization.
+
+For explicit recording around an executor call, use `with ActionJournal(path).run()`.
+Set `JE_AUTOCONTROL_ACTION_JOURNAL` to enable automatic executor recording; without
+it, existing calls keep their behavior. Reads and previews never execute actions.
+Journal paths and their lock files follow the effective filesystem policy.

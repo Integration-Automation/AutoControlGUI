@@ -21,3 +21,10 @@ Unknown commands require host administration. Filesystem metadata is checked at
 every scoped executor dispatch, including nested scripts and flow blocks.
 Internal `RequestBinding` preserves authorization, roots and variable snapshots
 for deferred work; it adds no public command or facade API.
+
+`je_auto_control.api.journal` is Beta (schema version 1). It exports
+`ActionEvent`, `ActionJournal`, `JournalError`, `read_events`,
+`execute_journaled`, `read_action_journal` and `list_journal_runs`.
+The legacy facade re-exports these for JSON/GUI integration compatibility;
+the stable `core.py` namespace is unchanged. Journal readers validate schema
+and ordering and do not execute records.
