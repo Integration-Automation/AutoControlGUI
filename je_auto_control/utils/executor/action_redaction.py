@@ -20,7 +20,7 @@ _MASK = "***"
 #: Argument names that hold a secret whatever the command.
 SENSITIVE_ARGUMENT_NAMES: FrozenSet[str] = frozenset({
     "password", "passphrase", "token", "secret", "api_key", "private_key",
-    "client_secret", "authorization", "access_token", "refresh_token",
+    "client_secret", "authorization", "access_token", "refresh_token", "shared_secret",
     # The credential headers, which arrive as the keys of a ``headers`` dict.
     "proxy-authorization", "cookie", "set-cookie", "x-api-key", "x-auth-token",
 })

@@ -67,6 +67,10 @@ from je_auto_control.utils.self_healing.evaluation_api import (
     accept_template_candidate, compare_healing_versions, create_template_candidate,
     preview_template_candidate, revert_template_revision, validate_template_candidate,
 )
+from je_auto_control.utils.config_sync.wire_api import (
+    config_sync_preview, config_sync_exchange, config_sync_apply, config_sync_retry, config_sync_status,
+    config_sync_assets,
+)
 from je_auto_control.utils.codegen.journal_api import generate_journal_candidate
 from je_auto_control.utils.secrets import default_secret_manager
 from je_auto_control.utils.script_vars.interpolate import (
@@ -7766,6 +7770,12 @@ class Executor:
             "AC_self_heal_click": _self_heal_click,
             "AC_self_heal_log_list": _self_heal_log_list,
             "AC_self_heal_log_clear": _self_heal_log_clear,
+            'AC_config_sync_preview': config_sync_preview,
+            'AC_config_sync_exchange': config_sync_exchange,
+            'AC_config_sync_apply': config_sync_apply,
+            'AC_config_sync_retry': config_sync_retry,
+            'AC_config_sync_status': config_sync_status,
+            'AC_config_sync_assets': config_sync_assets,
             "AC_compare_healing_versions": compare_healing_versions,
             "AC_create_template_candidate": create_template_candidate,
             "AC_preview_template_candidate": preview_template_candidate,

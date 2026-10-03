@@ -15,7 +15,7 @@ from je_auto_control.utils.remote_desktop.auth import (
     verify_response,
 )
 from je_auto_control.utils.remote_desktop.clipboard_sync import (
-    encode_image, encode_text,
+    ClipboardLoopGuard,
 )
 from je_auto_control.utils.remote_desktop.file_transfer import (
     FileReceiver, FileTransferError, send_file,
@@ -191,6 +191,7 @@ class RemoteDesktopHost(FrameProductionMixin):
         self._lifecycle_lock = threading.RLock()
         self._clients: List[_ClientHandler] = []
         self._clients_lock = threading.Lock()
+        self._clipboard_guard = ClipboardLoopGuard()
         self._handshake_slots = threading.BoundedSemaphore(_MAX_HANDSHAKES)
         self._frame_cond = threading.Condition()
         self._latest_frame: Optional[bytes] = None
@@ -241,6 +242,7 @@ class RemoteDesktopHost(FrameProductionMixin):
     def _start_locked(self) -> None:
         if self.is_running:
             return
+        self._clipboard_guard = ClipboardLoopGuard()
         # A fresh event per run, never clear() on the old one: a loop that
         # outlived stop()'s join would see it cleared and resume beside
         # the new run.
@@ -362,11 +364,13 @@ class RemoteDesktopHost(FrameProductionMixin):
 
     def broadcast_clipboard_text(self, text: str) -> int:
         """Send a text-clipboard message to every authenticated viewer."""
-        return self._broadcast_clipboard_payload(encode_text(text))
+        payload = self._clipboard_guard.encode_text(text)
+        return self._broadcast_clipboard_payload(payload) if payload is not None else 0
 
     def broadcast_clipboard_image(self, png_bytes: bytes) -> int:
         """Send a PNG image to every authenticated viewer's clipboard."""
-        return self._broadcast_clipboard_payload(encode_image(png_bytes))
+        payload = self._clipboard_guard.encode_image(png_bytes)
+        return self._broadcast_clipboard_payload(payload) if payload is not None else 0
 
     def _broadcast_clipboard_payload(self, payload: bytes) -> int:
         with self._clients_lock:

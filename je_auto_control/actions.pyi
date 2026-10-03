@@ -711,6 +711,48 @@ def AC_config_export() -> Dict[str, Any]:
 def AC_config_import(bundle: Dict[str, Any], dry_run: bool = ...) -> Dict[str, Any]:
     """Executor adapter: apply a config bundle dict to the user config root."""
 
+def AC_config_sync_apply(
+    definitions_path: str,
+    preview_path: str,
+    state_path: str,
+    device_id: str,
+    *,
+    choices: Mapping[str, int] | str = ...,
+) -> Dict[str, Any]:
+    """Apply selected preview entries with baseline and asset integrity checks."""
+
+def AC_config_sync_assets(manifest_path: str, source_root: str, destination_root: str) -> Dict[str, Any]:
+    """Publish completed assets after exact size and SHA256 verification."""
+
+def AC_config_sync_exchange(
+    definitions_path: str,
+    workspace_path: str,
+    server_url: str,
+    user_id: str,
+    shared_secret: str = ...,
+) -> Dict[str, Any]:
+    """Publish protected definitions while retaining explicit local application."""
+
+def AC_config_sync_preview(
+    definitions_path: str,
+    workspace_path: str,
+    server_url: str,
+    user_id: str,
+    shared_secret: str = ...,
+) -> Dict[str, Any]:
+    """Preview definitions without applying or publishing; persist portable causal state."""
+
+def AC_config_sync_retry(
+    workspace_path: str,
+    server_url: str,
+    user_id: str,
+    shared_secret: str = ...,
+) -> Dict[str, Any]:
+    """Retry durable envelopes with finite attempts and retained uncertain identities."""
+
+def AC_config_sync_status(workspace_path: str, server_url: str, user_id: str) -> Dict[str, Any]:
+    """Read local revision and pending counts without network access or secret disclosure."""
+
 def AC_confusable_compare(first: str, second: str) -> Dict[str, Any]:
     """Adapter: whether two strings render to the same skeleton."""
 

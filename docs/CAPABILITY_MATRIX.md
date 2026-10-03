@@ -349,3 +349,5 @@ Whole-B review regressions cover positional resolved credentials and sensitive g
 Persistent config server is Beta with controlled SQLite/TestClient/loopback tests for restart, concurrent writers, idempotent retries, account isolation and migration guards. Physical multi-device convergence, config GUI and offline causal client are not claimed by this server-only increment.
 
 Causal config sync and durable outbox are Beta. Controlled HTTP/SQLite tests cover real interleaved CAS writes, clock skew, preserved conflicts, lost replies/restart, bounded retry/cancellation, shared peer acknowledgements and explicit retired-device full resync. No physical multi-machine or GUI delivery is claimed by this increment.
+
+Definition/asset sync is Beta: controlled HTTP/SQLite, file integrity and offscreen Qt verification; physical multi-machine evidence remains pending. Config Sync covers explicit preview/exchange/apply/retry/status/assets; folder and TCP clipboard suppress incoming echoes. All remote config commands retain MANAGE_HOSTS authorization and scoped filesystem metadata; advisory tool annotations do not grant permission.

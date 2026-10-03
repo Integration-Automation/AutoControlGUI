@@ -16,7 +16,7 @@ from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.remote_desktop.auth import make_nonce
 from je_auto_control.utils.remote_desktop.clipboard_sync import (
-    ClipboardSyncError, decode as decode_clipboard,
+    ClipboardSyncError,
 )
 from je_auto_control.utils.remote_desktop.file_transfer import (
     FileTransferError, decode_begin,
@@ -409,7 +409,10 @@ class _ClientHandler:
 
     def _handle_clipboard_payload(self, payload: bytes) -> None:
         try:
-            kind, data = decode_clipboard(payload)
+            received = self._host._clipboard_guard.receive(payload)
+            if received is None:
+                return
+            kind, data = received
         except ClipboardSyncError as error:
             autocontrol_logger.info(
                 "remote_desktop bad CLIPBOARD from %s: %r",

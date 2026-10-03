@@ -1221,6 +1221,18 @@ from je_auto_control.utils.codegen.codegen import (
 from je_auto_control.api.codegen import (
     CandidateError, CandidateScript, generate_candidate_from_log, generate_journal_candidate,
 )
+from je_auto_control.utils.config_sync.adapters import (
+    ApplyReport, SyncAdapter, JsonDefinitionAdapter, ScriptSyncAdapter, LocatorSyncAdapter,
+    HotkeySyncAdapter, TriggerSyncAdapter, AddressBookSyncAdapter,
+)
+from je_auto_control.utils.config_sync.assets import (
+    AssetSpec, AssetManifest, AssetTransport, AssetSyncResult, AssetSyncError, sync_assets,
+)
+from je_auto_control.utils.config_sync.service import (
+    config_sync_preview, config_sync_exchange, config_sync_apply, config_sync_retry, config_sync_status,
+)
+from je_auto_control.utils.config_sync.asset_service import config_sync_assets
+
 from je_auto_control.api.config_sync import (
     ConfigBucket, ConfigRevisionConflict, ConfigStore, ConfigStoreCapacityError, ConfigSyncError,
     ConfigSyncClient, SyncClientOptions, MergeDecision, PeerState, SyncEntry, can_collect_tombstone, merge_entries,
@@ -1318,7 +1330,13 @@ def start_autocontrol_gui(*args, **kwargs):
     from je_auto_control.gui import start_autocontrol_gui as _impl
     return _impl(*args, **kwargs)
 
+
 __all__ = [
+    'ApplyReport', 'SyncAdapter', 'JsonDefinitionAdapter', 'ScriptSyncAdapter', 'LocatorSyncAdapter',
+    'HotkeySyncAdapter', 'TriggerSyncAdapter', 'AddressBookSyncAdapter', 'AssetSpec', 'AssetManifest',
+    'AssetTransport', 'AssetSyncResult', 'AssetSyncError', 'sync_assets', 'config_sync_preview',
+    'config_sync_exchange', 'config_sync_apply', 'config_sync_retry', 'config_sync_status', 'config_sync_assets',
+
     'ConfigBucket', 'ConfigRevisionConflict', 'ConfigStore', 'ConfigStoreCapacityError', 'ConfigSyncError',
     'ConfigSyncClient', 'SyncClientOptions', 'MergeDecision', 'PeerState', 'SyncEntry', 'can_collect_tombstone',
     'merge_entries', 'OutboxReport', 'SyncOperation', 'SyncOutbox', 'BucketConflict', 'bucket_peer_states',

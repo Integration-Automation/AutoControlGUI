@@ -10,7 +10,7 @@ from typing import Any, Callable, Deque, Dict, Mapping, Optional, Tuple
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.remote_desktop.auth import compute_response
 from je_auto_control.utils.remote_desktop.clipboard_sync import (
-    ClipboardSyncError, decode as decode_clipboard, encode_image, encode_text,
+    ClipboardSyncError, ClipboardLoopGuard,
 )
 from je_auto_control.utils.remote_desktop.file_transfer import (
     FileReceiver, FileTransferError, default_download_dir, send_file,
@@ -120,6 +120,7 @@ class RemoteDesktopViewer:
         self._on_error = on_error
         self._on_audio = on_audio
         self._on_clipboard = on_clipboard
+        self._clipboard_guard = ClipboardLoopGuard()
         self._on_cursor = on_cursor
         self._on_viewer_cursor = on_viewer_cursor
         self._on_chat = on_chat
@@ -190,6 +191,7 @@ class RemoteDesktopViewer:
         """
         if self._connected:
             return
+        self._clipboard_guard = ClipboardLoopGuard()
         raw_sock = socket.create_connection(
             (self._host, self._port), timeout=timeout,
         )
@@ -284,13 +286,17 @@ class RemoteDesktopViewer:
         """Push ``text`` onto the host's clipboard."""
         if not self._connected or self._channel is None:
             raise ConnectionError(_NOT_CONNECTED_MESSAGE)
-        self._channel.send_typed(MessageType.CLIPBOARD, encode_text(text))
+        payload = self._clipboard_guard.encode_text(text)
+        if payload is not None:
+            self._channel.send_typed(MessageType.CLIPBOARD, payload)
 
     def send_clipboard_image(self, png_bytes: bytes) -> None:
         """Push a PNG image onto the host's clipboard."""
         if not self._connected or self._channel is None:
             raise ConnectionError(_NOT_CONNECTED_MESSAGE)
-        self._channel.send_typed(MessageType.CLIPBOARD, encode_image(png_bytes))
+        payload = self._clipboard_guard.encode_image(png_bytes)
+        if payload is not None:
+            self._channel.send_typed(MessageType.CLIPBOARD, payload)
 
     def set_file_receiver(self, receiver: FileReceiver) -> None:
         """Replace the default ``FileReceiver`` used for incoming files."""
@@ -330,7 +336,10 @@ class RemoteDesktopViewer:
 
     def _handle_clipboard_payload(self, payload: bytes) -> None:
         try:
-            kind, data = decode_clipboard(payload)
+            received = self._clipboard_guard.receive(payload)
+            if received is None:
+                return
+            kind, data = received
         except ClipboardSyncError as error:
             autocontrol_logger.info(
                 "remote_desktop viewer bad CLIPBOARD: %r", error,

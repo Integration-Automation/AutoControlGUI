@@ -20,7 +20,7 @@
 
 - **一套 API，七個平台。** `wrapper/platform_wrapper.py` 在匯入時挑選後端；同一份腳本在
   Windows、macOS、X11 與 Wayland 上都不需要改寫。
-- **不寫 Python 也能腳本化。** 792 個 `AC_*` 指令涵蓋全部功能，因此一個 JSON 檔能做到函式庫
+- **不寫 Python 也能腳本化。** 798 個 `AC_*` 指令涵蓋全部功能，因此一個 JSON 檔能做到函式庫
   能做的任何事——包含迴圈、分支、try/catch、巨集與變數。
 - **預設無頭執行。** `import je_auto_control` 絕不會載入 Qt。GUI 是選用套件，包在同一個無頭核心之外。
 - **四種定位方式。** 樣板比對、OCR、無障礙樹、視覺語言模型——可透過錨點定位器與自癒後備串接組合。
@@ -40,7 +40,7 @@ pip install je_auto_control[gui]       # 加上 PySide6 桌面應用程式
 
 | Extra | 啟用的功能 |
 |---|---|
-| `gui` | PySide6 桌面應用程式（48 個分頁） |
+| `gui` | PySide6 桌面應用程式（49 個分頁） |
 | `webrtc` | WebRTC 遠端桌面、USB 直通（`aiortc`、`av`） |
 | `signaling` | 獨立的訊令／rendezvous 伺服器（`fastapi`、`uvicorn`） |
 | `discovery` | mDNS / Zeroconf 區網主機探索 |
@@ -142,7 +142,7 @@ python -c "import je_auto_control; je_auto_control.start_autocontrol_gui()"
 | 自然語言規劃 | `plan_actions`、`run_from_description` | `AC_llm_plan` | LLM Planner |
 | Computer-use agent | `AgentLoop`、`run_agent` | `AC_run_agent` | Computer Use |
 | 錄製與重播 | `record`、`stop_record` | `AC_record`、`AC_stop_record` | Record |
-| JSON 腳本 | `execute_action`、`execute_files` | 全部 792 個指令 | Script、Script Builder |
+| JSON 腳本 | `execute_action`、`execute_files` | 全部 798 個指令 | Script、Script Builder |
 | 變數與流程控制 | `execute_action_with_vars` | `AC_set_var`、`AC_loop`、`AC_for_each`、`AC_try`、`AC_retry` | Variables |
 | 資料驅動執行 | — | `AC_for_each_row`（CSV／JSON／SQLite／Excel） | Data Sources |
 | 斷言 | `assert_text`、`assert_image` | `AC_assert_text` 等 21 個 | Assertions |
@@ -191,7 +191,7 @@ je_auto_control version
 
 | 介面 | 啟動方式 | 說明 |
 |---|---|---|
-| **MCP 伺服器** | `je_auto_control_mcp`（stdio）或 `AC_start_mcp_http_server` | 697 個工具，供 Claude Desktop／Claude Code／自訂 tool loop 使用。除了以 `initialize` 握手的各版協定，也支援無狀態的 MCP 2026-07-28。Bearer 驗證、TLS、稽核記錄、限流、外掛熱重載、CI 假後端。 |
+| **MCP 伺服器** | `je_auto_control_mcp`（stdio）或 `AC_start_mcp_http_server` | 703 個工具，供 Claude Desktop／Claude Code／自訂 tool loop 使用。除了以 `initialize` 握手的各版協定，也支援無狀態的 MCP 2026-07-28。Bearer 驗證、TLS、稽核記錄、限流、外掛熱重載、CI 假後端。 |
 | **REST API** | `je_auto_control start-rest` | Bearer token、逐 IP 限流與鎖定、SQLite 稽核 hook、`/metrics`、`/openapi.json`、`/docs` Swagger UI、`/dashboard`。 |
 | **TCP socket 伺服器** | `je_auto_control start-server` | 以換行分隔的 JSON 動作清單。預設綁 `127.0.0.1`。 |
 | **pytest 外掛** | 安裝後自動生效 | 輕量 `je_auto_control_pytest` 入口，提供 fixture 與 Gherkin 步驟。升級 editable 工作樹後須重新安裝；明確指定的舊外掛路徑仍相容。 |
@@ -593,7 +593,7 @@ WebRTC 待配對連線仍採 TTL。
 `ConfigSyncError`、`ConfigRevisionConflict`、`ConfigStoreCapacityError`。
 ConfigSyncClient 預設使用受保護的因果同步與持久化 outbox。
 明確使用 `SyncClientOptions(legacy_writes=True)` 時，也必須開啟伺服器的
-`--allow-legacy-config-writes` 遷移選項。設定同步 GUI 尚待交付。
+`--allow-legacy-config-writes` 遷移選項。設定同步分頁使用共用受保護服務。
 
 ## 因果同步與離線重送（Beta）
 
@@ -614,3 +614,33 @@ SQLite `SyncOutbox` 依 endpoint 與帳號保存原 envelope，成功與否不�
 完整同步前必須審閱待送操作；`retire_device()` 也須明確呼叫。
 本機 `SyncOutbox` peer 介面可跨重啟保留退休狀態。
 目前證據是受控 SQLite／HTTP 測試，實體多機驗證仍待完成。
+
+## 定義與資產同步（Beta）
+
+設定同步分頁、六個 `AC_config_sync_*`／`ac_config_sync_*` 入口及 Script Builder
+共用 headless 的預覽、受保護交換、明確套用、持久化重送、本機狀態及資產服務。
+面板顯示提交版本、待送數、保留衝突、離線及 CAS 保護；Actions menu 的 worker
+有獨立取消事件，在操作之間檢查取消，目前有逾時限制的請求結束後釋放用戶端。
+
+本機 JSON 的 `scripts`、`locators`、`hotkeys`、`triggers`、`address_book` 各自
+對應 ID／定義物件。未變動的快照保留因果 ID；重建 adapter 時應保存其 state mapping。
+檔案服務將因果 state 放在明確工作目錄，依帳號與正常化 endpoint 隔離。
+命名秘密、依函式簽章綁定的 action 參數、已知秘密的回顯、認證 URL、絕對機器路徑
+轉成本機 `{"$local": "/欄位/路徑"}` 參照；`${secrets.NAME}` 原樣保留。
+接收端缺少本機參照會列為未解決。任意 Python／原始碼及未分類 literal 不在此
+結構化隱私契約內；接收定義不啟動 listener、引擎、連線或腳本。
+
+預覽及交換保留所有因果候選，不套用本機定義。套用檢查原檔雜湊；`choices`
+明確選取 `sync_conflict` 陣列索引，例如 `{"locators/button": 0}`，解決後推進
+所有已知候選的向量。收到的熱鍵／觸發器在加入前停用，停用熱鍵不進入 listener 快照。
+
+資產清單含 `path`、`sha256`、`size`；六個入口中的資產操作從明確來源目錄接收，
+Python `sync_assets` 支援 streaming transport。每檔限制 256 MiB，拒絕越界、symlink
+及 Windows 轉向檔名，完整大小／雜湊驗證後才原子取代。取消、損毀或斷線清除
+本次暫存檔，既有目的檔保留；此前完成的檔案維持發布。定義宣告的 `assets` 必須
+先在定義檔目錄下驗證才能套用；資產作為資料保存，雜湊驗證不判斷內容是否含秘密。
+
+資料夾維持只新增／更新：內容雜湊偵測同 mtime 修改，連續兩次穩定觀察後傳送，
+失敗重試且接收檔案不回送。停止時仍保留尚未結束 sender 的所有權。TCP 剪貼簿
+使用有限 origin／event／hash 去重，抑制收到內容的下一次回送，舊 envelope 仍可讀。
+目前證據是受控 HTTP／SQLite、檔案及 offscreen Qt；實體多機驗證仍待完成。

@@ -23,7 +23,24 @@ from je_auto_control.utils.config_sync.causal_bucket import (
     collect_acknowledged_tombstones, merge_causal_buckets,
 )
 
+from je_auto_control.utils.config_sync.adapters import (
+    ApplyReport, SyncAdapter, JsonDefinitionAdapter, ScriptSyncAdapter, LocatorSyncAdapter,
+    HotkeySyncAdapter, TriggerSyncAdapter, AddressBookSyncAdapter,
+)
+from je_auto_control.utils.config_sync.assets import (
+    AssetSpec, AssetManifest, AssetTransport, AssetSyncResult, AssetSyncError, sync_assets,
+)
+from je_auto_control.utils.config_sync.service import (
+    config_sync_preview, config_sync_exchange, config_sync_apply, config_sync_retry, config_sync_status,
+)
+from je_auto_control.utils.config_sync.asset_service import config_sync_assets
+
 __all__ = [
+    'ApplyReport', 'SyncAdapter', 'JsonDefinitionAdapter', 'ScriptSyncAdapter', 'LocatorSyncAdapter',
+    'HotkeySyncAdapter', 'TriggerSyncAdapter', 'AddressBookSyncAdapter', 'AssetSpec', 'AssetManifest',
+    'AssetTransport', 'AssetSyncResult', 'AssetSyncError', 'sync_assets', 'config_sync_preview',
+    'config_sync_exchange', 'config_sync_apply', 'config_sync_retry', 'config_sync_status', 'config_sync_assets',
+
     "ConfigBucket", "ConflictRecord", "ConfigSyncClient",
     "ConfigSyncError", "TOMBSTONE_RETENTION_S", "is_tombstone", "merge_buckets",
     "ConfigRevisionConflict", "ConfigStore", "ConfigStoreCapacityError",

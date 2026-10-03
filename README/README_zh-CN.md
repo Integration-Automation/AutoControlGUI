@@ -20,7 +20,7 @@
 
 - **一套 API，七个平台。** `wrapper/platform_wrapper.py` 在导入时挑选后端；同一份脚本在
   Windows、macOS、X11 与 Wayland 上都不需要改写。
-- **不写 Python 也能脚本化。** 792 个 `AC_*` 命令覆盖全部功能，因此一个 JSON 文件能做到库
+- **不写 Python 也能脚本化。** 798 个 `AC_*` 命令覆盖全部功能，因此一个 JSON 文件能做到库
   能做的任何事——包含循环、分支、try/catch、宏与变量。
 - **默认无头运行。** `import je_auto_control` 绝不会加载 Qt。GUI 是可选包，包在同一个无头内核之外。
 - **四种定位方式。** 模板匹配、OCR、无障碍树、视觉语言模型——可通过锚点定位器与自愈回退串接组合。
@@ -40,7 +40,7 @@ pip install je_auto_control[gui]       # 加上 PySide6 桌面应用
 
 | Extra | 启用的功能 |
 |---|---|
-| `gui` | PySide6 桌面应用（48 个标签页） |
+| `gui` | PySide6 桌面应用（49 个标签页） |
 | `webrtc` | WebRTC 远程桌面、USB 直通（`aiortc`、`av`） |
 | `signaling` | 独立的信令／rendezvous 服务器（`fastapi`、`uvicorn`） |
 | `discovery` | mDNS / Zeroconf 局域网主机发现 |
@@ -142,7 +142,7 @@ python -c "import je_auto_control; je_auto_control.start_autocontrol_gui()"
 | 自然语言规划 | `plan_actions`、`run_from_description` | `AC_llm_plan` | LLM Planner |
 | Computer-use agent | `AgentLoop`、`run_agent` | `AC_run_agent` | Computer Use |
 | 录制与回放 | `record`、`stop_record` | `AC_record`、`AC_stop_record` | Record |
-| JSON 脚本 | `execute_action`、`execute_files` | 全部 792 个命令 | Script、Script Builder |
+| JSON 脚本 | `execute_action`、`execute_files` | 全部 798 个命令 | Script、Script Builder |
 | 变量与流程控制 | `execute_action_with_vars` | `AC_set_var`、`AC_loop`、`AC_for_each`、`AC_try`、`AC_retry` | Variables |
 | 数据驱动执行 | — | `AC_for_each_row`（CSV／JSON／SQLite／Excel） | Data Sources |
 | 断言 | `assert_text`、`assert_image` | `AC_assert_text` 等 21 个 | Assertions |
@@ -191,7 +191,7 @@ je_auto_control version
 
 | 接口 | 启动方式 | 说明 |
 |---|---|---|
-| **MCP 服务器** | `je_auto_control_mcp`（stdio）或 `AC_start_mcp_http_server` | 697 个工具，供 Claude Desktop／Claude Code／自定义 tool loop 使用。除了以 `initialize` 握手的各版协议，也支持无状态的 MCP 2026-07-28。Bearer 认证、TLS、审计日志、限流、插件热重载、CI 假后端。 |
+| **MCP 服务器** | `je_auto_control_mcp`（stdio）或 `AC_start_mcp_http_server` | 703 个工具，供 Claude Desktop／Claude Code／自定义 tool loop 使用。除了以 `initialize` 握手的各版协议，也支持无状态的 MCP 2026-07-28。Bearer 认证、TLS、审计日志、限流、插件热重载、CI 假后端。 |
 | **REST API** | `je_auto_control start-rest` | Bearer token、按 IP 限流与锁定、SQLite 审计 hook、`/metrics`、`/openapi.json`、`/docs` Swagger UI、`/dashboard`。 |
 | **TCP socket 服务器** | `je_auto_control start-server` | 以换行分隔的 JSON 动作列表。默认绑定 `127.0.0.1`。 |
 | **pytest 插件** | 安装后自动生效 | 轻量 `je_auto_control_pytest` 入口，提供 fixture 与 Gherkin 步骤。升级 editable 工作树后须重新安装；明确指定的旧插件路径仍兼容。 |
@@ -592,7 +592,7 @@ WebRTC 待配对连接仍采用 TTL。
 `ConfigSyncError`、`ConfigRevisionConflict`、`ConfigStoreCapacityError`。
 ConfigSyncClient 默认使用受保护的因果同步与持久化 outbox。
 明确使用 `SyncClientOptions(legacy_writes=True)` 时，也必须开启服务器的
-`--allow-legacy-config-writes` 迁移选项。配置同步 GUI 尚待交付。
+`--allow-legacy-config-writes` 迁移选项。配置同步页签使用共享受保护服务。
 
 ## 因果同步与离线重发（Beta）
 
@@ -613,3 +613,33 @@ SQLite `SyncOutbox` 按 endpoint 与账号保存原 envelope，成功与否不�
 完整同步前必须审阅待发操作；`retire_device()` 也需明确调用。
 本机 `SyncOutbox` peer 接口可跨重启保留退休状态。
 目前证据是受控 SQLite／HTTP 测试，实体多机验证仍待完成。
+
+## 定义与资产同步（Beta）
+
+配置同步页签、六个 `AC_config_sync_*`／`ac_config_sync_*` 入口及 Script Builder
+共享 headless 的预览、受保护交换、明确应用、持久化重发、本地状态及资产服务。
+面板显示提交版本、待发数、保留冲突、离线和 CAS 保护；Actions menu worker
+有独立取消事件，在操作之间检查取消，当前有超时限制的请求结束后释放客户端。
+
+本地 JSON 的 `scripts`、`locators`、`hotkeys`、`triggers`、`address_book` 分别
+对应 ID／定义对象。未变化的快照保留因果 ID；重建 adapter 时应保存 state mapping。
+文件服务把 state 放在明确工作目录，按账号与正常化 endpoint 隔离。命名秘密、
+按函数签名绑定的 action 参数、已知秘密回显、认证 URL、绝对机器路径转成本地
+`{"$local": "/字段/路径"}` 引用；`${secrets.NAME}` 原样保留。缺少本地引用的
+定义列为未解决。任意 Python／源码与未分类 literal 不在此结构化隐私契约内。
+接收定义不启动 listener、引擎、连接或脚本。
+
+预览及交换保留全部因果候选，不应用本地定义。应用检查原文件哈希；`choices`
+明确选择 `sync_conflict` 数组索引，例如 `{"locators/button": 0}`，解决后推进
+全部已知候选的向量。收到的热键／触发器在加入前禁用，禁用热键不进入 listener 快照。
+
+资产清单包含 `path`、`sha256`、`size`。资产入口从明确来源目录接收；Python
+`sync_assets` 支持 streaming transport。每文件限制 256 MiB，拒绝越界、symlink
+与 Windows 转向文件名，完整大小／哈希验证后才原子替换。取消、损坏或断线只
+清除本次临时文件，保留原目标；之前已完成文件保持发布。定义声明的 `assets`
+先在定义文件目录下验证才能应用；资产按数据保存，哈希验证不判断内容是否含秘密。
+
+文件夹维持只新增／更新：内容哈希发现同 mtime 修改，连续两次稳定观察后传输，
+失败重试且接收文件不回发。停止时保留尚未结束 sender 的所有权。TCP 剪贴板
+以有限 origin／event／hash 去重，抑制收到内容的下一次回发，旧 envelope 仍可读。
+目前证据为受控 HTTP／SQLite、文件与 offscreen Qt；实体多机验证仍待完成。

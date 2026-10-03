@@ -11,6 +11,26 @@ _BROWSE = "参照..."  # NOSONAR python:S1192 — shared button label
 _LOCATE_CLICK = "検索してクリック"  # NOSONAR python:S1192
 
 japanese_word_dict = {
+    'sync_assets': 'アセットを検証して受信',
+    'sync_asset_manifest': 'アセット一覧（JSON）',
+    'sync_asset_source': 'アセット元フォルダ',
+
+    'tab_config_sync': '設定同期',
+    'sync_definitions': 'ローカル定義（JSON）',
+    'sync_workspace': '同期フォルダ',
+    'sync_server': 'サーバー URL',
+    'sync_user': 'アカウント',
+    'sync_secret': '共有鍵',
+    'sync_ready': '準備完了',
+    'sync_preview': 'プレビュー',
+    'sync_exchange': '設定交換',
+    'sync_apply': 'プレビューを適用',
+    'sync_retry': '保留を再送',
+    'sync_status': 'ローカル状態',
+    'sync_cancel': 'キャンセル',
+    'sync_choices': '競合の選択：{"セクション/ID": 候補番号}',
+    'sync_summary': '版 {revision} · 保留 {pending} · 競合 {conflicts} · オフライン {offline} · 保護 {protected}',
+
     "application_name": "AutoControlGUI",
 
     # Tabs

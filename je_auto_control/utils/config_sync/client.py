@@ -267,31 +267,41 @@ class ConfigSyncClient:
         """Release local retry storage without deleting undelivered data."""
         self._outbox.close()
 
-    def sync(self, local: ConfigBucket
+    def sync(self, local: ConfigBucket, *, cancel: Optional[Event] = None
              ) -> Tuple[ConfigBucket, List[ConflictRecord]] | Tuple[ConfigBucket, List[BucketConflict]]:
         """Fetch and merge causally, then commit with finite CAS retries; legacy mode is explicit."""
+        self._check_cancel(cancel)
         if not self._options.legacy_writes:
-            return self._sync_causal(local)
+            return self._sync_causal(local, cancel)
         remote = self.fetch() or ConfigBucket(user_id=self._user_id)
         merged, conflicts = merge_buckets(local, remote)
         self.push(merged)
         return merged, conflicts
 
-    def _sync_causal(self, local: ConfigBucket) -> Tuple[ConfigBucket, List[BucketConflict]]:
+    @staticmethod
+    def _check_cancel(cancel: Optional[Event]) -> None:
+        if cancel is not None and cancel.is_set():
+            raise ConfigSyncError('config synchronization was cancelled')
+
+    def _sync_causal(self, local: ConfigBucket, cancel: Optional[Event]) -> Tuple[ConfigBucket, List[BucketConflict]]:
         self._check_retirement(self.fetch())
+        self._check_cancel(cancel)
         if self.pending_operations():
-            self.retry_pending()
+            self.retry_pending(cancel=cancel)
             if self.pending_operations():
                 raise ConfigSyncError('pending operations require delivery or conflict resolution first')
         old_operation: Optional[str] = None
         for _attempt in range(self._options.max_cas_retries):
+            self._check_cancel(cancel)
             remote = self.fetch() or ConfigBucket(self._user_id)
+            self._check_cancel(cancel)
             self._check_retirement(remote)
             merged, conflicts = merge_causal_buckets(local, remote)
             merged = collect_acknowledged_tombstones(merged, bucket_peer_states(remote))
             merged = prepare_tombstone_revisions(merged, remote.revision)
             update_peer_state(merged, PeerState(self.device_id, remote.revision + 1), device_id=self.device_id)
             operation_id = uuid.uuid4().hex
+            self._check_cancel(cancel)
             operation = SyncOperation(self._server_url, self._user_id, operation_id, remote.revision, merged.to_dict())
             self._outbox.enqueue(operation)
             if old_operation is not None:

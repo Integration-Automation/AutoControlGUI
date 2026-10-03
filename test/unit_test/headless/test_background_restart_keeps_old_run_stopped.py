@@ -168,6 +168,14 @@ def test_restart_does_not_revive_the_stuck_run(monkeypatch, tmp_path, build):
         assert first.is_set(), (
             "start() cleared the event the stuck loop is waiting on: it will "
             "resume beside the new run")
+        if build is _folder_sync:
+            # Folder transfers own a captured file until the sender returns.
+            # A draining transfer must retain its worker and block replacement.
+            assert len(_StuckThread.created) == 1
+            assert service._thread is _StuckThread.created[0]
+            monkeypatch.setattr(_StuckThread.created[0], "is_alive", lambda: False)
+            service.start()               # replacement is allowed after drain
+            assert first.is_set()
         second = _run_event(_StuckThread.created[-1])
         assert second is not first and not second.is_set()
     finally:

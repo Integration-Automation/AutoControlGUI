@@ -79,7 +79,7 @@ assert wall_clock_does_not_change_merge is True
 
 **Interfaces:** `SyncAdapter.snapshot() -> Mapping[str, SyncEntry]`、`apply(entries: Mapping[str, SyncEntry]) -> ApplyReport`；`sync_assets(manifest: AssetManifest, transport: AssetTransport) -> AssetSyncResult`。
 
-- [ ] **Step 1:** 定義 fake fixtures 並新增 `test_script_asset_hash_round_trip, test_sync_never_enables_trigger, test_secret_is_local, test_clipboard_does_not_echo`，驗證：
+- [x] **Step 1:** 定義 fake fixtures 並新增 `test_script_asset_hash_round_trip, test_sync_never_enables_trigger, test_secret_is_local, test_clipboard_does_not_echo`，驗證：
 
 ```python
 assert received_hash == source_hash
@@ -87,10 +87,10 @@ assert enabled_triggers == []
 assert sync_payload_contains_secret is False
 ```
 
-- [ ] **Step 2:** 執行 `.venv/Scripts/python.exe -m pytest -q --tb=short --basetemp=.test-tmp/modernization-task -o cache_dir=.test-tmp/modernization-pytest-cache test/unit_test/headless/test_sync_adapters.py`，確認新測試因原有缺陷或尚未提供接口而 FAIL；不要把環境錯誤當成功的重現。
-- [ ] **Step 3:** 先寫 script/locator/hotkey/trigger/address-book adapters，秘密及機器路徑留下參照。hash 驗證與 atomic replace；同步面板顯示 revision/pending/conflict/offline，取消 worker 釋放；folder/clipboard loop 與斷線場景也回歸。
-- [ ] **Step 4:** 重跑 Step 2，預期 exit 0；再跑這些修改檔所對應的既有回歸，確認公開契約。
-- [ ] **Step 5:** 更新本 task 的型別、所有交付入口、文件、測量計數與進度，僅 stage 本 task 檔案，提交 `git commit -m 'C3: 設定／資產 adapter 與同步 UI'`。
+- [x] **Step 2:** 執行 `.venv/Scripts/python.exe -m pytest -q --tb=short --basetemp=.test-tmp/modernization-task -o cache_dir=.test-tmp/modernization-pytest-cache test/unit_test/headless/test_sync_adapters.py`，確認新測試因原有缺陷或尚未提供接口而 FAIL；不要把環境錯誤當成功的重現。
+- [x] **Step 3:** 先寫 script/locator/hotkey/trigger/address-book adapters，秘密及機器路徑留下參照。hash 驗證與 atomic replace；同步面板顯示 revision/pending/conflict/offline，取消 worker 釋放；folder/clipboard loop 與斷線場景也回歸。
+- [x] **Step 4:** 重跑 Step 2，預期 exit 0；再跑這些修改檔所對應的既有回歸，確認公開契約。
+- [x] **Step 5:** 更新本 task 的型別、所有交付入口、文件、測量計數與進度，僅 stage 本 task 檔案，提交 `git commit -m 'C3: 設定／資產 adapter 與同步 UI'`。
 
 ### Task 4: C4 遠端 session 擁有權
 

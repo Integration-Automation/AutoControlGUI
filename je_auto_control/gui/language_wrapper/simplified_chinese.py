@@ -2,6 +2,26 @@ _BROWSE = "浏览..."  # NOSONAR python:S1192 — shared button label
 _LOCATE_CLICK = "定位并点击"  # NOSONAR python:S1192
 
 simplified_chinese_word_dict = {
+    'sync_assets': '接收并验证资产',
+    'sync_asset_manifest': '资产清单（JSON）',
+    'sync_asset_source': '资产来源目录',
+
+    'tab_config_sync': '配置同步',
+    'sync_definitions': '本地定义（JSON）',
+    'sync_workspace': '同步工作目录',
+    'sync_server': '服务器 URL',
+    'sync_user': '账号',
+    'sync_secret': '共享密钥',
+    'sync_ready': '就绪',
+    'sync_preview': '预览',
+    'sync_exchange': '交换配置',
+    'sync_apply': '应用预览',
+    'sync_retry': '重发待发操作',
+    'sync_status': '本地状态',
+    'sync_cancel': '取消',
+    'sync_choices': '冲突选择：{"区段/ID": 候选索引}',
+    'sync_summary': '版本 {revision} · 待发 {pending} · 冲突 {conflicts} · 离线 {offline} · 保护 {protected}',
+
     "application_name": "AutoControlGUI",
 
     # Tabs

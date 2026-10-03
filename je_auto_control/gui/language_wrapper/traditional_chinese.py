@@ -2,6 +2,26 @@ _TOKEN_LABEL_ZH = "Token："
 _BROWSE = "瀏覽..."  # NOSONAR python:S1192 — shared button label
 
 traditional_chinese_word_dict = {
+    'sync_assets': '接收並驗證資產',
+    'sync_asset_manifest': '資產清單（JSON）',
+    'sync_asset_source': '資產來源目錄',
+
+    'tab_config_sync': '設定同步',
+    'sync_definitions': '本機定義（JSON）',
+    'sync_workspace': '同步工作目錄',
+    'sync_server': '伺服器 URL',
+    'sync_user': '帳號',
+    'sync_secret': '共用密鑰',
+    'sync_ready': '就緒',
+    'sync_preview': '預覽',
+    'sync_exchange': '交換設定',
+    'sync_apply': '套用預覽',
+    'sync_retry': '重送待送操作',
+    'sync_status': '本機狀態',
+    'sync_cancel': '取消',
+    'sync_choices': '衝突選擇：{"區段/ID": 候選索引}',
+    'sync_summary': '版本 {revision} · 待送 {pending} · 衝突 {conflicts} · 離線 {offline} · 保護 {protected}',
+
     # Main
     "application_name": "AutoControlGUI",
 

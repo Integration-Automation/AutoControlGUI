@@ -147,8 +147,8 @@ class HotkeyDaemon:
         self._request_bindings: Dict[str, RequestBinding] = {}
 
     def bind(self, combo: str, script_path: str,
-             binding_id: Optional[str] = None) -> HotkeyBinding:
-        """Register a hotkey → script binding. Safe to call before/after start."""
+             binding_id: Optional[str] = None, *, enabled: bool = True) -> HotkeyBinding:
+        """Register a binding, optionally disabled before insertion for received definitions."""
         split_combo(combo)
         # A key the platform cannot take fails here, not later on every tick.
         if sys.platform == "win32":
@@ -158,7 +158,7 @@ class HotkeyDaemon:
             _combo_to_macos(combo)
         bid = binding_id or uuid.uuid4().hex[:8]
         binding = HotkeyBinding(
-            binding_id=bid, combo=combo, script_path=script_path,
+            binding_id=bid, combo=combo, script_path=script_path, enabled=enabled,
         )
         with self._lock:
             self._bindings[bid] = binding
@@ -175,6 +175,9 @@ class HotkeyDaemon:
             return list(self._bindings.values())
 
     _snapshot = list_bindings
+
+    def _active_bindings(self) -> List[HotkeyBinding]:
+        return [binding for binding in self.list_bindings() if binding.enabled]
 
     @property
     def is_running(self) -> bool:
@@ -197,7 +200,7 @@ class HotkeyDaemon:
         self._stop = threading.Event()
         context = BackendContext(
             stop_event=self._stop,
-            get_bindings=self._snapshot,
+            get_bindings=self._active_bindings,
             fire=self._fire_binding,
         )
         self._thread = threading.Thread(

@@ -12,6 +12,13 @@ from je_auto_control.utils.path_guard.path_guard import PathNotAllowedError
 # '*' addresses array items / mapping values. Mixed string/action-list 'source'
 # is validated only when it is a string. Optional omitted fields stay omitted.
 _READ_FIELDS = {
+    'ac_config_sync_preview': 'definitions_path workspace_path',
+    'ac_config_sync_exchange': 'definitions_path workspace_path',
+    'ac_config_sync_apply': 'definitions_path preview_path state_path',
+    'ac_config_sync_retry': 'workspace_path',
+    'ac_config_sync_status': 'workspace_path',
+    'ac_config_sync_assets': 'manifest_path source_root',
+
     'ac_generate_journal_candidate': 'journal_path',
     'ac_compare_healing_versions': 'dataset_path versions.*.template_path',
     'ac_create_template_candidate': 'template_path candidate_path',
@@ -105,6 +112,13 @@ _READ_FIELDS = {
     'ac_assert_video_changes': 'video_path',
 }
 _WRITE_FIELDS = {
+    'ac_config_sync_preview': 'workspace_path',
+    'ac_config_sync_exchange': 'workspace_path',
+    'ac_config_sync_apply': 'definitions_path state_path',
+    'ac_config_sync_retry': 'workspace_path',
+    'ac_config_sync_status': 'workspace_path',
+    'ac_config_sync_assets': 'destination_root',
+
     'ac_generate_journal_candidate': 'output_path',
     'ac_compare_healing_versions': 'report_path',
     'ac_create_template_candidate': 'store_path',

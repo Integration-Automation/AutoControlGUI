@@ -55,6 +55,7 @@ except ImportError as _remote_desktop_error:
     RemoteDesktopTab = None  # type: ignore[assignment,misc]  # reason: name is a class or None
     _REMOTE_DESKTOP_IMPORT_ERROR = _remote_desktop_error
 from je_auto_control.gui.rest_api_tab import RestApiTab
+from je_auto_control.gui.config_sync_tab import ConfigSyncTab
 from je_auto_control.gui.run_history_tab import RunHistoryTab
 from je_auto_control.gui.scheduler_tab import SchedulerTab
 from je_auto_control.gui.flow_editor import FlowEditorTab
@@ -162,6 +163,7 @@ class AutoControlGUIWidget(
                       ))
         self._add_tab("recording_editor", "tab_recording_editor", RecordingEditorTab(),
                       category="editing")
+        self._add_tab("config_sync", "tab_config_sync", ConfigSyncTab(), category="editing")
         self._add_tab("variables", "tab_variables", VariablesTab(),
                       category="editing")
         self._add_tab("secrets", "tab_secrets", SecretsTab(),

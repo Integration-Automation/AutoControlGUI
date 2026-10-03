@@ -12,6 +12,27 @@ _OUTPUT_LABEL = "Output:"  # NOSONAR python:S1192
 _MODEL_LABEL = "Model:"  # NOSONAR python:S1192
 
 english_word_dict = {
+    'sync_assets': 'Receive checked assets',
+    'sync_asset_manifest': 'Asset manifest (JSON)',
+    'sync_asset_source': 'Asset source directory',
+
+    'tab_config_sync': 'Config Sync',
+    'sync_definitions': 'Local definitions (JSON)',
+    'sync_workspace': 'Sync workspace',
+    'sync_server': 'Server URL',
+    'sync_user': 'Account',
+    'sync_secret': 'Shared secret',
+    'sync_ready': 'Ready',
+    'sync_preview': 'Preview',
+    'sync_exchange': 'Exchange',
+    'sync_apply': 'Apply preview',
+    'sync_retry': 'Retry pending',
+    'sync_status': 'Local status',
+    'sync_cancel': 'Cancel',
+    'sync_choices': 'Conflict choices: {"section/id": alternative index}',
+    'sync_summary': ('Revision {revision} · Pending {pending} · Conflicts {conflicts} · '
+                     'Offline {offline} · Protected {protected}'),
+
     # Main
     "application_name": "AutoControlGUI",
 

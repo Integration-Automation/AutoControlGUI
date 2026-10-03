@@ -1492,7 +1492,7 @@ WebRTC 待配對連線仍採 TTL。
 ``ConfigSyncError``、``ConfigRevisionConflict``、``ConfigStoreCapacityError``。
 ConfigSyncClient 預設使用受保護的因果同步與持久化 outbox。
 明確使用 ``SyncClientOptions(legacy_writes=True)`` 時，也必須開啟伺服器的
-``--allow-legacy-config-writes`` 遷移選項。設定同步 GUI 尚待交付。
+``--allow-legacy-config-writes`` 遷移選項。設定同步分頁使用共用受保護服務。
 
 因果同步與離線重送（Beta）
 ---------------
@@ -1514,3 +1514,34 @@ SQLite ``SyncOutbox`` 依 endpoint 與帳號保存原 envelope，成功與否不
 完整同步前必須審閱待送操作；``retire_device()`` 也須明確呼叫。
 本機 ``SyncOutbox`` peer 介面可跨重啟保留退休狀態。
 目前證據是受控 SQLite／HTTP 測試，實體多機驗證仍待完成。
+
+定義與資產同步（Beta）
+-------------
+
+設定同步分頁、六個 ``AC_config_sync_*``／``ac_config_sync_*`` 入口及 Script Builder
+共用 headless 的預覽、受保護交換、明確套用、持久化重送、本機狀態及資產服務。
+面板顯示提交版本、待送數、保留衝突、離線及 CAS 保護；Actions menu 的 worker
+有獨立取消事件，在操作之間檢查取消，目前有逾時限制的請求結束後釋放用戶端。
+
+本機 JSON 的 ``scripts``、``locators``、``hotkeys``、``triggers``、``address_book`` 各自
+對應 ID／定義物件。未變動的快照保留因果 ID；重建 adapter 時應保存其 state mapping。
+檔案服務將因果 state 放在明確工作目錄，依帳號與正常化 endpoint 隔離。
+命名秘密、依函式簽章綁定的 action 參數、已知秘密的回顯、認證 URL、絕對機器路徑
+轉成本機 ``{"$local": "/欄位/路徑"}`` 參照；``${secrets.NAME}`` 原樣保留。
+接收端缺少本機參照會列為未解決。任意 Python／原始碼及未分類 literal 不在此
+結構化隱私契約內；接收定義不啟動 listener、引擎、連線或腳本。
+
+預覽及交換保留所有因果候選，不套用本機定義。套用檢查原檔雜湊；``choices``
+明確選取 ``sync_conflict`` 陣列索引，例如 ``{"locators/button": 0}``，解決後推進
+所有已知候選的向量。收到的熱鍵／觸發器在加入前停用，停用熱鍵不進入 listener 快照。
+
+資產清單含 ``path``、``sha256``、``size``；六個入口中的資產操作從明確來源目錄接收，
+Python ``sync_assets`` 支援 streaming transport。每檔限制 256 MiB，拒絕越界、symlink
+及 Windows 轉向檔名，完整大小／雜湊驗證後才原子取代。取消、損毀或斷線清除
+本次暫存檔，既有目的檔保留；此前完成的檔案維持發布。定義宣告的 ``assets`` 必須
+先在定義檔目錄下驗證才能套用；資產作為資料保存，雜湊驗證不判斷內容是否含秘密。
+
+資料夾維持只新增／更新：內容雜湊偵測同 mtime 修改，連續兩次穩定觀察後傳送，
+失敗重試且接收檔案不回送。停止時仍保留尚未結束 sender 的所有權。TCP 剪貼簿
+使用有限 origin／event／hash 去重，抑制收到內容的下一次回送，舊 envelope 仍可讀。
+目前證據是受控 HTTP／SQLite、檔案及 offscreen Qt；實體多機驗證仍待完成。

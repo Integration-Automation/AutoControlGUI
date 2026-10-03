@@ -86,6 +86,7 @@ def _build_specs() -> List[CommandSpec]:
             FieldSpec('path', FieldType.FILE_PATH),
         )),
     ])
+    _add_config_sync_specs(specs)
     _add_healing_evaluation_specs(specs)
     _add_mouse_specs(specs)
     _add_keyboard_specs(specs)
@@ -98,6 +99,25 @@ def _build_specs() -> List[CommandSpec]:
     _add_rbac_specs(specs)
     return specs
 
+
+def _add_config_sync_specs(specs: List[CommandSpec]) -> None:
+    connection = (FieldSpec('workspace_path', FieldType.FILE_PATH), FieldSpec('server_url', FieldType.STRING),
+                  FieldSpec('user_id', FieldType.STRING))
+    secret = FieldSpec('shared_secret', FieldType.STRING, optional=True, sensitive=True)
+    for name in ('preview', 'exchange'):
+        specs.append(CommandSpec('AC_config_sync_' + name, 'Config Sync', name.title(), fields=(
+            FieldSpec('definitions_path', FieldType.FILE_PATH), *connection, secret)))
+    specs.extend([
+        CommandSpec('AC_config_sync_apply', 'Config Sync', 'Apply reviewed preview', fields=(
+            FieldSpec('definitions_path', FieldType.FILE_PATH), FieldSpec('preview_path', FieldType.FILE_PATH),
+            FieldSpec('state_path', FieldType.FILE_PATH), FieldSpec('device_id', FieldType.STRING),
+            FieldSpec('choices', FieldType.STRING, optional=True, default='{}'))),
+        CommandSpec('AC_config_sync_retry', 'Config Sync', 'Retry durable writes', fields=(*connection, secret)),
+        CommandSpec('AC_config_sync_status', 'Config Sync', 'Inspect sync status', fields=connection),
+        CommandSpec('AC_config_sync_assets', 'Config Sync', 'Receive checked assets', fields=(
+            FieldSpec('manifest_path', FieldType.FILE_PATH), FieldSpec('source_root', FieldType.FILE_PATH),
+            FieldSpec('destination_root', FieldType.FILE_PATH))),
+    ])
 
 def _add_healing_evaluation_specs(specs: List[CommandSpec]) -> None:
     specs.extend([

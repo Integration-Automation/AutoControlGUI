@@ -155,7 +155,7 @@ def check_webrtc_marshal():
 
     receiver = Receiver()
     signals.file_received.connect(receiver.on_file)
-    stub = types.SimpleNamespace(_signals=signals)
+    stub = types.SimpleNamespace(_signals=signals, _sync_engine=None)
 
     run_off_thread(
         lambda: _WebRTCViewerPanel._on_received_file(stub, "file-123"))

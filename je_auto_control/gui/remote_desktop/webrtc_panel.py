@@ -2362,9 +2362,9 @@ class _WebRTCViewerPanel(TranslatableMixin, QWidget):
         return viewer
 
     def _on_received_file(self, path) -> None:
-        # Called from the asyncio thread, which has no Qt event loop:
-        # QTimer.singleShot would never fire. Emit a signal — Qt queues the
-        # status update onto the GUI thread.
+        engine = self._sync_engine
+        if engine is not None:
+            engine.mark_received(path)
         self._signals.file_received.emit(path)
 
     def _on_file_received_ui(self, path) -> None:

@@ -789,7 +789,7 @@ Browser preflight supports PUT. Pending WebRTC rendezvous sessions retain their 
 ``ConfigSyncError``, ``ConfigRevisionConflict`` and ``ConfigStoreCapacityError``.
 ConfigSyncClient defaults to protected causal synchronization and a durable outbox.
 Explicit ``SyncClientOptions(legacy_writes=True)`` also requires the server's
-``--allow-legacy-config-writes`` migration option. The config GUI is still pending.
+``--allow-legacy-config-writes`` migration option. The Config Sync tab uses the shared protected services.
 
 Causal sync and offline retries (Beta)
 --------------------------------------
@@ -815,3 +815,48 @@ Retired or unresolved registration state blocks incremental sync and push;
 Pending operations require review before full resync. ``retire_device()`` is explicit.
 Local ``SyncOutbox`` peer methods preserve retirement across restart.
 These are controlled SQLite/HTTP tests; physical multi-machine checks remain pending.
+
+Definition and asset synchronization (Beta)
+-------------------------------------------
+
+The Config Sync tab and six ``AC_config_sync_*`` / ``ac_config_sync_*`` tools share
+headless services for preview, protected exchange, explicit apply, durable retry,
+local status and checked assets. The Script Builder exposes the same operations.
+The panel shows committed revision, pending count, retained conflicts, offline
+state and CAS protection. Actions menu operations use owned workers; cancellation
+checks between operations and closes the client after the current bounded request.
+
+Local definition JSON maps ``scripts``, ``locators``, ``hotkeys``, ``triggers`` and
+``address_book`` to identifier/object mappings. Portable adapters retain causal
+identities across unchanged snapshots; their optional state mapping must be
+persisted when rebuilding an adapter. The file service keeps this state under
+an explicit workspace, isolated by account and normalized server endpoint.
+Named confidential fields, signature-bound action arguments, known secret echoes,
+credential URLs and absolute machine paths become ``{"$local": "/field/path"}``
+references. Exact ``${secrets.NAME}`` references stay unresolved for local execution.
+Missing destination-local references remain unresolved. Opaque Python/source files
+and arbitrary unclassified literals are outside this structured privacy contract.
+
+Preview and exchange preserve all causal alternatives and do not apply local
+definitions. Apply requires the original file hash; optional ``choices`` explicitly
+selects an index from each ``sync_conflict`` array, e.g. ``{"locators/button": 0}``.
+A resolved edit advances after all known alternatives. Incoming hotkeys/triggers
+are disabled before registration and are excluded from active listener snapshots.
+Receiving definitions never starts listeners, engines, connections or scripts.
+
+Asset manifests list ``path``, ``sha256`` and ``size``. ``config_sync_assets`` receives
+from an explicit source root; Python ``sync_assets`` supports streaming transports.
+Each file is bounded to 256 MiB, rejects traversal, symlinks and Windows redirected
+names, and replaces its destination only after exact size/hash verification.
+Cancellation, corruption and disconnect remove only owned temporary files;
+earlier completed files remain published. Definitions declaring ``assets`` apply
+only after those files verify beneath the definition file's directory. Asset bytes
+are stored as data; integrity verification does not classify their contents.
+
+Folder mirroring remains additive: content identities detect edits even with
+unchanged mtimes, two consecutive stable observations precede transfer, failed
+sends retry, and received identities are not echoed. Stop retains ownership of
+a sender still draining. TCP clipboard sessions carry bounded origin/event/hash
+deduplication and suppress a received value's next outgoing echo; legacy envelopes
+remain readable. Evidence uses controlled HTTP/SQLite, files and offscreen Qt;
+physical multi-machine validation remains pending.
