@@ -37,7 +37,6 @@
 | 檔案 | 行數 | 為何還沒拆 |
 | --- | ---: | --- |
 | `utils/mcp_server/tools/_handlers_executor_bridge.py` | 1,429 | 2026-09-23 拆 `_handlers.py` 時新建。253 個純委派（中位數 3 行）：`from action_executor import _x` 再 `return _x(...)`,沒有分支。**不套用 flat data tables 條款**——那一條講的是「一個對照表或清單」,這裡是 252 個函式定義。再切下去只能照 MCP 工廠領域分（159 個領域）,那會把同一種委派散進十幾個檔,而它們之間沒有語意邊界。規則照舊:只准變短。 |
-| `gui/remote_desktop/webrtc_panel.py` | 2,527 | 單一 Qt 面板,但已含連線、監視器選擇、頻寬自適應、麥克風、錄影五組互動狀態。應拆成 panel + 各控制器。 |
 | `utils/accessibility/backends/windows_backend.py` | 805 | 已拆出 `windows_query.py`（193）、`windows_state.py`（98）與 `windows_reads.py`（142,2026-09-23;拆完 801,同日加焦點查詢的委派 +4）。剩下的是同一套 UIA COM 生命週期管理,再拆會把 `CoInitialize`／介面釋放的配對邏輯切散。 |
 
 **本質豁免（依 `CLAUDE.md` 的「flat data tables」條款,不算既有豁免）**:
@@ -53,7 +52,7 @@
 2026-08-18 重新實測時,表上原有的七列**全部**變長,而 `CLAUDE.md` 明寫
 「列上的檔案不得再變長,要再長就得先拆」,所以這裡曾標成 `[DECIDE]`。
 **維護者已於 2026-08-19 拍板:接受實測數字當新基準**——不為了回到舊數字而去拆
-`_handlers.py`（4,789）與 `webrtc_panel.py`。上表的行數即是各自的新上限,
+`_handlers.py`（4,789）與當時的 `webrtc_panel.py`。後者已依 C4 拆成各控制器；上表保留其餘檔案上限,
 規則不變:只准變短,再變長就得先拆。
 （`_handlers.py` 後來還是拆了:2026-09-22 拆出 QA 主題,2026-09-23 再拆出九個主題模組,
 本體降到 522 行、離開上表。見 `docs/updates/` 的 U-20260922-05 與 U-20260923-09。）
@@ -250,22 +249,6 @@ Anthropic 每一步送約 202 KB 的工具 schema、沒有 `cache_control`。拍
 執行 `grab_logical`、區域／視窗截圖、定位座標及 Qt 轉換驗證，附 OS、縮放、布局與影像尺寸。
 目前 2026-10-03 僅有 Windows 單一 1920×1200、100% 螢幕，無 Retina Mac；
 負原點、125% Qt 與混合 Retina 的 fixtures 已通過，但不能取代上述實機驗證。
-
----
-
-## 遠端桌面的 viewer 槽位由各面板共用
-
-`DECIDE` — 要改 `registry` 的擁有權模型
-
-`utils/remote_desktop/registry.py` 的 TCP 與 WS viewer 各只有一個槽位，快速連線（`gui/remote_desktop/connection_screen.py`）、
-舊式 viewer 分頁（`viewer_panel.py`）與 `AC_remote_connect` 都寫同一格。每一方連線前先 `registry.disconnect_viewer()`，
-於是在一邊連線會切斷另一邊的連線，被切斷的面板卻不知道：它的彈出視窗仍停在最後一格畫面，
-「中斷」按鈕則會切斷別人的連線。快速連線的「開始被遠端」也一樣會停掉主機分頁開的 host。
-
-**做法**：registry 記錄每個 viewer／host 由誰開的（owner token），`disconnect_*` 只在 owner 相符時動作；
-被別人取代時通知原本的面板收掉自己的視窗。或是反過來讓每個面板持有自己的 viewer，不經 registry。
-
-**為什麼要拍板**：`AC_remote_*` 指令與 MCP 工具依賴「registry 裡就是那一個 viewer」，改成多槽位要一起改它們的語意。
 
 ---
 

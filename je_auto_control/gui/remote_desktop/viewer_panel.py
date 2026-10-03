@@ -24,6 +24,7 @@ from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.remote_desktop import (
     FileReceiver, RemoteDesktopViewer, WebSocketDesktopViewer,
 )
+from je_auto_control.gui.remote_desktop.session_owner import PanelSessions
 from je_auto_control.utils.remote_desktop.file_transfer import default_download_dir
 from je_auto_control.utils.remote_desktop.audio import (
     AudioPlayer, is_audio_backend_available,
@@ -47,6 +48,10 @@ class _ViewerPanel(TranslatableMixin, QWidget):
     def __init__(self, parent: Optional[QWidget] = None) -> None:
         super().__init__(parent)
         self._tr_init()
+        self._sessions = PanelSessions(self, registry)
+        self._session_owner = self._sessions.owner
+        self._session_id: Optional[str] = None
+        self._sessions.ended.connect(self._on_session_ended)
         self._host_field = QLineEdit("127.0.0.1")
         self._port = QSpinBox()
         # 0 is "not entered yet", which _connect refuses; with a minimum of 1
@@ -221,34 +226,37 @@ class _ViewerPanel(TranslatableMixin, QWidget):
         viewer_cls = (WebSocketDesktopViewer
                       if transport in ("WebSocket", "WSS")
                       else RemoteDesktopViewer)
-        registry.disconnect_viewer()
+        self._disconnect()
+        session = self._sessions.reserve('ws' if transport in ('WebSocket', 'WSS') else 'tcp', 'viewer')
+        self._session_id = session.id
         try:
             viewer = viewer_cls(
                 host=host, port=port, token=token,
-                on_frame=self._frame_signal.emit,
-                on_error=lambda exc: self._error_signal.emit(str(exc)),
-                on_audio=self._audio_signal.emit,
-                on_clipboard=lambda kind, data:
-                    self._clipboard_signal.emit(kind, data),
+                on_frame=self._sessions.callback('viewer', self._frame_signal.emit),
+                on_error=self._sessions.callback('viewer', lambda exc: self._error_signal.emit(str(exc))),
+                on_audio=self._sessions.callback('viewer', self._audio_signal.emit),
+                on_clipboard=self._sessions.callback('viewer', self._clipboard_signal.emit),
                 expected_host_id=expected_id,
                 ssl_context=ssl_context,
             )
             viewer.set_file_receiver(FileReceiver(
                 base_dir=default_download_dir(),
-                on_progress=lambda tid, done, total:
-                    self._file_progress_signal.emit(tid, done, total),
-                on_complete=lambda tid, ok, err, dst:
+                on_progress=self._sessions.callback('viewer', self._file_progress_signal.emit),
+                on_complete=self._sessions.callback('viewer', lambda tid, ok, err, dst:
                     self._file_complete_signal.emit(
                         tid, bool(ok), err or "", dst,
-                    ),
+                    )),
             ))
+            self._sessions.attach(viewer, 'viewer', active=False)
             viewer.connect(timeout=5.0)
+            self._sessions.activate('viewer')
         # ValueError: a host such as "a..b" fails IDNA encoding with
         # UnicodeError, which escaped the slot and left the click unanswered.
         except (OSError, RuntimeError, ValueError, AutoControlException) as error:
+            self._sessions.close('viewer')
+            self._session_id = None
             QMessageBox.warning(self, _t("rd_viewer_connect"), str(error))
             return
-        registry._viewer = viewer  # noqa: SLF001  centralised lifecycle ownership
         self._connected = True
         self._start_audio_player_if_requested()
         # AnyDesk-style: open the live screen in its own window so the
@@ -297,7 +305,8 @@ class _ViewerPanel(TranslatableMixin, QWidget):
                 pass
 
     def _disconnect(self) -> None:
-        registry.disconnect_viewer()
+        self._sessions.close('viewer')
+        self._session_id = None
         self._stop_audio_player()
         self._connected = False
         self._close_screen_window()
@@ -305,6 +314,10 @@ class _ViewerPanel(TranslatableMixin, QWidget):
         self._progress_label.setText("")
         self._active_progress_id = None
         self._refresh_status()
+
+    def _on_session_ended(self, role: str) -> None:
+        if role == 'viewer':
+            self._disconnect()
 
     # --- pop-out screen window ----------------------------------------
 
@@ -344,7 +357,8 @@ class _ViewerPanel(TranslatableMixin, QWidget):
             self._disconnect()
 
     def _refresh_status(self) -> None:
-        live = self._connected and registry.viewer_status()["connected"]
+        viewer = self._sessions.resource('viewer')
+        live = self._connected and viewer is not None and viewer.connected
         if live:
             self._badge.set_state("live", _t("rd_badge_live"))
         else:
@@ -426,7 +440,7 @@ class _ViewerPanel(TranslatableMixin, QWidget):
     # --- input forwarding ---------------------------------------------
 
     def _send(self, action: dict) -> None:
-        viewer = registry.viewer
+        viewer = self._sessions.resource('viewer')
         if viewer is None or not viewer.connected:
             return
         try:
@@ -437,7 +451,7 @@ class _ViewerPanel(TranslatableMixin, QWidget):
     # --- clipboard / file transfer (viewer -> host) -------------------
 
     def _push_clipboard_to_host(self) -> None:
-        viewer = registry.viewer
+        viewer = self._sessions.resource('viewer')
         if viewer is None or not viewer.connected:
             QMessageBox.warning(self, _t("rd_viewer_push_clipboard"),
                                 _t("rd_viewer_status_idle"))
@@ -455,7 +469,7 @@ class _ViewerPanel(TranslatableMixin, QWidget):
         self._status.setText(_t("rd_clipboard_sent"))
 
     def _on_send_file_clicked(self) -> None:
-        viewer = registry.viewer
+        viewer = self._sessions.resource('viewer')
         if viewer is None or not viewer.connected:
             QMessageBox.warning(self, _t("rd_viewer_send_file"),
                                 _t("rd_viewer_status_idle"))
@@ -468,7 +482,7 @@ class _ViewerPanel(TranslatableMixin, QWidget):
         self._upload_file(source)
 
     def _on_files_dropped(self, paths) -> None:
-        viewer = registry.viewer
+        viewer = self._sessions.resource('viewer')
         if viewer is None or not viewer.connected:
             return
         for path in paths:
@@ -484,7 +498,7 @@ class _ViewerPanel(TranslatableMixin, QWidget):
         )
         if not ok or not dest:
             return
-        viewer = registry.viewer
+        viewer = self._sessions.resource('viewer')
         if viewer is None:
             return
         thread = _FileSendThread(viewer, source_path, dest, self)

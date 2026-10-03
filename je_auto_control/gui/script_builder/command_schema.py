@@ -19,6 +19,7 @@ class FieldType(str, Enum):
     ENUM = "enum"
     FILE_PATH = "file_path"
     RGB = "rgb"
+    JSON = "json"
 
 
 @dataclass(frozen=True)
@@ -86,6 +87,7 @@ def _build_specs() -> List[CommandSpec]:
             FieldSpec('path', FieldType.FILE_PATH),
         )),
     ])
+    _add_remote_session_specs(specs)
     _add_config_sync_specs(specs)
     _add_healing_evaluation_specs(specs)
     _add_mouse_specs(specs)
@@ -5196,6 +5198,238 @@ def _add_work_queue_specs(specs: List[CommandSpec]) -> None:
         description="Average + dominant colour of a screen region.",
     ))
 
+
+def _add_remote_session_specs(specs: List[CommandSpec]) -> None:
+    specs.extend(
+        [
+            CommandSpec(
+                "AC_start_remote_host",
+                "Remote Desktop",
+                "start_remote_host",
+                fields=(
+                    FieldSpec("token", FieldType.STRING, sensitive=True),
+                    FieldSpec("bind", FieldType.STRING, optional=True, default="127.0.0.1"),
+                    FieldSpec("port", FieldType.INT, optional=True, default=0),
+                    FieldSpec("fps", FieldType.FLOAT, optional=True, default=10.0),
+                    FieldSpec("quality", FieldType.INT, optional=True, default=70),
+                    FieldSpec("region", FieldType.JSON, optional=True, default=None, placeholder=_RECT_PLACEHOLDER),
+                    FieldSpec("max_clients", FieldType.INT, optional=True, default=4),
+                    FieldSpec("session_id", FieldType.STRING, optional=True, default=None),
+                ),
+            ),
+            CommandSpec(
+                "AC_stop_remote_host",
+                "Remote Desktop",
+                "stop_remote_host",
+                fields=(FieldSpec("session_id", FieldType.STRING, optional=True, default=None),),
+            ),
+            CommandSpec(
+                "AC_remote_host_status",
+                "Remote Desktop",
+                "remote_host_status",
+                fields=(FieldSpec("session_id", FieldType.STRING, optional=True, default=None),),
+            ),
+            CommandSpec(
+                "AC_remote_connect",
+                "Remote Desktop",
+                "remote_connect",
+                fields=(
+                    FieldSpec("host", FieldType.STRING),
+                    FieldSpec("port", FieldType.INT),
+                    FieldSpec("token", FieldType.STRING, sensitive=True),
+                    FieldSpec("timeout", FieldType.FLOAT, optional=True, default=5.0),
+                    FieldSpec("session_id", FieldType.STRING, optional=True, default=None),
+                ),
+            ),
+            CommandSpec(
+                "AC_remote_disconnect",
+                "Remote Desktop",
+                "remote_disconnect",
+                fields=(FieldSpec("session_id", FieldType.STRING, optional=True, default=None),),
+            ),
+            CommandSpec(
+                "AC_remote_viewer_status",
+                "Remote Desktop",
+                "remote_viewer_status",
+                fields=(FieldSpec("session_id", FieldType.STRING, optional=True, default=None),),
+            ),
+            CommandSpec(
+                "AC_remote_send_input",
+                "Remote Desktop",
+                "remote_send_input",
+                fields=(
+                    FieldSpec("action", FieldType.JSON),
+                    FieldSpec("session_id", FieldType.STRING, optional=True, default=None),
+                ),
+            ),
+            CommandSpec(
+                "AC_start_ws_host",
+                "Remote Desktop",
+                "start_ws_host",
+                fields=(
+                    FieldSpec("token", FieldType.STRING, sensitive=True),
+                    FieldSpec("bind", FieldType.STRING, optional=True, default="127.0.0.1"),
+                    FieldSpec("port", FieldType.INT, optional=True, default=0),
+                    FieldSpec("fps", FieldType.FLOAT, optional=True, default=10.0),
+                    FieldSpec("quality", FieldType.INT, optional=True, default=70),
+                    FieldSpec("region", FieldType.JSON, optional=True, default=None, placeholder=_RECT_PLACEHOLDER),
+                    FieldSpec("max_clients", FieldType.INT, optional=True, default=4),
+                    FieldSpec("session_id", FieldType.STRING, optional=True, default=None),
+                ),
+            ),
+            CommandSpec(
+                "AC_stop_ws_host",
+                "Remote Desktop",
+                "stop_ws_host",
+                fields=(FieldSpec("session_id", FieldType.STRING, optional=True, default=None),),
+            ),
+            CommandSpec(
+                "AC_ws_host_status",
+                "Remote Desktop",
+                "ws_host_status",
+                fields=(FieldSpec("session_id", FieldType.STRING, optional=True, default=None),),
+            ),
+            CommandSpec(
+                "AC_ws_connect",
+                "Remote Desktop",
+                "ws_connect",
+                fields=(
+                    FieldSpec("host", FieldType.STRING),
+                    FieldSpec("port", FieldType.INT),
+                    FieldSpec("token", FieldType.STRING, sensitive=True),
+                    FieldSpec("path", FieldType.STRING, optional=True, default="/"),
+                    FieldSpec("timeout", FieldType.FLOAT, optional=True, default=5.0),
+                    FieldSpec("session_id", FieldType.STRING, optional=True, default=None),
+                ),
+            ),
+            CommandSpec(
+                "AC_ws_disconnect",
+                "Remote Desktop",
+                "ws_disconnect",
+                fields=(FieldSpec("session_id", FieldType.STRING, optional=True, default=None),),
+            ),
+            CommandSpec(
+                "AC_ws_viewer_status",
+                "Remote Desktop",
+                "ws_viewer_status",
+                fields=(FieldSpec("session_id", FieldType.STRING, optional=True, default=None),),
+            ),
+            CommandSpec(
+                "AC_ws_send_input",
+                "Remote Desktop",
+                "ws_send_input",
+                fields=(
+                    FieldSpec("action", FieldType.JSON),
+                    FieldSpec("session_id", FieldType.STRING, optional=True, default=None),
+                ),
+            ),
+            CommandSpec(
+                "AC_start_webrtc_host",
+                "Remote Desktop",
+                "start_webrtc_host",
+                fields=(
+                    FieldSpec("token", FieldType.STRING, sensitive=True),
+                    FieldSpec("read_only", FieldType.BOOL, optional=True, default=False),
+                    FieldSpec("session_id", FieldType.STRING, optional=True, default=None),
+                ),
+            ),
+            CommandSpec(
+                "AC_webrtc_create_offer",
+                "Remote Desktop",
+                "webrtc_create_offer",
+                fields=(
+                    FieldSpec("peer_label", FieldType.STRING, optional=True, default="remote viewer"),
+                    FieldSpec("session_id", FieldType.STRING, optional=True, default=None),
+                ),
+            ),
+            CommandSpec(
+                "AC_webrtc_accept_answer",
+                "Remote Desktop",
+                "webrtc_accept_answer",
+                fields=(
+                    FieldSpec("answer_sdp", FieldType.STRING),
+                    FieldSpec("session_id", FieldType.STRING, optional=True, default=None),
+                ),
+            ),
+            CommandSpec(
+                "AC_stop_webrtc_host",
+                "Remote Desktop",
+                "stop_webrtc_host",
+                fields=(FieldSpec("session_id", FieldType.STRING, optional=True, default=None),),
+            ),
+            CommandSpec(
+                "AC_webrtc_host_status",
+                "Remote Desktop",
+                "webrtc_host_status",
+                fields=(FieldSpec("session_id", FieldType.STRING, optional=True, default=None),),
+            ),
+            CommandSpec(
+                "AC_start_webrtc_viewer",
+                "Remote Desktop",
+                "start_webrtc_viewer",
+                fields=(
+                    FieldSpec("token", FieldType.STRING, sensitive=True),
+                    FieldSpec("viewer_id", FieldType.STRING, optional=True, default=None),
+                    FieldSpec("session_id", FieldType.STRING, optional=True, default=None),
+                ),
+            ),
+            CommandSpec(
+                "AC_webrtc_process_offer",
+                "Remote Desktop",
+                "webrtc_process_offer",
+                fields=(
+                    FieldSpec("offer_sdp", FieldType.STRING),
+                    FieldSpec("expected_dtls_fingerprint", FieldType.STRING, optional=True, default=None),
+                    FieldSpec("session_id", FieldType.STRING, optional=True, default=None),
+                ),
+            ),
+            CommandSpec(
+                "AC_webrtc_send_input",
+                "Remote Desktop",
+                "webrtc_send_input",
+                fields=(
+                    FieldSpec("action", FieldType.JSON),
+                    FieldSpec("session_id", FieldType.STRING, optional=True, default=None),
+                ),
+            ),
+            CommandSpec(
+                "AC_stop_webrtc_viewer",
+                "Remote Desktop",
+                "stop_webrtc_viewer",
+                fields=(FieldSpec("session_id", FieldType.STRING, optional=True, default=None),),
+            ),
+            CommandSpec(
+                "AC_webrtc_viewer_status",
+                "Remote Desktop",
+                "webrtc_viewer_status",
+                fields=(FieldSpec("session_id", FieldType.STRING, optional=True, default=None),),
+            ),
+            CommandSpec(
+                "AC_remote_disconnect_session",
+                "Remote Desktop",
+                "remote_disconnect_session",
+                fields=(
+                    FieldSpec("session_id", FieldType.STRING),
+                    FieldSpec("owner", FieldType.STRING, optional=True),
+                ),
+            ),
+            CommandSpec(
+                "AC_remote_session_status",
+                "Remote Desktop",
+                "remote_session_status",
+                fields=(
+                    FieldSpec("session_id", FieldType.STRING),
+                    FieldSpec("owner", FieldType.STRING, optional=True),
+                ),
+            ),
+            CommandSpec(
+                "AC_remote_session_events",
+                "Remote Desktop",
+                "remote_session_events",
+                fields=(FieldSpec("owner", FieldType.STRING, optional=True),),
+            ),
+        ]
+    )
 
 _SPECS: Tuple[CommandSpec, ...] = tuple(_build_specs())
 COMMAND_SPECS: Mapping[str, CommandSpec] = {spec.command: spec for spec in _SPECS}

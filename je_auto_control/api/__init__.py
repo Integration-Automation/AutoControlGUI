@@ -5,6 +5,10 @@ prefer this namespace so importing core automation does not eagerly import
 hundreds of optional integrations.
 """
 
+from je_auto_control.utils.remote_desktop.sessions import (
+    RemoteSession, SessionStatus, SessionEvent, RemoteSessionError, SessionOwnershipError,
+    disconnect_session, get_remote_session, list_remote_session_events,
+)
 from je_auto_control.api.config_sync import (
     ConfigBucket, ConfigRevisionConflict, ConfigStore, ConfigStoreCapacityError, ConfigSyncError,
     ConfigSyncClient, SyncClientOptions, MergeDecision, PeerState, SyncEntry, can_collect_tombstone, merge_entries,
@@ -46,7 +50,11 @@ from je_auto_control.utils.config_sync.service import (
 )
 from je_auto_control.utils.config_sync.asset_service import config_sync_assets
 
+
 __all__ = [
+    'RemoteSession', 'SessionStatus', 'SessionEvent', 'RemoteSessionError', 'SessionOwnershipError',
+    'disconnect_session', 'get_remote_session', 'list_remote_session_events',
+
     'ApplyReport', 'SyncAdapter', 'JsonDefinitionAdapter', 'ScriptSyncAdapter', 'LocatorSyncAdapter',
     'HotkeySyncAdapter', 'TriggerSyncAdapter', 'AddressBookSyncAdapter', 'AssetSpec', 'AssetManifest',
     'AssetTransport', 'AssetSyncResult', 'AssetSyncError', 'sync_assets', 'config_sync_preview',

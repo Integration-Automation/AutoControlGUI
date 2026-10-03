@@ -9,6 +9,10 @@ misuse difficult — this is *not* a hardened RDP replacement, and exposing
 it to untrusted networks should be paired with an SSH tunnel or TLS
 front-end.
 """
+from je_auto_control.utils.remote_desktop.sessions import (
+    RemoteSession, SessionStatus, SessionEvent, RemoteSessionError, SessionOwnershipError,
+    disconnect_session, get_remote_session, list_remote_session_events,
+)
 from je_auto_control.utils.remote_desktop.audio import (
     AudioBackendError, AudioCapture, AudioPlayer,
     is_audio_backend_available,
@@ -157,7 +161,11 @@ def is_webrtc_available() -> bool:
     return WebRTCDesktopHost is not None
 
 
+
 __all__ = [
+    'RemoteSession', 'SessionStatus', 'SessionEvent', 'RemoteSessionError', 'SessionOwnershipError',
+    'disconnect_session', 'get_remote_session', 'list_remote_session_events',
+
     "RemoteDesktopHost", "RemoteDesktopViewer",
     "PendingViewer", "PendingViewerCallback", "list_host_monitors",
     "WebSocketDesktopHost", "WebSocketDesktopViewer",

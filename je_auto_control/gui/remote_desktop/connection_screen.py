@@ -45,6 +45,8 @@ from je_auto_control.utils.remote_desktop.connect_coordinator import (
 )
 from je_auto_control.utils.remote_desktop.host_id import format_host_id
 from je_auto_control.utils.remote_desktop.registry import registry
+from je_auto_control.gui.remote_desktop.session_owner import PanelSessions
+from je_auto_control.utils.remote_desktop.sessions import RemoteSession
 from je_auto_control.utils.remote_desktop.wake_on_lan import (
     send_magic_packet,
 )
@@ -77,10 +79,11 @@ class _ApprovalRequest:
     ``decision``. Falls back to deny if the operator never answers.
     """
 
-    __slots__ = ("pending", "event", "decision")
+    __slots__ = ("pending", "event", "decision", "session")
 
-    def __init__(self, pending: PendingViewer) -> None:
+    def __init__(self, pending: PendingViewer, session: Optional[RemoteSession] = None) -> None:
         self.pending = pending
+        self.session = session
         self.event = threading.Event()
         # One of "full", "view_only", "denied".
         self.decision: str = "denied"
@@ -118,6 +121,8 @@ class QuickConnectScreen(TranslatableMixin, QWidget):
     def __init__(self, parent: Optional[QWidget] = None) -> None:
         super().__init__(parent)
         self._tr_init()
+        self._sessions = PanelSessions(self, registry)
+        self._sessions.ended.connect(self._on_session_ended)
         self._host_id_label = QLabel("---")
         self._host_id_label.setStyleSheet(_HOST_ID_CSS)
         self._host_id_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -280,22 +285,24 @@ class QuickConnectScreen(TranslatableMixin, QWidget):
         if not token:
             self._generate_token()
             token = self._host_token.text().strip()
-        registry.disconnect_viewer()
-        registry.stop_host()
+        session = self._sessions.reserve('tcp', 'host')
         try:
             host = RemoteDesktopHost(
                 token=token, bind="127.0.0.1", port=0,
                 fps=10.0, quality=70,
-                on_pending_viewer=self._host_approval_callback,
+                on_pending_viewer=registry.bind_callback(
+                    session.id, lambda pending: self._host_approval_callback(pending, session=session)),
             )
+            self._sessions.attach(host, 'host', active=False)
             host.start()
+            self._sessions.activate('host')
         except (OSError, ValueError, RuntimeError) as error:
+            self._sessions.close('host')
             QMessageBox.warning(self, _t("rd_quick_start_host"), str(error))
             return
-        registry._host = host  # noqa: SLF001  centralised lifecycle ownership
         self._refresh_status()
 
-    def _host_approval_callback(self, pending: PendingViewer):
+    def _host_approval_callback(self, pending: PendingViewer, *, session: Optional[RemoteSession] = None):
         """Bridge incoming viewers to a GUI Allow/View-only/Deny dialog.
 
         Runs on the host's accept thread — we ship the request over to
@@ -303,7 +310,7 @@ class QuickConnectScreen(TranslatableMixin, QWidget):
         then block here until the operator clicks (or the timeout
         fires, in which case we deny).
         """
-        request = _ApprovalRequest(pending)
+        request = _ApprovalRequest(pending, session)
         self._approval_requested.emit(request)
         if not request.event.wait(timeout=_APPROVAL_TIMEOUT_S):
             return False
@@ -311,6 +318,11 @@ class QuickConnectScreen(TranslatableMixin, QWidget):
 
     def _show_approval_dialog(self, request: _ApprovalRequest) -> None:
         """GUI thread: ask the operator how to admit ``request.pending``."""
+        session = request.session
+        if session is not None and not registry.session_is_current(
+                session.id, session.generation, owner=self._sessions.owner):
+            request.event.set()
+            return
         try:
             address = ":".join(str(part) for part in request.pending.address)
             transport = request.pending.transport.upper()
@@ -340,6 +352,9 @@ class QuickConnectScreen(TranslatableMixin, QWidget):
             # stayed up, and an Allow clicked after that admitted nobody.
             QTimer.singleShot(int(_APPROVAL_TIMEOUT_S * 1000), box, box.reject)
             box.exec()
+            if session is not None and not registry.session_is_current(
+                    session.id, session.generation, owner=self._sessions.owner):
+                return
             clicked = box.clickedButton()
             if clicked is allow_btn:
                 request.decision = "full"
@@ -354,14 +369,14 @@ class QuickConnectScreen(TranslatableMixin, QWidget):
 
     def _stop_hosting(self) -> None:
         try:
-            registry.stop_host()
+            self._sessions.close('host')
         except (OSError, RuntimeError) as error:
             QMessageBox.warning(self, _t("rd_quick_stop_host"), str(error))
             return
         self._refresh_status()
 
     def _copy_host_id(self) -> None:
-        host = registry.host
+        host = self._sessions.resource('host')
         if host is None:
             return
         QGuiApplication.clipboard().setText(format_host_id(host.host_id))
@@ -369,7 +384,7 @@ class QuickConnectScreen(TranslatableMixin, QWidget):
     def _on_publish_via_signaling(self) -> None:
         """Hand off to the Advanced WebRTC Host tab with token prefilled."""
         token = self._host_token.text().strip()
-        host = registry.host
+        host = self._sessions.resource('host')
         host_id = host.host_id if host is not None else ""
         self.webrtc_host_handoff_requested.emit(token, host_id)
 
@@ -415,21 +430,24 @@ class QuickConnectScreen(TranslatableMixin, QWidget):
         )
 
     def _do_tcp_connect(self, host: str, port: int, token: str) -> None:
-        registry.disconnect_viewer()
+        self._disconnect()
+        self._sessions.reserve('tcp', 'viewer')
         try:
             viewer = RemoteDesktopViewer(
                 host=host, port=port, token=token,
-                on_frame=self._frame_arrived.emit,
-                on_error=lambda exc: self._error_arrived.emit(str(exc)),
-                on_cursor=self._cursor_moved.emit,
+                on_frame=self._sessions.callback('viewer', self._frame_arrived.emit),
+                on_error=self._sessions.callback('viewer', lambda exc: self._error_arrived.emit(str(exc))),
+                on_cursor=self._sessions.callback('viewer', self._cursor_moved.emit),
             )
+            self._sessions.attach(viewer, 'viewer', active=False)
             viewer.connect(timeout=5.0)
+            self._sessions.activate('viewer')
         # ValueError: a host such as "a..b" fails IDNA encoding with
         # UnicodeError, which escaped the slot and left the click unanswered.
         except (OSError, RuntimeError, ValueError, AutoControlException) as error:
+            self._sessions.close('viewer')
             QMessageBox.warning(self, _t("rd_quick_connect_btn"), str(error))
             return
-        registry._viewer = viewer  # noqa: SLF001  centralised lifecycle ownership
         self._remember_tcp(host, port)
         self._open_screen_window(f"{host}:{port}")
         self._refresh_status()
@@ -438,23 +456,26 @@ class QuickConnectScreen(TranslatableMixin, QWidget):
         host = target.host or ""
         port = target.port or 0
         path = target.path or "/"
-        registry.disconnect_ws_viewer()
+        self._disconnect()
+        self._sessions.reserve('ws', 'viewer')
         # wss:// was dialled as plain ws://: the session went unencrypted to
         # a host the operator took for TLS, and a real TLS host was unreachable.
         ssl_context = _build_verifying_client_context() if target.kind == "wss" else None
         try:
             viewer = WebSocketDesktopViewer(
                 host=host, port=port, token=token, path=path,
-                on_frame=self._frame_arrived.emit,
-                on_error=lambda exc: self._error_arrived.emit(str(exc)),
-                on_cursor=self._cursor_moved.emit,
+                on_frame=self._sessions.callback('viewer', self._frame_arrived.emit),
+                on_error=self._sessions.callback('viewer', lambda exc: self._error_arrived.emit(str(exc))),
+                on_cursor=self._sessions.callback('viewer', self._cursor_moved.emit),
                 ssl_context=ssl_context,
             )
+            self._sessions.attach(viewer, 'viewer', active=False)
             viewer.connect(timeout=5.0)
+            self._sessions.activate('viewer')
         except (OSError, RuntimeError, ValueError, AutoControlException) as error:
+            self._sessions.close('viewer')
             QMessageBox.warning(self, _t("rd_quick_connect_btn"), str(error))
             return
-        registry._ws_viewer = viewer  # noqa: SLF001  centralised lifecycle ownership
         scheme = "wss" if target.kind == "wss" else "ws"
         self._remember_url(f"{scheme}://{host}:{port}{path}")
         self._open_screen_window(f"{scheme}://{host}:{port}")
@@ -476,12 +497,16 @@ class QuickConnectScreen(TranslatableMixin, QWidget):
         self.webrtc_handoff_requested.emit(host_id, token)
 
     def _disconnect(self) -> None:
-        # Both transports may be live; clear whichever slot was filled
-        # so the operator does not need to remember which they used.
-        registry.disconnect_viewer()
-        registry.disconnect_ws_viewer()
+        self._sessions.close('viewer')
+        self._pending_frame = None
         self._close_screen_window()
         self._refresh_status()
+
+    def _on_session_ended(self, role: str) -> None:
+        if role == 'viewer':
+            self._disconnect()
+        else:
+            self._refresh_status()
 
     # --- frame plumbing ----------------------------------------------
 
@@ -523,7 +548,7 @@ class QuickConnectScreen(TranslatableMixin, QWidget):
 
     def _send_input(self, action: dict) -> None:
         """Forward one input action from the popup to the live viewer."""
-        viewer = registry.viewer or registry._ws_viewer  # noqa: SLF001
+        viewer = self._sessions.resource('viewer')  # noqa: SLF001
         if viewer is None or not viewer.connected:
             return
         try:
@@ -533,7 +558,7 @@ class QuickConnectScreen(TranslatableMixin, QWidget):
 
     def _on_files_dropped(self, paths) -> None:
         """Upload each dropped file to the host's home directory."""
-        viewer = registry.viewer or registry._ws_viewer  # noqa: SLF001
+        viewer = self._sessions.resource('viewer')  # noqa: SLF001
         if viewer is None or not viewer.connected:
             return
         for path in paths:
@@ -561,7 +586,7 @@ class QuickConnectScreen(TranslatableMixin, QWidget):
 
     def _on_window_closed(self) -> None:
         # Either transport: closing a ws:// popup left its session running.
-        if registry.viewer is not None or registry._ws_viewer is not None:  # noqa: SLF001
+        if self._sessions.resource('viewer') is not None:  # noqa: SLF001
             self._disconnect()
 
     # --- recent connections ------------------------------------------
@@ -673,7 +698,7 @@ class QuickConnectScreen(TranslatableMixin, QWidget):
         self._refresh_viewer_status()
 
     def _refresh_host_status(self) -> None:
-        status = registry.host_status()
+        status = self._sessions.status('host')
         if status["running"]:
             host_id = status.get("host_id") or ""
             self._host_id_label.setText(
@@ -692,8 +717,7 @@ class QuickConnectScreen(TranslatableMixin, QWidget):
             )
 
     def _refresh_viewer_status(self) -> None:
-        # A ws:// session read as disconnected: only the TCP slot was asked.
-        if registry.viewer_status()["connected"] or registry.ws_viewer_status()["connected"]:
+        if self._sessions.status('viewer')["connected"]:
             self._viewer_badge.set_state("live", _t("rd_quick_connected"))
         else:
             self._viewer_badge.set_state(

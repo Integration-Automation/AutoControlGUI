@@ -1477,3 +1477,37 @@ contract. The portable test migration is in
 ``docs/compatibility/jeffrey-rpa-oem-test-migration.patch``; validation uses a copied
 test suite against the current consumer code. Apply it when integrating this
 branch after the live editable batch stops.
+
+Owned remote connections (Beta)
+-------------------------------
+
+Each Remote Desktop panel owns independent host/viewer sessions for TCP,
+WebSocket and WebRTC. Connecting or closing one panel preserves other panels
+and scripts. Callbacks retain request authorization and session generation;
+queued frames, status, transfers and signaling results from ended sessions are
+dropped. Panel destruction stops owned transports and WebRTC background work;
+failed transport cleanup remains in the registry for explicit retry.
+
+All 24 transport commands accept keyword-only ``session_id``. Omission selects
+the script default for that transport and role; starting a new default replaces
+only that default. An explicit ID allocates a fresh named connection without
+changing defaults; retained allocated IDs cannot be reused. Existing seven TCP
+MCP tools accept the same ID; 17 WebSocket/WebRTC and three lifecycle tools are
+also available. Script Builder edits input objects and regions as finite JSON.
+
+``je_auto_control.api.remote_sessions`` exports immutable ``RemoteSession``,
+``SessionStatus`` (the same snapshot type), ``SessionEvent``, typed errors,
+``get_remote_session``, ``disconnect_session`` and ``list_remote_session_events``.
+AC/MCP JSON operations are ``AC_remote_session_status``,
+``AC_remote_disconnect_session``, ``AC_remote_session_events`` and their lowercase
+tool names. Optional ``owner`` checks identity; remote authorization still requires
+``MANAGE_HOSTS``. Events retain at most 1,024 records; closed history retains 256
+non-default sessions. Events/status contain no credentials or resource objects.
+
+Session ``active`` describes successful local allocation; WebRTC peer readiness
+uses transport status (``authenticated``, ``state``). GUI multi-viewer host status
+additionally includes ``peers`` and ``connected_clients``. Sessions/events are
+process-local and are not persisted configuration-sync records. Calling
+``disconnect_session(id, owner=...)`` affects only that connection. Controlled
+transport doubles and offscreen Qt verify ownership; physical multi-machine
+validation remains pending.

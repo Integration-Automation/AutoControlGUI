@@ -20,7 +20,7 @@
 
 - **一套 API，七个平台。** `wrapper/platform_wrapper.py` 在导入时挑选后端；同一份脚本在
   Windows、macOS、X11 与 Wayland 上都不需要改写。
-- **不写 Python 也能脚本化。** 798 个 `AC_*` 命令覆盖全部功能，因此一个 JSON 文件能做到库
+- **不写 Python 也能脚本化。** 801 个 `AC_*` 命令覆盖全部功能，因此一个 JSON 文件能做到库
   能做的任何事——包含循环、分支、try/catch、宏与变量。
 - **默认无头运行。** `import je_auto_control` 绝不会加载 Qt。GUI 是可选包，包在同一个无头内核之外。
 - **四种定位方式。** 模板匹配、OCR、无障碍树、视觉语言模型——可通过锚点定位器与自愈回退串接组合。
@@ -142,7 +142,7 @@ python -c "import je_auto_control; je_auto_control.start_autocontrol_gui()"
 | 自然语言规划 | `plan_actions`、`run_from_description` | `AC_llm_plan` | LLM Planner |
 | Computer-use agent | `AgentLoop`、`run_agent` | `AC_run_agent` | Computer Use |
 | 录制与回放 | `record`、`stop_record` | `AC_record`、`AC_stop_record` | Record |
-| JSON 脚本 | `execute_action`、`execute_files` | 全部 798 个命令 | Script、Script Builder |
+| JSON 脚本 | `execute_action`、`execute_files` | 全部 801 个命令 | Script、Script Builder |
 | 变量与流程控制 | `execute_action_with_vars` | `AC_set_var`、`AC_loop`、`AC_for_each`、`AC_try`、`AC_retry` | Variables |
 | 数据驱动执行 | — | `AC_for_each_row`（CSV／JSON／SQLite／Excel） | Data Sources |
 | 断言 | `assert_text`、`assert_image` | `AC_assert_text` 等 21 个 | Assertions |
@@ -191,7 +191,7 @@ je_auto_control version
 
 | 接口 | 启动方式 | 说明 |
 |---|---|---|
-| **MCP 服务器** | `je_auto_control_mcp`（stdio）或 `AC_start_mcp_http_server` | 703 个工具，供 Claude Desktop／Claude Code／自定义 tool loop 使用。除了以 `initialize` 握手的各版协议，也支持无状态的 MCP 2026-07-28。Bearer 认证、TLS、审计日志、限流、插件热重载、CI 假后端。 |
+| **MCP 服务器** | `je_auto_control_mcp`（stdio）或 `AC_start_mcp_http_server` | 723 个工具，供 Claude Desktop／Claude Code／自定义 tool loop 使用。除了以 `initialize` 握手的各版协议，也支持无状态的 MCP 2026-07-28。Bearer 认证、TLS、审计日志、限流、插件热重载、CI 假后端。 |
 | **REST API** | `je_auto_control start-rest` | Bearer token、按 IP 限流与锁定、SQLite 审计 hook、`/metrics`、`/openapi.json`、`/docs` Swagger UI、`/dashboard`。 |
 | **TCP socket 服务器** | `je_auto_control start-server` | 以换行分隔的 JSON 动作列表。默认绑定 `127.0.0.1`。 |
 | **pytest 插件** | 安装后自动生效 | 轻量 `je_auto_control_pytest` 入口，提供 fixture 与 Gherkin 步骤。升级 editable 工作树后须重新安装；明确指定的旧插件路径仍兼容。 |
@@ -643,3 +643,27 @@ SQLite `SyncOutbox` 按 endpoint 与账号保存原 envelope，成功与否不�
 失败重试且接收文件不回发。停止时保留尚未结束 sender 的所有权。TCP 剪贴板
 以有限 origin／event／hash 去重，抑制收到内容的下一次回发，旧 envelope 仍可读。
 目前证据为受控 HTTP／SQLite、文件与 offscreen Qt；实体多机验证仍待完成。
+
+## 远程连接所有权（Beta）
+
+Remote Desktop 每个面板独立拥有 TCP、WebSocket、WebRTC 的 host／viewer session。
+连接或关闭一个面板会保留其他面板与脚本。callback 保存请求授权与 session generation；
+已结束连接的排队画面、状态、传文件与信令结果会丢弃。面板销毁会停止所属传输与
+WebRTC 后台工作；清理失败的传输保留在 registry，供明确重试。
+
+24 个传输命令都接受 keyword-only `session_id`。省略时选择该 transport／role 的
+script default；新 default 只替换原 default。明确 ID 分配新的具名连接，不改 default；
+仍在记录中的已分配 ID 不可重用。原有七个 TCP MCP 工具接受相同 ID，另提供
+17 个 WebSocket／WebRTC 和三个生命周期工具。Script Builder 以有限 JSON 编辑输入对象和 region。
+
+`je_auto_control.api.remote_sessions` 导出不可变的 `RemoteSession`、`SessionStatus`
+（同一快照类型）、`SessionEvent`、类型化错误、`get_remote_session`、
+`disconnect_session`、`list_remote_session_events`。AC／MCP 的 JSON 操作为
+`AC_remote_session_status`、`AC_remote_disconnect_session`、`AC_remote_session_events`
+和对应小写工具名。optional `owner` 核对所有者；远程授权仍需 `MANAGE_HOSTS`。
+事件最多保存 1,024 条，非 default 已关闭 session 保存 256 条；状态和事件不含秘密或资源对象。
+
+session `active` 表示本地分配成功；WebRTC 对端就绪程度用传输的 `authenticated`／`state`
+判断。GUI 多 viewer host 状态另含 `peers`／`connected_clients`。session／事件仅存在于
+本进程，不是持久化配置同步数据。`disconnect_session(id, owner=...)` 只影响该连接。
+当前证据为受控 transport 替身和 offscreen Qt；实体多机验证仍待完成。

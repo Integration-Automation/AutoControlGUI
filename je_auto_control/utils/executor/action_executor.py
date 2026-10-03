@@ -71,6 +71,9 @@ from je_auto_control.utils.config_sync.wire_api import (
     config_sync_preview, config_sync_exchange, config_sync_apply, config_sync_retry, config_sync_status,
     config_sync_assets,
 )
+from je_auto_control.utils.remote_desktop.session_api import (
+    remote_disconnect_session, remote_session_status, remote_session_events,
+)
 from je_auto_control.utils.codegen.journal_api import generate_journal_candidate
 from je_auto_control.utils.secrets import default_secret_manager
 from je_auto_control.utils.script_vars.interpolate import (
@@ -1148,153 +1151,170 @@ def _computer_use(goal: str,
     return result_to_dict(result)
 
 
-def _remote_start_host(token: str,
-                       bind: str = "127.0.0.1",
-                       port: int = 0,
-                       fps: float = 10.0,
-                       quality: int = 70,
-                       region: Optional[List[int]] = None,
-                       max_clients: int = 4) -> Dict[str, Any]:
-    """Executor adapter: start the singleton remote-desktop host."""
+# pylint: disable=too-many-arguments  # reason: preserve existing positional API
+def _remote_start_host(
+    token: str,
+    bind: str = "127.0.0.1",
+    port: int = 0,
+    fps: float = 10.0,
+    quality: int = 70,
+    region: Optional[List[int]] = None,
+    max_clients: int = 4,
+    *,
+    session_id: Optional[str] = None,
+) -> Dict[str, Any]:
+    """Executor adapter: start the script-default or named remote-desktop host."""
     return remote_desktop_registry.start_host(
-        token=token, bind=bind, port=int(port),
-        fps=float(fps), quality=int(quality),
-        region=region, max_clients=int(max_clients),
+        token=token,
+        bind=bind,
+        port=int(port),
+        fps=float(fps),
+        quality=int(quality),
+        region=region,
+        max_clients=int(max_clients),
+        session_id=session_id,
     )
+# pylint: enable=too-many-arguments
 
 
-def _remote_stop_host() -> Dict[str, Any]:
-    return remote_desktop_registry.stop_host()
+def _remote_stop_host(*, session_id: Optional[str] = None) -> Dict[str, Any]:
+    return remote_desktop_registry.stop_host(session_id=session_id)
 
 
-def _remote_host_status() -> Dict[str, Any]:
-    return remote_desktop_registry.host_status()
+def _remote_host_status(*, session_id: Optional[str] = None) -> Dict[str, Any]:
+    return remote_desktop_registry.host_status(session_id=session_id)
 
 
-def _remote_connect(host: str, port: int, token: str,
-                    timeout: float = 5.0) -> Dict[str, Any]:
-    """Executor adapter: connect the singleton viewer."""
+def _remote_connect(
+    host: str, port: int, token: str, timeout: float = 5.0, *, session_id: Optional[str] = None
+) -> Dict[str, Any]:
+    """Executor adapter: connect the script-default or named viewer."""
     return remote_desktop_registry.connect_viewer(
-        host=host, port=int(port), token=token, timeout=float(timeout),
+        host=host, port=int(port), token=token, timeout=float(timeout), session_id=session_id
     )
 
 
-def _remote_disconnect() -> Dict[str, Any]:
-    return remote_desktop_registry.disconnect_viewer()
+def _remote_disconnect(*, session_id: Optional[str] = None) -> Dict[str, Any]:
+    return remote_desktop_registry.disconnect_viewer(session_id=session_id)
 
 
-def _remote_viewer_status() -> Dict[str, Any]:
-    return remote_desktop_registry.viewer_status()
+def _remote_viewer_status(*, session_id: Optional[str] = None) -> Dict[str, Any]:
+    return remote_desktop_registry.viewer_status(session_id=session_id)
 
 
-def _remote_send_input(action: Dict[str, Any]) -> Dict[str, Any]:
-    return remote_desktop_registry.send_input(action)
+def _remote_send_input(action: Dict[str, Any], *, session_id: Optional[str] = None) -> Dict[str, Any]:
+    return remote_desktop_registry.send_input(action, session_id=session_id)
 
 
 # --- WebSocket-transport remote desktop ------------------------------------
 
-def _ws_start_host(token: str,
-                   bind: str = "127.0.0.1",
-                   port: int = 0,
-                   fps: float = 10.0,
-                   quality: int = 70,
-                   region: Optional[List[int]] = None,
-                   max_clients: int = 4) -> Dict[str, Any]:
-    """Executor adapter: start the singleton WebSocket-transport host."""
+# pylint: disable=too-many-arguments  # reason: preserve existing positional API
+def _ws_start_host(
+    token: str,
+    bind: str = "127.0.0.1",
+    port: int = 0,
+    fps: float = 10.0,
+    quality: int = 70,
+    region: Optional[List[int]] = None,
+    max_clients: int = 4,
+    *,
+    session_id: Optional[str] = None,
+) -> Dict[str, Any]:
+    """Executor adapter: start the script-default or named WebSocket-transport host."""
     return remote_desktop_registry.start_ws_host(
-        token=token, bind=bind, port=int(port),
-        fps=float(fps), quality=int(quality),
-        region=region, max_clients=int(max_clients),
+        token=token,
+        bind=bind,
+        port=int(port),
+        fps=float(fps),
+        quality=int(quality),
+        region=region,
+        max_clients=int(max_clients),
+        session_id=session_id,
     )
+# pylint: enable=too-many-arguments
 
 
-def _ws_stop_host() -> Dict[str, Any]:
-    return remote_desktop_registry.stop_ws_host()
+def _ws_stop_host(*, session_id: Optional[str] = None) -> Dict[str, Any]:
+    return remote_desktop_registry.stop_ws_host(session_id=session_id)
 
 
-def _ws_host_status() -> Dict[str, Any]:
-    return remote_desktop_registry.ws_host_status()
+def _ws_host_status(*, session_id: Optional[str] = None) -> Dict[str, Any]:
+    return remote_desktop_registry.ws_host_status(session_id=session_id)
 
 
-def _ws_connect(host: str, port: int, token: str,
-                path: str = "/",
-                timeout: float = 5.0) -> Dict[str, Any]:
-    """Executor adapter: connect the singleton WS viewer."""
+def _ws_connect(
+    host: str, port: int, token: str, path: str = "/", timeout: float = 5.0, *, session_id: Optional[str] = None
+) -> Dict[str, Any]:
+    """Executor adapter: connect the script-default or named WS viewer."""
     return remote_desktop_registry.connect_ws_viewer(
-        host=host, port=int(port), token=token,
-        path=path, timeout=float(timeout),
+        host=host, port=int(port), token=token, path=path, timeout=float(timeout), session_id=session_id
     )
 
 
-def _ws_disconnect() -> Dict[str, Any]:
-    return remote_desktop_registry.disconnect_ws_viewer()
+def _ws_disconnect(*, session_id: Optional[str] = None) -> Dict[str, Any]:
+    return remote_desktop_registry.disconnect_ws_viewer(session_id=session_id)
 
 
-def _ws_viewer_status() -> Dict[str, Any]:
-    return remote_desktop_registry.ws_viewer_status()
+def _ws_viewer_status(*, session_id: Optional[str] = None) -> Dict[str, Any]:
+    return remote_desktop_registry.ws_viewer_status(session_id=session_id)
 
 
-def _ws_send_input(action: Dict[str, Any]) -> Dict[str, Any]:
-    return remote_desktop_registry.ws_send_input(action)
+def _ws_send_input(action: Dict[str, Any], *, session_id: Optional[str] = None) -> Dict[str, Any]:
+    return remote_desktop_registry.ws_send_input(action, session_id=session_id)
 
 
 # --- WebRTC-transport remote desktop (manual SDP signaling) ----------------
 
-def _webrtc_start_host(token: str,
-                       read_only: bool = False) -> Dict[str, Any]:
-    """Executor adapter: allocate the singleton WebRTC host.
+def _webrtc_start_host(token: str, read_only: bool = False, *, session_id: Optional[str] = None) -> Dict[str, Any]:
+    """Executor adapter: allocate the script-default or named WebRTC host.
 
     Follow up with ``AC_webrtc_create_offer`` then
     ``AC_webrtc_accept_answer`` once the viewer's answer SDP arrives.
     """
-    return remote_desktop_registry.start_webrtc_host(
-        token=token, read_only=_as_bool(read_only),
-    )
+    return remote_desktop_registry.start_webrtc_host(token=token, read_only=_as_bool(read_only), session_id=session_id)
 
 
-def _webrtc_create_offer(peer_label: str = "remote viewer") -> Dict[str, Any]:
-    return remote_desktop_registry.webrtc_create_offer(peer_label=peer_label)
+def _webrtc_create_offer(peer_label: str = "remote viewer", *, session_id: Optional[str] = None) -> Dict[str, Any]:
+    return remote_desktop_registry.webrtc_create_offer(peer_label=peer_label, session_id=session_id)
 
 
-def _webrtc_accept_answer(answer_sdp: str) -> Dict[str, Any]:
-    return remote_desktop_registry.webrtc_accept_answer(answer_sdp)
+def _webrtc_accept_answer(answer_sdp: str, *, session_id: Optional[str] = None) -> Dict[str, Any]:
+    return remote_desktop_registry.webrtc_accept_answer(answer_sdp, session_id=session_id)
 
 
-def _webrtc_stop_host() -> Dict[str, Any]:
-    return remote_desktop_registry.stop_webrtc_host()
+def _webrtc_stop_host(*, session_id: Optional[str] = None) -> Dict[str, Any]:
+    return remote_desktop_registry.stop_webrtc_host(session_id=session_id)
 
 
-def _webrtc_host_status() -> Dict[str, Any]:
-    return remote_desktop_registry.webrtc_host_status()
+def _webrtc_host_status(*, session_id: Optional[str] = None) -> Dict[str, Any]:
+    return remote_desktop_registry.webrtc_host_status(session_id=session_id)
 
 
-def _webrtc_start_viewer(token: str,
-                         viewer_id: Optional[str] = None) -> Dict[str, Any]:
-    """Executor adapter: allocate the singleton WebRTC viewer."""
-    return remote_desktop_registry.start_webrtc_viewer(
-        token=token, viewer_id=viewer_id,
-    )
+def _webrtc_start_viewer(
+    token: str, viewer_id: Optional[str] = None, *, session_id: Optional[str] = None
+) -> Dict[str, Any]:
+    """Executor adapter: allocate the script-default or named WebRTC viewer."""
+    return remote_desktop_registry.start_webrtc_viewer(token=token, viewer_id=viewer_id, session_id=session_id)
 
 
-def _webrtc_process_offer(offer_sdp: str,
-                          expected_dtls_fingerprint: Optional[str] = None,
-                          ) -> Dict[str, Any]:
+def _webrtc_process_offer(
+    offer_sdp: str, expected_dtls_fingerprint: Optional[str] = None, *, session_id: Optional[str] = None
+) -> Dict[str, Any]:
     return remote_desktop_registry.webrtc_process_offer(
-        offer_sdp,
-        expected_dtls_fingerprint=expected_dtls_fingerprint,
+        offer_sdp, expected_dtls_fingerprint=expected_dtls_fingerprint, session_id=session_id
     )
 
 
-def _webrtc_send_input(action: Dict[str, Any]) -> Dict[str, Any]:
-    return remote_desktop_registry.webrtc_send_input(action)
+def _webrtc_send_input(action: Dict[str, Any], *, session_id: Optional[str] = None) -> Dict[str, Any]:
+    return remote_desktop_registry.webrtc_send_input(action, session_id=session_id)
 
 
-def _webrtc_stop_viewer() -> Dict[str, Any]:
-    return remote_desktop_registry.stop_webrtc_viewer()
+def _webrtc_stop_viewer(*, session_id: Optional[str] = None) -> Dict[str, Any]:
+    return remote_desktop_registry.stop_webrtc_viewer(session_id=session_id)
 
 
-def _webrtc_viewer_status() -> Dict[str, Any]:
-    return remote_desktop_registry.webrtc_viewer_status()
+def _webrtc_viewer_status(*, session_id: Optional[str] = None) -> Dict[str, Any]:
+    return remote_desktop_registry.webrtc_viewer_status(session_id=session_id)
 
 
 # --- Virtual gamepad (ViGEm) -----------------------------------------------
@@ -7941,6 +7961,9 @@ class Executor:
             "AC_llm_run": _llm_run_for_executor,
 
             # Remote desktop host (this machine streams to others)
+            'AC_remote_disconnect_session': remote_disconnect_session,
+            'AC_remote_session_status': remote_session_status,
+            'AC_remote_session_events': remote_session_events,
             "AC_start_remote_host": _remote_start_host,
             "AC_stop_remote_host": _remote_stop_host,
             "AC_remote_host_status": _remote_host_status,

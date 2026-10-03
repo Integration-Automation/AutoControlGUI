@@ -63,6 +63,8 @@ def test_quick_connect_screen_instantiates(qapp):
         assert screen._host_badge.text()  # noqa: SLF001
         assert screen._viewer_badge.text()  # noqa: SLF001
     finally:
+        screen._disconnect()
+        screen._stop_hosting()
         screen.deleteLater()
 
 
@@ -76,6 +78,8 @@ def test_generate_token_fills_field(qapp):
         screen._generate_token()  # noqa: SLF001
         assert len(screen._host_token.text()) >= 16  # noqa: SLF001
     finally:
+        screen._disconnect()
+        screen._stop_hosting()
         screen.deleteLater()
 
 
@@ -87,13 +91,15 @@ def test_start_hosting_registers_host_and_refreshes_badge(qapp):
     try:
         screen._host_token.setText("ttt")  # noqa: SLF001
         screen._start_hosting()  # noqa: SLF001
-        assert registry.host is not None
-        assert registry.host.is_running
+        assert screen._sessions.resource('host') is not None
+        assert screen._sessions.resource('host').is_running
         # Badge text updated from the idle placeholder to running text.
         assert "{port}" not in screen._host_badge.text()  # noqa: SLF001
         screen._stop_hosting()  # noqa: SLF001
-        assert registry.host is None
+        assert screen._sessions.resource('host') is None
     finally:
+        screen._disconnect()
+        screen._stop_hosting()
         screen.deleteLater()
 
 
@@ -121,14 +127,16 @@ def test_quick_connect_round_trips_frame_to_popup(qapp):
             screen._connect_token.setText("t")  # noqa: SLF001
             screen._connect()  # noqa: SLF001
 
-            assert registry.viewer is not None
+            assert screen._sessions.resource('viewer') is not None
             # Wait until the pop-out window receives at least one frame.
             window = screen._screen_window  # noqa: SLF001
             assert window is not None
             assert _process_until(qapp, window.display.has_image)
             screen._disconnect()  # noqa: SLF001
-            assert registry.viewer is None
+            assert screen._sessions.resource('viewer') is None
         finally:
+            screen._disconnect()
+            screen._stop_hosting()
             screen.deleteLater()
     finally:
         host.stop(timeout=1.0)
@@ -156,6 +164,8 @@ def test_publish_via_signaling_emits_host_handoff(qapp):
         assert host_id and len(host_id) == 9 and host_id.isdigit()
         screen._stop_hosting()  # noqa: SLF001
     finally:
+        screen._disconnect()
+        screen._stop_hosting()
         screen.deleteLater()
 
 
@@ -175,8 +185,10 @@ def test_nine_digit_id_emits_webrtc_handoff(qapp):
         screen._connect()  # noqa: SLF001
         assert captured == [("123456789", "ttt")]
         # No TCP viewer should have been created since this is a handoff.
-        assert registry.viewer is None
+        assert screen._sessions.resource('viewer') is None
     finally:
+        screen._disconnect()
+        screen._stop_hosting()
         screen.deleteLater()
 
 
@@ -200,7 +212,7 @@ def test_approval_dialog_admits_when_operator_clicks_allow(qapp, monkeypatch):
     try:
         screen._host_token.setText("ttt")  # noqa: SLF001
         screen._start_hosting()  # noqa: SLF001
-        host = registry.host
+        host = screen._sessions.resource('host')
         assert host is not None
         try:
             from je_auto_control.utils.remote_desktop.viewer import (
@@ -232,6 +244,8 @@ def test_approval_dialog_admits_when_operator_clicks_allow(qapp, monkeypatch):
         finally:
             screen._stop_hosting()  # noqa: SLF001
     finally:
+        screen._disconnect()
+        screen._stop_hosting()
         screen.deleteLater()
     _ = cs_mod  # keep import for namespace stability
 
@@ -260,7 +274,7 @@ def test_approval_dialog_rejects_when_operator_clicks_deny(qapp, monkeypatch):
     try:
         screen._host_token.setText("ttt")  # noqa: SLF001
         screen._start_hosting()  # noqa: SLF001
-        host = registry.host
+        host = screen._sessions.resource('host')
         assert host is not None
         try:
             viewer = RemoteDesktopViewer(
@@ -285,6 +299,8 @@ def test_approval_dialog_rejects_when_operator_clicks_deny(qapp, monkeypatch):
         finally:
             screen._stop_hosting()  # noqa: SLF001
     finally:
+        screen._disconnect()
+        screen._stop_hosting()
         screen.deleteLater()
 
 
@@ -324,6 +340,8 @@ def test_recent_connections_populated_after_connect(qapp, tmp_path,
             assert screen._recent.count() >= 1  # noqa: SLF001
             screen._disconnect()  # noqa: SLF001
         finally:
+            screen._disconnect()
+            screen._stop_hosting()
             screen.deleteLater()
     finally:
         host.stop(timeout=1.0)

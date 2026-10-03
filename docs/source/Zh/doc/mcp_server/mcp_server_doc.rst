@@ -74,12 +74,19 @@ list-changed 通知與 elicitation。
   ``ac_remote_host_status``、``ac_remote_viewer_connect``、
   ``ac_remote_viewer_disconnect``、``ac_remote_viewer_status``、
   ``ac_remote_viewer_send_input``。這組工具直接包裝 GUI 的「遠端
-  桌面」分頁所用的 process-global registry,模型可以代為啟動 host
+  桌面」分頁所用的 process-global registry；GUI 連線各有擁有者，省略
+  ``session_id`` 只選取 script default。模型可以代為啟動 host
   (``token``、``bind``、``port``、``fps``、``quality``、
   ``host_id``)、連線 viewer 至另一台主機、查詢狀態,並透過目前的
   viewer 將滑鼠 / 鍵盤 / type / hotkey 動作轉送給遠端 host。狀態
   類工具屬於唯讀,在 ``--readonly`` 模式下仍然可用;
   ``send_input`` 屬於破壞性工具。
+
+  七個既有 TCP 工具都接受 optional ``session_id``，另提供 17 個
+  WebSocket／WebRTC 工具，以及 ``ac_remote_session_status``、
+  ``ac_remote_disconnect_session``、``ac_remote_session_events``。
+  具名生命周期工具可另核對 ``owner``；它是擁有者檢查，遠端呼叫仍需
+  ``MANAGE_HOSTS`` 授權。狀態／事件唯讀，關閉僅影響該 session。
 
 每個工具都會帶上 MCP 2025-06-18 規範的 ``annotations``
 (``readOnlyHint``、``destructiveHint``、``idempotentHint``、

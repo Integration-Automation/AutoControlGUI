@@ -91,7 +91,9 @@ def test_viewer_panel_renders_frame_from_host(qapp):
         assert display._image.width() == 64  # noqa: SLF001
         assert display._image.height() == 48  # noqa: SLF001
     finally:
-        registry.disconnect_viewer()
+        panel._disconnect()
+        panel.close()
+        panel.deleteLater()
         host.stop(timeout=1.0)
         registry._host = None  # noqa: SLF001
 
@@ -106,9 +108,10 @@ def test_host_preview_shows_streamed_frame(qapp):
         frame_provider=lambda: jpeg,
     )
     host.start()
-    registry._host = host  # noqa: SLF001
     try:
         panel = _HostPanel()
+        panel._sessions.reserve('tcp', 'host')
+        panel._sessions.attach(host, 'host')
         panel.show()  # the preview only refreshes while visible
         # Speed the preview poll up so the test does not need to wait 250ms+.
         panel._preview_timer.setInterval(20)  # noqa: SLF001
@@ -116,8 +119,10 @@ def test_host_preview_shows_streamed_frame(qapp):
         assert panel._preview._image.width() == 80  # noqa: SLF001
         assert panel._preview._image.height() == 60  # noqa: SLF001
     finally:
+        panel._stop()
+        panel.close()
+        panel.deleteLater()
         host.stop(timeout=1.0)
-        registry._host = None  # noqa: SLF001
 
 
 def test_viewer_input_round_trips_to_dispatcher(qapp):
@@ -155,6 +160,8 @@ def test_viewer_input_round_trips_to_dispatcher(qapp):
         assert any(c == {"action": "mouse_move", "x": 11, "y": 13}
                    for c in moves)
     finally:
-        registry.disconnect_viewer()
+        panel._disconnect()
+        panel.close()
+        panel.deleteLater()
         host.stop(timeout=1.0)
         registry._host = None  # noqa: SLF001

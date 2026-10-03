@@ -1,4 +1,5 @@
 """Schema-driven form for editing a Step's parameters."""
+import json
 from typing import Any, Callable, Dict, Optional
 
 from PySide6.QtCore import Signal
@@ -243,6 +244,7 @@ _SETTERS = {
     FieldType.ENUM: _set_enum_value,
     FieldType.FILE_PATH: _set_file_value,
     FieldType.RGB: _set_rgb_value,
+    FieldType.JSON: lambda e, v: e.setText('' if v is None else json.dumps(v, allow_nan=False)),
 }
 
 
@@ -279,6 +281,15 @@ def _read_rgb(editor: QWidget) -> Any:
     return [int(p) for p in parts]
 
 
+def _reject_json_constant(value: str) -> None:
+    raise ValueError('non-finite JSON value: ' + value)
+
+
+def _read_json(editor: QWidget) -> Any:
+    text = editor.text().strip()
+    return json.loads(text, parse_constant=_reject_json_constant) if text else None
+
+
 _READERS = {
     FieldType.STRING: _read_string,
     FieldType.INT: _read_int,
@@ -287,6 +298,7 @@ _READERS = {
     FieldType.ENUM: lambda e: e.currentText() or None,
     FieldType.FILE_PATH: _read_file,
     FieldType.RGB: _read_rgb,
+    FieldType.JSON: _read_json,
 }
 
 
@@ -315,4 +327,5 @@ _EDITOR_BUILDERS = {
     FieldType.ENUM: StepFormView._build_enum,
     FieldType.FILE_PATH: StepFormView._build_file,
     FieldType.RGB: StepFormView._build_rgb,
+    FieldType.JSON: StepFormView._build_string,
 }

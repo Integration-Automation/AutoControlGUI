@@ -75,12 +75,20 @@ Remote desktop (TCP host + viewer registry)
   ``ac_remote_host_status``, ``ac_remote_viewer_connect``,
   ``ac_remote_viewer_disconnect``, ``ac_remote_viewer_status``,
   ``ac_remote_viewer_send_input``. These wrap the same singleton
-  registry the GUI's Remote Desktop tab uses, so a model can spin
+  registry with independent GUI ownership; an omitted session_id selects
+  only a script default. A model can spin
   up a host (``token``, ``bind``, ``port``, ``fps``, ``quality``,
   ``host_id``), open a viewer to another machine, query status, and
   forward mouse / keyboard / type / hotkey actions through the
   active viewer. Status tools are read-only and survive
   ``--readonly`` mode; ``send_input`` is destructive by design.
+
+  All seven TCP tools accept optional ``session_id``. Another 17 tools expose
+  WebSocket/WebRTC operations, alongside ``ac_remote_session_status``,
+  ``ac_remote_disconnect_session`` and ``ac_remote_session_events``.
+  Named lifecycle tools can validate ``owner``; remote calls still require
+  ``MANAGE_HOSTS`` authorization. Status/events are read-only, and disconnect
+  affects only that session.
 
 Every tool carries the MCP 2025-06-18 ``annotations`` block
 (``readOnlyHint``, ``destructiveHint``, ``idempotentHint``,

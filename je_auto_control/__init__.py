@@ -3,6 +3,10 @@ import all wrapper function
 """
 
 # callback
+from je_auto_control.utils.remote_desktop.sessions import (
+    RemoteSession, SessionStatus, SessionEvent, RemoteSessionError, SessionOwnershipError,
+    disconnect_session, get_remote_session, list_remote_session_events,
+)
 from je_auto_control.utils.exception.exceptions import (
     CryptoDependencyError, CryptoImportError, CryptoUnavailableError,
 )
@@ -1331,7 +1335,11 @@ def start_autocontrol_gui(*args, **kwargs):
     return _impl(*args, **kwargs)
 
 
+
 __all__ = [
+    'RemoteSession', 'SessionStatus', 'SessionEvent', 'RemoteSessionError', 'SessionOwnershipError',
+    'disconnect_session', 'get_remote_session', 'list_remote_session_events',
+
     'ApplyReport', 'SyncAdapter', 'JsonDefinitionAdapter', 'ScriptSyncAdapter', 'LocatorSyncAdapter',
     'HotkeySyncAdapter', 'TriggerSyncAdapter', 'AddressBookSyncAdapter', 'AssetSpec', 'AssetManifest',
     'AssetTransport', 'AssetSyncResult', 'AssetSyncError', 'sync_assets', 'config_sync_preview',

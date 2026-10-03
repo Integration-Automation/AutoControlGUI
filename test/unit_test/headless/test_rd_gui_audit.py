@@ -16,6 +16,7 @@ import pytest
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 pytest.importorskip("PySide6.QtWidgets", exc_type=ImportError)
 
+from PySide6.QtCore import QEvent  # noqa: E402
 from PySide6.QtWidgets import QApplication, QMessageBox  # noqa: E402
 
 from je_auto_control.gui.remote_desktop import connection_screen, host_panel, viewer_panel  # noqa: E402
@@ -34,6 +35,13 @@ def qapp(monkeypatch):
     monkeypatch.setattr(registry, "_host", None)
     app.warnings = warnings
     yield app
+    panels = [widget for widget in app.allWidgets()
+              if isinstance(widget, (connection_screen.QuickConnectScreen, host_panel._HostPanel,
+                                     viewer_panel._ViewerPanel))]
+    for panel in panels:
+        panel._sessions.dispose()
+        panel.deleteLater()
+    app.sendPostedEvents(None, QEvent.Type.DeferredDelete.value)
 
 
 class _FakeViewer:
@@ -48,6 +56,9 @@ class _FakeViewer:
 
     def send_input(self, action):
         self.sent.append(action)
+
+    def disconnect(self, timeout=2.0):
+        self.connected = False
 
 
 # --- Quick Connect -----------------------------------------------------------------------------------------
@@ -64,8 +75,9 @@ def test_quick_connect_dials_wss_with_a_verifying_tls_context(qapp, monkeypatch)
 
 def test_the_quick_connect_popup_forwards_input(qapp, monkeypatch):
     viewer = _FakeViewer()
-    monkeypatch.setattr(registry, "_ws_viewer", viewer)
     screen = connection_screen.QuickConnectScreen()
+    screen._sessions.reserve('ws', 'viewer')
+    screen._sessions.attach(viewer, 'viewer')
     screen._open_screen_window("desk")
     window = screen._screen_window
     window.mouse_pressed.emit(3, 4, "mouse_left")
@@ -175,6 +187,9 @@ class _FakeHost:
     def start(self):
         return None
 
+    def stop(self, timeout=2.0):
+        self.is_running = False
+
     def latest_frame(self):
         raise AssertionError("the hidden preview read a frame")
 
@@ -190,8 +205,8 @@ def _started_panel(monkeypatch):
 
 
 def test_the_host_captures_audio_with_the_advanced_section_collapsed(monkeypatch):
-    _started_panel(monkeypatch)
-    assert registry.host.kwargs["audio_config"].enabled is True
+    panel = _started_panel(monkeypatch)
+    assert panel._sessions.resource('host').kwargs["audio_config"].enabled is True
 
 
 def test_the_share_text_quotes_the_running_host_not_the_edited_fields(monkeypatch):

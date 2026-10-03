@@ -486,7 +486,7 @@ Headless viewer（控制別人）::
 - ``type`` ``{text}``
 - ``ping``
 
-Action-JSON 指令（使用 :mod:`utils.remote_desktop.registry` 的單例）::
+Action-JSON 指令（使用 :mod:`utils.remote_desktop.registry` 的 script default／具名 session）::
 
    AC_start_remote_host       # token, bind, port, fps, quality, region
    AC_stop_remote_host
@@ -1545,3 +1545,28 @@ Python ``sync_assets`` 支援 streaming transport。每檔限制 256 MiB，拒�
 失敗重試且接收檔案不回送。停止時仍保留尚未結束 sender 的所有權。TCP 剪貼簿
 使用有限 origin／event／hash 去重，抑制收到內容的下一次回送，舊 envelope 仍可讀。
 目前證據是受控 HTTP／SQLite、檔案及 offscreen Qt；實體多機驗證仍待完成。
+
+遠端連線所有權（Beta）
+-------------
+
+Remote Desktop 每個面板各自擁有 TCP、WebSocket、WebRTC 的 host／viewer session。
+連線或關閉一個面板會保留其他面板與腳本。callback 保存請求授權與 session generation；
+已結束連線的排隊影格、狀態、傳檔與訊令結果會丟棄。面板銷毀會停止所屬傳輸與
+WebRTC 背景工作；清理失敗的傳輸保留在 registry，供明確重試。
+
+24 個傳輸指令都接受 keyword-only ``session_id``。省略時選取該 transport／role 的
+script default；新 default 只替換原 default。明確 ID 配置新的具名連線，不改 default；
+仍在記錄中的已配置 ID 不可重用。既有七個 TCP MCP 工具接受相同 ID，另提供
+17 個 WebSocket／WebRTC 及三個生命周期工具。Script Builder 以有限 JSON 編輯輸入物件與 region。
+
+``je_auto_control.api.remote_sessions`` 匯出不可變的 ``RemoteSession``、``SessionStatus``
+（同一快照型別）、``SessionEvent``、型別化錯誤、``get_remote_session``、
+``disconnect_session``、``list_remote_session_events``。AC／MCP 的 JSON 操作為
+``AC_remote_session_status``、``AC_remote_disconnect_session``、``AC_remote_session_events``
+及對應小寫工具名稱。optional ``owner`` 核對擁有者；遠端授權仍需 ``MANAGE_HOSTS``。
+事件最多保存 1,024 筆，非 default 已關閉 session 保存 256 筆；狀態與事件不含秘密或資源物件。
+
+session ``active`` 表示本機配置成功；WebRTC 對端就緒程度以傳輸的 ``authenticated``／``state``
+判斷。GUI 多 viewer host 的狀態另含 ``peers``／``connected_clients``。session／事件只存在
+本行程，不是持久化設定同步資料。``disconnect_session(id, owner=...)`` 只影響該連線。
+目前證據是受控 transport 替身與 offscreen Qt；實體多機驗證仍待完成。

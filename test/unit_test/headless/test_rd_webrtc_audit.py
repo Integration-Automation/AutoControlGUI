@@ -8,6 +8,7 @@ window ignored the pen; an empty recording was reported saved; Quick Connect
 ignored ws:// sessions on close and in its badge, left the session up after an
 error, and kept a timed-out approval box open.
 """
+import importlib
 import os
 import time
 import types
@@ -83,7 +84,7 @@ def test_a_host_stopped_under_the_approval_dialog_is_not_an_error(monkeypatch):
         def choice(self):
             return Dialog.AcceptOnce
 
-    monkeypatch.setattr(webrtc_panel, "PendingViewerDialog", Dialog)
+    monkeypatch.setattr(importlib.import_module(panel.__class__.__module__), "PendingViewerDialog", Dialog)
     panel._on_pending_viewer("session-1", "viewer")
 
 
@@ -174,8 +175,9 @@ class _WsViewer:
 
 def test_quick_connect_treats_a_ws_session_as_a_session(monkeypatch):
     viewer = _WsViewer()
-    monkeypatch.setattr(registry, "_ws_viewer", viewer)
     screen = connection_screen.QuickConnectScreen()
+    screen._sessions.reserve('ws', 'viewer')
+    screen._sessions.attach(viewer, 'viewer')
     screen._refresh_viewer_status()
     assert screen._viewer_badge.text() == _t("rd_quick_connected")
     screen._on_window_closed()
@@ -184,8 +186,9 @@ def test_quick_connect_treats_a_ws_session_as_a_session(monkeypatch):
 
 def test_a_session_error_ends_the_quick_connect_session(monkeypatch, qapp):
     viewer = _WsViewer()
-    monkeypatch.setattr(registry, "_ws_viewer", viewer)
     screen = connection_screen.QuickConnectScreen()
+    screen._sessions.reserve('ws', 'viewer')
+    screen._sessions.attach(viewer, 'viewer')
     screen._open_screen_window("desk")
     screen._on_error("connection reset")
     assert viewer.disconnected and screen._screen_window is None

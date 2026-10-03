@@ -15,6 +15,8 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Added
 
+- Beta owned remote sessions and three AC/MCP lifecycle operations; all 24 transport commands and remote tools accept optional session_id. GUI panels keep separate identities, drop stale queued results and clean owned WebRTC background resources. Legacy omitted-ID script defaults and WebRTC class imports remain compatible.
+
 - Beta definition and asset sync adapters, a Config Sync tab and six shared AC/MCP/Builder operations preserve local secrets/paths, causal conflicts and inactive received triggers. Assets verify exact hash/size before atomic replace; folder and TCP clipboard incoming content is not echoed.
 
 - Protected causal config synchronization preserves concurrent alternatives and uses stable SQLite outbox envelopes for uncertain retries. Shared device acknowledgements govern deletion GC; retired devices require explicit full resync. Legacy timestamp/blind writes are opt-in compatibility behavior.

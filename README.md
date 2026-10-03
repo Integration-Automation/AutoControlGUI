@@ -22,7 +22,7 @@ from JSON files / CLI / servers, and a **GUI tab**. Nothing is GUI-only.
 
 - **One API, seven platforms.** `wrapper/platform_wrapper.py` picks the backend at import
   time; your script does not change between Windows, macOS, X11, and Wayland.
-- **Scriptable without Python.** 798 `AC_*` commands cover the whole feature set, so a
+- **Scriptable without Python.** 801 `AC_*` commands cover the whole feature set, so a
   JSON file can do anything the library can — including loops, branches, try/catch,
   macros, and variables.
 - **Headless by default.** `import je_auto_control` never loads Qt. The GUI is an
@@ -154,7 +154,7 @@ desktop app; tab commands live in the window's **Actions** menu.
 | Natural-language planner | `plan_actions`, `run_from_description` | `AC_llm_plan` | LLM Planner |
 | Computer-use agent | `AgentLoop`, `run_agent` | `AC_run_agent` | Computer Use |
 | Record & replay | `record`, `stop_record` | `AC_record`, `AC_stop_record` | Record |
-| JSON scripting | `execute_action`, `execute_files` | all 798 commands | Script, Script Builder |
+| JSON scripting | `execute_action`, `execute_files` | all 801 commands | Script, Script Builder |
 | Variables & flow control | `execute_action_with_vars` | `AC_set_var`, `AC_loop`, `AC_for_each`, `AC_try`, `AC_retry` | Variables |
 | Data-driven runs | — | `AC_for_each_row` (CSV / JSON / SQLite / Excel) | Data Sources |
 | Assertions | `assert_text`, `assert_image` | `AC_assert_text` + 20 more | Assertions |
@@ -206,7 +206,7 @@ still goes on to the end), so a CI step fails with it. The legacy
 
 | Surface | Start it with | Notes |
 |---|---|---|
-| **MCP server** | `je_auto_control_mcp` (stdio) or `AC_start_mcp_http_server` | 703 tools for Claude Desktop / Claude Code / custom tool loops. Speaks the stateless MCP 2026-07-28 beside the `initialize`-based revisions. Bearer auth, TLS, audit log, rate limit, plugin hot-reload, CI fake backend. |
+| **MCP server** | `je_auto_control_mcp` (stdio) or `AC_start_mcp_http_server` | 723 tools for Claude Desktop / Claude Code / custom tool loops. Speaks the stateless MCP 2026-07-28 beside the `initialize`-based revisions. Bearer auth, TLS, audit log, rate limit, plugin hot-reload, CI fake backend. |
 | **REST API** | `je_auto_control start-rest` | Bearer token, per-IP rate limit + lockout, SQLite audit hook, `/metrics`, `/openapi.json`, `/docs` Swagger UI, `/dashboard`. |
 | **TCP socket server** | `je_auto_control start-server` | Newline-framed JSON action lists. Binds `127.0.0.1` by default. |
 | **pytest plugin** | installed automatically | Lightweight `je_auto_control_pytest` entry point; fixtures plus Gherkin steps for pytest-bdd / behave. Reinstall after upgrading editable checkouts; the explicit legacy plugin path remains supported. |
@@ -755,3 +755,36 @@ a sender still draining. TCP clipboard sessions carry bounded origin/event/hash
 deduplication and suppress a received value's next outgoing echo; legacy envelopes
 remain readable. Evidence uses controlled HTTP/SQLite, files and offscreen Qt;
 physical multi-machine validation remains pending.
+
+## Owned remote connections (Beta)
+
+Each Remote Desktop panel owns independent host/viewer sessions for TCP,
+WebSocket and WebRTC. Connecting or closing one panel preserves other panels
+and scripts. Callbacks retain request authorization and session generation;
+queued frames, status, transfers and signaling results from ended sessions are
+dropped. Panel destruction stops owned transports and WebRTC background work;
+failed transport cleanup remains in the registry for explicit retry.
+
+All 24 transport commands accept keyword-only `session_id`. Omission selects
+the script default for that transport and role; starting a new default replaces
+only that default. An explicit ID allocates a fresh named connection without
+changing defaults; retained allocated IDs cannot be reused. Existing seven TCP
+MCP tools accept the same ID; 17 WebSocket/WebRTC and three lifecycle tools are
+also available. Script Builder edits input objects and regions as finite JSON.
+
+`je_auto_control.api.remote_sessions` exports immutable `RemoteSession`,
+`SessionStatus` (the same snapshot type), `SessionEvent`, typed errors,
+`get_remote_session`, `disconnect_session` and `list_remote_session_events`.
+AC/MCP JSON operations are `AC_remote_session_status`,
+`AC_remote_disconnect_session`, `AC_remote_session_events` and their lowercase
+tool names. Optional `owner` checks identity; remote authorization still requires
+`MANAGE_HOSTS`. Events retain at most 1,024 records; closed history retains 256
+non-default sessions. Events/status contain no credentials or resource objects.
+
+Session `active` describes successful local allocation; WebRTC peer readiness
+uses transport status (`authenticated`, `state`). GUI multi-viewer host status
+additionally includes `peers` and `connected_clients`. Sessions/events are
+process-local and are not persisted configuration-sync records. Calling
+`disconnect_session(id, owner=...)` affects only that connection. Controlled
+transport doubles and offscreen Qt verify ownership; physical multi-machine
+validation remains pending.

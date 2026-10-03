@@ -98,7 +98,7 @@ assert sync_payload_contains_secret is False
 
 **Interfaces:** `RemoteSession` 擁有 id/owner/transport/state；`disconnect_session(session_id: str, *, owner: str | None = None) -> SessionStatus`；既有 AC_remote_* 加 optional session_id。
 
-- [ ] **Step 1:** 定義 fake fixtures 並新增 `test_panel_disconnect_only_own_session, test_stale_callback_is_ignored, test_default_script_session_is_compatible`，驗證：
+- [x] **Step 1:** 定義 fake fixtures 並新增 `test_panel_disconnect_only_own_session, test_stale_callback_is_ignored, test_default_script_session_is_compatible`，驗證：
 
 ```python
 assert other_session.connected is True
@@ -106,7 +106,7 @@ assert stale_frame_delivered is False
 assert default_script_target == script_session.id
 ```
 
-- [ ] **Step 2:** 執行 `.venv/Scripts/python.exe -m pytest -q --tb=short --basetemp=.test-tmp/modernization-task -o cache_dir=.test-tmp/modernization-pytest-cache test/unit_test/headless/test_remote_session_ownership.py`，確認新測試因原有缺陷或尚未提供接口而 FAIL；不要把環境錯誤當成功的重現。
-- [ ] **Step 3:** registry 改 map 與 script default alias；每個 GUI 面板持有自己的 session，生命周期事件通知 owner，舊 callback 查 session ID。拆 webrtc_panel 過長責任，與工具 schema、builder 一起更新。
-- [ ] **Step 4:** 重跑 Step 2，預期 exit 0；再跑這些修改檔所對應的既有回歸，確認公開契約。
-- [ ] **Step 5:** 更新本 task 的型別、所有交付入口、文件、測量計數與進度，僅 stage 本 task 檔案，提交 `git commit -m 'C4: 遠端 session 擁有權'`。
+- [x] **Step 2:** 執行 `.venv/Scripts/python.exe -m pytest -q --tb=short --basetemp=.test-tmp/modernization-task -o cache_dir=.test-tmp/modernization-pytest-cache test/unit_test/headless/test_remote_session_ownership.py`，確認新測試因原有缺陷或尚未提供接口而 FAIL；不要把環境錯誤當成功的重現。
+- [x] **Step 3:** registry 改 map 與 script default alias；每個 GUI 面板持有自己的 session，生命周期事件通知 owner，舊 callback 查 session ID。拆 webrtc_panel 過長責任，與工具 schema、builder 一起更新。
+- [x] **Step 4:** 重跑 Step 2，預期 exit 0；再跑這些修改檔所對應的既有回歸，確認公開契約。
+- [x] **Step 5:** 更新本 task 的型別、所有交付入口、文件、測量計數與進度，僅 stage 本 task 檔案，提交 `git commit -m 'C4: 遠端 session 擁有權'`。

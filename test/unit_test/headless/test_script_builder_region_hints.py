@@ -10,6 +10,8 @@ rectangle. Each command is run here with both captures stubbed, and the
 capture it reached is compared with its hint.
 """
 import json
+import importlib
+import types
 
 import numpy as np
 import pytest
@@ -103,9 +105,45 @@ def captures(monkeypatch, tmp_path):
     monkeypatch.setattr(screenshot, "pil_screenshot", pil_screenshot)
     monkeypatch.setattr(region_capture, "grab_screen_region", grab_screen_region)
     monkeypatch.setattr(region_capture, "grab_screen_region_with_origin", grab_screen_region_with_origin)
+    # Remote hosts capture asynchronously through image_grabber rather than the
+    # two synchronous paths above. Exercise that actual producer with a host
+    # double, avoiding sockets, threads and physical desktop access.
+    from je_auto_control.utils.remote_desktop.host_capture import _default_frame_provider
+    from je_auto_control.utils.cv2_utils import screen_grabber
+    registry_module = importlib.import_module('je_auto_control.utils.remote_desktop.registry')
+    executor_module = importlib.import_module('je_auto_control.utils.executor.action_executor')
+
+    def remote_grab(*, bbox, all_screens):
+        assert all_screens is True
+        if bbox == (10, 20, 40, 60):
+            calls.append('xywh')
+        return frame
+
+    monkeypatch.setattr(screen_grabber, 'image_grabber', lambda: types.SimpleNamespace(grab=remote_grab))
+
+    class RemoteHost:
+        port, connected_clients, host_id = 1, 0, '123456789'
+        is_running = False
+
+        def __init__(self, **options):
+            self.provide = _default_frame_provider(options['region'])
+
+        def start(self):
+            self.provide()
+            self.is_running = True
+
+        def stop(self, timeout=2.0):
+            self.is_running = False
+
+    directory = registry_module._RemoteDesktopRegistry()
+    monkeypatch.setattr(registry_module, 'RemoteDesktopHost', RemoteHost)
+    monkeypatch.setattr(registry_module, 'WebSocketDesktopHost', RemoteHost)
+    monkeypatch.setattr(executor_module, 'remote_desktop_registry', directory)
     template = tmp_path / "template.png"
     Image.fromarray(np.asarray(frame)[20:40, 20:40]).save(template)
     yield calls, str(template)
+    directory.stop_host()
+    directory.stop_ws_host()
 
 
 def test_every_region_hint_is_a_named_convention():

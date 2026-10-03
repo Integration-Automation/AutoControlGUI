@@ -2359,19 +2359,35 @@ def AC_release_keyboard_key(keycode: int | str, is_shift: bool = ..., skip_recor
 def AC_release_mouse(mouse_keycode: int | str, x: int | None = ..., y: int | None = ...) -> tuple[Any, int, int] | None:
     """放開滑鼠按鍵"""
 
-def AC_remote_connect(host: str, port: int, token: str, timeout: float = ...) -> Dict[str, Any]:
-    """Executor adapter: connect the singleton viewer."""
+def AC_remote_connect(
+    host: str,
+    port: int,
+    token: str,
+    timeout: float = ...,
+    *,
+    session_id: str | None = ...,
+) -> Dict[str, Any]:
+    """Executor adapter: connect the script-default or named viewer."""
 
-def AC_remote_disconnect() -> Dict[str, Any]:
+def AC_remote_disconnect(*, session_id: str | None = ...) -> Dict[str, Any]:
     ...
 
-def AC_remote_host_status() -> Dict[str, Any]:
+def AC_remote_disconnect_session(session_id: str, *, owner: str | None = ...) -> Dict[str, Any]:
+    """Close only the named owned connection; failed cleanup retains retry ownership."""
+
+def AC_remote_host_status(*, session_id: str | None = ...) -> Dict[str, Any]:
     ...
 
-def AC_remote_send_input(action: Dict[str, Any]) -> Dict[str, Any]:
+def AC_remote_send_input(action: Dict[str, Any], *, session_id: str | None = ...) -> Dict[str, Any]:
     ...
 
-def AC_remote_viewer_status() -> Dict[str, Any]:
+def AC_remote_session_events(*, owner: str | None = ...) -> List[Dict[str, Any]]:
+    """Read bounded owner-addressed lifecycle events without authorization data."""
+
+def AC_remote_session_status(session_id: str, *, owner: str | None = ...) -> Dict[str, Any]:
+    """Read immutable lifecycle identity without credentials or transport resources."""
+
+def AC_remote_viewer_status(*, session_id: str | None = ...) -> Dict[str, Any]:
     ...
 
 def AC_repair_approve(suggestion_id: str, db: str | None = ...) -> Dict[str, Any]:
@@ -2851,14 +2867,16 @@ def AC_start_remote_host(
     quality: int = ...,
     region: List[int] | None = ...,
     max_clients: int = ...,
+    *,
+    session_id: str | None = ...,
 ) -> Dict[str, Any]:
-    """Executor adapter: start the singleton remote-desktop host."""
+    """Executor adapter: start the script-default or named remote-desktop host."""
 
-def AC_start_webrtc_host(token: str, read_only: bool = ...) -> Dict[str, Any]:
-    """Executor adapter: allocate the singleton WebRTC host."""
+def AC_start_webrtc_host(token: str, read_only: bool = ..., *, session_id: str | None = ...) -> Dict[str, Any]:
+    """Executor adapter: allocate the script-default or named WebRTC host."""
 
-def AC_start_webrtc_viewer(token: str, viewer_id: str | None = ...) -> Dict[str, Any]:
-    """Executor adapter: allocate the singleton WebRTC viewer."""
+def AC_start_webrtc_viewer(token: str, viewer_id: str | None = ..., *, session_id: str | None = ...) -> Dict[str, Any]:
+    """Executor adapter: allocate the script-default or named WebRTC viewer."""
 
 def AC_start_ws_host(
     token: str,
@@ -2868,8 +2886,10 @@ def AC_start_ws_host(
     quality: int = ...,
     region: List[int] | None = ...,
     max_clients: int = ...,
+    *,
+    session_id: str | None = ...,
 ) -> Dict[str, Any]:
-    """Executor adapter: start the singleton WebSocket-transport host."""
+    """Executor adapter: start the script-default or named WebSocket-transport host."""
 
 def AC_stop_record() -> list:
     """stop current record"""
@@ -2877,16 +2897,16 @@ def AC_stop_record() -> list:
 def AC_stop_record_timeline() -> List[dict]:
     """Adapter: stop recording and return the full replayable timeline."""
 
-def AC_stop_remote_host() -> Dict[str, Any]:
+def AC_stop_remote_host(*, session_id: str | None = ...) -> Dict[str, Any]:
     ...
 
-def AC_stop_webrtc_host() -> Dict[str, Any]:
+def AC_stop_webrtc_host(*, session_id: str | None = ...) -> Dict[str, Any]:
     ...
 
-def AC_stop_webrtc_viewer() -> Dict[str, Any]:
+def AC_stop_webrtc_viewer(*, session_id: str | None = ...) -> Dict[str, Any]:
     ...
 
-def AC_stop_ws_host() -> Dict[str, Any]:
+def AC_stop_ws_host(*, session_id: str | None = ...) -> Dict[str, Any]:
     ...
 
 def AC_store_validators(response: Any) -> Dict[str, Any]:
@@ -3364,22 +3384,27 @@ def AC_webhook_status() -> Dict[str, Any]:
 def AC_webhook_stop() -> Dict[str, Any]:
     ...
 
-def AC_webrtc_accept_answer(answer_sdp: str) -> Dict[str, Any]:
+def AC_webrtc_accept_answer(answer_sdp: str, *, session_id: str | None = ...) -> Dict[str, Any]:
     ...
 
-def AC_webrtc_create_offer(peer_label: str = ...) -> Dict[str, Any]:
+def AC_webrtc_create_offer(peer_label: str = ..., *, session_id: str | None = ...) -> Dict[str, Any]:
     ...
 
-def AC_webrtc_host_status() -> Dict[str, Any]:
+def AC_webrtc_host_status(*, session_id: str | None = ...) -> Dict[str, Any]:
     ...
 
-def AC_webrtc_process_offer(offer_sdp: str, expected_dtls_fingerprint: str | None = ...) -> Dict[str, Any]:
+def AC_webrtc_process_offer(
+    offer_sdp: str,
+    expected_dtls_fingerprint: str | None = ...,
+    *,
+    session_id: str | None = ...,
+) -> Dict[str, Any]:
     ...
 
-def AC_webrtc_send_input(action: Dict[str, Any]) -> Dict[str, Any]:
+def AC_webrtc_send_input(action: Dict[str, Any], *, session_id: str | None = ...) -> Dict[str, Any]:
     ...
 
-def AC_webrtc_viewer_status() -> Dict[str, Any]:
+def AC_webrtc_viewer_status(*, session_id: str | None = ...) -> Dict[str, Any]:
     ...
 
 def AC_window_interaction_state(
@@ -3420,19 +3445,27 @@ def AC_write_step_video(steps: Any, output: str, fps: int = ..., seconds_per_ste
 def AC_write_workbook(path: str, rows: List[Dict[str, Any]], sheet: str = ...) -> Dict[str, Any]:
     """Adapter: write rows to an .xlsx file."""
 
-def AC_ws_connect(host: str, port: int, token: str, path: str = ..., timeout: float = ...) -> Dict[str, Any]:
-    """Executor adapter: connect the singleton WS viewer."""
+def AC_ws_connect(
+    host: str,
+    port: int,
+    token: str,
+    path: str = ...,
+    timeout: float = ...,
+    *,
+    session_id: str | None = ...,
+) -> Dict[str, Any]:
+    """Executor adapter: connect the script-default or named WS viewer."""
 
-def AC_ws_disconnect() -> Dict[str, Any]:
+def AC_ws_disconnect(*, session_id: str | None = ...) -> Dict[str, Any]:
     ...
 
-def AC_ws_host_status() -> Dict[str, Any]:
+def AC_ws_host_status(*, session_id: str | None = ...) -> Dict[str, Any]:
     ...
 
-def AC_ws_send_input(action: Dict[str, Any]) -> Dict[str, Any]:
+def AC_ws_send_input(action: Dict[str, Any], *, session_id: str | None = ...) -> Dict[str, Any]:
     ...
 
-def AC_ws_viewer_status() -> Dict[str, Any]:
+def AC_ws_viewer_status(*, session_id: str | None = ...) -> Dict[str, Any]:
     ...
 
 def AC_xy_cut(boxes: Any, min_gap: Any = ...) -> Dict[str, Any]:

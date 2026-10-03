@@ -38,7 +38,7 @@ import inspect
 import json
 import threading
 import typing
-from typing import Any, Callable, Dict, List
+from typing import Any, Callable, Dict, List, Optional
 
 import pytest
 
@@ -138,6 +138,7 @@ _FIELD_SAMPLES: Dict[FieldType, Callable[[FieldSpec], Any]] = {
     FieldType.ENUM: lambda field: field.choices[0] if field.choices else "",
     FieldType.FILE_PATH: lambda field: "sample.txt",
     FieldType.RGB: lambda field: [1, 2, 3],
+    FieldType.JSON: lambda field: [0, 0, 10, 10] if field.name == 'region' else {},
 }
 
 
@@ -193,11 +194,17 @@ def _unique_by_handler(tools: List[MCPTool]) -> List[MCPTool]:
     return unique
 
 
-def _invoke_by_name(name: str) -> None:
+def _invoke_by_name(name: str, *, session_id: Optional[str] = None) -> None:
     """Call one tool by name with what its own schema declares, if it exists."""
     for tool in REGISTRY:
         if tool.name == name:
-            tool.invoke(_tool_arguments(tool.input_schema, required_only=False))
+            arguments = _tool_arguments(tool.input_schema, required_only=False)
+            if 'session_id' in arguments:
+                # A stubbed start allocates nothing; actual starts report the owned ID.
+                arguments.pop('session_id')
+                if session_id is not None:
+                    arguments['session_id'] = session_id
+            tool.invoke(arguments)
             return
 
 
@@ -253,7 +260,8 @@ def test_tool_result_survives_json(tool, monkeypatch):
     install_stubs(monkeypatch, contract_stubs(tool.handler))
     result = tool.invoke(_tool_arguments(tool.input_schema,
                                          required_only=False))
-    _stop_whatever_it_started(tool.name, lambda stop: _invoke_by_name(stop))
+    _stop_whatever_it_started(tool.name, lambda stop: _invoke_by_name(
+        stop, session_id=result.get('session_id') if isinstance(result, dict) else None))
     assert is_serialisable(result, (MCPContent,)), (
         f"{tool.name} returned {type(result).__name__}, which json.dumps "
         "cannot encode")

@@ -23,6 +23,7 @@ from je_auto_control.utils.remote_desktop.audio import (
 )
 from je_auto_control.utils.remote_desktop.host_id import format_host_id
 from je_auto_control.utils.remote_desktop.registry import registry
+from je_auto_control.gui.remote_desktop.session_owner import PanelSessions
 
 
 class _HostPanel(TranslatableMixin, QWidget):
@@ -33,6 +34,8 @@ class _HostPanel(TranslatableMixin, QWidget):
     def __init__(self, parent: Optional[QWidget] = None) -> None:
         super().__init__(parent)
         self._tr_init()
+        self._sessions = PanelSessions(self, registry)
+        self._sessions.ended.connect(self._on_session_ended)
         self._host_id_label = QLabel("---")
         self._host_id_label.setStyleSheet(
             "font-family: 'Consolas', 'Menlo', 'Courier New', monospace; "
@@ -206,7 +209,7 @@ class _HostPanel(TranslatableMixin, QWidget):
         self._token.setText(secrets.token_urlsafe(24))
 
     def _copy_host_id(self) -> None:
-        host = registry.host
+        host = self._sessions.resource('host')
         if host is None:
             return
         QGuiApplication.clipboard().setText(format_host_id(host.host_id))
@@ -219,7 +222,7 @@ class _HostPanel(TranslatableMixin, QWidget):
         details the running host refuses, and a host started elsewhere was
         shared with this panel's token.
         """
-        host = registry.host
+        host = self._sessions.resource('host')
         shared = self._shared
         if host is None or shared is None or shared["host"] is not host:
             QMessageBox.information(
@@ -286,8 +289,7 @@ class _HostPanel(TranslatableMixin, QWidget):
         host_cls = (WebSocketDesktopHost if transport == "WebSocket"
                     else RemoteDesktopHost)
         bind = self._bind.text().strip() or "127.0.0.1"
-        registry.disconnect_viewer()
-        registry.stop_host()
+        self._sessions.reserve('ws' if transport == 'WebSocket' else 'tcp', 'host')
         try:
             host = host_cls(
                 token=token,
@@ -300,11 +302,13 @@ class _HostPanel(TranslatableMixin, QWidget):
                     enabled=self._audio_available and self._enable_audio.isChecked(),
                 ),
             )
+            self._sessions.attach(host, 'host', active=False)
             host.start()
+            self._sessions.activate('host')
         except (OSError, ValueError, RuntimeError) as error:
+            self._sessions.close('host')
             QMessageBox.warning(self, _t("rd_host_start"), str(error))
             return
-        registry._host = host  # noqa: SLF001  centralised lifecycle ownership
         # The transport a viewer picks: with a certificate, TCP is TLS and
         # WebSocket is WSS, which the share text used to call TCP / WebSocket.
         if ssl_context is not None:
@@ -314,14 +318,18 @@ class _HostPanel(TranslatableMixin, QWidget):
 
     def _stop(self) -> None:
         try:
-            registry.stop_host()
+            self._sessions.close('host')
         except (OSError, RuntimeError) as error:
             QMessageBox.warning(self, _t("rd_host_stop"), str(error))
             return
         self._refresh_status()
 
+    def _on_session_ended(self, role: str) -> None:
+        if role == 'host':
+            self._refresh_status()
+
     def _refresh_status(self) -> None:
-        status = registry.host_status()
+        status = self._sessions.status('host')
         if status["running"]:
             host_id = status.get("host_id") or ""
             self._host_id_label.setText(
@@ -341,7 +349,7 @@ class _HostPanel(TranslatableMixin, QWidget):
         # Four JPEG decodes a second for a panel nobody can see.
         if not self.isVisible():
             return
-        host = registry.host
+        host = self._sessions.resource('host')
         if host is None or not host.is_running:
             self._preview.clear()
             return

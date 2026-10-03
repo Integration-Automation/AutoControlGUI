@@ -20,7 +20,7 @@
 
 - **一套 API，七個平台。** `wrapper/platform_wrapper.py` 在匯入時挑選後端；同一份腳本在
   Windows、macOS、X11 與 Wayland 上都不需要改寫。
-- **不寫 Python 也能腳本化。** 798 個 `AC_*` 指令涵蓋全部功能，因此一個 JSON 檔能做到函式庫
+- **不寫 Python 也能腳本化。** 801 個 `AC_*` 指令涵蓋全部功能，因此一個 JSON 檔能做到函式庫
   能做的任何事——包含迴圈、分支、try/catch、巨集與變數。
 - **預設無頭執行。** `import je_auto_control` 絕不會載入 Qt。GUI 是選用套件，包在同一個無頭核心之外。
 - **四種定位方式。** 樣板比對、OCR、無障礙樹、視覺語言模型——可透過錨點定位器與自癒後備串接組合。
@@ -142,7 +142,7 @@ python -c "import je_auto_control; je_auto_control.start_autocontrol_gui()"
 | 自然語言規劃 | `plan_actions`、`run_from_description` | `AC_llm_plan` | LLM Planner |
 | Computer-use agent | `AgentLoop`、`run_agent` | `AC_run_agent` | Computer Use |
 | 錄製與重播 | `record`、`stop_record` | `AC_record`、`AC_stop_record` | Record |
-| JSON 腳本 | `execute_action`、`execute_files` | 全部 798 個指令 | Script、Script Builder |
+| JSON 腳本 | `execute_action`、`execute_files` | 全部 801 個指令 | Script、Script Builder |
 | 變數與流程控制 | `execute_action_with_vars` | `AC_set_var`、`AC_loop`、`AC_for_each`、`AC_try`、`AC_retry` | Variables |
 | 資料驅動執行 | — | `AC_for_each_row`（CSV／JSON／SQLite／Excel） | Data Sources |
 | 斷言 | `assert_text`、`assert_image` | `AC_assert_text` 等 21 個 | Assertions |
@@ -191,7 +191,7 @@ je_auto_control version
 
 | 介面 | 啟動方式 | 說明 |
 |---|---|---|
-| **MCP 伺服器** | `je_auto_control_mcp`（stdio）或 `AC_start_mcp_http_server` | 703 個工具，供 Claude Desktop／Claude Code／自訂 tool loop 使用。除了以 `initialize` 握手的各版協定，也支援無狀態的 MCP 2026-07-28。Bearer 驗證、TLS、稽核記錄、限流、外掛熱重載、CI 假後端。 |
+| **MCP 伺服器** | `je_auto_control_mcp`（stdio）或 `AC_start_mcp_http_server` | 723 個工具，供 Claude Desktop／Claude Code／自訂 tool loop 使用。除了以 `initialize` 握手的各版協定，也支援無狀態的 MCP 2026-07-28。Bearer 驗證、TLS、稽核記錄、限流、外掛熱重載、CI 假後端。 |
 | **REST API** | `je_auto_control start-rest` | Bearer token、逐 IP 限流與鎖定、SQLite 稽核 hook、`/metrics`、`/openapi.json`、`/docs` Swagger UI、`/dashboard`。 |
 | **TCP socket 伺服器** | `je_auto_control start-server` | 以換行分隔的 JSON 動作清單。預設綁 `127.0.0.1`。 |
 | **pytest 外掛** | 安裝後自動生效 | 輕量 `je_auto_control_pytest` 入口，提供 fixture 與 Gherkin 步驟。升級 editable 工作樹後須重新安裝；明確指定的舊外掛路徑仍相容。 |
@@ -644,3 +644,27 @@ Python `sync_assets` 支援 streaming transport。每檔限制 256 MiB，拒絕�
 失敗重試且接收檔案不回送。停止時仍保留尚未結束 sender 的所有權。TCP 剪貼簿
 使用有限 origin／event／hash 去重，抑制收到內容的下一次回送，舊 envelope 仍可讀。
 目前證據是受控 HTTP／SQLite、檔案及 offscreen Qt；實體多機驗證仍待完成。
+
+## 遠端連線所有權（Beta）
+
+Remote Desktop 每個面板各自擁有 TCP、WebSocket、WebRTC 的 host／viewer session。
+連線或關閉一個面板會保留其他面板與腳本。callback 保存請求授權與 session generation；
+已結束連線的排隊影格、狀態、傳檔與訊令結果會丟棄。面板銷毀會停止所屬傳輸與
+WebRTC 背景工作；清理失敗的傳輸保留在 registry，供明確重試。
+
+24 個傳輸指令都接受 keyword-only `session_id`。省略時選取該 transport／role 的
+script default；新 default 只替換原 default。明確 ID 配置新的具名連線，不改 default；
+仍在記錄中的已配置 ID 不可重用。既有七個 TCP MCP 工具接受相同 ID，另提供
+17 個 WebSocket／WebRTC 及三個生命周期工具。Script Builder 以有限 JSON 編輯輸入物件與 region。
+
+`je_auto_control.api.remote_sessions` 匯出不可變的 `RemoteSession`、`SessionStatus`
+（同一快照型別）、`SessionEvent`、型別化錯誤、`get_remote_session`、
+`disconnect_session`、`list_remote_session_events`。AC／MCP 的 JSON 操作為
+`AC_remote_session_status`、`AC_remote_disconnect_session`、`AC_remote_session_events`
+及對應小寫工具名稱。optional `owner` 核對擁有者；遠端授權仍需 `MANAGE_HOSTS`。
+事件最多保存 1,024 筆，非 default 已關閉 session 保存 256 筆；狀態與事件不含秘密或資源物件。
+
+session `active` 表示本機配置成功；WebRTC 對端就緒程度以傳輸的 `authenticated`／`state`
+判斷。GUI 多 viewer host 的狀態另含 `peers`／`connected_clients`。session／事件只存在
+本行程，不是持久化設定同步資料。`disconnect_session(id, owner=...)` 只影響該連線。
+目前證據是受控 transport 替身與 offscreen Qt；實體多機驗證仍待完成。

@@ -8,6 +8,7 @@ MCP client surfaces to the model.
 from typing import List
 from je_auto_control.utils.mcp_server.tools._factories_signing import signing_tools
 from je_auto_control.utils.mcp_server.tools._factories_rbac import rbac_tools
+from je_auto_control.utils.mcp_server.tools._factories_remote_sessions import remote_session_tools
 from je_auto_control.utils.mcp_server.tools._factories_config_sync import config_sync_tools
 from je_auto_control.utils.mcp_server.tools._factories_journal import journal_tools
 from je_auto_control.utils.mcp_server.tools._factories_healing_evaluation import healing_evaluation_tools
@@ -7971,16 +7972,16 @@ def hotkey_tools() -> List[MCPTool]:
 
 
 def remote_desktop_tools() -> List[MCPTool]:
-    """MCP wrappers for the remote-desktop registry singletons."""
+    """MCP wrappers for the remote-desktop registry script-default or nameds."""
     return [
         MCPTool(
             name="ac_remote_host_start",
             description=(
-                "Start (or restart) the singleton TCP remote-desktop "
+                "Start (or restart) the script-default or named TCP remote-desktop "
                 "host this process owns. Returns "
                 "{running, port, host_id, connected_clients}."
             ),
-            input_schema=schema({
+            input_schema=schema({'session_id': {'type': 'string'},
                 "token": {"type": "string",
                           "description": "Bearer token clients must present"},
                 "bind": {"type": "string",
@@ -8000,8 +8001,8 @@ def remote_desktop_tools() -> List[MCPTool]:
         ),
         MCPTool(
             name="ac_remote_host_stop",
-            description="Stop the singleton TCP remote-desktop host.",
-            input_schema=schema({"timeout": {"type": "number"}}),
+            description="Stop the script-default or named TCP remote-desktop host.",
+            input_schema=schema({'session_id': {'type': 'string'}, "timeout": {"type": "number"}}),
             handler=h_remote.remote_host_stop,
             annotations=SIDE_EFFECT_ONLY,
         ),
@@ -8011,18 +8012,18 @@ def remote_desktop_tools() -> List[MCPTool]:
                 "Read-only snapshot of the host: "
                 "{running, port, host_id, connected_clients}."
             ),
-            input_schema=schema({}),
+            input_schema=schema({'session_id': {'type': 'string'}, }),
             handler=h_remote.remote_host_status,
             annotations=READ_ONLY,
         ),
         MCPTool(
             name="ac_remote_viewer_connect",
             description=(
-                "Connect the singleton viewer to a remote host and wait "
+                "Connect the script-default or named viewer to a remote host and wait "
                 "for the auth handshake. Returns "
                 "{connected, host_id}."
             ),
-            input_schema=schema({
+            input_schema=schema({'session_id': {'type': 'string'},
                 "host": {"type": "string"},
                 "port": {"type": "integer"},
                 "token": {"type": "string"},
@@ -8038,15 +8039,15 @@ def remote_desktop_tools() -> List[MCPTool]:
         ),
         MCPTool(
             name="ac_remote_viewer_disconnect",
-            description="Disconnect the singleton viewer.",
-            input_schema=schema({"timeout": {"type": "number"}}),
+            description="Disconnect the script-default or named viewer.",
+            input_schema=schema({'session_id': {'type': 'string'}, "timeout": {"type": "number"}}),
             handler=h_remote.remote_viewer_disconnect,
             annotations=SIDE_EFFECT_ONLY,
         ),
         MCPTool(
             name="ac_remote_viewer_status",
             description="Read-only viewer state: {connected, host_id}.",
-            input_schema=schema({}),
+            input_schema=schema({'session_id': {'type': 'string'}, }),
             handler=h_remote.remote_viewer_status,
             annotations=READ_ONLY,
         ),
@@ -8058,7 +8059,7 @@ def remote_desktop_tools() -> List[MCPTool]:
                 "type / hotkey) through the connected viewer to the "
                 "remote host."
             ),
-            input_schema=schema({
+            input_schema=schema({'session_id': {'type': 'string'},
                 "action": {
                     "type": "object",
                     "description": "Input payload, e.g. "
@@ -9048,5 +9049,5 @@ ALL_FACTORIES = (
     sql_tools, http_tools, email_tools, pdf_tools,
     visual_regression_tools, state_machine_tools, codegen_tools,
     flakiness_tools, suite_tools, quarantine_tools,
-    a11y_audit_tools, device_matrix_tools, media_assert_tools, journal_tools, config_sync_tools,
+    a11y_audit_tools, device_matrix_tools, media_assert_tools, journal_tools, config_sync_tools, remote_session_tools,
 )
