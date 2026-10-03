@@ -77,6 +77,10 @@ class _Gate:
     def check(self, **_kwargs) -> str:
         return "ok"
 
+    def identity(self, _authorization):
+        """Legacy shared-token requests carry no per-user RBAC identity."""
+        return None
+
 
 class _Metrics:
     def __init__(self) -> None:

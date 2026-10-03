@@ -802,6 +802,9 @@ def AC_costs_summary(limit: int = ...) -> Dict[str, Any]:
 def AC_create_project(project_path: str | None = ..., parent_name: str = ...) -> None:
     """Create project directory structure and templates."""
 
+def AC_create_signing_keypair(private_path: str, public_path: str) -> Dict[str, Any]:
+    """Create separate private signing and public verification key files."""
+
 def AC_critical_steps(steps: Any, top: Any = ...) -> Dict[str, Any]:
     """Adapter: the steps that dominate a run's time (bottlenecks)."""
 
@@ -1362,7 +1365,7 @@ def AC_gettext_translate(po: str, msgid: str, context: Any = ...) -> Dict[str, A
 def AC_grade_contrast(foreground: Any, background: Any) -> Dict[str, Any]:
     """Adapter: grade a foreground/background colour pair vs WCAG (pure)."""
 
-def AC_grid_cell(boxes: Any, row: Any, col: Any, row_tolerance: Any = ...) -> Dict[str, Any]:
+def AC_grid_cell(boxes: Any, row: Any, col: Any, row_tolerance: Any = ..., box_format: str = ...) -> Dict[str, Any]:
     """Adapter: address a grid cell by (row, col) from a JSON list of boxes."""
 
 def AC_grid_cells(rows: Any, cols: Any, region: Any = ...) -> Dict[str, Any]:
@@ -2321,10 +2324,10 @@ def AC_resolve_pointer(doc: Any, pointer: str) -> Dict[str, Any]:
     """Adapter: resolve a JSON Pointer in doc (a dict/list or JSON string)."""
 
 def AC_resolve_ref(ref: str) -> Dict[str, Any]:
-    """Adapter: resolve an env:// / file:// / secret:// reference."""
+    """Adapter: resolve an env:// / file:// reference; secret:// is refused (it would be recorded)."""
 
 def AC_resolve_refs(obj: Any) -> Dict[str, Any]:
-    """Adapter: recursively resolve references in a structure (or JSON str)."""
+    """Adapter: recursively resolve references in a structure (or JSON str); no secret://."""
 
 def AC_rest_api_start(
     host: str = ...,
@@ -2669,8 +2672,13 @@ def AC_shard_suite(
 def AC_shell_command(shell_command: str | List[str] | None = ..., *, command: str | List[str] | None = ...) -> None:
     """Execute shell command with shell=False."""
 
-def AC_sign_action_file(path: str, key: str | None = ...) -> Dict[str, Any]:
-    """Executor adapter: write an HMAC-SHA256 signature sidecar for a file."""
+def AC_sign_action_file(
+    path: str,
+    key: str | None = ...,
+    private_key_path: str | None = ...,
+    legacy_hmac: bool = ...,
+) -> Dict[str, Any]:
+    """Write an Ed25519 sidecar with an explicitly configured private key."""
 
 def AC_simhash(text: str, bits: Any = ...) -> Dict[str, Any]:
     """Adapter: SimHash fingerprint of text (as int)."""
@@ -2736,7 +2744,7 @@ def AC_start_mcp_http_server(
 ) -> Any:
     """Start and return an :class:`HttpMCPServer`; convenience wrapper."""
 
-def AC_start_mcp_server() -> Any:
+def AC_start_mcp_server(read_only: bool | None = ...) -> Any:
     """Start a stdio MCP server in the foreground; blocks until EOF."""
 
 def AC_start_remote_host(
@@ -2954,6 +2962,21 @@ def AC_usb_watch_start(poll_interval_s: float = ...) -> Dict[str, Any]:
 def AC_usb_watch_stop() -> Dict[str, Any]:
     ...
 
+def AC_user_add(user_id: str, display_name: str, role: str, token: str) -> Dict[str, object]:
+    """Add a user with an explicitly supplied token; never return the token."""
+
+def AC_user_list() -> Dict[str, object]:
+    """List user metadata without authentication secrets or token hashes."""
+
+def AC_user_remove(user_id: str) -> Dict[str, object]:
+    """Remove a user and report whether it existed."""
+
+def AC_user_rotate_token(user_id: str, token: str) -> Dict[str, object]:
+    """Replace a token without exposing it in command output or audit logs."""
+
+def AC_user_set_role(user_id: str, role: str) -> Dict[str, object]:
+    """Change a user's role and return current metadata."""
+
 def AC_validate_action(action: Any, screen: Any = ..., targets: Any = ...) -> Dict[str, Any]:
     """Adapter: validate a coordinate action (bounds + optional snap-to-target)."""
 
@@ -2966,7 +2989,13 @@ def AC_validate_json(data: Any, schema: Any) -> Dict[str, Any]:
 def AC_validate_rows(rows: List[Dict[str, Any]], schema: Dict[str, Any]) -> Dict[str, Any]:
     """Adapter: validate rows against a declarative schema."""
 
-def AC_verify_action_file(path: str, key: str | None = ..., raise_on_fail: bool = ...) -> Dict[str, Any]:
+def AC_verify_action_file(
+    path: str,
+    key: str | None = ...,
+    raise_on_fail: bool = ...,
+    public_key_path: str | None = ...,
+    allow_legacy_hmac: bool = ...,
+) -> Dict[str, Any]:
     """Executor adapter: verify an action file against its signature sidecar."""
 
 def AC_verify_artifact(name: str, content: Any, approvals_dir: str = ..., extension: str = ...) -> Dict[str, Any]:
@@ -3202,7 +3231,7 @@ def AC_web_quit() -> Any:
 def AC_web_run(action: Dict[str, Any] | None = ..., **action_kwargs: Any) -> Any:
     """Bridge one WR_* action into the WebRunner executor (Phase 7.7)."""
 
-def AC_web_run_actions(actions: list) -> list:
+def AC_web_run_actions(actions: List[Dict[str, Any]]) -> list:
     """Bridge a list of WR_* actions through the WebRunner executor."""
 
 def AC_web_screenshot(file_path: str) -> Any:
