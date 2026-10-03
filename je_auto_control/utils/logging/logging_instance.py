@@ -24,9 +24,11 @@ import logging
 import os
 import tempfile
 import warnings
+from contextlib import contextmanager
+from contextvars import ContextVar
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
-from typing import Optional
+from typing import Iterator, Optional
 
 # 建立 AutoControlGUI 專用 logger Create dedicated logger
 # 只設自己這個 logger 的等級。以前這裡設的是 root：函式庫改掉宿主程式的全域
@@ -37,6 +39,26 @@ from typing import Optional
 # library's DEBUG records.
 autocontrol_logger = logging.getLogger("AutoControlGUI")
 autocontrol_logger.setLevel(logging.DEBUG)
+
+_CONFIDENTIAL_INPUT: ContextVar[bool] = ContextVar('confidential_input', default=False)
+
+
+def _allow_input_record(_record: logging.LogRecord) -> bool:
+    """Suppress nested input logs only in the confidential caller's context."""
+    return not _CONFIDENTIAL_INPUT.get()
+
+
+autocontrol_logger.addFilter(_allow_input_record)
+
+
+@contextmanager
+def confidential_input() -> Iterator[None]:
+    """Keep native typing diagnostics out of every attached logging handler."""
+    token = _CONFIDENTIAL_INPUT.set(True)
+    try:
+        yield
+    finally:
+        _CONFIDENTIAL_INPUT.reset(token)
 
 # 日誌格式 Formatter
 formatter = logging.Formatter(

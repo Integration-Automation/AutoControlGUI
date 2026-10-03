@@ -68,7 +68,7 @@ def mouse_tools() -> List[MCPTool]:
                          "a negative scroll_value reverses the direction. "
                          "scroll_direction names the direction a positive "
                          "value takes and is read on X11/Wayland only: "
-                         "scroll_up | scroll_down | scroll_left | scroll_right."),
+                         "scroll_up (default) | scroll_down | scroll_left | scroll_right."),
             input_schema=schema({
                 "scroll_value": {"type": "integer"},
                 "x": {"type": "integer"},
@@ -83,6 +83,14 @@ def mouse_tools() -> List[MCPTool]:
 
 def keyboard_tools() -> List[MCPTool]:
     return [
+        MCPTool(
+            name='ac_write_secret',
+            description='Type confidential text without returning, recording or logging it.',
+            input_schema=schema({'secret': {'type': 'string'}, 'is_shift': {'type': 'boolean'}},
+                                required=['secret']),
+            handler=h_input.write_secret,
+            annotations=DESTRUCTIVE,
+        ),
         MCPTool(
             name="ac_type_text",
             description=("Type a string by pressing each character. "

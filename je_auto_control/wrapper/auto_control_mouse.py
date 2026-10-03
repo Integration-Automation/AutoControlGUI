@@ -127,7 +127,8 @@ def _coordinate(value: object, axis: str) -> int:
     reported the requested point.
     """
     try:
-        number = int(value)  # type: ignore[call-overload]
+        numeric = float(value) if isinstance(value, str) else value
+        number = int(round(numeric))  # type: ignore[call-overload]
     except (TypeError, ValueError, OverflowError) as error:
         raise AutoControlMouseException(f"{axis} must be a number, got {value!r}") from error
     if not _INT32_MIN <= number <= _INT32_MAX:
@@ -295,6 +296,8 @@ def _scroll_to(x: Optional[int], y: Optional[int]) -> None:
     supplied the current position is never needed, so backends that cannot
     report it (e.g. Wayland) must not be forced to raise.
     """
+    x = None if x is None else _coordinate(x, 'x')
+    y = None if y is None else _coordinate(y, 'y')
     left, top, width, height = _scroll_bounds()
     # 兩個座標都給定時不會被讀到，見下面的三元運算。
     # Never read when both coordinates were supplied.
@@ -357,7 +360,7 @@ def _resolve_scroll_axis(scroll_direction: str) -> int:
 
 def mouse_scroll(scroll_value: int, x: Optional[int] = None,
                  y: Optional[int] = None,
-                 scroll_direction: str = "scroll_down"
+                 scroll_direction: str = "scroll_up"
                  ) -> Tuple[int, Union[int, str]]:
     """
     模擬滑鼠滾輪操作

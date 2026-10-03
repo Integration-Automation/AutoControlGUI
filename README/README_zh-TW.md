@@ -20,7 +20,7 @@
 
 - **一套 API，七個平台。** `wrapper/platform_wrapper.py` 在匯入時挑選後端；同一份腳本在
   Windows、macOS、X11 與 Wayland 上都不需要改寫。
-- **不寫 Python 也能腳本化。** 781 個 `AC_*` 指令涵蓋全部功能，因此一個 JSON 檔能做到函式庫
+- **不寫 Python 也能腳本化。** 782 個 `AC_*` 指令涵蓋全部功能，因此一個 JSON 檔能做到函式庫
   能做的任何事——包含迴圈、分支、try/catch、巨集與變數。
 - **預設無頭執行。** `import je_auto_control` 絕不會載入 Qt。GUI 是選用套件，包在同一個無頭核心之外。
 - **四種定位方式。** 樣板比對、OCR、無障礙樹、視覺語言模型——可透過錨點定位器與自癒後備串接組合。
@@ -142,7 +142,7 @@ python -c "import je_auto_control; je_auto_control.start_autocontrol_gui()"
 | 自然語言規劃 | `plan_actions`、`run_from_description` | `AC_llm_plan` | LLM Planner |
 | Computer-use agent | `AgentLoop`、`run_agent` | `AC_run_agent` | Computer Use |
 | 錄製與重播 | `record`、`stop_record` | `AC_record`、`AC_stop_record` | Record |
-| JSON 腳本 | `execute_action`、`execute_files` | 全部 781 個指令 | Script、Script Builder |
+| JSON 腳本 | `execute_action`、`execute_files` | 全部 782 個指令 | Script、Script Builder |
 | 變數與流程控制 | `execute_action_with_vars` | `AC_set_var`、`AC_loop`、`AC_for_each`、`AC_try`、`AC_retry` | Variables |
 | 資料驅動執行 | — | `AC_for_each_row`（CSV／JSON／SQLite／Excel） | Data Sources |
 | 斷言 | `assert_text`、`assert_image` | `AC_assert_text` 等 21 個 | Assertions |
@@ -191,7 +191,7 @@ je_auto_control version
 
 | 介面 | 啟動方式 | 說明 |
 |---|---|---|
-| **MCP 伺服器** | `je_auto_control_mcp`（stdio）或 `AC_start_mcp_http_server` | 686 個工具，供 Claude Desktop／Claude Code／自訂 tool loop 使用。除了以 `initialize` 握手的各版協定，也支援無狀態的 MCP 2026-07-28。Bearer 驗證、TLS、稽核記錄、限流、外掛熱重載、CI 假後端。 |
+| **MCP 伺服器** | `je_auto_control_mcp`（stdio）或 `AC_start_mcp_http_server` | 687 個工具，供 Claude Desktop／Claude Code／自訂 tool loop 使用。除了以 `initialize` 握手的各版協定，也支援無狀態的 MCP 2026-07-28。Bearer 驗證、TLS、稽核記錄、限流、外掛熱重載、CI 假後端。 |
 | **REST API** | `je_auto_control start-rest` | Bearer token、逐 IP 限流與鎖定、SQLite 稽核 hook、`/metrics`、`/openapi.json`、`/docs` Swagger UI、`/dashboard`。 |
 | **TCP socket 伺服器** | `je_auto_control start-server` | 以換行分隔的 JSON 動作清單。預設綁 `127.0.0.1`。 |
 | **pytest 外掛** | 安裝後自動生效 | 輕量 `je_auto_control_pytest` 入口，提供 fixture 與 Gherkin 步驟。升級 editable 工作樹後須重新安裝；明確指定的舊外掛路徑仍相容。 |
@@ -441,3 +441,22 @@ Windows 列舉略過 DWM 隱藏及零面積視窗；投遞文字只送一次字�
 最小化狀態。舊版只有幾何資料的 JSON 仍可讀取；重新儲存快照才能保留原生位置。
 注入的 geometry／mover 仍沿用幾何契約。貼齊／格狀／階梯排列使用含原點偏移的主螢幕工作區，
 避開工作列。macOS 依視窗 ID 還原時查詢離開螢幕的視窗，仍須取得 Accessibility 授權。
+
+## 鍵盤正確性與秘密輸入
+
+`write("Hi\r\nthere")` 保留大小寫，CRLF 只按一次 Enter。Windows 的字面文字
+優先使用 Unicode 注入；明確指定 `is_shift=True` 時，Windows／X11 與 macOS 都會
+按住及放開 Shift。Windows 快捷鍵接受 `plus`、`minus`、`comma`、`period`、`slash`
+等 OEM 名稱。`type_unicode_keys` 將換行／Tab／退格送為控制鍵。配置表包含區域 OEM
+鍵，Shift 半邊無法翻譯時回傳 `None`。
+
+秘密文字使用 `ac.write_secret(secret)` 或 `ac.write(text, secret=True)`。
+兩者回傳 `None`，不留下輸入日誌或錄製紀錄；後端失敗資訊改為通用的框架例外。
+腳本使用 `["AC_write_secret", {"secret": "${secrets.LOGIN}"}]`；MCP 提供
+`ac_write_secret(secret=...)`。Script Builder 隱藏秘密欄位；請儲存秘密參照，因為
+動作檔仍會包含傳入的參數。執行器回呼收到遮蔽後的副本，紀錄也遮蔽具名與位置形式的
+秘密輸入。WebRunner 的 `WR_ac_basic_auth` 已使用此 `secret` 參數契約。
+
+`mouse_scroll` 預設改為 `scroll_up`，各平台正值都往上滾動。依賴舊預設向下的 X11
+腳本請明確傳 `scroll_direction="scroll_down"`。座標使用 `int(round(value))`，
+移動前拒絕 NaN／無限值，包括滾動目標。剪貼簿格式描述中缺少的名稱統一為空字串。

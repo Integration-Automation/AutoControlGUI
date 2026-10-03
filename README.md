@@ -22,7 +22,7 @@ from JSON files / CLI / servers, and a **GUI tab**. Nothing is GUI-only.
 
 - **One API, seven platforms.** `wrapper/platform_wrapper.py` picks the backend at import
   time; your script does not change between Windows, macOS, X11, and Wayland.
-- **Scriptable without Python.** 781 `AC_*` commands cover the whole feature set, so a
+- **Scriptable without Python.** 782 `AC_*` commands cover the whole feature set, so a
   JSON file can do anything the library can — including loops, branches, try/catch,
   macros, and variables.
 - **Headless by default.** `import je_auto_control` never loads Qt. The GUI is an
@@ -154,7 +154,7 @@ desktop app; tab commands live in the window's **Actions** menu.
 | Natural-language planner | `plan_actions`, `run_from_description` | `AC_llm_plan` | LLM Planner |
 | Computer-use agent | `AgentLoop`, `run_agent` | `AC_run_agent` | Computer Use |
 | Record & replay | `record`, `stop_record` | `AC_record`, `AC_stop_record` | Record |
-| JSON scripting | `execute_action`, `execute_files` | all 781 commands | Script, Script Builder |
+| JSON scripting | `execute_action`, `execute_files` | all 782 commands | Script, Script Builder |
 | Variables & flow control | `execute_action_with_vars` | `AC_set_var`, `AC_loop`, `AC_for_each`, `AC_try`, `AC_retry` | Variables |
 | Data-driven runs | — | `AC_for_each_row` (CSV / JSON / SQLite / Excel) | Data Sources |
 | Assertions | `assert_text`, `assert_image` | `AC_assert_text` + 20 more | Assertions |
@@ -206,7 +206,7 @@ still goes on to the end), so a CI step fails with it. The legacy
 
 | Surface | Start it with | Notes |
 |---|---|---|
-| **MCP server** | `je_auto_control_mcp` (stdio) or `AC_start_mcp_http_server` | 686 tools for Claude Desktop / Claude Code / custom tool loops. Speaks the stateless MCP 2026-07-28 beside the `initialize`-based revisions. Bearer auth, TLS, audit log, rate limit, plugin hot-reload, CI fake backend. |
+| **MCP server** | `je_auto_control_mcp` (stdio) or `AC_start_mcp_http_server` | 687 tools for Claude Desktop / Claude Code / custom tool loops. Speaks the stateless MCP 2026-07-28 beside the `initialize`-based revisions. Bearer auth, TLS, audit log, rate limit, plugin hot-reload, CI fake backend. |
 | **REST API** | `je_auto_control start-rest` | Bearer token, per-IP rate limit + lockout, SQLite audit hook, `/metrics`, `/openapi.json`, `/docs` Swagger UI, `/dashboard`. |
 | **TCP socket server** | `je_auto_control start-server` | Newline-framed JSON action lists. Binds `127.0.0.1` by default. |
 | **pytest plugin** | installed automatically | Lightweight `je_auto_control_pytest` entry point; fixtures plus Gherkin steps for pytest-bdd / behave. Reinstall after upgrading editable checkouts; the explicit legacy plugin path remains supported. |
@@ -497,3 +497,28 @@ new snapshot to gain placement preservation. Injected geometry/movers retain
 their geometry-only contract. Snap/grid/cascade use the primary work area,
 including its offset, excluding the taskbar. macOS handle-based restore queries
 offscreen windows and still requires Accessibility permission.
+
+## Keyboard correctness and confidential typing
+
+`write("Hi\r\nthere")` preserves case and sends one Enter for CRLF. Windows
+prefers Unicode injection for literal characters; explicit `is_shift=True`
+holds and releases Shift on Windows/X11 as well as macOS. Keyboard shortcuts
+accept Windows OEM names such as `plus`, `minus`, `comma`, `period` and `slash`.
+`type_unicode_keys` sends newline/Tab/backspace as control keys. Layout tables
+include regional OEM keys and return `None` for an untranslatable Shift half.
+
+Use `ac.write_secret(secret)` or `ac.write(text, secret=True)` for confidential
+typing. These calls return `None` and suppress input logs and recordings;
+backend failure diagnostics are replaced by a generic typed error. Scripts use
+`["AC_write_secret", {"secret": "${secrets.LOGIN}"}]`; MCP exposes
+`ac_write_secret(secret=...)`. Script Builder hides the secret field; save a
+secret reference because action files still contain the supplied arguments.
+Executor callbacks receive a redacted copy, and records redact secret typing
+in keyword and positional forms. WebRunner's `WR_ac_basic_auth` already uses
+this `secret` parameter contract.
+
+`mouse_scroll` now defaults to `scroll_up`, so positive values scroll up on
+every platform. X11 scripts relying on the old downward default should pass
+`scroll_direction="scroll_down"`. Coordinate conversion uses `int(round(value))`
+and rejects NaN/infinity before moving, including scroll targets. Clipboard
+format descriptors normalize a missing name to an empty string.

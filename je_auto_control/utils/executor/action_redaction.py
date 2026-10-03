@@ -49,8 +49,27 @@ def redact_actions(value: Any) -> Any:
     if not isinstance(value, list):
         return value
     if value and isinstance(value[0], str) and value[0].startswith("AC_"):
-        return [value[0], *(_redact_argument(value[0], argument) for argument in value[1:])]
+        return _redact_action(value)
     return [redact_actions(item) for item in value]
+
+
+def _redact_action(action: list) -> list:
+    if _confidential_write(action):
+        return [action[0], *(_mask(argument) for argument in action[1:])]
+    return [action[0], *(_redact_argument(action[0], argument) for argument in action[1:])]
+
+
+def _confidential_write(action: list) -> bool:
+    if action[0] == 'AC_write_secret':
+        return True
+    if action[0] != 'AC_write' or len(action) < 2:
+        return False
+    arguments = action[1]
+    if isinstance(arguments, dict):
+        return bool(arguments.get('secret', False))
+    if isinstance(arguments, list):
+        return len(arguments) > 2 and bool(arguments[2])
+    return False
 
 
 def is_sensitive_argument(command: str, name: str) -> bool:

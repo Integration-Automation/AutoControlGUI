@@ -31,6 +31,7 @@ class FieldSpec:
     min_value: Optional[float] = None
     max_value: Optional[float] = None
     placeholder: str = ""
+    sensitive: bool = False
 
 
 @dataclass(frozen=True)
@@ -143,6 +144,8 @@ def _add_mouse_specs(specs: List[CommandSpec]) -> None:
         "AC_mouse_scroll", "Mouse", "Scroll Wheel",
         fields=(
             FieldSpec("scroll_value", FieldType.INT, default=1),
+            FieldSpec('scroll_direction', FieldType.ENUM, optional=True, default='scroll_up',
+                      choices=('scroll_up', 'scroll_down', 'scroll_left', 'scroll_right')),
             FieldSpec("x", FieldType.INT, optional=True),
             FieldSpec("y", FieldType.INT, optional=True),
         ),
@@ -175,7 +178,17 @@ def _add_keyboard_specs(specs: List[CommandSpec]) -> None:
         "AC_write", "Keyboard", "Write Text",
         fields=(
             FieldSpec("write_string", FieldType.STRING, placeholder="Hello, world"),
+            FieldSpec('is_shift', FieldType.BOOL, optional=True, default=False),
+            FieldSpec('secret', FieldType.BOOL, optional=True, default=False),
         ),
+    ))
+    specs.append(CommandSpec(
+        'AC_write_secret', 'Keyboard', 'Write Secret',
+        fields=(
+            FieldSpec('secret', FieldType.STRING, placeholder='${secrets.LOGIN}', sensitive=True),
+            FieldSpec('is_shift', FieldType.BOOL, optional=True, default=False),
+        ),
+        description='Type a secret reference without logging or returning the text.',
     ))
     specs.append(CommandSpec(
         "AC_human_type", "Keyboard", "Human-like Type",

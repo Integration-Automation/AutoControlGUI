@@ -94,6 +94,8 @@ class StepFormView(QWidget):
 
     def _build_string(self, spec: FieldSpec) -> QWidget:
         editor = QLineEdit()
+        if spec.sensitive:
+            editor.setEchoMode(QLineEdit.EchoMode.Password)
         editor.setPlaceholderText(spec.placeholder)
         editor.textChanged.connect(self._commit_field)
         return editor

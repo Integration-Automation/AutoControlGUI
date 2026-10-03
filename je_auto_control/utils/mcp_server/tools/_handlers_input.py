@@ -35,7 +35,7 @@ def get_mouse_position() -> List[int]:
 def mouse_scroll(scroll_value: int,
                  x: Optional[int] = None,
                  y: Optional[int] = None,
-                 scroll_direction: str = "scroll_down") -> List[Any]:
+                 scroll_direction: str = "scroll_up") -> List[Any]:
     from je_auto_control.wrapper.auto_control_mouse import mouse_scroll as _scroll
     value, direction = _scroll(int(scroll_value), x, y, scroll_direction)
     return [int(value), str(direction)]
@@ -44,6 +44,12 @@ def mouse_scroll(scroll_value: int,
 def type_text(text: str) -> str:
     from je_auto_control.wrapper.auto_control_keyboard import write
     return write(text) or ""
+
+
+def write_secret(secret: str, is_shift: bool = False) -> None:
+    """Type confidential text without exposing it in the MCP response."""
+    from je_auto_control.wrapper.auto_control_keyboard import write_secret as _write_secret
+    _write_secret(secret, is_shift=is_shift)
 
 
 def press_key(keycode: str) -> str:

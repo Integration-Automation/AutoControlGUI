@@ -83,7 +83,7 @@ from je_auto_control.utils.test_record.record_test_class import record_action_to
 from je_auto_control.wrapper.auto_control_image import locate_all_image, locate_and_click, locate_image_center
 from je_auto_control.wrapper.auto_control_keyboard import (
     check_key_is_press, get_keyboard_keys_table,
-    press_keyboard_key, release_keyboard_key, hotkey, type_keyboard, write
+    press_keyboard_key, release_keyboard_key, hotkey, type_keyboard, write, write_secret
 )
 from je_auto_control.wrapper.auto_control_mouse import (
     get_mouse_position, press_mouse, release_mouse, click_mouse,
@@ -7163,6 +7163,7 @@ class Executor:
             "AC_release_keyboard_key": release_keyboard_key,
             "AC_check_key_is_press": check_key_is_press,
             "AC_write": write,
+            "AC_write_secret": write_secret,
             "AC_hotkey": hotkey,
 
             # Image 影像辨識
@@ -8139,7 +8140,7 @@ class Executor:
         :param raise_on_error: 若為 True，遇到錯誤立即拋出 (流程控制用)
         :param _validated: 內部用；子呼叫已驗證過時避免重複驗證
         :param dry_run: 若為 True，只記錄將執行的動作，不實際呼叫。
-        :param step_callback: 每個 action 開始前呼叫此 hook（偵錯用）。
+        :param step_callback: 每個 action 開始前，以遮蔽秘密後的副本呼叫 hook。
         :return: 執行紀錄字典
         """
         autocontrol_logger.info(f"execute_action, action_list: {redact_actions(action_list)}")
@@ -8173,7 +8174,7 @@ class Executor:
         execute_record_dict: Dict[str, Any] = {}
         for action in action_list:
             if step_callback is not None:
-                step_callback(action)
+                step_callback(redact_actions(action))
             if dry_run:
                 key = _unique_key(execute_record_dict, "dry-run: " + describe_action(action))
                 execute_record_dict[key] = "(not executed)"

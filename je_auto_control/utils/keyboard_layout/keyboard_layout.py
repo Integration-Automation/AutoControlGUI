@@ -24,10 +24,12 @@ from typing import Dict, Optional, Tuple
 
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 
+CharTable = Dict[int, Tuple[str, Optional[str]]]
+
 # Virtual key code -> (unshifted, shifted) on a **US** layout. Only the fallback
 # for when the OS will not answer; letters and digits are layout-independent
 # anyway, punctuation is what actually differs.
-US_PRINTABLE_VK: Dict[int, Tuple[str, str]] = {
+US_PRINTABLE_VK: CharTable = {
     **{vk: (chr(vk).lower(), chr(vk)) for vk in range(0x41, 0x5B)},      # A-Z
     **{vk: (chr(vk), shifted) for vk, shifted
        in zip(range(0x30, 0x3A), ")!@#$%^&*(")},                        # 0-9
@@ -43,7 +45,12 @@ US_PRINTABLE_VK: Dict[int, Tuple[str, str]] = {
 _VK_SHIFT = 0x10
 _VK_SPACE = 0x20
 _MAPVK_VK_TO_VSC = 0
-_LAYOUT_CACHE: Dict[int, Dict[int, Tuple[str, str]]] = {}
+_LAYOUT_CACHE: Dict[int, CharTable] = {}
+
+
+def _private_user32():
+    import ctypes
+    return getattr(ctypes, 'WinDLL')('user32', use_last_error=True)
 
 
 def foreground_keyboard_layout() -> Optional[int]:
@@ -52,7 +59,14 @@ def foreground_keyboard_layout() -> Optional[int]:
         return None
     try:
         import ctypes
-        user32 = ctypes.windll.user32
+        from ctypes import wintypes
+        user32 = _private_user32()
+        user32.GetForegroundWindow.argtypes = []
+        user32.GetForegroundWindow.restype = wintypes.HWND
+        user32.GetWindowThreadProcessId.argtypes = [wintypes.HWND, ctypes.POINTER(wintypes.DWORD)]
+        user32.GetWindowThreadProcessId.restype = wintypes.DWORD
+        user32.GetKeyboardLayout.argtypes = [wintypes.DWORD]
+        user32.GetKeyboardLayout.restype = wintypes.HKL
         window = user32.GetForegroundWindow()
         thread_id = user32.GetWindowThreadProcessId(window, None) if window else 0
         return int(user32.GetKeyboardLayout(thread_id))
@@ -90,20 +104,20 @@ def _translator(user32, layout: int):
     return _translate
 
 
-def _build_table(translate) -> Dict[int, Tuple[str, str]]:
+def _build_table(translate) -> CharTable:
     """Translate every candidate key, keeping only the printable results."""
-    table: Dict[int, Tuple[str, str]] = {}
-    for vk in US_PRINTABLE_VK:
+    table: CharTable = {}
+    for vk in dict.fromkeys([*US_PRINTABLE_VK, 0xDF, 0xE1, 0xE2]):
         plain, shifted = translate(vk, False), translate(vk, True)
         if len(plain) == 1 and plain.isprintable():
             usable = len(shifted) == 1 and shifted.isprintable()
-            table[vk] = (plain, shifted if usable else plain)
+            table[vk] = (plain, shifted if usable else None)
     translate(_VK_SPACE, False)          # flush any dead-key state left behind
     return table
 
 
 def layout_char_table(layout: Optional[int] = None
-                      ) -> Dict[int, Tuple[str, str]]:
+                      ) -> CharTable:
     """``{vk: (unshifted, shifted)}`` for ``layout`` (default: the foreground one).
 
     Empty off Windows or when the OS will not answer, so callers can fall back
@@ -116,8 +130,7 @@ def layout_char_table(layout: Optional[int] = None
     if layout in _LAYOUT_CACHE:
         return _LAYOUT_CACHE[layout]
     try:
-        import ctypes
-        table = _build_table(_translator(ctypes.windll.user32, layout))
+        table = _build_table(_translator(_private_user32(), layout))
     except (OSError, AttributeError, ValueError) as error:
         autocontrol_logger.info("layout table build failed: %r", error)
         return {}
@@ -125,7 +138,7 @@ def layout_char_table(layout: Optional[int] = None
     return table
 
 
-def char_table(layout: Optional[int] = None) -> Dict[int, Tuple[str, str]]:
+def char_table(layout: Optional[int] = None) -> CharTable:
     """The layout's table, or the US table when the layout cannot be read.
 
     Not merged: a key missing from the layout's table (a dead key such as
@@ -135,7 +148,7 @@ def char_table(layout: Optional[int] = None) -> Dict[int, Tuple[str, str]]:
 
 
 def vk_to_char(vk: int, shifted: bool = False,
-               table: Optional[Dict[int, Tuple[str, str]]] = None
+               table: Optional[CharTable] = None
                ) -> Optional[str]:
     """The character this key produces, or ``None`` if it produces none."""
     pair = (char_table() if table is None else table).get(int(vk))

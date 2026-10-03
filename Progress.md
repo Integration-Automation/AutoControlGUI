@@ -161,30 +161,16 @@ pip install --dry-run --only-binary=:all: --platform win_arm64 --python-version 
 
 ---
 
-## 鍵盤與滑鼠 wrapper 的輸入修正：等 Jeffrey_RPA 批次停下
+## 影像與 OCR 修正：在隔離工作樹完成後驗證下游
 
-`BLOCKED` — Jeffrey_RPA 以 editable install 載入這個工作樹，正式批次（`webrunner_novelai.py`）與 Discord bot 正在跑，並且經 `_gui_control.py` 呼叫 `ac.write`、`ac.hotkey`、`ac.mouse_scroll`；下面每一項都會改變它打出來的字或滾動方向，依工作區規則在它執行期間不動
-
-2026-09-24 稽核用假後端重現：
-
-- **大寫字母打成小寫**：`wrapper/auto_control_keyboard.py:234` `write()` 在 Windows 送的是與小寫相同的虛擬鍵（`_platform_windows.py` 的表裡 `"A"` 與 `"a"` 同一個碼），沒有按 Shift，`"Hi"` 打成 `hi`；X11 很可能一樣。做法：需要 Shift 的字元改走 `_write_char_via_unicode`，或包一層 Shift 按下／放開。
-- **`is_shift` 在 Windows 與 X11 無效**：`auto_control_keyboard.py:73`、`:104` 只在 macOS 把它傳下去，其他平台直接忽略，docstring 卻寫「是否同時按下 Shift」。做法：在這一層按住 `keyboard_keys_table["shift"]`，`finally` 放開。
-- **`"\r\n"` 按兩次 Enter**：`write()` 把 `\r` 與 `\n` 都對到 `return`，從檔案讀進來的 Windows 換行每行多一個空行。做法：迴圈前把 `\r\n` 換成 `\n`。
-- **X11 預設滾動方向與 Windows／macOS 相反**：`wrapper/auto_control_mouse.py` `mouse_scroll(..., scroll_direction="scroll_down")`，正值在 X11 往下、其他平台往上，與 docstring「一份寫法各平台通用」不符。做法：預設改 `scroll_up`，或改 docstring 講清楚（重播路徑已在 U-20260924-14 明確傳 `scroll_up`）。
-- **`mouse_scroll` 的 NaN 座標被悄悄夾到桌面邊緣**：`auto_control_mouse.py` 的夾限在 `_coordinate()` 驗證之前，`mouse_scroll(3, x=nan, y=100)` 移到 `(-1920, 100)` 才滾；`set_mouse_position(nan, …)` 則正確丟例外。做法：夾限前先過 `_coordinate()`。
-- **座標截斷而非四捨五入**：`set_mouse_position(-0.6, 10.9)` 得到 `(0, 10)`，註解寫的是「rounded point」。做法：`int(round(value))`。
-- **Windows 鍵表沒有標點鍵**：`plus`、`minus`、`comma`、`period`、`slash` 等沒有對應的 `VK_OEM_*`，computer use 的 `ctrl+minus` 在 Windows 失敗。做法：在 Windows 鍵表補上 `VK_OEM_PLUS`／`VK_OEM_MINUS`／`VK_OEM_COMMA`／`VK_OEM_PERIOD`／`VK_OEM_2` 等。
-- **打字一定留下原文**：`write()`／`type_keyboard()`（`wrapper/auto_control_keyboard.py`）把打的字寫進 INFO log、記進測試紀錄並回傳，executor 的紀錄鍵也含原文。WebRunner 的 `WR_ac_basic_auth`（它的 `progress.md` #20，只收環境變數名稱）因此做不了：密碼會進 AutoControl 的 log 與兩邊的執行紀錄。做法：加一個不寫 log、不記錄、不回傳原文的打字呼叫（例如 `write(..., secret=True)`），WebRunner 從 Python 直接呼叫它；兩邊 `architecture.md` §6 一起改。
-
-同一次稽核的影像與 OCR 部分也在它的路徑上（Discord bot 的 `!find_image`／`!find_text`），一併等：
+`TODO` — A13 已完成鍵鼠、Unicode、秘密輸入、配置表與剪貼簿格式修正；仍在隔離的
+modernization 工作樹，Jeffrey_RPA 執行中的 editable 原始碼未變更。以下影像／OCR
+修正由 A14 處理；整合前確認正式批次已停止，再跑下游介面測試。
 
 - **非 ASCII 路徑與灰階樣板**：`cv2_utils/template_detection.py:126` 經 `je_open_cv` 的 `cv2.imread` 讀樣板，`測試\t.png` 讀不到；2-D 陣列或 PIL `"L"` 樣板丟出 `cv2.error`，不在 `wrapper/auto_control_image.py` 的例外清單裡。做法：路徑改走 `cv2_utils/image_file.read_image`，2-D 直接用，`cv2.error` 包成 `ImageNotFoundException`。
 - **部分超出螢幕的 `screen_region` 被補黑**：`monitor_layout/logical_frame.py:143` 沒有先和畫面取交集，PIL `crop` 補零，可能回傳螢幕外的命中；寬或高為負時丟裸 `ValueError`。做法：先取交集（回傳裁過的原點），非正的寬高丟框架例外。
 - **OCR 跨框比對漏掉從長框中段開始的字串**：`ocr/text_span.py:330` 的視窗超過「目標長度＋40」就整個丟掉最左框，即使目標從那框開始；`"Save As"` 在長句框之後就找不到。做法：只有剩下的部分仍不短於目標時才丟左框。
 - **負座標的中心點差一**：`wrapper/auto_control_image.py:48`、`:73` 的 `int((x1 + x2) / 2)` 向零截斷。做法：`(x1 + x2) // 2`。
-- **Unicode 打字把換行與 Tab 當字元送**：`utils/text_unicode/text_unicode.py:49` `plan_unicode_keys("a\nb\tc")` 送出碼位 10 與 9，多數程式會丟掉 Unicode 的 LF；`write` 早就把它們對到 Return／Tab（`WRITE_CONTROL_KEYS`）。這個模組被 `wrapper/auto_control_keyboard.py:27` 載入。做法：控制空白改成按鍵。
-- **鍵盤配置表的 Shift 半邊與非美式鍵**：`utils/keyboard_layout/keyboard_layout.py:98-100` 的 Shift 半邊是死鍵時退回未按 Shift 的字（美式國際配置的 Shift+6 回 `'6'`，契約是回 `None`）；`:96` 只翻譯美式鍵碼，德／法／北歐鍵盤的 `VK_OEM_102`（0xE2）與英式 `VK_OEM_8` 永遠沒有標籤；`:68-74` 把原型設在全程序共用的 `ctypes.windll.user32` 上，之後別的呼叫者用 `c_ubyte` 陣列呼叫 `ToUnicodeEx` 會 `ArgumentError`。Jeffrey_RPA 的 `_gui_control.py:3322` 呼叫 `ac.foreground_keyboard_layout()`。做法：死鍵半邊回 `None`；候選鍵碼加上 0xDF、0xE1、0xE2…；改用私有的 `ctypes.WinDLL("user32")`。
-- **剪貼簿格式名稱 `None`**：`utils/clipboard_formats/clipboard_formats.py:46` `_coerce` 把 tuple／list 描述的 `None` 名稱變成字串 `"None"`，dict 形式卻是 `""`，`diff_formats` 因此回報有變動。Jeffrey_RPA 的 `_gui_control.py:1126` 呼叫 `ac.clipboard_formats()`。做法：兩種形式都把 `None` 正規化成 `""`。
 
 **解除條件**：Jeffrey_RPA 沒有批次在跑（`webrunner.pid` 的行程不在、Discord bot 停止）；改完在 Jeffrey_RPA 跑 `test/test_je_facade.py`。
 

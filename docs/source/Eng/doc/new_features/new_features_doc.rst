@@ -1429,3 +1429,29 @@ new snapshot to gain placement preservation. Injected geometry/movers retain
 their geometry-only contract. Snap/grid/cascade use the primary work area,
 including its offset, excluding the taskbar. macOS handle-based restore queries
 offscreen windows and still requires Accessibility permission.
+
+Keyboard correctness and confidential typing
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+``write("Hi\r\nthere")`` preserves case and sends one Enter for CRLF. Windows
+prefers Unicode injection for literal characters; explicit ``is_shift=True``
+holds and releases Shift on Windows/X11 as well as macOS. Keyboard shortcuts
+accept Windows OEM names such as ``plus``, ``minus``, ``comma``, ``period`` and ``slash``.
+``type_unicode_keys`` sends newline/Tab/backspace as control keys. Layout tables
+include regional OEM keys and return ``None`` for an untranslatable Shift half.
+
+Use ``ac.write_secret(secret)`` or ``ac.write(text, secret=True)`` for confidential
+typing. These calls return ``None`` and suppress input logs and recordings;
+backend failure diagnostics are replaced by a generic typed error. Scripts use
+``["AC_write_secret", {"secret": "${secrets.LOGIN}"}]``; MCP exposes
+``ac_write_secret(secret=...)``. Script Builder hides the secret field; save a
+secret reference because action files still contain the supplied arguments.
+Executor callbacks receive a redacted copy, and records redact secret typing
+in keyword and positional forms. WebRunner's ``WR_ac_basic_auth`` already uses
+this ``secret`` parameter contract.
+
+``mouse_scroll`` now defaults to ``scroll_up``, so positive values scroll up on
+every platform. X11 scripts relying on the old downward default should pass
+``scroll_direction="scroll_down"``. Coordinate conversion uses ``int(round(value))``
+and rejects NaN/infinity before moving, including scroll targets. Clipboard
+format descriptors normalize a missing name to an empty string.

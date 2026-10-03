@@ -9,6 +9,10 @@ from je_auto_control.wrapper.backend_contract import (
 )
 from je_auto_control.windows.core.utils import win32_keypress_check
 from je_auto_control.windows.core.utils.win32_vk import (
+    WIN32_VK_OEM_1, WIN32_VK_OEM_PLUS, WIN32_VK_OEM_COMMA, WIN32_VK_OEM_MINUS,
+    WIN32_VK_OEM_PERIOD, WIN32_VK_OEM_2, WIN32_VK_OEM_3, WIN32_VK_OEM_4,
+    WIN32_VK_OEM_5, WIN32_VK_OEM_6, WIN32_VK_OEM_7, WIN32_VK_OEM_8,
+    WIN32_VK_OEM_102,
     WIN32_VK_ACCEPT, WIN32_VK_ADD, WIN32_VK_APPS, WIN32_VK_BACK,
     WIN32_VK_BROWSER_BACK, WIN32_VK_BROWSER_FAVORITES,
     WIN32_VK_BROWSER_FORWARD, WIN32_VK_BROWSER_REFRESH,
@@ -125,6 +129,19 @@ def _build_mouse_keys_table(mouse_module) -> dict:
 # type constants are not keys, yet their values collide with real ones: "down"
 # used to be MOUSEEVENTF_XDOWN (0x80), which typed F17 instead of Down arrow.
 keyboard_keys_table = {
+    'semicolon': WIN32_VK_OEM_1,
+    'plus': WIN32_VK_OEM_PLUS,
+    'comma': WIN32_VK_OEM_COMMA,
+    'minus': WIN32_VK_OEM_MINUS,
+    'period': WIN32_VK_OEM_PERIOD,
+    'slash': WIN32_VK_OEM_2,
+    'grave': WIN32_VK_OEM_3,
+    'bracketleft': WIN32_VK_OEM_4,
+    'backslash': WIN32_VK_OEM_5,
+    'bracketright': WIN32_VK_OEM_6,
+    'apostrophe': WIN32_VK_OEM_7,
+    'oem_8': WIN32_VK_OEM_8,
+    'oem_102': WIN32_VK_OEM_102,
     "accept": WIN32_VK_ACCEPT,
     "add": WIN32_VK_ADD,
     "apps": WIN32_VK_APPS,

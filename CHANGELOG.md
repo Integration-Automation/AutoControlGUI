@@ -112,6 +112,15 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Changed
 
+- Literal typing preserves case and CRLF enters once. Shift works and releases
+  on Windows/X11; Windows shortcuts gain OEM names. Unicode control whitespace
+  uses actual keys; layout dead-key halves return None and use private WinDLLs.
+- Mouse coordinates round rather than truncate and reject NaN before scrolling.
+  X11's wheel default is now scroll_up; pass scroll_down to retain old behavior.
+- Confidential write/AC_write_secret/MCP typing returns no text and suppresses
+  input logs/records. Executor callbacks now receive redacted copies; use secret
+  references when saving scripts. Missing clipboard format names normalize to "".
+
 - Window focus failures now raise instead of reporting success; Windows z-order
   and show-state failures propagate. Posted printable text is delivered once.
   New Windows layout snapshots preserve native placement/show state without

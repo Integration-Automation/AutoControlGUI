@@ -3298,7 +3298,7 @@ def AC_windows_for_pid(pid: int, titled_only: bool = ...) -> Dict[str, Any]:
 def AC_with_modifiers(modifiers: Any, actions: Any) -> Dict[str, Any]:
     """Adapter: run nested actions while modifier keys are held down."""
 
-def AC_write(write_string: str, is_shift: bool = ...) -> str | None:
+def AC_write(write_string: str, is_shift: bool = ..., secret: bool = ...) -> str | None:
     """模擬輸入整個字串"""
 
 def AC_write_document(path: str, paragraphs: List[str]) -> Dict[str, Any]:
@@ -3306,6 +3306,9 @@ def AC_write_document(path: str, paragraphs: List[str]) -> Dict[str, Any]:
 
 def AC_write_presentation(path: str, slides: List[Any]) -> Dict[str, Any]:
     """Adapter: write slides to a .pptx file."""
+
+def AC_write_secret(secret: str, is_shift: bool = ...) -> None:
+    """Type confidential text without returning, logging or recording it."""
 
 def AC_write_step_video(steps: Any, output: str, fps: int = ..., seconds_per_step: float = ...) -> Dict[str, Any]:
     """Adapter: render captioned screenshots into a walkthrough video."""

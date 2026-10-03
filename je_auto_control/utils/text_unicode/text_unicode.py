@@ -1,9 +1,7 @@
 """Type arbitrary Unicode (emoji / CJK / accented) by key injection or clipboard.
 
-``write`` types through the platform virtual-key table and *raises* on any
-character outside it — emoji, CJK, many accented letters, and on a US table even
-``, . / : ? ! _ + @ %`` — so non-ASCII and most punctuation are unreachable
-through the normal path.
+``write`` prefers Unicode injection where supported. These helpers also offer
+an explicit injection plan and an opt-in clipboard route on other platforms.
 
 Two ways out, and the difference matters:
 
@@ -24,6 +22,7 @@ from typing import Any, Callable, Dict, List, Optional
 from je_auto_control.utils.exception.exceptions import AutoControlKeyboardException
 
 Sink = Callable[[Dict[str, Any]], None]
+WRITE_CONTROL_KEYS = {'\n': 'return', '\r': 'return', '\t': 'tab', '\b': 'back'}
 
 
 def unicode_code_units(text: str) -> List[int]:
@@ -52,8 +51,14 @@ def plan_unicode_keys(text: str) -> List[Dict[str, Any]]:
     One op per UTF-16 code unit, so a character above U+FFFF becomes the two
     surrogates the platform layer has to send separately.
     """
-    return [{"op": "unicode_unit", "unit": unit}
-            for unit in unicode_code_units(text)]
+    plan: List[Dict[str, Any]] = []
+    for char in text.replace('\r\n', '\n'):
+        if char in WRITE_CONTROL_KEYS:
+            plan.append({'op': 'key', 'key': WRITE_CONTROL_KEYS[char]})
+        else:
+            plan.extend({'op': 'unicode_unit', 'unit': unit}
+                        for unit in unicode_code_units(char))
+    return plan
 
 
 def unicode_keys_supported() -> bool:
@@ -74,6 +79,9 @@ def _default_sink(event: Dict[str, Any]) -> None:
     elif op == "hotkey":
         from je_auto_control.wrapper.auto_control_keyboard import hotkey
         hotkey(list(event["keys"]))
+    elif op == 'key':
+        from je_auto_control.wrapper.auto_control_keyboard import type_keyboard
+        type_keyboard(event['key'])
     elif op == "unicode_unit":
         from je_auto_control.wrapper.platform_wrapper import keyboard
         # 平台縫沒有承諾這個成員——只有 Windows 有——所以照 `unicode_keys_supported`

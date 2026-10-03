@@ -43,7 +43,7 @@ def _coerce(item: _Format) -> Tuple[int, str]:
     if isinstance(item, dict):
         return int(item.get("id", 0)), str(item.get("name") or "")
     if isinstance(item, (tuple, list)):
-        return int(item[0]), str(item[1] if len(item) > 1 else "")
+        return int(item[0]), str((item[1] if len(item) > 1 else '') or '')
     return int(item), ""
 
 

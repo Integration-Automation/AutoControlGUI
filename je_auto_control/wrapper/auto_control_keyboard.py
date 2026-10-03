@@ -21,11 +21,40 @@ from je_auto_control.utils.exception.exception_tags import (
 from je_auto_control.utils.exception.exceptions import (
     AutoControlCantFindKeyException, AutoControlKeyboardException
 )
-from je_auto_control.utils.logging.logging_instance import autocontrol_logger
+from je_auto_control.utils.logging.logging_instance import autocontrol_logger, confidential_input
+from je_auto_control.utils.cua_action.cua_action import resolve_key_name
 from je_auto_control.utils.platform_id import is_windows, is_x11_unix
 from je_auto_control.utils.test_record.record_test_class import record_action_to_list
-from je_auto_control.utils.text_unicode.text_unicode import unicode_code_units
+from je_auto_control.utils.text_unicode.text_unicode import unicode_code_units, WRITE_CONTROL_KEYS
 from je_auto_control.wrapper.platform_wrapper import keyboard, keyboard_keys_table, keyboard_check
+
+
+def _press_with_shift(keycode: int, is_shift: bool) -> None:
+    """Release the modifier if pressing its companion key fails."""
+    if sys.platform == 'darwin':
+        keyboard.press_key(keycode, is_shift=is_shift)
+        return
+    if not is_shift:
+        keyboard.press_key(keycode)
+        return
+    shift = _resolve_keycode('shift')
+    keyboard.press_key(shift)
+    try:
+        keyboard.press_key(keycode)
+    except BaseException:
+        keyboard.release_key(shift)
+        raise
+
+
+def _release_with_shift(keycode: int, is_shift: bool) -> None:
+    if sys.platform == 'darwin':
+        keyboard.release_key(keycode, is_shift=is_shift)
+        return
+    try:
+        keyboard.release_key(keycode)
+    finally:
+        if is_shift:
+            keyboard.release_key(_resolve_keycode('shift'))
 
 def get_keyboard_keys_table() -> dict:
     """
@@ -41,7 +70,7 @@ def _resolve_keycode(keycode: Union[int, str]) -> int:
     Resolve string key name to keycode
     """
     if isinstance(keycode, str):
-        resolved = keyboard_keys_table.get(keycode)
+        resolved = keyboard_keys_table.get(resolve_key_name(keycode, keyboard_keys_table))
         if resolved is None:
             raise AutoControlCantFindKeyException(table_cant_find_key_error_message)
         return resolved
@@ -72,7 +101,7 @@ def press_keyboard_key(keycode: Union[int, str], is_shift: bool = False,
         if sys.platform == "darwin":
             keyboard.press_key(keycode, is_shift=is_shift)
         elif is_windows() or is_x11_unix():
-            keyboard.press_key(keycode)
+            _press_with_shift(keycode, is_shift)
         else:
             raise AutoControlKeyboardException(
                 f"press_keyboard_key: no backend for {sys.platform!r}")
@@ -103,7 +132,7 @@ def release_keyboard_key(keycode: Union[int, str], is_shift: bool = False,
         if sys.platform == "darwin":
             keyboard.release_key(keycode, is_shift=is_shift)
         elif is_windows() or is_x11_unix():
-            keyboard.release_key(keycode)
+            _release_with_shift(keycode, is_shift)
         else:
             raise AutoControlKeyboardException(
                 f"release_keyboard_key: no backend for {sys.platform!r}")
@@ -211,10 +240,6 @@ def check_key_is_press(keycode: Union[int, str]) -> Optional[bool]:
 # Whitespace that means a *key*, not a character. Sent as a Unicode code point
 # these are silently dropped by most applications — a newline especially, which
 # turns a multi-line `write` into one run-on line with nothing reported.
-WRITE_CONTROL_KEYS = {"\n": "return", "\r": "return", "\t": "tab",
-                      "\b": "back"}
-
-
 def _write_char_via_unicode(single_char: str) -> bool:
     """
     以 Unicode 事件輸入單一字元 (鍵盤對應表沒有的字元)
@@ -231,7 +256,33 @@ def _write_char_via_unicode(single_char: str) -> bool:
     return True
 
 
-def write(write_string: str, is_shift: bool = False) -> Optional[str]:
+def _write_character(single_char: str, is_shift: bool) -> None:
+    control_key = WRITE_CONTROL_KEYS.get(single_char)
+    if control_key is not None:
+        type_keyboard(control_key, is_shift, skip_record=True)
+        return
+    # Unicode injection preserves case and punctuation independently of the
+    # current Windows layout. Explicit Shift still uses virtual keys.
+    if not is_shift and _write_char_via_unicode(single_char):
+        return
+    key = keyboard_keys_table.get(single_char)
+    if key is not None:
+        shifted = is_shift or (single_char.isupper() and single_char.lower() in keyboard_keys_table)
+        type_keyboard(key, shifted, skip_record=True)
+    elif _write_char_via_unicode(single_char):
+        return
+    elif single_char.isspace():
+        type_keyboard('space', is_shift, skip_record=True)
+    else:
+        raise AutoControlKeyboardException(keyboard_write_cant_find_error_message)
+
+
+def _write_text(write_string: str, is_shift: bool) -> None:
+    for single_char in write_string.replace('\r\n', '\n'):
+        _write_character(single_char, is_shift)
+
+
+def write(write_string: str, is_shift: bool = False, secret: bool = False) -> Optional[str]:
     """
     模擬輸入整個字串
     Type a whole string
@@ -244,37 +295,31 @@ def write(write_string: str, is_shift: bool = False) -> Optional[str]:
 
     :param write_string: 要輸入的字串 String to type
     :param is_shift: 是否同時按下 Shift
+    :param secret: 不記錄、不輸出、不回傳文字 Confidential typing returns None
     :return: 輸入的字串
     """
+    if secret:
+        with confidential_input():
+            try:
+                _write_text(write_string, is_shift)
+            except Exception:  # noqa: BLE001  # reason: native diagnostics may contain credentials
+                raise AutoControlKeyboardException('confidential typing failed') from None
+        return None
     autocontrol_logger.info(f"write, write_string={write_string}, is_shift={is_shift}")
     try:
-        record_write_chars = []
-        for single_char in write_string:
-            key = keyboard_keys_table.get(single_char)
-            control_key = WRITE_CONTROL_KEYS.get(single_char)
-            if control_key is not None and control_key in keyboard_keys_table:
-                # Before the table lookup: a newline must press Enter, not type
-                # U+000A and not fall through to the space fallback below.
-                type_keyboard(control_key, is_shift, skip_record=True)
-            elif key is not None:
-                type_keyboard(key, is_shift, skip_record=True)
-            elif _write_char_via_unicode(single_char):
-                pass
-            elif single_char.isspace():
-                type_keyboard("space", is_shift, skip_record=True)
-            else:
-                autocontrol_logger.error(f"write failed: {keyboard_write_cant_find_error_message}, char={single_char}")
-                raise AutoControlKeyboardException(keyboard_write_cant_find_error_message)
-            record_write_chars.append(single_char)
-
-        result = "".join(record_write_chars)
+        _write_text(write_string, is_shift)
         record_action_to_list("write", {"write_string": write_string, "is_shift": is_shift})
-        return result
+        return write_string
 
     except (OSError, RuntimeError, AttributeError, TypeError, ValueError) as error:
         record_action_to_list("write", {"write_string": write_string}, repr(error))
         autocontrol_logger.error(f"write failed: {repr(error)}")
         raise AutoControlKeyboardException(f"{keyboard_write_error_message} {repr(error)}") from error
+
+
+def write_secret(secret: str, is_shift: bool = False) -> None:
+    """Type confidential text without returning, logging or recording it."""
+    write(secret, is_shift=is_shift, secret=True)
 
 
 def hotkey(key_code_list: list, is_shift: bool = False) -> Tuple[str, str]:
