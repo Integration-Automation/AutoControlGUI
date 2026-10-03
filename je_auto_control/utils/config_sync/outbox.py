@@ -7,9 +7,10 @@ import time
 import urllib.parse
 import uuid
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Callable, Dict, Mapping, Optional, Tuple
+from typing import TYPE_CHECKING, Callable, Dict, Literal, Mapping, Optional, Tuple
 
 from je_auto_control.utils.sqlite_support import sqlite_errors_as
+
 from .database import LazyConfigDatabase
 from .models import ConfigSyncError
 from .store import ConfigRevisionConflict, StorePath, validate_operation_id, validate_revision
@@ -98,8 +99,16 @@ class SyncOutbox:
         return self._database.connection()
 
     @sqlite_errors_as(ConfigSyncError)
-    def enqueue(self, operation: SyncOperation) -> None:
-        """Store an immutable retry snapshot; mismatched reused operation IDs are rejected."""
+    def enqueue(self, operation: SyncOperation, *, superseded: Tuple[str, ...] = ()) -> None:
+        """Atomically replace only unsent intents or server-confirmed stale envelopes."""
+        self._enqueue(operation, 'pending', superseded)
+
+    @sqlite_errors_as(ConfigSyncError)
+    def enqueue_intent(self, operation: SyncOperation) -> None:
+        """Persist a local publication intent; it must never be dispatched as an exact envelope."""
+        self._enqueue(operation, 'intent', ())
+
+    def _enqueue(self, operation: SyncOperation, state: str, superseded: Tuple[str, ...]) -> None:
         if operation.endpoint != self._endpoint or operation.user_id != self._user_id:
             raise ConfigSyncError('operation belongs to another outbox namespace')
         payload = json.dumps(operation.envelope(), sort_keys=True, separators=(',', ':'), allow_nan=False)
@@ -107,16 +116,26 @@ class SyncOutbox:
             conn = self._connection()
             conn.execute('BEGIN IMMEDIATE')
             try:
+                self._check_superseded(conn, superseded)
                 row = conn.execute('SELECT payload FROM sync_outbox WHERE endpoint=? AND user_id=? '
                                    'AND operation_id=?', self._key(operation.operation_id)).fetchone()
                 if row is not None and row[0] != payload:
                     raise ConfigSyncError('operation ID reused with a different envelope')
-                conn.execute('INSERT OR IGNORE INTO sync_outbox(endpoint,user_id,operation_id,payload) '
-                             'VALUES(?,?,?,?)', (*self._key(operation.operation_id), payload))
+                conn.execute('INSERT OR IGNORE INTO sync_outbox(endpoint,user_id,operation_id,payload,state) '
+                             'VALUES(?,?,?,?,?)', (*self._key(operation.operation_id), payload, state))
+                conn.executemany('DELETE FROM sync_outbox WHERE endpoint=? AND user_id=? AND operation_id=?',
+                                 [self._key(identifier) for identifier in superseded])
                 conn.commit()
             finally:
                 if conn.in_transaction:
                     conn.rollback()
+
+    def _check_superseded(self, conn: sqlite3.Connection, identifiers: Tuple[str, ...]) -> None:
+        for identifier in identifiers:
+            row = conn.execute('SELECT state FROM sync_outbox WHERE endpoint=? AND user_id=? AND operation_id=?',
+                               self._key(identifier)).fetchone()
+            if row is None or row[0] not in ('intent', 'conflict'):
+                raise ConfigSyncError('cannot replace an operation with an uncertain delivery outcome')
 
     def _key(self, operation_id: str) -> Tuple[str, str, str]:
         return self._endpoint, self._user_id, operation_id
@@ -166,6 +185,31 @@ class SyncOutbox:
             rows = self._connection().execute('SELECT payload FROM sync_outbox WHERE endpoint=? AND user_id=? '
                                               'ORDER BY rowid', (self._endpoint, self._user_id)).fetchall()
             return tuple(self._operation(row[0]) for row in rows)
+
+    @sqlite_errors_as(ConfigSyncError)
+    def recoverable(self, *, state: Optional[Literal['intent', 'conflict']] = None) -> Tuple[SyncOperation, ...]:
+        """Read only never-dispatched intents and confirmed stale writes for fresh causal merging."""
+        with self._lock:
+            rows = self._connection().execute('SELECT payload,state FROM sync_outbox WHERE endpoint=? AND user_id=? '
+                                              "AND state IN ('intent','conflict') ORDER BY rowid",
+                                              (self._endpoint, self._user_id)).fetchall()
+            return tuple(self._operation(row[0]) for row in rows if state is None or row[1] == state)
+
+    @sqlite_errors_as(ConfigSyncError)
+    def restart_failed(self) -> None:
+        """Explicitly renew exhausted retries without changing their payload or operation ID."""
+        with self._lock:
+            self._connection().execute("UPDATE sync_outbox SET state='pending',attempts=0,next_at=0 "
+                                       "WHERE endpoint=? AND user_id=? AND state='failed'",
+                                       (self._endpoint, self._user_id))
+
+    @sqlite_errors_as(ConfigSyncError)
+    def state_counts(self) -> Dict[str, int]:
+        """Expose actionable recovery conditions without disclosing payloads or credentials."""
+        with self._lock:
+            rows = self._connection().execute('SELECT state,COUNT(*) FROM sync_outbox WHERE endpoint=? AND user_id=? '
+                                              'GROUP BY state', (self._endpoint, self._user_id)).fetchall()
+            return {str(state): int(count) for state, count in rows}
 
     @sqlite_errors_as(ConfigSyncError)
     def drain(self, sender: Callable[[SyncOperation], int], *, cancel: Optional[threading.Event] = None,

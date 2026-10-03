@@ -1,6 +1,9 @@
 # 跨平台與 GUI 改版實作計畫
 
-狀態：設計與八份實作計畫已核准；依使用者授權逐階段實作中。
+狀態：設計與八份實作計畫已核准；A–C 已完成並暫停，D–H 待續。
+
+依使用者最新要求，已在 C 階段審閱收尾後暫停，保留隔離分支；恢復時從 D 開始。
+各平台實機與正式下游整合仍由 H3 驗收，未完成項目保留在 `Progress.md`。
 
 設計：[2026-10-02-platform-gui-modernization-design.md](../specs/2026-10-02-platform-gui-modernization-design.md)。
 

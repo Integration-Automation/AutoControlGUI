@@ -227,6 +227,7 @@ def test_sync_preview_is_explicit_and_keeps_local_credentials(tmp_path, monkeypa
     client.last_successful_revision = 0
     client.fetch.return_value = remote
     client.pending_operations.return_value = ()
+    client.recovery_status.return_value = {}
     monkeypatch.setattr(service, '_client', lambda *args, **kwargs: client)
     result = service.config_sync_preview(str(definitions), str(tmp_path / 'sync'), 'http://example.test', 'account')
     assert result['revision'] == 7 and not result['offline']

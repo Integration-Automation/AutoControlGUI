@@ -1,5 +1,7 @@
 """Config HTTP client and compatible legacy timestamp merge."""
 from __future__ import annotations
+
+import hashlib
 import json
 import time
 import urllib.parse
@@ -7,20 +9,35 @@ import uuid
 from dataclasses import dataclass
 from pathlib import Path
 from threading import Event
-from typing import Any, Dict, List, Mapping, Optional, Tuple
+from typing import Any, Callable, Dict, List, Mapping, Optional, Tuple
+
 from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.http_client import http_client
-from .models import TOMBSTONE_RETENTION_S, ConfigBucket, ConfigSyncError, ConflictRecord, is_tombstone
-from .database import StorePath
-from .store import ConfigRevisionConflict, validate_revision
-from .outbox import OutboxReport, SyncOperation, SyncOutbox
+
 from .causal_bucket import (
-    BucketConflict, bucket_peer_states, collect_acknowledged_tombstones, merge_causal_buckets,
-    device_requires_full_sync, prepare_tombstone_revisions, update_peer_state,
+    BucketConflict,
+    bucket_peer_states,
+    collect_acknowledged_tombstones,
+    device_requires_full_sync,
+    merge_causal_buckets,
+    prepare_tombstone_revisions,
+    update_peer_state,
 )
+from .database import StorePath
+from .models import TOMBSTONE_RETENTION_S, ConfigBucket, ConfigSyncError, ConflictRecord, is_tombstone
+from .outbox import OutboxReport, SyncOperation, SyncOutbox
+from .store import ConfigRevisionConflict, validate_revision
 from .versions import PeerState
 
 _DEFAULT_TIMEOUT_S = 5.0
+
+
+class SyncRecoveryRequired(ConfigSyncError):
+    """Data remains durable and requires explicit retry or full snapshot recovery."""
+
+
+class SyncValidationError(ConfigSyncError):
+    """A local or remote bucket failed the configured publication boundary."""
 
 
 def _default_outbox_path() -> Path:
@@ -34,6 +51,8 @@ class SyncClientOptions:
     device_id: Optional[str] = None
     legacy_writes: bool = False
     max_cas_retries: int = 3
+    acknowledge_on_sync: bool = True
+    bucket_validator: Optional[Callable[[ConfigBucket], None]] = None
 
 
 @dataclass
@@ -196,7 +215,28 @@ class ConfigSyncClient:
         if bucket.user_id != self._user_id:
             raise ConfigSyncError('server bucket user_id mismatch')
         self._state.cas_supported = body.get('cas_supported') is True and body.get('schema_version') == 2
+        self._validate_bucket(bucket)
         return bucket
+
+    def _validate_bucket(self, bucket: ConfigBucket) -> None:
+        if bucket.user_id != self._user_id:
+            raise ConfigSyncError('bucket account does not match client')
+        if self._options.bucket_validator is not None:
+            try:
+                self._options.bucket_validator(bucket)
+            except ConfigSyncError as error:
+                raise SyncValidationError(str(error)) from error
+
+    def queue(self, local: ConfigBucket) -> None:
+        """Save unsent local intent before network access; fresh remote merge must precede dispatch."""
+        self._validate_bucket(local)
+        digest = hashlib.sha256(json.dumps(local.to_dict(), sort_keys=True).encode('utf-8')).hexdigest()
+        self._outbox.enqueue_intent(SyncOperation(self._server_url, self._user_id, 'intent-' + digest,
+                                                  local.revision, local.to_dict()))
+
+    def recovery_status(self) -> Dict[str, int]:
+        """Return durable pending/intent/stale/exhausted counts for explicit recovery controls."""
+        return self._outbox.state_counts()
 
     def push(self, bucket: ConfigBucket, *, base_revision: Optional[int] = None,
              operation_id: Optional[str] = None) -> int:
@@ -254,9 +294,20 @@ class ConfigSyncClient:
         return self._state.last_successful_revision
 
     def retry_pending(self, *, cancel: Optional[Event] = None) -> OutboxReport:
-        """Retry exact pending envelopes with bounded backoff, preserving unresolved data."""
+        """Explicitly retry exact exhausted envelopes, then safely rebase confirmed stale writes/intents."""
+        if cancel is not None and cancel.is_set():
+            return OutboxReport(0, len(self.pending_operations()), cancelled=True)
         self._check_retirement(self.fetch())
-        return self._outbox.drain(self._dispatch_operation, cancel=cancel)
+        self._outbox.restart_failed()
+        report = self._outbox.drain(self._dispatch_operation, cancel=cancel)
+        recovery = self._outbox.recoverable()
+        sent = report.sent
+        if recovery and len(recovery) == len(self.pending_operations()) and not report.cancelled:
+            self._sync_causal(ConfigBucket(self._user_id), cancel, queue_local=False)
+            sent += 1
+        counts = self.recovery_status()
+        return OutboxReport(sent, len(self.pending_operations()), counts.get('conflict', 0),
+                            counts.get('failed', 0), report.cancelled)
 
     @property
     def device_id(self) -> str:
@@ -283,14 +334,21 @@ class ConfigSyncClient:
         if cancel is not None and cancel.is_set():
             raise ConfigSyncError('config synchronization was cancelled')
 
-    def _sync_causal(self, local: ConfigBucket, cancel: Optional[Event]) -> Tuple[ConfigBucket, List[BucketConflict]]:
-        self._check_retirement(self.fetch())
+    def _sync_causal(self, local: ConfigBucket, cancel: Optional[Event], *, queue_local: bool = True
+                     ) -> Tuple[ConfigBucket, List[BucketConflict]]:
+        try:
+            initial = self.fetch()
+        except SyncValidationError:
+            raise
+        except ConfigSyncError:
+            if queue_local and not self._outbox.requires_full_sync(self.device_id):
+                self.queue(local)
+            raise
+        self._check_retirement(initial)
         self._check_cancel(cancel)
-        if self.pending_operations():
-            self.retry_pending(cancel=cancel)
-            if self.pending_operations():
-                raise ConfigSyncError('pending operations require delivery or conflict resolution first')
-        old_operation: Optional[str] = None
+        if queue_local:
+            self.queue(local)
+        local, superseded = self._prepare_pending(local, cancel)
         for _attempt in range(self._options.max_cas_retries):
             self._check_cancel(cancel)
             remote = self.fetch() or ConfigBucket(self._user_id)
@@ -299,26 +357,57 @@ class ConfigSyncClient:
             merged, conflicts = merge_causal_buckets(local, remote)
             merged = collect_acknowledged_tombstones(merged, bucket_peer_states(remote))
             merged = prepare_tombstone_revisions(merged, remote.revision)
-            update_peer_state(merged, PeerState(self.device_id, remote.revision + 1), device_id=self.device_id)
+            acknowledgement = self._acknowledgement(local, remote.revision + 1)
+            update_peer_state(merged, PeerState(self.device_id, acknowledgement), device_id=self.device_id)
             operation_id = uuid.uuid4().hex
             self._check_cancel(cancel)
             operation = SyncOperation(self._server_url, self._user_id, operation_id, remote.revision, merged.to_dict())
-            self._outbox.enqueue(operation)
-            if old_operation is not None:
-                self._outbox.drop_conflict(old_operation)
+            self._validate_bucket(merged)
+            self._outbox.enqueue(operation, superseded=superseded)
             try:
-                merged.revision = self.push(merged, base_revision=remote.revision, operation_id=operation_id)
+                merged.revision = self._dispatch_operation(operation)
             except ConfigRevisionConflict:
-                old_operation = operation_id
+                self._outbox.mark_conflict(operation_id)
+                superseded = (operation_id,)
                 continue
-            self._outbox.acknowledge_peer(self.device_id, revision=merged.revision)
+            self._outbox.confirm(operation_id, revision=merged.revision)
+            self._outbox.acknowledge_peer(self.device_id, revision=acknowledgement)
             return merged, conflicts
         raise ConfigRevisionConflict('config sync exhausted bounded CAS retries')
+
+    def _prepare_pending(self, local: ConfigBucket, cancel: Optional[Event]) -> Tuple[ConfigBucket, Tuple[str, ...]]:
+        self._outbox.drain(self._dispatch_operation, cancel=cancel)
+        recovery = self._outbox.recoverable()
+        if len(recovery) != len(self.pending_operations()):
+            raise SyncRecoveryRequired(
+                'uncertain pending operations need delivery; exhausted retries need explicit Retry')
+        stale = {operation.operation_id for operation in self._outbox.recoverable(state='conflict')}
+        for operation in recovery:
+            bucket = ConfigBucket.from_dict(json.loads(json.dumps(operation.bucket)))
+            if operation.operation_id in stale:
+                self._reset_stale_receipts(bucket, operation.base_revision + 1)
+            local, _ = merge_causal_buckets(local, bucket)
+        return local, tuple(operation.operation_id for operation in recovery)
+
+    @staticmethod
+    def _reset_stale_receipts(bucket: ConfigBucket, attempted_revision: int) -> None:
+        # Only this confirmed failed CAS's newly assigned receipt was never committed.
+        for entries in bucket.sections.values():
+            for entry in entries.values():
+                metadata = entry.get('_sync', {})
+                if entry.get('deleted') is True and metadata.get('deleted_revision') == attempted_revision:
+                    metadata['deleted_revision'] = 0
+
+    def _acknowledgement(self, local: ConfigBucket, received_revision: int) -> int:
+        if self._options.acknowledge_on_sync:
+            return received_revision
+        return next((peer.acknowledged_revision for peer in bucket_peer_states(local)
+                     if peer.peer_id == self.device_id and not peer.retired), 0)
 
     def _check_retirement(self, remote: Optional[ConfigBucket]) -> None:
         if (self._outbox.requires_full_sync(self.device_id)
                 or device_requires_full_sync(remote, self.device_id)):
-            raise ConfigSyncError('retired device requires a full sync before incremental edits')
+            raise SyncRecoveryRequired('retired device requires a full sync before incremental edits')
 
     def retire_device(self, device_id: str) -> int:
         """Explicitly retire a known device in the shared registry before deleting its tombstone obligations."""

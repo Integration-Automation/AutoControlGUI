@@ -435,9 +435,9 @@ class QuickConnectScreen(TranslatableMixin, QWidget):
         try:
             viewer = RemoteDesktopViewer(
                 host=host, port=port, token=token,
-                on_frame=self._sessions.callback('viewer', self._frame_arrived.emit),
-                on_error=self._sessions.callback('viewer', lambda exc: self._error_arrived.emit(str(exc))),
-                on_cursor=self._sessions.callback('viewer', self._cursor_moved.emit),
+                on_frame=self._sessions.callback('viewer', self._on_frame),
+                on_error=self._sessions.callback('viewer', lambda exc: self._on_error(str(exc))),
+                on_cursor=self._sessions.callback('viewer', self._on_remote_cursor),
             )
             self._sessions.attach(viewer, 'viewer', active=False)
             viewer.connect(timeout=5.0)
@@ -464,9 +464,9 @@ class QuickConnectScreen(TranslatableMixin, QWidget):
         try:
             viewer = WebSocketDesktopViewer(
                 host=host, port=port, token=token, path=path,
-                on_frame=self._sessions.callback('viewer', self._frame_arrived.emit),
-                on_error=self._sessions.callback('viewer', lambda exc: self._error_arrived.emit(str(exc))),
-                on_cursor=self._sessions.callback('viewer', self._cursor_moved.emit),
+                on_frame=self._sessions.callback('viewer', self._on_frame),
+                on_error=self._sessions.callback('viewer', lambda exc: self._on_error(str(exc))),
+                on_cursor=self._sessions.callback('viewer', self._on_remote_cursor),
                 ssl_context=ssl_context,
             )
             self._sessions.attach(viewer, 'viewer', active=False)

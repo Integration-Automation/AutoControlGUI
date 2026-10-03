@@ -112,7 +112,12 @@ class WebRTCHostFeaturesController:  # pylint: disable=too-few-public-methods  #
         for host in sessions:
             try:
                 if value:
-                    host.set_viewer_video_callback(self._panel._on_viewer_video_av_frame)
+                    host.set_viewer_video_callback(
+                        self._panel._sessions.callback(
+                            'host', self._panel._signals.viewer_video_frame.emit,
+                            transform=self._panel._viewer_video_arguments,
+                        )
+                    )
                     host.enable_accept_viewer_video()
                 else:
                     host.disable_accept_viewer_video()

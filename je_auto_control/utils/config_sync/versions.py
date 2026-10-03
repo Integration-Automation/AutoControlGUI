@@ -75,11 +75,23 @@ def _dominates(left: Mapping[str, int], right: Mapping[str, int]) -> bool:
 
 def merge_entries(left: SyncEntry, right: SyncEntry) -> MergeDecision:
     """Compare version vectors; concurrent or inconsistent equal vectors retain both values."""
+    if _same_deletion(left, right):
+        receipt = left if left.deleted_revision >= right.deleted_revision else right
+        return MergeDecision(left, right, receipt)
     if left == right or _dominates(left.version, right.version):
         return MergeDecision(left, right, left)
     if _dominates(right.version, left.version):
         return MergeDecision(left, right, right)
     return MergeDecision(left, right, None)
+
+
+def _same_deletion(left: SyncEntry, right: SyncEntry) -> bool:
+    if not left.is_deleted or not right.is_deleted:
+        return False
+    first, second = left.to_dict(), right.to_dict()
+    first.pop('deleted_revision')
+    second.pop('deleted_revision')
+    return json.dumps(first, sort_keys=True) == json.dumps(second, sort_keys=True)
 
 
 @dataclass(frozen=True)

@@ -40,6 +40,9 @@ class WebRTCViewerTransfersController:  # pylint: disable=too-few-public-methods
 
     def _on_toggle_sync(self, checked: bool) -> None:
         if checked:
+            if not self._ready_for_sync():
+                self._panel._sync_btn.setChecked(False)
+                return
             if self._panel._viewer is None or not self._panel._viewer.authenticated:
                 QMessageBox.information(self._panel, "WebRTC", _t("rd_webrtc_cad_not_connected"))
                 self._panel._sync_btn.setChecked(False)
@@ -76,6 +79,15 @@ class WebRTCViewerTransfersController:  # pylint: disable=too-few-public-methods
         else:
             stop_folder_sync(self._panel)
             self._panel._sync_btn.setText(_t("rd_webrtc_sync_start"))
+
+    def _ready_for_sync(self) -> bool:
+        engine = self._panel._sync_engine
+        if engine is not None and engine.is_running():
+            self._panel._sync_btn.setToolTip(_t('rd_webrtc_sync_draining'))
+            return False
+        self._panel._sync_engine = None
+        self._panel._sync_btn.setToolTip('')
+        return True
 
     def _on_browse_refresh(self) -> None:
         if self._panel._viewer is None or not self._panel._viewer.authenticated:

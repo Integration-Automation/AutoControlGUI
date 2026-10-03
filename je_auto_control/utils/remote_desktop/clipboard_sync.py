@@ -85,6 +85,7 @@ class ClipboardLoopGuard:
         self.origin = origin or uuid.uuid4().hex
         self._seen: Deque[str] = deque(maxlen=256)
         self._echo: Optional[str] = None
+        self._last_content: Optional[str] = None
         self._lock = threading.Lock()
 
     @staticmethod
@@ -96,8 +97,9 @@ class ClipboardLoopGuard:
         kind, value = decode(payload)
         digest = self._identity(kind, value)
         with self._lock:
-            if digest == self._echo:
-                self._echo = None
+            echo, self._echo = self._echo, None
+            self._last_content = digest
+            if digest == echo:
                 return None
             envelope = json.loads(payload)
             envelope['sync'] = {'origin': self.origin, 'event': uuid.uuid4().hex, 'sha256': digest}
@@ -116,19 +118,25 @@ class ClipboardLoopGuard:
         kind, value = decode(payload)
         digest = self._identity(kind, value)
         metadata = json.loads(payload).get('sync')
-        if metadata is None:
-            identity = 'legacy:' + digest
-        else:
-            if not isinstance(metadata, dict) or metadata.get('sha256') != digest:
-                raise ClipboardSyncError('invalid clipboard sync identity')
-            if not all(isinstance(metadata.get(key), str) and metadata[key] for key in ('origin', 'event')):
-                raise ClipboardSyncError('invalid clipboard sync identity')
-            if metadata['origin'] == self.origin:
-                return None
-            identity = metadata['origin'] + ':' + metadata['event']
+        identity = '' if metadata is None else self._event_identity(metadata, digest)
+        if identity is None:
+            return None
         with self._lock:
-            if identity in self._seen:
+            if metadata is None and digest == self._last_content:
                 return None
-            self._seen.append(identity)
+            if metadata is not None:
+                if identity in self._seen:
+                    return None
+                self._seen.append(identity)
+            self._last_content = digest
             self._echo = digest
         return kind, value
+
+    def _event_identity(self, metadata: Any, digest: str) -> Optional[str]:
+        if not isinstance(metadata, dict) or metadata.get('sha256') != digest:
+            raise ClipboardSyncError('invalid clipboard sync identity')
+        if not all(isinstance(metadata.get(key), str) and metadata[key] for key in ('origin', 'event')):
+            raise ClipboardSyncError('invalid clipboard sync identity')
+        if metadata['origin'] == self.origin:
+            return None
+        return metadata['origin'] + ':' + metadata['event']

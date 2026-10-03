@@ -58,6 +58,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261003-21 | 2026-10-03 | Close whole-C review, clean completed progress and pause before D | #done #review #sync #modernization | [2026-10](2026-10.md) |
 | U-20261003-20 | 2026-10-03 | Independent owned remote sessions and complete command surfaces | #done #remote-desktop #gui #modernization | [2026-10](2026-10.md) |
 | U-20261003-19 | 2026-10-03 | Portable definitions, checked assets and explicit sync panel | #done #sync #gui #modernization | [2026-10](2026-10.md) |
 | U-20261003-18 | 2026-10-03 | Causal config conflicts and durable offline retry | #done #sync #modernization | [2026-10](2026-10.md) |
@@ -363,7 +364,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | File | Period | Entries |
 |---|---|---:|
-| [2026-10.md](2026-10.md) | 2026-10 | 27 |
+| [2026-10.md](2026-10.md) | 2026-10 | 28 |
 | [2026-09-e.md](2026-09-e.md) | 2026-09 | 7 |
 | [2026-09-d.md](2026-09-d.md) | 2026-09 | 55 |
 | [2026-09-c.md](2026-09-c.md) | 2026-09 | 38 |

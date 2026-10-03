@@ -184,5 +184,6 @@ def stop_folder_sync(panel: Any) -> None:
         try:
             panel._sync_engine.stop()
         except (RuntimeError, OSError):
-            pass
-        panel._sync_engine = None
+            return
+        if not panel._sync_engine.is_running():
+            panel._sync_engine = None

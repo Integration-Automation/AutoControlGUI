@@ -258,6 +258,181 @@ def test_hosting_panel_keeps_script_viewer_alive(directory, panels, monkeypatch,
         _APPLICATION.sendPostedEvents(None, QEvent.Type.DeferredDelete.value)
 
 
+@pytest.mark.parametrize('transport', ['tcp', 'ws'])
+@pytest.mark.parametrize('event', ['error', 'frame', 'cursor'])
+def test_quick_final_delivery_cannot_act_on_replacement(directory, panels, monkeypatch, transport, event):
+    import types
+    from PySide6.QtCore import QEvent
+    from je_auto_control.gui.remote_desktop import connection_screen
+    from je_auto_control.utils.remote_desktop.connect_coordinator import parse_target
+    monkeypatch.setattr(connection_screen, 'registry', directory)
+    monkeypatch.setattr(connection_screen, 'RemoteDesktopViewer', Viewer)
+    monkeypatch.setattr(connection_screen, 'WebSocketDesktopViewer', Viewer)
+    warnings, cursors = [], []
+    monkeypatch.setattr(connection_screen.QMessageBox, 'warning', lambda *args: warnings.append(args))
+    screen = connection_screen.QuickConnectScreen()
+    monkeypatch.setattr(screen, '_open_screen_window', lambda *args: None)
+    monkeypatch.setattr(screen, '_remember_tcp', lambda *args: None)
+    monkeypatch.setattr(screen, '_remember_url', lambda *args: None)
+    try:
+        if transport == 'tcp':
+            screen._do_tcp_connect('127.0.0.1', 1, 'test-only')
+        else:
+            screen._do_ws_connect(parse_target('ws://127.0.0.1:1'), 'test-only')
+        old = screen._sessions.resource('viewer')
+        if event == 'error':
+            old.options['on_error'](OSError('old connection'))
+        elif event == 'frame':
+            old.options['on_frame'](b'old frame')
+        else:
+            old.options['on_cursor'](1, 2)
+        screen._disconnect()
+        session = screen._sessions.reserve(transport, 'viewer')
+        replacement = Viewer()
+        screen._sessions.attach(replacement, 'viewer')
+        screen._pending_frame = b'current frame'
+        before = len(warnings)
+        if event == 'cursor':
+            screen._screen_window = types.SimpleNamespace(
+                display=types.SimpleNamespace(set_remote_cursor=lambda *args: cursors.append(args)))
+        _APPLICATION.processEvents()
+        assert screen._sessions.id('viewer') == session.id and replacement.connected
+        assert screen._pending_frame == b'current frame'
+        assert cursors == [] and len(warnings) == before
+    finally:
+        screen._screen_window = None
+        screen._sessions.dispose()
+        screen.close()
+        screen.deleteLater()
+        _APPLICATION.sendPostedEvents(None, QEvent.Type.DeferredDelete.value)
+
+
+def test_webrtc_video_toggle_keeps_generation_guard(directory, panels, monkeypatch):
+    import threading
+    import types
+    from PySide6.QtCore import QEvent
+    from PySide6.QtGui import QImage
+    from je_auto_control.gui.remote_desktop import webrtc_host_panel, webrtc_host_features
+    monkeypatch.setattr(webrtc_host_panel, 'registry', directory)
+    monkeypatch.setattr(webrtc_host_panel, 'install_host_tray', lambda **kwargs: None)
+    delivered = []
+
+    class Peer:
+        def set_viewer_video_callback(self, callback):
+            self.callback = callback
+
+        def enable_accept_viewer_video(self):
+            pass
+
+    peer = Peer()
+    pool = types.SimpleNamespace(_lock=threading.Lock(), _sessions={'peer': peer}, stop=lambda: None)
+    panel = webrtc_host_panel._WebRTCHostPanel()
+    panel._signals.viewer_video_frame.disconnect()
+    panel._signals.viewer_video_frame.connect(delivered.append)
+    monkeypatch.setattr(webrtc_host_features, '_av_frame_to_qimage',
+                        lambda frame: QImage(2, 2, QImage.Format.Format_RGB32))
+    try:
+        panel._sessions.reserve('webrtc', 'host')
+        panel._sessions.attach(pool, 'host')
+        panel._multi_host = pool
+        panel._on_toggle_accept_viewer_video(True)
+        callback = peer.callback
+        panel._sessions.close('host')
+        panel._sessions.reserve('webrtc', 'host')
+        panel._sessions.attach(pool, 'host')
+        callback(object())
+        _APPLICATION.processEvents()
+        assert delivered == []
+    finally:
+        panel._multi_host = None
+        panel._sessions.dispose()
+        panel.close()
+        panel.deleteLater()
+        _APPLICATION.sendPostedEvents(None, QEvent.Type.DeferredDelete.value)
+
+
+def test_old_reconnect_timer_cannot_replace_new_viewer(webrtc_panels, monkeypatch):
+    panel = webrtc_panels[0]
+    panel._token_edit.setText('test-only')
+    panel._server_edit.setText('http://example.test')
+    panel._host_id_edit.setText('123456789')
+    panel._auto_reconnect_check.setChecked(True)
+    panel._viewer = panel._build_viewer('test-only')
+    panel._maybe_schedule_auto_reconnect()
+    assert panel._reconnect_timer.isActive()
+    panel._stop_viewer_if_any()
+    panel._viewer = panel._build_viewer('test-only')
+    replacement = panel._viewer
+    calls = []
+    monkeypatch.setattr(panel._session_controller, '_on_connect_via_server', lambda: calls.append('reconnect'))
+    assert not panel._reconnect_timer.isActive()
+    panel._reconnect_timer.timeout.emit()
+    assert calls == [] and panel._viewer is replacement and replacement.connected
+
+
+def test_successful_auth_revokes_pending_reconnect(webrtc_panels, monkeypatch):
+    import types
+    panel = webrtc_panels[0]
+    panel._token_edit.setText('test-only')
+    panel._server_edit.setText('http://example.test')
+    panel._host_id_edit.setText('123456789')
+    panel._auto_reconnect_check.setChecked(True)
+    panel._viewer = panel._build_viewer('test-only')
+    panel._maybe_schedule_auto_reconnect()
+    assert panel._reconnect_timer.isActive()
+    monkeypatch.setattr(panel, '_start_stats_polling', lambda: None)
+    monkeypatch.setattr(panel, '_ensure_screen_window', lambda: types.SimpleNamespace(
+        show=lambda: None, raise_=lambda: None, activateWindow=lambda: None))
+    panel._on_auth(True)
+    assert not panel._reconnect_timer.isActive()
+
+
+def test_gui_folder_toggle_retains_real_draining_sender(webrtc_panels, tmp_path, monkeypatch):
+    import threading
+    from je_auto_control.utils.remote_desktop import file_sync
+    panel = webrtc_panels[0]
+    panel._viewer = panel._build_viewer('test-only')
+    panel._viewer.authenticated = True
+    panel._sync_dir_edit.setText(str(tmp_path))
+    entered, release = threading.Event(), threading.Event()
+
+    def blocked_sender(_path, _name):
+        entered.set()
+        release.wait(30)
+
+    engine_class = file_sync.FolderSyncEngine
+    original = engine_class(watch_dir=tmp_path, sender=blocked_sender, poll_interval_s=0.5)
+    original.start()
+    created = []
+
+    def replacement(**kwargs):
+        engine = engine_class(**kwargs)
+        created.append(engine)
+        return engine
+
+    try:
+        assert original.wait_until_ready()
+        (tmp_path / 'changed.txt').write_text('captured data', encoding='utf-8')
+        assert entered.wait(4)
+        panel._sync_engine = original
+        monkeypatch.setattr(file_sync, 'FolderSyncEngine', replacement)
+        panel._on_toggle_sync(False)
+        assert original.is_running()
+        panel._on_toggle_sync(True)
+        assert created == [] and panel._sync_engine is original
+        release.set()
+        original.stop()
+        panel._on_toggle_sync(False)
+        panel._on_toggle_sync(True)
+        assert len(created) == 1 and panel._sync_engine is created[0]
+    finally:
+        release.set()
+        original.stop()
+        for engine in created:
+            engine.stop()
+        panel._sync_engine = None
+
+
 @pytest.fixture
 def webrtc_panels(directory, panels, monkeypatch):
     from PySide6.QtCore import QEvent

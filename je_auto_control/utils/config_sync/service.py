@@ -12,7 +12,7 @@ from je_auto_control.utils.rbac.authorization import require_command
 
 from .causal_bucket import bucket_peer_states, merge_causal_buckets
 from .apply_service import config_sync_apply
-from .client import ConfigSyncClient, SyncClientOptions
+from .client import ConfigSyncClient, SyncClientOptions, SyncRecoveryRequired, SyncValidationError
 from .definition_files import (
     SECTIONS, ensure_portable_bucket, read_object, snapshot_definitions, write_object,
 )
@@ -31,7 +31,8 @@ def _paths(workspace_path: str, server_url: str, user_id: str) -> Tuple[Path, Pa
 def _client(server_url: str, user_id: str, outbox: Path, secret: str) -> ConfigSyncClient:
     outbox.parent.mkdir(parents=True, exist_ok=True)
     return ConfigSyncClient(server_url, user_id=user_id, secret=secret,
-                            options=SyncClientOptions(outbox_path=outbox))
+                            options=SyncClientOptions(outbox_path=outbox, acknowledge_on_sync=False,
+                                                       bucket_validator=ensure_portable_bucket))
 
 
 def _conflicts(bucket: ConfigBucket) -> int:
@@ -43,7 +44,8 @@ def _status(client: ConfigSyncClient, bucket: ConfigBucket, *, offline: bool = F
                   if peer.peer_id == client.device_id), 0)
     return {'revision': bucket.revision, 'pending': len(client.pending_operations()), 'conflicts': _conflicts(bucket),
             'offline': offline, 'cas_supported': client.cas_supported,
-            'last_successful_revision': max(known, client.last_successful_revision), 'device_id': client.device_id}
+            'last_successful_revision': max(known, client.last_successful_revision), 'device_id': client.device_id,
+            'applied_revision': known, 'recovery': client.recovery_status()}
 
 
 def _exchange(definitions_path: str, workspace_path: str, server_url: str, user_id: str, secret: str, *,
@@ -54,22 +56,18 @@ def _exchange(definitions_path: str, workspace_path: str, server_url: str, user_
         local, digest = snapshot_definitions(Path(definitions_path), state_path, user_id, client.device_id)
         if cancel is not None and cancel.is_set():
             return {**_status(client, local, offline=True), 'cancelled': True}
-        try:
-            remote = client.fetch() or ConfigBucket(user_id)
-        except ConfigSyncError:
-            return {**_status(client, local, offline=True), 'cancelled': False}
-        ensure_portable_bucket(remote)
-        merged, _ = merge_causal_buckets(local, remote)
         if publish:
-            if cancel is not None and cancel.is_set():
-                return {**_status(client, merged), 'cancelled': True}
-            try:
-                merged, _ = client.sync(local, cancel=cancel)
-            except ConfigSyncError:
-                return {**_status(client, merged, offline=True),
-                        'cancelled': cancel is not None and cancel.is_set()}
-            ensure_portable_bucket(merged)
-            # Only confirmed exchange advances the durable applied causal state.
+            client.queue(local)
+        try:
+            merged = _exchange_bucket(client, local, publish=publish, cancel=cancel)
+        except SyncValidationError:
+            raise
+        except SyncRecoveryRequired as error:
+            return {**_status(client, local), 'recovery_required': str(error), 'cancelled': False}
+        except ConfigSyncError:
+            return {**_status(client, local, offline=True), 'cancelled': cancel is not None and cancel.is_set()}
+        if publish:
+            # Receipt advances preview/registry state; applied entry heads and acknowledgement stay local.
             local.revision = merged.revision
             local.sections['__sync_devices__'] = merged.sections.get('__sync_devices__', {})
             write_object(state_path, local.to_dict())
@@ -79,6 +77,21 @@ def _exchange(definitions_path: str, workspace_path: str, server_url: str, user_
                 'definitions_sha256': digest, 'bucket': merged.to_dict(), 'cancelled': False}
     finally:
         client.close()
+
+
+def _exchange_bucket(client: ConfigSyncClient, local: ConfigBucket, *, publish: bool,
+                     cancel: Optional[Event]) -> ConfigBucket:
+    remote = client.fetch() or ConfigBucket(local.user_id)
+    try:
+        ensure_portable_bucket(remote)
+    except ConfigSyncError as error:
+        raise SyncValidationError(str(error)) from error
+    if publish:
+        merged, _ = client.sync(local, cancel=cancel)
+    else:
+        merged, _ = merge_causal_buckets(local, remote)
+    ensure_portable_bucket(merged)
+    return merged
 
 
 def config_sync_preview(definitions_path: str, workspace_path: str, server_url: str, user_id: str,

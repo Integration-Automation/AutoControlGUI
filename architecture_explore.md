@@ -20,13 +20,13 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 | 指標 | 數值 |
 | --- | ---: |
 | Python 模組總數（含周邊子專案） | 1,140 |
-| 程式碼總行數 | 166,780 |
+| 程式碼總行數 | 166,987 |
 | `je_auto_control/utils/` 子套件數 | 311 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 801 |
 | 套件門面 `__all__` 公開名稱數 | 1,342 |
 | GUI 分頁數（`main_widget` 註冊） | 49 |
 | MCP 工具數（`build_default_tool_registry()` 實測） | 723 |
-| `test_*.py` 測試檔／測試函式 | 745 / 7,746 |
+| `test_*.py` 測試檔／測試函式 | 746 / 7,768 |
 | 範例腳本 | 27 |
 
 **技術基線**：Python ≥ 3.10、MIT 授權、必要相依只有 `je_open_cv`／`opencv-python`／`pillow`／`mss`／
@@ -518,14 +518,14 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.10 遠端桌面與 USB
 
-> 6 個套件、約 22,372 行。
+> 6 個套件、約 22,540 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
 | `utils/admin/` | 418 | 多主機管理主控台：平行輪詢 N 個 AutoControl REST 端點 |
-| `utils/config_sync/` | 2,342 | SQLite CAS、因果衝突、離線 outbox 與設定同步 |
+| `utils/config_sync/` | 2,502 | SQLite CAS、因果衝突、離線 outbox 與設定同步 |
 | `utils/device_matrix/` | 147 | 行動裝置矩陣：同一 action list 於多台裝置平行執行 |
-| `utils/remote_desktop/` | 13,791 | **遠端桌面子系統**（56 檔／11.7K LOC）：TCP／WebSocket／WebRTC 三條傳輸路徑、主機與檢視端、訊令伺服器、TURN／中繼、多檢視者、錄影、信任清單、TOTP、稽核鏈 |
+| `utils/remote_desktop/` | 13,799 | **遠端桌面子系統**（56 檔／11.7K LOC）：TCP／WebSocket／WebRTC 三條傳輸路徑、主機與檢視端、訊令伺服器、TURN／中繼、多檢視者、錄影、信任清單、TOTP、稽核鏈 |
 | `utils/usb/` | 4,666 | 跨平台 USB 列舉／熱插拔／裝置直通（WinUSB、IOKit、libusb 後端 + ACL + WebRTC DataChannel 通道） |
 | `utils/usbip/` | 1,008 | USB/IP 線路協定主機端（協定封包、TCP 伺服器、libusb URB 後端） |
 
@@ -759,7 +759,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `rate_limit.py` | 48 | 工具呼叫的 token bucket 限流。 |
 | `__main__.py` | 92 | `je_auto_control_mcp` console script 進入點。 |
 
-#### `utils/remote_desktop/`（13,791 行／59 檔）
+#### `utils/remote_desktop/`（13,799 行／59 檔）
 
 三條傳輸路徑並存：**TCP**（JPEG 影格）、**WebSocket**（同協定換傳輸）、**WebRTC**（aiortc 視訊 + DataChannel）。
 
@@ -810,7 +810,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `protocol.py` | 98 | 長度前綴的 TCP 框架。 |
 | `resume_tokens.py` / `session_quality_cache.py` / `rate_limit.py` | 94 / 85 / 84 | 快速重連 token、每 session 品質快取、檢視端限流。 |
 | `host_id.py` / `viewer_id.py` | 83 / 79 | 主機與檢視端的持久身分。 |
-| `permissions.py` / `clipboard_sync.py` / `wake_on_lan.py` / `session_actions.py` / `auth.py` | 64 / 134 / 56 / 40 / 28 | 逐 session 權限、剪貼簿同步、WOL、SAS 注入與螢幕遮蔽、HMAC 挑戰回應。 |
+| `permissions.py` / `clipboard_sync.py` / `wake_on_lan.py` / `session_actions.py` / `auth.py` | 64 / 142 / 56 / 40 / 28 | 逐 session 權限、剪貼簿同步、WOL、SAS 注入與螢幕遮蔽、HMAC 挑戰回應。 |
 | `ws_host.py` / `ws_viewer.py` / `jpeg_recorder.py` | 40 / 29 / 146 | WebSocket 傳輸變體與 TCP 路徑錄影。 |
 
 #### `utils/usb/`（4,666 行）與 `utils/usbip/`（1,008 行）
@@ -927,7 +927,7 @@ GUI 是**選用 extra**（`pip install je_auto_control[gui]`，PySide6 + qt-mate
 | `_screen_geometry.py` | 53 | Qt 邏輯座標與截圖用的原生像素互轉：`native_region()`、`screen_at_native()`、`logical_point()`（每個螢幕的左上角在兩者相同，螢幕內依 device pixel ratio 縮放）。區域選取與主機端標註覆蓋層都用它。 |
 | `_daemon_thread.py` | 79 | `DaemonThread`：`QThread` 的替代品，保留遠端桌面 worker 用到的介面（`start`／`run`／`isRunning`／`wait`／`requestInterruption`／`started`／`finished`），但 `run()` 跑在 daemon `threading.Thread` 上，刪除物件或程式結束都不會銷毀執行中的執行緒。 |
 | `_worker_thread.py` | 216 | `start_worker()`：在 daemon `threading.Thread` 上執行 `QObject` worker 的 `run()`（沒有 `QThread` 可被銷毀），並經由分頁擁有的中繼物件回報結果（回呼一律在 GUI 執行緒；worker 沒處理的例外也送到 `on_fail`）；worker 留在模組登錄表直到 GUI 執行緒看到它結束，回傳 `WorkerHandle`（`isRunning()`）；程式結束時先呼叫 worker 的 `request_stop()`，最多等 10 秒，仍在跑的隨行程結束。 |
-| `language_wrapper/` | 5,328 | 四語系字典（英／日／簡中／繁中）+ `multi_language_wrapper` 執行期切換器與監聽註冊表。 |
+| `language_wrapper/` | 5,332 | 四語系字典（英／日／簡中／繁中）+ `multi_language_wrapper` 執行期切換器與監聽註冊表。 |
 | `selector/` | 216 | 拖曳選取螢幕區域的半透明全螢幕覆蓋層與樣板裁切工具（互動式，但都有對應的程式化 API）。 |
 
 > **分頁指令一律走 Actions 選單**：分頁本身只放輸入、表格與結果檢視，指令由視窗層選單暴露。
@@ -987,7 +987,7 @@ GUI 是**選用 extra**（`pip install je_auto_control[gui]`，PySide6 + qt-mate
 | diagnostics | `diagnostics_tab.py` | 91 | 執行子系統檢查並顯示結果。 |
 | report | `_report_tab.py` | 81 | 產生 HTML／JSON／XML 報表。 |
 
-#### 遠端桌面 GUI（`gui/remote_desktop/`，29 檔／7,688 行）
+#### 遠端桌面 GUI（`gui/remote_desktop/`，29 檔／7,723 行）
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -1007,9 +1007,9 @@ GUI 是**選用 extra**（`pip install je_auto_control[gui]`，PySide6 + qt-mate
 | `trusted_group.py` | 70 | The 'trusted viewers' group the WebRTC host panel builds. |
 | `viewer_panel.py` | 537 | ``_ViewerPanel``: the 'control another machine' Remote Desktop sub-tab. |
 | `viewer_screen_window.py` | 46 | Popup window that displays a connected viewer's shared screen. |
-| `webrtc_common.py` | 188 | Shared WebRTC panel signals and configuration/frame conversion helpers. |
+| `webrtc_common.py` | 189 | Shared WebRTC panel signals and configuration/frame conversion helpers. |
 | `webrtc_dialogs.py` | 519 | Custom dialogs / list widgets used by the WebRTC GUI panels. |
-| `webrtc_host_features.py` | 305 | WebRTC host features controller; session and widget ownership stays on the panel. |
+| `webrtc_host_features.py` | 310 | WebRTC host features controller; session and widget ownership stays on the panel. |
 | `webrtc_host_layout.py` | 348 | WebRTC host layout controller; session and widget ownership stays on the panel. |
 | `webrtc_host_panel.py` | 402 | Typed WebRTC host panel composing layout, feature and lifecycle controllers. |
 | `webrtc_host_session.py` | 431 | WebRTC host session controller; session and widget ownership stays on the panel. |
@@ -1017,8 +1017,8 @@ GUI 是**選用 extra**（`pip install je_auto_control[gui]`，PySide6 + qt-mate
 | `webrtc_panel.py` | 8 | Compatible WebRTC panel imports; implementation is split into typed panels and controllers. |
 | `webrtc_viewer_layout.py` | 347 | WebRTC viewer layout controller; session and widget ownership stays on the panel. |
 | `webrtc_viewer_panel.py` | 446 | Typed WebRTC viewer panel composing layout, feature and lifecycle controllers. |
-| `webrtc_viewer_session.py` | 489 | WebRTC viewer session controller; session and widget ownership stays on the panel. |
-| `webrtc_viewer_transfers.py` | 388 | WebRTC viewer transfers controller; session and widget ownership stays on the panel. |
+| `webrtc_viewer_session.py` | 506 | WebRTC viewer session controller; session and widget ownership stays on the panel. |
+| `webrtc_viewer_transfers.py` | 400 | WebRTC viewer transfers controller; session and widget ownership stays on the panel. |
 | `webrtc_workers.py` | 237 | Background workers for the WebRTC signaling-server flow. |
 
 ### 5.6 周邊子專案與資產
@@ -1037,32 +1037,32 @@ GUI 是**選用 extra**（`pip install je_auto_control[gui]`，PySide6 + qt-mate
 | `ci_templates/.gitlab-ci.yml` | — | 供使用者專案複製的 GitLab CI 範本。 |
 | `docs/` | Sphinx（`API`／`Eng`／`Zh`／`getting_started`） | Read the Docs 文件。 |
 | `architecture_diagram/` | drawio + png | 既有的架構圖原始檔。 |
-| `test/` | `unit_test/headless`（主要）、`unit_test/flow_control`、`integrated_test`、`gui_test`、`manual_test`、`verify`、`test_source` | 745 個 `test_*.py`／7,746 個測試函式。**注意**：`test/unit_test/` 下的 `*_test.py` 是會真的驅動滑鼠鍵盤的手動示範腳本，因此 `pyproject.toml` 把 `python_files` 釘成 `test_*.py`。`unit_test/headless/conftest.py` 有一個 autouse fixture，每個測試結束都沖掉 Qt 排隊中的 `deleteLater()`——不沖會讓殘留的 widget 在後面某個不相干的測試裡被銷毀，曾經整個直譯器 `__fastfail`。`test_doc_counts.py` 守住文件引用的指令／工具／子套件／範例數,`test_doc_line_counts.py` 守住所有行數（`--fix` 可一次重新產生）。 `verify/macos_verify.py` 是在真的 `macos-14` runner 上量測 TCC 到底允許什麼的探針（macOS 是唯一沒有容器可用的支援平台），不被 pytest 收集。 |
+| `test/` | `unit_test/headless`（主要）、`unit_test/flow_control`、`integrated_test`、`gui_test`、`manual_test`、`verify`、`test_source` | 746 個 `test_*.py`／7,768 個測試函式。**注意**：`test/unit_test/` 下的 `*_test.py` 是會真的驅動滑鼠鍵盤的手動示範腳本，因此 `pyproject.toml` 把 `python_files` 釘成 `test_*.py`。`unit_test/headless/conftest.py` 有一個 autouse fixture，每個測試結束都沖掉 Qt 排隊中的 `deleteLater()`——不沖會讓殘留的 widget 在後面某個不相干的測試裡被銷毀，曾經整個直譯器 `__fastfail`。`test_doc_counts.py` 守住文件引用的指令／工具／子套件／範例數,`test_doc_line_counts.py` 守住所有行數（`--fix` 可一次重新產生）。 `verify/macos_verify.py` 是在真的 `macos-14` runner 上量測 TCC 到底允許什麼的探針（macOS 是唯一沒有容器可用的支援平台），不被 pytest 收集。 |
 
 ---
 
 
-#### 因果設定同步（`utils/config_sync/`，18 檔／2,342 行）
+#### 因果設定同步（`utils/config_sync/`，18 檔／2,502 行）
 
 | 檔案 | 行數 | 職責 |
 |---|---:|---|
 | `__init__.py` | 50 | Persistent protected config synchronization with causal conflicts and offline retries. |
 | `adapters.py` | 6 | Shared portable definition interfaces and concrete definition-only store adapters. |
-| `apply_service.py` | 155 | Explicit conflict resolution and inert definition publication after asset verification. |
+| `apply_service.py` | 157 | Explicit conflict resolution and inert definition publication after asset verification. |
 | `asset_service.py` | 46 | Scoped file-backed asset transport shared by executor, MCP and GUI callers. |
 | `assets.py` | 141 | Receive bounded, hash-checked assets as data; publish each completed file atomically. |
 | `causal_bucket.py` | 185 | Merge versioned buckets without clock-based winners or lost conflict alternatives. |
-| `client.py` | 362 | Config HTTP client and compatible legacy timestamp merge. |
+| `client.py` | 451 | Config HTTP client and compatible legacy timestamp merge. |
 | `database.py` | 47 | Shared lazy SQLite connection lifecycle for config persistence. |
 | `definition_adapter.py` | 99 | Definition-only adapters; receiving never executes scripts or starts listeners. |
 | `definition_files.py` | 111 | Strict local definition documents and portable causal snapshot persistence. |
 | `definition_privacy.py` | 167 | Portable JSON definitions keep confidential literals and machine paths local. |
 | `models.py` | 132 | Compatible config bucket shapes and legacy timestamp editing helpers. |
-| `outbox.py` | 262 | Durable account/endpoint-scoped config retries and device acknowledgements. |
+| `outbox.py` | 306 | Durable account/endpoint-scoped config retries and device acknowledgements. |
 | `runtime_adapters.py` | 153 | Adapt actual hotkey, trigger and address-book stores without starting their runtime. |
-| `service.py` | 128 | Shared explicit preview, protected exchange, apply, retry and status services. |
+| `service.py` | 141 | Shared explicit preview, protected exchange, apply, retry and status services. |
 | `store.py` | 157 | Persistent config buckets with atomic revision checks and operation deduplication. |
-| `versions.py` | 102 | Causal entry comparison and acknowledgement-based tombstone collection. |
+| `versions.py` | 114 | Causal entry comparison and acknowledgement-based tombstone collection. |
 | `wire_api.py` | 39 | JSON-only command adapters over cancellable Python services. |
 | `api/config_sync.py` | 30 | Beta typed facade。 |
 
@@ -1141,9 +1141,9 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 
 | 層／子系統 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `gui/` | 109 | 30,147 |
+| `gui/` | 109 | 30,186 |
 | `utils/mcp_server/` | 45 | 19,745 |
-| `utils/remote_desktop/` | 59 | 13,791 |
+| `utils/remote_desktop/` | 59 | 13,799 |
 | `utils/executor/` | 10 | 9,821 |
 | `utils/usb/` | 17 | 4,666 |
 | `je_auto_control/`（頂層 3 檔） | 3 | 2,559 |
@@ -1161,8 +1161,8 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `osx/` | 17 | 925 |
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 863 |
-| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 727 | 61,856 |
-| **總計** | **1,132** | **166,650** |
+| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 727 | 62,016 |
+| **總計** | **1,132** | **166,857** |
 
 
 Crypto optional-dependency failures use CryptoDependencyError from utils/exception:

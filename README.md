@@ -788,3 +788,34 @@ process-local and are not persisted configuration-sync records. Calling
 `disconnect_session(id, owner=...)` affects only that connection. Controlled
 transport doubles and offscreen Qt verify ownership; physical multi-machine
 validation remains pending.
+
+## Sync recovery and delayed Apply (Beta)
+
+Exchange saves unsent local publication intent before its first network request.
+Retry first merges a fresh protected snapshot before turning that intent into a
+CAS envelope. Preview and requests cancelled before starting do not queue intent.
+An uncertain dispatched envelope keeps its exact ID and payload. Explicit Retry
+renews exhausted delivery attempts; a server-confirmed HTTP 409 can be causally
+rebased and atomically replaced. A tentative deletion receipt from a rejected
+write is reassigned to the new CAS revision. Incoming privacy validation runs
+again before each fresh rebase. Local status includes `recovery` state counts;
+Exchange reports `recovery_required` separately from a network outage.
+
+Exchange and Retry leave local definitions unchanged. Receiving a preview does
+not acknowledge applying it: `applied_revision` advances only after explicit
+Apply resolves every entry and required asset/reference. The next Exchange
+publishes that acknowledgement. Unresolved entries retain deletion obligations,
+so delayed Apply cannot revive collected data. Direct causal clients default to
+acknowledging the returned snapshot; adapters use
+`SyncClientOptions(acknowledge_on_sync=False)` for explicit local application.
+Only receipt metadata of the same causal deletion is reconciled; independent
+edits and different JSON values still require conflict review.
+
+Quick Connect checks session generation at final frame/error/cursor delivery.
+WebRTC video toggles retain the same guard, and stop, replacement or successful
+authentication revoke scheduled reconnects. Folder Sync retains a still-draining
+sender and delays restart until it stops. Legacy clipboard repetition is
+suppressed only across contiguous equal content, allowing A→B→A; modern event
+IDs still use bounded deduplication and one received echo is suppressed.
+These are controlled SQLite/network-boundary and offscreen Qt regressions;
+physical multi-machine checks remain pending.

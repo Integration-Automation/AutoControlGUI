@@ -471,6 +471,7 @@ simplified_chinese_word_dict = {
     "rd_webrtc_sync_dir": "本机目录:",
     "rd_webrtc_sync_dir_ph": "要镜像到 host inbox 的目录",
     "rd_webrtc_sync_start": "开始同步",
+    "rd_webrtc_sync_draining": "先前的传送仍在结束中，停止后即可重新启动。",
     "rd_webrtc_sync_stop": "停止同步",
     "rd_webrtc_sync_dir_required": "请先选一个本机目录",
     "rd_webrtc_not_started": "请先开始主机端",

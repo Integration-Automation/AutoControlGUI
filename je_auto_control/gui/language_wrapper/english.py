@@ -600,6 +600,7 @@ english_word_dict = {
     "rd_webrtc_sync_dir": "Local folder:",
     "rd_webrtc_sync_dir_ph": "directory to mirror to host's inbox",
     "rd_webrtc_sync_start": "Start sync",
+    "rd_webrtc_sync_draining": "The previous transfer is finishing. Try again when it has stopped.",
     "rd_webrtc_sync_stop": "Stop sync",
     "rd_webrtc_sync_dir_required": "Pick a local folder first",
     "rd_webrtc_not_started": "Start hosting first",

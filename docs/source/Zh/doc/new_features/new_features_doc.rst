@@ -1570,3 +1570,27 @@ session ``active`` 表示本機配置成功；WebRTC 對端就緒程度以傳輸
 判斷。GUI 多 viewer host 的狀態另含 ``peers``／``connected_clients``。session／事件只存在
 本行程，不是持久化設定同步資料。``disconnect_session(id, owner=...)`` 只影響該連線。
 目前證據是受控 transport 替身與 offscreen Qt；實體多機驗證仍待完成。
+
+同步復原與延後 Apply（Beta）
+-------------------
+
+Exchange 在第一次網路請求前保存尚未送出的本機發布意圖。Retry 先與最新的受保護
+快照做因果合併，才建立 CAS 請求；Preview 與開始前取消的操作不排入發布意圖。
+已送出但結果未明的請求保留原 ID 與內容。明確 Retry 可重新嘗試耗盡的重送；
+只有伺服器確認 HTTP 409 的請求才可重新合併並原子替換。未提交的刪除 receipt
+重新指定到新 CAS revision；每次重新合併前再次驗證遠端隱私。
+本機狀態回傳 ``recovery`` 各狀態數量，Exchange 用 ``recovery_required`` 區分需要
+復原的情況與網路離線。
+
+Exchange 與 Retry 不修改本機定義。收到預覽不代表已套用：只有明確 Apply 解決
+全部項目與必要資產／參照後才推進 ``applied_revision``，下一次 Exchange 才發布
+該確認。未解決項目仍保留刪除義務，因此延後 Apply 不會讓已回收資料復活。
+直接因果 client 預設確認回傳快照；需要明確本機套用的 adapter 使用
+``SyncClientOptions(acknowledge_on_sync=False)``。只有同一因果刪除的 receipt 資料
+會合併；獨立編輯或不同 JSON 值仍需衝突審閱。
+
+Quick Connect 在最後交付畫面、錯誤與游標時檢查 session generation；WebRTC
+影片切換使用相同保護，停止、替換與認證成功會撤銷預約重連。資料夾同步保留
+仍在結束中的傳送者，等停止後才允許重啟。舊剪貼簿只抑制連續相同內容，允許
+A→B→A；新版仍以有限事件 ID 去重，並抑制一次收到內容的回送。
+證據來自受控 SQLite／網路邊界與 offscreen Qt；實體多機驗證仍待完成。

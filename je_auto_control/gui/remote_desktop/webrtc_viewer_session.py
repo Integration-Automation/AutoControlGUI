@@ -50,6 +50,17 @@ class WebRTCViewerSessionController:  # pylint: disable=too-few-public-methods  
 
     def __init__(self, panel: _WebRTCViewerPanel) -> None:
         self._panel = panel
+        self._reconnect_callback: Optional[Callable[[], None]] = None
+
+    def reconnect_if_current(self) -> None:
+        """Consume the retry belonging to the original session, including queued timer delivery."""
+        callback, self._reconnect_callback = self._reconnect_callback, None
+        if callback is not None:
+            callback()
+
+    def _cancel_reconnect(self) -> None:
+        self._reconnect_callback = None
+        self._panel._reconnect_timer.stop()
 
     def _on_send_cad(self) -> None:
         if self._panel._viewer is None or not self._panel._viewer.authenticated:
@@ -335,6 +346,7 @@ class WebRTCViewerSessionController:  # pylint: disable=too-few-public-methods  
 
     def dispose_background(self) -> None:
         """Stop background objects without touching any disposed Qt widget."""
+        self._reconnect_callback = None
         # pylint: disable=import-outside-toplevel  # reason: lazy optional/cyclic boundary
         from je_auto_control.gui.remote_desktop.webrtc_common import (
             dispose_background,
@@ -352,6 +364,7 @@ class WebRTCViewerSessionController:  # pylint: disable=too-few-public-methods  
         dispose_background(callbacks)
 
     def _stop_viewer_if_any(self) -> None:
+        self._cancel_reconnect()
         owned = self._panel._sessions.id("viewer") is not None
         if owned:
             self._panel._sessions.close("viewer")
@@ -408,6 +421,7 @@ class WebRTCViewerSessionController:  # pylint: disable=too-few-public-methods  
         key = "rd_webrtc_auth_ok" if ok else "rd_webrtc_auth_fail"
         self._panel._status_label.setText(_t(key))
         if ok:
+            self._cancel_reconnect()
             self._panel._auto_reconnect_attempts = 0
             host_id = self._panel._host_id_edit.text().strip()
             server_url = self._panel._server_edit.text().strip()
@@ -431,6 +445,8 @@ class WebRTCViewerSessionController:  # pylint: disable=too-few-public-methods  
             self._panel._stop_stats_polling()
 
     def _maybe_schedule_auto_reconnect(self) -> None:
+        if self._panel._sessions.id('viewer') is None:
+            return
         if not self._panel._auto_reconnect_check.isChecked() or self._panel._user_initiated_disconnect:
             return
         max_attempts = int(self._panel._reconnect_max_spin.value())
@@ -449,6 +465,7 @@ class WebRTCViewerSessionController:  # pylint: disable=too-few-public-methods  
         self._panel._status_label.setText(
             _t("rd_webrtc_reconnecting").format(n=self._panel._auto_reconnect_attempts, max=max_attempts)
         )
+        self._reconnect_callback = self._panel._sessions.callback('viewer', self._panel._on_connect_via_server)
         self._panel._reconnect_timer.start(delay_ms)
 
     def _start_stats_polling(self) -> None:

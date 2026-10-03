@@ -2,13 +2,14 @@
 
 ## 跨平台與 GUI 全面改版
 
-`WIP` — 重設 UI、重寫並優化 GUI、修正 Wayland 與函式庫問題、跨機器同步、
+`WIP` — 重設 UI、重寫並優化 GUI、修正 Wayland 與函式庫問題、
 深化全套 mypy、補齊 iOS／Android、MCP 逐步揭露、
 完整範例與文件。涉及 `gui/`、`linux_wayland/`、`android/`、`ios/`、
-`utils/{config_sync,remote_desktop,mcp_server,self_healing,codegen,executor}/` 與型別／文件驗證。
+`utils/{mcp_server,executor}/` 與型別／文件驗證。
 核准設計：[跨平台自動化與 GUI 改版](docs/superpowers/specs/2026-10-02-platform-gui-modernization-design.md)。
 實作計畫：[分階段交付計畫](docs/superpowers/plans/2026-10-02-modernization-index.md)，已核准，依序實作。
-現有 `[Answer]` 決策沿用；後續交付包含 C–H 各階段與完整整合驗收。
+現有 `[Answer]` 決策沿用；後續交付包含 D–H 各階段與完整整合驗收。
+依使用者要求，已在 C 階段審閱收尾後暫停；恢復時從 D 開始。
 
 **只記未完成的事。** 完成的工作記在 [docs/updates/](docs/updates/README.md)（每月一個批次檔，
 索引與查詢指令在它的 README），相容性變更寫進 [CHANGELOG.md](CHANGELOG.md)；完成的項目
@@ -29,8 +30,7 @@
 
 `CLAUDE.md` §Size and complexity limits 規定:超標檔案只能列在這裡,列不進來的就是缺陷。
 清單上的檔案**可以改、可以變短,但不得再變長**——要再長就得先拆。
-行數為實測（`len(text.splitlines())`）；`webrtc_panel.py` 於 2026-08-22 拆出
-`advanced_group.py`、2026-09-23 拆出 `trusted_group.py` 後降到 2,530，上限跟著往下走。
+行數為實測（`len(text.splitlines())`）；上表實測值是已核准的上限，只准變短。
 **這張表現在有測試在守**：`test/unit_test/headless/test_file_length_budget.py` 比對本表與樹，
 超標未列、列上的檔案變長、或已經縮到線內卻還留著的列，都會紅。
 
@@ -46,22 +46,6 @@
 `je_auto_control/__init__.py`（1,970,門面 re-export）、
 `gui/language_wrapper/{english,japanese,traditional_chinese,simplified_chinese}.py`
 （1,326／1,213／1,193／1,192,語系字串表；以上皆 2026-09-23 實測）。
-
-### 2026-08-19 決議:上表的實測行數就是新的上限
-
-2026-08-18 重新實測時,表上原有的七列**全部**變長,而 `CLAUDE.md` 明寫
-「列上的檔案不得再變長,要再長就得先拆」,所以這裡曾標成 `[DECIDE]`。
-**維護者已於 2026-08-19 拍板:接受實測數字當新基準**——不為了回到舊數字而去拆
-`_handlers.py`（4,789）與當時的 `webrtc_panel.py`。後者已依 C4 拆成各控制器；上表保留其餘檔案上限,
-規則不變:只准變短,再變長就得先拆。
-（`_handlers.py` 後來還是拆了:2026-09-22 拆出 QA 主題,2026-09-23 再拆出九個主題模組,
-本體降到 522 行、離開上表。見 `docs/updates/` 的 U-20260922-05 與 U-20260923-09。）
-
-同一批裡有六個檔案在 2026-08-19 已經拆回線內、從表上移除,做法寫在
-commit `46f4cd5` 的說明裡（`docs/updates/` 沒有對應條目：舊的 `WHATS_NEW.md` 從沒記過這件事）。
-
-行數沒有任何 CI 在把關（`quality.yml` 的五個 job 裡只有 ruff 管到這一節的限制,而它只管行寬),
-所以這張表只會在有人手動實測時才會被發現對不上——上次就是。
 
 ---
 
@@ -167,6 +151,15 @@ pip install --dry-run --only-binary=:all: --platform win_arm64 --python-version 
 `docs/compatibility/jeffrey-rpa-oem-test-migration.patch` 更新 slash 快捷鍵測試契約，
 再跑下游 `test/test_gui_facade.py`、`test/test_gui_control.py` 與
 `test/test_je_facade.py`，並完成 H3 的真實平台驗收。
+
+---
+
+## 多機同步與遠端連線實機驗收
+
+`TODO` — H3 需用兩台實體機器驗證設定並行編輯、離線重送、刪除與退休裝置、
+資產完整性、folder／clipboard 防回送，以及 TCP／WebSocket／WebRTC 多面板獨立關閉。
+保存版本、連線條件、操作順序與結果；受控 HTTP／SQLite、transport 替身及 offscreen Qt
+回歸不能取代這項實機證據。
 
 ---
 

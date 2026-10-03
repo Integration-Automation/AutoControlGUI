@@ -11,13 +11,13 @@ from je_auto_control.utils.path_guard.policy import scoped_path
 from je_auto_control.utils.rbac.authorization import require_command
 
 from .assets import AssetSpec
-from .causal_bucket import _decode, causal_remove, causal_upsert
+from .causal_bucket import _decode, causal_remove, causal_upsert, update_peer_state
 from .definition_adapter import JsonDefinitionAdapter
 from .definition_files import (
     SECTIONS, checked_sections, definition_hash, ensure_portable_bucket, inactive_definition, read_object, write_object,
 )
 from .models import ConfigBucket, ConfigSyncError
-from .versions import SyncEntry
+from .versions import PeerState, SyncEntry
 
 Choices = Union[Mapping[str, int], str]
 
@@ -116,6 +116,8 @@ def _apply_locked(destination: Path, preview_path: Path, state_path: Path, devic
         raise ConfigSyncError('local definitions changed during application')
     state = _applied_state(state_path, bucket, unresolved)
     write_object(destination, definitions)
+    if not unresolved:
+        update_peer_state(state, PeerState(device_id, bucket.revision), device_id=device_id)
     write_object(state_path, state.to_dict())
     return {'applied': applied, 'unresolved': unresolved,
             'conflicts': sum('sync_conflict' in value for section in SECTIONS

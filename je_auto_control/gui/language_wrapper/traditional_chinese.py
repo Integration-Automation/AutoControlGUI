@@ -472,6 +472,7 @@ traditional_chinese_word_dict = {
     "rd_webrtc_sync_dir": "本機資料夾：",
     "rd_webrtc_sync_dir_ph": "要鏡像到 host inbox 的目錄",
     "rd_webrtc_sync_start": "開始同步",
+    "rd_webrtc_sync_draining": "先前的傳送仍在結束中，停止後即可重新啟動。",
     "rd_webrtc_sync_stop": "停止同步",
     "rd_webrtc_sync_dir_required": "請先選一個本機資料夾",
     "rd_webrtc_not_started": "請先開始主機端",

@@ -488,6 +488,7 @@ japanese_word_dict = {
     "rd_webrtc_sync_dir": "ローカルフォルダ:",
     "rd_webrtc_sync_dir_ph": "ホストの受信箱にミラーするディレクトリ",
     "rd_webrtc_sync_start": "同期開始",
+    "rd_webrtc_sync_draining": "前の転送が終了するまで待ってから、再開してください。",
     "rd_webrtc_sync_stop": "同期停止",
     "rd_webrtc_sync_dir_required": "ローカルフォルダを選択してください",
     "rd_webrtc_not_started": "先にホストを開始してください",

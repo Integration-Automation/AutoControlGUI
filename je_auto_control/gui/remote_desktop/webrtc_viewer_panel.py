@@ -136,7 +136,7 @@ class _WebRTCViewerPanel(TranslatableMixin, QWidget):  # pylint: disable=too-man
         self._user_initiated_disconnect = False
         self._reconnect_timer = QTimer(self)
         self._reconnect_timer.setSingleShot(True)
-        self._reconnect_timer.timeout.connect(self._on_connect_via_server)
+        self._reconnect_timer.timeout.connect(self._session_controller.reconnect_if_current)
         self._screen_window: Optional[RemoteScreenWindow] = None
         self._signals = _PanelSignals(self)
         self._signals.frame.connect(self._on_frame_image)
