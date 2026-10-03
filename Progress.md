@@ -223,20 +223,6 @@ MCP 的 bearer 比對同理；稽核寫入帶上 `user_id`。
 
 ---
 
-## MCP registry 的 server 名稱與專案網址還是舊組織
-
-`DECIDE` — 要發布到 MCP registry 前得先定名稱，改名會影響已發布的項目
-
-`utils/mcp_registry/registry.py` 的 `_SERVER_NAME` 是 `io.github.intergration-automation-testing/autocontrol`，
-`_REPO_URL` 與 `pyproject.toml` 的 Homepage / Code、`README.md` 的 clone 網址都還是
-`Intergration-Automation-Testing/AutoControl`；repo 現在在 `Integration-Automation/AutoControlGUI`（舊網址只是轉址）。
-registry 以 GitHub 帳號驗證 `io.github.<org>/` 命名空間，舊組織名發布不了。
-
-**做法**：決定正式名稱（例如 `io.github.integration-automation/autocontrol`），在同一輪改 `registry.py`、
-`pyproject.toml`、三份 README 的網址。
-
----
-
 
 ## libei 的 `ei_unref` 在半開交握上會 SIGSEGV
 

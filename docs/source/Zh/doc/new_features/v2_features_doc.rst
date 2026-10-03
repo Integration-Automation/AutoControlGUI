@@ -571,3 +571,11 @@ JE_AUTOCONTROL_DOWNLOAD_DIR 改變目錄。Host 使用相對目的地::
 
 GUI 使用相同預設邊界；WebRTC 保留既有受限 inbox 與檔名協定。舊 host 絕對
 目的地範例須改為相對檔名；本機仍可明確選擇自訂、不限制根目錄的 receiver。
+
+Registry 發布名稱
+-----------------
+
+預設 manifest 名稱改為 io.github.integration-automation/autocontrol，專案網址為
+https://github.com/Integration-Automation/AutoControlGUI。穩定 PyPI 套件仍為
+je_auto_control，dev.toml 保留 je_auto_control_dev。發布前重新產生 server.json
+以使用已核准命名空間；自訂 name／repository_url 參數繼續支援。

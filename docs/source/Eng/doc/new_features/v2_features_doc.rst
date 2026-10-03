@@ -629,3 +629,12 @@ is preserved. A local client can choose a different bounded receiver::
 GUI viewers use the same default boundary. WebRTC retains its existing bounded
 inbox and file-name protocol. Absolute host-to-viewer examples must migrate to
 relative names; a deliberately unbounded custom receiver remains a local choice.
+
+Registry publishing identity
+-----------------------------
+
+The default server manifest name is io.github.integration-automation/autocontrol.
+Its repository is https://github.com/Integration-Automation/AutoControlGUI.
+The stable PyPI package remains je_auto_control; dev.toml retains je_auto_control_dev.
+Regenerate server.json before publishing to use the approved namespace.
+Existing custom name/repository_url overrides remain supported.

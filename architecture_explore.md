@@ -508,7 +508,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/cost_telemetry/` | 345 | 每次呼叫的 LLM 成本遙測：token 數 + 估算美金 |
 | `utils/cua_action/` | 204 | 標準化 computer-use 動作結構（Anthropic／OpenAI → `AC_*`） |
 | `utils/llm/` | 365 | 自然語言 → action list 規劃器 + Anthropic／null 後端 |
-| `utils/mcp_registry/` | 97 | MCP registry `server.json` 資訊清單產生（可被發現） |
+| `utils/mcp_registry/` | 97 | MCP registry 資訊清單產生；預設 io.github.integration-automation/autocontrol，專案 Integration-Automation/AutoControlGUI |
 | `utils/mcp_server/` | 19,180 | **無頭 MCP 伺服器**（16K LOC，預設註冊 678 個工具＝659 個 `ac_*` + 19 個別名）：stdio + HTTP 傳輸、工具工廠與處理器、資源、prompt、稽核、限流、外掛熱重載 |
 | `utils/tool_use_schema/` | 195 | 把 `AC_*` 指令匯出成 Claude／OpenAI 的 tool-use schema |
 | `utils/trajectory_eval/` | 132 | agent 軌跡評估：依評分規準為一次執行打分 |

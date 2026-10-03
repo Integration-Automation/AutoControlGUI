@@ -16,8 +16,8 @@ from typing import Any, Dict, List
 
 _SCHEMA_URL = ("https://static.modelcontextprotocol.io/schemas/"
                "2025-09-29/server.schema.json")
-_SERVER_NAME = "io.github.intergration-automation-testing/autocontrol"
-_REPO_URL = "https://github.com/Intergration-Automation-Testing/AutoControl"
+_SERVER_NAME = "io.github.integration-automation/autocontrol"
+_REPO_URL = "https://github.com/Integration-Automation/AutoControlGUI"
 _PYPI_NAME = "je_auto_control"
 _DEFAULT_VERSION = "0.0.189"
 # The registry schema caps description at 100 characters; the old 161 would
