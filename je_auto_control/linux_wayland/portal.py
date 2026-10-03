@@ -39,6 +39,7 @@ import urllib.parse
 from typing import Any, Dict, List, Tuple
 
 from je_auto_control.linux_wayland import _dbus_client
+from je_auto_control.linux_wayland.permission import WaylandPermissionRequired
 from je_auto_control.utils.exception.exceptions import AutoControlScreenException
 
 
@@ -100,11 +101,21 @@ def _request_and_await(bus: "_dbus_client.SessionBus", timeout: float) -> str:
         body = bus.wait_for_signal(paths, REQUEST_INTERFACE, "Response",
                                    timeout)
     except _dbus_client.DBusError as error:
+        _close_request(bus, handle or predicted)
         raise AutoControlScreenException(
             f"desktop portal did not answer within {timeout:g}s "
             f"(a consent dialog may be waiting)",
         ) from error
     return _uri_from_response(body)
+
+
+def _close_request(bus: "_dbus_client.SessionBus", path: str) -> None:
+    """Cancel an unanswered request before releasing its bus connection."""
+    try:
+        bus.call(PORTAL_BUS, path, REQUEST_INTERFACE, "Close", "", [], timeout=_CALL_TIMEOUT)
+    except _dbus_client.DBusError:
+        # The bus/portal may already be gone; the original timeout is retained.
+        pass
 
 
 def _screenshot(bus: "_dbus_client.SessionBus", token: str) -> str:
@@ -155,6 +166,8 @@ def _uri_from_response(body: List[Any]) -> str:
     """Read the screenshot URI out of one ``Response`` signal body."""
     code, results = _response_parts(body)
     if code != 0:
+        if code == 1:
+            raise WaylandPermissionRequired("capture", _RESPONSE_MEANING[code])
         raise AutoControlScreenException(
             _RESPONSE_MEANING.get(code, f"desktop portal returned {code}"),
         )

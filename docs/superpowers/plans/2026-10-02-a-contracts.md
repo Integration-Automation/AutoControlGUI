@@ -198,7 +198,7 @@ assert default_tools == original_tools
 ```
 
 - [ ] **Step 2:** 執行 `.venv/Scripts/python.exe -m pytest -q --tb=short --basetemp=.test-tmp/modernization-task -o cache_dir=.test-tmp/modernization-pytest-cache test/unit_test/headless/test_agent_append_only_history.py`，確認新測試因原有缺陷或尚未提供接口而 FAIL；不要把環境錯誤當成功的重現。
-- [ ] **Step 3:** 超過截圖上限時建立目標／已執行動作摘要與最新截圖的新對話，不改已送訊息。按照當前官方 API 驗證兩條 Anthropic 路徑。paid smoke 僅在配置可用時執行；預設 toolset 切換仍需真實 API 結果。
+- [ ] **Step 3:** 超過截圖上限時建立目標／已執行動作摘要與最新截圖的新對話，不改已送訊息。按照當前官方 API 驗證兩條 Anthropic 路徑。本機／離線測試先完成；paid smoke 僅在具備真實 API 條件時執行；預設 toolset 切換仍需真實 API 結果。不額外新增付費型功能。
 - [ ] **Step 4:** 重跑 Step 2，預期 exit 0；再跑這些修改檔所對應的既有回歸，確認公開契約。
 - [ ] **Step 5:** 更新本 task 的型別、所有交付入口、文件、測量計數與進度，僅 stage 本 task 檔案，提交 `git commit -m 'A9: Agent 歷史與真實 API 驗證'`。
 

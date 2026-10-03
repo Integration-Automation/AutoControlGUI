@@ -53,3 +53,12 @@ Beta config_sync adds SyncAdapter/ApplyReport, five definition adapters, asset m
 Beta remote_sessions exports immutable identities/status/events, typed errors and get/disconnect/events functions. AC/MCP add JSON lifecycle adapters and all transport commands accept keyword-only optional session_id; historical facade mirrors remain compatible. Omitted IDs use transport/role script defaults. GUI identities are independent. SessionStatus aliases RemoteSession; active is local allocation, not WebRTC peer authentication.
 
 Beta config recovery now separates never-dispatched intent, exact uncertain writes and confirmed stale writes. Explicit Retry renews exhausted exact attempts and causally rebases stale envelopes atomically. Adapter acknowledgements advance only after resolved explicit Apply; status exposes applied_revision/recovery and Exchange distinguishes recovery_required. Existing commands and script transport defaults remain compatible.
+
+`je_auto_control.api.capabilities` is Beta. `BackendContext`, `CapabilityStatus`,
+`CapabilitySnapshot` and `probe_capabilities` expose passive status evidence,
+not a claim of platform acceptance. The legacy facade re-exports these names;
+the stable core namespace remains unchanged. `AC_diagnose(include_active=False)`
+and GUI diagnostics skip actual capture/cursor reads. The stable Python
+`run_diagnostics()` retains active checks by default and accepts
+`include_active=False`. Native Wayland grant failures never choose another
+input device automatically; CLI selection is explicit.

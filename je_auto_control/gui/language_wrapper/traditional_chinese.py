@@ -71,6 +71,8 @@ traditional_chinese_word_dict = {
 
     # 診斷分頁
     "diag_run": "執行診斷",
+    "diag_stop_input": "停止 Wayland 輸入控制",
+    "diag_retry_input": "允許新的 Wayland 授權請求",
     "diag_summary_ok": "{count} 項檢查全部通過。",
     "diag_summary_failed": "{count} 項檢查中有 {failed} 項失敗。",
     "diag_col_name": "檢查項目",

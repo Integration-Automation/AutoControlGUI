@@ -41,7 +41,7 @@ Step 4 通過後，該階段另外執行 ruff、相關既有回歸與三目標�
 
 **Interfaces:** `CapabilityStatus` 與 `probe_capabilities(context: BackendContext) -> CapabilitySnapshot`；探測沒有控制或授權副作用。
 
-- [ ] **Step 1:** 定義 fake fixtures 並新增 `test_cancel_does_not_fallback_silently, test_revoked_session_cannot_send, test_xwayland_scope_is_explicit`，驗證：
+- [x] **Step 1:** 定義 fake fixtures 並新增 `test_cancel_does_not_fallback_silently, test_revoked_session_cannot_send, test_xwayland_scope_is_explicit`，驗證：
 
 ```python
 assert canceled.state == 'needs_permission'
@@ -49,10 +49,12 @@ assert writes_after_revoke == 0
 assert xwayland.desktop_wide is False
 ```
 
-- [ ] **Step 2:** 執行 `.venv/Scripts/python.exe -m pytest -q --tb=short --basetemp=.test-tmp/modernization-task -o cache_dir=.test-tmp/modernization-pytest-cache test/unit_test/headless/test_wayland_capability_states.py`，確認新測試因原有缺陷或尚未提供接口而 FAIL；不要把環境錯誤當成功的重現。
-- [ ] **Step 3:** 輸入／擷取獨立選擇與診斷，portal request/session close、restore token、compositor 重啟走明確狀態；GUI 顯示可操作修正與停止控制，headless/AC/MCP 使用同一 capability。
-- [ ] **Step 4:** 重跑 Step 2，預期 exit 0；再跑這些修改檔所對應的既有回歸，確認公開契約。
-- [ ] **Step 5:** 更新本 task 的型別、所有交付入口、文件、測量計數與進度，僅 stage 本 task 檔案，提交 `git commit -m 'D1: 能力與授權狀態機'`。
+- [x] **Step 2:** 執行 `.venv/Scripts/python.exe -m pytest -q --tb=short --basetemp=.test-tmp/modernization-task -o cache_dir=.test-tmp/modernization-pytest-cache test/unit_test/headless/test_wayland_capability_states.py`，確認新測試因原有缺陷或尚未提供接口而 FAIL；不要把環境錯誤當成功的重現。
+- [x] **Step 3:** 輸入／擷取獨立選擇與診斷，portal request/session close、restore token、compositor 重啟走明確狀態；GUI 顯示可操作修正與停止控制，headless/AC/MCP 使用同一 capability。
+- [x] **Step 4:** 重跑 Step 2，預期 exit 0；再跑這些修改檔所對應的既有回歸，確認公開契約。
+- [x] **Step 5:** 更新本 task 的型別、所有交付入口、文件、測量計數與進度，僅 stage 本 task 檔案，提交 `git commit -m 'D1: 能力與授權狀態機'`。
+
+D1 實作與本機／替身驗證已交付；原生 GNOME/KDE、EI 與 restore-token 替代接口仍需 D2/D3/H3 證據，不以離線測試代替。
 
 ### Task D2: libei crash 隔離與 backend 相依
 

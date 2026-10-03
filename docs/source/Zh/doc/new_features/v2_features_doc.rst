@@ -276,10 +276,25 @@ Wayland CLI backend
 Wayland libei native backend
 ----------------------------
 
-對 ``libei.so.*`` 的 ctypes 綁定，繞過 CLI shim 取得微秒級延遲。
+對 ``libei.so.*`` 的 ctypes 綁定，提供原生輸入。
 以 ``JE_AUTOCONTROL_WAYLAND_INPUT_BACKEND=libei|cli|auto`` 啟用；
-``auto``（預設）在 libei 可載入時用 libei，否則用 CLI，現有
-部署不會中斷。
+``auto``（預設）使用 libei；缺少相依回報型別化錯誤。
+CLI 需明確選擇，拒絕授權不觸發替代輸入。
+
+
+授權與能力診斷
+~~~~~~~~~~~~~~
+
+``probe_capabilities()``（Beta ``je_auto_control.api.capabilities``）、
+``AC_probe_capabilities`` 與 MCP ``ac_probe_capabilities`` 分別回報輸入／擷取狀態，不請求授權、不送輸入、不截圖，
+也不載入原生函式庫。XWayland 只涵蓋 X11 用戶端。原生授權取消、失敗或撤銷時停止輸入；
+CLI 需明確設定 ``JE_AUTOCONTROL_WAYLAND_INPUT_BACKEND=cli``。診斷 Actions 選單可
+停止原生輸入或允許下一次明確請求重新授權。現有綁定不支援 restore token，亦不保存 token。
+
+GUI 與 ``AC_diagnose`` 預設被動檢查；``AC_diagnose include_active=true`` 才執行截圖／游標
+檢查。Python 使用 ``run_diagnostics(include_active=False)`` 跳過上述主動檢查。
+這些本機功能不需要付費 API 或 API key；找到工具不代表已有合成器實機驗證。
+
 
 
 macOS Accessibility：tree dump + recorder

@@ -79,6 +79,8 @@ japanese_word_dict = {
 
     # 診断タブ
     "diag_run": "診断を実行",
+    "diag_stop_input": "Wayland 入力制御を停止",
+    "diag_retry_input": "新しい Wayland 認可リクエストを許可",
     "diag_summary_ok": "{count} 件すべて合格。",
     "diag_summary_failed": "{count} 件中 {failed} 件失敗。",
     "diag_col_name": "チェック",

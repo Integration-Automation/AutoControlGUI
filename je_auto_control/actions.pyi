@@ -935,8 +935,8 @@ def AC_detect_scale(
 ) -> Dict[str, Any]:
     """Adapter: infer the display scale a template renders at (visual DPI)."""
 
-def AC_diagnose() -> Dict[str, Any]:
-    """Executor adapter: run system diagnostics and return the report."""
+def AC_diagnose(include_active: bool = ...) -> Dict[str, Any]:
+    """Run passive diagnostics; opt in to actual capture/cursor checks."""
 
 def AC_diff_formats(before: Any, after: Any) -> Dict[str, Any]:
     """Adapter: diff two clipboard-format snapshots (pure)."""
@@ -2179,6 +2179,9 @@ def AC_press_mouse(mouse_keycode: int | str, x: int | None = ..., y: int | None 
 
 def AC_preview_template_candidate(store_path: str, revision_id: str) -> Dict[str, JSONValue]:
     """Read checked candidate/base identities and preview paths without writing files."""
+
+def AC_probe_capabilities() -> Dict[str, object]:
+    """Return passive backend input/capture evidence without requesting consent."""
 
 def AC_profile_rows(rows: Any, columns: Any = ...) -> Dict[str, Any]:
     """Adapter: profile a row-set into per-column statistics."""

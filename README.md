@@ -22,7 +22,7 @@ from JSON files / CLI / servers, and a **GUI tab**. Nothing is GUI-only.
 
 - **One API, seven platforms.** `wrapper/platform_wrapper.py` picks the backend at import
   time; your script does not change between Windows, macOS, X11, and Wayland.
-- **Scriptable without Python.** 801 `AC_*` commands cover the whole feature set, so a
+- **Scriptable without Python.** 802 `AC_*` commands cover the whole feature set, so a
   JSON file can do anything the library can — including loops, branches, try/catch,
   macros, and variables.
 - **Headless by default.** `import je_auto_control` never loads Qt. The GUI is an
@@ -154,7 +154,7 @@ desktop app; tab commands live in the window's **Actions** menu.
 | Natural-language planner | `plan_actions`, `run_from_description` | `AC_llm_plan` | LLM Planner |
 | Computer-use agent | `AgentLoop`, `run_agent` | `AC_run_agent` | Computer Use |
 | Record & replay | `record`, `stop_record` | `AC_record`, `AC_stop_record` | Record |
-| JSON scripting | `execute_action`, `execute_files` | all 801 commands | Script, Script Builder |
+| JSON scripting | `execute_action`, `execute_files` | all 802 commands | Script, Script Builder |
 | Variables & flow control | `execute_action_with_vars` | `AC_set_var`, `AC_loop`, `AC_for_each`, `AC_try`, `AC_retry` | Variables |
 | Data-driven runs | — | `AC_for_each_row` (CSV / JSON / SQLite / Excel) | Data Sources |
 | Assertions | `assert_text`, `assert_image` | `AC_assert_text` + 20 more | Assertions |
@@ -206,7 +206,7 @@ still goes on to the end), so a CI step fails with it. The legacy
 
 | Surface | Start it with | Notes |
 |---|---|---|
-| **MCP server** | `je_auto_control_mcp` (stdio) or `AC_start_mcp_http_server` | 723 tools for Claude Desktop / Claude Code / custom tool loops. Speaks the stateless MCP 2026-07-28 beside the `initialize`-based revisions. Bearer auth, TLS, audit log, rate limit, plugin hot-reload, CI fake backend. |
+| **MCP server** | `je_auto_control_mcp` (stdio) or `AC_start_mcp_http_server` | 724 tools for Claude Desktop / Claude Code / custom tool loops. Speaks the stateless MCP 2026-07-28 beside the `initialize`-based revisions. Bearer auth, TLS, audit log, rate limit, plugin hot-reload, CI fake backend. |
 | **REST API** | `je_auto_control start-rest` | Bearer token, per-IP rate limit + lockout, SQLite audit hook, `/metrics`, `/openapi.json`, `/docs` Swagger UI, `/dashboard`. |
 | **TCP socket server** | `je_auto_control start-server` | Newline-framed JSON action lists. Binds `127.0.0.1` by default. |
 | **pytest plugin** | installed automatically | Lightweight `je_auto_control_pytest` entry point; fixtures plus Gherkin steps for pytest-bdd / behave. Reinstall after upgrading editable checkouts; the explicit legacy plugin path remains supported. |
@@ -297,13 +297,30 @@ packaging rather than the platform: it goes through Pillow/mss and OpenCV, and
 those from ports and capture, image matching, OCR and action encryption work
 too — `import je_auto_control` no longer requires any of them.
 
-Wayland input falls back to the `ydotool` CLI wherever libei is not
-reachable, and that fallback needs **ydotool 1.0 or newer**. Every argument
+Wayland input uses libei by default. CLI input requires explicit
+`JE_AUTOCONTROL_WAYLAND_INPUT_BACKEND=cli` and **ydotool 1.0 or newer**. Every argument
 AutoControl builds arrived in that release; 0.1.x — which is what Debian
 bookworm and every current Ubuntu still ship under that name, and Debian
 trixie ships not at all — answers the same arguments with exit code 0 and no
 events. AutoControl detects it and refuses rather than reporting success for
 input it never sent. Arch, Fedora and Debian unstable package 1.0.
+
+`probe_capabilities()` (Beta `je_auto_control.api.capabilities`),
+`AC_probe_capabilities` and MCP `ac_probe_capabilities` report independent input/capture states (`available`,
+`needs_permission`, `needs_dependency`, `unsupported`) without requesting
+consent, emitting input, taking screenshots or loading native libraries.
+XWayland is explicitly limited to X11 windows; discovered helpers do not
+prove compositor support. Canceled, failed or revoked native grants stop input
+and never select CLI automatically. The Wayland Diagnostics Actions menu can
+stop native control or allow a new authorization attempt; the next explicit
+input request prompts again. Restore tokens are unsupported by the current
+liboeffis binding and are never persisted.
+
+The GUI and `AC_diagnose` use passive checks; `AC_diagnose include_active=true`
+requests capture/cursor checks. Python retains active diagnostics by default:
+use `run_diagnostics(include_active=False)` for passive checks. These local
+features require no paid API or API key.
+
 
 That fallback also positions the pointer accurately **only where the
 compositor's pointer acceleration is off**. `ydotool mousemove --absolute`

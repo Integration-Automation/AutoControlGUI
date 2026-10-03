@@ -298,11 +298,29 @@ Override::
 Wayland libei native backend
 ----------------------------
 
-ctypes binding to ``libei.so.*`` that bypasses the CLI shims for
-microsecond-latency input. Opt-in via
+ctypes binding to ``libei.so.*`` for native input. Select via
 ``JE_AUTOCONTROL_WAYLAND_INPUT_BACKEND=libei|cli|auto``; the
-``auto`` default uses libei when loadable and CLI otherwise, so
-existing deployments keep working.
+``auto`` default uses libei. Missing dependencies are reported as typed errors;
+CLI selection is explicit, and refused authorization never triggers fallback.
+
+
+Permission and capability diagnostics
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+``probe_capabilities()`` (Beta ``je_auto_control.api.capabilities``),
+``AC_probe_capabilities`` and MCP ``ac_probe_capabilities`` report separate input/capture states without consent
+requests, input, screenshots or native-library loading. XWayland covers X11
+clients only. A canceled, failed or revoked native grant stops input; CLI
+requires explicit ``JE_AUTOCONTROL_WAYLAND_INPUT_BACKEND=cli``. The Diagnostics
+Actions menu can stop native input or allow the next explicit request to
+retry authorization. Restore tokens are unsupported and are not stored.
+
+GUI and ``AC_diagnose`` checks are passive. Opt in with
+``AC_diagnose include_active=true`` for capture/cursor checks; Python uses
+``run_diagnostics(include_active=False)`` to skip those checks. These local
+features need no paid API or API key. Discovered tools are not native
+compositor verification evidence.
+
 
 
 macOS Accessibility: tree dump + recorder

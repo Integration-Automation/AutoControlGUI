@@ -20,7 +20,7 @@
 
 - **一套 API，七个平台。** `wrapper/platform_wrapper.py` 在导入时挑选后端；同一份脚本在
   Windows、macOS、X11 与 Wayland 上都不需要改写。
-- **不写 Python 也能脚本化。** 801 个 `AC_*` 命令覆盖全部功能，因此一个 JSON 文件能做到库
+- **不写 Python 也能脚本化。** 802 个 `AC_*` 命令覆盖全部功能，因此一个 JSON 文件能做到库
   能做的任何事——包含循环、分支、try/catch、宏与变量。
 - **默认无头运行。** `import je_auto_control` 绝不会加载 Qt。GUI 是可选包，包在同一个无头内核之外。
 - **四种定位方式。** 模板匹配、OCR、无障碍树、视觉语言模型——可通过锚点定位器与自愈回退串接组合。
@@ -142,7 +142,7 @@ python -c "import je_auto_control; je_auto_control.start_autocontrol_gui()"
 | 自然语言规划 | `plan_actions`、`run_from_description` | `AC_llm_plan` | LLM Planner |
 | Computer-use agent | `AgentLoop`、`run_agent` | `AC_run_agent` | Computer Use |
 | 录制与回放 | `record`、`stop_record` | `AC_record`、`AC_stop_record` | Record |
-| JSON 脚本 | `execute_action`、`execute_files` | 全部 801 个命令 | Script、Script Builder |
+| JSON 脚本 | `execute_action`、`execute_files` | 全部 802 个命令 | Script、Script Builder |
 | 变量与流程控制 | `execute_action_with_vars` | `AC_set_var`、`AC_loop`、`AC_for_each`、`AC_try`、`AC_retry` | Variables |
 | 数据驱动执行 | — | `AC_for_each_row`（CSV／JSON／SQLite／Excel） | Data Sources |
 | 断言 | `assert_text`、`assert_image` | `AC_assert_text` 等 21 个 | Assertions |
@@ -191,7 +191,7 @@ je_auto_control version
 
 | 接口 | 启动方式 | 说明 |
 |---|---|---|
-| **MCP 服务器** | `je_auto_control_mcp`（stdio）或 `AC_start_mcp_http_server` | 723 个工具，供 Claude Desktop／Claude Code／自定义 tool loop 使用。除了以 `initialize` 握手的各版协议，也支持无状态的 MCP 2026-07-28。Bearer 认证、TLS、审计日志、限流、插件热重载、CI 假后端。 |
+| **MCP 服务器** | `je_auto_control_mcp`（stdio）或 `AC_start_mcp_http_server` | 724 个工具，供 Claude Desktop／Claude Code／自定义 tool loop 使用。除了以 `initialize` 握手的各版协议，也支持无状态的 MCP 2026-07-28。Bearer 认证、TLS、审计日志、限流、插件热重载、CI 假后端。 |
 | **REST API** | `je_auto_control start-rest` | Bearer token、按 IP 限流与锁定、SQLite 审计 hook、`/metrics`、`/openapi.json`、`/docs` Swagger UI、`/dashboard`。 |
 | **TCP socket 服务器** | `je_auto_control start-server` | 以换行分隔的 JSON 动作列表。默认绑定 `127.0.0.1`。 |
 | **pytest 插件** | 安装后自动生效 | 轻量 `je_auto_control_pytest` 入口，提供 fixture 与 Gherkin 步骤。升级 editable 工作树后须重新安装；明确指定的旧插件路径仍兼容。 |
@@ -273,11 +273,23 @@ OpenCV，而 `opencv-python`、`pillow`、`cryptography` 都没有发 FreeBSD wh
 从 ports 构建之后，截取、图像匹配、OCR 与动作加密也都能用——
 `import je_auto_control` 本身已经不需要它们任何一个。
 
-Wayland 的输入在 libei 走不通时会退回 `ydotool` CLI，而这条退路需要
-**ydotool 1.0 以上**。AutoControl 送的每一个参数都是那一版才有的；0.1.x
+Wayland 输入默认使用 libei；CLI 输入需明确设置
+`JE_AUTOCONTROL_WAYLAND_INPUT_BACKEND=cli`，并安装 **ydotool 1.0 以上**。AutoControl 送的每一个参数都是那一版才有的；0.1.x
 （Debian bookworm 与目前所有 Ubuntu 仍以这个名字提供，Debian trixie 则根本没有）
 对同一批参数返回 0 却不送出任何事件。AutoControl 会检测并直接拒绝，
 而不是为根本没送出的输入回报成功。Arch、Fedora 与 Debian unstable 提供的是 1.0。
+
+`probe_capabilities()`（Beta `je_auto_control.api.capabilities`）、
+`AC_probe_capabilities` 与 MCP `ac_probe_capabilities` 分别报告输入／截图状态（`available`、`needs_permission`、
+`needs_dependency`、`unsupported`），不请求授权、不发送输入、不截图，也不加载原生库。
+XWayland 明确限于 X11 窗口；发现工具不代表已验证合成器支持。原生授权取消、失败或撤销时
+停止输入，不自动选择 CLI。Wayland 诊断的 Actions 菜单可停止原生控制或允许新的授权尝试；
+下一次明确输入请求才显示授权。当前 liboeffis 绑定不支持 restore token，也不保存 token。
+
+GUI 与 `AC_diagnose` 默认使用被动检查；`AC_diagnose include_active=true` 才执行截图／光标检查。
+Python 为兼容保留默认的主动诊断，被动模式使用 `run_diagnostics(include_active=False)`。
+这些本机功能不需要付费 API 或 API key。
+
 
 这条退路要能**准确定位**，还有一个前提:合成器的指针加速度必须是关的。
 `ydotool mousemove --absolute` 并不发任何绝对事件——它先把光标推到合成器夹取的

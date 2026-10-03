@@ -70,6 +70,8 @@ simplified_chinese_word_dict = {
 
     # 诊断分页
     "diag_run": "运行诊断",
+    "diag_stop_input": "停止 Wayland 输入控制",
+    "diag_retry_input": "允许新的 Wayland 授权请求",
     "diag_summary_ok": "{count} 项检查全部通过。",
     "diag_summary_failed": "{count} 项检查中有 {failed} 项失败。",
     "diag_col_name": "检查项",

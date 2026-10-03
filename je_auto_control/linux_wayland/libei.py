@@ -19,8 +19,8 @@ pointer type confusion in a C library — and without ``frame()`` no event
 would have arrived even had the pointers been right.
 
 **Fail-closed by construction.** Every failure below raises
-:class:`LibeiUnavailable`, which ``keyboard`` / ``mouse`` already treat as
-"use the ydotool CLI". The handshake is bounded by a deadline and the result
+:class:`LibeiUnavailable` or a typed permission refusal. Input does not switch
+to CLI after a refused grant. The handshake is bounded by a deadline and the result
 is cached per process (:func:`connected_backend`), so a host where libei is
 installed but unusable pays the probe once, not once per keystroke.
 
@@ -29,7 +29,7 @@ module that a wrong guess would silently change, so the ``eis-verification``
 job reads them back off a real ``libeis`` server rather than trusting the
 header. A mismatch degrades safely rather than misfiring: capabilities that
 do not match mean no device ever reports them, the handshake times out, and
-the CLI takes over.
+the input operation fails with recovery instructions.
 """
 from __future__ import annotations
 
@@ -44,6 +44,7 @@ from typing import Callable, Dict, List, Optional, Sequence, Set, Tuple
 from je_auto_control.linux_wayland import oeffis
 from je_auto_control.linux_wayland._ctypes_bind import BoundSymbols, bind
 from je_auto_control.linux_wayland._layout import layout_origin
+from je_auto_control.linux_wayland.permission import WaylandPermissionRequired
 from je_auto_control.utils.exception.exceptions import AutoControlException
 
 
@@ -142,6 +143,10 @@ class LibeiUnavailable(AutoControlException, RuntimeError):
     """
 
 
+class LibeiOutOfBounds(LibeiUnavailable):
+    """A point lies outside the authorized device's coordinate regions."""
+
+
 def _load_symbols() -> Optional[BoundSymbols]:
     """Resolve every libei entry point, or None if one is missing.
 
@@ -194,6 +199,7 @@ class LibeiBackend:
         self._emulating: Dict[int, bool] = {}
         self._sequence = 0
         self._lock = threading.RLock()
+        self._permission_error: Optional[WaylandPermissionRequired] = None
 
     @property
     def is_available(self) -> bool:
@@ -204,6 +210,16 @@ class LibeiBackend:
     def is_connected(self) -> bool:
         """Whether the handshake finished and a device is emulating."""
         return self._ei is not None and self._has_required_devices()
+
+    @property
+    def permission_status(self) -> Tuple[str, str]:
+        """Read grant/device state without native dispatch or library loading."""
+        with self._lock:
+            if self._permission_error is not None:
+                return ("needs_permission", self._permission_error.reason)
+            if self.is_connected:
+                return ("available", "authorized libei session; checked again before each emission")
+            return ("needs_permission", "input devices paused, removed or disconnected")
 
     @property
     def _api(self) -> BoundSymbols:
@@ -380,7 +396,8 @@ class LibeiBackend:
         elif event_type == EI_EVENT_DEVICE_REMOVED:
             self._forget_device(self._api.ei_event_get_device(event))
         elif event_type == EI_EVENT_DISCONNECT:
-            raise LibeiUnavailable("the compositor disconnected the sender")
+            self._permission_error = WaylandPermissionRequired("input", "the compositor disconnected the sender")
+            raise self._permission_error
 
     def _bind_seat(self, seat: int) -> None:
         """Ask a seat for the capabilities this sender emits.
@@ -492,7 +509,7 @@ class LibeiBackend:
         side. Where the raw point misses, the origin-normalised one is tried,
         which is the translation that keeps input and capture addressing the
         same pixel. If that misses too, the caller gets a refusal and
-        ``_select_input.emitted`` hands the move to the ydotool path.
+        ``_select_input.emitted`` preserves the authorized coordinate boundary.
         """
         regions = self._device_regions(device)
         if not regions or _in_any_region(regions, x, y):
@@ -501,10 +518,10 @@ class LibeiBackend:
         moved_x, moved_y = x - origin_x, y - origin_y
         if (origin_x or origin_y) and _in_any_region(regions, moved_x, moved_y):
             return (float(moved_x), float(moved_y))
-        raise LibeiUnavailable(
+        raise LibeiOutOfBounds(
             f"({x}, {y}) lies outside every region this pointer accepts "
             f"{regions}; libei drops such a motion without reporting it, so "
-            "the move is refused here for the CLI path to take",
+            "the move is refused without switching input transports",
         )
 
     # --- plumbing ---------------------------------------------------------
@@ -518,9 +535,7 @@ class LibeiBackend:
         with self._lock:
             if self._ei is None:
                 raise LibeiUnavailable("libei sender is not connected")
-            # Pause / resume arrive asynchronously; read them before deciding
-            # the device is still usable.
-            self._pump(0.0)
+            self.check_permission()
             device = self._devices.get(capability)
             if not device or not self._emulating.get(device, False):
                 raise LibeiUnavailable(
@@ -528,6 +543,21 @@ class LibeiBackend:
                 )
             send(device)
             self._api.ei_device_frame(device, self._api.ei_now(self._ei))
+
+    def check_permission(self) -> None:
+        """Dispatch grant/device revocations before control, without emitting."""
+        with self._lock:
+            if self._permission_error is not None:
+                raise WaylandPermissionRequired("input", self._permission_error.reason)
+            try:
+                if self._session is not None:
+                    self._session.poll()
+                self._pump(0.0)
+            except WaylandPermissionRequired as error:
+                self._permission_error = WaylandPermissionRequired("input", error.reason)
+                raise
+            if not self._has_required_devices():
+                raise LibeiUnavailable("no libei device is emulating: input paused, removed or disconnected")
 
     def _teardown(self) -> None:
         """Release what is safe to release; abandon what is not.
@@ -599,6 +629,7 @@ def _quietly(action: Callable[[], object]) -> None:
 
 _DEFAULT_BACKEND: Optional[LibeiBackend] = None
 _PROBE_FAILED = False
+_PERMISSION_ERROR: Optional[WaylandPermissionRequired] = None
 _DEFAULT_LOCK = threading.Lock()
 
 
@@ -607,10 +638,13 @@ def connected_backend() -> Optional[LibeiBackend]:
 
     The probe involves a portal round trip and a consent dialog, so a host
     where libei cannot be used must pay for that discovery once rather than
-    on every keystroke. Callers treat None as "use the ydotool CLI".
+    on every keystroke. None means dependencies are absent; connection failures
+    remain cached typed permission errors until explicitly reset.
     """
-    global _DEFAULT_BACKEND, _PROBE_FAILED
+    global _DEFAULT_BACKEND, _PROBE_FAILED, _PERMISSION_ERROR
     with _DEFAULT_LOCK:
+        if _PERMISSION_ERROR is not None:
+            raise WaylandPermissionRequired("input", _PERMISSION_ERROR.reason)
         if _DEFAULT_BACKEND is not None:
             return _DEFAULT_BACKEND
         if _PROBE_FAILED:
@@ -621,9 +655,13 @@ def connected_backend() -> Optional[LibeiBackend]:
             return None
         try:
             backend.connect()
-        except (LibeiUnavailable, OSError, ValueError, AttributeError):
+        except WaylandPermissionRequired as error:
+            _PERMISSION_ERROR = WaylandPermissionRequired("input", error.reason)
+            raise
+        except (LibeiUnavailable, OSError, ValueError, AttributeError) as error:
             _PROBE_FAILED = True
-            return None
+            _PERMISSION_ERROR = WaylandPermissionRequired("input", str(error))
+            raise _PERMISSION_ERROR from error
         _DEFAULT_BACKEND = backend
         return _DEFAULT_BACKEND
 
@@ -638,13 +676,46 @@ def get_default_backend() -> Optional[LibeiBackend]:
 
 
 def reset_default_backend() -> None:
-    """Test hook — drop the cached backend so the probe runs fresh."""
-    global _DEFAULT_BACKEND, _PROBE_FAILED
+    """Explicitly allow a new native authorization attempt on the next input."""
+    global _DEFAULT_BACKEND, _PROBE_FAILED, _PERMISSION_ERROR
     with _DEFAULT_LOCK:
         if _DEFAULT_BACKEND is not None:
             _quietly(_DEFAULT_BACKEND.disconnect)
         _DEFAULT_BACKEND = None
         _PROBE_FAILED = False
+        _PERMISSION_ERROR = None
+
+
+def input_permission_status() -> Optional[Tuple[str, str]]:
+    """Read cached session state without loading libraries or pumping events."""
+    with _DEFAULT_LOCK:
+        if _PERMISSION_ERROR is not None:
+            return ("needs_permission", _PERMISSION_ERROR.reason)
+        if _DEFAULT_BACKEND is not None:
+            return _DEFAULT_BACKEND.permission_status
+        return None
+
+
+def stop_input_control() -> None:
+    """Close the native grant and require explicit retry before further input."""
+    global _DEFAULT_BACKEND, _PERMISSION_ERROR
+    with _DEFAULT_LOCK:
+        _PERMISSION_ERROR = WaylandPermissionRequired("input", "input control stopped by the operator")
+        if _DEFAULT_BACKEND is not None:
+            _DEFAULT_BACKEND.disconnect()
+            _DEFAULT_BACKEND = None
+
+
+def check_default_permission() -> None:
+    """Protect CLI text calls from an already refused or revoked native grant."""
+    with _DEFAULT_LOCK:
+        if _PERMISSION_ERROR is not None:
+            raise WaylandPermissionRequired("input", _PERMISSION_ERROR.reason)
+        if _DEFAULT_BACKEND is not None:
+            try:
+                _DEFAULT_BACKEND.check_permission()
+            except LibeiUnavailable as error:
+                raise WaylandPermissionRequired("input", str(error)) from error
 
 
 __all__ = [
@@ -652,4 +723,5 @@ __all__ = [
     "EI_DEVICE_CAP_POINTER_ABSOLUTE", "EI_DEVICE_CAP_SCROLL",
     "HANDSHAKE_TIMEOUT", "LibeiBackend", "LibeiUnavailable",
     "connected_backend", "get_default_backend", "reset_default_backend",
+    "input_permission_status", "stop_input_control",
 ]

@@ -20,7 +20,7 @@
 
 - **一套 API，七個平台。** `wrapper/platform_wrapper.py` 在匯入時挑選後端；同一份腳本在
   Windows、macOS、X11 與 Wayland 上都不需要改寫。
-- **不寫 Python 也能腳本化。** 801 個 `AC_*` 指令涵蓋全部功能，因此一個 JSON 檔能做到函式庫
+- **不寫 Python 也能腳本化。** 802 個 `AC_*` 指令涵蓋全部功能，因此一個 JSON 檔能做到函式庫
   能做的任何事——包含迴圈、分支、try/catch、巨集與變數。
 - **預設無頭執行。** `import je_auto_control` 絕不會載入 Qt。GUI 是選用套件，包在同一個無頭核心之外。
 - **四種定位方式。** 樣板比對、OCR、無障礙樹、視覺語言模型——可透過錨點定位器與自癒後備串接組合。
@@ -142,7 +142,7 @@ python -c "import je_auto_control; je_auto_control.start_autocontrol_gui()"
 | 自然語言規劃 | `plan_actions`、`run_from_description` | `AC_llm_plan` | LLM Planner |
 | Computer-use agent | `AgentLoop`、`run_agent` | `AC_run_agent` | Computer Use |
 | 錄製與重播 | `record`、`stop_record` | `AC_record`、`AC_stop_record` | Record |
-| JSON 腳本 | `execute_action`、`execute_files` | 全部 801 個指令 | Script、Script Builder |
+| JSON 腳本 | `execute_action`、`execute_files` | 全部 802 個指令 | Script、Script Builder |
 | 變數與流程控制 | `execute_action_with_vars` | `AC_set_var`、`AC_loop`、`AC_for_each`、`AC_try`、`AC_retry` | Variables |
 | 資料驅動執行 | — | `AC_for_each_row`（CSV／JSON／SQLite／Excel） | Data Sources |
 | 斷言 | `assert_text`、`assert_image` | `AC_assert_text` 等 21 個 | Assertions |
@@ -191,7 +191,7 @@ je_auto_control version
 
 | 介面 | 啟動方式 | 說明 |
 |---|---|---|
-| **MCP 伺服器** | `je_auto_control_mcp`（stdio）或 `AC_start_mcp_http_server` | 723 個工具，供 Claude Desktop／Claude Code／自訂 tool loop 使用。除了以 `initialize` 握手的各版協定，也支援無狀態的 MCP 2026-07-28。Bearer 驗證、TLS、稽核記錄、限流、外掛熱重載、CI 假後端。 |
+| **MCP 伺服器** | `je_auto_control_mcp`（stdio）或 `AC_start_mcp_http_server` | 724 個工具，供 Claude Desktop／Claude Code／自訂 tool loop 使用。除了以 `initialize` 握手的各版協定，也支援無狀態的 MCP 2026-07-28。Bearer 驗證、TLS、稽核記錄、限流、外掛熱重載、CI 假後端。 |
 | **REST API** | `je_auto_control start-rest` | Bearer token、逐 IP 限流與鎖定、SQLite 稽核 hook、`/metrics`、`/openapi.json`、`/docs` Swagger UI、`/dashboard`。 |
 | **TCP socket 伺服器** | `je_auto_control start-server` | 以換行分隔的 JSON 動作清單。預設綁 `127.0.0.1`。 |
 | **pytest 外掛** | 安裝後自動生效 | 輕量 `je_auto_control_pytest` 入口，提供 fixture 與 Gherkin 步驟。升級 editable 工作樹後須重新安裝；明確指定的舊外掛路徑仍相容。 |
@@ -274,11 +274,23 @@ runner。唯一的例外是螢幕擷取，而卡的是打包不是平台：它�
 建起來之後，擷取、影像比對、OCR 與動作加密也都能用——`import je_auto_control`
 本身已經不需要它們任何一個。
 
-Wayland 的輸入在 libei 走不通時會退回 `ydotool` CLI，而這條退路需要
-**ydotool 1.0 以上**。AutoControl 送的每一個參數都是那一版才有的；0.1.x
+Wayland 輸入預設使用 libei；CLI 輸入需明確設定
+`JE_AUTOCONTROL_WAYLAND_INPUT_BACKEND=cli`，並安裝 **ydotool 1.0 以上**。AutoControl 送的每一個參數都是那一版才有的；0.1.x
 （Debian bookworm 與目前所有 Ubuntu 仍以這個名字提供，Debian trixie 則根本沒有）
 對同一批參數回傳 0 卻不送出任何事件。AutoControl 會偵測並直接拒絕，
 而不是為根本沒送出的輸入回報成功。Arch、Fedora 與 Debian unstable 提供的是 1.0。
+
+`probe_capabilities()`（Beta `je_auto_control.api.capabilities`）、
+`AC_probe_capabilities` 與 MCP `ac_probe_capabilities` 分別回報輸入／擷取狀態（`available`、`needs_permission`、
+`needs_dependency`、`unsupported`），不請求授權、不送輸入、不截圖，也不載入原生函式庫。
+XWayland 明確限於 X11 視窗；找到工具不代表已驗證合成器支援。原生授權取消、失敗或撤銷時
+停止輸入，不自動選擇 CLI。Wayland 診斷的 Actions 選單可停止原生控制或允許新的授權嘗試；
+下一次明確輸入請求才顯示授權。現有 liboeffis 綁定不支援 restore token，也不保存 token。
+
+GUI 與 `AC_diagnose` 預設使用被動檢查；`AC_diagnose include_active=true` 才進行截圖／游標檢查。
+Python 為相容保留預設的主動診斷，被動模式使用 `run_diagnostics(include_active=False)`。
+這些本機功能不需要付費 API 或 API key。
+
 
 這條退路要能**準確定位**，還有一個前提:合成器的指標加速度必須是關的。
 `ydotool mousemove --absolute` 並不送任何絕對事件——它先把游標推到合成器夾取的

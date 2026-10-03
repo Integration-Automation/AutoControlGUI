@@ -13,6 +13,7 @@ install hint, so the operator can either install the tool or set
 """
 from __future__ import annotations
 
+import os
 import subprocess  # nosec B404  # reason: argv-list, no shell interpolation
 import time
 from typing import Iterable
@@ -121,25 +122,29 @@ def hotkey(keycodes: Iterable[int]) -> None:
 
 
 def _libei_chord(libei, codes: list) -> bool:
-    """Send a whole chord through libei; False means the CLI has to redo it.
+    """Send a chord; on failure release through the same transport and stop.
 
-    Whatever went down is released in reverse before giving up, so a refusal
-    part-way through cannot leave a modifier held. The CLI then replays the
-    chord from a clean state — and if it was a *release* that was refused,
-    replaying is also what unsticks the key.
+    A revoked session cannot release keys; the compositor owns device cleanup.
+    A different CLI device must never be used to replay the chord.
     """
+    from je_auto_control.linux_wayland.permission import WaylandPermissionRequired
+
     pressed = []
-    taken = True
-    for code in codes:
-        if not emitted(libei, lambda device, key=code: device.press_key(key)):
-            taken = False
-            break
-        pressed.append(code)
+    failure = None
+    try:
+        for code in codes:
+            emitted(libei, lambda device: device.press_key(code))
+            pressed.append(code)
+    except WaylandPermissionRequired as error:
+        failure = error
     for code in reversed(pressed):
-        if not emitted(libei,
-                       lambda device, key=code: device.release_key(key)):
-            taken = False
-    return taken
+        try:
+            emitted(libei, lambda device: device.release_key(code))
+        except WaylandPermissionRequired as error:
+            failure = failure or error
+    if failure is not None:
+        raise failure
+    return True
 
 
 def write(text: str) -> None:
@@ -148,6 +153,9 @@ def write(text: str) -> None:
         raise ValueError("write requires a string")
     if not text:
         return
+    from je_auto_control.linux_wayland.libei import check_default_permission
+    if os.environ.get("JE_AUTOCONTROL_WAYLAND_INPUT_BACKEND", "auto").strip().lower() != "cli":
+        check_default_permission()
     _run([_require(WAYLAND_WTYPE, _INSTALL_HINT_WTYPE), "--", text])
 
 

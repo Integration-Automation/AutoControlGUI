@@ -15,7 +15,7 @@ what :mod:`libei` then passes to ``ei_setup_backend_fd``.
 
 Everything here is fail-closed: if the library is missing, the portal denies
 the request, or the user dismisses the consent dialog, the caller gets None
-or an exception and falls back to the ydotool CLI.
+or a typed permission exception. A refused grant never selects CLI input.
 """
 from __future__ import annotations
 
@@ -25,6 +25,7 @@ import time
 from typing import Optional, Tuple
 
 from je_auto_control.linux_wayland._ctypes_bind import BoundSymbols, bind
+from je_auto_control.linux_wayland.permission import WaylandPermissionRequired
 from je_auto_control.utils.exception.exceptions import AutoControlException
 
 
@@ -158,6 +159,8 @@ def _require_connected(symbols: BoundSymbols, handle: int, event: int,
     reason = ("the desktop portal closed the remote-desktop session"
               if event == OEFFIS_EVENT_CLOSED
               else "the desktop portal disconnected the remote-desktop session")
+    if event == OEFFIS_EVENT_CLOSED:
+        raise WaylandPermissionRequired("input", f"{reason}{': ' + detail if detail else ''}")
     raise OeffisUnavailable(f"{reason}{': ' + detail if detail else ''}")
 
 
@@ -182,6 +185,27 @@ class _Session:
             return
         _release(self._symbols, self._handle)
         self._handle = None
+
+    def poll(self) -> None:
+        """Check for grant closure/disconnection without waiting or prompting."""
+        if self._handle is None:
+            raise WaylandPermissionRequired("input", "the portal session is closed")
+        poll_fd = self._symbols.oeffis_get_fd(self._handle)
+        if poll_fd < 0:
+            raise WaylandPermissionRequired("input", "the portal session lost its connection")
+        try:
+            ready, _, _ = select.select([poll_fd], [], [], 0.0)
+        except (OSError, ValueError) as error:
+            self.close()
+            raise WaylandPermissionRequired("input", "the portal session connection failed") from error
+        if not ready:
+            return
+        self._symbols.oeffis_dispatch(self._handle)
+        event = self._symbols.oeffis_get_event(self._handle)
+        if event in (OEFFIS_EVENT_CLOSED, OEFFIS_EVENT_DISCONNECTED):
+            detail = _describe(self._symbols, self._handle)
+            self.close()
+            raise WaylandPermissionRequired("input", detail or "the portal revoked the session")
 
     def __del__(self) -> None:
         self.close()

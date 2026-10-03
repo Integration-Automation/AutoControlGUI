@@ -68,10 +68,21 @@ class DiagnosticsReport:
 CheckFn = Callable[[], Check]
 
 
-def run_diagnostics() -> DiagnosticsReport:
-    """Run every registered check; return a :class:`DiagnosticsReport`."""
+def run_diagnostics(*, include_active: bool = True) -> DiagnosticsReport:
+    """Run checks; set include_active=False to skip capture and cursor reads.
+
+    Backend capability reporting itself is passive and never requests consent.
+    Python retains active checks by default for compatibility; GUI and
+    AC_diagnose request passive checks by default.
+    """
     checks: List[Check] = []
     for runner in _ALL_CHECKS:
+        if not include_active and runner in (_check_screenshot, _check_mouse):
+            checks.append(Check(
+                name=runner.__name__.replace("_check_", ""), ok=True, severity=_SEVERITY_INFO,
+                detail="active check skipped; request include_active=True to exercise the backend",
+            ))
+            continue
         try:
             checks.append(runner())
         except Exception as error:  # noqa: BLE001  # pylint: disable=broad-except  # reason: never let one probe poison the rest
@@ -93,6 +104,24 @@ def _check_platform() -> Check:
         severity=_SEVERITY_INFO,
         detail=f"{platform.system()} {platform.release()} / "
                f"Python {platform.python_version()}",
+    )
+
+
+def _check_backend_capabilities() -> Check:
+    """Expose the same passive input/capture evidence through all diagnostics."""
+    from je_auto_control.wrapper.capabilities import probe_capabilities
+
+    snapshot = probe_capabilities()
+    statuses = (snapshot.input, snapshot.capture)
+    ready = all(status.state == "available" for status in statuses)
+    return Check(
+        name="backend_capabilities", ok=ready,
+        severity=_SEVERITY_INFO if ready else _SEVERITY_WARN,
+        detail="; ".join(
+            f"{name}: {status.state} ({status.backend}); {status.reason} {status.recovery}"
+            for name, status in (("input", snapshot.input), ("capture", snapshot.capture))
+        ),
+        extra=snapshot.to_dict(),
     )
 
 
@@ -273,6 +302,7 @@ def _check_executor() -> Check:
 
 _ALL_CHECKS: Tuple[CheckFn, ...] = (
     _check_platform,
+    _check_backend_capabilities,
     _check_optional_deps,
     _check_executor,
     _check_audit_chain,

@@ -288,3 +288,13 @@ Definition synchronization: definition_privacy binds action signatures and repla
 Remote session ownership: sessions.py stores immutable identities/generations, separate transport/role script aliases, request bindings and bounded lifecycle events; registry_sessions.py shares lifecycle allocation. session_api.py provides JSON lifecycle commands. PanelSessions owns GUI identity and checks generation at producer and Qt delivery, then cleans its independent resources at destruction. The WebRTC compatibility module re-exports typed panels composing layout/features/transfers/session controllers; shared presentation helpers remove repeated UI contracts.
 
 Config recovery stores local intents separately from exact CAS envelopes; SyncOutbox atomically supersedes only intents/confirmed conflicts. ConfigSyncClient revalidates fresh snapshots and reassigns rejected tentative deletion receipts. Definition adapters acknowledge resolved Apply rather than preview receipt. Qt handlers retain generation through final delivery; reconnect callbacks are revoked and folder sender ownership persists during drain.
+
+Wayland capability diagnostics use `wrapper/capabilities.py`, exposed as the
+Beta `api.capabilities` namespace and compatibility facade. Passive snapshots
+separate input/capture availability, authorization/dependency recovery and
+XWayland scope. `oeffis._Session.poll()` and libei device dispatch validate
+existing grants before control; cancellations and connection failures are
+cached until explicit retry, and text input observes the same refusal. GUI
+Diagnostics and `AC_diagnose` use passive checks; Python keeps its active
+default. CLI input requires explicit selection. Stop/retry operations own the
+native portal grant; the compositor owns cleanup of revoked devices.

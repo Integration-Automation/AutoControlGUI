@@ -131,8 +131,9 @@ def test_cli_prints_to_stdout(capsys):
     assert "def AC_screenshot" in captured.out
 
 
-def test_cli_writes_when_path_given(tmp_path: Path, capsys):
+def test_cli_writes_when_path_given(tmp_path: Path, capsys, monkeypatch):
     from je_auto_control.utils.stubs.generator import _cli
+    monkeypatch.setenv("AUTOCONTROL_ALLOWED_PATH_ROOTS", str(tmp_path))
     target = tmp_path / "out.pyi"
     exit_code = _cli([str(target)])
     assert exit_code == 0

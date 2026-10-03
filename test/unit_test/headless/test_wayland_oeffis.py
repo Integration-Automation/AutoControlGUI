@@ -13,6 +13,7 @@ from unittest.mock import patch
 import pytest
 
 from je_auto_control.linux_wayland import oeffis as oeffis_mod
+from je_auto_control.linux_wayland.permission import WaylandPermissionRequired
 
 
 HANDLE = 0x0EFF15
@@ -105,7 +106,7 @@ def test_device_constants_match_liboeffis_h():
 def test_a_closed_session_reads_as_the_user_declining():
     fake = FakeOeffis(events=[oeffis_mod.OEFFIS_EVENT_CLOSED],
                       error=b"permission denied")
-    with pytest.raises(oeffis_mod.OeffisUnavailable, match="closed"):
+    with pytest.raises(WaylandPermissionRequired, match="closed"):
         oeffis_mod.connect_eis_fd(symbols=fake)
     assert ("unref", HANDLE) in fake.calls
 
@@ -113,7 +114,7 @@ def test_a_closed_session_reads_as_the_user_declining():
 def test_the_librarys_own_error_text_reaches_the_message():
     fake = FakeOeffis(events=[oeffis_mod.OEFFIS_EVENT_CLOSED],
                       error=b"permission denied")
-    with pytest.raises(oeffis_mod.OeffisUnavailable, match="permission denied"):
+    with pytest.raises(WaylandPermissionRequired, match="permission denied"):
         oeffis_mod.connect_eis_fd(symbols=fake)
 
 

@@ -249,10 +249,10 @@ where the negative-origin layout above reaches the input half: a region's
 offset is part of the coordinate rather than something to subtract, and a
 motion landing outside every region is dropped by libei without a return code,
 an event or an error — so the sender maps the point into region space and
-refuses what no region covers, which is what lets the `ydotool` path take it.
+refuses what no region covers, without switching the authorized transport.
 
-The `ydotool-verification` job covers the CLI fallback, which the `libei` path
-drops to at every failure point. A seat is what makes an injected event arrive
+The `ydotool-verification` job covers explicitly configured CLI input
+(`JE_AUTOCONTROL_WAYLAND_INPUT_BACKEND=cli`). A seat makes an injected event arrive
 somewhere; it is not what makes one observable, so no compositor is needed:
 `ydotoold` creates an ordinary uinput device, the kernel publishes it as
 `/dev/input/eventN`, and the job reads the `input_event` structs back off it.
@@ -355,3 +355,15 @@ Definition/asset sync is Beta: controlled HTTP/SQLite, file integrity and offscr
 Owned remote sessions are Beta and process-local. Controlled TCP/WS/WebRTC transport doubles and offscreen Qt verify independent defaults, owner-only disconnect, generation checks after queue/modal handoffs, failed-cleanup retry and WebRTC background disposal. Physical multi-machine verification remains pending. All new lifecycle/transport tools require MANAGE_HOSTS; read-only annotations do not bypass authorization.
 
 Whole-C controlled SQLite/network-boundary and actual offscreen Qt regressions cover delayed Apply with eventual tombstone GC, receipt reconciliation, stale/exhausted/offline recovery, privacy revalidation, final Quick Connect generation delivery, WebRTC video/reconnect guards, legacy clipboard A→B→A and retained draining folder senders. Physical multi-machine/native/paid API/downstream checks remain H3.
+
+Passive Wayland permission reporting (D1)
+---------------------------------------
+
+`probe_capabilities()` independently describes input and capture using
+`available`, `needs_permission`, `needs_dependency` and `unsupported`, with
+reason/recovery/scope. A discovered library/helper or configured command is
+not proof of a usable compositor grant. XWayland is never reported as desktop
+wide; restore tokens are unsupported by the current liboeffis binding.
+Cancellation, timeout, live grant revocation and paused/removed devices are
+covered by fake-library/headless tests. Those tests do not establish GNOME/KDE
+acceptance or native libei teardown safety; real Linux evidence remains D2/D3/H3.

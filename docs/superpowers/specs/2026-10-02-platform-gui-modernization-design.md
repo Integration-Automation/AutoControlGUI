@@ -232,6 +232,8 @@ command、可序列化參數、起訖、status、錯誤與可引用 artifact。
 其他尚未完成項目也納入實作：macOS 最小化還原、Windows 副螢幕擷取、Retina 多螢幕、
 輸入 wrapper 修正、agent 截圖歷史壓縮、arm64 可選相依、Python 3.10 USB ACL 間歇 crash。
 agent API 與原生依賴版本在實作時查核官方文件，不能只依進度檔中的版本或 API 名稱猜測。
+2026-10-03 範圍確認：不額外新增付費型功能；既有 API 介面及相關修正繼續。
+本機／離線驗證先完成；缺少真實 API 條件的既有驗證仍保留，
 Computer-use 預設切換須有真實 API 驗證才落地。
 
 RBAC 與強制簽章的舊部署過渡仍需細化；建議以明確 opt-in 的 UserStore 配置啟用角色，

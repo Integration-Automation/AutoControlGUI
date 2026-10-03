@@ -6,6 +6,7 @@ owns the JSON Schemas, descriptions, and annotation choices that the
 MCP client surfaces to the model.
 """
 from typing import List
+from je_auto_control.utils.mcp_server.tools._factories_capabilities import capability_tools
 from je_auto_control.utils.mcp_server.tools._factories_signing import signing_tools
 from je_auto_control.utils.mcp_server.tools._factories_rbac import rbac_tools
 from je_auto_control.utils.mcp_server.tools._factories_remote_sessions import remote_session_tools
@@ -9050,4 +9051,5 @@ ALL_FACTORIES = (
     visual_regression_tools, state_machine_tools, codegen_tools,
     flakiness_tools, suite_tools, quarantine_tools,
     a11y_audit_tools, device_matrix_tools, media_assert_tools, journal_tools, config_sync_tools, remote_session_tools,
+    capability_tools,
 )

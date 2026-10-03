@@ -15,6 +15,15 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Added
 
+- Passive backend capability snapshots (`je_auto_control.api.capabilities`), independent
+  input/capture states, XWayland scope and explicit restore-token limitations. GUI diagnostics
+  can stop native Wayland control or allow a new authorization request.
+- Wayland canceled, failed or revoked native grants stop input without switching devices.
+  CLI input now requires `JE_AUTOCONTROL_WAYLAND_INPUT_BACKEND=cli`; missing native
+  dependencies raise a typed error. `AC_diagnose` and GUI checks are passive by default;
+  use `include_active=true` for actual capture/cursor checks. Python `run_diagnostics()`
+  retains its active default; use `include_active=False` for passive checks.
+
 - Preserve deletions while Apply is delayed; recover offline intent, confirmed stale CAS and exhausted exact retries safely. Guard final Quick Connect and WebRTC video/reconnect delivery, allow legacy clipboard A→B→A and retain draining Folder Sync ownership.
 
 - Beta owned remote sessions and three AC/MCP lifecycle operations; all 24 transport commands and remote tools accept optional session_id. GUI panels keep separate identities, drop stale queued results and clean owned WebRTC background resources. Legacy omitted-ID script defaults and WebRTC class imports remain compatible.

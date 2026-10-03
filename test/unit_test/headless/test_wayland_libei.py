@@ -25,6 +25,9 @@ from je_auto_control.linux_wayland import (
     _select_input as select_mod,
 )
 from je_auto_control.linux_wayland import _ydotool_cli
+from je_auto_control.linux_wayland.permission import (
+    WaylandDependencyRequired, WaylandInputUnavailable, WaylandPermissionRequired,
+)
 
 
 SEAT = 0x5EA7
@@ -231,9 +234,10 @@ def _kinds(fake):
 
 # === Selector =============================================================
 
-def test_select_input_backend_defaults_to_cli_when_libei_absent(monkeypatch):
+def test_select_input_backend_requires_explicit_cli_when_libei_absent(monkeypatch):
     monkeypatch.setattr(select_mod, "_libei_loadable", lambda: False)
-    assert select_input_backend({}) == "cli"
+    with pytest.raises(WaylandDependencyRequired, match="not loadable"):
+        select_input_backend({})
 
 
 def test_select_input_backend_picks_libei_when_loadable(monkeypatch):
@@ -250,7 +254,7 @@ def test_select_input_backend_honours_cli_override(monkeypatch):
 
 def test_select_input_backend_force_libei_raises_without_libei(monkeypatch):
     monkeypatch.setattr(select_mod, "_libei_loadable", lambda: False)
-    with pytest.raises(RuntimeError, match="libei"):
+    with pytest.raises(WaylandDependencyRequired, match="libei"):
         select_input_backend({
             "JE_AUTOCONTROL_WAYLAND_INPUT_BACKEND": "libei",
         })
@@ -258,9 +262,8 @@ def test_select_input_backend_force_libei_raises_without_libei(monkeypatch):
 
 def test_select_input_backend_invalid_override_treated_as_auto(monkeypatch):
     monkeypatch.setattr(select_mod, "_libei_loadable", lambda: False)
-    assert select_input_backend({
-        "JE_AUTOCONTROL_WAYLAND_INPUT_BACKEND": "garbage",
-    }) == "cli"
+    with pytest.raises(WaylandDependencyRequired):
+        select_input_backend({"JE_AUTOCONTROL_WAYLAND_INPUT_BACKEND": "garbage"})
 
 
 # === ABI constants ========================================================
@@ -608,9 +611,8 @@ def test_region_enumeration_stops_at_the_ceiling():
     assert len(backend._device_regions(POINTER_DEVICE)) == libei_mod._MAX_REGIONS
 
 
-def test_a_motion_refused_for_its_region_reaches_the_cli(monkeypatch):
-    """End to end: the refusal is the *point*, because ``emitted`` turns it
-    into the ydotool move that libei would have swallowed."""
+def test_a_motion_outside_authorized_regions_does_not_reach_the_cli(monkeypatch):
+    """Out-of-bounds moves retain the scope of the authorized transport."""
     from je_auto_control.linux_wayland import mouse as wayland_mouse
     monkeypatch.setattr(libei_mod, "layout_origin", lambda: (0, 0))
     backend, fake = _with_regions([(0, 0, 1920, 1080)])
@@ -619,10 +621,10 @@ def test_a_motion_refused_for_its_region_reaches_the_cli(monkeypatch):
     binary, run = _cli_capture(wayland_mouse, captured)
     with patch.object(wayland_mouse, "_try_libei", return_value=backend), \
          binary, run:
-        wayland_mouse.set_position(4000, 30)
+        with pytest.raises(WaylandInputUnavailable):
+            wayland_mouse.set_position(4000, 30)
     assert not [call for call in fake.calls if call[0] == "motion"]
-    assert captured[0][1:] == ["mousemove", "--absolute",
-                               "-x", "4000", "-y", "30"]
+    assert captured == []
 
 
 def test_click_button_presses_then_releases():
@@ -737,9 +739,9 @@ def test_a_failed_probe_is_not_retried_on_every_keystroke():
 
     try:
         with patch.object(libei_mod, "LibeiBackend", _Failing):
-            assert libei_mod.connected_backend() is None
-            assert libei_mod.connected_backend() is None
-            assert libei_mod.connected_backend() is None
+            for _ in range(3):
+                with pytest.raises(WaylandPermissionRequired, match="no portal here"):
+                    libei_mod.connected_backend()
     finally:
         libei_mod.reset_default_backend()
     assert len(attempts) == 1
@@ -850,11 +852,8 @@ def test_libei_unavailable_is_catchable_as_an_autocontrol_error():
     assert issubclass(LibeiUnavailable, RuntimeError)
 
 
-def test_a_refused_emission_falls_back_to_the_cli():
-    """A backend that finished its handshake can still refuse one emission —
-    a paused device, a session that ended between calls. libei is documented
-    as the fast path and never the only one, but the refusal used to escape
-    the module instead of reaching ydotool."""
+def test_a_refused_emission_stops_before_the_cli():
+    """A paused device cannot trigger input through a different transport."""
     from je_auto_control.linux_wayland import mouse as wayland_mouse
     backend = MagicMock()
     backend.set_position.side_effect = LibeiUnavailable("device paused")
@@ -863,13 +862,13 @@ def test_a_refused_emission_falls_back_to_the_cli():
     binary, run = _cli_capture(wayland_mouse, captured)
     with patch.object(wayland_mouse, "_try_libei", return_value=backend), \
          binary, run:
-        wayland_mouse.set_position(120, 240)
-    assert captured[0][1:] == ["mousemove", "--absolute",
-                               "-x", "120", "-y", "240"]
+        with pytest.raises(WaylandPermissionRequired):
+            wayland_mouse.set_position(120, 240)
+    assert captured == []
 
 
-def test_a_refused_scroll_falls_back_to_the_cli_in_ydotools_own_frame():
-    """And it falls back *unflipped*: the vertical flip belongs to libei."""
+def test_a_refused_scroll_stops_before_the_cli():
+    """A refused scroll does not switch devices or send a second scroll."""
     from je_auto_control.linux_wayland import mouse as wayland_mouse
     backend = MagicMock()
     backend.scroll.side_effect = LibeiUnavailable("device paused")
@@ -878,13 +877,13 @@ def test_a_refused_scroll_falls_back_to_the_cli_in_ydotools_own_frame():
     binary, run = _cli_capture(wayland_mouse, captured)
     with patch.object(wayland_mouse, "_try_libei", return_value=backend), \
          binary, run:
-        wayland_mouse.scroll(5, wayland_mouse.wayland_scroll_direction_up)
-    assert captured[0][1:] == ["mousemove", "--wheel", "-x", "0", "-y", "5"]
+        with pytest.raises(WaylandPermissionRequired):
+            wayland_mouse.scroll(5, wayland_mouse.wayland_scroll_direction_up)
+    assert captured == []
 
 
-def test_a_refused_button_release_still_reaches_the_cli():
-    """The worst refusal to drop: the press landed, so giving up on the
-    release leaves the button held for the rest of the session."""
+def test_a_refused_button_release_never_injects_through_the_cli():
+    """Revocation stops input; a different device cannot release this button."""
     from je_auto_control.linux_wayland import mouse as wayland_mouse
     backend = MagicMock()
     backend.release_button.side_effect = LibeiUnavailable("device paused")
@@ -893,13 +892,13 @@ def test_a_refused_button_release_still_reaches_the_cli():
     binary, run = _cli_capture(wayland_mouse, captured)
     with patch.object(wayland_mouse, "_try_libei", return_value=backend), \
          binary, run:
-        wayland_mouse.click_mouse(wayland_mouse.wayland_mouse_left)
+        with pytest.raises(WaylandPermissionRequired):
+            wayland_mouse.click_mouse(wayland_mouse.wayland_mouse_left)
     backend.press_button.assert_called_once_with(272)
-    # 0xC0 with the down-bit cleared: a release-only click.
-    assert captured[0][1:] == ["click", "0x80"]
+    assert captured == []
 
 
-def test_a_refused_key_press_falls_back_to_the_cli():
+def test_a_refused_key_press_stops_before_the_cli():
     from je_auto_control.linux_wayland import keyboard as wayland_keyboard
     backend = MagicMock()
     backend.press_key.side_effect = LibeiUnavailable("device paused")
@@ -908,8 +907,9 @@ def test_a_refused_key_press_falls_back_to_the_cli():
     binary, run = _cli_capture(wayland_keyboard, captured)
     with patch.object(wayland_keyboard, "_try_libei", return_value=backend), \
          binary, run:
-        wayland_keyboard.press_key(28)
-    assert captured[0][1:] == ["key", "28:1"]
+        with pytest.raises(WaylandPermissionRequired):
+            wayland_keyboard.press_key(28)
+    assert captured == []
 
 
 def test_a_chord_refused_part_way_releases_what_it_already_pressed():
@@ -923,9 +923,10 @@ def test_a_chord_refused_part_way_releases_what_it_already_pressed():
     binary, run = _cli_capture(wayland_keyboard, captured)
     with patch.object(wayland_keyboard, "_try_libei", return_value=backend), \
          binary, run:
-        wayland_keyboard.hotkey([29, 42])
+        with pytest.raises(WaylandPermissionRequired):
+            wayland_keyboard.hotkey([29, 42])
     backend.release_key.assert_called_once_with(29)
-    assert captured[0][1:] == ["key", "29:1", "42:1", "42:0", "29:0"]
+    assert captured == []
 
 
 def test_mouse_scroll_falls_back_to_ydotool_without_libei():

@@ -1,4 +1,5 @@
 """System diagnostics tab: run subsystem checks and display results."""
+import sys
 from typing import Optional
 
 from PySide6.QtGui import QBrush, QColor
@@ -50,9 +51,26 @@ class DiagnosticsTab(TranslatableMixin, QWidget):
 
     def menu_actions(self) -> list:
         """Expose tab commands to the window-level Actions menu."""
-        return [
+        actions = [
             ("diag_run", self._refresh),
         ]
+        from je_auto_control.linux_wayland._detect import is_wayland_session
+        if sys.platform.startswith("linux") and is_wayland_session():
+            actions.extend([
+                ("diag_stop_input", self._stop_input),
+                ("diag_retry_input", self._retry_input),
+            ])
+        return actions
+
+    def _stop_input(self) -> None:
+        from je_auto_control.linux_wayland.libei import stop_input_control
+        stop_input_control()
+        self._refresh()
+
+    def _retry_input(self) -> None:
+        from je_auto_control.linux_wayland.libei import reset_default_backend
+        reset_default_backend()
+        self._refresh()
 
     def _apply_table_headers(self) -> None:
         self._table.setHorizontalHeaderLabels([
@@ -61,7 +79,7 @@ class DiagnosticsTab(TranslatableMixin, QWidget):
         ])
 
     def _refresh(self) -> None:
-        report = run_diagnostics()
+        report = run_diagnostics(include_active=False)
         summary = report.to_dict()
         if report.ok:
             self._summary_label.setText(_t("diag_summary_ok").format(

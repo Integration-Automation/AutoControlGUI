@@ -191,6 +191,8 @@ english_word_dict = {
 
     # Diagnostics tab
     "diag_run": "Run diagnostics",
+    "diag_stop_input": "Stop Wayland input control",
+    "diag_retry_input": "Allow a new Wayland authorization request",
     "diag_summary_ok": "All {count} checks passed.",
     "diag_summary_failed": "{failed} of {count} checks failed.",
     "diag_col_name": "Check",

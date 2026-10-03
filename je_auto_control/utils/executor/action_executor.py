@@ -1484,10 +1484,16 @@ def _list_usb_devices() -> Dict[str, Any]:
     return list_usb_devices().to_dict()
 
 
-def _diagnose() -> Dict[str, Any]:
-    """Executor adapter: run system diagnostics and return the report."""
+def _diagnose(include_active: bool = False) -> Dict[str, Any]:
+    """Run passive diagnostics; opt in to actual capture/cursor checks."""
     from je_auto_control.utils.diagnostics.diagnostics import run_diagnostics
-    return run_diagnostics().to_dict()
+    return run_diagnostics(include_active=include_active).to_dict()
+
+
+def _probe_capabilities() -> Dict[str, object]:
+    """Return passive backend input/capture evidence without requesting consent."""
+    from je_auto_control.wrapper.capabilities import probe_capabilities
+    return probe_capabilities().to_dict()
 
 
 def _config_export() -> Dict[str, Any]:
@@ -8056,6 +8062,7 @@ class Executor:
 
             # System diagnostics
             "AC_diagnose": _diagnose,
+            "AC_probe_capabilities": _probe_capabilities,
 
             # Config bundle export / import
             "AC_config_export": _config_export,

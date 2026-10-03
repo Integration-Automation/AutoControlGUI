@@ -8,8 +8,9 @@
 `utils/{mcp_server,executor}/` 與型別／文件驗證。
 核准設計：[跨平台自動化與 GUI 改版](docs/superpowers/specs/2026-10-02-platform-gui-modernization-design.md)。
 實作計畫：[分階段交付計畫](docs/superpowers/plans/2026-10-02-modernization-index.md)，已核准，依序實作。
-現有 `[Answer]` 決策沿用；後續交付包含 D–H 各階段與完整整合驗收。
-依使用者要求，已在 C 階段審閱收尾後暫停；恢復時從 D 開始。
+現有 `[Answer]` 決策沿用；後續交付包含 D2/D3、E–H 各階段與完整整合驗收。
+從 D2/D3 接續原有計畫；不額外新增付費型功能。既有 API 介面及相關修正繼續，
+目前以本機／離線測試驗證；缺少真實 API 條件的既有項目保留待驗證。
 
 **只記未完成的事。** 完成的工作記在 [docs/updates/](docs/updates/README.md)（每月一個批次檔，
 索引與查詢指令在它的 README），相容性變更寫進 [CHANGELOG.md](CHANGELOG.md)；完成的項目
@@ -163,6 +164,7 @@ pip install --dry-run --only-binary=:all: --platform win_arm64 --python-version 
 
 ---
 
+
 ## Computer use 的預設還是 beta 的 `computer_20251124`
 
 `TODO` — 在 `claude-opus-5`（兩種形式都接受）上實測 GA toolset 後，把它設成所有模型的預設
@@ -226,6 +228,7 @@ Anthropic 每一步送約 202 KB 的工具 schema、沒有 `cache_control`。拍
 
 ---
 
+
 ## Agent 付費 API 多回合驗證
 
 `TODO` — 已實作 Anthropic append-only 與截圖上限摘要新對話，需在配置 API key 後
@@ -235,6 +238,7 @@ Anthropic 每一步送約 202 KB 的工具 schema、沒有 `cache_control`。拍
 既有 Computer use 預設 toolset 切換仍以真實 API 結果為門檻。
 
 ---
+
 
 ## 混合 DPI 與 Retina 實機驗證
 
@@ -248,3 +252,13 @@ Anthropic 每一步送約 202 KB 的工具 schema、沒有 `cache_control`。拍
 ## `test_usb_acl_prompt.py` 讓 Python 3.10 的 headless 測試間歇 segfault
 
 `TODO` — `test/unit_test/headless/test_usb_acl_prompt.py::test_bridge_remember_persists_acl_rule` 在 `coverage run -m pytest` 下讓行程 SIGSEGV（exit 139），整個 `pytest-headless` job 因此失敗：2026-09-26 連續三次 AutoControl Code Quality（ubuntu-22.04／3.10），2026-09-30 一次（macos-14／3.10）；同一次其他版本都過，之後的 run 又過，所以是間歇的。原因還沒查：先在 3.10 開 `faulthandler` 重跑這一支，看崩在哪個原生呼叫。
+
+---
+
+## Wayland 原生生命周期與能力驗收
+
+`TODO` — D2 先在可用 Linux runtime 重跑 `docker/libei_verify.py`、
+`docker/eis_verify.py`，再依 unsafe teardown 結果交付 helper 隔離與 cleanup。
+本機 Docker Linux engine 目前未啟動；D1 的授權／撤銷／XWayland scope 測試
+只有替身及 offscreen Qt 證據。GNOME/KDE 的允許／拒絕、合成器重啟、裝置 pause/remove
+與 restore-token 替代接口仍需 D2/D3/H3 原生驗收。
