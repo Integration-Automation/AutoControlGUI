@@ -1272,3 +1272,19 @@ Set-of-Marks 圖例保留全域座標，結果提供擷取的 ``origin``。
    import je_auto_control as ac
    image = ac.pil_screenshot(screen_region=[-80, 10, -20, 70])
    assert image.size == (60, 60)
+
+Agent 歷史只追加與摘要新對話
+----------------------------------------
+
+Anthropic Agent 歷史在三張截圖上限內只追加；超過時以目標、已完成動作數、
+最近五十個動作及結果、最新截圖建立新對話。已送出的訊息與簽署 thinking 區塊
+保留原樣，不移入新對話。一般工具、beta computer-use 與 GA toolset 都適用。
+``AC_run_agent`` 沿用現有預設工具匯出。付費 API 驗證需配置 key，待辦見 ``Progress.md``。
+
+2026-10-03 已核對官方請求契約：
+`Computer use tool <https://platform.claude.com/docs/en/agents-and-tools/tool-use/computer-use-tool>`_
+與 `Handle tool calls <https://platform.claude.com/docs/en/agents-and-tools/tool-use/handle-tool-calls>`_。
+beta 路徑傳入 computer-use beta 標頭並配對 tool_use/tool_result ID；
+GA toolset 結果帶 toolset_name，整批循序動作完成後一起回覆。
+摘要新對話只在結果收齊後建立，完全不重播先前的對話。
+官方 schema 核對與離線測試不能取代付費傳輸驗證；本次未配置 API key。

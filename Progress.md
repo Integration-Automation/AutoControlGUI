@@ -298,25 +298,15 @@ Windows 的 `list_windows` 則包含最小化視窗。
 
 ---
 
-## Agent 的截圖修剪會改寫較早的回合
+## Agent 付費 API 多回合驗證
 
-`TODO` — 需要付費實機跑一次多步驟任務驗證，不能只靠離線測試
-
-`utils/agent/backends/base.py` 的 `prune_old_screenshots` 每一步把較舊的截圖換成文字，改的是已送出過的訊息。
-Claude Fable 5.1 與 Opus 5.5 的 thinking 區塊綁定它之前的整段對話，2026-08-31 之後建立的帳號會直接回 400
-（"block is bound to a different conversation"），約在第 4 步中斷；其他模型則是每一步都讓 prompt cache 失效。
-不修剪也不行：每步重送全部截圖會超過 32 MB 的請求上限。
-
-**做法（擇一，依 claude-api 文件的 append-only 對照表）**：用戶端「簡單壓縮」——截圖數超過上限時，以一則摘要
-（目標、已執行的動作）加最新截圖開新對話，不重播舊回合；或送
-`thinking.block_binding.prefix_mismatch_behavior: "drop_block"`（beta `thinking-binding-controls-2026-08-01`），
-讓被改到的 thinking 區塊被丟棄而不是 400。伺服器端 tool-result clearing 不會縮小請求本身，擋不住 32 MB。
-
-**要動的地方**：`anthropic.py`、`anthropic_computer_use.py`（兩條路徑）呼叫 `prune_old_screenshots` 之處；
-OpenAI 後端沒有這個綁定，照舊。
+`TODO` — 已實作 Anthropic append-only 與截圖上限摘要新對話，需在配置 API key 後
+以一般工具、beta computer-use、GA toolset 各跑超過三張截圖的多回合 smoke，
+確認 tool_result 配對、thinking 簽章及新對話不出現 400；保存模型、工具版本、回合數與結果。
+2026-10-03 未配置 API key，僅核對官方 schema 與離線測試；
+既有 Computer use 預設 toolset 切換仍以真實 API 結果為門檻。
 
 ---
-
 
 ## 混合 DPI 與 Retina 實機驗證
 

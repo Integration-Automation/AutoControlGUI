@@ -24,6 +24,7 @@ return).
 """
 from __future__ import annotations
 
+import copy
 import math
 from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple
 
@@ -36,7 +37,7 @@ from je_auto_control.utils.agent.backends._computer_toolset import (
 )
 from je_auto_control.utils.agent.backends.base import (
     REQUEST_TIMEOUT_S, AgentBackendError, build_default_system_prompt,
-    encode_screenshot_b64, prune_old_screenshots,
+    encode_screenshot_b64, compact_screenshots,
 )
 
 
@@ -210,7 +211,7 @@ class ComputerUseAgentBackend(AgentBackend):
                 "role": "user",
                 "content": _initial_user_content(goal, screenshot),
             })
-        prune_old_screenshots(self._conversation)
+        self._conversation = compact_screenshots(self._conversation, goal, history)
         return self._handle_response(self._create(goal, beta=True))
 
     def _new_run(self) -> None:
@@ -227,7 +228,7 @@ class ComputerUseAgentBackend(AgentBackend):
         request: Dict[str, Any] = {
             "timeout": REQUEST_TIMEOUT_S, "model": self._model,
             "system": self._build_system(goal), "tools": [self._tool_schema],
-            "messages": self._conversation, "max_tokens": self._max_tokens,
+            "messages": copy.deepcopy(self._conversation), "max_tokens": self._max_tokens,
         }
         try:
             if not beta:
@@ -264,7 +265,7 @@ class ComputerUseAgentBackend(AgentBackend):
                 "role": "user",
                 "content": _initial_user_content(goal, self._fit(screenshot)),
             })
-        prune_old_screenshots(self._conversation)
+        self._conversation = compact_screenshots(self._conversation, goal, history)
         return self._handle_toolset_response(self._create(goal, beta=False), batch)
 
     def _fit(self, screenshot: Optional[bytes]) -> Optional[bytes]:

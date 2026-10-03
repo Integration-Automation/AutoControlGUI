@@ -214,3 +214,8 @@ Screen-coordinate contract: regions and locating results use global input coordi
 Fresh Windows processes prefer per-monitor v2; Qt scales inside each display.
 macOS captures normalize each display to points before stitching. Set-of-Marks
 draws relative to the capture origin while keeping global points in its legend.
+
+Anthropic Agent requests append history up to three screenshots, then start
+a separate goal/action-summary conversation with the latest image. Completed
+toolset batches are summarized after all results are collected; submitted
+request snapshots remain immutable. OpenAI and default tool exports are unchanged.

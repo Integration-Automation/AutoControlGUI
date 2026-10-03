@@ -2,9 +2,14 @@
 from __future__ import annotations
 
 import base64
-from typing import Any, Dict, FrozenSet, Iterable, List, Mapping, Optional
+import copy
+from typing import TYPE_CHECKING, Any, Dict, FrozenSet, Iterable, List, Mapping, Optional
+from typing import Sequence, cast
 
 from je_auto_control.utils.exception.exceptions import AutoControlException
+
+if TYPE_CHECKING:
+    from je_auto_control.utils.agent.agent_loop import AgentStep
 
 
 class AgentBackendError(AutoControlException, RuntimeError):
@@ -110,8 +115,58 @@ def _prune_blocks(content: Any, keep: int, seen: int) -> int:
     return seen
 
 
+def compact_history(messages: Sequence[object], summary: str,
+                    latest_screenshot: object) -> List[object]:
+    """Start a separate conversation with a summary and independently owned image.
+
+    Previous signed thinking/tool blocks belong to their original history.
+    They are not replayed in this new conversation or modified in place.
+    ``summary`` includes the goal and actions; ``latest_screenshot`` is an
+    image content block, or ``None`` for a text-only continuation.
+    """
+    del messages  # Previous provider-bound blocks deliberately do not enter the new conversation.
+    content: List[object] = [{'type': 'text', 'text': summary}]
+    if latest_screenshot is not None:
+        content.append(copy.deepcopy(latest_screenshot))
+    return [{'role': 'user', 'content': content}]
+
+
+def _images(content: Any) -> List[Dict[str, Any]]:
+    """Image blocks in send order, including nested tool results."""
+    images: List[Dict[str, Any]] = []
+    if not isinstance(content, list):
+        return images
+    for block in content:
+        if not isinstance(block, dict):
+            continue
+        if block.get('type') in _IMAGE_BLOCK_TYPES:
+            images.append(block)
+        else:
+            images.extend(_images(block.get('content')))
+    return images
+
+
+def compact_screenshots(messages: List[Dict[str, Any]], goal: str,
+                        history: Sequence[AgentStep]) -> List[Dict[str, Any]]:
+    """Compact above the screenshot limit without editing any prior message.
+
+    A bounded deterministic summary includes the goal, completed action count,
+    the latest fifty actions with arguments/results/errors, and the newest
+    screenshot. Until the limit, history remains append-only.
+    """
+    images = [image for message in messages for image in _images(message.get('content'))]
+    if len(images) <= SCREENSHOTS_KEPT:
+        return messages
+    summary = [f'Goal: {goal}', f'Completed actions: {len(history)}. Latest 50 actions:']
+    for step in history[-50:]:
+        outcome = f'error: {step.error}' if step.error else repr(step.result)
+        summary.append(f'{step.index}: {step.tool} {repr(step.arguments)[:500]} => {outcome[:500]}')
+    return cast(List[Dict[str, Any]], compact_history(messages, '\n'.join(summary), images[-1]))
+
+
 __all__ = [
     "AgentBackendError", "REQUEST_TIMEOUT_S", "SCREENSHOTS_KEPT",
     "build_default_system_prompt", "encode_screenshot_b64",
     "prune_old_screenshots",
+    "compact_history", "compact_screenshots",
 ]

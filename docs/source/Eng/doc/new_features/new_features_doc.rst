@@ -1359,3 +1359,23 @@ Example (global bbox, not x/y/width/height)::
    import je_auto_control as ac
    image = ac.pil_screenshot(screen_region=[-80, 10, -20, 70])
    assert image.size == (60, 60)
+
+Append-only Agent history
+----------------------------------------
+
+Anthropic Agent histories stay append-only until the screenshot limit (three).
+Above it, a new conversation contains the goal, completed action count, the
+latest fifty actions with outcomes, and the newest screenshot. Previously sent
+messages and signed thinking blocks are retained unchanged in their original
+request. This applies to regular tools, beta computer-use and the GA toolset.
+``AC_run_agent`` retains its existing default tool export. Paid API validation
+requires a configured key and remains tracked in ``Progress.md``.
+
+Official request contracts checked on 2026-10-03:
+`Computer use tool <https://platform.claude.com/docs/en/agents-and-tools/tool-use/computer-use-tool>`_
+and `Handle tool calls <https://platform.claude.com/docs/en/agents-and-tools/tool-use/handle-tool-calls>`_.
+The beta path sends the computer-use beta header and pairs tool_use/tool_result IDs;
+GA toolset results echo toolset_name and answer the whole sequential batch.
+Compaction starts only after these results have been gathered, then omits the
+previous conversation entirely. Official-schema verification and offline tests
+do not constitute paid transport validation; no API key was configured for this run.

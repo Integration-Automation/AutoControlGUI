@@ -125,7 +125,7 @@ def test_later_screenshots_are_resized_too():
     backend.decide_next_action("goal", _png(3840, 2160), [step])
     import base64
     from PIL import Image
-    result = client.messages.calls[1]["messages"][-2]["content"][0]["content"][0]
+    result = client.messages.calls[1]["messages"][-1]["content"][0]["content"][0]
     with Image.open(io.BytesIO(base64.b64decode(result["source"]["data"]))) as image:
         assert image.size == (2576, 1449)
 

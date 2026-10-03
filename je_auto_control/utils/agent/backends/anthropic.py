@@ -1,6 +1,7 @@
 """Anthropic Claude backend for the AgentLoop."""
 from __future__ import annotations
 
+import copy
 from typing import Any, Dict, List, Optional, Sequence
 
 from je_auto_control.utils.agent.agent_loop import AgentBackend, AgentStep
@@ -9,7 +10,7 @@ from je_auto_control.utils.agent.backends._computer_toolset import (
 )
 from je_auto_control.utils.agent.backends.base import (
     REQUEST_TIMEOUT_S, AgentBackendError, build_default_system_prompt,
-    encode_screenshot_b64, offered_tool_names, prune_old_screenshots,
+    encode_screenshot_b64, offered_tool_names, compact_screenshots,
     require_offered,
 )
 
@@ -80,7 +81,7 @@ class AnthropicAgentBackend(AgentBackend):
             screenshot, self._scale = fit_screenshot(screenshot, self._tier)
         user_content = _build_user_content(screenshot)
         self._conversation.append({"role": "user", "content": user_content})
-        prune_old_screenshots(self._conversation)
+        self._conversation = compact_screenshots(self._conversation, goal, history)
         client = self._resolve_client()
         try:
             response = client.messages.create(
@@ -88,7 +89,7 @@ class AnthropicAgentBackend(AgentBackend):
                 model=self._model,
                 system=self._build_system(goal),
                 tools=self._tools,
-                messages=self._conversation,
+                messages=copy.deepcopy(self._conversation),
                 max_tokens=self._max_tokens,
                 # 這個迴圈一次只執行一個工具:_handle_response 只回傳第一個
                 # tool_use,_ingest_history 也只附上一筆 tool_result。平行

@@ -80,7 +80,7 @@ def test_agent_requests_carry_a_timeout_and_bounded_screenshots(backend_cls, too
             backend.decide_next_action("goal", b"png", history)
         history = [AgentStep(index=index, tool=None, arguments={})]   # an empty one starts a new run
     assert all(call["timeout"] == base.REQUEST_TIMEOUT_S for call in client.calls)
-    assert client.calls[-1]["image_count"] == base.SCREENSHOTS_KEPT
+    assert 0 < client.calls[-1]["image_count"] <= base.SCREENSHOTS_KEPT
 
 
 def test_an_empty_only_list_exports_no_tools():

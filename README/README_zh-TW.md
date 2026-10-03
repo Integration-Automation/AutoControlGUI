@@ -400,3 +400,8 @@ TCP／WebSocket viewer 預設收檔到 `~/Downloads/AutoControl`，本機可用
 需要重新錄製。嵌入的主程式保留已設定的 DPI 策略。macOS 逐螢幕縮成 point
 後拼接，主螢幕與區域截圖也使用 point，並支援較舊的 Pillow。
 Set-of-Marks 圖例保留全域座標，結果提供擷取的 `origin`。
+
+Anthropic Agent 歷史在三張截圖上限內只追加；超過時以目標、已完成動作數、
+最近五十個動作及結果、最新截圖建立新對話。已送出的訊息與簽署 thinking 區塊
+保留原樣，不移入新對話。一般工具、beta computer-use 與 GA toolset 都適用。
+`AC_run_agent` 沿用現有預設工具匯出。付費 API 驗證需配置 key，待辦見 `Progress.md`。

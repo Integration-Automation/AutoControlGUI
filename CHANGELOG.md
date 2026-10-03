@@ -103,6 +103,10 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Changed
 
+- Anthropic Agent screenshot compaction now starts a separate summarized
+  conversation instead of editing old messages; sent request snapshots stay
+  unchanged. The default AC_run_agent tool export is preserved.
+
 - Fresh Windows processes prefer per-monitor DPI v2; re-record coordinates and
   templates on scaled secondary displays made under the old system-DPI policy.
   macOS primary/region screenshots now use points; virtual captures stitch

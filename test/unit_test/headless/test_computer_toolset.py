@@ -100,9 +100,8 @@ def test_opus_5_5_gets_the_toolset_without_a_beta():
     final = backend.decide_next_action("goal", screen, [_step(0, "AC_click_mouse"),
                                                         _step(1, "AC_write")])
     assert final == {"stop": True, "message": "done"}
-    # The recorded messages list is the live conversation, so the model's
-    # reply follows the answers by now.
-    answers = client.messages.calls[1]["messages"][-2]
+    # Recorded requests own immutable snapshots, ending with submitted answers.
+    answers = client.messages.calls[1]["messages"][-1]
     assert answers["role"] == "user"
     assert [(r["tool_use_id"], r["toolset_name"], r["is_error"]) for r in answers["content"]] == [
         ("t1", "computer", False), ("t2", "computer", False)]
@@ -118,7 +117,7 @@ def test_a_failed_step_answers_the_rest_of_the_batch_as_skipped():
     backend.decide_next_action("goal", None, [])
     result = backend.decide_next_action("goal", None, [_step(0, "AC_type_keyboard", error="boom")])
     assert result["stop"] is True
-    answers = client.messages.calls[1]["messages"][-2]["content"]
+    answers = client.messages.calls[1]["messages"][-1]["content"]
     assert [(r["tool_use_id"], r["is_error"]) for r in answers] == [("a", True), ("b", True)]
     assert "not run" in answers[1]["content"][0]["text"]
 
@@ -195,7 +194,7 @@ def test_zoom_answers_with_a_full_resolution_crop():
     assert second["input"]["x"] == 298 and second["input"]["y"] == 149
     backend.decide_next_action("goal", screen, [_step(0, "AC_screenshot"),
                                                 _step(1, "AC_click_mouse")])
-    answers = client.messages.calls[1]["messages"][-2]["content"]
+    answers = client.messages.calls[1]["messages"][-1]["content"]
     zoom_answer = answers[0]
     assert zoom_answer["tool_use_id"] == "z1" and not zoom_answer["is_error"]
     image_block = zoom_answer["content"][0]

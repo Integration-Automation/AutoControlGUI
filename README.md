@@ -444,3 +444,11 @@ on scaled secondary displays. An embedding host retains its existing DPI policy.
 macOS captures normalize each display to points before stitching; primary and
 region screenshots also use points, including older Pillow releases.
 Set-of-Marks legends keep global points and return the captured `origin`.
+
+Anthropic Agent histories stay append-only until the screenshot limit (three).
+Above it, a new conversation contains the goal, completed action count, the
+latest fifty actions with outcomes, and the newest screenshot. Previously sent
+messages and signed thinking blocks are retained unchanged in their original
+request. This applies to regular tools, beta computer-use and the GA toolset.
+`AC_run_agent` retains its existing default tool export. Paid API validation
+requires a configured key and remains tracked in `Progress.md`.
