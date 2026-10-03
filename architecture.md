@@ -1,7 +1,7 @@
 # AutoControl Architecture
 
 > Short overview for people and agents. Per-module detail lives in [`architecture_explore.md`](architecture_explore.md).
-> Last verified: 2026-09-22 against `0e8e25b` on `feat/coverage-to-80`.
+> Last verified: 2026-10-03 on `feat/platform-gui-modernization`.
 
 ## 1. Purpose
 
@@ -278,3 +278,5 @@ for readonly preview and separate explicit import/export; neither dispatches
 candidate actions. Raw outcomes never become replay arguments.
 Ordinary runtime references without resolved binding evidence are omitted with
 warnings; block object shapes and required keys are validated without dispatch.
+
+Config storage: `utils/config_sync/store.py` atomically checks server revisions, writes buckets and records operation receipts in SQLite. `remote_desktop/signaling_server.py` exposes protected version-2 HTTP envelopes and explicit legacy compatibility; app lifespan closes the connection. The Beta `api/config_sync.py` and historical facade expose the same typed storage API without Qt or database creation at import.

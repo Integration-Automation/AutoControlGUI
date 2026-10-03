@@ -1473,3 +1473,22 @@ Recording Editor 與 Script Builder 的 Actions 提供候選審閱，保留 scop
 成功捕捉或重試處理的失敗仍保持成功狀態。
 插值變數名稱在記錄前保守視為私密資料。
 已辨識的私密純量（包含數值 PIN）也會在結果／日誌副本中遮罩。
+
+持久化設定伺服器（Beta）
+--------------
+
+訊令服務以 SQLite 保存設定 bucket，重啟後仍保留。使用 ``--config-store PATH``
+或 ``AC_CONFIG_STORE_PATH``；預設在首次使用時解析為
+``~/.je_auto_control/config_sync.sqlite``。匯入 API 或建立 app 不會建立資料庫。
+
+``PUT /config/{user_id}`` 必須傳入包含 ``schema_version: 2``、``base_revision``、
+``operation_id``、``bucket`` 的新版 envelope。版本檢查與寫入在同一交易完成。
+GET 回傳已提交的 ``revision`` 及 ``cas_supported: true``；過期寫入回 HTTP 409。
+相同操作重送回原提交版本，不覆寫後來的資料；重用 ID 傳不同資料會被拒絕。
+帳號隔離、共享秘密與資料量／帳號上限仍有效，瀏覽器 preflight 支援 PUT。
+WebRTC 待配對連線仍採 TTL。
+
+``je_auto_control.api.config_sync`` 提供 ``ConfigStore``、``ConfigBucket``、
+``ConfigSyncError``、``ConfigRevisionConflict``、``ConfigStoreCapacityError``。
+現有時間戳記用戶端需要明確開啟 ``--allow-legacy-config-writes`` 遷移選項，
+預設禁止無條件寫入。設定同步 GUI、因果衝突與離線 outbox 尚待交付。

@@ -9,8 +9,9 @@ timestamp; the newer entry wins on conflict.
 
 This module is the **headless client**. It speaks HTTP to a sync endpoint,
 ``GET`` / ``PUT /config/{user_id}`` with an optional ``X-Signaling-Secret``
-header, that stores the bucket as an opaque JSON document; this package does
-not ship that endpoint yet -- the signaling server has no ``/config`` routes.
+header. The signaling server persists buckets and requires version-2 revision
+envelopes by default. This legacy client currently requires the server's explicit
+compatibility write option.
 
 Each section maps an entry id to a dict carrying ``last_modified``. Section
 names are free-form; ``hotkeys``, ``triggers``, ``address_book`` and
@@ -27,8 +28,12 @@ from je_auto_control.utils.config_sync.client import (
     TOMBSTONE_RETENTION_S, ConflictRecord, ConfigBucket, ConfigSyncClient,
     ConfigSyncError, is_tombstone, merge_buckets,
 )
+from je_auto_control.utils.config_sync.store import (
+    ConfigRevisionConflict, ConfigStore, ConfigStoreCapacityError,
+)
 
 __all__ = [
     "ConfigBucket", "ConflictRecord", "ConfigSyncClient",
     "ConfigSyncError", "TOMBSTONE_RETENTION_S", "is_tombstone", "merge_buckets",
+    "ConfigRevisionConflict", "ConfigStore", "ConfigStoreCapacityError",
 ]

@@ -15,6 +15,8 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Added
 
+- Persistent config SQLite storage and version-2 CAS envelopes with idempotent operation receipts. Signaling adds --config-store / AC_CONFIG_STORE_PATH and --allow-legacy-config-writes; blind PUT is disabled by default.
+
 - Beta selected-run journal candidate generation with observed-only source,
   actions, provenance manifest and warnings; command/argument/dry-run and Python
   AST validation, `codegen --from-log --run-id`, AC/MCP adapters and separate

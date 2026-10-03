@@ -18,8 +18,10 @@ _SECRET = {"X-Signaling-Secret": "s3cret"}
 
 
 @pytest.fixture
-def client():
-    return testclient.TestClient(create_app(shared_secret="s3cret", serve_web_viewer=False))
+def client(tmp_path):
+    return testclient.TestClient(create_app(shared_secret="s3cret", serve_web_viewer=False,
+                                          config_store_path=tmp_path / 'config.sqlite',
+                                          allow_legacy_config_writes=True))
 
 
 def test_an_unknown_bucket_is_404(client):
@@ -27,9 +29,10 @@ def test_an_unknown_bucket_is_404(client):
 
 
 def test_a_bucket_round_trips(client):
-    bucket = {"user_id": "alice", "revision": 3, "sections": {"hotkeys": []}}
+    bucket = {"user_id": "alice", "revision": 3, "sections": {"hotkeys": {}}}
     assert client.put("/config/alice", json=bucket, headers=_SECRET).status_code == 200
-    assert client.get("/config/alice", headers=_SECRET).json() == bucket
+    assert client.get("/config/alice", headers=_SECRET).json() == {
+        **bucket, 'revision': 1, 'schema_version': 2, 'cas_supported': True}
 
 
 def test_config_routes_need_the_secret(client):
@@ -55,11 +58,13 @@ def _free_port():
         return probe.getsockname()[1]
 
 
-def test_the_real_client_syncs_through_the_server():
+def test_the_real_client_syncs_through_the_server(tmp_path):
     uvicorn = pytest.importorskip("uvicorn")
     from je_auto_control.utils.config_sync import ConfigBucket, ConfigSyncClient
     port = _free_port()
-    server = uvicorn.Server(uvicorn.Config(create_app(shared_secret="s3cret", serve_web_viewer=False),
+    server = uvicorn.Server(uvicorn.Config(create_app(shared_secret="s3cret", serve_web_viewer=False,
+                                                     config_store_path=tmp_path / 'config.sqlite',
+                                                     allow_legacy_config_writes=True),
                                            host="127.0.0.1", port=port, log_level="error"))
     thread = threading.Thread(target=server.run, daemon=True)
     thread.start()

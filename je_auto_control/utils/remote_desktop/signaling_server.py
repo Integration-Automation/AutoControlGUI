@@ -4,9 +4,9 @@ Hosts register an offer keyed by their host ID; viewers fetch the offer,
 post an answer, and the host polls for it. The server is stateless beyond
 an in-memory dict with TTL eviction — restart loses pending sessions.
 
-It also serves ``GET`` / ``PUT /config/{user_id}``, the per-user bucket that
-:mod:`je_auto_control.utils.config_sync` pushes and pulls. Buckets are kept
-in memory as sent (no TTL), so they too are lost on restart.
+It also serves ``GET`` / ``PUT /config/{user_id}`` with persistent SQLite
+buckets, committed revisions and version-2 CAS/idempotent writes. Blind legacy
+writes require explicit compatibility configuration.
 
 Run::
 
@@ -16,9 +16,8 @@ Run::
 Optional ``--shared-secret`` requires every request to carry a matching
 ``X-Signaling-Secret`` header (cheap protection against drive-by use).
 
-Deployment: drop behind nginx + TLS on a small VPS. The server itself
-is single-process; for HA put two instances behind a sticky load balancer
-or swap the in-memory store for Redis (left as a follow-up).
+Deployment: put behind TLS and configure --config-store for persistent buckets.
+Pending rendezvous sessions remain process-local with TTL eviction.
 """
 from __future__ import annotations
 
@@ -29,7 +28,14 @@ import os
 import threading
 import time
 from dataclasses import dataclass, field
-from typing import Annotated, Dict, List, Optional
+from typing import Annotated, Callable, Dict, List, Optional
+from contextlib import asynccontextmanager
+
+from je_auto_control.utils.config_sync.client import ConfigBucket, ConfigSyncError
+from je_auto_control.utils.config_sync.store import (
+    ConfigRevisionConflict, ConfigStore, ConfigStoreCapacityError, StorePath,
+    default_config_store_path, validate_operation_id, validate_revision,
+)
 
 try:
     from fastapi import Depends, FastAPI, Header, HTTPException, Request
@@ -65,26 +71,6 @@ class _Session:
     answer_sdp: Optional[str] = None
     created_at: float = field(default_factory=time.monotonic)
     updated_at: float = field(default_factory=time.monotonic)
-
-
-class _ConfigStore:
-    """Thread-safe in-memory map of user id -> config-sync bucket."""
-
-    def __init__(self) -> None:
-        self._buckets: Dict[str, Dict] = {}
-        self._lock = threading.Lock()
-
-    def get(self, user_id: str) -> Optional[Dict]:
-        with self._lock:
-            return self._buckets.get(user_id)
-
-    def put(self, user_id: str, bucket: Dict) -> bool:
-        """Store ``bucket``; ``False`` when a new user would exceed the cap."""
-        with self._lock:
-            if user_id not in self._buckets and len(self._buckets) >= _MAX_CONFIG_USERS:
-                return False
-            self._buckets[user_id] = bucket
-            return True
 
 
 class _SessionStore:
@@ -197,7 +183,7 @@ def _configure_cors(app: FastAPI, cors_origins: Optional[List[str]]) -> None:
     app.add_middleware(
         CORSMiddleware,
         allow_origins=cors_origins or ["*"],  # nosemgrep: python.fastapi.security.wildcard-cors.wildcard-cors
-        allow_methods=["GET", "POST", "DELETE", "OPTIONS"],
+        allow_methods=["GET", "PUT", "POST", "DELETE", "OPTIONS"],
         allow_headers=["Content-Type", "X-Signaling-Secret"],
     )
 
@@ -322,17 +308,30 @@ def _validate_user_id(user_id: str) -> None:
 _CONFIG_RESPONSES = {
     400: {"description": "invalid user_id or bucket"},
     404: {"description": "no bucket for this user"},
+    409: {"description": "stale committed revision"},
     503: {"description": "too many users"},
     **_AUTH_RESPONSES,
 }
 
 
-def _register_config_routes(app: FastAPI, store: _ConfigStore, secret_dep) -> None:
-    """``GET`` / ``PUT /config/{user_id}`` for :mod:`je_auto_control.utils.config_sync`.
+def _commit_config(store: ConfigStore, user_id: str, body: Dict[str, object], legacy: bool) -> int:
+    if 'schema_version' not in body:
+        if not legacy:
+            raise ConfigSyncError('version-2 CAS envelope required')
+        return store.commit_legacy(user_id, ConfigBucket.from_dict(body))
+    if type(body['schema_version']) is not int or body['schema_version'] != 2:
+        raise ConfigSyncError('schema_version must be 2')
+    payload = body.get('bucket')
+    if not isinstance(payload, dict):
+        raise ConfigSyncError('bucket must be a mapping')
+    return store.commit(user_id, ConfigBucket.from_dict(payload),
+                        base_revision=validate_revision(body.get('base_revision')),
+                        operation_id=validate_operation_id(body.get('operation_id')))
 
-    The client has always called these; nothing served them, so every sync
-    failed. A bucket is stored as sent -- the merge happens client-side.
-    """
+
+def _register_config_routes(app: FastAPI, store: ConfigStore, secret_dep: Callable,
+                            allow_legacy: bool) -> None:
+    """Expose durable buckets and protected revision commits without executing data."""
     auth_only = [Depends(secret_dep)]
 
     @app.get("/config/{user_id}", responses=_CONFIG_RESPONSES, dependencies=auth_only)
@@ -341,16 +340,20 @@ def _register_config_routes(app: FastAPI, store: _ConfigStore, secret_dep) -> No
         bucket = store.get(user_id)
         if bucket is None:
             raise HTTPException(status_code=404, detail="no bucket")  # NOSONAR — see _CONFIG_RESPONSES
-        return bucket
+        return {**bucket.to_dict(), 'schema_version': 2, 'cas_supported': True}
 
     @app.put("/config/{user_id}", responses=_CONFIG_RESPONSES, dependencies=auth_only)
-    def _put_config(user_id: str, bucket: Dict) -> dict:
+    def _put_config(user_id: str, body: Dict[str, object]) -> dict:
         _validate_user_id(user_id)
-        if bucket.get("user_id", user_id) != user_id:
-            raise HTTPException(status_code=400, detail="bucket user_id mismatch")  # NOSONAR — see _CONFIG_RESPONSES
-        if not store.put(user_id, bucket):
-            raise HTTPException(status_code=503, detail="too many users")  # NOSONAR — see _CONFIG_RESPONSES
-        return {"ok": True}
+        try:
+            revision = _commit_config(store, user_id, body, allow_legacy)
+        except ConfigRevisionConflict as error:
+            raise HTTPException(status_code=409, detail=str(error)) from error
+        except ConfigStoreCapacityError as error:
+            raise HTTPException(status_code=503, detail=str(error)) from error
+        except ConfigSyncError as error:
+            raise HTTPException(status_code=400, detail=str(error)) from error
+        return {'ok': True, 'revision': revision, 'schema_version': 2, 'cas_supported': True}
 
 
 def _register_request_logging(app: FastAPI) -> None:
@@ -365,9 +368,20 @@ def _register_request_logging(app: FastAPI) -> None:
 def create_app(shared_secret: Optional[str] = None,
                ttl_s: float = _DEFAULT_TTL_S,
                serve_web_viewer: bool = True,
-               cors_origins: Optional[list] = None) -> FastAPI:
-    """Build the FastAPI app. Importable for embedding in larger services."""
-    app = FastAPI(title="AutoControl Signaling", version="1.0.0")
+               cors_origins: Optional[List[str]] = None, *,
+               config_store_path: StorePath = default_config_store_path,
+               allow_legacy_config_writes: bool = False) -> FastAPI:
+    """Build a lazy persistent-config app; compatibility writes are explicitly opt-in."""
+    config_store = ConfigStore(config_store_path, max_users=_MAX_CONFIG_USERS)
+
+    @asynccontextmanager
+    async def _lifespan(_app: FastAPI):
+        try:
+            yield
+        finally:
+            config_store.close()
+
+    app = FastAPI(title="AutoControl Signaling", version="1.0.0", lifespan=_lifespan)
     store = _SessionStore(ttl_s=ttl_s)
     # Before CORS, so CORS wraps it and a browser still sees the 401 / 413.
     _register_body_guard(app, shared_secret)
@@ -375,7 +389,7 @@ def create_app(shared_secret: Optional[str] = None,
     _maybe_mount_viewer(app, serve_web_viewer)
     secret_dep = _build_secret_dependency(shared_secret)
     _register_routes(app, store, secret_dep)
-    _register_config_routes(app, _ConfigStore(), secret_dep)
+    _register_config_routes(app, config_store, secret_dep, allow_legacy_config_writes)
     _register_request_logging(app)
     return app
 
@@ -398,6 +412,10 @@ def _build_arg_parser() -> argparse.ArgumentParser:
                         help="don't mount the bundled web viewer at /viewer")
     parser.add_argument("--cors-origin", action="append", default=None,
                         help="allowed CORS origin (repeatable; default: *)")
+    parser.add_argument('--config-store', default=None,
+                        help='SQLite path (default: AC_CONFIG_STORE_PATH or per-user cache)')
+    parser.add_argument('--allow-legacy-config-writes', action='store_true',
+                        help='explicitly allow blind legacy config PUT during migration')
     return parser
 
 
@@ -419,6 +437,8 @@ def main(argv: Optional[list] = None) -> None:
         ttl_s=args.ttl_seconds,
         serve_web_viewer=not args.no_web_viewer,
         cors_origins=args.cors_origin,
+        config_store_path=args.config_store or default_config_store_path,
+        allow_legacy_config_writes=args.allow_legacy_config_writes,
     )
     uvicorn.run(app, host=args.bind, port=args.port, log_level="info")
 

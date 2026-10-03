@@ -345,3 +345,5 @@ Script Builder and Recording Editor use the same core. These tests and
 `benchmarks/journal_codegen` do not certify physical replay or unobserved paths.
 
 Whole-B review regressions cover positional resolved credentials and sensitive getter outputs before append/logging, unhandled loop/parallel/catch failures versus successful recovery, omitted variable-dependent candidates and required block arguments without dispatch. These remain controlled headless checks.
+
+Persistent config server is Beta with controlled SQLite/TestClient/loopback tests for restart, concurrent writers, idempotent retries, account isolation and migration guards. Physical multi-device convergence, config GUI and offline causal client are not claimed by this server-only increment.

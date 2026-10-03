@@ -666,3 +666,24 @@ marks unhandled descendant failures as errors. Successfully caught/retried
 failures retain successful container/run status.
 Interpolated variable names are conservatively private before recording.
 Known private scalar values, including numeric PINs, are masked in result/log copies.
+
+## Persistent config server (Beta)
+
+The signaling service keeps config buckets in SQLite across restarts. Set
+`--config-store PATH` or `AC_CONFIG_STORE_PATH`; otherwise the database path
+is resolved on first use under `~/.je_auto_control/config_sync.sqlite`.
+Importing the API or constructing an app creates no database.
+
+`PUT /config/{user_id}` requires a version-2 envelope with `schema_version: 2`,
+`base_revision`, `operation_id` and `bucket`. The server checks and writes in
+one transaction. GET reports the committed `revision` and `cas_supported: true`.
+Stale writes return HTTP 409; an identical operation retry returns the original
+revision without replacing later data. Reusing its ID with different data is an error.
+Accounts, shared-secret authentication and body/user limits remain enforced.
+Browser preflight supports PUT. Pending WebRTC rendezvous sessions retain their TTL.
+
+`je_auto_control.api.config_sync` exports `ConfigStore`, `ConfigBucket`,
+`ConfigSyncError`, `ConfigRevisionConflict` and `ConfigStoreCapacityError`.
+The existing timestamp-based client requires the explicit
+`--allow-legacy-config-writes` migration option; blind writes are disabled by default.
+The config client GUI, causal conflicts and offline outbox are still pending.

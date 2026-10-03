@@ -35,13 +35,13 @@ Step 4 通過後，該階段另外執行 ruff、相關既有回歸與三目標�
 
 ---
 
-### Task C1: 持久化與 CAS server
+### Task 1: C1 持久化與 CAS server
 
 **Files:** 修改：`je_auto_control/utils/remote_desktop/signaling_server.py`；新增：`je_auto_control/utils/config_sync/store.py`；測試：`test/unit_test/headless/test_config_sync_persistence.py`。
 
 **Interfaces:** `ConfigStore.commit(user_id: str, bucket: ConfigBucket, *, base_revision: int, operation_id: str) -> int`；revision 檢查／寫入在一個 SQLite transaction，重複 operation 回原 revision。
 
-- [ ] **Step 1:** 定義 fake fixtures 並新增 `test_reopen_preserves_bucket, test_stale_revision_conflicts, test_operation_retry_is_idempotent`，驗證：
+- [x] **Step 1:** 定義 fake fixtures 並新增 `test_reopen_preserves_bucket, test_stale_revision_conflicts, test_operation_retry_is_idempotent`，驗證：
 
 ```python
 assert reopened.get(user).revision == committed_revision
@@ -49,12 +49,12 @@ assert stale_response.status_code == 409
 assert repeated.revision == original.revision
 ```
 
-- [ ] **Step 2:** 執行 `.venv/Scripts/python.exe -m pytest -q --tb=short --basetemp=.test-tmp/modernization-task -o cache_dir=.test-tmp/modernization-pytest-cache test/unit_test/headless/test_config_sync_persistence.py`，確認新測試因原有缺陷或尚未提供接口而 FAIL；不要把環境錯誤當成功的重現。
-- [ ] **Step 3:** version-2 PUT 以 base_revision/operation_id 加 envelope，GET 回 committed revision。設定 store 路徑 lazy resolve，account isolation、body cap 與共享 secret 規則沿用；舊 blind write 需明確相容設定。
-- [ ] **Step 4:** 重跑 Step 2，預期 exit 0；再跑這些修改檔所對應的既有回歸，確認公開契約。
-- [ ] **Step 5:** 更新本 task 的型別、所有交付入口、文件、測量計數與進度，僅 stage 本 task 檔案，提交 `git commit -m 'C1: 持久化與 CAS server'`。
+- [x] **Step 2:** 執行 `.venv/Scripts/python.exe -m pytest -q --tb=short --basetemp=.test-tmp/modernization-task -o cache_dir=.test-tmp/modernization-pytest-cache test/unit_test/headless/test_config_sync_persistence.py`，確認新測試因原有缺陷或尚未提供接口而 FAIL；不要把環境錯誤當成功的重現。
+- [x] **Step 3:** version-2 PUT 以 base_revision/operation_id 加 envelope，GET 回 committed revision。設定 store 路徑 lazy resolve，account isolation、body cap 與共享 secret 規則沿用；舊 blind write 需明確相容設定。
+- [x] **Step 4:** 重跑 Step 2，預期 exit 0；再跑這些修改檔所對應的既有回歸，確認公開契約。
+- [x] **Step 5:** 更新本 task 的型別、所有交付入口、文件、測量計數與進度，僅 stage 本 task 檔案，提交 `git commit -m 'C1: 持久化與 CAS server'`。
 
-### Task C2: 因果合併、刪除與離線 outbox
+### Task 2: C2 因果合併、刪除與離線 outbox
 
 **Files:** 修改：`je_auto_control/utils/config_sync/client.py`、`je_auto_control/utils/config_sync/__init__.py`；新增：`je_auto_control/utils/config_sync/versions.py`、`je_auto_control/utils/config_sync/outbox.py`；測試：`test/unit_test/headless/test_config_sync_convergence.py`。
 
@@ -73,7 +73,7 @@ assert wall_clock_does_not_change_merge is True
 - [ ] **Step 4:** 重跑 Step 2，預期 exit 0；再跑這些修改檔所對應的既有回歸，確認公開契約。
 - [ ] **Step 5:** 更新本 task 的型別、所有交付入口、文件、測量計數與進度，僅 stage 本 task 檔案，提交 `git commit -m 'C2: 因果合併、刪除與離線 outbox'`。
 
-### Task C3: 設定／資產 adapter 與同步 UI
+### Task 3: C3 設定／資產 adapter 與同步 UI
 
 **Files:** 修改：`je_auto_control/utils/remote_desktop/file_sync.py`、`je_auto_control/utils/remote_desktop/clipboard_sync.py`；新增：`je_auto_control/utils/config_sync/adapters.py`、`je_auto_control/utils/config_sync/assets.py`、`je_auto_control/gui/config_sync_tab.py`；測試：`test/unit_test/headless/test_sync_adapters.py`。
 
@@ -92,7 +92,7 @@ assert sync_payload_contains_secret is False
 - [ ] **Step 4:** 重跑 Step 2，預期 exit 0；再跑這些修改檔所對應的既有回歸，確認公開契約。
 - [ ] **Step 5:** 更新本 task 的型別、所有交付入口、文件、測量計數與進度，僅 stage 本 task 檔案，提交 `git commit -m 'C3: 設定／資產 adapter 與同步 UI'`。
 
-### Task C4: 遠端 session 擁有權
+### Task 4: C4 遠端 session 擁有權
 
 **Files:** 修改：`je_auto_control/utils/remote_desktop/registry.py`、`je_auto_control/gui/remote_desktop/connection_screen.py`、`je_auto_control/gui/remote_desktop/viewer_panel.py`、`je_auto_control/gui/remote_desktop/webrtc_panel.py`、`je_auto_control/utils/executor/action_executor.py`；新增：`je_auto_control/utils/remote_desktop/sessions.py`；測試：`test/unit_test/headless/test_remote_session_ownership.py`。
 

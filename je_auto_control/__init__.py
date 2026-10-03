@@ -1221,6 +1221,9 @@ from je_auto_control.utils.codegen.codegen import (
 from je_auto_control.api.codegen import (
     CandidateError, CandidateScript, generate_candidate_from_log, generate_journal_candidate,
 )
+from je_auto_control.api.config_sync import (
+    ConfigBucket, ConfigRevisionConflict, ConfigStore, ConfigStoreCapacityError, ConfigSyncError,
+)
 # HTTP/API request action (dependency-free, stdlib urllib)
 from je_auto_control.utils.http_client.http_client import http_request
 # Ad-hoc read-only SQL query against SQLite
@@ -1313,6 +1316,7 @@ def start_autocontrol_gui(*args, **kwargs):
     return _impl(*args, **kwargs)
 
 __all__ = [
+    'ConfigBucket', 'ConfigRevisionConflict', 'ConfigStore', 'ConfigStoreCapacityError', 'ConfigSyncError',
     "CryptoDependencyError", "CryptoImportError", "CryptoUnavailableError",
     "AuthorizationContext", "AuthorizationError", "Capability", "Role", "UserAuthError",
     "UserRecord", "UserStore", "authorization_scope", "can", "configured_user_store",
