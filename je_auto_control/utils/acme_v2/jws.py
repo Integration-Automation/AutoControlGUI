@@ -14,13 +14,15 @@ from typing import Any, Dict, Mapping, Optional
 
 from je_auto_control.utils.exception.exceptions import AutoControlException
 
+from je_auto_control.utils.exception.exceptions import CryptoImportError
+
 try:
     from cryptography.hazmat.primitives import hashes, serialization
     from cryptography.hazmat.primitives.asymmetric import padding, rsa
 except ImportError as exc:  # pragma: no cover - platform-dependent wheel
-    raise ImportError(
+    raise CryptoImportError(
         "ACME JWS signing requires cryptography, which publishes no "
-        "Windows arm64 wheel: pip install cryptography"
+        "Windows arm64 wheel: pip install \"cryptography>=50.0.0\""
     ) from exc
 
 

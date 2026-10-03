@@ -11,6 +11,19 @@ class AutoControlException(Exception):
     """
 
 
+# Optional cryptography
+class CryptoDependencyError(AutoControlException):
+    """A crypto feature requires an unavailable optional cryptography library."""
+
+
+class CryptoUnavailableError(CryptoDependencyError, RuntimeError):
+    """Runtime crypto unavailability; retains existing RuntimeError handlers."""
+
+
+class CryptoImportError(CryptoDependencyError, ImportError):
+    """Optional crypto module import failure; retains ImportError handlers."""
+
+
 # Keyboard
 class AutoControlKeyboardException(AutoControlException):
     pass

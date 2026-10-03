@@ -58,6 +58,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261003-06 | 2026-10-03 | Raise crypto floor and verify optional installation profiles | #done #dependencies | [2026-10](2026-10.md) |
 | U-20261003-05 | 2026-10-03 | Enforce opt-in REST/MCP roles and shared user administration | #done #rbac | [2026-10](2026-10.md) |
 | U-20261003-04 | 2026-10-03 | Keep Agent history append-only and compact into new conversations | #done #agent | [2026-10](2026-10.md) |
 | U-20261003-03 | 2026-10-03 | Unify virtual capture, Retina points and per-monitor DPI | #done #screen | [2026-10](2026-10.md) |
@@ -348,7 +349,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | File | Period | Entries |
 |---|---|---:|
-| [2026-10.md](2026-10.md) | 2026-10 | 12 |
+| [2026-10.md](2026-10.md) | 2026-10 | 13 |
 | [2026-09-e.md](2026-09-e.md) | 2026-09 | 7 |
 | [2026-09-d.md](2026-09-d.md) | 2026-09 | 55 |
 | [2026-09-c.md](2026-09-c.md) | 2026-09 | 38 |

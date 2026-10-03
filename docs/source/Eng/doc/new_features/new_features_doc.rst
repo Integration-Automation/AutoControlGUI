@@ -1400,3 +1400,13 @@ using the same store as local servers. The facade exports ``rbac_*`` adapters an
 ``AC_user_remove``, ``AC_user_set_role``, ``AC_user_rotate_token`` (equivalent lowercase
 MCP names). Supply command tokens with ``${secrets.USER_TOKEN}``; results contain
 metadata only. Local GUI-generated tokens are shown once for saving.
+
+Secure crypto installation
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+cryptography>=50.0.0 is required, with 50.0.2 in the lock. Windows arm64
+markers remain; Intel Mac needs a source build. Missing crypto features raise
+CryptoDependencyError with installation instructions, while noncrypto imports
+and commands stay usable. CryptoUnavailableError remains a RuntimeError;
+CryptoImportError remains an ImportError. See docs/CAPABILITY_MATRIX.md for the
+separate binary probes and official source-build guide.

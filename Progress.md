@@ -101,7 +101,7 @@ sys_platform != 'win32' or platform_machine != 'ARM64'
 | 依賴 | win_arm64 | 實測（2026-08-20） |
 | --- | --- | --- |
 | `opencv-python>=4.8,<6` | **沒有** | 任何版本都沒有，pip 回的是 `from versions: none`。`je_open_cv` 自己是純 Python，但相依 opencv-python，所以一起卡——標記也必須一起下。 |
-| `cryptography>=48.0.1` | **沒有** | wheel 只出到 **46.0.3**，46.0.4 起上游就不再發 win_arm64。而 `>=48.0.1` 是 347ec1e 為了 GHSA-537c-gmf6-5ccf（high）訂的**安全下限**，不能為了 arm64 降回去。 |
+| `cryptography>=50.0.0` | **沒有** | wheel 只出到 **46.0.3**，46.0.4 起上游就不再發 win_arm64。而 `>=50.0.0` 是 347ec1e 為了 GHSA-g6cj-pr64-35w5（moderate；50.0.0 修復）訂的**安全下限**，不能為了 arm64 降回去。 |
 | `pillow==12.3.0` | 有 | `pillow-12.3.0-cp3xx-win_arm64.whl` 一直都在。**曾經被寫成卡點，那是猜的，它從來不是。** |
 | `mss`／`defusedxml` | 有 | 純 Python。這三個加上 Pillow 就是 arm64 實際裝到的全部。 |
 | `PySide6==6.11.1`／`qt-material==2.17` | 有 | `[gui]` extra 在 arm64 上裝得起來。 |
@@ -110,7 +110,7 @@ sys_platform != 'win32' or platform_machine != 'ARM64'
 重驗指令（不需要 arm64 機器，也不需要 runner）：
 
 ```bash
-pip install --dry-run --only-binary=:all: --platform win_arm64 --python-version 3.12 --target /tmp/probe 'opencv-python>=4.8,<6' 'cryptography>=48.0.1'
+pip install --dry-run --only-binary=:all: --platform win_arm64 --python-version 3.12 --target /tmp/probe 'opencv-python>=4.8,<6' 'cryptography>=50.0.0'
 ```
 
 兩行 `ERROR: No matching distribution` 就是現況。**哪天其中一行不見了，就把
@@ -227,26 +227,6 @@ pip install --dry-run --only-binary=:all: --platform win_arm64 --python-version 
 出現，就把 `_teardown` 的迴避拿掉。形狀與 arm64 那條一樣：卡上游、有一行重驗。
 
 ---
-
-## `cryptography` 的安全下限要不要拉到 50
-
-`DECIDE` — 要不要用 Intel Mac 的預編 wheel 換掉一個本套件沒用到的漏洞範圍
-
-`pyproject.toml` 的 `cryptography>=48.0.1` 仍包含 GHSA-g6cj-pr64-35w5（high,`>=44.0.0, <50.0.0`,
-PKCS#7 EnvelopedData 解密的 Bleichenbacher oracle）的範圍。本套件沒有呼叫 PKCS#7 解密
-（用的是 Fernet，以及 aiortc 的 DTLS），所以目前不受影響。`uv.lock` 已鎖在 50.0.1。
-
-**為什麼要拍板**:49.0.0 起上游不再發 `macosx_10_9_universal2` wheel，只剩 `macosx_11_0_arm64`。
-下限拉到 `>=50.0.0` 之後，Intel Mac 上的 `pip install` 要從原始碼編譯（得先裝 Rust 工具鏈）。
-CI 只有 macos-14(arm64)，量不到這一點。重新檢查（不需要機器）:
-
-```bash
-pip install --dry-run --only-binary=:all: --platform macosx_10_9_x86_64 \
-    --python-version 3.12 --target /tmp/probe 'cryptography>=50'
-```
-
----
-
 
 ## `AC_run_agent` 預設把每個 AC_* 指令都交給模型
 

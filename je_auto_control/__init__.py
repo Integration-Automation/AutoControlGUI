@@ -3,6 +3,9 @@ import all wrapper function
 """
 
 # callback
+from je_auto_control.utils.exception.exceptions import (
+    CryptoDependencyError, CryptoImportError, CryptoUnavailableError,
+)
 from je_auto_control.utils.rbac import (
     AuthorizationContext, AuthorizationError, Capability, Role, UserAuthError,
     UserRecord, UserStore, authorization_scope, can, configured_user_store,
@@ -1298,6 +1301,7 @@ def start_autocontrol_gui(*args, **kwargs):
     return _impl(*args, **kwargs)
 
 __all__ = [
+    "CryptoDependencyError", "CryptoImportError", "CryptoUnavailableError",
     "AuthorizationContext", "AuthorizationError", "Capability", "Role", "UserAuthError",
     "UserRecord", "UserStore", "authorization_scope", "can", "configured_user_store",
     "default_user_store", "rbac_add_user", "rbac_list_users", "rbac_remove_user",

@@ -58,6 +58,10 @@ ENVIRONMENTS: Dict[str, Dict[str, str]] = {
         "sys_platform": "darwin", "platform_machine": "arm64",
         "platform_system": "Darwin",
     },
+    "macos x86-64": {
+        "sys_platform": "darwin", "platform_machine": "x86_64",
+        "platform_system": "Darwin",
+    },
     "freebsd x86-64": {
         "sys_platform": "freebsd14", "platform_machine": "amd64",
         "platform_system": "FreeBSD",

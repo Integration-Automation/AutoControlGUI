@@ -10,6 +10,8 @@ on first use, 0600). Files written before the salt existed -- a bare token
 keyed by unsalted SHA-256 of the passphrase -- still decrypt.
 GUI-free; imports no Qt.
 """
+from je_auto_control.utils.exception.exceptions import CryptoUnavailableError
+
 import base64
 import hashlib
 import os
@@ -47,8 +49,8 @@ def _fernet_types() -> tuple:
     try:
         from cryptography.fernet import Fernet, InvalidToken
     except ImportError as error:
-        raise RuntimeError(
-            "Action-file encryption requires cryptography (pip install cryptography). "
+        raise CryptoUnavailableError(
+            "Action-file encryption requires cryptography (pip install \"cryptography>=50.0.0\"). "
             "It has no Windows arm64 wheel, so encryption is unavailable there."
         ) from error
     return Fernet, InvalidToken

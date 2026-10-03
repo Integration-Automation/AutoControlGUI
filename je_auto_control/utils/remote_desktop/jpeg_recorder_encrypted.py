@@ -24,12 +24,14 @@ from pathlib import Path
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from typing import Dict, List, Optional
 
+from je_auto_control.utils.exception.exceptions import CryptoImportError
+
 try:
     from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 except ImportError as exc:  # pragma: no cover - platform-dependent wheel
-    raise ImportError(
+    raise CryptoImportError(
         "Encrypted recording requires cryptography, which publishes no "
-        "Windows arm64 wheel: pip install cryptography"
+        "Windows arm64 wheel: pip install \"cryptography>=50.0.0\""
     ) from exc
 
 _MANIFEST_FILENAME = "manifest.json"

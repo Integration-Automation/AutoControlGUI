@@ -1307,3 +1307,12 @@ JSON／Script Builder 提供 ``AC_user_add``、``AC_user_list``、``AC_user_remo
 ``AC_user_set_role``、``AC_user_rotate_token``，MCP 使用相應小寫名称。
 命令 token 可由 ``${secrets.USER_TOKEN}`` 提供，結果僅含使用者資料。
 GUI 產生的 token 僅顯示一次供保存。
+
+加密安全下限與安裝
+~~~~~~~~~
+
+cryptography>=50.0.0 為安全下限，lock 使用 50.0.2。Windows arm64 保留
+optional markers，Intel Mac 需原始碼編譯。缺少依賴時，相關能力拋出
+CryptoDependencyError 並附安裝說明；非加密匯入與操作維持可用。
+CryptoUnavailableError 相容 RuntimeError，CryptoImportError 相容 ImportError。
+各平台獨立 binary probe 與官方編譯指引見 docs/CAPABILITY_MATRIX.md。

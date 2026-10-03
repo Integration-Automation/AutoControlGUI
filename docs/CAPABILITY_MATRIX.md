@@ -124,17 +124,33 @@ asked for button events for the wheel — which is what caught `mouse_scroll`
 matching a literal `["linux", "linux2"]` and therefore doing nothing at all,
 silently, on every BSD.
 
-**arm64.** `macos-14` was already arm64; `ubuntu-22.04-arm` joins the
-smoke matrix and passes. `windows-11-arm` was tried and removed, on
-measurement rather than assumption, and **two** dependencies are why:
-**opencv-python publishes no `win_arm64` wheel** in any version, so pip falls
-back to building from source and CMake cannot configure for ARM64; and
-**cryptography stopped publishing one after 46.0.3**, while this project's
-floor is `>=48.0.1` — a security floor (GHSA-537c-gmf6-5ccf) that cannot be
-lowered to reach a wheel. Neither is a CI problem to work around: the package
-genuinely cannot be installed on Windows arm64 today. `Progress.md` records
-both, alongside a `pip --dry-run --platform win_arm64` command that re-checks
-them in seconds without an arm64 machine.
+**Crypto installation snapshot (2026-10-03).** The required cryptography floor
+is >=50.0.0; uv.lock resolves 50.0.2. The upstream PKCS#7 advisory is moderate
+and fixed in 50.0.0; AutoControl does not invoke PKCS#7 decryption. See the
+[upstream advisory](https://github.com/pyca/cryptography/security/advisories/GHSA-g6cj-pr64-35w5)
+and [PyPI release files](https://pypi.org/project/cryptography/50.0.2/#files).
+
+| Target / Python 3.12 binary probe | cryptography>=50.0.0 | Base profile / affected features |
+| --- | --- | --- |
+| Windows x64 (`win_amd64`) | 50.0.2 wheel resolves | Crypto regressions pass with an isolated 50.0.2 wheel. |
+| Windows arm64 (`win_arm64`) | No matching wheel; newest offered 46.0.3 | Markers exclude crypto/OpenCV/je_open_cv, keeping imports and noncrypto capabilities available. Encryption, vault, Ed25519, TLS/ACME and encrypted recording require a compatible local crypto build. |
+| Intel Mac (`macosx_10_9_x86_64`) | No matching wheel; newest offered 48.0.1 | Crypto stays required; installation needs a source build. Do not lower the security floor. |
+| Apple Silicon | PyPI lists macosx_11_0_arm64 wheels | Metadata verified; native installation is covered by the later platform matrix. |
+
+Reproduce each crypto probe separately (pip --platform does not change PEP 508
+marker evaluation on the running host):
+
+```sh
+python -m pip install --dry-run --only-binary=:all: --no-deps --platform win_arm64 --python-version 3.12 --target ./probe-win-arm 'cryptography>=50.0.0'
+python -m pip install --dry-run --only-binary=:all: --no-deps --platform macosx_10_9_x86_64 --python-version 3.12 --target ./probe-intel-mac 'cryptography>=50.0.0'
+```
+
+Source builds need Rust and native build dependencies; follow the
+[official installation guide](https://cryptography.io/en/latest/installation/).
+`CryptoDependencyError` identifies unavailable crypto features;
+`CryptoUnavailableError` also remains a RuntimeError, and `CryptoImportError`
+remains an ImportError. Each message includes `pip install "cryptography>=50.0.0"`.
+Public imports stay Qt/crypto-free; unsupported crypto features fail individually.
 
 The accessibility row said `backend tests` for Linux X11 and meant nothing by
 it: there was no Linux backend at all, and `_build_backend()` fell straight

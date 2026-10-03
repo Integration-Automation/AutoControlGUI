@@ -21,6 +21,8 @@ set, every read returns ``None`` and ``${secrets.X}`` resolution raises.
 The on-disk file is created with mode ``0o600`` on POSIX so other users
 cannot read the encrypted blobs.
 """
+from je_auto_control.utils.exception.exceptions import CryptoUnavailableError
+
 import base64
 import hashlib
 import json
@@ -50,8 +52,8 @@ def _fernet_types() -> tuple:
     try:
         from cryptography.fernet import Fernet, InvalidToken
     except ImportError as error:
-        raise RuntimeError(
-            "The secret vault requires cryptography (pip install cryptography). "
+        raise CryptoUnavailableError(
+            "The secret vault requires cryptography (pip install \"cryptography>=50.0.0\"). "
             "It has no Windows arm64 wheel, so the vault is unavailable there."
         ) from error
     return Fernet, InvalidToken

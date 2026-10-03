@@ -420,3 +420,10 @@ JSON／Script Builder 提供 `AC_user_add`、`AC_user_list`、`AC_user_remove`�
 `AC_user_set_role`、`AC_user_rotate_token`，MCP 使用对应小写名称。
 命令 token 可由 `${secrets.USER_TOKEN}` 提供，结果仅含用户资料。
 GUI 生成的 token 仅显示一次供保存。
+
+
+加密依赖下限为 `cryptography>=50.0.0`（lock：50.0.2）。Windows arm64 保留
+optional markers，上游仍无符合安全下限的 wheel；Intel Mac 需源码编译。
+详见[安装矩阵](../docs/CAPABILITY_MATRIX.md)。缺少依赖时，相关能力抛出
+门面公开的 `CryptoDependencyError`；`CryptoUnavailableError` 兼容 RuntimeError，
+`CryptoImportError` 兼容 ImportError。错误附安装指引，非加密操作与 Qt-free 导入可继续使用。

@@ -9,12 +9,14 @@ import urllib.request
 from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, List, Mapping, Optional, Sequence
 
+from je_auto_control.utils.exception.exceptions import CryptoImportError
+
 try:
     from cryptography.hazmat.primitives.asymmetric import rsa
 except ImportError as exc:  # pragma: no cover - platform-dependent wheel
-    raise ImportError(
+    raise CryptoImportError(
         "The ACME client requires cryptography, which publishes no "
-        "Windows arm64 wheel: pip install cryptography"
+        "Windows arm64 wheel: pip install \"cryptography>=50.0.0\""
     ) from exc
 
 from je_auto_control.utils.acme_v2.jws import (

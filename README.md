@@ -470,3 +470,12 @@ using the same store as local servers. The facade exports `rbac_*` adapters and
 `AC_user_remove`, `AC_user_set_role`, `AC_user_rotate_token` (equivalent lowercase
 MCP names). Supply command tokens with `${secrets.USER_TOKEN}`; results contain
 metadata only. Local GUI-generated tokens are shown once for saving.
+
+
+Crypto dependencies require `cryptography>=50.0.0` (lock: 50.0.2). Windows arm64
+keeps its optional markers because upstream still offers no compatible safe
+wheel; Intel Mac requires a source build. See [the installation matrix](docs/CAPABILITY_MATRIX.md).
+Missing crypto features raise facade-exported `CryptoDependencyError`:
+`CryptoUnavailableError` retains RuntimeError compatibility and `CryptoImportError`
+retains ImportError compatibility. Messages include installation instructions;
+noncrypto automation and Qt-free imports remain available.

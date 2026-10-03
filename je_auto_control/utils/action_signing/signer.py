@@ -17,7 +17,7 @@ from pathlib import Path
 from typing import Any, Dict, Optional, TYPE_CHECKING, Union
 
 from je_auto_control.utils.action_signing._key_file import load_or_create_key_file
-from je_auto_control.utils.exception.exceptions import AutoControlException
+from je_auto_control.utils.exception.exceptions import AutoControlException, CryptoUnavailableError
 from je_auto_control.utils.json_store.json_store import atomic_write_text
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 
@@ -71,7 +71,10 @@ def _load_private(key: KeyType = None, path: KeyPath = None) -> Ed25519PrivateKe
         if not isinstance(loaded, Ed25519PrivateKey):
             raise ValueError("expected Ed25519")
         return loaded
-    except (ImportError, ValueError, TypeError) as error:
+    except ImportError as error:
+        raise CryptoUnavailableError(
+            'Ed25519 private keys require: pip install "cryptography>=50.0.0"') from error
+    except (ValueError, TypeError) as error:
         raise AutoControlException(
             "Ed25519 private key unavailable or invalid; install cryptography") from error
 
@@ -86,7 +89,10 @@ def _load_public(key: KeyType = None, path: KeyPath = None) -> Ed25519PublicKey:
         if not isinstance(loaded, Ed25519PublicKey):
             raise ValueError("expected Ed25519")
         return loaded
-    except (ImportError, ValueError, TypeError) as error:
+    except ImportError as error:
+        raise CryptoUnavailableError(
+            'Ed25519 public keys require: pip install "cryptography>=50.0.0"') from error
+    except (ValueError, TypeError) as error:
         raise AutoControlException(
             "Ed25519 public key unavailable or invalid; install cryptography") from error
 
@@ -104,7 +110,8 @@ def create_signing_keypair(private_path: Path, public_path: Path) -> None:
         from cryptography.hazmat.primitives import serialization
         from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
     except ImportError as error:
-        raise AutoControlException("Ed25519 key generation requires cryptography") from error
+        raise CryptoUnavailableError(
+            'Ed25519 key generation requires: pip install "cryptography>=50.0.0"') from error
     generated = Ed25519PrivateKey.generate().private_bytes(
         serialization.Encoding.PEM, serialization.PrivateFormat.PKCS8, serialization.NoEncryption(),
     )

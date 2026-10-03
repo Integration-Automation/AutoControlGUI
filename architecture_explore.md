@@ -20,10 +20,10 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 | 指標 | 數值 |
 | --- | ---: |
 | Python 模組總數（含周邊子專案） | 1,073 |
-| 程式碼總行數 | 158,424 |
+| 程式碼總行數 | 158,460 |
 | `je_auto_control/utils/` 子套件數 | 310 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 781 |
-| 套件門面 `__all__` 公開名稱數 | 1,264 |
+| 套件門面 `__all__` 公開名稱數 | 1,267 |
 | GUI 分頁數（`main_widget` 註冊） | 48 |
 | MCP 工具數（`build_default_tool_registry()` 實測） | 686 |
 | `test_*.py` 測試檔／測試函式 | 478 / 4,654 |
@@ -92,7 +92,7 @@ USB/IP 協定、Prometheus 指標），以維持這條輕相依基線。
 | 模式 | 落點 | 說明 |
 | --- | --- | --- |
 | **Strategy** | `wrapper/platform_wrapper.py` | 依 `sys.platform` 只匯入當前 OS 的 `keyboard`／`mouse`／`screen`／`recorder` 實作；Linux 再細分 Wayland／X11，Wayland 後端不可用時自動退回 XWayland 並記警告。新增平台不需要改 wrapper。 |
-| **Facade** | `je_auto_control/__init__.py` | 把 1,264 個公開名稱集中再匯出，使用者只 `import je_auto_control`。`api/core.py` 另提供一個小而穩定的版本化門面（7 個名稱）給新整合使用。 |
+| **Facade** | `je_auto_control/__init__.py` | 把 1,267 個公開名稱集中再匯出，使用者只 `import je_auto_control`。`api/core.py` 另提供一個小而穩定的版本化門面（7 個名稱）給新整合使用。 |
 | **Command** | `utils/executor/action_executor.py` | `Executor.event_dict` 是字串 → callable 的分派表；JSON 動作檔即指令序列，因此可錄製、序列化、重播、簽章。 |
 | **Observer** | `utils/callback/`、`utils/observer/`、`utils/triggers/` | 動作完成後觸發回呼；畫面出現／消失／變化與外部事件（webhook／IMAP／檔案）驅動腳本。 |
 | **Template Method** | `utils/generate_report/` | HTML／JSON／XML 三個產生器共用「收集紀錄 → 格式化 → 寫檔」骨架，各自實作渲染。 |
@@ -154,7 +154,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
-| `je_auto_control/__init__.py` | 1,982 | **套件門面**。集中匯入並再匯出 1,264 個公開名稱，以功能區塊註解分段（callback／exception／executor／a11y／vision／clipboard…）。 |
+| `je_auto_control/__init__.py` | 1,986 | **套件門面**。集中匯入並再匯出 1,267 個公開名稱，以功能區塊註解分段（callback／exception／executor／a11y／vision／clipboard…）。 |
 | `je_auto_control/__main__.py` | 93 | 舊版 argparse 進入點：`-e` 執行單檔、`-d` 執行整個目錄、`--execute_str` 執行 JSON 字串、`-c` 建立專案。 |
 | `je_auto_control_pytest.py` | 125 | 輕量 pytest11 入口；fixture／失敗截圖內才匯入自動化核心。 |
 | `je_auto_control/cli.py` | 401 | **主 CLI**（`je_auto_control` console script）。子命令：`run`（含 `--var`／`--dry-run`）、`validate`／`lint`、`list-commands`、`fmt`、`record`、`codegen`、`failure-bundle`、`list-jobs`、`start-server`、`start-rest`、`version`、`signing-keygen`、`sign`、`verify`。所有子命令延遲匯入，確保不碰 Qt。 |
@@ -273,12 +273,12 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.1 執行引擎與腳本資產
 
-> 24 個套件、約 14,880 行。
+> 24 個套件、約 14,889 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
 | `utils/action_lint/` | 429 | action 檔 linter 與 JSON Schema 產生器（CI 用 `python -m` 進入點） |
-| `utils/action_signing/` | 476 | action 檔 Ed25519 v2 公鑰驗簽、私鑰離線簽署與 Fernet 加密；所有執行檔案載入器可強制驗簽，HMAC 只允許明確遷移 |
+| `utils/action_signing/` | 485 | action 檔 Ed25519 v2 公鑰驗簽、私鑰離線簽署與 Fernet 加密；所有執行檔案載入器可強制驗簽，HMAC 只允許明確遷移 |
 | `utils/checkpoint/` | 129 | 流程檢查點與續跑，讓長 action list 具持久性 |
 | `utils/codegen/` | 294 | 由 action list 產生可執行的 pytest / python / robot 測試碼 |
 | `utils/dag/` | 552 | 跨主機 DAG 編排器（圖模型 + runner） |
@@ -304,7 +304,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.2 框架基礎設施
 
-> 11 個套件、約 2,774 行。
+> 11 個套件、約 2,787 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -313,7 +313,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/critical_exit/` | 132 | 監看緊急停止鍵的守護執行緒，用於中止失控腳本 |
 | `utils/diagnostics/` | 330 | 跨子系統的「一切正常嗎」健檢，附 `python -m` 進入點 |
 | `utils/dbus_client/` | 714 | 只用標準函式庫的 D-Bus session bus 客戶端。原本在 `linux_wayland/` 為 portal 交握而寫，AT-SPI 無障礙後端成為第二個使用者後搬到這裡（`utils/` 在分層上在各 OS 套件之上） |
-| `utils/exception/` | 213 | **例外階層根**。所有錯誤繼承 `AutoControlException`，加上集中式錯誤訊息字串（`exception_tags`） |
+| `utils/exception/` | 226 | **例外階層根**。所有錯誤繼承 `AutoControlException`，加上集中式錯誤訊息字串（`exception_tags`） |
 | `utils/failure_bundle/` | 229 | 可攜、已遮蔽的失敗診斷 ZIP（截圖 + 診斷 + log 尾段） |
 | `utils/file_process/` | 40 | 目錄檔案列舉（`execute_dir` 的後端） |
 | `utils/logging/` | 168 | `autocontrol_logger` 單例 + 家目錄共用記錄檔 handler（`JE_AUTOCONTROL_LOG_FILE` 可改） |
@@ -516,24 +516,24 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.10 遠端桌面與 USB
 
-> 6 個套件、約 19,615 行。
+> 6 個套件、約 19,617 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
 | `utils/admin/` | 418 | 多主機管理主控台：平行輪詢 N 個 AutoControl REST 端點 |
 | `utils/config_sync/` | 332 | 透過訊令伺服器做跨機器設定同步 |
 | `utils/device_matrix/` | 143 | 行動裝置矩陣：同一 action list 於多台裝置平行執行 |
-| `utils/remote_desktop/` | 13,048 | **遠端桌面子系統**（56 檔／11.7K LOC）：TCP／WebSocket／WebRTC 三條傳輸路徑、主機與檢視端、訊令伺服器、TURN／中繼、多檢視者、錄影、信任清單、TOTP、稽核鏈 |
+| `utils/remote_desktop/` | 13,050 | **遠端桌面子系統**（56 檔／11.7K LOC）：TCP／WebSocket／WebRTC 三條傳輸路徑、主機與檢視端、訊令伺服器、TURN／中繼、多檢視者、錄影、信任清單、TOTP、稽核鏈 |
 | `utils/usb/` | 4,666 | 跨平台 USB 列舉／熱插拔／裝置直通（WinUSB、IOKit、libusb 後端 + ACL + WebRTC DataChannel 通道） |
 | `utils/usbip/` | 1,008 | USB/IP 線路協定主機端（協定封包、TCP 伺服器、libusb URB 後端） |
 
 ### 5.4.11 伺服器、網路協定與外部整合
 
-> 24 個套件、約 6,970 行。
+> 24 個套件、約 6,976 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
-| `utils/acme_v2/` | 617 | 完整 ACME v2 用戶端（RFC 8555），不依賴 certbot |
+| `utils/acme_v2/` | 621 | 完整 ACME v2 用戶端（RFC 8555），不依賴 certbot |
 | `utils/chatops/` | 667 | Chat-ops bot：接收 Slack／Discord／webhook 的 slash 指令並路由到動作 |
 | `utils/cookie_jar/` | 191 | RFC 6265 cookie jar |
 | `utils/email_send/` | 118 | SMTP 寄信（email 觸發器的發送端搭檔） |
@@ -554,7 +554,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/rest_api/` | 1,918 | 純標準庫 REST 前端：路由、Bearer 驗證、限流、Prometheus 指標、OpenAPI 3.1 產生 |
 | `utils/socket_server/` | 160 | 執行 action JSON 的執行緒式 TCP 指令伺服器（預設綁 127.0.0.1） |
 | `utils/sse_client/` | 142 | Server-Sent Events 用戶端解析 |
-| `utils/tls_acme/` | 473 | TLS 自動化：HTTP-01 挑戰伺服器、金鑰／CSR、自動續期 |
+| `utils/tls_acme/` | 475 | TLS 自動化：HTTP-01 挑戰伺服器、金鑰／CSR、自動續期 |
 | `utils/url_canon/` | 194 | RFC 3986 URL 正規化與查詢字串工具 |
 | `utils/webrunner_bridge/` | 208 | 把 action JSON 橋接到 WebRunner（`je_web_runner`） |
 
@@ -632,7 +632,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.14 安全、機密與合規
 
-> 13 個套件、約 3,189 行。
+> 13 個套件、約 3,191 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -645,7 +645,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/redaction/` | 508 | 截圖遮蔽層：規則偵測 + 政策 + 協調器（上傳 VLM 前先遮） |
 | `utils/sbom/` | 170 | SBOM（CycloneDX）產生 |
 | `utils/secret_ref/` | 182 | URI scheme 形式的值參照解析 |
-| `utils/secrets/` | 360 | 加密機密儲存庫，供 `${secrets.NAME}` 解析 |
+| `utils/secrets/` | 362 | 加密機密儲存庫，供 `${secrets.NAME}` 解析 |
 | `utils/secrets_scan/` | 138 | 掃描 action JSON／資料中應入庫卻硬編碼的機密 |
 | `utils/vex/` | 178 | OpenVEX 陳述撰寫與漏洞分類處置 |
 | `utils/vuln_scan/` | 276 | 以 OSV 比對 SBOM 元件的漏洞（純標準庫） |
@@ -754,7 +754,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `rate_limit.py` | 48 | 工具呼叫的 token bucket 限流。 |
 | `__main__.py` | 92 | `je_auto_control_mcp` console script 進入點。 |
 
-#### `utils/remote_desktop/`（13,048 行／56 檔）
+#### `utils/remote_desktop/`（13,050 行／56 檔）
 
 三條傳輸路徑並存：**TCP**（JPEG 影格）、**WebSocket**（同協定換傳輸）、**WebRTC**（aiortc 視訊 + DataChannel）。
 
@@ -778,7 +778,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `fingerprint.py` | 246 | TOFU 主機指紋驗證。 |
 | `turn_config.py` | 249 | coturn 設定產生器。 |
 | `presence.py` | 238 | 多檢視者的執行緒安全在場註冊表。 |
-| `jpeg_recorder_encrypted.py` | 239 | AES-GCM 加密版 session 錄影。 |
+| `jpeg_recorder_encrypted.py` | 241 | AES-GCM 加密版 session 錄影。 |
 | `address_book.py` | 229 | 檢視端的主機通訊錄。 |
 | `audio.py` / `webrtc_audio.py` / `webrtc_mic.py` | 243 / 207 / 155 | 音訊擷取播放、音訊軌、麥克風上行。 |
 | `webrtc_files.py` | 249 | 專屬 DataChannel 的分塊檔案傳輸；viewer 的相對目的地限制在本機下載 root，host 預設用法保留，完成時重新檢查邊界。 |
@@ -1080,10 +1080,10 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | --- | ---: | ---: |
 | `gui/` | 96 | 27,993 |
 | `utils/mcp_server/` | 41 | 19,319 |
-| `utils/remote_desktop/` | 56 | 13,048 |
+| `utils/remote_desktop/` | 56 | 13,050 |
 | `utils/executor/` | 8 | 9,595 |
 | `utils/usb/` | 17 | 4,666 |
-| `je_auto_control/`（頂層 3 檔） | 3 | 2,476 |
+| `je_auto_control/`（頂層 3 檔） | 3 | 2,480 |
 | `utils/accessibility/` | 14 | 3,143 |
 | `wrapper/` | 19 | 3,631 |
 | `windows/` | 23 | 1,973 |
@@ -1098,6 +1098,12 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `osx/` | 17 | 925 |
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 852 |
-| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 684 | 57,424 |
-| **總計** | **1,067** | **158,359** |
+| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 684 | 57,454 |
+| **總計** | **1,067** | **158,395** |
 
+
+Crypto optional-dependency failures use CryptoDependencyError from utils/exception:
+CryptoUnavailableError preserves RuntimeError handling for lazy operations;
+CryptoImportError preserves ImportError handling for optional TLS/ACME/recording
+modules. All three names are exported by the Qt-free facade, and messages name
+the cryptography>=50.0.0 installation requirement.

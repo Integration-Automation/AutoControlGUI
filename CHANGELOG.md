@@ -15,6 +15,10 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Added
 
+- Typed optional crypto failures: `CryptoDependencyError`, with
+  `CryptoUnavailableError` preserving RuntimeError and `CryptoImportError`
+  preserving ImportError compatibility. Messages include installation guidance.
+
 - Opt-in REST/MCP user roles via `JE_AUTOCONTROL_USERS`, authenticated audit
   identities and owner-bound HTTP MCP sessions. Unconfigured servers keep their
   shared tokens; a configured store never falls back. Admin Console, facade,
@@ -107,6 +111,10 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
   get a `ValueError` out of `datetime.fromisoformat`.
 
 ### Changed
+
+- The cryptography dependency floor is now >=50.0.0; uv.lock resolves 50.0.2.
+  Windows arm64 markers remain. Intel Mac installs require source builds with
+  Rust/native dependencies; see docs/CAPABILITY_MATRIX.md and the official guide.
 
 - Anthropic Agent screenshot compaction now starts a separate summarized
   conversation instead of editing old messages; sent request snapshots stay

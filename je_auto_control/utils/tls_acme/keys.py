@@ -7,15 +7,17 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional, Sequence
 
+from je_auto_control.utils.exception.exceptions import CryptoImportError
+
 try:
     from cryptography import x509
     from cryptography.hazmat.primitives import hashes, serialization
     from cryptography.hazmat.primitives.asymmetric import rsa
     from cryptography.x509.oid import NameOID as _NameOID
 except ImportError as exc:  # pragma: no cover - platform-dependent wheel
-    raise ImportError(
+    raise CryptoImportError(
         "TLS key and CSR generation requires cryptography, which publishes "
-        "no Windows arm64 wheel: pip install cryptography"
+        "no Windows arm64 wheel: pip install \"cryptography>=50.0.0\""
     ) from exc
 
 
