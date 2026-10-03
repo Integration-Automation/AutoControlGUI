@@ -7,11 +7,12 @@ import os
 import threading
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, Iterator, Optional
+from typing import Dict, Iterator, Mapping, Optional
 
 from je_auto_control.utils.rbac.users import (
     Capability, UserAuthError, UserStore, can,
 )
+from je_auto_control.utils.rbac.capability_catalog import CAPABILITY_CATALOG
 
 
 @dataclass(frozen=True)
@@ -75,61 +76,34 @@ def authorization_scope(context: Optional[AuthorizationContext]) -> Iterator[Non
         _CURRENT.reset(token)
 
 
-_ADMIN_PREFIXES = (
-    'sign_', 'create_signing_', 'encrypt_', 'decrypt_', 'secret_', 'secrets_',
-    'shell_', 'python_', 'plugin_', 'package_', 'host_', 'server_', 'rest_',
-    'usb_', 'usbip_', 'remote_desktop_', 'file_', 'write_file', 'read_file',
-    'config_', 'sync_', 'process_', 'subprocess_', 'keyring_', 'cert_', 'ssh_',
-    'schedule_', 'scheduler_', 'trigger_', 'email_trigger_', 'watchdog_',
-    'webhook_', 'pipeline_', 'failure_hook_', 'webrtc_',
-    'admin_', 'add_package_', 'load_plugins', 'start_mcp_', 'start_remote_',
-    'start_ws_', 'start_webrtc_', 'stop_remote_', 'stop_ws_', 'stop_webrtc_',
-    'web_', 'http_', 's3_', 'write_document', 'write_presentation', 'write_workbook',
-    'element_save', 'skill_save', 'skill_remove', 'notify_webhook',
-)
-_USER_PREFIXES = ('user_', 'users_', 'rbac_')
-_AUDIT_PREFIXES = ('audit_', 'history_', 'logs_', 'log_')
-_ADMIN_NAMES = frozenset({'shell', 'exec', 'eval', 'execute_python', 'run_python',
-                          'open_path', 'install', 'uninstall', 'restart', 'shutdown',
-                          'execute_process', 'android_shell', 'load_dotenv',
-                          'add_package_to_callback_executor', 'parallel', 'run_dag',
-                          'run_agent',
-                          'lease_secret', 'scan_secrets', 'sign', 'encrypt', 'decrypt'})
-_READ_COMMANDS = frozenset({'screen_size', 'get_screen_size', 'get_mouse_position',
-                            'get_pixel', 'screenshot', 'a11y_list', 'a11y_find',
-                            'list_windows', 'known_commands'})
-
-
-def required_capability(name: str, *, read_only: bool = False) -> str:
+def required_capability(name: str, *, read_only: bool = False,
+                        arguments: Optional[Mapping[str, object]] = None) -> str:
     """Server-owned capability classification for tools and executor commands.
 
-    Sensitive namespaces always require admin capabilities, even if a tool
-    advertises read-only behavior. Unclassified mutating commands require input
-    privileges; provider-defined read-only tools grant only observation.
+    Provider hints never confer privileges. Unknown remote commands require
+    host administration; local and legacy calls retain unrestricted access.
     """
+    _ = read_only  # Compatibility hint; privileges come only from the reviewed catalog.
     normalized = name.lower()
     if normalized.startswith('ac_'):
         normalized = normalized[3:]
-    if normalized.startswith(_USER_PREFIXES):
-        return Capability.MANAGE_USERS
-    if normalized.startswith(_AUDIT_PREFIXES):
-        return Capability.READ_AUDIT
-    if normalized in _ADMIN_NAMES or normalized.startswith(_ADMIN_PREFIXES):
+    if normalized == 'screenshot' and arguments and arguments.get('file_path'):
         return Capability.MANAGE_HOSTS
-    if read_only or normalized in _READ_COMMANDS:
-        return Capability.READ_SCREEN
-    return Capability.DRIVE_INPUT
+    return CAPABILITY_CATALOG.get(normalized, Capability.MANAGE_HOSTS)
 
 
-def permitted(name: str, *, read_only: bool = False) -> bool:
+def permitted(name: str, *, read_only: bool = False,
+              arguments: Optional[Mapping[str, object]] = None) -> bool:
     """Whether the active identity can use this server-owned operation."""
     identity = current_authorization()
-    return identity is None or can(identity.role, required_capability(name, read_only=read_only))
+    return identity is None or can(identity.role, required_capability(
+        name, read_only=read_only, arguments=arguments))
 
 
-def require_command(name: str, *, read_only: bool = False) -> None:
+def require_command(name: str, *, read_only: bool = False,
+                    arguments: Optional[Mapping[str, object]] = None) -> None:
     """Guard every nested executor command under a remote request identity."""
-    if not permitted(name, read_only=read_only):
+    if not permitted(name, read_only=read_only, arguments=arguments):
         raise AuthorizationError(f'permission denied for {name}')
 
 

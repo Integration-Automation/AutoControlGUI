@@ -2,7 +2,7 @@
 
 The matchers, OCR and most vision commands capture through ``grab_logical``,
 which takes ``[x, y, width, height]``; the colour, histogram and SSIM commands
-through ``region_capture.grab_screen_region`` or ``pil_screenshot``, which take
+through ``region_capture``'s capture helpers or ``pil_screenshot``, which take
 ``[left, top, right, bottom]``. The
 hints said left, top, right, bottom for 25 of the first kind (and x, y, w, h
 for one of the second), so a region typed as the hint asked searched another
@@ -93,10 +93,16 @@ def captures(monkeypatch, tmp_path):
     def grab_screen_region(region=None):
         return pil_screenshot(screen_region=region)
 
+    def grab_screen_region_with_origin(region=None):
+        image = pil_screenshot(screen_region=region)
+        origin = (region[0], region[1]) if region else (0, 0)
+        return image, *origin
+
     monkeypatch.setattr(logical_frame, "grab_logical", grab_logical)
     monkeypatch.setattr(ocr_engine, "grab_logical", grab_logical)
     monkeypatch.setattr(screenshot, "pil_screenshot", pil_screenshot)
     monkeypatch.setattr(region_capture, "grab_screen_region", grab_screen_region)
+    monkeypatch.setattr(region_capture, "grab_screen_region_with_origin", grab_screen_region_with_origin)
     template = tmp_path / "template.png"
     Image.fromarray(np.asarray(frame)[20:40, 20:40]).save(template)
     yield calls, str(template)

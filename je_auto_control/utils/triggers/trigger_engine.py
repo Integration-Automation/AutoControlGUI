@@ -17,6 +17,7 @@ from typing import TYPE_CHECKING, Callable, ClassVar, Dict, List, Optional, Tupl
 from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.json.json_file import read_executable_action_json
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
+from je_auto_control.utils.executor.request_context import RequestBinding
 from je_auto_control.utils.timeouts import clamp_poll_interval
 from je_auto_control.utils.run_history.artifact_manager import (
     capture_error_snapshot,
@@ -231,7 +232,7 @@ class CronTrigger(_TriggerBase):
         return False
 
 
-class TriggerEngine:
+class TriggerEngine:  # pylint: disable=too-many-instance-attributes  # reason: locked identity map binds each registration
     """Polls registered triggers on a background thread."""
 
     def __init__(self, executor: Optional[Callable[[list], object]] = None,
@@ -240,6 +241,7 @@ class TriggerEngine:
         self._execute = executor or execute_action
         self._tick = clamp_poll_interval(tick_seconds)
         self._triggers: Dict[str, _TriggerBase] = {}
+        self._request_bindings: Dict[str, RequestBinding] = {}
         self._lock = threading.Lock()
         # start() / stop() race without it: two starts made two polling
         # threads (every trigger fired twice) and a stop() between creating
@@ -255,10 +257,12 @@ class TriggerEngine:
             trigger.trigger_id = uuid.uuid4().hex[:8]
         with self._lock:
             self._triggers[trigger.trigger_id] = trigger
+            self._request_bindings[trigger.trigger_id] = RequestBinding.capture()
         return trigger
 
     def remove(self, trigger_id: str) -> bool:
         with self._lock:
+            self._request_bindings.pop(trigger_id, None)
             return self._triggers.pop(trigger_id, None) is not None
 
     def list_triggers(self) -> List[_TriggerBase]:
@@ -358,6 +362,13 @@ class TriggerEngine:
             return False
 
     def _fire(self, trigger: _TriggerBase, now: float) -> None:
+        with self._lock:
+            binding = self._request_bindings.get(trigger.trigger_id)
+        if binding is None:
+            return
+        binding.run(self._fire_bound, trigger, now)
+
+    def _fire_bound(self, trigger: _TriggerBase, now: float) -> None:
         run_id = default_history_store.start_run(
             SOURCE_TRIGGER, trigger.trigger_id, trigger.script_path,
         )
@@ -397,6 +408,7 @@ class TriggerEngine:
             live._last_fire = now
             if not live.repeat:
                 self._triggers.pop(trigger.trigger_id, None)
+                self._request_bindings.pop(trigger.trigger_id, None)
 
 
 default_trigger_engine = TriggerEngine()

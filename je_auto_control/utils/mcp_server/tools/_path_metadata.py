@@ -1,4 +1,5 @@
 """Reviewed filesystem semantics; names such as JSONPath are never inferred."""
+import os
 from copy import deepcopy
 from dataclasses import replace
 from typing import Any, Dict
@@ -11,6 +12,19 @@ from je_auto_control.utils.path_guard.path_guard import PathNotAllowedError
 # '*' addresses array items / mapping values. Mixed string/action-list 'source'
 # is validated only when it is a string. Optional omitted fields stay omitted.
 _READ_FIELDS = {
+    'ac_read_file_to_var': 'path',
+    'ac_pdf_to_var': 'path',
+    'ac_sql_to_var': 'database',
+    'ac_for_each_row': 'source.path',
+    'ac_if_image_found': 'image',
+    'ac_while_image': 'image',
+    'ac_wait_image': 'image',
+    'ac_clipboard_set_image': 'path',
+    'ac_plan_file_drop': 'paths.*',
+    'ac_perceptual_diff': 'actual expected',
+    'ac_encrypt_action_file': 'path',
+    'ac_decrypt_action_file': 'enc_path',
+    'ac_usb_acl_import': 'path',
     'ac_sign_action_file': 'path private_key_path',
     'ac_verify_action_file': 'path public_key_path',
     'ac_wait_for_image': 'image_path',
@@ -84,6 +98,15 @@ _READ_FIELDS = {
     'ac_assert_video_changes': 'video_path',
 }
 _WRITE_FIELDS = {
+    'ac_clipboard_get_image': 'path',
+    'ac_encrypt_action_file': 'path',
+    'ac_decrypt_action_file': 'output_path',
+    'ac_android_screenshot': 'file_path',
+    'ac_usb_acl_export': 'path',
+    'ac_annotate_screenshot': 'output_path',
+    'ac_move_to_trash': 'path',
+    'ac_capture_window': 'output_path',
+    'ac_save_window_layout': 'path',
     'ac_create_signing_keypair': 'private_path public_path',
     'ac_screenshot': 'file_path',
     'ac_sign_action_file': 'path',
@@ -196,8 +219,8 @@ def validate_path_arguments(value: Any, node: Dict[str, Any], policy: PathPolicy
     """Normalize only annotated filesystem values, including nested containers."""
     if not isinstance(node, dict):
         return value
-    if node.get('format') in {'path', 'path-or-url'} and isinstance(value, str):
-        return _validate_location(value, node, policy)
+    if node.get('format') in {'path', 'path-or-url'} and isinstance(value, (str, os.PathLike)):
+        return _validate_location(os.fspath(value), node, policy)
     if isinstance(value, dict):
         return {key: validate_path_arguments(item, _field_schema(key, node, value), policy)
                 for key, item in value.items()}

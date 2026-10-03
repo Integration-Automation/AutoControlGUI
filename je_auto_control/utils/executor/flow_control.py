@@ -5,6 +5,7 @@ These commands receive the owning executor and a dict of arguments;
 they may execute nested action lists (``body`` / ``then`` / ``else``)
 by delegating back to ``executor.execute_action``.
 """
+import contextvars
 import json
 import threading
 import time
@@ -533,7 +534,8 @@ def exec_parallel(executor: Any, args: Mapping[str, Any]) -> Dict[str, Any]:
     """
     branches = _parallel_branches(executor, args.get("branches"))
     run = _ParallelRun(executor, branches)
-    threads = [threading.Thread(target=run.run_branch, args=(idx, branch), daemon=True)
+    threads = [threading.Thread(target=contextvars.copy_context().run,
+                                args=(run.run_branch, idx, branch), daemon=True)
                for idx, branch in enumerate(branches)]
     for thread in threads:
         thread.start()

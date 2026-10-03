@@ -11,6 +11,7 @@ from je_auto_control.utils.mcp_server._protocol import (
     _InvalidToolArguments, _MCPError, _capture_error_screenshot, _to_content_blocks,
 )
 from je_auto_control.utils.path_guard.policy import path_policy_scope
+from je_auto_control.utils.script_vars.scope import execution_scope
 from je_auto_control.utils.rbac.authorization import AuthorizationError, current_authorization
 
 if TYPE_CHECKING:
@@ -47,7 +48,7 @@ def _invoke_tool(server: MCPServer, msg_id: Any, name: str, tool: Any,
         server._active_calls[call_key] = ctx
     started_at = time.monotonic()
     try:
-        with path_policy_scope(server._current_path_policy()):
+        with path_policy_scope(server._current_path_policy()), execution_scope(isolated=True):
             result = tool.invoke(arguments, ctx=ctx)
     except OperationCancelledError:
         server._audit.record(

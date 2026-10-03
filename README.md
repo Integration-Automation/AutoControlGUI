@@ -546,3 +546,14 @@ contract. The portable test migration is in
 `docs/compatibility/jeffrey-rpa-oem-test-migration.patch`; validation uses a copied
 test suite against the current consumer code. Apply it when integrating this
 branch after the live editable batch stops.
+
+Remote execution uses an explicit server-owned capability catalog. Unknown
+commands require admin regardless of provider `readOnly` hints; saving a screenshot
+to a file also requires admin access. Nested, loaded and flow-block actions check
+declared filesystem paths after interpolation and positional/default binding.
+Parallel and deferred work retain the caller's identity and allowed roots;
+each remote request and deferred delivery has independent script variables.
+Configured signing and encryption keys must also lie within the effective roots,
+or use an explicit in-memory key. Local calls without a policy retain existing behavior.
+Color/HSV and VLM results use the actual clipped capture origin. Windows restore
+accepts a minimized window returning to its previous maximized state.

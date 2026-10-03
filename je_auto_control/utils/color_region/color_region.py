@@ -13,6 +13,8 @@ imported lazily. Imports no ``PySide6``.
 """
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
+from je_auto_control.utils.exception.exceptions import AutoControlScreenException
+
 ImageSource = Any
 
 
@@ -42,15 +44,30 @@ def _to_rgb(source: ImageSource):
         return _array_as_rgb(np.asarray(source))
     if isinstance(source, (str, bytes)) or hasattr(source, "__fspath__"):
         from je_auto_control.utils.cv2_utils.image_file import read_image
-        return cv2.cvtColor(read_image(source, cv2.IMREAD_COLOR), cv2.COLOR_BGR2RGB)
+        try:
+            image = read_image(source, cv2.IMREAD_COLOR)
+        except ValueError as error:
+            raise AutoControlScreenException('image decoding failed') from error
+        return cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
     # RGBA / L / P images passed through unchanged made cv2.inRange fail.
     return np.asarray(source.convert("RGB"))
 
 
-def _grab_rgb(region: Optional[Sequence[int]]):
+def _grab_rgb_with_origin(region: Optional[Sequence[int]]):
     import numpy as np
-    from je_auto_control.utils.cv2_utils.region_capture import grab_screen_region
-    return np.asarray(grab_screen_region(region).convert("RGB"))
+    from je_auto_control.utils.cv2_utils.region_capture import grab_screen_region_with_origin
+    image, left, top = grab_screen_region_with_origin(region)
+    return np.asarray(image.convert("RGB")), (left, top)
+
+
+def _grab_rgb(region: Optional[Sequence[int]]):
+    """Compatibility RGB-only view for non-coordinate consumers."""
+    return _grab_rgb_with_origin(region)[0]
+
+
+def _rgb_with_origin(source: Optional[ImageSource], region: Optional[Sequence[int]]):
+    """Load caller imagery locally or preserve a screen capture's actual origin."""
+    return (_to_rgb(source), (0, 0)) if source is not None else _grab_rgb_with_origin(region)
 
 
 def _origin(haystack: Optional[ImageSource], region: Optional[Sequence[int]]) -> Tuple[int, int]:
@@ -79,7 +96,7 @@ def find_color_regions(rgb: Sequence[int], *,
     import cv2
     import numpy as np
     from je_auto_control.utils.cv2_utils.blobs import connected_boxes
-    image = _to_rgb(haystack) if haystack is not None else _grab_rgb(region)
+    image, origin = _rgb_with_origin(haystack, region)
     red, green, blue = (int(channel) for channel in rgb[:3])
     tol = int(tolerance)
     lower = np.array([max(0, red - tol), max(0, green - tol),
@@ -87,7 +104,7 @@ def find_color_regions(rgb: Sequence[int], *,
     upper = np.array([min(255, red + tol), min(255, green + tol),
                       min(255, blue + tol)], dtype=np.uint8)
     mask = cv2.inRange(image, lower, upper)
-    return connected_boxes(mask, int(min_area), origin=_origin(haystack, region))
+    return connected_boxes(mask, int(min_area), origin=origin)
 
 
 def find_color_region(rgb: Sequence[int], *,

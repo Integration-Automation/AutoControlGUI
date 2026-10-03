@@ -86,8 +86,14 @@ def current_path_policy() -> Optional[PathPolicy]:
     return _ACTIVE_POLICY.get()
 
 
+def scoped_path(path: str | Path, *, operation: str) -> Path:
+    """Validate effective file access when a remote policy is active."""
+    policy = current_path_policy()
+    return Path(path) if policy is None else policy.validate(str(path), operation=operation)
+
+
 @contextmanager
-def path_policy_scope(policy: PathPolicy) -> Iterator[None]:
+def path_policy_scope(policy: Optional[PathPolicy]) -> Iterator[None]:
     """Apply a policy to reference resolution for one call and restore its parent."""
     token = _ACTIVE_POLICY.set(policy)
     try:

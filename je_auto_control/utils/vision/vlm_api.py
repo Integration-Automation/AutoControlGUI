@@ -5,9 +5,7 @@ vision-language model, as a fallback for cases where pixel templates
 and accessibility lookups both come up empty. The backend is chosen
 per :mod:`je_auto_control.utils.vision.backends` by env vars.
 """
-import os
-import tempfile
-from pathlib import Path
+import io
 from typing import List, Optional, Tuple
 
 from je_auto_control.utils.vision.backends import get_backend
@@ -57,6 +55,9 @@ def _to_screen(coords: Tuple[int, int], image_bytes: bytes,
         return (int(x), int(y))
     # A reply outside the region is a misread, not a location: it was
     # translated and clicked anyway (region 100x100 -> a point at y=5100).
+    origin = _png_origin(image_bytes)
+    if origin is not None:
+        return int(x) + origin[0], int(y) + origin[1]
     left, top = int(screen_region[0]), int(screen_region[1])
     if not _inside(x, y, int(screen_region[2]) - left, int(screen_region[3]) - top):
         return None
@@ -128,18 +129,25 @@ def _png_size(data: bytes) -> Optional[Tuple[int, int]]:
 def _capture_screenshot_bytes(
         screen_region: Optional[List[int]] = None) -> bytes:
     """Take a screenshot (optionally of ``[left, top, right, bottom]``, on any monitor) as PNG bytes."""
-    fd, tmp = tempfile.mkstemp(prefix="vlm_", suffix=".png")
-    os.close(fd)
-    tmp_path = Path(tmp)
+    from PIL.PngImagePlugin import PngInfo
+    from je_auto_control.utils.cv2_utils.region_capture import grab_screen_region_with_origin
+    image, left, top = grab_screen_region_with_origin(screen_region)
+    metadata = PngInfo()
+    metadata.add_text('autocontrol_origin_x', str(left))
+    metadata.add_text('autocontrol_origin_y', str(top))
+    output = io.BytesIO()
+    image.save(output, format='PNG', pnginfo=metadata)
+    return output.getvalue()
+
+
+def _png_origin(data: bytes) -> Optional[Tuple[int, int]]:
+    """Read capture provenance without introducing mutable per-call state."""
+    from PIL import Image
     try:
-        from je_auto_control.utils.cv2_utils.region_capture import grab_screen_region
-        grab_screen_region(screen_region).save(str(tmp_path), format="PNG")
-        return tmp_path.read_bytes()
-    finally:
-        try:
-            tmp_path.unlink()
-        except FileNotFoundError:
-            pass
+        with Image.open(io.BytesIO(data)) as image:
+            return int(image.info['autocontrol_origin_x']), int(image.info['autocontrol_origin_y'])
+    except (OSError, ValueError, KeyError):
+        return None
 
 
 __all__ = [

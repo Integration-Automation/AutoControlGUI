@@ -10,8 +10,6 @@ on first use, 0600). Files written before the salt existed -- a bare token
 keyed by unsalted SHA-256 of the passphrase -- still decrypt.
 GUI-free; imports no Qt.
 """
-from je_auto_control.utils.exception.exceptions import CryptoUnavailableError
-
 import base64
 import hashlib
 import os
@@ -19,8 +17,9 @@ from pathlib import Path
 from typing import Optional, Union
 
 from je_auto_control.utils.action_signing._key_file import load_or_create_key_file
-from je_auto_control.utils.exception.exceptions import AutoControlException
+from je_auto_control.utils.exception.exceptions import AutoControlException, CryptoUnavailableError
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
+from je_auto_control.utils.path_guard.policy import scoped_path
 
 
 def _default_key_path() -> Path:
@@ -60,7 +59,8 @@ def _persistent_key() -> bytes:
     """Read the per-user Fernet key, creating it (0600) on first use."""
     fernet_cls, _ = _fernet_types()
     return load_or_create_key_file(
-        _default_key_path(), fernet_cls.generate_key, _FERNET_KEY_LENGTH)
+        scoped_path(_default_key_path(), operation='write'),
+        fernet_cls.generate_key, _FERNET_KEY_LENGTH)
 
 
 def _passphrase(key: Union[bytes, str]) -> bytes:
@@ -107,9 +107,9 @@ def _decrypt(blob: bytes, key: KeyType) -> bytes:
 
 def encrypt_action_file(path: Union[str, Path], key: KeyType = None) -> str:
     """Encrypt the file at ``path`` to ``<path>.enc``; return the enc path."""
-    target = Path(path)
+    target = scoped_path(path, operation='read')
     token = _encrypt(target.read_bytes(), key)
-    enc_path = target.with_name(target.name + _ENC_SUFFIX)
+    enc_path = scoped_path(target.with_name(target.name + _ENC_SUFFIX), operation='write')
     enc_path.write_bytes(token)
     autocontrol_logger.info("encrypted action file %s", target)
     return str(enc_path)
@@ -124,14 +124,14 @@ def decrypt_action_file(enc_path: Union[str, Path], key: KeyType = None,
     tampered file.
     """
     _, invalid_token = _fernet_types()
-    enc = Path(enc_path)
+    enc = scoped_path(enc_path, operation='read')
     try:
         plaintext = _decrypt(enc.read_bytes(), key)
     except invalid_token as error:
         raise AutoControlException(
             f"cannot decrypt {enc_path!r}: wrong key or tampered file",
         ) from error
-    out = _output_path(enc, output_path)
+    out = scoped_path(_output_path(enc, output_path), operation='write')
     out.write_bytes(plaintext)
     return str(out)
 

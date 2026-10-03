@@ -20,6 +20,7 @@ from typing import Callable, Dict, FrozenSet, List, Optional, Tuple
 from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.json.json_file import read_executable_action_json
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
+from je_auto_control.utils.executor.request_context import RequestBinding
 from je_auto_control.utils.run_history.artifact_manager import (
     capture_error_snapshot,
 )
@@ -143,6 +144,7 @@ class HotkeyDaemon:
         self._lifecycle_lock = threading.RLock()
         self._thread: Optional[threading.Thread] = None
         self._stop = threading.Event()
+        self._request_bindings: Dict[str, RequestBinding] = {}
 
     def bind(self, combo: str, script_path: str,
              binding_id: Optional[str] = None) -> HotkeyBinding:
@@ -160,10 +162,12 @@ class HotkeyDaemon:
         )
         with self._lock:
             self._bindings[bid] = binding
+            self._request_bindings[bid] = RequestBinding.capture()
         return binding
 
     def unbind(self, binding_id: str) -> bool:
         with self._lock:
+            self._request_bindings.pop(binding_id, None)
             return self._bindings.pop(binding_id, None) is not None
 
     def list_bindings(self) -> List[HotkeyBinding]:
@@ -212,8 +216,12 @@ class HotkeyDaemon:
     def _fire_binding(self, binding_id: str) -> None:
         with self._lock:
             match = self._bindings.get(binding_id)
-        if match is None or not match.enabled:
+            binding = self._request_bindings.get(binding_id)
+        if match is None or not match.enabled or binding is None:
             return
+        binding.run(self._fire_bound, match)
+
+    def _fire_bound(self, match: HotkeyBinding) -> None:
         run_id = _start_history(match)
         status = STATUS_OK
         error_text: Optional[str] = None

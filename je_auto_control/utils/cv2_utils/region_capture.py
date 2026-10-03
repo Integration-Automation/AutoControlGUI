@@ -7,13 +7,12 @@ On macOS ``screencapture -R`` reaches every display, but a Retina region
 comes back at twice its size in points, the unit the mouse takes, so a blob
 found in it was placed twice as far from the region's corner. The region is
 normalized explicitly by ``grab_logical``, supporting older Pillow releases
-without ``scale_down``. Elsewhere (the X11 root, the Wayland layout) and
-for a primary-screen capture ``pil_screenshot`` is used.
+without ``scale_down``. X11/Wayland regions use the same virtual-desktop
+capture and clipping boundary; primary captures retain ``pil_screenshot``.
 """
 from __future__ import annotations
 
-import sys
-from typing import TYPE_CHECKING, Optional, Sequence
+from typing import TYPE_CHECKING, Optional, Sequence, Tuple
 
 if TYPE_CHECKING:
     from PIL import Image
@@ -26,12 +25,16 @@ def grab_screen_region(region: Optional[Sequence[int]] = None) -> Image.Image:
     ``pil_screenshot()`` does. A region with no area raises
     ``AutoControlScreenException``.
     """
+    return grab_screen_region_with_origin(region)[0]
+
+
+def grab_screen_region_with_origin(region: Optional[Sequence[int]] = None
+                                   ) -> Tuple[Image.Image, int, int]:
+    """Return a capture plus its actual clipped logical desktop origin."""
     from je_auto_control.utils.cv2_utils.screenshot import _validate_region, pil_screenshot
     if not region:
-        return pil_screenshot(screen_region=None)
+        return pil_screenshot(screen_region=None), 0, 0
     _validate_region(list(region))
     left, top, right, bottom = (int(value) for value in region)
-    if sys.platform.startswith("win") or sys.platform == "darwin":
-        from je_auto_control.utils.monitor_layout.logical_frame import grab_logical
-        return grab_logical((left, top, right - left, bottom - top))[0]
-    return pil_screenshot(screen_region=[left, top, right, bottom])
+    from je_auto_control.utils.monitor_layout.logical_frame import grab_logical
+    return grab_logical((left, top, right - left, bottom - top))

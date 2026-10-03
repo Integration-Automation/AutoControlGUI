@@ -316,3 +316,10 @@ in that release. Debian trixie ships no `ydotool` package; bookworm and every
 current Ubuntu ship 0.1.8, which answers this argv with exit code 0 and no
 events. AutoControl refuses that version up front rather than reporting
 success for input it never sent.
+
+Remote request limits propagate through device workers, parallel branches, DAG
+nodes, observers, schedules, triggers and hotkeys. Independent requests and
+deferred deliveries isolate variables. Filesystem roots constrain declared
+arguments and configured signing/encryption key paths; process tools require
+admin and remain outside an operating-system sandbox. Physical mixed-DPI,
+Retina, keyboard-layout, USB and macOS accessibility checks remain in Progress.md.

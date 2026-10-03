@@ -278,7 +278,10 @@ def _show_state_matches(hwnd: int, cmd_show: int) -> bool:
         return bool(_user32.IsIconic(hwnd))
     if cmd_show == 3:
         return bool(_user32.IsZoomed(hwnd))
-    if cmd_show in (1, 4, 9):
+    if cmd_show == 9:
+        # A window minimized from maximized may restore maximized (WPF_RESTORETOMAXIMIZED).
+        return bool(_user32.IsWindowVisible(hwnd)) and not _user32.IsIconic(hwnd)
+    if cmd_show in (1, 4):
         return bool(_user32.IsWindowVisible(hwnd)) and not _user32.IsIconic(hwnd) and not _user32.IsZoomed(hwnd)
     return bool(_user32.IsWindowVisible(hwnd))
 

@@ -24,6 +24,7 @@ from je_auto_control.utils.http_headers import (
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.rest_api.rest_auth import RestAuthGate, generate_token
 from je_auto_control.utils.rbac.authorization import AuthorizationContext, authorization_scope, route_capability
+from je_auto_control.utils.script_vars.scope import execution_scope
 from je_auto_control.utils.rbac.users import UserAuthError, UserStore, can
 from je_auto_control.utils.rest_api.rest_handlers import (
     HandlerResult, RouteContext,
@@ -225,7 +226,7 @@ class _RestRequestHandler(BaseHTTPRequestHandler):
                 return
         ctx = RouteContext(query=parsed.query, body=body, client_ip=client_ip)
         try:
-            with authorization_scope(self._authorization):
+            with authorization_scope(self._authorization), execution_scope(isolated=True):
                 status, payload = handler(ctx)
         except _HANDLER_ERRORS as error:
             autocontrol_logger.error(

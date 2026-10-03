@@ -110,15 +110,16 @@ def test_the_vlm_and_the_mcp_screenshot_see_the_left_monitor(desktop):
     assert _has_red(Image.open(io.BytesIO(base64.b64decode(block.to_dict()["data"]))))
 
 
-def test_x11_and_wayland_keep_pil_screenshot(monkeypatch):
+def test_linux_regions_use_logical_origin_and_primary_keeps_pil(monkeypatch):
     calls = []
     monkeypatch.setattr(sys, "platform", "linux")
     monkeypatch.setattr(screenshot, "pil_screenshot",
                         lambda screen_region=None: calls.append(screen_region) or Image.new("RGB", (2, 2)))
-    monkeypatch.setattr(logical_frame, "grab_logical", lambda *_a, **_k: pytest.fail("grab_logical used off Windows"))
+    monkeypatch.setattr(logical_frame, "grab_logical", lambda region:
+                        (calls.append(region) or Image.new("RGB", (2, 2)), region[0], region[1]))
     region_capture.grab_screen_region([-1920, 0, -1720, 100])
     region_capture.grab_screen_region(None)
-    assert calls == [[-1920, 0, -1720, 100], None]
+    assert calls == [(-1920, 0, 200, 100), None]
 
 
 def test_a_macos_region_is_grabbed_in_points(monkeypatch):

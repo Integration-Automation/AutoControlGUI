@@ -12,6 +12,7 @@ from typing import Callable, Dict, List, Optional, Set
 
 from je_auto_control.utils.json.json_file import read_executable_action_json
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
+from je_auto_control.utils.executor.request_context import RequestBinding
 from je_auto_control.utils.run_history.artifact_manager import (
     capture_error_snapshot,
 )
@@ -64,6 +65,7 @@ class Scheduler:
         self._execute = executor or execute_action
         self._tick = max(0.1, float(tick_seconds))
         self._jobs: Dict[str, ScheduledJob] = {}
+        self._request_bindings: Dict[str, RequestBinding] = {}
         # Jobs being executed right now, by id. A job is rescheduled only
         # after it finishes, so until then it still looks due; a second
         # loop -- the new run after a stop() that timed out mid-job --
@@ -98,6 +100,7 @@ class Scheduler:
         )
         with self._lock:
             self._jobs[jid] = job
+            self._request_bindings[jid] = RequestBinding.capture()
         autocontrol_logger.info("scheduler add_job %s %s", jid, script_path)
         return job
 
@@ -117,12 +120,14 @@ class Scheduler:
         )
         with self._lock:
             self._jobs[jid] = job
+            self._request_bindings[jid] = RequestBinding.capture()
         autocontrol_logger.info("scheduler add_cron_job %s %r -> %s",
                                 jid, cron_expression, _dt.datetime.fromtimestamp(job.next_run_ts).isoformat())
         return job
 
     def remove_job(self, job_id: str) -> bool:
         with self._lock:
+            self._request_bindings.pop(job_id, None)
             return self._jobs.pop(job_id, None) is not None
 
     def set_enabled(self, job_id: str, enabled: bool) -> bool:
@@ -224,6 +229,13 @@ class Scheduler:
                     job.job_id for job in pending)
 
     def _fire(self, job: ScheduledJob, now_mono: float, now_wall: float) -> None:
+        with self._lock:
+            binding = self._request_bindings.get(job.job_id)
+        if binding is None:
+            return
+        binding.run(self._fire_bound, job, now_mono, now_wall)
+
+    def _fire_bound(self, job: ScheduledJob, now_mono: float, now_wall: float) -> None:
         run_id = default_history_store.start_run(
             SOURCE_SCHEDULER, job.job_id, job.script_path,
         )
@@ -263,6 +275,7 @@ class Scheduler:
             live.runs += 1
             if live.max_runs is not None and live.runs >= live.max_runs:
                 self._jobs.pop(job.job_id, None)
+                self._request_bindings.pop(job.job_id, None)
                 return
             if live.is_cron and live.cron_expression is not None:
                 try:
@@ -271,6 +284,7 @@ class Scheduler:
                     # Escaping here left next_run_ts in the past, so the job
                     # fired again on every tick. It has no future run: drop it.
                     self._jobs.pop(job.job_id, None)
+                    self._request_bindings.pop(job.job_id, None)
                     autocontrol_logger.error(
                         "scheduler job %s removed: %s", job.job_id, error)
                     return
@@ -278,6 +292,7 @@ class Scheduler:
                 return
             if not live.repeat:
                 self._jobs.pop(job.job_id, None)
+                self._request_bindings.pop(job.job_id, None)
                 return
             # From the previous deadline, not from this tick: each run's
             # lateness added up, and a 0.7 s job on 0.5 s ticks ran every 1 s.

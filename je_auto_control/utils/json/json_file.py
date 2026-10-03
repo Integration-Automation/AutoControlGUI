@@ -3,6 +3,7 @@ import os
 from pathlib import Path
 from threading import Lock
 from typing import Dict, List, Union
+from je_auto_control.utils.path_guard.policy import scoped_path
 
 from je_auto_control.utils.exception.exception_tags import cant_find_json_error_message, cant_save_json_error_message
 from je_auto_control.utils.exception.exceptions import AutoControlJsonActionException
@@ -19,6 +20,7 @@ def read_action_json(json_file_path: str) -> List[List[Dict[str, Dict[str, str]]
     :param json_file_path: JSON 檔案路徑
     :return: JSON 內容 (list of list of dict)
     """
+    json_file_path = str(scoped_path(json_file_path, operation='read'))
     with _lock:
         try:
             file_path = Path(json_file_path)
@@ -43,6 +45,7 @@ def read_executable_action_json(json_file_path: str) -> List[List[Dict[str, Dict
     are parsed. Raises :class:`AutoControlException` on a failed signature.
     """
     from je_auto_control.utils.action_signing.signer import read_signed_action_bytes
+    json_file_path = str(scoped_path(json_file_path, operation='read'))
     if not Path(json_file_path).is_file():
         raise AutoControlJsonActionException(cant_find_json_error_message)
     try:
@@ -63,6 +66,7 @@ def write_action_json(json_save_path: str, action_json: Union[list, dict]) -> No
     :param json_save_path: JSON 檔案儲存路徑
     :param action_json: 要寫入的 JSON 資料
     """
+    json_save_path = str(scoped_path(json_save_path, operation='write'))
     with _lock:
         try:
             payload = json.dumps(action_json, indent=4, ensure_ascii=False)

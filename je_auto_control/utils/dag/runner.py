@@ -8,6 +8,7 @@ remote calls.
 """
 from __future__ import annotations
 
+import contextvars
 import threading
 import time
 from concurrent.futures import FIRST_COMPLETED, Future, ThreadPoolExecutor, wait
@@ -179,7 +180,8 @@ def _spawn_ready_nodes(pending: Set[str], inflight: Dict[Future, str],
         results[nid].status = STATUS_RUNNING
         results[nid].started_at = time.monotonic()
         runner = local if node.host == LOCAL_HOST else remote
-        future = pool.submit(_run_one, node, results[nid], runner, nodes_by_id)
+        future = pool.submit(contextvars.copy_context().run,
+                             _run_one, node, results[nid], runner, nodes_by_id)
         inflight[future] = nid
         pending.discard(nid)
 

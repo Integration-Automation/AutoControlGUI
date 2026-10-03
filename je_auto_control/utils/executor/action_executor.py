@@ -3467,9 +3467,11 @@ def _seed_everything(seed: int = 0) -> Dict[str, Any]:
 
 def _observe_handler(actions: List[Any]) -> Callable[[str, Any], None]:
     """Build an observer callback that runs an action list on each event."""
+    from je_auto_control.utils.executor.request_context import RequestBinding
+    binding = RequestBinding.capture()
     def handler(_event: str, _value: Any) -> None:
         if actions:
-            _running_executor().execute_action(list(actions))
+            binding.run(_running_executor().execute_action, list(actions))
     return handler
 
 
@@ -8111,7 +8113,9 @@ class Executor:
                 raise AutoControlActionException(
                     f"{name} requires a dict of arguments"
                 )
-            return block_handler(self, self._resolve_runtime_args(args, name))
+            from je_auto_control.utils.executor.path_arguments import validate_block_arguments
+            resolved = validate_block_arguments(name, self._resolve_runtime_args(args, name))
+            return block_handler(self, resolved)
 
         event = self.event_dict.get(name)
         if event is None:
@@ -8119,11 +8123,15 @@ class Executor:
 
         if len(action) == 2:
             resolved = self._resolve_runtime_args(action[1], name)
-            if isinstance(resolved, dict):
-                return event(**resolved)
-            return event(*resolved)
+            from je_auto_control.utils.executor.path_arguments import validate_event_arguments
+            arguments, keywords = validate_event_arguments(name, event, resolved)
+            require_command(name, arguments=keywords)
+            return event(*arguments, **keywords)
         if len(action) == 1:
-            return event()
+            from je_auto_control.utils.executor.path_arguments import validate_event_arguments
+            arguments, keywords = validate_event_arguments(name, event, {})
+            require_command(name, arguments=keywords)
+            return event(*arguments, **keywords)
         raise AutoControlActionException(cant_execute_action_error_message + " " + describe_action(action))
 
     def execute_action(self, action_list: Union[list, dict],

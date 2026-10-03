@@ -241,3 +241,10 @@ cv2 failures become ImageNotFoundException. Regions intersect the desktop before
 cropping, returning the actual origin to match/OCR callers; negative centres use
 integer floor division. The Jeffrey_RPA OEM test migration is delivered as a
 portable patch without changing its live editable source.
+
+The remote boundary uses a server-owned RBAC capability catalog. Executor
+dispatch binds positional/default arguments and validates declared file fields
+after interpolation, including flow blocks and loaded scripts. RequestBinding
+retains registration identity, roots and variable snapshots for deferred work;
+thread workers inherit authorization/path contexts and fork execution variables.
+Color/HSV and VLM coordinates share capture's actual clipped origin.

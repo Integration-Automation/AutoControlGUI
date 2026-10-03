@@ -670,7 +670,7 @@ class MCPServer(StatelessDispatchMixin, SubscriptionMixin, ClientRequestMixin):
         tool = self._tools.get(name)
         if tool is None:
             raise _MCPError(-32602, f"Unknown tool: {name}")
-        require_command(name, read_only=tool.annotations.read_only)
+        require_command(name, read_only=tool.annotations.read_only, arguments=arguments)
         violation = (validate_arguments(tool.input_schema, arguments)
                      or undeclared_arguments(tool.input_schema, arguments))
         if violation is not None:

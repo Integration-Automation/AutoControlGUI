@@ -478,3 +478,11 @@ Pillow `L` 模板保留灰度；解码／匹配失败抛出 `ImageNotFoundExcept
 Jeffrey_RPA 原有拒绝 slash 的测试需要配合已批准的 OEM 快捷键契约更新。
 可移植测试迁移补丁位于 `docs/compatibility/jeffrey-rpa-oem-test-migration.patch`；
 验证使用测试副本搭配当前的下游代码。等正式 editable 批次停止、整合此分支时再应用。
+
+远程执行采用服务器持有的明确 capability 清单。未知命令需 admin 权限，
+provider 的 `readOnly` 提示不会授予权限；保存截图到文件也需 admin。嵌套、载入与流程区块动作在插值及
+位置／默认参数绑定后，检查声明的文件路径。并行与延后工作保留调用者身份及允许
+根目录；每个远程请求与延后执行都有独立脚本变量。配置的签名及加密密钥也必须位于
+有效根目录内，或改用明确的内存密钥。未设置 policy 的本机调用沿用既有行为。
+色彩／HSV 与 VLM 结果使用实际裁剪后的捕获原点。Windows 还原接受最小化窗口
+回到先前最大化状态。

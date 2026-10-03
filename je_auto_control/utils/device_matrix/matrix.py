@@ -19,6 +19,7 @@ device::
 """
 from __future__ import annotations
 
+import contextvars
 import time
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import asdict, dataclass, field
@@ -87,7 +88,9 @@ def _run_one_device(actions: List[Any], device: Dict[str, Any],
     platform = str(device.get("platform", ""))
     started = time.monotonic()
     try:
-        runner.execute_action(actions, raise_on_error=True)
+        from je_auto_control.utils.script_vars.scope import execution_scope
+        with execution_scope({var_name: device}, isolated=True):
+            runner.execute_action(actions, raise_on_error=True)
         return DeviceResult(device_id, platform, True,
                             time.monotonic() - started)
     # The executor's own containment set: an ImageNotFoundException or a
@@ -122,7 +125,8 @@ def run_on_devices(actions: List[Any],
     report = MatrixReport()
     with ThreadPoolExecutor(max_workers=workers) as pool:
         futures = [
-            pool.submit(_run_one_device, actions, device, index, var_name)
+            pool.submit(contextvars.copy_context().run, _run_one_device,
+                        actions, device, index, var_name)
             for index, device in enumerate(devices)
         ]
         report.results = [future.result() for future in futures]

@@ -15,3 +15,9 @@ available for compatibility but is not expanded with new integrations.
 The project remains pre-1.0. A 1.0 release requires passing stable capability
 tests on every claimed platform, documented recovery/diagnostic behavior, and
 no unresolved critical security advisories.
+
+Remote RBAC uses a reviewed capability catalog, independent of provider hints.
+Unknown commands require host administration. Filesystem metadata is checked at
+every scoped executor dispatch, including nested scripts and flow blocks.
+Internal `RequestBinding` preserves authorization, roots and variable snapshots
+for deferred work; it adds no public command or facade API.

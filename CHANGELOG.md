@@ -453,6 +453,13 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Security
 
+- Remote execution boundary corrections: opt-in roles now use an explicit
+  capability catalog; unknown commands/provider hints and file-saving screenshots
+  require admin. Nested and deferred execution preserve path and identity limits,
+  with isolated request variables. Scoped default crypto keys obey roots.
+  Clipped color/HSV/VLM coordinates use the capture origin, and Windows restore
+  accepts the previous maximized state. Local calls without limits remain compatible.
+
 - `ac_egress_reset` and `ac_approve_artifact` are destructive, so the
   confirmation gate asks before loosening egress or overwriting an approved
   baseline.

@@ -58,7 +58,8 @@ def _key_material(key: KeyType, path: KeyPath, environment: str, role: str) -> b
     if not configured:
         raise AutoControlException(
             f"no {role} key configured; set {environment} or supply a key path")
-    return Path(configured).read_bytes()
+    from je_auto_control.utils.path_guard.policy import scoped_path
+    return scoped_path(configured, operation='read').read_bytes()
 
 
 def _load_private(key: KeyType = None, path: KeyPath = None) -> Ed25519PrivateKey:
@@ -255,7 +256,9 @@ def require_signed_actions(path: Union[str, Path], key: KeyType = None) -> None:
 
 def read_signed_action_bytes(path: Union[str, Path], key: KeyType = None) -> bytes:
     """Read once and verify those exact bytes when enforcement is enabled."""
-    data = Path(path).read_bytes()
+    from je_auto_control.utils.path_guard.policy import scoped_path
+    path = scoped_path(path, operation='read')
+    data = path.read_bytes()
     if signing_required():
         _verify_bytes(path, data, key, raise_on_fail=True, allow_legacy_hmac=_legacy_enabled())
     return data

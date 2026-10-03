@@ -17,7 +17,7 @@ solid colour blobs use ``color_region``. ``color_match`` is for targets with col
 """
 from typing import Any, List, Optional, Sequence
 
-from je_auto_control.utils.color_region.color_region import _grab_rgb, _origin, _to_rgb
+from je_auto_control.utils.color_region.color_region import _grab_rgb, _rgb_with_origin, _to_rgb
 from je_auto_control.utils.visual_match.visual_match import (
     Match, _contain_cv2_error, _nms, _resize, _select_candidates,
 )
@@ -35,6 +35,13 @@ def _hsv(source, region, is_haystack: bool):
     else:
         rgb = _to_rgb(source)
     return cv2.cvtColor(rgb, cv2.COLOR_RGB2HSV)
+
+
+def _scene_hsv(source, region):
+    """Return HSV pixels and the actual origin from the same capture."""
+    import cv2
+    rgb, origin = _rgb_with_origin(source, region)
+    return cv2.cvtColor(rgb, cv2.COLOR_RGB2HSV), origin
 
 
 def _chromatic_mask(template_hsv):
@@ -105,8 +112,7 @@ def match_color(template: ImageSource, *, haystack: Optional[ImageSource] = None
     """Return the best colour (HSV-channel) match at or above ``min_score``, or ``None``."""
     import cv2
     template_hsv = _hsv(template, None, is_haystack=False)
-    haystack_hsv = _hsv(haystack, region, is_haystack=True)
-    origin_x, origin_y = _origin(haystack, region)
+    haystack_hsv, (origin_x, origin_y) = _scene_hsv(haystack, region)
     best: Optional[Match] = None
     for scale in scales:
         scaled = _resize(template_hsv, float(scale))
@@ -134,12 +140,12 @@ def match_color_all(template: ImageSource, *,
     320x240 haystack and past five minutes for 640x480.
     """
     template_hsv = _hsv(template, None, is_haystack=False)
-    haystack_hsv = _hsv(haystack, region, is_haystack=True)
+    haystack_hsv, origin = _scene_hsv(haystack, region)
     if template_hsv.shape[0] > haystack_hsv.shape[0] \
             or template_hsv.shape[1] > haystack_hsv.shape[1]:
         return []
     score_map = _score_map(template_hsv, haystack_hsv, channels)
     height, width = template_hsv.shape[:2]
     candidates = _select_candidates(score_map, float(min_score), width, height,
-                                    int(max_results), _origin(haystack, region))
+                                    int(max_results), origin)
     return _nms(candidates, float(nms_iou))[:int(max_results)]
