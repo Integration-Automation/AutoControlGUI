@@ -103,6 +103,11 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Changed
 
+- Fresh Windows processes prefer per-monitor DPI v2; re-record coordinates and
+  templates on scaled secondary displays made under the old system-DPI policy.
+  macOS primary/region screenshots now use points; virtual captures stitch
+  displays after per-display scaling. Set-of-Marks returns its virtual `origin`.
+
 - USB passthrough JSON requests now carry `request_id`, echoed by new hosts
   in replies, errors and credit grants. Late replies cannot complete newer
   operations; duplicate or wrong-claim credit grants are ignored and orphaned

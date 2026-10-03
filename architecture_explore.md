@@ -20,7 +20,7 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 | 指標 | 數值 |
 | --- | ---: |
 | Python 模組總數（含周邊子專案） | 1,067 |
-| 程式碼總行數 | 157,724 |
+| 程式碼總行數 | 157,800 |
 | `je_auto_control/utils/` 子套件數 | 310 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 776 |
 | 套件門面 `__all__` 公開名稱數 | 1,247 |
@@ -188,7 +188,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.3 平台後端
 
-#### Windows（`windows/`，23 檔／1,959 行）
+#### Windows（`windows/`，23 檔／1,973 行）
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -199,7 +199,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `keyboard/win32_ctype_keyboard_control.py` | 98 | 鍵盤事件產生。 |
 | `record/win32_input_hook.py` | 253 | 單一一組低階鍵鼠 hook（`WH_KEYBOARD_LL`／`WH_MOUSE_LL`）＋訊息迴圈，產生帶時間戳的事件時間軸；停止時以 `PostThreadMessageW(WM_QUIT)` 收掉執行緒，不會每錄一次就漏一條。 |
 | `record/win32_record.py` | 41 | 把 `win32_input_hook` 的時間軸轉成 action list（含按鍵放開、滾輪與間隔）；整形本體與 macOS 共用 `utils/input_macro/recorder_base.py`。 |
-| `screen/win32_screen.py` | 95 | 螢幕尺寸與像素讀取。**每支 Win32 函式都明寫 argtypes/restype**（HDC 是指標寬度，走預設的 c_int 會截斷，錯誤會沉默地擴散到 GetPixel／ReleaseDC），並持有自己的 user32／gdi32 handle。import 時呼叫 `SetProcessDPIAware()`——**行程層級且不可還原**，實體↔邏輯座標換算請走 `utils/monitor_layout`。 |
+| `screen/win32_screen.py` | 109 | 螢幕尺寸與像素讀取。**每支 Win32 函式都明寫 argtypes/restype**（HDC 是指標寬度，走預設的 c_int 會截斷，錯誤會沉默地擴散到 GetPixel／ReleaseDC），並持有自己的 user32／gdi32 handle。import 時優先呼叫 per-monitor v2，失敗才退回 `SetProcessDPIAware()`——**行程層級且不可還原**，實體↔邏輯座標換算請走 `utils/monitor_layout`。 |
 | `window/windows_window_manage.py` | 374 | 視窗列舉／聚焦／關閉／最小化／幾何／所屬行程 PID／投遞式輸入（`auto_control_window` 的實作）。**每支 Win32 函式都明寫 argtypes/restype**，並持有自己的 user32 handle，避免把原型外溢到別的模組；hwnd 一律是 int。 |
 | `message/window_message.py` | 97 | 直接對視窗送 `WM_*` 訊息（背景輸入）。 |
 | `interception/_dll.py` | 232 | `interception.dll` 的延遲 ctypes 載入與結構定義。 |
@@ -373,7 +373,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.5 影像辨識與畫面分析
 
-> 37 個套件、約 6,064 行。
+> 37 個套件、約 6,124 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -383,7 +383,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/color_region/` | 107 | 以顏色定位畫面區域（遮罩 + 連通元件） |
 | `utils/color_stats/` | 103 | 區域顏色統計：平均色與主色 |
 | `utils/coordinate_space/` | 93 | 模型網格座標與實體像素之間的座標空間對映 |
-| `utils/cv2_utils/` | 847 | OpenCV 基礎層：擷取後端選擇（`screen_grabber`，Pillow／mss 或平台後端）、截圖、`[left, top, right, bottom]` 區域擷取（`region_capture`，Windows 經 `grab_logical` 涵蓋所有螢幕）、樣板比對（走 `grab_logical`，涵蓋所有螢幕）、螢幕錄影、影片錄製（兩者都經 `frame_clock` 依 fps 配速）、連通元件、影像堆疊的取用口（`optional`，Windows arm64 沒有 wheel 時語意報錯）、非 ASCII 路徑也讀寫得到的影像檔存取（`image_file`） |
+| `utils/cv2_utils/` | 849 | OpenCV 基礎層：擷取後端選擇（`screen_grabber`，Pillow／mss 或平台後端）、截圖、`[left, top, right, bottom]` 區域擷取（`region_capture`，Windows／macOS 經 `grab_logical`，負座標與 Retina point 區域統一）、樣板比對（走 `grab_logical`，涵蓋所有螢幕）、螢幕錄影、影片錄製（兩者都經 `frame_clock` 依 fps 配速）、連通元件、影像堆疊的取用口（`optional`，Windows arm64 沒有 wheel 時語意報錯）、非 ASCII 路徑也讀寫得到的影像檔存取（`image_file`） |
 | `utils/edge_lines/` | 131 | 以 Hough 轉換偵測線條／格線／分隔線 |
 | `utils/edge_match/` | 115 | 邊緣形狀（Chamfer／距離轉換）樣板比對 |
 | `utils/feature_match/` | 143 | ORB 特徵比對：在旋轉／縮放／主題變更下定位樣板 |
@@ -397,7 +397,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/match_ensemble/` | 67 | 多樣板共識比對（多張參考圖投票到同一位置） |
 | `utils/match_stability/` | 70 | 比對前的靜止閘門與跨影格的比對持續性 |
 | `utils/match_trust/` | 154 | 樣板比對可信度評分（次峰比 + peak-to-sidelobe） |
-| `utils/monitor_layout/` | 320 | 多螢幕／虛擬桌面幾何（在哪個螢幕、位置、重映射）＋ `logical_frame` 以滑鼠座標空間擷取畫面 |
+| `utils/monitor_layout/` | 374 | 多螢幕／虛擬桌面幾何（在哪個螢幕、位置、重映射）＋ `logical_frame` 以全域輸入座標擷取；macOS 每螢幕縮至 point 後拼接，Windows per-monitor v2 下保持實體像素 |
 | `utils/motion_regions/` | 78 | 兩影格間的局部變化／活動偵測（absdiff） |
 | `utils/perceptual_diff/` | 202 | 感知式（YIQ）影像差異，抑制反鋸齒邊緣誤報 |
 | `utils/preprocess/` | 276 | OCR／比對前的影像前處理（灰階、二值化、去傾斜…） |
@@ -406,7 +406,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/saliency/` | 114 | 頻譜殘差視覺顯著性：顯著圖與排序後的顯著區域 |
 | `utils/scale_detect/` | 105 | 偵測樣板實際渲染的顯示縮放／視覺 DPI |
 | `utils/screen_grid/` | 146 | 供 VLM 接地用的粗粒度標號網格（點 ↔ 格對映） |
-| `utils/set_of_marks/` | 153 | Set-of-Marks 疊圖：為畫面元素編號供 VLM 指認 |
+| `utils/set_of_marks/` | 157 | Set-of-Marks 虛擬桌面疊圖：依 capture origin 繪圖，圖例保留全域輸入座標供 VLM 指認 |
 | `utils/shape_locator/` | 108 | 以邊緣／輪廓偵測定位元件（矩形／形狀，免樣板） |
 | `utils/ssim/` | 162 | 結構相似度比較：感知分數 + 變化區域 |
 | `utils/subpixel_match/` | 109 | 以二次曲面擬合做次像素級比對精修 |
@@ -673,7 +673,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.16 系統、視窗與剪貼簿
 
-> 16 個套件、約 2,616 行。
+> 16 個套件、約 2,617 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -689,7 +689,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/shell_open/` | 99 | 以預設應用開啟檔案，或以預設瀏覽器開啟 URL |
 | `utils/system_volume/` | 212 | 讀取與控制系統主音量與靜音狀態 |
 | `utils/trash/` | 93 | 把檔案移到系統資源回收筒（可復原刪除） |
-| `utils/window_capture/` | 304 | 逐視窗截圖、視窗版面儲存／還原、貼齊與排列 |
+| `utils/window_capture/` | 305 | 逐視窗截圖、視窗版面儲存／還原、貼齊與排列 |
 | `utils/window_geometry/` | 87 | 視窗客戶區幾何（外框內縮、client→screen 對映） |
 | `utils/window_layout/` | 137 | 視窗拼貼／版面規劃器（左右半、四象限、網格、層疊） |
 | `utils/window_zorder/` | 76 | 視窗 z 序控制（最上層／移到最前／送到最後） |
@@ -896,7 +896,7 @@ GUI 是**選用 extra**（`pip install je_auto_control[gui]`，PySide6 + qt-mate
 | `_report_tab.py` | 88 | 報表分頁 mixin。 |
 | `_i18n_helpers.py` | 66 | 需要即時語言切換的分頁共用的翻譯註冊 mixin。 |
 | `_validators.py` | 29 | `int_validator()`／`double_validator()`：以 C locale 驗證的數字輸入框 validator，接受的正是 `int()`／`float()` 讀得懂的寫法（預設 locale 在法文、德文下只收小數逗號）。所有數字 `QLineEdit` 都用它。 |
-| `_screen_geometry.py` | 52 | Qt 邏輯座標與截圖用的原生像素互轉：`native_region()`、`screen_at_native()`、`logical_point()`（每個螢幕的左上角在兩者相同，螢幕內依 device pixel ratio 縮放）。區域選取與主機端標註覆蓋層都用它。 |
+| `_screen_geometry.py` | 53 | Qt 邏輯座標與截圖用的原生像素互轉：`native_region()`、`screen_at_native()`、`logical_point()`（每個螢幕的左上角在兩者相同，螢幕內依 device pixel ratio 縮放）。區域選取與主機端標註覆蓋層都用它。 |
 | `_daemon_thread.py` | 79 | `DaemonThread`：`QThread` 的替代品，保留遠端桌面 worker 用到的介面（`start`／`run`／`isRunning`／`wait`／`requestInterruption`／`started`／`finished`），但 `run()` 跑在 daemon `threading.Thread` 上，刪除物件或程式結束都不會銷毀執行中的執行緒。 |
 | `_worker_thread.py` | 216 | `start_worker()`：在 daemon `threading.Thread` 上執行 `QObject` worker 的 `run()`（沒有 `QThread` 可被銷毀），並經由分頁擁有的中繼物件回報結果（回呼一律在 GUI 執行緒；worker 沒處理的例外也送到 `on_fail`）；worker 留在模組登錄表直到 GUI 執行緒看到它結束，回傳 `WorkerHandle`（`isRunning()`）；程式結束時先呼叫 worker 的 `request_stop()`，最多等 10 秒，仍在跑的隨行程結束。 |
 | `language_wrapper/` | 5,031 | 四語系字典（英／日／簡中／繁中）+ `multi_language_wrapper` 執行期切換器與監聽註冊表。 |
@@ -1075,7 +1075,7 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 
 | 層／子系統 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `gui/` | 95 | 27,836 |
+| `gui/` | 95 | 27,837 |
 | `utils/mcp_server/` | 38 | 19,180 |
 | `utils/remote_desktop/` | 56 | 13,041 |
 | `utils/executor/` | 8 | 9,585 |
@@ -1083,7 +1083,7 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `je_auto_control/`（頂層 3 檔） | 3 | 2,466 |
 | `utils/accessibility/` | 14 | 3,143 |
 | `wrapper/` | 19 | 3,631 |
-| `windows/` | 23 | 1,959 |
+| `windows/` | 23 | 1,973 |
 | `utils/rest_api/` | 8 | 1,885 |
 | `utils/agent/` | 9 | 1,975 |
 | `linux_with_x11/` | 19 | 1,281 |
@@ -1095,6 +1095,6 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `osx/` | 17 | 925 |
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 852 |
-| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 682 | 57,151 |
-| **總計** | **1,061** | **157,659** |
+| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 682 | 57,212 |
+| **總計** | **1,061** | **157,735** |
 

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import sys
 from typing import TYPE_CHECKING, List, Optional
 
 if TYPE_CHECKING:  # pragma: no cover - annotations only
@@ -55,7 +56,15 @@ def pil_screenshot(file_path: Optional[str] = None, screen_region: Optional[List
     grabber = image_grabber()
     if screen_region is not None:
         _validate_region(screen_region)
-        image = grabber.grab(bbox=screen_region)
+        if sys.platform.startswith('win') or sys.platform == 'darwin':
+            from je_auto_control.utils.monitor_layout.logical_frame import grab_logical
+            left, top, right, bottom = (int(value) for value in screen_region)
+            image = grab_logical((left, top, right - left, bottom - top), grabber=grabber)[0]
+        else:
+            image = grabber.grab(bbox=screen_region)
+    elif sys.platform == 'darwin':
+        from je_auto_control.utils.monitor_layout.logical_frame import grab_logical
+        image = grab_logical(all_screens=False, grabber=grabber)[0]
     else:
         image = grabber.grab()
 

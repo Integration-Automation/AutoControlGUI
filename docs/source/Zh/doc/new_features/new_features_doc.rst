@@ -1252,3 +1252,23 @@ Watcher 在 process 記憶體中追蹤已觸發的 UID,可選擇把訊息標為
 
 GUI: **Email Triggers** 分頁 — 註冊 IMAP 觸發、啟動 / 停止 watcher、
 手動觸發一次輪詢、檢視最近錯誤與觸發次數。
+
+全域螢幕座標與 DPI
+----------------------------------------
+
+螢幕區域使用全域輸入座標，包含副螢幕的負座標。新 Windows 行程在 GUI 初始化前
+優先啟用 per-monitor DPI v2；縮放副螢幕上以舊系統 DPI 策略錄製的座標與樣板
+需要重新錄製。嵌入的主程式保留已設定的 DPI 策略。macOS 逐螢幕縮成 point
+後拼接，主螢幕與區域截圖也使用 point，並支援較舊的 Pillow。
+Set-of-Marks 圖例保留全域座標，結果提供擷取的 ``origin``。
+
+2026-10-03 驗證條件：Windows 11 build 26300、Python 3.14.4、單一
+1920x1200 螢幕、100%，已確認 per-monitor v2。負原點、125% Qt 換算、
+1x/2x Retina 拼接以 fixtures 驗證；Windows 混合 DPI 與 Retina Mac
+實機驗證保留在 Progress.md。
+
+全域 bbox 範例（不是 x/y/寬/高）::
+
+   import je_auto_control as ac
+   image = ac.pil_screenshot(screen_region=[-80, 10, -20, 70])
+   assert image.size == (60, 60)

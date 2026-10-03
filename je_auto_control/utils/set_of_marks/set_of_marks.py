@@ -14,7 +14,7 @@ Pillow (already a dependency). Imports no ``PySide6``.
 """
 import io
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 from je_auto_control.utils.accessibility.element import element_box
 
@@ -73,11 +73,13 @@ def resolve_mark(marks: List[Dict[str, Any]],
     return None
 
 
-def _draw_marks(image: Any, marks: List[Dict[str, Any]]) -> Any:
+def _draw_marks(image: Any, marks: List[Dict[str, Any]],
+                 origin: Tuple[int, int] = (0, 0)) -> Any:
     from PIL import ImageDraw
     draw = ImageDraw.Draw(image)
     for mark in marks:
         left, top, width, height = mark["bbox"]
+        left, top = left - origin[0], top - origin[1]
         draw.rectangle([left, top, left + width, top + height],
                        outline=_OUTLINE, width=2)
         label = str(mark["id"])
@@ -117,11 +119,13 @@ def mark_screen(app_name: Optional[str] = None,
     _last_marks.extend(marks)
     result: Dict[str, Any] = {"marks": marks}
     if render_path:
-        from je_auto_control.utils.cv2_utils.screenshot import pil_screenshot
-        image = _draw_marks(pil_screenshot().convert("RGB"), marks)
+        from je_auto_control.utils.monitor_layout.logical_frame import grab_logical
+        captured, origin_x, origin_y = grab_logical()
+        image = _draw_marks(captured.convert("RGB"), marks, (origin_x, origin_y))
         target = Path(render_path)
         image.save(str(target), format="PNG")
         result["image_path"] = str(target.resolve())
+        result['origin'] = [origin_x, origin_y]
     return result
 
 

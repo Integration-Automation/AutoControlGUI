@@ -122,7 +122,7 @@ def test_x11_and_wayland_keep_pil_screenshot(monkeypatch):
 
 
 def test_a_macos_region_is_grabbed_in_points(monkeypatch):
-    """Pillow returns a Retina region at 2x unless ``scale_down`` is passed."""
+    """Normalize Retina pixels explicitly, including older Pillow releases."""
     grabs = []
 
     class _Retina:
@@ -136,7 +136,7 @@ def test_a_macos_region_is_grabbed_in_points(monkeypatch):
     monkeypatch.setattr(sys, "platform", "darwin")
     monkeypatch.setattr(screen_grabber, "image_grabber", lambda: _Retina)
     assert region_capture.grab_screen_region([-1920, 0, -1720, 100]).size == (200, 100)
-    assert grabs == [((-1920, 0, -1720, 100), True)]
+    assert grabs == [((-1920, 0, -1720, 100), False)]
 
 
 def test_connected_boxes_add_the_origin():

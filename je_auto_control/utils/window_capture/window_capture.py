@@ -61,6 +61,7 @@ _DWMWA_EXTENDED_FRAME_BOUNDS = 9
 
 
 def _default_capture(output_path: str, rect: Rect) -> None:
+    """Capture global input coordinates, including negative secondary displays."""
     from je_auto_control.wrapper.auto_control_screen import screenshot
     x, y, width, height = rect
     screenshot(str(output_path), screen_region=[x, y, x + width, y + height])

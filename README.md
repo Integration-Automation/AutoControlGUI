@@ -436,3 +436,11 @@ override locally with `JE_AUTOCONTROL_DOWNLOAD_DIR`. Hosts must send relative
 destinations such as `reports/result.txt`; absolute, drive/UNC, traversal and
 symlink escapes are rejected. An explicit `FileReceiver(base_dir=Path(...))`
 selects another bounded root. Host receivers retain their existing behavior.
+
+Screen regions use global input coordinates, including negative monitor origins.
+Fresh Windows processes request per-monitor DPI v2 before GUI initialization;
+re-record coordinates and templates captured under the old system-DPI policy
+on scaled secondary displays. An embedding host retains its existing DPI policy.
+macOS captures normalize each display to points before stitching; primary and
+region screenshots also use points, including older Pillow releases.
+Set-of-Marks legends keep global points and return the captured `origin`.

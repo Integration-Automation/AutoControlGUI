@@ -209,3 +209,8 @@ first. `AC_*` command names and the legacy CLI flags are public too (action file
   target moves, or the log file name or location changes.
 - A hard rule in CLAUDE.md is added or changed.
 - On every edit, refresh the "Last verified" line. Module-level changes belong in `architecture_explore.md`, not here.
+
+Screen-coordinate contract: regions and locating results use global input coordinates.
+Fresh Windows processes prefer per-monitor v2; Qt scales inside each display.
+macOS captures normalize each display to points before stitching. Set-of-Marks
+draws relative to the capture origin while keeping global points in its legend.

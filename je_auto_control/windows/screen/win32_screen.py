@@ -1,5 +1,8 @@
+"""Win32 screen queries with pointer-safe handles and per-monitor DPI awareness."""
+import ctypes
 import sys
-from typing import Tuple
+from ctypes import wintypes
+from typing import Any, Tuple
 
 from je_auto_control.utils.exception.exception_tags import windows_import_error_message
 from je_auto_control.utils.exception.exceptions import AutoControlException
@@ -8,9 +11,6 @@ from je_auto_control.utils.exception.exceptions import AutoControlException
 if sys.platform not in ["win32", "cygwin", "msys"]:
     raise AutoControlException(windows_import_error_message)
 
-import ctypes
-from ctypes import wintypes
-
 # 這個模組持有自己的 user32 / gdi32 handle，而不是共用 `ctypes.windll`：
 # argtypes/restype 是設在**函式物件**上的，共用 handle 會讓這裡的原型外溢到
 # 別的呼叫者（`utils/window_capture/` 就用自己的 RECT 呼叫 GetWindowRect）。
@@ -18,8 +18,9 @@ from ctypes import wintypes
 # This module owns its user32 / gdi32 handles rather than sharing
 # ``ctypes.windll``: prototypes live on the function objects, so a shared handle
 # would leak these declarations into every other caller in the process.
-_user32 = ctypes.WinDLL("user32", use_last_error=True)  # type: ignore[attr-defined]  # reason: win32-only ctypes
-_gdi32 = ctypes.WinDLL("gdi32", use_last_error=True)  # type: ignore[attr-defined]  # reason: win32-only ctypes
+# WinDLL is available only on Windows, guarded above.
+_user32 = ctypes.WinDLL("user32", use_last_error=True)  # type: ignore[attr-defined]
+_gdi32 = ctypes.WinDLL("gdi32", use_last_error=True)  # type: ignore[attr-defined]
 
 # HDC 是**指標寬度**的 handle。ctypes 預設把回傳值與參數當成 c_int，在 64 位元
 # Windows 上會截斷——`GetDC` 回來就已經是壞的，再傳給 `GetPixel` / `ReleaseDC`
@@ -40,14 +41,27 @@ _user32.ReleaseDC.restype = ctypes.c_int
 _gdi32.GetPixel.argtypes = [wintypes.HDC, ctypes.c_int, ctypes.c_int]
 _gdi32.GetPixel.restype = wintypes.COLORREF
 
-# 確保 DPI 感知，避免座標偏移。**這是行程層級的副作用**，而它發生在 import 時：
-# 一旦設定就無法還原，之後所有 Win32 座標查詢都會拿到實體像素。這正是本模組被
-# import 的理由（螢幕尺寸與取色都必須是實體座標），但呼叫端要知道它會影響整個
-# 行程——擷取與滑鼠座標的換算請走 `utils/monitor_layout`。
-#
-# Process-wide and irreversible, and it happens at import time; conversions
-# between physical and logical coordinates belong to ``utils/monitor_layout``.
-_user32.SetProcessDPIAware()
+
+def _configure_dpi_awareness(user32: Any) -> bool:
+    """Prefer per-monitor v2 before legacy awareness, before creating any GUI.
+
+    Windows refuses changes after an application/manifest has set its policy.
+    The fallback cannot override that policy; existing host applications keep
+    their awareness. Fresh AutoControl processes use physical mouse coordinates.
+    """
+    configure = getattr(user32, 'SetProcessDpiAwarenessContext', None)
+    if configure is not None:
+        configure.argtypes = [ctypes.c_void_p]
+        configure.restype = wintypes.BOOL
+        if configure(ctypes.c_void_p(-4)):  # DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2
+            return True
+    return bool(user32.SetProcessDPIAware())
+
+
+# Process-wide import-time initialization, before capture/input/Qt windows.
+# Per-monitor v2 removes mixed-DPI virtualization in fresh processes. A host
+# that already chose its DPI policy cannot be changed by this import.
+_configure_dpi_awareness(_user32)
 
 _CLR_INVALID = 0xFFFFFFFF
 

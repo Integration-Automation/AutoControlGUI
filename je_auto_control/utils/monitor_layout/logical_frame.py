@@ -1,23 +1,16 @@
 """Capture a frame whose pixels map 1:1 onto the coordinates the mouse takes.
 
-Two things quietly disagree on Windows once a second monitor is attached:
+On Windows a fresh AutoControl process requests per-monitor v2 before Qt,
+so captures and input use physical global coordinates. Primary-only Pillow
+captures miss secondary monitors, therefore this module captures the virtual
+desktop and reports its possibly negative origin.
 
-* ``ImageGrab.grab()`` sees **only the primary monitor**, so anything located
-  from it can never be on the second one — the search does not fail, it just
-  never finds.
-* ``ImageGrab.grab(all_screens=True)`` makes itself DPI-aware first and returns
-  **physical** pixels, while a DPI-unaware process (and therefore
-  ``GetSystemMetrics`` and every mouse API) works in **logical** pixels. On a
-  mixed-DPI desktop the two differ — a 1920×1080 monitor beside a 1920×1080 one
-  scaled to 125% is 3840 physical but 3456 logical wide — so a point read off
-  the capture lands somewhere else when clicked. Measured on such a desktop the
-  drift reaches ~116 px, which reads as "sometimes misses" rather than "broken".
-
-Both are the same requirement: one pixel in the frame must be one coordinate for
-the mouse. ``grab_logical`` captures the whole virtual desktop and scales it back
-into the logical space, reporting the origin to add to any hit — the virtual
-desktop starts at negative coordinates whenever a monitor sits left of or above
-the primary one.
+An embedding host may already have set its DPI policy; Windows disallows
+changing that process policy. The existing rescale fallback remains for
+those hosts, whose mixed-DPI mapping is limited by their chosen policy.
+On macOS capture each display in global points, resize its Retina pixels
+independently, and stitch the displays at their global origins. All APIs
+here return one image pixel per input coordinate.
 
 Wayland has the same requirement without the DPI half: its capture spans the
 compositor's whole output layout, and that layout starts at a negative
@@ -32,7 +25,7 @@ unit-testable; the OS reader and the grabber are both injectable. Imports no
 ``PySide6``.
 """
 import sys
-from typing import Any, Callable, Optional, Sequence, Tuple
+from typing import Any, Callable, List, Optional, Sequence, Tuple
 
 Rect = Tuple[int, int, int, int]
 MetricsReader = Callable[[int], int]
@@ -58,6 +51,8 @@ def logical_virtual_rect(metrics: Optional[MetricsReader] = None) -> Optional[Re
     ``None`` where the platform cannot report it, so callers skip the rescale
     rather than guess.
     """
+    if metrics is None and sys.platform == 'darwin':
+        return _union_rects(_mac_display_rects())
     reader = metrics or _system_metrics
     try:
         rect = (reader(SM_XVIRTUALSCREEN), reader(SM_YVIRTUALSCREEN),
@@ -111,6 +106,63 @@ def _resample():
     return getattr(getattr(Image, "Resampling", Image), "LANCZOS")
 
 
+def _mac_display_rects() -> List[Rect]:
+    """Active Quartz display bounds in global points, primary first."""
+    from je_auto_control.utils.exception.exceptions import AutoControlScreenException
+    try:
+        import Quartz
+    except ImportError as error:
+        raise AutoControlScreenException('macOS display geometry requires pyobjc/Quartz') from error
+    status, displays, _count = Quartz.CGGetActiveDisplayList(64, None, None)
+    if status != 0 or not displays:
+        raise AutoControlScreenException(f'CGGetActiveDisplayList failed: {status}')
+    main = Quartz.CGMainDisplayID()
+    ordered = sorted(displays, key=lambda display: display != main)
+    rectangles = []
+    for display in ordered:
+        bounds = Quartz.CGDisplayBounds(display)
+        rectangles.append((round(bounds.origin.x), round(bounds.origin.y),
+                           round(bounds.size.width), round(bounds.size.height)))
+    return rectangles
+
+
+def _union_rects(rectangles: Sequence[Rect]) -> Rect:
+    left = min(rect[0] for rect in rectangles)
+    top = min(rect[1] for rect in rectangles)
+    right = max(rect[0] + rect[2] for rect in rectangles)
+    bottom = max(rect[1] + rect[3] for rect in rectangles)
+    return left, top, right - left, bottom - top
+
+
+def _mac_region(grabber: Any, region: Sequence[int]) -> Tuple[Any, int, int]:
+    """Normalize a global-point bbox independently of its display's Retina ratio.
+
+    Resizing explicitly supports Pillow releases before scale_down was added.
+    A native -R capture addresses the region directly, including negative points.
+    """
+    left, top, width, height = (int(value) for value in region)
+    image = grabber.grab(bbox=(left, top, left + width, top + height))
+    if needs_rescale(image.size, (width, height)):
+        image = image.resize((width, height), _resample())
+    return image, left, top
+
+
+def _grab_mac(grabber: Any, region: Optional[Sequence[int]],
+              all_screens: bool) -> Tuple[Any, int, int]:
+    if region is not None:
+        return _mac_region(grabber, region)
+    displays = _mac_display_rects()
+    if not all_screens:
+        return _mac_region(grabber, displays[0])
+    from PIL import Image
+    left, top, width, height = _union_rects(displays)
+    canvas = Image.new('RGB', (width, height))
+    for display in displays:
+        image, x, y = _mac_region(grabber, display)
+        canvas.paste(image, (x - left, y - top))
+    return canvas, left, top
+
+
 def grab_logical(region: Optional[Sequence[int]] = None, *,
                  all_screens: bool = True,
                  grabber: Optional[Any] = None,
@@ -126,6 +178,8 @@ def grab_logical(region: Optional[Sequence[int]] = None, *,
         the image to get a coordinate the mouse can be sent to.
     """
     image_grab = grabber or _load_image_grab()
+    if sys.platform == 'darwin':
+        return _grab_mac(image_grab, region, all_screens)
     if region is None and not all_screens:
         # The primary-only grab is already in logical pixels and starts at (0, 0).
         return image_grab.grab(), 0, 0

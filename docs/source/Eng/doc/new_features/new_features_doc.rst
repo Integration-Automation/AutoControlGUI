@@ -1337,3 +1337,25 @@ with ``${secrets.NAME}`` so passwords never appear in the JSON.
 
 GUI: **Email Triggers** tab — register IMAP triggers, start/stop the
 watcher, run a manual poll, inspect last error and fire counter.
+
+Global screen coordinates and DPI
+----------------------------------------
+
+Screen regions use global input coordinates, including negative monitor origins.
+Fresh Windows processes request per-monitor DPI v2 before GUI initialization;
+re-record coordinates and templates captured under the old system-DPI policy
+on scaled secondary displays. An embedding host retains its existing DPI policy.
+macOS captures normalize each display to points before stitching; primary and
+region screenshots also use points, including older Pillow releases.
+Set-of-Marks legends keep global points and return the captured ``origin``.
+
+Verification on 2026-10-03: Windows 11 build 26300, Python 3.14.4, one
+1920x1200 display at 100%, per-monitor v2 confirmed. Negative origins, 125%
+Qt conversions and mixed 1x/2x Retina stitching are covered by fixtures.
+Physical mixed-DPI Windows and Retina Mac validation remain in Progress.md.
+
+Example (global bbox, not x/y/width/height)::
+
+   import je_auto_control as ac
+   image = ac.pil_screenshot(screen_region=[-80, 10, -20, 70])
+   assert image.size == (60, 60)

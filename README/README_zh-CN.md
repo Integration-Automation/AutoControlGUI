@@ -393,3 +393,9 @@ TCP／WebSocket viewer 默认收文件到 `~/Downloads/AutoControl`，本机可�
 `JE_AUTOCONTROL_DOWNLOAD_DIR` 指定目录。Host 必须传入 `reports/result.txt` 等相对
 目的地；绝对路径、磁盘／UNC、目录穿越和 symlink 越界会被拒绝。
 可用 `FileReceiver(base_dir=Path(...))` 选择其他受限目录；host 收文件保留原行为。
+
+屏幕区域使用全局输入坐标，包含副屏幕的负坐标。新 Windows 进程在 GUI 初始化前
+优先启用 per-monitor DPI v2；缩放副屏幕上以旧系统 DPI 策略录制的坐标与模板
+需要重新录制。嵌入的主程序保留已设置的 DPI 策略。macOS 逐屏幕缩成 point
+后拼接，主屏幕与区域截图也使用 point，并支持较旧的 Pillow。
+Set-of-Marks 图例保留全局坐标，结果提供捕获的 `origin`。

@@ -1,18 +1,14 @@
 """Capture a ``[left, top, right, bottom]`` screen region on whichever monitor holds it.
 
-``pil_screenshot(screen_region=...)`` hands the box to ``ImageGrab.grab(bbox=...)``,
-which on Windows captures the primary monitor only and crops that, filling
-the rest with black. A colour, histogram, SSIM, contrast or colour-wait
-region on any other monitor therefore measured a black image. On Windows the
-region goes through ``grab_logical`` instead, which captures every monitor
-in mouse coordinates as the matchers do.
+Windows regions go through ``grab_logical`` to reach negative monitor
+coordinates instead of cropping only the primary screen.
 
 On macOS ``screencapture -R`` reaches every display, but a Retina region
 comes back at twice its size in points, the unit the mouse takes, so a blob
 found in it was placed twice as far from the region's corner. The region is
-grabbed with ``scale_down=True``, which keeps it in points. Elsewhere (the X11
-root, the Wayland layout) and for a whole-screen capture ``pil_screenshot``
-is used unchanged.
+normalized explicitly by ``grab_logical``, supporting older Pillow releases
+without ``scale_down``. Elsewhere (the X11 root, the Wayland layout) and
+for a primary-screen capture ``pil_screenshot`` is used.
 """
 from __future__ import annotations
 
@@ -35,10 +31,7 @@ def grab_screen_region(region: Optional[Sequence[int]] = None) -> Image.Image:
         return pil_screenshot(screen_region=None)
     _validate_region(list(region))
     left, top, right, bottom = (int(value) for value in region)
-    if sys.platform.startswith("win"):
+    if sys.platform.startswith("win") or sys.platform == "darwin":
         from je_auto_control.utils.monitor_layout.logical_frame import grab_logical
         return grab_logical((left, top, right - left, bottom - top))[0]
-    if sys.platform == "darwin":
-        from je_auto_control.utils.cv2_utils.screen_grabber import image_grabber
-        return image_grabber().grab(bbox=(left, top, right, bottom), scale_down=True)
     return pil_screenshot(screen_region=[left, top, right, bottom])

@@ -58,6 +58,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261003-03 | 2026-10-03 | Unify virtual capture, Retina points and per-monitor DPI | #done #screen | [2026-10](2026-10.md) |
 | U-20261003-02 | 2026-10-03 | Align registry identity and package repository links | #done #metadata | [2026-10](2026-10.md) |
 | U-20261003-01 | 2026-10-03 | Bound MCP file references and viewer downloads | #done #security | [2026-10](2026-10.md) |
 | U-20261002-05 | 2026-10-02 | Separate action signing keys from execution verification | #done #security | [2026-10](2026-10.md) |

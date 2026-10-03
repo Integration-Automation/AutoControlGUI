@@ -318,55 +318,12 @@ OpenAI 後端沒有這個綁定，照舊。
 ---
 
 
-## Windows 的 DPI 感知是系統層級，混合 DPI 的螢幕座標被虛擬化
+## 混合 DPI 與 Retina 實機驗證
 
-`DECIDE` — 改成 per-monitor 會移動那些螢幕上的所有座標，Jeffrey_RPA 在那些螢幕上錄的座標與樣板要重錄
-
-`windows/screen/win32_screen.py:50` 在 import 時呼叫 `SetProcessDPIAware()`，那是系統 DPI 感知，不是
-per-monitor。DPI 與主螢幕不同的螢幕會被 Windows 虛擬化：本機第二螢幕 125%，實際 1920×1080，但 Win32、
-`mss` 與 Qt 都回報 `(1920, -164, 1536, 864)`，截圖是 Windows 縮小過的影像，那個螢幕上的樣板比對與 OCR
-用的是模糊的畫面。同檔註解說之後「所有 Win32 座標查詢都會拿到實體像素」，只在主螢幕 DPI 的螢幕上成立。
-
-**做法**：先呼叫 `SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2)`，失敗再退回
-`SetProcessDPIAware()`，並改正註解；`utils/monitor_layout` 的換算與 `gui/_screen_geometry.py` 一起檢查。
-
-**為什麼要拍板**：這個檔在 Jeffrey_RPA 正在跑的截圖路徑上。換成 per-monitor 之後，縮放螢幕上的座標與截圖
-尺寸都會變，既有的樣板和錄好的座標在那些螢幕上會失準。
-
----
-
-## `pil_screenshot`／`screenshot` 的區域擷取在 Windows 只看得到主螢幕
-
-`BLOCKED` — 要改的是 Jeffrey_RPA 正在跑的截圖路徑（`cv2_utils/screenshot.py`、`wrapper/auto_control_screen.py`、`utils/window_capture/window_capture.py`），依工作區規則在它執行期間不動
-
-`cv2_utils/screenshot.py:58` 把 `screen_region` 交給 `ImageGrab.grab(bbox=...)`，Pillow 在 Windows 沒帶
-`all_screens=True` 時只擷取主螢幕再裁切，主螢幕外的部分補黑。分析類指令已改走
-`cv2_utils/region_capture.grab_screen_region`（顏色、直方圖、SSIM、對比、顏色等待、QR、VLM、MCP 截圖），
-下面這些仍是舊路徑，在主螢幕左側或上方的螢幕得到全黑影像：
-
-- `pil_screenshot(screen_region=...)`、`screenshot(screen_region=...)` 與 `AC_screenshot`。
-- `utils/pytest_plugin/keywords.py:41` `keyword_screenshot`（與 `AC_screenshot` 同一語意，一起改）。
-- `utils/window_capture/window_capture.py:66` `capture_window`：視窗在副螢幕時截到黑的。
-- `utils/set_of_marks/set_of_marks.py:121` 把標記畫在 `pil_screenshot()`（只有主螢幕）上，副螢幕的元件沒有標記。
-
-**做法**：`pil_screenshot` 的區域路徑在 Windows 改走 `grab_screen_region`（它已處理 DPI 與負座標），
-`capture_window` 同樣；set-of-marks 改用 `grab_logical(None)` 並把原點加回標記座標。
-
----
-
-## macOS 的 `grab_logical` 在 Retina 上是像素座標，而且只看得到主螢幕
-
-`BLOCKED` — `utils/monitor_layout/logical_frame.py` 在 Jeffrey_RPA 正在跑的截圖路徑上，依工作區規則在它執行期間不動
-
-`grab_logical` 在 macOS 呼叫 `ImageGrab.grab(all_screens=True)`。讀 Pillow 12.3.0 的 darwin 分支：`all_screens`
-不被使用，`screencapture -x` 只擷取主螢幕；Retina 螢幕的影像是點座標的 2 倍（Pillow 文件：「screen captures will
-be at 2x if on a Retina screen」，`scale_down=True` 只在帶 `bbox` 時生效）。`logical_virtual_rect` 只讀 Windows 的
-`GetSystemMetrics`，所以 macOS 不縮放：樣板比對、OCR 與其他走 `grab_logical` 的定位，在 Retina 上回傳的座標是
-滑鼠（Quartz，點座標）的 2 倍，副螢幕上的目標則找不到。GitHub 的 macOS runner 是 1x 虛擬螢幕，CI 測不到。
-
-**做法**：darwin 上以 `CGDisplayBounds`／`CGGetActiveDisplayList` 取得各螢幕的點座標範圍；有 `region` 時交給
-`ImageGrab.grab(bbox=..., scale_down=True)`（`screencapture -R` 接受全域點座標，包括負值），整個桌面則逐螢幕擷取、
-各自縮到點座標後拼接，原點取所有螢幕的最小 x／y。需要在 Retina Mac 上實測。
+`TODO` — H3 需在 Windows 混合 DPI 雙螢幕及 Retina Mac（含 1x/2x 與負原點）
+執行 `grab_logical`、區域／視窗截圖、定位座標及 Qt 轉換驗證，附 OS、縮放、布局與影像尺寸。
+目前 2026-10-03 僅有 Windows 單一 1920×1200、100% 螢幕，無 Retina Mac；
+負原點、125% Qt 與混合 Retina 的 fixtures 已通過，但不能取代上述實機驗證。
 
 ---
 
