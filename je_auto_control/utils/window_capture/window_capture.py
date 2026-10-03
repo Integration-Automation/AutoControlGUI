@@ -103,10 +103,11 @@ def save_window_layout(path: Optional[Union[str, Path]] = None, *,
                        ) -> List[Dict[str, Any]]:
     """Snapshot the geometry of every titled window.
 
-    Returns a list of ``{title, x, y, width, height}`` and, when ``path``
+    Returns ``{title, x, y, width, height}`` entries; native Windows snapshots
+    also carry ``placement`` with normal bounds and the show state. When ``path``
     is given, also writes it as JSON for a later
     :func:`restore_window_layout`. Windows with no readable geometry are
-    skipped.
+    skipped. Injecting ``geometry`` preserves the geometry-only format.
     """
     layout: List[Dict[str, Any]] = []
     for hwnd, title in (lister or _default_lister)():
@@ -116,8 +117,13 @@ def save_window_layout(path: Optional[Union[str, Path]] = None, *,
         rect = geometry(title) if geometry is not None else _handle_geometry(hwnd)
         if rect is None:
             continue
-        layout.append({"title": title, "x": rect[0], "y": rect[1],
-                       "width": rect[2], "height": rect[3]})
+        entry = {"title": title, "x": rect[0], "y": rect[1], "width": rect[2], "height": rect[3]}
+        if geometry is None and sys.platform == "win32":
+            from je_auto_control.windows.window import windows_window_manage as wm
+            placement = wm.get_window_placement(int(hwnd))
+            if placement is not None:
+                entry["placement"] = placement
+        layout.append(entry)
     if path is not None:
         Path(path).write_text(json.dumps(layout, indent=2), encoding="utf-8")
     return layout
@@ -139,10 +145,17 @@ def _default_mover(title: str, x: int, y: int,
 
 
 def _handle_geometry(hwnd: int) -> Optional[Rect]:
-    return _win32_geometry(int(hwnd)) if sys.platform == "win32" else None
+    if sys.platform != "win32":
+        return None
+    from je_auto_control.windows.window import windows_window_manage as wm
+    rect = wm.get_window_rect(int(hwnd))
+    if rect is None:
+        return None
+    left, top, right, bottom = rect
+    return left, top, right - left, bottom - top
 
 
-def _exact_title_mover() -> WindowMover:
+def _exact_title_mover(placements: Optional[Dict[str, list]] = None) -> WindowMover:
     """A mover that gives each saved entry a different window of that exact title.
 
     It matched by title substring, so every entry whose title another
@@ -159,6 +172,10 @@ def _exact_title_mover() -> WindowMover:
         for hwnd, name in list_windows(titled_only=True):
             if name == title and hwnd not in used:
                 used.add(hwnd)
+                saved = (placements or {}).get(title)
+                placement = saved.pop(0) if saved else None
+                if placement is not None:
+                    return wm.set_window_placement(int(hwnd), placement)
                 return bool(wm.move_window(int(hwnd), x, y, width, height))
         return False
 
@@ -167,16 +184,20 @@ def _exact_title_mover() -> WindowMover:
 
 def restore_window_layout(layout: Union[List[Dict[str, Any]], str, Path], *,
                           mover: Optional[WindowMover] = None) -> int:
-    """Move each window back to its saved geometry; return the count moved.
+    """Restore native placement or legacy geometry; return the count restored.
 
     ``layout`` is a list from :func:`save_window_layout`, or a path to the
-    JSON it wrote. ``mover`` is injectable for tests.
+    JSON it wrote. Native Windows entries replay placement and show state;
+    legacy entries use MoveWindow. Injected ``mover`` receives geometry only.
     """
     entries: List[Dict[str, Any]] = (
         json.loads(Path(layout).read_text(encoding="utf-8"))
         if isinstance(layout, (str, Path)) else list(layout)
     )
-    move = mover or _exact_title_mover()
+    placements: Dict[str, list] = {}
+    for entry in entries:
+        placements.setdefault(entry.get("title", ""), []).append(entry.get("placement"))
+    move = mover or _exact_title_mover(placements)
     restored = 0
     for entry in entries:
         title = entry.get("title")
@@ -215,6 +236,18 @@ def _default_screen_size() -> Tuple[int, int]:
     return (int(size[0]), int(size[1]))
 
 
+def _layout_area(screen_size: Optional[SizeProvider]) -> Rect:
+    """Use explicit size providers as-is, otherwise the Windows work area."""
+    if screen_size is None and sys.platform == "win32":
+        from je_auto_control.windows.window import windows_window_manage as wm
+        area = wm.get_work_area()
+        if area is not None:
+            left, top, right, bottom = area
+            return left, top, right - left, bottom - top
+    width, height = (screen_size or _default_screen_size)()
+    return 0, 0, int(width), int(height)
+
+
 def snap_window(title: str, position: str = "left", *,
                 mover: Optional[WindowMover] = None,
                 screen_size: Optional[SizeProvider] = None) -> bool:
@@ -224,9 +257,9 @@ def snap_window(title: str, position: str = "left", *,
     top-right / bottom-left / bottom-right / max. Returns ``True`` when the
     window moved. The size provider and mover are injectable for tests.
     """
-    width, height = (screen_size or _default_screen_size)()
-    x, y, w, h = _snap_rect(position, int(width), int(height))
-    return (mover or _default_mover)(title, x, y, w, h)
+    left, top, width, height = _layout_area(screen_size)
+    x, y, w, h = _snap_rect(position, width, height)
+    return (mover or _default_mover)(title, left + x, top + y, w, h)
 
 
 def _move_into(titles: List[str], rects, move: WindowMover) -> int:
@@ -265,9 +298,8 @@ def arrange_grid(titles: List[str], *, rows: Optional[int] = None,
     titles = list(titles)
     if not titles:
         return 0
-    width, height = (screen_size or _default_screen_size)()
     grid_rows, grid_cols = _grid_shape(len(titles), rows, cols)
-    rects = grid_rects((0, 0, int(width), int(height)), grid_rows, grid_cols,
+    rects = grid_rects(_layout_area(screen_size), grid_rows, grid_cols,
                        gap=int(gap))
     return _move_into(titles, rects, mover or _default_mover)
 
@@ -284,7 +316,6 @@ def arrange_cascade(titles: List[str], *, offset: int = 30,
     titles = list(titles)
     if not titles:
         return 0
-    width, height = (screen_size or _default_screen_size)()
-    rects = cascade_rects((0, 0, int(width), int(height)), len(titles),
+    rects = cascade_rects(_layout_area(screen_size), len(titles),
                           offset=int(offset))
     return _move_into(titles, rects, mover or _default_mover)

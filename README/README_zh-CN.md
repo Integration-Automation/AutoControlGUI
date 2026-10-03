@@ -427,3 +427,16 @@ optional markers，上游仍无符合安全下限的 wheel；Intel Mac 需源码
 详见[安装矩阵](../docs/CAPABILITY_MATRIX.md)。缺少依赖时，相关能力抛出
 门面公开的 `CryptoDependencyError`；`CryptoUnavailableError` 兼容 RuntimeError，
 `CryptoImportError` 兼容 ImportError。错误附安装指引，非加密操作与 Qt-free 导入可继续使用。
+
+## 窗口生命周期与布局快照
+
+`focus_window` 确认实际前台窗口，焦点被拒时抛出
+`AutoControlActionException`。`wait_for_window` 每次等待不超过剩余超时，也支持无限 poll 值。
+Windows 枚举跳过 DWM 隐藏和零面积窗口；投递文本只发送一次字符消息，控制键发送含扫描码和
+释放标志的成对按键消息，并接受 `enter`、`esc` 别名。
+
+`capture_window` 读取可见边界，不移动或还原窗口。新的 Windows `save_window_layout`
+快照包含原生位置和显示状态，`restore_window_layout` 还原时不会因边框而偏移，并保留最大化／
+最小化状态。旧版只有几何数据的 JSON 仍可读取；重新保存快照才能保留原生位置。
+注入的 geometry／mover 仍沿用几何契约。贴齐／网格／层叠排列使用含原点偏移的主屏幕工作区，
+避开任务栏。macOS 按窗口 ID 还原时查询离开屏幕的窗口，仍须取得 Accessibility 授权。

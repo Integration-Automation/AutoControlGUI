@@ -6,11 +6,12 @@ import ctypes
 from ctypes import (  # type: ignore[attr-defined]  # reason: win32-only ctypes
     WINFUNCTYPE, byref, create_unicode_buffer, wintypes,
 )
-from typing import List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 # 相容用途：舊版本從這個模組匯出共用的 user32。
 # Compatibility: older code imported the shared user32 from this module.
 from je_auto_control.windows.core.utils.win32_ctype_input import user32  # noqa: F401
+from je_auto_control.utils.exception.exceptions import AutoControlActionException
 
 # 這個模組刻意持有自己的 user32 handle，而不是共用上面那個：底下每個函式都要
 # 設 argtypes/restype，而那是設在**函式物件**上的，共用同一個 handle 會讓設定
@@ -64,12 +65,47 @@ _user32.MoveWindow.argtypes = [wintypes.HWND, ctypes.c_int, ctypes.c_int,
 _user32.MoveWindow.restype = wintypes.BOOL
 _user32.IsIconic.argtypes = [wintypes.HWND]
 _user32.IsIconic.restype = wintypes.BOOL
+_user32.IsWindow.argtypes = [wintypes.HWND]
+_user32.IsWindow.restype = wintypes.BOOL
+_user32.IsZoomed.argtypes = [wintypes.HWND]
+_user32.IsZoomed.restype = wintypes.BOOL
+_user32.MapVirtualKeyW.argtypes = [wintypes.UINT, wintypes.UINT]
+_user32.MapVirtualKeyW.restype = wintypes.UINT
+_user32.SystemParametersInfoW.argtypes = [wintypes.UINT, wintypes.UINT, ctypes.c_void_p, wintypes.UINT]
+_user32.SystemParametersInfoW.restype = wintypes.BOOL
 _user32.GetWindowThreadProcessId.argtypes = [wintypes.HWND,
                                              ctypes.POINTER(wintypes.DWORD)]
 _user32.GetWindowThreadProcessId.restype = wintypes.DWORD
 
 WM_CLOSE = 0x0010
 SW_RESTORE = 9
+
+
+class _WindowPlacement(ctypes.Structure):  # pylint: disable=too-few-public-methods  # reason: native data structure
+    """The stable Win32 placement structure (workspace coordinates)."""
+
+    _fields_ = [("length", wintypes.UINT), ("flags", wintypes.UINT), ("showCmd", wintypes.UINT),
+                ("ptMinPosition", wintypes.POINT), ("ptMaxPosition", wintypes.POINT),
+                ("rcNormalPosition", wintypes.RECT)]
+
+
+_user32.GetWindowPlacement.argtypes = [wintypes.HWND, ctypes.POINTER(_WindowPlacement)]
+_user32.GetWindowPlacement.restype = wintypes.BOOL
+_user32.SetWindowPlacement.argtypes = [wintypes.HWND, ctypes.POINTER(_WindowPlacement)]
+_user32.SetWindowPlacement.restype = wintypes.BOOL
+
+
+def _is_cloaked(hwnd: int) -> bool:
+    """Query DWM without changing another module's ctypes prototypes."""
+    try:
+        dwm = ctypes.WinDLL("dwmapi")  # type: ignore[attr-defined]  # reason: win32-only ctypes
+    except OSError:
+        return False
+    attribute = dwm.DwmGetWindowAttribute
+    attribute.argtypes = [wintypes.HWND, wintypes.DWORD, ctypes.c_void_p, wintypes.DWORD]
+    attribute.restype = ctypes.c_long
+    cloaked = wintypes.DWORD()
+    return attribute(hwnd, 14, byref(cloaked), ctypes.sizeof(cloaked)) == 0 and bool(cloaked.value)
 
 
 def get_all_window_hwnd() -> List[Tuple[int, str]]:
@@ -86,7 +122,9 @@ def get_all_window_hwnd() -> List[Tuple[int, str]]:
     window_info: List[Tuple[int, str]] = []
 
     def _foreach_window(hwnd, _l_param) -> bool:
-        if _user32.IsWindowVisible(hwnd):
+        rect = get_window_rect(hwnd)
+        if (_user32.IsWindowVisible(hwnd) and not _is_cloaked(hwnd) and rect is not None
+                and rect[2] > rect[0] and rect[3] > rect[1]):
             length = _user32.GetWindowTextLengthW(hwnd)
             buff = create_unicode_buffer(length + 1)
             _user32.GetWindowTextW(hwnd, buff, length + 1)
@@ -188,23 +226,23 @@ def destroy_window(hwnd: int) -> bool:
     return bool(_user32.DestroyWindow(hwnd))
 
 
-def set_foreground_window(hwnd: int) -> None:
+def set_foreground_window(hwnd: int) -> bool:
     """
     設定視窗為前景視窗
     Set window to foreground
     """
-    _user32.SetForegroundWindow(hwnd)
+    return bool(_user32.SetForegroundWindow(hwnd))
 
 
-def set_window_position(hwnd: int, position: int) -> None:
+def set_window_position(hwnd: int, position: int) -> bool:
     """
     設定視窗位置 (僅改變 Z-order，不改變大小與座標)
     Set window position (only Z-order, no resize or move)
     """
     swp_no_size = 0x0001
     swp_no_move = 0x0002
-    _user32.SetWindowPos(hwnd, position, 0, 0, 0, 0,
-                         swp_no_move | swp_no_size)
+    return bool(_user32.SetWindowPos(hwnd, position, 0, 0, 0, 0,
+                                    swp_no_move | swp_no_size))
 
 
 #: SW_SHOWNORMAL, SW_SHOWMAXIMIZED, SW_SHOW, SW_RESTORE, SW_SHOWDEFAULT. The
@@ -213,7 +251,7 @@ def set_window_position(hwnd: int, position: int) -> None:
 _ACTIVATING_SHOW_COMMANDS = frozenset({1, 3, 5, 9, 10})
 
 
-def show_window(hwnd: int, cmd_show: int) -> None:
+def show_window(hwnd: int, cmd_show: int) -> bool:
     """
     顯示或隱藏視窗
     Show or hide a window
@@ -222,11 +260,78 @@ def show_window(hwnd: int, cmd_show: int) -> None:
     """
     if cmd_show < 0 or cmd_show > 11:  # Win32 ShowWindow 常見範圍
         cmd_show = 1  # 預設為 Normal
+    if not _user32.IsWindow(hwnd):
+        return False
     _user32.ShowWindow(hwnd, cmd_show)
     # 隱藏之後不該再把它拉到前景，那是自相矛盾的一組動作。
     # Do not pull a window forward right after hiding it.
     if cmd_show in _ACTIVATING_SHOW_COMMANDS:
         _user32.SetForegroundWindow(hwnd)
+    return _show_state_matches(hwnd, cmd_show)
+
+
+def _show_state_matches(hwnd: int, cmd_show: int) -> bool:
+    """ShowWindow returns previous visibility; inspect the resulting state instead."""
+    if cmd_show == 0:
+        return not bool(_user32.IsWindowVisible(hwnd))
+    if cmd_show in (2, 6, 7, 11):
+        return bool(_user32.IsIconic(hwnd))
+    if cmd_show == 3:
+        return bool(_user32.IsZoomed(hwnd))
+    if cmd_show in (1, 4, 9):
+        return bool(_user32.IsWindowVisible(hwnd)) and not _user32.IsIconic(hwnd) and not _user32.IsZoomed(hwnd)
+    return bool(_user32.IsWindowVisible(hwnd))
+
+
+def get_window_placement(hwnd: int) -> Optional[Dict[str, Any]]:
+    """Read normal bounds and show state for lossless SetWindowPlacement replay."""
+    placement = _WindowPlacement(length=ctypes.sizeof(_WindowPlacement))
+    if not _user32.GetWindowPlacement(hwnd, byref(placement)):
+        return None
+    rect = placement.rcNormalPosition
+    return {"flags": int(placement.flags), "show_cmd": int(placement.showCmd),
+            "min_position": [int(placement.ptMinPosition.x), int(placement.ptMinPosition.y)],
+            "max_position": [int(placement.ptMaxPosition.x), int(placement.ptMaxPosition.y)],
+            "normal_position": [int(rect.left), int(rect.top), int(rect.right), int(rect.bottom)]}
+
+
+def set_window_placement(hwnd: int, saved: Dict[str, Any]) -> bool:
+    """Restore native workspace bounds and show state without border conversion."""
+    try:
+        flags, command = saved["flags"], saved["show_cmd"]
+        if not _placement_integer(flags, 7) or not _placement_integer(command, 11):
+            raise ValueError("invalid placement flags or show command")
+        placement = _WindowPlacement(
+            length=ctypes.sizeof(_WindowPlacement), flags=flags, showCmd=command,
+            ptMinPosition=wintypes.POINT(*_placement_coordinates(saved["min_position"], 2)),
+            ptMaxPosition=wintypes.POINT(*_placement_coordinates(saved["max_position"], 2)),
+            rcNormalPosition=wintypes.RECT(*_placement_coordinates(saved["normal_position"], 4)))
+    except (KeyError, TypeError, ValueError) as error:
+        raise AutoControlActionException(f"invalid window placement: {error}") from error
+    return bool(_user32.SetWindowPlacement(hwnd, byref(placement)))
+
+
+def _placement_integer(value: Any, maximum: int) -> bool:
+    """JSON booleans are not valid native flags or show commands."""
+    return isinstance(value, int) and not isinstance(value, bool) and 0 <= value <= maximum
+
+
+def _placement_coordinates(values: Any, size: int) -> Tuple[int, ...]:
+    """Reject missing coordinates and integer overflow before calling native code."""
+    if not isinstance(values, (list, tuple)) or len(values) != size:
+        raise ValueError(f"expected {size} placement coordinates")
+    if any(not isinstance(value, int) or isinstance(value, bool) or not -(2 ** 31) <= value < 2 ** 31
+           for value in values):
+        raise ValueError("placement coordinates must be signed 32-bit integers")
+    return tuple(values)
+
+
+def get_work_area() -> Optional[Tuple[int, int, int, int]]:
+    """Primary desktop work rectangle, excluding taskbar and docked toolbars."""
+    rect = wintypes.RECT()
+    if not _user32.SystemParametersInfoW(0x0030, 0, byref(rect), 0):
+        return None
+    return int(rect.left), int(rect.top), int(rect.right), int(rect.bottom)
 
 
 def move_window(hwnd: int, x: int, y: int, width: int, height: int,
@@ -340,15 +445,22 @@ def post_key(hwnd: int, keycode: int, character: str = "") -> bool:
     可列印字元要送 `WM_CHAR`：控制項是靠它拿到文字的，只送 `WM_KEYDOWN` 對多數
     編輯控制項不會產生任何字。
 
-    A printable character also needs ``WM_CHAR``: edit controls take their text
-    from that message, so ``WM_KEYDOWN`` alone types nothing in most of them.
+    Printable text sends only ``WM_CHAR`` UTF-16 units; posting key messages
+    as well would let TranslateMessage generate the same text again. Control
+    keys use scan codes, extended-key flags and the release transition bit.
     """
     target = get_focused_control(hwnd)
-    posted = bool(_user32.PostMessageW(target, WM_KEYDOWN, int(keycode), 0))
     if character:
-        posted = bool(_user32.PostMessageW(
-            target, WM_CHAR, ord(character[0]), 0)) and posted
-    posted = bool(_user32.PostMessageW(target, WM_KEYUP, int(keycode), 0)) and posted
+        units = character.encode("utf-16-le")
+        posted = True
+        for index in range(0, len(units), 2):
+            sent = _user32.PostMessageW(target, WM_CHAR, int.from_bytes(units[index:index + 2], "little"), 1)
+            posted = bool(sent) and posted
+        return posted
+    scan = int(_user32.MapVirtualKeyW(int(keycode), 4))
+    flags = 1 | ((scan & 0xff) << 16) | (0x01000000 if scan & 0xff00 else 0)
+    posted = bool(_user32.PostMessageW(target, WM_KEYDOWN, int(keycode), flags))
+    posted = bool(_user32.PostMessageW(target, WM_KEYUP, int(keycode), flags | 0xC0000000)) and posted
     return posted
 
 

@@ -112,6 +112,12 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Changed
 
+- Window focus failures now raise instead of reporting success; Windows z-order
+  and show-state failures propagate. Posted printable text is delivered once.
+  New Windows layout snapshots preserve native placement/show state without
+  border drift; legacy snapshots remain readable. Arrangements avoid the taskbar;
+  window polls honor remaining time; macOS ID queries include offscreen windows.
+
 - The cryptography dependency floor is now >=50.0.0; uv.lock resolves 50.0.2.
   Windows arm64 markers remain. Intel Mac installs require source builds with
   Rust/native dependencies; see docs/CAPABILITY_MATRIX.md and the official guide.

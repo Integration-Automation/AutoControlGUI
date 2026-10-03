@@ -115,6 +115,15 @@ def test_hiding_a_window_does_not_pull_it_to_the_foreground(monkeypatch):
     seen = []
 
     class _FakeUser32:
+        def IsWindow(self, hwnd):
+            return True
+
+        def IsWindowVisible(self, hwnd):
+            return False
+
+        def IsZoomed(self, hwnd):
+            return True
+
         def ShowWindow(self, hwnd, cmd):  # noqa: N802  # Win32 name
             seen.append(("show", hwnd, cmd))
 

@@ -18,7 +18,7 @@ from typing import List, Optional, Tuple, Union
 from je_auto_control.utils.exception.exceptions import AutoControlActionException
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.wrapper.window_backends import get_backend
-from je_auto_control.utils.timeouts import deadline_after
+from je_auto_control.utils.timeouts import clamp_poll_interval, deadline_after
 
 
 def list_windows(titled_only: bool = False) -> List[Tuple[int, str]]:
@@ -66,7 +66,8 @@ def focus_window(title_substring: str, case_sensitive: bool = False) -> int:
     # maximized window un-maximizes it, which is not what "focus" should do.
     if backend.is_minimized(hwnd):
         backend.restore(hwnd)
-    backend.set_foreground(hwnd)
+    if not backend.bring_to_front(hwnd):
+        raise AutoControlActionException(f"focus_window: foreground request refused for {title!r}")
     autocontrol_logger.info("focused window hwnd=%s title=%r", hwnd, title)
     return hwnd
 
@@ -76,16 +77,17 @@ def wait_for_window(title_substring: str,
                     poll: float = 0.5,
                     case_sensitive: bool = False) -> int:
     """Poll until a window with the given title appears; return its hwnd."""
-    poll = max(0.05, float(poll))
+    poll = clamp_poll_interval(poll)
     deadline = deadline_after(time.monotonic(), timeout)
     # Look first, then check the clock: with timeout=0 the loop never ran.
     while True:
         hit = find_window(title_substring, case_sensitive)
         if hit is not None:
             return hit[0]
-        if time.monotonic() >= deadline:
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
             break
-        time.sleep(poll)
+        time.sleep(min(poll, remaining))
     raise AutoControlActionException(
         f"wait_for_window timeout: {title_substring!r}"
     )
@@ -173,7 +175,9 @@ def _resolve_key(key: Union[int, str]) -> Tuple[int, str]:
         return int(key), ""
     name = str(key)
     from je_auto_control.wrapper.platform_wrapper import keyboard_keys_table
-    keycode = keyboard_keys_table.get(name)
+    from je_auto_control.utils.cua_action.cua_action import resolve_key_name
+    resolved = resolve_key_name(name, keyboard_keys_table)
+    keycode = keyboard_keys_table.get(resolved)
     if keycode is None:
         raise AutoControlActionException(f"unknown key name: {name!r}")
     # A one-character key is text: edit controls take their content from

@@ -230,3 +230,8 @@ REST hash-chain records expose `user_id` using their existing actor column, and
 MCP JSONL entries include `user_id`. Local Admin Console user actions use the same
 store instance; the headless facade, five AC commands, MCP tools and Script Builder
 provide equivalent management surfaces.
+
+Window lifecycle: focus verifies foreground ownership; waits bound each sleep.
+Windows capture reads visible bounds without mutation, while saved layouts use
+native placement/show state and arrangement uses the primary work area. Legacy
+geometry snapshots and public command/import names remain compatible.

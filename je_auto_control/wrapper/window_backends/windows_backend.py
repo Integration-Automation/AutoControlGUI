@@ -2,6 +2,7 @@
 import sys
 from typing import List, Optional, Tuple
 
+from je_auto_control.utils.exception.exceptions import AutoControlActionException
 from je_auto_control.wrapper.window_backends.base import WindowManageBackend
 
 
@@ -44,10 +45,11 @@ class WindowsWindowBackend(WindowManageBackend):
         self._wm.set_foreground_window(window_id)
 
     def restore(self, window_id: int) -> None:
-        self._wm.show_window(window_id, self._wm.SW_RESTORE)
+        self.show(window_id, self._wm.SW_RESTORE)
 
     def show(self, window_id: int, cmd_show: int) -> None:
-        self._wm.show_window(window_id, int(cmd_show))
+        if not self._wm.show_window(window_id, int(cmd_show)):
+            raise AutoControlActionException(f"show: window {window_id} refused state {cmd_show}")
 
     def close(self, window_id: int) -> bool:
         return self._wm.close_window(window_id)

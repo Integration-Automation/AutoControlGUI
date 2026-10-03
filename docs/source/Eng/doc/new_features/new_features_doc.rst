@@ -1410,3 +1410,22 @@ CryptoDependencyError with installation instructions, while noncrypto imports
 and commands stay usable. CryptoUnavailableError remains a RuntimeError;
 CryptoImportError remains an ImportError. See docs/CAPABILITY_MATRIX.md for the
 separate binary probes and official source-build guide.
+
+Window lifecycle and saved layouts
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+`focus_window` confirms the actual foreground window and raises
+`AutoControlActionException` when focus is refused. `wait_for_window` bounds each
+sleep by the remaining timeout, including an infinite poll value. Windows
+listing skips DWM-cloaked and empty windows. Printable posted text uses character
+messages once; control keys use paired key messages with scan/release flags;
+`enter` and `esc` aliases are accepted.
+
+`capture_window` reads visible bounds without moving or restoring the window.
+New Windows `save_window_layout` snapshots include native placement and show
+state; `restore_window_layout` replays these without border drift, preserving
+maximized/minimized state. Legacy geometry-only JSON remains readable; save a
+new snapshot to gain placement preservation. Injected geometry/movers retain
+their geometry-only contract. Snap/grid/cascade use the primary work area,
+including its offset, excluding the taskbar. macOS handle-based restore queries
+offscreen windows and still requires Accessibility permission.

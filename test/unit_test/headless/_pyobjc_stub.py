@@ -35,7 +35,7 @@ WINDOW_KEYS = (
 
 #: The rest of the surface the backend names, by module.
 QUARTZ_NAMES = WINDOW_KEYS + (
-    "kCGWindowListOptionOnScreenOnly", "kCGWindowListExcludeDesktopElements",
+    "kCGWindowListOptionOnScreenOnly", "kCGWindowListExcludeDesktopElements", "kCGWindowListOptionIncludingWindow",
     "kCGNullWindowID",
     "CGWindowListCopyWindowInfo", "CGPoint", "CGSize",
 )
@@ -166,6 +166,7 @@ def install(monkeypatch, world: World) -> World:
         setattr(quartz, name, name)
     quartz.kCGWindowListOptionOnScreenOnly = 1
     quartz.kCGWindowListExcludeDesktopElements = 16
+    quartz.kCGWindowListOptionIncludingWindow = 8
     quartz.kCGNullWindowID = 0
     quartz.CGWindowListCopyWindowInfo = world.copy_window_info
     quartz.CGPoint = AXPoint

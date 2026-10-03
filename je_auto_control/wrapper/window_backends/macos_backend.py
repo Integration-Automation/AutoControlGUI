@@ -80,7 +80,9 @@ class MacOSWindowBackend(WindowManageBackend):
     def _info_for(self, window_id: int) -> Optional[dict]:
         import Quartz
 
-        for info in self._window_info():
+        found = Quartz.CGWindowListCopyWindowInfo(
+            Quartz.kCGWindowListOptionIncludingWindow, int(window_id))
+        for info in found or []:
             if int(info.get(Quartz.kCGWindowNumber, 0) or 0) == int(window_id):
                 return info
         return None

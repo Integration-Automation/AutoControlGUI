@@ -47,8 +47,7 @@ def _default_driver(title: str, action: str) -> bool:
     if hit is None:
         return False
     from je_auto_control.windows.window import windows_window_manage as wm
-    wm.set_window_position(int(hit[0]), plan_zorder(action)["insert_after"])
-    return True
+    return wm.set_window_position(int(hit[0]), plan_zorder(action)["insert_after"])
 
 
 def set_topmost(title: str, on: bool = True, *,

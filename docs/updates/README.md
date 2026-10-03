@@ -58,6 +58,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261003-07 | 2026-10-03 | Preserve window placement and report native refusals | #done #window | [2026-10](2026-10.md) |
 | U-20261003-06 | 2026-10-03 | Raise crypto floor and verify optional installation profiles | #done #dependencies | [2026-10](2026-10.md) |
 | U-20261003-05 | 2026-10-03 | Enforce opt-in REST/MCP roles and shared user administration | #done #rbac | [2026-10](2026-10.md) |
 | U-20261003-04 | 2026-10-03 | Keep Agent history append-only and compact into new conversations | #done #agent | [2026-10](2026-10.md) |

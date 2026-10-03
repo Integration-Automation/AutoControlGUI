@@ -59,7 +59,11 @@ def test_ocr_matching_normalises_unicode():
 def test_a_saved_layout_reads_each_window_by_its_handle(monkeypatch):
     monkeypatch.setattr(sys, "platform", "win32")
     real = {1: (0, 0, 800, 600), 2: (900, 50, 400, 300)}
-    monkeypatch.setattr(window_capture, "_win32_geometry", lambda hwnd: real[hwnd])
+    monkeypatch.setattr(window_capture, "_handle_geometry", lambda hwnd: real[hwnd])
+    fake_wm = types.SimpleNamespace(get_window_placement=lambda hwnd: None)
+    monkeypatch.setitem(sys.modules, "je_auto_control.windows.window.windows_window_manage", fake_wm)
+    monkeypatch.setattr(sys.modules["je_auto_control.windows.window"], "windows_window_manage",
+                        fake_wm, raising=False)
     layout = window_capture.save_window_layout(lister=lambda: [(1, "Editor - a"), (2, "Editor")])
     assert [(entry["title"], entry["x"]) for entry in layout] == [("Editor - a", 0), ("Editor", 900)]
 
@@ -105,7 +109,9 @@ def test_a_scoped_uia_search_skips_a_window_that_errors(monkeypatch):
 def test_show_window_foregrounds_only_for_activating_commands(monkeypatch, command, foreground):
     from je_auto_control.windows.window import windows_window_manage
     calls = []
-    fake = types.SimpleNamespace(ShowWindow=lambda hwnd, cmd: calls.append("show"),
+    fake = types.SimpleNamespace(IsWindow=lambda hwnd: True, IsWindowVisible=lambda hwnd: command != 0,
+                                 IsIconic=lambda hwnd: command in (2, 6, 7, 11), IsZoomed=lambda hwnd: command == 3,
+                                 ShowWindow=lambda hwnd, cmd: calls.append("show"),
                                  SetForegroundWindow=lambda hwnd: calls.append("foreground"))
     monkeypatch.setattr(windows_window_manage, "_user32", fake)
     windows_window_manage.show_window(1, command)
