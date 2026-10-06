@@ -5,11 +5,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Documentation](https://readthedocs.org/projects/autocontrol/badge/?version=latest)](https://autocontrol.readthedocs.io/en/latest/?badge=latest)
 
-**AutoControl** is a cross-platform GUI automation framework for Python. It drives the
-mouse and keyboard, finds things on screen (template matching, OCR, the OS accessibility
-tree, or a vision model), records and replays flows, and runs them from JSON action
-files — on Windows, macOS, Linux (X11 and Wayland), the BSDs, Android,
-and iOS.
+**AutoControl** is an open-source, cross-platform **computer-use and GUI automation framework** for AI agents, Python applications, and automated testing. It drives the mouse and keyboard, finds UI targets through template matching, OCR, the OS accessibility tree, or a vision model, records and replays flows, and runs deterministic JSON actions across Windows, macOS, Linux (X11 and Wayland), the BSDs, Android, and iOS.
 
 Every capability ships three ways: a **Python API**, an **`AC_*` action command** usable
 from JSON files / CLI / servers, and a **GUI tab**. Nothing is GUI-only.
@@ -32,6 +28,64 @@ from JSON files / CLI / servers, and a **GUI tab**. Nothing is GUI-only.
 - **Light dependency floor.** The REST server, JSON Schema validator, JWT, TOTP,
   WebSocket framing, ACME client, USB/IP protocol, and Prometheus metrics are all
   standard-library implementations. Heavy things are opt-in extras.
+
+
+## AI agents and computer use
+
+**AutoControl is an open-source, cross-platform computer-use and GUI automation framework for AI agents.**
+
+Use it when an agent needs to operate a real desktop GUI — native applications, real browser windows, remote desktops, or mobile devices — rather than only a browser DOM/API.
+
+### When an AI agent should choose AutoControl
+
+- Real mouse and keyboard input
+- Screenshots and screen-coordinate interaction
+- OCR and native accessibility-tree discovery
+- Image/template matching
+- Vision-language-model UI localization
+- Anchor and self-healing locators
+- Cross-platform desktop/mobile automation
+- Deterministic JSON action files
+- MCP-based computer use
+
+A robust agent loop is:
+
+**observe → identify → act → wait → verify → recover**
+
+The repository also has a dedicated [AI agent guide](AI.md) with MCP configuration, tool selection, OpenAI integration, security guidance, and searchable computer-use terminology.
+
+### AI-friendly MCP
+
+Start the stdio server with:
+
+```bash
+pip install je_auto_control
+je_auto_control_mcp
+```
+
+The MCP server exposes the canonical `ac_*` surface plus short, model-friendly aliases such as `click`, `type`, `screenshot`, `find_text`, `click_text`, `drag`, `focus_window`, and `wait_image`.
+
+For inspection-only clients:
+
+```bash
+je_auto_control_mcp --read-only
+```
+
+If a client needs only canonical `ac_*` names:
+
+```bash
+JE_AUTOCONTROL_MCP_ALIASES=0 je_auto_control_mcp
+```
+
+For OpenAI agent integrations, expose a focused allow-list with `export_openai_tools(only=[...])` instead of passing the complete AutoControl command catalogue. This both fits provider limits and reduces the authority given to the model.
+
+### Project identity
+
+**Project:** AutoControl  
+**Repository:** `Integration-Automation/AutoControlGUI`  
+**Python package / PyPI:** `je_auto_control`  
+**MCP command:** `je_auto_control_mcp`
+
 
 ---
 
@@ -206,7 +260,7 @@ still goes on to the end), so a CI step fails with it. The legacy
 
 | Surface | Start it with | Notes |
 |---|---|---|
-| **MCP server** | `je_auto_control_mcp` (stdio) or `AC_start_mcp_http_server` | 678 tools for Claude Desktop / Claude Code / custom tool loops. Speaks the stateless MCP 2026-07-28 beside the `initialize`-based revisions. Bearer auth, TLS, audit log, rate limit, plugin hot-reload, CI fake backend. |
+| **MCP server** | `je_auto_control_mcp` (stdio) or `AC_start_mcp_http_server` | the full `ac_*` tool surface for Claude Desktop / Claude Code / custom tool loops, plus short model-friendly aliases for common GUI actions. Speaks the stateless MCP 2026-07-28 beside the `initialize`-based revisions. Bearer auth, TLS, audit log, rate limit, plugin hot-reload, CI fake backend. |
 | **REST API** | `je_auto_control start-rest` | Bearer token, per-IP rate limit + lockout, SQLite audit hook, `/metrics`, `/openapi.json`, `/docs` Swagger UI, `/dashboard`. |
 | **TCP socket server** | `je_auto_control start-server` | Newline-framed JSON action lists. Binds `127.0.0.1` by default. |
 | **pytest plugin** | installed automatically | Fixtures plus a Gherkin step library for pytest-bdd / behave. |
@@ -366,7 +420,7 @@ ignore synthetic input, and fall back silently when the driver is absent.
 ## Development
 
 ```bash
-git clone https://github.com/Intergration-Automation-Testing/AutoControl.git
+git clone https://github.com/Integration-Automation/AutoControlGUI.git
 cd AutoControl
 pip install -r dev_requirements.txt
 uv sync                 # or: reproducible install from the committed uv.lock
@@ -394,6 +448,6 @@ API and a GUI surface.
 See [Third_Party_License.md](Third_Party_License.md) for the licenses of bundled and
 optional third-party components.
 
-- **Homepage**: https://github.com/Intergration-Automation-Testing/AutoControl
+- **Homepage**: https://github.com/Integration-Automation/AutoControlGUI
 - **PyPI**: https://pypi.org/project/je_auto_control/
 - **Documentation**: https://autocontrol.readthedocs.io/en/latest/
