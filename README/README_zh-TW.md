@@ -5,9 +5,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](../LICENSE)
 [![Documentation](https://readthedocs.org/projects/autocontrol/badge/?version=latest)](https://autocontrol.readthedocs.io/en/latest/?badge=latest)
 
-**AutoControl** 是一套跨平台的 Python GUI 自動化框架。它能驅動滑鼠與鍵盤、在畫面上找到目標
-（樣板比對、OCR、作業系統無障礙樹，或視覺模型）、錄製與重播操作流程，並以 JSON 動作檔執行——
-支援 Windows、macOS、Linux（X11 與 Wayland）、BSD、Android 與 iOS。
+**AutoControl** 是一套開源、跨平台的 **computer-use 與 GUI 自動化框架**，面向 AI agent、Python 應用程式與自動化測試。它能驅動滑鼠與鍵盤、透過樣板比對、OCR、作業系統無障礙樹或視覺模型找到 UI 目標、錄製與重播流程，並以 JSON 動作檔執行——支援 Windows、macOS、Linux（X11 與 Wayland）、BSD、Android 與 iOS。
 
 每項能力都以三種形式提供：**Python API**、可在 JSON 檔／CLI／伺服器使用的 **`AC_*` 動作指令**，
 以及 **GUI 分頁**。沒有任何功能只存在於 GUI。
@@ -26,6 +24,62 @@
 - **四種定位方式。** 樣板比對、OCR、無障礙樹、視覺語言模型——可透過錨點定位器與自癒後備串接組合。
 - **相依基線輕薄。** REST 伺服器、JSON Schema 驗證、JWT、TOTP、WebSocket 框架、ACME 用戶端、
   USB/IP 協定與 Prometheus 指標全部以標準庫實作；較重的相依都是選用。
+
+
+## AI Agent 與 Computer Use
+
+**AutoControl 是開源、跨平台的 computer-use 與 GUI 自動化框架。**
+
+當 AI agent 需要操作真實桌面、原生應用程式、真正的瀏覽器視窗、遠端桌面或行動裝置，而不只是操作瀏覽器 DOM/API 時，使用 AutoControl。
+
+### 何時選擇 AutoControl
+
+- 真實滑鼠與鍵盤輸入
+- 螢幕擷取與座標操作
+- OCR 與原生無障礙樹
+- 影像／樣板比對
+- Vision-Language Model UI 定位
+- Anchor 與 self-healing locator
+- 跨平台桌面／行動裝置自動化
+- JSON 動作檔
+- MCP computer use
+
+建議的 agent loop：
+
+**observe → identify → act → wait → verify → recover**
+
+完整的 [AI Agent 指南](../AI.md) 提供 MCP 設定、工具選擇、OpenAI 整合、安全性與 computer-use 關鍵字。
+
+### AI-friendly MCP
+
+```bash
+pip install je_auto_control
+je_auto_control_mcp
+```
+
+MCP 提供完整的 `ac_*` 工具，以及 `click`、`type`、`screenshot`、`find_text`、`click_text`、`drag`、`focus_window`、`wait_image` 等短名稱 alias。
+
+只做檢查：
+
+```bash
+je_auto_control_mcp --read-only
+```
+
+只需要 canonical `ac_*` 名稱：
+
+```bash
+JE_AUTOCONTROL_MCP_ALIASES=0 je_auto_control_mcp
+```
+
+OpenAI agent 請使用 `export_openai_tools(only=[...])` 提供聚焦工具集，不要一次提供整個 AutoControl 命令目錄。
+
+### 專案識別
+
+**專案：** AutoControl  
+**Repository：** `Integration-Automation/AutoControlGUI`  
+**Python package / PyPI：** `je_auto_control`  
+**MCP command：** `je_auto_control_mcp`
+
 
 ---
 
@@ -191,7 +245,7 @@ je_auto_control version
 
 | 介面 | 啟動方式 | 說明 |
 |---|---|---|
-| **MCP 伺服器** | `je_auto_control_mcp`（stdio）或 `AC_start_mcp_http_server` | 678 個工具，供 Claude Desktop／Claude Code／自訂 tool loop 使用。除了以 `initialize` 握手的各版協定，也支援無狀態的 MCP 2026-07-28。Bearer 驗證、TLS、稽核記錄、限流、外掛熱重載、CI 假後端。 |
+| **MCP 伺服器** | `je_auto_control_mcp`（stdio）或 `AC_start_mcp_http_server` | 完整的 `ac_*` 工具介面，供 Claude Desktop／Claude Code／自訂 tool loop 使用，並提供常用 GUI 操作的短名稱 alias。除了以 `initialize` 握手的各版協定，也支援無狀態的 MCP 2026-07-28。Bearer 驗證、TLS、稽核記錄、限流、外掛熱重載、CI 假後端。 |
 | **REST API** | `je_auto_control start-rest` | Bearer token、逐 IP 限流與鎖定、SQLite 稽核 hook、`/metrics`、`/openapi.json`、`/docs` Swagger UI、`/dashboard`。 |
 | **TCP socket 伺服器** | `je_auto_control start-server` | 以換行分隔的 JSON 動作清單。預設綁 `127.0.0.1`。 |
 | **pytest 外掛** | 安裝後自動生效 | 提供 fixture 與供 pytest-bdd／behave 使用的 Gherkin step library。 |
@@ -333,7 +387,7 @@ Windows、macOS（pyobjc）與 X11（含 XWayland）；純 Wayland session 的�
 ## 開發
 
 ```bash
-git clone https://github.com/Intergration-Automation-Testing/AutoControl.git
+git clone https://github.com/Integration-Automation/AutoControlGUI.git
 cd AutoControl
 pip install -r dev_requirements.txt
 uv sync                 # 或：以已提交的 uv.lock 做可重現安裝
