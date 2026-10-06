@@ -219,6 +219,7 @@ MCP 的 bearer 比對同理；稽核寫入帶上 `user_id`。
 
 **選項**：簽章指令在強制模式下只准本機 CLI 使用；或簽章金鑰與執行權限分開保存（簽章端不在執行端）。
 
+[Answer] 簽章金鑰與執行權限分開保存
 ---
 
 ## USB passthrough viewer 以種類配對回覆，逾時的回覆會交給下一個請求
@@ -233,6 +234,7 @@ MCP 的 bearer 比對同理；稽核寫入帶上 `user_id`。
 **選項**：在 payload 加一個由 client 產生、host 原樣帶回的請求編號（舊 host 不帶就退回現在的配對）；或逾時後把該
 claim 標成需排空，丟掉下一個回覆——但 host 若根本沒回，會丟掉正確的回覆。
 
+[Answer] 加，但是想辦法解決可能丟掉正確回復的問題
 ---
 
 ## 全域 executor 的變數會留到下一次執行
@@ -250,6 +252,8 @@ socket server 的執行也都用同一個 `executor`；`for_each` 的迴圈變�
 **附帶**：`AC_circuit_call`、`AC_bulkhead_run`、`AC_run_chaos`、`AC_run_dag` 的巢狀動作跑在全域 `executor` 上，
 在 `AC_parallel` 分支裡因此用到父層的變數範圍，而不是分支自己的。
 
+[Answer] `execute_action_with_vars` 與各伺服器入口每次開一個新的 `VariableScope`（`AC_set_var` 在單次執行內照舊
+
 ---
 
 ## 舊式 CLI（`-e`／`-d`／`--execute_str`）在動作失敗時仍然結束碼 0
@@ -262,6 +266,8 @@ socket server 的執行也都用同一個 `executor`；`for_each` 的迴圈變�
 **要先確認**：PyBreeze（`AI_CONTEXT.md` §5）與 TestPioneer 的 `parallel_run` 怎麼解讀這個結束碼——若把非 0 當成
 「無法執行」而非「有動作失敗」，改了會讓它們把一次有失敗步驟的執行回報成錯誤。改的話兩邊的 `architecture.md` §6
 與相容性測試要一起更新。
+
+[Answer] 讓舊式入口也以結束碼 1 回報動作失敗
 
 ---
 
@@ -290,6 +296,8 @@ registry 以 GitHub 帳號驗證 `io.github.<org>/` 命名空間，舊組織名�
 **做法**：決定正式名稱（例如 `io.github.integration-automation/autocontrol`），在同一輪改 `registry.py`、
 `pyproject.toml`、三份 README 的網址。
 
+[Answer] io.github.integration-automation/autocontrol`
+
 ---
 
 ## pytest11 進入點會把整個門面拉進每一次 pytest
@@ -312,6 +320,8 @@ registry 以 GitHub 帳號驗證 `io.github.<org>/` 命名空間，舊組織名�
 (3) `test/unit_test/headless/test_coverage_measurement.py` 的前提會改變——它現在釘住
 「外掛載入時門面已經在 `sys.modules` 裡」，改完就不成立，那份說明與測試要一起改寫
 （CI 仍可繼續用 `coverage run -m pytest`）。
+
+[Answer] 照你建議改寫
 
 ---
 
@@ -351,6 +361,8 @@ pip install --dry-run --only-binary=:all: --platform macosx_10_9_x86_64 \
     --python-version 3.12 --target /tmp/probe 'cryptography>=50'
 ```
 
+[Answer] 可以
+
 ---
 
 ## Viewer 端要不要把 host 推來的檔案關在一個目錄裡
@@ -368,6 +380,8 @@ viewer 端的 `FileReceiver`（`utils/remote_desktop/file_transfer.py`）照單�
 
 **為什麼要拍板**：`dest_path` 的語意會從「viewer 上的絕對路徑」變成「viewer 下載目錄裡的相對路徑」，
 現有腳本與文件範例都要跟著改。
+
+[Answer] 可以改
 
 ---
 
@@ -390,6 +404,7 @@ viewer 端的 `FileReceiver`（`utils/remote_desktop/file_transfer.py`）照單�
 `backend="openai"` 超過 Chat Completions 的 128 個工具上限，現在建 backend 時就明確拒絕；
 Anthropic 每一步送約 202 KB 的工具 schema、沒有 `cache_control`。拍板後一併決定上限與快取。
 
+[Answer] 不改
 
 ---
 
@@ -447,6 +462,8 @@ MCP 工具的檔案參數（`path`、`file_path`、`db`、`image_path`、`golden
 `base_dir` 限制，`env://` 可讀任何環境變數，包括放 API 金鑰的那些，結果直接回給模型。`secret://` 已經拒絕；
 `env://` 要不要改成允許清單、`file://` 要不要套同一個根目錄，跟上面一起決定。
 
+[Answer] 兩者，不要預設開啟唯獨
+
 ---
 
 ## Windows 的 DPI 感知是系統層級，混合 DPI 的螢幕座標被虛擬化
@@ -463,6 +480,8 @@ per-monitor。DPI 與主螢幕不同的螢幕會被 Windows 虛擬化：本機�
 
 **為什麼要拍板**：這個檔在 Jeffrey_RPA 正在跑的截圖路徑上。換成 per-monitor 之後，縮放螢幕上的座標與截圖
 尺寸都會變，既有的樣板和錄好的座標在那些螢幕上會失準。
+
+[Answer] 換並修好 Jeffrey_RPA 
 
 ---
 
@@ -514,6 +533,8 @@ be at 2x if on a Retina screen」，`scale_down=True` 只在帶 `bbox` 時生效
 被別人取代時通知原本的面板收掉自己的視窗。或是反過來讓每個面板持有自己的 viewer，不經 registry。
 
 **為什麼要拍板**：`AC_remote_*` 指令與 MCP 工具依賴「registry 裡就是那一個 viewer」，改成多槽位要一起改它們的語意。
+
+[Answer] 一起改沒問題
 
 ---
 
