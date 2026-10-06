@@ -277,6 +277,754 @@ button.invoke(
 
 This is intentionally a later phase; the first implementation should establish the platform contracts without coupling the Windows layer to the full workflow engine.
 
+## Detailed API and implementation examples
+
+### Module responsibilities
+
+| Module | Responsibility | Must not own |
+|---|---|---|
+| windows/core | Win32 ctypes, handles, constants, structs, low-level errors | workflow logic |
+| windows/window | HWND discovery, lifecycle, geometry, activation | UIA pattern implementation |
+| windows/uia | UI Automation tree, elements, selectors, patterns, events | raw mouse/keyboard injection |
+| windows/input | mouse/keyboard input and backend selection | UI tree discovery |
+| windows/screen | monitors, DPI, capture, coordinate conversion | application semantics |
+| windows/process | process lifecycle and application binding | UI element operations |
+| windows/clipboard | clipboard formats, preservation, watchers | workflow orchestration |
+| windows/shell | Explorer, dialogs, Start Menu, Taskbar | generic UIA primitives |
+| windows/console | CMD, PowerShell, Windows Terminal | arbitrary workflow logic |
+| wrapper | cross-platform facade and compatibility | Win32 implementation details |
+| executor / AC_* | command/workflow dispatch | Windows backend implementation |
+
+The Windows platform layer provides capabilities; the automation layer decides when and why to use them.
+
+### Window example
+
+~~~python
+windows = WindowsContext()
+
+window = windows.windows.find(title="Calculator")
+window.activate()
+
+if not window.is_active:
+    raise WindowActivationError(window.hwnd)
+
+window.move_resize(Rect.from_xywh(100, 100, 800, 600))
+~~~
+
+Multiple discovery strategies:
+
+~~~python
+window = windows.windows.find(
+    title="Calculator",
+    class_name="ApplicationFrameWindow",
+)
+
+window = windows.windows.find(process_name="calc.exe")
+
+window = windows.windows.wait_for(
+    title_regex=r".*Calculator.*",
+    timeout=10.0,
+)
+~~~
+
+### UIA-first interaction
+
+~~~python
+app_window = windows.windows.wait_for(
+    title="My Application",
+    timeout=10,
+)
+
+button = windows.uia.find(
+    window=app_window,
+    name="Login",
+    control_type="Button",
+)
+
+assert button.enabled
+button.invoke()
+~~~
+
+Text fields should prefer ValuePattern:
+
+~~~python
+username = windows.uia.find(
+    window=app_window,
+    automation_id="Username",
+    control_type="Edit",
+)
+
+username.set_value("user@example.com")
+~~~
+
+Checkboxes:
+
+~~~python
+remember_me = windows.uia.find(
+    window=app_window,
+    name="Remember me",
+    control_type="CheckBox",
+)
+
+remember_me.toggle()
+~~~
+
+Tree/list navigation:
+
+~~~python
+settings = windows.uia.find(
+    window=app_window,
+    name="Settings",
+    control_type="TreeItem",
+)
+
+settings.expand()
+
+notifications = settings.child(
+    name="Notifications",
+    control_type="TreeItem",
+)
+
+notifications.select()
+~~~
+
+### UIA Pattern fallback
+
+~~~python
+if element.supports("Value"):
+    element.set_value("hello")
+else:
+    element.type_text("hello")
+~~~
+
+Preferred execution order:
+
+~~~text
+native UIA pattern
+    ↓ unavailable
+native semantic/text operation
+    ↓ unavailable
+keyboard input
+    ↓ unavailable
+mouse input
+    ↓ unavailable
+OCR / template / vision fallback
+~~~
+
+Unsupported operations should raise a specific exception instead of silently reporting success.
+
+### Locator composition
+
+~~~python
+login_button = (
+    windows.uia.selector()
+    .inside(window)
+    .child(
+        control_type="Pane",
+        automation_id="LoginPanel",
+    )
+    .descendant(
+        name="Login",
+        control_type="Button",
+    )
+    .first()
+)
+
+login_button.invoke()
+~~~
+
+Relative locators:
+
+~~~python
+password = windows.uia.find(
+    window=window,
+    automation_id="Password",
+)
+
+show_password = password.right(
+    name="Show password",
+    control_type="CheckBox",
+)
+
+show_password.toggle()
+~~~
+
+Relative relations should use UIA tree/bounds information whenever possible, not hard-coded screen coordinates.
+
+### State-based waits
+
+Avoid arbitrary sleeps:
+
+~~~python
+time.sleep(2)
+pyautogui.click(123, 456)
+~~~
+
+Prefer state-based waits:
+
+~~~python
+button = windows.uia.wait_for(
+    window=window,
+    name="Continue",
+    control_type="Button",
+    timeout=10,
+)
+
+button.invoke()
+
+windows.uia.wait_for(
+    window=window,
+    name="Completed",
+    control_type="Text",
+    timeout=10,
+)
+~~~
+
+### ActionResult
+
+~~~python
+@dataclass
+class ActionResult:
+    success: bool
+    action: str
+    backend: str
+    duration: float
+    target: str | None = None
+    error: Exception | None = None
+    metadata: dict[str, object] = field(default_factory=dict)
+~~~
+
+Example:
+
+~~~python
+result = button.invoke()
+
+if not result.success:
+    logger.error(
+        "UI action failed: backend=%s target=%s error=%s",
+        result.backend,
+        result.target,
+        result.error,
+    )
+~~~
+
+The result should be serializable into the existing trace/failure-bundle infrastructure.
+
+### Input backend strategy
+
+~~~text
+InputManager
+├── Native / SendInput
+├── Low-level / Interception
+└── Virtual / HID / ViGEm
+~~~
+
+The strategy must report the actual backend used:
+
+~~~python
+result = windows.input.click(point, strategy="auto")
+
+assert result.backend in {
+    "sendinput",
+    "interception",
+    "virtual",
+}
+~~~
+
+A backend failure must remain observable rather than being silently swallowed.
+
+### DPI and coordinate model
+
+The new layer should never pass an untyped (x, y) between unrelated coordinate spaces.
+
+~~~python
+Point(
+    x=100,
+    y=200,
+    space=CoordinateSpace.SCREEN_PHYSICAL,
+)
+~~~
+
+Conversions:
+
+~~~python
+physical = screen.to_physical(logical_point)
+logical = screen.to_logical(physical_point)
+
+window_point = window.to_window(screen_point)
+screen_point = window.to_screen(window_point)
+~~~
+
+Required test scenarios:
+
+- 100% DPI
+- 125% DPI
+- 150% DPI
+- mixed-DPI monitors
+- secondary monitor to the right
+- secondary monitor to the left (negative X)
+- monitor above primary (negative Y)
+- per-monitor DPI awareness
+
+Monitor diagnostics:
+
+~~~python
+for monitor in windows.screen.monitors():
+    print(
+        monitor.id,
+        monitor.bounds,
+        monitor.work_area,
+        monitor.dpi,
+        monitor.scale,
+        monitor.is_primary,
+    )
+~~~
+
+### Process / window binding
+
+A process and a window are related but must remain separate abstractions:
+
+~~~python
+app = windows.processes.launch(
+    "C:/Program Files/MyApp/MyApp.exe",
+    args=["--automation"],
+)
+
+window = app.wait_for_window(
+    title="My Application",
+    timeout=15,
+)
+
+assert window.process_id == app.pid
+~~~
+
+This supports applications with multiple top-level windows:
+
+~~~text
+Process
+├── Main Window
+├── Dialog
+└── Child Window
+~~~
+
+The process layer owns lifecycle; window/UIA layers own interaction.
+
+### Clipboard
+
+~~~python
+with windows.clipboard.preserve():
+    windows.clipboard.set_text("automation text")
+    value = windows.clipboard.get_text()
+~~~
+
+Watching changes:
+
+~~~python
+with windows.clipboard.watch() as changes:
+    windows.input.hotkey("ctrl", "c")
+    change = changes.wait(timeout=3)
+    print(change.text)
+~~~
+
+When another process holds the clipboard, behavior should be bounded retry/wait plus a useful error, not an indefinite hang.
+
+### Windows Shell
+
+~~~python
+windows.shell.explorer.open(
+    path=r"C:\Users\Public\Documents"
+)
+
+windows.shell.dialogs.open_file(
+    title="Open configuration",
+    path=r"C:\config.json",
+)
+
+windows.shell.dialogs.save_file(
+    title="Save result",
+    path=r"C:\output.json",
+)
+~~~
+
+Internally these may use UIA, Win32, Shell APIs, or input depending on the operation.
+
+### Console / Terminal
+
+Distinguish process execution from terminal UI automation:
+
+~~~python
+result = windows.console.powershell.run(
+    "Get-Process | Select-Object -First 5"
+)
+
+result = windows.console.cmd.run(
+    ["ipconfig", "/all"]
+)
+~~~
+
+### Event-driven automation
+
+Target events:
+
+~~~text
+UIA
+├── FocusChanged
+├── PropertyChanged
+├── StructureChanged
+└── AutomationEvent
+
+Window
+├── Created
+├── Destroyed
+├── Activated
+├── Minimized
+└── Restored
+
+Process
+├── Started
+└── Exited
+~~~
+
+Example:
+
+~~~python
+with windows.uia.events.focus_changed() as events:
+    button.invoke()
+    focused = events.wait(timeout=5)
+
+assert focused.name == "Username"
+~~~
+
+### Verification and recovery
+
+~~~text
+Locate
+  ↓
+Actionability check
+  ↓
+Action
+  ↓
+Verify effect
+  ↓
+Success
+~~~
+
+Failure path:
+
+~~~text
+Action failed
+      ↓
+Collect diagnostics
+      ↓
+Retry same strategy
+      ↓
+Try alternate locator
+      ↓
+Try alternate backend
+      ↓
+OCR/template/vision fallback
+      ↓
+Return structured failure
+~~~
+
+Example:
+
+~~~python
+result = button.invoke(
+    verify=lambda: windows.uia.exists(
+        window=window,
+        name="Logged in",
+    ),
+)
+
+if not result.success:
+    result = button.retry(
+        max_attempts=2,
+        alternate_locator=True,
+    )
+~~~
+
+Self-healing must never silently change workflow semantics. Every fallback must be recorded.
+
+### Locator priority
+
+~~~text
+1. UIA AutomationId
+2. UIA Name + ControlType
+3. UIA ClassName / structural relation
+4. UIA TextPattern / native pattern
+5. OCR / text
+6. Template matching
+7. Vision model
+8. Absolute coordinates
+~~~
+
+Coordinates are an emergency fallback, not the primary automation interface.
+
+## Architecture rules / anti-patterns
+
+Do not create one AC command for every Windows primitive.
+
+Bad:
+
+~~~text
+AC_windows_click
+AC_windows_click_at
+AC_windows_click_hwnd
+AC_windows_click_uia
+AC_windows_click_interception
+AC_windows_click_retry
+AC_windows_click_verified
+~~~
+
+Better:
+
+~~~python
+windows.uia.find(...).invoke()
+windows.input.click(...)
+~~~
+
+Do not mix UIA and raw input responsibilities.
+
+Bad:
+
+~~~python
+UIAElement.click()
+    -> hidden global mouse implementation
+~~~
+
+Better:
+
+~~~python
+UIAElement.invoke()
+~~~
+
+for semantic InvokePattern, or explicitly:
+
+~~~python
+windows.input.click(element.bounds.center)
+~~~
+
+when a pointer action is actually required.
+
+Do not make vision the Windows default. Do not create a generic Windows mega-manager. Keep cohesive services:
+
+~~~text
+windows.windows
+windows.uia
+windows.input
+windows.screen
+windows.processes
+windows.clipboard
+windows.shell
+windows.console
+~~~
+
+## Dependency graph and first PR sequence
+
+~~~text
+PR 1  Windows Core Contract
+          │
+          ├── PR 2  Window Manager
+          ├── PR 3  DPI / Monitor / Coordinates
+          └── PR 4  UIA Element Model
+                    │
+                    └── PR 5  Unified Locator
+                              │
+             ┌────────────────┼────────────────┐
+             │                │                │
+          PR 6 Input       PR 7 Process     PR 8 Shell
+             │                │                │
+             └────────────────┼────────────────┘
+                              │
+                       PR 9 Verification
+                              │
+                       PR 10 AC / Wrapper
+                              │
+                       PR 11 Events
+                              │
+                       PR 12 Self-healing
+~~~
+
+### PR 1 — Windows Core Contract
+
+Only reusable primitives:
+
+~~~text
+HWND
+HMONITOR
+ProcessId
+Rect
+Point
+Size
+Dpi
+CoordinateSpace
+WindowsError
+~~~
+
+No workflow code.
+
+### PR 2 — Window Manager
+
+~~~python
+window = windows.windows.find(...)
+window.activate()
+window.move_resize(...)
+window.close()
+~~~
+
+### PR 3 — DPI / Monitor
+
+Make all geometry code use the coordinate model before UIA/input grows on top of it.
+
+### PR 4 — UIA Element Model
+
+~~~python
+root = windows.uia.root(window)
+elements = root.children()
+~~~
+
+### PR 5 — Unified Locator
+
+~~~python
+windows.uia.find(
+    window=window,
+    automation_id="submitButton",
+)
+~~~
+
+### PR 6 — Input
+
+Move native input implementations behind one strategy interface without making UIA depend on them.
+
+### PR 7 — Process
+
+Connect application lifecycle with window discovery.
+
+### PR 8 — Clipboard / Shell
+
+Add common Windows automation primitives that otherwise get duplicated across commands.
+
+### PR 9 — Verification
+
+Introduce structured success/failure and post-action state checks.
+
+### PR 10 — AC / Wrapper Integration
+
+Only after the platform API is stable should existing command layers migrate.
+
+### PR 11 — Events
+
+Replace unnecessary polling with native UI/process/window events.
+
+### PR 12 — Self-healing
+
+Add controlled fallback and diagnostics after deterministic paths are reliable.
+
+## Testing strategy
+
+Three levels are required.
+
+### Unit tests
+
+~~~text
+Rect
+Point
+CoordinateSpace
+Selector
+Locator composition
+ActionResult
+retry policy
+~~~
+
+### Windows integration tests
+
+~~~text
+HWND enumeration
+window activation
+window geometry
+DPI conversion
+UIA tree
+UIA patterns
+process lifecycle
+clipboard
+input
+~~~
+
+### End-to-end tests
+
+~~~text
+launch application
+    ↓
+find window
+    ↓
+find UIA element
+    ↓
+perform action
+    ↓
+verify state
+    ↓
+collect diagnostics on failure
+~~~
+
+Prefer stable fixture applications over arbitrary third-party software.
+
+## Compatibility / migration policy
+
+~~~text
+Existing implementation
+        │
+        ▼
+Adapter
+        │
+        ▼
+New windows/* API
+        │
+        ▼
+Existing wrapper / AC_*
+~~~
+
+No first-phase PR should require a flag-day rewrite.
+
+## Final architecture
+
+~~~text
+AutoControlGUI
+│
+├── Python API
+├── AC_* / Workflow DSL
+└── Automation Core
+    │
+    ├── Locator
+    │   ├── UIA
+    │   ├── TextPattern
+    │   ├── OCR
+    │   ├── Template
+    │   └── Vision
+    │
+    └── Action
+        ├── UIA Patterns
+        ├── Input
+        ├── Window
+        ├── Process
+        ├── Clipboard
+        └── Shell
+             │
+             ▼
+       Windows Platform Layer
+       ├── Win32
+       ├── UIA
+       ├── Process
+       ├── Input Backends
+       ├── Screen / DPI
+       └── Native Windows APIs
+~~~
+
+The key architectural rule is:
+
+> Find the UI element → confirm it is actionable → perform the action → verify that the state actually changed → if necessary, change locator/backend/strategy and retry → report the complete trace.
+
+
 ## Implementation roadmap
 
 ### Phase A — Windows Foundation
