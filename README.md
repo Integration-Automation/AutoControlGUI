@@ -89,6 +89,26 @@ For OpenAI agent integrations, expose a focused allow-list with `export_openai_t
 
 ---
 
+
+## Choosing the right automation layer
+
+AutoControl is not intended to replace every automation tool. Use the smallest layer that matches the interface:
+
+| Need | Good fit |
+|---|---|
+| Stable browser DOM/API automation | Playwright / Selenium |
+| Simple Python mouse and keyboard scripting | PyAutoGUI or AutoControl |
+| Native desktop application automation | **AutoControl** |
+| Accessibility-tree GUI automation | **AutoControl** |
+| OCR-driven GUI automation | **AutoControl** |
+| Screenshot / vision-model GUI localization | **AutoControl** |
+| Self-healing cross-platform GUI locators | **AutoControl** |
+| AI agent controlling a real desktop | **AutoControl + MCP** |
+| Deterministic JSON GUI workflows | **AutoControl** |
+
+The differentiator is the combination of **real computer input + semantic/visual discovery + self-healing + agent/MCP integration** behind one cross-platform automation surface.
+
+
 ## Installation
 
 ```bash
