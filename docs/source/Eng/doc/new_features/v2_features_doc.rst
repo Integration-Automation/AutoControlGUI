@@ -399,10 +399,10 @@ Generic agent loop (JSON + MCP)
 language and the MCP tool registry. Parameters:
 
 * ``goal`` — natural-language objective.
-* ``backend`` — ``"anthropic"`` (uses ``export_anthropic_tools()``
-  with tool-use messages; each screenshot is fitted into the model's image
-  tier and the ``x`` / ``y`` of a tool call mapped back to the screen) or ``"openai"`` (uses ``export_openai_tools()``
-  with Chat Completions function calling).
+* ``backend`` — ``"anthropic"`` or ``"openai"``. ``AC_run_agent`` uses a focused, low-risk
+  computer-use allow-list by default instead of exposing the complete ``AC_*`` catalogue.
+  Applications that need a custom set should construct the backend with
+  ``export_anthropic_tools(only=[...])`` or ``export_openai_tools(only=[...])``.
 * ``max_steps`` (default 25) and ``wall_seconds`` (default 300.0).
 * ``model`` / ``max_tokens`` — backend-specific overrides.
 
