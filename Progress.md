@@ -262,24 +262,10 @@ socket server 的執行也都用同一個 `executor`；`for_each` 的迴圈變�
 一回合多個呼叫逐一執行後一次回覆、每個 `tool_result` 帶 `toolset_name`、截圖縮到高解析度層級的 2576 px／4784 visual tokens 內並換算座標、`zoom` 以全解析度裁切回覆），
 `claude-opus-5-5` 自動使用它；其他模型仍預設 beta 形式，因為 toolset 只以假 client 測過、還沒對真的 API 跑過。
 
-**附帶**：`AC_run_agent backend="openai"` 送出全部約 740 個工具，超過 OpenAI Chat Completions 的 128 個上限，
-所以一定失敗——與「`AC_run_agent` 預設工具集」那一條 DECIDE 一起決定。
+**附帶**：`AC_run_agent` 現在預設只提供一組聚焦的 computer-use 工具，OpenAI 不再收到整個命令目錄；需要更大的工具集時，應由應用程式明確用 `export_openai_tools(only=[...])` 建立 agent。
 
 ---
 
-## MCP registry 的 server 名稱與專案網址還是舊組織
-
-`DECIDE` — 要發布到 MCP registry 前得先定名稱，改名會影響已發布的項目
-
-`utils/mcp_registry/registry.py` 的 `_SERVER_NAME` 是 `io.github.intergration-automation-testing/autocontrol`，
-`_REPO_URL` 與 `pyproject.toml` 的 Homepage / Code、`README.md` 的 clone 網址都還是
-`Intergration-Automation-Testing/AutoControl`；repo 現在在 `Integration-Automation/AutoControlGUI`（舊網址只是轉址）。
-registry 以 GitHub 帳號驗證 `io.github.<org>/` 命名空間，舊組織名發布不了。
-
-**做法**：決定正式名稱（例如 `io.github.integration-automation/autocontrol`），在同一輪改 `registry.py`、
-`pyproject.toml`、三份 README 的網址。
-
----
 
 ## pytest11 進入點會把整個門面拉進每一次 pytest
 
@@ -360,27 +346,6 @@ viewer 端的 `FileReceiver`（`utils/remote_desktop/file_transfer.py`）照單�
 
 ---
 
-## `AC_run_agent` 預設把每個 AC_* 指令都交給模型
-
-`DECIDE` — 預設工具集要不要排除高風險指令
-
-`utils/executor/action_executor.py` 的 `_run_agent` 以 `export_anthropic_tools()` / `export_openai_tools()`
-不帶 `only=` 建立 backend，所以模型拿得到 `AC_shell_command`、`AC_execute_process`、`AC_android_shell`、
-`AC_add_package_to_executor`、`AC_run_agent`、`AC_computer_use`、`AC_execute_action` 等指令。
-2026-09-23 已讓 backend 拒絕「沒有提供的工具」，但提供的清單本身就包含這些；
-螢幕上的內容（網頁、文件）若誘導模型呼叫 shell，目前不會被擋。
-
-**做法**：`_run_agent` 預設排除上述類別，另加一個 opt-in 參數（例如 `allow_system_commands`）
-讓需要的人明確打開；MCP `ac_run_agent` 與 Script Builder 的欄位同步。
-
-**為什麼要拍板**：這會縮小既有的 agent 能力，依賴它跑 shell 的腳本會改變行為。
-
-實測數字（2026-09-25）：預設清單有 741 個指令，含 `AC_run_agent` 本身（模型可以遞迴開 agent）；
-`backend="openai"` 超過 Chat Completions 的 128 個工具上限，現在建 backend 時就明確拒絕；
-Anthropic 每一步送約 202 KB 的工具 schema、沒有 `cache_control`。拍板後一併決定上限與快取。
-
-
----
 
 ## macOS 無法還原最小化的視窗
 
