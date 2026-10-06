@@ -413,6 +413,6 @@ bandit -c pyproject.toml -r je_auto_control/
 [MIT License](../LICENSE) © JE-Chen。
 內含與選用第三方元件的授權請見 [Third_Party_License.md](../Third_Party_License.md)。
 
-- **首頁**：https://github.com/Intergration-Automation-Testing/AutoControl
+- **首頁**：https://github.com/Integration-Automation/AutoControlGUI
 - **PyPI**：https://pypi.org/project/je_auto_control/
 - **文件**：https://autocontrol.readthedocs.io/en/latest/
