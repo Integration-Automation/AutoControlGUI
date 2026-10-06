@@ -93,6 +93,22 @@ tools = export_openai_tools(only=[
 
 A focused toolset is also safer: do not expose shell, process execution, package-loading, or recursive agent commands unless the application explicitly needs them and its security policy allows them.
 
+## Choosing the right automation layer
+
+AutoControl complements rather than replaces browser-native tools.
+
+| Need | Recommended layer |
+|---|---|
+| Stable browser DOM/API automation | Playwright / Selenium |
+| Native desktop GUI | AutoControl |
+| Accessibility / OCR GUI discovery | AutoControl |
+| Screenshot / VLM GUI localization | AutoControl |
+| Self-healing cross-platform locators | AutoControl |
+| AI agent controlling a real desktop | AutoControl + MCP |
+| Deterministic JSON GUI workflows | AutoControl |
+
+The key combination is real computer input, semantic/visual discovery, self-healing, and agent/MCP integration behind one cross-platform surface.
+
 ## Project identity
 
 - Project: **AutoControl**
