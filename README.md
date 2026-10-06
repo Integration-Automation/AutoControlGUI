@@ -22,7 +22,7 @@ from JSON files / CLI / servers, and a **GUI tab**. Nothing is GUI-only.
 
 - **One API, seven platforms.** `wrapper/platform_wrapper.py` picks the backend at import
   time; your script does not change between Windows, macOS, X11, and Wayland.
-- **Scriptable without Python.** 775 `AC_*` commands cover the whole feature set, so a
+- **Scriptable without Python.** 776 `AC_*` commands cover the whole feature set, so a
   JSON file can do anything the library can — including loops, branches, try/catch,
   macros, and variables.
 - **Headless by default.** `import je_auto_control` never loads Qt. The GUI is an
@@ -143,7 +143,7 @@ desktop app; tab commands live in the window's **Actions** menu.
 | Capability | Python API | `AC_*` command | GUI tab |
 |---|---|---|---|
 | Mouse | `click_mouse`, `set_mouse_position`, `mouse_scroll` | `AC_click_mouse` | Auto Click |
-| Keyboard | `write`, `hotkey`, `type_keyboard` | `AC_write`, `AC_hotkey` | Auto Click |
+| Keyboard | `write`, `write_secret`, `hotkey`, `type_keyboard` | `AC_write`, `AC_write_secret`, `AC_hotkey` | Auto Click |
 | Screen & pixels | `screenshot`, `screen_size`, `get_pixel` | `AC_screenshot` | Screenshot |
 | Image matching | `locate_image_center`, `locate_and_click` | `AC_locate_and_click` | Image Detect |
 | OCR text | `click_text`, `wait_for_text`, `read_text_in_region` | `AC_click_text`, `AC_wait_text` | OCR Reader |
@@ -154,7 +154,7 @@ desktop app; tab commands live in the window's **Actions** menu.
 | Natural-language planner | `plan_actions`, `run_from_description` | `AC_llm_plan` | LLM Planner |
 | Computer-use agent | `AgentLoop`, `run_agent` | `AC_run_agent` | Computer Use |
 | Record & replay | `record`, `stop_record` | `AC_record`, `AC_stop_record` | Record |
-| JSON scripting | `execute_action`, `execute_files` | all 775 commands | Script, Script Builder |
+| JSON scripting | `execute_action`, `execute_files` | all 776 commands | Script, Script Builder |
 | Variables & flow control | `execute_action_with_vars` | `AC_set_var`, `AC_loop`, `AC_for_each`, `AC_try`, `AC_retry` | Variables |
 | Data-driven runs | — | `AC_for_each_row` (CSV / JSON / SQLite / Excel) | Data Sources |
 | Assertions | `assert_text`, `assert_image` | `AC_assert_text` + 20 more | Assertions |
@@ -214,6 +214,8 @@ still goes on to the end), so a CI step fails with it. The legacy
 | **Remote desktop** | `RemoteDesktopHost` / GUI | TCP, WebSocket, or WebRTC; TOTP, trust list, TURN config, file/clipboard/audio sync. |
 
 All servers bind to `127.0.0.1` unless you opt in explicitly.
+
+**Package gate.** `AC_add_package_to_executor` and `AC_add_package_to_callback_executor` import a Python package and register its members as commands, so an action list arriving over any of these surfaces could load `os` or `subprocess`. The host program decides what may load: `executor.allow_packages("name", …)` lists the packages (submodules included) and `executor.set_allow_arbitrary_packages(False)` refuses the rest before importing them. Neither is an `AC_*` command, so an action list cannot open its own gate. A refused package fails that action with `AutoControlExecuteActionException`. Until the host calls either switch, any package still loads but raises a `DeprecationWarning`: a future release will refuse unlisted packages by default.
 
 ### How the remote-desktop wire protocol works
 

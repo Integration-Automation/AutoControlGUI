@@ -163,6 +163,11 @@ def _add_keyboard_specs(specs: List[CommandSpec]) -> None:
         ),
     ))
     specs.append(CommandSpec(
+        "AC_write_secret", "Keyboard", "Write Secret Text",
+        fields=(FieldSpec("secret", FieldType.STRING),),
+        description="Type a password or token exactly; never logged, recorded or returned.",
+    ))
+    specs.append(CommandSpec(
         "AC_human_type", "Keyboard", "Human-like Type",
         fields=(
             FieldSpec("text", FieldType.STRING, placeholder="Hello, world"),

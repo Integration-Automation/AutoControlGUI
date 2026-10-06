@@ -179,7 +179,6 @@ pip install --dry-run --only-binary=:all: --platform win_arm64 --python-version 
 - **視窗版面每次還原都偏移**：`utils/window_capture/window_capture.py:115` 存 DWM 可見框、還原時交給 `MoveWindow`（它定位的是含隱形邊框的完整矩形），每輪右移 7 px、縮小 14×7 px；最大化視窗與不同 DPI 的第二螢幕偏得更多。做法：存 `GetWindowRect`，或改用 `GetWindowPlacement`／`SetWindowPlacement`。同一檔的 snap／grid／cascade 用整個螢幕而非工作區，最底下 48 px 落在工作列下，一併改用 `SPI_GETWORKAREA`。
 - **`wait_for_window` 睡過逾時**：`wrapper/auto_control_window.py:79` 以 `poll` 整段睡，`poll=30` 就睡 30 秒，`poll=inf` 丟 `OverflowError`。做法：`clamp_poll_interval`，並只睡到截止時間。
 - **Windows 鍵表沒有標點鍵**：`plus`、`minus`、`comma`、`period`、`slash` 等沒有對應的 `VK_OEM_*`，computer use 的 `ctrl+minus` 在 Windows 失敗。做法：在 Windows 鍵表補上 `VK_OEM_PLUS`／`VK_OEM_MINUS`／`VK_OEM_COMMA`／`VK_OEM_PERIOD`／`VK_OEM_2` 等。
-- **打字一定留下原文**：`write()`／`type_keyboard()`（`wrapper/auto_control_keyboard.py`）把打的字寫進 INFO log、記進測試紀錄並回傳，executor 的紀錄鍵也含原文。WebRunner 的 `WR_ac_basic_auth`（它的 `progress.md` #20，只收環境變數名稱）因此做不了：密碼會進 AutoControl 的 log 與兩邊的執行紀錄。做法：加一個不寫 log、不記錄、不回傳原文的打字呼叫（例如 `write(..., secret=True)`），WebRunner 從 Python 直接呼叫它；兩邊 `architecture.md` §6 一起改。
 
 同一次稽核的影像與 OCR 部分也在它的路徑上（Discord bot 的 `!find_image`／`!find_text`），一併等：
 
@@ -541,3 +540,13 @@ be at 2x if on a Retina screen」，`scale_down=True` 只在帶 `bbox` 時生效
 ## `test_usb_acl_prompt.py` 讓 Python 3.10 的 headless 測試間歇 segfault
 
 `TODO` — `test/unit_test/headless/test_usb_acl_prompt.py::test_bridge_remember_persists_acl_rule` 在 `coverage run -m pytest` 下讓行程 SIGSEGV（exit 139），整個 `pytest-headless` job 因此失敗：2026-09-26 連續三次 AutoControl Code Quality（ubuntu-22.04／3.10），2026-09-30 一次（macos-14／3.10）；同一次其他版本都過，之後的 run 又過，所以是間歇的。原因還沒查：先在 3.10 開 `faulthandler` 重跑這一支，看崩在哪個原生呼叫。
+
+---
+
+## 套件閘門的預設改成拒絕
+
+`BLOCKED` — 等含警告的版本出去之後再發兩版
+
+`AC_add_package_to_executor`／`AC_add_package_to_callback_executor` 前面已有套件閘門（工作區 X-12），但沒設定時仍會載入任何套件、只發 `DeprecationWarning`。兩個版本之後，在 `utils/package_manager/package_manager_class.py` 的 `PackageManager.__init__` 把 `allow_arbitrary_packages` 改成 `False`，拿掉 `_check_allowed` 裡的警告分支，並更新三份 README 的「Package gate」段落、`docs/source/{Eng,Zh}/doc/keyword_and_executor/keyword_and_executor_doc.rst` 與 `docs/source/API/utils/package_manager.rst`，`CHANGELOG.md` 記成破壞性變更。
+
+**先決定**：只跑動作檔、沒有 Python 宿主程式的使用者（`je_auto_control` CLI、socket／REST／MCP server、排程器）要怎麼放行套件。

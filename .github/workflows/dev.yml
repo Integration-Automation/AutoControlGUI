@@ -1,0 +1,145 @@
+name: AutoControl Dev CI
+
+# The dev channel. A push or pull request to dev runs the headless suite, and
+# a push that passes is then built from dev.toml and published to PyPI as
+# je_auto_control_dev (the publish-dev job). main has its own workflows:
+# quality.yml gates it and stable.yml publishes je_auto_control.
+
+on:
+  push:
+    branches: [ "dev" ]
+  pull_request:
+    branches: [ "dev" ]
+
+permissions:
+  contents: read
+
+jobs:
+  pytest-headless:
+    # The same suite, install steps and command as the pytest-headless job of
+    # quality.yml, without the coverage floor: that ratchet belongs to main.
+    # Every square here is one quality.yml also runs. Each operating system
+    # runs once, because the facade imports a different backend on each, and
+    # Windows runs both ends of the supported Python range. The full nine-way
+    # matrix runs on the pull request that takes dev to main.
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30  # about 3x a square of the same suite in quality.yml
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: windows-2022, python-version: "3.10" }
+          - { os: windows-2022, python-version: "3.14" }
+          - { os: ubuntu-22.04, python-version: "3.14" }
+          - { os: macos-14, python-version: "3.10" }
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: "pip"
+
+      # The X11 backend connects to a display at import time, opencv and
+      # PySide6 need libGL/glib, and Qt's platform plugin needs the xcb
+      # libraries: without them the suite fails at collection.
+      - name: Install X11 and Qt runtime libraries (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            xvfb xauth x11-utils \
+            libgl1 libegl1 libglib2.0-0 \
+            libxkbcommon-x11-0 libdbus-1-3 \
+            libxcb-cursor0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 \
+            libxcb-randr0 libxcb-render-util0 libxcb-shape0 libxcb-sync1 \
+            libxcb-xfixes0 libxcb-xinerama0 libxcb-xkb1
+
+      # One command per step, each on a single line: a `run: |` block scalar
+      # swallows NOSONAR markers.
+      - name: Upgrade the installer
+        shell: bash
+        run: python -m pip install --upgrade pip wheel  # NOSONAR githubactions:S8544  # reason: pip and wheel are the installer; pinning them here would pin the tool that applies the pins below
+
+      # The editable project, not dev_requirements.txt: that file installs the
+      # published je_auto_control_dev, whose copy of je_auto_control/ in
+      # site-packages would be tested instead of this checkout. The WebRTC
+      # extra is there because the tests of the WebRTC host skip without it.
+      - name: Install the project itself, with the WebRTC extra
+        shell: bash
+        run: pip install -e ".[webrtc]"  # NOSONAR githubactions:S8544 githubactions:S8541  # reason: installs the checked-out project itself, so there is no upstream version to lock and no third-party setup script to run
+
+      - name: Install the test tooling
+        shell: bash
+        # The same line as quality.yml (test_dev_release.py compares them).
+        # Quoted: `--only-binary :all:` puts a colon-space inside the scalar.
+        run: "pip install --only-binary :all: ruff==0.15.22 bandit==1.9.4 pytest==9.1.1 pytest-timeout==2.4.0 pytest-rerunfailures==15.1 coverage==7.15.4 PySide6==6.11.1 radon==6.0.1"
+
+      # No path argument: the paths come from `testpaths` in pyproject.toml,
+      # and an argument would drop the flow_control tests. Linux runs under a
+      # real Xvfb because the X11 backend opens a display at import time.
+      - name: Run headless pytest suite
+        shell: bash
+        run: >-
+          ${{ runner.os == 'Linux' && 'xvfb-run -a -s "-screen 0 1280x800x24"' || '' }}
+          python -m pytest -v --tb=short --timeout=120
+
+  publish-dev:
+    # A push to dev that passes the tests is built from dev.toml and uploaded
+    # when it is still the tip of dev and ships something the newest
+    # je_auto_control_dev does not. scripts/dev_release.py picks the version
+    # from PyPI, so nothing is committed back. The condition keeps the job off
+    # pull requests.
+    name: Publish je_auto_control_dev to PyPI
+    needs: [pytest-headless]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/dev'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    concurrency:
+      group: publish-dev
+      cancel-in-progress: false
+
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Install build tooling
+        run: "pip install --only-binary :all: build==1.5.0 twine==6.2.0"
+
+      - name: Write pyproject.toml from dev.toml with the next version
+        run: python scripts/dev_release.py prepare
+
+      - name: Build distribution
+        run: python -m build
+
+      - name: Verify distribution metadata
+        run: python -m twine check dist/*
+
+      - name: Compare with the newest published wheel
+        id: compare
+        run: python scripts/dev_release.py changed dist
+
+      # A run that finishes after a newer push would otherwise publish older
+      # code as the newest release.
+      - name: Check that this commit is still the tip of dev
+        id: tip
+        run: |
+          tip="$(git ls-remote origin refs/heads/dev | cut -f1)"
+          if [ "$tip" = "$GITHUB_SHA" ]; then current=true; else current=false; fi
+          echo "current=$current" >> "$GITHUB_OUTPUT"
+
+      - name: Publish to PyPI
+        if: steps.compare.outputs.changed == 'true' && steps.tip.outputs.current == 'true'
+        env:
+          TWINE_USERNAME: __token__
+          TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
+        run: python -m twine upload --non-interactive dist/*
