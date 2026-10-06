@@ -83,6 +83,26 @@ OpenAI agent 請使用 `export_openai_tools(only=[...])` 提供聚焦工具集�
 
 ---
 
+
+## 如何選擇自動化層
+
+AutoControl 不需要取代所有自動化工具；應該選擇最符合介面的那一層：
+
+| 需求 | 適合工具 |
+|---|---|
+| 穩定的瀏覽器 DOM／API 自動化 | Playwright／Selenium |
+| 簡單的 Python 滑鼠鍵盤腳本 | PyAutoGUI 或 AutoControl |
+| 原生桌面應用程式自動化 | **AutoControl** |
+| 無障礙樹 GUI 自動化 | **AutoControl** |
+| OCR GUI 自動化 | **AutoControl** |
+| 截圖／視覺模型 GUI 定位 | **AutoControl** |
+| Self-healing 跨平台 GUI locator | **AutoControl** |
+| AI agent 操作真實桌面 | **AutoControl + MCP** |
+| 確定性的 JSON GUI workflow | **AutoControl** |
+
+AutoControl 的差異在於把 **真實電腦輸入 + 語意／視覺定位 + self-healing + agent/MCP 整合** 放在同一個跨平台自動化介面。
+
+
 ## 安裝
 
 ```bash
