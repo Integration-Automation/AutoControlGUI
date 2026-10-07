@@ -610,3 +610,13 @@ LLDB ignores launcher exec stops; other nonfatal stops retain missing exit
 evidence and fail as debugger errors.
 Both debuggers pass SIGINT to Python, preserving emergency-stop assertions.
 Quality and development dependencies include signaling and HTTP TestClient support.
+
+GlobalShortcuts owner lifecycle
+---------------------------------------------
+
+A portal owner loss/replacement revokes pending and active stop grants without
+automatic reauthorization. Active revocation signals the owned stop callback;
+foreign senders/names and unchanged ownership are ignored. Quality and portal
+Docker CI run an installed wheel against an independent GDBus peer on a private
+bus, retaining protocol records and failures. This transport verification does
+not establish GNOME/KDE human consent or physical keyboard-state recovery.

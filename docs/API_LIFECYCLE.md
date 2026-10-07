@@ -87,3 +87,8 @@ active/pending owners detached under a short cache lock. Stop/reset cancel
 pending IPC and stale completion cannot publish its grant; permission polling
 also leaves the cache lock free. Tests include controlled workers without
 performing desktop input.
+
+GlobalShortcuts owners also retain a bus-daemon NameOwnerChanged subscription.
+Loss/replacement of the portal owner revokes pending or active grants, without
+automatic reauthorization; an active grant invokes its owned stop callback.
+Foreign senders/names and unchanged ownership do not revoke the grant.

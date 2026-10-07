@@ -565,5 +565,14 @@ Linux/macOS Python 3.10 quality job 透過 ``test/verify/native_debugger.py``
 退出證據會使 job 失敗；斷言與 coverage 地板持續強制。收集診斷並不代表已修正
 USB ACL 間歇崩潰。
 LLDB 略過啟動器 exec 暫停；其他非致命停止不建立退出證據，視為 debugger 錯誤。
-兩個 debugger 都將 SIGINT 傳给 Python，維持緊急停止斷言。
+兩個 debugger 都將 SIGINT 傳給 Python，維持緊急停止斷言。
 Quality 與開發相依包含 signaling 及 HTTP TestClient 支援。
+
+GlobalShortcuts owner 生命周期
+-----------------------------------------------
+
+portal owner 消失／替換會撤銷待授權及有效的 stop grant，不自動重試授權。
+有效 grant 撤銷時通知該 owner 的停止 callback；外來 sender／名稱及未變更的 owner
+會被忽略。Quality 與 portal Docker CI 使用 installed wheel、獨立 GDBus peer 及
+私有 bus，保留協定紀錄與失敗結果；傳輸驗證不代表 GNOME／KDE 真人授權或實體鍵態
+恢復已完成。

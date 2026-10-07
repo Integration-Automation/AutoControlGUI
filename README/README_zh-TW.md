@@ -404,6 +404,12 @@ artifact，包含原生堆疊、套件版本及測試退出碼。原有 coverage
 LLDB 略過啟動器的 exec 暫停；其他非致命停止會視為診斷失敗，不捏造崩潰退出碼。
 兩個 debugger 都將 SIGINT 傳給 Python，讓緊急停止斷言正常執行。
 Quality 測試安裝 WebRTC／signaling extras 與 HTTP 測試 client。
+手動執行 `quality.yml` 可選 `verification_scope=native-shortcut`，僅跑 installed-wheel／
+私有 bus 檢查；預設會執行全部 quality jobs。
+
+portal owner 消失或替換會撤銷待授權及有效的快捷鍵 grant；有效 grant 撤銷時
+通知該 owner 的停止 callback。原生傳輸驗證使用獨立 GDBus、私有 bus 與 installed wheel，
+不代表 GNOME／KDE 真人授權或實體鍵態恢復已驗收。
 
 ---
 

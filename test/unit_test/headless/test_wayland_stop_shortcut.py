@@ -207,3 +207,53 @@ def test_activation_queued_around_bind_response_is_preserved():
     assert session.wait_ready(2)
     assert fired.wait(2)
     session.close()
+
+
+@pytest.mark.parametrize('pending', [False, True])
+def test_portal_name_loss_revokes_active_or_pending_shortcut(pending):
+    bus = PortalBus(pending=pending)
+    stopped = threading.Event()
+    session = StopShortcutSession(_bus_factory=lambda: bus)
+    session.start(stopped.set)
+    try:
+        assert bus.bind_requested.wait(2)
+        if not pending:
+            assert session.wait_ready(2)
+        lost = signal('/org/freedesktop/DBus', 'NameOwnerChanged',
+                      ['org.freedesktop.portal.Desktop', ':1.42', ''], 'org.freedesktop.DBus')
+        lost.fields[dbus.FIELD_SENDER] = 'org.freedesktop.DBus'
+        bus.messages.append(lost)
+        if not pending:
+            assert stopped.wait(2), 'portal owner disappeared but the owned stop grant remained available'
+        with pytest.raises(ShortcutUnavailable, match='revoked'):
+            assert session.wait_ready(2)
+        assert session.state == 'needs_permission'
+        assert stopped.is_set() is not pending
+    finally:
+        session.close()
+
+
+@pytest.mark.parametrize('sender,name,new_owner', [
+    (':1.99', 'org.freedesktop.portal.Desktop', ''),
+    ('org.freedesktop.DBus', 'org.other.Portal', ''),
+    ('org.freedesktop.DBus', 'org.freedesktop.portal.Desktop', ':1.42'),
+])
+def test_foreign_or_unchanged_bus_owner_does_not_revoke_grant(sender, name, new_owner):
+    bus = PortalBus()
+    fired = []
+    session = StopShortcutSession(_bus_factory=lambda: bus)
+    session.start(lambda: fired.append(True))
+    try:
+        assert session.wait_ready(2)
+        message = signal('/org/freedesktop/DBus', 'NameOwnerChanged', [name, ':1.42', new_owner],
+                         'org.freedesktop.DBus')
+        message.fields[dbus.FIELD_SENDER] = sender
+        bus.messages.append(message)
+        bus.messages.append(signal('/org/freedesktop/portal/desktop', 'Activated',
+                                   [bus.session, 'autocontrol-stop', 1, {}]))
+        deadline = time.monotonic() + 2
+        while not fired and time.monotonic() < deadline:
+            time.sleep(0.001)
+        assert fired == [True] and session.state == 'available' and session.error is None
+    finally:
+        session.close()

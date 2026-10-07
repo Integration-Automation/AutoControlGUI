@@ -349,3 +349,9 @@ gdb/lldb through `test/verify/native_debugger.py`. Owned debugger process groups
 are bounded by a 30-minute deadline. Artifacts retain target/debugger exit codes,
 versions, command files and native frames; missing target exit evidence fails
 the job. Capturing diagnostics does not establish the USB Qt crash root cause.
+
+StopShortcutSession subscribes to the bus daemon's portal NameOwnerChanged events.
+Owner loss/replacement invalidates both pending and active grants without retry;
+active revocation signals the owning callback. Independent GI/GDBus native peers
+and installed-wheel verification run in quality and the portal Docker CI job,
+retaining per-scenario records and logs. Desktop consent/recovery remains D3/H3.

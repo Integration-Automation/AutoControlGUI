@@ -403,6 +403,12 @@ artifact，包含原生堆栈、包版本及测试退出码。原有 coverage �
 LLDB 跳过启动器的 exec 暂停；其他非致命停止会视为诊断失败，不捏造崩溃退出码。
 两个 debugger 都将 SIGINT 传给 Python，让紧急停止断言正常执行。
 Quality 测试安装 WebRTC／signaling extras 与 HTTP 测试 client。
+手动运行 `quality.yml` 可选 `verification_scope=native-shortcut`，仅跑 installed-wheel／
+私有 bus 检查；默认会运行全部 quality jobs。
+
+portal owner 消失或替换会撤销待授权及有效的快捷键 grant；有效 grant 撤销时
+通知该 owner 的停止 callback。原生传输验证使用独立 GDBus、私有 bus 与 installed wheel，
+不代表 GNOME／KDE 真人授权或实体键态恢复已验收。
 
 ---
 

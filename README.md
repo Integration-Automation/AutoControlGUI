@@ -390,7 +390,8 @@ nodes using existing read permissions, excluding kernel virtual/uinput devices.
 It returns raw device events, not desktop coordinates or replay actions, and
 never changes ACLs. `StopShortcutSession` explicitly requests a portal stop
 binding, reports its actual trigger, and closes its own grant; refusal is cached
-until explicit close/start. Beta `je_auto_control.api.wayland_input` and the legacy facade expose these
+until explicit close/start. Loss or replacement of the portal owner revokes pending
+and active grants; active revocation signals the owned stop callback. Beta `je_auto_control.api.wayland_input` and the legacy facade expose these
 helpers and five script operations: `start_physical_recording(devices)`,
 `stop_physical_recording()`, `start_wayland_stop_shortcut(preferred_trigger='F7')`,
 `stop_wayland_stop_shortcut()` and `wayland_input_status()`. Each has an `AC_*`
@@ -457,6 +458,12 @@ does not establish the intermittent USB ACL crash root cause.
 LLDB ignores launcher exec stops; other nonfatal stops fail without a fabricated crash exit code.
 Both debuggers pass SIGINT to Python so emergency-stop assertions execute normally.
 Quality tests install WebRTC/signaling extras and the HTTP test client.
+Manual `quality.yml` runs accept `verification_scope=native-shortcut` to run
+only the installed-wheel/private-bus check; the default runs all quality jobs.
+
+Native shortcut transport verification uses independent GDBus, a private bus
+and an installed wheel; it does not establish GNOME/KDE human consent or
+physical keyboard-state recovery.
 
 ---
 

@@ -11,7 +11,8 @@
 現有 `[Answer]` 決策沿用；後續交付包含 D3、E–H 與完整整合驗收。
 從 D3 接續原有計畫；不額外新增付費型功能。既有 API 介面及相關修正繼續，
 目前以本機／離線測試驗證；缺少真實 API 條件的既有項目保留待驗證。
-D3 尚需在 compositor CI 驗證原始實體事件與 portal 停止的原生傳輸，
+D3 尚需在 compositor CI 驗證原始實體事件；portal 停止已加入獨立 GDBus 原生傳輸 CI，
+待保存並核對實測 artifact，
 完成 GNOME/KDE 授權與鍵態恢復驗收，並完成下列 Python 3.10 USB ACL
 原生 crash 定位、artifact 與修正。
 

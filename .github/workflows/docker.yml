@@ -282,6 +282,21 @@ jobs:
       - name: Verify the portal handshake against liboeffis
         run: docker run --rm autocontrol-portal:ci
 
+      - name: Verify owned GlobalShortcuts over a real private bus
+        run: >-
+          docker run --rm -v "$PWD/shortcut-diagnostics:/artifacts"
+          -e AC_SHORTCUT_ARTIFACT_DIR=/artifacts --entrypoint timeout autocontrol-portal:ci
+          120 dbus-run-session -- python /opt/verify/shortcut_verify.py
+
+      - name: Preserve GlobalShortcuts native transport evidence
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: docker-wayland-shortcut-native
+          path: shortcut-diagnostics/
+          if-no-files-found: error
+          retention-days: 14
+
   x11-verification:
     name: X11 backend against a real X server
     needs: build-image

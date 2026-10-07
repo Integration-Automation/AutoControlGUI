@@ -11,6 +11,12 @@ on:
   pull_request:
     branches: [ "main" ]
   workflow_dispatch:
+    inputs:
+      verification_scope:
+        description: Run all quality checks or only the private-bus shortcut verification
+        type: choice
+        options: [all, native-shortcut]
+        default: all
 
 permissions:
   contents: read
@@ -26,6 +32,7 @@ jobs:
       - uses: actions/dependency-review-action@v5
 
   lint:
+    if: inputs.verification_scope != 'native-shortcut'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -43,6 +50,7 @@ jobs:
         run: ruff check je_auto_control/
 
   security:
+    if: inputs.verification_scope != 'native-shortcut'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -60,6 +68,7 @@ jobs:
         run: bandit -r je_auto_control/ -c pyproject.toml
 
   pytest-headless:
+    if: inputs.verification_scope != 'native-shortcut'
     # The suite ran on Windows alone for its whole life, so every
     # platform assumption it holds went unmeasured on the two operating
     # systems the project also claims to support. Linux and macOS are
@@ -205,6 +214,7 @@ jobs:
   # runs the three target platforms mypy can be pointed at, so the Windows and
   # macOS backends are checked from this Ubuntu runner rather than skipped.
   typing-stable-api:
+    if: inputs.verification_scope != 'native-shortcut'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -218,3 +228,34 @@ jobs:
       # on what is installed, and installing them here would only hide a
       # regression in that arrangement.
       - run: python test/verify/typing_contract_verify.py
+
+  wayland-shortcut-native:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 10
+    env:
+      XDG_SESSION_TYPE: wayland
+      JE_AUTOCONTROL_LINUX_DISPLAY_SERVER: wayland
+      AC_SHORTCUT_ARTIFACT_DIR: ${{ github.workspace }}/shortcut-diagnostics
+      PYTHONPATH: ${{ github.workspace }}/docker
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - name: Install independent GDBus peer and private bus
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends dbus python3-gi
+      - name: Build and install a minimal wheel environment
+        run: |
+          pip wheel --no-deps --wheel-dir dist .
+          pip install --no-deps dist/je_auto_control-*.whl
+          pip install --only-binary :all: mss==10.2.0 Pillow==12.3.0 defusedxml==0.7.1
+      - name: Verify native GlobalShortcuts transport and ownership
+        run: timeout 120 dbus-run-session -- python docker/shortcut_verify.py
+      - name: Preserve independent peer records and failures
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: wayland-shortcut-native
+          path: shortcut-diagnostics/
+          if-no-files-found: error
+          retention-days: 14

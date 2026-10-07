@@ -465,3 +465,8 @@ active/pending owners detached under a short cache lock. Stop/reset cancel
 pending IPC and stale completion cannot publish its grant; permission polling
 also leaves the cache lock free. Tests include controlled workers without
 performing desktop input.
+
+GlobalShortcuts availability is revoked when its portal owner disappears or is
+replaced. Pending consent fails and an active grant signals its owned callback.
+The installed-wheel/private-bus GDBus checks exercise wire transport and grant
+ownership; GNOME/KDE human consent and physical key-state recovery remain unverified.

@@ -22,6 +22,10 @@ from je_auto_control.utils.exception.exceptions import AutoControlException
 
 _INTERFACE = 'org.freedesktop.portal.GlobalShortcuts'
 _SESSION_INTERFACE = 'org.freedesktop.portal.Session'
+_DBUS_INTERFACE = 'org.freedesktop.DBus'
+_OWNER_RULE = ("type='signal',sender='org.freedesktop.DBus',path='/org/freedesktop/DBus',"
+               "interface='org.freedesktop.DBus',member='NameOwnerChanged',"
+               f"arg0='{PORTAL_BUS}'")
 _SHORTCUT_ID = 'autocontrol-stop'
 _REQUEST_SECONDS = 30.0
 _POLL_SECONDS = 0.1
@@ -79,6 +83,13 @@ def _response_result(message: dbus.Message) -> dict[str, Any]:
 
 def _valid_text(value: str, limit: int, *, allow_empty: bool = False) -> bool:
     return isinstance(value, str) and (bool(value) or allow_empty) and len(value) <= limit and '\x00' not in value
+
+
+def _owner_lost(message: dbus.Message) -> bool:
+    return (message.path == '/org/freedesktop/DBus' and message.interface == _DBUS_INTERFACE
+            and message.member == 'NameOwnerChanged' and message.fields.get(dbus.FIELD_SENDER) == _DBUS_INTERFACE
+            and len(message.body) == 3 and message.body[0] == PORTAL_BUS
+            and bool(message.body[1]) and message.body[1] != message.body[2])
 
 
 class StopShortcutSession:
@@ -162,6 +173,7 @@ class StopShortcutSession:
             if self._stop.is_set():
                 return
             bus.connect()
+            bus.add_match(_OWNER_RULE)
             self._negotiate(bus, preferred, parent)
             with self._lock:
                 if not self._stop.is_set():
@@ -268,6 +280,8 @@ class StopShortcutSession:
                     message = bus.read_message(min(deadline, time.monotonic() + _POLL_SECONDS))
                 except dbus.DBusTimeout:
                     continue
+            if self._is_revocation(message):
+                raise ShortcutUnavailable('stop shortcut grant was revoked', state='needs_permission')
             if _is_response(message, paths):
                 # Signals after the Response retain their order for the active listener.
                 for pending in queued:
@@ -277,7 +291,7 @@ class StopShortcutSession:
         raise ShortcutUnavailable('stop shortcut request was cancelled or timed out', state='needs_permission')
 
     def _defer(self, message: dbus.Message) -> None:
-        if message.interface not in (_INTERFACE, _SESSION_INTERFACE):
+        if message.interface not in (_INTERFACE, _SESSION_INTERFACE, _DBUS_INTERFACE):
             return
         if len(self._pending) >= _MAX_PENDING:
             raise ShortcutUnavailable('stop shortcut pending signal budget exceeded')
@@ -316,8 +330,10 @@ class StopShortcutSession:
             self._invoke_stop()
 
     def _is_revocation(self, message: dbus.Message) -> bool:
-        return (message.path == self._live.session and message.interface == _SESSION_INTERFACE
-                and message.member == 'Closed')
+        return (message.type == dbus.SIGNAL and
+                (_owner_lost(message) or (message.path == self._live.session
+                                         and message.interface == _SESSION_INTERFACE
+                                         and message.member == 'Closed')))
 
     def _is_own_shortcut(self, message: dbus.Message) -> bool:
         return (message.path == PORTAL_PATH and message.interface == _INTERFACE
