@@ -405,6 +405,11 @@ LLDB 跳过启动器的 exec 暂停；其他非致命停止会视为诊断失败
 Quality 测试安装 WebRTC／signaling extras 与 HTTP 测试 client。
 GUI 翻译表保留子组件 wrapper，对自身组件使用 weak proxy，避免自身循环引用
 把 GUI 销毁延后到工作线程的 GC。
+
+共享 D-Bus 取消会移除连接并唤醒进行中的 I/O；最后一个操作退出时才关闭 descriptor。
+读取每 100 ms 检查取消，保留原请求时限，拒绝取消后的完成结果；旧 descriptor
+回收前不能重连。
+
 手动运行 `quality.yml` 可选 `verification_scope=native-shortcut`，仅跑 installed-wheel／
 私有 bus 检查；默认会运行全部 quality jobs。
 

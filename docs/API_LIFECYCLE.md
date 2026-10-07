@@ -97,3 +97,8 @@ Shared GUI translation registries retain child wrappers and use weak proxies
 for self entries, including tab titles. This prevents the registry's own cycle
 from deferring parentless widget destruction to worker-thread garbage collection.
 Setter/translation behavior and returned original widgets are unchanged.
+
+Shared D-Bus cancellation detaches the connection and wakes pending I/O. The
+last in-flight operation closes its descriptor; read polling checks cancellation
+every 100 ms while preserving the original request deadline. Late completion
+is rejected, and reconnect is refused until the previous descriptor has drained.

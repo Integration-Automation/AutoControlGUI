@@ -15,6 +15,10 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Fixed
 
+- Shared D-Bus cancellation retains an in-flight socket descriptor until I/O
+  exits, polls reads for bounded cancellation and rejects late completion.
+  Reconnection waits for the previous descriptor to drain.
+
 - Qt translation registries avoid retaining their own GUI owner, preventing
   parentless widgets from being destroyed by background garbage collection.
   Child widget retention and language switching remain supported.

@@ -360,3 +360,8 @@ GUI translation registries retain child wrappers but store self/title-tab entrie
 through weak proxies. This removes the registry's owner-to-self cycle, which
 otherwise lets background Python GC destroy parentless widgets off the GUI
 thread. Isolated ownership/translation tests preserve live language switching.
+
+Shared D-Bus cancellation detaches the connection and wakes pending I/O. The
+last in-flight operation closes its descriptor; read polling checks cancellation
+every 100 ms while preserving the original request deadline. Late completion
+is rejected, and reconnect is refused until the previous descriptor has drained.

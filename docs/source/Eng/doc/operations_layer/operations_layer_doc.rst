@@ -629,3 +629,11 @@ for its own widget and self-registered tab titles. This removes a self-cycle
 that otherwise defers parentless widget destruction to background garbage
 collection. Live language switching and original widget return values remain
 unchanged. Historical native Qt crash closure still requires regression evidence.
+
+D-Bus cancellation ownership
+---------------------------------------------
+
+Shared D-Bus cancellation detaches the connection and wakes pending I/O. The
+last in-flight operation closes its descriptor; read polling checks cancellation
+every 100 ms while preserving the original request deadline. Late completion
+is rejected, and reconnect is refused until the previous descriptor has drained.

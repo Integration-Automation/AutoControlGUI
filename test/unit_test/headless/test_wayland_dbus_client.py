@@ -51,6 +51,9 @@ class _LoopbackSocket:
     def close(self):
         self.closed = True
 
+    def shutdown(self, _how):
+        return None
+
 
 def _bus():
     """A connection whose socket is loopback, so nothing leaves the process."""

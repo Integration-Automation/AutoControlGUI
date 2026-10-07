@@ -105,7 +105,8 @@ Script Builder 操作與獨立 Diagnostics 面板已交付；停止／重試可�
 及 Python 3.10 USB ACL native backtrace／修正仍待完成，不能勾選整個 task。
 人工驗收步驟見 `docs/WAYLAND_ACCEPTANCE.md`。
 Linux/macOS Python 3.10 quality jobs 已配置 gdb/lldb 包裝原有 coverage 命令，
-保存 native-diagnostics artifact 與真實 target exit；等待原生執行及 root-cause 證據。
+保存 native-diagnostics artifact 與真實 target exit；原生完整回歸已有證據，
+macOS 的一般取消／擷取等失敗仍需修正；歷史 Qt 間歇崩潰仍需收斂證據。
 portal owner 消失／替換的失敗案例已重現並修正；獨立 GDBus peer 與 installed-wheel
 傳輸驗證已接入 quality／portal Docker CI；quality 的六組獨立 GDBus／installed-wheel
 檢查已通過，artifact 見 run 37586779813。GUI 翻譯表自身循環造成 worker GC 銷毀

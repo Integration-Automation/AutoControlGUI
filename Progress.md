@@ -213,7 +213,8 @@ GNOME/KDE 的允許／拒絕、合成器重啟、裝置 pause/remove、helper cr
 ## macOS 原生 CI 的取消與擷取回歸
 
 `WIP` — quality run 37585132041 的 macOS Python 3.10/3.14 尚有普通測試失敗：
-`test_portal_stop_bus_lifecycle.py` 的 shutdown/close 與進行中 socket read 競爭；
+`test_portal_stop_bus_lifecycle.py` 的取消回收修正仍需 macOS 原生回歸；
+`test_wayland_worker_cleanup.py` 的 pending EI IPC 取消亦需消除 descriptor 競爭；
 `test_logical_frame.py` 的明確 metrics 在 macOS 被 native layout 覆蓋；
 platform-coordinate／screen-grabber fixtures 未完整隔離 Mac display geometry；
 legacy CLI stderr 前綴與 Folder Sync 的兩項固定 sleep 等待亦需檢查原生證據並修正。

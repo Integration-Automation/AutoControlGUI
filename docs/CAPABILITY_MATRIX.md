@@ -475,3 +475,8 @@ GUI live-language registries preserve child wrappers and weakly reference self
 entries. Ownership tests cover a USB prompt and self-registered tab titles,
 including background GC and subsequent language switching. Historical Qt
 segfault closure still requires native regression evidence.
+
+Shared D-Bus cancellation detaches the connection and wakes pending I/O. The
+last in-flight operation closes its descriptor; read polling checks cancellation
+every 100 ms while preserving the original request deadline. Late completion
+is rejected, and reconnect is refused until the previous descriptor has drained.

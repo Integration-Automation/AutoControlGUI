@@ -460,6 +460,12 @@ Both debuggers pass SIGINT to Python so emergency-stop assertions execute normal
 Quality tests install WebRTC/signaling extras and the HTTP test client.
 GUI translation registries retain child wrappers and hold their own widget via
 a weak proxy, avoiding self-cycles that defer GUI destruction to worker GC.
+
+Shared D-Bus cancellation detaches the connection and wakes pending I/O. The
+last in-flight operation closes its descriptor; read polling checks cancellation
+every 100 ms while preserving the original request deadline. Late completion
+is rejected, and reconnect is refused until the previous descriptor has drained.
+
 Manual `quality.yml` runs accept `verification_scope=native-shortcut` to run
 only the installed-wheel/private-bus check; the default runs all quality jobs.
 

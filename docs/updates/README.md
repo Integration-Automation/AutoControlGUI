@@ -58,6 +58,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261007-10 | 2026-10-07 | Drain cancelled D-Bus I/O before closing its socket descriptor | #done #wayland #testing #modernization | [2026-10](2026-10.md) |
 | U-20261007-09 | 2026-10-07 | Prevent translation registries from retaining their GUI owner | #done #gui #testing #modernization | [2026-10](2026-10.md) |
 | U-20261007-08 | 2026-10-07 | Revoke lost portal owners and add independent native shortcut transport checks | #done #wayland #testing #modernization | [2026-10](2026-10.md) |
 | U-20261007-07 | 2026-10-07 | Preserve Python signal tests and install HTTP integration dependencies | #incident #testing #modernization | [2026-10](2026-10.md) |
@@ -375,7 +376,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | File | Period | Entries |
 |---|---|---:|
-| [2026-10.md](2026-10.md) | 2026-10 | 36 |
+| [2026-10.md](2026-10.md) | 2026-10 | 37 |
 | [2026-09-e.md](2026-09-e.md) | 2026-09 | 7 |
 | [2026-09-d.md](2026-09-d.md) | 2026-09 | 55 |
 | [2026-09-c.md](2026-09-c.md) | 2026-09 | 38 |

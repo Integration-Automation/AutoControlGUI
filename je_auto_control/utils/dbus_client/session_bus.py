@@ -28,7 +28,6 @@ boundaries that catch the family keep working.
 """
 from __future__ import annotations
 
-import contextlib
 import os
 import socket
 import struct
@@ -37,6 +36,7 @@ import urllib.parse
 from typing import Any, Dict, List, Optional, Tuple
 
 from je_auto_control.utils.exception.exceptions import AutoControlException
+from .socket_owner import SocketOwner
 
 
 #: Message types, from the D-Bus specification.
@@ -454,7 +454,7 @@ class SessionBus:
     def __init__(self, address: Optional[str] = None) -> None:
         self.address = address or session_address()
         self.unique_name = ""
-        self._socket: Optional[socket.socket] = None
+        self._socket_owner = SocketOwner()
         self._serial = 0
         self._buffer = b""
         #: Messages read while waiting for a method reply. A portal's Response
@@ -464,6 +464,17 @@ class SessionBus:
         self._queued: List[Message] = []
 
     # --- lifecycle --------------------------------------------------------
+
+    @property
+    def _socket(self) -> Optional[socket.socket]:
+        return self._socket_owner.connection
+
+    @_socket.setter
+    def _socket(self, connection: socket.socket) -> None:
+        try:
+            self._socket_owner.adopt(connection)
+        except OSError as error:
+            raise DBusError(f'cannot replace the session bus connection: {error}') from error
 
     def __enter__(self) -> "SessionBus":
         self.connect()
@@ -486,7 +497,9 @@ class SessionBus:
                 socket.SOCK_STREAM,
             )
             self._socket = connection
-            connection.connect(("\0" + path) if abstract else path)
+            with self._socket_owner.borrow() as connection:
+                connection.settimeout(10.0)
+                connection.connect(("\0" + path) if abstract else path)
         except OSError as error:
             self.close()
             raise DBusError(f"cannot reach the session bus: {error}") from error
@@ -501,19 +514,12 @@ class SessionBus:
             raise
 
     def close(self) -> None:
-        """Drop the connection; never raise from teardown."""
-        connection, self._socket = self._socket, None
-        if connection is not None:
-            with contextlib.suppress(OSError):
-                connection.close()
+        """Wake pending I/O and reclaim its descriptor when the last operation exits."""
+        self._socket_owner.close()
         self._queued.clear()
 
     def abort(self) -> None:
         """Wake a pending socket read before dropping this owned connection."""
-        connection = self._socket
-        if connection is not None:
-            with contextlib.suppress(OSError):
-                connection.shutdown(socket.SHUT_RDWR)
         self.close()
 
     def take_pending_messages(self) -> List[Message]:
@@ -539,11 +545,9 @@ class SessionBus:
         self._send_raw(b"BEGIN\r\n")
 
     def _send_raw(self, data: bytes) -> None:
-        connection = self._socket
-        if connection is None:
-            raise DBusError("the session bus connection is closed")
         try:
-            connection.sendall(data)
+            with self._socket_owner.borrow() as connection:
+                connection.sendall(data)
         except OSError as error:
             raise DBusError(f"writing to the session bus failed: {error}") from error
 
@@ -559,18 +563,22 @@ class SessionBus:
 
     def _fill(self, timeout: float) -> None:
         """Read whatever is available, or fail once the deadline has passed."""
-        connection = self._socket
-        if connection is None:
-            raise DBusError("the session bus connection is closed")
-        if timeout <= 0:
-            raise DBusTimeout("the session bus did not answer in time")
-        try:
-            connection.settimeout(timeout)
-            chunk = connection.recv(65536)
-        except socket.timeout as error:
-            raise DBusTimeout("the session bus did not answer in time") from error
-        except OSError as error:
-            raise DBusError(f"reading from the session bus failed: {error}") from error
+        deadline = time.monotonic() + timeout
+        while True:
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                raise DBusTimeout("the session bus did not answer in time")
+            try:
+                with self._socket_owner.borrow() as connection:
+                    # Some platforms keep select waiting after local shutdown.
+                    # A short poll bounds cancellation without shortening the request deadline.
+                    connection.settimeout(min(remaining, 0.1))
+                    chunk = connection.recv(65536)
+                break
+            except socket.timeout:
+                continue
+            except OSError as error:
+                raise DBusError(f"reading from the session bus failed: {error}") from error
         if not chunk:
             raise DBusError("the session bus closed the connection")
         self._buffer += chunk

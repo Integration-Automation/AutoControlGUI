@@ -89,7 +89,7 @@ def test_dbus_integers_get_a_type_that_fits():
 
 
 def test_a_failed_dbus_handshake_closes_the_socket(monkeypatch):
-    bus = session_bus.SessionBus.__new__(session_bus.SessionBus)
+    bus = session_bus.SessionBus(address='unix:path=/tmp/x')
     closed = []
     monkeypatch.setattr(bus, "close", lambda: closed.append(True), raising=False)
 
@@ -101,6 +101,9 @@ def test_a_failed_dbus_handshake_closes_the_socket(monkeypatch):
     monkeypatch.setattr(session_bus, "_socket_target", lambda _a: ("/tmp/x", False))
 
     class _Sock:
+        def settimeout(self, _timeout):
+            return None
+
         def connect(self, _target):
             return None
 
