@@ -22,7 +22,7 @@ from JSON files / CLI / servers, and a **GUI tab**. Nothing is GUI-only.
 
 - **One API, seven platforms.** `wrapper/platform_wrapper.py` picks the backend at import
   time; your script does not change between Windows, macOS, X11, and Wayland.
-- **Scriptable without Python.** 802 `AC_*` commands cover the whole feature set, so a
+- **Scriptable without Python.** 807 `AC_*` commands cover the whole feature set, so a
   JSON file can do anything the library can — including loops, branches, try/catch,
   macros, and variables.
 - **Headless by default.** `import je_auto_control` never loads Qt. The GUI is an
@@ -152,7 +152,7 @@ desktop app; tab commands live in the window's **Actions** menu.
 | Natural-language planner | `plan_actions`, `run_from_description` | `AC_llm_plan` | LLM Planner |
 | Computer-use agent | `AgentLoop`, `run_agent` | `AC_run_agent` | Computer Use |
 | Record & replay | `record`, `stop_record` | `AC_record`, `AC_stop_record` | Record |
-| JSON scripting | `execute_action`, `execute_files` | all 802 commands | Script, Script Builder |
+| JSON scripting | `execute_action`, `execute_files` | all 807 commands | Script, Script Builder |
 | Variables & flow control | `execute_action_with_vars` | `AC_set_var`, `AC_loop`, `AC_for_each`, `AC_try`, `AC_retry` | Variables |
 | Data-driven runs | — | `AC_for_each_row` (CSV / JSON / SQLite / Excel) | Data Sources |
 | Assertions | `assert_text`, `assert_image` | `AC_assert_text` + 20 more | Assertions |
@@ -204,7 +204,7 @@ still goes on to the end), so a CI step fails with it. The legacy
 
 | Surface | Start it with | Notes |
 |---|---|---|
-| **MCP server** | `je_auto_control_mcp` (stdio) or `AC_start_mcp_http_server` | 724 tools for Claude Desktop / Claude Code / custom tool loops. Speaks the stateless MCP 2026-07-28 beside the `initialize`-based revisions. Bearer auth, TLS, audit log, rate limit, plugin hot-reload, CI fake backend. |
+| **MCP server** | `je_auto_control_mcp` (stdio) or `AC_start_mcp_http_server` | 729 tools for Claude Desktop / Claude Code / custom tool loops. Speaks the stateless MCP 2026-07-28 beside the `initialize`-based revisions. Bearer auth, TLS, audit log, rate limit, plugin hot-reload, CI fake backend. |
 | **REST API** | `je_auto_control start-rest` | Bearer token, per-IP rate limit + lockout, SQLite audit hook, `/metrics`, `/openapi.json`, `/docs` Swagger UI, `/dashboard`. |
 | **TCP socket server** | `je_auto_control start-server` | Newline-framed JSON action lists. Binds `127.0.0.1` by default. |
 | **pytest plugin** | installed automatically | Lightweight `je_auto_control_pytest` entry point; fixtures plus Gherkin steps for pytest-bdd / behave. Reinstall after upgrading editable checkouts; the explicit legacy plugin path remains supported. |
@@ -390,8 +390,18 @@ nodes using existing read permissions, excluding kernel virtual/uinput devices.
 It returns raw device events, not desktop coordinates or replay actions, and
 never changes ACLs. `StopShortcutSession` explicitly requests a portal stop
 binding, reports its actual trigger, and closes its own grant; refusal is cached
-until explicit close/start. These helpers have controlled tests; their facade,
-AC/MCP and GUI integration and native desktop acceptance remain in D3/H3.
+until explicit close/start. Beta `je_auto_control.api.wayland_input` and the legacy facade expose these
+helpers and five script operations: `start_physical_recording(devices)`,
+`stop_physical_recording()`, `start_wayland_stop_shortcut(preferred_trigger='F7')`,
+`stop_wayland_stop_shortcut()` and `wayland_input_status()`. Each has an `AC_*`
+command, lowercase MCP tool and Script Builder schema. Raw stop results are
+masked in action journals. Remote RBAC requires host administration for all five
+operations. Diagnostics provides explicit Actions, JSON device-path input,
+preferred trigger, actual binding/status and raw results. Each panel owns its
+resources independently from script defaults. The stop binding stops native
+input control and sets the owner's cooperative `stop_event`; it does not
+interrupt arbitrary Python work. Native desktop acceptance remains in D3/H3.
+Stop and explicit reset cancel pending native authorization without waiting for its cache lock; cancelled grants cannot be published later.
 The legacy Wayland global recording hook remains unavailable. Window
 management works on Windows, macOS (pyobjc) and X11, including XWayland; on a pure
 Wayland session, whose protocol hides other clients' windows, `list_windows()` returns

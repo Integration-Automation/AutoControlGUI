@@ -70,6 +70,45 @@ def test_half_open_worker_exit_reclaims_resources(worker_factory):
         client.press_key(29)
 
 
+def test_default_stop_cancels_pending_worker_ipc(worker_factory, monkeypatch):
+    from je_auto_control.linux_wayland import libei
+    from je_auto_control.linux_wayland.permission import WaylandPermissionRequired
+
+    started = threading.Event()
+    failures = []
+
+    def factory(peer):
+        process = worker_factory(peer, mode='hang')
+        started.set()
+        return process
+
+    client = transport.EiWorkerClient(process_factory=factory)
+    monkeypatch.setattr(libei, '_DEFAULT_BACKEND', None)
+    monkeypatch.setattr(libei, '_PROBE_FAILED', False)
+    monkeypatch.setattr(libei, '_PERMISSION_ERROR', None)
+    monkeypatch.setattr(libei, '_new_default_backend', lambda: client)
+
+    def connect():
+        try:
+            libei.connected_backend()
+        except WaylandPermissionRequired as failure:
+            failures.append(failure)
+
+    worker = threading.Thread(target=connect)
+    worker.start()
+    try:
+        assert started.wait(2)
+        libei.stop_input_control()
+        worker.join(2)
+        assert not worker.is_alive()
+        assert len(failures) == 1
+        assert not client.worker_running and not client.open_channel
+        assert libei.input_permission_status()[0] == 'needs_permission'
+    finally:
+        client.close()
+        worker.join(6)
+
+
 def test_reply_identity_and_batch_ack(worker_factory):
     client = transport.EiWorkerClient(process_factory=worker_factory)
     try:

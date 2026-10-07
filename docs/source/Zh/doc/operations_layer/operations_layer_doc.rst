@@ -30,7 +30,7 @@ faulthandler 輸出。
 Wayland 實體錄製與停止底層
 ===========================
 
-實驗中的 ``linux_wayland.input_events.PhysicalRecorder`` 只以既有讀取權限開啟
+Beta ``linux_wayland.input_events.PhysicalRecorder`` 只以既有讀取權限開啟
 明確選定的 Linux 實體 event 節點，排除 virtual 裝置並限制儲存量。``stop()``
 回傳原始裝置事件；相對／絕對裝置單位不能默默轉成桌面座標或重播動作。
 讀取失敗、事件遺失與不完整紀錄皆回報失敗；移除 ACL 不會撤銷已開啟的 descriptor。
@@ -38,8 +38,22 @@ Executor 動作日誌不需要全域輸入 hook。
 
 ``linux_wayland.global_shortcuts.StopShortcutSession`` 明確且非同步請求 portal
 綁定，顯示實際快捷鍵並只關閉自己的 request／session。拒絕後需先 close 再 start
-才重試；授權撤銷會呼叫停止 callback，callback 應立即通知取消。門面／AC／MCP／GUI
-整合及原生驗收仍列於 D3／H3；舊 Wayland 全域 hook 仍不可用。
+才重試；授權撤銷會呼叫停止 callback，callback 應立即通知取消。Beta ``api.wayland_input``、門面、五項 AC／MCP 指令與 Script Builder schema 共用
+錄製／停止轉接層。診斷頁 Actions 明確啟用授權與原始擷取，使用獨立 session，經
+CallWorker 執行並在關閉時只清理自己的資源。遠端操作要求主機管理權限；動作日誌
+遮罩原始結果。停止授權會停止原生輸入控制並設定持有者的合作取消 stop_event，
+不會中斷任意 Python 工作。原生驗收仍列於 D3／H3；舊 Wayland 全域 hook 仍不可用。
+
+停止／重試可取消待授權的原生連線，不會被 cache 鎖擋住；
+取消後的交握完成也不能發布失效授權。
+
+腳本指令::
+
+   ["AC_start_physical_recording", {"devices": ["/dev/input/event0"]}]
+   ["AC_stop_physical_recording"]
+   ["AC_start_wayland_stop_shortcut", {"preferred_trigger": "F7"}]
+   ["AC_wayland_input_status"]
+   ["AC_stop_wayland_stop_shortcut"]
 
 
 資料夾同步（增量鏡像）

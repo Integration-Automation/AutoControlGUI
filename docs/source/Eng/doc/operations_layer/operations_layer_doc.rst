@@ -34,7 +34,7 @@ callers own their process lifecycle. The native verification entry is
 Wayland physical recording and stop foundation
 ==============================================
 
-Experimental ``PhysicalRecorder`` in ``linux_wayland.input_events`` opens only
+Beta ``PhysicalRecorder`` in ``linux_wayland.input_events`` opens only
 explicitly chosen physical Linux event nodes using existing read access. Virtual
 sources are excluded and storage is bounded. ``stop()`` returns raw device events;
 relative/absolute device units must not be converted silently to desktop positions
@@ -46,8 +46,25 @@ need no global input hook.
 portal binding asynchronously, exposes its actual trigger and closes only its own
 request/session. Refusal is retained until explicit close/start. Grant revocation
 invokes the caller's stop callback, which should signal cancellation promptly.
-Public facade/AC/MCP/GUI integration and native acceptance remain in D3/H3;
+Beta ``api.wayland_input``, the facade, five AC/MCP commands and Script Builder
+schemas share the recording/stop adapters. Diagnostics Actions provide explicit
+registration and raw capture on an independently owned session; operations run
+through CallWorker and closing releases only that panel. Remote access requires
+host administration. Raw results are masked in action journals. The stop grant
+stops native input control and sets the owner's cooperative stop_event; it does
+not interrupt arbitrary Python execution. Native acceptance remains in D3/H3;
 legacy Wayland global hooks remain unavailable.
+
+Stop/reset cancels pending native authorization without waiting behind its
+cache lock. Cancelled completion cannot publish a stale grant.
+
+Script commands::
+
+   ["AC_start_physical_recording", {"devices": ["/dev/input/event0"]}]
+   ["AC_stop_physical_recording"]
+   ["AC_start_wayland_stop_shortcut", {"preferred_trigger": "F7"}]
+   ["AC_wayland_input_status"]
+   ["AC_stop_wayland_stop_shortcut"]
 
 
 Folder sync (additive mirror)

@@ -78,6 +78,15 @@ japanese_word_dict = {
     "tab_diagnostics": "診断",
 
     # 診断タブ
+    'wl_physical_devices': '物理 event ノード（JSON パス一覧）',
+    'wl_stop_trigger': '希望する停止ショートカット',
+    'wl_raw_hint': ('生のデバイスイベントはデバイス単位のままです。画面座標として再生できません。'
+                    '既存の読み取り権限を使用します。'),
+    'wl_start_physical': '物理入力の生記録を開始',
+    'wl_stop_physical': '物理入力の生記録を停止',
+    'wl_start_shortcut': 'portal 停止ショートカットを要求',
+    'wl_stop_shortcut': 'portal 停止ショートカットを閉じる',
+    'wl_input_status': '記録／停止状態を取得',
     "diag_run": "診断を実行",
     "diag_stop_input": "Wayland 入力制御を停止",
     "diag_retry_input": "新しい Wayland 認可リクエストを許可",

@@ -1129,6 +1129,11 @@ from je_auto_control.utils.usb import (
 from je_auto_control.wrapper.capabilities import (
     BackendContext, CapabilitySnapshot, CapabilityStatus, probe_capabilities,
 )
+from je_auto_control.api.wayland_input import (
+    InputDevice, InputEvent, PhysicalRecorder, RecordingUnavailable, ShortcutUnavailable,
+    StopShortcutSession, WaylandInputSession, start_physical_recording, stop_physical_recording,
+    start_wayland_stop_shortcut, stop_wayland_stop_shortcut, wayland_input_status,
+)
 from je_auto_control.utils.diagnostics import (
     Check, DiagnosticsReport, run_diagnostics,
 )
@@ -1340,6 +1345,9 @@ def start_autocontrol_gui(*args, **kwargs):
 
 
 __all__ = [
+    'InputDevice', 'InputEvent', 'PhysicalRecorder', 'RecordingUnavailable', 'ShortcutUnavailable',
+    'StopShortcutSession', 'WaylandInputSession', 'start_physical_recording', 'stop_physical_recording',
+    'start_wayland_stop_shortcut', 'stop_wayland_stop_shortcut', 'wayland_input_status',
     'RemoteSession', 'SessionStatus', 'SessionEvent', 'RemoteSessionError', 'SessionOwnershipError',
     'disconnect_session', 'get_remote_session', 'list_remote_session_events',
 

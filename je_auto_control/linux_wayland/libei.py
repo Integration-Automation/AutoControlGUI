@@ -36,14 +36,16 @@ from __future__ import annotations
 import ctypes
 import os
 import select
+import sys
 import threading
 import time
 from functools import partial
-from typing import Callable, Dict, List, Optional, Sequence, Set, Tuple, TYPE_CHECKING, Union
+from typing import Callable, Dict, List, Optional, Sequence, Set, Tuple, TYPE_CHECKING, Union, cast
 
 from je_auto_control.linux_wayland import oeffis
 from je_auto_control.linux_wayland._ctypes_bind import BoundSymbols, bind
 from je_auto_control.linux_wayland._layout import layout_origin
+from je_auto_control.linux_wayland.default_input import CacheOwner, connect_default
 from je_auto_control.linux_wayland.permission import WaylandPermissionRequired
 from je_auto_control.utils.exception.exceptions import AutoControlException
 
@@ -634,6 +636,8 @@ _DEFAULT_BACKEND: Optional[NativeInputBackend] = None
 _PROBE_FAILED = False
 _PERMISSION_ERROR: Optional[WaylandPermissionRequired] = None
 _DEFAULT_LOCK = threading.Lock()
+_CONNECT_LOCK = threading.Lock()
+_PENDING_BACKEND: Optional[NativeInputBackend] = None
 
 
 def _new_default_backend() -> Optional[NativeInputBackend]:
@@ -645,36 +649,8 @@ def _new_default_backend() -> Optional[NativeInputBackend]:
 
 
 def connected_backend() -> Optional[NativeInputBackend]:
-    """Return a connected backend, or None — probing at most once.
-
-    The probe involves a portal round trip and a consent dialog, so a host
-    where libei cannot be used must pay for that discovery once rather than
-    on every keystroke. None means dependencies are absent; connection failures
-    remain cached typed permission errors until explicitly reset.
-    """
-    global _DEFAULT_BACKEND, _PROBE_FAILED, _PERMISSION_ERROR
-    with _DEFAULT_LOCK:
-        if _PERMISSION_ERROR is not None:
-            raise WaylandPermissionRequired("input", _PERMISSION_ERROR.reason)
-        if _DEFAULT_BACKEND is not None:
-            return _DEFAULT_BACKEND
-        if _PROBE_FAILED:
-            return None
-        backend = _new_default_backend()
-        if backend is None:
-            _PROBE_FAILED = True
-            return None
-        try:
-            backend.connect()
-        except WaylandPermissionRequired as error:
-            _PERMISSION_ERROR = WaylandPermissionRequired("input", error.reason)
-            raise
-        except (LibeiUnavailable, OSError, ValueError, AttributeError) as error:
-            _PROBE_FAILED = True
-            _PERMISSION_ERROR = WaylandPermissionRequired("input", str(error))
-            raise _PERMISSION_ERROR from error
-        _DEFAULT_BACKEND = backend
-        return _DEFAULT_BACKEND
+    """Connect once without blocking stop/reset behind an unanswered consent request."""
+    return connect_default(cast(CacheOwner, sys.modules[__name__]), _quietly)
 
 
 def get_default_backend() -> Optional[NativeInputBackend]:
@@ -686,15 +662,25 @@ def get_default_backend() -> Optional[NativeInputBackend]:
     return backend if backend.is_available else None
 
 
-def reset_default_backend() -> None:
-    """Explicitly allow a new native authorization attempt on the next input."""
-    global _DEFAULT_BACKEND, _PROBE_FAILED, _PERMISSION_ERROR
+def _detach_default(permission: Optional[WaylandPermissionRequired]) -> None:
+    # pylint: disable=global-statement  # reason: preserve the compatibility module cache
+    global _DEFAULT_BACKEND, _PENDING_BACKEND, _PROBE_FAILED, _PERMISSION_ERROR
     with _DEFAULT_LOCK:
-        if _DEFAULT_BACKEND is not None:
-            _quietly(_DEFAULT_BACKEND.disconnect)
-        _DEFAULT_BACKEND = None
+        active, pending = _DEFAULT_BACKEND, _PENDING_BACKEND
+        _DEFAULT_BACKEND = _PENDING_BACKEND = None
         _PROBE_FAILED = False
-        _PERMISSION_ERROR = None
+        _PERMISSION_ERROR = permission
+    for backend in (active, pending):
+        if backend is not None:
+            if permission is None:
+                _quietly(backend.disconnect)
+            else:
+                backend.disconnect()
+
+
+def reset_default_backend() -> None:
+    """Cancel pending input and explicitly allow a fresh authorization attempt."""
+    _detach_default(None)
 
 
 def input_permission_status() -> Optional[Tuple[str, str]]:
@@ -708,25 +694,26 @@ def input_permission_status() -> Optional[Tuple[str, str]]:
 
 
 def stop_input_control() -> None:
-    """Close the native grant and require explicit retry before further input."""
-    global _DEFAULT_BACKEND, _PERMISSION_ERROR
-    with _DEFAULT_LOCK:
-        _PERMISSION_ERROR = WaylandPermissionRequired("input", "input control stopped by the operator")
-        if _DEFAULT_BACKEND is not None:
-            _DEFAULT_BACKEND.disconnect()
-            _DEFAULT_BACKEND = None
+    """Revoke active or pending input without waiting for consent; require explicit retry."""
+    _detach_default(WaylandPermissionRequired("input", "input control stopped by the operator"))
 
 
 def check_default_permission() -> None:
-    """Protect CLI text calls from an already refused or revoked native grant."""
+    """Protect CLI calls while leaving native permission polling cancellable."""
+    # pylint: disable=global-statement  # reason: preserve the compatibility module cache
+    global _PERMISSION_ERROR
     with _DEFAULT_LOCK:
         if _PERMISSION_ERROR is not None:
             raise WaylandPermissionRequired("input", _PERMISSION_ERROR.reason)
-        if _DEFAULT_BACKEND is not None:
-            try:
-                _DEFAULT_BACKEND.check_permission()
-            except LibeiUnavailable as error:
-                raise WaylandPermissionRequired("input", str(error)) from error
+        backend = _DEFAULT_BACKEND
+    if backend is not None:
+        try:
+            backend.check_permission()
+        except LibeiUnavailable as error:
+            with _DEFAULT_LOCK:
+                if _DEFAULT_BACKEND is backend:
+                    _PERMISSION_ERROR = WaylandPermissionRequired("input", str(error))
+            raise WaylandPermissionRequired("input", str(error)) from error
 
 
 __all__ = [

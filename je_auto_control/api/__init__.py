@@ -37,6 +37,11 @@ from je_auto_control.api.core import (
     failure_bundle_on_error,
     run_diagnostics,
 )
+from je_auto_control.api.wayland_input import (
+    InputDevice, InputEvent, PhysicalRecorder, RecordingUnavailable, ShortcutUnavailable,
+    StopShortcutSession, WaylandInputSession, start_physical_recording, stop_physical_recording,
+    start_wayland_stop_shortcut, stop_wayland_stop_shortcut, wayland_input_status,
+)
 
 from je_auto_control.utils.config_sync.adapters import (
     ApplyReport, SyncAdapter, JsonDefinitionAdapter, ScriptSyncAdapter, LocatorSyncAdapter,
@@ -52,6 +57,9 @@ from je_auto_control.utils.config_sync.asset_service import config_sync_assets
 
 
 __all__ = [
+    'InputDevice', 'InputEvent', 'PhysicalRecorder', 'RecordingUnavailable', 'ShortcutUnavailable',
+    'StopShortcutSession', 'WaylandInputSession', 'start_physical_recording', 'stop_physical_recording',
+    'start_wayland_stop_shortcut', 'stop_wayland_stop_shortcut', 'wayland_input_status',
     'RemoteSession', 'SessionStatus', 'SessionEvent', 'RemoteSessionError', 'SessionOwnershipError',
     'disconnect_session', 'get_remote_session', 'list_remote_session_events',
 

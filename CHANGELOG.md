@@ -15,6 +15,14 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Added
 
+- Beta `api.wayland_input`, facade mirrors, five AC/MCP/Script Builder operations
+  and owned Diagnostics Actions for opt-in raw physical Linux recording and
+  portal stop bindings. Device events retain raw units; they are separate from
+  legacy replay recording and masked in action journals. Remote access requires
+  host administration. Stop/reset can cancel pending native authorization;
+  cancelled handshakes cannot publish a stale grant. Legacy Wayland hook errors
+  now use RecordingUnavailable, preserving NotImplementedError compatibility
+  and adding framework containment plus actionable recovery.
 - NumPy/Pillow fallback for grayscale normalized image matching, BGR screenshots,
   non-ASCII image file I/O and fixed-frame healing. Windows arm64 on Python 3.11+
   installs NumPy 2.4.6; frame/FFT budgets and typed dependency errors replace

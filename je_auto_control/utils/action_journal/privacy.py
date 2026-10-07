@@ -134,7 +134,10 @@ def _collect_mapping(command: str, raw: Dict[str, JSONValue], resolved: Dict[str
 
 
 def private_output(command: str, arguments: JSONValue, outcome: JSONValue) -> Tuple[JSONValue, Set[str]]:
-    """Mask sensitive variable results and retain their strings for later echoes."""
+    """Mask confidential results; retain sensitive variable strings for later echoes."""
+    if command == 'AC_stop_physical_recording':
+        # Physical keystrokes are explicit caller output, never an automatic journal artifact.
+        return _MASK, set()
     if isinstance(arguments, dict) and _private_variable(command, arguments):
         return _MASK, _output_strings(outcome)
     return outcome, set()

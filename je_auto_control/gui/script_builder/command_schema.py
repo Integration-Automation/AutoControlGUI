@@ -66,6 +66,17 @@ _BOXES_JSON_PLACEHOLDER = '[{"role":"button","x":0,"y":0}]'
 def _build_specs() -> List[CommandSpec]:
     specs: List[CommandSpec] = []
     specs.extend([
+        CommandSpec('AC_start_physical_recording', 'Wayland', 'Start raw physical recording', fields=(
+            FieldSpec('devices', FieldType.JSON, placeholder='["/dev/input/event0"]'),
+        )),
+        CommandSpec('AC_stop_physical_recording', 'Wayland', 'Stop raw physical recording'),
+        CommandSpec('AC_start_wayland_stop_shortcut', 'Wayland', 'Request stop shortcut', fields=(
+            FieldSpec('preferred_trigger', FieldType.STRING, default='F7'),
+        )),
+        CommandSpec('AC_stop_wayland_stop_shortcut', 'Wayland', 'Close stop shortcut'),
+        CommandSpec('AC_wayland_input_status', 'Wayland', 'Read input lifecycle status'),
+    ])
+    specs.extend([
         CommandSpec('AC_generate_journal_candidate', 'Journals', 'Generate observed journal candidate', fields=(
             FieldSpec('journal_path', FieldType.FILE_PATH), FieldSpec('run_id', FieldType.STRING),
             FieldSpec('target', FieldType.STRING, default='pytest'),

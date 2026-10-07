@@ -39,6 +39,12 @@ class DiagnosticsTab(TranslatableMixin, QWidget):
             3, QHeaderView.ResizeMode.Stretch,
         )
         self._build_layout()
+        self._wayland_panel = None
+        from je_auto_control.linux_wayland._detect import is_wayland_session
+        if sys.platform.startswith('linux') and is_wayland_session():
+            from je_auto_control.gui.wayland_input_panel import WaylandInputPanel
+            self._wayland_panel = WaylandInputPanel(self)
+            self.layout().addWidget(self._wayland_panel)
         self._apply_table_headers()
         self._refresh()
 
@@ -60,6 +66,8 @@ class DiagnosticsTab(TranslatableMixin, QWidget):
                 ("diag_stop_input", self._stop_input),
                 ("diag_retry_input", self._retry_input),
             ])
+        if self._wayland_panel is not None:
+            actions.extend(self._wayland_panel.menu_actions())
         return actions
 
     def _stop_input(self) -> None:

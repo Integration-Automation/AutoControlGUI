@@ -69,6 +69,14 @@ simplified_chinese_word_dict = {
     "tab_diagnostics": "诊断",
 
     # 诊断分页
+    'wl_physical_devices': '实体 event 节点（JSON 路径列表）',
+    'wl_stop_trigger': '希望使用的停止快捷键',
+    'wl_raw_hint': '原始设备事件保留设备单位，不能作为桌面坐标回放；只使用已有读取权限。',
+    'wl_start_physical': '开始原始实体录制',
+    'wl_stop_physical': '停止原始实体录制',
+    'wl_start_shortcut': '请求 portal 停止快捷键',
+    'wl_stop_shortcut': '关闭 portal 停止快捷键',
+    'wl_input_status': '读取录制／停止状态',
     "diag_run": "运行诊断",
     "diag_stop_input": "停止 Wayland 输入控制",
     "diag_retry_input": "允许新的 Wayland 授权请求",

@@ -70,6 +70,14 @@ traditional_chinese_word_dict = {
     "tab_diagnostics": "診斷",
 
     # 診斷分頁
+    'wl_physical_devices': '實體 event 節點（JSON 路徑清單）',
+    'wl_stop_trigger': '希望使用的停止快捷鍵',
+    'wl_raw_hint': '原始裝置事件保留裝置單位，不能作為桌面座標重播；只使用既有讀取權限。',
+    'wl_start_physical': '開始原始實體錄製',
+    'wl_stop_physical': '停止原始實體錄製',
+    'wl_start_shortcut': '請求 portal 停止快捷鍵',
+    'wl_stop_shortcut': '關閉 portal 停止快捷鍵',
+    'wl_input_status': '讀取錄製／停止狀態',
     "diag_run": "執行診斷",
     "diag_stop_input": "停止 Wayland 輸入控制",
     "diag_retry_input": "允許新的 Wayland 授權請求",

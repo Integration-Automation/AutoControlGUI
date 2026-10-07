@@ -105,6 +105,10 @@ from je_auto_control.wrapper.auto_control_mouse import (
     mouse_scroll, get_mouse_table, set_mouse_position
 )
 from je_auto_control.wrapper.auto_control_record import record, stop_record
+from je_auto_control.wrapper.wayland_input import (
+    start_physical_recording, stop_physical_recording, start_wayland_stop_shortcut,
+    stop_wayland_stop_shortcut, wayland_input_status,
+)
 from je_auto_control.wrapper.auto_control_screen import screenshot, screen_size
 from je_auto_control.wrapper.auto_control_window import (
     close_window_by_title, focus_window, foreground_window,
@@ -7286,6 +7290,11 @@ class Executor:
             # Run history
             "AC_history_list": _history_list_as_dicts,
             "AC_execute_journaled": execute_journaled,
+            "AC_start_physical_recording": start_physical_recording,
+            "AC_stop_physical_recording": stop_physical_recording,
+            "AC_start_wayland_stop_shortcut": start_wayland_stop_shortcut,
+            "AC_stop_wayland_stop_shortcut": stop_wayland_stop_shortcut,
+            "AC_wayland_input_status": wayland_input_status,
             "AC_read_action_journal": read_action_journal,
             "AC_list_journal_runs": list_journal_runs,
             "AC_history_clear": default_history_store.clear,

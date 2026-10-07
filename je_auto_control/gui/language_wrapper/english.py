@@ -190,6 +190,15 @@ english_word_dict = {
     "flaky_summary_empty": "No run history yet",
 
     # Diagnostics tab
+    'wl_physical_devices': 'Physical event nodes (JSON paths)',
+    'wl_stop_trigger': 'Preferred stop shortcut',
+    'wl_raw_hint': ('Raw device events keep device units; they cannot be replayed as desktop coordinates. '
+                    'Access uses existing read permissions.'),
+    'wl_start_physical': 'Start raw physical recording',
+    'wl_stop_physical': 'Stop raw physical recording',
+    'wl_start_shortcut': 'Request portal stop shortcut',
+    'wl_stop_shortcut': 'Close portal stop shortcut',
+    'wl_input_status': 'Read recording / stop status',
     "diag_run": "Run diagnostics",
     "diag_stop_input": "Stop Wayland input control",
     "diag_retry_input": "Allow a new Wayland authorization request",

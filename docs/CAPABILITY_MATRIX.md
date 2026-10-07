@@ -433,7 +433,7 @@ Stable and development package install/build declarations are checked for parity
 Physical recording and portal stop foundation (D3)
 ------------------------------------------------
 
-Experimental `PhysicalRecorder.start([InputDevice(path)])` explicitly opts into
+Beta `PhysicalRecorder.start([InputDevice(path)])` explicitly opts into
 reading at most 16 existing physical Linux event nodes, with a 20,000-event
 capacity. It never grabs devices or changes ACLs. Kernel virtual/uinput sources
 are excluded before open. Stop returns raw events, including unchanged relative
@@ -452,7 +452,16 @@ cleanup available for retry. The callback must signal cancellation promptly.
 
 Controlled tests cover source exclusion, partial startup cleanup, capacity,
 partial records, rejection, pending-request close, foreign sessions, early
-activation ordering and revocation. Public facade/AC/MCP/GUI integration and
-native GNOME/KDE authorization/keyboard recovery remain in Progress.md.
+activation ordering and revocation. The Beta/facade, five AC/MCP/Script Builder adapters and owned Diagnostics panel
+share recording/stop services. All five remote operations require MANAGE_HOSTS;
+raw stop output is masked in journals. Native GNOME/KDE authorization/keyboard
+recovery remains in Progress.md. See `docs/WAYLAND_ACCEPTANCE.md` for the manual
+authorization and physical-device procedure.
 Specifications: [Linux input events](https://www.kernel.org/doc/html/latest/input/event-codes.html)
 and [GlobalShortcuts](https://flatpak.github.io/xdg-desktop-portal/docs/doc-org.freedesktop.portal.GlobalShortcuts.html).
+
+Native default authorization uses a separate connection-attempt lock, with
+active/pending owners detached under a short cache lock. Stop/reset cancel
+pending IPC and stale completion cannot publish its grant; permission polling
+also leaves the cache lock free. Tests include controlled workers without
+performing desktop input.

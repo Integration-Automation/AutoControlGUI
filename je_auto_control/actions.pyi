@@ -2862,6 +2862,9 @@ def AC_start_mcp_http_server(
 def AC_start_mcp_server(read_only: bool | None = ...) -> Any:
     """Start a stdio MCP server in the foreground; blocks until EOF."""
 
+def AC_start_physical_recording(devices: list[str]) -> dict[str, Any]:
+    """Start the script-owned raw recorder for explicitly selected physical Linux nodes."""
+
 def AC_start_remote_host(
     token: str,
     bind: str = ...,
@@ -2874,6 +2877,9 @@ def AC_start_remote_host(
     session_id: str | None = ...,
 ) -> Dict[str, Any]:
     """Executor adapter: start the script-default or named remote-desktop host."""
+
+def AC_start_wayland_stop_shortcut(preferred_trigger: str = ...) -> dict[str, Any]:
+    """Explicitly request a script-owned portal shortcut to stop native input control."""
 
 def AC_start_webrtc_host(token: str, read_only: bool = ..., *, session_id: str | None = ...) -> Dict[str, Any]:
     """Executor adapter: allocate the script-default or named WebRTC host."""
@@ -2894,6 +2900,9 @@ def AC_start_ws_host(
 ) -> Dict[str, Any]:
     """Executor adapter: start the script-default or named WebSocket-transport host."""
 
+def AC_stop_physical_recording() -> list[dict[str, Any]]:
+    """Stop the script-owned recorder and return raw events, not replay actions."""
+
 def AC_stop_record() -> list:
     """stop current record"""
 
@@ -2902,6 +2911,9 @@ def AC_stop_record_timeline() -> List[dict]:
 
 def AC_stop_remote_host(*, session_id: str | None = ...) -> Dict[str, Any]:
     ...
+
+def AC_stop_wayland_stop_shortcut() -> dict[str, Any]:
+    """Cancel or release the script-owned stop registration without touching GUI grants."""
 
 def AC_stop_webrtc_host(*, session_id: str | None = ...) -> Dict[str, Any]:
     ...
@@ -3329,6 +3341,9 @@ def AC_watchdog_start() -> Dict[str, Any]:
 
 def AC_watchdog_stop() -> Dict[str, Any]:
     """Adapter: stop the background popup watchdog."""
+
+def AC_wayland_input_status() -> dict[str, Any]:
+    """Read script-owned recording/stop evidence without device I/O or authorization."""
 
 def AC_wcag_audit(
     app_name: str | None = ...,

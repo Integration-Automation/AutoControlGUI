@@ -11,9 +11,9 @@
 現有 `[Answer]` 決策沿用；後續交付包含 D3、E–H 與完整整合驗收。
 從 D3 接續原有計畫；不額外新增付費型功能。既有 API 介面及相關修正繼續，
 目前以本機／離線測試驗證；缺少真實 API 條件的既有項目保留待驗證。
-D3 尚需接上原始實體事件與 portal 停止的門面／AC／MCP／GUI 入口，
-更正舊 hook 的復原提示，補 compositor CI 與 GNOME/KDE 授權驗收步驟，
-並完成下列 Python 3.10 USB ACL 原生 crash 定位與修正。
+D3 尚需在 compositor CI 驗證原始實體事件與 portal 停止的原生傳輸，
+完成 GNOME/KDE 授權與鍵態恢復驗收，並完成下列 Python 3.10 USB ACL
+原生 crash 定位、artifact 與修正。
 
 **只記未完成的事。** 完成的工作記在 [docs/updates/](docs/updates/README.md)（每月一個批次檔，
 索引與查詢指令在它的 README），相容性變更寫進 [CHANGELOG.md](CHANGELOG.md)；完成的項目

@@ -99,6 +99,12 @@ assert error.capability == unavailable_capability
 
 **Interfaces:** `PhysicalRecorder.start(devices: Sequence[InputDevice]) -> None`、`stop() -> list[InputEvent]`；`StopShortcutSession.close() -> None`。
 
+D3 底層與入口階段：明確物理 reader、owned GlobalShortcuts、五項共享 Python／AC／MCP／
+Script Builder 操作與獨立 Diagnostics 面板已交付；停止／重試可取消待授權的 EI owner，
+取消後的交握不能發布 stale grant。原生 compositor transport、GNOME/KDE 授權與鍵態恢復
+及 Python 3.10 USB ACL native backtrace／修正仍待完成，不能勾選整個 task。
+人工驗收步驟見 `docs/WAYLAND_ACCEPTANCE.md`。
+
 - [ ] **Step 1:** 定義 fake fixtures 並新增 `test_action_recording_needs_no_global_hook, test_physical_reader_excludes_virtual_device, test_permission_denial_is_actionable, test_shortcut_session_closes`，驗證：
 
 ```python

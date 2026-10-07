@@ -1,34 +1,26 @@
-"""Wayland record stub.
-
-Recording requires hooking global mouse + key events; Wayland forbids
-that for unprivileged clients (see ``listener``). The Wayland backend
-exposes the same module surface as the X11 backend so the wrapper
-can swap them out, but every entry point raises a clear
-NotImplementedError pointing at the X11 fallback.
-"""
+"""Legacy replay recording stays unavailable; explicit physical capture returns raw units."""
 from __future__ import annotations
 
-from typing import Any, List
+from typing import Any
+
+from je_auto_control.linux_wayland.input_events import RecordingUnavailable
 
 
 class _WaylandRecorder:
-    """Stand-in recorder that explains why recording is unavailable."""
+    """Preserve the legacy surface without fabricating a replay timeline from device units."""
 
-    def __init__(self) -> None:
-        self._reason = (
-            "Wayland forbids global input recording from unprivileged "
-            "clients. Set JE_AUTOCONTROL_LINUX_DISPLAY_SERVER=x11 to "
-            "use the X11 backend, or run on an X11 session."
-        )
+    @staticmethod
+    def record() -> None:
+        """Reject a legacy hook; use action journals or opt-in raw physical capture."""
+        raise RecordingUnavailable('legacy Wayland replay recording is unavailable; '
+                                   'use api.wayland_input.start_physical_recording for raw device events')
 
-    def record(self) -> None:
-        raise NotImplementedError(self._reason)
-
-    def stop_record(self) -> List[Any]:
-        raise NotImplementedError(self._reason)
+    @staticmethod
+    def stop_record() -> list[Any]:
+        """Reject unsupported replay output; raw capture has its own explicit stop API."""
+        raise RecordingUnavailable('legacy Wayland recording has no replay timeline')
 
 
 wayland_recorder = _WaylandRecorder()
 
-
-__all__ = ["wayland_recorder"]
+__all__ = ['wayland_recorder']

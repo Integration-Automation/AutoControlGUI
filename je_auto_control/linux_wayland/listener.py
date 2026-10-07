@@ -1,48 +1,32 @@
-"""Wayland keyboard listener stub.
+"""Legacy key-state compatibility; Wayland stop uses an explicitly granted portal shortcut.
 
-Wayland deliberately forbids reading the global key state from an
-unprivileged client. Hooking would require either the libei input
-capture protocol (not yet stable across compositors) or a kernel-level
-listener via ``/dev/input/event*`` (root-only). For now, raise a
-specific NotImplementedError so callers can fall back to the X11
-backend if they need key listening.
+InputCapture is not an ordinary desktop-wide observation hook. Physical event
+capture uses selected Linux nodes with existing read ACLs, not an automatic
+privilege change. No backend selector can convert an existing Wayland session
+into an X11 desktop. See api.wayland_input for raw recording and portal stop.
 """
 from __future__ import annotations
 
+from typing import Any
 
-def check_key_press(*_args, **_kwargs):
-    """Wayland clients cannot read the global key state. Raise explicitly."""
-    raise NotImplementedError(
-        "Wayland forbids global key-state queries from unprivileged "
-        "clients. Use the X11 backend "
-        "(JE_AUTOCONTROL_LINUX_DISPLAY_SERVER=x11), libei capture, or "
-        "an evdev reader (requires root).",
-    )
+from je_auto_control.linux_wayland.input_events import RecordingUnavailable
 
 
-def hook_keyboard(*_args, **_kwargs):
-    """Wayland clients cannot install a global key hook."""
-    raise NotImplementedError(
-        "Wayland forbids global key hooks. See check_key_press for "
-        "fallback options.",
-    )
+def check_key_press(*_args: Any, **_kwargs: Any) -> None:
+    """Reject unsupported desktop-wide key-state observation with actionable recovery."""
+    raise RecordingUnavailable('Wayland has no ordinary global key-state query; '
+                               'request a StopShortcutSession for stopping control')
+
+
+def hook_keyboard(*_args: Any, **_kwargs: Any) -> None:
+    """Reject a legacy global hook; raw recording requires explicit physical device selection."""
+    raise RecordingUnavailable('Wayland has no ordinary global keyboard hook')
 
 
 def check_key_is_press(keycode: int | None = None) -> bool:
-    """Best-effort key-state query; on Wayland this always reports ``False``.
-
-    Every other backend exposes ``check_key_is_press`` and the wrapper's
-    critical-exit watcher calls it on a timer. Wayland cannot read the
-    global key state from an unprivileged client, so rather than omitting
-    the name (which would ``AttributeError`` and kill the critical-exit
-    thread) this reports ``False`` — the panic key is inert on Wayland,
-    but callers degrade gracefully instead of crashing.
-
-    :param keycode: key to query; ignored because no query is possible.
-    :return: always ``False``.
-    """
+    """Return False for the legacy polling contract; this does not provide a stop grant."""
     del keycode
     return False
 
 
-__all__ = ["check_key_is_press", "check_key_press", "hook_keyboard"]
+__all__ = ['check_key_is_press', 'check_key_press', 'hook_keyboard']

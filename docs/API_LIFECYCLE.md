@@ -70,10 +70,20 @@ OpenCV processing or video. Strict OpenCV/je_open_cv dependency accessors now
 raise ImageDependencyRequired, which preserves RuntimeError compatibility and
 adds AutoControlException, needs_dependency and capability metadata.
 
-The D3 foundation modules `linux_wayland.input_events` and
-`linux_wayland.global_shortcuts` are experimental. PhysicalRecorder returns
+`je_auto_control.api.wayland_input` is Beta and re-exports the D3
+`linux_wayland.input_events` and `linux_wayland.global_shortcuts` models. PhysicalRecorder returns
 bounded raw kernel events, not a replay timeline. StopShortcutSession owns one
 asynchronous portal registration and its cancellation; failed authorization is
 retained until explicit close/start. Constructing either helper does not open
-devices or request consent. Public facade, AC/MCP and GUI adapters remain open
-in Progress.md; the stable namespace and legacy recording contract are unchanged.
+devices or request consent. WaylandInputSession, five script operations and the historical facade mirror
+share JSON AC/MCP/Script Builder adapters. Diagnostics owns an independent panel
+session. Raw results are masked in action journals; remote operations require
+host administration. Stop sets a cooperative stop_event and stops native input
+control, not arbitrary Python execution. Native acceptance remains in Progress.md;
+the stable namespace and legacy replay recording contract are unchanged.
+
+Native default authorization uses a separate connection-attempt lock, with
+active/pending owners detached under a short cache lock. Stop/reset cancel
+pending IPC and stale completion cannot publish its grant; permission polling
+also leaves the cache lock free. Tests include controlled workers without
+performing desktop input.

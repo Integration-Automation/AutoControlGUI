@@ -331,4 +331,15 @@ A bounded worker returns raw device units and fails incomplete capture.
 `global_shortcuts.py` owns an asynchronous GlobalShortcuts session on its private
 D-Bus connection; bounded polling, pending signals and abort permit cancellation
 and cleanup. Refusal is cached until explicit close/start; revocation invokes the
-caller-owned stop callback. Public adapters and native acceptance remain in D3/H3.
+caller-owned stop callback. `wrapper/wayland_input.py` owns separate raw capture
+and shortcut lifetimes; Beta `api/wayland_input.py` and the facade expose five
+shared AC/MCP/Script Builder operations. Remote access requires MANAGE_HOSTS.
+The Diagnostics child panel runs operations through CallWorker, displays actual
+portal binding and raw events, and disposes only its own resources. Action
+journals mask raw physical results. Native acceptance remains in D3/H3.
+
+Native default authorization uses a separate connection-attempt lock, with
+active/pending owners detached under a short cache lock. Stop/reset cancel
+pending IPC and stale completion cannot publish its grant; permission polling
+also leaves the cache lock free. Tests include controlled workers without
+performing desktop input.

@@ -20,7 +20,7 @@
 
 - **一套 API，七个平台。** `wrapper/platform_wrapper.py` 在导入时挑选后端；同一份脚本在
   Windows、macOS、X11 与 Wayland 上都不需要改写。
-- **不写 Python 也能脚本化。** 802 个 `AC_*` 命令覆盖全部功能，因此一个 JSON 文件能做到库
+- **不写 Python 也能脚本化。** 807 个 `AC_*` 命令覆盖全部功能，因此一个 JSON 文件能做到库
   能做的任何事——包含循环、分支、try/catch、宏与变量。
 - **默认无头运行。** `import je_auto_control` 绝不会加载 Qt。GUI 是可选包，包在同一个无头内核之外。
 - **四种定位方式。** 模板匹配、OCR、无障碍树、视觉语言模型——可通过锚点定位器与自愈回退串接组合。
@@ -141,7 +141,7 @@ python -c "import je_auto_control; je_auto_control.start_autocontrol_gui()"
 | 自然语言规划 | `plan_actions`、`run_from_description` | `AC_llm_plan` | LLM Planner |
 | Computer-use agent | `AgentLoop`、`run_agent` | `AC_run_agent` | Computer Use |
 | 录制与回放 | `record`、`stop_record` | `AC_record`、`AC_stop_record` | Record |
-| JSON 脚本 | `execute_action`、`execute_files` | 全部 802 个命令 | Script、Script Builder |
+| JSON 脚本 | `execute_action`、`execute_files` | 全部 807 个命令 | Script、Script Builder |
 | 变量与流程控制 | `execute_action_with_vars` | `AC_set_var`、`AC_loop`、`AC_for_each`、`AC_try`、`AC_retry` | Variables |
 | 数据驱动执行 | — | `AC_for_each_row`（CSV／JSON／SQLite／Excel） | Data Sources |
 | 断言 | `assert_text`、`assert_image` | `AC_assert_text` 等 21 个 | Assertions |
@@ -190,7 +190,7 @@ je_auto_control version
 
 | 接口 | 启动方式 | 说明 |
 |---|---|---|
-| **MCP 服务器** | `je_auto_control_mcp`（stdio）或 `AC_start_mcp_http_server` | 724 个工具，供 Claude Desktop／Claude Code／自定义 tool loop 使用。除了以 `initialize` 握手的各版协议，也支持无状态的 MCP 2026-07-28。Bearer 认证、TLS、审计日志、限流、插件热重载、CI 假后端。 |
+| **MCP 服务器** | `je_auto_control_mcp`（stdio）或 `AC_start_mcp_http_server` | 729 个工具，供 Claude Desktop／Claude Code／自定义 tool loop 使用。除了以 `initialize` 握手的各版协议，也支持无状态的 MCP 2026-07-28。Bearer 认证、TLS、审计日志、限流、插件热重载、CI 假后端。 |
 | **REST API** | `je_auto_control start-rest` | Bearer token、按 IP 限流与锁定、SQLite 审计 hook、`/metrics`、`/openapi.json`、`/docs` Swagger UI、`/dashboard`。 |
 | **TCP socket 服务器** | `je_auto_control start-server` | 以换行分隔的 JSON 动作列表。默认绑定 `127.0.0.1`。 |
 | **pytest 插件** | 安装后自动生效 | 轻量 `je_auto_control_pytest` 入口，提供 fixture 与 Gherkin 步骤。升级 editable 工作树后须重新安装；明确指定的旧插件路径仍兼容。 |
@@ -344,8 +344,15 @@ Executor 动作日志不需要全局输入 hook。实验中的 Wayland `Physical
 使用已有读取权限，读取明确选定的实体 `/dev/input/event*` 节点，排除内核 virtual／uinput
 设备；返回原始设备事件，不转为桌面坐标或回放动作，也不修改 ACL。
 `StopShortcutSession` 会明确请求 portal 停止快捷键、显示实际绑定并关闭自己的授权；
-拒绝后须先 close 再 start 才重试。这些底层已通过受控测试；门面、AC／MCP、GUI 集成
-及原生桌面验收仍列于 D3／H3。旧 Wayland 全局录制 hook 仍不可用。窗口管理支持
+拒绝后须先 close 再 start 才重试。Beta `je_auto_control.api.wayland_input` 与旧门面提供上述底层及五个脚本操作：
+`start_physical_recording(devices)`、`stop_physical_recording()`、
+`start_wayland_stop_shortcut(preferred_trigger='F7')`、`stop_wayland_stop_shortcut()`、
+`wayland_input_status()`。各有 `AC_*` 命令、小写 MCP 工具与 Script Builder schema。
+动作日志遮罩原始停止结果；远程 RBAC 的五项操作均要求主机管理权限。
+诊断页提供明确 Actions、JSON 设备路径输入、希望使用的快捷键、实际绑定／状态与原始结果；
+每个面板与脚本默认资源独立持有。停止绑定会停止原生输入控制并设置持有者的合作取消
+`stop_event`，不会中断任意 Python 工作。原生桌面验收仍列于 D3／H3。停止与明确重试可取消待授权的原生连接，不会等待其 cache 锁；取消后的 grant 不能再被发布。
+旧 Wayland 全局录制 hook 仍不可用。窗口管理支持
 Windows、macOS（pyobjc）与 X11（含 XWayland）；纯 Wayland 会话的协议不让客户端看到其他程序的窗口，
 所以 `list_windows()` 返回空列表，其余窗口操作一律抛出带原因的 `AutoControlUnsupportedOperationException`。对于会忽略合成输入的应用，
 可选用驱动层后端（`JE_AUTOCONTROL_WIN32_BACKEND=interception`、
