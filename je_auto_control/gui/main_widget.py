@@ -21,6 +21,7 @@ from je_auto_control.gui.flakiness_tab import FlakinessTab
 from je_auto_control.gui.test_suite_tab import TestSuiteTab
 from je_auto_control.gui.a11y_audit_tab import A11yAuditTab
 from je_auto_control.gui.device_matrix_tab import DeviceMatrixTab
+from je_auto_control.gui.mobile_tab import MobileTab
 from je_auto_control.gui.media_checks_tab import MediaChecksTab
 from je_auto_control.gui.computer_use_tab import ComputerUseTab
 from je_auto_control.gui.chatops_tab import ChatOpsTab
@@ -202,6 +203,7 @@ class AutoControlGUIWidget(
                       category="system")
         self._add_tab("a11y_audit", "tab_a11y_audit", A11yAuditTab(),
                       category="core")
+        self._add_tab("mobile", "tab_mobile", MobileTab(), category="core")
         self._add_tab("device_matrix", "tab_device_matrix", DeviceMatrixTab(),
                       category="core")
         self._add_tab("media_checks", "tab_media_checks", MediaChecksTab(),

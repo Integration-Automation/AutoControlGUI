@@ -417,3 +417,11 @@ recording require configured adapters. The shared JSON app/alert/extension servi
 reach AC/MCP/Builder and Device Matrix Actions; remote access requires MANAGE_HOSTS.
 
 _mobile_wda_lease.py reserves exact endpoints before native construction using a short registry lock. Bounded status preflight rejects active/missing ownership metadata before POST/session. WDA creation replaces its active session; dedicated endpoints must remain exclusive against external clients and aliases. Unknown creation replies remain unknown native state; they are not automatically retried.
+
+E4 exposes a persistent MobilePanelOwner through a thin MobileTab. The shared operation
+catalog supplies Android/iOS alias enums, MCP/Builder and device-only batch validation.
+Setup is passive unless connect is requested; the live executor inventory lists scope
+and alternatives. Owner close revokes immediately and cleans on a headless thread;
+GUI callbacks reject obsolete generations. Explicit result values remain available
+while automatic extension logs are masked. Docker/KVM and remote WDA setup/smoke
+configuration live in docs/MOBILE_SETUP.md and examples/mobile_device_smoke.py.

@@ -64,7 +64,15 @@ from je_auto_control.utils.config_sync.asset_service import config_sync_assets
 from je_auto_control.wrapper.mobile_extensions import MobileExtension, MobileExtensionSpec, run_mobile_extension
 from je_auto_control.wrapper.mobile_actions import mobile_app, mobile_alert, mobile_extension_action
 
+from je_auto_control.wrapper.mobile_setup import DeviceSetupReport, inspect_device_setup, mobile_setup
+from je_auto_control.wrapper.mobile_surfaces import mobile_surface_matrix
+from je_auto_control.wrapper.mobile_dispatch import (
+    android_mobile_action, ios_mobile_action, run_mobile_actions, mobile_run,
+)
+
 __all__ = [
+    'DeviceSetupReport', 'inspect_device_setup', 'mobile_setup', 'mobile_surface_matrix',
+    'android_mobile_action', 'ios_mobile_action', 'run_mobile_actions', 'mobile_run',
     'MobileExtension', 'MobileExtensionSpec', 'run_mobile_extension',
     'mobile_app', 'mobile_alert', 'mobile_extension_action',
     'DeviceContext', 'DeviceSession', 'DeviceSessionError', 'DeviceFrame', 'Gesture',

@@ -54,3 +54,11 @@ python examples/01_screenshot_and_click.py
 
 A few scripts have optional dependencies — the script comments
 mention which `pip install` brings them in.
+
+### Mobile device smoke
+
+`mobile_device_smoke.py --validate` reports passive setup without importing optional
+SDKs or sending device input. `--connect` explicitly probes one serial/WDA URL;
+`--connect --exercise --app-id ...` launches, captures and stops a disposable app.
+Use `--target`, `--adb-path`, `--timeout` and `--output` for explicit configuration.
+See [Android Docker / remote WDA setup](../docs/MOBILE_SETUP.md).

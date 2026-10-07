@@ -19,24 +19,34 @@ def extension_capabilities(context: DeviceContext, dependencies: Mapping[str, Ca
                                           'backend dependency only; app/device authorization remains unverified',
                                           primary.recovery, False)
               for operation in ('launch_app', 'stop_app', 'app_state', 'wait_for_app')}
+    native = dependencies['wda' if context.platform == 'ios' else 'uiautomator2']
+    for operation in ('capture', 'perform', 'type_text'):
+        result[operation] = CapabilityStatus(native.state, native.backend,
+                                            'SDK dependency only; capture/input permission remains unverified',
+                                            native.recovery, False)
+    result['device_setup'] = CapabilityStatus('available', 'metadata', 'passive setup; connection is opt-in', '', False)
     result['alert'] = (CapabilityStatus(primary.state, 'wda', 'iOS alert endpoint; permission remains unverified',
                                        primary.recovery, False) if context.platform == 'ios' else
                        CapabilityStatus('unsupported', 'uiautomator2', 'no universal Android alert endpoint',
                                         'Use a specific UI-tree selector.', False))
     for operation in ('install', 'files', 'clipboard', 'recording'):
-        if context.platform == 'android' and operation in ('install', 'files'):
-            status = dependencies['adb']
-            result[operation] = CapabilityStatus(status.state, 'adb', 'ADB dependency; device access not exercised',
-                                                status.recovery, False)
-        elif context.platform == 'android' and operation == 'clipboard':
-            status = dependencies['uiautomator2']
-            result[operation] = CapabilityStatus(status.state, 'uiautomator2', 'SDK clipboard; access unverified',
-                                                status.recovery, False)
-        else:
-            result[operation] = CapabilityStatus('needs_dependency', 'mobile-extension',
-                                                'no owned adapter configured for this operation',
-                                                'Configure a MobileExtension for this device owner.', False)
+        result[operation] = _extension_status(context, operation, dependencies)
     return result
+
+
+def _extension_status(context: DeviceContext, operation: str, dependencies: Mapping[str, CapabilityStatus]
+                      ) -> CapabilityStatus:
+    if context.platform == 'android' and operation in ('install', 'files'):
+        status = dependencies['adb']
+        return CapabilityStatus(status.state, 'adb', 'ADB dependency; device access not exercised',
+                                status.recovery, False)
+    if context.platform == 'android' and operation == 'clipboard':
+        status = dependencies['uiautomator2']
+        return CapabilityStatus(status.state, 'uiautomator2', 'SDK clipboard; access unverified',
+                                status.recovery, False)
+    return CapabilityStatus('needs_dependency', 'mobile-extension',
+                            'no owned adapter configured for this operation',
+                            'Configure a MobileExtension for this device owner.', False)
 
 
 

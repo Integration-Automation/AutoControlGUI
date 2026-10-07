@@ -13,6 +13,11 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ## Unreleased
 
+- Add persistent Mobile devices Actions, passive/explicit setup diagnostics, shared
+  Android/iOS operation aliases and a validated device-only batch boundary. Automatic
+  extension result logs are masked; explicit callers retain their results. Deliver
+  pinned Android Docker smoke and remote WDA signing/setup guidance.
+
 - E3: Observed mobile app lifecycle, iOS alert handling and owner-bound optional
   extensions. Android install/files/SDK clipboard have native routes; iOS equivalents
   and recording require a configured adapter. WDA app operations create/delete only

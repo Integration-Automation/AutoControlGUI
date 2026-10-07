@@ -219,3 +219,29 @@ native launch/stop. Controlled adapter tests establish dispatch/lifetime; emulat
 signing, real-WDA and physical recording acceptance remain H3.
 
 WDA app operations require a dedicated idle endpoint. A bounded status preflight rejects existing or missing ownership metadata before creation; a local lease protects pending/active owners for the exact URL. WDA creation replaces its active session, so external clients and aliases must be excluded operationally. Unknown creation replies remain unknown native state and require inspection before explicit retry.
+Mobile workspace and setup
+--------------------------
+
+The Mobile devices tab retains one explicit owner. Configure platform, serial/WDA
+URL and timeout; Actions opens/closes the owner, inspects passive dependencies,
+explicitly diagnoses authorization, runs the selected operation or validates an
+entire flat mobile-only action list. Close revokes input immediately and performs
+cleanup off Qt; failed cleanup is retained for retry and late results are dropped.
+The 13-operation catalog supplies Android/iOS aliases and MCP/Builder enums.
+``mobile_surface_matrix()`` inventories every executor command with scope/recovery.
+
+Install optional ``uiautomator2==3.7.0`` or ``facebook-wda==1.5.4``. Android requires
+SDK platform-tools, USB debugging and RSA authorization. iOS requires a signed
+WebDriverAgentRunner on an Apple host/device, Developer Mode and an exclusive idle
+WDA endpoint. HTTP ready status is not input permission or exclusive ownership.
+The repository ``docs/MOBILE_SETUP.md`` documents signing, recovery and Docker/KVM
+setup. ``docker/mobile-compose.yml`` pins Android 14/API 34; a Linux host needs
+working KVM. The manual Mobile native smoke workflow preserves actual JSON/PNG/logs.
+Configuration/controlled tests cannot replace successful native artifacts.
+
+Default/``--validate`` execution below is passive. ``--connect`` diagnoses the
+selected device; ``--exercise --app-id ...`` additionally launches, captures and
+stops a disposable app. Unicode focus/rotation/restoration remain separate cases.
+
+.. literalinclude:: ../../../../../examples/mobile_device_smoke.py
+   :language: python

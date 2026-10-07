@@ -1,0 +1,71 @@
+name: Mobile native smoke
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ['feat/platform-gui-modernization']
+    paths:
+      - '.github/workflows/mobile-smoke.yml'
+      - 'examples/mobile_device_smoke.py'
+      - 'je_auto_control/wrapper/mobile*.py'
+      - 'je_auto_control/android/**'
+      - 'je_auto_control/ios/**'
+
+permissions:
+  contents: read
+
+jobs:
+  android-docker:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      ANDROID_IMAGE: budtmo/docker-android@sha256:1bffbbed5d530284dd355eb73e863411b4a761bc55a00fa1e49fe4a013b6b24a
+      PYTHONPATH: ${{ github.workspace }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Install isolated native smoke dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y adb xvfb
+          python -m pip install . uiautomator2==3.7.0 adbutils==2.12.0 retry2==0.9.5
+      - name: Start disposable Android 14 emulator in Docker
+        run: |
+          test -c /dev/kvm
+          sudo chmod 666 /dev/kvm
+          docker run -d --name mobile-smoke --device /dev/kvm \
+            -p 127.0.0.1:5555:5555 -e EMULATOR_DEVICE='Samsung Galaxy S10' \
+            -e WEB_VNC=false "$ANDROID_IMAGE"
+          mkdir -p artifacts
+          adb version > artifacts/adb-version.txt
+          python -m pip freeze > artifacts/python-packages.txt
+          docker inspect mobile-smoke > artifacts/container.json
+      - name: Wait for Android boot without selecting other devices
+        run: |
+          for attempt in $(seq 1 120); do
+            adb connect 127.0.0.1:5555 || true
+            if [ "$(adb -s 127.0.0.1:5555 shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')" = 1 ]; then
+              adb -s 127.0.0.1:5555 devices -l > artifacts/adb-devices.txt
+              exit 0
+            fi
+            sleep 5
+          done
+          exit 1
+      - name: Exercise observed Settings app lifecycle and native device capture
+        run: |
+          xvfb-run -a python examples/mobile_device_smoke.py --platform android \
+            --target 127.0.0.1:5555 --connect --exercise --app-id com.android.settings \
+            --output artifacts/android-frame.png > artifacts/mobile-report.json
+      - name: Preserve emulator logs
+        if: always()
+        run: docker logs mobile-smoke > artifacts/emulator.log 2>&1 || true
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: android-native-evidence
+          path: artifacts/
+      - name: Close only the owned emulator container
+        if: always()
+        run: docker rm -f mobile-smoke || true

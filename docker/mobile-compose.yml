@@ -1,0 +1,11 @@
+# Disposable Android 14 / API 34; no physical device or user storage mounts.
+services:
+  android:
+    image: budtmo/docker-android@sha256:1bffbbed5d530284dd355eb73e863411b4a761bc55a00fa1e49fe4a013b6b24a
+    devices:
+      - /dev/kvm:/dev/kvm
+    environment:
+      EMULATOR_DEVICE: Samsung Galaxy S10
+      WEB_VNC: 'false'
+    ports:
+      - '127.0.0.1:5555:5555'

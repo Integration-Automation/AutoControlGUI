@@ -161,3 +161,16 @@ Android owner close does not stop apps. Repeated close retries failed cleanup,
 including late construction; no action is automatically replayed after lost replies.
 
 WDA app operations require a dedicated idle endpoint. Bounded status preflight rejects existing or missing session ownership metadata; a short local lease rejects another pending/active owner for the exact URL. WDA has no atomic external-client exclusion: endpoint aliases and external users require operational exclusivity. POST/session can replace an active server session; unknown creation replies require native-state inspection before explicit retry.
+
+### E4 mobile delivery (Beta)
+
+`DeviceSetupReport`, `inspect_device_setup`, `mobile_setup`, `mobile_surface_matrix`,
+`android_mobile_action`, `ios_mobile_action`, `run_mobile_actions` and `mobile_run`
+are available from api.mobile and the facade. AC/MCP/Builder use the same services.
+`mobile_surface_matrix(include_executor=True)` includes the live command inventory;
+False gives the lightweight operation catalog. DeviceSession.revoke() immediately
+rejects requests without native I/O; call close() off Qt for cleanup/retry. Closing
+an owner does not prove restoration of native state. Flat mobile batches validate
+all command names/schemas first and exclude desktop/flow/macro/file commands.
+The setup report distinguishes SDK version, HTTP/ADB connectivity and untested input.
+See [setup and signing](MOBILE_SETUP.md) for explicit opt-in smoke and ownership limits.

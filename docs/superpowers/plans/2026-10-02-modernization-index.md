@@ -2,7 +2,7 @@
 
 狀態：設計與八份實作計畫已核准；A–D 的程式交付已完成，E–H 接續實作；D 的實機與歷史 Qt 追蹤保留 H3。
 
-依使用者最新要求持續實作，現從 E4 接續；E1 的 context／matrix、E2 的 Unicode／手勢／device frame 及 E3 的 App lifecycle／擴充能力已完成。保留隔離分支；不額外新增付費型功能；既有 API 相關修正照原計畫繼續。
+依使用者最新要求持續實作，現從 F1 接續；E1–E4 的 context／matrix、Unicode／手勢／device frame、App lifecycle／擴充能力及共用交付入口已完成。Android Docker／remote WDA smoke 配置已交付，未具原生成功產出的驗收保留 H3。保留隔離分支；不額外新增付費型功能；既有 API 相關修正照原計畫繼續。
 各平台實機與正式下游整合仍由 H3 驗收，未完成項目保留在 `Progress.md`。
 
 設計：[2026-10-02-platform-gui-modernization-design.md](../specs/2026-10-02-platform-gui-modernization-design.md)。

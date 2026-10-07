@@ -34,7 +34,7 @@ logical lifetime. Remote probes require MANAGE_HOSTS. Matrix duplicate detection
 compares configured targets, not physical identities hidden behind endpoint aliases.
 Real Android/emulator and remote-WDA reachability, authorization, SDK bootstrap
 total deadlines and recovery remain H3 acceptance cases in Progress.md. Unicode,
-gestures, frames and observed app lifecycle are delivered in E2–E3; the dedicated mobile panel follows in E4.
+gestures, frames and observed app lifecycle are delivered in E2–E3; the Mobile devices panel retains an explicit owner.
 
 Linux Wayland is split: **capture is exercised by CI against a real
 compositor; input is exercised by CI against a real EI peer and a real portal.**
@@ -547,3 +547,17 @@ JSON services share facade/API/AC/MCP/Builder/Device Matrix Actions and remote
 MANAGE_HOSTS checks. Emulator signing/authorization and real-WDA recovery remain H3.
 
 WDA creation can replace an existing server session. Controlled negative tests now prove that status reporting a borrowed ID or lacking ownership metadata produces no POST/DELETE, and a nested pending owner for the same URL cannot supersede the first. A bounded status check plus local endpoint lease protects detected/exact local owners; it cannot atomically exclude external clients or aliases. Dedicated idle endpoints and unknown-reply inspection remain operational requirements. Primary sources: [WDA creation](https://github.com/appium/WebDriverAgent/blob/master/WebDriverAgentLib/Commands/FBSessionCommands.m), [ownership response](https://github.com/appium/WebDriverAgent/blob/master/WebDriverAgentLib/Routing/FBResponsePayload.m).
+
+### E4 delivery surfaces and setup evidence
+
+`mobile_surface_matrix()` returns all 13 operation/API/AC/MCP/GUI catalog rows and
+all actual executor commands with scope, reason and alternative. Alias enums come
+from that catalog. A persistent Mobile devices owner permits app/frame workflows;
+its six Actions include passive inspection, explicit authorization diagnosis,
+operation/batch execution and immediate revocation/background close.
+Controlled tests cover remote WDA GET status without session creation, Android
+unauthorized zero input, platform mismatch, complete batch rejection, cleanup retry,
+late callback rejection and plain-log privacy. They are not native device evidence.
+Android Docker/KVM and remote WDA smoke configurations are delivered in
+[MOBILE_SETUP.md](MOBILE_SETUP.md); native smoke emits actual/skipped results.
+Physical Unicode focus, rotation/recovery and Apple signing/WDA remain H3 evidence.

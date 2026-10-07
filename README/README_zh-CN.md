@@ -20,7 +20,7 @@
 
 - **一套 API，七个平台。** `wrapper/platform_wrapper.py` 在导入时挑选后端；同一份脚本在
   Windows、macOS、X11 与 Wayland 上都不需要改写。
-- **不写 Python 也能脚本化。** 814 个 `AC_*` 命令覆盖全部功能，因此一个 JSON 文件能做到库
+- **不写 Python 也能脚本化。** 819 个 `AC_*` 命令覆盖全部功能，因此一个 JSON 文件能做到库
   能做的任何事——包含循环、分支、try/catch、宏与变量。
 - **默认无头运行。** `import je_auto_control` 绝不会加载 Qt。GUI 是可选包，包在同一个无头内核之外。
 - **四种定位方式。** 模板匹配、OCR、无障碍树、视觉语言模型——可通过锚点定位器与自愈回退串接组合。
@@ -40,7 +40,7 @@ pip install je_auto_control[gui]       # 加上 PySide6 桌面应用
 
 | Extra | 启用的功能 |
 |---|---|
-| `gui` | PySide6 桌面应用（49 个标签页） |
+| `gui` | PySide6 桌面应用（50 个标签页） |
 | `webrtc` | WebRTC 远程桌面、USB 直通（`aiortc`、`av`） |
 | `signaling` | 独立的信令／rendezvous 服务器（`fastapi`、`uvicorn`） |
 | `discovery` | mDNS / Zeroconf 局域网主机发现 |
@@ -141,7 +141,7 @@ python -c "import je_auto_control; je_auto_control.start_autocontrol_gui()"
 | 自然语言规划 | `plan_actions`、`run_from_description` | `AC_llm_plan` | LLM Planner |
 | Computer-use agent | `AgentLoop`、`run_agent` | `AC_run_agent` | Computer Use |
 | 录制与回放 | `record`、`stop_record` | `AC_record`、`AC_stop_record` | Record |
-| JSON 脚本 | `execute_action`、`execute_files` | 全部 814 个命令 | Script、Script Builder |
+| JSON 脚本 | `execute_action`、`execute_files` | 全部 819 个命令 | Script、Script Builder |
 | 变量与流程控制 | `execute_action_with_vars` | `AC_set_var`、`AC_loop`、`AC_for_each`、`AC_try`、`AC_retry` | Variables |
 | 数据驱动执行 | — | `AC_for_each_row`（CSV／JSON／SQLite／Excel） | Data Sources |
 | 断言 | `assert_text`、`assert_image` | `AC_assert_text` 等 21 个 | Assertions |
@@ -190,7 +190,7 @@ je_auto_control version
 
 | 接口 | 启动方式 | 说明 |
 |---|---|---|
-| **MCP 服务器** | `je_auto_control_mcp`（stdio）或 `AC_start_mcp_http_server` | 736 个工具，供 Claude Desktop／Claude Code／自定义 tool loop 使用。除了以 `initialize` 握手的各版协议，也支持无状态的 MCP 2026-07-28。Bearer 认证、TLS、审计日志、限流、插件热重载、CI 假后端。 |
+| **MCP 服务器** | `je_auto_control_mcp`（stdio）或 `AC_start_mcp_http_server` | 741 个工具，供 Claude Desktop／Claude Code／自定义 tool loop 使用。除了以 `initialize` 握手的各版协议，也支持无状态的 MCP 2026-07-28。Bearer 认证、TLS、审计日志、限流、插件热重载、CI 假后端。 |
 | **REST API** | `je_auto_control start-rest` | Bearer token、按 IP 限流与锁定、SQLite 审计 hook、`/metrics`、`/openapi.json`、`/docs` Swagger UI、`/dashboard`。 |
 | **TCP socket 服务器** | `je_auto_control start-server` | 以换行分隔的 JSON 动作列表。默认绑定 `127.0.0.1`。 |
 | **pytest 插件** | 安装后自动生效 | 轻量 `je_auto_control_pytest` 入口，提供 fixture 与 Gherkin 步骤。升级 editable 工作树后须重新安装；明确指定的旧插件路径仍兼容。 |
@@ -801,3 +801,22 @@ iOS 安装／文件／剪贴板，以及双平台录屏需要拥有资源的 `Mo
 原生 emulator/WDA 授权与恢复仍列 H3 验收。
 
 WDA App 操作需要专用空闲 endpoint：有时限的 status 检查拒绝既有／未知 session，本进程 lease 防止同 URL 同时创建 owner。WDA 无法原子排除外部 client 或 endpoint 别名，请保持该 endpoint 专用。
+
+### 移动设备工作区与原生冒烟测试
+
+Mobile 移动设备标签页保留同一 owner，供 App、截图与输入操作共用。
+选择平台、序列号／WDA URL 与超时，通过 Actions → 打开设备 owner 开始。
+检查依赖不连接；检查连接／授权才发送 get-state 或 WDA GET /status。
+执行所选操作共用 `AC_android_mobile_action`／`AC_ios_mobile_action`、MCP 与
+Builder 的 13 项操作目录。执行设备操作先验证整个平坦的设备专用列表；
+关闭设备 owner 立即撤销输入，并在后台清理。`mobile_surface_matrix()` 对照所有
+executor 命令，并提供桌面专用操作的设备替代方案。自动日志屏蔽设备扩展结果，
+显式调用方仍能取得结果。
+
+用 `python -m pip install uiautomator2==3.7.0 facebook-wda==1.5.4` 安装可选 SDK；
+Android 还需要 Android SDK platform-tools、USB 调试及 RSA 授权。
+iOS 需要 Apple 主机／设备上已签名的 WebDriverAgentRunner、开发者模式及专用空闲 WDA
+endpoint。参阅[移动设备设置](../docs/MOBILE_SETUP.md)。
+`python examples/mobile_device_smoke.py --validate` 无需硬件；`--connect` 启用连接诊断，
+`--exercise --app-id ...` 还会启动、截图并停止指定测试 App。已提供 Android 14
+Docker/KVM 配置及手动原生 CI；测试配置与受控测试不等于实体设备验证。

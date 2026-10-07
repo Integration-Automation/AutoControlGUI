@@ -197,3 +197,26 @@ extension options／結果。``examples/mobile_app_lifecycle.py`` 預設被動�
 真實 WDA 及實體錄影驗收仍列 H3。
 
 WDA App 操作需專用閒置 endpoint。有時限的 status 檢查會在建立前拒絕既有或缺少 ownership 資訊的狀態；本程序 lease 保護同 URL 的 pending／active owner。WDA 建立會取代既有 session，外部 client 及別名仍需操作上維持專用。建立回覆未知時保持未知狀態，明確重試前需檢查原生狀態。
+行動裝置工作區與設定
+--------------------
+
+Mobile 分頁保留同一個明確 owner。設定平台、序號／WDA URL 與逾時，透過
+Actions 開啟／關閉 owner、被動檢查相依套件、明確診斷授權、執行選取操作
+或先驗證整份平坦裝置專用清單。關閉立即撤銷輸入，背景清理失敗可重試；
+已過期的結果不更新 GUI。13 項操作目錄供 Android／iOS 別名及 MCP／Builder
+enum 共用。``mobile_surface_matrix()`` 對照全部 executor 指令並列出替代方式。
+
+選用 SDK 為 ``uiautomator2==3.7.0``／``facebook-wda==1.5.4``。Android 需要
+SDK platform-tools、USB 偵錯及 RSA 授權。iOS 需要 Apple 主機／裝置上已簽章的
+WebDriverAgentRunner、開發者模式及專用閒置 WDA endpoint；HTTP ready 不代表
+輸入授權或原生互斥。儲存庫 ``docs/MOBILE_SETUP.md`` 說明簽章、恢復與 Docker/KVM；
+``docker/mobile-compose.yml`` 固定 Android 14/API 34，Linux host 須具備 KVM。
+手動 Mobile native smoke workflow 保存 JSON／PNG／日誌；配置與受控測試
+不能代替成功的原生測試產出。
+
+下列範例預設及 ``--validate`` 不操作裝置。``--connect`` 診斷所選裝置；
+``--exercise --app-id ...`` 才啟動、擷取及停止測試 App。
+Unicode 焦點、旋轉及狀態恢復仍需獨立驗收。
+
+.. literalinclude:: ../../../../../examples/mobile_device_smoke.py
+   :language: python

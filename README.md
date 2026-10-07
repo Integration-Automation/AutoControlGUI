@@ -22,7 +22,7 @@ from JSON files / CLI / servers, and a **GUI tab**. Nothing is GUI-only.
 
 - **One API, seven platforms.** `wrapper/platform_wrapper.py` picks the backend at import
   time; your script does not change between Windows, macOS, X11, and Wayland.
-- **Scriptable without Python.** 814 `AC_*` commands cover the whole feature set, so a
+- **Scriptable without Python.** 819 `AC_*` commands cover the whole feature set, so a
   JSON file can do anything the library can — including loops, branches, try/catch,
   macros, and variables.
 - **Headless by default.** `import je_auto_control` never loads Qt. The GUI is an
@@ -46,7 +46,7 @@ Optional extras, installed only when you need them:
 
 | Extra | Enables |
 |---|---|
-| `gui` | PySide6 desktop application (49 tabs) |
+| `gui` | PySide6 desktop application (50 tabs) |
 | `webrtc` | WebRTC remote desktop, USB passthrough (`aiortc`, `av`) |
 | `signaling` | Standalone signaling / rendezvous server (`fastapi`, `uvicorn`) |
 | `discovery` | mDNS / Zeroconf LAN host discovery |
@@ -152,7 +152,7 @@ desktop app; tab commands live in the window's **Actions** menu.
 | Natural-language planner | `plan_actions`, `run_from_description` | `AC_llm_plan` | LLM Planner |
 | Computer-use agent | `AgentLoop`, `run_agent` | `AC_run_agent` | Computer Use |
 | Record & replay | `record`, `stop_record` | `AC_record`, `AC_stop_record` | Record |
-| JSON scripting | `execute_action`, `execute_files` | all 814 commands | Script, Script Builder |
+| JSON scripting | `execute_action`, `execute_files` | all 819 commands | Script, Script Builder |
 | Variables & flow control | `execute_action_with_vars` | `AC_set_var`, `AC_loop`, `AC_for_each`, `AC_try`, `AC_retry` | Variables |
 | Data-driven runs | — | `AC_for_each_row` (CSV / JSON / SQLite / Excel) | Data Sources |
 | Assertions | `assert_text`, `assert_image` | `AC_assert_text` + 20 more | Assertions |
@@ -204,7 +204,7 @@ still goes on to the end), so a CI step fails with it. The legacy
 
 | Surface | Start it with | Notes |
 |---|---|---|
-| **MCP server** | `je_auto_control_mcp` (stdio) or `AC_start_mcp_http_server` | 736 tools for Claude Desktop / Claude Code / custom tool loops. Speaks the stateless MCP 2026-07-28 beside the `initialize`-based revisions. Bearer auth, TLS, audit log, rate limit, plugin hot-reload, CI fake backend. |
+| **MCP server** | `je_auto_control_mcp` (stdio) or `AC_start_mcp_http_server` | 741 tools for Claude Desktop / Claude Code / custom tool loops. Speaks the stateless MCP 2026-07-28 beside the `initialize`-based revisions. Bearer auth, TLS, audit log, rate limit, plugin hot-reload, CI fake backend. |
 | **REST API** | `je_auto_control start-rest` | Bearer token, per-IP rate limit + lockout, SQLite audit hook, `/metrics`, `/openapi.json`, `/docs` Swagger UI, `/dashboard`. |
 | **TCP socket server** | `je_auto_control start-server` | Newline-framed JSON action lists. Binds `127.0.0.1` by default. |
 | **pytest plugin** | installed automatically | Lightweight `je_auto_control_pytest` entry point; fixtures plus Gherkin steps for pytest-bdd / behave. Reinstall after upgrading editable checkouts; the explicit legacy plugin path remains supported. |
@@ -451,7 +451,7 @@ ignore synthetic input, and fall back silently when the driver is absent.
 
 | Resource | What's in it |
 |---|---|
-| [`examples/`](examples/) | 30 self-contained scripts: screenshot + click, OCR, scheduler, remote desktop, agent loop, observability, recording, variables, hotkeys, triggers, reports, MCP, REST, secrets, plugins, computer use, Wayland, cross-host DAGs, chat-ops, pytest/BDD, anchor locators. |
+| [`examples/`](examples/) | 31 self-contained scripts: screenshot + click, OCR, scheduler, remote desktop, agent loop, observability, recording, variables, hotkeys, triggers, reports, MCP, REST, secrets, plugins, computer use, Wayland, cross-host DAGs, chat-ops, pytest/BDD, anchor locators. |
 | [Read the Docs](https://autocontrol.readthedocs.io/en/latest/) | Full API reference, English and 中文. |
 | [architecture_explore.md](architecture_explore.md) | Every module's responsibility, layer by layer. |
 | [docs/CAPABILITY_MATRIX.md](docs/CAPABILITY_MATRIX.md) | Capability × platform matrix. |
@@ -959,3 +959,24 @@ Device Matrix Actions. Extension options/results are masked in journals.
 Native emulator/WDA authorization and recovery remain H3 acceptance.
 
 WDA app operations require a dedicated idle endpoint: bounded status preflight rejects an existing/unknown session, and a local lease prevents concurrent owners for the same URL. External clients and endpoint aliases cannot be excluded atomically by WDA; keep this endpoint exclusive.
+
+### Mobile workspace and native smoke
+
+The Mobile devices tab keeps one explicit owner across app, capture and input operations.
+Choose platform, serial/WDA URL and timeout, then use Actions → Open device owner.
+Inspect dependencies is passive; Check connection / authorization explicitly sends get-state
+or WDA GET /status. Run selected operation uses the same 13-operation catalog as
+`AC_android_mobile_action` / `AC_ios_mobile_action`, MCP and Builder enums.
+Run mobile actions accepts a validated flat device-only batch; Close device owner revokes
+input immediately and cleans resources in the background. `mobile_surface_matrix()` inventories
+all executor commands and gives device alternatives for host-only operations. Sensitive device
+extension results are masked in automatic logs; explicit callers still receive their results.
+
+Install optional SDKs with `python -m pip install uiautomator2==3.7.0 facebook-wda==1.5.4`;
+Android also needs Android SDK platform-tools and USB debugging/RSA authorization.
+iOS needs a signed WebDriverAgentRunner on an Apple host/device, Developer Mode and
+an exclusive idle WDA endpoint. See the [mobile setup guide](docs/MOBILE_SETUP.md).
+`python examples/mobile_device_smoke.py --validate` is hardware-free. `--connect` opts
+into diagnostics; `--exercise --app-id ...` additionally launches, captures and stops the
+named disposable app. Android 14 Docker/KVM configuration and a manual native CI workflow
+are included. Configured smoke and controlled tests are distinct from real device evidence.

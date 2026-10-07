@@ -10,6 +10,8 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import List, Mapping, Optional, Sequence, Tuple
 
+from je_auto_control.wrapper.mobile_surfaces import _operation_names
+
 
 class FieldType(str, Enum):
     STRING = "string"
@@ -71,6 +73,23 @@ def _build_specs() -> List[CommandSpec]:
     mobile_device = FieldSpec('device', FieldType.JSON, optional=True,
                               placeholder='{"platform":"android","serial":"emulator-5554"}')
     specs.extend([
+        CommandSpec('AC_mobile_setup', 'Mobile', 'Inspect device setup and authorization', fields=(
+            mobile_device, FieldSpec('connect', FieldType.BOOL, default=False),
+        )),
+        CommandSpec('AC_mobile_surfaces', 'Mobile', 'Inspect mobile surface matrix', fields=(
+            FieldSpec('include_executor', FieldType.BOOL, default=True),
+        )),
+        CommandSpec('AC_android_mobile_action', 'Mobile', 'Run Android catalog operation', fields=(
+            FieldSpec('operation', FieldType.ENUM, choices=_operation_names()),
+            FieldSpec('options', FieldType.JSON, sensitive=True), mobile_device,
+        )),
+        CommandSpec('AC_ios_mobile_action', 'Mobile', 'Run iOS catalog operation', fields=(
+            FieldSpec('operation', FieldType.ENUM, choices=_operation_names()),
+            FieldSpec('options', FieldType.JSON, sensitive=True), mobile_device,
+        )),
+        CommandSpec('AC_mobile_run', 'Mobile', 'Run mobile-only batch on one owner', fields=(
+            FieldSpec('actions', FieldType.JSON), mobile_device,
+        )),
         CommandSpec('AC_mobile_app', 'Mobile', 'Observe mobile app lifecycle', fields=(
             FieldSpec('action', FieldType.ENUM, choices=('launch', 'wait', 'state', 'stop')),
             FieldSpec('app_id', FieldType.STRING),

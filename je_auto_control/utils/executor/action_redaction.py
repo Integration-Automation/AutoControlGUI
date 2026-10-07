@@ -76,7 +76,7 @@ def _confidential_write(action: list) -> bool:
 def is_sensitive_argument(command: str, name: str) -> bool:
     """Whether argument ``name`` of ``command`` holds a secret."""
     lowered = str(name).lower()
-    if command == 'AC_mobile_extension' and lowered == 'options':
+    if command in {'AC_mobile_extension', 'AC_android_mobile_action', 'AC_ios_mobile_action'} and lowered == 'options':
         return True
     if command == 'AC_mobile_type_text' and lowered == 'text':
         return True
@@ -97,7 +97,8 @@ def _redact_argument(command: str, argument: Any) -> Any:
 
 
 def _redact_positional(command: str, argument: Any) -> Any:
-    if command == 'AC_mobile_extension' and isinstance(argument, list) and len(argument) > 1:
+    if (command in {'AC_mobile_extension', 'AC_android_mobile_action', 'AC_ios_mobile_action'}
+            and isinstance(argument, list) and len(argument) > 1):
         return [argument[0], _mask(argument[1]), *(redact_actions(item) for item in argument[2:])]
     if command == 'AC_mobile_type_text' and isinstance(argument, list) and argument:
         return [_MASK, *(redact_actions(item) for item in argument[1:])]
@@ -124,6 +125,13 @@ def _redact_serialized_actions(value: Any) -> Any:
 def describe_action(action: Any) -> str:
     """``str()`` of ``action`` with secrets masked, for logs and record keys."""
     return str(redact_actions(action))
+
+
+def redact_result(action: list[Any], result: Any) -> Any:
+    """Mask private device output in log copies while preserving explicit caller results."""
+    if action[0] in {'AC_mobile_extension', 'AC_android_mobile_action', 'AC_ios_mobile_action'}:
+        return _MASK
+    return result
 
 
 def _mask(argument: Any) -> Any:

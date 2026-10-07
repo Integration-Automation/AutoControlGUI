@@ -185,6 +185,13 @@ def AC_android_key(key: str, serial: str | None = ..., adb_path: str | None = ..
 def AC_android_list_devices(adb_path: str | None = ...) -> list:
     """Return ``{serial, state, model, …}`` for every adb-attached device."""
 
+def AC_android_mobile_action(
+    operation: str,
+    options: Mapping[str, Any],
+    device: Optional[Mapping[str, Any]] = ...,
+) -> Any:
+    """Run any catalog operation on an explicit Android owner without cross-platform fallback."""
+
 def AC_android_screenshot(file_path: str, serial: str | None = ..., adb_path: str | None = ...) -> str:
     """Capture the live Android screen and save it as PNG at ``file_path``."""
 
@@ -1602,6 +1609,9 @@ def AC_ios_find_element(
 ) -> Dict[str, int]:
     ...
 
+def AC_ios_mobile_action(operation: str, options: Mapping[str, Any], device: Optional[Mapping[str, Any]] = ...) -> Any:
+    """Run any catalog operation on an explicit iOS owner; never substitute ADB."""
+
 def AC_ios_screenshot(file_path: str, url: str | None = ...) -> str:
     ...
 
@@ -1946,6 +1956,15 @@ def AC_mobile_extension(operation: str, options: Mapping[str, Any], device: Opti
 
 def AC_mobile_gesture(gesture: Mapping[str, Any], device: Optional[Mapping[str, Any]] = ...) -> None:
     """Perform a validated JSON native-point gesture with explicit device ownership."""
+
+def AC_mobile_run(actions: list[Any], device: Optional[Mapping[str, Any]] = ...) -> dict[str, Any]:
+    """Execute a mobile-only JSON batch on one owner; summary never echoes device clipboard data."""
+
+def AC_mobile_setup(device: Optional[Mapping[str, Any]] = ..., connect: bool = ...) -> dict[str, Any]:
+    """JSON setup service shared by facade, AC, MCP, Builder and Mobile Actions."""
+
+def AC_mobile_surfaces(include_executor: bool = ...) -> dict[str, Any]:
+    """Return independent JSON rows; this metadata never imports Qt/SDKs or connects."""
 
 def AC_mobile_type_text(text: str, device: Optional[Mapping[str, Any]] = ...) -> None:
     """Send exact Unicode via SDK input; response never echoes the supplied text."""

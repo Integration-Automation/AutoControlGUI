@@ -1333,6 +1333,12 @@ from je_auto_control.wrapper.auto_control_window import (
 )
 from je_auto_control.wrapper.mobile_extensions import MobileExtension, MobileExtensionSpec, run_mobile_extension
 from je_auto_control.wrapper.mobile_actions import mobile_app, mobile_alert, mobile_extension_action
+from je_auto_control.wrapper.mobile_setup import DeviceSetupReport, inspect_device_setup, mobile_setup
+from je_auto_control.wrapper.mobile_surfaces import mobile_surface_matrix
+from je_auto_control.wrapper.mobile_dispatch import (
+    android_mobile_action, ios_mobile_action, run_mobile_actions, mobile_run,
+)
+
 # Windows-only modules (ctypes.WINFUNCTYPE / Win32 API) — gated so
 # ``import je_auto_control`` keeps working on macOS / Linux. Kept last
 # so every preceding statement is a plain top-level import (ruff E402).
@@ -1353,6 +1359,8 @@ def start_autocontrol_gui(*args, **kwargs):
 
 
 __all__ = [
+    'DeviceSetupReport', 'inspect_device_setup', 'mobile_setup', 'mobile_surface_matrix',
+    'android_mobile_action', 'ios_mobile_action', 'run_mobile_actions', 'mobile_run',
     'MobileExtension', 'MobileExtensionSpec', 'run_mobile_extension',
     'mobile_app', 'mobile_alert', 'mobile_extension_action',
     'DeviceContext', 'DeviceSession', 'DeviceSessionError', 'DeviceFrame', 'Gesture',

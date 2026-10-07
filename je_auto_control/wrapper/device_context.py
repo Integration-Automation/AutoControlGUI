@@ -155,6 +155,10 @@ class DeviceSession:
         with bind_device(self):
             yield self
 
+    def revoke(self) -> None:
+        """Reject further/late operations immediately; call close off the GUI thread for cleanup."""
+        self._closed.set()
+
     def cancel(self) -> None:
         """Invalidate before cleanup; do not wait behind an unanswered SDK constructor."""
         self.close()

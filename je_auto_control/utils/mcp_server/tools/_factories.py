@@ -7,6 +7,9 @@ MCP client surfaces to the model.
 """
 from typing import List
 from je_auto_control.wrapper.device_context import probe_device_contexts
+from je_auto_control.wrapper.mobile_setup import mobile_setup
+from je_auto_control.wrapper.mobile_surfaces import mobile_surface_matrix, _operation_names
+from je_auto_control.wrapper.mobile_dispatch import android_mobile_action, ios_mobile_action, mobile_run
 from je_auto_control.wrapper.mobile_actions import (
     mobile_capture, mobile_gesture, mobile_type_text, mobile_app, mobile_alert, mobile_extension_action,
 )
@@ -8931,6 +8934,28 @@ def a11y_audit_tools() -> List[MCPTool]:
 
 def device_matrix_tools() -> List[MCPTool]:
     return [
+        MCPTool(name='ac_mobile_setup',
+                description='Inspect SDK versions; optional read-only device authorization check.',
+                input_schema=schema({'device': {'type': 'object'}, 'connect': {'type': 'boolean'}}),
+                handler=mobile_setup, annotations=READ_ONLY),
+        MCPTool(name='ac_mobile_surfaces', description='Read mobile operation surfaces and desktop-only alternatives.',
+                input_schema=schema({'include_executor': {'type': 'boolean'}}),
+                handler=mobile_surface_matrix, annotations=READ_ONLY),
+        MCPTool(name='ac_android_mobile_action', description='Dispatch catalog operation on explicit Android owner.',
+                input_schema=schema({'operation': {'type': 'string', 'enum': list(_operation_names())},
+                                     'options': {'type': 'object'},
+                                     'device': {'type': 'object'}}, required=['operation', 'options']),
+                handler=android_mobile_action, annotations=DESTRUCTIVE),
+        MCPTool(name='ac_ios_mobile_action', description='Dispatch catalog operation on explicit iOS owner; no ADB.',
+                input_schema=schema({'operation': {'type': 'string', 'enum': list(_operation_names())},
+                                     'options': {'type': 'object'},
+                                     'device': {'type': 'object'}}, required=['operation', 'options']),
+                handler=ios_mobile_action, annotations=DESTRUCTIVE),
+        MCPTool(name='ac_mobile_run',
+                description='Run a validated flat mobile-only batch on one owner; return summary.',
+                input_schema=schema({'actions': {'type': 'array', 'items': {'type': 'array'}},
+                                     'device': {'type': 'object'}}, required=['actions']),
+                handler=mobile_run, annotations=DESTRUCTIVE),
         MCPTool(name='ac_mobile_app', description='Launch/wait/state/stop explicit mobile app; observe native state.',
                 input_schema=schema({'action': {'type': 'string', 'enum': ['launch', 'wait', 'state', 'stop']},
                                      'app_id': {'type': 'string'}, 'timeout_s': {'type': 'number'},

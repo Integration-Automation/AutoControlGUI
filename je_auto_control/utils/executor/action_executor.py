@@ -6,6 +6,9 @@ from je_auto_control.utils.rbac.user_api import (
 )
 from contextvars import ContextVar
 from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple, Union
+from je_auto_control.wrapper.mobile_setup import mobile_setup
+from je_auto_control.wrapper.mobile_surfaces import mobile_surface_matrix
+from je_auto_control.wrapper.mobile_dispatch import android_mobile_action, ios_mobile_action, mobile_run
 from je_auto_control.wrapper.mobile_actions import (
     mobile_capture, mobile_gesture, mobile_type_text, mobile_app, mobile_alert, mobile_extension_action,
 )
@@ -40,7 +43,7 @@ from je_auto_control.utils.executor.flags import as_bool as _as_bool
 from je_auto_control.utils.executor.flow_control import (
     BLOCK_COMMANDS, LoopBreak, LoopContinue, MacroDepthExceeded,
 )
-from je_auto_control.utils.executor.action_redaction import describe_action, redact_actions
+from je_auto_control.utils.executor.action_redaction import describe_action, redact_actions, redact_result
 from je_auto_control.utils.executor.mouse_aliases import MOUSE_BUTTON_COMMANDS
 from je_auto_control.utils.llm.planner import (
     plan_actions as llm_plan_actions,
@@ -7893,6 +7896,11 @@ class Executor:
             "AC_mobile_capture": mobile_capture,
             "AC_mobile_gesture": mobile_gesture,
             "AC_mobile_type_text": mobile_type_text,
+            "AC_mobile_setup": mobile_setup,
+            "AC_mobile_surfaces": mobile_surface_matrix,
+            "AC_android_mobile_action": android_mobile_action,
+            "AC_ios_mobile_action": ios_mobile_action,
+            "AC_mobile_run": mobile_run,
             "AC_mobile_app": mobile_app,
             "AC_mobile_alert": mobile_alert,
             "AC_mobile_extension": mobile_extension_action,
@@ -8316,9 +8324,9 @@ class Executor:
                 self._record_unwound_signal(
                     signal, execute_record_dict, raise_on_error, key)
 
-        for key, value in execute_record_dict.items():
+        for action, (key, value) in zip(action_list, execute_record_dict.items()):
             from je_auto_control.utils.action_journal.store import journal_log_value
-            autocontrol_logger.info("%s -> %s", journal_log_value(key), journal_log_value(value))
+            autocontrol_logger.info("%s -> %s", journal_log_value(key), journal_log_value(redact_result(action, value)))
         return execute_record_dict
 
     @staticmethod
