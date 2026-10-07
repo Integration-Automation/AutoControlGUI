@@ -58,6 +58,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261008-14 | 2026-10-08 | Await owned terminal states and retain full local coverage | #incident #testing #gui | [2026-10](2026-10.md) |
 | U-20261008-13 | 2026-10-08 | Retain native and release artifacts and remove verified gaps | #done #testing #platform | [2026-10](2026-10.md) |
 | U-20261008-12 | 2026-10-08 | Wait for window refresh and selected-window actions | #incident #testing #gui | [2026-10](2026-10.md) |
 | U-20261008-11 | 2026-10-08 | Await asynchronous cleanup and verify Android Docker capture | #incident #testing #mobile | [2026-10](2026-10.md) |
@@ -403,7 +404,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | File | Period | Entries |
 |---|---|---:|
-| [2026-10.md](2026-10.md) | 2026-10 | 67 |
+| [2026-10.md](2026-10.md) | 2026-10 | 68 |
 | [2026-09-e.md](2026-09-e.md) | 2026-09 | 7 |
 | [2026-09-d.md](2026-09-d.md) | 2026-09 | 55 |
 | [2026-09-c.md](2026-09-c.md) | 2026-09 | 38 |

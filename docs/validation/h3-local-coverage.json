@@ -1,0 +1,16 @@
+{
+  "source_commit": "a296b8d30f461ab14dcd96fc27fd63345754c0e1",
+  "platform": "Windows-11-10.0.26300-SP0",
+  "python": "3.14.4",
+  "passed": 11485,
+  "skipped": 46,
+  "seconds": 559.17,
+  "coverage_percent": 87.0,
+  "coverage_floor": 81,
+  "covered": 70452,
+  "total": 80977,
+  "artifact_sha256": {
+    "ac-h3-release-coverage.log": "17e3608611d0602878cb4eb5918c4a8f5c41a40b9c27168aa0b3142720d7799a",
+    "ac-h3-release-coverage.xml": "7813a1a2bda483eac00a5ec77c80c895220dd04f69219c4f772be39e1ca00dae"
+  }
+}

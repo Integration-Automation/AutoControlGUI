@@ -2,21 +2,14 @@
 
 ## 跨平台與 GUI 全面改版
 
-`WIP` — 重設 UI、重寫並優化 GUI、修正 Wayland 與函式庫問題、
-深化全套 mypy、補齊 iOS／Android、MCP 逐步揭露、
-完整範例與文件。涉及 `gui/`、`linux_wayland/`、`android/`、`ios/`、
-`utils/{mcp_server,executor}/` 與型別／文件驗證。
+`WIP` — 接續 H3 的完整 coverage／跨平台 CI，以及原生與正式下游整合驗收。
 核准設計：[跨平台自動化與 GUI 改版](docs/superpowers/specs/2026-10-02-platform-gui-modernization-design.md)。
-實作計畫：[分階段交付計畫](docs/superpowers/plans/2026-10-02-modernization-index.md)，已核准，依序實作。
-現有 `[Answer]` 決策沿用；後續交付包含 E–H 與完整整合驗收。
-從 H3 接續原有計畫；不額外新增付費型功能。既有 API 介面及相關修正繼續，
-目前以本機／離線測試驗證；缺少真實 API 條件的既有項目保留待驗證。
+實作計畫：[分階段交付計畫](docs/superpowers/plans/2026-10-02-modernization-index.md)。
+現有 `[Answer]` 決策沿用；不額外新增付費型功能，缺少真實 API 條件的既有項目保留待驗證。
 正向實體裝置擷取、GNOME/KDE 授權與鍵態恢復仍列 H3；
 歷史 Qt 原生崩潰的後續追蹤仍保留在下列驗收項目。
 WDA 專用 endpoint、外部 client／別名競態、未知建立回覆及 SDK 擷取後的
 App session 接續／恢復仍列 H3；受控閒置檢查不能冒充原生互斥證據。
-H3 的完整 coverage／跨平台 CI 驗收正在執行；原生及正式下游整合仍保留。
-唯讀下游三支測試已重現 slash 遷移需求，正式 editable 安裝未變更。
 H3 仍需自有錄製的原生輸出內容、實體鍵態恢復及外部輸入 client 競態證據；
 受控 GUI 所有權、重試、container 關閉與 widget 刪除不代表實體恢復或有效錄影。
 

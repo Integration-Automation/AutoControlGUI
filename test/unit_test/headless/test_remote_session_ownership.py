@@ -1,5 +1,6 @@
 """Owned remote connections never replace or disconnect unrelated resources."""
 import importlib
+import time
 
 import pytest
 
@@ -173,6 +174,15 @@ def test_lifecycle_notifications_are_owner_scoped(directory):
 _APPLICATION = None
 
 
+def _wait_for(predicate):
+    deadline = time.monotonic() + 5
+    while not predicate() and time.monotonic() < deadline:
+        if _APPLICATION is not None:
+            _APPLICATION.processEvents()
+        time.sleep(.005)
+    assert predicate()
+
+
 @pytest.fixture
 def panels(directory, monkeypatch, tmp_path):
     global _APPLICATION
@@ -204,6 +214,7 @@ def test_actual_panels_keep_connections_independent(directory, panels):
     right._connect()
     second = directory.session_resource(right._session_id, owner=right._session_owner)
     left._disconnect()
+    _wait_for(lambda: first.closed == 1)
     assert first.closed == 1
     assert second.connected and second.closed == 0
     right._send({'action': 'ping'})
@@ -584,11 +595,15 @@ def test_panel_disposal_cleans_other_roles_after_one_failure(directory, panels):
     second = controller.reserve('tcp', 'viewer')
     viewer = Viewer()
     controller.attach(viewer, 'viewer')
-    controller.dispose()
-    assert directory.get_session(first.id).state == 'failed'
-    assert directory.get_session(second.id).state == 'closed' and viewer.closed == 1
-    failing.stop = lambda timeout=2.0: None
-    directory.disconnect_session(first.id)
+    try:
+        controller.dispose()
+        _wait_for(lambda: all(directory.get_session(identifier).state in ('failed', 'closed')
+                             for identifier in (first.id, second.id)))
+        assert directory.get_session(first.id).state == 'failed'
+        assert directory.get_session(second.id).state == 'closed' and viewer.closed == 1
+    finally:
+        failing.stop = lambda timeout=2.0: None
+        directory.disconnect_session(first.id)
 
 
 def test_webrtc_disposal_stops_owned_background_resources(webrtc_panels):

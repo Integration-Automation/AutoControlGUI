@@ -83,6 +83,19 @@ and close completion. The same selected-window assertion remains; 46 related
 cases pass with one optional skip, and thirty repeated selected-window checks pass.
 Package code is unchanged by these two test timing corrections.
 
+The fourth quality run at `a296b8d3` passes fourteen coverage jobs and all other
+applicable gates. Linux 3.12 exposes one more immediate owned-disposal assertion
+(`closing` versus `failed`). The test now waits for both roles to reach terminal
+states before its unchanged assertions; the adjacent independent-panel test also
+waits for its own fake resource cleanup. All 52 related cases pass, and both cases
+pass thirty repeated runs. Registry revocation/generation checks remain immediate.
+
+The full local run at `a296b8d3` passes **11,485 cases with 46 skips** in 559.17
+seconds on Windows 11/Python 3.14.4, with **87.00% coverage** and the unchanged
+**81% floor**. The [local report](validation/h3-local-coverage.json) retains source
+and artifact hashes. This run includes the corrected viewer and earlier test
+waits; only test terminal waits change afterward, with no package-code change.
+
 The release wheel after the viewer correction passes the same isolated import
 and generated-code compilation checks. All 1,200 packaged Python/type files match
 the current source. Its SHA256 is
