@@ -9,6 +9,7 @@ AutoControl 所有功能的完整使用指南。
    :caption: 使用者指南
 
    doc/installation/installation_doc
+   doc/mobile/mobile_doc
    doc/mouse/mouse_doc
    doc/keyboard/keyboard_doc
    doc/screen/screen_doc

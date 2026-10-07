@@ -27,6 +27,8 @@ keeps each worker alive until the GUI thread has seen its thread end.
 import atexit
 import threading
 import time
+import weakref
+from types import MethodType
 from typing import Any, Callable, Dict, Optional
 
 from PySide6.QtCore import QObject, Signal
@@ -120,9 +122,9 @@ class _Relay(QObject):
                  on_thread_done: Callable[[], None],
                  on_fail: Optional[Callable[[str], None]]) -> None:
         super().__init__(parent)
-        self._on_done = on_done
-        self._on_thread_done = on_thread_done
-        self._on_fail = on_fail
+        self._on_done = _owner_callback(parent, on_done)
+        self._on_thread_done = _owner_callback(parent, on_thread_done)
+        self._on_fail = _owner_callback(parent, on_fail) if on_fail is not None else None
         self.thread_ended.connect(self.thread_done)
         self.crashed.connect(self.fail)
 
@@ -139,6 +141,18 @@ class _Relay(QObject):
         """Forward the thread's end (runs on the GUI thread), then go away."""
         self._on_thread_done()
         self.deleteLater()
+
+
+def _owner_callback(owner: QObject, callback: Callable[..., Any]) -> Callable[..., Any]:
+    """Avoid retaining the Qt parent through a relay's bound Python callbacks."""
+    if not isinstance(callback, MethodType) or callback.__self__ is not owner:
+        return callback
+    reference = weakref.WeakMethod(callback)
+
+    def invoke(*args: Any) -> Any:
+        method = reference()
+        return method(*args) if method is not None else None
+    return invoke
 
 
 def _stop_running_workers() -> None:

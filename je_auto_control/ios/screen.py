@@ -4,13 +4,15 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Optional, Tuple
 
+from je_auto_control.wrapper._mobile_binding import resolve_client
+
 from je_auto_control.ios.client import IOSDevice, default_ios_device, translate_device_errors
 
 
 @translate_device_errors
 def screen_size(*, device: Optional[IOSDevice] = None) -> Tuple[int, int]:
     """Return the device's current pixel size as ``(width, height)``."""
-    handle = (device or default_ios_device()).handle
+    handle = (resolve_client('ios', 'wda', device) or default_ios_device()).handle
     size = handle.window_size()
     if isinstance(size, dict):
         return int(size["width"]), int(size["height"])
@@ -21,7 +23,7 @@ def screen_size(*, device: Optional[IOSDevice] = None) -> Tuple[int, int]:
 def screenshot(file_path: Optional[str] = None,
                *, device: Optional[IOSDevice] = None) -> Optional[str]:
     """Capture the device screen; writes PNG to ``file_path`` when given."""
-    handle = (device or default_ios_device()).handle
+    handle = (resolve_client('ios', 'wda', device) or default_ios_device()).handle
     if file_path is None:
         return None
     target = Path(file_path)

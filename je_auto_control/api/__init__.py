@@ -28,6 +28,9 @@ from je_auto_control.api.healing import (
     create_template_candidate, evaluate_locators, healing_context, preview_template_candidate,
     revert_template_revision, validate_template_candidate,
 )
+from je_auto_control.api.mobile import (
+    DeviceContext, DeviceSession, DeviceSessionError, open_device, probe_device_contexts,
+)
 from je_auto_control.api.core import (
     FailureBundleOptions,
     create_failure_bundle,
@@ -57,6 +60,7 @@ from je_auto_control.utils.config_sync.asset_service import config_sync_assets
 
 
 __all__ = [
+    'DeviceContext', 'DeviceSession', 'DeviceSessionError', 'open_device', 'probe_device_contexts',
     'InputDevice', 'InputEvent', 'PhysicalRecorder', 'RecordingUnavailable', 'ShortcutUnavailable',
     'StopShortcutSession', 'WaylandInputSession', 'start_physical_recording', 'stop_physical_recording',
     'start_wayland_stop_shortcut', 'stop_wayland_stop_shortcut', 'wayland_input_status',

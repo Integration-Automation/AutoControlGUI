@@ -16,12 +16,24 @@ without a compatibility window.
 | REST, MCP, scheduler | beta | CI | CI | CI | platform-neutral |
 | Remote desktop / WebRTC | beta | tests | tests | tests | tests |
 | Android and iOS bridges | experimental | mocked CI | mocked CI | mocked CI | mocked CI |
+| Frozen mobile contexts / owned matrix / passive probe | beta | controlled SDK tests | controlled SDK tests | controlled SDK tests | controlled SDK tests |
 | LLM/VLM agents | experimental | fake-backend CI | fake-backend CI | fake-backend CI | fake-backend CI |
 | USB passthrough | experimental | hardware-unverified | backend tests | backend tests | hardware-unverified |
 
 “Implementation” means code exists but the repository does not currently run a
 real OS runner for it. It must not be interpreted as a production guarantee.
 Hardware-backed results and known limitations should be attached to releases.
+
+Mobile context evidence uses fake SDK/transports and offscreen Qt: parallel default
+isolation, owned ADB argv/timeouts, cancellation during construction/request,
+rejected late completion, owner-only helper cleanup and matching probe surfaces.
+Passive probes inspect dependencies without SDK loading, device scanning or input;
+dependency discovery is not device connectivity/authorization. `connected` means
+logical lifetime. Remote probes require MANAGE_HOSTS. Matrix duplicate detection
+compares configured targets, not physical identities hidden behind endpoint aliases.
+Real Android/emulator and remote-WDA reachability, authorization, SDK bootstrap
+total deadlines and recovery remain H3 acceptance cases in Progress.md. Unicode,
+gestures, frames and app lifecycle continue through E2–E4.
 
 Linux Wayland is split: **capture is exercised by CI against a real
 compositor; input is exercised by CI against a real EI peer and a real portal.**

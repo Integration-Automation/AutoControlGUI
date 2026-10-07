@@ -17,10 +17,12 @@ Setup outside this module:
 from __future__ import annotations
 
 import functools
-import threading
 from typing import Any, Callable, Optional, TypeVar
 
 from je_auto_control.utils.exception.exceptions import AutoControlException
+from je_auto_control.wrapper._mobile_client_owner import LazyMobileHandle
+from je_auto_control.wrapper._mobile_binding import bound_device
+from je_auto_control.wrapper._mobile_sdk import ios_handle
 
 
 class IOSUnavailableError(AutoControlException, RuntimeError):
@@ -38,13 +40,16 @@ class IOSDevice:
     DEFAULT_URL = "http://localhost:8100"
 
     def __init__(self, url: Optional[str] = None,
-                 handle: Optional[Any] = None) -> None:
+                 handle: Optional[Any] = None, *, timeout_s: Optional[float] = None,
+                 _guard: Optional[Callable[[], None]] = None) -> None:
         self._url = url or self.DEFAULT_URL
-        self._handle = handle
-        self._lock = threading.Lock()
+        self._timeout_s = timeout_s
+        self._guard = _guard
+        self._owner = LazyMobileHandle(handle, _guard, None)
 
     @property
     def url(self) -> str:
+        """The configured WDA endpoint; does not connect to the device."""
         return self._url
 
     @property
@@ -53,32 +58,35 @@ class IOSDevice:
         return self._resolve_handle()
 
     def _resolve_handle(self) -> Any:
-        with self._lock:
-            if self._handle is not None:
-                return self._handle
-            try:
-                import wda
-            except ImportError as error:
-                raise IOSUnavailableError(
-                    "facebook-wda not installed. "
-                    "`pip install facebook-wda` and run WebDriverAgent "
-                    "on the target device (see the Facebook WDA "
-                    "project README).",
-                ) from error
-            try:
-                self._handle = wda.Client(self._url)
-            except (OSError, RuntimeError, ValueError, *_sdk_errors()) as error:
-                raise IOSUnavailableError(
-                    f"could not reach WebDriverAgent at {self._url}: {error}",
-                ) from error
-            return self._handle
+        return self._owner.get(self._connect_handle)
+
+    def _connect_handle(self) -> Any:
+        try:
+            import wda
+        except ImportError as error:
+            raise IOSUnavailableError(
+                "facebook-wda not installed. `pip install facebook-wda` and run WebDriverAgent on the target device.",
+            ) from error
+        try:
+            if self._guard is None:
+                return wda.Client(self._url)
+            return ios_handle(wda, self._url, self._timeout_s or 10, self._guard)
+        except (OSError, RuntimeError, ValueError, *_sdk_errors()) as error:
+            raise IOSUnavailableError(f"could not reach WebDriverAgent at {self._url}: {error}") from error
+
+    def close(self) -> None:
+        """Close this logical client without deleting an unrelated WDA app session."""
+        self._owner.close()
 
 
 _DEFAULT_DEVICE: Optional[IOSDevice] = None
 
 
 def default_ios_device() -> IOSDevice:
-    """Process-wide default :class:`IOSDevice` (lazy-built)."""
+    """Current explicit binding, or the compatible lazy process default."""
+    session = bound_device('ios')
+    if session is not None:
+        return session.adapter('wda')
     global _DEFAULT_DEVICE
     if _DEFAULT_DEVICE is None:
         _DEFAULT_DEVICE = IOSDevice()

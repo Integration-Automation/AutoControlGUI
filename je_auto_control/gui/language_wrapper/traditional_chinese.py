@@ -2,6 +2,8 @@ _TOKEN_LABEL_ZH = "Token："
 _BROWSE = "瀏覽..."  # NOSONAR python:S1192 — shared button label
 
 traditional_chinese_word_dict = {
+    'dm_probe': '查詢行動裝置依賴',
+    'dm_running': '正在執行裝置矩陣…',
     'sync_assets': '接收並驗證資產',
     'sync_asset_manifest': '資產清單（JSON）',
     'sync_asset_source': '資產來源目錄',

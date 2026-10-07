@@ -9,6 +9,7 @@ Comprehensive guides for all AutoControl features.
    :caption: User Guide
 
    doc/installation/installation_doc
+   doc/mobile/mobile_doc
    doc/mouse/mouse_doc
    doc/keyboard/keyboard_doc
    doc/screen/screen_doc

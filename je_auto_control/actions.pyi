@@ -2183,6 +2183,9 @@ def AC_preview_template_candidate(store_path: str, revision_id: str) -> Dict[str
 def AC_probe_capabilities() -> Dict[str, object]:
     """Return passive backend input/capture evidence without requesting consent."""
 
+def AC_probe_mobile_devices(devices: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """Return passive dependency metadata without connecting or sending device input."""
+
 def AC_profile_rows(rows: Any, columns: Any = ...) -> Dict[str, Any]:
     """Adapter: profile a row-set into per-column statistics."""
 

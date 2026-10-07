@@ -3,6 +3,7 @@
 Thin wrapper over :func:`je_auto_control.run_on_devices`.
 """
 import json
+from functools import partial
 from typing import Optional
 
 from PySide6.QtCore import Qt
@@ -12,6 +13,8 @@ from PySide6.QtWidgets import (
 )
 
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
+from je_auto_control.gui._worker_thread import CallWorker, WorkerHandle, start_worker
+from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.gui.language_wrapper.multi_language_wrapper import (
     language_wrapper,
 )
@@ -47,6 +50,9 @@ class DeviceMatrixTab(TranslatableMixin, QWidget):
         self._table.setEditTriggers(QAbstractItemView.NoEditTriggers)
         self._table.horizontalHeader().setStretchLastSection(True)
         self._summary = QLabel()
+        self._metadata = QPlainTextEdit()
+        self._metadata.setReadOnly(True)
+        self._worker: Optional[WorkerHandle] = None
         self._apply_headers()
         self._build_layout()
 
@@ -72,24 +78,47 @@ class DeviceMatrixTab(TranslatableMixin, QWidget):
         root.addLayout(row)
         root.addWidget(self._table, stretch=1)
         root.addWidget(self._summary)
+        root.addWidget(self._metadata)
 
     def menu_actions(self) -> list:
         """Expose tab commands to the window-level Actions menu."""
         return [
             ("dm_run", self._on_run),
+            ("dm_probe", self._on_probe),
         ]
 
     def _on_run(self) -> None:
+        if self._worker is not None:
+            return
         try:
             devices = json.loads(self._devices.toPlainText() or "[]")
             actions = json.loads(self._actions.toPlainText() or "[]")
-            report = ac.run_on_devices(
-                actions, devices, max_parallel=self._parallel.value(),
-            )
-        except (ValueError, RuntimeError) as error:
-            self._summary.setText(_t("dm_error").replace("{error}", str(error)))
+            parallel = self._parallel.value()
+        except ValueError as error:
+            self._failed(str(error))
             return
+        self._summary.setText(_t('dm_running'))
+        worker = CallWorker(partial(ac.run_on_devices, actions, devices, max_parallel=parallel))
+        self._worker = start_worker(self, worker, on_done=self._completed,
+                                    on_thread_done=self._thread_done, on_fail=self._failed)
+
+    def _completed(self, report: ac.MatrixReport) -> None:
         self._render(report.to_dict())
+
+    def _thread_done(self) -> None:
+        self._worker = None
+
+    def _failed(self, message: str) -> None:
+        self._summary.setText(_t('dm_error').replace('{error}', message))
+
+    def _on_probe(self) -> None:
+        try:
+            devices = json.loads(self._devices.toPlainText() or '[]')
+            metadata = ac.probe_device_contexts(devices)
+        except (AutoControlException, ValueError) as error:
+            self._failed(str(error))
+            return
+        self._metadata.setPlainText(json.dumps(metadata, ensure_ascii=False, indent=2))
 
     def _render(self, report: dict) -> None:
         results = report["results"]

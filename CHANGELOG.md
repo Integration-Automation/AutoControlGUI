@@ -15,6 +15,16 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Fixed
 
+- Mobile matrix workers now bind independent frozen contexts, so implicit mobile
+  commands target their own serial/WDA endpoint. Duplicate configured targets,
+  foreign explicit clients and mismatched overrides fail before their input.
+  Outside bindings, existing defaults remain compatible. Beta `api.mobile` and
+  facade mirrors provide lazy sessions, per-request deadlines, cancellation and
+  owned Android helper cleanup. Root WDA close preserves borrowed app sessions.
+  AC/MCP/Builder and Device Matrix add passive dependency probing; matrix runs
+  in a background worker. Its relay uses weak owner callbacks to prevent a
+  reproduced parentless matrix widget crash during deferred Qt cleanup.
+
 - Docker native CI adds an explicit D3 scope, installed-wheel/kernel virtual-source
   exclusion in seat/uinput images, bounded verification and retained failure logs.
   Image builders include the standalone pytest entry point; execution evidence is

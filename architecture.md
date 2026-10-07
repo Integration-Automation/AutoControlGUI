@@ -20,6 +20,7 @@ entry points → execution core (`utils/executor/`) → headless capabilities (`
 | --- | --- |
 | `je_auto_control/__init__.py` | Facade: re-exports the public API and lists it in `__all__`. Must import without PySide6. |
 | `je_auto_control/api/` | Versioned headless facade (`core.py`) and Beta structured journals (`journal.py`); the supported entry for new integrations per `docs/API_LIFECYCLE.md`. |
+| `wrapper/device_context.py` | Lazy mobile sessions with frozen identities, owned backend adapters, cancellation and passive metadata; Beta `api/mobile.py` mirrors the public models/services. |
 | `je_auto_control/cli.py`, `__main__.py` | Main CLI and legacy argparse entry point; both exit 1 for recorded action failures. |
 | `je_auto_control/utils/executor/` | Execution core with ContextVar public-run scopes and copied parallel/DAG variables: `Executor.event_dict` (`AC_*` name → callable) in `action_executor.py`, block commands in `flow_control.py`, validation in `action_schema.py`. |
 | `je_auto_control/utils/` | Headless capability layer, one subpackage per feature, zero Qt imports. Grouped by theme in `architecture_explore.md` §5.4. |
@@ -378,3 +379,16 @@ uinput and sway/libinput seat images. It independently checks kernel identity,
 installed-wheel origin, pre-open exclusion and recorder cleanup, without opening
 physical input devices. Docker CI supports a manual D3 native scope and retains
 seat/uinput failure output alongside existing EIS/portal/compositor artifacts.
+
+Mobile ownership: wrapper/_mobile_models.py freezes identities/configuration and
+validates bounded request timeouts; _mobile_binding.py provides a ContextVar and
+minimal Protocol without importing SDK clients. device_context.py owns lazy ADB,
+uiautomator2 and WDA adapters. _mobile_client_owner.py uses separate lifecycle
+and connection locks, revokes waiters and disposes constructors that finish late.
+_mobile_sdk.py guards retained public SDK operations and native request boundaries,
+unregistering only this client's Android exit callback and reclaiming only its
+started helper. _mobile_adb.py preserves the existing argv-only bounded transport.
+Matrix snapshots specs before fan-out and binds each worker's frozen owner.
+The Beta mobile API/facade and AC/MCP/Builder/GUI probe share passive metadata;
+Device Matrix uses CallWorker, whose relay holds owner-bound callbacks weakly.
+SDK bootstrap/retry total deadlines and actual-device recovery remain H3 cases.

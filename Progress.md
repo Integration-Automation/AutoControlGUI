@@ -9,7 +9,7 @@
 核准設計：[跨平台自動化與 GUI 改版](docs/superpowers/specs/2026-10-02-platform-gui-modernization-design.md)。
 實作計畫：[分階段交付計畫](docs/superpowers/plans/2026-10-02-modernization-index.md)，已核准，依序實作。
 現有 `[Answer]` 決策沿用；後續交付包含 E–H 與完整整合驗收。
-從 E1 接續原有計畫；不額外新增付費型功能。既有 API 介面及相關修正繼續，
+從 E2 接續原有計畫；不額外新增付費型功能。既有 API 介面及相關修正繼續，
 目前以本機／離線測試驗證；缺少真實 API 條件的既有項目保留待驗證。
 正向實體裝置擷取、GNOME/KDE 授權與鍵態恢復仍列 H3；
 歷史 Qt 原生崩潰的後續追蹤仍保留在下列驗收項目。
@@ -164,6 +164,16 @@ Anthropic 每一步送約 202 KB 的工具 schema、沒有 `cache_control`。拍
 
 ---
 
+## 行動裝置原生所有權與恢復驗收
+
+`TODO` — E1 的 frozen context、matrix 隔離、被動 metadata、逐請求逾時與取消已建立；
+H3 仍需 Android emulator／實機及 remote WDA 驗證裝置可達性、授權失敗、
+SDK bootstrap／retry 的整體截止時間，以及取消後實體狀態和自有 helper 回收。
+不同 endpoint alias 是否指向同一實機不能由配置字串判定。保存 SDK／ADB／WDA
+版本、平台與執行證據；fake SDK、受控 ADB argv 及 offscreen Qt 不代替原生驗收。
+
+---
+
 
 ## Agent 付費 API 多回合驗證
 
@@ -188,14 +198,16 @@ Anthropic 每一步送約 202 KB 的工具 schema、沒有 `cache_control`。拍
 ## `test_usb_acl_prompt.py` 讓 Python 3.10 的 headless 測試間歇 segfault
 
 `WIP` — `test/unit_test/headless/test_usb_acl_prompt.py::test_bridge_remember_persists_acl_rule`
-在 Linux／macOS Python 3.10 間歇 SIGSEGV。需在原生目標取得 gdb／lldb backtrace，
-Qt 翻譯表造成背景 GC 銷毀 GUI owner 的缺陷已重現並修正；仍需用原生
-回歸驗證歷史崩潰是否收斂，並取得任何再現的 gdb／lldb 堆疊。
+在 Linux／macOS Python 3.10 曾間歇 SIGSEGV。Qt 翻譯表背景 GC owner 缺陷已修正，
+九個平台 pytest／coverage 目標已通過；這尚不能證明所有歷史 fault 的精確成因。
+H3 仍需原生重複／壓力回歸追蹤收斂，任何再現須保存 gdb／lldb 堆疊。
 既有 faulthandler 證據見
 `docs/updates/2026-10.md` U-20261007-03，不能以 Windows／較新 Python 的通過取代。
 本次原生 CI 另在 Linux Python 3.14 的 `test_rd_gui_audit.py` teardown／
 `QApplication.allWidgets()` 捕獲 Qt/shiboken crash；需一併定位 GUI cleanup lifecycle，
 不能將 debugger 捕獲測試 SIGINT 當作這些崩潰的重現。
+E1 另修正有獨立 subprocess 重現的 matrix owner／relay deferred cleanup abort；
+此特定回歸通過，也不能直接推論是所有歷史 Qt fault 的原因。
 
 ---
 
@@ -204,4 +216,4 @@ Qt 翻譯表造成背景 GC 銷毀 GUI owner 的缺陷已重現並修正；仍�
 `WIP` — H3 尚缺 Windows arm64 runner 的影像替代 backend 執行證據；已加入 platform smoke。
 D1 的桌面授權／撤銷／XWayland scope 仍只有替身及 offscreen Qt 證據；
 GNOME/KDE 的允許／拒絕、合成器重啟、裝置 pause/remove、helper crash 後
-實體按鍵狀態恢復，以及 restore-token 替代接口仍需 D3/H3 原生驗收。
+實體按鍵狀態恢復，以及 restore-token 替代接口仍需 H3 原生驗收。

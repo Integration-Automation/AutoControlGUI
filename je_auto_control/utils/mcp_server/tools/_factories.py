@@ -6,6 +6,7 @@ owns the JSON Schemas, descriptions, and annotation choices that the
 MCP client surfaces to the model.
 """
 from typing import List
+from je_auto_control.wrapper.device_context import probe_device_contexts
 from je_auto_control.utils.mcp_server.tools._factories_wayland_input import wayland_input_tools
 from je_auto_control.utils.mcp_server.tools._factories_capabilities import capability_tools
 from je_auto_control.utils.mcp_server.tools._factories_signing import signing_tools
@@ -8928,9 +8929,16 @@ def a11y_audit_tools() -> List[MCPTool]:
 def device_matrix_tools() -> List[MCPTool]:
     return [
         MCPTool(
+            name='ac_probe_mobile_devices',
+            description='Passively inspect configured mobile SDK dependencies; no connection or device input.',
+            input_schema=schema({'devices': {'type': 'array', 'items': {'type': 'object'}}}, required=['devices']),
+            handler=probe_device_contexts,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
             name="ac_run_device_matrix",
             description=("Run one AC_* action list across many mobile devices "
-                         "in parallel (each on an isolated executor). Each "
+                         "in parallel (each on an isolated executor and frozen device context). Each "
                          "device spec (platform + serial/url) is bound to "
                          "${device.*} so the script targets the current "
                          "device. Returns per-device pass/fail."),

@@ -65,6 +65,9 @@ _BOXES_JSON_PLACEHOLDER = '[{"role":"button","x":0,"y":0}]'
 
 def _build_specs() -> List[CommandSpec]:
     specs: List[CommandSpec] = []
+    specs.append(CommandSpec('AC_probe_mobile_devices', 'Mobile', 'Inspect configured mobile dependencies', fields=(
+        FieldSpec('devices', FieldType.JSON, placeholder='[{"platform":"android","serial":"emulator-5554"}]'),
+    )))
     specs.extend([
         CommandSpec('AC_start_physical_recording', 'Wayland', 'Start raw physical recording', fields=(
             FieldSpec('devices', FieldType.JSON, placeholder='["/dev/input/event0"]'),

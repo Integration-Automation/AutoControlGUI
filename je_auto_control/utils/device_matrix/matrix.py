@@ -26,6 +26,7 @@ from dataclasses import asdict, dataclass, field
 from typing import Any, Dict, List, Optional
 
 from je_auto_control.utils.exception.exceptions import AutoControlException
+from je_auto_control.wrapper.device_context import DeviceContext, DeviceSessionError, open_device
 
 
 @dataclass
@@ -75,7 +76,21 @@ class MatrixReport:
 
 
 def _device_id(device: Dict[str, Any], index: int) -> str:
-    return str(device.get("serial") or device.get("url") or f"device-{index}")
+    return str(device.get("device_id") or device.get("serial") or device.get("url")
+               or device.get("target") or f"device-{index}")
+
+
+def _reject_duplicate_targets(devices: List[Dict[str, Any]]) -> None:
+    targets = set()
+    for index, device in enumerate(devices):
+        try:
+            context = DeviceContext.from_spec(device, index=index)
+        except DeviceSessionError:
+            continue  # Invalid endpoints remain per-device failures in the legacy report contract.
+        key = (context.platform, context.target.rstrip('/'))
+        if key in targets:
+            raise DeviceSessionError('duplicate device target; matrix workers must own distinct devices')
+        targets.add(key)
 
 
 def _run_one_device(actions: List[Any], device: Dict[str, Any],
@@ -89,8 +104,10 @@ def _run_one_device(actions: List[Any], device: Dict[str, Any],
     started = time.monotonic()
     try:
         from je_auto_control.utils.script_vars.scope import execution_scope
-        with execution_scope({var_name: device}, isolated=True):
-            runner.execute_action(actions, raise_on_error=True)
+        context = DeviceContext.from_spec(device, index=index)
+        with open_device(context) as session:
+            with session.bind(), execution_scope({var_name: device}, isolated=True):
+                runner.execute_action(actions, raise_on_error=True)
         return DeviceResult(device_id, platform, True,
                             time.monotonic() - started)
     # The executor's own containment set: an ImageNotFoundException or a
@@ -122,6 +139,8 @@ def run_on_devices(actions: List[Any],
         # after earlier devices had run, and their results were lost.
         raise ValueError(f"device specs must be objects; not at index {bad}")
     workers = max(1, min(int(max_parallel), len(devices)))
+    devices = [dict(device) for device in devices]
+    _reject_duplicate_targets(devices)
     report = MatrixReport()
     with ThreadPoolExecutor(max_workers=workers) as pool:
         futures = [

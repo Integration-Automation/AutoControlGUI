@@ -1100,6 +1100,12 @@ def _run_device_matrix(actions: List[Any], devices: List[Dict[str, Any]],
     ).to_dict()
 
 
+def _probe_mobile_devices(devices: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """Return passive dependency metadata without connecting or sending device input."""
+    from je_auto_control.wrapper.device_context import probe_device_contexts
+    return probe_device_contexts(devices)
+
+
 def _assert_audio(duration_s: float = 1.0,
                   threshold: float = 0.01,
                   expect_sound: bool = True,
@@ -1674,6 +1680,10 @@ _android_client_cache: Dict[Tuple[Optional[str], Optional[str]], Any] = {}
 def _android_client(serial: Optional[str] = None,
                     adb_path: Optional[str] = None) -> Any:
     """Build (or return) a cached :class:`AdbClient` for ``serial``."""
+    from je_auto_control.wrapper.device_context import bound_adapter
+    owned = bound_adapter('android', 'adb', serial, adb_path)
+    if owned is not None:
+        return owned
     key = (serial, adb_path)
     cached = _android_client_cache.get(key)
     if cached is not None:
@@ -1751,9 +1761,9 @@ def _ac_android_find_element(text: Optional[str] = None,
                               ) -> Dict[str, int]:
     """Find an Android widget via uiautomator2; return its bounding rect."""
     from je_auto_control.android import (
-        UIAutomatorDevice, find_element,
+        find_element,
     )
-    device = UIAutomatorDevice(serial=serial)
+    device = _android_ui_device(serial)
     x1, y1, x2, y2 = find_element(
         text=text, resource_id=resource_id, description=description,
         class_name=class_name, timeout_s=float(timeout_s), device=device,
@@ -1770,9 +1780,9 @@ def _ac_android_click_element(text: Optional[str] = None,
                                ) -> Dict[str, int]:
     """Tap the first widget matching the selectors; return click centre."""
     from je_auto_control.android import (
-        UIAutomatorDevice, click_element,
+        click_element,
     )
-    device = UIAutomatorDevice(serial=serial)
+    device = _android_ui_device(serial)
     cx, cy = click_element(
         text=text, resource_id=resource_id, description=description,
         class_name=class_name, timeout_s=float(timeout_s), device=device,
@@ -1782,16 +1792,25 @@ def _ac_android_click_element(text: Optional[str] = None,
 
 def _ac_android_dump_hierarchy(serial: Optional[str] = None) -> str:
     """Return the device's widget tree as an XML string."""
-    from je_auto_control.android import UIAutomatorDevice, dump_hierarchy
-    device = UIAutomatorDevice(serial=serial)
+    from je_auto_control.android import dump_hierarchy
+    device = _android_ui_device(serial)
     return dump_hierarchy(device=device)
 
 
 # === iOS executor adapters (WebDriverAgent / facebook-wda) ==================
 
+def _android_ui_device(serial: Optional[str]) -> Any:
+    from je_auto_control.android import UIAutomatorDevice
+    from je_auto_control.wrapper.device_context import bound_adapter
+    owned = bound_adapter('android', 'uiautomator2', serial)
+    return owned if owned is not None else UIAutomatorDevice(serial=serial)
+
+
 def _ios_device(url: Optional[str]) -> Any:
     from je_auto_control.ios import IOSDevice
-    return IOSDevice(url=url)
+    from je_auto_control.wrapper.device_context import bound_adapter
+    owned = bound_adapter('ios', 'wda', url)
+    return owned if owned is not None else IOSDevice(url=url)
 
 
 def _ac_ios_tap(x: int, y: int, url: Optional[str] = None) -> Dict[str, int]:
@@ -7867,6 +7886,7 @@ class Executor:
 
             # Mobile device matrix (parallel script across devices)
             "AC_run_device_matrix": _run_device_matrix,
+            "AC_probe_mobile_devices": _probe_mobile_devices,
 
             # Media assertions (audio activity, video motion)
             "AC_assert_audio": _assert_audio,

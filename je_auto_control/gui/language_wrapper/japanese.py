@@ -11,6 +11,8 @@ _BROWSE = "参照..."  # NOSONAR python:S1192 — shared button label
 _LOCATE_CLICK = "検索してクリック"  # NOSONAR python:S1192
 
 japanese_word_dict = {
+    'dm_probe': 'モバイル依存関係を確認',
+    'dm_running': 'デバイスマトリックスを実行中…',
     'sync_assets': 'アセットを検証して受信',
     'sync_asset_manifest': 'アセット一覧（JSON）',
     'sync_asset_source': 'アセット元フォルダ',

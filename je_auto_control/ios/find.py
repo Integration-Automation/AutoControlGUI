@@ -9,6 +9,8 @@ from __future__ import annotations
 
 from typing import Any, Dict, Optional, Tuple
 
+from je_auto_control.wrapper._mobile_binding import resolve_client
+
 from je_auto_control.ios.client import IOSDevice, default_ios_device, translate_device_errors
 from je_auto_control.utils.exception.exceptions import AutoControlException
 
@@ -44,7 +46,7 @@ def find_element(name: Optional[str] = None,
                  device: Optional[IOSDevice] = None,
                  ) -> Tuple[int, int, int, int]:
     """Return the matched element's bounding rect ``(x1, y1, x2, y2)``."""
-    handle = (device or default_ios_device()).handle
+    handle = (resolve_client('ios', 'wda', device) or default_ios_device()).handle
     query = _build_query(handle, name, class_name, predicate)
     element = query.wait(timeout=float(timeout_s))
     if not element:
@@ -77,7 +79,7 @@ def click_element(name: Optional[str] = None,
     )
     cx = (bounds[0] + bounds[2]) // 2
     cy = (bounds[1] + bounds[3]) // 2
-    handle = (device or default_ios_device()).handle
+    handle = (resolve_client('ios', 'wda', device) or default_ios_device()).handle
     handle.tap(int(cx), int(cy))
     return (int(cx), int(cy))
 
@@ -85,7 +87,7 @@ def click_element(name: Optional[str] = None,
 @translate_device_errors
 def dump_source(*, device: Optional[IOSDevice] = None) -> str:
     """Return the page source (XCUITest XML tree) as a string."""
-    handle = (device or default_ios_device()).handle
+    handle = (resolve_client('ios', 'wda', device) or default_ios_device()).handle
     return str(handle.source())
 
 

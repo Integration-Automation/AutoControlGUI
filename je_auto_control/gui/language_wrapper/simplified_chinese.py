@@ -2,6 +2,8 @@ _BROWSE = "浏览..."  # NOSONAR python:S1192 — shared button label
 _LOCATE_CLICK = "定位并点击"  # NOSONAR python:S1192
 
 simplified_chinese_word_dict = {
+    'dm_probe': '查询移动设备依赖',
+    'dm_running': '正在运行设备矩阵…',
     'sync_assets': '接收并验证资产',
     'sync_asset_manifest': '资产清单（JSON）',
     'sync_asset_source': '资产来源目录',

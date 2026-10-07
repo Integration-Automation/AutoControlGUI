@@ -58,6 +58,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261007-16 | 2026-10-07 | Own mobile contexts and isolate matrix helpers | #done #mobile #gui #modernization | [2026-10](2026-10.md) |
 | U-20261007-15 | 2026-10-07 | Complete D3 native Docker verification and corrected platform regressions | #done #wayland #testing #modernization | [2026-10](2026-10.md) |
 | U-20261007-14 | 2026-10-07 | Validate typed portal revocation and preserve native failure artifacts | #incident #wayland #testing #modernization | [2026-10](2026-10.md) |
 | U-20261007-13 | 2026-10-07 | Await actual Folder Sync delivery and processing in native regressions | #incident #testing #modernization | [2026-10](2026-10.md) |
@@ -381,7 +382,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | File | Period | Entries |
 |---|---|---:|
-| [2026-10.md](2026-10.md) | 2026-10 | 42 |
+| [2026-10.md](2026-10.md) | 2026-10 | 43 |
 | [2026-09-e.md](2026-09-e.md) | 2026-09 | 7 |
 | [2026-09-d.md](2026-09-d.md) | 2026-09 | 55 |
 | [2026-09-c.md](2026-09-c.md) | 2026-09 | 38 |

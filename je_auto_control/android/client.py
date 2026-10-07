@@ -10,10 +10,12 @@ isn't installed.
 from __future__ import annotations
 
 import functools
-import threading
 from typing import Any, Callable, Optional, TypeVar
 
 from je_auto_control.utils.exception.exceptions import AutoControlException
+from je_auto_control.wrapper._mobile_client_owner import LazyMobileHandle
+from je_auto_control.wrapper._mobile_binding import bound_device
+from je_auto_control.wrapper._mobile_sdk import android_handle, dispose_android
 
 
 class UIAutomatorUnavailableError(AutoControlException, RuntimeError):
@@ -31,13 +33,16 @@ class UIAutomatorDevice:
     """
 
     def __init__(self, serial: Optional[str] = None,
-                 handle: Optional[Any] = None) -> None:
+                 handle: Optional[Any] = None, *, timeout_s: Optional[float] = None,
+                 _guard: Optional[Callable[[], None]] = None) -> None:
         self._serial = serial
-        self._handle = handle
-        self._lock = threading.Lock()
+        self._timeout_s = timeout_s
+        self._guard = _guard
+        self._owner = LazyMobileHandle(handle, _guard, dispose_android if _guard is not None else None)
 
     @property
     def serial(self) -> Optional[str]:
+        """The configured ADB serial; does not connect to the device."""
         return self._serial
 
     @property
@@ -50,32 +55,38 @@ class UIAutomatorDevice:
         return self._resolve_handle()
 
     def _resolve_handle(self) -> Any:
-        with self._lock:
-            if self._handle is not None:
-                return self._handle
-            try:
-                import uiautomator2 as u2
-            except ImportError as error:
-                raise UIAutomatorUnavailableError(
-                    "uiautomator2 not installed. "
-                    "`pip install uiautomator2` and ensure adb sees the "
-                    "device (`adb devices`).",
-                ) from error
-            try:
-                self._handle = u2.connect(self._serial)
-            except (OSError, RuntimeError, ValueError, *_sdk_errors()) as error:
-                raise UIAutomatorUnavailableError(
-                    f"could not connect to Android device "
-                    f"{self._serial or '(default)'}: {error}",
-                ) from error
-            return self._handle
+        return self._owner.get(self._connect_handle)
+
+    def _connect_handle(self) -> Any:
+        try:
+            import uiautomator2 as u2
+        except ImportError as error:
+            raise UIAutomatorUnavailableError(
+                "uiautomator2 not installed. `pip install uiautomator2` "
+                "and ensure adb sees the device (`adb devices`).",
+            ) from error
+        try:
+            if self._guard is None:
+                return u2.connect(self._serial)
+            return android_handle(u2, self._serial or '', self._timeout_s or 10, self._guard)
+        except (OSError, RuntimeError, ValueError, *_sdk_errors()) as error:
+            raise UIAutomatorUnavailableError(
+                f"could not connect to Android device {self._serial or '(default)'}: {error}",
+            ) from error
+
+    def close(self) -> None:
+        """Close this client; an explicit owner also disposes its own started helper."""
+        self._owner.close()
 
 
 _DEFAULT_DEVICE: Optional[UIAutomatorDevice] = None
 
 
 def default_ui_device() -> UIAutomatorDevice:
-    """Process-wide default :class:`UIAutomatorDevice` (lazy-built)."""
+    """Current explicit binding, or the compatible lazy process default."""
+    session = bound_device('android')
+    if session is not None:
+        return session.adapter('uiautomator2')
     global _DEFAULT_DEVICE
     if _DEFAULT_DEVICE is None:
         _DEFAULT_DEVICE = UIAutomatorDevice()

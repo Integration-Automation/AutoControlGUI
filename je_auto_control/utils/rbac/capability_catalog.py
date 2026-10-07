@@ -22,6 +22,7 @@ read_action_journal list_journal_runs'''.split()
 _USERS = '''user_add user_list user_remove user_set_role user_rotate_token'''.split()
 
 CAPABILITY_CATALOG: Dict[str, str] = {
+    'probe_mobile_devices': Capability.MANAGE_HOSTS,
     **dict.fromkeys(('start_physical_recording', 'stop_physical_recording', 'start_wayland_stop_shortcut',
                      'stop_wayland_stop_shortcut', 'wayland_input_status'), Capability.MANAGE_HOSTS),
     **dict.fromkeys(_SCREEN, Capability.READ_SCREEN),

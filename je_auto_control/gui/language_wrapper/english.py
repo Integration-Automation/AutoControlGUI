@@ -120,6 +120,8 @@ english_word_dict = {
     "dm_actions": "Action list (JSON)",
     "dm_parallel": "Max parallel",
     "dm_run": "Run matrix",
+    'dm_probe': 'Inspect mobile dependencies',
+    'dm_running': 'Running device matrix…',
     "dm_col_device": "Device",
     "dm_col_platform": "Platform",
     "dm_col_result": "Result",

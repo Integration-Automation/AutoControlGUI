@@ -10,6 +10,8 @@ from __future__ import annotations
 
 from typing import Any, Dict, Optional, Tuple
 
+from je_auto_control.wrapper._mobile_binding import resolve_client
+
 from je_auto_control.android.client import (
     UIAutomatorDevice, default_ui_device, translate_device_errors,
 )
@@ -52,7 +54,7 @@ def find_element(text: Optional[str] = None,
                  device: Optional[UIAutomatorDevice] = None,
                  ) -> Tuple[int, int, int, int]:
     """Return the matched widget's bounding rect ``(x1, y1, x2, y2)``."""
-    handle = (device or default_ui_device()).handle
+    handle = (resolve_client('android', 'uiautomator2', device) or default_ui_device()).handle
     query = _build_query(handle, text, resource_id, description, class_name)
     if not query.wait(timeout=float(timeout_s)):
         raise ElementNotFoundError(
@@ -90,7 +92,7 @@ def click_element(text: Optional[str] = None,
     )
     cx = (bounds[0] + bounds[2]) // 2
     cy = (bounds[1] + bounds[3]) // 2
-    handle = (device or default_ui_device()).handle
+    handle = (resolve_client('android', 'uiautomator2', device) or default_ui_device()).handle
     handle.click(int(cx), int(cy))
     return (int(cx), int(cy))
 
@@ -98,7 +100,7 @@ def click_element(text: Optional[str] = None,
 @translate_device_errors
 def dump_hierarchy(*, device: Optional[UIAutomatorDevice] = None) -> str:
     """Return the device's current widget tree as an XML string."""
-    handle = (device or default_ui_device()).handle
+    handle = (resolve_client('android', 'uiautomator2', device) or default_ui_device()).handle
     return str(handle.dump_hierarchy())
 
 

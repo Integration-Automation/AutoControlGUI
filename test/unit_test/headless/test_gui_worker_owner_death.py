@@ -81,6 +81,67 @@ def test_exiting_during_a_step_longer_than_the_grace_still_exits_cleanly():
     assert exit_seconds(done) < 30
 
 
+def test_completed_parentless_owner_can_release_before_relay_delete():
+    script = textwrap.dedent('''
+        import os, time, weakref
+        os.environ['QT_QPA_PLATFORM'] = 'offscreen'
+        from PySide6.QtCore import QEvent
+        from PySide6.QtWidgets import QApplication, QWidget
+        from je_auto_control.gui._worker_thread import CallWorker, start_worker, running_threads
+
+        class Owner(QWidget):
+            def done(self, value):
+                self.value = value
+            def ended(self):
+                self.finished = True
+            def failed(self, message):
+                raise AssertionError(message)
+
+        app = QApplication([])
+        owner = Owner()
+        start_worker(owner, CallWorker(lambda: 42), on_done=owner.done,
+                     on_thread_done=owner.ended, on_fail=owner.failed)
+        deadline = time.monotonic() + 5
+        while running_threads() and time.monotonic() < deadline:
+            app.processEvents()
+            time.sleep(0.01)
+        assert owner.value == 42 and owner.finished
+        retained = weakref.ref(owner)
+        del owner
+        # The relay must not retain its parent through three bound callbacks.
+        assert retained() is None, 'completed relay retained its GUI owner'
+        app.sendPostedEvents(None, QEvent.Type.DeferredDelete)
+        app.processEvents()
+    ''')
+    result = run_probe(script, 'wait')
+    assert result.returncode == 0, result.stderr
+
+
+def test_completed_matrix_owner_does_not_abort_during_deferred_cleanup():
+    script = textwrap.dedent('''
+        import os, time
+        os.environ['QT_QPA_PLATFORM'] = 'offscreen'
+        from PySide6.QtCore import QEvent
+        from PySide6.QtWidgets import QApplication
+        from je_auto_control.gui.device_matrix_tab import DeviceMatrixTab
+        app = QApplication([])
+        tab = DeviceMatrixTab()
+        tab._devices.setPlainText('[{"platform":"android","serial":"a"}]')
+        tab._actions.setPlainText('[["AC_set_var", {"name":"id","value":"${device.serial}"}]]')
+        tab._on_run()
+        deadline = time.monotonic() + 5
+        while tab._worker is not None and time.monotonic() < deadline:
+            app.processEvents()
+            time.sleep(0.01)
+        assert tab._worker is None and tab._table.rowCount() == 1
+        del tab
+        app.sendPostedEvents(None, QEvent.Type.DeferredDelete)
+        app.processEvents()
+    ''')
+    result = run_probe(script, 'wait')
+    assert result.returncode == 0, result.stderr
+
+
 def _pump_until(app, predicate, seconds=10.0):
     deadline = time.monotonic() + seconds
     while not predicate() and time.monotonic() < deadline:

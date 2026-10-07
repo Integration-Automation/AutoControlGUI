@@ -1,9 +1,26 @@
 # Public API lifecycle
 
 The supported entry point for new integrations is `je_auto_control.api`.
+
+`je_auto_control.api.mobile` is Beta and exports `DeviceContext`, `DeviceSession`,
+`DeviceSessionError`, `open_device` and `probe_device_contexts`; the facade mirrors
+these five names. Frozen serial/endpoint/configuration and execution-local bindings
+keep matrix workers independent. Existing mobile helpers outside a binding retain
+their defaults; a closed or mismatched binding cannot fall back to another device.
+`connected` means logical owner lifetime. Cancellation invalidates before cleanup,
+rejects late results and reclaims only a helper started by that Android SDK client.
+The root WDA client never deletes a borrowed server-side app session on close.
+Per-request ADB/SDK timeouts do not change SDK globals; native bootstrap and retry
+internals are not a verified total-operation deadline. The JSON probe is shared by
+AC/MCP/Builder and the Device Matrix Actions menu; it performs no device I/O.
+Remote probing requires MANAGE_HOSTS. Device Matrix executes on the shared GUI
+worker, whose relay keeps owner-bound callbacks through weak references.
+See the mobile guide and Progress.md for native acceptance scope.
+
 Everything reachable only through `je_auto_control.utils` is internal unless a
 document explicitly says otherwise. The historical top-level package remains
-available for compatibility but is not expanded with new integrations.
+available for compatibility. New integrations are defined in `api`; required
+historical facade mirrors share those definitions.
 
 - Stable API removal requires a deprecation warning and two minor releases.
 - Beta API removal requires one release note and one minor release.
