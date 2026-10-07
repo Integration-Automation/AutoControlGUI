@@ -88,6 +88,7 @@ def _run_mypy(platform: str, *, extras: bool = False) -> subprocess.CompletedPro
             config = Path(directory) / 'mypy.toml'
             text = (REPO_ROOT / 'pyproject.toml').read_text(encoding='utf-8')
             text = text.replace('"PySide6", "PySide6.*",', '')
+            text = text.replace('"shiboken6", "shiboken6.*",', '')
             config.write_text(text, encoding='utf-8')
             options = ['--config-file', str(config)]
             targets = tuple(module.replace('.', '/') + '.py' for module in _modernization_modules()
@@ -123,8 +124,7 @@ def _failing_modules(platform: str, *, extras: bool = False) -> set[str]:
             continue
         if record.get("severity") != "error":
             continue
-        if extras:
-            print(f"{record.get('file')}:{record.get('line')}: {record.get('message')}")
+        print(f"{record.get('file')}:{record.get('line')}: {record.get('message')}")
         path = str(record.get("file", "")).replace("\\", "/")
         if path.startswith(f"{PACKAGE}/") or path in TYPE_TARGETS:
             modules.add(_module_name(path))

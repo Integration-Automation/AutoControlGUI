@@ -1,0 +1,113 @@
+{
+  "schema_version": 1,
+  "platform": "macOS-14.8.9-arm64-arm-64bit",
+  "backend": "macOS/Quartz",
+  "versions": {
+    "python": "3.12.10",
+    "macos": "14.8.9"
+  },
+  "source_commit": "9675a98f21497e1aeec7fe9ca75b2869b19c890e",
+  "mode": "assert",
+  "checks": [
+    {
+      "name": "backend-selection",
+      "actual": true,
+      "expected": true,
+      "status": "verified",
+      "evidence": [
+        "je_auto_control.osx.mouse.osx_mouse"
+      ],
+      "error": null
+    },
+    {
+      "name": "screen-size",
+      "actual": true,
+      "expected": true,
+      "status": "verified",
+      "evidence": [
+        "1920x1080"
+      ],
+      "error": null
+    },
+    {
+      "name": "screenshot",
+      "actual": true,
+      "expected": true,
+      "status": "verified",
+      "evidence": [
+        "1920x1080 against a 1920x1080 display"
+      ],
+      "error": null
+    },
+    {
+      "name": "get-pixel",
+      "actual": true,
+      "expected": true,
+      "status": "verified",
+      "evidence": [
+        "(55, 55, 55)"
+      ],
+      "error": null
+    },
+    {
+      "name": "mouse-position",
+      "actual": true,
+      "expected": true,
+      "status": "verified",
+      "evidence": [
+        "(10, 10)"
+      ],
+      "error": null
+    },
+    {
+      "name": "mouse-move",
+      "actual": true,
+      "expected": true,
+      "status": "verified",
+      "evidence": [
+        "asked (137, 211), cursor at (137, 211)"
+      ],
+      "error": null
+    },
+    {
+      "name": "keyboard-post",
+      "actual": true,
+      "expected": true,
+      "status": "verified",
+      "evidence": [
+        "check_key_is_press('shift') became True within 3.0s"
+      ],
+      "error": null
+    },
+    {
+      "name": "accessibility-tree",
+      "actual": true,
+      "expected": true,
+      "status": "verified",
+      "evidence": [
+        "backend 'macos-ax' returned 5 elements"
+      ],
+      "error": null
+    },
+    {
+      "name": "recorder",
+      "actual": true,
+      "expected": true,
+      "status": "verified",
+      "evidence": [
+        "4 event(s): ['mouse_down', 'mouse_up', 'key_down', 'key_up']; clicks landed at [(321, 123)], posted (321, 123)"
+      ],
+      "error": null
+    },
+    {
+      "name": "window-management",
+      "actual": true,
+      "expected": true,
+      "status": "verified",
+      "evidence": [
+        "7 on-screen window(s) from Quartz, 1 at the application layer; described [('', (764, 34, 1156, 182), 12416)]"
+      ],
+      "error": null
+    }
+  ]
+}

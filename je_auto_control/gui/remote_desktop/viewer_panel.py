@@ -86,6 +86,7 @@ class _ViewerPanel(TranslatableMixin, QWidget):
         # itself stays compact instead of devoting half its height to a
         # blank frame area.
         self._screen_window: Optional[RemoteScreenWindow] = None
+        self._pending_image: Optional[QImage] = None
         self._connect_btn: Optional[QPushButton] = None
         self._disconnect_btn: Optional[QPushButton] = None
         self._action_row: Optional[QWidget] = None
@@ -266,6 +267,9 @@ class _ViewerPanel(TranslatableMixin, QWidget):
         # operator gets a real workspace and the control panel stays
         # uncluttered.
         window = self._ensure_screen_window()
+        if self._pending_image is not None:
+            window.set_image(self._pending_image)
+            self._pending_image = None
         window.show()
         window.raise_()
         window.activateWindow()
@@ -314,6 +318,7 @@ class _ViewerPanel(TranslatableMixin, QWidget):
         self._session_id = None
         self._stop_audio_player()
         self._connected = False
+        self._pending_image = None
         self._close_screen_window()
         self._progress_bar.setVisible(False)
         self._progress_label.setText("")
@@ -375,7 +380,10 @@ class _ViewerPanel(TranslatableMixin, QWidget):
 
     def _on_frame_main(self, payload: bytes) -> None:
         image = QImage.fromData(payload, "JPEG")
-        if image.isNull() or self._screen_window is None:
+        if image.isNull():
+            return
+        if self._screen_window is None:
+            self._pending_image = image
             return
         self._screen_window.set_image(image)
 

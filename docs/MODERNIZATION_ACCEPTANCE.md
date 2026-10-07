@@ -52,3 +52,13 @@ exclusive remote WDA session/client races and two-host sync/transport panel clos
 Upstream libei pause/sequence/half-open teardown issues and unavailable Windows
 arm64 OpenCV/crypto wheels remain explicitly tracked in Progress. Controlled
 fixtures and passing CI jobs do not remove those conditions.
+
+## Local H3 regression result
+
+Windows/Python 3.14.4 full run preceding the remote-viewer CI correction: 11,483 passed, 46 skipped, 591.99 seconds; coverage 87.00% with the unchanged floor. Final wheel imports with Qt and all heavy image/crypto packages blocked, retains 822 commands/1,403 names and compiles generated Python. Wheel SHA256: `41fe3ae5d9f8bcc57b0fb3abe8d207e7ca782d128bcc8e6fae178540bb6ca05a`.
+
+The first H3 quality dispatch at `9675a98f` revealed that the base type gate omitted the optional Qt companion `shiboken6`. It is now a precise third-party boundary; extras checking removes both Qt and companion skips to use installed real stubs. No business-module exemption or global ignore is added. Diagnostics print the actual type errors in either mode. All three local stable/extras targets pass; CI rerun evidence is recorded in updates.
+
+The first fifteen-target CI run exposed missing Xvfb in the Linux evidence step, a delayed ready callback in the ownership test and an early remote JPEG arriving before its window exists. The viewer now retains only the latest early image and clears it on disconnect. Controlled reconnect tests protect replacement owners; 64 GUI/task/transport regressions pass, including the new two-case frame test. The evidence step runs under Xvfb on Linux. Private-bus setup checks installed dependencies first and bounds apt acquisition retries after an Azure mirror timeout.
+
+[H3 platform smoke](https://github.com/Integration-Automation/AutoControlGUI/actions/runs/37677922126) at `9675a98f` passed all eleven jobs, including native macOS and arm64. [H3 Docker](https://github.com/Integration-Automation/AutoControlGUI/actions/runs/37677931015) passed all six selected native verification/build jobs; full-image headless and X11 jobs were outside the selected D3 scope.

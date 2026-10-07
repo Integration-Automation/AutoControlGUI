@@ -20,13 +20,13 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 | 指標 | 數值 |
 | --- | ---: |
 | Python 模組總數（含周邊子專案） | 1,219 |
-| 程式碼總行數 | 177,576 |
+| 程式碼總行數 | 177,584 |
 | `je_auto_control/utils/` 子套件數 | 311 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 822 |
 | 套件門面 `__all__` 公開名稱數 | 1,403 |
 | GUI 分頁數（`main_widget` 註冊） | 50 |
 | MCP 工具數（`build_default_tool_registry()` 實測） | 747 |
-| `test_*.py` 測試檔／測試函式 | 775 / 8,026 |
+| `test_*.py` 測試檔／測試函式 | 775 / 8,027 |
 | 範例腳本 | 37 |
 
 **技術基線**：Python ≥ 3.10、MIT 授權、必要相依只有 `je_open_cv`／`opencv-python`／`pillow`／`mss`／
@@ -1070,7 +1070,7 @@ GUI 是**選用 extra**（`pip install je_auto_control[gui]`，PySide6 + qt-mate
 | diagnostics | `diagnostics_tab.py` | 91 | 執行子系統檢查並顯示結果。 |
 | report | `_report_tab.py` | 81 | 產生 HTML／JSON／XML 報表。 |
 
-#### 遠端桌面 GUI（`gui/remote_desktop/`，31 檔／8,146 行）
+#### 遠端桌面 GUI（`gui/remote_desktop/`，31 檔／8,154 行）
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -1088,7 +1088,7 @@ GUI 是**選用 extra**（`pip install je_auto_control[gui]`，PySide6 + qt-mate
 | `tab.py` | 177 | ``RemoteDesktopTab``: outer container holding the Remote Desktop sub-tabs. |
 | `tray_icon.py` | 106 | System-tray icon for the WebRTC host. |
 | `trusted_group.py` | 76 | The 'trusted viewers' group the WebRTC host panel builds. |
-| `viewer_panel.py` | 542 | ``_ViewerPanel``: the 'control another machine' Remote Desktop sub-tab. |
+| `viewer_panel.py` | 550 | ``_ViewerPanel``: the 'control another machine' Remote Desktop sub-tab. |
 | `viewer_screen_window.py` | 46 | Popup window that displays a connected viewer's shared screen. |
 | `webrtc_common.py` | 191 | Shared WebRTC panel signals and configuration/frame conversion helpers. |
 | `webrtc_dialogs.py` | 519 | Custom dialogs / list widgets used by the WebRTC GUI panels. |
@@ -1125,7 +1125,7 @@ GUI 是**選用 extra**（`pip install je_auto_control[gui]`，PySide6 + qt-mate
 | `ci_templates/.gitlab-ci.yml` | — | 供使用者專案複製的 GitLab CI 範本。 |
 | `docs/` | Sphinx（`API`／`Eng`／`Zh`／`getting_started`） | Read the Docs 文件。 |
 | `architecture_diagram/` | drawio + png | 既有的架構圖原始檔。 |
-| `test/` | `unit_test/headless`（主要）、`unit_test/flow_control`、`integrated_test`、`gui_test`、`manual_test`、`verify`、`test_source` | 775 個 `test_*.py`／8,026 個測試函式。**注意**：`test/unit_test/` 下的 `*_test.py` 是會真的驅動滑鼠鍵盤的手動示範腳本，因此 `pyproject.toml` 把 `python_files` 釘成 `test_*.py`。`unit_test/headless/conftest.py` 有一個 autouse fixture，每個測試結束都沖掉 Qt 排隊中的 `deleteLater()`——不沖會讓殘留的 widget 在後面某個不相干的測試裡被銷毀，曾經整個直譯器 `__fastfail`。`test_doc_counts.py` 守住文件引用的指令／工具／子套件／範例數,`test_doc_line_counts.py` 守住所有行數（`--fix` 可一次重新產生）。 Folder Sync 正向案例等待實際 sender，防回送先等待實際輪詢處理，保留內容與次數斷言。 `verify/native_debugger.py` 以有時限的 gdb/lldb 包裝原有 coverage 命令，保留 target 退出碼與原生堆疊。 `verify/macos_verify.py` 是在真的 `macos-14` runner 上量測 TCC 到底允許什麼的探針（macOS 是唯一沒有容器可用的支援平台），不被 pytest 收集。 |
+| `test/` | `unit_test/headless`（主要）、`unit_test/flow_control`、`integrated_test`、`gui_test`、`manual_test`、`verify`、`test_source` | 775 個 `test_*.py`／8,027 個測試函式。**注意**：`test/unit_test/` 下的 `*_test.py` 是會真的驅動滑鼠鍵盤的手動示範腳本，因此 `pyproject.toml` 把 `python_files` 釘成 `test_*.py`。`unit_test/headless/conftest.py` 有一個 autouse fixture，每個測試結束都沖掉 Qt 排隊中的 `deleteLater()`——不沖會讓殘留的 widget 在後面某個不相干的測試裡被銷毀，曾經整個直譯器 `__fastfail`。`test_doc_counts.py` 守住文件引用的指令／工具／子套件／範例數,`test_doc_line_counts.py` 守住所有行數（`--fix` 可一次重新產生）。 Folder Sync 正向案例等待實際 sender，防回送先等待實際輪詢處理，保留內容與次數斷言。 `verify/native_debugger.py` 以有時限的 gdb/lldb 包裝原有 coverage 命令，保留 target 退出碼與原生堆疊。 `verify/macos_verify.py` 是在真的 `macos-14` runner 上量測 TCC 到底允許什麼的探針（macOS 是唯一沒有容器可用的支援平台），不被 pytest 收集。 |
 
 ---
 
@@ -1229,7 +1229,7 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 
 | 層／子系統 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `gui/` | 127 | 34,021 |
+| `gui/` | 127 | 34,029 |
 | `utils/mcp_server/` | 54 | 20,673 |
 | `utils/remote_desktop/` | 60 | 13,886 |
 | `utils/executor/` | 13 | 10,177 |
@@ -1250,7 +1250,7 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 863 |
 | 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 737 | 62,838 |
-| **總計** | **1,206** | **176,964** |
+| **總計** | **1,206** | **176,972** |
 
 
 Crypto optional-dependency failures use CryptoDependencyError from utils/exception:
@@ -1351,3 +1351,7 @@ H1 strict manifest/config checks all modernization modules and complete annotati
 H2 adds six passive/disposable validation examples and shares their source through both Sphinx trees. Readme configuration and mobile operation metadata are guarded by test_modernization_examples.py.
 
 H3 acceptance tooling records controlled journal replay and durable sync restart with platform/backend/version, actual outcomes and existing artifact paths; offscreen GUI rendering is tested separately. macOS native JSON retains failed probes. Fifteen coverage CI jobs keep the existing floor. See [acceptance evidence](docs/MODERNIZATION_ACCEPTANCE.md).
+
+Stable type checking treats optional Qt companion shiboken6 at the same dependency boundary as PySide6; installed extras inspect both real stub sets. Business module scope and empty exemption list remain unchanged.
+
+Linux validation without X11 uses `xvfb-run -a` to supply an isolated display. Remote viewer first-frame retention is bounded to one image and cleared at disconnect; stale owner/generation delivery remains guarded.

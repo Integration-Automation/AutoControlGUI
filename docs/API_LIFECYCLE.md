@@ -281,3 +281,7 @@ The strict manifest `test/verify/typing_modernization_modules.txt` and mypy over
 Six modernization examples expose `--validate` without desktop/device/network effects. Journal v1, labelled evaluation datasets and candidate manifests are explicit formats; legacy action JSON and full MCP defaults stay compatible. Generated code is reviewed before execution. Local metadata previews do not mutate remote sessions. See [workflow and migration guide](MODERNIZATION_GUIDE.md).
 
 H3 acceptance tooling records controlled journal replay and durable sync restart with platform/backend/version, actual outcomes and existing artifact paths; offscreen GUI rendering is tested separately. macOS native JSON retains failed probes. Fifteen coverage CI jobs keep the existing floor. See [acceptance evidence](MODERNIZATION_ACCEPTANCE.md).
+
+Stable type checking treats optional Qt companion shiboken6 at the same dependency boundary as PySide6; installed extras inspect both real stub sets. Business module scope and empty exemption list remain unchanged.
+
+Linux validation without X11 uses `xvfb-run -a` to supply an isolated display. Remote viewer first-frame retention is bounded to one image and cleared at disconnect; stale owner/generation delivery remains guarded.

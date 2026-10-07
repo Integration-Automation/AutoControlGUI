@@ -2695,3 +2695,5 @@ Six examples support offline `--validate`; three READMEs and both Sphinx trees s
 ### H3 integration acceptance
 
 Controlled journal-to-generated-script replay and SQLite-to-GUI restart evidence, fifteen desktop coverage CI targets and structured macOS native reports retain actual/skipped results. SDK image typing no longer imports Pillow at runtime. Existing asynchronous diagnostic assertions await completed tasks. Six empty-credential Bandit false positives have local reviewed annotations; no global security rules change.
+
+H3 CI follow-up: preserve remote JPEG frames that arrive before connection-ready; clear them on disconnect. The Linux evidence step uses Xvfb. Stable typing recognizes the optional shiboken6 companion; real extras inspect its stubs. Private-bus setup avoids redundant apt updates and bounds acquisition retries.

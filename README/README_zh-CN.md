@@ -927,3 +927,7 @@ MCP stdio 支持 `--tool-mode full|progressive|static`、`--tool-profile ac_scre
 ## 集成验收
 
 受控日志回放、同步重启与 offscreen GUI 结果一起验证。执行 `python test/verify/modernization_verify.py --output acceptance-evidence` 可获取平台／后端／版本、实际结果与证据路径。Coverage CI 覆盖 Windows／Linux／macOS 的 Python 3.10–3.14；安装 extras 的类型及原生平台／容器证据分别验证。只读下游测试的 slash 契约迁移与正式合并分别验收。参阅[验收证据与待验证的原生条件](../docs/MODERNIZATION_ACCEPTANCE.md)。
+
+安装 extras 的类型检查同时检查 PySide6 与 shiboken6；基础类型保留精确的可选依赖边界，业务模块没有豁免。
+
+远程 viewer 会保留 ready 回调前收到的最新 JPEG，断线时清除。Linux 没有 X11 display 时，以 `xvfb-run -a` 执行仓库验证命令，使用隔离的虚拟显示。

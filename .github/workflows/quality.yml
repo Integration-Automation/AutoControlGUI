@@ -198,7 +198,10 @@ jobs:
       # XML before the floor check, so a square that fails the floor still
       # uploads the report that says which lines it was short of.
       - name: Controlled modernization acceptance evidence
-        run: python test/verify/modernization_verify.py --output modernization-evidence
+        shell: bash
+        run: >-
+          ${{ runner.os == 'Linux' && 'xvfb-run -a' || '' }}
+          python test/verify/modernization_verify.py --output modernization-evidence
 
       - uses: actions/upload-artifact@v6
         if: always()
@@ -283,7 +286,11 @@ jobs:
         with:
           python-version: "3.12"
       - name: Install independent GDBus peer and private bus
-        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends dbus python3-gi
+        run: |
+          if ! command -v dbus-run-session || ! /usr/bin/python3 -c 'from gi.repository import Gio'; then
+            sudo apt-get update -o Acquire::http::Timeout=30 -o Acquire::https::Timeout=30 -o Acquire::Retries=2
+            sudo apt-get install -y --no-install-recommends dbus python3-gi
+          fi
       - name: Build and install a minimal wheel environment
         run: |
           pip wheel --no-deps --wheel-dir dist .

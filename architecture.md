@@ -477,3 +477,7 @@ H1 strict module manifest mirrors mypy complete-definition/generic overrides. St
 H2 workflow examples validate offline through the facade; both Sphinx trees include the same source. Generated journal candidates retain provenance and are never executed by the examples.
 
 H3 acceptance tooling records controlled journal replay and durable sync restart with platform/backend/version, actual outcomes and existing artifact paths; offscreen GUI rendering is tested separately. macOS native JSON retains failed probes. Fifteen coverage CI jobs keep the existing floor. See [acceptance evidence](docs/MODERNIZATION_ACCEPTANCE.md).
+
+Stable type checking treats optional Qt companion shiboken6 at the same dependency boundary as PySide6; installed extras inspect both real stub sets. Business module scope and empty exemption list remain unchanged.
+
+Linux validation without X11 uses `xvfb-run -a` to supply an isolated display. Remote viewer first-frame retention is bounded to one image and cleared at disconnect; stale owner/generation delivery remains guarded.

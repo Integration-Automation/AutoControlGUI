@@ -62,8 +62,6 @@ H3 仍需自有錄製的原生輸出內容、實體鍵態恢復及外部輸入 c
 
 `BLOCKED` — 進階 OpenCV／影片及安全版本 cryptography 仍缺少 Windows arm64 wheel。
 上游提供 wheel 前，保留 OpenCV／je_open_cv／crypto 共用相依標記及 cryptography >=50.0.0 下限。
-Windows arm64 原生 NumPy／Pillow platform smoke 仍由 H3 驗收；
-wheel 解析成功及非 arm64 的替代後端測試不能當作原生執行證據。
 
 ## Wayland:剩下的都不是「缺一台機器」
 

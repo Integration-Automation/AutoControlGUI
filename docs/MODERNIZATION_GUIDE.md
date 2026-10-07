@@ -93,3 +93,5 @@ Container evidence covers native compositor/protocol behavior and the Android
 emulator. It does not certify human consent interaction or physical keyboard
 restoration. [CAPABILITY_MATRIX.md](CAPABILITY_MATRIX.md) distinguishes these
 results; unresolved acceptance conditions remain in [Progress.md](../Progress.md).
+
+Linux validation without X11 uses `xvfb-run -a` to supply an isolated display. Remote viewer first-frame retention is bounded to one image and cleared at disconnect; stale owner/generation delivery remains guarded.

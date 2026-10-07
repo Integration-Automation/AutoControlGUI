@@ -1105,3 +1105,7 @@ Start progressive MCP with `python -m je_auto_control.utils.mcp_server --tool-mo
 ## Integration acceptance
 
 Controlled journal replay, durable sync restart and offscreen GUI results are checked together. Run `python test/verify/modernization_verify.py --output acceptance-evidence` for platform/backend/version, actual results and evidence paths. Coverage CI spans Python 3.10–3.14 on Windows/Linux/macOS; installed extras typing and native platform/container evidence are separate checks. Read-only downstream tests retain the legacy slash migration separately from production merge. See [acceptance evidence and pending native conditions](docs/MODERNIZATION_ACCEPTANCE.md).
+
+Installed extras typing checks PySide6 and shiboken6 together; stable typing retains precise optional dependency boundaries and no business-module exemptions.
+
+Remote viewers retain the latest JPEG received before the ready callback and clear it on disconnect. On Linux without an X11 display, run repository validation commands under `xvfb-run -a`; this uses an isolated virtual display.

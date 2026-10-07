@@ -274,7 +274,7 @@ ignore_missing_imports = true
 # unchecked, which is where they already were before the scope widened.
 module = [
     # [gui]
-    "PySide6", "PySide6.*", "qt_material", "qt_material.*",
+    "PySide6", "PySide6.*", "shiboken6", "shiboken6.*", "qt_material", "qt_material.*",
     # [webrtc] / [signaling] / [discovery]
     "aiortc", "aiortc.*", "av", "av.*",
     "fastapi", "fastapi.*", "uvicorn", "uvicorn.*",

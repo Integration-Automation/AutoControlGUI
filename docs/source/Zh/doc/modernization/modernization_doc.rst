@@ -44,3 +44,7 @@ Integration acceptance
 ----------------------
 
 Run ``python test/verify/modernization_verify.py --output acceptance-evidence`` for controlled journal replay and SQLite restart evidence. Reports preserve actual results and reasons for skipped native conditions. Python 3.10–3.14 coverage CI spans Windows/Linux/macOS; installed extras typing, physical native acceptance and production integration retain separate evidence.
+
+Installed extras typing inspects both PySide6 and its shiboken6 companion stubs; the base gate remains independent of optional dependency installation. Business exemptions remain empty.
+
+On Linux without an X11 display, prefix validation with ``xvfb-run -a``. Remote viewers retain the latest early JPEG until connection-ready and discard it on disconnect; replacement sessions never inherit that image.

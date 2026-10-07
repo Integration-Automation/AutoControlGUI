@@ -683,3 +683,9 @@ Passive desktop keys: `input`, `capture`, `restore_token`. Metadata is not autho
 These declarations describe the selected device surface; check its capability result before native use. Offline examples and controlled fixtures do not certify physical devices.
 
 H3 acceptance tooling records controlled journal replay and durable sync restart with platform/backend/version, actual outcomes and existing artifact paths; offscreen GUI rendering is tested separately. macOS native JSON retains failed probes. Fifteen coverage CI jobs keep the existing floor. See [acceptance evidence](MODERNIZATION_ACCEPTANCE.md).
+
+### H3 Windows arm64 execution
+
+[Platform job](https://github.com/Integration-Automation/AutoControlGUI/actions/runs/37677922126) at source `9675a98f` ran CPython 3.14.8 from the native arm64 toolcache, NumPy 2.4.6/Pillow 12.3.0 win_arm64 wheels: 10 image/backend checks passed, 4 optional OpenCV comparison checks skipped. Stable API/code generation/failure bundle passed. This is synthetic image execution on a native runner; it does not verify desktop capture or physical input. Upstream advanced OpenCV/video and secure cryptography wheel gaps remain in Progress.
+
+Linux validation without X11 uses `xvfb-run -a` to supply an isolated display. Remote viewer first-frame retention is bounded to one image and cleared at disconnect; stale owner/generation delivery remains guarded.

@@ -212,6 +212,7 @@ def test_actual_panels_keep_connections_independent(directory, panels):
 
 def test_queued_old_gui_frame_does_not_reach_replacement(directory, panels):
     import threading
+    import time
     from PySide6.QtCore import QByteArray, QBuffer, QIODevice
     from PySide6.QtGui import QImage
     panel = panels[0]
@@ -227,8 +228,33 @@ def test_queued_old_gui_frame_does_not_reach_replacement(directory, panels):
     thread.join(2)
     panel._disconnect()
     panel._connect()
-    _APPLICATION.processEvents()
+    deadline = time.monotonic() + 5
+    while panel._screen_window is None and time.monotonic() < deadline:
+        _APPLICATION.processEvents()
+        time.sleep(.01)
     assert panel._screen_window.display.has_image() is False
+
+
+@pytest.mark.parametrize('reconnect', [False, True])
+def test_frame_before_connection_ready_is_retained(directory, panels, reconnect):
+    from PySide6.QtCore import QByteArray, QBuffer, QIODevice
+    from PySide6.QtGui import QImage
+    panel = panels[0]
+    session = panel._sessions.reserve('tcp', 'viewer')
+    panel._session_id = session.id
+    panel._sessions.attach(Viewer(), 'viewer')
+    data = QByteArray()
+    buffer = QBuffer(data)
+    buffer.open(QIODevice.OpenModeFlag.WriteOnly)
+    QImage(2, 2, QImage.Format.Format_RGB32).save(buffer, 'JPEG')
+    panel._on_frame_main(bytes(data))
+    if reconnect:
+        panel._disconnect()
+        session = panel._sessions.reserve('tcp', 'viewer')
+        panel._session_id = session.id
+        panel._sessions.attach(Viewer(), 'viewer')
+    panel._connection_ready()
+    assert panel._screen_window.display.has_image() is (not reconnect)
 
 
 @pytest.mark.parametrize('kind', ['host', 'quick'])
