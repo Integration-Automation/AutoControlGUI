@@ -29,6 +29,10 @@ from je_auto_control.utils.self_healing.heal_log import (
     HealEvent, HealEventLog, default_heal_log,
 )
 from je_auto_control.utils.self_healing.healing_context import attempt_evidence, bound_locator_version, event_context
+from je_auto_control.wrapper._mobile_binding import active_device
+from je_auto_control.wrapper._mobile_models import DeviceSessionError
+from je_auto_control.wrapper.mobile_gesture import Gesture
+from je_auto_control.wrapper.device_frame import DeviceFrame
 
 
 METHOD_IMAGE = "image"
@@ -90,6 +94,9 @@ def _locate(template_path: Optional[str], description: Optional[str], detect_thr
         raise ValueError(
             "self_heal_locate requires template_path or description",
         )
+    session = active_device()
+    if session is not None:
+        return _locate_mobile(template_path, description, detect_threshold, screen_region, model, log, raise_on_miss)[0]
     started = monotonic()
     coords, image_error = (_try_image(template_path, detect_threshold, screen_region)
                            if screen_region is not None else _try_image(template_path, detect_threshold))
@@ -129,6 +136,26 @@ def _locate(template_path: Optional[str], description: Optional[str], detect_thr
     return outcome
 
 
+def _locate_mobile(template_path: Optional[str], description: Optional[str], threshold: float,
+                   region: Optional[List[int]], model: Optional[str], log: Optional[HealEventLog],
+                   raise_on_miss: bool) -> Tuple[HealOutcome, DeviceFrame]:
+    if region is not None:
+        raise DeviceSessionError('mobile self-heal requires a full DeviceFrame; screen_region is desktop-only')
+    # pylint: disable-next=import-outside-toplevel  # reason: mobile strategy loads only within an explicit owner
+    from je_auto_control.utils.self_healing.mobile_locator import locate_frame
+    session = active_device()
+    if session is None:
+        raise DeviceSessionError('mobile self-heal requires an active device owner')
+    if not template_path and not description:
+        raise ValueError('self_heal_locate requires template_path or description')
+    frame = session.capture()
+    outcome = _finish(locate_frame(frame, template_path, description, threshold, model), log)
+    session.ensure_open()
+    if raise_on_miss and not outcome.found:
+        raise SelfHealError('self-heal found no match on the supplied device frame')
+    return outcome, frame
+
+
 def self_heal_click(template_path: Optional[str] = None,
                     description: Optional[str] = None,
                     mouse_keycode: str = "mouse_left",
@@ -139,6 +166,16 @@ def self_heal_click(template_path: Optional[str] = None,
                     raise_on_miss: bool = False,
                     ) -> HealOutcome:
     """``self_heal_locate`` + a click at the resolved coordinates."""
+    session = active_device()
+    if session is not None:
+        if mouse_keycode != 'mouse_left':
+            raise DeviceSessionError('mobile self-heal supports touch tap; mouse buttons are desktop-only')
+        with attempt_evidence():
+            outcome, frame = _locate_mobile(template_path, description, detect_threshold,
+                                             screen_region, model, log, raise_on_miss)
+            if outcome.found and outcome.coordinates is not None:
+                session.perform(Gesture('tap', (outcome.coordinates,), frame=frame))
+            return outcome
     outcome = self_heal_locate(
         template_path=template_path, description=description,
         detect_threshold=detect_threshold, screen_region=screen_region,
@@ -205,6 +242,12 @@ def _try_vlm(description: Optional[str],
 
 
 def _click_at(coordinates: Tuple[int, int], mouse_keycode: str) -> None:
+    session = active_device()
+    if session is not None:
+        if mouse_keycode != 'mouse_left':
+            raise DeviceSessionError('mobile self-heal supports a touch tap; mouse buttons are desktop-only')
+        session.perform(Gesture('tap', (coordinates,)))
+        return
     from je_auto_control.wrapper.auto_control_mouse import (
         click_mouse, set_mouse_position,
     )

@@ -3,9 +3,13 @@ from __future__ import annotations
 
 from contextlib import contextmanager
 from contextvars import ContextVar
-from typing import Any, Iterator, Optional, Protocol
+from typing import Any, Iterator, Optional, Protocol, TYPE_CHECKING
 
 from je_auto_control.wrapper._mobile_models import DeviceContext, DeviceSessionError
+
+if TYPE_CHECKING:
+    from je_auto_control.wrapper.device_frame import DeviceFrame
+    from je_auto_control.wrapper.mobile_gesture import Gesture
 
 
 class _BoundDevice(Protocol):
@@ -20,6 +24,12 @@ class _BoundDevice(Protocol):
 
     def adapter(self, kind: str) -> Any:
         """Return an owned lazy backend client."""
+
+    def capture(self) -> DeviceFrame:
+        """Return native frame evidence for this device."""
+
+    def perform(self, gesture: Gesture) -> None:
+        """Send one native-point gesture to this device."""
 
 
 _CURRENT: ContextVar[Optional[_BoundDevice]] = ContextVar('mobile_device_session', default=None)
@@ -42,6 +52,14 @@ def bound_device(platform: str) -> Optional[_BoundDevice]:
         session.ensure_open()
         if session.context.platform != platform:
             raise DeviceSessionError('active device context belongs to a different platform')
+    return session
+
+
+def active_device() -> Optional[_BoundDevice]:
+    """Return the active mobile owner without selecting a desktop or default device."""
+    session = _CURRENT.get()
+    if session is not None:
+        session.ensure_open()
     return session
 
 

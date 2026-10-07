@@ -1927,6 +1927,15 @@ def AC_minimize_window(title_substring: str, case_sensitive: bool = ...) -> bool
 def AC_minimize_windows_for_pid(pid: int) -> Dict[str, Any]:
     """Adapter: minimise every window a process owns."""
 
+def AC_mobile_capture(file_path: str, device: Optional[Mapping[str, Any]] = ...) -> dict[str, Any]:
+    """Save one root-checked PNG and return native geometry without desktop fallback."""
+
+def AC_mobile_gesture(gesture: Mapping[str, Any], device: Optional[Mapping[str, Any]] = ...) -> None:
+    """Perform a validated JSON native-point gesture with explicit device ownership."""
+
+def AC_mobile_type_text(text: str, device: Optional[Mapping[str, Any]] = ...) -> None:
+    """Send exact Unicode via SDK input; response never echoes the supplied text."""
+
 def AC_monitor_at_point(x: Any, y: Any) -> Dict[str, Any]:
     """Adapter: report which monitor contains a virtual point."""
 

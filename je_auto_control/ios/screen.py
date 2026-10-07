@@ -11,7 +11,7 @@ from je_auto_control.ios.client import IOSDevice, default_ios_device, translate_
 
 @translate_device_errors
 def screen_size(*, device: Optional[IOSDevice] = None) -> Tuple[int, int]:
-    """Return the device's current pixel size as ``(width, height)``."""
+    """Return the current UIKit point viewport; legacy values are unchanged."""
     handle = (resolve_client('ios', 'wda', device) or default_ios_device()).handle
     size = handle.window_size()
     if isinstance(size, dict):

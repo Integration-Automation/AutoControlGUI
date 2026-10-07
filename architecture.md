@@ -392,3 +392,14 @@ Matrix snapshots specs before fan-out and binds each worker's frozen owner.
 The Beta mobile API/facade and AC/MCP/Builder/GUI probe share passive metadata;
 Device Matrix uses CallWorker, whose relay holds owner-bound callbacks weakly.
 SDK bootstrap/retry total deadlines and actual-device recovery remain H3 cases.
+
+E2 adds headless mobile Gesture/DeviceFrame and session capture/input dispatch.
+Device frames validate immutable PNG against the observed native viewport,
+convert screenshot pixels to UIKit points/Android pixels and preserve mapping
+through display rotation. Fixed-frame OCR and template/VLM reuse the same bytes;
+bound self-heal chooses device capture and touch before any desktop helper.
+JSON services reuse an active matrix owner or open/close an explicit context and
+reject foreign specs. Facade, AC, MCP, Builder and Device Matrix Actions share
+these services; sensitive text arguments are masked. Legacy iOS values remain
+native points. Android ADB input refuses Unicode and names the SDK alternative.
+No optional SDK/Qt import occurs during passive mobile imports.

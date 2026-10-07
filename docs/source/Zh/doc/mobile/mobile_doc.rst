@@ -2,8 +2,9 @@
 ================================
 
 Beta ``je_auto_control.api.mobile`` 匯出 ``DeviceContext``、``DeviceSession``、
-``DeviceSessionError``、``open_device`` 與 ``probe_device_contexts``；
-歷史門面同步匯出這五個名稱。
+``DeviceSessionError``、``DeviceFrame``、``Gesture``、``open_device``、
+``probe_device_contexts``、``mobile_capture``、``mobile_gesture`` 與 ``mobile_type_text``；
+歷史門面同步匯出這些名稱。
 
 明確所有權
 ----------
@@ -66,4 +67,76 @@ Device Matrix 的 Actions 選單提供「查詢行動裝置依賴」與「執行
 顯示為 JSON；矩陣在背景 worker 執行，編輯器及事件迴圈保持回應。
 Script Builder 使用同一 JSON 指令。``examples/mobile_contexts.py`` 示範被動查詢及
 不操作硬體的矩陣；原生 Android/emulator 與 remote WDA 驗收仍列 Progress.md。
-Unicode、手勢、App lifecycle 依後續 E task 交付。
+App lifecycle 與專用 mobile 面板依後續 E task 交付。
+
+裝置輸入與不可變畫面
+--------------------
+
+``session.type_text('測試 café 🙂')`` 使用 uiautomator2 Unicode IME／剪貼簿
+或 WDA Unicode keys。缺少 SDK 時會顯示相依資訊，不退回 ``adb input text``；
+舊 ADB ASCII 入口現在會在輸入前拒絕非 ASCII。SDK 可能設定 IME／剪貼簿，
+原生恢復及焦點欄位 round-trip 仍需驗收。
+
+``Gesture`` 驗證種類、座標及持續時間。tap／long_press 使用一點、drag／swipe
+使用兩點、pinch 使用四點（start1、start2、end1、end2），全部是原生輸入座標。
+時間不能超過 session request timeout。Android 使用 SDK click／long_click／
+drag／swipe 及雙指 RPC；WDA 使用原生 touch，雙指操作需 W3C ``/actions``。
+不支援的 endpoint 會失敗並保留框架例外。WDA swipe duration 是起點按住時間，
+Android 則是移動時間。
+
+``session.capture()`` 回傳不可變 ``DeviceFrame``，帶 PNG、context、``pixel_size``、
+``point_size`` 及順時鐘 orientation（0／90／180／270）。Android 輸入是原生 pixel；
+iOS 是 UIKit point。既有 iOS 觸控、viewport 及樹定位保留數值行為，文件修正單位。
+擷取在原生截圖前後讀取 geometry，拒絕變動、零尺寸、未知方向或長寬比不符。
+WDA 使用原始 viewport 查詢，避開 SDK window_size 可能關閉 alert／開啟 Settings
+的 fallback。
+
+.. code-block:: python
+
+   from je_auto_control.api.mobile import DeviceContext, Gesture, open_device
+
+   context = DeviceContext('ios', 'phone-a', target='http://127.0.0.1:8100')
+   with open_device(context) as session:
+       frame = session.capture()
+       point = frame.pixel_to_point((200, 100))
+       session.perform(Gesture('tap', (point,), frame=frame))
+
+``pixel_to_point`` 依截圖時的 viewport 換算，並反轉額外顯示旋轉。
+``frame.rotated(90)`` 產生順時鐘旋轉的新畫面，保留原生座標關係。
+Gesture 附上 ``frame`` 時，輸入前會檢查 owner 及當前 geometry；方向改變會拒絕
+舊座標。裝置仍可能在最後一次 metadata 讀取後旋轉，原生 race／恢復需另驗收。
+``examples/mobile_frame_mapping.py`` 示範 Retina／旋轉換算，不連線也不輸入。
+
+``frame.ocr(backend=engine)`` 共用這份 bytes，回傳 image-local OCR 結果。
+``frame.locate(TemplateFrameStrategy(...))``／``VLMFrameStrategy`` 回傳 frame pixel
+預測，再以 ``pixel_to_point`` 換算。``session.bind()`` 內的 ``self_heal_locate``／
+``self_heal_click`` 讓 template 與 VLM 共用一次裝置擷取，保留 frame hash 證據，
+不呼叫桌面擷取／輸入。self-heal click 會附上 frame，再次檢查 geometry。
+mobile 全畫面搜尋拒絕桌面 ``screen_region``；touch 僅支援 ``mouse_left``。
+
+JSON 動作、MCP 與 Builder
+-------------------------
+
+``mobile_capture(file_path, device=None)``、``mobile_gesture(gesture, device=None)``
+及 ``mobile_type_text(text, device=None)`` 對應 ``AC_mobile_*``／MCP ``ac_mobile_*``。
+``device`` 是 matrix 格式物件；省略時必須有啟用中的 matrix owner，外來 device
+override 會拒絕。capture 寫入經 root 檢查的 PNG 並回傳 geometry。文字回應不複誦；
+action／journal 遮罩具名及位置文字參數，journal 保留 secret reference。
+三項遠端服務均需 host admin。
+
+.. code-block:: json
+
+   ["AC_run_device_matrix", {"devices": [
+     {"platform": "android", "serial": "emulator-5554"}
+   ], "actions": [
+     ["AC_mobile_type_text", {"text": "測試 café 🙂"}],
+     ["AC_mobile_gesture", {"gesture": {"kind": "long_press", "points": [[120, 200]], "duration_s": 1}}],
+     ["AC_mobile_capture", {"file_path": "phone.png"}]
+   ]}]
+
+使用 Device Matrix Actions 的 Run matrix，或 Script Builder Mobile 類別。
+受控 SDK 契約不代表 emulator／WDA 已實測。官方參考：
+`uiautomator2 input <https://github.com/openatx/uiautomator2/blob/master/uiautomator2/__init__.py>`_、
+`雙指 RPC <https://github.com/openatx/uiautomator2/blob/master/uiautomator2/_selector.py>`_、
+`WDA SDK <https://github.com/openatx/facebook-wda/blob/master/wda/__init__.py>`_ 與
+`WDA W3C actions <https://github.com/appium/WebDriverAgent/blob/master/WebDriverAgentLib/Commands/FBTouchActionCommands.m>`_。

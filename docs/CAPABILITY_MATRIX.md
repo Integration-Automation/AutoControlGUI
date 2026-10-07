@@ -16,6 +16,7 @@ without a compatibility window.
 | REST, MCP, scheduler | beta | CI | CI | CI | platform-neutral |
 | Remote desktop / WebRTC | beta | tests | tests | tests | tests |
 | Android and iOS bridges | experimental | mocked CI | mocked CI | mocked CI | mocked CI |
+| Device-frame Unicode / gestures / OCR-template-VLM healing | beta | controlled SDK tests | controlled SDK tests | controlled SDK tests | controlled SDK tests |
 | Frozen mobile contexts / owned matrix / passive probe | beta | controlled SDK tests | controlled SDK tests | controlled SDK tests | controlled SDK tests |
 | LLM/VLM agents | experimental | fake-backend CI | fake-backend CI | fake-backend CI | fake-backend CI |
 | USB passthrough | experimental | hardware-unverified | backend tests | backend tests | hardware-unverified |
@@ -506,3 +507,14 @@ and fail on opening a selected virtual source, accepted recording or FD leakage.
 This covers kernel source exclusion; it does not establish positive physical
 capture or GNOME/KDE consent and key recovery. Manual Docker scope: `d3-native`;
 seat/ydotool native logs are retained for 14 days even on failure.
+
+Mobile device frames retain immutable PNG, native orientation/viewport and display
+rotation. Pixel-to-point conversion is explicit; captured geometry changes or
+aspect mismatch fail instead of guessing. SDK Unicode does not fall back to ADB
+input text. WDA pinch requires the W3C `/actions` endpoint and errors are typed;
+Android two-pointer input uses the SDK RPC contract. OCR/template/VLM consume
+supplied frame bytes. Bound self-heal captures once and taps the mobile owner.
+Desktop screen regions/mouse buttons are unsupported in that binding. JSON mobile
+services share facade/AC/MCP/Builder and Device Matrix Actions; remote calls need
+MANAGE_HOSTS. Native emulator/WDA/rotation and SDK IME/clipboard restoration are
+H3 acceptance, not established by controlled fixtures.

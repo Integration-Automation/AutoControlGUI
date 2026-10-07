@@ -3,8 +3,9 @@
 The supported entry point for new integrations is `je_auto_control.api`.
 
 `je_auto_control.api.mobile` is Beta and exports `DeviceContext`, `DeviceSession`,
-`DeviceSessionError`, `open_device` and `probe_device_contexts`; the facade mirrors
-these five names. Frozen serial/endpoint/configuration and execution-local bindings
+`DeviceSessionError`, `DeviceFrame`, `Gesture`, `open_device`, `probe_device_contexts`,
+`mobile_capture`, `mobile_gesture` and `mobile_type_text`; the facade mirrors these names.
+Frozen serial/endpoint/configuration and execution-local bindings
 keep matrix workers independent. Existing mobile helpers outside a binding retain
 their defaults; a closed or mismatched binding cannot fall back to another device.
 `connected` means logical owner lifetime. Cancellation invalidates before cleanup,
@@ -15,7 +16,16 @@ internals are not a verified total-operation deadline. The JSON probe is shared 
 AC/MCP/Builder and the Device Matrix Actions menu; it performs no device I/O.
 Remote probing requires MANAGE_HOSTS. Device Matrix executes on the shared GUI
 worker, whose relay keeps owner-bound callbacks through weak references.
-See the mobile guide and Progress.md for native acceptance scope.
+Session capture/gestures/Unicode and immutable-frame OCR/template/VLM use explicit
+mobile ownership. Bound self-heal consumes one device frame and native points,
+without desktop fallback. WDA touch/size legacy values are UIKit points; their
+numeric ABI is preserved. ADB input text rejects non-ASCII; use SDK Unicode.
+`AC_mobile_*`, MCP and Builder schemas share the three JSON services; Device
+Matrix Actions can run them. Remote mobile access requires MANAGE_HOSTS. Typed
+failure retains its cause, text arguments are masked and responses omit text.
+Native SDK IME/clipboard changes, device rotation after a snapshot and WDA W3C
+support remain explicit physical acceptance cases. See the mobile guide and
+Progress.md for native acceptance scope.
 
 Everything reachable only through `je_auto_control.utils` is internal unless a
 document explicitly says otherwise. The historical top-level package remains

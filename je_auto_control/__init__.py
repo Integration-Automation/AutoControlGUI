@@ -1051,7 +1051,8 @@ from je_auto_control.utils.device_matrix import (
     DeviceResult, MatrixReport, run_on_devices,
 )
 from je_auto_control.api.mobile import (
-    DeviceContext, DeviceSession, DeviceSessionError, open_device, probe_device_contexts,
+    DeviceContext, DeviceSession, DeviceSessionError, DeviceFrame, Gesture, open_device, probe_device_contexts,
+    mobile_capture, mobile_gesture, mobile_type_text,
 )
 # Media assertions (audio activity, video motion)
 from je_auto_control.utils.media_assert import (
@@ -1348,7 +1349,8 @@ def start_autocontrol_gui(*args, **kwargs):
 
 
 __all__ = [
-    'DeviceContext', 'DeviceSession', 'DeviceSessionError', 'open_device', 'probe_device_contexts',
+    'DeviceContext', 'DeviceSession', 'DeviceSessionError', 'DeviceFrame', 'Gesture',
+    'open_device', 'probe_device_contexts', 'mobile_capture', 'mobile_gesture', 'mobile_type_text',
     'InputDevice', 'InputEvent', 'PhysicalRecorder', 'RecordingUnavailable', 'ShortcutUnavailable',
     'StopShortcutSession', 'WaylandInputSession', 'start_physical_recording', 'stop_physical_recording',
     'start_wayland_stop_shortcut', 'stop_wayland_stop_shortcut', 'wayland_input_status',

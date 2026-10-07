@@ -20,7 +20,7 @@
 
 - **一套 API，七个平台。** `wrapper/platform_wrapper.py` 在导入时挑选后端；同一份脚本在
   Windows、macOS、X11 与 Wayland 上都不需要改写。
-- **不写 Python 也能脚本化。** 808 个 `AC_*` 命令覆盖全部功能，因此一个 JSON 文件能做到库
+- **不写 Python 也能脚本化。** 811 个 `AC_*` 命令覆盖全部功能，因此一个 JSON 文件能做到库
   能做的任何事——包含循环、分支、try/catch、宏与变量。
 - **默认无头运行。** `import je_auto_control` 绝不会加载 Qt。GUI 是可选包，包在同一个无头内核之外。
 - **四种定位方式。** 模板匹配、OCR、无障碍树、视觉语言模型——可通过锚点定位器与自愈回退串接组合。
@@ -141,7 +141,7 @@ python -c "import je_auto_control; je_auto_control.start_autocontrol_gui()"
 | 自然语言规划 | `plan_actions`、`run_from_description` | `AC_llm_plan` | LLM Planner |
 | Computer-use agent | `AgentLoop`、`run_agent` | `AC_run_agent` | Computer Use |
 | 录制与回放 | `record`、`stop_record` | `AC_record`、`AC_stop_record` | Record |
-| JSON 脚本 | `execute_action`、`execute_files` | 全部 808 个命令 | Script、Script Builder |
+| JSON 脚本 | `execute_action`、`execute_files` | 全部 811 个命令 | Script、Script Builder |
 | 变量与流程控制 | `execute_action_with_vars` | `AC_set_var`、`AC_loop`、`AC_for_each`、`AC_try`、`AC_retry` | Variables |
 | 数据驱动执行 | — | `AC_for_each_row`（CSV／JSON／SQLite／Excel） | Data Sources |
 | 断言 | `assert_text`、`assert_image` | `AC_assert_text` 等 21 个 | Assertions |
@@ -190,7 +190,7 @@ je_auto_control version
 
 | 接口 | 启动方式 | 说明 |
 |---|---|---|
-| **MCP 服务器** | `je_auto_control_mcp`（stdio）或 `AC_start_mcp_http_server` | 730 个工具，供 Claude Desktop／Claude Code／自定义 tool loop 使用。除了以 `initialize` 握手的各版协议，也支持无状态的 MCP 2026-07-28。Bearer 认证、TLS、审计日志、限流、插件热重载、CI 假后端。 |
+| **MCP 服务器** | `je_auto_control_mcp`（stdio）或 `AC_start_mcp_http_server` | 733 个工具，供 Claude Desktop／Claude Code／自定义 tool loop 使用。除了以 `initialize` 握手的各版协议，也支持无状态的 MCP 2026-07-28。Bearer 认证、TLS、审计日志、限流、插件热重载、CI 假后端。 |
 | **REST API** | `je_auto_control start-rest` | Bearer token、按 IP 限流与锁定、SQLite 审计 hook、`/metrics`、`/openapi.json`、`/docs` Swagger UI、`/dashboard`。 |
 | **TCP socket 服务器** | `je_auto_control start-server` | 以换行分隔的 JSON 动作列表。默认绑定 `127.0.0.1`。 |
 | **pytest 插件** | 安装后自动生效 | 轻量 `je_auto_control_pytest` 入口，提供 fixture 与 Gherkin 步骤。升级 editable 工作树后须重新安装；明确指定的旧插件路径仍兼容。 |
@@ -271,6 +271,21 @@ Device Matrix 在 Actions 提供查询，矩阵改在后台执行；Script Build
 见[移动设备指南](../docs/source/Zh/doc/mobile/mobile_doc.rst)及
 [不操作硬件的示例](../examples/mobile_contexts.py)。设备可达性、授权、SDK bootstrap
 整体截止时间与恢复仍列验收。
+
+`DeviceSession` 另提供 `capture()`、`perform(Gesture)` 与 `type_text()`。
+`DeviceFrame` 保存不可变 PNG、原生 viewport／方向及 `pixel_to_point()`；`rotated()`
+保留换算。UIKit point 不等于 Retina 截图 pixel，旧 iOS 数值输入保持兼容。
+Gesture 附上 `frame=frame` 时，输入前再检查 owner／geometry。
+捕获时方向改变或宽高比不符会拒绝，避免猜测旋转。Android Unicode 经 SDK
+IME／剪贴板路径；`AdbClient.text`／`AC_android_text` 在输入前拒绝非 ASCII。
+SDK 可能设置输入法／剪贴板，原生恢复仍列验收。frame 的 `ocr()`、`locate(strategy)`
+共用已有 bytes；binding 内的 `self_heal_locate`／`self_heal_click` 使用同一设备画面
+及原生 touch，不退回桌面。mobile 全画面搜索拒绝桌面 `screen_region` 与非左键。
+`mobile_capture`、`mobile_gesture`、`mobile_type_text` 对应 `AC_mobile_*`、MCP
+`ac_mobile_*` 与 Builder schema，可在 Device Matrix Actions 执行。需提供 device
+对象或使用矩阵 owner；远程操作需 host admin。文字在 action／journal 参数中遮罩，
+响应不复述。WDA pinch 需支持 `/actions`，失败属于框架异常。
+[画面换算示例](../examples/mobile_frame_mapping.py) 不会输入。
 
 图像匹配与 `screenshot()` 优先使用 OpenCV；缺少时使用 NumPy／Pillow 后端。
 Windows arm64 的 Python 3.11+ 会安装 NumPy 2.4.6。归一化灰度匹配、BGR 截图数组、
@@ -376,7 +391,7 @@ Windows、macOS（pyobjc）与 X11（含 XWayland）；纯 Wayland 会话的协�
 
 | 资源 | 内容 |
 |---|---|
-| [`examples/`](../examples/) | 27 个自包含脚本：截图点击、OCR、调度器、远程桌面、agent loop、可观测性、录制、变量、热键、触发器、报表、MCP、REST、密钥、插件、computer use、Wayland、跨主机 DAG、chat-ops、pytest/BDD、锚点定位。 |
+| [`examples/`](../examples/) | 29 个自包含脚本：截图点击、OCR、调度器、远程桌面、agent loop、可观测性、录制、变量、热键、触发器、报表、MCP、REST、密钥、插件、computer use、Wayland、跨主机 DAG、chat-ops、pytest/BDD、锚点定位。 |
 | [Read the Docs](https://autocontrol.readthedocs.io/en/latest/) | 完整 API 参考，含英文与中文。 |
 | [architecture_explore.md](../architecture_explore.md) | 逐层记录每个模块的职责。 |
 | [docs/CAPABILITY_MATRIX.md](../docs/CAPABILITY_MATRIX.md) | 能力 × 平台对照矩阵。 |

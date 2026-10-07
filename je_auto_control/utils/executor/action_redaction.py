@@ -76,6 +76,8 @@ def _confidential_write(action: list) -> bool:
 def is_sensitive_argument(command: str, name: str) -> bool:
     """Whether argument ``name`` of ``command`` holds a secret."""
     lowered = str(name).lower()
+    if command == 'AC_mobile_type_text' and lowered == 'text':
+        return True
     return lowered in SENSITIVE_ARGUMENT_NAMES or (
         lowered == "key" and command in _KEYED_COMMANDS) or (
         lowered == "url" and command in _URL_SECRET_COMMANDS)
@@ -89,6 +91,12 @@ def _redact_argument(command: str, argument: Any) -> Any:
                 for name, item in argument.items()}
     if command == 'AC_execute_journaled' and isinstance(argument, list) and argument:
         return [_redact_serialized_actions(argument[0]), *(redact_actions(item) for item in argument[1:])]
+    return _redact_positional(command, argument)
+
+
+def _redact_positional(command: str, argument: Any) -> Any:
+    if command == 'AC_mobile_type_text' and isinstance(argument, list) and argument:
+        return [_MASK, *(redact_actions(item) for item in argument[1:])]
     return redact_actions(argument)
 
 

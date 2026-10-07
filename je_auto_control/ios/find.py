@@ -45,7 +45,7 @@ def find_element(name: Optional[str] = None,
                  *, timeout_s: float = 5.0,
                  device: Optional[IOSDevice] = None,
                  ) -> Tuple[int, int, int, int]:
-    """Return the matched element's bounding rect ``(x1, y1, x2, y2)``."""
+    """Return native UIKit point bounds ``(x1, y1, x2, y2)`` in current orientation."""
     handle = (resolve_client('ios', 'wda', device) or default_ios_device()).handle
     query = _build_query(handle, name, class_name, predicate)
     element = query.wait(timeout=float(timeout_s))

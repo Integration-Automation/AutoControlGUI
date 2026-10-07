@@ -10,6 +10,9 @@ import threading
 from typing import Any, Iterator, Mapping, Optional, Sequence
 
 from je_auto_control.wrapper._mobile_models import DeviceContext, DeviceSessionError
+from je_auto_control.wrapper import _mobile_operations
+from je_auto_control.wrapper.device_frame import DeviceFrame
+from je_auto_control.wrapper.mobile_gesture import Gesture
 from je_auto_control.wrapper._mobile_binding import bind_device, bound_device
 from je_auto_control.wrapper.capabilities import CapabilityStatus
 from je_auto_control.android.client import UIAutomatorDevice
@@ -77,6 +80,18 @@ class DeviceSession:
         """Reject a cancelled owner rather than falling back to a default device."""
         if not self.connected:
             raise DeviceSessionError('device session is closed or cancelled; open a new explicit context')
+
+    def capture(self) -> DeviceFrame:
+        """Capture native device evidence with point/pixel and orientation metadata."""
+        return _mobile_operations.capture(self)
+
+    def perform(self, gesture: Gesture) -> None:
+        """Send a validated native-point gesture without a desktop fallback."""
+        _mobile_operations.perform(self, gesture)
+
+    def type_text(self, text: str) -> None:
+        """Send Unicode unchanged through this device's SDK input route."""
+        _mobile_operations.type_text(self, text)
 
     def adapter(self, kind: str) -> Any:
         """Return one owned lazy client; SDK construction happens on first use."""

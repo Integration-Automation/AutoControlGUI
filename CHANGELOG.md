@@ -13,6 +13,12 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ## Unreleased
 
+- E2: DeviceSession capture, native-point Gesture dispatch and exact Unicode SDK input;
+  immutable DeviceFrame geometry/rotation, supplied-frame OCR/template/VLM and mobile
+  self-heal without desktop fallback. Three AC/MCP/Builder services run through Device
+  Matrix Actions. Legacy iOS numeric values remain UIKit points; ADB input text now
+  rejects non-ASCII and directs callers to SDK Unicode. Text arguments are masked.
+
 ### Fixed
 
 - Mobile matrix workers now bind independent frozen contexts, so implicit mobile

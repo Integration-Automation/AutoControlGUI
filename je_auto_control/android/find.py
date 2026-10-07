@@ -53,7 +53,7 @@ def find_element(text: Optional[str] = None,
                  *, timeout_s: float = 5.0,
                  device: Optional[UIAutomatorDevice] = None,
                  ) -> Tuple[int, int, int, int]:
-    """Return the matched widget's bounding rect ``(x1, y1, x2, y2)``."""
+    """Return native Android pixel bounds ``(x1, y1, x2, y2)`` in current orientation."""
     handle = (resolve_client('android', 'uiautomator2', device) or default_ui_device()).handle
     query = _build_query(handle, text, resource_id, description, class_name)
     if not query.wait(timeout=float(timeout_s)):

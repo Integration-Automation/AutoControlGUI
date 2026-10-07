@@ -68,6 +68,19 @@ def _build_specs() -> List[CommandSpec]:
     specs.append(CommandSpec('AC_probe_mobile_devices', 'Mobile', 'Inspect configured mobile dependencies', fields=(
         FieldSpec('devices', FieldType.JSON, placeholder='[{"platform":"android","serial":"emulator-5554"}]'),
     )))
+    mobile_device = FieldSpec('device', FieldType.JSON, optional=True,
+                              placeholder='{"platform":"android","serial":"emulator-5554"}')
+    specs.extend([
+        CommandSpec('AC_mobile_capture', 'Mobile', 'Capture device PNG and geometry', fields=(
+            FieldSpec('file_path', FieldType.FILE_PATH), mobile_device,
+        )),
+        CommandSpec('AC_mobile_gesture', 'Mobile', 'Perform native-point device gesture', fields=(
+            FieldSpec('gesture', FieldType.JSON, placeholder='{"kind":"tap","points":[[120,200]]}'), mobile_device,
+        )),
+        CommandSpec('AC_mobile_type_text', 'Mobile', 'Type device Unicode via SDK', fields=(
+            FieldSpec('text', FieldType.STRING, sensitive=True), mobile_device,
+        )),
+    ])
     specs.extend([
         CommandSpec('AC_start_physical_recording', 'Wayland', 'Start raw physical recording', fields=(
             FieldSpec('devices', FieldType.JSON, placeholder='["/dev/input/event0"]'),

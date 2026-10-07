@@ -19,15 +19,15 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 
 | 指標 | 數值 |
 | --- | ---: |
-| Python 模組總數（含周邊子專案） | 1,162 |
-| 程式碼總行數 | 170,054 |
+| Python 模組總數（含周邊子專案） | 1,168 |
+| 程式碼總行數 | 170,649 |
 | `je_auto_control/utils/` 子套件數 | 311 |
-| `AC_*` 動作指令數（`known_commands()` 實測） | 808 |
-| 套件門面 `__all__` 公開名稱數 | 1,363 |
+| `AC_*` 動作指令數（`known_commands()` 實測） | 811 |
+| 套件門面 `__all__` 公開名稱數 | 1,368 |
 | GUI 分頁數（`main_widget` 註冊） | 49 |
-| MCP 工具數（`build_default_tool_registry()` 實測） | 730 |
-| `test_*.py` 測試檔／測試函式 | 761 / 7,897 |
-| 範例腳本 | 28 |
+| MCP 工具數（`build_default_tool_registry()` 實測） | 733 |
+| `test_*.py` 測試檔／測試函式 | 762 / 7,910 |
+| 範例腳本 | 29 |
 
 **技術基線**：Python ≥ 3.10、MIT 授權、必要相依只有 `je_open_cv`／`opencv-python`／`pillow`／`mss`／
 `defusedxml`／`cryptography`（依平台標記；Windows arm64 改用 NumPy／Pillow，另有 pyobjc、python-Xlib）；
@@ -50,7 +50,7 @@ USB/IP 協定、Prometheus 指標），以維持這條輕相依基線。
                                 │  全部只呼叫下面這一層，不含業務邏輯
 ┌───────────────────────────────▼──────────────────────────────────────────┐
 │  執行核心 Execution Core                                                  │
-│  utils/executor/action_executor.py  ── Executor.event_dict（808 個 AC_*） │
+│  utils/executor/action_executor.py  ── Executor.event_dict（811 個 AC_*） │
 │  utils/executor/flow_control.py     ── 34 個區塊指令（迴圈/分支/try/巨集） │
 │  utils/script_vars ── ${var} 插值   │ utils/json ── action 檔 I/O          │
 └───────────────────────────────┬──────────────────────────────────────────┘
@@ -93,7 +93,7 @@ USB/IP 協定、Prometheus 指標），以維持這條輕相依基線。
 | 模式 | 落點 | 說明 |
 | --- | --- | --- |
 | **Strategy** | `wrapper/platform_wrapper.py` | 依 `sys.platform` 只匯入當前 OS 的 `keyboard`／`mouse`／`screen`／`recorder` 實作；Linux 再細分 Wayland／X11，Wayland 後端不可用時自動退回 XWayland 並記警告。新增平台不需要改 wrapper。 |
-| **Facade** | `je_auto_control/__init__.py` | 把 1,363 個公開名稱集中再匯出，使用者只 `import je_auto_control`。`api/core.py` 另提供一個小而穩定的版本化門面（7 個名稱）給新整合使用。 |
+| **Facade** | `je_auto_control/__init__.py` | 把 1,368 個公開名稱集中再匯出，使用者只 `import je_auto_control`。`api/core.py` 另提供一個小而穩定的版本化門面（7 個名稱）給新整合使用。 |
 | **Command** | `utils/executor/action_executor.py` | `Executor.event_dict` 是字串 → callable 的分派表；JSON 動作檔即指令序列，因此可錄製、序列化、重播、簽章。 |
 | **Observer** | `utils/callback/`、`utils/observer/`、`utils/triggers/` | 動作完成後觸發回呼；畫面出現／消失／變化與外部事件（webhook／IMAP／檔案）驅動腳本。 |
 | **Template Method** | `utils/generate_report/` | HTML／JSON／XML 三個產生器共用「收集紀錄 → 格式化 → 寫檔」骨架，各自實作渲染。 |
@@ -155,12 +155,12 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
-| `je_auto_control/__init__.py` | 2,057 | **套件門面**。集中匯入並再匯出 1,363 個公開名稱，以功能區塊註解分段（callback／exception／executor／a11y／vision／clipboard…）。 |
+| `je_auto_control/__init__.py` | 2,059 | **套件門面**。集中匯入並再匯出 1,368 個公開名稱，以功能區塊註解分段（callback／exception／executor／a11y／vision／clipboard…）。 |
 | `je_auto_control/__main__.py` | 93 | 舊版 argparse 進入點：`-e` 執行單檔、`-d` 執行整個目錄、`--execute_str` 執行 JSON 字串、`-c` 建立專案。 |
 | `je_auto_control_pytest.py` | 125 | 輕量 pytest11 入口；fixture／失敗截圖內才匯入自動化核心。 |
 | `je_auto_control/cli.py` | 425 | **主 CLI**（`je_auto_control` console script）。子命令：`run`（含 `--var`／`--dry-run`）、`validate`／`lint`、`list-commands`、`fmt`、`record`、`codegen`、`failure-bundle`、`list-jobs`、`start-server`、`start-rest`、`version`、`signing-keygen`、`sign`、`verify`。所有子命令延遲匯入，確保不碰 Qt。 |
-| `je_auto_control/api/__init__.py` | 88 | 版本化整合進入點。 |
-| `je_auto_control/api/mobile.py` | 6 | Beta frozen mobile contexts, owned lazy sessions and passive device metadata. |
+| `je_auto_control/api/__init__.py` | 90 | 版本化整合進入點。 |
+| `je_auto_control/api/mobile.py` | 10 | Beta frozen mobile contexts, owned lazy sessions and passive device metadata. |
 | `je_auto_control/api/wayland_input.py` | 14 | Beta owned raw physical recording and explicit portal stop API. |
 | `je_auto_control/api/journal.py` | 8 | Beta typed 動作日誌入口：錄製、驗證及 run 預覽。 |
 | `je_auto_control/api/core.py` | 19 | **穩定無頭 API 門面**：只暴露 `execute_action`、`execute_action_with_vars`、`generate_code`、`run_diagnostics`、`create_failure_bundle`、`failure_bundle_on_error`、`FailureBundleOptions`。mypy 型別契約以此為起點，現已擴到整包（見「設定基線」）。 |
@@ -177,9 +177,13 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
 | `wrapper/platform_wrapper.py` | 116 | **Strategy 樞紐**。依 `sys.platform` 匯入唯一後端並匯出 `keyboard`、`keyboard_check`、`keyboard_keys_table`、`mouse`、`mouse_keys_table`、`special_mouse_keys_table`、`screen`、`recorder`；八個名稱都帶著 `backend_contract` 的型別出去，其中 `keyboard`／`mouse` 因為四個分支綁的是三種互不相容的形狀，先落在私有的 `_keyboard`／`_mouse`（`Any`）上再標合約；載入失敗直接拋 `AutoControlException`（fail fast）。 |
-| `wrapper/device_context.py` | 152 | Frozen mobile identities and independently owned, lazy execution bindings. |
+| `wrapper/device_context.py` | 167 | Frozen mobile identities and independently owned, lazy execution bindings. |
+| `wrapper/device_frame.py` | 109 | Immutable device PNG evidence with native-point mapping and fixed-frame search. |
+| `wrapper/mobile_gesture.py` | 63 | Validated native-point mobile gestures independent of optional SDKs. |
+| `wrapper/_mobile_operations.py` | 108 | Session-scoped mobile capture and input without desktop fallback. |
+| `wrapper/mobile_actions.py` | 57 | JSON-safe owned mobile operations shared by actions, MCP and the matrix GUI. |
 | `wrapper/_mobile_models.py` | 96 | Frozen mobile identities, validated endpoints and typed ownership failures. |
-| `wrapper/_mobile_binding.py` | 56 | Execution-local mobile bindings without importing SDK clients or session factories. |
+| `wrapper/_mobile_binding.py` | 74 | Execution-local mobile bindings without importing SDK clients or session factories. |
 | `wrapper/_mobile_client_owner.py` | 71 | Publish lazy SDK handles atomically and dispose only owned helper resources. |
 | `wrapper/_mobile_sdk.py` | 117 | Per-owner SDK transport guards; no SDK import or global timeout changes. |
 | `wrapper/_mobile_adb.py` | 29 | Explicit-session ADB client, without the executor's process-wide cache. |
@@ -276,12 +280,13 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
-| `android/adb_client.py` | 213 | `adb` CLI 的薄封裝。 |
+| `android/adb_client.py` | 216 | `adb` CLI 的薄封裝。 |
 | `android/client.py` | 140 | `uiautomator2.Device` 的延遲封裝。 |
 | `android/find.py` | 110 | uiautomator2 widget 樹的元素查詢。 |
+| `android/input.py` | 45 | Unicode-safe SDK text and native-point Android gesture dispatch. |
 | `ios/client.py` | 132 | `facebook-wda`（WebDriverAgent）封裝。 |
 | `ios/find.py` | 96 | XCUITest 無障礙查詢。 |
-| `ios/input.py` | 53 | iOS 觸控與按鍵原語。 |
+| `ios/input.py` | 86 | iOS 觸控與按鍵原語。 |
 | `ios/screen.py` | 36 | iOS 裝置螢幕擷取與尺寸。 |
 
 ### 5.4 能力層 `utils/`（311 個子套件）
@@ -291,19 +296,19 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.1 執行引擎與腳本資產
 
-> 25 個套件、約 16,235 行。
+> 25 個套件、約 16,252 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
 | `utils/action_lint/` | 429 | action 檔 linter 與 JSON Schema 產生器（CI 用 `python -m` 進入點） |
 | `utils/action_signing/` | 488 | action 檔 Ed25519 v2 公鑰驗簽、私鑰離線簽署與 Fernet 加密；所有執行檔案載入器可強制驗簽，HMAC 只允許明確遷移 |
 | `utils/checkpoint/` | 129 | 流程檢查點與續跑，讓長 action list 具持久性 |
-| `utils/action_journal/` | 754 | 版本一 JSONL 動作日誌、先遮罩再追加、run／step／parent 與來源追溯；typed API 與 run-history artifact adapters；`wire_api.py` 為 AC／MCP 薄轉接層 |
+| `utils/action_journal/` | 759 | 版本一 JSONL 動作日誌、先遮罩再追加、run／step／parent 與來源追溯；typed API 與 run-history artifact adapters；`wire_api.py` 為 AC／MCP 薄轉接層 |
 | `utils/codegen/` | 612 | 由 action list 產碼；日誌快照驗證、observed path 候選／來源 manifest、遮罩差異及安全匯出 |
 | `utils/dag/` | 554 | 跨主機 DAG 編排器（圖模型 + runner） |
 | `utils/decision_table/` | 112 | DMN 風格決策表：規則 + 命中策略，把分支外部化 |
 | `utils/deterministic/` | 116 | 決定性執行控制：固定亂數種子 + 凍結時鐘 |
-| `utils/executor/` | 9,857 | **核心**。`Executor` 指令分派表（808 個 `AC_*`）、參數插值、乾跑、逐步 callback、日誌與來源追蹤；`flow_control` 提供 34 個區塊指令（迴圈／分支／try／巨集／變數） |
+| `utils/executor/` | 9,869 | **核心**。`Executor` 指令分派表（811 個 `AC_*`）、參數插值、乾跑、逐步 callback、日誌與來源追蹤；`flow_control` 提供 34 個區塊指令（迴圈／分支／try／巨集／變數） |
 | `utils/flow_debugger/` | 166 | action list 的單步除錯器與追蹤器 |
 | `utils/input_macro/` | 462 | 定時輸入事件：錄製結果的整形（`timeline`／`InputRecorder`，Windows 與 macOS 共用）、重播與宣告式輸入序列 DSL |
 | `utils/json/` | 103 | action JSON 檔讀寫與正規化格式化（`fmt --check` 的後端） |
@@ -485,7 +490,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.8 元素定位、自我修復與智慧等待
 
-> 23 個套件、約 5,412 行。
+> 23 個套件、約 5,505 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -508,14 +513,14 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/observation_delta/` | 122 | token 預算內的觀察差異：兩個 UI 影格之間變了什麼 |
 | `utils/screen_state/` | 191 | 語義畫面狀態：快照／差異與結構化畫面描述 |
 | `utils/scroll_find/` | 103 | 捲動直到目標影像／文字可見 |
-| `utils/self_healing/` | 1,345 | 自癒定位、固定畫面版本比較與標註指標、schema 2 稽核來源、不可變樣板修訂及明確接受／還原 |
+| `utils/self_healing/` | 1,438 | 自癒定位、固定畫面版本比較與標註指標、schema 2 稽核來源、不可變樣板修訂及明確接受／還原 |
 | `utils/semantic_recording/` | 498 | 為錄製內容加上語義錨點，支援換機重播與自癒重播 |
 | `utils/settle_detector/` | 79 | 以純函式介面判定 UI 是否已靜止 |
 | `utils/smart_waits/` | 672 | 智慧等待：以影格差異取代 `time.sleep` |
 
 ### 5.4.9 AI / Agent / LLM
 
-> 13 個套件、約 24,218 行。
+> 13 個套件、約 24,230 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -528,7 +533,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/cua_action/` | 204 | 標準化 computer-use 動作結構（Anthropic／OpenAI → `AC_*`） |
 | `utils/llm/` | 365 | 自然語言 → action list 規劃器 + Anthropic／null 後端 |
 | `utils/mcp_registry/` | 97 | MCP registry 資訊清單產生；預設 io.github.integration-automation/autocontrol，專案 Integration-Automation/AutoControlGUI |
-| `utils/mcp_server/` | 19,801 | **無頭 MCP 伺服器**（16K LOC，預設註冊 730 個工具＝711 個 `ac_*` + 19 個別名）：stdio + HTTP 傳輸、工具工廠與處理器、資源、prompt、稽核、限流、外掛熱重載 |
+| `utils/mcp_server/` | 19,813 | **無頭 MCP 伺服器**（16K LOC，預設註冊 733 個工具＝714 個 `ac_*` + 19 個別名）：stdio + HTTP 傳輸、工具工廠與處理器、資源、prompt、稽核、限流、外掛熱重載 |
 | `utils/tool_use_schema/` | 195 | 把 `AC_*` 指令匯出成 Claude／OpenAI 的 tool-use schema |
 | `utils/trajectory_eval/` | 132 | agent 軌跡評估：依評分規準為一次執行打分 |
 | `utils/vision/` | 550 | VLM 元素定位器（依描述找元素）+ Anthropic／OpenAI／null 後端 |
@@ -651,7 +656,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.14 安全、機密與合規
 
-> 13 個套件、約 3,197 行。
+> 13 個套件、約 3,198 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -660,7 +665,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/governance/` | 242 | 治理：maker-checker 核准閘門與即時憑證租約 |
 | `utils/license_policy/` | 240 | 以 SBOM 元件評估 SPDX 授權允許／拒絕政策 |
 | `utils/provenance/` | 126 | SLSA 建置來源證明（in-toto v1） |
-| `utils/rbac/` | 520 | 角色型存取控制：JSON 使用者、request AuthorizationContext、REST／MCP capability guards；user_api 提供五個管理命令，共用 configured_user_store |
+| `utils/rbac/` | 521 | 角色型存取控制：JSON 使用者、request AuthorizationContext、REST／MCP capability guards；user_api 提供五個管理命令，共用 configured_user_store |
 | `utils/redaction/` | 508 | 截圖遮蔽層：規則偵測 + 政策 + 協調器（上傳 VLM 前先遮） |
 | `utils/sbom/` | 170 | SBOM（CycloneDX）產生 |
 | `utils/secret_ref/` | 182 | URI scheme 形式的值參照解析 |
@@ -717,25 +722,25 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 上表以子套件為單位；以下把行數最大的幾個子系統展開到檔案層。
 
-#### `utils/executor/`（9,857 行）— 執行核心
+#### `utils/executor/`（9,869 行）— 執行核心
 
 | 檔案 | 行數 | 職責 |
 | --- | ---: | --- |
-| `action_executor.py` | 8,498 | `Executor` 類別與 `event_dict` 分派表（808 個指令），另含數百個把 utils 能力接成指令的 adapter 函式；全域單例 `executor` 與 `add_command_to_executor()` 擴充點。 |
+| `action_executor.py` | 8,502 | `Executor` 類別與 `event_dict` 分派表（811 個指令），另含數百個把 utils 能力接成指令的 adapter 函式；全域單例 `executor` 與 `add_command_to_executor()` 擴充點。 |
 | `flow_control.py` | 650 | 真正的流程控制：`AC_loop`／`AC_for_each`／`AC_while_*`／`AC_if_*`／`AC_try`／`AC_retry`／`AC_parallel`／`AC_define_macro`／`AC_call_macro`／變數指令（`AC_set_var`／`AC_get_var`／`AC_inc_var`）。`LoopBreak`／`LoopContinue` 以例外實作。34 個區塊指令的分派表 `BLOCK_COMMANDS` 也在這裡，含下一列匯入的資料來源指令。 |
 | `flow_data_commands.py` | 272 | `AC_*_to_var` 資料來源與轉換指令：shell、時鐘、亂數、PDF、TOTP、SQL、檔案、HTTP、OCR，加上 `AC_assert_var`／`AC_assert_db`／`AC_assert_duration`／`AC_transform_var`。都不執行巢狀 action list，所以沒有迴圈／分支語意。 |
 | `action_schema.py` | 159 | action list 的結構驗證：形狀、參數型別、未知指令拒絕。單一走訪同時支援兩種消費方式：`validate_actions()` 遇到第一個問題就拋、`unknown_command_names()` 收齊全部不認得的名字（REST `/execute` 用它回 400）。 |
-| `action_redaction.py` | 122 | 記錄與紀錄鍵用的遮蔽：`AC_secret_*` 的參數（金庫通行碼、機密值）在寫進 log、當成結果紀錄的鍵之前換成 `***`，巢狀在區塊指令裡的也一樣。 |
+| `action_redaction.py` | 130 | 記錄與紀錄鍵用的遮蔽：`AC_secret_*` 的參數（金庫通行碼、機密值）在寫進 log、當成結果紀錄的鍵之前換成 `***`，巢狀在區塊指令裡的也一樣。 |
 | `mouse_aliases.py` | 39 | 單鍵點擊別名（`AC_click_left` 等），executor 與 callback executor 共用。 |
 | `flags.py` | 19 | 旗標讀取 `as_bool`：依拼法（`"true"`／`"yes"`／`"on"`／`"1"`）而非 Python 真值判斷，所以 JSON、CLI、MCP 傳來的 `"false"` 是關；所有 adapter 與流程指令共用。 |
 | `path_arguments.py` | 58 | Scoped dispatch: reviewed filesystem fields after interpolation and positional/default binding; includes flow-block arguments. |
 | `request_context.py` | 40 | Deferred registration snapshots: identity, roots and independent variables for each delivery. |
 
-#### `utils/mcp_server/`（19,801 行，730 個工具）— 最大子系統
+#### `utils/mcp_server/`（19,813 行，733 個工具）— 最大子系統
 
 | 檔案 | 行數 | 職責 |
 | --- | ---: | --- |
-| `tools/_factories.py` | 9,065 | 工具工廠：每個函式回傳一個領域的 `MCPTool` 清單（把 `AC_*` 能力包成 MCP 工具）。 |
+| `tools/_factories.py` | 9,077 | 工具工廠：每個函式回傳一個領域的 `MCPTool` 清單（把 `AC_*` 能力包成 MCP 工具）。 |
 | `tools/_handlers.py` | 545 | 把 MCP 工具呼叫橋接到 AutoControl 無頭 API 的 adapter；主題模組拆完之後這裡留的是資料／文字／HTTP 那一類與 WebRunner 橋接。 |
 | `tools/_handlers_qa.py` | 429 | 同一種 adapter，QA 主題：斷言 DSL、資料驅動、SQL／PDF／郵件／HTTP 步驟、codegen、視覺回歸、狀態機、flaky 偵測與隔離、suite runner、無障礙稽核、裝置矩陣、媒體斷言。從 `_handlers.py` 依主題拆出的第一塊（750 行上限）；兩者互不引用。 |
 | `tools/_handlers_input.py` | 224 | 同一種 adapter，輸入主題：滑鼠、鍵盤、虛擬手把（ViGEm）。 |
@@ -865,7 +870,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `rest_registry.py` | 75 | 保存執行中 REST 伺服器的行程級單例。 |
 | `__main__.py` | 56 | `python -m je_auto_control.utils.rest_api` 進入點。 |
 
-#### `utils/self_healing/`（1,345 行）— 固定畫面比較與候選修訂
+#### `utils/self_healing/`（1,438 行）— 固定畫面比較與候選修訂
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -875,9 +880,10 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `evaluation_dataset.py` | 93 | Load root-checked labelled frames and export JSON plus shareable HTML reports. |
 | `evaluation_models.py` | 253 | Immutable fixed-frame inputs, predictions and labelled comparison reports. |
 | `frame_strategies.py` | 86 | Template and VLM strategies that consume an already captured immutable frame. |
+| `mobile_locator.py` | 50 | Self-heal on one device frame, preserving evidence and native-point coordinates. |
 | `heal_log.py` | 130 | Append-only JSON-lines log of self-healing locator events. |
 | `healing_context.py` | 74 | Scope locator versions and keep detection evidence separate from verification. |
-| `locator.py` | 254 | Self-healing locator: image template first, VLM fallback on miss. |
+| `locator.py` | 297 | Self-healing locator: image template first, VLM fallback on miss. |
 | `report_views.py` | 60 | Read-only metric and failure rows shared by HTML exports and GUI reports. |
 | `template_revisions.py` | 186 | Explicitly validate, accept and revert immutable candidate template revisions. |
 
@@ -921,7 +927,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `time_travel/` | `controller.py`、`player.py` |
 | `dag/` | `graph.py`、`runner.py` |
 | `run_history/` | `history_store.py`、`artifact_manager.py`、`run_outcome.py`（排程／觸發／熱鍵執行有動作失敗時判為錯誤） |
-| `self_healing/` | `__init__.py`、`evaluation.py`、`evaluation_api.py`、`evaluation_dataset.py`、`evaluation_models.py`、`frame_strategies.py`、`heal_log.py`、`healing_context.py`、`locator.py`、`report_views.py`、`template_revisions.py` |
+| `self_healing/` | `__init__.py`、`evaluation.py`、`evaluation_api.py`、`evaluation_dataset.py`、`evaluation_models.py`、`frame_strategies.py`、`mobile_locator.py`、`heal_log.py`、`healing_context.py`、`locator.py`、`report_views.py`、`template_revisions.py` |
 | `ab_locator/` | `runner.py`、`store.py` |
 | `cost_telemetry/` | `pricing.py`、`store.py` |
 | `governance/` | `governance.py`、`credential_broker.py` |
@@ -1063,7 +1069,7 @@ GUI 是**選用 extra**（`pip install je_auto_control[gui]`，PySide6 + qt-mate
 | `AutoControl/executor/` | 3 檔 | 由 `create_project_dir` 產生的專案範本示範（單檔／整個目錄／錯誤檔案三種執行方式）。 |
 | `exe/start_autocontrol_gui.py` | 4 行 | 打包成執行檔用的 GUI 啟動器。 |
 | `benchmarks/core_latency.py` | 32 行 | 對穩定無頭進入點的可重複煙霧基準測試。 |
-| `examples/` | 27 個腳本 | 從截圖點擊、OCR、排程、遠端桌面、agent loop、可觀測性，一路到 computer-use、Wayland、跨主機 DAG、chatops、pytest/BDD、anchor locator。 |
+| `examples/` | 29 個腳本 | 從截圖點擊、OCR、排程、遠端桌面、agent loop、可觀測性，一路到 computer-use、Wayland、跨主機 DAG、chatops、pytest/BDD、anchor locator。 |
 | `browser-extension/` | manifest v3 擴充 | 瀏覽器端配合元件（background／content script／popup）。 |
 | `docker/` | Dockerfile ×8 + compose + 15 支驗證／伺服器腳本 | 無頭容器（`Dockerfile`）、帶 XFCE 桌面的容器（`Dockerfile.xfce`),以及六個**驗證用**映像:`Dockerfile.wayland`（sway headless,擷取路徑 + `libei_verify.py` 對真的 libei.so 解析符號）、`Dockerfile.eis`（`eis_server.py` 用 ctypes 綁 libeis 起一個真的 EIS server,`eis_verify.py` 把 libei sender 對著它跑完整握手與發送）、`Dockerfile.portal`（`portal_server.py` 自己佔住 `org.freedesktop.portal.Desktop`,真的 `dbus-daemon` + 真的 liboeffis 跑完 RemoteDesktop 交握，Session Closed 必須保留 needs_permission/input 與明確重試；`shortcut_server.py`／`shortcut_verify.py` 用獨立 GDBus 驗證 GlobalShortcuts grant/拒絕/取消/早到 signal/owner 撤銷）、`Dockerfile.ydotool`（真的 uinput 裝置,`ydotool_verify.py` 直接讀回 `/dev/input/eventN`）、`Dockerfile.seat`（`headless,libinput` + builtin seat,合成器真的吃下 ydotool 裝置,`seat_verify.py` 從 `grim -c` 的像素讀回游標落點）、`Dockerfile.x11`（真的 Xvfb + openbox,`x11_verify.py` 用 `xev` 把注入的事件從真的客戶端讀回（含 `synthetic NO`,這是 XTest 跟 `XSendEvent` 的差別）,另用 ImageMagick `import` 做獨立擷取對照,跑兩種螢幕版面）。`physical_source_verify.py` 在 seat／uinput 映像驗證 installed wheel 排除真實核心 virtual 裝置，禁止在排除前開啟，並驗證無 worker／事件／FD 洩漏。全部接在 `.github/workflows/docker.yml`。 |
 | `k8s/helm/` | Helm chart | Kubernetes 部署。 |
@@ -1174,14 +1180,14 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 
 | 層／子系統 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `gui/` | 110 | 30,440 |
-| `utils/mcp_server/` | 47 | 19,801 |
+| `gui/` | 110 | 30,453 |
+| `utils/mcp_server/` | 47 | 19,813 |
 | `utils/remote_desktop/` | 59 | 13,799 |
-| `utils/executor/` | 10 | 9,857 |
+| `utils/executor/` | 10 | 9,869 |
 | `utils/usb/` | 17 | 4,666 |
-| `je_auto_control/`（頂層 3 檔） | 3 | 2,575 |
+| `je_auto_control/`（頂層 3 檔） | 3 | 2,577 |
 | `utils/accessibility/` | 14 | 3,143 |
-| `wrapper/` | 27 | 4,504 |
+| `wrapper/` | 31 | 4,874 |
 | `windows/` | 23 | 2,101 |
 | `utils/rest_api/` | 8 | 1,919 |
 | `utils/agent/` | 9 | 2,032 |
@@ -1194,8 +1200,8 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `osx/` | 17 | 937 |
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 863 |
-| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 732 | 62,455 |
-| **總計** | **1,154** | **169,924** |
+| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 734 | 62,641 |
+| **總計** | **1,160** | **170,519** |
 
 
 Crypto optional-dependency failures use CryptoDependencyError from utils/exception:
@@ -1242,3 +1248,8 @@ Actions share the same headless metadata. Matrix execution uses CallWorker;
 relay owner-bound callbacks use weak references so deferred cleanup cannot
 retain/destroy a parentless matrix owner from its child callback lifetime.
 Native Android/emulator and remote-WDA recovery remain H3 acceptance cases.
+
+E2 native-point Gesture and immutable DeviceFrame share capture evidence across OCR/template/VLM.
+Bound healing uses one device frame, then checks ownership/geometry before touch. JSON
+mobile operations share facade/AC/MCP/Builder and Device Matrix Actions. Unicode uses
+SDK input; legacy ADB non-ASCII is refused. Hardware restoration remains H3.

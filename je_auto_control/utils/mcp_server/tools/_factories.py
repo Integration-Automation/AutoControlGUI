@@ -7,6 +7,7 @@ MCP client surfaces to the model.
 """
 from typing import List
 from je_auto_control.wrapper.device_context import probe_device_contexts
+from je_auto_control.wrapper.mobile_actions import mobile_capture, mobile_gesture, mobile_type_text
 from je_auto_control.utils.mcp_server.tools._factories_wayland_input import wayland_input_tools
 from je_auto_control.utils.mcp_server.tools._factories_capabilities import capability_tools
 from je_auto_control.utils.mcp_server.tools._factories_signing import signing_tools
@@ -8928,6 +8929,17 @@ def a11y_audit_tools() -> List[MCPTool]:
 
 def device_matrix_tools() -> List[MCPTool]:
     return [
+        MCPTool(name='ac_mobile_capture', description='Capture explicit mobile PNG and native geometry; never desktop.',
+                input_schema=schema({'file_path': {'type': 'string'}, 'device': {'type': 'object'}},
+                                    required=['file_path']), handler=mobile_capture, annotations=NON_DESTRUCTIVE),
+        MCPTool(name='ac_mobile_gesture',
+                description='Perform native-point mobile gesture on an explicit device owner.',
+                input_schema=schema({'gesture': {'type': 'object'}, 'device': {'type': 'object'}},
+                                    required=['gesture']), handler=mobile_gesture, annotations=DESTRUCTIVE),
+        MCPTool(name='ac_mobile_type_text',
+                description='Type exact mobile Unicode via SDK; no ADB fallback or text echo.',
+                input_schema=schema({'text': {'type': 'string'}, 'device': {'type': 'object'}},
+                                    required=['text']), handler=mobile_type_text, annotations=DESTRUCTIVE),
         MCPTool(
             name='ac_probe_mobile_devices',
             description='Passively inspect configured mobile SDK dependencies; no connection or device input.',

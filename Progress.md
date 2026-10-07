@@ -9,7 +9,7 @@
 核准設計：[跨平台自動化與 GUI 改版](docs/superpowers/specs/2026-10-02-platform-gui-modernization-design.md)。
 實作計畫：[分階段交付計畫](docs/superpowers/plans/2026-10-02-modernization-index.md)，已核准，依序實作。
 現有 `[Answer]` 決策沿用；後續交付包含 E–H 與完整整合驗收。
-從 E2 接續原有計畫；不額外新增付費型功能。既有 API 介面及相關修正繼續，
+從 E3 接續原有計畫；不額外新增付費型功能。既有 API 介面及相關修正繼續，
 目前以本機／離線測試驗證；缺少真實 API 條件的既有項目保留待驗證。
 正向實體裝置擷取、GNOME/KDE 授權與鍵態恢復仍列 H3；
 歷史 Qt 原生崩潰的後續追蹤仍保留在下列驗收項目。
@@ -169,6 +169,8 @@ Anthropic 每一步送約 202 KB 的工具 schema、沒有 `cache_control`。拍
 `TODO` — E1 的 frozen context、matrix 隔離、被動 metadata、逐請求逾時與取消已建立；
 H3 仍需 Android emulator／實機及 remote WDA 驗證裝置可達性、授權失敗、
 SDK bootstrap／retry 的整體截止時間，以及取消後實體狀態和自有 helper 回收。
+E2 仍需 Unicode 焦點 round-trip、SDK IME／剪貼簿恢復、裝置旋轉後座標與 WDA W3C
+雙指手勢支援的原生證據；capture 拒絕擷取中旋轉，不保證擷取後裝置不再旋轉。
 不同 endpoint alias 是否指向同一實機不能由配置字串判定。保存 SDK／ADB／WDA
 版本、平台與執行證據；fake SDK、受控 ADB argv 及 offscreen Qt 不代替原生驗收。
 

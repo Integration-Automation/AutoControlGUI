@@ -80,8 +80,13 @@ def _sanitize_sequence(command: str, value: List[JSONValue], forced: bool) -> Tu
         arguments = value[1] if len(value) > 1 else None
         cleaned, reasons = private_input(value[0], arguments)
         return [value[0], cleaned] if len(value) > 1 else [value[0]], bool(reasons)
-    values = [_sanitize(command, item, forced) for item in value]
+    values = [_sanitize(command, item, _private_position(command, index, forced))
+              for index, item in enumerate(value)]
     return [item for item, _ in values], any(masked for _, masked in values)
+
+
+def _private_position(command: str, index: int, forced: bool) -> bool:
+    return forced or (command == 'AC_mobile_type_text' and index == 0)
 
 
 def secret_values(command: str, raw: object, resolved: object) -> Set[str]:
@@ -118,8 +123,8 @@ def _collect_sequence(command: str, raw: List[JSONValue], resolved: List[JSONVal
         after = resolved[1] if len(resolved) > 1 else None
         return _collect(raw[0], before, after, _forced(raw[0], before))
     values: Set[str] = set()
-    for before, after in zip(raw, resolved):
-        values.update(_collect(command, before, after, forced))
+    for index, (before, after) in enumerate(zip(raw, resolved)):
+        values.update(_collect(command, before, after, _private_position(command, index, forced)))
     return values
 
 

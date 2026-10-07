@@ -172,13 +172,16 @@ class AdbClient:
         self.shell(f"input keyevent {payload}", serial=serial)
 
     def text(self, value: str, *, serial: Optional[str] = None) -> None:
-        """Type ``value`` via ``input text``. Spaces are %s-escaped.
+        """Type ASCII ``value`` via ``input text``. Spaces are %s-escaped.
 
         ``input text`` itself turns every ``%s`` into a space and offers no
         escape for it, so a literal ``%s`` in ``value`` arrives as a space.
+        Non-ASCII text fails before input; use DeviceSession.type_text instead.
         """
         if not isinstance(value, str):
             raise AdbError(f"text must be a string, got {type(value).__name__}")
+        if not value.isascii():
+            raise AdbError('adb input text cannot preserve Unicode; use DeviceSession.type_text with uiautomator2')
         # ``input text`` mangles spaces; the official workaround is to
         # replace them with %s before passing through the shell layer.
         escaped = value.replace(" ", "%s")
