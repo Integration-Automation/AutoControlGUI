@@ -15,6 +15,12 @@ defusedxml==0.7.1
 aiortc>=1.14.0
 av>=14.0.0
 
+# Protected configuration/signaling HTTP integration tests ([signaling] extra).
+fastapi>=0.115
+starlette>=1.0.1
+uvicorn>=0.32
+httpx==0.28.1
+
 # Office I/O ([office] extra) — exercised by the headless Office tests.
 openpyxl==3.1.5
 python-docx==1.2.0

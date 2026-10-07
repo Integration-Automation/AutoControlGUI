@@ -608,3 +608,5 @@ missing target exit evidence fails the job. Assertions and coverage floors
 remain enforced. Diagnostic collection is not a USB ACL crash fix.
 LLDB ignores launcher exec stops; other nonfatal stops retain missing exit
 evidence and fail as debugger errors.
+Both debuggers pass SIGINT to Python, preserving emergency-stop assertions.
+Quality and development dependencies include signaling and HTTP TestClient support.

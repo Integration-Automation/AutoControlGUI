@@ -23,6 +23,7 @@ set confirm off
 set print thread-events off
 set detach-on-fork on
 handle SIGPIPE nostop noprint pass
+handle SIGINT nostop noprint pass
 run
 python
 import gdb
@@ -51,12 +52,15 @@ settings set target.process.stop-on-exec false
 settings set stop-disassembly-count 0
 settings set auto-confirm true
 process handle SIGPIPE -n false -p true -s false
+process handle SIGINT -n false -p true -s false
 run
 script process = lldb.debugger.GetSelectedTarget().GetProcess()
 script exited = process.GetState() == lldb.eStateExited
 script thread = process.GetSelectedThread()
-script fatal_stop = thread.GetStopReason() in (lldb.eStopReasonSignal, lldb.eStopReasonException)
-script native_signal = thread.GetStopReasonDataAtIndex(0) if thread.GetStopReason() == lldb.eStopReasonSignal else 11
+script stop_reason = thread.GetStopReason()
+script native_signal = thread.GetStopReasonDataAtIndex(0) if stop_reason == lldb.eStopReasonSignal else 11
+script fatal_signal = native_signal in (4, 5, 6, 8, 10, 11)
+script fatal_stop = stop_reason == lldb.eStopReasonException or (stop_reason == lldb.eStopReasonSignal and fatal_signal)
 script code = process.GetExitStatus() if exited else (128 + native_signal if fatal_stop else None)
 script lldb.debugger.HandleCommand("thread backtrace all") if not exited else None
 script lldb.debugger.HandleCommand("image list") if not exited else None

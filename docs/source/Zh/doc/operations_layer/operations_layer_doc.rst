@@ -565,3 +565,5 @@ Linux/macOS Python 3.10 quality job 透過 ``test/verify/native_debugger.py``
 退出證據會使 job 失敗；斷言與 coverage 地板持續強制。收集診斷並不代表已修正
 USB ACL 間歇崩潰。
 LLDB 略過啟動器 exec 暫停；其他非致命停止不建立退出證據，視為 debugger 錯誤。
+兩個 debugger 都將 SIGINT 傳给 Python，維持緊急停止斷言。
+Quality 與開發相依包含 signaling 及 HTTP TestClient 支援。

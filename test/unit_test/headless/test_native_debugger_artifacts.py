@@ -49,9 +49,11 @@ def test_invalid_profile_fails_before_launch(tmp_path, platform_name, timeout):
         native_debugger.run_diagnostic(['python'], tmp_path, target_platform=platform_name, timeout_s=timeout)
 
 
-@pytest.mark.parametrize('exited,reason,expected', [(True, 7, '17'), (False, 5, '134'), (False, 7, None)])
-def test_lldb_startup_exec_stop_cannot_be_reported_as_a_native_crash(tmp_path, exited, reason, expected):
-    thread = SimpleNamespace(GetStopReason=lambda: reason, GetStopReasonDataAtIndex=lambda _index: 6)
+@pytest.mark.parametrize('exited,reason,native_signal,expected', [
+    (True, 7, 6, '17'), (False, 5, 6, '134'), (False, 7, 6, None), (False, 5, 2, None),
+])
+def test_lldb_nonfatal_stops_cannot_be_reported_as_a_native_crash(tmp_path, exited, reason, native_signal, expected):
+    thread = SimpleNamespace(GetStopReason=lambda: reason, GetStopReasonDataAtIndex=lambda _index: native_signal)
     process = SimpleNamespace(GetState=lambda: 10 if exited else 0, GetExitStatus=lambda: 17,
                               GetSelectedThread=lambda: thread, Kill=lambda: None)
     target = SimpleNamespace(GetProcess=lambda: process)
@@ -61,6 +63,8 @@ def test_lldb_startup_exec_stop_cannot_be_reported_as_a_native_crash(tmp_path, e
     report = tmp_path / 'target-exit.txt'
     commands = native_debugger._lldb_script(report)
     assert 'settings set target.process.stop-on-exec false' in commands
+    assert 'process handle SIGINT -n false -p true -s false' in commands
+    assert 'handle SIGINT nostop noprint pass' in native_debugger._gdb_script(report)
     for line in commands.splitlines():
         if line.startswith('script '):
             exec(line[7:], namespace)  # pylint: disable=exec-used  # Executes only this tool's generated fixed script.

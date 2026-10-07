@@ -193,6 +193,9 @@ Anthropic 每一步送約 202 KB 的工具 schema、沒有 `cache_control`。拍
 定位並修正 Qt lifecycle；CI 已配置原生 debugger artifact，仍需執行並確認崩潰堆疊。
 既有 faulthandler 證據見
 `docs/updates/2026-10.md` U-20261007-03，不能以 Windows／較新 Python 的通過取代。
+本次原生 CI 另在 Linux Python 3.14 的 `test_rd_gui_audit.py` teardown／
+`QApplication.allWidgets()` 捕獲 Qt/shiboken crash；需一併定位 GUI cleanup lifecycle，
+不能將 debugger 捕獲測試 SIGINT 當作這些崩潰的重現。
 
 ---
 

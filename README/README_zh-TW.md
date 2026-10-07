@@ -402,6 +402,8 @@ Linux／macOS Python 3.10 quality job 透過 gdb／lldb 保存 `native-diagnosti
 artifact，包含原生堆疊、套件版本及測試退出碼。原有 coverage 命令及斷言繼續執行；
 收集診斷不代表已定位 USB ACL 的間歇崩潰原因。
 LLDB 略過啟動器的 exec 暫停；其他非致命停止會視為診斷失敗，不捏造崩潰退出碼。
+兩個 debugger 都將 SIGINT 傳給 Python，讓緊急停止斷言正常執行。
+Quality 測試安裝 WebRTC／signaling extras 與 HTTP 測試 client。
 
 ---
 

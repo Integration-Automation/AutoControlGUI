@@ -58,6 +58,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261007-07 | 2026-10-07 | Preserve Python signal tests and install HTTP integration dependencies | #incident #testing #modernization | [2026-10](2026-10.md) |
 | U-20261007-06 | 2026-10-07 | Distinguish LLDB launcher exec stops from native failures | #incident #testing #modernization | [2026-10](2026-10.md) |
 | U-20261007-05 | 2026-10-07 | Preserve native Python 3.10 debugger diagnostics and target failures | #done #testing #modernization | [2026-10](2026-10.md) |
 | U-20261007-04 | 2026-10-07 | Owned raw input and portal stop across Python, actions, MCP and GUI | #done #wayland #gui #modernization | [2026-10](2026-10.md) |
@@ -372,7 +373,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | File | Period | Entries |
 |---|---|---:|
-| [2026-10.md](2026-10.md) | 2026-10 | 33 |
+| [2026-10.md](2026-10.md) | 2026-10 | 34 |
 | [2026-09-e.md](2026-09-e.md) | 2026-09 | 7 |
 | [2026-09-d.md](2026-09-d.md) | 2026-09 | 55 |
 | [2026-09-c.md](2026-09-c.md) | 2026-09 | 38 |
