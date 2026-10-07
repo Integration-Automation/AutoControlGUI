@@ -186,3 +186,13 @@ Qt-free until a factory is opened; open/close belong on the GUI thread. Closing
 native panels follows their existing owner cleanup; native state restoration is a
 separate acceptance case. No unopened feature is created during metadata, language
 or engine refresh.
+
+### F2 workspace presentation
+
+WorkspaceShell embeds one tab registry owner. Navigation and theme tokens are GUI
+presentation, not automation services; metadata/token imports remain Qt-free.
+Search/language/theme changes do not recreate panels. Responsive details show only
+explicitly reported execution state, with ready distinct from native authorization.
+Legacy widget constructor remains compatible and accepts an optional standalone
+registry for controlled embedding; binding is GUI-thread-only and cannot transfer
+an existing owner. Shared task cancellation follows in F3.

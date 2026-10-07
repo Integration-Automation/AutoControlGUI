@@ -1,0 +1,21 @@
+{
+  "platform": "Windows-11-10.0.26300-SP0",
+  "python": "3.14.4",
+  "pyside": "6.11.1",
+  "qt_platform": "offscreen",
+  "registered_font_families": [
+    "MS Gothic",
+    "MS PGothic",
+    "MS UI Gothic",
+    "Microsoft JhengHei",
+    "Microsoft JhengHei UI",
+    "Segoe UI"
+  ],
+  "resolved_font": "Microsoft JhengHei",
+  "small_window": [
+    640,
+    480
+  ],
+  "small_workspace_width": 395,
+  "native_device_operations": false
+}

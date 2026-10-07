@@ -830,3 +830,14 @@ Docker/KVM 配置與手動原生 CI；測試配置與受控測試不等於實體
 分頁關閉鈕及 `close_tab` 釋放面板與訂閱。重開已關閉分頁會以相同 key 建立新 widget。
 切換語言／更新引擎只處理已建立面板；缺少選用套件會顯示恢復說明。
 GUI factory 在 GUI 執行緒執行；registry 的 headless metadata 不匯入 Qt 或功能模組。
+
+### 可搜尋工作區與主題
+
+左側導航可搜尋全部 50 個功能 key、翻譯標題與英文別名，搜尋不會開啟面板。
+Ctrl+K 聚焦搜尋，Enter 開啟第一個符合項目。中央工作區保留既有分頁與 Actions
+選單；右側執行詳情顯示明確回報的狀態、原因、復原方式及進度；工作區就緒不代表
+原生權限已驗證。Ctrl+Shift+D 或 View 可切換詳情，寬度小於 900 邏輯像素時預設
+收合；較寬內容可透過捲軸操作。View → 主題切換深色／淺色，字級及四種語言切換
+會保留搜尋與面板輸入。主題使用系統字型與原生 Qt 圖示。
+[Qt 布局截圖](../benchmarks/results/gui-workspace-f2/report.json)記錄 offscreen 條件，
+不代表原生裝置或混合 DPI 驗證。

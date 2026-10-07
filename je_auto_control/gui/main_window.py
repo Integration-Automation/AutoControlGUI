@@ -1,17 +1,19 @@
 """Top-level window with menu bar, closable tabs, and live language switching."""
 import sys
+from dataclasses import replace
 
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QAction, QActionGroup
+from PySide6.QtGui import QAction, QActionGroup, QCloseEvent
 from PySide6.QtWidgets import (
     QApplication, QFileDialog, QMainWindow, QMenu, QMessageBox,
 )
-from qt_material import QtStyleTools
 
 from je_auto_control.gui.language_wrapper.multi_language_wrapper import (
     language_wrapper,
 )
 from je_auto_control.gui.main_widget import AutoControlGUIWidget
+from je_auto_control.gui.theme import ThemeTokens, apply_theme
+from je_auto_control.gui.workspace import WorkspaceShell
 
 
 def _t(key: str, default: str = "") -> str:
@@ -36,21 +38,20 @@ _TEXT_SIZE_PRESETS = (
 )
 
 
-class AutoControlGUIUI(QMainWindow, QtStyleTools):
+class AutoControlGUIUI(QMainWindow):  # pylint: disable=too-many-instance-attributes  # reason: independent menus, theme, registry and window state
     """Main window: menu bar + AutoControlGUIWidget (which owns the tabs)."""
 
     def __init__(self) -> None:
         super().__init__()
         self.app_id = _t("application_name", "AutoControlGUI")
         if sys.platform in ["win32", "cygwin", "msys"]:
+            # pylint: disable-next=import-outside-toplevel  # reason: platform or selected engine is loaded on demand
             from ctypes import windll  # type: ignore[attr-defined]  # reason: win32-only ctypes
             windll.shell32.SetCurrentProcessExplicitAppUserModelID(self.app_id)
 
         self._user_font_pt: int = 0  # 0 means auto-detect from screen
-        self.apply_stylesheet(self, "dark_amber.xml")
-        # qt_material writes the theme into this window's stylesheet; capture it
-        # so _apply_font_pt can append the font rule instead of replacing (and
-        # thereby wiping) the theme.
+        self._theme = ThemeTokens.dark()
+        apply_theme(self, self._theme)
         self._theme_stylesheet: str = self.styleSheet()
         self._apply_font_pt(self._user_font_pt)
 
@@ -58,7 +59,9 @@ class AutoControlGUIUI(QMainWindow, QtStyleTools):
         self.resize(1000, 760)
 
         self.auto_control_gui_widget = AutoControlGUIWidget(parent=self)
-        self.setCentralWidget(self.auto_control_gui_widget)
+        self.workspace_shell = WorkspaceShell(self.auto_control_gui_widget.registry, parent=self)
+        self.setCentralWidget(self.workspace_shell)
+        self._apply_font_pt(self._user_font_pt)
 
         self._view_menu: QMenu = None
         self._actions_menu: QMenu = None
@@ -73,19 +76,20 @@ class AutoControlGUIUI(QMainWindow, QtStyleTools):
         # Left registered, a language switch after the window was destroyed
         # called into the deleted C++ object.
         listener = self._on_language_changed
-        self.destroyed.connect(lambda *_args: language_wrapper.remove_listener(listener))
+        self.destroyed.connect(  # pylint: disable=no-member  # reason: Qt SignalInstance runtime binding
+            lambda *_args: language_wrapper.remove_listener(listener))
 
     # --- menu construction ---------------------------------------------------
 
     def _build_menu_bar(self) -> None:
-        bar = self.menuBar()
-        bar.clear()
-        bar.addMenu(self._build_file_menu())
-        bar.addMenu(self._build_actions_menu())
-        bar.addMenu(self._build_view_menu())
-        bar.addMenu(self._build_tools_menu())
-        bar.addMenu(self._build_language_menu())
-        bar.addMenu(self._build_help_menu())
+        menu_bar = self.menuBar()
+        menu_bar.clear()
+        menu_bar.addMenu(self._build_file_menu())
+        menu_bar.addMenu(self._build_actions_menu())
+        menu_bar.addMenu(self._build_view_menu())
+        menu_bar.addMenu(self._build_tools_menu())
+        menu_bar.addMenu(self._build_language_menu())
+        menu_bar.addMenu(self._build_help_menu())
 
     def _build_actions_menu(self) -> QMenu:
         """Per-tab command menu: the active tab's operations live here
@@ -112,11 +116,11 @@ class AutoControlGUIUI(QMainWindow, QtStyleTools):
     def _build_file_menu(self) -> QMenu:
         menu = QMenu(_t("menu_file", "File"), self)
         open_action = QAction(_t("menu_file_open_script", "Open Script..."), self)
-        open_action.triggered.connect(self._on_open_script)
+        open_action.triggered.connect(self._on_open_script)  # pylint: disable=no-member  # reason: Qt SignalInstance runtime binding
         menu.addAction(open_action)
         menu.addSeparator()
         exit_action = QAction(_t("menu_file_exit", "Exit"), self)
-        exit_action.triggered.connect(self.close)
+        exit_action.triggered.connect(self.close)  # pylint: disable=no-member  # reason: Qt SignalInstance runtime binding
         menu.addAction(exit_action)
         return menu
 
@@ -128,7 +132,15 @@ class AutoControlGUIUI(QMainWindow, QtStyleTools):
         menu.addSeparator()
         text_menu = menu.addMenu(_t("menu_view_text_size", "Text Size"))
         self._build_text_size_menu(text_menu)
+        theme_menu = menu.addMenu(_t('workspace_theme', 'Theme'))
+        theme_menu.addAction(_t('workspace_theme_dark', 'Dark'), lambda: self._set_theme(False))
+        theme_menu.addAction(_t('workspace_theme_light', 'Light'), lambda: self._set_theme(True))
+        menu.addAction(_t('workspace_details_toggle', 'Execution details'), self.workspace_shell.toggle_details)
         return menu
+
+    def _set_theme(self, light: bool) -> None:
+        self._theme = ThemeTokens.light() if light else ThemeTokens.dark()
+        self._apply_font_pt(self._user_font_pt)
 
     def _rebuild_tabs_menu(self) -> None:
         if self._view_menu is None:
@@ -156,7 +168,7 @@ class AutoControlGUIUI(QMainWindow, QtStyleTools):
             action = QAction(entry["title"], sub, checkable=True)
             action.setChecked(entry["visible"])
             action.setData(entry["key"])
-            action.toggled.connect(self._on_tab_action_toggled)
+            action.toggled.connect(self._on_tab_action_toggled)  # pylint: disable=no-member  # reason: Qt SignalInstance runtime binding
             sub.addAction(action)
             self._tab_actions.append(action)
 
@@ -167,7 +179,7 @@ class AutoControlGUIUI(QMainWindow, QtStyleTools):
             action = QAction(_t(label_key, default_label), menu, checkable=True)
             action.setData(pt)
             action.setChecked(pt == self._user_font_pt)
-            action.triggered.connect(self._on_text_size_selected)
+            action.triggered.connect(self._on_text_size_selected)  # pylint: disable=no-member  # reason: Qt SignalInstance runtime binding
             group.addAction(action)
             menu.addAction(action)
 
@@ -183,15 +195,18 @@ class AutoControlGUIUI(QMainWindow, QtStyleTools):
         return 12
 
     def _apply_font_pt(self, pt: int) -> None:
-        """Apply the font size on top of the active theme stylesheet.
-
-        The theme lives in this window's stylesheet, so the font rule is
-        appended rather than assigned — assigning would replace (and wipe) the
-        qt_material theme on startup and on every text-size change.
-        """
+        """Change system-font size while preserving the active palette and focus rules."""
         effective = pt if pt > 0 else self._detect_auto_font_pt()
-        font_rule = f"* {{ font-size: {effective}pt; font-family: 'Lato'; }}"
-        self.setStyleSheet(f"{self._theme_stylesheet}\n{font_rule}")
+        theme = getattr(self, '_theme', None)
+        if isinstance(theme, ThemeTokens):
+            self._theme = replace(theme, font_point_size=effective)
+            apply_theme(self, self._theme)
+            if hasattr(self, 'workspace_shell'):
+                apply_theme(self.workspace_shell, self._theme)
+            self._theme_stylesheet = self.styleSheet()
+        else:
+            # Keep the existing unbound font helper contract for Qt embedders.
+            self.setStyleSheet(f"{self._theme_stylesheet}\n* {{ font-size: {effective}pt; }}")
 
     def _on_text_size_selected(self) -> None:
         action = self.sender()
@@ -235,7 +250,7 @@ class AutoControlGUIUI(QMainWindow, QtStyleTools):
             action = QAction(lang.replace("_", " "), menu, checkable=True)
             action.setData(lang)
             action.setChecked(lang == language_wrapper.language)
-            action.triggered.connect(self._on_language_selected)
+            action.triggered.connect(self._on_language_selected)  # pylint: disable=no-member  # reason: Qt SignalInstance runtime binding
             group.addAction(action)
             menu.addAction(action)
         return menu
@@ -264,7 +279,7 @@ class AutoControlGUIUI(QMainWindow, QtStyleTools):
 
     def _on_language_changed(self, _language: str) -> None:
         self.setWindowTitle(_t("application_name", "AutoControlGUI"))
-        self.auto_control_gui_widget.retranslate()
+        self.workspace_shell.retranslate()
         self._build_menu_bar()
 
     def _on_about(self) -> None:
@@ -273,7 +288,13 @@ class AutoControlGUIUI(QMainWindow, QtStyleTools):
             "AutoControlGUI — cross-platform automation framework.",
         )
 
+    def closeEvent(self, event: QCloseEvent) -> None:  # pylint: disable=invalid-name  # reason: Qt virtual callback
+        """Close constructed workflow owners before the top-level window is hidden."""
+        self.workspace_shell.close()
+        super().closeEvent(event)
+
     def _start_hotkeys(self) -> None:
+        # pylint: disable-next=import-outside-toplevel  # reason: platform or selected engine is loaded on demand
         from je_auto_control.utils.hotkey.hotkey_daemon import default_hotkey_daemon
         try:
             default_hotkey_daemon.start()
@@ -282,11 +303,13 @@ class AutoControlGUIUI(QMainWindow, QtStyleTools):
         self.auto_control_gui_widget.sync_engine_tabs()
 
     def _start_scheduler(self) -> None:
+        # pylint: disable-next=import-outside-toplevel  # reason: platform or selected engine is loaded on demand
         from je_auto_control.utils.scheduler.scheduler import default_scheduler
         default_scheduler.start()
         self.auto_control_gui_widget.sync_engine_tabs()
 
     def _start_triggers(self) -> None:
+        # pylint: disable-next=import-outside-toplevel  # reason: platform or selected engine is loaded on demand
         from je_auto_control.utils.triggers.trigger_engine import (
             default_trigger_engine,
         )

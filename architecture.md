@@ -433,3 +433,10 @@ preserve unbound/bound legacy core handlers without eagerly importing mixins.
 TabSpec/TabRegistry are Qt-free metadata with owner-scoped instances; hide retains
 state, explicit close releases it, and parent destruction drops cached references.
 Only default record/script_builder/remote_desktop factories run at startup.
+
+F2 adds navigation.py (passive searchable catalog), workspace.py (one existing or
+initially unbound registry owner in scrollable responsive panes), theme.py (Qt-free
+validated color/spacing/font tokens) and _workspace_details.py (explicit reported
+state/recovery/progress). main_window.py embeds the shell while retaining the
+legacy auto_control_gui_widget. _dependency_panel.py retranslates selected-feature
+recovery. No new automation service or native permission probe is introduced.

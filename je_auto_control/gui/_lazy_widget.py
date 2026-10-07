@@ -45,7 +45,7 @@ class AutoControlGUIWidget(  # pylint: disable=too-many-instance-attributes  # r
         script_editor: QTextEdit
         script_result_text: QTextEdit
 
-    def __init__(self, parent: Optional[QWidget] = None) -> None:
+    def __init__(self, parent: Optional[QWidget] = None, registry: Optional[TabRegistry] = None) -> None:
         super().__init__(parent)
         self._tr_registry: list[tuple[QWidget, str, str]] = []
         self._tr_tabs: list[tuple[QTabWidget, int, str]] = []
@@ -59,9 +59,16 @@ class AutoControlGUIWidget(  # pylint: disable=too-many-instance-attributes  # r
         self.tabs.currentChanged.connect(self._on_current_tab_changed)  # pylint: disable=no-member  # reason: Qt SignalInstance runtime binding
         layout = QVBoxLayout(self)
         layout.addWidget(self.tabs)
-        specs = [TabSpec(key, title, category, partial(build_tab, weakref.ref(self), module, target), actions, visible)
-                 for key, title, category, visible, module, target, actions in TAB_CATALOG]
-        self.registry = TabRegistry(specs, parent=self)
+        self._builtin_catalog = registry is None
+        if registry is None:
+            specs = [TabSpec(key, title, category,
+                            partial(build_tab, weakref.ref(self), module, target), actions, visible)
+                     for key, title, category, visible, module, target, actions in TAB_CATALOG]
+            self.registry = TabRegistry(specs, parent=self)
+        else:
+            registry.bind_owner(self)
+            self.registry = registry
+            specs = list(registry.specs)
         self._tab_entries = [_TabEntry(spec.key, spec.title_key, category=spec.category,
                                        default_visible=spec.default_visible) for spec in specs]
         for spec in specs:
@@ -125,6 +132,8 @@ class AutoControlGUIWidget(  # pylint: disable=too-many-instance-attributes  # r
         self.tabs.setCurrentWidget(entry.widget)
 
     def _bind_core_actions(self, entry: _TabEntry) -> None:
+        if not self._builtin_catalog:
+            return
         row = next((item for item in TAB_CATALOG if item[0] == entry.key), None)
         if row is not None and not row[4] and entry.key != 'remote_desktop':
             entry.actions = tuple((label, partial(call_core_action, weakref.WeakMethod(getattr(self, method))))

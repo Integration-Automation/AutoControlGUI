@@ -13,6 +13,11 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ## Unreleased
 
+- Add searchable full-catalog navigation, responsive scrollable workspace and
+  collapsible execution details; Ctrl+K searches and Ctrl+Shift+D toggles details.
+  View supports native light/dark themes and system-font sizes. Four-language
+  refresh preserves search/panel data; legacy tab APIs and Actions remain available.
+
 - GUI startup now imports/builds only default panels. View hiding retains state;
   closing a tab releases its widget/subscriptions and reopening creates a fresh
   widget under the same stable key. Legacy GUI import and show/hide/list/core

@@ -35,10 +35,25 @@ class TabRegistry:
         if len(self._specs) != len(specs) or any(not spec.key for spec in specs):
             raise TabRegistryError('tab keys must be unique and nonempty')
         self._instances: dict[str, QWidget] = {}
-        self._parent = weakref.ref(parent) if parent is not None else None
+        self._parent: Optional[weakref.ReferenceType[QWidget]] = None
         self._disposed = False
         if parent is not None:
-            parent.destroyed.connect(self._owner_destroyed)
+            self.bind_owner(parent)
+
+    @property
+    def owner(self) -> Optional[QWidget]:
+        """Return the live owner for workspace embedding without opening a feature."""
+        return self._parent() if self._parent is not None else None
+
+    def bind_owner(self, parent: QWidget) -> None:
+        """Attach an initially standalone registry to one GUI owner; never transfer ownership."""
+        _require_gui_thread()
+        if self._disposed or (self.owner is not None and self.owner is not parent):
+            raise TabRegistryError('registry already belongs to another owner or has been destroyed')
+        if self.owner is parent:
+            return
+        self._parent = weakref.ref(parent)
+        parent.destroyed.connect(self._owner_destroyed)
 
     @property
     def specs(self) -> tuple[TabSpec, ...]:

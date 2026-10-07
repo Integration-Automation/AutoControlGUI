@@ -19,14 +19,14 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 
 | 指標 | 數值 |
 | --- | ---: |
-| Python 模組總數（含周邊子專案） | 1,188 |
-| 程式碼總行數 | 172,737 |
+| Python 模組總數（含周邊子專案） | 1,194 |
+| 程式碼總行數 | 173,423 |
 | `je_auto_control/utils/` 子套件數 | 311 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 819 |
 | 套件門面 `__all__` 公開名稱數 | 1,388 |
 | GUI 分頁數（`main_widget` 註冊） | 50 |
 | MCP 工具數（`build_default_tool_registry()` 實測） | 741 |
-| `test_*.py` 測試檔／測試函式 | 765 / 7,953 |
+| `test_*.py` 測試檔／測試函式 | 766 / 7,960 |
 | 範例腳本 | 31 |
 
 **技術基線**：Python ≥ 3.10、MIT 授權、必要相依只有 `je_open_cv`／`opencv-python`／`pillow`／`mss`／
@@ -967,13 +967,18 @@ GUI 是**選用 extra**（`pip install je_auto_control[gui]`，PySide6 + qt-mate
 | --- | ---: | --- |
 | `journal_candidate_panel.py` | 118 | Journal candidate source, provenance and diff preview with explicit import/export. |
 | `gui/__init__.py` | 23 | `start_autocontrol_gui()`：**唯一**會延遲匯入 PySide6 的地方，維持頂層套件 Qt-free。 |
-| `main_window.py` | 301 | `QMainWindow`：選單列（File／Actions／View／…）、可關閉分頁、即時語言切換、字級預設、qt-material 主題。分頁分為 core／editing／detection／automation／system 五類。 |
+| `main_window.py` | 324 | `QMainWindow`：選單列（File／Actions／View／…）、可關閉分頁、即時語言切換、字級預設、原生 light/dark 主題與可搜尋三欄工作區。分頁分為 core／editing／detection／automation／system 五類。 |
 | `main_widget.py` | 8 | Compatible import path for the lazy AutoControl GUI widget. |
-| `_lazy_widget.py` | 221 | Lazy tab workspace preserving legacy show/hide/list and core handler contracts. |
+| `_lazy_widget.py` | 230 | Lazy tab workspace preserving legacy show/hide/list and core handler contracts. |
 | `_tab_catalog.py` | 476 | Pure tab catalog: stable keys, lazy import targets and action metadata. |
-| `_tab_factories.py` | 53 | Resolve one catalog factory only at first open, retaining optional dependency recovery. |
+| `_tab_factories.py` | 39 | Resolve one catalog factory only at first open, retaining optional dependency recovery. |
 | `_core_tab_proxy.py` | 69 | Lazy descriptors preserve legacy core-tab methods without importing unopened panels. |
-| `tab_registry.py` | 97 | Immutable tab metadata and lazy owner-scoped factories; imports remain Qt-free. |
+| `tab_registry.py` | 112 | Immutable tab metadata and lazy owner-scoped factories; imports remain Qt-free. |
+| `workspace.py` | 127 | Responsive navigation, retained workflow workspace and collapsible execution details. |
+| `navigation.py` | 143 | Searchable, keyboard-accessible navigation over passive tab catalog metadata. |
+| `theme.py` | 103 | Qt-free theme tokens and validated native Qt styling for the workspace. |
+| `_workspace_details.py` | 77 | Read-only workflow state, recovery and progress display for the workspace chrome. |
+| `_dependency_panel.py` | 29 | Translated selected-feature dependency recovery with native selectable text. |
 | `_auto_click_tab.py` | 291 | 自動點擊分頁的 mixin 建構器。 |
 | `_screenshot_tab.py` | 137 | 截圖／取像素分頁 mixin。 |
 | `_image_detect_tab.py` | 115 | 影像偵測分頁 mixin。 |
@@ -985,7 +990,7 @@ GUI 是**選用 extra**（`pip install je_auto_control[gui]`，PySide6 + qt-mate
 | `_screen_geometry.py` | 53 | Qt 邏輯座標與截圖用的原生像素互轉：`native_region()`、`screen_at_native()`、`logical_point()`（每個螢幕的左上角在兩者相同，螢幕內依 device pixel ratio 縮放）。區域選取與主機端標註覆蓋層都用它。 |
 | `_daemon_thread.py` | 79 | `DaemonThread`：`QThread` 的替代品，保留遠端桌面 worker 用到的介面（`start`／`run`／`isRunning`／`wait`／`requestInterruption`／`started`／`finished`），但 `run()` 跑在 daemon `threading.Thread` 上，刪除物件或程式結束都不會銷毀執行中的執行緒。 |
 | `_worker_thread.py` | 230 | `start_worker()`：在 daemon `threading.Thread` 上執行 `QObject` worker 的 `run()`（沒有 `QThread` 可被銷毀），並經由分頁擁有的中繼物件回報結果（回呼一律在 GUI 執行緒；worker 沒處理的例外也送到 `on_fail`）；worker 留在模組登錄表直到 GUI 執行緒看到它結束，回傳 `WorkerHandle`（`isRunning()`）；程式結束時先呼叫 worker 的 `request_stop()`，最多等 10 秒，仍在跑的隨行程結束。 |
-| `language_wrapper/` | 5,498 | 四語系字典（英／日／簡中／繁中）+ `multi_language_wrapper` 執行期切換器與監聽註冊表。 |
+| `language_wrapper/` | 5,614 | 四語系字典（英／日／簡中／繁中）+ `multi_language_wrapper` 執行期切換器與監聽註冊表。 |
 | `selector/` | 216 | 拖曳選取螢幕區域的半透明全螢幕覆蓋層與樣板裁切工具（互動式，但都有對應的程式化 API）。 |
 
 > **分頁指令一律走 Actions 選單**：分頁本身只放輸入、表格與結果檢視，指令由視窗層選單暴露。
@@ -1200,7 +1205,7 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 
 | 層／子系統 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `gui/` | 116 | 31,259 |
+| `gui/` | 121 | 31,887 |
 | `utils/mcp_server/` | 47 | 19,855 |
 | `utils/remote_desktop/` | 59 | 13,799 |
 | `utils/executor/` | 10 | 9,894 |
@@ -1221,7 +1226,7 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 863 |
 | 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 737 | 62,811 |
-| **總計** | **1,180** | **172,607** |
+| **總計** | **1,185** | **173,235** |
 
 
 Crypto optional-dependency failures use CryptoDependencyError from utils/exception:
@@ -1294,3 +1299,9 @@ descriptors. tab_registry.py freezes TabSpec factories without Qt imports until 
 owner destruction drops cached instances. Explicit close releases subscriptions and
 translation entries; hide keeps widget/input state. Existing Actions tests open all
 factories, while fresh subprocess tests assert the unopened import boundary.
+
+F2 workspace composition retains one _lazy_widget registry owner: navigation.py
+searches passive metadata, workspace.py owns responsive navigation/scroll/details,
+_workspace_details.py renders explicit states, and theme.py validates Qt-free
+palette/spacing/font tokens. _dependency_panel.py refreshes recovery translations.
+main_window.py preserves legacy embedding/menu handlers and applies native themes.

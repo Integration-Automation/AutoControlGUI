@@ -27,23 +27,9 @@ def build_tab(host: weakref.ReferenceType[QWidget], module: str, target: str) ->
 
 
 def _dependency_view(reason: str) -> QWidget:
-    # pylint: disable-next=import-outside-toplevel  # reason: Qt is needed only when the selected factory lacks an extra
-    from PySide6.QtWidgets import QLabel, QVBoxLayout, QWidget
-    # pylint: disable-next=import-outside-toplevel  # reason: selected dependency recovery view uses native Qt text selection
-    from PySide6.QtCore import Qt
-    # pylint: disable-next=import-outside-toplevel  # reason: selected recovery view translates only when created
-    from je_auto_control.gui.language_wrapper.multi_language_wrapper import language_wrapper
-    widget = QWidget()
-    layout = QVBoxLayout(widget)
-    label = QLabel(language_wrapper.translate('feature_dependency_unavailable') + '\n' +
-                   language_wrapper.translate('feature_dependency_recovery') + '\n' +
-                   'Remote Desktop: python -m pip install je_auto_control[webrtc]\n' + reason)
-    label.setWordWrap(True)
-    label.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
-    layout.addWidget(label)
-    layout.addStretch()
-    widget.setProperty('capability_reason', reason)
-    return widget
+    # pylint: disable-next=import-outside-toplevel  # reason: Qt recovery panel is loaded only for a selected missing extra
+    from je_auto_control.gui._dependency_panel import DependencyPanel
+    return DependencyPanel(reason)
 
 
 def call_core_action(method: weakref.WeakMethod[Callable[[], object]]) -> None:

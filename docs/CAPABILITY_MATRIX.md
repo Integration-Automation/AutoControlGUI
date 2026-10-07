@@ -577,3 +577,13 @@ widget identity/data and close/reopen retains key while replacing the widget.
 Real Presence subscriptions return to baseline after deferred deletion. Existing
 Actions and teardown audits explicitly open every feature to retain full coverage.
 These offscreen tests are GUI lifetime evidence, not physical platform input proof.
+
+### F2 workspace evidence
+
+Six controlled Qt subprocess cases cover full 50-key reachability without unopened
+Mobile/Screenshot construction, Ctrl+K/Enter, active Actions, stable language/input
+identity, light/dark font refresh, 640×480 geometry, scroll access to 1200-pixel
+content and explicit seven-state/recovery rendering. Actual Windows Qt offscreen
+frames plus versions/fonts are retained in benchmarks/results/gui-workspace-f2.
+No native input or permission operation is performed. Shared task cancellation is
+F3; native desktop/mixed-DPI/physical recovery remains Progress.md/H3.

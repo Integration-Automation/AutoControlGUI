@@ -992,3 +992,16 @@ Reopening a closed panel creates a fresh widget with the same key. Language/engi
 refresh only touches constructed panels. Missing optional dependencies show a
 recovery view. GUI factories run on the GUI thread; headless registry metadata
 imports neither Qt nor feature modules.
+
+### Searchable workspace and themes
+
+The left navigation searches all 50 feature keys, translated titles and English
+aliases without opening panels. Ctrl+K focuses search; Enter opens the first match.
+The middle workspace retains the legacy tabs and Actions menu. The right execution
+details show explicitly reported state/reason/recovery/progress; workspace ready
+does not assert native permission. Ctrl+Shift+D or View toggles details. Below
+900 logical pixels the details collapse by default; wide content remains accessible
+through scrollbars. View → Theme selects light/dark; Text Size and all four
+languages preserve search and panel inputs. Themes use system fonts and native Qt
+icons. [Qt layout captures](benchmarks/results/gui-workspace-f2/report.json) record
+offscreen conditions; they do not establish native device or mixed-DPI behavior.
