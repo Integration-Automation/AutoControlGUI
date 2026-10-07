@@ -20,13 +20,13 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 | 指標 | 數值 |
 | --- | ---: |
 | Python 模組總數（含周邊子專案） | 1,155 |
-| 程式碼總行數 | 169,362 |
+| 程式碼總行數 | 169,390 |
 | `je_auto_control/utils/` 子套件數 | 311 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 807 |
 | 套件門面 `__all__` 公開名稱數 | 1,358 |
 | GUI 分頁數（`main_widget` 註冊） | 49 |
 | MCP 工具數（`build_default_tool_registry()` 實測） | 729 |
-| `test_*.py` 測試檔／測試函式 | 758 / 7,864 |
+| `test_*.py` 測試檔／測試函式 | 759 / 7,868 |
 | 範例腳本 | 27 |
 
 **技術基線**：Python ≥ 3.10、MIT 授權、必要相依只有 `je_open_cv`／`opencv-python`／`pillow`／`mss`／
@@ -199,7 +199,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | --- | ---: | --- |
 | `core/utils/win32_ctype_input.py` | 73 | `SendInput` 的 ctypes 結構定義與送出。 |
 | `core/utils/win32_vk.py` | 201 | Windows 虛擬鍵碼對照表。 |
-| `core/utils/win32_keypress_check.py` | 22 | `GetAsyncKeyState` 按鍵狀態查詢。 |
+| `core/utils/win32_keypress_check.py` | 22 | `GetAsyncKeyState` 按鍵狀態查詢，原生呼叫才載入 Quartz。 |
 | `mouse/win32_ctype_mouse_control.py` | 220 | 滑鼠事件產生（含多螢幕絕對座標換算）。 |
 | `keyboard/win32_ctype_keyboard_control.py` | 98 | 鍵盤事件產生。 |
 | `record/win32_input_hook.py` | 253 | 單一一組低階鍵鼠 hook（`WH_KEYBOARD_LL`／`WH_MOUSE_LL`）＋訊息迴圈，產生帶時間戳的事件時間軸；停止時以 `PostThreadMessageW(WM_QUIT)` 收掉執行緒，不會每錄一次就漏一條。 |
@@ -211,18 +211,18 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `interception/keyboard.py` | 70 | 經 Interception 驅動的鍵盤輸入（繞過部分反自動化偵測）。 |
 | `interception/mouse.py` | 160 | 經 Interception 驅動的滑鼠輸入。 |
 
-#### macOS（`osx/`，17 檔／925 行）
+#### macOS（`osx/`，17 檔／937 行）
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
 | `core/utils/osx_vk.py` | 113 | macOS 虛擬鍵碼表。 |
-| `mouse/osx_mouse.py` | 143 | Quartz `CGEvent` 滑鼠事件。 |
-| `keyboard/osx_keyboard.py` | 144 | Quartz 鍵盤事件。 |
+| `mouse/osx_mouse.py` | 148 | Quartz `CGEvent` 滑鼠事件；原生操作才載入 Quartz。 |
+| `keyboard/osx_keyboard.py` | 146 | Quartz 鍵盤事件；原生操作才載入 Quartz／AppKit。 |
 | `keyboard/osx_keyboard_check.py` | 24 | 按鍵狀態查詢。 |
 | `listener/osx_listener.py` | 261 | 專屬執行緒上的 listen-only `CGEventTap`＋自己的 `CFRunLoopRunInMode` 切片；不在 import 時建 `NSApplication`，也不用會卡住呼叫緒的 `AppHelper.runEventLoop()`。修飾鍵由 `flagsChanged` 的旗標還原成 press／release，座標取 `CGEventGetLocation`（左上原點，與重播送出的座標同一空間）。 |
-| `record/osx_record.py` | 41 | 錄製。捕捉後的整形（舊版按下事件 Queue、時間軸、只錄滑鼠／只錄鍵盤）走共用的 `utils/input_macro/recorder_base.py`。 |
-| `screen/osx_screen.py` | 143 | 螢幕擷取與尺寸（含 Retina 座標處理）。 |
-| `pid/pid_control.py` | 53 | 以 PID 操作應用程式。 |
+| `record/osx_record.py` | 46 | 錄製，開始時才建立／載入原生 event tap。捕捉後的整形（舊版按下事件 Queue、時間軸、只錄滑鼠／只錄鍵盤）走共用的 `utils/input_macro/recorder_base.py`。 |
+| `screen/osx_screen.py` | 143 | 螢幕擷取與尺寸（含 Retina 座標處理）；原生 metrics 才載入 Quartz。 |
+| `pid/pid_control.py` | 53 | 以 PID 操作應用程式；送出鍵盤事件時才載入 Quartz。 |
 
 #### Linux X11（`linux_with_x11/`，19 檔／1,281 行）
 
@@ -239,7 +239,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `uinput/keyboard.py` | 44 | uinput 鍵盤後端，介面與 X11 版一致。 |
 | `uinput/mouse.py` | 130 | uinput 滑鼠後端。 |
 
-#### Linux Wayland（`linux_wayland/`，23 檔／4,362 行）
+#### Linux Wayland（`linux_wayland/`，23 檔／4,376 行）
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -253,7 +253,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `oeffis.py` | 221 | liboeffis 綁定：跑完 RemoteDesktop portal 交握，交出 EIS fd。 |
 | `default_input.py` | 80 | Connect a default native grant without holding the stop/cache lock across authorization. |
 | `libei.py` | 725 | libei 綁定與完整握手（seat 綁定能力 → 由事件取得 device → start_emulating → 每次發送後 frame）。另負責絕對指標的座標空間:讀回裝置的 region,把版面座標映射進去,沒有任何 region 涵蓋就拒絕（libei 對這種移動是靜靜丟掉的）。 |
-| `ei_transport.py` | 418 | 有界且可取消的私有 JSON IPC；預設 session 由 helper 持有，逾時／死亡後回收並拒絕重送。 |
+| `ei_transport.py` | 432 | 有界且可取消的私有 JSON IPC；取消保留 socket 至 transaction 退出，100 ms poll 保留總時限，拒絕 late completion／重送。 |
 | `ei_worker.py` | 150 | 子程序內持有 EI／portal；整批驗證、同一授權按鍵釋放、EOF 清理與 faulthandler。 |
 | `input_events.py` | 289 | Opt-in physical Linux event capture; kernel identity filtering, raw units, bounded storage and cleanup. |
 | `global_shortcuts.py` | 377 | Owned GlobalShortcuts stop session; asynchronous consent, bounded signal queue, cancellation, session and portal-owner revocation. |
@@ -316,7 +316,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.2 框架基礎設施
 
-> 11 個套件、約 2,941 行。
+> 11 個套件、約 2,942 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -324,7 +324,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/config_bundle/` | 424 | 使用者設定的單檔匯出／匯入 |
 | `utils/critical_exit/` | 132 | 監看緊急停止鍵的守護執行緒，用於中止失控腳本 |
 | `utils/diagnostics/` | 361 | 跨子系統的「一切正常嗎」健檢，附 `python -m` 進入點 |
-| `utils/dbus_client/` | 809 | 只用標準函式庫的 D-Bus session bus 客戶端；`socket_owner.py` 以 I/O 借用保留取消中的 descriptor，100 ms read poll 保留總時限並拒絕 late completion。原本在 `linux_wayland/` 為 portal 交握而寫，AT-SPI 無障礙後端成為第二個使用者後搬到這裡（`utils/` 在分層上在各 OS 套件之上） |
+| `utils/dbus_client/` | 810 | 只用標準函式庫的 D-Bus session bus 客戶端；共用 `socket_owner.py` 供 D-Bus／EI 以 I/O 借用保留取消中的 descriptor，100 ms read poll 保留總時限並拒絕 late completion。原本在 `linux_wayland/` 為 portal 交握而寫，AT-SPI 無障礙後端成為第二個使用者後搬到這裡（`utils/` 在分層上在各 OS 套件之上） |
 | `utils/exception/` | 226 | **例外階層根**。所有錯誤繼承 `AutoControlException`，加上集中式錯誤訊息字串（`exception_tags`） |
 | `utils/failure_bundle/` | 229 | 可攜、已遮蔽的失敗診斷 ZIP（截圖 + 診斷 + log 尾段） |
 | `utils/file_process/` | 40 | 目錄檔案列舉（`execute_dir` 的後端） |
@@ -385,7 +385,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.5 影像辨識與畫面分析
 
-> 37 個套件、約 6,424 行。
+> 37 個套件、約 6,425 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -409,7 +409,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/match_ensemble/` | 67 | 多樣板共識比對（多張參考圖投票到同一位置） |
 | `utils/match_stability/` | 70 | 比對前的靜止閘門與跨影格的比對持續性 |
 | `utils/match_trust/` | 154 | 樣板比對可信度評分（次峰比 + peak-to-sidelobe） |
-| `utils/monitor_layout/` | 407 | 多螢幕／虛擬桌面幾何（在哪個螢幕、位置、重映射）＋ `logical_frame` 以全域輸入座標擷取；macOS 每螢幕縮至 point 後拼接，Windows per-monitor v2 下保持實體像素 |
+| `utils/monitor_layout/` | 408 | 多螢幕／虛擬桌面幾何（在哪個螢幕、位置、重映射）＋ `logical_frame` 以全域輸入座標擷取；macOS 每螢幕縮至 point 後拼接，Windows per-monitor v2 下保持實體像素；明確 metrics 優先於 host 原生布局 |
 | `utils/motion_regions/` | 78 | 兩影格間的局部變化／活動偵測（absdiff） |
 | `utils/perceptual_diff/` | 202 | 感知式（YIQ）影像差異，抑制反鋸齒邊緣誤報 |
 | `utils/preprocess/` | 276 | OCR／比對前的影像前處理（灰階、二值化、去傾斜…） |
@@ -1063,7 +1063,7 @@ GUI 是**選用 extra**（`pip install je_auto_control[gui]`，PySide6 + qt-mate
 | `ci_templates/.gitlab-ci.yml` | — | 供使用者專案複製的 GitLab CI 範本。 |
 | `docs/` | Sphinx（`API`／`Eng`／`Zh`／`getting_started`） | Read the Docs 文件。 |
 | `architecture_diagram/` | drawio + png | 既有的架構圖原始檔。 |
-| `test/` | `unit_test/headless`（主要）、`unit_test/flow_control`、`integrated_test`、`gui_test`、`manual_test`、`verify`、`test_source` | 758 個 `test_*.py`／7,864 個測試函式。**注意**：`test/unit_test/` 下的 `*_test.py` 是會真的驅動滑鼠鍵盤的手動示範腳本，因此 `pyproject.toml` 把 `python_files` 釘成 `test_*.py`。`unit_test/headless/conftest.py` 有一個 autouse fixture，每個測試結束都沖掉 Qt 排隊中的 `deleteLater()`——不沖會讓殘留的 widget 在後面某個不相干的測試裡被銷毀，曾經整個直譯器 `__fastfail`。`test_doc_counts.py` 守住文件引用的指令／工具／子套件／範例數,`test_doc_line_counts.py` 守住所有行數（`--fix` 可一次重新產生）。 `verify/native_debugger.py` 以有時限的 gdb/lldb 包裝原有 coverage 命令，保留 target 退出碼與原生堆疊。 `verify/macos_verify.py` 是在真的 `macos-14` runner 上量測 TCC 到底允許什麼的探針（macOS 是唯一沒有容器可用的支援平台），不被 pytest 收集。 |
+| `test/` | `unit_test/headless`（主要）、`unit_test/flow_control`、`integrated_test`、`gui_test`、`manual_test`、`verify`、`test_source` | 759 個 `test_*.py`／7,868 個測試函式。**注意**：`test/unit_test/` 下的 `*_test.py` 是會真的驅動滑鼠鍵盤的手動示範腳本，因此 `pyproject.toml` 把 `python_files` 釘成 `test_*.py`。`unit_test/headless/conftest.py` 有一個 autouse fixture，每個測試結束都沖掉 Qt 排隊中的 `deleteLater()`——不沖會讓殘留的 widget 在後面某個不相干的測試裡被銷毀，曾經整個直譯器 `__fastfail`。`test_doc_counts.py` 守住文件引用的指令／工具／子套件／範例數,`test_doc_line_counts.py` 守住所有行數（`--fix` 可一次重新產生）。 `verify/native_debugger.py` 以有時限的 gdb/lldb 包裝原有 coverage 命令，保留 target 退出碼與原生堆疊。 `verify/macos_verify.py` 是在真的 `macos-14` runner 上量測 TCC 到底允許什麼的探針（macOS 是唯一沒有容器可用的支援平台），不被 pytest 收集。 |
 
 ---
 
@@ -1179,16 +1179,16 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `utils/rest_api/` | 8 | 1,919 |
 | `utils/agent/` | 9 | 2,032 |
 | `linux_with_x11/` | 19 | 1,281 |
-| `linux_wayland/` | 23 | 4,362 |
+| `linux_wayland/` | 23 | 4,376 |
 | `utils/triggers/` | 4 | 1,395 |
 | `utils/ocr/` | 9 | 1,141 |
 | `utils/usbip/` | 5 | 1,008 |
 | `utils/assertion/` | 3 | 887 |
-| `osx/` | 17 | 925 |
+| `osx/` | 17 | 937 |
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 863 |
-| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 731 | 62,396 |
-| **總計** | **1,147** | **169,232** |
+| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 731 | 62,398 |
+| **總計** | **1,147** | **169,260** |
 
 
 Crypto optional-dependency failures use CryptoDependencyError from utils/exception:

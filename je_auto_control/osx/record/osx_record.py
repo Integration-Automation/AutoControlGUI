@@ -6,7 +6,10 @@ mouse-only / keyboard-only filters — is platform-neutral and lives in
 :mod:`je_auto_control.utils.input_macro.recorder_base`, so this backend and
 the Windows one cannot drift in the shape they produce.
 """
+from __future__ import annotations
+
 import sys
+from typing import TYPE_CHECKING
 
 from je_auto_control.utils.exception.exception_tags import (
     osx_import_error_message,
@@ -19,7 +22,8 @@ from je_auto_control.utils.input_macro.recorder_base import InputRecorder
 if sys.platform not in ["darwin"]:
     raise AutoControlException(osx_import_error_message)
 
-from je_auto_control.osx.listener.osx_listener import OSXInputTap
+if TYPE_CHECKING:
+    from je_auto_control.osx.listener.osx_listener import OSXInputTap
 
 
 class OSXRecorder(InputRecorder):
@@ -34,6 +38,7 @@ class OSXRecorder(InputRecorder):
 
     def new_hook(self) -> OSXInputTap:
         """Return a fresh, unstarted event tap."""
+        from ..listener.osx_listener import OSXInputTap  # pylint: disable=import-outside-toplevel  # reason: tap loads when recording starts
         return OSXInputTap()
 
 

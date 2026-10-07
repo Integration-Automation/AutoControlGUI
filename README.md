@@ -466,6 +466,14 @@ last in-flight operation closes its descriptor; read polling checks cancellation
 every 100 ms while preserving the original request deadline. Late completion
 is rejected, and reconnect is refused until the previous descriptor has drained.
 
+
+macOS Quartz/AppKit and the recording tap load only for native operations,
+so imports and pure CLI file errors do not initialize those frameworks.
+Explicit `grab_logical(metrics=...)` selects virtual-frame geometry on every
+host; default macOS capture retains per-display Retina normalization. EI helper
+cancellation also retains its socket until the transaction exits, polls reads
+without shortening the total deadline and rejects completion after cancellation.
+
 Manual `quality.yml` runs accept `verification_scope=native-shortcut` to run
 only the installed-wheel/private-bus check; the default runs all quality jobs.
 

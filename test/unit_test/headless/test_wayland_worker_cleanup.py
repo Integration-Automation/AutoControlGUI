@@ -109,6 +109,52 @@ def test_default_stop_cancels_pending_worker_ipc(worker_factory, monkeypatch):
         worker.join(6)
 
 
+def test_cancelled_helper_read_retains_descriptor_until_transaction_exits(worker_factory, monkeypatch):
+    entered, returned, finish = (threading.Event() for _ in range(3))
+
+    class PausedSocket(socket.socket):
+        def recv(self, size):
+            entered.set()
+            try:
+                return super().recv(size)
+            finally:
+                returned.set()
+                if not finish.wait(5):
+                    raise TimeoutError('test did not release the helper read')
+
+    original, peer = socket.socketpair()
+    channel = PausedSocket(fileno=original.detach())
+    monkeypatch.setattr(transport.socket, 'socketpair', lambda: (channel, peer))
+    client = transport.EiWorkerClient(process_factory=lambda child: worker_factory(child, mode='hang'))
+    failures = []
+
+    def connect():
+        try:
+            client.connect(timeout=5)
+        except transport.EiWorkerError as failure:
+            failures.append(failure)
+
+    worker = threading.Thread(target=connect)
+    try:
+        worker.start()
+        assert entered.wait(2)
+        client.close()
+        assert returned.wait(1)
+        assert channel.fileno() >= 0, 'the transaction still owns its descriptor'
+        assert not client.worker_running and not client.open_channel
+        finish.set()
+        worker.join(1)
+        assert not worker.is_alive()
+        assert len(failures) == 1
+        assert channel.fileno() == -1
+    finally:
+        finish.set()
+        client.close()
+        peer.close()
+        worker.join(6)
+        channel.close()
+
+
 def test_reply_identity_and_batch_ack(worker_factory):
     client = transport.EiWorkerClient(process_factory=worker_factory)
     try:

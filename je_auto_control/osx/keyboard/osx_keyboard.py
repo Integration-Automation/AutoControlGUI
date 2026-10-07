@@ -1,3 +1,4 @@
+"""macOS keyboard operations load Quartz/AppKit only when needed."""
 import sys
 
 from je_auto_control.utils.exception.exception_tags import osx_import_error_message
@@ -5,15 +6,13 @@ from je_auto_control.utils.exception.exceptions import (
     AutoControlException, AutoControlKeyboardException,
 )
 
+from je_auto_control.osx.core.utils.osx_vk import osx_key_shift
+
 # === 平台檢查 Platform Check ===
 # 僅允許在 macOS (Darwin) 環境執行，否則拋出例外
 if sys.platform not in ["darwin"]:
     raise AutoControlException(osx_import_error_message)
 
-import AppKit
-import Quartz
-
-from je_auto_control.osx.core.utils.osx_vk import osx_key_shift
 
 # === 特殊鍵對照表 Special key mapping ===
 special_key_table = {
@@ -53,6 +52,7 @@ def normal_key(keycode: int, is_shift: bool, is_down: bool) -> None:
     :param is_shift: 是否同時按下 Shift
     :param is_down: True = 按下, False = 釋放
     """
+    import Quartz  # pylint: disable=import-outside-toplevel,import-error  # reason: native macOS dependency loads on use
     try:
         # 如果需要 Shift，先送出 Shift 事件
         if is_shift:
@@ -88,6 +88,8 @@ def special_key(keycode: str, is_down: bool) -> None:
     if keycode not in special_key_table:
         raise ValueError(f"Unknown special key: {keycode}")
 
+    import AppKit  # pylint: disable=import-outside-toplevel,import-error  # reason: native macOS dependency loads on use
+    import Quartz  # pylint: disable=import-outside-toplevel,import-error  # reason: native macOS dependency loads on use
     mapped_code = special_key_table[keycode]
 
     # The selector ends in ``data2:``, so its PyObjC name ends in ``_``; without

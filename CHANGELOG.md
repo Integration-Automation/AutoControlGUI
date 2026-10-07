@@ -15,6 +15,12 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Fixed
 
+- EI helper cancellation retains its descriptor until the transaction exits
+  and rejects late replies. macOS loads Quartz/AppKit and the recording tap on
+  native use; pure CLI file errors no longer initialize those frameworks.
+  Explicit capture metrics override host geometry; default Retina capture stays
+  in per-display points.
+
 - Shared D-Bus cancellation retains an in-flight socket descriptor until I/O
   exits, polls reads for bounded cancellation and rejects late completion.
   Reconnection waits for the previous descriptor to drain.

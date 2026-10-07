@@ -1,3 +1,4 @@
+"""macOS key-state queries load Quartz on their first native call."""
 import sys
 
 from je_auto_control.utils.exception.exception_tags import osx_import_error_message
@@ -8,8 +9,6 @@ from je_auto_control.utils.exception.exceptions import AutoControlException
 if sys.platform not in ["darwin"]:
     raise AutoControlException(osx_import_error_message)
 
-import Quartz
-
 
 def check_key_is_press(keycode: int) -> bool:
     """
@@ -19,6 +18,7 @@ def check_key_is_press(keycode: int) -> bool:
     :param keycode: (int) The keycode to check 要檢查的鍵盤代碼
     :return: True if pressed, False otherwise 若按下則回傳 True，否則 False
     """
+    import Quartz  # pylint: disable=import-outside-toplevel,import-error  # reason: native macOS dependency loads on use
     # Quartz.CGEventSourceKeyState(source, keycode)
     # source = 0 表示使用預設事件來源
     return Quartz.CGEventSourceKeyState(0, keycode)

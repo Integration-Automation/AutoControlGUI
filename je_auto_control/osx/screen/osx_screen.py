@@ -1,3 +1,4 @@
+"""macOS screen operations load Quartz only for native display metrics."""
 import sys
 import ctypes
 from ctypes import c_void_p, c_uint32
@@ -10,8 +11,6 @@ from je_auto_control.utils.exception.exceptions import AutoControlException
 # 僅允許在 macOS (Darwin) 環境執行，否則拋出例外
 if sys.platform not in ["darwin"]:
     raise AutoControlException(osx_import_error_message)
-
-import Quartz
 
 
 class CGPoint(ctypes.Structure):
@@ -41,6 +40,7 @@ def size() -> Tuple[int, int]:
 
     :return: (width, height) 螢幕寬度與高度
     """
+    import Quartz  # pylint: disable=import-outside-toplevel,import-error  # reason: native macOS dependency loads on use
     return (
         Quartz.CGDisplayPixelsWide(Quartz.CGMainDisplayID()),
         Quartz.CGDisplayPixelsHigh(Quartz.CGMainDisplayID())

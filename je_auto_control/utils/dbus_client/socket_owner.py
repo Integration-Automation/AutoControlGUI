@@ -9,7 +9,8 @@ from typing import Iterator, Optional
 class SocketOwner:
     """Own one connection and defer its close while cancellation wakes borrowers."""
 
-    def __init__(self) -> None:
+    def __init__(self, label: str = 'session bus') -> None:
+        self._label = label
         self._lock = Lock()
         self._current: Optional[socket.socket] = None
         self._retired: Optional[socket.socket] = None
@@ -27,7 +28,7 @@ class SocketOwner:
             if self._current is not None or self._retired is not None:
                 with suppress(OSError):
                     connection.close()
-                raise OSError(errno.EBUSY, 'the previous session bus connection has not drained')
+                raise OSError(errno.EBUSY, f'the previous {self._label} connection has not drained')
             self._current = connection
 
     @contextmanager
@@ -36,13 +37,13 @@ class SocketOwner:
         with self._lock:
             connection = self._current
             if connection is None:
-                raise OSError(errno.ENOTCONN, 'the session bus connection is closed')
+                raise OSError(errno.ENOTCONN, f'the {self._label} connection is closed')
             self._borrowers += 1
         try:
             yield connection
             with self._lock:
                 if self._current is not connection:
-                    raise OSError(errno.ENOTCONN, 'the session bus connection was cancelled')
+                    raise OSError(errno.ENOTCONN, f'the {self._label} connection was cancelled')
         finally:
             with self._lock:
                 self._borrowers -= 1

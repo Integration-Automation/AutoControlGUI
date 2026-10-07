@@ -213,7 +213,8 @@ def grab_logical(region: Optional[Sequence[int]] = None, *,
         for everything.
     :param all_screens: include monitors beyond the primary one.
     :param grabber: ``ImageGrab``-shaped object, for tests.
-    :param metrics: ``GetSystemMetrics``-shaped reader, for tests.
+    :param metrics: ``GetSystemMetrics``-shaped reader; explicit metrics select
+        the virtual-frame path on every host, overriding native macOS layout.
     :return: ``(image, origin_x, origin_y)`` — add the origin to any hit found in
         the image to get a coordinate the mouse can be sent to.
     """
@@ -222,7 +223,7 @@ def grab_logical(region: Optional[Sequence[int]] = None, *,
     if requested is not None and rect is not None:
         requested = _clip_region(requested, rect)
     image_grab = grabber or _load_image_grab()
-    if sys.platform == 'darwin':
+    if sys.platform == 'darwin' and metrics is None:
         return _grab_mac(image_grab, requested, all_screens)
     if region is None and not all_screens:
         # The primary-only grab is already in logical pixels and starts at (0, 0).

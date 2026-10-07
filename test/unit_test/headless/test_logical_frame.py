@@ -1,4 +1,9 @@
 """Headless tests for capturing in mouse-coordinate space. No Qt, no screen."""
+from types import SimpleNamespace
+
+from PIL import Image
+import pytest
+
 from je_auto_control.utils.monitor_layout import (
     grab_logical, logical_scale, logical_virtual_rect, needs_rescale,
 )
@@ -104,3 +109,25 @@ def test_grab_logical_region_origin_is_the_region_corner():
     _image, origin_x, origin_y = grab_logical(
         (10, -50, 100, 100), grabber=grabber, metrics=_metrics())
     assert (origin_x, origin_y) == (10, -50)
+
+
+@pytest.mark.parametrize('primary_only', [True, False])
+def test_explicit_metrics_override_host_mac_display_geometry(monkeypatch, primary_only):
+    from je_auto_control.utils.monitor_layout import logical_frame as frame
+    monkeypatch.setattr(frame, 'sys', SimpleNamespace(platform='darwin'))
+    native_queries = []
+
+    def host_displays():
+        native_queries.append(True)
+        return [(0, 0, 9, 7)]
+
+    monkeypatch.setattr(frame, '_mac_display_rects', host_displays)
+
+    class Grabber:
+        def grab(self, **_kwargs):
+            return Image.new('RGB', (20, 8), 'red')
+
+    image, x, y = frame.grab_logical(all_screens=not primary_only, grabber=Grabber(),
+                                    metrics=_metrics(x=-4, y=-2, width=12, height=8))
+    assert (image.size, x, y) == (((20, 8), 0, 0) if primary_only else ((12, 8), -4, -2))
+    assert native_queries == []

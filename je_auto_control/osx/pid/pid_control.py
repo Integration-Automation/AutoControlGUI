@@ -1,6 +1,5 @@
+"""macOS process controls load Quartz only when posting keyboard events."""
 import subprocess  # nosec B404  # reason: required to invoke osascript with argv list
-
-from Quartz import CGEventCreateKeyboardEvent, CGEventPostToPid
 
 
 def send_key_to_pid(pid: int, keycode: int) -> None:
@@ -15,6 +14,7 @@ def send_key_to_pid(pid: int, keycode: int) -> None:
     :param pid: Process ID 目標應用程式的 PID
     :param keycode: Keycode 要傳送的鍵盤代碼
     """
+    from Quartz import CGEventCreateKeyboardEvent, CGEventPostToPid  # pylint: disable=import-outside-toplevel,import-error  # reason: native macOS dependency loads on use
     for is_down in (True, False):
         CGEventPostToPid(int(pid), CGEventCreateKeyboardEvent(None, int(keycode), is_down))
 

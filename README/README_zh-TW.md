@@ -411,6 +411,12 @@ GUI 翻譯表保留子元件 wrapper，對自身元件使用 weak proxy，避免
 讀取每 100 ms 檢查取消，保留原請求時限，拒絕取消後的完成結果；舊 descriptor
 回收前不能重連。
 
+
+macOS Quartz／AppKit 與錄製 tap 僅在原生操作時載入，匯入及純 CLI 檔案錯誤
+不初始化這些框架。明確 `grab_logical(metrics=...)` 在所有平台採用虛擬畫面幾何；
+macOS 預設擷取仍逐螢幕轉成 Retina points。EI helper 取消也會保留 socket 至
+transaction 退出，以短輪詢保留總時限，並拒絕取消後的完成結果。
+
 手動執行 `quality.yml` 可選 `verification_scope=native-shortcut`，僅跑 installed-wheel／
 私有 bus 檢查；預設會執行全部 quality jobs。
 

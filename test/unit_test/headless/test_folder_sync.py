@@ -1,6 +1,7 @@
 """Tests for FolderSyncEngine (round 22 — additive folder mirror)."""
 import os
 import time
+import threading
 
 import pytest
 
@@ -38,12 +39,19 @@ def test_pre_existing_files_not_pushed(watch_dir):
 
 def test_new_file_is_pushed(watch_dir):
     sent = []
-    engine = _make_engine(watch_dir, lambda p, n: sent.append(n))
+    completed = threading.Event()
+
+    def sender(_path, name):
+        sent.append(name)
+        completed.set()
+
+    engine = _make_engine(watch_dir, sender)
     engine.start()
     try:
         assert engine.wait_until_ready()  # baseline is fixed from here on
         (watch_dir / "new.txt").write_text("hi", encoding="utf-8")
-        time.sleep(1.1)
+        # Stable content needs two polls; debugger scheduling must not race a fixed sleep.
+        assert completed.wait(5)
     finally:
         engine.stop()
     assert "new.txt" in sent, sent
@@ -91,19 +99,21 @@ def test_deletion_does_not_propagate(watch_dir):
 def test_sender_failure_is_retried_next_tick(watch_dir):
     """A raising sender on the first tick must not poison the snapshot."""
     attempts = []
+    completed = threading.Event()
 
     def flaky_sender(local_path, remote_name):
         attempts.append(remote_name)
         if len(attempts) == 1:
             raise RuntimeError("transient")
+        completed.set()
 
     engine = _make_engine(watch_dir, flaky_sender)
     engine.start()
     try:
         assert engine.wait_until_ready()
         (watch_dir / "retry.txt").write_text("data", encoding="utf-8")
-        # Engine clamps interval to 0.5s minimum, so wait ≥1.5s for two ticks.
-        time.sleep(1.7)
+        # Wait for actual success after the failed send; stable content needs two initial polls.
+        assert completed.wait(5)
     finally:
         engine.stop()
     assert len(attempts) >= 2, attempts

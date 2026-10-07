@@ -13,6 +13,7 @@ and no dependency on the host's display server.
 """
 import contextlib
 import sys
+from types import SimpleNamespace
 from unittest.mock import patch
 
 import pytest
@@ -54,7 +55,10 @@ def _with_backend(backend):
     the test host happens to have -- passing on a 1920x1080 desktop and
     failing under a 1280x800 Xvfb for reasons unrelated to the code here.
     """
-    with patch.object(screen_grabber, "backend_grab_image",
+    from je_auto_control.utils.cv2_utils import screenshot as screenshot_module
+    # The injected capture/geometry belongs to the fake Linux backend, including on a Mac host.
+    with patch.object(screenshot_module, 'sys', SimpleNamespace(platform='linux')), \
+         patch.object(screen_grabber, "backend_grab_image",
                       return_value=backend.grab_image):
         with patch.object(screen_grabber, "_backend_screen_size",
                           side_effect=backend.size):
@@ -246,6 +250,7 @@ def test_public_screenshot_returns_the_compositors_pixels_on_wayland():
     from je_auto_control.linux_wayland import capture as wayland_capture
     from je_auto_control.linux_wayland import screen as wayland_screen
     from je_auto_control.wrapper.auto_control_screen import screenshot
+    from je_auto_control.utils.cv2_utils import screenshot as screenshot_module
 
     png = _solid_png((3, 2), (10, 20, 30))
 
@@ -253,7 +258,8 @@ def test_public_screenshot_returns_the_compositors_pixels_on_wayland():
         assert argv[0] == "/usr/bin/grim"
         return subprocess.CompletedProcess(argv, 0, png, b"")  # nosemgrep
 
-    with patch.object(screen_grabber, "backend_grab_image",
+    with patch.object(screenshot_module, 'sys', SimpleNamespace(platform='linux')), \
+         patch.object(screen_grabber, "backend_grab_image",
                       return_value=wayland_screen.grab_image), \
          patch.object(wayland_capture, "binary_path",
                       return_value="/usr/bin/grim"), \

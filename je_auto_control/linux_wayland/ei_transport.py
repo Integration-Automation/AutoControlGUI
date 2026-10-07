@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import atexit
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 import json
 import math
 import socket
@@ -16,6 +16,7 @@ from uuid import uuid4
 
 from je_auto_control.linux_wayland.libei import LibeiOutOfBounds, LibeiUnavailable
 from je_auto_control.linux_wayland.permission import WaylandDependencyRequired, WaylandPermissionRequired
+from je_auto_control.utils.dbus_client.socket_owner import SocketOwner
 
 MAX_MESSAGE_BYTES = 65536
 MAX_BATCH_EVENTS = 128
@@ -44,6 +45,7 @@ class _WorkerResources:
 
     process: subprocess.Popen[bytes] | None = None
     channel: socket.socket | None = None
+    channel_owner: SocketOwner = field(default_factory=lambda: SocketOwner('EI worker'))
     diagnostics: _Diagnostics | None = None
     crash_details: str = ""
     exit_code: int | None = None
@@ -107,15 +109,33 @@ def _budget(timeout_s: float) -> float:
     return value
 
 
-def _read_exact(channel: socket.socket, size: int, deadline: float | None) -> bytes:
+def _read_chunk(channel: socket.socket, size: int, deadline: float | None,
+                cancelled: Callable[[], bool] | None) -> bytes | None:
+    """Poll cancellable reads without changing the envelope's total deadline."""
+    if cancelled is not None and cancelled():
+        raise EiWorkerError('EI worker request was cancelled')
+    if deadline is not None:
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            raise TimeoutError("EI worker timed out reading a message")
+        channel.settimeout(min(remaining, 0.1) if cancelled is not None else remaining)
+    elif cancelled is not None:
+        channel.settimeout(0.1)
+    try:
+        return channel.recv(size)
+    except socket.timeout:
+        if cancelled is None:
+            raise
+        return None
+
+
+def _read_exact(channel: socket.socket, size: int, deadline: float | None,
+                cancelled: Callable[[], bool] | None = None) -> bytes:
     parts = bytearray()
     while len(parts) < size:
-        if deadline is not None:
-            remaining = deadline - time.monotonic()
-            if remaining <= 0:
-                raise TimeoutError("EI worker timed out reading a message")
-            channel.settimeout(remaining)
-        chunk = channel.recv(size - len(parts))
+        chunk = _read_chunk(channel, size - len(parts), deadline, cancelled)
+        if chunk is None:
+            continue
         if not chunk:
             if not parts:
                 raise _PeerClosed("EI worker closed its channel")
@@ -124,15 +144,15 @@ def _read_exact(channel: socket.socket, size: int, deadline: float | None) -> by
     return bytes(parts)
 
 
-def read_message(channel: socket.socket) -> dict[str, Any]:
+def read_message(channel: socket.socket, *, cancelled: Callable[[], bool] | None = None) -> dict[str, Any]:
     """Read a size-limited JSON object; no pickle or executable wire content."""
     timeout = channel.gettimeout()
     deadline = None if timeout is None else time.monotonic() + timeout
-    size = int.from_bytes(_read_exact(channel, 4, deadline), "big")
+    size = int.from_bytes(_read_exact(channel, 4, deadline, cancelled), "big")
     if not 0 < size <= MAX_MESSAGE_BYTES:
         raise EiWorkerError("invalid EI message size")
     try:
-        value = json.loads(_read_exact(channel, size, deadline))
+        value = json.loads(_read_exact(channel, size, deadline, cancelled))
     except (ValueError, UnicodeError, RecursionError) as error:
         raise EiWorkerError("invalid EI JSON message") from error
     if not isinstance(value, dict):
@@ -252,6 +272,7 @@ class EiWorkerClient:
                     peer, [sys.executable, "-m", "je_auto_control.linux_wayland.ei_worker"],
                     self._resources.diagnostics,
                 )
+                self._resources.channel_owner.adopt(parent)
                 self._resources.channel = parent
             except (OSError, ValueError):
                 parent.close()
@@ -268,18 +289,16 @@ class EiWorkerClient:
             raise EiWorkerError("EI worker request timed out waiting for another request")
         try:
             self._start()
-            channel = self._resources.channel
-            if channel is None:
-                raise EiWorkerError("EI worker channel is closed")
-            request_id = uuid4().hex
-            channel.settimeout(max(0.001, deadline - time.monotonic()))
-            write_message(channel, {**payload, "operation": operation, "request_id": request_id})
-            channel.settimeout(max(0.001, deadline - time.monotonic()))
-            reply = read_message(channel)
-            if reply.get("request_id") != request_id:
-                raise EiWorkerError("EI worker reply has the wrong request identity")
-            self._check_error(reply)
-            return reply
+            with self._resources.channel_owner.borrow() as channel:
+                request_id = uuid4().hex
+                channel.settimeout(max(0.001, deadline - time.monotonic()))
+                write_message(channel, {**payload, "operation": operation, "request_id": request_id})
+                channel.settimeout(max(0.001, deadline - time.monotonic()))
+                reply = read_message(channel, cancelled=lambda: self._closed)
+                if reply.get("request_id") != request_id:
+                    raise EiWorkerError("EI worker reply has the wrong request identity")
+                self._check_error(reply)
+                return reply
         except TimeoutError as error:
             self._failure = "EI worker timed out; delivery is uncertain; explicitly retry authorization"
             self.close()
@@ -387,13 +406,8 @@ class EiWorkerClient:
                 return
             self._closed = True
             self._connected = False
-            channel, self._resources.channel = self._resources.channel, None
-            if channel is not None:
-                try:
-                    channel.shutdown(socket.SHUT_RDWR)
-                except OSError:
-                    pass
-                channel.close()
+            self._resources.channel = None
+            self._resources.channel_owner.close()
             process = self._resources.process
             if process is not None:
                 try:

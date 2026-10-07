@@ -10,6 +10,8 @@ from je_auto_control.utils.monitor_layout import logical_frame as frame
 
 def test_negative_secondary_monitor_capture(monkeypatch):
     from je_auto_control.utils.cv2_utils import screenshot as capture
+    # This fixture supplies a Windows-style virtual frame; Retina is tested separately below.
+    monkeypatch.setattr(frame, 'sys', SimpleNamespace(platform='win32'))
     virtual = Image.new('RGB', (300, 100), 'blue')
     virtual.paste('red', (0, 0, 100, 100))
     class Grabber:
