@@ -19,14 +19,14 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 
 | 指標 | 數值 |
 | --- | ---: |
-| Python 模組總數（含周邊子專案） | 1,183 |
-| 程式碼總行數 | 172,246 |
+| Python 模組總數（含周邊子專案） | 1,188 |
+| 程式碼總行數 | 172,737 |
 | `je_auto_control/utils/` 子套件數 | 311 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 819 |
 | 套件門面 `__all__` 公開名稱數 | 1,388 |
 | GUI 分頁數（`main_widget` 註冊） | 50 |
 | MCP 工具數（`build_default_tool_registry()` 實測） | 741 |
-| `test_*.py` 測試檔／測試函式 | 764 / 7,946 |
+| `test_*.py` 測試檔／測試函式 | 765 / 7,953 |
 | 範例腳本 | 31 |
 
 **技術基線**：Python ≥ 3.10、MIT 授權、必要相依只有 `je_open_cv`／`opencv-python`／`pillow`／`mss`／
@@ -968,7 +968,12 @@ GUI 是**選用 extra**（`pip install je_auto_control[gui]`，PySide6 + qt-mate
 | `journal_candidate_panel.py` | 118 | Journal candidate source, provenance and diff preview with explicit import/export. |
 | `gui/__init__.py` | 23 | `start_autocontrol_gui()`：**唯一**會延遲匯入 PySide6 的地方，維持頂層套件 Qt-free。 |
 | `main_window.py` | 301 | `QMainWindow`：選單列（File／Actions／View／…）、可關閉分頁、即時語言切換、字級預設、qt-material 主題。分頁分為 core／editing／detection／automation／system 五類。 |
-| `main_widget.py` | 441 | 擁有 `QTabWidget`，註冊 50 個分頁，並暴露 show/hide/list API 給選單列。核心分頁在註冊時直接宣告 `(label_key, handler)` 動作對；分頁本體都在下列 mixin。 |
+| `main_widget.py` | 8 | Compatible import path for the lazy AutoControl GUI widget. |
+| `_lazy_widget.py` | 221 | Lazy tab workspace preserving legacy show/hide/list and core handler contracts. |
+| `_tab_catalog.py` | 476 | Pure tab catalog: stable keys, lazy import targets and action metadata. |
+| `_tab_factories.py` | 53 | Resolve one catalog factory only at first open, retaining optional dependency recovery. |
+| `_core_tab_proxy.py` | 69 | Lazy descriptors preserve legacy core-tab methods without importing unopened panels. |
+| `tab_registry.py` | 97 | Immutable tab metadata and lazy owner-scoped factories; imports remain Qt-free. |
 | `_auto_click_tab.py` | 291 | 自動點擊分頁的 mixin 建構器。 |
 | `_screenshot_tab.py` | 137 | 截圖／取像素分頁 mixin。 |
 | `_image_detect_tab.py` | 115 | 影像偵測分頁 mixin。 |
@@ -980,11 +985,11 @@ GUI 是**選用 extra**（`pip install je_auto_control[gui]`，PySide6 + qt-mate
 | `_screen_geometry.py` | 53 | Qt 邏輯座標與截圖用的原生像素互轉：`native_region()`、`screen_at_native()`、`logical_point()`（每個螢幕的左上角在兩者相同，螢幕內依 device pixel ratio 縮放）。區域選取與主機端標註覆蓋層都用它。 |
 | `_daemon_thread.py` | 79 | `DaemonThread`：`QThread` 的替代品，保留遠端桌面 worker 用到的介面（`start`／`run`／`isRunning`／`wait`／`requestInterruption`／`started`／`finished`），但 `run()` 跑在 daemon `threading.Thread` 上，刪除物件或程式結束都不會銷毀執行中的執行緒。 |
 | `_worker_thread.py` | 230 | `start_worker()`：在 daemon `threading.Thread` 上執行 `QObject` worker 的 `run()`（沒有 `QThread` 可被銷毀），並經由分頁擁有的中繼物件回報結果（回呼一律在 GUI 執行緒；worker 沒處理的例外也送到 `on_fail`）；worker 留在模組登錄表直到 GUI 執行緒看到它結束，回傳 `WorkerHandle`（`isRunning()`）；程式結束時先呼叫 worker 的 `request_stop()`，最多等 10 秒，仍在跑的隨行程結束。 |
-| `language_wrapper/` | 5,490 | 四語系字典（英／日／簡中／繁中）+ `multi_language_wrapper` 執行期切換器與監聽註冊表。 |
+| `language_wrapper/` | 5,498 | 四語系字典（英／日／簡中／繁中）+ `multi_language_wrapper` 執行期切換器與監聽註冊表。 |
 | `selector/` | 216 | 拖曳選取螢幕區域的半透明全螢幕覆蓋層與樣板裁切工具（互動式，但都有對應的程式化 API）。 |
 
 > **分頁指令一律走 Actions 選單**：分頁本身只放輸入、表格與結果檢視，指令由視窗層選單暴露。
-> 核心分頁在 `main_widget.py` 註冊時宣告動作；功能分頁實作 `menu_actions()`（目前 40 個檔案有此 hook）。
+> 核心分頁在 `_tab_catalog.py` 宣告動作 metadata，首次建立後綁定；功能分頁實作 `menu_actions()`。
 > `test/unit_test/headless/test_actions_menu_gui.py` 會守住這個契約——沒有動作宣告的新分頁會讓 CI 失敗。
 
 #### 50 個分頁
@@ -1091,7 +1096,7 @@ GUI 是**選用 extra**（`pip install je_auto_control[gui]`，PySide6 + qt-mate
 | `ci_templates/.gitlab-ci.yml` | — | 供使用者專案複製的 GitLab CI 範本。 |
 | `docs/` | Sphinx（`API`／`Eng`／`Zh`／`getting_started`） | Read the Docs 文件。 |
 | `architecture_diagram/` | drawio + png | 既有的架構圖原始檔。 |
-| `test/` | `unit_test/headless`（主要）、`unit_test/flow_control`、`integrated_test`、`gui_test`、`manual_test`、`verify`、`test_source` | 764 個 `test_*.py`／7,946 個測試函式。**注意**：`test/unit_test/` 下的 `*_test.py` 是會真的驅動滑鼠鍵盤的手動示範腳本，因此 `pyproject.toml` 把 `python_files` 釘成 `test_*.py`。`unit_test/headless/conftest.py` 有一個 autouse fixture，每個測試結束都沖掉 Qt 排隊中的 `deleteLater()`——不沖會讓殘留的 widget 在後面某個不相干的測試裡被銷毀，曾經整個直譯器 `__fastfail`。`test_doc_counts.py` 守住文件引用的指令／工具／子套件／範例數,`test_doc_line_counts.py` 守住所有行數（`--fix` 可一次重新產生）。 Folder Sync 正向案例等待實際 sender，防回送先等待實際輪詢處理，保留內容與次數斷言。 `verify/native_debugger.py` 以有時限的 gdb/lldb 包裝原有 coverage 命令，保留 target 退出碼與原生堆疊。 `verify/macos_verify.py` 是在真的 `macos-14` runner 上量測 TCC 到底允許什麼的探針（macOS 是唯一沒有容器可用的支援平台），不被 pytest 收集。 |
+| `test/` | `unit_test/headless`（主要）、`unit_test/flow_control`、`integrated_test`、`gui_test`、`manual_test`、`verify`、`test_source` | 765 個 `test_*.py`／7,953 個測試函式。**注意**：`test/unit_test/` 下的 `*_test.py` 是會真的驅動滑鼠鍵盤的手動示範腳本，因此 `pyproject.toml` 把 `python_files` 釘成 `test_*.py`。`unit_test/headless/conftest.py` 有一個 autouse fixture，每個測試結束都沖掉 Qt 排隊中的 `deleteLater()`——不沖會讓殘留的 widget 在後面某個不相干的測試裡被銷毀，曾經整個直譯器 `__fastfail`。`test_doc_counts.py` 守住文件引用的指令／工具／子套件／範例數,`test_doc_line_counts.py` 守住所有行數（`--fix` 可一次重新產生）。 Folder Sync 正向案例等待實際 sender，防回送先等待實際輪詢處理，保留內容與次數斷言。 `verify/native_debugger.py` 以有時限的 gdb/lldb 包裝原有 coverage 命令，保留 target 退出碼與原生堆疊。 `verify/macos_verify.py` 是在真的 `macos-14` runner 上量測 TCC 到底允許什麼的探針（macOS 是唯一沒有容器可用的支援平台），不被 pytest 收集。 |
 
 ---
 
@@ -1129,7 +1134,7 @@ GUI 是**選用 extra**（`pip install je_auto_control[gui]`，PySide6 + qt-mate
 | **新平台後端** | 新增 `je_auto_control/<platform>/` 實作 backend 介面，並在 `wrapper/platform_wrapper.py` 加一個分支 | 所有 wrapper 模組與上層 |
 | **新 `AC_*` 指令** | 在 `utils/` 寫無頭實作 → 加進 `Executor.event_dict` → 加進 `gui/script_builder/command_schema.py` | executor 分派邏輯本身 |
 | **執行期外掛指令** | `add_command_to_executor({"AC_x": fn})`，或用 `utils/plugin_loader`（掃描目錄）／`utils/plugin_sdk`（entry points） | 核心程式碼 |
-| **新 GUI 分頁** | 在 `gui/` 新增 widget（只做 UI 翻譯）→ 在 `main_widget.py` `_add_tab` 註冊 → 提供 `menu_actions()` | 主視窗選單建構邏輯 |
+| **新 GUI 分頁** | 在 `gui/` 新增薄 widget → 在 `_tab_catalog.py` 註冊延遲 factory 與動作 metadata → 提供 `menu_actions()` | 主視窗選單／registry |
 | **新 OCR／VLM／LLM／a11y 後端** | 在對應 `backends/` 實作 base 協定 | 呼叫端 |
 | **新報表格式** | 仿 `generate_report/` 既有三者的骨架新增產生器 | 執行紀錄收集 |
 | **新 MCP 工具** | 在 `mcp_server/tools/_factories.py` 加工廠、`_handlers.py` 加 adapter（QA 主題加在 `_handlers_qa.py`） | 傳輸層 |
@@ -1195,7 +1200,7 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 
 | 層／子系統 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `gui/` | 111 | 30,768 |
+| `gui/` | 116 | 31,259 |
 | `utils/mcp_server/` | 47 | 19,855 |
 | `utils/remote_desktop/` | 59 | 13,799 |
 | `utils/executor/` | 10 | 9,894 |
@@ -1216,7 +1221,7 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 863 |
 | 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 737 | 62,811 |
-| **總計** | **1,175** | **172,116** |
+| **總計** | **1,180** | **172,607** |
 
 
 Crypto optional-dependency failures use CryptoDependencyError from utils/exception:
@@ -1281,3 +1286,11 @@ validates platform aliases and entire flat mobile batches before native input. m
 provides passive package version/capability evidence and opt-in read-only ADB/WDA diagnostics.
 _mobile_panel_owner.py owns revocation/background cleanup independent of QObject lifetime;
 gui/mobile_tab.py provides persistent device operations through Actions with generation guards.
+
+F1 GUI shell: main_widget.py is a compatibility shim; _lazy_widget.py owns tabs and
+show/hide/list/close. _tab_catalog.py holds all stable metadata, _tab_factories.py
+performs selected optional imports and _core_tab_proxy.py preserves lazy core handler
+descriptors. tab_registry.py freezes TabSpec factories without Qt imports until open;
+owner destruction drops cached instances. Explicit close releases subscriptions and
+translation entries; hide keeps widget/input state. Existing Actions tests open all
+factories, while fresh subprocess tests assert the unopened import boundary.

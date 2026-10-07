@@ -58,6 +58,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261007-23 | 2026-10-07 | Lazily build GUI panels and release explicitly closed owners | #done #gui #modernization | [2026-10](2026-10.md) |
 | U-20261007-22 | 2026-10-07 | Verify Android lifecycle and native capture in Docker | #snapshot #mobile #testing | [2026-10](2026-10.md) |
 | U-20261007-21 | 2026-10-07 | Deliver shared mobile workspace and native smoke configuration | #done #mobile #gui #modernization | [2026-10](2026-10.md) |
 | U-20261007-20 | 2026-10-07 | Observe mobile apps and own optional extension resources | #done #mobile #modernization | [2026-10](2026-10.md) |
@@ -388,7 +389,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | File | Period | Entries |
 |---|---|---:|
-| [2026-10.md](2026-10.md) | 2026-10 | 52 |
+| [2026-10.md](2026-10.md) | 2026-10 | 53 |
 | [2026-09-e.md](2026-09-e.md) | 2026-09 | 7 |
 | [2026-09-d.md](2026-09-d.md) | 2026-09 | 55 |
 | [2026-09-c.md](2026-09-c.md) | 2026-09 | 38 |

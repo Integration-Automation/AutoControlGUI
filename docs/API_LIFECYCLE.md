@@ -174,3 +174,15 @@ an owner does not prove restoration of native state. Flat mobile batches validat
 all command names/schemas first and exclude desktop/flow/macro/file commands.
 The setup report distinguishes SDK version, HTTP/ADB connectivity and untested input.
 See [setup and signing](MOBILE_SETUP.md) for explicit opt-in smoke and ownership limits.
+
+### F1 GUI catalog and lifetime
+
+The `gui.main_widget.AutoControlGUIWidget` import path and core methods remain
+compatible through lazy descriptors. show/hide/list retain catalog identities,
+ordering and visibility fields. hide keeps input/state; the close button and new
+close_tab release/delete the widget and remove subscriptions. Reopen builds a new
+widget under the same key. TabSpec/TabRegistry metadata in gui.tab_registry is
+Qt-free until a factory is opened; open/close belong on the GUI thread. Closing
+native panels follows their existing owner cleanup; native state restoration is a
+separate acceptance case. No unopened feature is created during metadata, language
+or engine refresh.

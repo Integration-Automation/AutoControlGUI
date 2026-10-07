@@ -1331,4 +1331,6 @@ japanese_word_dict = {
     "mobile_op_files": "ファイル",
     "mobile_op_clipboard": "クリップボード",
     "mobile_op_recording": "録画",
+    'feature_dependency_unavailable': "機能の依存パッケージが不足しています",
+    'feature_dependency_recovery': "必要な追加パッケージをインストールして、このパネルを開き直してください。",
 }

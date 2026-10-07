@@ -1310,4 +1310,6 @@ traditional_chinese_word_dict = {
     "mobile_op_files": "檔案",
     "mobile_op_clipboard": "剪貼簿",
     "mobile_op_recording": "錄影",
+    'feature_dependency_unavailable': "缺少功能相依套件",
+    'feature_dependency_recovery': "請安裝文件指定的選用套件，再重新開啟面板。",
 }

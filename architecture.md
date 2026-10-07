@@ -30,7 +30,7 @@ entry points → execution core (`utils/executor/`) → headless capabilities (`
 | `je_auto_control/wrapper/` | Platform-neutral API (`auto_control_mouse/keyboard/screen/image/record/window.py`); `platform_wrapper.py` picks the backend; `backend_contract.py` types the seam; `window_backends/`. |
 | `je_auto_control/{windows,osx,linux_with_x11,linux_wayland}/` | Desktop OS backends; only the running OS's backend is imported. |
 | `je_auto_control/{android,ios}/` | Mobile device control (adb / uiautomator2, WebDriverAgent). |
-| `je_auto_control/gui/` | Optional PySide6 GUI (`[gui]` extra): `main_window.py`, tab registry `main_widget.py`, `script_builder/`, `remote_desktop/`, `language_wrapper/`. |
+| `je_auto_control/gui/` | Optional PySide6 GUI (`[gui]` extra): `main_window.py`, lazy registry `tab_registry.py`, compatible `main_widget.py`, `script_builder/`, `remote_desktop/`, `language_wrapper/`. |
 | `autocontrol-lsp/` | Separate distribution: language server for `AC_*` action JSON, plus a `vscode/` client. |
 | `test/` | `unit_test/headless/` (CI gate), `unit_test/flow_control/`, `integrated_test/`, `gui_test/`, `manual_test/`, `verify/`. |
 | `docs/` | Sphinx docs, `API_LIFECYCLE.md`, `CAPABILITY_MATRIX.md`. |
@@ -107,7 +107,7 @@ wrapper/auto_control_record.record → OS listener (e.g. windows/record/win32_in
    `_handlers_scheduling.py`, `_handlers_remote.py`, `_handlers_locators.py`, `_handlers_operations.py`,
    `_handlers_qa.py`, `_handlers_executor_bridge.py` (a three-line delegation to an executor function), or
    `_handlers.py` for data, text and the WebRunner bridge.
-6. GUI: thin widget in `gui/`, registered in `gui/main_widget.py` (`_add_tab`) with commands exposed through
+6. GUI: thin widget in `gui/`, registered in `gui/_tab_catalog.py` with a lazy factory/action metadata with commands exposed through
    `menu_actions()`; strings in every `gui/language_wrapper/*.py` catalogue.
 7. Headless test in `test/unit_test/headless/`.
 8. Update `architecture_explore.md` (and `README.md` + `README/` translations if a quoted count changes), then run
@@ -425,3 +425,11 @@ and alternatives. Owner close revokes immediately and cleans on a headless threa
 GUI callbacks reject obsolete generations. Explicit result values remain available
 while automatic extension logs are masked. Docker/KVM and remote WDA setup/smoke
 configuration live in docs/MOBILE_SETUP.md and examples/mobile_device_smoke.py.
+
+F1 keeps main_widget.py as a compatible import shim to _lazy_widget.py.
+_tab_catalog.py contains pure stable keys, import targets and action metadata;
+_tab_factories.py resolves only the selected panel. _core_tab_proxy.py descriptors
+preserve unbound/bound legacy core handlers without eagerly importing mixins.
+TabSpec/TabRegistry are Qt-free metadata with owner-scoped instances; hide retains
+state, explicit close releases it, and parent destruction drops cached references.
+Only default record/script_builder/remote_desktop factories run at startup.

@@ -1309,4 +1309,6 @@ simplified_chinese_word_dict = {
     "mobile_op_files": "文件",
     "mobile_op_clipboard": "剪贴板",
     "mobile_op_recording": "录屏",
+    'feature_dependency_unavailable': "缺少功能依赖",
+    'feature_dependency_recovery': "请安装文档指定的可选依赖，再重新打开面板。",
 }

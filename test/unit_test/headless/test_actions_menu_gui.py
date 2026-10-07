@@ -56,6 +56,8 @@ report = {
 }
 
 for entry in widget._tab_entries:
+    # Explicitly open every factory so this remains a complete hook audit after lazy startup.
+    widget.show_tab(entry.key)
     actions = entry_actions(entry)
     if entry.key not in MENU_EXEMPT_TABS and not actions:
         report["missing_actions"].append(entry.key)

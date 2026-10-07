@@ -281,6 +281,7 @@ _WINDOW_PROBE = textwrap.dedent("""
     before = (len(language_wrapper._listeners), len(default_presence_registry()._listeners))
     from je_auto_control.gui.main_window import AutoControlGUIUI
     window = AutoControlGUIUI()
+    window.auto_control_gui_widget.show_tab('presence')
     during = (len(language_wrapper._listeners), len(default_presence_registry()._listeners))
     window.deleteLater()
     del window
@@ -300,6 +301,6 @@ def test_destroying_the_window_removes_its_listeners():
     done = subprocess.run(argv, capture_output=True, text=True, timeout=180, env=env, cwd=str(_REPO_ROOT), check=False)  # nosec B603  # nosemgrep  # reason: this test's own probe, fixed argv
     assert done.returncode == 0, done.stderr[-2000:]
     counts = json.loads(done.stdout.strip().splitlines()[-1])
-    # [language listeners, presence listeners]: each window adds one of each.
+    # The window adds a language listener; explicitly opening Presence adds its listener.
     assert all(d > b for d, b in zip(counts["during"], counts["before"])), counts
     assert counts["after"] == counts["before"], counts

@@ -567,3 +567,13 @@ on source 21e02733 passes Android14/API34 Docker/KVM explicit get-state, observe
 com.android.settings launch/stop and a real 1440×3040 device PNG. ADB1.0.41 /
 platform-tools34.0.4-debian, uiautomator2 3.7.0 and adbutils 2.12.0 are retained
 with the artifact. It does not establish physical-device, Unicode, rotation or iOS behavior.
+
+### F1 lazy GUI evidence
+
+All 50 catalog keys remain reachable; startup builds record/script_builder/
+remote_desktop only. Fresh-process tests verify unopened Mobile and Screenshot
+modules are absent, passive catalog/registry imports load no Qt, hide/reveal retains
+widget identity/data and close/reopen retains key while replacing the widget.
+Real Presence subscriptions return to baseline after deferred deletion. Existing
+Actions and teardown audits explicitly open every feature to retain full coverage.
+These offscreen tests are GUI lifetime evidence, not physical platform input proof.

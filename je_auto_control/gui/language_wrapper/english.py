@@ -1445,4 +1445,6 @@ english_word_dict = {
     "mobile_op_files": "Files",
     "mobile_op_clipboard": "Clipboard",
     "mobile_op_recording": "Recording",
+    'feature_dependency_unavailable': "Feature dependency unavailable",
+    'feature_dependency_recovery': "Install the documented optional extra and reopen this panel.",
 }

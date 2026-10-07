@@ -1,0 +1,33 @@
+{
+  "commit": "21e027334a7af4a808682f03e20c70f0075a5f23",
+  "workload": "construct widget then open mobile; tracemalloc enabled",
+  "runs": [
+    {
+      "startup_ms": 6520.369099918753,
+      "first_open_mobile_ms": 0.8759000338613987,
+      "traced_memory_bytes": 98741233,
+      "python": "3.14.4",
+      "platform": "Windows-11-10.0.26300-SP0",
+      "qt_backend": "offscreen",
+      "catalog_count": 50
+    },
+    {
+      "startup_ms": 6743.589699966833,
+      "first_open_mobile_ms": 0.8808999555185437,
+      "traced_memory_bytes": 98744798,
+      "python": "3.14.4",
+      "platform": "Windows-11-10.0.26300-SP0",
+      "qt_backend": "offscreen",
+      "catalog_count": 50
+    },
+    {
+      "startup_ms": 7257.012799964286,
+      "first_open_mobile_ms": 1.1407999554648995,
+      "traced_memory_bytes": 98744466,
+      "python": "3.14.4",
+      "platform": "Windows-11-10.0.26300-SP0",
+      "qt_backend": "offscreen",
+      "catalog_count": 50
+    }
+  ]
+}

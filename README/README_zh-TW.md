@@ -821,3 +821,12 @@ endpoint。請參閱[行動裝置設定](../docs/MOBILE_SETUP.md)。
 `python examples/mobile_device_smoke.py --validate` 不需硬體；`--connect` 啟用連線診斷，
 `--exercise --app-id ...` 另會啟動、擷取及停止指定測試 App。已交付 Android 14
 Docker/KVM 配置與手動原生 CI；測試配置與受控測試不等於實體裝置驗證。
+
+### 延遲建立 GUI 面板
+
+啟動只建立錄製、Script Builder 與遠端桌面。完整 50 個分頁仍可透過 View → Tabs
+開啟；其他功能在首次開啟時才匯入及建立，Actions 也於建立後綁定。
+既有 `show_tab`、`hide_tab`、`list_registered_tabs` 介面保留；隱藏保留輸入內容，
+分頁關閉鈕及 `close_tab` 釋放面板與訂閱。重開已關閉分頁會以相同 key 建立新 widget。
+切換語言／更新引擎只處理已建立面板；缺少選用套件會顯示恢復說明。
+GUI factory 在 GUI 執行緒執行；registry 的 headless metadata 不匯入 Qt 或功能模組。

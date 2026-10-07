@@ -980,3 +980,15 @@ an exclusive idle WDA endpoint. See the [mobile setup guide](docs/MOBILE_SETUP.m
 into diagnostics; `--exercise --app-id ...` additionally launches, captures and stops the
 named disposable app. Android 14 Docker/KVM configuration and a manual native CI workflow
 are included. Configured smoke and controlled tests are distinct from real device evidence.
+
+### Lazy GUI panels
+
+Startup constructs Record, Script Builder and Remote Desktop. The complete 50-tab
+catalog stays available through View → Tabs; other features import and construct
+only when opened. Actions bind after construction. The legacy `show_tab`, `hide_tab`
+and `list_registered_tabs` APIs remain available: hide preserves entered data;
+the tab close button and `close_tab` release the panel and its subscriptions.
+Reopening a closed panel creates a fresh widget with the same key. Language/engine
+refresh only touches constructed panels. Missing optional dependencies show a
+recovery view. GUI factories run on the GUI thread; headless registry metadata
+imports neither Qt nor feature modules.

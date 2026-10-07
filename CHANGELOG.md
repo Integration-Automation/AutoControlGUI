@@ -13,6 +13,11 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ## Unreleased
 
+- GUI startup now imports/builds only default panels. View hiding retains state;
+  closing a tab releases its widget/subscriptions and reopening creates a fresh
+  widget under the same stable key. Legacy GUI import and show/hide/list/core
+  handler paths remain compatible through lazy factories/descriptors.
+
 - Add persistent Mobile devices Actions, passive/explicit setup diagnostics, shared
   Android/iOS operation aliases and a validated device-only batch boundary. Automatic
   extension result logs are masked; explicit callers retain their results. Deliver
