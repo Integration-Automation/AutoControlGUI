@@ -2,7 +2,7 @@
 
 ## 跨平台與 GUI 全面改版
 
-`WIP` — 接續 H3 的完整 coverage／跨平台 CI，以及原生與正式下游整合驗收。
+`WIP` — 接續 H3 尚缺的原生與正式下游整合驗收。
 核准設計：[跨平台自動化與 GUI 改版](docs/superpowers/specs/2026-10-02-platform-gui-modernization-design.md)。
 實作計畫：[分階段交付計畫](docs/superpowers/plans/2026-10-02-modernization-index.md)。
 現有 `[Answer]` 決策沿用；不額外新增付費型功能，缺少真實 API 條件的既有項目保留待驗證。

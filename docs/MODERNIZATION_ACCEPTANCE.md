@@ -104,3 +104,25 @@ the [wheel report](validation/h3-release-wheel.json) identifies its package sour
 The sdist also builds successfully. The
 [native manifest](validation/h3-native-manifest.json) links each native run to its
 source and preserves checked Docker summaries and artifact hashes.
+
+## Final programmatic CI acceptance
+
+[Quality run 37688956452](https://github.com/Integration-Automation/AutoControlGUI/actions/runs/37688956452)
+at `02930f9134160990feee38b3fc84c2c5bb21ce87` succeeds across all **15**
+Windows/Linux/macOS × Python 3.10–3.14 targets. Coverage is **85.86%–86.97%**,
+above the unchanged **81%** floor. Lint, security, stable typing, both installed
+extras checks and the private-bus native shortcut job also pass. Dependency review
+is skipped for manual dispatch. The
+[quality summary](validation/h3-quality-summary.json) retains each target's exact
+Python/platform, coverage counters and artifact hashes.
+
+Downloaded artifacts were checked independently: all fifteen reports identify
+the tested source and controlled backend; thirty distinct source/replay journal
+identities contain the actual reported steps; every referenced artifact exists;
+all fifteen SQLite integrity checks pass. Each report has two verified controlled
+checks and four explicitly skipped native/production checks with reasons.
+
+Only documentation changes follow this tested source. Original native/container
+runs and wheel artifacts retain their earlier source identities. Programmatic CI
+acceptance is complete; the native and production conditions above keep H3's full
+acceptance step open in the plan and Progress.

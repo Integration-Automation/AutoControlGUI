@@ -90,6 +90,12 @@ assert all_verified_capabilities_have_evidence is True
 - [x] **Step 2:** 執行 `.venv/Scripts/python.exe -m pytest -q --tb=short --basetemp=.test-tmp/modernization-task -o cache_dir=.test-tmp/modernization-pytest-cache test/unit_test/headless/test_modernization_integration.py`，確認新測試因原有缺陷或尚未提供接口而 FAIL；不要把環境錯誤當成功的重現。
 - [ ] **Step 3:** Python3.10–3.14與各OS CI、現有coverage floor不下降；手動／CI native EI、GNOME/KDE、Retina、Android、iOS結果附文件。執行下游 test_gui_facade/test_gui_control 與跨專案契約；有阻礙寫進 Progress，不能假完成。
 - [x] **Step 4:** 重跑 Step 2，預期 exit 0；再跑這些修改檔所對應的既有回歸，確認公開契約。
-- [ ] **Step 5:** 更新本 task 的型別、所有交付入口、文件、測量計數與進度，僅 stage 本 task 檔案，提交 `git commit -m 'H3: 跨平台、下游與發布前回歸'`。
+- [x] **Step 5:** 更新本 task 的型別、所有交付入口、文件、測量計數與進度，僅 stage 本 task 檔案，提交 `git commit -m 'H3: 跨平台、下游與發布前回歸'`。
 
-H3 controlled regressions pass. Full coverage/CI results are being collected; native and production downstream conditions remain in Progress and keep Step 3 open.
+H3 controlled regressions and all fifteen Python/OS coverage jobs pass at `02930f91`
+([quality run](https://github.com/Integration-Automation/AutoControlGUI/actions/runs/37688956452)).
+The full local package run passes 11,485 cases with 46 skips and 87.00% coverage at `a296b8d3`;
+subsequent changes only wait for test terminal states. Native Docker/macOS/arm64/Android
+evidence and release artifacts are retained in `docs/MODERNIZATION_ACCEPTANCE.md`.
+Remaining physical/native and production downstream conditions stay in Progress and
+keep Step 3 open; passing controlled jobs do not complete those conditions.

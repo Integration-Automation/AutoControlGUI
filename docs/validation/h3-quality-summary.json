@@ -1,0 +1,251 @@
+{
+  "run_id": 37688956452,
+  "source_commit": "02930f9134160990feee38b3fc84c2c5bb21ce87",
+  "url": "https://github.com/Integration-Automation/AutoControlGUI/actions/runs/37688956452",
+  "coverage_floor": 81,
+  "targets": [
+    {
+      "target": "macos-14-3.10",
+      "python": "3.10.11",
+      "platform": "macOS-14.8.9-arm64-arm-64bit",
+      "coverage_percent": 85.9,
+      "covered": 69779,
+      "total": 81236,
+      "verified_checks": 2,
+      "skipped_checks": 4,
+      "evidence_sha256": {
+        "journal/source.jsonl": "bac504399769e5aa5b309968f1e4e2b7393707fa319cb1034a1f2fb965d895ae",
+        "journal/replayed.jsonl": "e4884b3dadf37794156ccfea053c4e7cf5ce8a7d5f186baf19b37a43c235311b",
+        "sync/sync.sqlite": "ed4f6744a3c0571aa7eb7ad46f902f0b903fb56d5a53b14afe74357ef4ecc6a8"
+      },
+      "coverage_sha256": "36c40c482fec59e7efd6dd8b9410e4b7dc9e3a94d8a8d7a8ee4df7b585f5eb2e"
+    },
+    {
+      "target": "macos-14-3.11",
+      "python": "3.11.9",
+      "platform": "macOS-14.8.9-arm64-arm-64bit",
+      "coverage_percent": 85.91,
+      "covered": 69788,
+      "total": 81236,
+      "verified_checks": 2,
+      "skipped_checks": 4,
+      "evidence_sha256": {
+        "journal/source.jsonl": "dd925cb90c98e5c5f986d9f56dcd7b1f6cf466839bc2e4ff4b599b9ac7780c80",
+        "journal/replayed.jsonl": "9b473097657e6562d6995afa32158fab9aef2966a77be4e10b74bf489100f31e",
+        "sync/sync.sqlite": "f07aaeb8f766ddaef79514e29308e8fc91476ef89c1008226bf633493b36b5b8"
+      },
+      "coverage_sha256": "987b011793974d481a3f66bf84baf62b429983e9c9fa19e8e68c3f73d89a13cb"
+    },
+    {
+      "target": "macos-14-3.12",
+      "python": "3.12.10",
+      "platform": "macOS-14.8.9-arm64-arm-64bit",
+      "coverage_percent": 85.9,
+      "covered": 69781,
+      "total": 81236,
+      "verified_checks": 2,
+      "skipped_checks": 4,
+      "evidence_sha256": {
+        "journal/source.jsonl": "b66a821054ca853dfca00fed13df022a066c2fb5f1ce7af0cd51e9f11bd6cec0",
+        "journal/replayed.jsonl": "51531e833b45ff7d3d769d8a3df448683121ad3cd5a3b220f3ddd4450506fe6e",
+        "sync/sync.sqlite": "74c26855dd2c0647809491ac0fe4c528d1581a8a919c8874d936f31e13c64089"
+      },
+      "coverage_sha256": "4f73def9a6dbbc87da72f2446920d61b5df358ebffd8ec18c5b8f74cd7bc8d13"
+    },
+    {
+      "target": "macos-14-3.13",
+      "python": "3.13.15",
+      "platform": "macOS-14.8.9-arm64-arm-64bit-Mach-O",
+      "coverage_percent": 85.91,
+      "covered": 69789,
+      "total": 81236,
+      "verified_checks": 2,
+      "skipped_checks": 4,
+      "evidence_sha256": {
+        "journal/source.jsonl": "17038e3e7ef1fe0164c825b757ba5ae8df9f8fc7ae7ffb95b26ae07c30c8aeee",
+        "journal/replayed.jsonl": "5205f2ed5be395d1bc57e06c840cc2487fe522cbef2f391fa4b2d0dc757dcd13",
+        "sync/sync.sqlite": "3491169f01c2c82840513b3d2fb6ff6f4bf901ae82c54165a0b8f13b59dbcdce"
+      },
+      "coverage_sha256": "6cb16b61577bb6a42b3c7082a8a7fe0533855135989ca0a7ea5286edd1770587"
+    },
+    {
+      "target": "macos-14-3.14",
+      "python": "3.14.7",
+      "platform": "macOS-14.8.9-arm64-arm-64bit-Mach-O",
+      "coverage_percent": 85.87,
+      "covered": 69535,
+      "total": 80977,
+      "verified_checks": 2,
+      "skipped_checks": 4,
+      "evidence_sha256": {
+        "journal/source.jsonl": "5646816099cee2d8d99d15fca26098969e21241b0b79c4e23de0b5770ac09d4d",
+        "journal/replayed.jsonl": "d878ba0015c55876dcc2127e21f880e03e274ea6fbee11e96c13df1c97c9fb45",
+        "sync/sync.sqlite": "3491169f01c2c82840513b3d2fb6ff6f4bf901ae82c54165a0b8f13b59dbcdce"
+      },
+      "coverage_sha256": "434cfe7ea73b6e068211be6a60ae730fab5de5e1588943ca9bc57afdb1280ef4"
+    },
+    {
+      "target": "ubuntu-22.04-3.10",
+      "python": "3.10.22",
+      "platform": "Linux-6.8.0-1064-azure-x86_64-with-glibc2.35",
+      "coverage_percent": 85.89,
+      "covered": 69772,
+      "total": 81236,
+      "verified_checks": 2,
+      "skipped_checks": 4,
+      "evidence_sha256": {
+        "journal/source.jsonl": "99e13f384f9eac66b16f0ec0b8140575887583d3e7ba7fe8381fb014b45db29d",
+        "journal/replayed.jsonl": "699523292cddc1f1ba46df3ec4bcf57b5ee27f2e0ef5994547a5edcd062d68a4",
+        "sync/sync.sqlite": "f274e676460e9da65746eac24a69dd97f6da811f096f6511d1278dddc842b706"
+      },
+      "coverage_sha256": "fc4b9b7dadf404e4eabebeb0257443875902267c3ffdf3dc1161d90c0c1b0288"
+    },
+    {
+      "target": "ubuntu-22.04-3.11",
+      "python": "3.11.16",
+      "platform": "Linux-6.8.0-1064-azure-x86_64-with-glibc2.35",
+      "coverage_percent": 85.9,
+      "covered": 69779,
+      "total": 81236,
+      "verified_checks": 2,
+      "skipped_checks": 4,
+      "evidence_sha256": {
+        "journal/source.jsonl": "9d1d944a36764c3fc5bbc8ea5f12881451b2e7725ffb317ee5d79abe34bc7033",
+        "journal/replayed.jsonl": "d14243f9db85790cce9d2d487259907d11fc9f7d6115f348820089b64792c4e5",
+        "sync/sync.sqlite": "f274e676460e9da65746eac24a69dd97f6da811f096f6511d1278dddc842b706"
+      },
+      "coverage_sha256": "8768e07af1a29fac831289a6f60f52cc54aeaa556657c79418cc5a07b501cfb4"
+    },
+    {
+      "target": "ubuntu-22.04-3.12",
+      "python": "3.12.15",
+      "platform": "Linux-6.8.0-1064-azure-x86_64-with-glibc2.35",
+      "coverage_percent": 85.9,
+      "covered": 69780,
+      "total": 81236,
+      "verified_checks": 2,
+      "skipped_checks": 4,
+      "evidence_sha256": {
+        "journal/source.jsonl": "0b29a8a22b76eb4907b84e955b96f40dcaefc606fe6e21875e2087dc574207d7",
+        "journal/replayed.jsonl": "a0a0d6c0a271aa174ae40e33e6770331805c0d239f1858d1b88708d7b9d6e890",
+        "sync/sync.sqlite": "f274e676460e9da65746eac24a69dd97f6da811f096f6511d1278dddc842b706"
+      },
+      "coverage_sha256": "71ae110665d298f263255102c819b9c253cf6536a9cf5bf13158eb8d1eb29587"
+    },
+    {
+      "target": "ubuntu-22.04-3.13",
+      "python": "3.13.15",
+      "platform": "Linux-6.8.0-1064-azure-x86_64-with-glibc2.35",
+      "coverage_percent": 85.9,
+      "covered": 69778,
+      "total": 81236,
+      "verified_checks": 2,
+      "skipped_checks": 4,
+      "evidence_sha256": {
+        "journal/source.jsonl": "0f089beb11cbbfa651a7db7ea1f8e373dee9e8af0c3fba9485914cf080449501",
+        "journal/replayed.jsonl": "dd5a0718e7d49c2792919d05167202560aad77ee49ebe339d3433ce85bd8b0d1",
+        "sync/sync.sqlite": "f274e676460e9da65746eac24a69dd97f6da811f096f6511d1278dddc842b706"
+      },
+      "coverage_sha256": "3d6b14c1a1a05f98b48036d50096f62a9f8c334c42148a95057d7469d95cc5a8"
+    },
+    {
+      "target": "ubuntu-22.04-3.14",
+      "python": "3.14.7",
+      "platform": "Linux-6.8.0-1064-azure-x86_64-with-glibc2.35",
+      "coverage_percent": 85.86,
+      "covered": 69526,
+      "total": 80977,
+      "verified_checks": 2,
+      "skipped_checks": 4,
+      "evidence_sha256": {
+        "journal/source.jsonl": "5a4b4d78802c0d72de6ce9a4edadd113fa131fe8d9c25fda56e13d17a27b52e0",
+        "journal/replayed.jsonl": "b8fdc32b56ad2f6e40d3be9d88dc09938bdda1addd051d5bad399f64d0a8ef22",
+        "sync/sync.sqlite": "f274e676460e9da65746eac24a69dd97f6da811f096f6511d1278dddc842b706"
+      },
+      "coverage_sha256": "7780f1b74ac35c399fd9af7289408ff35aaf05c2ff761a74a02b853e4dec1eaf"
+    },
+    {
+      "target": "windows-2022-3.10",
+      "python": "3.10.11",
+      "platform": "Windows-10-10.0.20348-SP0",
+      "coverage_percent": 86.96,
+      "covered": 70643,
+      "total": 81236,
+      "verified_checks": 2,
+      "skipped_checks": 4,
+      "evidence_sha256": {
+        "journal/source.jsonl": "e19574fad13764d7be80039afc1cf10cbf283be9b0782d691d1ae95826279332",
+        "journal/replayed.jsonl": "c685b9473ac5dd89bcf321397138e3597f646ab931d100dd9101cde75cb045c1",
+        "sync/sync.sqlite": "ed4f6744a3c0571aa7eb7ad46f902f0b903fb56d5a53b14afe74357ef4ecc6a8"
+      },
+      "coverage_sha256": "2e6a3b4348a92917500948f668302f69e70e6bc30612c85d5267578cb478f927"
+    },
+    {
+      "target": "windows-2022-3.11",
+      "python": "3.11.9",
+      "platform": "Windows-10-10.0.20348-SP0",
+      "coverage_percent": 86.97,
+      "covered": 70647,
+      "total": 81236,
+      "verified_checks": 2,
+      "skipped_checks": 4,
+      "evidence_sha256": {
+        "journal/source.jsonl": "38b4d341a79b734e347e2ce06c61d98a8519a99a8a642f69ba452f90a8fa37bf",
+        "journal/replayed.jsonl": "b237fcbcb372c4e49fede165f9d5563c70bac5b1c314311ed5d8f475e83d59dc",
+        "sync/sync.sqlite": "f07aaeb8f766ddaef79514e29308e8fc91476ef89c1008226bf633493b36b5b8"
+      },
+      "coverage_sha256": "9044ac5fd19a5da985050d01a07d5f0dd1a1f1a28dabb8754a3d98419608b982"
+    },
+    {
+      "target": "windows-2022-3.12",
+      "python": "3.12.10",
+      "platform": "Windows-2022Server-10.0.20348-SP0",
+      "coverage_percent": 86.96,
+      "covered": 70643,
+      "total": 81236,
+      "verified_checks": 2,
+      "skipped_checks": 4,
+      "evidence_sha256": {
+        "journal/source.jsonl": "a4855c724b81f9e384a22938c479f9a6bdef57d3a1d3b1442267f2e64ffc70fc",
+        "journal/replayed.jsonl": "a3d3038bb445ad6f69b4268f53d2a5116094c47175639a67fd06d602d121555c",
+        "sync/sync.sqlite": "74c26855dd2c0647809491ac0fe4c528d1581a8a919c8874d936f31e13c64089"
+      },
+      "coverage_sha256": "0e5d51cc151e23a5c478b45bddee51d22323c5f9c4bf4b0868a9c2a68fca3cf1"
+    },
+    {
+      "target": "windows-2022-3.13",
+      "python": "3.13.15",
+      "platform": "Windows-2022Server-10.0.20348-SP0",
+      "coverage_percent": 86.96,
+      "covered": 70641,
+      "total": 81236,
+      "verified_checks": 2,
+      "skipped_checks": 4,
+      "evidence_sha256": {
+        "journal/source.jsonl": "d51d11e7f37bbc816612821fd7e0ccd13e7beb1152044ff5d43305a1efc52046",
+        "journal/replayed.jsonl": "2cb993e5442bed0031341ef3f076a8f81453f8df3d10f8279ef4fc6134aa4d54",
+        "sync/sync.sqlite": "3491169f01c2c82840513b3d2fb6ff6f4bf901ae82c54165a0b8f13b59dbcdce"
+      },
+      "coverage_sha256": "610ee4980ccd174ad87290998a3ccf23f8f04f64f7ce18ce4c59d38ba348561c"
+    },
+    {
+      "target": "windows-2022-3.14",
+      "python": "3.14.8",
+      "platform": "Windows-2022Server-10.0.20348-SP0",
+      "coverage_percent": 86.93,
+      "covered": 70393,
+      "total": 80977,
+      "verified_checks": 2,
+      "skipped_checks": 4,
+      "evidence_sha256": {
+        "journal/source.jsonl": "221a2f6f1c877b39e6af776c9713443f0f6bca4f6c42121a0534fb8fec74bf6e",
+        "journal/replayed.jsonl": "a777e65c3f387830d49eabfbf2102954f93b2a29640bc78abc29642f2b5df62e",
+        "sync/sync.sqlite": "3491169f01c2c82840513b3d2fb6ff6f4bf901ae82c54165a0b8f13b59dbcdce"
+      },
+      "coverage_sha256": "22a91c66e4088241cc7b5eeb8e448a8c201a11b29eba8bb6461415e93da8715f"
+    }
+  ],
+  "coverage_min": 85.86,
+  "coverage_max": 86.97,
+  "mode": "controlled integration; native evidence is separate"
+}

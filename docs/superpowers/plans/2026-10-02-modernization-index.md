@@ -1,8 +1,13 @@
 # 跨平台與 GUI 改版實作計畫
 
-狀態：設計與八份實作計畫已核准；A–D 的程式交付已完成，E–H 接續實作；D 的實機與歷史 Qt 追蹤保留 H3。
+狀態：設計與八份實作計畫已核准；A–G、H1–H2 與 H3 程式／CI 交付已完成。
+H3 尚缺的原生、歷史 Qt 追蹤與正式下游整合保留在 `Progress.md`。
 
-依使用者最新要求持續實作，現從 H2 接續；E1–E4、F1 延遲 registry、F2 導航／布局／主題與 F3 worker／取消／關閉、F4 同環境基準／全目錄回歸、G1 MCP 搜尋／單一結構查詢、G2 session 揭露／分頁、G3 權限一致／成本量測、H1 嚴格型別／extras 矩陣已完成。Android Docker 原生 App／擷取 smoke 已成功；remote WDA／實體裝置及未具原生成功產出的驗收保留 H3。保留隔離分支；不額外新增付費型功能；既有 API 相關修正照原計畫繼續。
+依使用者最新要求接續 H3 的原生與正式下游驗收。E1–E4、F1–F4、G1–G3、
+H1 嚴格型別／extras 與 H2 範例／三語文件已交付；H3 完整十五格 CI 通過，
+原生 Docker、macOS、arm64、Android 及受控整合證據見
+[驗收文件](../../MODERNIZATION_ACCEPTANCE.md)。remote WDA／實體裝置及尚缺原生成功產出的驗收保留 H3。
+保留隔離分支；不額外新增付費型功能；既有 API 相關修正照原計畫繼續。
 各平台實機與正式下游整合仍由 H3 驗收，未完成項目保留在 `Progress.md`。
 
 設計：[2026-10-02-platform-gui-modernization-design.md](../specs/2026-10-02-platform-gui-modernization-design.md)。
