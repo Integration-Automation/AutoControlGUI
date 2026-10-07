@@ -410,6 +410,26 @@ def _check_portal_refuses(oeffis) -> str:
                     oeffis.OeffisUnavailable, GRANT_TIMEOUT)
 
 
+def _check_portal_closed(oeffis) -> str:
+    """Closure revokes permission; it is not a missing optional dependency."""
+    # pylint: disable-next=import-outside-toplevel  # reason: setup chooses the native environment before package import
+    from je_auto_control.linux_wayland.permission import WaylandPermissionRequired
+
+    def connect() -> None:
+        try:
+            descriptor = oeffis.connect_eis_fd(timeout=GRANT_TIMEOUT)
+        except WaylandPermissionRequired as failure:
+            _require(failure.state == 'needs_permission' and failure.capability == 'input',
+                     'portal closure must preserve the input permission state')
+            _require('closed' in failure.reason and 'explicitly retry' in str(failure).lower(),
+                     'portal closure must name revocation and explicit recovery')
+            _require(not isinstance(failure, RuntimeError), 'revocation must bypass optional-library fallback')
+            raise
+        os.close(descriptor)
+
+    return _refused(connect, WaylandPermissionRequired, GRANT_TIMEOUT)
+
+
 def _check_open_dialog_times_out(oeffis) -> str:
     """A consent dialog nobody answers must end on our clock, not never."""
     reason = _refused(lambda: oeffis.connect_eis_fd(timeout=REFUSAL_TIMEOUT),
@@ -512,7 +532,7 @@ def _run_refusal_scenarios(socket_path: str, libei, oeffis) -> None:
               lambda: _check_portal_refuses(oeffis))
     with Portal(socket_path, behaviour="close"):
         check("a portal that closes the session fails closed",
-              lambda: _check_portal_refuses(oeffis))
+              lambda: _check_portal_closed(oeffis))
     with Portal(socket_path, version=1):
         check("a portal too old to have ConnectToEIS fails closed",
               lambda: _check_portal_refuses(oeffis))

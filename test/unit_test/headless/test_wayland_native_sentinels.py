@@ -4,9 +4,11 @@ from __future__ import annotations
 import importlib.util
 from pathlib import Path
 import subprocess
-from types import ModuleType
+from types import ModuleType, SimpleNamespace
 
 import pytest
+
+from je_auto_control.linux_wayland.permission import WaylandPermissionRequired
 
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -18,6 +20,29 @@ def _load(name: str) -> ModuleType:
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
+
+
+def test_native_portal_closure_preserves_typed_permission_failure():
+    module = _load('portal_verify')
+
+    def closed(**_kwargs):
+        raise WaylandPermissionRequired('input', 'the desktop portal closed the remote-desktop session')
+
+    detail = module._check_portal_closed(SimpleNamespace(connect_eis_fd=closed))
+    assert 'closed' in detail
+
+
+@pytest.mark.parametrize('state,capability', [('unsupported', 'input'), ('needs_permission', 'capture')])
+def test_native_portal_closure_rejects_incorrect_capability_state(state, capability):
+    module = _load('portal_verify')
+
+    def closed(**_kwargs):
+        failure = WaylandPermissionRequired(capability, 'the desktop portal closed the remote-desktop session')
+        failure.state = state
+        raise failure
+
+    with pytest.raises(AssertionError, match='permission state'):
+        module._check_portal_closed(SimpleNamespace(connect_eis_fd=closed))
 
 
 @pytest.mark.parametrize("name", ["libei_verify", "eis_verify"])

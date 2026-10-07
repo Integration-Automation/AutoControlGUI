@@ -477,7 +477,7 @@ without shortening the total deadline and rejects completion after cancellation.
 Docker CI accepts the manual `d3-native` scope for the sway, EIS, portal, seat and
 uinput checks. The seat/uinput images verify an installed wheel rejects real
 ydotool kernel devices before opening them, with no recorded events or leaked
-descriptors. Their failure logs remain available for 14 days. See
+descriptors. Native failure logs remain available for 14 days. See
 [Wayland acceptance](docs/WAYLAND_ACCEPTANCE.md) for commands and evidence limits.
 
 Manual `quality.yml` runs accept `verification_scope=native-shortcut` to run

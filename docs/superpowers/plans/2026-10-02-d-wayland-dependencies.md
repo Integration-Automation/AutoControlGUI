@@ -106,7 +106,9 @@ Script Builder 操作與獨立 Diagnostics 面板已交付；停止／重試可�
 人工驗收與 Docker 指令見 `docs/WAYLAND_ACCEPTANCE.md`。
 Docker seat／uinput 共用 installed-wheel 核心來源驗證：真實 virtual 身分、
 開啟前排除、無 worker／事件／FD 遺留；手動 `d3-native` scope 與日誌 artifact
-已接線，原生執行結果仍待保存。
+已通過 native Docker：uinput 13/13、seat 兩種布局各 15/15；
+sway 兩種布局各 27/27、EIS 20/20、libei 9/9 與 worker isolation 均通過。
+portal 19/20 的剩餘舊例外斷言已對齊 typed needs_permission，更新原生回歸待保存。
 Linux/macOS Python 3.10 quality jobs 已配置 gdb/lldb 包裝原有 coverage 命令，
 保存 native-diagnostics artifact 與真實 target exit；原生完整回歸已有證據，
 macOS 的取消／擷取／CLI／EI 修正已通過 3.10／3.14 原生回歸；

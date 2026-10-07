@@ -419,7 +419,7 @@ transaction 退出，以短輪詢保留總時限，並拒絕取消後的完成�
 
 Docker CI 可手動選擇 `d3-native`，執行 sway、EIS、portal、seat 與 uinput
 檢查。seat／uinput 映像用已安裝的 wheel 驗證真實 ydotool 核心裝置會在開啟前
-被排除，沒有錄回事件或遺留描述符；失敗日誌保存 14 天。執行指令與證據範圍見
+被排除，沒有錄回事件或遺留描述符；原生失敗日誌保存 14 天。執行指令與證據範圍見
 [Wayland 驗收](../docs/WAYLAND_ACCEPTANCE.md)。
 
 手動執行 `quality.yml` 可選 `verification_scope=native-shortcut`，僅跑 installed-wheel／

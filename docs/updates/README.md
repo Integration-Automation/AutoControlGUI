@@ -58,6 +58,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261007-14 | 2026-10-07 | Validate typed portal revocation and preserve native failure artifacts | #incident #wayland #testing #modernization | [2026-10](2026-10.md) |
 | U-20261007-13 | 2026-10-07 | Await actual Folder Sync delivery and processing in native regressions | #incident #testing #modernization | [2026-10](2026-10.md) |
 | U-20261007-12 | 2026-10-07 | Verify kernel virtual-source exclusion in native Docker input jobs | #done #wayland #testing #modernization | [2026-10](2026-10.md) |
 | U-20261007-11 | 2026-10-07 | Cancel EI transactions safely and honor native platform boundaries | #incident #testing #modernization | [2026-10](2026-10.md) |
@@ -379,7 +380,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | File | Period | Entries |
 |---|---|---:|
-| [2026-10.md](2026-10.md) | 2026-10 | 40 |
+| [2026-10.md](2026-10.md) | 2026-10 | 41 |
 | [2026-09-e.md](2026-09-e.md) | 2026-09 | 7 |
 | [2026-09-d.md](2026-09-d.md) | 2026-09 | 55 |
 | [2026-09-c.md](2026-09-c.md) | 2026-09 | 38 |

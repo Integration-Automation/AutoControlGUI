@@ -82,7 +82,11 @@ checks; normal push/PR behavior still includes the headless and X11 jobs.
 `seat-native-verification` and `ydotool-native-verification` preserve stdout/stderr
 on failure for 14 days. In CI, the owned container process has a 180-second seat
 or 120-second ydotool deadline, with a five-second kill grace period. Existing
-EIS, portal and sway artifacts remain.
+EIS and sway artifacts remain. `portal-native-verification` preserves the
+RemoteDesktop check log; `docker-wayland-shortcut-native` retains the independent
+shortcut transcripts even when the preceding RemoteDesktop check fails. Session
+Closed must raise an input `needs_permission` error naming explicit retry, rather
+than being caught by the optional dependency fallback.
 
 Both input checks require nonempty, existing kernel character devices whose
 sysfs identity resolves under `/sys/devices/virtual/input`. They use the actual

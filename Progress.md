@@ -11,7 +11,7 @@
 現有 `[Answer]` 決策沿用；後續交付包含 D3、E–H 與完整整合驗收。
 從 D3 接續原有計畫；不額外新增付費型功能。既有 API 介面及相關修正繼續，
 目前以本機／離線測試驗證；缺少真實 API 條件的既有項目保留待驗證。
-D3 尚需完成 compositor／uinput Docker CI 的核心注入來源排除驗證；
+D3 尚需完成 portal Docker CI 的撤銷契約回歸；
 正向實體裝置擷取仍列 H3，
 完成 GNOME/KDE 授權與鍵態恢復驗收，並完成下列 Python 3.10 USB ACL
 原生 crash 定位、artifact 與修正。

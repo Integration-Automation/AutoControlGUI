@@ -289,13 +289,27 @@ jobs:
       #
       # The container exits with the number of failed checks.
       - name: Verify the portal handshake against liboeffis
-        run: docker run --rm autocontrol-portal:ci
+        run: |
+          set -o pipefail
+          docker run --rm --entrypoint timeout autocontrol-portal:ci \
+            --kill-after=5s 120 python /opt/verify/portal_verify.py 2>&1 | tee portal-verification.log
 
       - name: Verify owned GlobalShortcuts over a real private bus
+        if: always()
         run: >-
           docker run --rm -v "$PWD/shortcut-diagnostics:/artifacts"
           -e AC_SHORTCUT_ARTIFACT_DIR=/artifacts --entrypoint timeout autocontrol-portal:ci
-          120 dbus-run-session -- python /opt/verify/shortcut_verify.py
+          --kill-after=5s 120 dbus-run-session -- python /opt/verify/shortcut_verify.py
+
+      - name: Preserve RemoteDesktop native transport evidence
+        if: always()
+        # nosemgrep: yaml.github-actions.security.third-party-action-not-pinned-to-commit-sha.third-party-action-not-pinned-to-commit-sha
+        uses: actions/upload-artifact@v4  # NOSONAR githubactions:S7637
+        with:
+          name: portal-native-verification
+          path: portal-verification.log
+          if-no-files-found: ignore
+          retention-days: 14
 
       - name: Preserve GlobalShortcuts native transport evidence
         if: always()
