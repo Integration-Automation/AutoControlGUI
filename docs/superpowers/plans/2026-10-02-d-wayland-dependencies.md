@@ -99,25 +99,20 @@ assert error.capability == unavailable_capability
 
 **Interfaces:** `PhysicalRecorder.start(devices: Sequence[InputDevice]) -> None`、`stop() -> list[InputEvent]`；`StopShortcutSession.close() -> None`。
 
-D3 底層與入口階段：明確物理 reader、owned GlobalShortcuts、五項共享 Python／AC／MCP／
-Script Builder 操作與獨立 Diagnostics 面板已交付；停止／重試可取消待授權的 EI owner，
-取消後的交握不能發布 stale grant。原生 compositor transport、GNOME/KDE 授權與鍵態恢復
-及 Python 3.10 USB ACL native backtrace／修正仍待完成，不能勾選整個 task。
-人工驗收與 Docker 指令見 `docs/WAYLAND_ACCEPTANCE.md`。
-Docker seat／uinput 共用 installed-wheel 核心來源驗證：真實 virtual 身分、
-開啟前排除、無 worker／事件／FD 遺留；手動 `d3-native` scope 與日誌 artifact
-已通過 native Docker：uinput 13/13、seat 兩種布局各 15/15；
-sway 兩種布局各 27/27、EIS 20/20、libei 9/9 與 worker isolation 均通過。
-portal 19/20 的剩餘舊例外斷言已對齊 typed needs_permission，更新原生回歸待保存。
-Linux/macOS Python 3.10 quality jobs 已配置 gdb/lldb 包裝原有 coverage 命令，
-保存 native-diagnostics artifact 與真實 target exit；原生完整回歸已有證據，
-macOS 的取消／擷取／CLI／EI 修正已通過 3.10／3.14 原生回歸；
-更新後剩餘兩項 Folder Sync 時序案例已修正，仍待新原生完整回歸；
-歷史 Qt 間歇崩潰仍需收斂證據。
-portal owner 消失／替換的失敗案例已重現並修正；獨立 GDBus peer 與 installed-wheel
-傳輸驗證已接入 quality／portal Docker CI；quality 的六組獨立 GDBus／installed-wheel
-檢查已通過，artifact 見 run 37586779813。GUI 翻譯表自身循環造成 worker GC 銷毀
-GUI owner 的失敗已重現並修正，歷史 Qt crash 的原生回歸仍待完成。
+D3 程式、文件與原生容器驗證已交付；實體裝置正向擷取、GNOME/KDE 真人
+授權與鍵態恢復依主計畫保留 H3。歷史 Qt 精確根因尚未能由原生再現封閉；
+已修正可確定重現的背景 GC 銷毀 GUI owner 路徑，最新原生九目標完整回歸通過，
+後续追蹤留在 Progress.md，不將無再現寫成歷史根因已證明。
+
+Docker run 37595864748：建置及五個原生驗證 job 全部通過；sway 兩種布局各
+27/27、seat 各 15/15、uinput 13/13、EIS 20/20、libei 9/9、worker 三項及
+portal 20/20、獨立 GDBus shortcut 六項均通過。Installed wheel 排除真實
+kernel virtual source，無開啟、錄回或 FD 遺留；artifact 保存 14 天。
+Quality run 37595255659：九個 pytest／coverage targets、typing、lint 與 shortcut
+transport 通過；security 仍有六項既有 LOW finding，未宣稱整個 quality workflow 成功。
+macOS 3.10：11,158 passed / 155 skipped，85.88%；LLDB target/debugger 0。
+macOS 3.14：11,164 passed / 153 skipped，85.84%。
+人工驗收及容器命令见 `docs/WAYLAND_ACCEPTANCE.md`。
 
 - [x] **Step 1:** 定義 fake fixtures 並新增 `test_action_recording_needs_no_global_hook, test_physical_reader_excludes_virtual_device, test_permission_denial_is_actionable, test_shortcut_session_closes`，驗證：
 
@@ -128,6 +123,6 @@ assert permission_error.has_recovery_instruction
 ```
 
 - [x] **Step 2:** 執行 `.venv/Scripts/python.exe -m pytest -q --tb=short --basetemp=.test-tmp/modernization-task -o cache_dir=.test-tmp/modernization-pytest-cache test/unit_test/headless/test_wayland_recording_paths.py`，確認新測試因原有缺陷或尚未提供接口而 FAIL；不要把環境錯誤當成功的重現。
-- [ ] **Step 3:** 明確 opt-in 的物理 event reader，排除 virtual/uinput source；不將 portal InputCapture 誤用為普通全域 hook。整合現有 WL compositor CI，新增 GNOME/KDE 授權允許／拒絕人工步驟。USB ACL 3.10 用 faulthandler/native backtrace 重現後修 Qt/native lifecycle，保留 crash log artifact。
+- [x] **Step 3:** 明確 opt-in 的物理 event reader，排除 virtual/uinput source；不將 portal InputCapture 誤用為普通全域 hook。整合現有 WL compositor CI，新增 GNOME/KDE 授權允許／拒絕人工步驟。USB ACL 3.10 用 faulthandler/native backtrace 重現後修 Qt/native lifecycle，保留 crash log artifact。
 - [x] **Step 4:** 重跑 Step 2，預期 exit 0；再跑這些修改檔所對應的既有回歸，確認公開契約。
-- [ ] **Step 5:** 更新本 task 的型別、所有交付入口、文件、測量計數與進度，僅 stage 本 task 檔案，提交 `git commit -m 'D3: 錄製、全域停止與原生驗證'`。
+- [x] **Step 5:** 更新本 task 的型別、所有交付入口、文件、測量計數與進度，僅 stage 本 task 檔案，提交 `git commit -m 'D3: 錄製、全域停止與原生驗證'`。

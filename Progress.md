@@ -8,13 +8,11 @@
 `utils/{mcp_server,executor}/` 與型別／文件驗證。
 核准設計：[跨平台自動化與 GUI 改版](docs/superpowers/specs/2026-10-02-platform-gui-modernization-design.md)。
 實作計畫：[分階段交付計畫](docs/superpowers/plans/2026-10-02-modernization-index.md)，已核准，依序實作。
-現有 `[Answer]` 決策沿用；後續交付包含 D3、E–H 與完整整合驗收。
-從 D3 接續原有計畫；不額外新增付費型功能。既有 API 介面及相關修正繼續，
+現有 `[Answer]` 決策沿用；後續交付包含 E–H 與完整整合驗收。
+從 E1 接續原有計畫；不額外新增付費型功能。既有 API 介面及相關修正繼續，
 目前以本機／離線測試驗證；缺少真實 API 條件的既有項目保留待驗證。
-D3 尚需完成 portal Docker CI 的撤銷契約回歸；
-正向實體裝置擷取仍列 H3，
-完成 GNOME/KDE 授權與鍵態恢復驗收，並完成下列 Python 3.10 USB ACL
-原生 crash 定位、artifact 與修正。
+正向實體裝置擷取、GNOME/KDE 授權與鍵態恢復仍列 H3；
+歷史 Qt 原生崩潰的後續追蹤仍保留在下列驗收項目。
 
 **只記未完成的事。** 完成的工作記在 [docs/updates/](docs/updates/README.md)（每月一個批次檔，
 索引與查詢指令在它的 README），相容性變更寫進 [CHANGELOG.md](CHANGELOG.md)；完成的項目
@@ -207,12 +205,3 @@ Qt 翻譯表造成背景 GC 銷毀 GUI owner 的缺陷已重現並修正；仍�
 D1 的桌面授權／撤銷／XWayland scope 仍只有替身及 offscreen Qt 證據；
 GNOME/KDE 的允許／拒絕、合成器重啟、裝置 pause/remove、helper crash 後
 實體按鍵狀態恢復，以及 restore-token 替代接口仍需 D3/H3 原生驗收。
-
-
----
-
-## macOS 原生 CI 的 Folder Sync 回歸
-
-`WIP` — 修改檔案及收到內容後再本機編輯的 Folder Sync 案例已改成等待實際
-sender／處理完成，保留送出次數、防回送及內容斷言；仍需 macOS Python 3.10/3.14
-原生完整回歸確認。涉及 `test_folder_sync.py`、`test_sync_adapters.py`。

@@ -99,3 +99,25 @@ An empty device list or disabled assertions fails the check.
 This establishes kernel-level injected-source exclusion and compositor input
 integration. Positive physical capture, GNOME/KDE's actual consent UI and
 physical keyboard recovery are covered by the separate steps above.
+
+
+## Recorded native CI evidence
+
+[D3 Docker run 37595864748](https://github.com/Integration-Automation/AutoControlGUI/actions/runs/37595864748)
+passes the build and all five native verification jobs (headless/X11 are outside
+this manual scope). The installed wheel runs on Python 3.12.15/Linux
+6.8.0-1064-azure. Sway capture passes 27/27 and seat 15/15 in each layout; ydotool
+passes 13/13, EIS 20/20, libei 9/9, worker containment three checks, RemoteDesktop
+20/20 and independent shortcut transport six checks. Both input jobs exclude the
+kernel's virtual event2 before opening it, record zero events and preserve their
+before/after descriptor counts. Retained artifact names are listed above.
+
+[Quality run 37595255659](https://github.com/Integration-Automation/AutoControlGUI/actions/runs/37595255659)
+passes all nine pytest/coverage targets, typing, lint and private-bus shortcut
+checks. macOS 3.10 passes 11,158 tests, skips 155, and reports 85.88% coverage;
+LLDB target/debugger exit codes are both zero. macOS 3.14 passes 11,164, skips 153,
+and reports 85.84%. Security still fails on six existing LOW findings; the entire
+quality workflow is not green. No historical Qt fault reproduces in this run.
+The confirmed cross-thread owner-destruction defect is fixed; this does not prove
+the exact cause of every historical native fault. Physical/GNOME/KDE acceptance
+and continued native Qt investigation remain in Progress.md/H3.
