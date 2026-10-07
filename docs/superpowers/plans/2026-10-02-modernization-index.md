@@ -2,7 +2,7 @@
 
 狀態：設計與八份實作計畫已核准；A–D 的程式交付已完成，E–H 接續實作；D 的實機與歷史 Qt 追蹤保留 H3。
 
-依使用者最新要求持續實作，現從 G3 接續；E1–E4、F1 延遲 registry、F2 導航／布局／主題與 F3 worker／取消／關閉、F4 同環境基準／全目錄回歸、G1 MCP 搜尋／單一結構查詢、G2 session 揭露／分頁已完成。Android Docker 原生 App／擷取 smoke 已成功；remote WDA／實體裝置及未具原生成功產出的驗收保留 H3。保留隔離分支；不額外新增付費型功能；既有 API 相關修正照原計畫繼續。
+依使用者最新要求持續實作，現從 H1 接續；E1–E4、F1 延遲 registry、F2 導航／布局／主題與 F3 worker／取消／關閉、F4 同環境基準／全目錄回歸、G1 MCP 搜尋／單一結構查詢、G2 session 揭露／分頁、G3 權限一致／成本量測已完成。Android Docker 原生 App／擷取 smoke 已成功；remote WDA／實體裝置及未具原生成功產出的驗收保留 H3。保留隔離分支；不額外新增付費型功能；既有 API 相關修正照原計畫繼續。
 各平台實機與正式下游整合仍由 H3 驗收，未完成項目保留在 `Progress.md`。
 
 設計：[2026-10-02-platform-gui-modernization-design.md](../specs/2026-10-02-platform-gui-modernization-design.md)。

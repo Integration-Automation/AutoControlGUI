@@ -1,0 +1,55 @@
+{
+  "source_revision": "f2a35e8c525b5cd9001a792f75b92bef6b04c6d8",
+  "mcp_source_sha256": "2e398e78b4b313c3333ece3cf3e18ab27bef64340b393d428baa63329c295dc5",
+  "module_path": "D:\\Codes\\AutoControlGUI\\.worktrees\\modernization\\je_auto_control\\utils\\mcp_server\\server.py",
+  "environment": {
+    "python": "3.14.4",
+    "platform": "Windows-11-10.0.26300-SP0",
+    "authorized_registry_count": 747
+  },
+  "workload": "local JSON-RPC initialize + all tools/list pages; screenshot summary search; no network",
+  "warmups": 1,
+  "repeats": 5,
+  "full": {
+    "count": 747,
+    "json_bytes": 363544,
+    "first_page_json_bytes": 363544,
+    "handshake_ms": 37.90530003607273,
+    "search_ms": 9.783199988305569,
+    "handshake_samples_ms": [
+      39.41249998752028,
+      38.16569992341101,
+      37.90530003607273,
+      36.01320006418973,
+      35.79690004698932
+    ],
+    "search_samples_ms": [
+      31.5299000358209,
+      10.272399988025427,
+      9.4513000221923,
+      9.783199988305569,
+      9.525800007395446
+    ]
+  },
+  "progressive": {
+    "count": 6,
+    "json_bytes": 2506,
+    "first_page_json_bytes": 2568,
+    "handshake_ms": 9.556900011375546,
+    "search_ms": 9.64529998600483,
+    "handshake_samples_ms": [
+      9.403300005942583,
+      12.424000073224306,
+      10.16840001102537,
+      9.556900011375546,
+      8.617299958132207
+    ],
+    "search_samples_ms": [
+      15.913299983367324,
+      25.673499912954867,
+      9.64529998600483,
+      9.6035999013111,
+      9.437100030481815
+    ]
+  }
+}

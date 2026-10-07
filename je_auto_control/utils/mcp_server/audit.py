@@ -1,6 +1,7 @@
 """Audit log for MCP tool calls.
 
-Every ``tools/call`` produces one JSONL line with timestamp, tool
+Authorized and denied ``tools/call`` outcomes use the same authenticated audit
+identity, including discovery and session management. Each recorded call produces one JSONL line with timestamp, tool
 name, sanitised arguments, status (``ok`` / ``error``), and
 duration. The default sink is ``$JE_AUTOCONTROL_MCP_AUDIT`` (or
 ``mcp_audit.jsonl`` next to the cwd) so deployments that need a

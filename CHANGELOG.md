@@ -6,7 +6,9 @@ notes are recorded in `docs/updates/` (index: `docs/updates/README.md`).
 The format follows Keep a Changelog. Until 1.0, breaking changes are permitted
 only when documented here with a migration path.
 
-New entries go under `## Unreleased`. The version bump on `main` is automated
+New entries go under `## Unreleased
+
+- MCP adds mode/profile/page-size stdio flags and measured disclosure costs. Readonly now rejects mutating custom-registry calls; concurrent workers preserve accepted client roots and capabilities after session termination.`. The version bump on `main` is automated
 and does not touch this file, so after a release tag appears, move the entries
 it shipped into a `## [x.y.z] - date` section of their own; the tag's
 `CHANGELOG.md` shows which ones those are (`git show vX.Y.Z:CHANGELOG.md`).

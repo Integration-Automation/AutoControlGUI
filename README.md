@@ -1078,3 +1078,5 @@ cursor or real session changes. GUI Tools adds mode/profile preview, enable/disa
 comma-separated names and next page Actions. Static preview names share the name field.
 Configure the real deployment with the environment settings above. More details:
 [session contract](docs/MCP_DISCOVERY.md).
+
+MCP stdio also accepts `--tool-mode full|progressive|static`, `--tool-profile ac_screenshot,ac_probe_capabilities` and `--tool-page-size 1..100`; explicit flags override corresponding deployment settings. `--list-tools` still prints the complete authorized catalog for inspection. Example: `python -m je_auto_control.utils.mcp_server --tool-mode static --tool-profile ac_screenshot`. Discovery changes availability only: execution still checks RBAC, schema, roots/env, rate limits and confirmation. Readonly rejects mutating calls from custom registries too. Concurrent workers retain accepted identity, roots and capabilities across session termination. [Measured local schema cost](benchmarks/results/mcp-discovery-g3/report.json): full747 /363544bytes versus core6 /2506bytes; local handshake/list medians37.91/9.56ms, search9.78/9.65ms (five samples, no network).

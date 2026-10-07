@@ -469,3 +469,5 @@ its original default tools/list shape; progressive/static modes and explicit pag
 are deployment settings. Cursor signatures are per owner, stable snapshots have
 bounded lifetime/count, and standing HTTP notification writers are looked up from
 live session metadata. Preview surfaces never mutate real serving sessions.
+
+G3 concurrent MCP workers retain accepted transport identity, capabilities and bounded roots even after session drop. ContextVar authorization/view leases remain intact. Readonly is checked at execution for custom registries; mode/profile/page-size flags preserve full defaults. Local cost artifacts use the same registry/policy.

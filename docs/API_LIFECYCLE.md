@@ -255,3 +255,19 @@ no usable continuation cursor. Deployment environment settings preserve default
 full lists and provide progressive/static/explicit paging. Stateless requests use
 fixed availability and reject cursor/session mutations. Detailed limits and policy:
 `docs/MCP_DISCOVERY.md`.
+
+
+### Policy and measured cost
+
+Stdio flags `--tool-mode`, `--tool-profile` and `--tool-page-size` override corresponding
+mode/profile/page-size settings; existing flags and full catalog inspection remain.
+Readonly rejects mutating custom-registry calls as well as hiding/disallowing enable.
+Availability never replaces the existing schema/RBAC/root/env/rate/confirmation checks.
+Concurrent work captures accepted peer identity, roots and capabilities, including after
+session removal; the original closed view lease cannot create a replacement session.
+Controlled regressions verify root denial, authenticated audits and removed-tool rejection.
+`benchmarks/mcp_discovery.py --output report.json` compares identical registry/policy
+with one warmup/five samples and records source hash/platform/version. Reference:
+full747/363544bytes, core6/2506bytes; local initialize+list37.91/9.56ms and
+search9.78/9.65ms. This measures local JSON-RPC, excluding networking/native input.
+Artifact: `benchmarks/results/mcp-discovery-g3/report.json`.

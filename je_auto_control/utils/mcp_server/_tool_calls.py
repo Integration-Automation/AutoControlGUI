@@ -8,6 +8,7 @@ from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.mcp_server.context import OperationCancelledError
 from je_auto_control.utils.mcp_server._input_required import AnsweredByGate
 from je_auto_control.utils.mcp_server.tools import MCPTool
+from je_auto_control.utils.mcp_server.tools._base import read_only_env_flag
 from je_auto_control.utils.mcp_server.tools._validation import undeclared_arguments, validate_arguments
 from je_auto_control.utils.mcp_server.tools._path_metadata import validate_path_arguments
 from je_auto_control.utils.path_guard.path_guard import PathNotAllowedError
@@ -115,7 +116,7 @@ def prepare_tool_call(server: MCPServer, params: Dict[str, Any]) -> tuple[str, M
     tool = server._tools.get(name)
     if tool is None:
         raise _MCPError(-32602, f"Unknown tool: {name}")
-    require_command(name, read_only=tool.annotations.read_only, arguments=arguments)
+    _authorize_call(name, tool, arguments)
     violation = (validate_arguments(tool.input_schema, arguments)
                  or undeclared_arguments(tool.input_schema, arguments))
     if violation is not None:
@@ -129,3 +130,10 @@ def prepare_tool_call(server: MCPServer, params: Dict[str, Any]) -> tuple[str, M
         raise _MCPError(-32000, f"Rate limit exceeded for tool {name!r}")
     server._maybe_confirm_destructive(name, tool, arguments)
     return name, tool, arguments
+
+
+def _authorize_call(name: str, tool: MCPTool, arguments: Dict[str, Any]) -> None:
+    """Refuse readonly mutations before the existing argument-sensitive capability guard."""
+    if read_only_env_flag() and not tool.annotations.read_only:
+        raise AuthorizationError("tool unavailable in readonly mode")
+    require_command(name, read_only=tool.annotations.read_only, arguments=arguments)

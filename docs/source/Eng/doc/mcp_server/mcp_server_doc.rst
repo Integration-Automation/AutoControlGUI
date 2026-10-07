@@ -636,3 +636,14 @@ all selected descriptors without a retained cursor. Tools inspector Actions prov
 local mode/static-name preview, enable/disable and next page. Real deployment
 settings remain explicit. Enabling/previewing grants no execution/root/env privilege.
 See ``docs/MCP_DISCOVERY.md`` for ownership, limits and request policy.
+
+Policy and cost
+===============
+
+Stdio flags ``--tool-mode``, ``--tool-profile`` and ``--tool-page-size`` override
+corresponding deployment settings. Catalog inspection remains complete. Readonly
+rejects custom-registry mutations. All calls retain RBAC/schema/root/env/rate and
+confirmation checks; accepted concurrent workers retain peer roots/capabilities after
+a transport drop. Local five-sample measurement: full747/363544bytes versus
+core6/2506bytes, initialize+list37.91/9.56ms and search9.78/9.65ms, excluding network.
+Source hash and samples are retained in ``benchmarks/results/mcp-discovery-g3/report.json``.

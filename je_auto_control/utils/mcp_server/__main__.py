@@ -7,7 +7,9 @@ exits — useful for inspection in CI or manual debugging.
 import argparse
 import json
 import sys
-from typing import Optional
+from typing import Optional, cast
+
+from je_auto_control.utils.mcp_server.disclosure import DisclosureMode
 
 from je_auto_control.utils.cli_output import utf8_stdout
 from je_auto_control.utils.mcp_server.fake_backend import (
@@ -49,10 +51,32 @@ def _build_parser() -> argparse.ArgumentParser:
         help=("Install the in-memory fake backend so tools record but "
               "don't drive the real OS. Useful for CI smoke tests."),
     )
+    parser.add_argument('--tool-mode', choices=('full', 'progressive', 'static'),
+                        help='Session disclosure mode; defaults to the environment or full.')
+    parser.add_argument('--tool-profile', type=_profile,
+                        help='Comma-separated canonical tool names for a static profile.')
+    parser.add_argument('--tool-page-size', type=_page_size, help='Explicit tools/list page size (1–100).')
     return parser
 
 
-def main(argv: Optional[list] = None) -> None:
+def _profile(value: str) -> tuple[str, ...]:
+    names = tuple(name.strip() for name in value.split(',') if name.strip())
+    if len(names) > 100 or any(len(name) > 256 for name in names):
+        raise argparse.ArgumentTypeError('profile requires at most100 names of at most256 characters')
+    return names
+
+
+def _page_size(value: str) -> int:
+    try:
+        size = int(value)
+    except ValueError as error:
+        raise argparse.ArgumentTypeError('page size must be an integer from1 to100') from error
+    if not 1 <= size <= 100:
+        raise argparse.ArgumentTypeError('page size must be an integer from1 to100')
+    return size
+
+
+def main(argv: Optional[list[str]] = None) -> None:
     """CLI entry point. Performs the requested action and returns ``None``."""
     parser = _build_parser()
     args = parser.parse_args(argv)
@@ -64,7 +88,13 @@ def main(argv: Optional[list] = None) -> None:
     if any(listing_modes):
         _print_listings(args)
         return
-    start_mcp_stdio_server(read_only=True if args.read_only else None)
+    read_only = True if args.read_only else None
+    if args.tool_mode is None and args.tool_profile is None and args.tool_page_size is None:
+        start_mcp_stdio_server(read_only=read_only)
+    else:
+        start_mcp_stdio_server(read_only=read_only, tool_mode=cast(Optional[DisclosureMode], args.tool_mode),
+                               tool_profile=args.tool_profile, tool_page_size=args.tool_page_size)
+
 
 
 def _print_listings(args: argparse.Namespace) -> None:

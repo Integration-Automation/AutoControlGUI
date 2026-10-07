@@ -638,4 +638,20 @@ cursor failures, bounded caches/selections and session-drop reclamation. Statele
 requests use fixed deployment availability without session mutation or cursors.
 Local preview via facade/AC/Builder/GUI and server-registry preview via MCP invoke
 no tools or native probes. Availability changes do not widen RBAC/root/env/call
-permissions; final policy/cost coverage continues through G3/H3.
+permissions; policy/cost regression is retained below; native integration remains H3.
+
+
+### Policy and measured cost
+
+Stdio flags `--tool-mode`, `--tool-profile` and `--tool-page-size` override corresponding
+mode/profile/page-size settings; existing flags and full catalog inspection remain.
+Readonly rejects mutating custom-registry calls as well as hiding/disallowing enable.
+Availability never replaces the existing schema/RBAC/root/env/rate/confirmation checks.
+Concurrent work captures accepted peer identity, roots and capabilities, including after
+session removal; the original closed view lease cannot create a replacement session.
+Controlled regressions verify root denial, authenticated audits and removed-tool rejection.
+`benchmarks/mcp_discovery.py --output report.json` compares identical registry/policy
+with one warmup/five samples and records source hash/platform/version. Reference:
+full747/363544bytes, core6/2506bytes; local initialize+list37.91/9.56ms and
+search9.78/9.65ms. This measures local JSON-RPC, excluding networking/native input.
+Artifact: `benchmarks/results/mcp-discovery-g3/report.json`.

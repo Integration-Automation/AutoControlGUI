@@ -900,3 +900,5 @@ Tools → MCP 工具发现提供可取消的 Actions，在本机搜索或查看�
 工具的完整结构，不保留 cursor、不修改真实 session。GUI Tools 增加模式／静态清单预览、
 逗号分隔名称的启用／停用及下一页 Actions；静态清单也使用名称字段。
 真正部署请使用上述环境设置。详见[session 契约](../docs/MCP_DISCOVERY.md)。
+
+MCP stdio 支持 `--tool-mode full|progressive|static`、`--tool-profile ac_screenshot,ac_probe_capabilities` 和 `--tool-page-size 1..100`；参数覆盖对应部署设置。`--list-tools` 仍输出完整已授权目录供检查。例如：`python -m je_auto_control.utils.mcp_server --tool-mode static --tool-profile ac_screenshot`。披露只改变可见列表，执行仍检查 RBAC、schema、roots/env、限流与确认。只读也拒绝自定义 registry 的修改调用；后台任务在 session 终止后保留原请求身份、roots 与 capabilities。[本机测量](../benchmarks/results/mcp-discovery-g3/report.json)：完整747个／363544bytes，核心6个／2506bytes；本机握手及列表中位数37.91／9.56ms，搜索9.78／9.65ms（五次样本，未含网络）。

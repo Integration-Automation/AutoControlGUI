@@ -551,3 +551,13 @@ Beta ``ToolView`` 擁有 headless 視圖。``preview_tool_disclosure`` 與對應
 ``ac_preview_tool_disclosure`` 預覽實際服務目錄。預覽回傳選取工具完整結構、不保留 cursor。
 Tools 探索 Actions 提供本機模式／靜態名稱預覽、啟用／停用及下一頁；真實部署設定仍須
 明確指定。啟用／預覽不授予執行、root、環境權限。契約見 ``docs/MCP_DISCOVERY.md``。
+
+權限與成本
+==========
+
+stdio 旗標 ``--tool-mode``、``--tool-profile``、``--tool-page-size`` 覆寫對應部署設定；
+目錄檢查仍完整。唯讀拒絕自訂 registry 的修改呼叫；所有呼叫仍檢查 RBAC、schema、
+root/env、限流與確認。背景工作保留接受請求時的身分與 roots/capabilities，session
+結束不會放寬限制。本機五次樣本：完整747個／363544bytes，核心6個／2506bytes；
+交握及清單37.91／9.56ms，搜尋9.78／9.65ms，未含網路。
+版本、來源 hash 與樣本見 ``benchmarks/results/mcp-discovery-g3/report.json``。

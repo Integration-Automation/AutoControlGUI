@@ -8,7 +8,6 @@ the MCP stdio spec.
 """
 from collections.abc import Hashable
 import contextlib
-import contextvars
 import itertools
 import json
 import sys
@@ -20,7 +19,8 @@ from je_auto_control.utils.cli_output import utf8_stream
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.mcp_server.audit import AuditLogger
 from je_auto_control.utils.mcp_server._tool_calls import handle_tool_call, prepare_tool_call
-from je_auto_control.utils.mcp_server._disclosure_sessions import ToolSessions
+from je_auto_control.utils.mcp_server._worker_scope import dispatch_tool_call_async
+from je_auto_control.utils.mcp_server._disclosure_sessions import ToolSessions, environment_settings
 from je_auto_control.utils.mcp_server.disclosure import DisclosureMode, ToolDisclosureError
 from je_auto_control.utils.rbac.authorization import (
     AuthorizationContext, authorization_scope, permitted, resource_permitted,
@@ -141,6 +141,9 @@ class MCPServer(StatelessDispatchMixin, SubscriptionMixin, ClientRequestMixin):
     # --- connection-scoped state ------------------------------------------
     def _current_path_policy(self) -> PathPolicy:
         """Apply deployment roots and client roots by intersection for this peer."""
+        accepted = getattr(self._local, "accepted_path_policy", None)
+        if accepted is not None:
+            return accepted
         with self._roots_lock:
             roots = self._roots_by_conn.get(self._connection_id)
         return self._path_policy if roots is None else self._path_policy.restrict(roots)
@@ -204,6 +207,9 @@ class MCPServer(StatelessDispatchMixin, SubscriptionMixin, ClientRequestMixin):
     @property
     def _client_capabilities(self) -> Dict[str, Any]:
         """Capabilities advertised by the peer served on this thread."""
+        accepted = getattr(self._local, "accepted_capabilities", None)
+        if accepted is not None:
+            return accepted
         if self._stateless_request is not None:
             return self._stateless_request.capabilities
         conn = self._connection_id
@@ -442,32 +448,8 @@ class MCPServer(StatelessDispatchMixin, SubscriptionMixin, ClientRequestMixin):
 
     def _dispatch_tools_call_async(self, msg_id: Any,
                                    params: Dict[str, Any]) -> None:
-        """Run a tools/call on a worker thread; the worker writes the reply."""
-        # Captured here rather than read inside the worker. The worker may not
-        # reach its write until after the transport's `finally` has restored
-        # the previous writer, and then the reply would go down the previous
-        # connection or be dropped as "no writer" — a reply belongs to the
-        # transport that accepted the request.
-        writer = self._writer
-
-        def worker() -> None:
-            payload = self._build_response(msg_id, _TOOLS_CALL_METHOD, params)
-            if payload is None:
-                return
-            if writer is None:
-                autocontrol_logger.warning(
-                    "MCP async tool reply with no writer; dropping %s", msg_id,
-                )
-                return
-            writer(payload)
-        context = contextvars.copy_context()
-        thread = threading.Thread(
-            target=context.run, args=(worker,), daemon=True, name=f"MCPCall-{msg_id}",
-        )
-        with self._workers_lock:
-            self._workers = [live for live in self._workers if live.is_alive()]
-            self._workers.append(thread)
-        thread.start()
+        """Run one tool with its accepted transport identity and request policies."""
+        dispatch_tool_call_async(self, msg_id, params)
 
     def _join_workers(self, timeout: float = WORKER_DRAIN_TIMEOUT) -> None:
         """Wait for in-flight tool replies before the transport goes away.
@@ -717,7 +699,10 @@ def _parse_request(line: str) -> "tuple[Optional[Dict[str, Any]], Optional[str]]
     return (None, refusal) if refusal is not None else (message, None)
 
 
-def start_mcp_stdio_server(read_only: Optional[bool] = None) -> MCPServer:
+def start_mcp_stdio_server(read_only: Optional[bool] = None, *,
+                           tool_mode: Optional[DisclosureMode] = None,
+                           tool_profile: Optional[Sequence[str]] = None,
+                           tool_page_size: Optional[int] = None) -> MCPServer:
     """Start a stdio MCP server in the foreground; blocks until EOF.
 
     ``read_only=True`` offers only tools marked read-only; ``None`` leaves
@@ -726,5 +711,10 @@ def start_mcp_stdio_server(read_only: Optional[bool] = None) -> MCPServer:
     it started offered every tool, clicks and typing included.
     """
     server = MCPServer(tools=build_default_tool_registry(read_only=read_only))
+    if tool_mode is not None or tool_profile is not None or tool_page_size is not None:
+        defaults = environment_settings()
+        server.configure_tool_disclosure(tool_mode or defaults.mode,
+                                         profile=defaults.profile if tool_profile is None else tool_profile,
+                                         page_size=defaults.page_size if tool_page_size is None else tool_page_size)
     server.serve_stdio()
     return server
