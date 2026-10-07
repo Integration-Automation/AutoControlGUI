@@ -340,8 +340,12 @@ Wayland 不让客户端读光标位置，所以没有东西可以可靠地遮或
 export JE_AUTOCONTROL_WAYLAND_CAPTURE_COMMAND="mycapture --png {output}"
 ```
 
-Wayland 禁止非特权客户端进行全局输入录制——若要录制，请设置
-`JE_AUTOCONTROL_LINUX_DISPLAY_SERVER=x11` 并在 X11 会话下运行。窗口管理支持
+Executor 动作日志不需要全局输入 hook。实验中的 Wayland `PhysicalRecorder` 底层
+使用已有读取权限，读取明确选定的实体 `/dev/input/event*` 节点，排除内核 virtual／uinput
+设备；返回原始设备事件，不转为桌面坐标或回放动作，也不修改 ACL。
+`StopShortcutSession` 会明确请求 portal 停止快捷键、显示实际绑定并关闭自己的授权；
+拒绝后须先 close 再 start 才重试。这些底层已通过受控测试；门面、AC／MCP、GUI 集成
+及原生桌面验收仍列于 D3／H3。旧 Wayland 全局录制 hook 仍不可用。窗口管理支持
 Windows、macOS（pyobjc）与 X11（含 XWayland）；纯 Wayland 会话的协议不让客户端看到其他程序的窗口，
 所以 `list_windows()` 返回空列表，其余窗口操作一律抛出带原因的 `AutoControlUnsupportedOperationException`。对于会忽略合成输入的应用，
 可选用驱动层后端（`JE_AUTOCONTROL_WIN32_BACKEND=interception`、

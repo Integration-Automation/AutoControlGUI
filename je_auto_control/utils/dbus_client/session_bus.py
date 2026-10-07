@@ -95,6 +95,10 @@ class DBusError(AutoControlException):
     """The session bus is unreachable, or answered with an error."""
 
 
+class DBusTimeout(DBusError):
+    """A bounded bus read expired; the connection itself may still be usable."""
+
+
 class Variant:
     """A value with an explicit D-Bus type, for the ``a{sv}`` option maps."""
 
@@ -477,11 +481,12 @@ class SessionBus:
             )
         path, abstract = _socket_target(self.address)
         try:
-            self._socket = socket.socket(
+            connection = socket.socket(
                 socket.AF_UNIX,  # type: ignore[attr-defined]  # reason: POSIX-only
                 socket.SOCK_STREAM,
             )
-            self._socket.connect(("\0" + path) if abstract else path)
+            self._socket = connection
+            connection.connect(("\0" + path) if abstract else path)
         except OSError as error:
             self.close()
             raise DBusError(f"cannot reach the session bus: {error}") from error
@@ -497,10 +502,24 @@ class SessionBus:
 
     def close(self) -> None:
         """Drop the connection; never raise from teardown."""
-        if self._socket is not None:
+        connection, self._socket = self._socket, None
+        if connection is not None:
             with contextlib.suppress(OSError):
-                self._socket.close()
-            self._socket = None
+                connection.close()
+        self._queued.clear()
+
+    def abort(self) -> None:
+        """Wake a pending socket read before dropping this owned connection."""
+        connection = self._socket
+        if connection is not None:
+            with contextlib.suppress(OSError):
+                connection.shutdown(socket.SHUT_RDWR)
+        self.close()
+
+    def take_pending_messages(self) -> List[Message]:
+        """Transfer messages queued during method calls, preserving signal order."""
+        pending, self._queued = self._queued, []
+        return pending
 
     @property
     def sender_token(self) -> str:
@@ -520,10 +539,11 @@ class SessionBus:
         self._send_raw(b"BEGIN\r\n")
 
     def _send_raw(self, data: bytes) -> None:
-        if self._socket is None:
+        connection = self._socket
+        if connection is None:
             raise DBusError("the session bus connection is closed")
         try:
-            self._socket.sendall(data)
+            connection.sendall(data)
         except OSError as error:
             raise DBusError(f"writing to the session bus failed: {error}") from error
 
@@ -539,15 +559,16 @@ class SessionBus:
 
     def _fill(self, timeout: float) -> None:
         """Read whatever is available, or fail once the deadline has passed."""
-        if self._socket is None:
+        connection = self._socket
+        if connection is None:
             raise DBusError("the session bus connection is closed")
         if timeout <= 0:
-            raise DBusError("the session bus did not answer in time")
-        self._socket.settimeout(timeout)
+            raise DBusTimeout("the session bus did not answer in time")
         try:
-            chunk = self._socket.recv(65536)
+            connection.settimeout(timeout)
+            chunk = connection.recv(65536)
         except socket.timeout as error:
-            raise DBusError("the session bus did not answer in time") from error
+            raise DBusTimeout("the session bus did not answer in time") from error
         except OSError as error:
             raise DBusError(f"reading from the session bus failed: {error}") from error
         if not chunk:
@@ -684,7 +705,7 @@ def _decode(raw: bytes, message_type: int, serial: int, fields_length: int,
 
 
 __all__ = [
-    "BUS_INTERFACE", "BUS_NAME", "BUS_PATH", "DBusError", "ERROR",
+    "BUS_INTERFACE", "BUS_NAME", "BUS_PATH", "DBusError", "DBusTimeout", "ERROR",
     "METHOD_CALL", "METHOD_RETURN", "Message", "SIGNAL", "SessionBus",
     "Variant", "is_available", "session_address",
 ]

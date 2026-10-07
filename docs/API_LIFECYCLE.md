@@ -69,3 +69,11 @@ fallback supports bounded normalized gray template matching, not arbitrary
 OpenCV processing or video. Strict OpenCV/je_open_cv dependency accessors now
 raise ImageDependencyRequired, which preserves RuntimeError compatibility and
 adds AutoControlException, needs_dependency and capability metadata.
+
+The D3 foundation modules `linux_wayland.input_events` and
+`linux_wayland.global_shortcuts` are experimental. PhysicalRecorder returns
+bounded raw kernel events, not a replay timeline. StopShortcutSession owns one
+asynchronous portal registration and its cancellation; failed authorization is
+retained until explicit close/start. Constructing either helper does not open
+devices or request consent. Public facade, AC/MCP and GUI adapters remain open
+in Progress.md; the stable namespace and legacy recording contract are unchanged.

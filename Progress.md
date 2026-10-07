@@ -11,6 +11,9 @@
 現有 `[Answer]` 決策沿用；後續交付包含 D3、E–H 與完整整合驗收。
 從 D3 接續原有計畫；不額外新增付費型功能。既有 API 介面及相關修正繼續，
 目前以本機／離線測試驗證；缺少真實 API 條件的既有項目保留待驗證。
+D3 尚需接上原始實體事件與 portal 停止的門面／AC／MCP／GUI 入口，
+更正舊 hook 的復原提示，補 compositor CI 與 GNOME/KDE 授權驗收步驟，
+並完成下列 Python 3.10 USB ACL 原生 crash 定位與修正。
 
 **只記未完成的事。** 完成的工作記在 [docs/updates/](docs/updates/README.md)（每月一個批次檔，
 索引與查詢指令在它的 README），相容性變更寫進 [CHANGELOG.md](CHANGELOG.md)；完成的項目
@@ -185,7 +188,10 @@ Anthropic 每一步送約 202 KB 的工具 schema、沒有 `cache_control`。拍
 
 ## `test_usb_acl_prompt.py` 讓 Python 3.10 的 headless 測試間歇 segfault
 
-`TODO` — `test/unit_test/headless/test_usb_acl_prompt.py::test_bridge_remember_persists_acl_rule` 在 `coverage run -m pytest` 下讓行程 SIGSEGV（exit 139），整個 `pytest-headless` job 因此失敗：2026-09-26 連續三次 AutoControl Code Quality（ubuntu-22.04／3.10），2026-09-30 一次（macos-14／3.10）；同一次其他版本都過，之後的 run 又過，所以是間歇的。原因還沒查：先在 3.10 開 `faulthandler` 重跑這一支，看崩在哪個原生呼叫。
+`WIP` — `test/unit_test/headless/test_usb_acl_prompt.py::test_bridge_remember_persists_acl_rule`
+在 Linux／macOS Python 3.10 間歇 SIGSEGV。需在原生目標取得 gdb／lldb backtrace，
+定位並修正 Qt lifecycle，CI 保存 crash artifact；既有 faulthandler 證據見
+`docs/updates/2026-10.md` U-20261007-03，不能以 Windows／較新 Python 的通過取代。
 
 ---
 

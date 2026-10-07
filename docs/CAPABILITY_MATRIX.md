@@ -429,3 +429,30 @@ Unsupported fallback methods, dtype, decode format or scratch budget raise
 framework image errors. Correlation scores preserve the normalized-coefficient
 contract within the tested tolerance; they are not promised to be bit-identical.
 Stable and development package install/build declarations are checked for parity.
+
+Physical recording and portal stop foundation (D3)
+------------------------------------------------
+
+Experimental `PhysicalRecorder.start([InputDevice(path)])` explicitly opts into
+reading at most 16 existing physical Linux event nodes, with a 20,000-event
+capacity. It never grabs devices or changes ACLs. Kernel virtual/uinput sources
+are excluded before open. Stop returns raw events, including unchanged relative
+or absolute device units; these are not desktop positions or replay commands.
+Existing executor action journals require no global input hook. Read failure,
+removal, SYN_DROPPED and incomplete events fail the recording; removing an ACL
+after opening a descriptor does not itself revoke that descriptor on Linux.
+
+`StopShortcutSession.start(on_stop, preferred_trigger='F7')` explicitly requests
+a GlobalShortcuts binding asynchronously. The portal may change the actual
+trigger, exposed as `trigger_description`. Refusal/timeout is retained until
+explicit close/start; hold activation is debounced and grant revocation signals
+stopping. Each method/response wait has a 30-second budget; close cancels the
+owned request/session and can abort its connection. A blocked callback leaves
+cleanup available for retry. The callback must signal cancellation promptly.
+
+Controlled tests cover source exclusion, partial startup cleanup, capacity,
+partial records, rejection, pending-request close, foreign sessions, early
+activation ordering and revocation. Public facade/AC/MCP/GUI integration and
+native GNOME/KDE authorization/keyboard recovery remain in Progress.md.
+Specifications: [Linux input events](https://www.kernel.org/doc/html/latest/input/event-codes.html)
+and [GlobalShortcuts](https://flatpak.github.io/xdg-desktop-portal/docs/doc-org.freedesktop.portal.GlobalShortcuts.html).

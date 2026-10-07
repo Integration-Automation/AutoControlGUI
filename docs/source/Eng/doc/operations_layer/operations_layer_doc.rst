@@ -31,6 +31,25 @@ callers own their process lifecycle. The native verification entry is
 ``docker/ei_worker_verify.py``; CI retains its results and faulthandler output.
 
 
+Wayland physical recording and stop foundation
+==============================================
+
+Experimental ``PhysicalRecorder`` in ``linux_wayland.input_events`` opens only
+explicitly chosen physical Linux event nodes using existing read access. Virtual
+sources are excluded and storage is bounded. ``stop()`` returns raw device events;
+relative/absolute device units must not be converted silently to desktop positions
+or replay actions. Read failure, dropped events and incomplete records fail closed.
+ACL removal does not revoke an already opened descriptor. Executor action journals
+need no global input hook.
+
+``StopShortcutSession`` in ``linux_wayland.global_shortcuts`` explicitly requests a
+portal binding asynchronously, exposes its actual trigger and closes only its own
+request/session. Refusal is retained until explicit close/start. Grant revocation
+invokes the caller's stop callback, which should signal cancellation promptly.
+Public facade/AC/MCP/GUI integration and native acceptance remain in D3/H3;
+legacy Wayland global hooks remain unavailable.
+
+
 Folder sync (additive mirror)
 =============================
 

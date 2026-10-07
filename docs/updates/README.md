@@ -58,6 +58,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261007-03 | 2026-10-07 | Bounded physical recording and owned portal stop foundation | #done #wayland #modernization | [2026-10](2026-10.md) |
 | U-20261007-02 | 2026-10-07 | Bounded image fallback and aligned Windows arm64 dependencies | #done #image #dependencies #modernization | [2026-10](2026-10.md) |
 | U-20261007-01 | 2026-10-07 | Isolate native EI sessions and reclaim failed handshakes | #done #wayland #modernization | [2026-10](2026-10.md) |
 | U-20261003-23 | 2026-10-03 | Classify native EI teardown and retain trustworthy crash probes | #done #testing #wayland | [2026-10](2026-10.md) |
@@ -368,7 +369,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | File | Period | Entries |
 |---|---|---:|
-| [2026-10.md](2026-10.md) | 2026-10 | 29 |
+| [2026-10.md](2026-10.md) | 2026-10 | 30 |
 | [2026-09-e.md](2026-09-e.md) | 2026-09 | 7 |
 | [2026-09-d.md](2026-09-d.md) | 2026-09 | 55 |
 | [2026-09-c.md](2026-09-c.md) | 2026-09 | 38 |

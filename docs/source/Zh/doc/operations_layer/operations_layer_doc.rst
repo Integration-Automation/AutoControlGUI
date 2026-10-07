@@ -27,6 +27,21 @@ Wayland 原生輸入生命週期
 faulthandler 輸出。
 
 
+Wayland 實體錄製與停止底層
+===========================
+
+實驗中的 ``linux_wayland.input_events.PhysicalRecorder`` 只以既有讀取權限開啟
+明確選定的 Linux 實體 event 節點，排除 virtual 裝置並限制儲存量。``stop()``
+回傳原始裝置事件；相對／絕對裝置單位不能默默轉成桌面座標或重播動作。
+讀取失敗、事件遺失與不完整紀錄皆回報失敗；移除 ACL 不會撤銷已開啟的 descriptor。
+Executor 動作日誌不需要全域輸入 hook。
+
+``linux_wayland.global_shortcuts.StopShortcutSession`` 明確且非同步請求 portal
+綁定，顯示實際快捷鍵並只關閉自己的 request／session。拒絕後需先 close 再 start
+才重試；授權撤銷會呼叫停止 callback，callback 應立即通知取消。門面／AC／MCP／GUI
+整合及原生驗收仍列於 D3／H3；舊 Wayland 全域 hook 仍不可用。
+
+
 資料夾同步（增量鏡像）
 ======================
 

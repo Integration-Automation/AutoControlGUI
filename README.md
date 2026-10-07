@@ -384,8 +384,15 @@ detected tool, and `{output}` is replaced with a temporary PNG path:
 export JE_AUTOCONTROL_WAYLAND_CAPTURE_COMMAND="mycapture --png {output}"
 ```
 
-Wayland forbids global input recording for unprivileged clients — set
-`JE_AUTOCONTROL_LINUX_DISPLAY_SERVER=x11` to record on an X11 session. Window
+Executor action journals need no global input hook. The experimental Wayland
+`PhysicalRecorder` helper reads explicitly selected physical `/dev/input/event*`
+nodes using existing read permissions, excluding kernel virtual/uinput devices.
+It returns raw device events, not desktop coordinates or replay actions, and
+never changes ACLs. `StopShortcutSession` explicitly requests a portal stop
+binding, reports its actual trigger, and closes its own grant; refusal is cached
+until explicit close/start. These helpers have controlled tests; their facade,
+AC/MCP and GUI integration and native desktop acceptance remain in D3/H3.
+The legacy Wayland global recording hook remains unavailable. Window
 management works on Windows, macOS (pyobjc) and X11, including XWayland; on a pure
 Wayland session, whose protocol hides other clients' windows, `list_windows()` returns
 an empty list and every window action raises `AutoControlUnsupportedOperationException`

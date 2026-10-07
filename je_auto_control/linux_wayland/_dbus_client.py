@@ -11,14 +11,14 @@ name, and moving a working protocol implementation is not a reason to churn
 either.
 """
 from je_auto_control.utils.dbus_client.session_bus import (  # noqa: F401  # reason: re-export
-    BUS_INTERFACE, BUS_NAME, BUS_PATH, DBusError, ERROR, FIELD_ERROR_NAME,
+    BUS_INTERFACE, BUS_NAME, BUS_PATH, DBusError, DBusTimeout, ERROR, FIELD_ERROR_NAME,
     FIELD_INTERFACE, FIELD_MEMBER, FIELD_PATH, FIELD_REPLY_SERIAL,
     FIELD_SENDER, FIELD_SIGNATURE, METHOD_CALL, METHOD_RETURN, Message,
     SIGNAL, SessionBus, Variant, body_pairs, is_available, session_address,
 )
 
 __all__ = [
-    "BUS_INTERFACE", "BUS_NAME", "BUS_PATH", "DBusError", "ERROR",
+    "BUS_INTERFACE", "BUS_NAME", "BUS_PATH", "DBusError", "DBusTimeout", "ERROR",
     "METHOD_CALL", "METHOD_RETURN", "Message", "SIGNAL", "SessionBus",
     "Variant", "body_pairs", "is_available", "session_address",
 ]

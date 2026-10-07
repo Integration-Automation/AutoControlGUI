@@ -323,3 +323,12 @@ arm64 dependency marker installs NumPy without changing other platforms' base
 requirements. Strict OpenCV accessors remain separate typed capability refusals.
 The platform smoke workflow includes arm64 image tests that never inject input;
 headless fallback tests compare outputs against OpenCV on other platforms.
+
+The D3 recording foundation separates raw physical input from executor action
+journals: `linux_wayland/input_events.py` opens only explicitly chosen existing
+physical Linux nodes, verifies sysfs/device identity and excludes virtual sources.
+A bounded worker returns raw device units and fails incomplete capture.
+`global_shortcuts.py` owns an asynchronous GlobalShortcuts session on its private
+D-Bus connection; bounded polling, pending signals and abort permit cancellation
+and cleanup. Refusal is cached until explicit close/start; revocation invokes the
+caller-owned stop callback. Public adapters and native acceptance remain in D3/H3.
