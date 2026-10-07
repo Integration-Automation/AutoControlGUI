@@ -606,3 +606,5 @@ artifacts retain native frames, commands, versions and target/debugger exit
 status for 14 days, including on failure. The final log retains up to 64 MiB;
 missing target exit evidence fails the job. Assertions and coverage floors
 remain enforced. Diagnostic collection is not a USB ACL crash fix.
+LLDB ignores launcher exec stops; other nonfatal stops retain missing exit
+evidence and fail as debugger errors.

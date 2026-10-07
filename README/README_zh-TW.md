@@ -401,6 +401,7 @@ bandit -c pyproject.toml -r je_auto_control/
 Linux／macOS Python 3.10 quality job 透過 gdb／lldb 保存 `native-diagnostics`
 artifact，包含原生堆疊、套件版本及測試退出碼。原有 coverage 命令及斷言繼續執行；
 收集診斷不代表已定位 USB ACL 的間歇崩潰原因。
+LLDB 略過啟動器的 exec 暫停；其他非致命停止會視為診斷失敗，不捏造崩潰退出碼。
 
 ---
 

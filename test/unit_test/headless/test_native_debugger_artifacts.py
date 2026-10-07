@@ -3,6 +3,7 @@ import importlib.util
 import json
 from pathlib import Path
 import sys
+from types import SimpleNamespace
 
 import pytest
 
@@ -46,3 +47,21 @@ def test_timeout_kills_owned_debugger_and_retains_artifact(tmp_path, monkeypatch
 def test_invalid_profile_fails_before_launch(tmp_path, platform_name, timeout):
     with pytest.raises(ValueError):
         native_debugger.run_diagnostic(['python'], tmp_path, target_platform=platform_name, timeout_s=timeout)
+
+
+@pytest.mark.parametrize('exited,reason,expected', [(True, 7, '17'), (False, 5, '134'), (False, 7, None)])
+def test_lldb_startup_exec_stop_cannot_be_reported_as_a_native_crash(tmp_path, exited, reason, expected):
+    thread = SimpleNamespace(GetStopReason=lambda: reason, GetStopReasonDataAtIndex=lambda _index: 6)
+    process = SimpleNamespace(GetState=lambda: 10 if exited else 0, GetExitStatus=lambda: 17,
+                              GetSelectedThread=lambda: thread, Kill=lambda: None)
+    target = SimpleNamespace(GetProcess=lambda: process)
+    debugger = SimpleNamespace(GetSelectedTarget=lambda: target, HandleCommand=lambda _command: None)
+    namespace = {'lldb': SimpleNamespace(debugger=debugger, eStateExited=10,
+                                        eStopReasonSignal=5, eStopReasonException=6)}
+    report = tmp_path / 'target-exit.txt'
+    commands = native_debugger._lldb_script(report)
+    assert 'settings set target.process.stop-on-exec false' in commands
+    for line in commands.splitlines():
+        if line.startswith('script '):
+            exec(line[7:], namespace)  # pylint: disable=exec-used  # Executes only this tool's generated fixed script.
+    assert report.read_text(encoding='ascii') == expected if expected is not None else not report.exists()

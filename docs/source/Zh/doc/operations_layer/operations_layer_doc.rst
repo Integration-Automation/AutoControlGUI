@@ -564,3 +564,4 @@ Linux/macOS Python 3.10 quality job 透過 ``test/verify/native_debugger.py``
 及 target/debugger 退出碼，保留 14 天；最終 log 保留至多 64 MiB。缺少 target
 退出證據會使 job 失敗；斷言與 coverage 地板持續強制。收集診斷並不代表已修正
 USB ACL 間歇崩潰。
+LLDB 略過啟動器 exec 暫停；其他非致命停止不建立退出證據，視為 debugger 錯誤。

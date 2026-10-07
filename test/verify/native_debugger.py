@@ -47,6 +47,7 @@ end
 
 def _lldb_script(status: Path) -> str:
     return f'''settings set target.disable-aslr false
+settings set target.process.stop-on-exec false
 settings set stop-disassembly-count 0
 settings set auto-confirm true
 process handle SIGPIPE -n false -p true -s false
@@ -54,11 +55,14 @@ run
 script process = lldb.debugger.GetSelectedTarget().GetProcess()
 script exited = process.GetState() == lldb.eStateExited
 script thread = process.GetSelectedThread()
+script fatal_stop = thread.GetStopReason() in (lldb.eStopReasonSignal, lldb.eStopReasonException)
 script native_signal = thread.GetStopReasonDataAtIndex(0) if thread.GetStopReason() == lldb.eStopReasonSignal else 11
-script code = process.GetExitStatus() if exited else 128 + native_signal
+script code = process.GetExitStatus() if exited else (128 + native_signal if fatal_stop else None)
 script lldb.debugger.HandleCommand("thread backtrace all") if not exited else None
 script lldb.debugger.HandleCommand("image list") if not exited else None
-script report = open({str(status)!r}, "w", encoding="ascii"); report.write(str(code)); report.close()
+script report = open({str(status)!r}, "w", encoding="ascii") if code is not None else None
+script report.write(str(code)) if report is not None else None
+script report.close() if report is not None else None
 script process.Kill() if not exited else None
 quit
 '''

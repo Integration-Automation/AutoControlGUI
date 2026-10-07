@@ -454,6 +454,7 @@ Linux/macOS Python 3.10 quality jobs retain `native-diagnostics` artifacts
 from gdb/lldb, including native frames, package versions and target exit status.
 The original coverage command and assertions still run; diagnostic collection
 does not establish the intermittent USB ACL crash root cause.
+LLDB ignores launcher exec stops; other nonfatal stops fail without a fabricated crash exit code.
 
 ---
 
