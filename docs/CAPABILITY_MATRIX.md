@@ -561,3 +561,9 @@ late callback rejection and plain-log privacy. They are not native device eviden
 Android Docker/KVM and remote WDA smoke configurations are delivered in
 [MOBILE_SETUP.md](MOBILE_SETUP.md); native smoke emits actual/skipped results.
 Physical Unicode focus, rotation/recovery and Apple signing/WDA remain H3 evidence.
+
+Native Android evidence: [Mobile smoke 37625736780](https://github.com/Integration-Automation/AutoControlGUI/actions/runs/37625736780)
+on source 21e02733 passes Android14/API34 Docker/KVM explicit get-state, observed
+com.android.settings launch/stop and a real 1440×3040 device PNG. ADB1.0.41 /
+platform-tools34.0.4-debian, uiautomator2 3.7.0 and adbutils 2.12.0 are retained
+with the artifact. It does not establish physical-device, Unicode, rotation or iOS behavior.
