@@ -22,7 +22,7 @@ from JSON files / CLI / servers, and a **GUI tab**. Nothing is GUI-only.
 
 - **One API, seven platforms.** `wrapper/platform_wrapper.py` picks the backend at import
   time; your script does not change between Windows, macOS, X11, and Wayland.
-- **Scriptable without Python.** 821 `AC_*` commands cover the whole feature set, so a
+- **Scriptable without Python.** 822 `AC_*` commands cover the whole feature set, so a
   JSON file can do anything the library can — including loops, branches, try/catch,
   macros, and variables.
 - **Headless by default.** `import je_auto_control` never loads Qt. The GUI is an
@@ -152,7 +152,7 @@ desktop app; tab commands live in the window's **Actions** menu.
 | Natural-language planner | `plan_actions`, `run_from_description` | `AC_llm_plan` | LLM Planner |
 | Computer-use agent | `AgentLoop`, `run_agent` | `AC_run_agent` | Computer Use |
 | Record & replay | `record`, `stop_record` | `AC_record`, `AC_stop_record` | Record |
-| JSON scripting | `execute_action`, `execute_files` | all 821 commands | Script, Script Builder |
+| JSON scripting | `execute_action`, `execute_files` | all 822 commands | Script, Script Builder |
 | Variables & flow control | `execute_action_with_vars` | `AC_set_var`, `AC_loop`, `AC_for_each`, `AC_try`, `AC_retry` | Variables |
 | Data-driven runs | — | `AC_for_each_row` (CSV / JSON / SQLite / Excel) | Data Sources |
 | Assertions | `assert_text`, `assert_image` | `AC_assert_text` + 20 more | Assertions |
@@ -204,7 +204,7 @@ still goes on to the end), so a CI step fails with it. The legacy
 
 | Surface | Start it with | Notes |
 |---|---|---|
-| **MCP server** | `je_auto_control_mcp` (stdio) or `AC_start_mcp_http_server` | 743 tools for Claude Desktop / Claude Code / custom tool loops. Speaks the stateless MCP 2026-07-28 beside the `initialize`-based revisions. Bearer auth, TLS, audit log, rate limit, plugin hot-reload, CI fake backend. |
+| **MCP server** | `je_auto_control_mcp` (stdio) or `AC_start_mcp_http_server` | 747 tools for Claude Desktop / Claude Code / custom tool loops. Speaks the stateless MCP 2026-07-28 beside the `initialize`-based revisions. Bearer auth, TLS, audit log, rate limit, plugin hot-reload, CI fake backend. |
 | **REST API** | `je_auto_control start-rest` | Bearer token, per-IP rate limit + lockout, SQLite audit hook, `/metrics`, `/openapi.json`, `/docs` Swagger UI, `/dashboard`. |
 | **TCP socket server** | `je_auto_control start-server` | Newline-framed JSON action lists. Binds `127.0.0.1` by default. |
 | **pytest plugin** | installed automatically | Lightweight `je_auto_control_pytest` entry point; fixtures plus Gherkin steps for pytest-bdd / behave. Reinstall after upgrading editable checkouts; the explicit legacy plugin path remains supported. |
@@ -1051,3 +1051,30 @@ execution/root/env permission. Tools → MCP tool discovery offers cancellable
 Actions to search or inspect one schema locally. Registry version belongs to the
 returned snapshot; old indexes keep their original definitions. See
 [discovery contract](docs/MCP_DISCOVERY.md).
+
+### MCP session disclosure and paging
+
+Full mode remains the default. Set `JE_AUTOCONTROL_MCP_TOOL_MODE=progressive`
+before starting stdio/HTTP to list only core probe/discovery/schema/enable/disable/state
+tools initially. `ac_enable_tools` / `ac_disable_tools` change only that session's
+availability; `ac_tool_state` reports mode/names/version. Changes are idempotent and
+notify only the owner; plugin updates reach live standing HTTP streams. Closing or
+evicting a session revokes its view/cursors. Enabling grants no call privilege.
+`JE_AUTOCONTROL_MCP_TOOL_MODE=static` plus comma-separated canonical names in
+`JE_AUTOCONTROL_MCP_TOOL_PROFILE` serves a fixed profile for clients without list updates.
+Stateful pagination uses `nextCursor`, `snapshotId`, `registryVersion`; an explicit
+`JE_AUTOCONTROL_MCP_TOOL_PAGE_SIZE=1..100` also opts full mode into paging. Default
+full responses keep their original shape. Views retain at most eight snapshots for
+120 seconds and 1000 selected tools. Cursors cannot cross owners; old pages retain
+the original definitions/version and recheck permission. Expired/revoked cursors fail.
+Stateless requests use a fixed full/static deployment view, without session mutation
+or paging cursors; progressive deployments expose fixed core tools to these clients.
+
+`ToolView` / `DisclosureResult` / `ToolPage` are Beta headless owner models.
+`preview_tool_disclosure(names=["ac_screenshot"])` and `AC_preview_tool_disclosure`
+(Builder) inspect an isolated local view; MCP `ac_preview_tool_disclosure` uses the
+serving registry. Preview returns complete selected descriptors with no retained
+cursor or real session changes. GUI Tools adds mode/profile preview, enable/disable
+comma-separated names and next page Actions. Static preview names share the name field.
+Configure the real deployment with the environment settings above. More details:
+[session contract](docs/MCP_DISCOVERY.md).

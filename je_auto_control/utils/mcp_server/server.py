@@ -6,6 +6,7 @@ stateless 2026-07-28, chosen per request (see :mod:`._stateless`). Each
 stdio line is one JSON-RPC message — no Content-Length framing — matching
 the MCP stdio spec.
 """
+from collections.abc import Hashable
 import contextlib
 import contextvars
 import itertools
@@ -13,14 +14,16 @@ import json
 import sys
 import threading
 import time
-from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, TextIO
+from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Sequence, TextIO
 
 from je_auto_control.utils.cli_output import utf8_stream
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.mcp_server.audit import AuditLogger
-from je_auto_control.utils.mcp_server._tool_calls import handle_tool_call
+from je_auto_control.utils.mcp_server._tool_calls import handle_tool_call, prepare_tool_call
+from je_auto_control.utils.mcp_server._disclosure_sessions import ToolSessions
+from je_auto_control.utils.mcp_server.disclosure import DisclosureMode, ToolDisclosureError
 from je_auto_control.utils.rbac.authorization import (
-    AuthorizationContext, authorization_scope, permitted, require_command, resource_permitted,
+    AuthorizationContext, authorization_scope, permitted, resource_permitted,
 )
 from je_auto_control.utils.mcp_server.context import (
     OperationCancelledError, ToolCallContext,
@@ -38,12 +41,7 @@ from je_auto_control.utils.mcp_server.resources import (
 from je_auto_control.utils.mcp_server.tools import (
     MCPTool, build_default_tool_registry,
 )
-from je_auto_control.utils.mcp_server.tools._validation import (
-    undeclared_arguments, validate_arguments,
-)
-from je_auto_control.utils.mcp_server.tools._path_metadata import validate_path_arguments
 from je_auto_control.utils.path_guard.policy import PathPolicy
-from je_auto_control.utils.path_guard.path_guard import PathNotAllowedError
 from je_auto_control.utils.mcp_server._client_requests import (
     ClientRequestMixin,
 )
@@ -56,10 +54,10 @@ from je_auto_control.utils.mcp_server._subscriptions import NO_RESPONSE, Subscri
 from je_auto_control.utils.mcp_server._protocol import (
     PROTOCOL_VERSION,  # noqa: F401  # reason: re-exported; callers import it from server
     negotiate_protocol_version,
-    _coerce_params, _DISPATCH_ERRORS, _error_response, _invalid_envelope, _InvalidToolArguments,
+    _coerce_params, _DISPATCH_ERRORS, _error_response, _invalid_envelope,
     _is_hashable,
     _MCPError, _notification_message, _result_response, _server_info,
-    _TOOLS_CALL_METHOD,
+    _TOOLS_CALL_METHOD, _tools_list_cursor,
 )
 
 if TYPE_CHECKING:
@@ -90,6 +88,7 @@ class MCPServer(StatelessDispatchMixin, SubscriptionMixin, ClientRequestMixin):
                           else default_prompt_provider())
         self._tools_lock = threading.Lock()
         self._registry_version = 0
+        self._disclosure = ToolSessions(self._discovery_index, self._notify_view_changed)
         self._default_concurrent_tools = bool(concurrent_tools)
         self._audit = (audit_logger if audit_logger is not None
                         else AuditLogger())
@@ -242,7 +241,7 @@ class MCPServer(StatelessDispatchMixin, SubscriptionMixin, ClientRequestMixin):
         self._local.concurrent_tools = concurrent_tools
         self._local.connection_id = connection_id
         try:
-            with authorization_scope(authorization):
+            with authorization_scope(authorization), self._disclosure.scope(connection_id):
                 yield self
         finally:
             (self._local.notifier, self._local.writer,
@@ -256,6 +255,7 @@ class MCPServer(StatelessDispatchMixin, SubscriptionMixin, ClientRequestMixin):
         """
         if connection_id is None:
             return
+        self._disclosure.forget(connection_id)
         with self._caps_lock:
             self._client_caps_by_conn.pop(connection_id, None)
         with self._roots_lock:
@@ -276,7 +276,9 @@ class MCPServer(StatelessDispatchMixin, SubscriptionMixin, ClientRequestMixin):
         with self._tools_lock:
             self._tools[tool.name] = tool
             self._registry_version += 1
-        self._notify_tools_list_changed()
+        if self._disclosure.settings.mode != "static":
+            self._notify_tools_list_changed()
+            self._disclosure.notify_registry(self._connection_id)
 
     def unregister_tool(self, name: str) -> bool:
         """Remove a tool by name. Returns True if it existed."""
@@ -285,7 +287,9 @@ class MCPServer(StatelessDispatchMixin, SubscriptionMixin, ClientRequestMixin):
                 return False
             del self._tools[name]
             self._registry_version += 1
-        self._notify_tools_list_changed()
+        if self._disclosure.settings.mode != "static":
+            self._notify_tools_list_changed()
+            self._disclosure.notify_registry(self._connection_id)
         return True
 
     def stop(self) -> None:
@@ -328,6 +332,7 @@ class MCPServer(StatelessDispatchMixin, SubscriptionMixin, ClientRequestMixin):
             # EOF is still running, and its reply has nowhere to go once the
             # writer is swapped back.
             self._join_workers()
+            self._disclosure.forget(None)
             self.end_subscriptions(stdio=True)
             self._detach_log_bridge_if_configured()
             self._notifier = prior_notifier
@@ -541,13 +546,13 @@ class MCPServer(StatelessDispatchMixin, SubscriptionMixin, ClientRequestMixin):
             raise _MCPError(-32601, f"Method not found: {method}")
         nullary = {
             "ping": self._handle_ping,
-            "tools/list": self._handle_tools_list,
             "resources/list": self._handle_resources_list,
             "prompts/list": self._handle_prompts_list,
         }.get(method)
         if nullary is not None:
             return nullary()
         handler = {
+            "tools/list": self._handle_tools_list,
             "initialize": self._handle_initialize,
             "resources/read": self._handle_resources_read,
             "resources/subscribe": self._handle_resources_subscribe,
@@ -569,15 +574,28 @@ class MCPServer(StatelessDispatchMixin, SubscriptionMixin, ClientRequestMixin):
         with self._tools_lock:
             return ToolIndex(list(self._tools.values()), version=self._registry_version)
 
-    def _handle_tools_list(self) -> Dict[str, Any]:
-        """List descriptors for every registered tool."""
-        # Snapshot under the lock: PluginWatcher re-registers tools from its
-        # own thread, and mutating the dict mid-iteration surfaced to the
-        # client as "-32603 dictionary changed size during iteration".
-        with self._tools_lock:
-            tools = list(self._tools.values())
-        return {"tools": [tool.to_descriptor() for tool in tools
-                          if permitted(tool.name, read_only=tool.annotations.read_only)]}
+    def configure_tool_disclosure(self, mode: DisclosureMode, *, profile: Sequence[str] = (),
+                                  page_size: int | None = None) -> None:
+        """Configure an explicit mode/profile before clients connect."""
+        self._disclosure.configure(mode, profile=profile, page_size=page_size)
+
+    def _notify_view_changed(self, key: Hashable | None) -> None:
+        """Notify only the view owner, through the current request or its standing stream."""
+        notifier = self._unsolicited_notifier() if key == self._connection_id else None
+        notifier = notifier or self._disclosure.notifier(key)
+        if notifier is not None:
+            try:
+                notifier('notifications/tools/list_changed', {})
+            except (OSError, RuntimeError, ValueError):
+                autocontrol_logger.exception('MCP session tool notification failed')
+
+    def _handle_tools_list(self, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        """List the current view; default full mode preserves the original wire result."""
+        cursor = _tools_list_cursor(params or {})
+        try:
+            return self._disclosure.list_tools(cursor, stateless=self._stateless_request is not None)
+        except ToolDisclosureError as error:
+            raise _MCPError(-32602, str(error)) from error
 
     def _handle_resources_list(self) -> Dict[str, Any]:
         """List descriptors for every registered resource."""
@@ -628,7 +646,7 @@ class MCPServer(StatelessDispatchMixin, SubscriptionMixin, ClientRequestMixin):
         # roots/list), and advertising them from here claimed features the
         # server does not offer.
         capabilities: Dict[str, Any] = {
-            "tools": {"listChanged": True},
+            "tools": {"listChanged": self._disclosure.settings.mode != "static"},
             "resources": {"listChanged": False, "subscribe": True},
             "prompts": {"listChanged": False},
             "logging": {},
@@ -665,38 +683,9 @@ class MCPServer(StatelessDispatchMixin, SubscriptionMixin, ClientRequestMixin):
             raise _MCPError(-32602, f"Unknown prompt: {name}")
         return payload
 
-    def _prepare_tool_call(
-        self, params: Dict[str, Any],
-    ) -> tuple[str, Any, Dict[str, Any]]:
-        """Validate a tools/call request; return ``(name, tool, arguments)``.
-
-        Raises :class:`_MCPError` when the request is malformed, the tool is
-        unknown or the rate limit is hit, and :class:`_InvalidToolArguments`
-        when the arguments fail the tool's schema.
-        """
-        name = params.get("name")
-        arguments = params.get("arguments") or {}
-        if not isinstance(name, str):
-            raise _MCPError(-32602, "tools/call requires string 'name'")
-        if not isinstance(arguments, dict):
-            raise _MCPError(-32602, "tools/call 'arguments' must be an object")
-        tool = self._tools.get(name)
-        if tool is None:
-            raise _MCPError(-32602, f"Unknown tool: {name}")
-        require_command(name, read_only=tool.annotations.read_only, arguments=arguments)
-        violation = (validate_arguments(tool.input_schema, arguments)
-                     or undeclared_arguments(tool.input_schema, arguments))
-        if violation is not None:
-            raise _InvalidToolArguments(f"Invalid arguments for {name}: {violation}")
-        try:
-            arguments = validate_path_arguments(arguments, tool.input_schema,
-                                                 self._current_path_policy())
-        except PathNotAllowedError as error:
-            raise _InvalidToolArguments(str(error)) from error
-        if self._rate_limiter is not None and not self._rate_limiter.try_acquire():
-            raise _MCPError(-32000, f"Rate limit exceeded for tool {name!r}")
-        self._maybe_confirm_destructive(name, tool, arguments)
-        return name, tool, arguments
+    def _prepare_tool_call(self, params: Dict[str, Any]) -> tuple[str, MCPTool, Dict[str, Any]]:
+        """Validate a call through the shared authorization and argument pipeline."""
+        return prepare_tool_call(self, params)
 
     def _handle_tools_call(self, msg_id: Any,
                            params: Dict[str, Any]) -> Dict[str, Any]:
@@ -710,6 +699,7 @@ class MCPServer(StatelessDispatchMixin, SubscriptionMixin, ClientRequestMixin):
         return ToolCallContext(
             request_id=msg_id, progress_token=progress_token,
             notifier=self._notifier, tool_index=self._discovery_index,
+            tool_view=self._disclosure.current(stateless=self._stateless_request is not None),
         )
 
 

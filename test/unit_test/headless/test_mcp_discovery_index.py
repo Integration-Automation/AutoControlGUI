@@ -100,7 +100,7 @@ from PySide6.QtWidgets import QApplication,QMenu
 from je_auto_control.gui.mcp_discovery_dialog import MCPDiscoveryDialog
 app=QApplication([]);dialog=MCPDiscoveryDialog()
 menu=dialog.findChild(QMenu)
-assert len(menu.actions())==3
+assert len(menu.actions())==8
 dialog.query.setText('discover_tools');dialog.search()
 deadline=time.monotonic()+5
 while dialog._tasks.handle is not None and time.monotonic()<deadline:

@@ -241,3 +241,13 @@ def _error_response(msg_id: Any, code: int, message: str, data: Any = None) -> s
     if data is not None:
         error["data"] = data
     return wire_json_text({"jsonrpc": "2.0", "id": msg_id, "error": error})
+
+
+def _tools_list_cursor(params: Dict[str, Any]) -> Optional[str]:
+    """Validate a wire cursor separately from an omitted first-page request."""
+    if 'cursor' not in params:
+        return None
+    cursor = params['cursor']
+    if not isinstance(cursor, str) or not cursor or len(cursor) > 512:
+        raise _MCPError(-32602, 'tools/list cursor must be a nonempty string up to 512 characters')
+    return cursor

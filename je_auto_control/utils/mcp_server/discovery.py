@@ -89,6 +89,10 @@ class ToolIndex:
             return False
         return self._authorize is None or self._authorize(entry.tool)
 
+    def authorized_names(self) -> tuple[str, ...]:
+        """Return current-authorized names in the original registry order."""
+        return tuple(entry.summary.name for entry in self._entries if self._allowed(entry))
+
     def search(self, query: str, *, limit: int = 10) -> list[ToolSummary]:
         """Return deterministic ranked summaries, at most 100, from this authorized snapshot."""
         terms = _search_terms(query, limit)

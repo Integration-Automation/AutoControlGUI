@@ -7,6 +7,12 @@ from typing import TYPE_CHECKING, Any, Dict, Optional
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.mcp_server.context import OperationCancelledError
 from je_auto_control.utils.mcp_server._input_required import AnsweredByGate
+from je_auto_control.utils.mcp_server.tools import MCPTool
+from je_auto_control.utils.mcp_server.tools._validation import undeclared_arguments, validate_arguments
+from je_auto_control.utils.mcp_server.tools._path_metadata import validate_path_arguments
+from je_auto_control.utils.path_guard.path_guard import PathNotAllowedError
+from je_auto_control.utils.rbac.authorization import require_command
+
 from je_auto_control.utils.mcp_server._protocol import (
     _InvalidToolArguments, _MCPError, _capture_error_screenshot, _to_content_blocks,
 )
@@ -96,3 +102,30 @@ def _invoke_tool(server: MCPServer, msg_id: Any, name: str, tool: Any,
     if tool.output_schema is not None and isinstance(result, dict):
         response["structuredContent"] = result
     return response
+
+
+def prepare_tool_call(server: MCPServer, params: Dict[str, Any]) -> tuple[str, MCPTool, Dict[str, Any]]:
+    """Apply the existing call authorization/schema/path/rate/confirmation pipeline."""
+    name = params.get("name")
+    arguments = params.get("arguments") or {}
+    if not isinstance(name, str):
+        raise _MCPError(-32602, "tools/call requires string 'name'")
+    if not isinstance(arguments, dict):
+        raise _MCPError(-32602, "tools/call 'arguments' must be an object")
+    tool = server._tools.get(name)
+    if tool is None:
+        raise _MCPError(-32602, f"Unknown tool: {name}")
+    require_command(name, read_only=tool.annotations.read_only, arguments=arguments)
+    violation = (validate_arguments(tool.input_schema, arguments)
+                 or undeclared_arguments(tool.input_schema, arguments))
+    if violation is not None:
+        raise _InvalidToolArguments(f"Invalid arguments for {name}: {violation}")
+    try:
+        arguments = validate_path_arguments(arguments, tool.input_schema,
+                                             server._current_path_policy())
+    except PathNotAllowedError as error:
+        raise _InvalidToolArguments(str(error)) from error
+    if server._rate_limiter is not None and not server._rate_limiter.try_acquire():
+        raise _MCPError(-32000, f"Rate limit exceeded for tool {name!r}")
+    server._maybe_confirm_destructive(name, tool, arguments)
+    return name, tool, arguments

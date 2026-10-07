@@ -1378,4 +1378,13 @@ japanese_word_dict = {
         'ローカルの既定一覧のみ。検索は概要を返し、スキーマの取得は有効化'
         'や実行をしません。リモートサーバーは独自の一覧と権限を使います。'
     ),
+    'mcp_disclosure_mode': 'ローカルプレビューモード',
+    'mcp_disclosure_progressive': '段階的',
+    'mcp_disclosure_full': '全一覧',
+    'mcp_disclosure_static': '静的一覧',
+    'mcp_disclosure_apply': 'プレビューモードを適用',
+    'mcp_disclosure_list': 'プレビューツール一覧',
+    'mcp_disclosure_enable': 'プレビュー名を有効化',
+    'mcp_disclosure_disable': 'プレビュー名を無効化',
+    'mcp_disclosure_next': '次のプレビューページ',
 }

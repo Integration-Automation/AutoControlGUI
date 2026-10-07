@@ -1356,4 +1356,13 @@ simplified_chinese_word_dict = {
         '仅查询本机默认目录。搜索返回摘要；读取结构不会'
         '启用或执行工具。远程服务器使用自己的目录与权限。'
     ),
+    'mcp_disclosure_mode': '本机预览模式',
+    'mcp_disclosure_progressive': '逐步发现',
+    'mcp_disclosure_full': '完整目录',
+    'mcp_disclosure_static': '静态清单',
+    'mcp_disclosure_apply': '应用预览模式',
+    'mcp_disclosure_list': '列出预览工具',
+    'mcp_disclosure_enable': '启用预览名称',
+    'mcp_disclosure_disable': '停用预览名称',
+    'mcp_disclosure_next': '下一页预览',
 }

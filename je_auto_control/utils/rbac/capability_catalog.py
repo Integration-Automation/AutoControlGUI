@@ -8,7 +8,8 @@ _SCREEN = '''screen_size get_screen_size get_mouse_position get_pixel screenshot
 list_monitors list_windows find_window get_window_rect get_foreground_window
 is_window_minimized window_exists a11y_list a11y_find known_commands
 get_control_text control_expand_state control_range find_control_text
-list_controls get_keyboard_layout keyboard_layout_info probe_capabilities discover_tools get_tool_schema'''.split()
+list_controls get_keyboard_layout keyboard_layout_info probe_capabilities discover_tools get_tool_schema
+enable_tools disable_tools tool_state preview_tool_disclosure'''.split()
 _INPUT = '''click_mouse double_click_mouse press_mouse release_mouse set_mouse_position
 move_mouse mouse_scroll scroll_mouse press_key release_key press_and_release_key
 write write_secret type_unicode hotkey key_down key_up key_press

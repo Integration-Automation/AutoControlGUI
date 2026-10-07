@@ -13,6 +13,12 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ## Unreleased
 
+- Add per-session MCP progressive/static availability and stable signed pagination,
+  with bounded owner state and cleanup on session termination. Default full mode
+  preserves its original wire result. Stateless clients use fixed deployment profiles.
+  GUI/API/AC/Builder/MCP preview changes only isolated metadata; enabling grants no
+  call privilege. Deployment mode/profile/page size use explicit environment settings.
+
 - Add Beta typed MCP registry search and single-schema lookup through facade,
   AC/Builder/MCP and the lazy GUI Tools inspector. Search returns bounded summaries;
   server queries observe the live registry version and recheck RBAC/readonly.

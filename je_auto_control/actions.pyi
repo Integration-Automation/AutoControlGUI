@@ -2228,6 +2228,13 @@ def AC_press_mouse(mouse_keycode: int | str, x: int | None = ..., y: int | None 
 def AC_preview_template_candidate(store_path: str, revision_id: str) -> Dict[str, JSONValue]:
     """Read checked candidate/base identities and preview paths without writing files."""
 
+def AC_preview_tool_disclosure(
+    mode: str = ...,
+    names: List[str] | str | None = ...,
+    profile: List[str] | str | None = ...,
+) -> Dict[str, object]:
+    """Inspect an isolated local tool view without changing server sessions."""
+
 def AC_probe_capabilities() -> Dict[str, object]:
     """Return passive backend input/capture evidence without requesting consent."""
 

@@ -566,6 +566,8 @@ class _MCPHttpServer(ThreadingHTTPServer):
         self.sessions = SessionRegistry(
             on_drop=lambda session: mcp.forget_connection(session.id),
         )
+        sessions = self.sessions
+        mcp._disclosure.set_notifier_lookup(lambda key: _notifier_for(sessions.stream_writer_for(key)))
         # No sse_lock: SSE requests used to swap server-wide notifier/writer
         # state and needed serialising. They now bind that state to their own
         # thread via MCPServer.connection_scope, so concurrent SSE streams no

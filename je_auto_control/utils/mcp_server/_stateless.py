@@ -133,10 +133,10 @@ def _optional(params: Dict[str, Any], key: str, kind: type, described: str) -> A
     return value
 
 
-def discover_result() -> Dict[str, Any]:
+def discover_result(*, tool_list_changed: bool = True) -> Dict[str, Any]:
     """The body of a ``server/discover`` result."""
     return {"supportedVersions": list(all_supported_versions()),
-            "capabilities": STATELESS_CAPABILITIES}
+            "capabilities": {**STATELESS_CAPABILITIES, "tools": {"listChanged": tool_list_changed}}}
 
 
 def shape_result(method: str, result: Dict[str, Any]) -> Dict[str, Any]:
@@ -168,6 +168,8 @@ class StatelessDispatchMixin:
     """
 
     if TYPE_CHECKING:
+        from je_auto_control.utils.mcp_server._disclosure_sessions import ToolSessions
+        _disclosure: ToolSessions
         _local: Any
         _log_bridge: Any
         _peer_era: Optional[str]
@@ -208,7 +210,8 @@ class StatelessDispatchMixin:
         with self._stateless_scope(request):
             if method == LISTEN_METHOD:
                 return self._listen(msg_id, params)
-            result = (discover_result() if method == DISCOVER_METHOD
+            result = (discover_result(tool_list_changed=self._disclosure.settings.mode == "full")
+                      if method == DISCOVER_METHOD
                       else self._run_method(msg_id, method, params))
         return shape_result(method, result)
 

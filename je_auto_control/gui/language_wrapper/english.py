@@ -1492,4 +1492,13 @@ english_word_dict = {
         'Local default registry only. Search returns summaries; reading a schema does not '
         'enable or execute the tool. Remote servers use their own registry and permissions.'
     ),
+    'mcp_disclosure_mode': 'Local preview mode',
+    'mcp_disclosure_progressive': 'Progressive',
+    'mcp_disclosure_full': 'Full',
+    'mcp_disclosure_static': 'Static profile',
+    'mcp_disclosure_apply': 'Apply preview mode',
+    'mcp_disclosure_list': 'List preview tools',
+    'mcp_disclosure_enable': 'Enable preview names',
+    'mcp_disclosure_disable': 'Disable preview names',
+    'mcp_disclosure_next': 'Next preview page',
 }

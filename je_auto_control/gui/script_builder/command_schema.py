@@ -4491,6 +4491,14 @@ def _add_tooling_specs(specs: List[CommandSpec]) -> None:
                     "writes a file when 'path' is set.",
     ))
     specs.append(CommandSpec(
+        "AC_preview_tool_disclosure", "Tools", "Preview MCP Tool Availability",
+        fields=(FieldSpec("mode", FieldType.ENUM, choices=("progressive", "full", "static"),
+                          optional=True, default="progressive"),
+                FieldSpec("names", FieldType.STRING, optional=True, placeholder='["ac_screenshot"]'),
+                FieldSpec("profile", FieldType.STRING, optional=True, placeholder='["ac_screenshot"]')),
+        description="Preview an isolated view; never change serving sessions or execute tools.",
+    ))
+    specs.append(CommandSpec(
         "AC_discover_tools", "Tools", "Search MCP Tools",
         fields=(FieldSpec("query", FieldType.STRING, optional=True, default=""),
                 FieldSpec("limit", FieldType.INT, optional=True, default=10)),

@@ -242,3 +242,16 @@ handler or native capability probe. Current RBAC and read-only apply to each que
 base capability summaries are not grants for arguments/root/env or execution.
 Copied schemas and mutation versions belong to the captured snapshot. Full legacy
 tools/list is unchanged. Detailed contract: `docs/MCP_DISCOVERY.md`.
+
+### MCP session availability (Beta)
+
+ToolView/DisclosureMode/DisclosureResult/ToolPage/ToolDisclosureError and
+preview_tool_disclosure are Beta owner APIs. ToolView.close revokes immediately,
+clears selection/snapshots and rejects accepted late work; request ContextVar leases
+keep the same closed view across transport drop. No native action is undone or run.
+Stateful views/cursors are owned per HTTP session or stdio peer. Preview API/AC/
+Builder/MCP/GUI is isolated metadata and closes its ephemeral owner; preview has
+no usable continuation cursor. Deployment environment settings preserve default
+full lists and provide progressive/static/explicit paging. Stateless requests use
+fixed availability and reject cursor/session mutations. Detailed limits and policy:
+`docs/MCP_DISCOVERY.md`.

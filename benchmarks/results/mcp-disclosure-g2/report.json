@@ -1,0 +1,14 @@
+{
+  "platform": "Windows-11-10.0.26300-SP0",
+  "python": "3.14.4",
+  "pyside": "6.11.1",
+  "qt_platform": "offscreen",
+  "resolved_font": "Microsoft JhengHei",
+  "preview_mode": "progressive",
+  "enabled_names": [
+    "ac_screenshot"
+  ],
+  "native_device_operations": false,
+  "real_session_changed": false,
+  "source": "G2 implementation in containing commit"
+}

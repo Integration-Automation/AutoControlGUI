@@ -612,3 +612,27 @@ Search returns no complete schemas. Every query rechecks current identity/readon
 base capability summaries are not grants for arguments, roots, environment or calls.
 Tools → MCP tool discovery offers cancellable local search/schema Actions.
 Snapshots retain copied definitions. See ``docs/MCP_DISCOVERY.md`` for the Beta contract.
+
+Session availability and paging
+===============================
+
+Full remains the default. Before stdio/HTTP startup, set
+``JE_AUTOCONTROL_MCP_TOOL_MODE=progressive`` for the small core list, or ``static``
+plus comma-separated canonical ``JE_AUTOCONTROL_MCP_TOOL_PROFILE`` names for a
+fixed profile. ``ac_enable_tools`` / ``ac_disable_tools`` modify only the current
+progressive session; ``ac_tool_state`` reads its names/mode/version. Changes are
+idempotent and owner-notified; session drop revokes the view and cursors.
+``JE_AUTOCONTROL_MCP_TOOL_PAGE_SIZE=1..100`` explicitly enables full-mode paging;
+default full wire shape stays unchanged. ``nextCursor`` / ``snapshotId`` /
+``registryVersion`` pages preserve old definitions/version and recheck permissions.
+Each owner retains at most eight snapshots for 120 seconds and 1000 selected tools.
+Foreign/expired/revoked cursors fail. Stateless requests use fixed full/static
+availability without session mutation or cursors; progressive serves core only there.
+
+Beta ``ToolView`` owns a headless view. ``preview_tool_disclosure`` and matching
+``AC_preview_tool_disclosure`` / Builder inspect isolated local metadata; MCP
+``ac_preview_tool_disclosure`` previews its actual serving registry. Preview returns
+all selected descriptors without a retained cursor. Tools inspector Actions provide
+local mode/static-name preview, enable/disable and next page. Real deployment
+settings remain explicit. Enabling/previewing grants no execution/root/env privilege.
+See ``docs/MCP_DISCOVERY.md`` for ownership, limits and request policy.

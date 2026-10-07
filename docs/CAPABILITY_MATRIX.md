@@ -628,3 +628,14 @@ live registry versions/plugins; local inspection uses the default registry.
 RBAC/readonly checks run per query, and schema access cannot widen call roots/env
 or privileges. Controlled tests cover snapshot copies, limits, viewer isolation,
 readonly and removed tools; native device or consent operations are not needed.
+
+### MCP session availability and paging
+
+Controlled stdio/HTTP tests verify per-owner enable, idempotent owner-only list
+changes, live standing-stream plugin notifications, original full-mode wire shape,
+static fixed profiles, coherent old snapshot versions, foreign/expired/revoked
+cursor failures, bounded caches/selections and session-drop reclamation. Stateless
+requests use fixed deployment availability without session mutation or cursors.
+Local preview via facade/AC/Builder/GUI and server-registry preview via MCP invoke
+no tools or native probes. Availability changes do not widen RBAC/root/env/call
+permissions; final policy/cost coverage continues through G3/H3.

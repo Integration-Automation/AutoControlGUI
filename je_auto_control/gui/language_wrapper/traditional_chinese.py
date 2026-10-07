@@ -1357,4 +1357,13 @@ traditional_chinese_word_dict = {
         '僅查詢本機預設目錄。搜尋回傳摘要；讀取結構不會'
         '啟用或執行工具。遠端伺服器使用自己的目錄與權限。'
     ),
+    'mcp_disclosure_mode': '本機預覽模式',
+    'mcp_disclosure_progressive': '逐步揭露',
+    'mcp_disclosure_full': '完整目錄',
+    'mcp_disclosure_static': '靜態清單',
+    'mcp_disclosure_apply': '套用預覽模式',
+    'mcp_disclosure_list': '列出預覽工具',
+    'mcp_disclosure_enable': '啟用預覽名稱',
+    'mcp_disclosure_disable': '停用預覽名稱',
+    'mcp_disclosure_next': '下一頁預覽',
 }

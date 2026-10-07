@@ -20,7 +20,7 @@
 
 - **一套 API，七个平台。** `wrapper/platform_wrapper.py` 在导入时挑选后端；同一份脚本在
   Windows、macOS、X11 与 Wayland 上都不需要改写。
-- **不写 Python 也能脚本化。** 821 个 `AC_*` 命令覆盖全部功能，因此一个 JSON 文件能做到库
+- **不写 Python 也能脚本化。** 822 个 `AC_*` 命令覆盖全部功能，因此一个 JSON 文件能做到库
   能做的任何事——包含循环、分支、try/catch、宏与变量。
 - **默认无头运行。** `import je_auto_control` 绝不会加载 Qt。GUI 是可选包，包在同一个无头内核之外。
 - **四种定位方式。** 模板匹配、OCR、无障碍树、视觉语言模型——可通过锚点定位器与自愈回退串接组合。
@@ -141,7 +141,7 @@ python -c "import je_auto_control; je_auto_control.start_autocontrol_gui()"
 | 自然语言规划 | `plan_actions`、`run_from_description` | `AC_llm_plan` | LLM Planner |
 | Computer-use agent | `AgentLoop`、`run_agent` | `AC_run_agent` | Computer Use |
 | 录制与回放 | `record`、`stop_record` | `AC_record`、`AC_stop_record` | Record |
-| JSON 脚本 | `execute_action`、`execute_files` | 全部 821 个命令 | Script、Script Builder |
+| JSON 脚本 | `execute_action`、`execute_files` | 全部 822 个命令 | Script、Script Builder |
 | 变量与流程控制 | `execute_action_with_vars` | `AC_set_var`、`AC_loop`、`AC_for_each`、`AC_try`、`AC_retry` | Variables |
 | 数据驱动执行 | — | `AC_for_each_row`（CSV／JSON／SQLite／Excel） | Data Sources |
 | 断言 | `assert_text`、`assert_image` | `AC_assert_text` 等 21 个 | Assertions |
@@ -190,7 +190,7 @@ je_auto_control version
 
 | 接口 | 启动方式 | 说明 |
 |---|---|---|
-| **MCP 服务器** | `je_auto_control_mcp`（stdio）或 `AC_start_mcp_http_server` | 743 个工具，供 Claude Desktop／Claude Code／自定义 tool loop 使用。除了以 `initialize` 握手的各版协议，也支持无状态的 MCP 2026-07-28。Bearer 认证、TLS、审计日志、限流、插件热重载、CI 假后端。 |
+| **MCP 服务器** | `je_auto_control_mcp`（stdio）或 `AC_start_mcp_http_server` | 747 个工具，供 Claude Desktop／Claude Code／自定义 tool loop 使用。除了以 `initialize` 握手的各版协议，也支持无状态的 MCP 2026-07-28。Bearer 认证、TLS、审计日志、限流、插件热重载、CI 假后端。 |
 | **REST API** | `je_auto_control start-rest` | Bearer token、按 IP 限流与锁定、SQLite 审计 hook、`/metrics`、`/openapi.json`、`/docs` Swagger UI、`/dashboard`。 |
 | **TCP socket 服务器** | `je_auto_control start-server` | 以换行分隔的 JSON 动作列表。默认绑定 `127.0.0.1`。 |
 | **pytest 插件** | 安装后自动生效 | 轻量 `je_auto_control_pytest` 入口，提供 fixture 与 Gherkin 步骤。升级 editable 工作树后须重新安装；明确指定的旧插件路径仍兼容。 |
@@ -877,3 +877,26 @@ MCP `ac_discover_tools`／`ac_get_tool_schema` 查询实际服务中的目录，
 需求，具体参数可能需要更高权限。读取结构不授予执行、root 或环境权限。
 Tools → MCP 工具发现提供可取消的 Actions，在本机搜索或查看单个结构。目录版本属于
 返回快照，旧索引保留原定义。见[发现契约](../docs/MCP_DISCOVERY.md)。
+
+### MCP session 发现与分页
+
+默认仍为完整模式。启动 stdio／HTTP 前设置 `JE_AUTOCONTROL_MCP_TOOL_MODE=progressive`，
+首次清单只列核心诊断／发现／结构／启用／停用／状态工具。`ac_enable_tools`／
+`ac_disable_tools` 只改该 session 的可见性，`ac_tool_state` 返回模式／名称／版本。
+重复操作不重复通知，变更只通知 owner；plugin 更新可发到存活的 HTTP 常驻 stream。
+关闭或淘汰 session 会撤销视图／cursor，启用不授予调用权限。
+不接收清单更新的 client 可设 `JE_AUTOCONTROL_MCP_TOOL_MODE=static`，并用
+`JE_AUTOCONTROL_MCP_TOOL_PROFILE` 指定逗号分隔的 canonical 名称。
+有状态分页使用 `nextCursor`／`snapshotId`／`registryVersion`；显式设置
+`JE_AUTOCONTROL_MCP_TOOL_PAGE_SIZE=1..100` 也可让完整模式分页，默认完整回复形状保持兼容。
+每个视图最多保留八份快照、有效120秒，以及1000个选取工具。Cursor 不能跨 owner；
+旧页保留原定义／版本并重查权限，过期或权限撤销会明确失败。
+无状态请求使用固定的完整／静态部署视图，不提供 session 变更或分页 cursor；
+逐步部署对这些 client 提供固定核心工具。
+
+`ToolView`／`DisclosureResult`／`ToolPage` 是 Beta headless owner 模型。
+`preview_tool_disclosure(names=["ac_screenshot"])`、`AC_preview_tool_disclosure`／Builder
+预览隔离的本机视图；MCP `ac_preview_tool_disclosure` 使用服务中的目录。预览返回选取
+工具的完整结构，不保留 cursor、不修改真实 session。GUI Tools 增加模式／静态清单预览、
+逗号分隔名称的启用／停用及下一页 Actions；静态清单也使用名称字段。
+真正部署请使用上述环境设置。详见[session 契约](../docs/MCP_DISCOVERY.md)。

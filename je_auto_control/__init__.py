@@ -1130,6 +1130,10 @@ from je_auto_control.utils.usb import (
     UsbPassthroughClient, UsbPassthroughSession, default_usb_watcher,
     enable_usb_passthrough, is_usb_passthrough_enabled, list_usb_devices,
 )
+# Session-owned MCP availability metadata
+from je_auto_control.utils.mcp_server.disclosure import (
+    DisclosureMode, DisclosureResult, ToolDisclosureError, ToolPage, ToolView, preview_tool_disclosure,
+)
 # Passive MCP registry discovery
 from je_auto_control.utils.mcp_server.discovery import (
     MCPToolDescriptor, ToolCapability, ToolDiscoveryError, ToolIndex, ToolSummary,
@@ -1859,6 +1863,7 @@ __all__ = [
     "UsbAcl",
     "enable_usb_passthrough", "is_usb_passthrough_enabled",
     # System diagnostics
+    "DisclosureMode", "DisclosureResult", "ToolDisclosureError", "ToolPage", "ToolView", "preview_tool_disclosure",
     "MCPToolDescriptor", "ToolCapability", "ToolDiscoveryError", "ToolIndex", "ToolSummary",
     "ToolCategory", "default_tool_index", "discover_tools", "get_tool_schema",
     "BackendContext", "CapabilitySnapshot", "CapabilityStatus", "probe_capabilities",

@@ -532,3 +532,22 @@ CI runner 也能走完所有 MCP 工具:
 1–100，短說明最多 240 字元；搜尋不含完整 schema。每次查詢重查目前身分／唯讀規則；
 基本能力摘要不授予具體參數、root、環境或呼叫權限。Tools → MCP 工具探索提供可取消
 的本機搜尋／結構 Actions。快照保留複製的定義；Beta 契約見 ``docs/MCP_DISCOVERY.md``。
+
+Session 可見性與分頁
+====================
+
+預設仍完整。啟動 stdio／HTTP 前設定 ``JE_AUTOCONTROL_MCP_TOOL_MODE=progressive``
+使用小型核心清單，或 ``static`` 搭配 ``JE_AUTOCONTROL_MCP_TOOL_PROFILE`` 的逗號分隔
+canonical 名稱提供固定清單。``ac_enable_tools``／``ac_disable_tools`` 只改目前逐步
+session，``ac_tool_state`` 讀取名稱／模式／版本。重複操作不重複通知，變更只通知 owner；
+session 結束撤銷視圖／cursor。``JE_AUTOCONTROL_MCP_TOOL_PAGE_SIZE=1..100`` 可明確讓
+完整模式分頁，預設回覆形狀仍相容。``nextCursor``／``snapshotId``／``registryVersion``
+保留舊定義／版本並重查權限。每個 owner 最多八份快照、有效120秒，以及1000個選取工具；
+跨 owner／過期／權限撤銷的 cursor 明確失敗。無狀態請求使用固定完整／靜態清單，
+不提供 session 變更或 cursor；逐步部署在此只列核心工具。
+
+Beta ``ToolView`` 擁有 headless 視圖。``preview_tool_disclosure`` 與對應
+``AC_preview_tool_disclosure``／Builder 預覽隔離本機資料；MCP
+``ac_preview_tool_disclosure`` 預覽實際服務目錄。預覽回傳選取工具完整結構、不保留 cursor。
+Tools 探索 Actions 提供本機模式／靜態名稱預覽、啟用／停用及下一頁；真實部署設定仍須
+明確指定。啟用／預覽不授予執行、root、環境權限。契約見 ``docs/MCP_DISCOVERY.md``。

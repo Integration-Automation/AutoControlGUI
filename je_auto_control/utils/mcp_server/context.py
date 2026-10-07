@@ -14,6 +14,7 @@ from typing import TYPE_CHECKING, Any, Callable, Optional
 
 if TYPE_CHECKING:
     from je_auto_control.utils.mcp_server.discovery import ToolIndex
+    from je_auto_control.utils.mcp_server.disclosure import ToolView
 
 
 class OperationCancelledError(RuntimeError):
@@ -42,6 +43,7 @@ class ToolCallContext:
     )
     cancelled_event: threading.Event = field(default_factory=threading.Event)
     tool_index: Callable[[], ToolIndex] | None = field(default=None, repr=False)
+    tool_view: ToolView | None = field(default=None, repr=False)
 
     @property
     def cancelled(self) -> bool:

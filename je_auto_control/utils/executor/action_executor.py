@@ -3330,6 +3330,18 @@ def _generate_data(schema: Dict[str, Any], count: int = 10,
     return {"rows": rows, "count": len(rows)}
 
 
+def _preview_tool_disclosure(mode: str = 'progressive', names: Optional[List[str] | str] = None,
+                            profile: Optional[List[str] | str] = None) -> Dict[str, object]:
+    """Inspect an isolated local tool view without changing server sessions."""
+    import json
+    from typing import cast
+    from je_auto_control.utils.mcp_server.disclosure import DisclosureMode, preview_tool_disclosure
+    parsed_names = json.loads(names) if isinstance(names, str) else names
+    parsed_profile = json.loads(profile) if isinstance(profile, str) else profile
+    return preview_tool_disclosure(cast(DisclosureMode, mode), parsed_names if parsed_names is not None else (),
+                                   parsed_profile if parsed_profile is not None else ())
+
+
 def _discover_tools(query: str = '', limit: int = 10) -> Dict[str, object]:
     """Search local authorized registry summaries without schemas or execution."""
     from je_auto_control.utils.mcp_server.discovery import discover_tools
@@ -7473,6 +7485,7 @@ class Executor:
             "AC_queue_fail": _queue_fail,
             "AC_queue_stats": _queue_stats,
             "AC_generate_data": _generate_data,
+            "AC_preview_tool_disclosure": _preview_tool_disclosure,
             "AC_discover_tools": _discover_tools,
             "AC_get_tool_schema": _get_tool_schema,
             "AC_mcp_manifest": _mcp_manifest,

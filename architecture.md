@@ -462,3 +462,10 @@ local API/AC/Builder/Tools inspect the default registry. Summaries omit schemas,
 carry reviewed base capabilities and recheck current RBAC/readonly. Reading a
 schema never enables a tool or grants execution/path/env permission. GUI Tools
 loads the inspector lazily and runs its copied-input queries off Qt.
+
+MCP ToolSessions owns per-connection ToolView metadata through ContextVar leases;
+session drop closes the exact accepted view and releases cursors. Full mode keeps
+its original default tools/list shape; progressive/static modes and explicit paging
+are deployment settings. Cursor signatures are per owner, stable snapshots have
+bounded lifetime/count, and standing HTTP notification writers are looked up from
+live session metadata. Preview surfaces never mutate real serving sessions.

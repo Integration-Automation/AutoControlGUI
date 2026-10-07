@@ -185,6 +185,16 @@ class SessionRegistry:
         self._announce(dropped)
         return session
 
+    def stream_writer_for(self, session_id: object) -> Optional[Callable[[str], None]]:
+        """Read a live standing stream without touching idle time or retaining transient writers."""
+        if not isinstance(session_id, str):
+            return None
+        with self._lock:
+            session = self._sessions.get(session_id)
+        if session is None or session.closed.is_set():
+            return None
+        return session.stream_writer
+
     def terminate(self, session_id: Optional[str]) -> Optional[HttpSession]:
         """Drop ``session_id`` and close its stream; None when unknown."""
         if not session_id:
