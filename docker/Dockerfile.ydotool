@@ -43,7 +43,7 @@
 FROM python:3.12-slim AS builder
 
 WORKDIR /src
-COPY pyproject.toml README.md ./
+COPY pyproject.toml README.md je_auto_control_pytest.py ./
 COPY je_auto_control ./je_auto_control
 COPY autocontrol-lsp ./autocontrol-lsp
 RUN pip install --no-cache-dir --only-binary :all: --upgrade "pip==26.0.1" \
@@ -85,6 +85,7 @@ RUN pip install --no-cache-dir --only-binary :all: --upgrade "pip==26.0.1" \
     && rm -rf /wheels
 
 COPY docker/ydotool_verify.py /opt/verify/ydotool_verify.py
+COPY docker/physical_source_verify.py /opt/verify/physical_source_verify.py
 
 # Runs as root on purpose: writing to /dev/uinput and creating the input node
 # both need it, and this image exists to run one verification and exit. It is

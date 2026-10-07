@@ -109,3 +109,10 @@ Explicit `grab_logical(metrics=...)` selects virtual-frame geometry on every
 host; default macOS capture retains per-display Retina normalization. EI helper
 cancellation also retains its socket until the transaction exits, polls reads
 without shortening the total deadline and rejects completion after cancellation.
+
+Docker native source verification uses the public PhysicalRecorder lifecycle
+from an installed wheel against actual ydotool kernel event nodes. A selected-node
+open audit must stay empty; failed start must leave no worker, events or leaked
+descriptors, and repeated close is safe. This establishes injected-source
+exclusion. Physical device capture and GNOME/KDE consent/recovery remain separate
+acceptance cases in WAYLAND_ACCEPTANCE.md.

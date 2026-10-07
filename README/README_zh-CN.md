@@ -416,6 +416,11 @@ macOS Quartz／AppKit 与录制 tap 仅在原生操作时加载，导入及纯 C
 macOS 默认捕获仍逐屏幕转成 Retina points。EI helper 取消也会保留 socket 至
 transaction 退出，以短轮询保留总时限，并拒绝取消后的完成结果。
 
+Docker CI 可手动选择 `d3-native`，执行 sway、EIS、portal、seat 与 uinput
+检查。seat／uinput 镜像用已安装的 wheel 验证真实 ydotool 内核设备会在打开前
+被排除，没有录回事件或遗留描述符；失败日志保存 14 天。执行命令与证据范围见
+[Wayland 验收](../docs/WAYLAND_ACCEPTANCE.md)。
+
 手动运行 `quality.yml` 可选 `verification_scope=native-shortcut`，仅跑 installed-wheel／
 私有 bus 检查；默认会运行全部 quality jobs。
 

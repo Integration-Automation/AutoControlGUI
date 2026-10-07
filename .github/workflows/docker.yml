@@ -16,6 +16,14 @@ on:
       - "pyproject.toml"
       - ".github/workflows/docker.yml"
 
+  workflow_dispatch:
+    inputs:
+      verification_scope:
+        description: Verify D3 native transports and kernel input, or run the complete Docker suite
+        type: choice
+        options: [d3-native, all]
+        default: d3-native
+
 permissions:
   contents: read
 
@@ -46,6 +54,7 @@ jobs:
         run: docker image inspect autocontrol:ci --format='size={{.Size}} bytes'
 
   headless-tests:
+    if: inputs.verification_scope != 'd3-native'
     name: Headless pytest inside the image
     needs: build-image
     runs-on: ubuntu-22.04
@@ -298,6 +307,7 @@ jobs:
           retention-days: 14
 
   x11-verification:
+    if: inputs.verification_scope != 'd3-native'
     name: X11 backend against a real X server
     needs: build-image
     runs-on: ubuntu-22.04
@@ -346,6 +356,7 @@ jobs:
         run: docker run --rm autocontrol-x11:ci
 
   seat-verification:
+    timeout-minutes: 20
     name: ydotool absolute move against a seat that consumes it
     needs: build-image
     runs-on: ubuntu-22.04
@@ -400,9 +411,24 @@ jobs:
       # The container exits with the number of failed checks.
       - name: Verify the absolute move against a real seat
         run: |
-          docker run --rm             --device /dev/uinput             --device-cgroup-rule 'c 13:* rmw'             autocontrol-seat:ci
+          set -o pipefail
+          docker run --rm --device /dev/uinput \
+            --device-cgroup-rule 'c 13:* rmw' \
+            --entrypoint timeout autocontrol-seat:ci \
+            --kill-after=5s 180 /usr/local/bin/autocontrol-seat-verify 2>&1 | tee seat-verification.log
+
+      - name: Preserve seat kernel input verification output
+        if: always()
+        # nosemgrep: yaml.github-actions.security.third-party-action-not-pinned-to-commit-sha.third-party-action-not-pinned-to-commit-sha
+        uses: actions/upload-artifact@v4  # NOSONAR githubactions:S7637
+        with:
+          name: seat-native-verification
+          path: seat-verification.log
+          if-no-files-found: ignore
+          retention-days: 14
 
   ydotool-verification:
+    timeout-minutes: 20
     name: ydotool argv against a real uinput device
     needs: build-image
     runs-on: ubuntu-22.04
@@ -462,7 +488,19 @@ jobs:
       # The container exits with the number of failed checks.
       - name: Verify the ydotool argv against the kernel
         run: |
+          set -o pipefail
           docker run --rm \
             --device /dev/uinput \
             --device-cgroup-rule 'c 13:* rmw' \
-            autocontrol-ydotool:ci
+            --entrypoint timeout autocontrol-ydotool:ci \
+            --kill-after=5s 120 python3 /opt/verify/ydotool_verify.py 2>&1 | tee ydotool-verification.log
+
+      - name: Preserve ydotool kernel input verification output
+        if: always()
+        # nosemgrep: yaml.github-actions.security.third-party-action-not-pinned-to-commit-sha.third-party-action-not-pinned-to-commit-sha
+        uses: actions/upload-artifact@v4  # NOSONAR githubactions:S7637
+        with:
+          name: ydotool-native-verification
+          path: ydotool-verification.log
+          if-no-files-found: ignore
+          retention-days: 14

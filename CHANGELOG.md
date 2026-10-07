@@ -15,6 +15,11 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Fixed
 
+- Docker native CI adds an explicit D3 scope, installed-wheel/kernel virtual-source
+  exclusion in seat/uinput images, bounded verification and retained failure logs.
+  Image builders include the standalone pytest entry point; execution evidence is
+  tracked separately.
+
 - EI helper cancellation retains its descriptor until the transaction exits
   and rejects late replies. macOS loads Quartz/AppKit and the recording tap on
   native use; pure CLI file errors no longer initialize those frameworks.

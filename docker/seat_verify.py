@@ -52,6 +52,8 @@ import subprocess  # nosec B404  # reason: argv-list, fixed tool names, no shell
 import sys
 import tempfile
 import time
+
+from physical_source_verify import verify_virtual_sources
 import traceback
 from typing import Any, Callable, List, Optional, Tuple
 
@@ -460,6 +462,8 @@ def main() -> int:
 
     check("sway's libinput backend is holding the ydotool device",
           lambda: _seat_holds_the_device(pointer_devices()))
+
+    check("physical recording excludes kernel uinput devices before open", verify_virtual_sources)
 
     # Everything about the origin is measured with acceleration switched off,
     # because a scaled move cannot show where it counted from.

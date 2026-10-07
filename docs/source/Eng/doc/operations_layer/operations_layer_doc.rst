@@ -647,3 +647,13 @@ Explicit ``grab_logical(metrics=...)`` selects virtual-frame geometry on every
 host; default macOS capture retains per-display Retina normalization. EI helper
 cancellation also retains its socket until the transaction exits, polls reads
 without shortening the total deadline and rejects completion after cancellation.
+
+Docker kernel source verification
+---------------------------------
+
+Docker CI supports manual ``verification_scope=d3-native`` for sway, EIS, portal,
+seat and uinput checks. Seat/uinput use an installed wheel and real kernel
+ydotool nodes. The recorder must reject them before open, produce no events and
+leave no worker or descriptors; sysfs identity and failure output are retained
+for 14 days. This verifies injected-source exclusion. Physical capture and
+GNOME/KDE consent/key recovery remain separate acceptance cases.

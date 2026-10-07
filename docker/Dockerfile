@@ -12,7 +12,7 @@
 FROM python:3.12-slim AS builder
 
 WORKDIR /src
-COPY pyproject.toml README.md ./
+COPY pyproject.toml README.md je_auto_control_pytest.py ./
 COPY je_auto_control ./je_auto_control
 COPY autocontrol-lsp ./autocontrol-lsp
 RUN pip install --no-cache-dir --only-binary :all: --upgrade "pip==26.0.1" \
@@ -46,7 +46,7 @@ WORKDIR /app
 
 # Bring in the project source. Build context is the repo root, so the
 # COPY paths are relative to that — not to docker/.
-COPY pyproject.toml dev_requirements.txt ./
+COPY pyproject.toml dev_requirements.txt je_auto_control_pytest.py ./
 COPY je_auto_control ./je_auto_control
 COPY autocontrol-lsp ./autocontrol-lsp
 COPY README.md ./

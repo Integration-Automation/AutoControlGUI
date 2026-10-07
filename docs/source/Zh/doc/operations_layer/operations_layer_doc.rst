@@ -598,3 +598,12 @@ macOS Quartz／AppKit 與錄製 tap 僅在原生操作時載入，匯入及純 C
 不初始化這些框架。明確 ``grab_logical(metrics=...)`` 在所有平台採用虛擬畫面幾何；
 macOS 預設擷取仍逐螢幕轉成 Retina points。EI helper 取消也會保留 socket 至
 transaction 退出，以短輪詢保留總時限，並拒絕取消後的完成結果。
+
+Docker 核心來源驗證
+-----------------------
+
+Docker CI 可手動指定 ``verification_scope=d3-native``，執行 sway、EIS、portal、
+seat 與 uinput 檢查。seat／uinput 使用 installed wheel 與真實 ydotool 核心節點。
+錄製器必須在開啟前拒絕它們，不產生事件或遺留 worker／描述符；sysfs 身分及
+失敗輸出保存 14 天。這項證據驗證注入來源排除；實體擷取與 GNOME/KDE 授權、
+鍵態恢復另列人工驗收。

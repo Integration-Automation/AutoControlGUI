@@ -487,3 +487,10 @@ Explicit `grab_logical(metrics=...)` selects virtual-frame geometry on every
 host; default macOS capture retains per-display Retina normalization. EI helper
 cancellation also retains its socket until the transaction exits, polls reads
 without shortening the total deadline and rejects completion after cancellation.
+
+Native recording verification: Docker seat/uinput checks resolve real ydotool
+nodes under `/sys/devices/virtual/input`, exercise the installed-wheel recorder,
+and fail on opening a selected virtual source, accepted recording or FD leakage.
+This covers kernel source exclusion; it does not establish positive physical
+capture or GNOME/KDE consent and key recovery. Manual Docker scope: `d3-native`;
+seat/ydotool native logs are retained for 14 days even on failure.

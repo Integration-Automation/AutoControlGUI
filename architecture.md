@@ -372,3 +372,9 @@ Explicit `grab_logical(metrics=...)` selects virtual-frame geometry on every
 host; default macOS capture retains per-display Retina normalization. EI helper
 cancellation also retains its socket until the transaction exits, polls reads
 without shortening the total deadline and rejects completion after cancellation.
+
+D3 Docker verification shares `docker/physical_source_verify.py` between the
+uinput and sway/libinput seat images. It independently checks kernel identity,
+installed-wheel origin, pre-open exclusion and recorder cleanup, without opening
+physical input devices. Docker CI supports a manual D3 native scope and retains
+seat/uinput failure output alongside existing EIS/portal/compositor artifacts.

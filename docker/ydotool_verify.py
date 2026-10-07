@@ -37,6 +37,8 @@ import struct
 import subprocess  # nosec B404  # reason: argv-list, fixed tool names, no shell
 import sys
 import time
+
+from physical_source_verify import verify_virtual_sources
 import traceback
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
@@ -365,6 +367,9 @@ def main() -> int:
                   "container needs --device-cgroup-rule 'c 13:* rmw'.")
             return 1
         print(f"reading {', '.join(nodes)}\n")
+
+        check("physical recording excludes kernel uinput devices before open",
+              lambda: verify_virtual_sources(nodes))
 
         check("click 0xc0 is BTN_LEFT down then up",
               lambda: _button_check(device, tool, "0xc0",

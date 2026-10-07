@@ -52,3 +52,46 @@ For every failed step retain the artifact, observed capability state and recover
 result. Keep unresolved desktop/device cases in Progress.md and H3. Docker/EIS
 worker tests cover process containment and controlled input, independently from
 the desktop results above.
+
+
+## Docker native checks
+
+On a Linux Docker host with uinput/evdev support, run from the repository root:
+
+```sh
+sudo modprobe uinput
+sudo modprobe evdev
+docker build -f docker/Dockerfile.ydotool -t autocontrol-ydotool:verify .
+docker run --rm --device /dev/uinput --device-cgroup-rule 'c 13:* rmw' autocontrol-ydotool:verify
+docker build -f docker/Dockerfile.seat -t autocontrol-seat:verify .
+docker run --rm --device /dev/uinput --device-cgroup-rule 'c 13:* rmw' autocontrol-seat:verify
+```
+
+The explicit device and character-major rule cover the verification daemon's
+uinput node; these images require no privileged container. Run them on a scratch
+host without other ydotool daemons. They never open physical input devices.
+
+Alternatively dispatch Docker CI on the isolated branch:
+
+```sh
+gh workflow run docker.yml --ref feat/platform-gui-modernization -f verification_scope=d3-native
+```
+
+The manual scope builds the image and runs sway, EIS, portal, seat and ydotool
+checks; normal push/PR behavior still includes the headless and X11 jobs.
+`seat-native-verification` and `ydotool-native-verification` preserve stdout/stderr
+on failure for 14 days. In CI, the owned container process has a 180-second seat
+or 120-second ydotool deadline, with a five-second kill grace period. Existing
+EIS, portal and sway artifacts remain.
+
+Both input checks require nonempty, existing kernel character devices whose
+sysfs identity resolves under `/sys/devices/virtual/input`. They use the actual
+installed-wheel PhysicalRecorder. An audit hook fails any attempted open of a
+selected virtual node; start must report an actionable unsupported state, leave
+no worker, produce no events and leak no descriptor. The JSON result includes
+module origin, Python/kernel version, kernel identities and descriptor counts.
+An empty device list or disabled assertions fails the check.
+
+This establishes kernel-level injected-source exclusion and compositor input
+integration. Positive physical capture, GNOME/KDE's actual consent UI and
+physical keyboard recovery are covered by the separate steps above.
