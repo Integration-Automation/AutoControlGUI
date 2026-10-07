@@ -9,7 +9,7 @@ pixels, so a hit read off it can be clicked directly on a mixed-DPI desktop.
 import os
 from typing import Any, List, Optional, Sequence, Tuple
 
-from je_auto_control.utils.cv2_utils.optional import require_cv2
+from je_auto_control.utils.cv2_utils.optional import require_image_backend
 from je_auto_control.utils.cv2_utils.image_file import read_image
 from je_auto_control.utils.exception.exceptions import ImageNotFoundException
 from je_auto_control.utils.monitor_layout.logical_frame import grab_logical
@@ -63,7 +63,7 @@ def _prepare(image: Any, detect_threshold: float,
             f"detect_threshold must be between 0 and 1, got {detect_threshold!r}")
     if isinstance(image, (str, os.PathLike)) and not os.path.isfile(image):
         raise ImageNotFoundException(f"template image not found: {image}")
-    cv2 = require_cv2()
+    cv2 = require_image_backend()
     grab_image, origin_x, origin_y = grab_logical(screen_region, all_screens=all_screens)
     # pylint: disable-next=import-outside-toplevel  # reason: optional healing provenance avoids import cycles
     from je_auto_control.utils.self_healing.healing_context import record_image_frame
@@ -74,7 +74,8 @@ def _prepare(image: Any, detect_threshold: float,
 
 
 def _draw(frame: Any, boxes: Sequence[Sequence[int]]) -> Any:
-    cv2 = require_cv2()
+    cv2 = require_image_backend()
+    frame = frame.copy()
     for x1, y1, x2, y2 in boxes:
         cv2.rectangle(frame, (int(x1), int(y1)), (int(x2), int(y2)), (0, 0, 255), 2)
     return frame
@@ -101,7 +102,7 @@ def find_image(image: Any, detect_threshold: float = 1.0,
     """
     (frame, scores), template, threshold, origin = _prepare(
         image, detect_threshold, screen_region, all_screens)
-    _min_score, max_score, _min_at, (left, top) = require_cv2().minMaxLoc(scores)
+    _min_score, max_score, _min_at, (left, top) = require_image_backend().minMaxLoc(scores)
     height, width = template.shape[:2]
     found = bool(max_score >= threshold)
     box = [left, top, left + width, top + height] if found else []

@@ -19,18 +19,19 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 
 | 指標 | 數值 |
 | --- | ---: |
-| Python 模組總數（含周邊子專案） | 1,146 |
-| 程式碼總行數 | 167,946 |
+| Python 模組總數（含周邊子專案） | 1,147 |
+| 程式碼總行數 | 168,167 |
 | `je_auto_control/utils/` 子套件數 | 311 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 802 |
 | 套件門面 `__all__` 公開名稱數 | 1,346 |
 | GUI 分頁數（`main_widget` 註冊） | 49 |
 | MCP 工具數（`build_default_tool_registry()` 實測） | 724 |
-| `test_*.py` 測試檔／測試函式 | 746 / 7,768 |
+| `test_*.py` 測試檔／測試函式 | 751 / 7,819 |
 | 範例腳本 | 27 |
 
 **技術基線**：Python ≥ 3.10、MIT 授權、必要相依只有 `je_open_cv`／`opencv-python`／`pillow`／`mss`／
-`defusedxml`／`cryptography`（加上各平台專屬的 pyobjc、python-Xlib）；其餘全部是選用 extras
+`defusedxml`／`cryptography`（依平台標記；Windows arm64 改用 NumPy／Pillow，另有 pyobjc、python-Xlib）；
+其餘全部是選用 extras
 （`gui`、`webrtc`、`signaling`、`discovery`、`pdf`、`office`、`fuzzy`、`s3`、`locale`、`audio`）。
 大量子系統刻意只用標準庫實作（REST 伺服器、JSON Schema、JWT、TOTP、WebSocket 框架、ACME、
 USB/IP 協定、Prometheus 指標），以維持這條輕相依基線。
@@ -182,7 +183,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `wrapper/_platform_wayland.py` | 58 | Wayland 後端組裝（libei／ydotool／grim）。 |
 | `wrapper/auto_control_mouse.py` | 494 | 滑鼠 API：位置讀寫、按下／放開／點擊、捲動、座標前處理、送訊息給指定視窗。 |
 | `wrapper/auto_control_keyboard.py` | 413 | 鍵盤 API：鍵表查詢、按下／放開／敲擊、`write` 字串、`hotkey` 組合鍵、按鍵狀態偵測。**`type_keyboard` 與 `hotkey` 的放開走 `finally`**（見下）。 |
-| `wrapper/auto_control_screen.py` | 111 | 螢幕 API：`screen_size`、`screenshot`（可指定區域）、`get_pixel`。 |
+| `wrapper/auto_control_screen.py` | 110 | 螢幕 API：`screen_size`、`screenshot`（可指定區域）、`get_pixel`。 |
 | `wrapper/auto_control_image.py` | 83 | 影像 API：`locate_all_image`、`locate_image_center`、`locate_and_click`。 |
 | `wrapper/auto_control_record.py` | 124 | 錄製 API：`record`／`stop_record`／`record_to_json`（支援 stop event 與逾時）。 |
 | `wrapper/auto_control_window.py` | 291 | 視窗管理門面：列舉、尋找、聚焦、等待、關閉、顯示狀態、幾何、所屬行程 PID、依行程列舉／最小化視窗、不搶焦點的投遞式輸入（目前僅 Windows 實作）。 |
@@ -310,14 +311,14 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.2 框架基礎設施
 
-> 11 個套件、約 2,845 行。
+> 11 個套件、約 2,846 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
 | `utils/callback/` | 209 | Observer 模式：`callback_executor` 以字串名觸發功能，執行後呼叫回呼 |
 | `utils/config_bundle/` | 424 | 使用者設定的單檔匯出／匯入 |
 | `utils/critical_exit/` | 132 | 監看緊急停止鍵的守護執行緒，用於中止失控腳本 |
-| `utils/diagnostics/` | 360 | 跨子系統的「一切正常嗎」健檢，附 `python -m` 進入點 |
+| `utils/diagnostics/` | 361 | 跨子系統的「一切正常嗎」健檢，附 `python -m` 進入點 |
 | `utils/dbus_client/` | 714 | 只用標準函式庫的 D-Bus session bus 客戶端。原本在 `linux_wayland/` 為 portal 交握而寫，AT-SPI 無障礙後端成為第二個使用者後搬到這裡（`utils/` 在分層上在各 OS 套件之上） |
 | `utils/exception/` | 226 | **例外階層根**。所有錯誤繼承 `AutoControlException`，加上集中式錯誤訊息字串（`exception_tags`） |
 | `utils/failure_bundle/` | 229 | 可攜、已遮蔽的失敗診斷 ZIP（截圖 + 診斷 + log 尾段） |
@@ -379,7 +380,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.5 影像辨識與畫面分析
 
-> 37 個套件、約 6,204 行。
+> 37 個套件、約 6,424 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -389,7 +390,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/color_region/` | 124 | 以顏色定位畫面區域（遮罩 + 連通元件） |
 | `utils/color_stats/` | 103 | 區域顏色統計：平均色與主色 |
 | `utils/coordinate_space/` | 93 | 模型網格座標與實體像素之間的座標空間對映 |
-| `utils/cv2_utils/` | 871 | OpenCV 基礎層：擷取後端選擇（`screen_grabber`，Pillow／mss 或平台後端）、截圖、`[left, top, right, bottom]` 區域擷取（`region_capture`，Windows／macOS 經 `grab_logical`，負座標與 Retina point 區域統一）、樣板比對（走 `grab_logical`，涵蓋所有螢幕）、螢幕錄影、影片錄製（兩者都經 `frame_clock` 依 fps 配速）、連通元件、影像堆疊的取用口（`optional`，Windows arm64 沒有 wheel 時語意報錯）、非 ASCII 路徑也讀寫得到的影像檔存取（`image_file`） |
+| `utils/cv2_utils/` | 1,091 | OpenCV 基礎層：擷取後端選擇（`screen_grabber`，Pillow／mss 或平台後端）、截圖、`[left, top, right, bottom]` 區域擷取（`region_capture`，Windows／macOS 經 `grab_logical`，負座標與 Retina point 區域統一）、樣板比對（走 `grab_logical`，涵蓋所有螢幕）、螢幕錄影、影片錄製（兩者都經 `frame_clock` 依 fps 配速）、連通元件、影像後端延遲選擇（`optional`，OpenCV 優先，缺少時用有界 NumPy/Pillow；進階原生能力保留型別錯誤）、非 ASCII 路徑也讀寫得到的影像檔存取（`image_file`） |
 | `utils/edge_lines/` | 131 | 以 Hough 轉換偵測線條／格線／分隔線 |
 | `utils/edge_match/` | 115 | 邊緣形狀（Chamfer／距離轉換）樣板比對 |
 | `utils/feature_match/` | 143 | ORB 特徵比對：在旋轉／縮放／主題變更下定位樣板 |
@@ -472,7 +473,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.8 元素定位、自我修復與智慧等待
 
-> 23 個套件、約 5,411 行。
+> 23 個套件、約 5,412 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -495,7 +496,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/observation_delta/` | 122 | token 預算內的觀察差異：兩個 UI 影格之間變了什麼 |
 | `utils/screen_state/` | 191 | 語義畫面狀態：快照／差異與結構化畫面描述 |
 | `utils/scroll_find/` | 103 | 捲動直到目標影像／文字可見 |
-| `utils/self_healing/` | 1,344 | 自癒定位、固定畫面版本比較與標註指標、schema 2 稽核來源、不可變樣板修訂及明確接受／還原 |
+| `utils/self_healing/` | 1,345 | 自癒定位、固定畫面版本比較與標註指標、schema 2 稽核來源、不可變樣板修訂及明確接受／還原 |
 | `utils/semantic_recording/` | 498 | 為錄製內容加上語義錨點，支援換機重播與自癒重播 |
 | `utils/settle_detector/` | 79 | 以純函式介面判定 UI 是否已靜止 |
 | `utils/smart_waits/` | 672 | 智慧等待：以影格差異取代 `time.sleep` |
@@ -852,7 +853,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `rest_registry.py` | 75 | 保存執行中 REST 伺服器的行程級單例。 |
 | `__main__.py` | 56 | `python -m je_auto_control.utils.rest_api` 進入點。 |
 
-#### `utils/self_healing/`（1,344 行）— 固定畫面比較與候選修訂
+#### `utils/self_healing/`（1,345 行）— 固定畫面比較與候選修訂
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -861,12 +862,28 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `evaluation_api.py` | 89 | JSON adapters for comparable healing versions and reviewed template revisions. |
 | `evaluation_dataset.py` | 93 | Load root-checked labelled frames and export JSON plus shareable HTML reports. |
 | `evaluation_models.py` | 253 | Immutable fixed-frame inputs, predictions and labelled comparison reports. |
-| `frame_strategies.py` | 85 | Template and VLM strategies that consume an already captured immutable frame. |
+| `frame_strategies.py` | 86 | Template and VLM strategies that consume an already captured immutable frame. |
 | `heal_log.py` | 130 | Append-only JSON-lines log of self-healing locator events. |
 | `healing_context.py` | 74 | Scope locator versions and keep detection evidence separate from verification. |
 | `locator.py` | 254 | Self-healing locator: image template first, VLM fallback on miss. |
 | `report_views.py` | 60 | Read-only metric and failure rows shared by HTML exports and GUI reports. |
 | `template_revisions.py` | 186 | Explicitly validate, accept and revert immutable candidate template revisions. |
+
+#### `utils/cv2_utils/` - image backend seam
+
+| 模組 | 行數 | 職責 |
+| --- | ---: | --- |
+| `screen_grabber.py` | 229 | 擷取後端與原點。 |
+| `screenshot.py` | 79 | Pillow 螢幕擷取。 |
+| `region_capture.py` | 40 | 區域擷取。 |
+| `template_detection.py` | 151 | 共用後端的樣板比對與原點映射。 |
+| `screen_record.py` | 124 | OpenCV 螢幕錄影。 |
+| `video_recording.py` | 76 | OpenCV 影片錄製。 |
+| `frame_clock.py` | 50 | 影片配速。 |
+| `blobs.py` | 34 | OpenCV 連通元件。 |
+| `optional.py` | 71 | 影像後端延遲選擇與型別錯誤。 |
+| `image_file.py` | 52 | 選定後端的非 ASCII 影像檔 I/O。 |
+| `numpy_backend.py` | 185 | 資源預算內的 NumPy/Pillow 樣板比對、轉換與檔案 I/O。 |
 
 #### 其他多檔子套件
 
@@ -887,7 +904,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `semantic_recording/` | `enrich.py`（加錨點）、`replay.py`（換機重播）、`self_healing.py`（自癒重播） |
 | `tls_acme/` | `challenge.py`、`keys.py`、`renewal.py` |
 | `pytest_plugin/` | `plugin.py`（舊入口相容轉匯出）、`keywords.py`、`bdd_steps.py`（Gherkin） |
-| `cv2_utils/` | `screen_grabber.py`、`screenshot.py`、`region_capture.py`、`template_detection.py`、`screen_record.py`、`video_recording.py`、`frame_clock.py`、`blobs.py`、`optional.py`、`image_file.py` |
+| `cv2_utils/` | `screen_grabber.py`、`screenshot.py`、`region_capture.py`、`template_detection.py`、`screen_record.py`、`video_recording.py`、`frame_clock.py`、`blobs.py`、`optional.py`、`image_file.py`、`numpy_backend.py` |
 | `action_lint/` | `linter.py`、`schema.py`、`__main__.py`（CI 使用） |
 | `time_travel/` | `controller.py`、`player.py` |
 | `dag/` | `graph.py`、`runner.py` |
@@ -1152,7 +1169,7 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `utils/usb/` | 17 | 4,666 |
 | `je_auto_control/`（頂層 3 檔） | 3 | 2,563 |
 | `utils/accessibility/` | 14 | 3,143 |
-| `wrapper/` | 20 | 3,840 |
+| `wrapper/` | 20 | 3,839 |
 | `windows/` | 23 | 2,101 |
 | `utils/rest_api/` | 8 | 1,919 |
 | `utils/agent/` | 9 | 2,032 |
@@ -1165,8 +1182,8 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `osx/` | 17 | 925 |
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 863 |
-| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 728 | 62,052 |
-| **總計** | **1,138** | **167,816** |
+| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 729 | 62,274 |
+| **總計** | **1,139** | **168,037** |
 
 
 Crypto optional-dependency failures use CryptoDependencyError from utils/exception:

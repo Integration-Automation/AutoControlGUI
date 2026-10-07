@@ -132,7 +132,8 @@ def _check_optional_deps() -> Check:
         ("usb.core", "USB enumeration via pyusb"),
         ("pyaudio", "microphone capture"),
         ("pytesseract", "OCR engine"),
-        ("cv2", "image recognition"),
+        ("cv2", "OpenCV processing / video"),
+        ("numpy", "fallback image matching / BGR conversion"),
         ("PySide6", "GUI"),
         ("sqlite3", "run history / checkpoints / work queue / SQL sources"),
     )

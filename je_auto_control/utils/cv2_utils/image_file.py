@@ -1,4 +1,4 @@
-"""Read and write image files with OpenCV at any path, including non-ASCII ones.
+"""Read and write image bytes with the selected backend at non-ASCII paths.
 
 ``cv2.imread`` and ``cv2.imwrite`` go through the C locale on Windows: a path
 with non-ASCII characters (a Chinese user name, a folder like ``測試``) makes
@@ -8,13 +8,15 @@ decoding the bytes ourselves sidesteps the file name entirely.
 """
 from typing import Any
 
+from je_auto_control.utils.cv2_utils.optional import require_image_backend
+
 
 def read_image(path: Any, flags: int) -> Any:
     """Decode the image file at ``path`` with ``cv2.imdecode`` ``flags``.
 
     Raises ``ValueError`` when the file cannot be read or decoded.
     """
-    import cv2
+    cv2 = require_image_backend()
     import numpy as np
     try:
         with open(str(path), "rb") as handle:
@@ -38,7 +40,7 @@ def write_image(path: Any, image: Any) -> None:
     """
     import os
 
-    import cv2
+    cv2 = require_image_backend()
     extension = os.path.splitext(str(path))[1] or ".png"
     ok, encoded = cv2.imencode(extension, image)
     if not ok:

@@ -6,7 +6,7 @@ import math
 from dataclasses import dataclass
 from typing import ClassVar, Optional
 
-from je_auto_control.utils.cv2_utils.optional import require_cv2
+from je_auto_control.utils.cv2_utils.optional import require_image_backend
 from je_auto_control.utils.cv2_utils.template_detection import _match_frame, _SCORE_EPSILON
 from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.path_guard.policy import scoped_path
@@ -35,7 +35,7 @@ class TemplateFrameStrategy:
         """Return the best frame-pixel match, or an image-strategy miss."""
         # pylint: disable-next=import-outside-toplevel  # reason: Pillow is loaded only for image evaluation
         from PIL import Image
-        cv2 = require_cv2()
+        cv2 = require_image_backend()
         path = scoped_path(self.template_path, operation='read')
         with Image.open(io.BytesIO(sample.frame)) as frame:
             _, scores, template = _match_frame(frame.convert('RGB'), str(path), cv2)
@@ -47,7 +47,8 @@ class TemplateFrameStrategy:
             return LocatorPrediction(None, 'image')
         height, width = template.shape[:2]
         return LocatorPrediction((int(position[0]) + int(width) // 2,
-                                  int(position[1]) + int(height) // 2), 'image', backend='opencv')
+                                  int(position[1]) + int(height) // 2), 'image',
+                                 backend=getattr(cv2, 'BACKEND_NAME', 'opencv'))
 
 
 @dataclass(frozen=True)

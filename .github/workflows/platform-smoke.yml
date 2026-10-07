@@ -27,18 +27,18 @@ jobs:
         #                    back to building from source and CMake could not
         #                    configure for ARM64. Twelve minutes, then failure.
         #   cryptography   — wheels stop at 46.0.3; 46.0.4 onwards ship none.
-        #                    Our floor is >=48.0.1 and that is a security floor
-        #                    (GHSA-537c-gmf6-5ccf), so it cannot be lowered.
+        #                    Our floor is >=50.0.0 and that is a security floor
+        #                    (GHSA-g6cj-pr64-35w5), so it cannot be lowered.
         #
         # Nothing in the package imports either one at import time, so what
         # this square proves is real: the install succeeds and the stable API
-        # works. Image matching, action signing, ACME and encrypted recording
-        # do not work there, and Progress.md says so. Re-check upstream in
+        # works. NumPy/Pillow supports matching and BGR conversion; advanced
+        # OpenCV/video and crypto operations remain unavailable. Re-check upstream in
         # about ten seconds, no runner required:
         #
         #   pip install --dry-run --only-binary=:all: --platform win_arm64 \
         #       --python-version 3.12 --target /tmp/probe \
-        #       'opencv-python>=4.8,<6' 'cryptography>=48.0.1'
+        #       'opencv-python>=4.8,<6' 'cryptography>=50.0.0'
         #
         # When both resolve, drop the markers from pyproject.toml.
         os: [windows-2022, ubuntu-22.04, macos-14, ubuntu-22.04-arm, windows-11-arm]
@@ -55,6 +55,12 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - run: python -m pip install -e .  # NOSONAR githubactions:S8544  # reason: installs the checked-out project itself, there is no upstream version to lock
+      - name: Install arm64 image verification tooling
+        if: matrix.os == 'windows-11-arm'
+        run: python -m pip install pytest==9.1.1
+      - name: Verify arm64 image matching and BGR conversion without desktop input
+        if: matrix.os == 'windows-11-arm'
+        run: python -m pytest -q test/unit_test/headless/test_arm64_image_backend.py
       # The X11 backend connects to a display at import time, so Linux
       # runs need a virtual one.
       - name: Install a virtual display (Linux)

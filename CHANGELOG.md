@@ -15,6 +15,13 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Added
 
+- NumPy/Pillow fallback for grayscale normalized image matching, BGR screenshots,
+  non-ASCII image file I/O and fixed-frame healing. Windows arm64 on Python 3.11+
+  installs NumPy 2.4.6; frame/FFT budgets and typed dependency errors replace
+  unavailable OpenCV in those operations. Advanced OpenCV/video and safe crypto
+  keep their native requirements. Stable/dev metadata now shares the same dependency
+  markers, extras, entry points and package data.
+
 - Process-owned Wayland libei sessions isolate native crashes and reclaim failed
   handshakes. Bounded JSON IPC rejects malformed batches and stale replies;
   timeout/cancellation ends the grant without replay. Normal shutdown releases

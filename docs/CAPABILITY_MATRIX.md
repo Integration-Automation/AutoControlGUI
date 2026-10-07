@@ -403,5 +403,29 @@ and EIS disconnect. Fifty permission round trips measured p50 0.18 ms and
 p95 0.25 ms on that container; these are transport measurements rather than
 desktop response times. Unit tests also cover Windows socket sharing, typed
 dependency errors, stale replies and concurrent cancellation. This does not
-verify physical GNOME/KDE key-state recovery after crashes; D2 arm64 alternatives
-and D3/H3 desktop acceptance remain pending.
+verify physical GNOME/KDE key-state recovery after crashes; D3/H3 desktop
+acceptance remains pending.
+
+NumPy/Pillow image backend (D2)
+------------------------------
+
+The shared image seam prefers OpenCV and lazily selects NumPy/Pillow when it
+is absent. Windows arm64 installs NumPy 2.4.6 on Python 3.11+; binary-only
+dependency resolution succeeded for CPython 3.11, 3.12, 3.13 and 3.14.
+OpenCV and cryptography >=50.0.0 still fail binary resolution on that platform;
+the safe crypto floor and shared exclusion markers remain in both distributions.
+
+| Capability | NumPy/Pillow implementation | Evidence |
+| --- | --- | --- |
+| Template search, including negative origins and multi-match previews | Gray TM_CCOEFF_NORMED, uint8/float32 arrays or 8-bit image files | Controlled OpenCV-blocked tests; seeded scores and tile edges compared with OpenCV on Windows x64 |
+| BGR screenshots | RGB/RGBA conversion preserving uint8 ndarray output | Controlled capture fixture; RGB/gray conversion compared with OpenCV |
+| Image files and preview | Pillow decode/encode with non-ASCII paths; writable preview copies | Controlled PNG round trip and immutable gray-frame tests |
+| Fixed-frame self-healing | Same image seam; prediction backend identifies numpy-pillow | Existing self-healing regression contracts |
+| General OpenCV processing and video | Requires OpenCV/je_open_cv | Strict backend accessors report typed dependency errors |
+| Native Windows arm64 execution | Platform smoke includes image tests without desktop input | Pending hosted-runner evidence in H3; wheel resolution is not CPU execution |
+
+Frames are bounded at 16,777,216 pixels and each tiled FFT at 4,194,304 cells.
+Unsupported fallback methods, dtype, decode format or scratch budget raise
+framework image errors. Correlation scores preserve the normalized-coefficient
+contract within the tested tolerance; they are not promised to be bit-identical.
+Stable and development package install/build declarations are checked for parity.

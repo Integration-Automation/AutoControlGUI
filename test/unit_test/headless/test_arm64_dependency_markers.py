@@ -144,3 +144,14 @@ def test_the_marker_excludes_exactly_one_platform(
             f"on {label}, {name} evaluates to {not wanted} — expected "
             f"{wanted}. The marker excludes the wrong set of platforms."
         )
+
+
+@pytest.mark.parametrize("version", ["3.10", "3.11", "3.12", "3.13", "3.14"])
+@pytest.mark.parametrize("label", sorted(ENVIRONMENTS))
+def test_numpy_fallback_is_installed_only_on_supported_windows_arm64(label, version):
+    from packaging.requirements import Requirement
+
+    dependency = Requirement(_requirement("numpy"))
+    assert str(dependency.specifier) == "==2.4.6"
+    environment = dict(ENVIRONMENTS[label], python_version=version)
+    assert dependency.marker.evaluate(environment) is (label == "windows arm64" and version != "3.10")

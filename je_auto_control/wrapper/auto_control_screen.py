@@ -1,7 +1,7 @@
 import sys
 from typing import Any, Optional, Tuple
 
-from je_auto_control.utils.cv2_utils.optional import require_cv2
+from je_auto_control.utils.cv2_utils.optional import require_image_backend
 from je_auto_control.utils.cv2_utils.screenshot import pil_screenshot
 from je_auto_control.utils.exception.exception_tags import screen_get_size_error_message
 from je_auto_control.utils.exception.exception_tags import screen_screenshot_error_message
@@ -45,9 +45,8 @@ def screenshot(file_path: Optional[str] = None,
     # Spelled out rather than locals(): the imports below land in locals() too,
     # so the recorded parameters would carry two module objects.
     param = {"file_path": file_path, "screen_region": screen_region}
-    # require_cv2 first: without the OpenCV wheel there is no NumPy either,
-    # so its ModuleNotFoundError would be the one the caller ended up seeing.
-    cv2 = require_cv2()
+    # Resolve the conversion backend before importing its optional array dependency.
+    cv2 = require_image_backend()
     import numpy as np  # noqa: E402  # reason: kept off the facade's import path
     try:
         record_action_to_list("AC_screenshot", param)

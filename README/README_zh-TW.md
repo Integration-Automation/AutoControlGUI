@@ -48,12 +48,11 @@ pip install je_auto_control[gui]       # 加上 PySide6 桌面應用程式
 | `fuzzy` / `locale` | `rapidfuzz` 模糊比對、`babel` 地區解析 |
 | `s3` / `audio` | S3 產出物儲存、系統音量控制 |
 
-**Windows arm64** 裝得起來也跑得起來，少的是上游在那裡發不出來的那些：
-`opencv-python` 與 `cryptography` 都沒發 `win_arm64` wheel。所以 `find_image*`、
-`screenshot()`（OpenCV／BGR 那一支——Pillow 截圖仍可用）、秘密金庫、動作檔加密、
-ACME／TLS 與加密錄影會拋出指名缺哪個 wheel 的錯誤，而不是難以追查的失敗。
-滑鼠、鍵盤、螢幕尺寸、視窗管理、無障礙樹、動作執行器、MCP／REST／TCP 伺服器
-與 GUI 都正常——這是實測的，不是推論的。其他平台不受影響。
+**Windows arm64** 的 `find_image*`、BGR `screenshot()` 與固定畫面自愈使用
+NumPy／Pillow 後端，基本安裝包含 NumPy 2.4.6。進階 OpenCV 處理／影片與安全版本
+cryptography 仍缺上游 wheel；秘密金庫、動作簽章／加密、ACME／TLS 與加密錄影
+仍不可用。共用後端的相依錯誤屬於框架例外家族。platform smoke job 已加入
+原生 arm64 影像測試；本機替代後端測試會封鎖 OpenCV，並保留既有契約。
 
 **系統需求：** Python ≥ 3.10（Windows arm64≥ 3.11，CPython 官方建置從那裡開始）。
 Linux 請先安裝建置前置套件：
@@ -262,6 +261,13 @@ RemoteDesktopHost(token="tok", ip_allowlist=["10.0.0.0/8", "192.168.1.100"])
 | Android | adb + uiautomator2 | ✅ | ✅ | — | — |
 | iOS | WebDriverAgent / facebook-wda | ✅ | ✅ | — | — |
 
+影像比對與 `screenshot()` 優先使用 OpenCV；缺少時使用 NumPy／Pillow 後端。
+Windows arm64 的 Python 3.11+ 會安裝 NumPy 2.4.6。正規化灰階比對、BGR 截圖陣列、
+影像檔解碼／編碼、比對預覽及固定畫面自愈沿用既有 Python／AC／GUI／MCP 入口。
+替代後端接受 uint8／float32 陣列與 8-bit 影像檔；畫面最多 16,777,216 像素，
+每個分塊 FFT 最多 4,194,304 格，超出預算或不支援的操作會拋出框架型別錯誤。
+進階 OpenCV 處理／影片與加密／簽章仍需其原生相依。
+
 ¹ macOS 的錄製走 Quartz event tap，需要**輔助使用**權限
 （系統設定 → 隱私權與安全性 → 輔助使用）。沒有授權時會直接拋出並指名
 缺的是哪個權限，而不是安靜地錄到一個空的 session。
@@ -269,7 +275,7 @@ RemoteDesktopHost(token="tok", ip_allowlist=["10.0.0.0/8", "192.168.1.100"])
 ² BSD 直接跑同一套 X11 後端——同一個 X server、同一個 `python-Xlib`，而輸入、
 錄製與視窗管理就只相依這一個套件。`freebsd` CI job 在真的 FreeBSD 14 上驅動真的
 輸入，再從 X server 讀回來；OpenBSD 與 NetBSD 走同一條程式路徑，只是沒有 CI
-runner。唯一的例外是螢幕擷取，而卡的是打包不是平台：它走 Pillow／mss 與 OpenCV，
+runner。唯一的例外是螢幕擷取，而卡的是打包不是平台：它走 Pillow／mss 與 OpenCV 或 NumPy 轉換，
 而 `opencv-python`、`pillow`、`cryptography` 都沒有發 FreeBSD wheel。從 ports
 建起來之後，擷取、影像比對、OCR 與動作加密也都能用——`import je_auto_control`
 本身已經不需要它們任何一個。

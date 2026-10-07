@@ -2,8 +2,15 @@
 圖片辨識
 ========
 
-AutoControl 使用 OpenCV 模板匹配技術在螢幕上定位 UI 元素。
+AutoControl 優先使用 OpenCV 模板匹配技術在螢幕上定位 UI 元素。
 可用於尋找按鈕、圖示或其他視覺元素並與之互動。
+
+缺少 OpenCV 時，NumPy／Pillow 後端提供正規化灰階樣板比對、BGR 截圖陣列、
+影像檔讀寫、預覽及固定畫面自愈。Windows arm64 的 Python 3.11+ 會安裝
+NumPy 2.4.6；既有 Python、``AC_*``、GUI 與 MCP 呼叫沿用同一後端選擇。
+畫面最多 16,777,216 像素，每個分塊 FFT 最多 4,194,304 格。
+支援 uint8／float32 陣列與 8-bit 影像檔；不支援的操作或預算會拋出框架型別錯誤。
+進階 OpenCV 處理與影片仍相依 OpenCV，cryptography 的安全下限不變。
 
 定位所有匹配
 ============

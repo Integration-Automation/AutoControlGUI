@@ -54,15 +54,13 @@ Optional extras, installed only when you need them:
 | `fuzzy` / `locale` | `rapidfuzz` matching, `babel` locale parsing |
 | `s3` / `audio` | S3 artifact store, system volume control |
 
-**Windows on arm64** installs and runs, minus what upstream cannot ship
-there: neither `opencv-python` nor `cryptography` publishes a `win_arm64`
-wheel. So `find_image*`, `screenshot()` (the OpenCV/BGR one — the Pillow
-capture still works), the secret vault, action-file encryption, ACME/TLS
-and encrypted recording each raise a message naming the missing wheel
-instead of failing obscurely. Mouse, keyboard, screen size, window
-management, the accessibility tree, the action executor, the MCP/REST/TCP
-servers and the GUI all work — measured, not assumed. Every other platform
-is unaffected.
+**Windows on arm64** uses the NumPy/Pillow backend for `find_image*`, BGR
+`screenshot()` and fixed-frame healing. Its base install includes NumPy 2.4.6.
+Advanced OpenCV processing/video and safe cryptography still lack upstream
+wheels; the secret vault, action signing/encryption, ACME/TLS and encrypted
+recording remain unavailable. Shared backend dependency errors belong to the
+framework exception family. The platform smoke job includes native arm64 image
+tests; local fallback tests block OpenCV and preserve the existing contracts.
 
 **Requirements:** Python ≥ 3.10 (≥ 3.11 on Windows arm64, which is where
 CPython's official builds for it start). On Linux, install build
@@ -282,6 +280,15 @@ RemoteDesktopHost(token="tok", ip_allowlist=["10.0.0.0/8", "192.168.1.100"])
 | Android | adb + uiautomator2 | ✅ | ✅ | — | — |
 | iOS | WebDriverAgent / facebook-wda | ✅ | ✅ | — | — |
 
+Image matching and `screenshot()` prefer OpenCV and use a NumPy/Pillow backend
+when OpenCV is absent. Windows arm64 installs NumPy 2.4.6 on Python 3.11+.
+Normalized grayscale matching, BGR screenshot arrays, file decoding/encoding,
+match previews and fixed-frame healing use existing Python/AC/GUI/MCP entry
+points. The fallback accepts uint8/float32 arrays and 8-bit image files,
+limits frames to 16,777,216 pixels and each tiled FFT to 4,194,304 cells, and
+reports a typed error for unsupported budgets or operations. Advanced OpenCV
+processing/video and encryption/signing retain their native dependencies.
+
 ¹ macOS recording captures through a Quartz event tap and needs
 **Accessibility** permission (System Settings → Privacy & Security →
 Accessibility). Without it recording raises and names the permission
@@ -292,7 +299,7 @@ rather than returning an empty session.
 management have. A `freebsd` CI job drives real input on a real FreeBSD 14 and
 reads it back off the X server; OpenBSD and NetBSD take the same code path but
 have no CI runner. Screen capture is the exception, and the reason is
-packaging rather than the platform: it goes through Pillow/mss and OpenCV, and
+packaging rather than the platform: it uses Pillow/mss with OpenCV or NumPy conversion, and
 `opencv-python`, `pillow` and `cryptography` publish no FreeBSD wheels. Build
 those from ports and capture, image matching, OCR and action encryption work
 too — `import je_auto_control` no longer requires any of them.

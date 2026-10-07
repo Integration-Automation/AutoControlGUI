@@ -8,8 +8,8 @@
 `utils/{mcp_server,executor}/` 與型別／文件驗證。
 核准設計：[跨平台自動化與 GUI 改版](docs/superpowers/specs/2026-10-02-platform-gui-modernization-design.md)。
 實作計畫：[分階段交付計畫](docs/superpowers/plans/2026-10-02-modernization-index.md)，已核准，依序實作。
-現有 `[Answer]` 決策沿用；後續交付包含 D2 的 arm64 backend、D3、E–H 與完整整合驗收。
-從 D2 的 arm64 backend 與 D3 接續原有計畫；不額外新增付費型功能。既有 API 介面及相關修正繼續，
+現有 `[Answer]` 決策沿用；後續交付包含 D3、E–H 與完整整合驗收。
+從 D3 接續原有計畫；不額外新增付費型功能。既有 API 介面及相關修正繼續，
 目前以本機／離線測試驗證；缺少真實 API 條件的既有項目保留待驗證。
 
 **只記未完成的事。** 完成的工作記在 [docs/updates/](docs/updates/README.md)（每月一個批次檔，
@@ -50,69 +50,12 @@
 
 ---
 
-## Windows arm64:裝得起來了，但少了影像與加密
+## Windows arm64：上游 OpenCV／影片與安全 crypto wheel
 
-`TODO` — 上游仍未發 wheel（`opencv-python`、`cryptography`），但安裝本身不再是卡點
-
-這一項曾經是 `BLOCKED`，而那個判斷只對一半。上游確實沒有發 wheel，
-這件事到今天（2026-08-20）重新實測依舊成立；但「裝不起來」卡的不是程式，
-是 `pyproject.toml` 無條件要求那兩個套件。實測：把 `cryptography`、`cv2`、
-`je_open_cv`、`numpy`、`PIL` 五個全擋掉之後，`import je_auto_control`、executor、
-MCP 工具表、`cli`、`api.generate_code`、`api.create_failure_bundle` **全部照常跑**。
-
-所以修法是一個 PEP 508 環境標記，三個相依共用同一個：
-
-```
-sys_platform != 'win32' or platform_machine != 'ARM64'
-```
-
-`windows-11-arm` 已經回到 `platform-smoke.yml` 的矩陣（只跑 3.14，CPython 的
-官方 win-arm64 build 從 3.11 才有）。其他平台拿到的東西一個位元都沒變。
-
-### 還沒有答案的：Windows arm64 上這些功能不能用
-
-裝得起來不等於功能齊。該平台上以下四組會拋帶提示的錯誤，而不是默默失效：
-
-| 功能 | 缺的是 | 錯誤形式 |
-| --- | --- | --- |
-| 影像比對、截圖轉 BGR、螢幕錄影 | `opencv-python`／`je_open_cv` | `utils/cv2_utils/optional.py` 的 `require_cv2()`／`require_je_open_cv()` 拋 `RuntimeError` |
-| 動作檔加密（`action_signing`） | `cryptography` | `_fernet_types()` 拋 `RuntimeError`（Ed25519 簽章同樣需要 cryptography，匯入仍延遲） |
-| 秘密金庫（`${secrets.NAME}`） | `cryptography` | 同上 |
-| ACME／TLS 發證、加密錄影 | `cryptography` | 模組層 `ImportError` 轉述（照 `webrtc_transport` 慣例） |
-
-這四組在 arm64 上能不能回來，**完全取決於上游**：
-
-| 依賴 | win_arm64 | 實測（2026-08-20） |
-| --- | --- | --- |
-| `opencv-python>=4.8,<6` | **沒有** | 任何版本都沒有，pip 回的是 `from versions: none`。`je_open_cv` 自己是純 Python，但相依 opencv-python，所以一起卡——標記也必須一起下。 |
-| `cryptography>=50.0.0` | **沒有** | wheel 只出到 **46.0.3**，46.0.4 起上游就不再發 win_arm64。而 `>=50.0.0` 是 347ec1e 為了 GHSA-g6cj-pr64-35w5（moderate；50.0.0 修復）訂的**安全下限**，不能為了 arm64 降回去。 |
-| `pillow==12.3.0` | 有 | `pillow-12.3.0-cp3xx-win_arm64.whl` 一直都在。**曾經被寫成卡點，那是猜的，它從來不是。** |
-| `mss`／`defusedxml` | 有 | 純 Python。這三個加上 Pillow 就是 arm64 實際裝到的全部。 |
-| `PySide6==6.11.1`／`qt-material==2.17` | 有 | `[gui]` extra 在 arm64 上裝得起來。 |
-| `aiortc` | **沒有** | 卡在傳遞相依 `google-crc32c`，與本專案的選擇無關；`av` 自己有 wheel。 |
-
-重驗指令（不需要 arm64 機器，也不需要 runner）：
-
-```bash
-pip install --dry-run --only-binary=:all: --platform win_arm64 --python-version 3.12 --target /tmp/probe 'opencv-python>=4.8,<6' 'cryptography>=50.0.0'
-```
-
-兩行 `ERROR: No matching distribution` 就是現況。**哪天其中一行不見了，就把
-`pyproject.toml` 上那個標記拿掉**（三行一起），
-`test/unit_test/headless/test_arm64_dependency_markers.py` 會帶著你改完。
-
-注意一個驗證上的陷阱：**`pip --platform` 不會換掉 marker 的評估環境**，
-它只影響 wheel 相容性標籤，所以拿本機做 `--dry-run` **驗不到標記的效果**（兩個
-套件依舊會被要求）。能驗的是兩件事：直接評估 marker（上面那支測試在做的），
-以及 `windows-11-arm` 那一格自己綠。
-
-### 一個刻意的取捨：cv2 只包兩扇門
-
-`cv2` 在 33 個檔、共 76 句 import，全部是函式內 lazy。這次**只**在兩個大家一定會
-經過的門換成 `require_cv2()`／`require_je_open_cv()`：`wrapper/auto_control_screen.py`（截圖）
-與 `utils/cv2_utils/template_detection.py`（樣板比對）。其餘七十幾句維持原樣，在 arm64 上
-會得到 `ModuleNotFoundError: No module named 'cv2'`。全包一輪是大面積 diff，且對呼叫端
-並沒有多提供可以行動的資訊——哪天語意不足再說。
+`BLOCKED` — 進階 OpenCV／影片及安全版本 cryptography 仍缺少 Windows arm64 wheel。
+上游提供 wheel 前，保留 OpenCV／je_open_cv／crypto 共用相依標記及 cryptography >=50.0.0 下限。
+Windows arm64 原生 NumPy／Pillow platform smoke 仍由 H3 驗收；
+wheel 解析成功及非 arm64 的替代後端測試不能當作原生執行證據。
 
 ## Wayland:剩下的都不是「缺一台機器」
 
@@ -248,7 +191,7 @@ Anthropic 每一步送約 202 KB 的工具 schema、沒有 `cache_control`。拍
 
 ## Wayland 原生生命周期與能力驗收
 
-`WIP` — D2 尚缺 Windows arm64 的影像替代 backend 與相依能力矩陣。
+`WIP` — H3 尚缺 Windows arm64 runner 的影像替代 backend 執行證據；已加入 platform smoke。
 D1 的桌面授權／撤銷／XWayland scope 仍只有替身及 offscreen Qt 證據；
 GNOME/KDE 的允許／拒絕、合成器重啟、裝置 pause/remove、helper crash 後
 實體按鍵狀態恢復，以及 restore-token 替代接口仍需 D3/H3 原生驗收。

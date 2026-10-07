@@ -74,10 +74,13 @@ Helper 階段已交付：`ei_transport.py`／`ei_worker.py` 接到預設 libei �
 `docker/ei_worker_verify.py` 在已安裝 wheel 的 Linux/Python 3.12 容器通過 3/3 原生檢查；
 三次半開失敗的父程序 fd 為 7→7，正常 EOF 釋放 Shift，SIGABRT 不影響父程序且保留 stack。
 50 次 permission IPC 的 p50/p95 為 0.18/0.25 ms（容器測量，非桌面反應時間）。
-arm64 影像替代與相依矩陣尚未交付，以下完整 task 仍保持未完成；
-crash 後實體桌面鍵態由合成器恢復，GNOME/KDE 證據留在 D3/H3。
+影像替代階段已交付：OpenCV 缺少時以 NumPy／Pillow 提供有界灰階樣板比對、
+BGR 截圖、影像檔、預覽及固定畫面自愈；Windows arm64 的 NumPy 2.4.6 wheel
+在 Python 3.11–3.14 解析成功，OpenCV／安全 crypto wheel 仍不可用。
+本機 OpenCV 對照及封鎖 OpenCV 的測試完成；Windows arm64 原生 platform smoke
+及 crash 後實體桌面鍵態恢復的 GNOME/KDE 證據仍由 D3/H3 驗收。
 
-- [ ] **Step 1:** 定義 fake fixtures 並新增 `test_half_open_worker_exit_reclaims_resources, test_worker_death_releases_pressed_keys, test_missing_dependency_is_typed`，驗證：
+- [x] **Step 1:** 定義 fake fixtures 並新增 `test_half_open_worker_exit_reclaims_resources, test_worker_death_releases_pressed_keys, test_missing_dependency_is_typed`，驗證：
 
 ```python
 assert active_workers == 0
@@ -85,10 +88,10 @@ assert fd_count_after == fd_count_before
 assert error.capability == unavailable_capability
 ```
 
-- [ ] **Step 2:** 執行 `.venv/Scripts/python.exe -m pytest -q --tb=short --basetemp=.test-tmp/modernization-task -o cache_dir=.test-tmp/modernization-pytest-cache test/unit_test/headless/test_wayland_worker_cleanup.py`，確認新測試因原有缺陷或尚未提供接口而 FAIL；不要把環境錯誤當成功的重現。
-- [ ] **Step 3:** 先跑現有 real-EI verify 精確分類 unsafe teardown；合法清理仍 crash 才啟用 helper。IPC 上限、超時與退場，測量延遲。arm64 影像能力用 backend seam 提供可行替代並逐項矩陣驗證；crypto 維持安全版本與可選診斷。
-- [ ] **Step 4:** 重跑 Step 2，預期 exit 0；再跑這些修改檔所對應的既有回歸，確認公開契約。
-- [ ] **Step 5:** 更新本 task 的型別、所有交付入口、文件、測量計數與進度，僅 stage 本 task 檔案，提交 `git commit -m 'D2: libei crash 隔離與 backend 相依'`。
+- [x] **Step 2:** 執行 `.venv/Scripts/python.exe -m pytest -q --tb=short --basetemp=.test-tmp/modernization-task -o cache_dir=.test-tmp/modernization-pytest-cache test/unit_test/headless/test_wayland_worker_cleanup.py`，確認新測試因原有缺陷或尚未提供接口而 FAIL；不要把環境錯誤當成功的重現。
+- [x] **Step 3:** 先跑現有 real-EI verify 精確分類 unsafe teardown；合法清理仍 crash 才啟用 helper。IPC 上限、超時與退場，測量延遲。arm64 影像能力用 backend seam 提供可行替代並逐項矩陣驗證；crypto 維持安全版本與可選診斷。
+- [x] **Step 4:** 重跑 Step 2，預期 exit 0；再跑這些修改檔所對應的既有回歸，確認公開契約。
+- [x] **Step 5:** 更新本 task 的型別、所有交付入口、文件、測量計數與進度，僅 stage 本 task 檔案，提交 `git commit -m 'D2: libei crash 隔離與 backend 相依'`。
 
 ### Task D3: 錄製、全域停止與原生驗證
 

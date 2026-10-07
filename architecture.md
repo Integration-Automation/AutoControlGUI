@@ -315,3 +315,11 @@ half-open contexts. Crash diagnostics retain a bounded faulthandler tail.
 `LibeiBackend` is still the direct binding used by native verification.
 `docker/ei_worker_verify.py` checks real emission, cleanup, descriptor stability,
 crash containment and IPC latency; Docker CI retains its log in the EI artifact.
+
+Image conversion/template/file/healing paths use the lazy `cv2_utils/optional.py`
+backend seam. OpenCV remains preferred; `numpy_backend.py` supplies bounded tiled
+FFT normalized grayscale matching and Pillow I/O when it is absent. The Windows
+arm64 dependency marker installs NumPy without changing other platforms' base
+requirements. Strict OpenCV accessors remain separate typed capability refusals.
+The platform smoke workflow includes arm64 image tests that never inject input;
+headless fallback tests compare outputs against OpenCV on other platforms.

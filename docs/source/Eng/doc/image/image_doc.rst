@@ -2,8 +2,17 @@
 Image Recognition
 =================
 
-AutoControl uses OpenCV template matching to locate UI elements on the screen.
+AutoControl prefers OpenCV template matching to locate UI elements on the screen.
 This is useful for finding buttons, icons, or other visual elements and interacting with them.
+
+Without OpenCV, a NumPy/Pillow backend provides normalized grayscale template
+matching, BGR screenshot arrays, image file I/O, previews and fixed-frame healing.
+Windows arm64 installs NumPy 2.4.6 on Python 3.11+. Existing Python, ``AC_*``,
+GUI and MCP calls use the same backend selection. Frames are limited to
+16,777,216 pixels and each tiled FFT to 4,194,304 cells. Inputs support uint8
+or float32 arrays and 8-bit image files; unsupported operations or budgets
+raise typed framework errors. Advanced OpenCV processing and video remain
+dependent on OpenCV. Cryptography's safety floor is unchanged.
 
 Locate All Matches
 ==================

@@ -62,3 +62,10 @@ and GUI diagnostics skip actual capture/cursor reads. The stable Python
 `run_diagnostics()` retains active checks by default and accepts
 `include_active=False`. Native Wayland grant failures never choose another
 input device automatically; CLI selection is explicit.
+
+Existing image search, BGR screenshot and fixed-frame healing entry points keep
+their signatures and lazily select NumPy/Pillow when OpenCV is absent. The
+fallback supports bounded normalized gray template matching, not arbitrary
+OpenCV processing or video. Strict OpenCV/je_open_cv dependency accessors now
+raise ImageDependencyRequired, which preserves RuntimeError compatibility and
+adds AutoControlException, needs_dependency and capability metadata.
