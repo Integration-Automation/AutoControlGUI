@@ -20,7 +20,7 @@
 
 - **一套 API，七個平台。** `wrapper/platform_wrapper.py` 在匯入時挑選後端；同一份腳本在
   Windows、macOS、X11 與 Wayland 上都不需要改寫。
-- **不寫 Python 也能腳本化。** 819 個 `AC_*` 指令涵蓋全部功能，因此一個 JSON 檔能做到函式庫
+- **不寫 Python 也能腳本化。** 821 個 `AC_*` 指令涵蓋全部功能，因此一個 JSON 檔能做到函式庫
   能做的任何事——包含迴圈、分支、try/catch、巨集與變數。
 - **預設無頭執行。** `import je_auto_control` 絕不會載入 Qt。GUI 是選用套件，包在同一個無頭核心之外。
 - **四種定位方式。** 樣板比對、OCR、無障礙樹、視覺語言模型——可透過錨點定位器與自癒後備串接組合。
@@ -141,7 +141,7 @@ python -c "import je_auto_control; je_auto_control.start_autocontrol_gui()"
 | 自然語言規劃 | `plan_actions`、`run_from_description` | `AC_llm_plan` | LLM Planner |
 | Computer-use agent | `AgentLoop`、`run_agent` | `AC_run_agent` | Computer Use |
 | 錄製與重播 | `record`、`stop_record` | `AC_record`、`AC_stop_record` | Record |
-| JSON 腳本 | `execute_action`、`execute_files` | 全部 819 個指令 | Script、Script Builder |
+| JSON 腳本 | `execute_action`、`execute_files` | 全部 821 個指令 | Script、Script Builder |
 | 變數與流程控制 | `execute_action_with_vars` | `AC_set_var`、`AC_loop`、`AC_for_each`、`AC_try`、`AC_retry` | Variables |
 | 資料驅動執行 | — | `AC_for_each_row`（CSV／JSON／SQLite／Excel） | Data Sources |
 | 斷言 | `assert_text`、`assert_image` | `AC_assert_text` 等 21 個 | Assertions |
@@ -190,7 +190,7 @@ je_auto_control version
 
 | 介面 | 啟動方式 | 說明 |
 |---|---|---|
-| **MCP 伺服器** | `je_auto_control_mcp`（stdio）或 `AC_start_mcp_http_server` | 741 個工具，供 Claude Desktop／Claude Code／自訂 tool loop 使用。除了以 `initialize` 握手的各版協定，也支援無狀態的 MCP 2026-07-28。Bearer 驗證、TLS、稽核記錄、限流、外掛熱重載、CI 假後端。 |
+| **MCP 伺服器** | `je_auto_control_mcp`（stdio）或 `AC_start_mcp_http_server` | 743 個工具，供 Claude Desktop／Claude Code／自訂 tool loop 使用。除了以 `initialize` 握手的各版協定，也支援無狀態的 MCP 2026-07-28。Bearer 驗證、TLS、稽核記錄、限流、外掛熱重載、CI 假後端。 |
 | **REST API** | `je_auto_control start-rest` | Bearer token、逐 IP 限流與鎖定、SQLite 稽核 hook、`/metrics`、`/openapi.json`、`/docs` Swagger UI、`/dashboard`。 |
 | **TCP socket 伺服器** | `je_auto_control start-server` | 以換行分隔的 JSON 動作清單。預設綁 `127.0.0.1`。 |
 | **pytest 外掛** | 安裝後自動生效 | 輕量 `je_auto_control_pytest` 入口，提供 fixture 與 Gherkin 步驟。升級 editable 工作樹後須重新安裝；明確指定的舊外掛路徑仍相容。 |
@@ -862,3 +862,19 @@ Python 配置峰值 100.86→90.17 MB（tracemalloc，非 RSS），首次開啟 
 19.37→22.81 ms，AC_sleep 期間事件迴圈 p95 263.16→16.33 ms；首次開啟成本保留可見。
 執行 `python benchmarks/gui_startup.py --compare <before.json> <after.json> --budget <budgets.json>`
 檢查校準門檻；不同環境或工作負載會拒絕比較。實際螢幕、授權與輸入驗收仍在 H3。
+
+### MCP 工具探索
+
+```python
+from je_auto_control import discover_tools, get_tool_schema
+summaries = discover_tools("screenshot", limit=10)  # 名稱、短說明、分類、能力
+schema = get_tool_schema("ac_screenshot")         # 單一結構，不執行
+```
+
+`AC_discover_tools`／`AC_get_tool_schema` 共用本機預設目錄 API 與 Script Builder 欄位。
+MCP `ac_discover_tools`／`ac_get_tool_schema` 查詢實際服務中的目錄，包含 plugin 即時變更，
+回傳結構化結果。搜尋最多 512 字元，結果上限 1–100（預設10），短說明最多 240 字元；
+搜尋回覆不含完整 schema。每次查詢重查目前身分與唯讀規則；能力欄位表示審閱過的基本
+需求，具體參數可能需要更高權限。讀取結構不授予執行、root 或環境權限。
+Tools → MCP 工具探索提供可取消的 Actions，在本機搜尋或查看單一結構。目錄版本屬於
+回傳快照，舊索引保留原定義。見[探索契約](../docs/MCP_DISCOVERY.md)。

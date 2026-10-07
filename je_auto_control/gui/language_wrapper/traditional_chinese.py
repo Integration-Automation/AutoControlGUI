@@ -1347,4 +1347,14 @@ traditional_chinese_word_dict = {
     'workspace_timed_out': '工作已超過期限。',
     'workspace_cancelled': '工作已取消，目前工作已返回。',
     'workspace_retry_cleanup': '重試所擁有資源的清理',
+    'mcp_discovery_title': 'MCP 工具探索',
+    'mcp_discovery_query': '搜尋條件',
+    'mcp_discovery_limit': '結果上限',
+    'mcp_discovery_name': '工具名稱',
+    'mcp_discovery_search': '搜尋工具',
+    'mcp_discovery_schema': '讀取工具結構',
+    'mcp_discovery_local_note': (
+        '僅查詢本機預設目錄。搜尋回傳摘要；讀取結構不會'
+        '啟用或執行工具。遠端伺服器使用自己的目錄與權限。'
+    ),
 }

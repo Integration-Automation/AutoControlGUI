@@ -13,6 +13,11 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ## Unreleased
 
+- Add Beta typed MCP registry search and single-schema lookup through facade,
+  AC/Builder/MCP and the lazy GUI Tools inspector. Search returns bounded summaries;
+  server queries observe the live registry version and recheck RBAC/readonly.
+  Schema access neither executes nor enables tools; custom registries remain explicit.
+
 - Add fresh-process GUI startup/allocation/first-open/event-loop benchmarks with
   matching-environment comparison and calibrated reference budgets. Retain real
   offscreen task/layout frames and full-catalog/synthetic-DPI regression evidence.

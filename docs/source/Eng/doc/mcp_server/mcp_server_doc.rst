@@ -598,3 +598,17 @@ Security notes
 - Subprocess calls (``ac_launch_process`` / ``ac_shell``) accept
   argv lists or a command line (POSIX-split, or passed to
   ``CreateProcess`` as written on Windows) — never an OS shell.
+
+Tool discovery and single schemas
+=================================
+
+``discover_tools(query, limit=10)`` returns local default-registry summaries;
+``get_tool_schema(name)`` reads one authorized descriptor without execution.
+Matching AC/Builder commands are ``AC_discover_tools`` and ``AC_get_tool_schema``.
+MCP ``ac_discover_tools`` and ``ac_get_tool_schema`` use the serving registry,
+including plugin changes, with structured replies and a registry mutation version.
+Queries are at most 512 characters, limits 1–100, descriptions at most 240 characters.
+Search returns no complete schemas. Every query rechecks current identity/readonly;
+base capability summaries are not grants for arguments, roots, environment or calls.
+Tools → MCP tool discovery offers cancellable local search/schema Actions.
+Snapshots retain copied definitions. See ``docs/MCP_DISCOVERY.md`` for the Beta contract.

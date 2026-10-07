@@ -22,7 +22,7 @@ from JSON files / CLI / servers, and a **GUI tab**. Nothing is GUI-only.
 
 - **One API, seven platforms.** `wrapper/platform_wrapper.py` picks the backend at import
   time; your script does not change between Windows, macOS, X11, and Wayland.
-- **Scriptable without Python.** 819 `AC_*` commands cover the whole feature set, so a
+- **Scriptable without Python.** 821 `AC_*` commands cover the whole feature set, so a
   JSON file can do anything the library can — including loops, branches, try/catch,
   macros, and variables.
 - **Headless by default.** `import je_auto_control` never loads Qt. The GUI is an
@@ -152,7 +152,7 @@ desktop app; tab commands live in the window's **Actions** menu.
 | Natural-language planner | `plan_actions`, `run_from_description` | `AC_llm_plan` | LLM Planner |
 | Computer-use agent | `AgentLoop`, `run_agent` | `AC_run_agent` | Computer Use |
 | Record & replay | `record`, `stop_record` | `AC_record`, `AC_stop_record` | Record |
-| JSON scripting | `execute_action`, `execute_files` | all 819 commands | Script, Script Builder |
+| JSON scripting | `execute_action`, `execute_files` | all 821 commands | Script, Script Builder |
 | Variables & flow control | `execute_action_with_vars` | `AC_set_var`, `AC_loop`, `AC_for_each`, `AC_try`, `AC_retry` | Variables |
 | Data-driven runs | — | `AC_for_each_row` (CSV / JSON / SQLite / Excel) | Data Sources |
 | Assertions | `assert_text`, `assert_image` | `AC_assert_text` + 20 more | Assertions |
@@ -204,7 +204,7 @@ still goes on to the end), so a CI step fails with it. The legacy
 
 | Surface | Start it with | Notes |
 |---|---|---|
-| **MCP server** | `je_auto_control_mcp` (stdio) or `AC_start_mcp_http_server` | 741 tools for Claude Desktop / Claude Code / custom tool loops. Speaks the stateless MCP 2026-07-28 beside the `initialize`-based revisions. Bearer auth, TLS, audit log, rate limit, plugin hot-reload, CI fake backend. |
+| **MCP server** | `je_auto_control_mcp` (stdio) or `AC_start_mcp_http_server` | 743 tools for Claude Desktop / Claude Code / custom tool loops. Speaks the stateless MCP 2026-07-28 beside the `initialize`-based revisions. Bearer auth, TLS, audit log, rate limit, plugin hot-reload, CI fake backend. |
 | **REST API** | `je_auto_control start-rest` | Bearer token, per-IP rate limit + lockout, SQLite audit hook, `/metrics`, `/openapi.json`, `/docs` Swagger UI, `/dashboard`. |
 | **TCP socket server** | `je_auto_control start-server` | Newline-framed JSON action lists. Binds `127.0.0.1` by default. |
 | **pytest plugin** | installed automatically | Lightweight `je_auto_control_pytest` entry point; fixtures plus Gherkin steps for pytest-bdd / behave. Reinstall after upgrading editable checkouts; the explicit legacy plugin path remains supported. |
@@ -1031,3 +1031,23 @@ offscreen medians are startup 6698→5894 ms, Python allocation peak 100.86→90
 Run `python benchmarks/gui_startup.py --compare <before.json> <after.json> --budget <budgets.json>`
 to check calibrated limits; environment/workload mismatches are rejected. Real
 monitor/permission/input acceptance remains H3.
+
+### MCP tool discovery
+
+```python
+from je_auto_control import discover_tools, get_tool_schema
+summaries = discover_tools("screenshot", limit=10)  # names, brief descriptions, category, capability
+schema = get_tool_schema("ac_screenshot")         # one descriptor; no execution
+```
+
+`AC_discover_tools` / `AC_get_tool_schema` share these local default-registry APIs
+and Script Builder fields. MCP `ac_discover_tools` / `ac_get_tool_schema` query
+the actual serving registry, including live plugin changes, and return structured
+results. Queries are at most 512 characters, limits 1–100 (default10); descriptions
+are at most 240 characters. Search replies contain no full schemas. Every query
+rechecks the current identity and read-only policy; required capability is the
+reviewed base requirement (arguments can require more). Schema access grants no
+execution/root/env permission. Tools → MCP tool discovery offers cancellable
+Actions to search or inspect one schema locally. Registry version belongs to the
+returned snapshot; old indexes keep their original definitions. See
+[discovery contract](docs/MCP_DISCOVERY.md).

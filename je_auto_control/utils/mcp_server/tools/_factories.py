@@ -15,6 +15,7 @@ from je_auto_control.wrapper.mobile_actions import (
 )
 from je_auto_control.utils.mcp_server.tools._factories_wayland_input import wayland_input_tools
 from je_auto_control.utils.mcp_server.tools._factories_capabilities import capability_tools
+from je_auto_control.utils.mcp_server.tools._factories_discovery import discovery_tools
 from je_auto_control.utils.mcp_server.tools._factories_signing import signing_tools
 from je_auto_control.utils.mcp_server.tools._factories_rbac import rbac_tools
 from je_auto_control.utils.mcp_server.tools._factories_remote_sessions import remote_session_tools
@@ -9114,6 +9115,6 @@ ALL_FACTORIES = (
     visual_regression_tools, state_machine_tools, codegen_tools,
     flakiness_tools, suite_tools, quarantine_tools,
     a11y_audit_tools, device_matrix_tools, media_assert_tools, journal_tools, config_sync_tools, remote_session_tools,
-    capability_tools,
+    capability_tools, discovery_tools,
     wayland_input_tools,
 )

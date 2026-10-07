@@ -5,9 +5,15 @@ A handler that declares a ``ctx`` parameter receives a
 client and observe cooperative cancellation requests. Handlers that
 do not declare ``ctx`` are unaffected.
 """
+from __future__ import annotations
+
 import threading
 from dataclasses import dataclass, field
-from typing import Any, Callable, Optional
+from typing import TYPE_CHECKING, Any, Callable, Optional
+
+
+if TYPE_CHECKING:
+    from je_auto_control.utils.mcp_server.discovery import ToolIndex
 
 
 class OperationCancelledError(RuntimeError):
@@ -35,6 +41,7 @@ class ToolCallContext:
         default=None, repr=False,
     )
     cancelled_event: threading.Event = field(default_factory=threading.Event)
+    tool_index: Callable[[], ToolIndex] | None = field(default=None, repr=False)
 
     @property
     def cancelled(self) -> bool:

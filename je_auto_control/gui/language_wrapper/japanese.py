@@ -1368,4 +1368,14 @@ japanese_word_dict = {
     'workspace_timed_out': '処理の期限を過ぎました。',
     'workspace_cancelled': 'キャンセルしました。実行中の処理は終了しました。',
     'workspace_retry_cleanup': '所有リソースの解放を再試行',
+    'mcp_discovery_title': 'MCP ツール検索',
+    'mcp_discovery_query': '検索条件',
+    'mcp_discovery_limit': '結果の上限',
+    'mcp_discovery_name': 'ツール名',
+    'mcp_discovery_search': 'ツールを検索',
+    'mcp_discovery_schema': 'スキーマを読む',
+    'mcp_discovery_local_note': (
+        'ローカルの既定一覧のみ。検索は概要を返し、スキーマの取得は有効化'
+        'や実行をしません。リモートサーバーは独自の一覧と権限を使います。'
+    ),
 }

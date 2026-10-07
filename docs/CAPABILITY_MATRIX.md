@@ -617,3 +617,14 @@ Qt frames are retained under `benchmarks/results/gui-workspace-f4`. All50 keys,
 default workflow, menu/navigation/cancel/close and synthetic DPI transforms pass
 controlled regression. Native desktop layout/fonts/permission/input, physical
 monitors and recording content remain Progress.md/H3; offscreen is not that evidence.
+
+### MCP registry discovery
+
+The same platform-neutral headless search/single-schema API is available through
+facade, AC, MCP, Builder and the lazy GUI Tools inspector. Full schemas appear
+only in explicit single-tool responses; summaries have bounded descriptions and
+reviewed base capabilities, not verified native availability. Server queries use
+live registry versions/plugins; local inspection uses the default registry.
+RBAC/readonly checks run per query, and schema access cannot widen call roots/env
+or privileges. Controlled tests cover snapshot copies, limits, viewer isolation,
+readonly and removed tools; native device or consent operations are not needed.

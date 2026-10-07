@@ -957,6 +957,9 @@ def AC_diff_rows(old_rows: Any, new_rows: Any, key: Any) -> Dict[str, Any]:
 def AC_diff_runs(before: Any, after: Any, key: str = ..., regress_factor: Any = ...) -> Dict[str, Any]:
     """Adapter: diff two run step-traces (added/removed/flips/regressions)."""
 
+def AC_discover_tools(query: str = ..., limit: int = ...) -> Dict[str, object]:
+    """Search local authorized registry summaries without schemas or execution."""
+
 def AC_dominant_hue_regions(
     hue: Any,
     hue_tol: Any = ...,
@@ -1430,6 +1433,9 @@ def AC_get_selection(
     automation_id: str | None = ...,
 ) -> Dict[str, Any]:
     """Adapter: a container's selection state (SelectionPattern)."""
+
+def AC_get_tool_schema(name: str) -> Dict[str, Any]:
+    """Read one local authorized registry descriptor without invoking it."""
 
 def AC_get_visible_text(
     name: str | None = ...,

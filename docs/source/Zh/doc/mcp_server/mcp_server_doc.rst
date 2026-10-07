@@ -521,3 +521,14 @@ CI runner 也能走完所有 MCP 工具:
 - 子程序呼叫(``ac_launch_process`` / ``ac_shell``)只接受 argv list
   或指令字串(POSIX 規則切分;Windows 上原樣交給 ``CreateProcess``),
   從不啟用 OS shell。
+
+工具探索與單一結構
+==================
+
+``discover_tools(query, limit=10)`` 回傳本機預設目錄摘要；``get_tool_schema(name)``
+讀取單一已授權結構而不執行。AC／Builder 指令是 ``AC_discover_tools`` 與
+``AC_get_tool_schema``。MCP ``ac_discover_tools``／``ac_get_tool_schema`` 使用服務中的
+目錄，包含 plugin 變更，回傳結構化結果與目錄變更版本。搜尋最多 512 字元，結果上限
+1–100，短說明最多 240 字元；搜尋不含完整 schema。每次查詢重查目前身分／唯讀規則；
+基本能力摘要不授予具體參數、root、環境或呼叫權限。Tools → MCP 工具探索提供可取消
+的本機搜尋／結構 Actions。快照保留複製的定義；Beta 契約見 ``docs/MCP_DISCOVERY.md``。

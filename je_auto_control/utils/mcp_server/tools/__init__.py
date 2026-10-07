@@ -10,7 +10,7 @@ from dataclasses import replace
 from typing import Dict, List, Optional
 
 from je_auto_control.utils.mcp_server.tools._base import (
-    MCPContent, MCPTool, MCPToolAnnotations, read_only_env_flag,
+    MCPContent, MCPTool, MCPToolAnnotations, ToolCategory, read_only_env_flag,
 )
 from je_auto_control.utils.mcp_server.tools._factories import ALL_FACTORIES
 from je_auto_control.utils.mcp_server.tools._path_metadata import annotate_file_fields
@@ -84,7 +84,8 @@ def build_default_tool_registry(read_only: Optional[bool] = None,
     )
     tools: List[MCPTool] = []
     for factory in ALL_FACTORIES:
-        tools.extend(annotate_file_fields(tool) for tool in factory())
+        tools.extend(annotate_file_fields(replace(tool, category=ToolCategory(factory.__name__.removesuffix('_tools'))))
+                     for tool in factory())
     if enforce_read_only:
         tools = [tool for tool in tools if tool.annotations.read_only]
     if _aliases_enabled(aliases):
@@ -93,7 +94,7 @@ def build_default_tool_registry(read_only: Optional[bool] = None,
 
 
 __all__ = [
-    "MCPContent", "MCPTool", "MCPToolAnnotations",
+    "MCPContent", "MCPTool", "MCPToolAnnotations", "ToolCategory",
     "build_default_tool_registry", "make_plugin_tool",
     "register_plugin_tools",
 ]

@@ -4491,6 +4491,17 @@ def _add_tooling_specs(specs: List[CommandSpec]) -> None:
                     "writes a file when 'path' is set.",
     ))
     specs.append(CommandSpec(
+        "AC_discover_tools", "Tools", "Search MCP Tools",
+        fields=(FieldSpec("query", FieldType.STRING, optional=True, default=""),
+                FieldSpec("limit", FieldType.INT, optional=True, default=10)),
+        description="Search authorized local-registry summaries; bounded reply without schemas.",
+    ))
+    specs.append(CommandSpec(
+        "AC_get_tool_schema", "Tools", "Read MCP Tool Schema",
+        fields=(FieldSpec("name", FieldType.STRING),),
+        description="Read one authorized local-registry descriptor without invoking or enabling it.",
+    ))
+    specs.append(CommandSpec(
         "AC_mcp_manifest", "Tools", "MCP Registry Manifest",
         fields=(
             FieldSpec("path", FieldType.FILE_PATH, optional=True,

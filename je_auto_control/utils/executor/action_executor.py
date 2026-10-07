@@ -3330,6 +3330,18 @@ def _generate_data(schema: Dict[str, Any], count: int = 10,
     return {"rows": rows, "count": len(rows)}
 
 
+def _discover_tools(query: str = '', limit: int = 10) -> Dict[str, object]:
+    """Search local authorized registry summaries without schemas or execution."""
+    from je_auto_control.utils.mcp_server.discovery import discover_tools
+    return discover_tools(query, limit=limit)
+
+
+def _get_tool_schema(name: str) -> Dict[str, Any]:
+    """Read one local authorized registry descriptor without invoking it."""
+    from je_auto_control.utils.mcp_server.discovery import get_tool_schema
+    return get_tool_schema(name)
+
+
 def _mcp_manifest(path: Optional[str] = None,
                   include_tools: bool = False) -> Dict[str, Any]:
     """Adapter: build (or write) the MCP registry server.json manifest."""
@@ -7461,6 +7473,8 @@ class Executor:
             "AC_queue_fail": _queue_fail,
             "AC_queue_stats": _queue_stats,
             "AC_generate_data": _generate_data,
+            "AC_discover_tools": _discover_tools,
+            "AC_get_tool_schema": _get_tool_schema,
             "AC_mcp_manifest": _mcp_manifest,
             "AC_rank_tests": _rank_tests,
             "AC_select_tests": _select_tests,

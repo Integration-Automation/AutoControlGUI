@@ -231,3 +231,14 @@ and three samples are retained separately. `--budget` checks calibrated startup/
 ratios and first-open/event-loop medians, refusing a different calibration environment.
 GUI frames capture busy, cancelled-after-return and error states without native input.
 Reference results and commands: `benchmarks/results/gui-workspace-f4/README.md`.
+
+### MCP discovery (Beta)
+
+ToolIndex, ToolSummary, MCPToolDescriptor, ToolCategory, ToolCapability and
+ToolDiscoveryError plus default_tool_index/discover_tools/get_tool_schema are
+Beta exports. Local APIs/actions/Builder/Tools use the default registry; MCP handlers
+use the serving registry via call context. Search/index construction invokes no
+handler or native capability probe. Current RBAC and read-only apply to each query;
+base capability summaries are not grants for arguments/root/env or execution.
+Copied schemas and mutation versions belong to the captured snapshot. Full legacy
+tools/list is unchanged. Detailed contract: `docs/MCP_DISCOVERY.md`.

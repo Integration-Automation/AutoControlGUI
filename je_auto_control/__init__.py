@@ -1130,6 +1130,12 @@ from je_auto_control.utils.usb import (
     UsbPassthroughClient, UsbPassthroughSession, default_usb_watcher,
     enable_usb_passthrough, is_usb_passthrough_enabled, list_usb_devices,
 )
+# Passive MCP registry discovery
+from je_auto_control.utils.mcp_server.discovery import (
+    MCPToolDescriptor, ToolCapability, ToolDiscoveryError, ToolIndex, ToolSummary,
+    default_tool_index, discover_tools, get_tool_schema,
+)
+from je_auto_control.utils.mcp_server.tools._base import ToolCategory
 # System diagnostics (headless self-test)
 from je_auto_control.wrapper.capabilities import (
     BackendContext, CapabilitySnapshot, CapabilityStatus, probe_capabilities,
@@ -1853,6 +1859,8 @@ __all__ = [
     "UsbAcl",
     "enable_usb_passthrough", "is_usb_passthrough_enabled",
     # System diagnostics
+    "MCPToolDescriptor", "ToolCapability", "ToolDiscoveryError", "ToolIndex", "ToolSummary",
+    "ToolCategory", "default_tool_index", "discover_tools", "get_tool_schema",
     "BackendContext", "CapabilitySnapshot", "CapabilityStatus", "probe_capabilities",
     "Check", "DiagnosticsReport", "run_diagnostics",
     # Config bundle

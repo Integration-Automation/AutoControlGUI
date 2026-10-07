@@ -7,7 +7,7 @@ from typing import Callable
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QAction, QActionGroup, QCloseEvent
 from PySide6.QtWidgets import (
-    QApplication, QFileDialog, QMainWindow, QMenu, QMessageBox,
+    QApplication, QDialog, QFileDialog, QMainWindow, QMenu, QMessageBox,
 )
 
 from je_auto_control.gui.language_wrapper.multi_language_wrapper import (
@@ -48,6 +48,7 @@ class AutoControlGUIUI(QMainWindow):  # pylint: disable=too-many-instance-attrib
     def __init__(self) -> None:
         super().__init__()
         self._service_tasks = PanelTasks(self)
+        self._mcp_discovery_dialog: QDialog | None = None
         self.app_id = _t("application_name", "AutoControlGUI")
         if sys.platform in ["win32", "cygwin", "msys"]:
             # pylint: disable-next=import-outside-toplevel  # reason: platform or selected engine is loaded on demand
@@ -256,7 +257,18 @@ class AutoControlGUIUI(QMainWindow):  # pylint: disable=too-many-instance-attrib
             self._start_triggers,
         )
         menu.addAction(_t('workspace_retry_cleanup'), self._retry_owned_cleanup)
+        menu.addAction(_t('mcp_discovery_title'), self._show_mcp_discovery)
         return menu
+
+    def _show_mcp_discovery(self) -> None:
+        """Open the passive local MCP inspector without constructing it at startup."""
+        # pylint: disable-next=import-outside-toplevel  # reason: optional GUI inspector is created on demand
+        from je_auto_control.gui.mcp_discovery_dialog import MCPDiscoveryDialog
+        if self._mcp_discovery_dialog is None:
+            self._mcp_discovery_dialog = MCPDiscoveryDialog(self)
+        self._mcp_discovery_dialog.show()
+        self._mcp_discovery_dialog.raise_()
+        self._mcp_discovery_dialog.activateWindow()
 
     def _retry_owned_cleanup(self) -> None:
         """Request another background cleanup attempt for retained GUI-owned native resources."""
@@ -313,6 +325,8 @@ class AutoControlGUIUI(QMainWindow):  # pylint: disable=too-many-instance-attrib
 
     def closeEvent(self, event: QCloseEvent) -> None:  # pylint: disable=invalid-name  # reason: Qt virtual callback
         """Close constructed workflow owners before the top-level window is hidden."""
+        if self._mcp_discovery_dialog is not None:
+            self._mcp_discovery_dialog.close()
         self.workspace_shell.close()
         super().closeEvent(event)
 

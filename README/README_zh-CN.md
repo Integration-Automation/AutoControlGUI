@@ -20,7 +20,7 @@
 
 - **一套 API，七个平台。** `wrapper/platform_wrapper.py` 在导入时挑选后端；同一份脚本在
   Windows、macOS、X11 与 Wayland 上都不需要改写。
-- **不写 Python 也能脚本化。** 819 个 `AC_*` 命令覆盖全部功能，因此一个 JSON 文件能做到库
+- **不写 Python 也能脚本化。** 821 个 `AC_*` 命令覆盖全部功能，因此一个 JSON 文件能做到库
   能做的任何事——包含循环、分支、try/catch、宏与变量。
 - **默认无头运行。** `import je_auto_control` 绝不会加载 Qt。GUI 是可选包，包在同一个无头内核之外。
 - **四种定位方式。** 模板匹配、OCR、无障碍树、视觉语言模型——可通过锚点定位器与自愈回退串接组合。
@@ -141,7 +141,7 @@ python -c "import je_auto_control; je_auto_control.start_autocontrol_gui()"
 | 自然语言规划 | `plan_actions`、`run_from_description` | `AC_llm_plan` | LLM Planner |
 | Computer-use agent | `AgentLoop`、`run_agent` | `AC_run_agent` | Computer Use |
 | 录制与回放 | `record`、`stop_record` | `AC_record`、`AC_stop_record` | Record |
-| JSON 脚本 | `execute_action`、`execute_files` | 全部 819 个命令 | Script、Script Builder |
+| JSON 脚本 | `execute_action`、`execute_files` | 全部 821 个命令 | Script、Script Builder |
 | 变量与流程控制 | `execute_action_with_vars` | `AC_set_var`、`AC_loop`、`AC_for_each`、`AC_try`、`AC_retry` | Variables |
 | 数据驱动执行 | — | `AC_for_each_row`（CSV／JSON／SQLite／Excel） | Data Sources |
 | 断言 | `assert_text`、`assert_image` | `AC_assert_text` 等 21 个 | Assertions |
@@ -190,7 +190,7 @@ je_auto_control version
 
 | 接口 | 启动方式 | 说明 |
 |---|---|---|
-| **MCP 服务器** | `je_auto_control_mcp`（stdio）或 `AC_start_mcp_http_server` | 741 个工具，供 Claude Desktop／Claude Code／自定义 tool loop 使用。除了以 `initialize` 握手的各版协议，也支持无状态的 MCP 2026-07-28。Bearer 认证、TLS、审计日志、限流、插件热重载、CI 假后端。 |
+| **MCP 服务器** | `je_auto_control_mcp`（stdio）或 `AC_start_mcp_http_server` | 743 个工具，供 Claude Desktop／Claude Code／自定义 tool loop 使用。除了以 `initialize` 握手的各版协议，也支持无状态的 MCP 2026-07-28。Bearer 认证、TLS、审计日志、限流、插件热重载、CI 假后端。 |
 | **REST API** | `je_auto_control start-rest` | Bearer token、按 IP 限流与锁定、SQLite 审计 hook、`/metrics`、`/openapi.json`、`/docs` Swagger UI、`/dashboard`。 |
 | **TCP socket 服务器** | `je_auto_control start-server` | 以换行分隔的 JSON 动作列表。默认绑定 `127.0.0.1`。 |
 | **pytest 插件** | 安装后自动生效 | 轻量 `je_auto_control_pytest` 入口，提供 fixture 与 Gherkin 步骤。升级 editable 工作树后须重新安装；明确指定的旧插件路径仍兼容。 |
@@ -861,3 +861,19 @@ Python 分配峰值 100.86→90.17 MB（tracemalloc，非 RSS），首次打开 
 19.37→22.81 ms，AC_sleep 期间事件循环 p95 263.16→16.33 ms；首次打开成本保持可见。
 运行 `python benchmarks/gui_startup.py --compare <before.json> <after.json> --budget <budgets.json>`
 检查校准门槛；不同环境或工作负载会拒绝比较。实际屏幕、授权与输入验收仍在 H3。
+
+### MCP 工具发现
+
+```python
+from je_auto_control import discover_tools, get_tool_schema
+summaries = discover_tools("screenshot", limit=10)  # 名称、短说明、分类、能力
+schema = get_tool_schema("ac_screenshot")         # 单个结构，不执行
+```
+
+`AC_discover_tools`／`AC_get_tool_schema` 共用本机默认目录 API 与 Script Builder 字段。
+MCP `ac_discover_tools`／`ac_get_tool_schema` 查询实际服务中的目录，包括 plugin 即时变更，
+返回结构化结果。搜索最多 512 字符，结果上限 1–100（默认10），短说明最多 240 字符；
+搜索回复不含完整 schema。每次查询重查当前身份与只读规则；能力字段表示审阅过的基本
+需求，具体参数可能需要更高权限。读取结构不授予执行、root 或环境权限。
+Tools → MCP 工具发现提供可取消的 Actions，在本机搜索或查看单个结构。目录版本属于
+返回快照，旧索引保留原定义。见[发现契约](../docs/MCP_DISCOVERY.md)。

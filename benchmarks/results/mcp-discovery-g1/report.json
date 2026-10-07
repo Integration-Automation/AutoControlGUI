@@ -1,0 +1,10 @@
+{
+  "platform": "Windows-11-10.0.26300-SP0",
+  "python": "3.14.4",
+  "pyside": "6.11.1",
+  "qt_platform": "offscreen",
+  "resolved_font": "Microsoft JhengHei",
+  "native_device_operations": false,
+  "query": "screenshot",
+  "source": "G1 implementation in the containing commit"
+}

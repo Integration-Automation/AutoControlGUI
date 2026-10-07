@@ -13,7 +13,7 @@ import json
 import sys
 import threading
 import time
-from typing import Any, Callable, Dict, List, Optional, TextIO
+from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, TextIO
 
 from je_auto_control.utils.cli_output import utf8_stream
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
@@ -62,6 +62,10 @@ from je_auto_control.utils.mcp_server._protocol import (
     _TOOLS_CALL_METHOD,
 )
 
+if TYPE_CHECKING:
+    from je_auto_control.utils.mcp_server.discovery import ToolIndex
+
+
 #: How long a transport waits for in-flight tool replies before it gives up
 #: and shuts down anyway.
 WORKER_DRAIN_TIMEOUT = 10.0
@@ -85,6 +89,7 @@ class MCPServer(StatelessDispatchMixin, SubscriptionMixin, ClientRequestMixin):
         self._prompts = (prompt_provider if prompt_provider is not None
                           else default_prompt_provider())
         self._tools_lock = threading.Lock()
+        self._registry_version = 0
         self._default_concurrent_tools = bool(concurrent_tools)
         self._audit = (audit_logger if audit_logger is not None
                         else AuditLogger())
@@ -270,6 +275,7 @@ class MCPServer(StatelessDispatchMixin, SubscriptionMixin, ClientRequestMixin):
         """
         with self._tools_lock:
             self._tools[tool.name] = tool
+            self._registry_version += 1
         self._notify_tools_list_changed()
 
     def unregister_tool(self, name: str) -> bool:
@@ -278,6 +284,7 @@ class MCPServer(StatelessDispatchMixin, SubscriptionMixin, ClientRequestMixin):
             if name not in self._tools:
                 return False
             del self._tools[name]
+            self._registry_version += 1
         self._notify_tools_list_changed()
         return True
 
@@ -556,6 +563,12 @@ class MCPServer(StatelessDispatchMixin, SubscriptionMixin, ClientRequestMixin):
         """Liveness probe; returns an empty result per the MCP spec."""
         return {}
 
+    def _discovery_index(self) -> "ToolIndex":
+        """Snapshot the live registry and its mutation version under one lock."""
+        from je_auto_control.utils.mcp_server.discovery import ToolIndex
+        with self._tools_lock:
+            return ToolIndex(list(self._tools.values()), version=self._registry_version)
+
     def _handle_tools_list(self) -> Dict[str, Any]:
         """List descriptors for every registered tool."""
         # Snapshot under the lock: PluginWatcher re-registers tools from its
@@ -696,7 +709,7 @@ class MCPServer(StatelessDispatchMixin, SubscriptionMixin, ClientRequestMixin):
         progress_token = meta.get("progressToken") if isinstance(meta, dict) else None
         return ToolCallContext(
             request_id=msg_id, progress_token=progress_token,
-            notifier=self._notifier,
+            notifier=self._notifier, tool_index=self._discovery_index,
         )
 
 

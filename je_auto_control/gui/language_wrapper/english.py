@@ -1482,4 +1482,14 @@ english_word_dict = {
     'workspace_timed_out': 'Task deadline expired.',
     'workspace_cancelled': 'Task cancelled; owned work returned.',
     'workspace_retry_cleanup': 'Retry owned resource cleanup',
+    'mcp_discovery_title': 'MCP tool discovery',
+    'mcp_discovery_query': 'Search query',
+    'mcp_discovery_limit': 'Maximum results',
+    'mcp_discovery_name': 'Tool name',
+    'mcp_discovery_search': 'Search tools',
+    'mcp_discovery_schema': 'Read tool schema',
+    'mcp_discovery_local_note': (
+        'Local default registry only. Search returns summaries; reading a schema does not '
+        'enable or execute the tool. Remote servers use their own registry and permissions.'
+    ),
 }

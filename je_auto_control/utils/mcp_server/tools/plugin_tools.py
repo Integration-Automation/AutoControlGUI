@@ -10,7 +10,7 @@ import inspect
 from typing import Any, Callable, Dict, List
 
 from je_auto_control.utils.mcp_server.tools._base import (
-    DESTRUCTIVE, MCPTool, schema,
+    DESTRUCTIVE, MCPTool, ToolCategory, schema,
 )
 
 
@@ -37,7 +37,7 @@ def make_plugin_tool(name: str,
         description=desc,
         input_schema=schema(properties, required=required or None),
         handler=handler,
-        annotations=DESTRUCTIVE,
+        annotations=DESTRUCTIVE, category=ToolCategory("plugin"),
     )
 
 

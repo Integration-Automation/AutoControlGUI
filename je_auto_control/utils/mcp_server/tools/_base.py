@@ -8,7 +8,10 @@ import inspect
 import os
 from dataclasses import dataclass
 from functools import lru_cache
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, List, NewType, Optional
+
+
+ToolCategory = NewType('ToolCategory', str)
 
 
 @dataclass(frozen=True)
@@ -87,6 +90,7 @@ class MCPTool:
     handler: Callable[..., Any]
     annotations: MCPToolAnnotations = MCPToolAnnotations()
     output_schema: Optional[Dict[str, Any]] = None
+    category: ToolCategory = ToolCategory("general")
 
     def to_descriptor(self) -> Dict[str, Any]:
         """Return the dict shape MCP clients expect from ``tools/list``."""
