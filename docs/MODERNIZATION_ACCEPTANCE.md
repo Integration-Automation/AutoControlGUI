@@ -62,3 +62,16 @@ The first H3 quality dispatch at `9675a98f` revealed that the base type gate omi
 The first fifteen-target CI run exposed missing Xvfb in the Linux evidence step, a delayed ready callback in the ownership test and an early remote JPEG arriving before its window exists. The viewer now retains only the latest early image and clears it on disconnect. Controlled reconnect tests protect replacement owners; 64 GUI/task/transport regressions pass, including the new two-case frame test. The evidence step runs under Xvfb on Linux. Private-bus setup checks installed dependencies first and bounds apt acquisition retries after an Azure mirror timeout.
 
 [H3 platform smoke](https://github.com/Integration-Automation/AutoControlGUI/actions/runs/37677922126) at `9675a98f` passed all eleven jobs, including native macOS and arm64. [H3 Docker](https://github.com/Integration-Automation/AutoControlGUI/actions/runs/37677931015) passed all six selected native verification/build jobs; full-image headless and X11 jobs were outside the selected D3 scope.
+
+[H3 Android Docker](https://github.com/Integration-Automation/AutoControlGUI/actions/runs/37681934892)
+at `a4e9e2b3` passed on Android 14 with uiautomator2 3.7.0 and adbutils 2.12.0.
+The observed Settings app starts, supplies a 1440×3040 frame and stops. Visual
+inspection confirms the Settings page in that frame. The original
+[mobile report](validation/h3-android-native.json) records the untested
+Unicode/focus/rotation/IME restoration explicitly.
+
+The second quality run passed fourteen coverage jobs; Windows 3.13 exposed an
+existing test checking resource shutdown before its asynchronous completion.
+It now waits for the same asserted shutdown order and always clears substitutes.
+All forty ownership cases and thirty repeated cleanup checks pass; final full
+matrix evidence follows in the update log.

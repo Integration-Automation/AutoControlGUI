@@ -58,6 +58,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261008-11 | 2026-10-08 | Await asynchronous cleanup and verify Android Docker capture | #incident #testing #mobile | [2026-10](2026-10.md) |
 | U-20261008-10 | 2026-10-08 | Correct initial CI job total and finalize regression fixes | #incident #testing #platform | [2026-10](2026-10.md) |
 | U-20261008-09 | 2026-10-08 | Full coverage, native arm64 and optional typing correction | #incident #typing #testing | [2026-10](2026-10.md) |
 | U-20261008-08 | 2026-10-08 | Cross-layer acceptance tooling and import regression fixes | #snapshot #testing #platform | [2026-10](2026-10.md) |
@@ -400,7 +401,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | File | Period | Entries |
 |---|---|---:|
-| [2026-10.md](2026-10.md) | 2026-10 | 64 |
+| [2026-10.md](2026-10.md) | 2026-10 | 65 |
 | [2026-09-e.md](2026-09-e.md) | 2026-09 | 7 |
 | [2026-09-d.md](2026-09-d.md) | 2026-09 | 55 |
 | [2026-09-c.md](2026-09-c.md) | 2026-09 | 38 |

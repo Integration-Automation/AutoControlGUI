@@ -598,9 +598,16 @@ def test_webrtc_disposal_stops_owned_background_resources(webrtc_panels):
     panel._stats_poller = types.SimpleNamespace(stop=lambda: stopped.append('stats'))
     panel._recorder = types.SimpleNamespace(stop=lambda: stopped.append('recorder'))
     panel._sync_engine = types.SimpleNamespace(stop=lambda: stopped.append('sync'))
-    panel._sessions.dispose()
-    assert stopped == ['stats', 'recorder', 'sync']
-    panel._stats_poller = panel._recorder = panel._sync_engine = None
+    import time
+    try:
+        panel._sessions.dispose()
+        deadline = time.monotonic() + 5
+        while stopped != ['stats', 'recorder', 'sync'] and time.monotonic() < deadline:
+            _APPLICATION.processEvents()
+            time.sleep(.01)
+        assert stopped == ['stats', 'recorder', 'sync']
+    finally:
+        panel._stats_poller = panel._recorder = panel._sync_engine = None
 
 
 @pytest.mark.parametrize('transport,method', [('tcp', 'send_input'), ('ws', 'ws_send_input'),

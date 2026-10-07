@@ -1,0 +1,57 @@
+{
+  "platform": "android",
+  "setup": {
+    "context": {
+      "platform": "android",
+      "device_id": "smoke-phone",
+      "target": "127.0.0.1:5555",
+      "timeout_s": 60.0,
+      "adb_path": null
+    },
+    "backend_version": "3.7.0",
+    "authorization": {
+      "state": "available",
+      "backend": "adb",
+      "reason": "selected serial reports device; input unverified",
+      "recovery": "",
+      "desktop_wide": false
+    },
+    "endpoint_idle": null,
+    "verified_connection": true
+  },
+  "actual": [
+    "authorization/status",
+    "observed launch",
+    "device frame capture",
+    "observed stop"
+  ],
+  "skipped": [
+    "Unicode focus round-trip, rotation and IME restoration not exercised"
+  ],
+  "launch": {
+    "app_id": "com.android.settings",
+    "device_id": "smoke-phone",
+    "state": "running",
+    "native_state": 0
+  },
+  "frame": {
+    "file_path": "artifacts/android-frame.png",
+    "device_id": "smoke-phone",
+    "pixel_size": [
+      1440,
+      3040
+    ],
+    "point_size": [
+      1440.0,
+      3040.0
+    ],
+    "orientation": 0,
+    "rotation": 0
+  },
+  "stop": {
+    "app_id": "com.android.settings",
+    "device_id": "smoke-phone",
+    "state": "not_running",
+    "native_state": 0
+  }
+}
