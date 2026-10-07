@@ -39,3 +39,8 @@ Run from the repository root with ``--validate``. Validation uses disposable fix
 .. literalinclude:: ../../../../../examples/33_mcp_progressive.py
    :language: python
 
+
+Integration acceptance
+----------------------
+
+Run ``python test/verify/modernization_verify.py --output acceptance-evidence`` for controlled journal replay and SQLite restart evidence. Reports preserve actual results and reasons for skipped native conditions. Python 3.10–3.14 coverage CI spans Windows/Linux/macOS; installed extras typing, physical native acceptance and production integration retain separate evidence.

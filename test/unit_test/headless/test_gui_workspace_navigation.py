@@ -105,6 +105,7 @@ shell.close();app.processEvents();print(json.dumps({'usable':True}))
 
 
 def test_full_catalog_and_main_window_keep_one_owner():
+    pytest.importorskip('qt_material', exc_type=ImportError)
     report = _probe('''
 from je_auto_control.gui.main_window import AutoControlGUIUI
 window=AutoControlGUIUI();window.show();app.processEvents()

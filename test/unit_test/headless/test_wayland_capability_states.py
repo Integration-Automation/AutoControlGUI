@@ -178,6 +178,7 @@ def test_ac_and_mcp_share_passive_capability_snapshot():
 def test_gui_diagnostics_stop_retry_and_passive_refresh():
     pytest.importorskip("PySide6.QtWidgets", exc_type=ImportError)
     code = """
+import time
 from types import SimpleNamespace
 from unittest.mock import patch
 from PySide6.QtWidgets import QApplication
@@ -193,10 +194,21 @@ with patch.object(gui, 'sys', SimpleNamespace(platform='linux')), \
      patch.object(_detect, 'is_wayland_session', return_value=True), \
      patch.object(gui, 'run_diagnostics', side_effect=report):
     tab = gui.DiagnosticsTab()
+    def drain(expected):
+        deadline = time.monotonic() + 5
+        while time.monotonic() < deadline:
+            app.processEvents()
+            if len(calls) == expected and tab._tasks.handle is None:
+                return
+            time.sleep(.01)
+        raise AssertionError('diagnostic worker did not finish')
+    drain(1)
     actions = dict(tab.menu_actions())
     actions['diag_stop_input']()
+    drain(2)
     assert libei.input_permission_status()[0] == 'needs_permission'
     actions['diag_retry_input']()
+    drain(3)
     assert libei.input_permission_status() is None
     assert calls == [{'include_active': False}] * 3
     tab.deleteLater()

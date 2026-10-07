@@ -681,3 +681,5 @@ Passive desktop keys: `input`, `capture`, `restore_token`. Metadata is not autho
 | `recording` | `mobile_extension_action` | `AC_mobile_extension` | `ac_mobile_extension` |
 
 These declarations describe the selected device surface; check its capability result before native use. Offline examples and controlled fixtures do not certify physical devices.
+
+H3 acceptance tooling records controlled journal replay and durable sync restart with platform/backend/version, actual outcomes and existing artifact paths; offscreen GUI rendering is tested separately. macOS native JSON retains failed probes. Fifteen coverage CI jobs keep the existing floor. See [acceptance evidence](MODERNIZATION_ACCEPTANCE.md).

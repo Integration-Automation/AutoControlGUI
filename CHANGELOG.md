@@ -2691,3 +2691,7 @@ WDA App lifecycle additionally requires a dedicated idle endpoint. Existing or u
 ### H2 workflow examples
 
 Six examples support offline `--validate`; three READMEs and both Sphinx trees share installation, permissions, explicit native flags and migration guidance. Existing formats/default MCP mode remain compatible.
+
+### H3 integration acceptance
+
+Controlled journal-to-generated-script replay and SQLite-to-GUI restart evidence, fifteen desktop coverage CI targets and structured macOS native reports retain actual/skipped results. SDK image typing no longer imports Pillow at runtime. Existing asynchronous diagnostic assertions await completed tasks. Six empty-credential Bandit false positives have local reviewed annotations; no global security rules change.

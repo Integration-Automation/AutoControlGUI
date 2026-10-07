@@ -80,7 +80,7 @@ def _exchange(definitions_path: str, workspace_path: str, server_url: str, user_
 
 
 def _exchange_bucket(client: ConfigSyncClient, local: ConfigBucket, *, publish: bool,
-                     cancel: Optional[Event]) -> ConfigBucket:
+    cancel: Optional[Event]) -> ConfigBucket:
     remote = client.fetch() or ConfigBucket(local.user_id)
     try:
         ensure_portable_bucket(remote)
@@ -94,24 +94,30 @@ def _exchange_bucket(client: ConfigSyncClient, local: ConfigBucket, *, publish: 
     return merged
 
 
-def config_sync_preview(definitions_path: str, workspace_path: str, server_url: str, user_id: str,
-                        shared_secret: str = '', *, cancel: Optional[Event] = None) -> Dict[str, Any]:
+# Empty means no configured credential; it is not a built-in password.
+def config_sync_preview(  # nosec B107
+    definitions_path: str, workspace_path: str, server_url: str, user_id: str,
+    shared_secret: str = '', *, cancel: Optional[Event] = None) -> Dict[str, Any]:
     """Snapshot local definitions and preview causal alternatives without publishing or applying."""
     require_command('AC_config_sync_preview')
     return _exchange(definitions_path, workspace_path, server_url, user_id, shared_secret,
                      publish=False, cancel=cancel)
 
 
-def config_sync_exchange(definitions_path: str, workspace_path: str, server_url: str, user_id: str,
-                         shared_secret: str = '', *, cancel: Optional[Event] = None) -> Dict[str, Any]:
+# Empty means no configured credential; it is not a built-in password.
+def config_sync_exchange(  # nosec B107
+    definitions_path: str, workspace_path: str, server_url: str, user_id: str,
+    shared_secret: str = '', *, cancel: Optional[Event] = None) -> Dict[str, Any]:
     """Publish protected portable definitions; local application remains a separate explicit action."""
     require_command('AC_config_sync_exchange')
     return _exchange(definitions_path, workspace_path, server_url, user_id, shared_secret,
                      publish=True, cancel=cancel)
 
 
-def config_sync_retry(workspace_path: str, server_url: str, user_id: str, shared_secret: str = '', *,
-                      cancel: Optional[Event] = None) -> Dict[str, Any]:
+# Empty means no configured credential; it is not a built-in password.
+def config_sync_retry(  # nosec B107
+    workspace_path: str, server_url: str, user_id: str, shared_secret: str = '', *,
+    cancel: Optional[Event] = None) -> Dict[str, Any]:
     """Retry durable envelopes with bounded attempts; keep failed or uncertain operations intact."""
     require_command('AC_config_sync_retry')
     _, _, outbox = _paths(workspace_path, server_url, user_id)

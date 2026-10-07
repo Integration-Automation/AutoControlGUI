@@ -1,9 +1,10 @@
 """Structural SDK contracts exported only through the lazy Android/iOS adapters."""
 from __future__ import annotations
 
-from typing import Any, Protocol
+from typing import TYPE_CHECKING, Any, Protocol
 
-from PIL.Image import Image
+if TYPE_CHECKING:
+    from PIL.Image import Image
 
 
 class AndroidSelector(Protocol):

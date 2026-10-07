@@ -923,3 +923,7 @@ MCP stdio 支持 `--tool-mode full|progressive|static`、`--tool-profile ac_scre
 例如 `python examples/33_mcp_progressive.py --validate`。验证不输入桌面或设备；实际捕获需 `30_mobile_devices.py --platform android --target SERIAL --capture phone.png`，iOS 使用明确的 WDA URL。WDA 必须先在 Apple 主机部署；专属 App session endpoint 不应与其他 client 共用。
 
 以 `python -m je_auto_control.utils.mcp_server --tool-mode progressive` 启动 MCP；client 搜索摘要、获取单一 schema、启用工具再调用 `tools/list`。原有 full 模式与 CLI 标志兼容。平台授权与 MCP 权限分别检查；连接前处理不支持／缺少依赖的诊断。Wayland 拒绝授权或撤销 restore token 时需重新获取桌面同意。生成候选后先审阅再执行；回放不代表实体输入成功。参阅[完整流程与迁移指南](../docs/MODERNIZATION_GUIDE.md)及[示例](../examples/README.md)。
+
+## 集成验收
+
+受控日志回放、同步重启与 offscreen GUI 结果一起验证。执行 `python test/verify/modernization_verify.py --output acceptance-evidence` 可获取平台／后端／版本、实际结果与证据路径。Coverage CI 覆盖 Windows／Linux／macOS 的 Python 3.10–3.14；安装 extras 的类型及原生平台／容器证据分别验证。只读下游测试的 slash 契约迁移与正式合并分别验收。参阅[验收证据与待验证的原生条件](../docs/MODERNIZATION_ACCEPTANCE.md)。

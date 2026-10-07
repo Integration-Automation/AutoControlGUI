@@ -1,6 +1,7 @@
 name: Platform smoke
 
 on:
+  workflow_dispatch:
   push:
     branches: ["main"]
   pull_request:
@@ -201,4 +202,11 @@ jobs:
       # holds what was measured, and a capability appearing or disappearing
       # turns this red and names which one.
       - name: Verify the macOS backend against a real window server
-        run: python test/verify/macos_verify.py
+        run: python test/verify/macos_verify.py --output macos-native-report.json
+
+      - uses: actions/upload-artifact@v6
+        if: always()
+        with:
+          name: macos-native-evidence
+          path: macos-native-report.json
+          if-no-files-found: warn

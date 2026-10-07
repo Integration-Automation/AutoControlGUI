@@ -279,3 +279,5 @@ The strict manifest `test/verify/typing_modernization_modules.txt` and mypy over
 ### H2 reproducible workflow boundary
 
 Six modernization examples expose `--validate` without desktop/device/network effects. Journal v1, labelled evaluation datasets and candidate manifests are explicit formats; legacy action JSON and full MCP defaults stay compatible. Generated code is reviewed before execution. Local metadata previews do not mutate remote sessions. See [workflow and migration guide](MODERNIZATION_GUIDE.md).
+
+H3 acceptance tooling records controlled journal replay and durable sync restart with platform/backend/version, actual outcomes and existing artifact paths; offscreen GUI rendering is tested separately. macOS native JSON retains failed probes. Fifteen coverage CI jobs keep the existing floor. See [acceptance evidence](MODERNIZATION_ACCEPTANCE.md).

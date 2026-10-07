@@ -20,13 +20,13 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 | 指標 | 數值 |
 | --- | ---: |
 | Python 模組總數（含周邊子專案） | 1,219 |
-| 程式碼總行數 | 177,563 |
+| 程式碼總行數 | 177,576 |
 | `je_auto_control/utils/` 子套件數 | 311 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 822 |
 | 套件門面 `__all__` 公開名稱數 | 1,403 |
 | GUI 分頁數（`main_widget` 註冊） | 50 |
 | MCP 工具數（`build_default_tool_registry()` 實測） | 747 |
-| `test_*.py` 測試檔／測試函式 | 774 / 8,022 |
+| `test_*.py` 測試檔／測試函式 | 775 / 8,026 |
 | 範例腳本 | 37 |
 
 **技術基線**：Python ≥ 3.10、MIT 授權、必要相依只有 `je_open_cv`／`opencv-python`／`pillow`／`mss`／
@@ -187,7 +187,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `wrapper/_mobile_models.py` | 96 | Frozen mobile identities, validated endpoints and typed ownership failures. |
 | `wrapper/_mobile_binding.py` | 77 | Execution-local mobile bindings without importing SDK clients or session factories. |
 | `wrapper/_mobile_client_owner.py` | 85 | Publish lazy SDK handles atomically and dispose only owned helper resources. |
-| `wrapper/_mobile_sdk_protocols.py` | 108 | Structural SDK contracts exported only through the lazy Android/iOS adapters. |
+| `wrapper/_mobile_sdk_protocols.py` | 109 | Structural SDK contracts exported only through the lazy Android/iOS adapters. |
 | `wrapper/_mobile_sdk.py` | 128 | Per-owner SDK transport guards; no SDK import or global timeout changes. |
 | `wrapper/_mobile_adb.py` | 29 | Explicit-session ADB client, without the executor's process-wide cache. |
 | `wrapper/_mobile_app_models.py` | 24 | Observed app state and validated native application identifiers. |
@@ -558,12 +558,12 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.10 遠端桌面與 USB
 
-> 6 個套件、約 22,649 行。
+> 6 個套件、約 22,661 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
 | `utils/admin/` | 418 | 多主機管理主控台：平行輪詢 N 個 AutoControl REST 端點 |
-| `utils/config_sync/` | 2,502 | SQLite CAS、因果衝突、離線 outbox 與設定同步 |
+| `utils/config_sync/` | 2,514 | SQLite CAS、因果衝突、離線 outbox 與設定同步 |
 | `utils/device_matrix/` | 169 | 行動裝置矩陣：同一 action list 於多台裝置平行執行 |
 | `utils/remote_desktop/` | 13,886 | **遠端桌面子系統**（56 檔／11.7K LOC）：TCP／WebSocket／WebRTC 三條傳輸路徑、主機與檢視端、訊令伺服器、TURN／中繼、多檢視者、錄影、信任清單、TOTP、稽核鏈 |
 | `utils/usb/` | 4,666 | 跨平台 USB 列舉／熱插拔／裝置直通（WinUSB、IOKit、libusb 後端 + ACL + WebRTC DataChannel 通道） |
@@ -1125,12 +1125,12 @@ GUI 是**選用 extra**（`pip install je_auto_control[gui]`，PySide6 + qt-mate
 | `ci_templates/.gitlab-ci.yml` | — | 供使用者專案複製的 GitLab CI 範本。 |
 | `docs/` | Sphinx（`API`／`Eng`／`Zh`／`getting_started`） | Read the Docs 文件。 |
 | `architecture_diagram/` | drawio + png | 既有的架構圖原始檔。 |
-| `test/` | `unit_test/headless`（主要）、`unit_test/flow_control`、`integrated_test`、`gui_test`、`manual_test`、`verify`、`test_source` | 773 個 `test_*.py`／8,019 個測試函式。**注意**：`test/unit_test/` 下的 `*_test.py` 是會真的驅動滑鼠鍵盤的手動示範腳本，因此 `pyproject.toml` 把 `python_files` 釘成 `test_*.py`。`unit_test/headless/conftest.py` 有一個 autouse fixture，每個測試結束都沖掉 Qt 排隊中的 `deleteLater()`——不沖會讓殘留的 widget 在後面某個不相干的測試裡被銷毀，曾經整個直譯器 `__fastfail`。`test_doc_counts.py` 守住文件引用的指令／工具／子套件／範例數,`test_doc_line_counts.py` 守住所有行數（`--fix` 可一次重新產生）。 Folder Sync 正向案例等待實際 sender，防回送先等待實際輪詢處理，保留內容與次數斷言。 `verify/native_debugger.py` 以有時限的 gdb/lldb 包裝原有 coverage 命令，保留 target 退出碼與原生堆疊。 `verify/macos_verify.py` 是在真的 `macos-14` runner 上量測 TCC 到底允許什麼的探針（macOS 是唯一沒有容器可用的支援平台），不被 pytest 收集。 |
+| `test/` | `unit_test/headless`（主要）、`unit_test/flow_control`、`integrated_test`、`gui_test`、`manual_test`、`verify`、`test_source` | 775 個 `test_*.py`／8,026 個測試函式。**注意**：`test/unit_test/` 下的 `*_test.py` 是會真的驅動滑鼠鍵盤的手動示範腳本，因此 `pyproject.toml` 把 `python_files` 釘成 `test_*.py`。`unit_test/headless/conftest.py` 有一個 autouse fixture，每個測試結束都沖掉 Qt 排隊中的 `deleteLater()`——不沖會讓殘留的 widget 在後面某個不相干的測試裡被銷毀，曾經整個直譯器 `__fastfail`。`test_doc_counts.py` 守住文件引用的指令／工具／子套件／範例數,`test_doc_line_counts.py` 守住所有行數（`--fix` 可一次重新產生）。 Folder Sync 正向案例等待實際 sender，防回送先等待實際輪詢處理，保留內容與次數斷言。 `verify/native_debugger.py` 以有時限的 gdb/lldb 包裝原有 coverage 命令，保留 target 退出碼與原生堆疊。 `verify/macos_verify.py` 是在真的 `macos-14` runner 上量測 TCC 到底允許什麼的探針（macOS 是唯一沒有容器可用的支援平台），不被 pytest 收集。 |
 
 ---
 
 
-#### 因果設定同步（`utils/config_sync/`，18 檔／2,502 行）
+#### 因果設定同步（`utils/config_sync/`，18 檔／2,514 行）
 
 | 檔案 | 行數 | 職責 |
 |---|---:|---|
@@ -1148,10 +1148,10 @@ GUI 是**選用 extra**（`pip install je_auto_control[gui]`，PySide6 + qt-mate
 | `models.py` | 132 | Compatible config bucket shapes and legacy timestamp editing helpers. |
 | `outbox.py` | 306 | Durable account/endpoint-scoped config retries and device acknowledgements. |
 | `runtime_adapters.py` | 153 | Adapt actual hotkey, trigger and address-book stores without starting their runtime. |
-| `service.py` | 141 | Shared explicit preview, protected exchange, apply, retry and status services. |
+| `service.py` | 147 | Shared explicit preview, protected exchange, apply, retry and status services. |
 | `store.py` | 157 | Persistent config buckets with atomic revision checks and operation deduplication. |
 | `versions.py` | 114 | Causal entry comparison and acknowledgement-based tombstone collection. |
-| `wire_api.py` | 39 | JSON-only command adapters over cancellable Python services. |
+| `wire_api.py` | 45 | JSON-only command adapters over cancellable Python services. |
 | `api/config_sync.py` | 30 | Beta typed facade。 |
 
 同步 GUI：`gui/config_sync_tab.py` 以 Actions menu 呼叫共用服務，顯示 revision/pending/conflict/offline/CAS，擁有自己的取消事件。received 定義與資產不執行。
@@ -1236,7 +1236,7 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `utils/usb/` | 17 | 4,666 |
 | `je_auto_control/`（頂層 3 檔） | 3 | 2,605 |
 | `utils/accessibility/` | 14 | 3,143 |
-| `wrapper/` | 45 | 6,217 |
+| `wrapper/` | 45 | 6,218 |
 | `windows/` | 23 | 2,101 |
 | `utils/rest_api/` | 8 | 1,919 |
 | `utils/agent/` | 9 | 2,032 |
@@ -1249,8 +1249,8 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `osx/` | 17 | 937 |
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 863 |
-| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 737 | 62,826 |
-| **總計** | **1,206** | **176,951** |
+| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 737 | 62,838 |
+| **總計** | **1,206** | **176,964** |
 
 
 Crypto optional-dependency failures use CryptoDependencyError from utils/exception:
@@ -1349,3 +1349,5 @@ G3 `_worker_scope` preserves accepted thread-local connection/capabilities/path 
 H1 strict manifest/config checks all modernization modules and complete annotations; separate installed-PySide6 checking covers all modernized GUI files across three targets. SDK handle protocols and literal adapter overloads constrain downstream calls; JSON payloads stay explicit dynamic data.
 
 H2 adds six passive/disposable validation examples and shares their source through both Sphinx trees. Readme configuration and mobile operation metadata are guarded by test_modernization_examples.py.
+
+H3 acceptance tooling records controlled journal replay and durable sync restart with platform/backend/version, actual outcomes and existing artifact paths; offscreen GUI rendering is tested separately. macOS native JSON retains failed probes. Fifteen coverage CI jobs keep the existing floor. See [acceptance evidence](docs/MODERNIZATION_ACCEPTANCE.md).

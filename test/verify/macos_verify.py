@@ -31,6 +31,9 @@ that asserts nothing reads as coverage that does not exist.
 from __future__ import annotations
 
 import argparse
+import json
+import os
+from pathlib import Path
 import platform
 import sys
 import time
@@ -326,6 +329,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     parser.add_argument(
         "--measure", action="store_true",
         help="report what the runner permits and exit 0, asserting nothing")
+    parser.add_argument("--output", type=Path, help="Write structured native evidence")
     options = parser.parse_args(argv)
 
     print("=" * 72)
@@ -335,6 +339,18 @@ def main(argv: Optional[List[str]] = None) -> int:
     print("-" * 72)
 
     outcomes = {name: probe(name, fn) for name, fn in PROBES}
+    if options.output is not None:
+        report = {
+            'schema_version': 1, 'platform': platform.platform(), 'backend': 'macOS/Quartz',
+            'versions': {'python': platform.python_version(), 'macos': platform.mac_ver()[0]},
+            'source_commit': os.environ.get('GITHUB_SHA', 'local-worktree'),
+            'mode': 'measurement' if options.measure else 'assert',
+            'checks': [{'name': name, 'actual': outcome.key, 'expected': EXPECTED.get(name),
+                        'status': 'verified' if outcome.worked and outcome.key == EXPECTED.get(name)
+                        else 'failed', 'evidence': [outcome.detail], 'error': outcome.error}
+                       for name, outcome in outcomes.items()],
+        }
+        options.output.write_text(json.dumps(report, indent=2), encoding='utf-8')
 
     print("-" * 72)
     if options.measure:
