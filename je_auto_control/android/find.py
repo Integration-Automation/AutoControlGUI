@@ -8,27 +8,29 @@ exposed so test code can snapshot the live UI tree.
 """
 from __future__ import annotations
 
-from typing import Any, Dict, Optional, Tuple
-
-from je_auto_control.wrapper._mobile_binding import resolve_client
+from typing import Dict, Optional, Tuple
 
 from je_auto_control.android.client import (
-    UIAutomatorDevice, default_ui_device, translate_device_errors,
+    UIAutomatorDevice,
+    default_ui_device,
+    translate_device_errors,
 )
 from je_auto_control.utils.exception.exceptions import AutoControlException
+from je_auto_control.wrapper._mobile_binding import resolve_client
+from je_auto_control.wrapper._mobile_sdk_protocols import AndroidSDK, AndroidSelector
 
 
 class ElementNotFoundError(AutoControlException, LookupError):
     """Raised when no widget on screen matches the supplied selector."""
 
 
-def _build_query(handle: Any,
+def _build_query(handle: AndroidSDK,
                  text: Optional[str],
                  resource_id: Optional[str],
                  description: Optional[str],
-                 class_name: Optional[str]) -> Any:
+                 class_name: Optional[str]) -> AndroidSelector:
     """Translate the public kwargs into uiautomator2's chained selector."""
-    selectors: Dict[str, Any] = {}
+    selectors: Dict[str, str] = {}
     if text is not None:
         selectors["text"] = text
     if resource_id is not None:

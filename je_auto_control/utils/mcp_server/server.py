@@ -6,6 +6,7 @@ stateless 2026-07-28, chosen per request (see :mod:`._stateless`). Each
 stdio line is one JSON-RPC message — no Content-Length framing — matching
 the MCP stdio spec.
 """
+
 from collections.abc import Hashable
 import contextlib
 import itertools
@@ -13,7 +14,7 @@ import json
 import sys
 import threading
 import time
-from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Sequence, TextIO
+from typing import TYPE_CHECKING, Any, Callable, Dict, Iterator, List, Optional, Sequence, TextIO
 
 from je_auto_control.utils.cli_output import utf8_stream
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
@@ -177,7 +178,7 @@ class MCPServer(StatelessDispatchMixin, SubscriptionMixin, ClientRequestMixin):
         return getattr(self._local, "notifier", None) or self._default_notifier
 
     @_notifier.setter
-    def _notifier(self, value) -> None:
+    def _notifier(self, value: Optional[Callable[[str, Dict[str, Any]], None]]) -> None:
         self._default_notifier = value
 
     @property
@@ -185,7 +186,7 @@ class MCPServer(StatelessDispatchMixin, SubscriptionMixin, ClientRequestMixin):
         return getattr(self._local, "writer", None) or self._default_writer
 
     @_writer.setter
-    def _writer(self, value) -> None:
+    def _writer(self, value: Optional[Callable[[str], None]]) -> None:
         self._default_writer = value
 
     @property
@@ -196,7 +197,7 @@ class MCPServer(StatelessDispatchMixin, SubscriptionMixin, ClientRequestMixin):
         return scoped
 
     @_concurrent_tools.setter
-    def _concurrent_tools(self, value) -> None:
+    def _concurrent_tools(self, value: bool) -> None:
         self._default_concurrent_tools = bool(value)
 
     @property
@@ -228,9 +229,10 @@ class MCPServer(StatelessDispatchMixin, SubscriptionMixin, ClientRequestMixin):
             self._client_caps_by_conn[conn] = value
 
     @contextlib.contextmanager
-    def connection_scope(self, *, notifier=None, writer=None,
-                         concurrent_tools=None, connection_id=None,
-                         authorization: Optional[AuthorizationContext] = None):
+    def connection_scope(self, *, notifier: Optional[Callable[[str, Dict[str, Any]], None]] = None,
+                         writer: Optional[Callable[[str], None]] = None,
+                         concurrent_tools: Optional[bool] = None, connection_id: Optional[Hashable] = None,
+                         authorization: Optional[AuthorizationContext] = None) -> Iterator["MCPServer"]:
         """Bind notifier/writer/concurrency/identity to the calling thread only.
 
         Transports that serve more than one peer must wrap each request in

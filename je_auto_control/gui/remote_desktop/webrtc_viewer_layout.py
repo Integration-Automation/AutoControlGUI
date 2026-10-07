@@ -3,7 +3,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Any, Optional
 
 # pylint: disable=no-name-in-module  # reason: native Qt binding
 from PySide6.QtWidgets import (
@@ -262,7 +262,7 @@ class WebRTCViewerLayoutController:  # pylint: disable=too-few-public-methods  #
     def _wire_input_signals(self) -> None:
         self._panel._wire_display_input(self._panel._frame_display)
 
-    def _wire_display_input(self, source) -> None:
+    def _wire_display_input(self, source: Any) -> None:
         """Wire mouse / keyboard / annotation signals from ``source``.
 
         ``source`` can be a :class:`_FrameDisplay` or a

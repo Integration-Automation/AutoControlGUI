@@ -1,23 +1,29 @@
 """Top-level window with menu bar, closable tabs, and live language switching."""
+
 import sys
 from dataclasses import replace
 from functools import partial
-from typing import Callable
+from typing import Any, Callable, Optional
 
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QAction, QActionGroup, QCloseEvent
 from PySide6.QtWidgets import (
-    QApplication, QDialog, QFileDialog, QMainWindow, QMenu, QMessageBox,
+    QApplication,
+    QDialog,
+    QFileDialog,
+    QMainWindow,
+    QMenu,
+    QMessageBox,
 )
 
+from je_auto_control.gui._panel_tasks import PanelTasks, call_native
+from je_auto_control.gui._task_state import TaskError, TaskResult
 from je_auto_control.gui.language_wrapper.multi_language_wrapper import (
     language_wrapper,
 )
 from je_auto_control.gui.main_widget import AutoControlGUIWidget
 from je_auto_control.gui.theme import ThemeTokens, apply_theme
 from je_auto_control.gui.workspace import WorkspaceShell
-from je_auto_control.gui._panel_tasks import PanelTasks, call_native
-from je_auto_control.gui._task_state import TaskError, TaskResult
 
 
 def _t(key: str, default: str = "") -> str:
@@ -69,9 +75,9 @@ class AutoControlGUIUI(QMainWindow):  # pylint: disable=too-many-instance-attrib
         self.setCentralWidget(self.workspace_shell)
         self._apply_font_pt(self._user_font_pt)
 
-        self._view_menu: QMenu = None
-        self._actions_menu: QMenu = None
-        self._tab_actions: list = []
+        self._view_menu: Optional[QMenu] = None
+        self._actions_menu: Optional[QMenu] = None
+        self._tab_actions: list[QAction] = []
         self._build_menu_bar()
         self.auto_control_gui_widget.tabs_changed.connect(self._rebuild_tabs_menu)
         self.auto_control_gui_widget.tabs_changed.connect(self._rebuild_actions_menu)
@@ -167,7 +173,7 @@ class AutoControlGUIUI(QMainWindow):  # pylint: disable=too-many-instance-attrib
             submenu.deleteLater()
         self._view_menu.clear()
         self._tab_actions = []
-        entries_by_cat: dict = {}
+        entries_by_cat: dict[str, Any] = {}
         for entry in self.auto_control_gui_widget.list_registered_tabs():
             entries_by_cat.setdefault(entry["category"], []).append(entry)
         for cat_key, title_key, default in _TAB_CATEGORIES:
@@ -178,7 +184,9 @@ class AutoControlGUIUI(QMainWindow):  # pylint: disable=too-many-instance-attrib
             if entries:
                 self._add_category_submenu(cat_key.title(), entries)
 
-    def _add_category_submenu(self, label: str, entries: list) -> None:
+    def _add_category_submenu(self, label: str, entries: list[Any]) -> None:
+        if self._view_menu is None:
+            return
         sub = self._view_menu.addMenu(label)
         for entry in entries:
             action = QAction(entry["title"], sub, checkable=True)

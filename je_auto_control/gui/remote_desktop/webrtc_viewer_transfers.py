@@ -3,7 +3,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Optional
 
 # pylint: disable=no-name-in-module  # reason: native Qt binding
 from PySide6.QtCore import QTimer
@@ -109,7 +109,7 @@ class WebRTCViewerTransfersController:  # pylint: disable=too-few-public-methods
             return
         self._panel._on_delete_names(names)
 
-    def _on_pull_names(self, names) -> None:
+    def _on_pull_names(self, names: list[str]) -> None:
         if self._panel._viewer is None or not self._panel._viewer.authenticated:
             return
         try:
@@ -118,7 +118,7 @@ class WebRTCViewerTransfersController:  # pylint: disable=too-few-public-methods
         except (RuntimeError, OSError, ValueError) as error:
             QMessageBox.warning(self._panel, "WebRTC", str(error))
 
-    def _on_delete_names(self, names) -> None:
+    def _on_delete_names(self, names: list[str]) -> None:
         if not names or self._panel._viewer is None or (not self._panel._viewer.authenticated):
             return
         confirm_text = (
@@ -137,7 +137,7 @@ class WebRTCViewerTransfersController:  # pylint: disable=too-few-public-methods
         except (RuntimeError, OSError, ValueError) as error:
             QMessageBox.warning(self._panel, "WebRTC", str(error))
 
-    def _on_upload_paths(self, paths) -> None:
+    def _on_upload_paths(self, paths: list[str]) -> None:
         if self._panel._viewer is None or not self._panel._viewer.authenticated:
             QMessageBox.information(self._panel, "WebRTC", _t("rd_webrtc_cad_not_connected"))
             return
@@ -167,7 +167,7 @@ class WebRTCViewerTransfersController:  # pylint: disable=too-few-public-methods
         if clipboard is not None:
             clipboard.setText(name)
 
-    def _on_inbox_listing(self, files) -> None:
+    def _on_inbox_listing(self, files: list[dict[str, Any]]) -> None:
         # pylint: disable=import-outside-toplevel  # reason: lazy optional/cyclic boundary
         from datetime import (
             datetime,
@@ -177,7 +177,7 @@ class WebRTCViewerTransfersController:  # pylint: disable=too-few-public-methods
         if not isinstance(files, list):
             return
 
-        def _format_mtime(value):
+        def _format_mtime(value: Any) -> str:
             try:
                 return datetime.fromtimestamp(float(value)).strftime("%Y-%m-%d %H:%M:%S")
             except (TypeError, ValueError, OSError, OverflowError):
@@ -185,7 +185,7 @@ class WebRTCViewerTransfersController:  # pylint: disable=too-few-public-methods
 
         self._panel._remote_files_table.populate(files, _format_mtime)
 
-    def _on_inbox_op_result(self, name: str, ok: bool, error) -> None:
+    def _on_inbox_op_result(self, name: str, ok: bool, error: object) -> None:
         if ok:
             self._panel._status_label.setText(_t("rd_webrtc_browse_op_ok").format(name=name))
             try:
@@ -212,13 +212,13 @@ class WebRTCViewerTransfersController:  # pylint: disable=too-few-public-methods
             QMessageBox.warning(self._panel, "WebRTC", str(error))
 
     @staticmethod
-    def _wol_defaults(entry) -> tuple[str, str]:
+    def _wol_defaults(entry: Optional[dict[str, Any]]) -> tuple[str, str]:
         """Return (mac, broadcast) pre-fill values from a book entry."""
         if entry is None:
             return ("", "")
         return (entry.get("mac_address", "") or "", entry.get("broadcast_address", "") or "")
 
-    def _persist_wol_entry(self, entry, mac: str, broadcast: str) -> None:
+    def _persist_wol_entry(self, entry: Optional[dict[str, Any]], mac: str, broadcast: str) -> None:
         """Save the MAC / broadcast just used back onto the book entry."""
         if entry is None:
             return
@@ -328,7 +328,7 @@ class WebRTCViewerTransfersController:  # pylint: disable=too-few-public-methods
         active_tag = self._panel._tag_filter_combo.currentData() or ""
         self._panel._address_list.populate(self._panel._address_book.list_entries(), tag_filter=active_tag)
 
-    def _on_address_tags(self, entry: dict) -> None:
+    def _on_address_tags(self, entry: dict[str, Any]) -> None:
         existing = entry.get("tags", []) or []
         text, ok = QInputDialog.getText(
             self._panel, _t("rd_webrtc_edit_tags"), _t("rd_webrtc_tags_prompt"), text=", ".join(existing)
@@ -344,16 +344,16 @@ class WebRTCViewerTransfersController:  # pylint: disable=too-few-public-methods
             autocontrol_logger.debug("set_tags: %r", error)
         self._panel._refresh_address_book()
 
-    def _on_address_chosen(self, entry: dict) -> None:
+    def _on_address_chosen(self, entry: dict[str, Any]) -> None:
         self._panel._server_edit.setText(entry.get("server_url", ""))
         self._panel._host_id_edit.setText(entry.get("host_id", ""))
         self._panel._on_connect_via_server()
 
-    def _on_address_removed(self, entry: dict) -> None:
+    def _on_address_removed(self, entry: dict[str, Any]) -> None:
         self._panel._address_book.remove(host_id=entry.get("host_id", ""), server_url=entry.get("server_url", ""))
         self._panel._refresh_address_book()
 
-    def _on_address_favorite(self, entry: dict) -> None:
+    def _on_address_favorite(self, entry: dict[str, Any]) -> None:
         try:
             self._panel._address_book.toggle_favorite(
                 host_id=entry.get("host_id", ""), server_url=entry.get("server_url", "")
@@ -388,7 +388,7 @@ class WebRTCViewerTransfersController:  # pylint: disable=too-few-public-methods
         dialog.chosen.connect(self._panel._on_lan_chosen)
         dialog.exec()
 
-    def _on_lan_chosen(self, svc: dict) -> None:
+    def _on_lan_chosen(self, svc: dict[str, Any]) -> None:
         host_id = svc.get("host_id", "")
         signaling = svc.get("signaling_url", "")
         if host_id:
@@ -396,5 +396,5 @@ class WebRTCViewerTransfersController:  # pylint: disable=too-few-public-methods
         if signaling:
             self._panel._server_edit.setText(signaling)
 
-    def _on_file_received_ui(self, path) -> None:
+    def _on_file_received_ui(self, path: str) -> None:
         self._panel._status_label.setText(_t("rd_webrtc_file_received").format(name=str(path)))

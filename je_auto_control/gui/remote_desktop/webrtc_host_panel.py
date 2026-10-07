@@ -3,10 +3,12 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Any, Callable, Optional
+
+from PySide6.QtCore import QPoint
 
 # pylint: disable=no-name-in-module  # reason: native Qt binding
-from PySide6.QtGui import QImage
+from PySide6.QtGui import QAction, QImage
 
 # pylint: enable=no-name-in-module
 # pylint: disable=no-name-in-module  # reason: native Qt binding
@@ -32,6 +34,9 @@ from je_auto_control.utils.remote_desktop.session_quality_cache import SessionQu
 from je_auto_control.utils.remote_desktop.webrtc_stats import StatsPoller, StatsSnapshot
 
 if TYPE_CHECKING:
+    from PySide6.QtWidgets import QComboBox, QLineEdit
+
+    import je_auto_control.gui.remote_desktop.webrtc_dialogs
     from je_auto_control.utils.remote_desktop.lan_discovery import HostAdvertiser
 if TYPE_CHECKING:
     import je_auto_control.gui.remote_desktop.annotation_overlay
@@ -51,6 +56,12 @@ if TYPE_CHECKING:
 class _WebRTCHostPanel(TranslatableMixin, QWidget):  # pylint: disable=too-many-instance-attributes  # reason: explicit owned lifecycle/widget state
     """Host: stream this machine's screen and accept viewer input."""
 
+    _stun_edit: QLineEdit
+    _turn_edit: QLineEdit
+    _turn_user_edit: QLineEdit
+    _turn_cred_edit: QLineEdit
+    _hw_codec_combo: QComboBox
+    _trusted_list: je_auto_control.gui.remote_desktop.webrtc_dialogs.TrustedViewersList
     _sessions: je_auto_control.gui.remote_desktop.session_owner.PanelSessions
     _multi_host: Any | None
     _publish_loop: je_auto_control.gui.remote_desktop.webrtc_workers.HostPublishLoopWorker | None
@@ -110,7 +121,7 @@ class _WebRTCHostPanel(TranslatableMixin, QWidget):  # pylint: disable=too-many-
         self._manual_session_id: Optional[str] = None
         self._adaptive_controller: Optional[AdaptiveBitrateController] = None
         self._adaptive_poller: Optional[StatsPoller] = None
-        self._session_pollers: dict = {}
+        self._session_pollers: dict[str, Any] = {}
         self._session_cache = SessionQualityCache()
         self._trust_list = default_trust_list()
         self._blanking: Optional[BlankingOverlay] = None
@@ -133,7 +144,7 @@ class _WebRTCHostPanel(TranslatableMixin, QWidget):  # pylint: disable=too-many-
         self._update_availability()
         self._sessions.add_cleanup(self._session_controller.dispose_background)
 
-    def _on_pending_viewer(self, session_id: str, viewer_id) -> None:
+    def _on_pending_viewer(self, session_id: str, viewer_id: object) -> None:
         original_host = self._multi_host
         if original_host is None:
             return
@@ -291,16 +302,16 @@ class _WebRTCHostPanel(TranslatableMixin, QWidget):  # pylint: disable=too-many-
     def _on_clear_trust(self) -> None:
         return self._features_controller._on_clear_trust()
 
-    def _on_annotation_event(self, data) -> None:
+    def _on_annotation_event(self, data: dict[str, Any]) -> None:
         return self._features_controller._on_annotation_event(data)
 
     def _on_session_authed(self, session_id: str) -> None:
         return self._features_controller._on_session_authed(session_id)
 
-    def _viewer_video_arguments(self, frame) -> Optional[tuple]:
+    def _viewer_video_arguments(self, frame: Any) -> Optional[tuple[Any, ...]]:
         return self._features_controller._viewer_video_arguments(frame)
 
-    def _on_viewer_video_av_frame(self, frame) -> None:
+    def _on_viewer_video_av_frame(self, frame: Any) -> None:
         return self._features_controller._on_viewer_video_av_frame(frame)
 
     def _on_viewer_video_image(self, image: QImage) -> None:
@@ -359,17 +370,18 @@ class _WebRTCHostPanel(TranslatableMixin, QWidget):  # pylint: disable=too-many-
         """Spawn StatsPoller for new sessions; stop pollers for gone ones."""
         return self._session_controller._sync_session_pollers()
 
-    def _make_session_stats_handler(self, session_id: str):
+    def _make_session_stats_handler(self, session_id: str) -> Callable[[StatsSnapshot], None]:
         """Closure capturing session_id for the per-session poller."""
         return self._session_controller._make_session_stats_handler(session_id)
 
     def _refresh_sessions_table(self) -> None:
         return self._session_controller._refresh_sessions_table()
 
-    def _on_sessions_context_menu(self, position) -> None:
+    def _on_sessions_context_menu(self, position: QPoint) -> None:
         return self._session_controller._on_sessions_context_menu(position)
 
-    def _dispatch_session_menu(self, chosen, actions: dict, sid: str, viewer_id: str) -> None:
+    def _dispatch_session_menu(self, chosen: Optional[QAction], actions: dict[str, Any],
+                               sid: str, viewer_id: str) -> None:
         """Run the action chosen from the sessions context menu."""
         return self._session_controller._dispatch_session_menu(chosen, actions, sid, viewer_id)
 

@@ -10,12 +10,13 @@ isn't installed.
 from __future__ import annotations
 
 import functools
-from typing import Any, Callable, Optional, TypeVar
+from typing import Any, Callable, Optional, ParamSpec, TypeVar, cast
 
 from je_auto_control.utils.exception.exceptions import AutoControlException
-from je_auto_control.wrapper._mobile_client_owner import LazyMobileHandle
 from je_auto_control.wrapper._mobile_binding import bound_device
+from je_auto_control.wrapper._mobile_client_owner import LazyMobileHandle
 from je_auto_control.wrapper._mobile_sdk import android_handle, dispose_android
+from je_auto_control.wrapper._mobile_sdk_protocols import AndroidSDK
 
 
 class UIAutomatorUnavailableError(AutoControlException, RuntimeError):
@@ -46,13 +47,13 @@ class UIAutomatorDevice:
         return self._serial
 
     @property
-    def handle(self) -> Any:
+    def handle(self) -> AndroidSDK:
         """Return the underlying ``uiautomator2.Device`` instance.
 
         Lazily connects on first call. Subsequent calls reuse the
         handle so the daemon-side session survives across operations.
         """
-        return self._resolve_handle()
+        return cast(AndroidSDK, self._resolve_handle())
 
     def _resolve_handle(self) -> Any:
         return self._owner.get(self._connect_handle)
@@ -69,7 +70,7 @@ class UIAutomatorDevice:
             if self._guard is None:
                 return u2.connect(self._serial)
             return android_handle(u2, self._serial or '', self._timeout_s or 10, self._guard)
-        except (OSError, RuntimeError, ValueError, *_sdk_errors()) as error:
+        except (OSError, RuntimeError, ValueError) + _sdk_errors() as error:
             raise UIAutomatorUnavailableError(
                 f"could not connect to Android device {self._serial or '(default)'}: {error}",
             ) from error
@@ -106,9 +107,10 @@ __all__ = [
 
 
 _Result = TypeVar("_Result")
+_Parameters = ParamSpec("_Parameters")
 
 
-def _sdk_errors() -> tuple:
+def _sdk_errors() -> tuple[type[BaseException], ...]:
     """``adbutils.AdbError`` (no device, or several without a serial) and
     uiautomator2's base error, whichever are installed."""
     errors = []
@@ -125,16 +127,16 @@ def _sdk_errors() -> tuple:
     return tuple(errors)
 
 
-def translate_device_errors(function: Callable[..., _Result]) -> Callable[..., _Result]:
+def translate_device_errors(function: Callable[_Parameters, _Result]) -> Callable[_Parameters, _Result]:
     """Re-raise the adbutils / uiautomator2 errors a device call can raise as :class:`UIAutomatorUnavailableError`.
 
     They derive from ``Exception`` alone, so an unreachable or confused device
     escaped ``raise_on_error=False`` and aborted every remaining action.
     """
     @functools.wraps(function)
-    def wrapper(*args: Any, **kwargs: Any) -> _Result:
+    def wrapper(*args: _Parameters.args, **kwargs: _Parameters.kwargs) -> _Result:
         try:
             return function(*args, **kwargs)
-        except (*_sdk_errors(),) as error:
+        except _sdk_errors() as error:
             raise UIAutomatorUnavailableError(f"{function.__name__}: {error}") from error
     return wrapper

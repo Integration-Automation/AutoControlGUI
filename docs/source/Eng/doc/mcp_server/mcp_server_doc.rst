@@ -647,3 +647,11 @@ confirmation checks; accepted concurrent workers retain peer roots/capabilities 
 a transport drop. Local five-sample measurement: full747/363544bytes versus
 core6/2506bytes, initialize+list37.91/9.56ms and search9.78/9.65ms, excluding network.
 Source hash and samples are retained in ``benchmarks/results/mcp-discovery-g3/report.json``.
+
+Type validation
+===============
+
+Run ``python test/verify/typing_contract_verify.py`` for the three stable platforms,
+and add ``--extras`` after installing ``[gui]`` to check modernization GUI against
+real PySide6 stubs. Strict definitions/generics and zero exemptions remain required.
+SDK adapters expose structural protocols; successful typing does not grant native permissions.

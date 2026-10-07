@@ -4,10 +4,17 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable, List, Optional, cast
+from typing import Any, Callable, List, Optional, cast
 
 from PySide6.QtWidgets import (  # pylint: disable=no-name-in-module  # reason: native Qt bindings
-    QComboBox, QFileDialog, QFormLayout, QLabel, QLineEdit, QPlainTextEdit, QVBoxLayout, QWidget,
+    QComboBox,
+    QFileDialog,
+    QFormLayout,
+    QLabel,
+    QLineEdit,
+    QPlainTextEdit,
+    QVBoxLayout,
+    QWidget,
 )
 
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
@@ -43,9 +50,9 @@ class JournalCandidatePanel(TranslatableMixin, QWidget):
         self._candidate: Optional[CandidateScript] = None
         self._worker: Optional[WorkerHandle] = None
         self.journal, self.run_id = QLineEdit(), QLineEdit()
-        self.target, self.style = QComboBox(), QComboBox()
+        self.target, self.code_style = QComboBox(), QComboBox()
         self.target.addItems(['pytest', 'python', 'robot'])
-        self.style.addItems(['actions', 'calls'])
+        self.code_style.addItems(['actions', 'calls'])
         self.preview = QPlainTextEdit()
         self.preview.setReadOnly(True)
         self.preview.setMaximumHeight(190)
@@ -55,12 +62,12 @@ class JournalCandidatePanel(TranslatableMixin, QWidget):
         layout = QVBoxLayout(self)
         form = QFormLayout()
         for key, widget in (('journal_candidate_path', self.journal), ('journal_candidate_run', self.run_id),
-                            ('journal_candidate_target', self.target), ('journal_candidate_style', self.style)):
+                            ('journal_candidate_target', self.target), ('journal_candidate_style', self.code_style)):
             form.addRow(self._tr(QLabel(), key), widget)
         layout.addLayout(form)
         layout.addWidget(self.preview)
 
-    def menu_actions(self) -> list:
+    def menu_actions(self) -> list[Any]:
         """Expose preview, import and export as distinct window Actions commands."""
         return [('journal_candidate_preview', self._preview_candidate),
                 ('journal_candidate_import', self._import_candidate),
@@ -71,7 +78,7 @@ class JournalCandidatePanel(TranslatableMixin, QWidget):
             return
         self._candidate = None
         source, identifier = self.journal.text().strip(), self.run_id.text().strip()
-        target, style = self.target.currentText(), self.style.currentText()
+        target, style = self.target.currentText(), self.code_style.currentText()
         current, _ = safe_payload(self._get_actions())
 
         def prepare() -> _Preview:

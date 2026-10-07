@@ -2,26 +2,30 @@
 from __future__ import annotations
 
 import json
+import weakref
 from dataclasses import dataclass
 from functools import partial
-from typing import Any, Callable, Optional, TYPE_CHECKING
-import weakref
+from typing import TYPE_CHECKING, Any, Callable, Optional
 
 from PySide6.QtCore import QTimer, Signal
 from PySide6.QtGui import QCloseEvent, QKeyEvent, Qt
-from PySide6.QtWidgets import QWidget, QVBoxLayout, QTabWidget
+from PySide6.QtWidgets import QTabWidget, QVBoxLayout, QWidget
 
 from je_auto_control.gui._core_tab_proxy import CoreTabMethods
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
 from je_auto_control.gui._tab_catalog import TAB_CATALOG
 from je_auto_control.gui._tab_factories import build_tab, call_core_action
-from je_auto_control.gui.tab_registry import TabRegistry, TabSpec
 from je_auto_control.gui.language_wrapper.multi_language_wrapper import language_wrapper
+from je_auto_control.gui.tab_registry import TabRegistry, TabSpec
 from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.json.json_file import read_action_json
 
 if TYPE_CHECKING:
     from PySide6.QtWidgets import QLineEdit, QTextEdit
+
+    from je_auto_control.gui._panel_tasks import PanelTasks
+    from je_auto_control.gui.task_controller import TaskController
+    from je_auto_control.wrapper._record_panel_owner import RecordPanelOwner
 
 
 @dataclass
@@ -41,6 +45,9 @@ class AutoControlGUIWidget(  # pylint: disable=too-many-instance-attributes  # r
     tabs_changed = Signal()
     current_tab_changed = Signal()
     if TYPE_CHECKING:
+        _auto_tasks: PanelTasks
+        _record_tasks: TaskController
+        _record_owner: RecordPanelOwner
         script_path_input: QLineEdit
         script_editor: QTextEdit
         script_result_text: QTextEdit

@@ -271,3 +271,7 @@ with one warmup/five samples and records source hash/platform/version. Reference
 full747/363544bytes, core6/2506bytes; local initialize+list37.91/9.56ms and
 search9.78/9.65ms. This measures local JSON-RPC, excluding networking/native input.
 Artifact: `benchmarks/results/mcp-discovery-g3/report.json`.
+
+### Modernization typing
+
+The strict manifest `test/verify/typing_modernization_modules.txt` and mypy overrides require complete definitions/generics on all new and explicitly rewritten modules. Stable three-platform checks retain zero exemptions. `--extras` requires real PySide6 and checks every modernization GUI module with its stubs enabled, without changing the stable optional-dependency boundary. Lazy SDK handles expose AndroidSDK/IOSSDK structural protocols and typed literal adapter selection; raw construction/disposal stays at SDK adapter boundaries, with dynamic JSON payloads explicit. These internal contracts add no native operation or new public business API.

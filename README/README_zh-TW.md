@@ -903,3 +903,5 @@ Tools → MCP 工具探索提供可取消的 Actions，在本機搜尋或查看�
 真正部署請使用上述環境設定。詳見[session 契約](../docs/MCP_DISCOVERY.md)。
 
 MCP stdio 支援 `--tool-mode full|progressive|static`、`--tool-profile ac_screenshot,ac_probe_capabilities` 與 `--tool-page-size 1..100`；旗標覆寫對應部署設定。`--list-tools` 仍輸出完整已授權目錄供檢查。例如：`python -m je_auto_control.utils.mcp_server --tool-mode static --tool-profile ac_screenshot`。揭露只改變可見清單，執行仍檢查 RBAC、schema、roots/env、限流與確認。唯讀也拒絕自訂 registry 的修改呼叫；背景工作在 session 終止後保留原請求身分、roots 與 capabilities。[本機量測](../benchmarks/results/mcp-discovery-g3/report.json)：完整747個／363544bytes，核心6個／2506bytes；本機交握及清單中位數37.91／9.56ms，搜尋9.78／9.65ms（五次樣本，未含網路）。
+
+改版型別驗證：`python test/verify/typing_contract_verify.py` 檢查 win32/linux/darwin，豁免為零；新／重寫模組還要求完整函式與泛型參數。安裝 `[gui]` 後，`python test/verify/typing_contract_verify.py --extras` 使用真實 PySide6 stubs 檢查全部改版 GUI 模組。CI 另安裝固定版本 Android/WDA SDK；延遲 adapter 以 Protocol 限定 SDK 介面。JSON／事件資料保留明確的動態欄位。

@@ -6,6 +6,7 @@ from typing import Optional
 from je_auto_control.android.client import UIAutomatorDevice, default_ui_device, translate_device_errors
 from je_auto_control.wrapper._mobile_binding import resolve_client
 from je_auto_control.wrapper._mobile_models import DeviceSessionError
+from je_auto_control.wrapper._mobile_sdk_protocols import AndroidSDK
 from je_auto_control.wrapper.mobile_gesture import Gesture
 
 
@@ -30,13 +31,13 @@ def perform_gesture(gesture: Gesture, *, device: Optional[UIAutomatorDevice] = N
     elif gesture.kind == 'tap':
         handle.click(*points[0])
     elif gesture.kind == 'long_press':
-        handle.long_click(*points[0], gesture.duration_s)
+        handle.long_click(points[0][0], points[0][1], gesture.duration_s)
     else:
         operation = handle.drag if gesture.kind == 'drag' else handle.swipe
-        operation(*points[0], *points[1], gesture.duration_s)
+        operation(points[0][0], points[0][1], points[1][0], points[1][1], gesture.duration_s)
 
 
-def _pinch(handle, points: list[tuple[int, ...]], duration: float) -> None:
+def _pinch(handle: AndroidSDK, points: list[tuple[int, ...]], duration: float) -> None:
     params = [{'mask': 0}, *[{'x': x, 'y': y} for x, y in points], max(2, int(duration * 200))]
     if handle.jsonrpc_call('gesture', params) is False:
         raise DeviceSessionError('Android backend rejected the two-pointer gesture')

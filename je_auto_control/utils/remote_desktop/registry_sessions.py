@@ -2,13 +2,14 @@
 
 from __future__ import annotations
 
-from typing import Any, Callable, Optional
 from contextlib import AbstractContextManager
+from typing import Any, Callable, Optional
 
 from je_auto_control.utils.remote_desktop.sessions import (
     RemoteSession,
     RemoteSessionError,
     SessionDirectory,
+    SessionEvent,
     SessionStatus,
 )
 
@@ -73,7 +74,7 @@ class RegistrySessions:
         """Read the script transport alias without selecting a GUI resource."""
         return self._sessions.default_id(transport, role)
 
-    def session_events(self, *, owner: Optional[str] = None):
+    def session_events(self, *, owner: Optional[str] = None) -> tuple[SessionEvent, ...]:
         """Read bounded owner-addressed lifecycle evidence."""
         return self._sessions.events(owner=owner)
 
@@ -94,7 +95,7 @@ class RegistrySessions:
         session = self.get_session(session_id, owner=owner)
         return self._sessions.resource(session_id, session.transport, session.role)
 
-    def session_snapshot(self, session_id: Optional[str], *, role: str = "viewer") -> dict:
+    def session_snapshot(self, session_id: Optional[str], *, role: str = "viewer") -> dict[str, Any]:
         """Read a GUI-owned transport snapshot; no identity means no owned connection."""
         if session_id is None:
             return {
@@ -124,7 +125,8 @@ class RegistrySessions:
                 raise RemoteSessionError("session transport or role mismatch")
             self.disconnect_session(identifier, timeout=timeout)
 
-    def _status_identity(self, status: dict, transport: str, role: str, session_id: Optional[str]) -> dict:
+    def _status_identity(self, status: dict[str, Any], transport: str, role: str,
+                         session_id: Optional[str]) -> dict[str, Any]:
         identifier = session_id if session_id is not None else self.script_session_id(transport, role)
         if identifier is not None:
             session = self.get_session(identifier)

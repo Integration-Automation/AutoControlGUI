@@ -1,8 +1,8 @@
 """Portable JSON definitions keep confidential literals and machine paths local."""
 from __future__ import annotations
 
-import json
 import inspect
+import json
 import re
 from pathlib import PurePosixPath, PureWindowsPath
 from typing import Any, Dict, Mapping, Set
@@ -66,7 +66,7 @@ def _portable_mapping(value: Dict[str, Any], path: str) -> Dict[str, Any]:
     return {name: _portable(item, f'{path}/{name}', name) for name, item in value.items()}
 
 
-def _portable_action(value: list, path: str) -> list:
+def _portable_action(value: list[Any], path: str) -> list[Any]:
     named = _named_arguments(value[0], value[1] if len(value) > 1 else None)
     cleaned, reasons = private_input(value[0], named)
     if reasons and not all(reason == 'masked secret input requires an explicit secret reference' for reason in reasons):
@@ -153,7 +153,7 @@ def _normalize_actions(value: Any) -> Any:
     return [_normalize_actions(item) for item in value]
 
 
-def _normalize_action(value: list) -> list:
+def _normalize_action(value: list[Any]) -> list[Any]:
     named = _named_arguments(value[0], value[1] if len(value) > 1 else None)
     if value[0] == 'AC_execute_journaled' and isinstance(named, dict) and isinstance(named.get('actions'), str):
         named['actions'] = json.loads(named['actions'])

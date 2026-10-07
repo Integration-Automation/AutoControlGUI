@@ -8,11 +8,16 @@ silently so removing a row never breaks a later language switch. Self entries
 use a weak proxy: a self-cycle can otherwise postpone parentless widget
 destruction until garbage collection on a non-GUI worker thread.
 """
-from typing import cast, List, Tuple, TypeVar
 import weakref
+from typing import List, Tuple, TypeVar, cast
 
 from PySide6.QtWidgets import (
-    QAbstractButton, QGroupBox, QLabel, QLineEdit, QTabWidget, QWidget,
+    QAbstractButton,
+    QGroupBox,
+    QLabel,
+    QLineEdit,
+    QTabWidget,
+    QWidget,
 )
 
 from je_auto_control.gui.language_wrapper.multi_language_wrapper import (
@@ -44,7 +49,7 @@ class TranslatableMixin:  # pylint: disable=too-few-public-methods  # Mixin expo
         self._tr_registry: List[Tuple[QWidget, str, str]] = []
         self._tr_tabs: List[Tuple[QTabWidget, int, str]] = []
 
-    def _tr(self, widget: QWidget, key: str, setter: str = "") -> QWidget:
+    def _tr(self, widget: _Widget, key: str, setter: str = "") -> _Widget:
         """Set ``widget`` text from ``key`` now and on every retranslate."""
         if not hasattr(self, "_tr_registry"):
             self._tr_init()

@@ -12,18 +12,27 @@ Imports ``PySide6`` — it is GUI-only by construction.
 """
 from __future__ import annotations
 
-from typing import Any, Protocol
+from typing import Any, Protocol, TypeVar
 
 from PySide6.QtWidgets import (
-    QComboBox, QGridLayout, QGroupBox, QLabel, QLineEdit, QWidget,
+    QComboBox,
+    QGridLayout,
+    QGroupBox,
+    QLabel,
+    QLineEdit,
+    QWidget,
 )
 
 from je_auto_control.gui.remote_desktop._helpers import _t
 from je_auto_control.utils.remote_desktop import (
-    active_hardware_codec, available_hardware_codecs,
+    active_hardware_codec,
+    available_hardware_codecs,
 )
 
 DEFAULT_STUN = "stun:stun.l.google.com:19302"
+
+
+_Widget = TypeVar("_Widget", bound=QWidget)
 
 
 class AdvancedGroupHost(Protocol):
@@ -41,11 +50,9 @@ class AdvancedGroupHost(Protocol):
     _turn_cred_edit: Any
     _hw_codec_combo: Any
 
-    def _tr(self, widget: QWidget, key: str, setter: str = "") -> QWidget:
+    def _tr(self, widget: _Widget, key: str, setter: str = "") -> _Widget:
         """Register ``widget`` for live re-translation and return it."""
 
-    def _on_hw_codec_changed(self) -> None:
-        """React to the hardware-codec selection changing."""
 
 
 def build_advanced_group(panel: AdvancedGroupHost,
@@ -85,7 +92,7 @@ def _add_hw_codec_row(panel: AdvancedGroupHost, grid: QGridLayout) -> None:
         index = combo.findData(active)
         if index >= 0:
             combo.setCurrentIndex(index)
-    combo.currentIndexChanged.connect(lambda _i: panel._on_hw_codec_changed())
+    combo.currentIndexChanged.connect(lambda _i: getattr(panel, "_on_hw_codec_changed")())
     grid.addWidget(combo, 3, 1, 1, 3)
 
 

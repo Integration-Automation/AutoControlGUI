@@ -7,24 +7,24 @@ case where a more expressive XCTest NSPredicate is needed.
 """
 from __future__ import annotations
 
-from typing import Any, Dict, Optional, Tuple
-
-from je_auto_control.wrapper._mobile_binding import resolve_client
+from typing import Dict, Optional, Tuple
 
 from je_auto_control.ios.client import IOSDevice, default_ios_device, translate_device_errors
 from je_auto_control.utils.exception.exceptions import AutoControlException
+from je_auto_control.wrapper._mobile_binding import resolve_client
+from je_auto_control.wrapper._mobile_sdk_protocols import IOSSDK, IOSSelector
 
 
 class ElementNotFoundError(AutoControlException, LookupError):
     """Raised when no XCUITest element matches the supplied selector."""
 
 
-def _build_query(handle: Any,
+def _build_query(handle: IOSSDK,
                  name: Optional[str],
                  class_name: Optional[str],
-                 predicate: Optional[str]) -> Any:
+                 predicate: Optional[str]) -> IOSSelector:
     """Translate kwargs into the ``wda`` selector form."""
-    selectors: Dict[str, Any] = {}
+    selectors: Dict[str, str] = {}
     if name is not None:
         selectors["name"] = name
     if class_name is not None:

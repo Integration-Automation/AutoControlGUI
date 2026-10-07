@@ -12,9 +12,9 @@ from PySide6.QtCore import QObject, Signal
 # pylint: enable=no-name-in-module
 from je_auto_control.utils.executor.request_context import RequestBinding
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
+from je_auto_control.utils.remote_desktop.cleanup_jobs import _CleanupJob, _submit_cleanup
 from je_auto_control.utils.remote_desktop.registry_sessions import RegistrySessions
 from je_auto_control.utils.remote_desktop.sessions import RemoteSession, SessionEvent
-from je_auto_control.utils.remote_desktop.cleanup_jobs import _CleanupJob, _submit_cleanup
 
 
 class PanelSessions(QObject):
@@ -116,7 +116,7 @@ class PanelSessions(QObject):
         identifier = self.id(role)
         return None if identifier is None else self.directory.session_resource(identifier, owner=self.owner)
 
-    def status(self, role: str) -> dict:
+    def status(self, role: str) -> dict[str, Any]:
         """Read the owned transport state, including an empty panel with no connection."""
         return self.directory.session_snapshot(self.id(role), role=role)
 
@@ -136,7 +136,8 @@ class PanelSessions(QObject):
                     job.retry()
 
     def callback(
-        self, role: str, callback: Callable[..., Any], *, transform: Optional[Callable[..., Optional[tuple]]] = None
+        self, role: str, callback: Callable[..., Any], *,
+        transform: Optional[Callable[..., Optional[tuple[Any, ...]]]] = None
     ) -> Callable[..., None]:
         """Queue a captured delivery and recheck generation on the GUI thread."""
         session = self._current[role]
@@ -161,7 +162,7 @@ class PanelSessions(QObject):
         return receive
 
     def _deliver(
-        self, session: RemoteSession, binding: RequestBinding, callback: Callable[..., Any], args: tuple
+        self, session: RemoteSession, binding: RequestBinding, callback: Callable[..., Any], args: tuple[Any, ...]
     ) -> None:
         current = self._current.get(session.role)
         if (

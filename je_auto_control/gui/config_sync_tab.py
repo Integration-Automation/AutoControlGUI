@@ -8,12 +8,17 @@ from threading import Event
 from typing import Any, Callable, Dict, Optional
 
 from PySide6.QtWidgets import (  # pylint: disable=no-name-in-module  # reason: native Qt bindings
-    QFormLayout, QLabel, QLineEdit, QPlainTextEdit, QVBoxLayout, QWidget,
+    QFormLayout,
+    QLabel,
+    QLineEdit,
+    QPlainTextEdit,
+    QVBoxLayout,
+    QWidget,
 )
 
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
-from je_auto_control.gui.task_controller import CancellationToken, TaskController, TaskError, TaskHandle, TaskResult
 from je_auto_control.gui.language_wrapper.multi_language_wrapper import language_wrapper
+from je_auto_control.gui.task_controller import CancellationToken, TaskController, TaskError, TaskHandle, TaskResult
 from je_auto_control.utils.config_sync import service
 from je_auto_control.utils.config_sync.asset_service import config_sync_assets
 
@@ -30,7 +35,7 @@ class ConfigSyncTab(TranslatableMixin, QWidget):  # pylint: disable=too-many-ins
         super().__init__(parent)
         self._tr_init()
         self.definitions, self.workspace, self.server, self.user, self.secret = (QLineEdit() for _ in range(5))
-        self.secret.setEchoMode(QLineEdit.Password)
+        self.secret.setEchoMode(QLineEdit.EchoMode.Password)
         self.asset_manifest, self.asset_source = QLineEdit(), QLineEdit()
         self.results = QPlainTextEdit()
         self.results.setReadOnly(True)
@@ -54,7 +59,7 @@ class ConfigSyncTab(TranslatableMixin, QWidget):  # pylint: disable=too-many-ins
         root.addWidget(self.results)
         self._tr(self.status, 'sync_ready')
 
-    def menu_actions(self) -> list:
+    def menu_actions(self) -> list[Any]:
         """Explicit operations exposed through the application's Actions menu."""
         return [('sync_preview', self._preview), ('sync_exchange', self._exchange),
                 ('sync_apply', self._apply), ('sync_retry', self._retry), ('sync_status', self._status),

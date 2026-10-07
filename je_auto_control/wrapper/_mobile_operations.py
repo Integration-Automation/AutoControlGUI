@@ -65,13 +65,12 @@ def perform(session: _BoundDevice, gesture: Gesture) -> None:
         _validate_frame(session, gesture.frame)
     if session.context.platform == 'android':
         # pylint: disable-next=import-outside-toplevel  # reason: load only the selected platform operation
-        from je_auto_control.android.input import perform_gesture
-        kind = 'uiautomator2'
+        from je_auto_control.android.input import perform_gesture as perform_android
+        perform_android(gesture, device=session.adapter('uiautomator2'))
     else:
         # pylint: disable-next=import-outside-toplevel  # reason: load only the selected platform operation
-        from je_auto_control.ios.input import perform_gesture
-        kind = 'wda'
-    perform_gesture(gesture, device=session.adapter(kind))
+        from je_auto_control.ios.input import perform_gesture as perform_ios
+        perform_ios(gesture, device=session.adapter('wda'))
     session.ensure_open()
 
 
@@ -98,11 +97,10 @@ def type_text(session: _BoundDevice, text: str) -> None:
         raise DeviceSessionError('mobile text must be a string without NUL')
     if session.context.platform == 'android':
         # pylint: disable-next=import-outside-toplevel  # reason: load only the selected platform operation
-        from je_auto_control.android.input import type_text as send
-        kind = 'uiautomator2'
+        from je_auto_control.android.input import type_text as send_android
+        send_android(text, device=session.adapter('uiautomator2'))
     else:
         # pylint: disable-next=import-outside-toplevel  # reason: load only the selected platform operation
-        from je_auto_control.ios.input import type_text as send
-        kind = 'wda'
-    send(text, device=session.adapter(kind))
+        from je_auto_control.ios.input import type_text as send_ios
+        send_ios(text, device=session.adapter('wda'))
     session.ensure_open()

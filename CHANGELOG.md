@@ -8,6 +8,8 @@ only when documented here with a migration path.
 
 New entries go under `## Unreleased
 
+- Modernization modules now require complete mypy definitions/generics. Installed-extras checks validate real Qt stubs; SDK adapters expose typed Protocol interfaces. GUI fixes preserve QWidget.style(), use scoped Qt enums and retain translation widget subtypes.
+
 - MCP adds mode/profile/page-size stdio flags and measured disclosure costs. Readonly now rejects mutating custom-registry calls; concurrent workers preserve accepted client roots and capabilities after session termination.`. The version bump on `main` is automated
 and does not touch this file, so after a release tag appears, move the entries
 it shipped into a `## [x.y.z] - date` section of their own; the tag's

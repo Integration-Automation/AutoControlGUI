@@ -18,7 +18,7 @@ class OwnedAdbClient(AdbClient):
 
     def run(self, args: Sequence[str], *, serial: Optional[str] = None,
             input_bytes: Optional[bytes] = None, timeout: Optional[float] = None,
-            check: bool = True) -> subprocess.CompletedProcess:
+            check: bool = True) -> subprocess.CompletedProcess[bytes]:
         """Reject cross-device overrides and successful completion after cancellation."""
         self._guard()
         if serial is not None and serial != self._context.target:

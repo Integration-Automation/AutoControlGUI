@@ -3,14 +3,15 @@ from __future__ import annotations
 
 import re
 import threading
-from time import monotonic
 from collections.abc import Mapping
-from typing import Any, Callable
+from time import monotonic
+from typing import Any, Callable, cast
 
 from je_auto_control.ios.client import IOSDevice, IOSUnavailableError
 from je_auto_control.wrapper._mobile_client_owner import LazyMobileHandle
 from je_auto_control.wrapper._mobile_models import DeviceContext, DeviceSessionError
 from je_auto_control.wrapper._mobile_sdk import ios_handle
+from je_auto_control.wrapper._mobile_sdk_protocols import IOSSDK
 from je_auto_control.wrapper._mobile_wda_lease import EndpointLease
 
 
@@ -27,9 +28,9 @@ class IOSAppDevice(IOSDevice):
         self._lease = EndpointLease(context.target)
         self._owner = LazyMobileHandle(None, guard, self._dispose_handle)
 
-    def handle_for(self, timeout_s: float) -> Any:
+    def handle_for(self, timeout_s: float) -> IOSSDK:
         """Include first session construction in the caller's request budget."""
-        return self._owner.get(lambda: self._connect_handle(timeout_s))
+        return cast(IOSSDK, self._owner.get(lambda: self._connect_handle(timeout_s)))
 
     def _connect_handle(self, timeout_s: float | None = None) -> Any:
         self._app_guard()

@@ -3,7 +3,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Any, Optional
 
 # pylint: disable=no-name-in-module  # reason: native Qt binding
 from PySide6.QtCore import Qt
@@ -19,6 +19,8 @@ from PySide6.QtWidgets import (
     QMessageBox,
 )
 
+from je_auto_control.gui._panel_tasks import start_native
+
 # pylint: enable=no-name-in-module
 from je_auto_control.gui.remote_desktop._helpers import _read_import_entries, _t
 from je_auto_control.gui.remote_desktop.annotation_overlay import HostAnnotationOverlay
@@ -32,7 +34,6 @@ from je_auto_control.gui.remote_desktop.webrtc_common import (
 )
 from je_auto_control.gui.remote_desktop.webrtc_dialogs import AuditLogDialog
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
-from je_auto_control.gui._panel_tasks import start_native
 from je_auto_control.utils.remote_desktop.adaptive_bitrate import AdaptiveBitrateController
 from je_auto_control.utils.remote_desktop.webrtc_stats import StatsPoller, StatsSnapshot
 
@@ -268,7 +269,7 @@ class WebRTCHostFeaturesController:  # pylint: disable=too-few-public-methods  #
         self._panel._trust_list.clear()
         self._panel._refresh_trusted_list()
 
-    def _on_annotation_event(self, data) -> None:
+    def _on_annotation_event(self, data: dict[str, Any]) -> None:
         if not isinstance(data, dict):
             return
         if self._panel._annotation_overlay is None:
@@ -289,11 +290,11 @@ class WebRTCHostFeaturesController:  # pylint: disable=too-few-public-methods  #
             )
         )
 
-    def _viewer_video_arguments(self, frame) -> Optional[tuple]:
+    def _viewer_video_arguments(self, frame: Any) -> Optional[tuple[Any, ...]]:
         image = _av_frame_to_qimage(frame)
         return None if image is None else (image,)
 
-    def _on_viewer_video_av_frame(self, frame) -> None:
+    def _on_viewer_video_av_frame(self, frame: Any) -> None:
         image = _av_frame_to_qimage(frame)
         if image is not None:
             self._panel._signals.viewer_video_frame.emit(image)

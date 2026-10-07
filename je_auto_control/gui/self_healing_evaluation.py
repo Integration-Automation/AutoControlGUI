@@ -5,13 +5,22 @@ import hashlib
 import io
 import json
 from dataclasses import dataclass
-from typing import Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional
 
 from PIL import Image
 from PySide6.QtGui import QPixmap  # pylint: disable=no-name-in-module  # reason: native Qt binding
 from PySide6.QtWidgets import (  # pylint: disable=no-name-in-module  # reason: native Qt bindings
-    QAbstractItemView, QFileDialog, QFormLayout, QHBoxLayout, QLabel, QLineEdit, QPlainTextEdit,
-    QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget,
+    QAbstractItemView,
+    QFileDialog,
+    QFormLayout,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QPlainTextEdit,
+    QTableWidget,
+    QTableWidgetItem,
+    QVBoxLayout,
+    QWidget,
 )
 
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
@@ -21,11 +30,15 @@ from je_auto_control.utils.action_journal.events import JSONValue
 from je_auto_control.utils.executor.request_context import RequestBinding
 from je_auto_control.utils.path_guard.policy import scoped_path
 from je_auto_control.utils.self_healing.evaluation_api import (
-    accept_template_candidate, compare_healing_versions, create_template_candidate,
-    preview_template_candidate, revert_template_revision, validate_template_candidate,
+    accept_template_candidate,
+    compare_healing_versions,
+    create_template_candidate,
+    preview_template_candidate,
+    revert_template_revision,
+    validate_template_candidate,
 )
 from je_auto_control.utils.self_healing.evaluation_models import HealingEvaluationError
-from je_auto_control.utils.self_healing.report_views import METRIC_COLUMNS, FAILURE_COLUMNS, comparison_rows
+from je_auto_control.utils.self_healing.report_views import FAILURE_COLUMNS, METRIC_COLUMNS, comparison_rows
 
 
 def _t(key: str) -> str:
@@ -107,7 +120,7 @@ class SelfHealingEvaluationPanel(TranslatableMixin, QWidget):
         root.addWidget(self.failures)
         root.addWidget(self.results)
 
-    def menu_actions(self) -> list:
+    def menu_actions(self) -> list[Any]:
         """Comparison and review operations, with acceptance separate from preview."""
         return [('heal_eval_compare', self._compare), ('heal_eval_propose', self._propose),
                 ('heal_eval_preview', self._preview), ('heal_eval_validate', self._validate),

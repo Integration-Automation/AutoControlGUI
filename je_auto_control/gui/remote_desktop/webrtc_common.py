@@ -20,8 +20,8 @@ from PySide6.QtWidgets import QGridLayout, QGroupBox, QLabel, QLineEdit, QMessag
 from je_auto_control.gui.remote_desktop._helpers import _t
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.remote_desktop import WebRTCConfig
-from je_auto_control.utils.remote_desktop.webrtc_stats import StatsSnapshot
 from je_auto_control.utils.remote_desktop.cleanup_jobs import _submit_cleanup
+from je_auto_control.utils.remote_desktop.webrtc_stats import StatsSnapshot
 
 _DEFAULT_FPS = 24
 _DEFAULT_MONITOR = 1
@@ -35,7 +35,7 @@ def dispose_background(callbacks: Iterable[Callable[[], None]]) -> None:
     _submit_cleanup(callbacks)
 
 
-def _av_frame_to_qimage(frame) -> Optional[QImage]:
+def _av_frame_to_qimage(frame: Any) -> Optional[QImage]:
     """Convert an aiortc/av video frame to a Qt-owned QImage."""
     try:
         arr = frame.to_ndarray(format="rgb24")
@@ -63,13 +63,13 @@ class _PanelSignals(QObject):  # pylint: disable=too-few-public-methods  # reaso
     annotation = Signal(object)
 
 
-def _checked_or(panel, attr: str, default: bool = False) -> bool:
+def _checked_or(panel: Any, attr: str, default: bool = False) -> bool:
     """Return ``panel.<attr>.isChecked()`` if the widget exists, else default."""
     widget = getattr(panel, attr, None)
     return widget.isChecked() if widget is not None else default
 
 
-def _read_region(panel) -> Optional[tuple]:
+def _read_region(panel: Any) -> Optional[tuple[Any, ...]]:
     edit = getattr(panel, "_region_edit", None)
     if edit is None:
         return None
@@ -83,7 +83,7 @@ def _read_region(panel) -> Optional[tuple]:
     return tuple(parts) if len(parts) == 4 else None
 
 
-def _read_webrtc_config(panel) -> WebRTCConfig:
+def _read_webrtc_config(panel: Any) -> WebRTCConfig:
     """Build a WebRTCConfig from the advanced group + monitor/fps fields."""
     # pylint: disable=import-outside-toplevel  # reason: lazy optional/cyclic boundary
     from je_auto_control.utils.remote_desktop.webrtc_transport import (

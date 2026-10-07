@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import logging
 from functools import partial
-from typing import TYPE_CHECKING, Callable, Optional
+from typing import TYPE_CHECKING, Any, Callable, Optional
 
 # pylint: disable=no-name-in-module  # reason: native Qt binding
 from PySide6.QtCore import QTimer
@@ -21,8 +21,17 @@ from PySide6.QtWidgets import (
     QMessageBox,
 )
 
+from je_auto_control.gui._panel_tasks import start_native
+
 # pylint: enable=no-name-in-module
 from je_auto_control.gui.remote_desktop._helpers import _t
+from je_auto_control.gui.remote_desktop._task_work import (
+    AnswerRequest,
+    SignalingTarget,
+    ViewerAnswer,
+    create_answer,
+    run_in_session,
+)
 from je_auto_control.gui.remote_desktop.remote_screen_window import RemoteScreenWindow
 from je_auto_control.gui.remote_desktop.webrtc_common import (
     _QUALITY_DOT_STYLE,
@@ -35,17 +44,14 @@ from je_auto_control.gui.remote_desktop.webrtc_workers import (
     ViewerSignalingWorker,
     retire_worker,
 )
+from je_auto_control.gui.task_controller import CancellationToken, TaskController, TaskError, TaskHandle, TaskResult
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
-from je_auto_control.gui._panel_tasks import start_native
 from je_auto_control.utils.remote_desktop import SessionRecorder, WebRTCDesktopViewer
+from je_auto_control.utils.remote_desktop.cleanup_jobs import _submit_cleanup
 from je_auto_control.utils.remote_desktop.webrtc_inspector import default_webrtc_inspector
 from je_auto_control.utils.remote_desktop.webrtc_stats import StatsPoller, StatsSnapshot
 from je_auto_control.utils.remote_desktop.webrtc_transport import fps_for_preset
-from je_auto_control.gui.task_controller import CancellationToken, TaskController, TaskError, TaskHandle, TaskResult
-from je_auto_control.gui.remote_desktop._task_work import (
-    AnswerRequest, SignalingTarget, ViewerAnswer, create_answer, run_in_session,
-)
-from je_auto_control.utils.remote_desktop.cleanup_jobs import _submit_cleanup
+
 
 def _finish_recording(recorder: NativeRecorder, token: CancellationToken) -> object:
     token.checkpoint()
@@ -58,8 +64,8 @@ def _finish_recording(recorder: NativeRecorder, token: CancellationToken) -> obj
 
 
 if TYPE_CHECKING:
-    from je_auto_control.utils.remote_desktop.session_recorder import SessionRecorder as NativeRecorder
     from je_auto_control.gui.remote_desktop.webrtc_viewer_panel import _WebRTCViewerPanel
+    from je_auto_control.utils.remote_desktop.session_recorder import SessionRecorder as NativeRecorder
 
 
 class WebRTCViewerSessionController:  # pylint: disable=too-few-public-methods  # reason: internal signal/slot controller
@@ -436,12 +442,12 @@ class WebRTCViewerSessionController:  # pylint: disable=too-few-public-methods  
             _submit_cleanup((self._panel._viewer.stop,))
         self._panel._viewer = None
 
-    def _on_av_frame(self, frame) -> None:
+    def _on_av_frame(self, frame: Any) -> None:
         arguments = self._panel._frame_arguments(frame)
         if arguments is not None:
             self._panel._signals.frame.emit(*arguments)
 
-    def _frame_arguments(self, frame) -> Optional[tuple]:
+    def _frame_arguments(self, frame: Any) -> Optional[tuple[Any, ...]]:
         if self._panel._recorder is not None:
             try:
                 self._panel._recorder.write_frame(frame)
@@ -537,7 +543,7 @@ class WebRTCViewerSessionController:  # pylint: disable=too-few-public-methods  
             self._panel._rtt_spark.clear()
             self._panel._bitrate_spark.clear()
 
-    def _send(self, payload: dict) -> None:
+    def _send(self, payload: dict[str, Any]) -> None:
         if self._panel._viewer is None or not self._panel._viewer.authenticated:
             return
         try:

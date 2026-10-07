@@ -1,26 +1,26 @@
 """Frozen mobile identities and independently owned, lazy execution bindings."""
 from __future__ import annotations
 
-from contextlib import contextmanager
-from dataclasses import asdict
 import importlib.util
 import shutil
 import sys
 import threading
-from typing import Any, Iterator, Mapping, Optional, Sequence, TYPE_CHECKING
+from contextlib import contextmanager
+from dataclasses import asdict
+from typing import TYPE_CHECKING, Any, Iterator, Literal, Mapping, Optional, Sequence, overload
 
-from je_auto_control.wrapper._mobile_models import DeviceContext, DeviceSessionError
-from je_auto_control.wrapper import _mobile_operations
-from je_auto_control.wrapper.device_frame import DeviceFrame
-from je_auto_control.wrapper.mobile_gesture import Gesture
-from je_auto_control.wrapper._mobile_binding import bind_device, bound_device
-from je_auto_control.wrapper.capabilities import CapabilityStatus
 from je_auto_control.android.client import UIAutomatorDevice
 from je_auto_control.ios.client import IOSDevice
+from je_auto_control.wrapper import _mobile_operations
 from je_auto_control.wrapper._mobile_adb import OwnedAdbClient
-
+from je_auto_control.wrapper._mobile_binding import bind_device, bound_device
+from je_auto_control.wrapper._mobile_models import DeviceContext, DeviceSessionError
+from je_auto_control.wrapper.capabilities import CapabilityStatus
+from je_auto_control.wrapper.device_frame import DeviceFrame
+from je_auto_control.wrapper.mobile_gesture import Gesture
 
 if TYPE_CHECKING:
+    from je_auto_control.wrapper._mobile_wda_app import IOSAppDevice
     from je_auto_control.wrapper.mobile_extensions import MobileExtensionSpec
 
 
@@ -108,6 +108,26 @@ class DeviceSession:
     def type_text(self, text: str) -> None:
         """Send Unicode unchanged through this device's SDK input route."""
         _mobile_operations.type_text(self, text)
+
+    @overload
+    def adapter(self, kind: Literal['uiautomator2']) -> UIAutomatorDevice:
+        """Return the owned Android SDK adapter."""
+
+    @overload
+    def adapter(self, kind: Literal['wda']) -> IOSDevice:
+        """Return the owned iOS SDK adapter."""
+
+    @overload
+    def adapter(self, kind: Literal['wda_app']) -> IOSAppDevice:
+        """Return the owned WDA app-session adapter."""
+
+    @overload
+    def adapter(self, kind: Literal['adb']) -> OwnedAdbClient:
+        """Return the owned ADB transport."""
+
+    @overload
+    def adapter(self, kind: str) -> Any:
+        """Retain dynamic extension compatibility at the adapter boundary."""
 
     def adapter(self, kind: str) -> Any:
         """Return one owned lazy client; SDK construction happens on first use."""

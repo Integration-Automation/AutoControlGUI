@@ -144,6 +144,10 @@ def test_an_empty_recording_is_not_reported_saved(qapp):
     panel = webrtc_panel._WebRTCViewerPanel()
     panel._recorder = types.SimpleNamespace(stop=lambda: None, has_output=False, output_path="out.mp4")
     panel._on_toggle_recording(False)
+    deadline = time.monotonic() + 5
+    while not qapp.messages and time.monotonic() < deadline:
+        qapp.processEvents()
+        time.sleep(0.01)
     assert qapp.messages == [_t("rd_webrtc_recording_empty").format(path="out.mp4")]
 
 

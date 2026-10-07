@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from contextlib import contextmanager
 from contextvars import ContextVar
-from typing import Any, Iterator, Optional, Protocol, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Iterator, Optional, Protocol, TypeVar, cast
 
 from je_auto_control.wrapper._mobile_models import DeviceContext, DeviceSessionError
 
@@ -63,7 +63,10 @@ def active_device() -> Optional[_BoundDevice]:
     return session
 
 
-def resolve_client(platform: str, kind: str, client: Any) -> Any:
+_Client = TypeVar("_Client")
+
+
+def resolve_client(platform: str, kind: str, client: Optional[_Client]) -> Optional[_Client]:
     """A Python helper's explicit client must belong to the active binding."""
     session = bound_device(platform)
     if session is None:
@@ -71,4 +74,4 @@ def resolve_client(platform: str, kind: str, client: Any) -> Any:
     owned = session.adapter(kind)
     if client is not None and client is not owned:
         raise DeviceSessionError('explicit client does not belong to the active device context')
-    return owned
+    return cast(_Client, owned)

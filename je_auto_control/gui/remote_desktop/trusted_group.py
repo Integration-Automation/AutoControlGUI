@@ -12,13 +12,19 @@ reads (``_tr`` and the four slots it connects) and what it sets. Imports
 """
 from __future__ import annotations
 
-from typing import Any, Protocol
+from typing import Any, Protocol, TypeVar
 
 from PySide6.QtWidgets import (
-    QGroupBox, QHBoxLayout, QPushButton, QVBoxLayout, QWidget,
+    QGroupBox,
+    QHBoxLayout,
+    QPushButton,
+    QVBoxLayout,
+    QWidget,
 )
 
 from je_auto_control.gui.remote_desktop.webrtc_dialogs import TrustedViewersList
+
+_Widget = TypeVar("_Widget", bound=QWidget)
 
 
 class TrustedGroupHost(Protocol):
@@ -26,7 +32,7 @@ class TrustedGroupHost(Protocol):
 
     _trusted_list: Any
 
-    def _tr(self, widget: QWidget, key: str, setter: str = "") -> QWidget:
+    def _tr(self, widget: _Widget, key: str, setter: str = "") -> _Widget:
         """Register ``widget`` for live re-translation and return it."""
 
     def _on_remove_trust(self, viewer_id: str) -> None:

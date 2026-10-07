@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from time import monotonic
-from typing import Literal, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Literal
 
 from je_auto_control.wrapper._mobile_app_models import AppState
 from je_auto_control.wrapper._mobile_models import DeviceSessionError
@@ -11,7 +11,7 @@ if TYPE_CHECKING:
     from je_auto_control.wrapper.device_context import DeviceSession
 
 
-def _request(session: DeviceSession, path: str, data: dict, timeout_s: float):
+def _request(session: DeviceSession, path: str, data: dict[str, Any], timeout_s: float) -> Any:
     deadline = monotonic() + timeout_s
     handle = session.adapter('wda_app').handle_for(timeout_s)
     remaining = deadline - monotonic()

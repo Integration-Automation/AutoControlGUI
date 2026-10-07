@@ -1,11 +1,10 @@
 """Qt-owned connection presentation with headless, session-bound native work."""
 from __future__ import annotations
 
+import weakref
 from functools import partial
 from typing import Callable, Protocol
-import weakref
 
-from PySide6.QtCore import QObject
 from PySide6.QtWidgets import QMessageBox, QWidget
 
 from je_auto_control.gui._panel_tasks import PanelTasks
@@ -25,11 +24,10 @@ def _start_native(start: Callable[[], object], _timeout: float) -> object:
     return start()
 
 
-class ConnectionTasks(QObject):
+class ConnectionTasks:
     """Snapshot the owned session before starting; completion never selects a new session."""
 
     def __init__(self, owner: QWidget, sessions: PanelSessions) -> None:
-        super().__init__(owner)
         self._owner = weakref.ref(owner)
         self._sessions = sessions
         self._tasks = {role: PanelTasks(owner, timeout_s=60) for role in ('host', 'viewer')}

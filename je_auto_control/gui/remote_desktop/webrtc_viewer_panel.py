@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable, Optional
 
 # pylint: disable=no-name-in-module  # reason: native Qt binding
@@ -36,6 +37,8 @@ from je_auto_control.utils.remote_desktop.registry import registry
 from je_auto_control.utils.remote_desktop.webrtc_stats import StatsPoller, StatsSnapshot
 
 if TYPE_CHECKING:
+    from PySide6.QtWidgets import QComboBox, QLineEdit
+
     from je_auto_control.utils.remote_desktop.file_sync import FolderSyncEngine
     from je_auto_control.utils.remote_desktop.session_recorder import SessionRecorder as NativeRecorder
 if TYPE_CHECKING:
@@ -55,6 +58,11 @@ if TYPE_CHECKING:
 class _WebRTCViewerPanel(TranslatableMixin, QWidget):  # pylint: disable=too-many-instance-attributes  # reason: explicit owned lifecycle/widget state
     """Viewer: receive screen and send input."""
 
+    _stun_edit: QLineEdit
+    _turn_edit: QLineEdit
+    _turn_user_edit: QLineEdit
+    _turn_cred_edit: QLineEdit
+    _hw_codec_combo: QComboBox
     _sessions: je_auto_control.gui.remote_desktop.session_owner.PanelSessions
     _viewer: Any | None
     _offer_worker: je_auto_control.gui.remote_desktop.webrtc_workers.ViewerSignalingWorker | None
@@ -175,10 +183,10 @@ class _WebRTCViewerPanel(TranslatableMixin, QWidget):  # pylint: disable=too-man
         self._sessions.attach(viewer, "viewer")
         return viewer
 
-    def _on_received_file(self, path, *, deliver: Optional[Callable] = None) -> None:
+    def _on_received_file(self, path: str, *, deliver: Optional[Callable[[str], None]] = None) -> None:
         engine = self._sync_engine
         if engine is not None:
-            engine.mark_received(path)
+            engine.mark_received(Path(path))
         (self._signals.file_received.emit if deliver is None else deliver)(path)
 
     def _build_ui(self) -> None:
@@ -227,7 +235,7 @@ class _WebRTCViewerPanel(TranslatableMixin, QWidget):  # pylint: disable=too-man
     def _wire_input_signals(self) -> None:
         return self._layout_controller._wire_input_signals()
 
-    def _wire_display_input(self, source) -> None:
+    def _wire_display_input(self, source: Any) -> None:
         """Wire mouse / keyboard / annotation signals from ``source``.
 
         ``source`` can be a :class:`_FrameDisplay` or a
@@ -261,33 +269,33 @@ class _WebRTCViewerPanel(TranslatableMixin, QWidget):  # pylint: disable=too-man
     def _on_browse_delete_button(self) -> None:
         return self._transfers_controller._on_browse_delete_button()
 
-    def _on_pull_names(self, names) -> None:
+    def _on_pull_names(self, names: list[str]) -> None:
         return self._transfers_controller._on_pull_names(names)
 
-    def _on_delete_names(self, names) -> None:
+    def _on_delete_names(self, names: list[str]) -> None:
         return self._transfers_controller._on_delete_names(names)
 
-    def _on_upload_paths(self, paths) -> None:
+    def _on_upload_paths(self, paths: list[str]) -> None:
         return self._transfers_controller._on_upload_paths(paths)
 
     def _on_copy_name(self, name: str) -> None:
         return self._transfers_controller._on_copy_name(name)
 
-    def _on_inbox_listing(self, files) -> None:
+    def _on_inbox_listing(self, files: list[dict[str, Any]]) -> None:
         return self._transfers_controller._on_inbox_listing(files)
 
-    def _on_inbox_op_result(self, name: str, ok: bool, error) -> None:
+    def _on_inbox_op_result(self, name: str, ok: bool, error: object) -> None:
         return self._transfers_controller._on_inbox_op_result(name, ok, error)
 
     def _on_send_file(self) -> None:
         return self._transfers_controller._on_send_file()
 
     @staticmethod
-    def _wol_defaults(entry) -> tuple[str, str]:
+    def _wol_defaults(entry: Optional[dict[str, Any]]) -> tuple[str, str]:
         """Return (mac, broadcast) pre-fill values from a book entry."""
         return WebRTCViewerTransfersController._wol_defaults(entry)
 
-    def _persist_wol_entry(self, entry, mac: str, broadcast: str) -> None:
+    def _persist_wol_entry(self, entry: Optional[dict[str, Any]], mac: str, broadcast: str) -> None:
         """Save the MAC / broadcast just used back onto the book entry."""
         return self._transfers_controller._persist_wol_entry(entry, mac, broadcast)
 
@@ -309,16 +317,16 @@ class _WebRTCViewerPanel(TranslatableMixin, QWidget):  # pylint: disable=too-man
     def _refresh_address_book(self) -> None:
         return self._transfers_controller._refresh_address_book()
 
-    def _on_address_tags(self, entry: dict) -> None:
+    def _on_address_tags(self, entry: dict[str, Any]) -> None:
         return self._transfers_controller._on_address_tags(entry)
 
-    def _on_address_chosen(self, entry: dict) -> None:
+    def _on_address_chosen(self, entry: dict[str, Any]) -> None:
         return self._transfers_controller._on_address_chosen(entry)
 
-    def _on_address_removed(self, entry: dict) -> None:
+    def _on_address_removed(self, entry: dict[str, Any]) -> None:
         return self._transfers_controller._on_address_removed(entry)
 
-    def _on_address_favorite(self, entry: dict) -> None:
+    def _on_address_favorite(self, entry: dict[str, Any]) -> None:
         return self._transfers_controller._on_address_favorite(entry)
 
     def _on_connect_selected_address(self) -> None:
@@ -333,10 +341,10 @@ class _WebRTCViewerPanel(TranslatableMixin, QWidget):  # pylint: disable=too-man
     def _on_lan_browse(self) -> None:
         return self._transfers_controller._on_lan_browse()
 
-    def _on_lan_chosen(self, svc: dict) -> None:
+    def _on_lan_chosen(self, svc: dict[str, Any]) -> None:
         return self._transfers_controller._on_lan_chosen(svc)
 
-    def _on_file_received_ui(self, path) -> None:
+    def _on_file_received_ui(self, path: str) -> None:
         return self._transfers_controller._on_file_received_ui(path)
 
     def _on_send_cad(self) -> None:
@@ -412,10 +420,10 @@ class _WebRTCViewerPanel(TranslatableMixin, QWidget):  # pylint: disable=too-man
     def _stop_viewer_if_any(self) -> None:
         return self._session_controller._stop_viewer_if_any()
 
-    def _on_av_frame(self, frame) -> None:
+    def _on_av_frame(self, frame: Any) -> None:
         return self._session_controller._on_av_frame(frame)
 
-    def _frame_arguments(self, frame) -> Optional[tuple]:
+    def _frame_arguments(self, frame: Any) -> Optional[tuple[Any, ...]]:
         return self._session_controller._frame_arguments(frame)
 
     def _on_frame_image(self, image: QImage) -> None:
@@ -439,7 +447,7 @@ class _WebRTCViewerPanel(TranslatableMixin, QWidget):  # pylint: disable=too-man
     def _stop_stats_polling(self) -> None:
         return self._session_controller._stop_stats_polling()
 
-    def _send(self, payload: dict) -> None:
+    def _send(self, payload: dict[str, Any]) -> None:
         return self._session_controller._send(payload)
 
     def _show_error(self, error: Exception) -> None:

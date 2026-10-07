@@ -7,7 +7,12 @@ from typing import Any, Callable, Optional
 
 from PySide6.QtCore import QTimer  # pylint: disable=no-name-in-module  # reason: native Qt binding
 from PySide6.QtWidgets import (  # pylint: disable=no-name-in-module  # reason: native Qt binding
-    QFormLayout, QLabel, QLineEdit, QPlainTextEdit, QVBoxLayout, QWidget,
+    QFormLayout,
+    QLabel,
+    QLineEdit,
+    QPlainTextEdit,
+    QVBoxLayout,
+    QWidget,
 )
 
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
@@ -61,7 +66,7 @@ class WaylandInputPanel(TranslatableMixin, QWidget):
             target=_dispose, args=(session,), name='autocontrol-wayland-panel-close', daemon=True).start())
         self._status()
 
-    def menu_actions(self) -> list:
+    def menu_actions(self) -> list[Any]:
         """Return explicit opt-in operations for the window-level Actions menu."""
         return [('wl_start_physical', self._start_physical), ('wl_stop_physical', self._stop_physical),
                 ('wl_start_shortcut', self._start_shortcut), ('wl_stop_shortcut', self._stop_shortcut),

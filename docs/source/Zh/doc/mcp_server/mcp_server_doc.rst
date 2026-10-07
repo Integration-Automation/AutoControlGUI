@@ -561,3 +561,10 @@ root/env、限流與確認。背景工作保留接受請求時的身分與 roots
 結束不會放寬限制。本機五次樣本：完整747個／363544bytes，核心6個／2506bytes；
 交握及清單37.91／9.56ms，搜尋9.78／9.65ms，未含網路。
 版本、來源 hash 與樣本見 ``benchmarks/results/mcp-discovery-g3/report.json``。
+
+型別驗證
+========
+
+``python test/verify/typing_contract_verify.py`` 檢查三個平台；安裝 ``[gui]`` 後加上
+``--extras``，以真實 PySide6 stubs 檢查全部改版 GUI。嚴格函式／泛型與零豁免維持；
+SDK adapter 提供 Protocol 介面，型別成功不代表原生授權或裝置可達。

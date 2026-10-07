@@ -32,9 +32,11 @@ Usage::
 from __future__ import annotations
 
 import argparse
+import importlib.util
 import json
 import subprocess  # nosec B404  # reason: runs mypy, a fixed dev-time argv with no shell
 import sys
+import tempfile
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -75,19 +77,40 @@ def _module_name(relative_path: str) -> str:
     return ".".join(parts)
 
 
-def _failing_modules(platform: str) -> set[str]:
+def _run_mypy(platform: str, *, extras: bool = False) -> subprocess.CompletedProcess[str]:
+    """Check source using either stable third-party boundaries or installed real Qt stubs."""
+    targets = TYPE_TARGETS
+    options: list[str] = []
+    with tempfile.TemporaryDirectory(prefix="autocontrol-mypy-") as directory:
+        if extras:
+            if importlib.util.find_spec("PySide6") is None:
+                raise SystemExit("--extras requires the installed [gui] extra and real PySide6 stubs")
+            config = Path(directory) / 'mypy.toml'
+            text = (REPO_ROOT / 'pyproject.toml').read_text(encoding='utf-8')
+            text = text.replace('"PySide6", "PySide6.*",', '')
+            config.write_text(text, encoding='utf-8')
+            options = ['--config-file', str(config)]
+            targets = tuple(module.replace('.', '/') + '.py' for module in _modernization_modules()
+                            if module.startswith('je_auto_control.gui.') and
+                            (REPO_ROOT / (module.replace('.', '/') + '.py')).exists())
+        # pylint: disable-next=line-too-long  # reason: precise semgrep subprocess audit ID cannot wrap
+        completed = subprocess.run(  # nosec B603  # nosemgrep: python.lang.security.audit.dangerous-subprocess-use-audit.dangerous-subprocess-use-audit  # reason: argv is `sys.executable` plus literals and one value from the module-level PLATFORMS tuple; no shell, no environment, no caller input
+            [sys.executable, "-m", "mypy", "--platform", platform, "-O", "json", *options, *targets],
+            cwd=REPO_ROOT,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        return completed
+
+
+def _failing_modules(platform: str, *, extras: bool = False) -> set[str]:
     """Return the modules mypy reports errors in when targeting `platform`."""
     # The marker has to sit on the `subprocess.run(` line itself: Codacy honours
     # `nosemgrep` only on the exact line it reports, and the audit rule reports
     # the call, not the argument. See `je_auto_control/android/adb_client.py`
     # for the same shape.
-    completed = subprocess.run(  # nosec B603  # nosemgrep: python.lang.security.audit.dangerous-subprocess-use-audit.dangerous-subprocess-use-audit  # reason: argv is `sys.executable` plus literals and one value from the module-level PLATFORMS tuple; no shell, no environment, no caller input
-        [sys.executable, "-m", "mypy", "--platform", platform, "-O", "json", *TYPE_TARGETS],
-        cwd=REPO_ROOT,
-        capture_output=True,
-        text=True,
-        check=False,
-    )
+    completed = _run_mypy(platform, extras=extras)
     modules: set[str] = set()
     for line in completed.stdout.splitlines():
         line = line.strip()
@@ -100,10 +123,12 @@ def _failing_modules(platform: str) -> set[str]:
             continue
         if record.get("severity") != "error":
             continue
+        if extras:
+            print(f"{record.get('file')}:{record.get('line')}: {record.get('message')}")
         path = str(record.get("file", "")).replace("\\", "/")
         if path.startswith(f"{PACKAGE}/") or path in TYPE_TARGETS:
             modules.add(_module_name(path))
-    if not modules and completed.returncode not in (0, 1):
+    if not modules and completed.returncode != 0:
         raise SystemExit(
             f"mypy failed to run for --platform {platform} "
             f"(exit {completed.returncode}):\n{completed.stderr.strip()}"
@@ -111,11 +136,18 @@ def _failing_modules(platform: str) -> set[str]:
     return modules
 
 
-def _measure() -> set[str]:
+def _modernization_modules() -> tuple[str, ...]:
+    """Read the explicit new/rewritten strict scope shared with source checks."""
+    path = REPO_ROOT / 'test/verify/typing_modernization_modules.txt'
+    return tuple(line.strip() for line in path.read_text(encoding='utf-8').splitlines()
+                 if line.strip() and not line.startswith('#'))
+
+
+def _measure(*, extras: bool = False) -> set[str]:
     """Return every module failing on at least one supported target platform."""
     failing: set[str] = set()
     for platform in PLATFORMS:
-        found = _failing_modules(platform)
+        found = _failing_modules(platform, extras=extras)
         print(f"  --platform {platform}: {len(found)} module(s) with errors")
         failing |= found
     return failing
@@ -152,10 +184,12 @@ def main() -> int:
         action="store_true",
         help="rewrite the exemption list from a fresh measurement",
     )
+    parser.add_argument("--extras", action="store_true",
+                        help="Check modernization GUI modules against installed real PySide6 stubs.")
     args = parser.parse_args()
 
     print(f"Type-checking {PACKAGE} for {len(PLATFORMS)} target platforms...")
-    failing = _measure()
+    failing = _measure(extras=args.extras)
 
     if args.fix:
         _write_exempt(failing)

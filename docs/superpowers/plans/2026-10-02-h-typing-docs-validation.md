@@ -41,7 +41,7 @@ Step 4 通過後，該階段另外執行 ruff、相關既有回歸與三目標�
 
 **Interfaces:** 新／重寫模組限定 disallow_untyped_defs、disallow_any_generics；win32/linux/darwin 目標維持，extras 型別檢查另列 job。
 
-- [ ] **Step 1:** 定義 fake fixtures 並新增 `test_exemptions_remain_empty, test_new_modules_have_complete_annotations, test_adapter_is_only_sdk_any_boundary`，驗證：
+- [x] **Step 1:** 定義 fake fixtures 並新增 `test_exemptions_remain_empty, test_new_modules_have_complete_annotations, test_adapter_is_only_sdk_any_boundary`，驗證：
 
 ```python
 assert exemptions == set()
@@ -49,10 +49,10 @@ assert untyped_public_signatures == []
 assert sdk_any_leaks == []
 ```
 
-- [ ] **Step 2:** 執行 `.venv/Scripts/python.exe -m pytest -q --tb=short --basetemp=.test-tmp/modernization-task -o cache_dir=.test-tmp/modernization-pytest-cache test/unit_test/headless/test_typing_modernization_contract.py`，確認新測試因原有缺陷或尚未提供接口而 FAIL；不要把環境錯誤當成功的重現。
-- [ ] **Step 3:** 為 SDK 邊界建立 Protocol/typed adapters，新增 py-modules 也加入範圍。不要 blanket skip GUI；保留確實無法被3.10解析的依賴特定理由，空豁免不變。
-- [ ] **Step 4:** 重跑 Step 2，預期 exit 0；再跑這些修改檔所對應的既有回歸，確認公開契約。
-- [ ] **Step 5:** 更新本 task 的型別、所有交付入口、文件、測量計數與進度，僅 stage 本 task 檔案，提交 `git commit -m 'H1: 型別檢查深度與相依矩陣'`。
+- [x] **Step 2:** 執行 `.venv/Scripts/python.exe -m pytest -q --tb=short --basetemp=.test-tmp/modernization-task -o cache_dir=.test-tmp/modernization-pytest-cache test/unit_test/headless/test_typing_modernization_contract.py`，確認新測試因原有缺陷或尚未提供接口而 FAIL；不要把環境錯誤當成功的重現。
+- [x] **Step 3:** 為 SDK 邊界建立 Protocol/typed adapters，新增 py-modules 也加入範圍。不要 blanket skip GUI；保留確實無法被3.10解析的依賴特定理由，空豁免不變。
+- [x] **Step 4:** 重跑 Step 2，預期 exit 0；再跑這些修改檔所對應的既有回歸，確認公開契約。
+- [x] **Step 5:** 更新本 task 的型別、所有交付入口、文件、測量計數與進度，僅 stage 本 task 檔案，提交 `git commit -m 'H1: 型別檢查深度與相依矩陣'`。
 
 ### Task H2: 完整範例與三語文件
 

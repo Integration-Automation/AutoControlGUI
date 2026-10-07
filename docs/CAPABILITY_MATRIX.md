@@ -655,3 +655,7 @@ with one warmup/five samples and records source hash/platform/version. Reference
 full747/363544bytes, core6/2506bytes; local initialize+list37.91/9.56ms and
 search9.78/9.65ms. This measures local JSON-RPC, excluding networking/native input.
 Artifact: `benchmarks/results/mcp-discovery-g3/report.json`.
+
+### Type evidence
+
+Stable typing targets win32/linux/darwin without exemptions; strict new/rewritten scope includes all modernization modules. A separate `typing-extras` CI matrix installs GUI/WebRTC/Android/WDA SDKs and checks all modernization GUI modules against real PySide6 stubs on Python3.10/3.14. SDK protocols constrain adapter results; type success does not prove native authorization/device reachability. Local installed Qt checking and controlled mobile/GUI regressions are recorded in updates/H1.

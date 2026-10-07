@@ -75,9 +75,10 @@ def benchmark(*, repeats: int = 5) -> dict[str, Any]:
     """Return comparable full/progressive measurements without native device calls."""
     registry = build_default_tool_registry()
     index = ToolIndex(registry)
-    revision = subprocess.run(  # nosec B603,B607  # reason: fixed git inspection argv; no shell
+    result = subprocess.run(  # nosec B603, B607  # reason: fixed git inspection argv; no shell
         ['git', 'rev-parse', 'HEAD'], cwd=ROOT, capture_output=True,
-        text=True, check=True, timeout=10).stdout.strip()
+        text=True, check=True, timeout=10)
+    revision = result.stdout.strip()
     digest = hashlib.sha256()
     for path in sorted((ROOT / 'je_auto_control/utils/mcp_server').rglob('*.py')):
         digest.update(path.relative_to(ROOT).as_posix().encode())

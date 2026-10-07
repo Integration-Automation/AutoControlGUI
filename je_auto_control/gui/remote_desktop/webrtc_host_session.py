@@ -4,10 +4,11 @@
 from __future__ import annotations
 
 from functools import partial
-from typing import TYPE_CHECKING, Callable, Optional
+from typing import TYPE_CHECKING, Any, Callable, Optional
 
 # pylint: disable=no-name-in-module  # reason: native Qt binding
-from PySide6.QtCore import Qt, QTimer
+from PySide6.QtCore import QPoint, Qt, QTimer
+from PySide6.QtGui import QAction
 
 # pylint: enable=no-name-in-module
 # pylint: disable=no-name-in-module  # reason: native Qt binding
@@ -16,17 +17,18 @@ from PySide6.QtWidgets import (
     QTableWidgetItem,
 )
 
+from je_auto_control.gui._panel_tasks import start_native
+
 # pylint: enable=no-name-in-module
 from je_auto_control.gui.remote_desktop._helpers import _t
+from je_auto_control.gui.remote_desktop._task_work import HostOffer, apply_answer, create_offer, run_in_session
 from je_auto_control.gui.remote_desktop.webrtc_workers import HostPublishLoopWorker, retire_worker
+from je_auto_control.gui.task_controller import TaskController, TaskError, TaskHandle, TaskResult
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
-from je_auto_control.gui._panel_tasks import start_native
 from je_auto_control.utils.remote_desktop import MultiViewerHost
+from je_auto_control.utils.remote_desktop.cleanup_jobs import _submit_cleanup
 from je_auto_control.utils.remote_desktop.webrtc_inspector import default_webrtc_inspector
 from je_auto_control.utils.remote_desktop.webrtc_stats import StatsPoller, StatsSnapshot
-from je_auto_control.gui.task_controller import TaskController, TaskError, TaskHandle, TaskResult
-from je_auto_control.gui.remote_desktop._task_work import HostOffer, apply_answer, create_offer, run_in_session
-from je_auto_control.utils.remote_desktop.cleanup_jobs import _submit_cleanup
 
 if TYPE_CHECKING:
     from je_auto_control.gui.remote_desktop.webrtc_host_panel import _WebRTCHostPanel
@@ -264,7 +266,7 @@ class WebRTCHostSessionController:  # pylint: disable=too-few-public-methods  # 
             start_native(poller.start, self._panel)
             self._panel._session_pollers[sid] = poller
 
-    def _make_session_stats_handler(self, session_id: str):
+    def _make_session_stats_handler(self, session_id: str) -> Callable[[StatsSnapshot], None]:
         """Closure capturing session_id for the per-session poller."""
 
         def _handle(snapshot: StatsSnapshot) -> None:
@@ -318,7 +320,7 @@ class WebRTCHostSessionController:  # pylint: disable=too-few-public-methods  # 
             self._panel._sessions_table.setItem(row, 3, QTableWidgetItem(state))
             self._panel._sessions_table.setItem(row, 4, QTableWidgetItem(connected))
 
-    def _on_sessions_context_menu(self, position) -> None:
+    def _on_sessions_context_menu(self, position: QPoint) -> None:
         # pylint: disable=no-name-in-module,import-outside-toplevel  # reason: lazy optional/cyclic boundary
         from PySide6.QtWidgets import (
             QMenu,
@@ -347,7 +349,8 @@ class WebRTCHostSessionController:  # pylint: disable=too-few-public-methods  # 
         chosen = menu.exec(self._panel._sessions_table.viewport().mapToGlobal(position))
         self._panel._dispatch_session_menu(chosen, actions, sid, viewer_id)
 
-    def _dispatch_session_menu(self, chosen, actions: dict, sid: str, viewer_id: str) -> None:
+    def _dispatch_session_menu(self, chosen: Optional[QAction], actions: dict[str, Any],
+                               sid: str, viewer_id: str) -> None:
         """Run the action chosen from the sessions context menu."""
         if chosen is actions["disconnect"]:
             self._panel._on_disconnect_selected()

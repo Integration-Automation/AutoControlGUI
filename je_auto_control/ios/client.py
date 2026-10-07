@@ -17,12 +17,13 @@ Setup outside this module:
 from __future__ import annotations
 
 import functools
-from typing import Any, Callable, Optional, TypeVar
+from typing import Any, Callable, Optional, ParamSpec, TypeVar, cast
 
 from je_auto_control.utils.exception.exceptions import AutoControlException
-from je_auto_control.wrapper._mobile_client_owner import LazyMobileHandle
 from je_auto_control.wrapper._mobile_binding import bound_device
+from je_auto_control.wrapper._mobile_client_owner import LazyMobileHandle
 from je_auto_control.wrapper._mobile_sdk import ios_handle
+from je_auto_control.wrapper._mobile_sdk_protocols import IOSSDK
 
 
 class IOSUnavailableError(AutoControlException, RuntimeError):
@@ -53,9 +54,9 @@ class IOSDevice:
         return self._url
 
     @property
-    def handle(self) -> Any:
+    def handle(self) -> IOSSDK:
         """Return the underlying ``wda.Client`` instance (lazy)."""
-        return self._resolve_handle()
+        return cast(IOSSDK, self._resolve_handle())
 
     def _resolve_handle(self) -> Any:
         return self._owner.get(self._connect_handle)
@@ -71,7 +72,7 @@ class IOSDevice:
             if self._guard is None:
                 return wda.Client(self._url)
             return ios_handle(wda, self._url, self._timeout_s or 10, self._guard)
-        except (OSError, RuntimeError, ValueError, *_sdk_errors()) as error:
+        except (OSError, RuntimeError, ValueError) + _sdk_errors() as error:
             raise IOSUnavailableError(f"could not reach WebDriverAgent at {self._url}: {error}") from error
 
     def close(self) -> None:
@@ -106,9 +107,10 @@ __all__ = [
 
 
 _Result = TypeVar("_Result")
+_Parameters = ParamSpec("_Parameters")
 
 
-def _sdk_errors() -> tuple:
+def _sdk_errors() -> tuple[type[BaseException], ...]:
     """facebook-wda's base error (an invalid session, a crashed app...), if installed."""
     try:
         from wda import exceptions as wda_exceptions
@@ -117,16 +119,16 @@ def _sdk_errors() -> tuple:
     return (wda_exceptions.WDAError,)
 
 
-def translate_device_errors(function: Callable[..., _Result]) -> Callable[..., _Result]:
+def translate_device_errors(function: Callable[_Parameters, _Result]) -> Callable[_Parameters, _Result]:
     """Re-raise the facebook-wda errors a device call can raise as :class:`IOSUnavailableError`.
 
     They derive from ``Exception`` alone, so an unreachable or confused device
     escaped ``raise_on_error=False`` and aborted every remaining action.
     """
     @functools.wraps(function)
-    def wrapper(*args: Any, **kwargs: Any) -> _Result:
+    def wrapper(*args: _Parameters.args, **kwargs: _Parameters.kwargs) -> _Result:
         try:
             return function(*args, **kwargs)
-        except (*_sdk_errors(),) as error:
+        except _sdk_errors() as error:
             raise IOSUnavailableError(f"{function.__name__}: {error}") from error
     return wrapper

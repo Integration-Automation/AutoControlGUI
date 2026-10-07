@@ -229,6 +229,31 @@ jobs:
       # regression in that arrangement.
       - run: python test/verify/typing_contract_verify.py
 
+  typing-extras:
+    if: inputs.verification_scope != 'native-shortcut'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.14"]
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+      - run: pip install -e ".[gui,webrtc]"  # NOSONAR githubactions:S8544  # reason: installs the checked-out project
+      - run: "pip install mypy==2.3.0 uiautomator2==3.7.0 adbutils==2.12.0 facebook-wda==1.5.4"
+      - name: Check complete definitions and real Qt stubs with mobile SDKs installed
+        run: python test/verify/typing_contract_verify.py --extras
+      - name: Preserve installed SDK and typing dependency versions
+        if: always()
+        run: pip freeze > typing-extras-versions.txt
+      - uses: actions/upload-artifact@v6
+        if: always()
+        with:
+          name: typing-extras-${{ matrix.python-version }}
+          path: typing-extras-versions.txt
+
   wayland-shortcut-native:
     runs-on: ubuntu-22.04
     timeout-minutes: 10
