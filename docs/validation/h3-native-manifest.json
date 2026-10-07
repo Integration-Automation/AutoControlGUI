@@ -1,0 +1,68 @@
+{
+  "docker": {
+    "run_id": 37677931015,
+    "source_commit": "9675a98f21497e1aeec7fe9ca75b2869b19c890e",
+    "url": "https://github.com/Integration-Automation/AutoControlGUI/actions/runs/37677931015",
+    "native_log_checks": [
+      {
+        "artifact_path": "wayland-native-verification/wayland-verification.log",
+        "summary": "27/27 checks passed",
+        "sha256": "2963fef43def94514e4b79116e7000d40878989f2c787d91f09c3277422f0069"
+      },
+      {
+        "artifact_path": "seat-native-verification/seat-verification.log",
+        "summary": "15/15 checks passed",
+        "sha256": "0aea7cc6c2245690d543eac843817ddf40e92175087332b6757b44f8a1b94bb6"
+      },
+      {
+        "artifact_path": "portal-native-verification/portal-verification.log",
+        "summary": "20/20 checks passed",
+        "sha256": "1fdea8a844be851bd768af0de3ceca6d83007f798721a6113c5b6f2405cda44c"
+      },
+      {
+        "artifact_path": "ydotool-native-verification/ydotool-verification.log",
+        "summary": "13/13 checks passed",
+        "sha256": "e8691db36f8af6e3c2b5414785acc04d744e5417e75d70a2da3f816ce80b1d05"
+      },
+      {
+        "artifact_path": "ei-native-verification/libei-verification.log",
+        "summary": "9/9 checks passed",
+        "sha256": "dcd587c0c345bee3ab3c0a161239cff593c12ef8273860435dbcb7cde07bfb75"
+      },
+      {
+        "artifact_path": "ei-native-verification/eis-verification.log",
+        "summary": "20/20 checks passed",
+        "sha256": "1ae4f5fb9b26182e19bfe4cece1326a35b15d09d8c1b3fa3892f3fe6fe64b988"
+      }
+    ],
+    "private_bus": {
+      "python": "3.12.15 (main, Oct  6 2026, 02:02:22) [GCC 14.2.0]",
+      "platform": "Linux-6.8.0-1064-azure-x86_64-with-glibc2.41",
+      "package": "/usr/local/lib/python3.12/site-packages/je_auto_control/__init__.py",
+      "checks": {
+        "grant_and_isolation": true,
+        "early_activation": true,
+        "denied_and_cancelled": true,
+        "revoked": true,
+        "name_lost": true,
+        "pending_name_lost": true
+      }
+    }
+  },
+  "android": {
+    "run_id": 37681934892,
+    "source_commit": "a4e9e2b344274a5d7a7f434099f2c1aad768744c",
+    "url": "https://github.com/Integration-Automation/AutoControlGUI/actions/runs/37681934892",
+    "report": "h3-android-native.json",
+    "report_sha256": "91e8a3a5486579b0faf0cfafb890c75462a415b5efb17cd86bcd36da46605835",
+    "image_artifact": "android-native-evidence/android-frame.png",
+    "image_sha256": "f1ce0af08059a952430161da62feb8418f8f00b9152473aec3410f39749599e6",
+    "visual_inspection": "Settings heading/search and populated settings categories visible"
+  },
+  "macos": {
+    "run_id": 37677922126,
+    "source_commit": "9675a98f21497e1aeec7fe9ca75b2869b19c890e",
+    "url": "https://github.com/Integration-Automation/AutoControlGUI/actions/runs/37677922126",
+    "report": "h3-macos-native.json"
+  }
+}

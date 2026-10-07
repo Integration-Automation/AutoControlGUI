@@ -155,13 +155,29 @@ def test_the_window_manager_acts_on_the_selected_window(monkeypatch):
     backend = _Backend([])
     monkeypatch.setattr(window_tab, "get_backend", lambda: backend)
     tab = window_tab.WindowManagerTab()
-    table = tab._table  # noqa: SLF001
-    table.setRowCount(2)
-    for row, (window_id, title) in enumerate([(100, "*notes.txt - Notepad"), (200, "notes.txt - Notepad")]):
-        table.setItem(row, 0, QTableWidgetItem(str(window_id)))
-        table.setItem(row, 1, QTableWidgetItem(title))
-    table.setCurrentCell(1, 0)
-    tab._on_focus()  # noqa: SLF001
-    tab._on_close()  # noqa: SLF001   (refreshes the table)
-    assert backend.closed == [200] and backend.fronted == [200]
-    tab.deleteLater()
+    import time
+
+    def settle():
+        deadline = time.monotonic() + 5
+        while tab._tasks.handle is not None and time.monotonic() < deadline:
+            _app.processEvents()
+            time.sleep(.01)
+        assert tab._tasks.handle is None
+
+    try:
+        settle()  # Constructor refresh must finish before selecting fixture rows.
+        table = tab._table  # noqa: SLF001
+        table.setRowCount(2)
+        for row, (window_id, title) in enumerate([(100, "*notes.txt - Notepad"), (200, "notes.txt - Notepad")]):
+            table.setItem(row, 0, QTableWidgetItem(str(window_id)))
+            table.setItem(row, 1, QTableWidgetItem(title))
+        table.setCurrentCell(1, 0)
+        tab._on_focus()  # noqa: SLF001
+        settle()
+        tab._on_close()  # noqa: SLF001   (refreshes the table)
+        settle()
+        assert backend.closed == [200] and backend.fronted == [200]
+    finally:
+        tab.close()
+        tab.deleteLater()
+        _app.processEvents()

@@ -171,8 +171,8 @@ Anthropic 每一步送約 202 KB 的工具 schema、沒有 `cache_control`。拍
 ## 行動裝置原生所有權與恢復驗收
 
 `TODO` — E1 的 frozen context、matrix 隔離、被動 metadata、逐請求逾時與取消已建立；
-H3 仍需 Android emulator／實機及 remote WDA 驗證裝置可達性、授權失敗、
-SDK bootstrap／retry 的整體截止時間，以及取消後實體狀態和自有 helper 回收。
+H3 仍需 Android 實機與 remote WDA 的可達性證據，以及 Android emulator／實機與
+remote WDA 的授權失敗、SDK bootstrap／retry 整體截止時間、取消後實體狀態及自有 helper 回收。
 E2 仍需 Unicode 焦點 round-trip、SDK IME／剪貼簿恢復、裝置旋轉後座標與 WDA W3C
 雙指手勢支援的原生證據；capture 拒絕擷取中旋轉，不保證擷取後裝置不再旋轉。
 不同 endpoint alias 是否指向同一實機不能由配置字串判定。保存 SDK／ADB／WDA
@@ -219,7 +219,6 @@ E1 另修正有獨立 subprocess 重現的 matrix owner／relay deferred cleanup
 
 ## Wayland 原生生命周期與能力驗收
 
-`WIP` — H3 尚缺 Windows arm64 runner 的影像替代 backend 執行證據；已加入 platform smoke。
-D1 的桌面授權／撤銷／XWayland scope 仍只有替身及 offscreen Qt 證據；
+`WIP` — D1 的 GNOME/KDE GUI 桌面授權／撤銷／XWayland scope 尚缺原生整合證據；
 GNOME/KDE 的允許／拒絕、合成器重啟、裝置 pause/remove、helper crash 後
 實體按鍵狀態恢復，以及 restore-token 替代接口仍需 H3 原生驗收。

@@ -1,0 +1,11 @@
+{
+  "package_source_commit": "a4e9e2b344274a5d7a7f434099f2c1aad768744c",
+  "public_names": 1403,
+  "commands": 822,
+  "qt_loaded": false,
+  "heavy_optional_dependencies_blocked": true,
+  "wheel_import": "passed",
+  "generated_python_compile": "passed",
+  "wheel_sha256": "e6bd35ae9a070aa9cbe3c5c024d41978bfc3b92dd0d4afe987f52343910008d3",
+  "wheel": "je_auto_control-0.0.221-py3-none-any.whl"
+}

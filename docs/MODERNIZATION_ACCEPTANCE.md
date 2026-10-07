@@ -55,7 +55,7 @@ fixtures and passing CI jobs do not remove those conditions.
 
 ## Local H3 regression result
 
-Windows/Python 3.14.4 full run preceding the remote-viewer CI correction: 11,483 passed, 46 skipped, 591.99 seconds; coverage 87.00% with the unchanged floor. Final wheel imports with Qt and all heavy image/crypto packages blocked, retains 822 commands/1,403 names and compiles generated Python. Wheel SHA256: `41fe3ae5d9f8bcc57b0fb3abe8d207e7ca782d128bcc8e6fae178540bb6ca05a`.
+Windows/Python 3.14.4 full run preceding the remote-viewer CI correction: 11,483 passed, 46 skipped, 591.99 seconds; coverage 87.00% with the unchanged floor. That revision's wheel imports with Qt and all heavy image/crypto packages blocked, retains 822 commands/1,403 names and compiles generated Python. Wheel SHA256: `41fe3ae5d9f8bcc57b0fb3abe8d207e7ca782d128bcc8e6fae178540bb6ca05a`.
 
 The first H3 quality dispatch at `9675a98f` revealed that the base type gate omitted the optional Qt companion `shiboken6`. It is now a precise third-party boundary; extras checking removes both Qt and companion skips to use installed real stubs. No business-module exemption or global ignore is added. Diagnostics print the actual type errors in either mode. All three local stable/extras targets pass; CI rerun evidence is recorded in updates.
 
@@ -75,3 +75,19 @@ existing test checking resource shutdown before its asynchronous completion.
 It now waits for the same asserted shutdown order and always clears substitutes.
 All forty ownership cases and thirty repeated cleanup checks pass; final full
 matrix evidence follows in the update log.
+
+The third quality run at `0723f8f2` likewise passes fourteen coverage jobs.
+Windows 3.11 catches another old immediate assertion: the Window Manager test
+must wait for its initial refresh before inserting selected rows, then for focus
+and close completion. The same selected-window assertion remains; 46 related
+cases pass with one optional skip, and thirty repeated selected-window checks pass.
+Package code is unchanged by these two test timing corrections.
+
+The release wheel after the viewer correction passes the same isolated import
+and generated-code compilation checks. All 1,200 packaged Python/type files match
+the current source. Its SHA256 is
+`e6bd35ae9a070aa9cbe3c5c024d41978bfc3b92dd0d4afe987f52343910008d3`;
+the [wheel report](validation/h3-release-wheel.json) identifies its package source.
+The sdist also builds successfully. The
+[native manifest](validation/h3-native-manifest.json) links each native run to its
+source and preserves checked Docker summaries and artifact hashes.
