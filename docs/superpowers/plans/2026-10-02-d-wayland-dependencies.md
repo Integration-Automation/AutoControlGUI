@@ -109,7 +109,8 @@ Docker seat／uinput 共用 installed-wheel 核心來源驗證：真實 virtual 
 已接線，原生執行結果仍待保存。
 Linux/macOS Python 3.10 quality jobs 已配置 gdb/lldb 包裝原有 coverage 命令，
 保存 native-diagnostics artifact 與真實 target exit；原生完整回歸已有證據，
-macOS 的一般取消／擷取等失敗已修正，更新後原生回歸執行中；
+macOS 的取消／擷取／CLI／EI 修正已通過 3.10／3.14 原生回歸；
+更新後剩餘兩項 Folder Sync 時序案例已修正，仍待新原生完整回歸；
 歷史 Qt 間歇崩潰仍需收斂證據。
 portal owner 消失／替換的失敗案例已重現並修正；獨立 GDBus peer 與 installed-wheel
 傳輸驗證已接入 quality／portal Docker CI；quality 的六組獨立 GDBus／installed-wheel

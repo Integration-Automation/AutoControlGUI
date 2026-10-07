@@ -189,27 +189,49 @@ def test_actual_tcp_viewer_suppresses_received_clipboard_echo():
     assert viewer._on_clipboard.call_count == 1
 
 
-def test_folder_received_content_does_not_echo(tmp_path):
+def test_folder_received_content_does_not_echo(tmp_path, monkeypatch):
     from je_auto_control.utils.remote_desktop.file_sync import FolderSyncEngine
-    import time
+    from pathlib import Path
     sent = []
-    engine = FolderSyncEngine(watch_dir=tmp_path, sender=lambda path, name: sent.append(name), poll_interval_s=0.5)
+    payloads = []
+    completed = Event()
+    observed = Event()
+
+    def sender(path, name):
+        payloads.append(Path(path).read_bytes())
+        sent.append(name)
+        completed.set()
+
+    engine = FolderSyncEngine(watch_dir=tmp_path, sender=sender, poll_interval_s=0.5)
+    original_push = engine._push_if_changed
+    polls = []
+
+    def observe_push(relative, identity, previous, stop):
+        original_push(relative, identity, previous, stop)
+        if relative == 'received.txt':
+            polls.append(relative)
+            if len(polls) >= 2:
+                observed.set()
+
+    monkeypatch.setattr(engine, '_push_if_changed', observe_push)
     engine.start()
     try:
         assert engine.wait_until_ready()
         path = tmp_path / 'received.txt'
         path.write_bytes(b'incoming bytes')
         engine.mark_received(path)
-        time.sleep(1.1)
+        # Require actual processing before asserting absence of an echo.
+        assert observed.wait(5)
         assert sent == []
         stamp = path.stat().st_mtime_ns
         path.write_bytes(b'local new bytes')
         import os
         os.utime(path, ns=(stamp, stamp))
-        time.sleep(1.1)
+        assert completed.wait(5)
     finally:
         engine.stop()
     assert sent == ['received.txt']
+    assert payloads == [b'local new bytes']
 
 
 def test_sync_preview_is_explicit_and_keeps_local_credentials(tmp_path, monkeypatch):
@@ -395,16 +417,19 @@ def test_definition_service_real_protected_exchange_and_local_apply(tmp_path, mo
     source, target = tmp_path / 'source.json', tmp_path / 'target.json'
     source.write_text(json.dumps({'scripts': {'one': {'password': 'source-password', 'label': 'portable'}}}))
     target.write_text(json.dumps({'scripts': {'one': {'password': 'target-password', 'label': 'portable'}}}))
-    app = create_app(shared_secret='server-secret', serve_web_viewer=False, config_store_path=tmp_path / 'server.sqlite')
+    app = create_app(shared_secret='server-secret', serve_web_viewer=False,
+                     config_store_path=tmp_path / 'server.sqlite')
     with TestClient(app) as server:
         def perform(call):
             response = server.request(call['method'], call['url'], headers=call['headers'], content=call['body'])
             return {'status': response.status_code, 'text': response.text}
 
         monkeypatch.setattr(http_client, 'perform_call', perform)
-        outgoing = config_sync_exchange(str(source), str(tmp_path / 'a'), 'http://testserver', 'account', 'server-secret')
+        outgoing = config_sync_exchange(str(source), str(tmp_path / 'a'), 'http://testserver',
+                                        'account', 'server-secret')
         assert outgoing['revision'] == 1 and outgoing['pending'] == 0 and outgoing['cas_supported']
-        incoming = config_sync_preview(str(target), str(tmp_path / 'b'), 'http://testserver', 'account', 'server-secret')
+        incoming = config_sync_preview(str(target), str(tmp_path / 'b'), 'http://testserver',
+                                       'account', 'server-secret')
         assert incoming['revision'] == 1
         assert 'source-password' not in json.dumps(incoming)
         # Independently registered values have independent causal identities, even if equal.

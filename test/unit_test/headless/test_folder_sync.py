@@ -1,5 +1,6 @@
 """Tests for FolderSyncEngine (round 22 — additive folder mirror)."""
 import os
+from pathlib import Path
 import time
 import threading
 
@@ -59,9 +60,17 @@ def test_new_file_is_pushed(watch_dir):
 
 def test_modified_file_is_pushed_again(watch_dir, tmp_path):
     sent = []
+    payloads = []
+    completed = threading.Event()
+
+    def sender(path, name):
+        payloads.append(Path(path).read_text(encoding='utf-8'))
+        sent.append(name)
+        completed.set()
+
     target = watch_dir / "doc.txt"
     target.write_text("v1", encoding="utf-8")
-    engine = _make_engine(watch_dir, lambda p, n: sent.append(n))
+    engine = _make_engine(watch_dir, sender)
     engine.start()
     try:
         assert engine.wait_until_ready()
@@ -74,10 +83,11 @@ def test_modified_file_is_pushed_again(watch_dir, tmp_path):
         staged.write_text("v2", encoding="utf-8")
         os.utime(staged, (future, future))
         os.replace(staged, target)
-        time.sleep(1.1)
+        assert completed.wait(5)
     finally:
         engine.stop()
     assert sent.count("doc.txt") == 1, sent
+    assert payloads == ['v2']
 
 
 def test_deletion_does_not_propagate(watch_dir):

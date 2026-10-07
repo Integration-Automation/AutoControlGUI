@@ -211,10 +211,8 @@ GNOME/KDE 的允許／拒絕、合成器重啟、裝置 pause/remove、helper cr
 
 ---
 
-## macOS 原生 CI 的取消與擷取回歸
+## macOS 原生 CI 的 Folder Sync 回歸
 
-`WIP` — socket／EI IPC 取消、明確 capture metrics、Mac capture fixture 隔離、
-CLI 延後載入原生框架及 Folder Sync 實際成功等待仍需 macOS Python 3.10/3.14
-原生完整回歸確認。保留錯誤、資源回收與重試契約；未完成的原生結果不能以
-Windows／替身通過代替。涉及 `utils/dbus_client/`、`linux_wayland/ei_transport.py`、
-`osx/`、`utils/monitor_layout/logical_frame.py` 及相關 headless tests。
+`WIP` — 修改檔案及收到內容後再本機編輯的 Folder Sync 案例已改成等待實際
+sender／處理完成，保留送出次數、防回送及內容斷言；仍需 macOS Python 3.10/3.14
+原生完整回歸確認。涉及 `test_folder_sync.py`、`test_sync_adapters.py`。
