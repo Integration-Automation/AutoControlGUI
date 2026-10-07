@@ -7,7 +7,7 @@ import importlib.util
 import shutil
 import sys
 import threading
-from typing import Any, Iterator, Mapping, Optional, Sequence
+from typing import Any, Iterator, Mapping, Optional, Sequence, TYPE_CHECKING
 
 from je_auto_control.wrapper._mobile_models import DeviceContext, DeviceSessionError
 from je_auto_control.wrapper import _mobile_operations
@@ -20,9 +20,13 @@ from je_auto_control.ios.client import IOSDevice
 from je_auto_control.wrapper._mobile_adb import OwnedAdbClient
 
 
+if TYPE_CHECKING:
+    from je_auto_control.wrapper.mobile_extensions import MobileExtensionSpec
+
+
 def _sdk_present(name: str) -> bool:
     if name in sys.modules:
-        return True
+        return sys.modules[name] is not None
     try:
         return importlib.util.find_spec(name) is not None
     except (ImportError, ValueError):
@@ -33,12 +37,15 @@ def _capabilities(context: DeviceContext) -> dict[str, CapabilityStatus]:
     dependencies = {'wda': _sdk_present('wda')} if context.platform == 'ios' else {
         'adb': bool(shutil.which(context.adb_path or 'adb')), 'uiautomator2': _sdk_present('uiautomator2'),
     }
-    return {name: CapabilityStatus(
+    result = {name: CapabilityStatus(
         'needs_permission' if found else 'needs_dependency', name,
         'dependency discovered; device connectivity/authorization not exercised' if found else 'dependency not found',
         'Authorize and explicitly operate the selected device.' if found else f'Install/configure {name}.',
         desktop_wide=False,
     ) for name, found in dependencies.items()}
+    # pylint: disable-next=import-outside-toplevel  # reason: optional operation metadata stays Qt/SDK-free
+    from je_auto_control.wrapper.mobile_extensions import extension_capabilities
+    return {**result, **extension_capabilities(context, result)}
 
 
 class DeviceSession:
@@ -57,6 +64,7 @@ class DeviceSession:
         self._closed = threading.Event()
         self._lock = threading.Lock()
         self._adapters: dict[str, Any] = {}
+        self._extension_spec: Optional[MobileExtensionSpec] = None
 
     @property
     def context(self) -> DeviceContext:
@@ -72,7 +80,15 @@ class DeviceSession:
     def capabilities(self) -> dict[str, CapabilityStatus]:
         """Passively discover dependencies without loading SDKs or requesting input."""
         if self.connected:
-            return _capabilities(self.context)
+            result = _capabilities(self.context)
+            with self._lock:
+                spec = self._extension_spec
+            if spec is not None:
+                for operation in ('install', 'files', 'clipboard', 'recording'):
+                    result[operation] = spec.capabilities.get(operation, CapabilityStatus(
+                        'unsupported', spec.name, 'configured adapter does not provide this operation',
+                        'Configure a different adapter on a new device owner.', False))
+            return result
         return {'session': CapabilityStatus('unsupported', self.context.platform,
                                            'device session is closed', 'Open a new explicit context.', False)}
 
@@ -97,11 +113,33 @@ class DeviceSession:
         """Return one owned lazy client; SDK construction happens on first use."""
         with self._lock:
             self.ensure_open()
+            if kind == 'wda' and 'wda_app' in self._adapters:
+                return self._adapters['wda_app']
             if kind not in self._adapters:
                 self._adapters[kind] = self._new_adapter(kind)
             return self._adapters[kind]
 
+    def configure_extension(self, spec: MobileExtensionSpec) -> None:
+        """Configure one lazy adapter before first use; metadata probes never run its factory."""
+        # pylint: disable-next=import-outside-toplevel  # reason: public specification validates without SDK imports
+        from je_auto_control.wrapper.mobile_extensions import MobileExtensionSpec
+        if not isinstance(spec, MobileExtensionSpec):
+            raise DeviceSessionError('configure_extension requires MobileExtensionSpec')
+        with self._lock:
+            self.ensure_open()
+            if 'extension' in self._adapters:
+                raise DeviceSessionError('extension is already in use; open a new owner to replace it')
+            self._extension_spec = spec
+
     def _new_adapter(self, kind: str) -> Any:
+        if kind == 'extension':
+            # pylint: disable-next=import-outside-toplevel  # reason: optional native extension is constructed on first use
+            from je_auto_control.wrapper._mobile_extension_owner import ExtensionOwner
+            return ExtensionOwner(self, self._extension_spec)
+        if kind == 'wda_app' and self.context.platform == 'ios':
+            # pylint: disable-next=import-outside-toplevel  # reason: app resource does not load the SDK until native use
+            from je_auto_control.wrapper._mobile_wda_app import IOSAppDevice
+            return IOSAppDevice(self.context, self.ensure_open)
         if kind == 'adb' and self.context.platform == 'android':
             return OwnedAdbClient(self.context, self.ensure_open)
         if kind == 'uiautomator2' and self.context.platform == 'android':
@@ -121,15 +159,29 @@ class DeviceSession:
         """Invalidate before cleanup; do not wait behind an unanswered SDK constructor."""
         self.close()
 
+    def wait_cancelled(self, timeout_s: float) -> bool:
+        """Wait for cancellation during a bounded app/device poll without a busy loop."""
+        return self._closed.wait(timeout_s)
+
     def close(self) -> None:
-        """Detach clients first, then reclaim only helpers started by this owner."""
+        """Revoke clients, then reclaim owned resources; retain them for late cleanup retry."""
         with self._lock:
             self._closed.set()
             clients = tuple(self._adapters.items())
-            self._adapters.clear()
+        failures = []
         for kind, client in clients:
-            if kind != 'adb':
-                client.close()
+            try:
+                if kind != 'adb':
+                    client.close()
+            except Exception as failure:  # pylint: disable=broad-exception-caught  # reason: attempt all owned cleanup and retain failures for retry
+                failures.append(failure)
+                continue
+            # Retain revoked clients: a pending constructor may later need cleanup retry.
+            if kind == 'adb':
+                with self._lock:
+                    self._adapters.pop(kind, None)
+        if failures:
+            raise DeviceSessionError('mobile cleanup failed; repeated close retries resources') from failures[0]
 
     def __enter__(self) -> DeviceSession:
         self.ensure_open()

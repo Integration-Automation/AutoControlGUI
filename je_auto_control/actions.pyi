@@ -1927,8 +1927,22 @@ def AC_minimize_window(title_substring: str, case_sensitive: bool = ...) -> bool
 def AC_minimize_windows_for_pid(pid: int) -> Dict[str, Any]:
     """Adapter: minimise every window a process owns."""
 
+def AC_mobile_alert(action: str, device: Optional[Mapping[str, Any]] = ...) -> None:
+    """Accept/dismiss an iOS alert on the explicit owner; Android reports an alternative."""
+
+def AC_mobile_app(
+    action: str,
+    app_id: str,
+    timeout_s: Optional[float] = ...,
+    device: Optional[Mapping[str, Any]] = ...,
+) -> dict[str, Any]:
+    """Launch/wait/state/stop an app through JSON actions and observe native state."""
+
 def AC_mobile_capture(file_path: str, device: Optional[Mapping[str, Any]] = ...) -> dict[str, Any]:
     """Save one root-checked PNG and return native geometry without desktop fallback."""
+
+def AC_mobile_extension(operation: str, options: Mapping[str, Any], device: Optional[Mapping[str, Any]] = ...) -> Any:
+    """Run owned install/files/clipboard/recording through actions, MCP and matrix GUI."""
 
 def AC_mobile_gesture(gesture: Mapping[str, Any], device: Optional[Mapping[str, Any]] = ...) -> None:
     """Perform a validated JSON native-point gesture with explicit device ownership."""

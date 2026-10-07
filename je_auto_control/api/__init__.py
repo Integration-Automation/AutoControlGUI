@@ -31,6 +31,7 @@ from je_auto_control.api.healing import (
 from je_auto_control.api.mobile import (
     DeviceContext, DeviceSession, DeviceSessionError, DeviceFrame, Gesture, open_device, probe_device_contexts,
     mobile_capture, mobile_gesture, mobile_type_text,
+    AppState, app_state, launch_app, wait_for_app, stop_app, handle_mobile_alert,
 )
 from je_auto_control.api.core import (
     FailureBundleOptions,
@@ -60,9 +61,15 @@ from je_auto_control.utils.config_sync.service import (
 from je_auto_control.utils.config_sync.asset_service import config_sync_assets
 
 
+from je_auto_control.wrapper.mobile_extensions import MobileExtension, MobileExtensionSpec, run_mobile_extension
+from je_auto_control.wrapper.mobile_actions import mobile_app, mobile_alert, mobile_extension_action
+
 __all__ = [
+    'MobileExtension', 'MobileExtensionSpec', 'run_mobile_extension',
+    'mobile_app', 'mobile_alert', 'mobile_extension_action',
     'DeviceContext', 'DeviceSession', 'DeviceSessionError', 'DeviceFrame', 'Gesture',
     'open_device', 'probe_device_contexts', 'mobile_capture', 'mobile_gesture', 'mobile_type_text',
+    'AppState', 'app_state', 'launch_app', 'wait_for_app', 'stop_app', 'handle_mobile_alert',
     'InputDevice', 'InputEvent', 'PhysicalRecorder', 'RecordingUnavailable', 'ShortcutUnavailable',
     'StopShortcutSession', 'WaylandInputSession', 'start_physical_recording', 'stop_physical_recording',
     'start_wayland_stop_shortcut', 'stop_wayland_stop_shortcut', 'wayland_input_status',

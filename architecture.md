@@ -403,3 +403,17 @@ reject foreign specs. Facade, AC, MCP, Builder and Device Matrix Actions share
 these services; sensitive text arguments are masked. Legacy iOS values remain
 native points. Android ADB input refuses Unicode and names the SDK alternative.
 No optional SDK/Qt import occurs during passive mobile imports.
+
+E3 adds observed app lifecycle in wrapper/mobile_apps.py and per-platform apps.py.
+_mobile_wda_app.py freezes newly created WDA IDs and uses bounded low-level HTTP
+without SDK global locks or automatic input replay. It retains IDs for cleanup
+retry, including construction completing after cancellation. Revoked clients
+remain retained until their owner is collected, permitting repeated close after
+late cleanup failure. Android lifecycle uses explicit owned ADB argv.
+_mobile_extension_models.py defines passive factory specs and MobileExtension;
+_mobile_extension_owner.py validates paths/options and lazily binds one adapter.
+android/extensions.py supplies install/files/SDK clipboard. iOS extensions and
+recording require configured adapters. The shared JSON app/alert/extension services
+reach AC/MCP/Builder and Device Matrix Actions; remote access requires MANAGE_HOSTS.
+
+_mobile_wda_lease.py reserves exact endpoints before native construction using a short registry lock. Bounded status preflight rejects active/missing ownership metadata before POST/session. WDA creation replaces its active session; dedicated endpoints must remain exclusive against external clients and aliases. Unknown creation replies remain unknown native state; they are not automatically retried.

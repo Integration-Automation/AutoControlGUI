@@ -20,7 +20,7 @@
 
 - **一套 API，七个平台。** `wrapper/platform_wrapper.py` 在导入时挑选后端；同一份脚本在
   Windows、macOS、X11 与 Wayland 上都不需要改写。
-- **不写 Python 也能脚本化。** 811 个 `AC_*` 命令覆盖全部功能，因此一个 JSON 文件能做到库
+- **不写 Python 也能脚本化。** 814 个 `AC_*` 命令覆盖全部功能，因此一个 JSON 文件能做到库
   能做的任何事——包含循环、分支、try/catch、宏与变量。
 - **默认无头运行。** `import je_auto_control` 绝不会加载 Qt。GUI 是可选包，包在同一个无头内核之外。
 - **四种定位方式。** 模板匹配、OCR、无障碍树、视觉语言模型——可通过锚点定位器与自愈回退串接组合。
@@ -141,7 +141,7 @@ python -c "import je_auto_control; je_auto_control.start_autocontrol_gui()"
 | 自然语言规划 | `plan_actions`、`run_from_description` | `AC_llm_plan` | LLM Planner |
 | Computer-use agent | `AgentLoop`、`run_agent` | `AC_run_agent` | Computer Use |
 | 录制与回放 | `record`、`stop_record` | `AC_record`、`AC_stop_record` | Record |
-| JSON 脚本 | `execute_action`、`execute_files` | 全部 811 个命令 | Script、Script Builder |
+| JSON 脚本 | `execute_action`、`execute_files` | 全部 814 个命令 | Script、Script Builder |
 | 变量与流程控制 | `execute_action_with_vars` | `AC_set_var`、`AC_loop`、`AC_for_each`、`AC_try`、`AC_retry` | Variables |
 | 数据驱动执行 | — | `AC_for_each_row`（CSV／JSON／SQLite／Excel） | Data Sources |
 | 断言 | `assert_text`、`assert_image` | `AC_assert_text` 等 21 个 | Assertions |
@@ -190,7 +190,7 @@ je_auto_control version
 
 | 接口 | 启动方式 | 说明 |
 |---|---|---|
-| **MCP 服务器** | `je_auto_control_mcp`（stdio）或 `AC_start_mcp_http_server` | 733 个工具，供 Claude Desktop／Claude Code／自定义 tool loop 使用。除了以 `initialize` 握手的各版协议，也支持无状态的 MCP 2026-07-28。Bearer 认证、TLS、审计日志、限流、插件热重载、CI 假后端。 |
+| **MCP 服务器** | `je_auto_control_mcp`（stdio）或 `AC_start_mcp_http_server` | 736 个工具，供 Claude Desktop／Claude Code／自定义 tool loop 使用。除了以 `initialize` 握手的各版协议，也支持无状态的 MCP 2026-07-28。Bearer 认证、TLS、审计日志、限流、插件热重载、CI 假后端。 |
 | **REST API** | `je_auto_control start-rest` | Bearer token、按 IP 限流与锁定、SQLite 审计 hook、`/metrics`、`/openapi.json`、`/docs` Swagger UI、`/dashboard`。 |
 | **TCP socket 服务器** | `je_auto_control start-server` | 以换行分隔的 JSON 动作列表。默认绑定 `127.0.0.1`。 |
 | **pytest 插件** | 安装后自动生效 | 轻量 `je_auto_control_pytest` 入口，提供 fixture 与 Gherkin 步骤。升级 editable 工作树后须重新安装；明确指定的旧插件路径仍兼容。 |
@@ -784,3 +784,20 @@ Quick Connect 在最后交付画面、错误和光标时检查 session generatio
 仍在结束中的传送者，等停止后才允许重启。旧剪贴板只抑制连续相同内容，允许
 A→B→A；新版仍以有限事件 ID 去重，并抑制一次收到内容的回传。
 证据来自受控 SQLite／网络边界和 offscreen Qt；实体多机验证仍待完成。
+
+### 移动 App 生命周期与可选 adapter
+
+`launch_app`、`wait_for_app`、`app_state`、`stop_app` 与 `handle_mobile_alert`
+使用明确 session、返回观察到的状态，请求有时限且轮询可取消。
+iOS App 操作创建 WDA session ID，只删除该 ID；删除可能终止它的 App。
+Android 关闭连接仍让 App 运行，需要明确 `stop_app`；清理失败可重试 `close()`。
+`MobileExtensionSpec` 以被动能力信息配置单一 owner 的延迟 factory。
+Android 提供 APK 安装、push/pull 与 SDK Unicode 剪贴板。
+iOS 安装／文件／剪贴板，以及双平台录屏需要拥有资源的 `MobileExtension`；
+缺少 adapter 报告 `needs_dependency` 及修复方式。
+`mobile_app`、`mobile_alert`、`mobile_extension_action` 共用 AC/MCP/Builder
+及 Device Matrix Actions；日志遮罩 extension options／结果。
+[App 示例](../examples/mobile_app_lifecycle.py) 默认被动，`--run` 才操作。
+原生 emulator/WDA 授权与恢复仍列 H3 验收。
+
+WDA App 操作需要专用空闲 endpoint：有时限的 status 检查拒绝既有／未知 session，本进程 lease 防止同 URL 同时创建 owner。WDA 无法原子排除外部 client 或 endpoint 别名，请保持该 endpoint 专用。

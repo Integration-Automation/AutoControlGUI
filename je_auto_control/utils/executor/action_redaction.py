@@ -76,6 +76,8 @@ def _confidential_write(action: list) -> bool:
 def is_sensitive_argument(command: str, name: str) -> bool:
     """Whether argument ``name`` of ``command`` holds a secret."""
     lowered = str(name).lower()
+    if command == 'AC_mobile_extension' and lowered == 'options':
+        return True
     if command == 'AC_mobile_type_text' and lowered == 'text':
         return True
     return lowered in SENSITIVE_ARGUMENT_NAMES or (
@@ -95,6 +97,8 @@ def _redact_argument(command: str, argument: Any) -> Any:
 
 
 def _redact_positional(command: str, argument: Any) -> Any:
+    if command == 'AC_mobile_extension' and isinstance(argument, list) and len(argument) > 1:
+        return [argument[0], _mask(argument[1]), *(redact_actions(item) for item in argument[2:])]
     if command == 'AC_mobile_type_text' and isinstance(argument, list) and argument:
         return [_MASK, *(redact_actions(item) for item in argument[1:])]
     return redact_actions(argument)

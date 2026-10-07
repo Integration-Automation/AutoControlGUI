@@ -2,12 +2,13 @@
 from __future__ import annotations
 
 from contextlib import contextmanager
-from typing import Any, Iterator, Mapping, Optional
+from dataclasses import asdict
+from typing import Any, Iterator, Mapping, Optional, cast
 
 from je_auto_control.utils.path_guard.policy import scoped_path
 from je_auto_control.wrapper._mobile_binding import _BoundDevice, active_device
 from je_auto_control.wrapper._mobile_models import DeviceContext, DeviceSessionError
-from je_auto_control.wrapper.device_context import open_device
+from je_auto_control.wrapper.device_context import open_device, DeviceSession
 from je_auto_control.wrapper.mobile_gesture import Gesture
 
 
@@ -55,3 +56,43 @@ def mobile_type_text(text: str, device: Optional[Mapping[str, Any]] = None) -> N
 
 
 __all__ = ['mobile_capture', 'mobile_gesture', 'mobile_type_text']
+
+
+def mobile_app(action: str, app_id: str, timeout_s: Optional[float] = None,
+               device: Optional[Mapping[str, Any]] = None) -> dict[str, Any]:
+    """Launch/wait/state/stop an app through JSON actions and observe native state."""
+    # pylint: disable-next=import-outside-toplevel  # reason: native app routes remain optional until requested
+    from je_auto_control.wrapper import mobile_apps
+    if action not in ('launch', 'wait', 'state', 'stop'):
+        raise DeviceSessionError('mobile app action must be launch, wait, state or stop')
+    with _owner(device) as bound:
+        session = cast(DeviceSession, bound)
+        if action == 'wait':
+            result = mobile_apps.wait_for_app(session, app_id,
+                timeout_s=session.context.timeout_s if timeout_s is None else timeout_s)
+        else:
+            if timeout_s is not None:
+                raise DeviceSessionError('timeout_s is accepted only for wait; other operations use context timeout')
+            result = {'launch': mobile_apps.launch_app, 'state': mobile_apps.app_state,
+                      'stop': mobile_apps.stop_app}[action](session, app_id)
+    return asdict(result)
+
+
+def mobile_alert(action: str, device: Optional[Mapping[str, Any]] = None) -> None:
+    """Accept/dismiss an iOS alert on the explicit owner; Android reports an alternative."""
+    # pylint: disable-next=import-outside-toplevel  # reason: native alert route loads only when requested
+    from je_auto_control.wrapper.mobile_apps import handle_mobile_alert
+    with _owner(device) as session:
+        handle_mobile_alert(cast(DeviceSession, session), action)
+
+
+def mobile_extension_action(operation: str, options: Mapping[str, Any],
+                            device: Optional[Mapping[str, Any]] = None) -> Any:
+    """Run owned install/files/clipboard/recording through actions, MCP and matrix GUI."""
+    # pylint: disable-next=import-outside-toplevel  # reason: optional adapters stay lazy in headless imports
+    from je_auto_control.wrapper.mobile_extensions import run_mobile_extension
+    with _owner(device) as session:
+        return run_mobile_extension(cast(DeviceSession, session), operation, options)
+
+
+__all__ += ['mobile_app', 'mobile_alert', 'mobile_extension_action']

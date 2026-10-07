@@ -22,7 +22,7 @@ from JSON files / CLI / servers, and a **GUI tab**. Nothing is GUI-only.
 
 - **One API, seven platforms.** `wrapper/platform_wrapper.py` picks the backend at import
   time; your script does not change between Windows, macOS, X11, and Wayland.
-- **Scriptable without Python.** 811 `AC_*` commands cover the whole feature set, so a
+- **Scriptable without Python.** 814 `AC_*` commands cover the whole feature set, so a
   JSON file can do anything the library can — including loops, branches, try/catch,
   macros, and variables.
 - **Headless by default.** `import je_auto_control` never loads Qt. The GUI is an
@@ -152,7 +152,7 @@ desktop app; tab commands live in the window's **Actions** menu.
 | Natural-language planner | `plan_actions`, `run_from_description` | `AC_llm_plan` | LLM Planner |
 | Computer-use agent | `AgentLoop`, `run_agent` | `AC_run_agent` | Computer Use |
 | Record & replay | `record`, `stop_record` | `AC_record`, `AC_stop_record` | Record |
-| JSON scripting | `execute_action`, `execute_files` | all 811 commands | Script, Script Builder |
+| JSON scripting | `execute_action`, `execute_files` | all 814 commands | Script, Script Builder |
 | Variables & flow control | `execute_action_with_vars` | `AC_set_var`, `AC_loop`, `AC_for_each`, `AC_try`, `AC_retry` | Variables |
 | Data-driven runs | — | `AC_for_each_row` (CSV / JSON / SQLite / Excel) | Data Sources |
 | Assertions | `assert_text`, `assert_image` | `AC_assert_text` + 20 more | Assertions |
@@ -204,7 +204,7 @@ still goes on to the end), so a CI step fails with it. The legacy
 
 | Surface | Start it with | Notes |
 |---|---|---|
-| **MCP server** | `je_auto_control_mcp` (stdio) or `AC_start_mcp_http_server` | 733 tools for Claude Desktop / Claude Code / custom tool loops. Speaks the stateless MCP 2026-07-28 beside the `initialize`-based revisions. Bearer auth, TLS, audit log, rate limit, plugin hot-reload, CI fake backend. |
+| **MCP server** | `je_auto_control_mcp` (stdio) or `AC_start_mcp_http_server` | 736 tools for Claude Desktop / Claude Code / custom tool loops. Speaks the stateless MCP 2026-07-28 beside the `initialize`-based revisions. Bearer auth, TLS, audit log, rate limit, plugin hot-reload, CI fake backend. |
 | **REST API** | `je_auto_control start-rest` | Bearer token, per-IP rate limit + lockout, SQLite audit hook, `/metrics`, `/openapi.json`, `/docs` Swagger UI, `/dashboard`. |
 | **TCP socket server** | `je_auto_control start-server` | Newline-framed JSON action lists. Binds `127.0.0.1` by default. |
 | **pytest plugin** | installed automatically | Lightweight `je_auto_control_pytest` entry point; fixtures plus Gherkin steps for pytest-bdd / behave. Reinstall after upgrading editable checkouts; the explicit legacy plugin path remains supported. |
@@ -451,7 +451,7 @@ ignore synthetic input, and fall back silently when the driver is absent.
 
 | Resource | What's in it |
 |---|---|
-| [`examples/`](examples/) | 29 self-contained scripts: screenshot + click, OCR, scheduler, remote desktop, agent loop, observability, recording, variables, hotkeys, triggers, reports, MCP, REST, secrets, plugins, computer use, Wayland, cross-host DAGs, chat-ops, pytest/BDD, anchor locators. |
+| [`examples/`](examples/) | 30 self-contained scripts: screenshot + click, OCR, scheduler, remote desktop, agent loop, observability, recording, variables, hotkeys, triggers, reports, MCP, REST, secrets, plugins, computer use, Wayland, cross-host DAGs, chat-ops, pytest/BDD, anchor locators. |
 | [Read the Docs](https://autocontrol.readthedocs.io/en/latest/) | Full API reference, English and 中文. |
 | [architecture_explore.md](architecture_explore.md) | Every module's responsibility, layer by layer. |
 | [docs/CAPABILITY_MATRIX.md](docs/CAPABILITY_MATRIX.md) | Capability × platform matrix. |
@@ -941,3 +941,21 @@ suppressed only across contiguous equal content, allowing A→B→A; modern even
 IDs still use bounded deduplication and one received echo is suppressed.
 These are controlled SQLite/network-boundary and offscreen Qt regressions;
 physical multi-machine checks remain pending.
+
+### Mobile app lifecycle and optional adapters
+
+`launch_app`, `wait_for_app`, `app_state`, `stop_app` and `handle_mobile_alert`
+use an explicit session and return observed state, with bounded requests and
+cancellable polling. iOS app operations create a WDA session ID and delete only
+that ID; deletion can terminate its app. Android connection close leaves apps
+running; use `stop_app` explicitly. Failed cleanup remains retryable on `close()`.
+`MobileExtensionSpec` configures a lazy factory for one owner using passive
+capability metadata. Android includes APK install, push/pull and SDK Unicode
+clipboard. iOS install/files/clipboard and recording on either platform require
+an owned `MobileExtension`; absence reports `needs_dependency` with recovery.
+`mobile_app`, `mobile_alert`, `mobile_extension_action` share AC/MCP/Builder and
+Device Matrix Actions. Extension options/results are masked in journals.
+[App example](examples/mobile_app_lifecycle.py) is passive until `--run`.
+Native emulator/WDA authorization and recovery remain H3 acceptance.
+
+WDA app operations require a dedicated idle endpoint: bounded status preflight rejects an existing/unknown session, and a local lease prevents concurrent owners for the same URL. External clients and endpoint aliases cannot be excluded atomically by WDA; keep this endpoint exclusive.

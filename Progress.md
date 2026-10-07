@@ -9,10 +9,12 @@
 核准設計：[跨平台自動化與 GUI 改版](docs/superpowers/specs/2026-10-02-platform-gui-modernization-design.md)。
 實作計畫：[分階段交付計畫](docs/superpowers/plans/2026-10-02-modernization-index.md)，已核准，依序實作。
 現有 `[Answer]` 決策沿用；後續交付包含 E–H 與完整整合驗收。
-從 E3 接續原有計畫；不額外新增付費型功能。既有 API 介面及相關修正繼續，
+從 E4 接續原有計畫；不額外新增付費型功能。既有 API 介面及相關修正繼續，
 目前以本機／離線測試驗證；缺少真實 API 條件的既有項目保留待驗證。
 正向實體裝置擷取、GNOME/KDE 授權與鍵態恢復仍列 H3；
 歷史 Qt 原生崩潰的後續追蹤仍保留在下列驗收項目。
+WDA 專用 endpoint、外部 client／別名競態、未知建立回覆及 SDK 擷取後的
+App session 接續／恢復仍列 H3；受控閒置檢查不能冒充原生互斥證據。
 
 **只記未完成的事。** 完成的工作記在 [docs/updates/](docs/updates/README.md)（每月一個批次檔，
 索引與查詢指令在它的 README），相容性變更寫進 [CHANGELOG.md](CHANGELOG.md)；完成的項目

@@ -86,7 +86,8 @@ def _sanitize_sequence(command: str, value: List[JSONValue], forced: bool) -> Tu
 
 
 def _private_position(command: str, index: int, forced: bool) -> bool:
-    return forced or (command == 'AC_mobile_type_text' and index == 0)
+    return forced or (command == 'AC_mobile_type_text' and index == 0) or (
+        command == 'AC_mobile_extension' and index == 1)
 
 
 def secret_values(command: str, raw: object, resolved: object) -> Set[str]:
@@ -140,7 +141,7 @@ def _collect_mapping(command: str, raw: Dict[str, JSONValue], resolved: Dict[str
 
 def private_output(command: str, arguments: JSONValue, outcome: JSONValue) -> Tuple[JSONValue, Set[str]]:
     """Mask confidential results; retain sensitive variable strings for later echoes."""
-    if command == 'AC_stop_physical_recording':
+    if command in {'AC_stop_physical_recording', 'AC_mobile_extension'}:
         # Physical keystrokes are explicit caller output, never an automatic journal artifact.
         return _MASK, set()
     if isinstance(arguments, dict) and _private_variable(command, arguments):

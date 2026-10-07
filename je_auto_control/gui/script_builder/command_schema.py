@@ -71,6 +71,18 @@ def _build_specs() -> List[CommandSpec]:
     mobile_device = FieldSpec('device', FieldType.JSON, optional=True,
                               placeholder='{"platform":"android","serial":"emulator-5554"}')
     specs.extend([
+        CommandSpec('AC_mobile_app', 'Mobile', 'Observe mobile app lifecycle', fields=(
+            FieldSpec('action', FieldType.ENUM, choices=('launch', 'wait', 'state', 'stop')),
+            FieldSpec('app_id', FieldType.STRING),
+            FieldSpec('timeout_s', FieldType.FLOAT, optional=True), mobile_device,
+        )),
+        CommandSpec('AC_mobile_alert', 'Mobile', 'Handle iOS alert', fields=(
+            FieldSpec('action', FieldType.ENUM, choices=('accept', 'dismiss')), mobile_device,
+        )),
+        CommandSpec('AC_mobile_extension', 'Mobile', 'Use owned mobile extension', fields=(
+            FieldSpec('operation', FieldType.ENUM, choices=('install', 'files', 'clipboard', 'recording')),
+            FieldSpec('options', FieldType.JSON, sensitive=True), mobile_device,
+        )),
         CommandSpec('AC_mobile_capture', 'Mobile', 'Capture device PNG and geometry', fields=(
             FieldSpec('file_path', FieldType.FILE_PATH), mobile_device,
         )),

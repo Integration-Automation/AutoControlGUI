@@ -67,7 +67,7 @@ Device Matrix 的 Actions 選單提供「查詢行動裝置依賴」與「執行
 顯示為 JSON；矩陣在背景 worker 執行，編輯器及事件迴圈保持回應。
 Script Builder 使用同一 JSON 指令。``examples/mobile_contexts.py`` 示範被動查詢及
 不操作硬體的矩陣；原生 Android/emulator 與 remote WDA 驗收仍列 Progress.md。
-App lifecycle 與專用 mobile 面板依後續 E task 交付。
+專用 mobile 面板依 E4 交付。
 
 裝置輸入與不可變畫面
 --------------------
@@ -140,3 +140,60 @@ action／journal 遮罩具名及位置文字參數，journal 保留 secret refer
 `雙指 RPC <https://github.com/openatx/uiautomator2/blob/master/uiautomator2/_selector.py>`_、
 `WDA SDK <https://github.com/openatx/facebook-wda/blob/master/wda/__init__.py>`_ 與
 `WDA W3C actions <https://github.com/appium/WebDriverAgent/blob/master/WebDriverAgentLib/Commands/FBTouchActionCommands.m>`_。
+
+App 狀態與可選擴充
+------------------
+
+Beta API／門面另匯出 ``AppState``、``app_state``、``launch_app``、``wait_for_app``、
+``stop_app``、``handle_mobile_alert``、``MobileExtension``、``MobileExtensionSpec``、
+``run_mobile_extension``、``mobile_app``、``mobile_alert`` 與 ``mobile_extension_action``。
+
+.. code-block:: python
+
+   from je_auto_control.api.mobile import launch_app, stop_app, wait_for_app
+
+   with open_device(context) as session:
+       observed = launch_app(session, 'com.example.demo')
+       observed = wait_for_app(session, 'com.example.demo', timeout_s=5)
+       observed = stop_app(session, 'com.example.demo')
+
+Android 使用 owner 的 ADB launch／pidof／force-stop，以程序存在代表 running。
+iOS 建立並凍結新的 WDA session ID，避開 SDK 全域鎖、自動重試及 auto-unlock。
+XCTest 0／1／2–4 分別對應 not_installed／not_running／running；連線失敗代表
+未知狀態，不假稱 not_running。輪詢有期限且可取消，第一次 WDA 建立也使用呼叫者
+剩餘預算；遺失輸入回覆不自動重送。
+
+刪除 WDA session 可能終止它的 App，只刪除明確認領的 ID，保留借用 root session。
+失敗清理（含取消後才完成的建立）可重試 ``session.close()``。
+Android 關閉連線仍讓 App 執行，需明確 ``stop_app``。
+iOS ``handle_mobile_alert`` 可 accept／dismiss；Android 無通用 alert endpoint，
+需指定 UI-tree selector。原生授權及恢復仍列 H3。
+
+在首次使用前呼叫 ``session.configure_extension(MobileExtensionSpec(name, version,
+capabilities, factory))`` 配置被動資訊及延遲 factory(context, guard)。
+factory 必須建立單一 owner 的 adapter、在 I/O 前後檢查 guard、使用 context.timeout_s
+並清理自己的資源，不共用原生 client。查詢能力不執行 factory；未宣告的操作回報
+unsupported，缺少可選 adapter 回報 needs_dependency 及修復方式。
+
+``MobileExtension`` 定義 install(file_path)、files(action, local_path, remote_path)、
+clipboard(text=None)、recording(file_path, duration_s)、close()。
+Android 原生提供 ADB APK 安裝、push/pull 與 SDK Unicode 剪貼簿；iOS 對應功能及
+雙平台錄影需配置擁有資源的 adapter，不將 ADB 假借到 iOS。
+本機檔案檢查允許根目錄；遠端路徑需絕對 ASCII 路徑，不含 shell 字元或上層跳脫。
+
+.. code-block:: json
+
+   [
+     ["AC_mobile_app", {"action": "launch", "app_id": "com.example.demo"}],
+     ["AC_mobile_extension", {"operation": "clipboard", "options": {"text": "測試 café 🙂"}}],
+     ["AC_mobile_app", {"action": "stop", "app_id": "com.example.demo"}]
+   ]
+
+以上使用 active matrix owner，或提供明確 device 物件。
+``AC_mobile_alert`` 接受 action accept／dismiss；MCP ac_mobile_app/alert/extension、
+Builder 與 Device Matrix Actions 共用服務。遠端需 MANAGE_HOSTS；自動日誌遮罩
+extension options／結果。``examples/mobile_app_lifecycle.py`` 預設被動，
+只有 --run 才啟停 App。受控 adapter 測試驗證分派及生命週期；emulator、簽章、
+真實 WDA 及實體錄影驗收仍列 H3。
+
+WDA App 操作需專用閒置 endpoint。有時限的 status 檢查會在建立前拒絕既有或缺少 ownership 資訊的狀態；本程序 lease 保護同 URL 的 pending／active owner。WDA 建立會取代既有 session，外部 client 及別名仍需操作上維持專用。建立回覆未知時保持未知狀態，明確重試前需檢查原生狀態。

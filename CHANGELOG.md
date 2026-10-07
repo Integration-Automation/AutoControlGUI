@@ -13,6 +13,14 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ## Unreleased
 
+- E3: Observed mobile app lifecycle, iOS alert handling and owner-bound optional
+  extensions. Android install/files/SDK clipboard have native routes; iOS equivalents
+  and recording require a configured adapter. WDA app operations create/delete only
+  their own session ID; deletion can terminate its app. Android close preserves apps.
+  Failed cleanup can be retried, including late construction; input is never replayed
+  automatically after a lost reply. Three new JSON services share AC/MCP/Builder and
+  Device Matrix Actions. Extension options/results are masked in journals.
+
 - E2: DeviceSession capture, native-point Gesture dispatch and exact Unicode SDK input;
   immutable DeviceFrame geometry/rotation, supplied-frame OCR/template/VLM and mobile
   self-heal without desktop fallback. Three AC/MCP/Builder services run through Device
@@ -2632,3 +2640,5 @@ No compatibility changes.
   `UnicodeEncodeError`) on non-encodable text; non-ASCII USB/IP busid no longer
   kills the client thread; SQLite connections are closed; USB ACL removal is
   case-insensitive.
+
+WDA App lifecycle additionally requires a dedicated idle endpoint. Existing or unknown ownership status is rejected before creation; a local lease prevents a same-URL pending/active owner from being superseded. External clients/aliases still require endpoint exclusivity.

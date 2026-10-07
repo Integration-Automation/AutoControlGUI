@@ -7,7 +7,9 @@ MCP client surfaces to the model.
 """
 from typing import List
 from je_auto_control.wrapper.device_context import probe_device_contexts
-from je_auto_control.wrapper.mobile_actions import mobile_capture, mobile_gesture, mobile_type_text
+from je_auto_control.wrapper.mobile_actions import (
+    mobile_capture, mobile_gesture, mobile_type_text, mobile_app, mobile_alert, mobile_extension_action,
+)
 from je_auto_control.utils.mcp_server.tools._factories_wayland_input import wayland_input_tools
 from je_auto_control.utils.mcp_server.tools._factories_capabilities import capability_tools
 from je_auto_control.utils.mcp_server.tools._factories_signing import signing_tools
@@ -8929,6 +8931,21 @@ def a11y_audit_tools() -> List[MCPTool]:
 
 def device_matrix_tools() -> List[MCPTool]:
     return [
+        MCPTool(name='ac_mobile_app', description='Launch/wait/state/stop explicit mobile app; observe native state.',
+                input_schema=schema({'action': {'type': 'string', 'enum': ['launch', 'wait', 'state', 'stop']},
+                                     'app_id': {'type': 'string'}, 'timeout_s': {'type': 'number'},
+                                     'device': {'type': 'object'}}, required=['action', 'app_id']),
+                handler=mobile_app, annotations=DESTRUCTIVE),
+        MCPTool(name='ac_mobile_alert', description='Accept/dismiss explicit iOS alert; Android requires UI selector.',
+                input_schema=schema({'action': {'type': 'string', 'enum': ['accept', 'dismiss']},
+                                     'device': {'type': 'object'}}, required=['action']),
+                handler=mobile_alert, annotations=DESTRUCTIVE),
+        MCPTool(name='ac_mobile_extension', description='Run owned install/files/clipboard/recording adapter.',
+                input_schema=schema({'operation': {'type': 'string',
+                                     'enum': ['install', 'files', 'clipboard', 'recording']},
+                                     'options': {'type': 'object'}, 'device': {'type': 'object'}},
+                                     required=['operation', 'options']),
+                handler=mobile_extension_action, annotations=DESTRUCTIVE),
         MCPTool(name='ac_mobile_capture', description='Capture explicit mobile PNG and native geometry; never desktop.',
                 input_schema=schema({'file_path': {'type': 'string'}, 'device': {'type': 'object'}},
                                     required=['file_path']), handler=mobile_capture, annotations=NON_DESTRUCTIVE),

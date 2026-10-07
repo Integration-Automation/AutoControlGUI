@@ -20,7 +20,7 @@ Session capture/gestures/Unicode and immutable-frame OCR/template/VLM use explic
 mobile ownership. Bound self-heal consumes one device frame and native points,
 without desktop fallback. WDA touch/size legacy values are UIKit points; their
 numeric ABI is preserved. ADB input text rejects non-ASCII; use SDK Unicode.
-`AC_mobile_*`, MCP and Builder schemas share the three JSON services; Device
+`AC_mobile_*`, MCP and Builder schemas share the JSON services; Device
 Matrix Actions can run them. Remote mobile access requires MANAGE_HOSTS. Typed
 failure retains its cause, text arguments are masked and responses omit text.
 Native SDK IME/clipboard changes, device rotation after a snapshot and WDA W3C
@@ -143,3 +143,21 @@ open audit must stay empty; failed start must leave no worker, events or leaked
 descriptors, and repeated close is safe. This establishes injected-source
 exclusion. Physical device capture and GNOME/KDE consent/recovery remain separate
 acceptance cases in WAYLAND_ACCEPTANCE.md.
+
+Beta mobile additionally exports `AppState`, `app_state`, `launch_app`,
+`wait_for_app`, `stop_app`, `handle_mobile_alert`, `MobileExtension`,
+`MobileExtensionSpec`, `run_mobile_extension`, `mobile_app`, `mobile_alert` and
+`mobile_extension_action`. The facade mirrors these names. Configure a passive
+extension spec with `session.configure_extension(spec)` before first use;
+its factory receives `(context, guard)` and must own its native clients, bound
+requests and cleanup. Metadata queries never execute the factory. Unsupported
+adapter operations and missing dependencies report reasons/recovery. Native
+Android install/files/clipboard are provided; iOS equivalents and recording
+require a configured adapter. Generic extension operations validate options and
+local path roots before creating clients. Clipboard data is explicit API output;
+extension options/results are masked in automatic journals. WDA app IDs are newly
+created and never borrowed for deletion; deleting a session may terminate its app.
+Android owner close does not stop apps. Repeated close retries failed cleanup,
+including late construction; no action is automatically replayed after lost replies.
+
+WDA app operations require a dedicated idle endpoint. Bounded status preflight rejects existing or missing session ownership metadata; a short local lease rejects another pending/active owner for the exact URL. WDA has no atomic external-client exclusion: endpoint aliases and external users require operational exclusivity. POST/session can replace an active server session; unknown creation replies require native-state inspection before explicit retry.

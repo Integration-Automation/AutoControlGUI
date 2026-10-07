@@ -8,7 +8,7 @@ from typing import Any, Callable, Iterator, Optional
 from je_auto_control.wrapper._mobile_models import DeviceSessionError
 
 
-class LazyMobileHandle:
+class LazyMobileHandle:  # pylint: disable=too-many-instance-attributes  # reason: independent lifecycle/construction/cleanup locks and pending ownership state
     """Keep native construction outside the lifecycle lock so close can revoke it."""
 
     def __init__(self, handle: Any, guard: Optional[Callable[[], None]],
@@ -19,6 +19,8 @@ class LazyMobileHandle:
         self._state = threading.Lock()
         self._connection = threading.Lock()
         self._closed = False
+        self._cleanup = threading.Lock()
+        self._pending: list[Any] = []
 
     def _check(self) -> None:
         if self._closed:
@@ -39,7 +41,9 @@ class LazyMobileHandle:
                     self._check()
                     self._handle = handle
             except BaseException:  # reason: a completed native constructor must be disposed on cancelled publication
-                self._release(handle)
+                with self._state:
+                    self._pending.append(handle)
+                self._drain()
                 raise
             return handle
 
@@ -60,8 +64,18 @@ class LazyMobileHandle:
         with self._state:
             self._closed = True
             handle, self._handle = self._handle, None
-        if handle is not None:
-            self._release(handle)
+            if handle is not None:
+                self._pending.append(handle)
+        self._drain()
+
+    def _drain(self) -> None:
+        with self._cleanup:
+            with self._state:
+                pending = tuple(self._pending)
+            for handle in pending:
+                self._release(handle)
+                with self._state:
+                    self._pending.remove(handle)
 
     def _release(self, handle: Any) -> None:
         if self._dispose is not None:

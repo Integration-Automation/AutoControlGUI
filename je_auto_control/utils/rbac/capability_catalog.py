@@ -23,7 +23,8 @@ _USERS = '''user_add user_list user_remove user_set_role user_rotate_token'''.sp
 
 CAPABILITY_CATALOG: Dict[str, str] = {
     'probe_mobile_devices': Capability.MANAGE_HOSTS,
-    **dict.fromkeys(('mobile_capture', 'mobile_gesture', 'mobile_type_text'), Capability.MANAGE_HOSTS),
+    **dict.fromkeys(('mobile_capture', 'mobile_gesture', 'mobile_type_text',
+                     'mobile_app', 'mobile_alert', 'mobile_extension'), Capability.MANAGE_HOSTS),
     **dict.fromkeys(('start_physical_recording', 'stop_physical_recording', 'start_wayland_stop_shortcut',
                      'stop_wayland_stop_shortcut', 'wayland_input_status'), Capability.MANAGE_HOSTS),
     **dict.fromkeys(_SCREEN, Capability.READ_SCREEN),

@@ -80,7 +80,8 @@ def android_handle(sdk: Any, serial: str, timeout_s: float, guard: Callable[[], 
     return handle
 
 
-def ios_handle(sdk: Any, url: str, timeout_s: float, guard: Callable[[], None]) -> Any:
+def ios_handle(sdk: Any, url: str, timeout_s: float, guard: Callable[[], None],
+               session_id: Optional[str] = None) -> Any:
     """Bound WDA HTTP requests independently of the SDK's global HTTP_TIMEOUT."""
     class OwnedClient(_GuardedSDK, sdk.Client):  # pylint: disable=too-few-public-methods  # reason: inherits optional SDK API
         """Keep root-client requests and retry paths inside this owner's lifetime."""
@@ -88,6 +89,13 @@ def ios_handle(sdk: Any, url: str, timeout_s: float, guard: Callable[[], None]) 
         def _fetch(self, method: str, urlpath: str, data: Any = None,
                    with_session: bool = False, timeout: Optional[float] = None) -> Any:
             guard()
+            if session_id is not None:
+                prefix = f'/session/{session_id}' if with_session else ''
+                # pylint: disable-next=protected-access  # reason: owned app transport has no SDK global lock/retry
+                result = sdk._unsafe_httpdo(url.rstrip('/') + prefix + '/' + urlpath.lstrip('/'),
+                                           method, data, bounded_timeout(timeout_s, timeout))
+                guard()
+                return result
             result = super()._fetch(method, urlpath, data, with_session,
                                     bounded_timeout(timeout_s, timeout))
             guard()
@@ -96,7 +104,10 @@ def ios_handle(sdk: Any, url: str, timeout_s: float, guard: Callable[[], None]) 
     guard()
     handle = OwnedClient.__new__(OwnedClient)
     _initialize_owner(handle, guard)
-    sdk.Client.__init__(handle, url)  # pylint: disable=unnecessary-dunder-call  # reason: initialize owner before SDK bootstrap
+    if session_id is None:
+        sdk.Client.__init__(handle, url)  # pylint: disable=unnecessary-dunder-call  # reason: owner precedes SDK bootstrap
+    else:
+        sdk.Client.__init__(handle, url, _session_id=session_id)  # pylint: disable=unnecessary-dunder-call  # reason: freeze owned session
     return handle
 
 

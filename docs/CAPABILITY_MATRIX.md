@@ -34,7 +34,7 @@ logical lifetime. Remote probes require MANAGE_HOSTS. Matrix duplicate detection
 compares configured targets, not physical identities hidden behind endpoint aliases.
 Real Android/emulator and remote-WDA reachability, authorization, SDK bootstrap
 total deadlines and recovery remain H3 acceptance cases in Progress.md. Unicode,
-gestures, frames and app lifecycle continue through E2–E4.
+gestures, frames and observed app lifecycle are delivered in E2–E3; the dedicated mobile panel follows in E4.
 
 Linux Wayland is split: **capture is exercised by CI against a real
 compositor; input is exercised by CI against a real EI peer and a real portal.**
@@ -518,3 +518,32 @@ Desktop screen regions/mouse buttons are unsupported in that binding. JSON mobil
 services share facade/AC/MCP/Builder and Device Matrix Actions; remote calls need
 MANAGE_HOSTS. Native emulator/WDA/rotation and SDK IME/clipboard restoration are
 H3 acceptance, not established by controlled fixtures.
+
+### E3 observed apps and extension capability evidence
+
+Controlled transport tests cover Android launch/pidof/force-stop and owned WDA
+creation/app-state/termination/alert routes. WDA states 0/1/2–4 map to
+not_installed/not_running/running; Android pidof observes process presence only.
+Connection failures never mean not_running. WDA cleanup targets a confirmed owned
+ID, preserves borrowed sessions, retries failed DELETE and rejects late app input.
+A first WDA construction shares the caller's poll budget; launch shares its
+request/state deadline. Real native server/device behavior remains H3.
+
+| Operation | Android | iOS | Evidence / recovery |
+| --- | --- | --- | --- |
+| launch/state/wait/stop | owned ADB | owned WDA app session | controlled transport; authorize selected device |
+| alert accept/dismiss | unsupported | WDA endpoint | Android: specific UI-tree selector |
+| install | APK via ADB | configured extension | native dependency/optional adapter, no fake success |
+| files | ADB push/pull | configured extension | root-checked local paths; conservative native remote paths |
+| clipboard | SDK Unicode | configured extension | dependency only until explicit operation; journals mask data |
+| recording | configured extension | configured extension | needs_dependency without owner factory; bounded clip contract |
+
+MobileExtensionSpec metadata is immutable/passive; creating a session or querying
+capabilities performs no SDK import, connection or input. A configured adapter's
+missing operations are unsupported; factories receive context/guard and must own
+request budgets/cancellation/cleanup. Factory/context validation and controlled
+recording dispatch do not establish physical recording acceptance. All three
+JSON services share facade/API/AC/MCP/Builder/Device Matrix Actions and remote
+MANAGE_HOSTS checks. Emulator signing/authorization and real-WDA recovery remain H3.
+
+WDA creation can replace an existing server session. Controlled negative tests now prove that status reporting a borrowed ID or lacking ownership metadata produces no POST/DELETE, and a nested pending owner for the same URL cannot supersede the first. A bounded status check plus local endpoint lease protects detected/exact local owners; it cannot atomically exclude external clients or aliases. Dedicated idle endpoints and unknown-reply inspection remain operational requirements. Primary sources: [WDA creation](https://github.com/appium/WebDriverAgent/blob/master/WebDriverAgentLib/Commands/FBSessionCommands.m), [ownership response](https://github.com/appium/WebDriverAgent/blob/master/WebDriverAgentLib/Routing/FBResponsePayload.m).

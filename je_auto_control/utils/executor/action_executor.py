@@ -6,7 +6,9 @@ from je_auto_control.utils.rbac.user_api import (
 )
 from contextvars import ContextVar
 from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple, Union
-from je_auto_control.wrapper.mobile_actions import mobile_capture, mobile_gesture, mobile_type_text
+from je_auto_control.wrapper.mobile_actions import (
+    mobile_capture, mobile_gesture, mobile_type_text, mobile_app, mobile_alert, mobile_extension_action,
+)
 
 from je_auto_control.utils.exception.exception_tags import (
     action_is_null_error_message, add_command_exception_error_message,
@@ -7891,6 +7893,9 @@ class Executor:
             "AC_mobile_capture": mobile_capture,
             "AC_mobile_gesture": mobile_gesture,
             "AC_mobile_type_text": mobile_type_text,
+            "AC_mobile_app": mobile_app,
+            "AC_mobile_alert": mobile_alert,
+            "AC_mobile_extension": mobile_extension_action,
 
             # Media assertions (audio activity, video motion)
             "AC_assert_audio": _assert_audio,

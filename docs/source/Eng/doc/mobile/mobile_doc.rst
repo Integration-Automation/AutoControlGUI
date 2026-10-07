@@ -76,7 +76,7 @@ Actions menu. The probe displays JSON metadata; execution uses a background
 worker so the editors and event loop remain responsive. Script Builder uses
 the same JSON command. ``examples/mobile_contexts.py`` demonstrates a passive,
 hardware-free matrix. Native Android/emulator and remote-WDA acceptance remains
-in Progress.md; app lifecycle and the dedicated mobile panel are subsequent E tasks.
+in Progress.md; the dedicated mobile panel follows in E4.
 
 Device input and immutable frames
 ---------------------------------
@@ -156,3 +156,66 @@ References: `uiautomator2 input <https://github.com/openatx/uiautomator2/blob/ma
 `two-pointer RPC <https://github.com/openatx/uiautomator2/blob/master/uiautomator2/_selector.py>`_,
 `WDA SDK <https://github.com/openatx/facebook-wda/blob/master/wda/__init__.py>`_
 and `WDA W3C actions <https://github.com/appium/WebDriverAgent/blob/master/WebDriverAgentLib/Commands/FBTouchActionCommands.m>`_.
+
+Observed apps and optional extensions
+-------------------------------------
+
+The Beta API/facade additionally exports ``AppState``, ``app_state``, ``launch_app``,
+``wait_for_app``, ``stop_app``, ``handle_mobile_alert``, ``MobileExtension``,
+``MobileExtensionSpec``, ``run_mobile_extension``, ``mobile_app``, ``mobile_alert``
+and ``mobile_extension_action``.
+
+.. code-block:: python
+
+   from je_auto_control.api.mobile import launch_app, stop_app, wait_for_app
+
+   with open_device(context) as session:
+       observed = launch_app(session, 'com.example.demo')
+       observed = wait_for_app(session, 'com.example.demo', timeout_s=5)
+       observed = stop_app(session, 'com.example.demo')
+
+Android uses owned ADB launch/pidof/force-stop; process presence is running state.
+iOS creates a new WDA session and freezes its ID, bypassing SDK global locks,
+automatic retries and auto-unlock. XCTest 0/1/2–4 maps to
+not_installed/not_running/running. Connection failures mean unknown state, never
+not_running. Polling is cancellable with finite deadlines; first WDA construction
+uses the caller's remaining request budget. A lost input reply is not replayed.
+
+Deleting a WDA app session can terminate its app. Only confirmed owned IDs are
+deleted; borrowed root sessions are preserved. Failed cleanup, including late
+construction, remains retryable by repeated ``session.close()``. Android close
+leaves apps running; use ``stop_app`` explicitly. iOS alerts accept/dismiss via
+``handle_mobile_alert``; Android has no universal alert route, so use a specific
+UI-tree selector. Native authorization/recovery remains H3 acceptance.
+
+``session.configure_extension(MobileExtensionSpec(name, version, capabilities,
+factory))`` installs passive metadata and a lazy factory(context, guard) before
+first use. Factories must create one owner-bound adapter, honor guard before/after
+I/O, use context.timeout_s and clean their owned resources on close. Shared native
+clients are forbidden. Probes never execute factories. Missing declared operations
+are unsupported; absent optional adapters report needs_dependency and recovery.
+
+``MobileExtension`` defines install(file_path), files(action, local_path,
+remote_path), clipboard(text=None), recording(file_path, duration_s), close().
+Android includes ADB APK install, push/pull and SDK Unicode clipboard; iOS equivalents
+and recording on either platform require an owned configured adapter. ADB is never
+used as an iOS fallback. Local paths are root-checked; remote file paths accept
+absolute ASCII paths without shell metacharacters or parent traversal.
+
+.. code-block:: json
+
+   [
+     ["AC_mobile_app", {"action": "launch", "app_id": "com.example.demo"}],
+     ["AC_mobile_extension", {"operation": "clipboard", "options": {"text": "測試 café 🙂"}}],
+     ["AC_mobile_app", {"action": "stop", "app_id": "com.example.demo"}]
+   ]
+
+These commands use an active matrix owner, or pass an explicit device object.
+``AC_mobile_alert`` takes action accept/dismiss. MCP ac_mobile_app/alert/extension,
+Builder and Device Matrix Actions share the same services. Remote calls require
+MANAGE_HOSTS; extension options/results are masked in automatic journals.
+``examples/mobile_app_lifecycle.py`` is passive until --run explicitly opts into
+native launch/stop. Controlled adapter tests establish dispatch/lifetime; emulator,
+signing, real-WDA and physical recording acceptance remain H3.
+
+WDA app operations require a dedicated idle endpoint. A bounded status preflight rejects existing or missing ownership metadata before creation; a local lease protects pending/active owners for the exact URL. WDA creation replaces its active session, so external clients and aliases must be excluded operationally. Unknown creation replies remain unknown native state and require inspection before explicit retry.
