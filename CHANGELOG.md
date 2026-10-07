@@ -13,6 +13,12 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ## Unreleased
 
+### Fixed
+
+- Qt translation registries avoid retaining their own GUI owner, preventing
+  parentless widgets from being destroyed by background garbage collection.
+  Child widget retention and language switching remain supported.
+
 ### Added
 
 - Beta `api.wayland_input`, facade mirrors, five AC/MCP/Script Builder operations

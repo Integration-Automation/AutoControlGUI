@@ -403,6 +403,8 @@ artifact，包含原生堆栈、包版本及测试退出码。原有 coverage �
 LLDB 跳过启动器的 exec 暂停；其他非致命停止会视为诊断失败，不捏造崩溃退出码。
 两个 debugger 都将 SIGINT 传给 Python，让紧急停止断言正常执行。
 Quality 测试安装 WebRTC／signaling extras 与 HTTP 测试 client。
+GUI 翻译表保留子组件 wrapper，对自身组件使用 weak proxy，避免自身循环引用
+把 GUI 销毁延后到工作线程的 GC。
 手动运行 `quality.yml` 可选 `verification_scope=native-shortcut`，仅跑 installed-wheel／
 私有 bus 检查；默认会运行全部 quality jobs。
 

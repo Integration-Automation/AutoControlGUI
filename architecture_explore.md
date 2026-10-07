@@ -20,13 +20,13 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 | 指標 | 數值 |
 | --- | ---: |
 | Python 模組總數（含周邊子專案） | 1,154 |
-| 程式碼總行數 | 169,278 |
+| 程式碼總行數 | 169,288 |
 | `je_auto_control/utils/` 子套件數 | 311 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 807 |
 | 套件門面 `__all__` 公開名稱數 | 1,358 |
 | GUI 分頁數（`main_widget` 註冊） | 49 |
 | MCP 工具數（`build_default_tool_registry()` 實測） | 729 |
-| `test_*.py` 測試檔／測試函式 | 757 / 7,859 |
+| `test_*.py` 測試檔／測試函式 | 758 / 7,861 |
 | 範例腳本 | 27 |
 
 **技術基線**：Python ≥ 3.10、MIT 授權、必要相依只有 `je_open_cv`／`opencv-python`／`pillow`／`mss`／
@@ -948,7 +948,7 @@ GUI 是**選用 extra**（`pip install je_auto_control[gui]`，PySide6 + qt-mate
 | `_script_tab.py` | 115 | 腳本執行分頁 mixin。 |
 | `_record_tab.py` | 114 | 錄製／回放分頁 mixin。 |
 | `_report_tab.py` | 88 | 報表分頁 mixin。 |
-| `_i18n_helpers.py` | 66 | 需要即時語言切換的分頁共用的翻譯註冊 mixin。 |
+| `_i18n_helpers.py` | 76 | 翻譯註冊 mixin：保留子元件 wrapper，對自身使用 weak proxy，避免 worker GC 銷毀 GUI owner。 |
 | `_validators.py` | 29 | `int_validator()`／`double_validator()`：以 C locale 驗證的數字輸入框 validator，接受的正是 `int()`／`float()` 讀得懂的寫法（預設 locale 在法文、德文下只收小數逗號）。所有數字 `QLineEdit` 都用它。 |
 | `_screen_geometry.py` | 53 | Qt 邏輯座標與截圖用的原生像素互轉：`native_region()`、`screen_at_native()`、`logical_point()`（每個螢幕的左上角在兩者相同，螢幕內依 device pixel ratio 縮放）。區域選取與主機端標註覆蓋層都用它。 |
 | `_daemon_thread.py` | 79 | `DaemonThread`：`QThread` 的替代品，保留遠端桌面 worker 用到的介面（`start`／`run`／`isRunning`／`wait`／`requestInterruption`／`started`／`finished`），但 `run()` 跑在 daemon `threading.Thread` 上，刪除物件或程式結束都不會銷毀執行中的執行緒。 |
@@ -1063,7 +1063,7 @@ GUI 是**選用 extra**（`pip install je_auto_control[gui]`，PySide6 + qt-mate
 | `ci_templates/.gitlab-ci.yml` | — | 供使用者專案複製的 GitLab CI 範本。 |
 | `docs/` | Sphinx（`API`／`Eng`／`Zh`／`getting_started`） | Read the Docs 文件。 |
 | `architecture_diagram/` | drawio + png | 既有的架構圖原始檔。 |
-| `test/` | `unit_test/headless`（主要）、`unit_test/flow_control`、`integrated_test`、`gui_test`、`manual_test`、`verify`、`test_source` | 757 個 `test_*.py`／7,859 個測試函式。**注意**：`test/unit_test/` 下的 `*_test.py` 是會真的驅動滑鼠鍵盤的手動示範腳本，因此 `pyproject.toml` 把 `python_files` 釘成 `test_*.py`。`unit_test/headless/conftest.py` 有一個 autouse fixture，每個測試結束都沖掉 Qt 排隊中的 `deleteLater()`——不沖會讓殘留的 widget 在後面某個不相干的測試裡被銷毀，曾經整個直譯器 `__fastfail`。`test_doc_counts.py` 守住文件引用的指令／工具／子套件／範例數,`test_doc_line_counts.py` 守住所有行數（`--fix` 可一次重新產生）。 `verify/native_debugger.py` 以有時限的 gdb/lldb 包裝原有 coverage 命令，保留 target 退出碼與原生堆疊。 `verify/macos_verify.py` 是在真的 `macos-14` runner 上量測 TCC 到底允許什麼的探針（macOS 是唯一沒有容器可用的支援平台），不被 pytest 收集。 |
+| `test/` | `unit_test/headless`（主要）、`unit_test/flow_control`、`integrated_test`、`gui_test`、`manual_test`、`verify`、`test_source` | 758 個 `test_*.py`／7,861 個測試函式。**注意**：`test/unit_test/` 下的 `*_test.py` 是會真的驅動滑鼠鍵盤的手動示範腳本，因此 `pyproject.toml` 把 `python_files` 釘成 `test_*.py`。`unit_test/headless/conftest.py` 有一個 autouse fixture，每個測試結束都沖掉 Qt 排隊中的 `deleteLater()`——不沖會讓殘留的 widget 在後面某個不相干的測試裡被銷毀，曾經整個直譯器 `__fastfail`。`test_doc_counts.py` 守住文件引用的指令／工具／子套件／範例數,`test_doc_line_counts.py` 守住所有行數（`--fix` 可一次重新產生）。 `verify/native_debugger.py` 以有時限的 gdb/lldb 包裝原有 coverage 命令，保留 target 退出碼與原生堆疊。 `verify/macos_verify.py` 是在真的 `macos-14` runner 上量測 TCC 到底允許什麼的探針（macOS 是唯一沒有容器可用的支援平台），不被 pytest 收集。 |
 
 ---
 
@@ -1167,7 +1167,7 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 
 | 層／子系統 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `gui/` | 110 | 30,376 |
+| `gui/` | 110 | 30,386 |
 | `utils/mcp_server/` | 47 | 19,793 |
 | `utils/remote_desktop/` | 59 | 13,799 |
 | `utils/executor/` | 10 | 9,837 |
@@ -1188,7 +1188,7 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 863 |
 | 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 730 | 62,322 |
-| **總計** | **1,146** | **169,148** |
+| **總計** | **1,146** | **169,158** |
 
 
 Crypto optional-dependency failures use CryptoDependencyError from utils/exception:

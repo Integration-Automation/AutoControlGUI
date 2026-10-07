@@ -458,6 +458,8 @@ does not establish the intermittent USB ACL crash root cause.
 LLDB ignores launcher exec stops; other nonfatal stops fail without a fabricated crash exit code.
 Both debuggers pass SIGINT to Python so emergency-stop assertions execute normally.
 Quality tests install WebRTC/signaling extras and the HTTP test client.
+GUI translation registries retain child wrappers and hold their own widget via
+a weak proxy, avoiding self-cycles that defer GUI destruction to worker GC.
 Manual `quality.yml` runs accept `verification_scope=native-shortcut` to run
 only the installed-wheel/private-bus check; the default runs all quality jobs.
 

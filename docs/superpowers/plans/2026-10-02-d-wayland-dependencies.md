@@ -107,7 +107,9 @@ Script Builder 操作與獨立 Diagnostics 面板已交付；停止／重試可�
 Linux/macOS Python 3.10 quality jobs 已配置 gdb/lldb 包裝原有 coverage 命令，
 保存 native-diagnostics artifact 與真實 target exit；等待原生執行及 root-cause 證據。
 portal owner 消失／替換的失敗案例已重現並修正；獨立 GDBus peer 與 installed-wheel
-傳輸驗證已接入 quality／portal Docker CI，待實測 artifact。
+傳輸驗證已接入 quality／portal Docker CI；quality 的六組獨立 GDBus／installed-wheel
+檢查已通過，artifact 見 run 37586779813。GUI 翻譯表自身循環造成 worker GC 銷毀
+GUI owner 的失敗已重現並修正，歷史 Qt crash 的原生回歸仍待完成。
 
 - [ ] **Step 1:** 定義 fake fixtures 並新增 `test_action_recording_needs_no_global_hook, test_physical_reader_excludes_virtual_device, test_permission_denial_is_actionable, test_shortcut_session_closes`，驗證：
 

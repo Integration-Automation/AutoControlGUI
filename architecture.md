@@ -355,3 +355,8 @@ Owner loss/replacement invalidates both pending and active grants without retry;
 active revocation signals the owning callback. Independent GI/GDBus native peers
 and installed-wheel verification run in quality and the portal Docker CI job,
 retaining per-scenario records and logs. Desktop consent/recovery remains D3/H3.
+
+GUI translation registries retain child wrappers but store self/title-tab entries
+through weak proxies. This removes the registry's owner-to-self cycle, which
+otherwise lets background Python GC destroy parentless widgets off the GUI
+thread. Isolated ownership/translation tests preserve live language switching.

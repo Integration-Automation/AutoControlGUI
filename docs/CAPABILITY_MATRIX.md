@@ -470,3 +470,8 @@ GlobalShortcuts availability is revoked when its portal owner disappears or is
 replaced. Pending consent fails and an active grant signals its owned callback.
 The installed-wheel/private-bus GDBus checks exercise wire transport and grant
 ownership; GNOME/KDE human consent and physical key-state recovery remain unverified.
+
+GUI live-language registries preserve child wrappers and weakly reference self
+entries. Ownership tests cover a USB prompt and self-registered tab titles,
+including background GC and subsequent language switching. Historical Qt
+segfault closure still requires native regression evidence.

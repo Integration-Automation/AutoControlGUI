@@ -576,3 +576,10 @@ portal owner 消失／替換會撤銷待授權及有效的 stop grant，不自�
 會被忽略。Quality 與 portal Docker CI 使用 installed wheel、獨立 GDBus peer 及
 私有 bus，保留協定紀錄與失敗結果；傳輸驗證不代表 GNOME／KDE 真人授權或實體鍵態
 恢復已完成。
+
+GUI 翻譯物件所有權
+----------------------------------------
+
+翻譯表保留子元件 wrapper，對自身元件及自身註冊的 tab title 使用 weak proxy。
+這會移除原本讓 parentless widget 銷毀延後到背景 GC 的自身循環引用；即時語言
+切換與回傳原始 widget 的行為保持一致。歷史 Qt 原生崩潰的關閉仍需原生回歸證據。

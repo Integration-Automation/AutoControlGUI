@@ -620,3 +620,12 @@ foreign senders/names and unchanged ownership are ignored. Quality and portal
 Docker CI run an installed wheel against an independent GDBus peer on a private
 bus, retaining protocol records and failures. This transport verification does
 not establish GNOME/KDE human consent or physical keyboard-state recovery.
+
+GUI translation ownership
+-------------------------
+
+The translation registry keeps child wrappers alive while using a weak proxy
+for its own widget and self-registered tab titles. This removes a self-cycle
+that otherwise defers parentless widget destruction to background garbage
+collection. Live language switching and original widget return values remain
+unchanged. Historical native Qt crash closure still requires regression evidence.

@@ -11,8 +11,7 @@
 現有 `[Answer]` 決策沿用；後續交付包含 D3、E–H 與完整整合驗收。
 從 D3 接續原有計畫；不額外新增付費型功能。既有 API 介面及相關修正繼續，
 目前以本機／離線測試驗證；缺少真實 API 條件的既有項目保留待驗證。
-D3 尚需在 compositor CI 驗證原始實體事件；portal 停止已加入獨立 GDBus 原生傳輸 CI，
-待保存並核對實測 artifact，
+D3 尚需在 compositor CI 驗證原始實體事件，
 完成 GNOME/KDE 授權與鍵態恢復驗收，並完成下列 Python 3.10 USB ACL
 原生 crash 定位、artifact 與修正。
 
@@ -191,7 +190,8 @@ Anthropic 每一步送約 202 KB 的工具 schema、沒有 `cache_control`。拍
 
 `WIP` — `test/unit_test/headless/test_usb_acl_prompt.py::test_bridge_remember_persists_acl_rule`
 在 Linux／macOS Python 3.10 間歇 SIGSEGV。需在原生目標取得 gdb／lldb backtrace，
-定位並修正 Qt lifecycle；CI 已配置原生 debugger artifact，仍需執行並確認崩潰堆疊。
+Qt 翻譯表造成背景 GC 銷毀 GUI owner 的缺陷已重現並修正；仍需用原生
+回歸驗證歷史崩潰是否收斂，並取得任何再現的 gdb／lldb 堆疊。
 既有 faulthandler 證據見
 `docs/updates/2026-10.md` U-20261007-03，不能以 Windows／較新 Python 的通過取代。
 本次原生 CI 另在 Linux Python 3.14 的 `test_rd_gui_audit.py` teardown／
@@ -206,3 +206,15 @@ Anthropic 每一步送約 202 KB 的工具 schema、沒有 `cache_control`。拍
 D1 的桌面授權／撤銷／XWayland scope 仍只有替身及 offscreen Qt 證據；
 GNOME/KDE 的允許／拒絕、合成器重啟、裝置 pause/remove、helper crash 後
 實體按鍵狀態恢復，以及 restore-token 替代接口仍需 D3/H3 原生驗收。
+
+
+---
+
+## macOS 原生 CI 的取消與擷取回歸
+
+`WIP` — quality run 37585132041 的 macOS Python 3.10/3.14 尚有普通測試失敗：
+`test_portal_stop_bus_lifecycle.py` 的 shutdown/close 與進行中 socket read 競爭；
+`test_logical_frame.py` 的明確 metrics 在 macOS 被 native layout 覆蓋；
+platform-coordinate／screen-grabber fixtures 未完整隔離 Mac display geometry；
+legacy CLI stderr 前綴與 Folder Sync 的兩項固定 sleep 等待亦需檢查原生證據並修正。
+保留錯誤、資源回收與重試契約，不以跳過平台或放寬 assertion 消除失敗。

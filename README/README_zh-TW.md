@@ -404,6 +404,8 @@ artifact，包含原生堆疊、套件版本及測試退出碼。原有 coverage
 LLDB 略過啟動器的 exec 暫停；其他非致命停止會視為診斷失敗，不捏造崩潰退出碼。
 兩個 debugger 都將 SIGINT 傳給 Python，讓緊急停止斷言正常執行。
 Quality 測試安裝 WebRTC／signaling extras 與 HTTP 測試 client。
+GUI 翻譯表保留子元件 wrapper，對自身元件使用 weak proxy，避免自身循環引用
+把 GUI 銷毀延後到工作執行緒的 GC。
 手動執行 `quality.yml` 可選 `verification_scope=native-shortcut`，僅跑 installed-wheel／
 私有 bus 檢查；預設會執行全部 quality jobs。
 

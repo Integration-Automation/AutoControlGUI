@@ -92,3 +92,8 @@ GlobalShortcuts owners also retain a bus-daemon NameOwnerChanged subscription.
 Loss/replacement of the portal owner revokes pending or active grants, without
 automatic reauthorization; an active grant invokes its owned stop callback.
 Foreign senders/names and unchanged ownership do not revoke the grant.
+
+Shared GUI translation registries retain child wrappers and use weak proxies
+for self entries, including tab titles. This prevents the registry's own cycle
+from deferring parentless widget destruction to worker-thread garbage collection.
+Setter/translation behavior and returned original widgets are unchanged.
