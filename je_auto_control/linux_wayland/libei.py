@@ -39,7 +39,7 @@ import select
 import threading
 import time
 from functools import partial
-from typing import Callable, Dict, List, Optional, Sequence, Set, Tuple
+from typing import Callable, Dict, List, Optional, Sequence, Set, Tuple, TYPE_CHECKING, Union
 
 from je_auto_control.linux_wayland import oeffis
 from je_auto_control.linux_wayland._ctypes_bind import BoundSymbols, bind
@@ -47,6 +47,8 @@ from je_auto_control.linux_wayland._layout import layout_origin
 from je_auto_control.linux_wayland.permission import WaylandPermissionRequired
 from je_auto_control.utils.exception.exceptions import AutoControlException
 
+if TYPE_CHECKING:
+    from je_auto_control.linux_wayland.ei_transport import EiWorkerClient
 
 _LIBRARY_CANDIDATES = ("ei", "libei", "libei.so.1", "libei.so.0")
 
@@ -586,9 +588,9 @@ class LibeiBackend:
         So the release is chosen by state. A session that reached a live
         device is unreffed normally, which is the common path and no longer
         leaks. Only the crashing state is abandoned — its context and fd are
-        dropped without unref, a few hundred bytes and one descriptor per
-        process, since :func:`connected_backend` probes only once. A segfault
-        in a library that drives someone's desktop is far worse than that.
+        dropped without unref. The default transport owns this binding in a
+        disposable helper, whose exit reclaims that context and descriptor.
+        Direct users of this low-level binding must own its process lifecycle.
         """
         # Read through the attribute, not `_api`: this runs from the
         # `except BaseException` handler in `connect`, where raising would
@@ -627,13 +629,22 @@ def _quietly(action: Callable[[], object]) -> None:
         pass
 
 
-_DEFAULT_BACKEND: Optional[LibeiBackend] = None
+NativeInputBackend = Union[LibeiBackend, "EiWorkerClient"]
+_DEFAULT_BACKEND: Optional[NativeInputBackend] = None
 _PROBE_FAILED = False
 _PERMISSION_ERROR: Optional[WaylandPermissionRequired] = None
 _DEFAULT_LOCK = threading.Lock()
 
 
-def connected_backend() -> Optional[LibeiBackend]:
+def _new_default_backend() -> Optional[NativeInputBackend]:
+    """Probe symbols without creating native state; session ownership is in a helper."""
+    if not LibeiBackend().is_available:
+        return None
+    from je_auto_control.linux_wayland.ei_transport import EiWorkerClient
+    return EiWorkerClient()
+
+
+def connected_backend() -> Optional[NativeInputBackend]:
     """Return a connected backend, or None — probing at most once.
 
     The probe involves a portal round trip and a consent dialog, so a host
@@ -649,8 +660,8 @@ def connected_backend() -> Optional[LibeiBackend]:
             return _DEFAULT_BACKEND
         if _PROBE_FAILED:
             return None
-        backend = LibeiBackend()
-        if not backend.is_available:
+        backend = _new_default_backend()
+        if backend is None:
             _PROBE_FAILED = True
             return None
         try:
@@ -666,7 +677,7 @@ def connected_backend() -> Optional[LibeiBackend]:
         return _DEFAULT_BACKEND
 
 
-def get_default_backend() -> Optional[LibeiBackend]:
+def get_default_backend() -> Optional[NativeInputBackend]:
     """Return the cached backend if libei resolved, without connecting."""
     with _DEFAULT_LOCK:
         if _DEFAULT_BACKEND is not None:

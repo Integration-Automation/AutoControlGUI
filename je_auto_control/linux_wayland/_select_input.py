@@ -17,7 +17,7 @@ from typing import Callable, Mapping, TYPE_CHECKING
 from je_auto_control.linux_wayland.permission import WaylandDependencyRequired
 
 if TYPE_CHECKING:
-    from je_auto_control.linux_wayland.libei import LibeiBackend
+    from je_auto_control.linux_wayland.libei import NativeInputBackend
 
 
 _ENV_OVERRIDE = "JE_AUTOCONTROL_WAYLAND_INPUT_BACKEND"
@@ -49,7 +49,7 @@ def _libei_loadable() -> bool:
         return False
 
 
-def active_backend() -> LibeiBackend | None:
+def active_backend() -> NativeInputBackend | None:
     """Return a connected libei backend, or None to use the ydotool CLI.
 
     The single entry point ``keyboard`` and ``mouse`` use. It lives here
@@ -70,7 +70,7 @@ def active_backend() -> LibeiBackend | None:
         raise WaylandDependencyRequired("native input failed; install libei or explicitly select cli") from error
 
 
-def emitted(backend: LibeiBackend, send: Callable[[LibeiBackend], None]) -> bool:
+def emitted(backend: NativeInputBackend, send: Callable[[NativeInputBackend], None]) -> bool:
     """Emit on the authorized transport; refusals stop input without fallback."""
     from je_auto_control.linux_wayland.libei import LibeiOutOfBounds, LibeiUnavailable
     from je_auto_control.linux_wayland.permission import WaylandInputUnavailable, WaylandPermissionRequired

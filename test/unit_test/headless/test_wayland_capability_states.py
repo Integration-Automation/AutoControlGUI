@@ -17,7 +17,7 @@ def test_cancel_does_not_fallback_silently(monkeypatch):
     backend = MagicMock()
     backend.connect.side_effect = WaylandPermissionRequired("input", "permission denied")
     libei.reset_default_backend()
-    monkeypatch.setattr(libei, "LibeiBackend", lambda: backend)
+    monkeypatch.setattr(libei, "_new_default_backend", lambda: backend)
     monkeypatch.setattr(_select_input, "select_input_backend", lambda: "libei")
     run = MagicMock()
     monkeypatch.setattr(keyboard, "_run", run)

@@ -14,6 +14,18 @@
    :local:
    :depth: 2
 
+Wayland 原生輸入生命週期
+========================
+
+預設 libei session 由專用 helper 子程序持有；GUI、executor 與 MCP 的輸入指令
+皆使用同一 transport。私有 JSON IPC 每則訊息最多 64 KiB，每批最多 128 個事件。
+輸入請求時限 3 秒，啟動與授權總時限 38 秒；逾時、取消或 helper 死亡會終止連線，
+不重送結果不明的輸入。診斷的 Actions 選單可停止控制，或明確允許新的授權嘗試。
+正常關閉會在同一份授權下釋放已按住的鍵與按鈕；crash 後的撤銷裝置清理由合成器負責，
+實體 GNOME/KDE 的恢復仍需平台驗收。直接使用 ``LibeiBackend`` 的呼叫者須負責
+其程序生命週期。原生驗證入口是 ``docker/ei_worker_verify.py``；CI 保存結果及
+faulthandler 輸出。
+
 
 資料夾同步（增量鏡像）
 ======================

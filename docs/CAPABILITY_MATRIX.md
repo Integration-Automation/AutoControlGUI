@@ -382,5 +382,26 @@ The isolated Linux measurement of libei `1.3.901-1` confirms SIGSEGV on
 half-open cleanup; completed sessions release device references and the
 sender safely. Local runs pass 9/9 libei and 20/20 EIS checks; the EIS peer
 does not announce pause or preserve the emulation sequence number, so those
-conditions remain unverified. Helper isolation and desktop grant/device lifecycle
-acceptance remain open in `Progress.md`; this checkpoint is not completion of D2.
+conditions remain unverified. Desktop grant/device lifecycle acceptance remains
+open in `Progress.md`; this checkpoint is not completion of D2.
+
+Process-owned EI sessions (D2 helper stage)
+-----------------------------------------
+
+The default libei transport uses a dedicated helper and a private bounded JSON
+channel (64 KiB, 128 events). Timeout/cancellation/death closes that channel and
+reaps the worker without replay; explicit retry creates a new grant. Direct
+`LibeiBackend` callers still own their process lifetime. Normal EOF cleanup
+releases held keys/buttons on the same grant; after a native crash the
+compositor owns revoked-device cleanup.
+
+`docker/ei_worker_verify.py`, also retained by Docker CI, passed 3/3 checks
+locally on Linux/Python 3.12 with a real EIS peer: exact input delivery and
+held-Shift release on normal close, three half-open failures with parent fd
+count unchanged (7 to 7), and SIGABRT containment with faulthandler evidence
+and EIS disconnect. Fifty permission round trips measured p50 0.18 ms and
+p95 0.25 ms on that container; these are transport measurements rather than
+desktop response times. Unit tests also cover Windows socket sharing, typed
+dependency errors, stale replies and concurrent cancellation. This does not
+verify physical GNOME/KDE key-state recovery after crashes; D2 arm64 alternatives
+and D3/H3 desktop acceptance remain pending.

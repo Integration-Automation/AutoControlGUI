@@ -58,6 +58,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261007-01 | 2026-10-07 | Isolate native EI sessions and reclaim failed handshakes | #done #wayland #modernization | [2026-10](2026-10.md) |
 | U-20261003-23 | 2026-10-03 | Classify native EI teardown and retain trustworthy crash probes | #done #testing #wayland | [2026-10](2026-10.md) |
 | U-20261003-22 | 2026-10-03 | Passive Wayland capabilities and explicit authorization boundaries | #done #wayland #modernization | [2026-10](2026-10.md) |
 | U-20261003-21 | 2026-10-03 | Close whole-C review, clean completed progress and pause before D | #done #review #sync #modernization | [2026-10](2026-10.md) |

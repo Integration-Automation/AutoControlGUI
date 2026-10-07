@@ -738,7 +738,7 @@ def test_a_failed_probe_is_not_retried_on_every_keystroke():
             raise LibeiUnavailable("no portal here")
 
     try:
-        with patch.object(libei_mod, "LibeiBackend", _Failing):
+        with patch.object(libei_mod, "_new_default_backend", _Failing):
             for _ in range(3):
                 with pytest.raises(WaylandPermissionRequired, match="no portal here"):
                     libei_mod.connected_backend()

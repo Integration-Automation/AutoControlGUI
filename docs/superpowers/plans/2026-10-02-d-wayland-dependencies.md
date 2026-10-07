@@ -67,7 +67,15 @@ D1 實作與本機／替身驗證已交付；原生 GNOME/KDE、EI 與 restore-t
 並有 60 秒上限與 faulthandler 輸出。EIS 映像同時提供半開探針，CI 保留驗證輸出。
 本機原生執行結果：libei 9/9、EIS 20/20 檢查成功；完整交握後釋放 device refs 再
 `ei_unref` 安全。EIS 未公告 pause，因此 paused-device 與完整序號傳遞不列為實測證據。
-這是 D2 的驗證前置交付；以下 helper／arm64 task 尚未完成，不能因此標示 D2 已交付。
+這是 D2 的驗證前置交付；不能因此標示 D2 已交付。
+
+Helper 階段已交付：`ei_transport.py`／`ei_worker.py` 接到預設 libei 輸入路徑，
+提供有界 JSON、request IDs、整批驗證、總時限、取消與 process/fd 回收。
+`docker/ei_worker_verify.py` 在已安裝 wheel 的 Linux/Python 3.12 容器通過 3/3 原生檢查；
+三次半開失敗的父程序 fd 為 7→7，正常 EOF 釋放 Shift，SIGABRT 不影響父程序且保留 stack。
+50 次 permission IPC 的 p50/p95 為 0.18/0.25 ms（容器測量，非桌面反應時間）。
+arm64 影像替代與相依矩陣尚未交付，以下完整 task 仍保持未完成；
+crash 後實體桌面鍵態由合成器恢復，GNOME/KDE 證據留在 D3/H3。
 
 - [ ] **Step 1:** 定義 fake fixtures 並新增 `test_half_open_worker_exit_reclaims_resources, test_worker_death_releases_pressed_keys, test_missing_dependency_is_typed`，驗證：
 

@@ -316,6 +316,16 @@ stop native control or allow a new authorization attempt; the next explicit
 input request prompts again. Restore tokens are unsupported by the current
 liboeffis binding and are never persisted.
 
+The default libei session runs in a dedicated helper process. Private JSON
+IPC is limited to 64 KiB per message and 128 events per batch. Input requests
+have a 3-second budget; startup and authorization have a 38-second total
+budget. Timeout, cancellation or helper death ends the connection and requires
+explicit authorization retry; uncertain input is never replayed. Normal close
+releases held keys/buttons on the same grant. After a crash the compositor
+owns revoked-device cleanup. The Diagnostics stop/retry actions use this same
+lifecycle. `LibeiBackend` remains the low-level in-process binding for native
+verification; direct callers must own its process lifetime.
+
 The GUI and `AC_diagnose` use passive checks; `AC_diagnose include_active=true`
 requests capture/cursor checks. Python retains active diagnostics by default:
 use `run_diagnostics(include_active=False)` for passive checks. These local

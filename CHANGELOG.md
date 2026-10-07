@@ -15,6 +15,11 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Added
 
+- Process-owned Wayland libei sessions isolate native crashes and reclaim failed
+  handshakes. Bounded JSON IPC rejects malformed batches and stale replies;
+  timeout/cancellation ends the grant without replay. Normal shutdown releases
+  held input on the same grant; crashed sessions require explicit authorization retry.
+
 - Passive backend capability snapshots (`je_auto_control.api.capabilities`), independent
   input/capture states, XWayland scope and explicit restore-token limitations. GUI diagnostics
   can stop native Wayland control or allow a new authorization request.

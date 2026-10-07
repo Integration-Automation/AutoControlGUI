@@ -304,3 +304,14 @@ sentinels. Exit status plus markers around `ei_unref` distinguish cleanup
 results from probe setup failures; a bounded child and faulthandler preserve
 crash evidence. The EIS image supplies both probes without a compositor, and
 Docker CI retains the EI/Wayland logs even when a verification step fails.
+
+Default native EI sessions are now owned by `linux_wayland/ei_worker.py`;
+`ei_transport.py` provides a private bounded JSON channel, request identities,
+serialized batches, total deadlines and concurrent cancellation. The parent
+only probes symbols; the helper owns context/devices/portal grants. EOF releases
+held input on the same grant and closes the native session. Failed/uncertain
+requests reap the helper without replay; helper exit reclaims abandoned
+half-open contexts. Crash diagnostics retain a bounded faulthandler tail.
+`LibeiBackend` is still the direct binding used by native verification.
+`docker/ei_worker_verify.py` checks real emission, cleanup, descriptor stability,
+crash containment and IPC latency; Docker CI retains its log in the EI artifact.

@@ -287,6 +287,13 @@ XWayland 明確限於 X11 視窗；找到工具不代表已驗證合成器支援
 停止輸入，不自動選擇 CLI。Wayland 診斷的 Actions 選單可停止原生控制或允許新的授權嘗試；
 下一次明確輸入請求才顯示授權。現有 liboeffis 綁定不支援 restore token，也不保存 token。
 
+預設 libei session 在專用 helper 子程序執行。私有 JSON IPC 每則訊息上限
+64 KiB，每批最多 128 個事件；輸入請求時限 3 秒，啟動與授權總時限 38 秒。
+逾時、取消或 helper 死亡會終止連線並要求明確重新授權，不重送結果不明的輸入。
+正常關閉會在同一份授權下釋放已按住的鍵與按鈕；crash 後的撤銷裝置清理由合成器負責。
+診斷的停止／重試操作沿用這份生命週期。`LibeiBackend` 保留為原生驗證使用的
+低階程序內綁定，直接呼叫者須負責其程序生命週期。
+
 GUI 與 `AC_diagnose` 預設使用被動檢查；`AC_diagnose include_active=true` 才進行截圖／游標檢查。
 Python 為相容保留預設的主動診斷，被動模式使用 `run_diagnostics(include_active=False)`。
 這些本機功能不需要付費 API 或 API key。

@@ -8,8 +8,8 @@
 `utils/{mcp_server,executor}/` 與型別／文件驗證。
 核准設計：[跨平台自動化與 GUI 改版](docs/superpowers/specs/2026-10-02-platform-gui-modernization-design.md)。
 實作計畫：[分階段交付計畫](docs/superpowers/plans/2026-10-02-modernization-index.md)，已核准，依序實作。
-現有 `[Answer]` 決策沿用；後續交付包含 D2/D3、E–H 各階段與完整整合驗收。
-從 D2/D3 接續原有計畫；不額外新增付費型功能。既有 API 介面及相關修正繼續，
+現有 `[Answer]` 決策沿用；後續交付包含 D2 的 arm64 backend、D3、E–H 與完整整合驗收。
+從 D2 的 arm64 backend 與 D3 接續原有計畫；不額外新增付費型功能。既有 API 介面及相關修正繼續，
 目前以本機／離線測試驗證；缺少真實 API 條件的既有項目保留待驗證。
 
 **只記未完成的事。** 完成的工作記在 [docs/updates/](docs/updates/README.md)（每月一個批次檔，
@@ -183,18 +183,9 @@ pip install --dry-run --only-binary=:all: --platform win_arm64 --python-version 
 
 `BLOCKED` — 上游（libei 1.3.901）
 
-`linux_wayland/libei.py` 的 `_teardown` **刻意每個行程漏一個 context 與一個 fd**，
-因為對一個還沒完成交握的 handle 呼叫 `ei_unref` 會直接 SIGSEGV。
-這是在驅動使用者桌面的函式庫裡的 crash，所以寧可漏也不能當。
-
-**這條本來就該在這裡。** 兩支 verify 腳本都會印 `*** REVISIT ***` 並叫讀者
-來翻 `Progress.md`，而這裡一直什麼都沒寫：
-
-- `docker/libei_verify.py`：「The workaround in `LibeiBackend._teardown` can probably go」
-- `docker/eis_verify.py`：「`ei_unref` now SEGFAULTS on a live context too」
-
-重驗方式就是跑那兩支腳本（`eis-verification` job 已經在跑）；哪天 banner 不再
-出現，就把 `_teardown` 的迴避拿掉。形狀與 arm64 那條一樣：卡上游、有一行重驗。
+`linux_wayland/libei.py` 的 `_teardown` 仍須避開半開 handle 的原生 `ei_unref`。
+待 `docker/libei_verify.py` 與 `docker/eis_verify.py` 的 sentinel 確認上游合法清理
+不再 SIGSEGV，才能移除這項低階綁定迴避；不要在父程序呼叫已知 unsafe teardown。
 
 ---
 
@@ -257,12 +248,7 @@ Anthropic 每一步送約 202 KB 的工具 schema、沒有 `cache_control`。拍
 
 ## Wayland 原生生命周期與能力驗收
 
-`WIP` — D2 的原生 teardown 分類已開始；在隔離 Linux 容器對
-libei `1.3.901-1` 的合法半開連線呼叫 `ei_unref`，仍得到 SIGSEGV（子程序 rc=-11）。
-`docker/libei_verify.py` 9/9、`docker/eis_verify.py` 20/20 檢查通過；完整交握後
-釋放 device refs 再 `ei_unref` 安全。libeis 未送 pause 事件，因此該 lifecycle 仍未實測。
-接續交付 helper 隔離、
-有界 IPC、逾時／取消、按鍵生命週期與 fd/process 回收，並驗證 arm64 backend 相依矩陣。
-Docker Linux engine 已啟動供本機驗證；D1 的授權／撤銷／XWayland scope 測試
-仍只有替身及 offscreen Qt 證據。GNOME/KDE 的允許／拒絕、合成器重啟、裝置 pause/remove
-與 restore-token 替代接口仍需 D2/D3/H3 原生驗收。
+`WIP` — D2 尚缺 Windows arm64 的影像替代 backend 與相依能力矩陣。
+D1 的桌面授權／撤銷／XWayland scope 仍只有替身及 offscreen Qt 證據；
+GNOME/KDE 的允許／拒絕、合成器重啟、裝置 pause/remove、helper crash 後
+實體按鍵狀態恢復，以及 restore-token 替代接口仍需 D3/H3 原生驗收。

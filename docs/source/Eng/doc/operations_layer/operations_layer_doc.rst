@@ -15,6 +15,21 @@ it can be deployed as a daemon on remote machines and managed centrally.
    :local:
    :depth: 2
 
+Wayland native input lifecycle
+==============================
+
+The default libei session is owned by a dedicated helper process; the GUI,
+executor and MCP input commands all use that transport. Its private JSON IPC
+limits each message to 64 KiB and each batch to 128 events. Input requests have
+a 3-second budget; startup and authorization have a 38-second total budget.
+Timeout, cancellation or helper death closes the connection without replay.
+Use the Diagnostics Actions menu to stop control or explicitly allow a new
+authorization attempt. Normal close releases held keys/buttons on the same
+grant. After a crash the compositor owns revoked-device cleanup; physical
+GNOME/KDE recovery still requires platform acceptance. Direct ``LibeiBackend``
+callers own their process lifecycle. The native verification entry is
+``docker/ei_worker_verify.py``; CI retains its results and faulthandler output.
+
 
 Folder sync (additive mirror)
 =============================

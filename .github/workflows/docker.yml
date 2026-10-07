@@ -215,6 +215,13 @@ jobs:
           docker run --rm --entrypoint python autocontrol-eis:ci \
             /opt/verify/libei_verify.py 2>&1 | tee libei-verification.log
 
+      - name: Verify process-owned EI cleanup, crash isolation and latency
+        if: always()
+        run: |
+          set -o pipefail
+          docker run --rm --entrypoint python autocontrol-eis:ci \
+            /opt/verify/ei_worker_verify.py 2>&1 | tee ei-worker-verification.log
+
       - name: Preserve EI native verification output
         if: always()
         # nosemgrep: yaml.github-actions.security.third-party-action-not-pinned-to-commit-sha.third-party-action-not-pinned-to-commit-sha
@@ -224,6 +231,7 @@ jobs:
           path: |
             eis-verification.log
             libei-verification.log
+            ei-worker-verification.log
           if-no-files-found: ignore
           retention-days: 14
 
