@@ -659,3 +659,25 @@ Artifact: `benchmarks/results/mcp-discovery-g3/report.json`.
 ### Type evidence
 
 Stable typing targets win32/linux/darwin without exemptions; strict new/rewritten scope includes all modernization modules. A separate `typing-extras` CI matrix installs GUI/WebRTC/Android/WDA SDKs and checks all modernization GUI modules against real PySide6 stubs on Python3.10/3.14. SDK protocols constrain adapter results; type success does not prove native authorization/device reachability. Local installed Qt checking and controlled mobile/GUI regressions are recorded in updates/H1.
+
+### Metadata cross-check (H2)
+
+Passive desktop keys: `input`, `capture`, `restore_token`. Metadata is not authorization evidence.
+
+| Mobile operation | Facade | Command | MCP |
+| --- | --- | --- | --- |
+| `device_setup` | `mobile_setup` | `AC_mobile_setup` | `ac_mobile_setup` |
+| `capture` | `mobile_capture` | `AC_mobile_capture` | `ac_mobile_capture` |
+| `perform` | `mobile_gesture` | `AC_mobile_gesture` | `ac_mobile_gesture` |
+| `type_text` | `mobile_type_text` | `AC_mobile_type_text` | `ac_mobile_type_text` |
+| `launch_app` | `mobile_app` | `AC_mobile_app` | `ac_mobile_app` |
+| `wait_for_app` | `mobile_app` | `AC_mobile_app` | `ac_mobile_app` |
+| `app_state` | `mobile_app` | `AC_mobile_app` | `ac_mobile_app` |
+| `stop_app` | `mobile_app` | `AC_mobile_app` | `ac_mobile_app` |
+| `alert` | `mobile_alert` | `AC_mobile_alert` | `ac_mobile_alert` |
+| `install` | `mobile_extension_action` | `AC_mobile_extension` | `ac_mobile_extension` |
+| `files` | `mobile_extension_action` | `AC_mobile_extension` | `ac_mobile_extension` |
+| `clipboard` | `mobile_extension_action` | `AC_mobile_extension` | `ac_mobile_extension` |
+| `recording` | `mobile_extension_action` | `AC_mobile_extension` | `ac_mobile_extension` |
+
+These declarations describe the selected device surface; check its capability result before native use. Offline examples and controlled fixtures do not certify physical devices.

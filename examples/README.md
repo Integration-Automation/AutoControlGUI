@@ -62,3 +62,18 @@ SDKs or sending device input. `--connect` explicitly probes one serial/WDA URL;
 `--connect --exercise --app-id ...` launches, captures and stops a disposable app.
 Use `--target`, `--adb-path`, `--timeout` and `--output` for explicit configuration.
 See [Android Docker / remote WDA setup](../docs/MOBILE_SETUP.md).
+
+## Modernization workflows
+
+All six scripts accept `--validate`; run from the repository root. They use passive metadata or disposable fixtures and never send native input or connect a device/network.
+
+| Script | Workflow |
+| --- | --- |
+| [`28_wayland_diagnostics.py`](28_wayland_diagnostics.py) | Passive Wayland diagnostics |
+| [`29_config_sync.py`](29_config_sync.py) | Persistent revision and idempotent retry |
+| [`30_mobile_devices.py`](30_mobile_devices.py) | Owned mobile device setup |
+| [`31_healing_comparison.py`](31_healing_comparison.py) | Fixed-frame strategy comparison |
+| [`32_codegen_from_log.py`](32_codegen_from_log.py) | Journal to reviewed candidate |
+| [`33_mcp_progressive.py`](33_mcp_progressive.py) | Local progressive MCP view |
+
+See [workflow, explicit operation flags, permissions and migration](../docs/MODERNIZATION_GUIDE.md).

@@ -60,7 +60,7 @@ assert sdk_any_leaks == []
 
 **Interfaces:** 每個 example 提供 --validate 或可無副作用的測試入口；功能矩陣由能力 metadata 校對；範例數由既有測量 gate 更新。
 
-- [ ] **Step 1:** 定義 fake fixtures 並新增 `test_examples_compile_and_validate_without_device, test_readme_configuration_parity, test_matrix_matches_capabilities`，驗證：
+- [x] **Step 1:** 定義 fake fixtures 並新增 `test_examples_compile_and_validate_without_device, test_readme_configuration_parity, test_matrix_matches_capabilities`，驗證：
 
 ```python
 assert device_effects_in_validate == []
@@ -68,10 +68,10 @@ assert translated_configuration_keys == english_configuration_keys
 assert undocumented_capabilities == set()
 ```
 
-- [ ] **Step 2:** 執行 `.venv/Scripts/python.exe -m pytest -q --tb=short --basetemp=.test-tmp/modernization-task -o cache_dir=.test-tmp/modernization-pytest-cache test/unit_test/headless/test_modernization_examples.py`，確認新測試因原有缺陷或尚未提供接口而 FAIL；不要把環境錯誤當成功的重現。
-- [ ] **Step 3:** 交付安裝、啟動、權限、GUI操作、headless與CLI/MCP、故障與遷移完整流程。Sphinx 引用 shared examples，三README一致，API lifecycle標示兼容／新format，所有計數重新量測。
-- [ ] **Step 4:** 重跑 Step 2，預期 exit 0；再跑這些修改檔所對應的既有回歸，確認公開契約。
-- [ ] **Step 5:** 更新本 task 的型別、所有交付入口、文件、測量計數與進度，僅 stage 本 task 檔案，提交 `git commit -m 'H2: 完整範例與三語文件'`。
+- [x] **Step 2:** 執行 `.venv/Scripts/python.exe -m pytest -q --tb=short --basetemp=.test-tmp/modernization-task -o cache_dir=.test-tmp/modernization-pytest-cache test/unit_test/headless/test_modernization_examples.py`，確認新測試因原有缺陷或尚未提供接口而 FAIL；不要把環境錯誤當成功的重現。
+- [x] **Step 3:** 交付安裝、啟動、權限、GUI操作、headless與CLI/MCP、故障與遷移完整流程。Sphinx 引用 shared examples，三README一致，API lifecycle標示兼容／新format，所有計數重新量測。
+- [x] **Step 4:** 重跑 Step 2，預期 exit 0；再跑這些修改檔所對應的既有回歸，確認公開契約。
+- [x] **Step 5:** 更新本 task 的型別、所有交付入口、文件、測量計數與進度，僅 stage 本 task 檔案，提交 `git commit -m 'H2: 完整範例與三語文件'`。
 
 ### Task H3: 跨平台、下游與發布前回歸
 

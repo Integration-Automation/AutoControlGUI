@@ -391,7 +391,7 @@ Windows、macOS（pyobjc）与 X11（含 XWayland）；纯 Wayland 会话的协�
 
 | 资源 | 内容 |
 |---|---|
-| [`examples/`](../examples/) | 29 个自包含脚本：截图点击、OCR、调度器、远程桌面、agent loop、可观测性、录制、变量、热键、触发器、报表、MCP、REST、密钥、插件、computer use、Wayland、跨主机 DAG、chat-ops、pytest/BDD、锚点定位。 |
+| [`examples/`](../examples/) | 37 个自包含脚本：截图点击、OCR、调度器、远程桌面、agent loop、可观测性、录制、变量、热键、触发器、报表、MCP、REST、密钥、插件、computer use、Wayland、跨主机 DAG、chat-ops、pytest/BDD、锚点定位。 |
 | [Read the Docs](https://autocontrol.readthedocs.io/en/latest/) | 完整 API 参考，含英文与中文。 |
 | [architecture_explore.md](../architecture_explore.md) | 逐层记录每个模块的职责。 |
 | [docs/CAPABILITY_MATRIX.md](../docs/CAPABILITY_MATRIX.md) | 能力 × 平台对照矩阵。 |
@@ -904,3 +904,22 @@ Tools → MCP 工具发现提供可取消的 Actions，在本机搜索或查看�
 MCP stdio 支持 `--tool-mode full|progressive|static`、`--tool-profile ac_screenshot,ac_probe_capabilities` 和 `--tool-page-size 1..100`；参数覆盖对应部署设置。`--list-tools` 仍输出完整已授权目录供检查。例如：`python -m je_auto_control.utils.mcp_server --tool-mode static --tool-profile ac_screenshot`。披露只改变可见列表，执行仍检查 RBAC、schema、roots/env、限流与确认。只读也拒绝自定义 registry 的修改调用；后台任务在 session 终止后保留原请求身份、roots 与 capabilities。[本机测量](../benchmarks/results/mcp-discovery-g3/report.json)：完整747个／363544bytes，核心6个／2506bytes；本机握手及列表中位数37.91／9.56ms，搜索9.78／9.65ms（五次样本，未含网络）。
 
 改版类型验证：`python test/verify/typing_contract_verify.py` 检查 win32/linux/darwin，豁免为零；新／重写模块还要求完整函数和泛型参数。安装 `[gui]` 后，`python test/verify/typing_contract_verify.py --extras` 使用真实 PySide6 stubs 检查全部改版 GUI 模块。CI 另安装固定版本 Android/WDA SDK；延迟 adapter 以 Protocol 限定 SDK 接口。JSON／事件数据保留明确的动态字段。
+
+## 改版流程示例
+
+无头安装用 `pip install -e .`；工作区用 `pip install -e '.[gui,webrtc,signaling]'`。以 `python -c "import je_auto_control as ac; ac.start_autocontrol_gui()"` 打开 GUI，选择分页、填写设置并使用 Actions 菜单。关闭／取消会释放该面板拥有的任务；合作式超时无法强制中断任意 SDK 调用。
+
+每个示例加 `--validate`，使用可丢弃的离线数据验证：
+
+| 示例 | 流程 |
+| --- | --- |
+| `28_wayland_diagnostics.py` | 被动 input/capture/restore-token 诊断，不请求授权 |
+| `29_config_sync.py` | SQLite 重启后版本与幂等重试 |
+| `30_mobile_devices.py` | Android／iOS 所有权及被动设置检查 |
+| `31_healing_comparison.py` | 同一固定画面的定位准确率比较 |
+| `32_codegen_from_log.py` | 日志生成待审阅的 Python／pytest／Robot 候选 |
+| `33_mcp_progressive.py` | 本地 view 的搜索 → schema → 启用 → 列表 |
+
+例如 `python examples/33_mcp_progressive.py --validate`。验证不输入桌面或设备；实际捕获需 `30_mobile_devices.py --platform android --target SERIAL --capture phone.png`，iOS 使用明确的 WDA URL。WDA 必须先在 Apple 主机部署；专属 App session endpoint 不应与其他 client 共用。
+
+以 `python -m je_auto_control.utils.mcp_server --tool-mode progressive` 启动 MCP；client 搜索摘要、获取单一 schema、启用工具再调用 `tools/list`。原有 full 模式与 CLI 标志兼容。平台授权与 MCP 权限分别检查；连接前处理不支持／缺少依赖的诊断。Wayland 拒绝授权或撤销 restore token 时需重新获取桌面同意。生成候选后先审阅再执行；回放不代表实体输入成功。参阅[完整流程与迁移指南](../docs/MODERNIZATION_GUIDE.md)及[示例](../examples/README.md)。

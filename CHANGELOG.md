@@ -2687,3 +2687,7 @@ No compatibility changes.
   case-insensitive.
 
 WDA App lifecycle additionally requires a dedicated idle endpoint. Existing or unknown ownership status is rejected before creation; a local lease prevents a same-URL pending/active owner from being superseded. External clients/aliases still require endpoint exclusivity.
+
+### H2 workflow examples
+
+Six examples support offline `--validate`; three READMEs and both Sphinx trees share installation, permissions, explicit native flags and migration guidance. Existing formats/default MCP mode remain compatible.

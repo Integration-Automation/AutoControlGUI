@@ -258,3 +258,5 @@ AutoControl 所有功能的完整使用指南。
    :maxdepth: 2
 
    doc/workspace/workspace_doc
+
+   doc/modernization/modernization_doc

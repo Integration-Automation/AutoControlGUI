@@ -473,3 +473,5 @@ live session metadata. Preview surfaces never mutate real serving sessions.
 G3 concurrent MCP workers retain accepted transport identity, capabilities and bounded roots even after session drop. ContextVar authorization/view leases remain intact. Readonly is checked at execution for custom registries; mode/profile/page-size flags preserve full defaults. Local cost artifacts use the same registry/policy.
 
 H1 strict module manifest mirrors mypy complete-definition/generic overrides. Stable targets preserve zero exemptions; installed-extras runs expose actual Qt signatures on all modernization GUI files. Android/iOS lazy clients and literal DeviceSession.adapter overloads expose structural SDK interfaces; dynamic SDK bootstrap/disposal and extension compatibility remain at their adapter boundary. Generic translation helpers preserve QWidget subtype. ConnectionTasks uses composition of owner-bound PanelTasks, preserving its connect API without overriding QObject.connect.
+
+H2 workflow examples validate offline through the facade; both Sphinx trees include the same source. Generated journal candidates retain provenance and are never executed by the examples.

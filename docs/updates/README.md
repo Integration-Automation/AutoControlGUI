@@ -58,6 +58,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261008-07 | 2026-10-08 | Complete offline examples and aligned documentation | #done #docs #examples | [2026-10](2026-10.md) |
 | U-20261008-06 | 2026-10-08 | Deepen modernization typing and validate installed Qt contracts | #done #typing #modernization | [2026-10](2026-10.md) |
 | U-20261008-05 | 2026-10-08 | Enforce MCP call policy and measure disclosure cost | #done #mcp #modernization | [2026-10](2026-10.md) |
 | U-20261008-04 | 2026-10-08 | Isolate MCP disclosure sessions and preserve paginated snapshots | #done #mcp #modernization | [2026-10](2026-10.md) |
@@ -396,7 +397,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | File | Period | Entries |
 |---|---|---:|
-| [2026-10.md](2026-10.md) | 2026-10 | 60 |
+| [2026-10.md](2026-10.md) | 2026-10 | 61 |
 | [2026-09-e.md](2026-09-e.md) | 2026-09 | 7 |
 | [2026-09-d.md](2026-09-d.md) | 2026-09 | 55 |
 | [2026-09-c.md](2026-09-c.md) | 2026-09 | 38 |

@@ -451,7 +451,7 @@ ignore synthetic input, and fall back silently when the driver is absent.
 
 | Resource | What's in it |
 |---|---|
-| [`examples/`](examples/) | 31 self-contained scripts: screenshot + click, OCR, scheduler, remote desktop, agent loop, observability, recording, variables, hotkeys, triggers, reports, MCP, REST, secrets, plugins, computer use, Wayland, cross-host DAGs, chat-ops, pytest/BDD, anchor locators. |
+| [`examples/`](examples/) | 37 self-contained scripts: screenshot + click, OCR, scheduler, remote desktop, agent loop, observability, recording, variables, hotkeys, triggers, reports, MCP, REST, secrets, plugins, computer use, Wayland, cross-host DAGs, chat-ops, pytest/BDD, anchor locators. |
 | [Read the Docs](https://autocontrol.readthedocs.io/en/latest/) | Full API reference, English and 中文. |
 | [architecture_explore.md](architecture_explore.md) | Every module's responsibility, layer by layer. |
 | [docs/CAPABILITY_MATRIX.md](docs/CAPABILITY_MATRIX.md) | Capability × platform matrix. |
@@ -1082,3 +1082,22 @@ Configure the real deployment with the environment settings above. More details:
 MCP stdio also accepts `--tool-mode full|progressive|static`, `--tool-profile ac_screenshot,ac_probe_capabilities` and `--tool-page-size 1..100`; explicit flags override corresponding deployment settings. `--list-tools` still prints the complete authorized catalog for inspection. Example: `python -m je_auto_control.utils.mcp_server --tool-mode static --tool-profile ac_screenshot`. Discovery changes availability only: execution still checks RBAC, schema, roots/env, rate limits and confirmation. Readonly rejects mutating calls from custom registries too. Concurrent workers retain accepted identity, roots and capabilities across session termination. [Measured local schema cost](benchmarks/results/mcp-discovery-g3/report.json): full747 /363544bytes versus core6 /2506bytes; local handshake/list medians37.91/9.56ms, search9.78/9.65ms (five samples, no network).
 
 Modernization type validation: `python test/verify/typing_contract_verify.py` checks win32/linux/darwin with zero exemptions. New/rewritten modules additionally require complete definitions and generic arguments. After installing `[gui]`, `python test/verify/typing_contract_verify.py --extras` checks all modernization GUI modules against real PySide6 stubs. CI also installs pinned Android/WDA SDKs; Protocol-backed lazy adapters keep raw SDK objects inside their boundary. JSON/event payloads retain explicit dynamic fields.
+
+## Modernization workflow examples
+
+Install `pip install -e .` for headless use or `pip install -e '.[gui,webrtc,signaling]'` for the workspace. Run the GUI with `python -c "import je_auto_control as ac; ac.start_autocontrol_gui()"`. Select a workspace tab, edit its inputs and use its Actions menu. Close/cancel releases that panel's owned tasks; cooperative timeouts cannot forcibly interrupt an arbitrary SDK call.
+
+Run each example with `--validate` for disposable, offline validation:
+
+| Example | Workflow |
+| --- | --- |
+| `28_wayland_diagnostics.py` | Passive input/capture/restore-token metadata; no consent request |
+| `29_config_sync.py` | Durable revision and retry after SQLite restart |
+| `30_mobile_devices.py` | Owned Android/iOS context and passive setup |
+| `31_healing_comparison.py` | Fixed-frame accuracy comparison |
+| `32_codegen_from_log.py` | Journal to reviewable Python/pytest/Robot candidate |
+| `33_mcp_progressive.py` | Search → schema → enable → list in a local view |
+
+Example: `python examples/33_mcp_progressive.py --validate`. Validation sends no desktop/device input. Real capture needs `30_mobile_devices.py --platform android --target SERIAL --capture phone.png`; iOS uses an explicit WDA URL. WDA must already be provisioned on an Apple host. Never share an owned App session endpoint with another client.
+
+Start progressive MCP with `python -m je_auto_control.utils.mcp_server --tool-mode progressive`; clients discover summaries, request one schema, enable selected tools and then call `tools/list`. Existing full mode and legacy CLI flags remain compatible. Native platform consent is separate from MCP authorization. Diagnose unsupported/missing-dependency reports before connecting; Wayland portal denial or revoked restore tokens require renewed desktop consent. Review generated candidates before execution; replay does not imply successful physical input. See the [complete workflow and migration guide](docs/MODERNIZATION_GUIDE.md) and [examples](examples/README.md).

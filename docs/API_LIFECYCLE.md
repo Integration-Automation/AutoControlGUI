@@ -275,3 +275,7 @@ Artifact: `benchmarks/results/mcp-discovery-g3/report.json`.
 ### Modernization typing
 
 The strict manifest `test/verify/typing_modernization_modules.txt` and mypy overrides require complete definitions/generics on all new and explicitly rewritten modules. Stable three-platform checks retain zero exemptions. `--extras` requires real PySide6 and checks every modernization GUI module with its stubs enabled, without changing the stable optional-dependency boundary. Lazy SDK handles expose AndroidSDK/IOSSDK structural protocols and typed literal adapter selection; raw construction/disposal stays at SDK adapter boundaries, with dynamic JSON payloads explicit. These internal contracts add no native operation or new public business API.
+
+### H2 reproducible workflow boundary
+
+Six modernization examples expose `--validate` without desktop/device/network effects. Journal v1, labelled evaluation datasets and candidate manifests are explicit formats; legacy action JSON and full MCP defaults stay compatible. Generated code is reviewed before execution. Local metadata previews do not mutate remote sessions. See [workflow and migration guide](MODERNIZATION_GUIDE.md).

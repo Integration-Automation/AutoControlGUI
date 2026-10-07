@@ -26,8 +26,8 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 | 套件門面 `__all__` 公開名稱數 | 1,403 |
 | GUI 分頁數（`main_widget` 註冊） | 50 |
 | MCP 工具數（`build_default_tool_registry()` 實測） | 747 |
-| `test_*.py` 測試檔／測試函式 | 773 / 8,019 |
-| 範例腳本 | 31 |
+| `test_*.py` 測試檔／測試函式 | 774 / 8,022 |
+| 範例腳本 | 37 |
 
 **技術基線**：Python ≥ 3.10、MIT 授權、必要相依只有 `je_open_cv`／`opencv-python`／`pillow`／`mss`／
 `defusedxml`／`cryptography`（依平台標記；Windows arm64 改用 NumPy／Pillow，另有 pyobjc、python-Xlib）；
@@ -1118,7 +1118,7 @@ GUI 是**選用 extra**（`pip install je_auto_control[gui]`，PySide6 + qt-mate
 | `benchmarks/gui_startup.py` | 196 行 | Fresh-process GUI startup/memory/first-open and real AC_sleep event-loop benchmarks. |
 | `benchmarks/gui_workloads.py` | 42 行 | Passive catalog reports and repeatable, input-free GUI script workloads. |
 | `benchmarks/gui_workspace_capture.py` | 115 行 | Capture real Qt workspace layouts without invoking device or desktop operations. |
-| `examples/` | 29 個腳本 | 從截圖點擊、OCR、排程、遠端桌面、agent loop、可觀測性，一路到 computer-use、Wayland、跨主機 DAG、chatops、pytest/BDD、anchor locator。 |
+| `examples/` | 37 個腳本 | 從截圖點擊、OCR、排程、遠端桌面、agent loop、可觀測性，一路到 computer-use、Wayland、跨主機 DAG、chatops、pytest/BDD、anchor locator。 |
 | `browser-extension/` | manifest v3 擴充 | 瀏覽器端配合元件（background／content script／popup）。 |
 | `docker/` | Dockerfile ×8 + compose + 15 支驗證／伺服器腳本 | 無頭容器（`Dockerfile`）、帶 XFCE 桌面的容器（`Dockerfile.xfce`),以及六個**驗證用**映像:`Dockerfile.wayland`（sway headless,擷取路徑 + `libei_verify.py` 對真的 libei.so 解析符號）、`Dockerfile.eis`（`eis_server.py` 用 ctypes 綁 libeis 起一個真的 EIS server,`eis_verify.py` 把 libei sender 對著它跑完整握手與發送）、`Dockerfile.portal`（`portal_server.py` 自己佔住 `org.freedesktop.portal.Desktop`,真的 `dbus-daemon` + 真的 liboeffis 跑完 RemoteDesktop 交握，Session Closed 必須保留 needs_permission/input 與明確重試；`shortcut_server.py`／`shortcut_verify.py` 用獨立 GDBus 驗證 GlobalShortcuts grant/拒絕/取消/早到 signal/owner 撤銷）、`Dockerfile.ydotool`（真的 uinput 裝置,`ydotool_verify.py` 直接讀回 `/dev/input/eventN`）、`Dockerfile.seat`（`headless,libinput` + builtin seat,合成器真的吃下 ydotool 裝置,`seat_verify.py` 從 `grim -c` 的像素讀回游標落點）、`Dockerfile.x11`（真的 Xvfb + openbox,`x11_verify.py` 用 `xev` 把注入的事件從真的客戶端讀回（含 `synthetic NO`,這是 XTest 跟 `XSendEvent` 的差別）,另用 ImageMagick `import` 做獨立擷取對照,跑兩種螢幕版面）。`physical_source_verify.py` 在 seat／uinput 映像驗證 installed wheel 排除真實核心 virtual 裝置，禁止在排除前開啟，並驗證無 worker／事件／FD 洩漏。全部接在 `.github/workflows/docker.yml`。 |
 | `k8s/helm/` | Helm chart | Kubernetes 部署。 |
@@ -1347,3 +1347,5 @@ existing validation pipeline behind the server compatibility method.
 G3 `_worker_scope` preserves accepted thread-local connection/capabilities/path policy alongside ContextVar authorization/view leases. Readonly call checks also cover custom registries; CLI flags retain default full behavior. Local benchmarks retain version/hash and raw samples.
 
 H1 strict manifest/config checks all modernization modules and complete annotations; separate installed-PySide6 checking covers all modernized GUI files across three targets. SDK handle protocols and literal adapter overloads constrain downstream calls; JSON payloads stay explicit dynamic data.
+
+H2 adds six passive/disposable validation examples and shares their source through both Sphinx trees. Readme configuration and mobile operation metadata are guarded by test_modernization_examples.py.
