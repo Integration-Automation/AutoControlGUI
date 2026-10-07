@@ -852,3 +852,12 @@ GUI 的原始按键／鼠标按钮持有可跨成功工作保留，取消或销�
 保留原先已按住的输入，无法确认初始键态时在分配前拒绝持有。这不是跨 client 的
 原子保护，也不代表实体状态已恢复。直接 headless 调用沿用既有行为。
 请参阅[工作生命周期与 I/O 审核](../docs/GUI_TASK_LIFECYCLE.md)。
+
+### GUI 参考测量
+
+[GUI F4 证据](../benchmarks/results/gui-workspace-f4/README.md) 保存相同环境的预热前后样本、
+校准门槛与六张实际 Qt 截图。Windows offscreen 中位数：启动 6698→5894 ms，
+Python 分配峰值 100.86→90.17 MB（tracemalloc，非 RSS），首次打开 Mobile
+19.37→22.81 ms，AC_sleep 期间事件循环 p95 263.16→16.33 ms；首次打开成本保持可见。
+运行 `python benchmarks/gui_startup.py --compare <before.json> <after.json> --budget <budgets.json>`
+检查校准门槛；不同环境或工作负载会拒绝比较。实际屏幕、授权与输入验收仍在 H3。

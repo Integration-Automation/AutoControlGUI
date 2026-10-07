@@ -63,3 +63,15 @@ These contracts do not provide atomic protection from external clients or prove
 physical restoration. Direct headless input semantics remain compatible.
 The full catalog I/O audit is in ``docs/GUI_TASK_LIFECYCLE.md``; native device,
 GNOME/KDE permission and mixed-DPI verification remain H3.
+
+Reference measurements
+----------------------
+
+``benchmarks/results/gui-workspace-f4/README.md`` retains same-environment
+warmed before/after samples, calibrated limits and six real Qt frames. Windows
+offscreen medians: startup 6698→5894 ms, Python allocation peak 100.86→90.17 MB
+(tracemalloc, not RSS), first Mobile open 19.37→22.81 ms and AC_sleep event-loop
+p95 263.16→16.33 ms. The first-open cost remains visible. Use
+``python benchmarks/gui_startup.py --compare <before.json> <after.json> --budget <budgets.json>``
+to check calibrated medians; environment/workload mismatches are refused.
+Native monitors, permissions and physical input remain H3 acceptance.

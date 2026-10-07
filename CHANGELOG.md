@@ -13,6 +13,10 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ## Unreleased
 
+- Add fresh-process GUI startup/allocation/first-open/event-loop benchmarks with
+  matching-environment comparison and calibrated reference budgets. Retain real
+  offscreen task/layout frames and full-catalog/synthetic-DPI regression evidence.
+
 - GUI tasks now bind cancellation/deadlines and typed delivery to the original
   owner/run/session. Device, recognition, connection and service-stop work runs
   off Qt; close drops late results. GUI recording uses independent resources.

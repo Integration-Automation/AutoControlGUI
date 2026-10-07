@@ -64,3 +64,8 @@ SDK cancellation, external WDA/input-client races, native codec content and mixe
 DPI remain explicit H3 acceptance items in Progress.md. Docker native evidence is
 recorded separately in the update log; it does not turn these controlled GUI
 fixtures into physical-device evidence.
+
+F4 reference frames and warmed same-environment latency results are retained in
+`benchmarks/results/gui-workspace-f4/README.md`. The task renderer uses actual
+AC_sleep, cancellation-after-return and invalid-JSON failure; it does not operate
+native inputs or certify recording content/physical recovery.

@@ -58,6 +58,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261008-02 | 2026-10-08 | Calibrate GUI workloads and retain full-catalog regression evidence | #done #gui #modernization | [2026-10](2026-10.md) |
 | U-20261008-01 | 2026-10-08 | Own cancellable GUI work and retain failed native cleanup | #done #gui #modernization | [2026-10](2026-10.md) |
 | U-20261007-24 | 2026-10-07 | Deliver searchable responsive workspace and native Qt themes | #done #gui #modernization | [2026-10](2026-10.md) |
 | U-20261007-23 | 2026-10-07 | Lazily build GUI panels and release explicitly closed owners | #done #gui #modernization | [2026-10](2026-10.md) |
@@ -391,7 +392,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | File | Period | Entries |
 |---|---|---:|
-| [2026-10.md](2026-10.md) | 2026-10 | 55 |
+| [2026-10.md](2026-10.md) | 2026-10 | 56 |
 | [2026-09-e.md](2026-09-e.md) | 2026-09 | 7 |
 | [2026-09-d.md](2026-09-d.md) | 2026-09 | 55 |
 | [2026-09-c.md](2026-09-c.md) | 2026-09 | 38 |

@@ -1020,3 +1020,14 @@ or panel destruction. Previously pressed inputs are preserved; unknown initial
 state refuses a hold before allocation. This is not atomic protection from other
 clients or proof of physical state restoration. Direct headless calls retain their
 existing behavior. See [task lifecycle and I/O audit](docs/GUI_TASK_LIFECYCLE.md).
+
+### GUI reference measurements
+
+[GUI F4 evidence](benchmarks/results/gui-workspace-f4/README.md) retains identical-environment
+warmed before/after samples, calibrated limits and six actual Qt screenshots. Windows
+offscreen medians are startup 6698→5894 ms, Python allocation peak 100.86→90.17 MB
+(tracemalloc, not RSS), first Mobile open 19.37→22.81 ms, and event-loop p95
+263.16→16.33 ms during AC_sleep. First-open cost remains visible.
+Run `python benchmarks/gui_startup.py --compare <before.json> <after.json> --budget <budgets.json>`
+to check calibrated limits; environment/workload mismatches are rejected. Real
+monitor/permission/input acceptance remains H3.

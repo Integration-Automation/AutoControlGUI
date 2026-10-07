@@ -222,3 +222,12 @@ close failures also remain retryable. Tools → Retry owned cleanup retries only
 retained owned callbacks/recorders. Global servers/engines require explicit Stop;
 completed atomic file/vault/service changes are not rolled back by Cancel.
 See [the complete catalog I/O audit](GUI_TASK_LIFECYCLE.md).
+
+### F4 benchmark lifecycle
+
+`benchmarks/gui_startup.py` uses fresh child processes and an explicit target checkout;
+the before/after comparison requires identical environment and workload. One warmup
+and three samples are retained separately. `--budget` checks calibrated startup/memory
+ratios and first-open/event-loop medians, refusing a different calibration environment.
+GUI frames capture busy, cancelled-after-return and error states without native input.
+Reference results and commands: `benchmarks/results/gui-workspace-f4/README.md`.

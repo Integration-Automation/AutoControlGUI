@@ -606,3 +606,14 @@ uses independent Windows/macOS instances or an X11 subscription; unsupported sta
 fail before allocation. Controlled X11/recorder fixtures do not constitute native
 physical capture evidence. Cancellation drops late delivery and stops between
 bounded operations; completed file/vault/global-service changes are not undone.
+
+### F4 GUI reference evidence
+
+Windows 11 build26300 / Python3.14.4 / PySide6.11.1 offscreen, one warmup plus
+three fresh samples: startup median6698.29→5894.36 ms; tracemalloc peak
+100860561→90167341 bytes (not RSS); Mobile first-open19.37→22.81 ms;
+AC_sleep event-loop p95 median263.16→16.33 ms. Calibrated limits and six actual
+Qt frames are retained under `benchmarks/results/gui-workspace-f4`. All50 keys,
+default workflow, menu/navigation/cancel/close and synthetic DPI transforms pass
+controlled regression. Native desktop layout/fonts/permission/input, physical
+monitors and recording content remain Progress.md/H3; offscreen is not that evidence.

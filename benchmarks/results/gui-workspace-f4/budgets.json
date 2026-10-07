@@ -1,0 +1,34 @@
+{
+  "environment": {
+    "platform": "Windows-11-10.0.26300-SP0",
+    "python": "3.14.4",
+    "pyside": "6.11.1",
+    "qt_platform": "offscreen",
+    "fonts": [
+      "Microsoft JhengHei",
+      "Microsoft JhengHei UI",
+      "Segoe UI"
+    ],
+    "tracemalloc": true
+  },
+  "workload": "main window startup, first Mobile open, Script AC_sleep(.25), QTimer(5ms); tracemalloc; warmup=1",
+  "calibration": "Three warmed Windows offscreen samples; portable CI must recalibrate on the same environment.",
+  "limits": {
+    "startup_ms": {
+      "kind": "ratio",
+      "maximum": 1.1
+    },
+    "memory": {
+      "kind": "ratio",
+      "maximum": 1.1
+    },
+    "first_open_ms": {
+      "kind": "absolute",
+      "maximum": 50
+    },
+    "event_loop_p95_ms": {
+      "kind": "absolute",
+      "maximum": 25
+    }
+  }
+}

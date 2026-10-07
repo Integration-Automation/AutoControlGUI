@@ -853,3 +853,12 @@ GUI 的原始按鍵／滑鼠按鈕持有可跨成功工作保留，取消或銷�
 保留原先已按住的輸入，無法確認初始鍵態時在配置前拒絕持有。這不是跨 client 的
 原子保護，也不代表實體狀態已恢復。直接 headless 呼叫沿用既有行為。
 請參閱[工作生命周期與 I/O 稽核](../docs/GUI_TASK_LIFECYCLE.md)。
+
+### GUI 參考量測
+
+[GUI F4 證據](../benchmarks/results/gui-workspace-f4/README.md) 保存相同環境的暖機前後樣本、
+校準門檻與六張實際 Qt 截圖。Windows offscreen 中位數：啟動 6698→5894 ms，
+Python 配置峰值 100.86→90.17 MB（tracemalloc，非 RSS），首次開啟 Mobile
+19.37→22.81 ms，AC_sleep 期間事件迴圈 p95 263.16→16.33 ms；首次開啟成本保留可見。
+執行 `python benchmarks/gui_startup.py --compare <before.json> <after.json> --budget <budgets.json>`
+檢查校準門檻；不同環境或工作負載會拒絕比較。實際螢幕、授權與輸入驗收仍在 H3。

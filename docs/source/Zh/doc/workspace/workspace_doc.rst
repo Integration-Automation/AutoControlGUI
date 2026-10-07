@@ -51,3 +51,13 @@ Session 的原生配置與關閉共用 Qt 外的鎖，失敗 peer／container �
 此契約不提供跨 client 的原子保護，也不代表實體狀態已恢復；直接 headless 輸入
 語意維持相容。完整目錄 I/O 稽核位於 ``docs/GUI_TASK_LIFECYCLE.md``；原生裝置、
 GNOME／KDE 授權及混合 DPI 驗證仍留在 H3。
+
+參考量測
+--------
+
+``benchmarks/results/gui-workspace-f4/README.md`` 保存相同環境的暖機前後樣本、
+校準門檻與六張實際 Qt 截圖。Windows offscreen 中位數：啟動 6698→5894 ms，
+Python 配置峰值 100.86→90.17 MB（tracemalloc，非 RSS），首次開啟 Mobile
+19.37→22.81 ms，AC_sleep 事件迴圈 p95 263.16→16.33 ms；首次開啟成本仍可見。
+用 ``python benchmarks/gui_startup.py --compare <before.json> <after.json> --budget <budgets.json>``
+檢查校準中位數；不同環境或工作負載會拒絕比較。原生螢幕、授權與實體輸入仍在 H3。

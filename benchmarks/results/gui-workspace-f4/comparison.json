@@ -1,0 +1,48 @@
+{
+  "metrics": {
+    "startup_ms": {
+      "before_median": 6698.285600054078,
+      "after_median": 5894.356000004336,
+      "ratio": 0.8799797966149352
+    },
+    "memory": {
+      "before_median": 100860561,
+      "after_median": 90167341,
+      "ratio": 0.8939801653492687
+    },
+    "first_open_ms": {
+      "before_median": 19.36750009190291,
+      "after_median": 22.812799899838865,
+      "ratio": 1.1778907856763792
+    },
+    "event_loop_p95_ms": {
+      "before_median": 263.15979997161776,
+      "after_median": 16.331000020727515,
+      "ratio": 0.06205735079023788
+    }
+  },
+  "physical_desktop_verified": false,
+  "budget_checks": {
+    "startup_ms": {
+      "observed": 0.8799797966149352,
+      "maximum": 1.1,
+      "passed": true
+    },
+    "memory": {
+      "observed": 0.8939801653492687,
+      "maximum": 1.1,
+      "passed": true
+    },
+    "first_open_ms": {
+      "observed": 22.812799899838865,
+      "maximum": 50,
+      "passed": true
+    },
+    "event_loop_p95_ms": {
+      "observed": 16.331000020727515,
+      "maximum": 25,
+      "passed": true
+    }
+  },
+  "passed": true
+}
