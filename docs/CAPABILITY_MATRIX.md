@@ -587,3 +587,22 @@ content and explicit seven-state/recovery rendering. Actual Windows Qt offscreen
 frames plus versions/fonts are retained in benchmarks/results/gui-workspace-f2.
 No native input or permission operation is performed. Shared task cancellation is
 F3; native desktop/mixed-DPI/physical recovery remains Progress.md/H3.
+
+### GUI task and resource ownership (F3)
+
+Controlled Windows/offscreen Qt cases verify responsive waits, owner/run/session
+revocation, nested cancellation, raw input ownership, independent recording and
+retained cleanup failures. Native TCP frame/approval tests verify asynchronous
+connection completion. Device/recognition/network work and explicit service stops
+run off Qt; local editing, bounded metadata and Qt dialogs/rendering stay on Qt.
+The [50-key I/O audit](GUI_TASK_LIFECYCLE.md) separates shared tasks, legacy workers,
+custom stop Events, global service control and passive/local views.
+
+Raw GUI holds require known initial state and preserve previously pressed inputs;
+unknown state reports unsupported before acquisition. Native key-state races with
+other clients, physical restoration, real GNOME/KDE permission prompts and mixed
+DPI remain H3. Raw headless APIs keep their existing behavior. Owned GUI recording
+uses independent Windows/macOS instances or an X11 subscription; unsupported stacks
+fail before allocation. Controlled X11/recorder fixtures do not constitute native
+physical capture evidence. Cancellation drops late delivery and stops between
+bounded operations; completed file/vault/global-service changes are not undone.

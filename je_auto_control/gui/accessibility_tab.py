@@ -9,6 +9,9 @@ from PySide6.QtWidgets import (
 )
 
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
+from je_auto_control.gui._panel_tasks import PanelTasks, call_native
+from je_auto_control.gui._task_state import TaskResult
+from functools import partial
 from je_auto_control.gui.language_wrapper.multi_language_wrapper import (
     language_wrapper,
 )
@@ -44,6 +47,7 @@ class AccessibilityTab(TranslatableMixin, QWidget):
         header.setSectionResizeMode(QHeaderView.Interactive)
         header.setStretchLastSection(True)
         self._status = QLabel()
+        self._tasks = PanelTasks(self, self._status)
         self._apply_table_headers()
         self._build_layout()
 
@@ -85,12 +89,19 @@ class AccessibilityTab(TranslatableMixin, QWidget):
             ("a11y_refresh", self._refresh),
             ("a11y_click_selected", self._click_selected),
             ("a11y_show_focused", self._show_focused),
+            ('workspace_cancel_task', self._tasks.cancel),
         ]
 
     def _refresh(self) -> None:
         app = self._app_filter.text().strip() or None
         window = self._window_filter.text().strip() or None
         try:
+            if hasattr(self, '_tasks'):
+                name_filter = self._name_filter.text().strip().lower()
+                self._tasks.submit(partial(call_native, partial(list_accessibility_elements,
+                                                               app_name=app, window_title=window)),
+                                   partial(self._elements_done, name_filter))
+                return
             # Scoping to one window is not just a filter: the desktop tree is
             # orders of magnitude larger, so this is both faster and less
             # ambiguous than listing everything and filtering by name.
@@ -112,6 +123,10 @@ class AccessibilityTab(TranslatableMixin, QWidget):
     def _show_focused(self) -> None:
         app = self._app_filter.text().strip() or None
         try:
+            if hasattr(self, '_tasks'):
+                self._tasks.submit(partial(call_native, partial(focused_accessibility_element, app_name=app)),
+                                   self._focused_done)
+                return
             element = focused_accessibility_element(app_name=app)
         except AccessibilityNotAvailableError as error:
             self._status.setText(str(error))
@@ -143,6 +158,10 @@ class AccessibilityTab(TranslatableMixin, QWidget):
         role = self._table.item(row, 1).text() or None
         name = self._table.item(row, 2).text() or None
         try:
+            if hasattr(self, '_tasks'):
+                self._tasks.submit(partial(call_native, partial(click_accessibility_element,
+                                                               name=name, role=role, app_name=app)), self._clicked_done)
+                return
             ok = click_accessibility_element(
                 name=name, role=role, app_name=app,
             )
@@ -151,3 +170,18 @@ class AccessibilityTab(TranslatableMixin, QWidget):
             return
         if not ok:
             self._status.setText(_t("a11y_click_not_found"))
+
+    def _elements_done(self, name_filter: str, result: TaskResult) -> None:
+        if isinstance(result.value, list):
+            elements = [element for element in result.value if name_filter in element.name.lower()]
+            self._populate(elements)
+            self._status.setText(_t('a11y_count_label').replace('{n}', str(len(elements))))
+
+    def _focused_done(self, result: TaskResult) -> None:
+        self._populate([] if result.value is None else [result.value])
+        self._status.setText(_t('a11y_no_focus') if result.value is None
+                             else _t('a11y_count_label').replace('{n}', '1'))
+
+    def _clicked_done(self, result: TaskResult) -> None:
+        if not result.value:
+            self._status.setText(_t('a11y_click_not_found'))

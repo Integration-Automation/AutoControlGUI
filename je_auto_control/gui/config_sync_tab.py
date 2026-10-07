@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+from functools import partial
 from pathlib import Path
 from threading import Event
 from typing import Any, Callable, Dict, Optional
@@ -11,21 +12,15 @@ from PySide6.QtWidgets import (  # pylint: disable=no-name-in-module  # reason: 
 )
 
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
-from je_auto_control.gui._worker_thread import CallWorker, WorkerHandle, start_worker
+from je_auto_control.gui.task_controller import CancellationToken, TaskController, TaskError, TaskHandle, TaskResult
 from je_auto_control.gui.language_wrapper.multi_language_wrapper import language_wrapper
 from je_auto_control.utils.config_sync import service
 from je_auto_control.utils.config_sync.asset_service import config_sync_assets
-from je_auto_control.utils.executor.request_context import RequestBinding
 
 
-class _SyncWorker(CallWorker):
-    def __init__(self, function: Callable[[], Dict[str, Any]], cancel: Event) -> None:
-        super().__init__(function)
-        self._cancel = cancel
-
-    def request_stop(self) -> None:
-        """Cooperatively stop between operations; the current bounded request may finish first."""
-        self._cancel.set()
+def _sync_call(function: Callable[[Event], Dict[str, Any]], token: CancellationToken) -> object:
+    token.checkpoint()
+    return function(token.event)
 
 
 class ConfigSyncTab(TranslatableMixin, QWidget):  # pylint: disable=too-many-instance-attributes  # reason: public form controls and owned worker lifecycle
@@ -41,7 +36,8 @@ class ConfigSyncTab(TranslatableMixin, QWidget):  # pylint: disable=too-many-ins
         self.results.setReadOnly(True)
         self.choices = QLineEdit('{}')
         self.status = QLabel()
-        self._worker: Optional[WorkerHandle] = None
+        self._worker: Optional[TaskHandle] = None
+        self._tasks = TaskController(timeout_s=300)
         self._cancel_event = Event()
         self._preview_result: Dict[str, Any] = {}
         root, form = QVBoxLayout(self), QFormLayout()
@@ -57,8 +53,6 @@ class ConfigSyncTab(TranslatableMixin, QWidget):  # pylint: disable=too-many-ins
         root.addWidget(self.status)
         root.addWidget(self.results)
         self._tr(self.status, 'sync_ready')
-        stopped = self._cancel_event
-        self.destroyed.connect(lambda _owner=None: stopped.set())
 
     def menu_actions(self) -> list:
         """Explicit operations exposed through the application's Actions menu."""
@@ -73,12 +67,18 @@ class ConfigSyncTab(TranslatableMixin, QWidget):  # pylint: disable=too-many-ins
     def _submit(self, function: Callable[[Event], Dict[str, Any]]) -> None:
         if self._worker is not None:
             return
-        self._cancel_event.clear()
-        cancel = self._cancel_event
-        binding = RequestBinding.capture()
-        worker = _SyncWorker(lambda: binding.run(lambda: function(cancel)), cancel)
-        self._worker = start_worker(self, worker, on_done=self._done,
-                                    on_thread_done=self._released, on_fail=self._failed)
+        self._worker = self._tasks.submit(partial(_sync_call, function), owner=self)
+        self._cancel_event = self._worker.token.event
+        self._worker.completed.connect(self._task_done)
+        self._worker.failed.connect(self._task_failed)
+        self._worker.finished.connect(self._released)
+
+    def _task_done(self, result: TaskResult) -> None:
+        if isinstance(result.value, dict):
+            self._done(result.value)
+
+    def _task_failed(self, error: TaskError) -> None:
+        self._failed(error.message)
 
     def _preview(self) -> None:
         values = self._values()
@@ -111,7 +111,7 @@ class ConfigSyncTab(TranslatableMixin, QWidget):  # pylint: disable=too-many-ins
         self._submit(lambda cancel: config_sync_assets(manifest, source, destination, cancel=cancel))
 
     def _cancel(self) -> None:
-        self._cancel_event.set()
+        self._tasks.cancel_owner(self)
 
     def _done(self, result: Dict[str, Any]) -> None:
         if result.get('preview_path'):

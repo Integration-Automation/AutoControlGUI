@@ -24,6 +24,7 @@ from je_auto_control.utils.remote_desktop.audio import (
 from je_auto_control.utils.remote_desktop.host_id import format_host_id
 from je_auto_control.utils.remote_desktop.registry import registry
 from je_auto_control.gui.remote_desktop.session_owner import PanelSessions
+from je_auto_control.gui.remote_desktop.connection_tasks import ConnectionTasks
 
 
 class _HostPanel(TranslatableMixin, QWidget):
@@ -35,6 +36,7 @@ class _HostPanel(TranslatableMixin, QWidget):
         super().__init__(parent)
         self._tr_init()
         self._sessions = PanelSessions(self, registry)
+        self._connection_tasks = ConnectionTasks(self, self._sessions)
         self._sessions.ended.connect(self._on_session_ended)
         self._host_id_label = QLabel("---")
         self._host_id_label.setStyleSheet(
@@ -303,8 +305,7 @@ class _HostPanel(TranslatableMixin, QWidget):
                 ),
             )
             self._sessions.attach(host, 'host', active=False)
-            host.start()
-            self._sessions.activate('host')
+            self._connection_tasks.start(host.start, self._refresh_status)
         except (OSError, ValueError, RuntimeError) as error:
             self._sessions.close('host')
             QMessageBox.warning(self, _t("rd_host_start"), str(error))
@@ -317,6 +318,7 @@ class _HostPanel(TranslatableMixin, QWidget):
         self._refresh_status()
 
     def _stop(self) -> None:
+        self._connection_tasks.cancel('host')
         try:
             self._sessions.close('host')
         except (OSError, RuntimeError) as error:

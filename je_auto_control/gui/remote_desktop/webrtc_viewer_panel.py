@@ -28,7 +28,6 @@ from je_auto_control.gui.remote_desktop.webrtc_viewer_transfers import WebRTCVie
 from je_auto_control.gui.remote_desktop.webrtc_workers import ViewerAnswerPushWorker, ViewerSignalingWorker
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.remote_desktop import (
-    SessionRecorder,
     WebRTCDesktopViewer,
     default_address_book,
     load_or_create_viewer_id,
@@ -38,6 +37,7 @@ from je_auto_control.utils.remote_desktop.webrtc_stats import StatsPoller, Stats
 
 if TYPE_CHECKING:
     from je_auto_control.utils.remote_desktop.file_sync import FolderSyncEngine
+    from je_auto_control.utils.remote_desktop.session_recorder import SessionRecorder as NativeRecorder
 if TYPE_CHECKING:
     import je_auto_control.gui.remote_desktop.frame_display
     import je_auto_control.gui.remote_desktop.remote_screen_window
@@ -62,7 +62,7 @@ class _WebRTCViewerPanel(TranslatableMixin, QWidget):  # pylint: disable=too-man
     _address_book: je_auto_control.utils.remote_desktop.address_book.AddressBook
     _known_hosts: je_auto_control.utils.remote_desktop.fingerprint.KnownHosts
     _viewer_id: str | None
-    _recorder: Any | None
+    _recorder: NativeRecorder | None
     _stats_poller: je_auto_control.utils.remote_desktop.webrtc_stats.StatsPoller | None
     _sync_engine: je_auto_control.utils.remote_desktop.file_sync.FolderSyncEngine | None
     _auto_reconnect_attempts: int
@@ -129,7 +129,7 @@ class _WebRTCViewerPanel(TranslatableMixin, QWidget):  # pylint: disable=too-man
         except OSError as error:
             autocontrol_logger.warning("viewer_id init: %r", error)
             self._viewer_id = None
-        self._recorder: Optional[SessionRecorder] = None
+        self._recorder = None
         self._stats_poller: Optional[StatsPoller] = None
         self._sync_engine: Optional["FolderSyncEngine"] = None
         self._auto_reconnect_attempts = 0

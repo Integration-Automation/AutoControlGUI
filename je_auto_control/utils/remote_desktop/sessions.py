@@ -6,8 +6,11 @@ from __future__ import annotations
 import threading
 import uuid
 from collections import deque
+from contextlib import contextmanager
+from _thread import RLock
 from dataclasses import dataclass, replace
-from typing import Any, Callable, Dict, Optional, Tuple
+from functools import partial
+from typing import Any, Callable, Dict, Iterator, Optional, Tuple
 
 from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.executor.request_context import RequestBinding
@@ -63,6 +66,7 @@ class SessionDirectory:  # pylint: disable=too-many-instance-attributes  # reaso
         self._sessions: Dict[str, RemoteSession] = {}
         self._resources: Dict[str, Any] = {}
         self._bindings: Dict[str, RequestBinding] = {}
+        self._operations: Dict[str, RLock] = {}
         self._aliases: Dict[Tuple[str, str], str] = {}
         self._events: deque[SessionEvent] = deque(maxlen=1024)
         self._generation = 0
@@ -84,6 +88,7 @@ class SessionDirectory:  # pylint: disable=too-many-instance-attributes  # reaso
             session = RemoteSession(identifier, owner, transport, role, "connecting", self._generation)
             self._sessions[identifier] = session
             self._bindings[identifier] = RequestBinding.capture()
+            self._operations[identifier] = threading.RLock()
             if script_default:
                 self._aliases[transport, role] = identifier
             self._prune()
@@ -154,14 +159,49 @@ class SessionDirectory:  # pylint: disable=too-many-instance-attributes  # reaso
 
     def close(self, session_id: str, *, owner: Optional[str] = None, timeout: float = 2.0) -> SessionStatus:
         """Revoke delivery first, then stop only the named owned transport resource."""
+        return self._deferred_close(session_id, owner=owner, timeout=timeout)()
+
+    def _deferred_close(self, session_id: str, *, owner: Optional[str] = None,
+                        timeout: float = 2.0) -> Callable[[], SessionStatus]:
         require_command("remote_session_disconnect")
         with self._lock:
             session = self.get(session_id, owner=owner)
             if session.state in {"closing", "closed"}:
-                return session
+                return lambda: session
             resource = self._resources.get(session_id)
             binding = self._bindings[session_id]
             self._transition(session_id, "closing")
+        return partial(self._finish_close, resource, binding, session, timeout)
+
+    def _finish_close(self, resource: Any, binding: RequestBinding, session: RemoteSession,
+                      timeout: float) -> SessionStatus:
+        with self._lock:
+            current = self._sessions.get(session.id)
+            if current is None or current.generation != session.generation:
+                return replace(session, state='closed')
+            gate = self._operations[session.id]
+        with gate:
+            return self._finish_close_resource(resource, binding, session, timeout)
+
+    @contextmanager
+    def _resource_operation(self, session: RemoteSession) -> Iterator[None]:
+        """Serialize native allocation with cleanup without holding the GUI metadata lock."""
+        with self._operations[session.id]:
+            if not self.is_current(session.id, session.generation, owner=session.owner):
+                raise RemoteSessionError('remote session operation was revoked')
+            yield
+
+    def _finish_close_resource(self, resource: Any, binding: RequestBinding, session: RemoteSession,
+                               timeout: float) -> SessionStatus:
+        session_id = session.id
+        with self._lock:
+            current = self._sessions.get(session_id)
+            if current is None or current.generation != session.generation:
+                return replace(session, state='closed')
+            if self.get(session_id).state == 'closed':
+                return self.get(session_id)
+            if self.get(session_id).state == 'failed':
+                self._transition(session_id, 'closing')
         try:
             if resource is not None:
                 binding.run(self.close_resource, resource, session, timeout)
@@ -252,6 +292,7 @@ class SessionDirectory:  # pylint: disable=too-many-instance-attributes  # reaso
         for identifier in terminals[:-256]:
             del self._sessions[identifier]
             self._bindings.pop(identifier, None)
+            self._operations.pop(identifier, None)
 
 
 def disconnect_session(session_id: str, *, owner: Optional[str] = None) -> SessionStatus:

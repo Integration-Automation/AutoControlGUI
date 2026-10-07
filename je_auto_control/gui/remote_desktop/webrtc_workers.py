@@ -50,6 +50,7 @@ class HostSignalingWorker(DaemonThread):
             answer = signaling_client.wait_for_answer(
                 self._server_url, self._host_id,
                 secret=self._secret, timeout_s=self._timeout_s,
+                cancel=self.interruption_event,
             )
         except signaling_client.SignalingError as error:
             autocontrol_logger.warning("host signaling: %r", error)
@@ -77,6 +78,7 @@ class ViewerSignalingWorker(DaemonThread):
             offer = signaling_client.wait_for_offer(
                 self._server_url, self._host_id,
                 secret=self._secret, timeout_s=self._timeout_s,
+                cancel=self.interruption_event,
             )
         except signaling_client.SignalingError as error:
             autocontrol_logger.warning("viewer signaling: %r", error)
@@ -100,6 +102,8 @@ class ViewerAnswerPushWorker(DaemonThread):
         self._answer_sdp = answer_sdp
 
     def run(self) -> None:
+        if self.isInterruptionRequested():
+            return
         try:
             ok = signaling_client.push_answer(
                 self._server_url, self._host_id, self._answer_sdp,
@@ -111,7 +115,8 @@ class ViewerAnswerPushWorker(DaemonThread):
         if not ok:
             self.failed.emit("server reported no offer to match")
             return
-        self.pushed.emit()
+        if not self.isInterruptionRequested():
+            self.pushed.emit()
 
 
 class HostPublishLoopWorker(DaemonThread):
@@ -151,6 +156,9 @@ class HostPublishLoopWorker(DaemonThread):
         session_id = None
         try:
             session_id, offer = self._multi_host.create_session_offer()
+            if self.isInterruptionRequested():
+                self._safe_stop_session_if(session_id)
+                return False
             signaling_client.push_offer(
                 self._server_url, self._host_id, offer,
                 secret=self._secret,
@@ -159,7 +167,11 @@ class HostPublishLoopWorker(DaemonThread):
             answer = signaling_client.wait_for_answer(
                 self._server_url, self._host_id,
                 secret=self._secret, timeout_s=self._wait_timeout_s,
+                cancel=self.interruption_event,
             )
+            if self.isInterruptionRequested():
+                self._safe_stop_session_if(session_id)
+                return False
             self._multi_host.accept_session_answer(session_id, answer)
             self.session_connected.emit(session_id)
             return True

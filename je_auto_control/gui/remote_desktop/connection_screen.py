@@ -15,6 +15,7 @@ Operators who want WebRTC signaling, WSS, or manual SDP exchange go to
 the Advanced sub-tabs.
 """
 import secrets
+from functools import partial
 import threading
 from typing import Optional
 
@@ -46,6 +47,7 @@ from je_auto_control.utils.remote_desktop.connect_coordinator import (
 from je_auto_control.utils.remote_desktop.host_id import format_host_id
 from je_auto_control.utils.remote_desktop.registry import registry
 from je_auto_control.gui.remote_desktop.session_owner import PanelSessions
+from je_auto_control.gui.remote_desktop.connection_tasks import ConnectionTasks
 from je_auto_control.utils.remote_desktop.sessions import RemoteSession
 from je_auto_control.utils.remote_desktop.wake_on_lan import (
     send_magic_packet,
@@ -122,6 +124,7 @@ class QuickConnectScreen(TranslatableMixin, QWidget):
         super().__init__(parent)
         self._tr_init()
         self._sessions = PanelSessions(self, registry)
+        self._connection_tasks = ConnectionTasks(self, self._sessions)
         self._sessions.ended.connect(self._on_session_ended)
         self._host_id_label = QLabel("---")
         self._host_id_label.setStyleSheet(_HOST_ID_CSS)
@@ -294,8 +297,7 @@ class QuickConnectScreen(TranslatableMixin, QWidget):
                     session.id, lambda pending: self._host_approval_callback(pending, session=session)),
             )
             self._sessions.attach(host, 'host', active=False)
-            host.start()
-            self._sessions.activate('host')
+            self._connection_tasks.start(host.start, self._refresh_status)
         except (OSError, ValueError, RuntimeError) as error:
             self._sessions.close('host')
             QMessageBox.warning(self, _t("rd_quick_start_host"), str(error))
@@ -440,14 +442,15 @@ class QuickConnectScreen(TranslatableMixin, QWidget):
                 on_cursor=self._sessions.callback('viewer', self._on_remote_cursor),
             )
             self._sessions.attach(viewer, 'viewer', active=False)
-            viewer.connect(timeout=5.0)
-            self._sessions.activate('viewer')
+            self._connection_tasks.connect(viewer, partial(self._tcp_ready, host, port))
+            return
         # ValueError: a host such as "a..b" fails IDNA encoding with
         # UnicodeError, which escaped the slot and left the click unanswered.
         except (OSError, RuntimeError, ValueError, AutoControlException) as error:
             self._sessions.close('viewer')
             QMessageBox.warning(self, _t("rd_quick_connect_btn"), str(error))
             return
+    def _tcp_ready(self, host: str, port: int) -> None:
         self._remember_tcp(host, port)
         self._open_screen_window(f"{host}:{port}")
         self._refresh_status()
@@ -470,12 +473,14 @@ class QuickConnectScreen(TranslatableMixin, QWidget):
                 ssl_context=ssl_context,
             )
             self._sessions.attach(viewer, 'viewer', active=False)
-            viewer.connect(timeout=5.0)
-            self._sessions.activate('viewer')
+            self._connection_tasks.connect(viewer, partial(self._ws_ready, target))
+            return
         except (OSError, RuntimeError, ValueError, AutoControlException) as error:
             self._sessions.close('viewer')
             QMessageBox.warning(self, _t("rd_quick_connect_btn"), str(error))
             return
+    def _ws_ready(self, target: ConnectTarget) -> None:
+        host, port, path = target.host or "", target.port or 0, target.path or "/"
         scheme = "wss" if target.kind == "wss" else "ws"
         self._remember_url(f"{scheme}://{host}:{port}{path}")
         self._open_screen_window(f"{scheme}://{host}:{port}")
@@ -496,7 +501,9 @@ class QuickConnectScreen(TranslatableMixin, QWidget):
         """Emit the signal so the parent tab can switch + prefill."""
         self.webrtc_handoff_requested.emit(host_id, token)
 
-    def _disconnect(self) -> None:
+    def _disconnect(self, *, cancel_connect: bool = True) -> None:
+        if cancel_connect:
+            self._connection_tasks.cancel('viewer')
         self._sessions.close('viewer')
         self._pending_frame = None
         self._close_screen_window()
@@ -504,7 +511,7 @@ class QuickConnectScreen(TranslatableMixin, QWidget):
 
     def _on_session_ended(self, role: str) -> None:
         if role == 'viewer':
-            self._disconnect()
+            self._disconnect(cancel_connect=False)
         else:
             self._refresh_status()
 

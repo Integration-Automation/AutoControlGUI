@@ -7,6 +7,9 @@ from PySide6.QtWidgets import (
 )
 
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
+from je_auto_control.gui._panel_tasks import PanelTasks, call_native
+from je_auto_control.gui._task_state import TaskResult
+from functools import partial
 from je_auto_control.gui.language_wrapper.multi_language_wrapper import (
     language_wrapper,
 )
@@ -31,6 +34,7 @@ class ChatOpsTab(TranslatableMixin, QWidget):
         self._command_input = QLineEdit()
         self._command_input.returnPressed.connect(self._on_send)
         self._output = QTextEdit()
+        self._tasks = PanelTasks(self, self._output)
         self._output.setReadOnly(True)
         self._build_layout()
 
@@ -64,6 +68,7 @@ class ChatOpsTab(TranslatableMixin, QWidget):
         return [
             ("chatops_browse_btn", self._on_browse),
             ("chatops_send_btn", self._on_send),
+            ('workspace_cancel_task', self._tasks.cancel),
         ]
 
     def _apply_translations(self) -> None:
@@ -89,6 +94,10 @@ class ChatOpsTab(TranslatableMixin, QWidget):
         if root:
             context["script_root"] = root
         try:
+            if hasattr(self, '_tasks'):
+                self._tasks.submit(partial(call_native, partial(self._router.dispatch, message, context=context)),
+                                   self._dispatch_done)
+                return
             result = self._router.dispatch(message, context=context)
         except (RuntimeError, ValueError) as error:
             self._output.append(f"router error: {error}")
@@ -102,6 +111,14 @@ class ChatOpsTab(TranslatableMixin, QWidget):
         self._output.append(f"{prefix} {result.text}")
         if result.artifact_path:
             self._output.append(f"  artifact: {result.artifact_path}")
+
+    def _dispatch_done(self, result: TaskResult) -> None:
+        from je_auto_control.utils.chatops.router import CommandResult
+        if isinstance(result.value, CommandResult):
+            value = result.value
+            self._output.setText(('✓' if value.succeeded else '✗') + ' ' + value.text)
+            if value.artifact_path:
+                self._output.append(f'  artifact: {value.artifact_path}')
 
 
 __all__ = ["ChatOpsTab"]

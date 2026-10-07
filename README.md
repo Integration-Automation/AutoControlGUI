@@ -1005,3 +1005,18 @@ through scrollbars. View → Theme selects light/dark; Text Size and all four
 languages preserve search and panel inputs. Themes use system fonts and native Qt
 icons. [Qt layout captures](benchmarks/results/gui-workspace-f2/report.json) record
 offscreen conditions; they do not establish native device or mixed-DPI behavior.
+
+### GUI tasks and cancellation
+
+Actions → Cancel current task stops the active panel's nested actions and waits;
+closing a panel revokes late results. Slow device, capture, recognition, network
+and service-stop work runs off Qt. Deadlines are cooperative: an in-flight native
+call must return within its backend limit. Cancellation cannot undo completed
+file, vault or global-service changes. Shared servers/engines still require their
+explicit Stop action. Tools → Retry owned cleanup retries retained failures.
+GUI recording owns its recorder/subscription and preserves global recording.
+Raw GUI key/button holds survive successful runs and are released on cancellation
+or panel destruction. Previously pressed inputs are preserved; unknown initial
+state refuses a hold before allocation. This is not atomic protection from other
+clients or proof of physical state restoration. Direct headless calls retain their
+existing behavior. See [task lifecycle and I/O audit](docs/GUI_TASK_LIFECYCLE.md).

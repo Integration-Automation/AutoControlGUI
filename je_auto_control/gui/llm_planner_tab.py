@@ -6,16 +6,19 @@ shared global executor. Long calls run on a background worker thread so the
 UI stays responsive.
 """
 import json
+from copy import deepcopy
+from functools import partial
 from typing import List, Optional
 
 from PySide6.QtCore import QObject, Signal
+from PySide6.QtGui import QCloseEvent
 from PySide6.QtWidgets import (
     QGroupBox, QHBoxLayout, QLabel, QLineEdit, QMessageBox,
     QTextEdit, QVBoxLayout, QWidget,
 )
 
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
-from je_auto_control.gui._worker_thread import WorkerHandle, start_worker
+from je_auto_control.gui.task_controller import CancellationToken, TaskController, TaskError, TaskHandle, TaskResult
 from je_auto_control.gui.language_wrapper.multi_language_wrapper import (
     language_wrapper,
 )
@@ -27,6 +30,16 @@ from je_auto_control.utils.exception.exceptions import AutoControlException
 
 def _t(key: str) -> str:
     return language_wrapper.translate(key, key)
+
+
+def _make_plan(description: str, model: Optional[str], known: list[str], token: CancellationToken) -> object:
+    token.checkpoint()
+    return plan_actions(description, known_commands=known, model=model)
+
+
+def _run_plan(actions: list, token: CancellationToken) -> object:
+    token.checkpoint()
+    return execute_action(actions)
 
 
 class _PlanWorker(QObject):
@@ -71,7 +84,8 @@ class LLMPlannerTab(TranslatableMixin, QWidget):
         self._result_view.setReadOnly(True)
         self._status = QLabel()
         self._planned_actions: Optional[list] = None
-        self._plan_thread: Optional[WorkerHandle] = None
+        self._plan_thread: Optional[TaskHandle] = None
+        self._tasks = TaskController(timeout_s=300)
         self._build_layout()
         self._apply_placeholders()
 
@@ -117,6 +131,7 @@ class LLMPlannerTab(TranslatableMixin, QWidget):
         return [
             ("llm_plan_btn", self._on_plan),
             ("llm_run_btn", self._on_run),
+            ('workspace_cancel_task', self._cancel),
         ]
 
     def _on_plan(self) -> None:
@@ -130,10 +145,26 @@ class LLMPlannerTab(TranslatableMixin, QWidget):
         self._status.setText(_t("llm_planning"))
         self._actions_view.clear()
         self._planned_actions = None
-        worker = _PlanWorker(description, model, sorted(executor.known_commands()))
-        self._plan_thread = start_worker(
-            self, worker, on_done=self._on_plan_finished,
-            on_fail=self._on_plan_failed, on_thread_done=self._on_thread_done)
+        self._plan_thread = self._tasks.submit(
+            partial(_make_plan, description, model, sorted(executor.known_commands())), owner=self)
+        self._plan_thread.completed.connect(self._plan_completed)
+        self._plan_thread.failed.connect(self._task_failed)
+        self._plan_thread.finished.connect(self._on_thread_done)
+
+    def _plan_completed(self, result: TaskResult) -> None:
+        if isinstance(result.value, list):
+            self._on_plan_finished(result.value)
+
+    def _task_failed(self, error: TaskError) -> None:
+        self._on_plan_failed(error.message)
+
+    def _cancel(self) -> None:
+        self._tasks.cancel_owner(self)
+
+    def closeEvent(self, event: QCloseEvent) -> None:  # pylint: disable=invalid-name  # reason: Qt virtual callback
+        """Cancel planning/execution before the panel's delivery owner is deleted."""
+        self._cancel()
+        super().closeEvent(event)
 
     def _on_plan_finished(self, actions: list) -> None:
         self._planned_actions = actions
@@ -157,6 +188,12 @@ class LLMPlannerTab(TranslatableMixin, QWidget):
             self._status.setText(_t("llm_no_plan"))
             return
         self._status.setText(_t("llm_running"))
+        if hasattr(self, '_tasks'):
+            self._plan_thread = self._tasks.submit(partial(_run_plan, deepcopy(self._planned_actions)), owner=self)
+            self._plan_thread.completed.connect(self._run_completed)
+            self._plan_thread.failed.connect(self._task_failed)
+            self._plan_thread.finished.connect(self._on_thread_done)
+            return
         try:
             record = execute_action(self._planned_actions)
         except (AutoControlException, OSError, ValueError, TypeError, RuntimeError) as error:
@@ -167,3 +204,7 @@ class LLMPlannerTab(TranslatableMixin, QWidget):
             json.dumps(record, indent=2, ensure_ascii=False, default=str)
         )
         self._status.setText(_t("llm_run_done"))
+
+    def _run_completed(self, result: TaskResult) -> None:
+        self._result_view.setText(json.dumps(result.value, indent=2, ensure_ascii=False, default=str))
+        self._status.setText(_t('llm_run_done'))

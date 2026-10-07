@@ -12,11 +12,23 @@ from PySide6.QtWidgets import (
 )
 
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
-from je_auto_control.gui._worker_thread import CallWorker, WorkerHandle, start_worker
+from je_auto_control.gui.task_controller import CancellationToken, TaskController, TaskError, TaskHandle, TaskResult
 from je_auto_control.gui.language_wrapper.multi_language_wrapper import language_wrapper
 from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.wrapper._mobile_panel_owner import MobilePanelOwner
 from je_auto_control.wrapper.mobile_surfaces import mobile_surface_matrix
+
+
+def _mobile_work(owner: MobilePanelOwner, fn: Callable[[], Any], token: CancellationToken) -> object:
+    """Execute copied inputs headlessly; cancellation also revokes the owned native session."""
+    try:
+        token.checkpoint()
+        result = fn()
+        token.checkpoint()
+        return result
+    finally:
+        if token.event.is_set():
+            owner.request_close()
 
 
 class MobileTab(TranslatableMixin, QWidget):  # pylint: disable=too-many-instance-attributes  # reason: form widgets plus independent owner/worker state
@@ -27,7 +39,8 @@ class MobileTab(TranslatableMixin, QWidget):  # pylint: disable=too-many-instanc
         self._tr_init()
         self._owner = MobilePanelOwner()
         self.destroyed.connect(self._owner.request_close)  # pylint: disable=no-member  # reason: Qt SignalInstance runtime binding
-        self._worker: Optional[WorkerHandle] = None
+        self._tasks = TaskController(timeout_s=300)
+        self._worker: Optional[TaskHandle] = None
         self._job_generation = 0
         self._platform = QComboBox()
         self._platform.addItems(['android', 'ios'])
@@ -97,7 +110,8 @@ class MobileTab(TranslatableMixin, QWidget):  # pylint: disable=too-many-instanc
         """Make every operation and batch accessible through the window Actions menu."""
         return [('mobile_open', self._on_open), ('mobile_probe', self._on_probe),
                 ('mobile_diagnose', self._on_diagnose), ('mobile_run_operation', self._on_operation),
-                ('mobile_run_actions', self._on_actions), ('mobile_close', self._on_close_owner)]
+                ('mobile_run_actions', self._on_actions), ('workspace_cancel_task', self._on_cancel),
+                ('mobile_close', self._on_close_owner)]
 
     def _on_open(self) -> None:
         if self._worker is not None:
@@ -137,19 +151,21 @@ class MobileTab(TranslatableMixin, QWidget):  # pylint: disable=too-many-instanc
         if self._worker is not None:
             return
         self._job_generation = self._owner.snapshot()['generation']
-        self._worker = start_worker(self, CallWorker(fn), on_done=self._done,
-                                    on_thread_done=self._thread_done, on_fail=self._worker_failed)
+        self._worker = self._tasks.submit(partial(_mobile_work, self._owner, fn), owner=self)
+        self._worker.completed.connect(self._done)
+        self._worker.failed.connect(self._worker_failed)
+        self._worker.finished.connect(self._thread_done)
 
-    def _done(self, result: Any) -> None:
+    def _done(self, result: TaskResult) -> None:
         if self._job_generation == self._owner.snapshot()['generation']:
-            self._show(result)
+            self._show(result.value)
 
     def _thread_done(self) -> None:
         self._worker = None
 
-    def _worker_failed(self, message: str) -> None:
+    def _worker_failed(self, error: TaskError) -> None:
         if self._job_generation == self._owner.snapshot()['generation']:
-            self._failed(message)
+            self._failed(error.message)
 
     def _failed(self, message: str) -> None:
         self._output.setPlainText(message)
@@ -158,17 +174,25 @@ class MobileTab(TranslatableMixin, QWidget):  # pylint: disable=too-many-instanc
         self._output.setPlainText(json.dumps(result, ensure_ascii=False, indent=2))
 
     def _on_close_owner(self) -> None:
+        self._tasks.cancel_owner(self)
         self._owner.request_close()
         self._show(self._owner.snapshot())
         self._poll.start()
 
+    def _on_cancel(self) -> None:
+        self._on_close_owner()
+
     def _cleanup_status(self) -> None:
         state = self._owner.snapshot()
         self._show(state)
+        if state['cleanup_error']:
+            self.setProperty('execution_state', 'error')
+            self.setProperty('execution_reason', state['cleanup_error'])
         if not state['cleanup_running']:
             self._poll.stop()
 
     def closeEvent(self, event: QCloseEvent) -> None:  # pylint: disable=invalid-name  # reason: exact Qt virtual callback
         """Invalidate input before Qt closes; native cleanup retains no widget references."""
+        self._tasks.cancel_owner(self)
         self._owner.request_close()
         super().closeEvent(event)

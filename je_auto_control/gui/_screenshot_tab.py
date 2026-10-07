@@ -1,5 +1,6 @@
 """Screenshot / pixel-probe tab builder (extracted mixin)."""
 from typing import TYPE_CHECKING, Any, Callable
+from functools import partial
 
 from PySide6.QtWidgets import (
     QFileDialog, QGridLayout, QGroupBox, QHBoxLayout, QLabel, QLineEdit,
@@ -7,6 +8,8 @@ from PySide6.QtWidgets import (
 )
 
 from je_auto_control.gui._validators import int_validator
+from je_auto_control.gui._panel_tasks import PanelTasks, call_native
+from je_auto_control.gui._task_state import CancellationToken, TaskResult
 from je_auto_control.gui.language_wrapper.multi_language_wrapper import language_wrapper
 from je_auto_control.gui.selector import open_region_selector
 from je_auto_control.utils.exception.exceptions import AutoControlException
@@ -16,6 +19,13 @@ from je_auto_control.wrapper.auto_control_screen import screen_size, screenshot,
 def _t(key: str) -> str:
     """language_wrapper shorthand"""
     return language_wrapper.translate(key, key)
+
+
+def _capture(path: str | None, region: list[int] | None, token: CancellationToken) -> object:
+    """Capture off Qt and return a small completion message rather than retaining the image."""
+    token.checkpoint()
+    screenshot(file_path=path, screen_region=region)
+    return f"Screenshot saved: {path or '(not saved)'}"
 
 
 class ScreenshotTabMixin:
@@ -85,6 +95,8 @@ class ScreenshotTabMixin:
         layout.addWidget(self.ss_result_text)
         layout.addStretch()
         tab.setLayout(layout)
+        self._capture_tasks = PanelTasks(tab, self.ss_result_text)
+        self._pixel_tasks = PanelTasks(tab, self.pixel_result_label)
         return tab
 
     def _get_screen_size(self):
@@ -113,6 +125,9 @@ class ScreenshotTabMixin:
             region = None
             if region_text:
                 region = [int(x.strip()) for x in region_text.split(",")]
+            if hasattr(self, '_capture_tasks'):
+                self._capture_tasks.submit(partial(_capture, path, region))
+                return
             screenshot(file_path=path, screen_region=region)
             self.ss_result_text.setText(f"Screenshot saved: {path or '(not saved)'}")
         except (AutoControlException, OSError, ValueError, TypeError, RuntimeError) as error:
@@ -122,6 +137,9 @@ class ScreenshotTabMixin:
         try:
             x = int(self.pixel_x_input.text())
             y = int(self.pixel_y_input.text())
+            if hasattr(self, '_pixel_tasks'):
+                self._pixel_tasks.submit(partial(call_native, partial(get_pixel, x, y)), self._pixel_done)
+                return
             color = get_pixel(x, y)
             self._pixel_result_suffix = f" {color}"
             self.pixel_result_label.setText(
@@ -135,3 +153,11 @@ class ScreenshotTabMixin:
             self.pixel_result_label.setText(
                 self._translate("pixel_result") + self._pixel_result_suffix,
             )
+
+    def _cancel_capture(self) -> None:
+        self._capture_tasks.cancel()
+        self._pixel_tasks.cancel()
+
+    def _pixel_done(self, result: TaskResult) -> None:
+        self._pixel_result_suffix = f' {result.value}'
+        self.pixel_result_label.setText(self._translate('pixel_result') + self._pixel_result_suffix)

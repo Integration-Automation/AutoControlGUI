@@ -5,6 +5,7 @@ convenience actions (open / quit / screenshot) cover the common flow,
 and a free-form ``WR_*`` runner exposes every command WebRunner registers.
 """
 import json
+from functools import partial
 from typing import Optional
 
 from PySide6.QtCore import Qt
@@ -15,6 +16,7 @@ from PySide6.QtWidgets import (
 )
 
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
+from je_auto_control.gui._panel_tasks import PanelTasks, call_native
 from je_auto_control.gui.language_wrapper.multi_language_wrapper import (
     language_wrapper,
 )
@@ -46,6 +48,7 @@ class WebRunnerTab(TranslatableMixin, QWidget):
         self._params_input = QTextEdit()
         self._params_input.setMaximumHeight(120)
         self._output = QTextEdit()
+        self._tasks = PanelTasks(self, self._output)
         self._output.setReadOnly(True)
         self._commands_list = QListWidget()
         self._build_layout()
@@ -80,6 +83,7 @@ class WebRunnerTab(TranslatableMixin, QWidget):
             ("web_screenshot_btn", self._on_screenshot),
             ("web_run_btn", self._on_run_freeform),
             ("web_refresh_btn", self._on_refresh_commands),
+            ("workspace_cancel_task", self._tasks.cancel),
         ]
 
     def _build_convenience_group(self) -> QGroupBox:
@@ -126,8 +130,9 @@ class WebRunnerTab(TranslatableMixin, QWidget):
             QMessageBox.warning(self, _t("web_open_btn"),
                                 _t("web_url_required"))
             return
+        browser = self._browser_input.currentText()
         self._run_safe(
-            lambda: web_open(url, browser=self._browser_input.currentText()),
+            partial(web_open, url, browser=browser),
             "web_open_btn",
         )
 
@@ -172,6 +177,9 @@ class WebRunnerTab(TranslatableMixin, QWidget):
             self._output.append(f"{_t('web_error')}: {error}")
 
     def _run_safe(self, callable_, label_key: str) -> None:
+        if hasattr(self, '_tasks'):
+            self._tasks.submit(partial(call_native, callable_))
+            return
         try:
             result = callable_()
         except _BRIDGE_ERRORS as error:

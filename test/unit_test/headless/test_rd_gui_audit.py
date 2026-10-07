@@ -9,6 +9,7 @@ decoding; dates before 1970, naive times and odd remote file rows raised.
 """
 import os
 import ssl
+import time
 from datetime import datetime, timedelta, timezone
 
 import pytest
@@ -63,13 +64,22 @@ class _FakeViewer:
 
 # --- Quick Connect -----------------------------------------------------------------------------------------
 
+def _wait_warnings(app, count):
+    deadline = time.monotonic() + 5
+    while len(app.warnings) < count and time.monotonic() < deadline:
+        app.processEvents()
+        time.sleep(.005)
+
+
 def test_quick_connect_dials_wss_with_a_verifying_tls_context(qapp, monkeypatch):
     made = []
     monkeypatch.setattr(connection_screen, "WebSocketDesktopViewer",
                         lambda **kwargs: made.append(_FakeViewer(**kwargs)) or made[-1])
-    connection_screen.QuickConnectScreen()._dispatch_target(parse_target("wss://desk:8443/"), "tok")
+    screen = connection_screen.QuickConnectScreen()
+    screen._dispatch_target(parse_target("wss://desk:8443/"), "tok")
     context = made[0].kwargs.get("ssl_context")
     assert isinstance(context, ssl.SSLContext) and context.verify_mode == ssl.CERT_REQUIRED
+    _wait_warnings(qapp, 1)
     assert qapp.warnings == ["refused"]
 
 
@@ -98,6 +108,7 @@ def test_a_host_that_fails_idna_is_reported_by_both_viewers(qapp):
     panel._port.setValue(5555)
     panel._token.setText("tok")
     panel._connect()
+    _wait_warnings(qapp, 2)
     assert len(qapp.warnings) == 2
 
 

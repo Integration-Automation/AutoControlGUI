@@ -4,7 +4,8 @@ Thin wrapper over the headless ``je_auto_control.assert_*`` functions.
 Assertions run with ``raise_on_fail=False`` so the GUI reports the
 outcome instead of crashing the tab.
 """
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Callable
+from functools import partial
 
 from PySide6.QtWidgets import (
     QCheckBox, QComboBox, QHBoxLayout, QLabel, QLineEdit,
@@ -12,6 +13,9 @@ from PySide6.QtWidgets import (
 )
 
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
+from je_auto_control.gui._panel_tasks import PanelTasks, call_native
+from je_auto_control.gui._task_state import TaskResult
+from je_auto_control.utils.assertion.assertions import AssertionResult
 from je_auto_control.gui.language_wrapper.multi_language_wrapper import (
     language_wrapper,
 )
@@ -47,6 +51,7 @@ class AssertionsTab(TranslatableMixin, QWidget):
         self._expect.setChecked(True)
         self._regex = QCheckBox(_t("assert_regex"))
         self._result = QLabel()
+        self._tasks = PanelTasks(self, self._result)
         self._result.setWordWrap(True)
         self._build_layout()
         self._sync_visibility()
@@ -81,6 +86,7 @@ class AssertionsTab(TranslatableMixin, QWidget):
         """Expose tab commands to the window-level Actions menu."""
         return [
             ("assert_run", self._on_run),
+            ("workspace_cancel_task", self._tasks.cancel),
         ]
 
     def _current_kind(self) -> str:
@@ -96,17 +102,20 @@ class AssertionsTab(TranslatableMixin, QWidget):
         self._regex.setVisible(kind == "text")
 
     def _run_assertion(self) -> Dict[str, Any]:
+        return AssertionsTab._snapshot_assertion(self)().to_dict()
+
+    def _snapshot_assertion(self) -> Callable[[], AssertionResult]:
         kind = self._current_kind()
         present = self._expect.isChecked()
         if kind == "text":
-            return ac.assert_text(
+            return partial(ac.assert_text,
                 self._target.text(), regex=self._regex.isChecked(),
                 present=present, raise_on_fail=False,
-            ).to_dict()
+            )
         if kind == "image":
-            return ac.assert_image(
+            return partial(ac.assert_image,
                 self._target.text(), present=present, raise_on_fail=False,
-            ).to_dict()
+            )
         if kind == "pixel":
             coords = _parse_ints(self._xy.text())
             if len(coords) < 2:
@@ -116,23 +125,32 @@ class AssertionsTab(TranslatableMixin, QWidget):
                 raise ValueError(
                     f"pixel assertion needs 'x,y'; got {self._xy.text()!r}",
                 )
-            return ac.assert_pixel(
+            return partial(ac.assert_pixel,
                 coords[0], coords[1], _parse_ints(self._rgb.text()),
                 match=present, raise_on_fail=False,
-            ).to_dict()
+            )
         if kind == "window":
-            return ac.assert_window(
+            return partial(ac.assert_window,
                 self._target.text(), exists=present, raise_on_fail=False,
-            ).to_dict()
-        return ac.assert_by_description(
+            )
+        return partial(ac.assert_by_description,
             self._target.text(), present=present, raise_on_fail=False,
-        ).to_dict()
+        )
 
     def _on_run(self) -> None:
         try:
+            if hasattr(self, '_tasks'):
+                self._tasks.submit(partial(call_native, self._snapshot_assertion()), self._assertion_done)
+                return
             result = self._run_assertion()
         except (AutoControlException, ValueError, OSError, RuntimeError, TypeError) as error:
             self._result.setText(f"{_t('assert_failed')}: {error}")
             return
         label = _t("assert_passed") if result["passed"] else _t("assert_failed")
         self._result.setText(f"{label} — {result['message']}")
+
+    def _assertion_done(self, result: TaskResult) -> None:
+        if isinstance(result.value, AssertionResult):
+            value = result.value.to_dict()
+            label = _t('assert_passed') if value['passed'] else _t('assert_failed')
+            self._result.setText(f"{label} — {value['message']}")

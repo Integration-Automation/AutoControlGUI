@@ -82,6 +82,11 @@ class FolderSyncEngine:  # pylint: disable=too-many-instance-attributes  # reaso
             if self._thread is thread and (thread is None or not thread.is_alive()):
                 self._thread = None
 
+    def _request_stop(self) -> None:
+        """Revoke new sends without waiting for a currently draining transfer."""
+        with self._lifecycle_lock:
+            self._stop.set()
+
     def is_running(self) -> bool:
         """Whether this engine's worker is still alive, including a draining transfer."""
         return self._thread is not None and self._thread.is_alive()

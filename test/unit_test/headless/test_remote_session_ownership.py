@@ -496,11 +496,17 @@ def test_panel_retains_failed_cleanup_for_retry(directory, panels):
 
     resource.disconnect = disconnect
     controller.attach(resource, 'viewer')
-    with pytest.raises(OSError):
-        controller.close('viewer')
+    controller.close('viewer')
+    import time
+    deadline = time.monotonic() + 3
+    while directory.get_session(session.id).state != 'failed' and time.monotonic() < deadline:
+        time.sleep(.005)
     assert controller.id('viewer') == session.id
     assert directory.get_session(session.id).state == 'failed'
     controller.close('viewer')
+    deadline = time.monotonic() + 3
+    while directory.get_session(session.id).state != 'closed' and time.monotonic() < deadline:
+        time.sleep(.005)
     assert resource.closed == 1 and controller.id('viewer') is None
 
 

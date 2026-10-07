@@ -1340,4 +1340,10 @@ simplified_chinese_word_dict = {
     'workspace_state_hint_needs_dependency': "安装文档指定的可选依赖包后重新打开此功能。",
     'workspace_state_unsupported': "不支持",
     'workspace_state_hint_unsupported': "所选平台或后端无法执行此操作。",
+    'workspace_cancel_task': '取消当前任务',
+    'workspace_cancelling': '已请求取消，等待当前工作返回。',
+    'workspace_deadline_wait': '已超过期限，等待当前工作返回。',
+    'workspace_timed_out': '工作已超过期限。',
+    'workspace_cancelled': '工作已取消，当前工作已返回。',
+    'workspace_retry_cleanup': '重试所拥有资源的清理',
 }

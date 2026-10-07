@@ -30,10 +30,27 @@ import time
 import weakref
 from types import MethodType
 from typing import Any, Callable, Dict, Optional
+import uuid
 
 from PySide6.QtCore import QObject, Signal
+from shiboken6 import isValid  # pylint: disable=no-name-in-module  # reason: native Qt wrapper validity
 
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
+from je_auto_control.gui._task_state import CancellationToken, TaskCancelled
+from je_auto_control.utils.executor.cancellation import _task_scope
+from je_auto_control.utils.executor.input_owner import InputOwner, _input_scope
+from je_auto_control.utils.executor.request_context import RequestBinding
+
+_INPUT_OWNERS: weakref.WeakKeyDictionary[QObject, InputOwner] = weakref.WeakKeyDictionary()
+
+
+def _owner_inputs(owner: QObject) -> InputOwner:
+    inputs = _INPUT_OWNERS.get(owner)
+    if inputs is None:
+        inputs = InputOwner()
+        _INPUT_OWNERS[owner] = inputs
+        owner.destroyed.connect(inputs.close)
+    return inputs
 
 #: How long interpreter exit waits, in all, for running workers to stop.
 _EXIT_GRACE_S = 10.0
@@ -52,14 +69,35 @@ class CallWorker(QObject):
     def __init__(self, fn: Callable[[], Any]) -> None:
         super().__init__()
         self._fn = fn
+        self.token = CancellationToken(uuid.uuid4().hex, 300, lambda _value: None)
+        self._inputs: InputOwner | None = None
+        self._binding = RequestBinding.capture()
+
+    def bind_inputs(self, inputs: InputOwner) -> None:
+        """Bind headless input ownership before the native worker starts."""
+        self._inputs = inputs
+
+    def request_stop(self) -> None:
+        """Revoke nested actions and waits without blocking the GUI thread."""
+        self.token.cancel()
 
     def run(self) -> None:
         """Call the function; emit ``finished`` with its result or ``failed`` with the error."""
         try:
-            result = self._fn()
+            with _task_scope(self.token), _input_scope(self._inputs, self.token.run_id):
+                self.token.checkpoint()
+                result = self._binding.run(self._fn)
+                self.token.checkpoint()
+        except TaskCancelled:
+            return
         except Exception as error:  # noqa: BLE001  # pylint: disable=broad-except  # reason: surface any backend/transport error to the status line
+            if self._inputs is not None:
+                self._inputs.request_cleanup(self.token.run_id)
             self.failed.emit(str(error))
             return
+        finally:
+            if self.token.event.is_set() and self._inputs is not None:
+                self._inputs.request_cleanup(self.token.run_id)
         self.finished.emit(result)
 
 
@@ -70,7 +108,7 @@ class WorkerHandle:
         self.worker = worker
         self._thread: Optional[threading.Thread] = None
 
-    def isRunning(self) -> bool:  # noqa: N802  # reason: the QThread spelling its callers use
+    def isRunning(self) -> bool:  # pylint: disable=invalid-name  # reason: legacy QThread spelling
         """Whether ``run()`` has not returned yet."""
         return self._thread is not None and self._thread.is_alive()
 
@@ -83,6 +121,7 @@ class WorkerHandle:
 
 #: Handles whose thread-end the GUI thread has not processed yet.
 _RUNNING: Dict[WorkerHandle, QObject] = {}
+_RUN_OWNERS: dict[WorkerHandle, weakref.ReferenceType[QObject]] = {}
 
 
 class _Reaper(QObject):
@@ -96,7 +135,11 @@ class _Reaper(QObject):
 
     def _release(self, handle: WorkerHandle) -> None:
         worker = _RUNNING.pop(handle, None)
+        owner = _RUN_OWNERS.pop(handle, lambda: None)()
         if worker is not None:
+            stop = getattr(worker, 'request_stop', None)
+            if owner is not None and isValid(owner) and callable(stop):
+                owner.destroyed.disconnect(stop)
             worker.deleteLater()
 
 
@@ -105,7 +148,7 @@ _REAPER: Optional[_Reaper] = None
 
 def _reaper() -> _Reaper:
     """The registry's reaper, created on first use -- on the GUI thread."""
-    global _REAPER
+    global _REAPER  # pylint: disable=global-statement  # reason: one reaper created on the GUI thread
     if _REAPER is None:
         _REAPER = _Reaper()
     return _REAPER
@@ -180,6 +223,20 @@ def running_threads() -> int:
     return len(_RUNNING)
 
 
+def cancel_workers(owner: QObject) -> None:
+    """Cancel work belonging to the selected panel or its children; global services stay explicit."""
+    related = {owner, *owner.findChildren(QObject)}
+    for handle, reference in tuple(_RUN_OWNERS.items()):
+        if reference() in related:
+            stop = getattr(handle.worker, 'request_stop', None)
+            if callable(stop):
+                stop()
+    for widget in related:
+        inputs = _INPUT_OWNERS.get(widget)
+        if inputs is not None:
+            inputs.request_cleanup()
+
+
 def _run(handle: WorkerHandle, relay: Any, reaper: _Reaper) -> None:
     """The worker thread's body: run the worker, then report its end."""
     try:
@@ -187,8 +244,8 @@ def _run(handle: WorkerHandle, relay: Any, reaper: _Reaper) -> None:
     # The worker's own errors go out through its "failed" signal. Anything
     # else goes to on_fail too -- only logging it left a tab showing
     # "Fetching..." for good -- and must not stop the end being reported.
-    except Exception as error:  # noqa: BLE001  # reason: reported to on_fail; the end below must still be reported
-        autocontrol_logger.error(f"GUI worker {type(handle.worker).__name__} raised: {error!r}")
+    except Exception as error:  # pylint: disable=broad-exception-caught  # reason: reports crashes and always reaps the worker
+        autocontrol_logger.error('GUI worker %s raised: %r', type(handle.worker).__name__, error)
         _emit_to(relay.crashed, f"{type(error).__name__}: {error}")
     finally:
         _emit_to(relay.thread_ended)
@@ -215,6 +272,14 @@ def start_worker(owner: QObject, worker: QObject, *,
     mid-run drops them and leaves the work to finish on its own. The worker is
     deleted once the GUI thread has seen its thread end.
     """
+    # pylint: disable-next=import-outside-toplevel  # reason: lifecycle check is needed only when explicitly starting GUI work
+    from je_auto_control.gui.tab_registry import _require_gui_thread
+    _require_gui_thread()
+    if type(worker) is CallWorker:  # pylint: disable=unidiomatic-typecheck  # reason: subclasses manage their own scope
+        worker.bind_inputs(_owner_inputs(owner))
+    stop = getattr(worker, 'request_stop', None)
+    if callable(stop):
+        owner.destroyed.connect(stop)
     reaper = _reaper()
     relay = _Relay(owner, on_done, on_thread_done, on_fail)
     worker.finished.connect(relay.done)
@@ -223,8 +288,9 @@ def start_worker(owner: QObject, worker: QObject, *,
         failed.connect(relay.fail)
     handle = WorkerHandle(worker)
     _RUNNING[handle] = worker
+    _RUN_OWNERS[handle] = weakref.ref(owner)
     thread = threading.Thread(target=_run, args=(handle, relay, reaper),
                               name=f"gui-worker-{type(worker).__name__}", daemon=True)
-    handle._thread = thread  # noqa: SLF001  # reason: set once, before start
+    handle._thread = thread  # pylint: disable=protected-access  # reason: same-module initialization before start
     thread.start()
     return handle

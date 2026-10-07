@@ -13,6 +13,9 @@ from PySide6.QtWidgets import (
 )
 
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
+from je_auto_control.gui._panel_tasks import PanelTasks, call_native
+from je_auto_control.gui._task_state import TaskResult
+from functools import partial
 from je_auto_control.gui.self_healing_evaluation import SelfHealingEvaluationPanel
 from je_auto_control.gui.language_wrapper.multi_language_wrapper import (
     language_wrapper,
@@ -45,6 +48,7 @@ class SelfHealingTab(TranslatableMixin, QWidget):
         self._threshold.setValue(0.9)
         self._click_check = QCheckBox()
         self._status = QLabel()
+        self._tasks = PanelTasks(self, self._status)
         self._table = QTableWidget(0, len(_COLUMNS))
         self._evaluation = SelfHealingEvaluationPanel(self._template_input.text, self)
         self._build_layout()
@@ -85,6 +89,7 @@ class SelfHealingTab(TranslatableMixin, QWidget):
             ("self_heal_click_btn", self._on_click),
             ("self_heal_refresh", self.refresh_log),
             ("self_heal_clear", self._on_clear_log),
+            ('workspace_cancel_task', self._tasks.cancel),
         ] + self._evaluation.menu_actions()
 
     # --- translation -----------------------------------------------
@@ -136,6 +141,12 @@ class SelfHealingTab(TranslatableMixin, QWidget):
         if inputs is None:
             return
         template, description, threshold = inputs
+        if hasattr(self, '_tasks'):
+            fn = self_heal_click if do_click or self._click_check.isChecked() else self_heal_locate
+            self._tasks.submit(partial(call_native, partial(fn, template_path=template,
+                                                          description=description, detect_threshold=threshold)),
+                               self._healing_done)
+            return
         try:
             if do_click or self._click_check.isChecked():
                 outcome = self_heal_click(
@@ -152,6 +163,11 @@ class SelfHealingTab(TranslatableMixin, QWidget):
             return
         self._report_outcome(outcome)
         self.refresh_log()
+
+    def _healing_done(self, result: TaskResult) -> None:
+        if isinstance(result.value, HealOutcome):
+            self._report_outcome(result.value)
+            self.refresh_log()
 
     def _report_outcome(self, outcome: HealOutcome) -> None:
         if not outcome.found:

@@ -1,5 +1,6 @@
 """Report-generation tab builder (extracted mixin)."""
 from typing import TYPE_CHECKING, Any, Callable
+from functools import partial
 
 from PySide6.QtWidgets import (
     QGroupBox, QHBoxLayout, QLabel, QLineEdit,
@@ -7,10 +8,19 @@ from PySide6.QtWidgets import (
 )
 
 from je_auto_control.utils.exception.exceptions import AutoControlException
+from je_auto_control.gui._panel_tasks import PanelTasks
+from je_auto_control.gui._task_state import CancellationToken
 from je_auto_control.utils.generate_report.generate_html_report import generate_html_report
 from je_auto_control.utils.generate_report.generate_json_report import generate_json_report
 from je_auto_control.utils.generate_report.generate_xml_report import generate_xml_report
 from je_auto_control.utils.test_record.record_test_class import test_record_instance
+
+
+def _generate(fn: Callable[[str], object], name: str, label: str, token: CancellationToken) -> object:
+    """Write the selected format off Qt using the copied name."""
+    token.checkpoint()
+    fn(name)
+    return f'{label} report generated: {name}'
 
 
 class ReportTabMixin:
@@ -51,6 +61,7 @@ class ReportTabMixin:
         layout.addWidget(self.report_result_text)
         layout.addStretch()
         tab.setLayout(layout)
+        self._report_tasks = PanelTasks(tab, self.report_result_text)
         return tab
 
     def _set_test_record(self, enable: bool):
@@ -66,6 +77,9 @@ class ReportTabMixin:
     def _gen_html(self):
         try:
             name = self.report_name_input.text() or "autocontrol_report"
+            if hasattr(self, '_report_tasks'):
+                self._report_tasks.submit(partial(_generate, generate_html_report, name, 'HTML'))
+                return
             generate_html_report(name)
             self.report_result_text.setText(f"HTML report generated: {name}")
         except (AutoControlException, OSError, ValueError, TypeError, RuntimeError) as error:
@@ -74,6 +88,9 @@ class ReportTabMixin:
     def _gen_json(self):
         try:
             name = self.report_name_input.text() or "autocontrol_report"
+            if hasattr(self, '_report_tasks'):
+                self._report_tasks.submit(partial(_generate, generate_json_report, name, 'JSON'))
+                return
             generate_json_report(name)
             self.report_result_text.setText(f"JSON report generated: {name}")
         except (AutoControlException, OSError, ValueError, TypeError, RuntimeError) as error:
@@ -82,7 +99,13 @@ class ReportTabMixin:
     def _gen_xml(self):
         try:
             name = self.report_name_input.text() or "autocontrol_report"
+            if hasattr(self, '_report_tasks'):
+                self._report_tasks.submit(partial(_generate, generate_xml_report, name, 'XML'))
+                return
             generate_xml_report(name)
             self.report_result_text.setText(f"XML report generated: {name}")
         except (AutoControlException, OSError, ValueError, TypeError, RuntimeError) as error:
             self.report_result_text.setText(f"Error: {error}")
+
+    def _cancel_report(self) -> None:
+        self._report_tasks.cancel()

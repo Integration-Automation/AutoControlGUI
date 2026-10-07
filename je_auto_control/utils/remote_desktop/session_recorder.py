@@ -63,6 +63,7 @@ class SessionRecorder:
             return self._container, self._stream
         self._path.parent.mkdir(parents=True, exist_ok=True)
         container = av.open(str(self._path), mode="w")
+        self._container = container
         stream = container.add_stream(self._codec, rate=self._fps)
         stream.width = frame.width
         stream.height = frame.height
@@ -97,7 +98,7 @@ class SessionRecorder:
     def stop(self) -> None:
         """Flush the encoder and close the file."""
         with self._lock:
-            if self._closed:
+            if self._closed and self._container is None:
                 return
             self._closed = True
             self._teardown_locked()
@@ -113,12 +114,8 @@ class SessionRecorder:
                     "session_recorder: flush failed: %r", error,
                 )
         if container is not None:
-            try:
-                container.close()
-            except (ValueError, OSError, RuntimeError) as error:
-                autocontrol_logger.debug(
-                    "session_recorder: close failed: %r", error,
-                )
+            self._stream = None
+            container.close()
         self._container = None
         self._stream = None
 

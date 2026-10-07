@@ -1362,4 +1362,10 @@ japanese_word_dict = {
     'workspace_state_hint_needs_dependency': "指定の追加依存パッケージを導入し、機能を開き直してください。",
     'workspace_state_unsupported': "非対応",
     'workspace_state_hint_unsupported': "選択したプラットフォームまたはバックエンドでこの操作は利用できません。",
+    'workspace_cancel_task': '現在のタスクをキャンセル',
+    'workspace_cancelling': 'キャンセルを要求しました。実行中の処理を待っています。',
+    'workspace_deadline_wait': '期限を過ぎました。実行中の処理を待っています。',
+    'workspace_timed_out': '処理の期限を過ぎました。',
+    'workspace_cancelled': 'キャンセルしました。実行中の処理は終了しました。',
+    'workspace_retry_cleanup': '所有リソースの解放を再試行',
 }

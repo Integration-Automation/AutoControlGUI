@@ -1,5 +1,6 @@
 """Hotkeys tab: bind global hotkeys to action JSON files."""
 from typing import Optional
+from functools import partial
 
 from PySide6.QtCore import QTimer
 from PySide6.QtWidgets import (
@@ -8,6 +9,8 @@ from PySide6.QtWidgets import (
 )
 
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
+from je_auto_control.gui._panel_tasks import PanelTasks, call_native
+from je_auto_control.gui._task_state import TaskResult
 from je_auto_control.gui.language_wrapper.multi_language_wrapper import (
     language_wrapper,
 )
@@ -28,6 +31,7 @@ class HotkeysTab(TranslatableMixin, QWidget):
         self._combo_input.setPlaceholderText("ctrl+alt+1")
         self._script_input = QLineEdit()
         self._status = QLabel()
+        self._service_tasks = PanelTasks(self, self._status)
         self._table = QTableWidget(0, 4)
         self._apply_status_label()
         self._apply_table_headers()
@@ -121,7 +125,17 @@ class HotkeysTab(TranslatableMixin, QWidget):
         default_hotkey_daemon.unbind(bid)
         self._refresh()
 
+    def _service_started(self, _result: TaskResult) -> None:
+        self._timer.start()
+        self._apply_status_label()
+
+    def _service_stopped(self, _result: TaskResult) -> None:
+        self._apply_status_label()
+
     def _on_start(self) -> None:
+        if hasattr(self, '_service_tasks'):
+            self._service_tasks.submit(partial(call_native, default_hotkey_daemon.start), self._service_started)
+            return
         try:
             default_hotkey_daemon.start()
         except NotImplementedError as error:
@@ -131,6 +145,10 @@ class HotkeysTab(TranslatableMixin, QWidget):
         self._apply_status_label()
 
     def _on_stop(self) -> None:
+        if hasattr(self, '_service_tasks'):
+            self._timer.stop()
+            self._service_tasks.submit(partial(call_native, default_hotkey_daemon.stop), self._service_stopped)
+            return
         default_hotkey_daemon.stop()
         self._timer.stop()
         self._apply_status_label()

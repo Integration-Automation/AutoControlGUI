@@ -1,5 +1,6 @@
 """Image-detection tab builder (extracted mixin)."""
 from typing import TYPE_CHECKING, Any, Callable
+from functools import partial
 
 from PySide6.QtWidgets import (
     QCheckBox, QFileDialog, QGridLayout, QLabel, QLineEdit, QMessageBox,
@@ -7,6 +8,7 @@ from PySide6.QtWidgets import (
 )
 
 from je_auto_control.gui._validators import double_validator
+from je_auto_control.gui._panel_tasks import PanelTasks, call_native
 from je_auto_control.gui.language_wrapper.multi_language_wrapper import language_wrapper
 from je_auto_control.gui.selector import crop_template_to_file
 from je_auto_control.utils.exception.exceptions import AutoControlException
@@ -59,6 +61,7 @@ class ImageDetectTabMixin:
         self.detect_result_text.setReadOnly(True)
         layout.addWidget(self.detect_result_text)
         tab.setLayout(layout)
+        self._image_tasks = PanelTasks(tab, self.detect_result_text)
         return tab
 
     def _browse_img(self):
@@ -92,6 +95,9 @@ class ImageDetectTabMixin:
     def _locate_image(self):
         try:
             path, th, draw = self._get_detect_params()
+            if hasattr(self, '_image_tasks'):
+                self._image_tasks.submit(partial(call_native, partial(locate_image_center, path, th, draw)))
+                return
             result = locate_image_center(path, th, draw)
             self.detect_result_text.setText(f"Center: {result}")
         except (AutoControlException, OSError, ValueError, TypeError, RuntimeError) as error:
@@ -100,6 +106,9 @@ class ImageDetectTabMixin:
     def _locate_all(self):
         try:
             path, th, draw = self._get_detect_params()
+            if hasattr(self, '_image_tasks'):
+                self._image_tasks.submit(partial(call_native, partial(locate_all_image, path, th, draw)))
+                return
             result = locate_all_image(path, th, draw)
             self.detect_result_text.setText(f"Found {len(result)} matches:\n{result}")
         except (AutoControlException, OSError, ValueError, TypeError, RuntimeError) as error:
@@ -109,7 +118,13 @@ class ImageDetectTabMixin:
         try:
             path, th, draw = self._get_detect_params()
             btn = self.mouse_button_combo.currentText() if hasattr(self, "mouse_button_combo") else "mouse_left"
+            if hasattr(self, '_image_tasks'):
+                self._image_tasks.submit(partial(call_native, partial(locate_and_click, path, btn, th, draw)))
+                return
             result = locate_and_click(path, btn, th, draw)
             self.detect_result_text.setText(f"Clicked at: {result}")
         except (AutoControlException, OSError, ValueError, TypeError, RuntimeError) as error:
             self.detect_result_text.setText(f"Error: {error}")
+
+    def _cancel_detection(self) -> None:
+        self._image_tasks.cancel()

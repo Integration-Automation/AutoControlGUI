@@ -14,6 +14,9 @@ from PySide6.QtWidgets import (
 )
 
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
+from je_auto_control.gui._panel_tasks import PanelTasks, call_native
+from je_auto_control.gui._task_state import TaskResult
+from functools import partial
 from je_auto_control.gui.language_wrapper.multi_language_wrapper import (
     language_wrapper,
 )
@@ -45,6 +48,7 @@ class TestSuiteTab(TranslatableMixin, QWidget):
         self._table.setEditTriggers(QAbstractItemView.NoEditTriggers)
         self._table.horizontalHeader().setStretchLastSection(True)
         self._summary = QLabel()
+        self._tasks = PanelTasks(self, self._summary)
         self._quarantine = QListWidget()
         self._last_result: Optional[Any] = None
         self._apply_headers()
@@ -79,6 +83,7 @@ class TestSuiteTab(TranslatableMixin, QWidget):
             ("suite_q_auto", self._on_auto_quarantine),
             ("suite_q_remove", self._on_release_selected),
             ("suite_q_clear", self._on_clear_quarantine),
+            ('workspace_cancel_task', self._tasks.cancel),
         ]
 
     def _parse_spec(self):
@@ -99,6 +104,10 @@ class TestSuiteTab(TranslatableMixin, QWidget):
 
     def _on_run(self) -> None:
         try:
+            if hasattr(self, '_tasks'):
+                spec = self._parse_spec()
+                self._tasks.submit(partial(call_native, partial(ac.run_suite, spec)), self._suite_done)
+                return
             result = ac.run_suite(self._parse_spec())
         except (AutoControlException, ValueError, TypeError,
                 OSError, RuntimeError) as err:
@@ -106,6 +115,10 @@ class TestSuiteTab(TranslatableMixin, QWidget):
             return
         self._last_result = result
         self._render_result(result)
+
+    def _suite_done(self, result: TaskResult) -> None:
+        self._last_result = result.value
+        self._render_result(result.value)
 
     def _render_result(self, result) -> None:
         self._table.setRowCount(len(result.cases))

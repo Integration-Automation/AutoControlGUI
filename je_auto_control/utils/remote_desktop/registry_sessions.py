@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from typing import Any, Callable, Optional
+from contextlib import AbstractContextManager
 
 from je_auto_control.utils.remote_desktop.sessions import (
     RemoteSession,
@@ -59,6 +60,14 @@ class RegistrySessions:
     ) -> SessionStatus:
         """End only the named session, validating supplied ownership before side effects."""
         return self._sessions.close(session_id, owner=owner, timeout=timeout)
+
+    def _deferred_disconnect(self, session_id: str, *, owner: str) -> Callable[[], SessionStatus]:
+        """Revoke an owned GUI identity now; its captured native cleanup can run off Qt."""
+        return self._sessions._deferred_close(session_id, owner=owner)
+
+    def _session_operation(self, session: RemoteSession) -> AbstractContextManager[None]:
+        """Keep an in-flight native allocation ordered before this session's owned cleanup."""
+        return self._sessions._resource_operation(session)
 
     def script_session_id(self, transport: str, role: str) -> Optional[str]:
         """Read the script transport alias without selecting a GUI resource."""

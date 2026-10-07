@@ -21,6 +21,7 @@ from je_auto_control.gui.remote_desktop._helpers import _t
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.remote_desktop import WebRTCConfig
 from je_auto_control.utils.remote_desktop.webrtc_stats import StatsSnapshot
+from je_auto_control.utils.remote_desktop.cleanup_jobs import _submit_cleanup
 
 _DEFAULT_FPS = 24
 _DEFAULT_MONITOR = 1
@@ -30,13 +31,8 @@ _JSON_FILE_FILTER = "JSON (*.json);;All (*)"
 
 
 def dispose_background(callbacks: Iterable[Callable[[], None]]) -> None:
-    """Attempt each owned resource cleanup at the QObject destruction boundary."""
-    for callback in callbacks:
-        try:
-            callback()
-        # Contain observer/destruction failures so every owned cleanup is attempted.
-        except Exception as error:  # pylint: disable=broad-exception-caught  # reason: cleanup boundary
-            autocontrol_logger.warning("WebRTC background disposal failed: %s", type(error).__name__)
+    """Schedule owned cleanup off Qt, retaining failed callbacks for retry."""
+    _submit_cleanup(callbacks)
 
 
 def _av_frame_to_qimage(frame) -> Optional[QImage]:
@@ -178,12 +174,18 @@ def token_grid(panel: Any) -> tuple[QGroupBox, QGridLayout]:
     return group, grid
 
 
+def _drain_folder_sync(engine: Any) -> None:
+    """Keep a timed-out sender in the native cleanup registry for another stop attempt."""
+    engine.stop()
+    if engine.is_running():
+        raise RuntimeError('Folder sender is still draining; retry cleanup')
+
+
 def stop_folder_sync(panel: Any) -> None:
-    """Stop the panel's folder sender with the existing bounded draining semantics."""
-    if panel._sync_engine is not None:
-        try:
-            panel._sync_engine.stop()
-        except (RuntimeError, OSError):
-            return
-        if not panel._sync_engine.is_running():
-            panel._sync_engine = None
+    """Revoke sends immediately, then drain off Qt while preserving the owned engine."""
+    engine = panel._sync_engine
+    if engine is None:
+        return
+    engine._request_stop()
+    from functools import partial
+    _submit_cleanup((partial(_drain_folder_sync, engine),))

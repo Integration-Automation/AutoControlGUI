@@ -1,5 +1,6 @@
 """REST API tab: start/stop the HTTP front-end and surface URL + token."""
 from typing import Optional
+from functools import partial
 
 import json
 from pathlib import Path
@@ -12,6 +13,8 @@ from PySide6.QtWidgets import (
 )
 
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
+from je_auto_control.gui._panel_tasks import PanelTasks, call_native
+from je_auto_control.gui._task_state import TaskResult
 from je_auto_control.gui.language_wrapper.multi_language_wrapper import (
     language_wrapper,
 )
@@ -44,6 +47,7 @@ class RestApiTab(TranslatableMixin, QWidget):
         self._token_value = QLabel("-")
         self._token_value.setTextInteractionFlags(Qt.TextSelectableByMouse)
         self._status_label = QLabel()
+        self._service_tasks = PanelTasks(self, self._status_label)
         self._build_layout()
         self._refresh_status()
         self._timer = QTimer(self)
@@ -158,6 +162,12 @@ class RestApiTab(TranslatableMixin, QWidget):
         host = self._host_input.text().strip() or "127.0.0.1"
         port = int(self._port_input.value())
         token = self._token_input.text().strip() or None
+        if hasattr(self, '_service_tasks'):
+            self._timer.stop()
+            start = partial(rest_api_registry.start, host=host, port=port, token=token,
+                            enable_audit=self._audit_check.isChecked())
+            self._service_tasks.submit(partial(call_native, start), self._service_done)
+            return
         try:
             rest_api_registry.start(
                 host=host, port=port, token=token,
@@ -169,8 +179,16 @@ class RestApiTab(TranslatableMixin, QWidget):
         self._refresh_status()
 
     def _on_stop(self) -> None:
+        if hasattr(self, '_service_tasks'):
+            self._timer.stop()
+            self._service_tasks.submit(partial(call_native, rest_api_registry.stop), self._service_done)
+            return
         rest_api_registry.stop()
         self._refresh_status()
+
+    def _service_done(self, _result: TaskResult) -> None:
+        self._refresh_status()
+        self._timer.start()
 
     def _on_copy_url(self) -> None:
         text = self._url_value.text()

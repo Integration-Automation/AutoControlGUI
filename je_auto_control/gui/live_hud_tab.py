@@ -1,5 +1,7 @@
 """Live HUD: mouse position, pixel colour under cursor and log tail."""
 from typing import Optional
+from dataclasses import dataclass
+from functools import partial
 
 import logging
 import threading
@@ -10,6 +12,8 @@ from PySide6.QtWidgets import (
 )
 
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
+from je_auto_control.gui._panel_tasks import PanelTasks
+from je_auto_control.gui._task_state import CancellationToken, TaskResult
 from je_auto_control.gui.language_wrapper.multi_language_wrapper import (
     language_wrapper,
 )
@@ -19,6 +23,33 @@ from je_auto_control.utils.watcher.watcher import LogTail, MouseWatcher, PixelWa
 
 def _t(key: str) -> str:
     return language_wrapper.translate(key, key)
+
+
+@dataclass(frozen=True)
+class _HudSample:
+    x: int
+    y: int
+    rgb: object
+
+
+class _SamplingFilter(logging.Filter):
+    def __init__(self) -> None:
+        super().__init__()
+        self.active = threading.local()
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        return not getattr(self.active, 'value', False)
+
+
+def _sample(mouse: MouseWatcher, pixel: PixelWatcher, log_filter: _SamplingFilter,
+            token: CancellationToken) -> object:
+    token.checkpoint()
+    log_filter.active.value = True
+    try:
+        x, y = mouse.sample()
+        return _HudSample(x, y, pixel.sample(x, y))
+    finally:
+        log_filter.active.value = False
 
 
 class LiveHUDTab(TranslatableMixin, QWidget):
@@ -35,10 +66,13 @@ class LiveHUDTab(TranslatableMixin, QWidget):
         self._sampling = False
         self._gui_thread = threading.get_ident()
         self._log_tail.addFilter(self._not_own_sampling)
+        self._sample_filter = _SamplingFilter()
+        self._log_tail.addFilter(self._sample_filter)
         self._pos_suffix = " --"
         self._color_suffix = " --"
         self._pos_label = QLabel()
         self._color_label = QLabel()
+        self._tasks = PanelTasks(self, self._pos_label)
         self._apply_position_labels()
         self._log_view = QTextEdit()
         self._log_view.setReadOnly(True)
@@ -91,12 +125,17 @@ class LiveHUDTab(TranslatableMixin, QWidget):
     def _stop(self) -> None:
         self._running = False
         self._timer.stop()
+        self._tasks.cancel()
         self._log_tail.detach(autocontrol_logger)
 
     def _not_own_sampling(self, record: logging.LogRecord) -> bool:
         return not (self._sampling and record.thread == self._gui_thread)
 
     def _tick(self) -> None:
+        if hasattr(self, '_tasks'):
+            if self._tasks.handle is None:
+                self._tasks.submit(partial(_sample, self._mouse, self._pixel, self._sample_filter), self._sample_done)
+            return
         self._sampling = True
         try:
             x, y = self._mouse.sample()
@@ -115,11 +154,23 @@ class LiveHUDTab(TranslatableMixin, QWidget):
         scrollbar = self._log_view.verticalScrollBar()
         scrollbar.setValue(scrollbar.maximum())
 
+    def _sample_done(self, result: TaskResult) -> None:
+        sample = result.value
+        if not isinstance(sample, _HudSample):
+            return
+        self._pos_suffix = f' ({sample.x}, {sample.y})'
+        self._color_suffix = f' {sample.rgb}' if sample.rgb is not None else ' n/a'
+        self._apply_position_labels()
+        self._log_view.setPlainText('\n'.join(self._log_tail.snapshot()))
+        scrollbar = self._log_view.verticalScrollBar()
+        scrollbar.setValue(scrollbar.maximum())
+
     # The HUD samples the cursor and a pixel four times a second only while
     # it is on screen: a closed or switched-away tab kept polling. The log
     # tail stays attached, so lines logged meanwhile are there on return.
     def hideEvent(self, event) -> None:  # noqa: N802  # reason: Qt override
         self._timer.stop()
+        self._tasks.cancel()
         super().hideEvent(event)
 
     def showEvent(self, event) -> None:  # noqa: N802  # reason: Qt override

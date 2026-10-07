@@ -13,6 +13,17 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ## Unreleased
 
+- GUI tasks now bind cancellation/deadlines and typed delivery to the original
+  owner/run/session. Device, recognition, connection and service-stop work runs
+  off Qt; close drops late results. GUI recording uses independent resources.
+  Failed owned cleanup remains retryable through Tools. Cancellation is cooperative
+  and does not roll back completed atomic file/vault/global-service operations.
+  Raw GUI input only acquires known initially released keys/buttons; balanced
+  releases and cancel preserve previously pressed inputs. Successful holds remain
+  owned until release/cancel/panel destruction. Unknown state fails before raw
+  allocation; direct headless input behavior stays compatible. No physical state
+  restoration or atomic isolation from external clients is implied.
+
 - Add searchable full-catalog navigation, responsive scrollable workspace and
   collapsible execution details; Ctrl+K searches and Ctrl+Shift+D toggles details.
   View supports native light/dark themes and system-font sizes. Four-language

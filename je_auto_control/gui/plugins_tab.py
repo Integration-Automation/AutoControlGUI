@@ -7,6 +7,9 @@ from PySide6.QtWidgets import (
 )
 
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
+from je_auto_control.gui._panel_tasks import PanelTasks
+from je_auto_control.gui._task_state import CancellationToken, TaskResult
+from functools import partial
 from je_auto_control.gui.language_wrapper.multi_language_wrapper import (
     language_wrapper,
 )
@@ -19,6 +22,13 @@ def _t(key: str) -> str:
     return language_wrapper.translate(key, key)
 
 
+def _load_plugins(path: str, token: CancellationToken) -> object:
+    token.checkpoint()
+    commands = load_plugin_directory(path)
+    token.checkpoint()
+    return register_plugin_commands(commands) if commands else []
+
+
 class PluginsTab(TranslatableMixin, QWidget):
     """Pick a directory of plugins, register their ``AC_*`` callables."""
 
@@ -29,6 +39,7 @@ class PluginsTab(TranslatableMixin, QWidget):
         self._list = QListWidget()
         self._status_text = _t("pl_no_loaded")
         self._status = QLabel(self._status_text)
+        self._tasks = PanelTasks(self, self._status)
         self._status_is_translatable = True
         self._build_layout()
 
@@ -49,6 +60,7 @@ class PluginsTab(TranslatableMixin, QWidget):
         return [
             ("browse", self._browse),
             ("pl_load", self._on_load),
+            ('workspace_cancel_task', self._tasks.cancel),
         ]
 
     def retranslate(self) -> None:
@@ -66,6 +78,9 @@ class PluginsTab(TranslatableMixin, QWidget):
         if not path:
             return
         try:
+            if hasattr(self, '_tasks'):
+                self._tasks.submit(partial(_load_plugins, path), partial(self._plugins_done, path))
+                return
             commands = load_plugin_directory(path)
         except OSError as error:
             QMessageBox.warning(self, "Error", str(error))
@@ -80,3 +95,10 @@ class PluginsTab(TranslatableMixin, QWidget):
             self._list.addItem(name)
         self._status.setText(f"Registered {len(registered)} commands from {path}")
         self._status_is_translatable = False
+
+    def _plugins_done(self, path: str, result: TaskResult) -> None:
+        if isinstance(result.value, list):
+            self._list.clear()
+            self._list.addItems(result.value)
+            self._status.setText(f'Registered {len(result.value)} commands from {path}')
+            self._status_is_translatable = False

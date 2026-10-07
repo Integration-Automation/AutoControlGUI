@@ -22,7 +22,7 @@ from __future__ import annotations
 import contextvars
 import time
 from concurrent.futures import ThreadPoolExecutor
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass, field, replace
 from typing import Any, Dict, List, Optional
 
 from je_auto_control.utils.exception.exceptions import AutoControlException
@@ -104,7 +104,10 @@ def _run_one_device(actions: List[Any], device: Dict[str, Any],
     started = time.monotonic()
     try:
         from je_auto_control.utils.script_vars.scope import execution_scope
+        from je_auto_control.utils.executor.cancellation import _check_cancelled, _request_timeout
+        _check_cancelled()
         context = DeviceContext.from_spec(device, index=index)
+        context = replace(context, timeout_s=_request_timeout(context.timeout_s))
         with open_device(context) as session:
             with session.bind(), execution_scope({var_name: device}, isolated=True):
                 runner.execute_action(actions, raise_on_error=True)

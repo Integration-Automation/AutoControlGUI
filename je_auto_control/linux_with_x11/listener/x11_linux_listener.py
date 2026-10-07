@@ -1,6 +1,7 @@
 from queue import Queue
-from threading import Thread
+from threading import Lock, Thread
 from typing import Optional
+import uuid
 
 from je_auto_control.utils.exception.exception_tags import linux_import_error_message, listener_error_message
 from je_auto_control.utils.exception.exceptions import AutoControlException
@@ -45,6 +46,18 @@ class KeypressHandler:
         self.record_queue: Optional[Queue] = None
         self.event_keycode = 0
         self.event_position = (0, 0)
+        self._recordings: dict[str, Queue] = {}
+        self._recording_lock = Lock()
+
+    def _subscribe_recording(self, queue: Queue) -> str:
+        identifier = uuid.uuid4().hex
+        with self._recording_lock:
+            self._recordings[identifier] = queue
+        return identifier
+
+    def _unsubscribe_recording(self, identifier: str) -> None:
+        with self._recording_lock:
+            self._recordings.pop(identifier, None)
 
     def check_is_press(self, keycode: int) -> bool:
         """
@@ -71,6 +84,10 @@ class KeypressHandler:
                     if event.type in (X.ButtonRelease, X.KeyRelease):
                         self.event_keycode = event.detail
                         self.event_position = (event.root_x, event.root_y)
+                        with self._recording_lock:
+                            for queue in self._recordings.values():
+                                if queue.qsize() < 20000:
+                                    queue.put((event.type, event.detail, event.root_x, event.root_y))
 
                         # 如果開啟記錄模式，將事件放入 Queue
                         if self.record_flag and self.record_queue is not None:

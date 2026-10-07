@@ -14,6 +14,7 @@ from je_auto_control.utils.executor.request_context import RequestBinding
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.remote_desktop.registry_sessions import RegistrySessions
 from je_auto_control.utils.remote_desktop.sessions import RemoteSession, SessionEvent
+from je_auto_control.utils.remote_desktop.cleanup_jobs import _CleanupJob, _submit_cleanup
 
 
 class PanelSessions(QObject):
@@ -28,6 +29,7 @@ class PanelSessions(QObject):
         self.directory = directory
         self.owner = "gui:" + uuid.uuid4().hex
         self._current: Dict[str, RemoteSession] = {}
+        self._closing: dict[str, tuple[RemoteSession, _CleanupJob]] = {}
         self._delivery.connect(self._deliver)
         self._lifecycle.connect(self._on_lifecycle)
         reference = weakref.ref(self)
@@ -41,7 +43,7 @@ class PanelSessions(QObject):
                     pass  # QObject has already been disposed; teardown revoked every owned session.
 
         remove = directory.subscribe_sessions(self.owner, receive)
-        current, owner = self._current, self.owner
+        current, owner, closing = self._current, self.owner, self._closing
         self._cleanup: list[Callable[[], None]] = []
         cleanup = self._cleanup
         disposed = [False]
@@ -53,9 +55,12 @@ class PanelSessions(QObject):
             remove()
             sessions = tuple(current.values())
             current.clear()
+            for _session, job in tuple(closing.values()):
+                job.retry()
+            closing.clear()
             for session in sessions:
                 try:
-                    directory.disconnect_session(session.id, owner=owner)
+                    _submit_cleanup((directory._deferred_disconnect(session.id, owner=owner),))
                 # Contain observer/destruction failures so every owned cleanup is attempted.
                 except Exception as error:  # pylint: disable=broad-exception-caught  # reason: cleanup boundary
                     autocontrol_logger.warning("remote disposal failed: %s", type(error).__name__)
@@ -95,9 +100,16 @@ class PanelSessions(QObject):
         return self.directory.activate_session(self._current[role].id)
 
     def id(self, role: str) -> Optional[str]:
-        """Return only the panel's current identity for the requested role."""
+        """Return the current identity or a retained failed cleanup identity for retry."""
         session = self._current.get(role)
-        return None if session is None else session.id
+        if session is not None:
+            return session.id
+        for identifier, (retained, job) in tuple(self._closing.items()):
+            if not job.pending:
+                self._closing.pop(identifier, None)
+            elif retained.role == role and self.directory.get_session(identifier, owner=self.owner).state == 'failed':
+                return identifier
+        return None
 
     def resource(self, role: str) -> Any:
         """Get this panel's own resource; never consult script aliases."""
@@ -113,10 +125,15 @@ class PanelSessions(QObject):
         session = self._current.pop(role, None)
         if session is not None:
             try:
-                self.directory.disconnect_session(session.id, owner=self.owner)
+                job = _submit_cleanup((self.directory._deferred_disconnect(session.id, owner=self.owner),))
+                self._closing[session.id] = (session, job)
             except BaseException:
                 self._current[role] = session
                 raise
+        else:
+            for retained, job in tuple(self._closing.values()):
+                if retained.role == role:
+                    job.retry()
 
     def callback(
         self, role: str, callback: Callable[..., Any], *, transform: Optional[Callable[..., Optional[tuple]]] = None

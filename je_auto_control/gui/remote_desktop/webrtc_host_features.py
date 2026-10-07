@@ -32,6 +32,7 @@ from je_auto_control.gui.remote_desktop.webrtc_common import (
 )
 from je_auto_control.gui.remote_desktop.webrtc_dialogs import AuditLogDialog
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
+from je_auto_control.gui._panel_tasks import start_native
 from je_auto_control.utils.remote_desktop.adaptive_bitrate import AdaptiveBitrateController
 from je_auto_control.utils.remote_desktop.webrtc_stats import StatsPoller, StatsSnapshot
 
@@ -217,7 +218,7 @@ class WebRTCHostFeaturesController:  # pylint: disable=too-few-public-methods  #
         self._panel._adaptive_poller = StatsPoller(
             pc, self._panel._sessions.callback("host", self._panel._on_host_stats), interval_s=1.0
         )
-        self._panel._adaptive_poller.start()
+        start_native(self._panel._adaptive_poller.start, self._panel)
         autocontrol_logger.info("host stats poller active (adaptive=%s)", self._panel._adaptive_controller is not None)
 
     def _on_host_stats(self, snapshot: StatsSnapshot) -> None:

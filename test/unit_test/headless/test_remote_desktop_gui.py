@@ -84,7 +84,7 @@ def test_viewer_panel_renders_frame_from_host(qapp):
         panel._token.setText("t")  # noqa: SLF001
         panel._connect()  # noqa: SLF001
         assert _process_until(
-            qapp, panel._screen_window.display.has_image,  # noqa: SLF001
+            qapp, lambda: panel._screen_window is not None and panel._screen_window.display.has_image(),  # noqa: SLF001
         )
         # Display image must match the encoded frame size.
         display = panel._screen_window.display  # noqa: SLF001
@@ -145,7 +145,7 @@ def test_viewer_input_round_trips_to_dispatcher(qapp):
         panel._token.setText("t")  # noqa: SLF001
         panel._connect()  # noqa: SLF001
         assert _process_until(
-            qapp, panel._screen_window.display.has_image,  # noqa: SLF001
+            qapp, lambda: panel._screen_window is not None and panel._screen_window.display.has_image(),  # noqa: SLF001
         )
 
         window = panel._screen_window  # noqa: SLF001

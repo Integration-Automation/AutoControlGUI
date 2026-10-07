@@ -31,6 +31,7 @@ here are load-bearing and neither is arbitrary:
 import ctypes
 import sys
 import warnings
+from functools import partial
 from typing import Optional, Tuple, Union
 
 from je_auto_control.utils.exception.exception_tags import (
@@ -42,11 +43,14 @@ from je_auto_control.utils.exception.exceptions import (
     AutoControlCantFindKeyException, AutoControlMouseException
 )
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
+from je_auto_control.utils.executor.cancellation import _check_cancelled
+from je_auto_control.utils.executor.input_owner import _hold_input, _release_input
 from je_auto_control.utils.monitor_layout.logical_frame import logical_virtual_rect
 from je_auto_control.utils.platform_id import is_windows, is_x11_unix
 from je_auto_control.utils.test_record.record_test_class import record_action_to_list
 from je_auto_control.wrapper.auto_control_screen import screen_size
 from je_auto_control.wrapper.backend_contract import MouseKeycode
+from je_auto_control.wrapper._input_state import _button_state
 from je_auto_control.wrapper.platform_wrapper import mouse, mouse_keys_table, special_mouse_keys_table
 
 #: Plain button names -> mouse-table keys. Recorders and several commands say
@@ -164,6 +168,7 @@ def set_mouse_position(x: int, y: int) -> tuple[int, int]:
     :param y: Y 座標
     :return: (x, y)
     """
+    _check_cancelled()
     autocontrol_logger.info(f"set_mouse_position, x={x}, y={y}")
     param = {"x": x, "y": y}
     try:
@@ -186,6 +191,16 @@ def set_mouse_position(x: int, y: int) -> tuple[int, int]:
         raise
 
 
+def _native_mouse_event(pressed: bool, keycode: MouseKeycode, x: int, y: int) -> None:
+    event = mouse.press_mouse if pressed else mouse.release_mouse
+    if sys.platform == 'darwin':
+        event(x, y, keycode)
+    elif is_windows() or is_x11_unix():
+        event(keycode)
+    else:
+        raise AutoControlMouseException(f'mouse input: no backend for {sys.platform!r}')
+
+
 def press_mouse(mouse_keycode: Union[int, str], x: Optional[int] = None,
                 y: Optional[int] = None) -> tuple[MouseKeycode, int, int] | None:
     """
@@ -194,6 +209,7 @@ def press_mouse(mouse_keycode: Union[int, str], x: Optional[int] = None,
 
     :return: (keycode, x, y)
     """
+    _check_cancelled()
     autocontrol_logger.info(f"press_mouse, keycode={mouse_keycode}, x={x}, y={y}")
     param = {"keycode": mouse_keycode, "x": x, "y": y}
     try:
@@ -201,13 +217,9 @@ def press_mouse(mouse_keycode: Union[int, str], x: Optional[int] = None,
         # 分支寫法與理由見模組 docstring：非 macOS 問輸入堆疊（BSD 曾經
         # 落在所有分支之外），macOS 用字面比較（型別檢查器剪得掉）。
         # Branch spelling explained in the module docstring.
-        if sys.platform == "darwin":
-            mouse.press_mouse(x, y, keycode)
-        elif is_windows() or is_x11_unix():
-            mouse.press_mouse(keycode)
-        else:
-            raise AutoControlMouseException(
-                f"press_mouse: no backend for {sys.platform!r}")
+        _hold_input(('mouse', keycode), partial(_button_state, keycode),
+                    partial(_native_mouse_event, True, keycode, x, y),
+                    partial(_native_mouse_event, False, keycode, x, y))
         record_action_to_list("press_mouse", param)
         return keycode, x, y
     except AutoControlMouseException as error:
@@ -234,13 +246,7 @@ def release_mouse(mouse_keycode: Union[int, str], x: Optional[int] = None,
         # 分支寫法與理由見模組 docstring：非 macOS 問輸入堆疊（BSD 曾經
         # 落在所有分支之外），macOS 用字面比較（型別檢查器剪得掉）。
         # Branch spelling explained in the module docstring.
-        if sys.platform == "darwin":
-            mouse.release_mouse(x, y, keycode)
-        elif is_windows() or is_x11_unix():
-            mouse.release_mouse(keycode)
-        else:
-            raise AutoControlMouseException(
-                f"release_mouse: no backend for {sys.platform!r}")
+        _release_input(('mouse', keycode), partial(_native_mouse_event, False, keycode, x, y))
         record_action_to_list("release_mouse", param)
         return keycode, x, y
     except AutoControlMouseException as error:
@@ -263,6 +269,7 @@ def click_mouse(mouse_keycode: Union[int, str], x: Optional[int] = None,
     :param y: Y 座標 Y position
     :return: (keycode, x, y)
     """
+    _check_cancelled()
     autocontrol_logger.info(f"click_mouse, keycode={mouse_keycode}, x={x}, y={y}")
     param = {"keycode": mouse_keycode, "x": x, "y": y}
     try:
@@ -384,6 +391,7 @@ def mouse_scroll(scroll_value: int, x: Optional[int] = None,
         On X11 and Wayland the direction comes back as the backend axis code
         the name resolved to; elsewhere it is the name that was passed in.
     """
+    _check_cancelled()
     autocontrol_logger.info(f"mouse_scroll, value={scroll_value}, x={x}, y={y}, direction={scroll_direction}")
     param = {"scroll_value": scroll_value, "x": x, "y": y, "direction": scroll_direction}
     try:

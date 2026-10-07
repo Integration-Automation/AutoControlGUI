@@ -4,16 +4,17 @@ Thin wrapper over :func:`je_auto_control.run_on_devices`.
 """
 import json
 from functools import partial
-from typing import Optional
+from typing import Any, Callable, Optional
 
 from PySide6.QtCore import Qt
+from PySide6.QtGui import QCloseEvent
 from PySide6.QtWidgets import (
     QAbstractItemView, QHBoxLayout, QLabel, QPlainTextEdit,
     QSpinBox, QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget,
 )
 
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
-from je_auto_control.gui._worker_thread import CallWorker, WorkerHandle, start_worker
+from je_auto_control.gui.task_controller import CancellationToken, TaskController, TaskError, TaskHandle, TaskResult
 from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.gui.language_wrapper.multi_language_wrapper import (
     language_wrapper,
@@ -22,6 +23,12 @@ import je_auto_control as ac
 
 _COLS = ("dm_col_device", "dm_col_platform", "dm_col_result", "dm_col_time",
          "dm_col_error")
+
+
+def _run_matrix(actions: list[Any], devices: list[dict[str, Any]], parallel: int,
+                token: CancellationToken) -> object:
+    token.checkpoint()
+    return ac.run_on_devices(actions, devices, max_parallel=parallel)
 
 
 def _t(key: str) -> str:
@@ -52,7 +59,8 @@ class DeviceMatrixTab(TranslatableMixin, QWidget):
         self._summary = QLabel()
         self._metadata = QPlainTextEdit()
         self._metadata.setReadOnly(True)
-        self._worker: Optional[WorkerHandle] = None
+        self._worker: Optional[TaskHandle] = None
+        self._tasks = TaskController(timeout_s=300)
         self._apply_headers()
         self._build_layout()
 
@@ -85,6 +93,7 @@ class DeviceMatrixTab(TranslatableMixin, QWidget):
         return [
             ("dm_run", self._on_run),
             ("dm_probe", self._on_probe),
+            ('workspace_cancel_task', self._cancel),
         ]
 
     def _on_run(self) -> None:
@@ -98,12 +107,32 @@ class DeviceMatrixTab(TranslatableMixin, QWidget):
             self._failed(str(error))
             return
         self._summary.setText(_t('dm_running'))
-        worker = CallWorker(partial(ac.run_on_devices, actions, devices, max_parallel=parallel))
-        self._worker = start_worker(self, worker, on_done=self._completed,
-                                    on_thread_done=self._thread_done, on_fail=self._failed)
+        self._submit(partial(_run_matrix, actions, devices, parallel), self._completed)
 
-    def _completed(self, report: ac.MatrixReport) -> None:
-        self._render(report.to_dict())
+    def _submit(self, work: Callable[[CancellationToken], object], callback: Callable[[object], None]) -> None:
+        self._worker = self._tasks.submit(work, owner=self)
+        self._result_callback = callback
+        self._worker.completed.connect(self._task_done)
+        self._worker.failed.connect(self._task_failed)
+        self._worker.finished.connect(self._thread_done)
+
+    def _task_done(self, result: TaskResult) -> None:
+        self._result_callback(result.value)
+
+    def _task_failed(self, error: TaskError) -> None:
+        self._failed(error.message)
+
+    def _cancel(self) -> None:
+        self._tasks.cancel_owner(self)
+
+    def closeEvent(self, event: QCloseEvent) -> None:  # pylint: disable=invalid-name  # reason: Qt virtual callback
+        """Cancel before closure; owned device sessions release in the worker's finally."""
+        self._cancel()
+        super().closeEvent(event)
+
+    def _completed(self, report: object) -> None:
+        if isinstance(report, ac.MatrixReport):
+            self._render(report.to_dict())
 
     def _thread_done(self) -> None:
         self._worker = None
@@ -114,10 +143,12 @@ class DeviceMatrixTab(TranslatableMixin, QWidget):
     def _on_probe(self) -> None:
         try:
             devices = json.loads(self._devices.toPlainText() or '[]')
-            metadata = ac.probe_device_contexts(devices)
+            self._probe_done(ac.probe_device_contexts(devices))
         except (AutoControlException, ValueError) as error:
             self._failed(str(error))
             return
+
+    def _probe_done(self, metadata: object) -> None:
         self._metadata.setPlainText(json.dumps(metadata, ensure_ascii=False, indent=2))
 
     def _render(self, report: dict) -> None:

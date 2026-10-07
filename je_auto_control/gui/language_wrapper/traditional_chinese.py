@@ -1341,4 +1341,10 @@ traditional_chinese_word_dict = {
     'workspace_state_hint_needs_dependency': "安裝文件指定的選用相依套件後重新開啟此功能。",
     'workspace_state_unsupported': "不支援",
     'workspace_state_hint_unsupported': "所選平台或後端無法執行此操作。",
+    'workspace_cancel_task': '取消目前工作',
+    'workspace_cancelling': '已要求取消，等待目前工作返回。',
+    'workspace_deadline_wait': '已超過期限，等待目前工作返回。',
+    'workspace_timed_out': '工作已超過期限。',
+    'workspace_cancelled': '工作已取消，目前工作已返回。',
+    'workspace_retry_cleanup': '重試所擁有資源的清理',
 }

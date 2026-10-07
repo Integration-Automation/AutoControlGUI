@@ -92,7 +92,7 @@ def test_start_hosting_registers_host_and_refreshes_badge(qapp):
         screen._host_token.setText("ttt")  # noqa: SLF001
         screen._start_hosting()  # noqa: SLF001
         assert screen._sessions.resource('host') is not None
-        assert screen._sessions.resource('host').is_running
+        assert _process_until(qapp, lambda: screen._sessions.resource('host').is_running)
         # Badge text updated from the idle placeholder to running text.
         assert "{port}" not in screen._host_badge.text()  # noqa: SLF001
         screen._stop_hosting()  # noqa: SLF001
@@ -129,6 +129,7 @@ def test_quick_connect_round_trips_frame_to_popup(qapp):
 
             assert screen._sessions.resource('viewer') is not None
             # Wait until the pop-out window receives at least one frame.
+            assert _process_until(qapp, lambda: screen._screen_window is not None)
             window = screen._screen_window  # noqa: SLF001
             assert window is not None
             assert _process_until(qapp, window.display.has_image)
@@ -214,6 +215,7 @@ def test_approval_dialog_admits_when_operator_clicks_allow(qapp, monkeypatch):
         screen._start_hosting()  # noqa: SLF001
         host = screen._sessions.resource('host')
         assert host is not None
+        assert _process_until(qapp, lambda: host.is_running)
         try:
             from je_auto_control.utils.remote_desktop.viewer import (
                 RemoteDesktopViewer,
@@ -276,6 +278,7 @@ def test_approval_dialog_rejects_when_operator_clicks_deny(qapp, monkeypatch):
         screen._start_hosting()  # noqa: SLF001
         host = screen._sessions.resource('host')
         assert host is not None
+        assert _process_until(qapp, lambda: host.is_running)
         try:
             viewer = RemoteDesktopViewer(
                 host="127.0.0.1", port=host.port, token="ttt",
@@ -334,8 +337,9 @@ def test_recent_connections_populated_after_connect(qapp, tmp_path,
             screen._connect_token.setText("t")  # noqa: SLF001
             screen._connect()  # noqa: SLF001
 
-            entries = book.list_entries()
             expected_url = f"tcp://127.0.0.1:{host.port}"
+            assert _process_until(qapp, lambda: any(e["host_id"] == expected_url for e in book.list_entries()))
+            entries = book.list_entries()
             assert any(e["host_id"] == expected_url for e in entries)
             assert screen._recent.count() >= 1  # noqa: SLF001
             screen._disconnect()  # noqa: SLF001

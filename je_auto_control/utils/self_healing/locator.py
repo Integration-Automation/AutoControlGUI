@@ -16,6 +16,8 @@ tool are thin shells over it.
 """
 from __future__ import annotations
 
+from je_auto_control.utils.executor.cancellation import _check_cancelled
+
 from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
 from time import monotonic
@@ -174,6 +176,7 @@ def self_heal_click(template_path: Optional[str] = None,
             outcome, frame = _locate_mobile(template_path, description, detect_threshold,
                                              screen_region, model, log, raise_on_miss)
             if outcome.found and outcome.coordinates is not None:
+                _check_cancelled()
                 session.perform(Gesture('tap', (outcome.coordinates,), frame=frame))
             return outcome
     outcome = self_heal_locate(
@@ -182,6 +185,7 @@ def self_heal_click(template_path: Optional[str] = None,
         model=model, log=log, raise_on_miss=raise_on_miss,
     )
     if outcome.found and outcome.coordinates is not None:
+        _check_cancelled()
         _click_at(outcome.coordinates, mouse_keycode)
     return outcome
 

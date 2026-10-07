@@ -195,4 +195,30 @@ Search/language/theme changes do not recreate panels. Responsive details show on
 explicitly reported execution state, with ready distinct from native authorization.
 Legacy widget constructor remains compatible and accepts an optional standalone
 registry for controlled embedding; binding is GUI-thread-only and cannot transfer
-an existing owner. Shared task cancellation follows in F3.
+an existing owner. Shared task cancellation uses the F3 lifecycle below.
+
+### F3 owned work
+
+TaskController owns run-specific typed result/error/progress delivery. Work receives
+copied/headless inputs, a cancellation Event and deadline under captured request
+policy. Cancellation/owner destruction revoke delivery; nested AC_sleep wakes and
+new actions stop at checkpoints. Backend requests remain bounded and cooperative.
+Legacy CallWorker binds the same request/cancellation/input context (300-second
+cooperative deadline); custom workers retain their explicit stop Event. Qt-facing
+signals/relays do not prove backend cleanup or physical state restoration.
+
+GUI raw input preserves known previously pressed keys/buttons. InputOwner retains
+successful raw holds across runs until explicit release/cancel/panel destruction;
+failed releases keep ownership and original policy for retry. Cleanup snapshots
+cannot release later replacement holds. Unknown initial state rejects acquisition.
+The ownership registry serializes cooperating GUI allocation, not external clients.
+Headless input outside these scopes retains existing semantics.
+
+GUI Record uses an independent native recorder or X11 subscription. Global recorder
+state is borrowed and never stopped by panel cleanup. Unsupported owned recording
+fails before allocation. Remote session revocation is immediate; allocation and
+native close share a gate off Qt, with failed resources retained. Recorder container
+close failures also remain retryable. Tools → Retry owned cleanup retries only
+retained owned callbacks/recorders. Global servers/engines require explicit Stop;
+completed atomic file/vault/service changes are not rolled back by Cancel.
+See [the complete catalog I/O audit](GUI_TASK_LIFECYCLE.md).

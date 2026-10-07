@@ -1,5 +1,6 @@
 """GUI smoke tests for the QA tabs (assertions / data source / flakiness)."""
 import os
+import time
 
 import pytest
 
@@ -30,6 +31,10 @@ def test_data_source_tab_loads_inline(app):
     tab._kind.setCurrentText("inline")
     tab._inline.setPlainText('[{"u": "x"}, {"u": "y"}]')
     tab._on_load()
+    deadline = time.monotonic() + 5
+    while tab._tasks.handle is not None and time.monotonic() < deadline:
+        app.processEvents()
+        time.sleep(.005)
     assert tab._table.rowCount() == 2
     assert tab._table.columnCount() == 1
 
@@ -39,6 +44,10 @@ def test_data_source_tab_reports_error(app):
     tab._kind.setCurrentText("csv")
     tab._path.setText("/no/such/file_zzz.csv")
     tab._on_load()
+    deadline = time.monotonic() + 5
+    while tab._tasks.handle is not None and time.monotonic() < deadline:
+        app.processEvents()
+        time.sleep(.005)
     assert "fail" in tab._status.text().lower() or tab._status.text()
 
 
@@ -50,4 +59,8 @@ def test_assertions_tab_window_check(app, monkeypatch):
     tab._target.setText("Calculator")
     tab._expect.setChecked(True)
     tab._on_run()
+    deadline = time.monotonic() + 5
+    while tab._tasks.handle is not None and time.monotonic() < deadline:
+        app.processEvents()
+        time.sleep(.005)
     assert "PASS" in tab._result.text() or "pass" in tab._result.text().lower()

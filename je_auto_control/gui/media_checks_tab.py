@@ -11,6 +11,9 @@ from PySide6.QtWidgets import (
 )
 
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
+from je_auto_control.gui._panel_tasks import PanelTasks, call_native
+from je_auto_control.gui._task_state import TaskResult
+from functools import partial
 from je_auto_control.gui.language_wrapper.multi_language_wrapper import (
     language_wrapper,
 )
@@ -44,6 +47,7 @@ class MediaChecksTab(TranslatableMixin, QWidget):
         self._video_expect = QCheckBox(_t("media_video_expect"))
         self._video_expect.setChecked(True)
         self._result = QLabel()
+        self._tasks = PanelTasks(self, self._result)
         self._result.setWordWrap(True)
         self._build_layout()
 
@@ -82,6 +86,7 @@ class MediaChecksTab(TranslatableMixin, QWidget):
             ("media_audio_run", self._on_audio),
             ("media_video_browse", self._on_browse),
             ("media_video_run", self._on_video),
+            ('workspace_cancel_task', self._tasks.cancel),
         ]
 
     def _on_browse(self) -> None:
@@ -91,6 +96,11 @@ class MediaChecksTab(TranslatableMixin, QWidget):
 
     def _on_audio(self) -> None:
         try:
+            if hasattr(self, '_tasks'):
+                self._tasks.submit(partial(call_native, partial(ac.assert_audio_activity,
+                    duration_s=self._audio_duration.value(), threshold=self._audio_threshold.value(),
+                    expect_sound=self._audio_expect.isChecked(), raise_on_fail=False)), self._media_done)
+                return
             result = ac.assert_audio_activity(
                 duration_s=self._audio_duration.value(),
                 threshold=self._audio_threshold.value(),
@@ -104,6 +114,11 @@ class MediaChecksTab(TranslatableMixin, QWidget):
 
     def _on_video(self) -> None:
         try:
+            if hasattr(self, '_tasks'):
+                self._tasks.submit(partial(call_native, partial(ac.assert_video_changes,
+                    self._video_path.text().strip(), threshold=self._video_threshold.value(),
+                    expect_motion=self._video_expect.isChecked(), raise_on_fail=False)), self._media_done)
+                return
             result = ac.assert_video_changes(
                 self._video_path.text().strip(),
                 threshold=self._video_threshold.value(),
@@ -114,3 +129,8 @@ class MediaChecksTab(TranslatableMixin, QWidget):
             self._result.setText(str(error))
             return
         self._result.setText(result.message)
+
+    def _media_done(self, result: TaskResult) -> None:
+        from je_auto_control.utils.assertion.assertions import AssertionResult
+        if isinstance(result.value, AssertionResult):
+            self._result.setText(result.value.message)

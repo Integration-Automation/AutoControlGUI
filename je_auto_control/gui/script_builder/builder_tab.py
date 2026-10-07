@@ -1,5 +1,6 @@
 """Script Builder step tree, form and reviewed journal candidate import/export."""
 import json
+from functools import partial
 from typing import List, Optional
 
 from PySide6.QtCore import Qt
@@ -10,6 +11,7 @@ from PySide6.QtWidgets import (
 )
 
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
+from je_auto_control.gui._panel_tasks import PanelTasks, execute_actions
 from je_auto_control.gui.journal_candidate_panel import JournalCandidatePanel
 from je_auto_control.gui.language_wrapper.multi_language_wrapper import (
     language_wrapper,
@@ -42,6 +44,7 @@ class ScriptBuilderTab(TranslatableMixin, QWidget):
         self._result = QTextEdit()
         self._result.setReadOnly(True)
         self._result.setMaximumHeight(140)
+        self._tasks = PanelTasks(self, self._result)
         self._add_btn: Optional[QToolButton] = None
         # The other top-level keys of a loaded {"auto_control": [...]} file,
         # written back on Save; None for a bare list.
@@ -72,7 +75,8 @@ class ScriptBuilderTab(TranslatableMixin, QWidget):
 
     def menu_actions(self) -> list:
         """Expose journal review operations through the window Actions menu."""
-        return self._journal_candidate.menu_actions()
+        return [('sb_run', self._on_run), ('workspace_cancel_task', self._tasks.cancel),
+                *self._journal_candidate.menu_actions()]
 
     def _import_candidate(self, actions: List[List[JSONValue]]) -> None:
         self._tree.load_steps(actions_to_steps(actions))
@@ -168,6 +172,9 @@ class ScriptBuilderTab(TranslatableMixin, QWidget):
             actions = steps_to_actions(self._tree.root_steps())
             if not actions:
                 QMessageBox.information(self, "Info", "No steps to run")
+                return
+            if hasattr(self, '_tasks'):
+                self._tasks.submit(partial(execute_actions, actions))
                 return
             result = execute_action(actions)
             self._result.setPlainText(

@@ -34,6 +34,7 @@ class CoreTabMethods:  # pylint: disable=too-few-public-methods  # reason: priva
     _pick_ss_region = _LazyMethod('je_auto_control.gui._screenshot_tab', 'ScreenshotTabMixin', '_pick_ss_region')
     _take_screenshot = _LazyMethod('je_auto_control.gui._screenshot_tab', 'ScreenshotTabMixin', '_take_screenshot')
     _get_pixel_color = _LazyMethod('je_auto_control.gui._screenshot_tab', 'ScreenshotTabMixin', '_get_pixel_color')
+    _pixel_done = _LazyMethod('je_auto_control.gui._screenshot_tab', 'ScreenshotTabMixin', '_pixel_done')
     _screenshot_retranslate = _LazyMethod(
         'je_auto_control.gui._screenshot_tab', 'ScreenshotTabMixin', '_screenshot_retranslate')
     _build_image_detect_tab = _LazyMethod(
@@ -54,12 +55,19 @@ class CoreTabMethods:  # pylint: disable=too-few-public-methods  # reason: priva
     _playback_record = _LazyMethod('je_auto_control.gui._record_tab', 'RecordTabMixin', '_playback_record')
     _save_record = _LazyMethod('je_auto_control.gui._record_tab', 'RecordTabMixin', '_save_record')
     _load_record = _LazyMethod('je_auto_control.gui._record_tab', 'RecordTabMixin', '_load_record')
+    _submit_record = _LazyMethod('je_auto_control.gui._record_tab', 'RecordTabMixin', '_submit_record')
+    _record_started = _LazyMethod('je_auto_control.gui._record_tab', 'RecordTabMixin', '_record_started')
+    _record_stopped = _LazyMethod('je_auto_control.gui._record_tab', 'RecordTabMixin', '_record_stopped')
+    _record_played = _LazyMethod('je_auto_control.gui._record_tab', 'RecordTabMixin', '_record_played')
+    _record_failed = _LazyMethod('je_auto_control.gui._record_tab', 'RecordTabMixin', '_record_failed')
+    _record_released = _LazyMethod('je_auto_control.gui._record_tab', 'RecordTabMixin', '_record_released')
     _build_script_tab = _LazyMethod('je_auto_control.gui._script_tab', 'ScriptTabMixin', '_build_script_tab')
     _browse_script = _LazyMethod('je_auto_control.gui._script_tab', 'ScriptTabMixin', '_browse_script')
     _execute_script = _LazyMethod('je_auto_control.gui._script_tab', 'ScriptTabMixin', '_execute_script')
     _browse_script_dir = _LazyMethod('je_auto_control.gui._script_tab', 'ScriptTabMixin', '_browse_script_dir')
     _execute_dir = _LazyMethod('je_auto_control.gui._script_tab', 'ScriptTabMixin', '_execute_dir')
     _execute_manual_script = _LazyMethod('je_auto_control.gui._script_tab', 'ScriptTabMixin', '_execute_manual_script')
+    _cancel_script = _LazyMethod('je_auto_control.gui._script_tab', 'ScriptTabMixin', '_cancel_script')
     _build_report_tab = _LazyMethod('je_auto_control.gui._report_tab', 'ReportTabMixin', '_build_report_tab')
     _set_test_record = _LazyMethod('je_auto_control.gui._report_tab', 'ReportTabMixin', '_set_test_record')
     _enable_test_record = _LazyMethod('je_auto_control.gui._report_tab', 'ReportTabMixin', '_enable_test_record')
@@ -67,3 +75,13 @@ class CoreTabMethods:  # pylint: disable=too-few-public-methods  # reason: priva
     _gen_html = _LazyMethod('je_auto_control.gui._report_tab', 'ReportTabMixin', '_gen_html')
     _gen_json = _LazyMethod('je_auto_control.gui._report_tab', 'ReportTabMixin', '_gen_json')
     _gen_xml = _LazyMethod('je_auto_control.gui._report_tab', 'ReportTabMixin', '_gen_xml')
+    _cancel_detection = _LazyMethod(
+        'je_auto_control.gui._image_detect_tab', 'ImageDetectTabMixin', '_cancel_detection')
+    _cancel_capture = _LazyMethod(
+        'je_auto_control.gui._screenshot_tab', 'ScreenshotTabMixin', '_cancel_capture')
+    _cancel_report = _LazyMethod(
+        'je_auto_control.gui._report_tab', 'ReportTabMixin', '_cancel_report')
+    _auto_click_failed = _LazyMethod(
+        'je_auto_control.gui._auto_click_tab', 'AutoClickTabMixin', '_auto_click_failed')
+    _submit_click = _LazyMethod(
+        'je_auto_control.gui._auto_click_tab', 'AutoClickTabMixin', '_submit_click')

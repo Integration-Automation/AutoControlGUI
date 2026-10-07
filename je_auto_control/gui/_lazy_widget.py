@@ -157,6 +157,12 @@ class AutoControlGUIWidget(  # pylint: disable=too-many-instance-attributes  # r
         widget = entry.widget
         if key == 'auto_click':
             self.timer.stop()
+            if self._builtin_catalog:
+                self._auto_tasks.cancel()
+        if key == 'record' and self._builtin_catalog:
+            self._record_tasks.cancel_owner(widget)
+            self._record_owner.request_close()
+            self._record_job = None
         self.hide_tab(key)
         self._forget_translations(widget)
         if self.registry.instance(key) is widget:
@@ -219,6 +225,8 @@ class AutoControlGUIWidget(  # pylint: disable=too-many-instance-attributes  # r
         """Keep Ctrl+4 cancellation without opening an unused auto-click panel."""
         if event.modifiers() == Qt.KeyboardModifier.ControlModifier and event.key() == Qt.Key.Key_4:
             self.timer.stop()
+            if self.registry.instance('auto_click') is not None and self._builtin_catalog:
+                self._auto_tasks.cancel()
         else:
             super().keyPressEvent(event)
 

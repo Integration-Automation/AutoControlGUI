@@ -74,6 +74,11 @@ class DaemonThread(QObject):
         """Ask :meth:`run` to stop at its next :meth:`isInterruptionRequested` check."""
         self._interruption.set()
 
+    @property
+    def interruption_event(self) -> threading.Event:
+        """Pass cooperative cancellation into bounded signaling waits without a widget callback."""
+        return self._interruption
+
     def isInterruptionRequested(self) -> bool:  # noqa: N802  # reason: QThread API
         """Whether :meth:`requestInterruption` was called since :meth:`start`."""
         return self._interruption.is_set()

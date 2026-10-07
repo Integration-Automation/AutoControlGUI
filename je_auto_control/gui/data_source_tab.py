@@ -13,6 +13,9 @@ from PySide6.QtWidgets import (
 )
 
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
+from je_auto_control.gui._panel_tasks import PanelTasks, call_native
+from je_auto_control.gui._task_state import TaskResult
+from functools import partial
 from je_auto_control.gui.language_wrapper.multi_language_wrapper import (
     language_wrapper,
 )
@@ -42,6 +45,7 @@ class DataSourceTab(TranslatableMixin, QWidget):
         self._table = QTableWidget(0, 0)
         self._table.setEditTriggers(QAbstractItemView.NoEditTriggers)
         self._status = QLabel()
+        self._tasks = PanelTasks(self, self._status)
         self._build_layout()
         self._sync_visibility(self._kind.currentText())
 
@@ -85,6 +89,7 @@ class DataSourceTab(TranslatableMixin, QWidget):
         """Expose tab commands to the window-level Actions menu."""
         return [
             ("ds_load", self._on_load),
+            ('workspace_cancel_task', self._tasks.cancel),
         ]
 
     def _sync_visibility(self, kind: str) -> None:
@@ -113,6 +118,10 @@ class DataSourceTab(TranslatableMixin, QWidget):
     def _on_load(self) -> None:
         try:
             limit = self._limit.value() or None
+            if hasattr(self, '_tasks'):
+                source = self._build_source()
+                self._tasks.submit(partial(call_native, partial(load_rows, source, limit=limit)), self._rows_done)
+                return
             rows = load_rows(self._build_source(), limit=limit)
         except (AutoControlException, ValueError, OSError, RuntimeError) as error:
             self._status.setText(_t("ds_error").replace("{error}", str(error)))
@@ -134,3 +143,8 @@ class DataSourceTab(TranslatableMixin, QWidget):
                 self._table.setItem(
                     r, c, QTableWidgetItem(str(row.get(key, ""))),
                 )
+
+    def _rows_done(self, result: TaskResult) -> None:
+        if isinstance(result.value, list):
+            self._render_rows(result.value)
+            self._status.setText(_t('ds_row_count').replace('{n}', str(len(result.value))))

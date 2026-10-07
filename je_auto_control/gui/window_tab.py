@@ -1,5 +1,6 @@
 """Window Manager tab: list, focus, close windows."""
 from typing import Optional
+from functools import partial
 
 from PySide6.QtCore import QTimer
 from PySide6.QtWidgets import (
@@ -8,6 +9,8 @@ from PySide6.QtWidgets import (
 )
 
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
+from je_auto_control.gui._panel_tasks import PanelTasks, call_native
+from je_auto_control.gui._task_state import TaskResult
 from je_auto_control.gui.language_wrapper.multi_language_wrapper import (
     language_wrapper,
 )
@@ -34,6 +37,7 @@ class WindowManagerTab(TranslatableMixin, QWidget):
         self._status_count: Optional[int] = None
         self._status_error: Optional[str] = None
         self._status = QLabel("")
+        self._tasks = PanelTasks(self, self._status)
         self._build_layout()
         self.refresh()
 
@@ -73,9 +77,13 @@ class WindowManagerTab(TranslatableMixin, QWidget):
             ("win_refresh", self.refresh),
             ("win_focus_selected", self._on_focus),
             ("win_close_selected", self._on_close),
+            ("workspace_cancel_task", self._tasks.cancel),
         ]
 
     def refresh(self) -> None:
+        if hasattr(self, '_tasks'):
+            self._tasks.submit(partial(call_native, list_windows), self._windows_done)
+            return
         try:
             windows = list_windows()
         except NotImplementedError as error:
@@ -83,6 +91,14 @@ class WindowManagerTab(TranslatableMixin, QWidget):
             self._status_count = None
             self._apply_status()
             self._table.setRowCount(0)
+            return
+        self._render_windows(windows)
+
+    def _windows_done(self, result: TaskResult) -> None:
+        self._render_windows(result.value)
+
+    def _render_windows(self, windows: object) -> None:
+        if not isinstance(windows, list):
             return
         self._status_error = None
         self._table.setRowCount(len(windows))
@@ -120,6 +136,9 @@ class WindowManagerTab(TranslatableMixin, QWidget):
         window_id = self._selected_window()
         if window_id is None:
             return
+        if hasattr(self, '_tasks'):
+            self._tasks.submit(partial(call_native, partial(_focus_window, window_id)))
+            return
         try:
             if not get_backend().bring_to_front(window_id):
                 QMessageBox.warning(self, "Error", "The window could not be brought to the front.")
@@ -130,8 +149,22 @@ class WindowManagerTab(TranslatableMixin, QWidget):
         window_id = self._selected_window()
         if window_id is None:
             return
+        if hasattr(self, '_tasks'):
+            self._tasks.submit(partial(call_native, partial(_close_window, window_id)), self._windows_done)
+            return
         try:
             get_backend().close(window_id)
             self.refresh()
         except (AutoControlException, RuntimeError, OSError) as error:
             QMessageBox.warning(self, "Error", str(error))
+
+
+def _focus_window(window_id: int) -> str:
+    if not get_backend().bring_to_front(window_id):
+        raise AutoControlException('The window could not be brought to the front.')
+    return ''
+
+
+def _close_window(window_id: int) -> object:
+    get_backend().close(window_id)
+    return list_windows()

@@ -1,5 +1,7 @@
 """Secrets tab: unlock the vault and manage ${secrets.NAME} entries."""
-from typing import Optional
+from typing import Optional, Callable
+from dataclasses import dataclass
+from functools import partial
 
 from PySide6.QtWidgets import (
     QAbstractItemView, QGroupBox, QHBoxLayout, QInputDialog, QLabel,
@@ -8,6 +10,8 @@ from PySide6.QtWidgets import (
 )
 
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
+from je_auto_control.gui._panel_tasks import PanelTasks
+from je_auto_control.gui._task_state import CancellationToken, TaskResult
 from je_auto_control.gui.language_wrapper.multi_language_wrapper import (
     language_wrapper,
 )
@@ -20,6 +24,22 @@ def _t(key: str) -> str:
     return language_wrapper.translate(key, key)
 
 
+@dataclass(frozen=True)
+class _VaultState:
+    initialized: bool
+    unlocked: bool
+    names: tuple[str, ...]
+    succeeded: bool
+
+
+def _vault_call(fn: Callable[[], object], token: CancellationToken) -> object:
+    token.checkpoint()
+    result = fn()
+    manager = default_secret_manager
+    names = tuple(manager.list_names()) if manager.is_unlocked else ()
+    return _VaultState(manager.is_initialized, manager.is_unlocked, names, result is not False)
+
+
 class SecretsTab(TranslatableMixin, QWidget):
     """Manage the encrypted secret vault used by ``${secrets.NAME}``."""
 
@@ -27,6 +47,7 @@ class SecretsTab(TranslatableMixin, QWidget):
         super().__init__(parent)
         self._tr_init()
         self._status_label = QLabel()
+        self._tasks = PanelTasks(self, self._status_label)
         self._passphrase = QLineEdit()
         self._passphrase.setEchoMode(QLineEdit.Password)
         self._list = QListWidget()
@@ -66,9 +87,14 @@ class SecretsTab(TranslatableMixin, QWidget):
             ("secret_remove", self._on_remove),
             ("secret_init", self._on_init),
             ("secret_change_passphrase", self._on_change_passphrase),
+            ("workspace_cancel_task", self._tasks.cancel),
         ]
 
     def _refresh_status(self) -> None:
+        if hasattr(self, '_tasks'):
+            if self._tasks.handle is None:
+                self._tasks.submit(partial(_vault_call, lambda: None), self._vault_done)
+            return
         manager = default_secret_manager
         if not manager.is_initialized:
             self._status_label.setText(_t("secret_status_uninitialized"))
@@ -101,6 +127,10 @@ class SecretsTab(TranslatableMixin, QWidget):
                                 _t("secret_passphrase_required"))
             return
         try:
+            if hasattr(self, '_tasks'):
+                self._tasks.submit(partial(_vault_call, partial(default_secret_manager.initialize, passphrase)),
+                                   self._vault_done)
+                return
             default_secret_manager.initialize(passphrase)
         except SecretStoreError as error:
             QMessageBox.warning(self, _t("secret_init"), str(error))
@@ -114,6 +144,10 @@ class SecretsTab(TranslatableMixin, QWidget):
         if not passphrase:
             return
         try:
+            if hasattr(self, '_tasks'):
+                self._tasks.submit(partial(_vault_call, partial(default_secret_manager.unlock, passphrase)),
+                                   self._vault_done)
+                return
             ok = default_secret_manager.unlock(passphrase)
         except SecretStoreError as error:
             QMessageBox.warning(self, _t("secret_unlock"), str(error))
@@ -124,11 +158,16 @@ class SecretsTab(TranslatableMixin, QWidget):
         self._refresh_status()
 
     def _on_lock(self) -> None:
+        if hasattr(self, '_tasks'):
+            self._tasks.submit(partial(_vault_call, default_secret_manager.lock), self._vault_done)
+            return
         default_secret_manager.lock()
         self._refresh_status()
 
     def _on_add(self) -> None:
-        if not default_secret_manager.is_unlocked:
+        unlocked = (getattr(self, '_vault_unlocked', False) if hasattr(self, '_tasks')
+                    else default_secret_manager.is_unlocked)
+        if not unlocked:
             QMessageBox.information(self, _t("secret_add"),
                                     _t("secret_unlock_first"))
             return
@@ -144,6 +183,10 @@ class SecretsTab(TranslatableMixin, QWidget):
         if not ok:
             return
         try:
+            if hasattr(self, '_tasks'):
+                self._tasks.submit(partial(_vault_call, partial(default_secret_manager.set, name.strip(), value)),
+                                   self._vault_done)
+                return
             default_secret_manager.set(name.strip(), value)
         except (SecretStoreError, SecretStoreLocked, ValueError) as error:
             QMessageBox.warning(self, _t("secret_add"), str(error))
@@ -155,6 +198,10 @@ class SecretsTab(TranslatableMixin, QWidget):
         if item is None:
             return
         try:
+            if hasattr(self, '_tasks'):
+                self._tasks.submit(partial(_vault_call, partial(default_secret_manager.remove, item.text())),
+                                   self._vault_done)
+                return
             default_secret_manager.remove(item.text())
         except (SecretStoreError, SecretStoreLocked) as error:
             QMessageBox.warning(self, _t("secret_remove"), str(error))
@@ -175,6 +222,10 @@ class SecretsTab(TranslatableMixin, QWidget):
         if not ok or not new:
             return
         try:
+            if hasattr(self, '_tasks'):
+                self._tasks.submit(partial(_vault_call, partial(default_secret_manager.change_passphrase, old, new)),
+                                   self._vault_done)
+                return
             default_secret_manager.change_passphrase(old, new)
         except (SecretStoreError, ValueError) as error:
             QMessageBox.warning(self, _t("secret_change_passphrase"),
@@ -185,3 +236,16 @@ class SecretsTab(TranslatableMixin, QWidget):
             _t("secret_change_done"),
         )
         self._refresh_status()
+
+    def _vault_done(self, result: TaskResult) -> None:
+        state = result.value
+        if not isinstance(state, _VaultState):
+            return
+        self._vault_unlocked = state.unlocked
+        key = 'secret_status_uninitialized' if not state.initialized else (
+            'secret_status_unlocked' if state.unlocked else 'secret_status_locked')
+        self._status_label.setText(_t(key))
+        self._list.clear()
+        self._list.addItems(state.names)
+        if not state.succeeded:
+            QMessageBox.warning(self, _t('secret_unlock'), _t('secret_wrong_passphrase'))

@@ -1,12 +1,15 @@
 from typing import TYPE_CHECKING, Any, Callable
+from functools import partial
 
 from PySide6.QtWidgets import (
     QWidget, QLineEdit, QComboBox, QVBoxLayout, QLabel,
     QGridLayout, QHBoxLayout, QRadioButton, QButtonGroup, QMessageBox,
-    QGroupBox,
+    QGroupBox, QPlainTextEdit,
 )
 
 from je_auto_control.gui._validators import int_validator
+from je_auto_control.gui._panel_tasks import PanelTasks, call_native
+from je_auto_control.gui._task_state import CancellationToken, TaskError
 from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.wrapper.auto_control_keyboard import (
     type_keyboard, hotkey, write, get_keyboard_keys_table,
@@ -15,6 +18,14 @@ from je_auto_control.wrapper.auto_control_mouse import (
     click_mouse, get_mouse_position, mouse_scroll,
     mouse_keys_table, special_mouse_keys_table,
 )
+
+
+def _click(fn: Callable[..., object], args: tuple[Any, ...], repeat: int, token: CancellationToken) -> object:
+    """Check cancellation between native clicks without reading controls on the worker."""
+    for _ in range(repeat):
+        token.checkpoint()
+        fn(*args)
+    return None
 
 
 class AutoClickTabMixin:
@@ -163,6 +174,10 @@ class AutoClickTabMixin:
         self._update_click_mode()
 
         tab.setLayout(outer)
+        self._click_result = QPlainTextEdit()
+        self._click_result.setReadOnly(True)
+        outer.addWidget(self._click_result)
+        self._auto_tasks = PanelTasks(tab, self._click_result)
         return tab
 
     def _auto_click_retranslate(self) -> None:
@@ -213,8 +228,12 @@ class AutoClickTabMixin:
 
     def _stop_auto_click(self):
         self.timer.stop()
+        if hasattr(self, '_auto_tasks'):
+            self._auto_tasks.cancel()
 
     def _timer_tick(self):
+        if hasattr(self, '_auto_tasks') and self._auto_tasks.handle is not None:
+            return
         if self.repeat_until_stopped.isChecked():
             self._do_click()
         elif self.repeat_count_times.isChecked():
@@ -228,6 +247,9 @@ class AutoClickTabMixin:
     def _do_click(self):
         try:
             is_double = self.click_type_combo.currentIndex() == 1
+            if hasattr(self, '_auto_tasks'):
+                self._submit_click(is_double)
+                return
             if self.mouse_radio.isChecked():
                 btn = self.mouse_button_combo.currentText()
                 x = int(self.cursor_x_input.text() or "0")
@@ -266,9 +288,15 @@ class AutoClickTabMixin:
         except (AutoControlException, OSError, ValueError, TypeError, RuntimeError) as error:
             QMessageBox.warning(self, "Error", str(error))
 
+    def _auto_click_failed(self, _error: TaskError) -> None:
+        self.timer.stop()
+
     def _send_hotkey(self):
         try:
             keys = [k.strip() for k in self.hotkey_input.text().split(",") if k.strip()]
+            if keys and hasattr(self, '_auto_tasks'):
+                self._auto_tasks.submit(partial(call_native, partial(hotkey, keys)))
+                return
             if keys:
                 hotkey(keys)
         except (AutoControlException, OSError, ValueError, TypeError, RuntimeError) as error:
@@ -277,6 +305,9 @@ class AutoClickTabMixin:
     def _send_write(self):
         try:
             text = self.write_input.text()
+            if text and hasattr(self, '_auto_tasks'):
+                self._auto_tasks.submit(partial(call_native, partial(write, text)))
+                return
             if text:
                 write(text)
         except (AutoControlException, OSError, ValueError, TypeError, RuntimeError) as error:
@@ -286,6 +317,22 @@ class AutoClickTabMixin:
         try:
             val = int(self.scroll_value_input.text() or "3")
             direction = self.scroll_dir_combo.currentText() if self.scroll_dir_combo else "scroll_down"
+            if hasattr(self, '_auto_tasks'):
+                self._auto_tasks.submit(partial(call_native, partial(mouse_scroll, val, scroll_direction=direction)))
+                return
             mouse_scroll(val, scroll_direction=direction)
         except (AutoControlException, OSError, ValueError, TypeError, RuntimeError) as error:
             QMessageBox.warning(self, "Error", str(error))
+
+    def _submit_click(self, is_double: bool) -> None:
+        if self.mouse_radio.isChecked():
+            args: tuple[Any, ...] = (self.mouse_button_combo.currentText(),
+                                   int(self.cursor_x_input.text() or '0'),
+                                   int(self.cursor_y_input.text() or '0'))
+            fn: Callable[..., object] = click_mouse
+        else:
+            args = (self.keyboard_button_combo.currentText(),)
+            fn = type_keyboard
+        self._auto_tasks.submit(partial(_click, fn, args, 2 if is_double else 1))
+        if self._auto_tasks.handle is not None:
+            self._auto_tasks.handle.failed.connect(self._auto_click_failed)

@@ -25,6 +25,7 @@ from je_auto_control.utils.remote_desktop import (
     FileReceiver, RemoteDesktopViewer, WebSocketDesktopViewer,
 )
 from je_auto_control.gui.remote_desktop.session_owner import PanelSessions
+from je_auto_control.gui.remote_desktop.connection_tasks import ConnectionTasks
 from je_auto_control.utils.remote_desktop.file_transfer import default_download_dir
 from je_auto_control.utils.remote_desktop.audio import (
     AudioPlayer, is_audio_backend_available,
@@ -49,6 +50,7 @@ class _ViewerPanel(TranslatableMixin, QWidget):
         super().__init__(parent)
         self._tr_init()
         self._sessions = PanelSessions(self, registry)
+        self._connection_tasks = ConnectionTasks(self, self._sessions)
         self._session_owner = self._sessions.owner
         self._session_id: Optional[str] = None
         self._sessions.ended.connect(self._on_session_ended)
@@ -248,8 +250,8 @@ class _ViewerPanel(TranslatableMixin, QWidget):
                     )),
             ))
             self._sessions.attach(viewer, 'viewer', active=False)
-            viewer.connect(timeout=5.0)
-            self._sessions.activate('viewer')
+            self._connection_tasks.connect(viewer, self._connection_ready)
+            return
         # ValueError: a host such as "a..b" fails IDNA encoding with
         # UnicodeError, which escaped the slot and left the click unanswered.
         except (OSError, RuntimeError, ValueError, AutoControlException) as error:
@@ -257,6 +259,7 @@ class _ViewerPanel(TranslatableMixin, QWidget):
             self._session_id = None
             QMessageBox.warning(self, _t("rd_viewer_connect"), str(error))
             return
+    def _connection_ready(self) -> None:
         self._connected = True
         self._start_audio_player_if_requested()
         # AnyDesk-style: open the live screen in its own window so the
@@ -304,7 +307,9 @@ class _ViewerPanel(TranslatableMixin, QWidget):
             except (OSError, RuntimeError):
                 pass
 
-    def _disconnect(self) -> None:
+    def _disconnect(self, *, cancel_connect: bool = True) -> None:
+        if cancel_connect:
+            self._connection_tasks.cancel('viewer')
         self._sessions.close('viewer')
         self._session_id = None
         self._stop_audio_player()
@@ -317,7 +322,7 @@ class _ViewerPanel(TranslatableMixin, QWidget):
 
     def _on_session_ended(self, role: str) -> None:
         if role == 'viewer':
-            self._disconnect()
+            self._disconnect(cancel_connect=False)
 
     # --- pop-out screen window ----------------------------------------
 

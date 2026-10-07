@@ -440,3 +440,18 @@ validated color/spacing/font tokens) and _workspace_details.py (explicit reporte
 state/recovery/progress). main_window.py embeds the shell while retaining the
 legacy auto_control_gui_widget. _dependency_panel.py retranslates selected-feature
 recovery. No new automation service or native permission probe is introduced.
+
+F3 adds task_controller.py and Qt-free _task_state.py payloads. _panel_tasks.py
+snapshots widget values and renders owner-bound outcomes on Qt. Legacy CallWorker
+also binds RequestBinding, cancellation/deadlines and panel-owned raw input;
+custom workers retain Event-based stop. utils/executor/cancellation.py shares
+checkpoints, bounded waits and remaining time with nested executors/matrix/input.
+input_owner.py records known initially released input, retains failed releases
+with original request policy and prevents stale cleanup from releasing a new hold.
+cleanup_jobs.py retains independent failed native callbacks; the remote-desktop
+path is a compatibility shim. _record_panel_owner.py owns independent recorders;
+X11 owned_record.py subscribes without touching the global listener/record queue.
+Remote allocation and cleanup share a per-session gate off Qt; the directory
+revokes generations immediately, retains native close failures, and permits retry.
+The full catalog I/O audit and user cancellation limits are in
+[docs/GUI_TASK_LIFECYCLE.md](docs/GUI_TASK_LIFECYCLE.md).

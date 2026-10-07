@@ -1,6 +1,7 @@
 """OCR Reader tab: dump text in a region, or regex-search for matches."""
 import json
 import re
+from functools import partial
 from typing import Optional
 
 from PySide6.QtWidgets import (
@@ -9,6 +10,8 @@ from PySide6.QtWidgets import (
 )
 
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
+from je_auto_control.gui._panel_tasks import PanelTasks, call_native
+from je_auto_control.gui._task_state import TaskResult
 from je_auto_control.gui.language_wrapper.multi_language_wrapper import (
     language_wrapper,
 )
@@ -46,6 +49,7 @@ class OCRReaderTab(TranslatableMixin, QWidget):
         self._regex = QLineEdit()
         self._result = QTextEdit()
         self._result.setReadOnly(True)
+        self._tasks = PanelTasks(self, self._result)
         self._status = QLabel()
         self._apply_placeholders()
         self._build_layout()
@@ -93,6 +97,7 @@ class OCRReaderTab(TranslatableMixin, QWidget):
             ("ocr_pick_region", self._on_pick_region),
             ("ocr_dump_region", self._on_dump),
             ("ocr_find_regex", self._on_find_regex),
+            ('workspace_cancel_task', self._tasks.cancel),
         ]
 
     def _on_pick_region(self) -> None:
@@ -126,6 +131,10 @@ class OCRReaderTab(TranslatableMixin, QWidget):
             region = self._parse_region()
             min_conf = self._parse_min_conf()
             lang = self._lang.text().strip() or "eng"
+            if hasattr(self, '_tasks'):
+                self._tasks.submit(partial(call_native, partial(read_text_in_region, region=region,
+                                                               lang=lang, min_confidence=min_conf)), self._ocr_done)
+                return
             matches = read_text_in_region(
                 region=region, lang=lang, min_confidence=min_conf,
             )
@@ -154,6 +163,10 @@ class OCRReaderTab(TranslatableMixin, QWidget):
             region = self._parse_region()
             min_conf = self._parse_min_conf()
             lang = self._lang.text().strip() or "eng"
+            if hasattr(self, '_tasks'):
+                self._tasks.submit(partial(call_native, partial(find_text_regex, compiled, lang=lang,
+                                                               region=region, min_confidence=min_conf)), self._ocr_done)
+                return
             matches = find_text_regex(
                 compiled, lang=lang, region=region, min_confidence=min_conf,
             )
@@ -167,3 +180,8 @@ class OCRReaderTab(TranslatableMixin, QWidget):
         self._status.setText(
             _t("ocr_match_count").replace("{n}", str(len(matches)))
         )
+
+    def _ocr_done(self, result: TaskResult) -> None:
+        if isinstance(result.value, list):
+            self._result.setText(_matches_to_json(result.value))
+            self._status.setText(_t('ocr_match_count').replace('{n}', str(len(result.value))))

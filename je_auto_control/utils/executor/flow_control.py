@@ -11,6 +11,7 @@ import threading
 import time
 from typing import Any, Callable, Dict, Mapping, Optional, Sequence
 
+from je_auto_control.utils.executor.cancellation import _cooperative_sleep
 from je_auto_control.utils.exception.exceptions import (
     AutoControlActionException, AutoControlAssertionException,
     AutoControlException, ImageNotFoundException,
@@ -125,7 +126,7 @@ def exec_wait_image(executor: Any, args: Mapping[str, Any]) -> bool:
             return True
         if time.monotonic() >= deadline:
             break
-        time.sleep(poll)
+        _cooperative_sleep(poll)
     raise AutoControlActionException(f"AC_wait_image timeout: {image}")
 
 
@@ -143,14 +144,14 @@ def exec_wait_pixel(executor: Any, args: Mapping[str, Any]) -> bool:
             return True
         if time.monotonic() >= deadline:
             break
-        time.sleep(poll)
+        _cooperative_sleep(poll)
     raise AutoControlActionException(f"AC_wait_pixel timeout at ({x},{y})")
 
 
 def exec_sleep(executor: Any, args: Mapping[str, Any]) -> None:
     """Sleep for ``seconds``."""
     del executor
-    time.sleep(float(args["seconds"]))
+    _cooperative_sleep(float(args["seconds"]))
 
 
 def exec_loop(executor: Any, args: Mapping[str, Any]) -> int:
@@ -222,7 +223,7 @@ def exec_retry(executor: Any, args: Mapping[str, Any]) -> Any:
             if attempt + 1 < max_attempts:
                 # Capped: 2 ** attempt overflowed float after ~1000 attempts,
                 # and attempt 20 already slept 36 hours at the default 0.5 s.
-                time.sleep(min(backoff * (2 ** min(attempt, 30)), _MAX_RETRY_BACKOFF_S))
+                _cooperative_sleep(min(backoff * (2 ** min(attempt, 30)), _MAX_RETRY_BACKOFF_S))
     # A failed assertion is a deliberate fail signal that must propagate
     # even under raise_on_error=False; wrapping it would neutralise it.
     if isinstance(last_error, AutoControlAssertionException):

@@ -1,6 +1,8 @@
 """Top-level window with menu bar, closable tabs, and live language switching."""
 import sys
 from dataclasses import replace
+from functools import partial
+from typing import Callable
 
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QAction, QActionGroup, QCloseEvent
@@ -14,6 +16,8 @@ from je_auto_control.gui.language_wrapper.multi_language_wrapper import (
 from je_auto_control.gui.main_widget import AutoControlGUIWidget
 from je_auto_control.gui.theme import ThemeTokens, apply_theme
 from je_auto_control.gui.workspace import WorkspaceShell
+from je_auto_control.gui._panel_tasks import PanelTasks, call_native
+from je_auto_control.gui._task_state import TaskError, TaskResult
 
 
 def _t(key: str, default: str = "") -> str:
@@ -43,6 +47,7 @@ class AutoControlGUIUI(QMainWindow):  # pylint: disable=too-many-instance-attrib
 
     def __init__(self) -> None:
         super().__init__()
+        self._service_tasks = PanelTasks(self)
         self.app_id = _t("application_name", "AutoControlGUI")
         if sys.platform in ["win32", "cygwin", "msys"]:
             # pylint: disable-next=import-outside-toplevel  # reason: platform or selected engine is loaded on demand
@@ -112,6 +117,16 @@ class AutoControlGUIUI(QMainWindow):  # pylint: disable=too-many-instance-attrib
             return
         for label_key, handler in entries:
             self._actions_menu.addAction(_t(label_key, label_key), handler)
+        if all(label_key != 'workspace_cancel_task' for label_key, _handler in entries):
+            self._actions_menu.addSeparator()
+            self._actions_menu.addAction(_t('workspace_cancel_task'), self._cancel_workspace_task)
+
+    def _cancel_workspace_task(self) -> None:
+        """Cancel legacy and typed workers belonging to the active panel only."""
+        from je_auto_control.gui._worker_thread import cancel_workers
+        widget = self.auto_control_gui_widget.tabs.currentWidget()
+        if widget is not None:
+            cancel_workers(widget)
 
     def _build_file_menu(self) -> QMenu:
         menu = QMenu(_t("menu_file", "File"), self)
@@ -240,7 +255,15 @@ class AutoControlGUIUI(QMainWindow):  # pylint: disable=too-many-instance-attrib
             _t("menu_tools_start_triggers", "Start trigger engine"),
             self._start_triggers,
         )
+        menu.addAction(_t('workspace_retry_cleanup'), self._retry_owned_cleanup)
         return menu
+
+    def _retry_owned_cleanup(self) -> None:
+        """Request another background cleanup attempt for retained GUI-owned native resources."""
+        from je_auto_control.utils.remote_desktop.cleanup_jobs import _retry_cleanup
+        from je_auto_control.wrapper._record_panel_owner import _retry_retired
+        _retry_cleanup()
+        _retry_retired()
 
     def _build_language_menu(self) -> QMenu:
         menu = QMenu(_t("menu_language", "Language"), self)
@@ -296,6 +319,9 @@ class AutoControlGUIUI(QMainWindow):  # pylint: disable=too-many-instance-attrib
     def _start_hotkeys(self) -> None:
         # pylint: disable-next=import-outside-toplevel  # reason: platform or selected engine is loaded on demand
         from je_auto_control.utils.hotkey.hotkey_daemon import default_hotkey_daemon
+        if hasattr(self, '_service_tasks'):
+            self._start_service(default_hotkey_daemon.start)
+            return
         try:
             default_hotkey_daemon.start()
         except NotImplementedError as error:
@@ -305,6 +331,9 @@ class AutoControlGUIUI(QMainWindow):  # pylint: disable=too-many-instance-attrib
     def _start_scheduler(self) -> None:
         # pylint: disable-next=import-outside-toplevel  # reason: platform or selected engine is loaded on demand
         from je_auto_control.utils.scheduler.scheduler import default_scheduler
+        if hasattr(self, '_service_tasks'):
+            self._start_service(default_scheduler.start)
+            return
         default_scheduler.start()
         self.auto_control_gui_widget.sync_engine_tabs()
 
@@ -313,8 +342,22 @@ class AutoControlGUIUI(QMainWindow):  # pylint: disable=too-many-instance-attrib
         from je_auto_control.utils.triggers.trigger_engine import (
             default_trigger_engine,
         )
+        if hasattr(self, '_service_tasks'):
+            self._start_service(default_trigger_engine.start)
+            return
         default_trigger_engine.start()
         self.auto_control_gui_widget.sync_engine_tabs()
+
+    def _start_service(self, start: Callable[[], object]) -> None:
+        self._service_tasks.submit(partial(call_native, start), self._service_started)
+        if self._service_tasks.handle is not None:
+            self._service_tasks.handle.failed.connect(self._service_failed)
+
+    def _service_started(self, _result: TaskResult) -> None:
+        self.auto_control_gui_widget.sync_engine_tabs()
+
+    def _service_failed(self, error: TaskError) -> None:
+        QMessageBox.warning(self, 'Error', error.message)
 
 
 if "__main__" == __name__:

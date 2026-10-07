@@ -9,6 +9,9 @@ from PySide6.QtWidgets import (
 )
 
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
+from je_auto_control.gui._panel_tasks import PanelTasks, call_native
+from je_auto_control.gui._task_state import TaskResult
+from functools import partial
 from je_auto_control.gui.language_wrapper.multi_language_wrapper import (
     language_wrapper,
 )
@@ -33,6 +36,7 @@ class DiagnosticsTab(TranslatableMixin, QWidget):
         super().__init__(parent)
         self._tr_init()
         self._summary_label = QLabel("-")
+        self._tasks = PanelTasks(self, self._summary_label)
         self._table = QTableWidget(0, 4)
         self._table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         self._table.horizontalHeader().setSectionResizeMode(
@@ -65,19 +69,29 @@ class DiagnosticsTab(TranslatableMixin, QWidget):
             actions.extend([
                 ("diag_stop_input", self._stop_input),
                 ("diag_retry_input", self._retry_input),
-            ])
+                ('workspace_cancel_task', self._tasks.cancel),
+        ])
         if self._wayland_panel is not None:
             actions.extend(self._wayland_panel.menu_actions())
         return actions
 
     def _stop_input(self) -> None:
         from je_auto_control.linux_wayland.libei import stop_input_control
+        if hasattr(self, '_tasks'):
+            self._tasks.submit(partial(call_native, stop_input_control), self._input_reset_done)
+            return
         stop_input_control()
         self._refresh()
 
     def _retry_input(self) -> None:
         from je_auto_control.linux_wayland.libei import reset_default_backend
+        if hasattr(self, '_tasks'):
+            self._tasks.submit(partial(call_native, reset_default_backend), self._input_reset_done)
+            return
         reset_default_backend()
+        self._refresh()
+
+    def _input_reset_done(self, _result: TaskResult) -> None:
         self._refresh()
 
     def _apply_table_headers(self) -> None:
@@ -87,7 +101,18 @@ class DiagnosticsTab(TranslatableMixin, QWidget):
         ])
 
     def _refresh(self) -> None:
-        report = run_diagnostics(include_active=False)
+        if hasattr(self, '_tasks'):
+            self._tasks.submit(partial(call_native, partial(run_diagnostics, include_active=False)),
+                               self._diagnostics_done)
+            return
+        self._render_diagnostics(run_diagnostics(include_active=False))
+
+    def _diagnostics_done(self, result: TaskResult) -> None:
+        from je_auto_control.utils.diagnostics.diagnostics import DiagnosticsReport
+        if isinstance(result.value, DiagnosticsReport):
+            self._render_diagnostics(result.value)
+
+    def _render_diagnostics(self, report) -> None:
         summary = report.to_dict()
         if report.ok:
             self._summary_label.setText(_t("diag_summary_ok").format(

@@ -36,12 +36,29 @@ from je_auto_control.gui.remote_desktop.webrtc_workers import (
     retire_worker,
 )
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
+from je_auto_control.gui._panel_tasks import start_native
 from je_auto_control.utils.remote_desktop import SessionRecorder, WebRTCDesktopViewer
 from je_auto_control.utils.remote_desktop.webrtc_inspector import default_webrtc_inspector
 from je_auto_control.utils.remote_desktop.webrtc_stats import StatsPoller, StatsSnapshot
 from je_auto_control.utils.remote_desktop.webrtc_transport import fps_for_preset
+from je_auto_control.gui.task_controller import CancellationToken, TaskController, TaskError, TaskHandle, TaskResult
+from je_auto_control.gui.remote_desktop._task_work import (
+    AnswerRequest, SignalingTarget, ViewerAnswer, create_answer, run_in_session,
+)
+from je_auto_control.utils.remote_desktop.cleanup_jobs import _submit_cleanup
+
+def _finish_recording(recorder: NativeRecorder, token: CancellationToken) -> object:
+    token.checkpoint()
+    try:
+        recorder.stop()
+    except BaseException:
+        _submit_cleanup((recorder.stop,))
+        raise
+    return recorder
+
 
 if TYPE_CHECKING:
+    from je_auto_control.utils.remote_desktop.session_recorder import SessionRecorder as NativeRecorder
     from je_auto_control.gui.remote_desktop.webrtc_viewer_panel import _WebRTCViewerPanel
 
 
@@ -50,6 +67,9 @@ class WebRTCViewerSessionController:  # pylint: disable=too-few-public-methods  
 
     def __init__(self, panel: _WebRTCViewerPanel) -> None:
         self._panel = panel
+        self._tasks = TaskController(timeout_s=60)
+        self._record_tasks = TaskController(timeout_s=30)
+        self._task: Optional[TaskHandle] = None
         self._reconnect_callback: Optional[Callable[[], None]] = None
 
     def reconnect_if_current(self) -> None:
@@ -86,6 +106,8 @@ class WebRTCViewerSessionController:  # pylint: disable=too-few-public-methods  
             QMessageBox.warning(self._panel, "WebRTC", str(error))
 
     def _on_toggle_recording(self, checked: bool) -> None:
+        if checked and self._panel._recorder is not None:
+            return
         if checked:
             if SessionRecorder is None:
                 QMessageBox.warning(self._panel, "WebRTC", _t("rd_webrtc_unavailable"))
@@ -119,14 +141,24 @@ class WebRTCViewerSessionController:  # pylint: disable=too-few-public-methods  
             )
             self._panel._record_btn.setText(_t("rd_webrtc_stop_recording"))
         else:
-            if self._panel._recorder is not None:
-                self._panel._recorder.stop()
-                key = "rd_webrtc_recording_saved" if self._panel._recorder.has_output else "rd_webrtc_recording_empty"
-                QMessageBox.information(
-                    self._panel, "WebRTC", _t(key).format(path=str(self._panel._recorder.output_path))
-                )
-                self._panel._recorder = None
+            recorder = self._panel._recorder
+            if recorder is not None:
+                job = self._record_tasks.submit(partial(_finish_recording, recorder), owner=self._panel)
+                job.completed.connect(self._record_cleanup_ready)
+                job.failed.connect(self._record_cleanup_failed)
             self._panel._record_btn.setText(_t("rd_webrtc_start_recording"))
+
+    def _record_cleanup_ready(self, result: TaskResult) -> None:
+        recorder = result.value
+        current = self._panel._recorder
+        if current is not None and current is recorder:
+            key = 'rd_webrtc_recording_saved' if current.has_output else 'rd_webrtc_recording_empty'
+            self._panel._recorder = None
+            QMessageBox.information(self._panel, 'WebRTC', _t(key).format(path=str(current.output_path)))
+
+    def _record_cleanup_failed(self, error: TaskError) -> None:
+        self._panel._record_btn.setChecked(True)
+        self._task_failed(error)
 
     def _on_stats(self, snapshot: StatsSnapshot) -> None:
         parts = []
@@ -225,37 +257,55 @@ class WebRTCViewerSessionController:  # pylint: disable=too-few-public-methods  
         )
 
     def _answer_and_push(self, offer_sdp: str) -> None:
-        host_id = self._panel._host_id_edit.text().strip()
-        expected_dtls = self._panel._known_hosts.dtls_fingerprint_for(host_id) if host_id else None
+        self._submit_answer(offer_sdp, push=True)
+
+    def _submit_answer(self, offer: str, *, push: bool) -> None:
         try:
-            answer = self._panel._require_viewer().process_offer(offer_sdp, expected_dtls_fingerprint=expected_dtls)
+            viewer = self._require_viewer()
+            identifier = self._panel._sessions.id('viewer')
+            if identifier is None:
+                raise RuntimeError('WebRTC viewer has no owned session')
+            directory = self._panel._sessions.directory
+            session = directory.get_session(identifier, owner=self._panel._sessions.owner)
+            cleanup = partial(directory.disconnect_session, identifier, owner=session.owner)
+            current = partial(directory.session_is_current, identifier, session.generation, owner=session.owner)
+            target = SignalingTarget(self._panel._server_edit.text().strip(),
+                                     self._panel._host_id_edit.text().strip(),
+                                     self._panel._secret_edit.text() or None) if push else None
+            request = AnswerRequest(viewer, identifier, offer, cleanup, target,
+                                    self._panel._known_hosts if push else None, current)
         except (ValueError, RuntimeError, OSError) as error:
             self._panel._show_error(error)
             return
-        if host_id and (not expected_dtls):
-            # pylint: disable=import-outside-toplevel  # reason: lazy optional/cyclic boundary
-            from je_auto_control.utils.remote_desktop.fingerprint import (
-                extract_dtls_fingerprint,
-            )
-            # pylint: enable=import-outside-toplevel
+        work = partial(run_in_session, directory, session, partial(create_answer, request))
+        self._task = self._tasks.submit(work, owner=self._panel)
+        self._task.completed.connect(self._answer_ready)
+        self._task.failed.connect(self._task_failed)
 
-            new_fp = extract_dtls_fingerprint(offer_sdp)
-            if new_fp:
-                self._panel._known_hosts.remember_dtls_fingerprint(host_id, new_fp)
-        self._panel._answer_view.setPlainText(answer)
-        self._panel._status_label.setText(_t("rd_webrtc_pushing_answer"))
+    def _task_failed(self, error: TaskError) -> None:
+        self._panel._show_error(RuntimeError(error.message))
+
+    def _answer_ready(self, result: TaskResult) -> None:
+        answer = result.value
+        if not isinstance(answer, ViewerAnswer):
+            return
+        request = answer.request
+        if (self._panel._viewer is not request.viewer
+                or self._panel._sessions.id('viewer') != request.owner_session_id):
+            _submit_cleanup((request.cleanup,))
+            return
+        self._panel._answer_view.setPlainText(answer.sdp)
+        target = request.target
+        if target is None:
+            self._panel._status_label.setText(_t('rd_webrtc_answer_ready'))
+            return
+        self._panel._status_label.setText(_t('rd_webrtc_pushing_answer'))
         self._panel._answer_worker = ViewerAnswerPushWorker(
-            server_url=self._panel._server_edit.text().strip(),
-            host_id=self._panel._host_id_edit.text().strip(),
-            secret=self._panel._secret_edit.text() or None,
-            answer_sdp=answer,
-        )
+            server_url=target.server, host_id=target.host_id, secret=target.secret, answer_sdp=answer.sdp)
         self._panel._answer_worker.pushed.connect(
-            self._panel._sessions.callback("viewer", self._panel._on_answer_pushed)
-        )
+            self._panel._sessions.callback('viewer', self._panel._on_answer_pushed))
         self._panel._answer_worker.failed.connect(
-            self._panel._sessions.callback("viewer", self._panel._on_signaling_failed)
-        )
+            self._panel._sessions.callback('viewer', self._panel._on_signaling_failed))
         self._panel._answer_worker.start()
 
     def _on_answer_pushed(self) -> None:
@@ -291,13 +341,7 @@ class WebRTCViewerSessionController:  # pylint: disable=too-few-public-methods  
         return viewer
 
     def _produce_answer(self, offer: str) -> None:
-        try:
-            answer = self._panel._require_viewer().process_offer(offer)
-        except (ValueError, RuntimeError, OSError) as error:
-            self._panel._show_error(error)
-            return
-        self._panel._answer_view.setPlainText(answer)
-        self._panel._status_label.setText(_t("rd_webrtc_answer_ready"))
+        self._submit_answer(offer, push=False)
 
     def _on_stop(self) -> None:
         self._panel._user_initiated_disconnect = True
@@ -353,9 +397,11 @@ class WebRTCViewerSessionController:  # pylint: disable=too-few-public-methods  
         )
         # pylint: enable=import-outside-toplevel
 
-        callbacks: list[Callable[[], None]] = [
-            partial(retire_worker, worker) for worker in (self._panel._offer_worker, self._panel._answer_worker)
-        ]
+        self._tasks.cancel_owner(self._panel)
+        self._record_tasks.cancel_owner(self._panel)
+        for worker in (self._panel._offer_worker, self._panel._answer_worker):
+            retire_worker(worker)
+        callbacks: list[Callable[[], None]] = []
         callbacks.extend(
             resource.stop
             for resource in (self._panel._stats_poller, self._panel._recorder, self._panel._sync_engine)
@@ -364,6 +410,8 @@ class WebRTCViewerSessionController:  # pylint: disable=too-few-public-methods  
         dispose_background(callbacks)
 
     def _stop_viewer_if_any(self) -> None:
+        self._tasks.cancel_owner(self._panel)
+        self._record_tasks.cancel_owner(self._panel)
         self._cancel_reconnect()
         owned = self._panel._sessions.id("viewer") is not None
         if owned:
@@ -378,19 +426,15 @@ class WebRTCViewerSessionController:  # pylint: disable=too-few-public-methods  
             self._panel._sync_btn.setText(_t("rd_webrtc_sync_start"))
         self._panel._stop_stats_polling()
         if self._panel._recorder is not None:
-            self._panel._recorder.stop()
+            _submit_cleanup((self._panel._recorder.stop,))
             self._panel._recorder = None
             self._panel._record_btn.setChecked(False)
             self._panel._record_btn.setText(_t("rd_webrtc_start_recording"))
         if self._panel._viewer is None:
             return
-        try:
-            if not owned:
-                self._panel._viewer.stop()
-        except (RuntimeError, OSError):
-            pass
-        finally:
-            self._panel._viewer = None
+        if not owned:
+            _submit_cleanup((self._panel._viewer.stop,))
+        self._panel._viewer = None
 
     def _on_av_frame(self, frame) -> None:
         arguments = self._panel._frame_arguments(frame)
@@ -475,7 +519,7 @@ class WebRTCViewerSessionController:  # pylint: disable=too-few-public-methods  
         self._panel._stats_poller = StatsPoller(
             self._panel._viewer._pc, self._panel._sessions.callback("viewer", self._panel._on_viewer_stats_sample)
         )
-        self._panel._stats_poller.start()
+        start_native(self._panel._stats_poller.start, self._panel)
 
     def _on_viewer_stats_sample(self, snapshot: StatsSnapshot) -> None:
         default_webrtc_inspector().record(snapshot)

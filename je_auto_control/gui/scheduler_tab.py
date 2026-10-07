@@ -1,5 +1,6 @@
 """Scheduler tab: register interval-based action JSON runs."""
 from typing import Optional
+from functools import partial
 
 from PySide6.QtCore import QTimer
 from PySide6.QtWidgets import (
@@ -8,6 +9,8 @@ from PySide6.QtWidgets import (
 )
 
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
+from je_auto_control.gui._panel_tasks import PanelTasks, call_native
+from je_auto_control.gui._task_state import TaskResult
 from je_auto_control.gui.language_wrapper.multi_language_wrapper import (
     language_wrapper,
 )
@@ -31,6 +34,7 @@ class SchedulerTab(TranslatableMixin, QWidget):
         self._table = QTableWidget(0, 5)
         self._apply_table_headers()
         self._status = QLabel()
+        self._service_tasks = PanelTasks(self, self._status)
         self._apply_status()
         self._timer = QTimer(self)
         self._timer.setInterval(1000)
@@ -129,12 +133,26 @@ class SchedulerTab(TranslatableMixin, QWidget):
         default_scheduler.remove_job(job_id)
         self._refresh_table()
 
+    def _service_started(self, _result: TaskResult) -> None:
+        self._timer.start()
+        self._apply_status()
+
+    def _service_stopped(self, _result: TaskResult) -> None:
+        self._apply_status()
+
     def _on_start(self) -> None:
+        if hasattr(self, '_service_tasks'):
+            self._service_tasks.submit(partial(call_native, default_scheduler.start), self._service_started)
+            return
         default_scheduler.start()
         self._timer.start()
         self._apply_status()
 
     def _on_stop(self) -> None:
+        if hasattr(self, '_service_tasks'):
+            self._timer.stop()
+            self._service_tasks.submit(partial(call_native, default_scheduler.stop), self._service_stopped)
+            return
         default_scheduler.stop()
         self._timer.stop()
         self._apply_status()

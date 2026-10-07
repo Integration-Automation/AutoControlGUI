@@ -10,6 +10,7 @@ the rest of the Remote Desktop UI stays usable on stock installs.
 from typing import List, Optional, Tuple
 
 from PySide6.QtCore import Qt
+from PySide6.QtGui import QCloseEvent
 from PySide6.QtWidgets import (
     QFrame, QLabel, QScrollArea, QTabWidget, QVBoxLayout, QWidget,
 )
@@ -163,3 +164,14 @@ class RemoteDesktopTab(TranslatableMixin, QWidget):
         TranslatableMixin.retranslate(self)
         for panel in self._sub_panels:
             panel.retranslate()
+
+    def closeEvent(self, event: QCloseEvent) -> None:  # pylint: disable=invalid-name  # reason: Qt virtual callback
+        """Revoke child sessions before deferred deletion; native cleanup remains off Qt."""
+        for panel in self._sub_panels:
+            tasks = getattr(panel, '_connection_tasks', None)
+            if tasks is not None:
+                tasks.cancel()
+            sessions = getattr(panel, '_sessions', None)
+            if sessions is not None:
+                sessions.dispose()
+        super().closeEvent(event)

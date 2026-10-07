@@ -1,5 +1,6 @@
 """Admin console tab: manage many remote AutoControl REST endpoints."""
 import json
+from functools import partial
 from typing import Dict, List, Optional
 
 from PySide6.QtCore import QObject, QSize, QTimer, Qt, Signal
@@ -204,7 +205,7 @@ class AdminConsoleTab(TranslatableMixin, QWidget):
         if self._broadcast_thread is not None:
             return
         self._broadcast_thread = start_worker(
-            self, CallWorker(lambda: self._client.broadcast_execute(actions=actions, raise_on_error=True)),
+            self, CallWorker(partial(self._client.broadcast_execute, actions=actions, raise_on_error=True)),
             on_done=self._show_broadcast, on_fail=self._broadcast_output.setPlainText,
             on_thread_done=self._on_broadcast_thread_done)
 

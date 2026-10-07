@@ -8307,6 +8307,8 @@ class Executor:
 
         execute_record_dict: Dict[str, Any] = {}
         for source_index, action in enumerate(action_list):
+            from je_auto_control.utils.executor.cancellation import _check_cancelled
+            _check_cancelled()
             if step_callback is not None:
                 step_callback(redact_actions(action))
             if dry_run:

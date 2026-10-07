@@ -6,7 +6,7 @@
 > 擷取每個模組的 docstring 與頂層公開名稱；統計數字取自實際檔案，非估算。
 > 指令數與公開 API 數以 `executor.known_commands()` 與 `je_auto_control.__all__` 在工作樹上實測取得。
 >
-> **掃描時間**：2026-10-07　**版本**：`pyproject.toml` version `0.0.221`　**分支**：`feat/platform-gui-modernization`
+> **掃描時間**：2026-10-08　**版本**：`pyproject.toml` version `0.0.221`　**分支**：`feat/platform-gui-modernization`
 
 ---
 
@@ -19,14 +19,14 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 
 | 指標 | 數值 |
 | --- | ---: |
-| Python 模組總數（含周邊子專案） | 1,194 |
-| 程式碼總行數 | 173,423 |
+| Python 模組總數（含周邊子專案） | 1,206 |
+| 程式碼總行數 | 175,772 |
 | `je_auto_control/utils/` 子套件數 | 311 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 819 |
 | 套件門面 `__all__` 公開名稱數 | 1,388 |
 | GUI 分頁數（`main_widget` 註冊） | 50 |
 | MCP 工具數（`build_default_tool_registry()` 實測） | 741 |
-| `test_*.py` 測試檔／測試函式 | 766 / 7,960 |
+| `test_*.py` 測試檔／測試函式 | 768 / 7,984 |
 | 範例腳本 | 31 |
 
 **技術基線**：Python ≥ 3.10、MIT 授權、必要相依只有 `je_open_cv`／`opencv-python`／`pillow`／`mss`／
@@ -178,6 +178,8 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | --- | ---: | --- |
 | `wrapper/platform_wrapper.py` | 116 | **Strategy 樞紐**。依 `sys.platform` 匯入唯一後端並匯出 `keyboard`、`keyboard_check`、`keyboard_keys_table`、`mouse`、`mouse_keys_table`、`special_mouse_keys_table`、`screen`、`recorder`；八個名稱都帶著 `backend_contract` 的型別出去，其中 `keyboard`／`mouse` 因為四個分支綁的是三種互不相容的形狀，先落在私有的 `_keyboard`／`_mouse`（`Any`）上再標合約；載入失敗直接拋 `AutoControlException`（fail fast）。 |
 | `wrapper/device_context.py` | 223 | Frozen mobile identities and independently owned, lazy execution bindings. |
+| `wrapper/_record_panel_owner.py` | 121 | Independent GUI recording resources with revocation and retained failed native cleanup. |
+| `wrapper/_input_state.py` | 28 | Read native mouse button state before GUI raw holds, without capturing screen pixels. |
 | `wrapper/device_frame.py` | 109 | Immutable device PNG evidence with native-point mapping and fixed-frame search. |
 | `wrapper/mobile_gesture.py` | 63 | Validated native-point mobile gestures independent of optional SDKs. |
 | `wrapper/_mobile_operations.py` | 108 | Session-scoped mobile capture and input without desktop fallback. |
@@ -208,8 +210,8 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `wrapper/_platform_osx.py` | 157 | macOS 後端組裝（Quartz 事件 + osx 虛擬鍵表）。 |
 | `wrapper/_platform_linux.py` | 275 | X11 後端組裝（python-Xlib + 選用 uinput）。 |
 | `wrapper/_platform_wayland.py` | 58 | Wayland 後端組裝（libei／ydotool／grim）。 |
-| `wrapper/auto_control_mouse.py` | 494 | 滑鼠 API：位置讀寫、按下／放開／點擊、捲動、座標前處理、送訊息給指定視窗。 |
-| `wrapper/auto_control_keyboard.py` | 413 | 鍵盤 API：鍵表查詢、按下／放開／敲擊、`write` 字串、`hotkey` 組合鍵、按鍵狀態偵測。**`type_keyboard` 與 `hotkey` 的放開走 `finally`**（見下）。 |
+| `wrapper/auto_control_mouse.py` | 502 | 滑鼠 API：位置讀寫、按下／放開／點擊、捲動、座標前處理、送訊息給指定視窗。 |
+| `wrapper/auto_control_keyboard.py` | 439 | 鍵盤 API：鍵表查詢、按下／放開／敲擊、`write` 字串、`hotkey` 組合鍵、按鍵狀態偵測。**`type_keyboard` 與 `hotkey` 的放開走 `finally`**（見下）。 |
 | `wrapper/auto_control_screen.py` | 110 | 螢幕 API：`screen_size`、`screenshot`（可指定區域）、`get_pixel`。 |
 | `wrapper/auto_control_image.py` | 83 | 影像 API：`locate_all_image`、`locate_image_center`、`locate_and_click`。 |
 | `wrapper/auto_control_record.py` | 124 | 錄製 API：`record`／`stop_record`／`record_to_json`（支援 stop event 與逾時）。 |
@@ -249,7 +251,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `screen/osx_screen.py` | 143 | 螢幕擷取與尺寸（含 Retina 座標處理）；原生 metrics 才載入 Quartz。 |
 | `pid/pid_control.py` | 53 | 以 PID 操作應用程式；送出鍵盤事件時才載入 Quartz。 |
 
-#### Linux X11（`linux_with_x11/`，19 檔／1,281 行）
+#### Linux X11（`linux_with_x11/`，20 檔／1,334 行）
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -257,8 +259,9 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `core/utils/x11_linux_vk.py` | 199 | X11 keysym 對照表。 |
 | `mouse/x11_linux_mouse_control.py` | 158 | XTest 滑鼠事件。 |
 | `keyboard/x11_linux_keyboard_control.py` | 99 | XTest 鍵盤事件。 |
-| `listener/x11_linux_listener.py` | 208 | XRecord 監聽。 |
+| `listener/x11_linux_listener.py` | 225 | XRecord 監聽。 |
 | `record/x11_linux_record.py` | 78 | 錄製。 |
+| `record/owned_record.py` | 36 | Owned X11 recording subscription without replacing or stopping the global listener. |
 | `screen/x11_linux_screen.py` | 65 | 螢幕尺寸與擷取。 |
 | `uinput/_device.py` | 246 | `/dev/uinput` 封裝（核心層輸入，選用）。 |
 | `uinput/keyboard.py` | 44 | uinput 鍵盤後端，介面與 X11 版一致。 |
@@ -310,7 +313,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.1 執行引擎與腳本資產
 
-> 25 個套件、約 16,279 行。
+> 25 個套件、約 16,535 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -322,7 +325,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/dag/` | 554 | 跨主機 DAG 編排器（圖模型 + runner） |
 | `utils/decision_table/` | 112 | DMN 風格決策表：規則 + 命中策略，把分支外部化 |
 | `utils/deterministic/` | 116 | 決定性執行控制：固定亂數種子 + 凍結時鐘 |
-| `utils/executor/` | 9,894 | **核心**。`Executor` 指令分派表（819 個 `AC_*`）、參數插值、乾跑、逐步 callback、日誌與來源追蹤；`flow_control` 提供 34 個區塊指令（迴圈／分支／try／巨集／變數） |
+| `utils/executor/` | 10,150 | **核心**。`Executor` 指令分派表（819 個 `AC_*`）、參數插值、乾跑、逐步 callback、日誌與來源追蹤；`flow_control` 提供 34 個區塊指令（迴圈／分支／try／巨集／變數） |
 | `utils/flow_debugger/` | 166 | action list 的單步除錯器與追蹤器 |
 | `utils/input_macro/` | 462 | 定時輸入事件：錄製結果的整形（`timeline`／`InputRecorder`，Windows 與 macOS 共用）、重播與宣告式輸入序列 DSL |
 | `utils/json/` | 103 | action JSON 檔讀寫與正規化格式化（`fmt --check` 的後端） |
@@ -504,7 +507,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.8 元素定位、自我修復與智慧等待
 
-> 23 個套件、約 5,505 行。
+> 23 個套件、約 5,509 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -527,7 +530,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/observation_delta/` | 122 | token 預算內的觀察差異：兩個 UI 影格之間變了什麼 |
 | `utils/screen_state/` | 191 | 語義畫面狀態：快照／差異與結構化畫面描述 |
 | `utils/scroll_find/` | 103 | 捲動直到目標影像／文字可見 |
-| `utils/self_healing/` | 1,438 | 自癒定位、固定畫面版本比較與標註指標、schema 2 稽核來源、不可變樣板修訂及明確接受／還原 |
+| `utils/self_healing/` | 1,442 | 自癒定位、固定畫面版本比較與標註指標、schema 2 稽核來源、不可變樣板修訂及明確接受／還原 |
 | `utils/semantic_recording/` | 498 | 為錄製內容加上語義錨點，支援換機重播與自癒重播 |
 | `utils/settle_detector/` | 79 | 以純函式介面判定 UI 是否已靜止 |
 | `utils/smart_waits/` | 672 | 智慧等待：以影格差異取代 `time.sleep` |
@@ -554,14 +557,14 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.10 遠端桌面與 USB
 
-> 6 個套件、約 22,559 行。
+> 6 個套件、約 22,647 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
 | `utils/admin/` | 418 | 多主機管理主控台：平行輪詢 N 個 AutoControl REST 端點 |
 | `utils/config_sync/` | 2,502 | SQLite CAS、因果衝突、離線 outbox 與設定同步 |
-| `utils/device_matrix/` | 166 | 行動裝置矩陣：同一 action list 於多台裝置平行執行 |
-| `utils/remote_desktop/` | 13,799 | **遠端桌面子系統**（56 檔／11.7K LOC）：TCP／WebSocket／WebRTC 三條傳輸路徑、主機與檢視端、訊令伺服器、TURN／中繼、多檢視者、錄影、信任清單、TOTP、稽核鏈 |
+| `utils/device_matrix/` | 169 | 行動裝置矩陣：同一 action list 於多台裝置平行執行 |
+| `utils/remote_desktop/` | 13,884 | **遠端桌面子系統**（56 檔／11.7K LOC）：TCP／WebSocket／WebRTC 三條傳輸路徑、主機與檢視端、訊令伺服器、TURN／中繼、多檢視者、錄影、信任清單、TOTP、稽核鏈 |
 | `utils/usb/` | 4,666 | 跨平台 USB 列舉／熱插拔／裝置直通（WinUSB、IOKit、libusb 後端 + ACL + WebRTC DataChannel 通道） |
 | `utils/usbip/` | 1,008 | USB/IP 線路協定主機端（協定封包、TCP 伺服器、libusb URB 後端） |
 
@@ -736,12 +739,12 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 上表以子套件為單位；以下把行數最大的幾個子系統展開到檔案層。
 
-#### `utils/executor/`（9,894 行）— 執行核心
+#### `utils/executor/`（10,150 行）— 執行核心
 
 | 檔案 | 行數 | 職責 |
 | --- | ---: | --- |
-| `action_executor.py` | 8,515 | `Executor` 類別與 `event_dict` 分派表（819 個指令），另含數百個把 utils 能力接成指令的 adapter 函式；全域單例 `executor` 與 `add_command_to_executor()` 擴充點。 |
-| `flow_control.py` | 650 | 真正的流程控制：`AC_loop`／`AC_for_each`／`AC_while_*`／`AC_if_*`／`AC_try`／`AC_retry`／`AC_parallel`／`AC_define_macro`／`AC_call_macro`／變數指令（`AC_set_var`／`AC_get_var`／`AC_inc_var`）。`LoopBreak`／`LoopContinue` 以例外實作。34 個區塊指令的分派表 `BLOCK_COMMANDS` 也在這裡，含下一列匯入的資料來源指令。 |
+| `action_executor.py` | 8,517 | `Executor` 類別與 `event_dict` 分派表（819 個指令），另含數百個把 utils 能力接成指令的 adapter 函式；全域單例 `executor` 與 `add_command_to_executor()` 擴充點。 |
+| `flow_control.py` | 651 | 真正的流程控制：`AC_loop`／`AC_for_each`／`AC_while_*`／`AC_if_*`／`AC_try`／`AC_retry`／`AC_parallel`／`AC_define_macro`／`AC_call_macro`／變數指令（`AC_set_var`／`AC_get_var`／`AC_inc_var`）。`LoopBreak`／`LoopContinue` 以例外實作。34 個區塊指令的分派表 `BLOCK_COMMANDS` 也在這裡，含下一列匯入的資料來源指令。 |
 | `flow_data_commands.py` | 272 | `AC_*_to_var` 資料來源與轉換指令：shell、時鐘、亂數、PDF、TOTP、SQL、檔案、HTTP、OCR，加上 `AC_assert_var`／`AC_assert_db`／`AC_assert_duration`／`AC_transform_var`。都不執行巢狀 action list，所以沒有迴圈／分支語意。 |
 | `action_schema.py` | 159 | action list 的結構驗證：形狀、參數型別、未知指令拒絕。單一走訪同時支援兩種消費方式：`validate_actions()` 遇到第一個問題就拋、`unknown_command_names()` 收齊全部不認得的名字（REST `/execute` 用它回 400）。 |
 | `action_redaction.py` | 142 | 記錄與紀錄鍵用的遮蔽：`AC_secret_*` 的參數（金庫通行碼、機密值）在寫進 log、當成結果紀錄的鍵之前換成 `***`，巢狀在區塊指令裡的也一樣。 |
@@ -749,6 +752,9 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `flags.py` | 19 | 旗標讀取 `as_bool`：依拼法（`"true"`／`"yes"`／`"on"`／`"1"`）而非 Python 真值判斷，所以 JSON、CLI、MCP 傳來的 `"false"` 是關；所有 adapter 與流程指令共用。 |
 | `path_arguments.py` | 58 | Scoped dispatch: reviewed filesystem fields after interpolation and positional/default binding; includes flow-block arguments. |
 | `request_context.py` | 40 | Deferred registration snapshots: identity, roots and independent variables for each delivery. |
+| `cancellation.py` | 51 | Internal Qt-free cancellation context shared by nested executors and device workers. |
+| `input_owner.py` | 133 | Qt-free panel input ownership; cancelled work only releases its own native holds. |
+| `cleanup_jobs.py` | 69 | Internal headless cleanup jobs retaining failed owned callbacks for retry. |
 
 #### `utils/mcp_server/`（19,855 行，741 個工具）— 最大子系統
 
@@ -795,7 +801,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `rate_limit.py` | 48 | 工具呼叫的 token bucket 限流。 |
 | `__main__.py` | 92 | `je_auto_control_mcp` console script 進入點。 |
 
-#### `utils/remote_desktop/`（13,799 行／59 檔）
+#### `utils/remote_desktop/`（13,884 行／60 檔）
 
 三條傳輸路徑並存：**TCP**（JPEG 影格）、**WebSocket**（同協定換傳輸）、**WebRTC**（aiortc 視訊 + DataChannel）。
 
@@ -807,12 +813,13 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `viewer.py` | 643 | TCP 檢視端。 |
 | `host_service.py` | 562 | 無頭 WebRTC 主機執行器 + 多平台服務安裝器。 |
 | `host_client.py` | 456 | TCP 主機的每連線處理器：一個檢視端一個實例,擁有它的認證交換、sender／audio／receiver 三條執行緒,以及入站訊息的路由表。 |
-| `sessions.py` | 288 | Owned remote resources, script aliases and bounded lifecycle evidence. |
-| `registry_sessions.py` | 207 | Session ownership operations shared by transport-specific registry adapters. |
+| `sessions.py` | 329 | Owned remote resources, script aliases and bounded lifecycle evidence. |
+| `registry_sessions.py` | 216 | Session ownership operations shared by transport-specific registry adapters. |
+| `cleanup_jobs.py` | 6 | Compatibility import for shared owned-resource cleanup jobs. |
 | `session_api.py` | 25 | JSON lifecycle adapters shared by executor commands and MCP tools. |
 | `registry.py` | 429 | `AC_remote_*` 指令使用的行程級單例。 |
 | `webrtc_transport.py` | 421 | 共用 WebRTC 管線：asyncio 橋接執行緒、螢幕視訊軌、設定。 |
-| `multi_viewer.py` | 357 | 每個連入檢視端各跑一個 `WebRTCDesktopHost` 的協調器。 |
+| `multi_viewer.py` | 368 | 每個連入檢視端各跑一個 `WebRTCDesktopHost` 的協調器。 |
 | `signaling_server.py` | 447 | 獨立的 WebRTC SDP 交換 rendezvous 服務。 |
 | `audit_log.py` | 362 | SQLite 雜湊鏈稽核記錄。 |
 | `host_capture.py` | 323 | TCP 主機的影格與游標產生：螢幕列舉、監視器索引轉擷取區域、預設 JPEG／游標 provider,以及 `FrameProductionMixin`（游標輪詢、擷取迴圈、上線編碼）。 |
@@ -834,13 +841,13 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `webrtc_stats.py` | 167 | 把 aiortc 的 `RTCStats` 報告輪詢成精簡 dict。 |
 | `connect_coordinator.py` | 158 | 由使用者輸入的目標決定該用哪條傳輸。 |
 | `adaptive_bitrate.py` | 148 | 依統計調整主機擷取 FPS。 |
-| `signaling_client.py` | 164 | 純標準庫的訊令用戶端。 |
+| `signaling_client.py` | 180 | 純標準庫的訊令用戶端。 |
 | `trust_list.py` | 139 | 自動接受的檢視端信任清單。 |
 | `webrtc_inspector.py` | 138 | 行程級的 `StatsSnapshot` 滾動視窗。 |
 | `input_dispatch.py` | 161 | 在主機端套用輸入訊息。 |
-| `session_recorder.py` | 139 | 以 PyAV 把 WebRTC 影格錄成 mp4。 |
+| `session_recorder.py` | 136 | 以 PyAV 把 WebRTC 影格錄成 mp4。 |
 | `totp.py` | 160 | RFC 6238 TOTP（零外部相依）。 |
-| `file_sync.py` | 199 | 輪詢式資料夾鏡像。 |
+| `file_sync.py` | 204 | 輪詢式資料夾鏡像。 |
 | `transport.py` | 126 | 可插拔的型別化訊息傳輸。 |
 | `host_access.py` | 112 | TCP 主機的檢視端核准與存取控制：`PendingViewer`、權限字串、分享碼的 TOTP 候選值、IP 白名單。`host` 與 `host_client` 共用,所以獨立成模組。 |
 | `protocol.py` | 98 | 長度前綴的 TCP 框架。 |
@@ -884,7 +891,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `rest_registry.py` | 75 | 保存執行中 REST 伺服器的行程級單例。 |
 | `__main__.py` | 56 | `python -m je_auto_control.utils.rest_api` 進入點。 |
 
-#### `utils/self_healing/`（1,438 行）— 固定畫面比較與候選修訂
+#### `utils/self_healing/`（1,442 行）— 固定畫面比較與候選修訂
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -897,7 +904,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `mobile_locator.py` | 50 | Self-heal on one device frame, preserving evidence and native-point coordinates. |
 | `heal_log.py` | 130 | Append-only JSON-lines log of self-healing locator events. |
 | `healing_context.py` | 74 | Scope locator versions and keep detection evidence separate from verification. |
-| `locator.py` | 297 | Self-healing locator: image template first, VLM fallback on miss. |
+| `locator.py` | 301 | Self-healing locator: image template first, VLM fallback on miss. |
 | `report_views.py` | 60 | Read-only metric and failure rows shared by HTML exports and GUI reports. |
 | `template_revisions.py` | 186 | Explicitly validate, accept and revert immutable candidate template revisions. |
 
@@ -967,30 +974,33 @@ GUI 是**選用 extra**（`pip install je_auto_control[gui]`，PySide6 + qt-mate
 | --- | ---: | --- |
 | `journal_candidate_panel.py` | 118 | Journal candidate source, provenance and diff preview with explicit import/export. |
 | `gui/__init__.py` | 23 | `start_autocontrol_gui()`：**唯一**會延遲匯入 PySide6 的地方，維持頂層套件 Qt-free。 |
-| `main_window.py` | 324 | `QMainWindow`：選單列（File／Actions／View／…）、可關閉分頁、即時語言切換、字級預設、原生 light/dark 主題與可搜尋三欄工作區。分頁分為 core／editing／detection／automation／system 五類。 |
+| `main_window.py` | 367 | `QMainWindow`：選單列（File／Actions／View／…）、可關閉分頁、即時語言切換、字級預設、原生 light/dark 主題與可搜尋三欄工作區。分頁分為 core／editing／detection／automation／system 五類。 |
 | `main_widget.py` | 8 | Compatible import path for the lazy AutoControl GUI widget. |
-| `_lazy_widget.py` | 230 | Lazy tab workspace preserving legacy show/hide/list and core handler contracts. |
-| `_tab_catalog.py` | 476 | Pure tab catalog: stable keys, lazy import targets and action metadata. |
+| `_lazy_widget.py` | 238 | Lazy tab workspace preserving legacy show/hide/list and core handler contracts. |
+| `_tab_catalog.py` | 480 | Pure tab catalog: stable keys, lazy import targets and action metadata. |
 | `_tab_factories.py` | 39 | Resolve one catalog factory only at first open, retaining optional dependency recovery. |
-| `_core_tab_proxy.py` | 69 | Lazy descriptors preserve legacy core-tab methods without importing unopened panels. |
+| `_core_tab_proxy.py` | 87 | Lazy descriptors preserve legacy core-tab methods without importing unopened panels. |
 | `tab_registry.py` | 112 | Immutable tab metadata and lazy owner-scoped factories; imports remain Qt-free. |
 | `workspace.py` | 127 | Responsive navigation, retained workflow workspace and collapsible execution details. |
 | `navigation.py` | 143 | Searchable, keyboard-accessible navigation over passive tab catalog metadata. |
 | `theme.py` | 103 | Qt-free theme tokens and validated native Qt styling for the workspace. |
 | `_workspace_details.py` | 77 | Read-only workflow state, recovery and progress display for the workspace chrome. |
 | `_dependency_panel.py` | 29 | Translated selected-feature dependency recovery with native selectable text. |
-| `_auto_click_tab.py` | 291 | 自動點擊分頁的 mixin 建構器。 |
-| `_screenshot_tab.py` | 137 | 截圖／取像素分頁 mixin。 |
-| `_image_detect_tab.py` | 115 | 影像偵測分頁 mixin。 |
-| `_script_tab.py` | 115 | 腳本執行分頁 mixin。 |
-| `_record_tab.py` | 114 | 錄製／回放分頁 mixin。 |
-| `_report_tab.py` | 88 | 報表分頁 mixin。 |
+| `_auto_click_tab.py` | 338 | 自動點擊分頁的 mixin 建構器。 |
+| `_screenshot_tab.py` | 163 | 截圖／取像素分頁 mixin。 |
+| `_image_detect_tab.py` | 130 | 影像偵測分頁 mixin。 |
+| `_script_tab.py` | 146 | 腳本執行分頁 mixin。 |
+| `_record_tab.py` | 186 | 錄製／回放分頁 mixin。 |
+| `_report_tab.py` | 111 | 報表分頁 mixin。 |
 | `_i18n_helpers.py` | 76 | 翻譯註冊 mixin：保留子元件 wrapper，對自身使用 weak proxy，避免 worker GC 銷毀 GUI owner。 |
 | `_validators.py` | 29 | `int_validator()`／`double_validator()`：以 C locale 驗證的數字輸入框 validator，接受的正是 `int()`／`float()` 讀得懂的寫法（預設 locale 在法文、德文下只收小數逗號）。所有數字 `QLineEdit` 都用它。 |
 | `_screen_geometry.py` | 53 | Qt 邏輯座標與截圖用的原生像素互轉：`native_region()`、`screen_at_native()`、`logical_point()`（每個螢幕的左上角在兩者相同，螢幕內依 device pixel ratio 縮放）。區域選取與主機端標註覆蓋層都用它。 |
-| `_daemon_thread.py` | 79 | `DaemonThread`：`QThread` 的替代品，保留遠端桌面 worker 用到的介面（`start`／`run`／`isRunning`／`wait`／`requestInterruption`／`started`／`finished`），但 `run()` 跑在 daemon `threading.Thread` 上，刪除物件或程式結束都不會銷毀執行中的執行緒。 |
-| `_worker_thread.py` | 230 | `start_worker()`：在 daemon `threading.Thread` 上執行 `QObject` worker 的 `run()`（沒有 `QThread` 可被銷毀），並經由分頁擁有的中繼物件回報結果（回呼一律在 GUI 執行緒；worker 沒處理的例外也送到 `on_fail`）；worker 留在模組登錄表直到 GUI 執行緒看到它結束，回傳 `WorkerHandle`（`isRunning()`）；程式結束時先呼叫 worker 的 `request_stop()`，最多等 10 秒，仍在跑的隨行程結束。 |
-| `language_wrapper/` | 5,614 | 四語系字典（英／日／簡中／繁中）+ `multi_language_wrapper` 執行期切換器與監聽註冊表。 |
+| `_daemon_thread.py` | 84 | `DaemonThread`：`QThread` 的替代品，保留遠端桌面 worker 用到的介面（`start`／`run`／`isRunning`／`wait`／`requestInterruption`／`started`／`finished`），但 `run()` 跑在 daemon `threading.Thread` 上，刪除物件或程式結束都不會銷毀執行中的執行緒。 |
+| `_worker_thread.py` | 296 | `start_worker()`：在 daemon `threading.Thread` 上執行 `QObject` worker 的 `run()`（沒有 `QThread` 可被銷毀），並經由分頁擁有的中繼物件回報結果（回呼一律在 GUI 執行緒；worker 沒處理的例外也送到 `on_fail`）；worker 留在模組登錄表直到 GUI 執行緒看到它結束，回傳 `WorkerHandle`（`isRunning()`）；程式結束時先呼叫 worker 的 `request_stop()`，最多等 10 秒，仍在跑的隨行程結束。 |
+| `task_controller.py` | 220 | Owner/run-bound GUI task delivery with cooperative cancellation and bounded deadlines. |
+| `_task_state.py` | 123 | Qt-free immutable task payloads and cooperative cancellation/deadline checkpoints. |
+| `_panel_tasks.py` | 94 | Shared task-backed result rendering and close cancellation for existing workflow panels. |
+| `language_wrapper/` | 5,638 | 四語系字典（英／日／簡中／繁中）+ `multi_language_wrapper` 執行期切換器與監聽註冊表。 |
 | `selector/` | 216 | 拖曳選取螢幕區域的半透明全螢幕覆蓋層與樣板裁切工具（互動式，但都有對應的程式化 API）。 |
 
 > **分頁指令一律走 Actions 選單**：分頁本身只放輸入、表格與結果檢視，指令由視窗層選單暴露。
@@ -1051,7 +1061,7 @@ GUI 是**選用 extra**（`pip install je_auto_control[gui]`，PySide6 + qt-mate
 | diagnostics | `diagnostics_tab.py` | 91 | 執行子系統檢查並顯示結果。 |
 | report | `_report_tab.py` | 81 | 產生 HTML／JSON／XML 報表。 |
 
-#### 遠端桌面 GUI（`gui/remote_desktop/`，29 檔／7,723 行）
+#### 遠端桌面 GUI（`gui/remote_desktop/`，31 檔／8,104 行）
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -1060,30 +1070,32 @@ GUI 是**選用 extra**（`pip install je_auto_control[gui]`，PySide6 + qt-mate
 | `advanced_group.py` | 92 | The 'Advanced' STUN/TURN group both WebRTC panels build. |
 | `annotation_overlay.py` | 174 | Transparent topmost overlay for host-side annotation rendering. |
 | `blanking_overlay.py` | 71 | Full-screen blanking overlay used for privacy during a remote session. |
-| `connection_screen.py` | 728 | Quick Connect — single-screen AnyDesk-style entry for Remote Desktop. |
+| `connection_screen.py` | 735 | Quick Connect — single-screen AnyDesk-style entry for Remote Desktop. |
 | `frame_display.py` | 228 | ``_FrameDisplay`` widget: paints JPEG frames and emits remote-input events. |
-| `host_panel.py` | 361 | ``_HostPanel``: the 'host this machine' Remote Desktop sub-tab. |
+| `host_panel.py` | 363 | ``_HostPanel``: the 'host this machine' Remote Desktop sub-tab. |
 | `remote_screen_window.py` | 140 | Pop-out window that hosts the remote screen the viewer is watching. |
-| `session_owner.py` | 169 | Panel-owned remote sessions and generation checks at the queued Qt boundary. |
+| `session_owner.py` | 186 | Panel-owned remote sessions and generation checks at the queued Qt boundary. |
 | `sparkline.py` | 77 | Tiny sparkline widget for the WebRTC stats panel. |
-| `tab.py` | 165 | ``RemoteDesktopTab``: outer container holding the Remote Desktop sub-tabs. |
+| `tab.py` | 177 | ``RemoteDesktopTab``: outer container holding the Remote Desktop sub-tabs. |
 | `tray_icon.py` | 106 | System-tray icon for the WebRTC host. |
 | `trusted_group.py` | 70 | The 'trusted viewers' group the WebRTC host panel builds. |
-| `viewer_panel.py` | 537 | ``_ViewerPanel``: the 'control another machine' Remote Desktop sub-tab. |
+| `viewer_panel.py` | 542 | ``_ViewerPanel``: the 'control another machine' Remote Desktop sub-tab. |
 | `viewer_screen_window.py` | 46 | Popup window that displays a connected viewer's shared screen. |
-| `webrtc_common.py` | 189 | Shared WebRTC panel signals and configuration/frame conversion helpers. |
+| `webrtc_common.py` | 191 | Shared WebRTC panel signals and configuration/frame conversion helpers. |
 | `webrtc_dialogs.py` | 519 | Custom dialogs / list widgets used by the WebRTC GUI panels. |
-| `webrtc_host_features.py` | 310 | WebRTC host features controller; session and widget ownership stays on the panel. |
+| `webrtc_host_features.py` | 311 | WebRTC host features controller; session and widget ownership stays on the panel. |
 | `webrtc_host_layout.py` | 348 | WebRTC host layout controller; session and widget ownership stays on the panel. |
 | `webrtc_host_panel.py` | 402 | Typed WebRTC host panel composing layout, feature and lifecycle controllers. |
-| `webrtc_host_session.py` | 431 | WebRTC host session controller; session and widget ownership stays on the panel. |
+| `webrtc_host_session.py` | 467 | WebRTC host session controller; session and widget ownership stays on the panel. |
 | `webrtc_known_hosts.py` | 346 | Known-hosts browser for the WebRTC GUI panels. |
 | `webrtc_panel.py` | 8 | Compatible WebRTC panel imports; implementation is split into typed panels and controllers. |
 | `webrtc_viewer_layout.py` | 347 | WebRTC viewer layout controller; session and widget ownership stays on the panel. |
 | `webrtc_viewer_panel.py` | 446 | Typed WebRTC viewer panel composing layout, feature and lifecycle controllers. |
-| `webrtc_viewer_session.py` | 506 | WebRTC viewer session controller; session and widget ownership stays on the panel. |
+| `webrtc_viewer_session.py` | 550 | WebRTC viewer session controller; session and widget ownership stays on the panel. |
+| `_task_work.py` | 174 | Qt-free WebRTC task snapshots and native operations with late-allocation cleanup. |
+| `connection_tasks.py` | 69 | Qt-owned connection presentation with headless, session-bound native work. |
 | `webrtc_viewer_transfers.py` | 400 | WebRTC viewer transfers controller; session and widget ownership stays on the panel. |
-| `webrtc_workers.py` | 237 | Background workers for the WebRTC signaling-server flow. |
+| `webrtc_workers.py` | 249 | Background workers for the WebRTC signaling-server flow. |
 
 ### 5.6 周邊子專案與資產
 
@@ -1205,18 +1217,18 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 
 | 層／子系統 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `gui/` | 121 | 31,887 |
+| `gui/` | 126 | 33,652 |
 | `utils/mcp_server/` | 47 | 19,855 |
-| `utils/remote_desktop/` | 59 | 13,799 |
-| `utils/executor/` | 10 | 9,894 |
+| `utils/remote_desktop/` | 60 | 13,884 |
+| `utils/executor/` | 13 | 10,150 |
 | `utils/usb/` | 17 | 4,666 |
 | `je_auto_control/`（頂層 3 檔） | 3 | 2,592 |
 | `utils/accessibility/` | 14 | 3,143 |
-| `wrapper/` | 42 | 5,904 |
+| `wrapper/` | 44 | 6,087 |
 | `windows/` | 23 | 2,101 |
 | `utils/rest_api/` | 8 | 1,919 |
 | `utils/agent/` | 9 | 2,032 |
-| `linux_with_x11/` | 19 | 1,281 |
+| `linux_with_x11/` | 20 | 1,334 |
 | `linux_wayland/` | 23 | 4,376 |
 | `utils/triggers/` | 4 | 1,395 |
 | `utils/ocr/` | 9 | 1,141 |
@@ -1225,8 +1237,8 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `osx/` | 17 | 937 |
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 863 |
-| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 737 | 62,811 |
-| **總計** | **1,185** | **173,235** |
+| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 737 | 62,818 |
+| **總計** | **1,197** | **175,584** |
 
 
 Crypto optional-dependency failures use CryptoDependencyError from utils/exception:

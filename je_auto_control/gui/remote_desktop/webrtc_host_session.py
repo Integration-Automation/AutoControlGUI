@@ -3,7 +3,8 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from functools import partial
+from typing import TYPE_CHECKING, Callable, Optional
 
 # pylint: disable=no-name-in-module  # reason: native Qt binding
 from PySide6.QtCore import Qt, QTimer
@@ -19,9 +20,13 @@ from PySide6.QtWidgets import (
 from je_auto_control.gui.remote_desktop._helpers import _t
 from je_auto_control.gui.remote_desktop.webrtc_workers import HostPublishLoopWorker, retire_worker
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
+from je_auto_control.gui._panel_tasks import start_native
 from je_auto_control.utils.remote_desktop import MultiViewerHost
 from je_auto_control.utils.remote_desktop.webrtc_inspector import default_webrtc_inspector
 from je_auto_control.utils.remote_desktop.webrtc_stats import StatsPoller, StatsSnapshot
+from je_auto_control.gui.task_controller import TaskController, TaskError, TaskHandle, TaskResult
+from je_auto_control.gui.remote_desktop._task_work import HostOffer, apply_answer, create_offer, run_in_session
+from je_auto_control.utils.remote_desktop.cleanup_jobs import _submit_cleanup
 
 if TYPE_CHECKING:
     from je_auto_control.gui.remote_desktop.webrtc_host_panel import _WebRTCHostPanel
@@ -32,6 +37,8 @@ class WebRTCHostSessionController:  # pylint: disable=too-few-public-methods  # 
 
     def __init__(self, panel: _WebRTCHostPanel) -> None:
         self._panel = panel
+        self._tasks = TaskController(timeout_s=60)
+        self._task: Optional[TaskHandle] = None
 
     def _on_tray_open(self) -> None:
         win = self._panel.window()
@@ -98,7 +105,7 @@ class WebRTCHostSessionController:  # pylint: disable=too-few-public-methods  # 
             return
         try:
             if self._panel._lan_advertiser is not None:
-                self._panel._lan_advertiser.stop()
+                _submit_cleanup((self._panel._lan_advertiser.stop,))
             self._panel._lan_advertiser = HostAdvertiser(
                 host_id=self._panel._host_id_edit.text().strip(), signaling_url=self._panel._server_edit.text().strip()
             )
@@ -107,10 +114,7 @@ class WebRTCHostSessionController:  # pylint: disable=too-few-public-methods  # 
 
     def _stop_lan_advertise(self) -> None:
         if self._panel._lan_advertiser is not None:
-            try:
-                self._panel._lan_advertiser.stop()
-            except (RuntimeError, OSError):
-                pass
+            _submit_cleanup((self._panel._lan_advertiser.stop,))
             self._panel._lan_advertiser = None
 
     def _on_loop_offer_published(self, session_id: str) -> None:
@@ -149,13 +153,34 @@ class WebRTCHostSessionController:  # pylint: disable=too-few-public-methods  # 
 
     def _produce_offer(self) -> None:
         try:
-            session_id, offer = self._panel._require_multi_host().create_session_offer()
+            host = self._require_multi_host()
+            identifier = self._panel._sessions.id('host')
+            if identifier is None:
+                raise RuntimeError('WebRTC host has no owned session')
+            directory = self._panel._sessions.directory
+            session = directory.get_session(identifier, owner=self._panel._sessions.owner)
+            current = partial(directory.session_is_current, identifier, session.generation, owner=session.owner)
         except (RuntimeError, OSError) as error:
             self._panel._show_error(error)
             return
-        self._panel._manual_session_id = session_id
-        self._panel._offer_view.setPlainText(offer)
+        work = partial(run_in_session, directory, session, partial(create_offer, host, identifier, current))
+        self._task = self._tasks.submit(work, owner=self._panel)
+        self._task.completed.connect(self._offer_ready)
+        self._task.failed.connect(self._task_failed)
+
+    def _offer_ready(self, result: TaskResult) -> None:
+        offer = result.value
+        if not isinstance(offer, HostOffer):
+            return
+        if self._panel._multi_host is not offer.host or self._panel._sessions.id('host') != offer.owner_session_id:
+            _submit_cleanup((partial(offer.host.stop_session, offer.peer_id),))
+            return
+        self._panel._manual_session_id = offer.peer_id
+        self._panel._offer_view.setPlainText(offer.sdp)
         self._panel._status_label.setText(_t("rd_webrtc_offer_ready"))
+
+    def _task_failed(self, error: TaskError) -> None:
+        self._panel._show_error(RuntimeError(error.message))
 
     def _on_apply_answer(self) -> None:
         if self._panel._multi_host is None or not self._panel._manual_session_id:
@@ -165,13 +190,25 @@ class WebRTCHostSessionController:  # pylint: disable=too-few-public-methods  # 
         if not answer:
             QMessageBox.warning(self._panel, "WebRTC", _t("rd_webrtc_no_answer"))
             return
-        try:
-            self._panel._multi_host.accept_session_answer(self._panel._manual_session_id, answer)
-            self._panel._status_label.setText(_t("rd_webrtc_answer_applied"))
-        except (ValueError, RuntimeError, OSError, KeyError) as error:
-            self._panel._show_error(error)
+        identifier = self._panel._sessions.id('host')
+        if identifier is None:
             return
-        self._panel._manual_session_id = None
+        offer = HostOffer(self._panel._multi_host, identifier, self._panel._manual_session_id, '')
+        directory = self._panel._sessions.directory
+        session = directory.get_session(identifier, owner=self._panel._sessions.owner)
+        current = partial(directory.session_is_current, identifier, session.generation, owner=session.owner)
+        work = partial(run_in_session, directory, session, partial(apply_answer, offer, answer, current))
+        self._task = self._tasks.submit(work, owner=self._panel)
+        self._task.completed.connect(self._answer_applied)
+        self._task.failed.connect(self._task_failed)
+
+    def _answer_applied(self, result: TaskResult) -> None:
+        offer = result.value
+        if (isinstance(offer, HostOffer) and self._panel._multi_host is offer.host
+                and self._panel._sessions.id('host') == offer.owner_session_id
+                and self._panel._manual_session_id == offer.peer_id):
+            self._panel._status_label.setText(_t('rd_webrtc_answer_applied'))
+            self._panel._manual_session_id = None
 
     def _on_stop(self) -> None:
         self._panel._stop_host_if_any()
@@ -224,7 +261,7 @@ class WebRTCHostSessionController:  # pylint: disable=too-few-public-methods  # 
             poller = StatsPoller(
                 pc, self._panel._sessions.callback("host", self._panel._make_session_stats_handler(sid)), interval_s=1.0
             )
-            poller.start()
+            start_native(poller.start, self._panel)
             self._panel._session_pollers[sid] = poller
 
     def _make_session_stats_handler(self, session_id: str):
@@ -373,7 +410,9 @@ class WebRTCHostSessionController:  # pylint: disable=too-few-public-methods  # 
         )
         # pylint: enable=import-outside-toplevel
 
-        callbacks = [lambda: retire_worker(self._panel._publish_loop)]
+        self._tasks.cancel_owner(self._panel)
+        retire_worker(self._panel._publish_loop)
+        callbacks: list[Callable[[], None]] = []
         callbacks.extend(
             resource.stop
             for resource in (
@@ -386,6 +425,7 @@ class WebRTCHostSessionController:  # pylint: disable=too-few-public-methods  # 
         dispose_background(callbacks)
 
     def _stop_host_if_any(self) -> None:
+        self._tasks.cancel_owner(self._panel)
         owned = self._panel._sessions.id("host") is not None
         if owned:
             self._panel._sessions.close("host")
@@ -405,15 +445,11 @@ class WebRTCHostSessionController:  # pylint: disable=too-few-public-methods  # 
             self._panel._viewer_screen_window.hide()
         if self._panel._multi_host is None:
             return
-        try:
-            if not owned:
-                self._panel._multi_host.stop_all()
-        except (RuntimeError, OSError):
-            pass
-        finally:
-            self._panel._multi_host = None
-            self._panel._manual_session_id = None
-            self._panel._set_hosting(False)
+        if not owned:
+            _submit_cleanup((self._panel._multi_host.stop_all,))
+        self._panel._multi_host = None
+        self._panel._manual_session_id = None
+        self._panel._set_hosting(False)
 
     def _set_hosting(self, hosting: bool) -> None:
         if self._panel._tray is not None:

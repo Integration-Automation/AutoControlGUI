@@ -11,6 +11,7 @@ No third-party HTTP dep — everything goes through the package's
 from __future__ import annotations
 
 import json
+from threading import Event
 import time
 import urllib.parse
 from typing import Optional
@@ -119,29 +120,44 @@ def fetch_answer(server_url: str, host_id: str, *,
 def wait_for_answer(server_url: str, host_id: str, *,
                     secret: Optional[str] = None,
                     timeout_s: float = 60.0,
-                    poll_interval_s: float = _POLL_INTERVAL_S) -> str:
+                    poll_interval_s: float = _POLL_INTERVAL_S,
+                    cancel: Optional[Event] = None) -> str:
     """Host: block until viewer posts an answer or ``timeout_s`` elapses."""
-    deadline = time.monotonic() + timeout_s
-    while time.monotonic() < deadline:
-        answer = fetch_answer(server_url, host_id, secret=secret)
-        if answer is not None:
-            return answer
-        time.sleep(poll_interval_s)
-    raise SignalingError(f"no answer for host_id={host_id} within {timeout_s}s")
+    return _poll('answer', server_url, host_id, secret, timeout_s, poll_interval_s, cancel)
 
 
 def wait_for_offer(server_url: str, host_id: str, *,
                    secret: Optional[str] = None,
                    timeout_s: float = 60.0,
-                   poll_interval_s: float = _POLL_INTERVAL_S) -> str:
+                   poll_interval_s: float = _POLL_INTERVAL_S,
+                   cancel: Optional[Event] = None) -> str:
     """Viewer: block until host posts an offer or ``timeout_s`` elapses."""
-    deadline = time.monotonic() + timeout_s
+    return _poll('offer', server_url, host_id, secret, timeout_s, poll_interval_s, cancel)
+
+
+def _check_cancelled(cancel: Optional[Event]) -> None:
+    if cancel is not None and cancel.is_set():
+        raise SignalingError('signaling cancelled')
+
+
+def _poll(kind: str, server: str, host: str, secret: Optional[str], timeout: float,
+          interval: float, cancel: Optional[Event]) -> str:
+    deadline = time.monotonic() + timeout
+    fetch = fetch_offer if kind == 'offer' else fetch_answer
+    _check_cancelled(cancel)
     while time.monotonic() < deadline:
-        offer = fetch_offer(server_url, host_id, secret=secret)
-        if offer is not None:
-            return offer
-        time.sleep(poll_interval_s)
-    raise SignalingError(f"no offer for host_id={host_id} within {timeout_s}s")
+        _check_cancelled(cancel)
+        value = fetch(server, host, secret=secret,
+                      timeout=min(_DEFAULT_TIMEOUT_S, max(.001, deadline - time.monotonic())))
+        _check_cancelled(cancel)
+        if value is not None:
+            return value
+        delay = max(0.0, min(interval, deadline - time.monotonic()))
+        if cancel is None:
+            time.sleep(delay)
+        else:
+            cancel.wait(delay)
+    raise SignalingError(f'no {kind} for host_id={host} within {timeout}s')
 
 
 def delete_session(server_url: str, host_id: str, *,

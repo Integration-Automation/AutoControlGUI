@@ -1,5 +1,6 @@
 """Webhooks tab: bind HTTP requests to action scripts."""
 from typing import Optional
+from functools import partial
 
 from PySide6.QtCore import QTimer, Qt
 from PySide6.QtWidgets import (
@@ -9,6 +10,8 @@ from PySide6.QtWidgets import (
 )
 
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
+from je_auto_control.gui._panel_tasks import PanelTasks, call_native
+from je_auto_control.gui._task_state import TaskResult
 from je_auto_control.gui.language_wrapper.multi_language_wrapper import (
     language_wrapper,
 )
@@ -36,6 +39,7 @@ class WebhooksTab(TranslatableMixin, QWidget):
         self._port_input.setRange(0, 65535)
         self._port_input.setValue(0)
         self._status_label = QLabel()
+        self._service_tasks = PanelTasks(self, self._status_label)
         self._path_input = QLineEdit()
         self._path_input.setPlaceholderText("/jobs")
         self._script_input = QLineEdit()
@@ -125,6 +129,11 @@ class WebhooksTab(TranslatableMixin, QWidget):
     def _on_start(self) -> None:
         host = self._host_input.text().strip() or "127.0.0.1"
         port = int(self._port_input.value())
+        if hasattr(self, '_service_tasks'):
+            self._timer.stop()
+            self._service_tasks.submit(partial(call_native, partial(default_webhook_server.start, host, port)),
+                                       self._service_started)
+            return
         try:
             bound_host, bound_port = default_webhook_server.start(host, port)
         except OSError as error:
@@ -139,8 +148,22 @@ class WebhooksTab(TranslatableMixin, QWidget):
         self._refresh()
 
     def _on_stop(self) -> None:
+        if hasattr(self, '_service_tasks'):
+            self._timer.stop()
+            self._service_tasks.submit(partial(call_native, default_webhook_server.stop), self._service_stopped)
+            return
         default_webhook_server.stop()
         self._refresh()
+
+    def _service_started(self, result: TaskResult) -> None:
+        address = result.value
+        if isinstance(address, tuple) and len(address) == 2:
+            self._port_input.setValue(address[1])
+        self._service_stopped(result)
+
+    def _service_stopped(self, _result: TaskResult) -> None:
+        self._refresh()
+        self._timer.start()
 
     def _on_browse(self) -> None:
         path, _ = QFileDialog.getOpenFileName(

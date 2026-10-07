@@ -1476,4 +1476,10 @@ english_word_dict = {
     'workspace_state_hint_needs_dependency': "Install the documented optional dependency and reopen this feature.",
     'workspace_state_unsupported': "Unsupported",
     'workspace_state_hint_unsupported': "This operation is unavailable for the selected platform or backend.",
+    'workspace_cancel_task': 'Cancel current task',
+    'workspace_cancelling': 'Cancellation requested; waiting for owned work.',
+    'workspace_deadline_wait': 'Deadline expired; waiting for owned work.',
+    'workspace_timed_out': 'Task deadline expired.',
+    'workspace_cancelled': 'Task cancelled; owned work returned.',
+    'workspace_retry_cleanup': 'Retry owned resource cleanup',
 }

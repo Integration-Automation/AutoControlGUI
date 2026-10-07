@@ -10,6 +10,7 @@ matches neither.
 """
 import sys
 import warnings
+from functools import partial
 from typing import Optional, Union, Tuple
 
 from je_auto_control.utils.exception.exception_tags import (
@@ -22,6 +23,8 @@ from je_auto_control.utils.exception.exceptions import (
     AutoControlCantFindKeyException, AutoControlKeyboardException
 )
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger, confidential_input
+from je_auto_control.utils.executor.cancellation import _check_cancelled
+from je_auto_control.utils.executor.input_owner import _hold_input, _input_owner, _release_input
 from je_auto_control.utils.cua_action.cua_action import resolve_key_name
 from je_auto_control.utils.platform_id import is_windows, is_x11_unix
 from je_auto_control.utils.test_record.record_test_class import record_action_to_list
@@ -31,6 +34,12 @@ from je_auto_control.wrapper.platform_wrapper import keyboard, keyboard_keys_tab
 
 def _press_with_shift(keycode: int, is_shift: bool) -> None:
     """Release the modifier if pressing its companion key fails."""
+    if _input_owner() is not None:
+        keys = [_resolve_keycode('shift'), keycode] if is_shift else [keycode]
+        for key in keys:
+            _hold_input(('key', key), partial(keyboard_check.check_key_is_press, key),
+                        partial(keyboard.press_key, key), partial(keyboard.release_key, key))
+        return
     if sys.platform == 'darwin':
         keyboard.press_key(keycode, is_shift=is_shift)
         return
@@ -47,6 +56,14 @@ def _press_with_shift(keycode: int, is_shift: bool) -> None:
 
 
 def _release_with_shift(keycode: int, is_shift: bool) -> None:
+    if _input_owner() is not None:
+        try:
+            _release_input(('key', keycode), partial(keyboard.release_key, keycode))
+        finally:
+            if is_shift:
+                shift = _resolve_keycode('shift')
+                _release_input(('key', shift), partial(keyboard.release_key, shift))
+        return
     if sys.platform == 'darwin':
         keyboard.release_key(keycode, is_shift=is_shift)
         return
@@ -92,13 +109,16 @@ def press_keyboard_key(keycode: Union[int, str], is_shift: bool = False,
     :param skip_record: 是否跳過紀錄
     :return: keycode 字串
     """
+    _check_cancelled()
     autocontrol_logger.info(f"press_keyboard_key, keycode={keycode}, is_shift={is_shift}, skip_record={skip_record}")
     try:
         keycode = _resolve_keycode(keycode)
         # 分支寫法與理由見模組 docstring：非 macOS 問輸入堆疊（BSD 曾經
         # 落在所有分支之外），macOS 用字面比較（型別檢查器剪得掉）。
         # Branch spelling explained in the module docstring.
-        if sys.platform == "darwin":
+        if _input_owner() is not None:
+            _press_with_shift(keycode, is_shift)
+        elif sys.platform == "darwin":
             keyboard.press_key(keycode, is_shift=is_shift)
         elif is_windows() or is_x11_unix():
             _press_with_shift(keycode, is_shift)
@@ -129,7 +149,9 @@ def release_keyboard_key(keycode: Union[int, str], is_shift: bool = False,
         # 分支寫法與理由見模組 docstring：非 macOS 問輸入堆疊（BSD 曾經
         # 落在所有分支之外），macOS 用字面比較（型別檢查器剪得掉）。
         # Branch spelling explained in the module docstring.
-        if sys.platform == "darwin":
+        if _input_owner() is not None:
+            _release_with_shift(keycode, is_shift)
+        elif sys.platform == "darwin":
             keyboard.release_key(keycode, is_shift=is_shift)
         elif is_windows() or is_x11_unix():
             _release_with_shift(keycode, is_shift)
@@ -184,6 +206,7 @@ def type_keyboard(keycode: Union[int, str], is_shift: bool = False,
     the user's real keyboard, and a stuck modifier silently changes the meaning
     of every subsequent click and keystroke.
     """
+    _check_cancelled()
     autocontrol_logger.info(f"type_keyboard, keycode={keycode}, is_shift={is_shift}, skip_record={skip_record}")
     still_held: list = []
     try:
@@ -279,6 +302,7 @@ def _write_character(single_char: str, is_shift: bool) -> None:
 
 def _write_text(write_string: str, is_shift: bool) -> None:
     for single_char in write_string.replace('\r\n', '\n'):
+        _check_cancelled()
         _write_character(single_char, is_shift)
 
 
@@ -298,6 +322,7 @@ def write(write_string: str, is_shift: bool = False, secret: bool = False) -> Op
     :param secret: 不記錄、不輸出、不回傳文字 Confidential typing returns None
     :return: 輸入的字串
     """
+    _check_cancelled()
     if secret:
         with confidential_input():
             try:
@@ -331,6 +356,7 @@ def hotkey(key_code_list: list, is_shift: bool = False) -> Tuple[str, str]:
     :param is_shift: 是否同時按下 Shift
     :return: (press_str, release_str)
     """
+    _check_cancelled()
     autocontrol_logger.info(f"hotkey, key_code_list={key_code_list}, is_shift={is_shift}")
     # 已經按下去、還沒放開的鍵，**依按下的順序**。放開時倒著走。
     still_held: list = []

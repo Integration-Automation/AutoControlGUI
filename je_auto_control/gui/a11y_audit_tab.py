@@ -12,6 +12,9 @@ from PySide6.QtWidgets import (
 )
 
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
+from je_auto_control.gui._panel_tasks import PanelTasks, call_native
+from je_auto_control.gui._task_state import TaskResult
+from functools import partial
 from je_auto_control.gui.language_wrapper.multi_language_wrapper import (
     language_wrapper,
 )
@@ -44,6 +47,7 @@ class A11yAuditTab(TranslatableMixin, QWidget):
         self._table.setEditTriggers(QAbstractItemView.NoEditTriggers)
         self._table.horizontalHeader().setStretchLastSection(True)
         self._summary = QLabel()
+        self._tasks = PanelTasks(self, self._summary)
         self._apply_headers()
         self._build_layout()
 
@@ -75,16 +79,25 @@ class A11yAuditTab(TranslatableMixin, QWidget):
         return [
             ("audit_run", self._on_run),
             ("audit_contrast_run", self._on_contrast),
+            ('workspace_cancel_task', self._tasks.cancel),
         ]
 
     def _on_run(self) -> None:
         app = self._app.text().strip() or None
         try:
+            if hasattr(self, '_tasks'):
+                self._tasks.submit(partial(call_native, partial(ac.run_audit, app_name=app)), self._audit_done)
+                return
             report = ac.run_audit(app_name=app)
         except (RuntimeError, OSError, ValueError) as error:
             self._summary.setText(str(error))
             return
         self._render(report.to_dict())
+
+    def _audit_done(self, result: TaskResult) -> None:
+        from je_auto_control.utils.a11y_audit import AuditReport
+        if isinstance(result.value, AuditReport):
+            self._render(result.value.to_dict())
 
     def _render(self, report: dict) -> None:
         issues = report["issues"]

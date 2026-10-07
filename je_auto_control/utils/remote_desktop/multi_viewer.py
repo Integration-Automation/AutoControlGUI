@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import secrets
 import threading
+from functools import partial
 from datetime import datetime, timezone
 from typing import Any, Callable, Dict, List, Mapping, Optional, Tuple
 
@@ -21,6 +22,7 @@ except ImportError as exc:  # pragma: no cover
     ) from exc
 
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
+from je_auto_control.utils.remote_desktop.cleanup_jobs import _submit_cleanup
 from je_auto_control.utils.remote_desktop.input_dispatch import dispatcher_at
 from je_auto_control.utils.remote_desktop.permissions import SessionPermissions
 from je_auto_control.utils.remote_desktop.trust_list import TrustList
@@ -100,6 +102,7 @@ class MultiViewerHost:
         self._session_meta: Dict[str, dict] = {}
         self._source: Optional[_ScreenSource] = None
         self._lock = threading.Lock()
+        self._operation_lock = threading.RLock()
 
     def _capture_origin(self) -> Tuple[int, int]:
         source = self._source
@@ -117,6 +120,10 @@ class MultiViewerHost:
 
     def create_session_offer(self) -> Tuple[str, str]:
         """Mint a new session: returns ``(session_id, offer_sdp)``."""
+        with self._operation_lock:
+            return self._create_session_offer()
+
+    def _create_session_offer(self) -> Tuple[str, str]:
         with self._lock:
             if self._source is None:
                 self._source = _ScreenSource(self._config)
@@ -149,35 +156,40 @@ class MultiViewerHost:
         host.accept_answer(answer_sdp)
 
     def stop_session(self, session_id: str) -> None:
-        with self._lock:
-            host = self._sessions.pop(session_id, None)
-            self._session_meta.pop(session_id, None)
-        if host is not None:
-            try:
+        """Release a peer only after native stop succeeds; failure remains retryable."""
+        with self._operation_lock:
+            with self._lock:
+                host = self._sessions.get(session_id)
+            if host is not None:
                 host.stop()
-            except (RuntimeError, OSError) as error:
-                autocontrol_logger.debug("stop session %s: %r", session_id, error)
-        self._maybe_release_source()
+                with self._lock:
+                    self._sessions.pop(session_id, None)
+                    self._session_meta.pop(session_id, None)
+            self._maybe_release_source()
 
     def stop_all(self) -> None:
-        with self._lock:
-            sessions = list(self._sessions.items())
-            self._sessions.clear()
-            self._session_meta.clear()
-        for session_id, host in sessions:
-            try:
-                host.stop()
-            except (RuntimeError, OSError) as error:
-                autocontrol_logger.debug("stop_all %s: %r", session_id, error)
-        self._maybe_release_source()
+        """Attempt every peer, retain failures and report the first native cleanup error."""
+        with self._operation_lock:
+            with self._lock:
+                identifiers = tuple(self._sessions)
+            failures = []
+            for identifier in identifiers:
+                try:
+                    self.stop_session(identifier)
+                except (RuntimeError, OSError) as error:
+                    failures.append(error)
+            if failures:
+                raise failures[0]
+            self._maybe_release_source()
 
     def _maybe_release_source(self) -> None:
         with self._lock:
             if self._sessions or self._source is None:
                 return
             source = self._source
-            self._source = None
         source.stop()
+        with self._lock:
+            self._source = None
 
     # --- per-session controls -----------------------------------------------
 
@@ -318,8 +330,7 @@ class MultiViewerHost:
         on with nobody watching. ``stop_session`` blocks on the bridge, and
         this is called from the loop thread, hence the thread.
         """
-        threading.Thread(target=self.stop_session, args=(session_id,),
-                         name="webrtc-prune", daemon=True).start()
+        _submit_cleanup((partial(self.stop_session, session_id),))
 
     def _wrap_auth_callback(self, session_id: str):
         cb = self._on_session_authenticated

@@ -228,17 +228,19 @@ def test_stopping_an_unknown_session_is_a_no_op():
     assert host.session_count() == 1
 
 
-def test_a_session_that_fails_to_stop_is_still_forgotten():
-    # The PeerConnection may already be dead when the GUI asks to close the
-    # tab; the session must leave the table anyway, or the capture it holds
-    # a reference to never gets released.
+def test_a_failed_stop_retains_the_peer_and_capture_for_retry():
     host = _host()
     session_id, _ = host.create_session_offer()
     track = host.screen_track()
-    _FakeHost.instances[0].raise_on.add("stop")
+    peer = _FakeHost.instances[0]
+    peer.raise_on.add("stop")
+    with pytest.raises(RuntimeError, match="stop failed"):
+        host.stop_session(session_id)
+    assert host.session_count() == 1 and not track.stopped
+    assert host.list_sessions()[0]['session_id'] == session_id
+    peer.raise_on.clear()
     host.stop_session(session_id)
-    assert host.session_count() == 0
-    assert track.stopped
+    assert peer.stopped and track.stopped and host.session_count() == 0
 
 
 def test_stop_all_tears_every_session_and_the_capture_down():
@@ -252,14 +254,20 @@ def test_stop_all_tears_every_session_and_the_capture_down():
     assert host.session_count() == 0
 
 
-def test_a_session_that_fails_to_stop_does_not_strand_the_others():
+def test_a_failed_stop_does_not_strand_others_and_can_be_retried():
     host = _host()
     host.create_session_offer()
     host.create_session_offer()
-    _FakeHost.instances[0].raise_on.add("stop")
-    host.stop_all()
+    track = host.screen_track()
+    peer = _FakeHost.instances[0]
+    peer.raise_on.add("stop")
+    with pytest.raises(RuntimeError, match="stop failed"):
+        host.stop_all()
     assert _FakeHost.instances[1].stopped
-    assert host.screen_track() is None, "the capture is still released"
+    assert host.session_count() == 1 and not track.stopped
+    peer.raise_on.clear()
+    host.stop_all()
+    assert peer.stopped and track.stopped and host.screen_track() is None
 
 
 def test_a_new_session_after_stop_all_builds_a_fresh_capture():
