@@ -398,6 +398,10 @@ bandit -c pyproject.toml -r je_auto_control/
 [CODE_OF_CONDUCT.md](../CODE_OF_CONDUCT.md)。CI 會強制兩條規則：`import je_auto_control`
 絕不能載入 PySide6；每個功能都必須同時具備無頭 API 與 GUI 介面。
 
+Linux／macOS Python 3.10 quality job 透過 gdb／lldb 保存 `native-diagnostics`
+artifact，包含原生堆疊、套件版本及測試退出碼。原有 coverage 命令及斷言繼續執行；
+收集診斷不代表已定位 USB ACL 的間歇崩潰原因。
+
 ---
 
 ## 授權

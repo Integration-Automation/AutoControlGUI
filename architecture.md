@@ -343,3 +343,9 @@ active/pending owners detached under a short cache lock. Stop/reset cancel
 pending IPC and stale completion cannot publish its grant; permission polling
 also leaves the cache lock free. Tests include controlled workers without
 performing desktop input.
+
+Linux/macOS Python 3.10 quality jobs run the unchanged coverage command under
+gdb/lldb through `test/verify/native_debugger.py`. Owned debugger process groups
+are bounded by a 30-minute deadline. Artifacts retain target/debugger exit codes,
+versions, command files and native frames; missing target exit evidence fails
+the job. Capturing diagnostics does not establish the USB Qt crash root cause.

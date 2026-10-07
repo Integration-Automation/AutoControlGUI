@@ -595,3 +595,14 @@ Executor commands::
 
 GUI: *Export Config* / *Import Config* buttons on the REST API tab,
 both with file dialogs and overwrite-confirmation dialogs.
+
+Native CI diagnostics
+---------------------
+
+Linux/macOS Python 3.10 quality jobs run the original coverage/pytest command
+under gdb/lldb via ``test/verify/native_debugger.py``. The 30-minute wrapper
+deadline terminates its owned debugger process group. ``native-diagnostics``
+artifacts retain native frames, commands, versions and target/debugger exit
+status for 14 days, including on failure. The final log retains up to 64 MiB;
+missing target exit evidence fails the job. Assertions and coverage floors
+remain enforced. Diagnostic collection is not a USB ACL crash fix.

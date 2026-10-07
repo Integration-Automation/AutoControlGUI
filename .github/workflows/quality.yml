@@ -141,6 +141,10 @@ jobs:
         # scalar, which YAML reads as a mapping and refuses.
         run: "pip install --only-binary :all: ruff==0.15.22 bandit==1.9.4 pytest==9.1.1 pytest-timeout==2.4.0 pytest-rerunfailures==15.1 coverage==7.15.4 PySide6==6.11.1 radon==6.0.1"
 
+      - name: Install native debugger for Python 3.10 (Linux)
+        if: runner.os == 'Linux' && matrix.python-version == '3.10'
+        run: sudo apt-get install -y --no-install-recommends gdb
+
       # Paths come from `testpaths` in pyproject.toml. Do NOT pass an explicit
       # path here: an argument overrides testpaths, which previously meant the
       # flow_control tests were configured to run but silently never did.
@@ -152,10 +156,28 @@ jobs:
       # Start coverage before all pytest plugins and explicit legacy integrations.
       # The automatic standalone plugin itself no longer imports the facade.
       - name: Run headless pytest suite under coverage
+        if: matrix.python-version != '3.10' || runner.os == 'Windows'
         shell: bash
         run: >-
           ${{ runner.os == 'Linux' && 'xvfb-run -a -s "-screen 0 1280x800x24"' || '' }}
           python -m coverage run -m pytest -v --tb=short --timeout=120
+
+      - name: Run Python 3.10 under native debugger
+        if: matrix.python-version == '3.10' && runner.os != 'Windows'
+        shell: bash
+        run: >-
+          ${{ runner.os == 'Linux' && 'xvfb-run -a -s "-screen 0 1280x800x24"' || '' }}
+          python test/verify/native_debugger.py --output native-diagnostics --timeout 1800 --
+          python -m coverage run -m pytest -v --tb=short --timeout=120
+
+      - name: Preserve Python 3.10 native stack and runtime metadata
+        if: always() && matrix.python-version == '3.10' && runner.os != 'Windows'
+        uses: actions/upload-artifact@v6
+        with:
+          name: native-diagnostics-${{ matrix.os }}-${{ matrix.python-version }}
+          path: native-diagnostics/
+          if-no-files-found: error
+          retention-days: 14
 
       # XML before the floor check, so a square that fails the floor still
       # uploads the report that says which lines it was short of.

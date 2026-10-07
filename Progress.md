@@ -190,7 +190,8 @@ Anthropic 每一步送約 202 KB 的工具 schema、沒有 `cache_control`。拍
 
 `WIP` — `test/unit_test/headless/test_usb_acl_prompt.py::test_bridge_remember_persists_acl_rule`
 在 Linux／macOS Python 3.10 間歇 SIGSEGV。需在原生目標取得 gdb／lldb backtrace，
-定位並修正 Qt lifecycle，CI 保存 crash artifact；既有 faulthandler 證據見
+定位並修正 Qt lifecycle；CI 已配置原生 debugger artifact，仍需執行並確認崩潰堆疊。
+既有 faulthandler 證據見
 `docs/updates/2026-10.md` U-20261007-03，不能以 Windows／較新 Python 的通過取代。
 
 ---

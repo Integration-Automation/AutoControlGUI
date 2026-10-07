@@ -450,6 +450,11 @@ Contributions are welcome — see [CONTRIBUTING.md](CONTRIBUTING.md) and
 je_auto_control` must never pull in PySide6, and every feature needs both a headless
 API and a GUI surface.
 
+Linux/macOS Python 3.10 quality jobs retain `native-diagnostics` artifacts
+from gdb/lldb, including native frames, package versions and target exit status.
+The original coverage command and assertions still run; diagnostic collection
+does not establish the intermittent USB ACL crash root cause.
+
 ---
 
 ## License

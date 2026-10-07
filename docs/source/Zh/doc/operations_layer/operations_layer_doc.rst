@@ -554,3 +554,13 @@ Executor 指令::
 
 GUI：REST API 分頁的 *Export Config* / *Import Config* 兩顆按鈕，
 都帶檔案對話框與覆寫確認。
+
+原生 CI 診斷
+------------------------
+
+Linux/macOS Python 3.10 quality job 透過 ``test/verify/native_debugger.py``
+在 gdb/lldb 下執行原有 coverage/pytest 命令；30 分鐘時限會終止所屬 debugger
+程序群組。``native-diagnostics`` artifact 在失敗時仍保存原生堆疊、命令、版本
+及 target/debugger 退出碼，保留 14 天；最終 log 保留至多 64 MiB。缺少 target
+退出證據會使 job 失敗；斷言與 coverage 地板持續強制。收集診斷並不代表已修正
+USB ACL 間歇崩潰。
