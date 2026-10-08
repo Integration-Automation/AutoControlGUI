@@ -34,6 +34,8 @@ This package is the **headless client** side:
   (:class:`HttpAssetTransport`).
 * :mod:`.blobs` -- :class:`BlobStore`, what the server keeps behind
   ``/blobs``: per account, content-addressed, size-capped, with a quota.
+  :func:`collect_unreferenced_blobs` (and :func:`config_sync_collect_blobs`,
+  which works out what is still referenced) removes the ones no entry names.
 * :mod:`.device` -- :func:`default_device_id`, this machine's stable id.
 * :mod:`.session` -- :func:`run_sync`, the whole cycle behind the GUI tab,
   the ``AC_config_sync_*`` commands and the MCP tools.
@@ -57,8 +59,9 @@ from je_auto_control.utils.config_sync.adapters import (
     ScriptSyncAdapter, SyncAdapter, TriggerSyncAdapter,
 )
 from je_auto_control.utils.config_sync.assets import (
-    AssetManifest, AssetRef, AssetSyncError, AssetSyncResult, AssetTransport,
-    DirectoryAssetTransport, HttpAssetTransport, publish_assets, sync_assets,
+    DEFAULT_BLOB_GRACE_S, AssetManifest, AssetRef, AssetSyncError, AssetSyncResult,
+    AssetTransport, DirectoryAssetTransport, HttpAssetTransport, collect_unreferenced_blobs,
+    publish_assets, sync_assets,
 )
 from je_auto_control.utils.config_sync.blobs import BlobStore, BlobStoreError
 from je_auto_control.utils.config_sync.client import (
@@ -71,8 +74,9 @@ from je_auto_control.utils.config_sync.outbox import (
     DrainReport, OutboxError, SyncOutbox, default_outbox_path,
 )
 from je_auto_control.utils.config_sync.session import (
-    SYNCABLE_SECTIONS, SyncRunReport, config_sync_full_resync, config_sync_resolve,
-    config_sync_run, config_sync_status, default_adapters, default_device_id, resolve_conflict,
+    SYNCABLE_SECTIONS, SyncRunReport, config_sync_collect_blobs, config_sync_full_resync,
+    config_sync_resolve, config_sync_run, config_sync_status, default_adapters,
+    default_device_id, referenced_blob_digests, resolve_conflict,
     resolve_sections, run_full_resync, run_sync, sync_status,
 )
 from je_auto_control.utils.config_sync.store import (
@@ -93,6 +97,8 @@ __all__ = [
     "config_sync_status", "default_adapters", "default_device_id", "publish_assets",
     "resolve_conflict", "run_full_resync", "run_sync", "sync_assets", "sync_status",
     "SYNCABLE_SECTIONS", "resolve_sections",
+    "DEFAULT_BLOB_GRACE_S", "collect_unreferenced_blobs", "config_sync_collect_blobs",
+    "referenced_blob_digests",
     "ConfigBucket", "ConfigStore", "ConfigStoreError", "ConflictRecord", "ConfigSyncClient",
     "ConfigSyncConflict", "ConfigSyncError", "DEFAULT_SYNC_ATTEMPTS", "DrainReport",
     "FullResyncRequired", "MergeDecision", "OperationMismatchError", "OutboxError", "PeerState",

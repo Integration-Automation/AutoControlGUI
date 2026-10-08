@@ -12,6 +12,7 @@ Pure standard library; imports no ``PySide6``.
 from __future__ import annotations
 
 import hashlib
+import json
 import threading
 import urllib.parse
 from dataclasses import dataclass, field
@@ -22,6 +23,10 @@ from je_auto_control.utils.config_sync.bucket import ConfigSyncError
 from je_auto_control.utils.exception.exceptions import AutoControlException
 
 _SHA256_HEX_CHARS = 64
+#: Blobs stored more recently than this are left alone by
+#: :func:`collect_unreferenced_blobs`: a machine uploads a file just before it
+#: commits the entry that refers to it.
+DEFAULT_BLOB_GRACE_S = 24 * 3600.0
 
 
 class AssetSyncError(ConfigSyncError):
@@ -151,6 +156,7 @@ class DirectoryAssetTransport:
         return self._blob(sha256).is_file()
 
 
+_LISTING = "listing"
 #: Why the server refused a blob request, by status.
 _HTTP_REFUSALS = {
     400: "the server rejected the blob (bad digest or content)",
@@ -175,6 +181,16 @@ class HttpAssetTransport:
     an account may hold; a file over either is reported per file by
     :func:`publish_assets` rather than stopping the others.
 
+    The per-blob limit is read from the account's listing (``GET
+    /blobs/{user_id}``) before the first upload and remembered, and a file
+    over it is refused here without being sent. That matters for more than
+    the saved upload: the server answers an oversized ``PUT`` from its
+    declared length and closes the connection, and a client still sending
+    the body can see the reset instead of the ``413`` -- the failure then
+    read as a connection error. A server that does not say its limit is
+    simply sent the file; if that upload is cut off the limit is asked for
+    once more, so "too large" is still the reason given when it is the reason.
+
     Requests go through :mod:`je_auto_control.utils.http_client`, so the
     egress policy applies, and redirects are not followed -- the secret is
     never carried to another host.
@@ -190,26 +206,87 @@ class HttpAssetTransport:
         self._user_id = user_id
         self._secret = secret
         self._timeout = float(timeout_s)
+        self._max_blob_bytes: Optional[int] = None
+        self._limit_asked = False
+
+    def _listing_url(self) -> str:
+        account = urllib.parse.quote(self._user_id, safe="")
+        return f"{self._server_url}/blobs/{account}"
 
     def _url(self, sha256: str) -> str:
-        account = urllib.parse.quote(self._user_id, safe="")
-        return f"{self._server_url}/blobs/{account}/{_checked_digest(sha256)}"
+        return f"{self._listing_url()}/{_checked_digest(sha256)}"
 
-    def _request(self, method: str, sha256: str, data: Optional[bytes] = None) -> Dict[str, Any]:
+    def _request(self, method: str, sha256: Optional[str],
+                 data: Optional[bytes] = None) -> Dict[str, Any]:
+        """One request about blob ``sha256``, or about the account's listing (``None``)."""
         from je_auto_control.utils.http_client.http_client import build_call, perform_call
         headers = {"Content-Type": "application/octet-stream"} if data is not None else {}
         if self._secret:
             headers["X-Signaling-Secret"] = self._secret
         try:
-            call = build_call(self._url(sha256), method=method, headers=headers, data=data,
+            url = self._listing_url() if sha256 is None else self._url(sha256)
+            call = build_call(url, method=method, headers=headers, data=data,
                               timeout=self._timeout)
             call["follow_redirects"] = False
-            call["want_bytes"] = method == "GET"
+            call["want_bytes"] = method == "GET" and sha256 is not None
             return perform_call(call)
         except AssetSyncError:
             raise
         except (OSError, ValueError, AutoControlException) as error:
-            raise AssetSyncError(f"asset {method} {sha256} failed: {error}") from error
+            raise AssetSyncError(
+                f"asset {method} {sha256 or _LISTING} failed: {error}") from error
+
+    @staticmethod
+    def _json(response: Mapping[str, Any], what: str) -> Dict[str, Any]:
+        try:
+            body = json.loads(response.get("text") or "")
+        except (json.JSONDecodeError, RecursionError) as error:
+            raise AssetSyncError(f"asset {what}: the reply was not JSON") from error
+        if not isinstance(body, dict):
+            raise AssetSyncError(f"asset {what}: the reply was not a JSON object")
+        return body
+
+    def usage(self) -> Dict[str, Any]:
+        """What the account holds on the server, and the server's limits.
+
+        ``{"used", "quota", "count", "max_blob_bytes", "blobs": [{"sha256",
+        "size", "age_s"}, ...]}`` as the server reports it; a server older
+        than a field leaves it out. Raises :class:`AssetSyncError` when the
+        server refuses or does not serve the listing.
+        """
+        response = self._request("GET", None)
+        status = int(response["status"])
+        if status != 200:
+            raise self._refused("GET", _LISTING, status)
+        listing = self._json(response, _LISTING)
+        limit = listing.get("max_blob_bytes")
+        if isinstance(limit, int) and not isinstance(limit, bool) and limit > 0:
+            self._max_blob_bytes = limit
+        return listing
+
+    def max_blob_bytes(self, *, refresh: bool = False) -> Optional[int]:
+        """The largest blob the server accepts; ``None`` when it does not say.
+
+        Asked once and remembered (``refresh`` asks again). A listing that
+        cannot be had -- the server is unreachable, or predates it -- is not
+        an error here: the limit is then unknown.
+        """
+        if refresh or not self._limit_asked:
+            self._limit_asked = True
+            try:
+                self.usage()
+            except AssetSyncError:
+                pass
+        return self._max_blob_bytes
+
+    @staticmethod
+    def _require_fits(sha256: str, size: int, limit: Optional[int],
+                      cause: Optional[BaseException] = None) -> None:
+        """Raise the "too large" refusal when ``size`` is over a known ``limit``."""
+        if limit is not None and size > limit:
+            raise AssetSyncError(
+                f"asset PUT {sha256}: {_HTTP_REFUSALS[413]} "
+                f"({size} bytes; the limit is {limit})") from cause
 
     @staticmethod
     def _refused(method: str, sha256: str, status: int) -> AssetSyncError:
@@ -230,10 +307,22 @@ class HttpAssetTransport:
         return bytes(content)
 
     def store(self, sha256: str, data: bytes) -> None:
-        """Upload ``data`` under ``sha256``; the server checks the hash too."""
-        status = int(self._request("PUT", sha256, bytes(data))["status"])
+        """Upload ``data`` under ``sha256``; the server checks the hash too.
+
+        A file over the server's per-blob limit is refused without being
+        sent, and always with the same reason (see the class docstring).
+        """
+        digest = _checked_digest(sha256)
+        body = bytes(data)
+        self._require_fits(digest, len(body), self.max_blob_bytes())
+        try:
+            status = int(self._request("PUT", digest, body)["status"])
+        except AssetSyncError as error:
+            # Cut off while sending: was it the size? Ask the limit afresh.
+            self._require_fits(digest, len(body), self.max_blob_bytes(refresh=True), error)
+            raise
         if status not in (200, 201):
-            raise self._refused("PUT", sha256, status)
+            raise self._refused("PUT", digest, status)
 
     def has(self, sha256: str) -> bool:
         """Whether the server already holds the blob (so it need not be sent)."""
@@ -243,6 +332,16 @@ class HttpAssetTransport:
         if status == 404:
             return False
         raise self._refused("HEAD", sha256, status)
+
+    def delete(self, sha256: str) -> bool:
+        """Remove the account's blob from the server; ``False`` when it held none."""
+        response = self._request("DELETE", sha256)
+        status = int(response["status"])
+        if status == 404:
+            return False
+        if status != 200:
+            raise self._refused("DELETE", sha256, status)
+        return self._json(response, f"DELETE {sha256}").get("deleted") is True
 
 
 @dataclass
@@ -337,8 +436,88 @@ def publish_assets(manifest: AssetManifest, transport: AssetTransport, *,
     return result
 
 
+def _checked_grace(min_age_s: Any) -> float:
+    if isinstance(min_age_s, bool) or not isinstance(min_age_s, (int, float)) \
+            or not min_age_s >= 0:
+        raise AssetSyncError(f"min_age_s must be a number >= 0, got {min_age_s!r}")
+    return float(min_age_s)
+
+
+def _old_enough(age_s: Any, min_age_s: float) -> bool:
+    """Whether a listed blob is past the grace period (an unknown age never is)."""
+    if min_age_s <= 0:
+        return True
+    return isinstance(age_s, (int, float)) and not isinstance(age_s, bool) and age_s >= min_age_s
+
+
+def _listed(blob: Any) -> Optional[Tuple[str, int, Any]]:
+    """``(digest, size, age)`` of one listing row; ``None`` for a row that is not one."""
+    if not isinstance(blob, Mapping):
+        return None
+    try:
+        digest = _checked_digest(blob.get("sha256"))
+    except AssetSyncError:
+        return None
+    size = blob.get("size")
+    if isinstance(size, bool) or not isinstance(size, int):
+        size = 0
+    return digest, size, blob.get("age_s")
+
+
+def collect_unreferenced_blobs(transport: HttpAssetTransport, referenced: Iterable[str], *,
+                               min_age_s: float = DEFAULT_BLOB_GRACE_S,
+                               dry_run: bool = False) -> Dict[str, Any]:
+    """Delete the account's blobs on the server that ``referenced`` does not name.
+
+    ``referenced`` is every SHA-256 still in use -- for config sync, the
+    digests the bucket's entries name
+    (:func:`~je_auto_control.utils.config_sync.session.referenced_blob_digests`;
+    :func:`~je_auto_control.utils.config_sync.session.config_sync_collect_blobs`
+    gathers them for you). A blob stored less than ``min_age_s`` ago is kept
+    whatever it is: a machine uploads a file just before it commits the entry
+    naming it, and that entry is not in anybody's bucket yet. The age is the
+    server's own figure, so no two clocks are compared; a server that does
+    not report ages has nothing collected unless ``min_age_s`` is ``0``.
+
+    Returns ``{"deleted": [sha256...], "freed": bytes, "kept": count,
+    "recent": [sha256...], "failed": {sha256: why}, "dry_run": bool}``. With
+    ``dry_run`` nothing is deleted and ``deleted`` lists what would be.
+
+    For :class:`HttpAssetTransport` only: its blobs belong to one account. A
+    folder behind :class:`DirectoryAssetTransport` may hold other users'
+    files, which nothing here could tell apart.
+    """
+    grace = _checked_grace(min_age_s)
+    keep = {_checked_digest(digest) for digest in referenced}
+    rows = transport.usage().get("blobs")
+    result: Dict[str, Any] = {"deleted": [], "freed": 0, "kept": 0, "recent": [],
+                              "failed": {}, "dry_run": bool(dry_run)}
+    for digest, size, age in filter(None, map(_listed, rows if isinstance(rows, list) else ())):
+        if digest in keep:
+            result["kept"] += 1
+        elif not _old_enough(age, grace):
+            result["recent"].append(digest)
+        elif _removed(transport, digest, dry_run, result["failed"]):
+            result["deleted"].append(digest)
+            result["freed"] += size
+    return result
+
+
+def _removed(transport: HttpAssetTransport, digest: str, dry_run: bool,
+             failed: Dict[str, str]) -> bool:
+    """Delete one blob (unless ``dry_run``); a failure is recorded, not raised."""
+    if dry_run:
+        return True
+    try:
+        transport.delete(digest)
+    except AssetSyncError as error:
+        failed[digest] = str(error)
+        return False
+    return True
+
+
 __all__ = [
     "AssetManifest", "AssetRef", "AssetSyncError", "AssetSyncResult", "AssetTransport",
-    "DirectoryAssetTransport", "HttpAssetTransport", "file_sha256", "publish_assets",
-    "sync_assets",
+    "DEFAULT_BLOB_GRACE_S", "DirectoryAssetTransport", "HttpAssetTransport",
+    "collect_unreferenced_blobs", "file_sha256", "publish_assets", "sync_assets",
 ]

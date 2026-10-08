@@ -12,6 +12,13 @@ anything. Content is hashed before it is kept -- a blob can only ever be
 stored under the digest of its own bytes -- and is written to a temporary
 file and renamed, so a reader never sees half of one.
 
+The quota check and the write are one step for every process that shares the
+folder: a write holds the lock file ``<root>/store.lock`` (the helper the
+shared JSON stores use), so two server processes cannot each admit a blob the
+other has not counted. Nothing here deletes a blob by itself; the listing
+reports each blob's age so a client can collect the ones no entry refers to
+(:func:`~je_auto_control.utils.config_sync.assets.collect_unreferenced_blobs`).
+
 Pure standard library; imports no ``PySide6``.
 """
 from __future__ import annotations
@@ -20,6 +27,7 @@ import hashlib
 import os
 import secrets
 import threading
+import time
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 
@@ -56,6 +64,10 @@ class BlobCapacityError(BlobStoreError):
     """A new account's first blob would exceed the store's account limit."""
 
 
+class BlobStoreBusyError(BlobStoreError):
+    """Another process held the store's lock file for too long; nothing was written."""
+
+
 def default_blob_dir() -> Path:
     """``~/.je_auto_control/config_sync_blobs``, resolved at call time."""
     return Path.home() / ".je_auto_control" / "config_sync_blobs"
@@ -86,6 +98,8 @@ class BlobStore:
         self._quota_bytes = max(1, int(quota_bytes))
         self._max_users = max(1, int(max_users))
         # One writer at a time: the quota check and the write are one step.
+        # This lock is for the threads of one process; the lock file taken in
+        # put() is for the other processes sharing the folder.
         self._lock = threading.Lock()
 
     @property
@@ -139,15 +153,25 @@ class BlobStore:
             raise BlobStoreError(f"cannot read blob {path.name}: {error}") from error
 
     def usage(self, user_id: str) -> Dict[str, Any]:
-        """``{"used", "quota", "count", "max_blob_bytes", "blobs"}`` for the account."""
+        """``{"used", "quota", "count", "max_blob_bytes", "blobs"}`` for the account.
+
+        Each of ``blobs`` is ``{"sha256", "size", "age_s"}``; ``age_s`` is how
+        long ago, by this machine's clock, the blob was last stored (storing
+        content the account already holds counts), so a reader on another
+        machine needs no clock of its own to tell an old blob from a new one.
+        """
         try:
-            sizes = {entry.name: entry.stat().st_size
+            stats = {entry.name: entry.stat()
                      for entry in self._entries(self._account_dir(user_id))}
         except OSError as error:
             raise BlobStoreError(f"cannot list blobs: {error}") from error
-        blobs = [{"sha256": digest, "size": size} for digest, size in sorted(sizes.items())]
-        return {"used": sum(sizes.values()), "quota": self._quota_bytes,
-                "count": len(blobs), "max_blob_bytes": self._max_blob_bytes, "blobs": blobs}
+        now = time.time()
+        blobs = [{"sha256": digest, "size": stat.st_size,
+                  "age_s": max(0.0, now - stat.st_mtime)}
+                 for digest, stat in sorted(stats.items())]
+        return {"used": sum(stat.st_size for stat in stats.values()),
+                "quota": self._quota_bytes, "count": len(blobs),
+                "max_blob_bytes": self._max_blob_bytes, "blobs": blobs}
 
     def put(self, user_id: str, sha256: Any, data: bytes) -> bool:
         """Keep ``data`` under ``sha256``; whether it was new to the account.
@@ -157,7 +181,10 @@ class BlobStore:
         :class:`BlobQuotaError` when the account's total would pass its
         quota and :class:`BlobCapacityError` when a new account would pass
         the account limit. Storing content the account already holds
-        succeeds and writes nothing.
+        succeeds and writes nothing -- it only marks the blob as stored now,
+        so housekeeping that goes by age leaves it alone.
+        :class:`BlobStoreBusyError` when another process kept the store's
+        lock file for too long.
         """
         digest = checked_blob_digest(sha256)
         if len(data) > self._max_blob_bytes:
@@ -165,16 +192,22 @@ class BlobStore:
                 f"blob is {len(data)} bytes; the limit is {self._max_blob_bytes}")
         if hashlib.sha256(data).hexdigest() != digest:
             raise BlobDigestError("content does not match the SHA-256 it was sent under")
+        from je_auto_control.utils.json_store.json_store import _file_lock
         folder = self._account_dir(user_id)
         with self._lock:
             try:
-                return self._write(folder, digest, data)
+                with _file_lock(self.root / "store"):
+                    return self._write(folder, digest, data)
+            except TimeoutError as error:
+                raise BlobStoreBusyError(
+                    f"blob store {self.root} is locked by another process") from error
             except OSError as error:
                 raise BlobStoreError(f"cannot store blob {digest}: {error}") from error
 
     def _write(self, folder: Path, digest: str, data: bytes) -> bool:
         target = folder / digest
         if target.is_file():
+            os.utime(target)            # held already; it is as good as stored now
             return False
         used = sum(entry.stat().st_size for entry in self._entries(folder))
         if used + len(data) > self._quota_bytes:
@@ -215,7 +248,7 @@ class BlobStore:
 
 
 __all__ = [
-    "BlobCapacityError", "BlobDigestError", "BlobQuotaError", "BlobStore", "BlobStoreError",
-    "BlobTooLargeError", "DEFAULT_BLOB_QUOTA_BYTES", "DEFAULT_MAX_BLOB_BYTES",
+    "BlobCapacityError", "BlobDigestError", "BlobQuotaError", "BlobStore", "BlobStoreBusyError",
+    "BlobStoreError", "BlobTooLargeError", "DEFAULT_BLOB_QUOTA_BYTES", "DEFAULT_MAX_BLOB_BYTES",
     "DEFAULT_MAX_BLOB_USERS", "checked_blob_digest", "default_blob_dir",
 ]
