@@ -159,11 +159,12 @@ def build_verifier(spec: Mapping[str, Any], *, template_path: Optional[str] = No
     """
     if not isinstance(spec, Mapping):
         raise HealVerificationError(f"verify must be an object, got {spec!r}")
-    kind = spec.get("type")
-    allowed = _OPTIONS.get(kind) if isinstance(kind, str) else None
+    named = spec.get("type")
+    allowed = _OPTIONS.get(named) if isinstance(named, str) else None
     if allowed is None:
         raise HealVerificationError(
-            f"unknown verify type {kind!r}; expected one of {list(VERIFY_TYPES)}")
+            f"unknown verify type {named!r}; expected one of {list(VERIFY_TYPES)}")
+    kind = str(named)
     unknown = sorted(set(spec) - allowed)
     if unknown:
         raise HealVerificationError(f"unknown verify option(s) {unknown} for type {kind!r}")
