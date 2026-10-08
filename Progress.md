@@ -263,21 +263,6 @@ socket server 的執行也都用同一個 `executor`；`for_each` 的迴圈變�
 
 ---
 
-## 舊式 CLI（`-e`／`-d`／`--execute_str`）在動作失敗時仍然結束碼 0
-
-`DECIDE` — 要不要讓舊式入口也以結束碼 1 回報動作失敗（跨專案契約，PyBreeze 與 TestPioneer 以子程序呼叫）
-
-`je_auto_control/__main__.py` 執行完不看 `recorded_failures()`；`je_auto_control run` 在 `cli.py` 已經會回 1。
-同一個會失敗的腳本，`run` 回 1，`-e`、`-d`、`--execute_str` 回 0（2026-09-24 稽核重現）。
-
-**要先確認**：PyBreeze（`AI_CONTEXT.md` §5）與 TestPioneer 的 `parallel_run` 怎麼解讀這個結束碼——若把非 0 當成
-「無法執行」而非「有動作失敗」，改了會讓它們把一次有失敗步驟的執行回報成錯誤。改的話兩邊的 `architecture.md` §6
-與相容性測試要一起更新。
-
-[Answer] 讓舊式入口也以結束碼 1 回報動作失敗
-
----
-
 ## Computer use 的預設還是 beta 的 `computer_20251124`
 
 `TODO` — 在 `claude-opus-5`（兩種形式都接受）上實測 GA toolset 後，把它設成所有模型的預設
@@ -290,6 +275,20 @@ socket server 的執行也都用同一個 `executor`；`for_each` 的迴圈變�
 
 ---
 
+
+## mypy 2.4.0 在三個平台模組回報 `has-type`
+
+`TODO` — 讓型別契約在 mypy 2.4 也過，再把 CI 的 pin 往上提
+
+`quality.yml` 的 `typing-stable-api` 固定 `mypy==2.3.0`，`test/verify/typing_contract_verify.py` 在它上面是 0 個失敗模組；
+`dev_requirements.txt` 只寫下限 `mypy>=2.3.0`，新環境會裝到 2.4.0，同一個指令就多出三個不在豁免清單上的模組
+（2026-10-08 實測）：`wrapper/_platform_osx.py`（非 darwin 目標下 `osx_key_*` 全部 `Cannot determine type`）、
+`wrapper/_platform_windows.py:363`（`win32_recorder`）、`windows/message/window_message.py:7-8`（`user32`）。
+
+**做法**：替這些跨平台名稱補上明確型別註記（或把平台分支改成 mypy 看得懂的 `sys.platform` 判斷），
+兩個版本都驗過後把 `quality.yml` 的 pin 提到 2.4.x。
+
+---
 
 ## pytest11 進入點會把整個門面拉進每一次 pytest
 
