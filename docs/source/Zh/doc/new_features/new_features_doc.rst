@@ -343,6 +343,39 @@ executor 現在改成「每次呼叫」才解析 ``${var}`` placeholder（不會
 placeholder，每次重複執行時重新繫結 — 因此 ``AC_for_each`` 走訪
 list 時，body 內看到的就是當前的元素。
 
+每次執行各自的變數範圍
+----------------------
+
+變數的壽命是一次頂層執行，而不是整個行程。``execute_action_with_vars``、
+REST 的 ``/execute`` 與 ``/execute_file`` 請求、一次 MCP 工具呼叫、socket
+server 的一則指令、排程工作、trigger / hotkey / webhook / e-mail 的一次觸發、
+ChatOps 的 ``/run`` 以及語音指令，各自開一個新的 ``VariableScope``。
+``AC_set_var``、迴圈變數與巨集參數在該次執行內照舊運作，執行結束即消失，
+所以下一次執行裡的 ``${user}`` 會以 ``Unknown variable`` 失敗，而不是讀到
+前一個呼叫者設的值。要把值帶到下一次執行，請重新傳入
+（``execute_action_with_vars(actions, variables)``、webhook payload），
+或存在範圍之外（檔案、secrets vault）。
+
+一般的 Python 呼叫不變：``executor.execute_action(...)`` 與模組層級的
+``execute_action(...)`` 使用模組 executor 自己的範圍，與行程同壽命——GUI 的
+Variables 分頁顯示的、以及從 GUI 執行的腳本用的就是這個範圍。要讓這類呼叫
+同樣隔離，包在 ``execution_scope`` 裡::
+
+   import je_auto_control as ac
+
+   with ac.execution_scope({"user": "alice"}) as scope:
+       ac.execute_action([["AC_set_var", {"name": "n", "value": 1}]])
+       ac.execute_action([["AC_inc_var", {"name": "n"}]])
+       scope.get_value("n")          # 2
+   # 離開後 "user" 與 "n" 都不存在
+
+這個綁定以執行緒為單位：同時進行的伺服器請求互相看不到對方的變數，區塊結束時
+（不論是否出錯）會還原先前的範圍。巢狀動作清單（``AC_circuit_call``、
+``AC_bulkhead_run``、``AC_run_chaos``、``AC_run_dag`` 等）跑在呼叫它的清單的
+範圍裡，在 ``AC_parallel`` 分支內也一樣；分支從父層變數的一份複本開始，
+自己寫入的值留在分支內。自行建立的 executor（``Executor()``）永遠擁有自己的範圍。
+
+
 ::
 
    import je_auto_control as ac

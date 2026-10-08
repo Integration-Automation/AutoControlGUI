@@ -367,6 +367,42 @@ so nested ``body`` / ``then`` / ``else`` lists keep their placeholders
 and re-bind each time they execute — letting ``AC_for_each`` iterate
 over a list while the body sees the current item.
 
+Variable scope per run
+----------------------
+
+Variables live for one top-level run, not for the life of the process.
+``execute_action_with_vars``, a REST ``/execute`` or ``/execute_file``
+request, an MCP tool call, a socket-server command, a scheduler job, a
+trigger / hotkey / webhook / e-mail firing, a ChatOps ``/run`` and a voice
+command each open a fresh ``VariableScope``. ``AC_set_var``, loop variables
+and macro parameters work as before inside that run and are gone when it
+ends, so a later run's ``${user}`` fails with ``Unknown variable`` instead of
+reading what an earlier caller set. To carry a value from one run to the
+next, pass it in again (``execute_action_with_vars(actions, variables)``, a
+webhook payload) or keep it outside the scope (a file, the secrets vault).
+
+Plain Python calls are unchanged: ``executor.execute_action(...)`` and the
+module-level ``execute_action(...)`` use the module executor's own scope,
+which lasts as long as the process -- this is the scope the GUI's Variables
+tab shows and scripts run from the GUI use. Wrap such calls in
+``execution_scope`` to isolate them the same way::
+
+   import je_auto_control as ac
+
+   with ac.execution_scope({"user": "alice"}) as scope:
+       ac.execute_action([["AC_set_var", {"name": "n", "value": 1}]])
+       ac.execute_action([["AC_inc_var", {"name": "n"}]])
+       scope.get_value("n")          # 2
+   # "user" and "n" are gone here
+
+The binding is per thread: concurrent server requests never see each other's
+variables, and the previous scope is restored when the block ends, error or
+not. Nested action lists (``AC_circuit_call``, ``AC_bulkhead_run``,
+``AC_run_chaos``, ``AC_run_dag`` and the like) run in the scope of the list
+that called them, also inside an ``AC_parallel`` branch; a branch starts from
+a copy of its parent's variables and its own writes stay in the branch.
+An executor you construct yourself (``Executor()``) always owns its scope.
+
 ::
 
    import je_auto_control as ac

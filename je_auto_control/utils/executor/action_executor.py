@@ -60,6 +60,7 @@ from je_auto_control.utils.secrets import default_secret_manager
 from je_auto_control.utils.script_vars.interpolate import (
     interpolate_value,
 )
+from je_auto_control.utils.script_vars.execution import current_scope, execution_scope
 from je_auto_control.utils.script_vars.scope import VariableScope
 from je_auto_control.utils.http_client.http_client import http_request
 from je_auto_control.utils.generate_report.generate_html_report import generate_html, generate_html_report
@@ -7172,6 +7173,30 @@ class Executor:
             "AC_admin_broadcast_execute")},
     }
 
+    #: Whether :attr:`variables` follows the current ``execution_scope``. Only
+    #: the module-level executor does: it is the one object every server
+    #: request shares. A private Executor (an AC_parallel branch, a device
+    #: matrix runner, a resumable run) owns its scope outright.
+    _run_scoped = False
+
+    @property
+    def variables(self) -> VariableScope:
+        """The scope ``${var}`` and the variable commands read and write.
+
+        On the module executor inside an ``execution_scope`` that is the
+        run's own scope; otherwise it is this executor's own, which lives as
+        long as the executor does.
+        """
+        if self._run_scoped:
+            scope = current_scope()
+            if scope is not None:
+                return scope
+        return self._own_variables
+
+    @variables.setter
+    def variables(self, scope: VariableScope) -> None:
+        self._own_variables = scope
+
     def __init__(self):
         self._block_commands = BLOCK_COMMANDS
         self.variables = VariableScope()
@@ -8357,6 +8382,7 @@ def _count_recorded_failure() -> None:
 
 # === 全域 Executor 實例 Global Executor Instance ===
 executor = Executor()
+executor._run_scoped = True  # the one executor every entry point shares
 package_manager.executor = executor
 
 
@@ -8384,7 +8410,15 @@ def execute_files(execute_files_list: list) -> List[Dict[str, str]]:
 
 def execute_action_with_vars(action_list: list, variables: dict
                              ) -> Dict[str, str]:
-    """Seed ``variables`` into the runtime scope and execute.
+    """Run ``action_list`` in a fresh variable scope seeded with ``variables``.
+
+    The scope belongs to this run: ``AC_set_var``, loop variables and macro
+    parameters work as usual inside it and are gone when it returns, so the
+    next run's ``${name}`` fails with ``Unknown variable`` instead of quietly
+    reading this caller's value. Plain ``executor.execute_action(...)`` keeps
+    the executor's process-lifetime scope; wrap it in
+    :func:`~je_auto_control.utils.script_vars.execution.execution_scope` to
+    isolate it the same way.
 
     Interpolation happens at dispatch time through the executor's runtime
     resolver, which defers nested action bodies (loops/branches/try). Doing a
@@ -8395,5 +8429,5 @@ def execute_action_with_vars(action_list: list, variables: dict
     landed in logs and record keys. Seeding the scope and letting the runtime
     resolver interpolate per action fixes both.
     """
-    executor.variables.update_many(variables)
-    return executor.execute_action(action_list)
+    with execution_scope(variables):
+        return executor.execute_action(action_list)

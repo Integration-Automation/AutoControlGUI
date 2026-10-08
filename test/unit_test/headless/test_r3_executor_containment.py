@@ -92,12 +92,16 @@ def test_execute_action_with_vars_defers_loop_body():
     The eager pre-pass previously resolved ${item} against the seed mapping —
     where it does not exist — and raised before execution.
     """
-    execute_action_with_vars(
+    # Read back inside the run: its scope ends with it, so nothing is left in
+    # the module executor to inspect afterwards.
+    record = execute_action_with_vars(
         [["AC_for_each", {"items": ["a", "b"], "as": "item",
                           "body": [["AC_set_var",
-                                    {"name": "r3_last", "value": "${item}"}]]}]],
+                                    {"name": "r3_last", "value": "${item}"}]]}],
+         ["AC_get_var", {"name": "r3_last"}]],
         {"seed_only": 1})
-    assert executor.variables.get_value("r3_last") == "b"
+    assert list(record.values())[-1] == "b"
+    assert "r3_last" not in executor.variables
 
 
 def test_parallel_branch_sees_custom_command():

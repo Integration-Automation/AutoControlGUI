@@ -68,6 +68,8 @@ Flow control & variables
 * **In-process parallel** — ``AC_parallel`` runs branch action lists
   concurrently, each on a fresh isolated executor so branches never race
   on shared variables (the in-process complement to the cross-host DAG).
+  A branch starts from a copy of the caller's variables; what it sets stays
+  in that branch.
 * **Performance-budget assertion** — ``assert_duration(action, max_ms)``
   / ``AC_assert_duration`` fails a block that takes longer than the
   budget — a latency-regression guard bridging the profiler and the

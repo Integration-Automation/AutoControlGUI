@@ -85,7 +85,9 @@ class VoiceRouter:
 
 def _default_runner(actions: List[Any]) -> Any:
     from je_auto_control.utils.executor.action_executor import execute_action
-    return execute_action(actions)
+    from je_auto_control.utils.script_vars.execution import execution_scope
+    with execution_scope():  # one utterance, one variable scope
+        return execute_action(actions)
 
 
 default_voice_router = VoiceRouter()
