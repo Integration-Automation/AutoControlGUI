@@ -120,8 +120,34 @@ MCP：``ac_self_heal_*``。GUI：**Self-Healing** 分頁。
     payload = evaluate_healing_dataset("dataset.json")
     payload["passed"], payload["violations"]
 
-影像路徑相對於資料集檔案，且不得離開它所在的目錄。JSON 裡只能指名 ``template``
-策略；要評估 VLM，請把包裝它的 callable 傳給 ``evaluate_locators``。
+影像路徑相對於資料集檔案，且不得離開它所在的目錄。
+
+版本也可以指名 ``vlm`` 策略：把樣本自己的畫面（區域裁切後的 PNG，絕不重新截圖）交給
+``utils/vision`` 的後端，詢問樣本的 ``description``::
+
+    "samples": [{"id": "submit", "frame": "frames/submit.png",
+                 "description": "綠色的送出按鈕",
+                 "expected_box": [100, 60, 156, 92]}],
+    "versions": {"v1": {"strategy": "template", "threshold": 0.9},
+                 "v3": {"strategy": "vlm", "backend": "anthropic",
+                        "model": "…",
+                        "price": {"input_per_mtok": 5.0,
+                                  "output_per_mtok": 25.0}}},
+    "thresholds": {"v3": {"max_model_calls": 50, "max_cost": 0.25}}
+
+``backend`` 可為 ``anthropic``、``openai`` 或 ``null``；省略時使用
+``AUTOCONTROL_VLM_BACKEND`` 與 API 金鑰選出的後端。``null`` 不送出任何請求，每個樣本都是
+``error``——沒有金鑰的機器就該量到這個結果。從 Python 呼叫時，
+``evaluate_healing_dataset(path, backends={"fake": my_backend})`` 可以讓版本指名你自己的
+後端物件，``vlm_strategy(backend, model=..., price=...)`` 則是給 ``evaluate_locators`` 的
+callable。**對真的後端跑 ``vlm`` 版本會把每張畫面送到該服務，並由它計費。**
+
+每份報告與每一列結果都多了 ``model_calls``、``input_tokens``、``output_tokens`` 與
+``cost``。呼叫次數由評估本身計算（失敗的請求仍然算一次；沒有 description 的樣本或不可用的
+後端不算）。token 來自後端的 ``last_usage``——Anthropic 與 OpenAI 後端會從回應填入——
+``cost`` 則是後端自己回報的數字，或 token × ``price``。沒有回報的地方是 ``None``，不是
+``0``，也不估算；template 版本回報 ``model_calls: 0``，其餘為 ``None``。只要有一個版本是
+``vlm``，畫面就以彩色載入（template 策略會自己轉成灰階），所以每個版本拿到的仍是同一張畫面。
 
 ``benchmarks/self_healing/run.py`` 是固定的回歸資料集：十張在記憶體中繪製的畫面
 （一般、125%／150% 縮放、負原點螢幕、必須選中兩個相同目標中第二個的區域、

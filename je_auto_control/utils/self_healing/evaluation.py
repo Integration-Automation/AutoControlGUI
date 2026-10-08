@@ -16,7 +16,11 @@ carry the answer:
 * a sample with no label is ``unknown``. It counts in the hit rate, where no
   label is needed, and in no rate that claims correctness;
 * every rate is a :class:`Ratio` carrying its numerator and denominator, and a
-  rate over nothing has no value rather than a perfect one.
+  rate over nothing has no value rather than a perfect one;
+* a strategy that calls a model carries a :class:`UsageMeter` as its
+  ``usage_meter`` attribute. Its calls are counted per sample and per version;
+  tokens and cost are reported only where the backend reported them, and are
+  ``None`` -- not zero -- where it did not.
 
 All coordinates are screen coordinates. ``origin`` is the screen position of
 the frame's top-left pixel (negative on a monitor left of or above the
@@ -174,6 +178,68 @@ class LocateRequest:
 LocatorStrategy = Callable[[LocateRequest], Optional[Sequence[int]]]
 
 
+def _plus(left: Optional[float], right: Optional[float]) -> Optional[float]:
+    """Sum where ``None`` means "not reported", not zero."""
+    if left is None:
+        return right
+    return left if right is None else left + right
+
+
+@dataclass(frozen=True)
+class ModelUsage:
+    """Model calls made, and the tokens / cost the backend reported for them.
+
+    ``input_tokens``, ``output_tokens`` and ``cost`` are ``None`` when no call
+    reported them. ``cost`` is in whatever currency the price was given in.
+    """
+
+    calls: int = 0
+    input_tokens: Optional[int] = None
+    output_tokens: Optional[int] = None
+    cost: Optional[float] = None
+
+    def plus(self, other: "ModelUsage") -> "ModelUsage":
+        """This usage and ``other`` added together."""
+        tokens_in = _plus(self.input_tokens, other.input_tokens)
+        tokens_out = _plus(self.output_tokens, other.output_tokens)
+        return ModelUsage(
+            self.calls + other.calls,
+            None if tokens_in is None else int(tokens_in),
+            None if tokens_out is None else int(tokens_out),
+            _plus(self.cost, other.cost))
+
+    def to_dict(self) -> Dict[str, Any]:
+        """``{model_calls, input_tokens, output_tokens, cost}``."""
+        return {"model_calls": self.calls, "input_tokens": self.input_tokens,
+                "output_tokens": self.output_tokens,
+                "cost": None if self.cost is None else round(self.cost, 6)}
+
+
+class UsageMeter:
+    """Collects what a model-calling strategy used since it was last drained.
+
+    A strategy records each call with :meth:`record`; the evaluation drains
+    the meter after every sample, so usage lands on the sample that caused it.
+    """
+
+    def __init__(self) -> None:
+        self._pending = ModelUsage()
+
+    def record(self, usage: ModelUsage) -> None:
+        """Add one or more calls' usage."""
+        self._pending = self._pending.plus(usage)
+
+    def drain(self) -> ModelUsage:
+        """Return what was recorded since the last drain, and reset."""
+        pending, self._pending = self._pending, ModelUsage()
+        return pending
+
+
+def _drain_usage(strategy: Any) -> ModelUsage:
+    meter = getattr(strategy, "usage_meter", None)
+    return meter.drain() if isinstance(meter, UsageMeter) else ModelUsage()
+
+
 @dataclass(frozen=True)
 class Ratio:
     """A rate that keeps the counts it was computed from."""
@@ -212,6 +278,7 @@ class SampleResult:
     latency_ms: float
     frame_hash: Optional[str]
     error: Optional[str] = None
+    usage: ModelUsage = ModelUsage()
 
     def to_dict(self) -> Dict[str, Any]:
         """JSON-safe row."""
@@ -220,7 +287,7 @@ class SampleResult:
             "outcome": self.outcome, "located": self.located,
             "coordinates": None if self.coordinates is None else list(self.coordinates),
             "latency_ms": self.latency_ms, "frame_hash": self.frame_hash,
-            "error": self.error,
+            "error": self.error, **self.usage.to_dict(),
         }
 
 
@@ -241,6 +308,7 @@ class VersionReport:
     recoverable: int
     p50_ms: Optional[float]
     p95_ms: Optional[float]
+    usage: ModelUsage = ModelUsage()
 
     @property
     def labelled(self) -> int:
@@ -280,6 +348,7 @@ class VersionReport:
             "false_positive_rate": self.false_positive_rate.to_dict(),
             "recovery_rate": self.recovery_rate.to_dict(),
             "p50_ms": self.p50_ms, "p95_ms": self.p95_ms,
+            **self.usage.to_dict(),
         }
 
 
@@ -354,6 +423,7 @@ def _reject_duplicate_ids(samples: Sequence[EvaluationSample]) -> None:
 
 def _run_one(sample: EvaluationSample, request: LocateRequest, version: str,
              strategy: LocatorStrategy, clock: Callable[[], float]) -> SampleResult:
+    _drain_usage(strategy)  # nothing an earlier caller left behind counts here
     started = clock()
     point: Optional[Point] = None
     error: Optional[str] = None
@@ -371,7 +441,7 @@ def _run_one(sample: EvaluationSample, request: LocateRequest, version: str,
         sample_id=sample.sample_id, version=version,
         outcome=_classify(sample, point, error), located=point is not None,
         coordinates=point, latency_ms=latency, frame_hash=request.frame_hash,
-        error=error)
+        error=error, usage=_drain_usage(strategy))
 
 
 def _classify(sample: EvaluationSample, point: Optional[Point],
@@ -419,7 +489,11 @@ def _report(version: str, rows: Sequence[SampleResult], recovered: int,
     for row in rows:
         counts[row.outcome] += 1
     latencies = sorted(row.latency_ms for row in rows)
+    usage = ModelUsage()
+    for row in rows:
+        usage = usage.plus(row.usage)
     return VersionReport(
+        usage=usage,
         version=version, total=len(rows),
         located=sum(1 for row in rows if row.located),
         correct=counts[OUTCOME_CORRECT],
@@ -444,6 +518,8 @@ _THRESHOLD_CHECKS: Dict[str, Callable[[VersionReport], Optional[float]]] = {
     "max_false_positive": lambda report: report.false_positive,
     "max_error": lambda report: report.error,
     "max_p95_ms": lambda report: report.p95_ms,
+    "max_model_calls": lambda report: report.usage.calls,
+    "max_cost": lambda report: report.usage.cost,
 }
 
 
@@ -452,7 +528,8 @@ def check_thresholds(comparison: HealingComparison,
     """Return one line per threshold ``comparison`` does not meet.
 
     ``thresholds`` maps a version to ``min_correct`` / ``min_accuracy`` /
-    ``max_false_positive`` / ``max_error`` / ``max_p95_ms``. A version or key
+    ``max_false_positive`` / ``max_error`` / ``max_p95_ms`` /
+    ``max_model_calls`` / ``max_cost``. A version or key
     that does not exist is a violation too: a gate that silently checks
     nothing is worse than none. A rate with no value fails its ``min_``.
     """
@@ -493,6 +570,11 @@ def format_comparison(comparison: HealingComparison) -> str:
         lines.append(f"  false pos.   {report.false_positive_rate}")
         lines.append(f"  recovery     {report.recovery_rate}")
         lines.append(f"  latency ms   p50={report.p50_ms} p95={report.p95_ms}")
+        if report.usage.calls:
+            used = report.usage
+            lines.append(
+                f"  model calls  {used.calls} tokens in={used.input_tokens} "
+                f"out={used.output_tokens} cost={used.cost}")
         for row in comparison.failures(name):
             where = "" if row.coordinates is None else f" at {list(row.coordinates)}"
             reason = "" if row.error is None else f" ({row.error})"
@@ -504,7 +586,7 @@ __all__ = [
     "Box", "EvaluationSample", "FAILURE_OUTCOMES", "HealingComparison",
     "HealingEvaluationError", "LocateRequest", "LocatorStrategy",
     "OUTCOME_CORRECT", "OUTCOME_ERROR", "OUTCOME_FALSE_POSITIVE",
-    "OUTCOME_MISS", "OUTCOME_TRUE_NEGATIVE", "OUTCOME_UNKNOWN",
-    "Point", "Ratio", "SampleResult", "VersionReport",
+    "ModelUsage", "OUTCOME_MISS", "OUTCOME_TRUE_NEGATIVE", "OUTCOME_UNKNOWN",
+    "Point", "Ratio", "SampleResult", "UsageMeter", "VersionReport",
     "check_thresholds", "evaluate_locators", "format_comparison", "frame_hash",
 ]

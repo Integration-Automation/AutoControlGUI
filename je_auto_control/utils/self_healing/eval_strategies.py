@@ -11,8 +11,9 @@ report from the same dataset file:
 * :func:`load_evaluation_dataset` / :func:`evaluate_healing_dataset` — a JSON file of
   frame images, labels, version configs and thresholds.
 
-Nothing here captures the screen or calls a model: a VLM version is evaluated
-by passing :func:`evaluation.evaluate_locators` a callable that wraps one.
+Nothing here captures the screen. A version may name the ``vlm`` strategy
+(:mod:`eval_vlm`), which asks a ``utils/vision`` backend about the sample's
+own frame; that calls a model, and against a real backend it costs money.
 """
 from __future__ import annotations
 
@@ -23,6 +24,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple, Union
 
+from je_auto_control.utils.self_healing.eval_vlm import STRATEGY_VLM, vlm_strategy
 from je_auto_control.utils.self_healing.evaluation import (
     EvaluationSample, HealingComparison, HealingEvaluationError, LocateRequest,
     LocatorStrategy, Point, check_thresholds, evaluate_locators,
@@ -114,17 +116,51 @@ def template_match_strategy(threshold: float = 0.9,
     return locate
 
 
-def build_strategy(config: Mapping[str, Any]) -> LocatorStrategy:
-    """Build a strategy from ``{"strategy": "template", "threshold", "scales"}``."""
+_OPTIONS = {
+    STRATEGY_TEMPLATE: frozenset({"strategy", "threshold", "scales"}),
+    STRATEGY_VLM: frozenset({"strategy", "backend", "model", "price"}),
+}
+
+
+def _named_backend(name: Any, backends: Optional[Mapping[str, Any]]) -> Any:
+    """The VLM backend a version names; ``None`` means "pick from the environment"."""
+    if name is None:
+        return None
+    if backends is not None and name in backends:
+        return backends[name]
+    if not isinstance(name, str):
+        raise HealingEvaluationError(f"backend must be a name, got {name!r}")
+    from je_auto_control.utils.vision.backends import backend_by_name
+    from je_auto_control.utils.vision.backends.base import VLMNotAvailableError
+    try:
+        return backend_by_name(name)
+    except VLMNotAvailableError as error:
+        raise HealingEvaluationError(str(error)) from error
+
+
+def build_strategy(config: Mapping[str, Any],
+                   backends: Optional[Mapping[str, Any]] = None) -> LocatorStrategy:
+    """Build a strategy from a version config.
+
+    ``{"strategy": "template", "threshold", "scales"}`` or
+    ``{"strategy": "vlm", "backend", "model", "price"}``. A ``vlm`` version's
+    ``backend`` is ``"anthropic"``, ``"openai"``, ``"null"`` or a key of
+    ``backends`` (objects supplied by the caller -- how a test passes a fake);
+    without one, the backend ``get_backend()`` picks from the environment.
+    """
     if not isinstance(config, Mapping):
         raise HealingEvaluationError(f"a version must be an object, got {config!r}")
     kind = config.get("strategy", STRATEGY_TEMPLATE)
-    if kind != STRATEGY_TEMPLATE:
+    allowed = _OPTIONS.get(kind) if isinstance(kind, str) else None
+    if allowed is None:
         raise HealingEvaluationError(
-            f"unknown strategy {kind!r}; built-in strategies: [{STRATEGY_TEMPLATE!r}]")
-    unknown = sorted(set(config) - {"strategy", "threshold", "scales"})
+            f"unknown strategy {kind!r}; built-in strategies: {sorted(_OPTIONS)}")
+    unknown = sorted(set(config) - allowed)
     if unknown:
         raise HealingEvaluationError(f"unknown strategy option(s) {unknown}")
+    if kind == STRATEGY_VLM:
+        return vlm_strategy(_named_backend(config.get("backend"), backends),
+                            model=config.get("model"), price=config.get("price"))
     return template_match_strategy(config.get("threshold", 0.9), config.get("scales", (1.0,)))
 
 
@@ -150,13 +186,21 @@ def _inside_root(root: Path, relative: Any, what: str) -> Path:
     return resolved
 
 
-def _sample_from(entry: Any, root: Path) -> EvaluationSample:
+def _rgb(path: str) -> Any:
+    """The image at ``path`` as an RGB array (what a model is shown)."""
+    import cv2
+    from je_auto_control.utils.cv2_utils.image_file import read_image
+    return cv2.cvtColor(read_image(path, cv2.IMREAD_COLOR), cv2.COLOR_BGR2RGB)
+
+
+def _sample_from(entry: Any, root: Path, color: bool = False) -> EvaluationSample:
     if not isinstance(entry, dict) or not isinstance(entry.get("id"), str):
         raise HealingEvaluationError(f"a sample must be an object with a string id, got {entry!r}")
     sample_id = entry["id"]
     template = entry.get("template")
     try:
-        frame = _gray(str(_inside_root(root, entry.get("frame"), f"{sample_id}: frame")))
+        frame_path = str(_inside_root(root, entry.get("frame"), f"{sample_id}: frame"))
+        frame = _rgb(frame_path) if color else _gray(frame_path)
     except ValueError as error:
         raise HealingEvaluationError(f"{sample_id}: {error}") from error
     return EvaluationSample(
@@ -169,8 +213,12 @@ def _sample_from(entry: Any, root: Path) -> EvaluationSample:
         description=entry.get("description"))
 
 
-def load_evaluation_dataset(path: PathLike) -> EvaluationDataset:
+def load_evaluation_dataset(path: PathLike, *, color: bool = False) -> EvaluationDataset:
     """Load a dataset JSON file; image paths are relative to its directory.
+
+    Frames are loaded in grayscale unless ``color`` is true (RGB), which a
+    version that shows the frame to a model needs; the template strategy
+    converts either to gray itself, so every version still gets one frame.
 
     ::
 
@@ -198,7 +246,8 @@ def load_evaluation_dataset(path: PathLike) -> EvaluationDataset:
     thresholds = data.get("thresholds") or {}
     if not isinstance(versions, dict) or not isinstance(thresholds, dict):
         raise HealingEvaluationError("'versions' and 'thresholds' must be objects")
-    samples = tuple(_sample_from(entry, file_path.parent) for entry in data["samples"])
+    samples = tuple(_sample_from(entry, file_path.parent, color)
+                    for entry in data["samples"])
     return EvaluationDataset(path=file_path, samples=samples,
                              versions=versions, thresholds=thresholds)
 
@@ -215,20 +264,31 @@ def comparison_payload(comparison: HealingComparison,
     return payload
 
 
+def _names_vlm(configs: Mapping[str, Any]) -> bool:
+    return any(isinstance(config, Mapping) and config.get("strategy") == STRATEGY_VLM
+               for config in configs.values())
+
+
 def evaluate_healing_dataset(path: PathLike,
                      versions: Optional[Mapping[str, Mapping[str, Any]]] = None,
+                     backends: Optional[Mapping[str, Any]] = None,
                      ) -> Dict[str, Any]:
     """Evaluate a dataset file and return the JSON-safe report.
 
-    ``versions`` replaces the file's own version configs when given. The
-    report is :meth:`HealingComparison.to_dict` plus ``dataset``,
-    ``thresholds``, ``violations`` and ``passed``.
+    ``versions`` replaces the file's own version configs when given, and
+    ``backends`` maps a name a ``vlm`` version may use to a backend object.
+    The report is :meth:`HealingComparison.to_dict` plus ``dataset``,
+    ``thresholds``, ``violations`` and ``passed``. A ``vlm`` version against a
+    real backend sends every frame to that service.
     """
     dataset = load_evaluation_dataset(path)
     configs = dataset.versions if versions is None else versions
     if not configs:
         raise HealingEvaluationError(f"dataset {dataset.path} names no versions to compare")
-    strategies = {name: build_strategy(config) for name, config in configs.items()}
+    if _names_vlm(configs):
+        dataset = load_evaluation_dataset(path, color=True)
+    strategies = {name: build_strategy(config, backends)
+                  for name, config in configs.items()}
     comparison = evaluate_locators(dataset.samples, strategies)
     payload = comparison_payload(comparison, dataset.thresholds)
     payload["dataset"] = str(dataset.path)
@@ -236,7 +296,7 @@ def evaluate_healing_dataset(path: PathLike,
 
 
 __all__ = [
-    "DATASET_SCHEMA_VERSION", "EvaluationDataset", "STRATEGY_TEMPLATE",
+    "DATASET_SCHEMA_VERSION", "EvaluationDataset", "STRATEGY_TEMPLATE", "STRATEGY_VLM",
     "build_strategy", "comparison_payload", "evaluate_healing_dataset",
     "load_evaluation_dataset", "template_match_strategy",
 ]

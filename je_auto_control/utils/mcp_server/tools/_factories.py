@@ -2389,7 +2389,11 @@ def self_healing_tools() -> List[MCPTool]:
                          "numerator/denominator (accuracy, false positives, "
                          "recovery vs the baseline), p50/p95 latency, the "
                          "failing samples, and threshold violations. "
-                         "Unlabelled samples are 'unknown', never correct."),
+                         "Unlabelled samples are 'unknown', never correct. "
+                         "A version with strategy 'vlm' sends each frame to "
+                         "the configured VLM backend (model calls, and "
+                         "tokens / cost where reported, are in the report); "
+                         "backend 'null' makes no request."),
             input_schema=schema({
                 "dataset_path": {"type": "string", "format": "path"},
                 "versions": {"type": "object"},
