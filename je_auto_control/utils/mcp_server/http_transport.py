@@ -33,15 +33,18 @@ import json
 import os
 import ssl
 import threading
-from urllib.parse import urlsplit
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any, Callable, Dict, Optional, Tuple
 
-from je_auto_control.utils.http_headers import (
-    bearer_challenge, log_safe, parse_content_length, wire_json_text,
-)
+from je_auto_control.utils.http_headers import bearer_challenge, log_safe
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.mcp_server._authz import check_bearer
+from je_auto_control.utils.mcp_server._http_origin import (
+    ALLOWED_ORIGINS_ENV, origin_allowed,
+)
+from je_auto_control.utils.mcp_server._http_responses import (
+    SSE_MEDIA_TYPE, HttpResponseMixin,
+)
 from je_auto_control.utils.mcp_server._http_stateless import (
     PROTOCOL_VERSION_HEADER, is_stateless, read_message, stateless_refusal,
     status_for, unsupported_header_refusal,
@@ -63,11 +66,6 @@ from je_auto_control.utils.rbac.authorization import (
 from je_auto_control.utils.rbac.users import UserStore
 
 DEFAULT_PATH = "/mcp"
-_MAX_BODY = 1_000_000
-_SSE_MEDIA_TYPE = "text/event-stream"
-# Cap drain reads so a hostile Content-Length can't make us spin forever.
-_DRAIN_CHUNK = 64 * 1024
-_DRAIN_CAP_MULTIPLE = 4
 # Bound per-request reads so a client that declares a Content-Length then
 # stalls (body underrun) can't pin a worker thread forever.
 _REQUEST_TIMEOUT = 30.0
@@ -109,13 +107,10 @@ def _notifier_for(writer: Optional[Callable[[str], None]]):
     )
 
 
-class _MCPHttpHandler(BaseHTTPRequestHandler):
+class _MCPHttpHandler(HttpResponseMixin, BaseHTTPRequestHandler):
     """Bridges HTTP requests onto :meth:`MCPServer.handle_line`."""
 
     server_version = "AutoControlMCP/1.0"
-    # Set once this request's body has been read off the socket, so a later
-    # error response knows there is nothing left to drain.
-    _body_consumed = False
     # The RBAC user this request authenticated as; None under the shared token.
     _caller: Optional[AuthorizationContext] = None
     # socketserver applies this to the connection socket in setup(); it bounds
@@ -209,7 +204,7 @@ class _MCPHttpHandler(BaseHTTPRequestHandler):
         if not self._client_accepts_sse():
             self._send_raw_json(_error_response(
                 message.get("id"), -32600,
-                f"Invalid Request: {LISTEN_METHOD} needs Accept: {_SSE_MEDIA_TYPE}"), status=406)
+                f"Invalid Request: {LISTEN_METHOD} needs Accept: {SSE_MEDIA_TYPE}"), status=406)
             return
         send_lock = threading.Lock()
         emit = self._open_event_stream(send_lock)
@@ -231,26 +226,6 @@ class _MCPHttpHandler(BaseHTTPRequestHandler):
         finally:
             # Closing the stream is how an HTTP client cancels; no answer then.
             bridge.end_subscription(id(self), message["id"])
-
-    def _open_event_stream(self, send_lock: threading.Lock) -> Callable[[str], None]:
-        """Send the headers of an SSE response; return a writer of its events."""
-        self.close_connection = True
-        with send_lock:
-            self.send_response(200)
-            self.send_header("Content-Type", f"{_SSE_MEDIA_TYPE}; charset=utf-8")
-            self.send_header("Cache-Control", "no-cache")
-            self.send_header("Connection", "close")
-            self.send_header("X-Accel-Buffering", "no")
-            self.end_headers()
-            self.wfile.flush()
-
-        def emit(payload: str) -> None:
-            with send_lock:
-                self.wfile.write(b"data: ")
-                self.wfile.write(payload.encode("utf-8"))
-                self.wfile.write(b"\n\n")
-                self.wfile.flush()
-        return emit
 
     def _resolve_session(self, line: str) -> Tuple[Optional[HttpSession],
                                                     bool]:
@@ -313,7 +288,7 @@ class _MCPHttpHandler(BaseHTTPRequestHandler):
 
     def _caller_allowed(self) -> bool:
         """Refuse browser cross-site requests, then check the bearer token."""
-        if not self._origin_allowed():
+        if not origin_allowed(self.headers, self.server.server_address):
             self._send_json({"error": "origin not allowed"}, status=403)
             return False
         self._caller, refusal = check_bearer(
@@ -329,34 +304,6 @@ class _MCPHttpHandler(BaseHTTPRequestHandler):
         self._send_json({"error": text}, status=status, extra_headers=challenge)
         return False
 
-    def _origin_allowed(self) -> bool:
-        """True unless a browser on another site, or a rebound name, sent this.
-
-        With no token configured (the default) any web page the user opened
-        could POST ``tools/call`` here as a simple ``text/plain`` request,
-        which browsers send without a CORS preflight; the MCP specification
-        requires servers to validate ``Origin`` for exactly this. A request
-        without ``Origin`` comes from a non-browser client and is fine. When
-        bound to loopback, ``Host`` must also name loopback: a DNS-rebinding
-        page reaches 127.0.0.1 under its own name, and a same-origin GET
-        carries no ``Origin`` at all.
-        """
-        origin = self.headers.get("Origin")
-        if origin and origin not in _allowed_origins():
-            if urlsplit(origin).hostname not in _LOOPBACK_NAMES:
-                return False
-        address = self.server.server_address
-        bound_host = address[0] if isinstance(address, tuple) else address
-        if bound_host in _LOOPBACK_NAMES:
-            host = urlsplit("//" + self.headers.get("Host", "")).hostname
-            if host not in _LOOPBACK_NAMES:
-                return False
-        return True
-
-    def _client_accepts_sse(self) -> bool:
-        accept = self.headers.get("Accept", "")
-        return _SSE_MEDIA_TYPE in accept
-
     def _dispatch_sse(self, bridge: MCPServer, line: str,
                       conn_id: Any,
                       extra_headers: Optional[Dict[str, str]] = None) -> None:
@@ -365,7 +312,7 @@ class _MCPHttpHandler(BaseHTTPRequestHandler):
         self.close_connection = True
         self.send_response(200)
         self.send_header("Content-Type",
-                          f"{_SSE_MEDIA_TYPE}; charset=utf-8")
+                          f"{SSE_MEDIA_TYPE}; charset=utf-8")
         self.send_header("Cache-Control", "no-cache")
         self.send_header("Connection", "close")
         for name, value in (extra_headers or {}).items():
@@ -407,7 +354,7 @@ class _MCPHttpHandler(BaseHTTPRequestHandler):
             return
         if not self._client_accepts_sse():
             self._send_json(
-                {"error": f"GET requires Accept: {_SSE_MEDIA_TYPE}"},
+                {"error": f"GET requires Accept: {SSE_MEDIA_TYPE}"},
                 status=405,
             )
             return
@@ -445,7 +392,7 @@ class _MCPHttpHandler(BaseHTTPRequestHandler):
             with send_lock:
                 self.send_response(200)
                 self.send_header("Content-Type",
-                                  f"{_SSE_MEDIA_TYPE}; charset=utf-8")
+                                  f"{SSE_MEDIA_TYPE}; charset=utf-8")
                 self.send_header("Cache-Control", "no-cache")
                 self.send_header("Connection", "close")
                 self.send_header(SESSION_HEADER, session.id)
@@ -496,79 +443,6 @@ class _MCPHttpHandler(BaseHTTPRequestHandler):
             return
         self._send_json({"status": "session terminated"})
 
-    # --- helpers -------------------------------------------------------------
-
-    def _read_body(self) -> Optional[str]:
-        length = parse_content_length(self.headers)
-        if length <= 0 or length > _MAX_BODY:
-            self._send_json({"error": "invalid Content-Length"}, status=400)
-            return None
-        raw = self.rfile.read(length)
-        # From here the body is gone from the socket. Any 4xx we send later
-        # must not try to drain it again: there is nothing left to read, so
-        # the drain would block on the next request's bytes until the socket
-        # timeout and pin this worker for thirty seconds.
-        self._body_consumed = True
-        try:
-            return raw.decode("utf-8").strip()
-        except UnicodeDecodeError:
-            self._send_json({"error": "body must be UTF-8"}, status=400)
-            return None
-
-    def _send_json(self, payload: Any, status: int = 200,
-                   extra_headers: Optional[Dict[str, str]] = None) -> None:
-        body = wire_json_text(payload).encode("utf-8")
-        self._write_headers(status, body, extra_headers)
-        self.wfile.write(body)
-        if status >= 400:
-            # Drain any unread request body before the socket closes.
-            # Without this, Windows TCP turns "close with unread bytes"
-            # into RST and the client surfaces WinError 10053 before it
-            # can read the 4xx response.
-            self._drain_body()
-
-    def _drain_body(self) -> None:
-        if self._body_consumed:
-            return
-        declared = parse_content_length(self.headers)
-        if declared <= 0:
-            return
-        cap = min(declared, _MAX_BODY * _DRAIN_CAP_MULTIPLE)
-        remaining = cap
-        try:
-            while remaining > 0:
-                chunk = self.rfile.read(min(remaining, _DRAIN_CHUNK))
-                if not chunk:
-                    break
-                remaining -= len(chunk)
-        except OSError as error:
-            # Draining is a courtesy to the client's read of our 4xx. If the
-            # peer has already gone, there is nothing left to be courteous
-            # about — and letting this escape logs a whole traceback for it.
-            autocontrol_logger.debug("MCP drain aborted: %r", error)
-
-    def _send_raw_json(self, raw_json: str,
-                       extra_headers: Optional[Dict[str, str]] = None,
-                       status: int = 200) -> None:
-        body = raw_json.encode("utf-8")
-        self._write_headers(status, body, extra_headers)
-        self.wfile.write(body)
-
-    def _send_blank(self, status: int) -> None:
-        self.send_response(status)
-        self.send_header("Content-Length", "0")
-        self.end_headers()
-
-    def _write_headers(self, status: int, body: bytes,
-                       extra_headers: Optional[Dict[str, str]] = None,
-                       ) -> None:
-        self.send_response(status)
-        self.send_header("Content-Type", "application/json; charset=utf-8")
-        self.send_header("Content-Length", str(len(body)))
-        for name, value in (extra_headers or {}).items():
-            self.send_header(name, value)
-        self.end_headers()
-
 
 class _MCPHttpServer(ThreadingHTTPServer):
     """ThreadingHTTPServer extension that owns an :class:`MCPServer`."""
@@ -612,19 +486,6 @@ class _MCPHttpServer(ThreadingHTTPServer):
                 conn.close()
                 raise
         return conn, addr
-
-
-#: Host names that mean this machine. ``urlsplit`` strips IPv6 brackets.
-_LOOPBACK_NAMES = frozenset({"localhost", "127.0.0.1", "::1"})
-
-#: Extra browser origins allowed to call the server, comma-separated and
-#: exact (``https://example.test:8443``); loopback origins always are.
-ALLOWED_ORIGINS_ENV = "JE_AUTOCONTROL_MCP_ALLOWED_ORIGINS"
-
-
-def _allowed_origins() -> frozenset:
-    raw = os.environ.get(ALLOWED_ORIGINS_ENV, "")
-    return frozenset(part.strip() for part in raw.split(",") if part.strip())
 
 
 class HttpMCPServer:
@@ -724,4 +585,4 @@ def start_mcp_http_server(host: str = "127.0.0.1", port: int = 9940,
     return server
 
 
-__all__ = ["HttpMCPServer", "start_mcp_http_server"]
+__all__ = ["ALLOWED_ORIGINS_ENV", "HttpMCPServer", "start_mcp_http_server"]
