@@ -7,8 +7,8 @@
 2–8 次);``actionability`` 純粹是*動作前*的閘門。``action_effect`` 補上這個迴圈:比對前後
 觀測,並依動作的目標點分類結果,讓代理能立即反應。
 
-判定為下列之一:``no_op``(無變化)、``changed_near_target``(變化發生在我們動作之處——按鈕被
-按下)、``changed_elsewhere``(別處彈出意外對話框)、或 ``changed``(有變化但動作沒有可歸因的
+判定為下列之一:``no_op``\ (無變化)、``changed_near_target``\ (變化發生在我們動作之處——按鈕被
+按下)、``changed_elsewhere``\ (別處彈出意外對話框)、或 ``changed``\ (有變化但動作沒有可歸因的
 座標點)。
 
 純標準函式庫,作用於元素字典 + 動作記錄;重用 ``element_diff.match_elements`` 做重疊配對與
@@ -38,8 +38,8 @@
 執行器指令
 ----------
 
-``AC_classify_effect``(``before`` / ``after`` / ``action`` / ``radius`` →
+``AC_classify_effect``\ (``before`` / ``after`` / ``action`` / ``radius`` →
 ``{effect, changed_near_target, changed_count, changed_centers, reason}``)與
-``AC_effect_near_point``(``before`` / ``after`` / ``point`` / ``radius`` → ``{near}``)。
-兩者以 MCP 工具 ``ac_classify_effect`` / ``ac_effect_near_point``(唯讀)及 Script Builder 指令
-**Classify Action Effect** / **Effect Near Point?**(位於 **Native UI** 分類下)形式提供。
+``AC_effect_near_point``\ (``before`` / ``after`` / ``point`` / ``radius`` → ``{near}``)。
+兩者以 MCP 工具 ``ac_classify_effect`` / ``ac_effect_near_point``\ (唯讀)及 Script Builder 指令
+**Classify Action Effect** / **Effect Near Point?**\ (位於 **Native UI** 分類下)形式提供。

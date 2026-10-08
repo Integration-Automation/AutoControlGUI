@@ -195,5 +195,14 @@ jobs:
       # So the flag is off and this is a gate now: EXPECTED in the script
       # holds what was measured, and a capability appearing or disappearing
       # turns this red and names which one.
+      #
+      # Three probes are newer than that measurement and are only reported
+      # (REPORTED in the script; they print what they found and cannot fail
+      # this step): the click-state read-back, the by-id lookup of a minimised
+      # window, and the point-based `grab_logical`. The first two re-run tests
+      # the headless suite already has, where a skip is a pass; here it is
+      # printed as a skip. That is what pytest is installed for.
+      - run: "python -m pip install --only-binary :all: pytest==9.1.1"
+
       - name: Verify the macOS backend against a real window server
         run: python test/verify/macos_verify.py

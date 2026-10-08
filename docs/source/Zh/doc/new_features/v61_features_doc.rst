@@ -1,7 +1,7 @@
 JSON Web Token(JWT)
 ===================
 
-RPA 流程經常需要為其驅動的 API 簽發或驗證 bearer token,但框架過去只有 HMAC *檔案*簽章
+RPA 流程經常需要為其驅動的 API 簽發或驗證 bearer token,但框架過去只有 HMAC *檔案*\ 簽章
 (``action_signing``)以及綁定 ACME 的 RS256 JWS(``acme_v2``)—— 兩者都不會產生或驗證精簡的
 bearer JWT。本功能補上一個聚焦、純標準函式庫的 JWT 編解碼器(HMAC 家族)並含完整的宣告驗證,
 設計上可直接餵入 ``http_request`` 的 bearer 驗證。
@@ -16,8 +16,8 @@ bearer JWT。本功能補上一個聚焦、純標準函式庫的 JWT 編解碼�
 
 * **拒絕 ``alg: "none"``** 以及任何呼叫端未明確列入允許清單的演算法,藉此擊敗經典的演算法
   混淆 / 降級攻擊;
-* 以 ``hmac.compare_digest``(常數時間)比較簽章;
-* RSA/EC 演算法(RS256/ES256)刻意**不在範圍內** —— 它們需要第三方加密函式庫。
+* 以 ``hmac.compare_digest``\ (常數時間)比較簽章;
+* RSA/EC 演算法(RS256/ES256)刻意\ **不在範圍內** —— 它們需要第三方加密函式庫。
 
 無頭 API
 --------

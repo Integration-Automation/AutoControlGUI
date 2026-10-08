@@ -17,7 +17,7 @@ this adds the reusable :class:`RetryPolicy` callable wrapper and the new
 
 
 RetryPolicy
-==========
+===========
 
 ::
 
@@ -32,7 +32,7 @@ re-raising the last error when attempts are exhausted.
 
 
 CircuitBreaker
-=============
+==============
 
 ::
 

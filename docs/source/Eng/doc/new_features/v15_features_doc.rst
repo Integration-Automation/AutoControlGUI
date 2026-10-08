@@ -13,7 +13,7 @@ tools, Script Builder): a persistent **agent episodic memory** store and a
 
 
 Agent episodic memory
-====================
+=====================
 
 An agent that re-derives "how do I log in to this app" every run wastes
 tokens and repeats mistakes. :class:`AgentMemory` records each episode —
@@ -38,7 +38,7 @@ without changing the API. Commands: ``AC_memory_remember`` /
 
 
 Deterministic run
-================
+=================
 
 Time and randomness are two of the top causes of flaky automation.
 :class:`DeterministicRun` pins both for a ``with`` block and records the

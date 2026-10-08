@@ -43,8 +43,8 @@
 執行器指令
 ----------
 
-``AC_retry_delay``(``attempt`` / ``base`` / ``max_delay`` / ``multiplier`` /
-``jitter`` → ``{delay}``)與 ``AC_plan_retry_delays``(``attempts`` … →
+``AC_retry_delay``\ (``attempt`` / ``base`` / ``max_delay`` / ``multiplier`` /
+``jitter`` → ``{delay}``)與 ``AC_plan_retry_delays``\ (``attempts`` … →
 ``{delays}``)暴露純退避排程(``jitter`` 預設為 ``none`` 以得確定結果)。皆以對應的唯讀
 ``ac_*`` MCP 工具及 Script Builder 指令(位於 **Flow** 分類下)形式提供。
-:func:`run_with_budget`(包裹一個 callable)則是 Python API 介面。
+:func:`run_with_budget`\ (包裹一個 callable)則是 Python API 介面。

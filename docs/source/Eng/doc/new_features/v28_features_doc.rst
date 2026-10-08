@@ -1,6 +1,6 @@
-==================================================
+=======================================================
 New Features (2026-06-19) — Process-Doc (SOP) Generator
-==================================================
+=======================================================
 
 Turn a recorded / authored action list into a numbered, human-readable
 **standard operating procedure** — a structured step list plus an HTML

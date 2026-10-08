@@ -71,7 +71,7 @@ ac_assert_http``。
 斷言組合器（群組 / OR / 輪詢）
 ------------------------------
 
-用宣告式 *spec*(如 ``{"kind": "text", "text": "Saved"}`` 這樣的純 dict)
+用宣告式 *spec*\ (如 ``{"kind": "text", "text": "Saved"}`` 這樣的純 dict)
 組合八種斷言,讓相同檢查在 Python、JSON、MCP 中都能使用而不需傳遞 callable::
 
     from je_auto_control import assert_all, assert_any, assert_eventually
@@ -101,7 +101,7 @@ MCP：``ac_assert_all / ac_assert_any / ac_assert_eventually``。
 
 
 媒體斷言（音訊 / 影片）
-----------------------
+-----------------------
 
 斷言某個東西確實「播放」或「動」了::
 
@@ -270,7 +270,7 @@ MCP：``ac_audit_*``。GUI：**A11y Audit** 分頁。
 行動裝置矩陣
 ============
 
-將單一 action list **並行**分發到多台 Android / iOS 裝置，每台使用各自獨立的
+將單一 action list **並行**\ 分發到多台 Android / iOS 裝置，每台使用各自獨立的
 executor（執行緒間的執行期變數作用域互不衝突）。腳本透過綁定的 ``${device.*}``
 變數鎖定當前裝置::
 

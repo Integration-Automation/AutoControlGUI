@@ -1,9 +1,9 @@
 豐富剪貼簿——HTML(CF_HTML)
 =============================
 
-基礎 ``clipboard`` 模組只處理純文字(``CF_UNICODETEXT``)與影像(``CF_DIB``)。將*格式化*內容貼進 Word /
+基礎 ``clipboard`` 模組只處理純文字(``CF_UNICODETEXT``)與影像(``CF_DIB``)。將\ *格式化*\ 內容貼進 Word /
 Outlook / 富文字編輯器需要 ``CF_HTML`` 格式,其 ``Version / StartHTML / EndHTML / StartFragment /
-EndFragment`` **位元組偏移**標頭以手寫極易出錯。``build_cf_html`` / ``parse_cf_html`` 以純 Python 計算與還原
+EndFragment`` **位元組偏移**\ 標頭以手寫極易出錯。``build_cf_html`` / ``parse_cf_html`` 以純 Python 計算與還原
 該標頭(完整單元測試的往返,且在多位元組 UTF-8 下正確),而 ``set_clipboard_html`` / ``get_clipboard_html``
 將其包裝於 Win32 剪貼簿之上。
 

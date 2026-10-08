@@ -4,7 +4,7 @@ One interaction group of ``connection_screen.QuickConnectScreen``, kept as a
 mixin so the screen class still owns every widget and slot under its original
 name.
 """
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Dict, Optional
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
@@ -55,7 +55,7 @@ class _RecentConnectionsMixin:
         target = item.data(Qt.ItemDataRole.UserRole) or item.text()
         self._connect_target.setText(str(target))
 
-    def _on_recent_menu(self, pos) -> None:
+    def _on_recent_menu(self, pos: Any) -> None:
         """Right-click menu on the Recent list: edit MAC, send WoL."""
         item = self._recent.itemAt(pos)
         if item is None:
@@ -71,13 +71,13 @@ class _RecentConnectionsMixin:
         elif chosen is edit:
             self._edit_recent_mac(entry, host_id)
 
-    def _find_address_book_entry(self, host_id: str):
+    def _find_address_book_entry(self, host_id: str) -> Optional[Dict[str, Any]]:
         for entry in self._book.list_entries():
             if entry.get("host_id") == host_id:
                 return entry
         return None
 
-    def _send_wake_on_lan(self, entry, host_id: str) -> None:
+    def _send_wake_on_lan(self, entry: Optional[Dict[str, Any]], host_id: str) -> None:
         mac = (entry or {}).get("mac_address") if entry else None
         if not mac:
             mac, ok = QInputDialog.getText(
@@ -102,7 +102,7 @@ class _RecentConnectionsMixin:
             _t("rd_quick_wol_sent").replace("{mac}", mac),
         )
 
-    def _edit_recent_mac(self, entry, host_id: str) -> None:
+    def _edit_recent_mac(self, entry: Optional[Dict[str, Any]], host_id: str) -> None:
         current = (entry or {}).get("mac_address") if entry else ""
         mac, ok = QInputDialog.getText(
             self, _t("rd_quick_edit_mac"),

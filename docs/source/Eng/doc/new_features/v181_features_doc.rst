@@ -1,5 +1,5 @@
 Extended UIA Control Patterns (Expand / Select / Range / Scroll)
-===============================================================
+================================================================
 
 The accessibility backend shipped only four control patterns — Value, Invoke, Toggle and a
 read-only Grid dump. That left the controls automation hits most often undriveable by their

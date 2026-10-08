@@ -1,13 +1,13 @@
 OpenVEX 漏洞分級
-===============
+================
 
-``scan_components``(OSV 比對器)會產生漏洞發現項目,但之後每次執行每個已知 CVE 都會一直出現
+``scan_components``\ (OSV 比對器)會產生漏洞發現項目,但之後每次執行每個已知 CVE 都會一直出現
 —— 沒有辦法記錄「我們看過了,這個不影響我們」並把它捨棄。VEX(Vulnerability Exploitability
 eXchange)正是這個分級訊號的標準。本功能撰寫 `OpenVEX <https://openvex.dev>`_ 0.2.0 陳述並
 套用到掃描器的發現項目上。
 
-``not_affected`` / ``fixed`` 陳述會**抑制**一項發現;``affected`` / ``under_investigation``
-則以評估後的狀態**標註**它。陳述以漏洞 id *或*其任一別名與發現項目配對,並可選擇性地限定到某個
+``not_affected`` / ``fixed`` 陳述會\ **抑制**\ 一項發現;\ ``affected`` / ``under_investigation``
+則以評估後的狀態\ **標註**\ 它。陳述以漏洞 id *或*\ 其任一別名與發現項目配對,並可選擇性地限定到某個
 產品。純標準函式庫(``hashlib`` + ``json`` + ``datetime``);不匯入 ``PySide6``。
 
 無頭 API

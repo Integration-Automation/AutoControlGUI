@@ -2,7 +2,7 @@
 新功能 (2026-06-19) — Plugin SDK
 ==========================================
 
-第三方 pip 套件現在可透過 setuptools **entry point**(``je_auto_control.commands``
+第三方 pip 套件現在可透過 setuptools **entry point**\ (``je_auto_control.commands``
 群組)宣告式地註冊新的 ``AC_*`` 執行器指令——把單體變成生態系(pytest /
 Playwright 的成長方式)。AutoControl 於執行期探索它們;探索到的指令立即可
 用於 JSON action 檔、socket server、排程器與 MCP。純標準庫

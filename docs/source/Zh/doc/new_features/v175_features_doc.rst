@@ -34,6 +34,6 @@
 執行器指令
 ----------
 
-``AC_settle_point``(``churns`` / ``quiet_samples`` / ``max_churn`` → ``{settled, index}``)
-以 MCP 工具 ``ac_settle_point``(唯讀)及 Script Builder 指令 **Settle Point (churn series)**
+``AC_settle_point``\ (``churns`` / ``quiet_samples`` / ``max_churn`` → ``{settled, index}``)
+以 MCP 工具 ``ac_settle_point``\ (唯讀)及 Script Builder 指令 **Settle Point (churn series)**
 (位於 **Flow** 分類下)形式提供。

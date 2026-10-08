@@ -30,7 +30,7 @@ OCR 行的段落與清單分組
 執行器指令
 ----------
 
-``AC_group_paragraphs``(``lines`` / ``line_gap_factor`` → ``{count, paragraphs}``)與
-``AC_detect_lists``(``lines`` → ``{count, items}``)。兩者以 MCP 工具 ``ac_group_paragraphs`` /
-``ac_detect_lists``(唯讀)及 Script Builder 指令 **Group Paragraphs** / **Detect Lists**
+``AC_group_paragraphs``\ (``lines`` / ``line_gap_factor`` → ``{count, paragraphs}``)與
+``AC_detect_lists``\ (``lines`` → ``{count, items}``)。兩者以 MCP 工具 ``ac_group_paragraphs`` /
+``ac_detect_lists``\ (唯讀)及 Script Builder 指令 **Group Paragraphs** / **Detect Lists**
 (位於 **OCR** 分類下)形式提供。

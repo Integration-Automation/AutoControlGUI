@@ -2,8 +2,8 @@
 ==============
 
 一個按鈕常以多種狀態呈現——預設 / 懸停 / 按下 / 停用——但它是單一邏輯目標。``ab_locator``
-A/B 測試*哪個單一策略勝出*,``match_template(scales=...)`` 跨縮放掃描*一個*模板——兩者都不把
-*多個參考裁切*融合成一次投票。``match_ensemble`` 比對每個參考,聚類命中中心,只有在至少
+A/B 測試\ *哪個單一策略勝出*,\ ``match_template(scales=...)`` 跨縮放掃描\ *一個*\ 模板——兩者都不把
+*多個參考裁切*\ 融合成一次投票。``match_ensemble`` 比對每個參考,聚類命中中心,只有在至少
 ``min_votes`` 個參考於 ``agree_px`` 內一致時才接受目標——大幅減少換膚 / 動畫 UI 上的誤判。
 
 投票核心(``vote_centers``)為純標準函式庫,並重用 ``grounding_consensus`` 做聚類,因此可在
@@ -32,8 +32,8 @@ A/B 測試*哪個單一策略勝出*,``match_template(scales=...)`` 跨縮放掃
 執行器指令
 ----------
 
-``AC_match_ensemble``(``templates`` / ``min_score`` / ``agree_px`` / ``min_votes`` /
-``region`` → ``{found, result}``)與 ``AC_vote_centers``(``centers`` / ``agree_px`` /
+``AC_match_ensemble``\ (``templates`` / ``min_score`` / ``agree_px`` / ``min_votes`` /
+``region`` → ``{found, result}``)與 ``AC_vote_centers``\ (``centers`` / ``agree_px`` /
 ``min_votes`` → ``{found, result}``)。兩者以 MCP 工具 ``ac_match_ensemble`` /
-``ac_vote_centers``(唯讀)及 Script Builder 指令 **Match Ensemble (vote references)** /
-**Vote Centers (consensus)**(位於 **Image** 分類下)形式提供。
+``ac_vote_centers``\ (唯讀)及 Script Builder 指令 **Match Ensemble (vote references)** /
+**Vote Centers (consensus)**\ (位於 **Image** 分類下)形式提供。

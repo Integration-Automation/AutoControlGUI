@@ -36,6 +36,6 @@
 執行器指令
 ----------
 
-``AC_match_with_trust``(``template`` / ``min_score`` / ``scales`` / ``ambiguous_ratio`` /
-``region`` / ``method`` → ``{found, match}``)以 MCP 工具 ``ac_match_with_trust``(唯讀)及
-Script Builder 指令 **Match Template (trust-scored)**(位於 **Image** 分類下)形式提供。
+``AC_match_with_trust``\ (``template`` / ``min_score`` / ``scales`` / ``ambiguous_ratio`` /
+``region`` / ``method`` → ``{found, match}``)以 MCP 工具 ``ac_match_with_trust``\ (唯讀)及
+Script Builder 指令 **Match Template (trust-scored)**\ (位於 **Image** 分類下)形式提供。

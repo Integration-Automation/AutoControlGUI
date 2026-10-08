@@ -375,6 +375,13 @@ Variables 分頁顯示的、以及從 GUI 執行的腳本用的就是這個範�
 範圍裡，在 ``AC_parallel`` 分支內也一樣；分支從父層變數的一份複本開始，
 自己寫入的值留在分支內。自行建立的 executor（``Executor()``）永遠擁有自己的範圍。
 
+在區塊內自行啟動的執行緒\ **不會**\ 加入這次執行：它看到的是行程層級的範圍，
+執行緒池的 worker 與 timer 也一樣。這在每一種直譯器上都成立——包含
+free-threaded Python 與 ``-X thread_inherit_context=1``\ （新執行緒一開始就拿到
+建立者 context 的複本）——因為綁定只在建立它的那條執行緒上有效。要在另一條
+執行緒上替這次執行做事，請把值傳過去（或在那裡自己開一個
+``execution_scope``\ ）。在綁定執行緒上的 coroutine 與 task 則共用這次執行。
+
 另外四種呼叫者的範圍是刻意選定的，不再是行程層級的範圍：
 
 * ``je_auto_control run --dry-run --var name=value`` 把變數放進該次 dry run
@@ -512,7 +519,7 @@ GUI：**Variables** 分頁 — 即時檢視 ``executor.variables``，可單筆�
 * **沿途的** ``finally`` **都會執行**：``AC_type_keyboard``、``AC_hotkey``、
   ``AC_with_modifiers`` 會放開它們按住的鍵，``AC_try`` 的 ``finally`` 分支會跑完。
   第二次停止要求會連這段清理一起中斷，所以不會返回的清理無法讓執行停不下來。
-* **放開**這次執行用 ``AC_press_keyboard_key`` / ``AC_press_mouse`` 按下、還沒放開
+* **放開**\ 這次執行用 ``AC_press_keyboard_key`` / ``AC_press_mouse`` 按下、還沒放開
   的按鍵與滑鼠鍵。
 * **具黏著性**：吞掉這個例外的指令只是把它延後到下一個檢查點。
 

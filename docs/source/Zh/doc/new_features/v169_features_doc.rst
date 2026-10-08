@@ -36,6 +36,6 @@ before 觀測做差異)評估,回傳逐子句的通過 / 失敗報告。
 執行器指令
 ----------
 
-``AC_check_postcondition``(``after`` / ``spec`` / ``before`` → ``{ok, clauses, failed}``)
-以 MCP 工具 ``ac_check_postcondition``(唯讀)及 Script Builder 指令 **Check Postcondition**
+``AC_check_postcondition``\ (``after`` / ``spec`` / ``before`` → ``{ok, clauses, failed}``)
+以 MCP 工具 ``ac_check_postcondition``\ (唯讀)及 Script Builder 指令 **Check Postcondition**
 (位於 **Native UI** 分類下)形式提供。

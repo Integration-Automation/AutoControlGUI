@@ -42,8 +42,8 @@
 執行器指令
 ----------
 
-``AC_compare_field_value``(``expected`` / ``actual`` / ``mode`` → ``{match,
-mode, expected, actual}``,純函式)與 ``AC_verify_field_value``(``expected`` 加上
+``AC_compare_field_value``\ (``expected`` / ``actual`` / ``mode`` → ``{match,
+mode, expected, actual}``,純函式)與 ``AC_verify_field_value``\ (``expected`` 加上
 ``name`` / ``role`` / ``app_name`` / ``automation_id`` / ``mode`` → 比對結果,
 透過無障礙後端讀取控制項的值)。皆以對應的唯讀 ``ac_*`` MCP 工具及 Script Builder 指令
-(位於 **Flow** 分類下)形式提供。:func:`fill_and_verify`(包裹一個輸入 callable)則是 Python API 介面。
+(位於 **Flow** 分類下)形式提供。:func:`fill_and_verify`\ (包裹一個輸入 callable)則是 Python API 介面。

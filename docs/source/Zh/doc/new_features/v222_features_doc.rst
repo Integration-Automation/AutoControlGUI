@@ -35,7 +35,7 @@ actionability 探針(``region_sampler`` / ``enabled_probe`` / ``hit_tester``)與
 執行器指令
 ----------
 
-``AC_act_with_mode``(``x`` / ``y`` 加上 ``mode`` / ``button`` → ``{mode, acted,
-actionable, reason, point}``)以所選模式點擊一個點——``trial`` 是絕不點擊的乾跑探測,``force`` 無條件點擊。
+``AC_act_with_mode``\ (``x`` / ``y`` 加上 ``mode`` / ``button`` → ``{mode, acted,
+actionable, reason, point}``)以所選模式點擊一個點——``trial`` 是絕不點擊的乾跑探測,\ ``force`` 無條件點擊。
 以對應的 ``ac_act_with_mode`` MCP 工具及 Script Builder 指令(位於 **Flow** 分類下)形式提供。
-:func:`act_with_mode`(接受任意 action)則是 Python API 介面。
+:func:`act_with_mode`\ (接受任意 action)則是 Python API 介面。

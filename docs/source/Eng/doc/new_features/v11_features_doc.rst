@@ -40,7 +40,7 @@ The ``AC_generate_data`` command writes a file (then feed it to
 
 
 MCP registry manifest
-====================
+=====================
 
 Publish a ``server.json`` describing this AutoControl MCP server so
 MCP-aware agents and IDEs can discover and install it. The manifest is
@@ -56,7 +56,7 @@ touching the registry-valid core fields). Also exposed as
 
 
 Risk-based test selection
-========================
+=========================
 
 Instead of always running the whole suite, rank flows by how *risky* they
 are — recently failing, flaky, stale, or never-run — using the run-history

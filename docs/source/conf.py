@@ -40,7 +40,8 @@ html_theme_options = {
     'titles_only': False,
 }
 
-html_static_path = ['_static']
+# No `html_static_path`: the tree ships no static files of its own, and naming
+# a directory that does not exist is a warning the docs build treats as an error.
 
 # -- Options for language ----------------------------------------------------
 

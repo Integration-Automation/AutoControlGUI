@@ -38,7 +38,7 @@
 執行器指令
 ----------
 
-``AC_delta_observation``(``prev`` / ``curr`` / ``viewport`` / ``max_elements`` / ``max_lines``
+``AC_delta_observation``\ (``prev`` / ``curr`` / ``viewport`` / ``max_elements`` / ``max_lines``
 / ``interactive_only`` → ``{summary, added, removed, changed}``)以 MCP 工具
-``ac_delta_observation``(唯讀)及 Script Builder 指令 **Observation: Delta (what changed)**
+``ac_delta_observation``\ (唯讀)及 Script Builder 指令 **Observation: Delta (what changed)**
 (位於 **Native UI** 分類下)形式提供。

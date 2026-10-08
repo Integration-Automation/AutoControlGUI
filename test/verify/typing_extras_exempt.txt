@@ -1,0 +1,86 @@
+# Modules that do not type-check against the real PySide6 / aiortc / av types.
+#
+# The shrink-only list of `typing_contract_verify.py --extras`. The ordinary
+# contract treats those three libraries as `Any`; this run does not, and these
+# are the modules that were already inconsistent with the libraries' own
+# signatures when the question was first asked (mixins that call methods of the
+# widget they are mixed into, `QLayout | None` used unguarded, and the like).
+#
+# Rules: the same as `typing_contract_exempt.txt`. A module may leave; it may
+# not join; the list is measured, never hand-edited:
+#         python test/verify/typing_contract_verify.py --extras --fix
+# Measure with the versions the `typing-extras` job of `quality.yml` pins.
+#
+# Targets: win32, linux, darwin
+# Measured entries: 70
+
+je_auto_control.gui._auto_click_tab
+je_auto_control.gui._image_detect_tab
+je_auto_control.gui._record_tab
+je_auto_control.gui._screenshot_tab
+je_auto_control.gui._script_tab
+je_auto_control.gui._worker_thread
+je_auto_control.gui.a11y_audit_tab
+je_auto_control.gui.accessibility_tab
+je_auto_control.gui.admin_console_tab
+je_auto_control.gui.audit_log_tab
+je_auto_control.gui.config_sync_tab
+je_auto_control.gui.dag_tab
+je_auto_control.gui.data_source_tab
+je_auto_control.gui.device_matrix_tab
+je_auto_control.gui.email_triggers_tab
+je_auto_control.gui.flakiness_tab
+je_auto_control.gui.flow_editor.scene
+je_auto_control.gui.flow_editor.tab
+je_auto_control.gui.hotkeys_tab
+je_auto_control.gui.inspector_tab
+je_auto_control.gui.main_widget
+je_auto_control.gui.main_window
+je_auto_control.gui.mobile_tab
+je_auto_control.gui.navigation
+je_auto_control.gui.presence_tab
+je_auto_control.gui.profiler_tab
+je_auto_control.gui.rbac_users_panel
+je_auto_control.gui.remote_desktop._helpers
+je_auto_control.gui.remote_desktop.advanced_group
+je_auto_control.gui.remote_desktop.connection_screen
+je_auto_control.gui.remote_desktop.frame_display
+je_auto_control.gui.remote_desktop.host_panel
+je_auto_control.gui.remote_desktop.tab
+je_auto_control.gui.remote_desktop.trusted_group
+je_auto_control.gui.remote_desktop.viewer_panel
+je_auto_control.gui.remote_desktop.webrtc_dialogs
+je_auto_control.gui.remote_desktop.webrtc_host_connection
+je_auto_control.gui.remote_desktop.webrtc_host_media
+je_auto_control.gui.remote_desktop.webrtc_host_sessions
+je_auto_control.gui.remote_desktop.webrtc_host_trust
+je_auto_control.gui.remote_desktop.webrtc_host_ui
+je_auto_control.gui.remote_desktop.webrtc_panel
+je_auto_control.gui.remote_desktop.webrtc_panel_common
+je_auto_control.gui.remote_desktop.webrtc_viewer_address_book
+je_auto_control.gui.remote_desktop.webrtc_viewer_connection
+je_auto_control.gui.remote_desktop.webrtc_viewer_files
+je_auto_control.gui.remote_desktop.webrtc_viewer_media
+je_auto_control.gui.remote_desktop.webrtc_viewer_ui
+je_auto_control.gui.rest_api_tab
+je_auto_control.gui.run_history_tab
+je_auto_control.gui.run_history_timeline
+je_auto_control.gui.scheduler_tab
+je_auto_control.gui.script_builder.builder_tab
+je_auto_control.gui.script_builder.step_form_view
+je_auto_control.gui.script_builder.step_list_view
+je_auto_control.gui.secrets_tab
+je_auto_control.gui.self_healing_tab
+je_auto_control.gui.test_suite_tab
+je_auto_control.gui.trace_replay_tab
+je_auto_control.gui.triggers_tab
+je_auto_control.gui.usb_browser_tab
+je_auto_control.gui.usb_passthrough_panel
+je_auto_control.gui.usb_passthrough_prompt
+je_auto_control.gui.webhooks_tab
+je_auto_control.gui.webrunner_tab
+je_auto_control.gui.workspace_tabs
+je_auto_control.utils.remote_desktop.hw_codec
+je_auto_control.utils.remote_desktop.session_recorder
+je_auto_control.utils.remote_desktop.webrtc_audio
+je_auto_control.utils.remote_desktop.webrtc_transport

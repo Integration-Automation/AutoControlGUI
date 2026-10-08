@@ -36,8 +36,8 @@ SARIF 匯出器,供 GitHub / Azure DevOps 程式碼掃描使用。
                 tool_name="AutoControl-VulnScan")
 
 ``is_affected(version, osv_range)`` 透過掃描 ``introduced`` / ``fixed`` /
-``last_affected`` 事件來評估單一 OSV 範圍;``match_package`` 以資料庫比對單一套件(明確的
-``versions`` **或**範圍);``scan_components`` 跑完整份 SBOM。套件名稱以 PEP-503 正規化後比較,
+``last_affected`` 事件來評估單一 OSV 範圍;\ ``match_package`` 以資料庫比對單一套件(明確的
+``versions`` **或**\ 範圍);\ ``scan_components`` 跑完整份 SBOM。套件名稱以 PEP-503 正規化後比較,
 OSV 嚴重度字詞(``CRITICAL`` / ``HIGH`` / ``MODERATE`` / ``LOW``)對應到 SARIF 的
 ``error`` / ``warning`` / ``note`` 等級(預設為 ``warning``)。
 
