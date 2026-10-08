@@ -121,11 +121,8 @@ class ArgumentPolicy:
             RefResolver(env_allowlist=self.env_allowlist,
                         path_policy=self.path_policy).check_all(value)
             return value
-        if marker == PATH_FORMAT and isinstance(value, str):
-            return self._confine(value, where)
-        if marker == PATH_OR_OTHER_FORMAT and isinstance(value, str):
-            self._confine_if_path(value, where)
-            return value
+        if isinstance(value, str):
+            return self._judge_string(marker, value, where)
         if isinstance(value, dict):
             declared = schema.get("properties") or {}
             extra = schema.get("additionalProperties")
@@ -134,6 +131,14 @@ class ArgumentPolicy:
         if isinstance(value, list):
             return [self._walk(schema.get("items"), item, f"{where}[{index}]")
                     for index, item in enumerate(value)]
+        return value
+
+    def _judge_string(self, marker: Any, value: str, where: str) -> str:
+        """Apply a string's annotation: canonicalise a path, check a maybe-path."""
+        if marker == PATH_FORMAT:
+            return self._confine(value, where)
+        if marker == PATH_OR_OTHER_FORMAT:
+            self._confine_if_path(value, where)
         return value
 
     def _confine(self, value: str, where: str) -> str:

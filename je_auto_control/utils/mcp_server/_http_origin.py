@@ -7,7 +7,7 @@ the MCP specification requires servers to validate ``Origin`` for exactly
 this.
 """
 import os
-from typing import Any
+from typing import Any, FrozenSet
 from urllib.parse import urlsplit
 
 #: Host names that mean this machine. ``urlsplit`` strips IPv6 brackets.
@@ -18,7 +18,7 @@ LOOPBACK_NAMES = frozenset({"localhost", "127.0.0.1", "::1"})
 ALLOWED_ORIGINS_ENV = "JE_AUTOCONTROL_MCP_ALLOWED_ORIGINS"
 
 
-def allowed_origins() -> frozenset:
+def allowed_origins() -> FrozenSet[str]:
     """The extra origins ``JE_AUTOCONTROL_MCP_ALLOWED_ORIGINS`` names."""
     raw = os.environ.get(ALLOWED_ORIGINS_ENV, "")
     return frozenset(part.strip() for part in raw.split(",") if part.strip())
