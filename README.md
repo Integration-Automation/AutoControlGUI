@@ -198,7 +198,11 @@ je_auto_control version
 `--var name=value` is parsed as JSON when possible (`count=10` becomes an int),
 otherwise kept as a string. `run` exits 1 when any action failed (the run
 still goes on to the end), so a CI step fails with it. The legacy
-`python -m je_auto_control -e file.json` entry point still works.
+`python -m je_auto_control -e file.json` entry point still works, and its
+`-e`, `-d` and `--execute_str` flags exit 1 the same way. Under
+[TestPioneer](https://github.com/Integration-Automation/TestPioneer), which
+sets `TEST_PIONEER_ARTIFACT_DIR`, the HTML, JSON and XML reports asked for
+under a relative name are written below that directory.
 
 ---
 

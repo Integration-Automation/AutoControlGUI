@@ -58,6 +58,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261008-01 | 2026-10-08 | The legacy CLI flags exit 1 when an action failed; reports go below TestPioneer's artifact directory | #feature #cli #report #testpioneer | [2026-10](2026-10.md) |
 | U-20261001-10 | 2026-10-01 | The publish jobs install hash-locked build tooling and build with the locked setuptools | #release #ci #security #X-13 | [2026-10](2026-10.md) |
 | U-20261001-09 | 2026-10-01 | CI publishes je_auto_control_dev from the dev branch; dev.toml says what pyproject.toml says | #release #ci #X-13 | [2026-10](2026-10.md) |
 | U-20261001-08 | 2026-10-01 | Package gate in front of AC_add_package_to_executor | #security #X-12 | [2026-10](2026-10.md) |
