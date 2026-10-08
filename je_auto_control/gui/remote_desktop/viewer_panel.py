@@ -13,6 +13,7 @@ from PySide6.QtWidgets import (
 
 from je_auto_control.gui._daemon_thread import DaemonThread
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
+from je_auto_control.gui.remote_desktop._connect_task import connect_viewer
 from je_auto_control.gui.remote_desktop._helpers import (
     _CollapsibleSection, _StatusBadge, _build_insecure_client_context,
     _build_verifying_client_context, _t, displaced_notifier,
@@ -21,6 +22,7 @@ from je_auto_control.gui.remote_desktop._helpers import (
 from je_auto_control.gui.remote_desktop.remote_screen_window import (
     RemoteScreenWindow,
 )
+from je_auto_control.gui.task_controller import TaskHandle
 from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.remote_desktop import (
     FileReceiver, RemoteDesktopViewer, WebSocketDesktopViewer, default_download_dir,
@@ -90,6 +92,8 @@ class _ViewerPanel(TranslatableMixin, QWidget):
         self._disconnect_btn: Optional[QPushButton] = None
         self._action_row: Optional[QWidget] = None
         self._connected = False
+        # The connect in progress, off the GUI thread; None once it answered.
+        self._connect_task: Optional[TaskHandle] = None
         self._audio_player: Optional[AudioPlayer] = None
         self._progress_bar = QProgressBar()
         self._progress_bar.setVisible(False)
@@ -229,6 +233,7 @@ class _ViewerPanel(TranslatableMixin, QWidget):
         viewer_cls = (WebSocketDesktopViewer
                       if transport in ("WebSocket", "WSS")
                       else RemoteDesktopViewer)
+        self._cancel_pending_connect()
         registry.evict(SLOT_VIEWER, by=self._owner)
         try:
             viewer = viewer_cls(
@@ -250,12 +255,34 @@ class _ViewerPanel(TranslatableMixin, QWidget):
                     ),
                 base_dir=default_download_dir(),
             ))
-            viewer.connect(timeout=5.0)
-        # ValueError: a host such as "a..b" fails IDNA encoding with
-        # UnicodeError, which escaped the slot and left the click unanswered.
         except (OSError, RuntimeError, ValueError, AutoControlException) as error:
             QMessageBox.warning(self, _t("rd_viewer_connect"), str(error))
             return
+        # The connect itself (TCP, TLS / WebSocket upgrade, auth: up to five
+        # seconds each) held the GUI thread for all of it.
+        self._connect_task = connect_viewer(
+            self, viewer, on_connected=self._on_connected, on_failed=self._on_connect_failed)
+        self._connect_task.finished.connect(self._on_connect_finished)
+        self._refresh_status()
+
+    def _cancel_pending_connect(self) -> None:
+        """Give up a connect that has not answered; a viewer it still produces is dropped."""
+        task, self._connect_task = self._connect_task, None
+        if task is not None:
+            task.cancel()
+
+    def _on_connect_finished(self) -> None:
+        if self.sender() is self._connect_task:
+            self._connect_task = None
+        self._refresh_status()
+
+    def _on_connect_failed(self, error: Exception) -> None:
+        # Includes ValueError: a host such as "a..b" fails IDNA encoding with
+        # UnicodeError, which once escaped the slot and left the click unanswered.
+        QMessageBox.warning(self, _t("rd_viewer_connect"), str(error))
+
+    def _on_connected(self, viewer) -> None:
+        """GUI thread: the viewer this panel asked for is connected."""
         registry.adopt(SLOT_VIEWER, viewer, self._owner, displaced_notifier(self))
         self._connected = True
         self._start_audio_player_if_requested()
@@ -316,6 +343,7 @@ class _ViewerPanel(TranslatableMixin, QWidget):
         self._status.setText(_t("rd_viewer_displaced"))
 
     def _disconnect(self) -> None:
+        self._cancel_pending_connect()
         registry.release(SLOT_VIEWER, self._owner)
         self._stop_audio_player()
         self._connected = False
@@ -367,6 +395,8 @@ class _ViewerPanel(TranslatableMixin, QWidget):
         live = self._connected and viewer is not None and viewer.connected
         if live:
             self._badge.set_state("live", _t("rd_badge_live"))
+        elif self._connect_task is not None:
+            self._badge.set_state("idle", _t("rd_viewer_connecting"))
         else:
             self._badge.set_state("idle", _t("rd_badge_idle"))
         if self._action_row is not None:

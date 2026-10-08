@@ -22,6 +22,7 @@ from je_auto_control.gui.remote_desktop import connection_screen, host_panel, vi
 from je_auto_control.utils.remote_desktop.connect_coordinator import parse_target  # noqa: E402
 from je_auto_control.utils.remote_desktop.registry import registry  # noqa: E402
 from headless._exit_probe import run_probe  # noqa: E402
+from headless._qt_settle import settle  # noqa: E402
 
 
 @pytest.fixture(autouse=True)
@@ -56,7 +57,9 @@ def test_quick_connect_dials_wss_with_a_verifying_tls_context(qapp, monkeypatch)
     made = []
     monkeypatch.setattr(connection_screen, "WebSocketDesktopViewer",
                         lambda **kwargs: made.append(_FakeViewer(**kwargs)) or made[-1])
-    connection_screen.QuickConnectScreen()._dispatch_target(parse_target("wss://desk:8443/"), "tok")
+    screen = connection_screen.QuickConnectScreen()
+    screen._dispatch_target(parse_target("wss://desk:8443/"), "tok")
+    settle(screen)
     context = made[0].kwargs.get("ssl_context")
     assert isinstance(context, ssl.SSLContext) and context.verify_mode == ssl.CERT_REQUIRED
     assert qapp.warnings == ["refused"]
@@ -82,11 +85,13 @@ def test_a_host_that_fails_idna_is_reported_by_both_viewers(qapp):
     screen._connect_target.setText("a..b:5555")
     screen._connect_token.setText("tok")
     screen._connect()
+    settle(screen)
     panel = viewer_panel._ViewerPanel()
     panel._host_field.setText("a..b")
     panel._port.setValue(5555)
     panel._token.setText("tok")
     panel._connect()
+    settle(panel)
     assert len(qapp.warnings) == 2
 
 

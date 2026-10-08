@@ -26,6 +26,7 @@ from PySide6.QtWidgets import (
 )
 
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
+from je_auto_control.gui.remote_desktop._connect_task import connect_viewer
 from je_auto_control.gui.remote_desktop._helpers import (
     _StatusBadge, _build_verifying_client_context, _t, displaced_notifier,
     wire_remote_input,
@@ -33,6 +34,7 @@ from je_auto_control.gui.remote_desktop._helpers import (
 from je_auto_control.gui.remote_desktop.remote_screen_window import (
     RemoteScreenWindow,
 )
+from je_auto_control.gui.task_controller import TaskHandle
 from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.remote_desktop import (
     PendingViewer, RemoteDesktopHost, RemoteDesktopViewer,
@@ -153,6 +155,7 @@ class QuickConnectScreen(TranslatableMixin, QWidget):
         # the popup window is open, so we cache the most recent payload
         # and replay it the moment the window is created.
         self._pending_frame: Optional[bytes] = None
+        self._connect_task: Optional[TaskHandle] = None    # the connect in progress, off-thread
         self._book = default_address_book()
         self._refresh_timer = QTimer(self)
         self._refresh_timer.setInterval(self._STATUS_INTERVAL_MS)
@@ -439,51 +442,65 @@ class QuickConnectScreen(TranslatableMixin, QWidget):
             self._close_screen_window()
         self._refresh_status()
 
-    def _do_tcp_connect(self, host: str, port: int, token: str) -> None:
-        self._take_slot(SLOT_VIEWER)
+    def _viewer_callbacks(self) -> dict:
+        return {"on_frame": self._frame_arrived.emit,
+                "on_error": lambda exc: self._error_arrived.emit(str(exc)),
+                "on_cursor": self._cursor_moved.emit}
+
+    def _begin_connect(self, slot: str, build, on_live) -> None:
+        """Take ``slot``, build the viewer, and connect it off the GUI thread (see ``_connect_task``)."""
+        self._cancel_pending_connect()
+        self._take_slot(slot)
         try:
-            viewer = RemoteDesktopViewer(
-                host=host, port=port, token=token,
-                on_frame=self._frame_arrived.emit,
-                on_error=lambda exc: self._error_arrived.emit(str(exc)),
-                on_cursor=self._cursor_moved.emit,
-            )
-            viewer.connect(timeout=5.0)
-        # ValueError: a host such as "a..b" fails IDNA encoding with
-        # UnicodeError, which escaped the slot and left the click unanswered.
+            viewer = build()
         except (OSError, RuntimeError, ValueError, AutoControlException) as error:
-            QMessageBox.warning(self, _t("rd_quick_connect_btn"), str(error))
+            self._on_connect_failed(error)
             return
-        registry.adopt(SLOT_VIEWER, viewer, self._owner, displaced_notifier(self))
-        self._remember_tcp(host, port)
-        self._open_screen_window(f"{host}:{port}")
+
+        def connected(live_viewer) -> None:
+            registry.adopt(slot, live_viewer, self._owner, displaced_notifier(self))
+            on_live()
+        self._connect_task = connect_viewer(
+            self, viewer, on_connected=connected, on_failed=self._on_connect_failed)
+        self._connect_task.finished.connect(self._on_connect_finished)
         self._refresh_status()
 
+    def _cancel_pending_connect(self) -> None:
+        task, self._connect_task = self._connect_task, None
+        if task is not None:
+            task.cancel()
+
+    def _on_connect_finished(self) -> None:
+        if self.sender() is self._connect_task:
+            self._connect_task = None
+        self._refresh_status()
+
+    def _on_connect_failed(self, error: Exception) -> None:
+        # Any error: a host such as "a..b" fails IDNA encoding with UnicodeError.
+        QMessageBox.warning(self, _t("rd_quick_connect_btn"), str(error))
+
+    def _do_tcp_connect(self, host: str, port: int, token: str) -> None:
+        def live() -> None:
+            self._remember_tcp(host, port)
+            self._open_screen_window(f"{host}:{port}")
+
+        self._begin_connect(SLOT_VIEWER, lambda: RemoteDesktopViewer(
+            host=host, port=port, token=token, **self._viewer_callbacks()), live)
+
     def _do_ws_connect(self, target: ConnectTarget, token: str) -> None:
-        host = target.host or ""
-        port = target.port or 0
-        path = target.path or "/"
-        self._take_slot(SLOT_WS_VIEWER)
+        host, port, path = target.host or "", target.port or 0, target.path or "/"
+        scheme = "wss" if target.kind == "wss" else "ws"
         # wss:// was dialled as plain ws://: the session went unencrypted to
         # a host the operator took for TLS, and a real TLS host was unreachable.
-        ssl_context = _build_verifying_client_context() if target.kind == "wss" else None
-        try:
-            viewer = WebSocketDesktopViewer(
-                host=host, port=port, token=token, path=path,
-                on_frame=self._frame_arrived.emit,
-                on_error=lambda exc: self._error_arrived.emit(str(exc)),
-                on_cursor=self._cursor_moved.emit,
-                ssl_context=ssl_context,
-            )
-            viewer.connect(timeout=5.0)
-        except (OSError, RuntimeError, ValueError, AutoControlException) as error:
-            QMessageBox.warning(self, _t("rd_quick_connect_btn"), str(error))
-            return
-        registry.adopt(SLOT_WS_VIEWER, viewer, self._owner, displaced_notifier(self))
-        scheme = "wss" if target.kind == "wss" else "ws"
-        self._remember_url(f"{scheme}://{host}:{port}{path}")
-        self._open_screen_window(f"{scheme}://{host}:{port}")
-        self._refresh_status()
+        ssl_context = _build_verifying_client_context() if scheme == "wss" else None
+
+        def live() -> None:
+            self._remember_url(f"{scheme}://{host}:{port}{path}")
+            self._open_screen_window(f"{scheme}://{host}:{port}")
+
+        self._begin_connect(SLOT_WS_VIEWER, lambda: WebSocketDesktopViewer(
+            host=host, port=port, token=token, path=path, ssl_context=ssl_context,
+            **self._viewer_callbacks()), live)
 
     def _on_remote_cursor(self, x: int, y: int) -> None:
         """Cursor update, delivered on the GUI thread by ``_cursor_moved``."""
@@ -502,6 +519,7 @@ class QuickConnectScreen(TranslatableMixin, QWidget):
 
     def _disconnect(self) -> None:
         # Either transport, and only a session this screen opened.
+        self._cancel_pending_connect()
         registry.release(SLOT_VIEWER, self._owner)
         registry.release(SLOT_WS_VIEWER, self._owner)
         self._close_screen_window()
@@ -720,6 +738,8 @@ class QuickConnectScreen(TranslatableMixin, QWidget):
         viewer = self._own_viewer()
         if viewer is not None and viewer.connected:
             self._viewer_badge.set_state("live", _t("rd_quick_connected"))
+        elif self._connect_task is not None:
+            self._viewer_badge.set_state("idle", _t("rd_viewer_connecting"))
         else:
             self._viewer_badge.set_state(
                 "idle", _t("rd_quick_disconnected"),

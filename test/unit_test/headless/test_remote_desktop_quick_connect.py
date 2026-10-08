@@ -13,6 +13,7 @@ pytest.importorskip("PySide6.QtWidgets", exc_type=ImportError)
 from PySide6.QtWidgets import QApplication  # noqa: E402
 
 from je_auto_control.utils.remote_desktop.registry import registry  # noqa: E402
+from headless._qt_settle import settle  # noqa: E402
 
 
 @pytest.fixture(scope="module")
@@ -120,6 +121,7 @@ def test_quick_connect_round_trips_frame_to_popup(qapp):
             )
             screen._connect_token.setText("t")  # noqa: SLF001
             screen._connect()  # noqa: SLF001
+            settle(screen)
 
             assert registry.viewer is not None
             # Wait until the pop-out window receives at least one frame.
@@ -173,6 +175,7 @@ def test_nine_digit_id_emits_webrtc_handoff(qapp):
         screen._connect_target.setText("123-456-789")  # noqa: SLF001
         screen._connect_token.setText("ttt")  # noqa: SLF001
         screen._connect()  # noqa: SLF001
+        settle(screen)
         assert captured == [("123456789", "ttt")]
         # No TCP viewer should have been created since this is a handoff.
         assert registry.viewer is None
@@ -317,6 +320,7 @@ def test_recent_connections_populated_after_connect(qapp, tmp_path,
             )
             screen._connect_token.setText("t")  # noqa: SLF001
             screen._connect()  # noqa: SLF001
+            settle(screen)
 
             entries = book.list_entries()
             expected_url = f"tcp://127.0.0.1:{host.port}"

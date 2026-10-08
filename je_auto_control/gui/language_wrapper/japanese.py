@@ -1207,6 +1207,8 @@ japanese_word_dict = {
     "ocr_min_conf_invalid": "信頼度は数値で入力",
     "ocr_regex_required": "先に正規表現を入力",
     "ocr_regex_invalid": "正規表現が不正",
+    "ocr_running": "読み取り中...",
+    "dm_running": "実行中...",
 
     # Variables Tab
     "vars_current_group": "現在のスコープ",
@@ -1329,6 +1331,7 @@ japanese_word_dict = {
     "rd_badge_running": "RUNNING · :{port} · ビューア {n} 名",
     "rd_badge_stopped": "STOPPED",
     "rd_badge_idle": "未接続",
+    "rd_viewer_connecting": "接続中...",
     "rd_badge_live": "接続中",
     "rd_host_id_group": "ホスト ID（ビューアに伝える）",
     "rd_host_id_label": "ホスト ID:",

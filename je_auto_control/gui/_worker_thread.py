@@ -23,6 +23,12 @@ stays on the GUI thread, so its ``finished`` / ``failed`` signals, emitted from
 the worker thread, are queued to a relay the tab owns; the callbacks always run
 on the GUI thread and are dropped once the tab is gone. A module-level registry
 keeps each worker alive until the GUI thread has seen its thread end.
+
+This module is the thread layer only. Work that waits on a network peer or a
+device, and so needs a timeout, cancellation that reaches the backend, typed
+errors or progress, goes through :mod:`je_auto_control.gui.task_controller`,
+which runs on :func:`start_worker` and shares this registry -- there is one
+mechanism, with two levels of use.
 """
 import atexit
 import threading

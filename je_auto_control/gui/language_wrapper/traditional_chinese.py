@@ -1187,6 +1187,8 @@ traditional_chinese_word_dict = {
     "ocr_min_conf_invalid": "信心度需為數字",
     "ocr_regex_required": "請先輸入 regex 樣式",
     "ocr_regex_invalid": "Regex 不正確",
+    "ocr_running": "辨識中...",
+    "dm_running": "執行中...",
 
     # Variables Tab
     "vars_current_group": "目前作用域",
@@ -1305,6 +1307,7 @@ traditional_chinese_word_dict = {
     "rd_badge_running": "RUNNING · :{port} · {n} 個 viewer",
     "rd_badge_stopped": "STOPPED",
     "rd_badge_idle": "尚未連線",
+    "rd_viewer_connecting": "連線中...",
     "rd_badge_live": "連線中",
     "rd_host_id_group": "Host ID（給遠端的人）",
     "rd_host_id_label": "Host ID：",
