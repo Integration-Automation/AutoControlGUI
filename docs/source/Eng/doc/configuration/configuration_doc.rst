@@ -109,8 +109,10 @@ Logging and local state
    * - ``JE_AUTOCONTROL_GUI_SETTINGS``
      - unset / a path / ``off``
      - File the main window keeps its theme, text size, navigation panel and
-       geometry in. Unset: ``~/.je_auto_control/gui_settings.ini``. ``off``,
-       ``0``, ``none``, ``false`` or empty: nothing is read or written.
+       geometry in, and the Config Sync tab its server, user and folder
+       fields (never the shared secret: the file is plain text). Unset:
+       ``~/.je_auto_control/gui_settings.ini``. ``off``, ``0``, ``none``,
+       ``false`` or empty: nothing is read or written.
    * - ``JE_AUTOCONTROL_ENV``
      - ``default`` / a name
      - The active environment of the asset store (``active_environment()``),

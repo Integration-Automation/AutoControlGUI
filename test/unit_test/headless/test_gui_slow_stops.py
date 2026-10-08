@@ -28,7 +28,7 @@ from je_auto_control.gui.language_wrapper.multi_language_wrapper import language
 from je_auto_control.gui.remote_desktop import host_panel  # noqa: E402
 from je_auto_control.gui.task_controller import TaskUsageError  # noqa: E402
 from je_auto_control.utils.remote_desktop.registry import SLOT_HOST, registry  # noqa: E402
-from headless._qt_settle import pump_until, settle_op  # noqa: E402
+from headless._qt_settle import deleting, pump_until, settle_op  # noqa: E402
 
 #: A handler that returns within this is not waiting for the 30 s fake join.
 _PROMPT_S = 5.0
@@ -47,6 +47,34 @@ def qapp(monkeypatch):
         monkeypatch.setattr(QMessageBox, box, lambda *args: messages.append(args[-1]))
     app.messages = messages
     yield app
+
+
+@pytest.fixture(autouse=True)
+def _panels_deleted():
+    """Each test deletes the parentless panels it built (see ``_qt_settle.deleting``)."""
+    with deleting(scheduler_tab.SchedulerTab, triggers_tab.TriggersTab, hotkeys_tab.HotkeysTab,
+                  email_triggers_tab.EmailTriggersTab, webhooks_tab.WebhooksTab, rest_api_tab.RestApiTab,
+                  usb_passthrough_panel.UsbPassthroughPanel, host_panel._HostPanel):
+        yield
+
+
+class _Owner(QWidget):
+    def __init__(self):
+        super().__init__()
+        self.op, self.stops, self.seen = SlowOp(self), StopQueue(self), []
+
+    def done(self, *values):
+        self.seen.append(("done", self.op.busy, *values))
+
+    def failed(self, *values):
+        self.seen.append(("failed", self.op.busy, *values))
+
+
+@pytest.fixture()
+def owner():
+    widget = _Owner()
+    yield widget
+    widget.deleteLater()
 
 
 class _Gate:
@@ -345,20 +373,7 @@ def test_a_host_that_comes_up_for_a_panel_that_is_gone_is_stopped(qapp, host):
 
 # --- the helpers themselves ------------------------------------------------------------------------------------
 
-class _Owner(QWidget):
-    def __init__(self):
-        super().__init__()
-        self.op, self.stops, self.seen = SlowOp(self), StopQueue(self), []
-
-    def done(self, *values):
-        self.seen.append(("done", self.op.busy, *values))
-
-    def failed(self, *values):
-        self.seen.append(("failed", self.op.busy, *values))
-
-
-def test_slow_op_reports_once_idle_again_and_passes_leading_arguments():
-    owner = _Owner()
+def test_slow_op_reports_once_idle_again_and_passes_leading_arguments(owner):
     changes = []
     owner.op.busy_changed.connect(changes.append)
     assert owner.op.run(lambda: 7, on_done=owner.done, on_error=owner.failed, args=("ctx",))
@@ -375,8 +390,7 @@ def test_slow_op_reports_once_idle_again_and_passes_leading_arguments():
     assert owner.seen[-1] == ("failed", False, error)
 
 
-def test_work_that_holds_a_widget_is_refused():
-    owner = _Owner()
+def test_work_that_holds_a_widget_is_refused(owner):
     with pytest.raises(TaskUsageError):
         owner.op.run(owner.close)
     with pytest.raises(TaskUsageError):
@@ -384,8 +398,7 @@ def test_work_that_holds_a_widget_is_refused():
     assert not owner.op.busy and owner.stops.pending == 0
 
 
-def test_a_stop_queue_counts_what_is_out_and_says_when_it_drained():
-    owner = _Owner()
+def test_a_stop_queue_counts_what_is_out_and_says_when_it_drained(owner):
     first, second, drained = _Gate(), _Gate(), []
     owner.stops.drained.connect(lambda: drained.append(owner.stops.pending))
     owner.stops.retire(first, on_done=owner.done, args=("first",))
@@ -422,7 +435,7 @@ def test_a_dropped_owner_is_not_kept_alive_by_its_callbacks(qapp):
     seen = weakref.ref(owner)
     del owner
     gc.collect()
-    assert seen() is None
     gate.release.set()
+    assert seen() is None
     assert gate.entered.wait(10.0)
     pump_until(lambda: False, timeout=0.2)      # the outcome has nobody to go to, and nothing crashes

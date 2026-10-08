@@ -10,7 +10,14 @@ from je_auto_control.utils.codegen.journal_import import (
     generate_candidate_from_log,
 )
 
+from je_auto_control.utils.codegen.candidate_diff import (
+    CandidateDiff,
+    diff_candidate,
+    diff_candidate_against_file,
+)
+
 __all__ = [
+    "CandidateDiff", "diff_candidate", "diff_candidate_against_file",
     "CandidateScript", "JournalImportError", "generate_candidate_from_log",
     "generate_code", "generate_code_file",
 ]

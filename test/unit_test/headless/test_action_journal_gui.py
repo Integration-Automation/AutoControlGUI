@@ -11,7 +11,7 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 pytest.importorskip("PySide6.QtWidgets", exc_type=ImportError)
 
 from PySide6.QtWidgets import (  # noqa: E402
-    QApplication, QFileDialog, QInputDialog, QMessageBox,
+    QApplication, QDialog, QFileDialog, QInputDialog, QMessageBox,
 )
 
 from je_auto_control.gui import _journal_import  # noqa: E402
@@ -38,8 +38,15 @@ def _journal_off():
 @pytest.fixture()
 def dialogs(monkeypatch):
     """Stub every dialog; ``answers`` holds what each returns, ``shown`` what was said."""
-    answers = {"open": "", "save": "", "run": None}
+    answers = {"open": "", "save": "", "run": None, "replace": True, "diffs": []}
     shown = []
+
+    def review(dialog):
+        # Never a modal exec in a test: record what the dialog shows and answer for the user.
+        answers["diffs"].append((dialog.summary.text(), dialog.view.toPlainText()))
+        return QDialog.DialogCode.Accepted if answers["replace"] else QDialog.DialogCode.Rejected
+
+    monkeypatch.setattr(_journal_import.CandidateDiffDialog, "exec", review)
     monkeypatch.setattr(QFileDialog, "getOpenFileName",
                         lambda *_a, **_k: (answers["open"], ""))
     monkeypatch.setattr(QFileDialog, "getSaveFileName",
@@ -79,11 +86,75 @@ def test_recording_editor_imports_a_journal_run_and_can_undo(qapp, tmp_path, dia
     assert "re_import_journal" in [key for key, _handler in tab.menu_actions()]
     tab._import_journal()  # the newest run is offered first
     assert tab._actions == [["AC_write", {"write_string": "new"}], ["AC_get_mouse_position"]]
+    summary, text = dialogs["diffs"][0]     # a recording was open: the change was shown first
+    assert summary == _journal_import._t("jr_diff_summary").replace("{added}", "2").replace("{removed}", "1")
+    assert '-["AC_a"]' in text and '+["AC_get_mouse_position"]' in text
     assert "journal run new" in tab._status.text()
     assert '"new"' in tab._preview.toPlainText()
     tab._undo()
     assert tab._actions == [["AC_a"]]
     tab.deleteLater()
+
+
+def test_keeping_the_current_recording_leaves_it_untouched(qapp, tmp_path, dialogs):
+    dialogs["open"] = _journal(
+        tmp_path / "journal.jsonl", ("run", [("AC_write", {"params": {"write_string": "x"}})]))
+    dialogs["replace"] = False
+    tab = RecordingEditorTab()
+    tab._actions = [["AC_a"]]
+    tab._path_input.setText("kept.json")
+    tab._import_journal()
+    assert len(dialogs["diffs"]) == 1
+    assert tab._actions == [["AC_a"]] and tab._path_input.text() == "kept.json"
+    assert tab._undo_stack == []            # nothing happened, so nothing to undo
+    tab.deleteLater()
+
+
+def test_an_empty_editor_takes_the_candidate_without_a_diff(qapp, tmp_path, dialogs):
+    dialogs["open"] = _journal(
+        tmp_path / "journal.jsonl", ("run", [("AC_write", {"params": {"write_string": "x"}})]))
+    tab = RecordingEditorTab()
+    tab._import_journal()
+    assert dialogs["diffs"] == [] and tab._actions == [["AC_write", {"write_string": "x"}]]
+    tab.deleteLater()
+
+
+def test_exporting_over_an_earlier_candidate_shows_the_diff_first(qapp, tmp_path, dialogs):
+    dialogs["open"] = _journal(
+        tmp_path / "journal.jsonl", ("run", [("AC_write", {"params": {"write_string": "x"}})]))
+    target = tmp_path / "candidate.py"
+    dialogs["save"] = str(target)
+    tab = RunHistoryTab()
+    tab._timer.stop()
+    tab._export_journal_candidate()         # a new file: nothing to compare with
+    assert dialogs["diffs"] == [] and target.is_file()
+    first = target.read_text(encoding="utf-8")
+    target.write_text("# edited by hand\n" + first, encoding="utf-8")
+    dialogs["replace"] = False
+    tab._export_journal_candidate()
+    assert len(dialogs["diffs"]) == 1 and "-# edited by hand" in dialogs["diffs"][0][1]
+    assert target.read_text(encoding="utf-8").startswith("# edited by hand"), "Keep must not overwrite"
+    dialogs["replace"] = True
+    tab._export_journal_candidate()
+    assert target.read_text(encoding="utf-8") == first
+    tab.deleteLater()
+
+
+def test_the_diff_view_escapes_and_colours_and_an_identical_candidate_cannot_replace(qapp):
+    from je_auto_control.utils.codegen.candidate_diff import diff_code
+    diff = diff_code("a = '<b>'\n", "a = '<i>'\n")
+    markup = _journal_import.diff_as_html(diff)
+    assert "&lt;b&gt;" in markup and "<b>" not in markup
+    assert markup.count("color:#d9534f") == 1 and markup.count("color:#2e9e4f") == 1
+    dialog = _journal_import.CandidateDiffDialog(diff)
+    assert "-a = '<b>'" in dialog.view.toPlainText() and dialog.view.isReadOnly()
+    replace = dialog.buttons.buttons()[0]
+    assert replace.text() == _journal_import._t("jr_diff_replace") and replace.isEnabled()
+    dialog.deleteLater()
+    same = _journal_import.CandidateDiffDialog(diff_code("a\n", "a\n"))
+    assert same.summary.text() == _journal_import._t("jr_diff_identical")
+    assert not same.buttons.buttons()[0].isEnabled()
+    same.deleteLater()
 
 
 def test_observed_path_is_announced_before_the_candidate_opens(qapp, tmp_path, dialogs):

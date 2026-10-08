@@ -92,6 +92,11 @@ class _ViewerPanel(TranslatableMixin, QWidget):
         self._disconnect_btn: Optional[QPushButton] = None
         self._action_row: Optional[QWidget] = None
         self._connected = False
+        # The newest frame that arrived before the screen window existed. The
+        # host sends a screen that does not change exactly once, and that frame
+        # can be delivered ahead of the connect's own result: dropped, the
+        # window stayed blank until something moved on the host.
+        self._early_frame: Optional[QImage] = None
         # The connect in progress, off the GUI thread; None once it answered.
         self._connect_task: Optional[TaskHandle] = None
         self._audio_player: Optional[AudioPlayer] = None
@@ -235,6 +240,7 @@ class _ViewerPanel(TranslatableMixin, QWidget):
                       else RemoteDesktopViewer)
         self._cancel_pending_connect()
         registry.evict(SLOT_VIEWER, by=self._owner)
+        self._early_frame = None            # a frame of the session being replaced
         try:
             viewer = viewer_cls(
                 host=host, port=port, token=token,
@@ -290,6 +296,9 @@ class _ViewerPanel(TranslatableMixin, QWidget):
         # operator gets a real workspace and the control panel stays
         # uncluttered.
         window = self._ensure_screen_window()
+        early, self._early_frame = self._early_frame, None
+        if early is not None:
+            window.set_image(early)
         window.show()
         window.raise_()
         window.activateWindow()
@@ -347,6 +356,7 @@ class _ViewerPanel(TranslatableMixin, QWidget):
         registry.release(SLOT_VIEWER, self._owner)
         self._stop_audio_player()
         self._connected = False
+        self._early_frame = None
         self._close_screen_window()
         self._progress_bar.setVisible(False)
         self._progress_label.setText("")
@@ -406,7 +416,10 @@ class _ViewerPanel(TranslatableMixin, QWidget):
 
     def _on_frame_main(self, payload: bytes) -> None:
         image = QImage.fromData(payload, "JPEG")
-        if image.isNull() or self._screen_window is None:
+        if image.isNull():
+            return
+        if self._screen_window is None:
+            self._early_frame = image       # shown by _on_connected
             return
         self._screen_window.set_image(image)
 

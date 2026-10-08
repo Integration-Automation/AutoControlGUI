@@ -8928,7 +8928,10 @@ def codegen_tools() -> List[MCPTool]:
                          "Nothing from the log is executed: the candidate is "
                          "parsed, its command names checked and dry-run only. "
                          "run_id may be omitted when the journal holds one run. "
-                         "Pass 'output' to also write the code."),
+                         "Pass 'output' to also write the code, and "
+                         "'diff_against' (a .json action file or a script the "
+                         "candidate would replace) to get a unified diff with "
+                         "added / removed counts under 'diff'."),
             input_schema=schema({
                 "path": {"type": "string", "format": "path",
                          "description": "The journal (.jsonl) file."},
@@ -8937,6 +8940,7 @@ def codegen_tools() -> List[MCPTool]:
                            "enum": ["pytest", "python", "robot"]},
                 "style": {"type": "string", "enum": ["calls", "actions"]},
                 "output": {"type": "string", "format": "path"},
+                "diff_against": {"type": "string", "format": "path"},
             }, required=["path"]),
             handler=hq.generate_code_from_log,
             annotations=SIDE_EFFECT_ONLY,

@@ -20,7 +20,7 @@ from PySide6.QtWidgets import QApplication, QMessageBox, QTableWidgetItem  # noq
 
 from je_auto_control.gui.remote_desktop import webrtc_panel  # noqa: E402
 from je_auto_control.gui.remote_desktop._helpers import _t  # noqa: E402
-from headless._qt_settle import pump_until, settle_op  # noqa: E402
+from headless._qt_settle import deleting, pump_until, settle_op  # noqa: E402
 
 _PROMPT_S = 5.0
 _JOIN_S = 30.0
@@ -34,6 +34,13 @@ def qapp(monkeypatch):
         monkeypatch.setattr(QMessageBox, box, lambda *args: messages.append(args[-1]))
     app.messages = messages
     yield app
+
+
+@pytest.fixture(autouse=True)
+def _panels_deleted():
+    """Each test deletes the parentless panels it built (see ``_qt_settle.deleting``)."""
+    with deleting(webrtc_panel._WebRTCHostPanel, webrtc_panel._WebRTCViewerPanel):
+        yield
 
 
 class _Gate:

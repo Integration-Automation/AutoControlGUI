@@ -334,9 +334,11 @@ class AutoControlGUIUI(QMainWindow):
         theme on startup and on every text-size change. The font family is
         the theme's; only the size is set here.
         """
-        sheet = f"{self._theme_stylesheet}\n{font_rule(self._effective_font_pt(pt))}"
+        effective = pt if pt > 0 else self._detect_auto_font_pt()
+        sheet = f"{self._theme_stylesheet}\n{font_rule(effective)}"
         if sheet != self.styleSheet():      # unchanged: nothing to restyle
-            self._restyle(lambda: self.setStyleSheet(sheet))
+            # Through the class: tests drive this method on a bare QMainWindow.
+            AutoControlGUIUI._restyle(self, lambda: self.setStyleSheet(sheet))
 
     def _on_text_size_selected(self) -> None:
         action = self.sender()

@@ -24,7 +24,7 @@ from je_auto_control.utils.remote_desktop.connect_coordinator import parse_targe
 from je_auto_control.utils.remote_desktop.registry import (  # noqa: E402
     SCRIPT_OWNER, SLOT_HOST, SLOT_VIEWER, SLOT_WS_VIEWER, registry,
 )
-from headless._qt_settle import settle, settle_op  # noqa: E402
+from headless._qt_settle import deleting, settle, settle_op  # noqa: E402
 
 
 class _Viewer:
@@ -98,6 +98,13 @@ def qapp(monkeypatch, tmp_path):
     monkeypatch.setattr(connection_screen, "default_address_book", lambda: book)
     app.messages = messages
     yield app
+
+
+@pytest.fixture(autouse=True)
+def _panels_deleted():
+    """Each test deletes the parentless panels it built (see ``_qt_settle.deleting``)."""
+    with deleting(viewer_panel._ViewerPanel, host_panel._HostPanel, connection_screen.QuickConnectScreen):
+        yield
 
 
 def _quick(target="tcp"):
@@ -259,6 +266,39 @@ def test_a_panel_takes_over_a_scripts_session(monkeypatch):
     screen._dispatch_target(parse_target("desk:5555"), "tok")
     settle(screen)
     assert not scripted.connected and registry.owner_of(SLOT_VIEWER) == screen._owner
+
+
+def test_a_frame_delivered_before_the_connect_result_is_shown_when_the_window_opens(qapp):
+    """The host sends a static screen once; it can reach the GUI thread ahead of the connect's result.
+
+    Dropped, the window stayed blank for good -- the intermittent failure of
+    ``test_viewer_input_round_trips_to_dispatcher`` on a loaded machine.
+    """
+    from PySide6.QtCore import QBuffer, QIODevice
+    from PySide6.QtGui import QImage
+    image = QImage(8, 8, QImage.Format.Format_RGB32)
+    image.fill(0x336699)
+    buffer = QBuffer()
+    buffer.open(QIODevice.OpenModeFlag.WriteOnly)
+    image.save(buffer, "JPEG")
+    panel = viewer_panel._ViewerPanel()
+    assert panel._screen_window is None
+    panel._on_frame_main(bytes(buffer.data()))          # the frame's queued signal ran first
+    viewer = _Viewer()
+    viewer.connected = True
+    panel._on_connected(viewer)                         # then the connect task's result
+    assert panel._screen_window.display.has_image()
+    assert panel._early_frame is None
+    panel._disconnect()
+    panel._on_frame_main(bytes(buffer.data()))          # a late frame of the closed session
+    panel._host_field.setText("desk")
+    panel._port.setValue(5555)
+    panel._token.setText("tok")
+    panel._connect()                                    # must not open the next one's window
+    assert panel._early_frame is None
+    settle(panel)
+    panel._disconnect()
+    panel.deleteLater()
 
 
 # --- hosts -----------------------------------------------------------------------------------------------------

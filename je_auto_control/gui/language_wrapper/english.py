@@ -977,6 +977,12 @@ english_word_dict = {
     "eml_poll_done": "Fired {n} message(s) on this pass.",
     "eml_running": "Polling is active.",
     "eml_stopped": "Polling is stopped.",
+    "jr_diff_title": "What the candidate changes",
+    "jr_diff_summary": ("{added} line(s) added, {removed} removed. Lines starting with + come from the "
+                        "candidate; lines starting with - are what is there now."),
+    "jr_diff_identical": "The candidate is identical to what is there now.",
+    "jr_diff_replace": "Replace",
+    "jr_diff_keep": "Keep current",
     "gui_op_stopping": "Stopping…",
     "gui_op_starting": "Starting…",
     "eml_host_label": _HOST_LABEL,

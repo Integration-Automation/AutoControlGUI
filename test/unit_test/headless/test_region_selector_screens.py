@@ -30,8 +30,22 @@ from je_auto_control.gui.selector.region_overlay import RegionOverlay, pick_regi
 # scale, so they failed there while passing everywhere else.
 sys.platform = "darwin" if sys.argv[1].endswith("-mac") else "linux"
 
+# The overlays are recorded as they are made, never found by scanning
+# QApplication.topLevelWidgets(): PySide converts that list element by element,
+# and on Python 3.10 / 3.11 an allocation in the middle can run the cycle
+# collector, which destroys window garbage whose pointers are still in the list.
+made = []
+_overlay_init = RegionOverlay.__init__
+
+def _recording_init(self, *args, **kwargs):
+    _overlay_init(self, *args, **kwargs)
+    made.append(self)
+
+RegionOverlay.__init__ = _recording_init
+
 def drag():
-    overlays = [w for w in QApplication.topLevelWidgets() if isinstance(w, RegionOverlay) and w.isVisible()]
+    overlays = [w for w in made if w.isVisible()]
+    del made[:]
     if sys.argv[1] == "close":
         overlays[0].close()              # closed without a selection
         return

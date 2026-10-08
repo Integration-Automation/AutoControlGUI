@@ -25,7 +25,7 @@ from je_auto_control.gui.remote_desktop import connection_screen, tray_icon, web
 from je_auto_control.gui.remote_desktop._helpers import _t  # noqa: E402
 from je_auto_control.utils.remote_desktop.registry import registry  # noqa: E402
 from je_auto_control.utils.remote_desktop.webrtc_stats import StatsSnapshot  # noqa: E402
-from headless._qt_settle import settle_op  # noqa: E402
+from headless._qt_settle import deleting, settle_op  # noqa: E402
 
 
 @pytest.fixture(autouse=True)
@@ -38,6 +38,14 @@ def qapp(monkeypatch):
     monkeypatch.setattr(registry, "_ws_viewer", None)
     app.messages = messages
     yield app
+
+
+@pytest.fixture(autouse=True)
+def _panels_deleted():
+    """Each test deletes the parentless panels it built (see ``_qt_settle.deleting``)."""
+    with deleting(webrtc_panel._WebRTCHostPanel, webrtc_panel._WebRTCViewerPanel,
+                  connection_screen.QuickConnectScreen):
+        yield
 
 
 # --- host side -------------------------------------------------------------------------------------------

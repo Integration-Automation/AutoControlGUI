@@ -109,6 +109,17 @@ parent。
 * manifest 逐步記錄來源的日誌行號,以及做過的檢查:原始碼可解析、指令名稱已查表、
   動作清單通過執行器的 dry run。日誌中的任何內容都不會被執行或 eval。
 
+``diff_candidate(candidate, actions=...)`` / ``diff_candidate(candidate, code=...)``
+與 ``diff_candidate_against_file(candidate, path)`` 會在候選腳本取代既有內容之前說明
+它改了什麼:回傳 ``CandidateDiff``,``text`` 是 unified diff,``added`` / ``removed``
+是增刪的行數(沒有差異時 ``identical`` 為 true)。動作清單以一個動作一行比較,巢狀的
+body 會展開成多行,所以迴圈深處的改動只顯示那一行;``.json`` 路徑視為動作檔,其他
+視為程式碼,檔案不存在時整份候選都算新增。``AC_generate_code_from_journal`` 與
+``ac_generate_code_from_log`` 接受 ``diff_against``(該路徑),並在 ``"diff"`` 回傳同
+一份差異;差異在寫入 ``output`` 之前取得,所以兩者可以是同一個檔案。GUI 中,錄製編輯
+器在候選腳本取代目前開啟的錄製之前先顯示差異,Run History 在匯出覆蓋先前的候選之前
+先顯示差異;選「保留目前內容」則兩者都不變。
+
 執行器指令:``AC_journal_start`` / ``AC_journal_stop`` / ``AC_journal_status`` /
 ``AC_journal_read`` / ``AC_journal_runs`` 與 ``AC_generate_code_from_journal``。
 MCP 工具:``ac_journal_start`` / ``ac_journal_stop`` / ``ac_journal_status`` /

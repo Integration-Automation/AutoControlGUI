@@ -28,7 +28,7 @@ from je_auto_control.gui import (  # noqa: E402
 from je_auto_control.gui.tab_registry import TAB_SPECS, TabEntry  # noqa: E402
 from je_auto_control.gui.task_controller import task_controller  # noqa: E402
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger  # noqa: E402
-from headless._qt_settle import pump_until  # noqa: E402
+from headless._qt_settle import deleting, pump_until  # noqa: E402
 
 _GUI_DIR = pathlib.Path(_dispose.__file__).resolve().parent
 
@@ -39,6 +39,18 @@ def qapp(monkeypatch):
     for box in ("warning", "information", "question", "critical"):
         monkeypatch.setattr(QMessageBox, box, lambda *args: None)
     yield app
+
+
+@pytest.fixture(autouse=True)
+def _panels_deleted():
+    """Each test deletes the parentless panels it built (see ``_qt_settle.deleting``)."""
+    modules = (admin_console_tab, config_sync_tab, email_triggers_tab, hotkeys_tab, inspector_tab,
+               live_hud_tab, presence_tab, profiler_tab, rest_api_tab, run_history_tab, scheduler_tab,
+               triggers_tab, usb_devices_tab, usb_passthrough_panel, webhooks_tab)
+    classes = [value for module in modules for value in vars(module).values()
+               if isinstance(value, type) and issubclass(value, QWidget) and value.__module__ == module.__name__]
+    with deleting(*classes):
+        yield
 
 
 def _active_timers(widget):

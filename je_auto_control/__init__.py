@@ -1283,6 +1283,9 @@ from je_auto_control.utils.action_journal import (
 from je_auto_control.utils.codegen.journal_import import (
     CandidateScript, JournalImportError, generate_candidate_from_log,
 )
+from je_auto_control.utils.codegen.candidate_diff import (
+    CandidateDiff, diff_candidate, diff_candidate_against_file,
+)
 # HTTP/API request action (dependency-free, stdlib urllib)
 from je_auto_control.utils.http_client.http_client import http_request
 # Ad-hoc read-only SQL query against SQLite
@@ -1397,6 +1400,7 @@ __all__ = [
     "action_journal_status", "list_journal_runs", "read_events",
     "start_action_journal", "stop_action_journal",
     "CandidateScript", "JournalImportError", "generate_candidate_from_log",
+    "CandidateDiff", "diff_candidate", "diff_candidate_against_file",
     "send_email", "assert_pdf_text", "extract_pdf_text", "pdf_metadata",
     "pdf_page_count",
     "add_command_to_executor", "test_record_instance", "pil_screenshot",
