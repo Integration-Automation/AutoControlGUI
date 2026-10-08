@@ -53,6 +53,75 @@
 執行器指令:``AC_generate_code``。CLI:``je_auto_control codegen``。
 
 
+動作日誌與候選腳本
+==================
+
+動作日誌是選用、僅附加的 JSON-lines 紀錄,記下執行器跑過的每一個動作——不論是從
+Python、CLI、GUI、REST、socket 還是 MCP 進來的::
+
+    from je_auto_control import (
+        start_action_journal, stop_action_journal, read_events,
+        generate_candidate_from_log,
+    )
+
+    run_id = start_action_journal("journal.jsonl")["run_id"]
+    execute_action(actions)
+    stop_action_journal()
+
+    for event in read_events("journal.jsonl", run_id=run_id):
+        print(event.sequence, event.command, event.status, event.parent_id)
+
+沒有啟動日誌時,每個動作只多一次全域變數讀取,不配置任何物件。每筆事件
+(``ActionEvent``,``schema_version`` 為 1)包含:
+
+* ``run_id`` / ``step_id`` / ``parent_id`` / ``sequence``——巢狀在區塊內的步驟以該區塊
+  為 parent;``AC_parallel`` 的分支保留區塊為 parent 並帶 ``branch`` 編號;``sequence``
+  是步驟開始的順序(也是檔案中各行的順序);
+* ``command`` 與 ``params``——參數依 *原樣* 記錄:``${var}`` 與 ``${secrets.NAME}`` 參照
+  維持參照。秘密在該行 **寫入前** 就已遮罩(規則同執行器的 log,另含 tuple),JSON 無法
+  表示的值改記為 ``{"$unserialisable": "<型別>"}``;
+* ``unreplayable``——上述每個路徑(``params.password``、``params.body[0][1].token``)
+  無法重播的原因;
+* ``status``——``ok``、``error`` 或 ``incomplete``。步驟在開始時寫一行、結束時再寫一行,
+  所以結束行沒寫進檔案的步驟(行程死掉、``Ctrl+C``)讀回來是 ``incomplete``,不會看起來
+  像成功;
+* ``outcome``——只記回傳值的型別與大小(數字與布林才記值);回傳的文字一律不存,而且
+  outcome 永遠不會被當成輸入。
+
+start 到 stop 之間記下的一切屬於同一個 ``run_id``(可用 ``run_id=`` 指定)。日誌檔寫不
+進去時,日誌會停止而自動化繼續執行;``action_journal_status()`` 會回報錯誤。除了
+``AC_parallel`` 以外,交給執行緒池執行的步驟(DAG runner、device matrix)記錄時沒有
+parent。
+
+``generate_candidate_from_log(path, run_id=..., target="pytest", style="actions")``
+把一次執行轉成 ``CandidateScript``——``code``、``actions``、``manifest``、``warnings``
+與 ``observed_path_only``:
+
+* 頂層步驟依原樣輸出,所以記錄到的 ``AC_loop`` / ``AC_if_*`` / ``AC_parallel`` 保留其
+  控制流程;
+* 區塊無法還原時(日誌是在區塊內才啟動、參數無法儲存、呼叫了這次執行沒定義的巨集),
+  改輸出實際在它底下跑過的步驟,manifest 中標為 ``observed``,且 ``observed_path_only``
+  為 true——候選腳本重播的是那次執行走過的路徑,不會憑空產生沒執行的分支。已觀察的
+  ``AC_retry`` 只保留最後一次嘗試(manifest 會記嘗試次數);
+* 被遮罩的秘密會變成 ``${journal_redacted_N_M}`` 參照,在你替換掉之前會以未知變數
+  失敗;
+* 失敗與未完成的步驟會保留(它們是腳本的輸入),並列在 warnings;
+* manifest 逐步記錄來源的日誌行號,以及做過的檢查:原始碼可解析、指令名稱已查表、
+  動作清單通過執行器的 dry run。日誌中的任何內容都不會被執行或 eval。
+
+執行器指令:``AC_journal_start`` / ``AC_journal_stop`` / ``AC_journal_status`` /
+``AC_journal_read`` / ``AC_journal_runs`` 與 ``AC_generate_code_from_journal``。
+MCP 工具:``ac_journal_start`` / ``ac_journal_stop`` / ``ac_journal_status`` /
+``ac_journal_read`` / ``ac_journal_runs`` 與 ``ac_generate_code_from_log``。CLI::
+
+    je_auto_control codegen --from-log journal.jsonl --run-id RUN \
+        --target pytest -o test_flow.py --manifest test_flow.manifest.json
+
+日誌只有一次執行時可省略 ``--run-id``;這裡 ``--style`` 預設為 ``actions``(動作檔則是
+``calls``)。GUI:Run History 分頁 → Actions 選單(啟動/停止日誌、儲存候選腳本);
+Recording Editor →「匯入日誌的執行…」;Script Builder →「匯入日誌」。
+
+
 HTTP / API
 ==========
 

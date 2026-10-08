@@ -2995,6 +2995,56 @@ def _add_audit_specs(specs: List[CommandSpec]) -> None:
                     "locators).",
     ))
     specs.append(CommandSpec(
+        "AC_journal_start", "Testing", "Start Action Journal",
+        fields=(
+            FieldSpec("path", FieldType.FILE_PATH, optional=True,
+                      placeholder="action_journal.jsonl"),
+            FieldSpec("run_id", FieldType.STRING, optional=True),
+            FieldSpec("session", FieldType.STRING, optional=True),
+        ),
+        description="Append every executed action to a JSON-lines journal "
+                    "(secrets masked before they are written).",
+    ))
+    specs.append(CommandSpec(
+        "AC_journal_stop", "Testing", "Stop Action Journal",
+        description="Stop the action journal.",
+    ))
+    specs.append(CommandSpec(
+        "AC_journal_status", "Testing", "Action Journal Status",
+        description="Report whether an action journal is started.",
+    ))
+    specs.append(CommandSpec(
+        "AC_journal_read", "Testing", "Read Action Journal",
+        fields=(
+            FieldSpec("path", FieldType.FILE_PATH,
+                      placeholder="action_journal.jsonl"),
+            FieldSpec("run_id", FieldType.STRING, optional=True),
+            FieldSpec("limit", FieldType.INT, optional=True, default=0),
+        ),
+        description="Read a journal's events (the last 'limit' when positive).",
+    ))
+    specs.append(CommandSpec(
+        "AC_journal_runs", "Testing", "List Journal Runs",
+        fields=(FieldSpec("path", FieldType.FILE_PATH,
+                          placeholder="action_journal.jsonl"),),
+        description="Summarise each run a journal file holds.",
+    ))
+    specs.append(CommandSpec(
+        "AC_generate_code_from_journal", "Testing", "Candidate Script from Journal",
+        fields=(
+            FieldSpec("path", FieldType.FILE_PATH,
+                      placeholder="action_journal.jsonl"),
+            FieldSpec("run_id", FieldType.STRING, optional=True),
+            FieldSpec("target", FieldType.ENUM, optional=True, default="pytest",
+                      choices=("pytest", "python", "robot")),
+            FieldSpec("style", FieldType.ENUM, optional=True, default="actions",
+                      choices=("actions", "calls")),
+            FieldSpec("output", FieldType.FILE_PATH, optional=True),
+        ),
+        description="Build a reviewable candidate script from one journal "
+                    "run; nothing from the log is executed.",
+    ))
+    specs.append(CommandSpec(
         "AC_failure_signature", "Testing", "Failure Signature",
         fields=(
             FieldSpec("error", FieldType.STRING,

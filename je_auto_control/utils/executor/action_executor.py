@@ -33,6 +33,7 @@ from je_auto_control.utils.executor.flow_control import (
     BLOCK_COMMANDS, LoopBreak, LoopContinue, MacroDepthExceeded,
 )
 from je_auto_control.utils.executor.action_redaction import describe_action, redact_actions
+from je_auto_control.utils.action_journal.recorder import step as _journal_step
 from je_auto_control.utils.executor.mouse_aliases import MOUSE_BUTTON_COMMANDS
 from je_auto_control.utils.llm.planner import (
     plan_actions as llm_plan_actions,
@@ -2405,6 +2406,55 @@ def _generate_code(source: Any, output: Optional[str] = None,
                                   name=name, style=style)
     actions = source if isinstance(source, list) else read_action_json(source)
     return generate_code(actions, target=target, name=name, style=style)
+
+
+def _journal_start(path: Optional[str] = None, run_id: Optional[str] = None,
+                   session: Optional[str] = None) -> Dict[str, Any]:
+    """Start journalling every executed action to ``path``."""
+    from je_auto_control.utils.action_journal.recorder import start_action_journal
+    return start_action_journal(path or None, run_id=run_id or None,
+                                session=session or None)
+
+
+def _journal_stop() -> Dict[str, Any]:
+    """Stop the action journal."""
+    from je_auto_control.utils.action_journal.recorder import stop_action_journal
+    return stop_action_journal()
+
+
+def _journal_status() -> Dict[str, Any]:
+    """Report whether an action journal is started."""
+    from je_auto_control.utils.action_journal.recorder import action_journal_status
+    return action_journal_status()
+
+
+def _journal_read(path: str, run_id: Optional[str] = None,
+                  limit: int = 0) -> List[Dict[str, Any]]:
+    """Read a journal's events as dicts (the last ``limit`` when positive)."""
+    from je_auto_control.utils.action_journal.store import read_events
+    events = read_events(path, run_id=run_id or None)
+    return [event.to_dict() for event in events[-int(limit):]]
+
+
+def _journal_runs(path: str) -> List[Dict[str, Any]]:
+    """Summarise each run a journal file holds."""
+    from je_auto_control.utils.action_journal.store import list_journal_runs
+    return list_journal_runs(path)
+
+
+def _generate_code_from_journal(path: str, run_id: Optional[str] = None,
+                                target: str = "pytest", style: str = "actions",
+                                output: Optional[str] = None) -> Dict[str, Any]:
+    """Build a candidate script from one journal run, optionally writing it."""
+    from je_auto_control.utils.codegen.journal_import import (
+        generate_candidate_from_log, only_run_id, write_candidate,
+    )
+    candidate = generate_candidate_from_log(
+        path, run_id=run_id or only_run_id(path), target=target, style=style)
+    result = candidate.to_dict()
+    if output:
+        result.update(write_candidate(candidate, output))
+    return result
 
 
 def _send_email(message: Any, smtp: Any) -> Dict[str, Any]:
@@ -7247,6 +7297,12 @@ class Executor:
             "AC_generate_json_report": generate_json_report,
             "AC_generate_xml_report": generate_xml_report,
             "AC_generate_code": _generate_code,
+            "AC_generate_code_from_journal": _generate_code_from_journal,
+            "AC_journal_start": _journal_start,
+            "AC_journal_stop": _journal_stop,
+            "AC_journal_status": _journal_status,
+            "AC_journal_read": _journal_read,
+            "AC_journal_runs": _journal_runs,
             "AC_send_email": _send_email,
             "AC_assert_pdf_text": _assert_pdf_text,
             "AC_take_golden": _take_golden,
@@ -8292,8 +8348,9 @@ class Executor:
         action_name = action[0] if action and isinstance(action[0], str) else "<invalid>"
         started = _time.monotonic()
         try:
-            with default_profiler.measure(action_name):
+            with default_profiler.measure(action_name), _journal_step(action) as step:
                 record[key] = self._execute_event(action)
+                step.outcome(record[key])
             _observe_executor_metrics(action_name, started, error=None)
         except (LoopBreak, LoopContinue):
             raise
