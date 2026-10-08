@@ -292,6 +292,35 @@ dialog left open, a withheld descriptor, a closed session, a portal too old for
 `ConnectToEIS`, no portal at all — each of which has to fail closed on
 AutoControl's own clock.
 
+What each of those outcomes *means* is now an explicit state rather than one
+undifferentiated failure. `probe_capabilities()` (`AC_probe_capabilities`, the
+`ac_probe_capabilities` MCP tool, and the Diagnostics tab) reports input,
+capture, recording and the stop shortcut separately, each as `available`,
+`not_requested`, `requesting`, `needs_permission`, `needs_setup`,
+`session_closed`, `revoked` or `compositor_restarted`, with the backend
+serving it and whether it reaches the whole desktop — which it does not when
+the X11 backend is serving a Wayland session through XWayland. The probe asks
+the desktop for nothing. Two outcomes no longer fall back to ydotool: a
+consent the portal **denied**, and a session the compositor **revoked**; both
+raise `WaylandAuthorisationError` until `reset_input_authorisation()`. Every
+other failure falls back as before. The denial is recognised from liboeffis's
+own error text, which only the `portal-verification` job can vouch for: it
+prints how each of the six refusals is classified, with a `*** REVISIT ***`
+banner if the dismissed dialog is not the one classified as declined. Until
+that job has been read, treat "a denied consent stops the fallback" as
+implemented against fakes and unverified against a real liboeffis.
+
+The libei session can also be moved into a helper process
+(`JE_AUTOCONTROL_WAYLAND_EI_WORKER=1`, **off by default**). The in-process
+path and its deliberate one-context-one-descriptor leak on a half-open
+handshake are unchanged and remain the default; the upstream `ei_unref` crash
+is not fixed. `docker/libei_verify.py` now classifies that teardown — which
+ways of ending a half-open context crash and which are clean — and counts
+descriptors leaked in-process against through the helper, and
+`docker/eis_verify.py` measures the helper's latency and what happens to a
+held key when the helper is closed or killed. Those are printed as
+measurements and never change either job's exit status.
+
 What is still not covered is the consent dialog as a *dialog*: no user
 dismisses anything in CI, so what a real dialog looks like and how long a real
 one blocks stay mutter's business. The compositor also refuses global input

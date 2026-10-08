@@ -39,6 +39,9 @@ import urllib.parse
 from typing import Any, Dict, List, Tuple
 
 from je_auto_control.linux_wayland import _dbus_client
+from je_auto_control.linux_wayland.authorisation import (
+    CAPTURE, AuthorisationState, ledger,
+)
 from je_auto_control.utils.exception.exceptions import AutoControlScreenException
 
 
@@ -57,6 +60,15 @@ _CALL_TIMEOUT = 10.0
 _RESPONSE_MEANING = {
     1: "the user dismissed the desktop portal's screenshot dialog",
     2: "the desktop portal ended the screenshot request",
+}
+
+#: What each Response code means for the capture authorisation. Recorded so a
+#: dismissed dialog reads as "needs permission" in the diagnostics rather than
+#: as one more capture failure. There is no tier after the portal to fall back
+#: to, so nothing is ever captured another way behind a refusal.
+_RESPONSE_STATE = {
+    0: AuthorisationState.GRANTED,
+    1: AuthorisationState.DECLINED,
 }
 
 
@@ -100,6 +112,8 @@ def _request_and_await(bus: "_dbus_client.SessionBus", timeout: float) -> str:
         body = bus.wait_for_signal(paths, REQUEST_INTERFACE, "Response",
                                    timeout)
     except _dbus_client.DBusError as error:
+        ledger.transition(CAPTURE, AuthorisationState.TIMED_OUT,
+                          f"no answer within {timeout:g}s")
         raise AutoControlScreenException(
             f"desktop portal did not answer within {timeout:g}s "
             f"(a consent dialog may be waiting)",
@@ -154,6 +168,9 @@ def _match_rule(path: str) -> str:
 def _uri_from_response(body: List[Any]) -> str:
     """Read the screenshot URI out of one ``Response`` signal body."""
     code, results = _response_parts(body)
+    ledger.transition(
+        CAPTURE, _RESPONSE_STATE.get(code, AuthorisationState.FAILED),
+        _RESPONSE_MEANING.get(code, ""))
     if code != 0:
         raise AutoControlScreenException(
             _RESPONSE_MEANING.get(code, f"desktop portal returned {code}"),

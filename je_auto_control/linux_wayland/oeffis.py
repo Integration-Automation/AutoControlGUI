@@ -68,6 +68,35 @@ class OeffisUnavailable(AutoControlException, RuntimeError):
     """liboeffis is missing, or the portal refused to hand over an EIS fd."""
 
 
+class PortalConsentNotGranted(OeffisUnavailable):
+    """The portal was asked for a session and did not hand one over.
+
+    Still an :class:`OeffisUnavailable`, so every existing handler keeps
+    working. What it adds is *which way* the request ended, because the three
+    are not the same thing to an operator:
+
+    ``timeout``       nobody answered within this project's deadline
+    ``closed``        the portal closed the session
+    ``disconnected``  liboeffis gave up, with ``detail`` saying why
+
+    :attr:`declined` is true only where the library's own text says the
+    portal denied the request. That is the one outcome after which input must
+    not be routed through another backend, so it is recognised narrowly: a
+    host with no RemoteDesktop portal at all also ends in ``disconnected``,
+    and it must keep falling back to ydotool as it always has.
+    """
+
+    def __init__(self, message: str, outcome: str, detail: str = "") -> None:
+        super().__init__(message)
+        self.outcome = outcome
+        self.detail = detail
+
+    @property
+    def declined(self) -> bool:
+        """Whether the portal answered the request with a refusal."""
+        return "denied" in self.detail.lower()
+
+
 def load_symbols() -> Optional[BoundSymbols]:
     """Resolve liboeffis, or None when it is not installed."""
     return bind(_LIBRARY_CANDIDATES, _PROTOTYPES)
@@ -150,15 +179,18 @@ def _require_connected(symbols: BoundSymbols, handle: int, event: int,
     if event == OEFFIS_EVENT_CONNECTED_TO_EIS:
         return
     if event == OEFFIS_EVENT_NONE:
-        raise OeffisUnavailable(
+        raise PortalConsentNotGranted(
             f"the desktop portal did not answer within {timeout:g}s "
-            f"(a consent dialog may be waiting)",
+            f"(a consent dialog may be waiting)", "timeout",
         )
     detail = _describe(symbols, handle)
+    closed = event == OEFFIS_EVENT_CLOSED
     reason = ("the desktop portal closed the remote-desktop session"
-              if event == OEFFIS_EVENT_CLOSED
+              if closed
               else "the desktop portal disconnected the remote-desktop session")
-    raise OeffisUnavailable(f"{reason}{': ' + detail if detail else ''}")
+    raise PortalConsentNotGranted(
+        f"{reason}{': ' + detail if detail else ''}",
+        "closed" if closed else "disconnected", detail)
 
 
 def _release(symbols: BoundSymbols, handle: int) -> None:
@@ -192,6 +224,7 @@ __all__ = [
     "OEFFIS_DEVICE_KEYBOARD", "OEFFIS_DEVICE_POINTER",
     "OEFFIS_DEVICE_TOUCHSCREEN", "OEFFIS_EVENT_CLOSED",
     "OEFFIS_EVENT_CONNECTED_TO_EIS", "OEFFIS_EVENT_DISCONNECTED",
-    "OEFFIS_EVENT_NONE", "OeffisUnavailable", "connect_eis_fd",
+    "OEFFIS_EVENT_NONE", "OeffisUnavailable", "PortalConsentNotGranted",
+    "connect_eis_fd",
     "is_available", "load_symbols",
 ]

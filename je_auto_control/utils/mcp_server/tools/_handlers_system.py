@@ -544,6 +544,12 @@ def file_association(target):
     return _file_association(target)
 
 
+def probe_capabilities() -> Dict[str, Any]:
+    """Capability and authorisation states; the same data ``AC_`` returns."""
+    from je_auto_control.wrapper.capabilities import probe_capabilities as _probe
+    return _probe().to_dict()
+
+
 def get_clipboard() -> str:
     from je_auto_control.utils.clipboard.clipboard import get_clipboard as _get
     return _get()

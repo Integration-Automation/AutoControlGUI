@@ -1,11 +1,19 @@
 """Wayland keyboard listener stub.
 
 Wayland deliberately forbids reading the global key state from an
-unprivileged client. Hooking would require either the libei input
-capture protocol (not yet stable across compositors) or a kernel-level
-listener via ``/dev/input/event*`` (root-only). For now, raise a
-specific NotImplementedError so callers can fall back to the X11
-backend if they need key listening.
+unprivileged client, so the two hook entry points raise a specific
+NotImplementedError rather than pretending.
+
+The supported replacements are narrower than a hook, and live elsewhere:
+
+* a single global *stop* key — :mod:`global_shortcuts`, through the
+  GlobalShortcuts portal, which reports only the shortcut that was registered;
+* the user's own input, from kernel devices they name — the opt-in
+  ``PhysicalRecorder`` in :mod:`input_events`.
+
+The portal's InputCapture interface is not one of them: the compositor decides
+when it starts (a pointer crossing a screen edge), so it cannot be a listener
+that starts when a script asks.
 """
 from __future__ import annotations
 
@@ -14,9 +22,11 @@ def check_key_press(*_args, **_kwargs):
     """Wayland clients cannot read the global key state. Raise explicitly."""
     raise NotImplementedError(
         "Wayland forbids global key-state queries from unprivileged "
-        "clients. Use the X11 backend "
-        "(JE_AUTOCONTROL_LINUX_DISPLAY_SERVER=x11), libei capture, or "
-        "an evdev reader (requires root).",
+        "clients. For a stop key use StopShortcutSession (the "
+        "GlobalShortcuts portal); to read your own devices use the opt-in "
+        "PhysicalRecorder. The X11 backend "
+        "(JE_AUTOCONTROL_LINUX_DISPLAY_SERVER=x11) sees X11 applications "
+        "only under XWayland.",
     )
 
 

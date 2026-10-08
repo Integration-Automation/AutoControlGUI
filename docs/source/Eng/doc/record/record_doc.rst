@@ -71,3 +71,11 @@ The remaining helpers — ``insert_action``, ``remove_action``,
 ``scale_coordinates`` are also exposed over MCP as ``ac_dedupe_moves`` /
 ``ac_merge_sleeps`` / ``ac_trim_actions`` / ``ac_adjust_delays`` /
 ``ac_scale_coordinates``.
+
+Recording on Wayland
+====================
+
+``record()`` raises on a Wayland session: the compositor forbids a global
+input hook. ``InputStepLog`` records the steps the program executes without
+one, and the opt-in ``PhysicalRecorder`` reads your own input from kernel
+devices you name. See :doc:`/Eng/doc/wayland/wayland_capabilities_doc`.

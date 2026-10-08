@@ -429,6 +429,243 @@ def _live_teardown_sentinel(path: str) -> str:
     return f"inconclusive (rc={finished.returncode}): {detail[-1] if detail else ''}"
 
 
+def measure(name: str, fn: Callable[[], Any]) -> Any:
+    """Run a measurement and print what it found; never count it.
+
+    The checks decide this script's exit status. What follows are numbers and
+    classifications about the *opt-in* helper process — printed for whoever
+    reads the log, and unable to turn the job red.
+    """
+    try:
+        detail = fn()
+    except Exception:  # noqa: BLE001  # reason: a measurement that cannot run is itself a finding
+        print(f"note  {name} — could not be measured:")
+        print("        " + traceback.format_exc(limit=4).strip().replace(
+            "\n", "\n        "))
+        return None
+    print(f"info  {name}  — {detail}")
+    return detail
+
+
+def _describe_exit(returncode: Any) -> str:
+    """An exit status as a reader wants it: clean, a code, or a signal."""
+    import signal
+    if returncode is None:
+        return "still running"
+    if returncode == 0:
+        return "clean (rc=0)"
+    if returncode < 0:
+        try:
+            name = signal.Signals(-returncode).name
+        except ValueError:
+            name = "signal"
+        return f"{name} (rc={returncode})"
+    return f"exit status {returncode}"
+
+
+def _percentile(samples: List[float], fraction: float) -> float:
+    ordered = sorted(samples)
+    return ordered[min(len(ordered) - 1, int(len(ordered) * fraction))]
+
+
+def _timed_keystrokes(backend, count: int) -> List[float]:
+    """Milliseconds per press+release pair, ``count`` times."""
+    samples = []
+    for _ in range(count):
+        started = time.perf_counter()
+        backend.press_key(KEY_A)
+        backend.release_key(KEY_A)
+        samples.append((time.perf_counter() - started) * 1000.0)
+    return samples
+
+
+def _helper_session(path, server_class, ei_client):
+    """A helper process with a live session against a server of its own."""
+    if os.path.exists(path):
+        os.unlink(path)
+    server = server_class(path)
+    server.start()
+    client = ei_client.EiWorkerClient(socket_path=path,
+                                      handshake_timeout_s=5.0,
+                                      start_timeout_s=120.0)
+    client.start()
+    return client, server
+
+
+def _measure_helper_emits(path, server_class) -> str:
+    """Does input sent through the helper reach the EIS server at all?"""
+    from je_auto_control.linux_wayland import ei_client
+    client, server = _helper_session(path, server_class, ei_client)
+    try:
+        backend = ei_client.WorkerBackend(client)
+        backend.press_key(KEY_A)
+        backend.release_key(KEY_A)
+        backend.set_position(*TARGET_POSITION)
+        backend.click_button(BTN_LEFT)
+        backend.scroll(0, 1)
+        _wait_for(lambda: len(server.recording.keys) >= 2
+                  and server.recording.absolute_motions
+                  and len(server.recording.buttons) >= 2
+                  and server.recording.scrolls, 3.0,
+                  "the helper's events at the server")
+        record = server.recording
+        return (f"keys {record.keys[:2]}, motion "
+                f"{record.absolute_motions[-1]}, buttons {record.buttons[:2]}, "
+                f"scroll {record.scrolls[-1]} (in-process: (0, {SCROLL_UNIT}))")
+    finally:
+        client.close()
+        server.stop()
+
+
+def _measure_helper_latency(path, libei, server_class) -> str:
+    """What a pipe round trip per emission costs, next to none."""
+    from je_auto_control.linux_wayland import ei_client
+    count = 200
+    if os.path.exists(path + "-direct"):
+        os.unlink(path + "-direct")
+    direct_server = server_class(path + "-direct")
+    direct_server.start()
+    direct = libei.LibeiBackend()
+    direct.connect(timeout=5.0, socket_path=(path + "-direct").encode())
+    try:
+        in_process = _timed_keystrokes(direct, count)
+    finally:
+        direct.disconnect()
+        direct_server.stop()
+
+    client, server = _helper_session(path, server_class, ei_client)
+    try:
+        helper = _timed_keystrokes(ei_client.WorkerBackend(client), count)
+    finally:
+        client.close()
+        server.stop()
+
+    def summary(samples: List[float]) -> str:
+        return (f"median {_percentile(samples, 0.5):.3f} ms, "
+                f"p95 {_percentile(samples, 0.95):.3f} ms, "
+                f"max {max(samples):.3f} ms")
+
+    return (f"{count} press+release pairs — in-process: {summary(in_process)}"
+            f"; through the helper: {summary(helper)}")
+
+
+def _measure_helper_clean_close(path, server_class) -> str:
+    """A key held when the helper is closed: is it released, and how?"""
+    from je_auto_control.linux_wayland import ei_client
+    client, server = _helper_session(path, server_class, ei_client)
+    try:
+        ei_client.WorkerBackend(client).press_key(KEY_A)
+        _wait_for(lambda: server.recording.keys, 2.0, "the held key")
+        before = server.recording.disconnects
+        client.close()
+        try:
+            _wait_for(lambda: server.recording.disconnects > before, 3.0,
+                      "the helper to disconnect")
+        except AssertionError:
+            pass
+        released = (KEY_A, False) in server.recording.keys
+        return (f"helper exit {_describe_exit(client.returncode)}; key-up "
+                f"{'reached' if released else 'did NOT reach'} the server "
+                f"before it left; server saw "
+                f"{server.recording.disconnects - before} disconnect(s)")
+    finally:
+        client.close()
+        server.stop()
+
+
+def _measure_helper_killed(path, server_class) -> str:
+    """A key held when the helper is killed outright: who releases it?
+
+    Nothing in the helper runs after SIGKILL, so whatever the server sees is
+    libeis reacting to a client that vanished. This is the measurement behind
+    "the compositor is expected to release them" in ``ei_worker``.
+    """
+    import signal
+    from je_auto_control.linux_wayland import ei_transport, ei_client
+    client, server = _helper_session(path, server_class, ei_client)
+    try:
+        backend = ei_client.WorkerBackend(client)
+        backend.press_key(KEY_A)
+        _wait_for(lambda: server.recording.keys, 2.0, "the held key")
+        before = server.recording.disconnects
+        os.kill(client._process.pid, signal.SIGKILL)
+        try:
+            _wait_for(lambda: server.recording.disconnects > before, 3.0,
+                      "the server to notice the helper is gone")
+        except AssertionError:
+            pass
+        try:
+            backend.release_key(KEY_A)
+            reported = "the parent did NOT notice the helper died"
+        except ei_transport.EiWorkerDied as died:
+            reported = (f"the parent raised EiWorkerDied with pressed_keys="
+                        f"{died.pressed_keys}, exit "
+                        f"{_describe_exit(died.returncode)}")
+        released = (KEY_A, False) in server.recording.keys
+        return (f"{reported}; the server saw "
+                f"{server.recording.disconnects - before} disconnect(s) and "
+                f"{'a' if released else 'NO'} key-up for the held key — so "
+                "release on a dead client is "
+                f"{'done by libeis' if released else 'left to the compositor'}")
+    finally:
+        client.close()
+        server.stop()
+
+
+_HELPER_FLAG = "--helper-measurements"
+
+
+def _helper_measurements_in_a_child() -> None:
+    """Run the helper measurements where a crash cannot reach the checks.
+
+    They kill a client mid-session on purpose, which is a thing libeis might
+    not survive; in a child of its own, the worst that can happen is one more
+    line in the log saying so.
+    """
+    print("-" * 72)
+    print("      The libei helper process (JE_AUTOCONTROL_WAYLAND_EI_WORKER=1,")
+    print("      off by default). Measured here, never counted as a check:",
+          flush=True)
+    try:
+        # This interpreter running this file with a fixed flag; no shell.
+        finished = subprocess.run(  # nosec B603  # nosemgrep
+            [sys.executable, os.path.abspath(__file__), _HELPER_FLAG],
+            timeout=900)
+    except subprocess.TimeoutExpired:
+        print("note  the helper measurements did not finish within 900s")
+        return
+    if finished.returncode != 0:
+        print("note  the helper measurements ended with "
+              f"{_describe_exit(finished.returncode)} — see above; this is "
+              "about the opt-in helper only and is not counted")
+
+
+def _helper_measurements_main() -> int:
+    """Entry point of the measurement child."""
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    from eis_server import RecordingEisServer, load_symbols
+    from je_auto_control.linux_wayland import libei
+    if load_symbols() is None:
+        print("note  libeis is not installed; nothing to measure")
+        return 0
+    _run_helper_measurements(os.path.join(_scratch_dir(), "eis-helper"),
+                             libei, RecordingEisServer)
+    return 0
+
+
+def _run_helper_measurements(path, libei, server_class) -> None:
+    """Everything about the opt-in helper, as measurements only."""
+    measure("input sent through the helper reaches the EIS server",
+            lambda: _measure_helper_emits(path + "-emit", server_class))
+    measure("emission latency, in-process against through the helper",
+            lambda: _measure_helper_latency(path + "-latency", libei,
+                                            server_class))
+    measure("a key held when the helper is closed",
+            lambda: _measure_helper_clean_close(path + "-close", server_class))
+    measure("a key held when the helper is killed",
+            lambda: _measure_helper_killed(path + "-kill", server_class))
+
+
 #: An offset region layout: the shape a compositor must advertise for a
 #: desktop whose left-most monitor sits at a negative layout coordinate.
 #: Region offsets are ``uint32``, so it cannot advertise the negative
@@ -650,6 +887,9 @@ def main() -> int:
     if server.error is not None:
         print(f"      NOTE: the server thread ended with {server.error!r}")
 
+    # Last, and outside the checks: nothing below can change the exit status.
+    _helper_measurements_in_a_child()
+
     failed = [name for name, ok in _results if not ok]
     print("=" * 72)
     print(f"{len(_results) - len(failed)}/{len(_results)} checks passed")
@@ -660,4 +900,6 @@ def main() -> int:
 
 
 if __name__ == "__main__":
+    if _HELPER_FLAG in sys.argv[1:]:
+        sys.exit(_helper_measurements_main())
     sys.exit(main())

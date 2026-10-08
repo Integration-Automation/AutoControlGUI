@@ -68,3 +68,11 @@ AutoControl 可以錄製滑鼠與鍵盤事件，並透過執行器回放。
 ``adjust_delays`` 與 ``scale_coordinates`` 也透過 MCP 暴露為
 ``ac_dedupe_moves`` / ``ac_merge_sleeps`` / ``ac_trim_actions`` /
 ``ac_adjust_delays`` / ``ac_scale_coordinates``。
+
+在 Wayland 上錄製
+=================
+
+``record()`` 在 Wayland 工作階段會拋例外：合成器不允許全域輸入掛鉤。
+``InputStepLog`` 不需要掛鉤就能記下程式執行的步驟，而明確 opt-in 的
+``PhysicalRecorder`` 會從你指名的核心裝置讀取你自己的輸入。
+見 :doc:`/Zh/doc/wayland/wayland_capabilities_doc`。
