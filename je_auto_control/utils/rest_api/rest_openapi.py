@@ -14,6 +14,8 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Tuple
 
+from je_auto_control.utils.rbac.policy import capability_for_route
+
 
 _BEARER_SCHEME_NAME = "BearerAuth"
 _API_VERSION = "1.0.0"
@@ -323,7 +325,10 @@ def build_openapi_spec(*, server_url: str = "http://127.0.0.1:9939",
                 "AutoControl REST API. All non-public endpoints require "
                 "an `Authorization: Bearer <token>` header. The bearer "
                 "token is generated at server start and surfaced via the "
-                "REST API GUI tab or the CLI."
+                "REST API GUI tab or the CLI. When the server was started "
+                "with a user store (RBAC), the token is one user's instead, "
+                "and each operation needs the capability named in its "
+                "`x-required-capability`; a role without it gets 403."
             ),
         },
         "servers": [{"url": server_url}],
@@ -352,6 +357,8 @@ def _operation_object(method: str, path: str,
     }
     if meta.get("public"):
         op["security"] = []  # explicit empty array overrides global security
+    else:
+        op["x-required-capability"] = capability_for_route(method, path)
     if meta.get("params"):
         op["parameters"] = list(meta["params"])
     if meta.get("request_body"):
@@ -377,6 +384,11 @@ def _build_responses(meta: Dict[str, Any]) -> Dict[str, Any]:
     if not meta.get("public"):
         responses["401"] = {
             "description": "Missing or wrong bearer token.",
+            "content": {_JSON_MEDIA_TYPE: {"schema": _error_schema()}},
+        }
+        responses["403"] = {
+            "description": ("RBAC only: the authenticated user's role does not "
+                            "grant the capability this operation needs."),
             "content": {_JSON_MEDIA_TYPE: {"schema": _error_schema()}},
         }
         responses["429"] = {

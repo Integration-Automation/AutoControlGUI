@@ -125,6 +125,80 @@ CLI::
 
    python -m je_auto_control.utils.rest_api --host 127.0.0.1 --port 9939
 
+角色（選用的 RBAC）
+--------------------
+
+預設情況下所有呼叫端共用同一個 token，可以使用所有端點。把伺服器指向一個使用者
+存放檔之後，每個呼叫端改為擁有自己的 token 與角色：
+
+- **啟用方式**：把 ``JE_AUTOCONTROL_RBAC_USERS`` 設為使用者存放檔路徑、對
+  ``python -m je_auto_control.utils.rest_api`` 傳 ``--users <檔案>``，或對
+  ``RestApiServer``／``start_rest_api_server`` 傳 ``user_store=UserStore(path)``。
+  除此之外不會自動啟用——單純存在 ``~/.je_auto_control/users.json`` 並不算。
+- **啟用後共用 token 一律被拒絕。** Bearer token 必須屬於存放檔中的某位使用者；
+  存放檔是空的或讀不出來時，任何人都進不來。
+- **沒有啟用時完全不變**：單一共用 token、沒有角色、不會有 403。
+
+使用者以 Python 建立；明文 token 只顯示一次，檔案裡只存雜湊::
+
+   import je_auto_control as ac
+
+   store = ac.UserStore("/etc/autocontrol/users.json")
+   token = store.add_user(user_id="alice", display_name="Alice", role="operator")
+   store.set_role("alice", "viewer")      # 角色：viewer / operator / admin
+   store.rotate_token("alice")
+   store.remove_user("alice")
+
+執行中的伺服器會在檔案變動時重新讀取，所以移除使用者、輪替 token 或改角色都在
+下一個請求生效。
+
+.. list-table::
+   :header-rows: 1
+
+   * - 能力
+     - 角色
+     - 端點
+   * - ``read_screen``
+     - viewer、operator、admin
+     - 除下列兩個之外的所有 ``GET``，包含 ``/metrics``
+   * - ``drive_input``
+     - operator、admin
+     - ``POST /execute``、``/execute_file``、``/usb/loopback/open``、
+       ``/usb/remote/open``
+   * - ``read_audit``
+     - admin
+     - ``GET /audit/list``、``/audit/verify``
+   * - ``manage_hosts``
+     - admin
+     - ``POST /config/export``、``/config/import``、``/usb/passthrough/enable``、
+       ``/usb/acl/add``、``/usb/acl/remove``、``/usb/acl/default``，以及任何
+       尚未指定能力的路由
+   * - ``sign_actions``
+     - admin
+     - ``AC_sign_action_file`` 指令（見下）
+
+角色沒有該能力時回 ``403``
+``{"error": "forbidden", "required_capability": "...", "role": "..."}``。
+同一個值也以 ``x-required-capability`` 列在 ``/openapi.json`` 的每個 operation 上。
+
+可以 ``POST /execute`` 代表可以執行動作，不代表可以執行每一個指令。替動作檔簽章
+（``sign_actions``）、讀取稽核紀錄（``read_audit``），以及管理主機本身的指令——
+``AC_admin_*``、啟動或停止 REST／MCP／遠端桌面／webhook 伺服器、``AC_usb_acl_*``、
+``AC_usb_passthrough_enable``、``AC_config_import``／``AC_config_export``、
+``AC_egress_allow``／``AC_egress_reset``、``AC_load_plugins``、
+``AC_add_package_to_executor``、``AC_secret_init``／``set``／``remove``／``lock``／
+``unlock``、``AC_audit_log_clear``\ （皆為 ``manage_hosts``）——不論在動作清單裡
+巢狀多深，都需要各自的能力。請求會在第一個動作執行前就回 403 並指出 ``command``；
+同樣的指令若來自動作檔，則由 executor 拒絕。
+
+角色不是沙箱：operator 操作的是真實鍵盤，也能啟動程式，桌面使用者手動做得到的事
+它都做得到。角色保護的是主機自身的特權狀態。operator 交給其他執行緒延後執行的
+工作（排程工作、觸發器、熱鍵綁定）之後執行時不會帶著呼叫者的角色。
+
+RBAC 請求的每一筆稽核紀錄都會記下使用者：``viewer_id`` 欄位存使用者 id，detail 為
+``POST /execute -> ok:200 user=alice role=operator``\ （被拒絕時為
+``forbidden:<能力>``）。
+
 端點清單
 --------
 

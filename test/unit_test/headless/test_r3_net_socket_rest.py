@@ -77,6 +77,10 @@ class _Gate:
     def check(self, **_kwargs) -> str:
         return "ok"
 
+    def authenticate(self, **_kwargs):
+        from je_auto_control.utils.rest_api.rest_auth import AuthResult
+        return AuthResult("ok")
+
 
 class _Metrics:
     def __init__(self) -> None:

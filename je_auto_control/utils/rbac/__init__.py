@@ -12,21 +12,37 @@ mouse. This module adds:
   * Token authentication: ``authenticate(token)`` constant-time
     compares against every user's hashed token.
 
-It is a building block only: the REST API and the MCP server do not consult
-it yet, and the audit log has no ``user_id`` field -- both still use their
-single shared token.
+It is opt-in. The REST API and the MCP HTTP transport consult a store only
+when one is configured -- ``JE_AUTOCONTROL_RBAC_USERS`` naming the file, or
+a ``user_store=`` argument -- and otherwise keep their single shared token
+exactly as before. With a store, each request is authenticated as one user
+(:mod:`.authorization`), every REST route, MCP tool and privileged ``AC_*``
+command is checked against the capability it needs (:mod:`.policy`), and
+the audit entries carry the ``user_id``.
 
 The store is intentionally tiny — no LDAP, no OAuth, no row-level
 permissions. Operators who need more should stand up a proper IdP in
 front of the REST endpoint; this is the "good-enough-for-small-team"
 baseline.
 """
+from je_auto_control.utils.rbac.authorization import (
+    USERS_ENV, AuthorizationContext, AuthorizationError, authorization_scope,
+    current_authorization, resolve_token, user_store_from_env,
+)
+from je_auto_control.utils.rbac.policy import (
+    authorize_command, capability_for_command, capability_for_route,
+    capability_for_tool, denied_command_in,
+)
 from je_auto_control.utils.rbac.users import (
     Capability, Role, UserAuthError, UserRecord, UserStore,
     can, default_user_store, role_capabilities,
 )
 
 __all__ = [
-    "Capability", "Role", "UserAuthError", "UserRecord", "UserStore",
-    "can", "default_user_store", "role_capabilities",
+    "AuthorizationContext", "AuthorizationError", "Capability", "Role",
+    "USERS_ENV", "UserAuthError", "UserRecord", "UserStore",
+    "authorization_scope", "authorize_command", "can",
+    "capability_for_command", "capability_for_route", "capability_for_tool",
+    "current_authorization", "default_user_store", "denied_command_in",
+    "resolve_token", "role_capabilities", "user_store_from_env",
 ]

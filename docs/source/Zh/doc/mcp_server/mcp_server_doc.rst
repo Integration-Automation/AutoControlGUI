@@ -269,6 +269,27 @@ HTTP 傳輸(含 SSE / Auth / TLS)
 
 Bearer token 也可從 ``JE_AUTOCONTROL_MCP_TOKEN`` 環境變數讀取。
 
+**角色（選用的 RBAC）。** 把 ``JE_AUTOCONTROL_RBAC_USERS`` 設為使用者存放檔，或對
+``start_mcp_http_server``／``HttpMCPServer`` 傳 ``user_store=UserStore(path)``，HTTP
+傳輸就會把每個請求驗證為存放檔中的某位使用者，而不是比對共用 token（此時
+``auth_token`` 與 ``JE_AUTOCONTROL_MCP_TOKEN`` 不再被接受，且一律需要 bearer token）。
+存放檔、角色與建立使用者的方式見維運層 REST API 章節的「角色」；兩個伺服器可以共用
+同一個檔案。沒有設定存放檔時行為完全不變。stdio 傳輸沒有 bearer token，不受 RBAC
+約束。
+
+- 工具標示 ``readOnlyHint`` 時需要 ``read_screen``，否則需要 ``drive_input``，所以
+  ``viewer`` 拿到的正好是唯讀工具，``operator`` 再加上其餘工具。
+  ``ac_remote_host_start``／``_stop``、``ac_usb_acl_add``／``_remove``／
+  ``_set_default``、``ac_usb_passthrough_enable``、``ac_egress_allow``／``_reset`` 與
+  ``ac_load_plugins`` 需要 ``manage_hosts``\ （``admin``）。
+- ``tools/list`` 只回呼叫者可以呼叫的工具；對其他工具 ``tools/call`` 會回 JSON-RPC
+  錯誤 ``-32003``\ （``Forbidden: ...``、``data.required_capability``），且不會執行。
+- 接受動作清單的工具（``ac_execute_actions`` 等）在清單含有呼叫者角色沒有的指令時
+  同樣被拒絕，例如 operator 的 ``AC_sign_action_file``。
+- Token 的角色不在存放檔定義的角色之內時回 HTTP 403。
+- 每一行稽核紀錄都帶 ``user_id`` 與 ``role``；被拒絕的呼叫記為
+  ``"status": "denied"``。
+
 瀏覽器送來的請求只接受本機來源：``Origin`` 不是 loopback 的一律回 403；伺服器綁在
 loopback 時，``Host`` 不是 loopback 名稱的也回 403（防 DNS rebinding）。非瀏覽器的
 客戶端不送 ``Origin``，不受影響。要讓其他來源的瀏覽器客戶端連線，把完整來源列在

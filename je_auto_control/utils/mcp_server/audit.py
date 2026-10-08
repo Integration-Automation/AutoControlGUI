@@ -5,6 +5,10 @@ name, sanitised arguments, status (``ok`` / ``error``), and
 duration. The default sink is ``$JE_AUTOCONTROL_MCP_AUDIT`` (or
 ``mcp_audit.jsonl`` next to the cwd) so deployments that need a
 forensic trail get it without code changes.
+
+When the call was made by an authenticated RBAC user the line also carries
+``user_id`` and ``role``; a call refused for its role is recorded with
+status ``denied``.
 """
 import json
 import os
@@ -14,6 +18,7 @@ from typing import Any, Dict, Optional
 
 from je_auto_control.utils.executor.action_redaction import SENSITIVE_ARGUMENT_NAMES, redact_actions
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
+from je_auto_control.utils.rbac.authorization import current_authorization
 
 
 class AuditLogger:
@@ -39,10 +44,19 @@ class AuditLogger:
     def record(self, *, tool: str, arguments: Dict[str, Any],
                status: str, duration_seconds: float,
                error_text: Optional[str] = None,
-               artifact_path: Optional[str] = None) -> None:
-        """Append one audit entry. No-ops when no path is configured."""
+               artifact_path: Optional[str] = None,
+               user_id: Optional[str] = None) -> None:
+        """Append one audit entry. No-ops when no path is configured.
+
+        ``user_id`` defaults to the RBAC user the calling thread is serving,
+        so the entry names who made the call without each call site passing
+        it along; with no such user the entry has no ``user_id`` at all.
+        """
         if self._path is None:
             return
+        caller = current_authorization()
+        if user_id is None and caller is not None:
+            user_id = caller.user_id
         entry = {
             "ts": time.time(),
             "tool": tool,
@@ -50,6 +64,10 @@ class AuditLogger:
             "status": status,
             "duration_seconds": float(duration_seconds),
         }
+        if user_id is not None:
+            entry["user_id"] = user_id
+            if caller is not None and caller.user_id == user_id:
+                entry["role"] = caller.role
         if error_text is not None:
             entry["error"] = error_text
         if artifact_path is not None:

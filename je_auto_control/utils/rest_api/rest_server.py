@@ -22,6 +22,11 @@ from je_auto_control.utils.http_headers import (
     bearer_challenge, log_safe, parse_content_length, wire_json_text,
 )
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
+from je_auto_control.utils.rbac.authorization import (
+    AuthorizationContext, authorization_scope, user_store_from_env,
+)
+from je_auto_control.utils.rbac.policy import capability_for_route, denied_command_in
+from je_auto_control.utils.rbac.users import UserStore
 from je_auto_control.utils.rest_api.rest_auth import RestAuthGate, generate_token
 from je_auto_control.utils.rest_api.rest_handlers import (
     HandlerResult, RouteContext,
@@ -150,17 +155,9 @@ class _RestRequestHandler(BaseHTTPRequestHandler):
 
     def _serve_metrics(self) -> None:
         client_ip = self.client_address[0] if self.client_address else "?"
-        verdict = self._gate().check(
-            client_ip=client_ip,
-            header_value=self.headers.get("Authorization"),
-        )
-        if verdict != "ok":
-            if verdict == "unauthorized":
-                self._metrics().record_failed_auth()
-            self._reject(verdict)
-            self._metrics().record_request(
-                "GET", "/metrics", _verdict_to_status(verdict),
-            )
+        admitted, _caller = self._admit("GET", _PATH_METRICS, client_ip, None,
+                                        audit_refusal=False)
+        if not admitted:
             return
         body = self._metrics().render(
             audit_row_count=_count_audit_rows(getattr(self.server, "audit_log", None)),
@@ -192,40 +189,97 @@ class _RestRequestHandler(BaseHTTPRequestHandler):
             self._answer_unrouted(parsed.path)
             return
         client_ip = self.client_address[0] if self.client_address else "?"
+        caller: Optional[AuthorizationContext] = None
         if parsed.path not in _PUBLIC_PATHS:
-            verdict = self._gate().check(
-                client_ip=client_ip,
-                header_value=self.headers.get("Authorization"),
-            )
-            if verdict != "ok":
-                if verdict == "unauthorized":
-                    self._metrics().record_failed_auth()
-                self._drain_unread_body(body)
-                self._reject(verdict)
-                self._audit(method, parsed.path, client_ip, verdict)
-                self._metrics().record_request(
-                    method, parsed.path, _verdict_to_status(verdict),
-                )
+            admitted, caller = self._admit(method, parsed.path, client_ip, body)
+            if not admitted:
                 return
         if body is _BODY_PENDING:
             body = self._read_json_body()
             if body is _BODY_ERROR_SENT:
                 return
+        if self._refuse_privileged_commands(method, parsed.path, client_ip, caller, body):
+            return
         ctx = RouteContext(query=parsed.query, body=body, client_ip=client_ip)
         try:
-            status, payload = handler(ctx)
+            # The scope is what lets the executor refuse a privileged command
+            # found in an action file, which nothing here has read.
+            with authorization_scope(caller):
+                status, payload = handler(ctx)
         except _HANDLER_ERRORS as error:
             autocontrol_logger.error(
                 "rest-api %s %s handler raised: %r", method, parsed.path, error,
             )
             self._send_json({"error": "handler crashed"}, status=500)
-            self._audit(method, parsed.path, client_ip, "error")
+            self._audit(method, parsed.path, client_ip, "error", caller)
             self._metrics().record_request(method, parsed.path, 500)
             return
         status = self._send_json(payload, status=status, default=str)
         if parsed.path not in _PUBLIC_PATHS:
-            self._audit(method, parsed.path, client_ip, f"ok:{status}")
+            self._audit(method, parsed.path, client_ip, f"ok:{status}", caller)
         self._metrics().record_request(method, parsed.path, status)
+
+    def _admit(self, method: str, path: str, client_ip: str, body: Any,
+               *, audit_refusal: bool = True,
+               ) -> Tuple[bool, Optional[AuthorizationContext]]:
+        """Authenticate, then authorise the route; ``False`` means a reply was sent.
+
+        The caller is ``None`` under the shared token: there is no user to
+        hold a role, so there is nothing to authorise.
+        """
+        result = self._gate().authenticate(
+            client_ip=client_ip,
+            header_value=self.headers.get("Authorization"),
+        )
+        if result.verdict != "ok":
+            if result.verdict == "unauthorized":
+                self._metrics().record_failed_auth()
+            self._drain_unread_body(body)
+            self._reject(result.verdict)
+            if audit_refusal:
+                self._audit(method, path, client_ip, result.verdict)
+            self._metrics().record_request(
+                method, path, _verdict_to_status(result.verdict),
+            )
+            return False, None
+        needed = capability_for_route(method, path)
+        if result.context is not None and not result.context.allows(needed):
+            self._drain_unread_body(body)
+            self._forbid(method, path, client_ip, result.context, needed)
+            return False, None
+        return True, result.context
+
+    def _refuse_privileged_commands(self, method: str, path: str, client_ip: str,
+                                    caller: Optional[AuthorizationContext],
+                                    body: Any) -> bool:
+        """Answer 403 when the body names a command the caller's role lacks.
+
+        Being allowed to ``POST /execute`` is being allowed to run actions,
+        not to run every command: signing a file or starting a server needs
+        more. The whole body is refused before its first action runs.
+        """
+        if caller is None or body is None:
+            return False
+        denied = denied_command_in(body, caller)
+        if denied is None:
+            return False
+        self._forbid(method, path, client_ip, caller, denied[1], command=denied[0])
+        return True
+
+    def _forbid(self, method: str, path: str, client_ip: str,
+                caller: AuthorizationContext, needed: str,
+                command: Optional[str] = None) -> None:
+        """Answer 403, naming the capability the caller's role does not grant."""
+        payload: Dict[str, Any] = {
+            "error": "forbidden", "required_capability": needed, "role": caller.role,
+        }
+        outcome = f"forbidden:{needed}"
+        if command is not None:
+            payload["command"] = command
+            outcome += f":{command}"
+        self._send_json(payload, status=403)
+        self._audit(method, path, client_ip, outcome, caller)
+        self._metrics().record_request(method, path, 403)
 
     def _gate(self) -> RestAuthGate:
         return self.server.auth_gate  # type: ignore[attr-defined]
@@ -234,15 +288,25 @@ class _RestRequestHandler(BaseHTTPRequestHandler):
         return self.server.metrics  # type: ignore[attr-defined]
 
     def _audit(self, method: str, path: str, client_ip: str,
-               outcome: str) -> None:
+               outcome: str,
+               caller: Optional[AuthorizationContext] = None) -> None:
+        """Record one request; with RBAC the row names the authenticated user.
+
+        The user id goes in the row's ``viewer_id`` column -- the caller's
+        identity, as it is for a remote-desktop viewer -- and in the detail
+        text, so it shows wherever the row is read.
+        """
         audit = getattr(self.server, "audit_log", None)
         if audit is None:
             return
+        if caller is None:
+            identity: Dict[str, Any] = {}
+            detail = f"{method} {path} -> {outcome}"
+        else:
+            identity = {"viewer_id": caller.user_id}
+            detail = f"{method} {path} -> {outcome} user={caller.user_id} role={caller.role}"
         try:
-            audit.log(
-                "rest_api", host_id=client_ip,
-                detail=f"{method} {path} -> {outcome}",
-            )
+            audit.log("rest_api", host_id=client_ip, detail=detail, **identity)
         except (OSError, RuntimeError) as error:
             autocontrol_logger.warning("rest-api audit write failed: %r", error)
 
@@ -410,12 +474,21 @@ class RestApiServer:
 
     def __init__(self, host: str = "127.0.0.1", port: int = 9939,
                  *, token: Optional[str] = None,
-                 enable_audit: bool = True) -> None:
+                 enable_audit: bool = True,
+                 user_store: Optional[UserStore] = None) -> None:
+        """``user_store`` switches RBAC on; ``None`` reads ``JE_AUTOCONTROL_RBAC_USERS``.
+
+        With neither, every authenticated request holds the one shared
+        ``token`` and nothing is authorised per role -- the behaviour this
+        server has always had. With a store the shared token is refused and
+        each request is authorised as the user its own token belongs to.
+        """
         self._address: Tuple[str, int] = (host, port)
         self._server: Optional[ThreadingHTTPServer] = None
         self._thread: Optional[threading.Thread] = None
         self._token = token if token else generate_token()
-        self._auth = RestAuthGate(expected_token=self._token)
+        self._users = user_store if user_store is not None else user_store_from_env()
+        self._auth = RestAuthGate(expected_token=self._token, user_store=self._users)
         self._audit_log = self._open_audit_log() if enable_audit else None
         self._metrics = RestMetrics()
 
@@ -439,6 +512,11 @@ class RestApiServer:
     @property
     def token(self) -> str:
         return self._token
+
+    @property
+    def user_store(self) -> Optional[UserStore]:
+        """The store RBAC resolves tokens through, or ``None`` when RBAC is off."""
+        return self._users
 
     @property
     def is_running(self) -> bool:
@@ -474,9 +552,10 @@ class RestApiServer:
         )
         self._thread.start()
         autocontrol_logger.info(
-            "REST API listening on %s:%d (audit=%s)",
+            "REST API listening on %s:%d (audit=%s, rbac=%s)",
             self._address[0], self._address[1],
             "on" if self._audit_log is not None else "off",
+            "on" if self._users is not None else "off",
         )
 
     def stop(self, timeout: float = 2.0) -> None:
@@ -493,10 +572,12 @@ class RestApiServer:
 
 def start_rest_api_server(host: str = "127.0.0.1", port: int = 9939,
                           *, token: Optional[str] = None,
-                          enable_audit: bool = True) -> RestApiServer:
+                          enable_audit: bool = True,
+                          user_store: Optional[UserStore] = None) -> RestApiServer:
     """Construct, start, and return a ``RestApiServer``."""
     server = RestApiServer(
         host=host, port=port, token=token, enable_audit=enable_audit,
+        user_store=user_store,
     )
     server.start()
     return server
@@ -522,11 +603,15 @@ def _main(argv: Optional[list] = None) -> int:
     parser.add_argument("--port", type=int, default=9939)
     parser.add_argument("--token", default=os.environ.get("AC_TOKEN"))
     parser.add_argument("--no-audit", action="store_true")
+    parser.add_argument("--users", default=None,
+                        help="user store file; switches RBAC on (default: "
+                             "JE_AUTOCONTROL_RBAC_USERS)")
     args = parser.parse_args(argv)
 
     server = start_rest_api_server(
         host=args.host, port=args.port,
         token=args.token, enable_audit=not args.no_audit,
+        user_store=UserStore(Path(args.users)) if args.users else None,
     )
 
     stop_event = threading.Event()

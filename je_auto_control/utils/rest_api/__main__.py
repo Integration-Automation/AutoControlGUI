@@ -9,8 +9,10 @@ from __future__ import annotations
 import argparse
 import sys
 import time
+from pathlib import Path
 from typing import Optional
 
+from je_auto_control.utils.rbac.users import UserStore
 from je_auto_control.utils.rest_api.rest_server import RestApiServer
 
 
@@ -27,6 +29,9 @@ def _build_arg_parser() -> argparse.ArgumentParser:
                         help="bearer token (auto-generated if omitted)")
     parser.add_argument("--no-audit", action="store_true",
                         help="disable audit-log writes")
+    parser.add_argument("--users", default=None,
+                        help="user store file; switches RBAC on "
+                             "(default: JE_AUTOCONTROL_RBAC_USERS)")
     return parser
 
 
@@ -35,12 +40,17 @@ def main(argv: Optional[list] = None) -> int:
     server = RestApiServer(
         host=args.host, port=args.port, token=args.token,
         enable_audit=not args.no_audit,
+        user_store=UserStore(Path(args.users)) if args.users else None,
     )
     server.start()
     host, port = server.address
     print(f"REST API listening at http://{host}:{port}")
-    print(f"Bearer token: {server.token}")
-    print("Send Authorization: Bearer <token> on every non-/health call.")
+    if server.user_store is not None:
+        print(f"RBAC on: tokens are checked against {server.user_store.path}")
+        print("Send Authorization: Bearer <your user token> on every non-/health call.")
+    else:
+        print(f"Bearer token: {server.token}")
+        print("Send Authorization: Bearer <token> on every non-/health call.")
     print("Press Ctrl-C to stop.")
     try:
         while True:

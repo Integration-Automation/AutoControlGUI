@@ -9,6 +9,10 @@ Token model:
   * Comparison uses :func:`secrets.compare_digest` to avoid timing leaks.
   * The token is generated once at server start and surfaced on the
     ``RestApiServer`` instance so the GUI / CLI can show it to the user.
+  * With a ``user_store`` (opt-in RBAC) the shared token is not accepted at
+    all: a bearer token must belong to one user of the store, and the gate
+    hands back who that is so the server can authorise the route. One token
+    that passed for everyone could not be told apart by role.
 
 Rate limit:
   * One token bucket per client IP, refilled at ``_REQUESTS_PER_MINUTE``
@@ -22,7 +26,10 @@ import secrets
 import threading
 import time
 from dataclasses import dataclass
-from typing import Dict, Optional
+from typing import Dict, Optional, Tuple
+
+from je_auto_control.utils.rbac.authorization import AuthorizationContext, resolve_token
+from je_auto_control.utils.rbac.users import UserStore
 
 
 _DEFAULT_TOKEN_BYTES = 24
@@ -57,18 +64,28 @@ class _Bucket:
     failed_window_start: float = 0.0
 
 
+@dataclass(frozen=True)
+class AuthResult:
+    """What the gate decided, and who the caller is when RBAC identified one."""
+
+    verdict: str
+    context: Optional[AuthorizationContext] = None
+
+
 class RestAuthGate:
     """Bearer-token check + per-IP token bucket.
 
-    ``check(...)`` is the only entry point handlers should call.
-    Returns one of ``"ok"``, ``"unauthorized"``, ``"rate_limited"``,
-    ``"locked_out"``.
+    ``authenticate(...)`` returns the verdict together with the caller's
+    identity; ``check(...)`` returns the verdict alone -- one of ``"ok"``,
+    ``"unauthorized"``, ``"rate_limited"``, ``"locked_out"``.
     """
 
     def __init__(self, expected_token: str,
                  *, requests_per_minute: float = _REQUESTS_PER_MINUTE,
-                 burst: float = _BURST) -> None:
+                 burst: float = _BURST,
+                 user_store: Optional[UserStore] = None) -> None:
         self._token = expected_token
+        self._users = user_store
         self._rate_per_s = float(requests_per_minute) / 60.0
         self._burst = float(burst)
         self._buckets: Dict[str, _Bucket] = {}
@@ -78,7 +95,17 @@ class RestAuthGate:
     def expected_token(self) -> str:
         return self._token
 
+    @property
+    def rbac_enabled(self) -> bool:
+        """``True`` when tokens are resolved through a user store."""
+        return self._users is not None
+
     def check(self, *, client_ip: str, header_value: Optional[str]) -> str:
+        """The verdict of :meth:`authenticate`, for callers that need no identity."""
+        return self.authenticate(client_ip=client_ip, header_value=header_value).verdict
+
+    def authenticate(self, *, client_ip: str,
+                     header_value: Optional[str]) -> AuthResult:
         """Rate-limit, then authenticate; a valid token is never locked out.
 
         The lockout used to be checked first, keyed by IP alone -- and every
@@ -87,14 +114,26 @@ class RestAuthGate:
         only answers wrong tokens; the per-IP rate limit still applies to all.
         """
         if not self._consume_token(client_ip):
-            return "rate_limited"
-        if _matches_bearer(header_value, self._token):
+            return AuthResult("rate_limited")
+        accepted, context = self._identify(header_value)
+        if accepted:
             self._reset_failures(client_ip)
-            return "ok"
+            return AuthResult("ok", context)
         if self._is_locked_out(client_ip):
-            return "locked_out"
+            return AuthResult("locked_out")
         self._note_failure(client_ip)
-        return "unauthorized"
+        return AuthResult("unauthorized")
+
+    def _identify(self, header_value: Optional[str],
+                  ) -> Tuple[bool, Optional[AuthorizationContext]]:
+        """``(accepted, caller)``; the caller is ``None`` under the shared token."""
+        provided = _bearer_token(header_value)
+        if provided is None:
+            return False, None
+        if self._users is None:
+            return constant_time_equal(provided, self._token), None
+        context = resolve_token(self._users, provided)
+        return context is not None, context
 
     def _consume_token(self, client_ip: str) -> bool:
         now = time.monotonic()
@@ -143,15 +182,21 @@ class RestAuthGate:
                 bucket.failed = 0
 
 
-def _matches_bearer(header_value: Optional[str], expected: str) -> bool:
+def _bearer_token(header_value: Optional[str]) -> Optional[str]:
+    """The token of an ``Authorization: Bearer <token>`` header, or ``None``."""
     if not header_value:
-        return False
+        return None
     parts = header_value.strip().split(None, 1)
     if len(parts) != 2 or parts[0].lower() != "bearer":
-        return False
-    return constant_time_equal(parts[1], expected)
+        return None
+    return parts[1]
+
+
+def _matches_bearer(header_value: Optional[str], expected: str) -> bool:
+    provided = _bearer_token(header_value)
+    return provided is not None and constant_time_equal(provided, expected)
 
 
 __all__ = [
-    "RestAuthGate", "generate_token", "constant_time_equal",
+    "AuthResult", "RestAuthGate", "generate_token", "constant_time_equal",
 ]
