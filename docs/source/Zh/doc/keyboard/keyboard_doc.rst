@@ -37,7 +37,7 @@ Windows 的按鍵表也收常見的別名（``ctrl``、``alt``、``enter``、``e
 
 Windows 上有八個名字代表的是\ *字元*\ 而不是按鍵位置：``slash``\ （``/``\ ）、
 ``backslash``\ （``\``\ ）、``semicolon``\ （``;``\ ）、``quote``\ （``'``\ ）、
-``backquote``\ （`` ` ``\ ）、``bracketleft``\ （``[``\ ）、``bracketright``\ （``]``\ ）
+``backquote``\ （反引號）、``bracketleft``\ （``[``\ ）、``bracketright``\ （``]``\ ）
 與 ``equal``\ （``=``\ ）。它們在查表的當下才解析：向前景視窗的鍵盤配置詢問哪個鍵
 打得出該字元（``VkKeyScanExW``\ ），所以在 ``;`` 不在美式位置的配置上，
 ``press_keyboard_key("semicolon")`` 仍會按到正確的鍵。配置上沒有不加修飾鍵就能

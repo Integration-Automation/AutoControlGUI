@@ -39,7 +39,7 @@ alias:
 
 Eight Windows names stand for a *character* rather than a key position:
 ``slash`` (``/``), ``backslash`` (``\``), ``semicolon`` (``;``), ``quote``
-(``'``), ``backquote`` (`` ` ``), ``bracketleft`` (``[``), ``bracketright``
+(``'``), ``backquote`` (the backtick), ``bracketleft`` (``[``), ``bracketright``
 (``]``) and ``equal`` (``=``). Each is resolved when it is looked up, by
 asking the keyboard layout of the foreground window which key types that
 character (``VkKeyScanExW``), so ``press_keyboard_key("semicolon")`` presses
