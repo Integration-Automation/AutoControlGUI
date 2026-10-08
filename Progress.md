@@ -331,7 +331,6 @@ U-20261009-18 的每一個裝置面呼叫都只對假的 ADB／uiautomator2／WD
 - **三個新的 CI job 還沒在 GitHub 上跑過**（`typing-extras`、`docs`、`free-threaded-scope`）；`free-threaded-scope` 用的是 `3.14t`，setup-python 在 Windows 上怎麼命名那個直譯器沒驗過，紅了就拿掉。
 - **free-threaded**：變數範圍已修成只在綁定它的執行緒上有效，並在 3.14.8t（Windows）跑過。`rbac/authorization.py`、`self_healing/locator.py`、`wrapper/device_context.py`
   也用 `ContextVar`，在 free-threaded 版上仍會被執行緒繼承，沒有檢查。
-- **macOS smoke 的三個新探針**（click-state 讀回、最小化視窗以 id 查找、`grab_logical` 的點座標）是「只回報、不斷言」；等在 runner 上量到一次，再從 `REPORTED` 移到 `PROBES`。
 - **能力探測**：Windows 的鎖定工作站、session 0、低完整性與擷取失敗分支只用假資料判斷；macOS 的三個 preflight 呼叫只對假物件跑過，
   pyobjc 的 `Quartz` 有沒有 `CGPreflightListenEventAccess` 未知（沒有的話 `recording`／`stop_shortcut` 回 `unknown`）。
 - **Windows 的版面鍵名**（`slash` 等 8 個）只在美式配置上實際呼叫過。
@@ -386,18 +385,3 @@ U-20261009-11 之後，Anthropic 的兩條路徑（`anthropic.py`、`anthropic_c
 - 模型只憑摘要能不能接著做——上限是 3，大約每 3 張截圖就壓縮一次，摘要最多列最新 60 個動作、每個截到 240 字元。
 - 真的桌面 PNG 的請求大小離 32 MB 多遠。
 - 兩個後端都沒送 `cache_control`，所以現在本來就沒有 prompt cache；要開的話是另一個請求形狀的改動。
-
----
-
-## Python 3.10 的 headless segfault：已修，等 CI 確認
-
-`TODO` — 修正在 U-20261009-25；要看 ubuntu-22.04 與 macos-14 的 3.10 `pytest-headless` 連續幾次都綠才能結案
-
-`test_usb_acl_prompt.py::test_bridge_remember_persists_acl_rule` 在 3.10 間歇 SIGSEGV（2026-09-26 三次、09-30 一次、2026-10-08 四次）。
-查到的機制：每個 `UsbPassthroughPromptDialog` 都因 `TranslatableMixin._tr(self, …)` 把自己存進自己的登錄表而成為參照循環，被丟掉後要等循環回收；
-3.10／3.11 的回收會在配置物件時發生，測試掃 `QApplication.topLevelWidgets()` 的當下若剛好回收，清單裡的指標就指向已銷毀的 widget。
-在 Windows 的 3.10.22 上以探針確定性重現（存取違規），修掉循環後不再發生；CI 那個崩潰本身沒在這台機器重現。
-被銷毀的是不是那兩個被丟掉的對話框、為什麼只有 Linux／macOS，是推論。
-
----
-
