@@ -8646,8 +8646,20 @@ def add_command_to_executor(command_dict: dict) -> None:
             raise AutoControlAddCommandException(add_command_exception_error_message)
 
 
-def execute_action(action_list: list) -> Dict[str, str]:
-    return executor.execute_action(action_list)
+def execute_action(action_list: Union[list, dict], *,
+                   raise_on_error: bool = False, dry_run: bool = False,
+                   step_callback: Optional[Callable[[list], None]] = None,
+                   ) -> Dict[str, str]:
+    """Run ``action_list`` on the shared executor; return its execution record.
+
+    The keywords are the ones :meth:`Executor.execute_action` takes:
+    ``raise_on_error`` raises at the first failed action instead of recording
+    it, ``dry_run`` lists what would run without calling anything, and
+    ``step_callback`` is called with each action before it starts.
+    """
+    return executor.execute_action(
+        action_list, raise_on_error=raise_on_error, dry_run=dry_run,
+        step_callback=step_callback)
 
 
 def execute_files(execute_files_list: list) -> List[Dict[str, str]]:
