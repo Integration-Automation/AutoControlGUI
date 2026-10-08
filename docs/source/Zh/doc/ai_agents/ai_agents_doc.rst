@@ -60,6 +60,12 @@ MCP 同時提供完整的 ac_* 工具，以及給模型使用的短名稱 alias�
 
    je_auto_control_mcp --read-only
 
+先只給少量工具，讓 session 自行搜尋並啟用其餘工具（見 MCP 伺服器章節的「工具模式」）：
+
+.. code-block:: bash
+
+   je_auto_control_mcp --tool-mode progressive
+
 建議的 Agent Loop
 -----------------
 
