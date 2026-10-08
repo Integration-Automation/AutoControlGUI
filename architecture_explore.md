@@ -19,8 +19,8 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 
 | 指標 | 數值 |
 | --- | ---: |
-| Python 模組總數（含周邊子專案） | 1,063 |
-| 程式碼總行數 | 157,101 |
+| Python 模組總數（含周邊子專案） | 1,064 |
+| 程式碼總行數 | 157,154 |
 | `je_auto_control/utils/` 子套件數 | 310 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 776 |
 | 套件門面 `__all__` 公開名稱數 | 1,244 |
@@ -155,7 +155,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
 | `je_auto_control/__init__.py` | 1,971 | **套件門面**。集中匯入並再匯出 1,200 個公開名稱，以功能區塊註解分段（callback／exception／executor／a11y／vision／clipboard…）。 |
-| `je_auto_control/__main__.py` | 87 | 舊版 argparse 進入點：`-e` 執行單檔、`-d` 執行整個目錄、`--execute_str` 執行 JSON 字串、`-c` 建立專案。 |
+| `je_auto_control/__main__.py` | 98 | 舊版 argparse 進入點：`-e` 執行單檔、`-d` 執行整個目錄、`--execute_str` 執行 JSON 字串、`-c` 建立專案。 |
 | `je_auto_control/cli.py` | 353 | **主 CLI**（`je_auto_control` console script）。子命令：`run`（含 `--var`／`--dry-run`）、`validate`／`lint`、`list-commands`、`fmt`、`record`、`codegen`、`failure-bundle`、`list-jobs`、`start-server`、`start-rest`、`version`。所有子命令延遲匯入，確保不碰 Qt。 |
 | `je_auto_control/api/__init__.py` | 22 | 版本化整合進入點。 |
 | `je_auto_control/api/core.py` | 19 | **穩定無頭 API 門面**：只暴露 `execute_action`、`execute_action_with_vars`、`generate_code`、`run_diagnostics`、`create_failure_bundle`、`failure_bundle_on_error`、`FailureBundleOptions`。mypy 型別契約以此為起點，現已擴到整包（見「設定基線」）。 |
@@ -558,7 +558,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.12 報表、可觀測性與測試治理
 
-> 34 個套件、約 7,674 行。
+> 34 個套件、約 7,716 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -573,7 +573,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/failure_signature/` | 76 | 把錯誤訊息正規化成穩定的 SHA-256 失敗簽章並分群 |
 | `utils/flake_cluster/` | 112 | 以共同失敗 Jaccard 相似度為易碎測試分群 |
 | `utils/flakiness/` | 151 | 以執行歷史分析不穩定測試 |
-| `utils/generate_report/` | 294 | HTML／JSON／XML 三種報表產生器（Template Method） |
+| `utils/generate_report/` | 336 | HTML／JSON／XML 三種報表產生器（Template Method） |
 | `utils/media_assert/` | 273 | 媒體斷言：音訊活動與影片動態檢查 |
 | `utils/observability/` | 710 | Prometheus 格式指標 + OpenTelemetry 相容 trace + `/metrics` 匯出伺服器 |
 | `utils/otlp_export/` | 114 | OTLP/JSON span 匯出 |
@@ -1077,7 +1077,7 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `utils/remote_desktop/` | 56 | 13,014 |
 | `utils/executor/` | 8 | 9,560 |
 | `utils/usb/` | 17 | 4,572 |
-| `je_auto_control/`（頂層 3 檔） | 3 | 2,411 |
+| `je_auto_control/`（頂層 3 檔） | 3 | 2,422 |
 | `utils/accessibility/` | 14 | 3,143 |
 | `wrapper/` | 19 | 3,667 |
 | `windows/` | 23 | 1,959 |
@@ -1092,6 +1092,6 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `osx/` | 17 | 925 |
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 852 |
-| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 681 | 57,038 |
-| **總計** | **1,057** | **157,036** |
+| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 682 | 57,080 |
+| **總計** | **1,058** | **157,089** |
 

@@ -104,6 +104,39 @@ def test_create_project(tmp_path, flag):
     assert keywords, result.stderr[-2000:]
 
 
+def _failing_actions(target: Path) -> list:
+    """An action that fails when it runs, then one that writes ``target``.
+
+    The first writes below a path that is a file, so it passes the check of the
+    script and raises only at run time.
+    """
+    not_a_directory = target.with_name(target.name + ".blocker")
+    not_a_directory.write_text("x", encoding="utf-8")
+    return [["AC_export_sarif", {"findings": [], "path": str(not_a_directory / "out.sarif")}],
+            *_actions(target)]
+
+
+@pytest.mark.parametrize("flag", ["-e", "--execute_file"])
+def test_a_failed_action_exits_1_after_the_rest_ran(tmp_path, flag):
+    target = tmp_path / "out.sarif"
+    action_file = tmp_path / "actions.json"
+    action_file.write_text(json.dumps(_failing_actions(target)), encoding="utf-8")
+    result = _run_cli(tmp_path, flag, str(action_file))
+    assert result.returncode == 1, result.stderr[-2000:]
+    assert "error: 1 action(s) failed" in result.stderr
+    assert target.is_file(), result.stderr[-2000:]
+
+
+def test_a_failed_action_in_a_directory_exits_1(tmp_path):
+    action_dir = tmp_path / "actions"
+    action_dir.mkdir()
+    (action_dir / "a_ok.json").write_text(
+        json.dumps(_actions(tmp_path / "a.sarif")), encoding="utf-8")
+    (action_dir / "b_bad.json").write_text(
+        json.dumps(_failing_actions(tmp_path / "b.sarif")), encoding="utf-8")
+    assert _run_cli(tmp_path, "--execute_dir", str(action_dir)).returncode == 1
+
+
 def test_no_flag_exits_non_zero(tmp_path):
     """A caller that forgot its flag must see a failure, not a silent 0."""
     assert _run_cli(tmp_path).returncode != 0

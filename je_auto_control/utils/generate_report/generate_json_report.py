@@ -3,6 +3,7 @@ from typing import Dict, Tuple
 
 from je_auto_control.utils.exception.exception_tags import cant_generate_json_report_error_message
 from je_auto_control.utils.exception.exceptions import AutoControlGenerateJsonReportException
+from je_auto_control.utils.generate_report.report_path import report_path
 from je_auto_control.utils.json_store.json_store import atomic_write_text
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.test_record.record_test_class import test_record_instance
@@ -44,7 +45,7 @@ def generate_json() -> Tuple[Dict[str, Dict[str, str]], Dict[str, Dict[str, str]
 def _write_json_file(file_name: str, data: Dict[str, Dict[str, str]]) -> None:
     """Write ``data`` atomically; raise on failure instead of only logging it."""
     try:
-        atomic_write_text(file_name, json.dumps(data, indent=4, ensure_ascii=False))
+        atomic_write_text(report_path(file_name), json.dumps(data, indent=4, ensure_ascii=False))
     except (OSError, TypeError, ValueError) as error:
         raise AutoControlGenerateJsonReportException(
             f"cannot write report {file_name!r}: {error!r}") from error

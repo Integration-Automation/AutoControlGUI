@@ -11,6 +11,9 @@ from je_auto_control.utils.exception.exceptions import (
 )
 from je_auto_control.utils.executor.action_executor import execute_action
 from je_auto_control.utils.executor.action_executor import execute_files
+from je_auto_control.utils.executor.action_executor import (
+    recorded_failures, reset_recorded_failures,
+)
 from je_auto_control.utils.file_process.get_dir_file_list import \
     get_dir_files_as_list
 from je_auto_control.utils.json.json_file import read_executable_action_json
@@ -63,6 +66,7 @@ if __name__ == "__main__":
             type=str, help="execute json str"
         )
         parsed = vars(parser.parse_args())
+        reset_recorded_failures()
         for key, value in parsed.items():
             if value is None:
                 continue
@@ -73,6 +77,13 @@ if __name__ == "__main__":
             handler(value)
         if all(value is None for value in parsed.values()):
             raise AutoControlArgparseException(argparse_get_wrong_data_error_message)
+        # Failed actions are recorded and the run goes on, as with ``run``;
+        # exiting 0 anyway left TestPioneer and a CI step unable to tell a
+        # failed run from a clean one.
+        failures = recorded_failures()
+        if failures:
+            sys.stderr.write(f"error: {failures} action(s) failed\n")
+            sys.exit(1)
     # The message also goes to stderr: it went only to the log file, so a
     # failed -e printed nothing at all.
     except AutoControlArgparseException as error:
