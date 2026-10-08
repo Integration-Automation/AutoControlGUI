@@ -41,6 +41,7 @@ from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
+from je_auto_control.utils.remote_desktop.file_sync import note_incoming
 from je_auto_control.utils.remote_desktop.protocol import MessageType
 
 DEFAULT_CHUNK_SIZE = 256 * 1024
@@ -344,6 +345,8 @@ class FileReceiver:
                 f"received {incoming.bytes_done} of {incoming.total_size} bytes")
         if ok:
             try:
+                # Before the rename: see file_sync.note_incoming.
+                note_incoming(incoming.dest_path, incoming.part_path)
                 os.replace(incoming.part_path, incoming.dest_path)
                 return True, None
             except OSError as replace_error:

@@ -435,7 +435,39 @@ Folder mirror and clipboard: no echo
 ``FolderSyncEngine.note_received(remote_name, sha256=...)`` marks a file in
 the watched folder as having come from the peer; the engine does not push it
 back until its content changes locally. ``FolderSyncEngine.poll_once()`` runs
-one diff pass on demand. ``ClipboardEchoGuard`` (``note_remote`` /
-``should_send`` / ``reset``) does the same for code that forwards clipboard
-changes automatically: content that just arrived from the peer, or was
-already sent, is not sent again.
+one diff pass on demand.
+
+The receivers call it for you. ``FileTransferReceiver`` (WebRTC) and
+``FileReceiver`` (TCP) write a file as ``.<name>.<id>.part`` and, just before
+renaming it into place, call ``file_sync.note_incoming(final_path, part_path)``:
+every live engine whose folder holds that file records the content's SHA-256.
+A file received into a mirrored folder is therefore not sent back, with no
+wiring in the caller; when no engine mirrors the folder the file is not even
+hashed. ``FolderSyncEngine.relative_name(path)`` says whether an engine
+covers a path (a subfolder only with ``include_subdirs``).
+
+**Files still being written.** A changed file is pushed only once two polls
+in a row see the same size and modification time, so a large copy is sent
+whole one poll later instead of truncated now (a file that never stops
+changing, such as a live log, is not pushed until it does). Pass
+``wait_until_stable=False`` for the earlier push-on-first-sight behaviour.
+Names ending in ``.part``, ``.partial``, ``.tmp`` or ``.crdownload``
+(``IN_PROGRESS_SUFFIXES``; override with ``ignore_suffixes=``) are never
+mirrored -- including the receivers' own part files, which used to be pushed
+while a transfer was running. A program that writes under such a name and
+renames when it is done is picked up complete.
+
+``ClipboardEchoGuard`` (``note_remote`` / ``note_sent`` / ``should_send`` /
+``reset``) does the same for clipboard content. ``RemoteDesktopHost`` keeps
+one per connected viewer and ``RemoteDesktopViewer`` one for its host (reset
+on every connect); a received CLIPBOARD message is noted before it is
+applied. ``host.broadcast_clipboard_text(text, automatic=True)`` and
+``viewer.send_clipboard_text(text, automatic=True)`` (and the ``_image``
+forms) are for code that forwards clipboard *changes* by itself: content
+that just arrived from that peer, or was already sent to it, is not sent
+again -- per viewer, so what one viewer sent still reaches the others.
+Without ``automatic`` (a person pressing "send clipboard") the content is
+always sent, and remembered. ``broadcast_clipboard_*`` returns how many
+viewers it went to; ``send_clipboard_*`` now returns whether it was sent.
+The GUI sends the clipboard on a button only, so nothing in it passes
+``automatic=True`` yet.

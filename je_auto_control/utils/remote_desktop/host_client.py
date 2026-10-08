@@ -16,7 +16,7 @@ from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.remote_desktop.auth import make_nonce
 from je_auto_control.utils.remote_desktop.clipboard_sync import (
-    ClipboardSyncError, decode as decode_clipboard,
+    ClipboardEchoGuard, ClipboardSyncError, decode as decode_clipboard,
 )
 from je_auto_control.utils.remote_desktop.file_transfer import (
     FileTransferError, decode_begin,
@@ -65,6 +65,9 @@ class _ClientHandler:
         self._audio_event = threading.Event()
         self._audio_sender_thread: Optional[threading.Thread] = None
         self.authenticated = False
+        #: What this viewer and the host have exchanged over the clipboard,
+        #: so a forwarded change is not sent back to where it came from.
+        self.clipboard_guard = ClipboardEchoGuard()
         # Transfers this viewer began: aborted if it disconnects mid-file,
         # which used to leave the .part file and its open handle behind.
         self._transfer_ids: set = set()
@@ -416,6 +419,9 @@ class _ClientHandler:
                 self._address, error,
             )
             return
+        # Noted before it is applied: a watcher that sees the clipboard
+        # change the moment it is set must already find the note.
+        self.clipboard_guard.note_remote(kind, data)
         try:
             self._host._apply_clipboard(kind, data)
         except (OSError, RuntimeError, TypeError, ValueError) as error:

@@ -499,7 +499,9 @@ def test_a_folder_mirror_does_not_push_back_what_it_received(tmp_path):
     watch = tmp_path / "watch"
     watch.mkdir()
     sent = []
-    engine = FolderSyncEngine(watch_dir=watch, sender=lambda _path, name: sent.append(name))
+    # wait_until_stable=False: this is about echo, not about files still being written.
+    engine = FolderSyncEngine(watch_dir=watch, sender=lambda _path, name: sent.append(name),
+                              wait_until_stable=False)
     assert engine.poll_once() == []            # baseline
 
     # Noted before the bytes land, so a poll in between cannot echo it.

@@ -369,5 +369,27 @@ GUI
 
 ``FolderSyncEngine.note_received(remote_name, sha256=...)`` 把監看資料夾中的檔案標記為
 來自對端;在內容於本機變更之前,引擎不會把它推回去。``FolderSyncEngine.poll_once()``
-可隨時執行一次差異比對。``ClipboardEchoGuard``(``note_remote`` / ``should_send`` / ``reset``)
-為自動轉送剪貼簿變更的程式做同樣的事:剛從對端送達、或已經送過的內容不會再送一次。
+可隨時執行一次差異比對。
+
+接收端會替你呼叫它。``FileTransferReceiver``(WebRTC)與 ``FileReceiver``(TCP)把檔案先寫成
+``.<name>.<id>.part``,在改名到定位之前呼叫 ``file_sync.note_incoming(final_path, part_path)``:
+每個資料夾包含該檔案、而且還存在的引擎都會記下內容的 SHA-256。所以收進鏡像資料夾的檔案不會被送回去,
+呼叫端不需要接線;沒有引擎鏡像那個資料夾時,檔案連 hash 都不會算。
+``FolderSyncEngine.relative_name(path)`` 回報引擎是否涵蓋某個路徑(子資料夾需要 ``include_subdirs``)。
+
+**還在寫入的檔案。** 變更過的檔案要連續兩次輪詢看到相同的大小與修改時間才會推送,
+所以大檔案的複製會晚一次輪詢整個送出,而不是現在就送出截斷的前半段(一直在變的檔案,例如
+寫入中的 log,要等它停下來才會推送)。傳 ``wait_until_stable=False`` 可回到先前「一看到就推」的行為。
+名稱以 ``.part``、``.partial``、``.tmp`` 或 ``.crdownload`` 結尾的檔案
+(``IN_PROGRESS_SUFFIXES``;可用 ``ignore_suffixes=`` 覆寫)永遠不鏡像 —— 包含接收端自己的 part 檔,
+它們以前會在傳輸進行中被推送。先用這類名稱寫、寫完再改名的程式,會被完整地撿起來。
+
+``ClipboardEchoGuard``(``note_remote`` / ``note_sent`` / ``should_send`` / ``reset``)
+為剪貼簿內容做同樣的事。``RemoteDesktopHost`` 為每個連線中的 viewer 各持有一個,
+``RemoteDesktopViewer`` 為它的 host 持有一個(每次連線時重設);收到的 CLIPBOARD 訊息會在套用之前先記下。
+``host.broadcast_clipboard_text(text, automatic=True)`` 與
+``viewer.send_clipboard_text(text, automatic=True)``(以及 ``_image`` 版本)是給自動轉送剪貼簿
+*變更* 的程式用的:剛從那個對端送達、或已經送給它的內容不會再送一次 —— 以 viewer 為單位,
+所以某個 viewer 送來的內容仍會送到其他 viewer。不帶 ``automatic``(使用者按「送出剪貼簿」)時一律送出並記下。
+``broadcast_clipboard_*`` 回傳送達的 viewer 數;``send_clipboard_*`` 現在回傳是否有送出。
+GUI 只在按鈕按下時送剪貼簿,所以目前沒有任何地方傳 ``automatic=True``。

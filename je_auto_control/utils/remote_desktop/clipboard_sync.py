@@ -9,7 +9,10 @@ text, file lists, ...) doesn't require touching the framing layer:
 Applying a peer's clipboard changes the local clipboard, which a watcher
 then sees as a change and sends back -- and the peer does the same.
 :class:`ClipboardEchoGuard` breaks that loop for any code that forwards
-clipboard changes automatically.
+clipboard changes automatically. ``RemoteDesktopHost`` keeps one per
+connected viewer and ``RemoteDesktopViewer`` one for its host: receiving a
+CLIPBOARD message notes it, and ``broadcast_clipboard_*`` /
+``send_clipboard_*`` consult the guard when called with ``automatic=True``.
 """
 import base64
 import hashlib
@@ -33,7 +36,9 @@ class ClipboardEchoGuard:
     """Decides whether a local clipboard change should be sent to the peer.
 
     Call :meth:`note_remote` with what was just applied from the peer, and
-    ask :meth:`should_send` before forwarding a local change. Content that
+    ask :meth:`should_send` before forwarding a local change;
+    :meth:`note_sent` records a send that was made without asking (a person
+    pressing "send clipboard"). Content that
     is exactly what the peer last sent is not sent back, and content already
     sent is not sent again while the clipboard still holds it, so two
     machines watching each other's clipboard settle after one transfer
@@ -50,6 +55,11 @@ class ClipboardEchoGuard:
         """Record content that arrived from the peer and was applied locally."""
         with self._lock:
             self._from_remote = _fingerprint(kind, data)
+
+    def note_sent(self, kind: str, data: Any) -> None:
+        """Record content that was sent to the peer without asking the guard."""
+        with self._lock:
+            self._sent = _fingerprint(kind, data)
 
     def should_send(self, kind: str, data: Any) -> bool:
         """Whether this local clipboard content is news to the peer.

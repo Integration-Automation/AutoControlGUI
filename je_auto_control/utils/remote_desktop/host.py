@@ -360,22 +360,39 @@ class RemoteDesktopHost(FrameProductionMixin):
         for client in clients:
             client.push_audio(chunk)
 
-    def broadcast_clipboard_text(self, text: str) -> int:
-        """Send a text-clipboard message to every authenticated viewer."""
-        return self._broadcast_clipboard_payload(encode_text(text))
+    def broadcast_clipboard_text(self, text: str, *, automatic: bool = False) -> int:
+        """Send a text-clipboard message to every authenticated viewer.
 
-    def broadcast_clipboard_image(self, png_bytes: bytes) -> int:
-        """Send a PNG image to every authenticated viewer's clipboard."""
-        return self._broadcast_clipboard_payload(encode_image(png_bytes))
+        ``automatic=True`` is for code that forwards clipboard *changes* by
+        itself: a viewer is then skipped when this is exactly what that
+        viewer just sent, or what it was already sent, so two machines
+        watching each other's clipboard settle after one transfer. Without
+        it (a person asking) every viewer is sent the text. Returns how many
+        viewers it went to.
+        """
+        return self._broadcast_clipboard_payload(encode_text(text), "text", text, automatic)
 
-    def _broadcast_clipboard_payload(self, payload: bytes) -> int:
+    def broadcast_clipboard_image(self, png_bytes: bytes, *, automatic: bool = False) -> int:
+        """Send a PNG image to every authenticated viewer's clipboard.
+
+        ``automatic`` as in :meth:`broadcast_clipboard_text`.
+        """
+        return self._broadcast_clipboard_payload(
+            encode_image(png_bytes), "image", bytes(png_bytes), automatic)
+
+    def _broadcast_clipboard_payload(self, payload: bytes, kind: str, data: Any,
+                                     automatic: bool) -> int:
         with self._clients_lock:
             clients = [c for c in self._clients
                        if c.authenticated and not c._shutdown.is_set()]
         sent = 0
         for client in clients:
+            # One guard per viewer: what viewer A sent still goes to viewer B.
+            if automatic and not client.clipboard_guard.should_send(kind, data):
+                continue
             try:
                 client._channel.send_typed(MessageType.CLIPBOARD, payload)
+                client.clipboard_guard.note_sent(kind, data)
                 sent += 1
             except OSError as error:
                 autocontrol_logger.info(
