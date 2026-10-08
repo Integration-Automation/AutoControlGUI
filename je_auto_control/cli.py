@@ -6,6 +6,7 @@ Installed as the ``je_auto_control`` console script; also runnable via
 Usage::
 
     je_auto_control run script.json [--var x=10 --var y=20] [--dry-run]
+                        [--allow-package NAME ...]
     je_auto_control validate script.json          # alias: lint
     je_auto_control list-commands [--filter mouse] [--json]
     je_auto_control fmt script.json [--check]
@@ -49,6 +50,19 @@ def _parse_vars(pairs: Optional[Sequence[str]]) -> Dict[str, object]:
     return resolved
 
 
+def _allow_packages(names: Optional[Sequence[str]]) -> None:
+    """Put each ``--allow-package`` name on the package gate's allowlist."""
+    if not names:
+        return
+    from je_auto_control.utils.package_manager.package_manager_class import (
+        is_package_name, package_manager,
+    )
+    for name in names:
+        if not is_package_name(name):
+            raise SystemExit(f"--allow-package must be a package name; got {name!r}")
+    package_manager.allow_packages(*names)
+
+
 def cmd_run(args: argparse.Namespace) -> int:
     from je_auto_control.utils.executor.action_executor import (
         execute_action, execute_action_with_vars, recorded_failures,
@@ -57,6 +71,7 @@ def cmd_run(args: argparse.Namespace) -> int:
     from je_auto_control.utils.json.json_file import read_executable_action_json
     actions = read_executable_action_json(args.script)
     variables = _parse_vars(args.var)
+    _allow_packages(args.allow_package)
     reset_recorded_failures()
     if args.dry_run:
         from je_auto_control.utils.executor.action_executor import executor
@@ -254,6 +269,10 @@ def build_parser() -> argparse.ArgumentParser:
                        help="name=value override; may be repeated")
     p_run.add_argument("--dry-run", action="store_true",
                        help="record actions without calling them")
+    p_run.add_argument("--allow-package", action="append", metavar="NAME",
+                       help="package AC_add_package_to_executor may load (submodules "
+                            "included); may be repeated. JE_AUTOCONTROL_ALLOWED_PACKAGES "
+                            "lists them for every entry point")
     p_run.set_defaults(func=cmd_run)
 
     for name in ("validate", "lint"):
