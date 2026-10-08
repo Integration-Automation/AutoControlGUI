@@ -435,6 +435,9 @@ def test_a_cancelled_sync_stops_and_keeps_its_changes(tmp_path, server):
 
 def test_a_retired_device_is_told_to_resync_and_adopts_the_server_state(tmp_path, server):
     laptop, desktop = _pair(tmp_path)
+    # No hold, so the tombstone is really gone when the retired desktop returns:
+    # the refusal is then all that keeps the entry from coming back.
+    laptop.client = ConfigSyncClient(_URL, user_id="alice", tombstone_hold_s=0)
     laptop_store, desktop_store = {"a": {"v": 1}}, {}
     laptop.adapters = [_DictAdapter("laptop", laptop_store)]
     desktop.adapters = [_DictAdapter("desktop", desktop_store)]
@@ -513,10 +516,7 @@ def test_a_folder_mirror_does_not_push_back_what_it_received(tmp_path):
     assert engine.poll_once() == [] and sent == ["mine.txt"]
 
     # Edited here afterwards: now it is a local change and goes out.
-    import os
     (watch / "report.txt").write_bytes(b"edited locally")
-    stamp = (watch / "report.txt").stat().st_mtime + 5
-    os.utime(watch / "report.txt", (stamp, stamp))
     assert engine.poll_once() == ["report.txt"]
 
 

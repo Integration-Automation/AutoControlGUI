@@ -103,7 +103,9 @@ def test_joining_a_bucket_that_holds_entries_is_still_recorded(tmp_path, server)
 
 
 def test_a_bucket_emptied_of_entries_is_not_joined_either(server):
-    client = ConfigSyncClient(_URL, user_id="alice")
+    # tombstone_hold_s=0: the bucket has to be empty for this, so the deletion
+    # must not be held for the machines that have not synced yet.
+    client = ConfigSyncClient(_URL, user_id="alice", tombstone_hold_s=0)
     entry = SyncEntry.create("a", {"v": 1}, "laptop")
     client.push_operations([SyncOperation("custom", entry)], device_id="laptop")
     client.push_operations([SyncOperation("custom", entry.removed("laptop"))], device_id="laptop")
