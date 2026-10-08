@@ -3,9 +3,12 @@
 Qt keeps each screen's top-left corner the same in both and scales within the
 screen by its device pixel ratio. Measured on Windows in a per-monitor-aware
 process: a 125% screen at (1920, -164) is 1536x864 in Qt and 1920x1080
-natively. (``import je_auto_control`` makes a process system-DPI-aware, and
-then Qt reports a ratio of 1.0 there, in the same virtualised space as the
-cursor and ``mss``.) On macOS the capture APIs and the pointer take points,
+natively. ``import je_auto_control`` makes the process per-monitor-v2 aware,
+which is also Qt 6's own default, so that is the case here: the cursor, ``mss``
+and the capture all work in each screen's physical pixels and Qt's ratio is
+the real one. (In a process something else made system-DPI-aware first, Qt
+reports 1.0 on such a screen and everything shares the virtualised space; the
+same arithmetic holds.) On macOS the capture APIs and the pointer take points,
 which is Qt's logical unit, so no scaling applies.
 """
 import sys

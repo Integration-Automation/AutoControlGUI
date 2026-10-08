@@ -113,15 +113,22 @@ Window management
 =================
 
 * **Per-window capture** — ``capture_window(title, output_path)``
-  resolves a window's geometry by title (Win32 ``GetWindowRect``) and
-  screenshots exactly its bounds. ``AC_capture_window``.
+  resolves a window's geometry by title (its visible frame, as DWM reports
+  it) and screenshots exactly its bounds, on whichever monitor the window
+  is. ``AC_capture_window``.
 * **Layout save / restore** — ``save_window_layout(path)`` snapshots every
   window's position to JSON; ``restore_window_layout(path)`` moves them all
-  back (handy for test setup / teardown). ``AC_save_window_layout`` /
-  ``AC_restore_window_layout``.
+  back (handy for test setup / teardown). The saved rectangle is the one
+  ``MoveWindow`` positions (Win32 ``GetWindowRect``), so a window comes back
+  exactly where it was. A layout file saved by an earlier version holds the
+  visible frame instead and restores 7 px to the right and 14 x 7 px smaller;
+  save it again. ``AC_save_window_layout`` / ``AC_restore_window_layout``.
 * **Snap / tile** — ``snap_window(title, "left")`` moves a window to a
-  screen half (left / right / top / bottom), a quarter (the four corners),
-  or ``"max"``. ``AC_snap_window``.
+  half (left / right / top / bottom), a quarter (the four corners), or
+  ``"max"`` of the primary monitor's *work area* — the screen minus the
+  taskbar — so the bottom of a snapped window is not under the taskbar.
+  ``arrange_grid`` and ``arrange_cascade`` lay out in the same area.
+  ``AC_snap_window``.
 
 
 File security & safety

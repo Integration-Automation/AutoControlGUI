@@ -14,7 +14,7 @@ Pillow (already a dependency). Imports no ``PySide6``.
 """
 import io
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Sequence
 
 from je_auto_control.utils.accessibility.element import element_box
 
@@ -73,11 +73,14 @@ def resolve_mark(marks: List[Dict[str, Any]],
     return None
 
 
-def _draw_marks(image: Any, marks: List[Dict[str, Any]]) -> Any:
+def _draw_marks(image: Any, marks: List[Dict[str, Any]],
+                origin: Sequence[int] = (0, 0)) -> Any:
+    """Draw ``marks`` (screen coordinates) on an image whose corner is ``origin``."""
     from PIL import ImageDraw
     draw = ImageDraw.Draw(image)
     for mark in marks:
         left, top, width, height = mark["bbox"]
+        left, top = left - int(origin[0]), top - int(origin[1])
         draw.rectangle([left, top, left + width, top + height],
                        outline=_OUTLINE, width=2)
         label = str(mark["id"])
@@ -88,11 +91,17 @@ def _draw_marks(image: Any, marks: List[Dict[str, Any]]) -> Any:
 
 
 def render_marks(image_bytes: bytes,
-                 marks: List[Dict[str, Any]]) -> bytes:
-    """Draw numbered boxes for ``marks`` on a PNG; return annotated PNG bytes."""
+                 marks: List[Dict[str, Any]],
+                 origin: Sequence[int] = (0, 0)) -> bytes:
+    """Draw numbered boxes for ``marks`` on a PNG; return annotated PNG bytes.
+
+    ``origin`` is the screen coordinate of the image's top-left pixel: marks
+    are in screen coordinates, and a capture of the whole desktop starts at a
+    negative one whenever a monitor sits left of or above the primary.
+    """
     from PIL import Image
     image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
-    _draw_marks(image, marks)
+    _draw_marks(image, marks, origin)
     out = io.BytesIO()
     image.save(out, format="PNG")
     return out.getvalue()
@@ -108,7 +117,10 @@ def mark_screen(app_name: Optional[str] = None,
     """Number the live accessibility elements; optionally render an overlay.
 
     Stores the marks for a later :func:`mark_click`. When ``render_path`` is
-    given, a screenshot is captured, annotated, and saved there.
+    given, every monitor is captured, annotated, and saved there; the result
+    then carries ``image_origin``, the screen coordinate of the image's
+    top-left pixel (``mark bbox - image_origin`` is where a mark is drawn).
+    Marks themselves stay in screen coordinates.
     """
     from je_auto_control.utils.accessibility.accessibility_api import (
         list_accessibility_elements)
@@ -117,11 +129,15 @@ def mark_screen(app_name: Optional[str] = None,
     _last_marks.extend(marks)
     result: Dict[str, Any] = {"marks": marks}
     if render_path:
-        from je_auto_control.utils.cv2_utils.screenshot import pil_screenshot
-        image = _draw_marks(pil_screenshot().convert("RGB"), marks)
+        # The whole desktop, not pil_screenshot(): that is the primary monitor
+        # only, so an element on any other one was drawn off the image.
+        from je_auto_control.utils.monitor_layout.logical_frame import grab_logical
+        frame, origin_x, origin_y = grab_logical(None)
+        image = _draw_marks(frame.convert("RGB"), marks, (origin_x, origin_y))
         target = Path(render_path)
         image.save(str(target), format="PNG")
         result["image_path"] = str(target.resolve())
+        result["image_origin"] = [int(origin_x), int(origin_y)]
     return result
 
 

@@ -1,5 +1,5 @@
 import sys
-from typing import Tuple
+from typing import Any, Tuple
 
 from je_auto_control.utils.exception.exception_tags import windows_import_error_message
 from je_auto_control.utils.exception.exceptions import AutoControlException
@@ -40,14 +40,90 @@ _user32.ReleaseDC.restype = ctypes.c_int
 _gdi32.GetPixel.argtypes = [wintypes.HDC, ctypes.c_int, ctypes.c_int]
 _gdi32.GetPixel.restype = wintypes.COLORREF
 
-# 確保 DPI 感知，避免座標偏移。**這是行程層級的副作用**，而它發生在 import 時：
-# 一旦設定就無法還原，之後所有 Win32 座標查詢都會拿到實體像素。這正是本模組被
-# import 的理由（螢幕尺寸與取色都必須是實體座標），但呼叫端要知道它會影響整個
-# 行程——擷取與滑鼠座標的換算請走 `utils/monitor_layout`。
-#
-# Process-wide and irreversible, and it happens at import time; conversions
-# between physical and logical coordinates belong to ``utils/monitor_layout``.
-_user32.SetProcessDPIAware()
+_DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2 = -4
+_AWARENESS_NAMES = {0: "unaware", 1: "system", 2: "per_monitor"}
+_dpi_awareness_requested = False
+
+
+def _request_dpi_awareness(user32: Any) -> None:
+    """Ask for per-monitor-v2 awareness, then system awareness; never raise."""
+    try:
+        setter = user32.SetProcessDpiAwarenessContext
+        setter.argtypes = [ctypes.c_void_p]
+        setter.restype = wintypes.BOOL
+        if setter(ctypes.c_void_p(_DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2)):
+            return
+    except (AttributeError, OSError):
+        # Windows before 10 1703 exports no such function.
+        pass
+    try:
+        user32.SetProcessDPIAware()
+    except (AttributeError, OSError):
+        pass
+
+
+def dpi_awareness(user32: Any = None) -> str:
+    """
+    這個行程實際的 DPI 感知：``unaware``／``system``／``per_monitor``／``unknown``
+    The awareness this process really has: ``unaware`` / ``system`` /
+    ``per_monitor`` / ``unknown``
+
+    問系統而不是記住自己要求過什麼：行程的感知只能設定一次，host 程式、manifest
+    或先建立的 Qt 可能早就決定了。
+    Asked of the system rather than remembered: awareness can be set once per
+    process, and a host application, a manifest or an earlier Qt may have
+    decided it already.
+    """
+    library = user32 or _user32
+    try:
+        get_context = library.GetThreadDpiAwarenessContext
+        get_context.argtypes = []
+        get_context.restype = ctypes.c_void_p
+        get_awareness = library.GetAwarenessFromDpiAwarenessContext
+        get_awareness.argtypes = [ctypes.c_void_p]
+        get_awareness.restype = ctypes.c_int
+        return _AWARENESS_NAMES.get(int(get_awareness(get_context())), "unknown")
+    except (AttributeError, OSError):
+        return "unknown"
+
+
+def enable_dpi_awareness(user32: Any = None) -> str:
+    """
+    讓行程成為 per-monitor v2 DPI 感知（做不到就退回系統感知）；回傳實際結果
+    Make the process per-monitor-v2 DPI aware, falling back to system
+    awareness; return what it ended up with
+
+    **行程層級、無法還原，而且發生在 import 時**（本模組底下呼叫一次）。
+    per-monitor 之後，每個螢幕的 Win32 座標、滑鼠座標與擷取到的像素都是該螢幕的
+    實體像素。先前用的 `SetProcessDPIAware()` 是**系統**感知：只有 DPI 與主螢幕
+    相同的螢幕是實體像素，其他螢幕被 Windows 虛擬化——座標被縮放、截圖是縮過的
+    模糊影像。
+
+    只要求一次：第二次呼叫不再碰 Win32，只回報現況。感知已被別人設定時（要求會
+    被拒絕）不丟例外，照樣回報現況；那種行程裡擷取與滑鼠座標的換算仍由
+    `utils/monitor_layout` 負責。
+
+    Process-wide, irreversible, and it happens at import time (this module
+    calls it once below). Once per-monitor, Win32 coordinates, mouse
+    coordinates and captured pixels are each monitor's physical pixels. The
+    ``SetProcessDPIAware()`` used before is *system* awareness: only monitors
+    at the primary monitor's DPI were physical, and Windows virtualised the
+    rest — scaled coordinates and a blurred, resized capture.
+
+    Requested once: a second call does not touch Win32 and only reports. A
+    process whose awareness someone else fixed first refuses the request; that
+    is not an error, and ``utils/monitor_layout`` still converts between
+    capture and mouse coordinates there.
+    """
+    global _dpi_awareness_requested
+    library = user32 or _user32
+    if not _dpi_awareness_requested:
+        _dpi_awareness_requested = True
+        _request_dpi_awareness(library)
+    return dpi_awareness(library)
+
+
+enable_dpi_awareness()
 
 _CLR_INVALID = 0xFFFFFFFF
 

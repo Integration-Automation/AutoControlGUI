@@ -95,13 +95,18 @@ Builder 項目。視覺與視窗功能的 geometry / IO 操作皆可注入,因�
 ========
 
 * **單一視窗擷取** — ``capture_window(title, output_path)`` 以標題解析視窗
-  geometry(Win32 ``GetWindowRect``)並精確擷取其範圍。``AC_capture_window``。
+  geometry(DWM 回報的可見外框)並精確擷取其範圍,視窗在哪個螢幕都可以。
+  ``AC_capture_window``。
 * **版面儲存 / 還原** — ``save_window_layout(path)`` 把每個視窗的位置快照
   成 JSON;``restore_window_layout(path)`` 再把它們全部移回(方便測試
-  setup / teardown)。``AC_save_window_layout`` / ``AC_restore_window_layout``。
-* **貼齊 / 平鋪** — ``snap_window(title, "left")`` 把視窗移到螢幕一半
-  (left / right / top / bottom)、四分之一(四個角)或 ``"max"``。
-  ``AC_snap_window``。
+  setup / teardown)。存下的是 ``MoveWindow`` 定位的那個矩形(Win32
+  ``GetWindowRect``),所以視窗會回到原本的位置。舊版存的版面檔記的是可見
+  外框,還原會右移 7 px、縮小 14 x 7 px,請重新儲存。
+  ``AC_save_window_layout`` / ``AC_restore_window_layout``。
+* **貼齊 / 平鋪** — ``snap_window(title, "left")`` 把視窗移到主螢幕\ *工作區*\
+  (螢幕扣掉工作列)的一半(left / right / top / bottom)、四分之一(四個角)
+  或 ``"max"``,貼齊後視窗底部不會被工作列蓋住。``arrange_grid`` 與
+  ``arrange_cascade`` 也排在同一個區域。``AC_snap_window``。
 
 
 檔案安全

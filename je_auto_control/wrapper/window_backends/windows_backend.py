@@ -46,8 +46,8 @@ class WindowsWindowBackend(WindowManageBackend):
     def restore(self, window_id: int) -> None:
         self._wm.show_window(window_id, self._wm.SW_RESTORE)
 
-    def show(self, window_id: int, cmd_show: int) -> None:
-        self._wm.show_window(window_id, int(cmd_show))
+    def show(self, window_id: int, cmd_show: int) -> Optional[bool]:
+        return bool(self._wm.show_window(window_id, int(cmd_show)))
 
     def close(self, window_id: int) -> bool:
         return self._wm.close_window(window_id)

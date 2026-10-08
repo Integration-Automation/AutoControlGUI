@@ -32,12 +32,13 @@ class FakeBackend(WindowManageBackend):
         self.windows = [(11, "Editor"), (12, "   "), (13, "Browser")]
         self.rect = (10, 20, 110, 220)
         self.minimized = False
+        self.foreground = 13
 
     def list_windows(self):
         return list(self.windows)
 
     def foreground_window(self):
-        return 13
+        return self.foreground
 
     def window_rect(self, window_id):
         self.calls.append(("window_rect", window_id))
@@ -51,6 +52,7 @@ class FakeBackend(WindowManageBackend):
 
     def set_foreground(self, window_id):
         self.calls.append(("set_foreground", window_id))
+        self.foreground = window_id
 
     def restore(self, window_id):
         self.calls.append(("restore", window_id))

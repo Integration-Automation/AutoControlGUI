@@ -17,10 +17,31 @@ is used unchanged.
 from __future__ import annotations
 
 import sys
-from typing import TYPE_CHECKING, Optional, Sequence
+from typing import TYPE_CHECKING, Any, Optional, Sequence
 
 if TYPE_CHECKING:
     from PIL import Image
+
+
+def grab_windows_region(left: int, top: int, right: int, bottom: int,
+                        grabber: Optional[Any] = None) -> Image.Image:
+    """The Windows capture of ``[left, top, right, bottom]``, on any monitor.
+
+    Always ``right - left`` by ``bottom - top``: ``grab_logical`` clips the
+    region to the desktop, and the part that is off screen is padded back in
+    black here, so a point in the image is still ``(left, top)`` plus its
+    position. A region with none of it on screen raises
+    ``AutoControlScreenException``.
+    """
+    from je_auto_control.utils.monitor_layout.logical_frame import grab_logical
+    width, height = right - left, bottom - top
+    image, origin_x, origin_y = grab_logical((left, top, width, height), grabber=grabber)
+    if image.size == (width, height):
+        return image
+    from PIL import Image
+    canvas = Image.new(image.mode, (width, height))
+    canvas.paste(image, (origin_x - left, origin_y - top))
+    return canvas
 
 
 def grab_screen_region(region: Optional[Sequence[int]] = None) -> Image.Image:
@@ -36,8 +57,7 @@ def grab_screen_region(region: Optional[Sequence[int]] = None) -> Image.Image:
     _validate_region(list(region))
     left, top, right, bottom = (int(value) for value in region)
     if sys.platform.startswith("win"):
-        from je_auto_control.utils.monitor_layout.logical_frame import grab_logical
-        return grab_logical((left, top, right - left, bottom - top))[0]
+        return grab_windows_region(left, top, right, bottom)
     if sys.platform == "darwin":
         from je_auto_control.utils.cv2_utils.screen_grabber import image_grabber
         return image_grabber().grab(bbox=(left, top, right, bottom), scale_down=True)
