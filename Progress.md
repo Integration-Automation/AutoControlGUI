@@ -8,7 +8,21 @@
 `utils/{config_sync,remote_desktop,mcp_server,self_healing,codegen,executor}/` 與型別／文件驗證。
 核准設計：[跨平台自動化與 GUI 改版](docs/superpowers/specs/2026-10-02-platform-gui-modernization-design.md)。
 實作計畫：[分階段交付計畫](docs/superpowers/plans/2026-10-02-modernization-index.md)，待審閱。
-現有 `[Answer]` 決策沿用；產品實作尚未開始。
+現有 `[Answer]` 決策沿用。
+
+`WIP` — 計畫 F（GUI）：F1 的延遲分頁註冊與 F2 的導覽／搜尋／主題已交付（U-20261008-02），其餘各子計畫尚未開始。F 還缺：
+
+- **窄視窗的內容是被擠壓而不是可捲動**：`gui/main_widget.py` 給 `QTabWidget` 明確的最小尺寸讓視窗能縮到 640×420，
+  但分頁內容沒有包進 `QScrollArea`；包進去會改變 `tabs.indexOf(entry.widget)` 這個 PyBreeze 與測試都在用的關係，要一起設計。
+- **主題與面板狀態不會記住**：`AutoControlGUIUI.set_theme`、導覽面板的顯示與寬度、字級都只活在當次執行；
+  要用 `QSettings` 存，並讓測試不寫到使用者的設定。
+- **`qt-material` 還在 `[gui]` extra**：`gui/main_window.py` 已不匯入它。移除要同時改 `pyproject.toml`、`dev.toml`、
+  `requirements.txt`、`uv.lock` 與 mypy 的 override，並先確認 PyBreeze 沒有靠這個 extra 取得它。
+- **分頁的關閉鈕是 Fusion 內建圖示**：計畫規定主題不新增點陣圖相依，換圖示要用 Qt 內建向量或既有資產。
+- **Remote Desktop 與 Script Builder 仍在啟動時建立**（預設開啟），啟動時間 2.6–2.7 秒裡大半是它們與門面匯入。
+- **F1 的 `TabRegistry.open/close` 介面與 `close` 釋放訂閱**：現在關閉分頁只是從分頁列移除，widget 留著。
+- **F3**（共用 worker、取消、關閉時不碰已銷毀物件、`webrtc_panel.py` 拆分）與 **F4**（啟動／記憶體基準、mixed-DPI、
+  功能對等測試）尚未開始。
 
 **只記未完成的事。** 完成的工作記在 [docs/updates/](docs/updates/README.md)（每月一個批次檔，
 索引與查詢指令在它的 README），相容性變更寫進 [CHANGELOG.md](CHANGELOG.md)；完成的項目
@@ -507,7 +521,7 @@ be at 2x if on a Retina screen」，`scale_down=True` 只在帶 `bbox` 時生效
 
 ## `test_usb_acl_prompt.py` 讓 Python 3.10 的 headless 測試間歇 segfault
 
-`TODO` — `test/unit_test/headless/test_usb_acl_prompt.py::test_bridge_remember_persists_acl_rule` 在 `coverage run -m pytest` 下讓行程 SIGSEGV（exit 139），整個 `pytest-headless` job 因此失敗：2026-09-26 連續三次 AutoControl Code Quality（ubuntu-22.04／3.10），2026-09-30 一次（macos-14／3.10）；同一次其他版本都過，之後的 run 又過，所以是間歇的。原因還沒查：先在 3.10 開 `faulthandler` 重跑這一支，看崩在哪個原生呼叫。
+`TODO` — `test/unit_test/headless/test_usb_acl_prompt.py::test_bridge_remember_persists_acl_rule` 在 `coverage run -m pytest` 下讓行程 SIGSEGV（exit 139），整個 `pytest-headless` job 因此失敗：2026-09-26 連續三次 AutoControl Code Quality（ubuntu-22.04／3.10），2026-09-30 一次（macos-14／3.10），2026-10-08 一次（ubuntu-22.04／3.10，PR #501，重跑該 job 後通過）；同一次其他版本都過，之後的 run 又過，所以是間歇的。原因還沒查：先在 3.10 開 `faulthandler` 重跑這一支，看崩在哪個原生呼叫。
 
 ---
 

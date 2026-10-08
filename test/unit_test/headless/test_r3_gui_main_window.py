@@ -1,9 +1,9 @@
 """Round-3 GUI audit regression: applying the font must not wipe the theme.
 
 ``_apply_font_pt`` used to call ``setStyleSheet("font-size: ...")`` which
-*replaces* the widget stylesheet, discarding the qt_material theme that
-``apply_stylesheet`` had just installed (finding 5). The font rule must now be
-merged on top of the captured theme stylesheet instead.
+*replaces* the widget stylesheet, discarding the theme that had just been
+installed (finding 5). The font rule must now be merged on top of the captured
+theme stylesheet instead.
 """
 import os
 
@@ -11,10 +11,6 @@ import pytest
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 pytest.importorskip("PySide6.QtWidgets", exc_type=ImportError)
-# main_window imports qt_material (the theme); the headless CI job installs
-# PySide6 but not the GUI theme extra, so skip cleanly there rather than erroring
-# out collection for the whole suite.
-pytest.importorskip("qt_material")
 
 from PySide6.QtWidgets import QApplication, QMainWindow  # noqa: E402
 

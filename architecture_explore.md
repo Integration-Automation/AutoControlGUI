@@ -19,8 +19,8 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 
 | 指標 | 數值 |
 | --- | ---: |
-| Python 模組總數（含周邊子專案） | 1,065 |
-| 程式碼總行數 | 157,741 |
+| Python 模組總數（含周邊子專案） | 1,068 |
+| 程式碼總行數 | 158,287 |
 | `je_auto_control/utils/` 子套件數 | 310 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 778 |
 | 套件門面 `__all__` 公開名稱數 | 1,244 |
@@ -880,9 +880,12 @@ GUI 是**選用 extra**（`pip install je_auto_control[gui]`，PySide6 + qt-mate
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
-| `gui/__init__.py` | 23 | `start_autocontrol_gui()`：**唯一**會延遲匯入 PySide6 的地方，維持頂層套件 Qt-free。 |
-| `main_window.py` | 301 | `QMainWindow`：選單列（File／Actions／View／…）、可關閉分頁、即時語言切換、字級預設、qt-material 主題。分頁分為 core／editing／detection／automation／system 五類。 |
-| `main_widget.py` | 437 | 擁有 `QTabWidget`，註冊 48 個分頁，並暴露 show/hide/list API 給選單列。核心分頁在註冊時直接宣告 `(label_key, handler)` 動作對；分頁本體都在下列 mixin。 |
+| `gui/__init__.py` | 25 | `start_autocontrol_gui()`：**唯一**會延遲匯入 PySide6 的地方，維持頂層套件 Qt-free。 |
+| `main_window.py` | 379 | `QMainWindow`：選單列（File／Actions／View／…）、左側導覽面板 dock（`Ctrl+K` 搜尋、`Ctrl+B` 收合）、即時語言切換、字級預設、深色／淺色主題（`theme.py` 的 token，不再用 qt-material）。分頁分為 core／editing／detection／automation／system 五類。 |
+| `main_widget.py` | 368 | 工作區：擁有 `QTabWidget`，依 `tab_registry.TAB_SPECS` 註冊 48 個分頁，並暴露 show/hide/activate/list API 給選單列與導覽面板。只有預設開啟的三個分頁與自己的 mixin 表單在啟動時建立，其餘第一次開啟才匯入模組、建立 widget。核心分頁在 `_own_tab_builders` 宣告 `(label_key, handler)` 動作對。 |
+| `tab_registry.py` | 125 | 分頁表：每個分頁一筆 `TabSpec`（鍵、標題鍵、分類、模組與類別名），`TabEntry` 在第一次存取 `widget` 時才呼叫 factory。不匯入 Qt。 |
+| `navigation.py` | 200 | `NavigationPanel`：搜尋框 + 依分類的功能樹，列出每個已註冊分頁（開啟中的以粗體標示），只回報被選的鍵，開啟分頁仍由視窗負責。 |
+| `theme.py` | 178 | 設計 token（`ThemeTokens`：顏色、圓角、間距、字族）、深色與淺色兩組值、由 token 產生的樣式表與對應的 `QPalette`；不載入圖檔或字型檔。 |
 | `_auto_click_tab.py` | 291 | 自動點擊分頁的 mixin 建構器。 |
 | `_screenshot_tab.py` | 137 | 截圖／取像素分頁 mixin。 |
 | `_image_detect_tab.py` | 115 | 影像偵測分頁 mixin。 |
@@ -894,11 +897,11 @@ GUI 是**選用 extra**（`pip install je_auto_control[gui]`，PySide6 + qt-mate
 | `_screen_geometry.py` | 52 | Qt 邏輯座標與截圖用的原生像素互轉：`native_region()`、`screen_at_native()`、`logical_point()`（每個螢幕的左上角在兩者相同，螢幕內依 device pixel ratio 縮放）。區域選取與主機端標註覆蓋層都用它。 |
 | `_daemon_thread.py` | 79 | `DaemonThread`：`QThread` 的替代品，保留遠端桌面 worker 用到的介面（`start`／`run`／`isRunning`／`wait`／`requestInterruption`／`started`／`finished`），但 `run()` 跑在 daemon `threading.Thread` 上，刪除物件或程式結束都不會銷毀執行中的執行緒。 |
 | `_worker_thread.py` | 216 | `start_worker()`：在 daemon `threading.Thread` 上執行 `QObject` worker 的 `run()`（沒有 `QThread` 可被銷毀），並經由分頁擁有的中繼物件回報結果（回呼一律在 GUI 執行緒；worker 沒處理的例外也送到 `on_fail`）；worker 留在模組登錄表直到 GUI 執行緒看到它結束，回傳 `WorkerHandle`（`isRunning()`）；程式結束時先呼叫 worker 的 `request_stop()`，最多等 10 秒，仍在跑的隨行程結束。 |
-| `language_wrapper/` | 5,031 | 四語系字典（英／日／簡中／繁中）+ `multi_language_wrapper` 執行期切換器與監聽註冊表。 |
+| `language_wrapper/` | 5,063 | 四語系字典（英／日／簡中／繁中）+ `multi_language_wrapper` 執行期切換器與監聽註冊表。 |
 | `selector/` | 216 | 拖曳選取螢幕區域的半透明全螢幕覆蓋層與樣板裁切工具（互動式，但都有對應的程式化 API）。 |
 
 > **分頁指令一律走 Actions 選單**：分頁本身只放輸入、表格與結果檢視，指令由視窗層選單暴露。
-> 核心分頁在 `main_widget.py` 註冊時宣告動作；功能分頁實作 `menu_actions()`（目前 40 個檔案有此 hook）。
+> 核心分頁在 `main_widget.py` 的 `_own_tab_builders` 宣告動作；功能分頁實作 `menu_actions()`（目前 40 個檔案有此 hook）。
 > `test/unit_test/headless/test_actions_menu_gui.py` 會守住這個契約——沒有動作宣告的新分頁會讓 CI 失敗。
 
 #### 48 個分頁
@@ -1005,7 +1008,7 @@ GUI 是**選用 extra**（`pip install je_auto_control[gui]`，PySide6 + qt-mate
 | **新平台後端** | 新增 `je_auto_control/<platform>/` 實作 backend 介面，並在 `wrapper/platform_wrapper.py` 加一個分支 | 所有 wrapper 模組與上層 |
 | **新 `AC_*` 指令** | 在 `utils/` 寫無頭實作 → 加進 `Executor.event_dict` → 加進 `gui/script_builder/command_schema.py` | executor 分派邏輯本身 |
 | **執行期外掛指令** | `add_command_to_executor({"AC_x": fn})`，或用 `utils/plugin_loader`（掃描目錄）／`utils/plugin_sdk`（entry points） | 核心程式碼 |
-| **新 GUI 分頁** | 在 `gui/` 新增 widget（只做 UI 翻譯）→ 在 `main_widget.py` `_add_tab` 註冊 → 提供 `menu_actions()` | 主視窗選單建構邏輯 |
+| **新 GUI 分頁** | 在 `gui/` 新增 widget（只做 UI 翻譯）→ 在 `gui/tab_registry.py` 的 `TAB_SPECS` 加一筆 `TabSpec` → 提供 `menu_actions()` | 主視窗選單建構邏輯 |
 | **新 OCR／VLM／LLM／a11y 後端** | 在對應 `backends/` 實作 base 協定 | 呼叫端 |
 | **新報表格式** | 仿 `generate_report/` 既有三者的骨架新增產生器 | 執行紀錄收集 |
 | **新 MCP 工具** | 在 `mcp_server/tools/_factories.py` 加工廠、`_handlers.py` 加 adapter（QA 主題加在 `_handlers_qa.py`） | 傳輸層 |
@@ -1076,7 +1079,7 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 
 | 層／子系統 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `gui/` | 95 | 27,853 |
+| `gui/` | 98 | 28,399 |
 | `utils/mcp_server/` | 35 | 18,898 |
 | `utils/remote_desktop/` | 56 | 13,014 |
 | `utils/executor/` | 8 | 9,606 |
@@ -1097,5 +1100,5 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 852 |
 | 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 682 | 57,156 |
-| **總計** | **1,059** | **157,676** |
+| **總計** | **1,062** | **158,222** |
 

@@ -120,7 +120,7 @@ Optional extras, installed only when you need them:
 
 | Extra | Enables |
 |---|---|
-| `gui` | PySide6 desktop application (48 tabs) |
+| `gui` | PySide6 desktop application (48 tabs): a searchable navigation panel (`Ctrl+K`) lists every feature by category, tabs are built the first time they are opened, and **View → Theme** switches dark / light |
 | `webrtc` | WebRTC remote desktop, USB passthrough (`aiortc`, `av`) |
 | `signaling` | Standalone signaling / rendezvous server (`fastapi`, `uvicorn`) |
 | `discovery` | mDNS / Zeroconf LAN host discovery |
