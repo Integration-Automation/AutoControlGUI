@@ -95,11 +95,25 @@ def _next_span(line: Sequence[Any], index: int, needle: str,
         if needle in accumulated:
             return _shrink_left(line, index, end, needle, case_sensitive), end
         if len(accumulated) > len(needle) + MAX_OVERSHOOT:
-            # This start can no longer produce a shortest match; drop the
-            # leftmost box and keep scanning instead of restarting the line.
-            index += 1
-            accumulated = _joined(line, index, end, case_sensitive)
+            index, accumulated = _drop_left(line, index, end, needle, case_sensitive)
     return None
+
+
+def _drop_left(line: Sequence[Any], index: int, end: int, needle: str,
+               case_sensitive: bool) -> Tuple[int, str]:
+    """Drop leading boxes that can no longer start a match; return the rest.
+
+    A match that starts in box ``index`` and is not complete at ``end`` has to
+    take in every box after it, so the box can go only once those alone are as
+    long as the target. Dropping it for the run's total length threw away a
+    long sentence box that *ended* with the target's first word: ``Save As``
+    after ``... then choose Save`` was never found.
+    """
+    rest = _joined(line, index + 1, end, case_sensitive)
+    while index < end and len(rest) >= len(needle):
+        index += 1
+        rest = _joined(line, index + 1, end, case_sensitive)
+    return index, _joined(line, index, end, case_sensitive)
 
 
 def find_spans(boxes: Sequence[Any], target: str,

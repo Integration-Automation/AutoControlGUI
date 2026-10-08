@@ -169,12 +169,12 @@ def test_scrolling_survives_an_unreportable_cursor(mouse_env, monkeypatch):
     """
     monkeypatch.setattr(sys, "platform", "linux")
     monkeypatch.setattr(auto_control_mouse, "special_mouse_keys_table",
-                        {"scroll_down": 5})
+                        {"scroll_up": 4, "scroll_down": 5})
     monkeypatch.setattr(auto_control_mouse, "get_mouse_position", lambda: None)
 
     auto_control_mouse.mouse_scroll(3, x=100)
 
-    assert mouse_env == [("scroll", 3, 5)]
+    assert mouse_env == [("scroll", 3, 4)]
 
 
 def test_scrolling_reads_no_axis_table_where_there_is_none(mouse_env,
@@ -183,7 +183,7 @@ def test_scrolling_reads_no_axis_table_where_there_is_none(mouse_env,
     monkeypatch.setattr(sys, "platform", "win32")
     monkeypatch.setattr(auto_control_mouse, "special_mouse_keys_table", None)
 
-    assert auto_control_mouse.mouse_scroll(-2) == (-2, "scroll_down")
+    assert auto_control_mouse.mouse_scroll(-2) == (-2, "scroll_up")
     assert mouse_env == [("scroll", -2)]
 
 
@@ -201,7 +201,7 @@ def test_a_single_axis_wheel_is_scrolled_on_every_name_that_has_one(
     monkeypatch.setattr(sys, "platform", platform)
     monkeypatch.setattr(auto_control_mouse, "special_mouse_keys_table", None)
 
-    assert auto_control_mouse.mouse_scroll(4) == (4, "scroll_down")
+    assert auto_control_mouse.mouse_scroll(4) == (4, "scroll_up")
     assert mouse_env == [("scroll", 4)]
 
 

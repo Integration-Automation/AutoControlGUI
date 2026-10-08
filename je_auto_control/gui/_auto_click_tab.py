@@ -285,7 +285,7 @@ class AutoClickTabMixin:
     def _send_scroll(self):
         try:
             val = int(self.scroll_value_input.text() or "3")
-            direction = self.scroll_dir_combo.currentText() if self.scroll_dir_combo else "scroll_down"
+            direction = self.scroll_dir_combo.currentText() if self.scroll_dir_combo else "scroll_up"
             mouse_scroll(val, scroll_direction=direction)
         except (AutoControlException, OSError, ValueError, TypeError, RuntimeError) as error:
             QMessageBox.warning(self, "Error", str(error))

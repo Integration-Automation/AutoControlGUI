@@ -124,14 +124,21 @@ click_mouse
 mouse_scroll
 ============
 
-.. function:: mouse_scroll(scroll_value, x=None, y=None, scroll_direction="scroll_down")
+.. function:: mouse_scroll(scroll_value, x=None, y=None, scroll_direction="scroll_up")
 
-   Scrolls the mouse wheel.
+   Scrolls the mouse wheel. A positive ``scroll_value`` scrolls up and a
+   negative one down, on every platform.
 
-   :param int scroll_value: Number of scroll units.
-   :param int x: X position (default: current position).
-   :param int y: Y position (default: current position).
-   :param str scroll_direction: Scroll direction (Linux only). One of:
+   :param int scroll_value: Number of scroll notches; negative reverses the direction.
+   :param int x: X position (default: current position). A fractional value is
+      rounded to the nearest pixel; a value that is not a finite number raises
+      ``AutoControlMouseException`` before the cursor moves.
+   :param int y: Y position (default: current position). Same rules as ``x``.
+   :param str scroll_direction: The direction a *positive* ``scroll_value``
+      takes. Read on X11 and Wayland only (Windows and macOS have one wheel
+      axis and use the sign alone). One of:
       ``"scroll_up"``, ``"scroll_down"``, ``"scroll_left"``, ``"scroll_right"``.
+      The default was ``"scroll_down"``, which made ``mouse_scroll(3)`` go down
+      on X11 / Wayland and up elsewhere; pass it explicitly to keep that.
    :returns: Tuple of ``(scroll_value, direction)``.
    :rtype: tuple

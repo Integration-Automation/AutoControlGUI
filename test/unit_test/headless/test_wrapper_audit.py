@@ -74,7 +74,7 @@ def mouse_moves(monkeypatch):
                                     scroll=lambda *args: moves.append(("scroll",) + args))
     monkeypatch.setattr(auto_control_mouse, "mouse", backend)
     monkeypatch.setattr(auto_control_mouse, "record_action_to_list", lambda *a, **k: None)
-    monkeypatch.setattr(auto_control_mouse, "special_mouse_keys_table", {"scroll_down": 5})
+    monkeypatch.setattr(auto_control_mouse, "special_mouse_keys_table", {"scroll_up": 4, "scroll_down": 5})
     return moves
 
 

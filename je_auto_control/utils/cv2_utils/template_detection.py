@@ -9,6 +9,7 @@ pixels, so a hit read off it can be clicked directly on a mixed-DPI desktop.
 import os
 from typing import Any, List, Optional, Sequence, Tuple
 
+from je_auto_control.utils.cv2_utils.image_file import read_image
 from je_auto_control.utils.cv2_utils.optional import require_cv2, require_je_open_cv
 from je_auto_control.utils.exception.exceptions import ImageNotFoundException
 from je_auto_control.utils.monitor_layout.logical_frame import grab_logical
@@ -38,20 +39,59 @@ def _prepare(image: Any, detect_threshold: float,
             f"detect_threshold must be between 0 and 1, got {detect_threshold!r}")
     if isinstance(image, (str, os.PathLike)) and not os.path.isfile(image):
         raise ImageNotFoundException(f"template image not found: {image}")
-    open_cv = require_je_open_cv()
+    # Still the door that names the missing wheel on Windows arm64.
+    require_je_open_cv()
     cv2 = require_cv2()
+    template = _gray_template(cv2, image)
     grab_image, origin_x, origin_y = grab_logical(screen_region, all_screens=all_screens)
-    frame, template = open_cv.image_translate(grab_image, os.fspath(image)
-                                              if isinstance(image, os.PathLike) else image)
-    if template is None:
-        # cv2.imread returns None for an unreadable file; that used to surface
-        # as "'NoneType' object has no attribute 'shape'".
-        raise ImageNotFoundException(f"cannot read template image: {image}")
-    if template.shape[0] > frame.shape[0] or template.shape[1] > frame.shape[1]:
-        raise ImageNotFoundException("template is larger than the searched area")
-    scores = cv2.matchTemplate(frame, template, cv2.TM_CCOEFF_NORMED)
+    try:
+        frame = _to_gray(cv2, grab_image)
+        if template.shape[0] > frame.shape[0] or template.shape[1] > frame.shape[1]:
+            raise ImageNotFoundException("template is larger than the searched area")
+        scores = cv2.matchTemplate(frame, template, cv2.TM_CCOEFF_NORMED)
+    except cv2.error as error:
+        # An input OpenCV cannot match (an empty frame, a pixel type it does
+        # not take) is a search that found nothing, in the type callers catch.
+        raise ImageNotFoundException(f"cannot match template image: {error}") from error
     effective = min(threshold, 1.0 - _SCORE_EPSILON)
     return (frame, scores), template, effective, (origin_x, origin_y)
+
+
+def _to_gray(cv2: Any, image: Any) -> Any:
+    """``image`` (PIL image or array) as a 2-D ``uint8`` grayscale array.
+
+    A 2-D array or a PIL ``"L"`` image is grayscale already and is used as it
+    is: ``cvtColor`` raised ``cv2.error`` on it, which no caller's ``except``
+    list names.
+    """
+    import numpy as np
+    array = np.asarray(image)
+    if array.ndim == 3 and array.shape[2] == 1:
+        array = array[:, :, 0]
+    if array.ndim == 3:
+        array = cv2.cvtColor(array, cv2.COLOR_RGB2GRAY)
+    if array.ndim != 2:
+        raise ImageNotFoundException(
+            f"template detection needs a 2-D or 3-D image, got shape {array.shape}")
+    if array.dtype == np.bool_:
+        # PIL mode "1": True / False, which OpenCV has no pixel type for.
+        array = array.astype(np.uint8) * 255
+    return array
+
+
+def _gray_template(cv2: Any, image: Any) -> Any:
+    """Load ``image`` (path, PIL image or array) as a grayscale template.
+
+    A path is read through :func:`image_file.read_image`, not ``cv2.imread``:
+    on Windows ``imread`` returns ``None`` for a path with non-ASCII
+    characters, so a template in ``測試\\t.png`` was reported unreadable.
+    """
+    try:
+        if isinstance(image, (str, os.PathLike)):
+            return read_image(os.fspath(image), cv2.IMREAD_GRAYSCALE)
+        return _to_gray(cv2, image)
+    except (ValueError, TypeError, cv2.error) as error:
+        raise ImageNotFoundException(f"cannot read template image: {image!r}") from error
 
 
 def _draw(frame: Any, boxes: Sequence[Sequence[int]]) -> Any:

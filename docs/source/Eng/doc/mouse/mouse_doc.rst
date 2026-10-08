@@ -84,10 +84,19 @@ Scroll the mouse wheel:
 
    from je_auto_control import mouse_scroll
 
-   # Scroll down by 5 units
+   # Scroll up by 5 notches; a negative value scrolls down
    mouse_scroll(scroll_value=5)
+   mouse_scroll(scroll_value=-5)
+
+A positive value scrolls up and a negative one down on every platform. Pass
+``x`` / ``y`` to scroll at a point: a fractional coordinate is rounded to the
+nearest pixel, and one that is not a finite number raises
+``AutoControlMouseException`` before the cursor moves.
 
 .. note::
 
-   On Linux, you can specify the scroll direction using the ``scroll_direction`` parameter:
-   ``"scroll_up"``, ``"scroll_down"``, ``"scroll_left"``, ``"scroll_right"``.
+   On X11 and Wayland ``scroll_direction`` names the direction a positive value
+   takes: ``"scroll_up"`` (the default), ``"scroll_down"``, ``"scroll_left"``,
+   ``"scroll_right"``. The default used to be ``"scroll_down"``, so
+   ``mouse_scroll(5)`` scrolled down there and up on Windows and macOS; pass
+   ``scroll_direction="scroll_down"`` to keep the old meaning.
