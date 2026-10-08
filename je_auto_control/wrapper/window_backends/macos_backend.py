@@ -139,11 +139,16 @@ class MacOSWindowBackend(WindowManageBackend):
         wanted = int(window_id)
         if wanted <= 0:
             return None
-        found = Quartz.CGWindowListCopyWindowInfo(
-            Quartz.kCGWindowListOptionIncludingWindow, wanted)
-        for info in found or []:
-            if _number(info) == wanted:
-                return info
+        # Asked by id first. On a real window server (macos-14) that query
+        # came back without a window the same process had just minimised, so
+        # the complete list is the second source rather than a failure.
+        for option, relative_to in (
+                (Quartz.kCGWindowListOptionIncludingWindow, wanted),
+                (Quartz.kCGWindowListOptionAll, Quartz.kCGNullWindowID)):
+            found = Quartz.CGWindowListCopyWindowInfo(option, relative_to)
+            for info in found or []:
+                if _number(info) == wanted:
+                    return info
         return None
 
     def foreground_window(self) -> int:

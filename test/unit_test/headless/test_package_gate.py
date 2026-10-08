@@ -84,7 +84,7 @@ def test_environment_variable_reaches_the_gate_every_entry_point_shares(tmp_path
     tree = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(
         os.path.abspath(package_manager_class.__file__)))))
     env["PYTHONPATH"] = os.pathsep.join(filter(None, [tree, env.get("PYTHONPATH")]))
-    done = subprocess.run(  # nosec B603  # reason: fixed argv, this interpreter
+    done = subprocess.run(  # nosec B603  # nosemgrep  # reason: fixed argv, this interpreter
         [sys.executable, "-c", code], env=env, cwd=tmp_path,
         capture_output=True, text=True, timeout=120, check=True)
     assert json.loads(done.stdout.strip().splitlines()[-1]) == [["my_plugins", "time"], False]

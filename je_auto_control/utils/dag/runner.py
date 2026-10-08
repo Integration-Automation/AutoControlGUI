@@ -316,7 +316,8 @@ def _default_local_runner(node: DagNode, _definition: DagDefinition,
     """Run a local node's actions on ``runner`` (default: the module executor)."""
     from je_auto_control.utils.json.json_file import read_executable_action_json
     if runner is None:
-        from je_auto_control.utils.executor.action_executor import executor as runner
+        from je_auto_control.utils.executor.action_executor import executor
+        runner = executor
     # raise_on_error=True: by default a failed action is only recorded, so
     # a node whose actions all failed counted as succeeded and its
     # dependants ran anyway.

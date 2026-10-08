@@ -93,7 +93,7 @@ def owned_window():
     backend = MacOSWindowBackend()
     if not backend.available:
         pytest.skip("the macOS window backend is unavailable here")
-    child = subprocess.Popen(  # nosec B603  # reason: this interpreter, fixed argv, no shell
+    child = subprocess.Popen(  # nosec B603  # nosemgrep  # reason: this interpreter, fixed argv, no shell
         [sys.executable, "-c", _CHILD],
         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     try:

@@ -231,7 +231,9 @@ class UserStore:
         if not self._path.exists():
             return {}, None
         try:
-            body = json.loads(self._path.read_text(encoding="utf-8"))
+            # The path is the operator's own choice of user store (constructor,
+            # JE_AUTOCONTROL_RBAC_USERS or --users); no request can set it.
+            body = json.loads(self._path.read_text(encoding="utf-8"))  # NOSONAR pythonsecurity:S8707  # reason: operator-configured file, never request data
         except (OSError, ValueError) as error:  # ValueError: bad JSON or not UTF-8
             return {}, repr(error)
         entries = body.get("users") if isinstance(body, dict) else None
