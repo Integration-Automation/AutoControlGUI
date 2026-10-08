@@ -1483,6 +1483,40 @@ def _admin_broadcast_execute(actions: List[Any],
     )
 
 
+def _user_add(user_id: str, role: str = "viewer", display_name: str = "",
+              tags: Optional[List[str]] = None,
+              users_path: Optional[str] = None) -> Dict[str, Any]:
+    """Executor adapter: add an RBAC user; the reply carries its token, once."""
+    from je_auto_control.utils.rbac.admin import add_user
+    return add_user(user_id, role=role, display_name=display_name, tags=tags,
+                    users_path=users_path)
+
+
+def _user_remove(user_id: str, users_path: Optional[str] = None) -> Dict[str, Any]:
+    """Executor adapter: remove an RBAC user."""
+    from je_auto_control.utils.rbac.admin import remove_user
+    return remove_user(user_id, users_path=users_path)
+
+
+def _user_set_role(user_id: str, role: str,
+                   users_path: Optional[str] = None) -> Dict[str, Any]:
+    """Executor adapter: change an RBAC user's role."""
+    from je_auto_control.utils.rbac.admin import set_user_role
+    return set_user_role(user_id, role, users_path=users_path)
+
+
+def _user_rotate_token(user_id: str, users_path: Optional[str] = None) -> Dict[str, Any]:
+    """Executor adapter: replace an RBAC user's token; the reply carries it, once."""
+    from je_auto_control.utils.rbac.admin import rotate_user_token
+    return rotate_user_token(user_id, users_path=users_path)
+
+
+def _user_list(users_path: Optional[str] = None) -> List[Dict[str, Any]]:
+    """Executor adapter: list RBAC users (no tokens, no hashes)."""
+    from je_auto_control.utils.rbac.admin import list_users
+    return list_users(users_path=users_path)
+
+
 def _audit_log_list(event_type: Optional[str] = None,
                     host_id: Optional[str] = None,
                     limit: int = 200) -> List[Dict[str, Any]]:
@@ -2275,17 +2309,19 @@ def _human_type(text: str, base_delay: float = 0.05, jitter: float = 0.04,
 
 
 def _sign_action_file(path: str, key: Optional[str] = None,
-                      private_key_path: Optional[str] = None) -> Dict[str, Any]:
+                      private_key_path: Optional[str] = None,
+                      passphrase: Optional[str] = None) -> Dict[str, Any]:
     """Executor adapter: write an Ed25519 or HMAC signature sidecar for a file."""
     from je_auto_control.utils.action_signing import sign_action_file
     return {"signature_path": sign_action_file(
-        path, key, private_key_path=private_key_path)}
+        path, key, private_key_path=private_key_path, passphrase=passphrase)}
 
 
-def _create_signing_keypair(private_path: str, public_path: str) -> Dict[str, Any]:
+def _create_signing_keypair(private_path: str, public_path: str,
+                            passphrase: Optional[str] = None) -> Dict[str, Any]:
     """Executor adapter: create an Ed25519 action-signing key pair."""
     from je_auto_control.utils.action_signing import create_signing_keypair
-    create_signing_keypair(private_path, public_path)
+    create_signing_keypair(private_path, public_path, passphrase=passphrase)
     return {"private_path": str(private_path), "public_path": str(public_path)}
 
 
@@ -8148,6 +8184,13 @@ class Executor:
             "AC_admin_list_hosts": _admin_list_hosts,
             "AC_admin_poll": _admin_poll,
             "AC_admin_broadcast_execute": _admin_broadcast_execute,
+
+            # RBAC user management (needs manage_users under RBAC)
+            "AC_user_add": _user_add,
+            "AC_user_remove": _user_remove,
+            "AC_user_set_role": _user_set_role,
+            "AC_user_rotate_token": _user_rotate_token,
+            "AC_user_list": _user_list,
 
             # Audit log (tamper-evident security log)
             "AC_audit_log_list": _audit_log_list,

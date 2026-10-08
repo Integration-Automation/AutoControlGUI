@@ -21,6 +21,7 @@ from je_auto_control.utils.timeouts import clamp_poll_interval
 from je_auto_control.utils.run_history.artifact_manager import (
     capture_error_snapshot,
 )
+from je_auto_control.utils.rbac.deferred import DeferredOwner, capture_owner
 from je_auto_control.utils.run_history.run_outcome import run_counting_failures
 from je_auto_control.utils.run_history.history_store import (
     SOURCE_TRIGGER, STATUS_ERROR, STATUS_OK, default_history_store,
@@ -40,6 +41,8 @@ class _TriggerBase:
     fired: int = 0
     cooldown_seconds: float = 0.5
     _last_fire: float = field(default=0.0)
+    #: Who registered it under RBAC; the run is authorised as that user.
+    owner: Optional[DeferredOwner] = field(default=None, kw_only=True)
     #: True when checking the trigger uses up the event it reports (an edge:
     #: a cron minute, a file change, a sequence step), so a composite has to
     #: check it last. Not a dataclass field.
@@ -253,6 +256,8 @@ class TriggerEngine:
         """Register ``trigger``; assigns an id when missing."""
         if not trigger.trigger_id:
             trigger.trigger_id = uuid.uuid4().hex[:8]
+        if trigger.owner is None:
+            trigger.owner = capture_owner()
         with self._lock:
             self._triggers[trigger.trigger_id] = trigger
         return trigger
@@ -365,7 +370,7 @@ class TriggerEngine:
         error_text: Optional[str] = None
         try:
             actions = read_executable_action_json(trigger.script_path)
-            run_counting_failures(lambda: self._execute(actions))
+            run_counting_failures(lambda: self._execute(actions), owner=trigger.owner)
         # 這裡刻意攔截所有例外：一個 trigger 失敗必須記錄成 STATUS_ERROR
         # 並繼續，而不是拖垮輪詢執行緒。原本的 tuple 漏掉
         # AutoControlJsonActionException，所以光是改名 script 檔就會讓

@@ -16,11 +16,12 @@ injectable so the logic is unit-tested without a real desktop. Imports no
 import threading
 import time
 from collections import deque
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any, Callable, Deque, Dict, List, Optional
 
 from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
+from je_auto_control.utils.rbac.deferred import DeferredOwner, capture_owner, owner_scope
 from je_auto_control.utils.timeouts import clamp_poll_interval
 
 # Errors a rule's matcher/action may raise that must not kill the guard loop
@@ -42,6 +43,8 @@ class WatchdogRule:
     name: str
     matcher: Callable[[], bool]
     action: Callable[[], None]
+    #: Who registered it under RBAC; it is checked and dismissed as that user.
+    owner: Optional[DeferredOwner] = field(default=None, kw_only=True)
 
 
 class PopupWatchdog:
@@ -64,6 +67,8 @@ class PopupWatchdog:
 
     def add_rule(self, rule: WatchdogRule) -> None:
         """Register a generic detector/dismisser rule."""
+        if rule.owner is None:
+            rule.owner = capture_owner()
         with self._lock:
             self._rules.append(rule)
 
@@ -133,9 +138,12 @@ class PopupWatchdog:
 
     def _apply(self, rule: WatchdogRule) -> bool:
         try:
-            if not rule.matcher():
-                return False
-            rule.action()
+            # As the user who registered the rule, with the role they hold
+            # now: a removed or demoted user's rule is refused, not run.
+            with owner_scope(rule.owner):
+                if not rule.matcher():
+                    return False
+                rule.action()
         # Any rule error, as ScreenObserver does: a matcher raising something
         # off the list (subprocess.TimeoutExpired, sqlite3.Error) killed the
         # guard thread and every other rule with it.

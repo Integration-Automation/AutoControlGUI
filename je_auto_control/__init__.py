@@ -1110,6 +1110,14 @@ from je_auto_control.utils.rbac import (
     AuthorizationContext, AuthorizationError, UserAuthError, UserRecord,
     UserStore, authorization_scope,
 )
+from je_auto_control.utils.rbac import (
+    DeferredOwner, capture_owner, owner_scope,
+)
+from je_auto_control.utils.rbac.admin import (
+    add_user as rbac_add_user, list_users as rbac_list_users,
+    remove_user as rbac_remove_user, rotate_user_token as rbac_rotate_user_token,
+    set_user_role as rbac_set_user_role,
+)
 # Admin console (headless multi-host client)
 from je_auto_control.utils.admin import (
     AdminConsoleClient, AdminHost, default_admin_console,
@@ -1151,6 +1159,7 @@ from je_auto_control.utils.action_signing import (
     require_signed_actions, sign_action_file, verify_action_file,
 )
 from je_auto_control.utils.exception.exceptions import CryptographyUnavailableError
+from je_auto_control.utils.exception.exceptions import AutoControlSignatureException
 # Observability (Prometheus metrics + OpenTelemetry traces, headless)
 from je_auto_control.utils.observability import (
     Counter as MetricCounter,
@@ -1790,6 +1799,9 @@ __all__ = [
     # RBAC
     "AuthorizationContext", "AuthorizationError", "UserAuthError",
     "UserRecord", "UserStore", "authorization_scope",
+    "DeferredOwner", "capture_owner", "owner_scope",
+    "rbac_add_user", "rbac_list_users", "rbac_remove_user",
+    "rbac_rotate_user_token", "rbac_set_user_role",
     # Admin console
     "AdminConsoleClient", "AdminHost", "default_admin_console",
     # WebRTC inspector
@@ -1821,7 +1833,7 @@ __all__ = [
     # Action-file security (sign + encrypt)
     "VerifyResult", "sign_action_file", "verify_action_file",
     "SigningConfig", "action_signing_config", "create_signing_keypair",
-    "CryptographyUnavailableError",
+    "CryptographyUnavailableError", "AutoControlSignatureException",
     "require_signed_actions", "encrypt_action_file", "decrypt_action_file",
     # Observability (Prometheus + OpenTelemetry)
     "MetricCounter", "MetricGauge", "MetricHistogram",

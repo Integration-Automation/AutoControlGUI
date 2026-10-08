@@ -241,7 +241,7 @@ def test_the_facade_and_the_script_builder_expose_the_key_pair_command():
         assert name in je_auto_control.__all__ and hasattr(je_auto_control, name)
     specs = {spec.command: spec for spec in _build_specs()}
     assert [field.name for field in specs["AC_create_signing_keypair"].fields] == [
-        "private_path", "public_path"]
+        "private_path", "public_path", "passphrase"]
     assert "private_key_path" in [f.name for f in specs["AC_sign_action_file"].fields]
     assert "public_key_path" in [f.name for f in specs["AC_verify_action_file"].fields]
 

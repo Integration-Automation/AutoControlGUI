@@ -304,11 +304,33 @@ share one file. Without a store nothing changes. The stdio transport has no
 bearer token and is never subject to RBAC.
 
 - A tool needs ``read_screen`` when it is marked ``readOnlyHint`` and
-  ``drive_input`` otherwise, so a ``viewer`` gets exactly the read-only
-  tools and an ``operator`` the rest. ``ac_remote_host_start`` / ``_stop``,
+  ``drive_input`` otherwise. ``ac_remote_host_start`` / ``_stop``,
   ``ac_usb_acl_add`` / ``_remove`` / ``_set_default``,
   ``ac_usb_passthrough_enable``, ``ac_egress_allow`` / ``_reset`` and
-  ``ac_load_plugins`` need ``manage_hosts`` (``admin``).
+  ``ac_load_plugins`` need ``manage_hosts`` (``admin``); ``ac_user_add`` /
+  ``_remove`` / ``_set_role`` / ``_rotate_token`` / ``_list`` need
+  ``manage_users`` (``admin``).
+- Read-only is not the same as harmless to show: the read-only tools that
+  return the host's data rather than the state of its screen need
+  ``read_data``, which ``operator`` and ``admin`` hold and ``viewer`` does
+  not. They are the clipboard tools (``ac_get_clipboard`` and its
+  ``_csv`` / ``_files`` / ``_html`` / ``_image`` / ``_rtf`` variants,
+  ``ac_clipboard_formats``, ``ac_assert_clipboard``, ``ac_clip_history_list``
+  / ``_search``); the file readers (``ac_load_dotenv``, ``ac_load_data``,
+  ``ac_read_action_file``, ``ac_read_document``, ``ac_read_presentation``,
+  ``ac_read_workbook``, ``ac_extract_pdf_text``, ``ac_assert_pdf_text``,
+  ``ac_assert_file``, ``ac_build_provenance``, ``ac_verify_provenance``); the
+  database and store readers (``ac_sql_query``, ``ac_assert_db``,
+  ``ac_get_asset``, ``ac_list_assets``, ``ac_cas_get``, ``ac_outbox_pending``,
+  ``ac_checkpoint_status``, ``ac_memory_recall``, ``ac_memory_recent``,
+  ``ac_s3_list``); references and tokens (``ac_resolve_ref``,
+  ``ac_resolve_refs``, ``ac_generate_otp``, ``ac_jwt_encode``,
+  ``ac_jwt_decode``); and the process list, network and microphone probes
+  (``ac_list_processes``, ``ac_assert_process``, ``ac_wait_for_process``,
+  ``ac_assert_http``, ``ac_wait_for_port``, ``ac_assert_audio``). The list is
+  ``DATA_TOOLS`` in ``je_auto_control.utils.rbac.policy``. A ``viewer`` keeps
+  every other read-only tool: screen size, windows, pixels, image and text
+  location, accessibility reads, waits.
 - ``tools/list`` returns only the tools the caller may call, and
   ``tools/call`` on any other answers JSON-RPC error ``-32003``
   (``Forbidden: ...``, ``data.required_capability``) without running it.

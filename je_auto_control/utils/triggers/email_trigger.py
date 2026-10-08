@@ -30,6 +30,7 @@ from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.run_history.artifact_manager import (
     capture_error_snapshot,
 )
+from je_auto_control.utils.rbac.deferred import DeferredOwner, capture_owner
 from je_auto_control.utils.run_history.run_outcome import run_counting_failures
 from je_auto_control.utils.run_history.history_store import (
     SOURCE_TRIGGER, STATUS_ERROR, STATUS_OK, default_history_store,
@@ -62,6 +63,8 @@ class EmailTrigger:
     _seen_uids: set = field(default_factory=set, repr=False)
     _inflight: set = field(default_factory=set, repr=False)
     _uidvalidity: Optional[str] = field(default=None, repr=False)
+    #: Who registered it under RBAC; the run is authorised as that user.
+    owner: Optional[DeferredOwner] = field(default=None, kw_only=True)
 
 
 def _decode_header_value(value: Optional[str]) -> str:
@@ -283,6 +286,7 @@ class EmailTriggerWatcher:
             search_criteria=str(search_criteria or "UNSEEN"),
             mark_seen=bool(mark_seen),
             poll_seconds=max(_MIN_POLL_SECONDS, float(poll_seconds)),
+            owner=capture_owner(),
         )
         with self._lock:
             self._triggers[trigger.trigger_id] = trigger
@@ -487,7 +491,7 @@ class EmailTriggerWatcher:
             error_text: Optional[str] = None
             try:
                 actions = read_executable_action_json(trigger.script_path)
-                run_counting_failures(lambda: self._executor(actions, payload))
+                run_counting_failures(lambda: self._executor(actions, payload), owner=trigger.owner)
             # Any failure is recorded as STATUS_ERROR -- not a bogus
             # STATUS_OK from the finally below -- before re-raising.
             except Exception as error:  # noqa: BLE001  # reason: re-raised

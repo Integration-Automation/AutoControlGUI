@@ -14,7 +14,7 @@ Usage::
 import sys
 import threading
 import uuid
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Callable, Dict, FrozenSet, List, Optional, Tuple
 
 from je_auto_control.utils.exception.exceptions import AutoControlException
@@ -23,6 +23,7 @@ from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.run_history.artifact_manager import (
     capture_error_snapshot,
 )
+from je_auto_control.utils.rbac.deferred import DeferredOwner, capture_owner
 from je_auto_control.utils.run_history.run_outcome import run_counting_failures
 from je_auto_control.utils.run_history.history_store import (
     SOURCE_HOTKEY, STATUS_ERROR, STATUS_OK, default_history_store,
@@ -52,6 +53,8 @@ class HotkeyBinding:
     script_path: str
     enabled: bool = True
     fired: int = 0
+    #: Who registered it under RBAC; the run is authorised as that user.
+    owner: Optional[DeferredOwner] = field(default=None, kw_only=True)
 
 
 def split_combo(combo: str) -> Tuple[FrozenSet[str], str]:
@@ -157,6 +160,7 @@ class HotkeyDaemon:
         bid = binding_id or uuid.uuid4().hex[:8]
         binding = HotkeyBinding(
             binding_id=bid, combo=combo, script_path=script_path,
+            owner=capture_owner(),
         )
         with self._lock:
             self._bindings[bid] = binding
@@ -219,7 +223,7 @@ class HotkeyDaemon:
         error_text: Optional[str] = None
         try:
             actions = read_executable_action_json(match.script_path)
-            run_counting_failures(lambda: self._execute(actions))
+            run_counting_failures(lambda: self._execute(actions), owner=match.owner)
         except Exception as error:  # noqa: BLE001  # reason: this runs on the backend's listener thread; any escape ends every hotkey
             # AutoControlException covers the common cases — a missing/renamed
             # script (AutoControlJsonActionException) or an action that raises

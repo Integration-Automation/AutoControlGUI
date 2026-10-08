@@ -6,8 +6,10 @@ Three surfaces, one rule each:
   ``manage_hosts``, so a route added without a decision is admin-only rather
   than open.
 * **MCP tools** follow their own annotation -- a tool marked read-only needs
-  ``read_screen``, any other ``drive_input`` -- except the few named here
-  that change how the host itself is exposed.
+  ``read_screen``, any other ``drive_input`` -- except the ones named here:
+  those that change how the host itself is exposed, those that manage users,
+  and the read-only tools that hand back the host's data rather than what is
+  on its screen (``read_data``).
 * **``AC_*`` commands** reach the executor through anything that runs an
   action list (``POST /execute``, ``ac_execute_actions``, an action file).
   Being allowed to run actions is ``drive_input``; the commands named here
@@ -33,6 +35,8 @@ _READ = Capability.READ_SCREEN
 _DRIVE = Capability.DRIVE_INPUT
 _HOSTS = Capability.MANAGE_HOSTS
 _AUDIT = Capability.READ_AUDIT
+_USERS = Capability.MANAGE_USERS
+_DATA = Capability.READ_DATA
 
 REST_ROUTE_CAPABILITIES: Dict[Tuple[str, str], str] = {
     ("GET", "/metrics"): _READ,
@@ -113,7 +117,38 @@ COMMAND_CAPABILITIES: Dict[str, str] = {
     "AC_secret_remove": _HOSTS,
     "AC_secret_unlock": _HOSTS,
     "AC_secret_lock": _HOSTS,
+    "AC_user_add": _USERS,
+    "AC_user_remove": _USERS,
+    "AC_user_set_role": _USERS,
+    "AC_user_rotate_token": _USERS,
+    "AC_user_list": _USERS,
 }
+
+#: Read-only MCP tools that expose data rather than screen state. "Read-only"
+#: says a tool changes nothing; it does not say that what it returns is
+#: something a viewer of the desktop was meant to see.
+DATA_TOOLS = frozenset({
+    # the clipboard and its history
+    "ac_get_clipboard", "ac_get_clipboard_csv", "ac_get_clipboard_files",
+    "ac_get_clipboard_html", "ac_get_clipboard_image", "ac_get_clipboard_rtf",
+    "ac_clipboard_formats", "ac_assert_clipboard",
+    "ac_clip_history_list", "ac_clip_history_search",
+    # files: their content, or an oracle on it (substring, digest)
+    "ac_load_dotenv", "ac_load_data", "ac_read_action_file", "ac_read_document",
+    "ac_read_presentation", "ac_read_workbook", "ac_extract_pdf_text",
+    "ac_assert_pdf_text", "ac_assert_file", "ac_build_provenance",
+    "ac_verify_provenance",
+    # databases and the named stores kept on the host
+    "ac_sql_query", "ac_assert_db", "ac_get_asset", "ac_list_assets",
+    "ac_cas_get", "ac_outbox_pending", "ac_checkpoint_status",
+    "ac_memory_recall", "ac_memory_recent", "ac_s3_list",
+    # references into the environment, files and the secrets vault; tokens
+    "ac_resolve_ref", "ac_resolve_refs", "ac_generate_otp",
+    "ac_jwt_encode", "ac_jwt_decode",
+    # the process list, the network as seen from the host, the microphone
+    "ac_list_processes", "ac_assert_process", "ac_wait_for_process",
+    "ac_assert_http", "ac_wait_for_port", "ac_assert_audio",
+})
 
 #: MCP tools whose capability is not the one their read-only hint implies.
 TOOL_CAPABILITIES: Dict[str, str] = {
@@ -126,6 +161,12 @@ TOOL_CAPABILITIES: Dict[str, str] = {
     "ac_egress_allow": _HOSTS,
     "ac_egress_reset": _HOSTS,
     "ac_load_plugins": _HOSTS,
+    "ac_user_add": _USERS,
+    "ac_user_remove": _USERS,
+    "ac_user_set_role": _USERS,
+    "ac_user_rotate_token": _USERS,
+    "ac_user_list": _USERS,
+    **{name: _DATA for name in DATA_TOOLS},
 }
 
 
@@ -202,7 +243,7 @@ def _leading_names(node: Any, depth: int) -> Iterator[str]:
 
 
 __all__ = [
-    "COMMAND_CAPABILITIES", "REST_ROUTE_CAPABILITIES", "TOOL_CAPABILITIES",
+    "COMMAND_CAPABILITIES", "DATA_TOOLS", "REST_ROUTE_CAPABILITIES", "TOOL_CAPABILITIES",
     "authorize_command", "capability_for_command", "capability_for_route",
     "capability_for_tool", "denied_command_in",
 ]

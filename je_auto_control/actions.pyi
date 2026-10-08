@@ -808,7 +808,7 @@ def AC_costs_summary(limit: int = ...) -> Dict[str, Any]:
 def AC_create_project(project_path: str | None = ..., parent_name: str = ...) -> None:
     """Create project directory structure and templates."""
 
-def AC_create_signing_keypair(private_path: str, public_path: str) -> Dict[str, Any]:
+def AC_create_signing_keypair(private_path: str, public_path: str, passphrase: str | None = ...) -> Dict[str, Any]:
     """Executor adapter: create an Ed25519 action-signing key pair."""
 
 def AC_critical_steps(steps: Any, top: Any = ...) -> Dict[str, Any]:
@@ -2744,7 +2744,12 @@ def AC_shard_suite(
 def AC_shell_command(shell_command: str | List[str] | None = ..., *, command: str | List[str] | None = ...) -> None:
     """Execute shell command with shell=False."""
 
-def AC_sign_action_file(path: str, key: str | None = ..., private_key_path: str | None = ...) -> Dict[str, Any]:
+def AC_sign_action_file(
+    path: str,
+    key: str | None = ...,
+    private_key_path: str | None = ...,
+    passphrase: str | None = ...,
+) -> Dict[str, Any]:
     """Executor adapter: write an Ed25519 or HMAC signature sidecar for a file."""
 
 def AC_simhash(text: str, bits: Any = ...) -> Dict[str, Any]:
@@ -3031,6 +3036,27 @@ def AC_usb_watch_start(poll_interval_s: float = ...) -> Dict[str, Any]:
 
 def AC_usb_watch_stop() -> Dict[str, Any]:
     ...
+
+def AC_user_add(
+    user_id: str,
+    role: str = ...,
+    display_name: str = ...,
+    tags: List[str] | None = ...,
+    users_path: str | None = ...,
+) -> Dict[str, Any]:
+    """Executor adapter: add an RBAC user; the reply carries its token, once."""
+
+def AC_user_list(users_path: str | None = ...) -> List[Dict[str, Any]]:
+    """Executor adapter: list RBAC users (no tokens, no hashes)."""
+
+def AC_user_remove(user_id: str, users_path: str | None = ...) -> Dict[str, Any]:
+    """Executor adapter: remove an RBAC user."""
+
+def AC_user_rotate_token(user_id: str, users_path: str | None = ...) -> Dict[str, Any]:
+    """Executor adapter: replace an RBAC user's token; the reply carries it, once."""
+
+def AC_user_set_role(user_id: str, role: str, users_path: str | None = ...) -> Dict[str, Any]:
+    """Executor adapter: change an RBAC user's role."""
 
 def AC_validate_action(action: Any, screen: Any = ..., targets: Any = ...) -> Dict[str, Any]:
     """Adapter: validate a coordinate action (bounds + optional snap-to-target)."""
