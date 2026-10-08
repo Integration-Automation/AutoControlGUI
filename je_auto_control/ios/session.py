@@ -1,0 +1,91 @@
+"""One iOS device as a :class:`DeviceSession`: its own WebDriverAgent client."""
+from __future__ import annotations
+
+from typing import Any, Dict, Optional, Tuple
+
+from je_auto_control.ios.client import IOSDevice, translate_device_errors
+from je_auto_control.wrapper.device_context import (
+    CAPABILITY_NAMES, STATE_AVAILABLE, STATE_NEEDS_DEPENDENCY,
+    DeviceCapability, DeviceContext, DeviceError, DeviceSession, bound_session,
+)
+
+#: Capabilities WebDriverAgent itself provides.
+_WDA_CAPABILITIES = ("input", "unicode_text", "multi_touch", "screenshot", "ui_tree",
+                     "app_lifecycle", "alerts")
+#: Capabilities WebDriverAgent has no endpoint for.
+_ADAPTER_CAPABILITIES = ("install", "files", "clipboard", "recording")
+_NEEDS_ADAPTER = ("WebDriverAgent has no API for this; it needs a host-side adapter "
+                  "(for example tidevice, pymobiledevice3 or Appium)")
+
+
+@translate_device_errors
+def _wda_status(handle: Any) -> Dict[str, Any]:
+    """``GET /status`` — a read; nothing is sent to the app under test."""
+    return dict(handle.status() or {})
+
+
+class IOSSession(DeviceSession):
+    """An iOS device addressed by its WebDriverAgent URL.
+
+    The client is built on first use and belongs to this session alone; an
+    :class:`IOSDevice` handed in by the caller is used but not owned. Closing
+    the session never terminates an app or deletes a remote WDA session: it
+    releases the local client only.
+    """
+
+    def __init__(self, context: DeviceContext, *,
+                 device: Optional[IOSDevice] = None) -> None:
+        super().__init__(context)
+        self._device = device
+        self._injected = device is not None
+
+    @property
+    def device(self) -> IOSDevice:
+        """This session's :class:`IOSDevice`, bound to the context's URL."""
+        self.check_usable()
+        with self._state_lock:
+            if self._device is None:
+                self._device = IOSDevice(url=self.device_id or None)
+            return self._device
+
+    def status(self) -> Dict[str, Any]:
+        """WebDriverAgent's ``/status`` document."""
+        return self.invoke("status", lambda: _wda_status(self.device.handle))
+
+    def capabilities(self) -> Dict[str, DeviceCapability]:
+        """What this device can do right now; only ``GET /status`` is sent."""
+        return self.invoke("capabilities", self._probe)
+
+    def _probe(self) -> Dict[str, DeviceCapability]:
+        blocker = self._blocker()
+        if blocker is not None:
+            state, reason = blocker
+            return {name: DeviceCapability(name, state, reason) for name in CAPABILITY_NAMES}
+        found = {name: DeviceCapability(name, STATE_AVAILABLE) for name in _WDA_CAPABILITIES}
+        for name in _ADAPTER_CAPABILITIES:
+            found[name] = self._adapter_capability(name)
+        return {name: found[name] for name in CAPABILITY_NAMES}
+
+    def _blocker(self) -> Optional[Tuple[str, str]]:
+        """Why nothing can be used: ``(state, reason)``, or ``None`` when WDA answers."""
+        try:
+            _wda_status(self.device.handle)
+        except (DeviceError, OSError) as error:
+            return STATE_NEEDS_DEPENDENCY, str(error)
+        return None
+
+    def _adapter_capability(self, name: str) -> DeviceCapability:
+        return DeviceCapability(name, STATE_NEEDS_DEPENDENCY, _NEEDS_ADAPTER)
+
+    def _release(self) -> None:
+        if not self._injected:
+            self._device = None
+
+
+def bound_ios_session(url: Optional[str] = None) -> Optional[IOSSession]:
+    """The iOS session bound by ``use_device`` when ``url`` addresses it."""
+    session = bound_session("ios", url)
+    return session if isinstance(session, IOSSession) else None
+
+
+__all__ = ["IOSSession", "bound_ios_session"]

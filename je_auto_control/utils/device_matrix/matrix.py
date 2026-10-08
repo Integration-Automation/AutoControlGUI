@@ -6,6 +6,12 @@ devices *in parallel*, giving each device its own isolated executor (so the
 runtime variable scopes never collide between threads) and aggregating the
 per-device pass/fail outcome.
 
+Each mobile device also gets its own :class:`DeviceSession`, opened from an
+explicit :class:`DeviceContext` and bound for the duration of that device's
+run. An ``AC_android_*`` / ``AC_ios_*`` step that names no ``serial`` / ``url``
+therefore reaches the device its worker is running, never a process-wide
+default another worker could have set.
+
 The action list addresses the current device through a bound variable, e.g.
 ``${device.serial}`` / ``${device.url}``, so the same script targets every
 device::
@@ -25,6 +31,7 @@ from dataclasses import asdict, dataclass, field
 from typing import Any, Dict, List, Optional
 
 from je_auto_control.utils.exception.exceptions import AutoControlException
+from je_auto_control.wrapper.device_context import DeviceContext, open_device, use_device
 
 
 @dataclass
@@ -87,7 +94,13 @@ def _run_one_device(actions: List[Any], device: Dict[str, Any],
     platform = str(device.get("platform", ""))
     started = time.monotonic()
     try:
-        runner.execute_action(actions, raise_on_error=True)
+        context = DeviceContext.from_spec(device)
+        if context is None:
+            # Not a mobile spec: nothing to bind, the list runs as written.
+            runner.execute_action(actions, raise_on_error=True)
+        else:
+            with open_device(context) as session, use_device(session):
+                runner.execute_action(actions, raise_on_error=True)
         return DeviceResult(device_id, platform, True,
                             time.monotonic() - started)
     # The executor's own containment set: an ImageNotFoundException or a

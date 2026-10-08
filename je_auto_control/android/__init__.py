@@ -25,12 +25,15 @@ Two entry points:
 
 The ADB binary is **not** bundled — install `Android Platform Tools
 <https://developer.android.com/tools/releases/platform-tools>`_ and
-make sure ``adb`` is on ``PATH``. iOS support is deliberately not in
-this phase; it needs a Mac + paid Apple Developer cert to sideload
-WebDriverAgent, which is its own infrastructure problem.
+make sure ``adb`` is on ``PATH``. iOS lives in :mod:`je_auto_control.ios`.
+
+To drive several devices from one process, open one session per device with
+:func:`je_auto_control.wrapper.device_context.open_device` instead of relying
+on a default serial: each :class:`AndroidSession` owns its own client.
 """
 from je_auto_control.android.adb_client import (
-    AdbClient, AdbError, AdbNotAvailable, AndroidDevice,
+    AdbClient, AdbDeviceMissingError, AdbError, AdbNotAvailable,
+    AdbTimeoutError, AdbUnauthorizedError, AndroidDevice,
 )
 from je_auto_control.android.client import (
     UIAutomatorDevice, UIAutomatorUnavailableError,
@@ -39,9 +42,11 @@ from je_auto_control.android.client import (
 from je_auto_control.android.find import (
     ElementNotFoundError, click_element, dump_hierarchy, find_element,
 )
+from je_auto_control.android.session import AndroidSession
 
 __all__ = [
-    "AdbClient", "AdbError", "AdbNotAvailable", "AndroidDevice",
+    "AdbClient", "AdbDeviceMissingError", "AdbError", "AdbNotAvailable",
+    "AdbTimeoutError", "AdbUnauthorizedError", "AndroidDevice", "AndroidSession",
     "ElementNotFoundError",
     "UIAutomatorDevice", "UIAutomatorUnavailableError",
     "click_element", "default_ui_device", "dump_hierarchy",

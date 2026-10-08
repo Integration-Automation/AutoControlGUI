@@ -1038,6 +1038,12 @@ from je_auto_control.utils.a11y_audit import (
 from je_auto_control.utils.device_matrix import (
     DeviceResult, MatrixReport, run_on_devices,
 )
+# Mobile device contexts (one isolated session per Android / iOS device)
+from je_auto_control.wrapper.device_context import (
+    DeviceCancelledError, DeviceCapability, DeviceClosedError, DeviceContext,
+    DeviceError, DevicePermissionError, DeviceSession, DeviceTimeoutError,
+    DeviceUnavailableError, DeviceUnsupportedError, open_device, use_device,
+)
 # Media assertions (audio activity, video motion)
 from je_auto_control.utils.media_assert import (
     MediaAssertionResult, assert_audio_activity, assert_video_changes,
@@ -1934,6 +1940,10 @@ __all__ = [
     "wcag_audit",
     # Mobile device matrix
     "DeviceResult", "MatrixReport", "run_on_devices",
+    # Mobile device contexts
+    "DeviceCancelledError", "DeviceCapability", "DeviceClosedError", "DeviceContext",
+    "DeviceError", "DevicePermissionError", "DeviceSession", "DeviceTimeoutError",
+    "DeviceUnavailableError", "DeviceUnsupportedError", "open_device", "use_device",
     # Media assertions
     "MediaAssertionResult", "assert_audio_activity", "assert_video_changes",
     "measure_audio_rms", "video_segment_motion",

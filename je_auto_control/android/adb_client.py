@@ -9,17 +9,62 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import List, Optional, Sequence
 
-from je_auto_control.utils.exception.exceptions import AutoControlException
+from je_auto_control.wrapper.device_context import (
+    DeviceError, DevicePermissionError, DeviceTimeoutError, DeviceUnavailableError,
+    DeviceUnsupportedError,
+)
 
 _DEFAULT_TIMEOUT_S = 30.0
 
 
-class AdbError(AutoControlException, RuntimeError):
+class AdbError(DeviceError):
     """Raised when adb returns a non-zero exit code."""
 
 
-class AdbNotAvailable(AutoControlException, RuntimeError):
+class AdbNotAvailable(DeviceUnavailableError):
     """Raised when the adb binary isn't on PATH and no path was supplied."""
+
+
+class AdbTimeoutError(AdbError, DeviceTimeoutError):
+    """Raised when adb did not answer within the client's timeout."""
+
+
+class AdbUnauthorizedError(AdbError, DevicePermissionError):
+    """Raised when the device has not authorised this host for USB debugging."""
+
+
+class AdbDeviceMissingError(AdbError, DeviceUnavailableError):
+    """Raised when the addressed device is offline or not attached."""
+
+
+class AdbUnsupportedError(AdbError, DeviceUnsupportedError):
+    """Raised when adb on this device cannot do what was asked."""
+
+
+def adb_text_safe(value: str) -> bool:
+    """Whether ``adb shell input text`` delivers ``value`` unchanged.
+
+    It maps characters through the key character map, so only printable ASCII
+    arrives; and it turns every ``%s`` into a space with no escape for it.
+    """
+    return "%s" not in value and all(" " <= char <= "~" for char in value)
+
+
+#: adb's own wording for a refused or absent device, mapped to the typed error.
+#: Anchored on "device": a shell's "sh: foo: not found" is not a missing device.
+_STDERR_ERRORS = (
+    (re.compile(r"device unauthorized|no permissions"), AdbUnauthorizedError),
+    (re.compile(r"device (?:'[^']*' )?not found|device offline|no devices/emulators found"
+                r"|more than one device"), AdbDeviceMissingError),
+)
+
+
+def _exit_error(args: Sequence[str], returncode: int, stderr: str) -> AdbError:
+    """The typed error for a non-zero adb exit."""
+    lowered = stderr.lower()
+    kind = next((error for pattern, error in _STDERR_ERRORS if pattern.search(lowered)),
+                AdbError)
+    return kind(f"{_describe(args)} exited {returncode}: {stderr}")
 
 
 @dataclass
@@ -72,6 +117,11 @@ class AdbClient:
     def adb_path(self) -> str:
         return self._adb
 
+    @property
+    def default_serial(self) -> Optional[str]:
+        """The serial every call targets when it names none."""
+        return self._default_serial
+
     # --- low-level command runner -------------------------------------
 
     def run(self, args: Sequence[str], *, serial: Optional[str] = None,
@@ -90,13 +140,15 @@ class AdbClient:
                 capture_output=True, timeout=timeout or self._timeout,
                 check=False,
             )
+        except subprocess.TimeoutExpired as error:
+            # Not str(error): TimeoutExpired quotes the whole argv, typed text included.
+            raise AdbTimeoutError(
+                f"{_describe(args)} timed out after {timeout or self._timeout:g}s") from error
         except (OSError, subprocess.SubprocessError) as error:
             raise AdbError(f"{_describe(args)} failed: {error}") from error
         if check and result.returncode != 0:
             stderr = result.stderr.decode("utf-8", errors="replace").strip()
-            raise AdbError(
-                f"{_describe(args)} exited {result.returncode}: {stderr}",
-            )
+            raise _exit_error(args, result.returncode, stderr)
         return result
 
     def shell(self, command: str, *, serial: Optional[str] = None,
@@ -139,6 +191,27 @@ class AdbClient:
             ))
         return devices
 
+    def device_state(self, serial: Optional[str] = None) -> str:
+        """The ``adb devices`` state of one device, or ``""`` when it is not listed.
+
+        With no serial (and no default one) the answer is the single attached
+        device's state; several devices and no serial is ``""``.
+        """
+        target = serial if serial is not None else self._default_serial
+        devices = self.list_devices()
+        if target:
+            return next((d.state for d in devices if d.serial == target), "")
+        return devices[0].state if len(devices) == 1 else ""
+
+    def version(self) -> str:
+        """The adb build, e.g. ``"1.0.41 (35.0.2-12147458)"``."""
+        out = self.run(["version"]).stdout.decode("utf-8", errors="replace")
+        release = re.search(r"Android Debug Bridge version (\S+)", out)
+        build = re.search(r"^Version (\S+)", out, re.MULTILINE)
+        parts = [release.group(1) if release else "",
+                 f"({build.group(1)})" if build else ""]
+        return " ".join(part for part in parts if part)
+
     # --- input -------------------------------------------------------
 
     def tap(self, x: int, y: int, *, serial: Optional[str] = None) -> None:
@@ -154,6 +227,19 @@ class AdbClient:
             f"{int(duration_ms)}",
             serial=serial,
         )
+
+    def input_command(self, command: str, *, serial: Optional[str] = None,
+                      timeout: Optional[float] = None) -> None:
+        """Run ``adb shell input <command>``, raising when ``input`` rejected it.
+
+        An ``input`` build that does not know a subcommand prints its usage
+        and can still exit 0.
+        """
+        out = self.shell(f"input {command}", serial=serial, timeout=timeout)
+        if "Unknown command" in out or out.lstrip().startswith("Error:"):
+            raise AdbUnsupportedError(
+                f"this device's `input` does not support `{command.split()[0]}`",
+                alternative="uiautomator2 (pip install uiautomator2)")
 
     def key_event(self, key: str, *, serial: Optional[str] = None) -> None:
         """Send a keycode — accepts ``KEYCODE_HOME`` or numeric codes."""
@@ -174,11 +260,19 @@ class AdbClient:
     def text(self, value: str, *, serial: Optional[str] = None) -> None:
         """Type ``value`` via ``input text``. Spaces are %s-escaped.
 
-        ``input text`` itself turns every ``%s`` into a space and offers no
-        escape for it, so a literal ``%s`` in ``value`` arrives as a space.
+        ``input text`` carries printable ASCII only and turns every ``%s``
+        into a space with no escape for it, while reporting success either
+        way. Text it cannot deliver is refused here rather than sent;
+        :func:`je_auto_control.android.input.type_text` picks a path that can.
         """
         if not isinstance(value, str):
             raise AdbError(f"text must be a string, got {type(value).__name__}")
+        if not adb_text_safe(value):
+            raise AdbUnsupportedError(
+                "adb input text cannot deliver this text (non-ASCII characters or a "
+                "literal %s); it would be dropped or altered while reporting success",
+                alternative="type_text() / AC_android_type_text, which use the "
+                            "ADBKeyBoard IME or uiautomator2")
         # ``input text`` mangles spaces; the official workaround is to
         # replace them with %s before passing through the shell layer.
         escaped = value.replace(" ", "%s")
@@ -210,4 +304,8 @@ class AdbClient:
         return target
 
 
-__all__ = ["AdbClient", "AdbError", "AdbNotAvailable", "AndroidDevice"]
+__all__ = [
+    "AdbClient", "AdbDeviceMissingError", "AdbError", "AdbNotAvailable",
+    "AdbTimeoutError", "AdbUnauthorizedError", "AdbUnsupportedError",
+    "AndroidDevice", "adb_text_safe",
+]
