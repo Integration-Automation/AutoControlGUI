@@ -178,6 +178,57 @@ english_word_dict = {
     "diag_col_detail": "Detail",
     "diag_status_ok": "OK",
     "diag_status_fail": "FAIL",
+    # Diagnostics tab: capability and authorisation states
+    "diag_capabilities_title": "What this session can do",
+    "diag_capabilities_refresh": "Refresh capabilities",
+    "diag_input_reask": "Ask for input permission again",
+    "diag_input_close": "End the input session",
+    "diag_cap_col_name": "Capability",
+    "diag_cap_col_state": "State",
+    "diag_cap_col_backend": "Backend",
+    "diag_cap_col_scope": "Reaches",
+    "diag_cap_col_detail": "Detail",
+    "diag_cap_col_fix": "What to do",
+    "cap_name_input": "Keyboard and mouse input",
+    "cap_name_capture": "Screen capture",
+    "cap_name_recording": "Recording your own input",
+    "cap_name_stop_shortcut": "Global stop key",
+    "cap_state_available": "Available",
+    "cap_state_not_requested": "Not asked yet",
+    "cap_state_requesting": "Waiting for your answer",
+    "cap_state_needs_permission": "Needs permission",
+    "cap_state_needs_setup": "Needs setup",
+    "cap_state_session_closed": "Session closed",
+    "cap_state_revoked": "Revoked by the desktop",
+    "cap_state_compositor_restarted": "Desktop was restarted",
+    "cap_state_unsupported": "Not supported",
+    "cap_state_unknown": "Not checked",
+    "cap_scope_desktop": "Whole desktop",
+    "cap_scope_xwayland": "X11 applications only (XWayland)",
+    "cap_fix_input_consent": (
+        "Choose Actions > Ask for input permission again, repeat the action, "
+        "and allow the request. To use ydotool instead, set "
+        "JE_AUTOCONTROL_WAYLAND_INPUT_BACKEND=cli before starting."),
+    "cap_fix_answer_dialog": "Answer the permission dialog on the desktop.",
+    "cap_fix_ydotool": (
+        "Install ydotool 1.0 or newer and run ydotoold with access to "
+        "/dev/uinput, or install libei and liboeffis."),
+    "cap_fix_xwayland": (
+        "Install the Wayland tools (ydotool or libei, and grim, "
+        "gnome-screenshot or spectacle) so the Wayland backend loads."),
+    "cap_fix_display": "Set DISPLAY to a running X server.",
+    "cap_fix_capture": (
+        "Allow the screenshot request, install grim, gnome-screenshot or "
+        "spectacle, or set JE_AUTOCONTROL_WAYLAND_CAPTURE_COMMAND."),
+    "cap_fix_record_setup": (
+        "Name the devices to read in JE_AUTOCONTROL_WAYLAND_RECORD_DEVICES "
+        "(comma-separated /dev/input/event* paths)."),
+    "cap_fix_record_permission": (
+        "Add your user to the input group and log in again, or add a udev "
+        "rule. Do not run the program as root for this."),
+    "cap_fix_stop_manual": (
+        "Stop a running script from the Actions menu or by ending the "
+        "process."),
 
     # USB devices tab
     "usb_backend_label": "Backend:",

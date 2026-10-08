@@ -1481,6 +1481,21 @@ def _diagnose() -> Dict[str, Any]:
     return run_diagnostics().to_dict()
 
 
+def _probe_capabilities() -> Dict[str, Any]:
+    """Executor adapter: capability and authorisation states, no side effect."""
+    from je_auto_control.wrapper.capabilities import probe_capabilities
+    return probe_capabilities().to_dict()
+
+
+def _reset_input_authorisation() -> Dict[str, Any]:
+    """Executor adapter: forget a refused or revoked Wayland input session."""
+    from je_auto_control.linux_wayland._select_input import (
+        reset_input_authorisation,
+    )
+    reset_input_authorisation()
+    return _probe_capabilities()
+
+
 def _config_export() -> Dict[str, Any]:
     """Executor adapter: build the config bundle dict in-memory."""
     from je_auto_control.utils.config_bundle import export_config_bundle
@@ -8061,6 +8076,8 @@ class Executor:
 
             # System diagnostics
             "AC_diagnose": _diagnose,
+            "AC_probe_capabilities": _probe_capabilities,
+            "AC_reset_input_authorisation": _reset_input_authorisation,
 
             # Config bundle export / import
             "AC_config_export": _config_export,

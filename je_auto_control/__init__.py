@@ -1122,6 +1122,25 @@ from je_auto_control.utils.usb import (
 from je_auto_control.utils.diagnostics import (
     Check, DiagnosticsReport, run_diagnostics,
 )
+# Capability and authorisation states (side-effect-free probe)
+from je_auto_control.wrapper.capabilities import (
+    BackendContext, Capability, CapabilitySnapshot, CapabilityStatus,
+    probe_capabilities,
+)
+from je_auto_control.linux_wayland._select_input import (
+    close_input_session, reset_input_authorisation,
+)
+from je_auto_control.linux_wayland.authorisation import (
+    WaylandAuthorisationError,
+)
+# Recording without a global hook, and the Wayland stop shortcut
+from je_auto_control.linux_wayland.input_events import (
+    ActionJournal, InputDevice, InputEvent, InputPermissionError,
+    InputRecordingError, PhysicalRecorder, list_input_devices,
+)
+from je_auto_control.linux_wayland.global_shortcuts import (
+    ShortcutPermissionError, ShortcutUnavailable, StopShortcutSession,
+)
 # Config bundle (export / import user configuration)
 from je_auto_control.utils.config_bundle import (
     ConfigBundleExporter, ConfigBundleImporter, ImportReport,
@@ -1779,6 +1798,14 @@ __all__ = [
     "enable_usb_passthrough", "is_usb_passthrough_enabled",
     # System diagnostics
     "Check", "DiagnosticsReport", "run_diagnostics",
+    # Capability and authorisation states
+    "BackendContext", "Capability", "CapabilitySnapshot", "CapabilityStatus",
+    "probe_capabilities", "close_input_session",
+    "reset_input_authorisation", "WaylandAuthorisationError",
+    # Recording without a global hook, and the Wayland stop shortcut
+    "ActionJournal", "InputDevice", "InputEvent", "InputPermissionError",
+    "InputRecordingError", "PhysicalRecorder", "list_input_devices",
+    "ShortcutPermissionError", "ShortcutUnavailable", "StopShortcutSession",
     # Config bundle
     "ConfigBundleExporter", "ConfigBundleImporter", "ImportReport",
     "export_config_bundle", "import_config_bundle",

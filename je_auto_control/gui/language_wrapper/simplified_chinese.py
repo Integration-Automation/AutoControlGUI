@@ -58,6 +58,55 @@ simplified_chinese_word_dict = {
     "diag_col_detail": "详情",
     "diag_status_ok": "正常",
     "diag_status_fail": "失败",
+    # 诊断分页:能力与授权状态
+    "diag_capabilities_title": "这个会话现在能做什么",
+    "diag_capabilities_refresh": "刷新能力状态",
+    "diag_input_reask": "重新请求输入授权",
+    "diag_input_close": "结束输入会话",
+    "diag_cap_col_name": "能力",
+    "diag_cap_col_state": "状态",
+    "diag_cap_col_backend": "后端",
+    "diag_cap_col_scope": "作用范围",
+    "diag_cap_col_detail": "详情",
+    "diag_cap_col_fix": "怎么处理",
+    "cap_name_input": "键盘与鼠标输入",
+    "cap_name_capture": "屏幕截取",
+    "cap_name_recording": "录制自己的输入",
+    "cap_name_stop_shortcut": "全局停止键",
+    "cap_state_available": "可用",
+    "cap_state_not_requested": "尚未请求",
+    "cap_state_requesting": "等待您回应",
+    "cap_state_needs_permission": "需要授权",
+    "cap_state_needs_setup": "需要设置",
+    "cap_state_session_closed": "会话已关闭",
+    "cap_state_revoked": "已被桌面撤销",
+    "cap_state_compositor_restarted": "桌面已重启",
+    "cap_state_unsupported": "不支持",
+    "cap_state_unknown": "未检查",
+    "cap_scope_desktop": "整个桌面",
+    "cap_scope_xwayland": "仅 X11 应用程序 (XWayland)",
+    "cap_fix_input_consent": (
+        "选择「操作」>「重新请求输入授权」,重做一次动作并允许请求。"
+        "若要改用 ydotool,请在启动前设置 "
+        "JE_AUTOCONTROL_WAYLAND_INPUT_BACKEND=cli。"),
+    "cap_fix_answer_dialog": "请回应桌面上的授权对话框。",
+    "cap_fix_ydotool": (
+        "安装 ydotool 1.0 或更新版本,并以可访问 /dev/uinput 的权限运行 "
+        "ydotoold;或安装 libei 与 liboeffis。"),
+    "cap_fix_xwayland": (
+        "安装 Wayland 工具(ydotool 或 libei,以及 grim、gnome-screenshot "
+        "或 spectacle),让 Wayland 后端可以加载。"),
+    "cap_fix_display": "请把 DISPLAY 设为运行中的 X 服务器。",
+    "cap_fix_capture": (
+        "允许截图请求,安装 grim、gnome-screenshot 或 spectacle,或设置 "
+        "JE_AUTOCONTROL_WAYLAND_CAPTURE_COMMAND。"),
+    "cap_fix_record_setup": (
+        "在 JE_AUTOCONTROL_WAYLAND_RECORD_DEVICES 指定要读取的设备"
+        "(以逗号分隔的 /dev/input/event* 路径)。"),
+    "cap_fix_record_permission": (
+        "把用户加入 input 组后重新登录,或添加 udev 规则。"
+        "不要为此以 root 运行整个程序。"),
+    "cap_fix_stop_manual": "请从「操作」菜单停止运行中的脚本,或结束进程。",
 
     # USB 设备分页
     "usb_backend_label": "后端:",

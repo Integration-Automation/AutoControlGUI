@@ -2112,6 +2112,9 @@ def AC_press_keyboard_key(keycode: int | str, is_shift: bool = ..., skip_record:
 def AC_press_mouse(mouse_keycode: int | str, x: int | None = ..., y: int | None = ...) -> tuple[Any, int, int] | None:
     """按下滑鼠按鍵"""
 
+def AC_probe_capabilities() -> Dict[str, Any]:
+    """Executor adapter: capability and authorisation states, no side effect."""
+
 def AC_profile_rows(rows: Any, columns: Any = ...) -> Dict[str, Any]:
     """Adapter: profile a row-set into per-column statistics."""
 
@@ -2325,6 +2328,9 @@ def AC_replay_timeline(events: List[Dict[str, Any]], speed: float = ...) -> Dict
 
 def AC_replay_trace(trace: Any) -> Dict[str, Any]:
     """Adapter: replay a trajectory by running each step's action via the executor."""
+
+def AC_reset_input_authorisation() -> Dict[str, Any]:
+    """Executor adapter: forget a refused or revoked Wayland input session."""
 
 def AC_resize_element(
     width: Any,

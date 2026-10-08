@@ -59,6 +59,55 @@ traditional_chinese_word_dict = {
     "diag_col_detail": "詳情",
     "diag_status_ok": "正常",
     "diag_status_fail": "失敗",
+    # 診斷分頁:能力與授權狀態
+    "diag_capabilities_title": "這個工作階段現在能做什麼",
+    "diag_capabilities_refresh": "重新整理能力狀態",
+    "diag_input_reask": "重新要求輸入授權",
+    "diag_input_close": "結束輸入工作階段",
+    "diag_cap_col_name": "能力",
+    "diag_cap_col_state": "狀態",
+    "diag_cap_col_backend": "後端",
+    "diag_cap_col_scope": "作用範圍",
+    "diag_cap_col_detail": "詳情",
+    "diag_cap_col_fix": "怎麼處理",
+    "cap_name_input": "鍵盤與滑鼠輸入",
+    "cap_name_capture": "螢幕擷取",
+    "cap_name_recording": "錄製自己的輸入",
+    "cap_name_stop_shortcut": "全域停止鍵",
+    "cap_state_available": "可用",
+    "cap_state_not_requested": "尚未要求",
+    "cap_state_requesting": "等待您回應",
+    "cap_state_needs_permission": "需要授權",
+    "cap_state_needs_setup": "需要設定",
+    "cap_state_session_closed": "工作階段已關閉",
+    "cap_state_revoked": "已被桌面撤銷",
+    "cap_state_compositor_restarted": "桌面已重新啟動",
+    "cap_state_unsupported": "不支援",
+    "cap_state_unknown": "未檢查",
+    "cap_scope_desktop": "整個桌面",
+    "cap_scope_xwayland": "僅 X11 應用程式 (XWayland)",
+    "cap_fix_input_consent": (
+        "選擇「操作」>「重新要求輸入授權」,重做一次動作並允許要求。"
+        "若要改用 ydotool,請在啟動前設定 "
+        "JE_AUTOCONTROL_WAYLAND_INPUT_BACKEND=cli。"),
+    "cap_fix_answer_dialog": "請回應桌面上的授權對話框。",
+    "cap_fix_ydotool": (
+        "安裝 ydotool 1.0 或更新版本,並以可存取 /dev/uinput 的權限執行 "
+        "ydotoold;或安裝 libei 與 liboeffis。"),
+    "cap_fix_xwayland": (
+        "安裝 Wayland 工具(ydotool 或 libei,以及 grim、gnome-screenshot "
+        "或 spectacle),讓 Wayland 後端可以載入。"),
+    "cap_fix_display": "請把 DISPLAY 設為執行中的 X 伺服器。",
+    "cap_fix_capture": (
+        "允許截圖要求,安裝 grim、gnome-screenshot 或 spectacle,或設定 "
+        "JE_AUTOCONTROL_WAYLAND_CAPTURE_COMMAND。"),
+    "cap_fix_record_setup": (
+        "在 JE_AUTOCONTROL_WAYLAND_RECORD_DEVICES 指定要讀取的裝置"
+        "(以逗號分隔的 /dev/input/event* 路徑)。"),
+    "cap_fix_record_permission": (
+        "把使用者加入 input 群組後重新登入,或新增 udev 規則。"
+        "不要為此以 root 執行整個程式。"),
+    "cap_fix_stop_manual": "請從「操作」選單停止執行中的腳本,或結束行程。",
 
     # USB 裝置分頁
     "usb_backend_label": "後端:",

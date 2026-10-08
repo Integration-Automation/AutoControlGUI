@@ -67,6 +67,59 @@ japanese_word_dict = {
     "diag_col_detail": "詳細",
     "diag_status_ok": "OK",
     "diag_status_fail": "失敗",
+    # 診断タブ: 機能と許可の状態
+    "diag_capabilities_title": "このセッションでできること",
+    "diag_capabilities_refresh": "機能の状態を更新",
+    "diag_input_reask": "入力の許可をもう一度求める",
+    "diag_input_close": "入力セッションを終了",
+    "diag_cap_col_name": "機能",
+    "diag_cap_col_state": "状態",
+    "diag_cap_col_backend": "バックエンド",
+    "diag_cap_col_scope": "届く範囲",
+    "diag_cap_col_detail": "詳細",
+    "diag_cap_col_fix": "対処方法",
+    "cap_name_input": "キーボードとマウスの入力",
+    "cap_name_capture": "画面キャプチャ",
+    "cap_name_recording": "自分の入力の記録",
+    "cap_name_stop_shortcut": "グローバル停止キー",
+    "cap_state_available": "利用可能",
+    "cap_state_not_requested": "まだ確認していません",
+    "cap_state_requesting": "回答を待っています",
+    "cap_state_needs_permission": "許可が必要",
+    "cap_state_needs_setup": "設定が必要",
+    "cap_state_session_closed": "セッション終了",
+    "cap_state_revoked": "デスクトップにより取り消し",
+    "cap_state_compositor_restarted": "デスクトップが再起動されました",
+    "cap_state_unsupported": "非対応",
+    "cap_state_unknown": "未確認",
+    "cap_scope_desktop": "デスクトップ全体",
+    "cap_scope_xwayland": "X11 アプリケーションのみ (XWayland)",
+    "cap_fix_input_consent": (
+        "「アクション」>「入力の許可をもう一度求める」を選び、操作をやり直して"
+        "要求を許可してください。代わりに ydotool を使う場合は、起動前に "
+        "JE_AUTOCONTROL_WAYLAND_INPUT_BACKEND=cli を設定します。"),
+    "cap_fix_answer_dialog": "デスクトップの許可ダイアログに回答してください。",
+    "cap_fix_ydotool": (
+        "ydotool 1.0 以降をインストールし、/dev/uinput にアクセスできる "
+        "ydotoold を実行するか、libei と liboeffis をインストールしてください。"),
+    "cap_fix_xwayland": (
+        "Wayland バックエンドが読み込まれるよう、Wayland 用ツール (ydotool "
+        "または libei と、grim・gnome-screenshot・spectacle のいずれか) を"
+        "インストールしてください。"),
+    "cap_fix_display": "DISPLAY を実行中の X サーバーに設定してください。",
+    "cap_fix_capture": (
+        "スクリーンショットの要求を許可するか、grim・gnome-screenshot・"
+        "spectacle のいずれかをインストールするか、"
+        "JE_AUTOCONTROL_WAYLAND_CAPTURE_COMMAND を設定してください。"),
+    "cap_fix_record_setup": (
+        "読み取るデバイスを JE_AUTOCONTROL_WAYLAND_RECORD_DEVICES に指定して"
+        "ください (/dev/input/event* のパスをカンマ区切り)。"),
+    "cap_fix_record_permission": (
+        "ユーザーを input グループに追加してログインし直すか、udev ルールを"
+        "追加してください。このためにプログラムを root で実行しないでください。"),
+    "cap_fix_stop_manual": (
+        "実行中のスクリプトは「アクション」メニューから、またはプロセスを終了して"
+        "停止してください。"),
 
     # USB デバイスタブ
     "usb_backend_label": "バックエンド:",

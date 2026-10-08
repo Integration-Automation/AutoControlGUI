@@ -481,6 +481,19 @@ def window_tools() -> List[MCPTool]:
 def system_tools() -> List[MCPTool]:
     return [
         MCPTool(
+            name="ac_probe_capabilities",
+            description=("Report what this session can do right now — input, "
+                         "capture, recording and the stop shortcut — each "
+                         "with its state (available, needs_permission, "
+                         "needs_setup, revoked, ...), the backend serving "
+                         "it, whether it reaches the whole desktop (false "
+                         "under XWayland) and what to do about it. Asks the "
+                         "desktop for nothing: no consent dialog, no input."),
+            input_schema=schema({}),
+            handler=h_system.probe_capabilities,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
             name="ac_get_clipboard",
             description="Return the current text clipboard contents.",
             input_schema=schema({}),
