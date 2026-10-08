@@ -388,7 +388,7 @@ macOS entitlement、Windows WinUSB 通常不需要）。README 會逐 OS
 
 八個原始未決問題均已拍板，對應實作見上方各節：
 
-1. **OQ1 — Channel 可靠度**：``maxRetransmits=None``（完全可靠有序）。
+1. **OQ1 — Channel 可靠度**：``maxRetransmits=None``\ （完全可靠有序）。
 2. **OQ2 — frame 分片**：已實作 ``fragment_payload`` + EOF 重組。
 3. **OQ3 — ``LIST`` 走 channel**：是，ACL 過濾後經 channel 回傳。
 4. **OQ4 — Backpressure 顆粒度**：per-claim（per-endpoint 屬 YAGNI）。

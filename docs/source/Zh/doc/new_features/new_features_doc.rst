@@ -288,7 +288,7 @@ Action-JSON 指令：``AC_vlm_locate``、``AC_vlm_click``。GUI：
 =======================
 
 排程器、觸發器、熱鍵守護程序、REST API 與 GUI 手動回放的每一次執行
-都會被寫入 ``~/.je_auto_control/history.db``（SQLite）。失敗時會自動
+都會被寫入 ``~/.je_auto_control/history.db``\ （SQLite）。失敗時會自動
 擷取螢幕截圖並附到該筆紀錄上::
 
    from je_auto_control import default_history_store

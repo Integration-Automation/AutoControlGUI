@@ -40,21 +40,6 @@ A tab is built the first time it is opened: the window starts with the three
 default tabs and the forms the main widget owns, and imports the module of
 any other tab only when you open it.
 
-The navigation panel
---------------------
-
-Every registered tab is listed on the left of the window, grouped by the same
-five categories, whether it is open or not; open tabs are shown in bold.
-Click a feature to open it (or bring it to the front). The search box filters
-the list as you type — by title, by key (``usb_devices``) or by category — and
-**Return** opens the first match. ``Ctrl+K`` (**View → Search Features...**)
-puts the cursor in the search box from anywhere, and ``Ctrl+B``
-(**View → Navigation Panel**) hides or shows the panel.
-
-A tab is built the first time it is opened: the window starts with the three
-default tabs and the forms the main widget owns, and imports the module of
-any other tab only when you open it.
-
 The View menu
 -------------
 

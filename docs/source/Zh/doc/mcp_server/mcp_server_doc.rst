@@ -461,7 +461,7 @@ client 不用改,可以和 2026-07-28 的 client 並存。
     只有名稱符合時才會解析，其餘回工具執行錯誤。沒設時和以前一樣，任何變數都讀得到——
     包括放 API 金鑰的那些。
 
-在程式裡，同一份設定是 ``server.argument_policy``（:class:`ArgumentPolicy`，內含
+在程式裡，同一份設定是 ``server.argument_policy``\ （:class:`ArgumentPolicy`，內含
 :class:`je_auto_control.PathPolicy` 與允許清單）；自己建立的伺服器可以指派另一個。
 
 破壞性動作確認(Elicitation)

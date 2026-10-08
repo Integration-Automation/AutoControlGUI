@@ -21,7 +21,6 @@ Comprehensive guides for all AutoControl features.
    doc/socket_driver/socket_driver_doc
    doc/mcp_server/mcp_server_doc
    doc/ai_agents/ai_agents_doc
-   doc/ai_agents/ai_agents_doc
    doc/critical_exit/critical_exit_doc
    doc/cli/cli_doc
    doc/create_project/create_project_doc
