@@ -45,8 +45,10 @@ def locate_image_center(image, detect_threshold: float = 1.0,
         image_data_array = template_detection.find_image(image, detect_threshold, draw_image)
         if image_data_array[0]:
             x1, y1, x2, y2 = image_data_array[1]
-            center_x = int((x1 + x2) / 2)
-            center_y = int((y1 + y2) / 2)
+            # Floor, not int(): truncation rounds toward zero, so on a monitor
+            # left of or above the primary the centre came out one pixel off.
+            center_x = int((x1 + x2) // 2)
+            center_y = int((y1 + y2) // 2)
             record_action_to_list("locate_image_center", {"image": image, "threshold": detect_threshold})
             return center_x, center_y
         raise ImageNotFoundException(f"{cant_find_image_error_message} / {image}")
@@ -70,8 +72,8 @@ def locate_and_click(image, mouse_keycode: Union[int, str],
         image_data_array = template_detection.find_image(image, detect_threshold, draw_image)
         if image_data_array[0]:
             x1, y1, x2, y2 = image_data_array[1]
-            center_x = int((x1 + x2) / 2)
-            center_y = int((y1 + y2) / 2)
+            center_x = int((x1 + x2) // 2)
+            center_y = int((y1 + y2) // 2)
             set_mouse_position(center_x, center_y)
             click_mouse(mouse_keycode)
             record_action_to_list("locate_and_click", {"image": image, "threshold": detect_threshold})
