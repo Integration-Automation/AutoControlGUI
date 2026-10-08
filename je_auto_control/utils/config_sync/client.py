@@ -5,12 +5,19 @@ import json
 import math
 import time
 import urllib.parse
+import uuid
 from dataclasses import asdict, dataclass, field
 from typing import Any, Dict, List, Mapping, Optional, Tuple
 
 from je_auto_control.utils.exception.exceptions import AutoControlException
 
 _DEFAULT_TIMEOUT_S = 5.0
+#: The ``/config`` wire format: a PUT is an envelope naming the revision it
+#: was built on and an operation id, and is refused when that revision is stale.
+WIRE_VERSION = 2
+#: How often :meth:`ConfigSyncClient.sync` fetches, merges and pushes again
+#: after losing a race to another machine before it gives up.
+DEFAULT_SYNC_ATTEMPTS = 4
 
 #: How long a deletion is remembered. A tombstone purged before every machine
 #: has synced lets a machine that still holds the entry bring it back, so this
@@ -25,6 +32,23 @@ def is_tombstone(entry: Mapping[str, Any]) -> bool:
 
 class ConfigSyncError(AutoControlException, RuntimeError):
     """Raised on network errors or schema validation failures."""
+
+
+class ConfigSyncConflict(ConfigSyncError):
+    """The server refused a push built on a revision that is no longer current.
+
+    ``revision`` is the server's current revision when it reported one.
+    Nothing was written: fetch, merge and push again.
+    """
+
+    def __init__(self, message: str, revision: Optional[int] = None) -> None:
+        super().__init__(message)
+        self.revision = revision
+
+
+def new_operation_id() -> str:
+    """A fresh id for one push; reuse it when retrying that same push."""
+    return uuid.uuid4().hex
 
 
 @dataclass
@@ -258,6 +282,14 @@ class ConfigSyncClient:
         status = int(response["status"])
         if status == 404:
             return None
+        if status == 409:
+            raise ConfigSyncConflict(
+                f"config sync {method}: the server is at another revision",
+                _conflict_revision(response.get("text")))
+        if status == 428:
+            raise ConfigSyncError(
+                f"config sync {method} returned HTTP 428: the server only accepts "
+                "revision-checked (version 2) writes")
         if not 200 <= status < 300:
             raise ConfigSyncError(f"config sync {method} returned HTTP {status}")
         if not response.get("text"):
@@ -274,25 +306,72 @@ class ConfigSyncClient:
             return None
         return ConfigBucket.from_dict(body)
 
-    def push(self, bucket: ConfigBucket) -> None:
-        """PUT the bucket to the server, replacing whatever's there."""
+    def push(self, bucket: ConfigBucket, *, base_revision: Optional[int] = None,
+             operation_id: Optional[str] = None) -> int:
+        """PUT the bucket if the server is still at ``base_revision``.
+
+        ``base_revision`` defaults to ``bucket.revision`` -- for a bucket
+        that came from :meth:`fetch` that is the revision it was read at;
+        ``0`` means "there is no bucket yet". Returns the committed revision
+        and stores it in ``bucket.revision``. Raises
+        :class:`ConfigSyncConflict` when another machine pushed in between;
+        nothing is overwritten. Pass the same ``operation_id`` when repeating
+        a push whose reply never arrived: the server answers with the
+        revision the first attempt produced instead of a conflict.
+        """
         if bucket.user_id != self._user_id:
             raise ConfigSyncError(
                 f"bucket user_id={bucket.user_id!r} mismatches client user_id"
                 f"={self._user_id!r}",
             )
-        self._request("PUT", body=bucket.to_dict())
+        base = bucket.revision if base_revision is None else int(base_revision)
+        reply = self._request("PUT", body={
+            "version": WIRE_VERSION, "base_revision": base,
+            "operation_id": operation_id or new_operation_id(),
+            "bucket": bucket.to_dict(),
+        })
+        revision = (reply or {}).get("revision")
+        if isinstance(revision, bool) or not isinstance(revision, int):
+            # A server from before the version-2 format stores any JSON
+            # object and answers {"ok": true}: it did not check anything.
+            raise ConfigSyncError(
+                "config sync PUT: the server did not report a committed revision; "
+                "it predates revision-checked writes and must be upgraded")
+        bucket.revision = revision
+        return revision
 
-    def sync(self, local: ConfigBucket
+    def sync(self, local: ConfigBucket, *, max_attempts: int = DEFAULT_SYNC_ATTEMPTS,
              ) -> Tuple[ConfigBucket, List[ConflictRecord]]:
-        """One-shot bidirectional sync: fetch, merge, push the result."""
-        remote = self.fetch() or ConfigBucket(user_id=self._user_id)
-        merged, conflicts = merge_buckets(local, remote)
-        self.push(merged)
-        return merged, conflicts
+        """Bidirectional sync: fetch, merge, push on top of what was fetched.
+
+        When another machine pushes between the fetch and the push the
+        server refuses the write, and this fetches and merges again -- up to
+        ``max_attempts`` times, then :class:`ConfigSyncConflict`. The
+        returned bucket's ``revision`` is the one the server committed.
+        """
+        for _attempt in range(max(1, int(max_attempts))):
+            remote = self.fetch() or ConfigBucket(user_id=self._user_id)
+            merged, conflicts = merge_buckets(local, remote)
+            try:
+                self.push(merged, base_revision=remote.revision)
+            except ConfigSyncConflict:
+                continue
+            return merged, conflicts
+        raise ConfigSyncConflict(
+            f"config sync: still behind the server after {max_attempts} attempts")
+
+
+def _conflict_revision(text: Any) -> Optional[int]:
+    """The current revision a 409 reply names, when it names one."""
+    try:
+        revision = json.loads(text or "").get("revision")
+    except (json.JSONDecodeError, RecursionError, AttributeError, TypeError):
+        return None
+    return revision if isinstance(revision, int) and not isinstance(revision, bool) else None
 
 
 __all__ = [
-    "ConfigBucket", "ConflictRecord", "ConfigSyncClient",
-    "ConfigSyncError", "TOMBSTONE_RETENTION_S", "is_tombstone", "merge_buckets",
+    "ConfigBucket", "ConflictRecord", "ConfigSyncClient", "ConfigSyncConflict",
+    "ConfigSyncError", "DEFAULT_SYNC_ATTEMPTS", "TOMBSTONE_RETENTION_S", "WIRE_VERSION",
+    "is_tombstone", "merge_buckets", "new_operation_id",
 ]

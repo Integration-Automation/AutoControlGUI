@@ -24,6 +24,7 @@ AutoControl 所有功能的完整使用指南。
    doc/ai_agents/ai_agents_doc
    doc/critical_exit/critical_exit_doc
    doc/cli/cli_doc
+   doc/config_sync/config_sync_doc
    doc/create_project/create_project_doc
    doc/new_features/new_features_doc
    doc/new_features/v2_features_doc
