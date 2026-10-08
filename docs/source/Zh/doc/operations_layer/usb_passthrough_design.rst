@@ -145,7 +145,7 @@ viewer 端用 ``UsbPassthroughClient.list_devices()`` 取得。讓列舉與傳�
 ``claim_id`` 上的那一次交換。請求逾時後才到的回覆因此會交給同種類的
 *下一個*\ 請求——``open(bbbb)`` 綁到 host 為 ``aaaa`` 開的 claim，bulk
 讀取拿到上一次讀取的資料。host 接受最長 60 秒的 ``timeout_ms``\ ，
-viewer 預設 10 秒就放棄，所以正常使用就會遇到。
+viewer 不管要求多久都在 10 秒放棄，所以正常使用就會遇到。
 
 現在每個 JSON payload 都可以多帶一個選用的 key::
 
@@ -205,6 +205,30 @@ viewer 從第一個帶回自己編號的回覆得知 host 是新版
 呼叫會逾時；帶編號之後會讓對應的呼叫失敗。另外，因超過 2 MiB 上限
 而被丟棄的重組訊息，其尾段原本會被當成獨立的訊息解析；現在會一路
 略過到它的 EOF frame。
+
+viewer 等多久
+~~~~~~~~~~~~~
+
+傳輸的回覆不可能早於請求自己要求的裝置逾時，所以 viewer 會等
+``timeout_ms``\ （以 host 的 60 秒為上限）\ **再加上**
+``reply_timeout_s``\ ，才丟出 ``UsbClientTimeout``\ 。
+``reply_timeout_s``\ （預設 10 秒）因此是留給 host 與傳輸層的餘裕，
+不是整個呼叫的上限：``timeout_ms=30000`` 的傳輸最多等 40 秒。
+``OPEN``\ 、``RESUME``\ 、``LIST`` 與 ``CLOSE`` 沒有裝置逾時，只等
+``reply_timeout_s``\ 。在此之前，要求等待時間超過 ``reply_timeout_s``
+的傳輸會在 host 還在等裝置時就被放棄——對會帶回編號的 host 無害，
+對不帶回的 host 則是被迫重新連線。
+
+channel 轉接層送出的錯誤
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+有四種 ``ERROR`` 是 ``UsbChannelHost`` 在 session 看到 frame 之前就
+決定的：``usb passthrough disabled``\ 、``bad frame: ...``\ 、
+``usb backend unavailable: ...`` 與 ``no usb session on host``\ 。
+只要出問題的訊息帶著讀得出來的請求編號——四個 header 位元組之後是
+不超過 16 KiB、含有效 ``request_id`` 的 JSON 物件，不論整個 frame 能否
+解碼——這些錯誤就會帶回該編號，送出它的呼叫會以該訊息失敗而不是
+逾時。讀不出編號的訊息得到與以前相同的 ``ERROR``\ ，不含這個 key。
 
 Backpressure
 -------------

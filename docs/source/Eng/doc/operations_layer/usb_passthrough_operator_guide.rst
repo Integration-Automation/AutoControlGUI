@@ -237,10 +237,14 @@ Open + transfer
 Errors:
 
 - ``UsbClientTimeout`` — the host took longer than ``reply_timeout_s``
-  (default 10s) to respond. Check the network / host process.
+  (default 10s) to respond; for a transfer, longer than its own
+  ``timeout_ms`` plus ``reply_timeout_s``. Check the network / host
+  process.
 - ``UsbClientError`` — the host replied with ``{ok: false, error: ...}``.
   The most common case is *denied by ACL policy* — go check the
-  prompt dialog or the ACL rule on the host.
+  prompt dialog or the ACL rule on the host. *usb passthrough disabled*
+  and *no usb session on host* mean the host has not opted in (or has
+  no backend); they are reported at once rather than as a timeout.
 - ``UsbClientClosed`` — the client or its handle was already shut down.
 - ``UsbClientDesynchronized`` — an earlier request timed out and the
   host does not echo request ids (it predates them), so a late reply

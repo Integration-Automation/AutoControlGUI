@@ -221,10 +221,12 @@ Open + transfer
 錯誤：
 
 - ``UsbClientTimeout`` — host 超過 ``reply_timeout_s``\ （預設 10 秒）
-  沒回。檢查網路 / host 程序。
+  沒回；傳輸則是超過它自己的 ``timeout_ms`` 加上 ``reply_timeout_s``\ 。
+  檢查網路 / host 程序。
 - ``UsbClientError`` — host 回 ``{ok: false, error: ...}``\ 。最常見
   情境是 *denied by ACL policy* — 去看 host 端的 prompt 對話框或 ACL
-  規則。
+  規則。*usb passthrough disabled* 與 *no usb session on host* 表示
+  host 沒有啟用（或沒有後端）；會立即回報，不再等到逾時。
 - ``UsbClientClosed`` — client 或其 handle 已 shutdown。
 - ``UsbClientDesynchronized`` — 先前有請求逾時，而 host 不帶回請求
   編號（版本早於此欄位），遲到的回覆與下一個回覆無法分辨。此時不會
