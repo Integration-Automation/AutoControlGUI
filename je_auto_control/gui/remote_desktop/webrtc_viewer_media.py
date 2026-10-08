@@ -13,6 +13,7 @@ from PySide6.QtWidgets import (
     QFileDialog, QMessageBox,
 )
 
+from je_auto_control.gui.remote_desktop._webrtc_types import SessionRecorderT
 from je_auto_control.gui.remote_desktop._helpers import (
     _t,
 )
@@ -39,7 +40,7 @@ class _ViewerMediaMixin(_PanelPart):
     """Methods of ``_WebRTCViewerPanel``; the module docstring says which group."""
 
     # State this group owns; the panel's __init__ sets the starting values.
-    _recorder: Optional[SessionRecorder]
+    _recorder: Optional[SessionRecorderT]
     _stats_poller: Optional[StatsPoller]
 
     def _on_send_cad(self) -> None:

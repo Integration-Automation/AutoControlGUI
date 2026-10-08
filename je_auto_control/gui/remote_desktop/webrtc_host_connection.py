@@ -13,6 +13,7 @@ from PySide6.QtWidgets import (
     QMessageBox,
 )
 
+from je_auto_control.gui.remote_desktop._webrtc_types import MultiViewerHostT
 from je_auto_control.gui.remote_desktop._helpers import (
     _t,
 )
@@ -33,12 +34,12 @@ if TYPE_CHECKING:  # imported lazily at runtime to keep startup cheap
     from je_auto_control.utils.remote_desktop.lan_discovery import HostAdvertiser
 
 
-def _create_offer(host: MultiViewerHost, _token: CancellationToken) -> Tuple[str, str]:
+def _create_offer(host: MultiViewerHostT, _token: CancellationToken) -> Tuple[str, str]:
     """Worker thread: mint a session and its offer (ICE gathering, up to 12 s)."""
     return host.create_session_offer()
 
 
-def _drop_offer(host: MultiViewerHost, outcome: Tuple[str, str]) -> None:
+def _drop_offer(host: MultiViewerHostT, outcome: Tuple[str, str]) -> None:
     """End the session of an offer nobody will show."""
     try:
         host.stop_session(outcome[0])
@@ -50,6 +51,7 @@ class _HostConnectionMixin(_PanelPart):
     """Methods of ``_WebRTCHostPanel``; the module docstring says which group."""
 
     # State this group owns; the panel's __init__ sets the starting values.
+    _multi_host: Optional[MultiViewerHostT]
     _publish_loop: Optional[HostPublishLoopWorker]
     _manual_session_id: Optional[str]
     _lan_advertiser: Optional[HostAdvertiser]
@@ -138,7 +140,7 @@ class _HostConnectionMixin(_PanelPart):
         self._offer_view.setPlainText("")
         QTimer.singleShot(0, self, self._produce_offer)
 
-    def _require_multi_host(self) -> MultiViewerHost:
+    def _require_multi_host(self) -> MultiViewerHostT:
         """Return the running host, or say the session is not up yet."""
         host = self._multi_host
         if host is None:
@@ -158,11 +160,11 @@ class _HostConnectionMixin(_PanelPart):
         task.result.connect(functools.partial(self._show_offer, host))
         task.error.connect(functools.partial(self._show_offer_error, host))
 
-    def _show_offer_error(self, host: MultiViewerHost, error: Exception) -> None:
+    def _show_offer_error(self, host: MultiViewerHostT, error: Exception) -> None:
         if self._multi_host is host:        # a host stopped meanwhile fails by design
             self._show_error(error)
 
-    def _show_offer(self, host: MultiViewerHost, outcome: Tuple[str, str]) -> None:
+    def _show_offer(self, host: MultiViewerHostT, outcome: Tuple[str, str]) -> None:
         """GUI thread: the offer is ready -- unless the host was stopped or replaced meanwhile."""
         if self._multi_host is not host:
             _drop_offer(host, outcome)
@@ -211,7 +213,7 @@ class _HostConnectionMixin(_PanelPart):
                 return False
         return True
 
-    def _build_multi_host(self, token: str) -> MultiViewerHost:
+    def _build_multi_host(self, token: str) -> MultiViewerHostT:
         whitelist_text = self._ip_whitelist_edit.toPlainText().strip()
         whitelist = [line.strip() for line in whitelist_text.splitlines()
                      if line.strip() and not line.strip().startswith("#")]

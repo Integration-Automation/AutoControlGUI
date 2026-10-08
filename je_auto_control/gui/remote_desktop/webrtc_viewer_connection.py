@@ -13,6 +13,7 @@ from PySide6.QtWidgets import (
     QMessageBox,
 )
 
+from je_auto_control.gui.remote_desktop._webrtc_types import SessionRecorderT, WebRTCDesktopViewerT
 from je_auto_control.gui.remote_desktop._helpers import (
     _t,
 )
@@ -23,7 +24,7 @@ from je_auto_control.gui.remote_desktop.webrtc_workers import (
 from je_auto_control.gui.task_controller import CancellationToken, task_controller
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.remote_desktop import (
-    SessionRecorder, WebRTCDesktopViewer,
+    WebRTCDesktopViewer,
 )
 from je_auto_control.gui.remote_desktop.webrtc_panel_common import (
     _PanelPart,
@@ -34,7 +35,7 @@ if TYPE_CHECKING:  # imported lazily at runtime to keep startup cheap
     from je_auto_control.utils.remote_desktop.file_sync import FolderSyncEngine
 
 
-def _process_offer(viewer: WebRTCDesktopViewer, offer_sdp: str, expected_dtls: Optional[str],
+def _process_offer(viewer: WebRTCDesktopViewerT, offer_sdp: str, expected_dtls: Optional[str],
                    _token: CancellationToken) -> str:
     """Worker thread: answer the host's offer (up to 12 s; the backend takes no timeout or cancel)."""
     return viewer.process_offer(offer_sdp, expected_dtls_fingerprint=expected_dtls)
@@ -44,11 +45,12 @@ class _ViewerConnectionMixin(_PanelPart):
     """Methods of ``_WebRTCViewerPanel``; the module docstring says which group."""
 
     # State this group owns; the panel's __init__ sets the starting values.
+    _viewer: Optional[WebRTCDesktopViewerT]
     _offer_worker: Optional[ViewerSignalingWorker]
     _answer_worker: Optional[ViewerAnswerPushWorker]
     # Owned by the files and media groups; stopped here with the session.
     _sync_engine: Optional[FolderSyncEngine]
-    _recorder: Optional[SessionRecorder]
+    _recorder: Optional[SessionRecorderT]
 
     def _on_connect_via_server(self) -> None:
         if not self._validate_required_fields(needs_server=True):
@@ -146,7 +148,7 @@ class _ViewerConnectionMixin(_PanelPart):
         self._status_label.setText(_t("rd_webrtc_creating_answer"))
         QTimer.singleShot(0, self, lambda: self._produce_answer(offer))
 
-    def _require_viewer(self) -> WebRTCDesktopViewer:
+    def _require_viewer(self) -> WebRTCDesktopViewerT:
         """Return the live viewer, or say it is not connected yet."""
         viewer = self._viewer
         if viewer is None:
@@ -187,7 +189,7 @@ class _ViewerConnectionMixin(_PanelPart):
                 return False
         return True
 
-    def _build_viewer(self, token: str) -> WebRTCDesktopViewer:
+    def _build_viewer(self, token: str) -> WebRTCDesktopViewerT:
         viewer = WebRTCDesktopViewer(
             token=token,
             config=_read_webrtc_config(self),

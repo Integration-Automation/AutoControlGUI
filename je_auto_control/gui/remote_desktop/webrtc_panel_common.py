@@ -7,6 +7,7 @@ from PySide6.QtCore import QObject, Signal
 from PySide6.QtGui import QImage
 from PySide6.QtWidgets import QWidget
 
+from je_auto_control.gui.remote_desktop._webrtc_types import WebRTCConfigT
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
 
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
@@ -89,7 +90,7 @@ def _read_region(panel) -> Optional[tuple]:
     return tuple(parts) if len(parts) == 4 else None
 
 
-def _read_webrtc_config(panel) -> WebRTCConfig:
+def _read_webrtc_config(panel) -> WebRTCConfigT:
     """Build a WebRTCConfig from the advanced group + monitor/fps fields."""
     from je_auto_control.utils.remote_desktop.webrtc_transport import (
         _DEFAULT_STUN_SERVERS,
