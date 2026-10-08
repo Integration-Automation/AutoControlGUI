@@ -2812,7 +2812,7 @@ def AC_start_mcp_http_server(
 ) -> Any:
     """Start and return an :class:`HttpMCPServer`; convenience wrapper."""
 
-def AC_start_mcp_server(read_only: bool | None = ...) -> Any:
+def AC_start_mcp_server(read_only: bool | None = ..., tool_mode: Any = ...) -> Any:
     """Start a stdio MCP server in the foreground; blocks until EOF."""
 
 def AC_start_remote_host(

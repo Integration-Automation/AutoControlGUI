@@ -7,10 +7,10 @@ should import only the names re-exported here.
 """
 import os
 from dataclasses import replace
-from typing import Dict, List, Optional
+from typing import Callable, Dict, List, Optional
 
 from je_auto_control.utils.mcp_server.tools._base import (
-    MCPContent, MCPTool, MCPToolAnnotations, read_only_env_flag,
+    MCPContent, MCPTool, MCPToolAnnotations, MCPToolDescriptor, read_only_env_flag,
 )
 from je_auto_control.utils.mcp_server.tools._factories import ALL_FACTORIES
 from je_auto_control.utils.mcp_server.tools.plugin_tools import (
@@ -41,6 +41,17 @@ _DEFAULT_ALIASES: Dict[str, str] = {
     "diff_screens": "ac_diff_screenshots",
     "shell": "ac_shell",
 }
+
+
+#: The canonical tools behind the aliases: the handful most sessions need.
+COMMON_TOOL_NAMES = tuple(_DEFAULT_ALIASES.values())
+_FACTORY_SUFFIX = "_tools"
+
+
+def _category_of(factory: Callable[[], List[MCPTool]]) -> str:
+    """The category of a factory's tools: its name without ``_tools``."""
+    name = getattr(factory, "__name__", "")
+    return name[:-len(_FACTORY_SUFFIX)] if name.endswith(_FACTORY_SUFFIX) else name
 
 
 def _aliases_enabled(explicit: Optional[bool]) -> bool:
@@ -83,7 +94,10 @@ def build_default_tool_registry(read_only: Optional[bool] = None,
     )
     tools: List[MCPTool] = []
     for factory in ALL_FACTORIES:
-        tools.extend(factory())
+        # A factory may name a category itself; otherwise its own name is one.
+        category = _category_of(factory)
+        tools.extend(tool if tool.category else replace(tool, category=category)
+                     for tool in factory())
     if enforce_read_only:
         tools = [tool for tool in tools if tool.annotations.read_only]
     if _aliases_enabled(aliases):
@@ -92,7 +106,7 @@ def build_default_tool_registry(read_only: Optional[bool] = None,
 
 
 __all__ = [
-    "MCPContent", "MCPTool", "MCPToolAnnotations",
-    "build_default_tool_registry", "make_plugin_tool",
+    "COMMON_TOOL_NAMES", "MCPContent", "MCPTool", "MCPToolAnnotations",
+    "MCPToolDescriptor", "build_default_tool_registry", "make_plugin_tool",
     "register_plugin_tools",
 ]
