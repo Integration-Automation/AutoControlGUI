@@ -301,14 +301,15 @@ def test_sync_never_enables_trigger(tmp_path, server):
     laptop.adapters = [TriggerSyncAdapter("laptop", source, scripts_dir=laptop.scripts)]
     desktop.adapters = [TriggerSyncAdapter("desktop", target, scripts_dir=desktop.scripts)]
 
-    assert "triggers/both" in laptop.sync().withheld
+    # Composites are synced too (test_sync_composite_triggers.py) -- and arrive disabled.
+    assert laptop.sync().withheld == {}
     report = desktop.sync()
 
     received = {trigger.trigger_id: trigger for trigger in target.list_triggers()}
-    assert set(received) == {"img", "cron"}
+    assert set(received) == {"img", "cron", "both"}
     enabled_triggers = [trigger.trigger_id for trigger in received.values() if trigger.enabled]
     assert enabled_triggers == []
-    assert sorted(report.applied["triggers"]["left_disabled"]) == ["cron", "img"]
+    assert sorted(report.applied["triggers"]["left_disabled"]) == ["both", "cron", "img"]
     assert Path(received["img"].image_path) == desktop.scripts / "t.png"
     assert received["cron"].cron == "0 9 * * *"
     assert not target.is_running and not source.is_running and ran == []

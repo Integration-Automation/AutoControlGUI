@@ -212,7 +212,8 @@ Adapter:同步什麼、什麼留在本機
      - ``HotkeyDaemon`` 的綁定
    * - ``triggers``
      - ``TriggerSyncAdapter(origin, engine, scripts_dir=...)``
-     - ``TriggerEngine`` 的 image / window / pixel / file / cron 觸發器
+     - ``TriggerEngine`` 的 image / window / pixel / file / cron 觸發器,
+       以及由它們組成的 all-of / any-of / sequence 複合觸發器
    * - ``address_book``
      - ``AddressBookSyncAdapter(origin, book)``
      - 遠端桌面的 ``AddressBook``
@@ -227,7 +228,27 @@ Adapter:同步什麼、什麼留在本機
   —— 而且它在本機不存在 *不會* 被當成對其他機器的刪除。
 * **同步絕不啟用任何東西。** ``enabled`` 不同步。送達的快捷鍵或觸發器以 **停用** 狀態建立
   (``HotkeyDaemon.bind(..., enabled=False)``),既有的保留本機給它的狀態,
-  沒有任何 adapter 會啟動引擎或執行腳本。複合觸發器(all-of / any-of / sequence)不同步。
+  沒有任何 adapter 會啟動引擎或執行腳本。
+
+**複合觸發器。** ``AllOfTrigger`` / ``AnyOfTrigger`` / ``SequenceTrigger`` 以自己的欄位
+加上一個 ``children`` 定義清單傳送,巢狀幾層就傳幾層:
+
+.. code-block:: json
+
+    {"type": "AllOfTrigger", "repeat": true, "cooldown_seconds": 30.0,
+     "script_path": {"$local": "path", "root": "scripts", "relative": "report.json"},
+     "children": [
+       {"type": "CronTrigger", "trigger_id": "at-nine", "cron": "0 9 * * *", "...": "..."},
+       {"type": "ImageAppearsTrigger", "trigger_id": "logo", "threshold": 0.9,
+        "image_path": {"$local": "path", "root": "scripts", "relative": "logo.png"}}]}
+
+子觸發器保留它的 ``trigger_id``,路徑和其他路徑一樣轉成可攜形式;它的 ``enabled``、``fired`` 與
+``script_path`` 在複合觸發器內沒有意義,不會送出。複合觸發器以 **停用** 狀態建立,子觸發器也是停用;
+之後的更新會保留本機對 ``enabled`` 的選擇。定義會先完整建好才加入引擎,所以只要有一個子觸發器不對
+(不認得的型別、無效的 cron、超過 64 個子觸發器、超過 8 層)整個複合觸發器就跳過,並回報在 ``skipped``。
+含有上述型別以外的子觸發器的複合觸發器留在本機,列在 ``withheld``。註冊觸發器的 RBAC 身分
+(``owner``)絕不送出。執行較舊版本的機器收到複合觸發器時會回報在 ``skipped``
+(「unknown trigger type」),bucket 裡的 entry 不受影響。
 
 資產
 ----

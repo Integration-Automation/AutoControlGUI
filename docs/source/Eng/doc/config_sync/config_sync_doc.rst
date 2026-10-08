@@ -249,7 +249,8 @@ entries back and returns an ``ApplyReport`` (``written`` / ``removed`` /
      - a ``HotkeyDaemon``'s bindings
    * - ``triggers``
      - ``TriggerSyncAdapter(origin, engine, scripts_dir=...)``
-     - a ``TriggerEngine``'s image / window / pixel / file / cron triggers
+     - a ``TriggerEngine``'s image / window / pixel / file / cron triggers and the
+       all-of / any-of / sequence composites built from them
    * - ``address_book``
      - ``AddressBookSyncAdapter(origin, book)``
      - the remote-desktop ``AddressBook``
@@ -269,8 +270,33 @@ Three rules hold for every adapter:
 * **Syncing never enables anything.** ``enabled`` is not synced. A hotkey or
   trigger that arrives is created **disabled** (``HotkeyDaemon.bind(...,
   enabled=False)``), an existing one keeps the state this machine gave it,
-  and no adapter starts an engine or runs a script. Composite triggers
-  (all-of / any-of / sequence) are not synced.
+  and no adapter starts an engine or runs a script.
+
+**Composite triggers.** ``AllOfTrigger`` / ``AnyOfTrigger`` / ``SequenceTrigger``
+travel as their own fields plus a ``children`` list of definitions, nested as
+deep as the composite is:
+
+.. code-block:: json
+
+    {"type": "AllOfTrigger", "repeat": true, "cooldown_seconds": 30.0,
+     "script_path": {"$local": "path", "root": "scripts", "relative": "report.json"},
+     "children": [
+       {"type": "CronTrigger", "trigger_id": "at-nine", "cron": "0 9 * * *", "...": "..."},
+       {"type": "ImageAppearsTrigger", "trigger_id": "logo", "threshold": 0.9,
+        "image_path": {"$local": "path", "root": "scripts", "relative": "logo.png"}}]}
+
+A child keeps its ``trigger_id`` and has its paths made portable like any
+other; its ``enabled``, ``fired`` and ``script_path`` mean nothing inside a
+composite and are not sent. The composite is created **disabled** with
+disabled children, and an update keeps whatever this machine chose for
+``enabled``. A definition is built completely before it is added, so one bad
+child (unknown type, invalid cron, more than 64 children, more than 8 levels)
+skips the whole composite and reports it under ``skipped``. A composite
+holding a child that is not one of the trigger types above stays local and
+is listed under ``withheld``. The RBAC principal that registered a trigger
+(``owner``) is never sent. A machine running a release from before this
+reports an arriving composite under ``skipped`` ("unknown trigger type") and
+leaves the entry in the bucket untouched.
 
 Assets
 ------
