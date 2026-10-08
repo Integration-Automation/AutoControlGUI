@@ -118,3 +118,100 @@ iOS 只請求 WDA 的 ``/status``\ 。
 
 ``AdbError`` 等既有名稱照樣丟出，既有的 ``except`` 也照樣接得到；
 它們現在共用這個基底。
+
+文字
+====
+
+``session.type_text(text)`` 要嘛把文字送到，要嘛丟例外；裝置沒收到的文字
+絕不會回報成功。
+
+**Android。** ``adb shell input text`` 只能送可列印的 ASCII。其他字元會被丟掉
+或弄亂，每個 ``%s`` 會變成空白，而且不管怎樣結束碼都是 0。所以：
+
+1. 不含字面 ``%s`` 的可列印 ASCII 走 ``input text``\ 。
+2. 其他文字在裝置選用 `ADBKeyBoard <https://github.com/senzhk/ADBKeyBoard>`_
+   輸入法時交給它（``adb shell ime set com.android.adbkeyboard/.AdbIME``\ ）。
+3. 否則在主機裝有 ``uiautomator2`` 時交給它。
+4. 兩者都沒有就丟 ``AdbUnsupportedError``\ （屬於 ``DeviceUnsupportedError``\ ），
+   什麼都不送。
+
+``AC_android_text`` 走同一條路。\ ``AdbClient.text()`` 本身現在也會拒絕
+``input text`` 送不了的文字，而不是照送。
+
+.. note::
+
+   ADBKeyBoard 的 broadcast 不論有沒有輸入法接收，回傳結果都一樣，所以「送達」
+   是從輸入法已被選用推斷的，並非由裝置確認。
+
+**iOS。** WebDriverAgent 的按鍵端點可以送 Unicode；文字原樣傳遞。
+
+手勢
+====
+
+``session.perform(gesture)`` 接受五種 frozen dataclass 之一，全部使用裝置的
+輸入座標：
+
+.. list-table::
+   :header-rows: 1
+   :widths: 22 39 39
+
+   * - 手勢
+     - Android
+     - iOS
+   * - ``Tap(x, y)``
+     - ``input tap``
+     - WDA tap
+   * - ``LongPress(x, y, duration_s)``
+     - 不移動的 ``input swipe``
+     - WDA touch-and-hold
+   * - ``Swipe(x1, y1, x2, y2, duration_s)``
+     - ``input swipe``
+     - WDA drag
+   * - ``Drag(x1, y1, x2, y2, hold_s, duration_s)``
+     - ``input draganddrop``\ ；裝置的 ``input`` 沒有這個子指令時退回
+       ``uiautomator2``
+     - WDA drag，\ ``hold_s`` 是按住的時間
+   * - ``Pinch(x, y, scale, duration_s, span)``
+     - ``uiautomator2`` 的雙指手勢；\ ``adb shell input`` 只有一個觸控點，
+       沒裝的話丟 ``DeviceUnsupportedError``
+     - 對最前景的 App 做 pinch。WDA 的 pinch 對象是元素而不是座標，所以
+       ``x`` / ``y`` / ``span`` 會被忽略。
+
+畫面與座標
+==========
+
+``session.capture()`` 回傳 :class:`DeviceFrame`\ ：轉正後的截圖，加上輸入座標
+空間的大小。
+
+* **iOS** 的 WebDriverAgent 收的是 *point*\ 、回的是 *pixel*\ （多數 iPhone 是
+  一個 point 三個 pixel）。\ ``frame.pixel_to_point(x, y)`` 負責換算；把截圖的
+  pixel 當成 point 去點會點錯位置。
+* **Android** 的 ``screencap`` 與 ``input tap`` 共用同一個座標空間，換算是恆等
+  的。這一點是對照 ``wm size`` 與顯示旋轉檢查出來的，不是假設。
+* 顯示已旋轉、截圖卻以面板原生方向回來時，會先轉正再做任何定位。要往哪邊轉
+  （\ ``landscape_left`` 轉 270 度、\ ``landscape_right`` 轉 90 度）依據的是兩個
+  平台文件記載的慣例，沒有在實機上確認過。上下顛倒的顯示無法從影像形狀判斷，
+  視為已經是正的。
+
+定位
+----
+
+定位直接在 frame 上做——不會去截主機的桌面——而且答案一律是裝置的 point，
+可以直接交給手勢::
+
+    from je_auto_control import Tap, self_heal_locate
+
+    frame = session.capture()
+    session.perform(Tap(*frame.locate_image("login_button.png")))
+
+    point = frame.locate_text("Sign in")              # OCR，找不到回 None
+    point = frame.locate_description("the blue button")   # VLM，找不到回 None
+
+    outcome = self_heal_locate(template_path="login_button.png",
+                               description="the login button", frame=frame)
+    if outcome.found:
+        session.perform(Tap(*outcome.coordinates))
+
+``self_heal_locate(..., frame=frame)`` 跑的是同一套「先樣板、後 VLM」的退路，
+寫的也是同一份 heal log；\ ``screen_region`` 不適用於 frame。
+``self_heal_click`` 仍然是點桌面的滑鼠，不接受 frame。

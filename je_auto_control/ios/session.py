@@ -1,13 +1,17 @@
 """One iOS device as a :class:`DeviceSession`: its own WebDriverAgent client."""
 from __future__ import annotations
 
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Callable, Dict, Optional, Tuple
 
+from je_auto_control.ios import input as ios_input
 from je_auto_control.ios.client import IOSDevice, translate_device_errors
+from je_auto_control.ios.screen import capture_frame
 from je_auto_control.wrapper.device_context import (
     CAPABILITY_NAMES, STATE_AVAILABLE, STATE_NEEDS_DEPENDENCY,
-    DeviceCapability, DeviceContext, DeviceError, DeviceSession, bound_session,
+    DeviceCapability, DeviceContext, DeviceError, DeviceSession, Drag, LongPress,
+    Pinch, Swipe, Tap, bound_session,
 )
+from je_auto_control.wrapper.device_frame import DeviceFrame
 
 #: Capabilities WebDriverAgent itself provides.
 _WDA_CAPABILITIES = ("input", "unicode_text", "multi_touch", "screenshot", "ui_tree",
@@ -73,6 +77,29 @@ class IOSSession(DeviceSession):
         except (DeviceError, OSError) as error:
             return STATE_NEEDS_DEPENDENCY, str(error)
         return None
+
+    def capture(self) -> DeviceFrame:
+        """The current screen, upright, with its pixel-to-point mapping."""
+        return self.invoke("capture", lambda: capture_frame(device=self.device))
+
+    def type_text(self, text: str) -> None:
+        """Type ``text`` into the focused field (WebDriverAgent carries Unicode)."""
+        self.invoke("type_text", lambda: ios_input.type_text(text, device=self.device))
+
+    def press_key(self, key: str) -> None:
+        """Press a hardware key (``"home"``, ``"volumeUp"``, ``"volumeDown"``)."""
+        self.invoke("press_key", lambda: ios_input.press_key(key, device=self.device))
+
+    def _gesture_handlers(self) -> Dict[type, Callable[[Any], None]]:
+        device = self.device
+        return {
+            Tap: lambda g: ios_input.tap(g.x, g.y, device=device),
+            LongPress: lambda g: ios_input.long_press(g.x, g.y, g.duration_s, device=device),
+            Swipe: lambda g: ios_input.swipe(g.x1, g.y1, g.x2, g.y2, g.duration_s,
+                                             device=device),
+            Drag: lambda g: ios_input.drag(g.x1, g.y1, g.x2, g.y2, g.hold_s, device=device),
+            Pinch: lambda g: ios_input.pinch(g.scale, g.duration_s, device=device),
+        }
 
     def _adapter_capability(self, name: str) -> DeviceCapability:
         return DeviceCapability(name, STATE_NEEDS_DEPENDENCY, _NEEDS_ADAPTER)

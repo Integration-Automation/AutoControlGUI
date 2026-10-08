@@ -33,7 +33,7 @@ on a default serial: each :class:`AndroidSession` owns its own client.
 """
 from je_auto_control.android.adb_client import (
     AdbClient, AdbDeviceMissingError, AdbError, AdbNotAvailable,
-    AdbTimeoutError, AdbUnauthorizedError, AndroidDevice,
+    AdbTimeoutError, AdbUnauthorizedError, AdbUnsupportedError, AndroidDevice,
 )
 from je_auto_control.android.client import (
     UIAutomatorDevice, UIAutomatorUnavailableError,
@@ -42,11 +42,15 @@ from je_auto_control.android.client import (
 from je_auto_control.android.find import (
     ElementNotFoundError, click_element, dump_hierarchy, find_element,
 )
+from je_auto_control.android.input import ADB_KEYBOARD_IME, type_text
+from je_auto_control.android.screen import capture_frame
 from je_auto_control.android.session import AndroidSession
 
 __all__ = [
-    "AdbClient", "AdbDeviceMissingError", "AdbError", "AdbNotAvailable",
-    "AdbTimeoutError", "AdbUnauthorizedError", "AndroidDevice", "AndroidSession",
+    "ADB_KEYBOARD_IME", "AdbClient", "AdbDeviceMissingError", "AdbError",
+    "AdbNotAvailable", "AdbTimeoutError", "AdbUnauthorizedError",
+    "AdbUnsupportedError", "AndroidDevice", "AndroidSession", "capture_frame",
+    "type_text",
     "ElementNotFoundError",
     "UIAutomatorDevice", "UIAutomatorUnavailableError",
     "click_element", "default_ui_device", "dump_hierarchy",

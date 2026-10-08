@@ -130,3 +130,108 @@ Every error derives from ``DeviceError`` (an ``AutoControlException`` and a
 
 ``AdbError`` and the other pre-existing names are still raised and still
 caught by existing ``except`` clauses; they now share this base.
+
+Text
+====
+
+``session.type_text(text)`` delivers the text or raises; it never reports
+success for text the device did not receive.
+
+**Android.** ``adb shell input text`` carries printable ASCII only. It drops
+or mangles everything else, turns every ``%s`` into a space, and exits 0
+either way. So:
+
+1. Printable ASCII without a literal ``%s`` goes through ``input text``.
+2. Anything else goes to the `ADBKeyBoard
+   <https://github.com/senzhk/ADBKeyBoard>`_ IME when it is the device's
+   selected input method (``adb shell ime set
+   com.android.adbkeyboard/.AdbIME``).
+3. Otherwise it goes to ``uiautomator2`` when that is installed on the host.
+4. With neither, ``AdbUnsupportedError`` (a ``DeviceUnsupportedError``) is
+   raised and nothing is sent.
+
+``AC_android_text`` follows the same route. ``AdbClient.text()`` itself now
+refuses text ``input text`` cannot deliver instead of sending it.
+
+.. note::
+
+   The ADBKeyBoard broadcast returns the same result whether or not an IME
+   consumed it, so delivery is inferred from the IME being selected, not
+   confirmed by the device.
+
+**iOS.** WebDriverAgent's key endpoint carries Unicode; the text is passed
+through unchanged.
+
+Gestures
+========
+
+``session.perform(gesture)`` takes one of five frozen dataclasses, all in
+device input coordinates:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 22 39 39
+
+   * - Gesture
+     - Android
+     - iOS
+   * - ``Tap(x, y)``
+     - ``input tap``
+     - WDA tap
+   * - ``LongPress(x, y, duration_s)``
+     - ``input swipe`` that does not move
+     - WDA touch-and-hold
+   * - ``Swipe(x1, y1, x2, y2, duration_s)``
+     - ``input swipe``
+     - WDA drag
+   * - ``Drag(x1, y1, x2, y2, hold_s, duration_s)``
+     - ``input draganddrop``; falls back to ``uiautomator2`` on a device
+       whose ``input`` lacks it
+     - WDA drag with ``hold_s`` as the press duration
+   * - ``Pinch(x, y, scale, duration_s, span)``
+     - ``uiautomator2`` two-pointer gesture; ``adb shell input`` has one
+       pointer, so without it this raises ``DeviceUnsupportedError``
+     - Pinch on the frontmost application. WDA pinches an element, not a
+       coordinate, so ``x`` / ``y`` / ``span`` are ignored.
+
+Frames and coordinates
+======================
+
+``session.capture()`` returns a :class:`DeviceFrame`: the screenshot, upright,
+together with the size of the input coordinate space.
+
+* On **iOS** WebDriverAgent takes *points* and returns *pixels* (three per
+  point on most iPhones). ``frame.pixel_to_point(x, y)`` converts; tapping a
+  screenshot pixel as if it were a point lands in the wrong place.
+* On **Android** ``screencap`` and ``input tap`` share one coordinate space
+  and the mapping is the identity. This is checked against ``wm size`` and the
+  display rotation rather than assumed.
+* A screenshot that comes back in the panel's natural orientation while the
+  display is rotated is turned upright before anything is located in it. Which
+  way to turn it (270 degrees for ``landscape_left``, 90 for
+  ``landscape_right``) follows the platforms' documented conventions and has
+  not been checked on a device. An upside-down display cannot be told from the
+  image shape and is taken as already upright.
+
+Locating
+--------
+
+A frame is searched directly — the host's desktop is never captured — and
+every answer is in device points, ready for a gesture::
+
+    from je_auto_control import Tap, self_heal_locate
+
+    frame = session.capture()
+    session.perform(Tap(*frame.locate_image("login_button.png")))
+
+    point = frame.locate_text("Sign in")              # OCR, or None
+    point = frame.locate_description("the blue button")   # VLM, or None
+
+    outcome = self_heal_locate(template_path="login_button.png",
+                               description="the login button", frame=frame)
+    if outcome.found:
+        session.perform(Tap(*outcome.coordinates))
+
+``self_heal_locate(..., frame=frame)`` runs the same template-then-VLM
+fallback and writes the same heal log; ``screen_region`` does not apply to a
+frame. ``self_heal_click`` still clicks the desktop mouse and takes no frame.

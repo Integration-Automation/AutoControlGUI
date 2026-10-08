@@ -22,16 +22,16 @@ from je_auto_control.ios.find import (
     ElementNotFoundError, click_element, dump_source, find_element,
 )
 from je_auto_control.ios.input import (
-    long_press, press_key, swipe, tap, type_text,
+    drag, long_press, pinch, press_key, swipe, tap, type_text,
 )
-from je_auto_control.ios.screen import screen_size, screenshot
+from je_auto_control.ios.screen import capture_frame, screen_size, screenshot
 from je_auto_control.ios.session import IOSSession
 
 
 __all__ = [
     "ElementNotFoundError", "IOSDevice", "IOSSession", "IOSUnavailableError",
-    "click_element", "default_ios_device", "dump_source",
-    "find_element", "long_press", "press_key",
+    "capture_frame", "click_element", "default_ios_device", "drag", "dump_source",
+    "find_element", "long_press", "pinch", "press_key",
     "reset_default_ios_device", "screen_size", "screenshot", "swipe",
     "tap", "type_text",
 ]

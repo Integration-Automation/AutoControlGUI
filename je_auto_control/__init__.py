@@ -1042,8 +1042,10 @@ from je_auto_control.utils.device_matrix import (
 from je_auto_control.wrapper.device_context import (
     DeviceCancelledError, DeviceCapability, DeviceClosedError, DeviceContext,
     DeviceError, DevicePermissionError, DeviceSession, DeviceTimeoutError,
-    DeviceUnavailableError, DeviceUnsupportedError, open_device, use_device,
+    DeviceUnavailableError, DeviceUnsupportedError, Drag, LongPress, Pinch,
+    Swipe, Tap, open_device, use_device,
 )
+from je_auto_control.wrapper.device_frame import DeviceFrame
 # Media assertions (audio activity, video motion)
 from je_auto_control.utils.media_assert import (
     MediaAssertionResult, assert_audio_activity, assert_video_changes,
@@ -1944,6 +1946,7 @@ __all__ = [
     "DeviceCancelledError", "DeviceCapability", "DeviceClosedError", "DeviceContext",
     "DeviceError", "DevicePermissionError", "DeviceSession", "DeviceTimeoutError",
     "DeviceUnavailableError", "DeviceUnsupportedError", "open_device", "use_device",
+    "DeviceFrame", "Drag", "LongPress", "Pinch", "Swipe", "Tap",
     # Media assertions
     "MediaAssertionResult", "assert_audio_activity", "assert_video_changes",
     "measure_audio_rms", "video_segment_motion",

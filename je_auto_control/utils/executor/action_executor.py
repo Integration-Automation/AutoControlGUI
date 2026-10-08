@@ -1711,8 +1711,9 @@ def _ac_android_key(key: str,
 def _ac_android_text(text: str,
                      serial: Optional[str] = None,
                      adb_path: Optional[str] = None) -> None:
-    """Type a string via ``input text``."""
-    _android_client(serial, adb_path).text(text)
+    """Type a string: ``input text`` for ASCII, a Unicode-capable path otherwise."""
+    from je_auto_control.android.input import type_text
+    type_text(_android_client(serial, adb_path), text)
 
 
 def _ac_android_screenshot(file_path: str,

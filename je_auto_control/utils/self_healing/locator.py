@@ -70,19 +70,25 @@ def self_heal_locate(template_path: Optional[str] = None,
                      model: Optional[str] = None,
                      log: Optional[HealEventLog] = None,
                      raise_on_miss: bool = False,
+                     frame: Optional[Any] = None,
                      ) -> HealOutcome:
     """Locate an element by template; fall back to VLM on miss.
 
     At least one of ``template_path`` / ``description`` must be given.
     Provide both for full self-healing — the VLM path only runs when
     the template match fails or returns no candidates.
+
+    ``frame`` (a ``DeviceFrame`` from ``DeviceSession.capture()``) is searched
+    instead of the desktop; the coordinates are then device points.
     """
     if not template_path and not description:
         raise ValueError(
             "self_heal_locate requires template_path or description",
         )
     started = monotonic()
-    coords, image_error = _try_image(template_path, detect_threshold)
+    # The two-argument call when there is no frame: callers replace these strategies.
+    coords, image_error = (_try_image(template_path, detect_threshold) if frame is None
+                           else _try_image(template_path, detect_threshold, frame))
     if coords is not None:
         return _finish(
             HealOutcome(found=True, coordinates=coords, method=METHOD_IMAGE,
@@ -90,7 +96,8 @@ def self_heal_locate(template_path: Optional[str] = None,
                         duration_ms=_ms_since(started)),
             log,
         )
-    coords, vlm_error = _try_vlm(description, screen_region, model)
+    coords, vlm_error = (_try_vlm(description, screen_region, model) if frame is None
+                         else _try_vlm(description, screen_region, model, frame))
     if coords is not None:
         autocontrol_logger.warning(
             f"self_heal: image miss ({image_error}); VLM healed → {coords}",
@@ -138,10 +145,14 @@ def self_heal_click(template_path: Optional[str] = None,
 
 def _try_image(template_path: Optional[str],
                detect_threshold: float,
+               frame: Optional[Any] = None,
                ) -> Tuple[Optional[Tuple[int, int]], Optional[str]]:
     if not template_path:
         return None, "no template_path supplied"
     try:
+        if frame is not None:
+            cx, cy = frame.locate_image(template_path, float(detect_threshold))
+            return (int(cx), int(cy)), None
         from je_auto_control.wrapper.auto_control_image import (
             locate_image_center,
         )
@@ -158,14 +169,15 @@ def _try_image(template_path: Optional[str],
 def _try_vlm(description: Optional[str],
              screen_region: Optional[List[int]],
              model: Optional[str],
+             frame: Optional[Any] = None,
              ) -> Tuple[Optional[Tuple[int, int]], Optional[str]]:
     if not description:
         return None, "no description supplied"
     try:
         from je_auto_control.utils.vision.vlm_api import locate_by_description
-        coords = locate_by_description(
-            description, screen_region=screen_region, model=model,
-        )
+        coords = (frame.locate_description(description, model=model) if frame is not None
+                  else locate_by_description(
+                      description, screen_region=screen_region, model=model))
     # AutoControlException: a failed screenshot (AutoControlScreenException)
     # escaped the self-heal and left no heal-log entry.
     except (AutoControlException, OSError, RuntimeError, ValueError, TypeError) as exc:

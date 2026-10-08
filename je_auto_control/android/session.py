@@ -2,15 +2,19 @@
 from __future__ import annotations
 
 from importlib.util import find_spec
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Callable, Dict, Optional, Tuple
 
+from je_auto_control.android import input as android_input
 from je_auto_control.android.adb_client import AdbClient, AdbError
 from je_auto_control.android.client import UIAutomatorDevice
 from je_auto_control.android.input import ADB_KEYBOARD_IME, current_input_method
+from je_auto_control.android.screen import capture_frame
 from je_auto_control.wrapper.device_context import (
     CAPABILITY_NAMES, STATE_AVAILABLE, STATE_NEEDS_DEPENDENCY, STATE_NEEDS_PERMISSION,
-    DeviceCapability, DeviceContext, DeviceError, DeviceSession, bound_session,
+    DeviceCapability, DeviceContext, DeviceError, DeviceSession, Drag, LongPress,
+    Pinch, Swipe, Tap, bound_session,
 )
+from je_auto_control.wrapper.device_frame import DeviceFrame
 
 #: Capabilities plain ``adb`` provides once the device is authorised.
 _ADB_CAPABILITIES = ("input", "screenshot", "app_lifecycle", "install", "files", "recording")
@@ -115,6 +119,34 @@ class AndroidSession(DeviceSession):
             "`adb shell input text` carries printable ASCII only; other text needs "
             "uiautomator2 on the host or the ADBKeyBoard IME selected on the device",
             alternative="ASCII text works without either")
+
+    def _ui_or_none(self) -> Optional[UIAutomatorDevice]:
+        """The uiautomator2 wrapper when that path can be used, else ``None``."""
+        return self.ui_device if self.has_ui_automator else None
+
+    def capture(self) -> DeviceFrame:
+        """The current screen, upright, in the coordinates ``input tap`` takes."""
+        return self.invoke("capture", lambda: capture_frame(self.adb, self.device_id))
+
+    def type_text(self, text: str) -> None:
+        """Type ``text`` through a path that can carry it, or raise (see ``android.input``)."""
+        self.invoke("type_text", lambda: android_input.type_text(
+            self.adb, text, ui_device=self._ui_or_none()))
+
+    def press_key(self, key: str) -> None:
+        """Send a keycode (``KEYCODE_HOME``, ``BACK``, or a number)."""
+        self.invoke("press_key", lambda: self.adb.key_event(key))
+
+    def _gesture_handlers(self) -> Dict[type, Callable[[Any], None]]:
+        adb = self.adb
+        ui_device = self._ui_or_none()
+        return {
+            Tap: lambda g: android_input.tap(adb, g),
+            LongPress: lambda g: android_input.long_press(adb, g),
+            Swipe: lambda g: android_input.swipe(adb, g),
+            Drag: lambda g: android_input.drag(adb, g, ui_device=ui_device),
+            Pinch: lambda g: android_input.pinch(adb, g, ui_device=ui_device),
+        }
 
     def _release(self) -> None:
         self._adb = None
