@@ -147,6 +147,12 @@ ACL 由 HMAC-SHA256 簽章保護，簽章就存在檔案本身的 ``"signature"`
 **fail-closed**\ （default-deny，``UsbAcl.integrity_ok`` 回 ``False``\ ）。這擋住
 偷偷改寫 JSON 想給自己授權的 process。
 
+fail-closed 的意思是 ``decide()`` 對**每一個**裝置都回 ``"deny"``：即使這個實例是用
+``default_policy="allow"`` 建立的、即使它先前從完好的檔案讀到過允許規則也一樣
+（以前 allow-by-default 的 ACL 會一邊回報 ``integrity_ok False`` 一邊繼續放行）。
+這段期間 ``default_policy`` 也回報 ``"deny"``。等檔案再次讀到完好的內容，或操作者
+存入一次變更（會重新簽章），才恢復正常判斷。
+
 簽章以前是寫在資料之後的 sidecar ``usb_acl.json.sig``，所以 GUI 與 host session
 （或兩個行程）可能讀到新資料配舊簽章，於是在沒有人動過的檔案上退回全部拒絕。現在
 資料與簽章是同一個檔案、以一次 rename 取代。變更（新增／移除／匯入／設定預設值）

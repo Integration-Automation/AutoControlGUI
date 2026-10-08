@@ -2047,7 +2047,7 @@ def AC_llm_run(
     model: str | None = ...,
     max_tokens: int = ...,
 ) -> Dict[str, Any]:
-    """Executor adapter: plan and execute against the global executor."""
+    """Executor adapter: plan and execute, as the caller this thread already serves (so no ``owner``)."""
 
 def AC_load_data(source: Dict[str, Any]) -> List[Dict[str, Any]]:
     """Executor adapter: load tabular rows from a data source spec."""

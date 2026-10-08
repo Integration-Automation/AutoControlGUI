@@ -441,6 +441,7 @@ module = [
     "je_auto_control.gui._tab_task",
     "je_auto_control.gui.remote_desktop.connection_recent",
     "je_auto_control.utils.executor.run_control",
+    "je_auto_control.utils.thread_bound",
     "je_auto_control.gui._dispose",
     "je_auto_control.gui._slow_op",
     "je_auto_control.gui._weak_call",

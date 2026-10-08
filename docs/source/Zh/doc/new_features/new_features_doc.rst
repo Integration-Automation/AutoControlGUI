@@ -382,6 +382,14 @@ free-threaded Python 與 ``-X thread_inherit_context=1``\ （新執行緒一開�
 執行緒上替這次執行做事，請把值傳過去（或在那裡自己開一個
 ``execution_scope``\ ）。在綁定執行緒上的 coroutine 與 task 則共用這次執行。
 
+其他屬於呼叫執行緒的狀態也是同一條規則：請求所代表的 RBAC 呼叫者
+（``authorization_scope`` / ``current_authorization``）、``use_device`` 綁定的裝置、
+``heal_context`` 的標記，以及可停止執行的停止權杖。在它們裡面啟動的執行緒，在每一種
+直譯器上一開始都不帶這些狀態，所以在 free-threaded Python 上，一條在管理員的請求
+進行中才第一次啟動的排程器或 observer 執行緒，不會一直以那位管理員的身分執行。
+刻意把工作交給另一條執行緒的程式會把值帶過去、在那裡重新綁定，``AC_parallel`` 對
+呼叫者與停止權杖就是這樣做的。
+
 另外四種呼叫者的範圍是刻意選定的，不再是行程層級的範圍：
 
 * ``je_auto_control run --dry-run --var name=value`` 把變數放進該次 dry run
@@ -506,12 +514,31 @@ GUI：**Variables** 分頁 — 即時檢視 ``executor.variables``，可單筆�
 不帶 ``run_id`` 的 ``AC_stop_execution``（以及 ``stop_execution()``）會停止呼叫者
 自己以外的所有可停止執行。
 
+在 MCP 上，同樣的兩件事是工具 ``ac_stop_execution``\ （參數 ``run_id`` 與 ``reason``\ ，需要
+``drive_input``\ ，唯讀的 server 不提供）與 ``ac_list_executions``\ （唯讀）。沒有另外的
+「以可停止方式執行」工具： ``ac_execute_actions`` 與 ``ac_execute_action_file`` 接受
+任何 action list，所以由清單自己帶上面的 ``AC_run_stoppable`` 區塊。ChatOps 指令的
+執行被停止時，回覆是 ``<command> stopped.``\ （原因放在括號裡），而不是回報失敗。
+
 停止時會發生的事：
 
 * **檢查點**：每個 action 之前、``AC_loop`` / ``AC_while_image`` /
   ``AC_while_var`` / ``AC_for_each`` / ``AC_for_each_row`` 的每一輪（body 是空的
   也算），以及 ``AC_sleep``、``AC_wait_image``、``AC_wait_pixel`` 與 ``AC_retry``
   退避等待的內部——這些等待會立刻醒來。``AC_parallel`` 的分支跟著所屬的執行一起停。
+* **輪詢式的等待也會被叫醒**——它們在兩次探測之間睡在 ``run_control.pause`` 上，
+  在可停止的執行之外那就是單純的 ``time.sleep``：``AC_wait_window``、
+  ``AC_wait_text``、``AC_expect_poll``、``AC_assert_eventually``、smart wait
+  （``AC_wait_screen_stable``、``AC_wait_pixel_changes``、``AC_wait_region_idle``、
+  ``AC_wait_clipboard_change``、``AC_wait_image_gone``、``AC_wait_text_gone``、
+  ``AC_wait_color``、``AC_wait_window_title``、``AC_wait_window_closed``、
+  ``AC_wait_for_file``、``AC_wait_for_port``、``AC_wait_for_process``）、
+  ``AC_wait_actionable``、``AC_wait_until_app_idle``、``AC_wait_for_unlock``、
+  ``AC_wait_for_composition_commit``、``AC_android_wait_for_app`` /
+  ``AC_ios_wait_for_app``、``AC_handle_file_dialog`` 等對話框出現的等待、
+  ``AC_self_heal_click`` 的 ``verify`` 輪詢、``AC_run_state_machine`` 的 ``after``
+  計時，以及 ``AC_hold_key``、``AC_input_sequence``（``wait`` 步驟）與
+  ``AC_replay_timeline`` 的計時按住（離開時會放開它們按住的東西）。
 * **拋出** ``ExecutionStopped``（``AutoControlException`` 的子類別），在執行自己的
   執行緒上。不論 ``raise_on_error`` 為何，它都不會被「記錄後繼續」，``AC_try`` /
   ``AC_retry`` 也不會接住它：``catch`` 會被跳過。測試套件會整個停止，而不是把
@@ -524,8 +551,11 @@ GUI：**Variables** 分頁 — 即時檢視 ``executor.variables``，可單筆�
 * **具黏著性**：吞掉這個例外的指令只是把它延後到下一個檢查點。
 
 不會做的事：中斷已經進到後端的指令（一次影像搜尋、一次 OCR、一次 HTTP 請求、
-wrapper 自己的 ``time.sleep``）。該指令返回後執行才結束。兩個進行中的執行不能
-使用同一個 ``run_id``。
+一次 shell 指令、wrapper 自己的 ``time.sleep``）。該指令返回後執行才結束。同樣不會
+被叫醒的還有：``AC_wait_for_focus_change``（單一次原生 UI Automation 等待）、聚焦
+視窗之後不到一秒的穩定等待，以及單一手勢內部的節奏停頓（帶 ``interval`` 的
+``AC_click_mouse``、擬人化的移動與打字、補間拖曳）。兩個進行中的執行不能使用同一個
+``run_id``。
 
 GUI：Script、Script Builder、LLM Planner、Record（回放）、Test Suites 與 ChatOps
 分頁都改在 GUI 執行緒之外執行，每個分頁一次只跑一個，並各有 **停止執行**

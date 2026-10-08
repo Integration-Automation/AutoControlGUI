@@ -2001,7 +2001,7 @@ def _llm_run_for_executor(description: str,
                           examples: Optional[list] = None,
                           model: Optional[str] = None,
                           max_tokens: int = 2048) -> Dict[str, Any]:
-    """Executor adapter: plan and execute against the global executor."""
+    """Executor adapter: plan and execute, as the caller this thread already serves (so no ``owner``)."""
     return llm_run_from_description(
         description,
         executor=executor,

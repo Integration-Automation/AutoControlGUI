@@ -23,6 +23,8 @@ import time
 from dataclasses import asdict, dataclass
 from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple
 
+from je_auto_control.utils.executor.run_control import pause
+
 _TIMEOUT_POSITIVE = "timeout_s must be positive"
 _POLL_POSITIVE = "poll_interval_s must be positive"
 
@@ -59,7 +61,7 @@ def _pause(deadline: float, poll_interval_s: float) -> None:
     Every wait slept its whole interval, so a 0.1 s timeout polled at
     1.5 s returned after 1.5 s.
     """
-    time.sleep(max(0.0, min(float(poll_interval_s), deadline - time.monotonic())))
+    pause(max(0.0, min(float(poll_interval_s), deadline - time.monotonic())), time.sleep)
 
 
 def _default_sampler(region: Optional[Sequence[int]]) -> Frame:

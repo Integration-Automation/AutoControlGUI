@@ -28,7 +28,7 @@ from je_auto_control.utils.rbac import (
     USERS_ENV, DeferredOwner, Role, UserStore, authorization_scope, capture_owner,
     current_authorization, resolve_token,
 )
-from je_auto_control.utils.rbac.deferred import adopted_scope
+from je_auto_control.utils.rbac.deferred import adopted_scope, owner_scope
 from je_auto_control.utils.state_machine import StateMachine
 
 _SIGN = "AC_sign_action_file"
@@ -257,6 +257,52 @@ def test_a_plan_inside_a_request_is_that_requests(users, ran):
 def test_a_plan_without_rbac_runs_as_before(ran):
     _plan()
     assert ran == [(_PROBE, None), (_SIGN, None)]
+
+
+# ``AC_llm_run`` takes no ``owner``: an action is executed on the thread that
+# runs its list, so the caller is already there -- the request's own scope, or
+# the ``owner_scope`` a scheduler / trigger / hotkey opened for the entry's
+# owner. An ``owner`` argument in an action list would only let its author
+# name somebody else.
+
+_LLM_RUN = [["AC_llm_run", {"description": "sign it"}]]
+
+
+@pytest.fixture()
+def fake_llm(monkeypatch):
+    monkeypatch.setattr("je_auto_control.utils.llm.planner.get_backend", _FakeBackend)
+
+
+def test_ac_llm_run_inside_a_request_runs_as_that_request(users, ran, fake_llm):
+    with _as(users, Role.OPERATOR):
+        execute_action(_LLM_RUN, raise_on_error=False)
+    assert ran == [(_PROBE, "operator-user")]
+    ran.clear()
+    with _as(users, Role.ADMIN):
+        execute_action(_LLM_RUN)
+    assert ran == [(_PROBE, "admin-user"), (_SIGN, "admin-user")]
+
+
+def test_ac_llm_run_in_deferred_work_runs_as_the_works_owner(users, ran, fake_llm):
+    with _as(users, Role.OPERATOR):
+        owner = capture_owner()
+
+    def fire():
+        with owner_scope(owner):  # what the scheduler does around a job
+            return execute_action(_LLM_RUN, raise_on_error=False)
+
+    status, _result = _on_thread(fire)
+    assert status == "ok"
+    assert ran == [(_PROBE, "operator-user")]
+
+
+def test_ac_llm_run_rejects_an_owner_argument(ran, fake_llm):
+    record = execute_action(
+        [["AC_llm_run", {"description": "sign it",
+                         "owner": {"user_id": "admin-user", "role": "admin"}}]],
+        raise_on_error=False)
+    assert ran == []
+    assert "owner" in str(list(record.values())[0])
 
 
 # --- the helper --------------------------------------------------------------------------------
