@@ -340,9 +340,14 @@ def test_only_a_stated_denial_counts_as_declined():
     absent = oeffis_mod.PortalConsentNotGranted(
         "x", "disconnected", "no such interface")
     silent = oeffis_mod.PortalConsentNotGranted("x", "timeout")
+    # What a real liboeffis said when the portal withheld the EIS descriptor
+    # (portal-verification, 2026-10-09): a failed route, not the user's "no".
+    withheld = oeffis_mod.PortalConsentNotGranted(
+        "x", "disconnected", "Error calling ConnectToEIS: Permission denied")
     assert denied.declined is True
     assert absent.declined is False
     assert silent.declined is False
+    assert withheld.declined is False
     assert isinstance(denied, oeffis_mod.OeffisUnavailable)
 
 

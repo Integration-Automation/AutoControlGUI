@@ -163,8 +163,18 @@ pip install --dry-run --only-binary=:all: --platform win_arm64 --python-version 
 選用的 libei helper 行程（`JE_AUTOCONTROL_WAYLAND_EI_WORKER=1`，預設關閉）都是在 Windows 上對假物件寫的。要看 CI 的 `portal-verification`、
 `eis-verification`、`wayland-verification` 三個 job 的輸出（新增的都是 `info` 行，不改變 job 的結果）：
 
-- **「同意被拒絕就不退回 ydotool」靠 liboeffis 的錯誤文字含 "denied" 來判斷**——沒對真的 liboeffis 驗過；判斷不出來時行為與以前相同（退回 ydotool）。
-  同意對話框放著不回答（逾時）仍會退回 ydotool。
+2026-10-09 在 #510 的 CI 第一次對真的函式庫跑過，結果：
+
+- **同意被拒絕**：真的 liboeffis 回的是 `Portal denied Start`，規則認得。第一版規則只看有沒有 "denied"，把「portal 不給 EIS descriptor」
+  （`Error calling ConnectToEIS: Permission denied`）也當成使用者拒絕；`portal-verification` 的 `*** REVISIT ***` 抓到，已改成只認 `Portal denied …` 開頭。
+  修正後還沒有再跑過那個 job 的結果可看。同意對話框放著不回答（逾時）仍會退回 ydotool。
+- **helper 行程對真的 EIS server 可用**：按鍵、絕對移動、按鈕、捲動都到達，與行程內路徑相同；延遲中位數 0.340 ms（行程內 0.096 ms），p95 0.393 ms。
+  正常關閉時按住的鍵會先放開；helper 被 SIGKILL 時 server 沒收到 key-up，放開交給合成器。
+- **半開交握**：崩潰確定是 `ei_unref`；3 次半開交握行程內漏 9 個 fd，經 helper 漏 3 個，helper 都以 exit status 1 結束、沒有殘留行程。
+  既有的真實函式庫檢查（20/20）在改過的 `oeffis.py`／`libei.py`／`_select_input.py`／`portal.py` 上仍然通過。
+
+還沒有實證的：
+
 - 沒有任何腳本從 server 端切斷一個連線中的 client，所以 `EI_EVENT_DISCONNECT` 對應到 `revoked` 沒有實證。
 - helper：SIGTERM 時放開按鍵、經 portal（fd 路徑）而非 socket 路徑，沒有 job 會跑到。
 - `compositor_identity`、uinput／藍牙裝置在 sysfs 的位置、`struct input_event` 的配置、GlobalShortcuts 的線上格式與哪些桌面有實作、XWayland 的可及範圍：

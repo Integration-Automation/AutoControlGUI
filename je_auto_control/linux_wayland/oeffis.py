@@ -93,8 +93,15 @@ class PortalConsentNotGranted(OeffisUnavailable):
 
     @property
     def declined(self) -> bool:
-        """Whether the portal answered the request with a refusal."""
-        return "denied" in self.detail.lower()
+        """Whether the portal answered the request with a refusal.
+
+        liboeffis words a dismissed consent as ``Portal denied <Method>``
+        ("Portal denied Start", measured against the real library). The bare
+        word is not enough: a portal that withholds the EIS descriptor says
+        "Error calling ConnectToEIS: Permission denied", which is a failure of
+        the route, not the user's answer, and has to keep falling back.
+        """
+        return self.detail.strip().lower().startswith("portal denied")
 
 
 def load_symbols() -> Optional[BoundSymbols]:

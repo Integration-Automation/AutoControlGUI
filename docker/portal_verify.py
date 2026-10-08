@@ -502,7 +502,7 @@ def _measure_classification(label: str, oeffis, expect_declined: bool,
     """Print how one refusal is classified; never count it.
 
     ``_select_input`` stops falling back to ydotool only when the portal
-    *declined* — recognised from the word "denied" in liboeffis's own error
+    *declined* — recognised from "Portal denied ..." at the start of liboeffis's own error
     text, which no fake can vouch for. This prints the real text for every
     way a request can end, so a wording change shows up here as a banner
     rather than as a silent change in who is allowed to fall back.
