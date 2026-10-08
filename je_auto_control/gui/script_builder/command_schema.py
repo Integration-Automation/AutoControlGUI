@@ -3555,6 +3555,7 @@ def _add_resilience_specs(specs: List[CommandSpec]) -> None:
         FieldSpec("scripts_dir", FieldType.FILE_PATH, optional=True),
         FieldSpec("locators_path", FieldType.FILE_PATH, optional=True),
         FieldSpec("assets_dir", FieldType.FILE_PATH, optional=True),
+        FieldSpec("assets_server", FieldType.BOOL, optional=True, default=False),
     )
     specs.append(CommandSpec(
         "AC_config_sync_run", "Data", "Config Sync: Sync Now",

@@ -88,6 +88,11 @@ class ConfigSyncClient:
         """The server this client talks to, without a trailing slash."""
         return self._server_url
 
+    @property
+    def timeout_s(self) -> float:
+        """Seconds this client waits for one request."""
+        return self._timeout
+
     def _endpoint(self, suffix: str = "") -> str:
         encoded = urllib.parse.quote(self._user_id, safe="")
         path = f"/config/{encoded}{suffix}"

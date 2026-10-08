@@ -29,7 +29,11 @@ This package is the **headless client** side:
   trigger and address-book adapters. Secrets and machine paths leave only as
   references, and applying synced data never enables a hotkey or trigger.
 * :mod:`.assets` -- :func:`sync_assets`: files fetched by SHA-256, verified,
-  then replaced atomically.
+  then replaced atomically, through a shared folder
+  (:class:`DirectoryAssetTransport`) or the sync server
+  (:class:`HttpAssetTransport`).
+* :mod:`.blobs` -- :class:`BlobStore`, what the server keeps behind
+  ``/blobs``: per account, content-addressed, size-capped, with a quota.
 * :mod:`.device` -- :func:`default_device_id`, this machine's stable id.
 * :mod:`.session` -- :func:`run_sync`, the whole cycle behind the GUI tab,
   the ``AC_config_sync_*`` commands and the MCP tools.
@@ -54,8 +58,9 @@ from je_auto_control.utils.config_sync.adapters import (
 )
 from je_auto_control.utils.config_sync.assets import (
     AssetManifest, AssetRef, AssetSyncError, AssetSyncResult, AssetTransport,
-    DirectoryAssetTransport, publish_assets, sync_assets,
+    DirectoryAssetTransport, HttpAssetTransport, publish_assets, sync_assets,
 )
+from je_auto_control.utils.config_sync.blobs import BlobStore, BlobStoreError
 from je_auto_control.utils.config_sync.client import (
     DEFAULT_SYNC_ATTEMPTS, TOMBSTONE_RETENTION_S, WIRE_VERSION, ConflictRecord, ConfigBucket,
     ConfigSyncClient, ConfigSyncConflict, ConfigSyncError, FullResyncRequired,
@@ -81,7 +86,8 @@ from je_auto_control.utils.config_sync.versions import (
 
 __all__ = [
     "AddressBookSyncAdapter", "ApplyReport", "AssetManifest", "AssetRef", "AssetSyncError",
-    "AssetSyncResult", "AssetTransport", "DirectoryAssetTransport", "HotkeySyncAdapter",
+    "AssetSyncResult", "AssetTransport", "BlobStore", "BlobStoreError",
+    "DirectoryAssetTransport", "HotkeySyncAdapter", "HttpAssetTransport",
     "LocatorSyncAdapter", "ScriptSyncAdapter", "SyncAdapter", "SyncRunReport",
     "TriggerSyncAdapter", "config_sync_full_resync", "config_sync_resolve", "config_sync_run",
     "config_sync_status", "default_adapters", "default_device_id", "publish_assets",

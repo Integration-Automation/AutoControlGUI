@@ -268,8 +268,78 @@ Adapter:同步什麼、什麼留在本機
     # AssetSyncResult(transferred, unchanged, failed, hashes, cancelled)
 
 ``sync_assets`` 在寫入 *之前* 以 SHA-256 與大小檢查每個檔案、以原子方式取代目的檔、
-檢查失敗時不動既有檔案,並拒絕會離開資料夾的路徑。隨附的 transport 是
-``DirectoryAssetTransport``;其他 blob 儲存請實作 ``fetch`` / ``store`` / ``has``。
+檢查失敗時不動既有檔案,並拒絕會離開資料夾的路徑。隨附兩種 transport;
+其他 blob 儲存請實作 ``fetch`` / ``store`` / ``has``。
+
+.. list-table::
+   :header-rows: 1
+
+   * - Transport
+     - 適用情況
+   * - ``DirectoryAssetTransport(folder)``
+     - 兩台機器都能存取同一個資料夾(共用磁碟、掛載的 bucket);
+       ``config_sync_run(..., assets_dir=folder)``
+   * - ``HttpAssetTransport(server_url, user_id=..., secret=...)``
+     - 兩台機器只共用同步 server;
+       ``config_sync_run(..., assets_server=True)``
+
+同時給 ``assets_dir`` 與 ``assets_server`` 是錯誤。
+
+**同步 server 上的 blob。** Signaling server 以「依內容定址、依帳號分開」的 blob 保存資產:
+
+.. list-table::
+   :header-rows: 1
+
+   * - 請求
+     - 回覆
+   * - ``PUT /blobs/{user_id}/{sha256}``,body 為原始位元組
+     - ``201 {"ok": true, "sha256", "size", "stored": true}``;帳號已有該內容時 ``200`` 且
+       ``"stored": false``;位元組的 hash 與路徑中的 digest 不符、或 digest 格式錯誤時 ``400``;
+       超過單一 blob 上限時 ``413``、沒有 ``Content-Length`` 時 ``411``(都在讀取 body 之前);
+       會超過帳號配額時 ``507``;帳號數過多或儲存失敗時 ``503``
+   * - ``GET /blobs/{user_id}/{sha256}``
+     - ``200`` 與位元組(``application/octet-stream``),或 ``404``
+   * - ``HEAD /blobs/{user_id}/{sha256}``
+     - ``200`` 或 ``404``,沒有 body
+   * - ``DELETE /blobs/{user_id}/{sha256}``
+     - ``200 {"deleted": true | false}``
+   * - ``GET /blobs/{user_id}``
+     - ``200 {"used", "quota", "count", "max_blob_bytes", "blobs": [{"sha256", "size"}]}``
+
+規則和 ``/config`` 相同:每個請求都要帶共享密鑰(``X-Signaling-Secret``,否則 ``401``);
+帳號就是路徑中的那個,所以一個帳號無法讀取、列出或刪除另一個帳號的 blob;
+大小上限在讀取 body 之前就以 ``Content-Length`` 檢查。除此之外每個帳號還有 **總配額**。
+
+.. list-table::
+   :header-rows: 1
+
+   * - 設定
+     - 預設
+     - 旗標 / ``create_app`` 參數
+   * - 單一 blob 上限
+     - 16 MiB
+     - ``--max-blob-bytes`` / ``max_blob_bytes``
+   * - 每個帳號的總量
+     - 256 MiB
+     - ``--blob-quota-bytes`` / ``blob_quota_bytes``
+   * - blob 存放位置
+     - config 資料庫路徑加上 ``.blobs``
+       (``~/.je_auto_control/config_sync.sqlite3.blobs``)
+     - ``--blob-dir`` / ``blob_store_path``
+   * - 持有 blob 的帳號數
+     - 1,024
+     - --
+
+資料夾在第一次上傳時才建立,不是啟動時。儲存由
+``je_auto_control.utils.config_sync.blobs.BlobStore`` 負責(``put`` / ``get`` / ``has`` /
+``delete`` / ``usage``);每個帳號的 blob 放在以帳號 id 的 hash 命名的資料夾,blob 先寫到暫存檔再改名。
+沒有任何東西會自動移除 blob:``used`` 接近 ``quota`` 時,請 ``DELETE`` 已經沒有腳本引用的那些。
+配額由單一 server 行程執行;兩個行程共用同一個資料夾時,可能在同一時刻各放行一個 blob 而超出這麼多。
+
+``HttpAssetTransport`` 經由 ``je_auto_control.utils.http_client``(egress policy 適用),不跟隨轉址。
+被拒絕的上傳會說明原因 —— 太大、配額用完、密鑰錯誤、或 server 還沒有 ``/blobs`` ——
+``publish_assets`` 會把它逐檔回報在 ``failed``,不會中斷其他檔案。``/blobs`` 路由是新增的:
+``/config`` 的傳輸格式仍是 version 2,不使用它們的 client 不受影響。
 
 一個呼叫,三個介面
 ------------------
@@ -296,7 +366,7 @@ Adapter:同步什麼、什麼留在本機
 ``config_sync_status`` 的 ``retry_in_s`` 是即時計算的,延遲結束後顯示 ``pending`` 而不是 ``backing_off``。
 
 選項:``device_id``(預設:在 ``~/.je_auto_control/config_sync_device_id`` 建立一次的 id)、
-``secret``(預設 ``$AC_SIGNALING_SECRET``)、``sections``(見下)、``scripts_dir``、
+``secret``(預設 ``$AC_SIGNALING_SECRET``)、``sections``(見下)、``assets_server``、``scripts_dir``、
 ``locators_path``、``outbox_path``、``assets_dir``、``timeout_s``、``wait``、``force``、
 ``max_attempts``。
 

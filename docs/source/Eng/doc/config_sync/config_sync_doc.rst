@@ -319,8 +319,89 @@ other files (template images) travel through an ``AssetTransport``:
 ``sync_assets`` checks every file against its SHA-256 and size *before*
 writing, replaces the destination atomically, leaves the existing file alone
 when the check fails, and refuses a path that would leave the folder.
-``DirectoryAssetTransport`` is the transport that ships; implement
-``fetch`` / ``store`` / ``has`` for any other blob store.
+Two transports ship; implement ``fetch`` / ``store`` / ``has`` for any other
+blob store.
+
+.. list-table::
+   :header-rows: 1
+
+   * - Transport
+     - Use it when
+   * - ``DirectoryAssetTransport(folder)``
+     - both machines reach one folder (a share, a mounted bucket);
+       ``config_sync_run(..., assets_dir=folder)``
+   * - ``HttpAssetTransport(server_url, user_id=..., secret=...)``
+     - the machines share only the sync server;
+       ``config_sync_run(..., assets_server=True)``
+
+``assets_dir`` and ``assets_server`` together are an error.
+
+**Blobs on the sync server.** The signaling server keeps assets as
+content-addressed blobs per account:
+
+.. list-table::
+   :header-rows: 1
+
+   * - Request
+     - Reply
+   * - ``PUT /blobs/{user_id}/{sha256}`` with the raw bytes
+     - ``201 {"ok": true, "sha256", "size", "stored": true}``; ``200`` with
+       ``"stored": false`` when the account already holds it; ``400`` when the
+       bytes do not hash to the digest in the path or the digest is malformed;
+       ``413`` over the per-blob cap and ``411`` without ``Content-Length``
+       (both before the body is read); ``507`` when the account's quota would
+       be exceeded; ``503`` for too many accounts or a failing store
+   * - ``GET /blobs/{user_id}/{sha256}``
+     - ``200`` with the bytes (``application/octet-stream``), or ``404``
+   * - ``HEAD /blobs/{user_id}/{sha256}``
+     - ``200`` or ``404``, no body
+   * - ``DELETE /blobs/{user_id}/{sha256}``
+     - ``200 {"deleted": true | false}``
+   * - ``GET /blobs/{user_id}``
+     - ``200 {"used", "quota", "count", "max_blob_bytes", "blobs": [{"sha256", "size"}]}``
+
+The rules are the ones ``/config`` follows: every request needs the shared
+secret (``X-Signaling-Secret``, ``401`` otherwise); the account is the one in
+the path, so one account never reads, lists or deletes another's blobs; and
+the size cap is checked against ``Content-Length`` before the body is read.
+On top of that an account has a **total quota**.
+
+.. list-table::
+   :header-rows: 1
+
+   * - Setting
+     - Default
+     - Flag / ``create_app`` argument
+   * - largest single blob
+     - 16 MiB
+     - ``--max-blob-bytes`` / ``max_blob_bytes``
+   * - total per account
+     - 256 MiB
+     - ``--blob-quota-bytes`` / ``blob_quota_bytes``
+   * - where blobs are kept
+     - the config database's path with ``.blobs`` added
+       (``~/.je_auto_control/config_sync.sqlite3.blobs``)
+     - ``--blob-dir`` / ``blob_store_path``
+   * - accounts holding blobs
+     - 1,024
+     - --
+
+The folder is created at the first upload, not at start-up. Storage is
+``je_auto_control.utils.config_sync.blobs.BlobStore`` (``put`` / ``get`` /
+``has`` / ``delete`` / ``usage``); each account's blobs are in a folder named
+by a hash of the account id, and a blob is written to a temporary file and
+renamed. Nothing removes blobs by itself: ``DELETE`` the ones no script
+refers to any more when ``used`` approaches ``quota``. The quota is enforced
+by one server process; two processes sharing one folder can each admit a blob
+at the same moment and overshoot by that much.
+
+``HttpAssetTransport`` goes through ``je_auto_control.utils.http_client`` (the
+egress policy applies) and does not follow redirects. A refused upload says
+why -- too large, quota used up, wrong secret, or a server that predates
+``/blobs`` -- and ``publish_assets`` reports it per file under ``failed``
+without stopping the other files. The ``/blobs`` routes are additions: the
+``/config`` wire format is still version 2, and a client that does not use
+them is unaffected.
 
 One call, three surfaces
 ------------------------
@@ -355,7 +436,7 @@ delay has run out.
 
 Options: ``device_id`` (default: an id created once in
 ``~/.je_auto_control/config_sync_device_id``), ``secret`` (default
-``$AC_SIGNALING_SECRET``), ``sections`` (below), ``scripts_dir``, ``locators_path``, ``outbox_path``, ``assets_dir``,
+``$AC_SIGNALING_SECRET``), ``sections`` (below), ``assets_server``, ``scripts_dir``, ``locators_path``, ``outbox_path``, ``assets_dir``,
 ``timeout_s``, ``wait``, ``force``, ``max_attempts``.
 
 **Which sections a sync covers.** ``resolve_sections(sections, scripts_dir=...,

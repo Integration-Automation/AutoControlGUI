@@ -392,6 +392,7 @@ module = [
     "je_auto_control.utils.codegen.journal_import",
     "je_auto_control.utils.config_sync.adapters",
     "je_auto_control.utils.config_sync.assets",
+    "je_auto_control.utils.config_sync.blobs",
     "je_auto_control.utils.config_sync.bucket",
     "je_auto_control.utils.config_sync.client",
     "je_auto_control.utils.config_sync.device",

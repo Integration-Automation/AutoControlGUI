@@ -9248,6 +9248,7 @@ def config_sync_tools() -> List[MCPTool]:
         "locators_path": {"type": "string", "format": "path"},
         "outbox_path": {"type": "string", "format": "path"},
         "assets_dir": {"type": "string", "format": "path"},
+        "assets_server": {"type": "boolean"},
         "timeout_s": {"type": "number"},
     }
     required = ["server_url", "user_id"]

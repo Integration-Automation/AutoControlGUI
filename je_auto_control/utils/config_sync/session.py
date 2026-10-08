@@ -26,7 +26,8 @@ from je_auto_control.utils.config_sync.adapters import (
     SyncAdapter, TriggerSyncAdapter,
 )
 from je_auto_control.utils.config_sync.assets import (
-    AssetManifest, AssetTransport, DirectoryAssetTransport, publish_assets, sync_assets,
+    AssetManifest, AssetTransport, DirectoryAssetTransport, HttpAssetTransport,
+    publish_assets, sync_assets,
 )
 from je_auto_control.utils.config_sync.client import (
     ConfigBucket, ConfigSyncClient, ConfigSyncError, FullResyncRequired, SyncResult,
@@ -58,7 +59,7 @@ _STATUS = "status"
 _UNAPPLIED = "unapplied"
 _OPTIONS = frozenset({
     "device_id", "secret", "sections", "scripts_dir", "locators_path", "outbox_path",
-    "assets_dir", "timeout_s", "wait", "max_attempts", "force",
+    "assets_dir", "assets_server", "timeout_s", "wait", "max_attempts", "force",
 })
 
 
@@ -457,7 +458,8 @@ def config_sync_run(server_url: str, user_id: str, *,
     their section -- pass ``sections="scripts"`` to sync scripts alone; the
     report's ``sections`` lists what was covered), ``scripts_dir``,
     ``locators_path``, ``outbox_path``, ``assets_dir`` (a folder both
-    machines reach, for scripts too large to inline), ``timeout_s``,
+    machines reach, for scripts too large to inline) or ``assets_server``
+    (true: keep those on the sync server itself, at ``/blobs``), ``timeout_s``,
     ``wait`` (sleep through a retry back-off instead of returning
     ``backing_off``), ``force`` (skip that back-off once: someone asked for
     a sync now) and ``max_attempts``.
@@ -465,12 +467,24 @@ def config_sync_run(server_url: str, user_id: str, *,
     if cancel is not None and not isinstance(cancel, threading.Event):
         raise ConfigSyncError("cancel must be a threading.Event")
     client, outbox, adapters, device_id = _session(server_url, user_id, options)
-    assets_dir = options.get("assets_dir")
     return run_sync(
         client, outbox, adapters, device_id=device_id, cancel=cancel,
         wait=bool(options.get("wait", False)), force=bool(options.get("force", False)),
         max_attempts=int(options.get("max_attempts") or DEFAULT_DRAIN_ATTEMPTS),
-        asset_transport=DirectoryAssetTransport(assets_dir) if assets_dir else None).to_dict()
+        asset_transport=_asset_transport(client, options)).to_dict()
+
+
+def _asset_transport(client: ConfigSyncClient,
+                     options: Mapping[str, Any]) -> Optional[AssetTransport]:
+    """Where large scripts travel: a shared folder, the sync server, or nowhere."""
+    assets_dir = options.get("assets_dir")
+    if not options.get("assets_server"):
+        return DirectoryAssetTransport(assets_dir) if assets_dir else None
+    if assets_dir:
+        raise ConfigSyncError("give assets_dir or assets_server, not both")
+    return HttpAssetTransport(
+        client.server_url, user_id=client.user_id, timeout_s=client.timeout_s,
+        secret=options.get("secret") or os.environ.get("AC_SIGNALING_SECRET") or None)
 
 
 def config_sync_status(server_url: str, user_id: str, outbox_path: Optional[str] = None,
