@@ -3038,6 +3038,8 @@ def _add_audit_specs(specs: List[CommandSpec]) -> None:
     specs.append(CommandSpec(
         "AC_self_heal_revision_list", "Testing", "Self-Heal: List Template Revisions",
         description="List stored template revisions and their status.",
+    ))
+    specs.append(CommandSpec(
         "AC_journal_start", "Testing", "Start Action Journal",
         fields=(
             FieldSpec("path", FieldType.FILE_PATH, optional=True,
