@@ -85,7 +85,7 @@ class PackageManager:
         Whether the gate would let ``package`` be loaded. Nothing is imported: this is
         what lets an action list be validated before the load command in it has run.
         """
-        if not is_package_name(package):
+        if not isinstance(package, str) or not is_package_name(package):
             return False
         return self.allow_arbitrary_packages or self._is_allowlisted(package)
 
