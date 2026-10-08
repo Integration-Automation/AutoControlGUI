@@ -30,7 +30,8 @@ class TabSpec:
 def lazy_factory(module: str, class_name: str) -> WidgetFactory:
     """Return a factory that imports ``module`` and builds ``class_name``."""
     def build() -> Any:
-        return getattr(import_module(module), class_name)()
+        # reason: both names come from the TAB_SPECS table below, never from user input.
+        return getattr(import_module(module), class_name)()  # nosemgrep: python.lang.security.audit.non-literal-import.non-literal-import
     return build
 
 
