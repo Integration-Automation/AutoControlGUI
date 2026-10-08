@@ -1160,6 +1160,20 @@ def ios_tools() -> List[MCPTool]:
     ]
 
 
+def mobile_command_tools() -> List[MCPTool]:
+    """Android / iOS tools generated from the table the executor commands come from."""
+    from je_auto_control.wrapper.mobile_commands import mcp_tool_specs
+    return [
+        MCPTool(
+            name=spec["name"], description=spec["description"],
+            input_schema=schema(spec["properties"], spec["required"]),
+            handler=spec["handler"],
+            annotations=READ_ONLY if spec["read_only"] else DESTRUCTIVE,
+        )
+        for spec in mcp_tool_specs()
+    ]
+
+
 def redaction_tools() -> List[MCPTool]:
     return [
         MCPTool(
@@ -9290,7 +9304,8 @@ ALL_FACTORIES = (
     ocr_structure_tools,
     smart_wait_tools, cost_telemetry_tools, failure_hook_tools,
     computer_use_tools, dag_tools, presence_tools, chatops_tools,
-    redaction_tools, android_widget_tools, ios_tools, webrunner_tools,
+    redaction_tools, android_widget_tools, ios_tools, mobile_command_tools,
+    webrunner_tools,
     scheduler_tools, trigger_tools, hotkey_tools, watchdog_tools,
     unattended_tools, work_queue_tools,
     synthetic_data_tools, mcp_registry_tools, test_selection_tools,

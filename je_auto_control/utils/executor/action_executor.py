@@ -1767,7 +1767,15 @@ _android_client_cache: Dict[Tuple[Optional[str], Optional[str]], Any] = {}
 
 def _android_client(serial: Optional[str] = None,
                     adb_path: Optional[str] = None) -> Any:
-    """Build (or return) a cached :class:`AdbClient` for ``serial``."""
+    """Build (or return) a cached :class:`AdbClient` for ``serial``.
+
+    Inside ``use_device`` (a device-matrix worker) the bound session's own
+    client is used unless ``serial`` names another device.
+    """
+    from je_auto_control.android.session import bound_android_session
+    session = bound_android_session(serial)
+    if session is not None:
+        return session.adb
     key = (serial, adb_path)
     cached = _android_client_cache.get(key)
     if cached is not None:
@@ -1776,6 +1784,16 @@ def _android_client(serial: Optional[str] = None,
     cached = AdbClient(adb_path=adb_path, default_serial=serial)
     _android_client_cache[key] = cached
     return cached
+
+
+def _android_ui_device(serial: Optional[str] = None) -> Any:
+    """The uiautomator2 wrapper for ``serial``: the bound session's, else a new one."""
+    from je_auto_control.android.session import bound_android_session
+    session = bound_android_session(serial)
+    if session is not None:
+        return session.ui_device
+    from je_auto_control.android import UIAutomatorDevice
+    return UIAutomatorDevice(serial=serial)
 
 
 def _ac_android_tap(x: int, y: int,
@@ -1806,8 +1824,9 @@ def _ac_android_key(key: str,
 def _ac_android_text(text: str,
                      serial: Optional[str] = None,
                      adb_path: Optional[str] = None) -> None:
-    """Type a string via ``input text``."""
-    _android_client(serial, adb_path).text(text)
+    """Type a string: ``input text`` for ASCII, a Unicode-capable path otherwise."""
+    from je_auto_control.android.input import type_text
+    type_text(_android_client(serial, adb_path), text)
 
 
 def _ac_android_screenshot(file_path: str,
@@ -1844,10 +1863,8 @@ def _ac_android_find_element(text: Optional[str] = None,
                               serial: Optional[str] = None,
                               ) -> Dict[str, int]:
     """Find an Android widget via uiautomator2; return its bounding rect."""
-    from je_auto_control.android import (
-        UIAutomatorDevice, find_element,
-    )
-    device = UIAutomatorDevice(serial=serial)
+    from je_auto_control.android import find_element
+    device = _android_ui_device(serial)
     x1, y1, x2, y2 = find_element(
         text=text, resource_id=resource_id, description=description,
         class_name=class_name, timeout_s=float(timeout_s), device=device,
@@ -1863,10 +1880,8 @@ def _ac_android_click_element(text: Optional[str] = None,
                                serial: Optional[str] = None,
                                ) -> Dict[str, int]:
     """Tap the first widget matching the selectors; return click centre."""
-    from je_auto_control.android import (
-        UIAutomatorDevice, click_element,
-    )
-    device = UIAutomatorDevice(serial=serial)
+    from je_auto_control.android import click_element
+    device = _android_ui_device(serial)
     cx, cy = click_element(
         text=text, resource_id=resource_id, description=description,
         class_name=class_name, timeout_s=float(timeout_s), device=device,
@@ -1876,14 +1891,25 @@ def _ac_android_click_element(text: Optional[str] = None,
 
 def _ac_android_dump_hierarchy(serial: Optional[str] = None) -> str:
     """Return the device's widget tree as an XML string."""
-    from je_auto_control.android import UIAutomatorDevice, dump_hierarchy
-    device = UIAutomatorDevice(serial=serial)
+    from je_auto_control.android import dump_hierarchy
+    device = _android_ui_device(serial)
     return dump_hierarchy(device=device)
+
+
+def _mobile_command_handlers() -> Dict[str, Callable[..., Any]]:
+    """The generated ``AC_android_*`` / ``AC_ios_*`` handlers (see ``wrapper.mobile_commands``)."""
+    from je_auto_control.wrapper.mobile_commands import generated_handlers
+    return generated_handlers()
 
 
 # === iOS executor adapters (WebDriverAgent / facebook-wda) ==================
 
 def _ios_device(url: Optional[str]) -> Any:
+    """The WDA wrapper for ``url``: the bound session's, else a new one."""
+    from je_auto_control.ios.session import bound_ios_session
+    session = bound_ios_session(url)
+    if session is not None:
+        return session.device
     from je_auto_control.ios import IOSDevice
     return IOSDevice(url=url)
 
@@ -8143,6 +8169,9 @@ class Executor:
             "AC_android_screenshot": _ac_android_screenshot,
             "AC_android_list_devices": _ac_android_list_devices,
             "AC_android_shell": _ac_android_shell,
+            # Android / iOS sessions, gestures, locating, apps and extensions:
+            # generated from the table the MCP tools and builder schema share.
+            **_mobile_command_handlers(),
 
             # LLM action planner
             "AC_llm_plan": _llm_plan_for_executor,

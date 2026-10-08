@@ -71,7 +71,25 @@ def _build_specs() -> List[CommandSpec]:
     _add_window_specs(specs)
     _add_flow_specs(specs)
     _add_misc_specs(specs)
+    _add_mobile_specs(specs)
     return specs
+
+
+def _add_mobile_specs(specs: List[CommandSpec]) -> None:
+    """Android / iOS commands, generated from the table the executor and MCP tools share."""
+    from je_auto_control.wrapper.mobile_commands import MOBILE_COMMANDS
+    kinds = {"int": FieldType.INT, "float": FieldType.FLOAT, "bool": FieldType.BOOL,
+             "file_path": FieldType.FILE_PATH}
+    for command in MOBILE_COMMANDS:
+        specs.append(CommandSpec(
+            command.name, "Android" if command.platform == "android" else "iOS",
+            command.label,
+            fields=tuple(
+                FieldSpec(param.name, kinds.get(param.kind, FieldType.STRING),
+                          optional=not param.required, default=param.default)
+                for param in command.params),
+            description=command.description,
+        ))
 
 
 def _add_mouse_specs(specs: List[CommandSpec]) -> None:

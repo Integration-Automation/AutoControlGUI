@@ -1052,6 +1052,23 @@ from je_auto_control.utils.a11y_audit import (
 from je_auto_control.utils.device_matrix import (
     DeviceResult, MatrixReport, run_on_devices,
 )
+# Mobile device contexts (one isolated session per Android / iOS device)
+from je_auto_control.wrapper.device_context import (
+    AlertNotPresentError, AppState, DeviceSetupReport,
+    DeviceCancelledError, DeviceCapability, DeviceClosedError, DeviceContext,
+    DeviceError, DevicePermissionError, DeviceSession, DeviceTimeoutError,
+    DeviceUnavailableError, DeviceUnsupportedError, Drag, LongPress, Pinch,
+    Swipe, Tap, open_device, use_device,
+)
+from je_auto_control.wrapper.device_frame import DeviceFrame
+from je_auto_control.wrapper.mobile_extensions import (
+    MobileExtension, accept_alert, app_state, dismiss_alert, launch_app,
+    mobile_extension, register_mobile_extension, stop_app, wait_for_app,
+)
+from je_auto_control.wrapper.mobile_commands import (
+    MOBILE_COMMANDS, MobileCommand, device_setup_report, mobile_capability_matrix,
+    run_mobile_command,
+)
 # Media assertions (audio activity, video motion)
 from je_auto_control.utils.media_assert import (
     MediaAssertionResult, assert_audio_activity, assert_video_changes,
@@ -2007,6 +2024,16 @@ __all__ = [
     "wcag_audit",
     # Mobile device matrix
     "DeviceResult", "MatrixReport", "run_on_devices",
+    # Mobile device contexts
+    "DeviceCancelledError", "DeviceCapability", "DeviceClosedError", "DeviceContext",
+    "DeviceError", "DevicePermissionError", "DeviceSession", "DeviceTimeoutError",
+    "DeviceUnavailableError", "DeviceUnsupportedError", "open_device", "use_device",
+    "DeviceFrame", "Drag", "LongPress", "Pinch", "Swipe", "Tap",
+    "AlertNotPresentError", "AppState", "MobileExtension", "accept_alert",
+    "app_state", "dismiss_alert", "launch_app", "mobile_extension",
+    "register_mobile_extension", "stop_app", "wait_for_app",
+    "DeviceSetupReport", "MOBILE_COMMANDS", "MobileCommand", "device_setup_report",
+    "mobile_capability_matrix", "run_mobile_command",
     # Media assertions
     "MediaAssertionResult", "assert_audio_activity", "assert_video_changes",
     "measure_audio_rms", "video_segment_motion",

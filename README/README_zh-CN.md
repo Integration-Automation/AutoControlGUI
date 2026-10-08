@@ -115,7 +115,7 @@ pip install je_auto_control[gui]       # 加上 PySide6 桌面应用
 
 | Extra | 启用的功能 |
 |---|---|
-| `gui` | PySide6 桌面应用（49 个标签页）：左侧可搜索的导航面板（`Ctrl+K`）按分类列出全部功能，标签页在第一次打开时才创建，**View → Theme** 切换深色／浅色 |
+| `gui` | PySide6 桌面应用（50 个标签页）：左侧可搜索的导航面板（`Ctrl+K`）按分类列出全部功能，标签页在第一次打开时才创建，**View → Theme** 切换深色／浅色 |
 | `webrtc` | WebRTC 远程桌面、USB 直通（`aiortc`、`av`） |
 | `signaling` | 独立的信令／rendezvous 服务器（`fastapi`、`uvicorn`） |
 | `discovery` | mDNS / Zeroconf 局域网主机发现 |
