@@ -101,9 +101,10 @@ Wayland
        而不是在 import 時。
    * - ``JE_AUTOCONTROL_GUI_SETTINGS``
      - 未設定 / 路徑 / ``off``
-     - 主視窗保存佈景主題、文字大小、導覽面板與視窗位置的檔案。未設定時為
-       ``~/.je_auto_control/gui_settings.ini``。設成 ``off``、``0``、``none``、
-       ``false`` 或空字串時，不讀也不寫。
+     - 主視窗保存佈景主題、文字大小、導覽面板與視窗位置的檔案；Config Sync 分頁
+       的伺服器、使用者與資料夾欄位也存在這裡（共用密鑰絕不保存：這是純文字檔）。
+       未設定時為 ``~/.je_auto_control/gui_settings.ini``。設成 ``off``、``0``、
+       ``none``、``false`` 或空字串時，不讀也不寫。
    * - ``JE_AUTOCONTROL_ENV``
      - ``default`` / 名稱
      - 資產庫目前使用的環境（``active_environment()``），讓同一份腳本在

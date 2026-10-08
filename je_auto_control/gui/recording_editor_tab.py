@@ -9,10 +9,11 @@ from PySide6.QtWidgets import (
 )
 
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
-from je_auto_control.gui._journal_import import pick_journal_candidate
+from je_auto_control.gui._journal_import import confirm_candidate_diff, pick_journal_candidate
 from je_auto_control.gui.language_wrapper.multi_language_wrapper import (
     language_wrapper,
 )
+from je_auto_control.utils.codegen.candidate_diff import diff_candidate
 from je_auto_control.utils.codegen.codegen import generate_code_file
 from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.json.json_file import read_action_json, write_action_json
@@ -150,6 +151,11 @@ class RecordingEditorTab(TranslatableMixin, QWidget):
         """Open the candidate built from an action journal run for editing."""
         candidate = pick_journal_candidate(self)
         if candidate is None:
+            return
+        # A recording is open: show what the candidate changes before it
+        # replaces it. (Undo brings the old one back either way.)
+        if self._actions and not confirm_candidate_diff(
+                self, diff_candidate(candidate, actions=self._actions)):
             return
         self._path_input.clear()
         self._mutate(list(candidate.actions))

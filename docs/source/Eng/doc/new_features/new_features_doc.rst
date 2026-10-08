@@ -655,6 +655,18 @@ Headless viewer (control someone else)::
    viewer.send_input({"action": "type", "text": "hello"})
    viewer.disconnect()
 
+``send_input`` does not wait for the socket. It puts the event on a bounded
+queue (``RemoteDesktopViewer.INPUT_QUEUE_LIMIT``, 256 events) that one writer
+thread drains, so a caller on a GUI thread is never held by a host that
+stopped reading. When the writer falls behind, queued ``mouse_move`` events
+give way to newer ones -- only the latest position matters; key, button,
+scroll and text events are never dropped. A write that fails, or that the
+host has not taken within ``RemoteDesktopViewer.SEND_TIMEOUT_S`` (10 s),
+is reported through ``on_error``; the viewer then reads as not connected and
+``send_input`` raises ``ConnectionError``. ``viewer.input_backlog()`` returns
+``{"pending": ..., "dropped_moves": ...}``. The same applies to
+``WebSocketDesktopViewer``.
+
 Input message allowlist (validated on the host before dispatch):
 
 - ``mouse_move`` ``{x, y}``

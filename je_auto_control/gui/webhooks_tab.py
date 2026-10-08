@@ -8,7 +8,9 @@ from PySide6.QtWidgets import (
     QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget,
 )
 
+from je_auto_control.gui._dispose import release_resources
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
+from je_auto_control.gui._slow_op import SlowOp
 from je_auto_control.gui.language_wrapper.multi_language_wrapper import (
     language_wrapper,
 )
@@ -36,6 +38,7 @@ class WebhooksTab(TranslatableMixin, QWidget):
         self._port_input.setRange(0, 65535)
         self._port_input.setValue(0)
         self._status_label = QLabel()
+        self._server_op = SlowOp(self)
         self._path_input = QLineEdit()
         self._path_input.setPlaceholderText("/jobs")
         self._script_input = QLineEdit()
@@ -60,6 +63,13 @@ class WebhooksTab(TranslatableMixin, QWidget):
         self._timer.timeout.connect(self._refresh)
         self._timer.start()
         self._refresh()
+
+    def dispose(self) -> None:
+        """Release what the tab holds beyond its widgets: its refresh timer (the server itself keeps running).
+
+        Called by ``close_tab(key, release=True)`` before the widget is deleted; safe to call twice.
+        """
+        release_resources(self)
 
     def retranslate(self) -> None:
         TranslatableMixin.retranslate(self)
@@ -123,6 +133,8 @@ class WebhooksTab(TranslatableMixin, QWidget):
         ]
 
     def _on_start(self) -> None:
+        if self._server_op.busy:        # still stopping: the port is not free yet
+            return
         host = self._host_input.text().strip() or "127.0.0.1"
         port = int(self._port_input.value())
         try:
@@ -139,7 +151,13 @@ class WebhooksTab(TranslatableMixin, QWidget):
         self._refresh()
 
     def _on_stop(self) -> None:
-        default_webhook_server.stop()
+        # stop() shuts the HTTP server down and joins its thread (up to 2 s),
+        # which used to hold the GUI thread; a second Stop is ignored.
+        if self._server_op.run(default_webhook_server.stop, on_done=self._on_server_stopped,
+                               on_error=self._on_server_stopped):
+            self._refresh()
+
+    def _on_server_stopped(self, _outcome: object = None) -> None:
         self._refresh()
 
     def _on_browse(self) -> None:
@@ -184,7 +202,9 @@ class WebhooksTab(TranslatableMixin, QWidget):
 
     def _refresh(self) -> None:
         bound = default_webhook_server.bound_address
-        if default_webhook_server.is_running and bound is not None:
+        if self._server_op.busy:
+            self._status_label.setText(_t("gui_op_stopping"))
+        elif default_webhook_server.is_running and bound is not None:
             self._status_label.setText(
                 _t("wh_running")
                 .replace("{host}", bound[0])

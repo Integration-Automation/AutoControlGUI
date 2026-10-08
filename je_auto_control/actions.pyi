@@ -1503,8 +1503,9 @@ def AC_generate_code_from_journal(
     target: str = ...,
     style: str = ...,
     output: str | None = ...,
+    diff_against: str | None = ...,
 ) -> Dict[str, Any]:
-    """Build a candidate script from one journal run, optionally writing it."""
+    """Build a candidate script from one journal run, optionally diffing and writing it."""
 
 def AC_generate_data(
     schema: Dict[str, Any],

@@ -11,16 +11,20 @@ from PySide6.QtWidgets import (
     QVBoxLayout, QWidget,
 )
 
+from je_auto_control.gui._dispose import release_resources
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
 from je_auto_control.gui.language_wrapper.multi_language_wrapper import (
     language_wrapper,
 )
-from je_auto_control.gui._journal_import import JOURNAL_FILTER, pick_journal_candidate
+from je_auto_control.gui._journal_import import (
+    JOURNAL_FILTER, confirm_candidate_diff, pick_journal_candidate,
+)
 from je_auto_control.gui.run_history_timeline import RunHistoryTimeline
 from je_auto_control.utils.action_journal import (
     action_journal_status, default_journal_path, start_action_journal,
     stop_action_journal,
 )
+from je_auto_control.utils.codegen.candidate_diff import diff_candidate_against_file
 from je_auto_control.utils.codegen.journal_import import write_candidate
 from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.run_history.history_store import (
@@ -104,6 +108,13 @@ class RunHistoryTab(TranslatableMixin, QWidget):
         self._build_layout()
         self._refresh()
         self._timer.start()
+
+    def dispose(self) -> None:
+        """Release what the tab holds beyond its widgets: its refresh timer.
+
+        Called by ``close_tab(key, release=True)`` before the widget is deleted; safe to call twice.
+        """
+        release_resources(self)
 
     def retranslate(self) -> None:
         TranslatableMixin.retranslate(self)
@@ -207,6 +218,10 @@ class RunHistoryTab(TranslatableMixin, QWidget):
         if not path:
             return
         try:
+            # Exporting over an earlier candidate: show what changes first.
+            if Path(path).is_file() and not confirm_candidate_diff(
+                    self, diff_candidate_against_file(candidate, path)):
+                return
             write_candidate(candidate, path, path + ".manifest.json")
         except OSError as error:
             QMessageBox.warning(self, _t("rh_journal_candidate"), str(error))

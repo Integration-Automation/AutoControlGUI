@@ -7,7 +7,9 @@ from PySide6.QtWidgets import (
     QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget,
 )
 
+from je_auto_control.gui._dispose import release_resources
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
+from je_auto_control.gui._slow_op import SlowOp
 from je_auto_control.gui.language_wrapper.multi_language_wrapper import (
     language_wrapper,
 )
@@ -29,6 +31,7 @@ class HotkeysTab(TranslatableMixin, QWidget):
         self._script_input = QLineEdit()
         self._status = QLabel()
         self._table = QTableWidget(0, 4)
+        self._engine_op = SlowOp(self)
         self._apply_status_label()
         self._apply_table_headers()
         self._timer = QTimer(self)
@@ -66,7 +69,7 @@ class HotkeysTab(TranslatableMixin, QWidget):
         The tab kept its own running flag, so an engine started from
         Tools > Start (or a script) still read "stopped" and was not polled.
         """
-        running = default_hotkey_daemon.is_running
+        running = default_hotkey_daemon.is_running and not self._engine_op.busy
         if running and not self._timer.isActive():
             self._timer.start()
         elif not running and self._timer.isActive():
@@ -79,7 +82,10 @@ class HotkeysTab(TranslatableMixin, QWidget):
         self.sync_with_engine()
 
     def _apply_status_label(self) -> None:
-        key = "hk_daemon_running" if default_hotkey_daemon.is_running else "hk_daemon_stopped"
+        if self._engine_op.busy:
+            key = "gui_op_stopping"
+        else:
+            key = "hk_daemon_running" if default_hotkey_daemon.is_running else "hk_daemon_stopped"
         self._status.setText(_t(key))
 
     def _apply_table_headers(self) -> None:
@@ -87,6 +93,13 @@ class HotkeysTab(TranslatableMixin, QWidget):
             _t("hk_col_id"), _t("hk_col_combo"),
             _t("hk_col_script"), _t("hk_col_fired"),
         ])
+
+    def dispose(self) -> None:
+        """Release what the tab holds beyond its widgets: its poll timer (the daemon itself keeps running).
+
+        Called by ``close_tab(key, release=True)`` before the widget is deleted; safe to call twice.
+        """
+        release_resources(self)
 
     def retranslate(self) -> None:
         TranslatableMixin.retranslate(self)
@@ -122,18 +135,25 @@ class HotkeysTab(TranslatableMixin, QWidget):
         self._refresh()
 
     def _on_start(self) -> None:
+        if self._engine_op.busy:        # still stopping: starting now would race the join
+            return
         try:
             default_hotkey_daemon.start()
         except NotImplementedError as error:
             QMessageBox.warning(self, "Error", str(error))
             return
-        self._timer.start()
-        self._apply_status_label()
+        self.sync_with_engine()
 
     def _on_stop(self) -> None:
-        default_hotkey_daemon.stop()
-        self._timer.stop()
-        self._apply_status_label()
+        # stop() joins the daemon thread, which used to hold the GUI thread
+        # for up to 2 s; a second Stop while it is out is ignored.
+        if self._engine_op.run(default_hotkey_daemon.stop, on_done=self._on_daemon_stopped,
+                               on_error=self._on_daemon_stopped):
+            self.sync_with_engine()
+
+    def _on_daemon_stopped(self, _outcome: object = None) -> None:
+        self.sync_with_engine()
+        self._refresh()
 
     def _refresh(self) -> None:
         bindings = default_hotkey_daemon.list_bindings()

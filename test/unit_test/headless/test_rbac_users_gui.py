@@ -26,6 +26,7 @@ from je_auto_control.gui.rbac_users_panel import RbacUsersPanel  # noqa: E402
 from je_auto_control.gui.rest_api_tab import RestApiTab  # noqa: E402
 from je_auto_control.utils.rbac import USERS_ENV, Role, UserStore, admin  # noqa: E402
 from je_auto_control.utils.rest_api.rest_registry import rest_api_registry  # noqa: E402
+from headless._qt_settle import settle_op  # noqa: E402
 
 
 @pytest.fixture(scope="module")
@@ -74,10 +75,12 @@ def test_shared_token_mode_shows_the_token(tab):
     tab._token_input.setText("shared-secret")
     tab._audit_check.setChecked(False)
     tab._on_start()
+    assert settle_op(tab._server_op)
     assert tab._token_value.text() == "shared-secret"
     assert tab._shared_token == "shared-secret"
     assert tab._status_label.text() == _t("rest_running")
     tab._on_stop()
+    assert settle_op(tab._server_op)
     assert tab._token_value.text() == "-" and tab._shared_token is None
 
 
@@ -90,6 +93,7 @@ def test_rbac_mode_names_the_user_store_instead_of_a_refused_token(tab, tmp_path
     tab._token_input.setText("shared-secret")
     tab._audit_check.setChecked(False)
     tab._on_start()
+    assert settle_op(tab._server_op)
     server = rest_api_registry.server
     assert server.user_store is not None and server.user_store.path == path.resolve()
     shown = tab._token_value.text()
@@ -105,6 +109,7 @@ def test_the_user_store_is_used_only_when_ticked(tab, tmp_path):
     tab._port_input.setValue(0)
     tab._audit_check.setChecked(False)
     tab._on_start()
+    assert settle_op(tab._server_op)
     assert rest_api_registry.server.user_store is None
     assert tab._shared_token == rest_api_registry.server.token
 

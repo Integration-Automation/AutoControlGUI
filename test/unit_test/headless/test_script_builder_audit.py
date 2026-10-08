@@ -31,6 +31,14 @@ def qapp():
     yield QApplication.instance() or QApplication([])
 
 
+@pytest.fixture(autouse=True)
+def _panels_deleted():
+    """Each test deletes the parentless panels it built (see ``_qt_settle.deleting``)."""
+    from headless._qt_settle import deleting
+    with deleting(ScriptBuilderTab, StepFormView):
+        yield
+
+
 # --- the model ------------------------------------------------------------------------------------------------
 
 def test_positional_arguments_survive_a_round_trip():

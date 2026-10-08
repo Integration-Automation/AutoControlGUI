@@ -178,6 +178,20 @@ which only ``robot --dryrun`` shows. A candidate's manifest records
 ``"robot_structure": true`` and ``"robot_parser": false``. A renderer that
 produces malformed Robot source raises ``RobotStructureError`` instead of
 writing it.
+``diff_candidate(candidate, actions=...)`` / ``diff_candidate(candidate,
+code=...)`` and ``diff_candidate_against_file(candidate, path)`` say what a
+candidate would change before it replaces something: a ``CandidateDiff`` with
+the unified diff as ``text`` and the ``added`` / ``removed`` line counts
+(``identical`` when there is nothing to change). Action lists are compared one
+action per line, a nested body spread over lines so a change deep in a loop
+shows as that line; a ``.json`` path is read as an action file, anything else
+as code, and a missing file makes the whole candidate new.
+``AC_generate_code_from_journal`` and ``ac_generate_code_from_log`` take
+``diff_against`` (that path) and return the same diff under ``"diff"``; it is
+taken before ``output`` is written, so both may name one file. In the GUI the
+Recording Editor shows the diff before a candidate replaces the recording that
+is open, and Run History before an export overwrites an earlier candidate;
+*Keep current* leaves both untouched.
 
 Executor commands: ``AC_journal_start`` / ``AC_journal_stop`` /
 ``AC_journal_status`` / ``AC_journal_read`` / ``AC_journal_runs`` and

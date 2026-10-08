@@ -3128,9 +3128,11 @@ def _add_audit_specs(specs: List[CommandSpec]) -> None:
             FieldSpec("style", FieldType.ENUM, optional=True, default="actions",
                       choices=("actions", "calls")),
             FieldSpec("output", FieldType.FILE_PATH, optional=True),
+            FieldSpec("diff_against", FieldType.FILE_PATH, optional=True),
         ),
         description="Build a reviewable candidate script from one journal "
-                    "run; nothing from the log is executed.",
+                    "run; nothing from the log is executed. diff_against "
+                    "adds a diff against the file the candidate would replace.",
     ))
     specs.append(CommandSpec(
         "AC_failure_signature", "Testing", "Failure Signature",

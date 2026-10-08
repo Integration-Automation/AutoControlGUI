@@ -32,6 +32,22 @@ def qapp():
     return QApplication.instance() or QApplication([])
 
 
+@pytest.fixture(autouse=True)
+def _panels_deleted():
+    """Each test deletes the parentless panels it built (see ``_qt_settle.deleting``)."""
+    from headless._qt_settle import deleting
+    from je_auto_control.gui.remote_desktop import connection_screen, viewer_panel
+    classes = [viewer_panel._ViewerPanel, connection_screen.QuickConnectScreen]
+    try:
+        from je_auto_control.gui.remote_desktop import webrtc_panel
+    except ImportError:                 # the webrtc extra is not installed
+        pass
+    else:
+        classes += [webrtc_panel._WebRTCHostPanel, webrtc_panel._WebRTCViewerPanel]
+    with deleting(*classes):
+        yield
+
+
 def _pump(app, predicate, timeout=5.0):
     deadline = time.monotonic() + timeout
     while not predicate() and time.monotonic() < deadline:

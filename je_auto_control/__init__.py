@@ -1317,6 +1317,9 @@ from je_auto_control.linux_wayland.authorisation import (
     AuthorisationLedger, AuthorisationState,
 )
 from je_auto_control.wrapper.capability_probes import MacFacts, WindowsFacts
+from je_auto_control.utils.codegen.candidate_diff import (
+    CandidateDiff, diff_candidate, diff_candidate_against_file,
+)
 # HTTP/API request action (dependency-free, stdlib urllib)
 from je_auto_control.utils.http_client.http_client import http_request
 # Ad-hoc read-only SQL query against SQLite
@@ -1440,6 +1443,7 @@ __all__ = [
     "build_verifier", "carry_step", "check_robot_structure", "check_thresholds",
     "comparison_rows", "format_comparison", "note_artifact", "note_secret_value",
     "only_run_id", "vlm_strategy", "write_candidate",
+    "CandidateDiff", "diff_candidate", "diff_candidate_against_file",
     "send_email", "assert_pdf_text", "extract_pdf_text", "pdf_metadata",
     "pdf_page_count",
     "add_command_to_executor", "test_record_instance", "pil_screenshot",

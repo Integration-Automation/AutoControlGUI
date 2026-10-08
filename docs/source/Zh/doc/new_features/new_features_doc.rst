@@ -606,6 +606,16 @@ Headless viewer（控制別人）::
    viewer.send_input({"action": "type", "text": "hello"})
    viewer.disconnect()
 
+``send_input`` 不會等 socket。事件先進一個有上限的佇列
+（``RemoteDesktopViewer.INPUT_QUEUE_LIMIT``，256 筆），由一條寫入執行緒送出，
+所以在 GUI 執行緒上呼叫也不會被一台不再讀取的 host 卡住。寫入端落後時，
+佇列裡較舊的 ``mouse_move`` 會讓位給新事件（只有最後的位置有意義）；按鍵、
+滑鼠按鈕、滾輪與文字事件絕不丟棄。寫入失敗，或 host 在
+``RemoteDesktopViewer.SEND_TIMEOUT_S``（10 秒）內沒有收下，會經由
+``on_error`` 回報；之後 viewer 視為未連線，``send_input`` 拋出
+``ConnectionError``。``viewer.input_backlog()`` 回傳
+``{"pending": ..., "dropped_moves": ...}``。``WebSocketDesktopViewer`` 相同。
+
 輸入訊息允許清單（host 派送前驗證）：
 
 - ``mouse_move`` ``{x, y}``

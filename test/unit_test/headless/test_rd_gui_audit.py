@@ -22,7 +22,7 @@ from je_auto_control.gui.remote_desktop import connection_screen, host_panel, vi
 from je_auto_control.utils.remote_desktop.connect_coordinator import parse_target  # noqa: E402
 from je_auto_control.utils.remote_desktop.registry import registry  # noqa: E402
 from headless._exit_probe import run_probe  # noqa: E402
-from headless._qt_settle import settle  # noqa: E402
+from headless._qt_settle import settle, settle_op  # noqa: E402
 
 
 @pytest.fixture(autouse=True)
@@ -192,6 +192,7 @@ def _started_panel(monkeypatch):
     panel._token.setText("tok-at-start")
     panel._enable_audio.setChecked(True)
     panel._start()
+    assert settle_op(panel._host_op)
     return panel
 
 

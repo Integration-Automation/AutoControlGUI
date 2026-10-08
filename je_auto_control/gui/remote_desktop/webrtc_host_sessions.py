@@ -5,6 +5,7 @@ still owns every widget and slot under its original name.
 """
 from __future__ import annotations
 
+import functools
 from typing import Callable, Dict, Optional
 
 from PySide6.QtCore import QPoint, Qt
@@ -12,6 +13,7 @@ from PySide6.QtWidgets import (
     QTableWidgetItem,
 )
 
+from je_auto_control.gui.remote_desktop._webrtc_types import MultiViewerHostT
 from je_auto_control.gui.remote_desktop._helpers import (
     _t,
 )
@@ -23,6 +25,14 @@ from je_auto_control.utils.remote_desktop.webrtc_stats import (
     StatsPoller, StatsSnapshot,
 )
 from je_auto_control.gui.remote_desktop.webrtc_panel_common import _PanelPart
+
+
+def _stop_session(host: MultiViewerHostT, sid: str) -> None:
+    """Worker thread: close one session; one that is already gone is not an error."""
+    try:
+        host.stop_session(sid)
+    except (KeyError, RuntimeError, OSError) as error:
+        autocontrol_logger.warning("disconnect session: %r", error)
 
 
 class _HostSessionsMixin(_PanelPart):
@@ -218,11 +228,19 @@ class _HostSessionsMixin(_PanelPart):
         sid = item.data(Qt.ItemDataRole.UserRole)
         if not isinstance(sid, str) or not sid:
             return
-        try:
-            self._multi_host.stop_session(sid)
-        except (KeyError, RuntimeError, OSError) as error:
-            autocontrol_logger.warning("disconnect session: %r", error)
-        self._signals.session_count.emit(self._multi_host.session_count())
+        if sid in self._stopping_sessions:     # a second click on a session already closing
+            return
+        host = self._multi_host
+        self._stopping_sessions.add(sid)
+        # stop_session waits for the peer connection to close (seconds).
+        self._stops.retire(functools.partial(_stop_session, host, sid),
+                           on_done=self._on_session_stopped, args=(host, sid))
+
+    def _on_session_stopped(self, host: MultiViewerHostT, sid: str, _outcome: object = None) -> None:
+        """GUI thread: the session closed -- count again unless the host was stopped meanwhile."""
+        self._stopping_sessions.discard(sid)
+        if self._multi_host is host:
+            self._signals.session_count.emit(host.session_count())
 
 
 __all__ = ["_HostSessionsMixin"]

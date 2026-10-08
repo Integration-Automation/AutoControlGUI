@@ -7,11 +7,18 @@ redirected home directory moves it like the rest of the per-user state.
 ``JE_AUTOCONTROL_GUI_SETTINGS`` names another file, or switches the store off
 (``off``, ``0``, ``none``, ``false`` or empty): nothing is read and nothing is
 written, which is what the test suite runs with.
+
+A tab may also keep the text of its form fields there
+(:meth:`WindowSettings.load_form` / :meth:`WindowSettings.save_form`), under
+``[forms]`` and its own name. That is for what a user would otherwise retype on
+every start -- a server address, a folder -- and never for a credential: the
+file is plain text, and the tab chooses which fields it hands over.
 """
 import os
+import re
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Optional, Tuple, Union
+from typing import Any, Dict, Mapping, Optional, Tuple, Union
 
 from PySide6.QtCore import QByteArray, QSettings
 
@@ -24,6 +31,10 @@ _OFF_VALUES = frozenset({"", "off", "0", "none", "false"})
 _WIDTH_RANGE = (200, 800)
 _TEXT_SIZE_RANGE = (6, 48)
 _GROUP = "main_window"
+_FORMS_GROUP = "forms"
+_FORM_NAME = re.compile(r"[A-Za-z][A-Za-z0-9_]{0,63}")
+#: A remembered field longer than this was not typed into a one-line input.
+_FORM_VALUE_LIMIT = 2048
 _UNSET: Any = object()
 
 
@@ -123,8 +134,60 @@ class WindowSettings:
         store.setValue("navigation_width", int(state.navigation_width))
         store.setValue("geometry", QByteArray(state.geometry))
         store.endGroup()
+        return self._commit(store)
+
+    def _commit(self, store: QSettings) -> bool:
         store.sync()
         if store.status() != QSettings.Status.NoError:
             autocontrol_logger.warning("GUI settings not saved to %s: %s", self._path, store.status())
             return False
         return True
+
+    @staticmethod
+    def _form_group(name: str) -> str:
+        if not _FORM_NAME.fullmatch(name):
+            raise ValueError(f"form name must be letters, digits and underscores, got {name!r}")
+        return f"{_FORMS_GROUP}/{name}"
+
+    def load_form(self, name: str) -> Dict[str, str]:
+        """Return the fields remembered for the form ``name``; empty when none were saved.
+
+        Only well-formed field names with plain, short text come back: the
+        file is user-editable, and a value from it goes into an input as is.
+        """
+        group = self._form_group(name)
+        if self._path is None or not self._path.is_file():
+            return {}
+        store = self._open()
+        store.beginGroup(group)
+        fields: Dict[str, str] = {}
+        for key in store.childKeys():
+            value = store.value(key)
+            if _FORM_NAME.fullmatch(key) and isinstance(value, str) and len(value) <= _FORM_VALUE_LIMIT:
+                fields[key] = value
+        store.endGroup()
+        return fields
+
+    def save_form(self, name: str, fields: Mapping[str, str]) -> bool:
+        """Remember ``fields`` for the form ``name``, replacing what was saved; return whether it was written.
+
+        Never pass a secret: this is a plain-text file.
+        """
+        group = self._form_group(name)
+        for key in fields:
+            if not _FORM_NAME.fullmatch(key):
+                raise ValueError(f"field name must be letters, digits and underscores, got {key!r}")
+        if self._path is None:
+            return False
+        try:
+            self._path.parent.mkdir(parents=True, exist_ok=True)
+        except OSError as error:
+            autocontrol_logger.warning("GUI settings not saved to %s: %r", self._path, error)
+            return False
+        store = self._open()
+        store.beginGroup(group)
+        store.remove("")                # this form's old fields only
+        for key, value in fields.items():
+            store.setValue(key, str(value)[:_FORM_VALUE_LIMIT])
+        store.endGroup()
+        return self._commit(store)

@@ -7,6 +7,7 @@ from PySide6.QtWidgets import (
     QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget,
 )
 
+from je_auto_control.gui._dispose import release_resources
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
 from je_auto_control.gui.language_wrapper.multi_language_wrapper import (
     language_wrapper,
@@ -54,6 +55,13 @@ class InspectorTab(TranslatableMixin, QWidget):
         root.addWidget(self._summary_label)
         root.addWidget(self._build_metrics_group())
         root.addWidget(self._table, stretch=1)
+
+    def dispose(self) -> None:
+        """Release what the tab holds beyond its widgets: its sampling timer.
+
+        Called by ``close_tab(key, release=True)`` before the widget is deleted; safe to call twice.
+        """
+        release_resources(self)
 
     def menu_actions(self) -> list:
         """Expose tab commands to the window-level Actions menu."""
