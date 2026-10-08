@@ -2580,8 +2580,12 @@ def AC_self_heal_click(
     screen_region: List[int] | None = ...,
     model: str | None = ...,
     raise_on_miss: bool = ...,
+    context: Dict[str, str] | None = ...,
 ) -> Dict[str, Any]:
     """Executor adapter: locate with self-heal, then click."""
+
+def AC_self_heal_evaluate(dataset_path: str, versions: Dict[str, Any] | None = ...) -> Dict[str, Any]:
+    """Executor adapter: score strategy versions on a labelled dataset file."""
 
 def AC_self_heal_locate(
     template_path: str | None = ...,
@@ -2590,6 +2594,7 @@ def AC_self_heal_locate(
     screen_region: List[int] | None = ...,
     model: str | None = ...,
     raise_on_miss: bool = ...,
+    context: Dict[str, str] | None = ...,
 ) -> Dict[str, Any]:
     """Executor adapter: template-first locate with VLM fallback."""
 
@@ -2598,6 +2603,30 @@ def AC_self_heal_log_clear() -> Dict[str, Any]:
 
 def AC_self_heal_log_list(limit: int = ...) -> List[Dict[str, Any]]:
     """Executor adapter: return the recent self-healing events."""
+
+def AC_self_heal_revision_accept(revision_id: str, allow_unvalidated: bool = ...) -> Dict[str, Any]:
+    """Executor adapter: replace the template with a validated candidate."""
+
+def AC_self_heal_revision_list() -> List[Dict[str, Any]]:
+    """Executor adapter: every stored template revision, oldest first."""
+
+def AC_self_heal_revision_preview(
+    revision_id: str,
+    dataset_path: str | None = ...,
+    detect_threshold: float = ...,
+) -> Dict[str, Any]:
+    """Executor adapter: current vs candidate, validated when given a dataset."""
+
+def AC_self_heal_revision_propose(
+    template_path: str,
+    candidate_path: str,
+    source: str = ...,
+    note: str | None = ...,
+) -> Dict[str, Any]:
+    """Executor adapter: store a candidate template; the template is untouched."""
+
+def AC_self_heal_revision_revert(revision_id: str) -> Dict[str, Any]:
+    """Executor adapter: restore the template an accepted revision replaced."""
 
 def AC_send_email(message: Any, smtp: Any) -> Dict[str, Any]:
     """Adapter: send an email via SMTP (message/smtp config dicts)."""

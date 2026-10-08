@@ -2250,6 +2250,8 @@ def self_healing_tools() -> List[MCPTool]:
                                    "items": {"type": "integer"}},
                 "model": {"type": "string"},
                 "raise_on_miss": {"type": "boolean"},
+                "context": {"type": "object",
+                            "additionalProperties": {"type": "string"}},
             }),
             handler=h_loc.self_heal_locate,
             annotations=READ_ONLY,
@@ -2269,6 +2271,8 @@ def self_healing_tools() -> List[MCPTool]:
                                    "items": {"type": "integer"}},
                 "model": {"type": "string"},
                 "raise_on_miss": {"type": "boolean"},
+                "context": {"type": "object",
+                            "additionalProperties": {"type": "string"}},
             }),
             handler=h_loc.self_heal_click,
             annotations=DESTRUCTIVE,
@@ -2289,6 +2293,83 @@ def self_healing_tools() -> List[MCPTool]:
             input_schema=schema({}),
             handler=h_loc.self_heal_log_clear,
             annotations=DESTRUCTIVE,
+        ),
+        MCPTool(
+            name="ac_self_heal_evaluate",
+            description=("Score locator strategy versions on a labelled "
+                         "dataset JSON file: every version runs on the same "
+                         "stored frames and regions; no screen is captured. "
+                         "Returns per-version counts and rates with "
+                         "numerator/denominator (accuracy, false positives, "
+                         "recovery vs the baseline), p50/p95 latency, the "
+                         "failing samples, and threshold violations. "
+                         "Unlabelled samples are 'unknown', never correct."),
+            input_schema=schema({
+                "dataset_path": {"type": "string", "format": "path"},
+                "versions": {"type": "object"},
+            }, required=["dataset_path"]),
+            handler=h_loc.self_heal_evaluate,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_self_heal_revision_propose",
+            description=("Store an image as a candidate replacement for a "
+                         "template. The live template is not changed; the "
+                         "candidate stays pending until previewed and "
+                         "accepted."),
+            input_schema=schema({
+                "template_path": {"type": "string", "format": "path"},
+                "candidate_path": {"type": "string", "format": "path"},
+                "source": {"type": "string"},
+                "note": {"type": "string"},
+            }, required=["template_path", "candidate_path"]),
+            handler=h_loc.self_heal_revision_propose,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
+        MCPTool(
+            name="ac_self_heal_revision_preview",
+            description=("Compare a candidate template revision with the "
+                         "current template. With dataset_path both are run "
+                         "over the same labelled frames and the candidate is "
+                         "marked validated only if it is correct at least as "
+                         "often and raises no false positive."),
+            input_schema=schema({
+                "revision_id": {"type": "string"},
+                "dataset_path": {"type": "string", "format": "path"},
+                "detect_threshold": {"type": "number"},
+            }, required=["revision_id"]),
+            handler=h_loc.self_heal_revision_preview,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
+        MCPTool(
+            name="ac_self_heal_revision_accept",
+            description=("Replace the live template file with a candidate "
+                         "revision, keeping a backup. Refuses a candidate "
+                         "that was not validated unless allow_unvalidated "
+                         "is true."),
+            input_schema=schema({
+                "revision_id": {"type": "string"},
+                "allow_unvalidated": {"type": "boolean"},
+            }, required=["revision_id"]),
+            handler=h_loc.self_heal_revision_accept,
+            annotations=DESTRUCTIVE,
+        ),
+        MCPTool(
+            name="ac_self_heal_revision_revert",
+            description=("Restore the template file an accepted revision "
+                         "replaced."),
+            input_schema=schema({
+                "revision_id": {"type": "string"},
+            }, required=["revision_id"]),
+            handler=h_loc.self_heal_revision_revert,
+            annotations=DESTRUCTIVE,
+        ),
+        MCPTool(
+            name="ac_self_heal_revision_list",
+            description="List stored template revisions (pending / accepted / reverted).",
+            input_schema=schema({}),
+            handler=h_loc.self_heal_revision_list,
+            annotations=READ_ONLY,
         ),
     ]
 

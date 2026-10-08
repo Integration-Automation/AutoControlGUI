@@ -32,6 +32,148 @@ locators can be tuned over time::
 Executor: ``AC_self_heal_locate / _click / _log_list / _log_clear``.
 MCP: ``ac_self_heal_*``. GUI: **Self-Healing** tab.
 
+``screen_region`` is ``[x1, y1, x2, y2]`` in screen coordinates and confines
+**both** strategies; it used to reach only the VLM, so the template match
+could answer from outside the region.
+
+**Located is not verified.** ``HealOutcome.found`` says a strategy returned a
+point. Whether the click did what it was for is a separate field,
+``action_verified``, filled from a check the caller passes — ``None`` when no
+check ran, never inferred from the hit::
+
+    outcome = self_heal_click(
+        template_path="submit.png",
+        description="the green Submit button",
+        verify=lambda result: dialog_is_open(),
+    )
+    outcome.found            # a point was returned
+    outcome.action_verified  # True / False from the check, None without one
+
+Heal-log lines gained optional fields (``schema_version``, ``run_id``,
+``step_id``, ``locator_id``, ``locator_version``, ``backend``, ``model``,
+``screen_region``, ``image_ms``, ``vlm_ms``, ``action``, ``action_verified``).
+Lines written before they existed still load, with those fields ``None``.
+Stamp the ids from the caller's side::
+
+    from je_auto_control import heal_context
+
+    with heal_context(run_id="nightly-42", locator_id="submit", locator_version="v2"):
+        self_heal_click(template_path="submit.png")
+
+From a JSON action or MCP, pass the same keys as ``context`` on
+``AC_self_heal_locate`` / ``AC_self_heal_click``. A JSON step cannot carry a
+check, so its ``action_verified`` stays ``None``. ``AC_heal_stats`` reports
+``action_verification`` (``actions`` / ``verified`` / ``failed`` /
+``unchecked``) apart from ``healed``, which only counts returned points.
+
+Measuring locator versions
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+``evaluate_locators`` runs every strategy version over the same labelled
+frames — one captured frame, one region, one origin and scale per sample, the
+same request object for every version — and scores the answers::
+
+    from je_auto_control import (
+        EvaluationSample, evaluate_locators, template_match_strategy,
+    )
+
+    samples = [
+        EvaluationSample("submit", frame, expected_box=(100, 60, 156, 92),
+                         template="submit.png"),
+        EvaluationSample("left-monitor-150", hidpi_frame,
+                         expected_box=(-1880, -180, -1824, -148),
+                         origin=(-1920, -300), scale=1.5, template="submit.png"),
+        EvaluationSample("dialog-closed", other_frame, expect_miss=True,
+                         template="submit.png"),
+    ]
+    comparison = evaluate_locators(samples, {
+        "v1": template_match_strategy(0.9),
+        "v2": template_match_strategy(0.9, scales=(1.0, 1.25, 1.5, 2.0)),
+    })
+    report = comparison.report("v2")
+    report.accuracy          # Ratio(numerator, denominator); .value is None over 0
+    report.recovery_rate     # targets v1 failed on that v2 hit correctly
+    report.p50_ms, report.p95_ms
+    comparison.failures("v2")
+
+How a result is counted:
+
+* a hit inside ``expected_box`` is ``correct``; a hit anywhere else, or on a
+  sample marked ``expect_miss``, is a ``false_positive`` — located, and not a
+  recovery;
+* a sample with neither ``expected_box`` nor ``expect_miss`` is ``unknown``.
+  It counts in the hit rate and in no rate that claims correctness;
+* a strategy that raises is ``error``, including on a sample that expects a
+  miss;
+* a strategy that modifies the frame is refused with
+  ``HealingEvaluationError``: the next version would be measured on a
+  different image.
+
+Coordinates are screen coordinates. ``origin`` is the screen position of the
+frame's top-left pixel (negative on a monitor left of or above the primary)
+and ``scale`` is frame pixels per screen unit.
+
+A dataset can also be a JSON file with frame images beside it, which is what
+the executor command, the MCP tool and the GUI evaluate::
+
+    {"schema_version": 1,
+     "samples": [{"id": "submit", "frame": "frames/submit.png",
+                  "template": "submit.png",
+                  "expected_box": [100, 60, 156, 92],
+                  "origin": [0, 0], "scale": 1.0, "region": null}],
+     "versions": {"v1": {"strategy": "template", "threshold": 0.9},
+                  "v2": {"strategy": "template", "threshold": 0.9,
+                         "scales": [1.0, 1.5]}},
+     "thresholds": {"v2": {"min_correct": 1, "max_false_positive": 0}}}
+
+    from je_auto_control import evaluate_healing_dataset
+    payload = evaluate_healing_dataset("dataset.json")
+    payload["passed"], payload["violations"]
+
+Image paths are relative to the dataset file and may not leave its directory.
+Only the ``template`` strategy can be named from JSON; evaluate a VLM by
+passing ``evaluate_locators`` a callable that wraps it.
+
+``benchmarks/self_healing/run.py`` is the fixed regression set: ten frames
+drawn in memory (plain, 125% / 150% scale, negative-origin monitor, a region
+that must pick the second of two identical targets, a redesigned control, an
+absent target, a look-alike neighbour, one unlabelled frame) and three
+versions. It captures no screen::
+
+    python benchmarks/self_healing/run.py --check --json report.json
+
+Candidate template revisions
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+A healed point is never written over a template. A new image is a candidate
+that has to be previewed before it replaces anything::
+
+    from je_auto_control import (
+        propose_template_revision, preview_template_revision,
+        accept_template_revision, revert_template_revision,
+    )
+
+    revision = propose_template_revision("submit.png", "submit_new.png")
+    preview = preview_template_revision(revision.revision_id,
+                                        dataset_path="dataset.json")
+    preview["revision"]["validated"]
+    accept_template_revision(revision.revision_id)   # backup kept
+    revert_template_revision(revision.revision_id)   # backup restored
+
+``propose`` and ``preview`` never touch the template. With a dataset (or
+``samples=``), preview runs the current and the candidate template over the
+same frames; the candidate is ``validated`` only when it is correct at least
+once, at least as often as the current template, and raises no false positive
+or error. ``accept`` refuses an unvalidated candidate unless
+``allow_unvalidated=True``, and both ``accept`` and ``revert`` refuse when the
+template file changed underneath the revision. Revisions live under
+``~/.je_auto_control/template_revisions``.
+
+Executor: ``AC_self_heal_evaluate``, ``AC_self_heal_revision_propose /
+_preview / _accept / _revert / _list``. MCP: ``ac_self_heal_evaluate``,
+``ac_self_heal_revision_*``. GUI: **Self-Healing** tab → Actions menu
+(*Evaluate dataset*, *Propose / Preview / Accept / Revert revision*).
+
 
 Anchor-based locator
 --------------------

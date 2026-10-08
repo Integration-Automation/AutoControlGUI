@@ -2995,6 +2995,51 @@ def _add_audit_specs(specs: List[CommandSpec]) -> None:
                     "locators).",
     ))
     specs.append(CommandSpec(
+        "AC_self_heal_evaluate", "Testing", "Self-Heal: Evaluate Dataset",
+        fields=(FieldSpec("dataset_path", FieldType.FILE_PATH,
+                          placeholder="dataset.json"),),
+        description="Score locator versions on the same labelled frames "
+                    "(accuracy, false positives, recovery, p50/p95).",
+    ))
+    specs.append(CommandSpec(
+        "AC_self_heal_revision_propose", "Testing", "Self-Heal: Propose Template Revision",
+        fields=(
+            FieldSpec("template_path", FieldType.FILE_PATH),
+            FieldSpec("candidate_path", FieldType.FILE_PATH),
+            FieldSpec("source", FieldType.STRING, optional=True, default="manual"),
+            FieldSpec("note", FieldType.STRING, optional=True),
+        ),
+        description="Store a candidate template; the live template is not changed.",
+    ))
+    specs.append(CommandSpec(
+        "AC_self_heal_revision_preview", "Testing", "Self-Heal: Preview Template Revision",
+        fields=(
+            FieldSpec("revision_id", FieldType.STRING),
+            FieldSpec("dataset_path", FieldType.FILE_PATH, optional=True,
+                      placeholder="dataset.json"),
+            FieldSpec("detect_threshold", FieldType.FLOAT, optional=True,
+                      default=0.9, min_value=0.0, max_value=1.0),
+        ),
+        description="Compare candidate and current template; a dataset validates it.",
+    ))
+    specs.append(CommandSpec(
+        "AC_self_heal_revision_accept", "Testing", "Self-Heal: Accept Template Revision",
+        fields=(
+            FieldSpec("revision_id", FieldType.STRING),
+            FieldSpec("allow_unvalidated", FieldType.BOOL, optional=True, default=False),
+        ),
+        description="Replace the template with a validated candidate (backup kept).",
+    ))
+    specs.append(CommandSpec(
+        "AC_self_heal_revision_revert", "Testing", "Self-Heal: Revert Template Revision",
+        fields=(FieldSpec("revision_id", FieldType.STRING),),
+        description="Restore the template an accepted revision replaced.",
+    ))
+    specs.append(CommandSpec(
+        "AC_self_heal_revision_list", "Testing", "Self-Heal: List Template Revisions",
+        description="List stored template revisions and their status.",
+    ))
+    specs.append(CommandSpec(
         "AC_failure_signature", "Testing", "Failure Signature",
         fields=(
             FieldSpec("error", FieldType.STRING,

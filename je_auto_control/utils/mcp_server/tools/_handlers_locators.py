@@ -279,14 +279,17 @@ def self_heal_locate(template_path: Optional[str] = None,
                      detect_threshold: float = 0.9,
                      screen_region: Optional[List[int]] = None,
                      model: Optional[str] = None,
-                     raise_on_miss: bool = False) -> Dict[str, Any]:
+                     raise_on_miss: bool = False,
+                     context: Optional[Dict[str, str]] = None) -> Dict[str, Any]:
+    from je_auto_control.utils.self_healing import heal_context
     from je_auto_control.utils.self_healing import self_heal_locate as _impl
-    return _impl(
-        template_path=template_path, description=description,
-        detect_threshold=float(detect_threshold),
-        screen_region=screen_region, model=model,
-        raise_on_miss=bool(raise_on_miss),
-    ).to_dict()
+    with heal_context(**(context or {})):
+        return _impl(
+            template_path=template_path, description=description,
+            detect_threshold=float(detect_threshold),
+            screen_region=screen_region, model=model,
+            raise_on_miss=bool(raise_on_miss),
+        ).to_dict()
 
 
 def self_heal_click(template_path: Optional[str] = None,
@@ -295,15 +298,18 @@ def self_heal_click(template_path: Optional[str] = None,
                     detect_threshold: float = 0.9,
                     screen_region: Optional[List[int]] = None,
                     model: Optional[str] = None,
-                    raise_on_miss: bool = False) -> Dict[str, Any]:
+                    raise_on_miss: bool = False,
+                    context: Optional[Dict[str, str]] = None) -> Dict[str, Any]:
+    from je_auto_control.utils.self_healing import heal_context
     from je_auto_control.utils.self_healing import self_heal_click as _impl
-    return _impl(
-        template_path=template_path, description=description,
-        mouse_keycode=mouse_keycode,
-        detect_threshold=float(detect_threshold),
-        screen_region=screen_region, model=model,
-        raise_on_miss=bool(raise_on_miss),
-    ).to_dict()
+    with heal_context(**(context or {})):
+        return _impl(
+            template_path=template_path, description=description,
+            mouse_keycode=mouse_keycode,
+            detect_threshold=float(detect_threshold),
+            screen_region=screen_region, model=model,
+            raise_on_miss=bool(raise_on_miss),
+        ).to_dict()
 
 
 def self_heal_log_list(limit: int = 50) -> List[Dict[str, Any]]:
@@ -316,6 +322,46 @@ def self_heal_log_clear() -> Dict[str, Any]:
     from je_auto_control.utils.self_healing import default_heal_log
     default_heal_log.clear()
     return {"cleared": True, "path": str(default_heal_log.path)}
+
+
+def self_heal_evaluate(dataset_path: str,
+                       versions: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    from je_auto_control.utils.self_healing import evaluate_healing_dataset
+    return evaluate_healing_dataset(dataset_path, versions=versions)
+
+
+def self_heal_revision_propose(template_path: str, candidate_path: str,
+                               source: str = "manual",
+                               note: Optional[str] = None) -> Dict[str, Any]:
+    from je_auto_control.utils.self_healing import propose_template_revision
+    return propose_template_revision(
+        template_path, candidate_path, source=source, note=note).to_dict()
+
+
+def self_heal_revision_preview(revision_id: str,
+                               dataset_path: Optional[str] = None,
+                               detect_threshold: float = 0.9) -> Dict[str, Any]:
+    from je_auto_control.utils.self_healing import preview_template_revision
+    return preview_template_revision(
+        revision_id, dataset_path=dataset_path or None,
+        detect_threshold=float(detect_threshold))
+
+
+def self_heal_revision_accept(revision_id: str,
+                              allow_unvalidated: bool = False) -> Dict[str, Any]:
+    from je_auto_control.utils.self_healing import accept_template_revision
+    return accept_template_revision(
+        revision_id, allow_unvalidated=bool(allow_unvalidated)).to_dict()
+
+
+def self_heal_revision_revert(revision_id: str) -> Dict[str, Any]:
+    from je_auto_control.utils.self_healing import revert_template_revision
+    return revert_template_revision(revision_id).to_dict()
+
+
+def self_heal_revision_list() -> List[Dict[str, Any]]:
+    from je_auto_control.utils.self_healing import list_template_revisions
+    return [revision.to_dict() for revision in list_template_revisions()]
 
 
 def a11y_dump(app_name: Optional[str] = None,
