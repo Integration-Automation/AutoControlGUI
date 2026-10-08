@@ -156,7 +156,17 @@ File security & safety
   key file, so a copy of the file alone signs nothing; the signer then passes
   ``sign_action_file(..., passphrase="...")`` or sets
   ``JE_AUTOCONTROL_ACTION_SIGNING_PASSPHRASE``. A key created without a
-  passphrase keeps loading as it is, and verifying never needs one. These
+  passphrase keeps loading as it is, and verifying never needs one. The
+  private key file is created readable by its owner only: mode ``0600`` on
+  POSIX and, on Windows -- where mode bits do nothing and the file used to
+  take its directory's permissions -- a protected access list naming the
+  current user alone (set in the call that creates the file, without
+  ``icacls``; the public half is left readable). The per-user HMAC and
+  encryption key files are created the same way. A private key or key file
+  that other accounts *can* read -- one made by an earlier version outside
+  your profile, or copied in -- still loads, with one warning per file in the
+  log naming who can read it; restrict it with ``icacls <file>
+  /inheritance:r /grant:r <user>:F`` or ``chmod 600``. These
   environment variables configure a process, and
   ``action_signing_config()`` reports what it sees:
 
