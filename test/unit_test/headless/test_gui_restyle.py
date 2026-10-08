@@ -18,7 +18,7 @@ pytest.importorskip("PySide6.QtWidgets", exc_type=ImportError)
 from PySide6.QtWidgets import QApplication, QLabel, QVBoxLayout, QWidget  # noqa: E402
 
 from je_auto_control.gui.window_settings import SETTINGS_ENV  # noqa: E402
-from je_auto_control.gui.workspace_tabs import WorkspaceTabWidget  # noqa: E402
+from je_auto_control.gui.workspace_tabs import WorkspaceTabWidget, real_window  # noqa: E402
 from headless._qt_settle import pump_until  # noqa: E402
 
 ROOT = pathlib.Path(__file__).resolve().parents[3]
@@ -104,6 +104,76 @@ def test_closing_a_tab_whose_page_is_parked_keeps_the_page(workspace):
     tabs.finish_restyle()
     tabs.insertTab(1, pages[1], "two")
     assert tabs.widget(1) is pages[1] and _size(pages[1]) == 15
+
+
+def test_the_page_of_a_closed_tab_is_not_restyled_in_the_same_slot(workspace):
+    """A closed tab's page is kept as a hidden child of the tab widget, and was restyled with the window."""
+    window, tabs, pages = workspace
+    tabs.removeTab(1)
+    assert pages[1].parent() is tabs and _size(pages[1]) == 9
+    parked = tabs.restyle(lambda: window.setStyleSheet("* { font-size: 17pt; }"))
+    assert parked == 2 and tabs.parked_pages() == 2            # the other tab's page and the closed one
+    assert not _in_window(pages[1], window) and pages[1].isHidden()
+    assert pump_until(lambda: tabs.parked_pages() == 0)
+    assert pages[1].parent() is tabs and pages[1].isHidden() and tabs.indexOf(pages[1]) == -1
+    assert _size(pages[1]) == 17, "the closed page came back with the old style"
+    assert pump_until(lambda: tabs._parking is None)
+
+
+def test_reopening_a_closed_tab_during_a_restyle_takes_its_page_out_of_the_queue(workspace):
+    window, tabs, pages = workspace
+    tabs.removeTab(1)
+    tabs.restyle(lambda: window.setStyleSheet("* { font-size: 15pt; }"))
+    tabs.insertTab(1, pages[1], "two")
+    tabs.setCurrentIndex(1)
+    assert _in_window(pages[1], window) and _size(pages[1]) == 15 and not pages[1].isHidden()
+    assert pump_until(lambda: tabs.parked_pages() == 0)
+    assert pump_until(lambda: tabs._parking is None)
+    assert tabs.widget(1) is pages[1] and _in_window(pages[1], window)    # not taken back out as "closed"
+
+
+def test_finishing_a_restyle_brings_closed_pages_back_too(workspace):
+    window, tabs, pages = workspace
+    tabs.removeTab(2)
+    tabs.restyle(lambda: window.setStyleSheet("* { font-size: 15pt; }"))
+    tabs.finish_restyle()
+    assert tabs.parked_pages() == 0 and pages[2].parent() is tabs and pages[2].isHidden()
+    assert _size(pages[2]) == 15
+
+
+def test_a_parked_page_still_finds_the_real_window(workspace):
+    """``page.window()`` is the parking widget for a few event-loop turns; ``real_window`` sees through it."""
+    window, tabs, pages = workspace
+    tabs.removeTab(2)
+    assert real_window(pages[1]) is window and real_window(pages[2]) is window
+    tabs.restyle(lambda: window.setStyleSheet("* { font-size: 15pt; }"))
+    parking = pages[1].window()
+    assert parking is not window
+    assert real_window(pages[1]) is window and real_window(pages[1].label) is window
+    assert real_window(pages[2]) is window                      # the closed tab's page
+    parking.show()                          # what ``self.window().showNormal()`` in a page would have done
+    parking.showNormal()
+    assert not parking.isVisible()
+    tabs.finish_restyle()
+    assert real_window(pages[1]) is window
+
+
+def test_the_webrtc_tray_raises_the_main_window_even_while_its_page_is_parked(workspace, monkeypatch):
+    pytest.importorskip("av", exc_type=ImportError)
+    pytest.importorskip("aiortc", exc_type=ImportError)
+    from je_auto_control.gui.remote_desktop import webrtc_panel
+    window, tabs, _pages = workspace
+    panel = webrtc_panel._WebRTCHostPanel()
+    tabs.addTab(panel, "host")
+    raised = []
+    for name in ("showNormal", "raise_", "activateWindow"):
+        monkeypatch.setattr(window, name, lambda name=name: raised.append(name), raising=False)
+    tabs.restyle(lambda: window.setStyleSheet("* { font-size: 15pt; }"))
+    assert panel.window() is not window
+    panel._on_tray_open()
+    assert raised == ["showNormal", "raise_", "activateWindow"]
+    assert not panel.window().isVisible()   # the parking widget was not shown as a window
+    tabs.finish_restyle()
 
 
 def test_a_restyle_that_raises_still_brings_the_pages_back(workspace):

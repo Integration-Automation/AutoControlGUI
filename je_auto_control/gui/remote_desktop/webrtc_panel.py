@@ -50,6 +50,7 @@ from je_auto_control.gui.remote_desktop.webrtc_workers import (
     HostPublishLoopWorker, ViewerAnswerPushWorker, ViewerSignalingWorker,
 )
 from je_auto_control.gui.task_controller import TaskHandle
+from je_auto_control.gui.workspace_tabs import real_window
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.remote_desktop import (
     default_address_book,
@@ -174,9 +175,9 @@ class _WebRTCHostPanel(_HostUiMixin, _HostTrustMixin, _HostMediaMixin, _HostSess
             self._tray.hide()
 
     def _on_tray_open(self) -> None:
-        win = self.window()
-        if win is None:
-            return
+        # Not self.window(): for a few event-loop turns after a theme switch
+        # this page is parked outside the main window's tree.
+        win = real_window(self)
         win.showNormal()
         win.raise_()
         win.activateWindow()

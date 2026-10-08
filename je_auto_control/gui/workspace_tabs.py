@@ -24,11 +24,46 @@ them back one per event-loop turn -- Qt styles a widget when it gains a styled
 parent -- or at once for a tab that gets selected meanwhile. A parked page is
 still the tab's page for every method here; only its Qt parent differs, and
 only until the queue has drained.
+
+The page of a *closed* tab is kept as a hidden child of the tab widget, which
+is inside the window's tree too: those pages are parked with the others and
+come back, hidden, at the end of the same queue.
+
+While a page is parked its ``window()`` is the parking widget, not the main
+window. Code in a tab that needs the window it belongs to -- to raise it, or
+to place a dialog -- asks :func:`real_window` instead, which sees through the
+parking; the parking widget itself refuses to be shown, so a stray
+``self.window().show()`` cannot put an empty window on screen.
 """
 from typing import Any, Callable, List, Optional
 
 from PySide6.QtCore import QTimer, Qt
 from PySide6.QtWidgets import QFrame, QScrollArea, QTabWidget, QVBoxLayout, QWidget
+
+
+#: Dynamic property on the page of a closed tab while it is kept, hidden, under the tab widget.
+_CLOSED_PAGE = "_workspace_closed_page"
+
+
+class _Parking(QWidget):
+    """Where pages wait, out of the window's tree, during a restyle; never visible."""
+
+    def __init__(self, home: QWidget) -> None:
+        super().__init__()
+        self.home = home
+
+    def setVisible(self, visible: bool) -> None:  # noqa: N802  # reason: Qt name
+        """Stay hidden: a parked page's ``window()`` is this widget, and must not open as one."""
+        super().setVisible(False)
+
+
+def real_window(widget: QWidget) -> QWidget:
+    """``widget.window()``, or the window its tab belongs to while its page is parked for a restyle."""
+    top = widget.window()
+    if isinstance(top, _Parking):
+        home: QWidget = top.home.window()
+        return home
+    return top
 
 
 class PageHolder(QWidget):
@@ -96,6 +131,7 @@ class PageHolder(QWidget):
         """Put ``page`` in the holder."""
         self._page = page
         self._parked = False
+        page.setProperty(_CLOSED_PAGE, None)    # shown in a tab again, wherever it waited
         if self._area is None:
             self.layout().addWidget(page)
             page.show()
@@ -124,7 +160,7 @@ class WorkspaceTabWidget(QTabWidget):
         super().__init__(parent)
         # Where the pages of unselected tabs wait during a restyle; made on
         # first use and dropped once empty.
-        self._parking: Optional[QWidget] = None
+        self._parking: Optional[_Parking] = None
         self._unpark_timer = QTimer(self)
         self._unpark_timer.setInterval(0)
         self._unpark_timer.timeout.connect(self._unpark_one)
@@ -135,17 +171,20 @@ class WorkspaceTabWidget(QTabWidget):
     def restyle(self, apply: Callable[[], object]) -> int:
         """Run ``apply`` -- a style sheet or palette change above this widget -- touching only what shows.
 
-        The pages of the tabs that are not selected are parked first and come
-        back afterwards, one per event-loop turn. Returns how many pages were
-        parked for this call.
+        The pages of the tabs that are not selected, and the kept pages of
+        closed tabs, are parked first and come back afterwards, one per
+        event-loop turn. Returns how many pages were parked for this call.
         """
         if self._parking is None:
-            self._parking = QWidget()
+            self._parking = _Parking(self)
         current = self._holder(self.currentIndex())
         parked = 0
         for holder in self._holders():
             if holder is not current and holder.park(self._parking):
                 parked += 1
+        for page in self._closed_pages(self):
+            page.setParent(self._parking)
+            parked += 1
         try:
             apply()
         finally:
@@ -157,14 +196,30 @@ class WorkspaceTabWidget(QTabWidget):
 
     def parked_pages(self) -> int:
         """How many pages are still waiting to be put back after a restyle."""
-        return sum(1 for holder in self._holders() if holder.parked)
+        return sum(1 for holder in self._holders() if holder.parked) + len(self._closed_pages(self._parking))
 
     def finish_restyle(self) -> None:
         """Put every parked page back now instead of over the next event-loop turns."""
         for holder in self._holders():
             holder.unpark()
+        for page in self._closed_pages(self._parking):
+            self._keep_closed(page)
         self._unpark_timer.stop()
         self._drop_parking()
+
+    @staticmethod
+    def _closed_pages(below: Optional[QWidget]) -> List[QWidget]:
+        """The kept pages of closed tabs that are direct children of ``below``."""
+        if below is None:
+            return []
+        return [child for child in below.children()
+                if isinstance(child, QWidget) and child.property(_CLOSED_PAGE)]
+
+    def _keep_closed(self, page: QWidget) -> None:
+        """Keep the page of a closed tab: hidden, below this widget, where the next open finds it."""
+        page.setProperty(_CLOSED_PAGE, True)
+        page.setParent(self)
+        page.hide()
 
     def _holders(self) -> List[PageHolder]:
         holders = (self._holder(index) for index in range(self.count()))
@@ -180,6 +235,9 @@ class WorkspaceTabWidget(QTabWidget):
         for holder in self._holders():
             if holder.unpark():
                 return
+        for page in self._closed_pages(self._parking):
+            self._keep_closed(page)
+            return
         self._unpark_timer.stop()
         self._drop_parking()
 
@@ -275,8 +333,7 @@ class WorkspaceTabWidget(QTabWidget):
             return
         page = holder.take_page()
         if page is not None:
-            page.setParent(self)
-            page.hide()
+            self._keep_closed(page)
         holder.setParent(None)
         holder.deleteLater()
 
