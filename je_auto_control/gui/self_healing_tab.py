@@ -2,9 +2,11 @@
 
 Fire a template-first / VLM-fallback locate from the GUI and browse the
 audit log of every healing attempt the runtime has performed. The second
-group measures locator versions against a labelled dataset and walks a
-candidate template revision through propose / preview / accept / revert; every
-one of those is a call into ``utils.self_healing`` and nothing more.
+group measures locator versions against a labelled dataset -- the result is
+a comparison table, one version per row, with the full report beneath it --
+and walks a candidate template revision through propose / preview / accept /
+revert; every one of those is a call into ``utils.self_healing`` and nothing
+more.
 """
 import json
 from typing import Callable, Optional, Sequence
@@ -21,8 +23,8 @@ from je_auto_control.gui.language_wrapper.multi_language_wrapper import (
     language_wrapper,
 )
 from je_auto_control.utils.self_healing import (
-    HealOutcome, accept_template_revision, default_heal_log,
-    evaluate_healing_dataset, list_template_revisions,
+    COMPARISON_COLUMNS, HealOutcome, accept_template_revision, comparison_rows,
+    default_heal_log, evaluate_healing_dataset, list_template_revisions,
     preview_template_revision, propose_template_revision,
     revert_template_revision, self_heal_click, self_heal_locate,
 )
@@ -60,6 +62,9 @@ class SelfHealingTab(TranslatableMixin, QWidget):
         self._dataset_input = QLineEdit()
         self._candidate_input = QLineEdit()
         self._revision_input = QLineEdit()
+        self._compare_table = QTableWidget(0, len(COMPARISON_COLUMNS))
+        self._compare_table.setEditTriggers(QTableWidget.NoEditTriggers)
+        self._compare_table.verticalHeader().setVisible(False)
         self._report_view = QPlainTextEdit()
         self._report_view.setReadOnly(True)
         self._build_layout()
@@ -77,6 +82,7 @@ class SelfHealingTab(TranslatableMixin, QWidget):
         root.addWidget(self._build_form_group())
         root.addWidget(self._table, stretch=1)
         root.addWidget(self._build_measure_group())
+        root.addWidget(self._compare_table, stretch=1)
         root.addWidget(self._report_view, stretch=1)
         root.addWidget(self._status)
         self._apply_translations()
@@ -143,6 +149,8 @@ class SelfHealingTab(TranslatableMixin, QWidget):
         ))
         headers = [_t(f"self_heal_col_{name}") for name in _COLUMNS]
         self._table.setHorizontalHeaderLabels(headers)
+        self._compare_table.setHorizontalHeaderLabels(
+            [_t(f"self_heal_cmp_{name}") for name in COMPARISON_COLUMNS])
 
     # --- actions ---------------------------------------------------
 
@@ -195,8 +203,23 @@ class SelfHealingTab(TranslatableMixin, QWidget):
             return
         result = self._show(lambda: evaluate_healing_dataset(dataset))
         if isinstance(result, dict):
+            self._fill_comparison(result)
             self._status.setText(_t(
                 "self_heal_eval_passed" if result.get("passed") else "self_heal_eval_failed"))
+
+    def _fill_comparison(self, report: dict) -> None:
+        """Show an evaluation report as one row per version, baseline first."""
+        rows = comparison_rows(report)
+        self._compare_table.setRowCount(len(rows))
+        for row, values in enumerate(rows):
+            for col, name in enumerate(COMPARISON_COLUMNS):
+                text = str(values[name])
+                if name == "version" and values["baseline"]:
+                    text = _t("self_heal_cmp_baseline").replace("{name}", text)
+                item = QTableWidgetItem(text)
+                item.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
+                self._compare_table.setItem(row, col, item)
+        self._compare_table.resizeColumnsToContents()
 
     def _on_propose_revision(self) -> None:
         template = self._template_input.text().strip()

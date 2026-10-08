@@ -18,8 +18,8 @@ Public surface:
   revisions with preview, accept and revert (:mod:`template_revision`).
 """
 from je_auto_control.utils.self_healing.eval_strategies import (
-    EvaluationDataset, build_strategy, evaluate_healing_dataset,
-    load_evaluation_dataset, template_match_strategy,
+    COMPARISON_COLUMNS, EvaluationDataset, build_strategy, comparison_rows,
+    evaluate_healing_dataset, load_evaluation_dataset, template_match_strategy,
 )
 from je_auto_control.utils.self_healing.eval_vlm import vlm_strategy
 from je_auto_control.utils.self_healing.evaluation import (
@@ -47,7 +47,7 @@ from je_auto_control.utils.self_healing.template_revision import (
 
 
 __all__ = [
-    "EvaluationDataset", "EvaluationSample", "HEAL_EVENT_SCHEMA_VERSION",
+    "COMPARISON_COLUMNS", "EvaluationDataset", "EvaluationSample", "HEAL_EVENT_SCHEMA_VERSION",
     "HealEvent", "HealEventLog", "HealOutcome", "HealVerificationError",
     "HealingComparison",
     "HealingEvaluationError", "LocateRequest", "LocatorStrategy",
@@ -56,6 +56,7 @@ __all__ = [
     "TemplateRevision", "TemplateRevisionError", "TemplateRevisionStore",
     "VERIFY_TYPES", "VersionReport",
     "accept_template_revision", "build_strategy", "build_verifier", "check_thresholds",
+    "comparison_rows",
     "default_heal_log", "default_template_revisions", "evaluate_healing_dataset",
     "evaluate_locators", "format_comparison", "heal_context",
     "list_template_revisions", "load_evaluation_dataset",

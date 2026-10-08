@@ -195,6 +195,14 @@ reports ``model_calls: 0`` and ``None`` for the rest. When any version is
 ``vlm`` the frames are loaded in colour (the template strategy converts them
 to gray itself), so every version is still given the same frame.
 
+The Self-Healing tab shows the result as a comparison table — one version per
+row, the baseline first; located, accuracy, false positives and recovery each
+as ``count/total (rate)``, then p50 / p95, model calls, tokens in / out and
+cost, with ``-`` where nothing was reported — and keeps the full JSON report
+(failing samples, threshold violations) beneath it. The same rows are
+available headlessly as ``comparison_rows(payload)`` (columns:
+``COMPARISON_COLUMNS``).
+
 ``benchmarks/self_healing/run.py`` is the fixed regression set: ten frames
 drawn in memory (plain, 125% / 150% scale, negative-origin monitor, a region
 that must pick the second of two identical targets, a redesigned control, an

@@ -264,6 +264,59 @@ def comparison_payload(comparison: HealingComparison,
     return payload
 
 
+#: Columns of :func:`comparison_rows`, in display order.
+COMPARISON_COLUMNS = (
+    "version", "located", "accuracy", "false_positive", "recovery",
+    "p50_ms", "p95_ms", "model_calls", "tokens", "cost",
+)
+_NOT_REPORTED = "-"
+
+
+def _ratio_text(ratio: Any) -> str:
+    """``3/4 (75.0%)`` from a ``Ratio.to_dict()``; ``n/a`` over nothing."""
+    if not isinstance(ratio, Mapping):
+        return _NOT_REPORTED
+    value = ratio.get("value")
+    shown = "n/a" if value is None else f"{float(value) * 100:.1f}%"
+    return f"{ratio.get('numerator')}/{ratio.get('denominator')} ({shown})"
+
+
+def _shown(value: Any) -> str:
+    return _NOT_REPORTED if value is None else str(value)
+
+
+def comparison_rows(payload: Mapping[str, Any]) -> List[Dict[str, Any]]:
+    """One display row per version of an evaluation report, baseline first.
+
+    ``payload`` is what :func:`evaluate_healing_dataset` returns. Every cell is
+    text keyed by :data:`COMPARISON_COLUMNS`, plus ``baseline`` (bool). A rate
+    keeps its counts (``3/4 (75.0%)``); a value nobody reported -- tokens or
+    cost of a version that called no model -- is ``-``, not ``0``.
+    """
+    versions = payload.get("versions")
+    if not isinstance(versions, Mapping):
+        raise HealingEvaluationError("not an evaluation report: it has no 'versions'")
+    baseline = payload.get("baseline")
+    rows: List[Dict[str, Any]] = []
+    for name, report in versions.items():
+        tokens = (report.get("input_tokens"), report.get("output_tokens"))
+        row = {
+            "version": str(name), "baseline": name == baseline,
+            "located": _ratio_text(report.get("hit_rate")),
+            "accuracy": _ratio_text(report.get("accuracy")),
+            "false_positive": _ratio_text(report.get("false_positive_rate")),
+            "recovery": _ratio_text(report.get("recovery_rate")),
+            "p50_ms": _shown(report.get("p50_ms")), "p95_ms": _shown(report.get("p95_ms")),
+            "model_calls": _shown(report.get("model_calls")),
+            "tokens": (_NOT_REPORTED if tokens == (None, None)
+                       else f"{_shown(tokens[0])} / {_shown(tokens[1])}"),
+            "cost": _shown(report.get("cost")),
+        }
+        rows.append(row)
+    # Stable: the baseline first, the rest in the order the report lists them.
+    return sorted(rows, key=lambda row: not row["baseline"])
+
+
 def _names_vlm(configs: Mapping[str, Any]) -> bool:
     return any(isinstance(config, Mapping) and config.get("strategy") == STRATEGY_VLM
                for config in configs.values())
@@ -296,7 +349,8 @@ def evaluate_healing_dataset(path: PathLike,
 
 
 __all__ = [
-    "DATASET_SCHEMA_VERSION", "EvaluationDataset", "STRATEGY_TEMPLATE", "STRATEGY_VLM",
-    "build_strategy", "comparison_payload", "evaluate_healing_dataset",
+    "COMPARISON_COLUMNS", "DATASET_SCHEMA_VERSION", "EvaluationDataset",
+    "STRATEGY_TEMPLATE", "STRATEGY_VLM",
+    "build_strategy", "comparison_payload", "comparison_rows", "evaluate_healing_dataset",
     "load_evaluation_dataset", "template_match_strategy",
 ]
