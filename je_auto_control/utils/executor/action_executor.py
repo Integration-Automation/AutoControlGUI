@@ -2211,18 +2211,29 @@ def _human_type(text: str, base_delay: float = 0.05, jitter: float = 0.04,
     return {"chars": len(str(text)), "total_delay_s": round(sum(delays), 3)}
 
 
-def _sign_action_file(path: str, key: Optional[str] = None) -> Dict[str, Any]:
-    """Executor adapter: write an HMAC-SHA256 signature sidecar for a file."""
+def _sign_action_file(path: str, key: Optional[str] = None,
+                      private_key_path: Optional[str] = None) -> Dict[str, Any]:
+    """Executor adapter: write an Ed25519 or HMAC signature sidecar for a file."""
     from je_auto_control.utils.action_signing import sign_action_file
-    return {"signature_path": sign_action_file(path, key)}
+    return {"signature_path": sign_action_file(
+        path, key, private_key_path=private_key_path)}
+
+
+def _create_signing_keypair(private_path: str, public_path: str) -> Dict[str, Any]:
+    """Executor adapter: create an Ed25519 action-signing key pair."""
+    from je_auto_control.utils.action_signing import create_signing_keypair
+    create_signing_keypair(private_path, public_path)
+    return {"private_path": str(private_path), "public_path": str(public_path)}
 
 
 def _verify_action_file(path: str, key: Optional[str] = None,
-                        raise_on_fail: bool = False) -> Dict[str, Any]:
+                        raise_on_fail: bool = False,
+                        public_key_path: Optional[str] = None) -> Dict[str, Any]:
     """Executor adapter: verify an action file against its signature sidecar."""
     from je_auto_control.utils.action_signing import verify_action_file
     return verify_action_file(
         path, key, raise_on_fail=_as_bool(raise_on_fail),
+        public_key_path=public_key_path,
     ).to_dict()
 
 
@@ -7793,7 +7804,8 @@ class Executor:
             "AC_assert_any": _assert_any,
             "AC_assert_eventually": _assert_eventually,
 
-            # Action-file integrity (HMAC-SHA256 sign / verify)
+            # Action-file integrity (Ed25519 / HMAC-SHA256 sign / verify)
+            "AC_create_signing_keypair": _create_signing_keypair,
             "AC_sign_action_file": _sign_action_file,
             "AC_verify_action_file": _verify_action_file,
             "AC_encrypt_action_file": _encrypt_action_file,

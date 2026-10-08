@@ -134,6 +134,35 @@ File security & safety
   ``read_executable_action_json`` for the same check. The per-user key
   file must hold at least 32 bytes.
   ``AC_sign_action_file`` / ``AC_verify_action_file``.
+* **Signing key kept apart from execution (version-2 signatures)** — the HMAC
+  key is one shared secret, so whoever can run actions on an endpoint can also
+  sign a file for it. ``create_signing_keypair(private_path, public_path)``
+  (``AC_create_signing_keypair``) makes an Ed25519 pair: the private key stays
+  on the signing machine, execution endpoints get the public key, which
+  verifies and cannot sign. ``sign_action_file(path, private_key_path=...)``
+  writes a JSON envelope (``version`` 2, ``algorithm`` ``ed25519``) into the
+  same ``.sig`` sidecar; ``verify_action_file(path, public_key_path=...)``
+  checks it. Three environment variables configure a process, and
+  ``action_signing_config()`` reports what it sees:
+
+  * ``JE_AUTOCONTROL_ACTION_SIGNING_PRIVATE_KEY`` — path of the private key;
+    signing machine only. ``sign_action_file(path)`` then signs with it.
+  * ``JE_AUTOCONTROL_ACTION_SIGNING_PUBLIC_KEY`` — path of the public key, on
+    every execution endpoint. With this and no private key the endpoint is
+    verify-only: ``AC_sign_action_file`` and ``AC_create_signing_keypair``
+    raise instead of falling back to the per-user HMAC key, and an HMAC
+    sidecar no longer verifies.
+  * ``JE_AUTOCONTROL_ACCEPT_LEGACY_ACTION_SIGNATURES`` (``1`` / ``true`` /
+    ``yes`` / ``on``) — migration mode: HMAC sidecars are accepted alongside
+    version 2, with a warning in the log.
+
+  With none of them set nothing changes: signing is the per-user HMAC as
+  before. To migrate an endpoint that enforces signatures: create the pair on
+  the signing machine; set the public-key variable and the migration variable
+  on the endpoint; sign every file again with the private key; then unset the
+  migration variable. Key-pair signing needs ``cryptography`` -- where it is
+  absent (Windows arm64) these calls raise ``CryptographyUnavailableError``
+  with the install hint, and HMAC signing still works.
 * **Action-file encryption** — ``encrypt_action_file`` /
   ``decrypt_action_file`` keep a script's contents secret at rest with
   Fernet (AES-128-CBC + HMAC), keyed by a per-user 0600 key or by a
