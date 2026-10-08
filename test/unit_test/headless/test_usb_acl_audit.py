@@ -3,9 +3,11 @@
 Deleting the ``.sig`` next to a rewritten file passed as a legacy unsigned
 ACL; a damaged file was replaced by the next save; malformed rule ids were
 stored and never matched; ``remove_rule`` compared ids differently from
-``matches``; and two instances overwrote each other's rules.
+``matches``; and two instances overwrote each other's rules. Found later, by
+the prompt stress test: threads changing one instance lost each other's rules.
 """
 import json
+import threading
 
 import pytest
 
@@ -67,6 +69,29 @@ def test_two_instances_keep_each_others_rules(tmp_path):
     second.add_rule(AclRule(vendor_id="2222", product_id="0002", allow=True))
     saved = json.loads(path.read_text(encoding="utf-8"))
     assert sorted(rule["vendor_id"] for rule in saved["rules"]) == ["1111", "2222"]
+
+
+def test_threads_changing_one_instance_keep_every_rule(tmp_path):
+    # Refresh, append and save were three separately locked steps: a thread
+    # re-read the file between another's data and signature writes ("signature
+    # mismatch", load refused) or reloaded over a rule not yet saved.
+    path = tmp_path / "usb_acl.json"
+    acl = UsbAcl(path=path)
+
+    def add(worker):
+        for step in range(15):
+            acl.add_rule(AclRule(vendor_id="1050", product_id=f"{worker * 15 + step:04x}", allow=True))
+
+    workers = [threading.Thread(target=add, args=(index,)) for index in range(4)]
+    for worker in workers:
+        worker.start()
+    for worker in workers:
+        worker.join(30.0)
+    expected = [f"{n:04x}" for n in range(60)]
+    assert sorted(rule.product_id for rule in acl.list_rules()) == expected
+    assert acl.integrity_ok is True
+    reloaded = UsbAcl(path=path)
+    assert sorted(rule.product_id for rule in reloaded.list_rules()) == expected
 
 
 def test_a_usb_error_without_errno_is_eio():
