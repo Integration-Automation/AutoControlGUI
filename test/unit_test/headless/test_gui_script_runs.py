@@ -69,7 +69,7 @@ class _Script:
 
 @pytest.fixture()
 def script(monkeypatch):
-    QApplication.instance() or QApplication([])
+    _app = QApplication.instance() or QApplication([])
     fake = _Script()
     for name, command in (("AC_fake_mark", fake.mark), ("AC_fake_held", fake.held),
                           ("AC_fake_after", fake.after)):

@@ -251,10 +251,13 @@ def _tab_classes():
 
 
 def _class_source(module_name, class_name):
+    # nosemgrep  # reason: module names come from this package's own tab registry
     module = importlib.import_module(module_name)
     path = pathlib.Path(module.__file__)
     if path.name == "__init__.py":          # a package that re-exports its tab class
-        path = pathlib.Path(importlib.import_module(getattr(module, class_name).__module__).__file__)
+        owner = getattr(module, class_name).__module__
+        # nosemgrep  # reason: the module a registered tab class says it was defined in
+        path = pathlib.Path(importlib.import_module(owner).__file__)
     source = path.read_text(encoding="utf-8")
     for node in ast.walk(ast.parse(source)):
         if isinstance(node, ast.ClassDef) and node.name == class_name:

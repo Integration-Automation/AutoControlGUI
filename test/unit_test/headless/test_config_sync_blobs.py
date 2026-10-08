@@ -125,8 +125,9 @@ def _test_client(**options):
     return testclient.TestClient(create_app(**options))
 
 
-def _put(client, user, data, digest=None, headers=_SECRET):
-    return client.put(f"/blobs/{user}/{digest or _sha(data)}", content=data, headers=headers)
+def _put(client, user, data, digest=None, headers=None):
+    return client.put(f"/blobs/{user}/{digest or _sha(data)}", content=data,
+                      headers=_SECRET if headers is None else headers)
 
 
 def test_put_get_head_and_delete(app_options):

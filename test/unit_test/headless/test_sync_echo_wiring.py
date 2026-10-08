@@ -120,6 +120,9 @@ def test_a_file_the_webrtc_receiver_writes_into_a_mirror_is_not_pushed_back(watc
     assert _polls(engine) == [] and sent == []
     # A local edit afterwards is this machine's change again.
     (watch / "from-peer.txt").write_bytes(b"edited here")
+    # The mirror compares modification times; an edit in the same clock tick as
+    # the arrival would not read as newer.
+    os.utime(watch / "from-peer.txt", (time.time() + 5, time.time() + 5))
     assert _polls(engine) == ["from-peer.txt"]
 
 

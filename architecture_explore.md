@@ -20,7 +20,7 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 | 指標 | 數值 |
 | --- | ---: |
 | Python 模組總數（含周邊子專案） | 1,171 |
-| 程式碼總行數 | 186,122 |
+| 程式碼總行數 | 186,124 |
 | `je_auto_control/utils/` 子套件數 | 311 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 851 |
 | 套件門面 `__all__` 公開名稱數 | 1,244 |
@@ -566,7 +566,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.12 報表、可觀測性與測試治理
 
-> 34 個套件、約 7,793 行。
+> 34 個套件、約 7,794 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -591,7 +591,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/profiler/` | 451 | 逐動作效能剖析器 + 資源剖析器 |
 | `utils/quarantine/` | 204 | 易碎測試隔離區，讓套件執行器跳過已知不穩定案例 |
 | `utils/run_diff/` | 143 | 兩次執行軌跡的差異（LCS 對齊：新增／移除／狀態翻轉／退化） |
-| `utils/run_history/` | 512 | 執行歷史儲存與產出物管理 |
+| `utils/run_history/` | 513 | 執行歷史儲存與產出物管理 |
 | `utils/sarif/` | 187 | 以 SARIF 2.1.0 匯出發現項，供 GitHub／Azure code scanning |
 | `utils/slo/` | 115 | SLO 評估：SLI、錯誤預算與多視窗燃燒率告警 |
 | `utils/smoothing/` | 67 | 數列移動平均平滑 |
@@ -1102,7 +1102,7 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `utils/usb/` | 20 | 5,039 |
 | `je_auto_control/`（頂層 3 檔） | 3 | 2,671 |
 | `utils/accessibility/` | 14 | 3,143 |
-| `wrapper/` | 26 | 6,575 |
+| `wrapper/` | 26 | 6,576 |
 | `windows/` | 24 | 2,266 |
 | `utils/rest_api/` | 8 | 2,080 |
 | `utils/agent/` | 13 | 2,251 |
@@ -1115,6 +1115,6 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `osx/` | 17 | 981 |
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 861 |
-| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 723 | 68,088 |
-| **總計** | **1,159** | **185,282** |
+| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 723 | 68,089 |
+| **總計** | **1,159** | **185,284** |
 

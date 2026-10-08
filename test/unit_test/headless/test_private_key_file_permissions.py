@@ -187,6 +187,15 @@ def test_key_file_module_uses_the_shared_helper():
 
 # --- the real platform -------------------------------------------------------------------------
 
+def _names_only(dacl_user: str, user: str) -> bool:
+    """Whether an SDDL trustee is ``user``: Windows abbreviates well-known SIDs.
+
+    The built-in Administrator (RID 500, the account of a hosted CI runner) is
+    printed as ``LA`` rather than as its SID.
+    """
+    return dacl_user == user or (dacl_user == "LA" and user.endswith("-500"))
+
+
 @windows_only
 def test_a_new_private_file_has_a_protected_list_naming_this_user_only(tmp_path):
     path = tmp_path / "private.pem"
@@ -199,7 +208,8 @@ def test_a_new_private_file_has_a_protected_list_naming_this_user_only(tmp_path)
     assert user.startswith("S-1-5-")
     _owner, _sep, dacl = sddl.partition("D:")
     assert dacl.startswith("P"), "protected: nothing is inherited from the directory"
-    assert dacl.count("(") == 1 and dacl.endswith(f"(A;;FA;;;{user})")
+    assert dacl.count("(") == 1 and dacl.startswith("P(A;;FA;;;") and dacl.endswith(")")
+    assert _names_only(dacl[len("P(A;;FA;;;"):-1], user)
     assert exposure(path) == []
 
 
@@ -218,7 +228,9 @@ def test_a_created_signing_key_is_restricted_and_its_public_half_is_not(tmp_path
     private, public = tmp_path / "private.pem", tmp_path / "public.pem"
     create_signing_keypair(private, public)
     user = _private_file._current_user_sid()
-    assert _private_file._windows_dacl_sddl(private).endswith(f"D:P(A;;FA;;;{user})")
+    _owner, _sep, dacl = _private_file._windows_dacl_sddl(private).partition("D:")
+    assert dacl.startswith("P(A;;FA;;;") and dacl.count("(") == 1
+    assert _names_only(dacl[len("P(A;;FA;;;"):-1], user)
     assert "P(" not in _private_file._windows_dacl_sddl(public), "inherits, as before"
     assert b"PRIVATE KEY" in private.read_bytes()
 

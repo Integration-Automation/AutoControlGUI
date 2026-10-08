@@ -173,6 +173,7 @@ class HistoryStore:
         ).fetchall()}
         for column in ("artifact_path", "journal_path", "journal_run_id"):
             if column not in cols:
+                # nosemgrep  # reason: the column names are the three literals above, nothing a caller supplies
                 conn.execute(  # nosec B608  # reason: column names are the literals above
                     f"ALTER TABLE runs ADD COLUMN {column} TEXT")
 

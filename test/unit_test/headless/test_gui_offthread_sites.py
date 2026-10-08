@@ -51,7 +51,7 @@ class _Gate:
 
 @pytest.fixture()
 def boxes(monkeypatch):
-    QApplication.instance() or QApplication([])
+    _app = QApplication.instance() or QApplication([])
     shown = []
     monkeypatch.setattr(QMessageBox, "warning", lambda *args: shown.append(args[-1]))
     monkeypatch.setattr(QMessageBox, "information", lambda *args: shown.append(args[-1]))

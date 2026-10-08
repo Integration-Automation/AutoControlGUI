@@ -239,8 +239,9 @@ def test_a_directory_that_cannot_hold_a_lock_file_does_not_block_the_change(
 
     @contextmanager
     def no_lock(_path):
-        raise PermissionError(13, "read-only directory")
-        yield  # pragma: no cover
+        if _path is not None:
+            raise PermissionError(13, "read-only directory")
+        yield
     monkeypatch.setattr(acl_module, "_file_lock", no_lock)
     caplog.set_level(logging.WARNING, logger=autocontrol_logger.name)
     acl = UsbAcl(path=tmp_path / "usb_acl.json")

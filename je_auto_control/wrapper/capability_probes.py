@@ -239,6 +239,7 @@ def _mac_preflight(modules: Tuple[str, ...], name: str) -> Optional[bool]:
     """Call the no-argument preflight ``name`` from the first module that has it."""
     for module_name in modules:
         try:
+            # nosemgrep  # reason: the module names are the constants this file passes, not input
             function = getattr(importlib.import_module(module_name), name, None)
         except _READ_ERRORS:
             continue
