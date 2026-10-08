@@ -90,7 +90,9 @@ class TabTask(QObject):
     def _submit(self, work: Callable[[CancellationToken], Any], tag: str,
                 timeout_s: Optional[float], discard: Optional[Callable[[Any], object]]) -> None:
         self.tag = tag
-        handle = task_controller().submit(work, owner=self.parent(), timeout_s=timeout_s, discard=discard)
+        # The tab owns the work; a TabTask built without a parent owns its own.
+        owner = self.parent() or self
+        handle = task_controller().submit(work, owner=owner, timeout_s=timeout_s, discard=discard)
         self.task = handle
         handle.result.connect(self.result)
         handle.error.connect(self.error)

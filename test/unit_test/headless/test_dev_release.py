@@ -171,8 +171,10 @@ def test_dev_is_tested_the_way_main_is():
     squares = {line.strip() for line in SQUARE.findall(dev)}
     assert squares, "dev.yml names no matrix square"
     assert squares <= {line.strip() for line in SQUARE.findall(quality)}
-    assert _line_with(dev, "pytest==") == _line_with(quality, "pytest==")
-    assert _line_with(dev, 'pip install -e "') == _line_with(quality, 'pip install -e "')
+    # quality.yml has other jobs that install things; the headless job's lines are
+    # the ones naming the coverage tool and the WebRTC extra without the GUI one.
+    assert _line_with(dev, "coverage==") == _line_with(quality, "coverage==")
+    assert _line_with(dev, 'pip install -e ".[webrtc') == _line_with(quality, 'pip install -e ".[webrtc')
     assert "python -m pytest -v --tb=short --timeout=120" in dev
 
 

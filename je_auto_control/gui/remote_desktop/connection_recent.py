@@ -4,11 +4,11 @@ One interaction group of ``connection_screen.QuickConnectScreen``, kept as a
 mixin so the screen class still owns every widget and slot under its original
 name.
 """
-from typing import TYPE_CHECKING, Any, Dict, Optional
+from typing import TYPE_CHECKING, Any, Dict, Optional, cast
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
-    QInputDialog, QLineEdit, QListWidget, QListWidgetItem, QMenu, QMessageBox,
+    QInputDialog, QLineEdit, QListWidget, QListWidgetItem, QMenu, QMessageBox, QWidget,
 )
 
 from je_auto_control.gui.remote_desktop._helpers import _t
@@ -28,6 +28,10 @@ class _RecentConnectionsMixin:
         _book: Any
         _recent: QListWidget
         _connect_target: QLineEdit
+
+    def _as_widget(self) -> QWidget:
+        """This object as the widget it is once mixed into the screen (a dialog's parent)."""
+        return cast(QWidget, self)
 
     def _remember_tcp(self, host: str, port: int) -> None:
         self._remember_url(f"{_TCP_RECENT_PREFIX}{host}:{port}")
@@ -81,7 +85,7 @@ class _RecentConnectionsMixin:
         mac = (entry or {}).get("mac_address") if entry else None
         if not mac:
             mac, ok = QInputDialog.getText(
-                self, _t("rd_quick_wake_host"),
+                self._as_widget(), _t("rd_quick_wake_host"),
                 _t("rd_quick_wol_mac_prompt"),
             )
             if not ok or not mac:
@@ -94,18 +98,18 @@ class _RecentConnectionsMixin:
             )
         except (OSError, ValueError) as error:
             QMessageBox.warning(
-                self, _t("rd_quick_wake_host"), str(error),
+                self._as_widget(), _t("rd_quick_wake_host"), str(error),
             )
             return
         QMessageBox.information(
-            self, _t("rd_quick_wake_host"),
+            self._as_widget(), _t("rd_quick_wake_host"),
             _t("rd_quick_wol_sent").replace("{mac}", mac),
         )
 
     def _edit_recent_mac(self, entry: Optional[Dict[str, Any]], host_id: str) -> None:
         current = (entry or {}).get("mac_address") if entry else ""
         mac, ok = QInputDialog.getText(
-            self, _t("rd_quick_edit_mac"),
+            self._as_widget(), _t("rd_quick_edit_mac"),
             _t("rd_quick_wol_mac_prompt"),
             text=str(current or ""),
         )
