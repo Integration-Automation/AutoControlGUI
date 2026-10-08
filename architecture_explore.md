@@ -1018,8 +1018,8 @@ GUI 是**選用 extra**（`pip install je_auto_control[gui]`，PySide6 + qt-mate
 
 | 檔案 | 用途 |
 | --- | --- |
-| `stable.yml` | 每次 push／PR 到 `main` 與每日排程跑 Windows 五版本的示範腳本；合併到 main 後版本遞增並上傳 PyPI（使用 `PYPI_API_TOKEN`）。 |
-| `dev.yml` | 每次 push／PR 到 `dev` 跑 headless pytest（四格：Windows 的 3.10 與 3.14、Ubuntu 3.14、macOS 3.10，都是 `quality.yml` 九格裡的格子，不量 coverage）。push 通過後由 `publish-dev` job 用 `dev.toml` 建置並上傳 `je_auto_control_dev`（同一個 `PYPI_API_TOKEN`）；只有這個 commit 仍是 `dev` 的最新一筆、而且 wheel 內容跟 PyPI 最新一版不同時才上傳，版本由 `scripts/dev_release.py` 向 PyPI 查，不回寫 repo。 |
+| `stable.yml` | 每次 push／PR 到 `main` 與每日排程跑 Windows 五版本的示範腳本；合併到 main 後版本遞增並上傳 PyPI（使用 `PYPI_API_TOKEN`）。`publish` job 只安裝雜湊鎖定的 `.github/requirements/publish.txt`（`build`、`twine` 與建置後端 `setuptools`，由同目錄的 `publish.in` 用 `uv pip compile` 產生），並以 `python -m build --no-isolation` 建置，所以建置後端也是鎖定的那一版。 |
+| `dev.yml` | 每次 push／PR 到 `dev` 跑 headless pytest（四格：Windows 的 3.10 與 3.14、Ubuntu 3.14、macOS 3.10，都是 `quality.yml` 九格裡的格子，不量 coverage）。push 通過後由 `publish-dev` job 用 `dev.toml` 建置並上傳 `je_auto_control_dev`（同一個 `PYPI_API_TOKEN`）；只有這個 commit 仍是 `dev` 的最新一筆、而且 wheel 內容跟 PyPI 最新一版不同時才上傳，版本由 `scripts/dev_release.py` 向 PyPI 查，不回寫 repo。`publish-dev` 跟 `stable.yml` 的 `publish` 一樣只安裝 `.github/requirements/publish.txt` 並以 `python -m build --no-isolation` 建置；`test_publish_tooling_lock.py` 守住這兩個 job 的安裝行、建置指令，以及鎖定版本滿足 `pyproject.toml`／`dev.toml` 的 `build-system.requires`。 |
 | `release.yml` | 發佈流程（上傳步驟目前關閉）。 |
 | `quality.yml` | ruff、bandit、dependency review、九格矩陣的 headless pytest（含 coverage 地板）與 mypy。 |
 | `platform-smoke.yml` | 跨平台煙霧測試。 |
