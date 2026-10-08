@@ -8,10 +8,20 @@ keyboard input, image recognition, screen capture, action scripting, and report 
 
 .. note::
 
-   AutoControl supports Linux Wayland via CLI bridges (wtype + ydotool +
-   grim). See :doc:`getting_started/run_in_ci` for compositor / install
-   notes. Set ``JE_AUTOCONTROL_LINUX_DISPLAY_SERVER=x11`` to force the
-   XWayland fallback.
+   On Linux Wayland, input goes through **libei** and the desktop portal's
+   consent dialog when ``libei`` / ``liboeffis`` are installed, and through
+   the ``ydotool`` daemon (with ``wtype`` for text) otherwise; capture uses
+   ``grim``, ``gnome-screenshot`` or ``spectacle``, or the
+   ``xdg-desktop-portal`` screenshot request when none is on ``PATH``. A
+   refused or revoked consent does not fall back silently. The compositor
+   allows no global input hook, so recording your own keyboard and mouse is an
+   opt-in ``evdev`` reader. ``probe_capabilities()`` reports where input,
+   capture, recording and the stop shortcut each stand, without asking the
+   desktop for anything: see
+   :doc:`Eng/doc/wayland/wayland_capabilities_doc`, and
+   :doc:`getting_started/run_in_ci` for compositor / install notes. Set
+   ``JE_AUTOCONTROL_LINUX_DISPLAY_SERVER=x11`` to force the XWayland
+   fallback, which reaches X11 applications only.
 
 ----
 
