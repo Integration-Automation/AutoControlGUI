@@ -4,7 +4,7 @@ build
 twine
 sphinx
 sphinx-rtd-theme
-PySide6==6.11.1
+PySide6==6.11.2
 qt-material==2.17
 mss==10.2.0
 defusedxml==0.7.1
@@ -25,7 +25,7 @@ ruff==0.16.0
 bandit==1.9.4
 pytest==9.1.1
 pytest-timeout==2.4.0
-pytest-rerunfailures==16.4
+pytest-rerunfailures==16.7
 # `coverage`, not `pytest-cov`: this package registers a `pytest11` entry
 # point, so pytest imports the facade before pytest-cov starts measuring and
 # `pytest --cov` under-reports by ~24 points. Measure with

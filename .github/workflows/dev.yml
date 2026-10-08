@@ -76,7 +76,7 @@ jobs:
         shell: bash
         # The same line as quality.yml (test_dev_release.py compares them).
         # Quoted: `--only-binary :all:` puts a colon-space inside the scalar.
-        run: "pip install --only-binary :all: ruff==0.16.0 bandit==1.9.4 pytest==9.1.1 pytest-timeout==2.4.0 pytest-rerunfailures==16.4 coverage==7.15.4 PySide6==6.11.1 radon==6.0.1"
+        run: "pip install --only-binary :all: ruff==0.16.0 bandit==1.9.4 pytest==9.1.1 pytest-timeout==2.4.0 pytest-rerunfailures==16.7 coverage==7.15.4 PySide6==6.11.2 radon==6.0.1"
 
       # No path argument: the paths come from `testpaths` in pyproject.toml,
       # and an argument would drop the flow_control tests. Linux runs under a
