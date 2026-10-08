@@ -48,7 +48,8 @@ def position() -> Tuple[int, int]:
     return int(loc.x), int(height - loc.y)
 
 
-def mouse_event(event: int, x: int, y: int, mouse_button: int) -> None:
+def mouse_event(event: int, x: int, y: int, mouse_button: int,
+                click_count: int = 1) -> None:
     """
     Create and post a mouse event
     建立並送出滑鼠事件
@@ -57,9 +58,53 @@ def mouse_event(event: int, x: int, y: int, mouse_button: int) -> None:
     :param x: X coordinate X 座標
     :param y: Y coordinate Y 座標
     :param mouse_button: Mouse button code 滑鼠按鍵代碼
+    :param click_count: 這是連續第幾次點擊 Which click of a run this is (>= 1)
     """
+    Quartz.CGEventPost(
+        Quartz.kCGHIDEventTap,
+        _build_mouse_event(event, x, y, mouse_button, click_count))
+
+
+def _build_mouse_event(event: int, x: int, y: int, mouse_button: int,
+                       click_count: int = 1):
+    """
+    The Quartz event ``mouse_event`` posts, not yet posted
+    建立（但不送出）滑鼠事件
+
+    macOS 的應用程式不從兩次點擊的時間差判定雙擊，而是讀事件上的點擊次數欄位
+    （``kCGMouseEventClickState``）。這裡原本從不寫它，所以連點兩次只是兩次
+    單擊；``click_count`` 大於 1 時寫進去，等於 1 時事件與以前完全相同。
+    A macOS application does not infer a double-click from the timing of two
+    clicks: it reads the click-state field of the event. This never wrote it,
+    so two clicks were two single clicks. A ``click_count`` above 1 is written
+    into the field; at 1 the event is exactly the one this always built.
+    """
+    count = _click_count(click_count)
     curr_event = Quartz.CGEventCreateMouseEvent(None, event, (x, y), mouse_button)
-    Quartz.CGEventPost(Quartz.kCGHIDEventTap, curr_event)
+    if count != 1:
+        Quartz.CGEventSetIntegerValueField(
+            curr_event, Quartz.kCGMouseEventClickState, count)
+    return curr_event
+
+
+def _click_count(click_count: int) -> int:
+    """``click_count`` as an int >= 1, else raise ``AutoControlMouseException``."""
+    if isinstance(click_count, bool) or not isinstance(click_count, int) or click_count < 1:
+        raise AutoControlMouseException(
+            f"click_count must be an integer >= 1, got {click_count!r}")
+    return click_count
+
+
+def double_click_interval() -> float:
+    """
+    The longest gap, in seconds, the system still counts as one multi-click
+    系統仍視為連擊的最長間隔（秒）
+
+    使用者可在系統設定調整；兩次點擊隔得比這更久，就是兩次獨立的單擊。
+    User-adjustable in System Settings; two clicks further apart than this
+    are two separate single clicks.
+    """
+    return float(Quartz.NSEvent.doubleClickInterval())
 
 
 def set_position(x: int, y: int) -> None:
@@ -73,7 +118,7 @@ def set_position(x: int, y: int) -> None:
     mouse_event(Quartz.kCGEventMouseMoved, x, y, 0)
 
 
-def press_mouse(x: int, y: int, mouse_button: int) -> None:
+def press_mouse(x: int, y: int, mouse_button: int, click_count: int = 1) -> None:
     """
     Press mouse button
     模擬按下滑鼠按鍵
@@ -81,18 +126,19 @@ def press_mouse(x: int, y: int, mouse_button: int) -> None:
     :param x: X coordinate X 座標
     :param y: Y coordinate Y 座標
     :param mouse_button: Mouse button code 滑鼠按鍵代碼
+    :param click_count: 這是連續第幾次點擊 Which click of a run this is (>= 1)
     """
     if mouse_button == osx_mouse_left:
-        mouse_event(Quartz.kCGEventLeftMouseDown, x, y, Quartz.kCGMouseButtonLeft)
+        mouse_event(Quartz.kCGEventLeftMouseDown, x, y, Quartz.kCGMouseButtonLeft, click_count)
     elif mouse_button == osx_mouse_middle:
-        mouse_event(Quartz.kCGEventOtherMouseDown, x, y, Quartz.kCGMouseButtonCenter)
+        mouse_event(Quartz.kCGEventOtherMouseDown, x, y, Quartz.kCGMouseButtonCenter, click_count)
     elif mouse_button == osx_mouse_right:
-        mouse_event(Quartz.kCGEventRightMouseDown, x, y, Quartz.kCGMouseButtonRight)
+        mouse_event(Quartz.kCGEventRightMouseDown, x, y, Quartz.kCGMouseButtonRight, click_count)
     else:   # nothing was posted, and the wrapper reported the press done
         raise AutoControlMouseException(f"unknown mouse button {mouse_button!r}")
 
 
-def release_mouse(x: int, y: int, mouse_button: int) -> None:
+def release_mouse(x: int, y: int, mouse_button: int, click_count: int = 1) -> None:
     """
     Release mouse button
     模擬釋放滑鼠按鍵
@@ -100,18 +146,20 @@ def release_mouse(x: int, y: int, mouse_button: int) -> None:
     :param x: X coordinate X 座標
     :param y: Y coordinate Y 座標
     :param mouse_button: Mouse button code 滑鼠按鍵代碼
+    :param click_count: 這是連續第幾次點擊，與對應的按下相同
+        Which click of a run this is; the same number as the matching press
     """
     if mouse_button == osx_mouse_left:
-        mouse_event(Quartz.kCGEventLeftMouseUp, x, y, Quartz.kCGMouseButtonLeft)
+        mouse_event(Quartz.kCGEventLeftMouseUp, x, y, Quartz.kCGMouseButtonLeft, click_count)
     elif mouse_button == osx_mouse_middle:
-        mouse_event(Quartz.kCGEventOtherMouseUp, x, y, Quartz.kCGMouseButtonCenter)
+        mouse_event(Quartz.kCGEventOtherMouseUp, x, y, Quartz.kCGMouseButtonCenter, click_count)
     elif mouse_button == osx_mouse_right:
-        mouse_event(Quartz.kCGEventRightMouseUp, x, y, Quartz.kCGMouseButtonRight)
+        mouse_event(Quartz.kCGEventRightMouseUp, x, y, Quartz.kCGMouseButtonRight, click_count)
     else:
         raise AutoControlMouseException(f"unknown mouse button {mouse_button!r}")
 
 
-def click_mouse(x: int, y: int, mouse_button: int) -> None:
+def click_mouse(x: int, y: int, mouse_button: int, click_count: int = 1) -> None:
     """
     Perform mouse click (press + release)
     模擬滑鼠點擊（按下 + 釋放）
@@ -119,10 +167,12 @@ def click_mouse(x: int, y: int, mouse_button: int) -> None:
     :param x: X coordinate X 座標
     :param y: Y coordinate Y 座標
     :param mouse_button: Mouse button code 滑鼠按鍵代碼
+    :param click_count: 這是連續第幾次點擊；雙擊的第二下傳 2
+        Which click of a run this is; the second click of a double-click is 2
     """
-    press_mouse(x, y, mouse_button)
+    press_mouse(x, y, mouse_button, click_count)
     time.sleep(0.001)  # 小延遲確保事件正確送出
-    release_mouse(x, y, mouse_button)
+    release_mouse(x, y, mouse_button, click_count)
 
 
 def scroll(scroll_value: int) -> None:

@@ -103,8 +103,11 @@ click_mouse
    Presses and releases a mouse button at the specified position, ``clicks``
    times, ``interval`` seconds apart; ``clicks=2`` double-clicks. Windows and
    X11 recognise a double-click from the timing and distance of the clicks, so
-   keep ``interval`` under the system double-click time. On macOS the clicks
-   arrive as separate single clicks.
+   keep ``interval`` under the system double-click time. macOS applications
+   read a click count carried by the event instead, so there the n-th click
+   has its click-state field (``kCGMouseEventClickState``) set to n; when
+   ``interval`` is longer than the system double-click interval every click is
+   sent as a single click.
 
    :param mouse_keycode: Mouse button name (e.g., ``"mouse_left"``).
    :type mouse_keycode: int or str

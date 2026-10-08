@@ -178,14 +178,25 @@ class DarwinMouseBackend(Protocol):
     def set_position(self, x: int, y: int) -> None:
         """Move the cursor to a point on the desktop."""
 
-    def press_mouse(self, x: int, y: int, mouse_button: int) -> None:
-        """Hold a button down at a point."""
+    def press_mouse(self, x: int, y: int, mouse_button: int,
+                    click_count: int = 1) -> None:
+        """Hold a button down at a point; ``click_count`` as in ``click_mouse``."""
 
-    def release_mouse(self, x: int, y: int, mouse_button: int) -> None:
-        """Let a button up at a point."""
+    def release_mouse(self, x: int, y: int, mouse_button: int,
+                      click_count: int = 1) -> None:
+        """Let a button up at a point; ``click_count`` as in ``click_mouse``."""
 
-    def click_mouse(self, x: int, y: int, mouse_button: int) -> None:
-        """Press and release a button at a point."""
+    def click_mouse(self, x: int, y: int, mouse_button: int,
+                    click_count: int = 1) -> None:
+        """Press and release a button at a point.
+
+        ``click_count`` is which click of a run this is. Applications here
+        read it off the event instead of timing two clicks, so the second
+        click of a double-click has to say 2.
+        """
+
+    def double_click_interval(self) -> float:
+        """Seconds within which the system still counts clicks as one run."""
 
     def scroll(self, scroll_value: int) -> None:
         """Turn the wheel; one axis, so the sign carries the direction."""
