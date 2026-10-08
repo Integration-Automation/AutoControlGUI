@@ -96,8 +96,12 @@ class WindowManageBackend:
         """
         self._unsupported("restore")
 
-    def show(self, window_id: int, cmd_show: int) -> None:
-        """Apply a platform show-state code (Win32 ``ShowWindow`` numbering)."""
+    def show(self, window_id: int, cmd_show: int) -> Optional[bool]:
+        """Apply a platform show-state code (Win32 ``ShowWindow`` numbering).
+
+        ``False`` when the platform reports the request failed, ``True`` when
+        it reports success, ``None`` when it cannot tell.
+        """
         self._unsupported("show")
 
     def close(self, window_id: int) -> bool:

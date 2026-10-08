@@ -6,7 +6,7 @@ import ctypes
 from ctypes import (  # type: ignore[attr-defined]  # reason: win32-only ctypes
     WINFUNCTYPE, byref, create_unicode_buffer, wintypes,
 )
-from typing import List, Optional, Tuple
+from typing import Any, List, Optional, Tuple
 
 # 相容用途：舊版本從這個模組匯出共用的 user32。
 # Compatibility: older code imported the shared user32 from this module.
@@ -67,9 +67,65 @@ _user32.IsIconic.restype = wintypes.BOOL
 _user32.GetWindowThreadProcessId.argtypes = [wintypes.HWND,
                                              ctypes.POINTER(wintypes.DWORD)]
 _user32.GetWindowThreadProcessId.restype = wintypes.DWORD
+_user32.IsWindow.argtypes = [wintypes.HWND]
+_user32.IsWindow.restype = wintypes.BOOL
+_user32.MapVirtualKeyW.argtypes = [wintypes.UINT, wintypes.UINT]
+_user32.MapVirtualKeyW.restype = wintypes.UINT
+
+
+def _load_dwmapi() -> Any:
+    """The module's own dwmapi handle, or ``None`` where the DLL is missing.
+
+    Without it nothing is treated as cloaked, rather than the whole module
+    failing to import on a stripped-down Windows image.
+    """
+    try:
+        dwmapi = ctypes.WinDLL("dwmapi")  # type: ignore[attr-defined]  # reason: win32-only ctypes
+    except OSError:
+        return None
+    dwmapi.DwmGetWindowAttribute.argtypes = [
+        wintypes.HWND, wintypes.DWORD, ctypes.c_void_p, wintypes.DWORD]
+    dwmapi.DwmGetWindowAttribute.restype = ctypes.c_long
+    return dwmapi
+
+
+_dwmapi = _load_dwmapi()
 
 WM_CLOSE = 0x0010
 SW_RESTORE = 9
+_DWMWA_CLOAKED = 14
+
+
+def is_window_cloaked(hwnd: int) -> bool:
+    """
+    視窗是否被 DWM 隱藏（cloak）
+    Whether DWM is hiding the window although ``IsWindowVisible`` says it shows
+
+    UWP 的背景視窗（「設定」、「Windows 輸入體驗」）與其他虛擬桌面上的視窗都是
+    這種狀態：樣式上可見，畫面上沒有。
+    Suspended UWP frames and windows on another virtual desktop are in this
+    state: visible by style, absent from the screen.
+    """
+    if _dwmapi is None:
+        return False
+    cloaked = wintypes.DWORD(0)
+    result = _dwmapi.DwmGetWindowAttribute(
+        hwnd, _DWMWA_CLOAKED, byref(cloaked), ctypes.sizeof(cloaked))
+    return result == 0 and cloaked.value != 0
+
+
+def _has_area(hwnd: int) -> bool:
+    """False only for a window whose rectangle is known and empty."""
+    rect = wintypes.RECT()
+    if not _user32.GetWindowRect(hwnd, byref(rect)):
+        return True
+    return rect.right > rect.left and rect.bottom > rect.top
+
+
+def _is_listable(hwnd: int) -> bool:
+    """A window a user could see: visible, not cloaked, not zero-sized."""
+    return (bool(_user32.IsWindowVisible(hwnd)) and not is_window_cloaked(hwnd)
+            and _has_area(hwnd))
 
 
 def get_all_window_hwnd() -> List[Tuple[int, str]]:
@@ -81,12 +137,17 @@ def get_all_window_hwnd() -> List[Tuple[int, str]]:
     handle 都成了 `LP_c_long` 物件：`int(hwnd)` 會丟 `ValueError`，也沒辦法拿去
     跟其他 Win32 呼叫組合，等於這份清單只能看不能用。
 
+    被 DWM cloak 的視窗與零面積的視窗不列出：它們通過 `IsWindowVisible`，但
+    畫面上沒有，`find_window` 選到之後的每個動作都落空。
+    Cloaked and zero-area windows are left out: they pass ``IsWindowVisible``
+    but are not on screen, and anything done to one of them does nothing.
+
     :return: [(hwnd, window_title), ...]
     """
     window_info: List[Tuple[int, str]] = []
 
     def _foreach_window(hwnd, _l_param) -> bool:
-        if _user32.IsWindowVisible(hwnd):
+        if _is_listable(hwnd):
             length = _user32.GetWindowTextLengthW(hwnd)
             buff = create_unicode_buffer(length + 1)
             _user32.GetWindowTextW(hwnd, buff, length + 1)
@@ -188,23 +249,29 @@ def destroy_window(hwnd: int) -> bool:
     return bool(_user32.DestroyWindow(hwnd))
 
 
-def set_foreground_window(hwnd: int) -> None:
+def set_foreground_window(hwnd: int) -> bool:
     """
-    設定視窗為前景視窗
-    Set window to foreground
+    設定視窗為前景視窗；回傳 Windows 是否接受
+    Set window to foreground; return whether Windows accepted the request
+
+    前景鎖常拒絕背景行程，那時這裡回 False。True 也只代表請求被接受，要確認
+    請比對 :func:`get_foreground_window`。
+    The foreground lock refuses a background process often, and this is False
+    then. True means accepted, not done: compare
+    :func:`get_foreground_window` to be sure.
     """
-    _user32.SetForegroundWindow(hwnd)
+    return bool(_user32.SetForegroundWindow(hwnd))
 
 
-def set_window_position(hwnd: int, position: int) -> None:
+def set_window_position(hwnd: int, position: int) -> bool:
     """
-    設定視窗位置 (僅改變 Z-order，不改變大小與座標)
-    Set window position (only Z-order, no resize or move)
+    設定視窗位置 (僅改變 Z-order，不改變大小與座標)；回傳是否成功
+    Set window position (only Z-order, no resize or move); return success
     """
     swp_no_size = 0x0001
     swp_no_move = 0x0002
-    _user32.SetWindowPos(hwnd, position, 0, 0, 0, 0,
-                         swp_no_move | swp_no_size)
+    return bool(_user32.SetWindowPos(hwnd, position, 0, 0, 0, 0,
+                                     swp_no_move | swp_no_size))
 
 
 #: SW_SHOWNORMAL, SW_SHOWMAXIMIZED, SW_SHOW, SW_RESTORE, SW_SHOWDEFAULT. The
@@ -213,20 +280,29 @@ def set_window_position(hwnd: int, position: int) -> None:
 _ACTIVATING_SHOW_COMMANDS = frozenset({1, 3, 5, 9, 10})
 
 
-def show_window(hwnd: int, cmd_show: int) -> None:
+def show_window(hwnd: int, cmd_show: int) -> bool:
     """
-    顯示或隱藏視窗
-    Show or hide a window
+    顯示或隱藏視窗；回傳是否成功
+    Show or hide a window; return whether it worked
+
+    `ShowWindow` 的回傳值是「先前是否可見」，不是成敗，所以成敗看的是：handle
+    是不是一個視窗，以及（會啟用視窗的指令）Windows 是否接受前景請求。
+    ``ShowWindow`` returns the previous visibility, not success, so success is
+    whether the handle is a window and, for a command that activates, whether
+    Windows accepted the foreground request.
 
     :param cmd_show: Win32 ShowWindow flag (e.g., 0=Hide, 1=Normal, 2=Minimized, 3=Maximized)
     """
     if cmd_show < 0 or cmd_show > 11:  # Win32 ShowWindow 常見範圍
         cmd_show = 1  # 預設為 Normal
+    if not _user32.IsWindow(hwnd):
+        return False
     _user32.ShowWindow(hwnd, cmd_show)
     # 隱藏之後不該再把它拉到前景，那是自相矛盾的一組動作。
     # Do not pull a window forward right after hiding it.
     if cmd_show in _ACTIVATING_SHOW_COMMANDS:
-        _user32.SetForegroundWindow(hwnd)
+        return bool(_user32.SetForegroundWindow(hwnd))
+    return True
 
 
 def move_window(hwnd: int, x: int, y: int, width: int, height: int,
@@ -332,24 +408,47 @@ def deepest_child_at(hwnd: int, x: int, y: int) -> int:
     return current
 
 
+#: Keys the keyboard driver reports with the extended-key bit (lParam bit 24).
+_EXTENDED_KEYS = frozenset({
+    0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0x28,   # page up/down, end, home, arrows
+    0x2D, 0x2E, 0x5B, 0x5C, 0x5D, 0x6F, 0x90, 0xA3, 0xA5,
+})
+_KEY_EXTENDED = 1 << 24
+_KEY_UP_BITS = 0xC0000000      # previous state down + transition (released)
+
+
+def _key_lparams(keycode: int) -> Tuple[int, int]:
+    """``(WM_KEYDOWN lParam, WM_KEYUP lParam)`` as a real key press carries them."""
+    scan = int(_user32.MapVirtualKeyW(int(keycode), 0)) & 0xFF
+    base = 1 | (scan << 16)
+    if int(keycode) in _EXTENDED_KEYS:
+        base |= _KEY_EXTENDED
+    return base, base | _KEY_UP_BITS
+
+
 def post_key(hwnd: int, keycode: int, character: str = "") -> bool:
     """
     把一次按鍵投遞給視窗（不搶焦點）；回傳訊息是否都排進佇列
     Post one key press to a window without focusing it
 
-    可列印字元要送 `WM_CHAR`：控制項是靠它拿到文字的，只送 `WM_KEYDOWN` 對多數
-    編輯控制項不會產生任何字。
+    可列印字元**只**送 `WM_CHAR`：控制項是靠它拿到文字的。先前另外送
+    `WM_KEYDOWN`／`WM_KEYUP`，目標的 `TranslateMessage` 又各產生一次 `WM_CHAR`
+    （`lParam=0` 的 `WM_KEYUP` 被當成按下），一個字打成三個。其他鍵送
+    `WM_KEYDOWN`／`WM_KEYUP`，`lParam` 帶重複次數、掃描碼與放開旗標。
 
-    A printable character also needs ``WM_CHAR``: edit controls take their text
-    from that message, so ``WM_KEYDOWN`` alone types nothing in most of them.
+    A printable character is posted as ``WM_CHAR`` alone: controls take their
+    text from it. Posting the key messages as well made the target's
+    ``TranslateMessage`` produce one more ``WM_CHAR`` from each (a ``WM_KEYUP``
+    whose ``lParam`` is 0 reads as a press), so one character arrived three
+    times. Any other key is a ``WM_KEYDOWN`` / ``WM_KEYUP`` pair whose
+    ``lParam`` holds the repeat count, scan code and release bits.
     """
     target = get_focused_control(hwnd)
-    posted = bool(_user32.PostMessageW(target, WM_KEYDOWN, int(keycode), 0))
     if character:
-        posted = bool(_user32.PostMessageW(
-            target, WM_CHAR, ord(character[0]), 0)) and posted
-    posted = bool(_user32.PostMessageW(target, WM_KEYUP, int(keycode), 0)) and posted
-    return posted
+        return bool(_user32.PostMessageW(target, WM_CHAR, ord(character[0]), 1))
+    down, up = _key_lparams(keycode)
+    posted = bool(_user32.PostMessageW(target, WM_KEYDOWN, int(keycode), down))
+    return bool(_user32.PostMessageW(target, WM_KEYUP, int(keycode), up)) and posted
 
 
 def post_click(hwnd: int, button: str, x: int, y: int) -> bool:
