@@ -98,6 +98,27 @@ traditional_chinese_word_dict = {
         "安裝 Wayland 工具(ydotool 或 libei,以及 grim、gnome-screenshot "
         "或 spectacle),讓 Wayland 後端可以載入。"),
     "cap_fix_display": "請把 DISPLAY 設為執行中的 X 伺服器。",
+    "cap_fix_win_session0": (
+        "請在已登入使用者的工作階段中執行——使用設為「只有使用者登入時才執行」的排程工作,而不是服"
+        "務。"
+    ),
+    "cap_fix_win_locked": "請解除鎖定工作階段,或回應畫面上的提示。",
+    "cap_fix_win_integrity": "請從一般(中完整性等級)的處理程序啟動。",
+    "cap_fix_win_capture": "已中斷連線的遠端桌面工作階段沒有螢幕:請保持連線,或把工作階段移到主控台。",
+    "cap_fix_mac_accessibility": (
+        "系統設定 › 隱私權與安全性 › 輔助使用:啟用執行 Python 的應用程式(終端機、IDE),然後重新啟動"
+        "它。"
+    ),
+    "cap_fix_mac_screen_recording": (
+        "系統設定 › 隱私權與安全性 › 螢幕錄製:啟用執行 Python 的應用程式(終端機、IDE),然後重新啟動"
+        "它。"
+    ),
+    "cap_fix_mac_input_monitoring": (
+        "系統設定 › 隱私權與安全性 › 輸入監控:啟用執行 Python 的應用程式(終端機、IDE),然後重新啟動"
+        "它。"
+    ),
+    "cap_backend_version": "後端:{backend} — {version}",
+    "cap_backend_version_unknown": "未回報版本",
     "cap_fix_capture": (
         "允許截圖要求,安裝 grim、gnome-screenshot 或 spectacle,或設定 "
         "JE_AUTOCONTROL_WAYLAND_CAPTURE_COMMAND。"),
@@ -824,6 +845,7 @@ traditional_chinese_word_dict = {
     "rh_journal_candidate": "從日誌產生候選腳本…",
     "rh_journal_off": "動作日誌：未啟用",
     "rh_journal_on": "動作日誌：執行 {run}，{n} 個步驟 → {path}",
+    "rh_journal_link": "日誌執行 {run},位於 {path}",
     "re_import_journal": "匯入日誌的執行…",
     "sb_import_journal": "匯入日誌",
     "jr_dialog_open": "開啟動作日誌",
@@ -847,6 +869,13 @@ traditional_chinese_word_dict = {
     "eml_poll_done": "本次共觸發 {n} 封郵件。",
     "eml_running": "輪詢中。",
     "eml_stopped": "輪詢已停止。",
+    "jr_diff_title": "候選腳本的變更",
+    "jr_diff_summary": "新增 {added} 行，刪除 {removed} 行。以 + 開頭的是候選腳本，以 - 開頭的是目前內容。",
+    "jr_diff_identical": "候選腳本與目前內容相同。",
+    "jr_diff_replace": "取代",
+    "jr_diff_keep": "保留目前內容",
+    "gui_op_stopping": "正在停止…",
+    "gui_op_starting": "正在啟動…",
     "eml_host_label": "主機：",
     "eml_port_label": "埠號：",
     "eml_user_label": "使用者：",
@@ -979,6 +1008,20 @@ traditional_chinese_word_dict = {
     "self_heal_desc_placeholder": "失敗時用的自然語言備援（選填）",
     "self_heal_threshold_label": "比對門檻：",
     "self_heal_click_check": "定位後自動點擊",
+    "self_heal_verify_label": "點擊後驗證",
+    "self_heal_verify_placeholder": "選用的 JSON 檢查,例如 {\"type\": \"image_gone\"}",
+    "self_heal_verify_invalid": "檢查必須是 JSON 物件",
+    "self_heal_cmp_version": "版本",
+    "self_heal_cmp_located": "定位到",
+    "self_heal_cmp_accuracy": "準確率",
+    "self_heal_cmp_false_positive": "誤報",
+    "self_heal_cmp_recovery": "復原",
+    "self_heal_cmp_p50_ms": "p50 (ms)",
+    "self_heal_cmp_p95_ms": "p95 (ms)",
+    "self_heal_cmp_model_calls": "模型呼叫",
+    "self_heal_cmp_tokens": "Token 輸入 / 輸出",
+    "self_heal_cmp_cost": "成本",
+    "self_heal_cmp_baseline": "{name}(基準)",
     "self_heal_browse": _BROWSE,
     "self_heal_locate_btn": "定位",
     "self_heal_click_btn": "定位並點擊",
@@ -1132,6 +1175,8 @@ traditional_chinese_word_dict = {
     "config_sync_state_pending": "有變更等待送出",
     "config_sync_state_conflict": "衝突:需要選擇",
     "config_sync_state_offline": "離線:變更已排入佇列",
+    "config_sync_state_backing_off": "等待重試:尚未再次連線伺服器",
+    "config_sync_retry_in": "{seconds} 秒後自動重試",
     "config_sync_state_cancelled": "已取消",
     "config_sync_state_resync_required": "已退休:需要完整重新同步",
     "config_sync_revision": "最後合併的修訂版",
@@ -1229,6 +1274,16 @@ traditional_chinese_word_dict = {
     "llm_no_plan": "請先按下「規劃」",
     "llm_running": "執行中...",
     "llm_run_done": "完成",
+    # Background runs shared by the tabs (gui/_tab_task.py)
+    "task_running": "執行中...",
+    "task_busy": "已在執行中：請等它結束，或先停止。",
+    "task_stopping": "正在停止...",
+    "task_stopped": "已停止。",
+    "task_stop": "停止執行",
+    "stop_playback": "停止回放",
+    "record_playing": "回放中...",
+    "rd_file_sending": "正在傳送 {name}...",
+    "rd_file_busy": "已有傳輸在進行中。",
 
     # Remote Desktop Tab
     "rd_quick_tab": "快速連線",

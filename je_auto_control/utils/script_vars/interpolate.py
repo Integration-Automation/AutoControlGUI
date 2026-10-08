@@ -120,7 +120,14 @@ def _lookup_secret(secret_name: str) -> str:
         ) from error
     if value is None:
         raise ValueError(f"Unknown secret: ${{secrets.{secret_name}}}")
+    _note_resolved_secret(value)
     return value
+
+
+def _note_resolved_secret(value: Any) -> None:
+    """Let a started action journal mask ``value`` by exact match."""
+    from je_auto_control.utils.action_journal import recorder
+    recorder.note_secret_value(value)
 
 
 def load_vars_from_json(path: str,

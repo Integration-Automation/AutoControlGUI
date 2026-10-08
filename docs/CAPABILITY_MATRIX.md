@@ -360,32 +360,51 @@ these states:
 A state is a diagnosis, not a test result. On Linux every state comes from
 what the probe could read without side effects — the environment, `PATH`, the
 loader and the authorisation ledger — so `available` there means "nothing was
-found in the way", not "an event was delivered". On the other two desktops the
-probe reads nothing at all, and says so:
+found in the way", not "an event was delivered". On Windows and macOS the
+probe reads the session with queries that change nothing — on Windows the
+process's integrity level, its session id, the name of the desktop receiving
+input, whether that desktop opens with hook access, and a 1x1 screen copy; on
+macOS `AXIsProcessTrusted()`, `CGPreflightScreenCaptureAccess()` and
+`CGPreflightListenEventAccess()`, the calls that check a permission and never
+the ones that prompt for it. A fact that could not be read gives `unknown`,
+never `available`. The table is what the probe concludes from each session
+*described to it* (so it is the same on every machine that generates it):
 
 <!-- probe-capabilities:begin (generated: test_modernization_examples.py --fix) -->
-| Platform | Capability | State | Backend | Evidence |
-|---|---|---|---|---|
-| `win32` | `input` | `available` | `win32` | reported, not probed: nothing to authorise |
-| `win32` | `capture` | `available` | `win32` | reported, not probed: nothing to authorise |
-| `win32` | `recording` | `available` | `win32` | reported, not probed: nothing to authorise |
-| `win32` | `stop_shortcut` | `available` | `win32` | reported, not probed: nothing to authorise |
-| `darwin` | `input` | `unknown` | `quartz` | not probed: permission for this platform is granted outside the process and is not probed here |
-| `darwin` | `capture` | `unknown` | `quartz` | not probed: permission for this platform is granted outside the process and is not probed here |
-| `darwin` | `recording` | `unknown` | `quartz` | not probed: permission for this platform is granted outside the process and is not probed here |
-| `darwin` | `stop_shortcut` | `unknown` | `quartz` | not probed: permission for this platform is granted outside the process and is not probed here |
+| Platform | Session described | `input` | `capture` | `recording` | `stop_shortcut` |
+|---|---|---|---|---|---|
+| `win32` | signed-in session, medium integrity | `available` | `available` | `available` | `available` |
+| `win32` | elevated (high integrity) | `available` | `available` | `available` | `available` |
+| `win32` | low integrity | `needs_permission` | `available` | `available` | `available` |
+| `win32` | workstation locked (input desktop `Winlogon`) | `needs_permission` | `needs_permission` | `needs_permission` | `needs_permission` |
+| `win32` | session 0 (a service) | `unsupported` | `unsupported` | `unsupported` | `unsupported` |
+| `win32` | 1x1 screen copy fails | `available` | `needs_setup` | `available` | `available` |
+| `win32` | nothing could be read | `unknown` | `unknown` | `unknown` | `unknown` |
+| `darwin` | Accessibility, Screen Recording and Input Monitoring granted | `available` | `available` | `available` | `available` |
+| `darwin` | only Accessibility granted | `available` | `needs_permission` | `needs_permission` | `needs_permission` |
+| `darwin` | nothing granted | `needs_permission` | `needs_permission` | `needs_permission` | `needs_permission` |
+| `darwin` | preflight calls not available | `unknown` | `unknown` | `unknown` | `unknown` |
 <!-- probe-capabilities:end (generated: test_modernization_examples.py --fix) -->
 
-So a Windows or macOS row in a capability report is the backend's name and a
-constant, never evidence that input works: on macOS the Accessibility and
-Screen Recording permissions are granted in System Settings and are not
-readable here. The `macos-capabilities` and Windows jobs in the table above
-are what exercise those backends.
+So a Windows or macOS row in a capability report is now a reading of the
+session, and still not evidence that an event was delivered: no input is sent,
+no hook installed and no hotkey registered by the probe. On Windows `input`
+`available` at medium integrity carries the note that input to an elevated
+window is dropped by UIPI. `CapabilitySnapshot.backend_version` is what the
+backend can say without running anything (`Windows <build>`, `macOS <version>;
+pyobjc <version>`, `python-xlib <version>`) and is empty on Wayland, whose
+tools report a version only when run. The Windows queries were run on a real
+Windows 11 session; the macOS calls have only run against fakes — the
+`pytest-headless` jobs on `macos-14` import and call them on a real runner
+(where they return whatever that runner grants), and the `macos-capabilities`
+job in the table above is what exercises the backend itself.
 
 ## Mobile devices
 
 `mobile_capability_matrix()` is the source of the tables below: which
-`AC_android_*` / `AC_ios_*` commands deliver each capability, and which
+`AC_android_*` / `AC_ios_*` commands deliver each capability, which commands
+deliver none of them (describing devices sends no input, and the adb shell can
+do anything, so neither is filed under `input`), and which
 desktop features have no mobile counterpart. A session reports each capability
 per device with `device_setup_report()`, in one of four states — `available`,
 `needs_permission` (USB debugging not authorised), `needs_dependency` (for
@@ -401,7 +420,7 @@ and the row in the table at the top stays `mocked CI`.
 <!-- mobile-matrix:begin (generated: test_modernization_examples.py --fix) -->
 | Capability | Android commands | iOS commands |
 |---|---|---|
-| `input` | `AC_android_tap`, `AC_android_swipe`, `AC_android_key`, `AC_android_list_devices`, `AC_android_shell`, `AC_android_device_info`, `AC_android_long_press`, `AC_android_drag` | `AC_ios_tap`, `AC_ios_swipe`, `AC_ios_device_info`, `AC_ios_press_key`, `AC_ios_long_press`, `AC_ios_drag` |
+| `input` | `AC_android_tap`, `AC_android_swipe`, `AC_android_key`, `AC_android_long_press`, `AC_android_drag` | `AC_ios_tap`, `AC_ios_swipe`, `AC_ios_press_key`, `AC_ios_long_press`, `AC_ios_drag` |
 | `unicode_text` | `AC_android_text`, `AC_android_type_text` | `AC_ios_type` |
 | `multi_touch` | `AC_android_pinch` | `AC_ios_pinch` |
 | `screenshot` | `AC_android_screenshot`, `AC_android_screen_info`, `AC_android_find_image`, `AC_android_find_text`, `AC_android_find_by_description`, `AC_android_self_heal` | `AC_ios_screenshot`, `AC_ios_screen_info`, `AC_ios_find_image`, `AC_ios_find_text`, `AC_ios_find_by_description`, `AC_ios_self_heal` |
@@ -412,6 +431,11 @@ and the row in the table at the top stays `mocked CI`.
 | `files` | `AC_android_push_file`, `AC_android_pull_file` | `AC_ios_push_file`, `AC_ios_pull_file` |
 | `clipboard` | `AC_android_get_clipboard`, `AC_android_set_clipboard` | `AC_ios_get_clipboard`, `AC_ios_set_clipboard` |
 | `recording` | `AC_android_start_recording`, `AC_android_stop_recording` | `AC_ios_start_recording`, `AC_ios_stop_recording` |
+
+| Not a device capability | Android commands | iOS commands |
+|---|---|---|
+| `device_info` | `AC_android_list_devices`, `AC_android_device_info` | `AC_ios_device_info` |
+| `shell` | `AC_android_shell` | — |
 
 | Desktop-only feature | Why | Use instead |
 |---|---|---|

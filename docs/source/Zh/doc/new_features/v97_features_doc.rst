@@ -1,5 +1,5 @@
 Unicode 文字正規化與 Slug
-========================
+=========================
 
 ``fuzzy`` 與 ``search_index.tokenize`` 只做小寫化,OCR ``find_text_matches`` 只做 ``.lower()`` + 子字串
 比對 —— 因此 ``"Café"``(NFC)、``"Café"``(NFD)與 OCR 的 ``"cafe"`` 會比對不相等。本功能補上它們在比對

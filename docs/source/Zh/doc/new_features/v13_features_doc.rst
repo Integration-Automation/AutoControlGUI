@@ -55,7 +55,7 @@ Prompt-injection 防禦閘
 A2A agent card
 ==============
 
-A2A 協定讓 agent 之間透過 *Agent Card*(一份描述身分、端點與技能的 JSON
+A2A 協定讓 agent 之間透過 *Agent Card*\ (一份描述身分、端點與技能的 JSON
 文件)互相發現。發佈一份即可讓其他 agent 把 AutoControl 當成 GUI 自動化
 夥伴來呼叫::
 

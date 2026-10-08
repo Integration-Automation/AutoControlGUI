@@ -5,6 +5,7 @@ Lists every viewer currently registered with
 timestamp, and exposes one-click promote / demote / kick buttons. The
 table auto-refreshes when the registry notifies of a change.
 """
+import functools
 from typing import Optional
 
 from PySide6.QtCore import Qt, QTimer, Signal
@@ -13,6 +14,7 @@ from PySide6.QtWidgets import (
     QTableWidgetItem, QVBoxLayout, QWidget,
 )
 
+from je_auto_control.gui._dispose import release_resources
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
 from je_auto_control.gui.language_wrapper.multi_language_wrapper import (
     language_wrapper,
@@ -57,6 +59,13 @@ class PresenceTab(TranslatableMixin, QWidget):
         self._timer.timeout.connect(self.refresh)
         self._timer.start()
         self.refresh()
+
+    def dispose(self) -> None:
+        """Release what the tab holds beyond its widgets: its refresh timer and its listener on the presence registry.
+
+        Called by ``close_tab(key, release=True)`` before the widget is deleted; safe to call twice.
+        """
+        release_resources(self, functools.partial(self._registry.remove_listener, self._on_registry_event))
 
     def retranslate(self) -> None:
         TranslatableMixin.retranslate(self)

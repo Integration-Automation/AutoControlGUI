@@ -109,8 +109,10 @@ Logging and local state
    * - ``JE_AUTOCONTROL_GUI_SETTINGS``
      - unset / a path / ``off``
      - File the main window keeps its theme, text size, navigation panel and
-       geometry in. Unset: ``~/.je_auto_control/gui_settings.ini``. ``off``,
-       ``0``, ``none``, ``false`` or empty: nothing is read or written.
+       geometry in, and the Config Sync tab its server, user and folder
+       fields (never the shared secret: the file is plain text). Unset:
+       ``~/.je_auto_control/gui_settings.ini``. ``off``, ``0``, ``none``,
+       ``false`` or empty: nothing is read or written.
    * - ``JE_AUTOCONTROL_ENV``
      - ``default`` / a name
      - The active environment of the asset store (``active_environment()``),
@@ -218,7 +220,8 @@ See :doc:`../mcp_server/mcp_server_doc`.
        none.
    * - ``JE_AUTOCONTROL_MCP_AUDIT``
      - unset / a path
-     - JSON-lines file that receives one record per ``tools/call``.
+     - JSON-lines file that receives one record per ``tools/call``. Unset or
+       empty: no audit log is written, anywhere.
    * - ``JE_AUTOCONTROL_MCP_ERROR_SHOTS``
      - unset / a directory
      - A screenshot is saved there each time a tool fails.
@@ -260,4 +263,7 @@ See :doc:`../operations_layer/operations_layer_doc` and
    * - ``AC_SIGNALING_CONFIG_DB``
      - unset / a path
      - SQLite file the signaling server keeps config-sync buckets in. Unset:
-       ``~/.je_auto_control/config_sync.sqlite3``.
+       ``~/.je_auto_control/config_sync.sqlite3``. Asset blobs (``/blobs``)
+       go in a folder of the same path with ``.blobs`` added unless
+       ``--blob-dir`` says otherwise; ``--max-blob-bytes`` and
+       ``--blob-quota-bytes`` bound them (flags only, no variable).

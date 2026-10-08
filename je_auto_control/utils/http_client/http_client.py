@@ -75,7 +75,8 @@ def _try_json(text: str) -> Any:
         return None
 
 
-def _read_response(response: Any) -> Dict[str, Any]:
+def _read_response(response: Any, want_bytes: bool = False) -> Dict[str, Any]:
+    """The response as a dict; with ``want_bytes`` the undecoded body is ``content``."""
     raw_status: Any = getattr(response, "status", None)
     if raw_status is None:
         raw_status = getattr(response, "code", 0)
@@ -87,7 +88,7 @@ def _read_response(response: Any) -> Dict[str, Any]:
     text = body.decode("utf-8", errors="replace")
     raw_headers = getattr(response, "headers", None)
     headers, set_cookie = _collect_headers(raw_headers)
-    return {
+    result: Dict[str, Any] = {
         "status": status,
         "ok": 200 <= status < 400,
         "headers": headers,
@@ -96,6 +97,11 @@ def _read_response(response: Any) -> Dict[str, Any]:
         "json": _try_json(text),
         "url": getattr(response, "url", None),
     }
+    if want_bytes:
+        # Only on request: the dict is otherwise JSON-ready, and ``text`` has
+        # already replaced whatever was not UTF-8.
+        result["content"] = body
+    return result
 
 
 def _collect_headers(raw_headers: Any) -> "tuple[Dict[str, str], list]":
@@ -178,24 +184,28 @@ def urllib_transport(call: Mapping[str, Any]) -> Dict[str, Any]:
     A malformed reply (``http.client.HTTPException``: a garbage status
     line, a truncated body) is raised as ``urllib.error.URLError``, the
     ``OSError`` every other transport failure already arrives as. With
-    ``call["follow_redirects"]`` false a 3xx comes back as the response.
+    ``call["follow_redirects"]`` false a 3xx comes back as the response;
+    with ``call["want_bytes"]`` true the reply also carries the undecoded
+    body as ``content`` (for binary downloads).
     """
     request = urllib.request.Request(
         call["url"], data=call.get("body"), method=call["method"],
         headers=dict(call.get("headers") or {}))
     opener = _OPENER if call.get("follow_redirects", True) else _NO_REDIRECT_OPENER
+    want_bytes = bool(call.get("want_bytes", False))
     try:
         with opener.open(  # nosec B310 — scheme allow-listed, redirects too
                 request, timeout=float(call.get("timeout", _DEFAULT_TIMEOUT))) \
                 as response:
-            return _read_response(response)
+            return _read_response(response, want_bytes)
     except urllib.error.HTTPError as error:
-        return _read_error_response(error)
+        return _read_error_response(error, want_bytes)
     except http.client.HTTPException as error:
         raise urllib.error.URLError(f"malformed HTTP response: {error!r}") from error
 
 
-def _read_error_response(error: urllib.error.HTTPError) -> Dict[str, Any]:
+def _read_error_response(error: urllib.error.HTTPError,
+                         want_bytes: bool = False) -> Dict[str, Any]:
     """A 4xx / 5xx response, read and closed like any other.
 
     Read inside the ``except HTTPError`` clause, a truncated error body raised
@@ -204,7 +214,7 @@ def _read_error_response(error: urllib.error.HTTPError) -> Dict[str, Any]:
     """
     try:
         with error:
-            return _read_response(error)
+            return _read_response(error, want_bytes)
     except http.client.HTTPException as bad:
         raise urllib.error.URLError(f"malformed HTTP response: {bad!r}") from bad
 

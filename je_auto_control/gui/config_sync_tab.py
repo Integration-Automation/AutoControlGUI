@@ -9,7 +9,13 @@ same thing and a person has to choose.
 
 Syncing runs on a worker thread with a cancel event; closing the tab sets
 the event, so a sync waiting on the network does not outlive its view.
+
+The server, user and the two folders are remembered between runs in the GUI
+settings file (:mod:`je_auto_control.gui.window_settings`). The shared secret
+never is: that file is plain text.
 """
+import functools
+import math
 import threading
 import time
 from typing import Any, Callable, Dict, List, Optional, Tuple
@@ -20,13 +26,18 @@ from PySide6.QtWidgets import (
     QTableWidgetItem, QVBoxLayout, QWidget,
 )
 
+from je_auto_control.gui._dispose import release_resources
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
 from je_auto_control.gui._worker_thread import CallWorker, WorkerHandle, start_worker
 from je_auto_control.gui.language_wrapper.multi_language_wrapper import language_wrapper
+from je_auto_control.gui.window_settings import WindowSettings
 from je_auto_control.utils.config_sync import session
 from je_auto_control.utils.exception.exceptions import AutoControlException
 
 _FIELDS = ("server", "user", "secret", "scripts", "assets")
+#: What is kept between runs. Not "secret": the settings file is plain text.
+_REMEMBERED = ("server", "user", "scripts", "assets")
+_FORM_NAME = "config_sync"
 _COLUMNS = ("entry", "choice", "origin", "value")
 
 
@@ -43,11 +54,16 @@ def _release(events: List[threading.Event]) -> None:
 class ConfigSyncTab(TranslatableMixin, QWidget):
     """Status and commands for cross-machine config sync."""
 
-    def __init__(self, parent: Optional[QWidget] = None) -> None:
+    def __init__(self, parent: Optional[QWidget] = None,
+                 settings: Optional[WindowSettings] = None) -> None:
         super().__init__(parent)
         self._tr_init()
+        self._settings_store = settings if settings is not None else WindowSettings()
         self._inputs: Dict[str, QLineEdit] = {name: QLineEdit() for name in _FIELDS}
         self._inputs["secret"].setEchoMode(QLineEdit.Password)
+        self._restore_form()
+        for name in _REMEMBERED:
+            self._inputs[name].editingFinished.connect(self._remember_form)
         self._state = QLabel()
         self._detail = QLabel()
         self._detail.setWordWrap(True)
@@ -83,6 +99,13 @@ class ConfigSyncTab(TranslatableMixin, QWidget):
         self._conflicts.setHorizontalHeaderLabels(
             [_t(f"config_sync_col_{column}") for column in _COLUMNS])
 
+    def dispose(self) -> None:
+        """Release what the tab holds beyond its widgets: the sync still out, by setting its cancel event.
+
+        Called by ``close_tab(key, release=True)`` before the widget is deleted; safe to call twice.
+        """
+        release_resources(self, functools.partial(_release, self._cancel_slot))
+
     def retranslate(self) -> None:
         """Re-apply the translated texts after a language change."""
         TranslatableMixin.retranslate(self)
@@ -100,6 +123,18 @@ class ConfigSyncTab(TranslatableMixin, QWidget):
         ]
 
     # --- inputs ------------------------------------------------------------
+
+    def _restore_form(self) -> None:
+        """Fill the remembered fields from the settings file; the secret is never among them."""
+        saved = self._settings_store.load_form(_FORM_NAME)
+        for name in _REMEMBERED:
+            if saved.get(name):
+                self._inputs[name].setText(saved[name])
+
+    def _remember_form(self) -> None:
+        """Save the remembered fields as they stand (a field lost focus, or a sync is starting)."""
+        self._settings_store.save_form(
+            _FORM_NAME, {name: self._inputs[name].text().strip() for name in _REMEMBERED})
 
     def _settings(self) -> Optional[Dict[str, Any]]:
         """The form as session arguments, or ``None`` (with a message) if incomplete."""
@@ -123,9 +158,10 @@ class ConfigSyncTab(TranslatableMixin, QWidget):
         settings = self._settings()
         if settings is None:
             return
+        self._remember_form()
         cancel = threading.Event()
         self._start(lambda: session.config_sync_run(
-            settings["server_url"], settings["user_id"], cancel=cancel,
+            settings["server_url"], settings["user_id"], cancel=cancel, force=True,
             **settings["options"]), cancel)
 
     def full_resync(self) -> None:
@@ -205,7 +241,11 @@ class ConfigSyncTab(TranslatableMixin, QWidget):
     def _render(self) -> None:
         status = self._status
         state = str(status.get("state", "never"))
-        self._state.setText(f"{_t('config_sync_state_label')}: {_t(f'config_sync_state_{state}')}")
+        text = f"{_t('config_sync_state_label')}: {_t(f'config_sync_state_{state}')}"
+        retry_in = float(status.get("retry_in_s") or 0.0)
+        if retry_in > 0 and state in ("backing_off", "offline"):
+            text += f" ({_t('config_sync_retry_in').format(seconds=math.ceil(retry_in))})"
+        self._state.setText(text)
         succeeded = float(status.get("last_success") or 0.0)
         when = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(succeeded)) if succeeded else "-"
         lines = [

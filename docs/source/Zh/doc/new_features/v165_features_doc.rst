@@ -35,8 +35,8 @@
 執行器指令
 ----------
 
-``AC_detect_borderless_table``(``boxes`` / ``page_width`` / ``min_gap`` / ``min_cols`` /
-``min_rows`` → ``{found, table}``)與 ``AC_column_gutters``(``boxes`` / ``page_width`` /
+``AC_detect_borderless_table``\ (``boxes`` / ``page_width`` / ``min_gap`` / ``min_cols`` /
+``min_rows`` → ``{found, table}``)與 ``AC_column_gutters``\ (``boxes`` / ``page_width`` /
 ``min_gap`` → ``{count, gutters}``)。兩者以 MCP 工具 ``ac_detect_borderless_table`` /
-``ac_column_gutters``(唯讀)及 Script Builder 指令 **Detect Borderless Table** /
-**Column Gutters (whitespace)**(位於 **OCR** 分類下)形式提供。
+``ac_column_gutters``\ (唯讀)及 Script Builder 指令 **Detect Borderless Table** /
+**Column Gutters (whitespace)**\ (位於 **OCR** 分類下)形式提供。

@@ -35,6 +35,6 @@ UPC-A / Code-128）的功能——這些正是商品、庫存標籤與物流面�
 執行器指令
 ----------
 
-``AC_read_barcodes``（``source`` / ``region`` → ``{count, barcodes}``）以 MCP 工具
-``ac_read_barcodes``（唯讀）及 Script Builder 指令 **Read Barcodes (1-D)**（位於
+``AC_read_barcodes``\ （``source`` / ``region`` → ``{count, barcodes}``）以 MCP 工具
+``ac_read_barcodes``\ （唯讀）及 Script Builder 指令 **Read Barcodes (1-D)**\ （位於
 **OCR** 分類下）形式提供。

@@ -9,7 +9,15 @@ from the GUI, the CLI, the REST, socket and MCP servers alike, because they
 all end in ``Executor._run_one_action`` -- is written when it starts and again
 when it ends. The parent of a nested action is whatever action is running on
 the same thread; an ``AC_parallel`` branch runs on a new thread, so the block
-hands its own step over with :func:`branch_scope`.
+hands its own step over with :func:`branch_scope`. A runner that submits work
+to a thread pool (the DAG runner, the device matrix) wraps what it submits in
+:func:`carry_step` for the same reason.
+
+Pattern redaction cannot recognise a secret that does not look like one. So
+while a journal is started the recorder also remembers -- in memory only, and
+only until the journal stops -- every value the run resolved from a secret
+(:func:`note_secret_value`), and masks it by exact match in everything it
+writes.
 
 Pure standard library; imports no ``PySide6``.
 """
@@ -20,13 +28,14 @@ import time
 import uuid
 from pathlib import Path
 from types import TracebackType
-from typing import Any, Dict, List, Optional, Tuple, Type, Union
+from typing import Any, Callable, Dict, List, Optional, Tuple, Type, TypeVar, Union
 
 from je_auto_control.utils.action_journal.events import (
     STATUS_ERROR, STATUS_INCOMPLETE, STATUS_OK, ActionEvent,
 )
 from je_auto_control.utils.action_journal.sanitize import (
-    describe_outcome, sanitise_params,
+    MIN_KNOWN_SECRET_CHARS, artifacts_of_step, describe_outcome, mask_known_params,
+    mask_known_text, sanitise_params, secret_forms,
 )
 from je_auto_control.utils.action_journal.store import ActionJournal
 from je_auto_control.utils.exception.exceptions import AutoControlException
@@ -52,6 +61,24 @@ class _Session:
         self.error: Optional[str] = None
         self._counter = itertools.count(1)
         self._lock = threading.Lock()
+        #: Secret values this run resolved, as the spellings to mask, longest
+        #: first. Replaced, never mutated, so a reader needs no lock.
+        self._secret_forms: Tuple[str, ...] = ()
+
+    def add_secret(self, value: str) -> None:
+        """Remember ``value`` so nothing written from now on can hold it."""
+        with self._lock:
+            forms = set(self._secret_forms) | set(secret_forms(value))
+            self._secret_forms = tuple(sorted(forms, key=len, reverse=True))
+
+    def secret_values(self) -> Tuple[str, ...]:
+        """The spellings masked by exact match (empty once the journal stops)."""
+        return self._secret_forms
+
+    def forget_secrets(self) -> None:
+        """Drop the remembered values; called when the journal stops."""
+        with self._lock:
+            self._secret_forms = ()
 
     def start_event(self, event: ActionEvent) -> ActionEvent:
         """Number ``event`` and write its start line, in one critical section.
@@ -107,12 +134,50 @@ def _stack() -> List[str]:
     return stack
 
 
-def _error_text(error: BaseException) -> str:
+def _open_steps() -> List["_Step"]:
+    running = getattr(_LOCAL, "steps", None)
+    if running is None:
+        running = _LOCAL.steps = []
+    return running
+
+
+def _error_text(error: BaseException, known: Tuple[str, ...] = ()) -> str:
     # The same masking log lines get: an error message can quote an argument.
     from je_auto_control.utils.config_redaction.config_redaction import (
         redact_secret_text,
     )
-    return redact_secret_text(repr(error)[:_MAX_ERROR_CHARS])
+    # Known values first and on the whole text: cutting to length before it
+    # would leave the front of a secret that straddles the limit.
+    text = mask_known_text(repr(error), known)[:_MAX_ERROR_CHARS]
+    return redact_secret_text(text)
+
+
+def _masked_artifacts(found: List[Dict[str, str]], known: Tuple[str, ...]
+                      ) -> Tuple[Dict[str, str], ...]:
+    """``found`` with known secret values masked in every string."""
+    if not known:
+        return tuple(found)
+    return tuple({key: mask_known_text(value, known) for key, value in item.items()}
+                 for item in found)
+
+
+def note_secret_value(value: Any) -> bool:
+    """Tell the journal a value is a secret the run just resolved.
+
+    Called where a secret becomes plaintext: a ``${secrets.NAME}`` lookup, a
+    vault read or write, ``write_secret``. From then on, until the journal
+    stops, the value is masked by exact match in every error text, argument
+    and artifact the journal writes; it is held in memory only and never
+    written anywhere. Returns whether it was remembered: not without a
+    started journal, and not for a value shorter than four characters.
+    """
+    session = _ACTIVE
+    if session is None or not isinstance(value, str):
+        return False
+    if len(value) < MIN_KNOWN_SECRET_CHARS:
+        return False
+    session.add_secret(value)
+    return True
 
 
 def _control_signals() -> Tuple[type, ...]:
@@ -123,19 +188,25 @@ def _control_signals() -> Tuple[type, ...]:
 class _Step:
     """One running action: writes its start on entry and its end on exit."""
 
-    __slots__ = ("_session", "_action", "_event", "_outcome")
+    __slots__ = ("_session", "_action", "_event", "_outcome", "_result", "artifacts")
 
     def __init__(self, session: _Session, action: Any) -> None:
         self._session = session
         self._action = action
         self._event: Optional[ActionEvent] = None
         self._outcome: Optional[Dict[str, Any]] = None
+        self._result: Any = None
+        #: What :func:`note_artifact` attached while this step was running.
+        self.artifacts: List[Dict[str, str]] = []
 
     def __enter__(self) -> "_Step":
         session, action = self._session, self._action
         command = action[0] if action and isinstance(action[0], str) else "<invalid>"
         params, unreplayable = sanitise_params(
             command, action[1] if len(action) > 1 else None)
+        known = session.secret_values()
+        if known:
+            params = mask_known_params(params, known, unreplayable)
         stack = _stack()
         event = ActionEvent(
             run_id=session.run_id, step_id="", sequence=0, command=command,
@@ -149,11 +220,13 @@ class _Step:
             _fail(session, error)
             return self
         stack.append(self._event.step_id)
+        _open_steps().append(self)
         return self
 
     def outcome(self, value: Any) -> None:
         """Note what the action returned (by type and size only)."""
         self._outcome = describe_outcome(value)
+        self._result = value
 
     def __exit__(self, exc_type: Optional[Type[BaseException]],
                  exc: Optional[BaseException], _tb: Optional[TracebackType]) -> None:
@@ -163,25 +236,36 @@ class _Step:
         stack = _stack()
         if stack and stack[-1] == event.step_id:
             stack.pop()
+        running = _open_steps()
+        if running and running[-1] is self:
+            running.pop()
+        ended = self._ended(event, exc)
+        _LOCAL.last = (self._session, ended)
         try:
-            self._session.journal.append_end(self._ended(event, exc))
+            self._session.journal.append_end(ended)
         except OSError as error:
             _fail(self._session, error)
 
     def _ended(self, event: ActionEvent, exc: Optional[BaseException]) -> ActionEvent:
         """``event`` with the status its exit earned."""
         status, error, outcome = STATUS_OK, None, self._outcome
+        known = self._session.secret_values()
         if exc is not None and isinstance(exc, _control_signals()):
             # AC_break / AC_continue unwinding through a block is the block
             # doing its job, not a failure.
             outcome = {"type": "signal", "signal": type(exc).__name__}
         elif isinstance(exc, Exception):
-            status, error = STATUS_ERROR, _error_text(exc)
+            status, error = STATUS_ERROR, _error_text(exc, known)
         elif exc is not None:
             # KeyboardInterrupt / SystemExit: the action never finished.
-            status, error = STATUS_INCOMPLETE, _error_text(exc)
+            status, error = STATUS_INCOMPLETE, _error_text(exc, known)
+        params = self._action[1] if len(self._action) > 1 else None
+        found = self.artifacts + [
+            item for item in artifacts_of_step(params, self._result, event.started_at)
+            if item not in self.artifacts]
         return dataclasses.replace(
-            event, status=status, error=error, outcome=outcome, finished_at=time.time())
+            event, status=status, error=error, outcome=outcome,
+            finished_at=time.time(), artifacts=_masked_artifacts(found, known))
 
 
 def _fail(session: _Session, error: OSError) -> None:
@@ -190,6 +274,7 @@ def _fail(session: _Session, error: OSError) -> None:
     session.error = repr(error)
     autocontrol_logger.error(
         "action journal %s stopped: %r", session.journal.path, error)
+    session.forget_secrets()
     with _SWITCH:
         if _ACTIVE is session:
             _ACTIVE, _LAST = None, session
@@ -211,28 +296,97 @@ def current_step() -> Optional[str]:
     return stack[-1] if stack else getattr(_LOCAL, "parent", None)
 
 
+def note_artifact(kind: str, *, path: Optional[str] = None,
+                  ident: Optional[str] = None) -> bool:
+    """Attach something a step produced to that step's journal record.
+
+    ``kind`` says what it is (``"screenshot"``, ``"report"``, ``"trace"``...);
+    give the file's ``path`` or an ``ident`` such as a trace id. It goes to the
+    step running on this thread. With none running -- a failure screenshot is
+    taken once the run has already failed -- it goes to the step that most
+    recently ended on this thread, as a second ``end`` line. Returns whether
+    anything was recorded; with no journal started this does nothing.
+    """
+    session = _ACTIVE
+    if session is None or (path is None and ident is None):
+        return False
+    entry: Dict[str, str] = {"kind": str(kind)}
+    if path is not None:
+        entry["path"] = str(path)
+    if ident is not None:
+        entry["id"] = str(ident)
+    running = getattr(_LOCAL, "steps", None)
+    if running:
+        if entry not in running[-1].artifacts:
+            running[-1].artifacts.append(entry)
+        return True
+    return _note_after_end(session, entry)
+
+
+def _note_after_end(session: _Session, entry: Dict[str, str]) -> bool:
+    """Rewrite the end of this thread's last step with ``entry`` added."""
+    last_session, last = getattr(_LOCAL, "last", None) or (None, None)
+    if last is None or last_session is not session:
+        return False
+    if entry in last.artifacts:
+        return True
+    updated = dataclasses.replace(last, artifacts=last.artifacts + _masked_artifacts(
+        [entry], session.secret_values()))
+    try:
+        session.journal.append_end(updated)
+    except OSError as error:
+        _fail(session, error)
+        return False
+    _LOCAL.last = (session, updated)
+    return True
+
+
 class _BranchScope:
     """Binds the parent step and branch index of a worker thread for a block."""
 
-    __slots__ = ("_parent", "_index")
+    __slots__ = ("_parent", "_index", "_before")
 
     def __init__(self, parent: Optional[str], index: Optional[int] = None) -> None:
         self._parent = parent
         self._index = index
+        self._before: Tuple[Optional[str], Optional[int]] = (None, None)
 
     def __enter__(self) -> "_BranchScope":
+        # Restored on exit: a pool thread is reused, and a scope may be
+        # entered on a thread that is itself a branch.
+        self._before = (getattr(_LOCAL, "parent", None), getattr(_LOCAL, "branch", None))
         _LOCAL.parent = self._parent
         _LOCAL.branch = self._index
         return self
 
     def __exit__(self, *_exc: Any) -> None:
-        _LOCAL.parent = None
-        _LOCAL.branch = None
+        _LOCAL.parent, _LOCAL.branch = self._before
 
 
 def branch_scope(parent: Optional[str], index: Optional[int] = None) -> _BranchScope:
     """Make ``parent`` the parent of what this (new) thread runs, as branch ``index``."""
     return _BranchScope(parent, index)
+
+
+_Work = TypeVar("_Work", bound=Callable[..., Any])
+
+
+def carry_step(work: _Work, index: Optional[int] = None) -> _Work:
+    """``work`` bound to the step running here, for a call on another thread.
+
+    Call this on the thread that hands the work over (it reads that thread's
+    running step); what ``work`` runs on the pool thread is then recorded as
+    that step's child, branch ``index``. With no journal started, ``work`` is
+    returned untouched.
+    """
+    if _ACTIVE is None:
+        return work
+    parent = current_step()
+
+    def carried(*args: Any, **kwargs: Any) -> Any:
+        with branch_scope(parent, index):
+            return work(*args, **kwargs)
+    return carried  # type: ignore[return-value]  # reason: same call signature as work
 
 
 def start_action_journal(path: Union[str, Path, None] = None, *,
@@ -270,6 +424,7 @@ def stop_action_journal() -> Dict[str, Any]:
         _LAST = stopped or _LAST
     if stopped is None:
         return {"active": False}
+    stopped.forget_secrets()
     return {"active": False, **stopped.status()}
 
 

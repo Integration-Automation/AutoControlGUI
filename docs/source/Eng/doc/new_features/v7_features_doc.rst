@@ -40,7 +40,7 @@ Executor commands: ``AC_control_get_value``, ``AC_control_set_value``.
 
 
 Invoking and toggling
-====================
+=====================
 
 ::
 
@@ -57,7 +57,7 @@ Executor commands: ``AC_control_invoke``, ``AC_control_toggle``.
 
 
 Reading tables / grids
-====================
+======================
 
 ::
 
@@ -73,7 +73,7 @@ Executor command: ``AC_read_table``.
 
 
 Targeting controls
-=================
+==================
 
 Every call accepts the same matchers — provide whichever uniquely
 identify the control:

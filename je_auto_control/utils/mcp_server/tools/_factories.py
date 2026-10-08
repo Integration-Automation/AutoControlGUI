@@ -2198,7 +2198,7 @@ def smart_wait_tools() -> List[MCPTool]:
             description=("Scroll a 'target' (kind=image template path / text) "
                          "into view, wait until it is actionable, then click it "
                          "('button'). Returns {acted, coords, scrolls}."),
-            input_schema=schema({"target": {"type": "string"},
+            input_schema=schema({"target": {"type": "string", "format": "path-or-other"},
                                  "kind": {"type": "string"},
                                  "direction": {"type": "string"},
                                  "max_scrolls": {"type": "integer"},
@@ -2347,7 +2347,11 @@ def self_healing_tools() -> List[MCPTool]:
             description=("Self-heal locate then click the resolved point. "
                          "Provide template_path, description, or both — "
                          "description triggers the VLM fallback when the "
-                         "template fails."),
+                         "template fails. 'verify' is a post-click check "
+                         "that fills action_verified: {type: image_gone | "
+                         "image_present | text_present, template_path, text, "
+                         "screen_region, timeout_s}; without it "
+                         "action_verified is null."),
             input_schema=schema({
                 "template_path": {"type": "string", "format": "path"},
                 "description": {"type": "string"},
@@ -2359,6 +2363,7 @@ def self_healing_tools() -> List[MCPTool]:
                 "raise_on_miss": {"type": "boolean"},
                 "context": {"type": "object",
                             "additionalProperties": {"type": "string"}},
+                "verify": {"type": "object"},
             }),
             handler=h_loc.self_heal_click,
             annotations=DESTRUCTIVE,
@@ -2389,7 +2394,11 @@ def self_healing_tools() -> List[MCPTool]:
                          "numerator/denominator (accuracy, false positives, "
                          "recovery vs the baseline), p50/p95 latency, the "
                          "failing samples, and threshold violations. "
-                         "Unlabelled samples are 'unknown', never correct."),
+                         "Unlabelled samples are 'unknown', never correct. "
+                         "A version with strategy 'vlm' sends each frame to "
+                         "the configured VLM backend (model calls, and "
+                         "tokens / cost where reported, are in the report); "
+                         "backend 'null' makes no request."),
             input_schema=schema({
                 "dataset_path": {"type": "string", "format": "path"},
                 "versions": {"type": "object"},
@@ -2623,7 +2632,7 @@ def process_and_shell_tools() -> List[MCPTool]:
             description=("Open a file with its OS-registered default app (or a "
                          "'verb' like print), or a URL in the default browser. "
                          "'target' is a path or URL. Returns {opened}."),
-            input_schema=schema({"target": {"type": "string"},
+            input_schema=schema({"target": {"type": "string", "format": "path-or-other"},
                                  "verb": {"type": "string"}},
                                 required=["target"]),
             handler=h_system.open_path,
@@ -2634,7 +2643,7 @@ def process_and_shell_tools() -> List[MCPTool]:
             description=("Classify how a file path / URL would be opened without "
                          "opening it (pure): {kind, target, backend, verb} "
                          "(+scheme for URLs). Rejects non-allow-listed schemes."),
-            input_schema=schema({"target": {"type": "string"},
+            input_schema=schema({"target": {"type": "string", "format": "path-or-other"},
                                  "verb": {"type": "string"}},
                                 required=["target"]),
             handler=h_system.plan_open,
@@ -2697,7 +2706,7 @@ def process_and_shell_tools() -> List[MCPTool]:
             description=("Which application is registered to open a file type. "
                          "'target' is a path / .ext / bare ext. Returns {ext, "
                          "command, exe, friendly, content_type} (Windows)."),
-            input_schema=schema({"target": {"type": "string"}},
+            input_schema=schema({"target": {"type": "string", "format": "path-or-other"}},
                                 required=["target"]),
             handler=h_system.file_association,
             annotations=READ_ONLY,
@@ -8098,7 +8107,7 @@ def unattended_tools() -> List[MCPTool]:
                          "it, and confirm (default Enter). Returns "
                          "{handled, title}."),
             input_schema=schema({
-                "path": {"type": "string"},
+                "path": {"type": "string", "format": "path-or-other"},
                 "action": {"type": "string"},
                 "window_title": {"type": "string"},
                 "timeout_s": {"type": "number"},
@@ -8928,7 +8937,10 @@ def codegen_tools() -> List[MCPTool]:
                          "Nothing from the log is executed: the candidate is "
                          "parsed, its command names checked and dry-run only. "
                          "run_id may be omitted when the journal holds one run. "
-                         "Pass 'output' to also write the code."),
+                         "Pass 'output' to also write the code, and "
+                         "'diff_against' (a .json action file or a script the "
+                         "candidate would replace) to get a unified diff with "
+                         "added / removed counts under 'diff'."),
             input_schema=schema({
                 "path": {"type": "string", "format": "path",
                          "description": "The journal (.jsonl) file."},
@@ -8937,6 +8949,7 @@ def codegen_tools() -> List[MCPTool]:
                            "enum": ["pytest", "python", "robot"]},
                 "style": {"type": "string", "enum": ["calls", "actions"]},
                 "output": {"type": "string", "format": "path"},
+                "diff_against": {"type": "string", "format": "path"},
             }, required=["path"]),
             handler=hq.generate_code_from_log,
             annotations=SIDE_EFFECT_ONLY,
@@ -9242,11 +9255,13 @@ def config_sync_tools() -> List[MCPTool]:
     target = {"server_url": {"type": "string"}, "user_id": {"type": "string"}}
     options = {
         "device_id": {"type": "string"}, "secret": {"type": "string"},
-        "sections": {"type": "array", "items": {"type": "string"}},
+        "sections": {"type": "array", "items": {
+            "type": "string", "enum": list(h_sync.SYNCABLE_SECTIONS)}},
         "scripts_dir": {"type": "string", "format": "path"},
         "locators_path": {"type": "string", "format": "path"},
         "outbox_path": {"type": "string", "format": "path"},
         "assets_dir": {"type": "string", "format": "path"},
+        "assets_server": {"type": "boolean"},
         "timeout_s": {"type": "number"},
     }
     required = ["server_url", "user_id"]
@@ -9255,12 +9270,20 @@ def config_sync_tools() -> List[MCPTool]:
             name="ac_config_sync_run",
             description=("Sync this machine's hotkeys, triggers, address book (and "
                          "scripts / locators when their paths are given) with the "
-                         "config-sync server once. Local changes are queued durably "
+                         "config-sync server once. A path ADDS its section to those "
+                         "three; pass sections (e.g. [\"scripts\"]) to sync only the "
+                         "ones named. The result's 'sections' lists what was covered. "
+                         "Local changes are queued durably "
                          "and sent on top of the server's revision; concurrent edits "
                          "of one entry are kept as a conflict. Received hotkeys and "
                          "triggers are created DISABLED and nothing is run. Returns "
-                         "{state, revision, pending, conflicts, applied, error}."),
+                         "{state, revision, pending, conflicts, applied, error, "
+                         "retry_in_s}. state 'offline' = this run tried the server and "
+                         "failed; 'backing_off' = it did not try, an earlier failure's "
+                         "retry delay (retry_in_s) is still running -- pass force=true "
+                         "to skip that delay once."),
             input_schema=schema({**target, **options, "wait": {"type": "boolean"},
+                                 "force": {"type": "boolean"},
                                  "max_attempts": {"type": "integer"}}, required),
             handler=h_sync.config_sync_run,
             annotations=DESTRUCTIVE,
@@ -9269,8 +9292,11 @@ def config_sync_tools() -> List[MCPTool]:
             name="ac_config_sync_status",
             description=("Report the recorded config-sync state for an account and "
                          "server without touching the network: {state, revision, "
-                         "pending, conflicts, conflict_details, last_success, error}."),
-            input_schema=schema({**target, "outbox_path": options["outbox_path"]}, required),
+                         "pending, conflicts, conflict_details, last_success, error, "
+                         "retry_in_s}."),
+            # The options of the other three are accepted (only outbox_path
+            # matters here), so one argument object serves all four tools.
+            input_schema=schema({**target, **options}, required),
             handler=h_sync.config_sync_status,
             annotations=READ_ONLY,
         ),

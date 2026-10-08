@@ -24,7 +24,7 @@ Layering: entry points (`cli.py`, `gui/`, socket / REST / MCP servers) → execu
 
 ```bash
 pip install -r dev_requirements.txt         # dev deps
-pip install -e .[gui,webrtc]                # + GUI and WebRTC extras
+pip install -e .[gui,webrtc,signaling]      # + GUI, WebRTC and signaling-server extras
 python -m pytest test/unit_test/headless    # headless unit tests
 python -m pytest test/integrated_test/      # cross-module workflows
 python -m coverage run -m pytest            # the suite WITH coverage (see below)
@@ -133,7 +133,7 @@ Anything agreed but not done — deferred follow-ups, known gaps, half-delivered
 
 Cyclomatic complexity ≤ 10 · cognitive complexity ≤ 15 · function ≤ 75 lines · parameters ≤ 7 · nesting ≤ 4 · file ≤ 750 lines · line ≤ 120 chars · no duplicated block ≥ 10 lines.
 
-**What actually enforces these.** `quality.yml` has five jobs — `lint` (ruff), `security` (bandit), `pytest-headless` (the suite plus the coverage floor), `typing-stable-api` (mypy) and `dependency-review`. Of the limits in this section, line length is rejected by ruff (`[tool.ruff] line-length = 120` with `E501`; it exempts a line ending in a pragma, which cannot wrap), and the file-length limit by `test/unit_test/headless/test_file_length_budget.py`, which reads the exemption list in `Progress.md` and fails on a file over the limit that is not listed, on a listed file that grew past its recorded ceiling, and on a row whose file is now under the limit. Cyclomatic complexity is measured with the same `radon` the pre-commit list below names, by `test/unit_test/headless/test_complexity_budget.py`; the whole package was one function over the limit when that gate went in. Cognitive complexity, function length, parameter count and nesting depth are still review standards rather than gates.
+**What actually enforces these.** `quality.yml` has eight jobs — `lint` (ruff), `security` (bandit), `pytest-headless` (the suite plus the coverage floor), `typing-stable-api` (mypy), `typing-extras` (the same contract against the real PySide6 / aiortc types, with the shrink-only list in `test/verify/typing_extras_exempt.txt`), `docs` (the Sphinx build, warnings as errors), `free-threaded-scope` (the variable-scope tests on a free-threaded build) and `dependency-review`. Of the limits in this section, line length is rejected by ruff (`[tool.ruff] line-length = 120` with `E501`; it exempts a line ending in a pragma, which cannot wrap), and the file-length limit by `test/unit_test/headless/test_file_length_budget.py`, which reads the exemption list in `Progress.md` and fails on a file over the limit that is not listed, on a listed file that grew past its recorded ceiling, and on a row whose file is now under the limit. Cyclomatic complexity is measured with the same `radon` the pre-commit list below names, by `test/unit_test/headless/test_complexity_budget.py`; the whole package was one function over the limit when that gate went in. Cognitive complexity, function length, parameter count and nesting depth are still review standards rather than gates.
 
 **Scope of the file-length limit.** It applies to:
 

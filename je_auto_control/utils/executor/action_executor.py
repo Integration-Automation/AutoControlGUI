@@ -35,6 +35,10 @@ from je_auto_control.utils.executor.flow_control import (
 from je_auto_control.utils.executor.action_redaction import describe_action, redact_actions
 from je_auto_control.utils.action_journal.recorder import step as _journal_step
 from je_auto_control.utils.executor.mouse_aliases import MOUSE_BUTTON_COMMANDS
+from je_auto_control.utils.executor.run_control import (
+    ExecutionStopped, active_executions, checkpoint, note_command, stop_execution,
+    stoppable_run,
+)
 from je_auto_control.utils.config_sync.session import (
     config_sync_full_resync, config_sync_resolve, config_sync_run, config_sync_status,
 )
@@ -196,11 +200,13 @@ def _self_heal_click(template_path: Optional[str] = None,
                      screen_region: Optional[List[int]] = None,
                      model: Optional[str] = None,
                      raise_on_miss: bool = False,
-                     context: Optional[Dict[str, str]] = None) -> Dict[str, Any]:
+                     context: Optional[Dict[str, str]] = None,
+                     verify: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     """Executor adapter: locate with self-heal, then click.
 
-    The result's ``action_verified`` stays ``None``: a JSON step cannot carry
-    the check, so the click is recorded as located and unverified.
+    ``verify`` is the declarative post-click check (``{"type": "image_gone" |
+    "image_present" | "text_present", ...}``) that fills ``action_verified``;
+    without it the click is recorded as located and unverified (``None``).
     """
     from je_auto_control.utils.self_healing import heal_context
     with heal_context(**(context or {})):
@@ -209,7 +215,7 @@ def _self_heal_click(template_path: Optional[str] = None,
             mouse_keycode=mouse_keycode,
             detect_threshold=float(detect_threshold),
             screen_region=screen_region, model=model,
-            raise_on_miss=_as_bool(raise_on_miss),
+            raise_on_miss=_as_bool(raise_on_miss), verify=verify,
         )
     return outcome.to_dict()
 
@@ -2278,6 +2284,8 @@ def _history_list_as_dicts(limit: int = 100,
             "started_at": r.started_at, "finished_at": r.finished_at,
             "status": r.status, "error_text": r.error_text,
             "duration_seconds": r.duration_seconds,
+            "journal_path": r.journal_path,
+            "journal_run_id": r.journal_run_id,
         }
         for r in rows
     ]
@@ -2584,14 +2592,24 @@ def _journal_runs(path: str) -> List[Dict[str, Any]]:
 
 def _generate_code_from_journal(path: str, run_id: Optional[str] = None,
                                 target: str = "pytest", style: str = "actions",
-                                output: Optional[str] = None) -> Dict[str, Any]:
-    """Build a candidate script from one journal run, optionally writing it."""
+                                output: Optional[str] = None,
+                                diff_against: Optional[str] = None) -> Dict[str, Any]:
+    """Build a candidate script from one journal run, optionally diffing and writing it.
+
+    ``diff_against`` names what the candidate would replace -- a ``.json``
+    action file or a script -- and adds ``"diff"`` (a unified diff with
+    counts) to the result.
+    """
     from je_auto_control.utils.codegen.journal_import import (
         generate_candidate_from_log, only_run_id, write_candidate,
     )
     candidate = generate_candidate_from_log(
         path, run_id=run_id or only_run_id(path), target=target, style=style)
     result = candidate.to_dict()
+    if diff_against:
+        # Before the write below: output and diff_against may be the same file.
+        from je_auto_control.utils.codegen.candidate_diff import diff_candidate_against_file
+        result["diff"] = diff_candidate_against_file(candidate, diff_against).to_dict()
     if output:
         result.update(write_candidate(candidate, output))
     return result
@@ -7320,6 +7338,16 @@ def _export_sarif(findings: Any, path: Optional[str] = None,
     return result
 
 
+def _stop_execution(run_id: Optional[str] = None, reason: str = "") -> Dict[str, Any]:
+    """Adapter: ask one stoppable run (or every other one) to stop."""
+    return {"stopped": stop_execution(str(run_id) if run_id else None, str(reason))}
+
+
+def _list_executions() -> List[Dict[str, Any]]:
+    """Adapter: the stoppable runs in progress."""
+    return active_executions()
+
+
 #: Whether the action list running on this thread was asked to raise on
 #: error; nested bodies (``_validated=True``) inherit it. Thread-local, so
 #: AC_parallel branches -- their own threads and executors -- are unaffected.
@@ -7470,6 +7498,8 @@ class Executor:
             # Executor 執行器
             "AC_execute_action": self.execute_action,
             "AC_execute_files": self.execute_files,
+            "AC_stop_execution": _stop_execution,
+            "AC_list_executions": _list_executions,
             "AC_add_package_to_executor": package_manager.add_package_to_executor,
             "AC_add_package_to_callback_executor": package_manager.add_package_to_callback_executor,
 
@@ -8411,9 +8441,11 @@ class Executor:
 
         if len(action) == 2:
             resolved = self._resolve_runtime_args(action[1], name)
-            if isinstance(resolved, dict):
-                return event(**resolved)
-            return event(*resolved)
+            result = event(**resolved) if isinstance(resolved, dict) else event(*resolved)
+            # Inside a stoppable run: remember what a press leaves held, so a
+            # stop can let go of it. Nothing happens outside one.
+            note_command(name, resolved)
+            return result
         if len(action) == 1:
             return event()
         raise AutoControlActionException(cant_execute_action_error_message + " " + describe_action(action))
@@ -8466,6 +8498,7 @@ class Executor:
 
         execute_record_dict: Dict[str, Any] = {}
         for action in action_list:
+            checkpoint()  # a stop requested for this run ends it between actions
             if step_callback is not None:
                 step_callback(action)
             if dry_run:
@@ -8535,8 +8568,8 @@ class Executor:
                 record[key] = self._execute_event(action)
                 step.outcome(record[key])
             _observe_executor_metrics(action_name, started, error=None)
-        except (LoopBreak, LoopContinue):
-            raise
+        except (LoopBreak, LoopContinue, ExecutionStopped):
+            raise  # a stop is never recorded-and-continued, whatever raise_on_error says
         # LookupError covers the KeyError/IndexError raised by block handlers
         # that subscript a required arg directly (``args["name"]``). Without
         # it a merely malformed action escaped raise_on_error=False and
@@ -8642,17 +8675,34 @@ def add_command_to_executor(command_dict: dict) -> None:
             raise AutoControlAddCommandException(add_command_exception_error_message)
 
 
-def execute_action(action_list: list) -> Dict[str, str]:
-    return executor.execute_action(action_list)
+def execute_action(action_list: Union[list, dict], *,
+                   raise_on_error: bool = False, dry_run: bool = False,
+                   step_callback: Optional[Callable[[list], None]] = None,
+                   ) -> Dict[str, str]:
+    """Run ``action_list`` on the shared executor; return its execution record.
+
+    The keywords are the ones :meth:`Executor.execute_action` takes:
+    ``raise_on_error`` raises at the first failed action instead of recording
+    it, ``dry_run`` lists what would run without calling anything, and
+    ``step_callback`` is called with each action before it starts.
+    """
+    return executor.execute_action(
+        action_list, raise_on_error=raise_on_error, dry_run=dry_run,
+        step_callback=step_callback)
 
 
 def execute_files(execute_files_list: list) -> List[Dict[str, str]]:
     return executor.execute_files(execute_files_list)
 
 
-def execute_action_with_vars(action_list: list, variables: dict
-                             ) -> Dict[str, str]:
+def execute_action_with_vars(action_list: list, variables: dict,
+                             run_id: Optional[str] = None) -> Dict[str, str]:
     """Run ``action_list`` in a fresh variable scope seeded with ``variables``.
+
+    With ``run_id`` the run is stoppable under that name:
+    ``stop_execution(run_id)`` from another thread (or ``AC_stop_execution``
+    from another entry point) ends it at its next checkpoint by raising
+    :class:`~je_auto_control.utils.executor.run_control.ExecutionStopped` here.
 
     The scope belongs to this run: ``AC_set_var``, loop variables and macro
     parameters work as usual inside it and are gone when it returns, so the
@@ -8672,4 +8722,7 @@ def execute_action_with_vars(action_list: list, variables: dict
     resolver interpolate per action fixes both.
     """
     with execution_scope(variables):
-        return executor.execute_action(action_list)
+        if run_id is None:
+            return executor.execute_action(action_list)
+        with stoppable_run(run_id):
+            return executor.execute_action(action_list)

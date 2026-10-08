@@ -41,6 +41,9 @@ from je_auto_control.utils.executor.action_executor import \
     execute_action_with_vars
 from je_auto_control.utils.executor.action_executor import execute_files
 from je_auto_control.utils.executor.action_executor import executor
+from je_auto_control.utils.executor.run_control import (
+    ExecutionStopped, StopToken, active_executions, stop_execution, stoppable_run,
+)
 # Accessibility (headless)
 from je_auto_control.utils.accessibility import (
     AccessibilityElement, accessibility_status, AccessibilityNotAvailableError,
@@ -279,6 +282,14 @@ from je_auto_control.utils.config_sync import (
     SyncOperation, SyncOutbox, config_sync_full_resync, config_sync_resolve,
     config_sync_run, config_sync_status, merge_entries, sync_assets,
 )
+# ... the errors a caller catches, the adapters it builds, the transports, the cycle
+from je_auto_control.utils.config_sync import (
+    AddressBookSyncAdapter, BlobStore, ConfigStoreError, DirectoryAssetTransport,
+    HotkeySyncAdapter, HttpAssetTransport, LocatorSyncAdapter, OperationMismatchError,
+    RevisionConflictError, ScriptSyncAdapter, TriggerSyncAdapter, run_sync,
+)
+# The /config wire format; named for what it versions (the module calls it WIRE_VERSION)
+from je_auto_control.utils.config_sync import WIRE_VERSION as CONFIG_SYNC_WIRE_VERSION
 # Step-through debugger / tracer for action lists
 from je_auto_control.utils.flow_debugger import FlowDebugger, trace_actions
 # Persistent library of reusable action sequences (skills/playbooks)
@@ -1283,6 +1294,32 @@ from je_auto_control.utils.action_journal import (
 from je_auto_control.utils.codegen.journal_import import (
     CandidateScript, JournalImportError, generate_candidate_from_log,
 )
+# What the examples had to reach past the facade for: journal helpers, the
+# Robot structure check, healing measurement and verification, Wayland
+# authorisation, and the schema versions the journal and heal files carry.
+from je_auto_control.utils.action_journal import (
+    SCHEMA_VERSION as ACTION_JOURNAL_SCHEMA_VERSION,
+    carry_step, note_artifact, note_secret_value,
+)
+from je_auto_control.utils.codegen.journal_import import only_run_id, write_candidate
+from je_auto_control.utils.codegen.robot_check import (
+    RobotStructureError, check_robot_structure,
+)
+from je_auto_control.utils.self_healing import (
+    COMPARISON_COLUMNS, HEAL_EVENT_SCHEMA_VERSION, VERIFY_TYPES,
+    HealVerificationError, LocateRequest, ModelUsage, UsageMeter, build_verifier,
+    check_thresholds, comparison_rows, format_comparison, vlm_strategy,
+)
+from je_auto_control.utils.self_healing.eval_strategies import (
+    DATASET_SCHEMA_VERSION as HEALING_DATASET_SCHEMA_VERSION,
+)
+from je_auto_control.linux_wayland.authorisation import (
+    AuthorisationLedger, AuthorisationState,
+)
+from je_auto_control.wrapper.capability_probes import MacFacts, WindowsFacts
+from je_auto_control.utils.codegen.candidate_diff import (
+    CandidateDiff, diff_candidate, diff_candidate_against_file,
+)
 # HTTP/API request action (dependency-free, stdlib urllib)
 from je_auto_control.utils.http_client.http_client import http_request
 # Ad-hoc read-only SQL query against SQLite
@@ -1392,11 +1429,21 @@ __all__ = [
     "read_action_json", "read_executable_action_json", "write_action_json", "format_action_json",
     "execute_action", "execute_files", "executor",
     "execute_action_with_vars", "record_to_json",
+    "ExecutionStopped", "StopToken", "active_executions", "stop_execution", "stoppable_run",
     "generate_code", "generate_code_file", "http_request", "query_sqlite",
     "ActionEvent", "ActionJournal", "ActionJournalError", "JournalFormatError",
     "action_journal_status", "list_journal_runs", "read_events",
     "start_action_journal", "stop_action_journal",
     "CandidateScript", "JournalImportError", "generate_candidate_from_log",
+    "ACTION_JOURNAL_SCHEMA_VERSION", "HEAL_EVENT_SCHEMA_VERSION",
+    "HEALING_DATASET_SCHEMA_VERSION", "COMPARISON_COLUMNS", "VERIFY_TYPES",
+    "AuthorisationLedger", "AuthorisationState", "HealVerificationError",
+    "LocateRequest", "MacFacts", "ModelUsage", "RobotStructureError", "UsageMeter",
+    "WindowsFacts",
+    "build_verifier", "carry_step", "check_robot_structure", "check_thresholds",
+    "comparison_rows", "format_comparison", "note_artifact", "note_secret_value",
+    "only_run_id", "vlm_strategy", "write_candidate",
+    "CandidateDiff", "diff_candidate", "diff_candidate_against_file",
     "send_email", "assert_pdf_text", "extract_pdf_text", "pdf_metadata",
     "pdf_page_count",
     "add_command_to_executor", "test_record_instance", "pil_screenshot",
@@ -1760,6 +1807,10 @@ __all__ = [
     "ConfigSyncError", "FullResyncRequired", "MergeDecision", "SyncAdapter", "SyncEntry",
     "SyncOperation", "SyncOutbox", "config_sync_full_resync", "config_sync_resolve",
     "config_sync_run", "config_sync_status", "merge_entries", "sync_assets",
+    "AddressBookSyncAdapter", "BlobStore", "CONFIG_SYNC_WIRE_VERSION", "ConfigStoreError",
+    "DirectoryAssetTransport", "HotkeySyncAdapter", "HttpAssetTransport",
+    "LocatorSyncAdapter", "OperationMismatchError", "RevisionConflictError",
+    "ScriptSyncAdapter", "TriggerSyncAdapter", "run_sync",
     "ConfigField", "ConfigSchema", "coerce", "validate_config",
     "PathNotAllowedError", "PathPolicy",
     "RefResolver", "SecretRefError", "is_ref", "resolve_ref", "resolve_refs_in",

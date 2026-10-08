@@ -97,15 +97,24 @@ class _ViewerMediaMixin(_PanelPart):
             )
             self._record_btn.setText(_t("rd_webrtc_stop_recording"))
         else:
-            if self._recorder is not None:
-                self._recorder.stop()
-                # "Saved" was reported for a file that no frame ever created.
-                key = "rd_webrtc_recording_saved" if self._recorder.has_output else "rd_webrtc_recording_empty"
-                QMessageBox.information(
-                    self, "WebRTC", _t(key).format(path=str(self._recorder.output_path)),
-                )
-                self._recorder = None
+            recorder, self._recorder = self._recorder, None
+            if recorder is None:
+                self._record_btn.setText(_t("rd_webrtc_start_recording"))
+                return
+            # stop() drains the frame queue and finalises the file; until it
+            # reports the button says so and takes no click.
+            self._record_btn.setText(_t("gui_op_stopping"))
+            self._record_btn.setEnabled(False)
+            self._stops.retire(recorder.stop, on_done=self._on_recording_stopped, args=(recorder,))
+
+    def _on_recording_stopped(self, recorder: SessionRecorderT, _outcome: object = None) -> None:
+        """GUI thread: the recording is on disk (or no frame ever arrived)."""
+        self._record_btn.setEnabled(True)
+        if self._recorder is None:
             self._record_btn.setText(_t("rd_webrtc_start_recording"))
+        # "Saved" was reported for a file that no frame ever created.
+        key = "rd_webrtc_recording_saved" if recorder.has_output else "rd_webrtc_recording_empty"
+        QMessageBox.information(self, "WebRTC", _t(key).format(path=str(recorder.output_path)))
 
     def _on_stats(self, snapshot: StatsSnapshot) -> None:
         parts = []

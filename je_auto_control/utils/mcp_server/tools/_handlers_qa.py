@@ -238,13 +238,18 @@ def generate_code(source: Any, target: str = "pytest",
 
 def generate_code_from_log(path: str, run_id: Optional[str] = None,
                            target: str = "pytest", style: str = "actions",
-                           output: Optional[str] = None) -> Dict[str, Any]:
+                           output: Optional[str] = None,
+                           diff_against: Optional[str] = None) -> Dict[str, Any]:
     from je_auto_control.utils.codegen.journal_import import (
         generate_candidate_from_log, only_run_id, write_candidate,
     )
     candidate = generate_candidate_from_log(
         path, run_id=run_id or only_run_id(path), target=target, style=style)
     result = candidate.to_dict()
+    if diff_against:
+        # Before the write below: output and diff_against may be the same file.
+        from je_auto_control.utils.codegen.candidate_diff import diff_candidate_against_file
+        result["diff"] = diff_candidate_against_file(candidate, diff_against).to_dict()
     if output:
         result.update(write_candidate(candidate, output))
     return result

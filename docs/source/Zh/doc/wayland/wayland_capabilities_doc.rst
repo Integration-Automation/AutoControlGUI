@@ -71,10 +71,70 @@ sender，也不會送出任何事件。
    * - ``compositor_restarted``
      - 授權來自一個已經不是現在這個的合成器
    * - ``unknown``
-     - 不產生副作用就無法判定（例如 macOS 的權限）
+     - 不產生副作用就讀不到（查詢失敗，或 ``pyobjc`` 沒有提供的 macOS 呼叫）
 
 每項能力另外帶有 ``backend``（由誰提供）、``desktop_wide``、``detail``、
 ``recovery``\ （英文的處理方式）與 ``recovery_key``\ （同一段建議在 GUI 語系表的鍵）。
+
+快照另外帶有 ``backend_version``：提供服務的後端不必執行任何東西就能說出的版本
+（``Windows 10.0.26200``、``macOS 14.5; pyobjc 10.3``、``python-xlib 0.33``）。Wayland 上
+是空字串，因為那些工具要執行才會回報版本；Diagnostics 分頁把它顯示在能力表格上方。
+
+Windows 與 macOS
+================
+
+同一個探測也會讀取 Windows 或 macOS 的工作階段，同樣不改變任何東西：不送輸入、不顯示視窗、
+不安裝 hook、不註冊熱鍵，也不要求權限。
+
+.. list-table::
+   :header-rows: 1
+
+   * - 平台
+     - 讀取什麼
+     - 結論
+   * - Windows
+     - 行程的完整性等級（以查詢權限開啟 token）
+     - ``low`` / ``untrusted``：``input`` 為 ``needs_permission``。``medium``：
+       ``available``，並註明送到提權視窗的輸入會被 UIPI 丟棄
+   * - Windows
+     - 工作階段 id
+     - session 0（服務）：每項能力都是 ``unsupported``
+   * - Windows
+     - 正在接收輸入的桌面名稱
+     - ``Winlogon`` 或無法開啟（鎖定、UAC、Ctrl+Alt+Del）：每項能力都是
+       ``needs_permission``
+   * - Windows
+     - 從螢幕 ``BitBlt`` 1x1 到記憶體點陣圖
+     - 失敗：``capture`` 為 ``needs_setup`` 並附上錯誤
+   * - Windows
+     - 輸入桌面能否以 ``DESKTOP_HOOKCONTROL`` 開啟
+     - ``recording`` 與 ``stop_shortcut``；被拒絕時為 ``needs_permission``
+   * - macOS
+     - ``AXIsProcessTrusted()``
+     - ``input``——輔助使用
+   * - macOS
+     - ``CGPreflightScreenCaptureAccess()``
+     - ``capture``——螢幕錄製
+   * - macOS
+     - ``CGPreflightListenEventAccess()``
+     - ``recording`` 與 ``stop_shortcut``——輸入監控
+
+macOS 上只呼叫 *preflight* 的函式；會在畫面上跳出提示的 ``CGRequest…`` 永遠不會被呼叫。
+讀不到的事實是 ``unknown``——絕不會被當成 ``available``。描述別人的工作階段的方式和描述
+Wayland 桌面一樣::
+
+    from je_auto_control import BackendContext, WindowsFacts, probe_capabilities
+
+    locked = probe_capabilities(BackendContext(
+        platform="win32",
+        windows_facts=lambda: WindowsFacts(
+            integrity="medium", session_id=1, input_desktop="Winlogon",
+            hook_access=False, capture_ok=False)))
+    locked.input.state.value      # "needs_permission"
+
+Windows 的查詢已在真的 Windows 11 工作階段上執行過。macOS 的呼叫只對假物件跑過；
+``macos-14`` 上的 ``pytest-headless`` job（``quality.yml`` / ``dev.yml``）會在真的 runner 上
+呼叫它們。
 
 libei 路徑上的 ``restore_token`` 是 ``unsupported``：這個綁定不向 portal 要求
 restore token，所以同意是每個行程問一次，重新啟動後不會保留。

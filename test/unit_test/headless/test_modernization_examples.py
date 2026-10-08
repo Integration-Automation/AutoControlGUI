@@ -39,25 +39,11 @@ NEW_EXAMPLES = (
     "31_healing_comparison.py", "32_codegen_from_log.py", "33_mcp_progressive.py",
 )
 
-#: Variables the package reads that ``README.md`` does not mention. The README
-#: is an overview and the configuration reference is the complete list, so
-#: these are recorded rather than required -- but the set may not grow: a new
-#: variable is either mentioned in the README or added here on purpose.
-README_UNDOCUMENTED = frozenset({
-    "AC_SIGNALING_CONFIG_DB", "AC_SIGNALING_SECRET",
-    "JE_AUTOCONTROL_ACCEPT_LEGACY_ACTION_SIGNATURES",
-    "JE_AUTOCONTROL_ACTION_SIGNING_PASSPHRASE", "JE_AUTOCONTROL_ACTION_SIGNING_PRIVATE_KEY",
-    "JE_AUTOCONTROL_CHATOPS_SCRIPT_ROOT", "JE_AUTOCONTROL_ENV", "JE_AUTOCONTROL_FAKE_BACKEND",
-    "JE_AUTOCONTROL_GUI_SETTINGS", "JE_AUTOCONTROL_INTERCEPTION_DLL",
-    "JE_AUTOCONTROL_INTERCEPTION_KEYBOARD", "JE_AUTOCONTROL_INTERCEPTION_MOUSE",
-    "JE_AUTOCONTROL_MCP_ALLOWED_ORIGINS", "JE_AUTOCONTROL_MCP_AUDIT",
-    "JE_AUTOCONTROL_MCP_CONFIRM_DESTRUCTIVE", "JE_AUTOCONTROL_MCP_ERROR_SHOTS",
-    "JE_AUTOCONTROL_MCP_READONLY", "JE_AUTOCONTROL_MCP_TOKEN", "JE_AUTOCONTROL_MCP_TOOL_MODE",
-    "JE_AUTOCONTROL_MCP_TOOL_PROFILE", "JE_AUTOCONTROL_PYTEST_ARTIFACTS",
-    "JE_AUTOCONTROL_REDACTION", "JE_AUTOCONTROL_REQUIRE_SIGNED_ACTIONS",
-    "JE_AUTOCONTROL_USB_PASSTHROUGH", "JE_AUTOCONTROL_WAYLAND_EI_WORKER",
-    "JE_AUTOCONTROL_WAYLAND_INPUT_BACKEND", "JE_AUTOCONTROL_WAYLAND_RECORD_DEVICES",
-})
+#: Variables the package reads that ``README.md`` does not mention. Empty since
+#: the README gained its "Configuration" tables (one row per variable, in all
+#: three languages), and it stays empty: a new variable gets a README row and a
+#: row on the Sphinx configuration page in the change that introduces it.
+README_UNDOCUMENTED: frozenset = frozenset()
 
 _ENV_NAME = re.compile(r"\b(?:JE_AUTOCONTROL|AC_SIGNALING)_[A-Z0-9_]+\b")
 _BLOCK = "<!-- {name}:{edge} (generated: test_modernization_examples.py --fix) -->"
@@ -167,6 +153,12 @@ def _names_in_code() -> Set[str]:
     return _names([*sources, REPO_ROOT / "je_auto_control_pytest.py"])
 
 
+def _configuration_rows(readme: Path) -> List[str]:
+    """Variables that have a table row in a README (first column, in backticks)."""
+    return re.findall(r"^\| `((?:JE_AUTOCONTROL|AC_SIGNALING)_[A-Z0-9_]+)` \|",
+                      readme.read_text(encoding="utf-8"), flags=re.MULTILINE)
+
+
 def test_readme_configuration_parity():
     in_code = _names_in_code()
     english_configuration_keys = _names([CONFIG_PAGES["Eng"]])
@@ -181,8 +173,12 @@ def test_readme_configuration_parity():
     assert simplified == readme and traditional == readme, (
         "the three READMEs name different environment variables")
     assert readme - in_code == set(), "README.md names a variable nothing reads"
-    assert (in_code - readme) - README_UNDOCUMENTED == set(), (
-        "a new variable is in neither README.md nor README_UNDOCUMENTED")
+    assert README_UNDOCUMENTED == frozenset(), "the README lists every variable; keep it that way"
+    assert in_code - readme == set(), (
+        "read by the package and missing from the Configuration tables of the three READMEs")
+    for name in READMES:
+        rows = _configuration_rows(REPO_ROOT / name)
+        assert sorted(rows) == sorted(in_code), f"{name}: one Configuration row per variable"
 
 
 def test_the_configuration_page_is_reachable_in_both_languages():
@@ -195,27 +191,57 @@ def test_the_configuration_page_is_reachable_in_both_languages():
 
 # --- capability matrix ----------------------------------------------------
 
+def _described_sessions() -> List[Tuple[str, str, Dict[str, object]]]:
+    """``(platform, what is described, facts)``: sessions given as facts, never read here.
+
+    The table has to be the same on every runner, so nothing in it comes from
+    the machine that generates it.
+    """
+    usual = {"integrity": "medium", "session_id": 1, "input_desktop": "Default",
+             "hook_access": True, "capture_ok": True}
+    return [
+        ("win32", "signed-in session, medium integrity", usual),
+        ("win32", "elevated (high integrity)", {**usual, "integrity": "high"}),
+        ("win32", "low integrity", {**usual, "integrity": "low"}),
+        ("win32", "workstation locked (input desktop `Winlogon`)",
+         {**usual, "input_desktop": "Winlogon"}),
+        ("win32", "session 0 (a service)", {**usual, "session_id": 0}),
+        ("win32", "1x1 screen copy fails", {**usual, "capture_ok": False}),
+        ("win32", "nothing could be read", {}),
+        ("darwin", "Accessibility, Screen Recording and Input Monitoring granted",
+         {"accessibility": True, "screen_recording": True, "input_monitoring": True}),
+        ("darwin", "only Accessibility granted",
+         {"accessibility": True, "screen_recording": False, "input_monitoring": False}),
+        ("darwin", "nothing granted",
+         {"accessibility": False, "screen_recording": False, "input_monitoring": False}),
+        ("darwin", "preflight calls not available", {}),
+    ]
+
+
 def _probe_rows() -> List[Dict[str, str]]:
-    """What a probe reports on the platforms where it does not depend on the session."""
+    """What ``probe_capabilities()`` concludes from each described session."""
     from je_auto_control.wrapper.capabilities import BackendContext, probe_capabilities
+    from je_auto_control.wrapper.capability_probes import MacFacts, WindowsFacts
     rows = []
-    for platform in ("win32", "darwin"):
-        snapshot = probe_capabilities(BackendContext(platform=platform, environ={}))
-        for capability in snapshot.capabilities:
-            rows.append({"platform": platform, "capability": capability.name,
-                         "state": capability.state.value, "backend": capability.backend,
-                         "detail": capability.detail})
+    for platform, described, facts in _described_sessions():
+        snapshot = probe_capabilities(BackendContext(
+            platform=platform, environ={},
+            windows_facts=lambda facts=facts: WindowsFacts(**facts),
+            mac_facts=lambda facts=facts: MacFacts(**facts),
+            backend_version=lambda _backend: ""))
+        rows.append({"platform": platform, "described": described,
+                     **{item.name: item.state.value for item in snapshot.capabilities}})
     return rows
 
 
 def render_probe_block() -> str:
     """The generated table of ``probe_capabilities()`` on Windows and macOS."""
-    lines = ["| Platform | Capability | State | Backend | Evidence |", "|---|---|---|---|---|"]
+    names = ("input", "capture", "recording", "stop_shortcut")
+    lines = ["| Platform | Session described | " + " | ".join(f"`{name}`" for name in names) + " |",
+             "|---|---|---|---|---|---|"]
     for row in _probe_rows():
-        evidence = (f"not probed: {row['detail']}" if row["detail"]
-                    else "reported, not probed: nothing to authorise")
-        lines.append(f"| `{row['platform']}` | `{row['capability']}` | `{row['state']}` "
-                     f"| `{row['backend']}` | {evidence} |")
+        states = " | ".join(f"`{row[name]}`" for name in names)
+        lines.append(f"| `{row['platform']}` | {row['described']} | {states} |")
     return "\n".join(lines)
 
 
@@ -230,6 +256,9 @@ def render_mobile_block() -> str:
     lines = ["| Capability | Android commands | iOS commands |", "|---|---|---|"]
     lines += [f"| `{row['capability']}` | {commands(row['android'])} | {commands(row['ios'])} |"
               for row in matrix["capabilities"]]
+    lines += ["", "| Not a device capability | Android commands | iOS commands |", "|---|---|---|"]
+    lines += [f"| `{row['purpose']}` | {commands(row['android'])} | {commands(row['ios'])} |"
+              for row in matrix["other_commands"]]
     lines += ["", "| Desktop-only feature | Why | Use instead |", "|---|---|---|"]
     lines += [f"| {row['feature']} | {row['limitation']} | {row['alternative']} |"
               for row in matrix["desktop_only"]]

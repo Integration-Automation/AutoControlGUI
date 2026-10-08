@@ -1,5 +1,5 @@
 W3C Baggage 傳播
-===============
+================
 
 ``trace_context`` 能跨 HTTP 邊界攜帶 trace 與 span 身分,但沒有辦法在旁邊一併傳播橫切的鍵值脈絡
 (``run_id`` / ``tenant`` / ``experiment``)。本功能實作 W3C Baggage 標頭 —— 一個 percent-encoded 的

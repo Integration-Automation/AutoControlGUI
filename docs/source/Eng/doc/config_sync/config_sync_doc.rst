@@ -7,6 +7,18 @@ has one *bucket* on a sync server; the signaling server
 (``python -m je_auto_control.utils.remote_desktop.signaling_server``, the
 ``[signaling]`` extra) serves it at ``GET`` / ``PUT /config/{user_id}``.
 
+Everything a script needs is on the package facade: ``import je_auto_control as
+ac`` gives ``ac.config_sync_run`` and its three siblings, ``ac.run_sync``,
+``ac.ConfigSyncClient``, ``ac.ConfigBucket``, ``ac.SyncOutbox``, ``ac.SyncEntry``,
+``ac.SyncOperation``, ``ac.SyncAdapter`` and the five concrete adapters
+(``ac.ScriptSyncAdapter`` ...), ``ac.DirectoryAssetTransport``,
+``ac.HttpAssetTransport``, ``ac.ConfigStore``, ``ac.BlobStore``, the errors
+(``ac.ConfigSyncError``, ``ac.ConfigSyncConflict``, ``ac.FullResyncRequired``,
+``ac.OperationMismatchError``, ``ac.ConfigStoreError``,
+``ac.RevisionConflictError``) and ``ac.CONFIG_SYNC_WIRE_VERSION`` (the module's
+``WIRE_VERSION``, ``2``). The rest stays importable from
+``je_auto_control.utils.config_sync``.
+
 Server: persistent, revision-checked buckets
 --------------------------------------------
 
@@ -35,6 +47,14 @@ A repeated ``operation_id`` returns the revision its first commit produced and
 writes nothing, so a client whose reply was lost can simply send the same
 request again. The last 256 operation ids per user are remembered.
 
+An operation id names *one* write. The store keeps a SHA-256 of what each id
+wrote (the base revision plus the bucket without its ``revision`` field), and
+the same id sent with a different bucket or base revision raises
+``OperationMismatchError`` (``.operation_id``, ``.revision`` of the first
+write) and writes nothing -- before, it was answered as if it had been
+committed. An id recorded by a release that kept no hash is still answered
+the old way; the column is added to an existing database at first use.
+
 Wire format (version 2)
 -----------------------
 
@@ -50,6 +70,8 @@ Wire format (version 2)
        ``{"version": 2, "base_revision": N, "operation_id": "...", "bucket": {...}}``
      - ``200 {"ok": true, "revision": N + 1, "version": 2}``; ``409 {"detail": "revision conflict",
        "revision": <current>}`` when the bucket is no longer at ``N`` (nothing is written);
+       ``409 {"code": "operation_mismatch", "revision": <the first write's>}`` when
+       ``operation_id`` was already used for a different write (nothing is written);
        ``400`` for a malformed envelope or bucket, or a bucket naming another user.
    * - ``PUT /config/{user_id}`` with a bare bucket (the pre-version-2 body)
      - ``428`` -- unless the server runs with ``--allow-blind-config-writes``
@@ -85,10 +107,18 @@ Client
 
 ``sync`` pushes with the fetched revision as ``base_revision``; when another
 machine pushed in between it fetches and merges again, up to ``max_attempts``
-(default 4) times, then raises ``ConfigSyncConflict``. ``push(bucket)`` uses
+(default 4) times, then raises ``ConfigSyncConflict``. Each ``sync`` also records the client's device
+(``ConfigSyncClient(..., device_id=...)``, default: this machine's stored id)
+under the bucket's ``peers`` as having merged the committed revision, and
+drops the tombstones every device has seen -- the same bookkeeping
+``push_operations`` does. A device the group retired gets
+``FullResyncRequired`` from ``sync`` as well. ``push(bucket)`` uses
 ``bucket.revision`` as the base, returns the committed revision and raises
 ``ConfigSyncConflict`` (``.revision`` is the server's current one) instead of
-overwriting.
+overwriting. A ``409`` whose ``code`` is ``operation_mismatch`` raises
+``OperationMismatchError`` instead; it is a ``ConfigSyncError`` but not a
+``ConfigSyncConflict``, so ``sync`` does not fetch and retry it. A client
+from before this code existed sees that reply as an ordinary conflict.
 
 Causal merge: no clock picks a winner
 -------------------------------------
@@ -112,16 +142,43 @@ machines say, the decision is the same, and it is the same on every machine.
 
 .. code-block:: python
 
-    bucket.upsert("hotkeys", "hk1", {"combo": "ctrl+a"}, origin="laptop")   # versioned
-    bucket.remove("hotkeys", "hk1", origin="laptop")                        # versioned tombstone
+    bucket.upsert("hotkeys", "hk1", {"combo": "ctrl+a"})                    # versioned, by this machine
+    bucket.upsert("hotkeys", "hk1", {"combo": "ctrl+b"}, origin="laptop")   # ... or by a named device
+    bucket.remove("hotkeys", "hk1")                                         # versioned tombstone
     bucket.values("hotkeys")        # live values; entries still in conflict are left out
     bucket.conflicts()              # [(section, SyncEntry with .siblings), ...]
 
-``upsert`` / ``remove`` *without* ``origin`` still write the older flat entry
-stamped with ``last_modified``, and two flat entries still merge by "later
-wins" (reported in ``ConflictRecord``); a versioned entry supersedes a flat
-copy of the same id. ``ConflictRecord.unresolved`` is true for a causal
-conflict, where nothing was dropped.
+``origin`` defaults to this machine's device id
+(``default_device_id()``, kept in ``~/.je_auto_control/config_sync_device_id``),
+so code written before version vectors -- ``bucket.upsert(section, id, value)``
+and ``client.sync(bucket)`` -- is causal without being changed. A
+``last_modified`` inside the value passed to ``upsert`` becomes the entry's
+display stamp and is not stored in the value. ``remove`` on a flat entry
+writes a versioned tombstone, which supersedes every flat copy.
+
+.. warning::
+
+   This changes what ``upsert`` stores. The entry is now
+   ``{"value": {...}, "vector": {...}, "origin": ..., "operation_id": ...,
+   "deleted": false, "last_modified": ...}`` rather than the value itself, so
+   read values with ``bucket.values(section)`` (which works for both shapes)
+   instead of ``bucket.sections[section][id]["field"]``. Pass
+   ``versioned=False`` to ``upsert`` / ``remove`` to keep writing the flat
+   entry; two flat entries still merge by "later wins" (reported in
+   ``ConflictRecord``), and a versioned entry supersedes a flat copy of the
+   same id. ``ConflictRecord.unresolved`` is true for a causal conflict, where
+   nothing was dropped.
+
+**An existing bucket after its first sync with this release.** Flat entries
+this machine did not touch stay exactly as they were (same bytes, still "later
+wins" among themselves). An entry this machine creates, edits or removes is
+stored versioned with ``{"<device id>": n}`` as its vector. ``peers`` gains
+``{"<device id>": {"acked_revision": <committed revision>, "last_seen": ...,
+"retired": false}}``. A version-2 client from before this release reads all of
+it: it already understood both entry shapes and ignores peers it does not
+know. Let every machine sync once with this release before deleting entries
+on any of them -- a tombstone only waits for devices already listed under
+``peers``.
 
 Deletions and retired devices
 -----------------------------
@@ -130,6 +187,10 @@ A deletion is a tombstone. A versioned tombstone is **never dropped by age**:
 ``collect_tombstones`` removes it only when every active device recorded
 under the bucket's ``peers`` has acknowledged a revision that includes it.
 ``ConfigSyncClient.push_operations`` maintains those acknowledgements.
+A device joins ``peers`` with its first push; ``push_operations([])`` from a
+device the bucket does not list is such a push when the bucket holds entries
+(their later deletion must wait for it) and writes nothing when it holds
+none -- a first sync of an empty account commits no revision.
 
 A device that will not come back is retired with
 ``client.retire_peer(device_id)`` (or automatically with
@@ -167,6 +228,13 @@ makes at most ``max_attempts`` sends (default 5), ``wait=False`` returns
 instead of sleeping through a back-off, and setting ``cancel`` ends a drain
 even in the middle of a wait.
 
+A drain that finds the queue still inside a retry delay sends nothing and
+returns ``DrainReport(backing_off=True, retry_in_s=<seconds left>)``;
+``offline`` is true as well (the queue did not get out) and ``error`` is the
+failure that started the wait. ``drain(..., force=True)`` sends once without
+regard to the delay; if that attempt fails too, the longer delay it earns is
+respected.
+
 Adapters: what is synced, and what stays on the machine
 --------------------------------------------------------
 
@@ -193,7 +261,8 @@ entries back and returns an ``ApplyReport`` (``written`` / ``removed`` /
      - a ``HotkeyDaemon``'s bindings
    * - ``triggers``
      - ``TriggerSyncAdapter(origin, engine, scripts_dir=...)``
-     - a ``TriggerEngine``'s image / window / pixel / file / cron triggers
+     - a ``TriggerEngine``'s image / window / pixel / file / cron triggers and the
+       all-of / any-of / sequence composites built from them
    * - ``address_book``
      - ``AddressBookSyncAdapter(origin, book)``
      - the remote-desktop ``AddressBook``
@@ -213,8 +282,33 @@ Three rules hold for every adapter:
 * **Syncing never enables anything.** ``enabled`` is not synced. A hotkey or
   trigger that arrives is created **disabled** (``HotkeyDaemon.bind(...,
   enabled=False)``), an existing one keeps the state this machine gave it,
-  and no adapter starts an engine or runs a script. Composite triggers
-  (all-of / any-of / sequence) are not synced.
+  and no adapter starts an engine or runs a script.
+
+**Composite triggers.** ``AllOfTrigger`` / ``AnyOfTrigger`` / ``SequenceTrigger``
+travel as their own fields plus a ``children`` list of definitions, nested as
+deep as the composite is:
+
+.. code-block:: json
+
+    {"type": "AllOfTrigger", "repeat": true, "cooldown_seconds": 30.0,
+     "script_path": {"$local": "path", "root": "scripts", "relative": "report.json"},
+     "children": [
+       {"type": "CronTrigger", "trigger_id": "at-nine", "cron": "0 9 * * *", "...": "..."},
+       {"type": "ImageAppearsTrigger", "trigger_id": "logo", "threshold": 0.9,
+        "image_path": {"$local": "path", "root": "scripts", "relative": "logo.png"}}]}
+
+A child keeps its ``trigger_id`` and has its paths made portable like any
+other; its ``enabled``, ``fired`` and ``script_path`` mean nothing inside a
+composite and are not sent. The composite is created **disabled** with
+disabled children, and an update keeps whatever this machine chose for
+``enabled``. A definition is built completely before it is added, so one bad
+child (unknown type, invalid cron, more than 64 children, more than 8 levels)
+skips the whole composite and reports it under ``skipped``. A composite
+holding a child that is not one of the trigger types above stays local and
+is listed under ``withheld``. The RBAC principal that registered a trigger
+(``owner``) is never sent. A machine running a release from before this
+reports an arriving composite under ``skipped`` ("unknown trigger type") and
+leaves the entry in the bucket untouched.
 
 Assets
 ------
@@ -237,25 +331,154 @@ other files (template images) travel through an ``AssetTransport``:
 ``sync_assets`` checks every file against its SHA-256 and size *before*
 writing, replaces the destination atomically, leaves the existing file alone
 when the check fails, and refuses a path that would leave the folder.
-``DirectoryAssetTransport`` is the transport that ships; implement
-``fetch`` / ``store`` / ``has`` for any other blob store.
+Two transports ship; implement ``fetch`` / ``store`` / ``has`` for any other
+blob store.
+
+.. list-table::
+   :header-rows: 1
+
+   * - Transport
+     - Use it when
+   * - ``DirectoryAssetTransport(folder)``
+     - both machines reach one folder (a share, a mounted bucket);
+       ``config_sync_run(..., assets_dir=folder)``
+   * - ``HttpAssetTransport(server_url, user_id=..., secret=...)``
+     - the machines share only the sync server;
+       ``config_sync_run(..., assets_server=True)``
+
+``assets_dir`` and ``assets_server`` together are an error.
+
+**Blobs on the sync server.** The signaling server keeps assets as
+content-addressed blobs per account:
+
+.. list-table::
+   :header-rows: 1
+
+   * - Request
+     - Reply
+   * - ``PUT /blobs/{user_id}/{sha256}`` with the raw bytes
+     - ``201 {"ok": true, "sha256", "size", "stored": true}``; ``200`` with
+       ``"stored": false`` when the account already holds it; ``400`` when the
+       bytes do not hash to the digest in the path or the digest is malformed;
+       ``413`` over the per-blob cap and ``411`` without ``Content-Length``
+       (both before the body is read); ``507`` when the account's quota would
+       be exceeded; ``503`` for too many accounts or a failing store
+   * - ``GET /blobs/{user_id}/{sha256}``
+     - ``200`` with the bytes (``application/octet-stream``), or ``404``
+   * - ``HEAD /blobs/{user_id}/{sha256}``
+     - ``200`` or ``404``, no body
+   * - ``DELETE /blobs/{user_id}/{sha256}``
+     - ``200 {"deleted": true | false}``
+   * - ``GET /blobs/{user_id}``
+     - ``200 {"used", "quota", "count", "max_blob_bytes", "blobs": [{"sha256", "size"}]}``
+
+The rules are the ones ``/config`` follows: every request needs the shared
+secret (``X-Signaling-Secret``, ``401`` otherwise); the account is the one in
+the path, so one account never reads, lists or deletes another's blobs; and
+the size cap is checked against ``Content-Length`` before the body is read.
+On top of that an account has a **total quota**.
+
+.. list-table::
+   :header-rows: 1
+
+   * - Setting
+     - Default
+     - Flag / ``create_app`` argument
+   * - largest single blob
+     - 16 MiB
+     - ``--max-blob-bytes`` / ``max_blob_bytes``
+   * - total per account
+     - 256 MiB
+     - ``--blob-quota-bytes`` / ``blob_quota_bytes``
+   * - where blobs are kept
+     - the config database's path with ``.blobs`` added
+       (``~/.je_auto_control/config_sync.sqlite3.blobs``)
+     - ``--blob-dir`` / ``blob_store_path``
+   * - accounts holding blobs
+     - 1,024
+     - --
+
+The folder is created at the first upload, not at start-up. Storage is
+``je_auto_control.utils.config_sync.blobs.BlobStore`` (``put`` / ``get`` /
+``has`` / ``delete`` / ``usage``); each account's blobs are in a folder named
+by a hash of the account id, and a blob is written to a temporary file and
+renamed. Nothing removes blobs by itself: ``DELETE`` the ones no script
+refers to any more when ``used`` approaches ``quota``. The quota is enforced
+by one server process; two processes sharing one folder can each admit a blob
+at the same moment and overshoot by that much.
+
+``HttpAssetTransport`` goes through ``je_auto_control.utils.http_client`` (the
+egress policy applies) and does not follow redirects. A refused upload says
+why -- too large, quota used up, wrong secret, or a server that predates
+``/blobs`` -- and ``publish_assets`` reports it per file under ``failed``
+without stopping the other files. The ``/blobs`` routes are additions: the
+``/config`` wire format is still version 2, and a client that does not use
+them is unaffected.
 
 One call, three surfaces
 ------------------------
 
 ``config_sync_run(server_url, user_id, **options)`` runs the whole cycle --
 queue local changes, drain the outbox, merge, apply -- and returns
-``{state, revision, pending, conflicts, applied, withheld, assets, error}``
-with ``state`` one of ``synced`` / ``pending`` / ``conflict`` / ``offline`` /
-``cancelled`` / ``resync_required``. Being unable to reach the server is not
-an exception: the changes stay queued and the state is ``offline``.
+``{state, revision, pending, conflicts, applied, withheld, assets, error,
+retry_in_s}`` with ``state`` one of ``synced`` / ``pending`` / ``conflict`` /
+``offline`` / ``backing_off`` / ``cancelled`` / ``resync_required``. Being
+unable to reach the server is not an exception: the changes stay queued and
+the state is ``offline``.
+
+.. list-table::
+   :header-rows: 1
+
+   * - State
+     - Meaning
+   * - ``offline``
+     - this run tried the server and failed; ``error`` says how, ``retry_in_s``
+       when the queue is sent again by itself
+   * - ``backing_off``
+     - this run did **not** try: an earlier failure is still inside its retry
+       delay (2 s, doubling, at most 300 s). Nothing is known about the server
+       now. ``retry_in_s`` is the time left; ``error`` is the earlier failure
+
+Before, both were reported as ``offline``, so a sync asked for just after the
+network came back looked like a server that was still down. Pass
+``force=True`` to skip the delay once -- the *Sync now* command of the GUI
+does -- or ``wait=True`` to sleep through it. ``config_sync_status`` reports
+``retry_in_s`` live, and shows ``pending`` instead of ``backing_off`` once the
+delay has run out.
 
 Options: ``device_id`` (default: an id created once in
 ``~/.je_auto_control/config_sync_device_id``), ``secret`` (default
-``$AC_SIGNALING_SECRET``), ``sections`` (default ``hotkeys``, ``triggers``,
-``address_book``; ``scripts`` and ``locators`` join when their path is
-given), ``scripts_dir``, ``locators_path``, ``outbox_path``, ``assets_dir``,
-``timeout_s``, ``wait``, ``max_attempts``.
+``$AC_SIGNALING_SECRET``), ``sections`` (below), ``assets_server``, ``scripts_dir``, ``locators_path``, ``outbox_path``, ``assets_dir``,
+``timeout_s``, ``wait``, ``force``, ``max_attempts``.
+
+**Which sections a sync covers.** ``resolve_sections(sections, scripts_dir=...,
+locators_path=...)`` decides, and the report's ``sections`` lists the result.
+
+.. list-table::
+   :header-rows: 1
+
+   * - You pass
+     - Synced
+   * - nothing
+     - ``hotkeys``, ``triggers``, ``address_book``
+   * - ``scripts_dir``
+     - ``hotkeys``, ``triggers``, ``address_book``, ``scripts``
+   * - ``scripts_dir`` and ``locators_path``
+     - those four and ``locators``
+   * - ``sections="scripts"`` and ``scripts_dir``
+     - ``scripts`` only
+   * - ``sections=["hotkeys", "scripts"]`` and ``scripts_dir``
+     - exactly those two
+
+A path **adds** its section to the default three; it does not narrow the sync
+to it, so ``scripts_dir`` alone also syncs this machine's hotkeys, triggers
+and address book. That default is deliberate -- the GUI tab has a scripts
+folder and no section picker, and hotkeys and triggers need that folder to
+turn their script paths into portable references -- so it is unchanged; name
+``sections`` when you want less. ``sections`` is a list or one comma-separated
+string. An unknown name, a section whose path is missing, and a choice that
+names nothing (``[]``, ``","``) are each ``ConfigSyncError``; a name given
+twice is synced once.
 
 .. list-table::
    :header-rows: 1
@@ -276,7 +499,12 @@ given), ``scripts_dir``, ``locators_path``, ``outbox_path``, ``assets_dir``,
      - ``ac_config_sync_full_resync``
      - adopt the server's state after being retired; pending changes are discarded and listed
 
-All four are Script Builder commands under **Data**.
+All four are Script Builder commands under **Data**, and all four share one
+shape: ``(server_url, user_id, ..., **options)`` with the options listed
+above. ``config_sync_status(server_url, user_id, outbox_path=None, **options)``
+reads only ``outbox_path`` (still accepted positionally); the other options
+are accepted so that one options dict can be passed to every call, and an
+unknown name is ``ConfigSyncError`` there as everywhere else.
 
 .. code-block:: json
 
@@ -286,7 +514,8 @@ All four are Script Builder commands under **Data**.
 GUI
 ---
 
-The **Config Sync** tab (category *system*) shows the state, the last merged
+The **Config Sync** tab (category *system*) shows the state (with the seconds
+until the next automatic attempt while a retry delay is running), the last merged
 revision, the number of pending changes, the last successful sync and the
 last error, and lists every conflict with its candidates. Its commands --
 *Sync now*, *Cancel sync*, *Refresh sync status*, *Keep selected candidate*,
@@ -299,7 +528,39 @@ Folder mirror and clipboard: no echo
 ``FolderSyncEngine.note_received(remote_name, sha256=...)`` marks a file in
 the watched folder as having come from the peer; the engine does not push it
 back until its content changes locally. ``FolderSyncEngine.poll_once()`` runs
-one diff pass on demand. ``ClipboardEchoGuard`` (``note_remote`` /
-``should_send`` / ``reset``) does the same for code that forwards clipboard
-changes automatically: content that just arrived from the peer, or was
-already sent, is not sent again.
+one diff pass on demand.
+
+The receivers call it for you. ``FileTransferReceiver`` (WebRTC) and
+``FileReceiver`` (TCP) write a file as ``.<name>.<id>.part`` and, just before
+renaming it into place, call ``file_sync.note_incoming(final_path, part_path)``:
+every live engine whose folder holds that file records the content's SHA-256.
+A file received into a mirrored folder is therefore not sent back, with no
+wiring in the caller; when no engine mirrors the folder the file is not even
+hashed. ``FolderSyncEngine.relative_name(path)`` says whether an engine
+covers a path (a subfolder only with ``include_subdirs``).
+
+**Files still being written.** A changed file is pushed only once two polls
+in a row see the same size and modification time, so a large copy is sent
+whole one poll later instead of truncated now (a file that never stops
+changing, such as a live log, is not pushed until it does). Pass
+``wait_until_stable=False`` for the earlier push-on-first-sight behaviour.
+Names ending in ``.part``, ``.partial``, ``.tmp`` or ``.crdownload``
+(``IN_PROGRESS_SUFFIXES``; override with ``ignore_suffixes=``) are never
+mirrored -- including the receivers' own part files, which used to be pushed
+while a transfer was running. A program that writes under such a name and
+renames when it is done is picked up complete.
+
+``ClipboardEchoGuard`` (``note_remote`` / ``note_sent`` / ``should_send`` /
+``reset``) does the same for clipboard content. ``RemoteDesktopHost`` keeps
+one per connected viewer and ``RemoteDesktopViewer`` one for its host (reset
+on every connect); a received CLIPBOARD message is noted before it is
+applied. ``host.broadcast_clipboard_text(text, automatic=True)`` and
+``viewer.send_clipboard_text(text, automatic=True)`` (and the ``_image``
+forms) are for code that forwards clipboard *changes* by itself: content
+that just arrived from that peer, or was already sent to it, is not sent
+again -- per viewer, so what one viewer sent still reaches the others.
+Without ``automatic`` (a person pressing "send clipboard") the content is
+always sent, and remembered. ``broadcast_clipboard_*`` returns how many
+viewers it went to; ``send_clipboard_*`` now returns whether it was sent.
+The GUI sends the clipboard on a button only, so nothing in it passes
+``automatic=True`` yet.

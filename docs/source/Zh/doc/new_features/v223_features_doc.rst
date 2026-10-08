@@ -55,6 +55,16 @@ Actions 選單
 再刪除 widget,下一次 ``open_tab(key)`` 會建立新的。主元件自己建立的表單(自動點擊、
 截圖、影像偵測、錄製、腳本、報告)只會關閉,不會被放掉。
 
+凡是在 widget 之外還握有東西的分頁都實作了 ``dispose()``:排程、觸發器、熱鍵、
+E-mail 觸發器、Webhooks、REST API、Presence、Live HUD、Inspector、Profiler、
+Run History、Admin Console、USB Devices、USB Sharing、Config Sync 與遠端桌面。
+它會停掉分頁的計時器、取消背景工作、把監聽從 presence registry 移除、歸還 USB
+watcher 的持有、把 log tail 從 logger 拿掉,並關閉自己開的 loopback——在呼叫當下
+完成,而不是等 Qt 之後刪除 widget。分頁只是顯示的後端(排程器、REST 伺服器、遠端
+桌面 host)會繼續執行。新的分頁用 ``je_auto_control.gui._dispose`` 的
+``release_resources(self, *releases)`` 一行就能做到;已註冊的分頁若建立 ``QTimer``
+或註冊監聽卻沒有這個方法,``test_gui_tab_dispose.py`` 會失敗。
+
 View 選單
 ---------
 
@@ -65,6 +75,13 @@ View 選單
 * **View → Theme** 在深色與淺色主題之間切換。兩者都出自 ``gui/theme.py`` 的同一組
   設計 token;視窗不再使用 ``qt-material``。
 * **View → Text Size** 提供自動(依螢幕高度)與預設字級,即時套用在目前的主題上。
+
+切換主題或字級時,視窗的樣式表只設定一次,而且只重新套用畫面上看得到的部分。Qt 會
+把視窗的樣式表重新套用到底下每一個 widget,不論是否可見,所以沒有被選取的分頁內容
+會先移出視窗的樹(``WorkspaceTabWidget.restyle(apply)``),之後每一輪事件迴圈放回
+一頁,若分頁被選取則立刻放回。50 個分頁全開時,切換主題原本會卡住視窗 1.5–1.8 秒;
+現在約 0.3 秒,其餘分成每輪最多 85 毫秒完成(在開發機上以
+``benchmarks/gui_workloads.py`` 量測)。
 
 契約測試
 --------
@@ -95,7 +112,9 @@ GUI 設定檔):
 ``gui_startup.py`` 在全新的直譯器裡啟動視窗,回報 ``startup_ms``(從第一行到畫出
 第一個畫面)、各階段時間與行程的記憶體。``gui_workloads.py`` 把每個分頁各開一次
 (每個分頁的 ``first_open_ms``)、再切回去、在搜尋框輸入、切換主題,同時有一個 5 ms
-的計時器在跳;``event_loop_p95_ms`` 就是那些 tick 晚到多久。``--compare`` 把兩份
+的計時器在跳;``event_loop_p95_ms`` 就是那些 tick 晚到多久。``theme_switch_ms`` 是
+切換主題時卡住的時間,``theme_deferred_ms`` 是之後把未選取分頁重新套用樣式總共花的
+時間,``theme_deferred_longest_turn_ms`` 是其中最長的一輪。``--compare`` 把兩份
 報告並排,工作量或環境不同時拒絕比較。
 
 分頁裡的背景工作
@@ -133,6 +152,16 @@ GUI 設定檔):
   widget 的 slot。
 * **worker 不碰 widget。** 工作若是 widget 的方法,或閉包裡抓著 widget,會在啟動
   前以 ``TaskUsageError`` 拒絕。
+
+會 join 執行緒的 Stop 走 ``je_auto_control.gui._slow_op``,它建立在同一個 controller
+上。``SlowOp(self).run(backend.stop, on_done=..., on_error=...)`` 一次只跑一個這樣的
+呼叫:前一個還沒回來時回傳 ``False``\ (第二次點擊不做任何事),結果回來之前 ``busy``
+為 true——分頁這時顯示「正在停止…」——而 ``on_done`` 會在 ``busy`` 變回 false 之後於
+GUI 執行緒執行,原本接在阻塞呼叫後面的程式碼就放在這裡。排程、觸發器、熱鍵、E-mail
+觸發器、Webhooks、REST API、USB Sharing 分頁與遠端桌面的 host 面板都這樣停止(需要
+先停再啟動的也這樣啟動)。WebRTC 面板則是立刻放掉工作階段,把它的關閉交給
+``StopQueue``,所以舊的還在關閉時就能開始下一個。回呼以弱參照持有:請傳方法與
+``args=``,不要傳 ``functools.partial`` 或閉包抓著分頁的 lambda。
 
 這是 GUI 內部 API(會 import ``PySide6``),套件 facade 不會重新匯出;分頁所呼叫的
 無頭函式不需要它也能使用。

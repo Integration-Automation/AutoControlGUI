@@ -56,8 +56,31 @@ MCP：``ac_self_heal_*``。GUI：**Self-Healing** 分頁。
         self_heal_click(template_path="submit.png")
 
 從 JSON 動作或 MCP 呼叫時，把同樣的鍵放在 ``AC_self_heal_locate`` /
-``AC_self_heal_click`` 的 ``context`` 參數。JSON 步驟無法攜帶檢查函式，所以它的
-``action_verified`` 會維持 ``None``。``AC_heal_stats`` 另外回報
+``AC_self_heal_click`` 的 ``context`` 參數。
+
+JSON 步驟無法攜帶 callable，所以 ``verify`` 也可以是一個物件——用在
+``AC_self_heal_click``、MCP 工具 ``ac_self_heal_click``、自愈分頁的「點擊後驗證」欄位，以及
+Python::
+
+    ["AC_self_heal_click", {
+        "template_path": "submit.png",
+        "verify": {"type": "image_gone", "timeout_s": 3}}]
+
+==================  ==========================================================
+``type``            成立的條件
+==================  ==========================================================
+``image_gone``      找不到 ``template_path``\ （預設：被點擊的那張樣板）
+``image_present``   找得到 ``template_path``
+``text_present``    OCR 引擎讀到 ``text``\ （\ ``lang``\ 、\ ``min_confidence``\ 、
+                    ``case_sensitive`` 與 ``find_text_matches`` 相同）
+==================  ==========================================================
+
+共用選項：``screen_region``（``[x1, y1, x2, y2]``；預設為點擊本身的區域）、``timeout_s``
+（預設 2，檢查會重複到成立或時間用完）與 ``poll_s``（預設 0.2）；影像類型另有
+``detect_threshold``（預設 0.9）。物件會在點擊之前驗證——未知的類型或選項會丟
+``HealVerificationError``，而且不會點擊。無法執行的檢查（樣板讀不到、沒有 OCR 引擎、擷取
+失敗）會在點擊\ *之後*\ 丟同一個錯誤，事件記錄的 ``action_verified`` 是 ``None``：「沒辦法
+看」絕不回報成「不見了」。沒有 ``verify`` 時該欄位維持 ``None``。``AC_heal_stats`` 另外回報
 ``action_verification``（``actions`` / ``verified`` / ``failed`` / ``unchecked``），
 與只計算「有回傳座標」的 ``healed`` 分開。
 
@@ -120,8 +143,39 @@ MCP：``ac_self_heal_*``。GUI：**Self-Healing** 分頁。
     payload = evaluate_healing_dataset("dataset.json")
     payload["passed"], payload["violations"]
 
-影像路徑相對於資料集檔案，且不得離開它所在的目錄。JSON 裡只能指名 ``template``
-策略；要評估 VLM，請把包裝它的 callable 傳給 ``evaluate_locators``。
+影像路徑相對於資料集檔案，且不得離開它所在的目錄。
+
+版本也可以指名 ``vlm`` 策略：把樣本自己的畫面（區域裁切後的 PNG，絕不重新截圖）交給
+``utils/vision`` 的後端，詢問樣本的 ``description``::
+
+    "samples": [{"id": "submit", "frame": "frames/submit.png",
+                 "description": "綠色的送出按鈕",
+                 "expected_box": [100, 60, 156, 92]}],
+    "versions": {"v1": {"strategy": "template", "threshold": 0.9},
+                 "v3": {"strategy": "vlm", "backend": "anthropic",
+                        "model": "…",
+                        "price": {"input_per_mtok": 5.0,
+                                  "output_per_mtok": 25.0}}},
+    "thresholds": {"v3": {"max_model_calls": 50, "max_cost": 0.25}}
+
+``backend`` 可為 ``anthropic``、``openai`` 或 ``null``；省略時使用
+``AUTOCONTROL_VLM_BACKEND`` 與 API 金鑰選出的後端。``null`` 不送出任何請求，每個樣本都是
+``error``——沒有金鑰的機器就該量到這個結果。從 Python 呼叫時，
+``evaluate_healing_dataset(path, backends={"fake": my_backend})`` 可以讓版本指名你自己的
+後端物件，``vlm_strategy(backend, model=..., price=...)`` 則是給 ``evaluate_locators`` 的
+callable。**對真的後端跑 ``vlm`` 版本會把每張畫面送到該服務，並由它計費。**
+
+每份報告與每一列結果都多了 ``model_calls``、``input_tokens``、``output_tokens`` 與
+``cost``。呼叫次數由評估本身計算（失敗的請求仍然算一次；沒有 description 的樣本或不可用的
+後端不算）。token 來自後端的 ``last_usage``——Anthropic 與 OpenAI 後端會從回應填入——
+``cost`` 則是後端自己回報的數字，或 token × ``price``。沒有回報的地方是 ``None``，不是
+``0``，也不估算；template 版本回報 ``model_calls: 0``，其餘為 ``None``。只要有一個版本是
+``vlm``，畫面就以彩色載入（template 策略會自己轉成灰階），所以每個版本拿到的仍是同一張畫面。
+
+自愈分頁把結果顯示成比較表——每個版本一列、基準版在最前面；定位到、準確率、誤報與復原各以
+``次數/總數 (比率)`` 呈現，接著是 p50 / p95、模型呼叫次數、輸入 / 輸出 token 與成本，沒有
+回報的地方是 ``-``——完整的 JSON 報告（失敗的樣本、門檻違規）仍保留在表格下方。同樣的列可以
+用 ``comparison_rows(payload)`` 在沒有 GUI 的情況下取得（欄位：``COMPARISON_COLUMNS``）。
 
 ``benchmarks/self_healing/run.py`` 是固定的回歸資料集：十張在記憶體中繪製的畫面
 （一般、125%／150% 縮放、負原點螢幕、必須選中兩個相同目標中第二個的區域、

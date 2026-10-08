@@ -40,6 +40,7 @@ FLOW_BODY_KEYS = {
     "AC_for_each_row": ("body",),
     "AC_assert_duration": ("body",),
     "AC_define_macro": ("body",),
+    "AC_run_stoppable": ("body",),
 }
 
 # Arguments a block command reads unconditionally (``args["key"]`` in its

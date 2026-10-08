@@ -64,7 +64,26 @@ def _try_build(name: str):
     return None
 
 
+BACKEND_NAMES = ("anthropic", "openai", "null")
+
+
+def backend_by_name(name: str) -> VLMBackend:
+    """A new backend chosen by name: ``anthropic``, ``openai`` or ``null``.
+
+    ``null`` is the backend that refuses every request, which is what an
+    evaluation on a machine with no key should measure. An SDK that is not
+    installed, or a missing key, gives a backend whose ``available`` is false.
+    """
+    if name == "null":
+        return NullVLMBackend("the null VLM backend answers nothing")
+    backend = _try_build(str(name).lower())
+    if backend is None:
+        raise VLMNotAvailableError(
+            f"unknown VLM backend {name!r}; known: {list(BACKEND_NAMES)}")
+    return backend
+
+
 __all__ = [
-    "VLMBackend", "VLMNotAvailableError", "NullVLMBackend",
-    "get_backend", "reset_backend_cache",
+    "BACKEND_NAMES", "VLMBackend", "VLMNotAvailableError", "NullVLMBackend",
+    "backend_by_name", "get_backend", "reset_backend_cache",
 ]

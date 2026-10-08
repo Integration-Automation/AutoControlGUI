@@ -20,6 +20,7 @@ from je_auto_control.gui.remote_desktop._helpers import (
 from je_auto_control.gui.remote_desktop.webrtc_workers import (
     HostPublishLoopWorker, generate_host_id, retire_worker,
 )
+from je_auto_control.gui._slow_op import stop_each
 from je_auto_control.gui.task_controller import CancellationToken, task_controller
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.remote_desktop import (
@@ -28,6 +29,7 @@ from je_auto_control.utils.remote_desktop import (
 from je_auto_control.gui.remote_desktop.webrtc_panel_common import (
     _PanelPart,
     _read_webrtc_config,
+    start_panel_task,
 )
 
 if TYPE_CHECKING:  # imported lazily at runtime to keep startup cheap
@@ -182,17 +184,26 @@ class _HostConnectionMixin(_PanelPart):
         if not answer:
             QMessageBox.warning(self, "WebRTC", _t("rd_webrtc_no_answer"))
             return
-        try:
-            self._multi_host.accept_session_answer(self._manual_session_id, answer)
-            self._status_label.setText(_t("rd_webrtc_answer_applied"))
-        except (ValueError, RuntimeError, OSError, KeyError) as error:
-            self._show_error(error)
+        host, session_id = self._multi_host, self._manual_session_id
+        # accept_session_answer waits for the peer connection's loop (up to
+        # 10 s); the backend takes no timeout or cancel.
+        if start_panel_task(self, "_answer_task",
+                            functools.partial(_accept_answer, host, session_id, answer),
+                            functools.partial(self._answer_applied, host, session_id),
+                            functools.partial(self._show_offer_error, host)):
+            self._status_label.setText(_t("task_running"))
+
+    def _answer_applied(self, host: MultiViewerHostT, session_id: str, _outcome: object) -> None:
+        """GUI thread: the answer was accepted -- unless the host was stopped meanwhile."""
+        if self._multi_host is not host:
             return
-        self._manual_session_id = None  # consumed; next Generate creates new session
+        self._status_label.setText(_t("rd_webrtc_answer_applied"))
+        if self._manual_session_id == session_id:
+            self._manual_session_id = None  # consumed; next Generate creates new session
 
     def _on_stop(self) -> None:
         self._stop_host_if_any()
-        self._status_label.setText(_t("rd_webrtc_status_idle"))
+        self._show_idle()
         self._signals.session_count.emit(0)
 
     def _validate_required_fields(self, *, needs_server: bool) -> bool:
@@ -248,14 +259,20 @@ class _HostConnectionMixin(_PanelPart):
             self._viewer_screen_window.hide()
         if self._multi_host is None:
             return
-        try:
-            self._multi_host.stop_all()
-        except (RuntimeError, OSError):
-            pass
-        finally:
-            self._multi_host = None
-            self._manual_session_id = None
-            self._set_hosting(False)
+        # The panel lets go of the host here, so everything after this line
+        # (and a second Stop) sees none; stop_all closes each peer connection
+        # and waits for it, which used to hold the GUI thread for seconds.
+        host, self._multi_host = self._multi_host, None
+        self._manual_session_id = None
+        self._stopping_sessions.clear()
+        self._set_hosting(False)
+        self._stops.retire(functools.partial(stop_each, host.stop_all))
+
+
+def _accept_answer(host: MultiViewerHostT, session_id: str, answer: str,
+                   _token: CancellationToken) -> None:
+    """Worker thread: hand the viewer's answer to the session that made the offer."""
+    host.accept_session_answer(session_id, answer)
 
 
 __all__ = ["_HostConnectionMixin"]

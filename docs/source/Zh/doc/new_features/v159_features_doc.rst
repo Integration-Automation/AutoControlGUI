@@ -38,8 +38,8 @@
 執行器指令
 ----------
 
-``AC_grid_cells``(``rows`` / ``cols`` / ``region`` → ``{count, cells}``)、
-``AC_cell_for_point``(``x`` / ``y`` / ``rows`` / ``cols`` / ``region`` →
-``{found, cell}``)與 ``AC_point_for_cell``(``label`` / ``rows`` / ``cols`` /
+``AC_grid_cells``\ (``rows`` / ``cols`` / ``region`` → ``{count, cells}``)、
+``AC_cell_for_point``\ (``x`` / ``y`` / ``rows`` / ``cols`` / ``region`` →
+``{found, cell}``)與 ``AC_point_for_cell``\ (``label`` / ``rows`` / ``cols`` /
 ``region`` → ``{point}``)。三者以 MCP 工具 ``ac_grid_cells`` / ``ac_cell_for_point`` /
-``ac_point_for_cell``(唯讀)及 Script Builder 指令(位於 **Image** 分類下)形式提供。
+``ac_point_for_cell``\ (唯讀)及 Script Builder 指令(位於 **Image** 分類下)形式提供。

@@ -101,9 +101,10 @@ Wayland
        而不是在 import 時。
    * - ``JE_AUTOCONTROL_GUI_SETTINGS``
      - 未設定 / 路徑 / ``off``
-     - 主視窗保存佈景主題、文字大小、導覽面板與視窗位置的檔案。未設定時為
-       ``~/.je_auto_control/gui_settings.ini``。設成 ``off``、``0``、``none``、
-       ``false`` 或空字串時，不讀也不寫。
+     - 主視窗保存佈景主題、文字大小、導覽面板與視窗位置的檔案；Config Sync 分頁
+       的伺服器、使用者與資料夾欄位也存在這裡（共用密鑰絕不保存：這是純文字檔）。
+       未設定時為 ``~/.je_auto_control/gui_settings.ini``。設成 ``off``、``0``、
+       ``none``、``false`` 或空字串時，不讀也不寫。
    * - ``JE_AUTOCONTROL_ENV``
      - ``default`` / 名稱
      - 資產庫目前使用的環境（``active_environment()``），讓同一份腳本在
@@ -203,7 +204,8 @@ MCP 伺服器
        不限制；設了卻沒有指名任何變數時，一個都不允許。
    * - ``JE_AUTOCONTROL_MCP_AUDIT``
      - 未設定 / 路徑
-     - 每一次 ``tools/call`` 寫入一筆記錄的 JSON-lines 檔案。
+     - 每一次 ``tools/call`` 寫入一筆記錄的 JSON-lines 檔案。未設定或空字串時
+       不寫任何稽核紀錄。
    * - ``JE_AUTOCONTROL_MCP_ERROR_SHOTS``
      - 未設定 / 目錄
      - 工具每次失敗時，在這裡存一張截圖。
@@ -244,4 +246,7 @@ MCP 伺服器
    * - ``AC_SIGNALING_CONFIG_DB``
      - 未設定 / 路徑
      - 信令伺服器存放設定同步資料的 SQLite 檔案。未設定時為
-       ``~/.je_auto_control/config_sync.sqlite3``。
+       ``~/.je_auto_control/config_sync.sqlite3``。資產 blob(``/blobs``)
+       放在同一路徑加上 ``.blobs`` 的資料夾,除非以 ``--blob-dir`` 指定;
+       ``--max-blob-bytes`` 與 ``--blob-quota-bytes`` 限制它們的大小
+       (只有旗標,沒有對應的環境變數)。

@@ -5,7 +5,9 @@ still owns every widget and slot under its original name.
 """
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Optional, Sequence
+import functools
+import os
+from typing import TYPE_CHECKING, Any, List, Optional, Sequence, Tuple
 
 
 from PySide6.QtCore import QTimer
@@ -13,11 +15,13 @@ from PySide6.QtWidgets import (
     QFileDialog, QMessageBox,
 )
 
+from je_auto_control.gui._slow_op import stop_each
 from je_auto_control.gui.remote_desktop._helpers import (
     _t,
 )
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
-from je_auto_control.gui.remote_desktop.webrtc_panel_common import _PanelPart
+from je_auto_control.gui.remote_desktop.webrtc_panel_common import _PanelPart, start_panel_task
+from je_auto_control.gui.task_controller import CancellationToken
 
 if TYPE_CHECKING:  # imported lazily at runtime to keep startup cheap
     from je_auto_control.utils.remote_desktop.file_sync import FolderSyncEngine
@@ -71,12 +75,20 @@ class _ViewerFilesMixin(_PanelPart):
                 return
             self._sync_btn.setText(_t("rd_webrtc_sync_stop"))
         else:
-            if self._sync_engine is not None:
-                try:
-                    self._sync_engine.stop()
-                except (RuntimeError, OSError):
-                    pass
-                self._sync_engine = None
+            running, self._sync_engine = self._sync_engine, None
+            if running is None:
+                self._sync_btn.setText(_t("rd_webrtc_sync_start"))
+                return
+            # stop() joins the watcher thread; until it reports the button
+            # says so and takes no click, so the folder is not watched twice.
+            self._sync_btn.setText(_t("gui_op_stopping"))
+            self._sync_btn.setEnabled(False)
+            self._stops.retire(functools.partial(stop_each, running.stop), on_done=self._on_sync_stopped)
+
+    def _on_sync_stopped(self, _outcome: object = None) -> None:
+        """GUI thread: the sync engine's watcher has ended."""
+        self._sync_btn.setEnabled(True)
+        if self._sync_engine is None:
             self._sync_btn.setText(_t("rd_webrtc_sync_start"))
 
     def _on_browse_refresh(self) -> None:
@@ -134,22 +146,29 @@ class _ViewerFilesMixin(_PanelPart):
                 self, "WebRTC", _t("rd_webrtc_cad_not_connected"),
             )
             return
-        sent = 0
-        last_error = None
-        for path in paths:
-            try:
-                self._viewer.send_file(path)
-                sent += 1
-            except (RuntimeError, OSError, ValueError) as error:
-                last_error = error
-                autocontrol_logger.warning("upload %s: %r", path, error)
+        names = [str(path) for path in paths]
+        if not names:
+            return
+        # Each file is streamed whole: off the GUI thread, one transfer at a time.
+        if not start_panel_task(self, "_file_task", functools.partial(_upload_files, self._viewer, names),
+                                self._uploads_done, self._transfer_failed):
+            QMessageBox.information(self, "WebRTC", _t("rd_file_busy"))
+            return
+        self._status_label.setText(
+            _t("rd_file_sending").replace("{name}", os.path.basename(names[0])))
+
+    def _transfer_failed(self, error: object) -> None:
+        QMessageBox.warning(self, "WebRTC", str(error))
+
+    def _uploads_done(self, outcome: Tuple[int, Optional[str]]) -> None:
+        sent, last_error = outcome
         if sent:
             self._status_label.setText(
                 _t("rd_webrtc_upload_done").format(n=sent),
             )
             QTimer.singleShot(500, self, self._on_browse_refresh)
         if last_error is not None and sent == 0:
-            QMessageBox.warning(self, "WebRTC", str(last_error))
+            QMessageBox.warning(self, "WebRTC", last_error)
 
     def _on_copy_name(self, name: str) -> None:
         from PySide6.QtWidgets import QApplication as _QApp
@@ -198,15 +217,19 @@ class _ViewerFilesMixin(_PanelPart):
         path, _filter = QFileDialog.getOpenFileName(
             self, _t("rd_webrtc_send_file"), "",
         )
-        if not path:
+        viewer = self._viewer
+        if not path or viewer is None:      # cancelled, or disconnected while the dialog was open
             return
-        try:
-            self._viewer.send_file(path)
-            self._status_label.setText(
-                _t("rd_webrtc_file_sent").format(name=path),
-            )
-        except (RuntimeError, OSError, ValueError) as error:
-            QMessageBox.warning(self, "WebRTC", str(error))
+        if not start_panel_task(self, "_file_task", functools.partial(_send_one_file, viewer, path),
+                                functools.partial(self._file_sent, path), self._transfer_failed):
+            QMessageBox.information(self, "WebRTC", _t("rd_file_busy"))
+            return
+        self._status_label.setText(_t("rd_file_sending").replace("{name}", os.path.basename(path)))
+
+    def _file_sent(self, path: str, _outcome: object) -> None:
+        self._status_label.setText(
+            _t("rd_webrtc_file_sent").format(name=path),
+        )
 
     def _on_received_file(self, path: object) -> None:
         # Called from the asyncio thread, which has no Qt event loop:
@@ -218,6 +241,27 @@ class _ViewerFilesMixin(_PanelPart):
         self._status_label.setText(
             _t("rd_webrtc_file_received").format(name=str(path)),
         )
+
+
+def _send_one_file(viewer: Any, path: str, _token: CancellationToken) -> None:
+    """Worker thread: stream one file to the host's inbox."""
+    viewer.send_file(path)
+
+
+def _upload_files(viewer: Any, paths: List[str], token: CancellationToken) -> Tuple[int, Optional[str]]:
+    """Worker thread: send each file; returns how many went and the last error's text."""
+    sent = 0
+    last_error: Optional[str] = None
+    for path in paths:
+        if token.cancelled:
+            break
+        try:
+            viewer.send_file(path)
+            sent += 1
+        except (RuntimeError, OSError, ValueError) as error:
+            last_error = str(error)
+            autocontrol_logger.warning("upload %s: %r", path, error)
+    return sent, last_error
 
 
 __all__ = ["_ViewerFilesMixin"]

@@ -4,8 +4,10 @@ A thin wrapper over the headless API: the command list is
 ``je_auto_control.MOBILE_COMMANDS``, running one is
 ``je_auto_control.run_mobile_command`` and probing is
 ``je_auto_control.device_setup_report``. Nothing here is unreachable from an
-action file.
+action file. Probe and run talk to a device (adb, WebDriverAgent), so they run
+off the GUI thread, one at a time.
 """
+import functools
 import json
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
@@ -17,6 +19,7 @@ from PySide6.QtWidgets import (
 
 import je_auto_control as ac
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
+from je_auto_control.gui._tab_task import TabTask
 from je_auto_control.gui.language_wrapper.multi_language_wrapper import (
     language_wrapper,
 )
@@ -29,6 +32,18 @@ _ADDRESS = ("serial", "url", "adb_path")
 
 def _t(key: str) -> str:
     return language_wrapper.translate(key, key)
+
+
+def _run_command(name: str, params: Dict[str, Any]) -> Any:
+    """Worker thread: one mobile command."""
+    return ac.run_mobile_command(name, params)
+
+
+def _probe(platform: str, device_id: str, adb_path: Optional[str]) -> Dict[str, Any]:
+    """Worker thread: open the device and report what it can do."""
+    context = ac.DeviceContext(platform, device_id, adb_path=adb_path)
+    with ac.open_device(context) as session:
+        return ac.device_setup_report(session).to_dict()
 
 
 class MobileTab(TranslatableMixin, QWidget):
@@ -53,6 +68,9 @@ class MobileTab(TranslatableMixin, QWidget):
         self._table.horizontalHeader().setStretchLastSection(True)
         self._note = QLabel()
         self._note.setWordWrap(True)
+        self._runs = TabTask(self)   # tag: "probe" or "run"
+        self._runs.result.connect(self._show_outcome)
+        self._runs.error.connect(self._show_error)
         self._apply_headers()
         self._build_layout()
         self._platform.currentIndexChanged.connect(self._reload_commands)
@@ -132,8 +150,18 @@ class MobileTab(TranslatableMixin, QWidget):
         values = {key: self._device.text().strip(), "adb_path": self._adb_path.text().strip()}
         return {name: value for name, value in values.items() if value and name in names}
 
-    def _show_error(self, error: Exception) -> None:
+    def _show_error(self, error: object) -> None:
         self._result.setPlainText(_t("mob_error").replace("{error}", str(error)))
+
+    def _show_outcome(self, value: Any) -> None:
+        if self._runs.tag == "probe":
+            self._render(value)
+            return
+        self._result.setPlainText(json.dumps(value, indent=2, ensure_ascii=False, default=str))
+
+    def _start(self, work: Callable[[], Any], tag: str) -> None:
+        if self._runs.start(work, tag=tag):
+            self._result.setPlainText(_t("task_running"))
 
     # --- Actions menu handlers ---------------------------------------------
 
@@ -157,23 +185,15 @@ class MobileTab(TranslatableMixin, QWidget):
             params = json.loads(self._params.toPlainText() or "{}")
             if not isinstance(params, dict):
                 raise ValueError("parameters must be a JSON object")
-            result = ac.run_mobile_command(command.name, {**self._address(command), **params})
-        except (ac.AutoControlException, OSError, ValueError, TypeError, LookupError) as error:
+        except (ValueError, TypeError) as error:
             self._show_error(error)
             return
-        self._result.setPlainText(json.dumps(result, indent=2, ensure_ascii=False, default=str))
+        self._start(functools.partial(_run_command, command.name, {**self._address(command), **params}),
+                    "run")
 
     def _on_probe(self) -> None:
-        try:
-            context = ac.DeviceContext(
-                self._current_platform(), self._device.text().strip(),
-                adb_path=self._adb_path.text().strip() or None)
-            with ac.open_device(context) as session:
-                report = ac.device_setup_report(session).to_dict()
-        except (ac.AutoControlException, OSError, ValueError) as error:
-            self._show_error(error)
-            return
-        self._render(report)
+        self._start(functools.partial(_probe, self._current_platform(), self._device.text().strip(),
+                                      self._adb_path.text().strip() or None), "probe")
 
     def _render(self, report: Dict[str, Any]) -> None:
         capabilities = report.pop("capabilities")

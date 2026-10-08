@@ -5,7 +5,7 @@ Set-of-Marks 與元素提案器回傳*方框*,卻不告訴你*每個方框是什
 已能讀取一個已知是核取方塊的方框;缺少的是它之前的分類步驟——這個方框是核取方塊、單選鈕、按鈕、
 文字欄位還是切換開關?``icon_classify`` 從低成本的幾何特徵(無需模型)回答此問題。
 
-* :func:`box_features` ——擷取方框區域的 ``{aspect, fill, edge_density, circularity, vertices}``(客觀量測)。
+* :func:`box_features` ——擷取方框區域的 ``{aspect, fill, edge_density, circularity, vertices}``\ (客觀量測)。
 * :func:`classify_widget` ——純函式:以記載的啟發式規則把特徵字典映射為控制項型別。
 * :func:`classify_icon` ——組合兩者:把一個方框轉為 ``{type, features}``。
 

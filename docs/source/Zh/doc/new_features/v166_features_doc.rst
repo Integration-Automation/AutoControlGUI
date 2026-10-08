@@ -30,12 +30,12 @@
 ``associate_fields`` 把文字以 ``:`` 結尾的框視為標籤,並在指定方向中(``max_gap`` 內)配到
 最近的值框,回傳 ``{label, value, direction, gap, label_box, value_box}``。
 ``match_labels_to_widgets`` 依中心距離把每個 widget 配到最近標籤。``checkbox_state`` 由框內
-暗像素填充比例回傳 ``"checked"`` / ``"unchecked"``(image 可注入——路徑 / ndarray / PIL)。
+暗像素填充比例回傳 ``"checked"`` / ``"unchecked"``\ (image 可注入——路徑 / ndarray / PIL)。
 
 執行器指令
 ----------
 
-``AC_associate_fields``(``text_boxes`` / ``directions`` / ``max_gap`` → ``{count, fields}``)
-與 ``AC_match_labels_to_widgets``(``labels`` / ``widgets`` → ``{count, pairs}``)。兩者以
-MCP 工具 ``ac_associate_fields`` / ``ac_match_labels_to_widgets``(唯讀)及 Script Builder 指令
-**Associate Form Fields** / **Match Labels To Widgets**(位於 **OCR** 分類下)形式提供。
+``AC_associate_fields``\ (``text_boxes`` / ``directions`` / ``max_gap`` → ``{count, fields}``)
+與 ``AC_match_labels_to_widgets``\ (``labels`` / ``widgets`` → ``{count, pairs}``)。兩者以
+MCP 工具 ``ac_associate_fields`` / ``ac_match_labels_to_widgets``\ (唯讀)及 Script Builder 指令
+**Associate Form Fields** / **Match Labels To Widgets**\ (位於 **OCR** 分類下)形式提供。

@@ -36,8 +36,8 @@ Otsu 法,找出「背景相關」團與「真正匹配」團之間的谷,並回�
 執行器指令
 ----------
 
-``AC_match_auto``(``template`` / ``floor`` / ``max_results`` / ``region`` / ``method`` →
-``{count, matches}``)與 ``AC_auto_threshold``(``template`` / ``region`` / ``method`` →
-``{found, info}``)。兩者以 MCP 工具 ``ac_match_auto`` / ``ac_auto_threshold``(唯讀)及
+``AC_match_auto``\ (``template`` / ``floor`` / ``max_results`` / ``region`` / ``method`` →
+``{count, matches}``)與 ``AC_auto_threshold``\ (``template`` / ``region`` / ``method`` →
+``{found, info}``)。兩者以 MCP 工具 ``ac_match_auto`` / ``ac_auto_threshold``\ (唯讀)及
 Script Builder 指令 **Match Template (auto-threshold)** / **Auto Threshold (Otsu on scores)**
 (位於 **Image** 分類下)形式提供。

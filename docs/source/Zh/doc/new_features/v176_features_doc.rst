@@ -29,7 +29,7 @@
 執行器指令
 ----------
 
-``AC_classify_lines``(``lines`` / ``heading_ratio`` → ``{count, lines}``)與 ``AC_outline``
+``AC_classify_lines``\ (``lines`` / ``heading_ratio`` → ``{count, lines}``)與 ``AC_outline``
 (``lines`` / ``heading_ratio`` → ``{count, headings}``)。兩者以 MCP 工具 ``ac_classify_lines`` /
-``ac_outline``(唯讀)及 Script Builder 指令 **Classify Headings vs Body** / **Document Outline**
+``ac_outline``\ (唯讀)及 Script Builder 指令 **Classify Headings vs Body** / **Document Outline**
 (位於 **OCR** 分類下)形式提供。

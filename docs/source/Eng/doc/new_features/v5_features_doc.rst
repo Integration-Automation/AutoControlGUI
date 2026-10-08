@@ -96,13 +96,55 @@ nothing. Each event (``ActionEvent``, ``schema_version`` 1) carries:
   (the process died, ``Ctrl+C``) reads back as ``incomplete``, never as a
   success;
 * ``outcome`` -- the returned value by type and size only (numbers and booleans
-  by value); returned text is never stored, and an outcome is never an input.
+  by value); returned text is never stored, and an outcome is never an input;
+* ``artifacts`` (optional) -- what the step left behind, each
+  ``{"kind": ..., "path": ...}`` or ``{"kind": "trace", "id": ...}``: a file
+  named by a path argument or result key (``file_path``, ``output_path``,
+  ``path``...) that was written while the step ran, a report written by
+  ``generate_html_report`` / ``_json_`` / ``_xml_``, a ``trace_id`` /
+  ``traceparent`` in the result, and anything a command attaches itself with
+  ``note_artifact(kind, path=..., ident=...)``. The error screenshot a
+  scheduler, trigger or hotkey takes after a failed run is attached to the
+  step that ended last on that thread. The schema is still version 1: a step
+  with no artifacts writes the line it always did, and older lines read back
+  with ``artifacts == ()``.
 
 Everything recorded between start and stop belongs to one ``run_id`` (pass
 ``run_id=`` to choose it). If the journal file cannot be written, journalling
 stops and the automation continues; ``action_journal_status()`` reports the
-error. Steps a runner hands to a thread pool other than ``AC_parallel`` (the
-DAG runner, a device matrix) are recorded without a parent.
+error. Steps the DAG runner (``AC_run_dag``) and the device matrix
+(``AC_run_device_matrix``) hand to their thread pools name the step that ran
+the runner as parent, with the node's or device's index as ``branch``; the
+body of ``AC_bulkhead_run`` runs on the calling thread and is nested the same
+way. A pool of your own does it with ``carry_step``::
+
+    from je_auto_control.utils.action_journal.recorder import carry_step
+    pool.submit(carry_step(work, index), *args)   # call on the submitting thread
+
+A journal written before this holds those steps without a parent; candidate
+generation still recognises them by time containment and lists them as
+``detached``.
+
+Error text is masked twice. The pattern rules the log uses come second; first,
+every value the run itself resolved from a secret is masked by exact match --
+a ``${secrets.NAME}`` lookup, a vault read or write (``SecretManager.get`` /
+``set``, a ``secret://`` reference), the text given to ``AC_write_secret``.
+The recorder keeps those values in memory only, from the moment they are
+resolved until the journal stops, and applies them to error text (before it is
+cut to length), to the arguments of later steps and to artifact paths. A
+command that obtains a secret some other way calls
+``recorder.note_secret_value(value)``. Limits: a value resolved before the
+journal was started is unknown to it, values shorter than four characters are
+not matched, and a value an application echoes back transformed (encoded,
+truncated, split) is only caught by the pattern rules.
+
+A run-history row started while a journal is on records that journal's file
+and run id (``RunRecord.journal_path`` / ``journal_run_id``; pass them to
+``HistoryStore.start_run`` or call ``link_journal`` to set them yourself).
+``AC_history_list``, ``ac_list_run_history``, the REST history route and the
+Run History tab's detail show both. An existing ``run_history.sqlite`` gains
+the two columns the first time it is opened; clearing history never deletes a
+journal file.
 
 ``generate_candidate_from_log(path, run_id=..., target="pytest",
 style="actions")`` turns one run into a ``CandidateScript`` -- ``code``,
@@ -125,6 +167,31 @@ style="actions")`` turns one run into a ``CandidateScript`` -- ``code``,
   checks that were run: the source is parsed, command names are looked up and
   the list goes through the executor's dry run. Nothing read from the log is
   executed or evaluated.
+
+Robot output (``target="robot"``, from ``generate_code`` too) goes through
+``check_robot_structure``: section headers, indentation, keyword rows, a test
+with no body, a repeated test name, an unclosed variable and a block with no
+``END``. **It is not the Robot Framework parser** -- ``robotframework`` is not
+a dependency, so no keyword is resolved and no library imported; a file that
+passes can still fail in Robot (an unknown keyword, a wrong argument count),
+which only ``robot --dryrun`` shows. A candidate's manifest records
+``"robot_structure": true`` and ``"robot_parser": false``. A renderer that
+produces malformed Robot source raises ``RobotStructureError`` instead of
+writing it.
+``diff_candidate(candidate, actions=...)`` / ``diff_candidate(candidate,
+code=...)`` and ``diff_candidate_against_file(candidate, path)`` say what a
+candidate would change before it replaces something: a ``CandidateDiff`` with
+the unified diff as ``text`` and the ``added`` / ``removed`` line counts
+(``identical`` when there is nothing to change). Action lists are compared one
+action per line, a nested body spread over lines so a change deep in a loop
+shows as that line; a ``.json`` path is read as an action file, anything else
+as code, and a missing file makes the whole candidate new.
+``AC_generate_code_from_journal`` and ``ac_generate_code_from_log`` take
+``diff_against`` (that path) and return the same diff under ``"diff"``; it is
+taken before ``output`` is written, so both may name one file. In the GUI the
+Recording Editor shows the diff before a candidate replaces the recording that
+is open, and Run History before an export overwrites an earlier candidate;
+*Keep current* leaves both untouched.
 
 Executor commands: ``AC_journal_start`` / ``AC_journal_stop`` /
 ``AC_journal_status`` / ``AC_journal_read`` / ``AC_journal_runs`` and

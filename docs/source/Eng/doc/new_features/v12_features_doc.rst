@@ -13,7 +13,7 @@ Builder): a native-UI **element repository** (object repository) and a
 
 
 Element repository
-=================
+==================
 
 Save native-UI locators under friendly names once, reuse them everywhere
 — the classic RPA *object repository*. A flow references
@@ -40,7 +40,7 @@ the matching ``ac_element_*`` MCP tools).
 
 
 Step debugger and tracer
-=======================
+========================
 
 Run an action list one command at a time with breakpoints, single-step,
 and live variable inspection. Stepping reuses one executor instance, so

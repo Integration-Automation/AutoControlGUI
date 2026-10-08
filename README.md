@@ -18,7 +18,7 @@ from JSON files / CLI / servers, and a **GUI tab**. Nothing is GUI-only.
 
 - **One API, seven platforms.** `wrapper/platform_wrapper.py` picks the backend at import
   time; your script does not change between Windows, macOS, X11, and Wayland.
-- **Scriptable without Python.** 848 `AC_*` commands cover the whole feature set, so a
+- **Scriptable without Python.** 851 `AC_*` commands cover the whole feature set, so a
   JSON file can do anything the library can — including loops, branches, try/catch,
   macros, and variables.
 - **Headless by default.** `import je_auto_control` never loads Qt. The GUI is an
@@ -231,7 +231,7 @@ desktop app; tab commands live in the window's **Actions** menu.
 | Natural-language planner | `plan_actions`, `run_from_description` | `AC_llm_plan` | LLM Planner |
 | Computer-use agent | `AgentLoop`, `run_agent` | `AC_run_agent` | Computer Use |
 | Record & replay | `record`, `stop_record` | `AC_record`, `AC_stop_record` | Record |
-| JSON scripting | `execute_action`, `execute_files` | all 848 commands | Script, Script Builder |
+| JSON scripting | `execute_action`, `execute_files` | all 851 commands | Script, Script Builder |
 | Variables & flow control | `execute_action_with_vars` | `AC_set_var`, `AC_loop`, `AC_for_each`, `AC_try`, `AC_retry` | Variables |
 | Data-driven runs | — | `AC_for_each_row` (CSV / JSON / SQLite / Excel) | Data Sources |
 | Assertions | `assert_text`, `assert_image` | `AC_assert_text` + 20 more | Assertions |
@@ -433,6 +433,98 @@ ignore synthetic input, and fall back silently when the driver is absent.
 
 ---
 
+## Configuration
+
+Every environment variable AutoControl reads. Nothing here is required: with no variable set, AutoControl picks the platform backend by itself, servers bind `127.0.0.1`, and every opt-in feature (signature enforcement, RBAC, USB passthrough, tool-path roots) is off. The [configuration reference](https://autocontrol.readthedocs.io/en/latest/Eng/doc/configuration/configuration_doc.html) ([source](docs/source/Eng/doc/configuration/configuration_doc.rst)) has the accepted values in full and links each variable to the page that explains the feature; CI compares it, and the tables below, with the code.
+
+### Platform backends
+
+| Variable | Default | Effect |
+|---|---|---|
+| `JE_AUTOCONTROL_WIN32_BACKEND` | `sendinput` | `interception` sends keyboard and mouse through the Interception driver; falls back to `SendInput` with a warning when the driver or DLL is missing. |
+| `JE_AUTOCONTROL_LINUX_BACKEND` | `x11` | `uinput` writes kernel input events; falls back to XTest with a warning when `/dev/uinput` is not writable. |
+| `JE_AUTOCONTROL_LINUX_DISPLAY_SERVER` | `auto` | Which Linux backend loads: `auto` reads `XDG_SESSION_TYPE` and `WAYLAND_DISPLAY`; `wayland` or `x11` forces one (`x11` on a Wayland session drives XWayland windows only). |
+
+### Windows Interception driver
+
+| Variable | Default | Effect |
+|---|---|---|
+| `JE_AUTOCONTROL_INTERCEPTION_DLL` | unset: `PATH`, then next to the package | Full path of `interception.dll`. |
+| `JE_AUTOCONTROL_INTERCEPTION_KEYBOARD` | `1` | Interception device id (`1`–`10`) keyboard events are sent to. |
+| `JE_AUTOCONTROL_INTERCEPTION_MOUSE` | `11` | Interception device id (`11`–`20`) mouse events are sent to. |
+
+### Wayland
+
+| Variable | Default | Effect |
+|---|---|---|
+| `JE_AUTOCONTROL_WAYLAND_INPUT_BACKEND` | `auto` | `cli` sends input through `ydotool` and never asks the desktop portal. Chosen before starting: after a refused consent AutoControl does not switch to it by itself. |
+| `JE_AUTOCONTROL_WAYLAND_EI_WORKER` | unset | `1` runs the libei session in a helper process instead of in-process. |
+| `JE_AUTOCONTROL_WAYLAND_POINTER_ACCEL` | `warn` | Absolute moves on the `ydotool` path only (relative motion the compositor accelerates): `warn` warns once and moves, `flat` declares acceleration off and moves silently, `strict` refuses the move. |
+| `JE_AUTOCONTROL_WAYLAND_CAPTURE_COMMAND` | unset | Your own screenshot command line, with `{output}` where the PNG path goes. Takes precedence over `grim`, `gnome-screenshot`, `spectacle` and the portal. |
+| `JE_AUTOCONTROL_WAYLAND_RECORD_DEVICES` | unset: none | Comma-separated `/dev/input/event*` devices `PhysicalRecorder` may read; physical recording is opt-in per device. |
+
+### MCP server
+
+| Variable | Default | Effect |
+|---|---|---|
+| `JE_AUTOCONTROL_MCP_READONLY` | unset | `1`: only tools marked read-only are offered and callable. |
+| `JE_AUTOCONTROL_MCP_TOOL_MODE` | `full` | How much of the registry `tools/list` offers: `full`, `progressive` or `static`. An unknown value is an error rather than `full`. |
+| `JE_AUTOCONTROL_MCP_TOOL_PROFILE` | unset | Comma-separated tool names and `category:<name>` entries of the `static` profile. |
+| `JE_AUTOCONTROL_MCP_ALIASES` | `1` | `0` leaves out the short aliases (`click`, `screenshot`, …) registered beside the `ac_*` tools. |
+| `JE_AUTOCONTROL_MCP_TOKEN` | unset | Bearer token of the HTTP transport. Not accepted once RBAC is on. |
+| `JE_AUTOCONTROL_MCP_ALLOWED_ORIGINS` | unset: loopback origins only | Comma-separated extra browser origins (exact, e.g. `https://example.test:8443`) the HTTP transport accepts. |
+| `JE_AUTOCONTROL_MCP_CONFIRM_DESTRUCTIVE` | unset | `1`: destructive tools ask the client for confirmation (MCP elicitation) before they run. |
+| `JE_AUTOCONTROL_MCP_PATH_ROOTS` | unset: no confinement | Directories (separated by the OS path separator) every file argument of a tool must stay inside. |
+| `JE_AUTOCONTROL_MCP_PATH_ROOTS_FROM_CLIENT` | unset | `1`: also accept the roots the MCP client reports through `roots/list`. |
+| `JE_AUTOCONTROL_MCP_ENV_REF_ALLOW` | unset: no restriction | Comma-separated environment variable names (`fnmatch` patterns allowed) `ac_resolve_ref` may read; a value that names nothing allows none. |
+| `JE_AUTOCONTROL_MCP_AUDIT` | unset | Path of a JSON-lines file that receives one record per `tools/call`. |
+| `JE_AUTOCONTROL_MCP_ERROR_SHOTS` | unset | Directory a screenshot is saved to each time a tool fails. |
+| `JE_AUTOCONTROL_FAKE_BACKEND` | unset | `1`: the MCP server records mouse, keyboard and clipboard calls in memory instead of performing them, for CI without a display. |
+
+### REST / RBAC and chat-ops
+
+| Variable | Default | Effect |
+|---|---|---|
+| `JE_AUTOCONTROL_RBAC_USERS` | unset: shared token | Path of the user store file. Setting it is what switches roles on for the REST API and the MCP HTTP transport. |
+| `JE_AUTOCONTROL_CHATOPS_SCRIPT_ROOT` | unset: `run` is refused | The only directory the chat-ops `run` command may load action files from. |
+
+### Executing and signing action files
+
+| Variable | Default | Effect |
+|---|---|---|
+| `JE_AUTOCONTROL_ALLOWED_PACKAGES` | unset: none | Comma-separated packages `AC_add_package_to_executor` may load (submodules included), for every entry point. Read once, when the process starts. |
+| `JE_AUTOCONTROL_REQUIRE_SIGNED_ACTIONS` | unset | `1`: every path that runs an action file refuses one without a valid signature sidecar. |
+| `JE_AUTOCONTROL_ACTION_SIGNING_PRIVATE_KEY` | unset | Path of the Ed25519 private key (PEM). Set it on the signing machine only; signing then writes a version-2 sidecar. |
+| `JE_AUTOCONTROL_ACTION_SIGNING_PUBLIC_KEY` | unset | Path of the matching public key. Set it on every machine that executes: it verifies and cannot sign. |
+| `JE_AUTOCONTROL_ACTION_SIGNING_PASSPHRASE` | unset | Passphrase of the private key, when it was created with one. |
+| `JE_AUTOCONTROL_ACCEPT_LEGACY_ACTION_SIGNATURES` | unset | `1` is migration mode: once a public key is configured, HMAC sidecars written before version 2 are refused unless this is set. Switch it off again when every file has been re-signed. |
+
+### Remote desktop and signaling
+
+| Variable | Default | Effect |
+|---|---|---|
+| `JE_AUTOCONTROL_REMOTE_DOWNLOAD_DIR` | `~/Downloads/AutoControl` | Directory a remote-desktop viewer stores files its host sends in. A received path is confined to it. |
+| `JE_AUTOCONTROL_USB_PASSTHROUGH` | unset | `1` enables USB passthrough opcodes on the remote-desktop channel. |
+| `AC_SIGNALING_SECRET` | unset | Shared secret of the signaling / config-sync server (`X-Signaling-Secret`). Read by the server when `--shared-secret` is not given, and by `config_sync_run` when `secret` is not. |
+| `AC_SIGNALING_CONFIG_DB` | `~/.je_auto_control/config_sync.sqlite3` | SQLite file the signaling server keeps config-sync buckets in. |
+
+### GUI
+
+| Variable | Default | Effect |
+|---|---|---|
+| `JE_AUTOCONTROL_GUI_SETTINGS` | `~/.je_auto_control/gui_settings.ini` | File the main window keeps its theme, text size, navigation panel and geometry in. `off`, `0`, `none`, `false` or empty: nothing is read or written. |
+
+### Logging, data and testing
+
+| Variable | Default | Effect |
+|---|---|---|
+| `JE_AUTOCONTROL_LOG_FILE` | `~/.je_auto_control/logs/AutoControlGUI.log` | Where the log file is written. The null device (`/dev/null`, `NUL`) switches the file off. Read when the first record is written, not at import. |
+| `JE_AUTOCONTROL_ENV` | `default` | The active environment of the asset store (`active_environment()`), so one script reads different values in `dev` and `prod`. |
+| `JE_AUTOCONTROL_REDACTION` | `off` | Default screenshot redaction policy: `off`, `moderate` or `strict`. An unknown name is an error, not `off`. |
+| `JE_AUTOCONTROL_PYTEST_ARTIFACTS` | `./autocontrol_screenshots` | Directory the pytest plugin writes failure screenshots to when a test did not request the `autocontrol_screenshot_dir` fixture. |
+
+---
+
 ## Documentation and examples
 
 | Resource | What's in it |
@@ -464,6 +556,10 @@ python -m pytest test/integrated_test/        # cross-module workflows
 ruff check je_auto_control/
 pylint je_auto_control/
 bandit -c pyproject.toml -r je_auto_control/
+
+python test/verify/typing_contract_verify.py            # mypy, whole package, three target platforms
+python test/verify/typing_contract_verify.py --extras   # the same against the real PySide6 / aiortc types
+python -m sphinx -b html -W docs/source docs/_build/html  # the docs, warnings as errors
 ```
 
 Contributions are welcome — see [CONTRIBUTING.md](CONTRIBUTING.md) and

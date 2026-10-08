@@ -7,6 +7,7 @@ from PySide6.QtWidgets import (
     QTableWidgetItem, QVBoxLayout, QWidget,
 )
 
+from je_auto_control.gui._dispose import release_resources
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
 from je_auto_control.gui._worker_thread import CallWorker, WorkerHandle, start_worker
 from je_auto_control.gui.language_wrapper.multi_language_wrapper import (
@@ -65,6 +66,13 @@ class UsbDevicesTab(TranslatableMixin, QWidget):
         root.addWidget(self._error_label)
         root.addWidget(self._events_label)
         root.addWidget(self._table, stretch=1)
+
+    def dispose(self) -> None:
+        """Release what the tab holds beyond its widgets: its hotplug timer and its share of the USB watcher.
+
+        Called by ``close_tab(key, release=True)`` before the widget is deleted; safe to call twice.
+        """
+        release_resources(self, self._hold.release)
 
     def menu_actions(self) -> list:
         """Expose tab commands to the window-level Actions menu."""

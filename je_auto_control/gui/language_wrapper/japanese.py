@@ -107,6 +107,30 @@ japanese_word_dict = {
         "または libei と、grim・gnome-screenshot・spectacle のいずれか) を"
         "インストールしてください。"),
     "cap_fix_display": "DISPLAY を実行中の X サーバーに設定してください。",
+    "cap_fix_win_session0": (
+        "サインイン中のユーザーのセッションで実行してください。サービスではなく、「ユーザーがログオ"
+        "ンしているときのみ実行する」タスクにします。"
+    ),
+    "cap_fix_win_locked": "セッションのロックを解除するか、画面に表示されている確認に応答してください。",
+    "cap_fix_win_integrity": "通常(中の整合性レベル)のプロセスから起動してください。",
+    "cap_fix_win_capture": (
+        "切断されたリモートデスクトップ セッションには画面がありません。接続を維持するか、コンソー"
+        "ルに移してください。"
+    ),
+    "cap_fix_mac_accessibility": (
+        "システム設定 › プライバシーとセキュリティ › アクセシビリティ: Python を実行するアプリ(ター"
+        "ミナル、IDE)を有効にして再起動してください。"
+    ),
+    "cap_fix_mac_screen_recording": (
+        "システム設定 › プライバシーとセキュリティ › 画面収録: Python を実行するアプリ(ターミナル、"
+        "IDE)を有効にして再起動してください。"
+    ),
+    "cap_fix_mac_input_monitoring": (
+        "システム設定 › プライバシーとセキュリティ › 入力監視: Python を実行するアプリ(ターミナル、"
+        "IDE)を有効にして再起動してください。"
+    ),
+    "cap_backend_version": "バックエンド: {backend} — {version}",
+    "cap_backend_version_unknown": "バージョンは報告されていません",
     "cap_fix_capture": (
         "スクリーンショットの要求を許可するか、grim・gnome-screenshot・"
         "spectacle のいずれかをインストールするか、"
@@ -844,6 +868,7 @@ japanese_word_dict = {
     "rh_journal_candidate": "ジャーナルから候補スクリプトを作成…",
     "rh_journal_off": "アクションジャーナル: オフ",
     "rh_journal_on": "アクションジャーナル: 実行 {run}、{n} ステップ → {path}",
+    "rh_journal_link": "ジャーナル実行 {run}({path})",
     "re_import_journal": "ジャーナルの実行を取り込む…",
     "sb_import_journal": "ジャーナル取込",
     "jr_dialog_open": "アクションジャーナルを開く",
@@ -867,6 +892,13 @@ japanese_word_dict = {
     "eml_poll_done": "今回 {n} 件のメッセージで発火しました。",
     "eml_running": "ポーリング中。",
     "eml_stopped": "ポーリング停止中。",
+    "jr_diff_title": "候補スクリプトによる変更",
+    "jr_diff_summary": "{added} 行追加、{removed} 行削除。+ で始まる行は候補、- で始まる行は現在の内容です。",
+    "jr_diff_identical": "候補は現在の内容と同じです。",
+    "jr_diff_replace": "置き換える",
+    "jr_diff_keep": "現在のままにする",
+    "gui_op_stopping": "停止しています…",
+    "gui_op_starting": "開始しています…",
     "eml_host_label": "ホスト：",
     "eml_port_label": "ポート：",
     "eml_user_label": "ユーザー：",
@@ -999,6 +1031,20 @@ japanese_word_dict = {
     "self_heal_desc_placeholder": "失敗時のフォールバック説明（任意）",
     "self_heal_threshold_label": "マッチ閾値:",
     "self_heal_click_check": "検索後にクリック",
+    "self_heal_verify_label": "クリック後の検証",
+    "self_heal_verify_placeholder": "任意の JSON チェック。例: {\"type\": \"image_gone\"}",
+    "self_heal_verify_invalid": "チェックは JSON オブジェクトで指定してください",
+    "self_heal_cmp_version": "バージョン",
+    "self_heal_cmp_located": "検出",
+    "self_heal_cmp_accuracy": "正解率",
+    "self_heal_cmp_false_positive": "誤検出",
+    "self_heal_cmp_recovery": "回復",
+    "self_heal_cmp_p50_ms": "p50 (ms)",
+    "self_heal_cmp_p95_ms": "p95 (ms)",
+    "self_heal_cmp_model_calls": "モデル呼び出し",
+    "self_heal_cmp_tokens": "トークン 入力 / 出力",
+    "self_heal_cmp_cost": "コスト",
+    "self_heal_cmp_baseline": "{name}(基準)",
     "self_heal_browse": _BROWSE,
     "self_heal_locate_btn": "検索",
     "self_heal_click_btn": _LOCATE_CLICK,
@@ -1152,6 +1198,8 @@ japanese_word_dict = {
     "config_sync_state_pending": "送信待ちの変更あり",
     "config_sync_state_conflict": "競合: 選択が必要です",
     "config_sync_state_offline": "オフライン: 変更はキューに保存されています",
+    "config_sync_state_backing_off": "再試行待ち: サーバーにはまだ再接続していません",
+    "config_sync_retry_in": "次の自動再試行まで {seconds} 秒",
     "config_sync_state_cancelled": "キャンセルされました",
     "config_sync_state_resync_required": "退役済み: 完全再同期が必要です",
     "config_sync_revision": "最後にマージしたリビジョン",
@@ -1249,6 +1297,16 @@ japanese_word_dict = {
     "llm_no_plan": "まず「プラン作成」を押してください",
     "llm_running": "実行中...",
     "llm_run_done": "完了",
+    # Background runs shared by the tabs (gui/_tab_task.py)
+    "task_running": "実行中...",
+    "task_busy": "すでに実行中です。終了を待つか、先に停止してください。",
+    "task_stopping": "停止中...",
+    "task_stopped": "停止しました。",
+    "task_stop": "実行を停止",
+    "stop_playback": "再生を停止",
+    "record_playing": "再生中...",
+    "rd_file_sending": "{name} を送信中...",
+    "rd_file_busy": "すでに転送中です。",
 
     # Remote Desktop Tab
     "rd_quick_tab": "クイック接続",

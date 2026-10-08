@@ -3,9 +3,12 @@
 A thin wrapper over :mod:`je_auto_control.utils.webrunner_bridge` — the
 convenience actions (open / quit / screenshot) cover the common flow,
 and a free-form ``WR_*`` runner exposes every command WebRunner registers.
+Every bridge call drives a browser over the network, so it runs off the GUI
+thread, one at a time.
 """
+import functools
 import json
-from typing import Optional
+from typing import Any, Callable, Optional
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
@@ -15,6 +18,7 @@ from PySide6.QtWidgets import (
 )
 
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
+from je_auto_control.gui._tab_task import TabTask
 from je_auto_control.gui.language_wrapper.multi_language_wrapper import (
     language_wrapper,
 )
@@ -48,6 +52,9 @@ class WebRunnerTab(TranslatableMixin, QWidget):
         self._output = QTextEdit()
         self._output.setReadOnly(True)
         self._commands_list = QListWidget()
+        self._runs = TabTask(self)   # tag: the label key of the command that is running
+        self._runs.result.connect(self._show_result)
+        self._runs.error.connect(self._show_error)
         self._build_layout()
         self.refresh_availability()
 
@@ -127,7 +134,7 @@ class WebRunnerTab(TranslatableMixin, QWidget):
                                 _t("web_url_required"))
             return
         self._run_safe(
-            lambda: web_open(url, browser=self._browser_input.currentText()),
+            functools.partial(web_open, url, browser=self._browser_input.currentText()),
             "web_open_btn",
         )
 
@@ -140,7 +147,7 @@ class WebRunnerTab(TranslatableMixin, QWidget):
             QMessageBox.warning(self, _t("web_screenshot_btn"),
                                 _t("web_screenshot_required"))
             return
-        self._run_safe(lambda: web_screenshot(path), "web_screenshot_btn")
+        self._run_safe(functools.partial(web_screenshot, path), "web_screenshot_btn")
 
     def _on_run_freeform(self) -> None:
         action = self._action_input.text().strip()
@@ -157,9 +164,7 @@ class WebRunnerTab(TranslatableMixin, QWidget):
                 self._output.append(f"params JSON error: {error}")
                 return
         self._run_safe(
-            lambda: run_webrunner_action(
-                {"action": action, "params": params},
-            ),
+            functools.partial(run_webrunner_action, {"action": action, "params": params}),
             "web_run_btn",
         )
 
@@ -171,17 +176,20 @@ class WebRunnerTab(TranslatableMixin, QWidget):
         except _BRIDGE_ERRORS as error:
             self._output.append(f"{_t('web_error')}: {error}")
 
-    def _run_safe(self, callable_, label_key: str) -> None:
-        try:
-            result = callable_()
-        except _BRIDGE_ERRORS as error:
-            self._output.append(f"{_t(label_key)} {_t('web_error')}: {error}")
-            return
+    def _run_safe(self, callable_: Callable[[], Any], label_key: str) -> None:
+        """Run one bridge call off the GUI thread; ``callable_`` must not hold a widget."""
+        if not self._runs.start(callable_, tag=label_key):
+            self._output.append(_t("task_busy"))
+
+    def _show_error(self, error: object) -> None:
+        self._output.append(f"{_t(self._runs.tag)} {_t('web_error')}: {error}")
+
+    def _show_result(self, result: object) -> None:
         rendered = (
             result if isinstance(result, str)
             else json.dumps(result, default=str, ensure_ascii=False)
         )
-        self._output.append(f"{_t(label_key)}: {rendered}")
+        self._output.append(f"{_t(self._runs.tag)}: {rendered}")
 
 
 __all__ = ["WebRunnerTab"]

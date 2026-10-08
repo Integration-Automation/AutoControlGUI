@@ -13,10 +13,21 @@ tests rely on, and it holds whether or not the page is wrapped.
 
 A deferred tab is a holder with a title and no page yet; whoever owns the tab
 fills it the first time it is selected.
-"""
-from typing import Any, Optional
 
-from PySide6.QtCore import Qt
+Restyling. A style sheet set on the window is re-applied by Qt to every widget
+below it, visible or not: with all 50 tabs open that is about 2,600 widgets and
+most of a second in one slot, for the 80 or so that can be seen.
+:meth:`WorkspaceTabWidget.restyle` takes the pages of the tabs that are not
+selected out of the window's tree first ("parks" them under a hidden widget of
+their own), so the change itself touches only what is on screen, and then puts
+them back one per event-loop turn -- Qt styles a widget when it gains a styled
+parent -- or at once for a tab that gets selected meanwhile. A parked page is
+still the tab's page for every method here; only its Qt parent differs, and
+only until the queue has drained.
+"""
+from typing import Any, Callable, List, Optional
+
+from PySide6.QtCore import QTimer, Qt
 from PySide6.QtWidgets import QFrame, QScrollArea, QTabWidget, QVBoxLayout, QWidget
 
 
@@ -28,6 +39,7 @@ class PageHolder(QWidget):
         self.setObjectName("WorkspacePage")
         self.pending_key = pending_key
         self._page: Optional[QWidget] = None
+        self._parked = False
         self._area: Optional[QScrollArea] = None
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -50,9 +62,40 @@ class PageHolder(QWidget):
         """The page, or ``None`` for a deferred tab not filled yet."""
         return self._page
 
+    @property
+    def parked(self) -> bool:
+        """Whether the page is out of the window's tree for a restyle (see the module docstring)."""
+        return self._parked
+
+    def park(self, parking: QWidget) -> bool:
+        """Move the page under ``parking`` until :meth:`unpark`; ``False`` when there is nothing to move."""
+        page = self._page
+        if page is None or self._parked:
+            return False
+        self._detach(page)
+        page.setParent(parking)
+        self._parked = True
+        return True
+
+    def unpark(self) -> bool:
+        """Put a parked page back, which is when Qt gives it the window's current style."""
+        page = self._page
+        if page is None or not self._parked:
+            return False
+        self._parked = False
+        self.set_page(page)
+        return True
+
+    def _detach(self, page: QWidget) -> None:
+        if self._area is not None:
+            self._area.takeWidget()
+        else:
+            self.layout().removeWidget(page)
+
     def set_page(self, page: QWidget) -> None:
         """Put ``page`` in the holder."""
         self._page = page
+        self._parked = False
         if self._area is None:
             self.layout().addWidget(page)
             page.show()
@@ -67,15 +110,83 @@ class PageHolder(QWidget):
         page, self._page = self._page, None
         if page is None:
             return None
-        if self._area is not None:
-            self._area.takeWidget()
+        if self._parked:
+            self._parked = False        # already out of the holder: under the parking widget
         else:
-            self.layout().removeWidget(page)
+            self._detach(page)
         return page
 
 
 class WorkspaceTabWidget(QTabWidget):
     """``QTabWidget`` whose pages scroll when the window is smaller than they are."""
+
+    def __init__(self, parent: Optional[QWidget] = None) -> None:
+        super().__init__(parent)
+        # Where the pages of unselected tabs wait during a restyle; made on
+        # first use and dropped once empty.
+        self._parking: Optional[QWidget] = None
+        self._unpark_timer = QTimer(self)
+        self._unpark_timer.setInterval(0)
+        self._unpark_timer.timeout.connect(self._unpark_one)
+        self.currentChanged.connect(self._unpark_index)
+
+    # --- restyling -----------------------------------------------------------
+
+    def restyle(self, apply: Callable[[], object]) -> int:
+        """Run ``apply`` -- a style sheet or palette change above this widget -- touching only what shows.
+
+        The pages of the tabs that are not selected are parked first and come
+        back afterwards, one per event-loop turn. Returns how many pages were
+        parked for this call.
+        """
+        if self._parking is None:
+            self._parking = QWidget()
+        current = self._holder(self.currentIndex())
+        parked = 0
+        for holder in self._holders():
+            if holder is not current and holder.park(self._parking):
+                parked += 1
+        try:
+            apply()
+        finally:
+            if self.parked_pages():
+                self._unpark_timer.start()
+            else:
+                self._drop_parking()
+        return parked
+
+    def parked_pages(self) -> int:
+        """How many pages are still waiting to be put back after a restyle."""
+        return sum(1 for holder in self._holders() if holder.parked)
+
+    def finish_restyle(self) -> None:
+        """Put every parked page back now instead of over the next event-loop turns."""
+        for holder in self._holders():
+            holder.unpark()
+        self._unpark_timer.stop()
+        self._drop_parking()
+
+    def _holders(self) -> List[PageHolder]:
+        holders = (self._holder(index) for index in range(self.count()))
+        return [holder for holder in holders if holder is not None]
+
+    def _unpark_index(self, index: int) -> None:
+        """A tab was selected: its page must be in place, and styled, before it is painted."""
+        holder = self._holder(index)
+        if holder is not None:
+            holder.unpark()
+
+    def _unpark_one(self) -> None:
+        for holder in self._holders():
+            if holder.unpark():
+                return
+        self._unpark_timer.stop()
+        self._drop_parking()
+
+    def _drop_parking(self) -> None:
+        parking, self._parking = self._parking, None
+        if parking is not None:
+            parking.deleteLater()
 
     # --- adding --------------------------------------------------------------
 

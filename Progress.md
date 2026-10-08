@@ -2,7 +2,7 @@
 
 ## 跨平台與 GUI 全面改版
 
-`WIP` — 計畫 A–H 的程式都已交付（A 在 U-20261009-01…14，B–H 在 U-20261009-15…26）；還沒做到的是**實機驗證**與下面各節列的缺口
+`WIP` — 計畫 A–H 的程式都已交付（A 在 U-20261009-01…14，B–H 在 U-20261009-15…26，留下的缺口在 U-20261009-27…32）；還沒做到的是**實機驗證**、要維護者決定的幾件事，與下面各節列的少數缺口
 
 核准設計：[跨平台自動化與 GUI 改版](docs/superpowers/specs/2026-10-02-platform-gui-modernization-design.md)。
 實作計畫：[分階段交付計畫](docs/superpowers/plans/2026-10-02-modernization-index.md)。
@@ -167,7 +167,7 @@ pip install --dry-run --only-binary=:all: --platform win_arm64 --python-version 
 
 - **同意被拒絕**：真的 liboeffis 回的是 `Portal denied Start`，規則認得。第一版規則只看有沒有 "denied"，把「portal 不給 EIS descriptor」
   （`Error calling ConnectToEIS: Permission denied`）也當成使用者拒絕；`portal-verification` 的 `*** REVISIT ***` 抓到，已改成只認 `Portal denied …` 開頭。
-  修正後還沒有再跑過那個 job 的結果可看。同意對話框放著不回答（逾時）仍會退回 ydotool。
+  修正後同一個 job 再跑一次，六種結束方式的分類全部正確、沒有 `REVISIT`（20/20）。同意對話框放著不回答（逾時）仍會退回 ydotool。
 - **helper 行程對真的 EIS server 可用**：按鍵、絕對移動、按鈕、捲動都到達，與行程內路徑相同；延遲中位數 0.340 ms（行程內 0.096 ms），p95 0.393 ms。
   正常關閉時按住的鍵會先放開；helper 被 SIGKILL 時 server 沒收到 key-up，放開交給合成器。
 - **半開交握**：崩潰確定是 `ei_unref`；3 次半開交握行程內漏 9 個 fd，經 helper 漏 3 個，helper 都以 exit status 1 結束、沒有殘留行程。
@@ -227,52 +227,54 @@ U-20261009-06 與 -04 的 macOS 部分是在 Windows 上對假的 pyobjc／Quart
 
 ## 安全與伺服器：留下的缺口
 
-`TODO` — 各項都是 U-20261009-08、-09、-13、-22、-23 交付時明確沒做的部分
+`TODO` — U-20261009-29、-30 之後還開著的
 
-- **Intel Mac 安裝要編譯 `cryptography`**：下限 50 沒有 `macosx_10_9_x86_64` wheel（探測：最新只到 48.0.1），沒有在 Intel Mac 上實際編過。
-- **簽章分離擋不住能寫檔的人**：能執行寫檔指令的人仍能換掉公鑰檔本身；Windows 上沒驗私鑰檔的權限位元；遷移模式開著時 HMAC 簽章會被接受；
-  強制簽章經 socket server 的端到端沒有測試（REST 與 MCP 已有）。
-- **RBAC**：
-  - MCP 的 HTTP session 沒有綁定建立它的使用者：每個請求仍以自己的 token 授權，但知道 session id 的任何已驗證使用者都能接上它的 GET 串流或 DELETE 它
-    （在 `utils/mcp_server/http_transport.py`，727 行，要先拆）。漸進模式下第二個使用者拿同一個 session id 會看到第一個人啟用的工具名稱（再經自己的角色過濾）。
-  - observer 回呼、LLM planner、狀態機這幾條延後路徑不帶擁有者。
-  - `AC_user_*` 沒有 Script Builder schema。
-  - `utils/rbac/policy.py` 的 `DATA_TOOLS`（42 個需要 `read_data` 的工具）是實作時分的類，**請維護者過目**；刻意留在 `read_screen` 的有
-    `ac_list_run_history`、`ac_costs_*`、`ac_trace_export`、`ac_self_heal_log_list`、`ac_usb_acl_list`、`ac_vlm_locate`／`ac_self_heal_locate`（會花 VLM 費用）。
-  - 被拒絕的擁有者的 watchdog 規則每次輪詢都記一筆 info，沒有節流。
-  - 沒對真的 client（Claude Desktop、VS Code、內建 dashboard）試過。
-- **MCP 路徑根目錄**管不到的參數：執行動作清單的工具、有時才是路徑的參數（`ac_open_path`／`ac_plan_open`／`ac_file_association`／`ac_act_in_view` 的 `target`，
-  `ac_launch_process`／`ac_shell` 的 `argv`／`command`）、`ac_handle_file_dialog` 的 `path`、自由格式物件裡的路徑、沒標註的外掛工具。
-  檔案 symlink 的跳脫在這台機器上建不出來（只跑了目錄 junction）；POSIX 的 `:` 分隔與 `~` 沒在 Linux／macOS 跑。
-- **MCP 完整模式的唯讀漏洞**：唯讀只在建立 registry 時過濾，所以完整模式下外掛啟動後才註冊的變更類工具仍會被列出與執行。
-  漸進與靜態模式已經擋住；完整模式要擋會改變預設行為，待決定。
-- **MCP 漸進揭露**（`JE_AUTOCONTROL_MCP_TOOL_MODE`，預設關閉）：沒對任何真的 client 跑過，client 會不會跟 `nextCursor`、收到 `list_changed` 會不會重列，未知；
-  `tools/list` 的分頁游標與 `-32602` 是憑對規格的記憶寫的，repo 裡沒有可對照的既有實作；外掛由 watcher 執行緒註冊時，通知到不了 HTTP session。
-  `start_mcp_http_server` 沒有 `tool_mode` 參數（要用環境變數或自己建 `MCPServer`）。沒有 GUI 設定入口（GUI 裡本來就沒有 MCP 設定面）。
-- **USB passthrough**：沒對真的舊版 host、真的 WebRTC 通道或真的 USB 裝置跑過。`UsbAcl` 的鎖是每個實例一把，
-  兩個實例或兩個行程仍可能在資料檔與 `.sig` 之間互相踩到，要檔案鎖或單一原子檔。
-- **設定同步**（U-20261009-17）：
-  - CI 沒裝 `[signaling]` extra，所以 signaling server 端的測試在 CI 全部 `importorskip`；只有 `ConfigStore` 的測試在 CI 跑。
-  - 用舊的 `upsert`／`remove`（不帶 `origin=`）寫的項目仍是 last-write-wins；只用舊 `sync()` 的裝置不會被記成 peer，墓碑回收因此等不到它。
-  - 同一個 `operation_id` 帶不同內容不會被發現。複合觸發器（all-of／any-of／sequence）不同步。衝突項目要呼叫 `config_sync_resolve` 才會解。
-  - `note_received` 與 `ClipboardEchoGuard` 有測試但沒有呼叫端；資料夾鏡像對寫到一半的檔案沒有處理。
-  - 資產傳輸只有 `DirectoryAssetTransport`（兩台機器都看得到的資料夾），signaling server 沒有 blob 端點。分頁不記表單欄位。
-  - `config_sync/client.py` 717 行。沒有做過真的兩台機器同步。
+**要維護者過目或決定的：**
+
+- `utils/rbac/policy.py` 的 `DATA_TOOLS`（42 個需要 `read_data` 的工具）是實作時分的類；刻意留在 `read_screen` 的有
+  `ac_list_run_history`、`ac_costs_*`、`ac_trace_export`、`ac_self_heal_log_list`、`ac_usb_acl_list`、`ac_vlm_locate`／`ac_self_heal_locate`（會花 VLM 費用）。
+- Script Builder 現在永遠不顯示 `AC_user_add`／`AC_user_rotate_token` 回傳的 token（要從 Users 群組、CLI 或腳本取得）。
+- 唯讀模式現在在三種工具模式都強制執行，而外掛工具一律被登記成會變更的：**唯讀的 MCP server 不會執行任何外掛工具**。要不要讓外掛宣告自己唯讀。
+- `UsbAcl(path, default_policy="allow")` 遇到被竄改的檔案會回報 `integrity_ok False`，但 `decide()` 仍回 allow（早於這批修改；倉庫內的呼叫端都用預設的 deny）。
+- 設定同步：一台裝置加入「已經有內容」的 bucket 時仍會多提交一個 revision（這個登記是之後的刪除會等它的依據；要拿掉是 `merge.awaits_ack` 的一行，代價是那個保證）。
+
+**還沒做的：**
+
+- **Intel Mac 安裝要編譯 `cryptography`**（下限 50 沒有 `macosx_10_9_x86_64` wheel），沒有在 Intel Mac 上實際編過。
+- **簽章**：能執行寫檔指令的人仍能換掉公鑰檔本身；遷移模式開著時 HMAC 簽章會被接受。Windows 上新建的私鑰檔只有目前使用者可讀
+  （SYSTEM、Administrators、備份代理因此讀不到），沒在 FAT／網路磁碟或提權帳號下試過；POSIX 的權限位元檢查在這台機器上是跳過的。
+- **RBAC**：observer 的 predicate 仍不帶身分（只讀螢幕）；`AC_llm_run` 沒有 `owner` 參數；沒對真的 client（Claude Desktop、VS Code、內建 dashboard）試過。
+  MCP HTTP 的 `list_changed` 廣播遇到停住的 client，會讓註冊的執行緒在每條串流上最多等 30 秒。
+- **MCP 路徑根目錄**管不到的：執行動作清單的工具、自由格式物件裡的路徑、沒標註的外掛工具、`ac_launch_process` 的 `argv` 與 `ac_shell` 的 `command`（刻意不管）。
+  `path-or-other` 有已知的誤判：開了根目錄時，像 `/help` 這種文字目標或剛好對到根目錄外既有檔案的值會被拒絕。
+  檔案 symlink 的跳脫在這台機器上建不出來；POSIX 的 `file:` URL、`:` 分隔與 `~` 沒在 Linux／macOS 跑。
+- **MCP 漸進揭露**：沒對任何真的 client 跑過；`tools/list` 的分頁游標與 `-32602` 是憑對規格的記憶寫的。
+- **USB passthrough**：沒對真的舊版 host、真的 WebRTC 通道或真的 USB 裝置跑過。`usb_acl.json` 改成單一檔案（簽章內嵌）之後，**舊版讀不了新檔、會全部拒絕**；
+  沒有對真的舊版安裝做過降版測試。
+- **設定同步**：
+  - 沒有做過真的兩台機器同步；CI 新加的 `[signaling]` 安裝行與版本 pin 還沒在任何 runner 上跑過。
+  - 過渡期風險：墓碑只等已經列在 `peers` 底下的裝置，所以每台機器都要先用這一版同步一次，之後才能有人刪東西。
+  - `ConfigBucket.upsert` 不帶 `origin=` 時現在存的是帶版本的項目，直接讀 `bucket.sections[s][id]["field"]` 的程式會壞（`bucket.values(section)` 兩種形狀都能讀）。
+  - 沒有自動的剪貼簿轉送，所以 `automatic=True`（`ClipboardEchoGuard.should_send`）在產品裡沒有呼叫端。
+  - 上傳超過伺服器上限的 blob 時，伺服器依宣告長度回 413 就關閉連線；還在送 body 的 client 可能先看到連線被重設（Windows 的 CI 上發生過），
+    回報的就是連線錯誤而不是「太大」。`HttpAssetTransport` 沒有先問上限。
+  - 資料夾鏡像靠修改時間判斷變更：對方送來的檔案落地後，同一個時間刻度內的本機編輯不會被推送（CI 上的測試因此要把 mtime 往後推）。
+  - blob：沒有自動回收（只有 `DELETE` 與用量清單）；配額是單一行程內的鎖，兩個 server 行程共用一個資料夾時可能超出一個 blob。
+  - Config Sync 分頁沒有區段選擇與 `assets_server` 開關；`examples/29_config_sync.py` 還是從 `utils.config_sync` 匯入而不是門面。
 
 ---
 
 ## 動作日誌、候選腳本與自愈量測：留下的缺口
 
-`TODO` — U-20261009-15、-16 交付時明確沒做的部分
+`TODO` — U-20261009-31 之後還開著的
 
-- 日誌事件沒有 `artifacts` 欄位；`run_history` 的列沒有連到日誌的 run。
-- 只有 `AC_parallel` 把父步驟交給工作執行緒；DAG runner、device matrix、bulkhead 跑的步驟 `parent_id` 是 None，
-  產生候選腳本時靠時間包含關係猜，猜出來的列為 `detached`、不進腳本。
-- 錯誤文字經 `redact_secret_text` 遮蔽，那是比對樣式：例外訊息裡以樣式沒涵蓋的形式出現的秘密仍會被寫進去。
-- 候選腳本沒有 GUI 的 diff 檢視；Robot 輸出沒有語法檢查。沒量過日誌在真的執行上的負擔，也沒試過多個行程寫同一個日誌檔。
-- 自愈量測：資料集 JSON 只能指定 `template` 策略，VLM 版本要從 Python 傳 callable，沒有模型成本欄；
-  `AC_self_heal_click` 帶不了驗證（JSON 步驟沒有 callable），`action_verified` 永遠是 `None`；GUI 以 JSON 文字顯示結果，沒有比較表或影像 diff；
-  區域限定的樣板比對沒對真的螢幕跑過。
+- 完全比對的秘密遮蔽有三個限制：日誌開始之前就解出的值它不知道；短於 4 個字元的值不比對；應用程式變形後回顯的值只靠樣式規則。
+- Robot 輸出的檢查是自己寫的結構檢查，**不是 Robot 的 parser**，沒和 `robot --dryrun` 對過（`robotframework` 沒安裝）。
+- 沒量過日誌在真的執行上的負擔；沒試過多個行程寫同一個日誌檔；`artifacts` 的 mtime 規則（2 秒寬限）只在 NTFS 上測過。
+- 自愈量測：`vlm` 策略只用假的與 null 後端跑過，沒對真的 Anthropic／OpenAI 送過請求（指定真的後端會把每一格送出去、要花錢）；
+  宣告式 `verify`（`image_gone`／`image_present`／`text_present`）的螢幕探測都是假的，`text_on_screen` 沒對真的 OCR 引擎跑過；
+  GUI 沒有影像 diff；區域限定的樣板比對沒對真的螢幕跑過。
+- 候選腳本的 diff 對話框沒有真的以 modal 執行過，也沒在螢幕上看過兩種主題。
 
 ---
 
@@ -296,22 +298,26 @@ U-20261009-18 的每一個裝置面呼叫都只對假的 ADB／uiautomator2／WD
 
 ## GUI：留下的缺口
 
-`TODO` — U-20261009-19、-20 交付時明確沒做的部分
+`TODO` — U-20261009-27、-28 之後還開著的
 
-- **43 處會卡住 GUI 執行緒的呼叫還沒搬**（稽核找到 52 處，搬了 9 處：遠端桌面連線、WebRTC offer／answer、OCR、Device Matrix）。最需要單獨設計的是
-  在 GUI 執行緒上執行腳本的分頁（`_script_tab`、Script Builder、LLM planner、錄製回放、test suite、ChatOps）：executor 沒有逾時或停止事件，
-  搬到別的執行緒會改變重入與 Stop 的語意。其餘：檔案傳輸（`connection_screen._on_files_dropped`、WebRTC 推檔）、`webrunner_tab`、`assertions_tab`、
-  `self_healing_tab`、`a11y_audit_tab`、`accessibility_tab`、`media_checks_tab`、`webrtc_host_connection._on_apply_answer`、
-  各種會 join 執行緒的 Stop（2–6 秒）、每個輸入事件的 socket 寫入（要在後端加送出佇列）。清單在 U-20261009-19。
-- **一個沒查明的間歇失敗**：`test_remote_desktop_gui.py` + `test_remote_registry_owners_gui.py` + `test_gui_task_lifecycle.py` 連跑約 38 輪出現過一次失敗，
-  沒抓到是哪個測試，之後 30 輪乾淨。
-- **把 Python 建的 widget 放進分頁列會在結束時崩潰**（70 次裡 8 次存取違規，原因沒找到），所以關閉鈕改成樣式表圖片，
-  圖是執行時用 `QPainter` 畫好寫到 `~/.je_auto_control/gui_cache/`。另外發現：已 `deleteLater()` 又還在 Python 參照循環裡的 `QObject`，被垃圾回收時會弄壞堆積（0xc0000374）。
-- 還沒有任何分頁實作 `dispose()`；全部 50 個分頁開著時切換主題要 1.0–1.4 秒；基準（`benchmarks/gui_*.py`）只回報、CI 不設門檻。
-- `gui/remote_desktop/connection_screen.py` 749 行，離上限一行。
-- `test_region_selector_screens.py:34` 仍掃 `QApplication.topLevelWidgets()`，在 Python 3.10／3.11 有與下面 segfault 相同的風險；某個 GUI 測試會漏一個 `QComboBox` 的彈出容器，沒找出是哪個。
-- 沒在 macOS／Linux 上看過新的關閉鈕與捲動；沒在真的多螢幕桌面試過視窗位置還原；PyBreeze 沒有對這一版跑過（只讀了它的相依宣告）。
-- 各語系新增的字串（日文、簡體中文）沒有母語者看過。
+- **Accessibility 分頁的 3 個動作與 A11y Audit 仍在 GUI 執行緒上**：Windows 的 UIA 後端（`accessibility/backends/windows_backend.py`）快取一個 COM 自動化物件、
+  沒有做每個執行緒的 COM 初始化；開發環境沒裝 `comtypes`，無法驗證搬到別的執行緒後還能用，所以沒有盲改。要先改後端（擁有 COM apartment 的執行緒，或每執行緒初始化）。
+  **同一個原因的新風險**：從 GUI 啟動的腳本現在跑在工作執行緒上，腳本裡的 `AC_a11y_*` 會從新的執行緒呼叫 UIA，這條路徑沒有實際跑過。
+- **stop 叫不醒的等待**：`AC_wait_window`、`AC_wait_text`、smart wait、`AC_expect_poll` 用的是自己的 `time.sleep`，會跑到自己的逾時；
+  已經進到後端的單一指令（一次影像搜尋、OCR、HTTP 請求、shell 指令）不會被打斷。非腳本的分頁工作在後端無法取消，只是結果被丟掉。
+  ChatOps 的 router 會接住 `AutoControlException`，被停止的 `/run` 回的是「run failed: ExecutionStopped …」而不是「Stopped.」。沒有 stop／list 的 MCP 工具。
+- **WebRTC 停止路徑裡沒搬的**：`StatsPoller.stop()`、`_stop_adaptive`、`_stop_lan_advertise`，沒量過它們會不會卡。
+- **`dispose()`**：`RemoteDesktopTab.dispose()` 只停計時器，連線中的 viewer 或 host 刻意留在 registry；`_ViewerPanel`、`QuickConnectScreen` 與 WebRTC 面板自己沒有 `dispose()`；
+  只在需要時才開 worker 的分頁（computer use、DAG、VLM、USB browser）沒有。
+- **切換主題後約 0.4 秒內**，被暫存的分頁其 `window()` 不是主視窗；關閉後留作隱藏子元件的分頁仍是同步重設樣式。基準（`benchmarks/gui_*.py`）CI 仍不設門檻。
+- **一個沒修的隱患**：`webrtc_host_connection._produce_offer` 與 `webrtc_viewer_connection._answer_off_thread` 把工作結果接到對面板的強參照回呼上；
+  沒有 parent 的面板（測試裡）會因此在孫物件的解構子裡被銷毀而中止行程。應用程式裡面板都有 parent。`SlowOp` 已改成弱參照，這兩處還沒。
+- **把 Python 建的 widget 放進分頁列在結束時崩潰**：已查明觸發條件——分頁列按鈕上接了 Python callable、又有排隊中的 `deleteLater()`、而行程經 `os._exit` 離開；
+  先把 deferred delete 沖掉就不會。機制（Qt 在行程結束時釋放那個 slot）是推論，沒有 C 堆疊可看。`_tab_close_icon.py` 沒有改回自訂按鈕。
+- **對真實 Qt 型別的型別檢查**：`test/verify/typing_extras_exempt.txt` 列著 70 個模組（66 個在 `gui/`、4 個在 `utils/remote_desktop/`，共 711 個錯誤，
+  多半是 mixin 呼叫它所混入的 widget 的方法），只准變少。
+- 遠端桌面的輸入改成佇列送出後，`AC_remote_send_input` 回的 `{"sent": True}` 意思是「已排入」；`SO_SNDTIMEO` 的 POSIX 包法與經 TLS socket 的行為沒在這台機器上驗過。
+- 沒在 macOS／Linux 上看過新的關閉鈕、捲動與重設樣式；沒在真的多螢幕桌面試過視窗位置還原；PyBreeze 沒有對這一版跑過；各語系新增的字串（日文、簡體中文）沒有母語者看過。
 
 ---
 
@@ -319,26 +325,16 @@ U-20261009-18 的每一個裝置面呼叫都只對假的 ADB／uiautomator2／WD
 
 `TODO` — 小項目，各自獨立
 
-- **`DECIDE`：`pytest --cov` 可以放行了嗎**。進入點搬到 `je_auto_control_pytest` 之後重新量過（2026-10-09，同一棵樹、各跑一次完整套件）：
-  `coverage run -m pytest` 87.35%，`pytest --cov` 87.32%，差 21 個敘述（19 個在 `je_auto_control_pytest.py` 自己）。原本少算 24 個百分點的問題已經不存在。
+- **`DECIDE`：`pytest --cov` 可以放行了嗎**。進入點搬到 `je_auto_control_pytest` 之後重新量過（2026-10-09）：`coverage run -m pytest` 87.35%，`pytest --cov` 87.32%。
   `CLAUDE.md` 與 `test_coverage_measurement.py` 仍規定只能用 `coverage run`；要不要放寬由維護者決定。
-- **本機的共用 `.venv` 裝著 `je_auto_control_dev 0.0.136`**，它的 `pytest11` 進入點還是舊的重量級路徑，所以從那個環境跑的測試仍會載入舊外掛；重裝即可，不影響 CI。
-- **Sphinx 還有 184 個既有警告**（較舊的 `vN_features_doc.rst`、`getting_started/run_in_ci.rst`、`conf.py` 的 `_static` 不存在）；這個月改過的頁面是 0 個。
-- **變數範圍在 free-threaded 版**（執行緒繼承 context）沒有測試。
-- **Windows 的版面鍵名**（`slash` 等 8 個，依前景視窗的鍵盤配置解析）只在美式配置上實際呼叫過，非美式配置用的是假的 `user32`。
-- **寫範例時發現的缺口**（U-20261009-26）：
-  - 門面沒匯出使用者需要的名字：`only_run_id`、`write_candidate`、`check_thresholds`、`format_comparison`、`LocateRequest`、`RevisionConflictError`、
-    `ConfigStoreError`、`AuthorisationLedger`、`AuthorisationState`、各個具體的 sync adapter、`run_sync`、`DirectoryAssetTransport`、`SCHEMA_VERSION`／`WIRE_VERSION`。
-  - `ac.execute_action(actions)` 只收清單；`dry_run`、`raise_on_error`、`step_callback` 只在 `ac.executor.execute_action` 上。
-  - 設定同步：送出失敗後的退避期間（2 秒起、加倍、最長 300 秒）內再同步不會連 server，回報 `state="offline"`，剛恢復連線時按「立即同步」看起來像 server 掛了；
-    `config_sync_status` 的簽章和另外三個不一致；傳 `scripts_dir` 會連本機的熱鍵、觸發器、通訊錄一起同步（只同步腳本要 `sections="scripts"`）；
-    裝置第一次同步即使沒有內容也會多一個 revision。
-  - `CapabilitySnapshot` 沒有後端版本；win32 上四個能力都是寫死的 `available`、darwin 是寫死的 `unknown`，沒有真的探測。
-  - `MOBILE_COMMANDS` 裡 `AC_android_list_devices`、`AC_android_shell`、`AC_android_device_info` 被歸在 `input` 能力下。
-  - `mcp_server/audit.py` 的 docstring 說預設寫到 cwd 的 `mcp_audit.jsonl`，建構子在沒設環境變數時看起來是不寫——要對一下。
-  - `docs/source/index.rst` 還寫 Wayland 是「via CLI bridges (wtype + ydotool + grim)」。
-  - 27 個環境變數只在 Sphinx 的設定頁，不在三份 README（清單在 `test_modernization_examples.py` 的 `README_UNDOCUMENTED`，只准變少）。
-  - 計畫 H 裡「裝了 extras 的型別檢查」獨立 job 與 platform-smoke 的補充沒有做。
+- **本機的共用 `.venv` 裝著 `je_auto_control_dev 0.0.136`**，它的 `pytest11` 進入點還是舊的重量級路徑；重裝即可，不影響 CI。
+- **三個新的 CI job 還沒在 GitHub 上跑過**（`typing-extras`、`docs`、`free-threaded-scope`）；`free-threaded-scope` 用的是 `3.14t`，setup-python 在 Windows 上怎麼命名那個直譯器沒驗過，紅了就拿掉。
+- **free-threaded**：變數範圍已修成只在綁定它的執行緒上有效，並在 3.14.8t（Windows）跑過。`rbac/authorization.py`、`self_healing/locator.py`、`wrapper/device_context.py`
+  也用 `ContextVar`，在 free-threaded 版上仍會被執行緒繼承，沒有檢查。
+- **macOS smoke 的三個新探針**（click-state 讀回、最小化視窗以 id 查找、`grab_logical` 的點座標）是「只回報、不斷言」；等在 runner 上量到一次，再從 `REPORTED` 移到 `PROBES`。
+- **能力探測**：Windows 的鎖定工作站、session 0、低完整性與擷取失敗分支只用假資料判斷；macOS 的三個 preflight 呼叫只對假物件跑過，
+  pyobjc 的 `Quartz` 有沒有 `CGPreflightListenEventAccess` 未知（沒有的話 `recording`／`stop_shortcut` 回 `unknown`）。
+- **Windows 的版面鍵名**（`slash` 等 8 個）只在美式配置上實際呼叫過。
 - **狀態機 `on_enter` 的單一動作寫法**以前一直被拒絕、從沒執行過（已修，U-20261009-24）：依賴「它不會跑」的既有狀態機現在會跑它。
 
 ---

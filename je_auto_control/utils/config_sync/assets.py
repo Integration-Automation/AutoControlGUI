@@ -13,11 +13,13 @@ from __future__ import annotations
 
 import hashlib
 import threading
+import urllib.parse
 from dataclasses import dataclass, field
 from pathlib import Path, PurePosixPath
 from typing import Any, Dict, Iterable, List, Mapping, Optional, Protocol, Tuple, Union
 
-from je_auto_control.utils.config_sync.client import ConfigSyncError
+from je_auto_control.utils.config_sync.bucket import ConfigSyncError
+from je_auto_control.utils.exception.exceptions import AutoControlException
 
 _SHA256_HEX_CHARS = 64
 
@@ -99,7 +101,11 @@ class AssetManifest:
 
 
 class AssetTransport(Protocol):
-    """Where asset content travels: a content-addressed blob store."""
+    """Where asset content travels: a content-addressed blob store.
+
+    :class:`DirectoryAssetTransport` (a folder both machines reach) and
+    :class:`HttpAssetTransport` (the sync server's ``/blobs`` routes) ship.
+    """
 
     def fetch(self, sha256: str) -> bytes:
         """The content stored under ``sha256``; raise ``AssetSyncError`` if absent."""
@@ -143,6 +149,100 @@ class DirectoryAssetTransport:
     def has(self, sha256: str) -> bool:
         """Whether the blob exists."""
         return self._blob(sha256).is_file()
+
+
+#: Why the server refused a blob request, by status.
+_HTTP_REFUSALS = {
+    400: "the server rejected the blob (bad digest or content)",
+    401: "the shared secret was refused",
+    404: "the server does not serve /blobs (it predates blob storage)",
+    405: "the server does not serve /blobs (it predates blob storage)",
+    411: "the server requires a Content-Length",
+    413: "the file is larger than the server accepts for one blob",
+    503: "the server's blob store is unavailable or holds too many accounts",
+    507: "the account's blob quota on the server is used up",
+}
+
+
+class HttpAssetTransport:
+    """An :class:`AssetTransport` over the sync server's ``/blobs`` routes.
+
+    For machines that share a sync server and nothing else: no folder both
+    can reach is needed. Blobs are kept per account under the same shared
+    secret as the bucket (``PUT`` / ``GET`` / ``HEAD
+    /blobs/{user_id}/{sha256}``), named by their hash, so identical files
+    are stored once. The server limits the size of one blob and the total
+    an account may hold; a file over either is reported per file by
+    :func:`publish_assets` rather than stopping the others.
+
+    Requests go through :mod:`je_auto_control.utils.http_client`, so the
+    egress policy applies, and redirects are not followed -- the secret is
+    never carried to another host.
+    """
+
+    def __init__(self, server_url: str, *, user_id: str, secret: Optional[str] = None,
+                 timeout_s: float = 30.0) -> None:
+        if not server_url:
+            raise AssetSyncError("server_url is required")
+        if not user_id:
+            raise AssetSyncError("user_id is required")
+        self._server_url = server_url.rstrip("/")
+        self._user_id = user_id
+        self._secret = secret
+        self._timeout = float(timeout_s)
+
+    def _url(self, sha256: str) -> str:
+        account = urllib.parse.quote(self._user_id, safe="")
+        return f"{self._server_url}/blobs/{account}/{_checked_digest(sha256)}"
+
+    def _request(self, method: str, sha256: str, data: Optional[bytes] = None) -> Dict[str, Any]:
+        from je_auto_control.utils.http_client.http_client import build_call, perform_call
+        headers = {"Content-Type": "application/octet-stream"} if data is not None else {}
+        if self._secret:
+            headers["X-Signaling-Secret"] = self._secret
+        try:
+            call = build_call(self._url(sha256), method=method, headers=headers, data=data,
+                              timeout=self._timeout)
+            call["follow_redirects"] = False
+            call["want_bytes"] = method == "GET"
+            return perform_call(call)
+        except AssetSyncError:
+            raise
+        except (OSError, ValueError, AutoControlException) as error:
+            raise AssetSyncError(f"asset {method} {sha256} failed: {error}") from error
+
+    @staticmethod
+    def _refused(method: str, sha256: str, status: int) -> AssetSyncError:
+        reason = _HTTP_REFUSALS.get(status, f"the server answered HTTP {status}")
+        return AssetSyncError(f"asset {method} {sha256}: {reason}")
+
+    def fetch(self, sha256: str) -> bytes:
+        """Download the blob stored under ``sha256``."""
+        response = self._request("GET", sha256)
+        status = int(response["status"])
+        if status == 404:
+            raise AssetSyncError(f"asset {sha256} is not on the server")
+        if status != 200:
+            raise self._refused("GET", sha256, status)
+        content = response.get("content")
+        if not isinstance(content, (bytes, bytearray)):
+            raise AssetSyncError(f"asset GET {sha256}: the reply carried no content")
+        return bytes(content)
+
+    def store(self, sha256: str, data: bytes) -> None:
+        """Upload ``data`` under ``sha256``; the server checks the hash too."""
+        status = int(self._request("PUT", sha256, bytes(data))["status"])
+        if status not in (200, 201):
+            raise self._refused("PUT", sha256, status)
+
+    def has(self, sha256: str) -> bool:
+        """Whether the server already holds the blob (so it need not be sent)."""
+        status = int(self._request("HEAD", sha256)["status"])
+        if status == 200:
+            return True
+        if status == 404:
+            return False
+        raise self._refused("HEAD", sha256, status)
 
 
 @dataclass
@@ -239,5 +339,6 @@ def publish_assets(manifest: AssetManifest, transport: AssetTransport, *,
 
 __all__ = [
     "AssetManifest", "AssetRef", "AssetSyncError", "AssetSyncResult", "AssetTransport",
-    "DirectoryAssetTransport", "file_sha256", "publish_assets", "sync_assets",
+    "DirectoryAssetTransport", "HttpAssetTransport", "file_sha256", "publish_assets",
+    "sync_assets",
 ]

@@ -175,7 +175,7 @@ def test_a_frame_that_beats_the_connect_result_is_shown(qapp):
     try:
         panel._on_frame_main(_make_jpeg())  # noqa: SLF001  # before any window
         assert panel._screen_window is None  # noqa: SLF001
-        assert panel._pending_frame is not None  # noqa: SLF001
+        assert panel._early_frame is not None  # noqa: SLF001
         shown = []
         window = panel._ensure_screen_window()  # noqa: SLF001
         window.show = lambda: shown.append("show")
@@ -186,7 +186,7 @@ def test_a_frame_that_beats_the_connect_result_is_shown(qapp):
         fake_viewer = types.SimpleNamespace(connected=True, disconnect=lambda *a, **k: None)
         panel._on_connected(fake_viewer)  # noqa: SLF001
         assert window.display.has_image() and shown == ["show"]
-        assert panel._pending_frame is None  # noqa: SLF001
+        assert panel._early_frame is None  # noqa: SLF001
     finally:
         registry.evict("viewer", by=panel._owner)  # noqa: SLF001
         panel._close_screen_window()  # noqa: SLF001

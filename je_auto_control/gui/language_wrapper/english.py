@@ -218,6 +218,30 @@ english_word_dict = {
         "Install the Wayland tools (ydotool or libei, and grim, "
         "gnome-screenshot or spectacle) so the Wayland backend loads."),
     "cap_fix_display": "Set DISPLAY to a running X server.",
+    "cap_fix_win_session0": (
+        "Run it in the signed-in user's session — a scheduled task set to run only when the user i"
+        "s logged on, not a service."
+    ),
+    "cap_fix_win_locked": "Unlock the session, or answer the prompt that is on screen.",
+    "cap_fix_win_integrity": "Start it from a normal (medium-integrity) process.",
+    "cap_fix_win_capture": (
+        "A disconnected remote-desktop session has no screen: keep the session connected, or move i"
+        "t to the console."
+    ),
+    "cap_fix_mac_accessibility": (
+        "System Settings › Privacy & Security › Accessibility: enable the application that runs Pyt"
+        "hon (Terminal, the IDE), then restart it."
+    ),
+    "cap_fix_mac_screen_recording": (
+        "System Settings › Privacy & Security › Screen Recording: enable the application that runs "
+        "Python (Terminal, the IDE), then restart it."
+    ),
+    "cap_fix_mac_input_monitoring": (
+        "System Settings › Privacy & Security › Input Monitoring: enable the application that runs "
+        "Python (Terminal, the IDE), then restart it."
+    ),
+    "cap_backend_version": "Backend: {backend} — {version}",
+    "cap_backend_version_unknown": "version not reported",
     "cap_fix_capture": (
         "Allow the screenshot request, install grim, gnome-screenshot or "
         "spectacle, or set JE_AUTOCONTROL_WAYLAND_CAPTURE_COMMAND."),
@@ -954,6 +978,7 @@ english_word_dict = {
     "rh_journal_candidate": "Candidate script from journal…",
     "rh_journal_off": "Action journal: off",
     "rh_journal_on": "Action journal: run {run}, {n} step(s) → {path}",
+    "rh_journal_link": "Journal run {run} in {path}",
     "re_import_journal": "Import journal run…",
     "sb_import_journal": "Import journal",
     "jr_dialog_open": "Open action journal",
@@ -977,6 +1002,14 @@ english_word_dict = {
     "eml_poll_done": "Fired {n} message(s) on this pass.",
     "eml_running": "Polling is active.",
     "eml_stopped": "Polling is stopped.",
+    "jr_diff_title": "What the candidate changes",
+    "jr_diff_summary": ("{added} line(s) added, {removed} removed. Lines starting with + come from the "
+                        "candidate; lines starting with - are what is there now."),
+    "jr_diff_identical": "The candidate is identical to what is there now.",
+    "jr_diff_replace": "Replace",
+    "jr_diff_keep": "Keep current",
+    "gui_op_stopping": "Stopping…",
+    "gui_op_starting": "Starting…",
     "eml_host_label": _HOST_LABEL,
     "eml_port_label": _PORT_LABEL,
     "eml_user_label": "User:",
@@ -1109,6 +1142,20 @@ english_word_dict = {
     "self_heal_desc_placeholder": "natural-language fallback (optional)",
     "self_heal_threshold_label": "Match threshold:",
     "self_heal_click_check": "Click after locating",
+    "self_heal_verify_label": "Verify after click",
+    "self_heal_verify_placeholder": "Optional JSON check, e.g. {\"type\": \"image_gone\"}",
+    "self_heal_verify_invalid": "The check must be a JSON object",
+    "self_heal_cmp_version": "Version",
+    "self_heal_cmp_located": "Located",
+    "self_heal_cmp_accuracy": "Accuracy",
+    "self_heal_cmp_false_positive": "False positives",
+    "self_heal_cmp_recovery": "Recovery",
+    "self_heal_cmp_p50_ms": "p50 (ms)",
+    "self_heal_cmp_p95_ms": "p95 (ms)",
+    "self_heal_cmp_model_calls": "Model calls",
+    "self_heal_cmp_tokens": "Tokens in / out",
+    "self_heal_cmp_cost": "Cost",
+    "self_heal_cmp_baseline": "{name} (baseline)",
     "self_heal_browse": _BROWSE,
     "self_heal_locate_btn": "Locate",
     "self_heal_click_btn": "Locate & click",
@@ -1262,6 +1309,8 @@ english_word_dict = {
     "config_sync_state_pending": "changes waiting to be sent",
     "config_sync_state_conflict": "conflict: a choice is needed",
     "config_sync_state_offline": "offline: changes are queued",
+    "config_sync_state_backing_off": "waiting to retry: the server has not been tried again yet",
+    "config_sync_retry_in": "next automatic attempt in {seconds} s",
     "config_sync_state_cancelled": "cancelled",
     "config_sync_state_resync_required": "retired: a full resync is required",
     "config_sync_revision": "Last merged revision",
@@ -1358,6 +1407,16 @@ english_word_dict = {
     "llm_no_plan": "Click Plan first",
     "llm_running": "Running...",
     "llm_run_done": "Done",
+    # Background runs shared by the tabs (gui/_tab_task.py)
+    "task_running": "Running...",
+    "task_busy": "Already running: wait for it to finish, or stop it first.",
+    "task_stopping": "Stopping...",
+    "task_stopped": "Stopped.",
+    "task_stop": "Stop run",
+    "stop_playback": "Stop playback",
+    "record_playing": "Playing back...",
+    "rd_file_sending": "Sending {name}...",
+    "rd_file_busy": "A transfer is already running.",
 
     # Remote Desktop Tab
     "rd_quick_tab": "Quick Connect",

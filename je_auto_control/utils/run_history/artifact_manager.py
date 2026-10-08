@@ -53,6 +53,9 @@ def capture_error_snapshot(run_id: int,
         return None
     bound_store = store if store is not None else default_history_store
     bound_store.attach_artifact(int(run_id), str(target))
+    # The journal's failed step names the same file (no-op when none is started).
+    from je_auto_control.utils.action_journal.recorder import note_artifact
+    note_artifact("screenshot", path=str(target))
     return str(target)
 
 

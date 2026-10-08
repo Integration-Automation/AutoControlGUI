@@ -25,6 +25,7 @@ from je_auto_control.gui.remote_desktop import connection_screen, tray_icon, web
 from je_auto_control.gui.remote_desktop._helpers import _t  # noqa: E402
 from je_auto_control.utils.remote_desktop.registry import registry  # noqa: E402
 from je_auto_control.utils.remote_desktop.webrtc_stats import StatsSnapshot  # noqa: E402
+from headless._qt_settle import deleting, settle_op  # noqa: E402
 
 
 @pytest.fixture(autouse=True)
@@ -37,6 +38,14 @@ def qapp(monkeypatch):
     monkeypatch.setattr(registry, "_ws_viewer", None)
     app.messages = messages
     yield app
+
+
+@pytest.fixture(autouse=True)
+def _panels_deleted():
+    """Each test deletes the parentless panels it built (see ``_qt_settle.deleting``)."""
+    with deleting(webrtc_panel._WebRTCHostPanel, webrtc_panel._WebRTCViewerPanel,
+                  connection_screen.QuickConnectScreen):
+        yield
 
 
 # --- host side -------------------------------------------------------------------------------------------
@@ -143,6 +152,7 @@ def test_an_empty_recording_is_not_reported_saved(qapp):
     panel = webrtc_panel._WebRTCViewerPanel()
     panel._recorder = types.SimpleNamespace(stop=lambda: None, has_output=False, output_path="out.mp4")
     panel._on_toggle_recording(False)
+    assert settle_op(panel._stops)      # the recorder is finalised off the GUI thread
     assert qapp.messages == [_t("rd_webrtc_recording_empty").format(path="out.mp4")]
 
 

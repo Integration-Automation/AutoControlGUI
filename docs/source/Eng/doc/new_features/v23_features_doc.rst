@@ -14,7 +14,7 @@ effect and orient itself. Pure standard library; full stack.
 
 
 Snapshot & diff
-==============
+===============
 
 ::
 
@@ -34,7 +34,7 @@ the *live* tree (caching the baseline). Exposed as ``AC_screen_snapshot`` /
 
 
 Describe the screen
-==================
+===================
 
 ::
 

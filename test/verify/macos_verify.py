@@ -27,15 +27,27 @@ default
 
 Assert mode refuses to pass while :data:`EXPECTED` is empty, because a gate
 that asserts nothing reads as coverage that does not exist.
+
+A probe is not asserted before a runner has measured it. A new one goes into
+:data:`REPORTED`: it runs in both modes and its result is printed with the line
+:data:`EXPECTED` would hold, but it cannot turn the job red. Once a run has
+shown what the runner does, move it to :data:`PROBES` with that value.
 """
 from __future__ import annotations
 
 import argparse
+import os
 import platform
+import re
+import subprocess  # nosec B404  # reason: runs pytest on two repository test files, fixed argv, no shell
 import sys
 import time
 import traceback
+from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple
+
+REPO_ROOT = Path(__file__).resolve().parents[2]
+HEADLESS_TESTS = "test/unit_test/headless"
 
 #: What a ``macos-14`` runner was measured to permit, on 2026-08-19. Keys are
 #: probe names; values are ``True`` (works), ``False`` (silently does nothing
@@ -74,6 +86,22 @@ EXPECTED: Dict[str, Any] = {
     # the count is reported and not asserted.
     "window-management": True,
 }
+
+#: The real-framework tests the two "reuse" probes run, and how many results
+#: each must produce. These already exist and already run on the macOS squares
+#: of the headless suite; there a skip is a pass, and here it is not -- the
+#: probe says whether the question was actually reached.
+CLICK_STATE_TESTS: Tuple[List[str], int] = ([
+    f"{HEADLESS_TESTS}/test_osx_mouse_click_state.py::test_a_real_event_takes_the_click_count_it_is_given",
+    f"{HEADLESS_TESTS}/test_osx_mouse_click_state.py::test_the_real_double_click_interval_is_a_positive_number",
+], 3)
+MINIMISED_WINDOW_TESTS: Tuple[List[str], int] = ([
+    f"{HEADLESS_TESTS}/test_window_backend_macos_real.py"
+    "::test_a_really_minimised_window_is_found_listed_and_restored",
+], 1)
+
+#: A whole child pytest run, window included.
+TEST_RUN_TIMEOUT = 180
 
 #: How long the window server is given to reflect a posted modifier.
 KEY_STATE_TIMEOUT = 3.0
@@ -307,6 +335,126 @@ def probe_window_management() -> Outcome:
                    f"the application layer; described {described}")
 
 
+_REPORT_LINE = re.compile(r"^(PASSED|FAILED|ERROR|SKIPPED)\b(.*)$", re.MULTILINE)
+
+
+def tally_test_report(output: str) -> Tuple[Dict[str, int], List[str]]:
+    """Count the ``-rA`` summary lines of a pytest run; also the skip reasons."""
+    counts = {"PASSED": 0, "FAILED": 0, "ERROR": 0, "SKIPPED": 0}
+    skipped: List[str] = []
+    for kind, rest in _REPORT_LINE.findall(output):
+        # A skip line is "SKIPPED [n] file:line: reason" and stands for n tests.
+        many = re.match(r"\s*\[(\d+)\]\s*(.*)$", rest) if kind == "SKIPPED" else None
+        counts[kind] += int(many.group(1)) if many else 1
+        if many:
+            skipped.append(many.group(2).strip())
+    return counts, skipped
+
+
+def run_existing_tests(node_ids: List[str], wanted: int) -> Outcome:
+    """Run tests the suite already has; works only if all ``wanted`` really passed.
+
+    The real-window test asks to be invited (``AUTOCONTROL_REAL_WINDOW_TEST``):
+    it opens a window. This script already moves the cursor and types, so it
+    is the invitation.
+    """
+    env = dict(os.environ, AUTOCONTROL_REAL_WINDOW_TEST="1")
+    done = subprocess.run(  # nosec B603  # nosemgrep  # reason: this interpreter, repository test ids, no shell
+        [sys.executable, "-m", "pytest", "-q", "-rA", "-p", "no:cacheprovider", *node_ids],
+        cwd=REPO_ROOT, env=env, capture_output=True, text=True, encoding="utf-8",
+        errors="replace", timeout=TEST_RUN_TIMEOUT, check=False)
+    output = done.stdout + done.stderr
+    counts, skipped = tally_test_report(output)
+    detail = (f"{counts['PASSED']} passed, {counts['SKIPPED']} skipped, "
+              f"{counts['FAILED'] + counts['ERROR']} failed of {wanted} "
+              f"(pytest exit {done.returncode})")
+    if skipped:
+        detail += f"; skipped because: {' / '.join(skipped)}"
+    if sum(counts.values()) == 0:
+        detail += f"; no test ran: {output.strip()[-300:]!r}"
+    worked = (counts["PASSED"] == wanted
+              and counts["FAILED"] + counts["ERROR"] + counts["SKIPPED"] == 0)
+    return Outcome(worked, detail)
+
+
+def probe_click_state() -> Outcome:
+    """A real Quartz mouse event keeps the click count written into it.
+
+    Built and read back, never posted: it says the field holds the number,
+    not that an application treats the click as a double-click.
+    """
+    return run_existing_tests(*CLICK_STATE_TESTS)
+
+
+def probe_minimised_window() -> Outcome:
+    """A window minimised through the backend is still found by id, and restored.
+
+    The by-id Quartz query did not return a window its own process had just
+    minimised the first time this ran on a runner, which is why
+    ``_info_for`` falls back to the full list. The test opens a window of its
+    own in a child process and puts it through the real frameworks.
+    """
+    return run_existing_tests(*MINIMISED_WINDOW_TESTS)
+
+
+def judge_logical_frame(frame: Tuple[Tuple[int, int], Tuple[int, int]],
+                        displays: List[Tuple[int, int, int, int]],
+                        region: Tuple[Tuple[int, int], Tuple[int, int]],
+                        asked: Tuple[int, int, int, int]) -> bool:
+    """Whether a capture is in points: the frame is the displays, the region is itself.
+
+    ``frame`` and ``region`` are ``(size, origin)`` as ``grab_logical`` gave
+    them; ``displays`` are Quartz's bounds in points. On a runner's single 1x
+    display that means the display's size at origin ``(0, 0)``.
+    """
+    if not displays:
+        return False
+    left = min(rect[0] for rect in displays)
+    top = min(rect[1] for rect in displays)
+    right = max(rect[0] + rect[2] for rect in displays)
+    bottom = max(rect[1] + rect[3] for rect in displays)
+    whole = ((right - left, bottom - top), (left, top))
+    return frame == whole and region == ((asked[2], asked[3]), (asked[0], asked[1]))
+
+
+def probe_grab_logical() -> Outcome:
+    """``grab_logical`` returns points: the display's bounds, origin ``(0, 0)``.
+
+    Written against fakes and never run on a Mac. What a runner can say is
+    limited to its one 1x display, where points and pixels are the same
+    number: that ``screencapture -R`` accepts the rectangle Quartz reports,
+    that the frame is exactly ``CGDisplayBounds`` in size with its origin at
+    the main display's corner, that a region comes back at its own size and
+    origin, and what Pillow hands back for ``scale_down=True`` before this
+    package resizes anything. Retina and a second display stay unmeasured.
+    """
+    import Quartz
+    from PIL import ImageGrab
+
+    import je_auto_control as ac
+    from je_auto_control.utils.monitor_layout.macos_frame import quartz_display_bounds
+
+    displays = quartz_display_bounds()
+    main_id = Quartz.CGMainDisplayID()
+    main = Quartz.CGDisplayBounds(main_id)
+    points = (int(main.size.width), int(main.size.height))
+    pixels = (int(Quartz.CGDisplayPixelsWide(main_id)), int(Quartz.CGDisplayPixelsHigh(main_id)))
+    image, origin_x, origin_y = ac.grab_logical()
+    asked = (10, 20, 64, 48)
+    part, part_x, part_y = ac.grab_logical(asked)
+    raw = ImageGrab.grab(bbox=(0, 0, points[0], points[1]), scale_down=True)
+    blank = image.convert("L").getextrema() == (0, 0)
+    worked = (not blank and judge_logical_frame(
+        (tuple(image.size), (origin_x, origin_y)), displays,
+        (tuple(part.size), (part_x, part_y)), asked))
+    return Outcome(
+        worked,
+        f"frame {tuple(image.size)} at {(origin_x, origin_y)}; {len(displays)} display(s) {displays}; "
+        f"main display {points} points, {pixels} pixels; region {asked} came back "
+        f"{tuple(part.size)} at {(part_x, part_y)}; Pillow scale_down gave {tuple(raw.size)} for {points}"
+        + ("; every pixel is black" if blank else ""))
+
+
 PROBES: List[Tuple[str, Callable[[], Outcome]]] = [
     ("backend-selection", probe_backend),
     ("screen-size", probe_screen_size),
@@ -318,6 +466,20 @@ PROBES: List[Tuple[str, Callable[[], Outcome]]] = [
     ("accessibility-tree", probe_accessibility),
     ("recorder", probe_recorder),
     ("window-management", probe_window_management),
+]
+
+#: Probes no runner has measured yet: run and printed in both modes, judged in
+#: neither. Each was written on Windows, against the tests or fakes it names.
+#:
+#: ``click-state-readback`` and ``minimised-window-by-id`` re-run tests that
+#: did pass on macos-14 inside the headless suite (2026-10-09, Python 3.10 and
+#: 3.14) -- but as a child pytest of *this* job, with a skip counted as "did
+#: not work", they have not run anywhere. ``grab-logical-points`` has never
+#: executed on a Mac at all.
+REPORTED: List[Tuple[str, Callable[[], Outcome]]] = [
+    ("click-state-readback", probe_click_state),
+    ("minimised-window-by-id", probe_minimised_window),
+    ("grab-logical-points", probe_grab_logical),
 ]
 
 
@@ -335,16 +497,13 @@ def main(argv: Optional[List[str]] = None) -> int:
     print("-" * 72)
 
     outcomes = {name: probe(name, fn) for name, fn in PROBES}
+    print("-" * 72)
+    print("reported, not asserted — no runner has measured these yet:")
+    reported = {name: probe(name, fn) for name, fn in REPORTED}
 
     print("-" * 72)
     if options.measure:
-        print("measurement only — nothing asserted. EXPECTED would be:")
-        print()
-        for name, outcome in outcomes.items():
-            print(f'    "{name}": {outcome.key!r},')
-        print()
-        print("Paste that into EXPECTED and drop --measure to make it a gate.")
-        print("=" * 72)
+        _print_measurement({**outcomes, **reported})
         return 0
 
     if not EXPECTED:
@@ -354,19 +513,43 @@ def main(argv: Optional[List[str]] = None) -> int:
         print("=" * 72)
         return 1
 
-    failed = []
+    changed = _changed(outcomes)
+    misfiled = [f"{name}: is in both REPORTED and EXPECTED; move it to PROBES"
+                for name in reported if name in EXPECTED]
+    print(f"{len(outcomes) - len(changed)}/{len(outcomes)} probes match "
+          f"what this runner was measured to permit")
+    for line in changed + misfiled:
+        print(f"  CHANGED: {line}")
+    if reported:
+        print("measured but not asserted; to make one a gate, move it from")
+        print("REPORTED to PROBES and add its line to EXPECTED:")
+        for name, outcome in reported.items():
+            print(f'    "{name}": {outcome.key!r},')
+    print("=" * 72)
+    return len(changed) + len(misfiled)
+
+
+def _print_measurement(outcomes: Dict[str, Outcome]) -> None:
+    """``--measure``: the lines :data:`EXPECTED` would hold, nothing judged."""
+    print("measurement only — nothing asserted. EXPECTED would be:")
+    print()
+    for name, outcome in outcomes.items():
+        print(f'    "{name}": {outcome.key!r},')
+    print()
+    print("Paste that into EXPECTED and drop --measure to make it a gate.")
+    print("=" * 72)
+
+
+def _changed(outcomes: Dict[str, Outcome]) -> List[str]:
+    """One line per asserted probe that did not do what :data:`EXPECTED` says."""
+    lines = []
     for name, outcome in outcomes.items():
         if name not in EXPECTED:
-            failed.append(f"{name}: not in EXPECTED (a new probe?)")
+            lines.append(f"{name}: not in EXPECTED (a new probe?)")
         elif outcome.key != EXPECTED[name]:
-            failed.append(
+            lines.append(
                 f"{name}: expected {EXPECTED[name]!r}, measured {outcome.key!r}")
-    print(f"{len(outcomes) - len(failed)}/{len(outcomes)} probes match "
-          f"what this runner was measured to permit")
-    for line in failed:
-        print(f"  CHANGED: {line}")
-    print("=" * 72)
-    return len(failed)
+    return lines
 
 
 if __name__ == "__main__":

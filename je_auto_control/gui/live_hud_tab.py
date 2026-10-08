@@ -9,6 +9,7 @@ from PySide6.QtWidgets import (
     QGroupBox, QLabel, QTextEdit, QVBoxLayout, QWidget,
 )
 
+from je_auto_control.gui._dispose import release_resources
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
 from je_auto_control.gui.language_wrapper.multi_language_wrapper import (
     language_wrapper,
@@ -55,6 +56,13 @@ class LiveHUDTab(TranslatableMixin, QWidget):
     def _apply_position_labels(self) -> None:
         self._pos_label.setText(_t("hud_mouse_prefix") + self._pos_suffix)
         self._color_label.setText(_t("hud_pixel_prefix") + self._color_suffix)
+
+    def dispose(self) -> None:
+        """Release what the tab holds beyond its widgets: its sampling timer and its tail on the global logger.
+
+        Called by ``close_tab(key, release=True)`` before the widget is deleted; safe to call twice.
+        """
+        release_resources(self, self._stop)
 
     def retranslate(self) -> None:
         TranslatableMixin.retranslate(self)

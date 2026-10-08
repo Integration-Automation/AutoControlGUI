@@ -2,10 +2,10 @@
 ==============================
 
 為代理的步驟評分需要把證據集中一處——動作是什麼、變了什麼、是否落在目標、宣告的後置條件
-是否成立。``trajectory_eval`` 對*已完成的整條軌跡*依靜態準則評分,沒有逐步證據;
-``agent_trace`` 發出 OTel span(權杖 / 延遲),而非決策品質;``agent_replay`` 保存
+是否成立。``trajectory_eval`` 對\ *已完成的整條軌跡*\ 依靜態準則評分,沒有逐步證據;
+``agent_trace`` 發出 OTel span(權杖 / 延遲),而非決策品質;\ ``agent_replay`` 保存
 ``{obs, action, result}`` 卻不評分。``critic_features`` 正是缺少的逐步層:它把 ``action_effect``
-(有無效果、落在何處)、``observation_delta``(變了多少)與 ``postcondition``(預期結果是否成立)
+(有無效果、落在何處)、``observation_delta``\ (變了多少)與 ``postcondition``\ (預期結果是否成立)
 組合成單一精簡記錄,並附上確定性的規則式評分器,使此功能可完整無頭運作——把可選的
 LLM-as-judge 留給整合者。
 
@@ -36,7 +36,7 @@ LLM-as-judge 留給整合者。
 執行器指令
 ----------
 
-``AC_build_critic_record``(``action`` / ``before`` / ``after`` / ``postcondition`` /
-``radius`` → 該記錄)與 ``AC_score_step``(``record`` → ``{outcome, process_score, reasons}``)。
-兩者以 MCP 工具 ``ac_build_critic_record`` / ``ac_score_step``(唯讀)及 Script Builder 指令
-**Build Critic Record** / **Score Step (rule-based)**(位於 **Native UI** 分類下)形式提供。
+``AC_build_critic_record``\ (``action`` / ``before`` / ``after`` / ``postcondition`` /
+``radius`` → 該記錄)與 ``AC_score_step``\ (``record`` → ``{outcome, process_score, reasons}``)。
+兩者以 MCP 工具 ``ac_build_critic_record`` / ``ac_score_step``\ (唯讀)及 Script Builder 指令
+**Build Critic Record** / **Score Step (rule-based)**\ (位於 **Native UI** 分類下)形式提供。

@@ -16,12 +16,9 @@ Pure standard library; imports no ``PySide6``.
 from __future__ import annotations
 
 import os
-import socket
 import threading
 import time
-import uuid
 from dataclasses import dataclass, field
-from pathlib import Path
 from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple
 
 from je_auto_control.utils.config_sync.adapters import (
@@ -29,28 +26,40 @@ from je_auto_control.utils.config_sync.adapters import (
     SyncAdapter, TriggerSyncAdapter,
 )
 from je_auto_control.utils.config_sync.assets import (
-    AssetManifest, AssetTransport, DirectoryAssetTransport, publish_assets, sync_assets,
+    AssetManifest, AssetTransport, DirectoryAssetTransport, HttpAssetTransport,
+    publish_assets, sync_assets,
 )
 from je_auto_control.utils.config_sync.client import (
     ConfigBucket, ConfigSyncClient, ConfigSyncError, FullResyncRequired, SyncResult,
 )
-from je_auto_control.utils.config_sync.outbox import DEFAULT_DRAIN_ATTEMPTS, SyncOutbox
+from je_auto_control.utils.config_sync.device import default_device_id, default_device_id_path
+from je_auto_control.utils.config_sync.outbox import (
+    DEFAULT_DRAIN_ATTEMPTS, DrainReport, SyncOutbox,
+)
 from je_auto_control.utils.config_sync.versions import SyncOperation
 
 STATE_SYNCED = "synced"
 STATE_PENDING = "pending"
 STATE_CONFLICT = "conflict"
 STATE_OFFLINE = "offline"
+#: Nothing was sent: an earlier failure's retry delay has not run out yet.
+STATE_BACKING_OFF = "backing_off"
 STATE_CANCELLED = "cancelled"
 STATE_RESYNC_REQUIRED = "resync_required"
 
-#: Sections synced when the caller does not choose.
+#: Sections synced when the caller does not choose: the three stores every
+#: machine has. ``scripts`` and ``locators`` join them when their path is given.
 DEFAULT_SECTIONS = ("hotkeys", "triggers", "address_book")
+#: Every section :func:`default_adapters` can build, and the option each needs.
+SYNCABLE_SECTIONS: Dict[str, Optional[str]] = {
+    "hotkeys": None, "triggers": None, "address_book": None,
+    "scripts": "scripts_dir", "locators": "locators_path",
+}
 _STATUS = "status"
 _UNAPPLIED = "unapplied"
 _OPTIONS = frozenset({
     "device_id", "secret", "sections", "scripts_dir", "locators_path", "outbox_path",
-    "assets_dir", "timeout_s", "wait", "max_attempts",
+    "assets_dir", "assets_server", "timeout_s", "wait", "max_attempts", "force",
 })
 
 
@@ -59,57 +68,86 @@ class SyncRunReport:
     """How one sync ended, in the terms the status view shows.
 
     ``state`` is one of ``synced`` / ``pending`` / ``conflict`` / ``offline``
-    / ``cancelled`` / ``resync_required``; ``revision`` the last revision
-    merged from the server; ``pending`` the operations still queued;
-    ``conflicts`` the ``section/key`` names waiting for a choice.
+    / ``backing_off`` / ``cancelled`` / ``resync_required``; ``revision`` the
+    last revision merged from the server; ``pending`` the operations still
+    queued; ``conflicts`` the ``section/key`` names waiting for a choice.
+
+    ``offline`` means this run tried the server and failed. ``backing_off``
+    means it did not try: an earlier failure is still inside its retry
+    delay, so nothing is known about the server now. Either way
+    ``retry_in_s`` says how long until the queue is sent again by itself.
     """
     state: str = STATE_SYNCED
     revision: int = 0
     pending: int = 0
     conflicts: List[str] = field(default_factory=list)
+    #: The sections this run covered, in the order they were synced.
+    sections: List[str] = field(default_factory=list)
     applied: Dict[str, Dict[str, Any]] = field(default_factory=dict)
     withheld: Dict[str, str] = field(default_factory=dict)
     assets: Dict[str, Any] = field(default_factory=dict)
     error: str = ""
     finished_at: float = 0.0
     last_success: float = 0.0
+    retry_in_s: float = 0.0
 
     def to_dict(self) -> Dict[str, Any]:
         """A JSON-ready copy."""
         return {"state": self.state, "revision": self.revision, "pending": self.pending,
-                "conflicts": list(self.conflicts), "applied": dict(self.applied),
+                "conflicts": list(self.conflicts), "sections": list(self.sections),
+                "applied": dict(self.applied),
                 "withheld": dict(self.withheld), "assets": dict(self.assets),
                 "error": self.error, "finished_at": self.finished_at,
-                "last_success": self.last_success}
+                "last_success": self.last_success, "retry_in_s": self.retry_in_s}
 
 
-def default_device_id_path() -> Path:
-    """``~/.je_auto_control/config_sync_device_id``, resolved at call time."""
-    return Path.home() / ".je_auto_control" / "config_sync_device_id"
+def resolve_sections(sections: Any = None, *, scripts_dir: Optional[str] = None,
+                     locators_path: Optional[str] = None) -> List[str]:
+    """The sections a sync covers, in order, for the caller's choice.
 
+    ``None`` (or ``""``, an empty form field) is the default:
+    :data:`DEFAULT_SECTIONS` -- this machine's hotkeys, triggers and address
+    book -- plus ``scripts`` when ``scripts_dir`` is given and ``locators``
+    when ``locators_path`` is. Giving a path therefore *adds* a section; it
+    does not narrow the sync to it. To sync only some sections, name them: a
+    list, or one comma-separated string (``"scripts"``).
 
-def default_device_id() -> str:
-    """This machine's stable sync id, created on first use.
-
-    Version vectors count changes per device id, so two machines must never
-    share one; the id is the host name plus a random suffix, kept in
-    :func:`default_device_id_path`.
+    A named section must be one of :data:`SYNCABLE_SECTIONS` and its store
+    must have been given; a choice that names nothing (``[]``, ``","``) is an
+    error rather than a silent fall back to everything.
     """
-    from je_auto_control.utils.json_store.json_store import atomic_write_text
-    path = default_device_id_path()
-    try:
-        known = path.read_text(encoding="utf-8").strip()
-    except OSError:
-        known = ""
-    if known:
-        return known
-    device_id = f"{socket.gethostname() or 'device'}-{uuid.uuid4().hex[:12]}"
-    try:
-        path.parent.mkdir(parents=True, exist_ok=True)
-        atomic_write_text(path, device_id + "\n")
-    except OSError as error:
-        raise ConfigSyncError(f"cannot store this device's sync id at {path}: {error}") from error
-    return device_id
+    if sections is None or sections == "":
+        return [*DEFAULT_SECTIONS, *(["scripts"] if scripts_dir else []),
+                *(["locators"] if locators_path else [])]
+    given = {"scripts_dir": scripts_dir, "locators_path": locators_path}
+    wanted: List[str] = []
+    for name in _section_names(sections):
+        needs = _checked_section(name)
+        if needs is not None and not given[needs]:
+            raise ConfigSyncError(f"cannot sync section {name!r}: its {needs} is missing")
+        if name not in wanted:
+            wanted.append(name)
+    if not wanted:
+        raise ConfigSyncError(
+            "sections names no section; omit it for the default "
+            f"({', '.join(DEFAULT_SECTIONS)}) or name some of: {', '.join(SYNCABLE_SECTIONS)}")
+    return wanted
+
+
+def _section_names(sections: Any) -> List[Any]:
+    """The names in a ``sections`` value: a list as it is, a string split on commas."""
+    if isinstance(sections, str):
+        # "a,,b" and a trailing comma name nothing extra.
+        return [name.strip() for name in sections.split(",") if name.strip()]
+    return [name.strip() if isinstance(name, str) else name for name in sections]
+
+
+def _checked_section(name: Any) -> Optional[str]:
+    """The option ``name`` needs (``None`` for none); an unknown name is an error."""
+    if not isinstance(name, str) or name not in SYNCABLE_SECTIONS:
+        raise ConfigSyncError(
+            f"cannot sync section {name!r}: unknown; choose from {', '.join(SYNCABLE_SECTIONS)}")
+    return SYNCABLE_SECTIONS[name]
 
 
 def default_adapters(device_id: str, *, sections: Optional[Sequence[str]] = None,
@@ -117,13 +155,14 @@ def default_adapters(device_id: str, *, sections: Optional[Sequence[str]] = None
                      locators_path: Optional[str] = None) -> List[SyncAdapter]:
     """Adapters over this process's hotkey daemon, trigger engine and address book.
 
-    ``scripts`` needs ``scripts_dir`` and ``locators`` needs ``locators_path``;
-    naming a section whose store was not given, or an unknown section, is an
-    error rather than a silent omission.
+    Which sections is decided by :func:`resolve_sections`: without
+    ``sections`` that is hotkeys, triggers and the address book, plus
+    ``scripts`` / ``locators`` when their path is given -- so pass
+    ``sections=["scripts"]`` to sync scripts and nothing else. Naming a
+    section whose store was not given, or an unknown section, is an error
+    rather than a silent omission.
     """
-    wanted = list(sections) if sections else [
-        *DEFAULT_SECTIONS, *(["scripts"] if scripts_dir else []),
-        *(["locators"] if locators_path else [])]
+    wanted = resolve_sections(sections, scripts_dir=scripts_dir, locators_path=locators_path)
     return [_build_adapter(name, device_id, scripts_dir, locators_path) for name in wanted]
 
 
@@ -143,8 +182,7 @@ def _build_adapter(name: str, device_id: str, scripts_dir: Optional[str],
     if name == "locators" and locators_path:
         from je_auto_control.utils.element_repository import ElementRepository
         return LocatorSyncAdapter(device_id, ElementRepository(locators_path))
-    raise ConfigSyncError(
-        f"cannot sync section {name!r}: unknown, or its scripts_dir / locators_path is missing")
+    raise ConfigSyncError(f"cannot sync section {name!r}: its store was not given")
 
 
 def _conflict_names(bucket: ConfigBucket) -> List[str]:
@@ -219,53 +257,76 @@ def _finish(outbox: SyncOutbox, report: SyncRunReport) -> SyncRunReport:
     return report
 
 
+@dataclass(frozen=True)
+class _DrainOptions:
+    """How :func:`run_sync` drains: the caller's cancel, wait, attempts and force."""
+    cancel: Optional[threading.Event] = None
+    wait: bool = False
+    max_attempts: int = DEFAULT_DRAIN_ATTEMPTS
+    force: bool = False
+
+
 def _exchange(client: ConfigSyncClient, outbox: SyncOutbox, device_id: str,
-              cancel: Optional[threading.Event], wait: bool,
-              max_attempts: int) -> Tuple[Optional[SyncResult], str, bool]:
-    """Drain the outbox and pull; ``(result, error, cancelled)``."""
+              options: _DrainOptions) -> Tuple[Optional[SyncResult], DrainReport]:
+    """Drain the outbox and pull; the server's state (``None`` if not reached)."""
     results: List[SyncResult] = []
 
     def send(batch: List[SyncOperation]) -> None:
         results.append(client.push_operations(batch, device_id=device_id))
 
-    drained = outbox.drain(send, cancel=cancel, wait=wait, max_attempts=max_attempts)
+    drained = outbox.drain(send, cancel=options.cancel, wait=options.wait,
+                           max_attempts=options.max_attempts, force=options.force)
     if drained.cancelled or drained.offline:
-        return None, drained.error, drained.cancelled
+        return None, drained
     if not results:
         try:
             results.append(client.push_operations([], device_id=device_id))
         except FullResyncRequired:
             raise
         except ConfigSyncError as error:
-            return None, str(error), False
-    return results[-1], "", False
+            return None, DrainReport(offline=True, error=str(error))
+    return results[-1], drained
+
+
+def _stopped_state(drained: DrainReport) -> str:
+    """The run state for a drain that did not reach the server."""
+    if drained.cancelled:
+        return STATE_CANCELLED
+    return STATE_BACKING_OFF if drained.backing_off else STATE_OFFLINE
 
 
 def run_sync(client: ConfigSyncClient, outbox: SyncOutbox, adapters: Sequence[SyncAdapter], *,
              device_id: str, cancel: Optional[threading.Event] = None, wait: bool = False,
              max_attempts: int = DEFAULT_DRAIN_ATTEMPTS,
-             asset_transport: Optional[AssetTransport] = None) -> SyncRunReport:
+             asset_transport: Optional[AssetTransport] = None,
+             force: bool = False) -> SyncRunReport:
     """Sync once and report the outcome; see the module docstring for the steps.
 
     A failure to reach the server is not an exception: the changes stay in
-    the outbox and the report says ``offline``. A device the group retired
-    gets ``resync_required`` -- call :func:`run_full_resync`.
+    the outbox and the report says ``offline``. A run that falls inside the
+    retry delay of an earlier failure does not contact the server and says
+    ``backing_off`` with ``retry_in_s``; ``force`` (a person asking for a
+    sync *now*) skips that delay once, ``wait`` sleeps through it. A device
+    the group retired gets ``resync_required`` -- call
+    :func:`run_full_resync`.
     """
     baseline = outbox.load_baseline() or ConfigBucket(user_id=client.user_id)
-    report = SyncRunReport(revision=baseline.revision)
+    report = SyncRunReport(revision=baseline.revision,
+                           sections=[adapter.section for adapter in adapters])
     report.withheld = _stage(outbox, adapters, baseline)
     manifest = _script_assets(adapters, baseline)
     if asset_transport is not None and manifest is not None:
         report.assets["published"] = publish_assets(
             _present(manifest), asset_transport, cancel=cancel).to_dict()
     try:
-        result, error, cancelled = _exchange(client, outbox, device_id, cancel, wait, max_attempts)
+        result, drained = _exchange(client, outbox, device_id, _DrainOptions(
+            cancel=cancel, wait=wait, max_attempts=max_attempts, force=force))
     except FullResyncRequired as required:
         report.state, report.error = STATE_RESYNC_REQUIRED, str(required)
         return _finish(outbox, report)
     if result is None:
-        report.state = STATE_CANCELLED if cancelled else STATE_OFFLINE
-        report.error = error
+        report.state = _stopped_state(drained)
+        report.error, report.retry_in_s = drained.error, drained.retry_in_s
         report.conflicts = _conflict_names(baseline)
         return _finish(outbox, report)
     incoming = _script_assets(adapters, result.bucket)
@@ -285,7 +346,8 @@ def run_full_resync(client: ConfigSyncClient, outbox: SyncOutbox,
     offered again by the next :func:`run_sync`.
     """
     baseline = outbox.load_baseline() or ConfigBucket(user_id=client.user_id)
-    report = SyncRunReport(revision=baseline.revision)
+    report = SyncRunReport(revision=baseline.revision,
+                           sections=[adapter.section for adapter in adapters])
     try:
         adopted = client.full_resync(device_id=device_id)
     except ConfigSyncError as error:
@@ -325,7 +387,10 @@ def sync_status(outbox: SyncOutbox) -> Dict[str, Any]:
     status["conflicts"] = _conflict_names(known)
     status["conflict_details"] = _conflict_details(known)
     status["revision"] = known.revision
-    if status["pending"] and status["state"] == STATE_SYNCED:
+    # Live, not the figure the last run stored: the delay keeps running down.
+    status["retry_in_s"] = float(outbox.seconds_until_due(time.time()) or 0.0)
+    waiting_over = status["state"] == STATE_BACKING_OFF and not status["retry_in_s"]
+    if status["pending"] and (status["state"] == STATE_SYNCED or waiting_over):
         status["state"] = STATE_PENDING
     return status
 
@@ -359,21 +424,24 @@ def resolve_conflict(outbox: SyncOutbox, adapters: Sequence[SyncAdapter], *, dev
 
 # --- one-call entry points for the executor, MCP and the GUI -------------------
 
-def _session(server_url: str, user_id: str, options: Mapping[str, Any],
-             ) -> Tuple[ConfigSyncClient, SyncOutbox, List[SyncAdapter], str]:
+def _chosen(options: Mapping[str, Any]) -> Dict[str, Any]:
+    """The options that were given a value; an unknown name is an error."""
     unknown = sorted(set(options) - _OPTIONS)
     if unknown:
         raise ConfigSyncError(f"unknown config sync option(s): {', '.join(unknown)}")
-    chosen = {name: value for name, value in options.items() if value not in (None, "")}
+    return {name: value for name, value in options.items() if value not in (None, "")}
+
+
+def _session(server_url: str, user_id: str, options: Mapping[str, Any],
+             ) -> Tuple[ConfigSyncClient, SyncOutbox, List[SyncAdapter], str]:
+    chosen = _chosen(options)
     device_id = str(chosen.get("device_id") or default_device_id())
     client = ConfigSyncClient(
         server_url, user_id=user_id, timeout_s=float(chosen.get("timeout_s", 5.0)),
+        device_id=device_id,
         secret=chosen.get("secret") or os.environ.get("AC_SIGNALING_SECRET") or None)
     outbox = SyncOutbox(chosen.get("outbox_path"), account=user_id, endpoint=client.server_url)
-    sections = chosen.get("sections")
-    if isinstance(sections, str):
-        sections = [name.strip() for name in sections.split(",") if name.strip()]
-    adapters = default_adapters(device_id, sections=sections,
+    adapters = default_adapters(device_id, sections=options.get("sections"),
                                 scripts_dir=chosen.get("scripts_dir"),
                                 locators_path=chosen.get("locators_path"))
     return client, outbox, adapters, device_id
@@ -384,26 +452,52 @@ def config_sync_run(server_url: str, user_id: str, *,
     """Sync this machine's settings with ``server_url`` once; returns the report.
 
     Options: ``device_id`` (default: this machine's stored id), ``secret``
-    (default ``$AC_SIGNALING_SECRET``), ``sections``, ``scripts_dir``,
+    (default ``$AC_SIGNALING_SECRET``), ``sections`` (see
+    :func:`resolve_sections`: the default is this machine's hotkeys,
+    triggers and address book, and ``scripts_dir`` / ``locators_path`` *add*
+    their section -- pass ``sections="scripts"`` to sync scripts alone; the
+    report's ``sections`` lists what was covered), ``scripts_dir``,
     ``locators_path``, ``outbox_path``, ``assets_dir`` (a folder both
-    machines reach, for scripts too large to inline), ``timeout_s``,
-    ``wait`` (sleep through a retry back-off instead of returning) and
-    ``max_attempts``.
+    machines reach, for scripts too large to inline) or ``assets_server``
+    (true: keep those on the sync server itself, at ``/blobs``), ``timeout_s``,
+    ``wait`` (sleep through a retry back-off instead of returning
+    ``backing_off``), ``force`` (skip that back-off once: someone asked for
+    a sync now) and ``max_attempts``.
     """
     if cancel is not None and not isinstance(cancel, threading.Event):
         raise ConfigSyncError("cancel must be a threading.Event")
     client, outbox, adapters, device_id = _session(server_url, user_id, options)
-    assets_dir = options.get("assets_dir")
     return run_sync(
         client, outbox, adapters, device_id=device_id, cancel=cancel,
-        wait=bool(options.get("wait", False)),
+        wait=bool(options.get("wait", False)), force=bool(options.get("force", False)),
         max_attempts=int(options.get("max_attempts") or DEFAULT_DRAIN_ATTEMPTS),
-        asset_transport=DirectoryAssetTransport(assets_dir) if assets_dir else None).to_dict()
+        asset_transport=_asset_transport(client, options)).to_dict()
 
 
-def config_sync_status(server_url: str, user_id: str,
-                       outbox_path: Optional[str] = None) -> Dict[str, Any]:
-    """The recorded sync state for this account and server; no network."""
+def _asset_transport(client: ConfigSyncClient,
+                     options: Mapping[str, Any]) -> Optional[AssetTransport]:
+    """Where large scripts travel: a shared folder, the sync server, or nowhere."""
+    assets_dir = options.get("assets_dir")
+    if not options.get("assets_server"):
+        return DirectoryAssetTransport(assets_dir) if assets_dir else None
+    if assets_dir:
+        raise ConfigSyncError("give assets_dir or assets_server, not both")
+    return HttpAssetTransport(
+        client.server_url, user_id=client.user_id, timeout_s=client.timeout_s,
+        secret=options.get("secret") or os.environ.get("AC_SIGNALING_SECRET") or None)
+
+
+def config_sync_status(server_url: str, user_id: str, outbox_path: Optional[str] = None,
+                       **options: Any) -> Dict[str, Any]:
+    """The recorded sync state for this account and server; no network.
+
+    Takes the same options as :func:`config_sync_run`, so one options dict
+    serves all four entry points. Only ``outbox_path`` (which may also be
+    given positionally, as before) changes the answer; the others are
+    checked for their names and otherwise ignored, because reading the
+    recorded state needs no device, secret or section.
+    """
+    _chosen(options)
     endpoint = str(server_url).rstrip("/")
     return sync_status(SyncOutbox(outbox_path or None, account=user_id, endpoint=endpoint))
 
@@ -423,9 +517,10 @@ def config_sync_resolve(server_url: str, user_id: str, section: str, key: str,
 
 
 __all__ = [
-    "DEFAULT_SECTIONS", "STATE_CANCELLED", "STATE_CONFLICT", "STATE_OFFLINE", "STATE_PENDING",
+    "DEFAULT_SECTIONS", "STATE_BACKING_OFF", "STATE_CANCELLED", "STATE_CONFLICT",
+    "STATE_OFFLINE", "STATE_PENDING",
     "STATE_RESYNC_REQUIRED", "STATE_SYNCED", "SyncRunReport", "config_sync_full_resync",
-    "config_sync_resolve", "config_sync_run", "config_sync_status", "default_adapters",
-    "default_device_id", "default_device_id_path", "resolve_conflict", "run_full_resync",
-    "run_sync", "sync_status",
+    "SYNCABLE_SECTIONS", "config_sync_resolve", "config_sync_run", "config_sync_status",
+    "default_adapters", "default_device_id", "default_device_id_path", "resolve_conflict",
+    "resolve_sections", "run_full_resync", "run_sync", "sync_status",
 ]

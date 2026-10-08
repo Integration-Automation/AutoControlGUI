@@ -388,6 +388,12 @@ def write(write_string: str, is_shift: bool = False) -> Optional[str]:
 _RECORD_MASK = "***"
 
 
+def _note_secret_for_journal(secret: str) -> None:
+    """Tell a started action journal to mask ``secret`` wherever it appears."""
+    from je_auto_control.utils.action_journal import recorder
+    recorder.note_secret_value(secret)
+
+
 def write_secret(secret: str) -> None:
     """
     輸入機密字串：不寫 log、不記錄、不回傳原文
@@ -407,6 +413,9 @@ def write_secret(secret: str) -> None:
     """
     if not isinstance(secret, str):
         raise AutoControlKeyboardException("write_secret needs a string")
+    # Before anything can fail: a started action journal masks the value by
+    # exact match in whatever it writes from here on (held in memory only).
+    _note_secret_for_journal(secret)
     if not callable(getattr(keyboard, "type_unicode_unit", None)):
         raise AutoControlKeyboardException(
             "write_secret: this platform's keyboard backend cannot type Unicode text exactly")

@@ -1,5 +1,5 @@
 時間序列轉換
-==========
+============
 
 ``observability`` 的計數器與量規只儲存*當前*值 —— 沒有任何東西能把計數器轉成每秒速率 —— 而
 ``cost_telemetry`` 只以固定的「天」分桶。本功能在 ``(timestamp, value)`` 序列上加入 Prometheus 風格的
@@ -24,10 +24,10 @@
     ts_downsample([(0, 1), (3, 3), (5, 10)], 5, "avg")   # [(0, 2.0), (5, 10.0)]
     ts_resample([(0, 0), (20, 20)], 10, fill="linear")   # [(0,0),(10,10),(20,20)]
 
-``ts_rate`` / ``ts_increase`` 把值下降視為計數器重置(Prometheus 語意);``ts_irate`` 是最後兩個樣本的
-瞬時速率;``ts_delta`` / ``ts_idelta`` 是量規的首尾差與最後兩點差。``ts_downsample`` 把序列滾成 ``bucket_s``
+``ts_rate`` / ``ts_increase`` 把值下降視為計數器重置(Prometheus 語意);\ ``ts_irate`` 是最後兩個樣本的
+瞬時速率;\ ``ts_delta`` / ``ts_idelta`` 是量規的首尾差與最後兩點差。``ts_downsample`` 把序列滾成 ``bucket_s``
 的 tumbling 桶,以 ``avg`` / ``sum`` / ``min`` / ``max`` / ``first`` / ``last`` / ``count`` 聚合。
-``ts_resample`` 對齊到固定網格,以 ``"last"``(前向填補)、``"linear"``(內插)或 ``None``(留缺)填值。
+``ts_resample`` 對齊到固定網格,以 ``"last"``\ (前向填補)、``"linear"``\ (內插)或 ``None``\ (留缺)填值。
 
 執行器命令
 ----------

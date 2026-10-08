@@ -13,7 +13,7 @@ MCP tools, Script Builder): a **CycloneDX SBOM generator** and a
 
 
 CycloneDX SBOM
-=============
+==============
 
 Supply-chain regulation (EU Cyber Resilience Act, US EO 14028) increasingly
 requires a machine-readable Software Bill of Materials. ``build_sbom`` walks
@@ -35,7 +35,7 @@ action files alongside code. Exposed as ``AC_generate_sbom`` /
 
 
 Duration-aware suite sharding
-============================
+=============================
 
 Splitting a suite across N workers by *count* wastes time when tests differ
 in duration — the slowest worker defines wall-clock. ``shard_flows`` balances

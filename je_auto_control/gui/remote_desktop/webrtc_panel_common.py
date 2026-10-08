@@ -1,7 +1,8 @@
 """Signals, defaults and config readers shared by the WebRTC host and viewer panels."""
 from __future__ import annotations
 
-from typing import Optional, Tuple
+import functools
+from typing import Any, Callable, Optional, Tuple
 
 from PySide6.QtCore import QObject, Signal
 from PySide6.QtGui import QImage
@@ -9,6 +10,9 @@ from PySide6.QtWidgets import QWidget
 
 from je_auto_control.gui.remote_desktop._webrtc_types import AvFrameT, WebRTCConfigT
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
+from je_auto_control.gui._slow_op import StopQueue
+from je_auto_control.gui.remote_desktop._helpers import _t
+from je_auto_control.gui.task_controller import TaskHandle, task_controller
 
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.remote_desktop import (
@@ -64,10 +68,48 @@ class _PanelSignals(QObject):
 class _PanelPart(TranslatableMixin, QWidget):
     """Base of every WebRTC panel mixin: each one is a slice of a translatable ``QWidget``.
 
-    It adds nothing at run time. It is what lets a mixin use the widget API,
-    ``_tr`` and the attributes its sibling mixins set, the way the methods did
-    while they all sat in one class body.
+    It is what lets a mixin use the widget API, ``_tr`` and the attributes its
+    sibling mixins set, the way the methods did while they all sat in one class
+    body. The one thing it adds is what both panels need around a shutdown that
+    left the GUI thread: the queue it goes to and the text shown meanwhile.
     """
+
+    # Set by each panel's __init__: shutdowns of sessions the panel let go of.
+    _stops: StopQueue
+
+    def _show_idle(self) -> None:
+        """Show "idle" -- or "stopping" while a session this panel let go of is still closing."""
+        key = "gui_op_stopping" if self._stops.pending else "rd_webrtc_status_idle"
+        self._status_label.setText(_t(key))
+
+    def _on_stops_drained(self) -> None:
+        """GUI thread: the last shutdown reported; a "stopping" still on show becomes "idle"."""
+        if self._status_label.text() == _t("gui_op_stopping"):
+            self._status_label.setText(_t("rd_webrtc_status_idle"))
+
+
+def start_panel_task(panel: QWidget, attribute: str, work: Callable[..., object],
+                     on_result: Callable[[Any], object],
+                     on_error: Callable[[Any], object]) -> bool:
+    """Run ``work(token)`` off the GUI thread as ``panel.<attribute>``; one at a time.
+
+    Returns ``False`` (and starts nothing) while the previous task under the
+    same attribute has not ended. The attribute is ``None`` again once the
+    outcome has been delivered, which is what a test waits for.
+    """
+    if getattr(panel, attribute, None) is not None:
+        return False
+    task = task_controller().submit(work, owner=panel)
+    setattr(panel, attribute, task)
+    task.result.connect(on_result)
+    task.error.connect(on_error)
+    task.finished.connect(functools.partial(_clear_panel_task, panel, attribute, task))
+    return True
+
+
+def _clear_panel_task(panel: QWidget, attribute: str, task: TaskHandle) -> None:
+    if getattr(panel, attribute, None) is task:
+        setattr(panel, attribute, None)
 
 
 def _checked_or(panel: QWidget, attr: str, default: bool = False) -> bool:

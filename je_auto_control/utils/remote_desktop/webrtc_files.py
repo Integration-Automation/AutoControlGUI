@@ -31,6 +31,7 @@ from typing import Callable, Optional
 
 from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
+from je_auto_control.utils.remote_desktop.file_sync import note_incoming
 from je_auto_control.utils.remote_desktop.webrtc_transport import get_bridge
 
 
@@ -175,6 +176,9 @@ class FileTransferReceiver:
             return
         try:
             current["fh"].close()
+            # Before the rename, so a folder mirror watching the inbox never
+            # sees the file under its final name without knowing where it came from.
+            note_incoming(current["path"], current["part"])
             os.replace(current["part"], current["path"])
         except OSError as error:
             current["part"].unlink(missing_ok=True)

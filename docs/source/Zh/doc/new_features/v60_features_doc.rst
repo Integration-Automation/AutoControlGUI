@@ -1,5 +1,5 @@
 授權政策閘門
-===========
+============
 
 ``build_sbom`` 會記錄每個元件的授權*名稱*,但從未對它做判斷 —— copyleft 或其他不被允許的授權
 可能在無人察覺下隨產品出貨。本功能補上政策閘門:把 SBOM 的授權字串正規化為 SPDX id,以
@@ -32,11 +32,11 @@
 ``normalize_spdx`` 把寬鬆的名稱(``"MIT License"`` → ``MIT``、``"Apache 2.0"`` →
 ``Apache-2.0``)對應到 SPDX id。``evaluate_license`` 回傳 ``allowed`` / ``denied`` /
 ``unknown``:``deny`` 裡的授權一律不接受;沒給 ``allow`` 時其他授權都接受，空的 ``allow`` 清單則一個都不接受;
-缺少或格式錯誤的運算式為 ``unknown``。SPDX **運算式**會被解析 —— ``"MIT OR GPL-3.0-only"`` 是*擇一*
-(任一運算元被允許即允許，即使另一個被拒),``"MIT AND GPL-3.0-only"`` 需要每個運算元都被允許,``AND``
-比 ``OR`` 先結合、括號可分組,``X WITH exception`` 以 ``X`` 判定。id 比對不分大小寫,``GPL-2.0+`` 與
+缺少或格式錯誤的運算式為 ``unknown``。SPDX **運算式**\ 會被解析 —— ``"MIT OR GPL-3.0-only"`` 是\ *擇一*
+(任一運算元被允許即允許，即使另一個被拒),\ ``"MIT AND GPL-3.0-only"`` 需要每個運算元都被允許,\ ``AND``
+比 ``OR`` 先結合、括號可分組,\ ``X WITH exception`` 以 ``X`` 判定。id 比對不分大小寫,\ ``GPL-2.0+`` 與
 已淘汰的 ``GPL-2.0`` 分別視為 ``GPL-2.0-or-later`` 與 ``GPL-2.0-only``。每個違規為
-``{name, version, license, status}``;``denied`` 對應 SARIF ``error``,``unknown`` 對應
+``{name, version, license, status}``;\ ``denied`` 對應 SARIF ``error``,\ ``unknown`` 對應
 ``warning``。
 
 執行器命令

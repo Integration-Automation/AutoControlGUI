@@ -18,7 +18,7 @@
 
 - **一套 API，七個平台。** `wrapper/platform_wrapper.py` 在匯入時挑選後端；同一份腳本在
   Windows、macOS、X11 與 Wayland 上都不需要改寫。
-- **不寫 Python 也能腳本化。** 848 個 `AC_*` 指令涵蓋全部功能，因此一個 JSON 檔能做到函式庫
+- **不寫 Python 也能腳本化。** 851 個 `AC_*` 指令涵蓋全部功能，因此一個 JSON 檔能做到函式庫
   能做的任何事——包含迴圈、分支、try/catch、巨集與變數。
 - **預設無頭執行。** `import je_auto_control` 絕不會載入 Qt。GUI 是選用套件，包在同一個無頭核心之外。
 - **四種定位方式。** 樣板比對、OCR、無障礙樹、視覺語言模型——可透過錨點定位器與自癒後備串接組合。
@@ -218,7 +218,7 @@ python -c "import je_auto_control; je_auto_control.start_autocontrol_gui()"
 | 自然語言規劃 | `plan_actions`、`run_from_description` | `AC_llm_plan` | LLM Planner |
 | Computer-use agent | `AgentLoop`、`run_agent` | `AC_run_agent` | Computer Use |
 | 錄製與重播 | `record`、`stop_record` | `AC_record`、`AC_stop_record` | Record |
-| JSON 腳本 | `execute_action`、`execute_files` | 全部 848 個指令 | Script、Script Builder |
+| JSON 腳本 | `execute_action`、`execute_files` | 全部 851 個指令 | Script、Script Builder |
 | 變數與流程控制 | `execute_action_with_vars` | `AC_set_var`、`AC_loop`、`AC_for_each`、`AC_try`、`AC_retry` | Variables |
 | 資料驅動執行 | — | `AC_for_each_row`（CSV／JSON／SQLite／Excel） | Data Sources |
 | 斷言 | `assert_text`、`assert_image` | `AC_assert_text` 等 21 個 | Assertions |
@@ -395,6 +395,98 @@ Windows、macOS（pyobjc）與 X11（含 XWayland）；純 Wayland session 的�
 
 ---
 
+## 設定
+
+AutoControl 讀取的每一個環境變數。這裡沒有任何一項是必填的：完全不設定時，AutoControl 會自行選擇平台後端，伺服器只綁定 `127.0.0.1`，所有需要主動開啟的功能（簽章強制、RBAC、USB 直通、工具路徑限制）都是關閉的。[設定參考](https://autocontrol.readthedocs.io/en/latest/Zh/doc/configuration/configuration_doc.html)（[原始檔](../docs/source/Zh/doc/configuration/configuration_doc.rst)）列出完整的可接受值，並把每個變數連到說明該功能的頁面；CI 會拿它以及下面的表格和程式碼比對。
+
+### 平台後端
+
+| 變數 | 預設 | 作用 |
+|---|---|---|
+| `JE_AUTOCONTROL_WIN32_BACKEND` | `sendinput` | 設成 `interception` 時鍵盤與滑鼠改走 Interception 驅動程式；找不到驅動或 DLL 時會警告並退回 `SendInput`。 |
+| `JE_AUTOCONTROL_LINUX_BACKEND` | `x11` | 設成 `uinput` 時直接寫入核心輸入事件；`/dev/uinput` 無法寫入時會警告並退回 XTest。 |
+| `JE_AUTOCONTROL_LINUX_DISPLAY_SERVER` | `auto` | 決定載入哪一個 Linux 後端：`auto` 讀取 `XDG_SESSION_TYPE` 與 `WAYLAND_DISPLAY`；`wayland` 或 `x11` 則強制指定（在 Wayland 工作階段設成 `x11` 只能操作 XWayland 視窗）。 |
+
+### Windows Interception 驅動程式
+
+| 變數 | 預設 | 作用 |
+|---|---|---|
+| `JE_AUTOCONTROL_INTERCEPTION_DLL` | 未設定：先找 `PATH`，再找套件旁邊 | `interception.dll` 的完整路徑。 |
+| `JE_AUTOCONTROL_INTERCEPTION_KEYBOARD` | `1` | 鍵盤事件要送往的 Interception 裝置編號（`1`–`10`）。 |
+| `JE_AUTOCONTROL_INTERCEPTION_MOUSE` | `11` | 滑鼠事件要送往的 Interception 裝置編號（`11`–`20`）。 |
+
+### Wayland
+
+| 變數 | 預設 | 作用 |
+|---|---|---|
+| `JE_AUTOCONTROL_WAYLAND_INPUT_BACKEND` | `auto` | 設成 `cli` 時透過 `ydotool` 送出輸入，完全不向桌面 portal 提出要求。這是啟動前就做好的選擇：使用者拒絕授權後，AutoControl 不會自行切換過去。 |
+| `JE_AUTOCONTROL_WAYLAND_EI_WORKER` | 未設定 | 設成 `1` 時把 libei 工作階段放到輔助行程裡執行，而不是放在本行程。 |
+| `JE_AUTOCONTROL_WAYLAND_POINTER_ACCEL` | `warn` | 只影響 `ydotool` 路徑的絕對移動（那其實是會被合成器加速的相對位移）：`warn` 警告一次後照樣移動，`flat` 表示加速已關閉、不再警告，`strict` 直接拒絕移動。 |
+| `JE_AUTOCONTROL_WAYLAND_CAPTURE_COMMAND` | 未設定 | 自訂的截圖指令列，以 `{output}` 表示 PNG 的輸出路徑。優先於 `grim`、`gnome-screenshot`、`spectacle` 與 portal。 |
+| `JE_AUTOCONTROL_WAYLAND_RECORD_DEVICES` | 未設定：一個都不讀 | `PhysicalRecorder` 可以讀取的 `/dev/input/event*` 裝置（以逗號分隔）；實體輸入錄製必須逐一指定裝置才會啟用。 |
+
+### MCP 伺服器
+
+| 變數 | 預設 | 作用 |
+|---|---|---|
+| `JE_AUTOCONTROL_MCP_READONLY` | 未設定 | 設成 `1` 時只提供、也只能呼叫標示為唯讀的工具。 |
+| `JE_AUTOCONTROL_MCP_TOOL_MODE` | `full` | `tools/list` 要提供登錄表的多少內容：`full`、`progressive` 或 `static`。未知的值會報錯，不會被當成 `full`。 |
+| `JE_AUTOCONTROL_MCP_TOOL_PROFILE` | 未設定 | `static` 模式的工具清單：以逗號分隔的工具名稱與 `category:<名稱>`。 |
+| `JE_AUTOCONTROL_MCP_ALIASES` | `1` | 設成 `0` 時不註冊 `ac_*` 工具之外的簡短別名（`click`、`screenshot` …）。 |
+| `JE_AUTOCONTROL_MCP_TOKEN` | 未設定 | HTTP 傳輸的 Bearer 權杖。啟用 RBAC 之後不再接受。 |
+| `JE_AUTOCONTROL_MCP_ALLOWED_ORIGINS` | 未設定：只接受本機來源 | HTTP 傳輸額外接受的瀏覽器來源（以逗號分隔，須完全相符，例如 `https://example.test:8443`）。 |
+| `JE_AUTOCONTROL_MCP_CONFIRM_DESTRUCTIVE` | 未設定 | 設成 `1` 時具破壞性的工具在執行前先向用戶端要求確認（MCP elicitation）。 |
+| `JE_AUTOCONTROL_MCP_PATH_ROOTS` | 未設定：不限制 | 工具的每一個檔案參數都必須落在這些目錄內（以作業系統的路徑分隔字元分隔）。 |
+| `JE_AUTOCONTROL_MCP_PATH_ROOTS_FROM_CLIENT` | 未設定 | 設成 `1` 時同時接受 MCP 用戶端透過 `roots/list` 回報的根目錄。 |
+| `JE_AUTOCONTROL_MCP_ENV_REF_ALLOW` | 未設定：不限制 | `ac_resolve_ref` 可以讀取的環境變數名稱（以逗號分隔，可用 `fnmatch` 樣式）；設了卻沒有指名任何變數時，一個都不允許。 |
+| `JE_AUTOCONTROL_MCP_AUDIT` | 未設定 | JSON-lines 檔案的路徑，每一次 `tools/call` 寫入一筆記錄。 |
+| `JE_AUTOCONTROL_MCP_ERROR_SHOTS` | 未設定 | 工具每次失敗時存放截圖的目錄。 |
+| `JE_AUTOCONTROL_FAKE_BACKEND` | 未設定 | 設成 `1` 時 MCP 伺服器只在記憶體中記錄滑鼠、鍵盤與剪貼簿呼叫而不實際執行，供沒有顯示器的 CI 使用。 |
+
+### REST／RBAC 與 chat-ops
+
+| 變數 | 預設 | 作用 |
+|---|---|---|
+| `JE_AUTOCONTROL_RBAC_USERS` | 未設定：沿用共用權杖 | 使用者檔案的路徑。設定它就等於為 REST API 與 MCP HTTP 傳輸啟用角色。 |
+| `JE_AUTOCONTROL_CHATOPS_SCRIPT_ROOT` | 未設定：`run` 會被拒絕 | chat-ops 的 `run` 指令唯一可以載入動作檔的目錄。 |
+
+### 執行與簽署動作檔
+
+| 變數 | 預設 | 作用 |
+|---|---|---|
+| `JE_AUTOCONTROL_ALLOWED_PACKAGES` | 未設定：一個都不允許 | `AC_add_package_to_executor` 可以載入的套件（以逗號分隔，含子模組），對所有進入點生效。只在行程啟動時讀取一次。 |
+| `JE_AUTOCONTROL_REQUIRE_SIGNED_ACTIONS` | 未設定 | 設成 `1` 時所有會執行動作檔的路徑，都拒絕沒有有效簽章檔的動作檔。 |
+| `JE_AUTOCONTROL_ACTION_SIGNING_PRIVATE_KEY` | 未設定 | Ed25519 私鑰（PEM）的路徑。只在負責簽署的機器上設定；設定後簽署會寫出第 2 版的簽章檔。 |
+| `JE_AUTOCONTROL_ACTION_SIGNING_PUBLIC_KEY` | 未設定 | 對應公鑰的路徑。在每一台執行端設定：它只能驗證，不能簽署。 |
+| `JE_AUTOCONTROL_ACTION_SIGNING_PASSPHRASE` | 未設定 | 私鑰建立時若有設定通行碼，在這裡提供。 |
+| `JE_AUTOCONTROL_ACCEPT_LEGACY_ACTION_SIGNATURES` | 未設定 | 設成 `1` 是遷移模式：設定公鑰之後，第 2 版之前寫出的 HMAC 簽章檔會被拒絕，除非設定了這個變數。所有檔案重新簽署後請再關掉。 |
+
+### 遠端桌面與信令
+
+| 變數 | 預設 | 作用 |
+|---|---|---|
+| `JE_AUTOCONTROL_REMOTE_DOWNLOAD_DIR` | `~/Downloads/AutoControl` | 遠端桌面檢視端存放主機傳來檔案的目錄。收到的路徑一律限制在這個目錄內。 |
+| `JE_AUTOCONTROL_USB_PASSTHROUGH` | 未設定 | 設成 `1` 時在遠端桌面通道上啟用 USB 直通指令。 |
+| `AC_SIGNALING_SECRET` | 未設定 | 信令／設定同步伺服器的共用密鑰（`X-Signaling-Secret`）。伺服器在沒有 `--shared-secret` 時讀取它，`config_sync_run` 在沒有 `secret` 時也讀取它。 |
+| `AC_SIGNALING_CONFIG_DB` | `~/.je_auto_control/config_sync.sqlite3` | 信令伺服器存放設定同步資料的 SQLite 檔案。 |
+
+### GUI
+
+| 變數 | 預設 | 作用 |
+|---|---|---|
+| `JE_AUTOCONTROL_GUI_SETTINGS` | `~/.je_auto_control/gui_settings.ini` | 主視窗保存佈景主題、文字大小、導覽面板與視窗位置的檔案。設成 `off`、`0`、`none`、`false` 或空字串時，不讀也不寫。 |
+
+### 記錄檔、資料與測試
+
+| 變數 | 預設 | 作用 |
+|---|---|---|
+| `JE_AUTOCONTROL_LOG_FILE` | `~/.je_auto_control/logs/AutoControlGUI.log` | 記錄檔寫入的位置。指定空裝置（`/dev/null`、`NUL`）即可關閉檔案輸出。在寫入第一筆記錄時才讀取，而不是在 import 時。 |
+| `JE_AUTOCONTROL_ENV` | `default` | 資產庫目前使用的環境（`active_environment()`），讓同一份腳本在 `dev` 與 `prod` 讀到不同的值。 |
+| `JE_AUTOCONTROL_REDACTION` | `off` | 截圖遮蔽的預設政策：`off`、`moderate` 或 `strict`。未知的名稱會報錯，不會被當成 `off`。 |
+| `JE_AUTOCONTROL_PYTEST_ARTIFACTS` | `./autocontrol_screenshots` | 測試沒有使用 `autocontrol_screenshot_dir` fixture 時，pytest 外掛寫入失敗截圖的目錄。 |
+
+---
+
 ## 文件與範例
 
 | 資源 | 內容 |
@@ -426,6 +518,10 @@ python -m pytest test/integrated_test/        # 跨模組流程測試
 ruff check je_auto_control/
 pylint je_auto_control/
 bandit -c pyproject.toml -r je_auto_control/
+
+python test/verify/typing_contract_verify.py            # mypy，整個套件，三個目標平台
+python test/verify/typing_contract_verify.py --extras   # 同一項檢查，改用真正的 PySide6／aiortc 型別
+python -m sphinx -b html -W docs/source docs/_build/html  # 文件，警告視為錯誤
 ```
 
 歡迎貢獻——請見 [CONTRIBUTING.md](../CONTRIBUTING.md) 與

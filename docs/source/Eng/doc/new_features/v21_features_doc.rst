@@ -13,7 +13,7 @@ MCP tools, Script Builder).
 
 
 Flow checkpoint & resume
-=======================
+========================
 
 A multi-hour unattended flow that dies at step 400 should not restart from
 zero. :func:`run_resumable` persists ``{run_id, step_index, variables}``
@@ -45,7 +45,7 @@ Executor / MCP commands:
 
 
 ``py.typed`` marker
-==================
+===================
 
 The package now ships a PEP 561 ``py.typed`` marker, so Mypy / Pyright /
 Pylance honor AutoControl's inline type annotations in downstream code —

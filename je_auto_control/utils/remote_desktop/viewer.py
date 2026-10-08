@@ -10,12 +10,16 @@ from typing import Any, Callable, Deque, Dict, Mapping, Optional, Tuple
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.remote_desktop.auth import compute_response
 from je_auto_control.utils.remote_desktop.clipboard_sync import (
-    ClipboardSyncError, decode as decode_clipboard, encode_image, encode_text,
+    ClipboardEchoGuard, ClipboardSyncError, decode as decode_clipboard, encode_image,
+    encode_text,
 )
 from je_auto_control.utils.remote_desktop.file_transfer import (
     FileReceiver, FileTransferError, default_download_dir, send_file,
 )
 from je_auto_control.utils.remote_desktop.host_id import validate_host_id
+from je_auto_control.utils.remote_desktop.input_send_queue import (
+    InputSendQueue, set_send_timeout,
+)
 from je_auto_control.utils.remote_desktop.protocol import (
     AuthenticationError, MessageType, ProtocolError,
 )
@@ -84,8 +88,17 @@ class RemoteDesktopViewer:
 
     Frames are delivered to ``on_frame`` from a background thread, so the
     callback must be quick or hand work off (e.g. via ``QMetaObject`` for
-    Qt). ``send_input`` is safe to call from any thread.
+    Qt). ``send_input`` is safe to call from any thread and never waits for
+    the socket: it queues the event for a writer thread (see
+    :mod:`~je_auto_control.utils.remote_desktop.input_send_queue`). A write
+    that fails or stalls is reported through ``on_error``, and the viewer
+    then reads as not connected.
     """
+
+    #: Seconds a blocking write (input, clipboard, file chunk) may wait for the host.
+    SEND_TIMEOUT_S = 10.0
+    #: Input events that may wait for the writer before pointer moves give way.
+    INPUT_QUEUE_LIMIT = 256
 
     def __init__(
             # Each callback is a documented public hook; bundling them would
@@ -124,6 +137,8 @@ class RemoteDesktopViewer:
         self._on_viewer_cursor = on_viewer_cursor
         self._on_chat = on_chat
         self._file_receiver: Optional[FileReceiver] = None
+        # What this viewer and the host have exchanged over the clipboard.
+        self._clipboard_guard = ClipboardEchoGuard()
         self._expected_host_id = (validate_host_id(expected_host_id)
                                   if expected_host_id else None)
         self._remote_host_id: Optional[str] = None
@@ -141,6 +156,7 @@ class RemoteDesktopViewer:
         self._shutdown = threading.Event()
         self._receiver: Optional[threading.Thread] = None
         self._connected = False
+        self._input_queue: Optional[InputSendQueue] = None
         # Phase 6.9: latest USB device list pushed by the host in
         # response to a USB_LIST_REQUEST. Reader threads write,
         # callers block on the event until a fresh reply arrives.
@@ -221,7 +237,10 @@ class RemoteDesktopViewer:
         # that outlived disconnect()'s join would see it cleared and resume beside
         # the new run.
         self._shutdown = threading.Event()
+        # A new session: the host may hold anything on its clipboard now.
+        self._clipboard_guard.reset()
         self._connected = True
+        self._start_input_queue(channel)
         self._receiver = threading.Thread(
             target=self._recv_loop, args=(channel, self._shutdown),
             name="rd-viewer", daemon=True,
@@ -245,14 +264,43 @@ class RemoteDesktopViewer:
         """Hook for transports: TCP wraps directly, WS overrides this."""
         return TcpMessageChannel(sock)
 
+    def _start_input_queue(self, channel: MessageChannel) -> None:
+        """Give this connection its input writer; bound its blocking writes."""
+        sock = getattr(channel, "sock", None)
+        if sock is not None:
+            set_send_timeout(sock, self.SEND_TIMEOUT_S)
+
+        def send(payload: bytes) -> None:
+            channel.send_typed(MessageType.INPUT, payload)
+
+        def abort() -> None:
+            # Not channel.close(): the WebSocket one first writes a close
+            # frame, into the very socket that stopped taking writes.
+            if sock is not None:
+                sock.shutdown(socket.SHUT_RDWR)
+
+        def failed(error: Exception) -> None:
+            # Only this run's connection, as in _recv_loop.
+            if self._channel is channel:
+                self._notify_error(error)
+                self._connected = False
+
+        self._input_queue = InputSendQueue(
+            send, failed, abort=abort, limit=self.INPUT_QUEUE_LIMIT,
+            stall_timeout_s=self.SEND_TIMEOUT_S)
+
     def disconnect(self, timeout: float = 2.0) -> None:
         """Close the connection and join the receiver thread."""
         self._shutdown.set()
         channel = self._channel
+        queue, self._input_queue = self._input_queue, None
         if channel is not None:
             channel.close()
         self._sock = None
         self._channel = None
+        if queue is not None:
+            # After the close above, which unblocks a write still in the socket.
+            queue.close(timeout=timeout)
         receiver = self._receiver
         # Skip the join when disconnect() is invoked from inside an
         # on_frame / on_error callback: those run on the receiver thread, and
@@ -266,13 +314,27 @@ class RemoteDesktopViewer:
         self._connected = False
 
     def send_input(self, action: Mapping[str, Any]) -> None:
-        """JSON-encode ``action`` and forward it as an INPUT message."""
-        if not self._connected or self._channel is None:
+        """Queue ``action`` to be sent as an INPUT message; returns without waiting for the socket.
+
+        Raises :class:`ConnectionError` when the viewer is not connected and
+        :class:`TypeError` for a non-mapping. A write that fails later is
+        reported through ``on_error``. When the host falls behind, queued
+        pointer moves give way to newer events; key, button, scroll and text
+        events are never dropped.
+        """
+        queue = self._input_queue
+        if not self._connected or self._channel is None or queue is None:
             raise ConnectionError(_NOT_CONNECTED_MESSAGE)
         if not isinstance(action, Mapping):
             raise TypeError("action must be a mapping")
-        payload = json.dumps(dict(action), ensure_ascii=False).encode("utf-8")
-        self._channel.send_typed(MessageType.INPUT, payload)
+        queue.put(action)
+
+    def input_backlog(self) -> Dict[str, int]:
+        """How the input writer is keeping up: ``pending`` events and ``dropped_moves`` so far."""
+        queue = self._input_queue
+        if queue is None:
+            return {"pending": 0, "dropped_moves": 0}
+        return {"pending": queue.pending, "dropped_moves": queue.dropped_moves}
 
     def send_ping(self) -> None:
         """Send a no-op PING message; the host treats it as liveness."""
@@ -280,17 +342,33 @@ class RemoteDesktopViewer:
             raise ConnectionError(_NOT_CONNECTED_MESSAGE)
         self._channel.send_typed(MessageType.PING, b"")
 
-    def send_clipboard_text(self, text: str) -> None:
-        """Push ``text`` onto the host's clipboard."""
-        if not self._connected or self._channel is None:
-            raise ConnectionError(_NOT_CONNECTED_MESSAGE)
-        self._channel.send_typed(MessageType.CLIPBOARD, encode_text(text))
+    def send_clipboard_text(self, text: str, *, automatic: bool = False) -> bool:
+        """Push ``text`` onto the host's clipboard; whether it was sent.
 
-    def send_clipboard_image(self, png_bytes: bytes) -> None:
-        """Push a PNG image onto the host's clipboard."""
+        ``automatic=True`` is for code that forwards clipboard *changes* by
+        itself: the text is then not sent when it is exactly what the host
+        just sent here, or what was already sent, so two machines watching
+        each other's clipboard settle after one transfer. Without it (a
+        person asking) the text is always sent.
+        """
+        return self._send_clipboard(encode_text(text), "text", text, automatic)
+
+    def send_clipboard_image(self, png_bytes: bytes, *, automatic: bool = False) -> bool:
+        """Push a PNG image onto the host's clipboard; whether it was sent.
+
+        ``automatic`` as in :meth:`send_clipboard_text`.
+        """
+        return self._send_clipboard(encode_image(png_bytes), "image", bytes(png_bytes),
+                                    automatic)
+
+    def _send_clipboard(self, payload: bytes, kind: str, data: Any, automatic: bool) -> bool:
         if not self._connected or self._channel is None:
             raise ConnectionError(_NOT_CONNECTED_MESSAGE)
-        self._channel.send_typed(MessageType.CLIPBOARD, encode_image(png_bytes))
+        if automatic and not self._clipboard_guard.should_send(kind, data):
+            return False
+        self._channel.send_typed(MessageType.CLIPBOARD, payload)
+        self._clipboard_guard.note_sent(kind, data)
+        return True
 
     def set_file_receiver(self, receiver: FileReceiver) -> None:
         """Replace the default ``FileReceiver`` used for incoming files.
@@ -343,6 +421,9 @@ class RemoteDesktopViewer:
                 "remote_desktop viewer bad CLIPBOARD: %r", error,
             )
             return
+        # Noted before the callback applies it: a watcher that sees the
+        # clipboard change the moment it is set must already find the note.
+        self._clipboard_guard.note_remote(kind, data)
         if self._on_clipboard is not None:
             try:
                 self._on_clipboard(kind, data)
@@ -408,6 +489,9 @@ class RemoteDesktopViewer:
             # reconnect must not mark the new connection as down.
             if self._channel is channel:
                 self._connected = False
+                queue = self._input_queue
+                if queue is not None:
+                    queue.close(timeout=0.0)        # nothing more can be delivered
 
     def _read_and_dispatch(self, channel: MessageChannel) -> bool:
         """Read one typed message and dispatch it; return False on disconnect."""

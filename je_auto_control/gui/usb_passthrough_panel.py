@@ -17,6 +17,7 @@ GUI stays responsive.
 """
 from __future__ import annotations
 
+import functools
 from typing import Any, Callable, List, Optional
 
 from PySide6.QtCore import QTimer
@@ -26,7 +27,9 @@ from PySide6.QtWidgets import (
     QTableWidgetItem, QVBoxLayout, QWidget,
 )
 
+from je_auto_control.gui._dispose import release_resources
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
+from je_auto_control.gui._slow_op import SlowOp
 from je_auto_control.gui._worker_thread import CallWorker as _CallWorker, WorkerHandle, start_worker
 from je_auto_control.gui.language_wrapper.multi_language_wrapper import (
     language_wrapper,
@@ -56,6 +59,15 @@ _DESC_LENGTH = 18
 
 
 
+def _close_sharing(loop: Optional[UsbLoopback]) -> None:
+    """Worker thread: close the loopback the panel let go of, then turn passthrough off."""
+    try:
+        if loop is not None:
+            loop.close()
+    finally:
+        enable_usb_passthrough(False)
+
+
 class UsbPassthroughPanel(TranslatableMixin, QWidget):
     """Simple AnyDesk-style share + use surface for USB passthrough."""
 
@@ -76,6 +88,8 @@ class UsbPassthroughPanel(TranslatableMixin, QWidget):
         self._share = _ShareState()
         self.destroyed.connect(self._share.release)
         self._thread: Optional[WorkerHandle] = None
+        # Closing the loopback joins its pump thread; done off the GUI thread.
+        self._share_op = SlowOp(self)
         self._host_badge = _StatusBadge()
         self._viewer_status = QLabel("")
         self._source_combo = QComboBox()
@@ -201,6 +215,13 @@ class UsbPassthroughPanel(TranslatableMixin, QWidget):
         self._source_combo.setCurrentIndex(index)
         self._source_combo.blockSignals(False)
 
+    def dispose(self) -> None:
+        """Release what the tab holds beyond its widgets: its hotplug timer, its USB watcher share and its loopback.
+
+        Called by ``close_tab(key, release=True)`` before the widget is deleted; safe to call twice.
+        """
+        release_resources(self, self._share.unwatch, self._stop_sharing_if_on)
+
     def retranslate(self) -> None:
         TranslatableMixin.retranslate(self)
         self._populate_source_combo()
@@ -211,7 +232,7 @@ class UsbPassthroughPanel(TranslatableMixin, QWidget):
     # --- sharing lifecycle -------------------------------------------------
 
     def _enable_sharing(self) -> None:
-        if self._loopback is not None:
+        if self._loopback is not None or self._share_op.busy:
             return
         enable_usb_passthrough(True)
         try:
@@ -222,16 +243,29 @@ class UsbPassthroughPanel(TranslatableMixin, QWidget):
             return
         self._refresh_host_badge()
 
+    def _stop_sharing_if_on(self) -> None:
+        """Close the loopback this panel opened; a panel that never shared leaves the passthrough flag alone."""
+        if self._loopback is not None:
+            self._disable_sharing()
+
     def _disable_sharing(self) -> None:
+        if self._share_op.busy:         # a second click while the first is still closing
+            return
+        # The panel lets go of the loopback at once, so nothing opens a device
+        # through it while it closes; close() itself joins a thread.
         loop, self._share.loopback = self._share.loopback, None
-        if loop is not None:
-            loop.close()
-        enable_usb_passthrough(False)
         self._shared_table.setRowCount(0)
+        self._share_op.run(functools.partial(_close_sharing, loop), on_done=self._on_sharing_closed,
+                           on_error=self._on_sharing_closed)
+        self._refresh_host_badge()
+
+    def _on_sharing_closed(self, _outcome: object = None) -> None:
         self._refresh_host_badge()
 
     def _refresh_host_badge(self) -> None:
-        if self._loopback is None:
+        if self._share_op.busy:
+            self._host_badge.set_state("starting", _t("gui_op_stopping"))
+        elif self._loopback is None:
             self._host_badge.set_state("stopped", _t("usb_share_sharing_off"))
         else:
             self._host_badge.set_state("running", _t("usb_share_sharing_on"))

@@ -27,6 +27,7 @@ from PySide6.QtWidgets import (
 
 from je_auto_control.gui.remote_desktop._webrtc_types import MultiViewerHostT, SessionRecorderT, WebRTCDesktopViewerT
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
+from je_auto_control.gui._slow_op import StopQueue
 from je_auto_control.gui.remote_desktop._helpers import (
     _t,
 )
@@ -47,6 +48,7 @@ from je_auto_control.gui.remote_desktop.webrtc_dialogs import (
 from je_auto_control.gui.remote_desktop.webrtc_workers import (
     HostPublishLoopWorker, ViewerAnswerPushWorker, ViewerSignalingWorker,
 )
+from je_auto_control.gui.task_controller import TaskHandle
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.remote_desktop import (
     default_address_book,
@@ -95,6 +97,11 @@ class _WebRTCHostPanel(_HostUiMixin, _HostTrustMixin, _HostMediaMixin, _HostSess
         self._multi_host: Optional[MultiViewerHostT] = None
         self._publish_loop: Optional[HostPublishLoopWorker] = None
         self._manual_session_id: Optional[str] = None
+        self._answer_task: Optional[TaskHandle] = None     # the answer being applied, off-thread
+        self._file_task: Optional[TaskHandle] = None       # the file push in progress, off-thread
+        self._stops = StopQueue(self)
+        self._stops.drained.connect(self._on_stops_drained)
+        self._stopping_sessions: set = set()
         self._adaptive_controller: Optional[AdaptiveBitrateController] = None
         self._adaptive_poller: Optional[StatsPoller] = None
         self._session_pollers: dict = {}    # session_id -> StatsPoller
@@ -217,8 +224,11 @@ class _WebRTCViewerPanel(_ViewerUiMixin, _ViewerFilesMixin, _ViewerAddressBookMi
         super().__init__(parent)
         self._tr_init()
         self._viewer: Optional[WebRTCDesktopViewerT] = None
+        self._file_task: Optional[TaskHandle] = None       # the upload in progress, off-thread
         self._offer_worker: Optional[ViewerSignalingWorker] = None
         self._answer_worker: Optional[ViewerAnswerPushWorker] = None
+        self._stops = StopQueue(self)
+        self._stops.drained.connect(self._on_stops_drained)
         self._address_book = default_address_book()
         from je_auto_control.utils.remote_desktop import default_known_hosts
         self._known_hosts = default_known_hosts()

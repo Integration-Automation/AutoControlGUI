@@ -5,6 +5,7 @@ import time
 from typing import Any, Callable, Dict, Mapping, Optional
 
 from je_auto_control.utils.exception.exceptions import AutoControlException
+from je_auto_control.utils.rbac.deferred import adopted_scope, capture_owner
 from je_auto_control.utils.script_vars.execution import run_level_scope
 
 
@@ -50,6 +51,7 @@ class StateMachine:
             spec.get("states", {}),
         )
         self._execute = execute_action or _default_execute_action
+        self._owner = capture_owner()
         self._guard_eval = guard_eval or _default_guard_eval
         self._context: Dict[str, Any] = {}
         self._max_steps = int(spec.get("max_steps", _DEFAULT_MAX_STEPS))
@@ -69,7 +71,9 @@ class StateMachine:
         Raises :class:`StateMachineError` on budget exhaustion or when
         a state has no fireable transition.
         """
-        with run_level_scope():
+        # Built in a request, run on a thread with no caller of its own: the
+        # actions still run as the user who built the machine.
+        with adopted_scope(self._owner), run_level_scope():
             return self._drive()
 
     def _drive(self) -> Dict[str, Any]:

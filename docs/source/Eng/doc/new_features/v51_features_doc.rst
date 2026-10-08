@@ -6,16 +6,16 @@ do wildcards, recursive descent, or filters, so API/DB responses with arrays are
 awkward to extract from. ``json_query`` adds a focused JSONPath subset over
 already-parsed JSON:
 
-================ ===================================================
-Syntax           Meaning
-================ ===================================================
-``$``            root (optional prefix)
-``.name``        member access
-``[n]`` ``[-n]`` list index (negative from the end)
-``*`` ``[*]``    wildcard (all members / elements)
-``..``           recursive descent
+================= ==================================================
+Syntax            Meaning
+================= ==================================================
+``$``             root (optional prefix)
+``.name``         member access
+``[n]`` ``[-n]``  list index (negative from the end)
+``*`` ``[*]``     wildcard (all members / elements)
+``..``            recursive descent
 ``[?(@.k op v)]`` filter array elements (``op`` ∈ ``== != < <= > >=``)
-================ ===================================================
+================= ==================================================
 
 A filter field may be nested (``@.a.b``), and ``[?(@.k)]`` keeps the elements
 that have ``k``; on an object a filter selects among its member values. The

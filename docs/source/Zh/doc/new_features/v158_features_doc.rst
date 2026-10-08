@@ -36,9 +36,9 @@ OpenCV 的 ``matchTemplate`` 不具旋轉不變性,因此略為傾斜的控制�
 執行器指令
 ----------
 
-``AC_match_rotated``(``template`` / ``min_score`` / ``angles`` / ``scales`` /
-``region`` / ``method`` → ``{found, match}``)與 ``AC_match_rotated_all``(另加
+``AC_match_rotated``\ (``template`` / ``min_score`` / ``angles`` / ``scales`` /
+``region`` / ``method`` → ``{found, match}``)與 ``AC_match_rotated_all``\ (另加
 ``max_results`` / ``nms_iou`` → ``{count, matches}``)。兩者以 MCP 工具
-``ac_match_rotated`` / ``ac_match_rotated_all``(唯讀)及 Script Builder 指令
-**Match Template (rotated)** / **Match Template All (rotated)**(位於 **Image**
+``ac_match_rotated`` / ``ac_match_rotated_all``\ (唯讀)及 Script Builder 指令
+**Match Template (rotated)** / **Match Template All (rotated)**\ (位於 **Image**
 分類下)形式提供。

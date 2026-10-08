@@ -14,6 +14,7 @@ from PySide6.QtWidgets import (
     QFrame, QLabel, QScrollArea, QTabWidget, QVBoxLayout, QWidget,
 )
 
+from je_auto_control.gui._dispose import release_resources
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
 from je_auto_control.gui.remote_desktop._helpers import _t
 from je_auto_control.gui.remote_desktop.connection_screen import (
@@ -158,6 +159,16 @@ class RemoteDesktopTab(TranslatableMixin, QWidget):
                 (_build_webrtc_placeholder(), "rd_webrtc_unavailable_tab"),
             )
         return sub_panels
+
+    def dispose(self) -> None:
+        """Release what the sub-panels hold beyond their widgets: every status, preview and reconnect timer.
+
+        Called by ``close_tab(key, release=True)``; safe to call twice. A host
+        or a session a panel opened is left running -- it belongs to the
+        registry, where scripts and the other panels still see it.
+        """
+        disposals = [getattr(panel, "dispose", None) for panel in self._sub_panels]
+        release_resources(self, *(dispose for dispose in disposals if callable(dispose)))
 
     def retranslate(self) -> None:
         TranslatableMixin.retranslate(self)

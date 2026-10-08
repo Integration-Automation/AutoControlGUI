@@ -928,7 +928,12 @@ def AC_config_sync_resolve(
 def AC_config_sync_run(server_url: str, user_id: str, *, cancel: Any = ..., **options: Any) -> Dict[str, Any]:
     """Sync this machine's settings with ``server_url`` once; returns the report."""
 
-def AC_config_sync_status(server_url: str, user_id: str, outbox_path: Optional[str] = ...) -> Dict[str, Any]:
+def AC_config_sync_status(
+    server_url: str,
+    user_id: str,
+    outbox_path: Optional[str] = ...,
+    **options: Any,
+) -> Dict[str, Any]:
     """The recorded sync state for this account and server; no network."""
 
 def AC_confusable_compare(first: str, second: str) -> Dict[str, Any]:
@@ -1498,8 +1503,9 @@ def AC_generate_code_from_journal(
     target: str = ...,
     style: str = ...,
     output: str | None = ...,
+    diff_against: str | None = ...,
 ) -> Dict[str, Any]:
-    """Build a candidate script from one journal run, optionally writing it."""
+    """Build a candidate script from one journal run, optionally diffing and writing it."""
 
 def AC_generate_data(
     schema: Dict[str, Any],
@@ -2000,6 +2006,9 @@ def AC_legacy_info(
 
 def AC_list_assets(environment: str | None = ..., db: str | None = ...) -> Dict[str, Any]:
     """Adapter: list assets, optionally restricted to one environment."""
+
+def AC_list_executions() -> List[Dict[str, Any]]:
+    """Adapter: the stoppable runs in progress."""
 
 def AC_list_plugins(group: str = ...) -> Dict[str, Any]:
     """Adapter: discover third-party plugin command names (no register)."""
@@ -2982,6 +2991,7 @@ def AC_self_heal_click(
     model: str | None = ...,
     raise_on_miss: bool = ...,
     context: Dict[str, str] | None = ...,
+    verify: Dict[str, Any] | None = ...,
 ) -> Dict[str, Any]:
     """Executor adapter: locate with self-heal, then click."""
 
@@ -3191,6 +3201,7 @@ def AC_start_mcp_http_server(
     auth_token: str | None = ...,
     ssl_context: Any = ...,
     user_store: Any = ...,
+    tool_mode: Any = ...,
 ) -> Any:
     """Start and return an :class:`HttpMCPServer`; convenience wrapper."""
 
@@ -3224,6 +3235,9 @@ def AC_start_ws_host(
     max_clients: int = ...,
 ) -> Dict[str, Any]:
     """Executor adapter: start the singleton WebSocket-transport host."""
+
+def AC_stop_execution(run_id: str | None = ..., reason: str = ...) -> Dict[str, Any]:
+    """Adapter: ask one stoppable run (or every other one) to stop."""
 
 def AC_stop_record() -> list:
     """stop current record"""

@@ -21,6 +21,7 @@ from je_auto_control.gui.remote_desktop.webrtc_workers import (
     ViewerAnswerPushWorker, ViewerSignalingWorker,
     retire_worker,
 )
+from je_auto_control.gui._slow_op import stop_each
 from je_auto_control.gui.task_controller import CancellationToken, task_controller
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.remote_desktop import (
@@ -170,7 +171,7 @@ class _ViewerConnectionMixin(_PanelPart):
         self._stop_viewer_if_any()
         self._frame_display.clear()
         self._close_screen_window()
-        self._status_label.setText(_t("rd_webrtc_status_idle"))
+        self._show_idle()
 
     def _validate_required_fields(self, *, needs_server: bool) -> bool:
         token = self._token_edit.text().strip()
@@ -209,29 +210,28 @@ class _ViewerConnectionMixin(_PanelPart):
             retire_worker(worker)
         self._offer_worker = None
         self._answer_worker = None
+        # The panel lets go of each piece here and hands its stop() to the
+        # background, in the order they used to run: the sync engine joins its
+        # watcher, the recorder finalises its file and the viewer waits for
+        # the peer connection to close -- seconds on the GUI thread before.
+        stops = []
         if self._sync_engine is not None:
-            try:
-                self._sync_engine.stop()
-            except (RuntimeError, OSError):
-                pass
+            stops.append(self._sync_engine.stop)
             self._sync_engine = None
             if hasattr(self, "_sync_btn"):
                 self._sync_btn.setChecked(False)
                 self._sync_btn.setText(_t("rd_webrtc_sync_start"))
         self._stop_stats_polling()
         if self._recorder is not None:
-            self._recorder.stop()
+            stops.append(self._recorder.stop)
             self._recorder = None
             self._record_btn.setChecked(False)
             self._record_btn.setText(_t("rd_webrtc_start_recording"))
-        if self._viewer is None:
-            return
-        try:
-            self._viewer.stop()
-        except (RuntimeError, OSError):
-            pass
-        finally:
+        if self._viewer is not None:
+            stops.append(self._viewer.stop)
             self._viewer = None
+        if stops:
+            self._stops.retire(functools.partial(stop_each, *stops))
 
     def _on_auth(self, ok: bool) -> None:
         key = "rd_webrtc_auth_ok" if ok else "rd_webrtc_auth_fail"

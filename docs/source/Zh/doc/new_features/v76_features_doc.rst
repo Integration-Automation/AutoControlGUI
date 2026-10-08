@@ -1,5 +1,5 @@
 W3C Trace Context 傳播
-=====================
+======================
 
 ``observability`` 追蹤器與 ``agent_trace`` 的 span 都不帶任何 ID,因此一次 HTTP 呼叫一端的 span
 無法與它在另一端觸發的工作關聯起來。本功能加入 W3C Trace Context 標準 —— 產生、解析並傳播

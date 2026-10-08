@@ -35,7 +35,7 @@
 執行器指令
 ----------
 
-``AC_match_theme``(``template`` 加上 ``region`` ``[x, y, w, h]`` / ``method`` /
+``AC_match_theme``\ (``template`` 加上 ``region`` ``[x, y, w, h]`` / ``method`` /
 ``min_score`` → ``{found, x, y, width, height, score}``)跨主題切換定位模板。以對應的唯讀
 ``ac_match_theme`` MCP 工具及 Script Builder 指令(位於 **Image** 分類下)形式提供。
-:func:`normalize_theme`(回傳影像陣列)則是 Python API 介面。
+:func:`normalize_theme`\ (回傳影像陣列)則是 Python API 介面。

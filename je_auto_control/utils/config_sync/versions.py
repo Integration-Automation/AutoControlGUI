@@ -29,7 +29,7 @@ import uuid
 from dataclasses import dataclass, field
 from typing import Any, Dict, Iterable, List, Mapping, Optional, Tuple
 
-from je_auto_control.utils.config_sync.client import ConfigSyncError
+from je_auto_control.utils.config_sync.bucket import ConfigSyncError
 
 #: Relations :func:`compare_vectors` reports.
 EQUAL = "equal"

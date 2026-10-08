@@ -112,6 +112,7 @@ class SubscriptionMixin:
         _subscriptions_lock: threading.Lock
         _listeners: Dict[Any, Listener]
         _listeners_lock: threading.Lock
+        _list_changed_listeners: List[Callable[[Any], None]]
         _writer: Optional[Callable[[str], None]]
         #: The notifier for a notification no request asked for, or ``None``.
         _unsolicited_notifier: Callable[[], Optional[Callable[[str, Dict[str, Any]], None]]]
@@ -120,7 +121,31 @@ class SubscriptionMixin:
         def _connection_id(self) -> Any:
             """Identity of the connection the current request arrived on."""
 
+    def add_list_changed_listener(self, listener: Callable[[Any], None]) -> None:
+        """Call ``listener(connection_id)`` whenever the tool registry changes.
+
+        For a transport with peers the dispatcher cannot reach from the
+        thread that changed the registry: it is handed the id of the
+        connection being served on that thread (``None`` for none), which
+        has been notified already.
+        """
+        with self._listeners_lock:
+            self._list_changed_listeners = [*self._list_changed_listeners, listener]
+
+    def remove_list_changed_listener(self, listener: Callable[[Any], None]) -> None:
+        """Stop calling ``listener``; unknown listeners are ignored."""
+        with self._listeners_lock:
+            self._list_changed_listeners = [
+                kept for kept in self._list_changed_listeners if kept != listener]
+
     def _notify_tools_list_changed(self) -> None:
+        try:
+            self._notify_this_peer_list_changed()
+        finally:
+            for listener in self._list_changed_listeners:
+                listener(self._connection_id)
+
+    def _notify_this_peer_list_changed(self) -> None:
         with self._listeners_lock:
             listening = [(key, listener) for key, listener in self._listeners.items()
                          if listener.tools_list_changed]
