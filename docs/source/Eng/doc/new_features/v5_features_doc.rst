@@ -96,7 +96,18 @@ nothing. Each event (``ActionEvent``, ``schema_version`` 1) carries:
   (the process died, ``Ctrl+C``) reads back as ``incomplete``, never as a
   success;
 * ``outcome`` -- the returned value by type and size only (numbers and booleans
-  by value); returned text is never stored, and an outcome is never an input.
+  by value); returned text is never stored, and an outcome is never an input;
+* ``artifacts`` (optional) -- what the step left behind, each
+  ``{"kind": ..., "path": ...}`` or ``{"kind": "trace", "id": ...}``: a file
+  named by a path argument or result key (``file_path``, ``output_path``,
+  ``path``...) that was written while the step ran, a report written by
+  ``generate_html_report`` / ``_json_`` / ``_xml_``, a ``trace_id`` /
+  ``traceparent`` in the result, and anything a command attaches itself with
+  ``note_artifact(kind, path=..., ident=...)``. The error screenshot a
+  scheduler, trigger or hotkey takes after a failed run is attached to the
+  step that ended last on that thread. The schema is still version 1: a step
+  with no artifacts writes the line it always did, and older lines read back
+  with ``artifacts == ()``.
 
 Everything recorded between start and stop belongs to one ``run_id`` (pass
 ``run_id=`` to choose it). If the journal file cannot be written, journalling

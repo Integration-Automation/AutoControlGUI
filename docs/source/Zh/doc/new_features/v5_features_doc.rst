@@ -86,7 +86,14 @@ Python、CLI、GUI、REST、socket 還是 MCP 進來的::
   所以結束行沒寫進檔案的步驟(行程死掉、``Ctrl+C``)讀回來是 ``incomplete``,不會看起來
   像成功;
 * ``outcome``——只記回傳值的型別與大小(數字與布林才記值);回傳的文字一律不存,而且
-  outcome 永遠不會被當成輸入。
+  outcome 永遠不會被當成輸入;
+* ``artifacts``(選用)——這個步驟留下的東西,每筆是 ``{"kind": ..., "path": ...}`` 或
+  ``{"kind": "trace", "id": ...}``:由路徑參數或回傳鍵(``file_path``、``output_path``、
+  ``path``…)指名、而且是在步驟執行期間寫入的檔案;``generate_html_report`` /
+  ``_json_`` / ``_xml_`` 寫出的報告;回傳值裡的 ``trace_id`` / ``traceparent``;以及指令
+  自己用 ``note_artifact(kind, path=..., ident=...)`` 附上的項目。排程、觸發器或熱鍵在
+  執行失敗後拍的錯誤截圖,會附到該執行緒上最後結束的步驟。schema 仍是版本 1:沒有
+  artifacts 的步驟寫出的行和以前一樣,舊的行讀回來 ``artifacts == ()``。
 
 start 到 stop 之間記下的一切屬於同一個 ``run_id``(可用 ``run_id=`` 指定)。日誌檔寫不
 進去時,日誌會停止而自動化繼續執行;``action_journal_status()`` 會回報錯誤。除了

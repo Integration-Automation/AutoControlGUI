@@ -26,7 +26,7 @@ from je_auto_control.utils.action_journal.events import (
     STATUS_ERROR, STATUS_INCOMPLETE, STATUS_OK, ActionEvent,
 )
 from je_auto_control.utils.action_journal.sanitize import (
-    describe_outcome, sanitise_params,
+    artifacts_of_step, describe_outcome, sanitise_params,
 )
 from je_auto_control.utils.action_journal.store import ActionJournal
 from je_auto_control.utils.exception.exceptions import AutoControlException
@@ -107,6 +107,13 @@ def _stack() -> List[str]:
     return stack
 
 
+def _open_steps() -> List["_Step"]:
+    running = getattr(_LOCAL, "steps", None)
+    if running is None:
+        running = _LOCAL.steps = []
+    return running
+
+
 def _error_text(error: BaseException) -> str:
     # The same masking log lines get: an error message can quote an argument.
     from je_auto_control.utils.config_redaction.config_redaction import (
@@ -123,13 +130,16 @@ def _control_signals() -> Tuple[type, ...]:
 class _Step:
     """One running action: writes its start on entry and its end on exit."""
 
-    __slots__ = ("_session", "_action", "_event", "_outcome")
+    __slots__ = ("_session", "_action", "_event", "_outcome", "_result", "artifacts")
 
     def __init__(self, session: _Session, action: Any) -> None:
         self._session = session
         self._action = action
         self._event: Optional[ActionEvent] = None
         self._outcome: Optional[Dict[str, Any]] = None
+        self._result: Any = None
+        #: What :func:`note_artifact` attached while this step was running.
+        self.artifacts: List[Dict[str, str]] = []
 
     def __enter__(self) -> "_Step":
         session, action = self._session, self._action
@@ -149,11 +159,13 @@ class _Step:
             _fail(session, error)
             return self
         stack.append(self._event.step_id)
+        _open_steps().append(self)
         return self
 
     def outcome(self, value: Any) -> None:
         """Note what the action returned (by type and size only)."""
         self._outcome = describe_outcome(value)
+        self._result = value
 
     def __exit__(self, exc_type: Optional[Type[BaseException]],
                  exc: Optional[BaseException], _tb: Optional[TracebackType]) -> None:
@@ -163,8 +175,13 @@ class _Step:
         stack = _stack()
         if stack and stack[-1] == event.step_id:
             stack.pop()
+        running = _open_steps()
+        if running and running[-1] is self:
+            running.pop()
+        ended = self._ended(event, exc)
+        _LOCAL.last = (self._session, ended)
         try:
-            self._session.journal.append_end(self._ended(event, exc))
+            self._session.journal.append_end(ended)
         except OSError as error:
             _fail(self._session, error)
 
@@ -180,8 +197,13 @@ class _Step:
         elif exc is not None:
             # KeyboardInterrupt / SystemExit: the action never finished.
             status, error = STATUS_INCOMPLETE, _error_text(exc)
+        params = self._action[1] if len(self._action) > 1 else None
+        found = self.artifacts + [
+            item for item in artifacts_of_step(params, self._result, event.started_at)
+            if item not in self.artifacts]
         return dataclasses.replace(
-            event, status=status, error=error, outcome=outcome, finished_at=time.time())
+            event, status=status, error=error, outcome=outcome,
+            finished_at=time.time(), artifacts=tuple(found))
 
 
 def _fail(session: _Session, error: OSError) -> None:
@@ -209,6 +231,50 @@ def current_step() -> Optional[str]:
         return None
     stack = getattr(_LOCAL, "stack", None)
     return stack[-1] if stack else getattr(_LOCAL, "parent", None)
+
+
+def note_artifact(kind: str, *, path: Optional[str] = None,
+                  ident: Optional[str] = None) -> bool:
+    """Attach something a step produced to that step's journal record.
+
+    ``kind`` says what it is (``"screenshot"``, ``"report"``, ``"trace"``...);
+    give the file's ``path`` or an ``ident`` such as a trace id. It goes to the
+    step running on this thread. With none running -- a failure screenshot is
+    taken once the run has already failed -- it goes to the step that most
+    recently ended on this thread, as a second ``end`` line. Returns whether
+    anything was recorded; with no journal started this does nothing.
+    """
+    session = _ACTIVE
+    if session is None or (path is None and ident is None):
+        return False
+    entry: Dict[str, str] = {"kind": str(kind)}
+    if path is not None:
+        entry["path"] = str(path)
+    if ident is not None:
+        entry["id"] = str(ident)
+    running = getattr(_LOCAL, "steps", None)
+    if running:
+        if entry not in running[-1].artifacts:
+            running[-1].artifacts.append(entry)
+        return True
+    return _note_after_end(session, entry)
+
+
+def _note_after_end(session: _Session, entry: Dict[str, str]) -> bool:
+    """Rewrite the end of this thread's last step with ``entry`` added."""
+    last_session, last = getattr(_LOCAL, "last", None) or (None, None)
+    if last is None or last_session is not session:
+        return False
+    if entry in last.artifacts:
+        return True
+    updated = dataclasses.replace(last, artifacts=last.artifacts + (entry,))
+    try:
+        session.journal.append_end(updated)
+    except OSError as error:
+        _fail(session, error)
+        return False
+    _LOCAL.last = (session, updated)
+    return True
 
 
 class _BranchScope:

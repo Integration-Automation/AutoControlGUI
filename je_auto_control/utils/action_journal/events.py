@@ -10,7 +10,7 @@ Pure standard library; imports no ``PySide6``.
 """
 import dataclasses
 from dataclasses import dataclass, field
-from typing import Any, Dict, Mapping, Optional
+from typing import Any, Dict, Mapping, Optional, Tuple
 
 from je_auto_control.utils.exception.exceptions import AutoControlException
 
@@ -48,7 +48,10 @@ class ActionEvent:
     (``${var}`` and ``${secrets.NAME}`` references kept as references) after
     masking; ``unreplayable`` maps each path in it that cannot be replayed to
     the reason. ``outcome`` describes the returned value by type and size and
-    is never an input to anything.
+    is never an input to anything. ``artifacts`` lists what the step left
+    behind -- ``{"kind": "report", "path": ...}``, ``{"kind": "trace", "id":
+    ...}`` -- and is optional: a line written before the field existed reads
+    back with none.
     """
 
     run_id: str
@@ -67,21 +70,29 @@ class ActionEvent:
     thread: Optional[int] = None
     session: Optional[str] = None
     schema_version: int = SCHEMA_VERSION
+    artifacts: Tuple[Mapping[str, str], ...] = ()
 
     def to_dict(self) -> Dict[str, Any]:
         """The event as a JSON-ready dict (a whole ``start`` line)."""
         data = dataclasses.asdict(self)
         data["record"] = RECORD_START
+        # Optional in schema 1: a step with none writes the line it always did.
+        data["artifacts"] = [dict(item) for item in self.artifacts]
+        if not data["artifacts"]:
+            del data["artifacts"]
         return data
 
     def end_dict(self) -> Dict[str, Any]:
         """Only how the action ended (an ``end`` line for an earlier start)."""
-        return {
+        data: Dict[str, Any] = {
             "schema_version": self.schema_version, "record": RECORD_END,
             "run_id": self.run_id, "step_id": self.step_id,
             "status": self.status, "finished_at": self.finished_at,
             "error": self.error, "outcome": self.outcome,
         }
+        if self.artifacts:
+            data["artifacts"] = [dict(item) for item in self.artifacts]
+        return data
 
 
 _REQUIRED = {"run_id": str, "step_id": str, "sequence": int, "command": str}
@@ -107,6 +118,22 @@ def _number(data: Mapping[str, Any], name: str, where: str) -> Optional[float]:
     if isinstance(value, bool) or not isinstance(value, (int, float)):
         raise JournalFormatError(f"{where}: {name!r} must be a number")
     return float(value)
+
+
+def read_artifacts(data: Mapping[str, Any], where: str) -> Tuple[Dict[str, str], ...]:
+    """The validated ``artifacts`` of one journal line; ``()`` when it has none."""
+    raw = data.get("artifacts")
+    if raw is None:
+        return ()
+    if not isinstance(raw, list):
+        raise JournalFormatError(f"{where}: 'artifacts' must be a list")
+    for item in raw:
+        if not isinstance(item, dict) or not isinstance(item.get("kind"), str) or not all(
+                isinstance(key, str) and isinstance(value, str)
+                for key, value in item.items()):
+            raise JournalFormatError(
+                f"{where}: an artifact must be an object of strings with a 'kind'")
+    return tuple(dict(item) for item in raw)
 
 
 def check_record(data: Any, where: str) -> str:
@@ -145,7 +172,8 @@ def event_from_dict(data: Mapping[str, Any], where: str = "event") -> ActionEven
         params=data.get("params"), status=data.get("status", STATUS_INCOMPLETE),
         started_at=_number(data, "started_at", where) or 0.0,
         finished_at=_number(data, "finished_at", where),
-        unreplayable=dict(unreplayable), **values)
+        unreplayable=dict(unreplayable), artifacts=read_artifacts(data, where),
+        **values)
 
 
 def apply_end(event: ActionEvent, data: Mapping[str, Any], where: str) -> ActionEvent:
@@ -156,6 +184,9 @@ def apply_end(event: ActionEvent, data: Mapping[str, Any], where: str) -> Action
     error = data.get("error")
     if error is not None and not isinstance(error, str):
         raise JournalFormatError(f"{where}: 'error' must be a string")
+    # An end line without the field keeps what the start line carried.
+    artifacts = read_artifacts(data, where) if "artifacts" in data else event.artifacts
     return dataclasses.replace(
         event, status=data.get("status", STATUS_INCOMPLETE),
-        finished_at=_number(data, "finished_at", where), error=error, outcome=outcome)
+        finished_at=_number(data, "finished_at", where), error=error, outcome=outcome,
+        artifacts=artifacts)

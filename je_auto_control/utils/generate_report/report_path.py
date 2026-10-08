@@ -8,6 +8,7 @@ Outside TestPioneer nothing changes.
 import os
 from pathlib import Path
 
+from je_auto_control.utils.json_store.json_store import atomic_write_text
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 
 # Set by TestPioneer for every runner it starts, in a child process and in-process alike.
@@ -37,3 +38,16 @@ def report_path(name: str) -> str:
             "report_path: %r, the artifact directory is not usable: %r", name, error)
         return name
     return str(target)
+
+
+def write_report(name: str, text: str) -> str:
+    """Write the report called ``name`` atomically; return where it went.
+
+    The file is also noted on the action journal's running step, when a
+    journal is started, so the step that produced a report names it.
+    """
+    path = report_path(name)
+    atomic_write_text(path, text)
+    from je_auto_control.utils.action_journal.recorder import note_artifact
+    note_artifact("report", path=os.path.abspath(path))
+    return path
