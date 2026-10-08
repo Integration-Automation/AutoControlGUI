@@ -75,11 +75,14 @@ def cmd_run(args: argparse.Namespace) -> int:
     reset_recorded_failures()
     if args.dry_run:
         from je_auto_control.utils.executor.action_executor import executor
+        from je_auto_control.utils.script_vars.execution import execution_scope
         # Seeded, not interpolated over the whole tree: that failed on a loop
         # body's ${item} ("Unknown variable") and would print ${secrets.X}
-        # resolved into the dry-run keys.
-        executor.variables.update_many(variables)
-        result = executor.execute_action(actions, dry_run=True)
+        # resolved into the dry-run keys. Seeded into the run's own scope, as
+        # a real run's --var is: writing them into the module executor left
+        # them behind for whatever the same process ran next.
+        with execution_scope(variables):
+            result = executor.execute_action(actions, dry_run=True)
     elif variables:
         result = execute_action_with_vars(actions, variables)
     else:

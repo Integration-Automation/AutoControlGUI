@@ -3499,10 +3499,22 @@ def _seed_everything(seed: int = 0) -> Dict[str, Any]:
 
 
 def _observe_handler(actions: List[Any]) -> Callable[[str, Any], None]:
-    """Build an observer callback that runs an action list on each event."""
+    """Build an observer callback that runs an action list on each event.
+
+    The callback fires long after the run that registered it has ended -- on
+    the observer's thread, or inside whichever run calls ``AC_observe_poll``
+    -- so it cannot share a run's scope. It keeps a snapshot of the variables
+    visible at registration, and every firing runs on the module executor in
+    a fresh scope seeded from that snapshot: the actions see what the
+    registering run had set, and what they set reaches neither the process
+    scope, the run that polled, nor the next firing.
+    """
+    snapshot = _running_executor().variables.as_dict()
+
     def handler(_event: str, _value: Any) -> None:
         if actions:
-            _running_executor().execute_action(list(actions))
+            with execution_scope(dict(snapshot)):
+                executor.execute_action(list(actions))
     return handler
 
 

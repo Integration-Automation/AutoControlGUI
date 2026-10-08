@@ -375,6 +375,31 @@ Variables 分頁顯示的、以及從 GUI 執行的腳本用的就是這個範�
 範圍裡，在 ``AC_parallel`` 分支內也一樣；分支從父層變數的一份複本開始，
 自己寫入的值留在分支內。自行建立的 executor（``Executor()``）永遠擁有自己的範圍。
 
+另外四種呼叫者的範圍是刻意選定的，不再是行程層級的範圍：
+
+* ``je_auto_control run --dry-run --var name=value`` 把變數放進該次 dry run
+  自己的範圍，與真正的 ``run --var`` 相同。
+* **observer 回呼**\ （``AC_observe_add`` 與 MCP 的 ``ac_observe_add``\ ）
+  在註冊它的那次執行結束很久之後才觸發，無法共用那次執行的範圍。回呼會保留
+  註冊當下可見變數的一份\ *快照*\ ，每次觸發都在模組 executor 上、以該快照
+  為初值的全新範圍內執行——不論是 observer 的執行緒觸發，還是別的執行裡的
+  ``AC_observe_poll`` 觸發。動作看得到註冊時那次執行設好的值（之後對那些
+  變數的修改看不到）；動作寫入的值不會進到行程範圍、不會進到呼叫 poll 的
+  那次執行，也不會留到下一次觸發。經 MCP 註冊的回呼一開始沒有任何變數，
+  因為工具呼叫的範圍是空的。要在多次觸發之間保留狀態，請存在範圍之外
+  （檔案、secrets vault）。
+* **由描述產生並執行的計畫**\ （``run_from_description``\ 、``AC_llm_run``\ ）
+  與\ **狀態機**\ （``run_state_machine``\ 、``AC_run_state_machine``\ ）
+  從 Python 呼叫時本身就是一次執行：各自拿到一個全新的範圍——狀態機所有
+  ``on_enter`` 動作共用它——呼叫返回時丟棄，也讀不到先前的呼叫留在行程範圍
+  裡的值。從動作清單裡呼叫，或在 ``execution_scope`` 區塊內呼叫時，它們是
+  該次執行的一個步驟，共用其變數；要傳值給它們就用這個方式::
+
+     with ac.execution_scope({"user": "alice"}):
+         ac.run_state_machine(spec)       # on_enter 的動作可以用 ${user}
+
+  ``AC_parallel`` 分支內的狀態機使用該分支的變數。
+
 
 ::
 

@@ -57,6 +57,10 @@ headless 測試(PIL 影像 / spec 以注入方式提供,完全不需真實螢幕
     }
     result = run_state_machine(spec)   # {final_state, steps, elapsed_s}
 
+``on_enter`` 的每一項是一個動作(``["AC_name", {...}]``)或一串動作。
+一次 ``run_state_machine`` 呼叫就是一次執行:它的 ``on_enter`` 動作共用一個
+變數範圍,狀態機停止時丟棄(見\ *每次執行各自的變數範圍*\ )。
+
 每個狀態的 ``on_enter`` 動作會透過執行器執行;transition 依 guard 觸發
 (``after``:在該狀態停留的秒數,機器會等到它成立;``if_var_eq``;
 ``if_image_found``:範本路徑,或 ``{"image": ..., "detect_threshold": ...}``;
