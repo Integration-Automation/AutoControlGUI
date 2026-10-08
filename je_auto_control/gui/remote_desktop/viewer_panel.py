@@ -23,7 +23,7 @@ from je_auto_control.gui.remote_desktop.remote_screen_window import (
 )
 from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.remote_desktop import (
-    FileReceiver, RemoteDesktopViewer, WebSocketDesktopViewer,
+    FileReceiver, RemoteDesktopViewer, WebSocketDesktopViewer, default_download_dir,
 )
 from je_auto_control.utils.remote_desktop.audio import (
     AudioPlayer, is_audio_backend_available,
@@ -248,6 +248,7 @@ class _ViewerPanel(TranslatableMixin, QWidget):
                     self._file_complete_signal.emit(
                         tid, bool(ok), err or "", dst,
                     ),
+                base_dir=default_download_dir(),
             ))
             viewer.connect(timeout=5.0)
         # ValueError: a host such as "a..b" fails IDNA encoding with

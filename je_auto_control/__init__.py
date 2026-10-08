@@ -741,6 +741,8 @@ from je_auto_control.utils.layered_config import (
 from je_auto_control.utils.config_schema import (
     ConfigField, ConfigSchema, coerce, validate_config,
 )
+# Opt-in confinement of file paths to configured root directories
+from je_auto_control.utils.path_guard import PathNotAllowedError, PathPolicy
 # URI-scheme secret/value reference resolver (env:// / file:// / secret://)
 from je_auto_control.utils.secret_ref import (
     RefResolver, SecretRefError, is_ref, resolve_ref, resolve_refs_in,
@@ -1677,6 +1679,7 @@ __all__ = [
     "dotenv_values", "dump_dotenv", "load_dotenv", "parse_dotenv",
     "LayeredConfig", "SourceTrace", "deep_merge",
     "ConfigField", "ConfigSchema", "coerce", "validate_config",
+    "PathNotAllowedError", "PathPolicy",
     "RefResolver", "SecretRefError", "is_ref", "resolve_ref", "resolve_refs_in",
     "redact_config", "redact_secret_text",
     "EventEmitter", "post_cloudevent", "to_cloudevent",

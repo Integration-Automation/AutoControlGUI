@@ -16,6 +16,14 @@ There is no central per-host file-size limit — operators relying on
 this should keep ``trusted token holders == trusted users`` in mind, and
 treat the dropbox / destination filesystem accordingly.
 
+That trust runs one way. A host writes where an authenticated viewer says,
+because the viewer holds the token. A viewer has no such assurance about the
+host it connected to, so a viewer's receiver is built with ``base_dir``:
+``dest_path`` is then a path *relative to that directory*, and an absolute
+path, a drive or UNC path, a ``..`` component or a symlink leading out of it
+fails the transfer. :func:`default_download_dir` is the directory the viewers
+use unless told otherwise.
+
 The receiver writes to a ``.part`` file beside the destination and renames
 it into place only when ``FILE_END`` reports success and exactly the
 announced number of bytes arrived, so a failed transfer never truncates an
@@ -23,12 +31,13 @@ existing file or leaves a partial one behind.
 """
 import json
 import os
+import re
 import threading
 from collections import OrderedDict
 import uuid
 from dataclasses import dataclass
-from pathlib import Path
-from typing import Any, Callable, Dict, Optional, Tuple
+from pathlib import Path, PurePosixPath, PureWindowsPath
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
@@ -41,12 +50,65 @@ _INVALID_TRANSFER_ID_MESSAGE = (
     f"transfer_id must be a {TRANSFER_ID_LEN}-char UUID string"
 )
 
+#: Overrides where a viewer stores the files its host pushes.
+DOWNLOAD_DIR_ENV = "JE_AUTOCONTROL_REMOTE_DOWNLOAD_DIR"
+
+_SEPARATORS = re.compile(r"[\\/]+")
+
+PathLike = Union[str, "os.PathLike[str]"]
 ProgressCallback = Callable[[str, int, int], None]
 CompleteCallback = Callable[[str, bool, Optional[str], str], None]
 
 
 class FileTransferError(AutoControlException, RuntimeError):
     """Raised when a file-transfer payload is malformed."""
+
+
+def default_download_dir() -> Path:
+    """Where a viewer keeps host-pushed files: the env override, else ``~/Downloads/AutoControl``.
+
+    Not created here; the receiver makes it when the first file arrives.
+    """
+    override = os.environ.get(DOWNLOAD_DIR_ENV, "").strip()
+    if override:
+        return Path(os.path.expanduser(override))
+    return Path(os.path.expanduser("~")) / "Downloads" / "AutoControl"
+
+
+def confine_destination(base_dir: PathLike, dest_path: str) -> Path:
+    """Return where relative ``dest_path`` lands under ``base_dir``, or raise.
+
+    Raises :class:`FileTransferError` for an absolute, drive or UNC path, a
+    ``..`` component, and anything whose real location (symlinks resolved) is
+    outside ``base_dir``. Both separators are honoured whatever the local
+    platform, since the path was written on another machine.
+    """
+    parts = _relative_parts(dest_path)
+    base = Path(os.path.realpath(os.path.expanduser(os.fspath(base_dir))))
+    target = Path(os.path.realpath(base.joinpath(*parts)))
+    if base not in target.parents:
+        raise FileTransferError(f"dest_path leaves the download directory: {dest_path!r}")
+    return target
+
+
+def _relative_parts(dest_path: str) -> List[str]:
+    """Split a relative ``dest_path`` into components, refusing every way out."""
+    if "\x00" in dest_path:
+        raise FileTransferError("dest_path contains a NUL byte")
+    if PureWindowsPath(dest_path).anchor or PurePosixPath(dest_path).is_absolute():
+        raise FileTransferError(
+            f"dest_path must be relative to the download directory: {dest_path!r}")
+    parts = [part for part in _SEPARATORS.split(dest_path) if part not in ("", ".")]
+    if not parts:
+        raise FileTransferError("dest_path names no file")
+    if any(_climbs_out(part) for part in parts):
+        raise FileTransferError(f"dest_path leaves the download directory: {dest_path!r}")
+    return parts
+
+
+def _climbs_out(part: str) -> bool:
+    """A parent reference, or on Windows a colon: a drive or an alternate data stream."""
+    return part == ".." or (os.name == "nt" and ":" in part)
 
 
 def new_transfer_id() -> str:
@@ -151,12 +213,20 @@ _CANCELLED_MAX = 1024
 
 
 class FileReceiver:
-    """Demultiplex incoming FILE_* messages into one or more file writes."""
+    """Demultiplex incoming FILE_* messages into one or more file writes.
+
+    With ``base_dir`` every ``dest_path`` is relative to that directory and a
+    transfer that would land outside it fails (see
+    :func:`confine_destination`). Without it the sender's path is used as
+    given, which is right only when the sender is trusted — the host side.
+    """
 
     def __init__(self, on_progress: Optional[ProgressCallback] = None,
-                 on_complete: Optional[CompleteCallback] = None) -> None:
+                 on_complete: Optional[CompleteCallback] = None,
+                 base_dir: Optional[PathLike] = None) -> None:
         self._on_progress = on_progress
         self._on_complete = on_complete
+        self._base_dir = base_dir
         self._active: Dict[str, _Incoming] = {}
         # Transfers aborted before FILE_BEGIN registered them. A viewer that
         # disconnected while its begin was opening the part file had the
@@ -180,9 +250,11 @@ class FileReceiver:
         if cancelled:
             self._fire_complete(transfer_id, False, "cancelled before it began", str(dest_path))
             return
-        path = Path(os.path.expanduser(dest_path))
-        if not path.name:   # ".", "/" or "C:\\": with_name raised ValueError past the handler
-            self._fire_complete(transfer_id, False, "dest_path names no file", str(path))
+        try:
+            path = self._destination(dest_path)
+        # ValueError: a NUL in the name reaches realpath before any open().
+        except (FileTransferError, ValueError) as error:
+            self._fire_complete(transfer_id, False, str(error), str(dest_path))
             return
         part = path.with_name(f".{path.name}.{transfer_id[:8]}.part")
         try:
@@ -201,6 +273,15 @@ class FileReceiver:
             return
         if self._on_progress is not None:
             self._on_progress(transfer_id, 0, total_size)
+
+    def _destination(self, dest_path: str) -> Path:
+        """Where ``dest_path`` is written, confined to ``base_dir`` when there is one."""
+        if self._base_dir is not None:
+            return confine_destination(self._base_dir, dest_path)
+        path = Path(os.path.expanduser(dest_path))
+        if not path.name:   # ".", "/" or "C:\\": with_name raised ValueError past the handler
+            raise FileTransferError("dest_path names no file")
+        return path
 
     def _register(self, incoming: _Incoming) -> bool:
         """Make ``incoming`` active, unless it was aborted while its file opened."""

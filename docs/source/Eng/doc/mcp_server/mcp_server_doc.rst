@@ -439,6 +439,78 @@ clipboard reads, history, ...) survive:
      }
    }
 
+Confining file arguments to root directories
+============================================
+
+Read-only mode limits *which tools* exist, not *which files* they open:
+``ac_load_dotenv``, ``ac_read_document`` or ``ac_extract_pdf_text`` will read
+any file the server process can. To bound that, give the server roots. It is
+off by default — a server with neither variable set behaves exactly as
+before, read-only mode included.
+
+``JE_AUTOCONTROL_MCP_PATH_ROOTS``
+    Directories separated by ``os.pathsep`` (``;`` on Windows, ``:``
+    elsewhere). Setting it turns the check on.
+
+``JE_AUTOCONTROL_MCP_PATH_ROOTS_FROM_CLIENT``
+    ``1`` / ``true`` / ``yes`` / ``on`` to also accept the directories the
+    client reports through ``roots/list``, in addition to the variable
+    above. It turns the check on by itself too; until the client has
+    answered, every file argument is refused rather than let through. Only
+    use it with a client you trust to describe the workspace — over HTTP any
+    caller that can reach the server can report roots.
+
+.. code-block:: json
+
+   {
+     "mcpServers": {
+       "autocontrol_safe": {
+         "command": "python",
+         "args": ["-m", "je_auto_control.utils.mcp_server"],
+         "env": {"JE_AUTOCONTROL_MCP_READONLY": "1",
+                 "JE_AUTOCONTROL_MCP_PATH_ROOTS": "C:/work/project"}
+       }
+     }
+   }
+
+With roots in force, every tool argument whose schema says
+``"format": "path"`` is resolved with ``os.path.realpath`` and must land
+inside a root. ``..``, a symlink or junction leading out, another drive and a
+UNC share are all judged by where they really lead; a path starting with
+``~`` has to be inside the roots both expanded and taken literally. A
+refusal is a tool execution error (``isError: true``, ``Invalid arguments
+for <tool>: ...``), like any other bad argument. The tool then receives the
+canonical absolute path that was checked, so a relative path is relative to
+the server's working directory.
+
+The annotation follows meaning, not the property's name: ``ac_json_query``'s
+``path`` is a JSONPath expression and is left alone. What it does **not**
+reach:
+
+* ``ac_execute_actions`` and the other tools that run an action list — an
+  action can open any file, which is why they are not read-only tools.
+* Arguments that are a path only sometimes: ``target`` of ``ac_open_path`` /
+  ``ac_plan_open`` / ``ac_file_association`` (path or URL or extension) and of
+  ``ac_act_in_view`` (template path or text), ``ac_handle_file_dialog``'s
+  ``path`` (keystrokes typed into another application), ``argv`` of
+  ``ac_launch_process`` / ``ac_shell``, and paths inside free-form objects
+  (``ac_run_suite`` ``spec``, ``ac_run_dag`` ``definition``,
+  ``ac_assert_all`` ``specs``).
+* Tools registered by plugins, unless their schema carries the annotation.
+
+``ac_resolve_ref`` / ``ac_resolve_refs`` follow the same roots for
+``file://`` references, and have a switch of their own for ``env://``:
+
+``JE_AUTOCONTROL_MCP_ENV_REF_ALLOW``
+    Comma-separated variable names, ``fnmatch`` patterns allowed
+    (``APP_*,HOME``). When set, ``env://NAME`` resolves only for a matching
+    name and anything else is a tool execution error. Unset, every variable
+    is readable, as before — including the ones that hold API keys.
+
+Programmatically, the same policy is ``server.argument_policy``
+(:class:`ArgumentPolicy` holding a :class:`je_auto_control.PathPolicy` and
+the allowlist); assign another to a server you build yourself.
+
 Confirmation prompts (elicitation)
 ==================================
 

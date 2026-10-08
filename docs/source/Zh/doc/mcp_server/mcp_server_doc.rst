@@ -381,6 +381,66 @@ client 不用改,可以和 2026-07-28 的 client 並存。
      }
    }
 
+把檔案參數限制在根目錄內
+========================
+
+唯讀模式限制的是「有哪些工具」，不是「工具能開哪些檔案」：``ac_load_dotenv``、
+``ac_read_document``、``ac_extract_pdf_text`` 仍能讀伺服器行程讀得到的任何檔案。要限制這一點，
+請給伺服器根目錄。預設關閉——兩個變數都沒設的伺服器行為與以前完全相同，唯讀模式也一樣。
+
+``JE_AUTOCONTROL_MCP_PATH_ROOTS``
+    以 ``os.pathsep`` 分隔的目錄（Windows 是 ``;``，其他平台是 ``:``）。設了就啟用檢查。
+
+``JE_AUTOCONTROL_MCP_PATH_ROOTS_FROM_CLIENT``
+    設為 ``1`` / ``true`` / ``yes`` / ``on`` 時，除了上面那個變數之外，也接受用戶端透過
+    ``roots/list`` 回報的目錄。單獨設它也會啟用檢查；在用戶端回覆之前，所有檔案參數都會被拒絕，
+    而不是先放行。只在你信任用戶端描述的工作區時使用——走 HTTP 時，任何連得到伺服器的呼叫端
+    都能回報根目錄。
+
+.. code-block:: json
+
+   {
+     "mcpServers": {
+       "autocontrol_safe": {
+         "command": "python",
+         "args": ["-m", "je_auto_control.utils.mcp_server"],
+         "env": {"JE_AUTOCONTROL_MCP_READONLY": "1",
+                 "JE_AUTOCONTROL_MCP_PATH_ROOTS": "C:/work/project"}
+       }
+     }
+   }
+
+根目錄生效後，schema 標了 ``"format": "path"`` 的工具參數都會先經過 ``os.path.realpath``，
+結果必須落在某個根目錄內。``..``、指向外面的 symlink 或 junction、其他磁碟機、UNC 分享，
+都以實際指向的位置判斷；以 ``~`` 開頭的路徑，展開與不展開兩種讀法都必須在根目錄內。
+被拒絕時回的是工具執行錯誤（``isError: true``，``Invalid arguments for <tool>: ...``），
+和其他參數錯誤一樣。通過檢查後，工具收到的是檢查過的那個絕對路徑，所以相對路徑是相對於
+伺服器的工作目錄。
+
+這個標記看的是語意，不是屬性名稱：``ac_json_query`` 的 ``path`` 是 JSONPath，不受影響。
+它**涵蓋不到**的地方：
+
+* ``ac_execute_actions`` 與其他執行動作清單的工具——動作可以開任何檔案，這也是它們不屬於
+  唯讀工具的原因。
+* 只有某些情況下才是路徑的參數：``ac_open_path`` / ``ac_plan_open`` /
+  ``ac_file_association`` 的 ``target``（路徑、URL 或副檔名）、``ac_act_in_view`` 的
+  ``target``（樣板路徑或文字）、``ac_handle_file_dialog`` 的 ``path``（打進別的應用程式的
+  按鍵）、``ac_launch_process`` / ``ac_shell`` 的 ``argv``，以及自由格式物件裡的路徑
+  （``ac_run_suite`` 的 ``spec``、``ac_run_dag`` 的 ``definition``、``ac_assert_all`` 的
+  ``specs``）。
+* 外掛註冊的工具，除非它的 schema 也帶這個標記。
+
+``ac_resolve_ref`` / ``ac_resolve_refs`` 的 ``file://`` 參照套用同一組根目錄；``env://``
+另有自己的開關：
+
+``JE_AUTOCONTROL_MCP_ENV_REF_ALLOW``
+    以逗號分隔的變數名稱，可用 ``fnmatch`` 樣式（``APP_*,HOME``）。設了之後，``env://NAME``
+    只有名稱符合時才會解析，其餘回工具執行錯誤。沒設時和以前一樣，任何變數都讀得到——
+    包括放 API 金鑰的那些。
+
+在程式裡，同一份設定是 ``server.argument_policy``（:class:`ArgumentPolicy`，內含
+:class:`je_auto_control.PathPolicy` 與允許清單）；自己建立的伺服器可以指派另一個。
+
 破壞性動作確認(Elicitation)
 =============================
 

@@ -36,6 +36,17 @@ def needs_confirmation(tool: MCPTool) -> bool:
     return not annotations.read_only and bool(annotations.destructive)
 
 
+def _root_paths(roots_list: List[Any]) -> List[str]:
+    """Local directories named by a ``roots/list`` reply; other entries are skipped."""
+    paths: List[str] = []
+    for entry in roots_list:
+        uri = entry.get("uri") if isinstance(entry, dict) else None
+        local_path = _file_uri_to_path(uri) if isinstance(uri, str) else None
+        if local_path:
+            paths.append(local_path)
+    return paths
+
+
 class ClientRequestMixin:
     """Outbound half of the MCP session, mixed into :class:`MCPServer`.
 
@@ -51,6 +62,7 @@ class ClientRequestMixin:
         _writer: Optional[Callable[[str], None]]
         _client_capabilities: Dict[str, Any]
         _resources: Any
+        argument_policy: Any
         _outbound_lock: threading.Lock
         _pending_outbound: Dict[Any, Dict[str, Any]]
         _outbound_id_counter: "itertools.count[int]"
@@ -113,12 +125,20 @@ class ClientRequestMixin:
             autocontrol_logger.info("MCP roots refresh skipped: %r", error)
 
     def refresh_roots(self, timeout: float = 10.0) -> List[Dict[str, Any]]:
-        """Send ``roots/list`` to the client and apply the first root."""
+        """Send ``roots/list`` to the client and apply what it reports.
+
+        The first root becomes the resource provider's workspace. Every root
+        is offered to the tool-argument path policy, which keeps them only
+        when ``JE_AUTOCONTROL_MCP_PATH_ROOTS_FROM_CLIENT`` opted in.
+        """
         result = self._send_outbound_request(
             "roots/list", params={}, timeout=timeout,
         )
         roots_list = (result or {}).get("roots") or []
-        if not isinstance(roots_list, list) or not roots_list:
+        if not isinstance(roots_list, list):
+            roots_list = []
+        self.argument_policy.path_policy.set_client_roots(_root_paths(roots_list))
+        if not roots_list:
             return []
         first_uri = roots_list[0].get("uri") if isinstance(roots_list[0],
                                                             dict) else None

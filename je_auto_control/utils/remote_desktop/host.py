@@ -398,6 +398,9 @@ class RemoteDesktopHost(FrameProductionMixin):
                              on_progress=None) -> int:
         """Stream ``source_path`` to every authenticated viewer.
 
+        ``dest_path`` is relative to each viewer's download directory: a
+        viewer refuses an absolute path or one that leaves that directory.
+
         Returns the number of viewers the transfer was attempted on.
         Each viewer gets its own ``transfer_id`` so progress callbacks
         can be demultiplexed in the GUI.

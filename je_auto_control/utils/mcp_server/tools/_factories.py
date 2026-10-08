@@ -136,7 +136,7 @@ def screen_tools() -> List[MCPTool]:
                          "(0 = virtual desktop spanning all, 1+ = single "
                          "screens — see ac_list_monitors)."),
             input_schema=schema({
-                "file_path": {"type": "string"},
+                "file_path": {"type": "string", "format": "path"},
                 "screen_region": {"type": "array",
                                    "items": {"type": "integer"}},
                 "monitor_index": {"type": "integer"},
@@ -170,7 +170,7 @@ def screen_tools() -> List[MCPTool]:
                          "``timeout`` seconds. Cancellable: clients can "
                          "send notifications/cancelled to abort."),
             input_schema=schema({
-                "image_path": {"type": "string"},
+                "image_path": {"type": "string", "format": "path"},
                 "timeout": {"type": "number"},
                 "poll": {"type": "number"},
                 "detect_threshold": {"type": "number"},
@@ -204,8 +204,8 @@ def screen_tools() -> List[MCPTool]:
                          "equal; components smaller than min_box_pixels "
                          "are ignored to filter antialias noise."),
             input_schema=schema({
-                "image_path_a": {"type": "string"},
-                "image_path_b": {"type": "string"},
+                "image_path_a": {"type": "string", "format": "path"},
+                "image_path_b": {"type": "string", "format": "path"},
                 "threshold": {"type": "integer"},
                 "min_box_pixels": {"type": "integer"},
             }, required=["image_path_a", "image_path_b"]),
@@ -222,7 +222,7 @@ def image_and_ocr_tools() -> List[MCPTool]:
             description=("Find a template image on screen and return its "
                          "centre [x, y]. detect_threshold is 0.0–1.0."),
             input_schema=schema({
-                "image_path": {"type": "string"},
+                "image_path": {"type": "string", "format": "path"},
                 "detect_threshold": {"type": "number"},
             }, required=["image_path"]),
             handler=h_screen.locate_image_center,
@@ -232,7 +232,7 @@ def image_and_ocr_tools() -> List[MCPTool]:
             name="ac_locate_and_click",
             description="Find a template image and click its centre.",
             input_schema=schema({
-                "image_path": {"type": "string"},
+                "image_path": {"type": "string", "format": "path"},
                 "mouse_keycode": {"type": "string"},
                 "detect_threshold": {"type": "number"},
             }, required=["image_path"]),
@@ -510,7 +510,7 @@ def system_tools() -> List[MCPTool]:
             description=("Place a Pillow-readable image file on the "
                          "clipboard. Windows-only today; macOS / Linux "
                          "raise NotImplementedError."),
-            input_schema=schema({"image_path": {"type": "string"}},
+            input_schema=schema({"image_path": {"type": "string", "format": "path"}},
                                 required=["image_path"]),
             handler=h_system.set_clipboard_image,
             annotations=DESTRUCTIVE,
@@ -530,7 +530,7 @@ def system_tools() -> List[MCPTool]:
         MCPTool(
             name="ac_execute_action_file",
             description="Load a JSON action file from disk and execute it.",
-            input_schema=schema({"file_path": {"type": "string"}},
+            input_schema=schema({"file_path": {"type": "string", "format": "path"}},
                                 required=["file_path"]),
             handler=h_runs.execute_action_file,
             annotations=DESTRUCTIVE,
@@ -565,7 +565,7 @@ def screen_record_tools() -> List[MCPTool]:
                          "Codec defaults to XVID (.avi); use MP4V for .mp4."),
             input_schema=schema({
                 "recorder_name": {"type": "string"},
-                "file_path": {"type": "string"},
+                "file_path": {"type": "string", "format": "path"},
                 "codec": {"type": "string"},
                 "frame_per_sec": {"type": "integer"},
                 "width": {"type": "integer"},
@@ -629,7 +629,7 @@ def recording_tools() -> List[MCPTool]:
         MCPTool(
             name="ac_read_action_file",
             description="Read a JSON action file from disk and return its parsed contents.",
-            input_schema=schema({"file_path": {"type": "string"}},
+            input_schema=schema({"file_path": {"type": "string", "format": "path"}},
                                 required=["file_path"]),
             handler=h_runs.read_action_file,
             annotations=READ_ONLY,
@@ -638,7 +638,7 @@ def recording_tools() -> List[MCPTool]:
             name="ac_write_action_file",
             description="Persist an action list to a JSON file at file_path.",
             input_schema=schema({
-                "file_path": {"type": "string"},
+                "file_path": {"type": "string", "format": "path"},
                 "actions": {"type": "array"},
             }, required=["file_path", "actions"]),
             handler=h_runs.write_action_file,
@@ -935,7 +935,7 @@ def chatops_tools() -> List[MCPTool]:
             input_schema=schema({
                 "message": {"type": "string"},
                 "context": {"type": "object"},
-                "script_root": {"type": "string"},
+                "script_root": {"type": "string", "format": "path"},
             }, required=["message"]),
             handler=h_ops.chatops_dispatch,
             annotations=DESTRUCTIVE,
@@ -1060,7 +1060,7 @@ def ios_tools() -> List[MCPTool]:
             name="ac_ios_screenshot",
             description="Save the device screen as a PNG to file_path.",
             input_schema=schema({
-                "file_path": {"type": "string"},
+                "file_path": {"type": "string", "format": "path"},
                 "url": {"type": "string"},
             }, required=["file_path"]),
             handler=h_exec.ios_screenshot,
@@ -1101,8 +1101,8 @@ def redaction_tools() -> List[MCPTool]:
                          "unconditionally. Returns {output_path, boxes, "
                          "detectors_used}."),
             input_schema=schema({
-                "file_path": {"type": "string"},
-                "output_path": {"type": "string"},
+                "file_path": {"type": "string", "format": "path"},
+                "output_path": {"type": "string", "format": "path"},
                 "policy": {"type": "string",
                             "enum": ["off", "moderate", "strict"]},
                 "regions": {"type": "array",
@@ -1227,7 +1227,7 @@ def webrunner_tools() -> List[MCPTool]:
             name="ac_web_screenshot",
             description="Convenience: save a screenshot of the active browser tab.",
             input_schema=schema({
-                "file_path": {"type": "string"},
+                "file_path": {"type": "string", "format": "path"},
             }, required=["file_path"]),
             handler=h.web_screenshot,
             annotations=NON_DESTRUCTIVE,
@@ -1697,7 +1697,7 @@ def ab_locator_tools() -> List[MCPTool]:
         "properties": {
             "kind": {"type": "string",
                      "enum": ["image", "ocr", "vlm", "a11y"]},
-            "template_path": {"type": "string"},
+            "template_path": {"type": "string", "format": "path"},
             "detect_threshold": {"type": "number"},
             "text": {"type": "string"},
             "min_confidence": {"type": "number"},
@@ -1762,8 +1762,8 @@ def failure_hook_tools() -> List[MCPTool]:
                 "source": {"type": "string"},
                 "source_id": {"type": "string"},
                 "error_text": {"type": "string"},
-                "script_path": {"type": "string"},
-                "screenshot_path": {"type": "string"},
+                "script_path": {"type": "string", "format": "path"},
+                "screenshot_path": {"type": "string", "format": "path"},
                 "log_tail": {"type": "string"},
                 "metadata": {"type": "object"},
             }, required=["source", "source_id"]),
@@ -1832,7 +1832,7 @@ def smart_wait_tools() -> List[MCPTool]:
                          "(spinner/toast/dialog vanished). 'detect_threshold', "
                          "'timeout_s', 'poll_interval_s', 'gone_for_s'."),
             input_schema=schema({
-                "image": {"type": "string"},
+                "image": {"type": "string", "format": "path"},
                 "detect_threshold": {"type": "number"},
                 "timeout_s": {"type": "number"},
                 "poll_interval_s": {"type": "number"},
@@ -1937,7 +1937,7 @@ def smart_wait_tools() -> List[MCPTool]:
                          "(i.e. a download finished writing). Returns a "
                          "WaitOutcome (succeeded/reason/elapsed_s)."),
             input_schema=schema({
-                "path": {"type": "string"},
+                "path": {"type": "string", "format": "path"},
                 "timeout_s": {"type": "number"},
                 "poll_interval_s": {"type": "number"},
                 "stable_for_s": {"type": "number"},
@@ -2166,7 +2166,7 @@ def anchor_locator_tools() -> List[MCPTool]:
         "properties": {
             "kind": {"type": "string",
                      "enum": ["image", "ocr", "vlm", "a11y"]},
-            "template_path": {"type": "string"},
+            "template_path": {"type": "string", "format": "path"},
             "detect_threshold": {"type": "number"},
             "text": {"type": "string"},
             "min_confidence": {"type": "number"},
@@ -2243,7 +2243,7 @@ def self_healing_tools() -> List[MCPTool]:
                          "attempt is appended to the self-healing audit log. "
                          "Returns {found, coordinates, method, ...}."),
             input_schema=schema({
-                "template_path": {"type": "string"},
+                "template_path": {"type": "string", "format": "path"},
                 "description": {"type": "string"},
                 "detect_threshold": {"type": "number"},
                 "screen_region": {"type": "array",
@@ -2261,7 +2261,7 @@ def self_healing_tools() -> List[MCPTool]:
                          "description triggers the VLM fallback when the "
                          "template fails."),
             input_schema=schema({
-                "template_path": {"type": "string"},
+                "template_path": {"type": "string", "format": "path"},
                 "description": {"type": "string"},
                 "mouse_keycode": {"type": "string"},
                 "detect_threshold": {"type": "number"},
@@ -2301,7 +2301,7 @@ def scheduler_tools() -> List[MCPTool]:
                          "interval_seconds (run every N seconds) or "
                          "cron_expression (5-field cron rule)."),
             input_schema=schema({
-                "script_path": {"type": "string"},
+                "script_path": {"type": "string", "format": "path"},
                 "interval_seconds": {"type": "number"},
                 "cron_expression": {"type": "string"},
                 "repeat": {"type": "boolean"},
@@ -2355,9 +2355,9 @@ def trigger_tools() -> List[MCPTool]:
             input_schema=schema({
                 "kind": {"type": "string",
                          "enum": ["image", "window", "pixel", "file"]},
-                "script_path": {"type": "string"},
+                "script_path": {"type": "string", "format": "path"},
                 "repeat": {"type": "boolean"},
-                "image_path": {"type": "string"},
+                "image_path": {"type": "string", "format": "path"},
                 "threshold": {"type": "number"},
                 "title_substring": {"type": "string"},
                 "case_sensitive": {"type": "boolean"},
@@ -2366,7 +2366,7 @@ def trigger_tools() -> List[MCPTool]:
                 "target_rgb": {"type": "array",
                                 "items": {"type": "integer"}},
                 "tolerance": {"type": "integer"},
-                "watch_path": {"type": "string"},
+                "watch_path": {"type": "string", "format": "path"},
             }, required=["kind", "script_path"]),
             handler=h_sched.trigger_add,
             annotations=DESTRUCTIVE,
@@ -2412,7 +2412,7 @@ def process_and_shell_tools() -> List[MCPTool]:
                          "{pid, argv}. Optional working_directory."),
             input_schema=schema({
                 "argv": {"type": "array", "items": {"type": "string"}},
-                "working_directory": {"type": "string"},
+                "working_directory": {"type": "string", "format": "path"},
             }, required=["argv"]),
             handler=h_system.launch_process,
             annotations=DESTRUCTIVE,
@@ -2658,7 +2658,7 @@ def process_and_shell_tools() -> List[MCPTool]:
 
 
 def work_queue_tools() -> List[MCPTool]:
-    _Q = {"db": {"type": "string"}, "name": {"type": "string"}}
+    _Q = {"db": {"type": "string", "format": "path"}, "name": {"type": "string"}}
     return [
         MCPTool(
             name="ac_queue_add",
@@ -2733,7 +2733,7 @@ def synthetic_data_tools() -> List[MCPTool]:
             input_schema=schema({
                 "schema": {"type": "object"},
                 "count": {"type": "integer"},
-                "path": {"type": "string"},
+                "path": {"type": "string", "format": "path"},
                 "fmt": {"type": "string", "enum": ["json", "csv"]},
                 "seed": {"type": "integer"},
             }, required=["schema"]),
@@ -2752,7 +2752,7 @@ def mcp_registry_tools() -> List[MCPTool]:
                          "'path' when given, else returns the manifest. "
                          "include_tools embeds the live tool list."),
             input_schema=schema({
-                "path": {"type": "string"},
+                "path": {"type": "string", "format": "path"},
                 "include_tools": {"type": "boolean"},
             }),
             handler=h_ops.mcp_manifest,
@@ -2763,7 +2763,7 @@ def mcp_registry_tools() -> List[MCPTool]:
 
 def test_selection_tools() -> List[MCPTool]:
     _flows = {"flows": {"type": "array", "items": {"type": "string"}},
-              "history_path": {"type": "string"},
+              "history_path": {"type": "string", "format": "path"},
               "window": {"type": "integer"}}
     return [
         MCPTool(
@@ -2791,7 +2791,7 @@ def test_selection_tools() -> List[MCPTool]:
 
 
 def element_repository_tools() -> List[MCPTool]:
-    _R = {"path": {"type": "string"}, "key": {"type": "string"}}
+    _R = {"path": {"type": "string", "format": "path"}, "key": {"type": "string"}}
     return [
         MCPTool(
             name="ac_element_save",
@@ -2830,7 +2830,7 @@ def element_repository_tools() -> List[MCPTool]:
         MCPTool(
             name="ac_element_list",
             description="List saved locator names in a repository file.",
-            input_schema=schema({"path": {"type": "string"}},
+            input_schema=schema({"path": {"type": "string", "format": "path"}},
                                 required=["path"]),
             handler=h.element_list,
             annotations=READ_ONLY,
@@ -2856,7 +2856,7 @@ def flow_debugger_tools() -> List[MCPTool]:
 
 
 def skill_library_tools() -> List[MCPTool]:
-    _S = {"path": {"type": "string"}, "name": {"type": "string"}}
+    _S = {"path": {"type": "string", "format": "path"}, "name": {"type": "string"}}
     return [
         MCPTool(
             name="ac_skill_save",
@@ -2881,7 +2881,7 @@ def skill_library_tools() -> List[MCPTool]:
         MCPTool(
             name="ac_skill_list",
             description="List saved skill names in a library file.",
-            input_schema=schema({"path": {"type": "string"}},
+            input_schema=schema({"path": {"type": "string", "format": "path"}},
                                 required=["path"]),
             handler=h.skill_list,
             annotations=READ_ONLY,
@@ -2897,7 +2897,7 @@ def skill_library_tools() -> List[MCPTool]:
             name="ac_skill_search",
             description=("Search skills by name/description/tags; returns "
                          "matching names."),
-            input_schema=schema({"path": {"type": "string"},
+            input_schema=schema({"path": {"type": "string", "format": "path"},
                                  "query": {"type": "string"}},
                                 required=["path", "query"]),
             handler=h.skill_search,
@@ -2929,7 +2929,7 @@ def a2a_tools() -> List[MCPTool]:
             description=("Build an A2A (agent-to-agent) Agent Card describing "
                          "AutoControl's skills. Writes to 'path' when given, "
                          "else returns the card."),
-            input_schema=schema({"path": {"type": "string"}}),
+            input_schema=schema({"path": {"type": "string", "format": "path"}}),
             handler=h_ops.agent_card,
             annotations=SIDE_EFFECT_ONLY,
         ),
@@ -2937,7 +2937,7 @@ def a2a_tools() -> List[MCPTool]:
 
 
 def office_tools() -> List[MCPTool]:
-    _P = {"path": {"type": "string"}}
+    _P = {"path": {"type": "string", "format": "path"}}
     return [
         MCPTool(
             name="ac_read_workbook",
@@ -3000,7 +3000,7 @@ def office_tools() -> List[MCPTool]:
 
 
 def agent_memory_tools() -> List[MCPTool]:
-    _D = {"db": {"type": "string"}}
+    _D = {"db": {"type": "string", "format": "path"}}
     return [
         MCPTool(
             name="ac_memory_remember",
@@ -3081,7 +3081,7 @@ def observer_tools() -> List[MCPTool]:
                 "event": {"type": "string",
                           "enum": ["appear", "vanish", "change"]},
                 "actions": {"type": "array"},
-                "image": {"type": "string"},
+                "image": {"type": "string", "format": "path"},
                 "threshold": {"type": "number"},
                 "text": {"type": "string"},
                 "x": {"type": "integer"}, "y": {"type": "integer"},
@@ -3137,7 +3137,7 @@ def sbom_tools() -> List[MCPTool]:
                          "dependencies (supply-chain compliance). 'root' "
                          "limits to a distribution's closure (empty = all "
                          "installed). Writes to 'path' or returns the SBOM."),
-            input_schema=schema({"path": {"type": "string"},
+            input_schema=schema({"path": {"type": "string", "format": "path"},
                                  "root": {"type": "string"}}),
             handler=h_ops.generate_sbom,
             annotations=SIDE_EFFECT_ONLY,
@@ -3156,7 +3156,7 @@ def sharding_tools() -> List[MCPTool]:
             input_schema=schema({
                 "flows": {"type": "array", "items": {"type": "string"}},
                 "shards": {"type": "integer"},
-                "history_path": {"type": "string"},
+                "history_path": {"type": "string", "format": "path"},
                 "window": {"type": "integer"},
             }, required=["flows"]),
             handler=h_ops.shard_suite,
@@ -3274,7 +3274,7 @@ def i18n_tools() -> List[MCPTool]:
 
 
 def checkpoint_tools() -> List[MCPTool]:
-    _R = {"run_id": {"type": "string"}, "db": {"type": "string"}}
+    _R = {"run_id": {"type": "string"}, "db": {"type": "string", "format": "path"}}
     return [
         MCPTool(
             name="ac_run_resumable",
@@ -3317,7 +3317,7 @@ def set_of_marks_tools() -> List[MCPTool]:
                          "instead of pixels. Optionally render a numbered-box "
                          "overlay screenshot to 'render_path'."),
             input_schema=schema({"app_name": {"type": "string"},
-                                 "render_path": {"type": "string"}}),
+                                 "render_path": {"type": "string", "format": "path"}}),
             handler=h_loc.mark_screen,
             annotations=SIDE_EFFECT_ONLY,
         ),
@@ -3517,7 +3517,7 @@ def process_doc_tools() -> List[MCPTool]:
             input_schema=schema({
                 "actions": {"type": "array"},
                 "title": {"type": "string"},
-                "path": {"type": "string"}},
+                "path": {"type": "string", "format": "path"}},
                 required=["actions"]),
             handler=h.generate_sop,
             annotations=SIDE_EFFECT_ONLY,
@@ -3581,7 +3581,7 @@ def feature_match_tools() -> List[MCPTool]:
                          "points), center, inliers, matches, score}}. 'min_inliers' "
                          "is the confidence floor; 'ratio' the match cutoff."),
             input_schema=schema({
-                "template": {"type": "string"},
+                "template": {"type": "string", "format": "path"},
                 "region": {"type": "array", "items": {"type": "integer"}},
                 "max_features": {"type": "integer"},
                 "ratio": {"type": "number"},
@@ -3724,8 +3724,8 @@ def preprocess_tools() -> List[MCPTool]:
                          "deskew/contrast (default grayscale,upscale,binarize); "
                          "'scale' for upscale. Returns {path, width, height}."),
             input_schema=schema({
-                "output_path": {"type": "string"},
-                "source": {"type": "string"},
+                "output_path": {"type": "string", "format": "path"},
+                "source": {"type": "string", "format": "path"},
                 "steps": {"type": "array", "items": {"type": "string"}},
                 "scale": {"type": "number"},
                 "region": {"type": "array", "items": {"type": "integer"}},
@@ -3777,7 +3777,7 @@ def actionability_tools() -> List[MCPTool]:
                          "waited_s}. 'timeout_s', 'stable_for_s', 'min_score', "
                          "'region'."),
             input_schema=schema({
-                "template": {"type": "string"},
+                "template": {"type": "string", "format": "path"},
                 "timeout_s": {"type": "number"},
                 "stable_for_s": {"type": "number"},
                 "min_score": {"type": "number"},
@@ -4017,7 +4017,7 @@ def clipboard_files_tools() -> List[MCPTool]:
                          "file copy (Windows). 'paths' is a list of absolute paths. "
                          "Returns {set, count}."),
             input_schema=schema({
-                "paths": {"type": "array", "items": {"type": "string"}}},
+                "paths": {"type": "array", "items": {"type": "string", "format": "path"}}},
                 required=["paths"]),
             handler=h_exec.set_clipboard_files,
             annotations=SIDE_EFFECT_ONLY,
@@ -4107,7 +4107,7 @@ def clipboard_files_tools() -> List[MCPTool]:
                          "'point' without sending it (pure dry-run). Returns "
                          "{message, paths, point, wide, blob_size}."),
             input_schema=schema({
-                "paths": {"type": "array", "items": {"type": "string"}},
+                "paths": {"type": "array", "items": {"type": "string", "format": "path"}},
                 "point": {"type": "array", "items": {"type": "integer"}}},
                 required=["paths"]),
             handler=h_exec.plan_file_drop,
@@ -4120,7 +4120,7 @@ def clipboard_files_tools() -> List[MCPTool]:
                          "client-area drop coordinate. Returns {dropped, count}."),
             input_schema=schema({
                 "hwnd": {"type": "integer"},
-                "paths": {"type": "array", "items": {"type": "string"}},
+                "paths": {"type": "array", "items": {"type": "string", "format": "path"}},
                 "point": {"type": "array", "items": {"type": "integer"}}},
                 required=["hwnd", "paths"]),
             handler=h_exec.drop_files,
@@ -4138,7 +4138,7 @@ def img_histogram_tools() -> List[MCPTool]:
                          "hsv/rgb/gray, 'bins' per channel. Returns {bins, space, "
                          "histogram}. A scale/illumination-robust view fingerprint."),
             input_schema=schema({
-                "source": {"type": "string"},
+                "source": {"type": "string", "format": "path"},
                 "bins": {"type": "integer"},
                 "space": {"type": "string"},
                 "region": {"type": "array", "items": {"type": "integer"}}},
@@ -4153,8 +4153,8 @@ def img_histogram_tools() -> List[MCPTool]:
                          "'method' correlation/chisqr/intersection/bhattacharyya, "
                          "'threshold', 'space'. Returns {changed, score}."),
             input_schema=schema({
-                "reference": {"type": "string"},
-                "current": {"type": "string"},
+                "reference": {"type": "string", "format": "path"},
+                "current": {"type": "string", "format": "path"},
                 "method": {"type": "string"},
                 "threshold": {"type": "number"},
                 "space": {"type": "string"},
@@ -4170,7 +4170,7 @@ def img_histogram_tools() -> List[MCPTool]:
                          "variance — low=blurry), contrast (grayscale stddev), "
                          "brightness (mean 0-255)}."),
             input_schema=schema({
-                "source": {"type": "string"},
+                "source": {"type": "string", "format": "path"},
                 "region": {"type": "array", "items": {"type": "integer"}}}),
             handler=h_exec.image_quality,
             annotations=READ_ONLY,
@@ -4182,7 +4182,7 @@ def img_histogram_tools() -> List[MCPTool]:
                          "blurry / low_contrast / too_dark / too_bright. Tune with "
                          "'min_sharpness' / 'min_contrast'."),
             input_schema=schema({
-                "source": {"type": "string"},
+                "source": {"type": "string", "format": "path"},
                 "region": {"type": "array", "items": {"type": "integer"}},
                 "min_sharpness": {"type": "number"},
                 "min_contrast": {"type": "number"}}),
@@ -4196,8 +4196,8 @@ def img_histogram_tools() -> List[MCPTool]:
                          "across 'scales'. Returns {found, result:{scale, "
                          "scale_percent, score, center, margin, candidates}}."),
             input_schema=schema({
-                "template": {"type": "string"},
-                "haystack": {"type": "string"},
+                "template": {"type": "string", "format": "path"},
+                "haystack": {"type": "string", "format": "path"},
                 "region": {"type": "array", "items": {"type": "integer"}},
                 "scales": {"type": "array", "items": {"type": "number"}},
                 "method": {"type": "string"}},
@@ -4212,8 +4212,8 @@ def img_histogram_tools() -> List[MCPTool]:
                          "y, width, height, center}]} — the raw scores match_"
                          "template discards."),
             input_schema=schema({
-                "template": {"type": "string"},
-                "haystack": {"type": "string"},
+                "template": {"type": "string", "format": "path"},
+                "haystack": {"type": "string", "format": "path"},
                 "region": {"type": "array", "items": {"type": "integer"}},
                 "scales": {"type": "array", "items": {"type": "number"}},
                 "method": {"type": "string"}},
@@ -4228,7 +4228,7 @@ def img_histogram_tools() -> List[MCPTool]:
                          "saliency — where to look with no template/text. Returns "
                          "{regions:[{x,y,width,height,center,score}], count}."),
             input_schema=schema({
-                "source": {"type": "string"},
+                "source": {"type": "string", "format": "path"},
                 "region": {"type": "array", "items": {"type": "integer"}},
                 "size": {"type": "integer"},
                 "threshold": {"type": "number"},
@@ -4242,7 +4242,7 @@ def img_histogram_tools() -> List[MCPTool]:
                          "(default screen): {found, region:{x,y,width,height,"
                          "center,score}}. The first place to look."),
             input_schema=schema({
-                "source": {"type": "string"},
+                "source": {"type": "string", "format": "path"},
                 "region": {"type": "array", "items": {"type": "integer"}},
                 "size": {"type": "integer"},
                 "threshold": {"type": "number"},
@@ -4348,7 +4348,7 @@ def img_histogram_tools() -> List[MCPTool]:
                          "structure ('method' sobel/laplacian/zscore). "
                          "'region' [x,y,w,h] clips the search. Returns {found, "
                          "x, y, width, height, score}."),
-            input_schema=schema({"template": {"type": "string"},
+            input_schema=schema({"template": {"type": "string", "format": "path"},
                                  "region": {"type": "array",
                                            "items": {"type": "integer"}},
                                  "method": {"type": "string"},
@@ -4376,10 +4376,10 @@ def img_histogram_tools() -> List[MCPTool]:
                          "a 'reference' image and the current screen (or "
                          "'current' image). Returns {changes:[{box, score, "
                          "changed}]}."),
-            input_schema=schema({"reference": {"type": "string"},
+            input_schema=schema({"reference": {"type": "string", "format": "path"},
                                  "boxes": {"type": "array",
                                           "items": {"type": "array"}},
-                                 "current": {"type": "string"},
+                                 "current": {"type": "string", "format": "path"},
                                  "threshold": {"type": "number"},
                                  "region": {"type": "array",
                                            "items": {"type": "integer"}}},
@@ -4402,7 +4402,7 @@ def img_histogram_tools() -> List[MCPTool]:
             description=("Classify the widget in a 'box' [x,y,w,h] of a "
                          "'source' image from its pixel shape. Returns {type, "
                          "features}."),
-            input_schema=schema({"source": {"type": "string"},
+            input_schema=schema({"source": {"type": "string", "format": "path"},
                                  "box": {"type": "array",
                                         "items": {"type": "integer"}}},
                                 required=["source", "box"]),
@@ -4446,8 +4446,8 @@ def motion_regions_tools() -> List[MCPTool]:
                          "Returns {count, regions}. For spinners / animations / "
                          "picking a quiet area. 'threshold'/'min_area'/'blur'."),
             input_schema=schema({
-                "before": {"type": "string"},
-                "after": {"type": "string"},
+                "before": {"type": "string", "format": "path"},
+                "after": {"type": "string", "format": "path"},
                 "threshold": {"type": "integer"},
                 "min_area": {"type": "integer"},
                 "blur": {"type": "integer"}},
@@ -4461,8 +4461,8 @@ def motion_regions_tools() -> List[MCPTool]:
                          "(default: screen). Returns {moved, activity} where "
                          "activity is the fraction of pixels that changed."),
             input_schema=schema({
-                "before": {"type": "string"},
-                "after": {"type": "string"},
+                "before": {"type": "string", "format": "path"},
+                "after": {"type": "string", "format": "path"},
                 "threshold": {"type": "integer"},
                 "min_area": {"type": "integer"}},
                 required=["before"]),
@@ -4533,8 +4533,8 @@ def perceptual_diff_tools() -> List[MCPTool]:
                          "total_pixels, diff_ratio, regions}; pass 'max_diff_ratio' "
                          "to raise when exceeded. 'threshold' 0..1 sensitivity."),
             input_schema=schema({
-                "actual": {"type": "string"},
-                "expected": {"type": "string"},
+                "actual": {"type": "string", "format": "path"},
+                "expected": {"type": "string", "format": "path"},
                 "threshold": {"type": "number"},
                 "include_aa": {"type": "boolean"},
                 "max_diff_ratio": {"type": "number"}},
@@ -4883,7 +4883,7 @@ def barcode_tools() -> List[MCPTool]:
                          "{count, barcodes:[{text, type, points}]}. QR codes have "
                          "their own tool."),
             input_schema=schema({
-                "source": {"type": "string"},
+                "source": {"type": "string", "format": "path"},
                 "region": {"type": "array", "items": {"type": "integer"}}},
                 required=[]),
             handler=h_exec.read_barcodes,
@@ -4902,8 +4902,8 @@ def ssim_tools() -> List[MCPTool]:
                          "a list of [x,y,w,h] boxes to exclude (clocks/cursors). "
                          "Returns {score}. Perceptual, unlike pixel diff."),
             input_schema=schema({
-                "reference": {"type": "string"},
-                "current": {"type": "string"},
+                "reference": {"type": "string", "format": "path"},
+                "current": {"type": "string", "format": "path"},
                 "ignore": {"type": "array",
                            "items": {"type": "array",
                                      "items": {"type": "integer"}}},
@@ -4920,8 +4920,8 @@ def ssim_tools() -> List[MCPTool]:
                          "'ignore' [x,y,w,h] boxes suppressed. Returns "
                          "{count, regions} (largest first)."),
             input_schema=schema({
-                "reference": {"type": "string"},
-                "current": {"type": "string"},
+                "reference": {"type": "string", "format": "path"},
+                "current": {"type": "string", "format": "path"},
                 "ignore": {"type": "array",
                            "items": {"type": "array",
                                      "items": {"type": "integer"}}},
@@ -4944,7 +4944,7 @@ def visual_match_tools() -> List[MCPTool]:
                          "score,scale,center}}. 'scales' [..] for DPI/zoom, "
                          "'min_score', 'region', 'method'."),
             input_schema=schema({
-                "template": {"type": "string"},
+                "template": {"type": "string", "format": "path"},
                 "min_score": {"type": "number"},
                 "scales": {"type": "array", "items": {"type": "number"}},
                 "region": {"type": "array", "items": {"type": "integer"}},
@@ -4959,7 +4959,7 @@ def visual_match_tools() -> List[MCPTool]:
                          ">= 'min_score', overlaps removed by NMS. "
                          "Returns {count, matches}."),
             input_schema=schema({
-                "template": {"type": "string"},
+                "template": {"type": "string", "format": "path"},
                 "min_score": {"type": "number"},
                 "max_results": {"type": "integer"},
                 "nms_iou": {"type": "number"},
@@ -4976,8 +4976,8 @@ def visual_match_tools() -> List[MCPTool]:
                          "over a transparent or varying background. Returns "
                          "{found, match}. 'min_score', 'region'."),
             input_schema=schema({
-                "template": {"type": "string"},
-                "mask": {"type": "string"},
+                "template": {"type": "string", "format": "path"},
+                "mask": {"type": "string", "format": "path"},
                 "min_score": {"type": "number"},
                 "region": {"type": "array", "items": {"type": "integer"}}},
                 required=["template"]),
@@ -4989,8 +4989,8 @@ def visual_match_tools() -> List[MCPTool]:
             description=("Find EVERY masked match of 'template' >= 'min_score', "
                          "overlaps removed by NMS. Returns {count, matches}."),
             input_schema=schema({
-                "template": {"type": "string"},
-                "mask": {"type": "string"},
+                "template": {"type": "string", "format": "path"},
+                "mask": {"type": "string", "format": "path"},
                 "min_score": {"type": "number"},
                 "max_results": {"type": "integer"},
                 "nms_iou": {"type": "number"},
@@ -5012,7 +5012,7 @@ def rotated_match_tools() -> List[MCPTool]:
                          "scale,angle,center}}. Use when a control is skewed / a "
                          "rotated icon / a dial. 'min_score', 'region', 'method'."),
             input_schema=schema({
-                "template": {"type": "string"},
+                "template": {"type": "string", "format": "path"},
                 "min_score": {"type": "number"},
                 "scales": {"type": "array", "items": {"type": "number"}},
                 "angles": {"type": "array", "items": {"type": "number"}},
@@ -5028,7 +5028,7 @@ def rotated_match_tools() -> List[MCPTool]:
                          ">= 'min_score' over the angle x scale sweep, overlaps "
                          "removed by NMS. Returns {count, matches}."),
             input_schema=schema({
-                "template": {"type": "string"},
+                "template": {"type": "string", "format": "path"},
                 "min_score": {"type": "number"},
                 "scales": {"type": "array", "items": {"type": "number"}},
                 "angles": {"type": "array", "items": {"type": "number"}},
@@ -5048,7 +5048,7 @@ def rotated_match_tools() -> List[MCPTool]:
                          "button) - do NOT blindly click. 'ambiguous_ratio' (default "
                          "0.9), 'min_score', 'scales', 'region', 'method'."),
             input_schema=schema({
-                "template": {"type": "string"},
+                "template": {"type": "string", "format": "path"},
                 "min_score": {"type": "number"},
                 "scales": {"type": "array", "items": {"type": "number"}},
                 "ambiguous_ratio": {"type": "number"},
@@ -5066,7 +5066,7 @@ def rotated_match_tools() -> List[MCPTool]:
                          "separability near 0 = unimodal (no clear match) - do NOT "
                          "trust the threshold. 'region', 'method'."),
             input_schema=schema({
-                "template": {"type": "string"},
+                "template": {"type": "string", "format": "path"},
                 "region": {"type": "array", "items": {"type": "integer"}},
                 "method": {"type": "string"}},
                 required=["template"]),
@@ -5080,7 +5080,7 @@ def rotated_match_tools() -> List[MCPTool]:
                          "tune. 'floor' (default 0.5) clamps the threshold so a noisy "
                          "surface can't match junk. Returns {count, matches}."),
             input_schema=schema({
-                "template": {"type": "string"},
+                "template": {"type": "string", "format": "path"},
                 "floor": {"type": "number"},
                 "max_results": {"type": "integer"},
                 "region": {"type": "array", "items": {"type": "integer"}},
@@ -5097,7 +5097,7 @@ def rotated_match_tools() -> List[MCPTool]:
                          "ORB can't key on. Returns {found, match}. 'min_score', "
                          "'scales', 'region'."),
             input_schema=schema({
-                "template": {"type": "string"},
+                "template": {"type": "string", "format": "path"},
                 "min_score": {"type": "number"},
                 "scales": {"type": "array", "items": {"type": "number"}},
                 "region": {"type": "array", "items": {"type": "integer"}}},
@@ -5111,7 +5111,7 @@ def rotated_match_tools() -> List[MCPTool]:
                          "'min_score', overlaps removed by NMS. Returns "
                          "{count, matches}."),
             input_schema=schema({
-                "template": {"type": "string"},
+                "template": {"type": "string", "format": "path"},
                 "min_score": {"type": "number"},
                 "max_results": {"type": "integer"},
                 "nms_iou": {"type": "number"},
@@ -5128,7 +5128,7 @@ def rotated_match_tools() -> List[MCPTool]:
                          "cx/cy are float for drag / slider / high-DPI accuracy. "
                          "'min_score', 'region', 'method'."),
             input_schema=schema({
-                "template": {"type": "string"},
+                "template": {"type": "string", "format": "path"},
                 "min_score": {"type": "number"},
                 "region": {"type": "array", "items": {"type": "integer"}},
                 "method": {"type": "string"}},
@@ -5145,7 +5145,7 @@ def rotated_match_tools() -> List[MCPTool]:
                          ">= 'min_votes' references agree within 'agree_px'. Cuts false "
                          "positives on themed / animated UI. 'min_score', 'region'."),
             input_schema=schema({
-                "templates": {"type": "array", "items": {"type": "string"}},
+                "templates": {"type": "array", "items": {"type": "string", "format": "path"}},
                 "min_score": {"type": "number"},
                 "agree_px": {"type": "number"},
                 "min_votes": {"type": "integer"},
@@ -5177,7 +5177,7 @@ def rotated_match_tools() -> List[MCPTool]:
                          "targets), 'min_score', 'scales', 'region'. For solid colour "
                          "blobs use find_color_region instead."),
             input_schema=schema({
-                "template": {"type": "string"},
+                "template": {"type": "string", "format": "path"},
                 "channels": {"type": "array", "items": {"type": "string"}},
                 "min_score": {"type": "number"},
                 "scales": {"type": "array", "items": {"type": "number"}},
@@ -5192,7 +5192,7 @@ def rotated_match_tools() -> List[MCPTool]:
                          "'min_score', overlaps removed by NMS. Returns "
                          "{count, matches}."),
             input_schema=schema({
-                "template": {"type": "string"},
+                "template": {"type": "string", "format": "path"},
                 "channels": {"type": "array", "items": {"type": "string"}},
                 "min_score": {"type": "number"},
                 "max_results": {"type": "integer"},
@@ -5210,7 +5210,7 @@ def rotated_match_tools() -> List[MCPTool]:
                          "(min_ssim >= 'settle_threshold') - match only when stable to "
                          "avoid mid-animation hits."),
             input_schema=schema({
-                "frames": {"type": "array", "items": {"type": "string"}},
+                "frames": {"type": "array", "items": {"type": "string", "format": "path"}},
                 "settle_threshold": {"type": "number"}},
                 required=["frames"]),
             handler=h_exec.region_stability,
@@ -5224,8 +5224,8 @@ def rotated_match_tools() -> List[MCPTool]:
                          "'agree_px' - a steady match, not one lucky frame. "
                          "'min_score'."),
             input_schema=schema({
-                "template": {"type": "string"},
-                "frames": {"type": "array", "items": {"type": "string"}},
+                "template": {"type": "string", "format": "path"},
+                "frames": {"type": "array", "items": {"type": "string", "format": "path"}},
                 "min_score": {"type": "number"},
                 "agree_px": {"type": "number"}},
                 required=["template", "frames"]),
@@ -5638,9 +5638,9 @@ def plugin_sdk_tools() -> List[MCPTool]:
 
 def governance_tools() -> List[MCPTool]:
     _AD = {"action": {"type": "string"}, "requester": {"type": "string"},
-           "db": {"type": "string"}}
+           "db": {"type": "string", "format": "path"}}
     _TA = {"token": {"type": "string"}, "approver": {"type": "string"},
-           "db": {"type": "string"}}
+           "db": {"type": "string", "format": "path"}}
     return [
         MCPTool(
             name="ac_approval_request",
@@ -5675,7 +5675,7 @@ def governance_tools() -> List[MCPTool]:
                          "rejected) and an 'approved' boolean to gate an "
                          "action on."),
             input_schema=schema({"token": {"type": "string"},
-                                 "db": {"type": "string"}}, ["token"]),
+                                 "db": {"type": "string", "format": "path"}}, ["token"]),
             handler=h_ops.approval_status,
             annotations=READ_ONLY,
         ),
@@ -5757,7 +5757,7 @@ def egress_tools() -> List[MCPTool]:
 
 def approval_testing_tools() -> List[MCPTool]:
     _ND = {"name": {"type": "string"},
-           "approvals_dir": {"type": "string"},
+           "approvals_dir": {"type": "string", "format": "path"},
            "extension": {"type": "string"}}
     return [
         MCPTool(
@@ -5785,7 +5785,7 @@ def approval_testing_tools() -> List[MCPTool]:
             name="ac_pending_artifacts",
             description=("List artifact names with a received file awaiting "
                          "approval under 'approvals_dir'. Returns {pending}."),
-            input_schema=schema({"approvals_dir": {"type": "string"}}),
+            input_schema=schema({"approvals_dir": {"type": "string", "format": "path"}}),
             handler=h_ops.pending_artifacts,
             annotations=READ_ONLY,
         ),
@@ -5829,7 +5829,7 @@ def compliance_tools() -> List[MCPTool]:
             input_schema=schema(
                 {"evidence": {"type": "object"},
                  "frameworks": {"type": "array", "items": {"type": "string"}},
-                 "path": {"type": "string"},
+                 "path": {"type": "string", "format": "path"},
                  "fmt": {"type": "string", "enum": ["json", "html"]}},
                 ["evidence"]),
             handler=h_ops.compliance_report,
@@ -5896,8 +5896,9 @@ def video_report_tools() -> List[MCPTool]:
                          "burned in. Writes 'output' (mp4/avi). Returns "
                          "{output, steps, fps, frame_count}."),
             input_schema=schema(
-                {"steps": {"type": "array", "items": {"type": "object"}},
-                 "output": {"type": "string"},
+                {"steps": {"type": "array",
+                           "items": {"type": "object", "properties": {"image": {"format": "path"}}}},
+                 "output": {"type": "string", "format": "path"},
                  "fps": {"type": "integer"},
                  "seconds_per_step": {"type": "number"}},
                 ["steps", "output"]),
@@ -5956,7 +5957,7 @@ def artifact_store_tools() -> List[MCPTool]:
                          "S3-compatible store. Optional 'key' (defaults to the "
                          "file name). Returns {key}."),
             input_schema=schema(
-                {"local_path": {"type": "string"}, "key": {"type": "string"}},
+                {"local_path": {"type": "string", "format": "path"}, "key": {"type": "string"}},
                 ["local_path"]),
             handler=h_ops.s3_upload,
             annotations=DESTRUCTIVE,
@@ -5967,7 +5968,7 @@ def artifact_store_tools() -> List[MCPTool]:
                          "'local_path'. Returns {path}."),
             input_schema=schema(
                 {"key": {"type": "string"},
-                 "local_path": {"type": "string"}}, ["key", "local_path"]),
+                 "local_path": {"type": "string", "format": "path"}}, ["key", "local_path"]),
             handler=h_ops.s3_download,
             annotations=SIDE_EFFECT_ONLY,
         ),
@@ -5998,7 +5999,7 @@ def image_dedup_tools() -> List[MCPTool]:
                          "comparison. 'algo' is 'average' (default) or "
                          "'dhash'. Returns {hash} (hex)."),
             input_schema=schema(
-                {"path": {"type": "string"},
+                {"path": {"type": "string", "format": "path"},
                  "algo": {"type": "string", "enum": ["average", "dhash"]}},
                 ["path"]),
             handler=h_loc.image_hash,
@@ -6010,7 +6011,7 @@ def image_dedup_tools() -> List[MCPTool]:
                          "keeping the first of each cluster (images within "
                          "'max_distance' bits are dropped). Returns {unique}."),
             input_schema=schema(
-                {"paths": {"type": "array", "items": {"type": "string"}},
+                {"paths": {"type": "array", "items": {"type": "string", "format": "path"}},
                  "max_distance": {"type": "integer"}}, ["paths"]),
             handler=h_loc.dedupe_images,
             annotations=READ_ONLY,
@@ -6223,7 +6224,7 @@ def process_mining_tools() -> List[MCPTool]:
 
 
 def asset_tools() -> List[MCPTool]:
-    _ENV = {"environment": {"type": "string"}, "db": {"type": "string"}}
+    _ENV = {"environment": {"type": "string"}, "db": {"type": "string", "format": "path"}}
     return [
         MCPTool(
             name="ac_set_asset",
@@ -7119,7 +7120,7 @@ def dotenv_tools() -> List[MCPTool]:
             description=("Load a .env file at 'path' into a fresh {values} dict. "
                          "'override' is accepted for symmetry (fresh dict)."),
             input_schema=schema(
-                {"path": {"type": "string"}, "override": {"type": "boolean"}},
+                {"path": {"type": "string", "format": "path"}, "override": {"type": "boolean"}},
                 ["path"]),
             handler=h_exec.load_dotenv,
             annotations=READ_ONLY,
@@ -7219,7 +7220,7 @@ def secret_ref_tools() -> List[MCPTool]:
             name="ac_resolve_ref",
             description=("Resolve a value reference 'ref' (env://VAR, "
                          "file://path, or secret://name) to {value}."),
-            input_schema=schema({"ref": {"type": "string"}}, ["ref"]),
+            input_schema=schema({"ref": {"type": "string", "format": "value-ref"}}, ["ref"]),
             handler=h_exec.resolve_ref,
             annotations=READ_ONLY,
         ),
@@ -7227,7 +7228,7 @@ def secret_ref_tools() -> List[MCPTool]:
             name="ac_resolve_refs",
             description=("Recursively resolve every env:// / file:// / secret:// "
                          "reference inside 'obj'. Returns {resolved}."),
-            input_schema=schema({"obj": {"type": "object"}}, ["obj"]),
+            input_schema=schema({"obj": {"type": "object", "format": "value-ref"}}, ["obj"]),
             handler=h_exec.resolve_refs,
             annotations=READ_ONLY,
         ),
@@ -7523,7 +7524,7 @@ def provenance_tools() -> List[MCPTool]:
                          "list of file 'paths' (sha256 subjects). Returns "
                          "{statement}."),
             input_schema=schema(
-                {"paths": {"type": "array"}, "builder_id": {"type": "string"}},
+                {"paths": {"type": "array", "items": {"format": "path"}}, "builder_id": {"type": "string"}},
                 ["paths"]),
             handler=h_ops.build_provenance,
             annotations=READ_ONLY,
@@ -7533,7 +7534,8 @@ def provenance_tools() -> List[MCPTool]:
             description=("Re-hash 'files' (name->path) against a provenance "
                          "'statement'. Returns {ok, mismatches}."),
             input_schema=schema(
-                {"statement": {"type": "object"}, "files": {"type": "object"}},
+                {"statement": {"type": "object"},
+                 "files": {"type": "object", "additionalProperties": {"format": "path"}}},
                 ["statement", "files"]),
             handler=h_ops.verify_provenance,
             annotations=READ_ONLY,
@@ -7759,7 +7761,7 @@ def decision_table_tools() -> List[MCPTool]:
 
 
 def locator_repair_tools() -> List[MCPTool]:
-    _DB = {"db": {"type": "string"}}
+    _DB = {"db": {"type": "string", "format": "path"}}
     return [
         MCPTool(
             name="ac_repair_record",
@@ -7845,7 +7847,7 @@ def sarif_tools() -> List[MCPTool]:
                          "Returns {sarif, path?}."),
             input_schema=schema(
                 {"findings": {"type": "array", "items": {"type": "object"}},
-                 "path": {"type": "string"},
+                 "path": {"type": "string", "format": "path"},
                  "tool_name": {"type": "string"}}, ["findings"]),
             handler=h_ops.export_sarif,
             annotations=SIDE_EFFECT_ONLY,
@@ -7950,7 +7952,7 @@ def hotkey_tools() -> List[MCPTool]:
                          "to begin listening."),
             input_schema=schema({
                 "combo": {"type": "string"},
-                "script_path": {"type": "string"},
+                "script_path": {"type": "string", "format": "path"},
                 "binding_id": {"type": "string"},
             }, required=["combo", "script_path"]),
             handler=h_sched.hotkey_bind,
@@ -8323,7 +8325,7 @@ def assertion_tools() -> List[MCPTool]:
             description=("Assert a template image is (or is not) visible on "
                          "screen at the given match threshold."),
             input_schema=schema({
-                "template_path": {"type": "string"},
+                "template_path": {"type": "string", "format": "path"},
                 "threshold": {"type": "number"},
                 "present": {"type": "boolean"},
                 "raise_on_fail": {"type": "boolean"},
@@ -8401,7 +8403,7 @@ def assertion_tools() -> List[MCPTool]:
                          "or a minimum byte size (min_size). Set exists=false "
                          "to assert the file is absent."),
             input_schema=schema({
-                "path": {"type": "string"},
+                "path": {"type": "string", "format": "path"},
                 "exists": {"type": "boolean"},
                 "contains": {"type": "string"},
                 "sha256": {"type": "string"},
@@ -8486,7 +8488,7 @@ def data_source_tools() -> List[MCPTool]:
                          "with the AC_for_each_row flow-control command to "
                          "drive a script once per row."),
             input_schema=schema({
-                "source": {"type": "object"},
+                "source": {"type": "object", "properties": {"path": {"format": "path"}}},
                 "limit": {"type": "integer"},
             }, required=["source"]),
             handler=hq.load_data,
@@ -8503,7 +8505,7 @@ def pdf_tools() -> List[MCPTool]:
                          "pages), a 1-based page number, or a list of them. "
                          "Requires the optional pypdf package."),
             input_schema=schema({
-                "path": {"type": "string"},
+                "path": {"type": "string", "format": "path"},
                 "pages": {"type": ["integer", "array", "null"]},
             }, required=["path"]),
             handler=hq.extract_pdf_text,
@@ -8517,7 +8519,7 @@ def pdf_tools() -> List[MCPTool]:
                          "case-insensitive match. Raises on failure unless "
                          "raise_on_fail is false."),
             input_schema=schema({
-                "path": {"type": "string"},
+                "path": {"type": "string", "format": "path"},
                 "text": {"type": "string"},
                 "present": {"type": "boolean"},
                 "page": {"type": "integer"},
@@ -8541,7 +8543,8 @@ def email_tools() -> List[MCPTool]:
                          "use_tls?, use_ssl?, timeout?}; TLS is on by default. "
                          "Sends mail (irreversible side effect)."),
             input_schema=schema({
-                "message": {"type": "object"},
+                "message": {"type": "object",
+                            "properties": {"attachments": {"items": {"format": "path"}}}},
                 "smtp": {"type": "object"},
             }, required=["message", "smtp"]),
             handler=hq.send_email,
@@ -8561,7 +8564,7 @@ def sql_tools() -> List[MCPTool]:
                          "'params' (?/:name placeholders) — never interpolate. "
                          "A single read-only statement only."),
             input_schema=schema({
-                "database": {"type": "string"},
+                "database": {"type": "string", "format": "path"},
                 "query": {"type": "string"},
                 "params": {"type": ["array", "object"]},
                 "fetch": {"type": "string", "enum": ["all", "one", "scalar"]},
@@ -8577,7 +8580,7 @@ def sql_tools() -> List[MCPTool]:
                          "Bind values via 'params'. Raises on failure unless "
                          "raise_on_fail is false."),
             input_schema=schema({
-                "database": {"type": "string"},
+                "database": {"type": "string", "format": "path"},
                 "query": {"type": "string"},
                 "params": {"type": ["array", "object"]},
                 "op": {"type": "string"},
@@ -8626,7 +8629,7 @@ def visual_regression_tools() -> List[MCPTool]:
                          "screen (or a [x, y, w, h] region) for later visual "
                          "regression checks."),
             input_schema=schema({
-                "path": {"type": "string"},
+                "path": {"type": "string", "format": "path"},
                 "region": {"type": "array", "items": {"type": "integer"}},
             }, required=["path"]),
             handler=hq.take_golden,
@@ -8641,11 +8644,11 @@ def visual_regression_tools() -> List[MCPTool]:
                          "and passes unless create_if_missing=false. Pass "
                          "diff_path to save a highlighted diff on mismatch."),
             input_schema=schema({
-                "golden_path": {"type": "string"},
+                "golden_path": {"type": "string", "format": "path"},
                 "region": {"type": "array", "items": {"type": "integer"}},
                 "tolerance": {"type": "number"},
                 "per_pixel_threshold": {"type": "integer"},
-                "diff_path": {"type": "string"},
+                "diff_path": {"type": "string", "format": "path"},
                 "create_if_missing": {"type": "boolean"},
                 "raise_on_fail": {"type": "boolean"},
             }, required=["golden_path"]),
@@ -8683,13 +8686,13 @@ def codegen_tools() -> List[MCPTool]:
                          "execute_action). Pass 'output' to also write the file. "
                          "Returns the generated source code."),
             input_schema=schema({
-                "source": {"type": ["array", "string"],
+                "source": {"type": ["array", "string"], "format": "path",
                            "description": "Action list, or path to a JSON action file."},
                 "target": {"type": "string",
                            "enum": ["pytest", "python", "robot"]},
                 "style": {"type": "string", "enum": ["calls", "actions"]},
                 "name": {"type": "string"},
-                "output": {"type": "string"},
+                "output": {"type": "string", "format": "path"},
             }, required=["source"]),
             handler=hq.generate_code,
             annotations=SIDE_EFFECT_ONLY,
@@ -8823,8 +8826,8 @@ def suite_tools() -> List[MCPTool]:
                 "spec": {"type": "object"},
                 "tags": {"type": "array", "items": {"type": "string"}},
                 "respect_quarantine": {"type": "boolean"},
-                "junit_path": {"type": "string"},
-                "allure_dir": {"type": "string"},
+                "junit_path": {"type": "string", "format": "path"},
+                "allure_dir": {"type": "string", "format": "path"},
             }, required=["spec"]),
             handler=hq.run_suite,
             annotations=DESTRUCTIVE,
@@ -8977,7 +8980,7 @@ def media_assert_tools() -> List[MCPTool]:
                          "segment of a recorded video and assert motion "
                          "(expect_motion=true) or a static segment."),
             input_schema=schema({
-                "video_path": {"type": "string"},
+                "video_path": {"type": "string", "format": "path"},
                 "start_s": {"type": "number"},
                 "end_s": {"type": "number"},
                 "threshold": {"type": "number"},

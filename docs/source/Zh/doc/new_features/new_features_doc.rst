@@ -883,9 +883,23 @@ GUI：Viewer 分頁有 *把本機剪貼簿文字送到 Host* 按鈕；host 收�
 * ``FILE_CHUNK`` — 36-byte ASCII transfer id + 原始 payload
 * ``FILE_END``   — JSON ``{transfer_id, status, error?}``
 
-雙向、分塊（256 KiB / chunk）、**沒有總大小上限**、**沒有目的路徑
-限制**（拿到 token 就視為信任使用者）。進度由兩端各自本地計算，不
-需要額外的 wire 訊息::
+雙向、分塊（256 KiB / chunk）、**沒有總大小上限**。兩個方向對
+``dest_path`` 的處理不同，因為信任是單向的：
+
+* **Viewer → host**：``dest_path`` 是 host 上的路徑，照單全收。Viewer
+  持有 token，拿到 token 就視為信任使用者。
+* **Host → viewer**：``dest_path`` 是\ **相對於 viewer 下載目錄**\ 的
+  路徑。Viewer 無法替它連上的 host 背書，所以絕對路徑、磁碟機或 UNC
+  路徑、``..``、指向目錄外的 symlink 都會讓傳輸失敗（``on_complete``
+  收到 ``ok=False``），不會寫入任何東西。
+
+下載目錄預設是 ``~/Downloads/AutoControl``，可用
+``JE_AUTOCONTROL_REMOTE_DOWNLOAD_DIR`` 指定別的；第一個檔案到達時才
+建立。要個別指定，請把 ``FileReceiver(base_dir=...)`` 交給
+``set_file_receiver``。沒有 ``base_dir`` 的 receiver 不受限制——host
+用的就是這種。
+
+進度由兩端各自本地計算，不需要額外的 wire 訊息::
 
    from je_auto_control.utils.remote_desktop import (
        FileReceiver, RemoteDesktopHost, RemoteDesktopViewer, send_file,
@@ -895,11 +909,13 @@ GUI：Viewer 分頁有 *把本機剪貼簿文字送到 Host* 按鈕；host 收�
    viewer.send_file("local.bin", "/tmp/uploaded.bin",
                     on_progress=lambda tid, done, total: print(done, total))
 
-   # Host 下發到所有 viewer（viewer 需要設一個 FileReceiver 來收）
+   # Host 下發到所有 viewer；每個 viewer 存進自己的下載目錄，
+   # 這裡是 <下載目錄>/from_host/local.bin
    viewer.set_file_receiver(FileReceiver(
        on_progress=..., on_complete=...,
+       base_dir="~/Downloads/AutoControl",
    ))
-   host.send_file_to_viewers("local.bin", "/tmp/from_host.bin")
+   host.send_file_to_viewers("local.bin", "from_host/local.bin")
 
 GUI：*傳送檔案...* 按鈕開啟檔案選擇器 + 目的路徑提示，上傳跑在
 ``QThread`` 上，底下 ``QProgressBar`` 綁到 sender 的 progress 事
@@ -907,10 +923,17 @@ GUI：*傳送檔案...* 按鈕開啟檔案選擇器 + 目的路徑提示，上�
 去就走同一個流程上傳。
 
 .. warning::
-   路徑無限制、大小無上限。任何拿到 token 的人都能把任意檔案寫到
-   任意位置（覆蓋 ``C:\\Windows\\System32\\*.dll`` 都可能），也能
-   塞滿磁碟。Token 持有者必須等同信任使用者；要更嚴格的話請自行
-   繼承 ``FileReceiver`` 在 ``handle_begin`` 內驗證 dest_path。
+   在 host 端，路徑無限制、大小無上限。任何拿到 token 的人都能把任意
+   檔案寫到 host 的任意位置（覆蓋 ``C:\\Windows\\System32\\*.dll``
+   都可能），也能塞滿磁碟。Token 持有者必須等同信任使用者；要更嚴格
+   的話請用 ``host.set_file_receiver(FileReceiver(base_dir=...))`` 給
+   host 一個受限的 receiver。Viewer 被限制在下載目錄內，但 host 仍然
+   可以把那顆磁碟塞滿。
+
+.. note::
+   在這次變更之前，host 推來的 ``dest_path`` 是 viewer 上的絕對路徑。
+   呼叫 ``host.send_file_to_viewers(src, "/tmp/x.bin")`` 的腳本現在會
+   在 viewer 端失敗，請改送相對路徑。
 
 
 遠端桌面 — AnyDesk 風格彈出視窗
