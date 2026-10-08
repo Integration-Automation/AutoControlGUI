@@ -175,6 +175,10 @@ A deletion is a tombstone. A versioned tombstone is **never dropped by age**:
 ``collect_tombstones`` removes it only when every active device recorded
 under the bucket's ``peers`` has acknowledged a revision that includes it.
 ``ConfigSyncClient.push_operations`` maintains those acknowledgements.
+A device joins ``peers`` with its first push; ``push_operations([])`` from a
+device the bucket does not list is such a push when the bucket holds entries
+(their later deletion must wait for it) and writes nothing when it holds
+none -- a first sync of an empty account commits no revision.
 
 A device that will not come back is retired with
 ``client.retire_peer(device_id)`` (or automatically with

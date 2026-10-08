@@ -214,7 +214,10 @@ class ConfigSyncClient:
         device got there first, up to ``max_attempts`` times. Applying the
         same operations twice changes nothing, so a batch can be resent
         after an uncertain failure. With no operations this still pushes
-        when the bucket holds a deletion this device has not acknowledged.
+        when the bucket holds a deletion this device has not acknowledged,
+        or to list a device the bucket does not know yet -- unless the
+        bucket holds no entries, when there is nothing to commit and
+        ``pushed`` is false.
 
         Raises :class:`FullResyncRequired` when the group has retired this
         device. ``max_offline_s`` retires peers not seen for that long.

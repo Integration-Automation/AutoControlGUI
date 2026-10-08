@@ -239,6 +239,8 @@ def test_retired_peer_requires_full_sync(server):
 
 def test_peers_unseen_for_too_long_are_retired_when_asked(server):
     client = _client()
+    seed = SyncEntry.create("hk0", {"combo": "seed"}, "laptop")
+    client.push_operations([_op(seed)], device_id="laptop", now=0.0)
     client.push_operations([], device_id="desktop", now=0.0)
     entry = SyncEntry.create("hk1", {"combo": "a"}, "laptop")
     client.push_operations([_op(entry)], device_id="laptop", now=100.0, max_offline_s=50.0)

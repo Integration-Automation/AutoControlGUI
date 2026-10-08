@@ -197,10 +197,18 @@ def apply_operation(bucket: ConfigBucket, operation: SyncOperation,
 
 
 def awaits_ack(bucket: ConfigBucket, device_id: str) -> bool:
-    """Whether a tombstone is still waiting for ``device_id`` to acknowledge it."""
+    """Whether ``bucket`` needs a write from ``device_id`` that carries no change.
+
+    A device already listed under ``peers`` owes one while a tombstone waits
+    for its acknowledgement. A device not listed yet owes one to *join* --
+    so that later deletions wait for it -- but only when the bucket holds
+    versioned entries: with none there is nothing whose deletion could be
+    forgotten before this device saw it, and the write would be an empty
+    revision.
+    """
     peer = bucket.peer_states().get(device_id)
     if peer is None:
-        return True
+        return any(bucket.sync_entries(section) for section in bucket.sections)
     return any(entry.deleted and entry.deleted_revision > peer.acked_revision
                for section in bucket.sections
                for entry in bucket.sync_entries(section).values())

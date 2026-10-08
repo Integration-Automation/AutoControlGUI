@@ -149,6 +149,9 @@ tombstone 只會等已列在 ``peers`` 下的裝置。
 刪除是一個 tombstone。Versioned tombstone **絕不因時間而丟棄**:``collect_tombstones``
 只在 bucket 的 ``peers`` 記錄的每台有效裝置都已確認包含它的 revision 之後才移除。
 ``ConfigSyncClient.push_operations`` 負責維護這些確認。
+裝置在第一次 push 時加入 ``peers``;bucket 還沒列出的裝置呼叫 ``push_operations([])``,
+在 bucket 有 entry 時就是這樣的一次 push(之後的刪除必須等它),在 bucket 沒有任何 entry 時
+不寫入任何東西 —— 空帳號的第一次同步不會提交 revision。
 
 不會再回來的裝置以 ``client.retire_peer(device_id)`` 退休(或以
 ``push_operations(..., max_offline_s=...)`` 自動退休,它比較 ``last_seen`` ——
