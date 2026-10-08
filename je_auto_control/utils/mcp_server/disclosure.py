@@ -24,6 +24,11 @@ remembers. A call still passes every existing gate in
 confirmation -- and :meth:`ToolDisclosure.require_available` only adds one
 more refusal in front of them.
 
+Read-only is enforced here for every mode, when a list is answered and when
+a call arrives, not only when the default registry is built: a mutating tool
+registered on a running read-only server (a plugin) is neither listed nor
+run, in full mode as in the other two.
+
 ``tools/list`` is paged in these two modes. A cursor names a snapshot of the
 view taken when its first page was requested, so later pages come from that
 same list even if a plugin changed the registry in between; a cursor whose
@@ -558,23 +563,33 @@ class ToolDisclosure:
             raise _MCPError(-32602, f"Invalid params: {error}") from error
 
     def require_available(self, tool: MCPTool, arguments: Dict[str, Any]) -> None:
-        """Refuse a call to a tool the session's view does not offer.
+        """Refuse a call to a tool this server, or the session's view, does not offer.
 
-        A no-op in full mode. Otherwise this runs after the role check and
-        before every other gate, and a refusal is recorded like a role one.
+        In full mode the only refusal is a mutating tool on a read-only
+        server. This runs after the role check and before every other gate,
+        and a refusal is recorded like a role one.
         """
-        if self.mode is ToolMode.FULL:
+        message = self._unavailable_reason(tool)
+        if message is None:
             return
-        view = self.current_view()
-        if view.allows(tool.name):
-            return
-        message = f"Tool {tool.name!r} is not available in this session"
-        if not view.fixed and tool.name in self.catalog().tools:
-            message = (f"Tool {tool.name!r} is not enabled in this session; "
-                       f"enable it with {ENABLE_TOOL} first")
         self._server._audit.record(tool=tool.name, arguments=arguments, status="denied",
                                    duration_seconds=0.0, error_text=message)
         raise _MCPError(-32602, message)
+
+    def _unavailable_reason(self, tool: MCPTool) -> Optional[str]:
+        """Why ``tool`` cannot be called here; ``None`` when it can."""
+        if self.mode is ToolMode.FULL:
+            if self.read_only and not tool.annotations.read_only:
+                return (f"Tool {tool.name!r} is not available: this server is read-only "
+                        "and the tool is not marked read-only")
+            return None
+        view = self.current_view()
+        if view.allows(tool.name):
+            return None
+        if not view.fixed and tool.name in self.catalog().tools:
+            return (f"Tool {tool.name!r} is not enabled in this session; "
+                    f"enable it with {ENABLE_TOOL} first")
+        return f"Tool {tool.name!r} is not available in this session"
 
     def _full_list(self) -> List[MCPTool]:
         # Snapshot under the lock: PluginWatcher re-registers tools from its
@@ -582,6 +597,9 @@ class ToolDisclosure:
         # client as "-32603 dictionary changed size during iteration".
         with self._server._tools_lock:
             tools = list(self._server._tools.values())
+        if self.read_only:
+            # Not only at build time: a plugin registers into a running server.
+            tools = [tool for tool in tools if tool.annotations.read_only]
         return visible_tools(tools)
 
     def _current_page_size(self) -> int:

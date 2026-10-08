@@ -71,7 +71,7 @@ class MCPServer(ConnectionStateMixin, StatelessDispatchMixin, SubscriptionMixin,
     ``tool_mode`` is ``full`` (every tool in ``tools/list``, the default),
     ``progressive`` or ``static``; ``None`` reads ``JE_AUTOCONTROL_MCP_TOOL_MODE``.
     ``read_only`` builds the default registry without mutating tools and, in
-    the two non-full modes, keeps any registered later out of every session.
+    every mode, keeps any registered later from being listed or called.
     """
 
     def __init__(self, tools: Optional[List[MCPTool]] = None,

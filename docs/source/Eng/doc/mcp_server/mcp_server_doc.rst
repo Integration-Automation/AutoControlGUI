@@ -661,6 +661,18 @@ clipboard reads, history, ...) survive:
      }
    }
 
+The server holds to this after it has started, in every tool mode: a tool
+that is not marked read-only and is registered on a running read-only server
+-- by ``register_tool``, ``ac_load_plugins`` or the plugin watcher -- is left
+out of ``tools/list`` and a call to it is answered ``-32602`` and recorded in
+the audit log as ``denied``. In the default ``full`` mode the filter used to
+run only when the registry was built, so such a tool was listed and ran.
+Plugin tools are registered as destructive, so **a read-only server runs no
+plugin tool**; a tool your own code registers with ``readOnlyHint`` true is
+still offered. ``MCPServer(tools=[...])`` with the variable set is filtered
+the same way -- pass ``read_only=False`` to an embedded server that must
+ignore the variable.
+
 Confining file arguments to root directories
 ============================================
 
