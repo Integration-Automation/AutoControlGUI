@@ -170,7 +170,7 @@ def test_a_versioned_tombstone_is_not_dropped_by_age():
     with pytest.raises(ConfigSyncError):
         other = ConfigBucket(user_id="alice")
         other.upsert("hotkeys", "hk1", {"combo": "ctrl+a"}, origin="laptop")
-        other.remove("hotkeys", "hk1")
+        other.remove("hotkeys", "hk1", versioned=False)   # a flat tombstone cannot delete it
 
 
 # --- tombstone collection --------------------------------------------------

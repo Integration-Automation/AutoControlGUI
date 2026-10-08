@@ -22,7 +22,7 @@ _SECRET = {"X-Signaling-Secret": "s3cret"}
 
 def _bucket(combo="ctrl+a", user="alice"):
     bucket = ConfigBucket(user_id=user)
-    bucket.upsert("hotkeys", "hk1", {"combo": combo, "last_modified": 100.0})
+    bucket.upsert("hotkeys", "hk1", {"combo": combo, "last_modified": 100.0}, versioned=False)
     return bucket
 
 

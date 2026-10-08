@@ -92,12 +92,14 @@ class ConfigBucket:
     """JSON-shaped bucket persisted on the sync server.
 
     Each section maps an opaque ``entry_id`` to an entry. An entry written
-    with an ``origin`` device id is *versioned*: it has the
+    by :meth:`upsert` / :meth:`remove` is *versioned*: it has the
     :class:`~je_auto_control.utils.config_sync.versions.SyncEntry` shape
     (``value`` / ``vector`` / ``origin`` / ``operation_id``) and merges by
-    causality. An entry written without one is the older flat dict stamped
-    with ``last_modified``, which merges by "later wins". Unknown sections
-    are passed through untouched.
+    causality. ``origin`` is the device that made the change -- this
+    machine's own id unless the caller names another. A bucket may also hold
+    the older flat dict stamped with ``last_modified`` (written by releases
+    before version vectors, or with ``versioned=False``), which merges by
+    "later wins". Unknown sections are passed through untouched.
 
     A removed entry stays in ``sections`` as a tombstone (``"deleted": true``)
     so the deletion reaches the other machines; read entries through
@@ -133,53 +135,69 @@ class ConfigBucket:
             peers=_peers(body.get("peers") or {}),
         )
 
-    def upsert(self, section: str, entry_id: str,
-               entry: Mapping[str, Any], *, origin: Optional[str] = None) -> None:
+    def upsert(self, section: str, entry_id: str, entry: Mapping[str, Any], *,
+               origin: Optional[str] = None, versioned: bool = True) -> None:
         """Add or replace an entry.
 
-        With ``origin`` (this device's id) the entry is versioned: the change
-        is recorded as made by that device on top of whatever the bucket
-        holds for ``entry_id``, and no clock decides later merges.
+        The change is recorded as made by ``origin`` -- by default this
+        machine (:func:`~je_auto_control.utils.config_sync.device.default_device_id`)
+        -- on top of whatever the bucket holds for ``entry_id``, so no clock
+        decides later merges. A ``last_modified`` in ``entry`` is taken as
+        the display stamp and is not part of the stored value.
 
-        Without it the entry is stamped with the current time, and a
-        ``last_modified`` already in ``entry`` is kept -- so drop it when
-        editing an entry read back from a bucket, otherwise the edit keeps
-        its old stamp and loses the merge to any newer remote copy.
+        ``versioned=False`` writes the flat entry of the first format
+        instead: stamped with ``last_modified`` (the one in ``entry`` if
+        any, else now) and merged by "later wins". It exists for a bucket
+        shared with a program that reads ``sections`` in the flat shape.
         """
-        if origin is not None:
-            from je_auto_control.utils.config_sync.versions import SyncEntry
-            current = self.get_entry(section, entry_id)
-            now = time.time()
-            self.put_entry(section, (
-                SyncEntry.create(entry_id, entry, origin, modified_at=now) if current is None
-                else current.edited(entry, origin, modified_at=now)))
+        if not versioned:
+            if origin is not None:
+                raise ConfigSyncError("versioned=False writes a flat entry, which has no origin")
+            body = dict(entry)
+            body["last_modified"] = float(body.get("last_modified", time.time()))
+            self.sections.setdefault(section, {})[entry_id] = body
             return
-        body = dict(entry)
-        body["last_modified"] = float(body.get("last_modified", time.time()))
-        self.sections.setdefault(section, {})[entry_id] = body
+        from je_auto_control.utils.config_sync.versions import SyncEntry
+        device = origin or _this_device()
+        value, stamp = _value_and_stamp(entry)
+        current = self.get_entry(section, entry_id)
+        self.put_entry(section, (
+            SyncEntry.create(entry_id, value, device, modified_at=stamp) if current is None
+            else current.edited(value, device, modified_at=stamp)))
 
-    def remove(self, section: str, entry_id: str, *, origin: Optional[str] = None) -> bool:
+    def remove(self, section: str, entry_id: str, *, origin: Optional[str] = None,
+               versioned: bool = True) -> bool:
         """Replace a live entry with a tombstone; False when there was none.
 
         Dropping the entry outright let the next sync bring it straight back
-        from the server, where it still existed. With ``origin`` (required
-        for a versioned entry) the tombstone is a new version made by that
-        device. Without it the tombstone is stamped no earlier than the entry
-        it deletes, so a clock running behind cannot make the deletion lose
-        to the value it removed.
+        from the server, where it still existed. The tombstone is a new
+        version made by ``origin`` (default: this machine); removing a flat
+        entry this way supersedes every flat copy of it, whatever their
+        stamps.
+
+        ``versioned=False`` leaves a flat tombstone, stamped no earlier than
+        the entry it deletes so a clock running behind cannot make the
+        deletion lose to the value it removed. A versioned entry cannot be
+        removed that way.
         """
+        from je_auto_control.utils.config_sync.versions import SyncEntry
         entry = self.sections.get(section, {}).get(entry_id)
         if entry is None or is_tombstone(entry):
             return False
-        versioned = self.get_entry(section, entry_id)
-        if versioned is not None:
-            if origin is None:
+        current = self.get_entry(section, entry_id)
+        if not versioned:
+            if current is not None or origin is not None:
                 raise ConfigSyncError(
-                    f"{section}/{entry_id} is versioned: removing it needs origin=<device id>")
-            self.put_entry(section, versioned.removed(origin, modified_at=time.time()))
+                    f"{section}/{entry_id}: a flat tombstone cannot delete a versioned entry "
+                    "or carry an origin")
+            stamp = max(time.time(), float(entry.get("last_modified", 0)))
+            self.sections[section][entry_id] = {"deleted": True, "last_modified": stamp}
             return True
-        stamp = max(time.time(), float(entry.get("last_modified", 0)))
-        self.sections[section][entry_id] = {"deleted": True, "last_modified": stamp}
+        device = origin or _this_device()
+        if current is None:
+            value, stamp = _value_and_stamp(entry)
+            current = SyncEntry.create(entry_id, value, device, modified_at=stamp)
+        self.put_entry(section, current.removed(device, modified_at=time.time()))
         return True
 
     def entries(self, section: str) -> Dict[str, Dict[str, Any]]:
@@ -232,6 +250,18 @@ class ConfigBucket:
         """The devices taking part in this bucket, by device id."""
         from je_auto_control.utils.config_sync.versions import PeerState
         return {device: PeerState.from_dict(device, body) for device, body in self.peers.items()}
+
+
+def _this_device() -> str:
+    """The id of this machine, for a change whose caller named no origin."""
+    from je_auto_control.utils.config_sync import device
+    return device.default_device_id()
+
+
+def _value_and_stamp(entry: Mapping[str, Any]) -> Tuple[Dict[str, Any], float]:
+    """``entry`` without its ``last_modified``, and that stamp (default: now)."""
+    value = {name: item for name, item in entry.items() if name != "last_modified"}
+    return value, _finite(entry.get("last_modified", time.time()), "last_modified")
 
 
 def _finite(value: Any, what: str) -> float:

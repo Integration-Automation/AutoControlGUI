@@ -95,7 +95,12 @@ Client
 
 ``sync`` pushes with the fetched revision as ``base_revision``; when another
 machine pushed in between it fetches and merges again, up to ``max_attempts``
-(default 4) times, then raises ``ConfigSyncConflict``. ``push(bucket)`` uses
+(default 4) times, then raises ``ConfigSyncConflict``. Each ``sync`` also records the client's device
+(``ConfigSyncClient(..., device_id=...)``, default: this machine's stored id)
+under the bucket's ``peers`` as having merged the committed revision, and
+drops the tombstones every device has seen -- the same bookkeeping
+``push_operations`` does. A device the group retired gets
+``FullResyncRequired`` from ``sync`` as well. ``push(bucket)`` uses
 ``bucket.revision`` as the base, returns the committed revision and raises
 ``ConfigSyncConflict`` (``.revision`` is the server's current one) instead of
 overwriting. A ``409`` whose ``code`` is ``operation_mismatch`` raises
@@ -125,16 +130,43 @@ machines say, the decision is the same, and it is the same on every machine.
 
 .. code-block:: python
 
-    bucket.upsert("hotkeys", "hk1", {"combo": "ctrl+a"}, origin="laptop")   # versioned
-    bucket.remove("hotkeys", "hk1", origin="laptop")                        # versioned tombstone
+    bucket.upsert("hotkeys", "hk1", {"combo": "ctrl+a"})                    # versioned, by this machine
+    bucket.upsert("hotkeys", "hk1", {"combo": "ctrl+b"}, origin="laptop")   # ... or by a named device
+    bucket.remove("hotkeys", "hk1")                                         # versioned tombstone
     bucket.values("hotkeys")        # live values; entries still in conflict are left out
     bucket.conflicts()              # [(section, SyncEntry with .siblings), ...]
 
-``upsert`` / ``remove`` *without* ``origin`` still write the older flat entry
-stamped with ``last_modified``, and two flat entries still merge by "later
-wins" (reported in ``ConflictRecord``); a versioned entry supersedes a flat
-copy of the same id. ``ConflictRecord.unresolved`` is true for a causal
-conflict, where nothing was dropped.
+``origin`` defaults to this machine's device id
+(``default_device_id()``, kept in ``~/.je_auto_control/config_sync_device_id``),
+so code written before version vectors -- ``bucket.upsert(section, id, value)``
+and ``client.sync(bucket)`` -- is causal without being changed. A
+``last_modified`` inside the value passed to ``upsert`` becomes the entry's
+display stamp and is not stored in the value. ``remove`` on a flat entry
+writes a versioned tombstone, which supersedes every flat copy.
+
+.. warning::
+
+   This changes what ``upsert`` stores. The entry is now
+   ``{"value": {...}, "vector": {...}, "origin": ..., "operation_id": ...,
+   "deleted": false, "last_modified": ...}`` rather than the value itself, so
+   read values with ``bucket.values(section)`` (which works for both shapes)
+   instead of ``bucket.sections[section][id]["field"]``. Pass
+   ``versioned=False`` to ``upsert`` / ``remove`` to keep writing the flat
+   entry; two flat entries still merge by "later wins" (reported in
+   ``ConflictRecord``), and a versioned entry supersedes a flat copy of the
+   same id. ``ConflictRecord.unresolved`` is true for a causal conflict, where
+   nothing was dropped.
+
+**An existing bucket after its first sync with this release.** Flat entries
+this machine did not touch stay exactly as they were (same bytes, still "later
+wins" among themselves). An entry this machine creates, edits or removes is
+stored versioned with ``{"<device id>": n}`` as its vector. ``peers`` gains
+``{"<device id>": {"acked_revision": <committed revision>, "last_seen": ...,
+"retired": false}}``. A version-2 client from before this release reads all of
+it: it already understood both entry shapes and ignores peers it does not
+know. Let every machine sync once with this release before deleting entries
+on any of them -- a tombstone only waits for devices already listed under
+``peers``.
 
 Deletions and retired devices
 -----------------------------

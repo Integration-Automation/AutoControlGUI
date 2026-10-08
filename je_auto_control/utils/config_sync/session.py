@@ -16,12 +16,9 @@ Pure standard library; imports no ``PySide6``.
 from __future__ import annotations
 
 import os
-import socket
 import threading
 import time
-import uuid
 from dataclasses import dataclass, field
-from pathlib import Path
 from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple
 
 from je_auto_control.utils.config_sync.adapters import (
@@ -34,6 +31,7 @@ from je_auto_control.utils.config_sync.assets import (
 from je_auto_control.utils.config_sync.client import (
     ConfigBucket, ConfigSyncClient, ConfigSyncError, FullResyncRequired, SyncResult,
 )
+from je_auto_control.utils.config_sync.device import default_device_id, default_device_id_path
 from je_auto_control.utils.config_sync.outbox import DEFAULT_DRAIN_ATTEMPTS, SyncOutbox
 from je_auto_control.utils.config_sync.versions import SyncOperation
 
@@ -81,35 +79,6 @@ class SyncRunReport:
                 "withheld": dict(self.withheld), "assets": dict(self.assets),
                 "error": self.error, "finished_at": self.finished_at,
                 "last_success": self.last_success}
-
-
-def default_device_id_path() -> Path:
-    """``~/.je_auto_control/config_sync_device_id``, resolved at call time."""
-    return Path.home() / ".je_auto_control" / "config_sync_device_id"
-
-
-def default_device_id() -> str:
-    """This machine's stable sync id, created on first use.
-
-    Version vectors count changes per device id, so two machines must never
-    share one; the id is the host name plus a random suffix, kept in
-    :func:`default_device_id_path`.
-    """
-    from je_auto_control.utils.json_store.json_store import atomic_write_text
-    path = default_device_id_path()
-    try:
-        known = path.read_text(encoding="utf-8").strip()
-    except OSError:
-        known = ""
-    if known:
-        return known
-    device_id = f"{socket.gethostname() or 'device'}-{uuid.uuid4().hex[:12]}"
-    try:
-        path.parent.mkdir(parents=True, exist_ok=True)
-        atomic_write_text(path, device_id + "\n")
-    except OSError as error:
-        raise ConfigSyncError(f"cannot store this device's sync id at {path}: {error}") from error
-    return device_id
 
 
 def default_adapters(device_id: str, *, sections: Optional[Sequence[str]] = None,
@@ -368,6 +337,7 @@ def _session(server_url: str, user_id: str, options: Mapping[str, Any],
     device_id = str(chosen.get("device_id") or default_device_id())
     client = ConfigSyncClient(
         server_url, user_id=user_id, timeout_s=float(chosen.get("timeout_s", 5.0)),
+        device_id=device_id,
         secret=chosen.get("secret") or os.environ.get("AC_SIGNALING_SECRET") or None)
     outbox = SyncOutbox(chosen.get("outbox_path"), account=user_id, endpoint=client.server_url)
     sections = chosen.get("sections")

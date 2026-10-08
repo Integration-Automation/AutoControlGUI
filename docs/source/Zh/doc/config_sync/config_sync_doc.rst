@@ -84,6 +84,10 @@ Client
 
 ``sync`` 以 fetch 到的 revision 作為 ``base_revision`` push;若期間有另一台機器 push,
 它會重新 fetch 與 merge,最多 ``max_attempts``(預設 4)次,之後丟出 ``ConfigSyncConflict``。
+每次 ``sync`` 也會把 client 的裝置
+(``ConfigSyncClient(..., device_id=...)``,預設為本機儲存的 id)記在 bucket 的 ``peers`` 下,
+表示它已合併所提交的 revision,並移除每台裝置都看過的 tombstone —— 和 ``push_operations``
+做的記帳相同。被群組退休的裝置呼叫 ``sync`` 同樣會得到 ``FullResyncRequired``。
 ``push(bucket)`` 以 ``bucket.revision`` 為基準,回傳已提交的 revision;落後時丟出
 ``ConfigSyncConflict``(``.revision`` 為 server 目前的 revision)而不是覆寫。
 ``code`` 為 ``operation_mismatch`` 的 ``409`` 則丟出 ``OperationMismatchError``;
@@ -108,14 +112,36 @@ Client
 
 .. code-block:: python
 
-    bucket.upsert("hotkeys", "hk1", {"combo": "ctrl+a"}, origin="laptop")   # versioned
-    bucket.remove("hotkeys", "hk1", origin="laptop")                        # versioned tombstone
+    bucket.upsert("hotkeys", "hk1", {"combo": "ctrl+a"})                    # versioned,由本機寫入
+    bucket.upsert("hotkeys", "hk1", {"combo": "ctrl+b"}, origin="laptop")   # ……或指名裝置
+    bucket.remove("hotkeys", "hk1")                                         # versioned tombstone
     bucket.values("hotkeys")        # 有效值;仍在衝突中的 entry 不列入
     bucket.conflicts()              # [(section, 帶 .siblings 的 SyncEntry), ...]
 
-*不帶* ``origin`` 的 ``upsert`` / ``remove`` 仍寫入舊式、以 ``last_modified`` 蓋章的扁平 entry,
-兩筆扁平 entry 仍以「較晚者勝」合併(回報於 ``ConflictRecord``);versioned entry 會取代
-同 id 的扁平副本。因果衝突的 ``ConflictRecord.unresolved`` 為 true,此時沒有任何東西被丟棄。
+``origin`` 預設為本機的裝置 id(``default_device_id()``,存在
+``~/.je_auto_control/config_sync_device_id``),所以在 version vector 之前寫的程式 ——
+``bucket.upsert(section, id, value)`` 與 ``client.sync(bucket)`` —— 不必修改就是因果合併。
+傳給 ``upsert`` 的值裡若有 ``last_modified``,它會成為 entry 的顯示時間,不存進值裡。
+對扁平 entry 呼叫 ``remove`` 會寫入 versioned tombstone,並取代所有扁平副本。
+
+.. warning::
+
+   這改變了 ``upsert`` 儲存的內容。Entry 現在是
+   ``{"value": {...}, "vector": {...}, "origin": ..., "operation_id": ...,
+   "deleted": false, "last_modified": ...}`` 而不是值本身,所以請用
+   ``bucket.values(section)``\ (兩種形狀都適用)讀值,不要用
+   ``bucket.sections[section][id]["field"]``。要繼續寫扁平 entry,對 ``upsert`` / ``remove``
+   傳 ``versioned=False``;兩筆扁平 entry 仍以「較晚者勝」合併(回報於 ``ConflictRecord``),
+   versioned entry 會取代同 id 的扁平副本。因果衝突的 ``ConflictRecord.unresolved`` 為 true,
+   此時沒有任何東西被丟棄。
+
+**既有 bucket 在第一次用這個版本同步之後。** 本機沒碰過的扁平 entry 原封不動
+(位元組相同,彼此之間仍是「較晚者勝」)。本機新增、編輯或移除的 entry 以 versioned 形式儲存,
+vector 為 ``{"<裝置 id>": n}``。``peers`` 多出
+``{"<裝置 id>": {"acked_revision": <提交的 revision>, "last_seen": ..., "retired": false}}``。
+這個版本之前的 version-2 client 讀得懂全部內容:它本來就認得兩種 entry 形狀,
+不認得的 peer 會忽略。請讓每台機器都先用這個版本同步一次,再在任何一台上刪除 entry ——
+tombstone 只會等已列在 ``peers`` 下的裝置。
 
 刪除與退休裝置
 --------------

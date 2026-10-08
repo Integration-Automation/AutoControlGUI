@@ -54,7 +54,8 @@ class ConfigSyncClient:
 
     def __init__(self, server_url: str, *,
                  user_id: str, secret: Optional[str] = None,
-                 timeout_s: float = _DEFAULT_TIMEOUT_S) -> None:
+                 timeout_s: float = _DEFAULT_TIMEOUT_S,
+                 device_id: Optional[str] = None) -> None:
         if not server_url:
             raise ConfigSyncError("server_url is required")
         if not user_id:
@@ -63,6 +64,19 @@ class ConfigSyncClient:
         self._user_id = user_id
         self._secret = secret
         self._timeout = float(timeout_s)
+        self._device_id = device_id or None
+
+    @property
+    def device_id(self) -> str:
+        """The device :meth:`sync` announces: the one given, else this machine's.
+
+        The default is read (and on a machine's very first use created) when
+        it is first needed, not when the client is built.
+        """
+        if self._device_id is None:
+            from je_auto_control.utils.config_sync import device
+            self._device_id = device.default_device_id()
+        return self._device_id
 
     @property
     def user_id(self) -> str:
@@ -159,17 +173,27 @@ class ConfigSyncClient:
         return revision
 
     def sync(self, local: ConfigBucket, *, max_attempts: int = DEFAULT_SYNC_ATTEMPTS,
-             ) -> Tuple[ConfigBucket, List[ConflictRecord]]:
+             now: Optional[float] = None) -> Tuple[ConfigBucket, List[ConflictRecord]]:
         """Bidirectional sync: fetch, merge, push on top of what was fetched.
 
         When another machine pushes between the fetch and the push the
         server refuses the write, and this fetches and merges again -- up to
         ``max_attempts`` times, then :class:`ConfigSyncConflict`. The
         returned bucket's ``revision`` is the one the server committed.
+
+        The push records :attr:`device_id` under the bucket's ``peers`` as
+        having merged that revision, exactly as :meth:`push_operations`
+        does: deletions wait for this device before they are forgotten, and
+        the ones every device has seen are dropped. Raises
+        :class:`FullResyncRequired` when the group has retired this device.
         """
+        device = self.device_id
+        stamp = time.time() if now is None else float(now)
         for _attempt in range(max(1, int(max_attempts))):
             remote = self.fetch() or ConfigBucket(user_id=self._user_id)
+            self._require_active(remote, device)
             merged, conflicts = merge_buckets(local, remote)
+            settle(merged, device, remote.revision + 1, stamp, None)
             try:
                 self.push(merged, base_revision=remote.revision)
             except ConfigSyncConflict:

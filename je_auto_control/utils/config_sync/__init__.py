@@ -30,6 +30,7 @@ This package is the **headless client** side:
   references, and applying synced data never enables a hotkey or trigger.
 * :mod:`.assets` -- :func:`sync_assets`: files fetched by SHA-256, verified,
   then replaced atomically.
+* :mod:`.device` -- :func:`default_device_id`, this machine's stable id.
 * :mod:`.session` -- :func:`run_sync`, the whole cycle behind the GUI tab,
   the ``AC_config_sync_*`` commands and the MCP tools.
 
@@ -41,7 +42,9 @@ A removed entry is kept as a tombstone so the deletion reaches every
 machine; read live entries with ``ConfigBucket.entries(section)`` or
 ``values(section)``. A versioned tombstone is dropped only once every
 participating device has acknowledged it -- a device retired for staying
-away must do an explicit full resync. Entries written without a device id
+away must do an explicit full resync. ``ConfigBucket.upsert`` / ``remove``
+version what they write as made by this machine unless told otherwise; flat
+entries from before version vectors (or written with ``versioned=False``)
 keep the older rule: the later ``last_modified`` wins and the loser is
 reported in a ``ConflictRecord``.
 """
