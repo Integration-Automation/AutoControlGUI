@@ -5,6 +5,7 @@ still owns every widget and slot under its original name.
 """
 from __future__ import annotations
 
+import functools
 from typing import TYPE_CHECKING, Any, Optional, Sequence
 
 
@@ -13,6 +14,7 @@ from PySide6.QtWidgets import (
     QFileDialog, QMessageBox,
 )
 
+from je_auto_control.gui._slow_op import stop_each
 from je_auto_control.gui.remote_desktop._helpers import (
     _t,
 )
@@ -71,12 +73,20 @@ class _ViewerFilesMixin(_PanelPart):
                 return
             self._sync_btn.setText(_t("rd_webrtc_sync_stop"))
         else:
-            if self._sync_engine is not None:
-                try:
-                    self._sync_engine.stop()
-                except (RuntimeError, OSError):
-                    pass
-                self._sync_engine = None
+            engine, self._sync_engine = self._sync_engine, None
+            if engine is None:
+                self._sync_btn.setText(_t("rd_webrtc_sync_start"))
+                return
+            # stop() joins the watcher thread; until it reports the button
+            # says so and takes no click, so the folder is not watched twice.
+            self._sync_btn.setText(_t("gui_op_stopping"))
+            self._sync_btn.setEnabled(False)
+            self._stops.retire(functools.partial(stop_each, engine.stop), on_done=self._on_sync_stopped)
+
+    def _on_sync_stopped(self, _outcome: object = None) -> None:
+        """GUI thread: the sync engine's watcher has ended."""
+        self._sync_btn.setEnabled(True)
+        if self._sync_engine is None:
             self._sync_btn.setText(_t("rd_webrtc_sync_start"))
 
     def _on_browse_refresh(self) -> None:

@@ -20,3 +20,26 @@ def settle(owner, attribute: str = "_connect_task", timeout: float = 10.0) -> bo
         time.sleep(0.005)
     app.processEvents()
     return getattr(owner, attribute) is None
+
+
+def pump_until(predicate, timeout: float = 10.0) -> bool:
+    """Pump events until ``predicate()`` is true or ``timeout`` passes; return whether it is."""
+    app = QApplication.instance()
+    deadline = time.monotonic() + timeout
+    while not predicate() and time.monotonic() < deadline:
+        app.processEvents()
+        time.sleep(0.005)
+    app.processEvents()
+    return bool(predicate())
+
+
+def settle_op(op, timeout: float = 10.0) -> bool:
+    """Pump events until a ``SlowOp`` is idle or a ``StopQueue`` has drained; return whether it has.
+
+    Stops that join a thread left the GUI thread, so a test that calls Stop
+    (or a Start that first stops) pumps here before it reads the outcome.
+    """
+    def idle() -> bool:
+        return not getattr(op, "busy", False) and not getattr(op, "pending", 0)
+
+    return pump_until(idle, timeout)

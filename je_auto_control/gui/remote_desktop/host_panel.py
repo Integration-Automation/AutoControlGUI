@@ -1,7 +1,8 @@
 """``_HostPanel``: the 'host this machine' Remote Desktop sub-tab."""
+import functools
 import secrets
 import ssl
-from typing import Optional
+from typing import Any, Callable, Optional
 
 from PySide6.QtCore import QTimer, Signal
 from PySide6.QtGui import QGuiApplication, QImage
@@ -11,6 +12,7 @@ from PySide6.QtWidgets import (
 )
 
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
+from je_auto_control.gui._slow_op import SlowOp
 from je_auto_control.gui.remote_desktop._helpers import (
     _CollapsibleSection, _StatusBadge, _t, displaced_notifier,
 )
@@ -27,6 +29,32 @@ from je_auto_control.utils.remote_desktop.registry import (
 )
 
 
+def _replace_host(owner: str, build: Callable[[], Any],
+                  on_displaced: Callable[[str, str], None]) -> Any:
+    """Worker thread: stop the running host, start the new one and register it for ``owner``.
+
+    In this order because the old host has to let go of its port before the
+    new one binds it; the stop joins the old host's threads (2 s).
+    """
+    # Whoever started the running host is told it was replaced. Viewers
+    # are left alone: they belong to other panels or to a script.
+    registry.evict(SLOT_HOST, by=owner)
+    host = build()
+    host.start()
+    registry.adopt(SLOT_HOST, host, owner, on_displaced)
+    return host
+
+
+def _stop_host(owner: str) -> bool:
+    """Worker thread: stop the machine's host, whoever started it."""
+    return registry.evict(SLOT_HOST, by=owner)
+
+
+def _release_host(owner: str, _host: Any) -> None:
+    """A host that came up for a panel that is gone: nobody is left to stop it."""
+    registry.release(SLOT_HOST, owner)
+
+
 class _HostPanel(TranslatableMixin, QWidget):
     """Start / stop the singleton host and show what is being streamed."""
 
@@ -40,6 +68,11 @@ class _HostPanel(TranslatableMixin, QWidget):
         self._tr_init()
         self._owner = new_owner("host-tab")
         self._displaced.connect(self._on_displaced)
+        # Start and Stop both stop a host, which joins its threads.
+        self._host_op = SlowOp(self)
+        self._pending_key = "gui_op_stopping"
+        # The share details of the start that is out; they become _shared when it reports.
+        self._starting: dict = {}
         self._host_id_label = QLabel("---")
         self._host_id_label.setStyleSheet(
             "font-family: 'Consolas', 'Menlo', 'Courier New', monospace; "
@@ -201,6 +234,8 @@ class _HostPanel(TranslatableMixin, QWidget):
         self._stop_btn = self._tr(QPushButton(), "rd_host_stop")
         self._stop_btn.setMinimumHeight(36)
         self._stop_btn.clicked.connect(self._stop)
+        self._host_op.busy_changed.connect(self._start_btn.setDisabled)
+        self._host_op.busy_changed.connect(self._stop_btn.setDisabled)
         btn_row.addWidget(self._start_btn, stretch=2)
         btn_row.addWidget(self._stop_btn, stretch=1)
         root.addLayout(btn_row)
@@ -280,6 +315,8 @@ class _HostPanel(TranslatableMixin, QWidget):
         return ctx
 
     def _start(self) -> None:
+        if self._host_op.busy:          # a start or stop is still out; a second click is ignored
+            return
         token = self._token.text().strip()
         if not token:
             self._generate_token()
@@ -293,44 +330,58 @@ class _HostPanel(TranslatableMixin, QWidget):
         host_cls = (WebSocketDesktopHost if transport == "WebSocket"
                     else RemoteDesktopHost)
         bind = self._bind.text().strip() or "127.0.0.1"
-        # Whoever started the running host is told it was replaced. Viewers
-        # are left alone: they belong to other panels or to a script.
-        registry.evict(SLOT_HOST, by=self._owner)
-        try:
-            host = host_cls(
-                token=token,
-                bind=bind,
-                port=self._port.value(),
-                fps=float(self._fps.value()),
-                quality=self._quality.value(),
-                ssl_context=ssl_context,
-                audio_config=AudioCaptureConfig(
-                    enabled=self._audio_available and self._enable_audio.isChecked(),
-                ),
-            )
-            host.start()
-        except (OSError, ValueError, RuntimeError) as error:
-            QMessageBox.warning(self, _t("rd_host_start"), str(error))
-            return
-        registry.adopt(SLOT_HOST, host, self._owner, displaced_notifier(self))
+        build = functools.partial(
+            host_cls,
+            token=token,
+            bind=bind,
+            port=self._port.value(),
+            fps=float(self._fps.value()),
+            quality=self._quality.value(),
+            ssl_context=ssl_context,
+            audio_config=AudioCaptureConfig(
+                enabled=self._audio_available and self._enable_audio.isChecked(),
+            ),
+        )
         # The transport a viewer picks: with a certificate, TCP is TLS and
         # WebSocket is WSS, which the share text used to call TCP / WebSocket.
         if ssl_context is not None:
             transport = {"TCP": "TLS", "WebSocket": "WSS"}[transport]
-        self._shared = {"host": host, "bind": bind, "transport": transport, "token": token}
+        self._starting = {"bind": bind, "transport": transport, "token": token}
+        self._pending_key = "gui_op_starting"
+        self._host_op.run(
+            functools.partial(_replace_host, self._owner, build, displaced_notifier(self)),
+            on_done=self._on_started, on_error=self._on_start_failed,
+            discard=functools.partial(_release_host, self._owner))
         self._refresh_status()
+
+    def _on_started(self, host: Any) -> None:
+        """GUI thread: the host is up and registered for this panel."""
+        self._shared = {"host": host, **self._starting}
+        self._refresh_status()
+
+    def _on_start_failed(self, error: Exception) -> None:
+        self._shared = None
+        self._refresh_status()
+        QMessageBox.warning(self, _t("rd_host_start"), str(error))
 
     def _stop(self) -> None:
         # The badge shows the machine's host whoever started it, so Stop stops
         # that one: a visible "running" with a Stop that does nothing would be
         # worse on a remote-access surface. Its owner is told.
-        try:
-            registry.evict(SLOT_HOST, by=self._owner)
-        except (OSError, RuntimeError) as error:
-            QMessageBox.warning(self, _t("rd_host_stop"), str(error))
+        if self._host_op.busy:          # a second click while the first is still stopping
             return
+        self._pending_key = "gui_op_stopping"
+        self._host_op.run(functools.partial(_stop_host, self._owner), on_done=self._on_stopped,
+                          on_error=self._on_stop_failed)
+        self._refresh_status()
+
+    def _on_stopped(self, _evicted: object = None) -> None:
         self._shared = None
         self._refresh_status()
+
+    def _on_stop_failed(self, error: Exception) -> None:
+        self._refresh_status()
+        QMessageBox.warning(self, _t("rd_host_stop"), str(error))
 
     def _on_displaced(self, _slot: str, _by: str) -> None:
         """GUI thread: the host this panel started was replaced or stopped."""
@@ -339,6 +390,9 @@ class _HostPanel(TranslatableMixin, QWidget):
         self._refresh_status()
 
     def _refresh_status(self) -> None:
+        if self._host_op.busy:
+            self._badge.set_state("starting", _t(self._pending_key))
+            return
         status = registry.host_status()
         if status["running"]:
             host_id = status.get("host_id") or ""

@@ -27,6 +27,7 @@ from PySide6.QtWidgets import (
 
 from je_auto_control.gui.remote_desktop._webrtc_types import MultiViewerHostT, SessionRecorderT, WebRTCDesktopViewerT
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
+from je_auto_control.gui._slow_op import StopQueue
 from je_auto_control.gui.remote_desktop._helpers import (
     _t,
 )
@@ -95,6 +96,9 @@ class _WebRTCHostPanel(_HostUiMixin, _HostTrustMixin, _HostMediaMixin, _HostSess
         self._multi_host: Optional[MultiViewerHostT] = None
         self._publish_loop: Optional[HostPublishLoopWorker] = None
         self._manual_session_id: Optional[str] = None
+        self._stops = StopQueue(self)
+        self._stops.drained.connect(self._on_stops_drained)
+        self._stopping_sessions: set = set()
         self._adaptive_controller: Optional[AdaptiveBitrateController] = None
         self._adaptive_poller: Optional[StatsPoller] = None
         self._session_pollers: dict = {}    # session_id -> StatsPoller
@@ -219,6 +223,8 @@ class _WebRTCViewerPanel(_ViewerUiMixin, _ViewerFilesMixin, _ViewerAddressBookMi
         self._viewer: Optional[WebRTCDesktopViewerT] = None
         self._offer_worker: Optional[ViewerSignalingWorker] = None
         self._answer_worker: Optional[ViewerAnswerPushWorker] = None
+        self._stops = StopQueue(self)
+        self._stops.drained.connect(self._on_stops_drained)
         self._address_book = default_address_book()
         from je_auto_control.utils.remote_desktop import default_known_hosts
         self._known_hosts = default_known_hosts()

@@ -977,6 +977,8 @@ english_word_dict = {
     "eml_poll_done": "Fired {n} message(s) on this pass.",
     "eml_running": "Polling is active.",
     "eml_stopped": "Polling is stopped.",
+    "gui_op_stopping": "Stopping…",
+    "gui_op_starting": "Starting…",
     "eml_host_label": _HOST_LABEL,
     "eml_port_label": _PORT_LABEL,
     "eml_user_label": "User:",

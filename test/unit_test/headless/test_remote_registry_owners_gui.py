@@ -24,7 +24,7 @@ from je_auto_control.utils.remote_desktop.connect_coordinator import parse_targe
 from je_auto_control.utils.remote_desktop.registry import (  # noqa: E402
     SCRIPT_OWNER, SLOT_HOST, SLOT_VIEWER, SLOT_WS_VIEWER, registry,
 )
-from headless._qt_settle import settle  # noqa: E402
+from headless._qt_settle import settle, settle_op  # noqa: E402
 
 
 class _Viewer:
@@ -267,6 +267,7 @@ def _host_tab():
     panel = host_panel._HostPanel()
     panel._token.setText("tok")
     panel._start()
+    assert settle_op(panel._host_op)
     return panel
 
 

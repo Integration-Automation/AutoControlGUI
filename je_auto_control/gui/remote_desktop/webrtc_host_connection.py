@@ -20,6 +20,7 @@ from je_auto_control.gui.remote_desktop._helpers import (
 from je_auto_control.gui.remote_desktop.webrtc_workers import (
     HostPublishLoopWorker, generate_host_id, retire_worker,
 )
+from je_auto_control.gui._slow_op import stop_each
 from je_auto_control.gui.task_controller import CancellationToken, task_controller
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.remote_desktop import (
@@ -192,7 +193,7 @@ class _HostConnectionMixin(_PanelPart):
 
     def _on_stop(self) -> None:
         self._stop_host_if_any()
-        self._status_label.setText(_t("rd_webrtc_status_idle"))
+        self._show_idle()
         self._signals.session_count.emit(0)
 
     def _validate_required_fields(self, *, needs_server: bool) -> bool:
@@ -248,14 +249,14 @@ class _HostConnectionMixin(_PanelPart):
             self._viewer_screen_window.hide()
         if self._multi_host is None:
             return
-        try:
-            self._multi_host.stop_all()
-        except (RuntimeError, OSError):
-            pass
-        finally:
-            self._multi_host = None
-            self._manual_session_id = None
-            self._set_hosting(False)
+        # The panel lets go of the host here, so everything after this line
+        # (and a second Stop) sees none; stop_all closes each peer connection
+        # and waits for it, which used to hold the GUI thread for seconds.
+        host, self._multi_host = self._multi_host, None
+        self._manual_session_id = None
+        self._stopping_sessions.clear()
+        self._set_hosting(False)
+        self._stops.retire(functools.partial(stop_each, host.stop_all))
 
 
 __all__ = ["_HostConnectionMixin"]

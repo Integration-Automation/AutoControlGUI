@@ -9,6 +9,7 @@ from PySide6.QtWidgets import (
 )
 
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
+from je_auto_control.gui._slow_op import SlowOp
 from je_auto_control.gui._worker_thread import CallWorker, WorkerHandle, start_worker
 from je_auto_control.gui.language_wrapper.multi_language_wrapper import (
     language_wrapper,
@@ -53,6 +54,7 @@ class EmailTriggersTab(TranslatableMixin, QWidget):
         self._mark_seen_check = self._tr(QCheckBox(), "eml_mark_seen")
         self._mark_seen_check.setChecked(True)
         self._status_label = QLabel()
+        self._watcher_op = SlowOp(self)
         self._table = QTableWidget(0, 7)
         self._table.setEditTriggers(QAbstractItemView.NoEditTriggers)
         self._table.setSelectionBehavior(QAbstractItemView.SelectRows)
@@ -140,11 +142,19 @@ class EmailTriggersTab(TranslatableMixin, QWidget):
         ]
 
     def _on_start(self) -> None:
+        if self._watcher_op.busy:       # still stopping: starting now would race the join
+            return
         default_email_trigger_watcher.start()
         self._refresh()
 
     def _on_stop(self) -> None:
-        default_email_trigger_watcher.stop()
+        # stop() joins the poll thread for up to 5 s (an IMAP round in
+        # flight), which used to hold the GUI thread; a second Stop is ignored.
+        if self._watcher_op.run(default_email_trigger_watcher.stop, on_done=self._on_watcher_stopped,
+                                on_error=self._on_watcher_stopped):
+            self._refresh()
+
+    def _on_watcher_stopped(self, _outcome: object = None) -> None:
         self._refresh()
 
     def _on_poll_now(self) -> None:
@@ -216,10 +226,11 @@ class EmailTriggersTab(TranslatableMixin, QWidget):
         self._refresh()
 
     def _refresh(self) -> None:
-        running = default_email_trigger_watcher.is_running
-        self._status_label.setText(
-            _t("eml_running") if running else _t("eml_stopped"),
-        )
+        if self._watcher_op.busy:
+            self._status_label.setText(_t("gui_op_stopping"))
+        else:
+            running = default_email_trigger_watcher.is_running
+            self._status_label.setText(_t("eml_running") if running else _t("eml_stopped"))
         rows = default_email_trigger_watcher.list_triggers()
         self._table.setRowCount(len(rows))
         for row, trigger in enumerate(rows):

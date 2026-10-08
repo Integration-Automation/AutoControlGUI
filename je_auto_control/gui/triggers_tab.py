@@ -9,6 +9,7 @@ from PySide6.QtWidgets import (
 )
 
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
+from je_auto_control.gui._slow_op import SlowOp
 from je_auto_control.gui.language_wrapper.multi_language_wrapper import (
     language_wrapper,
 )
@@ -65,6 +66,7 @@ class TriggersTab(TranslatableMixin, QWidget):
         self._file_widgets = self._build_file_form()
         self._cron_widgets = self._build_cron_form()
         self._status = QLabel()
+        self._engine_op = SlowOp(self)
         self._apply_status()
         self._table = QTableWidget(0, 5)
         self._table.setSelectionBehavior(
@@ -99,7 +101,7 @@ class TriggersTab(TranslatableMixin, QWidget):
         The tab kept its own running flag, so an engine started from
         Tools > Start (or a script) still read "stopped" and was not polled.
         """
-        running = default_trigger_engine.is_running
+        running = default_trigger_engine.is_running and not self._engine_op.busy
         if running and not self._timer.isActive():
             self._timer.start()
         elif not running and self._timer.isActive():
@@ -112,7 +114,10 @@ class TriggersTab(TranslatableMixin, QWidget):
         self.sync_with_engine()
 
     def _apply_status(self) -> None:
-        key = "tr_engine_running" if default_trigger_engine.is_running else "tr_engine_stopped"
+        if self._engine_op.busy:
+            key = "gui_op_stopping"
+        else:
+            key = "tr_engine_running" if default_trigger_engine.is_running else "tr_engine_stopped"
         self._status.setText(_t(key))
 
     def retranslate(self) -> None:
@@ -319,14 +324,21 @@ class TriggersTab(TranslatableMixin, QWidget):
         self._refresh()
 
     def _on_start(self) -> None:
+        if self._engine_op.busy:        # still stopping: starting now would race the join
+            return
         default_trigger_engine.start()
-        self._timer.start()
-        self._apply_status()
+        self.sync_with_engine()
 
     def _on_stop(self) -> None:
-        default_trigger_engine.stop()
-        self._timer.stop()
-        self._apply_status()
+        # stop() joins the engine thread, which used to hold the GUI thread
+        # for up to 2 s; a second Stop while it is out is ignored.
+        if self._engine_op.run(default_trigger_engine.stop, on_done=self._on_engine_stopped,
+                               on_error=self._on_engine_stopped):
+            self.sync_with_engine()
+
+    def _on_engine_stopped(self, _outcome: object = None) -> None:
+        self.sync_with_engine()
+        self._refresh()
 
     def _refresh(self) -> None:
         triggers = default_trigger_engine.list_triggers()

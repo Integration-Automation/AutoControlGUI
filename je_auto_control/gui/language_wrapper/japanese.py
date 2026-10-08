@@ -867,6 +867,8 @@ japanese_word_dict = {
     "eml_poll_done": "今回 {n} 件のメッセージで発火しました。",
     "eml_running": "ポーリング中。",
     "eml_stopped": "ポーリング停止中。",
+    "gui_op_stopping": "停止しています…",
+    "gui_op_starting": "開始しています…",
     "eml_host_label": "ホスト：",
     "eml_port_label": "ポート：",
     "eml_user_label": "ユーザー：",

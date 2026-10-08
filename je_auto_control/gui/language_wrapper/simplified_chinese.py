@@ -846,6 +846,8 @@ simplified_chinese_word_dict = {
     "eml_poll_done": "本次共触发 {n} 封邮件。",
     "eml_running": "轮询中。",
     "eml_stopped": "轮询已停止。",
+    "gui_op_stopping": "正在停止…",
+    "gui_op_starting": "正在启动…",
     "eml_host_label": "主机：",
     "eml_port_label": "端口：",
     "eml_user_label": "用户：",

@@ -107,6 +107,8 @@ def test_panel_enable_then_disable_sharing(qapp, tmp_path):
         assert panel._loopback is not None
         panel._disable_sharing()
         assert panel._loopback is None
+        from headless._qt_settle import settle_op
+        assert settle_op(panel._share_op)
     finally:
         panel.deleteLater()
 
