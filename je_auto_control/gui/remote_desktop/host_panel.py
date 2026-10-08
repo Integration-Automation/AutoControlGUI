@@ -428,6 +428,6 @@ class _HostPanel(TranslatableMixin, QWidget):
         frame = host.latest_frame()
         if frame is None:
             return
-        image = QImage.fromData(frame, "JPEG")
+        image = QImage.fromData(frame, "JPEG")  # type: ignore[arg-type]  # reason: the stub says bytes; PySide6 raises ValueError for bytes
         if not image.isNull():
             self._preview.set_image(image)

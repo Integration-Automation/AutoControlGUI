@@ -50,7 +50,7 @@ class TestSuiteTab(TranslatableMixin, QWidget):
             '{"name": "Demo", "cases": [{"name": "c1", "actions": []}]}',
         )
         self._table = QTableWidget(0, len(_COLS))
-        self._table.setEditTriggers(QAbstractItemView.NoEditTriggers)
+        self._table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
         self._table.horizontalHeader().setStretchLastSection(True)
         self._summary = QLabel()
         self._quarantine = QListWidget()
@@ -149,7 +149,7 @@ class TestSuiteTab(TranslatableMixin, QWidget):
                       case.message)
             for col, text in enumerate(values):
                 item = QTableWidgetItem(text)
-                item.setFlags(item.flags() & ~Qt.ItemIsEditable)
+                item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
                 self._table.setItem(row, col, item)
         self._summary.setText(
             _t("suite_summary")

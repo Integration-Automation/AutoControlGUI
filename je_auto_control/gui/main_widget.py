@@ -167,7 +167,7 @@ class AutoControlGUIWidget(
             f"Underlying error: {import_error!r}",
         )
         message.setWordWrap(True)
-        message.setTextInteractionFlags(Qt.TextSelectableByMouse)
+        message.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
         layout.addWidget(message)
         layout.addStretch()
         return placeholder

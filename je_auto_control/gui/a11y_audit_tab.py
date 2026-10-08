@@ -52,7 +52,7 @@ class A11yAuditTab(TranslatableMixin, QWidget):
         self._bg = QLineEdit()
         self._bg.setPlaceholderText("255, 255, 255")
         self._table = QTableWidget(0, len(_COLS))
-        self._table.setEditTriggers(QAbstractItemView.NoEditTriggers)
+        self._table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
         self._table.horizontalHeader().setStretchLastSection(True)
         self._summary = QLabel()
         self._task = TabTask(self)          # the audit, off the GUI thread; one at a time
@@ -114,7 +114,7 @@ class A11yAuditTab(TranslatableMixin, QWidget):
                       issue["message"])
             for col, text in enumerate(values):
                 item = QTableWidgetItem(str(text))
-                item.setFlags(item.flags() & ~Qt.ItemIsEditable)
+                item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
                 self._table.setItem(row, col, item)
         self._summary.setText(
             _t("audit_summary")

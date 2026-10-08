@@ -21,6 +21,7 @@ import je_auto_control as ac
 from je_auto_control.gui._dispose import release_resources
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
 from je_auto_control.gui._tab_task import TabTask
+from je_auto_control.gui._qt_typed import filled_item
 from je_auto_control.gui.language_wrapper.multi_language_wrapper import (
     language_wrapper,
 )
@@ -65,7 +66,7 @@ class MobileTab(TranslatableMixin, QWidget):
         self._result = QPlainTextEdit()
         self._result.setReadOnly(True)
         self._table = QTableWidget(0, len(_COLS))
-        self._table.setEditTriggers(QAbstractItemView.NoEditTriggers)
+        self._table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
         self._table.horizontalHeader().setStretchLastSection(True)
         self._note = QLabel()
         self._note.setWordWrap(True)
@@ -139,7 +140,7 @@ class MobileTab(TranslatableMixin, QWidget):
 
     def capability_rows(self) -> Dict[str, str]:
         """Capability name to state, as the table shows it."""
-        return {self._table.item(row, 0).text(): self._table.item(row, 1).text()
+        return {filled_item(self._table, row, 0).text(): filled_item(self._table, row, 1).text()
                 for row in range(self._table.rowCount())}
 
     def _current_platform(self) -> str:
@@ -210,6 +211,6 @@ class MobileTab(TranslatableMixin, QWidget):
         for row, (name, capability) in enumerate(capabilities.items()):
             for col, text in enumerate((name, capability["state"], capability["reason"])):
                 item = QTableWidgetItem(str(text))
-                item.setFlags(item.flags() & ~Qt.ItemIsEditable)
+                item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
                 self._table.setItem(row, col, item)
         self._result.setPlainText(json.dumps(report, indent=2, ensure_ascii=False))

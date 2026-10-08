@@ -16,6 +16,7 @@ from PySide6.QtWidgets import (
 )
 
 from je_auto_control.gui._tab_task import TabTask, was_stopped
+from je_auto_control.gui._qt_typed import as_widget
 from je_auto_control.gui.language_wrapper.multi_language_wrapper import language_wrapper
 from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.executor.action_executor import execute_action, execute_files
@@ -87,7 +88,7 @@ class ScriptTabMixin:
         self.script_result_text.setReadOnly(True)
         layout.addWidget(self.script_result_text)
         tab.setLayout(layout)
-        self._script_runs = TabTask(self)
+        self._script_runs = TabTask(as_widget(self))
         self._script_runs.result.connect(self._show_script_result)
         self._script_runs.error.connect(self._show_script_error)
         return tab
@@ -114,7 +115,7 @@ class ScriptTabMixin:
             self.script_result_text.setText(_t("task_stopping"))
 
     def _browse_script(self):
-        path, _ = QFileDialog.getOpenFileName(self, _t("load_script"), "", _JSON_FILE_FILTER)
+        path, _ = QFileDialog.getOpenFileName(as_widget(self), _t("load_script"), "", _JSON_FILE_FILTER)
         if path:
             self.script_path_input.setText(path)
             try:
@@ -129,7 +130,7 @@ class ScriptTabMixin:
             self._start_script_run(functools.partial(_run_script_file, path))
 
     def _browse_script_dir(self):
-        path = QFileDialog.getExistingDirectory(self, _t("execute_dir_label"))
+        path = QFileDialog.getExistingDirectory(as_widget(self), _t("execute_dir_label"))
         if path:
             self.script_dir_input.setText(path)
 

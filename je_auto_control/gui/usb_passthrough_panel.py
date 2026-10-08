@@ -18,6 +18,7 @@ GUI stays responsive.
 from __future__ import annotations
 
 import functools
+from pathlib import Path
 from typing import Any, Callable, List, Optional
 
 from PySide6.QtCore import QTimer
@@ -361,7 +362,7 @@ class UsbPassthroughPanel(TranslatableMixin, QWidget):
         if not path:
             return
         try:
-            export_acl_to_file(self._acl, path)
+            export_acl_to_file(self._acl, Path(path))
         except OSError as error:
             self._viewer_status.setText(
                 _t("usb_share_acl_import_failed").format(error=str(error)),
@@ -376,7 +377,7 @@ class UsbPassthroughPanel(TranslatableMixin, QWidget):
         if not path:
             return
         try:
-            count = import_acl_from_file(self._acl, path)
+            count = import_acl_from_file(self._acl, Path(path))
         except (OSError, ValueError) as error:
             self._viewer_status.setText(
                 _t("usb_share_acl_import_failed").format(error=str(error)),

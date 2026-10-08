@@ -60,7 +60,7 @@ class ConfigSyncTab(TranslatableMixin, QWidget):
         self._tr_init()
         self._settings_store = settings if settings is not None else WindowSettings()
         self._inputs: Dict[str, QLineEdit] = {name: QLineEdit() for name in _FIELDS}
-        self._inputs["secret"].setEchoMode(QLineEdit.Password)
+        self._inputs["secret"].setEchoMode(QLineEdit.EchoMode.Password)
         self._restore_form()
         for name in _REMEMBERED:
             self._inputs[name].editingFinished.connect(self._remember_form)
@@ -91,8 +91,8 @@ class ConfigSyncTab(TranslatableMixin, QWidget):
         root.addWidget(self._detail)
         root.addWidget(self._tr(QLabel(), "config_sync_conflicts_title"))
         root.addWidget(self._conflicts, stretch=1)
-        self._conflicts.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
-        self._conflicts.setSelectionBehavior(QTableWidget.SelectRows)
+        self._conflicts.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        self._conflicts.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         self._apply_translations()
 
     def _apply_translations(self) -> None:
@@ -175,7 +175,7 @@ class ConfigSyncTab(TranslatableMixin, QWidget):
 
     def _confirm(self, question: str) -> bool:
         answer = QMessageBox.question(self, _t("tab_config_sync"), question)
-        return answer == QMessageBox.Yes
+        return answer == QMessageBox.StandardButton.Yes
 
     def _start(self, call: Callable[[], Dict[str, Any]], cancel: threading.Event) -> None:
         if self.is_busy():
@@ -213,7 +213,7 @@ class ConfigSyncTab(TranslatableMixin, QWidget):
         if item is None:
             self._detail.setText(_t("config_sync_no_conflict_selected"))
             return
-        section, key, choice = item.data(Qt.UserRole)
+        section, key, choice = item.data(Qt.ItemDataRole.UserRole)
         try:
             session.config_sync_resolve(settings["server_url"], settings["user_id"],
                                         section, key, choice, **settings["options"])
@@ -268,8 +268,8 @@ class ConfigSyncTab(TranslatableMixin, QWidget):
                      str(choice.get("origin", "")), value)
             for column, text in enumerate(cells):
                 item = QTableWidgetItem(text)
-                item.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
-                item.setData(Qt.UserRole, (detail["section"], detail["key"], index))
+                item.setFlags(Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsEnabled)
+                item.setData(Qt.ItemDataRole.UserRole, (detail["section"], detail["key"], index))
                 self._conflicts.setItem(row, column, item)
 
 

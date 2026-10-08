@@ -66,7 +66,7 @@ class SelfHealingTab(TranslatableMixin, QWidget):
         self._candidate_input = QLineEdit()
         self._revision_input = QLineEdit()
         self._compare_table = QTableWidget(0, len(COMPARISON_COLUMNS))
-        self._compare_table.setEditTriggers(QTableWidget.NoEditTriggers)
+        self._compare_table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         self._compare_table.verticalHeader().setVisible(False)
         self._report_view = QPlainTextEdit()
         self._report_view.setReadOnly(True)
@@ -231,7 +231,7 @@ class SelfHealingTab(TranslatableMixin, QWidget):
                 if name == "version" and values["baseline"]:
                     text = _t("self_heal_cmp_baseline").replace("{name}", text)
                 item = QTableWidgetItem(text)
-                item.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
+                item.setFlags(Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsEnabled)
                 self._compare_table.setItem(row, col, item)
         self._compare_table.resizeColumnsToContents()
 
@@ -270,7 +270,7 @@ class SelfHealingTab(TranslatableMixin, QWidget):
             reply = QMessageBox.question(
                 self, _t("self_heal_rev_accept"), _t("self_heal_accept_unvalidated"),
             )
-            if reply != QMessageBox.Yes:
+            if reply != QMessageBox.StandardButton.Yes:
                 return {"accepted": False, "revision_id": revision_id}
             allow = True
         return accept_template_revision(revision_id, allow_unvalidated=allow).to_dict()
@@ -349,7 +349,7 @@ class SelfHealingTab(TranslatableMixin, QWidget):
         reply = QMessageBox.question(
             self, _t("self_heal_clear"), _t("self_heal_clear_confirm"),
         )
-        if reply != QMessageBox.Yes:
+        if reply != QMessageBox.StandardButton.Yes:
             return
         default_heal_log.clear()
         self.refresh_log()
@@ -369,7 +369,7 @@ class SelfHealingTab(TranslatableMixin, QWidget):
             )
             for col, text in enumerate(values):
                 item = QTableWidgetItem(str(text))
-                item.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
+                item.setFlags(Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsEnabled)
                 self._table.setItem(row, col, item)
         self._table.resizeColumnsToContents()
 
@@ -405,9 +405,10 @@ def _set_form_labels(group: QGroupBox, keys: Sequence[str]) -> None:
     if not isinstance(layout, QFormLayout):
         return
     for row, key in enumerate(keys):
-        item = layout.itemAt(row, QFormLayout.LabelRole)
-        if item is not None and isinstance(item.widget(), QLabel):
-            item.widget().setText(_t(key) if key else "")
+        item = layout.itemAt(row, QFormLayout.ItemRole.LabelRole)
+        label = item.widget() if item is not None else None
+        if isinstance(label, QLabel):
+            label.setText(_t(key) if key else "")
 
 
 __all__ = ["SelfHealingTab"]

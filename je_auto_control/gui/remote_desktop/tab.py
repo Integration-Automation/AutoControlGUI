@@ -148,8 +148,8 @@ class RemoteDesktopTab(TranslatableMixin, QWidget):
         ]
         webrtc_host, webrtc_viewer = _load_webrtc_panels()
         if webrtc_host is not None and webrtc_viewer is not None:
-            self._webrtc_host_panel = webrtc_host
-            self._webrtc_viewer_panel = webrtc_viewer
+            self._webrtc_host_panel: Optional[QWidget] = webrtc_host
+            self._webrtc_viewer_panel: Optional[QWidget] = webrtc_viewer
             sub_panels.append((webrtc_host, "rd_webrtc_host_tab"))
             sub_panels.append((webrtc_viewer, "rd_webrtc_viewer_tab"))
         else:

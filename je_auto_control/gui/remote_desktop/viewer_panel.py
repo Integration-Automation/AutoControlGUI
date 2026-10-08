@@ -429,7 +429,7 @@ class _ViewerPanel(TranslatableMixin, QWidget):
     # --- slot handlers (run on GUI thread) -----------------------------
 
     def _on_frame_main(self, payload: bytes) -> None:
-        image = QImage.fromData(payload, "JPEG")
+        image = QImage.fromData(payload, "JPEG")  # type: ignore[arg-type]  # reason: the stub says bytes; PySide6 raises ValueError for bytes
         if image.isNull():
             return
         if self._screen_window is None:

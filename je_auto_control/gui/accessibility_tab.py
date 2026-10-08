@@ -18,6 +18,7 @@ from PySide6.QtWidgets import (
 from je_auto_control.gui._dispose import release_resources
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
 from je_auto_control.gui._tab_task import TabTask
+from je_auto_control.gui._qt_typed import filled_item
 from je_auto_control.gui.language_wrapper.multi_language_wrapper import (
     language_wrapper,
 )
@@ -69,11 +70,11 @@ class AccessibilityTab(TranslatableMixin, QWidget):
         self._window_filter = QLineEdit()
         self._name_filter = QLineEdit()
         self._table = QTableWidget(0, _COLUMN_COUNT)
-        self._table.setEditTriggers(QAbstractItemView.NoEditTriggers)
-        self._table.setSelectionBehavior(QAbstractItemView.SelectRows)
+        self._table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
+        self._table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         self._table.verticalHeader().setVisible(False)
         header = self._table.horizontalHeader()
-        header.setSectionResizeMode(QHeaderView.Interactive)
+        header.setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
         header.setStretchLastSection(True)
         self._status = QLabel()
         self._task = TabTask(self)          # one command at a time, off the GUI thread
@@ -177,7 +178,7 @@ class AccessibilityTab(TranslatableMixin, QWidget):
             )
             for col, text in enumerate(values):
                 item = QTableWidgetItem(text)
-                item.setFlags(item.flags() & ~Qt.ItemIsEditable)
+                item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
                 self._table.setItem(row, col, item)
 
     def _click_selected(self) -> None:
@@ -185,7 +186,7 @@ class AccessibilityTab(TranslatableMixin, QWidget):
         if row < 0:
             self._status.setText(_t("a11y_no_selection"))
             return
-        app = self._table.item(row, 0).text() or None
-        role = self._table.item(row, 1).text() or None
-        name = self._table.item(row, 2).text() or None
+        app = filled_item(self._table, row, 0).text() or None
+        role = filled_item(self._table, row, 1).text() or None
+        name = filled_item(self._table, row, 2).text() or None
         self._start(_CLICK, functools.partial(_click, name, role, app))

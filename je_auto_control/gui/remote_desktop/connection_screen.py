@@ -557,7 +557,7 @@ class QuickConnectScreen(_RecentConnectionsMixin, TranslatableMixin, QWidget):
         window = self._screen_window
         if window is None:
             return
-        image = QImage.fromData(payload, "JPEG")
+        image = QImage.fromData(payload, "JPEG")  # type: ignore[arg-type]  # reason: the stub says bytes; PySide6 raises ValueError for bytes
         if not image.isNull():
             window.set_image(image)
 
@@ -579,7 +579,7 @@ class QuickConnectScreen(_RecentConnectionsMixin, TranslatableMixin, QWidget):
         # If frames arrived before this window existed (race with the
         # motion-dedup capture path), apply the most recent now.
         if self._pending_frame is not None:
-            image = QImage.fromData(self._pending_frame, "JPEG")
+            image = QImage.fromData(self._pending_frame, "JPEG")  # type: ignore[arg-type]  # reason: the stub says bytes; PySide6 raises ValueError for bytes
             if not image.isNull():
                 self._screen_window.set_image(image)
         self._screen_window.show()

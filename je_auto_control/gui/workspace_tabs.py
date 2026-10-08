@@ -79,6 +79,7 @@ class PageHolder(QWidget):
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
+        self._box = layout      # the holder's own layout, typed (``layout()`` may answer None)
         if scrollable:
             self._area = QScrollArea(self)
             self._area.setObjectName("WorkspacePageScroll")
@@ -125,7 +126,7 @@ class PageHolder(QWidget):
         if self._area is not None:
             self._area.takeWidget()
         else:
-            self.layout().removeWidget(page)
+            self._box.removeWidget(page)
 
     def set_page(self, page: QWidget) -> None:
         """Put ``page`` in the holder."""
@@ -133,7 +134,7 @@ class PageHolder(QWidget):
         self._parked = False
         page.setProperty(_CLOSED_PAGE, None)    # shown in a tab again, wherever it waited
         if self._area is None:
-            self.layout().addWidget(page)
+            self._box.addWidget(page)
             page.show()
             return
         self._area.setWidget(page)
@@ -308,7 +309,7 @@ class WorkspaceTabWidget(QTabWidget):
         raw = super().widget(index)
         return raw.page if isinstance(raw, PageHolder) else raw
 
-    def currentWidget(self) -> Optional[QWidget]:  # noqa: N802  # reason: Qt name
+    def currentWidget(self) -> Optional[QWidget]:  # type: ignore[override]  # noqa: N802  # reason: Qt name; None for a deferred tab
         """The page of the selected tab."""
         return self.widget(self.currentIndex())
 

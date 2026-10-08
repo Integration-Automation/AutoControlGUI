@@ -73,7 +73,9 @@ class WorkerHandle:
     """A started worker: running until its thread has returned from ``run()``."""
 
     def __init__(self, worker: QObject) -> None:
-        self.worker = worker
+        # Any: a worker is duck-typed -- ``run``, a ``finished`` signal, optionally ``failed`` and
+        # ``request_stop`` -- and Qt's own type for it says none of that.
+        self.worker: Any = worker
         self._thread: Optional[threading.Thread] = None
         self._owner: Optional["weakref.ref[QObject]"] = None
         self._relay: Optional["weakref.ref[_Relay]"] = None
@@ -250,11 +252,11 @@ def start_worker(owner: QObject, worker: QObject, *,
     """
     reaper = _reaper()
     relay = _Relay(owner, on_done, on_thread_done, on_fail)
-    worker.finished.connect(relay.done)
+    handle = WorkerHandle(worker)
+    handle.worker.finished.connect(relay.done)
     failed = getattr(worker, "failed", None)
     if failed is not None:
         failed.connect(relay.fail)
-    handle = WorkerHandle(worker)
     handle._owner, handle._relay = weakref.ref(owner), weakref.ref(relay)  # noqa: SLF001  # reason: set once
     _RUNNING[handle] = worker
     thread = threading.Thread(target=_run, args=(handle, relay, reaper),

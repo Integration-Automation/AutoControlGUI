@@ -43,17 +43,17 @@ class WebhooksTab(TranslatableMixin, QWidget):
         self._path_input.setPlaceholderText("/jobs")
         self._script_input = QLineEdit()
         self._token_input = QLineEdit()
-        self._token_input.setEchoMode(QLineEdit.Password)
+        self._token_input.setEchoMode(QLineEdit.EchoMode.Password)
         self._method_checks = {
             method: QCheckBox(method) for method in _DEFAULT_METHODS
         }
         self._method_checks["POST"].setChecked(True)
         self._table = QTableWidget(0, 6)
-        self._table.setEditTriggers(QAbstractItemView.NoEditTriggers)
-        self._table.setSelectionBehavior(QAbstractItemView.SelectRows)
+        self._table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
+        self._table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         self._table.verticalHeader().setVisible(False)
         self._table.horizontalHeader().setSectionResizeMode(
-            QHeaderView.Interactive,
+            QHeaderView.ResizeMode.Interactive,
         )
         self._table.horizontalHeader().setStretchLastSection(True)
         self._apply_table_headers()
@@ -225,5 +225,5 @@ class WebhooksTab(TranslatableMixin, QWidget):
             )
             for col, text in enumerate(values):
                 item = QTableWidgetItem(text)
-                item.setFlags(item.flags() & ~Qt.ItemIsEditable)
+                item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
                 self._table.setItem(row, col, item)

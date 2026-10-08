@@ -28,9 +28,9 @@ class SecretsTab(TranslatableMixin, QWidget):
         self._tr_init()
         self._status_label = QLabel()
         self._passphrase = QLineEdit()
-        self._passphrase.setEchoMode(QLineEdit.Password)
+        self._passphrase.setEchoMode(QLineEdit.EchoMode.Password)
         self._list = QListWidget()
-        self._list.setEditTriggers(QAbstractItemView.NoEditTriggers)
+        self._list.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
         self._build_layout()
         self._refresh_status()
 
@@ -139,7 +139,7 @@ class SecretsTab(TranslatableMixin, QWidget):
             return
         value, ok = QInputDialog.getText(
             self, _t("secret_add"), _t("secret_value_prompt"),
-            QLineEdit.Password,
+            QLineEdit.EchoMode.Password,
         )
         if not ok:
             return
@@ -164,13 +164,13 @@ class SecretsTab(TranslatableMixin, QWidget):
     def _on_change_passphrase(self) -> None:
         old, ok = QInputDialog.getText(
             self, _t("secret_change_passphrase"),
-            _t("secret_old_passphrase_prompt"), QLineEdit.Password,
+            _t("secret_old_passphrase_prompt"), QLineEdit.EchoMode.Password,
         )
         if not ok:
             return
         new, ok = QInputDialog.getText(
             self, _t("secret_change_passphrase"),
-            _t("secret_new_passphrase_prompt"), QLineEdit.Password,
+            _t("secret_new_passphrase_prompt"), QLineEdit.EchoMode.Password,
         )
         if not ok or not new:
             return

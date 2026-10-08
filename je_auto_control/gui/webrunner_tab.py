@@ -124,7 +124,7 @@ class WebRunnerTab(TranslatableMixin, QWidget):
         key = "web_available" if available else "web_unavailable"
         self._available_label.setText(_t(key))
         self._available_label.setTextInteractionFlags(
-            Qt.TextSelectableByMouse,
+            Qt.TextInteractionFlag.TextSelectableByMouse,
         )
 
     # --- handlers -------------------------------------------------

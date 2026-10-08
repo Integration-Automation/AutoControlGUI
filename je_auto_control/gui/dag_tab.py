@@ -196,7 +196,7 @@ class DagTab(TranslatableMixin, QWidget):
             )
             for col, text in enumerate(values):
                 item = QTableWidgetItem(str(text))
-                item.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
+                item.setFlags(Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsEnabled)
                 self._table.setItem(row, col, item)
         self._table.resizeColumnsToContents()
 

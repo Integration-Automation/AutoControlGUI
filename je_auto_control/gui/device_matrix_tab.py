@@ -50,7 +50,7 @@ class DeviceMatrixTab(TranslatableMixin, QWidget):
         self._parallel.setRange(1, 64)
         self._parallel.setValue(4)
         self._table = QTableWidget(0, len(_COLS))
-        self._table.setEditTriggers(QAbstractItemView.NoEditTriggers)
+        self._table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
         self._table.horizontalHeader().setStretchLastSection(True)
         self._summary = QLabel()
         self._task: Optional[TaskHandle] = None     # one run at a time
@@ -129,7 +129,7 @@ class DeviceMatrixTab(TranslatableMixin, QWidget):
                       f"{res['duration_s']:.2f}s", res.get("error") or "")
             for col, text in enumerate(values):
                 item = QTableWidgetItem(str(text))
-                item.setFlags(item.flags() & ~Qt.ItemIsEditable)
+                item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
                 self._table.setItem(row, col, item)
         self._summary.setText(
             _t("dm_summary")
