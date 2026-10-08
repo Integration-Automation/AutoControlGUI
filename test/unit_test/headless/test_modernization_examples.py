@@ -195,27 +195,57 @@ def test_the_configuration_page_is_reachable_in_both_languages():
 
 # --- capability matrix ----------------------------------------------------
 
+def _described_sessions() -> List[Tuple[str, str, Dict[str, object]]]:
+    """``(platform, what is described, facts)``: sessions given as facts, never read here.
+
+    The table has to be the same on every runner, so nothing in it comes from
+    the machine that generates it.
+    """
+    usual = {"integrity": "medium", "session_id": 1, "input_desktop": "Default",
+             "hook_access": True, "capture_ok": True}
+    return [
+        ("win32", "signed-in session, medium integrity", usual),
+        ("win32", "elevated (high integrity)", {**usual, "integrity": "high"}),
+        ("win32", "low integrity", {**usual, "integrity": "low"}),
+        ("win32", "workstation locked (input desktop `Winlogon`)",
+         {**usual, "input_desktop": "Winlogon"}),
+        ("win32", "session 0 (a service)", {**usual, "session_id": 0}),
+        ("win32", "1x1 screen copy fails", {**usual, "capture_ok": False}),
+        ("win32", "nothing could be read", {}),
+        ("darwin", "Accessibility, Screen Recording and Input Monitoring granted",
+         {"accessibility": True, "screen_recording": True, "input_monitoring": True}),
+        ("darwin", "only Accessibility granted",
+         {"accessibility": True, "screen_recording": False, "input_monitoring": False}),
+        ("darwin", "nothing granted",
+         {"accessibility": False, "screen_recording": False, "input_monitoring": False}),
+        ("darwin", "preflight calls not available", {}),
+    ]
+
+
 def _probe_rows() -> List[Dict[str, str]]:
-    """What a probe reports on the platforms where it does not depend on the session."""
+    """What ``probe_capabilities()`` concludes from each described session."""
     from je_auto_control.wrapper.capabilities import BackendContext, probe_capabilities
+    from je_auto_control.wrapper.capability_probes import MacFacts, WindowsFacts
     rows = []
-    for platform in ("win32", "darwin"):
-        snapshot = probe_capabilities(BackendContext(platform=platform, environ={}))
-        for capability in snapshot.capabilities:
-            rows.append({"platform": platform, "capability": capability.name,
-                         "state": capability.state.value, "backend": capability.backend,
-                         "detail": capability.detail})
+    for platform, described, facts in _described_sessions():
+        snapshot = probe_capabilities(BackendContext(
+            platform=platform, environ={},
+            windows_facts=lambda facts=facts: WindowsFacts(**facts),
+            mac_facts=lambda facts=facts: MacFacts(**facts),
+            backend_version=lambda _backend: ""))
+        rows.append({"platform": platform, "described": described,
+                     **{item.name: item.state.value for item in snapshot.capabilities}})
     return rows
 
 
 def render_probe_block() -> str:
     """The generated table of ``probe_capabilities()`` on Windows and macOS."""
-    lines = ["| Platform | Capability | State | Backend | Evidence |", "|---|---|---|---|---|"]
+    names = ("input", "capture", "recording", "stop_shortcut")
+    lines = ["| Platform | Session described | " + " | ".join(f"`{name}`" for name in names) + " |",
+             "|---|---|---|---|---|---|"]
     for row in _probe_rows():
-        evidence = (f"not probed: {row['detail']}" if row["detail"]
-                    else "reported, not probed: nothing to authorise")
-        lines.append(f"| `{row['platform']}` | `{row['capability']}` | `{row['state']}` "
-                     f"| `{row['backend']}` | {evidence} |")
+        states = " | ".join(f"`{row[name]}`" for name in names)
+        lines.append(f"| `{row['platform']}` | {row['described']} | {states} |")
     return "\n".join(lines)
 
 

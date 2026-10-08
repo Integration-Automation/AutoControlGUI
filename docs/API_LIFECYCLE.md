@@ -41,7 +41,7 @@ one release note.
 
 | Area | Names | Status | Verified by |
 |---|---|---|---|
-| Capability states | `probe_capabilities`, `BackendContext`, `Capability`, `CapabilitySnapshot`, `CapabilityStatus`, `reset_input_authorisation`, `close_input_session`, `WaylandAuthorisationError` | beta | headless tests on desktops described through `BackendContext`; the probe itself is never a test of the desktop |
+| Capability states | `probe_capabilities`, `BackendContext`, `Capability`, `CapabilitySnapshot`, `CapabilityStatus`, `WindowsFacts`, `MacFacts`, `reset_input_authorisation`, `close_input_session`, `WaylandAuthorisationError` | beta | headless tests on desktops described through `BackendContext`; the probe itself is never a test of the desktop |
 | Recording without a hook | `InputStepLog`, `PhysicalRecorder`, `InputDevice`, `InputEvent`, `list_input_devices`, `StopShortcutSession` | beta; `PhysicalRecorder` and `StopShortcutSession` experimental | fakes; no CI job reads a real `/dev/input` device or a real GlobalShortcuts portal |
 | Config sync | `config_sync_run` / `_status` / `_resolve` / `_full_resync`, `ConfigStore`, `SyncOutbox`, `SyncAdapter`, `SyncEntry`, `SyncOperation`, `merge_entries`, `sync_assets`, `AssetManifest` | beta | headless tests against a real SQLite store and the FastAPI app in-process |
 | Mobile device sessions | `DeviceContext`, `DeviceSession`, `open_device`, `use_device`, `Tap` / `LongPress` / `Swipe` / `Drag` / `Pinch`, `DeviceFrame`, `device_setup_report`, `run_mobile_command`, `mobile_capability_matrix`, `MobileExtension` | experimental | fake `adb` host and fake WebDriverAgent only; **no real device** |

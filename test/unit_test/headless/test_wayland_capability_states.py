@@ -484,10 +484,18 @@ def test_probing_has_no_side_effect(monkeypatch):
 
 
 def test_other_platforms_are_described_without_guessing():
-    windows = probe_capabilities(BackendContext(platform="win32"))
+    from je_auto_control.wrapper.capability_probes import MacFacts, WindowsFacts
+    # Facts are supplied: the defaults query the machine the test runs on.
+    windows = probe_capabilities(BackendContext(
+        platform="win32", windows_facts=lambda: WindowsFacts(
+            integrity="high", session_id=1, input_desktop="Default",
+            hook_access=True, capture_ok=True)))
     assert windows.input.state is CapabilityStatus.AVAILABLE
     assert windows.input.backend == "win32"
-    mac = probe_capabilities(BackendContext(platform="darwin"))
+    unread = probe_capabilities(BackendContext(
+        platform="win32", windows_facts=WindowsFacts))
+    assert unread.input.state is CapabilityStatus.UNKNOWN
+    mac = probe_capabilities(BackendContext(platform="darwin", mac_facts=MacFacts))
     assert mac.input.state is CapabilityStatus.UNKNOWN
     assert mac.xwayland is False
 

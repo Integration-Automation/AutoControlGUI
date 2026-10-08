@@ -75,11 +75,75 @@ States
    * - ``compositor_restarted``
      - the grant came from a compositor that is no longer the one running
    * - ``unknown``
-     - not determinable without side effects (macOS permissions, for example)
+     - could not be read without side effects (a query that failed, a macOS
+       call ``pyobjc`` does not expose)
 
 Each capability also carries ``backend`` (what serves it), ``desktop_wide``,
 ``detail``, ``recovery`` (what to do, in English) and ``recovery_key`` (the
-same advice as a GUI catalogue key).
+same advice as a GUI catalogue key). The snapshot carries
+``backend_version``: what the serving backend can say without running anything
+(``Windows 10.0.26200``, ``macOS 14.5; pyobjc 10.3``, ``python-xlib 0.33``).
+It is empty on Wayland, whose tools report a version only when run, and the
+Diagnostics tab shows it above the capability table.
+
+Windows and macOS
+=================
+
+The same probe reads a Windows or macOS session, again without changing
+anything: no input is sent, no window shown, no hook installed, no hotkey
+registered and no permission requested.
+
+.. list-table::
+   :header-rows: 1
+
+   * - Platform
+     - What is read
+     - What follows
+   * - Windows
+     - the process's integrity level (token opened for query)
+     - ``low`` / ``untrusted``: ``input`` is ``needs_permission``. ``medium``:
+       ``available``, with the note that input to an elevated window is
+       dropped by UIPI
+   * - Windows
+     - the session id
+     - session 0 (a service): every capability ``unsupported``
+   * - Windows
+     - the name of the desktop receiving input
+     - ``Winlogon`` or unopenable (locked, UAC, Ctrl+Alt+Del): every
+       capability ``needs_permission``
+   * - Windows
+     - a 1x1 ``BitBlt`` off the screen into a memory bitmap
+     - failure: ``capture`` is ``needs_setup`` with the error
+   * - Windows
+     - whether the input desktop opens with ``DESKTOP_HOOKCONTROL``
+     - ``recording`` and ``stop_shortcut``; refused: ``needs_permission``
+   * - macOS
+     - ``AXIsProcessTrusted()``
+     - ``input`` — Accessibility
+   * - macOS
+     - ``CGPreflightScreenCaptureAccess()``
+     - ``capture`` — Screen Recording
+   * - macOS
+     - ``CGPreflightListenEventAccess()``
+     - ``recording`` and ``stop_shortcut`` — Input Monitoring
+
+Only the *preflight* calls are made on macOS; the ``CGRequest…`` ones, which
+put a prompt on screen, are never called. A fact that could not be read is
+``unknown`` — it is never rounded up to ``available``. Describe someone else's
+session the same way a Wayland desktop is described::
+
+    from je_auto_control import BackendContext, WindowsFacts, probe_capabilities
+
+    locked = probe_capabilities(BackendContext(
+        platform="win32",
+        windows_facts=lambda: WindowsFacts(
+            integrity="medium", session_id=1, input_desktop="Winlogon",
+            hook_access=False, capture_ok=False)))
+    locked.input.state.value      # "needs_permission"
+
+The Windows queries have been run on a real Windows 11 session. The macOS
+calls have been run against fakes only; the ``pytest-headless`` jobs on
+``macos-14`` (``quality.yml`` / ``dev.yml``) call them on a real runner.
 
 ``restore_token`` is ``unsupported`` on the libei path: this binding does not
 ask the portal for a restore token, so consent is asked once per process and

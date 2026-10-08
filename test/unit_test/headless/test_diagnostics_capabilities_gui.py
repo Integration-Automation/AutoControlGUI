@@ -54,7 +54,10 @@ def _declined_wayland():
 
 def test_every_state_and_every_fix_is_in_all_four_catalogues():
     """A state with no translation would show its raw key to the user."""
-    source = open(caps.__file__, encoding="utf-8").read()
+    from je_auto_control.wrapper import capability_states
+    # The Windows / macOS judgements live beside capabilities.py.
+    source = "".join(open(module.__file__, encoding="utf-8").read()
+                     for module in (caps, capability_states))
     wanted = {f"cap_state_{state.value}" for state in caps.CapabilityStatus}
     wanted |= {f"cap_name_{name}" for name in (
         caps.INPUT, caps.CAPTURE, caps.RECORDING, caps.STOP_SHORTCUT)}

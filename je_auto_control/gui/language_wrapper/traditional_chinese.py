@@ -98,6 +98,27 @@ traditional_chinese_word_dict = {
         "安裝 Wayland 工具(ydotool 或 libei,以及 grim、gnome-screenshot "
         "或 spectacle),讓 Wayland 後端可以載入。"),
     "cap_fix_display": "請把 DISPLAY 設為執行中的 X 伺服器。",
+    "cap_fix_win_session0": (
+        "請在已登入使用者的工作階段中執行——使用設為「只有使用者登入時才執行」的排程工作,而不是服"
+        "務。"
+    ),
+    "cap_fix_win_locked": "請解除鎖定工作階段,或回應畫面上的提示。",
+    "cap_fix_win_integrity": "請從一般(中完整性等級)的處理程序啟動。",
+    "cap_fix_win_capture": "已中斷連線的遠端桌面工作階段沒有螢幕:請保持連線,或把工作階段移到主控台。",
+    "cap_fix_mac_accessibility": (
+        "系統設定 › 隱私權與安全性 › 輔助使用:啟用執行 Python 的應用程式(終端機、IDE),然後重新啟動"
+        "它。"
+    ),
+    "cap_fix_mac_screen_recording": (
+        "系統設定 › 隱私權與安全性 › 螢幕錄製:啟用執行 Python 的應用程式(終端機、IDE),然後重新啟動"
+        "它。"
+    ),
+    "cap_fix_mac_input_monitoring": (
+        "系統設定 › 隱私權與安全性 › 輸入監控:啟用執行 Python 的應用程式(終端機、IDE),然後重新啟動"
+        "它。"
+    ),
+    "cap_backend_version": "後端:{backend} — {version}",
+    "cap_backend_version_unknown": "未回報版本",
     "cap_fix_capture": (
         "允許截圖要求,安裝 grim、gnome-screenshot 或 spectacle,或設定 "
         "JE_AUTOCONTROL_WAYLAND_CAPTURE_COMMAND。"),

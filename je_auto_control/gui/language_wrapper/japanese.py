@@ -107,6 +107,30 @@ japanese_word_dict = {
         "または libei と、grim・gnome-screenshot・spectacle のいずれか) を"
         "インストールしてください。"),
     "cap_fix_display": "DISPLAY を実行中の X サーバーに設定してください。",
+    "cap_fix_win_session0": (
+        "サインイン中のユーザーのセッションで実行してください。サービスではなく、「ユーザーがログオ"
+        "ンしているときのみ実行する」タスクにします。"
+    ),
+    "cap_fix_win_locked": "セッションのロックを解除するか、画面に表示されている確認に応答してください。",
+    "cap_fix_win_integrity": "通常(中の整合性レベル)のプロセスから起動してください。",
+    "cap_fix_win_capture": (
+        "切断されたリモートデスクトップ セッションには画面がありません。接続を維持するか、コンソー"
+        "ルに移してください。"
+    ),
+    "cap_fix_mac_accessibility": (
+        "システム設定 › プライバシーとセキュリティ › アクセシビリティ: Python を実行するアプリ(ター"
+        "ミナル、IDE)を有効にして再起動してください。"
+    ),
+    "cap_fix_mac_screen_recording": (
+        "システム設定 › プライバシーとセキュリティ › 画面収録: Python を実行するアプリ(ターミナル、"
+        "IDE)を有効にして再起動してください。"
+    ),
+    "cap_fix_mac_input_monitoring": (
+        "システム設定 › プライバシーとセキュリティ › 入力監視: Python を実行するアプリ(ターミナル、"
+        "IDE)を有効にして再起動してください。"
+    ),
+    "cap_backend_version": "バックエンド: {backend} — {version}",
+    "cap_backend_version_unknown": "バージョンは報告されていません",
     "cap_fix_capture": (
         "スクリーンショットの要求を許可するか、grim・gnome-screenshot・"
         "spectacle のいずれかをインストールするか、"

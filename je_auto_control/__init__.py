@@ -1305,6 +1305,7 @@ from je_auto_control.utils.self_healing.eval_strategies import (
 from je_auto_control.linux_wayland.authorisation import (
     AuthorisationLedger, AuthorisationState,
 )
+from je_auto_control.wrapper.capability_probes import MacFacts, WindowsFacts
 # HTTP/API request action (dependency-free, stdlib urllib)
 from je_auto_control.utils.http_client.http_client import http_request
 # Ad-hoc read-only SQL query against SQLite
@@ -1422,7 +1423,8 @@ __all__ = [
     "ACTION_JOURNAL_SCHEMA_VERSION", "HEAL_EVENT_SCHEMA_VERSION",
     "HEALING_DATASET_SCHEMA_VERSION", "COMPARISON_COLUMNS", "VERIFY_TYPES",
     "AuthorisationLedger", "AuthorisationState", "HealVerificationError",
-    "LocateRequest", "ModelUsage", "RobotStructureError", "UsageMeter",
+    "LocateRequest", "MacFacts", "ModelUsage", "RobotStructureError", "UsageMeter",
+    "WindowsFacts",
     "build_verifier", "carry_step", "check_robot_structure", "check_thresholds",
     "comparison_rows", "format_comparison", "note_artifact", "note_secret_value",
     "only_run_id", "vlm_strategy", "write_candidate",

@@ -218,6 +218,30 @@ english_word_dict = {
         "Install the Wayland tools (ydotool or libei, and grim, "
         "gnome-screenshot or spectacle) so the Wayland backend loads."),
     "cap_fix_display": "Set DISPLAY to a running X server.",
+    "cap_fix_win_session0": (
+        "Run it in the signed-in user's session — a scheduled task set to run only when the user i"
+        "s logged on, not a service."
+    ),
+    "cap_fix_win_locked": "Unlock the session, or answer the prompt that is on screen.",
+    "cap_fix_win_integrity": "Start it from a normal (medium-integrity) process.",
+    "cap_fix_win_capture": (
+        "A disconnected remote-desktop session has no screen: keep the session connected, or move i"
+        "t to the console."
+    ),
+    "cap_fix_mac_accessibility": (
+        "System Settings › Privacy & Security › Accessibility: enable the application that runs Pyt"
+        "hon (Terminal, the IDE), then restart it."
+    ),
+    "cap_fix_mac_screen_recording": (
+        "System Settings › Privacy & Security › Screen Recording: enable the application that runs "
+        "Python (Terminal, the IDE), then restart it."
+    ),
+    "cap_fix_mac_input_monitoring": (
+        "System Settings › Privacy & Security › Input Monitoring: enable the application that runs "
+        "Python (Terminal, the IDE), then restart it."
+    ),
+    "cap_backend_version": "Backend: {backend} — {version}",
+    "cap_backend_version_unknown": "version not reported",
     "cap_fix_capture": (
         "Allow the screenshot request, install grim, gnome-screenshot or "
         "spectacle, or set JE_AUTOCONTROL_WAYLAND_CAPTURE_COMMAND."),
