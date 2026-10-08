@@ -927,6 +927,10 @@ from je_auto_control.utils.ocr.ocr_engine import (
     locate_text_center, read_text_in_region, set_tesseract_cmd,
     wait_for_text,
 )
+# Tesseract engine discovery, configuration and health checks
+from je_auto_control.utils.ocr.tesseract_setup import (
+    OCRStatus, find_tesseract_cmd, ocr_languages, ocr_status, set_tessdata_dir,
+)
 # Group OCR word boxes into lines / runs (engines box one word at a time)
 from je_auto_control.utils.ocr.text_span import find_spans, group_lines
 # Whether input this process sends can actually arrive
@@ -1233,6 +1237,7 @@ from je_auto_control.wrapper.auto_control_image import locate_image_center
 from je_auto_control.wrapper.auto_control_keyboard import check_key_is_press
 from je_auto_control.wrapper.auto_control_keyboard import get_keyboard_keys_table
 from je_auto_control.wrapper.auto_control_keyboard import hotkey
+from je_auto_control.wrapper.auto_control_keyboard import keyboard_key_name
 from je_auto_control.wrapper.auto_control_keyboard import keyboard_keys_table
 from je_auto_control.wrapper.auto_control_keyboard import press_keyboard_key
 from je_auto_control.wrapper.auto_control_keyboard import release_keyboard_key
@@ -1297,7 +1302,7 @@ __all__ = [
     "HumanizedMotion", "humanized_path", "move_mouse_humanized",
     "humanized_key_delays", "type_text_humanized",
     "keyboard_keys_table", "press_keyboard_key", "release_keyboard_key", "type_keyboard", "check_key_is_press",
-    "write", "write_secret", "hotkey", "start_exe", "get_keyboard_keys_table",
+    "write", "write_secret", "hotkey", "start_exe", "get_keyboard_keys_table", "keyboard_key_name",
     "screen_size", "screenshot", "locate_all_image", "locate_image_center", "locate_and_click",
     "CriticalExit", "AutoControlException", "AutoControlKeyboardException",
     "AutoControlMouseException", "AutoControlCantFindKeyException",
@@ -1316,6 +1321,8 @@ __all__ = [
     "TextMatch", "find_text_matches", "locate_text_center", "wait_for_text",
     "click_text", "set_tesseract_cmd", "read_text_in_region",
     "find_text_regex", "find_spans", "group_lines",
+    "OCRStatus", "find_tesseract_cmd", "ocr_languages", "ocr_status",
+    "set_tessdata_dir",
     "char_table", "foreground_keyboard_layout", "layout_char_table",
     "vk_to_char", "input_desktop_available", "input_reaches_system",
     # Recording editor

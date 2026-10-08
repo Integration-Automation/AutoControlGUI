@@ -1,5 +1,5 @@
 import os
-from typing import Tuple
+from typing import Dict, Tuple
 
 from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
@@ -11,7 +11,7 @@ from je_auto_control.windows.core.utils import win32_keypress_check
 from je_auto_control.windows.core.utils.win32_vk import (
     WIN32_VK_ACCEPT, WIN32_VK_ADD, WIN32_VK_APPS, WIN32_VK_BACK,
     WIN32_VK_BROWSER_BACK, WIN32_VK_BROWSER_FAVORITES,
-    WIN32_VK_BROWSER_FORWARD, WIN32_VK_BROWSER_REFRESH,
+    WIN32_VK_BROWSER_FORWARD, WIN32_VK_BROWSER_HOME, WIN32_VK_BROWSER_REFRESH,
     WIN32_VK_BROWSER_SEARCH, WIN32_VK_BROWSER_STOP, WIN32_VK_CANCEL,
     WIN32_VK_CAPITAL, WIN32_VK_CLEAR, WIN32_VK_CONTROL, WIN32_VK_CONVERT,
     WIN32_VK_DECIMAL, WIN32_VK_DELETE, WIN32_VK_DIVIDE, WIN32_VK_DOWN,
@@ -31,6 +31,10 @@ from je_auto_control.windows.core.utils.win32_vk import (
     WIN32_VK_MEDIA_PREV_TRACK, WIN32_VK_MEDIA_STOP,
     WIN32_VK_MODECHANGE, WIN32_VK_MULTIPLY, WIN32_VK_Menu,
     WIN32_VK_NEXT, WIN32_VK_NONCONVERT, WIN32_VK_NUMLOCK,
+    WIN32_VK_OEM_1, WIN32_VK_OEM_2, WIN32_VK_OEM_3, WIN32_VK_OEM_4,
+    WIN32_VK_OEM_5, WIN32_VK_OEM_6, WIN32_VK_OEM_7, WIN32_VK_OEM_8,
+    WIN32_VK_OEM_102, WIN32_VK_OEM_CLEAR, WIN32_VK_OEM_COMMA,
+    WIN32_VK_OEM_MINUS, WIN32_VK_OEM_PERIOD, WIN32_VK_OEM_PLUS,
     WIN32_VK_NUMPAD0, WIN32_VK_NUMPAD1, WIN32_VK_NUMPAD2,
     WIN32_VK_NUMPAD3, WIN32_VK_NUMPAD4, WIN32_VK_NUMPAD5,
     WIN32_VK_NUMPAD6, WIN32_VK_NUMPAD7, WIN32_VK_NUMPAD8, WIN32_VK_NUMPAD9,
@@ -132,6 +136,7 @@ keyboard_keys_table = {
     "browser_back": WIN32_VK_BROWSER_BACK,
     "browser_favorites": WIN32_VK_BROWSER_FAVORITES,
     "browser_forward": WIN32_VK_BROWSER_FORWARD,
+    "browser_home": WIN32_VK_BROWSER_HOME,
     "browser_refresh": WIN32_VK_BROWSER_REFRESH,
     "browser_search": WIN32_VK_BROWSER_SEARCH,
     "browser_stop": WIN32_VK_BROWSER_STOP,
@@ -139,9 +144,6 @@ keyboard_keys_table = {
     "capital": WIN32_VK_CAPITAL,
     "clear": WIN32_VK_CLEAR,
     "control": WIN32_VK_CONTROL,
-    # Linux and macOS call it "ctrl", and so do the defaults of type_unicode,
-    # set_field_text and with_modifiers; without the alias they failed here.
-    "ctrl": WIN32_VK_CONTROL,
     "convert": WIN32_VK_CONVERT,
     "decimal": WIN32_VK_DECIMAL,
     "delete": WIN32_VK_DELETE,
@@ -184,7 +186,10 @@ keyboard_keys_table = {
     "junja": WIN32_VK_JUNJA,
     "kana": WIN32_VK_KANA,
     "launch_app1": WIN32_VK_LAUNCH_APP1,
+    # The upper-case spelling stays for scripts that use it; a lower-case
+    # caller (or anything that lower-cases a typed name) needs the other.
     "LAUNCH_APP2": WIN32_VK_LAUNCH_APP2,
+    "launch_app2": WIN32_VK_LAUNCH_APP2,
     "launch_mail": WIN32_VK_LAUNCH_MAIL,
     "launch_media_select": WIN32_VK_LAUNCH_MEDIA_SELECT,
     "lbutton": WIN32_VK_LBUTTON,
@@ -203,6 +208,22 @@ keyboard_keys_table = {
     "menu": WIN32_VK_Menu,
     "next": WIN32_VK_NEXT,
     "nonconvert": WIN32_VK_NONCONVERT,
+    # OEM keys are named after Microsoft's constants on purpose: oem_1 is ";"
+    # on a US layout and something else elsewhere, so "semicolon" would lie.
+    "oem_1": WIN32_VK_OEM_1,
+    "oem_2": WIN32_VK_OEM_2,
+    "oem_3": WIN32_VK_OEM_3,
+    "oem_4": WIN32_VK_OEM_4,
+    "oem_5": WIN32_VK_OEM_5,
+    "oem_6": WIN32_VK_OEM_6,
+    "oem_7": WIN32_VK_OEM_7,
+    "oem_8": WIN32_VK_OEM_8,
+    "oem_102": WIN32_VK_OEM_102,
+    "oem_clear": WIN32_VK_OEM_CLEAR,
+    "oem_comma": WIN32_VK_OEM_COMMA,
+    "oem_minus": WIN32_VK_OEM_MINUS,
+    "oem_period": WIN32_VK_OEM_PERIOD,
+    "oem_plus": WIN32_VK_OEM_PLUS,
     "numlock": WIN32_VK_NUMLOCK,
     "num0": WIN32_VK_NUMPAD0,
     "num1": WIN32_VK_NUMPAD1,
@@ -303,6 +324,33 @@ keyboard_keys_table = {
     "Z": WIN32_keyZ,
     "z": WIN32_keyZ,
 }
+
+# 常見的別名 → 上表的標準鍵名。別名也查得到同一個鍵碼，但反查（`keyboard_key_name`）
+# 一律回標準名，所以加別名不會改變錄製寫出來的鍵名。
+# Common aliases -> the canonical names above. An alias resolves to the same
+# code, but a reverse lookup (``keyboard_key_name``) never answers with one, so
+# adding an alias cannot change the key names a recorder writes.
+keyboard_key_aliases: Dict[str, str] = {
+    # Linux and macOS call it "ctrl", and so do the defaults of type_unicode,
+    # set_field_text and with_modifiers; without the alias they failed here.
+    "ctrl": "control", "lctrl": "lcontrol", "rctrl": "rcontrol",
+    "alt": "menu", "lalt": "lmenu", "ralt": "rmenu",
+    "enter": "return", "esc": "escape",
+    "win": "lwin", "super": "lwin", "cmd": "lwin", "meta": "lwin",
+    "backspace": "back", "bksp": "back",
+    "del": "delete", "ins": "insert",
+    "pgup": "prior", "pageup": "prior", "pgdn": "next", "pagedown": "next",
+    "caps": "capital", "capslock": "capital",
+    "printscreen": "snapshot", "prtsc": "snapshot", "prtscr": "snapshot",
+    "scrolllock": "scroll",
+    **{f"numpad{digit}": f"num{digit}" for digit in range(10)},
+    # Microsoft defines these four as the same key on every layout, so the
+    # readable name does not lie; oem_1 .. oem_8 get no alias for that reason.
+    "plus": "oem_plus", "comma": "oem_comma", "minus": "oem_minus",
+    "period": "oem_period",
+}
+keyboard_keys_table.update(
+    {alias: keyboard_keys_table[name] for alias, name in keyboard_key_aliases.items()})
 
 special_mouse_keys_table = None
 keyboard, mouse = _select_input_backend()

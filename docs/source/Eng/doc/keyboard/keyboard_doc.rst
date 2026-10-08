@@ -24,6 +24,19 @@ Retrieve available key names:
 
    See :doc:`/API/special/keyboard_keys` for the full list of available keyboard keys per platform.
 
+On Windows the table also accepts common aliases (``ctrl``, ``alt``, ``enter``,
+``esc``, ``win``, ``backspace``, ``del``, ``pgup``, ``capslock``, ``prtsc``,
+``numpad0`` ...). To turn a captured key code back into a name, use
+``keyboard_key_name``; it always answers with the canonical name, never an
+alias:
+
+.. code-block:: python
+
+   from je_auto_control import keyboard_key_name
+
+   keyboard_key_name(27)     # "escape" on Windows
+   keyboard_key_name(0xBB)   # "oem_plus"
+
 Press and Release
 =================
 

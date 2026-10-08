@@ -329,3 +329,16 @@ def click_text(text: str,
     cx, cy = _click(text, mouse_keycode=mouse_keycode, region=region,
                     min_confidence=float(min_confidence))
     return [int(cx), int(cy)]
+
+
+def ocr_status() -> Dict[str, Any]:
+    """Whether Tesseract OCR can work here, as ``{ok, reason}``."""
+    from je_auto_control.utils.ocr.tesseract_setup import ocr_status as _status
+    ok, reason = _status()
+    return {"ok": ok, "reason": reason}
+
+
+def ocr_languages() -> Dict[str, Any]:
+    """Installed Tesseract languages as ``{languages}``; ``None`` when unknown."""
+    from je_auto_control.utils.ocr.tesseract_setup import ocr_languages as _languages
+    return {"languages": _languages()}

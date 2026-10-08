@@ -27,3 +27,14 @@ coordinates; ``tween_drag`` presses at the start, moves through the points,
 and releases at the end. Easings: ``linear`` / ``ease_in_out_quad`` /
 ``ease_out_cubic`` / ``ease_in_cubic`` (see :func:`easing_names`). Exposed
 as ``AC_tween_drag`` / ``ac_tween_drag`` (``start`` / ``end`` as ``[x, y]``).
+
+Pacing, for apps that tell a drag from a click by the pointer's motion
+(file managers, drawing programs, games)::
+
+    tween_drag((0, 0), (300, 200), steps=24, step_delay_s=0.012, settle_s=0.08)
+
+``step_delay_s`` rests after each move; ``settle_s`` rests on the start
+before the press, after the press and before the release. Both default to
+0 (no pause) and must be finite and non-negative. If a step raises, the
+button is released in a ``finally`` at the last point the pointer reached,
+not at the end, and the original error propagates.

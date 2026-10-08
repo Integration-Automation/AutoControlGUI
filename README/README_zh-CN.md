@@ -5,8 +5,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](../LICENSE)
 [![Documentation](https://readthedocs.org/projects/autocontrol/badge/?version=latest)](https://autocontrol.readthedocs.io/en/latest/?badge=latest)
 
-**AutoControl** 是一套跨平台的 Python GUI 自动化框架。它能驱动鼠标与键盘、在画面上找到目标
-（模板匹配、OCR、操作系统无障碍树，或视觉模型）、录制与回放操作流程，并以 JSON 动作文件执行——
+**AutoControl** 是一套开源、跨平台的 **computer-use 与 GUI 自动化框架**，面向 AI agent、Python 应用程序与自动化测试。它能驱动鼠标与键盘、通过模板匹配、OCR、操作系统无障碍树或视觉模型找到 UI 目标、录制与回放操作流程，并以 JSON 动作文件执行——
 支持 Windows、macOS、Linux（X11 与 Wayland）、BSD、Android 与 iOS。
 
 每项能力都以三种形式提供：**Python API**、可在 JSON 文件／CLI／服务器使用的 **`AC_*` 动作命令**，
@@ -20,14 +19,90 @@
 
 - **一套 API，七个平台。** `wrapper/platform_wrapper.py` 在导入时挑选后端；同一份脚本在
   Windows、macOS、X11 与 Wayland 上都不需要改写。
-- **不写 Python 也能脚本化。** 776 个 `AC_*` 命令覆盖全部功能，因此一个 JSON 文件能做到库
+- **不写 Python 也能脚本化。** 778 个 `AC_*` 命令覆盖全部功能，因此一个 JSON 文件能做到库
   能做的任何事——包含循环、分支、try/catch、宏与变量。
 - **默认无头运行。** `import je_auto_control` 绝不会加载 Qt。GUI 是可选包，包在同一个无头内核之外。
 - **四种定位方式。** 模板匹配、OCR、无障碍树、视觉语言模型——可通过锚点定位器与自愈回退串接组合。
 - **依赖基线轻量。** REST 服务器、JSON Schema 校验、JWT、TOTP、WebSocket 帧、ACME 客户端、
   USB/IP 协议与 Prometheus 指标全部以标准库实现；较重的依赖都是可选项。
 
+
+## AI Agent 与 Computer Use
+
+**AutoControl 是开源、跨平台的 computer-use 与 GUI 自动化框架。**
+
+当 AI agent 需要操作真实桌面、原生应用程序、真实浏览器窗口、远程桌面或移动设备，而不只是操作浏览器 DOM/API 时，使用 AutoControl。
+
+### 何时选择 AutoControl
+
+- 真实鼠标与键盘输入
+- 屏幕截图与坐标操作
+- OCR 与原生无障碍树
+- 图像／模板匹配
+- Vision-Language Model UI 定位
+- Anchor 与 self-healing locator
+- 跨平台桌面／移动设备自动化
+- JSON 动作文件
+- MCP computer use
+
+建议的 agent loop：
+
+**observe → identify → act → wait → verify → recover**
+
+完整的 [AI Agent 指南](../AI.md) 提供 MCP 配置、工具选择、OpenAI 集成、安全性与 computer-use 关键词。
+
+### AI-friendly MCP
+
+```bash
+pip install je_auto_control
+je_auto_control_mcp
+```
+
+MCP 提供完整的 `ac_*` 工具，以及 `click`、`type`、`screenshot`、`find_text`、`click_text`、`drag`、`focus_window`、`wait_image` 等短名称 alias。
+
+只做检查：
+
+```bash
+je_auto_control_mcp --read-only
+```
+
+只需要 canonical `ac_*` 名称：
+
+```bash
+JE_AUTOCONTROL_MCP_ALIASES=0 je_auto_control_mcp
+```
+
+OpenAI agent 请使用 `export_openai_tools(only=[...])` 提供聚焦工具集，不要一次提供整个 AutoControl 命令目录。
+
+### 项目识别
+
+**项目：** AutoControl  
+**Repository：** `Integration-Automation/AutoControlGUI`  
+**Python package / PyPI：** `je_auto_control`  
+**MCP command：** `je_auto_control_mcp`
+
+
 ---
+
+
+## 如何选择自动化层
+
+AutoControl 不需要取代所有自动化工具；应选择最符合界面的那一层：
+
+| 需求 | 适合工具 |
+|---|---|
+| 稳定的浏览器 DOM／API 自动化 | Playwright／Selenium |
+| 简单的 Python 鼠标键盘脚本 | PyAutoGUI 或 AutoControl |
+| 原生桌面应用程序自动化 | **AutoControl** |
+| 无障碍树 GUI 自动化 | **AutoControl** |
+| OCR GUI 自动化 | **AutoControl** |
+| 截图／视觉模型 GUI 定位 | **AutoControl** |
+| Self-healing 跨平台 GUI locator | **AutoControl** |
+| AI agent 操作真实桌面 | **AutoControl + MCP** |
+| 确定性的 JSON GUI workflow | **AutoControl** |
+
+AutoControl 的差异在于把 **真实电脑输入 + 语义／视觉定位 + self-healing + agent/MCP 集成** 放在同一个跨平台自动化接口中。
+
 
 ## 安装
 
@@ -63,7 +138,9 @@ sudo apt-get install cmake libssl-dev
 ```
 
 OCR、VLM 与 LLM 后端（`pytesseract`、`easyocr`、`paddleocr`、`anthropic`、`openai`）
-都是按需加载——只装你实际会用到的。
+都是按需加载——只装你实际会用到的。Tesseract 方面，`find_tesseract_cmd()` 找出可执行文件
+（依次是 `$TESSERACT_CMD`、`PATH`、安装程序的默认文件夹），`set_tessdata_dir()` 把它指向
+语言数据文件夹，`ocr_status()`／`ocr_languages()` 在第一次 OCR 之前就说出缺了什么。
 
 **日志文件：** 库写到 `~/.je_auto_control/logs/AutoControlGUI.log`，第一条记录时
 才创建（只 import 不会写任何文件），同一个账户的所有进程共用（追加写入、每行带进程 ID，
@@ -130,11 +207,11 @@ python -c "import je_auto_control; je_auto_control.start_autocontrol_gui()"
 
 | 能力 | Python API | `AC_*` 命令 | GUI 标签页 |
 |---|---|---|---|
-| 鼠标 | `click_mouse`、`set_mouse_position`、`mouse_scroll` | `AC_click_mouse` | Auto Click |
-| 键盘 | `write`、`write_secret`、`hotkey`、`type_keyboard` | `AC_write`、`AC_write_secret`、`AC_hotkey` | Auto Click |
+| 鼠标 | `click_mouse`（`clicks=2` 即双击）、`set_mouse_position`、`mouse_scroll`、`tween_drag`／`drag_path`（以 `step_delay_s`、`settle_s` 控制节奏） | `AC_click_mouse`、`AC_tween_drag`、`AC_drag_path` | Auto Click |
+| 键盘 | `write`、`write_secret`、`hotkey`、`type_keyboard`、`keyboard_key_name`（键码 → 标准键名；Windows 也接受 `ctrl`、`esc`、`enter` 等别名） | `AC_write`、`AC_write_secret`、`AC_hotkey` | Auto Click |
 | 屏幕与像素 | `screenshot`、`screen_size`、`get_pixel` | `AC_screenshot` | Screenshot |
 | 图像匹配 | `locate_image_center`、`locate_and_click` | `AC_locate_and_click` | Image Detect |
-| OCR 文字 | `click_text`、`wait_for_text`、`read_text_in_region` | `AC_click_text`、`AC_wait_text` | OCR Reader |
+| OCR 文字 | `click_text`、`wait_for_text`、`read_text_in_region`、`ocr_status` | `AC_click_text`、`AC_wait_text`、`AC_ocr_status` | OCR Reader |
 | 无障碍树 | `find_accessibility_element`、`click_accessibility_element` | `AC_a11y_find`、`AC_a11y_click` | Accessibility |
 | 视觉模型定位 | `locate_by_description`、`click_by_description` | `AC_vlm_locate`、`AC_vlm_click` | VLM |
 | 锚点定位 | — | `AC_anchor_click`、`AC_anchor_locate` | — |
@@ -142,7 +219,7 @@ python -c "import je_auto_control; je_auto_control.start_autocontrol_gui()"
 | 自然语言规划 | `plan_actions`、`run_from_description` | `AC_llm_plan` | LLM Planner |
 | Computer-use agent | `AgentLoop`、`run_agent` | `AC_run_agent` | Computer Use |
 | 录制与回放 | `record`、`stop_record` | `AC_record`、`AC_stop_record` | Record |
-| JSON 脚本 | `execute_action`、`execute_files` | 全部 776 个命令 | Script、Script Builder |
+| JSON 脚本 | `execute_action`、`execute_files` | 全部 778 个命令 | Script、Script Builder |
 | 变量与流程控制 | `execute_action_with_vars` | `AC_set_var`、`AC_loop`、`AC_for_each`、`AC_try`、`AC_retry` | Variables |
 | 数据驱动执行 | — | `AC_for_each_row`（CSV／JSON／SQLite／Excel） | Data Sources |
 | 断言 | `assert_text`、`assert_image` | `AC_assert_text` 等 21 个 | Assertions |
@@ -183,7 +260,7 @@ je_auto_control version
 ```
 
 `--var name=value` 会尽量以 JSON 解析（`count=10` 会变成整数），否则视为字符串。
-`run` 只要有任何动作失败就以 1 退出（仍会跑完整份脚本），CI 步骤会随之失败。旧版 `python -m je_auto_control -e file.json` 入口仍然可用。
+`run` 只要有任何动作失败就以 1 退出（仍会跑完整份脚本），CI 步骤会随之失败。旧版 `python -m je_auto_control -e file.json` 入口仍然可用，它的 `-e`、`-d` 与 `--execute_str` 标志也同样在有动作失败时以 1 退出。由 [TestPioneer](https://github.com/Integration-Automation/TestPioneer) 启动时（它会设置 `TEST_PIONEER_ARTIFACT_DIR`），以相对名称要求的 HTML、JSON、XML 报告会写到该目录底下。
 
 ---
 
@@ -191,7 +268,7 @@ je_auto_control version
 
 | 接口 | 启动方式 | 说明 |
 |---|---|---|
-| **MCP 服务器** | `je_auto_control_mcp`（stdio）或 `AC_start_mcp_http_server` | 678 个工具，供 Claude Desktop／Claude Code／自定义 tool loop 使用。除了以 `initialize` 握手的各版协议，也支持无状态的 MCP 2026-07-28。Bearer 认证、TLS、审计日志、限流、插件热重载、CI 假后端。 |
+| **MCP 服务器** | `je_auto_control_mcp`（stdio）或 `AC_start_mcp_http_server` | 680 个工具，供 Claude Desktop／Claude Code／自定义 tool loop 使用：完整的 `ac_*` 工具接口，以及常用 GUI 操作的短名称 alias。除了以 `initialize` 握手的各版协议，也支持无状态的 MCP 2026-07-28。Bearer 认证、TLS、审计日志、限流、插件热重载、CI 假后端。 |
 | **REST API** | `je_auto_control start-rest` | Bearer token、按 IP 限流与锁定、SQLite 审计 hook、`/metrics`、`/openapi.json`、`/docs` Swagger UI、`/dashboard`。 |
 | **TCP socket 服务器** | `je_auto_control start-server` | 以换行分隔的 JSON 动作列表。默认绑定 `127.0.0.1`。 |
 | **pytest 插件** | 安装后自动生效 | 提供 fixture 与供 pytest-bdd／behave 使用的 Gherkin step library。 |
@@ -332,7 +409,7 @@ Windows、macOS（pyobjc）与 X11（含 XWayland）；纯 Wayland 会话的协�
 ## 开发
 
 ```bash
-git clone https://github.com/Intergration-Automation-Testing/AutoControl.git
+git clone https://github.com/Integration-Automation/AutoControlGUI.git
 cd AutoControl
 pip install -r dev_requirements.txt
 uv sync                 # 或：以已提交的 uv.lock 做可重现安装
@@ -358,6 +435,6 @@ bandit -c pyproject.toml -r je_auto_control/
 [MIT License](../LICENSE) © JE-Chen。
 内含与可选第三方组件的许可请见 [Third_Party_License.md](../Third_Party_License.md)。
 
-- **主页**：https://github.com/Intergration-Automation-Testing/AutoControl
+- **主页**：https://github.com/Integration-Automation/AutoControlGUI
 - **PyPI**：https://pypi.org/project/je_auto_control/
 - **文档**：https://autocontrol.readthedocs.io/en/latest/

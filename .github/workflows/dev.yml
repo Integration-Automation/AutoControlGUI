@@ -76,7 +76,7 @@ jobs:
         shell: bash
         # The same line as quality.yml (test_dev_release.py compares them).
         # Quoted: `--only-binary :all:` puts a colon-space inside the scalar.
-        run: "pip install --only-binary :all: ruff==0.15.22 bandit==1.9.4 pytest==9.1.1 pytest-timeout==2.4.0 pytest-rerunfailures==15.1 coverage==7.15.4 PySide6==6.11.1 radon==6.0.1"
+        run: "pip install --only-binary :all: ruff==0.16.0 bandit==1.9.4 pytest==9.1.1 pytest-timeout==2.4.0 pytest-rerunfailures==16.4 coverage==7.15.4 PySide6==6.11.1 radon==6.0.1"
 
       # No path argument: the paths come from `testpaths` in pyproject.toml,
       # and an argument would drop the flow_control tests. Linux runs under a
@@ -112,14 +112,19 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Install build tooling
-        run: "pip install --only-binary :all: build==1.5.0 twine==6.2.0"
+      # This job holds the PyPI token, so it installs one file and nothing else:
+      # wheels only, at locked hashes. The command that regenerates the lock is
+      # at the top of .github/requirements/publish.in.
+      - name: Install the hash-locked build tooling
+        run: "python -m pip install --require-hashes --only-binary :all: -r .github/requirements/publish.txt"
 
       - name: Write pyproject.toml from dev.toml with the next version
         run: python scripts/dev_release.py prepare
 
+      # --no-isolation: the backend is the setuptools the lock pins, not the
+      # newest one downloaded into a fresh build environment.
       - name: Build distribution
-        run: python -m build
+        run: python -m build --no-isolation
 
       - name: Verify distribution metadata
         run: python -m twine check dist/*

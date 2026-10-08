@@ -82,6 +82,10 @@ def _add_mouse_specs(specs: List[CommandSpec]) -> None:
                       default="mouse_left"),
             FieldSpec("x", FieldType.INT, optional=True),
             FieldSpec("y", FieldType.INT, optional=True),
+            FieldSpec("clicks", FieldType.INT, optional=True, default=1,
+                      min_value=1),
+            FieldSpec("interval", FieldType.FLOAT, optional=True, default=0.0,
+                      min_value=0.0),
         ),
     ))
     specs.append(CommandSpec(
@@ -885,6 +889,18 @@ def _add_ocr_specs(specs: List[CommandSpec]) -> None:
             FieldSpec("lang", FieldType.STRING, optional=True, default="eng"),
             FieldSpec("min_confidence", FieldType.FLOAT, optional=True,
                       default=60.0, min_value=0.0, max_value=100.0),
+        ),
+    ))
+    specs.extend((
+        CommandSpec(
+            "AC_ocr_status", "OCR", "OCR Engine Status",
+            fields=(),
+            description="Whether Tesseract OCR can work here: {ok, reason}.",
+        ),
+        CommandSpec(
+            "AC_ocr_languages", "OCR", "OCR Installed Languages",
+            fields=(),
+            description="Installed Tesseract languages; null when the engine cannot be asked.",
         ),
     ))
     specs.append(CommandSpec(
@@ -2023,6 +2039,10 @@ def _add_misc_specs(specs: List[CommandSpec]) -> None:
                       optional=True, default="ease_in_out_quad"),
             FieldSpec("button", FieldType.ENUM, choices=_MOUSE_BUTTONS,
                       optional=True, default="mouse_left"),
+            FieldSpec("step_delay_s", FieldType.FLOAT, optional=True,
+                      default=0.0, min_value=0.0),
+            FieldSpec("settle_s", FieldType.FLOAT, optional=True,
+                      default=0.0, min_value=0.0),
         ),
         description="Drag along an eased path; 'start'/'end' [x,y] via JSON "
                     "view.",
@@ -2054,6 +2074,10 @@ def _add_misc_specs(specs: List[CommandSpec]) -> None:
                       optional=True, default="linear"),
             FieldSpec("per_segment_steps", FieldType.INT, optional=True,
                       default=20),
+            FieldSpec("step_delay_s", FieldType.FLOAT, optional=True,
+                      default=0.0, min_value=0.0),
+            FieldSpec("settle_s", FieldType.FLOAT, optional=True,
+                      default=0.0, min_value=0.0),
         ),
         description="Press, drag through a polyline of waypoints, release.",
     ))

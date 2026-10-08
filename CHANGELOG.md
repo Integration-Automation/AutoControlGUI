@@ -15,6 +15,8 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Added
 
+- AI-agent documentation and a dedicated `AI.md` explain computer-use positioning, MCP aliases, safe tool selection, and OpenAI integration.
+- `AC_run_agent` now uses a focused computer-use allow-list by default instead of exposing the full `AC_*` command catalogue to the model.
 - `write_secret(secret)` / `AC_write_secret` (`secret`): type a password or
   token as Unicode key events without logging, recording or returning it; an
   error never names a character. Refuses on a backend without Unicode typing.
@@ -72,6 +74,41 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 - **`AC_idempotency_release`** / MCP `ac_idempotency_release` / Script
   Builder *Idempotency: Release*: free an in-progress idempotency key whose
   work failed so a retry runs it.
+- **Tesseract setup helpers.** `find_tesseract_cmd()` (`$TESSERACT_CMD`,
+  `PATH`, then the installers' default folders), `set_tessdata_dir(path)`
+  (sets `TESSDATA_PREFIX`; `None` clears it), `ocr_languages()` (sorted
+  codes; `[]` when the engine has no language data, `None` when it cannot be
+  asked) and `ocr_status()`, an `OCRStatus(ok, reason)` tuple whose reason is
+  `ready`, `missing_package`, `missing_engine`, `engine_unusable` or
+  `no_language_data`. `TesseractBackend` gained `cmd`, `version()` and
+  `languages()`. Commands `AC_ocr_status` / `AC_ocr_languages`, MCP tools
+  `ac_ocr_status` / `ac_ocr_languages`.
+- **`click_mouse(..., clicks=1, interval=0.0)`.** `clicks=2` double-clicks
+  in one call: the clicks land on one point, `interval` seconds apart.
+  Defaults keep the single click, and a single click records the same
+  action as before. `AC_click_mouse`, the `ac_click_mouse` MCP tool and the
+  Script Builder take both parameters. On macOS the clicks still arrive as
+  separate single clicks (`Progress.md`).
+- **Drag pacing: `tween_drag` / `drag_path` take `step_delay_s` and
+  `settle_s`** (seconds, default 0). `step_delay_s` rests after each move;
+  `settle_s` rests on the start before the press, after the press and before
+  the release, for apps that tell a drag from a click by the pointer's
+  motion. Both must be finite and non-negative (`ValueError` otherwise,
+  before anything is sent). `AC_tween_drag`, `AC_drag_path`, their MCP tools
+  and the Script Builder take both.
+- **Windows key names.** The OEM keys (`oem_1` .. `oem_8`, `oem_102`,
+  `oem_plus`, `oem_comma`, `oem_minus`, `oem_period`, `oem_clear`),
+  `browser_home`, a lower-case `launch_app2` (`LAUNCH_APP2` stays) and
+  common aliases: `ctrl` / `lctrl` / `rctrl`, `alt` / `lalt` / `ralt`,
+  `enter`, `esc`, `win` / `super` / `cmd` / `meta`, `backspace` / `bksp`,
+  `del`, `ins`, `pgup` / `pageup`, `pgdn` / `pagedown`, `caps` /
+  `capslock`, `printscreen` / `prtsc` / `prtscr`, `scrolllock`,
+  `numpad0` .. `numpad9`, and `plus` / `comma` / `minus` / `period` for the
+  four OEM keys that are the same on every layout. Aliases are listed in
+  `platform_wrapper.keyboard_key_aliases` (empty on other platforms).
+- **`keyboard_key_name(keycode)`** returns a code's canonical name and never
+  an alias, so a recorder's output does not change when an alias is added;
+  `None` when the table has no name for the code.
 - `cua_action.resolve_key_name` / `split_key_combo`, and
   `compile_postcondition(before=...)`.
 - `pii_text.luhn_valid` and `normalize_text(strip_format=...)`.
@@ -267,6 +304,12 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 - **Webhook methods**: `PATCH` webhooks are served; verbs the server cannot
   answer (e.g. `HEAD`) are refused when the webhook is added instead of
   returning 501 on every request.
+- **Windows `keyboard_keys_table` lists its aliases after the canonical
+  names**, `ctrl` included (it moved from beside `control` into
+  `keyboard_key_aliases`; same code). A reverse lookup that takes the
+  shortest name from the raw table now meets aliases such as `esc` or
+  `prtsc`; skip the names in `keyboard_key_aliases`, or call
+  `keyboard_key_name`, to keep getting the canonical ones.
 - **Golden-image capture (`take_golden` / `compare_to_golden`) reads its
   region in mouse coordinates**, like every other capture; region goldens
   taken on a scaled display need re-taking.
@@ -1011,6 +1054,11 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
   `shown=False` and Windows toasts appear; a dead key no longer reads as its
   US character; inverted and off-image regions are handled in annotate and
   colour stats.
+- **An aborted `tween_drag` / `drag_path` lets go where the pointer stopped.**
+  When a step raised, the button was released at the end of the path, which
+  completed a drop the drag never reached; it is now released in a `finally`
+  at the last point the pointer reached, and a failing cleanup release is
+  logged instead of replacing the original error.
 - **Emergency stop on Linux / macOS**: the stop key wakes a sleeping or
   waiting main thread there too (SIGINT is sent to the main thread).
 - **Image analysis and packaging**: colour-vision simulation uses Machado

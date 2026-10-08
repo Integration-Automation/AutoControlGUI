@@ -250,10 +250,12 @@ def generate_sop(actions, title="Automation Procedure", path=None):
 
 
 def tween_drag(start, end, steps=30, easing="ease_in_out_quad",
-               button="mouse_left"):
+               button="mouse_left", step_delay_s=0.0, settle_s=0.0):
     from je_auto_control.utils.tween_drag import tween_drag as _td
     return {"points": _td(tuple(start), tuple(end), steps=int(steps),
-                          easing=easing, button=button)["points"]}
+                          easing=easing, button=button,
+                          step_delay_s=float(step_delay_s),
+                          settle_s=float(settle_s))["points"]}
 
 
 def fuzzy_ratio(left, right, ignore_case=True):

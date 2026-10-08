@@ -49,6 +49,13 @@ Press and immediately release a mouse button:
    # Left click at specific coordinates
    click_mouse("mouse_left", x=500, y=300)
 
+   # Double-click: two clicks on the same point, 60 ms apart
+   click_mouse("mouse_left", x=500, y=300, clicks=2, interval=0.06)
+
+Windows and X11 recognise a double-click from the timing and distance of the
+clicks, so keep ``interval`` under the system double-click time (500 ms by
+default on Windows). On macOS the clicks arrive as separate single clicks.
+
 Position
 ========
 

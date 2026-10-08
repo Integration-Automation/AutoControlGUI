@@ -80,3 +80,26 @@ def test_unknown_backend_raises():
     import pytest
     with pytest.raises(ValueError, match="unknown agent backend"):
         _run_agent(goal="x", backend="bogus")
+
+
+def test_openai_agent_uses_focused_toolset(monkeypatch):
+    captured = {}
+
+    class StubBackend(FakeAgentBackend):
+        def __init__(self, *, tools, **kwargs):
+            captured["tools"] = tools
+            super().__init__([{"stop": True, "message": "focused"}])
+
+    import je_auto_control.utils.agent.backends as backends_pkg
+    monkeypatch.setattr(backends_pkg, "OpenAIAgentBackend", StubBackend)
+    from je_auto_control.utils.executor.action_executor import _run_agent
+
+    result = _run_agent(goal="probe", backend="openai", max_steps=1, wall_seconds=5.0)
+
+    names = {item["function"]["name"] for item in captured["tools"]}
+    assert result["succeeded"] is True
+    assert "AC_screenshot" in names
+    assert "AC_click_mouse" in names
+    assert "AC_shell_command" not in names
+    assert "AC_execute_process" not in names
+    assert len(names) <= 128

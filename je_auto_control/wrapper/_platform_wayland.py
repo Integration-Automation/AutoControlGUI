@@ -9,6 +9,8 @@ middle=2) — that's the public schema callers depend on. The internal
 ydotool BTN_* hex codes are converted in :mod:`linux_wayland.mouse`
 so the public mouse_keys_table stays consistent across platforms.
 """
+from typing import Dict
+
 from je_auto_control.linux_wayland import keyboard as wayland_keyboard
 from je_auto_control.linux_wayland import listener as wayland_listener
 from je_auto_control.linux_wayland import mouse as wayland_mouse
@@ -46,13 +48,16 @@ screen: ScreenBackend = wayland_screen
 recorder: RecorderBackend = wayland_record.wayland_recorder
 
 
+#: Aliases of canonical key names; none on this backend (see ``_platform_windows``).
+keyboard_key_aliases: Dict[str, str] = {}
+
 if None in [keyboard_keys_table, mouse_keys_table, special_mouse_keys_table,
             keyboard, mouse, screen, recorder]:
     raise AutoControlException("Can't init auto control (Wayland)")
 
 
 __all__ = [
-    "keyboard", "keyboard_check", "keyboard_keys_table",
+    "keyboard", "keyboard_check", "keyboard_key_aliases", "keyboard_keys_table",
     "mouse", "mouse_keys_table", "recorder",
     "screen", "special_mouse_keys_table",
 ]

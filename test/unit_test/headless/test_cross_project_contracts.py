@@ -104,6 +104,39 @@ def test_create_project(tmp_path, flag):
     assert keywords, result.stderr[-2000:]
 
 
+def _failing_actions(target: Path) -> list:
+    """An action that fails when it runs, then one that writes ``target``.
+
+    The first writes below a path that is a file, so it passes the check of the
+    script and raises only at run time.
+    """
+    not_a_directory = target.with_name(target.name + ".blocker")
+    not_a_directory.write_text("x", encoding="utf-8")
+    return [["AC_export_sarif", {"findings": [], "path": str(not_a_directory / "out.sarif")}],
+            *_actions(target)]
+
+
+@pytest.mark.parametrize("flag", ["-e", "--execute_file"])
+def test_a_failed_action_exits_1_after_the_rest_ran(tmp_path, flag):
+    target = tmp_path / "out.sarif"
+    action_file = tmp_path / "actions.json"
+    action_file.write_text(json.dumps(_failing_actions(target)), encoding="utf-8")
+    result = _run_cli(tmp_path, flag, str(action_file))
+    assert result.returncode == 1, result.stderr[-2000:]
+    assert "error: 1 action(s) failed" in result.stderr
+    assert target.is_file(), result.stderr[-2000:]
+
+
+def test_a_failed_action_in_a_directory_exits_1(tmp_path):
+    action_dir = tmp_path / "actions"
+    action_dir.mkdir()
+    (action_dir / "a_ok.json").write_text(
+        json.dumps(_actions(tmp_path / "a.sarif")), encoding="utf-8")
+    (action_dir / "b_bad.json").write_text(
+        json.dumps(_failing_actions(tmp_path / "b.sarif")), encoding="utf-8")
+    assert _run_cli(tmp_path, "--execute_dir", str(action_dir)).returncode == 1
+
+
 def test_no_flag_exits_non_zero(tmp_path):
     """A caller that forgot its flag must see a failure, not a silent 0."""
     assert _run_cli(tmp_path).returncode != 0
@@ -125,6 +158,9 @@ def test_no_flag_exits_non_zero(tmp_path):
     "save_window_layout", "screen_size", "set_clipboard",
     "set_mouse_position", "snap_window", "wait_until_clipboard_changes",
     "wait_until_port", "wait_until_process", "write",
+    # Jeffrey_RPA: added so it can drop its own copies of the same logic.
+    "find_tesseract_cmd", "ocr_languages", "ocr_status", "set_tessdata_dir",
+    "keyboard_key_name",
 ])
 def test_facade_name_other_repositories_call(name):
     assert name in je_auto_control.__all__, f"{name} left the facade"
@@ -152,6 +188,18 @@ def test_internal_names_jeffrey_rpa_imports():
     assert callable(enumerate_monitors) and callable(logical_virtual_rect)
     # Jeffrey_RPA falls back to its own table unless this is a non-empty dict.
     assert isinstance(WRITE_CONTROL_KEYS, dict) and WRITE_CONTROL_KEYS
+
+
+@pytest.mark.parametrize("name, keywords", [
+    ("click_mouse", {"clicks", "interval"}),
+    ("tween_drag", {"step_delay_s", "settle_s"}),
+    ("drag_path", {"step_delay_s", "settle_s"}),
+])
+def test_keywords_jeffrey_rpa_passes(name, keywords):
+    """Keyword parameters added so Jeffrey_RPA can drop its own loops."""
+    import inspect
+    parameters = inspect.signature(getattr(je_auto_control, name)).parameters
+    assert keywords <= set(parameters), (name, keywords - set(parameters))
 
 
 def test_gui_widget_pybreeze_embeds_is_still_there():
@@ -183,6 +231,8 @@ def test_key_tables_jeffrey_rpa_reads():
     for name in ("up", "down", "left", "right", "space", "tab", "shift",
                  "a", "z", "0", "9", "f1", "f12"):
         assert name in keyboard, name
+    # Reverse lookups skip these, so a recorder never writes an alias.
+    assert isinstance(platform_wrapper.keyboard_key_aliases, dict)
 
 
 @pytest.mark.skipif(not sys.platform.startswith("win"),
@@ -198,6 +248,10 @@ def test_windows_key_names_jeffrey_rpa_sends():
 
     for name in ("return", "escape", "control", "menu", "back", "delete",
                  "home", "end", "insert", "capital", "vk_down"):
+        assert name in platform_wrapper.keyboard_keys_table, name
+    # Added so it can drop its own alias and extra-key tables.
+    for name in ("ctrl", "alt", "enter", "esc", "win", "pgup", "numpad0", "plus",
+                 "oem_1", "oem_plus", "oem_102", "oem_clear", "browser_home", "launch_app2"):
         assert name in platform_wrapper.keyboard_keys_table, name
 
 

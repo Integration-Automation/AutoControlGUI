@@ -14,11 +14,12 @@ in keyboard functions.
 Windows
 =======
 
-Common keys:
+Common keys. The first name is the Win32 one a reverse lookup
+(``keyboard_key_name``) returns; the others are aliases for the same key:
 
 .. list-table::
    :header-rows: 1
-   :widths: 30 70
+   :widths: 40 60
 
    * - Key Name
      - Description
@@ -28,46 +29,55 @@ Common keys:
      - Number keys
    * - ``f1`` - ``f24``
      - Function keys
-   * - ``enter``, ``return``
+   * - ``return``, ``enter``
      - Enter / Return
    * - ``tab``
      - Tab
    * - ``space``
      - Space bar
-   * - ``back``
+   * - ``back``, ``backspace``, ``bksp``
      - Backspace
-   * - ``escape``
+   * - ``escape``, ``esc``
      - Escape
-   * - ``lcontrol``, ``rcontrol``
-     - Left / Right Control
-   * - ``lshift``, ``rshift``
-     - Left / Right Shift
-   * - ``lalt``, ``ralt``
-     - Left / Right Alt
-   * - ``lwin``, ``rwin``
-     - Left / Right Windows key
+   * - ``control``, ``ctrl``; ``lcontrol``, ``lctrl``; ``rcontrol``, ``rctrl``
+     - Control, left / right Control
+   * - ``shift``, ``lshift``, ``rshift``
+     - Shift, left / right Shift
+   * - ``menu``, ``alt``; ``lmenu``, ``lalt``; ``rmenu``, ``ralt``
+     - Alt, left / right Alt
+   * - ``lwin``, ``win``, ``super``, ``cmd``, ``meta``; ``rwin``
+     - Left / right Windows key
    * - ``up``, ``down``, ``left``, ``right``
      - Arrow keys
-   * - ``insert``, ``delete``
+   * - ``insert``, ``ins``; ``delete``, ``del``
      - Insert / Delete
    * - ``home``, ``end``
      - Home / End
-   * - ``pageup``, ``pagedown``
+   * - ``prior``, ``pgup``, ``pageup``; ``next``, ``pgdn``, ``pagedown``
      - Page Up / Page Down
-   * - ``capslock``
+   * - ``capital``, ``caps``, ``capslock``
      - Caps Lock
-   * - ``numlock``
-     - Num Lock
-   * - ``print_screen``
+   * - ``numlock``; ``scroll``, ``scrolllock``
+     - Num Lock / Scroll Lock
+   * - ``snapshot``, ``printscreen``, ``prtsc``, ``prtscr``
      - Print Screen
-   * - ``numpad0`` - ``numpad9``
+   * - ``num0`` - ``num9``, ``numpad0`` - ``numpad9``
      - Numpad keys
-   * - ``add``, ``subtract``, ``multiply``, ``divide``
+   * - ``add``, ``subtract``, ``multiply``, ``divide``, ``decimal``
      - Numpad operators
+   * - ``oem_plus``, ``plus``; ``oem_comma``, ``comma``; ``oem_minus``, ``minus``; ``oem_period``, ``period``
+     - ``=`` / ``,`` / ``-`` / ``.`` keys, the same key on every layout
+   * - ``oem_1`` - ``oem_8``, ``oem_102``
+     - Punctuation keys whose character depends on the layout (``oem_1`` is
+       ``;`` on a US layout); they have no character-named alias on purpose
+   * - ``oem_clear``
+     - Clear
    * - ``apps``
      - Application / Menu key
-   * - ``browser_back``, ``browser_forward``
+   * - ``browser_back``, ``browser_forward``, ``browser_home``
      - Browser navigation keys
+   * - ``launch_app1``, ``launch_app2``
+     - Launch application keys (``LAUNCH_APP2`` also still works)
    * - ``volume_mute``, ``volume_up``, ``volume_down``
      - Volume control keys
 
@@ -77,8 +87,8 @@ Common keys:
 
    .. code-block:: python
 
-      from je_auto_control import keys_table
-      for key_name in sorted(keys_table.keys()):
+      from je_auto_control import keyboard_keys_table
+      for key_name in sorted(keyboard_keys_table.keys()):
           print(key_name)
 
 Linux (X11)

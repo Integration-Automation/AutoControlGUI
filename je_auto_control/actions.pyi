@@ -591,8 +591,14 @@ def AC_classify_lock_transitions(states: Any) -> Dict[str, Any]:
 def AC_classify_widget(features: Any) -> Dict[str, Any]:
     """Adapter: map geometric features to a widget type (pure)."""
 
-def AC_click_mouse(mouse_keycode: int | str, x: int | None = ..., y: int | None = ...) -> Tuple[Any, int, int]:
-    """在指定座標按下並放開滑鼠按鍵"""
+def AC_click_mouse(
+    mouse_keycode: int | str,
+    x: int | None = ...,
+    y: int | None = ...,
+    clicks: int = ...,
+    interval: float = ...,
+) -> Tuple[Any, int, int]:
+    """在指定座標按下並放開滑鼠按鍵；``clicks=2`` 就是雙擊"""
 
 def AC_click_text(
     target: str,
@@ -903,7 +909,14 @@ def AC_dominant_hue_regions(
 def AC_dominant_pair(pixels: Any) -> Dict[str, Any]:
     """Adapter: split sampled RGB pixels into fg/bg dominant colours (pure)."""
 
-def AC_drag_path(waypoints: Any, button: str = ..., easing: str = ..., per_segment_steps: Any = ...) -> Dict[str, Any]:
+def AC_drag_path(
+    waypoints: Any,
+    button: str = ...,
+    easing: str = ...,
+    per_segment_steps: Any = ...,
+    step_delay_s: Any = ...,
+    settle_s: Any = ...,
+) -> Dict[str, Any]:
     """Adapter: press, drag through a polyline of waypoints, release."""
 
 def AC_drop_files(hwnd: Any, paths: Any, point: Any = ...) -> Dict[str, Any]:
@@ -1946,12 +1959,18 @@ def AC_observe_start() -> Dict[str, Any]:
 def AC_observe_stop() -> Dict[str, Any]:
     """Adapter: stop the background observer thread."""
 
+def AC_ocr_languages() -> Dict[str, Any]:
+    """Executor adapter: installed Tesseract languages; ``None`` when unknown."""
+
 def AC_ocr_read_structure(
     region: List[int] | None = ...,
     lang: str = ...,
     min_confidence: float = ...,
 ) -> Dict[str, Any]:
     """Executor adapter: structured OCR (rows / tables / form fields)."""
+
+def AC_ocr_status() -> Dict[str, Any]:
+    """Executor adapter: whether Tesseract OCR can work here, as a dict."""
 
 def AC_open_path(target: str, verb: str = ...) -> Dict[str, Any]:
     """Adapter: open a file with its default app / a URL in the browser."""
@@ -2881,6 +2900,8 @@ def AC_tween_drag(
     steps: int = ...,
     easing: str = ...,
     button: str = ...,
+    step_delay_s: Any = ...,
+    settle_s: Any = ...,
 ) -> Dict[str, Any]:
     """Adapter: drag along an eased path from start to end."""
 

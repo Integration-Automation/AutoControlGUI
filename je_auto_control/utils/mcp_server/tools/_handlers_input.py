@@ -11,9 +11,12 @@ from typing import Any, Dict, List, Optional
 
 def click_mouse(mouse_keycode: str = "mouse_left",
                 x: Optional[int] = None,
-                y: Optional[int] = None) -> List[Any]:
+                y: Optional[int] = None,
+                clicks: int = 1,
+                interval: float = 0.0) -> List[Any]:
+    """Click ``clicks`` times at (x, y); return ``[keycode, x, y]``."""
     from je_auto_control.wrapper.auto_control_mouse import click_mouse as _click
-    keycode, click_x, click_y = _click(mouse_keycode, x, y)
+    keycode, click_x, click_y = _click(mouse_keycode, x, y, clicks=clicks, interval=interval)
     # Real wrapper resolves the string keycode to an int via the keys table;
     # the fake backend keeps it as a string. Pass through whatever we got.
     resolved = int(keycode) if isinstance(keycode, int) else keycode

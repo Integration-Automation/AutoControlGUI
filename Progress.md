@@ -1,5 +1,15 @@
 # Progress
 
+## 跨平台與 GUI 全面改版
+
+`TODO` — 重設 UI、重寫並優化 GUI、修正 Wayland 與函式庫問題、跨機器同步、
+深化全套 mypy、補齊 iOS／Android、MCP 逐步揭露、自愈定位器量測、動作日誌 codegen、
+完整範例與文件。涉及 `gui/`、`linux_wayland/`、`android/`、`ios/`、
+`utils/{config_sync,remote_desktop,mcp_server,self_healing,codegen,executor}/` 與型別／文件驗證。
+核准設計：[跨平台自動化與 GUI 改版](docs/superpowers/specs/2026-10-02-platform-gui-modernization-design.md)。
+實作計畫：[分階段交付計畫](docs/superpowers/plans/2026-10-02-modernization-index.md)，待審閱。
+現有 `[Answer]` 決策沿用；產品實作尚未開始。
+
 **只記未完成的事。** 完成的工作記在 [docs/updates/](docs/updates/README.md)（每月一個批次檔，
 索引與查詢指令在它的 README），相容性變更寫進 [CHANGELOG.md](CHANGELOG.md)；完成的項目
 從本檔移除，同一個 commit 在 `docs/updates/` 補一筆 `#done` 條目，不在這裡累積歷史。
@@ -184,6 +194,14 @@ pip install --dry-run --only-binary=:all: --platform win_arm64 --python-version 
 
 ---
 
+## macOS 上 `click_mouse(clicks=2)` 不是雙擊
+
+`TODO` — `wrapper/auto_control_mouse.py` 的 `click_mouse` 在同一點連點 `clicks` 次。Windows 與 X11 依兩次點擊的時間差與位移判定雙擊，所以這樣就夠；macOS 的應用程式讀的是事件上的點擊次數欄位（`kCGMouseEventClickState`），`osx/mouse/osx_mouse.py` 的 `mouse_event` 從不設定它（一律是 1），所以 macOS 收到的是兩次單擊。文件（`docs/source/API/wrapper/mouse.rst`、`docs/source/{Eng,Zh}/doc/mouse/mouse_doc.rst`、`click_mouse` 的 docstring）照實寫了這個限制。
+
+做法：讓 osx 後端的按下／放開帶點擊次數（第 n 次點擊設成 n），wrapper 在 macOS 分支把序號傳下去；要在 macOS 上實測（`quality.yml` 的 `macos-14` 可以跑 CI，但雙擊是否被應用程式認得要真機看），完成後把文件裡的限制拿掉。
+
+---
+
 ## RBAC 還沒接到 REST API 與 MCP server
 
 `DECIDE` — 要不要把 `utils/rbac` 接上兩個伺服器，以及現有單一共用 token 怎麼過渡（維護者拍板）
@@ -208,6 +226,7 @@ MCP 的 bearer 比對同理；稽核寫入帶上 `user_id`。
 
 **選項**：簽章指令在強制模式下只准本機 CLI 使用；或簽章金鑰與執行權限分開保存（簽章端不在執行端）。
 
+[Answer] 簽章金鑰與執行權限分開保存
 ---
 
 ## USB passthrough viewer 以種類配對回覆，逾時的回覆會交給下一個請求
@@ -222,6 +241,7 @@ MCP 的 bearer 比對同理；稽核寫入帶上 `user_id`。
 **選項**：在 payload 加一個由 client 產生、host 原樣帶回的請求編號（舊 host 不帶就退回現在的配對）；或逾時後把該
 claim 標成需排空，丟掉下一個回覆——但 host 若根本沒回，會丟掉正確的回覆。
 
+[Answer] 加，但是想辦法解決可能丟掉正確回復的問題
 ---
 
 ## 全域 executor 的變數會留到下一次執行
@@ -239,18 +259,7 @@ socket server 的執行也都用同一個 `executor`；`for_each` 的迴圈變�
 **附帶**：`AC_circuit_call`、`AC_bulkhead_run`、`AC_run_chaos`、`AC_run_dag` 的巢狀動作跑在全域 `executor` 上，
 在 `AC_parallel` 分支裡因此用到父層的變數範圍，而不是分支自己的。
 
----
-
-## 舊式 CLI（`-e`／`-d`／`--execute_str`）在動作失敗時仍然結束碼 0
-
-`DECIDE` — 要不要讓舊式入口也以結束碼 1 回報動作失敗（跨專案契約，PyBreeze 與 TestPioneer 以子程序呼叫）
-
-`je_auto_control/__main__.py` 執行完不看 `recorded_failures()`；`je_auto_control run` 在 `cli.py` 已經會回 1。
-同一個會失敗的腳本，`run` 回 1，`-e`、`-d`、`--execute_str` 回 0（2026-09-24 稽核重現）。
-
-**要先確認**：PyBreeze（`AI_CONTEXT.md` §5）與 TestPioneer 的 `parallel_run` 怎麼解讀這個結束碼——若把非 0 當成
-「無法執行」而非「有動作失敗」，改了會讓它們把一次有失敗步驟的執行回報成錯誤。改的話兩邊的 `architecture.md` §6
-與相容性測試要一起更新。
+[Answer] `execute_action_with_vars` 與各伺服器入口每次開一個新的 `VariableScope`（`AC_set_var` 在單次執行內照舊
 
 ---
 
@@ -262,22 +271,22 @@ socket server 的執行也都用同一個 `executor`；`for_each` 的迴圈變�
 一回合多個呼叫逐一執行後一次回覆、每個 `tool_result` 帶 `toolset_name`、截圖縮到高解析度層級的 2576 px／4784 visual tokens 內並換算座標、`zoom` 以全解析度裁切回覆），
 `claude-opus-5-5` 自動使用它；其他模型仍預設 beta 形式，因為 toolset 只以假 client 測過、還沒對真的 API 跑過。
 
-**附帶**：`AC_run_agent backend="openai"` 送出全部約 740 個工具，超過 OpenAI Chat Completions 的 128 個上限，
-所以一定失敗——與「`AC_run_agent` 預設工具集」那一條 DECIDE 一起決定。
+**附帶**：`AC_run_agent` 現在預設只提供一組聚焦的 computer-use 工具，OpenAI 不再收到整個命令目錄；需要更大的工具集時，應由應用程式明確用 `export_openai_tools(only=[...])` 建立 agent。
 
 ---
 
-## MCP registry 的 server 名稱與專案網址還是舊組織
 
-`DECIDE` — 要發布到 MCP registry 前得先定名稱，改名會影響已發布的項目
+## mypy 2.4.0 在三個平台模組回報 `has-type`
 
-`utils/mcp_registry/registry.py` 的 `_SERVER_NAME` 是 `io.github.intergration-automation-testing/autocontrol`，
-`_REPO_URL` 與 `pyproject.toml` 的 Homepage / Code、`README.md` 的 clone 網址都還是
-`Intergration-Automation-Testing/AutoControl`；repo 現在在 `Integration-Automation/AutoControlGUI`（舊網址只是轉址）。
-registry 以 GitHub 帳號驗證 `io.github.<org>/` 命名空間，舊組織名發布不了。
+`TODO` — 讓型別契約在 mypy 2.4 也過，再把 CI 的 pin 往上提
 
-**做法**：決定正式名稱（例如 `io.github.integration-automation/autocontrol`），在同一輪改 `registry.py`、
-`pyproject.toml`、三份 README 的網址。
+`quality.yml` 的 `typing-stable-api` 固定 `mypy==2.3.0`，`test/verify/typing_contract_verify.py` 在它上面是 0 個失敗模組；
+`dev_requirements.txt` 只寫下限 `mypy>=2.3.0`，新環境會裝到 2.4.0，同一個指令就多出三個不在豁免清單上的模組
+（2026-10-08 實測）：`wrapper/_platform_osx.py`（非 darwin 目標下 `osx_key_*` 全部 `Cannot determine type`）、
+`wrapper/_platform_windows.py:363`（`win32_recorder`）、`windows/message/window_message.py:7-8`（`user32`）。
+
+**做法**：替這些跨平台名稱補上明確型別註記（或把平台分支改成 mypy 看得懂的 `sys.platform` 判斷），
+兩個版本都驗過後把 `quality.yml` 的 pin 提到 2.4.x。
 
 ---
 
@@ -301,6 +310,8 @@ registry 以 GitHub 帳號驗證 `io.github.<org>/` 命名空間，舊組織名�
 (3) `test/unit_test/headless/test_coverage_measurement.py` 的前提會改變——它現在釘住
 「外掛載入時門面已經在 `sys.modules` 裡」，改完就不成立，那份說明與測試要一起改寫
 （CI 仍可繼續用 `coverage run -m pytest`）。
+
+[Answer] 照你建議改寫
 
 ---
 
@@ -340,6 +351,8 @@ pip install --dry-run --only-binary=:all: --platform macosx_10_9_x86_64 \
     --python-version 3.12 --target /tmp/probe 'cryptography>=50'
 ```
 
+[Answer] 可以
+
 ---
 
 ## Viewer 端要不要把 host 推來的檔案關在一個目錄裡
@@ -358,27 +371,7 @@ viewer 端的 `FileReceiver`（`utils/remote_desktop/file_transfer.py`）照單�
 **為什麼要拍板**：`dest_path` 的語意會從「viewer 上的絕對路徑」變成「viewer 下載目錄裡的相對路徑」，
 現有腳本與文件範例都要跟著改。
 
----
-
-## `AC_run_agent` 預設把每個 AC_* 指令都交給模型
-
-`DECIDE` — 預設工具集要不要排除高風險指令
-
-`utils/executor/action_executor.py` 的 `_run_agent` 以 `export_anthropic_tools()` / `export_openai_tools()`
-不帶 `only=` 建立 backend，所以模型拿得到 `AC_shell_command`、`AC_execute_process`、`AC_android_shell`、
-`AC_add_package_to_executor`、`AC_run_agent`、`AC_computer_use`、`AC_execute_action` 等指令。
-2026-09-23 已讓 backend 拒絕「沒有提供的工具」，但提供的清單本身就包含這些；
-螢幕上的內容（網頁、文件）若誘導模型呼叫 shell，目前不會被擋。
-
-**做法**：`_run_agent` 預設排除上述類別，另加一個 opt-in 參數（例如 `allow_system_commands`）
-讓需要的人明確打開；MCP `ac_run_agent` 與 Script Builder 的欄位同步。
-
-**為什麼要拍板**：這會縮小既有的 agent 能力，依賴它跑 shell 的腳本會改變行為。
-
-實測數字（2026-09-25）：預設清單有 741 個指令，含 `AC_run_agent` 本身（模型可以遞迴開 agent）；
-`backend="openai"` 超過 Chat Completions 的 128 個工具上限，現在建 backend 時就明確拒絕；
-Anthropic 每一步送約 202 KB 的工具 schema、沒有 `cache_control`。拍板後一併決定上限與快取。
-
+[Answer] 可以改
 
 ---
 
@@ -436,6 +429,8 @@ MCP 工具的檔案參數（`path`、`file_path`、`db`、`image_path`、`golden
 `base_dir` 限制，`env://` 可讀任何環境變數，包括放 API 金鑰的那些，結果直接回給模型。`secret://` 已經拒絕；
 `env://` 要不要改成允許清單、`file://` 要不要套同一個根目錄，跟上面一起決定。
 
+[Answer] 兩者，不要預設開啟唯獨
+
 ---
 
 ## Windows 的 DPI 感知是系統層級，混合 DPI 的螢幕座標被虛擬化
@@ -452,6 +447,8 @@ per-monitor。DPI 與主螢幕不同的螢幕會被 Windows 虛擬化：本機�
 
 **為什麼要拍板**：這個檔在 Jeffrey_RPA 正在跑的截圖路徑上。換成 per-monitor 之後，縮放螢幕上的座標與截圖
 尺寸都會變，既有的樣板和錄好的座標在那些螢幕上會失準。
+
+[Answer] 換並修好 Jeffrey_RPA 
 
 ---
 
@@ -503,6 +500,8 @@ be at 2x if on a Retina screen」，`scale_down=True` 只在帶 `bbox` 時生效
 被別人取代時通知原本的面板收掉自己的視窗。或是反過來讓每個面板持有自己的 viewer，不經 registry。
 
 **為什麼要拍板**：`AC_remote_*` 指令與 MCP 工具依賴「registry 裡就是那一個 viewer」，改成多槽位要一起改它們的語意。
+
+[Answer] 一起改沒問題
 
 ---
 

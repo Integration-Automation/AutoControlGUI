@@ -125,7 +125,8 @@ def test_an_aborted_drag_releases_where_it_stopped():
 
     with pytest.raises(KeyboardInterrupt):
         drag_path([[0, 0], [100, 0], [100, 100]], per_segment_steps=4, sink=sink)
-    assert events[-1] == {"op": "release", "button": "mouse_left"}
+    # Let go at the last point the pointer reached, not at the end of the path.
+    assert events[-1] == {"op": "release", "button": "mouse_left", "x": 0, "y": 0}
     completed = []
     drag_path([[0, 0], [10, 0]], per_segment_steps=2, sink=completed.append)
     assert completed[-1] == {"op": "release", "button": "mouse_left", "x": 10, "y": 0}
