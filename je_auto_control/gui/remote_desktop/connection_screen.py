@@ -27,7 +27,8 @@ from PySide6.QtWidgets import (
 
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
 from je_auto_control.gui.remote_desktop._helpers import (
-    _StatusBadge, _build_verifying_client_context, _t, wire_remote_input,
+    _StatusBadge, _build_verifying_client_context, _t, displaced_notifier,
+    wire_remote_input,
 )
 from je_auto_control.gui.remote_desktop.remote_screen_window import (
     RemoteScreenWindow,
@@ -44,7 +45,9 @@ from je_auto_control.utils.remote_desktop.connect_coordinator import (
     ConnectTarget, UnresolvableTargetError, parse_target,
 )
 from je_auto_control.utils.remote_desktop.host_id import format_host_id
-from je_auto_control.utils.remote_desktop.registry import registry
+from je_auto_control.utils.remote_desktop.registry import (
+    SLOT_HOST, SLOT_VIEWER, SLOT_WS_VIEWER, new_owner, registry,
+)
 from je_auto_control.utils.remote_desktop.wake_on_lan import (
     send_magic_packet,
 )
@@ -114,10 +117,14 @@ class QuickConnectScreen(TranslatableMixin, QWidget):
     _frame_arrived = Signal(object)
     _error_arrived = Signal(str)
     _cursor_moved = Signal(int, int)
+    # Another owner took one of this screen's registry slots.
+    _displaced = Signal(str, str)
 
     def __init__(self, parent: Optional[QWidget] = None) -> None:
         super().__init__(parent)
         self._tr_init()
+        self._owner = new_owner("quick-connect")
+        self._displaced.connect(self._on_displaced)
         self._host_id_label = QLabel("---")
         self._host_id_label.setStyleSheet(_HOST_ID_CSS)
         self._host_id_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -280,8 +287,7 @@ class QuickConnectScreen(TranslatableMixin, QWidget):
         if not token:
             self._generate_token()
             token = self._host_token.text().strip()
-        registry.disconnect_viewer()
-        registry.stop_host()
+        registry.evict(SLOT_HOST, by=self._owner)
         try:
             host = RemoteDesktopHost(
                 token=token, bind="127.0.0.1", port=0,
@@ -292,7 +298,7 @@ class QuickConnectScreen(TranslatableMixin, QWidget):
         except (OSError, ValueError, RuntimeError) as error:
             QMessageBox.warning(self, _t("rd_quick_start_host"), str(error))
             return
-        registry._host = host  # noqa: SLF001  centralised lifecycle ownership
+        registry.adopt(SLOT_HOST, host, self._owner, displaced_notifier(self))
         self._refresh_status()
 
     def _host_approval_callback(self, pending: PendingViewer):
@@ -353,8 +359,9 @@ class QuickConnectScreen(TranslatableMixin, QWidget):
             request.event.set()
 
     def _stop_hosting(self) -> None:
+        # Stops the host the badge shows, whoever started it; see _HostPanel._stop.
         try:
-            registry.stop_host()
+            registry.evict(SLOT_HOST, by=self._owner)
         except (OSError, RuntimeError) as error:
             QMessageBox.warning(self, _t("rd_quick_stop_host"), str(error))
             return
@@ -414,8 +421,26 @@ class QuickConnectScreen(TranslatableMixin, QWidget):
             self, _t("rd_quick_connect_btn"), _t("rd_quick_bad_target"),
         )
 
+    def _take_slot(self, slot: str) -> None:
+        """Clear ``slot`` for a new session and end this screen's other one."""
+        other = SLOT_WS_VIEWER if slot == SLOT_VIEWER else SLOT_VIEWER
+        registry.release(other, self._owner)
+        registry.evict(slot, by=self._owner)
+
+    def _own_viewer(self):
+        """The viewer this screen opened, or None once it is gone or replaced."""
+        return (registry.owned(SLOT_VIEWER, self._owner)
+                or registry.owned(SLOT_WS_VIEWER, self._owner))
+
+    def _on_displaced(self, slot: str, _by: str) -> None:
+        """GUI thread: another panel or a script took one of this screen's slots."""
+        if slot != SLOT_HOST and self._own_viewer() is None:
+            self._pending_frame = None
+            self._close_screen_window()
+        self._refresh_status()
+
     def _do_tcp_connect(self, host: str, port: int, token: str) -> None:
-        registry.disconnect_viewer()
+        self._take_slot(SLOT_VIEWER)
         try:
             viewer = RemoteDesktopViewer(
                 host=host, port=port, token=token,
@@ -429,7 +454,7 @@ class QuickConnectScreen(TranslatableMixin, QWidget):
         except (OSError, RuntimeError, ValueError, AutoControlException) as error:
             QMessageBox.warning(self, _t("rd_quick_connect_btn"), str(error))
             return
-        registry._viewer = viewer  # noqa: SLF001  centralised lifecycle ownership
+        registry.adopt(SLOT_VIEWER, viewer, self._owner, displaced_notifier(self))
         self._remember_tcp(host, port)
         self._open_screen_window(f"{host}:{port}")
         self._refresh_status()
@@ -438,7 +463,7 @@ class QuickConnectScreen(TranslatableMixin, QWidget):
         host = target.host or ""
         port = target.port or 0
         path = target.path or "/"
-        registry.disconnect_ws_viewer()
+        self._take_slot(SLOT_WS_VIEWER)
         # wss:// was dialled as plain ws://: the session went unencrypted to
         # a host the operator took for TLS, and a real TLS host was unreachable.
         ssl_context = _build_verifying_client_context() if target.kind == "wss" else None
@@ -454,7 +479,7 @@ class QuickConnectScreen(TranslatableMixin, QWidget):
         except (OSError, RuntimeError, ValueError, AutoControlException) as error:
             QMessageBox.warning(self, _t("rd_quick_connect_btn"), str(error))
             return
-        registry._ws_viewer = viewer  # noqa: SLF001  centralised lifecycle ownership
+        registry.adopt(SLOT_WS_VIEWER, viewer, self._owner, displaced_notifier(self))
         scheme = "wss" if target.kind == "wss" else "ws"
         self._remember_url(f"{scheme}://{host}:{port}{path}")
         self._open_screen_window(f"{scheme}://{host}:{port}")
@@ -476,10 +501,9 @@ class QuickConnectScreen(TranslatableMixin, QWidget):
         self.webrtc_handoff_requested.emit(host_id, token)
 
     def _disconnect(self) -> None:
-        # Both transports may be live; clear whichever slot was filled
-        # so the operator does not need to remember which they used.
-        registry.disconnect_viewer()
-        registry.disconnect_ws_viewer()
+        # Either transport, and only a session this screen opened.
+        registry.release(SLOT_VIEWER, self._owner)
+        registry.release(SLOT_WS_VIEWER, self._owner)
         self._close_screen_window()
         self._refresh_status()
 
@@ -523,7 +547,7 @@ class QuickConnectScreen(TranslatableMixin, QWidget):
 
     def _send_input(self, action: dict) -> None:
         """Forward one input action from the popup to the live viewer."""
-        viewer = registry.viewer or registry._ws_viewer  # noqa: SLF001
+        viewer = self._own_viewer()
         if viewer is None or not viewer.connected:
             return
         try:
@@ -533,7 +557,7 @@ class QuickConnectScreen(TranslatableMixin, QWidget):
 
     def _on_files_dropped(self, paths) -> None:
         """Upload each dropped file to the host's home directory."""
-        viewer = registry.viewer or registry._ws_viewer  # noqa: SLF001
+        viewer = self._own_viewer()
         if viewer is None or not viewer.connected:
             return
         for path in paths:
@@ -561,7 +585,7 @@ class QuickConnectScreen(TranslatableMixin, QWidget):
 
     def _on_window_closed(self) -> None:
         # Either transport: closing a ws:// popup left its session running.
-        if registry.viewer is not None or registry._ws_viewer is not None:  # noqa: SLF001
+        if self._own_viewer() is not None:
             self._disconnect()
 
     # --- recent connections ------------------------------------------
@@ -692,8 +716,9 @@ class QuickConnectScreen(TranslatableMixin, QWidget):
             )
 
     def _refresh_viewer_status(self) -> None:
-        # A ws:// session read as disconnected: only the TCP slot was asked.
-        if registry.viewer_status()["connected"] or registry.ws_viewer_status()["connected"]:
+        # Only this screen's own session, on either transport.
+        viewer = self._own_viewer()
+        if viewer is not None and viewer.connected:
             self._viewer_badge.set_state("live", _t("rd_quick_connected"))
         else:
             self._viewer_badge.set_state(

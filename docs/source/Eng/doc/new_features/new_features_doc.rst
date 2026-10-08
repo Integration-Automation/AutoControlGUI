@@ -561,12 +561,44 @@ Action-JSON commands (use the singleton in
 
    AC_start_remote_host       # token, bind, port, fps, quality, region
    AC_stop_remote_host
-   AC_remote_host_status      # → {running, port, connected_clients}
+   AC_remote_host_status      # → {running, port, connected_clients, host_id, owner}
 
    AC_remote_connect          # host, port, token, timeout
    AC_remote_disconnect
-   AC_remote_viewer_status    # → {connected}
+   AC_remote_viewer_status    # → {connected, host_id, owner}
    AC_remote_send_input       # action: {...}
+
+**Who owns the host and the viewer.** The registry holds one host and one
+viewer per transport (TCP, WebSocket), and records the *owner* that opened
+each: ``"script"`` for these commands, the ``AC_ws_*`` ones and the MCP
+``ac_remote_*`` tools, and a token of its own (``quick-connect#1``,
+``viewer-tab#2``, ``host-tab#3``) for each GUI panel. The ``*_status``
+results name it under ``owner`` (``None`` when nothing is active).
+
+- A script that uses only these commands behaves as it always did: a second
+  ``AC_remote_connect`` replaces the first, ``AC_remote_disconnect`` ends it.
+- In a process that also runs the GUI, the commands still act on *the*
+  active host or viewer of that transport, whoever opened it:
+  ``AC_remote_viewer_status`` and ``AC_remote_send_input`` see a session a
+  panel opened, ``AC_remote_connect`` replaces it and
+  ``AC_remote_disconnect`` / ``AC_stop_remote_host`` end it. The panel is
+  told, closes its remote-screen window and returns to idle.
+- A panel only reads, drives and disconnects the viewer it opened itself.
+  *Connect* on one panel still replaces the other panel's session on the
+  same transport — there is one viewer per transport — but the replaced
+  panel closes its window instead of freezing on the last frame, and its
+  *Disconnect* no longer reaches the session that replaced it. Starting a
+  host no longer disconnects any viewer. *Stop* on either host surface
+  stops the host shown as running, whoever started it.
+
+From Python the same model is ``remote_desktop_registry.adopt(slot,
+resource, owner, on_displaced)``, ``owned(slot, owner)``, ``release(slot,
+owner)``, ``evict(slot, by)`` and ``owner_of(slot)``, with ``slot`` one of
+``"host"``, ``"viewer"``, ``"ws_host"``, ``"ws_viewer"`` and owner tokens
+from ``je_auto_control.utils.remote_desktop.registry.new_owner(label)``.
+``stop_host`` / ``disconnect_viewer`` (and the ``ws`` pair) take an optional
+``owner=`` that limits them to that owner's host or viewer.
+``on_displaced(slot, by)`` runs on the thread that did the replacing.
 
 GUI: **Remote Desktop** tab opens to the **Quick Connect** screen
 (AnyDesk-style) by default — huge Host ID on one side, a single input
@@ -1055,6 +1087,10 @@ clicking through the GUI:
    ac_remote_viewer_send_input(action={
        "action": "type", "text": "hello",
    })
+
+The MCP tools are the same ``"script"`` owner as the ``AC_remote_*``
+commands: they act on the active host or viewer whoever opened it, and a
+GUI panel whose session they replace or end is told and closes its window.
 
 The status / observer tools (``ac_remote_host_status``,
 ``ac_remote_viewer_status``) are read-only and survive the MCP

@@ -75,7 +75,9 @@ Remote desktop (TCP host + viewer registry)
   ``ac_remote_host_status``, ``ac_remote_viewer_connect``,
   ``ac_remote_viewer_disconnect``, ``ac_remote_viewer_status``,
   ``ac_remote_viewer_send_input``. These wrap the same singleton
-  registry the GUI's Remote Desktop tab uses, so a model can spin
+  registry the GUI's Remote Desktop tab uses and act on its active host
+  or viewer whoever opened it (the status results name that ``owner``;
+  a GUI panel whose session a tool replaces or ends closes its window), so a model can spin
   up a host (``token``, ``bind``, ``port``, ``fps``, ``quality``,
   ``host_id``), open a viewer to another machine, query status, and
   forward mouse / keyboard / type / hotkey actions through the

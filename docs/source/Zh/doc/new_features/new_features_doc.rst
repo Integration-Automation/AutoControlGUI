@@ -523,12 +523,40 @@ Action-JSON 指令（使用 :mod:`utils.remote_desktop.registry` 的單例）::
 
    AC_start_remote_host       # token, bind, port, fps, quality, region
    AC_stop_remote_host
-   AC_remote_host_status      # → {running, port, connected_clients}
+   AC_remote_host_status      # → {running, port, connected_clients, host_id, owner}
 
    AC_remote_connect          # host, port, token, timeout
    AC_remote_disconnect
-   AC_remote_viewer_status    # → {connected}
+   AC_remote_viewer_status    # → {connected, host_id, owner}
    AC_remote_send_input       # action: {...}
+
+**host 與 viewer 由誰擁有。** registry 每種傳輸（TCP、WebSocket）各保存一個
+host 與一個 viewer，並記錄是誰開的（owner）：這些指令、``AC_ws_*`` 指令與 MCP
+的 ``ac_remote_*`` 工具是 ``"script"``，每個 GUI 面板則有自己的代號
+（``quick-connect#1``、``viewer-tab#2``、``host-tab#3``）。``*_status``
+的結果以 ``owner`` 欄位回報（沒有連線時為 ``None``）。
+
+- 只用這些指令的腳本行為與以往完全相同：第二次 ``AC_remote_connect``
+  取代第一次，``AC_remote_disconnect`` 中斷它。
+- 在同時跑 GUI 的行程裡，這些指令仍然作用在該傳輸\ *目前那一個* host 或
+  viewer，不論是誰開的：``AC_remote_viewer_status`` 與
+  ``AC_remote_send_input`` 看得到面板開的連線，``AC_remote_connect``
+  會取代它，``AC_remote_disconnect``／``AC_stop_remote_host`` 會結束它。
+  面板會收到通知，關掉自己的遠端畫面視窗並回到閒置狀態。
+- 面板只讀取、操作、中斷自己開的 viewer。在一個面板按 *連線* 仍會取代另一個
+  面板在同一傳輸上的連線（每種傳輸只有一個 viewer），但被取代的面板會關掉
+  視窗，不再停在最後一格畫面，它的 *中斷* 也不會再切到取代它的那條連線。
+  啟動 host 不再中斷任何 viewer。兩個 host 介面的 *停止* 都會停掉顯示為
+  執行中的那個 host，不論是誰啟動的。
+
+Python 端對應的介面是 ``remote_desktop_registry.adopt(slot, resource, owner,
+on_displaced)``、``owned(slot, owner)``、``release(slot, owner)``、
+``evict(slot, by)`` 與 ``owner_of(slot)``；``slot`` 為 ``"host"``、
+``"viewer"``、``"ws_host"``、``"ws_viewer"`` 之一，owner 代號由
+``je_auto_control.utils.remote_desktop.registry.new_owner(label)`` 產生。
+``stop_host``／``disconnect_viewer``（以及 ``ws`` 那一組）多了可選的
+``owner=``，只在該 owner 擁有時才動作。``on_displaced(slot, by)``
+在執行取代動作的那個執行緒上被呼叫。
 
 GUI：\ **Remote Desktop**\ 分頁預設打開的是 **快速連線** （AnyDesk
 風格）— 一邊是超大本機 Host ID，另一邊一個輸入框接受
@@ -984,6 +1012,10 @@ registry 包成工具,工廠函式為
    ac_remote_viewer_send_input(action={
        "action": "type", "text": "hello",
    })
+
+MCP 工具與 ``AC_remote_*`` 指令同屬 ``"script"`` 這個 owner：它們作用在
+目前那一個 host 或 viewer，不論是誰開的；被它們取代或結束連線的 GUI 面板會
+收到通知並關掉自己的視窗。
 
 狀態類工具(``ac_remote_host_status``、
 ``ac_remote_viewer_status``)為唯讀,可以通過 MCP server 的

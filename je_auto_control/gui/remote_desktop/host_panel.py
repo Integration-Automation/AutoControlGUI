@@ -3,7 +3,7 @@ import secrets
 import ssl
 from typing import Optional
 
-from PySide6.QtCore import QTimer
+from PySide6.QtCore import QTimer, Signal
 from PySide6.QtGui import QGuiApplication, QImage
 from PySide6.QtWidgets import (
     QCheckBox, QComboBox, QFileDialog, QGroupBox, QHBoxLayout, QLabel,
@@ -12,7 +12,7 @@ from PySide6.QtWidgets import (
 
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
 from je_auto_control.gui.remote_desktop._helpers import (
-    _CollapsibleSection, _StatusBadge, _t,
+    _CollapsibleSection, _StatusBadge, _t, displaced_notifier,
 )
 from je_auto_control.gui.remote_desktop.frame_display import _FrameDisplay
 from je_auto_control.utils.remote_desktop import (
@@ -22,7 +22,9 @@ from je_auto_control.utils.remote_desktop.audio import (
     AudioCaptureConfig, is_audio_backend_available,
 )
 from je_auto_control.utils.remote_desktop.host_id import format_host_id
-from je_auto_control.utils.remote_desktop.registry import registry
+from je_auto_control.utils.remote_desktop.registry import (
+    SLOT_HOST, new_owner, registry,
+)
 
 
 class _HostPanel(TranslatableMixin, QWidget):
@@ -30,9 +32,14 @@ class _HostPanel(TranslatableMixin, QWidget):
 
     _PREVIEW_INTERVAL_MS = 250  # 4 fps preview is enough to confirm liveness
 
+    # Another owner replaced or stopped the host this panel started.
+    _displaced = Signal(str, str)
+
     def __init__(self, parent: Optional[QWidget] = None) -> None:
         super().__init__(parent)
         self._tr_init()
+        self._owner = new_owner("host-tab")
+        self._displaced.connect(self._on_displaced)
         self._host_id_label = QLabel("---")
         self._host_id_label.setStyleSheet(
             "font-family: 'Consolas', 'Menlo', 'Courier New', monospace; "
@@ -286,8 +293,9 @@ class _HostPanel(TranslatableMixin, QWidget):
         host_cls = (WebSocketDesktopHost if transport == "WebSocket"
                     else RemoteDesktopHost)
         bind = self._bind.text().strip() or "127.0.0.1"
-        registry.disconnect_viewer()
-        registry.stop_host()
+        # Whoever started the running host is told it was replaced. Viewers
+        # are left alone: they belong to other panels or to a script.
+        registry.evict(SLOT_HOST, by=self._owner)
         try:
             host = host_cls(
                 token=token,
@@ -304,7 +312,7 @@ class _HostPanel(TranslatableMixin, QWidget):
         except (OSError, ValueError, RuntimeError) as error:
             QMessageBox.warning(self, _t("rd_host_start"), str(error))
             return
-        registry._host = host  # noqa: SLF001  centralised lifecycle ownership
+        registry.adopt(SLOT_HOST, host, self._owner, displaced_notifier(self))
         # The transport a viewer picks: with a certificate, TCP is TLS and
         # WebSocket is WSS, which the share text used to call TCP / WebSocket.
         if ssl_context is not None:
@@ -313,11 +321,21 @@ class _HostPanel(TranslatableMixin, QWidget):
         self._refresh_status()
 
     def _stop(self) -> None:
+        # The badge shows the machine's host whoever started it, so Stop stops
+        # that one: a visible "running" with a Stop that does nothing would be
+        # worse on a remote-access surface. Its owner is told.
         try:
-            registry.stop_host()
+            registry.evict(SLOT_HOST, by=self._owner)
         except (OSError, RuntimeError) as error:
             QMessageBox.warning(self, _t("rd_host_stop"), str(error))
             return
+        self._shared = None
+        self._refresh_status()
+
+    def _on_displaced(self, _slot: str, _by: str) -> None:
+        """GUI thread: the host this panel started was replaced or stopped."""
+        if registry.owned(SLOT_HOST, self._owner) is None:
+            self._shared = None
         self._refresh_status()
 
     def _refresh_status(self) -> None:

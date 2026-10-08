@@ -64,8 +64,9 @@ def test_quick_connect_dials_wss_with_a_verifying_tls_context(qapp, monkeypatch)
 
 def test_the_quick_connect_popup_forwards_input(qapp, monkeypatch):
     viewer = _FakeViewer()
-    monkeypatch.setattr(registry, "_ws_viewer", viewer)
+    monkeypatch.setattr(registry, "_ws_viewer", None)  # restored after the test
     screen = connection_screen.QuickConnectScreen()
+    registry.adopt("ws_viewer", viewer, screen._owner)   # the session this screen opened
     screen._open_screen_window("desk")
     window = screen._screen_window
     window.mouse_pressed.emit(3, 4, "mouse_left")

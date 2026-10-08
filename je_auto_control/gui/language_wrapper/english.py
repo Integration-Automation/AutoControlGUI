@@ -1297,6 +1297,7 @@ english_word_dict = {
     "rd_viewer_status_connected": "Connected — receiving frames",
     "rd_viewer_status_idle": "Not connected",
     "rd_viewer_error": "Remote desktop error",
+    "rd_viewer_displaced": "This session was closed: another connection took its place.",
     "rd_remote_screen_title": "Remote Desktop — Live Session",
     "rd_remote_screen_title_with_id": "Remote Desktop — {host_id}",
 
