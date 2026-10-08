@@ -37,6 +37,18 @@ alias:
    keyboard_key_name(27)     # "escape" on Windows
    keyboard_key_name(0xBB)   # "oem_plus"
 
+Eight Windows names stand for a *character* rather than a key position:
+``slash`` (``/``), ``backslash`` (``\``), ``semicolon`` (``;``), ``quote``
+(``'``), ``backquote`` (`` ` ``), ``bracketleft`` (``[``), ``bracketright``
+(``]``) and ``equal`` (``=``). Each is resolved when it is looked up, by
+asking the keyboard layout of the foreground window which key types that
+character (``VkKeyScanExW``), so ``press_keyboard_key("semicolon")`` presses
+the right key on a layout where ``;`` is not at the US position. When the
+layout has no bare key for the character -- a German keyboard types ``/``
+with Shift+7 -- the name falls back to the key at the US position. The
+``oem_1`` ... ``oem_8`` names remain fixed positions, and ``keys_table``
+lists the eight names with their US-position codes.
+
 Press and Release
 =================
 

@@ -8,6 +8,9 @@ from je_auto_control.wrapper.backend_contract import (
     Win32KeyboardBackend, Win32MouseBackend,
 )
 from je_auto_control.windows.core.utils import win32_keypress_check
+from je_auto_control.windows.core.utils.win32_layout_vk import (
+    LAYOUT_KEY_ALIASES, LayoutKeyTable,
+)
 from je_auto_control.windows.core.utils.win32_vk import (
     WIN32_VK_ACCEPT, WIN32_VK_ADD, WIN32_VK_APPS, WIN32_VK_BACK,
     WIN32_VK_BROWSER_BACK, WIN32_VK_BROWSER_FAVORITES,
@@ -345,12 +348,19 @@ keyboard_key_aliases: Dict[str, str] = {
     "scrolllock": "scroll",
     **{f"numpad{digit}": f"num{digit}" for digit in range(10)},
     # Microsoft defines these four as the same key on every layout, so the
-    # readable name does not lie; oem_1 .. oem_8 get no alias for that reason.
+    # readable name does not lie; oem_1 .. oem_8 get no fixed alias for that
+    # reason.
     "plus": "oem_plus", "comma": "oem_comma", "minus": "oem_minus",
     "period": "oem_period",
+    # slash, backslash, semicolon, ... name a character, not a position: the
+    # table asks the active layout for the key that types it when the name is
+    # looked up, and the oem_N listed here is only its US-position fallback.
+    **{alias: us_name for alias, (_character, us_name) in LAYOUT_KEY_ALIASES.items()},
 }
 keyboard_keys_table.update(
-    {alias: keyboard_keys_table[name] for alias, name in keyboard_key_aliases.items()})
+    {alias: keyboard_keys_table[name] for alias, name in keyboard_key_aliases.items()
+     if alias not in LAYOUT_KEY_ALIASES})
+keyboard_keys_table = LayoutKeyTable(keyboard_keys_table)
 
 special_mouse_keys_table = None
 keyboard, mouse = _select_input_backend()
