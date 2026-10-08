@@ -9,6 +9,8 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 from PySide6.QtWidgets import QApplication  # noqa: E402
 
+from headless._qt_settle import settle  # noqa: E402
+
 from je_auto_control.gui.assertions_tab import AssertionsTab  # noqa: E402
 from je_auto_control.gui.data_source_tab import DataSourceTab  # noqa: E402
 from je_auto_control.gui.flakiness_tab import FlakinessTab  # noqa: E402
@@ -50,4 +52,5 @@ def test_assertions_tab_window_check(app, monkeypatch):
     tab._target.setText("Calculator")
     tab._expect.setChecked(True)
     tab._on_run()
+    assert settle(tab._runs, "task")  # the assertion runs off the GUI thread
     assert "PASS" in tab._result.text() or "pass" in tab._result.text().lower()

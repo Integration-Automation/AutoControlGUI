@@ -116,14 +116,17 @@ def test_screenshot_shows_a_bad_region(qapp, monkeypatch):
 
 
 def test_the_manual_script_shows_an_unknown_command(qapp):
-    from je_auto_control.gui._script_tab import ScriptTabMixin
-    fake = types.SimpleNamespace(script_editor=QTextEdit('[["AC_no_such_command"]]'),
-                                 script_result_text=QTextEdit())
-    ScriptTabMixin._execute_manual_script(fake)
+    from headless._qt_settle import settle
+    from headless._tab_hosts import ScriptHost
+    fake = ScriptHost()
+    fake.script_editor.setPlainText('[["AC_no_such_command"]]')
+    fake._execute_manual_script()
+    assert settle(fake._script_runs, "task")
     text = fake.script_result_text.toPlainText()
     assert text.startswith("Error") or "AC_no_such_command" in text
     fake.script_editor.setPlainText("[]")
-    ScriptTabMixin._execute_manual_script(fake)
+    fake._execute_manual_script()
+    assert settle(fake._script_runs, "task")
     assert fake.script_result_text.toPlainText().startswith("Error")
 
 

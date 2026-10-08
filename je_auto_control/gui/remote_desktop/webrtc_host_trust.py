@@ -5,6 +5,9 @@ still owns every widget and slot under its original name.
 """
 from __future__ import annotations
 
+import functools
+import os
+from typing import Any
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
@@ -21,7 +24,9 @@ from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.gui.remote_desktop.webrtc_panel_common import (
     _PanelPart,
     _JSON_FILE_FILTER,
+    start_panel_task,
 )
+from je_auto_control.gui.task_controller import CancellationToken
 
 
 class _HostTrustMixin(_PanelPart):
@@ -44,14 +49,26 @@ class _HostTrustMixin(_PanelPart):
         )
         if not path:
             return
-        try:
-            sent = self._multi_host.broadcast_file(path)
-            QMessageBox.information(
-                self, "WebRTC",
-                _t("rd_webrtc_push_done").format(n=sent, name=path),
-            )
-        except (RuntimeError, OSError, ValueError) as error:
-            QMessageBox.warning(self, "WebRTC", str(error))
+        host = self._multi_host
+        if host is None:            # stopped while the file dialog was open
+            return
+        # The whole file goes out to every viewer: off the GUI thread, one push at a time.
+        if not start_panel_task(self, "_file_task", functools.partial(_broadcast_file, host, path),
+                                functools.partial(self._push_done, path), self._push_failed):
+            QMessageBox.information(self, "WebRTC", _t("rd_file_busy"))
+            return
+        self._status_label.setText(_t("rd_file_sending").replace("{name}", os.path.basename(path)))
+
+    def _push_done(self, path: str, sent: object) -> None:
+        self._status_label.setText("")
+        QMessageBox.information(
+            self, "WebRTC",
+            _t("rd_webrtc_push_done").format(n=sent, name=path),
+        )
+
+    def _push_failed(self, error: object) -> None:
+        self._status_label.setText("")
+        QMessageBox.warning(self, "WebRTC", str(error))
 
     def _on_export_trust(self) -> None:
         import json as _json
@@ -127,6 +144,11 @@ class _HostTrustMixin(_PanelPart):
             return
         self._trust_list.clear()
         self._refresh_trusted_list()
+
+
+def _broadcast_file(host: Any, path: str, _token: CancellationToken) -> int:
+    """Worker thread: push ``path`` to every authenticated viewer; returns how many got it."""
+    return host.broadcast_file(path)
 
 
 __all__ = ["_HostTrustMixin"]

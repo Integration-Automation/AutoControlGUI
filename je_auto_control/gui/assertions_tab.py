@@ -4,6 +4,7 @@ Thin wrapper over the headless ``je_auto_control.assert_*`` functions.
 Assertions run with ``raise_on_fail=False`` so the GUI reports the
 outcome instead of crashing the tab.
 """
+import functools
 from typing import Any, Dict, List, Optional
 
 from PySide6.QtWidgets import (
@@ -12,10 +13,10 @@ from PySide6.QtWidgets import (
 )
 
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
+from je_auto_control.gui._tab_task import TabTask
 from je_auto_control.gui.language_wrapper.multi_language_wrapper import (
     language_wrapper,
 )
-from je_auto_control.utils.exception.exceptions import AutoControlException
 import je_auto_control as ac
 
 _KINDS = ("text", "image", "pixel", "window", "vlm")
@@ -48,6 +49,9 @@ class AssertionsTab(TranslatableMixin, QWidget):
         self._regex = QCheckBox(_t("assert_regex"))
         self._result = QLabel()
         self._result.setWordWrap(True)
+        self._runs = TabTask(self)
+        self._runs.result.connect(self._show_result)
+        self._runs.error.connect(self._show_error)
         self._build_layout()
         self._sync_visibility()
 
@@ -95,44 +99,43 @@ class AssertionsTab(TranslatableMixin, QWidget):
             widget.setVisible(not is_pixel)
         self._regex.setVisible(kind == "text")
 
-    def _run_assertion(self) -> Dict[str, Any]:
-        kind = self._current_kind()
-        present = self._expect.isChecked()
-        if kind == "text":
-            return ac.assert_text(
-                self._target.text(), regex=self._regex.isChecked(),
-                present=present, raise_on_fail=False,
-            ).to_dict()
-        if kind == "image":
-            return ac.assert_image(
-                self._target.text(), present=present, raise_on_fail=False,
-            ).to_dict()
-        if kind == "pixel":
-            coords = _parse_ints(self._xy.text())
-            if len(coords) < 2:
-                # Unpacking a short list used to reach assert_pixel with the
-                # RGB list bound to `y`, and the user saw a TypeError about
-                # keyword arguments instead of what they typed wrong.
-                raise ValueError(
-                    f"pixel assertion needs 'x,y'; got {self._xy.text()!r}",
-                )
-            return ac.assert_pixel(
-                coords[0], coords[1], _parse_ints(self._rgb.text()),
-                match=present, raise_on_fail=False,
-            ).to_dict()
-        if kind == "window":
-            return ac.assert_window(
-                self._target.text(), exists=present, raise_on_fail=False,
-            ).to_dict()
-        return ac.assert_by_description(
-            self._target.text(), present=present, raise_on_fail=False,
-        ).to_dict()
+    def _request(self) -> Dict[str, Any]:
+        """What the fields ask for, as plain values the worker can use."""
+        return {"kind": self._current_kind(), "present": self._expect.isChecked(),
+                "target": self._target.text(), "regex": self._regex.isChecked(),
+                "xy": self._xy.text(), "rgb": self._rgb.text()}
 
     def _on_run(self) -> None:
-        try:
-            result = self._run_assertion()
-        except (AutoControlException, ValueError, OSError, RuntimeError, TypeError) as error:
-            self._result.setText(f"{_t('assert_failed')}: {error}")
+        # OCR, a template search or a VLM call: off the GUI thread, one at a time.
+        if not self._runs.start(functools.partial(_run_assertion, self._request())):
             return
+        self._result.setText(_t("task_running"))
+
+    def _show_error(self, error: object) -> None:
+        self._result.setText(f"{_t('assert_failed')}: {error}")
+
+    def _show_result(self, result: Dict[str, Any]) -> None:
         label = _t("assert_passed") if result["passed"] else _t("assert_failed")
         self._result.setText(f"{label} — {result['message']}")
+
+
+def _run_assertion(request: Dict[str, Any]) -> Dict[str, Any]:
+    """Worker thread: run the assertion the tab's fields described."""
+    kind, present, target = request["kind"], request["present"], request["target"]
+    if kind == "text":
+        return ac.assert_text(target, regex=request["regex"], present=present,
+                              raise_on_fail=False).to_dict()
+    if kind == "image":
+        return ac.assert_image(target, present=present, raise_on_fail=False).to_dict()
+    if kind == "pixel":
+        coords = _parse_ints(request["xy"])
+        if len(coords) < 2:
+            # Unpacking a short list used to reach assert_pixel with the
+            # RGB list bound to `y`, and the user saw a TypeError about
+            # keyword arguments instead of what they typed wrong.
+            raise ValueError(f"pixel assertion needs 'x,y'; got {request['xy']!r}")
+        return ac.assert_pixel(coords[0], coords[1], _parse_ints(request["rgb"]),
+                               match=present, raise_on_fail=False).to_dict()
+    if kind == "window":
+        return ac.assert_window(target, exists=present, raise_on_fail=False).to_dict()
+    return ac.assert_by_description(target, present=present, raise_on_fail=False).to_dict()

@@ -2001,6 +2001,9 @@ def AC_legacy_info(
 def AC_list_assets(environment: str | None = ..., db: str | None = ...) -> Dict[str, Any]:
     """Adapter: list assets, optionally restricted to one environment."""
 
+def AC_list_executions() -> List[Dict[str, Any]]:
+    """Adapter: the stoppable runs in progress."""
+
 def AC_list_plugins(group: str = ...) -> Dict[str, Any]:
     """Adapter: discover third-party plugin command names (no register)."""
 
@@ -3224,6 +3227,9 @@ def AC_start_ws_host(
     max_clients: int = ...,
 ) -> Dict[str, Any]:
     """Executor adapter: start the singleton WebSocket-transport host."""
+
+def AC_stop_execution(run_id: str | None = ..., reason: str = ...) -> Dict[str, Any]:
+    """Adapter: ask one stoppable run (or every other one) to stop."""
 
 def AC_stop_record() -> list:
     """stop current record"""

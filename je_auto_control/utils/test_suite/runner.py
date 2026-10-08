@@ -29,6 +29,7 @@ from typing import Any, Dict, Iterable, List, Optional, Set, Tuple
 from je_auto_control.utils.exception.exceptions import (
     AutoControlAssertionException, AutoControlException,
 )
+from je_auto_control.utils.executor.run_control import ExecutionStopped
 from je_auto_control.utils.test_suite.result import (
     STATUS_ERROR, STATUS_FAILED, STATUS_PASSED, STATUS_SKIPPED,
     TestCaseResult, TestSuiteResult,
@@ -97,6 +98,8 @@ def _run_actions(executor: Any, actions: List[Any]) -> Tuple[str, str]:
     try:
         executor.execute_action(actions, raise_on_error=True)
         return STATUS_PASSED, ""
+    except ExecutionStopped:
+        raise  # the whole suite was stopped: not this case's error
     except AutoControlAssertionException as error:
         return STATUS_FAILED, str(error)
     except (AutoControlException, LookupError, AttributeError, ArithmeticError,

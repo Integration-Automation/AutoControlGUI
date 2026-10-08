@@ -1,9 +1,12 @@
 """Media Checks tab: audio activity and video motion assertions.
 
 Thin wrapper over :func:`je_auto_control.assert_audio_activity` and
-:func:`je_auto_control.assert_video_changes`.
+:func:`je_auto_control.assert_video_changes`. The audio check records for its
+whole duration and the video check decodes the file, so both run off the GUI
+thread, one at a time.
 """
-from typing import Optional
+import functools
+from typing import Any, Optional
 
 from PySide6.QtWidgets import (
     QCheckBox, QDoubleSpinBox, QFileDialog, QHBoxLayout, QLabel, QLineEdit,
@@ -11,15 +14,25 @@ from PySide6.QtWidgets import (
 )
 
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
+from je_auto_control.gui._tab_task import TabTask
 from je_auto_control.gui.language_wrapper.multi_language_wrapper import (
     language_wrapper,
 )
-from je_auto_control.utils.exception.exceptions import AutoControlException
 import je_auto_control as ac
 
 
 def _t(key: str) -> str:
     return language_wrapper.translate(key, key)
+
+
+def _check_audio(options: dict) -> Any:
+    """Worker thread: record and measure."""
+    return ac.assert_audio_activity(raise_on_fail=False, **options)
+
+
+def _check_video(path: str, options: dict) -> Any:
+    """Worker thread: decode the file and measure."""
+    return ac.assert_video_changes(path, raise_on_fail=False, **options)
 
 
 class MediaChecksTab(TranslatableMixin, QWidget):
@@ -45,6 +58,9 @@ class MediaChecksTab(TranslatableMixin, QWidget):
         self._video_expect.setChecked(True)
         self._result = QLabel()
         self._result.setWordWrap(True)
+        self._runs = TabTask(self)
+        self._runs.result.connect(self._show_result)
+        self._runs.error.connect(self._show_error)
         self._build_layout()
 
     def _build_layout(self) -> None:
@@ -90,27 +106,22 @@ class MediaChecksTab(TranslatableMixin, QWidget):
             self._video_path.setText(path)
 
     def _on_audio(self) -> None:
-        try:
-            result = ac.assert_audio_activity(
-                duration_s=self._audio_duration.value(),
-                threshold=self._audio_threshold.value(),
-                expect_sound=self._audio_expect.isChecked(),
-                raise_on_fail=False,
-            )
-        except (AutoControlException, RuntimeError, OSError, ValueError) as error:
-            self._result.setText(str(error))
-            return
-        self._result.setText(result.message)
+        options = {"duration_s": self._audio_duration.value(),
+                   "threshold": self._audio_threshold.value(),
+                   "expect_sound": self._audio_expect.isChecked()}
+        self._start(functools.partial(_check_audio, options))
 
     def _on_video(self) -> None:
-        try:
-            result = ac.assert_video_changes(
-                self._video_path.text().strip(),
-                threshold=self._video_threshold.value(),
-                expect_motion=self._video_expect.isChecked(),
-                raise_on_fail=False,
-            )
-        except (AutoControlException, RuntimeError, OSError, ValueError) as error:
-            self._result.setText(str(error))
-            return
+        options = {"threshold": self._video_threshold.value(),
+                   "expect_motion": self._video_expect.isChecked()}
+        self._start(functools.partial(_check_video, self._video_path.text().strip(), options))
+
+    def _start(self, work: Any) -> None:
+        if self._runs.start(work):
+            self._result.setText(_t("task_running"))
+
+    def _show_error(self, error: object) -> None:
+        self._result.setText(str(error))
+
+    def _show_result(self, result: Any) -> None:
         self._result.setText(result.message)

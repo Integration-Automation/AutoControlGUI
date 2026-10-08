@@ -1,5 +1,10 @@
-"""Chat-Ops tab: test slash commands locally before wiring them to Slack."""
-from typing import Optional
+"""Chat-Ops tab: test slash commands locally before wiring them to Slack.
+
+A command is dispatched off the GUI thread (``/run`` executes a whole script),
+one at a time, as a stoppable executor run.
+"""
+import functools
+from typing import Any, Optional
 
 from PySide6.QtWidgets import (
     QFileDialog, QHBoxLayout, QLabel, QLineEdit, QTextEdit,
@@ -7,6 +12,7 @@ from PySide6.QtWidgets import (
 )
 
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
+from je_auto_control.gui._tab_task import TabTask, was_stopped
 from je_auto_control.gui.language_wrapper.multi_language_wrapper import (
     language_wrapper,
 )
@@ -17,6 +23,11 @@ from je_auto_control.utils.chatops import (
 
 def _t(key: str) -> str:
     return language_wrapper.translate(key, key)
+
+
+def _dispatch(router: CommandRouter, message: str, context: dict) -> Any:
+    """Worker thread: route one message; the router is not touched by the GUI meanwhile."""
+    return router.dispatch(message, context=context)
 
 
 class ChatOpsTab(TranslatableMixin, QWidget):
@@ -32,6 +43,10 @@ class ChatOpsTab(TranslatableMixin, QWidget):
         self._command_input.returnPressed.connect(self._on_send)
         self._output = QTextEdit()
         self._output.setReadOnly(True)
+        self._pending_message = ""
+        self._runs = TabTask(self)
+        self._runs.result.connect(self._show_result)
+        self._runs.error.connect(self._show_error)
         self._build_layout()
 
     def retranslate(self) -> None:
@@ -64,6 +79,7 @@ class ChatOpsTab(TranslatableMixin, QWidget):
         return [
             ("chatops_browse_btn", self._on_browse),
             ("chatops_send_btn", self._on_send),
+            ("task_stop", self._on_stop),
         ]
 
     def _apply_translations(self) -> None:
@@ -88,14 +104,26 @@ class ChatOpsTab(TranslatableMixin, QWidget):
         root = self._script_root.text().strip()
         if root:
             context["script_root"] = root
-        try:
-            result = self._router.dispatch(message, context=context)
-        except (RuntimeError, ValueError) as error:
-            self._output.append(f"router error: {error}")
+        if not self._runs.start_script(functools.partial(_dispatch, self._router, message, context)):
+            self._output.append(_t("task_busy"))
             return
+        self._pending_message = message
+        self._output.append(f"> {message}")
+
+    def _on_stop(self) -> None:
+        if self._runs.stop():
+            self._output.append(_t("task_stopping"))
+
+    def _show_error(self, error: object) -> None:
+        if was_stopped(error):
+            self._output.append(_t("task_stopped"))
+            return
+        self._output.append(f"router error: {error}")
+
+    def _show_result(self, result: Any) -> None:
         if result is None:
             self._output.append(
-                f"(no match for: {message!r} — did you miss the / prefix?)",
+                f"(no match for: {self._pending_message!r} — did you miss the / prefix?)",
             )
             return
         prefix = "✓" if result.succeeded else "✗"
