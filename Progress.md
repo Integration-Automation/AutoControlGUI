@@ -167,7 +167,7 @@ pip install --dry-run --only-binary=:all: --platform win_arm64 --python-version 
 
 - **同意被拒絕**：真的 liboeffis 回的是 `Portal denied Start`，規則認得。第一版規則只看有沒有 "denied"，把「portal 不給 EIS descriptor」
   （`Error calling ConnectToEIS: Permission denied`）也當成使用者拒絕；`portal-verification` 的 `*** REVISIT ***` 抓到，已改成只認 `Portal denied …` 開頭。
-  修正後還沒有再跑過那個 job 的結果可看。同意對話框放著不回答（逾時）仍會退回 ydotool。
+  修正後同一個 job 再跑一次，六種結束方式的分類全部正確、沒有 `REVISIT`（20/20）。同意對話框放著不回答（逾時）仍會退回 ydotool。
 - **helper 行程對真的 EIS server 可用**：按鍵、絕對移動、按鈕、捲動都到達，與行程內路徑相同；延遲中位數 0.340 ms（行程內 0.096 ms），p95 0.393 ms。
   正常關閉時按住的鍵會先放開；helper 被 SIGKILL 時 server 沒收到 key-up，放開交給合成器。
 - **半開交握**：崩潰確定是 `ei_unref`；3 次半開交握行程內漏 9 個 fd，經 helper 漏 3 個，helper 都以 exit status 1 結束、沒有殘留行程。
