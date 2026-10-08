@@ -19,6 +19,22 @@ into the logical space, reporting the origin to add to any hit — the virtual
 desktop starts at negative coordinates whenever a monitor sits left of or above
 the primary one.
 
+``import je_auto_control`` now makes the process per-monitor DPI aware
+(``windows/screen/win32_screen.py``), and then the two spaces are the same one:
+``GetSystemMetrics`` reports physical pixels as well, nothing is rescaled, and a
+scaled monitor is captured sharp. The rescale stays for a process whose
+awareness was fixed before the import (an embedding host, a manifest).
+
+macOS has the requirement in a third form: ``screencapture`` returns a Retina
+display at twice its size in points, the unit Quartz mouse events take, and
+without a rectangle it captures the main display only. There the frame is built
+by :mod:`je_auto_control.utils.monitor_layout.macos_frame`, one display at a
+time, each scaled to points.
+
+A ``region`` is clipped to the captured frame and the origin returned is the
+clipped one. Cropping past the frame pads with black, and a matcher handed that
+padding can report a hit that is not on any screen.
+
 Wayland has the same requirement without the DPI half: its capture spans the
 compositor's whole output layout, and that layout starts at a negative
 coordinate whenever an output sits left of or above the origin. There is no
@@ -34,8 +50,11 @@ unit-testable; the OS reader and the grabber are both injectable. Imports no
 import sys
 from typing import Any, Callable, Optional, Sequence, Tuple
 
+from je_auto_control.utils.exception.exceptions import AutoControlScreenException
+
 Rect = Tuple[int, int, int, int]
 MetricsReader = Callable[[int], int]
+DisplayReader = Callable[[], Sequence[Sequence[int]]]
 
 # GetSystemMetrics indices for the virtual desktop, in logical pixels.
 SM_XVIRTUALSCREEN = 76
@@ -111,22 +130,95 @@ def _resample():
     return getattr(getattr(Image, "Resampling", Image), "LANCZOS")
 
 
+def checked_region(region: Sequence[int]) -> Rect:
+    """``region`` as four ints ``(x, y, width, height)`` with a positive size.
+
+    Raises ``AutoControlScreenException`` otherwise. A negative width reached
+    Pillow's ``crop`` and came back as a bare ``ValueError``, outside the
+    family every caller's containment catches.
+    """
+    try:
+        left, top, width, height = (int(value) for value in region)
+    except (TypeError, ValueError) as error:
+        raise AutoControlScreenException(
+            f"region must be 4 ints (x, y, width, height); got {region!r}") from error
+    if width <= 0 or height <= 0:
+        raise AutoControlScreenException(
+            f"region must have positive width and height; got "
+            f"({left}, {top}, {width}, {height})")
+    return left, top, width, height
+
+
+def intersect_rect(first: Sequence[int], second: Sequence[int]) -> Optional[Rect]:
+    """The overlap of two ``(x, y, width, height)`` rectangles, or ``None``."""
+    left = max(first[0], second[0])
+    top = max(first[1], second[1])
+    right = min(first[0] + first[2], second[0] + second[2])
+    bottom = min(first[1] + first[3], second[1] + second[3])
+    if right <= left or bottom <= top:
+        return None
+    return left, top, right - left, bottom - top
+
+
+def clip_region(region: Rect, frame: Rect) -> Rect:
+    """``region`` cut down to ``frame``; raise when none of it is on screen."""
+    clipped = intersect_rect(region, frame)
+    if clipped is None:
+        raise AutoControlScreenException(
+            f"region {region} (x, y, width, height) is entirely off screen; "
+            f"the desktop is {frame}")
+    return clipped
+
+
+def _is_macos() -> bool:
+    return sys.platform == "darwin"
+
+
+def _is_pillow_grab(image_grab: Any) -> bool:
+    """Whether ``image_grab`` is Pillow's own ``ImageGrab`` module.
+
+    The macOS path corrects what Pillow's ``screencapture`` call returns. A
+    grabber that is something else — a platform backend's, a test's — has
+    neither defect and keeps the generic path.
+    """
+    return getattr(image_grab, "__name__", "") == "PIL.ImageGrab"
+
+
 def grab_logical(region: Optional[Sequence[int]] = None, *,
                  all_screens: bool = True,
                  grabber: Optional[Any] = None,
-                 metrics: Optional[MetricsReader] = None) -> Tuple[Any, int, int]:
+                 metrics: Optional[MetricsReader] = None,
+                 displays: Optional[DisplayReader] = None) -> Tuple[Any, int, int]:
     """Capture the screen in mouse-coordinate space.
 
     :param region: ``(x, y, width, height)`` in mouse coordinates, or ``None``
-        for everything.
+        for everything. It is clipped to the desktop; a region with no area,
+        or none of it on screen, raises ``AutoControlScreenException``.
     :param all_screens: include monitors beyond the primary one.
     :param grabber: ``ImageGrab``-shaped object, for tests.
     :param metrics: ``GetSystemMetrics``-shaped reader, for tests.
+    :param displays: macOS only — returns each display's ``(x, y, width,
+        height)`` in points; the default asks Quartz. Passing one selects the
+        macOS path on any platform, for tests.
     :return: ``(image, origin_x, origin_y)`` — add the origin to any hit found in
-        the image to get a coordinate the mouse can be sent to.
+        the image to get a coordinate the mouse can be sent to. With a
+        ``region`` the origin is the clipped region's corner, which differs
+        from the requested one when the region started off screen.
     """
+    box = None if region is None else checked_region(region)
     image_grab = grabber or _load_image_grab()
-    if region is None and not all_screens:
+    if displays is not None or (_is_macos() and _is_pillow_grab(image_grab)):
+        from je_auto_control.utils.monitor_layout.macos_frame import grab_macos
+        frame = grab_macos(image_grab, box, all_screens=all_screens, displays=displays)
+        if frame is not None:
+            return frame
+    return _grab_virtual_desktop(image_grab, box, all_screens, metrics)
+
+
+def _grab_virtual_desktop(image_grab: Any, box: Optional[Rect], all_screens: bool,
+                          metrics: Optional[MetricsReader]) -> Tuple[Any, int, int]:
+    """The frame as Windows, X11 and Wayland build it: one capture, rescaled, cropped."""
+    if box is None and not all_screens:
         # The primary-only grab is already in logical pixels and starts at (0, 0).
         return image_grab.grab(), 0, 0
 
@@ -135,12 +227,13 @@ def grab_logical(region: Optional[Sequence[int]] = None, *,
     origin_x, origin_y = (rect[0], rect[1]) if rect else _backend_frame_origin()
     if rect and needs_rescale((image.width, image.height), (rect[2], rect[3])):
         image = image.resize((rect[2], rect[3]), _resample())
-    if region is None:
+    if box is None:
         return image, origin_x, origin_y
 
     # Crop on the rescaled frame, never through ImageGrab's bbox: that crop
     # happens in physical pixels and would cut the wrong place on a scaled screen.
-    left, top, width, height = (int(value) for value in region)
+    left, top, width, height = clip_region(
+        box, (origin_x, origin_y, image.width, image.height))
     image = image.crop((left - origin_x, top - origin_y,
                         left - origin_x + width, top - origin_y + height))
     return image, left, top

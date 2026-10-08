@@ -42,6 +42,9 @@
     mark_click(3)                                     # 點擊第 3 號標記
 
 ``mark_screen`` 為即時 accessibility 元素標號(並可另存編號方框疊圖截圖),
-並快取這些標記;``mark_click`` 從快取解析編號並點擊該元素中心。對應
+並快取這些標記;``mark_click`` 從快取解析編號並點擊該元素中心。疊圖涵蓋
+所有螢幕,此時結果另帶 ``image_origin``,也就是影像左上角像素的螢幕座標:
+標記維持螢幕座標,畫在影像上的位置是 ``bbox - image_origin``(有螢幕位於
+主螢幕左側或上方時原點為負)。對應
 ``AC_mark_screen`` / ``AC_mark_click``(以及 ``ac_mark_screen`` /
 ``ac_mark_click``)。

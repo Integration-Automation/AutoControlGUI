@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, List, Optional
+import sys
+from typing import TYPE_CHECKING, Any, List, Optional
 
 if TYPE_CHECKING:  # pragma: no cover - annotations only
     from PIL import Image
@@ -34,6 +35,20 @@ def _validate_region(screen_region: List[int]) -> None:
         )
 
 
+def _grab_region(grabber: Any, screen_region: List[int]) -> Image.Image:
+    """Capture ``[left, top, right, bottom]`` wherever on the desktop it is.
+
+    ``ImageGrab.grab(bbox=...)`` captures the primary monitor on Windows and
+    crops that, so a region on a monitor left of or above the primary one came
+    back black. There the region is cut from the whole virtual desktop instead.
+    """
+    if sys.platform.startswith("win"):
+        from je_auto_control.utils.cv2_utils.region_capture import grab_windows_region
+        left, top, right, bottom = (int(value) for value in screen_region)
+        return grab_windows_region(left, top, right, bottom, grabber=grabber)
+    return grabber.grab(bbox=screen_region)
+
+
 def pil_screenshot(file_path: Optional[str] = None, screen_region: Optional[List[int]] = None) -> Image.Image:
     """
     Take a screenshot through the platform's capture backend.
@@ -47,15 +62,22 @@ def pil_screenshot(file_path: Optional[str] = None, screen_region: Optional[List
 
     :param file_path: (str | None) Path to save the screenshot. If None, do not save.
                       螢幕截圖的存檔路徑，若為 None 則不存檔
-    :param screen_region: (list[int] | None) Region to capture [left, top, right, bottom].
-                          擷取的螢幕區域 [左, 上, 右, 下]，若為 None 則擷取全螢幕
+    :param screen_region: (list[int] | None) Region to capture [left, top, right, bottom],
+                          in the coordinates the mouse takes. On Windows it may be on any
+                          monitor (negative left of or above the primary one); the part of
+                          it that is off the desktop is black, and a region entirely off
+                          the desktop raises AutoControlScreenException. None captures the
+                          primary screen.
+                          擷取的螢幕區域 [左, 上, 右, 下]（滑鼠座標）。Windows 上可在任何
+                          螢幕；超出桌面的部分為黑色，完全在桌面外則丟
+                          AutoControlScreenException。None 擷取主螢幕
     :return: PIL.Image.Image object 擷取到的影像物件
     """
     # 擷取螢幕畫面 Capture screen
     grabber = image_grabber()
     if screen_region is not None:
         _validate_region(screen_region)
-        image = grabber.grab(bbox=screen_region)
+        image = _grab_region(grabber, screen_region)
     else:
         image = grabber.grab()
 

@@ -46,6 +46,10 @@ Live "mark then click" loop
 
 ``mark_screen`` numbers the live accessibility elements (and optionally
 saves a numbered-box overlay screenshot), caching the marks; ``mark_click``
-resolves a number from that cache and clicks the element's centre. Exposed
+resolves a number from that cache and clicks the element's centre. The
+overlay covers every monitor, and the result then carries ``image_origin``,
+the screen coordinate of the image's top-left pixel: marks stay in screen
+coordinates, so a mark is drawn at ``bbox - image_origin`` (the origin is
+negative when a monitor sits left of or above the primary one). Exposed
 as ``AC_mark_screen`` / ``AC_mark_click`` (and ``ac_mark_screen`` /
 ``ac_mark_click``).
