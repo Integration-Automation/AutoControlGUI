@@ -41,6 +41,9 @@ class CommandSpec:
     fields: Tuple[FieldSpec, ...] = ()
     body_keys: Tuple[str, ...] = ()
     description: str = ""
+    #: The command's result carries a secret that exists nowhere else (a
+    #: freshly issued token). The builder masks it before displaying a run.
+    sensitive_result: bool = False
 
 
 _MOUSE_BUTTONS = ("mouse_left", "mouse_right", "mouse_middle")
@@ -72,6 +75,7 @@ def _build_specs() -> List[CommandSpec]:
     _add_flow_specs(specs)
     _add_misc_specs(specs)
     _add_mobile_specs(specs)
+    _add_user_specs(specs)
     return specs
 
 
@@ -5308,6 +5312,51 @@ def _add_work_queue_specs(specs: List[CommandSpec]) -> None:
                       min_value=1),
         ),
         description="Average + dominant colour of a screen region.",
+    ))
+
+
+def _add_user_specs(specs: List[CommandSpec]) -> None:
+    """RBAC user management; under RBAC these need the ``manage_users`` capability."""
+    user_id = FieldSpec("user_id", FieldType.STRING)
+    users_path = FieldSpec("users_path", FieldType.FILE_PATH, optional=True,
+                           placeholder="default: JE_AUTOCONTROL_RBAC_USERS")
+    roles = ("viewer", "operator", "admin")
+    token_note = (" The token is in the run's record once; this builder masks it -- "
+                  "run the step from a script, REST or the CLI to read it.")
+    specs.append(CommandSpec(
+        "AC_user_add", "Security", "User: Add",
+        fields=(
+            user_id,
+            FieldSpec("role", FieldType.ENUM, optional=True, default="viewer", choices=roles),
+            FieldSpec("display_name", FieldType.STRING, optional=True),
+            users_path,
+        ),
+        description="Add an RBAC user ('tags' via JSON view) and issue its bearer token."
+                    + token_note,
+        sensitive_result=True,
+    ))
+    specs.append(CommandSpec(
+        "AC_user_remove", "Security", "User: Remove",
+        fields=(user_id, users_path),
+        description="Remove an RBAC user; the only admin cannot be removed.",
+    ))
+    specs.append(CommandSpec(
+        "AC_user_set_role", "Security", "User: Set Role",
+        fields=(user_id, FieldSpec("role", FieldType.ENUM, choices=roles), users_path),
+        description="Change a user's role; applies to their next request and their "
+                    "deferred work.",
+    ))
+    specs.append(CommandSpec(
+        "AC_user_rotate_token", "Security", "User: Rotate Token",
+        fields=(user_id, users_path),
+        description="Replace a user's bearer token; the old one stops working."
+                    + token_note,
+        sensitive_result=True,
+    ))
+    specs.append(CommandSpec(
+        "AC_user_list", "Security", "User: List",
+        fields=(users_path,),
+        description="List the RBAC users (id, display name, role, tags; never a token).",
     ))
 
 

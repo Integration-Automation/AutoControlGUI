@@ -20,7 +20,7 @@ from typing import Any, Dict, FrozenSet, Iterable, List, Optional, Tuple
 
 from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.mcp_server._argument_policy import (
-    PATH_FORMAT, VALUE_REF_FORMAT,
+    PATH_FORMAT, PATH_OR_OTHER_FORMAT, VALUE_REF_FORMAT,
 )
 from je_auto_control.utils.mcp_server.tools._base import MCPTool, MCPToolDescriptor
 from je_auto_control.utils.rbac.policy import capability_for_tool
@@ -39,7 +39,7 @@ _PLUGIN_PREFIX = "plugin_"
 
 _WORD = re.compile(r"[a-z0-9]+")
 _SENTENCE_END = re.compile(r"(?<=[.!?])\s")
-_PATH_FORMATS = frozenset({PATH_FORMAT, VALUE_REF_FORMAT})
+_PATH_FORMATS = frozenset({PATH_FORMAT, PATH_OR_OTHER_FORMAT, VALUE_REF_FORMAT})
 _MAX_SCHEMA_DEPTH = 32
 
 _EXACT_NAME, _NAME_WORD, _NAME_PART, _CATEGORY_WORD, _TEXT_WORD, _TEXT_PART = 100, 10, 6, 5, 2, 1

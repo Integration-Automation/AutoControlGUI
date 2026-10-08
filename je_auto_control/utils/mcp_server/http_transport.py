@@ -20,7 +20,10 @@ SSE stream with ``GET``. That stream is what lets the server ask the client
 something mid-call — the ``elicitation/create`` behind the destructive-action
 confirmation gate. A client that ignores the header still works exactly as
 before, scoped to its TCP connection, but cannot be prompted: there is no
-channel to carry the question. See :mod:`.http_sessions`.
+channel to carry the question. See :mod:`.http_sessions`. With RBAC a session
+belongs to the user who created it: anyone else presenting its id gets 403.
+A tool registered or removed outside a request -- the plugin watcher's thread
+-- is announced on every session's standing stream.
 
 **2026-07-28.** A request that declares the stateless revision, in its
 ``MCP-Protocol-Version`` header or its ``_meta``, is checked against that
@@ -33,15 +36,18 @@ import json
 import os
 import ssl
 import threading
-from urllib.parse import urlsplit
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from typing import Any, Callable, Dict, Optional, Tuple
+from typing import Any, Callable, Dict, Optional, Tuple, Union
 
-from je_auto_control.utils.http_headers import (
-    bearer_challenge, log_safe, parse_content_length, wire_json_text,
-)
+from je_auto_control.utils.http_headers import bearer_challenge, log_safe
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.mcp_server._authz import check_bearer
+from je_auto_control.utils.mcp_server._http_origin import (
+    ALLOWED_ORIGINS_ENV, origin_allowed,
+)
+from je_auto_control.utils.mcp_server._http_responses import (
+    SSE_MEDIA_TYPE, HttpResponseMixin,
+)
 from je_auto_control.utils.mcp_server._http_stateless import (
     PROTOCOL_VERSION_HEADER, is_stateless, read_message, stateless_refusal,
     status_for, unsupported_header_refusal,
@@ -54,7 +60,11 @@ from je_auto_control.utils.mcp_server._stateless import (
     LISTEN_METHOD, STATELESS_PROTOCOL_VERSIONS,
 )
 from je_auto_control.utils.mcp_server.http_sessions import (
-    HttpSession, SESSION_HEADER, SessionRegistry, session_id_from_headers,
+    HttpSession, SESSION_HEADER, SessionOwnerMismatch, SessionRegistry,
+    session_id_from_headers,
+)
+from je_auto_control.utils.mcp_server.disclosure import (
+    ToolDisclosureError, ToolMode, resolve_mode,
 )
 from je_auto_control.utils.mcp_server.server import MCPServer
 from je_auto_control.utils.rbac.authorization import (
@@ -63,11 +73,6 @@ from je_auto_control.utils.rbac.authorization import (
 from je_auto_control.utils.rbac.users import UserStore
 
 DEFAULT_PATH = "/mcp"
-_MAX_BODY = 1_000_000
-_SSE_MEDIA_TYPE = "text/event-stream"
-# Cap drain reads so a hostile Content-Length can't make us spin forever.
-_DRAIN_CHUNK = 64 * 1024
-_DRAIN_CAP_MULTIPLE = 4
 # Bound per-request reads so a client that declares a Content-Length then
 # stalls (body underrun) can't pin a worker thread forever.
 _REQUEST_TIMEOUT = 30.0
@@ -109,13 +114,10 @@ def _notifier_for(writer: Optional[Callable[[str], None]]):
     )
 
 
-class _MCPHttpHandler(BaseHTTPRequestHandler):
+class _MCPHttpHandler(HttpResponseMixin, BaseHTTPRequestHandler):
     """Bridges HTTP requests onto :meth:`MCPServer.handle_line`."""
 
     server_version = "AutoControlMCP/1.0"
-    # Set once this request's body has been read off the socket, so a later
-    # error response knows there is nothing left to drain.
-    _body_consumed = False
     # The RBAC user this request authenticated as; None under the shared token.
     _caller: Optional[AuthorizationContext] = None
     # socketserver applies this to the connection socket in setup(); it bounds
@@ -209,7 +211,7 @@ class _MCPHttpHandler(BaseHTTPRequestHandler):
         if not self._client_accepts_sse():
             self._send_raw_json(_error_response(
                 message.get("id"), -32600,
-                f"Invalid Request: {LISTEN_METHOD} needs Accept: {_SSE_MEDIA_TYPE}"), status=406)
+                f"Invalid Request: {LISTEN_METHOD} needs Accept: {SSE_MEDIA_TYPE}"), status=406)
             return
         send_lock = threading.Lock()
         emit = self._open_event_stream(send_lock)
@@ -232,26 +234,6 @@ class _MCPHttpHandler(BaseHTTPRequestHandler):
             # Closing the stream is how an HTTP client cancels; no answer then.
             bridge.end_subscription(id(self), message["id"])
 
-    def _open_event_stream(self, send_lock: threading.Lock) -> Callable[[str], None]:
-        """Send the headers of an SSE response; return a writer of its events."""
-        self.close_connection = True
-        with send_lock:
-            self.send_response(200)
-            self.send_header("Content-Type", f"{_SSE_MEDIA_TYPE}; charset=utf-8")
-            self.send_header("Cache-Control", "no-cache")
-            self.send_header("Connection", "close")
-            self.send_header("X-Accel-Buffering", "no")
-            self.end_headers()
-            self.wfile.flush()
-
-        def emit(payload: str) -> None:
-            with send_lock:
-                self.wfile.write(b"data: ")
-                self.wfile.write(payload.encode("utf-8"))
-                self.wfile.write(b"\n\n")
-                self.wfile.flush()
-        return emit
-
     def _resolve_session(self, line: str) -> Tuple[Optional[HttpSession],
                                                     bool]:
         """Resolve this request's session; False means a reply was sent.
@@ -263,16 +245,32 @@ class _MCPHttpHandler(BaseHTTPRequestHandler):
         registry: SessionRegistry = self.server.sessions  # type: ignore[attr-defined]
         header_id = session_id_from_headers(self.headers)
         if header_id is not None:
-            session = registry.get(header_id)
-            if session is None:
-                self._send_json(
-                    {"error": "unknown or expired session"}, status=404,
-                )
-                return None, False
-            return session, True
+            session = self._own_session(registry, header_id)
+            return session, session is not None
         if _is_initialize(line):
-            return registry.create(), True
+            return registry.create(owner=self._owner()), True
         return None, True
+
+    def _owner(self) -> Optional[str]:
+        """The RBAC user this request is from; ``None`` when nobody is identified."""
+        return self._caller.user_id if self._caller is not None else None
+
+    def _own_session(self, registry: SessionRegistry,
+                     session_id: Optional[str]) -> Optional[HttpSession]:
+        """The caller's session ``session_id``; ``None`` after a 403 or 404 was sent.
+
+        403 for a session another user created: the id is not a credential,
+        and attaching to that user's stream, ending their session or
+        dispatching into their scope is not this caller's to do.
+        """
+        try:
+            session = registry.get(session_id, owner=self._owner())
+        except SessionOwnerMismatch as error:
+            self._send_json({"error": str(error)}, status=403)
+            return None
+        if session is None:
+            self._send_json({"error": "unknown or expired session"}, status=404)
+        return session
 
     def finish(self) -> None:
         """Release this connection's per-peer server state, then close.
@@ -313,7 +311,7 @@ class _MCPHttpHandler(BaseHTTPRequestHandler):
 
     def _caller_allowed(self) -> bool:
         """Refuse browser cross-site requests, then check the bearer token."""
-        if not self._origin_allowed():
+        if not origin_allowed(self.headers, self.server.server_address):
             self._send_json({"error": "origin not allowed"}, status=403)
             return False
         self._caller, refusal = check_bearer(
@@ -329,34 +327,6 @@ class _MCPHttpHandler(BaseHTTPRequestHandler):
         self._send_json({"error": text}, status=status, extra_headers=challenge)
         return False
 
-    def _origin_allowed(self) -> bool:
-        """True unless a browser on another site, or a rebound name, sent this.
-
-        With no token configured (the default) any web page the user opened
-        could POST ``tools/call`` here as a simple ``text/plain`` request,
-        which browsers send without a CORS preflight; the MCP specification
-        requires servers to validate ``Origin`` for exactly this. A request
-        without ``Origin`` comes from a non-browser client and is fine. When
-        bound to loopback, ``Host`` must also name loopback: a DNS-rebinding
-        page reaches 127.0.0.1 under its own name, and a same-origin GET
-        carries no ``Origin`` at all.
-        """
-        origin = self.headers.get("Origin")
-        if origin and origin not in _allowed_origins():
-            if urlsplit(origin).hostname not in _LOOPBACK_NAMES:
-                return False
-        address = self.server.server_address
-        bound_host = address[0] if isinstance(address, tuple) else address
-        if bound_host in _LOOPBACK_NAMES:
-            host = urlsplit("//" + self.headers.get("Host", "")).hostname
-            if host not in _LOOPBACK_NAMES:
-                return False
-        return True
-
-    def _client_accepts_sse(self) -> bool:
-        accept = self.headers.get("Accept", "")
-        return _SSE_MEDIA_TYPE in accept
-
     def _dispatch_sse(self, bridge: MCPServer, line: str,
                       conn_id: Any,
                       extra_headers: Optional[Dict[str, str]] = None) -> None:
@@ -365,7 +335,7 @@ class _MCPHttpHandler(BaseHTTPRequestHandler):
         self.close_connection = True
         self.send_response(200)
         self.send_header("Content-Type",
-                          f"{_SSE_MEDIA_TYPE}; charset=utf-8")
+                          f"{SSE_MEDIA_TYPE}; charset=utf-8")
         self.send_header("Cache-Control", "no-cache")
         self.send_header("Connection", "close")
         for name, value in (extra_headers or {}).items():
@@ -407,18 +377,14 @@ class _MCPHttpHandler(BaseHTTPRequestHandler):
             return
         if not self._client_accepts_sse():
             self._send_json(
-                {"error": f"GET requires Accept: {_SSE_MEDIA_TYPE}"},
+                {"error": f"GET requires Accept: {SSE_MEDIA_TYPE}"},
                 status=405,
             )
             return
         registry: SessionRegistry = self.server.sessions  # type: ignore[attr-defined]
-        session = registry.get(session_id_from_headers(self.headers))
-        if session is None:
-            self._send_json(
-                {"error": "unknown or expired session"}, status=404,
-            )
-            return
-        self._stream_session(registry, session)
+        session = self._own_session(registry, session_id_from_headers(self.headers))
+        if session is not None:
+            self._stream_session(registry, session)
 
     def _stream_session(self, registry: SessionRegistry,
                         session: HttpSession) -> None:
@@ -445,7 +411,7 @@ class _MCPHttpHandler(BaseHTTPRequestHandler):
             with send_lock:
                 self.send_response(200)
                 self.send_header("Content-Type",
-                                  f"{_SSE_MEDIA_TYPE}; charset=utf-8")
+                                  f"{SSE_MEDIA_TYPE}; charset=utf-8")
                 self.send_header("Cache-Control", "no-cache")
                 self.send_header("Connection", "close")
                 self.send_header(SESSION_HEADER, session.id)
@@ -489,85 +455,17 @@ class _MCPHttpHandler(BaseHTTPRequestHandler):
             # still run their cleanup unchanged.
             self._send_json({"status": "session terminated"})
             return
-        if registry.terminate(header_id) is None:
+        try:
+            ended = registry.terminate(header_id, owner=self._owner())
+        except SessionOwnerMismatch as error:
+            self._send_json({"error": str(error)}, status=403)
+            return
+        if ended is None:
             self._send_json(
                 {"error": "unknown or expired session"}, status=404,
             )
             return
         self._send_json({"status": "session terminated"})
-
-    # --- helpers -------------------------------------------------------------
-
-    def _read_body(self) -> Optional[str]:
-        length = parse_content_length(self.headers)
-        if length <= 0 or length > _MAX_BODY:
-            self._send_json({"error": "invalid Content-Length"}, status=400)
-            return None
-        raw = self.rfile.read(length)
-        # From here the body is gone from the socket. Any 4xx we send later
-        # must not try to drain it again: there is nothing left to read, so
-        # the drain would block on the next request's bytes until the socket
-        # timeout and pin this worker for thirty seconds.
-        self._body_consumed = True
-        try:
-            return raw.decode("utf-8").strip()
-        except UnicodeDecodeError:
-            self._send_json({"error": "body must be UTF-8"}, status=400)
-            return None
-
-    def _send_json(self, payload: Any, status: int = 200,
-                   extra_headers: Optional[Dict[str, str]] = None) -> None:
-        body = wire_json_text(payload).encode("utf-8")
-        self._write_headers(status, body, extra_headers)
-        self.wfile.write(body)
-        if status >= 400:
-            # Drain any unread request body before the socket closes.
-            # Without this, Windows TCP turns "close with unread bytes"
-            # into RST and the client surfaces WinError 10053 before it
-            # can read the 4xx response.
-            self._drain_body()
-
-    def _drain_body(self) -> None:
-        if self._body_consumed:
-            return
-        declared = parse_content_length(self.headers)
-        if declared <= 0:
-            return
-        cap = min(declared, _MAX_BODY * _DRAIN_CAP_MULTIPLE)
-        remaining = cap
-        try:
-            while remaining > 0:
-                chunk = self.rfile.read(min(remaining, _DRAIN_CHUNK))
-                if not chunk:
-                    break
-                remaining -= len(chunk)
-        except OSError as error:
-            # Draining is a courtesy to the client's read of our 4xx. If the
-            # peer has already gone, there is nothing left to be courteous
-            # about — and letting this escape logs a whole traceback for it.
-            autocontrol_logger.debug("MCP drain aborted: %r", error)
-
-    def _send_raw_json(self, raw_json: str,
-                       extra_headers: Optional[Dict[str, str]] = None,
-                       status: int = 200) -> None:
-        body = raw_json.encode("utf-8")
-        self._write_headers(status, body, extra_headers)
-        self.wfile.write(body)
-
-    def _send_blank(self, status: int) -> None:
-        self.send_response(status)
-        self.send_header("Content-Length", "0")
-        self.end_headers()
-
-    def _write_headers(self, status: int, body: bytes,
-                       extra_headers: Optional[Dict[str, str]] = None,
-                       ) -> None:
-        self.send_response(status)
-        self.send_header("Content-Type", "application/json; charset=utf-8")
-        self.send_header("Content-Length", str(len(body)))
-        for name, value in (extra_headers or {}).items():
-            self.send_header(name, value)
-        self.end_headers()
 
 
 class _MCPHttpServer(ThreadingHTTPServer):
@@ -614,19 +512,6 @@ class _MCPHttpServer(ThreadingHTTPServer):
         return conn, addr
 
 
-#: Host names that mean this machine. ``urlsplit`` strips IPv6 brackets.
-_LOOPBACK_NAMES = frozenset({"localhost", "127.0.0.1", "::1"})
-
-#: Extra browser origins allowed to call the server, comma-separated and
-#: exact (``https://example.test:8443``); loopback origins always are.
-ALLOWED_ORIGINS_ENV = "JE_AUTOCONTROL_MCP_ALLOWED_ORIGINS"
-
-
-def _allowed_origins() -> frozenset:
-    raw = os.environ.get(ALLOWED_ORIGINS_ENV, "")
-    return frozenset(part.strip() for part in raw.split(",") if part.strip())
-
-
 class HttpMCPServer:
     """Threaded HTTP transport for the MCP dispatcher."""
 
@@ -635,9 +520,21 @@ class HttpMCPServer:
                  auth_token: Optional[str] = None,
                  ssl_context: Optional[ssl.SSLContext] = None,
                  user_store: Optional[UserStore] = None,
+                 tool_mode: Union[str, ToolMode, None] = None,
                  ) -> None:
-        """``user_store`` switches RBAC on; ``None`` reads ``JE_AUTOCONTROL_RBAC_USERS``."""
-        self._mcp = mcp if mcp is not None else MCPServer()
+        """``user_store`` switches RBAC on; ``None`` reads ``JE_AUTOCONTROL_RBAC_USERS``.
+
+        ``tool_mode`` is :class:`MCPServer`'s (``full`` / ``progressive`` /
+        ``static``; ``None`` reads ``JE_AUTOCONTROL_MCP_TOOL_MODE``) and builds
+        the dispatcher when ``mcp`` is not given. Passed together with an
+        ``mcp`` already in another mode it raises :class:`ToolDisclosureError`
+        -- a dispatcher's mode is fixed when it is built.
+        """
+        self._mcp = mcp if mcp is not None else MCPServer(tool_mode=tool_mode)
+        if tool_mode is not None and resolve_mode(tool_mode) is not self._mcp.disclosure.mode:
+            raise ToolDisclosureError(
+                f"tool_mode {resolve_mode(tool_mode).value!r} does not match the given "
+                f"MCPServer's {self._mcp.disclosure.mode.value!r}; build it with that mode")
         self._users = user_store if user_store is not None else user_store_from_env()
         self._address: Tuple[str, int] = (host, port)
         self._auth_token = auth_token if auth_token is not None else (
@@ -689,6 +586,7 @@ class HttpMCPServer:
             name="AutoControlMCPHttp",
         )
         self._thread.start()
+        self._mcp.add_list_changed_listener(self._broadcast_list_changed)
         scheme = "https" if self._ssl_context is not None else "http"
         autocontrol_logger.info("MCP %s listening on %s:%d (rbac=%s)", scheme,
                                  *self._address, "on" if self._users is not None else "off")
@@ -699,6 +597,7 @@ class HttpMCPServer:
         # Close the sessions and subscriptions first: a standing GET stream or
         # a subscriptions/listen parks a worker on its heartbeat, and ending
         # them releases it without waiting one out.
+        self._mcp.remove_list_changed_listener(self._broadcast_list_changed)
         self._mcp.end_subscriptions(stdio=False)
         self._server.sessions.terminate_all()
         self._server.shutdown()
@@ -709,19 +608,48 @@ class HttpMCPServer:
         self._thread = None
 
 
+    def _broadcast_list_changed(self, served: Any) -> None:
+        """Tell every session with a standing stream that the tool list changed.
+
+        ``served`` is the session the registering request came from, if any;
+        the dispatcher has told that one already. A registration from no
+        request at all -- the plugin watcher's thread -- used to reach nobody.
+        """
+        server = self._server
+        if server is None:
+            return
+        message = _notification_message("notifications/tools/list_changed", {})
+        for session in server.sessions.live():
+            writer = session.stream_writer
+            if writer is None or session.id == served:
+                continue
+            try:
+                writer(message)
+            except (OSError, ValueError) as error:
+                # The stream's own heartbeat notices a dead client and detaches.
+                autocontrol_logger.info(
+                    "MCP tools/list_changed not delivered to a session: %r", error)
+
+
 def start_mcp_http_server(host: str = "127.0.0.1", port: int = 9940,
                           mcp: Optional[MCPServer] = None,
                           auth_token: Optional[str] = None,
                           ssl_context: Optional[ssl.SSLContext] = None,
                           user_store: Optional[UserStore] = None,
+                          tool_mode: Union[str, ToolMode, None] = None,
                           ) -> HttpMCPServer:
-    """Start and return an :class:`HttpMCPServer`; convenience wrapper."""
+    """Start and return an :class:`HttpMCPServer`; convenience wrapper.
+
+    ``tool_mode`` is :class:`HttpMCPServer`'s: ``full``, ``progressive`` or
+    ``static``; ``None`` reads ``JE_AUTOCONTROL_MCP_TOOL_MODE``.
+    """
     server = HttpMCPServer(
         mcp=mcp, host=host, port=port,
         auth_token=auth_token, ssl_context=ssl_context, user_store=user_store,
+        tool_mode=tool_mode,
     )
     server.start()
     return server
 
 
-__all__ = ["HttpMCPServer", "start_mcp_http_server"]
+__all__ = ["ALLOWED_ORIGINS_ENV", "HttpMCPServer", "start_mcp_http_server"]

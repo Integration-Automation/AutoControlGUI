@@ -142,10 +142,21 @@ ACL 預設為 ``"deny"``\ ，所以 viewer 無法 claim 操作員未核准的裝
 ACL 檔案完整性（HMAC）
 ----------------------
 
-ACL 旁附一個 ``usb_acl.json.sig`` sidecar HMAC-SHA256 簽章。載入時對
-檔案位元組驗證；不符就 **fail-closed**\ （default-deny，
-``UsbAcl.integrity_ok`` 回 ``False``\ ）。這擋住偷偷改寫 JSON 想給自己
-授權的 process。
+ACL 由 HMAC-SHA256 簽章保護，簽章就存在檔案本身的 ``"signature"`` 欄位。它涵蓋
+其餘所有欄位的正規化形式，所以重新縮排不會影響，改任何一個值就會失效。載入時不符就
+**fail-closed**\ （default-deny，``UsbAcl.integrity_ok`` 回 ``False``\ ）。這擋住
+偷偷改寫 JSON 想給自己授權的 process。
+
+簽章以前是寫在資料之後的 sidecar ``usb_acl.json.sig``，所以 GUI 與 host session
+（或兩個行程）可能讀到新資料配舊簽章，於是在沒有人動過的檔案上退回全部拒絕。現在
+資料與簽章是同一個檔案、以一次 rename 取代。變更（新增／移除／匯入／設定預設值）
+另外會在重新讀取、修改、寫入的期間持有 ``usb_acl.json.lock``，所以兩個寫入者不會再
+互相蓋掉對方的規則；十秒內拿不到鎖時，變更會丟出 ``UsbAclBusyError`` 且不做任何修改
+（行程死掉留下的鎖會在三十秒後被接手）。
+
+- 舊的兩檔案格式仍可載入，下次儲存時改寫成單一檔案（並移除 ``.sig``）。**比這一版
+  舊的版本讀不懂新檔案**：它會看到有金鑰卻沒有 sidecar，於是全部拒絕。手動編輯檔案
+  現在會讓它失效，除非同時重算簽章——請改用 GUI、``AC_usb_acl_*`` 指令或 ``UsbAcl``。
 
 - 預設簽章金鑰是隨機 32-byte 檔 ``usb_acl.json.key``\ （POSIX 上 mode
   ``0600``\ ），首次儲存時建立。

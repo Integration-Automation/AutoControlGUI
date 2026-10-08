@@ -40,7 +40,7 @@ from je_auto_control.utils.rbac.authorization import (
     current_authorization, resolve_token, user_store_from_env,
 )
 from je_auto_control.utils.rbac.deferred import (
-    DeferredOwner, capture_owner, owner_scope, resolve_owner,
+    DeferredOwner, adopted_scope, capture_owner, owner_scope, resolve_owner,
 )
 from je_auto_control.utils.rbac.policy import (
     authorize_command, capability_for_command, capability_for_route,
@@ -54,7 +54,7 @@ from je_auto_control.utils.rbac.users import (
 __all__ = [
     "AuthorizationContext", "AuthorizationError", "Capability", "DeferredOwner",
     "IssuedToken", "Role", "USERS_ENV", "UserAuthError", "UserRecord", "UserStore",
-    "add_user", "authorization_scope", "authorize_command", "can",
+    "add_user", "adopted_scope", "authorization_scope", "authorize_command", "can",
     "capability_for_command", "capability_for_route", "capability_for_tool",
     "capture_owner", "current_authorization", "default_user_store",
     "denied_command_in", "list_users", "management_store", "owner_scope",

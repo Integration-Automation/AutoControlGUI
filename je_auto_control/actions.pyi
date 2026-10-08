@@ -3194,6 +3194,7 @@ def AC_start_mcp_http_server(
     auth_token: str | None = ...,
     ssl_context: Any = ...,
     user_store: Any = ...,
+    tool_mode: Any = ...,
 ) -> Any:
     """Start and return an :class:`HttpMCPServer`; convenience wrapper."""
 

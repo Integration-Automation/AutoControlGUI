@@ -1,10 +1,17 @@
 """Audit log for MCP tool calls.
 
-Every ``tools/call`` produces one JSONL line with timestamp, tool
-name, sanitised arguments, status (``ok`` / ``error``), and
-duration. The default sink is ``$JE_AUTOCONTROL_MCP_AUDIT`` (or
-``mcp_audit.jsonl`` next to the cwd) so deployments that need a
-forensic trail get it without code changes.
+With a sink configured, every ``tools/call`` produces one JSONL line with
+timestamp, tool name, sanitised arguments, status (``ok`` / ``error`` /
+``cancelled`` / ``denied``), and duration.
+
+**The log is off by default.** The sink is the ``path`` given to
+:class:`AuditLogger`, else the file ``JE_AUTOCONTROL_MCP_AUDIT`` names; with
+neither -- or with the variable empty -- nothing is recorded and no file is
+created anywhere, the working directory included. (This docstring used to
+promise a default ``mcp_audit.jsonl`` in the working directory. No version
+wrote one, and a server must not start leaving a file of tool arguments
+wherever it happens to be launched from; a deployment that needs the trail
+sets the variable, with no code change.)
 
 When the call was made by an authenticated RBAC user the line also carries
 ``user_id`` and ``role``; a call refused for its role is recorded with
@@ -22,7 +29,12 @@ from je_auto_control.utils.rbac.authorization import current_authorization
 
 
 class AuditLogger:
-    """Thread-safe JSONL audit logger for MCP tool calls."""
+    """Thread-safe JSONL audit logger for MCP tool calls; a no-op without a sink.
+
+    ``path`` is the file to append to. ``None`` reads
+    ``JE_AUTOCONTROL_MCP_AUDIT``; if that is unset or empty the logger is
+    disabled (:attr:`enabled` is ``False``) and :meth:`record` does nothing.
+    """
 
     def __init__(self, path: Optional[str] = None) -> None:
         resolved = path
@@ -35,10 +47,12 @@ class AuditLogger:
 
     @property
     def path(self) -> Optional[str]:
+        """The file entries are appended to; ``None`` when the log is off."""
         return self._path
 
     @property
     def enabled(self) -> bool:
+        """Whether a sink is configured, i.e. whether :meth:`record` writes."""
         return self._path is not None
 
     def record(self, *, tool: str, arguments: Dict[str, Any],

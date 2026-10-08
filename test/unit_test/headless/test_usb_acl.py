@@ -244,12 +244,13 @@ def test_save_persists_to_disk_with_safe_mode(tmp_path):
 # ---------------------------------------------------------------------------
 
 
-def test_save_writes_sidecar_signature(tmp_path):
+def test_save_signs_the_file_it_writes(tmp_path):
+    """The signature is in the ACL file itself; the ``.sig`` sidecar is no longer written."""
     path = tmp_path / "acl.json"
     acl = UsbAcl(path=path)
     acl.add_rule(AclRule(vendor_id="1050", product_id="0407", allow=True))
-    sig = path.with_name(path.name + ".sig")
-    assert sig.exists()
+    assert "signature" in json.loads(path.read_text(encoding="utf-8"))
+    assert not path.with_name(path.name + ".sig").exists()
     assert acl.integrity_ok is True
     assert acl.verify_integrity() is True
 

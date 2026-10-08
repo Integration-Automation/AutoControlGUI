@@ -353,6 +353,14 @@ scope——包含你在 ``initialize`` 聲明的能力,以及進行中呼叫佔�
   不帶標頭時照舊接受,不影響沒有 session 概念的 client。
 - 未知或已過期的 id 一律回 **404**,不會改用一個新的 scope 服務它:
   client 手上有伺服器沒有的狀態,它需要知道自己該重新 initialize。
+- 啟用角色(RBAC)時,session 屬於用 ``initialize`` 建立它的那位使用者。其他使用者
+  拿同一個 id 來 ``POST``、開 ``GET`` 串流或 ``DELETE``,一律回 **403**,而且這次嘗試
+  不會讓 session 保持存活。以前只要通過驗證,任何使用者都能用這個 id,因此可以接上
+  別人的串流、結束別人的 session,或看到別人啟用了哪些工具。沒有設定使用者存放檔時
+  沒有人被識別,id 的行為與以前相同。
+- 在任何請求之外註冊或移除的工具(由 watcher 執行緒載入的 plugin),會對每個 session
+  的常駐串流送出 ``notifications/tools/list_changed``。沒有 ``GET`` 串流的 session
+  無處可收。
 - session 有上下界。十分鐘沒被碰過就會被掃掉(常駐串流會讓自己的
   session 保持新鮮),而註冊表滿 128 個時,最久沒動的那個會被淘汰。
 
@@ -432,12 +440,13 @@ client 不用改,可以和 2026-07-28 的 client 並存。
    import je_auto_control as ac
 
    ac.start_mcp_stdio_server(tool_mode="progressive")
-   # HTTP:把以該模式建立的伺服器交給傳輸層
-   ac.start_mcp_http_server(mcp=ac.MCPServer(tool_mode="progressive"))
+   ac.start_mcp_http_server(tool_mode="progressive")
+   ac.HttpMCPServer(tool_mode="static")
 
-``AC_start_mcp_server`` 接受同一個 ``tool_mode`` 參數;環境變數則對所有啟動方式生效,
-包含 ``AC_start_mcp_http_server``。不是這三個值之一時伺服器會拒絕啟動,而不是悄悄地
-提供全部工具。
+``AC_start_mcp_server`` 與 ``AC_start_mcp_http_server`` 接受同一個 ``tool_mode``
+參數;環境變數則對所有啟動方式生效。不是這三個值之一時伺服器會拒絕啟動,而不是悄悄地
+提供全部工具。Dispatcher 的模式在建立時就固定了,所以同時傳 ``tool_mode`` 與另一種
+模式的 ``mcp=`` 會丟出 ``ToolDisclosureError``。
 
 **核心工具** (僅 progressive 模式):
 
@@ -557,6 +566,15 @@ process 內量測兩種模式。以 680 個工具的 registry 量測(2026-10-09,
      }
    }
 
+伺服器啟動之後,在每一種工具模式下都維持這個限制:在執行中的唯讀伺服器上註冊、且沒有
+標為唯讀的工具(透過 ``register_tool``、``ac_load_plugins`` 或 plugin watcher),不會
+出現在 ``tools/list``,呼叫它會得到 ``-32602`` 並在稽核 log 記為 ``denied``。預設的
+``full`` 模式以前只在建立 registry 時過濾,所以這種工具會被列出、也會執行。Plugin
+工具一律註冊為破壞性,因此\ **唯讀伺服器不會執行任何 plugin 工具**;你自己的程式以
+``readOnlyHint`` 為 true 註冊的工具仍然會提供。設了該環境變數時,
+``MCPServer(tools=[...])`` 也會被同樣過濾——內嵌的伺服器若必須忽略該變數,請傳
+``read_only=False``。
+
 把檔案參數限制在根目錄內
 ========================
 
@@ -594,16 +612,33 @@ process 內量測兩種模式。以 680 個工具的 registry 量測(2026-10-09,
 伺服器的工作目錄。
 
 這個標記看的是語意，不是屬性名稱：``ac_json_query`` 的 ``path`` 是 JSONPath，不受影響。
-它**涵蓋不到**的地方：
+
+**只有某些情況下才是路徑的參數**\ 帶第二種標記 ``"format": "path-or-other"``：
+``ac_open_path`` / ``ac_plan_open`` 的 ``target``（路徑或 URL）、``ac_file_association``
+的 ``target``（路徑或副檔名）、``ac_act_in_view`` 的 ``target``（樣板路徑或文字），以及
+``ac_handle_file_dialog`` 的 ``path``。這類值\ *是*\ 路徑時才受根目錄約束，也就是符合
+下列其中一項：
+
+* 看起來是絕對路徑——以 ``/``、``\``、``~`` 或磁碟機（``C:\`` / ``C:/``）開頭，含 UNC
+  共用——不論它是否存在；
+* 是 ``file:`` URL，依它指向的檔案判斷；
+* 相對於伺服器的工作目錄，它指向某個存在的東西（``..``、``notes.txt``）。
+
+其他的值——``https://...``、``.txt``、文字 ``Submit``——原樣通過；通過檢查的值也會原封不動
+交給工具（不會改寫成標準化路徑，因為同一個字串可能就是呼叫者要找的文字）。有兩點要知道：
+設定了根目錄時，看起來像絕對路徑（``/help``）或剛好是根目錄外某個現存檔案名稱的\ *文字*\
+目標會被拒絕；``ac_handle_file_dialog`` 是把字打進別的應用程式，相對名稱的意義由那個程式
+自己的目前目錄決定——伺服器只判斷它判斷得了的部分。
+
+根目錄**涵蓋不到**的地方：
 
 * ``ac_execute_actions`` 與其他執行動作清單的工具——動作可以開任何檔案，這也是它們不屬於
   唯讀工具的原因。
-* 只有某些情況下才是路徑的參數：``ac_open_path`` / ``ac_plan_open`` /
-  ``ac_file_association`` 的 ``target``（路徑、URL 或副檔名）、``ac_act_in_view`` 的
-  ``target``（樣板路徑或文字）、``ac_handle_file_dialog`` 的 ``path``（打進別的應用程式的
-  按鍵）、``ac_launch_process`` / ``ac_shell`` 的 ``argv``，以及自由格式物件裡的路徑
-  （``ac_run_suite`` 的 ``spec``、``ac_run_dag`` 的 ``definition``、``ac_assert_all`` 的
-  ``specs``）。
+* ``ac_launch_process`` 的 ``argv`` 與 ``ac_shell`` 的 ``command``，這是刻意的：命令列就是
+  一個程式，參數的意義由該程式決定，只拒絕看起來像路徑的參數並不能限制任何東西。不要把這些
+  工具提供給你想限制的 client。
+* 自由格式物件裡的路徑（``ac_run_suite`` 的 ``spec``、``ac_run_dag`` 的 ``definition``、
+  ``ac_assert_all`` 的 ``specs``）。
 * 外掛註冊的工具，除非它的 schema 也帶這個標記。
 
 ``ac_resolve_ref`` / ``ac_resolve_refs`` 的 ``file://`` 參照套用同一組根目錄；``env://``
@@ -658,6 +693,10 @@ process 內量測兩種模式。以 680 個工具的 registry 量測(2026-10-09,
 
 稽核 Log
 ========
+
+稽核 log **預設關閉**:沒有設定下面的變數(也沒有把 ``AuditLogger(path=...)``
+交給 ``MCPServer``)時,不會記錄任何東西,也不會建立任何檔案——工作目錄裡也不會;
+先前的 docstring 把工作目錄寫成預設值是錯的。
 
 設定 ``JE_AUTOCONTROL_MCP_AUDIT=/path/to/audit.jsonl``,每次
 ``tools/call`` 都會寫一筆 JSONL:時間戳、工具名稱、過濾過的參數

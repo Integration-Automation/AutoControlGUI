@@ -337,8 +337,10 @@ macOS 的 libusb 對 detach 拋 ``NotImplementedError``，會被容忍跳過
   modal 顯示 vendor/product/serial 與請求存取的 viewer ID。
 - Allow rule 可以靠提示中的「記住」勾選持久化。
 
-**已決（OQ8）：** 已實作 HMAC-SHA256。ACL 旁附一個 ``<acl>.sig``
-sidecar 簽章；載入時驗證，不符就 fail-closed（default-deny、
+**已決（OQ8）：** 已實作 HMAC-SHA256。簽章存在 ACL 檔案本身（``"signature"``；
+舊版寫的是 sidecar ``<acl>.sig``，仍可讀取並在下次儲存時取代，這樣資料與簽章就不會
+來自兩次不同的寫入），變更在 ``<acl>.lock`` 之下進行；載入時驗證，不符就
+fail-closed（default-deny、
 ``integrity_ok`` 為 False），讓偷偷改寫 JSON 的 process 無法在不同時
 偽造簽章的情況下給自己授權。簽章金鑰可插拔——部署可透過建構子的
 ``hmac_key=`` 傳入由平台 keychain 衍生的金鑰；未指定時會在 ACL 旁

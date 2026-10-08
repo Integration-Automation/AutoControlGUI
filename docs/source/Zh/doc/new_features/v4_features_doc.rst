@@ -129,7 +129,13 @@ Builder 項目。視覺與視窗功能的 geometry / IO 操作皆可注入,因�
   ``passphrase`` 欄位)會加密私鑰檔,只拿到檔案副本的人簽不了任何東西;簽章端之後傳
   ``sign_action_file(..., passphrase="...")`` 或設定
   ``JE_AUTOCONTROL_ACTION_SIGNING_PASSPHRASE``。沒有通行碼建立的金鑰照舊可以載入,
-  驗章也從不需要通行碼。行程由下列環境變數設定,
+  驗章也從不需要通行碼。私鑰檔建立時只有擁有者讀得到:POSIX 上是 ``0600``;在
+  Windows 上(權限位元無效,檔案以前會沿用所在資料夾的權限)則是只列出目前使用者、
+  且不繼承的存取清單(在建立檔案的同一個呼叫中設定,不經過 ``icacls``;公鑰仍可
+  讀取)。每位使用者的 HMAC 與加密金鑰檔也以同樣方式建立。其他帳號\ *讀得到*\ 的
+  私鑰或金鑰檔(舊版在個人資料夾以外建立的,或複製進來的)仍會載入,記錄中每個檔案
+  會有一則警告說明誰讀得到;請用 ``icacls <檔案> /inheritance:r /grant:r <使用者>:F``
+  或 ``chmod 600`` 收緊。行程由下列環境變數設定,
   ``action_signing_config()`` 會回報目前讀到的內容:
 
   * ``JE_AUTOCONTROL_ACTION_SIGNING_PRIVATE_KEY`` — 私鑰路徑;只設在簽章機。設了之後

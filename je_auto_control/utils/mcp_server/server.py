@@ -71,7 +71,7 @@ class MCPServer(ConnectionStateMixin, StatelessDispatchMixin, SubscriptionMixin,
     ``tool_mode`` is ``full`` (every tool in ``tools/list``, the default),
     ``progressive`` or ``static``; ``None`` reads ``JE_AUTOCONTROL_MCP_TOOL_MODE``.
     ``read_only`` builds the default registry without mutating tools and, in
-    the two non-full modes, keeps any registered later out of every session.
+    every mode, keeps any registered later from being listed or called.
     """
 
     def __init__(self, tools: Optional[List[MCPTool]] = None,
@@ -138,6 +138,7 @@ class MCPServer(ConnectionStateMixin, StatelessDispatchMixin, SubscriptionMixin,
         self._subscriptions_lock = threading.Lock()
         self._listeners: Dict[Any, Any] = {}  # open subscriptions/listen, by (connection, id)
         self._listeners_lock = threading.Lock()
+        self._list_changed_listeners: List[Callable[[Any], None]] = []
 
     def register_tool(self, tool: MCPTool) -> None:
         """Add or replace a tool in the live registry.

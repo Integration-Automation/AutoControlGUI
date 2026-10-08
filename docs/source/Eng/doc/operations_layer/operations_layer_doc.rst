@@ -169,7 +169,10 @@ surface, each of which needs the ``manage_users`` capability:
 
 - ``AC_user_add`` (``user_id``, ``role``, ``display_name``, ``tags``),
   ``AC_user_remove``, ``AC_user_set_role``, ``AC_user_rotate_token`` and
-  ``AC_user_list`` in an action list -- so also through ``POST /execute``;
+  ``AC_user_list`` in an action list -- so also through ``POST /execute``.
+  The Script Builder lists all five under **Security**; a run's result pane
+  shows ``AC_user_add`` / ``AC_user_rotate_token`` with the token masked, so
+  read a new token from the Users group, the CLI or a script instead;
 - the MCP tools ``ac_user_add`` / ``ac_user_remove`` / ``ac_user_set_role`` /
   ``ac_user_rotate_token`` / ``ac_user_list``;
 - the **Users (RBAC)** group of the REST API tab (commands in the Actions
@@ -252,6 +255,17 @@ privilege for work already registered, a user who no longer has
 failed), and a promoted user gains the new role. Work registered without RBAC
 -- from the GUI, a script, a server with no user store -- has no owner and
 runs as before.
+
+A screen-observer watch (``AC_observe_add``, the ``ac_observe_add`` MCP tool,
+``ScreenObserver.add``) is deferred work of the same kind: its callback fires
+as the user who added it (``rule.owner``), whoever's ``AC_observe_poll`` or
+whichever thread detects the transition, and a removed or demoted owner's
+callback is refused. A state machine (``StateMachine``, ``AC_run_state_machine``)
+and a planner run (``run_from_description``, ``AC_llm_run``) normally execute
+inside the request that asked for them and are that request's; a
+``StateMachine`` also remembers the user who built it, and
+``run_from_description`` takes ``owner=capture_owner()``, so one handed to
+another thread still runs as that user instead of as nobody.
 
 Status calls (``AC_rest_api_status``, the REST API tab) report
 ``"rbac": true``, ``"users_path"`` and ``"token": null`` while a user store is

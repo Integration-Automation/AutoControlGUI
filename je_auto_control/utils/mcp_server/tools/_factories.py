@@ -2198,7 +2198,7 @@ def smart_wait_tools() -> List[MCPTool]:
             description=("Scroll a 'target' (kind=image template path / text) "
                          "into view, wait until it is actionable, then click it "
                          "('button'). Returns {acted, coords, scrolls}."),
-            input_schema=schema({"target": {"type": "string"},
+            input_schema=schema({"target": {"type": "string", "format": "path-or-other"},
                                  "kind": {"type": "string"},
                                  "direction": {"type": "string"},
                                  "max_scrolls": {"type": "integer"},
@@ -2623,7 +2623,7 @@ def process_and_shell_tools() -> List[MCPTool]:
             description=("Open a file with its OS-registered default app (or a "
                          "'verb' like print), or a URL in the default browser. "
                          "'target' is a path or URL. Returns {opened}."),
-            input_schema=schema({"target": {"type": "string"},
+            input_schema=schema({"target": {"type": "string", "format": "path-or-other"},
                                  "verb": {"type": "string"}},
                                 required=["target"]),
             handler=h_system.open_path,
@@ -2634,7 +2634,7 @@ def process_and_shell_tools() -> List[MCPTool]:
             description=("Classify how a file path / URL would be opened without "
                          "opening it (pure): {kind, target, backend, verb} "
                          "(+scheme for URLs). Rejects non-allow-listed schemes."),
-            input_schema=schema({"target": {"type": "string"},
+            input_schema=schema({"target": {"type": "string", "format": "path-or-other"},
                                  "verb": {"type": "string"}},
                                 required=["target"]),
             handler=h_system.plan_open,
@@ -2697,7 +2697,7 @@ def process_and_shell_tools() -> List[MCPTool]:
             description=("Which application is registered to open a file type. "
                          "'target' is a path / .ext / bare ext. Returns {ext, "
                          "command, exe, friendly, content_type} (Windows)."),
-            input_schema=schema({"target": {"type": "string"}},
+            input_schema=schema({"target": {"type": "string", "format": "path-or-other"}},
                                 required=["target"]),
             handler=h_system.file_association,
             annotations=READ_ONLY,
@@ -8098,7 +8098,7 @@ def unattended_tools() -> List[MCPTool]:
                          "it, and confirm (default Enter). Returns "
                          "{handled, title}."),
             input_schema=schema({
-                "path": {"type": "string"},
+                "path": {"type": "string", "format": "path-or-other"},
                 "action": {"type": "string"},
                 "window_title": {"type": "string"},
                 "timeout_s": {"type": "number"},

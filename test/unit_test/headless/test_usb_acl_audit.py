@@ -26,7 +26,8 @@ def _signed_acl(tmp_path, rules=()):
 def test_deleting_the_signature_does_not_make_a_legacy_file(tmp_path):
     path = _signed_acl(tmp_path, [("1050", "0407", False)])
     path.write_text(json.dumps({"version": 1, "default": "allow", "rules": []}), encoding="utf-8")
-    (tmp_path / "usb_acl.json.sig").unlink()
+    # No sidecar since the signature moved into the file; the rewrite drops it either way.
+    (tmp_path / "usb_acl.json.sig").unlink(missing_ok=True)
     acl = UsbAcl(path=path)
     assert acl.integrity_ok is False
     assert acl.decide(vendor_id="1050", product_id="0407", serial=None) == "deny"
@@ -36,7 +37,7 @@ def test_a_damaged_file_is_kept_aside_not_overwritten(tmp_path):
     path = _signed_acl(tmp_path, [("aaaa", "0001", True), ("bbbb", "0002", True)])
     damaged = path.read_bytes()[:-3]
     path.write_bytes(damaged)
-    (tmp_path / "usb_acl.json.sig").unlink()
+    (tmp_path / "usb_acl.json.sig").unlink(missing_ok=True)
     (tmp_path / "usb_acl.json.key").unlink()
     acl = UsbAcl(path=path)
     assert acl.decide(vendor_id="aaaa", product_id="0001", serial=None) == "deny"

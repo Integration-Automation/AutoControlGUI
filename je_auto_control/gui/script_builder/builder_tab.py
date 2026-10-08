@@ -26,7 +26,8 @@ from je_auto_control.gui.script_builder.command_schema import (
 from je_auto_control.gui.script_builder.step_form_view import StepFormView
 from je_auto_control.gui.script_builder.step_list_view import StepTreeView
 from je_auto_control.gui.script_builder.step_model import (
-    Step, actions_to_steps, load_action_file, save_action_file, steps_to_actions,
+    Step, actions_to_steps, displayable_record, load_action_file, save_action_file,
+    steps_to_actions,
 )
 from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.executor.action_executor import execute_action
@@ -202,7 +203,9 @@ class ScriptBuilderTab(TranslatableMixin, QWidget):
             self._result.setPlainText(_t("task_stopping"))
 
     def _show_run_result(self, result: object) -> None:
-        self._result.setPlainText(json.dumps(result, indent=2, default=str, ensure_ascii=False))
+        # Masked first: AC_user_add / AC_user_rotate_token answer with a token.
+        self._result.setPlainText(json.dumps(
+            displayable_record(result), indent=2, default=str, ensure_ascii=False))
 
     def _show_run_error(self, error: object) -> None:
         if was_stopped(error):

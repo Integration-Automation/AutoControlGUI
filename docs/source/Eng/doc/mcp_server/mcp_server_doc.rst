@@ -399,6 +399,17 @@ offer.
 - An unknown or expired id is refused with **404**, not served under
   a fresh scope: the client holds state the server does not, and
   needs to know to re-initialize.
+- With roles on (RBAC), a session belongs to the user whose ``initialize``
+  minted it. Any other user who presents its id -- on a ``POST``, on the
+  ``GET`` stream or on ``DELETE`` -- is refused with **403**, and the attempt
+  does not keep the session alive. The id used to be honoured for every
+  authenticated user, so one user could attach to another's stream, end
+  their session, or read which tools they had enabled. Without a user store
+  nobody is identified and the id works as before.
+- A tool registered or removed outside any request -- a plugin picked up by
+  the watcher thread -- sends ``notifications/tools/list_changed`` down the
+  standing stream of every session. A session with no ``GET`` stream has
+  nowhere to receive it.
 - Sessions are bounded. They are swept after ten minutes untouched
   (a standing stream keeps its own session fresh), and the registry
   evicts the least recently seen once it holds 128.
@@ -504,13 +515,15 @@ Choose the mode with ``JE_AUTOCONTROL_MCP_TOOL_MODE``, with
    import je_auto_control as ac
 
    ac.start_mcp_stdio_server(tool_mode="progressive")
-   # HTTP: hand the transport a server built in that mode
-   ac.start_mcp_http_server(mcp=ac.MCPServer(tool_mode="progressive"))
+   ac.start_mcp_http_server(tool_mode="progressive")
+   ac.HttpMCPServer(tool_mode="static")
 
-``AC_start_mcp_server`` takes the same ``tool_mode`` argument, and the
-variable reaches every way of starting a server, ``AC_start_mcp_http_server``
-included. A value that is none of the three stops the server from starting
-rather than quietly offering everything.
+``AC_start_mcp_server`` and ``AC_start_mcp_http_server`` take the same
+``tool_mode`` argument, and the variable reaches every way of starting a
+server. A value that is none of the three stops the server from starting
+rather than quietly offering everything. A dispatcher's mode is fixed when it
+is built, so ``tool_mode`` passed together with an ``mcp=`` that is in
+another mode raises ``ToolDisclosureError``.
 
 **The core tools** (progressive mode only):
 
@@ -648,6 +661,18 @@ clipboard reads, history, ...) survive:
      }
    }
 
+The server holds to this after it has started, in every tool mode: a tool
+that is not marked read-only and is registered on a running read-only server
+-- by ``register_tool``, ``ac_load_plugins`` or the plugin watcher -- is left
+out of ``tools/list`` and a call to it is answered ``-32602`` and recorded in
+the audit log as ``denied``. In the default ``full`` mode the filter used to
+run only when the registry was built, so such a tool was listed and ran.
+Plugin tools are registered as destructive, so **a read-only server runs no
+plugin tool**; a tool your own code registers with ``readOnlyHint`` true is
+still offered. ``MCPServer(tools=[...])`` with the variable set is filtered
+the same way -- pass ``read_only=False`` to an embedded server that must
+ignore the variable.
+
 Confining file arguments to root directories
 ============================================
 
@@ -693,18 +718,41 @@ canonical absolute path that was checked, so a relative path is relative to
 the server's working directory.
 
 The annotation follows meaning, not the property's name: ``ac_json_query``'s
-``path`` is a JSONPath expression and is left alone. What it does **not**
-reach:
+``path`` is a JSONPath expression and is left alone.
+
+**Arguments that are a path only sometimes** carry a second annotation,
+``"format": "path-or-other"``: ``target`` of ``ac_open_path`` /
+``ac_plan_open`` (path or URL), of ``ac_file_association`` (path or
+extension) and of ``ac_act_in_view`` (template path or text), and ``path`` of
+``ac_handle_file_dialog``. Such a value is held to the roots when it *is* a
+path, which means one of:
+
+* it looks like an absolute path -- it starts with ``/``, ``\``, ``~`` or a
+  drive (``C:\`` / ``C:/``), UNC shares included -- whether or not it exists;
+* it is a ``file:`` URL, judged by the file it names;
+* it names something that exists, relative to the server's working directory
+  (``..``, ``notes.txt``).
+
+Anything else -- ``https://...``, ``.txt``, the text ``Submit`` -- passes
+untouched, and a value that passes the check reaches the tool exactly as it
+was sent (it is not rewritten to the canonical path, because the same string
+may be the text the caller meant). Two consequences to know about: a *text*
+target that looks like an absolute path (``/help``) or happens to name an
+existing file outside the roots is refused while roots are configured, and
+``ac_handle_file_dialog`` types into another application, whose own current
+directory decides what a relative name means -- only what the server can
+judge is judged.
+
+What the roots do **not** reach:
 
 * ``ac_execute_actions`` and the other tools that run an action list — an
   action can open any file, which is why they are not read-only tools.
-* Arguments that are a path only sometimes: ``target`` of ``ac_open_path`` /
-  ``ac_plan_open`` / ``ac_file_association`` (path or URL or extension) and of
-  ``ac_act_in_view`` (template path or text), ``ac_handle_file_dialog``'s
-  ``path`` (keystrokes typed into another application), ``argv`` of
-  ``ac_launch_process`` / ``ac_shell``, and paths inside free-form objects
-  (``ac_run_suite`` ``spec``, ``ac_run_dag`` ``definition``,
-  ``ac_assert_all`` ``specs``).
+* ``argv`` of ``ac_launch_process`` and ``command`` of ``ac_shell``, on
+  purpose: a command line is a program, the program decides what its
+  arguments mean, and refusing the ones that read as paths would confine
+  nothing. Do not offer these tools to a client you want confined.
+* Paths inside free-form objects (``ac_run_suite`` ``spec``, ``ac_run_dag``
+  ``definition``, ``ac_assert_all`` ``specs``).
 * Tools registered by plugins, unless their schema carries the annotation.
 
 ``ac_resolve_ref`` / ``ac_resolve_refs`` follow the same roots for
@@ -772,6 +820,11 @@ handshake era's unprompted run.
 
 Audit log
 =========
+
+The audit log is **off by default**: without the variable below (and
+without an ``AuditLogger(path=...)`` handed to ``MCPServer``) nothing is
+recorded and no file is created -- not in the working directory either, which
+an earlier docstring wrongly named as the default.
 
 Set ``JE_AUTOCONTROL_MCP_AUDIT=/path/to/audit.jsonl`` to append one
 JSONL record per ``tools/call``: timestamp, tool name, sanitised

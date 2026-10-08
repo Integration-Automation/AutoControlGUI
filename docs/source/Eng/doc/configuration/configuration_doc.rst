@@ -218,7 +218,8 @@ See :doc:`../mcp_server/mcp_server_doc`.
        none.
    * - ``JE_AUTOCONTROL_MCP_AUDIT``
      - unset / a path
-     - JSON-lines file that receives one record per ``tools/call``.
+     - JSON-lines file that receives one record per ``tools/call``. Unset or
+       empty: no audit log is written, anywhere.
    * - ``JE_AUTOCONTROL_MCP_ERROR_SHOTS``
      - unset / a directory
      - A screenshot is saved there each time a tool fails.

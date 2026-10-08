@@ -18,12 +18,19 @@ Sessions are bounded in both directions: idle ones are swept, and the
 registry never grows past ``max_sessions``. Whenever a session is dropped
 the registry reports it through ``on_drop`` so the transport can release the
 dispatcher state held under that id.
+
+With RBAC a session belongs to the user whose ``initialize`` minted it. The
+id alone is not a credential then: another authenticated user who presents it
+is refused (:class:`SessionOwnerMismatch`) instead of attaching to its stream,
+deleting it or dispatching into its scope. Without RBAC nobody is identified,
+every session's owner is ``None``, and the id works as it always has.
 """
 import secrets
 import threading
 import time
 from typing import Any, Callable, Dict, List, Optional
 
+from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 
 # MCP names the header in this casing; HTTP lookups are case-insensitive.
@@ -38,6 +45,13 @@ DEFAULT_IDLE_TIMEOUT = 600.0
 # Bytes of entropy in a session id. The spec asks for cryptographically
 # secure and globally unique; 32 bytes is comfortably both.
 _ID_ENTROPY_BYTES = 32
+#: "Whoever asks": the default of the registry's lookups, used by callers that
+#: are the transport itself (heartbeat, shutdown) rather than a peer.
+ANY_OWNER: Any = object()
+
+
+class SessionOwnerMismatch(AutoControlException, PermissionError):
+    """A session id was presented by a user other than the one who created it."""
 
 
 class HttpSession:
@@ -51,8 +65,11 @@ class HttpSession:
     prompted.
     """
 
-    def __init__(self, session_id: str, now: float) -> None:
+    def __init__(self, session_id: str, now: float, owner: Optional[str] = None) -> None:
         self.id = session_id
+        #: The RBAC user id whose ``initialize`` minted this session; ``None``
+        #: when the server identifies nobody (no user store).
+        self.owner = owner
         self.created_at = now
         self.last_seen = now
         self.closed = threading.Event()
@@ -89,6 +106,11 @@ class HttpSession:
         with self._lock:
             if self._stream_writer is writer:
                 self._stream_writer = None
+
+
+def _is_foreign(session: HttpSession, owner: Any) -> bool:
+    """Whether ``owner`` is somebody other than the user ``session`` belongs to."""
+    return owner is not ANY_OWNER and session.owner != owner
 
 
 def _abandoned(session: HttpSession) -> bool:
@@ -153,8 +175,8 @@ class SessionRegistry:
         with self._lock:
             return len(self._sessions)
 
-    def create(self) -> HttpSession:
-        """Mint a session, sweeping expired ones and honouring the cap."""
+    def create(self, owner: Optional[str] = None) -> HttpSession:
+        """Mint a session for ``owner``, sweeping expired ones and honouring the cap."""
         session_id = secrets.token_urlsafe(_ID_ENTROPY_BYTES)
         now = self._clock()
         dropped: List[HttpSession] = []
@@ -165,34 +187,55 @@ class SessionRegistry:
                 del self._sessions[victim.id]
                 dropped.append(victim)
                 _log_eviction(victim, self._max_sessions)
-            session = HttpSession(session_id, now)
+            session = HttpSession(session_id, now, owner)
             self._sessions[session_id] = session
         self._announce(dropped)
         return session
 
-    def get(self, session_id: Optional[str]) -> Optional[HttpSession]:
-        """Return the live session for ``session_id``, touching it."""
+    def get(self, session_id: Optional[str], owner: Any = ANY_OWNER) -> Optional[HttpSession]:
+        """Return the live session for ``session_id``, touching it.
+
+        With ``owner`` given, a session that belongs to someone else raises
+        :class:`SessionOwnerMismatch` and is *not* touched: a stranger who
+        knows the id must not be able to keep it off the idle sweep either.
+        """
         if not session_id:
             return None
         now = self._clock()
         dropped: List[HttpSession] = []
+        foreign = False
         with self._lock:
             dropped.extend(self._expired_locked(now))
             session = self._sessions.get(session_id)
-            if session is not None:
+            foreign = session is not None and _is_foreign(session, owner)
+            if session is not None and not foreign:
                 session.last_seen = now
         self._announce(dropped)
+        if foreign:
+            raise SessionOwnerMismatch("this session belongs to another user")
         return session
 
-    def terminate(self, session_id: Optional[str]) -> Optional[HttpSession]:
-        """Drop ``session_id`` and close its stream; None when unknown."""
+    def terminate(self, session_id: Optional[str], owner: Any = ANY_OWNER) -> Optional[HttpSession]:
+        """Drop ``session_id`` and close its stream; None when unknown.
+
+        With ``owner`` given, someone else's session is left alone and
+        :class:`SessionOwnerMismatch` is raised.
+        """
         if not session_id:
             return None
         with self._lock:
-            session = self._sessions.pop(session_id, None)
+            session = self._sessions.get(session_id)
+            if session is not None and _is_foreign(session, owner):
+                raise SessionOwnerMismatch("this session belongs to another user")
+            self._sessions.pop(session_id, None)
         if session is not None:
             self._announce([session])
         return session
+
+    def live(self) -> List[HttpSession]:
+        """A snapshot of the sessions held right now, without touching them."""
+        with self._lock:
+            return list(self._sessions.values())
 
     def terminate_all(self) -> List[HttpSession]:
         """Drop every session — used when the transport shuts down."""
@@ -242,6 +285,6 @@ def session_id_from_headers(headers: Any) -> Optional[str]:
 
 
 __all__ = [
-    "DEFAULT_IDLE_TIMEOUT", "DEFAULT_MAX_SESSIONS", "HttpSession",
-    "SESSION_HEADER", "SessionRegistry", "session_id_from_headers",
+    "ANY_OWNER", "DEFAULT_IDLE_TIMEOUT", "DEFAULT_MAX_SESSIONS", "HttpSession",
+    "SESSION_HEADER", "SessionOwnerMismatch", "SessionRegistry", "session_id_from_headers",
 ]

@@ -15,7 +15,10 @@ of reading as tampered. Keys are PEM: PKCS#8 for the private half (created
 0600), SubjectPublicKeyInfo for the public half. The private half is
 encrypted when a passphrase is given at creation; the signer then needs the
 same passphrase (an argument, or ``JE_AUTOCONTROL_ACTION_SIGNING_PASSPHRASE``).
-A key created without one stays loadable as it is.
+A key created without one stays loadable as it is. On Windows, where mode
+bits do nothing, the private file is created with an access list naming the
+current user only; a private key that other accounts can read -- on either
+platform -- is reported with a warning when it is loaded, and still loads.
 
 ``cryptography`` is imported lazily -- it has no Windows arm64 wheel, and HMAC
 signing must keep working without it. This module is GUI-free and imports no Qt.
@@ -29,6 +32,7 @@ from types import SimpleNamespace
 from typing import Any, Dict, Optional, Union
 
 from je_auto_control.utils.action_signing._key_file import write_new_file
+from je_auto_control.utils.action_signing._private_file import warn_if_exposed
 from je_auto_control.utils.action_signing.config import (
     PASSPHRASE_ENV, action_signing_config, signing_passphrase,
 )
@@ -129,6 +133,8 @@ def _load_private_key(path: PathLike, passphrase: Passphrase = None) -> Any:
     crypto = _ed25519()
     target = Path(path)
     data = _read_key_file(target, "private")
+    # Not refused: a key copied in from elsewhere still signs. Said once.
+    warn_if_exposed(target, "the private signing key")
     secret: Optional[bytes] = None
     if b"ENCRYPTED" in data:
         secret = _passphrase_bytes(passphrase) or signing_passphrase()
