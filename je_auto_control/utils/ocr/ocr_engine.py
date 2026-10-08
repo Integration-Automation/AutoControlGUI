@@ -15,6 +15,7 @@ from dataclasses import dataclass
 from typing import List, Optional, Pattern, Sequence, Tuple, Union
 
 from je_auto_control.utils.exception.exceptions import AutoControlActionException
+from je_auto_control.utils.executor.run_control import pause
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.monitor_layout.logical_frame import grab_logical
 from je_auto_control.utils.ocr.backends import (
@@ -202,7 +203,7 @@ def wait_for_text(target: str,
         except AutoControlActionException:
             if time.monotonic() >= deadline:
                 break
-            time.sleep(poll)
+            pause(poll, time.sleep)
     raise AutoControlActionException(f"OCR: wait_for_text timeout: {target!r}")
 
 

@@ -411,6 +411,16 @@ counts only on the thread that made it. To run something on another thread on
 behalf of the run, hand it the values (or open an ``execution_scope`` there).
 Coroutines and tasks on the binding thread share the run.
 
+The same rule holds for the other state that belongs to the calling thread:
+the RBAC caller a request is served as (``authorization_scope`` /
+``current_authorization``), the device bound by ``use_device``, the labels of
+``heal_context`` and the stop token of a stoppable run. A thread started
+inside one of them starts without it on every build, so a scheduler or
+observer thread first started while an admin's request was being served does
+not go on running as that admin on free-threaded Python. Code that hands work
+to another thread on purpose passes the value along and binds it there, as
+``AC_parallel`` does for the caller and the stop token.
+
 Four more callers have a scope chosen for them rather than the process scope:
 
 * ``je_auto_control run --dry-run --var name=value`` seeds the variables into
@@ -545,6 +555,14 @@ and stop it from any other entry point of the same process::
 ``AC_stop_execution`` without ``run_id`` (and ``stop_execution()``) stops every
 stoppable run except the caller's own.
 
+Over MCP the same two are the tools ``ac_stop_execution`` (``run_id``,
+``reason``; needs ``drive_input`` and is absent from a read-only server) and
+``ac_list_executions`` (read-only). There is no separate "run stoppably" tool:
+``ac_execute_actions`` and ``ac_execute_action_file`` take any action list, so
+the list itself carries the ``AC_run_stoppable`` block shown above. A ChatOps
+command whose run is stopped replies ``<command> stopped.`` (with the reason
+in parentheses) instead of reporting a failure.
+
 What a stop does:
 
 * **Checked** before every action, at every pass of ``AC_loop`` /
@@ -552,6 +570,21 @@ What a stop does:
   (also with an empty body), and inside the waits of ``AC_sleep``,
   ``AC_wait_image``, ``AC_wait_pixel`` and the ``AC_retry`` back-off, which
   wake at once. ``AC_parallel`` branches stop with their run.
+* **Wakes the polling waits** as well -- they sleep between two probes on
+  ``run_control.pause``, which is a plain ``time.sleep`` outside a stoppable
+  run: ``AC_wait_window``, ``AC_wait_text``, ``AC_expect_poll``,
+  ``AC_assert_eventually``, the smart waits (``AC_wait_screen_stable``,
+  ``AC_wait_pixel_changes``, ``AC_wait_region_idle``,
+  ``AC_wait_clipboard_change``, ``AC_wait_image_gone``, ``AC_wait_text_gone``,
+  ``AC_wait_color``, ``AC_wait_window_title``, ``AC_wait_window_closed``,
+  ``AC_wait_for_file``, ``AC_wait_for_port``, ``AC_wait_for_process``),
+  ``AC_wait_actionable``, ``AC_wait_until_app_idle``, ``AC_wait_for_unlock``,
+  ``AC_wait_for_composition_commit``, ``AC_android_wait_for_app`` /
+  ``AC_ios_wait_for_app``, the dialog wait of ``AC_handle_file_dialog``, the
+  ``verify`` poll of ``AC_self_heal_click``, an ``after`` timer of
+  ``AC_run_state_machine``, and the timed holds of ``AC_hold_key``,
+  ``AC_input_sequence`` (``wait`` steps) and ``AC_replay_timeline`` (which
+  release what they hold on the way out).
 * **Raises** ``ExecutionStopped`` (an ``AutoControlException``) on the run's
   own thread. It is never recorded-and-continued, whatever ``raise_on_error``
   says, and ``AC_try`` / ``AC_retry`` do not catch it: ``catch`` is skipped.
@@ -566,9 +599,12 @@ What a stop does:
   next checkpoint.
 
 What it does not do: interrupt a command that is already inside its backend
-(one image search, one OCR read, one HTTP request, a wrapper's own
-``time.sleep``). The run ends when that command returns. Two active runs
-cannot share a ``run_id``.
+(one image search, one OCR read, one HTTP request, one shell command, a
+wrapper's own ``time.sleep``). The run ends when that command returns. Also
+not woken: ``AC_wait_for_focus_change`` (a single native UI Automation wait),
+the sub-second settle waits after focusing a window, and the pacing sleeps
+inside one gesture (``AC_click_mouse`` with ``interval``, humanized moves and
+typing, tween drags). Two active runs cannot share a ``run_id``.
 
 GUI: the Script, Script Builder, LLM Planner, Record (playback), Test Suites
 and ChatOps tabs execute off the GUI thread, one run at a time per tab, and

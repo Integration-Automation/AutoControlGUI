@@ -22,6 +22,7 @@ import threading
 from time import monotonic
 from typing import Any, Callable, Dict, Optional, Protocol, runtime_checkable
 
+from je_auto_control.utils.executor.run_control import checkpoint
 from je_auto_control.wrapper.device_context import (
     MOBILE_PLATFORMS, AppState, DeviceCapability, DeviceError, DeviceSession,
     DeviceTimeoutError,
@@ -150,7 +151,8 @@ def wait_for_app(session: DeviceSession, app_id: str, *, timeout_s: float = 10.0
                  state: AppState = AppState.FOREGROUND) -> AppState:
     """Wait until ``app_id`` reaches ``state``; raises :class:`DeviceTimeoutError` if it does not.
 
-    Cancelling the session ends the wait at the next poll.
+    Cancelling the session, or stopping the stoppable run this is part of,
+    ends the wait at the next poll.
     """
     wanted = AppState(state)
     deadline = monotonic() + float(timeout_s)
@@ -163,6 +165,7 @@ def wait_for_app(session: DeviceSession, app_id: str, *, timeout_s: float = 10.0
                 f"{app_id} is {current.value}, not {wanted.value}, after {float(timeout_s):g}s")
         if session.wait_cancelled(_WAIT_POLL_S):
             session.check_usable()
+        checkpoint()
 
 
 def accept_alert(session: DeviceSession) -> str:

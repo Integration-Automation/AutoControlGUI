@@ -61,7 +61,9 @@ list-changed 通知與 elicitation。
 
 動作執行器 / 歷程
   ``ac_execute_actions``、``ac_execute_action_file``、
-  ``ac_list_action_commands``、``ac_list_run_history``。
+  ``ac_list_action_commands``、``ac_list_run_history``、
+  ``ac_stop_execution``、``ac_list_executions``（停止／列出可停止的執行；把清單包進
+  ``AC_run_stoppable`` 就是可停止的）。
 
 排程 / 觸發 / 熱鍵
   ``ac_scheduler_add_job``、``ac_scheduler_remove_job``、

@@ -12,6 +12,7 @@ import math
 import time
 from typing import Any, Callable, Dict, List, Optional
 
+from je_auto_control.utils.executor import run_control
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 
 Sink = Callable[[Dict[str, Any]], None]
@@ -80,19 +81,26 @@ def _release_held(dispatch: Sink, held: List[str]) -> None:
             )
 
 
+def _stoppable_sleep(seconds: float) -> None:
+    """``time.sleep`` that a stop of the surrounding stoppable run wakes."""
+    run_control.pause(seconds, time.sleep)
+
+
 def hold_key(key: str, duration_s: float, *, rate_hz: Optional[float] = None,
              sink: Optional[Sink] = None,
              sleep: Optional[Callable[[float], None]] = None) -> Dict[str, Any]:
     """Hold or auto-repeat ``key`` for ``duration_s``; return the dispatched plan.
 
-    ``wait`` ops go to ``sleep`` (default :func:`time.sleep`); key ops go to
-    ``sink`` (default: the real keyboard backend). A KeyboardInterrupt during
-    the hold wait, or a failing release, still releases the key via the finally
+    ``wait`` ops go to ``sleep`` (default: ``run_control.pause``, a plain
+    ``time.sleep`` that a stop of the surrounding stoppable run wakes); key ops
+    go to ``sink`` (default: the real keyboard backend). A stop or a
+    KeyboardInterrupt during the hold wait, or a failing release, still
+    releases the key via the finally
     block (auto-repeat plans only ``type`` keys, so nothing is held there).
     """
     plan = plan_key_hold(key, duration_s, rate_hz=rate_hz)
     dispatch = sink or _default_sink
-    pause = sleep or time.sleep
+    pause = sleep or _stoppable_sleep
     held: List[str] = []
     try:
         for event in plan:

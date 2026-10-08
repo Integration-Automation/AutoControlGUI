@@ -28,6 +28,7 @@ from typing import Any, Callable, Mapping, Optional, Sequence, Tuple
 from je_auto_control.utils.exception.exceptions import (
     AutoControlException, ImageNotFoundException,
 )
+from je_auto_control.utils.executor.run_control import pause
 
 VERIFY_IMAGE_GONE = "image_gone"
 VERIFY_IMAGE_PRESENT = "image_present"
@@ -149,7 +150,7 @@ def _poll(probe: Probe, kind: str, timeout_s: float, poll_s: float,
 def build_verifier(spec: Mapping[str, Any], *, template_path: Optional[str] = None,
                    screen_region: Region = None,
                    clock: Callable[[], float] = time.monotonic,
-                   sleep: Callable[[float], None] = time.sleep,
+                   sleep: Callable[[float], None] = pause,
                    ) -> Callable[[Any], bool]:
     """Turn a ``verify`` object into the check :func:`self_heal_click` calls.
 

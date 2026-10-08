@@ -5,6 +5,7 @@ import time
 from typing import Any, Callable, Dict, Mapping, Optional
 
 from je_auto_control.utils.exception.exceptions import AutoControlException
+from je_auto_control.utils.executor.run_control import pause
 from je_auto_control.utils.rbac.deferred import adopted_scope, capture_owner
 from je_auto_control.utils.script_vars.execution import run_level_scope
 
@@ -130,7 +131,7 @@ class StateMachine:
                 raise StateMachineError(
                     f"no transition fired in state {state_name!r}",
                 )
-            time.sleep(min(wait_s, _TIMER_POLL_S))
+            pause(min(wait_s, _TIMER_POLL_S), time.sleep)
             self._check_timeout(started_at, state_name)
 
     def _target(self, trans: Mapping[str, Any], state_name: str) -> str:

@@ -8,7 +8,9 @@ or the ``AC_run_stoppable`` block -- carries a :class:`StopToken`:
 * The executor checks it **before every action**, at every loop pass, and the
   waits of the block commands (``AC_sleep``, ``AC_wait_image``,
   ``AC_wait_pixel``, the ``AC_retry`` back-off) sleep on it, so they wake the
-  moment a stop is requested.
+  moment a stop is requested. So do the polling waits outside the executor
+  (``AC_wait_window``, ``AC_wait_text``, the smart waits, ``AC_expect_poll``
+  and the rest): between two probes they sleep on :func:`pause`.
 * A requested stop raises :class:`ExecutionStopped` on the run's own thread.
   It is never recorded-and-continued and ``AC_try`` / ``AC_retry`` do not
   catch it, but it is an ordinary exception: every ``finally`` on the way out
@@ -27,16 +29,21 @@ run ends when that command returns.
 
 Without a token nothing here does anything: ``executor.execute_action(...)``
 called from plain Python behaves exactly as before.
+
+A run is the thread that entered it. A thread started inside a run is not
+part of it -- on every build, including a free-threaded one, where a new
+thread inherits its creator's context variables -- unless it is handed the
+token and binds it with :func:`bound_stop_token`, as ``AC_parallel`` does.
 """
 import threading
 import time
 import uuid
 from contextlib import contextmanager
-from contextvars import ContextVar
 from typing import Any, Callable, Dict, Iterator, List, Optional, Tuple
 
 from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
+from je_auto_control.utils.thread_bound import ThreadBoundVar
 
 
 class ExecutionStopped(AutoControlException):
@@ -119,8 +126,12 @@ class StopToken:
         return held
 
 
-_CURRENT: ContextVar[Optional[StopToken]] = ContextVar("je_auto_control_stop_token", default=None)
-_SHIELDED: ContextVar[int] = ContextVar("je_auto_control_stop_shield", default=0)
+# Thread-bound: where a new thread inherits its creator's context variables (a
+# free-threaded build), a scheduler or observer thread first started inside a
+# run would otherwise answer to that run's token for ever -- and a stop is
+# sticky. A thread joins a run only through bound_stop_token().
+_CURRENT: ThreadBoundVar[Optional[StopToken]] = ThreadBoundVar("je_auto_control_stop_token", None)
+_SHIELDED: ThreadBoundVar[int] = ThreadBoundVar("je_auto_control_stop_shield", 0)
 _REGISTRY_LOCK = threading.Lock()
 _ACTIVE: Dict[str, StopToken] = {}
 
@@ -144,14 +155,18 @@ def checkpoint() -> None:
     raise ExecutionStopped(token.run_id, token.reason)
 
 
-def pause(seconds: float) -> None:
+def pause(seconds: float, sleep: Optional[Callable[[float], Any]] = None) -> None:
     """Sleep ``seconds``; inside a stoppable run, wake and raise on a stop.
 
-    Outside one this is exactly ``time.sleep(seconds)``.
+    Outside one this is exactly ``time.sleep(seconds)`` -- or ``sleep(seconds)``
+    when the caller hands in the sleep it used before it became stop-aware,
+    which keeps a module's own ``time.sleep`` the seam its tests replace.
+    This is what every polling wait reachable from an ``AC_*`` command sleeps
+    on between two probes, so a stop ends the wait instead of its timeout.
     """
     token = _CURRENT.get()
     if token is None or (_SHIELDED.get() and not token.forced):
-        time.sleep(seconds)
+        (sleep if sleep is not None else time.sleep)(seconds)
         return
     checkpoint()
     if token.wait(seconds):

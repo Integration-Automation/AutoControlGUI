@@ -22,6 +22,7 @@ import sys
 import time
 from typing import Any, Callable, Dict, List, Optional, Sequence
 
+from je_auto_control.utils.executor.run_control import pause
 from je_auto_control.utils.session_guard import is_session_locked
 from je_auto_control.utils.session_guard.session_guard import LockProbe
 from je_auto_control.utils.timeouts import clamp_poll_interval, deadline_after
@@ -120,7 +121,7 @@ def _wait_lock_state(target_locked: bool, *, probe: Optional[LockProbe],
 def wait_for_unlock(*, probe: Optional[LockProbe] = None,
                     timeout_s: float = 30.0, interval_s: float = 0.5,
                     clock: Callable[[], float] = time.monotonic,
-                    sleep: Callable[[float], None] = time.sleep) -> bool:
+                    sleep: Callable[[float], None] = pause) -> bool:
     """Block until the session is unlocked; return ``True``, or ``False`` on timeout.
 
     Reuses :func:`session_guard.is_session_locked` (Windows default probe).
@@ -133,7 +134,7 @@ def wait_for_unlock(*, probe: Optional[LockProbe] = None,
 def wait_for_lock(*, probe: Optional[LockProbe] = None,
                   timeout_s: float = 30.0, interval_s: float = 0.5,
                   clock: Callable[[], float] = time.monotonic,
-                  sleep: Callable[[float], None] = time.sleep) -> bool:
+                  sleep: Callable[[float], None] = pause) -> bool:
     """Block until the session is locked; return ``True``, or ``False`` on timeout."""
     return _wait_lock_state(True, probe=probe, timeout_s=timeout_s,
                             interval_s=interval_s, clock=clock, sleep=sleep)

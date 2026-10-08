@@ -24,6 +24,7 @@ import sys
 import time
 from typing import Any, Callable, Dict, Optional
 
+from je_auto_control.utils.executor.run_control import pause
 from je_auto_control.utils.timeouts import clamp_poll_interval, deadline_after
 
 # IMM32 conversion-mode (IME_CMODE_*) bit flags.
@@ -81,7 +82,7 @@ def is_composing(*, reader: Optional[ImeReader] = None) -> bool:
 def wait_for_composition_commit(
         *, reader: Optional[ImeReader] = None, timeout_s: float = 5.0,
         interval_s: float = 0.1, clock: Callable[[], float] = time.monotonic,
-        sleep: Callable[[float], None] = time.sleep) -> bool:
+        sleep: Callable[[float], None] = pause) -> bool:
     """Block until the IME is no longer composing; ``True``, or ``False`` on timeout.
 
     ``clock`` / ``sleep`` / ``reader`` are injectable for deterministic tests.

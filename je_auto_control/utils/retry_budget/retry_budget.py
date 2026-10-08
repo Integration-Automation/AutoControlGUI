@@ -22,6 +22,8 @@ import time
 from dataclasses import dataclass
 from typing import Any, Callable, Dict, List, Optional, Tuple, Type
 
+from je_auto_control.utils.executor.run_control import pause
+
 # A uniform sampler: ``(low, high) -> float`` in ``[low, high)``.
 Uniform = Callable[[float, float], float]
 
@@ -134,7 +136,7 @@ def run_with_budget(func: Callable[..., Any], budget: RetryBudget, *,
                     args: Tuple[Any, ...] = (),
                     kwargs: Optional[Dict[str, Any]] = None,
                     clock: Callable[[], float] = time.monotonic,
-                    sleep: Callable[[float], None] = time.sleep,
+                    sleep: Callable[[float], None] = pause,
                     uniform: Uniform = _default_uniform) -> Any:
     """Call ``func`` until it succeeds or the budget is spent; re-raise on giveup.
 

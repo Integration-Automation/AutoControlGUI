@@ -553,6 +553,35 @@ def system_tools() -> List[MCPTool]:
             annotations=DESTRUCTIVE,
         ),
         MCPTool(
+            name="ac_stop_execution",
+            description=("Ask a stoppable run to stop; returns {stopped: N} "
+                         "at once and the run ends at its next checkpoint "
+                         "(between actions, or inside a wait). A run is "
+                         "stoppable when its action list is wrapped in an "
+                         "AC_run_stoppable block (give it a run_id) or it "
+                         "was started with a run_id from Python or the GUI. "
+                         "Without run_id every stoppable run is asked. A "
+                         "second request for the same run also interrupts "
+                         "its cleanup."),
+            input_schema=schema({
+                "run_id": {"type": "string",
+                           "description": "The run to stop (see ac_list_executions)."},
+                "reason": {"type": "string",
+                           "description": "Stored on the run and shown in its stop error."},
+            }),
+            handler=h_runs.stop_execution,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
+        MCPTool(
+            name="ac_list_executions",
+            description=("Return the stoppable runs in progress as "
+                         "[{run_id, started_at, stopping}]; run_id is what "
+                         "ac_stop_execution takes."),
+            input_schema=schema({}),
+            handler=h_runs.list_executions,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
             name="ac_list_action_commands",
             description="Return every action command name the executor recognises.",
             input_schema=schema({}),

@@ -17,6 +17,7 @@ from typing import Any, Callable, Dict
 from je_auto_control.utils.exception.exceptions import (
     AutoControlActionException, AutoControlAssertionException,
 )
+from je_auto_control.utils.executor.run_control import pause
 from je_auto_control.utils.timeouts import deadline_after
 
 Matcher = Callable[[Any], bool]
@@ -82,7 +83,7 @@ def expect_poll(getter: Callable[[], Any], matcher: Matcher, *,
                 timeout_s: float = 5.0, interval_s: float = 0.25,
                 describe: Callable[[Any], str] = repr,
                 clock: Callable[[], float] = time.monotonic,
-                sleep: Callable[[float], None] = time.sleep) -> PollResult:
+                sleep: Callable[[float], None] = pause) -> PollResult:
     """Poll ``getter`` until ``matcher`` passes or ``timeout_s`` elapses.
 
     Returns a :class:`PollResult` with the final value, attempt count and elapsed
