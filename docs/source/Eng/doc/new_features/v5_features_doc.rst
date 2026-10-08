@@ -125,6 +125,19 @@ A journal written before this holds those steps without a parent; candidate
 generation still recognises them by time containment and lists them as
 ``detached``.
 
+Error text is masked twice. The pattern rules the log uses come second; first,
+every value the run itself resolved from a secret is masked by exact match --
+a ``${secrets.NAME}`` lookup, a vault read or write (``SecretManager.get`` /
+``set``, a ``secret://`` reference), the text given to ``AC_write_secret``.
+The recorder keeps those values in memory only, from the moment they are
+resolved until the journal stops, and applies them to error text (before it is
+cut to length), to the arguments of later steps and to artifact paths. A
+command that obtains a secret some other way calls
+``recorder.note_secret_value(value)``. Limits: a value resolved before the
+journal was started is unknown to it, values shorter than four characters are
+not matched, and a value an application echoes back transformed (encoded,
+truncated, split) is only caught by the pattern rules.
+
 A run-history row started while a journal is on records that journal's file
 and run id (``RunRecord.journal_path`` / ``journal_run_id``; pass them to
 ``HistoryStore.start_run`` or call ``link_journal`` to set them yourself).

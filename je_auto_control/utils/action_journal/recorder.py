@@ -13,6 +13,12 @@ hands its own step over with :func:`branch_scope`. A runner that submits work
 to a thread pool (the DAG runner, the device matrix) wraps what it submits in
 :func:`carry_step` for the same reason.
 
+Pattern redaction cannot recognise a secret that does not look like one. So
+while a journal is started the recorder also remembers -- in memory only, and
+only until the journal stops -- every value the run resolved from a secret
+(:func:`note_secret_value`), and masks it by exact match in everything it
+writes.
+
 Pure standard library; imports no ``PySide6``.
 """
 import dataclasses
@@ -28,7 +34,8 @@ from je_auto_control.utils.action_journal.events import (
     STATUS_ERROR, STATUS_INCOMPLETE, STATUS_OK, ActionEvent,
 )
 from je_auto_control.utils.action_journal.sanitize import (
-    artifacts_of_step, describe_outcome, sanitise_params,
+    MIN_KNOWN_SECRET_CHARS, artifacts_of_step, describe_outcome, mask_known_params,
+    mask_known_text, sanitise_params, secret_forms,
 )
 from je_auto_control.utils.action_journal.store import ActionJournal
 from je_auto_control.utils.exception.exceptions import AutoControlException
@@ -54,6 +61,24 @@ class _Session:
         self.error: Optional[str] = None
         self._counter = itertools.count(1)
         self._lock = threading.Lock()
+        #: Secret values this run resolved, as the spellings to mask, longest
+        #: first. Replaced, never mutated, so a reader needs no lock.
+        self._secret_forms: Tuple[str, ...] = ()
+
+    def add_secret(self, value: str) -> None:
+        """Remember ``value`` so nothing written from now on can hold it."""
+        with self._lock:
+            forms = set(self._secret_forms) | set(secret_forms(value))
+            self._secret_forms = tuple(sorted(forms, key=len, reverse=True))
+
+    def secret_values(self) -> Tuple[str, ...]:
+        """The spellings masked by exact match (empty once the journal stops)."""
+        return self._secret_forms
+
+    def forget_secrets(self) -> None:
+        """Drop the remembered values; called when the journal stops."""
+        with self._lock:
+            self._secret_forms = ()
 
     def start_event(self, event: ActionEvent) -> ActionEvent:
         """Number ``event`` and write its start line, in one critical section.
@@ -116,12 +141,43 @@ def _open_steps() -> List["_Step"]:
     return running
 
 
-def _error_text(error: BaseException) -> str:
+def _error_text(error: BaseException, known: Tuple[str, ...] = ()) -> str:
     # The same masking log lines get: an error message can quote an argument.
     from je_auto_control.utils.config_redaction.config_redaction import (
         redact_secret_text,
     )
-    return redact_secret_text(repr(error)[:_MAX_ERROR_CHARS])
+    # Known values first and on the whole text: cutting to length before it
+    # would leave the front of a secret that straddles the limit.
+    text = mask_known_text(repr(error), known)[:_MAX_ERROR_CHARS]
+    return redact_secret_text(text)
+
+
+def _masked_artifacts(found: List[Dict[str, str]], known: Tuple[str, ...]
+                      ) -> Tuple[Dict[str, str], ...]:
+    """``found`` with known secret values masked in every string."""
+    if not known:
+        return tuple(found)
+    return tuple({key: mask_known_text(value, known) for key, value in item.items()}
+                 for item in found)
+
+
+def note_secret_value(value: Any) -> bool:
+    """Tell the journal a value is a secret the run just resolved.
+
+    Called where a secret becomes plaintext: a ``${secrets.NAME}`` lookup, a
+    vault read or write, ``write_secret``. From then on, until the journal
+    stops, the value is masked by exact match in every error text, argument
+    and artifact the journal writes; it is held in memory only and never
+    written anywhere. Returns whether it was remembered: not without a
+    started journal, and not for a value shorter than four characters.
+    """
+    session = _ACTIVE
+    if session is None or not isinstance(value, str):
+        return False
+    if len(value) < MIN_KNOWN_SECRET_CHARS:
+        return False
+    session.add_secret(value)
+    return True
 
 
 def _control_signals() -> Tuple[type, ...]:
@@ -148,6 +204,9 @@ class _Step:
         command = action[0] if action and isinstance(action[0], str) else "<invalid>"
         params, unreplayable = sanitise_params(
             command, action[1] if len(action) > 1 else None)
+        known = session.secret_values()
+        if known:
+            params = mask_known_params(params, known, unreplayable)
         stack = _stack()
         event = ActionEvent(
             run_id=session.run_id, step_id="", sequence=0, command=command,
@@ -190,22 +249,23 @@ class _Step:
     def _ended(self, event: ActionEvent, exc: Optional[BaseException]) -> ActionEvent:
         """``event`` with the status its exit earned."""
         status, error, outcome = STATUS_OK, None, self._outcome
+        known = self._session.secret_values()
         if exc is not None and isinstance(exc, _control_signals()):
             # AC_break / AC_continue unwinding through a block is the block
             # doing its job, not a failure.
             outcome = {"type": "signal", "signal": type(exc).__name__}
         elif isinstance(exc, Exception):
-            status, error = STATUS_ERROR, _error_text(exc)
+            status, error = STATUS_ERROR, _error_text(exc, known)
         elif exc is not None:
             # KeyboardInterrupt / SystemExit: the action never finished.
-            status, error = STATUS_INCOMPLETE, _error_text(exc)
+            status, error = STATUS_INCOMPLETE, _error_text(exc, known)
         params = self._action[1] if len(self._action) > 1 else None
         found = self.artifacts + [
             item for item in artifacts_of_step(params, self._result, event.started_at)
             if item not in self.artifacts]
         return dataclasses.replace(
             event, status=status, error=error, outcome=outcome,
-            finished_at=time.time(), artifacts=tuple(found))
+            finished_at=time.time(), artifacts=_masked_artifacts(found, known))
 
 
 def _fail(session: _Session, error: OSError) -> None:
@@ -214,6 +274,7 @@ def _fail(session: _Session, error: OSError) -> None:
     session.error = repr(error)
     autocontrol_logger.error(
         "action journal %s stopped: %r", session.journal.path, error)
+    session.forget_secrets()
     with _SWITCH:
         if _ACTIVE is session:
             _ACTIVE, _LAST = None, session
@@ -269,7 +330,8 @@ def _note_after_end(session: _Session, entry: Dict[str, str]) -> bool:
         return False
     if entry in last.artifacts:
         return True
-    updated = dataclasses.replace(last, artifacts=last.artifacts + (entry,))
+    updated = dataclasses.replace(last, artifacts=last.artifacts + _masked_artifacts(
+        [entry], session.secret_values()))
     try:
         session.journal.append_end(updated)
     except OSError as error:
@@ -362,6 +424,7 @@ def stop_action_journal() -> Dict[str, Any]:
         _LAST = stopped or _LAST
     if stopped is None:
         return {"active": False}
+    stopped.forget_secrets()
     return {"active": False, **stopped.status()}
 
 

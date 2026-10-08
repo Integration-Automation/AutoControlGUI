@@ -107,6 +107,14 @@ start 到 stop 之間記下的一切屬於同一個 ``run_id``(可用 ``run_id=`
 在這之前寫下的日誌裡,這些步驟沒有 parent;產生候選腳本時仍會用時間包含關係認出它們,
 並列為 ``detached``。
 
+錯誤文字會遮蔽兩次。log 用的樣式規則是第二道;第一道是把這次執行自己從秘密解析出來的
+每個值做完全比對後遮蔽——``${secrets.NAME}`` 的查詢、保管庫的讀寫(``SecretManager.get`` /
+``set``、``secret://`` 參照)、交給 ``AC_write_secret`` 的文字。記錄器只把這些值留在記憶體
+裡,從解析出來的那一刻到日誌停止為止,並套用在錯誤文字(在截斷長度之前)、之後步驟的參數
+與 artifact 路徑上。用別的方式取得秘密的指令可以呼叫
+``recorder.note_secret_value(value)``。限制:日誌啟動之前就解析出來的值它不知道;短於四個
+字元的值不比對;應用程式把值變形後(編碼、截斷、拆開)回顯的情況只能靠樣式規則。
+
 日誌開著的時候開始的執行歷史列,會記下那個日誌的檔案與 run id
 (``RunRecord.journal_path`` / ``journal_run_id``;也可以自己傳給
 ``HistoryStore.start_run`` 或呼叫 ``link_journal``)。``AC_history_list``、

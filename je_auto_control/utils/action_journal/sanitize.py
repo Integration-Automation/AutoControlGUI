@@ -14,15 +14,20 @@ on top of a log line:
 
 Pure standard library; imports no ``PySide6``.
 """
+import json
 import math
 import os
-from typing import Any, Callable, Dict, List, Mapping, Tuple
+from typing import Any, Callable, Dict, List, Mapping, Sequence, Tuple
 
 from je_auto_control.utils.action_journal.events import MASK, UNSERIALISABLE_KEY
 from je_auto_control.utils.executor.action_redaction import redact_actions
 from je_auto_control.utils.script_vars.interpolate import _PLACEHOLDER
 
 REASON_MASKED = "secret masked before the journal was written"
+REASON_KNOWN = "holds a secret value this run resolved; masked before the journal was written"
+#: Shorter values are not masked by exact match: replacing every ``7`` or
+#: ``ab`` would shred the text and show where the secret's characters are.
+MIN_KNOWN_SECRET_CHARS = 4
 _REASON_TYPE = "not JSON-serialisable ({})"
 _REASON_FLOAT = "non-finite number ({})"
 _SCALARS = (str, int, bool, type(None))
@@ -166,3 +171,39 @@ def artifacts_of_step(params: Any, result: Any, started_at: float
                      for key in _TRACE_KEYS
                      if isinstance(result.get(key), str) and result[key])
     return found
+
+
+def secret_forms(value: str) -> Tuple[str, ...]:
+    """``value`` and the escaped spellings it takes inside a ``repr`` or JSON."""
+    forms = {value, repr(value)[1:-1], json.dumps(value)[1:-1],
+             json.dumps(value, ensure_ascii=False)[1:-1]}
+    return tuple(form for form in forms if form)
+
+
+def mask_known_text(text: str, forms: Sequence[str]) -> str:
+    """``text`` with every exact occurrence of a known secret form masked.
+
+    ``forms`` is longest first, so a secret that contains another is masked
+    whole.
+    """
+    for form in forms:
+        if form in text:
+            text = text.replace(form, MASK)
+    return text
+
+
+def mask_known_params(params: Any, forms: Sequence[str], notes: Dict[str, str],
+                      path: str = "params") -> Any:
+    """``params`` with known secret values masked in every string, noting each."""
+    if isinstance(params, str):
+        masked = mask_known_text(params, forms)
+        if masked != params:
+            notes[path] = REASON_KNOWN
+        return masked
+    if isinstance(params, dict):
+        return {key: mask_known_params(item, forms, notes, f"{path}.{key}")
+                for key, item in params.items()}
+    if isinstance(params, list):
+        return [mask_known_params(item, forms, notes, f"{path}[{index}]")
+                for index, item in enumerate(params)]
+    return params
