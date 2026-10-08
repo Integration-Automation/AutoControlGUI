@@ -148,8 +148,13 @@ class HotkeyDaemon:
         self._stop = threading.Event()
 
     def bind(self, combo: str, script_path: str,
-             binding_id: Optional[str] = None) -> HotkeyBinding:
-        """Register a hotkey → script binding. Safe to call before/after start."""
+             binding_id: Optional[str] = None, *, enabled: bool = True) -> HotkeyBinding:
+        """Register a hotkey → script binding. Safe to call before/after start.
+
+        ``enabled=False`` registers it without arming it, so it is never
+        live between being stored and being switched off (config sync adds
+        bindings that came from another machine this way).
+        """
         split_combo(combo)
         # A key the platform cannot take fails here, not later on every tick.
         if sys.platform == "win32":
@@ -159,7 +164,7 @@ class HotkeyDaemon:
             _combo_to_macos(combo)
         bid = binding_id or uuid.uuid4().hex[:8]
         binding = HotkeyBinding(
-            binding_id=bid, combo=combo, script_path=script_path,
+            binding_id=bid, combo=combo, script_path=script_path, enabled=bool(enabled),
             owner=capture_owner(),
         )
         with self._lock:

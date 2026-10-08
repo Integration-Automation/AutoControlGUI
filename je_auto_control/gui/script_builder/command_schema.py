@@ -3524,6 +3524,46 @@ def _add_resilience_specs(specs: List[CommandSpec]) -> None:
         ),
         description="Show the value and winning layer for a dotted config key.",
     ))
+    sync_target = (
+        FieldSpec("server_url", FieldType.STRING, placeholder="https://sync.example"),
+        FieldSpec("user_id", FieldType.STRING, placeholder="alice"),
+    )
+    sync_options = (
+        FieldSpec("secret", FieldType.STRING, optional=True, placeholder="${secrets.sync}"),
+        FieldSpec("device_id", FieldType.STRING, optional=True,
+                  placeholder="(this machine's stored id)"),
+        FieldSpec("sections", FieldType.STRING, optional=True,
+                  placeholder="hotkeys,triggers,address_book"),
+        FieldSpec("scripts_dir", FieldType.FILE_PATH, optional=True),
+        FieldSpec("locators_path", FieldType.FILE_PATH, optional=True),
+        FieldSpec("assets_dir", FieldType.FILE_PATH, optional=True),
+    )
+    specs.append(CommandSpec(
+        "AC_config_sync_run", "Data", "Config Sync: Sync Now",
+        fields=sync_target + sync_options,
+        description="Sync settings with the server once. Received hotkeys and "
+                    "triggers arrive disabled; nothing is run.",
+    ))
+    specs.append(CommandSpec(
+        "AC_config_sync_status", "Data", "Config Sync: Status",
+        fields=sync_target,
+        description="Recorded sync state (revision, pending, conflicts); no network.",
+    ))
+    specs.append(CommandSpec(
+        "AC_config_sync_resolve", "Data", "Config Sync: Resolve Conflict",
+        fields=sync_target + (
+            FieldSpec("section", FieldType.STRING, placeholder="hotkeys"),
+            FieldSpec("key", FieldType.STRING),
+            FieldSpec("choice", FieldType.INT, default=0),
+        ) + sync_options,
+        description="Keep one candidate of a conflicted entry (0-based choice).",
+    ))
+    specs.append(CommandSpec(
+        "AC_config_sync_full_resync", "Data", "Config Sync: Full Resync",
+        fields=sync_target + sync_options,
+        description="Adopt the server's state after this device was retired; "
+                    "pending local changes are discarded.",
+    ))
     specs.append(CommandSpec(
         "AC_detect_drift", "Data", "Data Drift: Detect (PSI + KS)",
         fields=(

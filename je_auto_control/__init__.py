@@ -272,6 +272,13 @@ from je_auto_control.utils.mcp_registry import (
 )
 # Named locator repository (object repository) for native UI
 from je_auto_control.utils.element_repository import ElementRepository
+# Cross-machine config sync: causal merge, offline outbox, adapters, assets
+from je_auto_control.utils.config_sync import (
+    AssetManifest, ConfigBucket, ConfigStore, ConfigSyncClient, ConfigSyncConflict,
+    ConfigSyncError, FullResyncRequired, MergeDecision, SyncAdapter, SyncEntry,
+    SyncOperation, SyncOutbox, config_sync_full_resync, config_sync_resolve,
+    config_sync_run, config_sync_status, merge_entries, sync_assets,
+)
 # Step-through debugger / tracer for action lists
 from je_auto_control.utils.flow_debugger import FlowDebugger, trace_actions
 # Persistent library of reusable action sequences (skills/playbooks)
@@ -1732,6 +1739,10 @@ __all__ = [
     "Asset", "AssetStore", "AssetValue", "active_environment",
     "dotenv_values", "dump_dotenv", "load_dotenv", "parse_dotenv",
     "LayeredConfig", "SourceTrace", "deep_merge",
+    "AssetManifest", "ConfigBucket", "ConfigStore", "ConfigSyncClient", "ConfigSyncConflict",
+    "ConfigSyncError", "FullResyncRequired", "MergeDecision", "SyncAdapter", "SyncEntry",
+    "SyncOperation", "SyncOutbox", "config_sync_full_resync", "config_sync_resolve",
+    "config_sync_run", "config_sync_status", "merge_entries", "sync_assets",
     "ConfigField", "ConfigSchema", "coerce", "validate_config",
     "PathNotAllowedError", "PathPolicy",
     "RefResolver", "SecretRefError", "is_ref", "resolve_ref", "resolve_refs_in",

@@ -35,6 +35,9 @@ from je_auto_control.utils.executor.flow_control import (
 from je_auto_control.utils.executor.action_redaction import describe_action, redact_actions
 from je_auto_control.utils.action_journal.recorder import step as _journal_step
 from je_auto_control.utils.executor.mouse_aliases import MOUSE_BUTTON_COMMANDS
+from je_auto_control.utils.config_sync.session import (
+    config_sync_full_resync, config_sync_resolve, config_sync_run, config_sync_status,
+)
 from je_auto_control.utils.llm.planner import (
     plan_actions as llm_plan_actions,
     run_from_description as llm_run_from_description,
@@ -7734,6 +7737,10 @@ class Executor:
             "AC_parse_sse": _parse_sse,
             "AC_resolve_config": _resolve_config,
             "AC_explain_config": _explain_config,
+            "AC_config_sync_run": config_sync_run,
+            "AC_config_sync_status": config_sync_status,
+            "AC_config_sync_resolve": config_sync_resolve,
+            "AC_config_sync_full_resync": config_sync_full_resync,
             "AC_check_compatibility": _check_compatibility,
             "AC_ts_rate": _ts_rate,
             "AC_ts_downsample": _ts_downsample,

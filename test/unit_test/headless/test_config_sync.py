@@ -174,13 +174,24 @@ def test_push_round_trip_uses_put():
     calls: list = []
     local = ConfigBucket(user_id="alice")
     local.upsert("hotkeys", "hk1", {"combo": "ctrl+a"})
-    with _patch_request({}, calls=calls):
-        client.push(local)
+    with _patch_request({"ok": True, "revision": 1}, calls=calls):
+        assert client.push(local) == 1
     assert len(calls) == 1
     method, body = calls[0]
     assert method == "PUT"
-    assert body["user_id"] == "alice"
-    assert "hk1" in body["sections"]["hotkeys"]
+    # Version 2: the bucket travels in an envelope naming what it was built on.
+    assert body["version"] == 2 and body["base_revision"] == 0 and body["operation_id"]
+    assert body["bucket"]["user_id"] == "alice"
+    assert "hk1" in body["bucket"]["sections"]["hotkeys"]
+    assert local.revision == 1
+
+
+def test_push_to_a_server_without_revision_checks_is_an_error():
+    """A pre-version-2 server answers {"ok": true}: nothing was checked."""
+    client = ConfigSyncClient("https://x", user_id="alice")
+    with _patch_request({"ok": True}):
+        with pytest.raises(ConfigSyncError, match="predates"):
+            client.push(ConfigBucket(user_id="alice"))
 
 
 def test_sync_merges_remote_into_local_and_pushes_result():
@@ -200,7 +211,7 @@ def test_sync_merges_remote_into_local_and_pushes_result():
 
     def fake_request(self, method, body=None):
         fetched.append(method)
-        return remote_body if method == "GET" else {}
+        return remote_body if method == "GET" else {"ok": True, "revision": 1}
 
     with patch.object(ConfigSyncClient, "_request", new=fake_request):
         merged, conflicts = client.sync(local)
@@ -208,3 +219,49 @@ def test_sync_merges_remote_into_local_and_pushes_result():
     assert merged.sections["hotkeys"]["hk1"]["combo"] == "ctrl+b"
     assert len(conflicts) == 1
     assert fetched == ["GET", "PUT"]
+    assert merged.revision == 1
+
+
+def test_sync_refetches_and_merges_again_when_it_loses_the_race():
+    """Another machine pushed between the fetch and the push: nothing is overwritten."""
+    from je_auto_control.utils.config_sync.client import ConfigSyncConflict
+    client = ConfigSyncClient("https://x", user_id="alice")
+    local = ConfigBucket(user_id="alice")
+    local.upsert("hotkeys", "mine", {"combo": "ctrl+m", "last_modified": 100.0})
+    server = {"revision": 1, "sections": {}}
+    bases: list = []
+
+    def fake_request(self, method, body=None):
+        if method == "GET":
+            return {"user_id": "alice", **server}
+        bases.append(body["base_revision"])
+        if len(bases) == 1:
+            # The other machine's push lands first.
+            server.update(revision=2, sections={"hotkeys": {
+                "theirs": {"combo": "ctrl+t", "last_modified": 50.0}}})
+            raise ConfigSyncConflict("behind", 2)
+        server.update(revision=3, sections=body["bucket"]["sections"])
+        return {"ok": True, "revision": 3}
+
+    with patch.object(ConfigSyncClient, "_request", new=fake_request):
+        merged, _conflicts = client.sync(local)
+    assert bases == [1, 2]
+    assert set(merged.entries("hotkeys")) == {"mine", "theirs"}
+    assert merged.revision == 3
+
+
+def test_sync_gives_up_after_a_bounded_number_of_lost_races():
+    from je_auto_control.utils.config_sync.client import ConfigSyncConflict
+    client = ConfigSyncClient("https://x", user_id="alice")
+    attempts: list = []
+
+    def fake_request(self, method, body=None):
+        if method == "GET":
+            return None
+        attempts.append(body["operation_id"])
+        raise ConfigSyncConflict("behind", 9)
+
+    with patch.object(ConfigSyncClient, "_request", new=fake_request):
+        with pytest.raises(ConfigSyncConflict):
+            client.sync(ConfigBucket(user_id="alice"), max_attempts=3)
+    assert len(attempts) == 3
