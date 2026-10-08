@@ -216,6 +216,13 @@ makes at most ``max_attempts`` sends (default 5), ``wait=False`` returns
 instead of sleeping through a back-off, and setting ``cancel`` ends a drain
 even in the middle of a wait.
 
+A drain that finds the queue still inside a retry delay sends nothing and
+returns ``DrainReport(backing_off=True, retry_in_s=<seconds left>)``;
+``offline`` is true as well (the queue did not get out) and ``error`` is the
+failure that started the wait. ``drain(..., force=True)`` sends once without
+regard to the delay; if that attempt fails too, the longer delay it earns is
+respected.
+
 Adapters: what is synced, and what stays on the machine
 --------------------------------------------------------
 
@@ -294,17 +301,38 @@ One call, three surfaces
 
 ``config_sync_run(server_url, user_id, **options)`` runs the whole cycle --
 queue local changes, drain the outbox, merge, apply -- and returns
-``{state, revision, pending, conflicts, applied, withheld, assets, error}``
-with ``state`` one of ``synced`` / ``pending`` / ``conflict`` / ``offline`` /
-``cancelled`` / ``resync_required``. Being unable to reach the server is not
-an exception: the changes stay queued and the state is ``offline``.
+``{state, revision, pending, conflicts, applied, withheld, assets, error,
+retry_in_s}`` with ``state`` one of ``synced`` / ``pending`` / ``conflict`` /
+``offline`` / ``backing_off`` / ``cancelled`` / ``resync_required``. Being
+unable to reach the server is not an exception: the changes stay queued and
+the state is ``offline``.
+
+.. list-table::
+   :header-rows: 1
+
+   * - State
+     - Meaning
+   * - ``offline``
+     - this run tried the server and failed; ``error`` says how, ``retry_in_s``
+       when the queue is sent again by itself
+   * - ``backing_off``
+     - this run did **not** try: an earlier failure is still inside its retry
+       delay (2 s, doubling, at most 300 s). Nothing is known about the server
+       now. ``retry_in_s`` is the time left; ``error`` is the earlier failure
+
+Before, both were reported as ``offline``, so a sync asked for just after the
+network came back looked like a server that was still down. Pass
+``force=True`` to skip the delay once -- the *Sync now* command of the GUI
+does -- or ``wait=True`` to sleep through it. ``config_sync_status`` reports
+``retry_in_s`` live, and shows ``pending`` instead of ``backing_off`` once the
+delay has run out.
 
 Options: ``device_id`` (default: an id created once in
 ``~/.je_auto_control/config_sync_device_id``), ``secret`` (default
 ``$AC_SIGNALING_SECRET``), ``sections`` (default ``hotkeys``, ``triggers``,
 ``address_book``; ``scripts`` and ``locators`` join when their path is
 given), ``scripts_dir``, ``locators_path``, ``outbox_path``, ``assets_dir``,
-``timeout_s``, ``wait``, ``max_attempts``.
+``timeout_s``, ``wait``, ``force``, ``max_attempts``.
 
 .. list-table::
    :header-rows: 1
@@ -335,7 +363,8 @@ All four are Script Builder commands under **Data**.
 GUI
 ---
 
-The **Config Sync** tab (category *system*) shows the state, the last merged
+The **Config Sync** tab (category *system*) shows the state (with the seconds
+until the next automatic attempt while a retry delay is running), the last merged
 revision, the number of pending changes, the last successful sync and the
 last error, and lists every conflict with its candidates. Its commands --
 *Sync now*, *Cancel sync*, *Refresh sync status*, *Keep selected candidate*,

@@ -70,8 +70,8 @@ def test_every_text_exists_in_all_four_languages(tab):
     keys |= {f"config_sync_{name}_label" for name in tab_module._FIELDS}  # noqa: SLF001
     keys |= {f"config_sync_col_{name}" for name in tab_module._COLUMNS}  # noqa: SLF001
     keys |= {f"config_sync_state_{state}" for state in (
-        "never", "syncing", "synced", "pending", "conflict", "offline", "cancelled",
-        "resync_required")}
+        "never", "syncing", "synced", "pending", "conflict", "offline", "backing_off",
+        "cancelled", "resync_required")}
     keys.discard("config_sync_state_")
     for module in (english, japanese, simplified_chinese, traditional_chinese):
         catalogue = next(value for value in vars(module).values()
@@ -113,7 +113,8 @@ def test_sync_runs_off_the_gui_thread_and_can_be_cancelled(tab, qapp, monkeypatc
     tab.sync_now()            # a second request while one runs is refused
     assert _pump(qapp, lambda: "thread" in seen)
     assert seen["thread"] is not threading.main_thread()
-    assert seen["options"] == {"secret": "s3cret"}
+    # "Sync now" is a person asking: it skips a retry delay once.
+    assert seen["options"] == {"secret": "s3cret", "force": True}
 
     tab.cancel()
     assert _pump(qapp, lambda: not tab.is_busy() and tab._worker is None)  # noqa: SLF001
@@ -172,3 +173,20 @@ def test_closing_the_tab_releases_a_running_sync(qapp, monkeypatch):
     widget.deleteLater()
     QCoreApplication.sendPostedEvents(None, QEvent.DeferredDelete)
     assert released.wait(5), "the worker was still waiting after its tab was destroyed"
+
+
+def test_a_retry_delay_reads_as_waiting_not_as_offline(tab, monkeypatch):
+    from je_auto_control.gui.language_wrapper.multi_language_wrapper import language_wrapper
+    monkeypatch.setattr(tab_module.session, "config_sync_status", lambda _url, _user: {
+        "state": "backing_off", "retry_in_s": 41.2, "pending": 1, "revision": 3,
+        "error": "config sync: connection refused"})
+    tab.refresh_status()
+    shown = tab._state.text()  # noqa: SLF001
+    waiting = language_wrapper.translate("config_sync_state_backing_off", "")
+    offline = language_wrapper.translate("config_sync_state_offline", "")
+    assert waiting and waiting in shown and offline not in shown
+    assert "42" in shown, "the seconds until the next automatic attempt, rounded up"
+    monkeypatch.setattr(tab_module.session, "config_sync_status",
+                        lambda _url, _user: {"state": "synced", "retry_in_s": 0.0})
+    tab.refresh_status()
+    assert "42" not in tab._state.text()  # noqa: SLF001

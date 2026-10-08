@@ -1132,6 +1132,8 @@ traditional_chinese_word_dict = {
     "config_sync_state_pending": "有變更等待送出",
     "config_sync_state_conflict": "衝突:需要選擇",
     "config_sync_state_offline": "離線:變更已排入佇列",
+    "config_sync_state_backing_off": "等待重試:尚未再次連線伺服器",
+    "config_sync_retry_in": "{seconds} 秒後自動重試",
     "config_sync_state_cancelled": "已取消",
     "config_sync_state_resync_required": "已退休:需要完整重新同步",
     "config_sync_revision": "最後合併的修訂版",

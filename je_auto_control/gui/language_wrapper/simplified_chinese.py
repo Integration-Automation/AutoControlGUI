@@ -1131,6 +1131,8 @@ simplified_chinese_word_dict = {
     "config_sync_state_pending": "有更改等待发送",
     "config_sync_state_conflict": "冲突:需要选择",
     "config_sync_state_offline": "离线:更改已排队",
+    "config_sync_state_backing_off": "等待重试:尚未再次连接服务器",
+    "config_sync_retry_in": "{seconds} 秒后自动重试",
     "config_sync_state_cancelled": "已取消",
     "config_sync_state_resync_required": "已退役:需要完整重新同步",
     "config_sync_revision": "最后合并的修订版",

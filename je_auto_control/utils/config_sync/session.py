@@ -32,13 +32,17 @@ from je_auto_control.utils.config_sync.client import (
     ConfigBucket, ConfigSyncClient, ConfigSyncError, FullResyncRequired, SyncResult,
 )
 from je_auto_control.utils.config_sync.device import default_device_id, default_device_id_path
-from je_auto_control.utils.config_sync.outbox import DEFAULT_DRAIN_ATTEMPTS, SyncOutbox
+from je_auto_control.utils.config_sync.outbox import (
+    DEFAULT_DRAIN_ATTEMPTS, DrainReport, SyncOutbox,
+)
 from je_auto_control.utils.config_sync.versions import SyncOperation
 
 STATE_SYNCED = "synced"
 STATE_PENDING = "pending"
 STATE_CONFLICT = "conflict"
 STATE_OFFLINE = "offline"
+#: Nothing was sent: an earlier failure's retry delay has not run out yet.
+STATE_BACKING_OFF = "backing_off"
 STATE_CANCELLED = "cancelled"
 STATE_RESYNC_REQUIRED = "resync_required"
 
@@ -48,7 +52,7 @@ _STATUS = "status"
 _UNAPPLIED = "unapplied"
 _OPTIONS = frozenset({
     "device_id", "secret", "sections", "scripts_dir", "locators_path", "outbox_path",
-    "assets_dir", "timeout_s", "wait", "max_attempts",
+    "assets_dir", "timeout_s", "wait", "max_attempts", "force",
 })
 
 
@@ -57,9 +61,14 @@ class SyncRunReport:
     """How one sync ended, in the terms the status view shows.
 
     ``state`` is one of ``synced`` / ``pending`` / ``conflict`` / ``offline``
-    / ``cancelled`` / ``resync_required``; ``revision`` the last revision
-    merged from the server; ``pending`` the operations still queued;
-    ``conflicts`` the ``section/key`` names waiting for a choice.
+    / ``backing_off`` / ``cancelled`` / ``resync_required``; ``revision`` the
+    last revision merged from the server; ``pending`` the operations still
+    queued; ``conflicts`` the ``section/key`` names waiting for a choice.
+
+    ``offline`` means this run tried the server and failed. ``backing_off``
+    means it did not try: an earlier failure is still inside its retry
+    delay, so nothing is known about the server now. Either way
+    ``retry_in_s`` says how long until the queue is sent again by itself.
     """
     state: str = STATE_SYNCED
     revision: int = 0
@@ -71,6 +80,7 @@ class SyncRunReport:
     error: str = ""
     finished_at: float = 0.0
     last_success: float = 0.0
+    retry_in_s: float = 0.0
 
     def to_dict(self) -> Dict[str, Any]:
         """A JSON-ready copy."""
@@ -78,7 +88,7 @@ class SyncRunReport:
                 "conflicts": list(self.conflicts), "applied": dict(self.applied),
                 "withheld": dict(self.withheld), "assets": dict(self.assets),
                 "error": self.error, "finished_at": self.finished_at,
-                "last_success": self.last_success}
+                "last_success": self.last_success, "retry_in_s": self.retry_in_s}
 
 
 def default_adapters(device_id: str, *, sections: Optional[Sequence[str]] = None,
@@ -188,37 +198,58 @@ def _finish(outbox: SyncOutbox, report: SyncRunReport) -> SyncRunReport:
     return report
 
 
+@dataclass(frozen=True)
+class _DrainOptions:
+    """How :func:`run_sync` drains: the caller's cancel, wait, attempts and force."""
+    cancel: Optional[threading.Event] = None
+    wait: bool = False
+    max_attempts: int = DEFAULT_DRAIN_ATTEMPTS
+    force: bool = False
+
+
 def _exchange(client: ConfigSyncClient, outbox: SyncOutbox, device_id: str,
-              cancel: Optional[threading.Event], wait: bool,
-              max_attempts: int) -> Tuple[Optional[SyncResult], str, bool]:
-    """Drain the outbox and pull; ``(result, error, cancelled)``."""
+              options: _DrainOptions) -> Tuple[Optional[SyncResult], DrainReport]:
+    """Drain the outbox and pull; the server's state (``None`` if not reached)."""
     results: List[SyncResult] = []
 
     def send(batch: List[SyncOperation]) -> None:
         results.append(client.push_operations(batch, device_id=device_id))
 
-    drained = outbox.drain(send, cancel=cancel, wait=wait, max_attempts=max_attempts)
+    drained = outbox.drain(send, cancel=options.cancel, wait=options.wait,
+                           max_attempts=options.max_attempts, force=options.force)
     if drained.cancelled or drained.offline:
-        return None, drained.error, drained.cancelled
+        return None, drained
     if not results:
         try:
             results.append(client.push_operations([], device_id=device_id))
         except FullResyncRequired:
             raise
         except ConfigSyncError as error:
-            return None, str(error), False
-    return results[-1], "", False
+            return None, DrainReport(offline=True, error=str(error))
+    return results[-1], drained
+
+
+def _stopped_state(drained: DrainReport) -> str:
+    """The run state for a drain that did not reach the server."""
+    if drained.cancelled:
+        return STATE_CANCELLED
+    return STATE_BACKING_OFF if drained.backing_off else STATE_OFFLINE
 
 
 def run_sync(client: ConfigSyncClient, outbox: SyncOutbox, adapters: Sequence[SyncAdapter], *,
              device_id: str, cancel: Optional[threading.Event] = None, wait: bool = False,
              max_attempts: int = DEFAULT_DRAIN_ATTEMPTS,
-             asset_transport: Optional[AssetTransport] = None) -> SyncRunReport:
+             asset_transport: Optional[AssetTransport] = None,
+             force: bool = False) -> SyncRunReport:
     """Sync once and report the outcome; see the module docstring for the steps.
 
     A failure to reach the server is not an exception: the changes stay in
-    the outbox and the report says ``offline``. A device the group retired
-    gets ``resync_required`` -- call :func:`run_full_resync`.
+    the outbox and the report says ``offline``. A run that falls inside the
+    retry delay of an earlier failure does not contact the server and says
+    ``backing_off`` with ``retry_in_s``; ``force`` (a person asking for a
+    sync *now*) skips that delay once, ``wait`` sleeps through it. A device
+    the group retired gets ``resync_required`` -- call
+    :func:`run_full_resync`.
     """
     baseline = outbox.load_baseline() or ConfigBucket(user_id=client.user_id)
     report = SyncRunReport(revision=baseline.revision)
@@ -228,13 +259,14 @@ def run_sync(client: ConfigSyncClient, outbox: SyncOutbox, adapters: Sequence[Sy
         report.assets["published"] = publish_assets(
             _present(manifest), asset_transport, cancel=cancel).to_dict()
     try:
-        result, error, cancelled = _exchange(client, outbox, device_id, cancel, wait, max_attempts)
+        result, drained = _exchange(client, outbox, device_id, _DrainOptions(
+            cancel=cancel, wait=wait, max_attempts=max_attempts, force=force))
     except FullResyncRequired as required:
         report.state, report.error = STATE_RESYNC_REQUIRED, str(required)
         return _finish(outbox, report)
     if result is None:
-        report.state = STATE_CANCELLED if cancelled else STATE_OFFLINE
-        report.error = error
+        report.state = _stopped_state(drained)
+        report.error, report.retry_in_s = drained.error, drained.retry_in_s
         report.conflicts = _conflict_names(baseline)
         return _finish(outbox, report)
     incoming = _script_assets(adapters, result.bucket)
@@ -294,7 +326,10 @@ def sync_status(outbox: SyncOutbox) -> Dict[str, Any]:
     status["conflicts"] = _conflict_names(known)
     status["conflict_details"] = _conflict_details(known)
     status["revision"] = known.revision
-    if status["pending"] and status["state"] == STATE_SYNCED:
+    # Live, not the figure the last run stored: the delay keeps running down.
+    status["retry_in_s"] = float(outbox.seconds_until_due(time.time()) or 0.0)
+    waiting_over = status["state"] == STATE_BACKING_OFF and not status["retry_in_s"]
+    if status["pending"] and (status["state"] == STATE_SYNCED or waiting_over):
         status["state"] = STATE_PENDING
     return status
 
@@ -357,8 +392,9 @@ def config_sync_run(server_url: str, user_id: str, *,
     (default ``$AC_SIGNALING_SECRET``), ``sections``, ``scripts_dir``,
     ``locators_path``, ``outbox_path``, ``assets_dir`` (a folder both
     machines reach, for scripts too large to inline), ``timeout_s``,
-    ``wait`` (sleep through a retry back-off instead of returning) and
-    ``max_attempts``.
+    ``wait`` (sleep through a retry back-off instead of returning
+    ``backing_off``), ``force`` (skip that back-off once: someone asked for
+    a sync now) and ``max_attempts``.
     """
     if cancel is not None and not isinstance(cancel, threading.Event):
         raise ConfigSyncError("cancel must be a threading.Event")
@@ -366,7 +402,7 @@ def config_sync_run(server_url: str, user_id: str, *,
     assets_dir = options.get("assets_dir")
     return run_sync(
         client, outbox, adapters, device_id=device_id, cancel=cancel,
-        wait=bool(options.get("wait", False)),
+        wait=bool(options.get("wait", False)), force=bool(options.get("force", False)),
         max_attempts=int(options.get("max_attempts") or DEFAULT_DRAIN_ATTEMPTS),
         asset_transport=DirectoryAssetTransport(assets_dir) if assets_dir else None).to_dict()
 
@@ -393,7 +429,8 @@ def config_sync_resolve(server_url: str, user_id: str, section: str, key: str,
 
 
 __all__ = [
-    "DEFAULT_SECTIONS", "STATE_CANCELLED", "STATE_CONFLICT", "STATE_OFFLINE", "STATE_PENDING",
+    "DEFAULT_SECTIONS", "STATE_BACKING_OFF", "STATE_CANCELLED", "STATE_CONFLICT",
+    "STATE_OFFLINE", "STATE_PENDING",
     "STATE_RESYNC_REQUIRED", "STATE_SYNCED", "SyncRunReport", "config_sync_full_resync",
     "config_sync_resolve", "config_sync_run", "config_sync_status", "default_adapters",
     "default_device_id", "default_device_id_path", "resolve_conflict", "run_full_resync",

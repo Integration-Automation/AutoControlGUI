@@ -9259,8 +9259,13 @@ def config_sync_tools() -> List[MCPTool]:
                          "and sent on top of the server's revision; concurrent edits "
                          "of one entry are kept as a conflict. Received hotkeys and "
                          "triggers are created DISABLED and nothing is run. Returns "
-                         "{state, revision, pending, conflicts, applied, error}."),
+                         "{state, revision, pending, conflicts, applied, error, "
+                         "retry_in_s}. state 'offline' = this run tried the server and "
+                         "failed; 'backing_off' = it did not try, an earlier failure's "
+                         "retry delay (retry_in_s) is still running -- pass force=true "
+                         "to skip that delay once."),
             input_schema=schema({**target, **options, "wait": {"type": "boolean"},
+                                 "force": {"type": "boolean"},
                                  "max_attempts": {"type": "integer"}}, required),
             handler=h_sync.config_sync_run,
             annotations=DESTRUCTIVE,
@@ -9269,7 +9274,8 @@ def config_sync_tools() -> List[MCPTool]:
             name="ac_config_sync_status",
             description=("Report the recorded config-sync state for an account and "
                          "server without touching the network: {state, revision, "
-                         "pending, conflicts, conflict_details, last_success, error}."),
+                         "pending, conflicts, conflict_details, last_success, error, "
+                         "retry_in_s}."),
             input_schema=schema({**target, "outbox_path": options["outbox_path"]}, required),
             handler=h_sync.config_sync_status,
             annotations=READ_ONLY,

@@ -182,6 +182,11 @@ tombstone 只會等已列在 ``peers`` 下的裝置。
 (``base_delay_s`` / ``max_delay_s``),一次 drain 最多送 ``max_attempts`` 次(預設 5),
 ``wait=False`` 會直接返回而不在退避期間睡眠,設定 ``cancel`` 即使在等待中途也會結束 drain。
 
+佇列仍在退避期間時,drain 不送任何東西,回傳
+``DrainReport(backing_off=True, retry_in_s=<剩餘秒數>)``;``offline`` 同時為 true(佇列沒有送出去),
+``error`` 是造成等待的那次失敗。``drain(..., force=True)`` 不管延遲直接送一次;
+如果這次也失敗,就遵守它換來的(更長的)延遲。
+
 Adapter:同步什麼、什麼留在本機
 --------------------------------
 
@@ -250,14 +255,30 @@ Adapter:同步什麼、什麼留在本機
 
 ``config_sync_run(server_url, user_id, **options)`` 執行整個循環 —— 把本機變更入列、
 清空 outbox、合併、套用 —— 並回傳
-``{state, revision, pending, conflicts, applied, withheld, assets, error}``,
-``state`` 為 ``synced`` / ``pending`` / ``conflict`` / ``offline`` / ``cancelled`` /
-``resync_required`` 之一。連不到 server 不是例外:變更留在佇列,狀態為 ``offline``。
+``{state, revision, pending, conflicts, applied, withheld, assets, error, retry_in_s}``,
+``state`` 為 ``synced`` / ``pending`` / ``conflict`` / ``offline`` / ``backing_off`` /
+``cancelled`` / ``resync_required`` 之一。連不到 server 不是例外:變更留在佇列,狀態為 ``offline``。
+
+.. list-table::
+   :header-rows: 1
+
+   * - 狀態
+     - 意義
+   * - ``offline``
+     - 這次執行連過 server 而且失敗;``error`` 說明原因,``retry_in_s`` 是佇列自己再送一次的時間
+   * - ``backing_off``
+     - 這次執行 **沒有** 連 server:先前的失敗還在退避期間(2 秒起、加倍、最長 300 秒)。
+       現在 server 的狀況未知。``retry_in_s`` 是剩餘時間,``error`` 是先前那次失敗
+
+以前兩者都回報 ``offline``,所以網路剛恢復時要求同步,看起來就像 server 還沒好。
+傳 ``force=True`` 可以跳過一次延遲(GUI 的 *立即同步* 會這樣做),或傳 ``wait=True`` 睡到延遲結束。
+``config_sync_status`` 的 ``retry_in_s`` 是即時計算的,延遲結束後顯示 ``pending`` 而不是 ``backing_off``。
 
 選項:``device_id``(預設:在 ``~/.je_auto_control/config_sync_device_id`` 建立一次的 id)、
 ``secret``(預設 ``$AC_SIGNALING_SECRET``)、``sections``(預設 ``hotkeys``、``triggers``、
 ``address_book``;給了路徑時加入 ``scripts`` 與 ``locators``)、``scripts_dir``、
-``locators_path``、``outbox_path``、``assets_dir``、``timeout_s``、``wait``、``max_attempts``。
+``locators_path``、``outbox_path``、``assets_dir``、``timeout_s``、``wait``、``force``、
+``max_attempts``。
 
 .. list-table::
    :header-rows: 1
@@ -288,7 +309,7 @@ Adapter:同步什麼、什麼留在本機
 GUI
 ---
 
-**設定同步** 分頁(分類 *system*)顯示狀態、最後合併的 revision、待送變更數、
+**設定同步** 分頁(分類 *system*)顯示狀態(退避期間會附上距離下次自動重試的秒數)、最後合併的 revision、待送變更數、
 上次成功同步與最後的錯誤,並列出每個衝突及其候選。它的指令 —— *立即同步*、*取消同步*、
 *重新整理同步狀態*、*保留所選候選*、*完整重新同步* —— 在 Actions 選單。
 同步在 worker 執行緒上執行;取消或關閉分頁都會釋放它。
