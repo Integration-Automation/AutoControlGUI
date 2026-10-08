@@ -22,9 +22,11 @@ What is rebuilt, and what is only observed:
   ``${journal_redacted_N_M}`` reference, which fails as an unknown variable
   until it is replaced; a ``${secrets.NAME}`` reference in the journal is kept.
 
-The candidate is checked without touching a device: the source is parsed, the
-command names are looked up, and the action list goes through the executor's
-dry run. Nothing is executed.
+The candidate is checked without touching a device: the source is parsed
+(Python with ``ast``; Robot output gets the structural check in
+``robot_check``, which is not the Robot Framework parser), the command names
+are looked up, and the action list goes through the executor's dry run.
+Nothing is executed.
 
 This module imports no ``PySide6``.
 """
@@ -310,6 +312,13 @@ def _validate(code: str, actions: List[Any], target: str,
     if target != "robot":
         ast.parse(code)  # a SyntaxError here is a codegen defect; let it out
         checks["ast"] = True
+    else:
+        # Sections, indentation and keyword rows only -- not the Robot parser,
+        # which is not a dependency; the manifest says so in as many words.
+        from je_auto_control.utils.codegen.robot_check import require_robot_structure
+        require_robot_structure(code)  # a failure here is a codegen defect too
+        checks["robot_structure"] = True
+        checks["robot_parser"] = False
     # A private executor: the dry run never touches the shared one's state.
     checker = Executor()
     unknown = unknown_command_names(actions, checker.known_commands())

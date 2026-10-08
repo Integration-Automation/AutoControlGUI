@@ -137,6 +137,14 @@ start 到 stop 之間記下的一切屬於同一個 ``run_id``(可用 ``run_id=`
 * manifest 逐步記錄來源的日誌行號,以及做過的檢查:原始碼可解析、指令名稱已查表、
   動作清單通過執行器的 dry run。日誌中的任何內容都不會被執行或 eval。
 
+Robot 輸出(``target="robot"``,包含 ``generate_code``)會經過 ``check_robot_structure`` 的
+結構檢查:區段標頭、縮排、關鍵字列、沒有主體的測試、重複的測試名稱、未關閉的變數與沒有
+``END`` 的區塊。**它不是 Robot Framework 的 parser**——``robotframework`` 不是相依套件,所以
+不會解析關鍵字、不會匯入函式庫;通過這個檢查的檔案在 Robot 裡仍可能失敗(未知的關鍵字、
+引數數量不對),那要用 ``robot --dryrun`` 才看得出來。候選腳本的 manifest 會寫
+``"robot_structure": true`` 與 ``"robot_parser": false``。產生器吐出結構錯誤的 Robot 原始碼
+時會丟 ``RobotStructureError``,而不是把它寫出去。
+
 執行器指令:``AC_journal_start`` / ``AC_journal_stop`` / ``AC_journal_status`` /
 ``AC_journal_read`` / ``AC_journal_runs`` 與 ``AC_generate_code_from_journal``。
 MCP 工具:``ac_journal_start`` / ``ac_journal_stop`` / ``ac_journal_status`` /

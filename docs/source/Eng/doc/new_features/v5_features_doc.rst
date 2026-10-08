@@ -168,6 +168,17 @@ style="actions")`` turns one run into a ``CandidateScript`` -- ``code``,
   the list goes through the executor's dry run. Nothing read from the log is
   executed or evaluated.
 
+Robot output (``target="robot"``, from ``generate_code`` too) goes through
+``check_robot_structure``: section headers, indentation, keyword rows, a test
+with no body, a repeated test name, an unclosed variable and a block with no
+``END``. **It is not the Robot Framework parser** -- ``robotframework`` is not
+a dependency, so no keyword is resolved and no library imported; a file that
+passes can still fail in Robot (an unknown keyword, a wrong argument count),
+which only ``robot --dryrun`` shows. A candidate's manifest records
+``"robot_structure": true`` and ``"robot_parser": false``. A renderer that
+produces malformed Robot source raises ``RobotStructureError`` instead of
+writing it.
+
 Executor commands: ``AC_journal_start`` / ``AC_journal_stop`` /
 ``AC_journal_status`` / ``AC_journal_read`` / ``AC_journal_runs`` and
 ``AC_generate_code_from_journal``. MCP tools: ``ac_journal_start`` /
