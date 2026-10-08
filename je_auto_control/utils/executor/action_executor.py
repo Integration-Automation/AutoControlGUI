@@ -8133,7 +8133,16 @@ class Executor:
         failed" *before* the first action moves anything.
         """
         return unknown_command_names(self._unwrap_action_list(action_list),
-                                     self.known_commands())
+                                     self.known_commands(), self._self_loadable())
+
+    def _self_loadable(self) -> Optional[Callable[[str], bool]]:
+        """The package gate's verdict, on the executor a load command fills.
+
+        ``AC_add_package_to_executor`` registers ``<package>_<member>`` names
+        on the package manager's executor, so only there may validation leave
+        such a name to run time; anywhere else it would never appear.
+        """
+        return package_manager.would_allow if package_manager.executor is self else None
 
     def _resolve_runtime_args(self, args: Any, command: str = "") -> Any:
         """Interpolate ``${var}`` placeholders against the current scope.
@@ -8235,7 +8244,7 @@ class Executor:
         """The body of :meth:`execute_action`, with strictness already settled."""
         action_list = self._unwrap_action_list(action_list)
         if not _validated:
-            validate_actions(action_list, self.known_commands())
+            validate_actions(action_list, self.known_commands(), self._self_loadable())
 
         execute_record_dict: Dict[str, Any] = {}
         for action in action_list:

@@ -106,7 +106,7 @@ def cmd_validate(args: argparse.Namespace) -> int:
     # Unwrapped and checked like `run` does: {"auto_control": [...]} failed
     # here and ran there, and [] passed here and failed there.
     actions = executor._unwrap_action_list(read_action_json(args.script))
-    validate_actions(actions, executor.known_commands())
+    validate_actions(actions, executor.known_commands(), executor._self_loadable())
     sys.stdout.write(f"OK: {len(actions)} action(s)\n")
     return 0
 

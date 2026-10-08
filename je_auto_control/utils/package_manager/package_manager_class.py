@@ -79,6 +79,16 @@ class PackageManager:
         return any(package == allowed or package.startswith(allowed + ".")
                    for allowed in self.allowed_packages)
 
+    def would_allow(self, package: object) -> bool:
+        """
+        閘門是否會放行這個套件（不匯入任何東西）
+        Whether the gate would let ``package`` be loaded. Nothing is imported: this is
+        what lets an action list be validated before the load command in it has run.
+        """
+        if not is_package_name(package):
+            return False
+        return self.allow_arbitrary_packages or self._is_allowlisted(package)
+
     def _check_allowed(self, package: object) -> None:
         """Refuse ``package`` before it is imported, unless the gate lets it through."""
         if isinstance(package, str) and self._is_allowlisted(package):
