@@ -30,12 +30,13 @@ import types
 #: Quartz's window-info dictionary keys, spelled as pyobjc spells them.
 WINDOW_KEYS = (
     "kCGWindowNumber", "kCGWindowName", "kCGWindowLayer",
-    "kCGWindowOwnerPID", "kCGWindowBounds",
+    "kCGWindowOwnerPID", "kCGWindowBounds", "kCGWindowIsOnscreen",
 )
 
 #: The rest of the surface the backend names, by module.
 QUARTZ_NAMES = WINDOW_KEYS + (
     "kCGWindowListOptionOnScreenOnly", "kCGWindowListExcludeDesktopElements",
+    "kCGWindowListOptionAll", "kCGWindowListOptionIncludingWindow",
     "kCGNullWindowID",
     "CGWindowListCopyWindowInfo", "CGPoint", "CGSize",
 )
@@ -57,6 +58,14 @@ AX_NAMES = (
 AX_SUCCESS = 0
 AX_FAILURE = -25200      # kAXErrorCannotComplete, in spirit
 
+#: `CGWindowListOption` values. Unlike the info-dictionary keys these are real
+#: numbers, because the stub has to *read* them to decide which windows a
+#: query sees -- that is the whole of the minimised-window defect.
+OPTION_ALL = 0
+OPTION_ON_SCREEN_ONLY = 1
+OPTION_INCLUDING_WINDOW = 8
+OPTION_EXCLUDE_DESKTOP = 16
+
 
 def window_info(number: int, *, name: str = "", layer: int = 0,
                 pid: int = 0, bounds=None) -> dict:
@@ -77,7 +86,11 @@ def window_info(number: int, *, name: str = "", layer: int = 0,
 class AXElement:
     """An accessibility element: attributes, and what was done to it."""
 
-    def __init__(self, **attributes) -> None:
+    def __init__(self, quartz_id=None, **attributes) -> None:
+        # The `CGWindowID` this element is the accessibility face of. Only a
+        # test that needs minimising to take the window off screen sets it;
+        # the backend never sees it, as it never sees the real bridge either.
+        self.quartz_id = quartz_id
         self.attributes = dict(attributes)
         self.actions = []
         self.assignments = []
@@ -113,14 +126,38 @@ class World:
         # pid lookup and the activation, which is its own branch.
         self.running_pids = (set() if running_pids is None
                              else set(running_pids))
+        # Window numbers Quartz knows but does not have on screen: minimised
+        # ones, and anything a test parks here to stand for a hidden window.
+        self.off_screen = set()
         self.list_options = []
         self.activated = []
         self.ax_list_error = AX_SUCCESS
 
     # -- Quartz --
     def copy_window_info(self, options, relative_to):
+        """Answer as Quartz does for the three option shapes the backend uses.
+
+        On-screen-only leaves out what is off screen, including-window answers
+        for exactly the id asked about wherever it is, and "all" returns the
+        lot. `kCGWindowIsOnscreen` is present only on the windows it is true
+        for, which is how the real dictionaries spell it.
+        """
         self.list_options.append((options, relative_to))
-        return list(self.windows)
+        if options & OPTION_INCLUDING_WINDOW:
+            chosen = [info for info in self.windows
+                      if info.get("kCGWindowNumber") == relative_to]
+        elif options & OPTION_ON_SCREEN_ONLY:
+            chosen = [info for info in self.windows
+                      if info.get("kCGWindowNumber") not in self.off_screen]
+        else:
+            chosen = list(self.windows)
+        return [self._described(info) for info in chosen]
+
+    def _described(self, info):
+        described = dict(info)
+        if info.get("kCGWindowNumber") not in self.off_screen:
+            described["kCGWindowIsOnscreen"] = True
+        return described
 
     # -- ApplicationServices --
     def ax_application(self, pid):
@@ -144,6 +181,12 @@ class World:
         if element.set_error:
             return element.set_error
         element.attributes[attribute] = value
+        if attribute == "AXMinimized" and element.quartz_id is not None:
+            # What the Dock does: the window leaves the screen, and comes back.
+            if value:
+                self.off_screen.add(element.quartz_id)
+            else:
+                self.off_screen.discard(element.quartz_id)
         return AX_SUCCESS
 
     def ax_perform_action(self, element, action):
@@ -164,8 +207,10 @@ def install(monkeypatch, world: World) -> World:
     quartz = types.ModuleType("Quartz")
     for name in WINDOW_KEYS:
         setattr(quartz, name, name)
-    quartz.kCGWindowListOptionOnScreenOnly = 1
-    quartz.kCGWindowListExcludeDesktopElements = 16
+    quartz.kCGWindowListOptionAll = OPTION_ALL
+    quartz.kCGWindowListOptionOnScreenOnly = OPTION_ON_SCREEN_ONLY
+    quartz.kCGWindowListOptionIncludingWindow = OPTION_INCLUDING_WINDOW
+    quartz.kCGWindowListExcludeDesktopElements = OPTION_EXCLUDE_DESKTOP
     quartz.kCGNullWindowID = 0
     quartz.CGWindowListCopyWindowInfo = world.copy_window_info
     quartz.CGPoint = AXPoint

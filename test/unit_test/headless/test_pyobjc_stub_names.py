@@ -44,9 +44,14 @@ def test_every_accessibility_name_the_stub_answers_for_exists(name):
 
 
 def test_the_window_list_options_are_the_flags_the_backend_composes():
-    # These two are the only Quartz numbers the backend does arithmetic on:
-    # it ORs them into the argument of CGWindowListCopyWindowInfo.
+    # These are the only Quartz numbers the backend does arithmetic on -- it
+    # ORs them into the argument of CGWindowListCopyWindowInfo -- and the only
+    # ones the stub reads, to decide which windows a query sees.
     import Quartz
-    assert Quartz.kCGWindowListOptionOnScreenOnly == 1
-    assert Quartz.kCGWindowListExcludeDesktopElements == 16
+    assert Quartz.kCGWindowListOptionAll == objc_stub.OPTION_ALL
+    assert Quartz.kCGWindowListOptionOnScreenOnly == objc_stub.OPTION_ON_SCREEN_ONLY
+    assert (Quartz.kCGWindowListOptionIncludingWindow
+            == objc_stub.OPTION_INCLUDING_WINDOW)
+    assert (Quartz.kCGWindowListExcludeDesktopElements
+            == objc_stub.OPTION_EXCLUDE_DESKTOP)
     assert Quartz.kCGNullWindowID == 0
