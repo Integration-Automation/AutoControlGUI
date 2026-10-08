@@ -27,7 +27,7 @@ sender，也不會送出任何事件。
 同一份資料在每個入口都拿得到：
 
 * JSON 動作：``[["AC_probe_capabilities"]]``
-* MCP 工具：``ac_probe_capabilities``（唯讀）
+* MCP 工具：``ac_probe_capabilities``\ （唯讀）
 * GUI：**診斷** 分頁的第二張表
 
 四項能力各自獨立診斷，因為它們各自獨立地壞：
@@ -74,7 +74,7 @@ sender，也不會送出任何事件。
      - 不產生副作用就無法判定（例如 macOS 的權限）
 
 每項能力另外帶有 ``backend``（由誰提供）、``desktop_wide``、``detail``、
-``recovery``（英文的處理方式）與 ``recovery_key``（同一段建議在 GUI 語系表的鍵）。
+``recovery``\ （英文的處理方式）與 ``recovery_key``\ （同一段建議在 GUI 語系表的鍵）。
 
 libei 路徑上的 ``restore_token`` 是 ``unsupported``：這個綁定不向 portal 要求
 restore token，所以同意是每個行程問一次，重新啟動後不會保留。

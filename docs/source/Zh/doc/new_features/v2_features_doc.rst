@@ -30,7 +30,7 @@
 Executor：``AC_self_heal_locate / _click / _log_list / _log_clear``。
 MCP：``ac_self_heal_*``。GUI：**Self-Healing** 分頁。
 
-``screen_region`` 是螢幕座標的 ``[x1, y1, x2, y2]``，**兩種**策略都受它限制；
+``screen_region`` 是螢幕座標的 ``[x1, y1, x2, y2]``，\ **兩種**\ 策略都受它限制；
 以前只有 VLM 收到它，樣板比對可能在區域之外回報命中。
 
 **找到不等於驗證過。** ``HealOutcome.found`` 只表示某個策略回傳了一個點。

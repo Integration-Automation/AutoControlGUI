@@ -333,3 +333,94 @@ in that release. Debian trixie ships no `ydotool` package; bookworm and every
 current Ubuntu ship 0.1.8, which answers this argv with exit code 0 and no
 events. AutoControl refuses that version up front rather than reporting
 success for input it never sent.
+
+## Capability states the code reports
+
+The table at the top says what CI exercises. This section says what the
+running program reports about itself, which is a different question and has a
+machine-readable answer.
+
+`probe_capabilities()` diagnoses four desktop capabilities separately —
+`input`, `capture`, `recording` and `stop_shortcut` — and gives each one of
+these states:
+
+| State | Meaning | Usable now |
+|---|---|---|
+| `available` | Nothing stands in the way. | yes |
+| `not_requested` | Usable; the desktop asks for consent on first use. | yes |
+| `session_closed` | This process closed its session; the next use asks again. | yes |
+| `requesting` | A consent request is on screen right now. | no |
+| `needs_permission` | Someone has to say yes: a refused or unanswered consent, a device node this user may not read. | no |
+| `needs_setup` | Something has to be installed or configured. | no |
+| `revoked` | The compositor took a granted session away. | no |
+| `compositor_restarted` | The grant came from a compositor that is no longer running. | no |
+| `unsupported` | The platform cannot do this. | no |
+| `unknown` | Not determinable without side effects. | no |
+
+A state is a diagnosis, not a test result. On Linux every state comes from
+what the probe could read without side effects — the environment, `PATH`, the
+loader and the authorisation ledger — so `available` there means "nothing was
+found in the way", not "an event was delivered". On the other two desktops the
+probe reads nothing at all, and says so:
+
+<!-- probe-capabilities:begin (generated: test_modernization_examples.py --fix) -->
+| Platform | Capability | State | Backend | Evidence |
+|---|---|---|---|---|
+| `win32` | `input` | `available` | `win32` | reported, not probed: nothing to authorise |
+| `win32` | `capture` | `available` | `win32` | reported, not probed: nothing to authorise |
+| `win32` | `recording` | `available` | `win32` | reported, not probed: nothing to authorise |
+| `win32` | `stop_shortcut` | `available` | `win32` | reported, not probed: nothing to authorise |
+| `darwin` | `input` | `unknown` | `quartz` | not probed: permission for this platform is granted outside the process and is not probed here |
+| `darwin` | `capture` | `unknown` | `quartz` | not probed: permission for this platform is granted outside the process and is not probed here |
+| `darwin` | `recording` | `unknown` | `quartz` | not probed: permission for this platform is granted outside the process and is not probed here |
+| `darwin` | `stop_shortcut` | `unknown` | `quartz` | not probed: permission for this platform is granted outside the process and is not probed here |
+<!-- probe-capabilities:end (generated: test_modernization_examples.py --fix) -->
+
+So a Windows or macOS row in a capability report is the backend's name and a
+constant, never evidence that input works: on macOS the Accessibility and
+Screen Recording permissions are granted in System Settings and are not
+readable here. The `macos-capabilities` and Windows jobs in the table above
+are what exercise those backends.
+
+## Mobile devices
+
+`mobile_capability_matrix()` is the source of the tables below: which
+`AC_android_*` / `AC_ios_*` commands deliver each capability, and which
+desktop features have no mobile counterpart. A session reports each capability
+per device with `device_setup_report()`, in one of four states — `available`,
+`needs_permission` (USB debugging not authorised), `needs_dependency` (for
+example `uiautomator2` for multi-touch, or the ADB Keyboard IME for non-ASCII
+text) and `unsupported` — together with the backend and the versions that
+answered.
+
+Every command below is exercised in CI against a fake `adb` host and a fake
+WebDriverAgent client. That proves which commands are sent. **No job drives a
+real Android device or a real iPhone**, so nothing here is hardware-verified,
+and the row in the table at the top stays `mocked CI`.
+
+<!-- mobile-matrix:begin (generated: test_modernization_examples.py --fix) -->
+| Capability | Android commands | iOS commands |
+|---|---|---|
+| `input` | `AC_android_tap`, `AC_android_swipe`, `AC_android_key`, `AC_android_list_devices`, `AC_android_shell`, `AC_android_device_info`, `AC_android_long_press`, `AC_android_drag` | `AC_ios_tap`, `AC_ios_swipe`, `AC_ios_device_info`, `AC_ios_press_key`, `AC_ios_long_press`, `AC_ios_drag` |
+| `unicode_text` | `AC_android_text`, `AC_android_type_text` | `AC_ios_type` |
+| `multi_touch` | `AC_android_pinch` | `AC_ios_pinch` |
+| `screenshot` | `AC_android_screenshot`, `AC_android_screen_info`, `AC_android_find_image`, `AC_android_find_text`, `AC_android_find_by_description`, `AC_android_self_heal` | `AC_ios_screenshot`, `AC_ios_screen_info`, `AC_ios_find_image`, `AC_ios_find_text`, `AC_ios_find_by_description`, `AC_ios_self_heal` |
+| `ui_tree` | `AC_android_find_element`, `AC_android_click_element`, `AC_android_dump_hierarchy` | `AC_ios_find_element`, `AC_ios_click_element`, `AC_ios_dump_source` |
+| `app_lifecycle` | `AC_android_launch_app`, `AC_android_stop_app`, `AC_android_app_state`, `AC_android_wait_for_app` | `AC_ios_launch_app`, `AC_ios_stop_app`, `AC_ios_app_state`, `AC_ios_wait_for_app` |
+| `alerts` | `AC_android_alert_accept`, `AC_android_alert_dismiss` | `AC_ios_alert_accept`, `AC_ios_alert_dismiss` |
+| `install` | `AC_android_install_app` | `AC_ios_install_app` |
+| `files` | `AC_android_push_file`, `AC_android_pull_file` | `AC_ios_push_file`, `AC_ios_pull_file` |
+| `clipboard` | `AC_android_get_clipboard`, `AC_android_set_clipboard` | `AC_ios_get_clipboard`, `AC_ios_set_clipboard` |
+| `recording` | `AC_android_start_recording`, `AC_android_stop_recording` | `AC_ios_start_recording`, `AC_ios_stop_recording` |
+
+| Desktop-only feature | Why | Use instead |
+|---|---|---|
+| Window management (AC_window_*, focus, move, resize, z-order) | a phone shows one app at a time; there are no windows to manage | launch_app / stop_app / app_state to choose what is in front |
+| Mouse buttons, wheel and hover (AC_click_mouse, AC_mouse_scroll) | touch screens have no pointer, buttons or wheel | Tap, LongPress, Swipe (to scroll), Drag and Pinch |
+| Keyboard shortcuts and modifier keys (AC_hotkey, AC_press_keyboard_key) | there is no physical keyboard or modifier state | type_text for text; AC_android_key / AC_ios_press_key for hardware keys |
+| Desktop accessibility tree (UIA, AX, AT-SPI) | those APIs describe the host's desktop, not the device | AC_android_find_element (uiautomator2) / AC_ios_find_element (XCUITest) |
+| COM / Office automation | COM is a Windows host API | none on the device; drive the mobile app's UI instead |
+| USB host passthrough and usbip | these share the host's USB devices; a phone is a USB device, not a host | none; adb and WebDriverAgent are the device transports |
+| Global hotkeys, triggers on host input, input recording | they observe the host's keyboard and mouse, which the device does not use | record executed mobile steps in the action journal |
+| Desktop screen capture and screen recording (AC_screenshot, AC_screen_record) | they capture the host's monitors | DeviceSession.capture() and the recording extension |
+<!-- mobile-matrix:end (generated: test_modernization_examples.py --fix) -->

@@ -15,7 +15,7 @@ server 重啟後仍在。檔案位置依序取自 ``--config-db PATH``、環境�
 在第一個 ``/config`` 請求時才開啟,不是啟動時。內嵌 app 時傳
 ``create_app(config_store_path=...)``。
 
-每個 bucket 有 server 指派的 **revision**(第一次寫入為 ``1``,之後每次 commit ``+1``)。
+每個 bucket 有 server 指派的 **revision**\ (第一次寫入為 ``1``,之後每次 commit ``+1``)。
 寫入必須指明它所依據的 revision,比較與寫入在同一個 SQLite transaction 內完成:
 
 .. code-block:: python
@@ -60,8 +60,8 @@ entry id 對應到物件的 mapping。
 會以 ``ConfigSyncError: config sync PUT returned HTTP 428`` 失敗且不寫入任何東西;
 ``fetch`` 照常運作(回覆欄位相同,多一個它們會忽略的 ``version``)。要繼續服務它們,
 以 ``--allow-blind-config-writes`` 啟動 server,並接受兩個這種 client 同時 push 仍可能互相覆寫。
-**version-2 client 面對舊 server** 會被明確告知:回覆沒有 revision,``push`` 丟出
-``ConfigSyncError``(「predates revision-checked writes」)—— 請先升級 server。
+**version-2 client 面對舊 server** 會被明確告知:回覆沒有 revision, ``push`` 丟出
+``ConfigSyncError``\ (「predates revision-checked writes」)—— 請先升級 server。
 
 Client
 ------
@@ -229,7 +229,7 @@ Adapter:同步什麼、什麼留在本機
      - ``ac_config_sync_run``
      - 同步一次
    * - ``AC_config_sync_status``
-     - ``ac_config_sync_status``(唯讀)
+     - ``ac_config_sync_status``\ (唯讀)
      - 已記錄的狀態;不連網、不建立任何東西
    * - ``AC_config_sync_resolve``
      - ``ac_config_sync_resolve``

@@ -9,6 +9,7 @@ Comprehensive guides for all AutoControl features.
    :caption: User Guide
 
    doc/installation/installation_doc
+   doc/configuration/configuration_doc
    doc/mouse/mouse_doc
    doc/keyboard/keyboard_doc
    doc/screen/screen_doc
@@ -25,6 +26,7 @@ Comprehensive guides for all AutoControl features.
    doc/critical_exit/critical_exit_doc
    doc/cli/cli_doc
    doc/config_sync/config_sync_doc
+   doc/examples/examples_doc
    doc/create_project/create_project_doc
    doc/new_features/new_features_doc
    doc/new_features/v2_features_doc
