@@ -376,29 +376,6 @@ viewer 端的 `FileReceiver`（`utils/remote_desktop/file_transfer.py`）照單�
 
 ---
 
-## `AC_run_agent` 預設把每個 AC_* 指令都交給模型
-
-`DECIDE` — 預設工具集要不要排除高風險指令
-
-`utils/executor/action_executor.py` 的 `_run_agent` 以 `export_anthropic_tools()` / `export_openai_tools()`
-不帶 `only=` 建立 backend，所以模型拿得到 `AC_shell_command`、`AC_execute_process`、`AC_android_shell`、
-`AC_add_package_to_executor`、`AC_run_agent`、`AC_computer_use`、`AC_execute_action` 等指令。
-2026-09-23 已讓 backend 拒絕「沒有提供的工具」，但提供的清單本身就包含這些；
-螢幕上的內容（網頁、文件）若誘導模型呼叫 shell，目前不會被擋。
-
-**做法**：`_run_agent` 預設排除上述類別，另加一個 opt-in 參數（例如 `allow_system_commands`）
-讓需要的人明確打開；MCP `ac_run_agent` 與 Script Builder 的欄位同步。
-
-**為什麼要拍板**：這會縮小既有的 agent 能力，依賴它跑 shell 的腳本會改變行為。
-
-實測數字（2026-09-25）：預設清單有 741 個指令，含 `AC_run_agent` 本身（模型可以遞迴開 agent）；
-`backend="openai"` 超過 Chat Completions 的 128 個工具上限，現在建 backend 時就明確拒絕；
-Anthropic 每一步送約 202 KB 的工具 schema、沒有 `cache_control`。拍板後一併決定上限與快取。
-
-[Answer] 不改
-
----
-
 ## macOS 無法還原最小化的視窗
 
 `TODO` — 需要在 macOS 上驗證，離線的 pyobjc 替身抓不到
