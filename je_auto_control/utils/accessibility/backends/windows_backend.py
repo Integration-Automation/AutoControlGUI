@@ -7,9 +7,11 @@ Flattens the UIAutomation tree into ``AccessibilityElement`` records one
 level at a time starting from the root desktop, filtered by app if needed.
 Only ``is_control_element=True`` nodes are surfaced to avoid millions of
 decorative text children.
+
+Threads: each calling thread gets its own automation object, created after COM
+is initialised on that thread, and no raw element outlives the call that found
+it -- see :mod:`~je_auto_control.utils.accessibility.backends.windows_automation`.
 """
-import functools
-import sys
 from typing import Any, Dict, List, Optional
 
 from je_auto_control.utils.accessibility.backends.base import (
@@ -17,6 +19,10 @@ from je_auto_control.utils.accessibility.backends.base import (
 )
 from je_auto_control.utils.accessibility.element import (
     AccessibilityElement, AccessibilityNotAvailableError, element_matches,
+)
+from je_auto_control.utils.accessibility.backends.windows_automation import (
+    _CLSID_CUIAUTOMATION, _CLSID_CUIAUTOMATION8, PerThread, _create_automation, _is_available,
+    _process_name, enter_apartment,
 )
 from je_auto_control.utils.accessibility.backends.windows_query import (
     UIA_ERRORS, _is_null, focused_raw, search_roots, walk_elements,
@@ -73,54 +79,17 @@ _WINDOW_INTERACTION_STATES = {
 }
 
 
-def _is_available() -> bool:
-    try:
-        import comtypes.client  # noqa: F401  # reason: probe import
-        return True
-    except ImportError:
-        return False
-
-
-# ``CUIAutomation8`` is the only class that hands out ``IUIAutomation2``, which
-# is the only way to bound how long UIA waits for an application's provider.
-# It matters: a full-screen game that never answers UIA made a single
-# ``ElementFromHandle`` block for **60 seconds** here, poisoning every
-# desktop-wide search. With the connection timeout set, the same call is 1.0 s.
-_CLSID_CUIAUTOMATION8 = "{e22ad333-b25f-460c-83d0-0581107395c9}"
-_CLSID_CUIAUTOMATION = "{ff48dba4-60ef-4201-aa87-54103eef594e}"
-# Only the connect step is tightened. A provider that cannot even connect within
-# a second is not going to answer; how long a legitimate *query* may take is a
-# different question, so ``TransactionTimeout`` keeps its default.
-_CONNECTION_TIMEOUT_MS = 1000
-
-
-def _create_automation(uia_module):
-    """The UIAutomation object, with a bounded provider-connect wait if possible."""
-    from comtypes import CoCreateInstance, GUID
-    interface = getattr(uia_module, "IUIAutomation2", None)
-    if interface is not None:
-        try:
-            automation = CoCreateInstance(GUID(_CLSID_CUIAUTOMATION8),
-                                          interface=interface)
-            automation.ConnectionTimeout = _CONNECTION_TIMEOUT_MS
-            return automation
-        except _UIA_ERRORS as error:
-            autocontrol_logger.info(
-                "UIAutomation2 unavailable, provider waits are unbounded: %r",
-                error)
-    return CoCreateInstance(GUID(_CLSID_CUIAUTOMATION),
-                            interface=uia_module.IUIAutomation)
-
 
 class WindowsAccessibilityBackend(AccessibilityBackend):
     """UIAutomation-based flat element listing."""
 
     name = "windows-uia"
+    #: One automation object per calling thread: a COM object is used where it was created.
+    _automation = PerThread()
 
     def __init__(self) -> None:
         import threading
         self.available = _is_available()
-        self._automation: Any = None
         # The comtypes-generated UIAutomationClient module; `Any` because it
         # is generated at import time and has no declarations to check.
         self._uia_module: Any = None
@@ -134,6 +103,7 @@ class WindowsAccessibilityBackend(AccessibilityBackend):
                 "comtypes is required for Windows accessibility; "
                 "install it with: pip install comtypes",
             )
+        enter_apartment()   # this thread's COM apartment, before its first COM call
         import comtypes.client  # noqa: F401
         try:
             uia_module = comtypes.client.GetModule("UIAutomationCore.dll")
@@ -772,34 +742,7 @@ def _convert_uia(raw, cached: bool = False) -> Optional[AccessibilityElement]:
     )
 
 
-@functools.lru_cache(maxsize=256)
-def _process_name(process_id: int) -> str:
-    """Executable name for a pid.
-
-    Cached because a desktop listing asks for the same handful of pids
-    thousands of times, and each miss is an ``OpenProcess`` /
-    ``QueryFullProcessImageNameW`` / ``CloseHandle`` round trip. Windows does
-    recycle pids, so a very long-lived session could in principle read a stale
-    name here; it only labels ``app_name``, and the cache is bounded.
-    """
-    if process_id <= 0 or sys.platform != "win32":
-        return ""
-    try:
-        import ctypes
-        from ctypes import wintypes
-        kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
-        process_query_information = 0x0400 | 0x0010
-        handle = kernel32.OpenProcess(process_query_information, False, process_id)
-        if not handle:
-            return ""
-        try:
-            buf = ctypes.create_unicode_buffer(260)
-            size = wintypes.DWORD(len(buf))
-            get_image = kernel32.QueryFullProcessImageNameW
-            if not get_image(handle, 0, buf, ctypes.byref(size)):
-                return ""
-            return buf.value.rsplit("\\", 1)[-1]
-        finally:
-            kernel32.CloseHandle(handle)
-    except OSError:
-        return ""
+__all__ = [
+    "WindowsAccessibilityBackend", "_CLSID_CUIAUTOMATION", "_CLSID_CUIAUTOMATION8", "_convert_uia",
+    "_create_automation", "_is_available", "_process_name",
+]

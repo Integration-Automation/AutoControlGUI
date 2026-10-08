@@ -12,6 +12,7 @@ from typing import Any, Callable
 
 from PySide6.QtCore import QObject
 
+from je_auto_control.gui._weak_call import weak_slot
 from je_auto_control.gui.task_controller import CancellationToken, TaskHandle, task_controller
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 
@@ -44,13 +45,15 @@ def connect_viewer(owner: QObject, viewer: Any, *,
     """Run ``viewer.connect`` off the GUI thread for ``owner``; return the task.
 
     ``on_connected(viewer)`` or ``on_failed(error)`` runs on the GUI thread,
-    and only while ``owner`` exists. Cancelling the task, or destroying
-    ``owner``, disconnects a viewer that connects anyway.
+    and only while ``owner`` exists; both are held weakly, so pass methods of
+    the panel (or a ``functools.partial`` of one), never a closure over it.
+    Cancelling the task, or destroying ``owner``, disconnects a viewer that
+    connects anyway.
     """
     handle = task_controller().submit(functools.partial(_connect, viewer, timeout_s),
                                       owner=owner, discard=_disconnect_quietly)
-    handle.result.connect(on_connected)
-    handle.error.connect(on_failed)
+    handle.result.connect(weak_slot(on_connected))
+    handle.error.connect(weak_slot(on_failed))
     return handle
 
 

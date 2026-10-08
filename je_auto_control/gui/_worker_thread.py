@@ -33,10 +33,12 @@ mechanism, with two levels of use.
 import atexit
 import threading
 import time
+import weakref
 from typing import Any, Callable, Dict, Optional
 
 from PySide6.QtCore import QObject, Signal
 
+from je_auto_control.gui._weak_call import WeakCall
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 
 #: How long interpreter exit waits, in all, for running workers to stop.
@@ -71,8 +73,26 @@ class WorkerHandle:
     """A started worker: running until its thread has returned from ``run()``."""
 
     def __init__(self, worker: QObject) -> None:
-        self.worker = worker
+        # Any: a worker is duck-typed -- ``run``, a ``finished`` signal, optionally ``failed`` and
+        # ``request_stop`` -- and Qt's own type for it says none of that.
+        self.worker: Any = worker
         self._thread: Optional[threading.Thread] = None
+        self._owner: Optional["weakref.ref[QObject]"] = None
+        self._relay: Optional["weakref.ref[_Relay]"] = None
+
+    def cancel(self) -> None:
+        """Ask the worker to stop if it can, and deliver neither its result nor its failure.
+
+        A worker with ``request_stop()`` ends at its next checkpoint; one
+        without runs to its end. ``on_thread_done`` still runs when the thread
+        ends -- it is the tab's bookkeeping, not an outcome.
+        """
+        request_stop = getattr(self.worker, "request_stop", None)
+        if callable(request_stop):
+            request_stop()
+        relay = self._relay() if self._relay is not None else None
+        if relay is not None:
+            relay.drop_outcome()
 
     def isRunning(self) -> bool:  # noqa: N802  # reason: the QThread spelling its callers use
         """Whether ``run()`` has not returned yet."""
@@ -116,7 +136,13 @@ def _reaper() -> _Reaper:
 
 
 class _Relay(QObject):
-    """GUI-thread receiver for a worker's outcome, owned by the tab."""
+    """GUI-thread receiver for a worker's outcome, owned by the tab.
+
+    The callbacks are normally methods of the tab this relay is a child of,
+    so they are held weakly (:mod:`je_auto_control.gui._weak_call`): held
+    strongly, the relay could be the last holder of a parentless tab and
+    destroy it from inside its own destructor.
+    """
 
     thread_ended = Signal()
     crashed = Signal(str)
@@ -126,9 +152,9 @@ class _Relay(QObject):
                  on_thread_done: Callable[[], None],
                  on_fail: Optional[Callable[[str], None]]) -> None:
         super().__init__(parent)
-        self._on_done = on_done
-        self._on_thread_done = on_thread_done
-        self._on_fail = on_fail
+        self._on_done = WeakCall(on_done)
+        self._on_thread_done = WeakCall(on_thread_done)
+        self._on_fail = WeakCall(on_fail)
         self.thread_ended.connect(self.thread_done)
         self.crashed.connect(self.fail)
 
@@ -136,10 +162,13 @@ class _Relay(QObject):
         """Forward the worker's result (runs on the GUI thread)."""
         self._on_done(value)
 
+    def drop_outcome(self) -> None:
+        """Deliver neither the result nor the failure from now on; the thread's end is still reported."""
+        self._on_done = self._on_fail = WeakCall(None)
+
     def fail(self, message: str) -> None:
         """Forward the worker's failure (runs on the GUI thread)."""
-        if self._on_fail is not None:
-            self._on_fail(message)
+        self._on_fail(message)
 
     def thread_done(self) -> None:
         """Forward the thread's end (runs on the GUI thread), then go away."""
@@ -165,6 +194,18 @@ def _stop_running_workers() -> None:
 
 
 atexit.register(_stop_running_workers)
+
+
+def cancel_workers(owner: QObject) -> int:
+    """Cancel every worker :func:`start_worker` is still running for ``owner``; return how many.
+
+    What a tab's ``dispose()`` needs: see :meth:`WorkerHandle.cancel`.
+    """
+    handles = [handle for handle in list(_RUNNING)
+               if handle._owner is not None and handle._owner() is owner]  # noqa: SLF001  # reason: own class
+    for handle in handles:
+        handle.cancel()
+    return len(handles)
 
 
 def running_threads() -> int:
@@ -204,16 +245,19 @@ def start_worker(owner: QObject, worker: QObject, *,
     Call from the GUI thread. ``worker`` must have a ``finished`` signal and
     may have ``failed``. ``on_done`` / ``on_fail`` / ``on_thread_done`` run on
     the GUI thread, and only while ``owner`` exists: destroying ``owner``
-    mid-run drops them and leaves the work to finish on its own. The worker is
-    deleted once the GUI thread has seen its thread end.
+    mid-run drops them and leaves the work to finish on its own. A bound
+    method (or a ``functools.partial`` of one) is held weakly, so pass those
+    rather than a lambda that closes over ``owner``. The worker is deleted
+    once the GUI thread has seen its thread end.
     """
     reaper = _reaper()
     relay = _Relay(owner, on_done, on_thread_done, on_fail)
-    worker.finished.connect(relay.done)
+    handle = WorkerHandle(worker)
+    handle.worker.finished.connect(relay.done)
     failed = getattr(worker, "failed", None)
     if failed is not None:
         failed.connect(relay.fail)
-    handle = WorkerHandle(worker)
+    handle._owner, handle._relay = weakref.ref(owner), weakref.ref(relay)  # noqa: SLF001  # reason: set once
     _RUNNING[handle] = worker
     thread = threading.Thread(target=_run, args=(handle, relay, reaper),
                               name=f"gui-worker-{type(worker).__name__}", daemon=True)

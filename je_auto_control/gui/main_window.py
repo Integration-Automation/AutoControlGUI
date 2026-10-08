@@ -80,8 +80,9 @@ class AutoControlGUIUI(QMainWindow):
         self.setCentralWidget(self.auto_control_gui_widget)
         self._build_navigation()
 
-        self._view_menu: QMenu = None
-        self._actions_menu: QMenu = None
+        # Both are assigned by _build_menu_bar, two lines down.
+        self._view_menu: QMenu
+        self._actions_menu: QMenu
         self._tab_actions: list = []
         self._build_menu_bar()
         self.auto_control_gui_widget.tabs_changed.connect(self._rebuild_tabs_menu)

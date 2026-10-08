@@ -71,7 +71,7 @@ def test_the_tab_restores_what_it_saved_and_never_the_secret(qapp, tmp_path):
     path = tmp_path / "gui.ini"
     first = config_sync_tab.ConfigSyncTab(settings=WindowSettings(path))
     values = {"server": "https://sync.invalid", "user": "alice", "secret": _NEVER_SAVED,
-              "scripts": "C:/scripts", "assets": "C:/assets"}
+              "scripts": "C:/scripts", "assets": "C:/assets", "locators": "C:/locators.json"}
     for name, value in values.items():
         first._inputs[name].setText(value)
     first._inputs["server"].editingFinished.emit()      # a field lost focus

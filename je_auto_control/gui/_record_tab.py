@@ -13,6 +13,7 @@ from PySide6.QtWidgets import (
 )
 
 from je_auto_control.gui._tab_task import TabTask, was_stopped
+from je_auto_control.gui._qt_typed import as_widget
 from je_auto_control.gui.language_wrapper.multi_language_wrapper import language_wrapper
 from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.executor.action_executor import execute_action
@@ -62,7 +63,7 @@ class RecordTabMixin:
         self.record_list_text.setReadOnly(True)
         layout.addWidget(self.record_list_text)
         tab.setLayout(layout)
-        self._playback_runs = TabTask(self)
+        self._playback_runs = TabTask(as_widget(self))
         self._playback_runs.error.connect(self._on_playback_error)
         self._playback_runs.finished.connect(self._on_playback_finished)
         return tab
@@ -82,12 +83,12 @@ class RecordTabMixin:
             if not record():
                 # record() logs its failure and returns False; the status
                 # said "Recording..." while nothing was recorded.
-                QMessageBox.warning(self, "Error", "Recording could not start; see the log")
+                QMessageBox.warning(as_widget(self), "Error", "Recording could not start; see the log")
                 return
             self._record_status_key = "record_recording"
             self._apply_record_status_label()
         except (AutoControlException, OSError, ValueError, TypeError, RuntimeError) as error:
-            QMessageBox.warning(self, "Error", str(error))
+            QMessageBox.warning(as_widget(self), "Error", str(error))
 
     def _stop_record(self):
         try:
@@ -96,11 +97,11 @@ class RecordTabMixin:
             self._apply_record_status_label()
             self.record_list_text.setText(json.dumps(self._record_data, indent=2, ensure_ascii=False))
         except (AutoControlException, OSError, ValueError, TypeError, RuntimeError) as error:
-            QMessageBox.warning(self, "Error", str(error))
+            QMessageBox.warning(as_widget(self), "Error", str(error))
 
     def _playback_record(self):
         if not self._record_data:
-            QMessageBox.warning(self, "Warning", "No recorded data")
+            QMessageBox.warning(as_widget(self), "Warning", "No recorded data")
             return
         # The worker gets its own copy: loading or recording again while the
         # playback runs must not change the list under it.
@@ -116,7 +117,7 @@ class RecordTabMixin:
 
     def _on_playback_error(self, error: object) -> None:
         if not was_stopped(error):
-            QMessageBox.warning(self, "Error", str(error))
+            QMessageBox.warning(as_widget(self), "Error", str(error))
 
     def _on_playback_finished(self) -> None:
         self._record_status_key = "record_idle"
@@ -125,19 +126,19 @@ class RecordTabMixin:
     def _save_record(self):
         try:
             if not self._record_data:
-                QMessageBox.warning(self, "Warning", "No recorded data")
+                QMessageBox.warning(as_widget(self), "Warning", "No recorded data")
                 return
-            path, _ = QFileDialog.getSaveFileName(self, _t("save_record"), "", _JSON_FILE_FILTER)
+            path, _ = QFileDialog.getSaveFileName(as_widget(self), _t("save_record"), "", _JSON_FILE_FILTER)
             if path:
                 write_action_json(path, self._record_data)
         except (AutoControlException, OSError, ValueError, TypeError, RuntimeError) as error:
-            QMessageBox.warning(self, "Error", str(error))
+            QMessageBox.warning(as_widget(self), "Error", str(error))
 
     def _load_record(self):
         try:
-            path, _ = QFileDialog.getOpenFileName(self, _t("load_record"), "", _JSON_FILE_FILTER)
+            path, _ = QFileDialog.getOpenFileName(as_widget(self), _t("load_record"), "", _JSON_FILE_FILTER)
             if path:
                 self._record_data = read_action_json(path)
                 self.record_list_text.setText(json.dumps(self._record_data, indent=2, ensure_ascii=False))
         except (AutoControlException, OSError, ValueError, TypeError, RuntimeError) as error:
-            QMessageBox.warning(self, "Error", str(error))
+            QMessageBox.warning(as_widget(self), "Error", str(error))

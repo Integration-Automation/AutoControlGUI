@@ -240,8 +240,11 @@ def test_releasing_a_tab_through_the_registry_runs_its_dispose(monkeypatch):
 
 # --- every tab that holds something has the hook -----------------------------------------------------------------
 
-#: A tab class whose source does one of these at any point holds something deletion alone releases late.
-_HOLDS = ("QTimer(", ".add_listener(", "hold_default_watcher(", ".attach(")
+#: A tab class whose source does one of these at any point holds something deletion alone releases late:
+#: a timer, a listener, or background work whose outcome would still be delivered (or which keeps running).
+_HOLDS = ("QTimer(", ".add_listener(", "hold_default_watcher(", ".attach(",
+          "start_worker(", "TabTask(", "task_controller()", "SlowOp(", "StopQueue(", "connect_viewer(",
+          "start_panel_task(")
 
 
 def _tab_classes():
@@ -274,7 +277,38 @@ def test_every_registered_tab_that_holds_a_timer_or_a_listener_implements_dispos
             continue
         if any(marker in source for marker in _HOLDS) and "def dispose(self)" not in source:
             missing.append(f"{module_name}.{class_name}")
-    assert missing == [], f"tabs that start a timer or register a listener without dispose(): {missing}"
+    assert missing == [], f"tabs that hold a timer, a listener or background work without dispose(): {missing}"
+
+
+#: Remote Desktop is built by the main widget, so the registry names no module for it; its sub-panels
+#: are the classes that hold things.
+_REMOTE_DESKTOP_PANELS = [
+    ("je_auto_control.gui.remote_desktop.tab", "RemoteDesktopTab"),
+    ("je_auto_control.gui.remote_desktop.connection_screen", "QuickConnectScreen"),
+    ("je_auto_control.gui.remote_desktop.host_panel", "_HostPanel"),
+    ("je_auto_control.gui.remote_desktop.viewer_panel", "_ViewerPanel"),
+    ("je_auto_control.gui.remote_desktop.webrtc_panel", "_WebRTCHostPanel"),
+    ("je_auto_control.gui.remote_desktop.webrtc_panel", "_WebRTCViewerPanel"),
+]
+
+
+@pytest.mark.parametrize("module_name, class_name", _REMOTE_DESKTOP_PANELS,
+                         ids=[case[1] for case in _REMOTE_DESKTOP_PANELS])
+def test_every_remote_desktop_panel_implements_dispose(module_name, class_name):
+    try:
+        source = _class_source(module_name, class_name)
+    except ImportError:                     # the webrtc extra is not installed here
+        pytest.skip("optional extra not installed")
+    assert "def dispose(self)" in source
+
+
+def test_the_guard_covers_tabs_that_only_hold_background_work():
+    sources = {name: _class_source(module, name) for module, name in _tab_classes()
+               if name in ("VLMTab", "ComputerUseTab", "DagTab", "UsbBrowserTab", "OCRReaderTab")}
+    assert len(sources) == 5
+    for name, source in sources.items():
+        assert any(marker in source for marker in _HOLDS[4:]), name
+        assert not any(marker in source for marker in _HOLDS[:4]), name
 
 
 def test_the_guard_reads_real_tab_classes():

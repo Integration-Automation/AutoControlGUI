@@ -18,6 +18,7 @@ GUI stays responsive.
 from __future__ import annotations
 
 import functools
+from pathlib import Path
 from typing import Any, Callable, List, Optional
 
 from PySide6.QtCore import QTimer
@@ -361,7 +362,7 @@ class UsbPassthroughPanel(TranslatableMixin, QWidget):
         if not path:
             return
         try:
-            export_acl_to_file(self._acl, path)
+            export_acl_to_file(self._acl, Path(path))
         except OSError as error:
             self._viewer_status.setText(
                 _t("usb_share_acl_import_failed").format(error=str(error)),
@@ -376,7 +377,7 @@ class UsbPassthroughPanel(TranslatableMixin, QWidget):
         if not path:
             return
         try:
-            count = import_acl_from_file(self._acl, path)
+            count = import_acl_from_file(self._acl, Path(path))
         except (OSError, ValueError) as error:
             self._viewer_status.setText(
                 _t("usb_share_acl_import_failed").format(error=str(error)),
@@ -451,7 +452,7 @@ class UsbPassthroughPanel(TranslatableMixin, QWidget):
         )
         self._run_async(
             lambda: _probe_device(client, vid, pid, serial),
-            lambda descriptor: self._opened(vid, pid, descriptor),
+            functools.partial(self._opened, vid, pid),
             self._fail,
         )
 
@@ -490,8 +491,9 @@ class UsbPassthroughPanel(TranslatableMixin, QWidget):
                    on_fail: Callable[[str], None]) -> None:
         if self._thread is not None:
             return
-        # on_done / on_fail are often lambdas; start_worker runs them on the
-        # GUI thread, where they may touch widgets.
+        # start_worker runs on_done / on_fail on the GUI thread, where they may
+        # touch widgets, and holds them weakly: pass methods (or partials of
+        # them), not lambdas over this panel.
         self._thread = start_worker(self, _CallWorker(fn), on_done=on_done,
                                     on_fail=on_fail, on_thread_done=self._on_thread_done)
 

@@ -1,7 +1,7 @@
 """Signals, defaults and config readers shared by the WebRTC host and viewer panels."""
 from __future__ import annotations
 
-import functools
+import weakref
 from typing import Any, Callable, Optional, Tuple
 
 from PySide6.QtCore import QObject, Signal
@@ -11,8 +11,9 @@ from PySide6.QtWidgets import QWidget
 from je_auto_control.gui.remote_desktop._webrtc_types import AvFrameT, WebRTCConfigT
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
 from je_auto_control.gui._slow_op import StopQueue
+from je_auto_control.gui._weak_call import weak_slot
 from je_auto_control.gui.remote_desktop._helpers import _t
-from je_auto_control.gui.task_controller import TaskHandle, task_controller
+from je_auto_control.gui.task_controller import task_controller
 
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.remote_desktop import (
@@ -95,20 +96,24 @@ def start_panel_task(panel: QWidget, attribute: str, work: Callable[..., object]
 
     Returns ``False`` (and starts nothing) while the previous task under the
     same attribute has not ended. The attribute is ``None`` again once the
-    outcome has been delivered, which is what a test waits for.
+    outcome has been delivered, which is what a test waits for. The callbacks
+    are held weakly (a method of the panel, or a ``functools.partial`` of
+    one): the task is the panel's child and must not be what keeps it alive.
     """
     if getattr(panel, attribute, None) is not None:
         return False
     task = task_controller().submit(work, owner=panel)
     setattr(panel, attribute, task)
-    task.result.connect(on_result)
-    task.error.connect(on_error)
-    task.finished.connect(functools.partial(_clear_panel_task, panel, attribute, task))
+    task.result.connect(weak_slot(on_result))
+    task.error.connect(weak_slot(on_error))
+    task.finished.connect(weak_slot(_clear_panel_task, weakref.ref(panel), attribute, weakref.ref(task)))
     return True
 
 
-def _clear_panel_task(panel: QWidget, attribute: str, task: TaskHandle) -> None:
-    if getattr(panel, attribute, None) is task:
+def _clear_panel_task(panel_ref: Callable[[], Optional[QWidget]], attribute: str,
+                      task_ref: Callable[[], Optional[QObject]]) -> None:
+    panel, task = panel_ref(), task_ref()
+    if panel is not None and task is not None and getattr(panel, attribute, None) is task:
         setattr(panel, attribute, None)
 
 

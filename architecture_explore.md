@@ -19,8 +19,8 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 
 | 指標 | 數值 |
 | --- | ---: |
-| Python 模組總數（含周邊子專案） | 1,171 |
-| 程式碼總行數 | 186,736 |
+| Python 模組總數（含周邊子專案） | 1,174 |
+| 程式碼總行數 | 187,432 |
 | `je_auto_control/utils/` 子套件數 | 311 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 851 |
 | 套件門面 `__all__` 公開名稱數 | 1,244 |
@@ -442,12 +442,12 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.7 無障礙樹與原生控制項
 
-> 16 個套件、約 4,678 行。
+> 16 個套件、約 4,825 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
 | `utils/a11y_audit/` | 362 | 以無障礙樹 + OCR 進行無障礙與 i18n 稽核 |
-| `utils/accessibility/` | 3,143 | 跨平台無障礙樹定位與錄製；Windows UIA／macOS AX／null 三後端。支援限定視窗（換搜尋起點，不是過濾）、逐節點可中斷走訪、`IUIAutomation2` 連線逾時、名稱子字串比對與排序、`control_get_state` 一次讀完值／勾選／選取／數值（密碼欄位不回內容） |
+| `utils/accessibility/` | 3,290 | 跨平台無障礙樹定位與錄製；Windows UIA／macOS AX／null 三後端。支援限定視窗（換搜尋起點，不是過濾）、逐節點可中斷走訪、`IUIAutomation2` 連線逾時、名稱子字串比對與排序、`control_get_state` 一次讀完值／勾選／選取／數值（密碼欄位不回內容） |
 | `utils/ax_events/` | 35 | 反應式 UIA 事件等待（focus-changed） |
 | `utils/ax_props/` | 44 | 讀取豐富 UIA 屬性（enabled／offscreen／help／status／快捷鍵） |
 | `utils/ax_text/` | 102 | 透過 UIA TextPattern 取得原生文字（讀取／尋找／選取／屬性） |
@@ -515,14 +515,14 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.10 遠端桌面與 USB
 
-> 6 個套件、約 24,929 行。
+> 6 個套件、約 24,936 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
 | `utils/admin/` | 418 | 多主機管理主控台：平行輪詢 N 個 AutoControl REST 端點 |
 | `utils/config_sync/` | 4,089 | 透過訊令伺服器做跨機器設定同步 |
 | `utils/device_matrix/` | 203 | 行動裝置矩陣：同一 action list 於多台裝置平行執行 |
-| `utils/remote_desktop/` | 14,172 | **遠端桌面子系統**（56 檔／11.7K LOC）：TCP／WebSocket／WebRTC 三條傳輸路徑、主機與檢視端、訊令伺服器、TURN／中繼、多檢視者、錄影、信任清單、TOTP、稽核鏈 |
+| `utils/remote_desktop/` | 14,179 | **遠端桌面子系統**（56 檔／11.7K LOC）：TCP／WebSocket／WebRTC 三條傳輸路徑、主機與檢視端、訊令伺服器、TURN／中繼、多檢視者、錄影、信任清單、TOTP、稽核鏈 |
 | `utils/usb/` | 5,039 | 跨平台 USB 列舉／熱插拔／裝置直通（WinUSB、IOKit、libusb 後端 + ACL + WebRTC DataChannel 通道） |
 | `utils/usbip/` | 1,008 | USB/IP 線路協定主機端（協定封包、TCP 伺服器、libusb URB 後端） |
 
@@ -754,7 +754,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `rate_limit.py` | 48 | 工具呼叫的 token bucket 限流。 |
 | `__main__.py` | 107 | `je_auto_control_mcp` console script 進入點。 |
 
-#### `utils/remote_desktop/`（14,172 行／57 檔）
+#### `utils/remote_desktop/`（14,179 行／57 檔）
 
 三條傳輸路徑並存：**TCP**（JPEG 影格）、**WebSocket**（同協定換傳輸）、**WebRTC**（aiortc 視訊 + DataChannel）。
 
@@ -787,7 +787,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `video_codec.py` | 197 | TCP／WS 路徑的可插拔視訊編解碼。 |
 | `webrtc_host_media.py` | 197 | 重新協商與 recvonly 軌管理。aiortc 沒有 `removeTransceiver`,所以開／關不對稱——開是加軌重新 offer,關只能設 inactive 並停掉 receiver。 |
 | `hw_codec.py` | 201 | 硬體 H.264 編碼偵測與啟用。 |
-| `webrtc_stats.py` | 167 | 把 aiortc 的 `RTCStats` 報告輪詢成精簡 dict。 |
+| `webrtc_stats.py` | 174 | 把 aiortc 的 `RTCStats` 報告輪詢成精簡 dict。 |
 | `connect_coordinator.py` | 158 | 由使用者輸入的目標決定該用哪條傳輸。 |
 | `adaptive_bitrate.py` | 148 | 依統計調整主機擷取 FPS。 |
 | `signaling_client.py` | 164 | 純標準庫的訊令用戶端。 |
@@ -889,28 +889,28 @@ GUI 是**選用 extra**（`pip install je_auto_control[gui]`，PySide6），且�
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
 | `gui/__init__.py` | 25 | `start_autocontrol_gui()`：**唯一**會延遲匯入 PySide6 的地方，維持頂層套件 Qt-free。 |
-| `main_window.py` | 456 | `QMainWindow`：選單列（File／Actions／View／…）、左側導覽面板 dock（`Ctrl+K` 搜尋、`Ctrl+B` 收合）、即時語言切換、字級預設、深色／淺色主題（`theme.py` 的 token，不再用 qt-material）。分頁分為 core／editing／detection／automation／system 五類。 |
+| `main_window.py` | 457 | `QMainWindow`：選單列（File／Actions／View／…）、左側導覽面板 dock（`Ctrl+K` 搜尋、`Ctrl+B` 收合）、即時語言切換、字級預設、深色／淺色主題（`theme.py` 的 token，不再用 qt-material）。分頁分為 core／editing／detection／automation／system 五類。 |
 | `main_widget.py` | 435 | 工作區：擁有 `QTabWidget`，依 `tab_registry.TAB_SPECS` 註冊 50 個分頁，並暴露 show/hide/activate/list API 給選單列與導覽面板。只有預設開啟的三個分頁與自己的 mixin 表單在啟動時建立，其餘第一次開啟才匯入模組、建立 widget。核心分頁在 `_own_tab_builders` 宣告 `(label_key, handler)` 動作對。 |
-| `workspace_tabs.py` | 286 | `WorkspaceTabWidget`：每頁包在可捲動的 holder 裡，對 Python 呼叫端仍以頁面本身為單位（`indexOf(page)`、`setCurrentWidget(page)`）。 |
+| `workspace_tabs.py` | 344 | `WorkspaceTabWidget`：每頁包在可捲動的 holder 裡，對 Python 呼叫端仍以頁面本身為單位（`indexOf(page)`、`setCurrentWidget(page)`）。 |
 | `window_settings.py` | 193 | 以 `QSettings` INI 記住主題、字級、導覽面板與視窗位置；`JE_AUTOCONTROL_GUI_SETTINGS` 可改路徑或關閉。 |
-| `task_controller.py` | 446 | 可取消的背景工作：結果／錯誤／進度以 typed signal 回到 GUI 執行緒，擁有者銷毀後的結果直接丟棄。建在 `_worker_thread.start_worker` 之上。 |
+| `task_controller.py` | 453 | 可取消的背景工作：結果／錯誤／進度以 typed signal 回到 GUI 執行緒，擁有者銷毀後的結果直接丟棄。建在 `_worker_thread.start_worker` 之上。 |
 | `_tab_task.py` | 130 | 分頁一次一個背景工作；腳本執行是可停止的 executor run，Stop 不等 worker。 |
-| `_slow_op.py` | 213 | 會 join 執行緒的 start／stop 移出 GUI 執行緒：`SlowOp`、`StopQueue`、`stop_each`，回呼以弱參照持有。 |
-| `_dispose.py` | 50 | 分頁 `dispose()` 的共用部分：停計時器、放掉 listener 與 watcher。 |
+| `_slow_op.py` | 184 | 會 join 執行緒的 start／stop 移出 GUI 執行緒：`SlowOp`、`StopQueue`、`stop_each`，回呼以弱參照持有。 |
+| `_dispose.py` | 60 | 分頁 `dispose()` 的共用部分：停計時器、放掉 listener 與 watcher。 |
 | `tab_registry.py` | 156 | 分頁表：每個分頁一筆 `TabSpec`（鍵、標題鍵、分類、模組與類別名），`TabEntry` 在第一次存取 `widget` 時才呼叫 factory。不匯入 Qt。 |
 | `navigation.py` | 200 | `NavigationPanel`：搜尋框 + 依分類的功能樹，列出每個已註冊分頁（開啟中的以粗體標示），只回報被選的鍵，開啟分頁仍由視窗負責。 |
 | `theme.py` | 183 | 設計 token（`ThemeTokens`：顏色、圓角、間距、字族）、深色與淺色兩組值、由 token 產生的樣式表與對應的 `QPalette`；不載入圖檔或字型檔。 |
-| `_auto_click_tab.py` | 294 | 自動點擊分頁的 mixin 建構器。 |
-| `_screenshot_tab.py` | 137 | 截圖／取像素分頁 mixin。 |
-| `_image_detect_tab.py` | 115 | 影像偵測分頁 mixin。 |
-| `_script_tab.py` | 144 | 腳本執行分頁 mixin。 |
-| `_record_tab.py` | 143 | 錄製／回放分頁 mixin。 |
+| `_auto_click_tab.py` | 295 | 自動點擊分頁的 mixin 建構器。 |
+| `_screenshot_tab.py` | 138 | 截圖／取像素分頁 mixin。 |
+| `_image_detect_tab.py` | 117 | 影像偵測分頁 mixin。 |
+| `_script_tab.py` | 145 | 腳本執行分頁 mixin。 |
+| `_record_tab.py` | 144 | 錄製／回放分頁 mixin。 |
 | `_report_tab.py` | 88 | 報表分頁 mixin。 |
-| `_i18n_helpers.py` | 75 | 需要即時語言切換的分頁共用的翻譯註冊 mixin。 |
+| `_i18n_helpers.py` | 79 | 需要即時語言切換的分頁共用的翻譯註冊 mixin。 |
 | `_validators.py` | 29 | `int_validator()`／`double_validator()`：以 C locale 驗證的數字輸入框 validator，接受的正是 `int()`／`float()` 讀得懂的寫法（預設 locale 在法文、德文下只收小數逗號）。所有數字 `QLineEdit` 都用它。 |
 | `_screen_geometry.py` | 55 | Qt 邏輯座標與截圖用的原生像素互轉：`native_region()`、`screen_at_native()`、`logical_point()`（每個螢幕的左上角在兩者相同，螢幕內依 device pixel ratio 縮放）。區域選取與主機端標註覆蓋層都用它。 |
 | `_daemon_thread.py` | 79 | `DaemonThread`：`QThread` 的替代品，保留遠端桌面 worker 用到的介面（`start`／`run`／`isRunning`／`wait`／`requestInterruption`／`started`／`finished`），但 `run()` 跑在 daemon `threading.Thread` 上，刪除物件或程式結束都不會銷毀執行中的執行緒。 |
-| `_worker_thread.py` | 222 | `start_worker()`：在 daemon `threading.Thread` 上執行 `QObject` worker 的 `run()`（沒有 `QThread` 可被銷毀），並經由分頁擁有的中繼物件回報結果（回呼一律在 GUI 執行緒；worker 沒處理的例外也送到 `on_fail`）；worker 留在模組登錄表直到 GUI 執行緒看到它結束，回傳 `WorkerHandle`（`isRunning()`）；程式結束時先呼叫 worker 的 `request_stop()`，最多等 10 秒，仍在跑的隨行程結束。 |
+| `_worker_thread.py` | 266 | `start_worker()`：在 daemon `threading.Thread` 上執行 `QObject` worker 的 `run()`（沒有 `QThread` 可被銷毀），並經由分頁擁有的中繼物件回報結果（回呼一律在 GUI 執行緒；worker 沒處理的例外也送到 `on_fail`）；worker 留在模組登錄表直到 GUI 執行緒看到它結束，回傳 `WorkerHandle`（`isRunning()`）；程式結束時先呼叫 worker 的 `request_stop()`，最多等 10 秒，仍在跑的隨行程結束。 |
 | `language_wrapper/` | 6,055 | 四語系字典（英／日／簡中／繁中）+ `multi_language_wrapper` 執行期切換器與監聽註冊表。 |
 | `selector/` | 216 | 拖曳選取螢幕區域的半透明全螢幕覆蓋層與樣板裁切工具（互動式，但都有對應的程式化 API）。 |
 
@@ -973,21 +973,21 @@ GUI 是**選用 extra**（`pip install je_auto_control[gui]`，PySide6），且�
 | diagnostics | `diagnostics_tab.py` | 91 | 執行子系統檢查並顯示結果。 |
 | report | `_report_tab.py` | 81 | 產生 HTML／JSON／XML 報表。 |
 
-#### 遠端桌面 GUI（`gui/remote_desktop/`，33 檔／7,646 行）
+#### 遠端桌面 GUI（`gui/remote_desktop/`，33 檔／7,776 行）
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
-| `webrtc_panel.py` | 382 | WebRTC 子分頁主體。 |
-| `webrtc_dialogs.py` | 519 | WebRTC GUI 用的自訂對話框與清單元件（待審檢視者、信任清單、通訊錄、遠端檔案表、稽核記錄、LAN 瀏覽）。 |
-| `advanced_group.py` | 92 | 兩個 WebRTC 面板共用的 Advanced STUN／TURN（含選用硬體編碼器）群組，含它寫回面板的 Protocol。 |
-| `trusted_group.py` | 70 | WebRTC host 面板的信任 viewer 清單群組（移除／清空／匯入／匯出），含它寫回面板的 Protocol。 |
-| `connection_screen.py` | 660 | Quick Connect —— AnyDesk 風格單畫面入口。 |
-| `viewer_panel.py` | 586 | 「控制另一台機器」子分頁。 |
+| `webrtc_panel.py` | 418 | WebRTC 子分頁主體。 |
+| `webrtc_dialogs.py` | 520 | WebRTC GUI 用的自訂對話框與清單元件（待審檢視者、信任清單、通訊錄、遠端檔案表、稽核記錄、LAN 瀏覽）。 |
+| `advanced_group.py` | 95 | 兩個 WebRTC 面板共用的 Advanced STUN／TURN（含選用硬體編碼器）群組，含它寫回面板的 Protocol。 |
+| `trusted_group.py` | 73 | WebRTC host 面板的信任 viewer 清單群組（移除／清空／匯入／匯出），含它寫回面板的 Protocol。 |
+| `connection_screen.py` | 679 | Quick Connect —— AnyDesk 風格單畫面入口。 |
+| `viewer_panel.py` | 600 | 「控制另一台機器」子分頁。 |
 | `webrtc_known_hosts.py` | 346 | TOFU 釘選庫瀏覽器：`KnownHostsDialog` 與帶外釘選用的小表單。由 `webrtc_dialogs` 再匯出。 |
 | `host_panel.py` | 433 | 「分享這台機器」子分頁。 |
-| `frame_display.py` | 228 | 繪製 JPEG 影格並發出遠端輸入事件的元件。 |
+| `frame_display.py` | 229 | 繪製 JPEG 影格並發出遠端輸入事件的元件。 |
 | `webrtc_workers.py` | 237 | 訊令流程的背景 worker（`DaemonThread`，長輪詢比面板或程式活得久也不會中止行程）。 |
-| `tab.py` | 176 | 外層容器分頁。 |
+| `tab.py` | 179 | 外層容器分頁。 |
 | `_helpers.py` | 273 | 面板共用輔助：翻譯、Qt→AC 鍵滑鼠對應、TLS context、狀態徽章、指紋與時間格式化。 |
 | `remote_screen_window.py` | 140 | 檢視端的彈出視窗。 |
 | `tray_icon.py` | 106 | WebRTC 主機的系統匣圖示。 |
@@ -1095,13 +1095,13 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 
 | 層／子系統 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `gui/` | 123 | 34,142 |
+| `gui/` | 125 | 34,684 |
 | `utils/mcp_server/` | 43 | 21,072 |
-| `utils/remote_desktop/` | 57 | 14,172 |
+| `utils/remote_desktop/` | 57 | 14,179 |
 | `utils/executor/` | 9 | 10,353 |
 | `utils/usb/` | 20 | 5,039 |
 | `je_auto_control/`（頂層 3 檔） | 3 | 2,676 |
-| `utils/accessibility/` | 14 | 3,143 |
+| `utils/accessibility/` | 15 | 3,290 |
 | `wrapper/` | 26 | 6,576 |
 | `windows/` | 24 | 2,266 |
 | `utils/rest_api/` | 8 | 2,080 |
@@ -1116,5 +1116,5 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 861 |
 | 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 723 | 68,427 |
-| **總計** | **1,159** | **185,896** |
+| **總計** | **1,162** | **186,592** |
 

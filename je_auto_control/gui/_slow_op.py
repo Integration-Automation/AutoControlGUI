@@ -30,21 +30,19 @@ the tab, and the task's handle is a grandchild of that tab: a connection that
 kept the tab's wrapper alive released it from inside the handle's destructor,
 which destroyed a parentless tab in the middle of destroying its own child and
 aborted the process. A bound method is therefore kept as a weak reference plus
-the leading arguments given in ``args``; pass a method and ``args`` rather than
-a ``functools.partial`` or a lambda that closes over the tab.
+the leading arguments given in ``args`` (:mod:`je_auto_control.gui._weak_call`);
+pass a method and ``args``, never a lambda that closes over the tab.
 """
 import functools
-import weakref
 from typing import Any, Callable, Optional, Tuple
 
 from PySide6.QtCore import QObject, Signal
 
+from je_auto_control.gui._weak_call import Callback, WeakCall as _WeakCall, weak_slot
 from je_auto_control.gui.task_controller import (
     CancellationToken, TaskController, TaskUsageError, _widgets_reachable_from, task_controller,
 )
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
-
-Callback = Optional[Callable[..., object]]
 
 
 def _call(work: Callable[[], Any], _token: CancellationToken) -> Any:
@@ -62,27 +60,6 @@ def _refuse_widgets(work: Callable[[], Any]) -> None:
     if _widgets_reachable_from(work):
         raise TaskUsageError(
             "background work must not hold a widget: read what it needs first and pass plain values")
-
-
-class _WeakCall:
-    """``callback(*args, outcome)`` that does not keep a bound method's object alive."""
-
-    def __init__(self, callback: Callback, args: Tuple[Any, ...] = ()) -> None:
-        self._args = args
-        self._strong: Callback = None
-        self._weak: Optional[weakref.WeakMethod[Callable[..., Any]]] = None
-        if getattr(callback, "__self__", None) is not None and hasattr(callback, "__func__"):
-            self._weak = weakref.WeakMethod(callback)   # type: ignore[arg-type]
-        else:
-            self._strong = callback
-
-    def __call__(self, outcome: object) -> bool:
-        """Run the callback if there is one and its object still exists; return whether it ran."""
-        callback = self._weak() if self._weak is not None else self._strong
-        if not callable(callback):
-            return False
-        callback(*self._args, outcome)
-        return True
 
 
 class SlowOp(QObject):
@@ -186,19 +163,13 @@ class StopQueue(QObject):
         self._pending += 1
         handle.error.connect(_log_failure)
         if on_done is not None:
-            # The partial holds this queue (owned by its parent) and a weak call, never the panel.
-            handle.result.connect(functools.partial(_run_weak, _WeakCall(on_done, args)))
+            handle.result.connect(weak_slot(on_done, *args))     # a weak call, never the panel
         handle.finished.connect(self._one_reported)
 
     def _one_reported(self) -> None:
         self._pending = max(0, self._pending - 1)
         if self._pending == 0:
             self.drained.emit()
-
-
-def _run_weak(call: _WeakCall, outcome: object) -> None:
-    """GUI thread: deliver one shutdown's result to whoever is still there."""
-    call(outcome)
 
 
 def stop_each(*stops: Callable[[], Any]) -> None:

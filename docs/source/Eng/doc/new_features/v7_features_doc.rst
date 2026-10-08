@@ -93,3 +93,21 @@ actions. On platforms / backends without a control driver yet, the calls
 raise ``AccessibilityNotAvailableError`` with a clear message rather than
 silently failing. The backend is swappable, so the logic is unit-tested
 with an injected fake — no real GUI required.
+
+Threads
+-------
+
+The Windows backend can be called from any thread. A COM object belongs to the
+thread that created it, so each calling thread gets its own UIAutomation
+object: the first accessibility call on a thread initialises COM there (the
+main thread as a single-threaded apartment, which is what ``comtypes`` does on
+import and what a GUI toolkit needs; any other thread joins the multi-threaded
+apartment; a thread already in an apartment keeps it) and then creates the
+object. No element is carried from one call to the next, so nothing ever
+crosses threads. A script started from the GUI runs on a worker thread, and
+its ``AC_a11y_*`` commands use that thread's object; the Accessibility and
+A11y Audit tabs run their commands on a worker thread for the same reason.
+
+``comtypes`` was not installed where this was written: the rule is enforced by
+tests whose fake COM objects refuse any use from a thread other than the one
+that created them, not by a run against the real UIAutomation.
