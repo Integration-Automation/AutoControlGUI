@@ -110,17 +110,20 @@ Where each feature is documented
 Three things the examples show that are easy to miss
 ====================================================
 
-**The executor's options are on the executor object.** The module-level
-``je_auto_control.execute_action(actions)`` takes the action list and nothing
-else. ``dry_run``, ``raise_on_error`` and ``step_callback`` belong to
-``je_auto_control.executor.execute_action``:
+**The executor's options are keywords.** The module-level
+``je_auto_control.execute_action(actions)`` forwards ``dry_run``,
+``raise_on_error`` and ``step_callback`` to
+``je_auto_control.executor.execute_action``; they are keyword-only there (it
+used to take the action list and nothing else, so the examples written before
+that call the executor object):
 
 .. code-block:: python
 
    import je_auto_control as ac
 
-   ac.executor.execute_action(actions, dry_run=True)          # resolve, call nothing
-   ac.executor.execute_action(actions, raise_on_error=True)   # stop at the first failure
+   ac.execute_action(actions, dry_run=True)          # resolve, call nothing
+   ac.execute_action(actions, raise_on_error=True)   # stop at the first failure
+   ac.execute_action(actions, step_callback=print)   # see each action before it runs
 
 **A failed sync backs off.** After a send that did not reach the server, the
 next ``config_sync_run`` inside the back-off window (2 s, doubling, capped at

@@ -218,6 +218,30 @@ english_word_dict = {
         "Install the Wayland tools (ydotool or libei, and grim, "
         "gnome-screenshot or spectacle) so the Wayland backend loads."),
     "cap_fix_display": "Set DISPLAY to a running X server.",
+    "cap_fix_win_session0": (
+        "Run it in the signed-in user's session — a scheduled task set to run only when the user i"
+        "s logged on, not a service."
+    ),
+    "cap_fix_win_locked": "Unlock the session, or answer the prompt that is on screen.",
+    "cap_fix_win_integrity": "Start it from a normal (medium-integrity) process.",
+    "cap_fix_win_capture": (
+        "A disconnected remote-desktop session has no screen: keep the session connected, or move i"
+        "t to the console."
+    ),
+    "cap_fix_mac_accessibility": (
+        "System Settings › Privacy & Security › Accessibility: enable the application that runs Pyt"
+        "hon (Terminal, the IDE), then restart it."
+    ),
+    "cap_fix_mac_screen_recording": (
+        "System Settings › Privacy & Security › Screen Recording: enable the application that runs "
+        "Python (Terminal, the IDE), then restart it."
+    ),
+    "cap_fix_mac_input_monitoring": (
+        "System Settings › Privacy & Security › Input Monitoring: enable the application that runs "
+        "Python (Terminal, the IDE), then restart it."
+    ),
+    "cap_backend_version": "Backend: {backend} — {version}",
+    "cap_backend_version_unknown": "version not reported",
     "cap_fix_capture": (
         "Allow the screenshot request, install grim, gnome-screenshot or "
         "spectacle, or set JE_AUTOCONTROL_WAYLAND_CAPTURE_COMMAND."),
@@ -954,6 +978,7 @@ english_word_dict = {
     "rh_journal_candidate": "Candidate script from journal…",
     "rh_journal_off": "Action journal: off",
     "rh_journal_on": "Action journal: run {run}, {n} step(s) → {path}",
+    "rh_journal_link": "Journal run {run} in {path}",
     "re_import_journal": "Import journal run…",
     "sb_import_journal": "Import journal",
     "jr_dialog_open": "Open action journal",
@@ -1109,6 +1134,20 @@ english_word_dict = {
     "self_heal_desc_placeholder": "natural-language fallback (optional)",
     "self_heal_threshold_label": "Match threshold:",
     "self_heal_click_check": "Click after locating",
+    "self_heal_verify_label": "Verify after click",
+    "self_heal_verify_placeholder": "Optional JSON check, e.g. {\"type\": \"image_gone\"}",
+    "self_heal_verify_invalid": "The check must be a JSON object",
+    "self_heal_cmp_version": "Version",
+    "self_heal_cmp_located": "Located",
+    "self_heal_cmp_accuracy": "Accuracy",
+    "self_heal_cmp_false_positive": "False positives",
+    "self_heal_cmp_recovery": "Recovery",
+    "self_heal_cmp_p50_ms": "p50 (ms)",
+    "self_heal_cmp_p95_ms": "p95 (ms)",
+    "self_heal_cmp_model_calls": "Model calls",
+    "self_heal_cmp_tokens": "Tokens in / out",
+    "self_heal_cmp_cost": "Cost",
+    "self_heal_cmp_baseline": "{name} (baseline)",
     "self_heal_browse": _BROWSE,
     "self_heal_locate_btn": "Locate",
     "self_heal_click_btn": "Locate & click",

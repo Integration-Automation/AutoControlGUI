@@ -312,6 +312,9 @@ class RunHistoryTab(TranslatableMixin, QWidget):
         )
         if record.error_text:
             caption += f"\n{record.error_text}"
+        if record.journal_run_id:
+            caption += "\n" + _t("rh_journal_link").replace(
+                "{run}", record.journal_run_id).replace("{path}", record.journal_path or "-")
         self._thumb_caption.setText(caption)
 
     def _selected_artifact_path(self) -> Optional[str]:

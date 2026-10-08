@@ -3041,7 +3041,8 @@ def _add_audit_specs(specs: List[CommandSpec]) -> None:
         fields=(FieldSpec("dataset_path", FieldType.FILE_PATH,
                           placeholder="dataset.json"),),
         description="Score locator versions on the same labelled frames "
-                    "(accuracy, false positives, recovery, p50/p95).",
+                    "(accuracy, false positives, recovery, p50/p95, model calls). "
+                    "A 'vlm' version in the dataset calls the VLM backend.",
     ))
     specs.append(CommandSpec(
         "AC_self_heal_revision_propose", "Testing", "Self-Heal: Propose Template Revision",

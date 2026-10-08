@@ -42,6 +42,8 @@ def list_run_history(limit: int = 50,
         "finished_at": str(row.finished_at),
         "status": row.status, "error_text": row.error_text,
         "duration_seconds": row.duration_seconds,
+        "journal_path": row.journal_path,
+        "journal_run_id": row.journal_run_id,
     } for row in rows]
 
 

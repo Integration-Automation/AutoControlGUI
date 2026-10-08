@@ -2347,7 +2347,11 @@ def self_healing_tools() -> List[MCPTool]:
             description=("Self-heal locate then click the resolved point. "
                          "Provide template_path, description, or both — "
                          "description triggers the VLM fallback when the "
-                         "template fails."),
+                         "template fails. 'verify' is a post-click check "
+                         "that fills action_verified: {type: image_gone | "
+                         "image_present | text_present, template_path, text, "
+                         "screen_region, timeout_s}; without it "
+                         "action_verified is null."),
             input_schema=schema({
                 "template_path": {"type": "string", "format": "path"},
                 "description": {"type": "string"},
@@ -2359,6 +2363,7 @@ def self_healing_tools() -> List[MCPTool]:
                 "raise_on_miss": {"type": "boolean"},
                 "context": {"type": "object",
                             "additionalProperties": {"type": "string"}},
+                "verify": {"type": "object"},
             }),
             handler=h_loc.self_heal_click,
             annotations=DESTRUCTIVE,
@@ -2389,7 +2394,11 @@ def self_healing_tools() -> List[MCPTool]:
                          "numerator/denominator (accuracy, false positives, "
                          "recovery vs the baseline), p50/p95 latency, the "
                          "failing samples, and threshold violations. "
-                         "Unlabelled samples are 'unknown', never correct."),
+                         "Unlabelled samples are 'unknown', never correct. "
+                         "A version with strategy 'vlm' sends each frame to "
+                         "the configured VLM backend (model calls, and "
+                         "tokens / cost where reported, are in the report); "
+                         "backend 'null' makes no request."),
             input_schema=schema({
                 "dataset_path": {"type": "string", "format": "path"},
                 "versions": {"type": "object"},

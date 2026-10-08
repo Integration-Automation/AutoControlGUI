@@ -22,6 +22,13 @@ dialog, never connects a libei sender and never sends an event — so it is safe
 to call from a diagnostics screen, a health check, or an MCP client that has
 no business moving the pointer.
 
+On Windows and macOS the same rule holds, with different questions: the
+process's integrity level and session, whether the workstation is locked,
+whether one pixel can be copied off the screen; Accessibility, Screen
+Recording and Input Monitoring through the calls that *check* a permission,
+never the ones that ask for it (:mod:`capability_probes`). What could not be
+read is ``unknown``, not ``available``.
+
 Everything it consults comes in through :class:`BackendContext`, which is what
 makes a GNOME session describable from a Windows test run.
 """
@@ -45,6 +52,10 @@ from je_auto_control.linux_wayland.authorisation import (
 )
 from je_auto_control.linux_wayland.input_events import (
     RECORD_DEVICES_ENV, configured_record_devices,
+)
+from je_auto_control.wrapper.capability_probes import (
+    MacFacts, WindowsFacts, cheap_backend_version, read_mac_facts,
+    read_windows_facts,
 )
 
 RECORDING = "recording"
@@ -124,6 +135,11 @@ class CapabilitySnapshot:
     #: True when the X11 backend is serving a Wayland session.
     xwayland: bool
     capabilities: Tuple[Capability, ...]
+    #: What the serving backend could say about its version without running
+    #: anything (``Windows 10.0.26200``, ``python-xlib 0.33``); ``""`` when it
+    #: cannot be known that cheaply -- the Wayland tools, or a described
+    #: desktop that is not this machine.
+    backend_version: str = ""
 
     def get(self, name: str) -> Capability:
         """The capability called ``name``."""
@@ -148,6 +164,7 @@ class CapabilitySnapshot:
             "platform": self.platform,
             "display_server": self.display_server,
             "xwayland": self.xwayland,
+            "backend_version": self.backend_version,
             "capabilities": [item.to_dict() for item in self.capabilities],
         }
 
@@ -203,6 +220,12 @@ class BackendContext:
     authorisations: AuthorisationLedger = ledger
     #: ``wayland`` / ``x11`` once the wrapper has chosen, else None.
     loaded_backend: Optional[str] = None
+    #: Read-only facts about a Windows / macOS session. The defaults query the
+    #: live process and answer "unknown" on any other platform.
+    windows_facts: Callable[[], WindowsFacts] = read_windows_facts
+    mac_facts: Callable[[], MacFacts] = read_mac_facts
+    #: ``backend name -> version text`` (``""`` when not cheaply known).
+    backend_version: Callable[[str], str] = cheap_backend_version
 
     @classmethod
     def current(cls) -> "BackendContext":
@@ -226,26 +249,28 @@ def probe_capabilities(context: Optional[BackendContext] = None
     if serving == "wayland":
         return CapabilitySnapshot(ctx.platform, "wayland", False, (
             _wayland_input(ctx), _wayland_capture(ctx),
-            _wayland_recording(ctx), _wayland_stop_shortcut(ctx)))
+            _wayland_recording(ctx), _wayland_stop_shortcut(ctx)),
+            backend_version=ctx.backend_version("wayland"))
     return _x11(ctx, is_wayland_session(ctx.environ))
 
 
-# --- platforms with no session authorisation to model ----------------------
-
-_OTHER_BACKENDS = {"win32": "win32", "darwin": "quartz"}
-
+# --- Windows, macOS and anything else --------------------------------------
 
 def _other_platform(ctx: BackendContext) -> CapabilitySnapshot:
-    backend = _OTHER_BACKENDS.get(ctx.platform, "x11")
+    from je_auto_control.wrapper import capability_states
     if ctx.platform == "win32":
-        state, detail = CapabilityStatus.AVAILABLE, ""
+        backend = "win32"
+        found = capability_states.windows_capabilities(ctx.windows_facts())
+    elif ctx.platform == "darwin":
+        backend = "quartz"
+        found = capability_states.mac_capabilities(ctx.mac_facts())
     else:
-        state = CapabilityStatus.UNKNOWN
-        detail = ("permission for this platform is granted outside the "
-                  "process and is not probed here")
-    return CapabilitySnapshot(ctx.platform, ctx.platform, False, tuple(
-        Capability(name, state, backend, detail=detail)
-        for name in (INPUT, CAPTURE, RECORDING, STOP_SHORTCUT)))
+        backend = "x11"
+        found = capability_states.unprobed_capabilities(backend)
+    return CapabilitySnapshot(
+        ctx.platform, ctx.platform, False,
+        tuple(Capability(**fields) for fields in found),
+        backend_version=ctx.backend_version(backend))
 
 
 # --- X11, including X11 serving a Wayland session --------------------------
@@ -273,7 +298,8 @@ def _x11(ctx: BackendContext, xwayland: bool) -> CapabilitySnapshot:
         Capability(name, state, "xwayland" if xwayland else "x11",
                    desktop_wide=not xwayland, detail=detail,
                    recovery=recovery, recovery_key=key)
-        for name in (INPUT, CAPTURE, RECORDING, STOP_SHORTCUT)))
+        for name in (INPUT, CAPTURE, RECORDING, STOP_SHORTCUT)),
+        backend_version=ctx.backend_version("x11"))
 
 
 # --- Wayland: input ---------------------------------------------------------
@@ -437,5 +463,5 @@ def _wayland_stop_shortcut(ctx: BackendContext) -> Capability:
 
 __all__ = [
     "BackendContext", "Capability", "CapabilitySnapshot", "CapabilityStatus",
-    "RECORDING", "STOP_SHORTCUT", "probe_capabilities",
+    "MacFacts", "RECORDING", "STOP_SHORTCUT", "WindowsFacts", "probe_capabilities",
 ]

@@ -407,6 +407,10 @@ def write_secret(secret: str) -> None:
     """
     if not isinstance(secret, str):
         raise AutoControlKeyboardException("write_secret needs a string")
+    # Before anything can fail: a started action journal masks the value by
+    # exact match in whatever it writes from here on (held in memory only).
+    from je_auto_control.utils.action_journal import recorder
+    recorder.note_secret_value(secret)
     if not callable(getattr(keyboard, "type_unicode_unit", None)):
         raise AutoControlKeyboardException(
             "write_secret: this platform's keyboard backend cannot type Unicode text exactly")

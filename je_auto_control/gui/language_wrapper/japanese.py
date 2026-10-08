@@ -107,6 +107,30 @@ japanese_word_dict = {
         "または libei と、grim・gnome-screenshot・spectacle のいずれか) を"
         "インストールしてください。"),
     "cap_fix_display": "DISPLAY を実行中の X サーバーに設定してください。",
+    "cap_fix_win_session0": (
+        "サインイン中のユーザーのセッションで実行してください。サービスではなく、「ユーザーがログオ"
+        "ンしているときのみ実行する」タスクにします。"
+    ),
+    "cap_fix_win_locked": "セッションのロックを解除するか、画面に表示されている確認に応答してください。",
+    "cap_fix_win_integrity": "通常(中の整合性レベル)のプロセスから起動してください。",
+    "cap_fix_win_capture": (
+        "切断されたリモートデスクトップ セッションには画面がありません。接続を維持するか、コンソー"
+        "ルに移してください。"
+    ),
+    "cap_fix_mac_accessibility": (
+        "システム設定 › プライバシーとセキュリティ › アクセシビリティ: Python を実行するアプリ(ター"
+        "ミナル、IDE)を有効にして再起動してください。"
+    ),
+    "cap_fix_mac_screen_recording": (
+        "システム設定 › プライバシーとセキュリティ › 画面収録: Python を実行するアプリ(ターミナル、"
+        "IDE)を有効にして再起動してください。"
+    ),
+    "cap_fix_mac_input_monitoring": (
+        "システム設定 › プライバシーとセキュリティ › 入力監視: Python を実行するアプリ(ターミナル、"
+        "IDE)を有効にして再起動してください。"
+    ),
+    "cap_backend_version": "バックエンド: {backend} — {version}",
+    "cap_backend_version_unknown": "バージョンは報告されていません",
     "cap_fix_capture": (
         "スクリーンショットの要求を許可するか、grim・gnome-screenshot・"
         "spectacle のいずれかをインストールするか、"
@@ -844,6 +868,7 @@ japanese_word_dict = {
     "rh_journal_candidate": "ジャーナルから候補スクリプトを作成…",
     "rh_journal_off": "アクションジャーナル: オフ",
     "rh_journal_on": "アクションジャーナル: 実行 {run}、{n} ステップ → {path}",
+    "rh_journal_link": "ジャーナル実行 {run}({path})",
     "re_import_journal": "ジャーナルの実行を取り込む…",
     "sb_import_journal": "ジャーナル取込",
     "jr_dialog_open": "アクションジャーナルを開く",
@@ -999,6 +1024,20 @@ japanese_word_dict = {
     "self_heal_desc_placeholder": "失敗時のフォールバック説明（任意）",
     "self_heal_threshold_label": "マッチ閾値:",
     "self_heal_click_check": "検索後にクリック",
+    "self_heal_verify_label": "クリック後の検証",
+    "self_heal_verify_placeholder": "任意の JSON チェック。例: {\"type\": \"image_gone\"}",
+    "self_heal_verify_invalid": "チェックは JSON オブジェクトで指定してください",
+    "self_heal_cmp_version": "バージョン",
+    "self_heal_cmp_located": "検出",
+    "self_heal_cmp_accuracy": "正解率",
+    "self_heal_cmp_false_positive": "誤検出",
+    "self_heal_cmp_recovery": "回復",
+    "self_heal_cmp_p50_ms": "p50 (ms)",
+    "self_heal_cmp_p95_ms": "p95 (ms)",
+    "self_heal_cmp_model_calls": "モデル呼び出し",
+    "self_heal_cmp_tokens": "トークン 入力 / 出力",
+    "self_heal_cmp_cost": "コスト",
+    "self_heal_cmp_baseline": "{name}(基準)",
     "self_heal_browse": _BROWSE,
     "self_heal_locate_btn": "検索",
     "self_heal_click_btn": _LOCATE_CLICK,

@@ -66,6 +66,14 @@ class MobileCommand:
         return "ac_" + self.name[3:]
 
 
+#: What a command is for when it delivers none of the per-device capabilities
+#: in ``CAPABILITY_NAMES``. No session reports a state for these and nothing
+#: probes them: describing a device sends it no input, and an adb shell
+#: command can do anything at all, so neither belongs under ``input``.
+PURPOSE_DEVICE_INFO = "device_info"
+PURPOSE_SHELL = "shell"
+COMMAND_PURPOSES = (PURPOSE_DEVICE_INFO, PURPOSE_SHELL)
+
 #: Commands deliberately not offered as MCP tools, with the reason.
 MCP_EXCLUDED: Mapping[str, str] = {
     "AC_android_shell": "runs an arbitrary shell command on the device; kept to action "
@@ -262,7 +270,8 @@ _APP = (Param("app_id", required=True, description="Android package or iOS bundl
 _OPERATIONS: Tuple[_Operation, ...] = (
     _Operation("device_info", "Device Info",
                "Backend, versions and capabilities of the device. Sends no input.",
-               _device_info, api="device_setup_report", read_only=True),
+               _device_info, capability=PURPOSE_DEVICE_INFO, api="device_setup_report",
+               read_only=True),
     _Operation("screen_info", "Screen Info",
                "Pixel size, point size, scale and orientation of the current screen.",
                _screen_info, capability="screenshot", api="DeviceFrame", read_only=True),
@@ -377,9 +386,9 @@ _LEGACY: Tuple[MobileCommand, ...] = (
     _legacy("AC_android_screenshot", "Screenshot", "Save the device screen as a PNG.",
             (Param("file_path", "file_path", True), _SERIAL, _ADB), "screenshot", "DeviceFrame"),
     _legacy("AC_android_list_devices", "List Devices", "Every device adb sees, with its state.",
-            (_ADB,), api="device_setup_report", read_only=True),
+            (_ADB,), PURPOSE_DEVICE_INFO, api="device_setup_report", read_only=True),
     _legacy("AC_android_shell", "Shell Command", "Run an adb shell command; returns stdout.",
-            (Param("command", required=True), _SERIAL, _ADB)),
+            (Param("command", required=True), _SERIAL, _ADB), PURPOSE_SHELL),
     _legacy("AC_android_find_element", "Find Element",
             "Find a widget in the uiautomator2 tree; returns its bounds.", _ANDROID_SELECTOR,
             "ui_tree", read_only=True, handwritten_mcp=True),
@@ -560,20 +569,32 @@ DESKTOP_ONLY_FEATURES: Tuple[Dict[str, str], ...] = (
 )
 
 
-def mobile_capability_matrix() -> Dict[str, Any]:
-    """Which commands deliver each capability per platform, and what stays desktop-only."""
+def _commands_for(key: str, names: Tuple[str, ...]) -> List[Dict[str, Any]]:
     rows = []
-    for name in CAPABILITY_NAMES:
-        row: Dict[str, Any] = {"capability": name}
+    for name in names:
+        row: Dict[str, Any] = {key: name}
         for platform in (PLATFORM_ANDROID, PLATFORM_IOS):
             row[platform] = [command.name for command in MOBILE_COMMANDS
                              if command.platform == platform and command.capability == name]
         rows.append(row)
-    return {"capabilities": rows, "desktop_only": [dict(row) for row in DESKTOP_ONLY_FEATURES]}
+    return rows
+
+
+def mobile_capability_matrix() -> Dict[str, Any]:
+    """Which commands deliver each capability per platform, and what stays desktop-only.
+
+    ``capabilities`` has one row per device capability. ``other_commands``
+    lists the commands that deliver none of them -- describing devices, and
+    the adb shell -- by purpose, so every command appears exactly once.
+    """
+    return {"capabilities": _commands_for("capability", CAPABILITY_NAMES),
+            "other_commands": _commands_for("purpose", COMMAND_PURPOSES),
+            "desktop_only": [dict(row) for row in DESKTOP_ONLY_FEATURES]}
 
 
 __all__ = [
-    "DESKTOP_ONLY_FEATURES", "MCP_EXCLUDED", "MOBILE_COMMANDS", "MobileCommand", "Param",
+    "COMMAND_PURPOSES", "DESKTOP_ONLY_FEATURES", "MCP_EXCLUDED", "MOBILE_COMMANDS",
+    "MobileCommand", "Param",
     "command_session", "device_setup_report", "generated_handlers", "mcp_tool_specs",
     "mobile_capability_matrix", "run_mobile_command",
 ]

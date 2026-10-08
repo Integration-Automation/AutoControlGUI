@@ -150,6 +150,12 @@ def _new_vault(passphrase: str) -> Tuple[Any, dict]:
     return fernet, payload
 
 
+def _note_for_journal(value: str) -> None:
+    """Let a started action journal mask ``value`` by exact match (memory only)."""
+    from je_auto_control.utils.action_journal import recorder
+    recorder.note_secret_value(value)
+
+
 class SecretManager:
     """In-memory cache around a Fernet-encrypted JSON vault."""
 
@@ -230,6 +236,7 @@ class SecretManager:
             raise ValueError("secret name must be a non-empty string")
         if not isinstance(value, str):
             raise ValueError("secret value must be a string")
+        _note_for_journal(value)
         with self._lock, self._vault_locked():
             fernet, vault = self._require_unlocked()
             token = fernet.encrypt(value.encode("utf-8")).decode("ascii")
@@ -245,11 +252,13 @@ class SecretManager:
                 return None
             _, invalid_token = _fernet_types()
             try:
-                return fernet.decrypt(token.encode("ascii")).decode("utf-8")
+                value = fernet.decrypt(token.encode("ascii")).decode("utf-8")
             except invalid_token as error:
                 raise SecretStoreError(
                     f"secret {name!r} failed integrity check"
                 ) from error
+        _note_for_journal(value)
+        return value
 
     def list_names(self) -> List[str]:
         """Return secret names sorted alphabetically (no values)."""

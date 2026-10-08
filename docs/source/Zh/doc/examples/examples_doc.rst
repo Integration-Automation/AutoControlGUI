@@ -106,17 +106,19 @@ docstring 會寫明。
 範例裡容易忽略的三件事
 ======================
 
-**執行器的選項在執行器物件上。** 模組層級的
-``je_auto_control.execute_action(actions)`` 只接受動作清單。``dry_run``、
-``raise_on_error`` 與 ``step_callback`` 屬於
-``je_auto_control.executor.execute_action``：
+**執行器的選項是關鍵字引數。** 模組層級的
+``je_auto_control.execute_action(actions)`` 會把 ``dry_run``、
+``raise_on_error`` 與 ``step_callback`` 轉交給
+``je_auto_control.executor.execute_action``；在模組層級它們只能以關鍵字傳入（以前它只接受
+動作清單，所以在那之前寫的範例呼叫的是執行器物件）：
 
 .. code-block:: python
 
    import je_auto_control as ac
 
-   ac.executor.execute_action(actions, dry_run=True)          # 只解析，不呼叫
-   ac.executor.execute_action(actions, raise_on_error=True)   # 第一個失敗就停
+   ac.execute_action(actions, dry_run=True)          # 只解析，不呼叫
+   ac.execute_action(actions, raise_on_error=True)   # 第一個失敗就停
+   ac.execute_action(actions, step_callback=print)   # 每個動作執行前先看到它
 
 **同步失敗後會退避。** 送出失敗之後，在退避時間內（2 秒起、每次加倍、上限
 5 分鐘）再呼叫 ``config_sync_run`` 並不會連線到伺服器：它會再次回報

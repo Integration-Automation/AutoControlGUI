@@ -29,7 +29,9 @@ from contextvars import ContextVar
 from dataclasses import asdict, dataclass, replace
 from datetime import datetime, timezone
 from time import monotonic
-from typing import Any, Callable, Dict, Iterator, List, Mapping, Optional, Sequence, Tuple
+from typing import (
+    Any, Callable, Dict, Iterator, List, Mapping, Optional, Sequence, Tuple, Union,
+)
 
 from je_auto_control.utils.exception.exceptions import (
     AutoControlException, ImageNotFoundException,
@@ -143,16 +145,26 @@ def self_heal_click(template_path: Optional[str] = None,
                     model: Optional[str] = None,
                     log: Optional[HealEventLog] = None,
                     raise_on_miss: bool = False,
-                    verify: Optional[Callable[[HealOutcome], bool]] = None,
+                    verify: Union[Callable[[HealOutcome], bool],
+                                  Mapping[str, Any], None] = None,
                     ) -> HealOutcome:
     """``self_heal_locate`` + a click at the resolved coordinates.
 
-    ``verify`` is called with the outcome after the click and its truth value
-    is recorded as ``action_verified``; without it the field stays ``None``.
-    ``found`` only ever says that a strategy returned a point.
+    ``verify`` is the post-click check whose truth value is recorded as
+    ``action_verified``; without it the field stays ``None``. It is a callable
+    taking the outcome, or -- what a JSON step can write -- an object such as
+    ``{"type": "image_gone"}``, ``{"type": "image_present", "template_path":
+    ...}`` or ``{"type": "text_present", "text": ...}`` (see
+    :mod:`~je_auto_control.utils.self_healing.verification`). An object is
+    validated before anything is clicked; a check that cannot be carried out
+    raises and leaves ``action_verified`` ``None``. ``found`` only ever says
+    that a strategy returned a point.
     """
-    outcome = _locate(template_path, description, detect_threshold,
-                      _checked_region(screen_region), model)
+    region = _checked_region(screen_region)
+    if isinstance(verify, Mapping):
+        from je_auto_control.utils.self_healing.verification import build_verifier
+        verify = build_verifier(verify, template_path=template_path, screen_region=region)
+    outcome = _locate(template_path, description, detect_threshold, region, model)
     if not outcome.found or outcome.coordinates is None:
         _finish(outcome, log)
         _raise_on_miss(outcome, raise_on_miss)

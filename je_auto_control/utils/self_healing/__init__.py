@@ -5,7 +5,8 @@ Public surface:
 * :func:`self_heal_locate` — return resolved screen coordinates or a
   miss outcome without raising;
 * :func:`self_heal_click` — same, then click the resolved point, and record
-  whether a caller-supplied check verified the click;
+  whether a caller-supplied check verified the click (a callable, or a
+  declarative object a JSON step can carry — :mod:`verification`);
 * :class:`HealOutcome` — structured result both helpers return;
 * :data:`default_heal_log` — singleton JSON-lines log every heal
   attempt is appended to (override per-call via ``log=`` argument);
@@ -17,13 +18,14 @@ Public surface:
   revisions with preview, accept and revert (:mod:`template_revision`).
 """
 from je_auto_control.utils.self_healing.eval_strategies import (
-    EvaluationDataset, build_strategy, evaluate_healing_dataset,
-    load_evaluation_dataset, template_match_strategy,
+    COMPARISON_COLUMNS, EvaluationDataset, build_strategy, comparison_rows,
+    evaluate_healing_dataset, load_evaluation_dataset, template_match_strategy,
 )
+from je_auto_control.utils.self_healing.eval_vlm import vlm_strategy
 from je_auto_control.utils.self_healing.evaluation import (
     EvaluationSample, HealingComparison, HealingEvaluationError,
-    LocateRequest, LocatorStrategy, Ratio, SampleResult, VersionReport,
-    check_thresholds, evaluate_locators, format_comparison,
+    LocateRequest, LocatorStrategy, ModelUsage, Ratio, SampleResult, UsageMeter,
+    VersionReport, check_thresholds, evaluate_locators, format_comparison,
 )
 from je_auto_control.utils.self_healing.heal_log import (
     HEAL_EVENT_SCHEMA_VERSION, HealEvent, HealEventLog, default_heal_log,
@@ -32,6 +34,9 @@ from je_auto_control.utils.self_healing.locator import (
     HealOutcome, SelfHealError,
     METHOD_IMAGE, METHOD_MISS, METHOD_VLM,
     heal_context, self_heal_click, self_heal_locate,
+)
+from je_auto_control.utils.self_healing.verification import (
+    VERIFY_TYPES, HealVerificationError, build_verifier,
 )
 from je_auto_control.utils.self_healing.template_revision import (
     TemplateRevision, TemplateRevisionError, TemplateRevisionStore,
@@ -42,18 +47,20 @@ from je_auto_control.utils.self_healing.template_revision import (
 
 
 __all__ = [
-    "EvaluationDataset", "EvaluationSample", "HEAL_EVENT_SCHEMA_VERSION",
-    "HealEvent", "HealEventLog", "HealOutcome", "HealingComparison",
+    "COMPARISON_COLUMNS", "EvaluationDataset", "EvaluationSample", "HEAL_EVENT_SCHEMA_VERSION",
+    "HealEvent", "HealEventLog", "HealOutcome", "HealVerificationError",
+    "HealingComparison",
     "HealingEvaluationError", "LocateRequest", "LocatorStrategy",
-    "METHOD_IMAGE", "METHOD_MISS", "METHOD_VLM",
-    "Ratio", "SampleResult", "SelfHealError",
+    "METHOD_IMAGE", "METHOD_MISS", "METHOD_VLM", "ModelUsage",
+    "Ratio", "SampleResult", "SelfHealError", "UsageMeter",
     "TemplateRevision", "TemplateRevisionError", "TemplateRevisionStore",
-    "VersionReport",
-    "accept_template_revision", "build_strategy", "check_thresholds",
+    "VERIFY_TYPES", "VersionReport",
+    "accept_template_revision", "build_strategy", "build_verifier", "check_thresholds",
+    "comparison_rows",
     "default_heal_log", "default_template_revisions", "evaluate_healing_dataset",
     "evaluate_locators", "format_comparison", "heal_context",
     "list_template_revisions", "load_evaluation_dataset",
     "preview_template_revision", "propose_template_revision",
     "revert_template_revision", "self_heal_click", "self_heal_locate",
-    "template_match_strategy",
+    "template_match_strategy", "vlm_strategy",
 ]

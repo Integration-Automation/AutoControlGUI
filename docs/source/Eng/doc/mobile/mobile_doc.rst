@@ -406,7 +406,12 @@ From Python the same table is reachable as
 latter also lists the desktop features with no mobile counterpart (window
 management, mouse buttons and wheel, keyboard shortcuts, the desktop
 accessibility tree, COM, USB host passthrough, global hotkeys, desktop
-capture) with the limitation and the alternative for each.
+capture) with the limitation and the alternative for each. Its
+``capabilities`` rows hold the commands that deliver a device capability;
+``other_commands`` holds the ones that deliver none, by purpose --
+``device_info`` (``AC_android_list_devices``, ``AC_android_device_info``,
+``AC_ios_device_info``: they describe devices and send no input) and ``shell``
+(``AC_android_shell``). Those four used to be listed under ``input``.
 
 **Mobile tab.** Pick the platform, enter the serial or WebDriverAgent URL,
 choose a command and edit its parameters as a JSON object. *Probe device*,

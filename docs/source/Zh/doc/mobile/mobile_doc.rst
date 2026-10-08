@@ -375,7 +375,10 @@ session（device matrix 的 worker）上，否則跑在後端的預設裝置上�
 在 Python 裡，同一張表可以透過 ``run_mobile_command(name, params)`` 與
 ``mobile_capability_matrix()`` 取用；後者同時列出沒有行動對應的桌面功能
 （視窗管理、滑鼠按鍵與滾輪、鍵盤快速鍵、桌面無障礙樹、COM、USB 主機轉接、
-全域熱鍵、桌面擷取），以及每一項的限制與替代做法。
+全域熱鍵、桌面擷取），以及每一項的限制與替代做法。它的 ``capabilities`` 列出提供某項
+裝置能力的指令；``other_commands`` 依用途列出不屬於任何能力的指令——``device_info``
+（``AC_android_list_devices``、``AC_android_device_info``、``AC_ios_device_info``：
+只描述裝置、不送輸入）與 ``shell``（``AC_android_shell``）。這四個指令以前被歸在 ``input`` 底下。
 
 **Mobile 分頁。** 選平台、輸入 serial 或 WebDriverAgent URL、選指令，並以 JSON
 物件編輯參數。「探測裝置」、「執行指令」、「填入參數範本」都在 Actions 選單。

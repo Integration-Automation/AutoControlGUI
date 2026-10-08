@@ -246,7 +246,10 @@ def _desktop(platform: str, environ: Optional[Dict[str, str]] = None, *, tools: 
         library_present=lambda name: libei and name in ("ei", "oeffis"),
         session_bus_present=lambda: True, readable=lambda _path: True,
         compositor=lambda _environ: "8:1:1",
-        authorisations=ledger if ledger is not None else AuthorisationLedger())
+        authorisations=ledger if ledger is not None else AuthorisationLedger(),
+        # Nothing read: a described Windows or macOS desktop is not this machine's.
+        windows_facts=ac.WindowsFacts, mac_facts=ac.MacFacts,
+        backend_version=lambda _backend: "")
 
 
 def _desktop_evidence(capability: ac.Capability, platform: str) -> Dict[str, Any]:
@@ -263,8 +266,9 @@ def desktop_report(context: ac.BackendContext) -> Dict[str, Any]:
     snapshot = ac.probe_capabilities(context)
     return {
         "platform": snapshot.platform, "backend": snapshot.display_server,
-        # CapabilitySnapshot carries no backend version; say so instead of inventing one.
-        "version": None, "version_reason": "probe_capabilities() reports no backend version",
+        # A described desktop is not this machine: its backend reports no version.
+        "version": snapshot.backend_version or None,
+        "version_reason": "a described desktop's backend version cannot be read from here",
         "transport": "described", "hardware_verified": False,
         "capabilities": [{
             "name": capability.name, "state": capability.state.value,

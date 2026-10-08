@@ -200,11 +200,13 @@ def _self_heal_click(template_path: Optional[str] = None,
                      screen_region: Optional[List[int]] = None,
                      model: Optional[str] = None,
                      raise_on_miss: bool = False,
-                     context: Optional[Dict[str, str]] = None) -> Dict[str, Any]:
+                     context: Optional[Dict[str, str]] = None,
+                     verify: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     """Executor adapter: locate with self-heal, then click.
 
-    The result's ``action_verified`` stays ``None``: a JSON step cannot carry
-    the check, so the click is recorded as located and unverified.
+    ``verify`` is the declarative post-click check (``{"type": "image_gone" |
+    "image_present" | "text_present", ...}``) that fills ``action_verified``;
+    without it the click is recorded as located and unverified (``None``).
     """
     from je_auto_control.utils.self_healing import heal_context
     with heal_context(**(context or {})):
@@ -213,7 +215,7 @@ def _self_heal_click(template_path: Optional[str] = None,
             mouse_keycode=mouse_keycode,
             detect_threshold=float(detect_threshold),
             screen_region=screen_region, model=model,
-            raise_on_miss=_as_bool(raise_on_miss),
+            raise_on_miss=_as_bool(raise_on_miss), verify=verify,
         )
     return outcome.to_dict()
 
@@ -2282,6 +2284,8 @@ def _history_list_as_dicts(limit: int = 100,
             "started_at": r.started_at, "finished_at": r.finished_at,
             "status": r.status, "error_text": r.error_text,
             "duration_seconds": r.duration_seconds,
+            "journal_path": r.journal_path,
+            "journal_run_id": r.journal_run_id,
         }
         for r in rows
     ]
@@ -8661,8 +8665,20 @@ def add_command_to_executor(command_dict: dict) -> None:
             raise AutoControlAddCommandException(add_command_exception_error_message)
 
 
-def execute_action(action_list: list) -> Dict[str, str]:
-    return executor.execute_action(action_list)
+def execute_action(action_list: Union[list, dict], *,
+                   raise_on_error: bool = False, dry_run: bool = False,
+                   step_callback: Optional[Callable[[list], None]] = None,
+                   ) -> Dict[str, str]:
+    """Run ``action_list`` on the shared executor; return its execution record.
+
+    The keywords are the ones :meth:`Executor.execute_action` takes:
+    ``raise_on_error`` raises at the first failed action instead of recording
+    it, ``dry_run`` lists what would run without calling anything, and
+    ``step_callback`` is called with each action before it starts.
+    """
+    return executor.execute_action(
+        action_list, raise_on_error=raise_on_error, dry_run=dry_run,
+        step_callback=step_callback)
 
 
 def execute_files(execute_files_list: list) -> List[Dict[str, str]]:

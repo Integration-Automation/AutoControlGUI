@@ -178,9 +178,11 @@ def run_on_devices(actions: List[Any],
         raise ValueError(f"device specs must be objects; not at index {bad}")
     workers = max(1, min(int(max_parallel), len(devices)))
     report = MatrixReport()
+    from je_auto_control.utils.action_journal.recorder import carry_step
     with ThreadPoolExecutor(max_workers=workers) as pool:
         futures = [
-            pool.submit(_run_one_device, actions, device, index, var_name)
+            # The journal's parent of a device's steps is the step that ran the matrix.
+            pool.submit(carry_step(_run_one_device, index), actions, device, index, var_name)
             for index, device in enumerate(devices)
         ]
         report.results = [future.result() for future in futures]

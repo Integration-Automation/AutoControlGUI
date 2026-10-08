@@ -167,6 +167,8 @@ def _spawn_ready_nodes(pending: Set[str], inflight: Dict[Future, str],
                        nodes_by_id: Dict[str, DagNode],
                        local: NodeRunner, remote: NodeRunner,
                        pool: ThreadPoolExecutor) -> None:
+    from je_auto_control.utils.action_journal.recorder import carry_step
+    order = {node_id: index for index, node_id in enumerate(nodes_by_id)}
     for nid in sorted(pending):
         node = nodes_by_id[nid]
         deps_done = {results[d].status for d in node.depends_on}
@@ -179,7 +181,9 @@ def _spawn_ready_nodes(pending: Set[str], inflight: Dict[Future, str],
         results[nid].status = STATUS_RUNNING
         results[nid].started_at = time.monotonic()
         runner = local if node.host == LOCAL_HOST else remote
-        future = pool.submit(_run_one, node, results[nid], runner, nodes_by_id)
+        # The journal's parent of a node's steps is the step that ran the DAG.
+        future = pool.submit(carry_step(_run_one, order[nid]), node, results[nid],
+                             runner, nodes_by_id)
         inflight[future] = nid
         pending.discard(nid)
 

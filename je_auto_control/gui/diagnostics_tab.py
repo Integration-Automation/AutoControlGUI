@@ -91,6 +91,7 @@ class DiagnosticsTab(TranslatableMixin, QWidget):
             3, QHeaderView.ResizeMode.Stretch,
         )
         self._capabilities_label = QLabel()
+        self._backend_label = QLabel()
         self._capabilities = QTableWidget(0, len(_CAPABILITY_COLUMNS))
         self._capabilities.setEditTriggers(
             QTableWidget.EditTrigger.NoEditTriggers)
@@ -111,6 +112,7 @@ class DiagnosticsTab(TranslatableMixin, QWidget):
         root.addWidget(self._table, stretch=2)
         root.addWidget(self._tr(self._capabilities_label,
                                 "diag_capabilities_title"))
+        root.addWidget(self._backend_label)
         root.addWidget(self._capabilities, stretch=1)
 
     def menu_actions(self) -> list:
@@ -165,6 +167,9 @@ class DiagnosticsTab(TranslatableMixin, QWidget):
     def _refresh_capabilities(self) -> None:
         """Show the current snapshot. Asks the desktop for nothing."""
         snapshot = probe_capabilities()
+        self._backend_label.setText(
+            _t("cap_backend_version").replace("{backend}", snapshot.display_server).replace(
+                "{version}", snapshot.backend_version or _t("cap_backend_version_unknown")))
         self._capabilities.setRowCount(len(snapshot.capabilities))
         for row, capability in enumerate(snapshot.capabilities):
             color = _SEVERITY_COLOR[_STATE_SEVERITY[capability.state]]

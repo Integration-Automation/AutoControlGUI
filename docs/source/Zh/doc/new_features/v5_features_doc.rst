@@ -86,12 +86,40 @@ Python、CLI、GUI、REST、socket 還是 MCP 進來的::
   所以結束行沒寫進檔案的步驟(行程死掉、``Ctrl+C``)讀回來是 ``incomplete``,不會看起來
   像成功;
 * ``outcome``——只記回傳值的型別與大小(數字與布林才記值);回傳的文字一律不存,而且
-  outcome 永遠不會被當成輸入。
+  outcome 永遠不會被當成輸入;
+* ``artifacts``(選用)——這個步驟留下的東西,每筆是 ``{"kind": ..., "path": ...}`` 或
+  ``{"kind": "trace", "id": ...}``:由路徑參數或回傳鍵(``file_path``、``output_path``、
+  ``path``…)指名、而且是在步驟執行期間寫入的檔案;``generate_html_report`` /
+  ``_json_`` / ``_xml_`` 寫出的報告;回傳值裡的 ``trace_id`` / ``traceparent``;以及指令
+  自己用 ``note_artifact(kind, path=..., ident=...)`` 附上的項目。排程、觸發器或熱鍵在
+  執行失敗後拍的錯誤截圖,會附到該執行緒上最後結束的步驟。schema 仍是版本 1:沒有
+  artifacts 的步驟寫出的行和以前一樣,舊的行讀回來 ``artifacts == ()``。
 
 start 到 stop 之間記下的一切屬於同一個 ``run_id``(可用 ``run_id=`` 指定)。日誌檔寫不
-進去時,日誌會停止而自動化繼續執行;``action_journal_status()`` 會回報錯誤。除了
-``AC_parallel`` 以外,交給執行緒池執行的步驟(DAG runner、device matrix)記錄時沒有
-parent。
+進去時,日誌會停止而自動化繼續執行;``action_journal_status()`` 會回報錯誤。DAG runner
+(``AC_run_dag``)與 device matrix(``AC_run_device_matrix``)交給執行緒池的步驟,會以執行
+該 runner 的步驟為 parent,``branch`` 是節點或裝置的索引;``AC_bulkhead_run`` 的 body 在
+呼叫的執行緒上執行,巢狀關係相同。自己的執行緒池用 ``carry_step``::
+
+    from je_auto_control.utils.action_journal.recorder import carry_step
+    pool.submit(carry_step(work, index), *args)   # 在送出工作的執行緒上呼叫
+
+在這之前寫下的日誌裡,這些步驟沒有 parent;產生候選腳本時仍會用時間包含關係認出它們,
+並列為 ``detached``。
+
+錯誤文字會遮蔽兩次。log 用的樣式規則是第二道;第一道是把這次執行自己從秘密解析出來的
+每個值做完全比對後遮蔽——``${secrets.NAME}`` 的查詢、保管庫的讀寫(``SecretManager.get`` /
+``set``、``secret://`` 參照)、交給 ``AC_write_secret`` 的文字。記錄器只把這些值留在記憶體
+裡,從解析出來的那一刻到日誌停止為止,並套用在錯誤文字(在截斷長度之前)、之後步驟的參數
+與 artifact 路徑上。用別的方式取得秘密的指令可以呼叫
+``recorder.note_secret_value(value)``。限制:日誌啟動之前就解析出來的值它不知道;短於四個
+字元的值不比對;應用程式把值變形後(編碼、截斷、拆開)回顯的情況只能靠樣式規則。
+
+日誌開著的時候開始的執行歷史列,會記下那個日誌的檔案與 run id
+(``RunRecord.journal_path`` / ``journal_run_id``;也可以自己傳給
+``HistoryStore.start_run`` 或呼叫 ``link_journal``)。``AC_history_list``、
+``ac_list_run_history``、REST 的歷史路由與執行歷史分頁的明細都會顯示這兩個值。既有的
+``run_history.sqlite`` 第一次開啟時會補上這兩個欄位;清除歷史不會刪除日誌檔。
 
 ``generate_candidate_from_log(path, run_id=..., target="pytest", style="actions")``
 把一次執行轉成 ``CandidateScript``——``code``、``actions``、``manifest``、``warnings``
@@ -108,6 +136,14 @@ parent。
 * 失敗與未完成的步驟會保留(它們是腳本的輸入),並列在 warnings;
 * manifest 逐步記錄來源的日誌行號,以及做過的檢查:原始碼可解析、指令名稱已查表、
   動作清單通過執行器的 dry run。日誌中的任何內容都不會被執行或 eval。
+
+Robot 輸出(``target="robot"``,包含 ``generate_code``)會經過 ``check_robot_structure`` 的
+結構檢查:區段標頭、縮排、關鍵字列、沒有主體的測試、重複的測試名稱、未關閉的變數與沒有
+``END`` 的區塊。**它不是 Robot Framework 的 parser**——``robotframework`` 不是相依套件,所以
+不會解析關鍵字、不會匯入函式庫;通過這個檢查的檔案在 Robot 裡仍可能失敗(未知的關鍵字、
+引數數量不對),那要用 ``robot --dryrun`` 才看得出來。候選腳本的 manifest 會寫
+``"robot_structure": true`` 與 ``"robot_parser": false``。產生器吐出結構錯誤的 Robot 原始碼
+時會丟 ``RobotStructureError``,而不是把它寫出去。
 
 執行器指令:``AC_journal_start`` / ``AC_journal_stop`` / ``AC_journal_status`` /
 ``AC_journal_read`` / ``AC_journal_runs`` 與 ``AC_generate_code_from_journal``。

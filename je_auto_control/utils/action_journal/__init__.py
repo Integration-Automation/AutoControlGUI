@@ -4,8 +4,8 @@ from je_auto_control.utils.action_journal.events import (
     JournalFormatError,
 )
 from je_auto_control.utils.action_journal.recorder import (
-    ActionJournalError, action_journal_status, start_action_journal,
-    stop_action_journal,
+    ActionJournalError, action_journal_status, carry_step, note_artifact,
+    note_secret_value, start_action_journal, stop_action_journal,
 )
 from je_auto_control.utils.action_journal.store import (
     ActionJournal, JournalContents, default_journal_path, list_journal_runs,
@@ -15,7 +15,8 @@ from je_auto_control.utils.action_journal.store import (
 __all__ = [
     "SCHEMA_VERSION", "STATUS_ERROR", "STATUS_INCOMPLETE", "STATUS_OK",
     "ActionEvent", "ActionJournal", "ActionJournalError", "JournalContents",
-    "JournalFormatError", "action_journal_status", "default_journal_path",
-    "list_journal_runs", "load_journal", "read_events", "start_action_journal",
+    "JournalFormatError", "action_journal_status", "carry_step",
+    "default_journal_path", "list_journal_runs", "load_journal", "note_artifact",
+    "note_secret_value", "read_events", "start_action_journal",
     "stop_action_journal",
 ]

@@ -5,7 +5,7 @@ from typing import Optional, Tuple
 
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.vision.backends._parse import (
-    LOCATE_PROMPT, parse_coords,
+    LOCATE_PROMPT, parse_coords, read_usage,
 )
 from je_auto_control.utils.vision.backends.base import VLMBackend, VLMRequestError
 
@@ -52,6 +52,7 @@ class OpenAIVLMBackend(VLMBackend):
         b64 = base64.standard_b64encode(image_bytes).decode("ascii")
         prompt = LOCATE_PROMPT.format(description=description)
         data_url = f"data:{image_mime};base64,{b64}"
+        self.last_usage = None
         try:
             response = self._client.chat.completions.create(
                 model=chosen_model,
@@ -70,6 +71,7 @@ class OpenAIVLMBackend(VLMBackend):
         # the LLM backend already caught them.
         except (*_sdk_errors(), OSError, ValueError, RuntimeError) as error:
             raise VLMRequestError(f"OpenAI VLM request failed: {error!r}") from error
+        self.last_usage = read_usage(response, "prompt_tokens", "completion_tokens")
         try:
             text = response.choices[0].message.content or ""
         except (AttributeError, IndexError):

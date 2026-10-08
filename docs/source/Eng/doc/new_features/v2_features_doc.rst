@@ -61,8 +61,37 @@ Stamp the ids from the caller's side::
         self_heal_click(template_path="submit.png")
 
 From a JSON action or MCP, pass the same keys as ``context`` on
-``AC_self_heal_locate`` / ``AC_self_heal_click``. A JSON step cannot carry a
-check, so its ``action_verified`` stays ``None``. ``AC_heal_stats`` reports
+``AC_self_heal_locate`` / ``AC_self_heal_click``.
+
+A JSON step cannot carry a callable, so ``verify`` may also be an object —
+on ``AC_self_heal_click``, on the ``ac_self_heal_click`` MCP tool, in the
+Self-Healing tab's *Verify after click* field, and from Python::
+
+    ["AC_self_heal_click", {
+        "template_path": "submit.png",
+        "verify": {"type": "image_gone", "timeout_s": 3}}]
+
+==================  ==========================================================
+``type``            holds when
+==================  ==========================================================
+``image_gone``      ``template_path`` (default: the clicked template) is no
+                    longer found
+``image_present``   ``template_path`` is found
+``text_present``    the OCR engine reads ``text`` (``lang``,
+                    ``min_confidence``, ``case_sensitive`` as for
+                    ``find_text_matches``)
+==================  ==========================================================
+
+Common options: ``screen_region`` (``[x1, y1, x2, y2]``; default: the click's
+own region), ``timeout_s`` (default 2, the check is repeated until it holds or
+the time is up) and ``poll_s`` (default 0.2); image types also take
+``detect_threshold`` (default 0.9). The object is validated before anything is
+clicked — an unknown type or option raises ``HealVerificationError`` and no
+click happens. A check that cannot be carried out (unreadable template, no OCR
+engine, failed capture) raises the same error *after* the click and the event
+is logged with ``action_verified`` ``None``: "could not look" is never
+reported as "gone". Without ``verify`` the field stays ``None``.
+``AC_heal_stats`` reports
 ``action_verification`` (``actions`` / ``verified`` / ``failed`` /
 ``unchecked``) apart from ``healed``, which only counts returned points.
 
@@ -131,8 +160,48 @@ the executor command, the MCP tool and the GUI evaluate::
     payload["passed"], payload["violations"]
 
 Image paths are relative to the dataset file and may not leave its directory.
-Only the ``template`` strategy can be named from JSON; evaluate a VLM by
-passing ``evaluate_locators`` a callable that wraps it.
+
+A version can also name the ``vlm`` strategy, which shows a ``utils/vision``
+backend the sample's own frame (the region crop, as PNG — never a new
+screenshot) and asks for the sample's ``description``::
+
+    "samples": [{"id": "submit", "frame": "frames/submit.png",
+                 "description": "the green Submit button",
+                 "expected_box": [100, 60, 156, 92]}],
+    "versions": {"v1": {"strategy": "template", "threshold": 0.9},
+                 "v3": {"strategy": "vlm", "backend": "anthropic",
+                        "model": "…",
+                        "price": {"input_per_mtok": 5.0,
+                                  "output_per_mtok": 25.0}}},
+    "thresholds": {"v3": {"max_model_calls": 50, "max_cost": 0.25}}
+
+``backend`` is ``anthropic``, ``openai`` or ``null``; left out, it is the
+backend ``AUTOCONTROL_VLM_BACKEND`` and the API keys select. ``null`` makes no
+request and turns every sample into an ``error``, which is what a machine with
+no key should measure. From Python, ``evaluate_healing_dataset(path,
+backends={"fake": my_backend})`` lets a version name a backend object of your
+own, and ``vlm_strategy(backend, model=..., price=...)`` is the callable for
+``evaluate_locators``. **A ``vlm`` version against a real backend sends every
+frame to that service and is billed by it.**
+
+Every report and every result row gains ``model_calls``, ``input_tokens``,
+``output_tokens`` and ``cost``. Calls are counted by the evaluation (a request
+that failed was still made; a sample with no description, or an unavailable
+backend, makes none). Tokens come from the backend's ``last_usage`` — the
+Anthropic and OpenAI backends fill it from the response — and ``cost`` is the
+backend's own figure or tokens × ``price``. Where nothing was reported the
+value is ``None``, never ``0`` and never an estimate; a template version
+reports ``model_calls: 0`` and ``None`` for the rest. When any version is
+``vlm`` the frames are loaded in colour (the template strategy converts them
+to gray itself), so every version is still given the same frame.
+
+The Self-Healing tab shows the result as a comparison table — one version per
+row, the baseline first; located, accuracy, false positives and recovery each
+as ``count/total (rate)``, then p50 / p95, model calls, tokens in / out and
+cost, with ``-`` where nothing was reported — and keeps the full JSON report
+(failing samples, threshold violations) beneath it. The same rows are
+available headlessly as ``comparison_rows(payload)`` (columns:
+``COMPARISON_COLUMNS``).
 
 ``benchmarks/self_healing/run.py`` is the fixed regression set: ten frames
 drawn in memory (plain, 125% / 150% scale, negative-origin monitor, a region

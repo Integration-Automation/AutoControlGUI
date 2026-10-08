@@ -1286,6 +1286,29 @@ from je_auto_control.utils.action_journal import (
 from je_auto_control.utils.codegen.journal_import import (
     CandidateScript, JournalImportError, generate_candidate_from_log,
 )
+# What the examples had to reach past the facade for: journal helpers, the
+# Robot structure check, healing measurement and verification, Wayland
+# authorisation, and the schema versions the journal and heal files carry.
+from je_auto_control.utils.action_journal import (
+    SCHEMA_VERSION as ACTION_JOURNAL_SCHEMA_VERSION,
+    carry_step, note_artifact, note_secret_value,
+)
+from je_auto_control.utils.codegen.journal_import import only_run_id, write_candidate
+from je_auto_control.utils.codegen.robot_check import (
+    RobotStructureError, check_robot_structure,
+)
+from je_auto_control.utils.self_healing import (
+    COMPARISON_COLUMNS, HEAL_EVENT_SCHEMA_VERSION, VERIFY_TYPES,
+    HealVerificationError, LocateRequest, ModelUsage, UsageMeter, build_verifier,
+    check_thresholds, comparison_rows, format_comparison, vlm_strategy,
+)
+from je_auto_control.utils.self_healing.eval_strategies import (
+    DATASET_SCHEMA_VERSION as HEALING_DATASET_SCHEMA_VERSION,
+)
+from je_auto_control.linux_wayland.authorisation import (
+    AuthorisationLedger, AuthorisationState,
+)
+from je_auto_control.wrapper.capability_probes import MacFacts, WindowsFacts
 # HTTP/API request action (dependency-free, stdlib urllib)
 from je_auto_control.utils.http_client.http_client import http_request
 # Ad-hoc read-only SQL query against SQLite
@@ -1401,6 +1424,14 @@ __all__ = [
     "action_journal_status", "list_journal_runs", "read_events",
     "start_action_journal", "stop_action_journal",
     "CandidateScript", "JournalImportError", "generate_candidate_from_log",
+    "ACTION_JOURNAL_SCHEMA_VERSION", "HEAL_EVENT_SCHEMA_VERSION",
+    "HEALING_DATASET_SCHEMA_VERSION", "COMPARISON_COLUMNS", "VERIFY_TYPES",
+    "AuthorisationLedger", "AuthorisationState", "HealVerificationError",
+    "LocateRequest", "MacFacts", "ModelUsage", "RobotStructureError", "UsageMeter",
+    "WindowsFacts",
+    "build_verifier", "carry_step", "check_robot_structure", "check_thresholds",
+    "comparison_rows", "format_comparison", "note_artifact", "note_secret_value",
+    "only_run_id", "vlm_strategy", "write_candidate",
     "send_email", "assert_pdf_text", "extract_pdf_text", "pdf_metadata",
     "pdf_page_count",
     "add_command_to_executor", "test_record_instance", "pil_screenshot",

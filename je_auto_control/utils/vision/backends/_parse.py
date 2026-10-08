@@ -40,3 +40,16 @@ LOCATE_PROMPT = (
     'element center in the form "x,y" (two integers separated by a comma). '
     'If the element is not visible, reply exactly "none".'
 )
+
+
+def read_usage(response: object, input_name: str, output_name: str):
+    """``{"input_tokens", "output_tokens"}`` from an SDK response, or ``None``.
+
+    The SDKs name the two counts differently (``input_tokens`` /
+    ``prompt_tokens``); a response without integer counts reports nothing.
+    """
+    usage = getattr(response, "usage", None)
+    counts = (getattr(usage, input_name, None), getattr(usage, output_name, None))
+    if not all(isinstance(count, int) and not isinstance(count, bool) for count in counts):
+        return None
+    return {"input_tokens": counts[0], "output_tokens": counts[1]}

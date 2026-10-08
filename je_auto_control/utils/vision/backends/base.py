@@ -1,5 +1,5 @@
 """Abstract VLM (vision-language model) backend."""
-from typing import Optional, Tuple
+from typing import Any, Mapping, Optional, Tuple
 
 from je_auto_control.utils.exception.exceptions import AutoControlException
 
@@ -21,6 +21,12 @@ class VLMBackend:
 
     name: str = "abstract"
     available: bool = False
+    #: What the most recent request used, when the service said:
+    #: ``{"input_tokens": int, "output_tokens": int}`` (a backend that knows
+    #: the price may add ``"cost"``). ``None`` when nothing was reported.
+    #: One value per backend object, so it is only meaningful to a caller
+    #: that is not sharing the backend with another thread.
+    last_usage: Optional[Mapping[str, Any]] = None
 
     def locate(self, image_bytes: bytes, description: str,
                model: Optional[str] = None,

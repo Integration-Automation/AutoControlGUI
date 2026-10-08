@@ -2985,6 +2985,7 @@ def AC_self_heal_click(
     model: str | None = ...,
     raise_on_miss: bool = ...,
     context: Dict[str, str] | None = ...,
+    verify: Dict[str, Any] | None = ...,
 ) -> Dict[str, Any]:
     """Executor adapter: locate with self-heal, then click."""
 
