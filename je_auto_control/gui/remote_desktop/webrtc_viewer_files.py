@@ -73,15 +73,15 @@ class _ViewerFilesMixin(_PanelPart):
                 return
             self._sync_btn.setText(_t("rd_webrtc_sync_stop"))
         else:
-            engine, self._sync_engine = self._sync_engine, None
-            if engine is None:
+            running, self._sync_engine = self._sync_engine, None
+            if running is None:
                 self._sync_btn.setText(_t("rd_webrtc_sync_start"))
                 return
             # stop() joins the watcher thread; until it reports the button
             # says so and takes no click, so the folder is not watched twice.
             self._sync_btn.setText(_t("gui_op_stopping"))
             self._sync_btn.setEnabled(False)
-            self._stops.retire(functools.partial(stop_each, engine.stop), on_done=self._on_sync_stopped)
+            self._stops.retire(functools.partial(stop_each, running.stop), on_done=self._on_sync_stopped)
 
     def _on_sync_stopped(self, _outcome: object = None) -> None:
         """GUI thread: the sync engine's watcher has ended."""
