@@ -402,7 +402,9 @@ job in the table above is what exercises the backend itself.
 ## Mobile devices
 
 `mobile_capability_matrix()` is the source of the tables below: which
-`AC_android_*` / `AC_ios_*` commands deliver each capability, and which
+`AC_android_*` / `AC_ios_*` commands deliver each capability, which commands
+deliver none of them (describing devices sends no input, and the adb shell can
+do anything, so neither is filed under `input`), and which
 desktop features have no mobile counterpart. A session reports each capability
 per device with `device_setup_report()`, in one of four states — `available`,
 `needs_permission` (USB debugging not authorised), `needs_dependency` (for
@@ -418,7 +420,7 @@ and the row in the table at the top stays `mocked CI`.
 <!-- mobile-matrix:begin (generated: test_modernization_examples.py --fix) -->
 | Capability | Android commands | iOS commands |
 |---|---|---|
-| `input` | `AC_android_tap`, `AC_android_swipe`, `AC_android_key`, `AC_android_list_devices`, `AC_android_shell`, `AC_android_device_info`, `AC_android_long_press`, `AC_android_drag` | `AC_ios_tap`, `AC_ios_swipe`, `AC_ios_device_info`, `AC_ios_press_key`, `AC_ios_long_press`, `AC_ios_drag` |
+| `input` | `AC_android_tap`, `AC_android_swipe`, `AC_android_key`, `AC_android_long_press`, `AC_android_drag` | `AC_ios_tap`, `AC_ios_swipe`, `AC_ios_press_key`, `AC_ios_long_press`, `AC_ios_drag` |
 | `unicode_text` | `AC_android_text`, `AC_android_type_text` | `AC_ios_type` |
 | `multi_touch` | `AC_android_pinch` | `AC_ios_pinch` |
 | `screenshot` | `AC_android_screenshot`, `AC_android_screen_info`, `AC_android_find_image`, `AC_android_find_text`, `AC_android_find_by_description`, `AC_android_self_heal` | `AC_ios_screenshot`, `AC_ios_screen_info`, `AC_ios_find_image`, `AC_ios_find_text`, `AC_ios_find_by_description`, `AC_ios_self_heal` |
@@ -429,6 +431,11 @@ and the row in the table at the top stays `mocked CI`.
 | `files` | `AC_android_push_file`, `AC_android_pull_file` | `AC_ios_push_file`, `AC_ios_pull_file` |
 | `clipboard` | `AC_android_get_clipboard`, `AC_android_set_clipboard` | `AC_ios_get_clipboard`, `AC_ios_set_clipboard` |
 | `recording` | `AC_android_start_recording`, `AC_android_stop_recording` | `AC_ios_start_recording`, `AC_ios_stop_recording` |
+
+| Not a device capability | Android commands | iOS commands |
+|---|---|---|
+| `device_info` | `AC_android_list_devices`, `AC_android_device_info` | `AC_ios_device_info` |
+| `shell` | `AC_android_shell` | — |
 
 | Desktop-only feature | Why | Use instead |
 |---|---|---|

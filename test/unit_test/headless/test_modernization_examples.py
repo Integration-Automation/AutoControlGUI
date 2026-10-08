@@ -260,6 +260,9 @@ def render_mobile_block() -> str:
     lines = ["| Capability | Android commands | iOS commands |", "|---|---|---|"]
     lines += [f"| `{row['capability']}` | {commands(row['android'])} | {commands(row['ios'])} |"
               for row in matrix["capabilities"]]
+    lines += ["", "| Not a device capability | Android commands | iOS commands |", "|---|---|---|"]
+    lines += [f"| `{row['purpose']}` | {commands(row['android'])} | {commands(row['ios'])} |"
+              for row in matrix["other_commands"]]
     lines += ["", "| Desktop-only feature | Why | Use instead |", "|---|---|---|"]
     lines += [f"| {row['feature']} | {row['limitation']} | {row['alternative']} |"
               for row in matrix["desktop_only"]]
