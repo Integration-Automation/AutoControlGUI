@@ -363,12 +363,17 @@ def resolve_conflict(outbox: SyncOutbox, adapters: Sequence[SyncAdapter], *, dev
 
 # --- one-call entry points for the executor, MCP and the GUI -------------------
 
-def _session(server_url: str, user_id: str, options: Mapping[str, Any],
-             ) -> Tuple[ConfigSyncClient, SyncOutbox, List[SyncAdapter], str]:
+def _chosen(options: Mapping[str, Any]) -> Dict[str, Any]:
+    """The options that were given a value; an unknown name is an error."""
     unknown = sorted(set(options) - _OPTIONS)
     if unknown:
         raise ConfigSyncError(f"unknown config sync option(s): {', '.join(unknown)}")
-    chosen = {name: value for name, value in options.items() if value not in (None, "")}
+    return {name: value for name, value in options.items() if value not in (None, "")}
+
+
+def _session(server_url: str, user_id: str, options: Mapping[str, Any],
+             ) -> Tuple[ConfigSyncClient, SyncOutbox, List[SyncAdapter], str]:
+    chosen = _chosen(options)
     device_id = str(chosen.get("device_id") or default_device_id())
     client = ConfigSyncClient(
         server_url, user_id=user_id, timeout_s=float(chosen.get("timeout_s", 5.0)),
@@ -407,9 +412,17 @@ def config_sync_run(server_url: str, user_id: str, *,
         asset_transport=DirectoryAssetTransport(assets_dir) if assets_dir else None).to_dict()
 
 
-def config_sync_status(server_url: str, user_id: str,
-                       outbox_path: Optional[str] = None) -> Dict[str, Any]:
-    """The recorded sync state for this account and server; no network."""
+def config_sync_status(server_url: str, user_id: str, outbox_path: Optional[str] = None,
+                       **options: Any) -> Dict[str, Any]:
+    """The recorded sync state for this account and server; no network.
+
+    Takes the same options as :func:`config_sync_run`, so one options dict
+    serves all four entry points. Only ``outbox_path`` (which may also be
+    given positionally, as before) changes the answer; the others are
+    checked for their names and otherwise ignored, because reading the
+    recorded state needs no device, secret or section.
+    """
+    _chosen(options)
     endpoint = str(server_url).rstrip("/")
     return sync_status(SyncOutbox(outbox_path or None, account=user_id, endpoint=endpoint))
 

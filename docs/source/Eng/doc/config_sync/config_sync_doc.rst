@@ -353,7 +353,12 @@ given), ``scripts_dir``, ``locators_path``, ``outbox_path``, ``assets_dir``,
      - ``ac_config_sync_full_resync``
      - adopt the server's state after being retired; pending changes are discarded and listed
 
-All four are Script Builder commands under **Data**.
+All four are Script Builder commands under **Data**, and all four share one
+shape: ``(server_url, user_id, ..., **options)`` with the options listed
+above. ``config_sync_status(server_url, user_id, outbox_path=None, **options)``
+reads only ``outbox_path`` (still accepted positionally); the other options
+are accepted so that one options dict can be passed to every call, and an
+unknown name is ``ConfigSyncError`` there as everywhere else.
 
 .. code-block:: json
 

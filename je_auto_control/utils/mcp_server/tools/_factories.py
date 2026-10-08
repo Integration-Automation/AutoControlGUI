@@ -9276,7 +9276,9 @@ def config_sync_tools() -> List[MCPTool]:
                          "server without touching the network: {state, revision, "
                          "pending, conflicts, conflict_details, last_success, error, "
                          "retry_in_s}."),
-            input_schema=schema({**target, "outbox_path": options["outbox_path"]}, required),
+            # The options of the other three are accepted (only outbox_path
+            # matters here), so one argument object serves all four tools.
+            input_schema=schema({**target, **options}, required),
             handler=h_sync.config_sync_status,
             annotations=READ_ONLY,
         ),

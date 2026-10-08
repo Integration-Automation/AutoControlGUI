@@ -299,7 +299,11 @@ Adapter:同步什麼、什麼留在本機
      - ``ac_config_sync_full_resync``
      - 被退休後採用 server 的狀態;待送變更會被捨棄並列出
 
-四個都是 Script Builder **Data** 分類下的指令。
+四個都是 Script Builder **Data** 分類下的指令,而且形狀一致:
+``(server_url, user_id, ..., **options)``,options 即上面列的那些。
+``config_sync_status(server_url, user_id, outbox_path=None, **options)`` 只讀 ``outbox_path``
+(仍可用位置參數傳);其他選項會被接受,讓同一個 options dict 可以傳給每一個呼叫,
+不認得的名稱和其他地方一樣是 ``ConfigSyncError``。
 
 .. code-block:: json
 
