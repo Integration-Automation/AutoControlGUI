@@ -6,12 +6,18 @@ state during execution — counters in loops, captured OCR/locator results,
 ``for_each`` items. ``VariableScope`` is a thin mutable container the
 executor exposes to flow-control commands so those commands can read and
 write the same bag the runtime interpolator consults.
+
+A scope lasts one top-level run when the run is opened through
+:func:`~je_auto_control.utils.script_vars.execution.execution_scope` (as
+``execute_action_with_vars`` and every server entry point do); a plain
+``executor.execute_action(...)`` uses the executor's own scope, which lasts
+as long as the executor.
 """
 from typing import Any, Dict, Iterator, Mapping, MutableMapping, Optional
 
 
 class VariableScope(MutableMapping[str, Any]):
-    """Mutable mapping of script variables shared across action execution."""
+    """Mutable mapping of the script variables one run's actions share."""
 
     __slots__ = ("_vars",)
 

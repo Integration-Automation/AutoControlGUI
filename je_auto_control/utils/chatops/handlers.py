@@ -59,7 +59,9 @@ def cmd_run(argv: List[str], context: Dict[str, Any]) -> CommandResult:
     root = _require_script_root(context)
     script_path = _resolve_script(root, argv[0])
     from je_auto_control.utils.executor.action_executor import execute_files
-    result = execute_files([str(script_path)])
+    from je_auto_control.utils.script_vars.execution import execution_scope
+    with execution_scope():  # one /run, one variable scope
+        result = execute_files([str(script_path)])
     return CommandResult(
         text=f"ran {script_path.name}: {len(result)} action(s) executed",
         metadata={"script": str(script_path), "results": _safe(result)},

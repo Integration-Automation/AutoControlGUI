@@ -59,7 +59,7 @@ Builder 項目。視覺與視窗功能的 geometry / IO 操作皆可注入,因�
   呼叫端同名的變數會恢復原值。
 * **同進程平行** — ``AC_parallel`` 讓多個分支動作清單並行執行,各自在
   獨立的全新 executor 上,因此分支不會在共享變數上互相 race(跨主機 DAG
-  的同進程版)。
+  的同進程版)。分支從呼叫端變數的一份複本開始;分支內設定的值只留在該分支。
 * **效能預算斷言** — ``assert_duration(action, max_ms)`` /
   ``AC_assert_duration`` 在區塊耗時超過預算時判失敗——銜接 profiler 與
   斷言 DSL 的延遲回歸守門。

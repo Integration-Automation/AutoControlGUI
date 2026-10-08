@@ -459,6 +459,10 @@ class _ParallelRun:
         # parent's live command/macro maps concurrently.
         self._event_dict = dict(executor.event_dict)
         self._macros = dict(executor.macros)
+        # Each branch starts from what the parent could see when AC_parallel
+        # ran -- a branch used to start empty, so ${var} set before the
+        # block was unknown inside it -- and writes to its own copy.
+        self._variables = executor.variables.as_dict()
         self._strict = getattr(executor_module._STRICT_BODIES, "value", False)
         self._macro_depth = getattr(_MACRO_DEPTH, "value", 0)
         self.results: list = [None] * len(branches)
@@ -477,6 +481,7 @@ class _ParallelRun:
         for name, handler in self._event_dict.items():
             branch_executor.event_dict.setdefault(name, handler)
         branch_executor.macros.update(self._macros)
+        branch_executor.variables.update_many(self._variables)
         return branch_executor
 
     def run_branch(self, index: int, branch: Any) -> None:
@@ -519,8 +524,10 @@ def exec_parallel(executor: Any, args: Mapping[str, Any]) -> Dict[str, Any]:
     """Run each branch action list concurrently on its own isolated executor.
 
     ``branches`` is a list of action lists (or a JSON string of one). Each
-    branch runs on a fresh :class:`Executor` with a separate variable scope,
-    so concurrent branches never race on shared state. Custom commands
+    branch runs on a fresh :class:`Executor` whose variable scope is a fork of
+    the caller's: it starts with the variables visible when ``AC_parallel``
+    ran, and what a branch sets stays in that branch, so concurrent branches
+    never race on shared state and nothing flows back. Custom commands
     (registered via ``add_command_to_executor``) and ``AC_define_macro``
     macros are copied from the parent so a branch recognises them — otherwise
     a branch's fresh executor only has the stock command set and rejects them

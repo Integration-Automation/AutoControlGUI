@@ -18,6 +18,7 @@ from je_auto_control.utils.exception.exceptions import (
     AutoControlException, AutoControlJsonActionException,
 )
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
+from je_auto_control.utils.script_vars.execution import execution_scope
 
 
 @dataclass
@@ -174,7 +175,8 @@ def _execute_strict(actions: Any) -> HandlerResult:
     """
     from je_auto_control.utils.executor.action_executor import executor
     try:
-        result = executor.execute_action(actions, raise_on_error=True)
+        with execution_scope():
+            result = executor.execute_action(actions, raise_on_error=True)
     except Exception as error:  # noqa: BLE001  # pylint: disable=broad-except  # reason: REST boundary; the failure is the response
         autocontrol_logger.info("rest execute stopped on a failed action: %r", error)
         return 200, {"ok": False, "error": f"{type(error).__name__}: {error}"}
@@ -198,7 +200,8 @@ def handle_execute(ctx: RouteContext) -> HandlerResult:
         return _execute_strict(actions)
     try:
         from je_auto_control.utils.executor.action_executor import execute_action
-        result = execute_action(actions)
+        with execution_scope():  # one request, one variable scope
+            result = execute_action(actions)
     except Exception as error:  # noqa: BLE001  # pylint: disable=broad-except  # reason: REST boundary must always return JSON, never drop the HTTP response
         autocontrol_logger.error("rest execute failed: %r", error)
         return 500, {"error": "execute_action failed"}
@@ -213,7 +216,8 @@ def handle_execute_file(ctx: RouteContext) -> HandlerResult:
         return 400, {"error": "missing 'path' field"}
     try:
         from je_auto_control.utils.executor.action_executor import execute_files
-        result = execute_files([path])
+        with execution_scope():
+            result = execute_files([path])
     except (AutoControlActionException, AutoControlActionNullException,
             AutoControlJsonActionException) as error:
         # The caller chose the path, so an unreadable file or an action list
