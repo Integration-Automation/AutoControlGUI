@@ -45,6 +45,10 @@ class WatchdogRule:
     action: Callable[[], None]
     #: Who registered it under RBAC; it is checked and dismissed as that user.
     owner: Optional[DeferredOwner] = field(default=None, kw_only=True)
+    #: The failure last logged for this rule, or ``None`` while it works. A
+    #: rule is polled about once a second: it reports a failure when it
+    #: starts, when it changes and when it ends, not on every poll.
+    last_error: Optional[str] = field(default=None, init=False, repr=False, compare=False)
 
 
 class PopupWatchdog:
@@ -142,15 +146,16 @@ class PopupWatchdog:
             # now: a removed or demoted user's rule is refused, not run.
             with owner_scope(rule.owner):
                 if not rule.matcher():
+                    _note_working(rule)
                     return False
                 rule.action()
         # Any rule error, as ScreenObserver does: a matcher raising something
         # off the list (subprocess.TimeoutExpired, sqlite3.Error) killed the
         # guard thread and every other rule with it.
         except Exception as error:  # noqa: BLE001  # reason: logged; one rule must not stop the others
-            autocontrol_logger.info(
-                "popup watchdog rule %r error: %r", rule.name, error)
+            _note_failure(rule, repr(error))
             return False
+        _note_working(rule)
         with self._lock:
             self._hits.append({"rule": rule.name, "time": time.time()})
         return True
@@ -159,6 +164,22 @@ class PopupWatchdog:
         while not stop.is_set():
             self.check_once()
             stop.wait(self._poll)
+
+
+def _note_failure(rule: WatchdogRule, failure: str) -> None:
+    """Log ``failure`` unless it is the one this rule already reported."""
+    if rule.last_error == failure:
+        return
+    rule.last_error = failure
+    autocontrol_logger.info("popup watchdog rule %r error: %s", rule.name, failure)
+
+
+def _note_working(rule: WatchdogRule) -> None:
+    """Say once that a rule which had been failing is being applied again."""
+    if rule.last_error is None:
+        return
+    rule.last_error = None
+    autocontrol_logger.info("popup watchdog rule %r recovered", rule.name)
 
 
 def _window_matcher(title: str, case_sensitive: bool) -> Callable[[], bool]:
