@@ -5062,6 +5062,8 @@ def _add_work_queue_specs(specs: List[CommandSpec]) -> None:
         fields=(
             FieldSpec("private_path", FieldType.STRING),
             FieldSpec("public_path", FieldType.STRING),
+            FieldSpec("passphrase", FieldType.STRING, optional=True,
+                      placeholder="encrypts the private key file"),
         ),
         description="Create an Ed25519 key pair: keep the private key on the "
                     "signing machine, give execution endpoints the public key.",
@@ -5072,6 +5074,8 @@ def _add_work_queue_specs(specs: List[CommandSpec]) -> None:
             FieldSpec("path", FieldType.FILE_PATH),
             FieldSpec("key", FieldType.STRING, optional=True),
             FieldSpec("private_key_path", FieldType.FILE_PATH, optional=True),
+            FieldSpec("passphrase", FieldType.STRING, optional=True,
+                      placeholder="of an encrypted private key"),
         ),
         description="Write a signature sidecar for an action file "
                     "(Ed25519 with a private key, else HMAC-SHA256).",

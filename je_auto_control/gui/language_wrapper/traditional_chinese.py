@@ -225,6 +225,35 @@ traditional_chinese_word_dict = {
     "rest_config_export_done": "已將 {count} 個檔案寫入 {path}。",
     "rest_config_import_confirm": "用此設定包覆寫使用者設定？既有檔案會先被改名為 .bak.<時間戳>。",
     "rest_config_import_done": "已寫入 {written} 個檔案；略過 {skipped} 個。",
+    "rest_token_rbac": "每位使用者各自的 token（使用者檔：{path}）",
+    "rest_running_rbac": "REST API 以 RBAC 執行中：共用 token 會被拒絕。",
+    "rest_users_group": "使用者（RBAC）",
+    "rest_users_path": "使用者檔：",
+    "rest_users_path_ph": "users.json 的路徑（JE_AUTOCONTROL_RBAC_USERS）",
+    "rest_users_enable": "REST 請求以這個使用者檔驗證",
+    "rest_users_col_id": "使用者 ID",
+    "rest_users_col_name": "名稱",
+    "rest_users_col_role": "角色",
+    "rest_users_id": "使用者 ID：",
+    "rest_users_name": "名稱：",
+    "rest_users_role": "角色：",
+    "rest_users_new_token": "新 token（只顯示一次）：",
+    "rest_users_refresh": "重新載入使用者",
+    "rest_users_add": "新增使用者",
+    "rest_users_set_role": "設定角色",
+    "rest_users_rotate": "更換 token",
+    "rest_users_remove": "移除使用者",
+    "rest_users_copy_token": "複製新 token",
+    "rest_users_remove_confirm": (
+        "要移除使用者 {user} 嗎？其 token 會失效，"
+        "他排定的工作也不會再執行。"
+    ),
+    "rest_users_no_store": "請先輸入使用者檔的路徑。",
+    "rest_users_no_user": "請先輸入或選取使用者 ID。",
+    "rest_users_count": "{path} 內有 {count} 位使用者",
+    "rest_users_token_issued": (
+        "已發出 {user} 的 token。請立即複製，之後無法再顯示。"
+    ),
 
     # Remote Desktop — WebRTC 子分頁
     "rd_webrtc_host_tab": "WebRTC 被遠端",

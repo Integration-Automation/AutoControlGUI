@@ -28,7 +28,7 @@ import hmac
 import json
 import threading
 import uuid
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any, Callable, Dict, List, Optional, Tuple
@@ -44,6 +44,7 @@ from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.run_history.artifact_manager import (
     capture_error_snapshot,
 )
+from je_auto_control.utils.rbac.deferred import DeferredOwner, capture_owner
 from je_auto_control.utils.run_history.run_outcome import run_counting_failures
 from je_auto_control.utils.run_history.history_store import (
     SOURCE_TRIGGER, STATUS_ERROR, STATUS_OK, default_history_store,
@@ -82,6 +83,8 @@ class WebhookTrigger:
     enabled: bool = True
     fired: int = 0
     last_status: int = 0
+    #: Who registered it under RBAC; the run is authorised as that user.
+    owner: Optional[DeferredOwner] = field(default=None, kw_only=True)
 
 
 #: Verbs the request handler answers; anything else gets a 501 before routing.
@@ -303,6 +306,7 @@ class WebhookTriggerServer:
             script_path=str(script_path),
             methods=_normalize_methods(methods),
             token=token if token is not None else None,
+            owner=capture_owner(),
         )
         with self._lock:
             for existing in self._triggers.values():
@@ -381,7 +385,7 @@ class WebhookTriggerServer:
             # error and _dispatch still answers the request.
             try:
                 actions = read_executable_action_json(trigger.script_path)
-                run_counting_failures(lambda: self._executor(actions, payload))
+                run_counting_failures(lambda: self._executor(actions, payload), owner=trigger.owner)
             except Exception as error:  # noqa: BLE001  # reason: any script failure must be recorded and answered
                 status = STATUS_ERROR
                 error_text = repr(error)

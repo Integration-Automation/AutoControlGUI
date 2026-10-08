@@ -30,6 +30,10 @@ class Role:
 class Capability:
     """Coarse capability tags checked by REST / MCP route guards."""
     READ_SCREEN = "read_screen"
+    #: Reading what is not on the screen: files, databases, the clipboard,
+    #: stored secrets and references, the process list, the network. A
+    #: viewer watches the desktop; it does not get the host's data.
+    READ_DATA = "read_data"
     DRIVE_INPUT = "drive_input"
     MANAGE_HOSTS = "manage_hosts"
     MANAGE_USERS = "manage_users"
@@ -41,13 +45,13 @@ class Capability:
 
     @classmethod
     def all(cls) -> List[str]:
-        return [cls.READ_SCREEN, cls.DRIVE_INPUT, cls.MANAGE_HOSTS,
+        return [cls.READ_SCREEN, cls.READ_DATA, cls.DRIVE_INPUT, cls.MANAGE_HOSTS,
                 cls.MANAGE_USERS, cls.READ_AUDIT, cls.SIGN_ACTIONS]
 
 
 _ROLE_CAPABILITIES: Dict[str, Set[str]] = {
     Role.VIEWER: {Capability.READ_SCREEN},
-    Role.OPERATOR: {Capability.READ_SCREEN, Capability.DRIVE_INPUT},
+    Role.OPERATOR: {Capability.READ_SCREEN, Capability.READ_DATA, Capability.DRIVE_INPUT},
     Role.ADMIN: set(Capability.all()),
 }
 

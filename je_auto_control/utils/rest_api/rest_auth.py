@@ -26,7 +26,7 @@ import secrets
 import threading
 import time
 from dataclasses import dataclass
-from typing import Dict, Optional, Tuple
+from typing import Any, Dict, Optional, Tuple
 
 from je_auto_control.utils.rbac.authorization import AuthorizationContext, resolve_token
 from je_auto_control.utils.rbac.users import UserStore
@@ -182,6 +182,23 @@ class RestAuthGate:
                 bucket.failed = 0
 
 
+def authenticate_with(gate: Any, *, client_ip: str,
+                      header_value: Optional[str]) -> AuthResult:
+    """Ask ``gate`` who the caller is, whichever of the two methods it has.
+
+    A gate written against the original interface implements only
+    ``check(...) -> str``. It cannot name a user, so its verdict is taken
+    with no identity -- the request is served as under the shared token.
+    """
+    authenticate = getattr(gate, "authenticate", None)
+    if callable(authenticate):
+        result = authenticate(client_ip=client_ip, header_value=header_value)
+        if isinstance(result, AuthResult):
+            return result
+        return AuthResult(str(result))
+    return AuthResult(str(gate.check(client_ip=client_ip, header_value=header_value)))
+
+
 def _bearer_token(header_value: Optional[str]) -> Optional[str]:
     """The token of an ``Authorization: Bearer <token>`` header, or ``None``."""
     if not header_value:
@@ -198,5 +215,6 @@ def _matches_bearer(header_value: Optional[str], expected: str) -> bool:
 
 
 __all__ = [
-    "AuthResult", "RestAuthGate", "generate_token", "constant_time_equal",
+    "AuthResult", "RestAuthGate", "authenticate_with", "generate_token",
+    "constant_time_equal",
 ]

@@ -27,7 +27,9 @@ from je_auto_control.utils.rbac.authorization import (
 )
 from je_auto_control.utils.rbac.policy import capability_for_route, denied_command_in
 from je_auto_control.utils.rbac.users import UserStore
-from je_auto_control.utils.rest_api.rest_auth import RestAuthGate, generate_token
+from je_auto_control.utils.rest_api.rest_auth import (
+    RestAuthGate, authenticate_with, generate_token,
+)
 from je_auto_control.utils.rest_api.rest_handlers import (
     HandlerResult, RouteContext,
     handle_audit_list, handle_audit_verify,
@@ -227,8 +229,8 @@ class _RestRequestHandler(BaseHTTPRequestHandler):
         The caller is ``None`` under the shared token: there is no user to
         hold a role, so there is nothing to authorise.
         """
-        result = self._gate().authenticate(
-            client_ip=client_ip,
+        result = authenticate_with(
+            self._gate(), client_ip=client_ip,
             header_value=self.headers.get("Authorization"),
         )
         if result.verdict != "ok":

@@ -125,6 +125,9 @@ CLI::
 
    python -m je_auto_control.utils.rest_api --host 127.0.0.1 --port 9939
 
+設定了 ``JE_AUTOCONTROL_REQUIRE_SIGNED_ACTIONS`` 而檔案沒有簽章或驗章失敗時，
+``POST /execute_file`` 回 ``403`` 並附上原因；該檔案不會被執行。
+
 角色（選用的 RBAC）
 --------------------
 
@@ -139,15 +142,31 @@ CLI::
   存放檔是空的或讀不出來時，任何人都進不來。
 - **沒有啟用時完全不變**：單一共用 token、沒有角色、不會有 403。
 
-使用者以 Python 建立；明文 token 只顯示一次，檔案裡只存雜湊::
+第一位 admin 在主機上從終端機建立；明文 token 只印出一次，檔案裡只存雜湊::
 
-   import je_auto_control as ac
+   je_auto_control users --users /etc/autocontrol/users.json add alice --role admin
+   je_auto_control users list                 # 存放檔取自 JE_AUTOCONTROL_RBAC_USERS
+   je_auto_control users set-role bob operator   # 角色：viewer / operator / admin
+   je_auto_control users rotate-token bob
+   je_auto_control users remove bob
 
-   store = ac.UserStore("/etc/autocontrol/users.json")
-   token = store.add_user(user_id="alice", display_name="Alice", role="operator")
-   store.set_role("alice", "viewer")      # 角色：viewer / operator / admin
-   store.rotate_token("alice")
-   store.remove_user("alice")
+（``python -m je_auto_control.utils.rbac ...`` 是同一組指令；``--json`` 以 JSON 輸出
+結果。）之後 admin 可以從任何介面管理使用者，每一個都需要 ``manage_users`` 能力：
+
+- 動作清單裡的 ``AC_user_add``\ （``user_id``、``role``、``display_name``、``tags``）、
+  ``AC_user_remove``、``AC_user_set_role``、``AC_user_rotate_token`` 與
+  ``AC_user_list``——所以 ``POST /execute`` 也可以；
+- MCP 工具 ``ac_user_add``／``ac_user_remove``／``ac_user_set_role``／
+  ``ac_user_rotate_token``／``ac_user_list``；
+- REST API 分頁的 **使用者（RBAC）** 群組（指令在 Actions 選單），該分頁也可以用這個
+  使用者存放檔啟動伺服器；
+- Python：``ac.rbac_add_user``／``rbac_remove_user``／``rbac_set_user_role``／
+  ``rbac_rotate_user_token``／``rbac_list_users``，或直接用 ``UserStore``。
+
+已驗證的呼叫者一律操作驗證它的那個存放檔；選用的 ``users_path`` 參數是給腳本與 CLI
+用的。最後一位 admin 不能被移除或降級。``add`` 與 ``rotate`` 只回傳 token 一次：它在
+回覆裡，回覆被寫進記錄時會被遮蔽，也不會出現在稽核紀錄中（稽核只記
+``rbac_user_added`` 這類事件、對象與操作者）。
 
 執行中的伺服器會在檔案變動時重新讀取，所以移除使用者、輪替 token 或改角色都在
 下一個請求生效。
@@ -161,6 +180,9 @@ CLI::
    * - ``read_screen``
      - viewer、operator、admin
      - 除下列兩個之外的所有 ``GET``，包含 ``/metrics``
+   * - ``read_data``
+     - operator、admin
+     - 沒有 REST 路由；回傳主機資料而非畫面的 MCP 工具（見 MCP 章節）
    * - ``drive_input``
      - operator、admin
      - ``POST /execute``、``/execute_file``、``/usb/loopback/open``、
@@ -176,6 +198,9 @@ CLI::
    * - ``sign_actions``
      - admin
      - ``AC_sign_action_file`` 指令（見下）
+   * - ``manage_users``
+     - admin
+     - ``AC_user_*`` 指令（見上）
 
 角色沒有該能力時回 ``403``
 ``{"error": "forbidden", "required_capability": "...", "role": "..."}``。
@@ -187,13 +212,28 @@ CLI::
 ``AC_usb_passthrough_enable``、``AC_config_import``／``AC_config_export``、
 ``AC_egress_allow``／``AC_egress_reset``、``AC_load_plugins``、
 ``AC_add_package_to_executor``、``AC_secret_init``／``set``／``remove``／``lock``／
-``unlock``、``AC_audit_log_clear``\ （皆為 ``manage_hosts``）——不論在動作清單裡
-巢狀多深，都需要各自的能力。請求會在第一個動作執行前就回 403 並指出 ``command``；
+``unlock``、``AC_audit_log_clear``\ （皆為 ``manage_hosts``）與 ``AC_user_*``\
+（``manage_users``）——不論在動作清單裡巢狀多深，都需要各自的能力。請求會在第一個動作執行前就回 403 並指出 ``command``；
 同樣的指令若來自動作檔，則由 executor 拒絕。
 
 角色不是沙箱：operator 操作的是真實鍵盤，也能啟動程式，桌面使用者手動做得到的事
-它都做得到。角色保護的是主機自身的特權狀態。operator 交給其他執行緒延後執行的
-工作（排程工作、觸發器、熱鍵綁定）之後執行時不會帶著呼叫者的角色。
+它都做得到。角色保護的是主機自身的特權狀態。
+
+**延後執行的工作會記住擁有者。** 已驗證的呼叫者註冊的排程工作、觸發器、熱鍵綁定、
+webhook、e-mail 觸發器或 watchdog 規則，會連同該使用者一起存下來（``job.owner`` 等，
+型別為 ``DeferredOwner``），之後以該使用者的身分執行。角色是在工作觸發時到使用者
+存放檔查的，不是記下來的：之後被降級的使用者，已註冊的工作也失去特權；不再有
+``drive_input`` 或已被移除的使用者，其工作完全不會執行（該次執行記為失敗）；被升級
+的使用者則取得新角色。沒有 RBAC 時註冊的工作（GUI、腳本、沒有使用者存放檔的伺服器）
+沒有擁有者，行為與以前相同。
+
+使用者存放檔啟用時，狀態查詢（``AC_rest_api_status``、REST API 分頁）回報
+``"rbac": true``、``"users_path"`` 與 ``"token": null``：共用 token 會被拒絕，所以不再
+顯示它。
+
+只實作 ``check(client_ip=, header_value=)`` 的自製 gate 物件仍可使用：採用它的判定，
+請求以沒有使用者身分的方式處理，與共用 token 相同。要提供身分，請實作回傳
+``AuthResult`` 的 ``authenticate(...)``。
 
 RBAC 請求的每一筆稽核紀錄都會記下使用者：``viewer_id`` 欄位存使用者 id，detail 為
 ``POST /execute -> ok:200 user=alice role=operator``\ （被拒絕時為

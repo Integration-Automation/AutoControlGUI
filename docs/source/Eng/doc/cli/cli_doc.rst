@@ -58,6 +58,27 @@ Start the REST API server
 Endpoints: ``GET /health``, ``GET /jobs``, ``POST /execute`` with
 ``{"actions": [...]}``.
 
+Manage RBAC users
+-----------------
+
+.. code-block:: bash
+
+   python -m je_auto_control.cli users --users users.json add alice --role admin
+   python -m je_auto_control.cli users --users users.json list
+   python -m je_auto_control.cli users --users users.json set-role bob operator
+   python -m je_auto_control.cli users --users users.json rotate-token bob
+   python -m je_auto_control.cli users --users users.json remove bob
+
+The users of the REST API and MCP server when RBAC is on (see *Roles* in the
+operations-layer chapter). ``--users`` names the store file and defaults to
+``JE_AUTOCONTROL_RBAC_USERS``; ``--json`` (before the sub-command) prints the
+result as JSON. ``add`` (``--role viewer|operator|admin``, ``--name``,
+``--tag``) and ``rotate-token`` print the token once -- it is not stored and
+cannot be shown again. The last admin cannot be removed or demoted;
+``remove`` exits 1 when there is no such user. ``python -m
+je_auto_control.utils.rbac`` takes the same arguments without the leading
+``users``.
+
 Legacy flag-style CLI (``python -m je_auto_control``)
 =====================================================
 

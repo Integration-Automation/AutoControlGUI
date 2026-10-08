@@ -16,6 +16,7 @@ from urllib.parse import parse_qs
 from je_auto_control.utils.exception.exceptions import (
     AutoControlActionException, AutoControlActionNullException,
     AutoControlException, AutoControlJsonActionException,
+    AutoControlSignatureException,
 )
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.script_vars.execution import execution_scope
@@ -225,6 +226,11 @@ def handle_execute_file(ctx: RouteContext) -> HandlerResult:
         # same reasoning as _reject_bad_action_list, reported the same way.
         autocontrol_logger.info("rest execute_file rejected: %r", error)
         return 400, {"error": str(error)}
+    except AutoControlSignatureException as error:
+        # Enforced signatures refused the file: nothing ran, and nothing
+        # crashed -- this used to be reported as a 500.
+        autocontrol_logger.warning("rest execute_file refused: %r", error)
+        return 403, {"error": str(error)}
     except Exception as error:  # noqa: BLE001  # pylint: disable=broad-except  # reason: REST boundary must always return JSON, never drop the HTTP response
         autocontrol_logger.error("rest execute_file failed: %r", error)
         return 500, {"error": "execute_files failed"}

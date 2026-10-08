@@ -11,8 +11,11 @@ A version-2 sidecar is a small JSON envelope::
 ``signature`` is base64 of the Ed25519 signature over a fixed context line
 followed by the file's exact bytes; ``key_id`` names the public key (the first
 16 hex digits of its SHA-256) so a file signed by another pair says so instead
-of reading as tampered. Keys are unencrypted PEM: PKCS#8 for the private half
-(created 0600), SubjectPublicKeyInfo for the public half.
+of reading as tampered. Keys are PEM: PKCS#8 for the private half (created
+0600), SubjectPublicKeyInfo for the public half. The private half is
+encrypted when a passphrase is given at creation; the signer then needs the
+same passphrase (an argument, or ``JE_AUTOCONTROL_ACTION_SIGNING_PASSPHRASE``).
+A key created without one stays loadable as it is.
 
 ``cryptography`` is imported lazily -- it has no Windows arm64 wheel, and HMAC
 signing must keep working without it. This module is GUI-free and imports no Qt.
@@ -26,7 +29,9 @@ from types import SimpleNamespace
 from typing import Any, Dict, Optional, Union
 
 from je_auto_control.utils.action_signing._key_file import write_new_file
-from je_auto_control.utils.action_signing.config import action_signing_config
+from je_auto_control.utils.action_signing.config import (
+    PASSPHRASE_ENV, action_signing_config, signing_passphrase,
+)
 from je_auto_control.utils.exception.exceptions import (
     AutoControlException, CryptographyUnavailableError,
 )
@@ -38,6 +43,15 @@ _CONTEXT = b"je_auto_control action file signature v2\n"
 _KEY_ID_LENGTH = 16
 
 PathLike = Union[str, Path]
+Passphrase = Optional[Union[str, bytes]]
+
+
+def _passphrase_bytes(passphrase: Passphrase) -> Optional[bytes]:
+    """``passphrase`` as bytes; ``None`` and the empty string mean "none"."""
+    if passphrase is None:
+        return None
+    raw = passphrase if isinstance(passphrase, bytes) else str(passphrase).encode("utf-8")
+    return raw or None
 
 
 def _ed25519() -> SimpleNamespace:
@@ -58,13 +72,17 @@ def _ed25519() -> SimpleNamespace:
     )
 
 
-def create_signing_keypair(private_path: PathLike, public_path: PathLike) -> None:
+def create_signing_keypair(private_path: PathLike, public_path: PathLike,
+                           *, passphrase: Passphrase = None) -> None:
     """Create an Ed25519 key pair as two PEM files; neither may exist yet.
 
     Keep ``private_path`` on the machine that signs and copy ``public_path``
-    to every execution endpoint. Raises :class:`AutoControlException` when a
-    file is already there, or when this process is configured to verify only
-    -- a key pair minted on an execution endpoint separates nothing.
+    to every execution endpoint. With ``passphrase`` the private key file is
+    encrypted, so the file alone -- a backup, a copied disk -- signs
+    nothing; without one it is plain PEM as before. Raises
+    :class:`AutoControlException` when a file is already there, or when this
+    process is configured to verify only -- a key pair minted on an execution
+    endpoint separates nothing.
     """
     if action_signing_config().verify_only:
         raise AutoControlException(
@@ -78,9 +96,11 @@ def create_signing_keypair(private_path: PathLike, public_path: PathLike) -> Non
     crypto = _ed25519()
     key = crypto.private_key.generate()
     encoding = crypto.serialization.Encoding.PEM
+    secret = _passphrase_bytes(passphrase)
+    protection = (crypto.serialization.NoEncryption() if secret is None
+                  else crypto.serialization.BestAvailableEncryption(secret))
     write_new_file(private, key.private_bytes(
-        encoding, crypto.serialization.PrivateFormat.PKCS8,
-        crypto.serialization.NoEncryption()), 0o600)
+        encoding, crypto.serialization.PrivateFormat.PKCS8, protection), 0o600)
     try:
         write_new_file(public, key.public_key().public_bytes(
             encoding, crypto.serialization.PublicFormat.SubjectPublicKeyInfo), 0o644)
@@ -98,15 +118,30 @@ def _read_key_file(path: Path, kind: str) -> bytes:
             f"cannot read the {kind} signing key {str(path)!r}: {error}") from error
 
 
-def _load_private_key(path: PathLike) -> Any:
+def _load_private_key(path: PathLike, passphrase: Passphrase = None) -> Any:
+    """Load the private key; an encrypted one needs ``passphrase`` or the variable.
+
+    The passphrase is only handed to the loader for a file that says it is
+    encrypted: ``cryptography`` refuses a password for a plain key, and a
+    signer whose environment carries a passphrase must still load a key that
+    was created without one.
+    """
     crypto = _ed25519()
     target = Path(path)
+    data = _read_key_file(target, "private")
+    secret: Optional[bytes] = None
+    if b"ENCRYPTED" in data:
+        secret = _passphrase_bytes(passphrase) or signing_passphrase()
+        if secret is None:
+            raise AutoControlException(
+                f"the private signing key {str(target)!r} is passphrase-protected; "
+                f"pass the passphrase or set {PASSPHRASE_ENV}")
     try:
-        key = crypto.serialization.load_pem_private_key(
-            _read_key_file(target, "private"), password=None)
+        key = crypto.serialization.load_pem_private_key(data, password=secret)
     except (ValueError, TypeError) as error:
-        raise AutoControlException(
-            f"{str(target)!r} is not an unencrypted PEM private key") from error
+        problem = ("could not be decrypted (wrong passphrase?)" if secret is not None
+                   else "is not a PEM private key")
+        raise AutoControlException(f"{str(target)!r} {problem}") from error
     if not isinstance(key, crypto.private_key):
         raise AutoControlException(f"{str(target)!r} is not an Ed25519 private key")
     return key
@@ -131,9 +166,10 @@ def _key_id(public_key: Any) -> str:
     return hashlib.sha256(raw).hexdigest()[:_KEY_ID_LENGTH]
 
 
-def sign_envelope(data: bytes, private_key_path: PathLike) -> str:
+def sign_envelope(data: bytes, private_key_path: PathLike,
+                  passphrase: Passphrase = None) -> str:
     """Return the version-2 sidecar text for ``data``, signed by the private key."""
-    key = _load_private_key(private_key_path)
+    key = _load_private_key(private_key_path, passphrase)
     signature = key.sign(_CONTEXT + data)
     return json.dumps({
         "version": SIGNATURE_VERSION,

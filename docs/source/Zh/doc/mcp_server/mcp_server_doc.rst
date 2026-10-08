@@ -277,11 +277,29 @@ Bearer token 也可從 ``JE_AUTOCONTROL_MCP_TOKEN`` 環境變數讀取。
 同一個檔案。沒有設定存放檔時行為完全不變。stdio 傳輸沒有 bearer token，不受 RBAC
 約束。
 
-- 工具標示 ``readOnlyHint`` 時需要 ``read_screen``，否則需要 ``drive_input``，所以
-  ``viewer`` 拿到的正好是唯讀工具，``operator`` 再加上其餘工具。
+- 工具標示 ``readOnlyHint`` 時需要 ``read_screen``，否則需要 ``drive_input``。
   ``ac_remote_host_start``／``_stop``、``ac_usb_acl_add``／``_remove``／
   ``_set_default``、``ac_usb_passthrough_enable``、``ac_egress_allow``／``_reset`` 與
-  ``ac_load_plugins`` 需要 ``manage_hosts``\ （``admin``）。
+  ``ac_load_plugins`` 需要 ``manage_hosts``\ （``admin``）；``ac_user_add``／
+  ``_remove``／``_set_role``／``_rotate_token``／``_list`` 需要 ``manage_users``\
+  （``admin``）。
+- 唯讀不等於可以給人看：回傳主機資料而不是畫面狀態的唯讀工具需要 ``read_data``，
+  ``operator`` 與 ``admin`` 有這個能力，``viewer`` 沒有。包括剪貼簿工具
+  （``ac_get_clipboard`` 及其 ``_csv``／``_files``／``_html``／``_image``／``_rtf``
+  變體、``ac_clipboard_formats``、``ac_assert_clipboard``、``ac_clip_history_list``／
+  ``_search``）；讀檔工具（``ac_load_dotenv``、``ac_load_data``、
+  ``ac_read_action_file``、``ac_read_document``、``ac_read_presentation``、
+  ``ac_read_workbook``、``ac_extract_pdf_text``、``ac_assert_pdf_text``、
+  ``ac_assert_file``、``ac_build_provenance``、``ac_verify_provenance``）；資料庫與
+  具名儲存區（``ac_sql_query``、``ac_assert_db``、``ac_get_asset``、``ac_list_assets``、
+  ``ac_cas_get``、``ac_outbox_pending``、``ac_checkpoint_status``、``ac_memory_recall``、
+  ``ac_memory_recent``、``ac_s3_list``）；參照與 token（``ac_resolve_ref``、
+  ``ac_resolve_refs``、``ac_generate_otp``、``ac_jwt_encode``、``ac_jwt_decode``）；
+  以及行程清單、網路與麥克風探測（``ac_list_processes``、``ac_assert_process``、
+  ``ac_wait_for_process``、``ac_assert_http``、``ac_wait_for_port``、
+  ``ac_assert_audio``）。完整清單是 ``je_auto_control.utils.rbac.policy`` 的
+  ``DATA_TOOLS``。其餘唯讀工具 ``viewer`` 都保留：螢幕尺寸、視窗、像素、影像與文字
+  定位、無障礙讀取、等待。
 - ``tools/list`` 只回呼叫者可以呼叫的工具；對其他工具 ``tools/call`` 會回 JSON-RPC
   錯誤 ``-32003``\ （``Forbidden: ...``、``data.required_capability``），且不會執行。
 - 接受動作清單的工具（``ac_execute_actions`` 等）在清單含有呼叫者角色沒有的指令時

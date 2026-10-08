@@ -16,7 +16,7 @@ from __future__ import annotations
 import contextlib
 import os
 from contextvars import ContextVar
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Iterator, Optional
 
@@ -43,6 +43,9 @@ class AuthorizationContext:
 
     user_id: str
     role: str
+    #: The store that identified the caller. Deferred work registered by the
+    #: caller looks its role up there again when it fires.
+    store: Optional[UserStore] = field(default=None, compare=False, repr=False)
 
     def allows(self, capability: str) -> bool:
         """``True`` when this caller's role grants ``capability``."""
@@ -73,7 +76,7 @@ def resolve_token(store: UserStore, token: str) -> Optional[AuthorizationContext
         record = store.authenticate(token)
     except UserAuthError:
         return None
-    return AuthorizationContext(user_id=record.user_id, role=record.role)
+    return AuthorizationContext(user_id=record.user_id, role=record.role, store=store)
 
 
 _CURRENT: ContextVar[Optional[AuthorizationContext]] = ContextVar(
@@ -90,7 +93,9 @@ def authorization_scope(context: Optional[AuthorizationContext]) -> Iterator[Non
     """Serve the enclosed work as ``context``; ``None`` clears any outer scope.
 
     The scope belongs to the calling thread. Work handed to another thread --
-    a scheduler job, a trigger, a hotkey -- runs outside it.
+    a scheduler job, a trigger, a hotkey -- runs outside it, which is why
+    those registries store the caller and re-enter a scope when the work
+    fires (:mod:`je_auto_control.utils.rbac.deferred`).
     """
     token = _CURRENT.set(context)
     try:

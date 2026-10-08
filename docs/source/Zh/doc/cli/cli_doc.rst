@@ -68,3 +68,21 @@ AutoControl 可以直接從命令列執行自動化腳本。
 
    啟動 GUI 需要安裝 ``[gui]`` 額外套件：
    ``pip install je_auto_control[gui]``
+
+管理 RBAC 使用者
+================
+
+.. code-block:: bash
+
+   python -m je_auto_control.cli users --users users.json add alice --role admin
+   python -m je_auto_control.cli users --users users.json list
+   python -m je_auto_control.cli users --users users.json set-role bob operator
+   python -m je_auto_control.cli users --users users.json rotate-token bob
+   python -m je_auto_control.cli users --users users.json remove bob
+
+RBAC 啟用時 REST API 與 MCP server 的使用者（見維運層章節的「角色」）。``--users`` 指定
+存放檔，預設取自 ``JE_AUTOCONTROL_RBAC_USERS``；``--json``\ （放在子指令之前）以 JSON
+輸出結果。``add``\ （``--role viewer|operator|admin``、``--name``、``--tag``）與
+``rotate-token`` 只印出 token 一次——它不會被存下來，之後無法再顯示。最後一位 admin
+不能被移除或降級；``remove`` 找不到使用者時結束碼為 1。
+``python -m je_auto_control.utils.rbac`` 接受相同的參數，只是不需要開頭的 ``users``。

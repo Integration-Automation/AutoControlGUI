@@ -239,6 +239,35 @@ japanese_word_dict = {
         "このバンドルでユーザー設定を置き換えますか？"
         "既存ファイルは .bak.<時刻> にリネームされます。"),
     "rest_config_import_done": "{written} ファイル書き込み、{skipped} スキップ。",
+    "rest_token_rbac": "ユーザーごとのトークン（ユーザーストア: {path}）",
+    "rest_running_rbac": "REST API は RBAC で実行中です。共有トークンは拒否されます。",
+    "rest_users_group": "ユーザー（RBAC）",
+    "rest_users_path": "ユーザーストア:",
+    "rest_users_path_ph": "users.json のパス（JE_AUTOCONTROL_RBAC_USERS）",
+    "rest_users_enable": "このユーザーストアで REST リクエストを認証する",
+    "rest_users_col_id": "ユーザー ID",
+    "rest_users_col_name": "名前",
+    "rest_users_col_role": "ロール",
+    "rest_users_id": "ユーザー ID:",
+    "rest_users_name": "名前:",
+    "rest_users_role": "ロール:",
+    "rest_users_new_token": "新しいトークン（一度だけ表示）:",
+    "rest_users_refresh": "ユーザーを再読み込み",
+    "rest_users_add": "ユーザーを追加",
+    "rest_users_set_role": "ロールを設定",
+    "rest_users_rotate": "トークンを再発行",
+    "rest_users_remove": "ユーザーを削除",
+    "rest_users_copy_token": "新しいトークンをコピー",
+    "rest_users_remove_confirm": (
+        "ユーザー {user} を削除しますか？トークンは無効になり、"
+        "そのユーザーが登録した予約作業は実行されなくなります。"
+    ),
+    "rest_users_no_store": "先にユーザーストアのパスを入力してください。",
+    "rest_users_no_user": "先にユーザー ID を入力または選択してください。",
+    "rest_users_count": "{path} に {count} 人のユーザー",
+    "rest_users_token_issued": (
+        "{user} のトークンを発行しました。今すぐコピーしてください。再表示はできません。"
+    ),
 
     # Remote Desktop — WebRTC サブタブ
     "rd_webrtc_host_tab": "WebRTC ホスト",

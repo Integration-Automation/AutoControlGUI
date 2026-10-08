@@ -350,6 +350,35 @@ english_word_dict = {
         "Replace user config from this bundle? "
         "Existing files are renamed to .bak.<timestamp> first."),
     "rest_config_import_done": "Wrote {written} files; skipped {skipped}.",
+    "rest_token_rbac": "per-user tokens (user store: {path})",
+    "rest_running_rbac": "REST API is running with RBAC: the shared token is refused.",
+    "rest_users_group": "Users (RBAC)",
+    "rest_users_path": "User store:",
+    "rest_users_path_ph": "path of users.json (JE_AUTOCONTROL_RBAC_USERS)",
+    "rest_users_enable": "Authenticate REST requests against this user store",
+    "rest_users_col_id": "User ID",
+    "rest_users_col_name": "Name",
+    "rest_users_col_role": "Role",
+    "rest_users_id": "User ID:",
+    "rest_users_name": "Name:",
+    "rest_users_role": "Role:",
+    "rest_users_new_token": "New token (shown once):",
+    "rest_users_refresh": "Refresh users",
+    "rest_users_add": "Add user",
+    "rest_users_set_role": "Set role",
+    "rest_users_rotate": "Rotate token",
+    "rest_users_remove": "Remove user",
+    "rest_users_copy_token": "Copy new token",
+    "rest_users_remove_confirm": (
+        "Remove user {user}? Their token stops working and work they "
+        "scheduled no longer runs."
+    ),
+    "rest_users_no_store": "Enter the path of a user store first.",
+    "rest_users_no_user": "Enter or select a user ID first.",
+    "rest_users_count": "{count} user(s) in {path}",
+    "rest_users_token_issued": (
+        "Token for {user} issued. Copy it now: it cannot be shown again."
+    ),
 
     # Remote Desktop — WebRTC sub-tabs
     "rd_webrtc_host_tab": "WebRTC Host",

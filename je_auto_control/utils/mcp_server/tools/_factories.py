@@ -5722,6 +5722,60 @@ def credential_lease_tools() -> List[MCPTool]:
     ]
 
 
+def user_admin_tools() -> List[MCPTool]:
+    _ID = {"user_id": {"type": "string"}}
+    _ROLE = {"type": "string", "enum": ["viewer", "operator", "admin"]}
+    return [
+        MCPTool(
+            name="ac_user_add",
+            description=("RBAC: add a user with a 'role' (viewer / operator / "
+                         "admin). Returns {user_id, display_name, role, tags, "
+                         "token}; the token is shown this once and only its "
+                         "hash is stored. Needs the manage_users capability."),
+            input_schema=schema({**_ID, "role": _ROLE,
+                                 "display_name": {"type": "string"},
+                                 "tags": {"type": "array", "items": {"type": "string"}}},
+                                ["user_id"]),
+            handler=h_ops.user_add,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
+        MCPTool(
+            name="ac_user_remove",
+            description=("RBAC: remove a user; their token stops working and "
+                         "work they scheduled no longer runs. The last admin "
+                         "cannot be removed. Returns {user_id, removed}."),
+            input_schema=schema(_ID, ["user_id"]),
+            handler=h_ops.user_remove,
+            annotations=DESTRUCTIVE,
+        ),
+        MCPTool(
+            name="ac_user_set_role",
+            description=("RBAC: change a user's role; it applies to their next "
+                         "request and to work they already scheduled. The last "
+                         "admin cannot be demoted. Returns {user_id, role}."),
+            input_schema=schema({**_ID, "role": _ROLE}, ["user_id", "role"]),
+            handler=h_ops.user_set_role,
+            annotations=DESTRUCTIVE,
+        ),
+        MCPTool(
+            name="ac_user_rotate_token",
+            description=("RBAC: replace a user's token; the old one stops "
+                         "working. Returns {user_id, token}, shown this once."),
+            input_schema=schema(_ID, ["user_id"]),
+            handler=h_ops.user_rotate_token,
+            annotations=DESTRUCTIVE,
+        ),
+        MCPTool(
+            name="ac_user_list",
+            description=("RBAC: list users as {users:[{user_id, display_name, "
+                         "role, tags}]} - no tokens. Needs manage_users."),
+            input_schema=schema({}),
+            handler=h_ops.user_list,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
 def egress_tools() -> List[MCPTool]:
     _LISTS = {"allow": {"type": "array", "items": {"type": "string"}},
               "deny": {"type": "array", "items": {"type": "string"}}}
@@ -9028,7 +9082,7 @@ ALL_FACTORIES = (
     observation_tools, action_grounding_tools, agent_replay_tools,
     element_diff_tools, element_scoring_tools, barcode_tools, plugin_sdk_tools,
     governance_tools,
-    credential_lease_tools, egress_tools, approval_testing_tools,
+    credential_lease_tools, egress_tools, user_admin_tools, approval_testing_tools,
     trajectory_eval_tools, compliance_tools, agent_trace_tools,
     video_report_tools, fuzzy_tools, artifact_store_tools, image_dedup_tools,
     url_canon_tools,

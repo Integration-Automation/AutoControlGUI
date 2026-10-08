@@ -17,6 +17,8 @@ Usage::
     je_auto_control list-jobs
     je_auto_control start-server --port 9938
     je_auto_control start-rest --port 9939
+    je_auto_control users [--users users.json] add alice --role admin
+    je_auto_control users list | set-role ID ROLE | rotate-token ID | remove ID
 
 The CLI is a thin wrapper around the headless APIs so every feature works
 without ever importing PySide6.
@@ -338,6 +340,10 @@ def build_parser() -> argparse.ArgumentParser:
     p_rest.add_argument("--host", default="127.0.0.1")
     p_rest.add_argument("--port", type=_port, default=9939)
     p_rest.set_defaults(func=cmd_start_rest)
+
+    from je_auto_control.utils.rbac.cli import add_users_arguments
+    add_users_arguments(sub.add_parser(
+        "users", help="Manage RBAC users of the REST API and MCP server"))
     return parser
 
 
