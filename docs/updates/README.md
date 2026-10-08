@@ -58,6 +58,12 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261009-32 | 2026-10-09 | READMEs list every environment variable, Sphinx builds without warnings, typing is also checked against the real Qt types | #done #docs #ci #typing | [2026-10](2026-10.md) |
+| U-20261009-31 | 2026-10-09 | Journal artifacts and exact-match secret masking, a Robot structure check, a VLM strategy and verified heals, real capability probes | #done #journal #self-healing #capabilities | [2026-10](2026-10.md) |
+| U-20261009-30 | 2026-10-09 | Config sync: reused operation ids are refused, old calls are causal, back-off is its own state, assets over HTTP | #done #sync #protocol | [2026-10](2026-10.md) |
+| U-20261009-29 | 2026-10-09 | MCP sessions belong to their user, read-only holds in every tool mode, one signed USB ACL file, owner-only private keys on Windows | #done #security #mcp #rbac #usb | [2026-10](2026-10.md) |
+| U-20261009-28 | 2026-10-09 | GUI lifecycle: stops that join a thread, queued viewer input, dispose(), one restyle per theme switch | #done #gui #remote-desktop | [2026-10](2026-10.md) |
+| U-20261009-27 | 2026-10-09 | GUI commands run off the GUI thread and a running script can be stopped | #done #gui #executor | [2026-10](2026-10.md) |
 | U-20261009-26 | 2026-10-09 | Six offline-validated examples, a configuration reference, strict typing for every module added this month, end-to-end tests on fakes | #done #docs #typing #examples #H1 #H2 #H3 | [2026-10](2026-10.md) |
 | U-20261009-25 | 2026-10-09 | The Python 3.10 headless segfault: a prompt dialog that was its own reference cycle | #bugfix #gui #ci | [2026-10](2026-10.md) |
 | U-20261009-24 | 2026-10-09 | Follow-ups: USB waits, run-level scopes, load-and-use in one list, layout key names, file splits, Sphinx | #done #followups | [2026-10](2026-10.md) |
@@ -375,7 +381,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | File | Period | Entries |
 |---|---|---:|
-| [2026-10.md](2026-10.md) | 2026-10 | 39 |
+| [2026-10.md](2026-10.md) | 2026-10 | 45 |
 | [2026-09-e.md](2026-09-e.md) | 2026-09 | 7 |
 | [2026-09-d.md](2026-09-d.md) | 2026-09 | 55 |
 | [2026-09-c.md](2026-09-c.md) | 2026-09 | 38 |

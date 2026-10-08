@@ -238,6 +238,34 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Changed
 
+- Config sync: `ConfigBucket.upsert` / `remove` without `origin=` now store a
+  versioned entry (`{"value", "vector", "origin", ...}`) instead of the flat
+  value. Read values with `bucket.values(section)`, or pass `versioned=False`
+  to keep the flat shape. Sync every machine once with this release before any
+  of them deletes an entry: a deletion waits only for devices already listed
+  under `peers`.
+- Config sync: a sync waiting out a retry delay reports `state="backing_off"`
+  (was `"offline"`); `DrainReport.offline` stays true for old callers.
+  `sections=[]` is an error instead of meaning every section. An operation id
+  reused for different content is answered `409 operation_mismatch`.
+- Remote desktop: `RemoteDesktopViewer.send_input` queues the event and
+  returns; a write failure arrives through `on_error` instead of raising, and
+  queued `mouse_move` events may be dropped under back-pressure.
+  `AC_remote_send_input`'s `{"sent": true}` now means queued. Blocking writes
+  on a viewer socket fail after 10 seconds.
+- Folder mirror: a changed file is pushed one poll later, once its size and
+  mtime repeat; `wait_until_stable=False` restores the old timing. Files ending
+  `.part`, `.partial`, `.tmp` or `.crdownload` are never mirrored.
+- USB ACL: `usb_acl.json` is a single file with its signature inside. Older
+  versions cannot read it and deny everything.
+- MCP: under RBAC a session id that belongs to another user answers 403.
+  Read-only mode is enforced in every tool mode, and a read-only server runs
+  no plug-in tool.
+- Script Builder never displays the token returned by `AC_user_add` /
+  `AC_user_rotate_token`; read it from the Users group, the CLI or a script.
+- GUI: Stop commands that join a thread return at once and show "Stopping…";
+  scripts started from the GUI run on a worker thread and can be stopped.
+
 - **Breaking wire change: config sync PUT `/config/{user_id}` is version 2.**
   The body is `{"version": 2, "base_revision", "operation_id", "bucket"}`; a
   stale base answers 409 and writes nothing. An older client's push is refused
