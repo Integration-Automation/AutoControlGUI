@@ -20,7 +20,10 @@ SSE stream with ``GET``. That stream is what lets the server ask the client
 something mid-call — the ``elicitation/create`` behind the destructive-action
 confirmation gate. A client that ignores the header still works exactly as
 before, scoped to its TCP connection, but cannot be prompted: there is no
-channel to carry the question. See :mod:`.http_sessions`.
+channel to carry the question. See :mod:`.http_sessions`. With RBAC a session
+belongs to the user who created it: anyone else presenting its id gets 403.
+A tool registered or removed outside a request -- the plugin watcher's thread
+-- is announced on every session's standing stream.
 
 **2026-07-28.** A request that declares the stateless revision, in its
 ``MCP-Protocol-Version`` header or its ``_meta``, is checked against that
@@ -34,7 +37,7 @@ import os
 import ssl
 import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from typing import Any, Callable, Dict, Optional, Tuple
+from typing import Any, Callable, Dict, Optional, Tuple, Union
 
 from je_auto_control.utils.http_headers import bearer_challenge, log_safe
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
@@ -57,7 +60,11 @@ from je_auto_control.utils.mcp_server._stateless import (
     LISTEN_METHOD, STATELESS_PROTOCOL_VERSIONS,
 )
 from je_auto_control.utils.mcp_server.http_sessions import (
-    HttpSession, SESSION_HEADER, SessionRegistry, session_id_from_headers,
+    HttpSession, SESSION_HEADER, SessionOwnerMismatch, SessionRegistry,
+    session_id_from_headers,
+)
+from je_auto_control.utils.mcp_server.disclosure import (
+    ToolDisclosureError, ToolMode, resolve_mode,
 )
 from je_auto_control.utils.mcp_server.server import MCPServer
 from je_auto_control.utils.rbac.authorization import (
@@ -238,16 +245,32 @@ class _MCPHttpHandler(HttpResponseMixin, BaseHTTPRequestHandler):
         registry: SessionRegistry = self.server.sessions  # type: ignore[attr-defined]
         header_id = session_id_from_headers(self.headers)
         if header_id is not None:
-            session = registry.get(header_id)
-            if session is None:
-                self._send_json(
-                    {"error": "unknown or expired session"}, status=404,
-                )
-                return None, False
-            return session, True
+            session = self._own_session(registry, header_id)
+            return session, session is not None
         if _is_initialize(line):
-            return registry.create(), True
+            return registry.create(owner=self._owner()), True
         return None, True
+
+    def _owner(self) -> Optional[str]:
+        """The RBAC user this request is from; ``None`` when nobody is identified."""
+        return self._caller.user_id if self._caller is not None else None
+
+    def _own_session(self, registry: SessionRegistry,
+                     session_id: Optional[str]) -> Optional[HttpSession]:
+        """The caller's session ``session_id``; ``None`` after a 403 or 404 was sent.
+
+        403 for a session another user created: the id is not a credential,
+        and attaching to that user's stream, ending their session or
+        dispatching into their scope is not this caller's to do.
+        """
+        try:
+            session = registry.get(session_id, owner=self._owner())
+        except SessionOwnerMismatch as error:
+            self._send_json({"error": str(error)}, status=403)
+            return None
+        if session is None:
+            self._send_json({"error": "unknown or expired session"}, status=404)
+        return session
 
     def finish(self) -> None:
         """Release this connection's per-peer server state, then close.
@@ -359,13 +382,9 @@ class _MCPHttpHandler(HttpResponseMixin, BaseHTTPRequestHandler):
             )
             return
         registry: SessionRegistry = self.server.sessions  # type: ignore[attr-defined]
-        session = registry.get(session_id_from_headers(self.headers))
-        if session is None:
-            self._send_json(
-                {"error": "unknown or expired session"}, status=404,
-            )
-            return
-        self._stream_session(registry, session)
+        session = self._own_session(registry, session_id_from_headers(self.headers))
+        if session is not None:
+            self._stream_session(registry, session)
 
     def _stream_session(self, registry: SessionRegistry,
                         session: HttpSession) -> None:
@@ -436,7 +455,12 @@ class _MCPHttpHandler(HttpResponseMixin, BaseHTTPRequestHandler):
             # still run their cleanup unchanged.
             self._send_json({"status": "session terminated"})
             return
-        if registry.terminate(header_id) is None:
+        try:
+            ended = registry.terminate(header_id, owner=self._owner())
+        except SessionOwnerMismatch as error:
+            self._send_json({"error": str(error)}, status=403)
+            return
+        if ended is None:
             self._send_json(
                 {"error": "unknown or expired session"}, status=404,
             )
@@ -496,9 +520,21 @@ class HttpMCPServer:
                  auth_token: Optional[str] = None,
                  ssl_context: Optional[ssl.SSLContext] = None,
                  user_store: Optional[UserStore] = None,
+                 tool_mode: Union[str, ToolMode, None] = None,
                  ) -> None:
-        """``user_store`` switches RBAC on; ``None`` reads ``JE_AUTOCONTROL_RBAC_USERS``."""
-        self._mcp = mcp if mcp is not None else MCPServer()
+        """``user_store`` switches RBAC on; ``None`` reads ``JE_AUTOCONTROL_RBAC_USERS``.
+
+        ``tool_mode`` is :class:`MCPServer`'s (``full`` / ``progressive`` /
+        ``static``; ``None`` reads ``JE_AUTOCONTROL_MCP_TOOL_MODE``) and builds
+        the dispatcher when ``mcp`` is not given. Passed together with an
+        ``mcp`` already in another mode it raises :class:`ToolDisclosureError`
+        -- a dispatcher's mode is fixed when it is built.
+        """
+        self._mcp = mcp if mcp is not None else MCPServer(tool_mode=tool_mode)
+        if tool_mode is not None and resolve_mode(tool_mode) is not self._mcp.disclosure.mode:
+            raise ToolDisclosureError(
+                f"tool_mode {resolve_mode(tool_mode).value!r} does not match the given "
+                f"MCPServer's {self._mcp.disclosure.mode.value!r}; build it with that mode")
         self._users = user_store if user_store is not None else user_store_from_env()
         self._address: Tuple[str, int] = (host, port)
         self._auth_token = auth_token if auth_token is not None else (
@@ -550,6 +586,7 @@ class HttpMCPServer:
             name="AutoControlMCPHttp",
         )
         self._thread.start()
+        self._mcp.add_list_changed_listener(self._broadcast_list_changed)
         scheme = "https" if self._ssl_context is not None else "http"
         autocontrol_logger.info("MCP %s listening on %s:%d (rbac=%s)", scheme,
                                  *self._address, "on" if self._users is not None else "off")
@@ -560,6 +597,7 @@ class HttpMCPServer:
         # Close the sessions and subscriptions first: a standing GET stream or
         # a subscriptions/listen parks a worker on its heartbeat, and ending
         # them releases it without waiting one out.
+        self._mcp.remove_list_changed_listener(self._broadcast_list_changed)
         self._mcp.end_subscriptions(stdio=False)
         self._server.sessions.terminate_all()
         self._server.shutdown()
@@ -570,16 +608,45 @@ class HttpMCPServer:
         self._thread = None
 
 
+    def _broadcast_list_changed(self, served: Any) -> None:
+        """Tell every session with a standing stream that the tool list changed.
+
+        ``served`` is the session the registering request came from, if any;
+        the dispatcher has told that one already. A registration from no
+        request at all -- the plugin watcher's thread -- used to reach nobody.
+        """
+        server = self._server
+        if server is None:
+            return
+        message = _notification_message("notifications/tools/list_changed", {})
+        for session in server.sessions.live():
+            writer = session.stream_writer
+            if writer is None or session.id == served:
+                continue
+            try:
+                writer(message)
+            except (OSError, ValueError) as error:
+                # The stream's own heartbeat notices a dead client and detaches.
+                autocontrol_logger.info(
+                    "MCP tools/list_changed not delivered to a session: %r", error)
+
+
 def start_mcp_http_server(host: str = "127.0.0.1", port: int = 9940,
                           mcp: Optional[MCPServer] = None,
                           auth_token: Optional[str] = None,
                           ssl_context: Optional[ssl.SSLContext] = None,
                           user_store: Optional[UserStore] = None,
+                          tool_mode: Union[str, ToolMode, None] = None,
                           ) -> HttpMCPServer:
-    """Start and return an :class:`HttpMCPServer`; convenience wrapper."""
+    """Start and return an :class:`HttpMCPServer`; convenience wrapper.
+
+    ``tool_mode`` is :class:`HttpMCPServer`'s: ``full``, ``progressive`` or
+    ``static``; ``None`` reads ``JE_AUTOCONTROL_MCP_TOOL_MODE``.
+    """
     server = HttpMCPServer(
         mcp=mcp, host=host, port=port,
         auth_token=auth_token, ssl_context=ssl_context, user_store=user_store,
+        tool_mode=tool_mode,
     )
     server.start()
     return server

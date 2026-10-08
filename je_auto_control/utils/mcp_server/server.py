@@ -138,6 +138,7 @@ class MCPServer(ConnectionStateMixin, StatelessDispatchMixin, SubscriptionMixin,
         self._subscriptions_lock = threading.Lock()
         self._listeners: Dict[Any, Any] = {}  # open subscriptions/listen, by (connection, id)
         self._listeners_lock = threading.Lock()
+        self._list_changed_listeners: List[Callable[[Any], None]] = []
 
     def register_tool(self, tool: MCPTool) -> None:
         """Add or replace a tool in the live registry.

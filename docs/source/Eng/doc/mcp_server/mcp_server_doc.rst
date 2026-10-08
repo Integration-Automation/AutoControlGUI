@@ -399,6 +399,17 @@ offer.
 - An unknown or expired id is refused with **404**, not served under
   a fresh scope: the client holds state the server does not, and
   needs to know to re-initialize.
+- With roles on (RBAC), a session belongs to the user whose ``initialize``
+  minted it. Any other user who presents its id -- on a ``POST``, on the
+  ``GET`` stream or on ``DELETE`` -- is refused with **403**, and the attempt
+  does not keep the session alive. The id used to be honoured for every
+  authenticated user, so one user could attach to another's stream, end
+  their session, or read which tools they had enabled. Without a user store
+  nobody is identified and the id works as before.
+- A tool registered or removed outside any request -- a plugin picked up by
+  the watcher thread -- sends ``notifications/tools/list_changed`` down the
+  standing stream of every session. A session with no ``GET`` stream has
+  nowhere to receive it.
 - Sessions are bounded. They are swept after ten minutes untouched
   (a standing stream keeps its own session fresh), and the registry
   evicts the least recently seen once it holds 128.
@@ -504,13 +515,15 @@ Choose the mode with ``JE_AUTOCONTROL_MCP_TOOL_MODE``, with
    import je_auto_control as ac
 
    ac.start_mcp_stdio_server(tool_mode="progressive")
-   # HTTP: hand the transport a server built in that mode
-   ac.start_mcp_http_server(mcp=ac.MCPServer(tool_mode="progressive"))
+   ac.start_mcp_http_server(tool_mode="progressive")
+   ac.HttpMCPServer(tool_mode="static")
 
-``AC_start_mcp_server`` takes the same ``tool_mode`` argument, and the
-variable reaches every way of starting a server, ``AC_start_mcp_http_server``
-included. A value that is none of the three stops the server from starting
-rather than quietly offering everything.
+``AC_start_mcp_server`` and ``AC_start_mcp_http_server`` take the same
+``tool_mode`` argument, and the variable reaches every way of starting a
+server. A value that is none of the three stops the server from starting
+rather than quietly offering everything. A dispatcher's mode is fixed when it
+is built, so ``tool_mode`` passed together with an ``mcp=`` that is in
+another mode raises ``ToolDisclosureError``.
 
 **The core tools** (progressive mode only):
 

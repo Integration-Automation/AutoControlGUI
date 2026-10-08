@@ -353,6 +353,14 @@ scope——包含你在 ``initialize`` 聲明的能力,以及進行中呼叫佔�
   不帶標頭時照舊接受,不影響沒有 session 概念的 client。
 - 未知或已過期的 id 一律回 **404**,不會改用一個新的 scope 服務它:
   client 手上有伺服器沒有的狀態,它需要知道自己該重新 initialize。
+- 啟用角色(RBAC)時,session 屬於用 ``initialize`` 建立它的那位使用者。其他使用者
+  拿同一個 id 來 ``POST``、開 ``GET`` 串流或 ``DELETE``,一律回 **403**,而且這次嘗試
+  不會讓 session 保持存活。以前只要通過驗證,任何使用者都能用這個 id,因此可以接上
+  別人的串流、結束別人的 session,或看到別人啟用了哪些工具。沒有設定使用者存放檔時
+  沒有人被識別,id 的行為與以前相同。
+- 在任何請求之外註冊或移除的工具(由 watcher 執行緒載入的 plugin),會對每個 session
+  的常駐串流送出 ``notifications/tools/list_changed``。沒有 ``GET`` 串流的 session
+  無處可收。
 - session 有上下界。十分鐘沒被碰過就會被掃掉(常駐串流會讓自己的
   session 保持新鮮),而註冊表滿 128 個時,最久沒動的那個會被淘汰。
 
@@ -432,12 +440,13 @@ client 不用改,可以和 2026-07-28 的 client 並存。
    import je_auto_control as ac
 
    ac.start_mcp_stdio_server(tool_mode="progressive")
-   # HTTP:把以該模式建立的伺服器交給傳輸層
-   ac.start_mcp_http_server(mcp=ac.MCPServer(tool_mode="progressive"))
+   ac.start_mcp_http_server(tool_mode="progressive")
+   ac.HttpMCPServer(tool_mode="static")
 
-``AC_start_mcp_server`` 接受同一個 ``tool_mode`` 參數;環境變數則對所有啟動方式生效,
-包含 ``AC_start_mcp_http_server``。不是這三個值之一時伺服器會拒絕啟動,而不是悄悄地
-提供全部工具。
+``AC_start_mcp_server`` 與 ``AC_start_mcp_http_server`` 接受同一個 ``tool_mode``
+參數;環境變數則對所有啟動方式生效。不是這三個值之一時伺服器會拒絕啟動,而不是悄悄地
+提供全部工具。Dispatcher 的模式在建立時就固定了,所以同時傳 ``tool_mode`` 與另一種
+模式的 ``mcp=`` 會丟出 ``ToolDisclosureError``。
 
 **核心工具** (僅 progressive 模式):
 

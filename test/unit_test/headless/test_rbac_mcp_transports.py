@@ -180,14 +180,22 @@ def _initialize(server, token):
 
 
 def test_session_requests_are_authorised_one_by_one(serve, users):
-    """A session does not carry a role: every request in it is the caller's own."""
+    """A session carries neither a role nor access: each request is its caller's own.
+
+    The operator used to be served inside the admin's session (and refused
+    only for the tool's capability); the session id is no longer honoured for
+    anyone but the user who created it.
+    """
     server = serve()
     session = {"Mcp-Session-Id": _initialize(server, users.tokens[Role.ADMIN])}
     _status, _headers, raw = _exchange(server, _call("ac_load_plugins"),
                                        users.tokens[Role.ADMIN], session)
     assert "result" in json.loads(raw)
+    assert _exchange(server, _call("ac_load_plugins"),
+                     users.tokens[Role.OPERATOR], session)[0] == 403
+    own = {"Mcp-Session-Id": _initialize(server, users.tokens[Role.OPERATOR])}
     status, _headers, raw = _exchange(server, _call("ac_load_plugins"),
-                                      users.tokens[Role.OPERATOR], session)
+                                      users.tokens[Role.OPERATOR], own)
     assert status == 200 and json.loads(raw)["error"]["code"] == -32003
     assert _exchange(server, _call("peek"), None, session)[0] == 401
     assert server.calls == [("ac_load_plugins", "admin-user")]
