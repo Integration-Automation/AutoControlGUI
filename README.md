@@ -147,7 +147,10 @@ sudo apt-get install cmake libssl-dev
 ```
 
 OCR, VLM, and LLM backends (`pytesseract`, `easyocr`, `paddleocr`, `anthropic`,
-`openai`) are loaded on demand — install whichever you actually use.
+`openai`) are loaded on demand — install whichever you actually use. For Tesseract,
+`find_tesseract_cmd()` locates the executable (`$TESSERACT_CMD`, then `PATH`, then the
+installers' default folders), `set_tessdata_dir()` points it at a language-data folder,
+and `ocr_status()` / `ocr_languages()` say what is missing before the first OCR call.
 
 **Log file:** the library logs to `~/.je_auto_control/logs/AutoControlGUI.log`,
 created on the first record (importing alone writes nothing) and shared by every
@@ -216,11 +219,11 @@ desktop app; tab commands live in the window's **Actions** menu.
 
 | Capability | Python API | `AC_*` command | GUI tab |
 |---|---|---|---|
-| Mouse | `click_mouse`, `set_mouse_position`, `mouse_scroll` | `AC_click_mouse` | Auto Click |
-| Keyboard | `write`, `write_secret`, `hotkey`, `type_keyboard` | `AC_write`, `AC_write_secret`, `AC_hotkey` | Auto Click |
+| Mouse | `click_mouse` (`clicks=2` double-clicks), `set_mouse_position`, `mouse_scroll`, `tween_drag` / `drag_path` (paced by `step_delay_s`, `settle_s`) | `AC_click_mouse`, `AC_tween_drag`, `AC_drag_path` | Auto Click |
+| Keyboard | `write`, `write_secret`, `hotkey`, `type_keyboard`, `keyboard_key_name` (code → canonical name; Windows also takes aliases such as `ctrl`, `esc`, `enter`) | `AC_write`, `AC_write_secret`, `AC_hotkey` | Auto Click |
 | Screen & pixels | `screenshot`, `screen_size`, `get_pixel` | `AC_screenshot` | Screenshot |
 | Image matching | `locate_image_center`, `locate_and_click` | `AC_locate_and_click` | Image Detect |
-| OCR text | `click_text`, `wait_for_text`, `read_text_in_region` | `AC_click_text`, `AC_wait_text` | OCR Reader |
+| OCR text | `click_text`, `wait_for_text`, `read_text_in_region`, `ocr_status` | `AC_click_text`, `AC_wait_text`, `AC_ocr_status` | OCR Reader |
 | Accessibility tree | `find_accessibility_element`, `click_accessibility_element` | `AC_a11y_find`, `AC_a11y_click` | Accessibility |
 | Vision-model locator | `locate_by_description`, `click_by_description` | `AC_vlm_locate`, `AC_vlm_click` | VLM |
 | Anchor locator | — | `AC_anchor_click`, `AC_anchor_locate` | — |
@@ -284,7 +287,7 @@ under a relative name are written below that directory.
 
 | Surface | Start it with | Notes |
 |---|---|---|
-| **MCP server** | `je_auto_control_mcp` (stdio) or `AC_start_mcp_http_server` | the full `ac_*` tool surface for Claude Desktop / Claude Code / custom tool loops, plus short model-friendly aliases for common GUI actions. Speaks the stateless MCP 2026-07-28 beside the `initialize`-based revisions. Bearer auth, TLS, audit log, rate limit, plugin hot-reload, CI fake backend. |
+| **MCP server** | `je_auto_control_mcp` (stdio) or `AC_start_mcp_http_server` | 679 tools for Claude Desktop / Claude Code / custom tool loops: the full `ac_*` surface plus short model-friendly aliases for common GUI actions. Speaks the stateless MCP 2026-07-28 beside the `initialize`-based revisions. Bearer auth, TLS, audit log, rate limit, plugin hot-reload, CI fake backend. |
 | **REST API** | `je_auto_control start-rest` | Bearer token, per-IP rate limit + lockout, SQLite audit hook, `/metrics`, `/openapi.json`, `/docs` Swagger UI, `/dashboard`. |
 | **TCP socket server** | `je_auto_control start-server` | Newline-framed JSON action lists. Binds `127.0.0.1` by default. |
 | **pytest plugin** | installed automatically | Fixtures plus a Gherkin step library for pytest-bdd / behave. |

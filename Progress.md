@@ -194,6 +194,14 @@ pip install --dry-run --only-binary=:all: --platform win_arm64 --python-version 
 
 ---
 
+## macOS 上 `click_mouse(clicks=2)` 不是雙擊
+
+`TODO` — `wrapper/auto_control_mouse.py` 的 `click_mouse` 在同一點連點 `clicks` 次。Windows 與 X11 依兩次點擊的時間差與位移判定雙擊，所以這樣就夠；macOS 的應用程式讀的是事件上的點擊次數欄位（`kCGMouseEventClickState`），`osx/mouse/osx_mouse.py` 的 `mouse_event` 從不設定它（一律是 1），所以 macOS 收到的是兩次單擊。文件（`docs/source/API/wrapper/mouse.rst`、`docs/source/{Eng,Zh}/doc/mouse/mouse_doc.rst`、`click_mouse` 的 docstring）照實寫了這個限制。
+
+做法：讓 osx 後端的按下／放開帶點擊次數（第 n 次點擊設成 n），wrapper 在 macOS 分支把序號傳下去；要在 macOS 上實測（`quality.yml` 的 `macos-14` 可以跑 CI，但雙擊是否被應用程式認得要真機看），完成後把文件裡的限制拿掉。
+
+---
+
 ## RBAC 還沒接到 REST API 與 MCP server
 
 `DECIDE` — 要不要把 `utils/rbac` 接上兩個伺服器，以及現有單一共用 token 怎麼過渡（維護者拍板）

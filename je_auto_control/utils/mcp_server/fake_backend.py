@@ -55,11 +55,14 @@ def _fake_set_mouse_position(x: int, y: int) -> Tuple[int, int]:
 
 
 def _fake_click_mouse(mouse_keycode: Any, x: Any = None,
-                      y: Any = None) -> Tuple[Any, int, int]:
+                      y: Any = None, clicks: int = 1,
+                      interval: float = 0.0) -> Tuple[Any, int, int]:
+    del interval  # the fake never waits
     cx, cy = _STATE.cursor if x is None or y is None else (int(x), int(y))
     with _STATE_LOCK:
         _STATE.cursor = (cx, cy)
-        _STATE.mouse_actions.append(("click", mouse_keycode, cx, cy))
+        for _ in range(int(clicks)):
+            _STATE.mouse_actions.append(("click", mouse_keycode, cx, cy))
     return mouse_keycode, cx, cy
 
 

@@ -175,6 +175,7 @@ WIN32_VK_BROWSER_REFRESH: int = 0xA8  # Browser Refresh key
 WIN32_VK_BROWSER_STOP: int = 0xA9  # Browser Stop key
 WIN32_VK_BROWSER_SEARCH: int = 0xAA  # Browser Search key
 WIN32_VK_BROWSER_FAVORITES: int = 0xAB  # Browser Favorites key
+WIN32_VK_BROWSER_HOME: int = 0xAC  # Browser Start and Home key
 WIN32_VK_VOLUME_MUTE: int = 0xAD
 WIN32_VK_VOLUME_DOWN: int = 0xAE
 WIN32_VK_VOLUME_UP: int = 0xAF
@@ -186,3 +187,19 @@ WIN32_VK_LAUNCH_MAIL: int = 0xB4
 WIN32_VK_LAUNCH_MEDIA_SELECT: int = 0xB5
 WIN32_VK_LAUNCH_APP1: int = 0xB6
 WIN32_VK_LAUNCH_APP2: int = 0xB7
+# OEM keys (Microsoft "Virtual-Key Codes"). OEM_PLUS / COMMA / MINUS / PERIOD
+# are the same key on every layout; OEM_1 .. OEM_8 and OEM_102 vary by layout.
+WIN32_VK_OEM_1: int = 0xBA
+WIN32_VK_OEM_PLUS: int = 0xBB
+WIN32_VK_OEM_COMMA: int = 0xBC
+WIN32_VK_OEM_MINUS: int = 0xBD
+WIN32_VK_OEM_PERIOD: int = 0xBE
+WIN32_VK_OEM_2: int = 0xBF
+WIN32_VK_OEM_3: int = 0xC0
+WIN32_VK_OEM_4: int = 0xDB
+WIN32_VK_OEM_5: int = 0xDC
+WIN32_VK_OEM_6: int = 0xDD
+WIN32_VK_OEM_7: int = 0xDE
+WIN32_VK_OEM_8: int = 0xDF
+WIN32_VK_OEM_102: int = 0xE2
+WIN32_VK_OEM_CLEAR: int = 0xFE

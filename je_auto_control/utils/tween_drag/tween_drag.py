@@ -9,8 +9,20 @@ drags (PyAutoGUI-style ``tween``).
 The point math is pure and unit-testable; dispatch goes through an
 injectable ``sink`` so the drag is tested without real input. Imports no
 ``PySide6``.
+
+The press / move / release sequence itself is :func:`_drag_through`, shared
+with ``mouse_path.drag_path``: optional pacing (``step_delay_s`` after each
+move, ``settle_s`` before the press, after it and before the release) and a
+release that runs in ``finally``, at the last point the pointer reached, if
+any step raises.
 """
-from typing import Any, Callable, Dict, List, Optional, Tuple
+import math
+import time
+from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple
+
+from je_auto_control.utils.logging.logging_instance import autocontrol_logger
+
+Sink = Callable[[Dict[str, Any]], None]
 
 
 def _linear(t: float) -> float:
@@ -76,20 +88,89 @@ def _default_sink(event: Dict[str, Any]) -> None:
         release_mouse(event.get("button", "mouse_left"), x, y)
 
 
+def _pause_seconds(value: Any, name: str) -> float:
+    """``value`` as a finite, non-negative number of seconds, else ValueError.
+
+    A NaN would pass a plain ``< 0`` test and then make ``time.sleep`` raise
+    with the button already held, so finiteness is checked up front.
+    """
+    try:
+        seconds = float(value)
+    except (TypeError, ValueError) as error:
+        raise ValueError(f"{name} must be a number of seconds, got {value!r}") from error
+    if not math.isfinite(seconds) or seconds < 0:
+        raise ValueError(f"{name} must be a finite number >= 0, got {value!r}")
+    return seconds
+
+
+def _pause(seconds: float) -> None:
+    if seconds:
+        time.sleep(seconds)
+
+
+def _release_quietly(dispatch: Sink, button: str, point: Sequence[int]) -> None:
+    """Release ``button`` at ``point`` from a ``finally``; never raises.
+
+    An exception here would replace the one that ended the drag, which is
+    what the caller needs to see, so a failed release is logged instead.
+    ``Exception`` rather than a list: the default sink raises the
+    ``AutoControlException`` family, which no builtin type covers.
+    """
+    try:
+        dispatch({"op": "release", "button": button, "x": point[0], "y": point[1]})
+    except Exception as error:  # noqa: BLE001  # pylint: disable=broad-except  # reason: see docstring
+        autocontrol_logger.error("failed to release %r after an aborted drag: %r", button, error)
+
+
+def _drag_through(points: List[List[int]], button: str, dispatch: Sink,
+                  step_delay_s: Any = 0.0, settle_s: Any = 0.0) -> None:
+    """Press at ``points[0]``, move through every point, release at ``points[-1]``.
+
+    ``settle_s`` (when non-zero) first moves to the start and rests there,
+    then rests after the press and again before the release; ``step_delay_s``
+    rests after each move. With both at 0 the events are exactly press,
+    moves, release. If any step raises, the button is released in
+    ``finally`` at the last point the pointer reached -- not at the end,
+    which would complete a drop the drag never got to -- and a failing
+    cleanup release is logged rather than raised over the original error.
+    Both pauses are checked before anything is dispatched.
+    """
+    step_delay = _pause_seconds(step_delay_s, "step_delay_s")
+    settle = _pause_seconds(settle_s, "settle_s")
+    first, last = points[0], points[-1]
+    if settle:
+        dispatch({"op": "move", "x": first[0], "y": first[1]})
+        time.sleep(settle)
+    dispatch({"op": "press", "button": button, "x": first[0], "y": first[1]})
+    reached: Sequence[int] = first
+    held = True
+    try:
+        _pause(settle)
+        for x, y in points:
+            dispatch({"op": "move", "x": x, "y": y})
+            reached = (x, y)
+            _pause(step_delay)
+        _pause(settle)
+        dispatch({"op": "release", "button": button, "x": last[0], "y": last[1]})
+        held = False
+    finally:
+        if held:
+            _release_quietly(dispatch, button, reached)
+
+
 def tween_drag(start: Tuple[int, int], end: Tuple[int, int], *,
                steps: int = 30, easing: str = "ease_in_out_quad",
                button: str = "mouse_left",
-               sink: Optional[Callable[[Dict[str, Any]], None]] = None
+               sink: Optional[Sink] = None,
+               step_delay_s: float = 0.0, settle_s: float = 0.0,
                ) -> Dict[str, Any]:
-    """Drag from ``start`` to ``end`` along an eased path; return point count."""
+    """Drag from ``start`` to ``end`` along an eased path; return point count.
+
+    ``step_delay_s`` rests after each move and ``settle_s`` before the press,
+    after it and before the release (seconds, default 0: no pause). Apps
+    that tell a drag from a click by the pointer's motion need both. If a
+    step raises, the button is released where the pointer stopped.
+    """
     points = tween_points(start, end, steps, easing)
-    dispatch = sink or _default_sink
-    first, last = points[0], points[-1]
-    dispatch({"op": "press", "button": button, "x": first[0], "y": first[1]})
-    try:
-        for x, y in points:
-            dispatch({"op": "move", "x": x, "y": y})
-    finally:
-        # A failed move used to leave the button held down.
-        dispatch({"op": "release", "button": button, "x": last[0], "y": last[1]})
+    _drag_through(points, button, sink or _default_sink, step_delay_s, settle_s)
     return {"points": len(points), "path": points}

@@ -25,11 +25,13 @@
 ``plan_path`` 以 ``per_segment_steps`` 個緩動步驟對每個相鄰點對插值(``easing`` 為 ``path_easings()`` 中任一
 名稱——``linear`` / ``ease_in_out_quad`` / ``ease_out_cubic`` / ``ease_in_cubic``),且不重複共用的交接點。
 ``move_along_path`` 沿路徑發出移動事件;``drag_path`` 在第一個路徑點按下、移動經過整段路徑、在最後一點放開——
-用於多停靠點拖曳。途中某次移動失敗時,會在指標停下的位置放開,所以中斷的拖曳不會在目標上放下。兩者皆可傳入 ``sink`` 以供無頭測試。
+用於多停靠點拖曳。兩者皆可傳入 ``sink`` 以供無頭測試。``drag_path`` 也接受 ``tween_drag`` 的節奏參數
+``step_delay_s``(每次移動後)與 ``settle_s``(按下前、按下後、放開前),而且和它一樣,任何一步丟出例外時會在
+游標停下的位置放開按鍵。
 
 執行器命令
 ----------
 
 ``AC_move_along_path`` 與 ``AC_drag_path`` 接受 ``waypoints``(JSON ``[[x, y], ...]`` 列表)以及 ``easing`` /
-``per_segment_steps``(拖曳另含 ``button``)。兩者皆以 MCP 工具(``ac_move_along_path`` / ``ac_drag_path``)
+``per_segment_steps``(拖曳另含 ``button``、``step_delay_s`` 與 ``settle_s``)。兩者皆以 MCP 工具(``ac_move_along_path`` / ``ac_drag_path``)
 以及 Script Builder 中 **Mouse** 分類下的命令提供。

@@ -137,7 +137,9 @@ sudo apt-get install cmake libssl-dev
 ```
 
 OCR、VLM 與 LLM 後端（`pytesseract`、`easyocr`、`paddleocr`、`anthropic`、`openai`）
-都是按需載入——只裝你實際會用到的。
+都是按需載入——只裝你實際會用到的。Tesseract 的部分，`find_tesseract_cmd()` 找出執行檔
+（依序是 `$TESSERACT_CMD`、`PATH`、安裝程式的預設資料夾），`set_tessdata_dir()` 把它指到
+語言資料夾，`ocr_status()`／`ocr_languages()` 在第一次 OCR 之前就說出缺了什麼。
 
 **記錄檔：** 函式庫寫到 `~/.je_auto_control/logs/AutoControlGUI.log`，第一筆記錄時
 才建立（只 import 不會寫任何檔），同一個帳號的所有行程共用（附加寫入、每行帶行程 ID，
@@ -204,11 +206,11 @@ python -c "import je_auto_control; je_auto_control.start_autocontrol_gui()"
 
 | 能力 | Python API | `AC_*` 指令 | GUI 分頁 |
 |---|---|---|---|
-| 滑鼠 | `click_mouse`、`set_mouse_position`、`mouse_scroll` | `AC_click_mouse` | Auto Click |
-| 鍵盤 | `write`、`write_secret`、`hotkey`、`type_keyboard` | `AC_write`、`AC_write_secret`、`AC_hotkey` | Auto Click |
+| 滑鼠 | `click_mouse`（`clicks=2` 就是雙擊）、`set_mouse_position`、`mouse_scroll`、`tween_drag`／`drag_path`（以 `step_delay_s`、`settle_s` 控制節奏） | `AC_click_mouse`、`AC_tween_drag`、`AC_drag_path` | Auto Click |
+| 鍵盤 | `write`、`write_secret`、`hotkey`、`type_keyboard`、`keyboard_key_name`（鍵碼 → 標準鍵名；Windows 也收 `ctrl`、`esc`、`enter` 等別名） | `AC_write`、`AC_write_secret`、`AC_hotkey` | Auto Click |
 | 螢幕與像素 | `screenshot`、`screen_size`、`get_pixel` | `AC_screenshot` | Screenshot |
 | 影像比對 | `locate_image_center`、`locate_and_click` | `AC_locate_and_click` | Image Detect |
-| OCR 文字 | `click_text`、`wait_for_text`、`read_text_in_region` | `AC_click_text`、`AC_wait_text` | OCR Reader |
+| OCR 文字 | `click_text`、`wait_for_text`、`read_text_in_region`、`ocr_status` | `AC_click_text`、`AC_wait_text`、`AC_ocr_status` | OCR Reader |
 | 無障礙樹 | `find_accessibility_element`、`click_accessibility_element` | `AC_a11y_find`、`AC_a11y_click` | Accessibility |
 | 視覺模型定位 | `locate_by_description`、`click_by_description` | `AC_vlm_locate`、`AC_vlm_click` | VLM |
 | 錨點定位 | — | `AC_anchor_click`、`AC_anchor_locate` | — |
@@ -265,7 +267,7 @@ je_auto_control version
 
 | 介面 | 啟動方式 | 說明 |
 |---|---|---|
-| **MCP 伺服器** | `je_auto_control_mcp`（stdio）或 `AC_start_mcp_http_server` | 完整的 `ac_*` 工具介面，供 Claude Desktop／Claude Code／自訂 tool loop 使用，並提供常用 GUI 操作的短名稱 alias。除了以 `initialize` 握手的各版協定，也支援無狀態的 MCP 2026-07-28。Bearer 驗證、TLS、稽核記錄、限流、外掛熱重載、CI 假後端。 |
+| **MCP 伺服器** | `je_auto_control_mcp`（stdio）或 `AC_start_mcp_http_server` | 679 個工具，供 Claude Desktop／Claude Code／自訂 tool loop 使用：完整的 `ac_*` 工具介面，以及常用 GUI 操作的短名稱 alias。除了以 `initialize` 握手的各版協定，也支援無狀態的 MCP 2026-07-28。Bearer 驗證、TLS、稽核記錄、限流、外掛熱重載、CI 假後端。 |
 | **REST API** | `je_auto_control start-rest` | Bearer token、逐 IP 限流與鎖定、SQLite 稽核 hook、`/metrics`、`/openapi.json`、`/docs` Swagger UI、`/dashboard`。 |
 | **TCP socket 伺服器** | `je_auto_control start-server` | 以換行分隔的 JSON 動作清單。預設綁 `127.0.0.1`。 |
 | **pytest 外掛** | 安裝後自動生效 | 提供 fixture 與供 pytest-bdd／behave 使用的 Gherkin step library。 |

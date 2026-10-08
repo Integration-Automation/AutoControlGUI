@@ -12,7 +12,7 @@ tested without real input. Imports no ``PySide6``.
 """
 from typing import Any, Callable, Dict, List, Optional, Sequence
 
-from je_auto_control.utils.tween_drag.tween_drag import easing_names, tween_points
+from je_auto_control.utils.tween_drag.tween_drag import _drag_through, easing_names, tween_points
 
 Point = Sequence[int]
 Sink = Callable[[Dict[str, Any]], None]
@@ -82,25 +82,20 @@ def move_along_path(waypoints: Sequence[Point], *, easing: str = "linear",
 
 def drag_path(waypoints: Sequence[Point], *, button: str = "mouse_left",
               easing: str = "linear", per_segment_steps: int = 20,
-              sink: Optional[Sink] = None) -> Dict[str, Any]:
-    """Press at the first waypoint, move through the path, release at the last."""
+              sink: Optional[Sink] = None, step_delay_s: float = 0.0,
+              settle_s: float = 0.0) -> Dict[str, Any]:
+    """Press at the first waypoint, move through the path, release at the last.
+
+    Pacing and failure handling are ``tween_drag``'s: ``step_delay_s`` rests
+    after each move, ``settle_s`` before the press, after it and before the
+    release (default 0: no pause), and a step that raises releases the
+    button where the pointer stopped.
+    """
     points = plan_path(waypoints, easing=easing,
                        per_segment_steps=per_segment_steps)
     if not points:
         return {"points": 0, "path": points}
-    dispatch = sink or _default_sink
-    first, last = points[0], points[-1]
-    dispatch({"op": "press", "button": button, "x": first[0], "y": first[1]})
-    try:
-        for x, y in points:
-            dispatch({"op": "move", "x": x, "y": y})
-    except BaseException:
-        # A failed move used to leave the button held down; releasing at the
-        # last waypoint, as it then did, completed the drop the drag never
-        # reached. The button is let go where the pointer stopped.
-        dispatch({"op": "release", "button": button})
-        raise
-    dispatch({"op": "release", "button": button, "x": last[0], "y": last[1]})
+    _drag_through(points, button, sink or _default_sink, step_delay_s, settle_s)
     return {"points": len(points), "path": points}
 
 

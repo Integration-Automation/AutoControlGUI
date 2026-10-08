@@ -59,11 +59,15 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
 | U-20261008-01 | 2026-10-08 | The legacy CLI flags exit 1 when an action failed; reports go below TestPioneer's artifact directory | #feature #cli #report #testpioneer | [2026-10](2026-10.md) |
-| U-20261006-01 | 2026-10-06 | Make AutoControl discoverable and safer for AI agents | #feature #ai #mcp #docs | [2026-10](2026-10.md) |\n| U-20261001-09 | 2026-10-01 | CI publishes je_auto_control_dev from the dev branch; dev.toml says what pyproject.toml says | #release #ci #X-13 | [2026-10](2026-10.md) |
+| U-20261006-01 | 2026-10-06 | Make AutoControl discoverable and safer for AI agents | #feature #ai #mcp #docs | [2026-10](2026-10.md) |
 | U-20261001-10 | 2026-10-01 | The publish jobs install hash-locked build tooling and build with the locked setuptools | #release #ci #security #X-13 | [2026-10](2026-10.md) |
 | U-20261001-09 | 2026-10-01 | CI publishes je_auto_control_dev from the dev branch; dev.toml says what pyproject.toml says | #release #ci #X-13 | [2026-10](2026-10.md) |
 | U-20261001-08 | 2026-10-01 | Package gate in front of AC_add_package_to_executor | #security #X-12 | [2026-10](2026-10.md) |
 | U-20261001-07 | 2026-10-01 | write_secret / AC_write_secret: type a password without logging, recording or returning it | #done #keyboard #security #webrunner | [2026-10](2026-10.md) |
+| U-20261001-06 | 2026-10-01 | Windows OEM keys, browser_home, launch_app2 and key aliases; canonical reverse lookup | #feature #input #contract | [2026-10](2026-10.md) |
+| U-20261001-05 | 2026-10-01 | Drag pacing for tween_drag / drag_path; an aborted drag lets go where it stopped | #feature #bugfix #input | [2026-10](2026-10.md) |
+| U-20261001-04 | 2026-10-01 | click_mouse(clicks=, interval=): a double-click in one call | #feature #input | [2026-10](2026-10.md) |
+| U-20261001-03 | 2026-10-01 | Tesseract setup helpers: find the engine, set tessdata, report status and languages | #feature #ocr #contract | [2026-10](2026-10.md) |
 | U-20261001-02 | 2026-10-01 | Pin the AC commands WebRunner's native WR_ac_* send; record the missing secret typing | #contract #webrunner | [2026-10](2026-10.md) |
 | U-20261001-01 | 2026-10-01 | Run AC_web_run's documented form, record WebRunner failures, gate through execute_one | #bugfix #webrunner | [2026-10](2026-10.md) |
 | U-20260926-41 | 2026-09-26 | Pin ruff's rule set in pyproject.toml so a ruff upgrade does not change what CI enforces | #ci #tooling | [2026-09-e](2026-09-e.md) |
@@ -344,7 +348,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | File | Period | Entries |
 |---|---|---:|
-| [2026-10.md](2026-10.md) | 2026-10 | 6 |
+| [2026-10.md](2026-10.md) | 2026-10 | 12 |
 | [2026-09-e.md](2026-09-e.md) | 2026-09 | 7 |
 | [2026-09-d.md](2026-09-d.md) | 2026-09 | 55 |
 | [2026-09-c.md](2026-09-c.md) | 2026-09 | 38 |
