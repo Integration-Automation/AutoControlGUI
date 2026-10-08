@@ -395,6 +395,98 @@ Windows、macOS（pyobjc）与 X11（含 XWayland）；纯 Wayland 会话的协�
 
 ---
 
+## 配置
+
+AutoControl 读取的每一个环境变量。这里没有任何一项是必填的：完全不设置时，AutoControl 会自行选择平台后端，服务器只绑定 `127.0.0.1`，所有需要主动开启的功能（签名强制、RBAC、USB 直通、工具路径限制）都是关闭的。[配置参考](https://autocontrol.readthedocs.io/en/latest/Zh/doc/configuration/configuration_doc.html)（[源文件](../docs/source/Zh/doc/configuration/configuration_doc.rst)）列出完整的可接受值，并把每个变量链接到说明该功能的页面；CI 会拿它以及下面的表格和代码比对。
+
+### 平台后端
+
+| 变量 | 默认 | 作用 |
+|---|---|---|
+| `JE_AUTOCONTROL_WIN32_BACKEND` | `sendinput` | 设为 `interception` 时键盘与鼠标改走 Interception 驱动程序；找不到驱动或 DLL 时会警告并回退到 `SendInput`。 |
+| `JE_AUTOCONTROL_LINUX_BACKEND` | `x11` | 设为 `uinput` 时直接写入内核输入事件；`/dev/uinput` 无法写入时会警告并回退到 XTest。 |
+| `JE_AUTOCONTROL_LINUX_DISPLAY_SERVER` | `auto` | 决定加载哪一个 Linux 后端：`auto` 读取 `XDG_SESSION_TYPE` 与 `WAYLAND_DISPLAY`；`wayland` 或 `x11` 则强制指定（在 Wayland 会话设为 `x11` 只能操作 XWayland 窗口）。 |
+
+### Windows Interception 驱动程序
+
+| 变量 | 默认 | 作用 |
+|---|---|---|
+| `JE_AUTOCONTROL_INTERCEPTION_DLL` | 未设置：先找 `PATH`，再找包旁边 | `interception.dll` 的完整路径。 |
+| `JE_AUTOCONTROL_INTERCEPTION_KEYBOARD` | `1` | 键盘事件要发往的 Interception 设备编号（`1`–`10`）。 |
+| `JE_AUTOCONTROL_INTERCEPTION_MOUSE` | `11` | 鼠标事件要发往的 Interception 设备编号（`11`–`20`）。 |
+
+### Wayland
+
+| 变量 | 默认 | 作用 |
+|---|---|---|
+| `JE_AUTOCONTROL_WAYLAND_INPUT_BACKEND` | `auto` | 设为 `cli` 时通过 `ydotool` 发送输入，完全不向桌面 portal 提出请求。这是启动前就做好的选择：用户拒绝授权后，AutoControl 不会自行切换过去。 |
+| `JE_AUTOCONTROL_WAYLAND_EI_WORKER` | 未设置 | 设为 `1` 时把 libei 会话放到辅助进程里运行，而不是放在本进程。 |
+| `JE_AUTOCONTROL_WAYLAND_POINTER_ACCEL` | `warn` | 只影响 `ydotool` 路径的绝对移动（那其实是会被合成器加速的相对位移）：`warn` 警告一次后照样移动，`flat` 表示加速已关闭、不再警告，`strict` 直接拒绝移动。 |
+| `JE_AUTOCONTROL_WAYLAND_CAPTURE_COMMAND` | 未设置 | 自定义的截图命令行，以 `{output}` 表示 PNG 的输出路径。优先于 `grim`、`gnome-screenshot`、`spectacle` 与 portal。 |
+| `JE_AUTOCONTROL_WAYLAND_RECORD_DEVICES` | 未设置：一个都不读 | `PhysicalRecorder` 可以读取的 `/dev/input/event*` 设备（以逗号分隔）；物理输入录制必须逐一指定设备才会启用。 |
+
+### MCP 服务器
+
+| 变量 | 默认 | 作用 |
+|---|---|---|
+| `JE_AUTOCONTROL_MCP_READONLY` | 未设置 | 设为 `1` 时只提供、也只能调用标记为只读的工具。 |
+| `JE_AUTOCONTROL_MCP_TOOL_MODE` | `full` | `tools/list` 要提供注册表的多少内容：`full`、`progressive` 或 `static`。未知的值会报错，不会被当成 `full`。 |
+| `JE_AUTOCONTROL_MCP_TOOL_PROFILE` | 未设置 | `static` 模式的工具清单：以逗号分隔的工具名称与 `category:<名称>`。 |
+| `JE_AUTOCONTROL_MCP_ALIASES` | `1` | 设为 `0` 时不注册 `ac_*` 工具之外的简短别名（`click`、`screenshot` …）。 |
+| `JE_AUTOCONTROL_MCP_TOKEN` | 未设置 | HTTP 传输的 Bearer 令牌。启用 RBAC 之后不再接受。 |
+| `JE_AUTOCONTROL_MCP_ALLOWED_ORIGINS` | 未设置：只接受本机来源 | HTTP 传输额外接受的浏览器来源（以逗号分隔，须完全相符，例如 `https://example.test:8443`）。 |
+| `JE_AUTOCONTROL_MCP_CONFIRM_DESTRUCTIVE` | 未设置 | 设为 `1` 时具破坏性的工具在执行前先向客户端请求确认（MCP elicitation）。 |
+| `JE_AUTOCONTROL_MCP_PATH_ROOTS` | 未设置：不限制 | 工具的每一个文件参数都必须落在这些目录内（以操作系统的路径分隔符分隔）。 |
+| `JE_AUTOCONTROL_MCP_PATH_ROOTS_FROM_CLIENT` | 未设置 | 设为 `1` 时同时接受 MCP 客户端通过 `roots/list` 报告的根目录。 |
+| `JE_AUTOCONTROL_MCP_ENV_REF_ALLOW` | 未设置：不限制 | `ac_resolve_ref` 可以读取的环境变量名称（以逗号分隔，可用 `fnmatch` 模式）；设了却没有指名任何变量时，一个都不允许。 |
+| `JE_AUTOCONTROL_MCP_AUDIT` | 未设置 | JSON-lines 文件的路径，每一次 `tools/call` 写入一条记录。 |
+| `JE_AUTOCONTROL_MCP_ERROR_SHOTS` | 未设置 | 工具每次失败时存放截图的目录。 |
+| `JE_AUTOCONTROL_FAKE_BACKEND` | 未设置 | 设为 `1` 时 MCP 服务器只在内存中记录鼠标、键盘与剪贴板调用而不实际执行，供没有显示器的 CI 使用。 |
+
+### REST／RBAC 与 chat-ops
+
+| 变量 | 默认 | 作用 |
+|---|---|---|
+| `JE_AUTOCONTROL_RBAC_USERS` | 未设置：沿用共享令牌 | 用户文件的路径。设置它就等于为 REST API 与 MCP HTTP 传输启用角色。 |
+| `JE_AUTOCONTROL_CHATOPS_SCRIPT_ROOT` | 未设置：`run` 会被拒绝 | chat-ops 的 `run` 命令唯一可以加载动作文件的目录。 |
+
+### 执行与签署动作文件
+
+| 变量 | 默认 | 作用 |
+|---|---|---|
+| `JE_AUTOCONTROL_ALLOWED_PACKAGES` | 未设置：一个都不允许 | `AC_add_package_to_executor` 可以加载的包（以逗号分隔，含子模块），对所有入口生效。只在进程启动时读取一次。 |
+| `JE_AUTOCONTROL_REQUIRE_SIGNED_ACTIONS` | 未设置 | 设为 `1` 时所有会执行动作文件的路径，都拒绝没有有效签名文件的动作文件。 |
+| `JE_AUTOCONTROL_ACTION_SIGNING_PRIVATE_KEY` | 未设置 | Ed25519 私钥（PEM）的路径。只在负责签署的机器上设置；设置后签署会写出第 2 版的签名文件。 |
+| `JE_AUTOCONTROL_ACTION_SIGNING_PUBLIC_KEY` | 未设置 | 对应公钥的路径。在每一台执行端设置：它只能验证，不能签署。 |
+| `JE_AUTOCONTROL_ACTION_SIGNING_PASSPHRASE` | 未设置 | 私钥创建时若设置了口令，在这里提供。 |
+| `JE_AUTOCONTROL_ACCEPT_LEGACY_ACTION_SIGNATURES` | 未设置 | 设为 `1` 是迁移模式：设置公钥之后，第 2 版之前写出的 HMAC 签名文件会被拒绝，除非设置了这个变量。所有文件重新签署后请再关掉。 |
+
+### 远程桌面与信令
+
+| 变量 | 默认 | 作用 |
+|---|---|---|
+| `JE_AUTOCONTROL_REMOTE_DOWNLOAD_DIR` | `~/Downloads/AutoControl` | 远程桌面查看端存放主机传来文件的目录。收到的路径一律限制在这个目录内。 |
+| `JE_AUTOCONTROL_USB_PASSTHROUGH` | 未设置 | 设为 `1` 时在远程桌面通道上启用 USB 直通指令。 |
+| `AC_SIGNALING_SECRET` | 未设置 | 信令／配置同步服务器的共享密钥（`X-Signaling-Secret`）。服务器在没有 `--shared-secret` 时读取它，`config_sync_run` 在没有 `secret` 时也读取它。 |
+| `AC_SIGNALING_CONFIG_DB` | `~/.je_auto_control/config_sync.sqlite3` | 信令服务器存放配置同步数据的 SQLite 文件。 |
+
+### GUI
+
+| 变量 | 默认 | 作用 |
+|---|---|---|
+| `JE_AUTOCONTROL_GUI_SETTINGS` | `~/.je_auto_control/gui_settings.ini` | 主窗口保存主题、文字大小、导航面板与窗口位置的文件。设为 `off`、`0`、`none`、`false` 或空字符串时，不读也不写。 |
+
+### 日志、数据与测试
+
+| 变量 | 默认 | 作用 |
+|---|---|---|
+| `JE_AUTOCONTROL_LOG_FILE` | `~/.je_auto_control/logs/AutoControlGUI.log` | 日志文件写入的位置。指定空设备（`/dev/null`、`NUL`）即可关闭文件输出。在写入第一条记录时才读取，而不是在 import 时。 |
+| `JE_AUTOCONTROL_ENV` | `default` | 资产库当前使用的环境（`active_environment()`），让同一份脚本在 `dev` 与 `prod` 读到不同的值。 |
+| `JE_AUTOCONTROL_REDACTION` | `off` | 截图遮蔽的默认策略：`off`、`moderate` 或 `strict`。未知的名称会报错，不会被当成 `off`。 |
+| `JE_AUTOCONTROL_PYTEST_ARTIFACTS` | `./autocontrol_screenshots` | 测试没有使用 `autocontrol_screenshot_dir` fixture 时，pytest 插件写入失败截图的目录。 |
+
+---
+
 ## 文档与示例
 
 | 资源 | 内容 |

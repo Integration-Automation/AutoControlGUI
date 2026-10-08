@@ -39,25 +39,11 @@ NEW_EXAMPLES = (
     "31_healing_comparison.py", "32_codegen_from_log.py", "33_mcp_progressive.py",
 )
 
-#: Variables the package reads that ``README.md`` does not mention. The README
-#: is an overview and the configuration reference is the complete list, so
-#: these are recorded rather than required -- but the set may not grow: a new
-#: variable is either mentioned in the README or added here on purpose.
-README_UNDOCUMENTED = frozenset({
-    "AC_SIGNALING_CONFIG_DB", "AC_SIGNALING_SECRET",
-    "JE_AUTOCONTROL_ACCEPT_LEGACY_ACTION_SIGNATURES",
-    "JE_AUTOCONTROL_ACTION_SIGNING_PASSPHRASE", "JE_AUTOCONTROL_ACTION_SIGNING_PRIVATE_KEY",
-    "JE_AUTOCONTROL_CHATOPS_SCRIPT_ROOT", "JE_AUTOCONTROL_ENV", "JE_AUTOCONTROL_FAKE_BACKEND",
-    "JE_AUTOCONTROL_GUI_SETTINGS", "JE_AUTOCONTROL_INTERCEPTION_DLL",
-    "JE_AUTOCONTROL_INTERCEPTION_KEYBOARD", "JE_AUTOCONTROL_INTERCEPTION_MOUSE",
-    "JE_AUTOCONTROL_MCP_ALLOWED_ORIGINS", "JE_AUTOCONTROL_MCP_AUDIT",
-    "JE_AUTOCONTROL_MCP_CONFIRM_DESTRUCTIVE", "JE_AUTOCONTROL_MCP_ERROR_SHOTS",
-    "JE_AUTOCONTROL_MCP_READONLY", "JE_AUTOCONTROL_MCP_TOKEN", "JE_AUTOCONTROL_MCP_TOOL_MODE",
-    "JE_AUTOCONTROL_MCP_TOOL_PROFILE", "JE_AUTOCONTROL_PYTEST_ARTIFACTS",
-    "JE_AUTOCONTROL_REDACTION", "JE_AUTOCONTROL_REQUIRE_SIGNED_ACTIONS",
-    "JE_AUTOCONTROL_USB_PASSTHROUGH", "JE_AUTOCONTROL_WAYLAND_EI_WORKER",
-    "JE_AUTOCONTROL_WAYLAND_INPUT_BACKEND", "JE_AUTOCONTROL_WAYLAND_RECORD_DEVICES",
-})
+#: Variables the package reads that ``README.md`` does not mention. Empty since
+#: the README gained its "Configuration" tables (one row per variable, in all
+#: three languages), and it stays empty: a new variable gets a README row and a
+#: row on the Sphinx configuration page in the change that introduces it.
+README_UNDOCUMENTED: frozenset = frozenset()
 
 _ENV_NAME = re.compile(r"\b(?:JE_AUTOCONTROL|AC_SIGNALING)_[A-Z0-9_]+\b")
 _BLOCK = "<!-- {name}:{edge} (generated: test_modernization_examples.py --fix) -->"
@@ -167,6 +153,12 @@ def _names_in_code() -> Set[str]:
     return _names([*sources, REPO_ROOT / "je_auto_control_pytest.py"])
 
 
+def _configuration_rows(readme: Path) -> List[str]:
+    """Variables that have a table row in a README (first column, in backticks)."""
+    return re.findall(r"^\| `((?:JE_AUTOCONTROL|AC_SIGNALING)_[A-Z0-9_]+)` \|",
+                      readme.read_text(encoding="utf-8"), flags=re.MULTILINE)
+
+
 def test_readme_configuration_parity():
     in_code = _names_in_code()
     english_configuration_keys = _names([CONFIG_PAGES["Eng"]])
@@ -181,8 +173,12 @@ def test_readme_configuration_parity():
     assert simplified == readme and traditional == readme, (
         "the three READMEs name different environment variables")
     assert readme - in_code == set(), "README.md names a variable nothing reads"
-    assert (in_code - readme) - README_UNDOCUMENTED == set(), (
-        "a new variable is in neither README.md nor README_UNDOCUMENTED")
+    assert README_UNDOCUMENTED == frozenset(), "the README lists every variable; keep it that way"
+    assert in_code - readme == set(), (
+        "read by the package and missing from the Configuration tables of the three READMEs")
+    for name in READMES:
+        rows = _configuration_rows(REPO_ROOT / name)
+        assert sorted(rows) == sorted(in_code), f"{name}: one Configuration row per variable"
 
 
 def test_the_configuration_page_is_reachable_in_both_languages():
