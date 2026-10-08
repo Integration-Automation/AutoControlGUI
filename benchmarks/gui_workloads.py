@@ -9,6 +9,11 @@ alone. Every step runs from the event loop while a 5 ms timer ticks; how late
 each tick arrives is the stall a user would feel, and ``event_loop_p95_ms`` is
 its 95th percentile over the whole workload. ``idle_event_loop_p95_ms`` is the
 same with every opened tab left running and nothing else happening.
+
+``theme_switch_ms`` is the stall of a theme switch: the call plus one turn of
+the event loop. The pages of unselected tabs are restyled after it, one per
+turn; ``theme_deferred_ms`` is how long that tail took in all and
+``theme_deferred_longest_turn_ms`` its longest single turn.
 """
 import argparse
 import os
@@ -68,9 +73,25 @@ def _steps(window: Any, keys: List[str], app: Any, results: Dict[str, Any]) -> L
         steps.append(lambda key=key: switch.append(_timed(lambda: workspace.activate_tab(key), app)))
     for text in SEARCHES:
         steps.append(lambda text=text: search.append(_timed(lambda: navigation.search.setText(text), app)))
+    tail: List[float] = results.setdefault("_theme_tail", [])
+    turns: List[float] = results.setdefault("_theme_turns", [])
     for name in ("light", "dark"):
         steps.append(lambda name=name: theme.append(_timed(lambda: window.set_theme(name), app)))
+        steps.append(lambda: _drain_restyle(workspace.tabs, app, tail, turns))
     return steps
+
+
+def _drain_restyle(tabs: Any, app: Any, tail: List[float], turns: List[float]) -> None:
+    """Pump until every page parked by the theme switch is back; record the total and the longest turn."""
+    pending = getattr(tabs, "parked_pages", None)
+    start = time.perf_counter()
+    longest = 0.0
+    while callable(pending) and pending():
+        turn = time.perf_counter()
+        app.processEvents()
+        longest = max(longest, (time.perf_counter() - turn) * 1000)
+    tail.append((time.perf_counter() - start) * 1000)
+    turns.append(longest)
 
 
 def run(tabs: Optional[List[str]] = None) -> Dict[str, Any]:
@@ -120,6 +141,8 @@ def run(tabs: Optional[List[str]] = None) -> Dict[str, Any]:
         "switch_ms": bench.summary(results.pop("_switch")),
         "search_ms": bench.summary(results.pop("_search")),
         "theme_switch_ms": bench.summary(results.pop("_theme")),
+        "theme_deferred_ms": bench.summary(results.pop("_theme_tail")),
+        "theme_deferred_longest_turn_ms": bench.summary(results.pop("_theme_turns")),
         "event_loop_p95_ms": round(bench.percentile(work, 95), 1),
         "event_loop_max_ms": round(max(work, default=0.0), 1),
         "event_loop_ticks": len(work),

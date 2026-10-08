@@ -1,6 +1,6 @@
 """Top-level window: menu bar, feature navigation, tabbed workspace, themes, live language switching."""
 import sys
-from typing import Optional
+from typing import Callable, Optional
 
 from PySide6.QtCore import QByteArray, Qt
 from PySide6.QtGui import QAction, QActionGroup, QCloseEvent, QKeySequence
@@ -14,7 +14,7 @@ from je_auto_control.gui.language_wrapper.multi_language_wrapper import (
 from je_auto_control.gui.main_widget import AutoControlGUIWidget
 from je_auto_control.gui.navigation import NavigationPanel
 from je_auto_control.gui.theme import (
-    THEMES, apply_theme, font_rule, prepare_application, theme_named,
+    THEMES, ThemeTokens, apply_theme, font_rule, prepare_application, theme_named,
 )
 from je_auto_control.gui.window_settings import WindowSettings, WindowState
 
@@ -254,9 +254,25 @@ class AutoControlGUIUI(QMainWindow):
         """Switch to the theme called ``name`` (``dark`` or ``light``), keeping the text size."""
         tokens = theme_named(name)
         self._theme_name = tokens.name
-        self._theme_stylesheet = apply_theme(self, tokens)
-        self._apply_font_pt(self._user_font_pt)
+        # One style sheet change, font rule included: setting the theme and
+        # then the theme plus the font rule made Qt restyle every widget twice.
+        self._restyle(lambda: self._set_theme_sheet(tokens))
         self._remember()
+
+    def _set_theme_sheet(self, tokens: ThemeTokens) -> None:
+        self._theme_stylesheet = apply_theme(self, tokens, self._effective_font_pt(self._user_font_pt))
+
+    def _effective_font_pt(self, pt: int) -> int:
+        return pt if pt > 0 else self._detect_auto_font_pt()
+
+    def _restyle(self, apply: Callable[[], object]) -> None:
+        """Run a style change with the pages of unselected tabs out of the way (see ``workspace_tabs``)."""
+        workspace = getattr(self, "auto_control_gui_widget", None)
+        restyle = getattr(getattr(workspace, "tabs", None), "restyle", None)
+        if callable(restyle):
+            restyle(apply)
+        else:
+            apply()
 
     def _rebuild_tabs_menu(self) -> None:
         if self._view_menu is None:
@@ -318,8 +334,9 @@ class AutoControlGUIUI(QMainWindow):
         theme on startup and on every text-size change. The font family is
         the theme's; only the size is set here.
         """
-        effective = pt if pt > 0 else self._detect_auto_font_pt()
-        self.setStyleSheet(f"{self._theme_stylesheet}\n{font_rule(effective)}")
+        sheet = f"{self._theme_stylesheet}\n{font_rule(self._effective_font_pt(pt))}"
+        if sheet != self.styleSheet():      # unchanged: nothing to restyle
+            self._restyle(lambda: self.setStyleSheet(sheet))
 
     def _on_text_size_selected(self) -> None:
         action = self.sender()
