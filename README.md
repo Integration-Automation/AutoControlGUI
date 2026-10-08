@@ -556,6 +556,10 @@ python -m pytest test/integrated_test/        # cross-module workflows
 ruff check je_auto_control/
 pylint je_auto_control/
 bandit -c pyproject.toml -r je_auto_control/
+
+python test/verify/typing_contract_verify.py            # mypy, whole package, three target platforms
+python test/verify/typing_contract_verify.py --extras   # the same against the real PySide6 / aiortc types
+python -m sphinx -b html -W docs/source docs/_build/html  # the docs, warnings as errors
 ```
 
 Contributions are welcome — see [CONTRIBUTING.md](CONTRIBUTING.md) and

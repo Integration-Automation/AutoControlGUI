@@ -518,6 +518,10 @@ python -m pytest test/integrated_test/        # 跨模組流程測試
 ruff check je_auto_control/
 pylint je_auto_control/
 bandit -c pyproject.toml -r je_auto_control/
+
+python test/verify/typing_contract_verify.py            # mypy，整個套件，三個目標平台
+python test/verify/typing_contract_verify.py --extras   # 同一項檢查，改用真正的 PySide6／aiortc 型別
+python -m sphinx -b html -W docs/source docs/_build/html  # 文件，警告視為錯誤
 ```
 
 歡迎貢獻——請見 [CONTRIBUTING.md](../CONTRIBUTING.md) 與

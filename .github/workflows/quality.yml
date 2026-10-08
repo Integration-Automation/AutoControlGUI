@@ -215,3 +215,97 @@ jobs:
       # on what is installed, and installing them here would only hide a
       # regression in that arrangement.
       - run: python test/verify/typing_contract_verify.py
+
+  # The job above answers "is our own code consistent with itself" and reads
+  # PySide6, aiortc and av as `Any` so that the answer does not depend on what
+  # is installed. This one installs them and asks the two questions that job
+  # cannot:
+  #
+  #   1. The ordinary contract again, with the extras present. It must print
+  #      the same verdict as the bare install above; if it does not, the
+  #      "forced to Any" override in pyproject.toml has a hole and the required
+  #      check has started to depend on the environment.
+  #   2. `--extras`: the same run with PySide6 / aiortc / av dropped from that
+  #      override, so every call into Qt and aiortc is checked against the
+  #      library's own signatures. What already failed when this was first
+  #      measured is `test/verify/typing_extras_exempt.txt`, shrink-only; a
+  #      module outside that list (every new GUI module) has to pass.
+  #
+  # Step 2 is a function of the stubs, so the libraries are pinned to the
+  # versions the list was measured with. PySide6 generates its stubs per
+  # platform and the Windows and Linux ones differ in 42 files; the list was
+  # measured against both and is the same.
+  #
+  # A new id, not a rename: `typing-stable-api` is a required check.
+  typing-extras:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: "pip"
+      - run: pip install -e ".[gui,webrtc]"  # NOSONAR githubactions:S8541,githubactions:S8544  # reason: installs the checked-out project itself, there is no upstream version to lock and the build must run
+      - run: "pip install --only-binary :all: mypy==2.4.0 PySide6==6.11.2 aiortc==1.15.0 av==17.1.0 aioice==0.10.2 pyee==14.0.0 pylibsrtp==1.0.0"
+      - name: The ordinary contract does not change when the extras are installed
+        run: python test/verify/typing_contract_verify.py
+      - name: The package against the real PySide6 / aiortc / av types
+        run: python test/verify/typing_contract_verify.py --extras
+
+  # A run's variable scope is bound through a ContextVar, and "a thread started
+  # in a run does not join it" used to be true only because a new thread starts
+  # with an empty context on a default build. On a free-threaded build it
+  # starts with a copy of its creator's. The headless suite holds the contract
+  # with an emulation on every square and with `-X thread_inherit_context=1`
+  # on 3.14 (test_execution_scope_threads.py); this runs the same three files
+  # on a real free-threaded interpreter with the GIL off.
+  #
+  # The project is not pip-installed: opencv-python ships abi3 wheels only,
+  # which a free-threaded interpreter cannot load, and nothing these tests
+  # import needs it. The packages below are what importing the executor needs,
+  # at the versions this was run with on Windows (CPython 3.14.8t).
+  #
+  # On Windows the free-threaded binary may be `python3.14t` beside a regular
+  # `python`, so it is looked up by that name first and the next step refuses
+  # to go on with an interpreter whose GIL is enabled.
+  free-threaded-scope:
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.14t"
+      - name: Find the free-threaded interpreter
+        shell: bash
+        run: echo "FT_PYTHON=$(command -v python3.14t || command -v python)" >> "$GITHUB_ENV"
+      - name: Refuse an interpreter with the GIL enabled
+        shell: bash
+        env:
+          PYTHON_GIL: "0"
+        run: '"$FT_PYTHON" -c "import sys; print(sys.version); raise SystemExit(sys._is_gil_enabled())"'
+      - name: Install what importing the executor needs
+        shell: bash
+        run: '"$FT_PYTHON" -m pip install --only-binary :all: pytest==9.1.1 defusedxml==0.7.1 mss==10.2.0 pillow==12.3.0 cryptography==50.0.2 numpy==2.5.3'
+      - name: Variable scope tests with inherited thread contexts and no GIL
+        shell: bash
+        env:
+          PYTHON_GIL: "0"
+          PYTHONPATH: ${{ github.workspace }}
+        run: '"$FT_PYTHON" -X thread_inherit_context=1 -m pytest -q -p no:cacheprovider test/unit_test/headless/test_execution_scope_threads.py test/unit_test/headless/test_execution_scope_isolation.py test/unit_test/headless/test_scope_run_level_callers.py'
+
+  # Sphinx with warnings as errors. The headless suite reads every page with
+  # the `dummy` builder when Sphinx is installed (test_sphinx_docs_build.py),
+  # but the suite's own job does not install Sphinx, and the HTML writer is
+  # where an unresolved reference or a missing static path shows. Nothing in
+  # the tree uses autodoc, so the project itself is not installed.
+  docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: "pip"
+      - run: "pip install --only-binary :all: sphinx==9.1.0 sphinx-rtd-theme==3.1.0"
+      - name: Build the documentation, warnings as errors
+        run: python -m sphinx -b html -W --keep-going -j auto -d "${{ runner.temp }}/doctrees" docs/source "${{ runner.temp }}/docs-html"
