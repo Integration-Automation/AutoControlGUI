@@ -38,14 +38,14 @@ def _sync(bucket, server):
 
 
 def _entry(bucket, entry_id="hk1", stamp=100.0):
-    bucket.upsert("hotkeys", entry_id, {"combo": "ctrl+a", "last_modified": stamp})
+    bucket.upsert("hotkeys", entry_id, {"combo": "ctrl+a", "last_modified": stamp}, versioned=False)
     return bucket
 
 
 def test_a_removed_entry_stays_removed_after_sync():
     server = _Server()
     local = _sync(_entry(ConfigBucket(user_id="alice")), server)
-    assert local.remove("hotkeys", "hk1") is True
+    assert local.remove("hotkeys", "hk1", versioned=False) is True
     merged = _sync(local, server)
     assert merged.entries("hotkeys") == {}
     assert is_tombstone(server.body["sections"]["hotkeys"]["hk1"])
@@ -56,17 +56,17 @@ def test_a_deletion_on_one_machine_reaches_the_other():
     laptop = _sync(_entry(ConfigBucket(user_id="alice")), server)
     desktop = _sync(ConfigBucket(user_id="alice"), server)
     assert "hk1" in desktop.entries("hotkeys")
-    laptop.remove("hotkeys", "hk1")
+    laptop.remove("hotkeys", "hk1", versioned=False)
     _sync(laptop, server)
     assert _sync(desktop, server).entries("hotkeys") == {}
 
 
 def test_an_edit_newer_than_the_deletion_brings_the_entry_back():
     local = _entry(ConfigBucket(user_id="u"))
-    local.remove("hotkeys", "hk1")
+    local.remove("hotkeys", "hk1", versioned=False)
     deleted_at = local.sections["hotkeys"]["hk1"]["last_modified"]
     remote = ConfigBucket(user_id="u")
-    remote.upsert("hotkeys", "hk1", {"combo": "ctrl+z", "last_modified": deleted_at + 5})
+    remote.upsert("hotkeys", "hk1", {"combo": "ctrl+z", "last_modified": deleted_at + 5}, versioned=False)
     merged, _ = merge_buckets(local, remote)
     assert merged.entries("hotkeys")["hk1"]["combo"] == "ctrl+z"
 
@@ -74,7 +74,7 @@ def test_an_edit_newer_than_the_deletion_brings_the_entry_back():
 def test_a_deletion_is_never_stamped_before_the_value_it_removes():
     future = 32503680000.0     # a clock far ahead wrote the entry
     local = _entry(ConfigBucket(user_id="u"), stamp=future)
-    local.remove("hotkeys", "hk1")
+    local.remove("hotkeys", "hk1", versioned=False)
     remote = _entry(ConfigBucket(user_id="u"), stamp=future)
     merged, _ = merge_buckets(local, remote, now=future)
     assert merged.entries("hotkeys") == {}
@@ -82,9 +82,9 @@ def test_a_deletion_is_never_stamped_before_the_value_it_removes():
 
 def test_remove_reports_only_live_entries():
     bucket = _entry(ConfigBucket(user_id="u"))
-    assert bucket.remove("hotkeys", "missing") is False
-    assert bucket.remove("hotkeys", "hk1") is True
-    assert bucket.remove("hotkeys", "hk1") is False
+    assert bucket.remove("hotkeys", "missing", versioned=False) is False
+    assert bucket.remove("hotkeys", "hk1", versioned=False) is True
+    assert bucket.remove("hotkeys", "hk1", versioned=False) is False
 
 
 def test_old_tombstones_are_purged_at_merge():
@@ -98,8 +98,8 @@ def test_old_tombstones_are_purged_at_merge():
 
 def test_upsert_over_a_tombstone_revives_the_entry():
     bucket = _entry(ConfigBucket(user_id="u"))
-    bucket.remove("hotkeys", "hk1")
-    bucket.upsert("hotkeys", "hk1", {"combo": "ctrl+q"})
+    bucket.remove("hotkeys", "hk1", versioned=False)
+    bucket.upsert("hotkeys", "hk1", {"combo": "ctrl+q"}, versioned=False)
     assert bucket.entries("hotkeys")["hk1"]["combo"] == "ctrl+q"
 
 

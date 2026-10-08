@@ -3580,12 +3580,19 @@ def _add_resilience_specs(specs: List[CommandSpec]) -> None:
         FieldSpec("scripts_dir", FieldType.FILE_PATH, optional=True),
         FieldSpec("locators_path", FieldType.FILE_PATH, optional=True),
         FieldSpec("assets_dir", FieldType.FILE_PATH, optional=True),
+        FieldSpec("assets_server", FieldType.BOOL, optional=True, default=False),
     )
     specs.append(CommandSpec(
         "AC_config_sync_run", "Data", "Config Sync: Sync Now",
-        fields=sync_target + sync_options,
+        fields=sync_target + sync_options + (
+            FieldSpec("force", FieldType.BOOL, optional=True, default=False),
+        ),
         description="Sync settings with the server once. Received hotkeys and "
-                    "triggers arrive disabled; nothing is run.",
+                    "triggers arrive disabled; nothing is run. 'force' skips the "
+                    "retry delay left by an earlier failure (state backing_off). "
+                    "Without 'sections' this syncs hotkeys, triggers and the address "
+                    "book, plus scripts / locators when their path is given; set "
+                    "sections (e.g. scripts) to sync only those.",
     ))
     specs.append(CommandSpec(
         "AC_config_sync_status", "Data", "Config Sync: Status",

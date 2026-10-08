@@ -37,6 +37,7 @@ _BASELINE = "baseline"
 _GO = "go"
 _EMPTY = "empty"
 _CANCELLED = ""
+_BACKING_OFF = "waiting to retry after an earlier failure"
 
 _SCHEMA = (
     "CREATE TABLE IF NOT EXISTS operations ("
@@ -64,8 +65,13 @@ class DrainReport:
     """How a :meth:`SyncOutbox.drain` ended.
 
     ``sent`` operations were accepted, ``pending`` are still queued,
-    ``attempts`` sends were made. ``offline`` is true when the last attempt
-    failed (``error`` says why); ``cancelled`` when the cancel event ended it.
+    ``attempts`` sends were made. ``offline`` is true when the queue did not
+    reach the server (``error`` says why); ``cancelled`` when the cancel
+    event ended it. ``backing_off`` narrows ``offline``: the drain made no
+    attempt at all because an earlier failure's retry delay has not run out,
+    so nothing is known about the server *now* and ``error`` is the failure
+    that started the wait. ``retry_in_s`` is how long until the queue may be
+    sent again (``0`` when it may go now).
     """
     sent: int = 0
     pending: int = 0
@@ -73,6 +79,8 @@ class DrainReport:
     offline: bool = False
     cancelled: bool = False
     error: str = ""
+    backing_off: bool = False
+    retry_in_s: float = 0.0
 
 
 class SyncOutbox:
@@ -183,6 +191,16 @@ class SyncOutbox:
         return max(0.0, float(row["due"]) - now)
 
     @sqlite_errors_as(OutboxError)
+    def last_error(self) -> str:
+        """Why the most recent failed send failed; ``""`` when none is recorded."""
+        with self._connection() as connection:
+            row = connection.execute(
+                "SELECT last_error FROM operations WHERE account = ? AND endpoint = ? "
+                "AND last_error != '' ORDER BY next_attempt DESC, seq DESC LIMIT 1",
+                self._scope).fetchone()
+        return "" if row is None else str(row["last_error"])
+
+    @sqlite_errors_as(OutboxError)
     def clear(self) -> List[SyncOperation]:
         """Empty the queue and return what was in it (for a full resync)."""
         discarded = self.pending()
@@ -221,13 +239,16 @@ class SyncOutbox:
     def drain(self, send: Callable[[List[SyncOperation]], Any], *,
               cancel: Optional[threading.Event] = None,
               max_attempts: int = DEFAULT_DRAIN_ATTEMPTS, wait: bool = True,
-              clock: Callable[[], float] = time.time) -> DrainReport:
+              clock: Callable[[], float] = time.time, force: bool = False) -> DrainReport:
         """Send the queue through ``send`` until it is empty or attempts run out.
 
         ``send(operations)`` must raise :class:`ConfigSyncError` when the
         operations did not (or may not have) arrived; they stay queued under
         the same ids and are tried again after the back-off delay. With
-        ``wait`` false a queue that is still backing off is left alone.
+        ``wait`` false a queue that is still backing off is left alone and
+        the report says ``backing_off``. ``force`` sends once without
+        regard to that delay -- for a person who has just said "now"; if
+        that attempt fails too, the (longer) delay it earns is respected.
         Setting ``cancel`` ends the drain at the next check, including in the
         middle of a wait. :class:`FullResyncRequired` is not retried.
         """
@@ -235,27 +256,41 @@ class SyncOutbox:
         sent = attempts = 0
         error = ""
         while attempts < max(1, int(max_attempts)):
-            turn = self._await_turn(stop, wait, clock())
+            turn = self._await_turn(stop, wait, clock(), force and not attempts)
             if turn == _EMPTY:
                 return DrainReport(sent=sent, attempts=attempts)
             if turn != _GO:
-                error = error or turn
                 break
             batch = self.pending()
             attempts += 1
             error = self._send(send, batch, clock)
             if not error:
                 sent += len(batch)
-        return DrainReport(sent=sent, pending=len(self.pending()), attempts=attempts,
-                           offline=bool(error), cancelled=stop.is_set(), error=error)
+        return self._stopped(sent, attempts, error, stop.is_set(), clock())
 
-    def _await_turn(self, stop: threading.Event, wait: bool, now: float) -> str:
+    def _stopped(self, sent: int, attempts: int, error: str, cancelled: bool,
+                 now: float) -> DrainReport:
+        """The report of a drain that ended with operations still queued."""
+        waiting = self.seconds_until_due(now) or 0.0
+        # No attempt and no cancel: the only thing that stopped it is the delay.
+        backing_off = not attempts and not cancelled and waiting > 0
+        if backing_off:
+            error = self.last_error() or _BACKING_OFF
+        return DrainReport(
+            sent=sent, pending=len(self.pending()), attempts=attempts,
+            offline=bool(error), cancelled=cancelled, error=error,
+            backing_off=backing_off, retry_in_s=waiting)
+
+    def _await_turn(self, stop: threading.Event, wait: bool, now: float,
+                    force: bool = False) -> str:
         """Wait out the back-off: ``_GO``, ``_EMPTY``, or why the drain must stop."""
         delay = self.seconds_until_due(now)
         if delay is None:
             return _EMPTY
+        if force:
+            delay = 0.0
         if delay > 0 and not wait:
-            return "waiting to retry after an earlier failure"
+            return _BACKING_OFF
         if stop.is_set() or (delay > 0 and stop.wait(delay)):
             return _CANCELLED
         return _GO

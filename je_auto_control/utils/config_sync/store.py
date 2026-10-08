@@ -11,18 +11,24 @@ both pass the check.
 A write also carries an ``operation_id``. A client that never saw the reply
 to a commit (timeout, dropped connection) repeats it with the same id and is
 answered with the revision the first attempt produced instead of a conflict
-against its own write.
+against its own write. The store keeps a hash of what each operation wrote,
+so an id reused for *different* content is refused with
+:class:`~je_auto_control.utils.config_sync.bucket.OperationMismatchError`
+rather than reported as committed.
 
 Pure standard library; imports no ``PySide6``.
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import time
 from pathlib import Path
 from typing import Any, ContextManager, Optional, Union
 
-from je_auto_control.utils.config_sync.client import ConfigBucket, ConfigSyncError
+from je_auto_control.utils.config_sync.bucket import (
+    ConfigBucket, ConfigSyncError, OperationMismatchError,
+)
 from je_auto_control.utils.sqlite_support import autocommit_connection, sqlite_errors_as
 
 #: How many distinct users may hold a bucket in one store.
@@ -40,8 +46,13 @@ _SCHEMA = (
     "CREATE TABLE IF NOT EXISTS operations ("
     " seq INTEGER PRIMARY KEY AUTOINCREMENT, user_id TEXT NOT NULL,"
     " operation_id TEXT NOT NULL, revision INTEGER NOT NULL,"
+    " content_hash TEXT NOT NULL DEFAULT '',"
     " UNIQUE (user_id, operation_id))",
 )
+#: Added to an ``operations`` table created before the content hash existed.
+#: Its old rows keep an empty hash, which matches any content: there is
+#: nothing to compare a write from before the upgrade against.
+_ADD_CONTENT_HASH = "ALTER TABLE operations ADD COLUMN content_hash TEXT NOT NULL DEFAULT ''"
 
 
 class ConfigStoreError(ConfigSyncError):
@@ -73,6 +84,19 @@ def _checked_revision(base_revision: Any) -> int:
     if isinstance(base_revision, bool) or not isinstance(base_revision, int) or base_revision < 0:
         raise ConfigStoreError(f"base_revision must be an integer >= 0, got {base_revision!r}")
     return base_revision
+
+
+def operation_content_hash(bucket: ConfigBucket, base_revision: int) -> str:
+    """The SHA-256 naming what one write puts on the server.
+
+    Covers the base revision and the whole bucket except its ``revision``
+    field, which the store overwrites with the committed one -- so a resend
+    hashes the same whatever revision the client believed it was at.
+    """
+    body = bucket.to_dict()
+    body.pop("revision", None)
+    canonical = json.dumps([int(base_revision), body], sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
 
 def _checked_operation_id(operation_id: Any) -> str:
@@ -115,6 +139,10 @@ class ConfigStore:
             with autocommit_connection(str(path)) as connection:
                 for statement in _SCHEMA:
                     connection.execute(statement)
+                columns = {row["name"] for row in connection.execute(
+                    "PRAGMA table_info(operations)").fetchall()}
+                if "content_hash" not in columns:
+                    connection.execute(_ADD_CONTENT_HASH)
             self._resolved_path = str(path)
         return autocommit_connection(self._resolved_path)
 
@@ -145,29 +173,45 @@ class ConfigStore:
         """Write ``bucket`` if the store is still at ``base_revision``.
 
         Returns the committed revision (``base_revision + 1``). A repeated
-        ``operation_id`` returns the revision its first commit produced and
-        writes nothing. Raises :class:`RevisionConflictError` when another
-        write got there first -- ``base_revision`` ``0`` means "no bucket
-        yet" -- and :class:`StoreCapacityError` when a new user would exceed
-        the user limit.
+        ``operation_id`` carrying the same write returns the revision its
+        first commit produced and writes nothing; carrying a different
+        bucket or base revision it raises
+        :class:`~je_auto_control.utils.config_sync.bucket.OperationMismatchError`.
+        Raises :class:`RevisionConflictError` when another write got there
+        first -- ``base_revision`` ``0`` means "no bucket yet" -- and
+        :class:`StoreCapacityError` when a new user would exceed the user
+        limit.
         """
         base = _checked_revision(base_revision)
         operation = _checked_operation_id(operation_id)
         self._require_owner(user_id, bucket)
+        content = operation_content_hash(bucket, base)
         with self._connection() as connection:
             connection.execute("BEGIN IMMEDIATE")
             done = connection.execute(
-                "SELECT revision FROM operations WHERE user_id = ? AND operation_id = ?",
-                (user_id, operation)).fetchone()
+                "SELECT revision, content_hash FROM operations "
+                "WHERE user_id = ? AND operation_id = ?", (user_id, operation)).fetchone()
             if done is not None:
                 connection.execute("COMMIT")
-                return int(done["revision"])
+                return self._replayed(operation, done, content)
             current = self._current_revision(connection, user_id)
             if current != base:
                 raise RevisionConflictError(user_id, base, current)
             revision = self._write(connection, user_id, bucket, current)
-            self._remember(connection, user_id, operation, revision)
+            self._remember(connection, user_id, operation, revision, content)
             connection.execute("COMMIT")
+        return revision
+
+    @staticmethod
+    def _replayed(operation: str, done: Any, content: str) -> int:
+        """The revision of a repeated operation, if it is the same write."""
+        revision = int(done["revision"])
+        recorded = str(done["content_hash"] or "")
+        if recorded and recorded != content:
+            raise OperationMismatchError(
+                f"operation id {operation!r} already committed revision {revision} "
+                "with different content; push again under a fresh id",
+                operation_id=operation, revision=revision)
         return revision
 
     @sqlite_errors_as(ConfigStoreError)
@@ -214,10 +258,11 @@ class ConfigStore:
             (user_id, revision, json.dumps(body, sort_keys=True), time.time()))
         return revision
 
-    def _remember(self, connection: Any, user_id: str, operation: str, revision: int) -> None:
+    def _remember(self, connection: Any, user_id: str, operation: str, revision: int,
+                  content: str) -> None:
         connection.execute(
-            "INSERT INTO operations (user_id, operation_id, revision) VALUES (?, ?, ?)",
-            (user_id, operation, revision))
+            "INSERT INTO operations (user_id, operation_id, revision, content_hash) "
+            "VALUES (?, ?, ?, ?)", (user_id, operation, revision, content))
         connection.execute(
             "DELETE FROM operations WHERE user_id = ? AND seq NOT IN ("
             " SELECT seq FROM operations WHERE user_id = ? ORDER BY seq DESC LIMIT ?)",
@@ -227,4 +272,5 @@ class ConfigStore:
 __all__ = [
     "ConfigStore", "ConfigStoreError", "DEFAULT_MAX_OPERATIONS", "DEFAULT_MAX_USERS",
     "RevisionConflictError", "StoreCapacityError", "default_store_path",
+    "operation_content_hash",
 ]

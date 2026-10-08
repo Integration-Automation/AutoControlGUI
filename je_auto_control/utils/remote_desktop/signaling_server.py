@@ -17,11 +17,33 @@ and is committed only while the stored bucket is still at ``base_revision``
 (``0`` = no bucket yet): ``200 {"ok": true, "revision": 4}``, or ``409
 {"detail": "revision conflict", "revision": <current>}`` when another write
 got there first. Repeating a ``PUT`` with the same ``operation_id`` returns
-the revision the first one produced. ``GET`` returns the bucket with
+the revision the first one produced; the same ``operation_id`` with a
+different bucket or base revision is ``409 {"code": "operation_mismatch",
+"revision": <the first write's>}`` and writes nothing. ``GET`` returns the bucket with
 ``revision`` set to the committed revision and ``"version": 2``. A bare
 bucket (what clients sent before version 2) is answered ``428`` unless the
 server runs with ``--allow-blind-config-writes``, which restores the
 unconditional overwrite those clients expect.
+
+It also keeps the *assets* config sync cannot fit in a bucket entry, as
+content-addressed blobs per account::
+
+    PUT    /blobs/{user_id}/{sha256}   raw bytes; 201 stored, 200 already held
+    GET    /blobs/{user_id}/{sha256}   the bytes, or 404
+    HEAD   /blobs/{user_id}/{sha256}   200 / 404, no body
+    DELETE /blobs/{user_id}/{sha256}   {"deleted": true | false}
+    GET    /blobs/{user_id}            {"used", "quota", "count", "blobs": [...]}
+
+under the rules ``/config`` follows: the shared secret, the account named by
+the path (one account never reads another's blob), and a size cap checked
+against ``Content-Length`` before the body is read (``--max-blob-bytes``,
+default 16 MiB; ``413`` over it, ``411`` without a length). The server hashes
+what it receives and answers ``400`` unless it matches the digest in the
+path. ``--blob-quota-bytes`` (default 256 MiB) bounds what one account may
+hold in total: ``507`` once a blob would not fit. Blobs live in
+``--blob-dir`` (default: the config database's path with ``.blobs`` added),
+created at the first upload. These routes are additions; the ``/config``
+wire format is still version 2.
 
 Run::
 
@@ -51,8 +73,9 @@ from typing import Annotated, Any, Dict, List, Optional, Tuple, Union
 
 try:
     from fastapi import Depends, FastAPI, Header, HTTPException, Request
+    from fastapi.concurrency import run_in_threadpool
     from fastapi.middleware.cors import CORSMiddleware
-    from fastapi.responses import JSONResponse
+    from fastapi.responses import JSONResponse, Response
     from fastapi.staticfiles import StaticFiles
     from pydantic import BaseModel
 except ImportError as exc:  # pragma: no cover - optional dep
@@ -61,9 +84,15 @@ except ImportError as exc:  # pragma: no cover - optional dep
         "pip install je_auto_control[signaling]"
     ) from exc
 
-from je_auto_control.utils.config_sync.client import ConfigBucket, ConfigSyncError
+from je_auto_control.utils.config_sync.blobs import (
+    DEFAULT_BLOB_QUOTA_BYTES, DEFAULT_MAX_BLOB_BYTES, BlobCapacityError, BlobDigestError,
+    BlobQuotaError, BlobStore, BlobStoreError, BlobTooLargeError,
+)
+from je_auto_control.utils.config_sync.bucket import (
+    ConfigBucket, ConfigSyncError, OperationMismatchError,
+)
 from je_auto_control.utils.config_sync.store import (
-    ConfigStore, RevisionConflictError, StoreCapacityError,
+    ConfigStore, RevisionConflictError, StoreCapacityError, default_store_path,
 )
 
 
@@ -78,6 +107,8 @@ _MAX_CONFIG_BYTES = 1024 * 1024
 _MAX_CONFIG_USERS = 1024
 #: The ``/config`` wire format this server speaks.
 CONFIG_WIRE_VERSION = 2
+#: ``code`` of the 409 that refuses an operation id reused for other content.
+CONFIG_OPERATION_MISMATCH = "operation_mismatch"
 _LOG = logging.getLogger("rd-signaling")
 _WEB_VIEWER_DIR = (
     __import__("pathlib").Path(__file__).parent / "web_viewer"
@@ -284,7 +315,8 @@ def _secret_matches(provided: Optional[str], shared_secret: Optional[str]) -> bo
         (provided or "").encode("utf-8"), shared_secret.encode("utf-8"))
 
 
-def _guard_refusal(request: Request, shared_secret: Optional[str]) -> Optional[JSONResponse]:
+def _guard_refusal(request: Request, shared_secret: Optional[str],
+                   max_blob_bytes: int = DEFAULT_MAX_BLOB_BYTES) -> Optional[JSONResponse]:
     """The response refusing ``request`` before its body is read, or ``None``.
 
     FastAPI reads and parses the body before it resolves route dependencies,
@@ -296,7 +328,7 @@ def _guard_refusal(request: Request, shared_secret: Optional[str]) -> Optional[J
     # ("example.com?") make it show another path (CVE-2026-48710, "BadHost"),
     # which would slip a request past a guard deciding by request.url.path.
     path = str(request.scope.get("path", ""))
-    if not path.startswith(("/sessions", "/config")) or request.method == "OPTIONS":
+    if not path.startswith(("/sessions", "/config", "/blobs")) or request.method == "OPTIONS":
         return None
     if not _secret_matches(request.headers.get("X-Signaling-Secret"), shared_secret):
         return JSONResponse({"detail": "bad shared secret"}, status_code=401)
@@ -305,16 +337,23 @@ def _guard_refusal(request: Request, shared_secret: Optional[str]) -> Optional[J
     length = request.headers.get("Content-Length")
     if length is None or not length.isdigit():
         return JSONResponse({"detail": "Content-Length required"}, status_code=411)
-    limit = _MAX_CONFIG_BYTES if path.startswith("/config") else _MAX_BODY_BYTES
-    if int(length) > limit:
+    if int(length) > _body_limit(path, max_blob_bytes):
         return JSONResponse({"detail": "request body too large"}, status_code=413)
     return None
 
 
-def _register_body_guard(app: FastAPI, shared_secret: Optional[str]) -> None:
+def _body_limit(path: str, max_blob_bytes: int) -> int:
+    """The largest body a POST / PUT to ``path`` may announce."""
+    if path.startswith("/blobs"):
+        return max_blob_bytes
+    return _MAX_CONFIG_BYTES if path.startswith("/config") else _MAX_BODY_BYTES
+
+
+def _register_body_guard(app: FastAPI, shared_secret: Optional[str],
+                         max_blob_bytes: int = DEFAULT_MAX_BLOB_BYTES) -> None:
     @app.middleware("http")
     async def _guard(request: Request, call_next):
-        refusal = _guard_refusal(request, shared_secret)
+        refusal = _guard_refusal(request, shared_secret, max_blob_bytes)
         return refusal if refusal is not None else await call_next(request)
 
 
@@ -327,7 +366,8 @@ def _validate_user_id(user_id: str) -> None:
 _CONFIG_RESPONSES = {
     400: {"description": "invalid user_id, envelope or bucket"},
     404: {"description": "no bucket for this user"},
-    409: {"description": "base_revision is not the current revision"},
+    409: {"description": "base_revision is not the current revision, or (code "
+                         "operation_mismatch) operation_id was used for another write"},
     428: {"description": "a write without base_revision / operation_id"},
     503: {"description": "too many users, or the store is unavailable"},
     **_AUTH_RESPONSES,
@@ -384,6 +424,13 @@ def _commit_config(store: ConfigStore, user_id: str, body: Dict[str, Any],
     except RevisionConflictError as conflict:
         return JSONResponse({"detail": "revision conflict", "revision": conflict.current_revision},
                             status_code=409)
+    except OperationMismatchError as mismatch:
+        # 409 like a revision conflict, so a client that knows only that
+        # status still learns nothing was written; ``code`` tells them apart.
+        return JSONResponse(
+            {"detail": "operation_id was already used for a different write",
+             "code": CONFIG_OPERATION_MISMATCH, "revision": mismatch.revision},
+            status_code=409)
 
 
 def _register_config_routes(app: FastAPI, store: ConfigStore, secret_dep,
@@ -422,6 +469,88 @@ def _register_config_routes(app: FastAPI, store: ConfigStore, secret_dep,
         return {"ok": True, "revision": outcome, "version": CONFIG_WIRE_VERSION}
 
 
+_BLOB_RESPONSES = {
+    400: {"description": "invalid user_id or digest, or content that does not hash to it"},
+    404: {"description": "the account holds no such blob"},
+    413: {"description": "larger than one blob may be"},
+    503: {"description": "too many accounts, or the store is unavailable"},
+    507: {"description": "the account's quota is used up"},
+    **_AUTH_RESPONSES,
+}
+_BLOB_FAILURES = (
+    (BlobDigestError, 400), (BlobTooLargeError, 413), (BlobQuotaError, 507),
+    (BlobCapacityError, 503),
+)
+
+
+def _blob_failure(error: BlobStoreError) -> HTTPException:
+    """The HTTP error a blob-store failure stands for."""
+    for kind, status in _BLOB_FAILURES:
+        if isinstance(error, kind):
+            return HTTPException(status_code=status, detail=str(error))
+    _LOG.error("blob store failed: %s", error)
+    return HTTPException(status_code=503, detail="blob store unavailable")
+
+
+def _blob_call(action, *arguments):
+    """Run one blob-store call, turning its failures into HTTP errors."""
+    try:
+        return action(*arguments)
+    except BlobStoreError as error:
+        raise _blob_failure(error) from error  # NOSONAR — see _BLOB_RESPONSES
+
+
+def _register_blob_routes(app: FastAPI, blobs: BlobStore, secret_dep) -> None:
+    """``/blobs/{user_id}/{sha256}`` for config sync's assets.
+
+    Content-addressed and per account: the path names the account, the
+    digest names the content, and the server checks the second itself.
+    """
+    auth_only = [Depends(secret_dep)]
+    one = "/blobs/{user_id}/{digest}"
+
+    @app.put(one, responses=_BLOB_RESPONSES, dependencies=auth_only)
+    async def _put_blob(user_id: str, digest: str, request: Request):
+        _validate_user_id(user_id)
+        # Bounded: the guard refused anything announcing more than the cap.
+        data = await request.body()
+        stored = await run_in_threadpool(_blob_call, blobs.put, user_id, digest, data)
+        return JSONResponse({"ok": True, "sha256": digest.lower(), "size": len(data),
+                             "stored": stored}, status_code=201 if stored else 200)
+
+    @app.get(one, responses=_BLOB_RESPONSES, dependencies=auth_only)
+    def _get_blob(user_id: str, digest: str):
+        _validate_user_id(user_id)
+        data = _blob_call(blobs.get, user_id, digest)
+        if data is None:
+            raise HTTPException(status_code=404, detail="no such blob")  # NOSONAR
+        return Response(content=data, media_type="application/octet-stream")
+
+    @app.head(one, responses=_BLOB_RESPONSES, dependencies=auth_only)
+    def _head_blob(user_id: str, digest: str):
+        _validate_user_id(user_id)
+        return Response(status_code=200 if _blob_call(blobs.has, user_id, digest) else 404)
+
+    @app.delete(one, responses=_BLOB_RESPONSES, dependencies=auth_only)
+    def _delete_blob(user_id: str, digest: str) -> dict:
+        _validate_user_id(user_id)
+        return {"deleted": _blob_call(blobs.delete, user_id, digest)}
+
+    @app.get("/blobs/{user_id}", responses=_BLOB_RESPONSES, dependencies=auth_only)
+    def _list_blobs(user_id: str) -> dict:
+        _validate_user_id(user_id)
+        return _blob_call(blobs.usage, user_id)
+
+
+def _blob_root(blob_store_path: Union[str, Path, None],
+               config_store_path: Union[str, Path, None]) -> Path:
+    """Where blobs go: the given folder, else beside the config database."""
+    if blob_store_path is not None:
+        return Path(blob_store_path)
+    database = Path(config_store_path) if config_store_path is not None else default_store_path()
+    return database.with_name(database.name + ".blobs")
+
+
 def _register_request_logging(app: FastAPI) -> None:
     @app.middleware("http")
     async def _log_request(request: Request, call_next):
@@ -436,7 +565,10 @@ def create_app(shared_secret: Optional[str] = None,
                serve_web_viewer: bool = True,
                cors_origins: Optional[list] = None, *,
                config_store_path: Union[str, Path, None] = None,
-               allow_blind_config_writes: bool = False) -> FastAPI:
+               allow_blind_config_writes: bool = False,
+               blob_store_path: Union[str, Path, None] = None,
+               max_blob_bytes: int = DEFAULT_MAX_BLOB_BYTES,
+               blob_quota_bytes: int = DEFAULT_BLOB_QUOTA_BYTES) -> FastAPI:
     """Build the FastAPI app. Importable for embedding in larger services.
 
     ``config_store_path`` is the SQLite file behind ``/config`` (default
@@ -444,17 +576,26 @@ def create_app(shared_secret: Optional[str] = None,
     ``/config`` request, not here. ``allow_blind_config_writes`` accepts the
     bare-bucket ``PUT`` of clients older than the version-2 envelope, which
     overwrites without a revision check.
+
+    ``blob_store_path`` is the folder behind ``/blobs`` (default: the config
+    database's path with ``.blobs`` added), created at the first upload.
+    ``max_blob_bytes`` caps one blob and ``blob_quota_bytes`` what one
+    account may hold in total.
     """
     app = FastAPI(title="AutoControl Signaling", version="1.0.0")
     store = _SessionStore(ttl_s=ttl_s)
+    blobs = BlobStore(_blob_root(blob_store_path, config_store_path),
+                      max_blob_bytes=max_blob_bytes, quota_bytes=blob_quota_bytes,
+                      max_users=_MAX_CONFIG_USERS)
     # Before CORS, so CORS wraps it and a browser still sees the 401 / 413.
-    _register_body_guard(app, shared_secret)
+    _register_body_guard(app, shared_secret, blobs.max_blob_bytes)
     _configure_cors(app, cors_origins)
     _maybe_mount_viewer(app, serve_web_viewer)
     secret_dep = _build_secret_dependency(shared_secret)
     _register_routes(app, store, secret_dep)
     _register_config_routes(app, ConfigStore(config_store_path, max_users=_MAX_CONFIG_USERS),
                             secret_dep, allow_blind_config_writes)
+    _register_blob_routes(app, blobs, secret_dep)
     _register_request_logging(app)
     return app
 
@@ -485,6 +626,15 @@ def _build_arg_parser() -> argparse.ArgumentParser:
                         help="accept the unconditional bucket PUT of clients older "
                              "than the version-2 envelope (no revision check: "
                              "concurrent pushes can overwrite each other)")
+    parser.add_argument("--blob-dir", default=None,
+                        help="folder for config-sync asset blobs (default: the "
+                             "config database's path with .blobs added)")
+    parser.add_argument("--max-blob-bytes", default=DEFAULT_MAX_BLOB_BYTES, type=int,
+                        help="largest single blob accepted at /blobs "
+                             f"(default: {DEFAULT_MAX_BLOB_BYTES})")
+    parser.add_argument("--blob-quota-bytes", default=DEFAULT_BLOB_QUOTA_BYTES, type=int,
+                        help="how much one account may store at /blobs in total "
+                             f"(default: {DEFAULT_BLOB_QUOTA_BYTES})")
     return parser
 
 
@@ -508,6 +658,9 @@ def main(argv: Optional[list] = None) -> None:
         cors_origins=args.cors_origin,
         config_store_path=args.config_db or os.environ.get("AC_SIGNALING_CONFIG_DB") or None,
         allow_blind_config_writes=args.allow_blind_config_writes,
+        blob_store_path=args.blob_dir,
+        max_blob_bytes=args.max_blob_bytes,
+        blob_quota_bytes=args.blob_quota_bytes,
     )
     uvicorn.run(app, host=args.bind, port=args.port, log_level="info")
 

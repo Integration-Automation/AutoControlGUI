@@ -10,6 +10,7 @@ same thing and a person has to choose.
 Syncing runs on a worker thread with a cancel event; closing the tab sets
 the event, so a sync waiting on the network does not outlive its view.
 """
+import math
 import threading
 import time
 from typing import Any, Callable, Dict, List, Optional, Tuple
@@ -125,7 +126,7 @@ class ConfigSyncTab(TranslatableMixin, QWidget):
             return
         cancel = threading.Event()
         self._start(lambda: session.config_sync_run(
-            settings["server_url"], settings["user_id"], cancel=cancel,
+            settings["server_url"], settings["user_id"], cancel=cancel, force=True,
             **settings["options"]), cancel)
 
     def full_resync(self) -> None:
@@ -205,7 +206,11 @@ class ConfigSyncTab(TranslatableMixin, QWidget):
     def _render(self) -> None:
         status = self._status
         state = str(status.get("state", "never"))
-        self._state.setText(f"{_t('config_sync_state_label')}: {_t(f'config_sync_state_{state}')}")
+        text = f"{_t('config_sync_state_label')}: {_t(f'config_sync_state_{state}')}"
+        retry_in = float(status.get("retry_in_s") or 0.0)
+        if retry_in > 0 and state in ("backing_off", "offline"):
+            text += f" ({_t('config_sync_retry_in').format(seconds=math.ceil(retry_in))})"
+        self._state.setText(text)
         succeeded = float(status.get("last_success") or 0.0)
         when = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(succeeded)) if succeeded else "-"
         lines = [

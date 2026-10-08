@@ -29,7 +29,7 @@ from dataclasses import dataclass, field, fields
 from pathlib import Path, PurePosixPath
 from typing import Any, ClassVar, Dict, Iterable, List, Mapping, Optional, Set, Tuple, Union
 
-from je_auto_control.utils.config_sync.client import ConfigSyncError
+from je_auto_control.utils.config_sync.bucket import ConfigSyncError
 from je_auto_control.utils.config_sync.versions import SyncEntry, SyncOperation
 from je_auto_control.utils.exception.exceptions import AutoControlException
 
@@ -417,25 +417,45 @@ class HotkeySyncAdapter(SyncAdapter):
         self._daemon.unbind(key)
 
 
+#: How deep composite triggers may nest, and how many children one may hold,
+#: in a definition that arrives from the bucket.
+MAX_TRIGGER_DEPTH = 8
+MAX_TRIGGER_CHILDREN = 64
+_CHILDREN = "children"
+
+
 def _trigger_types() -> Dict[str, Any]:
     from je_auto_control.utils.triggers import trigger_engine
     return {cls.__name__: cls for cls in (
         trigger_engine.ImageAppearsTrigger, trigger_engine.WindowAppearsTrigger,
         trigger_engine.PixelColorTrigger, trigger_engine.FilePathTrigger,
-        trigger_engine.CronTrigger)}
+        trigger_engine.CronTrigger, trigger_engine.AllOfTrigger,
+        trigger_engine.AnyOfTrigger, trigger_engine.SequenceTrigger)}
 
 
 class TriggerSyncAdapter(SyncAdapter):
     """The triggers of a ``TriggerEngine``; an arriving trigger is never armed.
 
-    Image, window, pixel, file and cron triggers are synced. Composite
-    triggers (all-of / any-of / sequence) hold other trigger objects and stay
-    local; they are listed in :attr:`withheld`.
+    Image, window, pixel, file and cron triggers are synced, and so are the
+    composites built from them (all-of / any-of / sequence): a composite
+    travels as its own fields plus a ``children`` list of definitions, each
+    with its ``type`` and ``trigger_id``, nested as deep as the composite is.
+    A child's paths are made portable like any other; its ``enabled``,
+    ``fired`` and ``script_path`` mean nothing inside a composite and are
+    not sent. The composite that arrives is created disabled like every
+    other trigger, with disabled children.
+
+    A composite holding a child that is not one of those types (anything
+    with ``is_fired`` can be a child) stays local and is listed in
+    :attr:`withheld`. The RBAC principal that registered a trigger never
+    leaves the machine; the receiving engine records its own.
     """
 
     section = "triggers"
     path_fields = ("script_path", "image_path", "watch_path")
-    local_fields = ("enabled", "fired", "trigger_id")
+    local_fields = ("enabled", "fired", "trigger_id", "owner")
+    #: What is dropped from a child on top of ``local_fields`` (its id is kept).
+    child_only_fields = ("script_path",)
     arms_on_enable = True
 
     def __init__(self, origin: str, engine: Any, *,
@@ -446,20 +466,80 @@ class TriggerSyncAdapter(SyncAdapter):
         self.withheld: Dict[str, str] = {}
 
     def read_local(self) -> Dict[str, Dict[str, Any]]:
-        known = _trigger_types()
         items: Dict[str, Dict[str, Any]] = {}
         self.withheld = {}
         for trigger in self._engine.list_triggers():
-            kind = type(trigger).__name__
-            if kind not in known:
-                self.withheld[trigger.trigger_id] = f"{kind} is not synced"
-                continue
-            item = {spec.name: getattr(trigger, spec.name) for spec in fields(trigger)
-                    if not spec.name.startswith("_")}
-            if isinstance(item.get("target_rgb"), tuple):
-                item["target_rgb"] = list(item["target_rgb"])
-            items[trigger.trigger_id] = {"type": kind, **item}
+            try:
+                items[trigger.trigger_id] = self._describe(trigger, 0)
+            except ConfigSyncError as reason:
+                self.withheld[trigger.trigger_id] = str(reason)
         return items
+
+    def _describe(self, trigger: Any, depth: int) -> Dict[str, Any]:
+        """``trigger`` as a plain definition; ``ConfigSyncError`` if it cannot be one."""
+        kind = type(trigger).__name__
+        if _trigger_types().get(kind) is not type(trigger):
+            raise ConfigSyncError(f"{kind} is not synced")
+        if depth > MAX_TRIGGER_DEPTH:
+            raise ConfigSyncError(f"nested more than {MAX_TRIGGER_DEPTH} composites deep")
+        item: Dict[str, Any] = {"type": kind}
+        for spec in fields(trigger):
+            if not spec.name.startswith("_") and spec.name != "owner":
+                item[spec.name] = getattr(trigger, spec.name)
+        if isinstance(item.get("target_rgb"), tuple):
+            item["target_rgb"] = list(item["target_rgb"])
+        if _CHILDREN in item:
+            item[_CHILDREN] = [self._describe_child(child, depth + 1)
+                               for child in item[_CHILDREN]]
+        return item
+
+    def _describe_child(self, child: Any, depth: int) -> Dict[str, Any]:
+        try:
+            described = self._describe(child, depth)
+        except ConfigSyncError as reason:
+            raise ConfigSyncError(f"it holds a child that cannot be synced: {reason}") from reason
+        dropped = ("enabled", "fired", *self.child_only_fields)
+        return {name: item for name, item in described.items() if name not in dropped}
+
+    def to_portable(self, value: Mapping[str, Any]) -> Dict[str, Any]:
+        """As :meth:`SyncAdapter.to_portable`, applied to every child as well."""
+        own = {name: item for name, item in value.items() if name != _CHILDREN}
+        portable = super().to_portable(own)
+        children = value.get(_CHILDREN)
+        if isinstance(children, list):
+            portable[_CHILDREN] = [self._portable_child(child) for child in children]
+        return portable
+
+    def _portable_child(self, child: Any) -> Any:
+        if not isinstance(child, Mapping):
+            return child
+        portable = self.to_portable(child)
+        if "trigger_id" in child:
+            portable["trigger_id"] = child["trigger_id"]     # a child's id is part of it
+        return portable
+
+    def from_portable(self, value: Mapping[str, Any],
+                      existing: Optional[Mapping[str, Any]]) -> Dict[str, Any]:
+        """As :meth:`SyncAdapter.from_portable`; a child's references are filled
+        from the child with the same id that this machine already holds."""
+        return self._localised(value, existing, 0)
+
+    def _localised(self, value: Mapping[str, Any], existing: Optional[Mapping[str, Any]],
+                   depth: int) -> Dict[str, Any]:
+        if depth > MAX_TRIGGER_DEPTH:
+            raise ConfigSyncError(
+                f"composite triggers nested more than {MAX_TRIGGER_DEPTH} deep")
+        own = {name: item for name, item in value.items() if name != _CHILDREN}
+        local = SyncAdapter.from_portable(self, own, existing)
+        children = value.get(_CHILDREN)
+        if isinstance(children, list):
+            held = _children_by_id(existing)
+            local[_CHILDREN] = [
+                self._localised(child, held.get(child.get("trigger_id")), depth + 1)
+                if isinstance(child, Mapping) else child for child in children]
+        elif _CHILDREN in value:
+            local[_CHILDREN] = children
+        return local
 
     def snapshot(self) -> Mapping[str, SyncEntry]:
         entries = dict(super().snapshot())
@@ -469,6 +549,13 @@ class TriggerSyncAdapter(SyncAdapter):
 
     def write_local(self, key: str, value: Dict[str, Any],
                     existing: Optional[Dict[str, Any]]) -> None:
+        # Disabled unless this machine had already enabled the same trigger.
+        enabled = bool(existing.get("enabled")) if existing is not None else False
+        # Built completely first: a composite with one bad child is not added.
+        self._engine.add(self._build(key, value, enabled, 0))
+
+    def _build(self, key: str, value: Mapping[str, Any], enabled: bool, depth: int) -> Any:
+        """The trigger object ``value`` defines; children are always disabled."""
         known = _trigger_types()
         kind = value.get("type")
         if kind not in known:
@@ -478,12 +565,36 @@ class TriggerSyncAdapter(SyncAdapter):
                      if name in allowed and name not in self.local_fields}
         if "target_rgb" in arguments:
             arguments["target_rgb"] = tuple(arguments["target_rgb"])
-        # Disabled unless this machine had already enabled the same trigger.
-        enabled = bool(existing.get("enabled")) if existing is not None else False
-        self._engine.add(known[kind](trigger_id=key, enabled=enabled, **arguments))
+        if _CHILDREN in arguments:
+            arguments[_CHILDREN] = self._build_children(arguments[_CHILDREN], depth + 1)
+        if depth:
+            arguments["script_path"] = ""       # only a registered trigger runs a script
+        return known[kind](trigger_id=key, enabled=enabled, **arguments)
+
+    def _build_children(self, children: Any, depth: int) -> List[Any]:
+        if depth > MAX_TRIGGER_DEPTH:
+            raise ConfigSyncError(
+                f"composite triggers nested more than {MAX_TRIGGER_DEPTH} deep")
+        if not isinstance(children, list) or len(children) > MAX_TRIGGER_CHILDREN:
+            raise ConfigSyncError(
+                f"children must be a list of at most {MAX_TRIGGER_CHILDREN} trigger definitions")
+        built = []
+        for child in children:
+            if not isinstance(child, Mapping):
+                raise ConfigSyncError("children must be trigger definitions (objects)")
+            built.append(self._build(str(child.get("trigger_id") or ""), child, False, depth))
+        return built
 
     def delete_local(self, key: str) -> None:
         self._engine.remove(key)
+
+
+def _children_by_id(trigger: Optional[Mapping[str, Any]]) -> Dict[Any, Mapping[str, Any]]:
+    """The children of a local trigger definition, by their id."""
+    children = trigger.get(_CHILDREN) if trigger is not None else None
+    if not isinstance(children, list):
+        return {}
+    return {child.get("trigger_id"): child for child in children if isinstance(child, Mapping)}
 
 
 class AddressBookSyncAdapter(SyncAdapter):
@@ -526,6 +637,7 @@ class AddressBookSyncAdapter(SyncAdapter):
 
 __all__ = [
     "AddressBookSyncAdapter", "ApplyReport", "HotkeySyncAdapter", "LOCAL_REF",
-    "LocatorSyncAdapter", "MAX_INLINE_SCRIPT_BYTES", "ScriptSyncAdapter", "SyncAdapter",
+    "LocatorSyncAdapter", "MAX_INLINE_SCRIPT_BYTES", "MAX_TRIGGER_CHILDREN",
+    "MAX_TRIGGER_DEPTH", "ScriptSyncAdapter", "SyncAdapter",
     "TriggerSyncAdapter", "is_local_ref",
 ]

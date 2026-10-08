@@ -321,7 +321,6 @@ je_auto_control.utils.config_redaction.config_redaction
 je_auto_control.utils.config_schema
 je_auto_control.utils.config_schema.config_schema
 je_auto_control.utils.config_sync
-je_auto_control.utils.config_sync.client
 je_auto_control.utils.confusables
 je_auto_control.utils.confusables.confusables
 je_auto_control.utils.contrast_map

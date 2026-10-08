@@ -245,4 +245,7 @@ MCP 伺服器
    * - ``AC_SIGNALING_CONFIG_DB``
      - 未設定 / 路徑
      - 信令伺服器存放設定同步資料的 SQLite 檔案。未設定時為
-       ``~/.je_auto_control/config_sync.sqlite3``。
+       ``~/.je_auto_control/config_sync.sqlite3``。資產 blob(``/blobs``)
+       放在同一路徑加上 ``.blobs`` 的資料夾,除非以 ``--blob-dir`` 指定;
+       ``--max-blob-bytes`` 與 ``--blob-quota-bytes`` 限制它們的大小
+       (只有旗標,沒有對應的環境變數)。

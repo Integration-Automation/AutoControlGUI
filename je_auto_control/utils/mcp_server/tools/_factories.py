@@ -9251,11 +9251,13 @@ def config_sync_tools() -> List[MCPTool]:
     target = {"server_url": {"type": "string"}, "user_id": {"type": "string"}}
     options = {
         "device_id": {"type": "string"}, "secret": {"type": "string"},
-        "sections": {"type": "array", "items": {"type": "string"}},
+        "sections": {"type": "array", "items": {
+            "type": "string", "enum": list(h_sync.SYNCABLE_SECTIONS)}},
         "scripts_dir": {"type": "string", "format": "path"},
         "locators_path": {"type": "string", "format": "path"},
         "outbox_path": {"type": "string", "format": "path"},
         "assets_dir": {"type": "string", "format": "path"},
+        "assets_server": {"type": "boolean"},
         "timeout_s": {"type": "number"},
     }
     required = ["server_url", "user_id"]
@@ -9264,12 +9266,20 @@ def config_sync_tools() -> List[MCPTool]:
             name="ac_config_sync_run",
             description=("Sync this machine's hotkeys, triggers, address book (and "
                          "scripts / locators when their paths are given) with the "
-                         "config-sync server once. Local changes are queued durably "
+                         "config-sync server once. A path ADDS its section to those "
+                         "three; pass sections (e.g. [\"scripts\"]) to sync only the "
+                         "ones named. The result's 'sections' lists what was covered. "
+                         "Local changes are queued durably "
                          "and sent on top of the server's revision; concurrent edits "
                          "of one entry are kept as a conflict. Received hotkeys and "
                          "triggers are created DISABLED and nothing is run. Returns "
-                         "{state, revision, pending, conflicts, applied, error}."),
+                         "{state, revision, pending, conflicts, applied, error, "
+                         "retry_in_s}. state 'offline' = this run tried the server and "
+                         "failed; 'backing_off' = it did not try, an earlier failure's "
+                         "retry delay (retry_in_s) is still running -- pass force=true "
+                         "to skip that delay once."),
             input_schema=schema({**target, **options, "wait": {"type": "boolean"},
+                                 "force": {"type": "boolean"},
                                  "max_attempts": {"type": "integer"}}, required),
             handler=h_sync.config_sync_run,
             annotations=DESTRUCTIVE,
@@ -9278,8 +9288,11 @@ def config_sync_tools() -> List[MCPTool]:
             name="ac_config_sync_status",
             description=("Report the recorded config-sync state for an account and "
                          "server without touching the network: {state, revision, "
-                         "pending, conflicts, conflict_details, last_success, error}."),
-            input_schema=schema({**target, "outbox_path": options["outbox_path"]}, required),
+                         "pending, conflicts, conflict_details, last_success, error, "
+                         "retry_in_s}."),
+            # The options of the other three are accepted (only outbox_path
+            # matters here), so one argument object serves all four tools.
+            input_schema=schema({**target, **options}, required),
             handler=h_sync.config_sync_status,
             annotations=READ_ONLY,
         ),

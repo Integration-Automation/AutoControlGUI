@@ -1301,6 +1301,8 @@ english_word_dict = {
     "config_sync_state_pending": "changes waiting to be sent",
     "config_sync_state_conflict": "conflict: a choice is needed",
     "config_sync_state_offline": "offline: changes are queued",
+    "config_sync_state_backing_off": "waiting to retry: the server has not been tried again yet",
+    "config_sync_retry_in": "next automatic attempt in {seconds} s",
     "config_sync_state_cancelled": "cancelled",
     "config_sync_state_resync_required": "retired: a full resync is required",
     "config_sync_revision": "Last merged revision",

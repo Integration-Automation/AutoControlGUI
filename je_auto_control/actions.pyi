@@ -928,7 +928,12 @@ def AC_config_sync_resolve(
 def AC_config_sync_run(server_url: str, user_id: str, *, cancel: Any = ..., **options: Any) -> Dict[str, Any]:
     """Sync this machine's settings with ``server_url`` once; returns the report."""
 
-def AC_config_sync_status(server_url: str, user_id: str, outbox_path: Optional[str] = ...) -> Dict[str, Any]:
+def AC_config_sync_status(
+    server_url: str,
+    user_id: str,
+    outbox_path: Optional[str] = ...,
+    **options: Any,
+) -> Dict[str, Any]:
     """The recorded sync state for this account and server; no network."""
 
 def AC_confusable_compare(first: str, second: str) -> Dict[str, Any]:

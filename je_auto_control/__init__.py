@@ -282,6 +282,14 @@ from je_auto_control.utils.config_sync import (
     SyncOperation, SyncOutbox, config_sync_full_resync, config_sync_resolve,
     config_sync_run, config_sync_status, merge_entries, sync_assets,
 )
+# ... the errors a caller catches, the adapters it builds, the transports, the cycle
+from je_auto_control.utils.config_sync import (
+    AddressBookSyncAdapter, BlobStore, ConfigStoreError, DirectoryAssetTransport,
+    HotkeySyncAdapter, HttpAssetTransport, LocatorSyncAdapter, OperationMismatchError,
+    RevisionConflictError, ScriptSyncAdapter, TriggerSyncAdapter, run_sync,
+)
+# The /config wire format; named for what it versions (the module calls it WIRE_VERSION)
+from je_auto_control.utils.config_sync import WIRE_VERSION as CONFIG_SYNC_WIRE_VERSION
 # Step-through debugger / tracer for action lists
 from je_auto_control.utils.flow_debugger import FlowDebugger, trace_actions
 # Persistent library of reusable action sequences (skills/playbooks)
@@ -1795,6 +1803,10 @@ __all__ = [
     "ConfigSyncError", "FullResyncRequired", "MergeDecision", "SyncAdapter", "SyncEntry",
     "SyncOperation", "SyncOutbox", "config_sync_full_resync", "config_sync_resolve",
     "config_sync_run", "config_sync_status", "merge_entries", "sync_assets",
+    "AddressBookSyncAdapter", "BlobStore", "CONFIG_SYNC_WIRE_VERSION", "ConfigStoreError",
+    "DirectoryAssetTransport", "HotkeySyncAdapter", "HttpAssetTransport",
+    "LocatorSyncAdapter", "OperationMismatchError", "RevisionConflictError",
+    "ScriptSyncAdapter", "TriggerSyncAdapter", "run_sync",
     "ConfigField", "ConfigSchema", "coerce", "validate_config",
     "PathNotAllowedError", "PathPolicy",
     "RefResolver", "SecretRefError", "is_ref", "resolve_ref", "resolve_refs_in",

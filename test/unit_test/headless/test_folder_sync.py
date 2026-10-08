@@ -15,6 +15,16 @@ def watch_dir(tmp_path):
     return target
 
 
+def _wait_until(predicate, timeout=15.0):
+    """Poll ``predicate``; a fixed sleep counted ticks and raced a loaded runner."""
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        if predicate():
+            return True
+        time.sleep(0.05)
+    return predicate()
+
+
 def _make_engine(watch, sender, *, interval=0.2, include_subdirs=False):
     return FolderSyncEngine(
         watch_dir=watch, sender=sender,
@@ -43,10 +53,10 @@ def test_new_file_is_pushed(watch_dir):
     try:
         assert engine.wait_until_ready()  # baseline is fixed from here on
         (watch_dir / "new.txt").write_text("hi", encoding="utf-8")
-        time.sleep(1.1)
+        # Two ticks now: one to see it, one to see it has stopped changing.
+        assert _wait_until(lambda: "new.txt" in sent), sent
     finally:
         engine.stop()
-    assert "new.txt" in sent, sent
 
 
 def test_modified_file_is_pushed_again(watch_dir, tmp_path):
@@ -66,7 +76,8 @@ def test_modified_file_is_pushed_again(watch_dir, tmp_path):
         staged.write_text("v2", encoding="utf-8")
         os.utime(staged, (future, future))
         os.replace(staged, target)
-        time.sleep(1.1)
+        assert _wait_until(lambda: "doc.txt" in sent), sent
+        time.sleep(1.1)       # two more ticks: it must not be sent a second time
     finally:
         engine.stop()
     assert sent.count("doc.txt") == 1, sent
@@ -102,8 +113,8 @@ def test_sender_failure_is_retried_next_tick(watch_dir):
     try:
         assert engine.wait_until_ready()
         (watch_dir / "retry.txt").write_text("data", encoding="utf-8")
-        # Engine clamps interval to 0.5s minimum, so wait ≥1.5s for two ticks.
-        time.sleep(1.7)
+        # The file settles for one tick, then the failed send is retried on the next.
+        assert _wait_until(lambda: len(attempts) >= 2), attempts
     finally:
         engine.stop()
     assert len(attempts) >= 2, attempts

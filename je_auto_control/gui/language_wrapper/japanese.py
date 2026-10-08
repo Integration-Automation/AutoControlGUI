@@ -1191,6 +1191,8 @@ japanese_word_dict = {
     "config_sync_state_pending": "送信待ちの変更あり",
     "config_sync_state_conflict": "競合: 選択が必要です",
     "config_sync_state_offline": "オフライン: 変更はキューに保存されています",
+    "config_sync_state_backing_off": "再試行待ち: サーバーにはまだ再接続していません",
+    "config_sync_retry_in": "次の自動再試行まで {seconds} 秒",
     "config_sync_state_cancelled": "キャンセルされました",
     "config_sync_state_resync_required": "退役済み: 完全再同期が必要です",
     "config_sync_revision": "最後にマージしたリビジョン",
