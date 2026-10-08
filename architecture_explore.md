@@ -940,7 +940,7 @@ GUI 是**選用 extra**（`pip install je_auto_control[gui]`，PySide6），且�
 | flakiness | `flakiness_tab.py` | 117 | 依執行歷史排序間歇失敗的腳本。 |
 | a11y_audit | `a11y_audit_tab.py` | 114 | 從即時樹找出無障礙／i18n 缺陷。 |
 | device_matrix | `device_matrix_tab.py` | 111 | 一份 action list 跨多裝置平行執行。 |
-| mobile | `mobile_tab.py` | 0 | Android／iOS 裝置：能力探測、手勢、App 生命週期，指令來自 `wrapper/mobile_commands.py` 的同一張表。 |
+| mobile | `mobile_tab.py` | 186 | Android／iOS 裝置：能力探測、手勢、App 生命週期，指令來自 `wrapper/mobile_commands.py` 的同一張表。 |
 | media_checks | `media_checks_tab.py` | 116 | 音訊活動與影片動態斷言。 |
 | run_history | `run_history_tab.py` + `run_history_timeline.py` | 462 | 瀏覽過去的排程／觸發／熱鍵執行，含自訂時間軸元件。 |
 | profiler | `profiler_tab.py` | 131 | 視覺化逐動作耗時熱點。 |
@@ -952,7 +952,7 @@ GUI 是**選用 extra**（`pip install je_auto_control[gui]`，PySide6），且�
 | trace_replay | `trace_replay_tab.py` | 187 | 拖曳捲動時光回溯錄製內容。 |
 | remote_desktop | `remote_desktop/`（17 檔） | 6,240 | 見下。 |
 | presence | `presence_tab.py` | 152 | 多檢視者在場名單。 |
-| config_sync | `config_sync_tab.py` | 0 | 設定同步：revision、待送、衝突與離線狀態；可取消的 worker。 |
+| config_sync | `config_sync_tab.py` | 236 | 設定同步：revision、待送、衝突與離線狀態；可取消的 worker。 |
 | rest_api | `rest_api_tab.py` | 198 | 啟停 HTTP 前端並顯示 URL 與 token。 |
 | admin_console | `admin_console_tab.py` | 313 | 管理多個遠端 AutoControl REST 端點。 |
 | audit_log | `audit_log_tab.py` | 192 | 瀏覽並驗證防竄改雜湊鏈。 |
