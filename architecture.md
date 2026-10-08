@@ -49,7 +49,7 @@ entry points → execution core (`utils/executor/`) → headless capabilities (`
 | MCP server | `je_auto_control_mcp` → `utils/mcp_server/__main__.py:main` | stdio; `start_mcp_stdio_server()`; HTTP transport via the `AC_start_mcp_http_server` command. |
 | REST API | `je_auto_control start-rest`, `python -m je_auto_control.utils.rest_api`, `start_rest_api_server()` | Default `127.0.0.1:9939`, bearer token + rate limit. |
 | TCP server | `je_auto_control start-server`, `start_autocontrol_socket_server()` | `utils/socket_server/auto_control_socket_server.py`, default `127.0.0.1:9938`, JSON action lists. |
-| pytest plugin | `pytest11` entry point `je_auto_control.utils.pytest_plugin.plugin` | Loaded automatically once the package is installed (see coverage rule in §7). |
+| pytest plugin | `pytest11` entry point `je_auto_control_pytest` (top-level module, imports only pytest; `je_auto_control.utils.pytest_plugin` re-exports it) | Loaded automatically once the package is installed, without importing the package (see coverage rule in §7). |
 | LSP | `autocontrol-lsp` → `autocontrol_lsp.server.server:run`; `python -m autocontrol_lsp.server` | Command list is read from the live executor. |
 | GUI | `start_autocontrol_gui()` in `gui/__init__.py`; `exe/start_autocontrol_gui.py` | Needs `pip install je_auto_control[gui]`; PySide6 is imported only under `gui/`. |
 | Action lint | `python -m je_auto_control.utils.action_lint` | Used by `.github/workflows/action-json-lint.yml`. |

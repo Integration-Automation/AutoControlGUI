@@ -33,13 +33,19 @@ python -m build                             # build
 ```
 
 **Coverage is measured with `coverage run -m pytest`, never `pytest --cov`.**
-This package registers a `pytest11` entry point, so pytest imports
-`je_auto_control.utils.pytest_plugin.plugin` — and with it the whole facade —
-while loading plugins, before pytest-cov starts. Several hundred modules then
-have their import-time lines recorded as never executed: measured, that is
-11,962 statements and ~24 percentage points (52.22% vs 72.05% on the same
-suite). `test/unit_test/headless/test_coverage_measurement.py` holds CI to the
-correct spelling.
+This package registers a `pytest11` entry point. While it pointed at
+`je_auto_control.utils.pytest_plugin.plugin`, pytest imported that submodule —
+and with it the whole facade — while loading plugins, before pytest-cov starts.
+Several hundred modules then had their import-time lines recorded as never
+executed: measured, that was 11,962 statements and ~24 percentage points
+(52.22% vs 72.05% on the same suite). The entry point is now the top-level
+module `je_auto_control_pytest`, which imports only pytest
+(`test_pytest_entrypoint_light.py` keeps it so), but `coverage run` remains the
+rule: it does not depend on what a plugin imports or on which build is
+installed, and `pytest --cov` has not been re-measured since.
+`test/unit_test/headless/test_coverage_measurement.py` holds CI to the
+correct spelling. After changing the entry point, reinstall (`pip install -e .`)
+for it to take effect.
 
 **Measure it with the `[webrtc]` extra installed**, which is why it is in the
 line above. Eleven modules under `utils/remote_desktop` raise `ImportError` at

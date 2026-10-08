@@ -1,12 +1,12 @@
-"""Why this package cannot measure its own coverage with ``pytest --cov``.
+"""Why this package measures its coverage with ``coverage run -m pytest``.
 
-``je_auto_control`` registers a ``pytest11`` entry point, so pytest imports
-``je_auto_control.utils.pytest_plugin.plugin`` while it is loading plugins —
-and importing that submodule executes ``je_auto_control/__init__.py``, the
-facade, which imports several hundred modules. ``pytest-cov`` starts measuring
-after plugin loading, so every one of those modules had its import-time lines
-(``def`` lines, class bodies, constants, the dispatch tables) recorded as never
-executed.
+``je_auto_control`` registers a ``pytest11`` entry point. Until 2026-10 it
+pointed at ``je_auto_control.utils.pytest_plugin.plugin``, so pytest imported
+that submodule while loading plugins — which executes
+``je_auto_control/__init__.py``, the facade, and with it several hundred
+modules. ``pytest-cov`` starts measuring after plugin loading, so every one of
+those modules had its import-time lines (``def`` lines, class bodies,
+constants, the dispatch tables) recorded as never executed.
 
 That is not a small correction. Measured 2026-08-23 on one machine, same suite
 and same ``[tool.coverage.run]`` config, the *only* difference being when
@@ -17,25 +17,21 @@ itself +369). The floor in ``pyproject.toml`` had been set from the low number.
 
 So ``quality.yml`` runs ``coverage run -m pytest``, which starts before pytest
 loads anything. These tests pin that, because the difference between the two
-spellings is invisible in a green build: reverting to ``pytest --cov`` gives
-back 24 points and every job still passes.
+spellings is invisible in a green build: reverting to ``pytest --cov`` gave
+back 24 points and every job still passed.
+
+The entry point is now the top-level module ``je_auto_control_pytest``, which
+imports only pytest (``test_pytest_entrypoint_light.py``), so the plugin no
+longer pulls the facade in. ``coverage run`` stays all the same: it does not
+depend on what any plugin imports or on which build of the package is
+installed — an environment that still has an older install keeps the old
+entry point until it is reinstalled — and nothing has re-measured
+``pytest --cov`` against it since the move.
 """
-import sys
 from pathlib import Path
 
 _REPO_ROOT = Path(__file__).resolve().parents[3]
 _QUALITY_YML = _REPO_ROOT / ".github" / "workflows" / "quality.yml"
-
-
-def test_the_facade_is_imported_before_any_test_runs():
-    """The premise: pytest has already imported the package by test time.
-
-    This is what makes the measurement order matter. It holds no matter which
-    test file runs first and with no conftest of ours involved, because the
-    entry point pulls the facade in during plugin loading.
-    """
-    assert "je_auto_control" in sys.modules
-    assert "je_auto_control.utils.pytest_plugin.plugin" in sys.modules
 
 
 def test_ci_starts_coverage_before_pytest_loads_plugins():
