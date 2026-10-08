@@ -1656,6 +1656,26 @@ def _add_flow_specs(specs: List[CommandSpec]) -> None:
         description="Run each branch action list concurrently (JSON list).",
     ))
     specs.append(CommandSpec(
+        "AC_run_stoppable", "Flow", "Stoppable Run",
+        fields=(
+            FieldSpec("run_id", FieldType.STRING, optional=True, placeholder="nightly"),
+        ),
+        body_keys=("body",),
+        description="Run the body as a named run that AC_stop_execution can end.",
+    ))
+    specs.append(CommandSpec(
+        "AC_stop_execution", "Flow", "Stop Execution",
+        fields=(
+            FieldSpec("run_id", FieldType.STRING, optional=True, placeholder="nightly"),
+            FieldSpec("reason", FieldType.STRING, optional=True),
+        ),
+        description="Ask a stoppable run (or every other one) to stop at its next checkpoint.",
+    ))
+    specs.append(CommandSpec(
+        "AC_list_executions", "Flow", "List Stoppable Runs",
+        description="List the stoppable runs in progress.",
+    ))
+    specs.append(CommandSpec(
         "AC_define_macro", "Flow", "Define Macro",
         fields=(
             FieldSpec("name", FieldType.STRING),

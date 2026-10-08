@@ -498,6 +498,77 @@ single-set, JSON seed, and clear-all controls; reflects what
 ``AC_set_var`` / ``AC_for_each`` mutate at runtime.
 
 
+Stopping a running script
+=========================
+
+A run can be stopped from outside once it is a *stoppable run*. Plain
+``executor.execute_action(...)`` is unchanged: without a stop token nothing is
+checked and nothing can interrupt it.
+
+::
+
+   import threading
+   import je_auto_control as ac
+
+   def job():
+       try:
+           ac.execute_action_with_vars(actions, {}, run_id="nightly")
+       except ac.ExecutionStopped as stopped:
+           print("stopped:", stopped.reason)
+
+   threading.Thread(target=job).start()
+   ...
+   ac.stop_execution("nightly", reason="operator")   # returns at once
+   ac.active_executions()   # [{"run_id": ..., "started_at": ..., "stopping": ...}]
+
+``stoppable_run(run_id=None, token=None)`` is the context manager behind it;
+it yields the run's ``StopToken`` (``stop()``, ``stopped``, ``run_id``). From
+an action list -- a JSON file, a REST / socket / MCP request, a scheduler job
+-- wrap the part that should be stoppable in the ``AC_run_stoppable`` block
+and stop it from any other entry point of the same process::
+
+   [["AC_run_stoppable", {"run_id": "nightly", "body": [
+       ["AC_loop", {"times": 1000, "body": [["AC_sleep", {"seconds": 5}]]}]
+   ]}]]
+
+   [["AC_stop_execution", {"run_id": "nightly", "reason": "operator"}]]
+   [["AC_list_executions"]]
+
+``AC_stop_execution`` without ``run_id`` (and ``stop_execution()``) stops every
+stoppable run except the caller's own.
+
+What a stop does:
+
+* **Checked** before every action, at every pass of ``AC_loop`` /
+  ``AC_while_image`` / ``AC_while_var`` / ``AC_for_each`` / ``AC_for_each_row``
+  (also with an empty body), and inside the waits of ``AC_sleep``,
+  ``AC_wait_image``, ``AC_wait_pixel`` and the ``AC_retry`` back-off, which
+  wake at once. ``AC_parallel`` branches stop with their run.
+* **Raises** ``ExecutionStopped`` (an ``AutoControlException``) on the run's
+  own thread. It is never recorded-and-continued, whatever ``raise_on_error``
+  says, and ``AC_try`` / ``AC_retry`` do not catch it: ``catch`` is skipped.
+  A test suite stops as a whole instead of marking the case as errored.
+* **Unwinds** through every ``finally``: ``AC_type_keyboard``, ``AC_hotkey``
+  and ``AC_with_modifiers`` release what they hold, and an ``AC_try``
+  ``finally`` branch runs to its end. A second stop request interrupts that
+  cleanup as well, so cleanup that never returns cannot make a run unstoppable.
+* **Releases** the keys and mouse buttons the run pressed with
+  ``AC_press_keyboard_key`` / ``AC_press_mouse`` and had not released.
+* **Is sticky**: a command that swallows the exception only delays it to the
+  next checkpoint.
+
+What it does not do: interrupt a command that is already inside its backend
+(one image search, one OCR read, one HTTP request, a wrapper's own
+``time.sleep``). The run ends when that command returns. Two active runs
+cannot share a ``run_id``.
+
+GUI: the Script, Script Builder, LLM Planner, Record (playback), Test Suites
+and ChatOps tabs execute off the GUI thread, one run at a time per tab, and
+each has a **Stop run** (**Stop playback**) action. ``Ctrl+4`` and the
+Auto Click tab's **Stop** also stop every running script. A stop returns
+immediately; the tab shows *Stopping...* until the script has really ended.
+
+
 LLM action planner
 ==================
 

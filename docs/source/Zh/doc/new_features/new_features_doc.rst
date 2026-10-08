@@ -461,6 +461,71 @@ GUI：**Variables** 分頁 — 即時檢視 ``executor.variables``，可單筆�
 行期的變動。
 
 
+停止執行中的腳本
+================
+
+一次執行只要是「可停止的執行」（stoppable run），就能從外部停止。單純的
+``executor.execute_action(...)`` 行為不變：沒有停止權杖就不做任何檢查，也沒有
+東西能中斷它。
+
+::
+
+   import threading
+   import je_auto_control as ac
+
+   def job():
+       try:
+           ac.execute_action_with_vars(actions, {}, run_id="nightly")
+       except ac.ExecutionStopped as stopped:
+           print("stopped:", stopped.reason)
+
+   threading.Thread(target=job).start()
+   ...
+   ac.stop_execution("nightly", reason="operator")   # 立刻返回
+   ac.active_executions()   # [{"run_id": ..., "started_at": ..., "stopping": ...}]
+
+背後的 context manager 是 ``stoppable_run(run_id=None, token=None)``，它交出這次
+執行的 ``StopToken``（``stop()``、``stopped``、``run_id``）。從 action list（JSON
+檔、REST / socket / MCP 請求、排程工作）要用時，把要能停止的部分包進
+``AC_run_stoppable`` 區塊，再從同一個行程的任何其他入口停止它::
+
+   [["AC_run_stoppable", {"run_id": "nightly", "body": [
+       ["AC_loop", {"times": 1000, "body": [["AC_sleep", {"seconds": 5}]]}]
+   ]}]]
+
+   [["AC_stop_execution", {"run_id": "nightly", "reason": "operator"}]]
+   [["AC_list_executions"]]
+
+不帶 ``run_id`` 的 ``AC_stop_execution``（以及 ``stop_execution()``）會停止呼叫者
+自己以外的所有可停止執行。
+
+停止時會發生的事：
+
+* **檢查點**：每個 action 之前、``AC_loop`` / ``AC_while_image`` /
+  ``AC_while_var`` / ``AC_for_each`` / ``AC_for_each_row`` 的每一輪（body 是空的
+  也算），以及 ``AC_sleep``、``AC_wait_image``、``AC_wait_pixel`` 與 ``AC_retry``
+  退避等待的內部——這些等待會立刻醒來。``AC_parallel`` 的分支跟著所屬的執行一起停。
+* **拋出** ``ExecutionStopped``（``AutoControlException`` 的子類別），在執行自己的
+  執行緒上。不論 ``raise_on_error`` 為何，它都不會被「記錄後繼續」，``AC_try`` /
+  ``AC_retry`` 也不會接住它：``catch`` 會被跳過。測試套件會整個停止，而不是把
+  該案例記成 error。
+* **沿途的** ``finally`` **都會執行**：``AC_type_keyboard``、``AC_hotkey``、
+  ``AC_with_modifiers`` 會放開它們按住的鍵，``AC_try`` 的 ``finally`` 分支會跑完。
+  第二次停止要求會連這段清理一起中斷，所以不會返回的清理無法讓執行停不下來。
+* **放開**這次執行用 ``AC_press_keyboard_key`` / ``AC_press_mouse`` 按下、還沒放開
+  的按鍵與滑鼠鍵。
+* **具黏著性**：吞掉這個例外的指令只是把它延後到下一個檢查點。
+
+不會做的事：中斷已經進到後端的指令（一次影像搜尋、一次 OCR、一次 HTTP 請求、
+wrapper 自己的 ``time.sleep``）。該指令返回後執行才結束。兩個進行中的執行不能
+使用同一個 ``run_id``。
+
+GUI：Script、Script Builder、LLM Planner、Record（回放）、Test Suites 與 ChatOps
+分頁都改在 GUI 執行緒之外執行，每個分頁一次只跑一個，並各有 **停止執行**
+（**停止回放**）動作。``Ctrl+4`` 與 Auto Click 分頁的 **Stop** 也會停止所有執行中
+的腳本。停止會立刻返回；腳本真正結束之前，分頁會顯示「正在停止...」。
+
+
 LLM 動作規劃器
 ==============
 

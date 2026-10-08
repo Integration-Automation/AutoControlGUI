@@ -41,6 +41,9 @@ from je_auto_control.utils.executor.action_executor import \
     execute_action_with_vars
 from je_auto_control.utils.executor.action_executor import execute_files
 from je_auto_control.utils.executor.action_executor import executor
+from je_auto_control.utils.executor.run_control import (
+    ExecutionStopped, StopToken, active_executions, stop_execution, stoppable_run,
+)
 # Accessibility (headless)
 from je_auto_control.utils.accessibility import (
     AccessibilityElement, accessibility_status, AccessibilityNotAvailableError,
@@ -1392,6 +1395,7 @@ __all__ = [
     "read_action_json", "read_executable_action_json", "write_action_json", "format_action_json",
     "execute_action", "execute_files", "executor",
     "execute_action_with_vars", "record_to_json",
+    "ExecutionStopped", "StopToken", "active_executions", "stop_execution", "stoppable_run",
     "generate_code", "generate_code_file", "http_request", "query_sqlite",
     "ActionEvent", "ActionJournal", "ActionJournalError", "JournalFormatError",
     "action_journal_status", "list_journal_runs", "read_events",

@@ -35,6 +35,10 @@ from je_auto_control.utils.executor.flow_control import (
 from je_auto_control.utils.executor.action_redaction import describe_action, redact_actions
 from je_auto_control.utils.action_journal.recorder import step as _journal_step
 from je_auto_control.utils.executor.mouse_aliases import MOUSE_BUTTON_COMMANDS
+from je_auto_control.utils.executor.run_control import (
+    ExecutionStopped, active_executions, checkpoint, note_command, stop_execution,
+    stoppable_run,
+)
 from je_auto_control.utils.config_sync.session import (
     config_sync_full_resync, config_sync_resolve, config_sync_run, config_sync_status,
 )
@@ -7320,6 +7324,16 @@ def _export_sarif(findings: Any, path: Optional[str] = None,
     return result
 
 
+def _stop_execution(run_id: Optional[str] = None, reason: str = "") -> Dict[str, Any]:
+    """Adapter: ask one stoppable run (or every other one) to stop."""
+    return {"stopped": stop_execution(str(run_id) if run_id else None, str(reason))}
+
+
+def _list_executions() -> List[Dict[str, Any]]:
+    """Adapter: the stoppable runs in progress."""
+    return active_executions()
+
+
 #: Whether the action list running on this thread was asked to raise on
 #: error; nested bodies (``_validated=True``) inherit it. Thread-local, so
 #: AC_parallel branches -- their own threads and executors -- are unaffected.
@@ -7470,6 +7484,8 @@ class Executor:
             # Executor 執行器
             "AC_execute_action": self.execute_action,
             "AC_execute_files": self.execute_files,
+            "AC_stop_execution": _stop_execution,
+            "AC_list_executions": _list_executions,
             "AC_add_package_to_executor": package_manager.add_package_to_executor,
             "AC_add_package_to_callback_executor": package_manager.add_package_to_callback_executor,
 
@@ -8411,9 +8427,11 @@ class Executor:
 
         if len(action) == 2:
             resolved = self._resolve_runtime_args(action[1], name)
-            if isinstance(resolved, dict):
-                return event(**resolved)
-            return event(*resolved)
+            result = event(**resolved) if isinstance(resolved, dict) else event(*resolved)
+            # Inside a stoppable run: remember what a press leaves held, so a
+            # stop can let go of it. Nothing happens outside one.
+            note_command(name, resolved)
+            return result
         if len(action) == 1:
             return event()
         raise AutoControlActionException(cant_execute_action_error_message + " " + describe_action(action))
@@ -8466,6 +8484,7 @@ class Executor:
 
         execute_record_dict: Dict[str, Any] = {}
         for action in action_list:
+            checkpoint()  # a stop requested for this run ends it between actions
             if step_callback is not None:
                 step_callback(action)
             if dry_run:
@@ -8535,8 +8554,8 @@ class Executor:
                 record[key] = self._execute_event(action)
                 step.outcome(record[key])
             _observe_executor_metrics(action_name, started, error=None)
-        except (LoopBreak, LoopContinue):
-            raise
+        except (LoopBreak, LoopContinue, ExecutionStopped):
+            raise  # a stop is never recorded-and-continued, whatever raise_on_error says
         # LookupError covers the KeyError/IndexError raised by block handlers
         # that subscript a required arg directly (``args["name"]``). Without
         # it a merely malformed action escaped raise_on_error=False and
@@ -8650,9 +8669,14 @@ def execute_files(execute_files_list: list) -> List[Dict[str, str]]:
     return executor.execute_files(execute_files_list)
 
 
-def execute_action_with_vars(action_list: list, variables: dict
-                             ) -> Dict[str, str]:
+def execute_action_with_vars(action_list: list, variables: dict,
+                             run_id: Optional[str] = None) -> Dict[str, str]:
     """Run ``action_list`` in a fresh variable scope seeded with ``variables``.
+
+    With ``run_id`` the run is stoppable under that name:
+    ``stop_execution(run_id)`` from another thread (or ``AC_stop_execution``
+    from another entry point) ends it at its next checkpoint by raising
+    :class:`~je_auto_control.utils.executor.run_control.ExecutionStopped` here.
 
     The scope belongs to this run: ``AC_set_var``, loop variables and macro
     parameters work as usual inside it and are gone when it returns, so the
@@ -8672,4 +8696,7 @@ def execute_action_with_vars(action_list: list, variables: dict
     resolver interpolate per action fixes both.
     """
     with execution_scope(variables):
-        return executor.execute_action(action_list)
+        if run_id is None:
+            return executor.execute_action(action_list)
+        with stoppable_run(run_id):
+            return executor.execute_action(action_list)
