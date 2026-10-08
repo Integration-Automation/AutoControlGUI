@@ -25,6 +25,7 @@ pytest.importorskip("aiortc")
 from PySide6.QtWidgets import QApplication  # noqa: E402
 
 from je_auto_control.utils.remote_desktop.registry import registry  # noqa: E402
+from headless._qt_settle import settle  # noqa: E402
 
 
 @pytest.fixture(scope="module")
@@ -83,6 +84,7 @@ def test_viewer_panel_renders_frame_from_host(qapp):
         panel._port.setValue(host.port)  # noqa: SLF001
         panel._token.setText("t")  # noqa: SLF001
         panel._connect()  # noqa: SLF001
+        settle(panel)
         assert _process_until(
             qapp, panel._screen_window.display.has_image,  # noqa: SLF001
         )
@@ -139,6 +141,7 @@ def test_viewer_input_round_trips_to_dispatcher(qapp):
         panel._port.setValue(host.port)  # noqa: SLF001
         panel._token.setText("t")  # noqa: SLF001
         panel._connect()  # noqa: SLF001
+        settle(panel)
         assert _process_until(
             qapp, panel._screen_window.display.has_image,  # noqa: SLF001
         )

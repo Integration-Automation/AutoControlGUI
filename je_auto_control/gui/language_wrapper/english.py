@@ -106,6 +106,7 @@ english_word_dict = {
     "dm_col_error": "Error",
     "dm_summary": "{passed} passed, {failed} failed of {total}",
     "dm_error": "Run failed: {error}",
+    "dm_running": "Running...",
 
     # Media checks tab
     "media_audio_label": "Audio activity check",
@@ -1144,6 +1145,7 @@ english_word_dict = {
     "ocr_min_conf_invalid": "Min confidence must be a number",
     "ocr_regex_required": "Enter a regex pattern first",
     "ocr_regex_invalid": "Invalid regex",
+    "ocr_running": "Reading...",
 
     # Variables Tab
     "vars_current_group": "Current scope",
@@ -1266,6 +1268,7 @@ english_word_dict = {
     "rd_badge_running": "RUNNING · :{port} · {n} viewer(s)",
     "rd_badge_stopped": "STOPPED",
     "rd_badge_idle": "NOT CONNECTED",
+    "rd_viewer_connecting": "CONNECTING...",
     "rd_badge_live": "LIVE",
     "rd_host_id_group": "Host ID (share with viewers)",
     "rd_host_id_label": "Host ID:",

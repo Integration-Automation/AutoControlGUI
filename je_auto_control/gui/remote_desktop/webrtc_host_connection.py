@@ -5,6 +5,8 @@ still owns every widget and slot under its original name.
 """
 from __future__ import annotations
 
+import functools
+from typing import TYPE_CHECKING, Optional, Tuple
 
 from PySide6.QtCore import QTimer
 from PySide6.QtWidgets import (
@@ -17,17 +19,40 @@ from je_auto_control.gui.remote_desktop._helpers import (
 from je_auto_control.gui.remote_desktop.webrtc_workers import (
     HostPublishLoopWorker, generate_host_id, retire_worker,
 )
+from je_auto_control.gui.task_controller import CancellationToken, task_controller
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.remote_desktop import (
     MultiViewerHost,
 )
 from je_auto_control.gui.remote_desktop.webrtc_panel_common import (
+    _PanelPart,
     _read_webrtc_config,
 )
 
+if TYPE_CHECKING:  # imported lazily at runtime to keep startup cheap
+    from je_auto_control.utils.remote_desktop.lan_discovery import HostAdvertiser
 
-class _HostConnectionMixin:
+
+def _create_offer(host: MultiViewerHost, _token: CancellationToken) -> Tuple[str, str]:
+    """Worker thread: mint a session and its offer (ICE gathering, up to 12 s)."""
+    return host.create_session_offer()
+
+
+def _drop_offer(host: MultiViewerHost, outcome: Tuple[str, str]) -> None:
+    """End the session of an offer nobody will show."""
+    try:
+        host.stop_session(outcome[0])
+    except (KeyError, RuntimeError, OSError) as error:
+        autocontrol_logger.debug("dropping an unused offer: %r", error)
+
+
+class _HostConnectionMixin(_PanelPart):
     """Methods of ``_WebRTCHostPanel``; the module docstring says which group."""
+
+    # State this group owns; the panel's __init__ sets the starting values.
+    _publish_loop: Optional[HostPublishLoopWorker]
+    _manual_session_id: Optional[str]
+    _lan_advertiser: Optional[HostAdvertiser]
 
     def _on_regen_id(self) -> None:
         self._host_id_edit.setText(generate_host_id())
@@ -122,10 +147,27 @@ class _HostConnectionMixin:
 
     def _produce_offer(self) -> None:
         try:
-            session_id, offer = self._require_multi_host().create_session_offer()
-        except (RuntimeError, OSError) as error:  # PermissionError is an OSError
+            host = self._require_multi_host()
+        except RuntimeError as error:
             self._show_error(error)
             return
+        # create_session_offer waits for ICE gathering (up to 12 s), which
+        # used to freeze the window; the backend takes no timeout or cancel.
+        task = task_controller().submit(functools.partial(_create_offer, host), owner=self,
+                                        discard=functools.partial(_drop_offer, host))
+        task.result.connect(functools.partial(self._show_offer, host))
+        task.error.connect(functools.partial(self._show_offer_error, host))
+
+    def _show_offer_error(self, host: MultiViewerHost, error: Exception) -> None:
+        if self._multi_host is host:        # a host stopped meanwhile fails by design
+            self._show_error(error)
+
+    def _show_offer(self, host: MultiViewerHost, outcome: Tuple[str, str]) -> None:
+        """GUI thread: the offer is ready -- unless the host was stopped or replaced meanwhile."""
+        if self._multi_host is not host:
+            _drop_offer(host, outcome)
+            return
+        session_id, offer = outcome
         self._manual_session_id = session_id
         self._offer_view.setPlainText(offer)
         self._status_label.setText(_t("rd_webrtc_offer_ready"))

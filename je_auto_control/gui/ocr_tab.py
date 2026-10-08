@@ -1,7 +1,13 @@
-"""OCR Reader tab: dump text in a region, or regex-search for matches."""
+"""OCR Reader tab: dump text in a region, or regex-search for matches.
+
+Both commands grab the screen and run the OCR backend -- Tesseract as a
+subprocess with no timeout, EasyOCR downloading its models on first use -- so
+they go through the task controller instead of holding the GUI thread.
+"""
+import functools
 import json
 import re
-from typing import Optional
+from typing import Any, Callable, Optional
 
 from PySide6.QtWidgets import (
     QGroupBox, QHBoxLayout, QLabel, QLineEdit, QMessageBox,
@@ -13,6 +19,7 @@ from je_auto_control.gui.language_wrapper.multi_language_wrapper import (
     language_wrapper,
 )
 from je_auto_control.gui.selector import open_region_selector
+from je_auto_control.gui.task_controller import CancellationToken, TaskHandle, task_controller
 from je_auto_control.utils.ocr.ocr_engine import (
     find_text_regex, read_text_in_region,
 )
@@ -47,6 +54,8 @@ class OCRReaderTab(TranslatableMixin, QWidget):
         self._result = QTextEdit()
         self._result.setReadOnly(True)
         self._status = QLabel()
+        self._task: Optional[TaskHandle] = None     # one read at a time
+        self._title_key = "ocr_dump_region"
         self._apply_placeholders()
         self._build_layout()
 
@@ -122,23 +131,7 @@ class OCRReaderTab(TranslatableMixin, QWidget):
             raise ValueError(_t("ocr_min_conf_invalid")) from error
 
     def _on_dump(self) -> None:
-        try:
-            region = self._parse_region()
-            min_conf = self._parse_min_conf()
-            lang = self._lang.text().strip() or "eng"
-            matches = read_text_in_region(
-                region=region, lang=lang, min_confidence=min_conf,
-            )
-        except ValueError as error:
-            self._status.setText(str(error))
-            return
-        except (OSError, RuntimeError) as error:
-            QMessageBox.warning(self, _t("ocr_dump_region"), str(error))
-            return
-        self._result.setText(_matches_to_json(matches))
-        self._status.setText(
-            _t("ocr_match_count").replace("{n}", str(len(matches)))
-        )
+        self._run_ocr("ocr_dump_region", read_text_in_region, {})
 
     def _on_find_regex(self) -> None:
         pattern = self._regex.text().strip()
@@ -150,20 +143,44 @@ class OCRReaderTab(TranslatableMixin, QWidget):
         except re.error as error:
             self._status.setText(f"{_t('ocr_regex_invalid')}: {error}")
             return
+        self._run_ocr("ocr_find_regex", find_text_regex, {"pattern": compiled})
+
+    def _run_ocr(self, title_key: str, backend: Callable[..., list], extra: dict) -> None:
+        """Read the fields, then run ``backend`` off the GUI thread; one read at a time."""
+        if self._task is not None:
+            return
         try:
-            region = self._parse_region()
-            min_conf = self._parse_min_conf()
-            lang = self._lang.text().strip() or "eng"
-            matches = find_text_regex(
-                compiled, lang=lang, region=region, min_confidence=min_conf,
-            )
+            options = {"region": self._parse_region(), "min_confidence": self._parse_min_conf(),
+                       "lang": self._lang.text().strip() or "eng", **extra}
         except ValueError as error:
             self._status.setText(str(error))
             return
-        except (OSError, RuntimeError) as error:
-            QMessageBox.warning(self, _t("ocr_find_regex"), str(error))
-            return
+        self._title_key = title_key
+        self._status.setText(_t("ocr_running"))
+        # The OCR backends take neither a timeout nor a cancel signal: a
+        # cancelled read runs to its end and its matches are dropped.
+        self._task = task_controller().submit(functools.partial(_call_backend, backend, options), owner=self)
+        self._task.result.connect(self._show_matches)
+        self._task.error.connect(self._show_error)
+        self._task.finished.connect(self._on_task_finished)
+
+    def _on_task_finished(self) -> None:
+        self._task = None
+
+    def _show_matches(self, matches: list) -> None:
         self._result.setText(_matches_to_json(matches))
         self._status.setText(
             _t("ocr_match_count").replace("{n}", str(len(matches)))
         )
+
+    def _show_error(self, error: Exception) -> None:
+        if isinstance(error, ValueError):
+            self._status.setText(str(error))
+            return
+        self._status.setText("")
+        QMessageBox.warning(self, _t(self._title_key), str(error))
+
+
+def _call_backend(backend: Callable[..., list], options: dict, _token: CancellationToken) -> Any:
+    """Worker thread: one OCR read with the options read from the tab."""
+    return backend(**options)

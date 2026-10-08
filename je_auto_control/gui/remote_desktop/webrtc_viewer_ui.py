@@ -27,11 +27,12 @@ from je_auto_control.utils.remote_desktop.webrtc_transport import (
     BANDWIDTH_PRESETS,
 )
 from je_auto_control.gui.remote_desktop.webrtc_panel_common import (
+    _PanelPart,
     _DEFAULT_SIGNALING_URL, _QUALITY_DOT_STYLE,
 )
 
 
-class _ViewerUiMixin:
+class _ViewerUiMixin(_PanelPart):
     """Methods of ``_WebRTCViewerPanel``; the module docstring says which group."""
 
     def _build_ui(self) -> None:

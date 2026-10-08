@@ -5,6 +5,8 @@ still owns every widget and slot under its original name.
 """
 from __future__ import annotations
 
+from typing import Optional
+
 
 from PySide6.QtGui import QImage
 from PySide6.QtWidgets import (
@@ -32,12 +34,20 @@ from je_auto_control.utils.remote_desktop.webrtc_stats import (
     StatsPoller, StatsSnapshot,
 )
 from je_auto_control.gui.remote_desktop.webrtc_panel_common import (
+    _PanelPart,
     _DEFAULT_MONITOR, _QUALITY_DOT_STYLE, _av_frame_to_qimage,
 )
 
 
-class _HostMediaMixin:
+class _HostMediaMixin(_PanelPart):
     """Methods of ``_WebRTCHostPanel``; the module docstring says which group."""
+
+    # State this group owns; the panel's __init__ sets the starting values.
+    _adaptive_controller: Optional[AdaptiveBitrateController]
+    _adaptive_poller: Optional[StatsPoller]
+    _blanking: Optional[BlankingOverlay]
+    _viewer_screen_window: Optional[ViewerScreenWindow]
+    _annotation_overlay: Optional[HostAnnotationOverlay]
 
     def _on_hw_codec_changed(self) -> None:
         codec = self._hw_codec_combo.currentData() or ""

@@ -1016,6 +1016,8 @@ simplified_chinese_word_dict = {
     "ocr_min_conf_invalid": "置信度需为数字",
     "ocr_regex_required": "请先输入 regex 表达式",
     "ocr_regex_invalid": "Regex 不正确",
+    "ocr_running": "识别中...",
+    "dm_running": "执行中...",
 
     # Variables Tab
     "vars_current_group": "当前作用域",
@@ -1134,6 +1136,7 @@ simplified_chinese_word_dict = {
     "rd_badge_running": "RUNNING · :{port} · {n} 个 viewer",
     "rd_badge_stopped": "STOPPED",
     "rd_badge_idle": "未连接",
+    "rd_viewer_connecting": "连接中...",
     "rd_badge_live": "已连接",
     "rd_host_id_group": "Host ID（给远程的人）",
     "rd_host_id_label": "Host ID:",

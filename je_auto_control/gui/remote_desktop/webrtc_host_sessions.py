@@ -22,9 +22,10 @@ from je_auto_control.utils.remote_desktop.webrtc_inspector import (
 from je_auto_control.utils.remote_desktop.webrtc_stats import (
     StatsPoller, StatsSnapshot,
 )
+from je_auto_control.gui.remote_desktop.webrtc_panel_common import _PanelPart
 
 
-class _HostSessionsMixin:
+class _HostSessionsMixin(_PanelPart):
     """Methods of ``_WebRTCHostPanel``; the module docstring says which group."""
 
     def _on_session_count(self, count: int) -> None:

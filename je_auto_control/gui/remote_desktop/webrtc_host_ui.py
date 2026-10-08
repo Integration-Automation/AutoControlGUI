@@ -26,11 +26,12 @@ from je_auto_control.gui.remote_desktop.webrtc_workers import (
     generate_host_id,
 )
 from je_auto_control.gui.remote_desktop.webrtc_panel_common import (
+    _PanelPart,
     _DEFAULT_FPS, _DEFAULT_SIGNALING_URL, _QUALITY_DOT_STYLE,
 )
 
 
-class _HostUiMixin:
+class _HostUiMixin(_PanelPart):
     """Methods of ``_WebRTCHostPanel``; the module docstring says which group."""
 
     def _build_ui(self) -> None:

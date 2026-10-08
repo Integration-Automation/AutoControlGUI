@@ -5,6 +5,8 @@ still owns every widget and slot under its original name.
 """
 from __future__ import annotations
 
+import functools
+from typing import TYPE_CHECKING, Optional
 
 from PySide6.QtCore import QTimer
 from PySide6.QtWidgets import (
@@ -18,17 +20,35 @@ from je_auto_control.gui.remote_desktop.webrtc_workers import (
     ViewerAnswerPushWorker, ViewerSignalingWorker,
     retire_worker,
 )
+from je_auto_control.gui.task_controller import CancellationToken, task_controller
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.remote_desktop import (
-    WebRTCDesktopViewer,
+    SessionRecorder, WebRTCDesktopViewer,
 )
 from je_auto_control.gui.remote_desktop.webrtc_panel_common import (
+    _PanelPart,
     _read_webrtc_config,
 )
 
+if TYPE_CHECKING:  # imported lazily at runtime to keep startup cheap
+    from je_auto_control.utils.remote_desktop.file_sync import FolderSyncEngine
 
-class _ViewerConnectionMixin:
+
+def _process_offer(viewer: WebRTCDesktopViewer, offer_sdp: str, expected_dtls: Optional[str],
+                   _token: CancellationToken) -> str:
+    """Worker thread: answer the host's offer (up to 12 s; the backend takes no timeout or cancel)."""
+    return viewer.process_offer(offer_sdp, expected_dtls_fingerprint=expected_dtls)
+
+
+class _ViewerConnectionMixin(_PanelPart):
     """Methods of ``_WebRTCViewerPanel``; the module docstring says which group."""
+
+    # State this group owns; the panel's __init__ sets the starting values.
+    _offer_worker: Optional[ViewerSignalingWorker]
+    _answer_worker: Optional[ViewerAnswerPushWorker]
+    # Owned by the files and media groups; stopped here with the session.
+    _sync_engine: Optional[FolderSyncEngine]
+    _recorder: Optional[SessionRecorder]
 
     def _on_connect_via_server(self) -> None:
         if not self._validate_required_fields(needs_server=True):
@@ -57,13 +77,32 @@ class _ViewerConnectionMixin:
     def _answer_and_push(self, offer_sdp: str) -> None:
         host_id = self._host_id_edit.text().strip()
         expected_dtls = self._known_hosts.dtls_fingerprint_for(host_id) if host_id else None
+        self._answer_off_thread(
+            offer_sdp, expected_dtls,
+            functools.partial(self._push_answer, host_id, expected_dtls, offer_sdp))
+
+    def _answer_off_thread(self, offer_sdp: str, expected_dtls: Optional[str], on_answer) -> None:
+        """Run ``process_offer`` on a worker; ``on_answer(answer)`` only if this viewer is still current."""
         try:
-            answer = self._require_viewer().process_offer(
-                offer_sdp, expected_dtls_fingerprint=expected_dtls,
-            )
-        except (ValueError, RuntimeError, OSError) as error:
+            viewer = self._require_viewer()
+        except RuntimeError as error:
             self._show_error(error)
             return
+
+        def deliver(answer: str) -> None:
+            if self._viewer is viewer:      # not stopped or replaced while the answer was made
+                on_answer(answer)
+
+        def fail(error: Exception) -> None:
+            if self._viewer is viewer:      # a viewer stopped meanwhile fails by design
+                self._show_error(error)
+
+        task = task_controller().submit(
+            functools.partial(_process_offer, viewer, offer_sdp, expected_dtls), owner=self)
+        task.result.connect(deliver)
+        task.error.connect(fail)
+
+    def _push_answer(self, host_id: str, expected_dtls: Optional[str], offer_sdp: str, answer: str) -> None:
         # First-time TOFU: stash the DTLS fingerprint we just observed
         if host_id and not expected_dtls:
             from je_auto_control.utils.remote_desktop.fingerprint import (
@@ -115,11 +154,9 @@ class _ViewerConnectionMixin:
         return viewer
 
     def _produce_answer(self, offer: str) -> None:
-        try:
-            answer = self._require_viewer().process_offer(offer)
-        except (ValueError, RuntimeError, OSError) as error:
-            self._show_error(error)
-            return
+        self._answer_off_thread(offer, None, self._show_manual_answer)
+
+    def _show_manual_answer(self, answer: str) -> None:
         self._answer_view.setPlainText(answer)
         self._status_label.setText(_t("rd_webrtc_answer_ready"))
 

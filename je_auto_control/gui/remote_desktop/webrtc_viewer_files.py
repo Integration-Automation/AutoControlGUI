@@ -5,6 +5,8 @@ still owns every widget and slot under its original name.
 """
 from __future__ import annotations
 
+from typing import TYPE_CHECKING, Optional
+
 
 from PySide6.QtCore import QTimer
 from PySide6.QtWidgets import (
@@ -15,10 +17,17 @@ from je_auto_control.gui.remote_desktop._helpers import (
     _t,
 )
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
+from je_auto_control.gui.remote_desktop.webrtc_panel_common import _PanelPart
+
+if TYPE_CHECKING:  # imported lazily at runtime to keep startup cheap
+    from je_auto_control.utils.remote_desktop.file_sync import FolderSyncEngine
 
 
-class _ViewerFilesMixin:
+class _ViewerFilesMixin(_PanelPart):
     """Methods of ``_WebRTCViewerPanel``; the module docstring says which group."""
+
+    # State this group owns; the panel's __init__ sets the starting values.
+    _sync_engine: Optional[FolderSyncEngine]
 
     def _on_sync_browse(self) -> None:
         path = QFileDialog.getExistingDirectory(

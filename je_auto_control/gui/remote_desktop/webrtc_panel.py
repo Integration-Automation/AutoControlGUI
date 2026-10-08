@@ -86,7 +86,7 @@ if TYPE_CHECKING:  # imported lazily at runtime to keep startup cheap
 
 
 class _WebRTCHostPanel(_HostUiMixin, _HostTrustMixin, _HostMediaMixin, _HostSessionsMixin,
-                       _HostConnectionMixin, TranslatableMixin, QWidget):
+                       _HostConnectionMixin):
     """Host: stream this machine's screen and accept viewer input."""
 
     def __init__(self, parent: Optional[QWidget] = None) -> None:
@@ -210,7 +210,7 @@ class _WebRTCHostPanel(_HostUiMixin, _HostTrustMixin, _HostMediaMixin, _HostSess
 
 
 class _WebRTCViewerPanel(_ViewerUiMixin, _ViewerFilesMixin, _ViewerAddressBookMixin, _ViewerMediaMixin,
-                         _ViewerConnectionMixin, TranslatableMixin, QWidget):
+                         _ViewerConnectionMixin):
     """Viewer: receive screen and send input."""
 
     def __init__(self, parent: Optional[QWidget] = None) -> None:

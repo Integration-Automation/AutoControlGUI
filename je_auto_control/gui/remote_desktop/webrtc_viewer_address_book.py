@@ -21,11 +21,12 @@ from je_auto_control.utils.remote_desktop import (
     send_magic_packet,
 )
 from je_auto_control.gui.remote_desktop.webrtc_panel_common import (
+    _PanelPart,
     _JSON_FILE_FILTER,
 )
 
 
-class _ViewerAddressBookMixin:
+class _ViewerAddressBookMixin(_PanelPart):
     """Methods of ``_WebRTCViewerPanel``; the module docstring says which group."""
 
     @staticmethod

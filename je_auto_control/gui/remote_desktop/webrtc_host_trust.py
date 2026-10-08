@@ -19,11 +19,12 @@ from je_auto_control.gui.remote_desktop.webrtc_dialogs import (
 )
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.gui.remote_desktop.webrtc_panel_common import (
+    _PanelPart,
     _JSON_FILE_FILTER,
 )
 
 
-class _HostTrustMixin:
+class _HostTrustMixin(_PanelPart):
     """Methods of ``_WebRTCHostPanel``; the module docstring says which group."""
 
     def _on_view_audit(self) -> None:

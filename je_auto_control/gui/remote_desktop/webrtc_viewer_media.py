@@ -5,6 +5,8 @@ still owns every widget and slot under its original name.
 """
 from __future__ import annotations
 
+from typing import Optional
+
 
 from PySide6.QtGui import QImage
 from PySide6.QtWidgets import (
@@ -28,12 +30,17 @@ from je_auto_control.utils.remote_desktop.webrtc_transport import (
     fps_for_preset,
 )
 from je_auto_control.gui.remote_desktop.webrtc_panel_common import (
+    _PanelPart,
     _QUALITY_DOT_STYLE, _av_frame_to_qimage,
 )
 
 
-class _ViewerMediaMixin:
+class _ViewerMediaMixin(_PanelPart):
     """Methods of ``_WebRTCViewerPanel``; the module docstring says which group."""
+
+    # State this group owns; the panel's __init__ sets the starting values.
+    _recorder: Optional[SessionRecorder]
+    _stats_poller: Optional[StatsPoller]
 
     def _on_send_cad(self) -> None:
         if self._viewer is None or not self._viewer.authenticated:

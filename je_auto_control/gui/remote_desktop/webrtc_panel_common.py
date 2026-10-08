@@ -5,6 +5,9 @@ from typing import Optional
 
 from PySide6.QtCore import QObject, Signal
 from PySide6.QtGui import QImage
+from PySide6.QtWidgets import QWidget
+
+from je_auto_control.gui._i18n_helpers import TranslatableMixin
 
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.remote_desktop import (
@@ -55,6 +58,15 @@ class _PanelSignals(QObject):
     viewer_video_frame = Signal(QImage)
     # Host-side: incoming annotation event from viewer
     annotation = Signal(object)  # dict
+
+
+class _PanelPart(TranslatableMixin, QWidget):
+    """Base of every WebRTC panel mixin: each one is a slice of a translatable ``QWidget``.
+
+    It adds nothing at run time. It is what lets a mixin use the widget API,
+    ``_tr`` and the attributes its sibling mixins set, the way the methods did
+    while they all sat in one class body.
+    """
 
 
 def _checked_or(panel, attr: str, default: bool = False) -> bool:
