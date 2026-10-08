@@ -179,6 +179,12 @@ class UsbAcl:
         self._require_signature = bool(require_signature)
         self._integrity_ok = True
         self._lock = threading.Lock()
+        # Held across refresh -> change -> save. ``_lock`` only guards the
+        # state object, so two threads changing one instance interleaved: the
+        # second re-read the file between the first's data and signature
+        # writes (a "signature mismatch" on a file nobody tampered with), or
+        # reloaded over a rule the first had appended but not yet saved.
+        self._change_lock = threading.Lock()
         if default_policy not in _VALID_DEFAULTS:
             raise ValueError(
                 f"default_policy must be one of {_VALID_DEFAULTS}",
@@ -206,31 +212,33 @@ class UsbAcl:
             return list(self._state.rules)
 
     def add_rule(self, rule: AclRule, *, persist: bool = True) -> None:
-        if persist:
-            self._refresh()
-        with self._lock:
-            self._state.rules.append(rule)
-        if persist:
-            self._save()
+        with self._change_lock:
+            if persist:
+                self._refresh()
+            with self._lock:
+                self._state.rules.append(rule)
+            if persist:
+                self._save()
 
     def remove_rule(self, *, vendor_id: str, product_id: str,
                     serial: Optional[str] = None,
                     persist: bool = True) -> bool:
-        if persist:
-            self._refresh()
-        with self._lock:
-            # The same id comparison as matches(): a rule a device matches
-            # ("0x1050" for 1050) must also be removable by that id.
-            new_rules = [
-                r for r in self._state.rules
-                if not (_same_id(r.vendor_id, vendor_id)
-                        and _same_id(r.product_id, product_id)
-                        and r.serial == serial)
-            ]
-            removed = len(new_rules) != len(self._state.rules)
-            self._state.rules = new_rules
-        if removed and persist:
-            self._save()
+        with self._change_lock:
+            if persist:
+                self._refresh()
+            with self._lock:
+                # The same id comparison as matches(): a rule a device matches
+                # ("0x1050" for 1050) must also be removable by that id.
+                new_rules = [
+                    r for r in self._state.rules
+                    if not (_same_id(r.vendor_id, vendor_id)
+                            and _same_id(r.product_id, product_id)
+                            and r.serial == serial)
+                ]
+                removed = len(new_rules) != len(self._state.rules)
+                self._state.rules = new_rules
+            if removed and persist:
+                self._save()
         return removed
 
     def export_rules(self) -> dict:
@@ -262,18 +270,19 @@ class UsbAcl:
             raise ValueError("'rules' must be a list")
         imported = [AclRule.from_dict(r) for r in raw_rules
                     if isinstance(r, dict)]
-        if persist:
-            self._refresh()
-        with self._lock:
-            if replace:
-                default = str(payload.get("default", self._state.default))
-                if default not in _VALID_DEFAULTS:
-                    default = "deny"
-                self._state = _AclState(default=default, rules=list(imported))
-            else:
-                self._state.rules.extend(imported)
-        if persist:
-            self._save()
+        with self._change_lock:
+            if persist:
+                self._refresh()
+            with self._lock:
+                if replace:
+                    default = str(payload.get("default", self._state.default))
+                    if default not in _VALID_DEFAULTS:
+                        default = "deny"
+                    self._state = _AclState(default=default, rules=list(imported))
+                else:
+                    self._state.rules.extend(imported)
+            if persist:
+                self._save()
         return len(imported)
 
     def set_default_policy(self, policy: str, *, persist: bool = True) -> None:
@@ -281,12 +290,13 @@ class UsbAcl:
             raise ValueError(
                 f"default_policy must be one of {_VALID_DEFAULTS}",
             )
-        if persist:
-            self._refresh()
-        with self._lock:
-            self._state.default = policy
-        if persist:
-            self._save()
+        with self._change_lock:
+            if persist:
+                self._refresh()
+            with self._lock:
+                self._state.default = policy
+            if persist:
+                self._save()
 
     def decide(self, *, vendor_id: str, product_id: str,
                serial: Optional[str]) -> str:

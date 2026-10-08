@@ -5,8 +5,15 @@ Widgets register their (widget, translation-key, setter-name) triples via
 ``self.retranslate()`` re-pulls every key from the language wrapper and
 re-applies it through the recorded setter. Destroyed widgets are skipped
 silently so removing a row never breaks a later language switch.
+
+A widget that registers *itself* (``self._tr(self, "title_key",
+setter="setWindowTitle")``) is recorded as ``None``, not as a reference. Holding
+it made the widget a reference cycle, so dropping one never freed it: it stayed
+a live window until the cycle collector ran, and the collector destroyed the
+C++ object wherever it happened to be — on Python 3.10/3.11 that can be in the
+middle of a PySide call that is still walking a list of widgets.
 """
-from typing import List, Tuple
+from typing import List, Optional, Tuple
 
 from PySide6.QtWidgets import (
     QAbstractButton, QGroupBox, QLabel, QLineEdit, QTabWidget, QWidget,
@@ -31,7 +38,7 @@ class TranslatableMixin:
     """Provides ``_tr(...)`` / ``retranslate()`` for a widget-building class."""
 
     def _tr_init(self) -> None:
-        self._tr_registry: List[Tuple[QWidget, str, str]] = []
+        self._tr_registry: List[Tuple[Optional[QWidget], str, str]] = []
         self._tr_tabs: List[Tuple[QTabWidget, int, str]] = []
 
     def _tr(self, widget: QWidget, key: str, setter: str = "") -> QWidget:
@@ -41,7 +48,8 @@ class TranslatableMixin:
         resolved = setter or _default_setter(widget)
         translated = language_wrapper.translate(key, key)
         getattr(widget, resolved)(translated)
-        self._tr_registry.append((widget, key, resolved))
+        # None stands for ``self``: see the module docstring.
+        self._tr_registry.append((None if widget is self else widget, key, resolved))
         return widget
 
     def _tr_tab(self, tab_widget: QTabWidget, index: int, key: str) -> None:
@@ -54,8 +62,9 @@ class TranslatableMixin:
     def retranslate(self) -> None:
         """Re-apply every registered translation key."""
         for widget, key, setter in getattr(self, "_tr_registry", []):
+            target = self if widget is None else widget
             try:
-                getattr(widget, setter)(language_wrapper.translate(key, key))
+                getattr(target, setter)(language_wrapper.translate(key, key))
             except RuntimeError:
                 # Widget destroyed; leave it for a future cleanup pass.
                 continue

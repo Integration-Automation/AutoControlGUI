@@ -162,8 +162,18 @@ jobs:
       # worst-hit files were the biggest ones (`action_executor` +786,
       # `_handlers` +684). A package that registers a pytest plugin cannot
       # measure itself with `pytest --cov`; `coverage run` starts first.
+      #
+      # PYTHONFAULTHANDLER: pytest's own faulthandler covers only the window
+      # between its configure and unconfigure, and a native crash here (Qt,
+      # aiortc, a platform backend) is as likely while plugins load or the
+      # interpreter shuts down. With the variable the dump is installed before
+      # `coverage` starts, pytest leaves it in place, and the step log — the
+      # only evidence a SIGSEGV leaves — names the Python line every thread
+      # was on.
       - name: Run headless pytest suite under coverage
         shell: bash
+        env:
+          PYTHONFAULTHANDLER: "1"
         run: >-
           ${{ runner.os == 'Linux' && 'xvfb-run -a -s "-screen 0 1280x800x24"' || '' }}
           python -m coverage run -m pytest -v --tb=short --timeout=120
