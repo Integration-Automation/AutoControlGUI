@@ -154,6 +154,8 @@ def test_an_unknown_key_name_is_still_refused(monkeypatch):
 class _FocusBackend:
     """A desktop whose foreground lock refuses unless ``allow`` is set."""
 
+    confirms_foreground = True
+
     def __init__(self, allow):
         self.allow = allow
         self.foreground = 99
@@ -182,6 +184,15 @@ def test_foreground_failure_propagates(monkeypatch):
     monkeypatch.setattr(w, "_FOCUS_SETTLE_S", 0.05)
     with pytest.raises(AutoControlActionException, match="did not become the foreground"):
         w.focus_window("Editor")
+
+
+def test_a_backend_that_cannot_confirm_the_foreground_is_not_second_guessed(monkeypatch):
+    # macOS and X11 may report the foreground window under another id; a
+    # mismatch there is not evidence that the request was refused.
+    backend = _FocusBackend(allow=False)
+    backend.confirms_foreground = False
+    monkeypatch.setattr(w, "get_backend", lambda: backend)
+    assert w.focus_window("Editor") == 11
 
 
 def test_focus_window_returns_the_handle_once_it_is_in_front(monkeypatch):

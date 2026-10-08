@@ -808,6 +808,9 @@ def AC_costs_summary(limit: int = ...) -> Dict[str, Any]:
 def AC_create_project(project_path: str | None = ..., parent_name: str = ...) -> None:
     """Create project directory structure and templates."""
 
+def AC_create_signing_keypair(private_path: str, public_path: str) -> Dict[str, Any]:
+    """Executor adapter: create an Ed25519 action-signing key pair."""
+
 def AC_critical_steps(steps: Any, top: Any = ...) -> Dict[str, Any]:
     """Adapter: the steps that dominate a run's time (bottlenecks)."""
 
@@ -2688,8 +2691,8 @@ def AC_shard_suite(
 def AC_shell_command(shell_command: str | List[str] | None = ..., *, command: str | List[str] | None = ...) -> None:
     """Execute shell command with shell=False."""
 
-def AC_sign_action_file(path: str, key: str | None = ...) -> Dict[str, Any]:
-    """Executor adapter: write an HMAC-SHA256 signature sidecar for a file."""
+def AC_sign_action_file(path: str, key: str | None = ..., private_key_path: str | None = ...) -> Dict[str, Any]:
+    """Executor adapter: write an Ed25519 or HMAC signature sidecar for a file."""
 
 def AC_simhash(text: str, bits: Any = ...) -> Dict[str, Any]:
     """Adapter: SimHash fingerprint of text (as int)."""
@@ -2752,6 +2755,7 @@ def AC_start_mcp_http_server(
     mcp: Any = ...,
     auth_token: str | None = ...,
     ssl_context: Any = ...,
+    user_store: Any = ...,
 ) -> Any:
     """Start and return an :class:`HttpMCPServer`; convenience wrapper."""
 
@@ -2987,7 +2991,12 @@ def AC_validate_json(data: Any, schema: Any) -> Dict[str, Any]:
 def AC_validate_rows(rows: List[Dict[str, Any]], schema: Dict[str, Any]) -> Dict[str, Any]:
     """Adapter: validate rows against a declarative schema."""
 
-def AC_verify_action_file(path: str, key: str | None = ..., raise_on_fail: bool = ...) -> Dict[str, Any]:
+def AC_verify_action_file(
+    path: str,
+    key: str | None = ...,
+    raise_on_fail: bool = ...,
+    public_key_path: str | None = ...,
+) -> Dict[str, Any]:
     """Executor adapter: verify an action file against its signature sidecar."""
 
 def AC_verify_artifact(name: str, content: Any, approvals_dir: str = ..., extension: str = ...) -> Dict[str, Any]:

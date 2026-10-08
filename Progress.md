@@ -10,7 +10,9 @@
 實作計畫：[分階段交付計畫](docs/superpowers/plans/2026-10-02-modernization-index.md)，待審閱。
 現有 `[Answer]` 決策沿用。
 
-`WIP` — 計畫 F（GUI）：F1 的延遲分頁註冊與 F2 的導覽／搜尋／主題已交付（U-20261008-02），其餘各子計畫尚未開始。F 還缺：
+`WIP` — 計畫 A（既有決策與執行契約）已交付，A2、A7 在 2026-10-08、其餘在 2026-10-09（U-20261009-01…14）；
+各項沒驗到或沒做完的部分在本檔下面三節（輸入與視窗、macOS、這一輪修正留下的後續）。計畫 F（GUI）：F1 的延遲分頁註冊與 F2 的導覽／搜尋／主題已交付（U-20261008-02）。
+計畫 B（動作日誌、自愈量測、codegen）、C（持久化同步與遠端 session；其中 C4 的擁有者模型已做）、D（Wayland）、E（Android／iOS）、G（MCP 逐步揭露）、H（型別深化與總驗收）尚未開始。F 還缺：
 
 - **窄視窗的內容是被擠壓而不是可捲動**：`gui/main_widget.py` 給 `QTabWidget` 明確的最小尺寸讓視窗能縮到 640×420，
   但分頁內容沒有包進 `QScrollArea`；包進去會改變 `tabs.indexOf(entry.widget)` 這個 PyBreeze 與測試都在用的關係，要一起設計。
@@ -106,7 +108,7 @@ sys_platform != 'win32' or platform_machine != 'ARM64'
 | 功能 | 缺的是 | 錯誤形式 |
 | --- | --- | --- |
 | 影像比對、截圖轉 BGR、螢幕錄影 | `opencv-python`／`je_open_cv` | `utils/cv2_utils/optional.py` 的 `require_cv2()`／`require_je_open_cv()` 拋 `RuntimeError` |
-| 動作檔加密（`action_signing`） | `cryptography` | `_fernet_types()` 拋 `RuntimeError`（簽章本身是 HMAC，不受影響） |
+| 動作檔加密與 Ed25519 簽章（`action_signing`） | `cryptography` | 拋 `CryptographyUnavailableError`（也是 `RuntimeError`；HMAC 簽章不受影響） |
 | 秘密金庫（`${secrets.NAME}`） | `cryptography` | 同上 |
 | ACME／TLS 發證、加密錄影 | `cryptography` | 模組層 `ImportError` 轉述（照 `webrtc_transport` 慣例） |
 
@@ -115,7 +117,7 @@ sys_platform != 'win32' or platform_machine != 'ARM64'
 | 依賴 | win_arm64 | 實測（2026-08-20） |
 | --- | --- | --- |
 | `opencv-python>=4.8,<6` | **沒有** | 任何版本都沒有，pip 回的是 `from versions: none`。`je_open_cv` 自己是純 Python，但相依 opencv-python，所以一起卡——標記也必須一起下。 |
-| `cryptography>=48.0.1` | **沒有** | wheel 只出到 **46.0.3**，46.0.4 起上游就不再發 win_arm64。而 `>=48.0.1` 是 347ec1e 為了 GHSA-537c-gmf6-5ccf（high）訂的**安全下限**，不能為了 arm64 降回去。 |
+| `cryptography>=50.0.0` | **沒有** | wheel 只出到 **46.0.3**，46.0.4 起上游就不再發 win_arm64。`>=50.0.0` 是**安全下限**（GHSA-537c-gmf6-5ccf 與 GHSA-g6cj-pr64-35w5），不能為了 arm64 降回去。 |
 | `pillow==12.3.0` | 有 | `pillow-12.3.0-cp3xx-win_arm64.whl` 一直都在。**曾經被寫成卡點，那是猜的，它從來不是。** |
 | `mss`／`defusedxml` | 有 | 純 Python。這三個加上 Pillow 就是 arm64 實際裝到的全部。 |
 | `PySide6==6.11.1`／`qt-material==2.17` | 有 | `[gui]` extra 在 arm64 上裝得起來。 |
@@ -124,7 +126,7 @@ sys_platform != 'win32' or platform_machine != 'ARM64'
 重驗指令（不需要 arm64 機器，也不需要 runner）：
 
 ```bash
-pip install --dry-run --only-binary=:all: --platform win_arm64 --python-version 3.12 --target /tmp/probe 'opencv-python>=4.8,<6' 'cryptography>=48.0.1'
+pip install --dry-run --only-binary=:all: --platform win_arm64 --python-version 3.12 --target /tmp/probe 'opencv-python>=4.8,<6' 'cryptography>=50.0.0'
 ```
 
 兩行 `ERROR: No matching distribution` 就是現況。**哪天其中一行不見了，就把
@@ -175,105 +177,87 @@ pip install --dry-run --only-binary=:all: --platform win_arm64 --python-version 
 
 ---
 
-## 鍵盤與滑鼠 wrapper 的輸入修正：等 Jeffrey_RPA 批次停下
+## 輸入、視窗與擷取修正：還沒在真的桌面與 Jeffrey_RPA 上驗過
 
-`BLOCKED` — Jeffrey_RPA 以 editable install 載入這個工作樹，正式批次（`webrunner_novelai.py`）與 Discord bot 正在跑，並且經 `_gui_control.py` 呼叫 `ac.write`、`ac.hotkey`、`ac.mouse_scroll`；下面每一項都會改變它打出來的字或滾動方向，依工作區規則在它執行期間不動
+`BLOCKED` — 程式已改完（U-20261009-03、-04、-05），但驗證全部是假後端；Jeffrey_RPA 的正式批次在跑，不能在它的環境裡換版本
 
-2026-09-24 稽核用假後端重現：
+2026-10-08 實測：Jeffrey_RPA（`NovelAI_RPA`）的 venv 是從 PyPI 裝的 `je_auto_control`，不是這個工作樹的 editable install，
+所以這裡的修改不會直接影響正在跑的批次；它升級套件時才會拿到。升級前要做的事：
 
-- **大寫字母打成小寫**：`wrapper/auto_control_keyboard.py:234` `write()` 在 Windows 送的是與小寫相同的虛擬鍵（`_platform_windows.py` 的表裡 `"A"` 與 `"a"` 同一個碼），沒有按 Shift，`"Hi"` 打成 `hi`；X11 很可能一樣。做法：需要 Shift 的字元改走 `_write_char_via_unicode`，或包一層 Shift 按下／放開。
-- **`is_shift` 在 Windows 與 X11 無效**：`auto_control_keyboard.py:73`、`:104` 只在 macOS 把它傳下去，其他平台直接忽略，docstring 卻寫「是否同時按下 Shift」。做法：在這一層按住 `keyboard_keys_table["shift"]`，`finally` 放開。
-- **`"\r\n"` 按兩次 Enter**：`write()` 把 `\r` 與 `\n` 都對到 `return`，從檔案讀進來的 Windows 換行每行多一個空行。做法：迴圈前把 `\r\n` 換成 `\n`。
-- **X11 預設滾動方向與 Windows／macOS 相反**：`wrapper/auto_control_mouse.py` `mouse_scroll(..., scroll_direction="scroll_down")`，正值在 X11 往下、其他平台往上，與 docstring「一份寫法各平台通用」不符。做法：預設改 `scroll_up`，或改 docstring 講清楚（重播路徑已在 U-20260924-14 明確傳 `scroll_up`）。
-- **`mouse_scroll` 的 NaN 座標被悄悄夾到桌面邊緣**：`auto_control_mouse.py` 的夾限在 `_coordinate()` 驗證之前，`mouse_scroll(3, x=nan, y=100)` 移到 `(-1920, 100)` 才滾；`set_mouse_position(nan, …)` 則正確丟例外。做法：夾限前先過 `_coordinate()`。
-- **座標截斷而非四捨五入**：`set_mouse_position(-0.6, 10.9)` 得到 `(0, 10)`，註解寫的是「rounded point」。做法：`int(round(value))`。
-- **`post_key` 打出三次同一字元**：`windows/window/windows_window_manage.py:347` 自己送 `WM_CHAR`，而目標的 `TranslateMessage` 又從 `WM_KEYDOWN` 與（`lParam=0` 被當成按下的）`WM_KEYUP` 各產生一次，`post_key_to_window(title, "a")` 打出 `aaa`。做法：可列印字元只送 `WM_CHAR`，其他鍵送 `WM_KEYDOWN`（`lParam = 1 | scan<<16`）與 `WM_KEYUP`（`0xC0000001 | scan<<16`）。`post_key_to_window(title, "enter")`／`"esc"` 在 Windows 丟 `unknown key name`（`wrapper/auto_control_window.py:170`），一併改走 `resolve_key_name`。
-- **焦點、顯示、z-order 失敗仍回報成功**：`windows_window_manage.py:191-229` 丟掉 `SetForegroundWindow`／`ShowWindow` 的回傳值，`window_zorder.py:50` 永遠回 `True`；Windows 的前景鎖常拒絕背景程序。做法：回傳 BOOL，`focus_window` 以 `GetForegroundWindow() == hwnd` 確認，否則丟 `AutoControlActionException`（`WindowManageBackend.bring_to_front` 已經這樣做）。
-- **列出看不見的視窗**：`windows_window_manage.py:88` 只看 `IsWindowVisible`，被 DWM cloak 的視窗（`Windows 輸入體驗`、背景的「設定」）與零面積視窗都算，`find_window` 可能選到它們。做法：略過 `DWMWA_CLOAKED` 非零與空矩形的視窗。
-- **視窗版面每次還原都偏移**：`utils/window_capture/window_capture.py:115` 存 DWM 可見框、還原時交給 `MoveWindow`（它定位的是含隱形邊框的完整矩形），每輪右移 7 px、縮小 14×7 px；最大化視窗與不同 DPI 的第二螢幕偏得更多。做法：存 `GetWindowRect`，或改用 `GetWindowPlacement`／`SetWindowPlacement`。同一檔的 snap／grid／cascade 用整個螢幕而非工作區，最底下 48 px 落在工作列下，一併改用 `SPI_GETWORKAREA`。
-- **`wait_for_window` 睡過逾時**：`wrapper/auto_control_window.py:79` 以 `poll` 整段睡，`poll=30` 就睡 30 秒，`poll=inf` 丟 `OverflowError`。做法：`clamp_poll_interval`，並只睡到截止時間。
-- **Windows 鍵表沒有標點鍵**：`plus`、`minus`、`comma`、`period`、`slash` 等沒有對應的 `VK_OEM_*`，computer use 的 `ctrl+minus` 在 Windows 失敗。做法：在 Windows 鍵表補上 `VK_OEM_PLUS`／`VK_OEM_MINUS`／`VK_OEM_COMMA`／`VK_OEM_PERIOD`／`VK_OEM_2` 等。
+- **在 Jeffrey_RPA 跑 `test/test_je_facade.py`**（原本的解除條件），並看 `_gui_control.py` 對下列行為變更有沒有依賴：
+  `write()` 大寫與 `is_shift` 在 Windows／X11 生效、`"\r\n"` 只按一次 Enter、`mouse_scroll` 預設方向改為 `scroll_up`
+  （X11／Wayland 上 `mouse_scroll(3)` 由往下變往上）、小數座標四捨五入、`focus_window` 在 Windows 沒拿到前景會丟例外、
+  `list_windows` 不再列出 DWM cloak 與零面積視窗、`post_key` 對可列印字元只送 `WM_CHAR`。
+- **混合 DPI 螢幕上的座標與樣板要重錄**：Windows 改成 per-monitor v2 之後，縮放比例與主螢幕不同的螢幕上，
+  座標變成原本的「該螢幕縮放／主螢幕縮放」倍（125% 副螢幕配 100% 主螢幕是 ×1.25），截圖是實體像素、不再是縮小的影像；
+  在那些螢幕上錄的點擊座標、`screen_region`、視窗版面與裁出來的樣板都要重做。主螢幕上的不受影響。
+  這台機器現在只接一個螢幕，位移量是推導的，沒有量過；第三個螢幕接在縮放螢幕之後時，原點會不會也移動，未知。
+- **舊版存的視窗版面檔要重存**：`save_window_layout` 改存 `GetWindowRect`，舊檔還原會偏右 7 px、縮小 14×7 px。
+- **真的 Win32 行為沒有實測**：`post_key` 在真的編輯框是否只出現一個字、DWM cloak 過濾掉的是哪些視窗、
+  `MoveWindow` 對最大化視窗與另一個 DPI 的螢幕是否能原樣還原，都只用假的 `user32` 驗過。
+- **X11／Wayland**：大寫與 Shift 標點的判斷假設 `keysym_to_keycode` 把大寫字母對到小寫的 keycode，沒有對著 X server 跑過。
 
-同一次稽核的影像與 OCR 部分也在它的路徑上（Discord bot 的 `!find_image`／`!find_text`），一併等：
+**還沒決定的小事**：Windows 鍵表沒有 `slash` 這個名字。`plus`／`minus`／`comma`／`period` 與 `oem_1`…`oem_8` 都有，
+但鍵表的註解刻意不替 `oem_*` 取好讀的別名，因為它們隨鍵盤配置而變（`oem_2` 只有在美式配置上是 `/`）。
+要加的話是 `wrapper/_platform_windows.py` 的 `keyboard_key_aliases` 一行。
 
-- **非 ASCII 路徑與灰階樣板**：`cv2_utils/template_detection.py:126` 經 `je_open_cv` 的 `cv2.imread` 讀樣板，`測試\t.png` 讀不到；2-D 陣列或 PIL `"L"` 樣板丟出 `cv2.error`，不在 `wrapper/auto_control_image.py` 的例外清單裡。做法：路徑改走 `cv2_utils/image_file.read_image`，2-D 直接用，`cv2.error` 包成 `ImageNotFoundException`。
-- **部分超出螢幕的 `screen_region` 被補黑**：`monitor_layout/logical_frame.py:143` 沒有先和畫面取交集，PIL `crop` 補零，可能回傳螢幕外的命中；寬或高為負時丟裸 `ValueError`。做法：先取交集（回傳裁過的原點），非正的寬高丟框架例外。
-- **OCR 跨框比對漏掉從長框中段開始的字串**：`ocr/text_span.py:330` 的視窗超過「目標長度＋40」就整個丟掉最左框，即使目標從那框開始；`"Save As"` 在長句框之後就找不到。做法：只有剩下的部分仍不短於目標時才丟左框。
-- **負座標的中心點差一**：`wrapper/auto_control_image.py:48`、`:73` 的 `int((x1 + x2) / 2)` 向零截斷。做法：`(x1 + x2) // 2`。
-- **Unicode 打字把換行與 Tab 當字元送**：`utils/text_unicode/text_unicode.py:49` `plan_unicode_keys("a\nb\tc")` 送出碼位 10 與 9，多數程式會丟掉 Unicode 的 LF；`write` 早就把它們對到 Return／Tab（`WRITE_CONTROL_KEYS`）。這個模組被 `wrapper/auto_control_keyboard.py:27` 載入。做法：控制空白改成按鍵。
-- **鍵盤配置表的 Shift 半邊與非美式鍵**：`utils/keyboard_layout/keyboard_layout.py:98-100` 的 Shift 半邊是死鍵時退回未按 Shift 的字（美式國際配置的 Shift+6 回 `'6'`，契約是回 `None`）；`:96` 只翻譯美式鍵碼，德／法／北歐鍵盤的 `VK_OEM_102`（0xE2）與英式 `VK_OEM_8` 永遠沒有標籤；`:68-74` 把原型設在全程序共用的 `ctypes.windll.user32` 上，之後別的呼叫者用 `c_ubyte` 陣列呼叫 `ToUnicodeEx` 會 `ArgumentError`。Jeffrey_RPA 的 `_gui_control.py:3322` 呼叫 `ac.foreground_keyboard_layout()`。做法：死鍵半邊回 `None`；候選鍵碼加上 0xDF、0xE1、0xE2…；改用私有的 `ctypes.WinDLL("user32")`。
-- **剪貼簿格式名稱 `None`**：`utils/clipboard_formats/clipboard_formats.py:46` `_coerce` 把 tuple／list 描述的 `None` 名稱變成字串 `"None"`，dict 形式卻是 `""`，`diff_formats` 因此回報有變動。Jeffrey_RPA 的 `_gui_control.py:1126` 呼叫 `ac.clipboard_formats()`。做法：兩種形式都把 `None` 正規化成 `""`。
-
-**解除條件**：Jeffrey_RPA 沒有批次在跑（`webrunner.pid` 的行程不在、Discord bot 停止）；改完在 Jeffrey_RPA 跑 `test/test_je_facade.py`。
+**MCP 的 `_show_command`**（`utils/mcp_server/tools/_handlers_system.py`，`window_minimize` 等）仍不看 `show_window` 的新回傳值。
 
 ---
 
-## macOS 上 `click_mouse(clicks=2)` 不是雙擊
+## macOS 的修正只對著假的 Quartz 驗過
 
-`TODO` — `wrapper/auto_control_mouse.py` 的 `click_mouse` 在同一點連點 `clicks` 次。Windows 與 X11 依兩次點擊的時間差與位移判定雙擊，所以這樣就夠；macOS 的應用程式讀的是事件上的點擊次數欄位（`kCGMouseEventClickState`），`osx/mouse/osx_mouse.py` 的 `mouse_event` 從不設定它（一律是 1），所以 macOS 收到的是兩次單擊。文件（`docs/source/API/wrapper/mouse.rst`、`docs/source/{Eng,Zh}/doc/mouse/mouse_doc.rst`、`click_mouse` 的 docstring）照實寫了這個限制。
+`TODO` — 要一台真的 Mac（Retina，最好接第二個螢幕）；CI 的 macos-14 能跑其中一部分
 
-做法：讓 osx 後端的按下／放開帶點擊次數（第 n 次點擊設成 n），wrapper 在 macOS 分支把序號傳下去；要在 macOS 上實測（`quality.yml` 的 `macos-14` 可以跑 CI，但雙擊是否被應用程式認得要真機看），完成後把文件裡的限制拿掉。
+U-20261009-06 與 -04 改了四件事，全部在 Windows 上以假的 pyobjc／Quartz 物件測試：
 
----
-
-## RBAC 還沒接到 REST API 與 MCP server
-
-`DECIDE` — 要不要把 `utils/rbac` 接上兩個伺服器，以及現有單一共用 token 怎麼過渡（維護者拍板）
-
-`utils/rbac/users.py` 有使用者、角色與權杖驗證（2026-09-24 已補上：壞檔不覆寫、權杖不得重複），但沒有任何程式
-import 它：`rest_api/rest_auth.py` 與 `mcp_server/http_transport.py` 都只比對一個共用 token，稽核 log 也沒有
-`user_id`。模組 docstring 已改成照實描述。
-
-**做法**：`RestAuthGate.check` 改成先查 `UserStore.authenticate`、再依路由對應的 `Capability` 呼叫 `can()`；
-MCP 的 bearer 比對同理；稽核寫入帶上 `user_id`。
-
-**要先想清楚**：沒有任何使用者時是否退回共用 token（相容現有部署）；viewer／operator／admin 各能呼叫哪些路由與工具。
+- **`click_mouse(clicks=2)`**：按下與放開現在帶 `kCGMouseEventClickState`（第 n 次點擊是 n）。應用程式是否因此認得雙擊，沒看過。
+  `test_osx_mouse_click_state.py` 有三個只在 darwin 跑的測試會把欄位讀回來，第一次執行在 CI。
+- **還原最小化視窗**：`_info_for` 改用 `kCGWindowListOptionIncludingWindow`，`list_windows` 會附上最小化的視窗。
+  `test_window_backend_macos_real.py` 會在 macOS CI 真的開一個視窗、最小化、列出、還原，**從沒執行過**；
+  `test_a_really_minimised_window_stays_in_the_listing` 依賴最小化視窗的 Quartz 邊界或標題仍對得上它的 AX 元素，最可能紅。
+  沒加 AX 逾時，沒回應的 app 會拖慢列出；同一行程裡與最小化視窗同原點或同標題的螢幕外輔助視窗可能被誤列。
+- **`grab_logical`**（`utils/monitor_layout/macos_frame.py`）：改成點座標、逐螢幕擷取後拼接。三個假設要實機確認：
+  `screencapture -R` 接受含負值的全域點座標、Pillow 的 `scale_down=True` 給出點尺寸的影像、`CGDisplayBounds` 與 Quartz 滑鼠事件同一個座標空間。
+  每一格要為每個螢幕各開一次 `screencapture`。
 
 ---
 
-## 能執行動作的人也能替檔案簽章
+## 這一輪修正留下的後續
 
-`DECIDE` — `JE_AUTOCONTROL_REQUIRE_SIGNED_ACTIONS` 要防的是誰（維護者拍板）
+`TODO` — 各項都是 2026-10-09 那批（U-20261009-01…14）交付時明確沒做的部分
 
-`AC_sign_action_file` 用預設的個人金鑰簽章，所以凡是能透過 socket、REST 或 MCP 執行動作的人，都能先簽一個檔再用
-`AC_execute_files` 執行它；內嵌的動作清單本來就不驗簽。現在的強制簽章只擋得住「能改檔案、但不能執行動作」的人。
-
-**選項**：簽章指令在強制模式下只准本機 CLI 使用；或簽章金鑰與執行權限分開保存（簽章端不在執行端）。
-
-[Answer] 簽章金鑰與執行權限分開保存
----
-
-## USB passthrough viewer 以種類配對回覆，逾時的回覆會交給下一個請求
-
-`DECIDE` — 協定要不要加請求編號（線上格式改動，新舊版本相容要一起想）
-
-`utils/usb/passthrough/viewer_client.py:413`（`_on_opened`）與 `:466`（`_complete_pending`）只按 OPEN／LIST／claim
-配對回覆，回覆沒有序號。請求逾時後，對同一種類的下一個請求會拿到遲到的舊回覆：`open(aaaa)` 逾時、`open(bbbb)`
-收到 `aaaa` 的 OPENED，claim 綁錯裝置；bulk 讀逾時後，下一次傳輸拿到上一次的資料。host 接受最長 60 秒的
-`timeout_ms`，client 預設 10 秒就放棄，正常使用就會遇到（2026-09-24 稽核重現）。
-
-**選項**：在 payload 加一個由 client 產生、host 原樣帶回的請求編號（舊 host 不帶就退回現在的配對）；或逾時後把該
-claim 標成需排空，丟掉下一個回覆——但 host 若根本沒回，會丟掉正確的回覆。
-
-[Answer] 加，但是想辦法解決可能丟掉正確回復的問題
----
-
-## 全域 executor 的變數會留到下一次執行
-
-`DECIDE` — 每次頂層執行要不要有自己的變數範圍（行為改動，維護者拍板）
-
-`execute_action_with_vars`（`utils/executor/action_executor.py`）把變數種進全域 `executor` 後從不清除，REST、MCP、
-socket server 的執行也都用同一個 `executor`；`for_each` 的迴圈變數與巨集參數同樣留著。下一次執行裡的 `${user}`
-會安靜地取到前一個呼叫者的值，而不是報 `Unknown variable`（2026-09-24 稽核重現）。模組文件把這個範圍描述成
-「共用」，所以有人可能依賴它在執行之間傳值。
-
-**選項**：`execute_action_with_vars` 與各伺服器入口每次開一個新的 `VariableScope`（`AC_set_var` 在單次執行內照舊）；
-或保留共用，但在伺服器入口清空，並在文件寫明。
-
-**附帶**：`AC_circuit_call`、`AC_bulkhead_run`、`AC_run_chaos`、`AC_run_dag` 的巢狀動作跑在全域 `executor` 上，
-在 `AC_parallel` 分支裡因此用到父層的變數範圍，而不是分支自己的。
-
-[Answer] `execute_action_with_vars` 與各伺服器入口每次開一個新的 `VariableScope`（`AC_set_var` 在單次執行內照舊
+- **Intel Mac 安裝要編譯 `cryptography`**：下限拉到 50 之後 `macosx_10_9_x86_64` 沒有 wheel（探測：最新只到 48.0.1），
+  `pip install je_auto_control` 在 Intel Mac 需要 Rust 工具鏈。沒有在 Intel Mac 上實際編過。
+- **簽章分離擋不住能寫檔的人**：能執行寫檔指令（shell、檔案類指令）的人仍能換掉公鑰檔本身，保護那個檔是作業系統權限的事；
+  私鑰是未加密的 PEM（0600，Windows 上沒驗權限位元），沒有通行碼選項；遷移模式開著時 HMAC 簽章會被接受。
+  強制簽章經 socket／REST／MCP 的端到端沒有跑過，覆蓋的是共用的 `read_executable_action_json` 與指令本身。
+- **RBAC**（`JE_AUTOCONTROL_RBAC_USERS`，預設關閉）：
+  - 延後執行的工作不帶角色：operator 註冊的排程、觸發器、熱鍵、watchdog 之後執行時沒有身分，裡面的特權指令不會被擋。
+  - 使用者只能用 Python 管（`UserStore.add_user/set_role/rotate_token/remove_user`），沒有 `AC_*`、CLI 或 GUI；`Capability.MANAGE_USERS` 因此沒有任何路由或工具對應。
+  - `gui/rest_api_tab.py` 仍顯示共用 token，RBAC 開啟後那個 token 會被拒絕。
+  - viewer 拿得到所有標成唯讀的工具，包括 `ac_sql_query`、`ac_load_dotenv`、`ac_get_clipboard`、`ac_jwt_encode`，沒有重新分類。
+  - 只實作 `check()` 的自製 REST gate 現在會 `AttributeError`（要有 `authenticate()`）。
+  - 沒對真的 client（Claude Desktop、VS Code、內建 dashboard）試過；SSE、無狀態與 `subscriptions/listen` 路徑、TLS 加 RBAC 沒有測試。
+- **MCP 路徑根目錄**（`JE_AUTOCONTROL_MCP_PATH_ROOTS`，預設關閉）管不到的參數：執行動作清單的工具、
+  有時才是路徑的參數（`ac_open_path`／`ac_plan_open`／`ac_file_association`／`ac_act_in_view` 的 `target`，`ac_launch_process`／`ac_shell` 的 `argv`／`command`）、
+  `ac_handle_file_dialog` 的 `path`、自由格式物件裡的路徑（`ac_run_suite` 的 `spec`、`ac_run_dag` 的 `definition`、`ac_assert_all` 的 `specs`）、沒標註的外掛工具。
+  檔案 symlink 的跳脫在這台機器上建不出來（只跑了目錄 junction）；POSIX 的 `:` 分隔與 `~` 沒在 Linux／macOS 跑。
+  `roots/list` 來的根目錄要另外開 `JE_AUTOCONTROL_MCP_PATH_ROOTS_FROM_CLIENT` 才算數——這是實作時定的，請維護者確認。
+- **USB passthrough**：client 仍在 `reply_timeout_s`（10 秒）放棄，即使呼叫端要的 `timeout_ms` 更長（host 接受到 60 秒）；
+  對新 host 逾時已經無害，對舊 host 正常使用就會進入「需重連」。通道層的 ERROR（passthrough 關閉、bad frame、host 沒有 session）在 session 之前送出、不帶請求編號，
+  呼叫仍是等到逾時。沒對真的舊版 host、真的 WebRTC 通道或真的 USB 裝置跑過。
+- **變數範圍**：`je_auto_control run --dry-run --var`、observer 回呼（`AC_observe_add` 與 MCP 的 observe bridge）、
+  `utils/llm/planner.py` 與狀態機預設 runner 仍用行程層級的範圍。排程／觸發／熱鍵／webhook／e-mail 的隔離是在 `run_counting_failures` 測的，沒有把每個 daemon 真的觸發一次。
+  free-threaded 版（執行緒繼承 context）上，一次執行裡另開的執行緒會看到該次執行的範圍，沒測。
+- **遠端桌面的擁有者模型**：Quick Connect 沒有狀態列，它的連線被取代時視窗只是關掉；主機的 Stop 會停任何擁有者開的 host（刻意的）；
+  只用假的 viewer／host 測過，真的 viewer 被擠掉時會不會觸發 `on_error` 而多跳一個警告框，沒看過。
+- **套件閘門**：`execute_action` 會先驗完所有指令名稱才執行，所以「載入套件」與「用它的指令」寫在同一份清單裡會以 unknown command 失敗，與閘門無關（既有限制）。
+  repo 根目錄的舊範例 `AutoControl/keyword/keyword1.json` 載入 `time`，現在預設會被拒絕。
+- **`pytest --cov` 沒有重新量過**：進入點搬到 `je_auto_control_pytest` 之後，它是否還少算，未知；規則仍是 `coverage run -m pytest`。
+- **快到 750 行上限的檔案**：`utils/usb/passthrough/viewer_client.py`（748）、`gui/remote_desktop/connection_screen.py`（729）、
+  `utils/mcp_server/server.py`（734）、`utils/mcp_server/http_transport.py`（727）、`utils/agent/backends/anthropic_computer_use.py`（723）——下一次要加東西就得先拆。
+- **Sphinx 沒有建置過**：這批改了 35 個 `.rst`，都沒有渲染檢查。
 
 ---
 
@@ -289,45 +273,6 @@ socket server 的執行也都用同一個 `executor`；`for_each` 的迴圈變�
 
 ---
 
-
-## mypy 2.4.0 在三個平台模組回報 `has-type`
-
-`TODO` — 讓型別契約在 mypy 2.4 也過，再把 CI 的 pin 往上提
-
-`quality.yml` 的 `typing-stable-api` 固定 `mypy==2.3.0`，`test/verify/typing_contract_verify.py` 在它上面是 0 個失敗模組；
-`dev_requirements.txt` 只寫下限 `mypy>=2.3.0`，新環境會裝到 2.4.0，同一個指令就多出三個不在豁免清單上的模組
-（2026-10-08 實測）：`wrapper/_platform_osx.py`（非 darwin 目標下 `osx_key_*` 全部 `Cannot determine type`）、
-`wrapper/_platform_windows.py:363`（`win32_recorder`）、`windows/message/window_message.py:7-8`（`user32`）。
-
-**做法**：替這些跨平台名稱補上明確型別註記（或把平台分支改成 mypy 看得懂的 `sys.platform` 判斷），
-兩個版本都驗過後把 `quality.yml` 的 pin 提到 2.4.x。
-
----
-
-## pytest11 進入點會把整個門面拉進每一次 pytest
-
-`DECIDE` — 要不要把進入點搬到一個精簡的頂層模組（打包層的改動，維護者拍板）
-
-`pyproject.toml` 的 `pytest11` 進入點指向 `je_auto_control.utils.pytest_plugin.plugin`。
-外掛模組本身很輕（只 import pytest，fixture 裡才 import 本套件），但它是**套件的子模組**，
-所以 Python 會先跑 `je_auto_control/__init__.py`——量到 **1,355 個模組**。機器上任何一個
-安裝了本套件的環境，每一次 pytest 啟動都付這筆成本（Jeffrey_RPA 因此在 `pytest.ini` 用
-`-p no:je_auto_control` 擋掉它）。pytest 官方文件建議的形狀正是「進入點指向只 import pytest
-的精簡模組」。
-
-改法：新增頂層模組（例如 `je_auto_control_pytest.py`，`[tool.setuptools] py-modules`），
-進入點改指它，`utils/pytest_plugin/plugin.py` 轉為 re-export 以維持
-`pytest_plugins = ["je_auto_control.utils.pytest_plugin"]` 這條路。
-
-**為什麼要拍板**：(1) 這是發佈產物的改動，會在 site-packages 多一個頂層名字；
-(2) 進入點改了要重裝才生效（本機的 editable 安裝、CI 的 `pip install -e .`）；
-(3) `test/unit_test/headless/test_coverage_measurement.py` 的前提會改變——它現在釘住
-「外掛載入時門面已經在 `sys.modules` 裡」，改完就不成立，那份說明與測試要一起改寫
-（CI 仍可繼續用 `coverage run -m pytest`）。
-
-[Answer] 照你建議改寫
-
----
 
 ## libei 的 `ei_unref` 在半開交握上會 SIGSEGV
 
@@ -348,174 +293,18 @@ socket server 的執行也都用同一個 `executor`；`for_each` 的迴圈變�
 
 ---
 
-## `cryptography` 的安全下限要不要拉到 50
+## Agent 的歷史壓縮還沒對真的 API 跑過
 
-`DECIDE` — 要不要用 Intel Mac 的預編 wheel 換掉一個本套件沒用到的漏洞範圍
+`TODO` — 需要付費實機跑一次多步驟任務；離線測試只驗得到請求的形狀
 
-`pyproject.toml` 的 `cryptography>=48.0.1` 仍包含 GHSA-g6cj-pr64-35w5（high,`>=44.0.0, <50.0.0`,
-PKCS#7 EnvelopedData 解密的 Bleichenbacher oracle）的範圍。本套件沒有呼叫 PKCS#7 解密
-（用的是 Fernet，以及 aiortc 的 DTLS），所以目前不受影響。`uv.lock` 已鎖在 50.0.1。
+U-20261009-11 之後，Anthropic 的兩條路徑（`anthropic.py`、`anthropic_computer_use.py` 的 beta 與 GA toolset）不再改寫已送出的回合：
+截圖超過 3 張（或 base64 超過 20,000,000 字元）時，以一則「目標＋已執行的動作」摘要加最新截圖開新對話。OpenAI 後端照舊就地修剪。
+假 client 驗到的是：前綴只增不改、重開後只有一則 `[image, text]`、沒有孤兒 `tool_result`、沒有重播 thinking。沒驗到的：
 
-**為什麼要拍板**:49.0.0 起上游不再發 `macosx_10_9_universal2` wheel，只剩 `macosx_11_0_arm64`。
-下限拉到 `>=50.0.0` 之後，Intel Mac 上的 `pip install` 要從原始碼編譯（得先裝 Rust 工具鏈）。
-CI 只有 macos-14(arm64)，量不到這一點。重新檢查（不需要機器）:
-
-```bash
-pip install --dry-run --only-binary=:all: --platform macosx_10_9_x86_64 \
-    --python-version 3.12 --target /tmp/probe 'cryptography>=50'
-```
-
-[Answer] 可以
-
----
-
-## Viewer 端要不要把 host 推來的檔案關在一個目錄裡
-
-`DECIDE` — 這是改一個已寫進文件的功能，由維護者決定
-
-`host.send_file_to_viewers(source, dest_path)` 由 **host** 指定 viewer 機器上的完整路徑
-（`docs/source/{Eng,Zh}/doc/new_features/new_features_doc.rst` 的範例是 `/tmp/from_host.bin`），
-viewer 端的 `FileReceiver`（`utils/remote_desktop/file_transfer.py`）照單全收：`expanduser`、
-建立父目錄、寫入。也就是被控端可以在控制端機器的任何可寫位置放檔案。模組說明的
-「trusted token holders == trusted users」只涵蓋 host 端；viewer 連上一台被入侵的 host 時沒有這層保護。
-
-**做法**：`FileReceiver` 加 `base_dir`，viewer（`viewer.py` 的 `_ensure_file_receiver`、GUI 的
-`viewer_panel.py`）預設給一個下載目錄，只保留相對路徑並拒絕跳出 `base_dir`；host 端維持現狀。
-
-**為什麼要拍板**：`dest_path` 的語意會從「viewer 上的絕對路徑」變成「viewer 下載目錄裡的相對路徑」，
-現有腳本與文件範例都要跟著改。
-
-[Answer] 可以改
-
----
-
-## macOS 無法還原最小化的視窗
-
-`TODO` — 需要在 macOS 上驗證，離線的 pyobjc 替身抓不到
-
-`wrapper/window_backends/macos_backend.py` 的 `_info_for` 只搜「在螢幕上」的視窗，最小化的不在其中：
-`minimize(77)` 成功後 `list_windows` 看不到它、`restore(77)` 丟「請授權 Accessibility」（即使已授權）。
-Windows 的 `list_windows` 則包含最小化視窗。
-
-**做法**：`_info_for` 改用 `CGWindowListCopyWindowInfo(kCGWindowListOptionIncludingWindow, window_id)`；
-在 macOS CI（TCC 已授權）加一個真的最小化再還原的測試。
-
----
-
-## Agent 的截圖修剪會改寫較早的回合
-
-`TODO` — 需要付費實機跑一次多步驟任務驗證，不能只靠離線測試
-
-`utils/agent/backends/base.py` 的 `prune_old_screenshots` 每一步把較舊的截圖換成文字，改的是已送出過的訊息。
-Claude Fable 5.1 與 Opus 5.5 的 thinking 區塊綁定它之前的整段對話，2026-08-31 之後建立的帳號會直接回 400
-（"block is bound to a different conversation"），約在第 4 步中斷；其他模型則是每一步都讓 prompt cache 失效。
-不修剪也不行：每步重送全部截圖會超過 32 MB 的請求上限。
-
-**做法（擇一，依 claude-api 文件的 append-only 對照表）**：用戶端「簡單壓縮」——截圖數超過上限時，以一則摘要
-（目標、已執行的動作）加最新截圖開新對話，不重播舊回合；或送
-`thinking.block_binding.prefix_mismatch_behavior: "drop_block"`（beta `thinking-binding-controls-2026-08-01`），
-讓被改到的 thinking 區塊被丟棄而不是 400。伺服器端 tool-result clearing 不會縮小請求本身，擋不住 32 MB。
-
-**要動的地方**：`anthropic.py`、`anthropic_computer_use.py`（兩條路徑）呼叫 `prune_old_screenshots` 之處；
-OpenAI 後端沒有這個綁定，照舊。
-
----
-
-## MCP 工具的檔案路徑參數要不要限制在工作區根目錄裡
-
-`DECIDE` — 限制範圍與預設值由維護者決定
-
-MCP 工具的檔案參數（`path`、`file_path`、`db`、`image_path`、`golden_path`、`output_path`… 約 100 個）
-不受任何根目錄限制；只有 `resources/read` 關在 `roots/list` 的根目錄裡。完整模式下這不是新的權限
-（`ac_execute_actions` 本來就能做任何事），但 `JE_AUTOCONTROL_MCP_READONLY=1` 的部署仍能讀到根目錄外的
-任意檔案：例如 `ac_load_dotenv` 會把任何檔案解析成 KEY=VALUE 回給模型，`ac_read_document`、
-`ac_extract_pdf_text` 也一樣。2026 年 MCP 伺服器通報最多的一類就是這種路徑越界。
-
-**做法**：在 `utils/mcp_server/tools/_factories.py` 的 schema 裡把真正是檔案路徑的屬性標上
-`"format": "path"`（不能照名字判斷：`ac_json_query` 的 `path` 是 JSON 路徑，`template`／`source`／
-`target` 有時是檔案有時不是），`server.py` 的 `_prepare_tool_call` 在設定了根目錄時先 `realpath`
-再檢查是否落在根目錄內，不在就回工具執行錯誤（`isError`，和其他參數驗證失敗一樣）。
-
-**為什麼要拍板**：根目錄從哪來（新的環境變數、沿用 `roots/list`、或兩者），唯讀模式要不要預設開啟；
-預設開啟會讓現有讀取工作區外檔案的用法失效。
-
-同一個問題也在 `ac_resolve_ref`／`ac_resolve_refs`（`_factories.py:7182`，標為 `READ_ONLY`）：`file://` 沒有
-`base_dir` 限制，`env://` 可讀任何環境變數，包括放 API 金鑰的那些，結果直接回給模型。`secret://` 已經拒絕；
-`env://` 要不要改成允許清單、`file://` 要不要套同一個根目錄，跟上面一起決定。
-
-[Answer] 兩者，不要預設開啟唯獨
-
----
-
-## Windows 的 DPI 感知是系統層級，混合 DPI 的螢幕座標被虛擬化
-
-`DECIDE` — 改成 per-monitor 會移動那些螢幕上的所有座標，Jeffrey_RPA 在那些螢幕上錄的座標與樣板要重錄
-
-`windows/screen/win32_screen.py:50` 在 import 時呼叫 `SetProcessDPIAware()`，那是系統 DPI 感知，不是
-per-monitor。DPI 與主螢幕不同的螢幕會被 Windows 虛擬化：本機第二螢幕 125%，實際 1920×1080，但 Win32、
-`mss` 與 Qt 都回報 `(1920, -164, 1536, 864)`，截圖是 Windows 縮小過的影像，那個螢幕上的樣板比對與 OCR
-用的是模糊的畫面。同檔註解說之後「所有 Win32 座標查詢都會拿到實體像素」，只在主螢幕 DPI 的螢幕上成立。
-
-**做法**：先呼叫 `SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2)`，失敗再退回
-`SetProcessDPIAware()`，並改正註解；`utils/monitor_layout` 的換算與 `gui/_screen_geometry.py` 一起檢查。
-
-**為什麼要拍板**：這個檔在 Jeffrey_RPA 正在跑的截圖路徑上。換成 per-monitor 之後，縮放螢幕上的座標與截圖
-尺寸都會變，既有的樣板和錄好的座標在那些螢幕上會失準。
-
-[Answer] 換並修好 Jeffrey_RPA 
-
----
-
-## `pil_screenshot`／`screenshot` 的區域擷取在 Windows 只看得到主螢幕
-
-`BLOCKED` — 要改的是 Jeffrey_RPA 正在跑的截圖路徑（`cv2_utils/screenshot.py`、`wrapper/auto_control_screen.py`、`utils/window_capture/window_capture.py`），依工作區規則在它執行期間不動
-
-`cv2_utils/screenshot.py:58` 把 `screen_region` 交給 `ImageGrab.grab(bbox=...)`，Pillow 在 Windows 沒帶
-`all_screens=True` 時只擷取主螢幕再裁切，主螢幕外的部分補黑。分析類指令已改走
-`cv2_utils/region_capture.grab_screen_region`（顏色、直方圖、SSIM、對比、顏色等待、QR、VLM、MCP 截圖），
-下面這些仍是舊路徑，在主螢幕左側或上方的螢幕得到全黑影像：
-
-- `pil_screenshot(screen_region=...)`、`screenshot(screen_region=...)` 與 `AC_screenshot`。
-- `utils/pytest_plugin/keywords.py:41` `keyword_screenshot`（與 `AC_screenshot` 同一語意，一起改）。
-- `utils/window_capture/window_capture.py:66` `capture_window`：視窗在副螢幕時截到黑的。
-- `utils/set_of_marks/set_of_marks.py:121` 把標記畫在 `pil_screenshot()`（只有主螢幕）上，副螢幕的元件沒有標記。
-
-**做法**：`pil_screenshot` 的區域路徑在 Windows 改走 `grab_screen_region`（它已處理 DPI 與負座標），
-`capture_window` 同樣；set-of-marks 改用 `grab_logical(None)` 並把原點加回標記座標。
-
----
-
-## macOS 的 `grab_logical` 在 Retina 上是像素座標，而且只看得到主螢幕
-
-`BLOCKED` — `utils/monitor_layout/logical_frame.py` 在 Jeffrey_RPA 正在跑的截圖路徑上，依工作區規則在它執行期間不動
-
-`grab_logical` 在 macOS 呼叫 `ImageGrab.grab(all_screens=True)`。讀 Pillow 12.3.0 的 darwin 分支：`all_screens`
-不被使用，`screencapture -x` 只擷取主螢幕；Retina 螢幕的影像是點座標的 2 倍（Pillow 文件：「screen captures will
-be at 2x if on a Retina screen」，`scale_down=True` 只在帶 `bbox` 時生效）。`logical_virtual_rect` 只讀 Windows 的
-`GetSystemMetrics`，所以 macOS 不縮放：樣板比對、OCR 與其他走 `grab_logical` 的定位，在 Retina 上回傳的座標是
-滑鼠（Quartz，點座標）的 2 倍，副螢幕上的目標則找不到。GitHub 的 macOS runner 是 1x 虛擬螢幕，CI 測不到。
-
-**做法**：darwin 上以 `CGDisplayBounds`／`CGGetActiveDisplayList` 取得各螢幕的點座標範圍；有 `region` 時交給
-`ImageGrab.grab(bbox=..., scale_down=True)`（`screencapture -R` 接受全域點座標，包括負值），整個桌面則逐螢幕擷取、
-各自縮到點座標後拼接，原點取所有螢幕的最小 x／y。需要在 Retina Mac 上實測。
-
----
-
-## 遠端桌面的 viewer 槽位由各面板共用
-
-`DECIDE` — 要改 `registry` 的擁有權模型
-
-`utils/remote_desktop/registry.py` 的 TCP 與 WS viewer 各只有一個槽位，快速連線（`gui/remote_desktop/connection_screen.py`）、
-舊式 viewer 分頁（`viewer_panel.py`）與 `AC_remote_connect` 都寫同一格。每一方連線前先 `registry.disconnect_viewer()`，
-於是在一邊連線會切斷另一邊的連線，被切斷的面板卻不知道：它的彈出視窗仍停在最後一格畫面，
-「中斷」按鈕則會切斷別人的連線。快速連線的「開始被遠端」也一樣會停掉主機分頁開的 host。
-
-**做法**：registry 記錄每個 viewer／host 由誰開的（owner token），`disconnect_*` 只在 owner 相符時動作；
-被別人取代時通知原本的面板收掉自己的視窗。或是反過來讓每個面板持有自己的 viewer，不經 registry。
-
-**為什麼要拍板**：`AC_remote_*` 指令與 MCP 工具依賴「registry 裡就是那一個 viewer」，改成多槽位要一起改它們的語意。
-
-[Answer] 一起改沒問題
+- 重開的歷史在強制 thinking 綁定的帳號（Opus 5.5／Fable 5.1）上是否被接受。
+- 模型只憑摘要能不能接著做——上限是 3，大約每 3 張截圖就壓縮一次，摘要最多列最新 60 個動作、每個截到 240 字元。
+- 真的桌面 PNG 的請求大小離 32 MB 多遠。
+- 兩個後端都沒送 `cache_control`，所以現在本來就沒有 prompt cache；要開的話是另一個請求形狀的改動。
 
 ---
 
@@ -525,10 +314,3 @@ be at 2x if on a Retina screen」，`scale_down=True` 只在帶 `bbox` 時生效
 
 ---
 
-## 套件閘門的預設改成拒絕
-
-`BLOCKED` — 等含警告的版本出去之後再發兩版
-
-`AC_add_package_to_executor`／`AC_add_package_to_callback_executor` 前面已有套件閘門（工作區 X-12），但沒設定時仍會載入任何套件、只發 `DeprecationWarning`。兩個版本之後，在 `utils/package_manager/package_manager_class.py` 的 `PackageManager.__init__` 把 `allow_arbitrary_packages` 改成 `False`，拿掉 `_check_allowed` 裡的警告分支，並更新三份 README 的「Package gate」段落、`docs/source/{Eng,Zh}/doc/keyword_and_executor/keyword_and_executor_doc.rst` 與 `docs/source/API/utils/package_manager.rst`，`CHANGELOG.md` 記成破壞性變更。
-
-**先決定**：只跑動作檔、沒有 Python 宿主程式的使用者（`je_auto_control` CLI、socket／REST／MCP server、排程器）要怎麼放行套件。

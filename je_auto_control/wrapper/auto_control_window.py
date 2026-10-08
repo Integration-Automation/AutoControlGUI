@@ -70,10 +70,11 @@ def _became_foreground(backend, hwnd: int, settle_s: float) -> bool:
 def focus_window(title_substring: str, case_sensitive: bool = False) -> int:
     """Bring the first matching window to the foreground; return its hwnd.
 
-    Raises ``AutoControlActionException`` when the window is not the foreground
-    one afterwards. Windows' foreground lock refuses a background process
-    often, and reporting success then sends the caller's next keystrokes to
-    whatever window the user has active.
+    On a backend that can confirm it (Windows), raises
+    ``AutoControlActionException`` when the window is not the foreground one
+    afterwards. Windows' foreground lock refuses a background process often,
+    and reporting success then sends the caller's next keystrokes to whatever
+    window the user has active.
     """
     hit = find_window(title_substring, case_sensitive)
     if hit is None:
@@ -88,7 +89,8 @@ def focus_window(title_substring: str, case_sensitive: bool = False) -> int:
     if backend.is_minimized(hwnd):
         backend.restore(hwnd)
     backend.set_foreground(hwnd)
-    if not _became_foreground(backend, hwnd, _FOCUS_SETTLE_S):
+    confirms = getattr(backend, "confirms_foreground", False)
+    if confirms and not _became_foreground(backend, hwnd, _FOCUS_SETTLE_S):
         raise AutoControlActionException(
             f"focus_window: {title!r} (hwnd={hwnd}) did not become the "
             f"foreground window; the system refused the request")

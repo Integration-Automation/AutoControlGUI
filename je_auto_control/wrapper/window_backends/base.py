@@ -25,6 +25,12 @@ class WindowManageBackend:
     answers, and a caller that cannot tell them apart will retry forever.
     """
 
+    #: Whether ``foreground_window()`` right after ``set_foreground(id)`` is a
+    #: reliable answer to "did it work". Only then does ``focus_window`` turn a
+    #: mismatch into an error; elsewhere a mismatch may only mean the platform
+    #: reports its foreground window under another id.
+    confirms_foreground: bool = False
+
     name: str = "abstract"
     available: bool = False
 

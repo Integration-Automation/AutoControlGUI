@@ -13,6 +13,9 @@ class WindowsWindowBackend(WindowManageBackend):
     """
 
     name = "win32"
+    # GetForegroundWindow answers with the HWND set_foreground was given, so
+    # a refused request can be told from a granted one.
+    confirms_foreground = True
 
     def __init__(self) -> None:
         self.available = sys.platform in ("win32", "cygwin", "msys")
