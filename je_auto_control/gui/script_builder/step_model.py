@@ -1,8 +1,14 @@
-"""Step data model and (de)serialisation between the tree view and AC JSON."""
+"""Step data model and (de)serialisation between the tree view and AC JSON.
+
+Also what the builder may show of a run: :func:`displayable_record` masks the
+results of commands whose schema entry is marked ``sensitive_result``.
+"""
+import re
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Mapping, Optional, Tuple
 
 from je_auto_control.gui.script_builder.command_schema import COMMAND_SPECS
+from je_auto_control.utils.executor.action_redaction import SENSITIVE_ARGUMENT_NAMES
 from je_auto_control.utils.json.json_file import read_action_json, write_action_json
 
 
@@ -33,6 +39,47 @@ class Step:
         base = spec.label if spec else self.command
         detail = _summarise_params(self.params) if self.args is None else _summarise_args(self.args)
         return f"{base}  {detail}" if detail else base
+
+
+#: Shown in place of a marked command's result that is not a mapping.
+HIDDEN_RESULT = "(hidden: this command's result carries a secret)"
+_MASK = "***"
+# A record key is "execute: " + str(action); the command is its first element.
+_RECORD_COMMAND = re.compile(r"^execute: \['(AC_\w+)'")
+
+
+def displayable_record(record: Any) -> Any:
+    """A copy of an execution record that is safe to print in the builder.
+
+    The result of a command marked ``sensitive_result`` -- at the top level or
+    inside a block's nested record -- keeps its shape with every secret-named
+    field masked, so the row still says which user it was. A failure is a
+    string (the error's ``repr``) and is shown as it is. The record itself is
+    not changed.
+    """
+    if isinstance(record, list):
+        return [displayable_record(item) for item in record]
+    if not isinstance(record, dict):
+        return record
+    shown: Dict[Any, Any] = {}
+    for key, value in record.items():
+        match = _RECORD_COMMAND.match(key) if isinstance(key, str) else None
+        spec = COMMAND_SPECS.get(match.group(1)) if match is not None else None
+        if spec is not None and spec.sensitive_result:
+            shown[key] = _without_secrets(value)
+        else:
+            shown[key] = displayable_record(value)
+    return shown
+
+
+def _without_secrets(value: Any) -> Any:
+    """``value`` with its secret-named fields masked; hidden whole when it has no fields."""
+    if isinstance(value, str):
+        return value
+    if not isinstance(value, dict):
+        return HIDDEN_RESULT
+    return {key: _MASK if str(key).lower() in SENSITIVE_ARGUMENT_NAMES else item
+            for key, item in value.items()}
 
 
 def step_to_action(step: Step) -> list:

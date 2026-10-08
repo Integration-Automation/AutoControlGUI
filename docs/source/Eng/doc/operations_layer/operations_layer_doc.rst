@@ -169,7 +169,10 @@ surface, each of which needs the ``manage_users`` capability:
 
 - ``AC_user_add`` (``user_id``, ``role``, ``display_name``, ``tags``),
   ``AC_user_remove``, ``AC_user_set_role``, ``AC_user_rotate_token`` and
-  ``AC_user_list`` in an action list -- so also through ``POST /execute``;
+  ``AC_user_list`` in an action list -- so also through ``POST /execute``.
+  The Script Builder lists all five under **Security**; a run's result pane
+  shows ``AC_user_add`` / ``AC_user_rotate_token`` with the token masked, so
+  read a new token from the Users group, the CLI or a script instead;
 - the MCP tools ``ac_user_add`` / ``ac_user_remove`` / ``ac_user_set_role`` /
   ``ac_user_rotate_token`` / ``ac_user_list``;
 - the **Users (RBAC)** group of the REST API tab (commands in the Actions

@@ -155,7 +155,9 @@ CLI::
 
 - 動作清單裡的 ``AC_user_add``\ （``user_id``、``role``、``display_name``、``tags``）、
   ``AC_user_remove``、``AC_user_set_role``、``AC_user_rotate_token`` 與
-  ``AC_user_list``——所以 ``POST /execute`` 也可以；
+  ``AC_user_list``——所以 ``POST /execute`` 也可以。Script Builder 在 **Security**
+  分類列出這五個指令；執行結果面板顯示 ``AC_user_add``／``AC_user_rotate_token`` 時
+  會遮蔽 token，所以新 token 請從使用者群組、CLI 或腳本取得；
 - MCP 工具 ``ac_user_add``／``ac_user_remove``／``ac_user_set_role``／
   ``ac_user_rotate_token``／``ac_user_list``；
 - REST API 分頁的 **使用者（RBAC）** 群組（指令在 Actions 選單），該分頁也可以用這個
