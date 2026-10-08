@@ -6,6 +6,7 @@ from PySide6.QtWidgets import (
     QGroupBox,
 )
 
+from je_auto_control.gui._tab_task import stop_all_script_runs
 from je_auto_control.gui._validators import int_validator
 from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.wrapper.auto_control_keyboard import (
@@ -212,7 +213,9 @@ class AutoClickTabMixin:
         self.timer.start()
 
     def _stop_auto_click(self):
+        """Stop the auto-clicker and ask every running script to stop (Ctrl+4)."""
         self.timer.stop()
+        stop_all_script_runs()
 
     def _timer_tick(self):
         if self.repeat_until_stopped.isChecked():

@@ -1358,6 +1358,16 @@ english_word_dict = {
     "llm_no_plan": "Click Plan first",
     "llm_running": "Running...",
     "llm_run_done": "Done",
+    # Background runs shared by the tabs (gui/_tab_task.py)
+    "task_running": "Running...",
+    "task_busy": "Already running: wait for it to finish, or stop it first.",
+    "task_stopping": "Stopping...",
+    "task_stopped": "Stopped.",
+    "task_stop": "Stop run",
+    "stop_playback": "Stop playback",
+    "record_playing": "Playing back...",
+    "rd_file_sending": "Sending {name}...",
+    "rd_file_busy": "A transfer is already running.",
 
     # Remote Desktop Tab
     "rd_quick_tab": "Quick Connect",

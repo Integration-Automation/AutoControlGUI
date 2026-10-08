@@ -1,4 +1,9 @@
-"""Composite widget that ties the step tree and form into a Script Builder tab."""
+"""Composite widget that ties the step tree and form into a Script Builder tab.
+
+Run executes the steps off the GUI thread as a stoppable executor run, one at
+a time; Stop ends it at its next checkpoint.
+"""
+import functools
 import json
 from typing import Optional
 
@@ -11,6 +16,7 @@ from PySide6.QtWidgets import (
 
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
 from je_auto_control.gui._journal_import import candidate_summary, pick_journal_candidate
+from je_auto_control.gui._tab_task import TabTask, was_stopped
 from je_auto_control.gui.language_wrapper.multi_language_wrapper import (
     language_wrapper,
 )
@@ -30,6 +36,11 @@ def _t(key: str) -> str:
     return language_wrapper.translate(key, key)
 
 
+def _run_actions(actions: list) -> object:
+    """Worker thread: execute the built action list."""
+    return execute_action(actions)
+
+
 class ScriptBuilderTab(TranslatableMixin, QWidget):
     """Visual editor for composing AC_* scripts."""
 
@@ -45,6 +56,9 @@ class ScriptBuilderTab(TranslatableMixin, QWidget):
         # The other top-level keys of a loaded {"auto_control": [...]} file,
         # written back on Save; None for a bare list.
         self._file_extras: Optional[dict] = None
+        self._runs = TabTask(self)
+        self._runs.result.connect(self._show_run_result)
+        self._runs.error.connect(self._show_run_error)
         self._build_layout()
         self._wire_signals()
 
@@ -82,6 +96,7 @@ class ScriptBuilderTab(TranslatableMixin, QWidget):
             ("sb_import_journal", self._on_import_journal),
             ("sb_save_json", self._on_save),
             ("sb_run", self._on_run),
+            ("task_stop", self._on_stop),
         ):
             btn = self._tr(QPushButton(), key)
             btn.clicked.connect(handler)
@@ -170,13 +185,28 @@ class ScriptBuilderTab(TranslatableMixin, QWidget):
     def _on_run(self) -> None:
         try:
             actions = steps_to_actions(self._tree.root_steps())
-            if not actions:
-                QMessageBox.information(self, "Info", "No steps to run")
-                return
-            result = execute_action(actions)
-            self._result.setPlainText(
-                json.dumps(result, indent=2, default=str, ensure_ascii=False)
-            )
         except (AutoControlException, OSError, ValueError, TypeError,
                 RuntimeError) as error:
             QMessageBox.warning(self, "Error", str(error))
+            return
+        if not actions:
+            QMessageBox.information(self, "Info", "No steps to run")
+            return
+        if not self._runs.start_script(functools.partial(_run_actions, actions)):
+            self._result.setPlainText(_t("task_busy"))
+            return
+        self._result.setPlainText(_t("task_running"))
+
+    def _on_stop(self) -> None:
+        if self._runs.stop():
+            self._result.setPlainText(_t("task_stopping"))
+
+    def _show_run_result(self, result: object) -> None:
+        self._result.setPlainText(json.dumps(result, indent=2, default=str, ensure_ascii=False))
+
+    def _show_run_error(self, error: object) -> None:
+        if was_stopped(error):
+            self._result.setPlainText(_t("task_stopped"))
+            return
+        self._result.setPlainText("")
+        QMessageBox.warning(self, "Error", str(error))

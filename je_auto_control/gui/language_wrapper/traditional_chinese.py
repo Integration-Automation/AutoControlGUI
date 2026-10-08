@@ -1229,6 +1229,16 @@ traditional_chinese_word_dict = {
     "llm_no_plan": "請先按下「規劃」",
     "llm_running": "執行中...",
     "llm_run_done": "完成",
+    # Background runs shared by the tabs (gui/_tab_task.py)
+    "task_running": "執行中...",
+    "task_busy": "已在執行中：請等它結束，或先停止。",
+    "task_stopping": "正在停止...",
+    "task_stopped": "已停止。",
+    "task_stop": "停止執行",
+    "stop_playback": "停止回放",
+    "record_playing": "回放中...",
+    "rd_file_sending": "正在傳送 {name}...",
+    "rd_file_busy": "已有傳輸在進行中。",
 
     # Remote Desktop Tab
     "rd_quick_tab": "快速連線",

@@ -1249,6 +1249,16 @@ japanese_word_dict = {
     "llm_no_plan": "まず「プラン作成」を押してください",
     "llm_running": "実行中...",
     "llm_run_done": "完了",
+    # Background runs shared by the tabs (gui/_tab_task.py)
+    "task_running": "実行中...",
+    "task_busy": "すでに実行中です。終了を待つか、先に停止してください。",
+    "task_stopping": "停止中...",
+    "task_stopped": "停止しました。",
+    "task_stop": "実行を停止",
+    "stop_playback": "再生を停止",
+    "record_playing": "再生中...",
+    "rd_file_sending": "{name} を送信中...",
+    "rd_file_busy": "すでに転送中です。",
 
     # Remote Desktop Tab
     "rd_quick_tab": "クイック接続",

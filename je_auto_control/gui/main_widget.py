@@ -121,6 +121,7 @@ class AutoControlGUIWidget(
                 ("start_record", self._start_record),
                 ("stop_record", self._stop_record),
                 ("playback", self._playback_record),
+                ("stop_playback", self._stop_playback),
                 ("save_record", self._save_record),
                 ("load_record", self._load_record),
             )),
@@ -130,6 +131,7 @@ class AutoControlGUIWidget(
                 ("menu_choose_script_dir", self._browse_script_dir),
                 ("execute_dir", self._execute_dir),
                 ("execute_editor_script", self._execute_manual_script),
+                ("task_stop", self._stop_script),
             )),
             "remote_desktop": (self._build_remote_desktop_tab, ()),
             "report": (self._build_report_tab(), (
@@ -424,7 +426,7 @@ class AutoControlGUIWidget(
             self.tabs.setCurrentWidget(entry.widget)
 
     # =========================================================================
-    # Global keyboard shortcut: Ctrl+4 to stop
+    # Global keyboard shortcut: Ctrl+4 stops the auto-clicker and every running script
     # =========================================================================
     def keyPressEvent(self, event: QKeyEvent):
         if event.modifiers() == Qt.KeyboardModifier.ControlModifier and event.key() == Qt.Key.Key_4:

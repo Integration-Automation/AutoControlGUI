@@ -1,4 +1,9 @@
-"""Record / playback tab builder (extracted mixin)."""
+"""Record / playback tab builder (extracted mixin).
+
+Playback runs off the GUI thread as a stoppable executor run, one at a time.
+"""
+import copy
+import functools
 import json
 
 from typing import TYPE_CHECKING, Any, Callable
@@ -7,6 +12,7 @@ from PySide6.QtWidgets import (
     QFileDialog, QLabel, QMessageBox, QTextEdit, QVBoxLayout, QWidget,
 )
 
+from je_auto_control.gui._tab_task import TabTask, was_stopped
 from je_auto_control.gui.language_wrapper.multi_language_wrapper import language_wrapper
 from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.executor.action_executor import execute_action
@@ -19,6 +25,11 @@ _JSON_FILE_FILTER = "JSON (*.json)"
 def _t(key: str) -> str:
     """language_wrapper shorthand"""
     return language_wrapper.translate(key, key)
+
+
+def _play_actions(actions: list) -> object:
+    """Worker thread: replay a recording."""
+    return execute_action(actions)
 
 
 class RecordTabMixin:
@@ -51,6 +62,9 @@ class RecordTabMixin:
         self.record_list_text.setReadOnly(True)
         layout.addWidget(self.record_list_text)
         tab.setLayout(layout)
+        self._playback_runs = TabTask(self)
+        self._playback_runs.error.connect(self._on_playback_error)
+        self._playback_runs.finished.connect(self._on_playback_finished)
         return tab
 
     def _apply_record_status_label(self) -> None:
@@ -85,13 +99,28 @@ class RecordTabMixin:
             QMessageBox.warning(self, "Error", str(error))
 
     def _playback_record(self):
-        try:
-            if not self._record_data:
-                QMessageBox.warning(self, "Warning", "No recorded data")
-                return
-            execute_action(self._record_data)
-        except (AutoControlException, OSError, ValueError, TypeError, RuntimeError) as error:
+        if not self._record_data:
+            QMessageBox.warning(self, "Warning", "No recorded data")
+            return
+        # The worker gets its own copy: loading or recording again while the
+        # playback runs must not change the list under it.
+        if not self._playback_runs.start_script(
+                functools.partial(_play_actions, copy.deepcopy(self._record_data))):
+            return
+        self._record_status_key = "record_playing"
+        self._apply_record_status_label()
+
+    def _stop_playback(self) -> None:
+        """Ask the running playback to stop; it ends at its next checkpoint."""
+        self._playback_runs.stop()
+
+    def _on_playback_error(self, error: object) -> None:
+        if not was_stopped(error):
             QMessageBox.warning(self, "Error", str(error))
+
+    def _on_playback_finished(self) -> None:
+        self._record_status_key = "record_idle"
+        self._apply_record_status_label()
 
     def _save_record(self):
         try:

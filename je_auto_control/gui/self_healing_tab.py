@@ -6,6 +6,7 @@ group measures locator versions against a labelled dataset and walks a
 candidate template revision through propose / preview / accept / revert; every
 one of those is a call into ``utils.self_healing`` and nothing more.
 """
+import functools
 import json
 from typing import Callable, Optional, Sequence
 
@@ -17,6 +18,7 @@ from PySide6.QtWidgets import (
 )
 
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
+from je_auto_control.gui._tab_task import TabTask
 from je_auto_control.gui.language_wrapper.multi_language_wrapper import (
     language_wrapper,
 )
@@ -61,6 +63,9 @@ class SelfHealingTab(TranslatableMixin, QWidget):
         self._revision_input = QLineEdit()
         self._report_view = QPlainTextEdit()
         self._report_view.setReadOnly(True)
+        self._runs = TabTask(self)
+        self._runs.result.connect(self._show_heal_outcome)
+        self._runs.error.connect(self._show_heal_error)
         self._build_layout()
 
     def retranslate(self) -> None:
@@ -263,20 +268,16 @@ class SelfHealingTab(TranslatableMixin, QWidget):
         if inputs is None:
             return
         template, description, threshold = inputs
-        try:
-            if do_click or self._click_check.isChecked():
-                outcome = self_heal_click(
-                    template_path=template, description=description,
-                    detect_threshold=threshold,
-                )
-            else:
-                outcome = self_heal_locate(
-                    template_path=template, description=description,
-                    detect_threshold=threshold,
-                )
-        except (AutoControlException, OSError, ValueError, RuntimeError) as error:
-            self._status.setText(f"{_t('self_heal_error')}: {error}")
+        click = do_click or self._click_check.isChecked()
+        # A template search and, on a miss, a VLM call: off the GUI thread.
+        if not self._runs.start(functools.partial(_heal, click, template, description, threshold)):
             return
+        self._status.setText(_t("task_running"))
+
+    def _show_heal_error(self, error: object) -> None:
+        self._status.setText(f"{_t('self_heal_error')}: {error}")
+
+    def _show_heal_outcome(self, outcome: HealOutcome) -> None:
         self._report_outcome(outcome)
         self.refresh_log()
 
@@ -317,6 +318,12 @@ class SelfHealingTab(TranslatableMixin, QWidget):
                 item.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
                 self._table.setItem(row, col, item)
         self._table.resizeColumnsToContents()
+
+
+def _heal(click: bool, template: str, description: str, threshold: float) -> HealOutcome:
+    """Worker thread: one locate (or locate-and-click) attempt."""
+    heal = self_heal_click if click else self_heal_locate
+    return heal(template_path=template, description=description, detect_threshold=threshold)
 
 
 def _format_coordinates(coords) -> str:

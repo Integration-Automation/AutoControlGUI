@@ -15,9 +15,11 @@ Transport for the viewer side defaults to direct TCP (no extras needed).
 Operators who want WebRTC signaling, WSS, or manual SDP exchange go to
 the Advanced sub-tabs.
 """
+import functools
 import secrets
 import threading
-from typing import Optional
+from pathlib import Path
+from typing import Any, List, Optional
 
 from PySide6.QtCore import Qt, QTimer, Signal
 from PySide6.QtGui import QGuiApplication, QImage
@@ -36,6 +38,7 @@ from je_auto_control.gui.remote_desktop._helpers import (
 from je_auto_control.gui.remote_desktop.remote_screen_window import (
     RemoteScreenWindow,
 )
+from je_auto_control.gui._tab_task import TabTask
 from je_auto_control.gui.task_controller import TaskHandle
 from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.remote_desktop import (
@@ -153,6 +156,9 @@ class QuickConnectScreen(_RecentConnectionsMixin, TranslatableMixin, QWidget):
         # and replay it the moment the window is created.
         self._pending_frame: Optional[bytes] = None
         self._connect_task: Optional[TaskHandle] = None    # the connect in progress, off-thread
+        self._uploads = TabTask(self)                      # dropped files going to the host, off-thread
+        self._uploads.error.connect(self._on_upload_failed)
+        self._uploads.finished.connect(self._refresh_status)
         self._book = default_address_book()
         self._refresh_timer = QTimer(self)
         self._refresh_timer.setInterval(self._STATUS_INTERVAL_MS)
@@ -517,6 +523,7 @@ class QuickConnectScreen(_RecentConnectionsMixin, TranslatableMixin, QWidget):
     def _disconnect(self) -> None:
         # Either transport, and only a session this screen opened.
         self._cancel_pending_connect()
+        self._uploads.stop()    # its socket is about to close; the failure is not news
         registry.release(SLOT_VIEWER, self._owner)
         registry.release(SLOT_WS_VIEWER, self._owner)
         self._close_screen_window()
@@ -575,16 +582,16 @@ class QuickConnectScreen(_RecentConnectionsMixin, TranslatableMixin, QWidget):
         viewer = self._own_viewer()
         if viewer is None or not viewer.connected:
             return
-        for path in paths:
-            from pathlib import Path
-            try:
-                dest = "~/" + Path(path).name
-                viewer.send_file(path, dest)
-            except (OSError, RuntimeError) as error:
-                QMessageBox.warning(
-                    self, _t("rd_quick_connect_btn"), str(error),
-                )
-                return
+        # send_file streams the whole file over the session's socket: off the
+        # GUI thread, one batch at a time, so the popup keeps painting frames.
+        if not self._uploads.start(
+                functools.partial(_upload_to_home, viewer, [str(path) for path in paths])):
+            QMessageBox.information(self, _t("rd_quick_connect_btn"), _t("rd_file_busy"))
+            return
+        self._refresh_status()
+
+    def _on_upload_failed(self, error: object) -> None:
+        QMessageBox.warning(self, _t("rd_quick_connect_btn"), str(error))
 
     def _close_screen_window(self) -> None:
         window = self._screen_window
@@ -632,13 +639,22 @@ class QuickConnectScreen(_RecentConnectionsMixin, TranslatableMixin, QWidget):
         # Only this screen's own session, on either transport.
         viewer = self._own_viewer()
         if viewer is not None and viewer.connected:
-            self._viewer_badge.set_state("live", _t("rd_quick_connected"))
+            sending = self._uploads.running
+            self._viewer_badge.set_state("live", _t(
+                "rd_file_sending").replace("{name}", "") if sending else _t("rd_quick_connected"))
         elif self._connect_task is not None:
             self._viewer_badge.set_state("idle", _t("rd_viewer_connecting"))
         else:
             self._viewer_badge.set_state(
                 "idle", _t("rd_quick_disconnected"),
             )
+
+
+def _upload_to_home(viewer: Any, paths: List[str]) -> int:
+    """Worker thread: send each file to the host's home directory; stops at the first failure."""
+    for path in paths:
+        viewer.send_file(path, "~/" + Path(path).name)
+    return len(paths)
 
 
 __all__ = ["QuickConnectScreen"]

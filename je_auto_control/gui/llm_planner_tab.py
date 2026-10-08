@@ -2,9 +2,11 @@
 
 The tab calls the headless ``plan_actions`` helper, shows the resulting
 JSON action list for review, and lets the user execute it through the
-shared global executor. Long calls run on a background worker thread so the
-UI stays responsive.
+shared global executor. Planning and running both happen off the GUI thread;
+a run is a stoppable executor run, one at a time.
 """
+import copy
+import functools
 import json
 from typing import List, Optional
 
@@ -15,6 +17,7 @@ from PySide6.QtWidgets import (
 )
 
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
+from je_auto_control.gui._tab_task import TabTask, was_stopped
 from je_auto_control.gui._worker_thread import WorkerHandle, start_worker
 from je_auto_control.gui.language_wrapper.multi_language_wrapper import (
     language_wrapper,
@@ -22,11 +25,15 @@ from je_auto_control.gui.language_wrapper.multi_language_wrapper import (
 from je_auto_control.utils.executor.action_executor import execute_action, executor
 from je_auto_control.utils.llm.backends.base import LLMNotAvailableError
 from je_auto_control.utils.llm.planner import LLMPlanError, plan_actions
-from je_auto_control.utils.exception.exceptions import AutoControlException
 
 
 def _t(key: str) -> str:
     return language_wrapper.translate(key, key)
+
+
+def _run_plan(actions: list) -> object:
+    """Worker thread: execute the reviewed plan."""
+    return execute_action(actions)
 
 
 class _PlanWorker(QObject):
@@ -72,6 +79,9 @@ class LLMPlannerTab(TranslatableMixin, QWidget):
         self._status = QLabel()
         self._planned_actions: Optional[list] = None
         self._plan_thread: Optional[WorkerHandle] = None
+        self._runs = TabTask(self)
+        self._runs.result.connect(self._show_run_result)
+        self._runs.error.connect(self._show_run_error)
         self._build_layout()
         self._apply_placeholders()
 
@@ -117,6 +127,7 @@ class LLMPlannerTab(TranslatableMixin, QWidget):
         return [
             ("llm_plan_btn", self._on_plan),
             ("llm_run_btn", self._on_run),
+            ("task_stop", self._on_stop),
         ]
 
     def _on_plan(self) -> None:
@@ -156,14 +167,25 @@ class LLMPlannerTab(TranslatableMixin, QWidget):
         if not self._planned_actions:
             self._status.setText(_t("llm_no_plan"))
             return
-        self._status.setText(_t("llm_running"))
-        try:
-            record = execute_action(self._planned_actions)
-        except (AutoControlException, OSError, ValueError, TypeError, RuntimeError) as error:
-            QMessageBox.warning(self, _t("llm_run_btn"), str(error))
-            self._status.setText(str(error))
+        if not self._runs.start_script(
+                functools.partial(_run_plan, copy.deepcopy(self._planned_actions))):
+            self._status.setText(_t("task_busy"))
             return
+        self._status.setText(_t("llm_running"))
+
+    def _on_stop(self) -> None:
+        if self._runs.stop():
+            self._status.setText(_t("task_stopping"))
+
+    def _show_run_result(self, record: object) -> None:
         self._result_view.setText(
             json.dumps(record, indent=2, ensure_ascii=False, default=str)
         )
         self._status.setText(_t("llm_run_done"))
+
+    def _show_run_error(self, error: object) -> None:
+        if was_stopped(error):
+            self._status.setText(_t("task_stopped"))
+            return
+        QMessageBox.warning(self, _t("llm_run_btn"), str(error))
+        self._status.setText(str(error))

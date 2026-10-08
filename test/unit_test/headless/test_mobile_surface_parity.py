@@ -283,12 +283,16 @@ def test_mobile_tab_runs_a_command_through_the_headless_api(adb_host):
         tab.set_target("android", "phone", adb_path="fake-adb")
         tab.set_command("AC_android_long_press", {"x": 3, "y": 4})
         actions = dict(tab.menu_actions())
+        from headless._qt_settle import settle
         actions["mob_run"]()
+        assert settle(tab._runs, "task")    # device calls run off the GUI thread
         assert adb_host.devices["phone"].input_calls == ["input swipe 3 4 3 4 1000"]
         actions["mob_probe"]()
+        assert settle(tab._runs, "task")
         assert tab.capability_rows()["input"] == "available"
         tab.set_command("AC_android_long_press", {"x": 3})
         actions["mob_run"]()
+        assert settle(tab._runs, "task")
         assert "y" in tab.result_text()
     finally:
         tab.deleteLater()
