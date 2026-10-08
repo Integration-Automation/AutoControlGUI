@@ -280,6 +280,24 @@ def _click_plan(clicks: object, interval: object) -> Tuple[int, float]:
     return count, pause
 
 
+def _darwin_click(x: int, y: int, keycode: MouseKeycode, index: int,
+                  pause: float) -> None:
+    """Send click ``index`` (0-based) of a run to the macOS backend.
+
+    macOS applications read the click count off the event rather than timing
+    two clicks, so the n-th click carries n. A pause longer than the system
+    double-click interval is not a multi-click anywhere, so those clicks stay
+    single ones -- and a single click is the three-argument call this always
+    made. Does nothing off macOS, where the field does not exist.
+    """
+    if sys.platform != "darwin":
+        return
+    if not index or (pause and pause > mouse.double_click_interval()):
+        mouse.click_mouse(x, y, keycode)
+    else:
+        mouse.click_mouse(x, y, keycode, index + 1)
+
+
 def click_mouse(mouse_keycode: int | str, x: int | None = None,
                 y: int | None = None, clicks: int = 1,
                 interval: float = 0.0) -> Tuple[MouseKeycode, int, int]:
@@ -290,8 +308,11 @@ def click_mouse(mouse_keycode: int | str, x: int | None = None,
     All clicks land on the same point, ``interval`` seconds apart. Windows and
     X11 recognise a double-click from the timing and distance of two clicks,
     so keep ``interval`` under the system double-click time (500 ms by
-    default on Windows). macOS apps read a click count this backend does not
-    set, so there the clicks arrive as separate single clicks.
+    default on Windows). macOS apps read a click count carried by the event
+    instead, so there the n-th click of the run has its click-state field
+    (``kCGMouseEventClickState``) set to n -- unless ``interval`` is longer
+    than the system double-click interval, in which case every click is sent
+    as a single click, as the other platforms would treat it.
 
     :param mouse_keycode: 滑鼠按鍵代碼 Mouse keycode
     :param x: X 座標 X position
@@ -318,7 +339,7 @@ def click_mouse(mouse_keycode: int | str, x: int | None = None,
             # strings, so the int never matches any branch and the click is
             # silently dropped with no exception.
             if sys.platform == "darwin":
-                mouse.click_mouse(x, y, keycode)
+                _darwin_click(x, y, keycode, index, pause)
             else:
                 mouse.click_mouse(keycode, x, y)
         record_action_to_list("click_mouse", param)

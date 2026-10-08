@@ -88,11 +88,16 @@ def test_the_backend_names_both_apis_it_uses(backend):
 
 # --- listing ------------------------------------------------------------------
 
-def test_listing_asks_quartz_for_on_screen_windows_only(backend, world):
+def test_listing_asks_quartz_for_what_is_on_screen_and_then_for_the_rest(
+        backend, world):
+    # Two questions, in this order: the on-screen list is the one that comes
+    # back front-to-back, so it sets the order; the full list is only mined
+    # for windows the first one left out.
     backend.list_windows()
-    [(options, relative_to)] = world.list_options
-    assert options == 1 | 16, "on-screen only, excluding desktop elements"
-    assert relative_to == 0, "kCGNullWindowID"
+    assert world.list_options == [
+        (1 | 16, 0),     # on-screen only, excluding desktop elements
+        (0 | 16, 0),     # everything, excluding desktop elements
+    ], "both relative to kCGNullWindowID"
 
 
 def test_listing_keeps_the_order_quartz_gives(backend, world):
@@ -288,9 +293,22 @@ def test_a_window_the_element_says_is_not_minimised_is_not(monkeypatch,
     assert backend.is_minimized(7) is False
 
 
-def test_a_window_that_is_not_on_screen_at_all_is_minimised(backend):
-    # A minimised window is absent from the on-screen list, so failing to
-    # find it is itself the answer rather than an error.
+def test_a_window_quartz_has_never_heard_of_is_not_minimised(backend):
+    # This used to answer True, on the reasoning that a minimised window is
+    # absent from the on-screen list. It is -- but so is a window that was
+    # closed, and now that one window is looked up by id the two can be told
+    # apart. The Windows backend answers False for a dead handle too.
+    assert backend.is_minimized(7) is False
+
+
+def test_an_off_screen_window_with_no_element_reads_as_minimised(monkeypatch,
+                                                                 on_darwin):
+    # Without the Accessibility grant there is no element to ask, and Quartz
+    # only knows "not on screen". That is the nearest answer available, and
+    # it is the one that makes focus_window try a restore first.
+    world = _mac_with_window(ax_windows=[])
+    world.off_screen.add(7)
+    backend = _build(monkeypatch, world)
     assert backend.is_minimized(7) is True
 
 
@@ -490,3 +508,170 @@ def test_input_to_an_unfocused_window_is_refused_not_faked(backend, call):
     # focus is. A "success" that clicked somewhere else is worse than a no.
     with pytest.raises(AutoControlUnsupportedOperationException):
         call(backend)
+
+
+# --- a minimised window is off screen, not gone -------------------------------
+#
+# The defect these pin: every lookup of one window went through the on-screen
+# list, which a minimised window is not in. `minimize(7)` succeeded, and from
+# then on the window was missing from `list_windows` and `restore(7)` raised
+# the "grant Accessibility" refusal on a Mac where it had been granted.
+
+def _linked_window(number=7, *, origin=(10, 20), title="Editor"):
+    """An accessibility window whose minimising the stub's Quartz notices."""
+    element = AXElement(quartz_id=number)
+    element.attributes["AXPosition"] = ("point", objc_stub.AXPoint(*origin))
+    element.attributes["AXTitle"] = title
+    return element
+
+
+def test_one_window_is_asked_for_by_id_not_searched_for_on_screen(backend,
+                                                                  world):
+    world.windows = [window_info(7, pid=501)]
+    backend.window_process_id(7)
+    assert world.list_options == [(objc_stub.OPTION_INCLUDING_WINDOW, 7)]
+
+
+@pytest.mark.parametrize("window_id", [0, -1])
+def test_a_null_window_id_is_not_put_to_quartz(backend, world, window_id):
+    # kCGNullWindowID with the including-window option is not a question
+    # about a window, so it is answered here rather than asked.
+    assert backend.window_process_id(window_id) == 0
+    assert world.list_options == []
+
+
+def test_a_minimised_window_can_be_restored(monkeypatch, on_darwin):
+    element = _linked_window()
+    world = _mac_with_window(ax_windows=[element])
+    backend = _build(monkeypatch, world)
+    assert backend.minimize(7) is True
+    assert 7 in world.off_screen, "the stub took it off screen, as the Dock does"
+    backend.restore(7)
+    assert element.attributes["AXMinimized"] is False
+    assert 7 not in world.off_screen
+
+
+def test_a_minimised_window_still_reports_its_owner_and_rectangle(
+        monkeypatch, on_darwin):
+    world = _mac_with_window(ax_windows=[_linked_window()])
+    backend = _build(monkeypatch, world)
+    backend.minimize(7)
+    assert backend.window_process_id(7) == 501
+    assert backend.window_rect(7) == (10, 20, 310, 420)
+
+
+def test_a_minimised_window_says_it_is_minimised(monkeypatch, on_darwin):
+    world = _mac_with_window(ax_windows=[_linked_window()])
+    backend = _build(monkeypatch, world)
+    assert backend.is_minimized(7) is False
+    backend.minimize(7)
+    assert backend.is_minimized(7) is True
+    backend.restore(7)
+    assert backend.is_minimized(7) is False
+
+
+def test_a_minimised_window_stays_in_the_listing(monkeypatch, on_darwin):
+    # What the Windows backend does: EnumWindows + IsWindowVisible keeps an
+    # iconified window, so a title search still finds it.
+    world = _mac_with_window(ax_windows=[_linked_window()])
+    backend = _build(monkeypatch, world)
+    backend.minimize(7)
+    assert backend.list_windows() == [(7, "Editor")]
+
+
+def test_minimised_windows_list_after_the_ones_on_screen(monkeypatch,
+                                                         on_darwin):
+    # Front-most first is the contract; a minimised window is in front of
+    # nothing, wherever Quartz happens to put it in the full list.
+    world = World(windows=[
+        window_info(7, name="Minimised", pid=501, bounds=(10, 20, 300, 400)),
+        window_info(3, name="Front", pid=501, bounds=(0, 0, 50, 50)),
+        window_info(4, name="Back", pid=99, bounds=(5, 5, 50, 50)),
+    ])
+    world.ax_windows = {501: [_linked_window(title="Minimised")]}
+    backend = _build(monkeypatch, world)
+    backend.minimize(7)
+    assert backend.list_windows() == [(3, "Front"), (4, "Back"),
+                                      (7, "Minimised")]
+
+
+def test_an_off_screen_window_that_is_not_minimised_is_not_listed(
+        monkeypatch, on_darwin):
+    # Quartz's full list is mostly not windows anyone minimised: hidden
+    # applications, other Spaces, windows built and never shown. Only the
+    # accessibility element can say which is which.
+    hidden = _linked_window()
+    hidden.attributes["AXMinimized"] = False
+    world = _mac_with_window(ax_windows=[hidden])
+    world.off_screen.add(7)
+    backend = _build(monkeypatch, world)
+    assert backend.list_windows() == []
+
+
+def test_an_off_screen_window_with_no_element_is_not_listed(monkeypatch,
+                                                            on_darwin):
+    # No Accessibility grant: nothing can vouch for the window, and listing
+    # every off-screen surface would bury the real ones.
+    world = _mac_with_window(ax_windows=[])
+    world.off_screen.add(7)
+    backend = _build(monkeypatch, world)
+    assert backend.list_windows() == []
+
+
+def test_off_screen_windows_above_the_application_layer_are_not_listed(
+        monkeypatch, on_darwin):
+    element = _linked_window()
+    element.attributes["AXMinimized"] = True
+    world = World(windows=[window_info(7, name="Editor", pid=501, layer=25,
+                                       bounds=(10, 20, 300, 400))])
+    world.ax_windows = {501: [element]}
+    world.off_screen.add(7)
+    backend = _build(monkeypatch, world)
+    assert backend.list_windows() == []
+
+
+def test_an_off_screen_window_with_no_owner_is_not_listed(monkeypatch,
+                                                          on_darwin):
+    world = World(windows=[window_info(7, pid=0)])
+    world.off_screen.add(7)
+    backend = _build(monkeypatch, world)
+    assert backend.list_windows() == []
+
+
+def test_each_application_is_asked_for_its_windows_once(monkeypatch,
+                                                        on_darwin):
+    # An AX round trip per off-screen window would be dozens for one browser.
+    first = _linked_window(7, origin=(10, 20), title="One")
+    second = _linked_window(8, origin=(30, 40), title="Two")
+    for element in (first, second):
+        element.attributes["AXMinimized"] = True
+    world = World(windows=[
+        window_info(7, name="One", pid=501, bounds=(10, 20, 1, 1)),
+        window_info(8, name="Two", pid=501, bounds=(30, 40, 1, 1)),
+    ])
+    world.ax_windows = {501: [first, second]}
+    world.off_screen.update({7, 8})
+    asked = []
+    real = world.ax_application
+    world.ax_application = lambda pid: asked.append(pid) or real(pid)
+    backend = _build(monkeypatch, world)
+    assert backend.list_windows() == [(7, "One"), (8, "Two")]
+    assert asked == [501]
+
+
+def test_focusing_a_minimised_window_by_title_restores_and_raises_it(
+        monkeypatch, on_darwin):
+    # The wrapper's whole path: find by title, see it is minimised, restore,
+    # raise. Before the fix it stopped at the first step -- "no window
+    # matches" -- for a window the same process had just minimised.
+    from je_auto_control.wrapper import auto_control_window
+
+    element = _linked_window()
+    world = _mac_with_window(ax_windows=[element])
+    backend = _build(monkeypatch, world)
+    monkeypatch.setattr(auto_control_window, "get_backend", lambda: backend)
+    assert auto_control_window.minimize_window_by_title("Editor") is True
+    assert 7 in world.off_screen
+    assert auto_control_window.focus_window("Editor") == 7
+    assert element.attributes["AXMinimized"] is False
+    assert element.actions == ["AXRaise"]

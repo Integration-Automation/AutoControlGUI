@@ -54,7 +54,10 @@ Press and immediately release a mouse button:
 
 Windows and X11 recognise a double-click from the timing and distance of the
 clicks, so keep ``interval`` under the system double-click time (500 ms by
-default on Windows). On macOS the clicks arrive as separate single clicks.
+default on Windows). macOS applications read a click count carried by the
+event instead, so there the n-th click has its click-state field
+(``kCGMouseEventClickState``) set to n; when ``interval`` is longer than the
+system double-click interval every click is sent as a single click.
 
 Position
 ========
