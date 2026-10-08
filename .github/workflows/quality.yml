@@ -131,15 +131,23 @@ jobs:
       # this tree, one variable changed: 513 of those statements are covered by
       # tests that exist today. The extra is NOT added to `typing-stable-api`
       # below — that gate must not depend on what is installed.
-      - name: Install the project itself, with the WebRTC extra
+      #
+      # `[signaling]` is there for the same reason. Every test of the signaling
+      # server (`/sessions`, `/config`, `/blobs`, the body guard, the BadHost
+      # fix) starts with `importorskip("fastapi")`, so without the extra the
+      # whole server side of config sync ran on developer machines only. The
+      # extra's own bounds are floors; the exact versions this job tests are
+      # pinned on the tooling line below, with `httpx`, which the extra does not
+      # need but `fastapi.testclient` does.
+      - name: Install the project itself, with the WebRTC and signaling extras
         shell: bash
-        run: pip install -e ".[webrtc]"  # NOSONAR githubactions:S8544 githubactions:S8541  # reason: installs the checked-out project itself, so there is no upstream version to lock and no third-party setup script to run
+        run: pip install -e ".[webrtc,signaling]"  # NOSONAR githubactions:S8544 githubactions:S8541  # reason: installs the checked-out project itself, so there is no upstream version to lock and no third-party setup script to run
 
       - name: Install the test tooling
         shell: bash
         # Quoted: `--only-binary :all:` puts a colon-space inside the
         # scalar, which YAML reads as a mapping and refuses.
-        run: "pip install --only-binary :all: ruff==0.16.0 bandit==1.9.4 pytest==9.1.1 pytest-timeout==2.4.0 pytest-rerunfailures==16.7 coverage==7.15.4 PySide6==6.11.2 radon==6.0.1"
+        run: "pip install --only-binary :all: ruff==0.16.0 bandit==1.9.4 pytest==9.1.1 pytest-timeout==2.4.0 pytest-rerunfailures==16.7 coverage==7.15.4 PySide6==6.11.2 radon==6.0.1 fastapi==0.143.0 starlette==1.7.0 uvicorn==0.54.0 httpx==0.28.1"
 
       # Paths come from `testpaths` in pyproject.toml. Do NOT pass an explicit
       # path here: an argument overrides testpaths, which previously meant the
