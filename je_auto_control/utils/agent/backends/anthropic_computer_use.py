@@ -36,7 +36,8 @@ from je_auto_control.utils.agent.backends._computer_toolset import (
 )
 from je_auto_control.utils.agent.backends.base import (
     REQUEST_TIMEOUT_S, AgentBackendError, build_default_system_prompt,
-    encode_screenshot_b64, prune_old_screenshots,
+    compact_history, encode_screenshot_b64, image_block, needs_compaction,
+    summarise_steps,
 )
 
 
@@ -204,14 +205,30 @@ class ComputerUseAgentBackend(AgentBackend):
             return self._decide_with_toolset(self._batch, goal, screenshot, history)
         if screenshot and self._declared is not None:
             screenshot = resize_png(screenshot, self._declared)
-        self._ingest_history(history, screenshot)
+        self._extend(self._pending_result(history, screenshot), goal, screenshot, history)
+        return self._handle_response(self._create(goal, beta=True))
+
+    def _extend(self, results: List[Dict[str, Any]], goal: str,
+                screenshot: Optional[bytes], history: Sequence[AgentStep]) -> None:
+        """Append the turn's ``tool_result`` blocks, or start a new history.
+
+        Sent turns are never edited: replacing their screenshots broke the
+        prompt cache every step and, where thinking blocks are bound to the
+        conversation before them, the request itself. Past the screenshot
+        limit the history restarts from a summary and the current full
+        screenshot (``screenshot``, already fitted) — the results are in the
+        summary, since their ``tool_use`` blocks are not replayed.
+        """
+        if results and needs_compaction(self._conversation, results):
+            self._conversation = compact_history(
+                self._conversation, summarise_steps(goal, history), image_block(screenshot))
+        elif results:
+            self._conversation.append({"role": "user", "content": results})
         if not self._conversation:
             self._conversation.append({
                 "role": "user",
                 "content": _initial_user_content(goal, screenshot),
             })
-        prune_old_screenshots(self._conversation)
-        return self._handle_response(self._create(goal, beta=True))
 
     def _new_run(self) -> None:
         """Forget the previous run: its conversation ended on an unanswered tool_use."""
@@ -257,14 +274,10 @@ class ComputerUseAgentBackend(AgentBackend):
         if batch.has_next():
             return batch.next_decision()
         results = batch.drain_results()
-        if results:
-            self._conversation.append({"role": "user", "content": results})
-        if not self._conversation:
-            self._conversation.append({
-                "role": "user",
-                "content": _initial_user_content(goal, self._fit(screenshot)),
-            })
-        prune_old_screenshots(self._conversation)
+        if not self._conversation or needs_compaction(self._conversation, results):
+            # Only a history that opens with this frame takes its scale.
+            screenshot = self._fit(screenshot)
+        self._extend(results, goal, screenshot, history)
         return self._handle_toolset_response(self._create(goal, beta=False), batch)
 
     def _fit(self, screenshot: Optional[bytes]) -> Optional[bytes]:
@@ -344,22 +357,20 @@ class ComputerUseAgentBackend(AgentBackend):
             return _clamp_decision(decision, *self._display)
         return _final_answer(response, content)
 
-    def _ingest_history(self, history: Sequence[AgentStep],
-                        screenshot: Optional[bytes]) -> None:
+    def _pending_result(self, history: Sequence[AgentStep],
+                        screenshot: Optional[bytes]) -> List[Dict[str, Any]]:
+        """The ``tool_result`` answering the last turn's call, if one is pending."""
         if not history or self._pending_tool_use_id is None:
-            return
+            return []
         last = history[-1]
         content = _tool_result_content(last, screenshot, self._scale)
-        self._conversation.append({
-            "role": "user",
-            "content": [{
-                "type": "tool_result",
-                "tool_use_id": self._pending_tool_use_id,
-                "content": content,
-                "is_error": bool(last.error),
-            }],
-        })
-        self._pending_tool_use_id = None
+        tool_use_id, self._pending_tool_use_id = self._pending_tool_use_id, None
+        return [{
+            "type": "tool_result",
+            "tool_use_id": tool_use_id,
+            "content": content,
+            "is_error": bool(last.error),
+        }]
 
     def _resolve_client(self) -> Any:
         if self._client is not None:

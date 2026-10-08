@@ -239,6 +239,15 @@ budgets so a runaway loop can't drain the API; setting ``stop_event=`` (a
 **Computer Use** tab, whose Actions menu has **Stop**. Closing the window
 asks a running job to stop and waits up to 10 seconds for it.
 
+The Anthropic backends (this one and ``AnthropicAgentBackend`` behind
+``AC_run_agent``) never edit a turn they have already sent. When the
+conversation would hold more than three screenshots (or more than 20 MB of
+them), the next request starts a new history instead: one message with the
+goal, the list of actions executed so far with their outcomes, and the current
+screenshot. Earlier turns and their thinking blocks are not replayed, so the
+model continues from that summary alone. The OpenAI backend still replaces
+older screenshots with a text note in place.
+
 
 WebRunner executor + MCP integration
 ------------------------------------
