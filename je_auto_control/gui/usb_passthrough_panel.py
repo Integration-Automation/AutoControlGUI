@@ -27,6 +27,7 @@ from PySide6.QtWidgets import (
     QTableWidgetItem, QVBoxLayout, QWidget,
 )
 
+from je_auto_control.gui._dispose import release_resources
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
 from je_auto_control.gui._slow_op import SlowOp
 from je_auto_control.gui._worker_thread import CallWorker as _CallWorker, WorkerHandle, start_worker
@@ -214,6 +215,13 @@ class UsbPassthroughPanel(TranslatableMixin, QWidget):
         self._source_combo.setCurrentIndex(index)
         self._source_combo.blockSignals(False)
 
+    def dispose(self) -> None:
+        """Release what the tab holds beyond its widgets: its hotplug timer, its USB watcher share and its loopback.
+
+        Called by ``close_tab(key, release=True)`` before the widget is deleted; safe to call twice.
+        """
+        release_resources(self, self._share.unwatch, self._stop_sharing_if_on)
+
     def retranslate(self) -> None:
         TranslatableMixin.retranslate(self)
         self._populate_source_combo()
@@ -234,6 +242,11 @@ class UsbPassthroughPanel(TranslatableMixin, QWidget):
             QMessageBox.warning(self, _t("usb_share_host_group"), str(error))
             return
         self._refresh_host_badge()
+
+    def _stop_sharing_if_on(self) -> None:
+        """Close the loopback this panel opened; a panel that never shared leaves the passthrough flag alone."""
+        if self._loopback is not None:
+            self._disable_sharing()
 
     def _disable_sharing(self) -> None:
         if self._share_op.busy:         # a second click while the first is still closing

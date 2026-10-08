@@ -7,6 +7,7 @@ from PySide6.QtWidgets import (
     QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget,
 )
 
+from je_auto_control.gui._dispose import release_resources
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
 from je_auto_control.gui._slow_op import SlowOp
 from je_auto_control.gui.language_wrapper.multi_language_wrapper import (
@@ -92,6 +93,13 @@ class HotkeysTab(TranslatableMixin, QWidget):
             _t("hk_col_id"), _t("hk_col_combo"),
             _t("hk_col_script"), _t("hk_col_fired"),
         ])
+
+    def dispose(self) -> None:
+        """Release what the tab holds beyond its widgets: its poll timer (the daemon itself keeps running).
+
+        Called by ``close_tab(key, release=True)`` before the widget is deleted; safe to call twice.
+        """
+        release_resources(self)
 
     def retranslate(self) -> None:
         TranslatableMixin.retranslate(self)

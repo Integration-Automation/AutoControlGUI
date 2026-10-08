@@ -18,6 +18,7 @@ from PySide6.QtWidgets import (
     QMessageBox, QSpinBox, QVBoxLayout, QWidget,
 )
 
+from je_auto_control.gui._dispose import release_resources
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
 from je_auto_control.gui._slow_op import SlowOp
 from je_auto_control.gui.language_wrapper.multi_language_wrapper import (
@@ -86,6 +87,13 @@ class RestApiTab(TranslatableMixin, QWidget):
             ("rest_config_import", self._on_config_import),
             *self._users_panel.menu_actions(),
         ]
+
+    def dispose(self) -> None:
+        """Release what the tab holds beyond its widgets: its status timer (the server keeps running).
+
+        Called by ``close_tab(key, release=True)`` before the widget is deleted; safe to call twice.
+        """
+        release_resources(self)
 
     def retranslate(self) -> None:
         """Re-translate the tab, its users group and the status texts."""

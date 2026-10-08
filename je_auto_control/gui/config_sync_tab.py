@@ -10,6 +10,7 @@ same thing and a person has to choose.
 Syncing runs on a worker thread with a cancel event; closing the tab sets
 the event, so a sync waiting on the network does not outlive its view.
 """
+import functools
 import threading
 import time
 from typing import Any, Callable, Dict, List, Optional, Tuple
@@ -20,6 +21,7 @@ from PySide6.QtWidgets import (
     QTableWidgetItem, QVBoxLayout, QWidget,
 )
 
+from je_auto_control.gui._dispose import release_resources
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
 from je_auto_control.gui._worker_thread import CallWorker, WorkerHandle, start_worker
 from je_auto_control.gui.language_wrapper.multi_language_wrapper import language_wrapper
@@ -82,6 +84,13 @@ class ConfigSyncTab(TranslatableMixin, QWidget):
     def _apply_translations(self) -> None:
         self._conflicts.setHorizontalHeaderLabels(
             [_t(f"config_sync_col_{column}") for column in _COLUMNS])
+
+    def dispose(self) -> None:
+        """Release what the tab holds beyond its widgets: the sync still out, by setting its cancel event.
+
+        Called by ``close_tab(key, release=True)`` before the widget is deleted; safe to call twice.
+        """
+        release_resources(self, functools.partial(_release, self._cancel_slot))
 
     def retranslate(self) -> None:
         """Re-apply the translated texts after a language change."""

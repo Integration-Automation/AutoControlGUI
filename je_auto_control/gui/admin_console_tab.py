@@ -10,6 +10,7 @@ from PySide6.QtWidgets import (
     QTableWidgetItem, QTextEdit, QVBoxLayout, QWidget,
 )
 
+from je_auto_control.gui._dispose import release_resources
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
 from je_auto_control.gui._worker_thread import CallWorker, WorkerHandle, start_worker
 from je_auto_control.gui.language_wrapper.multi_language_wrapper import (
@@ -115,6 +116,13 @@ class AdminConsoleTab(TranslatableMixin, QWidget):
         root.addWidget(self._table, stretch=1)
         root.addWidget(self._build_thumbnails_group(), stretch=1)
         root.addWidget(self._build_broadcast_group(), stretch=1)
+
+    def dispose(self) -> None:
+        """Release what the tab holds beyond its widgets: its thumbnail timer and the polls still out.
+
+        Called by ``close_tab(key, release=True)`` before the widget is deleted; safe to call twice.
+        """
+        release_resources(self)
 
     def menu_actions(self) -> list:
         """Expose tab commands to the window-level Actions menu."""
