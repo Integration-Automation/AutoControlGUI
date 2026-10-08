@@ -280,6 +280,8 @@ je_auto_control version
 
 **選用的強化設定。** 下列各項在設定之前都是關閉的，沒設定的伺服器行為與先前相同。`JE_AUTOCONTROL_RBAC_USERS=<使用者檔>` 讓 REST API 與 MCP HTTP 傳輸把 bearer token 對到使用者，並依角色（viewer／operator／admin）授權每一個路由、工具與特權 `AC_*` 命令；此時共用 token 會被拒絕。`JE_AUTOCONTROL_MCP_PATH_ROOTS`（以作業系統的路徑分隔字元分開的目錄）把每一個屬於檔案路徑的 MCP 工具參數限制在這些目錄裡，`JE_AUTOCONTROL_MCP_PATH_ROOTS_FROM_CLIENT=1` 再加上 client 的 `roots/list`，`JE_AUTOCONTROL_MCP_ENV_REF_ALLOW` 限制 `ac_resolve_ref` 可以讀哪些 `env://` 名稱。`JE_AUTOCONTROL_ACTION_SIGNING_PUBLIC_KEY` 讓端點只能驗證 Ed25519 簽章的動作檔而不能簽章（`create_signing_keypair`；私鑰留在簽章的機器上）。遠端桌面的 viewer 只把 host 推來的檔案寫在 `~/Downloads/AutoControl` 底下（`JE_AUTOCONTROL_REMOTE_DOWNLOAD_DIR`）；這一項預設就是開的。
 
+**其他可設定的項目。** `JE_AUTOCONTROL_MCP_TOOL_MODE=progressive`（或 `je_auto_control_mcp --tool-mode`）讓 MCP session 從五個核心工具開始，再搜尋、查詢與啟用其他工具；`static` 提供固定的工具組（`JE_AUTOCONTROL_MCP_TOOL_PROFILE`）；預設的 `full` 模式不變。RBAC 的使用者以 `je_auto_control users add|remove|set-role|rotate-token|list`、`AC_user_*` 命令或 REST API 分頁管理。`JE_AUTOCONTROL_ACTION_SIGNING_PASSPHRASE` 用來解開有通行碼保護的簽章私鑰。動作日誌（`start_action_journal`、`AC_journal_*`）記錄執行過的動作並先遮蔽秘密，`je_auto_control codegen --from-log` 把一次執行轉成候選腳本。設定同步把資料存在 SQLite 並檢查版本（`--config-db`、`AC_SIGNALING_CONFIG_DB`；舊版 client 需要 `--allow-blind-config-writes`）。Android 與 iOS 裝置各有自己的 session（`open_device`、`AC_android_*`、`AC_ios_*`）；行動裝置的程式還沒有在任何裝置上跑過。Wayland 上 `probe_capabilities`／`AC_probe_capabilities` 回報輸入與擷取能做什麼、為什麼，`JE_AUTOCONTROL_WAYLAND_EI_WORKER=1` 把 libei 移到輔助行程。GUI 會把主題、字級、面板與視窗位置記在 `~/.je_auto_control/gui_settings.ini`（`JE_AUTOCONTROL_GUI_SETTINGS`）。
+
 ### 遠端桌面的線路協定
 
 把主機開出去之前值得先知道，而且這段在其他文件裡都沒有寫。預設傳輸是**裸 TCP

@@ -6,7 +6,7 @@
 > 擷取每個模組的 docstring 與頂層公開名稱；統計數字取自實際檔案，非估算。
 > 指令數與公開 API 數以 `executor.known_commands()` 與 `je_auto_control.__all__` 在工作樹上實測取得。
 >
-> **掃描時間**：2026-10-08　**版本**：`pyproject.toml` version `0.0.225`　**分支**：`feat/coverage-to-80`
+> **掃描時間**：2026-10-09　**版本**：`pyproject.toml` version `0.0.228`　**分支**：`feat/progress-sweep-2`
 
 ---
 
@@ -874,7 +874,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.5 GUI 層（`gui/`，84 檔／26,367 行）
 
-GUI 是**選用 extra**（`pip install je_auto_control[gui]`，PySide6 + qt-material），且刻意保持「薄」：
+GUI 是**選用 extra**（`pip install je_auto_control[gui]`，PySide6），且刻意保持「薄」：
 每個分頁只把使用者輸入翻譯成對 `utils/` 無頭核心的呼叫。
 
 #### 骨架
@@ -883,7 +883,10 @@ GUI 是**選用 extra**（`pip install je_auto_control[gui]`，PySide6 + qt-mate
 | --- | ---: | --- |
 | `gui/__init__.py` | 25 | `start_autocontrol_gui()`：**唯一**會延遲匯入 PySide6 的地方，維持頂層套件 Qt-free。 |
 | `main_window.py` | 437 | `QMainWindow`：選單列（File／Actions／View／…）、左側導覽面板 dock（`Ctrl+K` 搜尋、`Ctrl+B` 收合）、即時語言切換、字級預設、深色／淺色主題（`theme.py` 的 token，不再用 qt-material）。分頁分為 core／editing／detection／automation／system 五類。 |
-| `main_widget.py` | 433 | 工作區：擁有 `QTabWidget`，依 `tab_registry.TAB_SPECS` 註冊 48 個分頁，並暴露 show/hide/activate/list API 給選單列與導覽面板。只有預設開啟的三個分頁與自己的 mixin 表單在啟動時建立，其餘第一次開啟才匯入模組、建立 widget。核心分頁在 `_own_tab_builders` 宣告 `(label_key, handler)` 動作對。 |
+| `main_widget.py` | 433 | 工作區：擁有 `QTabWidget`，依 `tab_registry.TAB_SPECS` 註冊 50 個分頁，並暴露 show/hide/activate/list API 給選單列與導覽面板。只有預設開啟的三個分頁與自己的 mixin 表單在啟動時建立，其餘第一次開啟才匯入模組、建立 widget。核心分頁在 `_own_tab_builders` 宣告 `(label_key, handler)` 動作對。 |
+| `workspace_tabs.py` | 175 | `WorkspaceTabWidget`：每頁包在可捲動的 holder 裡，對 Python 呼叫端仍以頁面本身為單位（`indexOf(page)`、`setCurrentWidget(page)`）。 |
+| `window_settings.py` | 130 | 以 `QSettings` INI 記住主題、字級、導覽面板與視窗位置；`JE_AUTOCONTROL_GUI_SETTINGS` 可改路徑或關閉。 |
+| `task_controller.py` | 446 | 可取消的背景工作：結果／錯誤／進度以 typed signal 回到 GUI 執行緒，擁有者銷毀後的結果直接丟棄。建在 `_worker_thread.start_worker` 之上。 |
 | `tab_registry.py` | 156 | 分頁表：每個分頁一筆 `TabSpec`（鍵、標題鍵、分類、模組與類別名），`TabEntry` 在第一次存取 `widget` 時才呼叫 factory。不匯入 Qt。 |
 | `navigation.py` | 200 | `NavigationPanel`：搜尋框 + 依分類的功能樹，列出每個已註冊分頁（開啟中的以粗體標示），只回報被選的鍵，開啟分頁仍由視窗負責。 |
 | `theme.py` | 183 | 設計 token（`ThemeTokens`：顏色、圓角、間距、字族）、深色與淺色兩組值、由 token 產生的樣式表與對應的 `QPalette`；不載入圖檔或字型檔。 |
@@ -905,7 +908,7 @@ GUI 是**選用 extra**（`pip install je_auto_control[gui]`，PySide6 + qt-mate
 > 核心分頁在 `main_widget.py` 的 `_own_tab_builders` 宣告動作；功能分頁實作 `menu_actions()`（目前 40 個檔案有此 hook）。
 > `test/unit_test/headless/test_actions_menu_gui.py` 會守住這個契約——沒有動作宣告的新分頁會讓 CI 失敗。
 
-#### 48 個分頁
+#### 50 個分頁
 
 | 分頁 | 模組 | 行數 | 職責 |
 | --- | --- | ---: | --- |
@@ -937,6 +940,7 @@ GUI 是**選用 extra**（`pip install je_auto_control[gui]`，PySide6 + qt-mate
 | flakiness | `flakiness_tab.py` | 117 | 依執行歷史排序間歇失敗的腳本。 |
 | a11y_audit | `a11y_audit_tab.py` | 114 | 從即時樹找出無障礙／i18n 缺陷。 |
 | device_matrix | `device_matrix_tab.py` | 111 | 一份 action list 跨多裝置平行執行。 |
+| mobile | `mobile_tab.py` | 0 | Android／iOS 裝置：能力探測、手勢、App 生命週期，指令來自 `wrapper/mobile_commands.py` 的同一張表。 |
 | media_checks | `media_checks_tab.py` | 116 | 音訊活動與影片動態斷言。 |
 | run_history | `run_history_tab.py` + `run_history_timeline.py` | 462 | 瀏覽過去的排程／觸發／熱鍵執行，含自訂時間軸元件。 |
 | profiler | `profiler_tab.py` | 131 | 視覺化逐動作耗時熱點。 |
@@ -948,6 +952,7 @@ GUI 是**選用 extra**（`pip install je_auto_control[gui]`，PySide6 + qt-mate
 | trace_replay | `trace_replay_tab.py` | 187 | 拖曳捲動時光回溯錄製內容。 |
 | remote_desktop | `remote_desktop/`（17 檔） | 6,240 | 見下。 |
 | presence | `presence_tab.py` | 152 | 多檢視者在場名單。 |
+| config_sync | `config_sync_tab.py` | 0 | 設定同步：revision、待送、衝突與離線狀態；可取消的 worker。 |
 | rest_api | `rest_api_tab.py` | 198 | 啟停 HTTP 前端並顯示 URL 與 token。 |
 | admin_console | `admin_console_tab.py` | 313 | 管理多個遠端 AutoControl REST 端點。 |
 | audit_log | `audit_log_tab.py` | 192 | 瀏覽並驗證防竄改雜湊鏈。 |

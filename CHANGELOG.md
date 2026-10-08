@@ -15,6 +15,51 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Added
 
+- Action journal: `start_action_journal` / `stop_action_journal` /
+  `read_events` / `list_journal_runs` (`AC_journal_*`, `ac_journal_*`), an
+  opt-in JSON-lines record of executed actions with secrets masked before
+  they are written. `generate_candidate_from_log` (`AC_generate_code_from_journal`,
+  `ac_generate_code_from_log`, `je_auto_control codegen --from-log`) builds a
+  reviewable candidate script from one run without executing anything from it.
+- Self-healing measurement: `evaluate_locators`, `evaluate_healing_dataset`,
+  `EvaluationSample`, `HealingComparison`, template revisions
+  (`propose_` / `preview_` / `accept_` / `revert_` / `list_template_revision(s)`),
+  `heal_context`, six `AC_self_heal_*` commands and MCP tools, and
+  `benchmarks/self_healing`.
+- Config sync: `ConfigStore` (SQLite, revision-checked commits), version
+  vectors and `merge_entries`, `SyncOutbox`, `SyncAdapter` / `sync_assets`,
+  `config_sync_run` / `_status` / `_resolve` / `_full_resync` (`AC_config_sync_*`,
+  `ac_config_sync_*`) and a Config Sync tab. Signaling server flags
+  `--config-db` and `--allow-blind-config-writes`, env `AC_SIGNALING_CONFIG_DB`.
+- Mobile: `DeviceContext`, `open_device`, `DeviceSession`, `DeviceFrame`,
+  gestures (`Tap`, `LongPress`, `Swipe`, `Drag`, `Pinch`), app lifecycle,
+  `MobileExtension`, 46 new `AC_android_*` / `AC_ios_*` commands with MCP tools
+  and Script Builder entries, and a Mobile tab. Built against fake ADB / WDA
+  transports only; not run on a device.
+- Wayland: `probe_capabilities` / `AC_probe_capabilities` /
+  `ac_probe_capabilities`, `CapabilityStatus`, `WaylandAuthorisationError`,
+  `reset_input_authorisation`, `PhysicalRecorder`, `InputStepLog`,
+  `StopShortcutSession`, an opt-in libei helper process
+  (`JE_AUTOCONTROL_WAYLAND_EI_WORKER`), `JE_AUTOCONTROL_WAYLAND_RECORD_DEVICES`.
+- MCP tool modes: `JE_AUTOCONTROL_MCP_TOOL_MODE` / `--tool-mode`
+  (`full`, `progressive`, `static`), `JE_AUTOCONTROL_MCP_TOOL_PROFILE`, the
+  session tools `ac_tools_search` / `_schema` / `_enable` / `_disable` /
+  `_state`, `ToolIndex`, `ToolView`, `ToolMode`; `tools/list` is paged in the
+  two new modes.
+- RBAC: user management (`AC_user_*`, `ac_user_*`, `je_auto_control users`,
+  `python -m je_auto_control.utils.rbac`, a Users group in the REST API tab),
+  `Capability.READ_DATA`, `DeferredOwner` / `capture_owner` / `owner_scope`.
+- Signing: optional passphrase for the Ed25519 private key
+  (`passphrase=`, `JE_AUTOCONTROL_ACTION_SIGNING_PASSPHRASE`);
+  `AutoControlSignatureException`.
+- GUI: `gui/task_controller.py` (cancellable background work),
+  `AutoControlGUIWidget.open_tab` / `close_tab(key, release=False)` and an
+  optional `dispose()` hook on tabs, remembered window state
+  (`JE_AUTOCONTROL_GUI_SETTINGS`), `benchmarks/gui_startup.py` and
+  `gui_workloads.py`.
+- Windows key names that follow the keyboard layout: `slash`, `backslash`,
+  `semicolon`, `quote`, `backquote`, `bracketleft`, `bracketright`, `equal`.
+- `examples/28`–`33` (see `examples/README.md`).
 - Action files can be signed with an Ed25519 key pair, so an endpoint that
   verifies does not hold what signs: `create_signing_keypair(private_path,
   public_path)` / `AC_create_signing_keypair`, `private_key_path=` on
@@ -193,6 +238,55 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Changed
 
+- **Breaking wire change: config sync PUT `/config/{user_id}` is version 2.**
+  The body is `{"version": 2, "base_revision", "operation_id", "bucket"}`; a
+  stale base answers 409 and writes nothing. An older client's push is refused
+  with HTTP 428 unless the server runs with `--allow-blind-config-writes`; a
+  newer client refuses an older server, so upgrade the server first.
+  `ConfigSyncClient.push` returns the revision and raises `ConfigSyncConflict`
+  instead of overwriting. Buckets are stored in SQLite.
+- **Under RBAC, a viewer no longer gets 42 read-only MCP tools that return
+  data rather than screen state** (clipboard, files, databases, references and
+  tokens, processes); they need the new `read_data` capability, which operator
+  and admin hold. A scheduler job, trigger, hotkey, webhook, e-mail trigger or
+  watchdog rule registered by an authenticated user now runs as that user,
+  with the role re-read when it fires. Without RBAC nothing changes.
+- REST `POST /execute_file` answers 403 with the reason for a refused
+  signature (was 500). `rest_api_registry.status()` reports `rbac` and
+  `users_path`, and `token` is `None` when a user store is in use.
+- **Wayland: a refused portal consent no longer falls back to ydotool.**
+  Input raises `WaylandAuthorisationError` until `reset_input_authorisation()`;
+  a session the compositor disconnected refuses further input the same way.
+  Other portal failures fall back as before.
+- `AdbClient.text()` raises `AdbUnsupportedError` for text `adb input text`
+  cannot carry (non-ASCII, a literal `%s`) instead of reporting success;
+  `AC_android_text` routes such text through ADBKeyBoard or uiautomator2. adb
+  failures are typed (`AdbTimeoutError`, `AdbUnauthorizedError`,
+  `AdbDeviceMissingError`). A device-matrix step without an address targets
+  that worker's own device.
+- `self_heal_locate` / `self_heal_click`: `screen_region` now confines the
+  template match as well as the VLM; `self_heal_click` logs one event after
+  the click; results and `HealEvent` gain optional fields.
+- `je_auto_control codegen`: the positional script is optional (use
+  `--from-log`), and `--style` defaults by source.
+- Variable scope: `run --dry-run --var`, observer callbacks, `AC_llm_run` and
+  `AC_run_state_machine` each get a deliberate scope instead of the process
+  one. A state machine's `on_enter` given as a single action now runs; it was
+  always rejected before.
+- Package gate: a list that loads an allowed package and then uses its
+  commands runs; it used to fail validation with "unknown command".
+- USB passthrough: a transfer waits for its own `timeout_ms` plus
+  `reply_timeout_s`; channel-level errors reach the caller at once.
+  Concurrent changes to one `UsbAcl` no longer lose rules.
+- MCP `ac_window_minimize` / `_maximize` / `_restore` return a tool error
+  when the window refused.
+- GUI: pages scroll in a narrow window instead of being squeezed; Script
+  Builder and Remote Desktop are built when first selected; connecting a
+  remote desktop, WebRTC offer / answer, OCR reads and device-matrix runs no
+  longer freeze the window; `Ctrl+B` works; tab close buttons are drawn in
+  the theme's colours. `gui/remote_desktop/webrtc_panel.py` is split into
+  twelve modules.
+- The `[gui]` extra no longer installs `qt-material`.
 - **Breaking: the package gate refuses by default.**
   `AC_add_package_to_executor` / `AC_add_package_to_callback_executor` (and
   the `package_manager` methods) no longer import a package that has not been
@@ -278,7 +372,7 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
   An embedder that relied on every tab existing after construction (a tab's
   timer or listener started at start-up) has to open the tab first.
 - The main window no longer imports `qt_material`; it styles itself from
-  `gui/theme.py`. The `[gui]` extra still lists `qt-material` for now.
+  `gui/theme.py`. (The `[gui]` extra listed `qt-material` until 2026-10-09.)
 - GUI text size "Auto" is 10 / 11 / 13 pt by screen height (was 12 / 14 / 16),
   and the default window is 1280×800 (was 1000×760). The font family is the
   platform's UI font instead of Lato.
