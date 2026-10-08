@@ -256,6 +256,9 @@ U-20261009-06 與 -04 的 macOS 部分是在 Windows 上對假的 pyobjc／Quart
   - 過渡期風險：墓碑只等已經列在 `peers` 底下的裝置，所以每台機器都要先用這一版同步一次，之後才能有人刪東西。
   - `ConfigBucket.upsert` 不帶 `origin=` 時現在存的是帶版本的項目，直接讀 `bucket.sections[s][id]["field"]` 的程式會壞（`bucket.values(section)` 兩種形狀都能讀）。
   - 沒有自動的剪貼簿轉送，所以 `automatic=True`（`ClipboardEchoGuard.should_send`）在產品裡沒有呼叫端。
+  - 上傳超過伺服器上限的 blob 時，伺服器依宣告長度回 413 就關閉連線；還在送 body 的 client 可能先看到連線被重設（Windows 的 CI 上發生過），
+    回報的就是連線錯誤而不是「太大」。`HttpAssetTransport` 沒有先問上限。
+  - 資料夾鏡像靠修改時間判斷變更：對方送來的檔案落地後，同一個時間刻度內的本機編輯不會被推送（CI 上的測試因此要把 mtime 往後推）。
   - blob：沒有自動回收（只有 `DELETE` 與用量清單）；配額是單一行程內的鎖，兩個 server 行程共用一個資料夾時可能超出一個 blob。
   - Config Sync 分頁沒有區段選擇與 `assets_server` 開關；`examples/29_config_sync.py` 還是從 `utils.config_sync` 匯入而不是門面。
 

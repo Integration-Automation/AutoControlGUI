@@ -324,7 +324,11 @@ def test_assets_travel_between_two_folders_through_a_real_server(live_server, tm
     # Larger than the server takes: reported per file, the rest still goes.
     (source / "huge.bin").write_bytes(b"z" * 200_001)
     again = publish_assets(AssetManifest.from_directory(source), transport)
-    assert list(again.failed) == ["huge.bin"] and "larger" in again.failed["huge.bin"]
+    assert list(again.failed) == ["huge.bin"]
+    # The server answers 413 from the declared length and closes; a client still
+    # writing the body can see the reset before it reads that answer (Windows).
+    reason = again.failed["huge.bin"]
+    assert "larger" in reason or "asset PUT" in reason
 
 
 def test_config_sync_run_can_use_the_server_for_assets(tmp_path):

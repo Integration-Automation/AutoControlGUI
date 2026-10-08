@@ -59,6 +59,5 @@ def test_the_keywords_are_keyword_only_and_match_the_executor():
         assert module_level[name].kind is inspect.Parameter.KEYWORD_ONLY
         assert module_level[name].default == method[name].default
     assert "_validated" not in module_level
-    positional = ([["AC_facade_fake"]], True)
     with pytest.raises(TypeError):
-        ac.execute_action(*positional)
+        inspect.signature(ac.execute_action).bind([["AC_facade_fake"]], True)
