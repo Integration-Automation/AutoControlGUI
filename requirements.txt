@@ -1,7 +1,7 @@
 # Floor, not a pin: releases before 0.0.216 resolve pillow==12.2.0, which
 # carries 13 CVEs fixed in 12.3.0. A floor keeps the dependency graph honest
 # without needing a bump here on every release.
-je_auto_control>=0.0.216
+je_auto_control>=0.0.217
 # Stated directly as well: the dependency graph recorded Pillow for this file
 # when je_auto_control was still unbounded here, and the floor above never
 # replaced that entry. A direct requirement does.
