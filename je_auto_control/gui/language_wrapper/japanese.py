@@ -1175,6 +1175,25 @@ japanese_word_dict = {
     "config_sync_secret_label": "共有シークレット:",
     "config_sync_scripts_label": "スクリプトフォルダー (任意):",
     "config_sync_assets_label": "共有アセットフォルダー (任意):",
+    "config_sync_locators_label": "ロケーターリポジトリファイル (任意):",
+    "config_sync_sections_label": "同期するセクション:",
+    "config_sync_section_hotkeys": "ホットキー",
+    "config_sync_section_triggers": "トリガー",
+    "config_sync_section_address_book": "アドレス帳",
+    "config_sync_section_scripts": "スクリプト (フォルダーが必要)",
+    "config_sync_section_locators": "ロケーター (ファイルが必要)",
+    "config_sync_assets_server_label": "大きなスクリプトを共有フォルダーではなく同期サーバーに保存する",
+    "config_sync_no_sections":
+        "同期するセクションを 1 つ以上選択してください (スクリプトとロケーターにはパスが必要"
+        "です)",
+    "config_sync_sections_covered": "同期したセクション",
+    "config_sync_collect_btn": "サーバー上の未使用 blob を削除",
+    "config_sync_collect_confirm":
+        "同期サーバー上のこのアカウントの blob のうち、どの同期項目からも参照されていないもの"
+        "を削除しますか? 直近 1 日以内に保存された blob は残します。",
+    "config_sync_collect_done":
+        "Blob: {deleted} 個を削除 ({freed} バイト解放)、使用中 {kept} 個、{recent} 個は新しす"
+        "ぎるため判定保留",
     "config_sync_conflicts_title": "競合: 2 台で同時に変更された項目",
     "config_sync_col_entry": "項目",
     "config_sync_col_choice": "候補",

@@ -59,8 +59,6 @@ from typing import Any, Dict, List, Optional, Tuple
 from urllib.parse import unquote
 
 import je_auto_control as ac
-# The store's own conflict error is not re-exported by the facade.
-from je_auto_control.utils.config_sync import RevisionConflictError
 
 _USER = "alice"
 
@@ -97,7 +95,7 @@ def _handler(store_path: Path) -> type:
                     self._user(), ac.ConfigBucket.from_dict(envelope["bucket"]),
                     base_revision=envelope["base_revision"],
                     operation_id=envelope["operation_id"])
-            except RevisionConflictError as conflict:
+            except ac.RevisionConflictError as conflict:
                 self._send(409, {"detail": "revision conflict",
                                  "revision": conflict.current_revision})
                 return
