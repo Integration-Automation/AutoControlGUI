@@ -316,6 +316,19 @@ U-20261009-18 的每一個裝置面呼叫都只對假的 ADB／uiautomator2／WD
 - **Sphinx 還有 184 個既有警告**（較舊的 `vN_features_doc.rst`、`getting_started/run_in_ci.rst`、`conf.py` 的 `_static` 不存在）；這個月改過的頁面是 0 個。
 - **變數範圍在 free-threaded 版**（執行緒繼承 context）沒有測試。
 - **Windows 的版面鍵名**（`slash` 等 8 個，依前景視窗的鍵盤配置解析）只在美式配置上實際呼叫過，非美式配置用的是假的 `user32`。
+- **寫範例時發現的缺口**（U-20261009-26）：
+  - 門面沒匯出使用者需要的名字：`only_run_id`、`write_candidate`、`check_thresholds`、`format_comparison`、`LocateRequest`、`RevisionConflictError`、
+    `ConfigStoreError`、`AuthorisationLedger`、`AuthorisationState`、各個具體的 sync adapter、`run_sync`、`DirectoryAssetTransport`、`SCHEMA_VERSION`／`WIRE_VERSION`。
+  - `ac.execute_action(actions)` 只收清單；`dry_run`、`raise_on_error`、`step_callback` 只在 `ac.executor.execute_action` 上。
+  - 設定同步：送出失敗後的退避期間（2 秒起、加倍、最長 300 秒）內再同步不會連 server，回報 `state="offline"`，剛恢復連線時按「立即同步」看起來像 server 掛了；
+    `config_sync_status` 的簽章和另外三個不一致；傳 `scripts_dir` 會連本機的熱鍵、觸發器、通訊錄一起同步（只同步腳本要 `sections="scripts"`）；
+    裝置第一次同步即使沒有內容也會多一個 revision。
+  - `CapabilitySnapshot` 沒有後端版本；win32 上四個能力都是寫死的 `available`、darwin 是寫死的 `unknown`，沒有真的探測。
+  - `MOBILE_COMMANDS` 裡 `AC_android_list_devices`、`AC_android_shell`、`AC_android_device_info` 被歸在 `input` 能力下。
+  - `mcp_server/audit.py` 的 docstring 說預設寫到 cwd 的 `mcp_audit.jsonl`，建構子在沒設環境變數時看起來是不寫——要對一下。
+  - `docs/source/index.rst` 還寫 Wayland 是「via CLI bridges (wtype + ydotool + grim)」。
+  - 27 個環境變數只在 Sphinx 的設定頁，不在三份 README（清單在 `test_modernization_examples.py` 的 `README_UNDOCUMENTED`，只准變少）。
+  - 計畫 H 裡「裝了 extras 的型別檢查」獨立 job 與 platform-smoke 的補充沒有做。
 - **狀態機 `on_enter` 的單一動作寫法**以前一直被拒絕、從沒執行過（已修，U-20261009-24）：依賴「它不會跑」的既有狀態機現在會跑它。
 
 ---

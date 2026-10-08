@@ -58,6 +58,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261009-26 | 2026-10-09 | Six offline-validated examples, a configuration reference, strict typing for every module added this month, end-to-end tests on fakes | #done #docs #typing #examples #H1 #H2 #H3 | [2026-10](2026-10.md) |
 | U-20261009-25 | 2026-10-09 | The Python 3.10 headless segfault: a prompt dialog that was its own reference cycle | #bugfix #gui #ci | [2026-10](2026-10.md) |
 | U-20261009-24 | 2026-10-09 | Follow-ups: USB waits, run-level scopes, load-and-use in one list, layout key names, file splits, Sphinx | #done #followups | [2026-10](2026-10.md) |
 | U-20261009-23 | 2026-10-09 | RBAC: deferred work runs as its owner, users have a management surface, data tools need read_data | #done #security #rbac | [2026-10](2026-10.md) |
@@ -374,7 +375,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | File | Period | Entries |
 |---|---|---:|
-| [2026-10.md](2026-10.md) | 2026-10 | 38 |
+| [2026-10.md](2026-10.md) | 2026-10 | 39 |
 | [2026-09-e.md](2026-09-e.md) | 2026-09 | 7 |
 | [2026-09-d.md](2026-09-d.md) | 2026-09 | 55 |
 | [2026-09-c.md](2026-09-c.md) | 2026-09 | 38 |
