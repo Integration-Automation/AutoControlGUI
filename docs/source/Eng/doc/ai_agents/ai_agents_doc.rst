@@ -62,6 +62,13 @@ Use read-only mode for inspection-only clients:
 
    je_auto_control_mcp --read-only
 
+Start with a small tool list and let the session search and enable the rest
+(see "Tool modes" in the MCP server chapter):
+
+.. code-block:: bash
+
+   je_auto_control_mcp --tool-mode progressive
+
 Recommended agent loop
 ----------------------
 

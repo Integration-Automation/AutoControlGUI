@@ -1,0 +1,93 @@
+{
+  "schema_version": 1,
+  "seed": 20261002,
+  "template_size": [56, 32],
+  "samples": [
+    {
+      "id": "plain",
+      "description": "target on the primary monitor at 100% scale",
+      "frame_size": [320, 200],
+      "targets": [{"at": [100, 60]}],
+      "expected_target": 0
+    },
+    {
+      "id": "scaled-150",
+      "description": "the same screen captured at 150% display scale",
+      "frame_size": [480, 300],
+      "scale": 1.5,
+      "targets": [{"at": [100, 60]}],
+      "expected_target": 0
+    },
+    {
+      "id": "negative-origin",
+      "description": "target on a monitor left of and above the primary",
+      "frame_size": [320, 200],
+      "origin": [-1920, -300],
+      "targets": [{"at": [40, 120]}],
+      "expected_target": 0
+    },
+    {
+      "id": "negative-origin-scaled-125",
+      "description": "negative-origin monitor at 125% display scale",
+      "frame_size": [400, 250],
+      "origin": [-2560, -200],
+      "scale": 1.25,
+      "targets": [{"at": [200, 40]}],
+      "expected_target": 0
+    },
+    {
+      "id": "region-second-of-two",
+      "description": "two identical targets; the region selects the second",
+      "frame_size": [320, 200],
+      "targets": [{"at": [20, 20]}, {"at": [220, 140]}],
+      "region": [160, 100, 320, 200],
+      "expected_target": 1
+    },
+    {
+      "id": "region-negative-origin",
+      "description": "region and target both in negative screen coordinates",
+      "frame_size": [320, 200],
+      "origin": [-320, -200],
+      "targets": [{"at": [30, 30]}, {"at": [200, 150]}],
+      "region": [-320, -200, -160, -100],
+      "expected_target": 0
+    },
+    {
+      "id": "failing-restyled",
+      "description": "the control was redesigned; the old template cannot find it",
+      "frame_size": [320, 200],
+      "targets": [{"at": [100, 60], "style": "restyled"}],
+      "expected_target": 0
+    },
+    {
+      "id": "failing-absent",
+      "description": "the target is not on screen; the right answer is a miss",
+      "frame_size": [320, 200],
+      "targets": [],
+      "expect_miss": true
+    },
+    {
+      "id": "failing-decoy-only",
+      "description": "only a look-alike neighbour is on screen; the right answer is a miss",
+      "frame_size": [320, 200],
+      "targets": [{"at": [100, 60], "style": "decoy"}],
+      "expect_miss": true
+    },
+    {
+      "id": "unlabelled",
+      "description": "a frame nobody labelled: reported as unknown, never as correct",
+      "frame_size": [320, 200],
+      "targets": [{"at": [60, 90]}]
+    }
+  ],
+  "versions": {
+    "v1-exact": {"strategy": "template", "threshold": 0.9},
+    "v2-multiscale": {"strategy": "template", "threshold": 0.9, "scales": [1.0, 1.25, 1.5, 2.0]},
+    "v3-loose": {"strategy": "template", "threshold": 0.5, "scales": [1.0, 1.25, 1.5, 2.0]}
+  },
+  "thresholds": {
+    "v1-exact": {"min_correct": 4, "max_false_positive": 0, "max_error": 0},
+    "v2-multiscale": {"min_correct": 6, "min_accuracy": 0.88, "max_false_positive": 0, "max_error": 0},
+    "v3-loose": {"min_correct": 6, "max_false_positive": 1, "max_error": 0}
+  }
+}

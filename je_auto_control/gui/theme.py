@@ -4,7 +4,8 @@ One :class:`ThemeTokens` value holds every colour, radius and spacing the
 window uses; :func:`build_stylesheet` turns it into Qt style sheet text and
 :func:`apply_theme` puts it on a window together with a matching palette, so
 the parts Qt draws itself (arrows, check marks, scroll handles) agree with it.
-Nothing here loads an image or a font file.
+No image or font file ships with it: the one picture, the cross on a tab's close
+button, is drawn in code (:mod:`je_auto_control.gui._tab_close_icon`).
 """
 from dataclasses import dataclass
 from typing import Any, Dict, Optional
@@ -167,7 +168,11 @@ def apply_theme(window: Any, tokens: ThemeTokens, point_size: Optional[int] = No
     ``point_size`` appends :func:`font_rule`, so the size is set on top of the
     theme instead of replacing it.
     """
+    from je_auto_control.gui._tab_close_icon import close_button_rules
     sheet = build_stylesheet(tokens)
+    close_rules = close_button_rules(tokens)
+    if close_rules:
+        sheet = f"{sheet}\n{close_rules}"
     window.setPalette(_palette(tokens))
     window.setStyleSheet(sheet if point_size is None else f"{sheet}\n{font_rule(point_size)}")
     return sheet

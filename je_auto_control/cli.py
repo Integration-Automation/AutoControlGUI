@@ -12,11 +12,15 @@ Usage::
     je_auto_control fmt script.json [--check]
     je_auto_control record out.json [--duration 5]
     je_auto_control codegen script.json [--target pytest] [-o test_flow.py]
+    je_auto_control codegen --from-log journal.jsonl [--run-id ID]
+                        [--manifest candidate.json] [-o test_flow.py]
     je_auto_control failure-bundle failure.zip [--error "message"]
     je_auto_control version
     je_auto_control list-jobs
     je_auto_control start-server --port 9938
     je_auto_control start-rest --port 9939
+    je_auto_control users [--users users.json] add alice --role admin
+    je_auto_control users list | set-role ID ROLE | rotate-token ID | remove ID
 
 The CLI is a thin wrapper around the headless APIs so every feature works
 without ever importing PySide6.
@@ -75,11 +79,14 @@ def cmd_run(args: argparse.Namespace) -> int:
     reset_recorded_failures()
     if args.dry_run:
         from je_auto_control.utils.executor.action_executor import executor
+        from je_auto_control.utils.script_vars.execution import execution_scope
         # Seeded, not interpolated over the whole tree: that failed on a loop
         # body's ${item} ("Unknown variable") and would print ${secrets.X}
-        # resolved into the dry-run keys.
-        executor.variables.update_many(variables)
-        result = executor.execute_action(actions, dry_run=True)
+        # resolved into the dry-run keys. Seeded into the run's own scope, as
+        # a real run's --var is: writing them into the module executor left
+        # them behind for whatever the same process ran next.
+        with execution_scope(variables):
+            result = executor.execute_action(actions, dry_run=True)
     elif variables:
         result = execute_action_with_vars(actions, variables)
     else:
@@ -103,7 +110,7 @@ def cmd_validate(args: argparse.Namespace) -> int:
     # Unwrapped and checked like `run` does: {"auto_control": [...]} failed
     # here and ran there, and [] passed here and failed there.
     actions = executor._unwrap_action_list(read_action_json(args.script))
-    validate_actions(actions, executor.known_commands())
+    validate_actions(actions, executor.known_commands(), executor._self_loadable())
     sys.stdout.write(f"OK: {len(actions)} action(s)\n")
     return 0
 
@@ -164,21 +171,52 @@ def _set_on_enter(stop_event: threading.Event) -> None:
 
 
 def cmd_codegen(args: argparse.Namespace) -> int:
-    """Generate pytest/python/robot source from an action file."""
+    """Generate pytest/python/robot source from an action file or a journal."""
     from je_auto_control.utils.codegen.codegen import (
         generate_code, generate_code_file,
     )
     from je_auto_control.utils.json.json_file import read_action_json
+    if bool(args.script) == bool(args.from_log):
+        raise ValueError("codegen needs an action file or --from-log JOURNAL (not both)")
+    if args.from_log:
+        return _codegen_from_log(args)
+    style = args.style or "calls"
     if args.output:
         generate_code_file(args.script, args.output, target=args.target,
-                           name=args.name, style=args.style,
+                           name=args.name, style=style,
                            failure_bundle=args.failure_bundle)
         sys.stderr.write(f"Wrote {args.target} code to {args.output}\n")
     else:
         code = generate_code(read_action_json(args.script), target=args.target,
-                             name=args.name, style=args.style,
+                             name=args.name, style=style,
                              failure_bundle=args.failure_bundle)
         sys.stdout.write(code)
+    return 0
+
+
+def _codegen_from_log(args: argparse.Namespace) -> int:
+    """Write a candidate script built from one run of an action journal."""
+    from je_auto_control.utils.codegen.journal_import import (
+        generate_candidate_from_log, only_run_id, write_candidate,
+    )
+    if args.failure_bundle:
+        raise ValueError("--failure-bundle does not apply to --from-log")
+    if args.manifest and not args.output:
+        raise ValueError("--manifest needs -o/--output")
+    run_id = args.run_id or only_run_id(args.from_log)
+    candidate = generate_candidate_from_log(
+        args.from_log, run_id=run_id, target=args.target,
+        style=args.style or "actions")
+    for warning in candidate.warnings:
+        sys.stderr.write(f"warning: {warning}\n")
+    if candidate.observed_path_only:
+        sys.stderr.write("warning: observed path only -- the candidate replays what "
+                         "this run did, not the script's control flow\n")
+    if args.output:
+        write_candidate(candidate, args.output, args.manifest)
+        sys.stderr.write(f"Wrote {args.target} candidate to {args.output}\n")
+    else:
+        sys.stdout.write(candidate.code)
     return 0
 
 
@@ -298,12 +336,20 @@ def build_parser() -> argparse.ArgumentParser:
     p_record.set_defaults(func=cmd_record)
 
     p_codegen = sub.add_parser(
-        "codegen", help="Generate test code from an action file")
-    p_codegen.add_argument("script")
+        "codegen", help="Generate test code from an action file or a journal")
+    p_codegen.add_argument("script", nargs="?")
+    p_codegen.add_argument(
+        "--from-log", metavar="JOURNAL",
+        help="Build a candidate from an action journal (.jsonl) instead of a script")
+    p_codegen.add_argument(
+        "--run-id", help="Journal run to use (optional when the journal holds one run)")
+    p_codegen.add_argument(
+        "--manifest", metavar="PATH",
+        help="With --from-log and -o: also write the provenance manifest (JSON)")
     p_codegen.add_argument("--target", choices=("pytest", "python", "robot"),
                            default="pytest")
-    p_codegen.add_argument("--style", choices=("calls", "actions"),
-                           default="calls")
+    p_codegen.add_argument("--style", choices=("calls", "actions"), default=None,
+                           help="Default: calls for a script, actions for --from-log")
     p_codegen.add_argument("--name", default="recorded_flow")
     p_codegen.add_argument("-o", "--output", help="Write to file instead of stdout")
     p_codegen.add_argument(
@@ -338,6 +384,10 @@ def build_parser() -> argparse.ArgumentParser:
     p_rest.add_argument("--host", default="127.0.0.1")
     p_rest.add_argument("--port", type=_port, default=9939)
     p_rest.set_defaults(func=cmd_start_rest)
+
+    from je_auto_control.utils.rbac.cli import add_users_arguments
+    add_users_arguments(sub.add_parser(
+        "users", help="Manage RBAC users of the REST API and MCP server"))
     return parser
 
 

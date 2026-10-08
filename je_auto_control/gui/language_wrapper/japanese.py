@@ -67,6 +67,59 @@ japanese_word_dict = {
     "diag_col_detail": "詳細",
     "diag_status_ok": "OK",
     "diag_status_fail": "失敗",
+    # 診断タブ: 機能と許可の状態
+    "diag_capabilities_title": "このセッションでできること",
+    "diag_capabilities_refresh": "機能の状態を更新",
+    "diag_input_reask": "入力の許可をもう一度求める",
+    "diag_input_close": "入力セッションを終了",
+    "diag_cap_col_name": "機能",
+    "diag_cap_col_state": "状態",
+    "diag_cap_col_backend": "バックエンド",
+    "diag_cap_col_scope": "届く範囲",
+    "diag_cap_col_detail": "詳細",
+    "diag_cap_col_fix": "対処方法",
+    "cap_name_input": "キーボードとマウスの入力",
+    "cap_name_capture": "画面キャプチャ",
+    "cap_name_recording": "自分の入力の記録",
+    "cap_name_stop_shortcut": "グローバル停止キー",
+    "cap_state_available": "利用可能",
+    "cap_state_not_requested": "まだ確認していません",
+    "cap_state_requesting": "回答を待っています",
+    "cap_state_needs_permission": "許可が必要",
+    "cap_state_needs_setup": "設定が必要",
+    "cap_state_session_closed": "セッション終了",
+    "cap_state_revoked": "デスクトップにより取り消し",
+    "cap_state_compositor_restarted": "デスクトップが再起動されました",
+    "cap_state_unsupported": "非対応",
+    "cap_state_unknown": "未確認",
+    "cap_scope_desktop": "デスクトップ全体",
+    "cap_scope_xwayland": "X11 アプリケーションのみ (XWayland)",
+    "cap_fix_input_consent": (
+        "「アクション」>「入力の許可をもう一度求める」を選び、操作をやり直して"
+        "要求を許可してください。代わりに ydotool を使う場合は、起動前に "
+        "JE_AUTOCONTROL_WAYLAND_INPUT_BACKEND=cli を設定します。"),
+    "cap_fix_answer_dialog": "デスクトップの許可ダイアログに回答してください。",
+    "cap_fix_ydotool": (
+        "ydotool 1.0 以降をインストールし、/dev/uinput にアクセスできる "
+        "ydotoold を実行するか、libei と liboeffis をインストールしてください。"),
+    "cap_fix_xwayland": (
+        "Wayland バックエンドが読み込まれるよう、Wayland 用ツール (ydotool "
+        "または libei と、grim・gnome-screenshot・spectacle のいずれか) を"
+        "インストールしてください。"),
+    "cap_fix_display": "DISPLAY を実行中の X サーバーに設定してください。",
+    "cap_fix_capture": (
+        "スクリーンショットの要求を許可するか、grim・gnome-screenshot・"
+        "spectacle のいずれかをインストールするか、"
+        "JE_AUTOCONTROL_WAYLAND_CAPTURE_COMMAND を設定してください。"),
+    "cap_fix_record_setup": (
+        "読み取るデバイスを JE_AUTOCONTROL_WAYLAND_RECORD_DEVICES に指定して"
+        "ください (/dev/input/event* のパスをカンマ区切り)。"),
+    "cap_fix_record_permission": (
+        "ユーザーを input グループに追加してログインし直すか、udev ルールを"
+        "追加してください。このためにプログラムを root で実行しないでください。"),
+    "cap_fix_stop_manual": (
+        "実行中のスクリプトは「アクション」メニューから、またはプロセスを終了して"
+        "停止してください。"),
 
     # USB デバイスタブ
     "usb_backend_label": "バックエンド:",
@@ -115,6 +168,21 @@ japanese_word_dict = {
 
     # USB 共有パネル（AnyDesk 風）
     "tab_usb_share": "USB 共有",
+    "tab_mobile": "モバイル",
+    "mob_platform": "プラットフォーム",
+    "mob_device": "デバイス（adb シリアル / WebDriverAgent URL）",
+    "mob_adb_path": "adb のパス（空欄 = PATH）",
+    "mob_command": "コマンド",
+    "mob_params": "パラメーター（JSON オブジェクト）",
+    "mob_result": "結果",
+    "mob_probe": "デバイスを調べる",
+    "mob_run": "コマンドを実行",
+    "mob_fill_params": "パラメーターのひな形を入力",
+    "mob_col_capability": "機能",
+    "mob_col_state": "状態",
+    "mob_col_reason": "理由",
+    "mob_error": "失敗: {error}",
+    "mob_untested": "偽の ADB / WebDriverAgent で開発。実機では未検証です。",
     "usb_share_host_group": "このマシンの USB を共有",
     "usb_share_viewer_group": "USB デバイスを使う",
     "usb_share_enable": "共有を有効化",
@@ -239,6 +307,35 @@ japanese_word_dict = {
         "このバンドルでユーザー設定を置き換えますか？"
         "既存ファイルは .bak.<時刻> にリネームされます。"),
     "rest_config_import_done": "{written} ファイル書き込み、{skipped} スキップ。",
+    "rest_token_rbac": "ユーザーごとのトークン（ユーザーストア: {path}）",
+    "rest_running_rbac": "REST API は RBAC で実行中です。共有トークンは拒否されます。",
+    "rest_users_group": "ユーザー（RBAC）",
+    "rest_users_path": "ユーザーストア:",
+    "rest_users_path_ph": "users.json のパス（JE_AUTOCONTROL_RBAC_USERS）",
+    "rest_users_enable": "このユーザーストアで REST リクエストを認証する",
+    "rest_users_col_id": "ユーザー ID",
+    "rest_users_col_name": "名前",
+    "rest_users_col_role": "ロール",
+    "rest_users_id": "ユーザー ID:",
+    "rest_users_name": "名前:",
+    "rest_users_role": "ロール:",
+    "rest_users_new_token": "新しいトークン（一度だけ表示）:",
+    "rest_users_refresh": "ユーザーを再読み込み",
+    "rest_users_add": "ユーザーを追加",
+    "rest_users_set_role": "ロールを設定",
+    "rest_users_rotate": "トークンを再発行",
+    "rest_users_remove": "ユーザーを削除",
+    "rest_users_copy_token": "新しいトークンをコピー",
+    "rest_users_remove_confirm": (
+        "ユーザー {user} を削除しますか？トークンは無効になり、"
+        "そのユーザーが登録した予約作業は実行されなくなります。"
+    ),
+    "rest_users_no_store": "先にユーザーストアのパスを入力してください。",
+    "rest_users_no_user": "先にユーザー ID を入力または選択してください。",
+    "rest_users_count": "{path} に {count} 人のユーザー",
+    "rest_users_token_issued": (
+        "{user} のトークンを発行しました。今すぐコピーしてください。再表示はできません。"
+    ),
 
     # Remote Desktop — WebRTC サブタブ
     "rd_webrtc_host_tab": "WebRTC ホスト",
@@ -742,6 +839,19 @@ japanese_word_dict = {
     "rh_col_artifact": "スクリーンショット",
     "rh_open_artifact": "スクリーンショットを開く",
     "rh_no_artifact": "選択した実行にスクリーンショットはありません。",
+    "rh_journal_start": "アクションジャーナルを開始…",
+    "rh_journal_stop": "アクションジャーナルを停止",
+    "rh_journal_candidate": "ジャーナルから候補スクリプトを作成…",
+    "rh_journal_off": "アクションジャーナル: オフ",
+    "rh_journal_on": "アクションジャーナル: 実行 {run}、{n} ステップ → {path}",
+    "re_import_journal": "ジャーナルの実行を取り込む…",
+    "sb_import_journal": "ジャーナル取込",
+    "jr_dialog_open": "アクションジャーナルを開く",
+    "jr_dialog_start": "追記するジャーナルファイル",
+    "jr_dialog_save_code": "候補スクリプトを保存",
+    "jr_pick_run": "実行",
+    "jr_no_runs": "このジャーナルには実行がありません。",
+    "jr_observed_only": "観測経路のみ: この候補は実行時の動作を再生するもので、スクリプトの制御フローではありません。",
     "rh_artifact_missing": "スクリーンショットファイルが存在しません。",
     "rh_timeline_heading": "タイムライン（左:古い → 右:新しい）",
     "rh_preview_heading": "プレビュー",
@@ -905,6 +1015,34 @@ japanese_word_dict = {
     "self_heal_col_template_path": "テンプレート",
     "self_heal_col_description": "説明",
     "self_heal_col_duration_ms": "ミリ秒",
+    "self_heal_col_locator_version": "バージョン",
+    "self_heal_col_action_verified": "検証",
+    "self_heal_verified_yes": "検証済み",
+    "self_heal_verified_no": "検証失敗",
+    "self_heal_verified_unknown": "未確認",
+    "self_heal_measure_title": "バージョンの測定とテンプレートの改訂",
+    "self_heal_dataset_label": "データセット:",
+    "self_heal_dataset_placeholder": "ラベル付きデータセット JSON",
+    "self_heal_candidate_label": "候補画像:",
+    "self_heal_candidate_placeholder": "提案する新しいテンプレート画像",
+    "self_heal_revision_label": "改訂 ID:",
+    "self_heal_revision_placeholder": "提案すると自動入力されます",
+    "self_heal_report_placeholder": "評価と改訂の結果がここに表示されます",
+    "self_heal_browse_dataset": "データセットを選択…",
+    "self_heal_browse_candidate": "候補画像を選択…",
+    "self_heal_evaluate": "データセットを評価",
+    "self_heal_rev_propose": "テンプレート改訂を提案",
+    "self_heal_rev_preview": "改訂をプレビュー",
+    "self_heal_rev_accept": "改訂を承認",
+    "self_heal_rev_revert": "改訂を取り消す",
+    "self_heal_rev_list": "改訂を一覧表示",
+    "self_heal_done": "完了",
+    "self_heal_dataset_required": "データセット JSON のパスを入力してください",
+    "self_heal_revision_required": "改訂 ID を入力してください",
+    "self_heal_propose_required": "テンプレートと候補画像を入力してください",
+    "self_heal_eval_passed": "評価完了 — しきい値を満たしています",
+    "self_heal_eval_failed": "評価完了 — しきい値を満たしていません",
+    "self_heal_accept_unvalidated": "この候補はラベル付きフレームで検証されていません。承認しますか？",
 
     # WebRunner Tab
     "web_available": "WebRunner はインストール済みです。",
@@ -984,6 +1122,42 @@ japanese_word_dict = {
     "presence_col_cursor": "カーソル",
     "presence_col_last_seen_iso": "最終時刻",
 
+    # Config Sync Tab
+    "tab_config_sync": "設定同期",
+    "config_sync_server_label": "同期サーバー URL:",
+    "config_sync_user_label": "ユーザー ID:",
+    "config_sync_secret_label": "共有シークレット:",
+    "config_sync_scripts_label": "スクリプトフォルダー (任意):",
+    "config_sync_assets_label": "共有アセットフォルダー (任意):",
+    "config_sync_conflicts_title": "競合: 2 台で同時に変更された項目",
+    "config_sync_col_entry": "項目",
+    "config_sync_col_choice": "候補",
+    "config_sync_col_origin": "変更元",
+    "config_sync_col_value": "値",
+    "config_sync_run_btn": "今すぐ同期",
+    "config_sync_cancel_btn": "同期をキャンセル",
+    "config_sync_refresh_btn": "同期状態を更新",
+    "config_sync_resolve_btn": "選択した候補を採用",
+    "config_sync_resync_btn": "完全再同期 (保留中の変更を破棄)",
+    "config_sync_required": "サーバー URL とユーザー ID は必須です",
+    "config_sync_busy": "同期はすでに実行中です",
+    "config_sync_resync_confirm": "サーバーの状態を採用し、このマシンの保留中の変更を破棄しますか?",
+    "config_sync_no_conflict_selected": "先に競合の候補を選択してください",
+    "config_sync_error": "エラー",
+    "config_sync_deleted": "(削除済み)",
+    "config_sync_state_label": "状態",
+    "config_sync_state_never": "未同期",
+    "config_sync_state_syncing": "同期中...",
+    "config_sync_state_synced": "同期済み",
+    "config_sync_state_pending": "送信待ちの変更あり",
+    "config_sync_state_conflict": "競合: 選択が必要です",
+    "config_sync_state_offline": "オフライン: 変更はキューに保存されています",
+    "config_sync_state_cancelled": "キャンセルされました",
+    "config_sync_state_resync_required": "退役済み: 完全再同期が必要です",
+    "config_sync_revision": "最後にマージしたリビジョン",
+    "config_sync_pending": "保留中の変更",
+    "config_sync_last_success": "最後に成功した同期",
+
     # Chat-Ops Tab
     "chatops_root_label": "スクリプトディレクトリ:",
     "chatops_root_placeholder": "/run で実行可能な .json スクリプトの場所",
@@ -1033,6 +1207,8 @@ japanese_word_dict = {
     "ocr_min_conf_invalid": "信頼度は数値で入力",
     "ocr_regex_required": "先に正規表現を入力",
     "ocr_regex_invalid": "正規表現が不正",
+    "ocr_running": "読み取り中...",
+    "dm_running": "実行中...",
 
     # Variables Tab
     "vars_current_group": "現在のスコープ",
@@ -1155,6 +1331,7 @@ japanese_word_dict = {
     "rd_badge_running": "RUNNING · :{port} · ビューア {n} 名",
     "rd_badge_stopped": "STOPPED",
     "rd_badge_idle": "未接続",
+    "rd_viewer_connecting": "接続中...",
     "rd_badge_live": "接続中",
     "rd_host_id_group": "ホスト ID（ビューアに伝える）",
     "rd_host_id_label": "ホスト ID:",

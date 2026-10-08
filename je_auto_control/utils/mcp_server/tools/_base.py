@@ -78,8 +78,36 @@ class MCPToolAnnotations:
 
 
 @dataclass(frozen=True)
+class MCPToolDescriptor:
+    """One tool as ``tools/list`` describes it: the schema without the callable."""
+
+    name: str
+    description: str
+    input_schema: Dict[str, Any]
+    annotations: Dict[str, Any]
+    output_schema: Optional[Dict[str, Any]] = None
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Return the JSON shape of one ``tools/list`` entry."""
+        descriptor: Dict[str, Any] = {
+            "name": self.name,
+            "description": self.description,
+            "inputSchema": self.input_schema,
+            "annotations": self.annotations,
+        }
+        if self.output_schema is not None:
+            descriptor["outputSchema"] = self.output_schema
+        return descriptor
+
+
+@dataclass(frozen=True)
 class MCPTool:
-    """A single MCP tool — public name, schema, and Python callable."""
+    """A single MCP tool — public name, schema, and Python callable.
+
+    ``category`` groups tools for the search index (:mod:`..discovery`); it
+    is the registry's own bookkeeping and never part of the descriptor a
+    client is sent.
+    """
 
     name: str
     description: str
@@ -87,6 +115,15 @@ class MCPTool:
     handler: Callable[..., Any]
     annotations: MCPToolAnnotations = MCPToolAnnotations()
     output_schema: Optional[Dict[str, Any]] = None
+    category: str = ""
+
+    def descriptor(self) -> MCPToolDescriptor:
+        """Return the typed form of :meth:`to_descriptor`."""
+        return MCPToolDescriptor(
+            name=self.name, description=self.description,
+            input_schema=self.input_schema, annotations=self.annotations.to_dict(),
+            output_schema=self.output_schema,
+        )
 
     def to_descriptor(self) -> Dict[str, Any]:
         """Return the dict shape MCP clients expect from ``tools/list``."""

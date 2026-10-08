@@ -33,7 +33,11 @@ from je_auto_control.utils.executor.flow_control import (
     BLOCK_COMMANDS, LoopBreak, LoopContinue, MacroDepthExceeded,
 )
 from je_auto_control.utils.executor.action_redaction import describe_action, redact_actions
+from je_auto_control.utils.action_journal.recorder import step as _journal_step
 from je_auto_control.utils.executor.mouse_aliases import MOUSE_BUTTON_COMMANDS
+from je_auto_control.utils.config_sync.session import (
+    config_sync_full_resync, config_sync_resolve, config_sync_run, config_sync_status,
+)
 from je_auto_control.utils.llm.planner import (
     plan_actions as llm_plan_actions,
     run_from_description as llm_run_from_description,
@@ -167,14 +171,21 @@ def _self_heal_locate(template_path: Optional[str] = None,
                       detect_threshold: float = 0.9,
                       screen_region: Optional[List[int]] = None,
                       model: Optional[str] = None,
-                      raise_on_miss: bool = False) -> Dict[str, Any]:
-    """Executor adapter: template-first locate with VLM fallback."""
-    outcome = _self_heal_locate_impl(
-        template_path=template_path, description=description,
-        detect_threshold=float(detect_threshold),
-        screen_region=screen_region, model=model,
-        raise_on_miss=_as_bool(raise_on_miss),
-    )
+                      raise_on_miss: bool = False,
+                      context: Optional[Dict[str, str]] = None) -> Dict[str, Any]:
+    """Executor adapter: template-first locate with VLM fallback.
+
+    ``context`` stamps ``run_id`` / ``step_id`` / ``locator_id`` /
+    ``locator_version`` / ``backend`` on the logged event.
+    """
+    from je_auto_control.utils.self_healing import heal_context
+    with heal_context(**(context or {})):
+        outcome = _self_heal_locate_impl(
+            template_path=template_path, description=description,
+            detect_threshold=float(detect_threshold),
+            screen_region=screen_region, model=model,
+            raise_on_miss=_as_bool(raise_on_miss),
+        )
     return outcome.to_dict()
 
 
@@ -184,15 +195,22 @@ def _self_heal_click(template_path: Optional[str] = None,
                      detect_threshold: float = 0.9,
                      screen_region: Optional[List[int]] = None,
                      model: Optional[str] = None,
-                     raise_on_miss: bool = False) -> Dict[str, Any]:
-    """Executor adapter: locate with self-heal, then click."""
-    outcome = _self_heal_click_impl(
-        template_path=template_path, description=description,
-        mouse_keycode=mouse_keycode,
-        detect_threshold=float(detect_threshold),
-        screen_region=screen_region, model=model,
-        raise_on_miss=_as_bool(raise_on_miss),
-    )
+                     raise_on_miss: bool = False,
+                     context: Optional[Dict[str, str]] = None) -> Dict[str, Any]:
+    """Executor adapter: locate with self-heal, then click.
+
+    The result's ``action_verified`` stays ``None``: a JSON step cannot carry
+    the check, so the click is recorded as located and unverified.
+    """
+    from je_auto_control.utils.self_healing import heal_context
+    with heal_context(**(context or {})):
+        outcome = _self_heal_click_impl(
+            template_path=template_path, description=description,
+            mouse_keycode=mouse_keycode,
+            detect_threshold=float(detect_threshold),
+            screen_region=screen_region, model=model,
+            raise_on_miss=_as_bool(raise_on_miss),
+        )
     return outcome.to_dict()
 
 
@@ -205,6 +223,52 @@ def _self_heal_log_list(limit: int = 50) -> List[Dict[str, Any]]:
 def _self_heal_log_clear() -> Dict[str, Any]:
     default_heal_log.clear()
     return {"cleared": True, "path": str(default_heal_log.path)}
+
+
+def _self_heal_evaluate(dataset_path: str,
+                        versions: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    """Executor adapter: score strategy versions on a labelled dataset file."""
+    from je_auto_control.utils.self_healing import evaluate_healing_dataset
+    return evaluate_healing_dataset(dataset_path, versions=versions)
+
+
+def _self_heal_revision_propose(template_path: str, candidate_path: str,
+                                source: str = "manual",
+                                note: Optional[str] = None) -> Dict[str, Any]:
+    """Executor adapter: store a candidate template; the template is untouched."""
+    from je_auto_control.utils.self_healing import propose_template_revision
+    return propose_template_revision(
+        template_path, candidate_path, source=source, note=note).to_dict()
+
+
+def _self_heal_revision_preview(revision_id: str,
+                                dataset_path: Optional[str] = None,
+                                detect_threshold: float = 0.9) -> Dict[str, Any]:
+    """Executor adapter: current vs candidate, validated when given a dataset."""
+    from je_auto_control.utils.self_healing import preview_template_revision
+    return preview_template_revision(
+        revision_id, dataset_path=dataset_path or None,
+        detect_threshold=float(detect_threshold))
+
+
+def _self_heal_revision_accept(revision_id: str,
+                               allow_unvalidated: bool = False) -> Dict[str, Any]:
+    """Executor adapter: replace the template with a validated candidate."""
+    from je_auto_control.utils.self_healing import accept_template_revision
+    return accept_template_revision(
+        revision_id, allow_unvalidated=_as_bool(allow_unvalidated)).to_dict()
+
+
+def _self_heal_revision_revert(revision_id: str) -> Dict[str, Any]:
+    """Executor adapter: restore the template an accepted revision replaced."""
+    from je_auto_control.utils.self_healing import revert_template_revision
+    return revert_template_revision(revision_id).to_dict()
+
+
+def _self_heal_revision_list() -> List[Dict[str, Any]]:
+    """Executor adapter: every stored template revision, oldest first."""
+    from je_auto_control.utils.self_healing import list_template_revisions
+    return [revision.to_dict() for revision in list_template_revisions()]
 
 
 def _run_dag(definition: Dict[str, Any],
@@ -1422,6 +1486,40 @@ def _admin_broadcast_execute(actions: List[Any],
     )
 
 
+def _user_add(user_id: str, role: str = "viewer", display_name: str = "",
+              tags: Optional[List[str]] = None,
+              users_path: Optional[str] = None) -> Dict[str, Any]:
+    """Executor adapter: add an RBAC user; the reply carries its token, once."""
+    from je_auto_control.utils.rbac.admin import add_user
+    return add_user(user_id, role=role, display_name=display_name, tags=tags,
+                    users_path=users_path)
+
+
+def _user_remove(user_id: str, users_path: Optional[str] = None) -> Dict[str, Any]:
+    """Executor adapter: remove an RBAC user."""
+    from je_auto_control.utils.rbac.admin import remove_user
+    return remove_user(user_id, users_path=users_path)
+
+
+def _user_set_role(user_id: str, role: str,
+                   users_path: Optional[str] = None) -> Dict[str, Any]:
+    """Executor adapter: change an RBAC user's role."""
+    from je_auto_control.utils.rbac.admin import set_user_role
+    return set_user_role(user_id, role, users_path=users_path)
+
+
+def _user_rotate_token(user_id: str, users_path: Optional[str] = None) -> Dict[str, Any]:
+    """Executor adapter: replace an RBAC user's token; the reply carries it, once."""
+    from je_auto_control.utils.rbac.admin import rotate_user_token
+    return rotate_user_token(user_id, users_path=users_path)
+
+
+def _user_list(users_path: Optional[str] = None) -> List[Dict[str, Any]]:
+    """Executor adapter: list RBAC users (no tokens, no hashes)."""
+    from je_auto_control.utils.rbac.admin import list_users
+    return list_users(users_path=users_path)
+
+
 def _audit_log_list(event_type: Optional[str] = None,
                     host_id: Optional[str] = None,
                     limit: int = 200) -> List[Dict[str, Any]]:
@@ -1479,6 +1577,21 @@ def _diagnose() -> Dict[str, Any]:
     """Executor adapter: run system diagnostics and return the report."""
     from je_auto_control.utils.diagnostics.diagnostics import run_diagnostics
     return run_diagnostics().to_dict()
+
+
+def _probe_capabilities() -> Dict[str, Any]:
+    """Executor adapter: capability and authorisation states, no side effect."""
+    from je_auto_control.wrapper.capabilities import probe_capabilities
+    return probe_capabilities().to_dict()
+
+
+def _reset_input_authorisation() -> Dict[str, Any]:
+    """Executor adapter: forget a refused or revoked Wayland input session."""
+    from je_auto_control.linux_wayland._select_input import (
+        reset_input_authorisation,
+    )
+    reset_input_authorisation()
+    return _probe_capabilities()
 
 
 def _config_export() -> Dict[str, Any]:
@@ -1654,7 +1767,15 @@ _android_client_cache: Dict[Tuple[Optional[str], Optional[str]], Any] = {}
 
 def _android_client(serial: Optional[str] = None,
                     adb_path: Optional[str] = None) -> Any:
-    """Build (or return) a cached :class:`AdbClient` for ``serial``."""
+    """Build (or return) a cached :class:`AdbClient` for ``serial``.
+
+    Inside ``use_device`` (a device-matrix worker) the bound session's own
+    client is used unless ``serial`` names another device.
+    """
+    from je_auto_control.android.session import bound_android_session
+    session = bound_android_session(serial)
+    if session is not None:
+        return session.adb
     key = (serial, adb_path)
     cached = _android_client_cache.get(key)
     if cached is not None:
@@ -1663,6 +1784,16 @@ def _android_client(serial: Optional[str] = None,
     cached = AdbClient(adb_path=adb_path, default_serial=serial)
     _android_client_cache[key] = cached
     return cached
+
+
+def _android_ui_device(serial: Optional[str] = None) -> Any:
+    """The uiautomator2 wrapper for ``serial``: the bound session's, else a new one."""
+    from je_auto_control.android.session import bound_android_session
+    session = bound_android_session(serial)
+    if session is not None:
+        return session.ui_device
+    from je_auto_control.android import UIAutomatorDevice
+    return UIAutomatorDevice(serial=serial)
 
 
 def _ac_android_tap(x: int, y: int,
@@ -1693,8 +1824,9 @@ def _ac_android_key(key: str,
 def _ac_android_text(text: str,
                      serial: Optional[str] = None,
                      adb_path: Optional[str] = None) -> None:
-    """Type a string via ``input text``."""
-    _android_client(serial, adb_path).text(text)
+    """Type a string: ``input text`` for ASCII, a Unicode-capable path otherwise."""
+    from je_auto_control.android.input import type_text
+    type_text(_android_client(serial, adb_path), text)
 
 
 def _ac_android_screenshot(file_path: str,
@@ -1731,10 +1863,8 @@ def _ac_android_find_element(text: Optional[str] = None,
                               serial: Optional[str] = None,
                               ) -> Dict[str, int]:
     """Find an Android widget via uiautomator2; return its bounding rect."""
-    from je_auto_control.android import (
-        UIAutomatorDevice, find_element,
-    )
-    device = UIAutomatorDevice(serial=serial)
+    from je_auto_control.android import find_element
+    device = _android_ui_device(serial)
     x1, y1, x2, y2 = find_element(
         text=text, resource_id=resource_id, description=description,
         class_name=class_name, timeout_s=float(timeout_s), device=device,
@@ -1750,10 +1880,8 @@ def _ac_android_click_element(text: Optional[str] = None,
                                serial: Optional[str] = None,
                                ) -> Dict[str, int]:
     """Tap the first widget matching the selectors; return click centre."""
-    from je_auto_control.android import (
-        UIAutomatorDevice, click_element,
-    )
-    device = UIAutomatorDevice(serial=serial)
+    from je_auto_control.android import click_element
+    device = _android_ui_device(serial)
     cx, cy = click_element(
         text=text, resource_id=resource_id, description=description,
         class_name=class_name, timeout_s=float(timeout_s), device=device,
@@ -1763,14 +1891,25 @@ def _ac_android_click_element(text: Optional[str] = None,
 
 def _ac_android_dump_hierarchy(serial: Optional[str] = None) -> str:
     """Return the device's widget tree as an XML string."""
-    from je_auto_control.android import UIAutomatorDevice, dump_hierarchy
-    device = UIAutomatorDevice(serial=serial)
+    from je_auto_control.android import dump_hierarchy
+    device = _android_ui_device(serial)
     return dump_hierarchy(device=device)
+
+
+def _mobile_command_handlers() -> Dict[str, Callable[..., Any]]:
+    """The generated ``AC_android_*`` / ``AC_ios_*`` handlers (see ``wrapper.mobile_commands``)."""
+    from je_auto_control.wrapper.mobile_commands import generated_handlers
+    return generated_handlers()
 
 
 # === iOS executor adapters (WebDriverAgent / facebook-wda) ==================
 
 def _ios_device(url: Optional[str]) -> Any:
+    """The WDA wrapper for ``url``: the bound session's, else a new one."""
+    from je_auto_control.ios.session import bound_ios_session
+    session = bound_ios_session(url)
+    if session is not None:
+        return session.device
     from je_auto_control.ios import IOSDevice
     return IOSDevice(url=url)
 
@@ -2214,17 +2353,19 @@ def _human_type(text: str, base_delay: float = 0.05, jitter: float = 0.04,
 
 
 def _sign_action_file(path: str, key: Optional[str] = None,
-                      private_key_path: Optional[str] = None) -> Dict[str, Any]:
+                      private_key_path: Optional[str] = None,
+                      passphrase: Optional[str] = None) -> Dict[str, Any]:
     """Executor adapter: write an Ed25519 or HMAC signature sidecar for a file."""
     from je_auto_control.utils.action_signing import sign_action_file
     return {"signature_path": sign_action_file(
-        path, key, private_key_path=private_key_path)}
+        path, key, private_key_path=private_key_path, passphrase=passphrase)}
 
 
-def _create_signing_keypair(private_path: str, public_path: str) -> Dict[str, Any]:
+def _create_signing_keypair(private_path: str, public_path: str,
+                            passphrase: Optional[str] = None) -> Dict[str, Any]:
     """Executor adapter: create an Ed25519 action-signing key pair."""
     from je_auto_control.utils.action_signing import create_signing_keypair
-    create_signing_keypair(private_path, public_path)
+    create_signing_keypair(private_path, public_path, passphrase=passphrase)
     return {"private_path": str(private_path), "public_path": str(public_path)}
 
 
@@ -2405,6 +2546,55 @@ def _generate_code(source: Any, output: Optional[str] = None,
                                   name=name, style=style)
     actions = source if isinstance(source, list) else read_action_json(source)
     return generate_code(actions, target=target, name=name, style=style)
+
+
+def _journal_start(path: Optional[str] = None, run_id: Optional[str] = None,
+                   session: Optional[str] = None) -> Dict[str, Any]:
+    """Start journalling every executed action to ``path``."""
+    from je_auto_control.utils.action_journal.recorder import start_action_journal
+    return start_action_journal(path or None, run_id=run_id or None,
+                                session=session or None)
+
+
+def _journal_stop() -> Dict[str, Any]:
+    """Stop the action journal."""
+    from je_auto_control.utils.action_journal.recorder import stop_action_journal
+    return stop_action_journal()
+
+
+def _journal_status() -> Dict[str, Any]:
+    """Report whether an action journal is started."""
+    from je_auto_control.utils.action_journal.recorder import action_journal_status
+    return action_journal_status()
+
+
+def _journal_read(path: str, run_id: Optional[str] = None,
+                  limit: int = 0) -> List[Dict[str, Any]]:
+    """Read a journal's events as dicts (the last ``limit`` when positive)."""
+    from je_auto_control.utils.action_journal.store import read_events
+    events = read_events(path, run_id=run_id or None)
+    return [event.to_dict() for event in events[-int(limit):]]
+
+
+def _journal_runs(path: str) -> List[Dict[str, Any]]:
+    """Summarise each run a journal file holds."""
+    from je_auto_control.utils.action_journal.store import list_journal_runs
+    return list_journal_runs(path)
+
+
+def _generate_code_from_journal(path: str, run_id: Optional[str] = None,
+                                target: str = "pytest", style: str = "actions",
+                                output: Optional[str] = None) -> Dict[str, Any]:
+    """Build a candidate script from one journal run, optionally writing it."""
+    from je_auto_control.utils.codegen.journal_import import (
+        generate_candidate_from_log, only_run_id, write_candidate,
+    )
+    candidate = generate_candidate_from_log(
+        path, run_id=run_id or only_run_id(path), target=target, style=style)
+    result = candidate.to_dict()
+    if output:
+        result.update(write_candidate(candidate, output))
+    return result
 
 
 def _send_email(message: Any, smtp: Any) -> Dict[str, Any]:
@@ -3499,10 +3689,22 @@ def _seed_everything(seed: int = 0) -> Dict[str, Any]:
 
 
 def _observe_handler(actions: List[Any]) -> Callable[[str, Any], None]:
-    """Build an observer callback that runs an action list on each event."""
+    """Build an observer callback that runs an action list on each event.
+
+    The callback fires long after the run that registered it has ended -- on
+    the observer's thread, or inside whichever run calls ``AC_observe_poll``
+    -- so it cannot share a run's scope. It keeps a snapshot of the variables
+    visible at registration, and every firing runs on the module executor in
+    a fresh scope seeded from that snapshot: the actions see what the
+    registering run had set, and what they set reaches neither the process
+    scope, the run that polled, nor the next firing.
+    """
+    snapshot = _running_executor().variables.as_dict()
+
     def handler(_event: str, _value: Any) -> None:
         if actions:
-            _running_executor().execute_action(list(actions))
+            with execution_scope(dict(snapshot)):
+                executor.execute_action(list(actions))
     return handler
 
 
@@ -7247,6 +7449,12 @@ class Executor:
             "AC_generate_json_report": generate_json_report,
             "AC_generate_xml_report": generate_xml_report,
             "AC_generate_code": _generate_code,
+            "AC_generate_code_from_journal": _generate_code_from_journal,
+            "AC_journal_start": _journal_start,
+            "AC_journal_stop": _journal_stop,
+            "AC_journal_status": _journal_status,
+            "AC_journal_read": _journal_read,
+            "AC_journal_runs": _journal_runs,
             "AC_send_email": _send_email,
             "AC_assert_pdf_text": _assert_pdf_text,
             "AC_take_golden": _take_golden,
@@ -7567,6 +7775,10 @@ class Executor:
             "AC_parse_sse": _parse_sse,
             "AC_resolve_config": _resolve_config,
             "AC_explain_config": _explain_config,
+            "AC_config_sync_run": config_sync_run,
+            "AC_config_sync_status": config_sync_status,
+            "AC_config_sync_resolve": config_sync_resolve,
+            "AC_config_sync_full_resync": config_sync_full_resync,
             "AC_check_compatibility": _check_compatibility,
             "AC_ts_rate": _ts_rate,
             "AC_ts_downsample": _ts_downsample,
@@ -7815,6 +8027,12 @@ class Executor:
             "AC_self_heal_click": _self_heal_click,
             "AC_self_heal_log_list": _self_heal_log_list,
             "AC_self_heal_log_clear": _self_heal_log_clear,
+            "AC_self_heal_evaluate": _self_heal_evaluate,
+            "AC_self_heal_revision_propose": _self_heal_revision_propose,
+            "AC_self_heal_revision_preview": _self_heal_revision_preview,
+            "AC_self_heal_revision_accept": _self_heal_revision_accept,
+            "AC_self_heal_revision_revert": _self_heal_revision_revert,
+            "AC_self_heal_revision_list": _self_heal_revision_list,
 
             # Assertion DSL (verify screen state; raise on mismatch)
             "AC_assert_text": _assert_text,
@@ -7963,6 +8181,9 @@ class Executor:
             "AC_android_screenshot": _ac_android_screenshot,
             "AC_android_list_devices": _ac_android_list_devices,
             "AC_android_shell": _ac_android_shell,
+            # Android / iOS sessions, gestures, locating, apps and extensions:
+            # generated from the table the MCP tools and builder schema share.
+            **_mobile_command_handlers(),
 
             # LLM action planner
             "AC_llm_plan": _llm_plan_for_executor,
@@ -8027,6 +8248,13 @@ class Executor:
             "AC_admin_poll": _admin_poll,
             "AC_admin_broadcast_execute": _admin_broadcast_execute,
 
+            # RBAC user management (needs manage_users under RBAC)
+            "AC_user_add": _user_add,
+            "AC_user_remove": _user_remove,
+            "AC_user_set_role": _user_set_role,
+            "AC_user_rotate_token": _user_rotate_token,
+            "AC_user_list": _user_list,
+
             # Audit log (tamper-evident security log)
             "AC_audit_log_list": _audit_log_list,
             "AC_audit_log_verify": _audit_log_verify,
@@ -8061,6 +8289,8 @@ class Executor:
 
             # System diagnostics
             "AC_diagnose": _diagnose,
+            "AC_probe_capabilities": _probe_capabilities,
+            "AC_reset_input_authorisation": _reset_input_authorisation,
 
             # Config bundle export / import
             "AC_config_export": _config_export,
@@ -8121,7 +8351,16 @@ class Executor:
         failed" *before* the first action moves anything.
         """
         return unknown_command_names(self._unwrap_action_list(action_list),
-                                     self.known_commands())
+                                     self.known_commands(), self._self_loadable())
+
+    def _self_loadable(self) -> Optional[Callable[[str], bool]]:
+        """The package gate's verdict, on the executor a load command fills.
+
+        ``AC_add_package_to_executor`` registers ``<package>_<member>`` names
+        on the package manager's executor, so only there may validation leave
+        such a name to run time; anywhere else it would never appear.
+        """
+        return package_manager.would_allow if package_manager.executor is self else None
 
     def _resolve_runtime_args(self, args: Any, command: str = "") -> Any:
         """Interpolate ``${var}`` placeholders against the current scope.
@@ -8223,7 +8462,7 @@ class Executor:
         """The body of :meth:`execute_action`, with strictness already settled."""
         action_list = self._unwrap_action_list(action_list)
         if not _validated:
-            validate_actions(action_list, self.known_commands())
+            validate_actions(action_list, self.known_commands(), self._self_loadable())
 
         execute_record_dict: Dict[str, Any] = {}
         for action in action_list:
@@ -8292,8 +8531,9 @@ class Executor:
         action_name = action[0] if action and isinstance(action[0], str) else "<invalid>"
         started = _time.monotonic()
         try:
-            with default_profiler.measure(action_name):
+            with default_profiler.measure(action_name), _journal_step(action) as step:
                 record[key] = self._execute_event(action)
+                step.outcome(record[key])
             _observe_executor_metrics(action_name, started, error=None)
         except (LoopBreak, LoopContinue):
             raise

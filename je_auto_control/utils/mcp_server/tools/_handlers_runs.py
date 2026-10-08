@@ -45,6 +45,35 @@ def list_run_history(limit: int = 50,
     } for row in rows]
 
 
+def journal_start(path: Optional[str] = None, run_id: Optional[str] = None,
+                  session: Optional[str] = None) -> Dict[str, Any]:
+    from je_auto_control.utils.action_journal.recorder import start_action_journal
+    return start_action_journal(path or None, run_id=run_id or None,
+                                session=session or None)
+
+
+def journal_stop() -> Dict[str, Any]:
+    from je_auto_control.utils.action_journal.recorder import stop_action_journal
+    return stop_action_journal()
+
+
+def journal_status() -> Dict[str, Any]:
+    from je_auto_control.utils.action_journal.recorder import action_journal_status
+    return action_journal_status()
+
+
+def journal_read(path: str, run_id: Optional[str] = None,
+                 limit: int = 0) -> List[Dict[str, Any]]:
+    from je_auto_control.utils.action_journal.store import read_events
+    events = read_events(path, run_id=run_id or None)
+    return [event.to_dict() for event in events[-int(limit):]]
+
+
+def journal_runs(path: str) -> List[Dict[str, Any]]:
+    from je_auto_control.utils.action_journal.store import list_journal_runs
+    return list_journal_runs(path)
+
+
 def record_start() -> str:
     from je_auto_control.wrapper.auto_control_record import record
     record()

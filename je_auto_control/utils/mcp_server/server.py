@@ -4,24 +4,27 @@ Serves tools, resources and prompts to MCP clients of both protocol eras:
 the handshake-based revisions (``initialize``, up to 2025-11-25) and the
 stateless 2026-07-28, chosen per request (see :mod:`._stateless`). Each
 stdio line is one JSON-RPC message — no Content-Length framing — matching
-the MCP stdio spec.
+the MCP stdio spec. Which tools a session is offered -- all of them by
+default -- is :mod:`.disclosure`'s.
 """
-import contextlib
 import itertools
 import json
 import sys
 import threading
 import time
-from typing import Any, Callable, Dict, List, Optional, TextIO
+from typing import Any, Callable, Dict, List, Optional, TextIO, Union
 
 from je_auto_control.utils.cli_output import utf8_stream
 from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
-from je_auto_control.utils.mcp_server._authz import authorize_tool_call, visible_tools
+from je_auto_control.utils.mcp_server._authz import authorize_tool_call
+from je_auto_control.utils.mcp_server._connection_state import ConnectionStateMixin
+from je_auto_control.utils.mcp_server._core_tools import build_core_tools
 from je_auto_control.utils.mcp_server.audit import AuditLogger
 from je_auto_control.utils.mcp_server.context import (
     OperationCancelledError, ToolCallContext,
 )
+from je_auto_control.utils.mcp_server.disclosure import ToolDisclosure, ToolMode
 from je_auto_control.utils.mcp_server.log_bridge import (
     MCPLogBridge, mcp_level_to_logging,
 )
@@ -61,8 +64,15 @@ from je_auto_control.utils.mcp_server._protocol import (
 WORKER_DRAIN_TIMEOUT = 10.0
 
 
-class MCPServer(StatelessDispatchMixin, SubscriptionMixin, ClientRequestMixin):
-    """JSON-RPC 2.0 MCP server with a configurable tool registry."""
+class MCPServer(ConnectionStateMixin, StatelessDispatchMixin, SubscriptionMixin,
+                ClientRequestMixin):
+    """JSON-RPC 2.0 MCP server with a configurable tool registry.
+
+    ``tool_mode`` is ``full`` (every tool in ``tools/list``, the default),
+    ``progressive`` or ``static``; ``None`` reads ``JE_AUTOCONTROL_MCP_TOOL_MODE``.
+    ``read_only`` builds the default registry without mutating tools and, in
+    the two non-full modes, keeps any registered later out of every session.
+    """
 
     def __init__(self, tools: Optional[List[MCPTool]] = None,
                  resource_provider: Optional[ResourceProvider] = None,
@@ -71,9 +81,15 @@ class MCPServer(StatelessDispatchMixin, SubscriptionMixin, ClientRequestMixin):
                  audit_logger: Optional[AuditLogger] = None,
                  rate_limiter: Optional[RateLimiter] = None,
                  log_bridge: Optional[MCPLogBridge] = None,
+                 tool_mode: Union[str, ToolMode, None] = None,
+                 read_only: Optional[bool] = None,
                  ) -> None:
-        registry = tools if tools is not None else build_default_tool_registry()
+        registry = tools if tools is not None else build_default_tool_registry(read_only=read_only)
         self._tools: Dict[str, MCPTool] = {tool.name: tool for tool in registry}
+        #: The tool mode and each session's view of the registry.
+        self.disclosure = ToolDisclosure(self, tool_mode, read_only=read_only)
+        if self.disclosure.mode is ToolMode.PROGRESSIVE:
+            self._tools.update((tool.name, tool) for tool in build_core_tools(self.disclosure))
         self._resources = (resource_provider if resource_provider is not None
                             else default_resource_provider())
         self._prompts = (prompt_provider if prompt_provider is not None
@@ -97,12 +113,7 @@ class MCPServer(StatelessDispatchMixin, SubscriptionMixin, ClientRequestMixin):
         # the writer out from under them.
         self._workers: List[threading.Thread] = []
         self._workers_lock = threading.Lock()
-        # Connection-scoped state. The stdio transport has exactly one peer, so
-        # a server-wide default is right for it; an HTTP transport has many, and
-        # each request runs on its own thread. Keeping the notifier/writer in
-        # thread-local storage is what stops one client's progress
-        # notifications from being emitted down another client's socket.
-        # See :meth:`connection_scope`.
+        # Connection-scoped state; see :mod:`._connection_state`.
         self._default_notifier: Optional[
             Callable[[str, Dict[str, Any]], None]] = None
         self._default_writer: Optional[Callable[[str], None]] = None
@@ -128,123 +139,26 @@ class MCPServer(StatelessDispatchMixin, SubscriptionMixin, ClientRequestMixin):
         self._listeners: Dict[Any, Any] = {}  # open subscriptions/listen, by (connection, id)
         self._listeners_lock = threading.Lock()
 
-    # --- connection-scoped state ------------------------------------------
-    #
-    # Each property prefers a value set for the current thread (one HTTP
-    # request = one thread) and falls back to the server-wide default that
-    # stdio and set_notifier() use. A plain POST therefore sees *no* notifier
-    # rather than inheriting whichever SSE connection happens to be open —
-    # correct, since a plain POST has no stream to deliver notifications on.
-
-    @property
-    def _notifier(self) -> Optional[Callable[[str, Dict[str, Any]], None]]:
-        return getattr(self._local, "notifier", None) or self._default_notifier
-
-    @_notifier.setter
-    def _notifier(self, value) -> None:
-        self._default_notifier = value
-
-    @property
-    def _writer(self) -> Optional[Callable[[str], None]]:
-        return getattr(self._local, "writer", None) or self._default_writer
-
-    @_writer.setter
-    def _writer(self, value) -> None:
-        self._default_writer = value
-
-    @property
-    def _concurrent_tools(self) -> bool:
-        scoped = getattr(self._local, "concurrent_tools", None)
-        if scoped is None:
-            return self._default_concurrent_tools
-        return scoped
-
-    @_concurrent_tools.setter
-    def _concurrent_tools(self, value) -> None:
-        self._default_concurrent_tools = bool(value)
-
-    @property
-    def _connection_id(self) -> Any:
-        """Identity of the peer served on this thread (None for stdio)."""
-        return getattr(self._local, "connection_id", None)
-
-    @property
-    def _client_capabilities(self) -> Dict[str, Any]:
-        """Capabilities advertised by the peer served on this thread."""
-        if self._stateless_request is not None:
-            return self._stateless_request.capabilities
-        conn = self._connection_id
-        if conn is None:
-            return self._default_client_capabilities
-        with self._caps_lock:
-            return self._client_caps_by_conn.get(conn, {})
-
-    @_client_capabilities.setter
-    def _client_capabilities(self, value: Dict[str, Any]) -> None:
-        conn = self._connection_id
-        if conn is None:
-            self._default_client_capabilities = value
-            return
-        with self._caps_lock:
-            self._client_caps_by_conn[conn] = value
-
-    @contextlib.contextmanager
-    def connection_scope(self, *, notifier=None, writer=None,
-                         concurrent_tools=None, connection_id=None):
-        """Bind notifier/writer/concurrency/identity to the calling thread only.
-
-        Transports that serve more than one peer must wrap each request in
-        this. Previously they swapped the attributes on the shared server, so
-        any concurrent request bound to the wrong peer's socket. ``connection_id``
-        scopes active-call slots and client capabilities per peer.
-        """
-        prior = (getattr(self._local, "notifier", None),
-                 getattr(self._local, "writer", None),
-                 getattr(self._local, "concurrent_tools", None),
-                 getattr(self._local, "connection_id", None))
-        self._local.notifier = notifier
-        self._local.writer = writer
-        self._local.concurrent_tools = concurrent_tools
-        self._local.connection_id = connection_id
-        try:
-            yield self
-        finally:
-            (self._local.notifier, self._local.writer,
-             self._local.concurrent_tools, self._local.connection_id) = prior
-
-    def forget_connection(self, connection_id: Any) -> None:
-        """Drop per-connection state when a transport connection closes.
-
-        HTTP connections are transient; without this their capabilities and
-        any stray active-call contexts would accumulate for the server's life.
-        """
-        if connection_id is None:
-            return
-        with self._caps_lock:
-            self._client_caps_by_conn.pop(connection_id, None)
-        self._end_listeners(lambda conn: conn == connection_id, graceful=False)
-        with self._calls_lock:
-            stale = [key for key in self._active_calls
-                     if isinstance(key, tuple) and key[0] == connection_id]
-            for key in stale:
-                self._active_calls.pop(key, None)
-
     def register_tool(self, tool: MCPTool) -> None:
         """Add or replace a tool in the live registry.
 
         Emits ``notifications/tools/list_changed`` to the connected
         client so it knows to refresh its cached tool list.
         """
+        self.disclosure.check_name(tool.name)
         with self._tools_lock:
             self._tools[tool.name] = tool
+        self.disclosure.registry_changed()
         self._notify_tools_list_changed()
 
     def unregister_tool(self, name: str) -> bool:
         """Remove a tool by name. Returns True if it existed."""
+        self.disclosure.check_name(name)
         with self._tools_lock:
             if name not in self._tools:
                 return False
             del self._tools[name]
+        self.disclosure.registry_changed(removed=name)
         self._notify_tools_list_changed()
         return True
 
@@ -289,6 +203,7 @@ class MCPServer(StatelessDispatchMixin, SubscriptionMixin, ClientRequestMixin):
             # writer is swapped back.
             self._join_workers()
             self.end_subscriptions(stdio=True)
+            self.disclosure.forget(None)  # the stdio peer's one implicit session
             self._detach_log_bridge_if_configured()
             self._notifier = prior_notifier
             self._writer = prior_writer
@@ -499,7 +414,6 @@ class MCPServer(StatelessDispatchMixin, SubscriptionMixin, ClientRequestMixin):
             raise _MCPError(-32601, f"Method not found: {method}")
         nullary = {
             "ping": self._handle_ping,
-            "tools/list": self._handle_tools_list,
             "resources/list": self._handle_resources_list,
             "prompts/list": self._handle_prompts_list,
         }.get(method)
@@ -507,6 +421,7 @@ class MCPServer(StatelessDispatchMixin, SubscriptionMixin, ClientRequestMixin):
             return nullary()
         handler = {
             "initialize": self._handle_initialize,
+            "tools/list": self.disclosure.handle_list,
             "resources/read": self._handle_resources_read,
             "resources/subscribe": self._handle_resources_subscribe,
             "resources/unsubscribe": self._handle_resources_unsubscribe,
@@ -520,15 +435,6 @@ class MCPServer(StatelessDispatchMixin, SubscriptionMixin, ClientRequestMixin):
     def _handle_ping(self) -> Dict[str, Any]:
         """Liveness probe; returns an empty result per the MCP spec."""
         return {}
-
-    def _handle_tools_list(self) -> Dict[str, Any]:
-        """List descriptors for every registered tool."""
-        # Snapshot under the lock: PluginWatcher re-registers tools from its
-        # own thread, and mutating the dict mid-iteration surfaced to the
-        # client as "-32603 dictionary changed size during iteration".
-        with self._tools_lock:
-            tools = list(self._tools.values())
-        return {"tools": [tool.to_descriptor() for tool in visible_tools(tools)]}
 
     def _handle_resources_list(self) -> Dict[str, Any]:
         """List descriptors for every registered resource."""
@@ -624,6 +530,7 @@ class MCPServer(StatelessDispatchMixin, SubscriptionMixin, ClientRequestMixin):
         if tool is None:
             raise _MCPError(-32602, f"Unknown tool: {name}")
         authorize_tool_call(tool, arguments, self._audit)  # RBAC; a no-op without a user
+        self.disclosure.require_available(tool, arguments)  # a no-op in full mode
         violation = (validate_arguments(tool.input_schema, arguments)
                      or undeclared_arguments(tool.input_schema, arguments))
         if violation is not None:
@@ -721,14 +628,16 @@ def _parse_request(line: str) -> "tuple[Optional[Dict[str, Any]], Optional[str]]
     return (None, refusal) if refusal is not None else (message, None)
 
 
-def start_mcp_stdio_server(read_only: Optional[bool] = None) -> MCPServer:
+def start_mcp_stdio_server(read_only: Optional[bool] = None,
+                           tool_mode: Union[str, ToolMode, None] = None) -> MCPServer:
     """Start a stdio MCP server in the foreground; blocks until EOF.
 
     ``read_only=True`` offers only tools marked read-only; ``None`` leaves
     the choice to ``JE_AUTOCONTROL_MCP_READONLY``. ``je_auto_control_mcp
     --read-only`` used to reach only its ``--list-*`` output, so the server
-    it started offered every tool, clicks and typing included.
+    it started offered every tool, clicks and typing included. ``tool_mode``
+    is :class:`MCPServer`'s; ``None`` reads ``JE_AUTOCONTROL_MCP_TOOL_MODE``.
     """
-    server = MCPServer(tools=build_default_tool_registry(read_only=read_only))
+    server = MCPServer(read_only=read_only, tool_mode=tool_mode)
     server.serve_stdio()
     return server

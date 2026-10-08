@@ -131,6 +131,17 @@ class AutoControlUnsupportedOperationException(
     """
 
 
+# Action-file signatures
+class AutoControlSignatureException(AutoControlException):
+    """An action file that had to be signed failed verification and was not run.
+
+    Raised where a file is refused -- a missing sidecar, a mismatch, a key
+    this endpoint does not trust -- so a server can answer "refused" rather
+    than "crashed". Still an :class:`AutoControlException`, which is what
+    this was before the type existed.
+    """
+
+
 # Optional dependency
 class CryptographyUnavailableError(AutoControlException, RuntimeError):
     """A feature needs ``cryptography`` and the package is not installed.

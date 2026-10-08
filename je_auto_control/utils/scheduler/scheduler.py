@@ -15,6 +15,7 @@ from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.run_history.artifact_manager import (
     capture_error_snapshot,
 )
+from je_auto_control.utils.rbac.deferred import DeferredOwner, capture_owner
 from je_auto_control.utils.run_history.run_outcome import run_counting_failures
 from je_auto_control.utils.run_history.history_store import (
     SOURCE_SCHEDULER, STATUS_ERROR, STATUS_OK, default_history_store,
@@ -49,6 +50,8 @@ class ScheduledJob:
     runs: int = 0
     enabled: bool = True
     next_run_ts: float = field(default=0.0)
+    #: Who registered it under RBAC; the run is authorised as that user.
+    owner: Optional[DeferredOwner] = field(default=None, kw_only=True)
 
     @property
     def is_cron(self) -> bool:
@@ -94,7 +97,7 @@ class Scheduler:
             job_id=jid, script_path=script_path,
             interval_seconds=interval,
             repeat=repeat, max_runs=max_runs,
-            next_run_ts=now + interval,
+            next_run_ts=now + interval, owner=capture_owner(),
         )
         with self._lock:
             self._jobs[jid] = job
@@ -114,6 +117,7 @@ class Scheduler:
             cron_expression=expression,
             repeat=True, max_runs=max_runs,
             next_run_ts=_next_cron_ts(expression, time.time()),
+            owner=capture_owner(),
         )
         with self._lock:
             self._jobs[jid] = job
@@ -231,7 +235,7 @@ class Scheduler:
         error_text: Optional[str] = None
         try:
             actions = read_executable_action_json(job.script_path)
-            run_counting_failures(lambda: self._execute(actions))
+            run_counting_failures(lambda: self._execute(actions), owner=job.owner)
         # 一個排程工作失敗必須記錄為 STATUS_ERROR 並繼續輪詢,絕不能拖垮
         # 排程執行緒。原本的 tuple 漏掉 AutoControlException——它是幾乎所有
         # action 失敗(找不到視窗/圖片、輸入錯誤)的基底,直接繼承

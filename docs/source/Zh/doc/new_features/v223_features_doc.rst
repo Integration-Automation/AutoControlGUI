@@ -28,23 +28,32 @@ Actions 選單
 視窗左側依同樣五個分類列出每一個已註冊的分頁,不論是否已開啟;已開啟的以粗體
 顯示。點一下就開啟該功能(已開啟則切到最前面)。搜尋框會隨輸入過濾清單——比對
 標題、鍵名(``usb_devices``)或分類——按 **Return** 開啟第一個符合的項目。
-``Ctrl+K``(**View → Search Features...**)從任何地方把游標移到搜尋框,
-``Ctrl+B``(**View → Navigation Panel**)隱藏或顯示面板。
+``Ctrl+K``\ (**View → Search Features...**)從任何地方把游標移到搜尋框,
+``Ctrl+B``\ (**View → Navigation Panel**)隱藏或顯示面板。
 
-分頁在第一次開啟時才建立:視窗啟動時只有三個預設分頁與主元件自己的表單,其他
-分頁的模組要到開啟時才匯入。
+分頁在第一次顯示時才建立。視窗啟動時分頁列上有三個分頁——錄製、Script Builder
+與遠端桌面——錄製在最前面;另外兩個在第一次點到時才建立,其他分頁則在開啟時建立。
+在那之前,Script Builder 與遠端桌面(它會載入 WebRTC 相關套件)都不會被匯入。
 
-導覽面板
---------
+小視窗,以及視窗會記住的事
+--------------------------
 
-視窗左側依同樣五個分類列出每一個已註冊的分頁,不論是否已開啟;已開啟的以粗體
-顯示。點一下就開啟該功能(已開啟則切到最前面)。搜尋框會隨輸入過濾清單——比對
-標題、鍵名(``usb_devices``)或分類——按 **Return** 開啟第一個符合的項目。
-``Ctrl+K``(**View → Search Features...**)從任何地方把游標移到搜尋框,
-``Ctrl+B``(**View → Navigation Panel**)隱藏或顯示面板。
+分頁內容保有自己的最小尺寸:視窗小到放不下時,分頁會出現捲軸,而不是把表單擠扁。
+遠端桌面本來就自己捲動內容,維持原樣。對於內嵌 ``AutoControlGUIWidget`` 的程式,
+``widget.tabs`` 仍然以分頁內容為單位——``tabs.indexOf(page)``、
+``tabs.widget(index)``、``tabs.currentWidget()`` 與 ``tabs.setCurrentWidget(page)``
+收與回的都是分頁自己的 widget,不是包在外面的捲動區。
 
-分頁在第一次開啟時才建立:視窗啟動時只有三個預設分頁與主元件自己的表單,其他
-分頁的模組要到開啟時才匯入。
+主題、字級、導覽面板是否顯示與寬度、視窗位置與大小,會存在
+``~/.je_auto_control/gui_settings.ini``,下次啟動時還原。把
+``JE_AUTOCONTROL_GUI_SETTINGS`` 設成另一個檔案可以換位置,設成 ``off`` 則什麼都
+不記(測試套件就是這樣跑的)。
+
+關閉分頁會保留它的 widget,再開啟時維持離開時的樣子。
+``AutoControlGUIWidget.close_tab(key, release=True)`` 則是放掉它:先呼叫 widget
+選擇性實作的 ``dispose()``——分頁在這裡停掉計時器與執行緒、移除它註冊的監聽——
+再刪除 widget,下一次 ``open_tab(key)`` 會建立新的。主元件自己建立的表單(自動點擊、
+截圖、影像偵測、錄製、腳本、報告)只會關閉,不會被放掉。
 
 View 選單
 ---------
@@ -66,3 +75,64 @@ View 選單
 新分頁若忘了掛鉤會直接讓 CI 失敗,而不是默默出貨一個沒有任何可觸及指令
 的分頁。探測程序在子行程中建構完整 widget,使 Qt 生命週期不會影響無頭
 測試套件的其餘部分。
+
+``test/unit_test/headless/test_gui_feature_parity.py`` 守其餘的部分:視窗以三個
+工作流程分頁開啟、每個已註冊分頁都能從導覽面板開啟並填入 Actions 選單、640×420
+的視窗會捲動而不是裁切、混合 DPI 的座標換算與 100% + 125% 桌面的實測一致。
+
+量測 GUI
+--------
+
+兩支腳本輸出 JSON 報告,而且不會顯示視窗(使用 Qt 的 ``offscreen`` 平台,也不碰
+GUI 設定檔):
+
+.. code-block:: bash
+
+   python benchmarks/gui_startup.py --runs 5 --output after.json
+   python benchmarks/gui_workloads.py --output workloads.json
+   python benchmarks/gui_startup.py --compare before.json after.json
+
+``gui_startup.py`` 在全新的直譯器裡啟動視窗,回報 ``startup_ms``(從第一行到畫出
+第一個畫面)、各階段時間與行程的記憶體。``gui_workloads.py`` 把每個分頁各開一次
+(每個分頁的 ``first_open_ms``)、再切回去、在搜尋框輸入、切換主題,同時有一個 5 ms
+的計時器在跳;``event_loop_p95_ms`` 就是那些 tick 晚到多久。``--compare`` 把兩份
+報告並排,工作量或環境不同時拒絕比較。
+
+分頁裡的背景工作
+----------------
+
+需要等待網路對端或裝置的分頁,透過 ``je_auto_control.gui.task_controller``
+啟動工作,而不是自己開執行緒:
+
+.. code-block:: python
+
+   from je_auto_control.gui.task_controller import CancellationToken, task_controller
+
+   def fetch(url: str, token: CancellationToken) -> dict:
+       token.raise_if_cancelled()
+       return download(url, timeout=token.remaining(default=10.0))
+
+   url = self._url_edit.text()                      # 先把 widget 的值讀出來
+   handle = task_controller().submit(
+       functools.partial(fetch, url), owner=self, timeout_s=30.0)
+   handle.result.connect(self._show)                # 在 GUI 執行緒發出
+   handle.error.connect(self._show_error)           # 例外物件本身
+   handle.finished.connect(self._enable_button)     # 無論結果如何都只發一次
+
+相較於單純的 worker,它多了這些:
+
+* **取消會傳到後端。** 工作會收到 ``CancellationToken``:以
+  ``raise_if_cancelled()`` / ``wait()`` 輪詢、把 ``remaining()`` 交給接受逾時的
+  後端,並用 ``on_cancel()`` 登記如何釋放手上的資源。``handle.cancel()`` 會在
+  呼叫取消的執行緒上立刻執行那些釋放動作。
+* **有型別的結果。** ``result`` 帶回傳值、``error`` 帶例外、``progress`` 帶
+  ``token.report_progress()`` 傳入的內容。逾時回報為 ``TaskTimeout``,取消回報為
+  ``TaskCancelled``。
+* **擁有者消失。** handle 是 ``owner`` 的子物件。分頁被銷毀時工作會被取消,之後
+  才到的結果交給 ``discard=``\ (關掉已經沒人要用的工作階段),絕不會送到已銷毀
+  widget 的 slot。
+* **worker 不碰 widget。** 工作若是 widget 的方法,或閉包裡抓著 widget,會在啟動
+  前以 ``TaskUsageError`` 拒絕。
+
+這是 GUI 內部 API(會 import ``PySide6``),套件 facade 不會重新匯出;分頁所呼叫的
+無頭函式不需要它也能使用。

@@ -237,10 +237,14 @@ Open + transfer
 Errors:
 
 - ``UsbClientTimeout`` — the host took longer than ``reply_timeout_s``
-  (default 10s) to respond. Check the network / host process.
+  (default 10s) to respond; for a transfer, longer than its own
+  ``timeout_ms`` plus ``reply_timeout_s``. Check the network / host
+  process.
 - ``UsbClientError`` — the host replied with ``{ok: false, error: ...}``.
   The most common case is *denied by ACL policy* — go check the
-  prompt dialog or the ACL rule on the host.
+  prompt dialog or the ACL rule on the host. *usb passthrough disabled*
+  and *no usb session on host* mean the host has not opted in (or has
+  no backend); they are reported at once rather than as a timeout.
 - ``UsbClientClosed`` — the client or its handle was already shut down.
 - ``UsbClientDesynchronized`` — an earlier request timed out and the
   host does not echo request ids (it predates them), so a late reply
@@ -290,21 +294,21 @@ Everything the GUI does is also an executor command, so JSON action
 files, the socket server, and the scheduler can drive USB passthrough
 with no GUI:
 
-================================  ============================================
-Command                           Purpose
-================================  ============================================
-``AC_usb_passthrough_enable``     Toggle the feature flag (``enabled`` bool)
-``AC_usb_passthrough_status``     Report whether passthrough is enabled
-``AC_usb_acl_list``               List ACL rules + default + integrity state
-``AC_usb_acl_add``                Add a per-device rule
-``AC_usb_acl_remove``             Remove a rule
-``AC_usb_acl_set_default``        Set the default policy (allow/deny)
-``AC_usb_acl_export`` / ``_import``  Back up / restore the ACL as JSON
-``AC_usb_loopback_list``          List ACL-visible devices over loopback
-``AC_usb_loopback_open``          Claim a local device + read its descriptor
-``AC_usb_remote_list``            List a remote host's devices (live WebRTC)
-``AC_usb_remote_open``            Claim a remote device + read its descriptor
-================================  ============================================
+====================================  ============================================
+Command                               Purpose
+====================================  ============================================
+``AC_usb_passthrough_enable``         Toggle the feature flag (``enabled`` bool)
+``AC_usb_passthrough_status``         Report whether passthrough is enabled
+``AC_usb_acl_list``                   List ACL rules + default + integrity state
+``AC_usb_acl_add``                    Add a per-device rule
+``AC_usb_acl_remove``                 Remove a rule
+``AC_usb_acl_set_default``            Set the default policy (allow/deny)
+``AC_usb_acl_export`` / ``_import``   Back up / restore the ACL as JSON
+``AC_usb_loopback_list``              List ACL-visible devices over loopback
+``AC_usb_loopback_open``              Claim a local device + read its descriptor
+``AC_usb_remote_list``                List a remote host's devices (live WebRTC)
+``AC_usb_remote_open``                Claim a remote device + read its descriptor
+====================================  ============================================
 
 Example JSON action::
 

@@ -18,6 +18,7 @@ from je_auto_control.utils.mcp_server.tools import _handlers_system as h_system
 from je_auto_control.utils.mcp_server.tools import _handlers_runs as h_runs
 from je_auto_control.utils.mcp_server.tools import _handlers_scheduling as h_sched
 from je_auto_control.utils.mcp_server.tools import _handlers_remote as h_remote
+from je_auto_control.utils.config_sync import session as h_sync
 from je_auto_control.utils.mcp_server.tools._base import (
     DESTRUCTIVE, MCPTool, MCPToolAnnotations, NON_DESTRUCTIVE, READ_ONLY,
     SIDE_EFFECT_ONLY, schema,
@@ -446,7 +447,8 @@ def window_tools() -> List[MCPTool]:
         ),
         MCPTool(
             name="ac_window_minimize",
-            description="Minimise the first matching window.",
+            description=("Minimise the first matching window. Fails if the "
+                         "window is gone by the time the request is made."),
             input_schema=schema({
                 "title_substring": {"type": "string"},
                 "case_sensitive": {"type": "boolean"},
@@ -456,7 +458,8 @@ def window_tools() -> List[MCPTool]:
         ),
         MCPTool(
             name="ac_window_maximize",
-            description="Maximise the first matching window.",
+            description=("Maximise the first matching window. Fails if the "
+                         "window is gone or Windows refuses to activate it."),
             input_schema=schema({
                 "title_substring": {"type": "string"},
                 "case_sensitive": {"type": "boolean"},
@@ -467,7 +470,8 @@ def window_tools() -> List[MCPTool]:
         MCPTool(
             name="ac_window_restore",
             description=("Restore the first matching window to its previous "
-                         "size and position."),
+                         "size and position. Fails if the window is gone or "
+                         "Windows refuses to activate it."),
             input_schema=schema({
                 "title_substring": {"type": "string"},
                 "case_sensitive": {"type": "boolean"},
@@ -480,6 +484,19 @@ def window_tools() -> List[MCPTool]:
 
 def system_tools() -> List[MCPTool]:
     return [
+        MCPTool(
+            name="ac_probe_capabilities",
+            description=("Report what this session can do right now — input, "
+                         "capture, recording and the stop shortcut — each "
+                         "with its state (available, needs_permission, "
+                         "needs_setup, revoked, ...), the backend serving "
+                         "it, whether it reaches the whole desktop (false "
+                         "under XWayland) and what to do about it. Asks the "
+                         "desktop for nothing: no consent dialog, no input."),
+            input_schema=schema({}),
+            handler=h_system.probe_capabilities,
+            annotations=READ_ONLY,
+        ),
         MCPTool(
             name="ac_get_clipboard",
             description="Return the current text clipboard contents.",
@@ -551,6 +568,61 @@ def system_tools() -> List[MCPTool]:
                 "source_type": {"type": "string"},
             }),
             handler=h_runs.list_run_history,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_journal_start",
+            description=("Start the structured action journal: every action "
+                         "the executor runs from now on (any entry point) is "
+                         "appended to a JSON-lines file with its run/step/"
+                         "parent ids, arguments (secrets masked before they "
+                         "are written) and how it ended. path defaults to "
+                         "~/.je_auto_control/action_journal.jsonl. Returns "
+                         "the path and the run_id."),
+            input_schema=schema({
+                "path": {"type": "string", "format": "path"},
+                "run_id": {"type": "string"},
+                "session": {"type": "string",
+                            "description": "Free label (device / session) stored on each event."},
+            }),
+            handler=h_runs.journal_start,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
+        MCPTool(
+            name="ac_journal_stop",
+            description="Stop the action journal; returns its path, run_id and event count.",
+            input_schema=schema({}),
+            handler=h_runs.journal_stop,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
+        MCPTool(
+            name="ac_journal_status",
+            description="Report whether an action journal is started and where it writes.",
+            input_schema=schema({}),
+            handler=h_runs.journal_status,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_journal_read",
+            description=("Read the events of an action journal file, oldest "
+                         "first. run_id keeps one run; limit keeps the last N. "
+                         "A step with no recorded end has status 'incomplete'."),
+            input_schema=schema({
+                "path": {"type": "string", "format": "path"},
+                "run_id": {"type": "string"},
+                "limit": {"type": "integer", "minimum": 0},
+            }, required=["path"]),
+            handler=h_runs.journal_read,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_journal_runs",
+            description=("List the runs an action journal file holds, with "
+                         "their event and ok/error/incomplete counts."),
+            input_schema=schema({
+                "path": {"type": "string", "format": "path"},
+            }, required=["path"]),
+            handler=h_runs.journal_runs,
             annotations=READ_ONLY,
         ),
     ]
@@ -1088,6 +1160,20 @@ def ios_tools() -> List[MCPTool]:
             handler=h_exec.ios_dump_source,
             annotations=READ_ONLY,
         ),
+    ]
+
+
+def mobile_command_tools() -> List[MCPTool]:
+    """Android / iOS tools generated from the table the executor commands come from."""
+    from je_auto_control.wrapper.mobile_commands import mcp_tool_specs
+    return [
+        MCPTool(
+            name=spec["name"], description=spec["description"],
+            input_schema=schema(spec["properties"], spec["required"]),
+            handler=spec["handler"],
+            annotations=READ_ONLY if spec["read_only"] else DESTRUCTIVE,
+        )
+        for spec in mcp_tool_specs()
     ]
 
 
@@ -2250,6 +2336,8 @@ def self_healing_tools() -> List[MCPTool]:
                                    "items": {"type": "integer"}},
                 "model": {"type": "string"},
                 "raise_on_miss": {"type": "boolean"},
+                "context": {"type": "object",
+                            "additionalProperties": {"type": "string"}},
             }),
             handler=h_loc.self_heal_locate,
             annotations=READ_ONLY,
@@ -2269,6 +2357,8 @@ def self_healing_tools() -> List[MCPTool]:
                                    "items": {"type": "integer"}},
                 "model": {"type": "string"},
                 "raise_on_miss": {"type": "boolean"},
+                "context": {"type": "object",
+                            "additionalProperties": {"type": "string"}},
             }),
             handler=h_loc.self_heal_click,
             annotations=DESTRUCTIVE,
@@ -2289,6 +2379,83 @@ def self_healing_tools() -> List[MCPTool]:
             input_schema=schema({}),
             handler=h_loc.self_heal_log_clear,
             annotations=DESTRUCTIVE,
+        ),
+        MCPTool(
+            name="ac_self_heal_evaluate",
+            description=("Score locator strategy versions on a labelled "
+                         "dataset JSON file: every version runs on the same "
+                         "stored frames and regions; no screen is captured. "
+                         "Returns per-version counts and rates with "
+                         "numerator/denominator (accuracy, false positives, "
+                         "recovery vs the baseline), p50/p95 latency, the "
+                         "failing samples, and threshold violations. "
+                         "Unlabelled samples are 'unknown', never correct."),
+            input_schema=schema({
+                "dataset_path": {"type": "string", "format": "path"},
+                "versions": {"type": "object"},
+            }, required=["dataset_path"]),
+            handler=h_loc.self_heal_evaluate,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_self_heal_revision_propose",
+            description=("Store an image as a candidate replacement for a "
+                         "template. The live template is not changed; the "
+                         "candidate stays pending until previewed and "
+                         "accepted."),
+            input_schema=schema({
+                "template_path": {"type": "string", "format": "path"},
+                "candidate_path": {"type": "string", "format": "path"},
+                "source": {"type": "string"},
+                "note": {"type": "string"},
+            }, required=["template_path", "candidate_path"]),
+            handler=h_loc.self_heal_revision_propose,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
+        MCPTool(
+            name="ac_self_heal_revision_preview",
+            description=("Compare a candidate template revision with the "
+                         "current template. With dataset_path both are run "
+                         "over the same labelled frames and the candidate is "
+                         "marked validated only if it is correct at least as "
+                         "often and raises no false positive."),
+            input_schema=schema({
+                "revision_id": {"type": "string"},
+                "dataset_path": {"type": "string", "format": "path"},
+                "detect_threshold": {"type": "number"},
+            }, required=["revision_id"]),
+            handler=h_loc.self_heal_revision_preview,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
+        MCPTool(
+            name="ac_self_heal_revision_accept",
+            description=("Replace the live template file with a candidate "
+                         "revision, keeping a backup. Refuses a candidate "
+                         "that was not validated unless allow_unvalidated "
+                         "is true."),
+            input_schema=schema({
+                "revision_id": {"type": "string"},
+                "allow_unvalidated": {"type": "boolean"},
+            }, required=["revision_id"]),
+            handler=h_loc.self_heal_revision_accept,
+            annotations=DESTRUCTIVE,
+        ),
+        MCPTool(
+            name="ac_self_heal_revision_revert",
+            description=("Restore the template file an accepted revision "
+                         "replaced."),
+            input_schema=schema({
+                "revision_id": {"type": "string"},
+            }, required=["revision_id"]),
+            handler=h_loc.self_heal_revision_revert,
+            annotations=DESTRUCTIVE,
+        ),
+        MCPTool(
+            name="ac_self_heal_revision_list",
+            description="List stored template revisions (pending / accepted / reverted).",
+            input_schema=schema({}),
+            handler=h_loc.self_heal_revision_list,
+            annotations=READ_ONLY,
         ),
     ]
 
@@ -5722,6 +5889,60 @@ def credential_lease_tools() -> List[MCPTool]:
     ]
 
 
+def user_admin_tools() -> List[MCPTool]:
+    _ID = {"user_id": {"type": "string"}}
+    _ROLE = {"type": "string", "enum": ["viewer", "operator", "admin"]}
+    return [
+        MCPTool(
+            name="ac_user_add",
+            description=("RBAC: add a user with a 'role' (viewer / operator / "
+                         "admin). Returns {user_id, display_name, role, tags, "
+                         "token}; the token is shown this once and only its "
+                         "hash is stored. Needs the manage_users capability."),
+            input_schema=schema({**_ID, "role": _ROLE,
+                                 "display_name": {"type": "string"},
+                                 "tags": {"type": "array", "items": {"type": "string"}}},
+                                ["user_id"]),
+            handler=h_ops.user_add,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
+        MCPTool(
+            name="ac_user_remove",
+            description=("RBAC: remove a user; their token stops working and "
+                         "work they scheduled no longer runs. The last admin "
+                         "cannot be removed. Returns {user_id, removed}."),
+            input_schema=schema(_ID, ["user_id"]),
+            handler=h_ops.user_remove,
+            annotations=DESTRUCTIVE,
+        ),
+        MCPTool(
+            name="ac_user_set_role",
+            description=("RBAC: change a user's role; it applies to their next "
+                         "request and to work they already scheduled. The last "
+                         "admin cannot be demoted. Returns {user_id, role}."),
+            input_schema=schema({**_ID, "role": _ROLE}, ["user_id", "role"]),
+            handler=h_ops.user_set_role,
+            annotations=DESTRUCTIVE,
+        ),
+        MCPTool(
+            name="ac_user_rotate_token",
+            description=("RBAC: replace a user's token; the old one stops "
+                         "working. Returns {user_id, token}, shown this once."),
+            input_schema=schema(_ID, ["user_id"]),
+            handler=h_ops.user_rotate_token,
+            annotations=DESTRUCTIVE,
+        ),
+        MCPTool(
+            name="ac_user_list",
+            description=("RBAC: list users as {users:[{user_id, display_name, "
+                         "role, tags}]} - no tokens. Needs manage_users."),
+            input_schema=schema({}),
+            handler=h_ops.user_list,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
 def egress_tools() -> List[MCPTool]:
     _LISTS = {"allow": {"type": "array", "items": {"type": "string"}},
               "deny": {"type": "array", "items": {"type": "string"}}}
@@ -8697,6 +8918,29 @@ def codegen_tools() -> List[MCPTool]:
             handler=hq.generate_code,
             annotations=SIDE_EFFECT_ONLY,
         ),
+        MCPTool(
+            name="ac_generate_code_from_log",
+            description=("Build a reviewable candidate script from one run of "
+                         "an action journal (see ac_journal_start). Returns "
+                         "code, the action list, a provenance manifest (each "
+                         "step's journal line and whether it was recorded or "
+                         "only observed), warnings and observed_path_only. "
+                         "Nothing from the log is executed: the candidate is "
+                         "parsed, its command names checked and dry-run only. "
+                         "run_id may be omitted when the journal holds one run. "
+                         "Pass 'output' to also write the code."),
+            input_schema=schema({
+                "path": {"type": "string", "format": "path",
+                         "description": "The journal (.jsonl) file."},
+                "run_id": {"type": "string"},
+                "target": {"type": "string",
+                           "enum": ["pytest", "python", "robot"]},
+                "style": {"type": "string", "enum": ["calls", "actions"]},
+                "output": {"type": "string", "format": "path"},
+            }, required=["path"]),
+            handler=hq.generate_code_from_log,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
     ]
 
 
@@ -8994,6 +9238,67 @@ def media_assert_tools() -> List[MCPTool]:
     ]
 
 
+def config_sync_tools() -> List[MCPTool]:
+    target = {"server_url": {"type": "string"}, "user_id": {"type": "string"}}
+    options = {
+        "device_id": {"type": "string"}, "secret": {"type": "string"},
+        "sections": {"type": "array", "items": {"type": "string"}},
+        "scripts_dir": {"type": "string", "format": "path"},
+        "locators_path": {"type": "string", "format": "path"},
+        "outbox_path": {"type": "string", "format": "path"},
+        "assets_dir": {"type": "string", "format": "path"},
+        "timeout_s": {"type": "number"},
+    }
+    required = ["server_url", "user_id"]
+    return [
+        MCPTool(
+            name="ac_config_sync_run",
+            description=("Sync this machine's hotkeys, triggers, address book (and "
+                         "scripts / locators when their paths are given) with the "
+                         "config-sync server once. Local changes are queued durably "
+                         "and sent on top of the server's revision; concurrent edits "
+                         "of one entry are kept as a conflict. Received hotkeys and "
+                         "triggers are created DISABLED and nothing is run. Returns "
+                         "{state, revision, pending, conflicts, applied, error}."),
+            input_schema=schema({**target, **options, "wait": {"type": "boolean"},
+                                 "max_attempts": {"type": "integer"}}, required),
+            handler=h_sync.config_sync_run,
+            annotations=DESTRUCTIVE,
+        ),
+        MCPTool(
+            name="ac_config_sync_status",
+            description=("Report the recorded config-sync state for an account and "
+                         "server without touching the network: {state, revision, "
+                         "pending, conflicts, conflict_details, last_success, error}."),
+            input_schema=schema({**target, "outbox_path": options["outbox_path"]}, required),
+            handler=h_sync.config_sync_status,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_config_sync_resolve",
+            description=("Settle a config-sync conflict by keeping candidate number "
+                         "'choice' (0-based, as listed in conflict_details) of "
+                         "'section'/'key'. Applied locally and queued; the next sync "
+                         "sends it."),
+            input_schema=schema({**target, "section": {"type": "string"},
+                                 "key": {"type": "string"}, "choice": {"type": "integer"},
+                                 **options},
+                                required + ["section", "key", "choice"]),
+            handler=h_sync.config_sync_resolve,
+            annotations=DESTRUCTIVE,
+        ),
+        MCPTool(
+            name="ac_config_sync_full_resync",
+            description=("After this device was retired from the sync group: adopt "
+                         "the server's state and DISCARD this machine's pending "
+                         "changes (listed under 'withheld')."),
+            input_schema=schema({**target, **options}, required),
+            handler=h_sync.config_sync_full_resync,
+            annotations=DESTRUCTIVE,
+        ),
+    ]
+
+
 ALL_FACTORIES = (
     mouse_tools, keyboard_tools, screen_tools, image_and_ocr_tools,
     window_tools, system_tools, recording_tools, drag_and_send_tools,
@@ -9002,7 +9307,8 @@ ALL_FACTORIES = (
     ocr_structure_tools,
     smart_wait_tools, cost_telemetry_tools, failure_hook_tools,
     computer_use_tools, dag_tools, presence_tools, chatops_tools,
-    redaction_tools, android_widget_tools, ios_tools, webrunner_tools,
+    redaction_tools, android_widget_tools, ios_tools, mobile_command_tools,
+    webrunner_tools,
     scheduler_tools, trigger_tools, hotkey_tools, watchdog_tools,
     unattended_tools, work_queue_tools,
     synthetic_data_tools, mcp_registry_tools, test_selection_tools,
@@ -9028,7 +9334,7 @@ ALL_FACTORIES = (
     observation_tools, action_grounding_tools, agent_replay_tools,
     element_diff_tools, element_scoring_tools, barcode_tools, plugin_sdk_tools,
     governance_tools,
-    credential_lease_tools, egress_tools, approval_testing_tools,
+    credential_lease_tools, egress_tools, user_admin_tools, approval_testing_tools,
     trajectory_eval_tools, compliance_tools, agent_trace_tools,
     video_report_tools, fuzzy_tools, artifact_store_tools, image_dedup_tools,
     url_canon_tools,
@@ -9060,4 +9366,5 @@ ALL_FACTORIES = (
     visual_regression_tools, state_machine_tools, codegen_tools,
     flakiness_tools, suite_tools, quarantine_tools,
     a11y_audit_tools, device_matrix_tools, media_assert_tools,
+    config_sync_tools,
 )

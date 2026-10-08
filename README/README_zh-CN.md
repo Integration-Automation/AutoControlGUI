@@ -19,7 +19,7 @@
 
 - **一套 API，七个平台。** `wrapper/platform_wrapper.py` 在导入时挑选后端；同一份脚本在
   Windows、macOS、X11 与 Wayland 上都不需要改写。
-- **不写 Python 也能脚本化。** 779 个 `AC_*` 命令覆盖全部功能，因此一个 JSON 文件能做到库
+- **不写 Python 也能脚本化。** 848 个 `AC_*` 命令覆盖全部功能，因此一个 JSON 文件能做到库
   能做的任何事——包含循环、分支、try/catch、宏与变量。
 - **默认无头运行。** `import je_auto_control` 绝不会加载 Qt。GUI 是可选包，包在同一个无头内核之外。
 - **四种定位方式。** 模板匹配、OCR、无障碍树、视觉语言模型——可通过锚点定位器与自愈回退串接组合。
@@ -115,7 +115,7 @@ pip install je_auto_control[gui]       # 加上 PySide6 桌面应用
 
 | Extra | 启用的功能 |
 |---|---|
-| `gui` | PySide6 桌面应用（48 个标签页）：左侧可搜索的导航面板（`Ctrl+K`）按分类列出全部功能，标签页在第一次打开时才创建，**View → Theme** 切换深色／浅色 |
+| `gui` | PySide6 桌面应用（50 个标签页）：左侧可搜索的导航面板（`Ctrl+K`）按分类列出全部功能，标签页在第一次打开时才创建，**View → Theme** 切换深色／浅色 |
 | `webrtc` | WebRTC 远程桌面、USB 直通（`aiortc`、`av`） |
 | `signaling` | 独立的信令／rendezvous 服务器（`fastapi`、`uvicorn`） |
 | `discovery` | mDNS / Zeroconf 局域网主机发现 |
@@ -219,7 +219,7 @@ python -c "import je_auto_control; je_auto_control.start_autocontrol_gui()"
 | 自然语言规划 | `plan_actions`、`run_from_description` | `AC_llm_plan` | LLM Planner |
 | Computer-use agent | `AgentLoop`、`run_agent` | `AC_run_agent` | Computer Use |
 | 录制与回放 | `record`、`stop_record` | `AC_record`、`AC_stop_record` | Record |
-| JSON 脚本 | `execute_action`、`execute_files` | 全部 779 个命令 | Script、Script Builder |
+| JSON 脚本 | `execute_action`、`execute_files` | 全部 848 个命令 | Script、Script Builder |
 | 变量与流程控制 | `execute_action_with_vars` | `AC_set_var`、`AC_loop`、`AC_for_each`、`AC_try`、`AC_retry` | Variables |
 | 数据驱动执行 | — | `AC_for_each_row`（CSV／JSON／SQLite／Excel） | Data Sources |
 | 断言 | `assert_text`、`assert_image` | `AC_assert_text` 等 21 个 | Assertions |
@@ -238,7 +238,7 @@ python -c "import je_auto_control; je_auto_control.start_autocontrol_gui()"
 | 系统诊断 | `run_diagnostics` | `AC_diagnose` | Diagnostics |
 | 测试代码生成 | `generate_code` | — | — |
 
-除了这张表，`utils/` 下还有 310 个无头包，覆盖断言、韧性、数据质量、i18n 审计、脱敏、
+除了这张表，`utils/` 下还有 311 个无头包，覆盖断言、韧性、数据质量、i18n 审计、脱敏、
 治理、可观测性等等。完整的逐模块地图在 **[architecture_explore.md](../architecture_explore.md)**。
 
 ---
@@ -268,7 +268,7 @@ je_auto_control version
 
 | 接口 | 启动方式 | 说明 |
 |---|---|---|
-| **MCP 服务器** | `je_auto_control_mcp`（stdio）或 `AC_start_mcp_http_server` | 680 个工具，供 Claude Desktop／Claude Code／自定义 tool loop 使用：完整的 `ac_*` 工具接口，以及常用 GUI 操作的短名称 alias。除了以 `initialize` 握手的各版协议，也支持无状态的 MCP 2026-07-28。Bearer 认证、TLS、审计日志、限流、插件热重载、CI 假后端。 |
+| **MCP 服务器** | `je_auto_control_mcp`（stdio）或 `AC_start_mcp_http_server` | 754 个工具，供 Claude Desktop／Claude Code／自定义 tool loop 使用：完整的 `ac_*` 工具接口，以及常用 GUI 操作的短名称 alias。除了以 `initialize` 握手的各版协议，也支持无状态的 MCP 2026-07-28。Bearer 认证、TLS、审计日志、限流、插件热重载、CI 假后端。 |
 | **REST API** | `je_auto_control start-rest` | Bearer token、按 IP 限流与锁定、SQLite 审计 hook、`/metrics`、`/openapi.json`、`/docs` Swagger UI、`/dashboard`。 |
 | **TCP socket 服务器** | `je_auto_control start-server` | 以换行分隔的 JSON 动作列表。默认绑定 `127.0.0.1`。 |
 | **pytest 插件** | 安装后自动生效 | 提供 fixture 与供 pytest-bdd／behave 使用的 Gherkin step library。 |
@@ -280,6 +280,8 @@ je_auto_control version
 **包闸门。** `AC_add_package_to_executor` 与 `AC_add_package_to_callback_executor` 会导入 Python 包并把成员注册成命令，所以从上面任何一个入口送来的动作列表都可能加载 `os` 或 `subprocess`。没有被放行的包不会加载：不在允许清单上的包在导入前就被拒绝，该动作以 `AutoControlExecuteActionException` 失败。放行包（含子模块）的方式：在 Python 里调用 `executor.allow_packages("name", …)`；对所有入口——两个 CLI、socket／REST／MCP 服务器与调度器——设置环境变量 `JE_AUTOCONTROL_ALLOWED_PACKAGES`（以逗号分隔的名称，进程启动时读取）；或只对一次 CLI 执行使用 `je_auto_control run script.json --allow-package NAME`（可重复）。`executor.set_allow_arbitrary_packages(True)` 会对所有包打开闸门，也就是先前版本的默认行为（当时会发 `DeprecationWarning`）。这些都不是 `AC_*` 命令，所以动作列表不能自己打开闸门。
 
 **可选的加固设置。** 下列各项在设置之前都是关闭的，没设置的服务器行为与先前相同。`JE_AUTOCONTROL_RBAC_USERS=<用户文件>` 让 REST API 与 MCP HTTP 传输把 bearer token 对应到用户，并按角色（viewer／operator／admin）授权每一个路由、工具与特权 `AC_*` 命令；此时共用 token 会被拒绝。`JE_AUTOCONTROL_MCP_PATH_ROOTS`（以操作系统的路径分隔符分开的目录）把每一个属于文件路径的 MCP 工具参数限制在这些目录里，`JE_AUTOCONTROL_MCP_PATH_ROOTS_FROM_CLIENT=1` 再加上 client 的 `roots/list`，`JE_AUTOCONTROL_MCP_ENV_REF_ALLOW` 限制 `ac_resolve_ref` 可以读哪些 `env://` 名称。`JE_AUTOCONTROL_ACTION_SIGNING_PUBLIC_KEY` 让端点只能验证 Ed25519 签名的动作文件而不能签名（`create_signing_keypair`；私钥留在签名的机器上）。远程桌面的 viewer 只把 host 推来的文件写在 `~/Downloads/AutoControl` 下面（`JE_AUTOCONTROL_REMOTE_DOWNLOAD_DIR`）；这一项默认就是开的。
+
+**其他可设置的项目。** `JE_AUTOCONTROL_MCP_TOOL_MODE=progressive`（或 `je_auto_control_mcp --tool-mode`）让 MCP session 从五个核心工具开始，再搜索、查询与启用其他工具；`static` 提供固定的工具组（`JE_AUTOCONTROL_MCP_TOOL_PROFILE`）；默认的 `full` 模式不变。RBAC 的用户以 `je_auto_control users add|remove|set-role|rotate-token|list`、`AC_user_*` 命令或 REST API 标签页管理。`JE_AUTOCONTROL_ACTION_SIGNING_PASSPHRASE` 用来解开有口令保护的签名私钥。动作日志（`start_action_journal`、`AC_journal_*`）记录执行过的动作并先遮蔽秘密，`je_auto_control codegen --from-log` 把一次执行转成候选脚本。配置同步把数据存在 SQLite 并检查版本（`--config-db`、`AC_SIGNALING_CONFIG_DB`；旧版 client 需要 `--allow-blind-config-writes`）。Android 与 iOS 设备各有自己的 session（`open_device`、`AC_android_*`、`AC_ios_*`）；移动设备的代码还没有在任何设备上跑过。Wayland 上 `probe_capabilities`／`AC_probe_capabilities` 报告输入与捕获能做什么、为什么，`JE_AUTOCONTROL_WAYLAND_EI_WORKER=1` 把 libei 移到辅助进程。GUI 会把主题、字号、面板与窗口位置记在 `~/.je_auto_control/gui_settings.ini`（`JE_AUTOCONTROL_GUI_SETTINGS`）。
 
 ### 远程桌面的线路协议
 
@@ -397,7 +399,7 @@ Windows、macOS（pyobjc）与 X11（含 XWayland）；纯 Wayland 会话的协�
 
 | 资源 | 内容 |
 |---|---|
-| [`examples/`](../examples/) | 27 个自包含脚本：截图点击、OCR、调度器、远程桌面、agent loop、可观测性、录制、变量、热键、触发器、报表、MCP、REST、密钥、插件、computer use、Wayland、跨主机 DAG、chat-ops、pytest/BDD、锚点定位。 |
+| [`examples/`](../examples/) | 33 个自包含脚本：截图点击、OCR、调度器、远程桌面、agent loop、可观测性、录制、变量、热键、触发器、报表、MCP、REST、密钥、插件、computer use、Wayland、跨主机 DAG、chat-ops、pytest/BDD、锚点定位。 |
 | [Read the Docs](https://autocontrol.readthedocs.io/en/latest/) | 完整 API 参考，含英文与中文。 |
 | [architecture_explore.md](../architecture_explore.md) | 逐层记录每个模块的职责。 |
 | [docs/CAPABILITY_MATRIX.md](../docs/CAPABILITY_MATRIX.md) | 能力 × 平台对照矩阵。 |

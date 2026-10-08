@@ -3,7 +3,7 @@
 ============================================
 
 兩個早已存在、卻從未接上其餘各層的 headless 核心,現在成為一級功能:
-**黃金影像視覺回歸**與**宣告式有限狀態機**執行器。兩者都提供 facade
+**黃金影像視覺回歸**\ 與\ **宣告式有限狀態機**\ 執行器。兩者都提供 facade
 re-export、``AC_*`` 執行器指令、MCP 工具與 Script Builder 項目,並有
 headless 測試(PIL 影像 / spec 以注入方式提供,完全不需真實螢幕)。
 
@@ -35,7 +35,7 @@ headless 測試(PIL 影像 / spec 以注入方式提供,完全不需真實螢幕
 
 * ``AC_take_golden`` — 擷取並存基準圖(可選 ``region``)。
 * ``AC_assert_visual`` — 把畫面與黃金影像比對,不符即拋例外(可存
-  ``diff_path``)。**首跑**(基準不存在)時會擷取基準並通過,除非
+  ``diff_path``)。**首跑**\ (基準不存在)時會擷取基準並通過,除非
   ``create_if_missing`` 設為 false。
 
 
@@ -56,6 +56,10 @@ headless 測試(PIL 影像 / spec 以注入方式提供,完全不需真實螢幕
         },
     }
     result = run_state_machine(spec)   # {final_state, steps, elapsed_s}
+
+``on_enter`` 的每一項是一個動作(``["AC_name", {...}]``)或一串動作。
+一次 ``run_state_machine`` 呼叫就是一次執行:它的 ``on_enter`` 動作共用一個
+變數範圍,狀態機停止時丟棄(見\ *每次執行各自的變數範圍*\ )。
 
 每個狀態的 ``on_enter`` 動作會透過執行器執行;transition 依 guard 觸發
 (``after``:在該狀態停留的秒數,機器會等到它成立;``if_var_eq``;

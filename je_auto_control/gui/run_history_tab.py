@@ -6,8 +6,8 @@ from typing import List, Optional
 from PySide6.QtCore import QTimer, Qt, QUrl
 from PySide6.QtGui import QDesktopServices, QPixmap
 from PySide6.QtWidgets import (
-    QAbstractItemView, QComboBox, QFrame, QHBoxLayout, QHeaderView, QLabel,
-    QMessageBox, QSplitter, QTableWidget, QTableWidgetItem,
+    QAbstractItemView, QComboBox, QFileDialog, QFrame, QHBoxLayout, QHeaderView,
+    QLabel, QMessageBox, QSplitter, QTableWidget, QTableWidgetItem,
     QVBoxLayout, QWidget,
 )
 
@@ -15,7 +15,14 @@ from je_auto_control.gui._i18n_helpers import TranslatableMixin
 from je_auto_control.gui.language_wrapper.multi_language_wrapper import (
     language_wrapper,
 )
+from je_auto_control.gui._journal_import import JOURNAL_FILTER, pick_journal_candidate
 from je_auto_control.gui.run_history_timeline import RunHistoryTimeline
+from je_auto_control.utils.action_journal import (
+    action_journal_status, default_journal_path, start_action_journal,
+    stop_action_journal,
+)
+from je_auto_control.utils.codegen.journal_import import write_candidate
+from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.run_history.history_store import (
     SOURCE_HOTKEY, SOURCE_MANUAL, SOURCE_REST, SOURCE_SCHEDULER,
     SOURCE_TRIGGER, STATUS_ERROR, STATUS_OK, STATUS_RUNNING, RunRecord,
@@ -77,6 +84,8 @@ class RunHistoryTab(TranslatableMixin, QWidget):
         header.setSectionResizeMode(QHeaderView.Interactive)
         header.setStretchLastSection(True)
         self._count_label = QLabel()
+        self._journal_label = QLabel()
+        self._journal_label.setTextInteractionFlags(Qt.TextSelectableByMouse)
         self._timeline = RunHistoryTimeline()
         self._timeline.run_clicked.connect(self._on_timeline_clicked)
         self._thumb_label = QLabel()
@@ -158,6 +167,7 @@ class RunHistoryTab(TranslatableMixin, QWidget):
         self._table.cellDoubleClicked.connect(self._on_cell_double_clicked)
         self._table.itemSelectionChanged.connect(self._on_selection_changed)
         root.addWidget(self._count_label)
+        root.addWidget(self._journal_label)
 
     def menu_actions(self) -> list:
         """Expose tab commands to the window-level Actions menu."""
@@ -165,7 +175,50 @@ class RunHistoryTab(TranslatableMixin, QWidget):
             ("rh_refresh", self._refresh),
             ("rh_clear", self._on_clear),
             ("rh_open_artifact", self._open_selected_artifact),
+            ("rh_journal_start", self._start_journal),
+            ("rh_journal_stop", self._stop_journal),
+            ("rh_journal_candidate", self._export_journal_candidate),
         ]
+
+    def _start_journal(self) -> None:
+        """Start the action journal, appending to the file the user names."""
+        path, _ = QFileDialog.getSaveFileName(
+            self, _t("jr_dialog_start"), str(default_journal_path()), JOURNAL_FILTER,
+            options=QFileDialog.Option.DontConfirmOverwrite)  # appended, never replaced
+        if not path:
+            return
+        try:
+            start_action_journal(path)
+        except (AutoControlException, OSError) as error:
+            QMessageBox.warning(self, _t("rh_journal_start"), str(error))
+        self._refresh_journal_label()
+
+    def _stop_journal(self) -> None:
+        stop_action_journal()
+        self._refresh_journal_label()
+
+    def _export_journal_candidate(self) -> None:
+        """Build a candidate script from a journal run and save it with its manifest."""
+        candidate = pick_journal_candidate(self)
+        if candidate is None:
+            return
+        path, _ = QFileDialog.getSaveFileName(
+            self, _t("jr_dialog_save_code"), "", "Python (*.py)")
+        if not path:
+            return
+        try:
+            write_candidate(candidate, path, path + ".manifest.json")
+        except OSError as error:
+            QMessageBox.warning(self, _t("rh_journal_candidate"), str(error))
+
+    def _refresh_journal_label(self) -> None:
+        status = action_journal_status()
+        if not status["active"]:
+            self._journal_label.setText(_t("rh_journal_off"))
+            return
+        self._journal_label.setText(
+            _t("rh_journal_on").replace("{run}", str(status["run_id"]))
+            .replace("{n}", str(status["events"])).replace("{path}", str(status["path"])))
 
     def _on_clear(self) -> None:
         reply = QMessageBox.question(
@@ -191,6 +244,7 @@ class RunHistoryTab(TranslatableMixin, QWidget):
         )
         self._timeline.set_records(runs)
         self._refresh_preview()
+        self._refresh_journal_label()
 
     def _set_row(self, row: int, record) -> None:
         status_key = _STATUS_LABEL_KEYS.get(record.status, record.status)

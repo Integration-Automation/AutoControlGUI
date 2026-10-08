@@ -152,6 +152,28 @@ def AC_anchor_locate_all(
 ) -> Dict[str, Any]:
     """Executor adapter: every anchor-relative match, nearest-first."""
 
+def AC_android_alert_accept(
+    serial: str | None = ...,
+    adb_path: str | None = ...,
+    device_timeout_s: float | None = ...,
+) -> Any:
+    """Accept the alert or system dialog showing."""
+
+def AC_android_alert_dismiss(
+    serial: str | None = ...,
+    adb_path: str | None = ...,
+    device_timeout_s: float | None = ...,
+) -> Any:
+    """Dismiss the alert or system dialog showing."""
+
+def AC_android_app_state(
+    app_id: str,
+    serial: str | None = ...,
+    adb_path: str | None = ...,
+    device_timeout_s: float | None = ...,
+) -> Any:
+    """not_installed, not_running, background or foreground."""
+
 def AC_android_click_element(
     text: str | None = ...,
     resource_id: str | None = ...,
@@ -162,8 +184,38 @@ def AC_android_click_element(
 ) -> Dict[str, int]:
     """Tap the first widget matching the selectors; return click centre."""
 
+def AC_android_device_info(
+    serial: str | None = ...,
+    adb_path: str | None = ...,
+    device_timeout_s: float | None = ...,
+) -> Any:
+    """Backend, versions and capabilities of the device. Sends no input."""
+
+def AC_android_drag(
+    x1: int,
+    y1: int,
+    x2: int,
+    y2: int,
+    hold_s: float = ...,
+    duration_s: float = ...,
+    serial: str | None = ...,
+    adb_path: str | None = ...,
+    device_timeout_s: float | None = ...,
+) -> Any:
+    """Press, hold so the item lifts, and move it."""
+
 def AC_android_dump_hierarchy(serial: str | None = ...) -> str:
     """Return the device's widget tree as an XML string."""
+
+def AC_android_find_by_description(
+    description: str,
+    model: str | None = ...,
+    tap: bool = ...,
+    serial: str | None = ...,
+    adb_path: str | None = ...,
+    device_timeout_s: float | None = ...,
+) -> Any:
+    """Ask a vision-language model where something is on the device screen."""
 
 def AC_android_find_element(
     text: str | None = ...,
@@ -175,17 +227,154 @@ def AC_android_find_element(
 ) -> Dict[str, int]:
     """Find an Android widget via uiautomator2; return its bounding rect."""
 
+def AC_android_find_image(
+    template_path: str,
+    detect_threshold: float = ...,
+    tap: bool = ...,
+    serial: str | None = ...,
+    adb_path: str | None = ...,
+    device_timeout_s: float | None = ...,
+) -> Any:
+    """Template-match in the device screen; answers in device points."""
+
+def AC_android_find_text(
+    text: str,
+    lang: str = ...,
+    min_confidence: float = ...,
+    tap: bool = ...,
+    serial: str | None = ...,
+    adb_path: str | None = ...,
+    device_timeout_s: float | None = ...,
+) -> Any:
+    """OCR the device screen for text; answers in device points."""
+
+def AC_android_get_clipboard(
+    serial: str | None = ...,
+    adb_path: str | None = ...,
+    device_timeout_s: float | None = ...,
+) -> Any:
+    """Read the device clipboard's text."""
+
+def AC_android_install_app(
+    path: str,
+    serial: str | None = ...,
+    adb_path: str | None = ...,
+    device_timeout_s: float | None = ...,
+) -> Any:
+    """Install an app package from the host."""
+
 def AC_android_key(key: str, serial: str | None = ..., adb_path: str | None = ...) -> None:
     """Send a keycode (``KEYCODE_HOME`` etc.) via ``input keyevent``."""
+
+def AC_android_launch_app(
+    app_id: str,
+    serial: str | None = ...,
+    adb_path: str | None = ...,
+    device_timeout_s: float | None = ...,
+) -> Any:
+    """Launch an app; returns its state."""
 
 def AC_android_list_devices(adb_path: str | None = ...) -> list:
     """Return ``{serial, state, model, …}`` for every adb-attached device."""
 
+def AC_android_long_press(
+    x: int,
+    y: int,
+    duration_s: float = ...,
+    serial: str | None = ...,
+    adb_path: str | None = ...,
+    device_timeout_s: float | None = ...,
+) -> Any:
+    """Press and hold at a point."""
+
+def AC_android_pinch(
+    x: int,
+    y: int,
+    scale: float,
+    duration_s: float = ...,
+    span: int = ...,
+    serial: str | None = ...,
+    adb_path: str | None = ...,
+    device_timeout_s: float | None = ...,
+) -> Any:
+    """Two-finger pinch: scale above 1 zooms in, below 1 out."""
+
+def AC_android_pull_file(
+    remote_path: str,
+    local_path: str,
+    serial: str | None = ...,
+    adb_path: str | None = ...,
+    device_timeout_s: float | None = ...,
+) -> Any:
+    """Copy a device file to the host."""
+
+def AC_android_push_file(
+    local_path: str,
+    remote_path: str,
+    serial: str | None = ...,
+    adb_path: str | None = ...,
+    device_timeout_s: float | None = ...,
+) -> Any:
+    """Copy a host file to the device."""
+
+def AC_android_screen_info(
+    serial: str | None = ...,
+    adb_path: str | None = ...,
+    device_timeout_s: float | None = ...,
+) -> Any:
+    """Pixel size, point size, scale and orientation of the current screen."""
+
 def AC_android_screenshot(file_path: str, serial: str | None = ..., adb_path: str | None = ...) -> str:
     """Capture the live Android screen and save it as PNG at ``file_path``."""
 
+def AC_android_self_heal(
+    template_path: str | None = ...,
+    description: str | None = ...,
+    detect_threshold: float = ...,
+    model: str | None = ...,
+    tap: bool = ...,
+    serial: str | None = ...,
+    adb_path: str | None = ...,
+    device_timeout_s: float | None = ...,
+) -> Any:
+    """Template first, VLM on a miss, against the device screen."""
+
+def AC_android_set_clipboard(
+    text: str,
+    serial: str | None = ...,
+    adb_path: str | None = ...,
+    device_timeout_s: float | None = ...,
+) -> Any:
+    """Put text on the device clipboard."""
+
 def AC_android_shell(command: str, serial: str | None = ..., adb_path: str | None = ...) -> str:
     """Run an ``adb shell`` command and return its stdout."""
+
+def AC_android_start_recording(
+    remote_path: str | None = ...,
+    time_limit_s: int | None = ...,
+    serial: str | None = ...,
+    adb_path: str | None = ...,
+    device_timeout_s: float | None = ...,
+) -> Any:
+    """Start recording the device screen."""
+
+def AC_android_stop_app(
+    app_id: str,
+    serial: str | None = ...,
+    adb_path: str | None = ...,
+    device_timeout_s: float | None = ...,
+) -> Any:
+    """Stop an app; returns its state."""
+
+def AC_android_stop_recording(
+    local_path: str,
+    remote_path: str | None = ...,
+    serial: str | None = ...,
+    adb_path: str | None = ...,
+    device_timeout_s: float | None = ...,
+) -> Any:
+    """Stop recording and save the video on the host."""
 
 def AC_android_swipe(
     x1: int,
@@ -202,7 +391,25 @@ def AC_android_tap(x: int, y: int, serial: str | None = ..., adb_path: str | Non
     """Send a single ``input tap`` to an Android device."""
 
 def AC_android_text(text: str, serial: str | None = ..., adb_path: str | None = ...) -> None:
-    """Type a string via ``input text``."""
+    """Type a string: ``input text`` for ASCII, a Unicode-capable path otherwise."""
+
+def AC_android_type_text(
+    text: str,
+    serial: str | None = ...,
+    adb_path: str | None = ...,
+    device_timeout_s: float | None = ...,
+) -> Any:
+    """Type text through a path that can carry it; raises when none can."""
+
+def AC_android_wait_for_app(
+    app_id: str,
+    timeout_s: float = ...,
+    state: str = ...,
+    serial: str | None = ...,
+    adb_path: str | None = ...,
+    device_timeout_s: float | None = ...,
+) -> Any:
+    """Wait until an app reaches a state; raises on timeout."""
 
 def AC_annotate_screenshot(source: str, annotations: List[Dict[str, Any]] | str, output_path: str) -> Dict[str, Any]:
     """Executor adapter: draw annotations onto a screenshot and save it."""
@@ -705,6 +912,25 @@ def AC_config_export() -> Dict[str, Any]:
 def AC_config_import(bundle: Dict[str, Any], dry_run: bool = ...) -> Dict[str, Any]:
     """Executor adapter: apply a config bundle dict to the user config root."""
 
+def AC_config_sync_full_resync(server_url: str, user_id: str, **options: Any) -> Dict[str, Any]:
+    """Adopt the server's state after this device was retired; see :func:`run_full_resync`."""
+
+def AC_config_sync_resolve(
+    server_url: str,
+    user_id: str,
+    section: str,
+    key: str,
+    choice: int,
+    **options: Any,
+) -> Dict[str, Any]:
+    """Pick one side of a conflict; see :func:`resolve_conflict`."""
+
+def AC_config_sync_run(server_url: str, user_id: str, *, cancel: Any = ..., **options: Any) -> Dict[str, Any]:
+    """Sync this machine's settings with ``server_url`` once; returns the report."""
+
+def AC_config_sync_status(server_url: str, user_id: str, outbox_path: Optional[str] = ...) -> Dict[str, Any]:
+    """The recorded sync state for this account and server; no network."""
+
 def AC_confusable_compare(first: str, second: str) -> Dict[str, Any]:
     """Adapter: whether two strings render to the same skeleton."""
 
@@ -808,7 +1034,7 @@ def AC_costs_summary(limit: int = ...) -> Dict[str, Any]:
 def AC_create_project(project_path: str | None = ..., parent_name: str = ...) -> None:
     """Create project directory structure and templates."""
 
-def AC_create_signing_keypair(private_path: str, public_path: str) -> Dict[str, Any]:
+def AC_create_signing_keypair(private_path: str, public_path: str, passphrase: str | None = ...) -> Dict[str, Any]:
     """Executor adapter: create an Ed25519 action-signing key pair."""
 
 def AC_critical_steps(steps: Any, top: Any = ...) -> Dict[str, Any]:
@@ -1266,6 +1492,15 @@ def AC_generate_code(
 ) -> str:
     """Render an action list/file as code, optionally writing a file."""
 
+def AC_generate_code_from_journal(
+    path: str,
+    run_id: str | None = ...,
+    target: str = ...,
+    style: str = ...,
+    output: str | None = ...,
+) -> Dict[str, Any]:
+    """Build a candidate script from one journal run, optionally writing it."""
+
 def AC_generate_data(
     schema: Dict[str, Any],
     count: int = ...,
@@ -1515,6 +1750,15 @@ def AC_inspector_reset() -> Dict[str, Any]:
 def AC_inspector_summary() -> Dict[str, Any]:
     ...
 
+def AC_ios_alert_accept(url: str | None = ..., device_timeout_s: float | None = ...) -> Any:
+    """Accept the alert or system dialog showing."""
+
+def AC_ios_alert_dismiss(url: str | None = ..., device_timeout_s: float | None = ...) -> Any:
+    """Dismiss the alert or system dialog showing."""
+
+def AC_ios_app_state(app_id: str, url: str | None = ..., device_timeout_s: float | None = ...) -> Any:
+    """not_installed, not_running, background or foreground."""
+
 def AC_ios_click_element(
     name: str | None = ...,
     class_name: str | None = ...,
@@ -1524,8 +1768,32 @@ def AC_ios_click_element(
 ) -> Dict[str, int]:
     ...
 
+def AC_ios_device_info(url: str | None = ..., device_timeout_s: float | None = ...) -> Any:
+    """Backend, versions and capabilities of the device. Sends no input."""
+
+def AC_ios_drag(
+    x1: int,
+    y1: int,
+    x2: int,
+    y2: int,
+    hold_s: float = ...,
+    duration_s: float = ...,
+    url: str | None = ...,
+    device_timeout_s: float | None = ...,
+) -> Any:
+    """Press, hold so the item lifts, and move it."""
+
 def AC_ios_dump_source(url: str | None = ...) -> str:
     ...
+
+def AC_ios_find_by_description(
+    description: str,
+    model: str | None = ...,
+    tap: bool = ...,
+    url: str | None = ...,
+    device_timeout_s: float | None = ...,
+) -> Any:
+    """Ask a vision-language model where something is on the device screen."""
 
 def AC_ios_find_element(
     name: str | None = ...,
@@ -1536,8 +1804,111 @@ def AC_ios_find_element(
 ) -> Dict[str, int]:
     ...
 
+def AC_ios_find_image(
+    template_path: str,
+    detect_threshold: float = ...,
+    tap: bool = ...,
+    url: str | None = ...,
+    device_timeout_s: float | None = ...,
+) -> Any:
+    """Template-match in the device screen; answers in device points."""
+
+def AC_ios_find_text(
+    text: str,
+    lang: str = ...,
+    min_confidence: float = ...,
+    tap: bool = ...,
+    url: str | None = ...,
+    device_timeout_s: float | None = ...,
+) -> Any:
+    """OCR the device screen for text; answers in device points."""
+
+def AC_ios_get_clipboard(url: str | None = ..., device_timeout_s: float | None = ...) -> Any:
+    """Read the device clipboard's text."""
+
+def AC_ios_install_app(path: str, url: str | None = ..., device_timeout_s: float | None = ...) -> Any:
+    """Install an app package from the host."""
+
+def AC_ios_launch_app(app_id: str, url: str | None = ..., device_timeout_s: float | None = ...) -> Any:
+    """Launch an app; returns its state."""
+
+def AC_ios_long_press(
+    x: int,
+    y: int,
+    duration_s: float = ...,
+    url: str | None = ...,
+    device_timeout_s: float | None = ...,
+) -> Any:
+    """Press and hold at a point."""
+
+def AC_ios_pinch(
+    x: int,
+    y: int,
+    scale: float,
+    duration_s: float = ...,
+    span: int = ...,
+    url: str | None = ...,
+    device_timeout_s: float | None = ...,
+) -> Any:
+    """Two-finger pinch: scale above 1 zooms in, below 1 out."""
+
+def AC_ios_press_key(key: str, url: str | None = ..., device_timeout_s: float | None = ...) -> Any:
+    """Press a hardware key (home, volumeUp, volumeDown)."""
+
+def AC_ios_pull_file(
+    remote_path: str,
+    local_path: str,
+    url: str | None = ...,
+    device_timeout_s: float | None = ...,
+) -> Any:
+    """Copy a device file to the host."""
+
+def AC_ios_push_file(
+    local_path: str,
+    remote_path: str,
+    url: str | None = ...,
+    device_timeout_s: float | None = ...,
+) -> Any:
+    """Copy a host file to the device."""
+
+def AC_ios_screen_info(url: str | None = ..., device_timeout_s: float | None = ...) -> Any:
+    """Pixel size, point size, scale and orientation of the current screen."""
+
 def AC_ios_screenshot(file_path: str, url: str | None = ...) -> str:
     ...
+
+def AC_ios_self_heal(
+    template_path: str | None = ...,
+    description: str | None = ...,
+    detect_threshold: float = ...,
+    model: str | None = ...,
+    tap: bool = ...,
+    url: str | None = ...,
+    device_timeout_s: float | None = ...,
+) -> Any:
+    """Template first, VLM on a miss, against the device screen."""
+
+def AC_ios_set_clipboard(text: str, url: str | None = ..., device_timeout_s: float | None = ...) -> Any:
+    """Put text on the device clipboard."""
+
+def AC_ios_start_recording(
+    remote_path: str | None = ...,
+    time_limit_s: int | None = ...,
+    url: str | None = ...,
+    device_timeout_s: float | None = ...,
+) -> Any:
+    """Start recording the device screen."""
+
+def AC_ios_stop_app(app_id: str, url: str | None = ..., device_timeout_s: float | None = ...) -> Any:
+    """Stop an app; returns its state."""
+
+def AC_ios_stop_recording(
+    local_path: str,
+    remote_path: str | None = ...,
+    url: str | None = ...,
+    device_timeout_s: float | None = ...,
+) -> Any:
+    """Stop recording and save the video on the host."""
 
 def AC_ios_swipe(x1: int, y1: int, x2: int, y2: int, duration_s: float = ..., url: str | None = ...) -> Dict[str, Any]:
     ...
@@ -1548,11 +1919,35 @@ def AC_ios_tap(x: int, y: int, url: str | None = ...) -> Dict[str, int]:
 def AC_ios_type(text: str, url: str | None = ...) -> str:
     ...
 
+def AC_ios_wait_for_app(
+    app_id: str,
+    timeout_s: float = ...,
+    state: str = ...,
+    url: str | None = ...,
+    device_timeout_s: float | None = ...,
+) -> Any:
+    """Wait until an app reaches a state; raises on timeout."""
+
 def AC_is_composing() -> Dict[str, Any]:
     """Adapter: whether the IME has an uncommitted composition."""
 
 def AC_is_idle(threshold: Any) -> Dict[str, Any]:
     """Adapter: whether the user has been idle for >= ``threshold`` seconds."""
+
+def AC_journal_read(path: str, run_id: str | None = ..., limit: int = ...) -> List[Dict[str, Any]]:
+    """Read a journal's events as dicts (the last ``limit`` when positive)."""
+
+def AC_journal_runs(path: str) -> List[Dict[str, Any]]:
+    """Summarise each run a journal file holds."""
+
+def AC_journal_start(path: str | None = ..., run_id: str | None = ..., session: str | None = ...) -> Dict[str, Any]:
+    """Start journalling every executed action to ``path``."""
+
+def AC_journal_status() -> Dict[str, Any]:
+    """Report whether an action journal is started."""
+
+def AC_journal_stop() -> Dict[str, Any]:
+    """Stop the action journal."""
 
 def AC_json_extract(data: Any, mapping: Any) -> Dict[str, Any]:
     """Adapter: extract a {key: path} mapping from data into a flat dict."""
@@ -2112,6 +2507,9 @@ def AC_press_keyboard_key(keycode: int | str, is_shift: bool = ..., skip_record:
 def AC_press_mouse(mouse_keycode: int | str, x: int | None = ..., y: int | None = ...) -> tuple[Any, int, int] | None:
     """按下滑鼠按鍵"""
 
+def AC_probe_capabilities() -> Dict[str, Any]:
+    """Executor adapter: capability and authorisation states, no side effect."""
+
 def AC_profile_rows(rows: Any, columns: Any = ...) -> Dict[str, Any]:
     """Adapter: profile a row-set into per-column statistics."""
 
@@ -2325,6 +2723,9 @@ def AC_replay_timeline(events: List[Dict[str, Any]], speed: float = ...) -> Dict
 
 def AC_replay_trace(trace: Any) -> Dict[str, Any]:
     """Adapter: replay a trajectory by running each step's action via the executor."""
+
+def AC_reset_input_authorisation() -> Dict[str, Any]:
+    """Executor adapter: forget a refused or revoked Wayland input session."""
 
 def AC_resize_element(
     width: Any,
@@ -2580,8 +2981,12 @@ def AC_self_heal_click(
     screen_region: List[int] | None = ...,
     model: str | None = ...,
     raise_on_miss: bool = ...,
+    context: Dict[str, str] | None = ...,
 ) -> Dict[str, Any]:
     """Executor adapter: locate with self-heal, then click."""
+
+def AC_self_heal_evaluate(dataset_path: str, versions: Dict[str, Any] | None = ...) -> Dict[str, Any]:
+    """Executor adapter: score strategy versions on a labelled dataset file."""
 
 def AC_self_heal_locate(
     template_path: str | None = ...,
@@ -2590,6 +2995,7 @@ def AC_self_heal_locate(
     screen_region: List[int] | None = ...,
     model: str | None = ...,
     raise_on_miss: bool = ...,
+    context: Dict[str, str] | None = ...,
 ) -> Dict[str, Any]:
     """Executor adapter: template-first locate with VLM fallback."""
 
@@ -2598,6 +3004,30 @@ def AC_self_heal_log_clear() -> Dict[str, Any]:
 
 def AC_self_heal_log_list(limit: int = ...) -> List[Dict[str, Any]]:
     """Executor adapter: return the recent self-healing events."""
+
+def AC_self_heal_revision_accept(revision_id: str, allow_unvalidated: bool = ...) -> Dict[str, Any]:
+    """Executor adapter: replace the template with a validated candidate."""
+
+def AC_self_heal_revision_list() -> List[Dict[str, Any]]:
+    """Executor adapter: every stored template revision, oldest first."""
+
+def AC_self_heal_revision_preview(
+    revision_id: str,
+    dataset_path: str | None = ...,
+    detect_threshold: float = ...,
+) -> Dict[str, Any]:
+    """Executor adapter: current vs candidate, validated when given a dataset."""
+
+def AC_self_heal_revision_propose(
+    template_path: str,
+    candidate_path: str,
+    source: str = ...,
+    note: str | None = ...,
+) -> Dict[str, Any]:
+    """Executor adapter: store a candidate template; the template is untouched."""
+
+def AC_self_heal_revision_revert(revision_id: str) -> Dict[str, Any]:
+    """Executor adapter: restore the template an accepted revision replaced."""
 
 def AC_send_email(message: Any, smtp: Any) -> Dict[str, Any]:
     """Adapter: send an email via SMTP (message/smtp config dicts)."""
@@ -2691,7 +3121,12 @@ def AC_shard_suite(
 def AC_shell_command(shell_command: str | List[str] | None = ..., *, command: str | List[str] | None = ...) -> None:
     """Execute shell command with shell=False."""
 
-def AC_sign_action_file(path: str, key: str | None = ..., private_key_path: str | None = ...) -> Dict[str, Any]:
+def AC_sign_action_file(
+    path: str,
+    key: str | None = ...,
+    private_key_path: str | None = ...,
+    passphrase: str | None = ...,
+) -> Dict[str, Any]:
     """Executor adapter: write an Ed25519 or HMAC signature sidecar for a file."""
 
 def AC_simhash(text: str, bits: Any = ...) -> Dict[str, Any]:
@@ -2759,7 +3194,7 @@ def AC_start_mcp_http_server(
 ) -> Any:
     """Start and return an :class:`HttpMCPServer`; convenience wrapper."""
 
-def AC_start_mcp_server(read_only: bool | None = ...) -> Any:
+def AC_start_mcp_server(read_only: bool | None = ..., tool_mode: Any = ...) -> Any:
     """Start a stdio MCP server in the foreground; blocks until EOF."""
 
 def AC_start_remote_host(
@@ -2978,6 +3413,27 @@ def AC_usb_watch_start(poll_interval_s: float = ...) -> Dict[str, Any]:
 
 def AC_usb_watch_stop() -> Dict[str, Any]:
     ...
+
+def AC_user_add(
+    user_id: str,
+    role: str = ...,
+    display_name: str = ...,
+    tags: List[str] | None = ...,
+    users_path: str | None = ...,
+) -> Dict[str, Any]:
+    """Executor adapter: add an RBAC user; the reply carries its token, once."""
+
+def AC_user_list(users_path: str | None = ...) -> List[Dict[str, Any]]:
+    """Executor adapter: list RBAC users (no tokens, no hashes)."""
+
+def AC_user_remove(user_id: str, users_path: str | None = ...) -> Dict[str, Any]:
+    """Executor adapter: remove an RBAC user."""
+
+def AC_user_rotate_token(user_id: str, users_path: str | None = ...) -> Dict[str, Any]:
+    """Executor adapter: replace an RBAC user's token; the reply carries it, once."""
+
+def AC_user_set_role(user_id: str, role: str, users_path: str | None = ...) -> Dict[str, Any]:
+    """Executor adapter: change an RBAC user's role."""
 
 def AC_validate_action(action: Any, screen: Any = ..., targets: Any = ...) -> Dict[str, Any]:
     """Adapter: validate a coordinate action (bounds + optional snap-to-target)."""

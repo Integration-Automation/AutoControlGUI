@@ -28,3 +28,5 @@ atexit.register(shutil.rmtree, _HOME, ignore_errors=True)
 os.environ["HOME"] = str(_HOME)
 os.environ["USERPROFILE"] = str(_HOME)
 os.environ["JE_AUTOCONTROL_LOG_FILE"] = str(_SCRATCH / "AutoControlGUI.log")
+# The main window remembers its look in a per-user file; one test must not hand the next its theme.
+os.environ["JE_AUTOCONTROL_GUI_SETTINGS"] = "off"

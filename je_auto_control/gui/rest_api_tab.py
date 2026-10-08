@@ -1,4 +1,10 @@
-"""REST API tab: start/stop the HTTP front-end and surface URL + token."""
+"""REST API tab: start/stop the HTTP front-end, show how to authenticate, manage users.
+
+Without a user store the server has one shared bearer token and the tab
+shows it. With one (RBAC) the shared token opens nothing, so the tab says
+whose tokens are accepted instead of displaying a credential the server
+refuses; the users themselves are managed in the group below.
+"""
 from typing import Optional
 
 import json
@@ -15,6 +21,7 @@ from je_auto_control.gui._i18n_helpers import TranslatableMixin
 from je_auto_control.gui.language_wrapper.multi_language_wrapper import (
     language_wrapper,
 )
+from je_auto_control.gui.rbac_users_panel import RbacUsersPanel
 from je_auto_control.utils.config_bundle import (
     ConfigBundleError, export_config_bundle, import_config_bundle,
 )
@@ -44,8 +51,12 @@ class RestApiTab(TranslatableMixin, QWidget):
         self._token_value = QLabel("-")
         self._token_value.setTextInteractionFlags(Qt.TextSelectableByMouse)
         self._status_label = QLabel()
+        # The token label holds a copyable token only under the shared token.
+        self._shared_token: Optional[str] = None
+        self._users_panel = RbacUsersPanel()
         self._build_layout()
         self._refresh_status()
+        self._users_panel.refresh()
         self._timer = QTimer(self)
         self._timer.setInterval(2000)
         self._timer.timeout.connect(self._refresh_status)
@@ -57,7 +68,7 @@ class RestApiTab(TranslatableMixin, QWidget):
         root = QVBoxLayout(self)
         root.addWidget(self._build_config_group())
         root.addWidget(self._build_status_group())
-        root.addStretch(1)
+        root.addWidget(self._users_panel, stretch=1)
 
     def menu_actions(self) -> list:
         """Expose tab commands to the window-level Actions menu."""
@@ -68,7 +79,14 @@ class RestApiTab(TranslatableMixin, QWidget):
             ("rest_copy_token", self._on_copy_token),
             ("rest_config_export", self._on_config_export),
             ("rest_config_import", self._on_config_import),
+            *self._users_panel.menu_actions(),
         ]
+
+    def retranslate(self) -> None:
+        """Re-translate the tab, its users group and the status texts."""
+        super().retranslate()
+        self._users_panel.retranslate()
+        self._refresh_status()
 
     def _build_config_group(self) -> QGroupBox:
         group = self._tr(QGroupBox(), "rest_config_group")
@@ -162,6 +180,7 @@ class RestApiTab(TranslatableMixin, QWidget):
             rest_api_registry.start(
                 host=host, port=port, token=token,
                 enable_audit=self._audit_check.isChecked(),
+                user_store=self._users_panel.user_store(),
             )
         except OSError as error:
             QMessageBox.warning(self, _t("rest_start"), str(error))
@@ -178,20 +197,26 @@ class RestApiTab(TranslatableMixin, QWidget):
             QGuiApplication.clipboard().setText(text)
 
     def _on_copy_token(self) -> None:
-        text = self._token_value.text()
-        if text and text != "-":
-            QGuiApplication.clipboard().setText(text)
+        if self._shared_token:
+            QGuiApplication.clipboard().setText(self._shared_token)
 
     def _refresh_status(self) -> None:
         status = rest_api_registry.status()
-        if status["running"]:
-            self._url_value.setText(status["url"])
-            self._token_value.setText(status["token"])
-            self._status_label.setText(_t("rest_running"))
-        else:
+        self._shared_token = None
+        if not status["running"]:
             self._url_value.setText("-")
             self._token_value.setText("-")
             self._status_label.setText(_t("rest_stopped"))
+            return
+        self._url_value.setText(status["url"])
+        if status.get("rbac"):
+            self._token_value.setText(
+                _t("rest_token_rbac").format(path=status.get("users_path")))
+            self._status_label.setText(_t("rest_running_rbac"))
+            return
+        self._shared_token = status["token"]
+        self._token_value.setText(status["token"])
+        self._status_label.setText(_t("rest_running"))
 
 
 __all__ = ["RestApiTab"]

@@ -199,6 +199,13 @@ from je_auto_control.utils.vision import (
 from je_auto_control.utils.self_healing import (
     HealEvent, HealEventLog, HealOutcome, SelfHealError,
     default_heal_log, self_heal_click, self_heal_locate,
+    # measurement: labelled evaluation of strategy versions, template revisions
+    EvaluationSample, HealingComparison, HealingEvaluationError,
+    TemplateRevision, TemplateRevisionError, TemplateRevisionStore,
+    accept_template_revision, evaluate_healing_dataset, evaluate_locators,
+    heal_context, list_template_revisions, preview_template_revision,
+    propose_template_revision, revert_template_revision,
+    template_match_strategy,
 )
 # Screenshot PII redaction (blur regions before VLM upload / audit log).
 from je_auto_control.utils.redaction import (
@@ -265,6 +272,13 @@ from je_auto_control.utils.mcp_registry import (
 )
 # Named locator repository (object repository) for native UI
 from je_auto_control.utils.element_repository import ElementRepository
+# Cross-machine config sync: causal merge, offline outbox, adapters, assets
+from je_auto_control.utils.config_sync import (
+    AssetManifest, ConfigBucket, ConfigStore, ConfigSyncClient, ConfigSyncConflict,
+    ConfigSyncError, FullResyncRequired, MergeDecision, SyncAdapter, SyncEntry,
+    SyncOperation, SyncOutbox, config_sync_full_resync, config_sync_resolve,
+    config_sync_run, config_sync_status, merge_entries, sync_assets,
+)
 # Step-through debugger / tracer for action lists
 from je_auto_control.utils.flow_debugger import FlowDebugger, trace_actions
 # Persistent library of reusable action sequences (skills/playbooks)
@@ -1038,6 +1052,23 @@ from je_auto_control.utils.a11y_audit import (
 from je_auto_control.utils.device_matrix import (
     DeviceResult, MatrixReport, run_on_devices,
 )
+# Mobile device contexts (one isolated session per Android / iOS device)
+from je_auto_control.wrapper.device_context import (
+    AlertNotPresentError, AppState, DeviceSetupReport,
+    DeviceCancelledError, DeviceCapability, DeviceClosedError, DeviceContext,
+    DeviceError, DevicePermissionError, DeviceSession, DeviceTimeoutError,
+    DeviceUnavailableError, DeviceUnsupportedError, Drag, LongPress, Pinch,
+    Swipe, Tap, open_device, use_device,
+)
+from je_auto_control.wrapper.device_frame import DeviceFrame
+from je_auto_control.wrapper.mobile_extensions import (
+    MobileExtension, accept_alert, app_state, dismiss_alert, launch_app,
+    mobile_extension, register_mobile_extension, stop_app, wait_for_app,
+)
+from je_auto_control.wrapper.mobile_commands import (
+    MOBILE_COMMANDS, MobileCommand, device_setup_report, mobile_capability_matrix,
+    run_mobile_command,
+)
 # Media assertions (audio activity, video motion)
 from je_auto_control.utils.media_assert import (
     MediaAssertionResult, assert_audio_activity, assert_video_changes,
@@ -1083,7 +1114,8 @@ from je_auto_control.utils.mcp_server import (
     AuditLogger, HttpMCPServer, MCPContent, MCPPrompt, MCPPromptArgument,
     MCPResource, MCPServer, MCPTool, MCPToolAnnotations,
     OperationCancelledError, PromptProvider, RateLimiter,
-    ResourceProvider, ToolCallContext, build_default_tool_registry,
+    ResourceProvider, ToolCallContext, ToolDisclosureError, ToolDiscoveryError,
+    ToolIndex, ToolMode, ToolSummary, ToolView, build_default_tool_registry,
     default_prompt_provider, default_resource_provider,
     make_plugin_tool, register_plugin_tools, start_mcp_http_server,
     start_mcp_stdio_server,
@@ -1101,6 +1133,14 @@ from je_auto_control.utils.rest_api.rest_server import (
 from je_auto_control.utils.rbac import (
     AuthorizationContext, AuthorizationError, UserAuthError, UserRecord,
     UserStore, authorization_scope,
+)
+from je_auto_control.utils.rbac import (
+    DeferredOwner, capture_owner, owner_scope,
+)
+from je_auto_control.utils.rbac.admin import (
+    add_user as rbac_add_user, list_users as rbac_list_users,
+    remove_user as rbac_remove_user, rotate_user_token as rbac_rotate_user_token,
+    set_user_role as rbac_set_user_role,
 )
 # Admin console (headless multi-host client)
 from je_auto_control.utils.admin import (
@@ -1121,6 +1161,25 @@ from je_auto_control.utils.usb import (
 # System diagnostics (headless self-test)
 from je_auto_control.utils.diagnostics import (
     Check, DiagnosticsReport, run_diagnostics,
+)
+# Capability and authorisation states (side-effect-free probe)
+from je_auto_control.wrapper.capabilities import (
+    BackendContext, Capability, CapabilitySnapshot, CapabilityStatus,
+    probe_capabilities,
+)
+from je_auto_control.linux_wayland._select_input import (
+    close_input_session, reset_input_authorisation,
+)
+from je_auto_control.linux_wayland.authorisation import (
+    WaylandAuthorisationError,
+)
+# Recording without a global hook, and the Wayland stop shortcut
+from je_auto_control.linux_wayland.input_events import (
+    InputStepLog, InputDevice, InputEvent, InputPermissionError,
+    InputRecordingError, PhysicalRecorder, list_input_devices,
+)
+from je_auto_control.linux_wayland.global_shortcuts import (
+    ShortcutPermissionError, ShortcutUnavailable, StopShortcutSession,
 )
 # Config bundle (export / import user configuration)
 from je_auto_control.utils.config_bundle import (
@@ -1143,6 +1202,7 @@ from je_auto_control.utils.action_signing import (
     require_signed_actions, sign_action_file, verify_action_file,
 )
 from je_auto_control.utils.exception.exceptions import CryptographyUnavailableError
+from je_auto_control.utils.exception.exceptions import AutoControlSignatureException
 # Observability (Prometheus metrics + OpenTelemetry traces, headless)
 from je_auto_control.utils.observability import (
     Counter as MetricCounter,
@@ -1213,6 +1273,15 @@ from je_auto_control.utils.json.json_file import format_action_json
 from je_auto_control.utils.codegen.codegen import (
     generate_code,
     generate_code_file,
+)
+# action journal (opt-in JSONL record of executed actions) + candidate scripts
+from je_auto_control.utils.action_journal import (
+    ActionEvent, ActionJournal, ActionJournalError, JournalFormatError,
+    action_journal_status, list_journal_runs, read_events,
+    start_action_journal, stop_action_journal,
+)
+from je_auto_control.utils.codegen.journal_import import (
+    CandidateScript, JournalImportError, generate_candidate_from_log,
 )
 # HTTP/API request action (dependency-free, stdlib urllib)
 from je_auto_control.utils.http_client.http_client import http_request
@@ -1324,6 +1393,10 @@ __all__ = [
     "execute_action", "execute_files", "executor",
     "execute_action_with_vars", "record_to_json",
     "generate_code", "generate_code_file", "http_request", "query_sqlite",
+    "ActionEvent", "ActionJournal", "ActionJournalError", "JournalFormatError",
+    "action_journal_status", "list_journal_runs", "read_events",
+    "start_action_journal", "stop_action_journal",
+    "CandidateScript", "JournalImportError", "generate_candidate_from_log",
     "send_email", "assert_pdf_text", "extract_pdf_text", "pdf_metadata",
     "pdf_page_count",
     "add_command_to_executor", "test_record_instance", "pil_screenshot",
@@ -1683,6 +1756,10 @@ __all__ = [
     "Asset", "AssetStore", "AssetValue", "active_environment",
     "dotenv_values", "dump_dotenv", "load_dotenv", "parse_dotenv",
     "LayeredConfig", "SourceTrace", "deep_merge",
+    "AssetManifest", "ConfigBucket", "ConfigStore", "ConfigSyncClient", "ConfigSyncConflict",
+    "ConfigSyncError", "FullResyncRequired", "MergeDecision", "SyncAdapter", "SyncEntry",
+    "SyncOperation", "SyncOutbox", "config_sync_full_resync", "config_sync_resolve",
+    "config_sync_run", "config_sync_status", "merge_entries", "sync_assets",
     "ConfigField", "ConfigSchema", "coerce", "validate_config",
     "PathNotAllowedError", "PathPolicy",
     "RefResolver", "SecretRefError", "is_ref", "resolve_ref", "resolve_refs_in",
@@ -1755,6 +1832,8 @@ __all__ = [
     "MCPPromptArgument", "MCPResource", "MCPServer", "MCPTool",
     "MCPToolAnnotations", "OperationCancelledError", "PromptProvider",
     "RateLimiter", "ResourceProvider", "ToolCallContext",
+    "ToolDisclosureError", "ToolDiscoveryError", "ToolIndex", "ToolMode",
+    "ToolSummary", "ToolView",
     "build_default_tool_registry",
     "default_prompt_provider", "default_resource_provider",
     "make_plugin_tool", "register_plugin_tools",
@@ -1767,6 +1846,9 @@ __all__ = [
     # RBAC
     "AuthorizationContext", "AuthorizationError", "UserAuthError",
     "UserRecord", "UserStore", "authorization_scope",
+    "DeferredOwner", "capture_owner", "owner_scope",
+    "rbac_add_user", "rbac_list_users", "rbac_remove_user",
+    "rbac_rotate_user_token", "rbac_set_user_role",
     # Admin console
     "AdminConsoleClient", "AdminHost", "default_admin_console",
     # WebRTC inspector
@@ -1779,6 +1861,14 @@ __all__ = [
     "enable_usb_passthrough", "is_usb_passthrough_enabled",
     # System diagnostics
     "Check", "DiagnosticsReport", "run_diagnostics",
+    # Capability and authorisation states
+    "BackendContext", "Capability", "CapabilitySnapshot", "CapabilityStatus",
+    "probe_capabilities", "close_input_session",
+    "reset_input_authorisation", "WaylandAuthorisationError",
+    # Recording without a global hook, and the Wayland stop shortcut
+    "InputStepLog", "InputDevice", "InputEvent", "InputPermissionError",
+    "InputRecordingError", "PhysicalRecorder", "list_input_devices",
+    "ShortcutPermissionError", "ShortcutUnavailable", "StopShortcutSession",
     # Config bundle
     "ConfigBundleExporter", "ConfigBundleImporter", "ImportReport",
     "export_config_bundle", "import_config_bundle",
@@ -1798,7 +1888,7 @@ __all__ = [
     # Action-file security (sign + encrypt)
     "VerifyResult", "sign_action_file", "verify_action_file",
     "SigningConfig", "action_signing_config", "create_signing_keypair",
-    "CryptographyUnavailableError",
+    "CryptographyUnavailableError", "AutoControlSignatureException",
     "require_signed_actions", "encrypt_action_file", "decrypt_action_file",
     # Observability (Prometheus + OpenTelemetry)
     "MetricCounter", "MetricGauge", "MetricHistogram",
@@ -1934,6 +2024,16 @@ __all__ = [
     "wcag_audit",
     # Mobile device matrix
     "DeviceResult", "MatrixReport", "run_on_devices",
+    # Mobile device contexts
+    "DeviceCancelledError", "DeviceCapability", "DeviceClosedError", "DeviceContext",
+    "DeviceError", "DevicePermissionError", "DeviceSession", "DeviceTimeoutError",
+    "DeviceUnavailableError", "DeviceUnsupportedError", "open_device", "use_device",
+    "DeviceFrame", "Drag", "LongPress", "Pinch", "Swipe", "Tap",
+    "AlertNotPresentError", "AppState", "MobileExtension", "accept_alert",
+    "app_state", "dismiss_alert", "launch_app", "mobile_extension",
+    "register_mobile_extension", "stop_app", "wait_for_app",
+    "DeviceSetupReport", "MOBILE_COMMANDS", "MobileCommand", "device_setup_report",
+    "mobile_capability_matrix", "run_mobile_command",
     # Media assertions
     "MediaAssertionResult", "assert_audio_activity", "assert_video_changes",
     "measure_audio_rms", "video_segment_motion",
@@ -1950,6 +2050,12 @@ __all__ = [
     # Self-healing locator (image → VLM fallback)
     "HealEvent", "HealEventLog", "HealOutcome", "SelfHealError",
     "default_heal_log", "self_heal_click", "self_heal_locate",
+    "EvaluationSample", "HealingComparison", "HealingEvaluationError",
+    "TemplateRevision", "TemplateRevisionError", "TemplateRevisionStore",
+    "accept_template_revision", "evaluate_healing_dataset", "evaluate_locators",
+    "heal_context", "list_template_revisions", "preview_template_revision",
+    "propose_template_revision", "revert_template_revision",
+    "template_match_strategy",
     # Screenshot redaction (PII blur)
     "POLICY_MODERATE", "POLICY_OFF", "POLICY_STRICT",
     "RedactionEngine", "RedactionPolicy", "RedactionResult",

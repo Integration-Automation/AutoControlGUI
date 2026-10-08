@@ -71,7 +71,25 @@ def _build_specs() -> List[CommandSpec]:
     _add_window_specs(specs)
     _add_flow_specs(specs)
     _add_misc_specs(specs)
+    _add_mobile_specs(specs)
     return specs
+
+
+def _add_mobile_specs(specs: List[CommandSpec]) -> None:
+    """Android / iOS commands, generated from the table the executor and MCP tools share."""
+    from je_auto_control.wrapper.mobile_commands import MOBILE_COMMANDS
+    kinds = {"int": FieldType.INT, "float": FieldType.FLOAT, "bool": FieldType.BOOL,
+             "file_path": FieldType.FILE_PATH}
+    for command in MOBILE_COMMANDS:
+        specs.append(CommandSpec(
+            command.name, "Android" if command.platform == "android" else "iOS",
+            command.label,
+            fields=tuple(
+                FieldSpec(param.name, kinds.get(param.kind, FieldType.STRING),
+                          optional=not param.required, default=param.default)
+                for param in command.params),
+            description=command.description,
+        ))
 
 
 def _add_mouse_specs(specs: List[CommandSpec]) -> None:
@@ -2995,6 +3013,101 @@ def _add_audit_specs(specs: List[CommandSpec]) -> None:
                     "locators).",
     ))
     specs.append(CommandSpec(
+        "AC_self_heal_evaluate", "Testing", "Self-Heal: Evaluate Dataset",
+        fields=(FieldSpec("dataset_path", FieldType.FILE_PATH,
+                          placeholder="dataset.json"),),
+        description="Score locator versions on the same labelled frames "
+                    "(accuracy, false positives, recovery, p50/p95).",
+    ))
+    specs.append(CommandSpec(
+        "AC_self_heal_revision_propose", "Testing", "Self-Heal: Propose Template Revision",
+        fields=(
+            FieldSpec("template_path", FieldType.FILE_PATH),
+            FieldSpec("candidate_path", FieldType.FILE_PATH),
+            FieldSpec("source", FieldType.STRING, optional=True, default="manual"),
+            FieldSpec("note", FieldType.STRING, optional=True),
+        ),
+        description="Store a candidate template; the live template is not changed.",
+    ))
+    specs.append(CommandSpec(
+        "AC_self_heal_revision_preview", "Testing", "Self-Heal: Preview Template Revision",
+        fields=(
+            FieldSpec("revision_id", FieldType.STRING),
+            FieldSpec("dataset_path", FieldType.FILE_PATH, optional=True,
+                      placeholder="dataset.json"),
+            FieldSpec("detect_threshold", FieldType.FLOAT, optional=True,
+                      default=0.9, min_value=0.0, max_value=1.0),
+        ),
+        description="Compare candidate and current template; a dataset validates it.",
+    ))
+    specs.append(CommandSpec(
+        "AC_self_heal_revision_accept", "Testing", "Self-Heal: Accept Template Revision",
+        fields=(
+            FieldSpec("revision_id", FieldType.STRING),
+            FieldSpec("allow_unvalidated", FieldType.BOOL, optional=True, default=False),
+        ),
+        description="Replace the template with a validated candidate (backup kept).",
+    ))
+    specs.append(CommandSpec(
+        "AC_self_heal_revision_revert", "Testing", "Self-Heal: Revert Template Revision",
+        fields=(FieldSpec("revision_id", FieldType.STRING),),
+        description="Restore the template an accepted revision replaced.",
+    ))
+    specs.append(CommandSpec(
+        "AC_self_heal_revision_list", "Testing", "Self-Heal: List Template Revisions",
+        description="List stored template revisions and their status.",
+    ))
+    specs.append(CommandSpec(
+        "AC_journal_start", "Testing", "Start Action Journal",
+        fields=(
+            FieldSpec("path", FieldType.FILE_PATH, optional=True,
+                      placeholder="action_journal.jsonl"),
+            FieldSpec("run_id", FieldType.STRING, optional=True),
+            FieldSpec("session", FieldType.STRING, optional=True),
+        ),
+        description="Append every executed action to a JSON-lines journal "
+                    "(secrets masked before they are written).",
+    ))
+    specs.append(CommandSpec(
+        "AC_journal_stop", "Testing", "Stop Action Journal",
+        description="Stop the action journal.",
+    ))
+    specs.append(CommandSpec(
+        "AC_journal_status", "Testing", "Action Journal Status",
+        description="Report whether an action journal is started.",
+    ))
+    specs.append(CommandSpec(
+        "AC_journal_read", "Testing", "Read Action Journal",
+        fields=(
+            FieldSpec("path", FieldType.FILE_PATH,
+                      placeholder="action_journal.jsonl"),
+            FieldSpec("run_id", FieldType.STRING, optional=True),
+            FieldSpec("limit", FieldType.INT, optional=True, default=0),
+        ),
+        description="Read a journal's events (the last 'limit' when positive).",
+    ))
+    specs.append(CommandSpec(
+        "AC_journal_runs", "Testing", "List Journal Runs",
+        fields=(FieldSpec("path", FieldType.FILE_PATH,
+                          placeholder="action_journal.jsonl"),),
+        description="Summarise each run a journal file holds.",
+    ))
+    specs.append(CommandSpec(
+        "AC_generate_code_from_journal", "Testing", "Candidate Script from Journal",
+        fields=(
+            FieldSpec("path", FieldType.FILE_PATH,
+                      placeholder="action_journal.jsonl"),
+            FieldSpec("run_id", FieldType.STRING, optional=True),
+            FieldSpec("target", FieldType.ENUM, optional=True, default="pytest",
+                      choices=("pytest", "python", "robot")),
+            FieldSpec("style", FieldType.ENUM, optional=True, default="actions",
+                      choices=("actions", "calls")),
+            FieldSpec("output", FieldType.FILE_PATH, optional=True),
+        ),
+        description="Build a reviewable candidate script from one journal "
+                    "run; nothing from the log is executed.",
+    ))
+    specs.append(CommandSpec(
         "AC_failure_signature", "Testing", "Failure Signature",
         fields=(
             FieldSpec("error", FieldType.STRING,
@@ -3428,6 +3541,46 @@ def _add_resilience_specs(specs: List[CommandSpec]) -> None:
             FieldSpec("key", FieldType.STRING, placeholder=_DOTTED_KEY_PLACEHOLDER),
         ),
         description="Show the value and winning layer for a dotted config key.",
+    ))
+    sync_target = (
+        FieldSpec("server_url", FieldType.STRING, placeholder="https://sync.example"),
+        FieldSpec("user_id", FieldType.STRING, placeholder="alice"),
+    )
+    sync_options = (
+        FieldSpec("secret", FieldType.STRING, optional=True, placeholder="${secrets.sync}"),
+        FieldSpec("device_id", FieldType.STRING, optional=True,
+                  placeholder="(this machine's stored id)"),
+        FieldSpec("sections", FieldType.STRING, optional=True,
+                  placeholder="hotkeys,triggers,address_book"),
+        FieldSpec("scripts_dir", FieldType.FILE_PATH, optional=True),
+        FieldSpec("locators_path", FieldType.FILE_PATH, optional=True),
+        FieldSpec("assets_dir", FieldType.FILE_PATH, optional=True),
+    )
+    specs.append(CommandSpec(
+        "AC_config_sync_run", "Data", "Config Sync: Sync Now",
+        fields=sync_target + sync_options,
+        description="Sync settings with the server once. Received hotkeys and "
+                    "triggers arrive disabled; nothing is run.",
+    ))
+    specs.append(CommandSpec(
+        "AC_config_sync_status", "Data", "Config Sync: Status",
+        fields=sync_target,
+        description="Recorded sync state (revision, pending, conflicts); no network.",
+    ))
+    specs.append(CommandSpec(
+        "AC_config_sync_resolve", "Data", "Config Sync: Resolve Conflict",
+        fields=sync_target + (
+            FieldSpec("section", FieldType.STRING, placeholder="hotkeys"),
+            FieldSpec("key", FieldType.STRING),
+            FieldSpec("choice", FieldType.INT, default=0),
+        ) + sync_options,
+        description="Keep one candidate of a conflicted entry (0-based choice).",
+    ))
+    specs.append(CommandSpec(
+        "AC_config_sync_full_resync", "Data", "Config Sync: Full Resync",
+        fields=sync_target + sync_options,
+        description="Adopt the server's state after this device was retired; "
+                    "pending local changes are discarded.",
     ))
     specs.append(CommandSpec(
         "AC_detect_drift", "Data", "Data Drift: Detect (PSI + KS)",
@@ -5062,6 +5215,8 @@ def _add_work_queue_specs(specs: List[CommandSpec]) -> None:
         fields=(
             FieldSpec("private_path", FieldType.STRING),
             FieldSpec("public_path", FieldType.STRING),
+            FieldSpec("passphrase", FieldType.STRING, optional=True,
+                      placeholder="encrypts the private key file"),
         ),
         description="Create an Ed25519 key pair: keep the private key on the "
                     "signing machine, give execution endpoints the public key.",
@@ -5072,6 +5227,8 @@ def _add_work_queue_specs(specs: List[CommandSpec]) -> None:
             FieldSpec("path", FieldType.FILE_PATH),
             FieldSpec("key", FieldType.STRING, optional=True),
             FieldSpec("private_key_path", FieldType.FILE_PATH, optional=True),
+            FieldSpec("passphrase", FieldType.STRING, optional=True,
+                      placeholder="of an encrypted private key"),
         ),
         description="Write a signature sidecar for an action file "
                     "(Ed25519 with a private key, else HMAC-SHA256).",

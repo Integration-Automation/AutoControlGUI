@@ -9,11 +9,13 @@ Comprehensive guides for all AutoControl features.
    :caption: User Guide
 
    doc/installation/installation_doc
+   doc/configuration/configuration_doc
    doc/mouse/mouse_doc
    doc/keyboard/keyboard_doc
    doc/screen/screen_doc
    doc/image/image_doc
    doc/record/record_doc
+   doc/wayland/wayland_capabilities_doc
    doc/keyword_and_executor/keyword_and_executor_doc
    doc/generate_report/generate_report_doc
    doc/callback_function/callback_function_doc
@@ -21,9 +23,10 @@ Comprehensive guides for all AutoControl features.
    doc/socket_driver/socket_driver_doc
    doc/mcp_server/mcp_server_doc
    doc/ai_agents/ai_agents_doc
-   doc/ai_agents/ai_agents_doc
    doc/critical_exit/critical_exit_doc
    doc/cli/cli_doc
+   doc/config_sync/config_sync_doc
+   doc/examples/examples_doc
    doc/create_project/create_project_doc
    doc/new_features/new_features_doc
    doc/new_features/v2_features_doc
@@ -248,6 +251,7 @@ Comprehensive guides for all AutoControl features.
    doc/new_features/v221_features_doc
    doc/new_features/v222_features_doc
    doc/new_features/v223_features_doc
+   doc/mobile/mobile_doc
    doc/ocr_backends/ocr_backends_doc
    doc/observability/observability_doc
    doc/operations_layer/operations_layer_doc

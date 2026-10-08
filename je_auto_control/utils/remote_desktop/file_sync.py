@@ -11,17 +11,26 @@ inbox dir).
 
 Polling interval default 3s — enough for most edit/save workflows
 without burning CPU; bump it lower for tighter sync.
+
+When both sides mirror the same folder, a file that *arrived* from the peer
+is new on disk and would be pushed straight back, and back again from the
+other side. The receiving code tells the engine with
+:meth:`FolderSyncEngine.note_received`; the engine then leaves that file
+alone until its content changes locally.
 """
 from __future__ import annotations
 
+import hashlib
 import threading
 from pathlib import Path
-from typing import Callable, Dict, Optional
+from typing import Callable, Dict, List, Optional
 
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 
 
 _DEFAULT_POLL_S = 3.0
+#: How many "this came from the peer" notes one engine keeps.
+_MAX_RECEIVED_NOTES = 4096
 
 
 class FolderSyncEngine:
@@ -40,6 +49,8 @@ class FolderSyncEngine:
         self._interval = max(0.5, float(poll_interval_s))
         self._include_subdirs = bool(include_subdirs)
         self._snapshot: Dict[str, float] = {}  # rel_path -> mtime
+        self._received: Dict[str, str] = {}  # rel_path -> sha256 of what the peer sent
+        self._received_lock = threading.Lock()
         self._stop = threading.Event()
         self._ready = threading.Event()
         self._thread: Optional[threading.Thread] = None
@@ -86,6 +97,88 @@ class FolderSyncEngine:
         """
         return self._ready.wait(timeout)
 
+    def note_received(self, remote_name: str, *, sha256: Optional[str] = None) -> None:
+        """Record that ``remote_name`` in the watched folder came from the peer.
+
+        The engine will not push it back while its content is still what the
+        peer sent. Pass the content's ``sha256`` to note a file *before* it
+        is written -- otherwise a poll landing between the write and this
+        call would already have echoed it; without it the file on disk is
+        hashed now. A later local edit changes the hash and is pushed as usual.
+        """
+        rel = Path(remote_name).as_posix()
+        digest = sha256.lower() if sha256 else self._digest(self._watch / rel)
+        if digest is None:
+            return
+        with self._received_lock:
+            # A note may be made before its file lands, so notes cannot be
+            # pruned by what is on disk; the oldest go once there are many.
+            self._received.pop(rel, None)
+            self._received[rel] = digest
+            while len(self._received) > _MAX_RECEIVED_NOTES:
+                self._received.pop(next(iter(self._received)))
+
+    @staticmethod
+    def _digest(path: Path) -> Optional[str]:
+        try:
+            return hashlib.sha256(path.read_bytes()).hexdigest()
+        except OSError:
+            return None
+
+    def _is_echo(self, rel: str) -> bool:
+        """Whether ``rel`` still holds exactly what the peer sent."""
+        with self._received_lock:
+            noted = self._received.get(rel)
+        if noted is None:
+            return False
+        if self._digest(self._watch / rel) == noted:
+            return True
+        # Edited here since it arrived: it is a local change again.
+        with self._received_lock:
+            self._received.pop(rel, None)
+        return False
+
+    def poll_once(self) -> List[str]:
+        """Run one diff pass now and return the relative paths pushed.
+
+        The first pass only records what is already there. The background
+        thread calls this every interval; tests and callers that drive the
+        engine themselves can call it directly.
+        """
+        if not self._ready.is_set():
+            self._snapshot = self._scan()
+            self._ready.set()
+            return []
+        current = self._scan()
+        pushed: List[str] = []
+        changed = [(rel, mtime) for rel, mtime in current.items()
+                   if self._snapshot.get(rel, float("-inf")) < mtime]
+        for rel, mtime in changed:
+            if self._is_echo(rel):
+                self._snapshot[rel] = mtime
+            elif self._push(rel, mtime):
+                pushed.append(rel)
+        # Track deletions in snapshot (don't propagate, just stop
+        # tracking). Do NOT blindly merge ``current`` here — that would
+        # mark failed sends as already-synced and break the next-tick
+        # retry promise made in this engine's docstring. Successful
+        # sends already updated ``_snapshot[rel]``.
+        self._snapshot = {
+            rel: mtime for rel, mtime in self._snapshot.items()
+            if rel in current
+        }
+        return pushed
+
+    def _push(self, rel: str, mtime: float) -> bool:
+        try:
+            self._sender(str(self._watch / rel), rel)
+        except (RuntimeError, OSError, ValueError) as error:
+            autocontrol_logger.warning("folder sync push %s: %r", rel, error)
+            return False
+        self._snapshot[rel] = mtime
+        autocontrol_logger.info("folder sync: pushed %s", rel)
+        return True
+
     def _scan(self) -> Dict[str, float]:
         out: Dict[str, float] = {}
         try:
@@ -107,35 +200,12 @@ class FolderSyncEngine:
         # Build initial snapshot WITHOUT sending; treat pre-existing files
         # as "already synced" so engaging sync mid-edit doesn't re-upload
         # the entire directory.
-        self._snapshot = self._scan()
-        self._ready.set()
+        self.poll_once()
         while not stop.is_set():
             stop.wait(self._interval)
             if stop.is_set():
                 return
-            current = self._scan()
-            for rel, mtime in current.items():
-                prev = self._snapshot.get(rel)
-                if prev is not None and prev >= mtime:
-                    continue
-                full = self._watch / rel
-                try:
-                    self._sender(str(full), rel)
-                    self._snapshot[rel] = mtime
-                    autocontrol_logger.info("folder sync: pushed %s", rel)
-                except (RuntimeError, OSError, ValueError) as error:
-                    autocontrol_logger.warning(
-                        "folder sync push %s: %r", rel, error,
-                    )
-            # Track deletions in snapshot (don't propagate, just stop
-            # tracking). Do NOT blindly merge ``current`` here — that would
-            # mark failed sends as already-synced and break the next-tick
-            # retry promise made in this engine's docstring. Successful
-            # sends already updated ``_snapshot[rel]`` above.
-            self._snapshot = {
-                rel: mtime for rel, mtime in self._snapshot.items()
-                if rel in current
-            }
+            self.poll_once()
 
 
 __all__ = ["FolderSyncEngine"]

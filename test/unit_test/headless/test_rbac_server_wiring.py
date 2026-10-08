@@ -11,6 +11,8 @@ import json
 import urllib.error
 import urllib.request
 
+import time
+
 import pytest
 
 from je_auto_control.utils.exception.exceptions import AutoControlException
@@ -216,6 +218,11 @@ def test_rest_audit_rows_name_the_user(rest, users):
     server = rest(user_store=users)
     _call(server, "GET", "/commands", users.tokens[Role.OPERATOR])
     _call(server, "POST", "/execute", users.tokens[Role.VIEWER], {"actions": []})
+    # The row is written after the response is sent, so the client can be
+    # back here before the second one exists.
+    deadline = time.monotonic() + 5.0
+    while len(server._audit_log.rows) < 2 and time.monotonic() < deadline:
+        time.sleep(0.01)
     allowed, refused = server._audit_log.rows
     assert allowed["viewer_id"] == "operator-user"
     assert "user=operator-user role=operator" in allowed["detail"]
@@ -418,10 +425,13 @@ def test_mcp_unconfigured_rbac_keeps_shared_token(mcp_http):
 
 
 def test_default_registry_offers_a_viewer_only_read_only_tools(users):
+    """Read-only, and not one of those listed as needing more than ``read_screen``."""
     registry = build_default_tool_registry(read_only=False)
     with authorization_scope(AuthorizationContext("viewer-user", Role.VIEWER)):
         listed = MCPServer(tools=registry).handle_line(
             json.dumps({"jsonrpc": "2.0", "id": 1, "method": "tools/list"}))
     names = {tool["name"] for tool in json.loads(listed)["result"]["tools"]}
-    assert names == {tool.name for tool in registry if tool.annotations.read_only}
+    read_only = {tool.name for tool in registry if tool.annotations.read_only}
+    assert names == read_only - set(TOOL_CAPABILITIES)
+    assert names < read_only, "data tools and user listing are held back"
     assert "ac_execute_actions" not in names and "ac_click_mouse" not in names

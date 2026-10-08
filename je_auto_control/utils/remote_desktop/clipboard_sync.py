@@ -5,16 +5,69 @@ text, file lists, ...) doesn't require touching the framing layer:
 
 * ``{"kind": "text", "text": "..."}``
 * ``{"kind": "image", "format": "png", "data_b64": "..."}``
+
+Applying a peer's clipboard changes the local clipboard, which a watcher
+then sees as a change and sends back -- and the peer does the same.
+:class:`ClipboardEchoGuard` breaks that loop for any code that forwards
+clipboard changes automatically.
 """
 import base64
+import hashlib
 import json
-from typing import Any, Dict, Tuple
+import threading
+from typing import Any, Dict, Optional, Tuple
 
 from je_auto_control.utils.exception.exceptions import AutoControlException
 
 
 class ClipboardSyncError(AutoControlException, ValueError):
     """Raised when a CLIPBOARD payload is malformed or unsupported."""
+
+
+def _fingerprint(kind: str, data: Any) -> str:
+    raw = data.encode("utf-8") if isinstance(data, str) else bytes(data)
+    return f"{kind}:{hashlib.sha256(raw).hexdigest()}"
+
+
+class ClipboardEchoGuard:
+    """Decides whether a local clipboard change should be sent to the peer.
+
+    Call :meth:`note_remote` with what was just applied from the peer, and
+    ask :meth:`should_send` before forwarding a local change. Content that
+    is exactly what the peer last sent is not sent back, and content already
+    sent is not sent again while the clipboard still holds it, so two
+    machines watching each other's clipboard settle after one transfer
+    instead of bouncing it forever. Only fingerprints are kept, never the
+    clipboard content.
+    """
+
+    def __init__(self) -> None:
+        self._lock = threading.Lock()
+        self._from_remote: Optional[str] = None
+        self._sent: Optional[str] = None
+
+    def note_remote(self, kind: str, data: Any) -> None:
+        """Record content that arrived from the peer and was applied locally."""
+        with self._lock:
+            self._from_remote = _fingerprint(kind, data)
+
+    def should_send(self, kind: str, data: Any) -> bool:
+        """Whether this local clipboard content is news to the peer.
+
+        Returning ``True`` records the content as sent.
+        """
+        fingerprint = _fingerprint(kind, data)
+        with self._lock:
+            if fingerprint in (self._from_remote, self._sent):
+                return False
+            self._sent = fingerprint
+            return True
+
+    def reset(self) -> None:
+        """Forget both sides (after a reconnect: the peer may hold anything)."""
+        with self._lock:
+            self._from_remote = None
+            self._sent = None
 
 
 def encode_text(text: str) -> bytes:

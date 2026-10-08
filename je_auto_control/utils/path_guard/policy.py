@@ -41,7 +41,7 @@ class PathPolicy:
     refused rather than let through while the roots are still unknown.
     """
 
-    def __init__(self, roots: Iterable[os.PathLike | str] = (), *,
+    def __init__(self, roots: Iterable[os.PathLike[str] | str] = (), *,
                  use_client_roots: bool = False) -> None:
         self._static: Tuple[Path, ...] = tuple(_canonical(root) for root in roots)
         self._use_client_roots = bool(use_client_roots)
@@ -71,7 +71,7 @@ class PathPolicy:
         """Whether roots reported by the client are honoured."""
         return self._use_client_roots
 
-    def set_client_roots(self, roots: Iterable[os.PathLike | str]) -> None:
+    def set_client_roots(self, roots: Iterable[os.PathLike[str] | str]) -> None:
         """Replace the client-reported roots; ignored unless they are honoured."""
         if not self._use_client_roots:
             return
@@ -84,7 +84,7 @@ class PathPolicy:
         with self._lock:
             return self._static + self._client
 
-    def validate(self, path: os.PathLike | str, *, operation: str) -> Path:
+    def validate(self, path: os.PathLike[str] | str, *, operation: str) -> Path:
         """Return ``path`` canonicalised, or raise :class:`PathNotAllowedError`.
 
         ``operation`` says what wanted the path and is quoted in the refusal.

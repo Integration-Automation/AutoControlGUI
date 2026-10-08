@@ -58,6 +58,18 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261009-26 | 2026-10-09 | Six offline-validated examples, a configuration reference, strict typing for every module added this month, end-to-end tests on fakes | #done #docs #typing #examples #H1 #H2 #H3 | [2026-10](2026-10.md) |
+| U-20261009-25 | 2026-10-09 | The Python 3.10 headless segfault: a prompt dialog that was its own reference cycle | #bugfix #gui #ci | [2026-10](2026-10.md) |
+| U-20261009-24 | 2026-10-09 | Follow-ups: USB waits, run-level scopes, load-and-use in one list, layout key names, file splits, Sphinx | #done #followups | [2026-10](2026-10.md) |
+| U-20261009-23 | 2026-10-09 | RBAC: deferred work runs as its owner, users have a management surface, data tools need read_data | #done #security #rbac | [2026-10](2026-10.md) |
+| U-20261009-22 | 2026-10-09 | MCP sessions can start with five tools and enable what they need | #done #mcp #G1 #G2 #G3 | [2026-10](2026-10.md) |
+| U-20261009-21 | 2026-10-09 | Wayland capability states, explicit authorisation, opt-in physical recording and an opt-in libei helper | #wayland #D1 #D2 #D3 | [2026-10](2026-10.md) |
+| U-20261009-20 | 2026-10-09 | GUI: scrolling pages, remembered window state, drawn close buttons, start tabs built on first click, benchmarks | #done #gui #F1 #F4 | [2026-10](2026-10.md) |
+| U-20261009-19 | 2026-10-09 | A cancellable GUI task controller; the WebRTC panel split into twelve modules | #gui #F3 | [2026-10](2026-10.md) |
+| U-20261009-18 | 2026-10-09 | Each mobile device has its own session; gestures, frames, app lifecycle and every surface from one command table | #mobile #E1 #E2 #E3 #E4 | [2026-10](2026-10.md) |
+| U-20261009-17 | 2026-10-09 | Config sync survives restarts, refuses stale writes and merges by causality | #done #sync #protocol #C1 #C2 #C3 | [2026-10](2026-10.md) |
+| U-20261009-16 | 2026-10-09 | Self-healing locator versions are measured on the same labelled frames | #done #self-healing #B2 | [2026-10](2026-10.md) |
+| U-20261009-15 | 2026-10-09 | Opt-in action journal, and candidate scripts built from one run | #done #journal #codegen #B1 #B3 | [2026-10](2026-10.md) |
 | U-20261009-14 | 2026-10-09 | The package gate refuses unlisted packages by default | #done #security #breaking | [2026-10](2026-10.md) |
 | U-20261009-13 | 2026-10-09 | REST routes and MCP tools are authorised by role when a user store is configured | #done #security #rbac #A10 | [2026-10](2026-10.md) |
 | U-20261009-12 | 2026-10-09 | Remote-desktop hosts and viewers have owners | #done #remote-desktop #gui #C4 | [2026-10](2026-10.md) |
@@ -363,7 +375,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | File | Period | Entries |
 |---|---|---:|
-| [2026-10.md](2026-10.md) | 2026-10 | 27 |
+| [2026-10.md](2026-10.md) | 2026-10 | 39 |
 | [2026-09-e.md](2026-09-e.md) | 2026-09 | 7 |
 | [2026-09-d.md](2026-09-d.md) | 2026-09 | 55 |
 | [2026-09-c.md](2026-09-c.md) | 2026-09 | 38 |

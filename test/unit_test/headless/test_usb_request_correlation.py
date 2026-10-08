@@ -136,7 +136,9 @@ def _timed_out_bulk(wire: _Wire, handle) -> Frame:
     """Issue a bulk read nobody answers; return the request that timed out."""
     sent_before = len(wire.sent)
     with pytest.raises(UsbClientTimeout):
-        handle.bulk_transfer(endpoint=0x81, direction="in", length=8)
+        # timeout_ms=0: the client waits the transfer's own timeout on top of
+        # reply_timeout_s, and the default 1000 ms would add a second per call.
+        handle.bulk_transfer(endpoint=0x81, direction="in", length=8, timeout_ms=0)
     return wire.sent[sent_before]
 
 
@@ -258,7 +260,8 @@ def test_reply_half_received_at_the_timeout_is_still_discarded_whole():
     wire = _Wire(timeout_s=0.5)
     handle = _opened(wire, 1)
     sent_before = len(wire.sent)
-    call = _Call(lambda: handle.bulk_transfer(endpoint=0x81, direction="in", length=8))
+    call = _Call(lambda: handle.bulk_transfer(
+        endpoint=0x81, direction="in", length=8, timeout_ms=0))
     first = wire.wait_sent(sent_before + 1)
     stale_frames = _big_reply(1, b"\x01" * (MAX_PAYLOAD_BYTES * 2), first)
     wire.client.feed_frame(stale_frames[0])

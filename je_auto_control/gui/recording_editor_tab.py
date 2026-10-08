@@ -9,6 +9,7 @@ from PySide6.QtWidgets import (
 )
 
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
+from je_auto_control.gui._journal_import import pick_journal_candidate
 from je_auto_control.gui.language_wrapper.multi_language_wrapper import (
     language_wrapper,
 )
@@ -105,6 +106,7 @@ class RecordingEditorTab(TranslatableMixin, QWidget):
         return [
             ("re_browse", self._browse),
             ("re_load", self._load),
+            ("re_import_journal", self._import_journal),
             ("re_save_as", self._save_as),
             ("re_export_code", self._export_code),
             ("re_apply_trim", self._apply_trim),
@@ -143,6 +145,17 @@ class RecordingEditorTab(TranslatableMixin, QWidget):
             return
         self._undo_stack.clear()  # a freshly loaded recording starts clean
         self._refresh()
+
+    def _import_journal(self) -> None:
+        """Open the candidate built from an action journal run for editing."""
+        candidate = pick_journal_candidate(self)
+        if candidate is None:
+            return
+        self._path_input.clear()
+        self._mutate(list(candidate.actions))
+        self._status.setText(
+            f"{len(self._actions)} actions from journal run {candidate.manifest['run_id']}"
+            f" ({len(candidate.warnings)} warning(s))")
 
     def _save_as(self) -> None:
         if not self._actions:

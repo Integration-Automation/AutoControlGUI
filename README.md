@@ -18,7 +18,7 @@ from JSON files / CLI / servers, and a **GUI tab**. Nothing is GUI-only.
 
 - **One API, seven platforms.** `wrapper/platform_wrapper.py` picks the backend at import
   time; your script does not change between Windows, macOS, X11, and Wayland.
-- **Scriptable without Python.** 779 `AC_*` commands cover the whole feature set, so a
+- **Scriptable without Python.** 848 `AC_*` commands cover the whole feature set, so a
   JSON file can do anything the library can — including loops, branches, try/catch,
   macros, and variables.
 - **Headless by default.** `import je_auto_control` never loads Qt. The GUI is an
@@ -120,7 +120,7 @@ Optional extras, installed only when you need them:
 
 | Extra | Enables |
 |---|---|
-| `gui` | PySide6 desktop application (48 tabs): a searchable navigation panel (`Ctrl+K`) lists every feature by category, tabs are built the first time they are opened, and **View → Theme** switches dark / light |
+| `gui` | PySide6 desktop application (50 tabs): a searchable navigation panel (`Ctrl+K`) lists every feature by category, tabs are built the first time they are opened, and **View → Theme** switches dark / light |
 | `webrtc` | WebRTC remote desktop, USB passthrough (`aiortc`, `av`) |
 | `signaling` | Standalone signaling / rendezvous server (`fastapi`, `uvicorn`) |
 | `discovery` | mDNS / Zeroconf LAN host discovery |
@@ -231,7 +231,7 @@ desktop app; tab commands live in the window's **Actions** menu.
 | Natural-language planner | `plan_actions`, `run_from_description` | `AC_llm_plan` | LLM Planner |
 | Computer-use agent | `AgentLoop`, `run_agent` | `AC_run_agent` | Computer Use |
 | Record & replay | `record`, `stop_record` | `AC_record`, `AC_stop_record` | Record |
-| JSON scripting | `execute_action`, `execute_files` | all 779 commands | Script, Script Builder |
+| JSON scripting | `execute_action`, `execute_files` | all 848 commands | Script, Script Builder |
 | Variables & flow control | `execute_action_with_vars` | `AC_set_var`, `AC_loop`, `AC_for_each`, `AC_try`, `AC_retry` | Variables |
 | Data-driven runs | — | `AC_for_each_row` (CSV / JSON / SQLite / Excel) | Data Sources |
 | Assertions | `assert_text`, `assert_image` | `AC_assert_text` + 20 more | Assertions |
@@ -250,7 +250,7 @@ desktop app; tab commands live in the window's **Actions** menu.
 | Diagnostics | `run_diagnostics` | `AC_diagnose` | Diagnostics |
 | Test-code generation | `generate_code` | — | — |
 
-Beyond this table, `utils/` holds 310 headless packages covering assertions, resilience,
+Beyond this table, `utils/` holds 311 headless packages covering assertions, resilience,
 data quality, i18n auditing, redaction, governance, observability, and more. The full
 per-module map is in **[architecture_explore.md](architecture_explore.md)**.
 
@@ -287,7 +287,7 @@ under a relative name are written below that directory.
 
 | Surface | Start it with | Notes |
 |---|---|---|
-| **MCP server** | `je_auto_control_mcp` (stdio) or `AC_start_mcp_http_server` | 680 tools for Claude Desktop / Claude Code / custom tool loops: the full `ac_*` surface plus short model-friendly aliases for common GUI actions. Speaks the stateless MCP 2026-07-28 beside the `initialize`-based revisions. Bearer auth, TLS, audit log, rate limit, plugin hot-reload, CI fake backend. |
+| **MCP server** | `je_auto_control_mcp` (stdio) or `AC_start_mcp_http_server` | 754 tools for Claude Desktop / Claude Code / custom tool loops: the full `ac_*` surface plus short model-friendly aliases for common GUI actions. Speaks the stateless MCP 2026-07-28 beside the `initialize`-based revisions. Bearer auth, TLS, audit log, rate limit, plugin hot-reload, CI fake backend. |
 | **REST API** | `je_auto_control start-rest` | Bearer token, per-IP rate limit + lockout, SQLite audit hook, `/metrics`, `/openapi.json`, `/docs` Swagger UI, `/dashboard`. |
 | **TCP socket server** | `je_auto_control start-server` | Newline-framed JSON action lists. Binds `127.0.0.1` by default. |
 | **pytest plugin** | installed automatically | Fixtures plus a Gherkin step library for pytest-bdd / behave. |
@@ -299,6 +299,8 @@ All servers bind to `127.0.0.1` unless you opt in explicitly.
 **Package gate.** `AC_add_package_to_executor` and `AC_add_package_to_callback_executor` import a Python package and register its members as commands, so an action list arriving over any of these surfaces could load `os` or `subprocess`. No package loads unless it has been allowed: a package that is not on the allowlist is refused before it is imported, and that action fails with `AutoControlExecuteActionException`. Allow packages (submodules included) from Python with `executor.allow_packages("name", …)`, for every entry point — both CLIs, the socket / REST / MCP servers and the scheduler — with the `JE_AUTOCONTROL_ALLOWED_PACKAGES` environment variable (comma-separated names, read when the process starts), or for one CLI run with `je_auto_control run script.json --allow-package NAME` (repeatable). `executor.set_allow_arbitrary_packages(True)` opens the gate for every package, which is what earlier releases did by default (with a `DeprecationWarning`). None of these is an `AC_*` command, so an action list cannot open its own gate.
 
 **Opt-in hardening.** Each of these is off until configured, and a server without them behaves as before. `JE_AUTOCONTROL_RBAC_USERS=<user store file>` makes the REST API and the MCP HTTP transport resolve the bearer token to a user and authorise each route, tool and privileged `AC_*` command by role (viewer / operator / admin); the shared token is then refused. `JE_AUTOCONTROL_MCP_PATH_ROOTS` (directories separated by the OS path separator) confines every MCP tool argument that is a file path to those directories, `JE_AUTOCONTROL_MCP_PATH_ROOTS_FROM_CLIENT=1` adds the client's `roots/list`, and `JE_AUTOCONTROL_MCP_ENV_REF_ALLOW` limits which `env://` names `ac_resolve_ref` may read. `JE_AUTOCONTROL_ACTION_SIGNING_PUBLIC_KEY` makes an endpoint verify Ed25519-signed action files without being able to sign them (`create_signing_keypair`; the private key stays on the signing machine). A remote-desktop viewer writes files pushed by a host only below `~/Downloads/AutoControl` (`JE_AUTOCONTROL_REMOTE_DOWNLOAD_DIR`); that one is on by default.
+
+**Also configurable.** `JE_AUTOCONTROL_MCP_TOOL_MODE=progressive` (or `je_auto_control_mcp --tool-mode`) starts an MCP session with five core tools that search, describe and enable the rest; `static` serves a fixed profile (`JE_AUTOCONTROL_MCP_TOOL_PROFILE`); the default `full` mode is unchanged. Users for RBAC are managed with `je_auto_control users add|remove|set-role|rotate-token|list`, the `AC_user_*` commands or the REST API tab. `JE_AUTOCONTROL_ACTION_SIGNING_PASSPHRASE` unlocks a passphrase-protected signing key. The action journal (`start_action_journal`, `AC_journal_*`) records executed actions with secrets masked, and `je_auto_control codegen --from-log` turns one run into a candidate script. Config sync keeps buckets in SQLite with revision-checked writes (`--config-db`, `AC_SIGNALING_CONFIG_DB`; older clients need `--allow-blind-config-writes`). Android and iOS devices get their own sessions (`open_device`, `AC_android_*`, `AC_ios_*`); none of the mobile code has been run on a device yet. On Wayland, `probe_capabilities` / `AC_probe_capabilities` report what input and capture can do and why, and `JE_AUTOCONTROL_WAYLAND_EI_WORKER=1` moves libei into a helper process. The GUI remembers theme, text size, panel and window geometry in `~/.je_auto_control/gui_settings.ini` (`JE_AUTOCONTROL_GUI_SETTINGS`).
 
 ### How the remote-desktop wire protocol works
 
@@ -435,7 +437,7 @@ ignore synthetic input, and fall back silently when the driver is absent.
 
 | Resource | What's in it |
 |---|---|
-| [`examples/`](examples/) | 27 self-contained scripts: screenshot + click, OCR, scheduler, remote desktop, agent loop, observability, recording, variables, hotkeys, triggers, reports, MCP, REST, secrets, plugins, computer use, Wayland, cross-host DAGs, chat-ops, pytest/BDD, anchor locators. |
+| [`examples/`](examples/) | 33 self-contained scripts: screenshot + click, OCR, scheduler, remote desktop, agent loop, observability, recording, variables, hotkeys, triggers, reports, MCP, REST, secrets, plugins, computer use, Wayland, cross-host DAGs, chat-ops, pytest/BDD, anchor locators. |
 | [Read the Docs](https://autocontrol.readthedocs.io/en/latest/) | Full API reference, English and 中文. |
 | [architecture_explore.md](architecture_explore.md) | Every module's responsibility, layer by layer. |
 | [docs/CAPABILITY_MATRIX.md](docs/CAPABILITY_MATRIX.md) | Capability × platform matrix. |

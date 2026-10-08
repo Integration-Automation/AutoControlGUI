@@ -14,7 +14,7 @@ Usage::
 import sys
 import threading
 import uuid
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Callable, Dict, FrozenSet, List, Optional, Tuple
 
 from je_auto_control.utils.exception.exceptions import AutoControlException
@@ -23,6 +23,7 @@ from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.run_history.artifact_manager import (
     capture_error_snapshot,
 )
+from je_auto_control.utils.rbac.deferred import DeferredOwner, capture_owner
 from je_auto_control.utils.run_history.run_outcome import run_counting_failures
 from je_auto_control.utils.run_history.history_store import (
     SOURCE_HOTKEY, STATUS_ERROR, STATUS_OK, default_history_store,
@@ -52,6 +53,8 @@ class HotkeyBinding:
     script_path: str
     enabled: bool = True
     fired: int = 0
+    #: Who registered it under RBAC; the run is authorised as that user.
+    owner: Optional[DeferredOwner] = field(default=None, kw_only=True)
 
 
 def split_combo(combo: str) -> Tuple[FrozenSet[str], str]:
@@ -145,8 +148,13 @@ class HotkeyDaemon:
         self._stop = threading.Event()
 
     def bind(self, combo: str, script_path: str,
-             binding_id: Optional[str] = None) -> HotkeyBinding:
-        """Register a hotkey → script binding. Safe to call before/after start."""
+             binding_id: Optional[str] = None, *, enabled: bool = True) -> HotkeyBinding:
+        """Register a hotkey → script binding. Safe to call before/after start.
+
+        ``enabled=False`` registers it without arming it, so it is never
+        live between being stored and being switched off (config sync adds
+        bindings that came from another machine this way).
+        """
         split_combo(combo)
         # A key the platform cannot take fails here, not later on every tick.
         if sys.platform == "win32":
@@ -156,7 +164,8 @@ class HotkeyDaemon:
             _combo_to_macos(combo)
         bid = binding_id or uuid.uuid4().hex[:8]
         binding = HotkeyBinding(
-            binding_id=bid, combo=combo, script_path=script_path,
+            binding_id=bid, combo=combo, script_path=script_path, enabled=bool(enabled),
+            owner=capture_owner(),
         )
         with self._lock:
             self._bindings[bid] = binding
@@ -219,7 +228,7 @@ class HotkeyDaemon:
         error_text: Optional[str] = None
         try:
             actions = read_executable_action_json(match.script_path)
-            run_counting_failures(lambda: self._execute(actions))
+            run_counting_failures(lambda: self._execute(actions), owner=match.owner)
         except Exception as error:  # noqa: BLE001  # reason: this runs on the backend's listener thread; any escape ends every hotkey
             # AutoControlException covers the common cases — a missing/renamed
             # script (AutoControlJsonActionException) or an action that raises

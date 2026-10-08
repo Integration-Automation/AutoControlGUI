@@ -1,6 +1,6 @@
-=====================
+======================
 New Features (2026-04)
-=====================
+======================
 
 This page documents the April 2026 additions to AutoControl. Every new
 feature ships with a headless Python API **and** a GUI affordance, and is
@@ -402,6 +402,36 @@ not. Nested action lists (``AC_circuit_call``, ``AC_bulkhead_run``,
 that called them, also inside an ``AC_parallel`` branch; a branch starts from
 a copy of its parent's variables and its own writes stay in the branch.
 An executor you construct yourself (``Executor()``) always owns its scope.
+
+Four more callers have a scope chosen for them rather than the process scope:
+
+* ``je_auto_control run --dry-run --var name=value`` seeds the variables into
+  the dry run's own scope, as a real ``run --var`` does.
+* **Observer callbacks** (``AC_observe_add`` and the MCP ``ac_observe_add``)
+  fire long after the run that registered them has ended, so they cannot
+  share its scope. A callback keeps a *snapshot* of the variables visible
+  when it was registered, and every firing runs on the module executor in a
+  fresh scope seeded from that snapshot -- whether the observer's thread or
+  an ``AC_observe_poll`` in some other run fired it. The actions see what
+  the registering run had set (later changes to those variables are not
+  seen); what they set reaches neither the process scope, the run that
+  polled, nor the next firing. A callback registered through MCP starts
+  with no variables, because a tool call's scope is empty. To keep state
+  between firings, keep it outside the scope (a file, the secrets vault).
+* **A plan run from a description** (``run_from_description``, ``AC_llm_run``)
+  and **a state machine** (``run_state_machine``, ``AC_run_state_machine``)
+  are a run of their own when called from Python: each gets a fresh scope
+  -- shared by all of the machine's ``on_enter`` actions -- that is dropped
+  when the call returns, and neither reads what an earlier call left in the
+  process scope. Called from an action list, or inside an
+  ``execution_scope`` block, they are a step of that run and share its
+  variables; that is how you hand them values::
+
+     with ac.execution_scope({"user": "alice"}):
+         ac.run_state_machine(spec)       # on_enter actions can use ${user}
+
+  A state machine inside an ``AC_parallel`` branch uses the branch's
+  variables.
 
 ::
 

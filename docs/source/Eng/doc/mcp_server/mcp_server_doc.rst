@@ -38,7 +38,11 @@ Screen / image / OCR
 Window management (Windows)
   ``ac_list_windows``, ``ac_focus_window``, ``ac_wait_for_window``,
   ``ac_close_window``, ``ac_window_move``, ``ac_window_minimize``,
-  ``ac_window_maximize``, ``ac_window_restore``.
+  ``ac_window_maximize``, ``ac_window_restore``. The last three answer with
+  a tool error (``isError``) when the window is gone or, for maximise and
+  restore, when Windows refuses to bring it to the foreground -- the window
+  may then have changed state without becoming the active one. They used to
+  return the window handle either way.
 
 Semantic locators
   ``ac_a11y_list``, ``ac_a11y_find``, ``ac_a11y_click``,
@@ -209,6 +213,8 @@ exits — useful in CI smoke tests and prompt prep:
    je_auto_control_mcp --list-resources
    je_auto_control_mcp --list-prompts
    je_auto_control_mcp --read-only          # serve only the read-only tools
+   je_auto_control_mcp --tool-mode progressive   # a small core; see "Tool modes"
+   je_auto_control_mcp --list-tools --tool-mode progressive   # what a new session sees
    je_auto_control_mcp --fake-backend       # swap in the in-memory backend
 
 One ``--list-*`` flag prints its array; several print one object keyed
@@ -302,11 +308,33 @@ share one file. Without a store nothing changes. The stdio transport has no
 bearer token and is never subject to RBAC.
 
 - A tool needs ``read_screen`` when it is marked ``readOnlyHint`` and
-  ``drive_input`` otherwise, so a ``viewer`` gets exactly the read-only
-  tools and an ``operator`` the rest. ``ac_remote_host_start`` / ``_stop``,
+  ``drive_input`` otherwise. ``ac_remote_host_start`` / ``_stop``,
   ``ac_usb_acl_add`` / ``_remove`` / ``_set_default``,
   ``ac_usb_passthrough_enable``, ``ac_egress_allow`` / ``_reset`` and
-  ``ac_load_plugins`` need ``manage_hosts`` (``admin``).
+  ``ac_load_plugins`` need ``manage_hosts`` (``admin``); ``ac_user_add`` /
+  ``_remove`` / ``_set_role`` / ``_rotate_token`` / ``_list`` need
+  ``manage_users`` (``admin``).
+- Read-only is not the same as harmless to show: the read-only tools that
+  return the host's data rather than the state of its screen need
+  ``read_data``, which ``operator`` and ``admin`` hold and ``viewer`` does
+  not. They are the clipboard tools (``ac_get_clipboard`` and its
+  ``_csv`` / ``_files`` / ``_html`` / ``_image`` / ``_rtf`` variants,
+  ``ac_clipboard_formats``, ``ac_assert_clipboard``, ``ac_clip_history_list``
+  / ``_search``); the file readers (``ac_load_dotenv``, ``ac_load_data``,
+  ``ac_read_action_file``, ``ac_read_document``, ``ac_read_presentation``,
+  ``ac_read_workbook``, ``ac_extract_pdf_text``, ``ac_assert_pdf_text``,
+  ``ac_assert_file``, ``ac_build_provenance``, ``ac_verify_provenance``); the
+  database and store readers (``ac_sql_query``, ``ac_assert_db``,
+  ``ac_get_asset``, ``ac_list_assets``, ``ac_cas_get``, ``ac_outbox_pending``,
+  ``ac_checkpoint_status``, ``ac_memory_recall``, ``ac_memory_recent``,
+  ``ac_s3_list``); references and tokens (``ac_resolve_ref``,
+  ``ac_resolve_refs``, ``ac_generate_otp``, ``ac_jwt_encode``,
+  ``ac_jwt_decode``); and the process list, network and microphone probes
+  (``ac_list_processes``, ``ac_assert_process``, ``ac_wait_for_process``,
+  ``ac_assert_http``, ``ac_wait_for_port``, ``ac_assert_audio``). The list is
+  ``DATA_TOOLS`` in ``je_auto_control.utils.rbac.policy``. A ``viewer`` keeps
+  every other read-only tool: screen size, windows, pixels, image and text
+  location, accessibility reads, waits.
 - ``tools/list`` returns only the tools the caller may call, and
   ``tools/call`` on any other answers JSON-RPC error ``-32003``
   (``Forbidden: ...``, ``data.required_capability``) without running it.
@@ -443,6 +471,161 @@ existing client keeps working unchanged next to a 2026-07-28 one.
   naming 2026-07-28 are 405. A plain JSON ``POST`` works for everything,
   confirmation included, since the question comes back in the result; an
   SSE ``POST`` additionally carries the call's progress notifications.
+
+Tool modes: full, progressive, static
+=====================================
+
+By default ``tools/list`` answers with every registered tool. That is the
+**full** mode; it is the default and its replies are unchanged. Two other
+modes exist for a client that should not carry several hundred schemas it
+will never use:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 16 84
+
+   * - Mode
+     - What ``tools/list`` offers
+   * - ``full``
+     - Every tool, in one reply. The default.
+   * - ``progressive``
+     - Five core tools. A session searches the registry, reads the schema of
+       what it wants and enables it; from then on the tool is in *that
+       session's* list and can be called.
+   * - ``static``
+     - A fixed profile and nothing else; nothing can be enabled. For a client
+       that reads the list once and never again.
+
+Choose the mode with ``JE_AUTOCONTROL_MCP_TOOL_MODE``, with
+``je_auto_control_mcp --tool-mode {full,progressive,static}``, or in code:
+
+.. code-block:: python
+
+   import je_auto_control as ac
+
+   ac.start_mcp_stdio_server(tool_mode="progressive")
+   # HTTP: hand the transport a server built in that mode
+   ac.start_mcp_http_server(mcp=ac.MCPServer(tool_mode="progressive"))
+
+``AC_start_mcp_server`` takes the same ``tool_mode`` argument, and the
+variable reaches every way of starting a server, ``AC_start_mcp_http_server``
+included. A value that is none of the three stops the server from starting
+rather than quietly offering everything.
+
+**The core tools** (progressive mode only):
+
+.. list-table::
+   :header-rows: 1
+   :widths: 24 76
+
+   * - Tool
+     - What it does
+   * - ``ac_tools_search``
+     - ``query``, ``limit`` (1-50, default 10), optional ``category`` and
+       ``capability``. Returns rows of ``name`` / ``summary`` / ``category`` /
+       ``capability`` / ``read_only`` / ``takes_paths`` / ``enabled`` plus
+       ``total`` and ``truncated`` -- never a schema.
+   * - ``ac_tools_schema``
+     - The full descriptor of one tool, by ``name``.
+   * - ``ac_tools_enable``
+     - ``names``: tool names, or ``category:<name>`` for a whole category.
+       Replies with ``enabled`` / ``already_enabled`` / ``unavailable`` and
+       whether ``notifications/tools/list_changed`` was sent.
+   * - ``ac_tools_disable``
+     - Removes tools the session enabled.
+   * - ``ac_tools_state``
+     - The mode, what the session has enabled, the categories and their
+       sizes, and the limits calls are held to (read-only, path roots,
+       ``env://`` allowlist, role).
+
+A category is the name of the factory that builds the tools (``mouse``,
+``screen``, ``window`` ...); a plugin's tools are in ``plugin``.
+
+**Sessions.** The enabled set belongs to one session and to nobody else:
+an ``Mcp-Session-Id`` over HTTP (or, for a client that ignores the header,
+its connection), and the one implicit session of a stdio server. It is
+released when the session is deleted, swept, evicted, when the connection
+closes or when the stdio loop ends. Enabling or disabling sends
+``notifications/tools/list_changed`` to that session only; a plain HTTP
+``POST`` with no standing ``GET`` stream has nowhere to receive it, so the
+reply says ``"list_changed_sent": false`` and the client should request
+``tools/list`` again.
+
+**Paging.** In these two modes ``tools/list`` is paged, 100 tools to a page
+(``server.disclosure.page_size``): a result with more to come carries
+``nextCursor``, to be sent back as ``cursor``. Every page carries the id of
+the list it belongs to under ``_meta``
+``io.github.integration-automation/toolSnapshot``. A cursor continues the
+list as it was when its first page was requested, even if a plugin was
+loaded or removed in between, so no page mixes two registries. A cursor that
+is malformed, belongs to another session, or names a list the server no
+longer keeps (it remembers the last eight per session) is answered
+``-32602``; request ``tools/list`` again without one. The full mode is not
+paged and ignores ``cursor``, as before.
+
+**The static profile.** ``JE_AUTOCONTROL_MCP_TOOL_PROFILE`` is a
+comma-separated list of tool names and ``category:<name>`` entries. In
+static mode it is the whole list; unset, the profile is the 19 tools behind
+the short aliases (``ac_click_mouse``, ``ac_type_text``, ``ac_screenshot``
+...). In progressive mode a configured profile is offered to every session
+beside the core, so a client that never refreshes its list still has those
+tools. MCP has no client capability that says "I follow
+``tools/list_changed``", so the server cannot detect such a client: use the
+static mode, or a profile, for one. A 2026-07-28 request is always served
+the static profile in progressive mode -- that revision has no session for
+an enabled set to live in.
+
+**What the mode does not change.** It decides what is *offered*, never what
+is *allowed*:
+
+* Every call still goes through the same gates in the same order -- role,
+  input schema, path roots and ``env://`` allowlist, rate limit,
+  confirmation -- and is audited as before.
+* Search, schema and enable answer from what the caller may call. A tool the
+  caller's role does not grant, or that read-only mode rules out, is not
+  found, not described and reported as ``unavailable`` when enabled.
+* A call to a tool the session's list does not hold is answered ``-32602``
+  and recorded in the audit log as ``denied``. A role refusal keeps its own
+  code, ``-32003``.
+* In read-only mode a mutating tool cannot be enabled, including one a
+  plugin registers after the server started.
+* A tool a plugin removes is gone from every session at once. If the same
+  name is registered again later, it has to be enabled again.
+* The core tools' names cannot be registered over or removed.
+
+**What it costs.** ``benchmarks/mcp_discovery.py`` measures both modes
+in-process through the dispatcher both transports use. On the 680-tool
+registry (2026-10-09, one Windows 11 machine, median of 30):
+
+.. list-table::
+   :header-rows: 1
+   :widths: 40 30 30
+
+   * - Figure
+     - ``full``
+     - ``progressive``
+   * - Tools in a new session's ``tools/list``
+     - 680
+     - 5
+   * - Size of that result
+     - 327,378 bytes
+     - 2,411 bytes (0.74 %)
+   * - ``initialize`` + ``initialized`` + ``tools/list``
+     - 43.7 ms
+     - 1.0 ms
+   * - One ``ac_tools_search`` (10 rows, 2,390 bytes)
+     - --
+     - 3.1 ms
+   * - One ``ac_tools_schema``
+     - --
+     - 0.3 ms
+   * - One ``ac_tools_enable`` + ``ac_tools_disable``
+     - --
+     - 0.9 ms
+
+.. code-block:: shell
+
+   python benchmarks/mcp_discovery.py --rounds 30
 
 Read-only / safe mode
 =====================

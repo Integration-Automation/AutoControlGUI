@@ -2,8 +2,8 @@ Layered Configuration Resolver
 ==============================
 
 ``json_patch.merge_patch`` merges exactly two documents, ``config_sync``
-resolves by last-write-wins timestamp (a tie goes to a deletion, then to the
-same entry on every client, and is reported as a conflict), and ``AssetStore`` is flat per
+merges per entry by version vector (concurrent edits of one entry are kept as
+a conflict; see :doc:`../config_sync/config_sync_doc`), and ``AssetStore`` is flat per
 environment. None of them compose an ordered ``defaults < file < env < CLI``
 precedence stack with a deep dict merge, nor report *which layer won each key*.
 This adds that 12-factor resolver.

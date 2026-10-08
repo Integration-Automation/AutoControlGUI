@@ -37,7 +37,9 @@ list-changed 通知與 elicitation。
 視窗管理 (Windows)
   ``ac_list_windows``、``ac_focus_window``、``ac_wait_for_window``、
   ``ac_close_window``、``ac_window_move``、``ac_window_minimize``、
-  ``ac_window_maximize``、``ac_window_restore``。
+  ``ac_window_maximize``、``ac_window_restore``。最後三個在視窗已不存在時，
+  或（最大化與還原）Windows 拒絕把它帶到前景時，會回工具錯誤（``isError``）
+  ——此時視窗可能已改變狀態但沒有成為作用中視窗。以前不論結果都回傳視窗代碼。
 
 語意定位
   ``ac_a11y_list``、``ac_a11y_find``、``ac_a11y_click``、
@@ -192,6 +194,8 @@ CLI 檢視旗標
    je_auto_control_mcp --list-resources
    je_auto_control_mcp --list-prompts
    je_auto_control_mcp --read-only          # 伺服器只提供唯讀工具
+   je_auto_control_mcp --tool-mode progressive   # 只提供少量核心工具;見「工具模式」
+   je_auto_control_mcp --list-tools --tool-mode progressive   # 新 session 看到的清單
    je_auto_control_mcp --fake-backend       # 切換成記憶體版 backend
 
 只給一個 ``--list-*`` 旗標時輸出該陣列;給多個時輸出一個以 ``tools`` / ``resources`` /
@@ -277,11 +281,29 @@ Bearer token 也可從 ``JE_AUTOCONTROL_MCP_TOKEN`` 環境變數讀取。
 同一個檔案。沒有設定存放檔時行為完全不變。stdio 傳輸沒有 bearer token，不受 RBAC
 約束。
 
-- 工具標示 ``readOnlyHint`` 時需要 ``read_screen``，否則需要 ``drive_input``，所以
-  ``viewer`` 拿到的正好是唯讀工具，``operator`` 再加上其餘工具。
+- 工具標示 ``readOnlyHint`` 時需要 ``read_screen``，否則需要 ``drive_input``。
   ``ac_remote_host_start``／``_stop``、``ac_usb_acl_add``／``_remove``／
   ``_set_default``、``ac_usb_passthrough_enable``、``ac_egress_allow``／``_reset`` 與
-  ``ac_load_plugins`` 需要 ``manage_hosts``\ （``admin``）。
+  ``ac_load_plugins`` 需要 ``manage_hosts``\ （``admin``）；``ac_user_add``／
+  ``_remove``／``_set_role``／``_rotate_token``／``_list`` 需要 ``manage_users``\
+  （``admin``）。
+- 唯讀不等於可以給人看：回傳主機資料而不是畫面狀態的唯讀工具需要 ``read_data``，
+  ``operator`` 與 ``admin`` 有這個能力，``viewer`` 沒有。包括剪貼簿工具
+  （``ac_get_clipboard`` 及其 ``_csv``／``_files``／``_html``／``_image``／``_rtf``
+  變體、``ac_clipboard_formats``、``ac_assert_clipboard``、``ac_clip_history_list``／
+  ``_search``）；讀檔工具（``ac_load_dotenv``、``ac_load_data``、
+  ``ac_read_action_file``、``ac_read_document``、``ac_read_presentation``、
+  ``ac_read_workbook``、``ac_extract_pdf_text``、``ac_assert_pdf_text``、
+  ``ac_assert_file``、``ac_build_provenance``、``ac_verify_provenance``）；資料庫與
+  具名儲存區（``ac_sql_query``、``ac_assert_db``、``ac_get_asset``、``ac_list_assets``、
+  ``ac_cas_get``、``ac_outbox_pending``、``ac_checkpoint_status``、``ac_memory_recall``、
+  ``ac_memory_recent``、``ac_s3_list``）；參照與 token（``ac_resolve_ref``、
+  ``ac_resolve_refs``、``ac_generate_otp``、``ac_jwt_encode``、``ac_jwt_decode``）；
+  以及行程清單、網路與麥克風探測（``ac_list_processes``、``ac_assert_process``、
+  ``ac_wait_for_process``、``ac_assert_http``、``ac_wait_for_port``、
+  ``ac_assert_audio``）。完整清單是 ``je_auto_control.utils.rbac.policy`` 的
+  ``DATA_TOOLS``。其餘唯讀工具 ``viewer`` 都保留：螢幕尺寸、視窗、像素、影像與文字
+  定位、無障礙讀取、等待。
 - ``tools/list`` 只回呼叫者可以呼叫的工具；對其他工具 ``tools/call`` 會回 JSON-RPC
   錯誤 ``-32003``\ （``Forbidden: ...``、``data.required_capability``），且不會執行。
 - 接受動作清單的工具（``ac_execute_actions`` 等）在清單含有呼叫者角色沒有的指令時
@@ -382,6 +404,139 @@ client 不用改,可以和 2026-07-28 的 client 並存。
   普通的 JSON ``POST`` 就能做所有事,確認也一樣(問題放在結果裡回來);SSE ``POST``
   另外會送出呼叫的進度通知。
 
+工具模式:full、progressive、static
+====================================
+
+預設情況下 ``tools/list`` 會回傳所有已註冊的工具,這就是 **full** 模式;它是預設值,
+回應內容與以前完全相同。另外兩種模式給不該背著幾百份用不到的 schema 的 client 使用:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 16 84
+
+   * - 模式
+     - ``tools/list`` 提供什麼
+   * - ``full``
+     - 全部工具,一次回完。預設值。
+   * - ``progressive``
+     - 五個核心工具。Session 先搜尋 registry、讀取想用的工具的 schema、再啟用它;
+       之後該工具才出現在 *這個 session* 的清單裡,並且可以呼叫。
+   * - ``static``
+     - 一份固定的 profile,不能再啟用任何工具。給只讀一次清單、之後不再更新的 client。
+
+用 ``JE_AUTOCONTROL_MCP_TOOL_MODE``、``je_auto_control_mcp --tool-mode
+{full,progressive,static}`` 或程式碼選擇模式:
+
+.. code-block:: python
+
+   import je_auto_control as ac
+
+   ac.start_mcp_stdio_server(tool_mode="progressive")
+   # HTTP:把以該模式建立的伺服器交給傳輸層
+   ac.start_mcp_http_server(mcp=ac.MCPServer(tool_mode="progressive"))
+
+``AC_start_mcp_server`` 接受同一個 ``tool_mode`` 參數;環境變數則對所有啟動方式生效,
+包含 ``AC_start_mcp_http_server``。不是這三個值之一時伺服器會拒絕啟動,而不是悄悄地
+提供全部工具。
+
+**核心工具** (僅 progressive 模式):
+
+.. list-table::
+   :header-rows: 1
+   :widths: 24 76
+
+   * - 工具
+     - 作用
+   * - ``ac_tools_search``
+     - ``query``、``limit`` (1-50,預設 10),可選的 ``category`` 與 ``capability``。
+       回傳 ``name`` / ``summary`` / ``category`` / ``capability`` / ``read_only`` /
+       ``takes_paths`` / ``enabled`` 的列,以及 ``total`` 與 ``truncated``——絕不含 schema。
+   * - ``ac_tools_schema``
+     - 依 ``name`` 取得單一工具的完整描述。
+   * - ``ac_tools_enable``
+     - ``names``:工具名稱,或用 ``category:<名稱>`` 啟用整個分類。回覆
+       ``enabled`` / ``already_enabled`` / ``unavailable``,以及是否送出了
+       ``notifications/tools/list_changed``。
+   * - ``ac_tools_disable``
+     - 移除這個 session 啟用過的工具。
+   * - ``ac_tools_state``
+     - 目前模式、這個 session 已啟用的工具、各分類及其數量,以及呼叫所受的限制
+       (唯讀、路徑根目錄、``env://`` 允許清單、角色)。
+
+分類就是建立該組工具的 factory 名稱(``mouse``、``screen``、``window`` ……);plugin
+的工具歸在 ``plugin``。
+
+**Session。** 已啟用的集合只屬於一個 session,不與任何人共用:HTTP 上是
+``Mcp-Session-Id`` (client 忽略該標頭時則是它的連線),stdio 伺服器則有唯一一個隱含的
+session。Session 被刪除、被清掃、被淘汰、連線關閉或 stdio 迴圈結束時就會釋放。啟用或
+停用只會對該 session 送出 ``notifications/tools/list_changed``;沒有常駐 ``GET`` 串流的
+普通 HTTP ``POST`` 無處可收,所以回覆會是 ``"list_changed_sent": false``,client 應該
+重新請求 ``tools/list``。
+
+**分頁。** 在這兩種模式下 ``tools/list`` 會分頁,每頁 100 個工具
+(``server.disclosure.page_size``):還有下一頁的結果會帶 ``nextCursor``,下一次請求
+以 ``cursor`` 送回。每一頁都在 ``_meta`` 的
+``io.github.integration-automation/toolSnapshot`` 帶著所屬清單的 id。Cursor 延續的是
+第一頁被請求當下的那份清單,即使中途有 plugin 載入或移除也一樣,所以不會有一頁混到
+兩份 registry。格式錯誤、屬於別的 session、或指向伺服器已不再保留的清單(每個 session
+只記最近八份)的 cursor 會得到 ``-32602``;請不帶 cursor 重新請求 ``tools/list``。
+full 模式不分頁,並且和以前一樣忽略 ``cursor``。
+
+**靜態 profile。** ``JE_AUTOCONTROL_MCP_TOOL_PROFILE`` 是以逗號分隔的工具名稱與
+``category:<名稱>`` 項目。在 static 模式下它就是整份清單;未設定時,profile 是短別名
+背後的 19 個工具(``ac_click_mouse``、``ac_type_text``、``ac_screenshot`` ……)。在
+progressive 模式下,有設定的 profile 會和核心工具一起提供給每個 session,因此從不更新
+清單的 client 仍然有這些工具可用。MCP 沒有任何 client capability 能表示「我會處理
+``tools/list_changed``」,所以伺服器無法偵測這種 client:請對它使用 static 模式或
+profile。2026-07-28 的請求在 progressive 模式下一律得到靜態 profile——該版本沒有可以
+存放已啟用集合的 session。
+
+**模式不會改變的事。** 它決定的是「提供」什麼,從來不是「允許」什麼:
+
+* 每一次呼叫仍然依同樣的順序通過同樣的關卡——角色、輸入 schema、路徑根目錄與
+  ``env://`` 允許清單、rate limit、確認——稽核紀錄也和以前一樣。
+* 搜尋、schema 與啟用都只依呼叫者可以呼叫的工具回答。角色不允許、或唯讀模式排除的
+  工具找不到、查不到描述,啟用時會被回報為 ``unavailable``。
+* 呼叫 session 清單裡沒有的工具會得到 ``-32602``,並在稽核 log 記為 ``denied``。
+  角色拒絕仍然是它自己的代碼 ``-32003``。
+* 唯讀模式下不能啟用會變更狀態的工具,包含伺服器啟動後才由 plugin 註冊的工具。
+* Plugin 移除的工具會立刻從所有 session 消失。之後若以同名重新註冊,必須重新啟用。
+* 核心工具的名稱不能被覆蓋註冊,也不能被移除。
+
+**成本。** ``benchmarks/mcp_discovery.py`` 透過兩種傳輸共用的 dispatcher,在同一個
+process 內量測兩種模式。以 680 個工具的 registry 量測(2026-10-09,一台 Windows 11
+機器,30 次取中位數):
+
+.. list-table::
+   :header-rows: 1
+   :widths: 40 30 30
+
+   * - 項目
+     - ``full``
+     - ``progressive``
+   * - 新 session 的 ``tools/list`` 工具數
+     - 680
+     - 5
+   * - 該結果的大小
+     - 327,378 bytes
+     - 2,411 bytes(0.74 %)
+   * - ``initialize`` + ``initialized`` + ``tools/list``
+     - 43.7 ms
+     - 1.0 ms
+   * - 一次 ``ac_tools_search`` (10 列,2,390 bytes)
+     - --
+     - 3.1 ms
+   * - 一次 ``ac_tools_schema``
+     - --
+     - 0.3 ms
+   * - 一次 ``ac_tools_enable`` + ``ac_tools_disable``
+     - --
+     - 0.9 ms
+
+.. code-block:: shell
+
+   python benchmarks/mcp_discovery.py --rounds 30
+
 唯讀 / 安全模式
 ===============
 
@@ -459,7 +614,7 @@ client 不用改,可以和 2026-07-28 的 client 並存。
     只有名稱符合時才會解析，其餘回工具執行錯誤。沒設時和以前一樣，任何變數都讀得到——
     包括放 API 金鑰的那些。
 
-在程式裡，同一份設定是 ``server.argument_policy``（:class:`ArgumentPolicy`，內含
+在程式裡，同一份設定是 ``server.argument_policy``\ （:class:`ArgumentPolicy`，內含
 :class:`je_auto_control.PathPolicy` 與允許清單）；自己建立的伺服器可以指派另一個。
 
 破壞性動作確認(Elicitation)

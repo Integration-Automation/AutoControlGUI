@@ -2,7 +2,9 @@
 
 Without flags this starts the stdio MCP server. With one of the
 ``--list-*`` flags it prints the requested catalogue to stdout and
-exits — useful for inspection in CI or manual debugging.
+exits — useful for inspection in CI or manual debugging. ``--tool-mode``
+chooses how much of the registry ``tools/list`` offers (see
+:mod:`.disclosure`); ``--list-tools`` then prints what a new session sees.
 """
 import argparse
 import json
@@ -10,6 +12,7 @@ import sys
 from typing import Optional
 
 from je_auto_control.utils.cli_output import utf8_stdout
+from je_auto_control.utils.mcp_server.disclosure import MODE_ENV, ToolMode
 from je_auto_control.utils.mcp_server.fake_backend import (
     install_fake_backend, maybe_install_from_env,
 )
@@ -17,7 +20,7 @@ from je_auto_control.utils.mcp_server.prompts import default_prompt_provider
 from je_auto_control.utils.mcp_server.resources import (
     default_resource_provider,
 )
-from je_auto_control.utils.mcp_server.server import start_mcp_stdio_server
+from je_auto_control.utils.mcp_server.server import MCPServer, start_mcp_stdio_server
 from je_auto_control.utils.mcp_server.tools import (
     build_default_tool_registry,
 )
@@ -45,6 +48,12 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Restrict tools to those marked readOnlyHint=true.",
     )
     parser.add_argument(
+        "--tool-mode", choices=[mode.value for mode in ToolMode], default=None,
+        help=("How much of the registry tools/list offers: full (every tool, the "
+              "default), progressive (a small core; a session searches and enables "
+              f"what it needs) or static (a fixed profile). Default: ${MODE_ENV}."),
+    )
+    parser.add_argument(
         "--fake-backend", action="store_true",
         help=("Install the in-memory fake backend so tools record but "
               "don't drive the real OS. Useful for CI smoke tests."),
@@ -64,7 +73,11 @@ def main(argv: Optional[list] = None) -> None:
     if any(listing_modes):
         _print_listings(args)
         return
-    start_mcp_stdio_server(read_only=True if args.read_only else None)
+    read_only = True if args.read_only else None
+    if args.tool_mode is None:
+        start_mcp_stdio_server(read_only=read_only)
+        return
+    start_mcp_stdio_server(read_only=read_only, tool_mode=args.tool_mode)
 
 
 def _print_listings(args: argparse.Namespace) -> None:
@@ -76,8 +89,10 @@ def _print_listings(args: argparse.Namespace) -> None:
     """
     listings = {}
     if args.list_tools:
-        listings["tools"] = [tool.to_descriptor() for tool in
-                             build_default_tool_registry(read_only=True if args.read_only else None)]
+        read_only = True if args.read_only else None
+        server = MCPServer(tools=build_default_tool_registry(read_only=read_only),
+                           tool_mode=args.tool_mode, read_only=read_only)
+        listings["tools"] = [tool.to_descriptor() for tool in server.disclosure.initial_tools()]
     if args.list_resources:
         listings["resources"] = [item.to_descriptor() for item in default_resource_provider().list()]
     if args.list_prompts:

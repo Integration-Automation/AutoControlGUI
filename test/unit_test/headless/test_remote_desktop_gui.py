@@ -25,6 +25,7 @@ pytest.importorskip("aiortc")
 from PySide6.QtWidgets import QApplication  # noqa: E402
 
 from je_auto_control.utils.remote_desktop.registry import registry  # noqa: E402
+from headless._qt_settle import settle  # noqa: E402
 
 
 @pytest.fixture(scope="module")
@@ -51,7 +52,7 @@ def _make_jpeg(width: int = 64, height: int = 48) -> bytes:
     return buf.getvalue()
 
 
-def _process_until(app: QApplication, predicate, timeout: float = 3.0,
+def _process_until(app: QApplication, predicate, timeout: float = 10.0,
                    interval_ms: int = 20) -> bool:
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
@@ -83,6 +84,7 @@ def test_viewer_panel_renders_frame_from_host(qapp):
         panel._port.setValue(host.port)  # noqa: SLF001
         panel._token.setText("t")  # noqa: SLF001
         panel._connect()  # noqa: SLF001
+        settle(panel)
         assert _process_until(
             qapp, panel._screen_window.display.has_image,  # noqa: SLF001
         )
@@ -139,6 +141,7 @@ def test_viewer_input_round_trips_to_dispatcher(qapp):
         panel._port.setValue(host.port)  # noqa: SLF001
         panel._token.setText("t")  # noqa: SLF001
         panel._connect()  # noqa: SLF001
+        settle(panel)
         assert _process_until(
             qapp, panel._screen_window.display.has_image,  # noqa: SLF001
         )
@@ -158,3 +161,33 @@ def test_viewer_input_round_trips_to_dispatcher(qapp):
         registry.disconnect_viewer()
         host.stop(timeout=1.0)
         registry._host = None  # noqa: SLF001
+
+
+def test_a_frame_that_beats_the_connect_result_is_shown(qapp):
+    """The first frame can arrive before the window exists; it must not be lost.
+
+    macOS / Python 3.10 CI lost it every run once the connect moved off the
+    GUI thread: the fake host sends an unchanging frame, so there was no second.
+    """
+    from je_auto_control.gui.remote_desktop_tab import _ViewerPanel
+
+    panel = _ViewerPanel()
+    try:
+        panel._on_frame_main(_make_jpeg())  # noqa: SLF001  # before any window
+        assert panel._screen_window is None  # noqa: SLF001
+        assert panel._pending_frame is not None  # noqa: SLF001
+        shown = []
+        window = panel._ensure_screen_window()  # noqa: SLF001
+        window.show = lambda: shown.append("show")
+        window.raise_ = lambda: None
+        window.activateWindow = lambda: None
+        panel._start_audio_player_if_requested = lambda: None  # noqa: SLF001
+        import types
+        fake_viewer = types.SimpleNamespace(connected=True, disconnect=lambda *a, **k: None)
+        panel._on_connected(fake_viewer)  # noqa: SLF001
+        assert window.display.has_image() and shown == ["show"]
+        assert panel._pending_frame is None  # noqa: SLF001
+    finally:
+        registry.evict("viewer", by=panel._owner)  # noqa: SLF001
+        panel._close_screen_window()  # noqa: SLF001
+        panel.deleteLater()

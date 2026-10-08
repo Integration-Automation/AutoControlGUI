@@ -10,6 +10,7 @@ import threading
 import time
 from typing import Any, Callable, Dict, Mapping, Optional, Sequence
 
+from je_auto_control.utils.action_journal.recorder import branch_scope, current_step
 from je_auto_control.utils.exception.exceptions import (
     AutoControlActionException, AutoControlAssertionException,
     AutoControlException, ImageNotFoundException,
@@ -469,6 +470,8 @@ class _ParallelRun:
         # The RBAC user is bound to the thread that accepted the request; a
         # branch thread without it ran privileged commands unchecked.
         self._caller = current_authorization()
+        # A branch thread has no running step of its own to be the parent.
+        self._journal_parent = current_step()
         self.results: list = [None] * len(branches)
         self._failures: list = [0] * len(branches)
         self._errors: Dict[int, str] = {}
@@ -498,7 +501,7 @@ class _ParallelRun:
         _MACRO_DEPTH.value = self._macro_depth
         self._module.reset_recorded_failures()
         try:
-            with authorization_scope(self._caller):
+            with authorization_scope(self._caller), branch_scope(self._journal_parent, index):
                 self.results[index] = self._branch_executor().execute_action(
                     branch, raise_on_error=self._strict, _validated=True)
             self._failures[index] = self._module.recorded_failures()

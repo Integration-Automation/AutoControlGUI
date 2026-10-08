@@ -134,6 +134,10 @@ CLI::
 
    python -m je_auto_control.utils.rest_api --host 127.0.0.1 --port 9939
 
+``POST /execute_file`` answers ``403`` with the reason when
+``JE_AUTOCONTROL_REQUIRE_SIGNED_ACTIONS`` is set and the file's signature is
+missing or does not verify; the file is not run.
+
 Roles (opt-in RBAC)
 -------------------
 
@@ -150,16 +154,35 @@ their own and a role instead:
   one user of the store; a store that is empty or unreadable admits nobody.
 - **Without it, nothing changes**: the single shared token, no roles, no 403.
 
-Create the users from Python; the plain token is shown once and only its
-hash is stored::
+Create the first admin on the host, from a terminal; the plain token is
+printed once and only its hash is stored::
 
-   import je_auto_control as ac
+   je_auto_control users --users /etc/autocontrol/users.json add alice --role admin
+   je_auto_control users list                 # store from JE_AUTOCONTROL_RBAC_USERS
+   je_auto_control users set-role bob operator   # roles: viewer / operator / admin
+   je_auto_control users rotate-token bob
+   je_auto_control users remove bob
 
-   store = ac.UserStore("/etc/autocontrol/users.json")
-   token = store.add_user(user_id="alice", display_name="Alice", role="operator")
-   store.set_role("alice", "viewer")      # roles: viewer / operator / admin
-   store.rotate_token("alice")
-   store.remove_user("alice")
+(``python -m je_auto_control.utils.rbac ...`` runs the same commands; ``--json``
+prints the result as JSON.) After that an admin can manage users through any
+surface, each of which needs the ``manage_users`` capability:
+
+- ``AC_user_add`` (``user_id``, ``role``, ``display_name``, ``tags``),
+  ``AC_user_remove``, ``AC_user_set_role``, ``AC_user_rotate_token`` and
+  ``AC_user_list`` in an action list -- so also through ``POST /execute``;
+- the MCP tools ``ac_user_add`` / ``ac_user_remove`` / ``ac_user_set_role`` /
+  ``ac_user_rotate_token`` / ``ac_user_list``;
+- the **Users (RBAC)** group of the REST API tab (commands in the Actions
+  menu), which also lets the tab start the server against that user store;
+- Python: ``ac.rbac_add_user`` / ``rbac_remove_user`` / ``rbac_set_user_role`` /
+  ``rbac_rotate_user_token`` / ``rbac_list_users``, or ``UserStore`` directly.
+
+An authenticated caller always works on the store that authenticated it; the
+optional ``users_path`` argument is for scripts and the CLI. The last admin
+cannot be removed or demoted. ``add`` and ``rotate`` return the token once: it
+is in the reply, masked wherever the reply is logged, and never in an audit
+entry (which records ``rbac_user_added`` and the like, with the user and who
+did it).
 
 A running server re-reads the file when it changes, so a removed user, a
 rotated token or a changed role applies to the next request.
@@ -173,6 +196,10 @@ rotated token or a changed role applies to the next request.
    * - ``read_screen``
      - viewer, operator, admin
      - every ``GET`` except the two below, ``/metrics`` included
+   * - ``read_data``
+     - operator, admin
+     - no REST route; the MCP tools that return the host's data rather than
+       its screen (see the MCP chapter)
    * - ``drive_input``
      - operator, admin
      - ``POST /execute``, ``/execute_file``, ``/usb/loopback/open``,
@@ -188,6 +215,9 @@ rotated token or a changed role applies to the next request.
    * - ``sign_actions``
      - admin
      - the ``AC_sign_action_file`` command (see below)
+   * - ``manage_users``
+     - admin
+     - the ``AC_user_*`` commands (see above)
 
 A role that lacks the capability gets ``403``
 ``{"error": "forbidden", "required_capability": "...", "role": "..."}``.
@@ -202,16 +232,35 @@ webhook servers, ``AC_usb_acl_*``, ``AC_usb_passthrough_enable``,
 ``AC_config_import`` / ``AC_config_export``, ``AC_egress_allow`` /
 ``AC_egress_reset``, ``AC_load_plugins``, ``AC_add_package_to_executor``,
 ``AC_secret_init`` / ``set`` / ``remove`` / ``lock`` / ``unlock``,
-``AC_audit_log_clear`` (all ``manage_hosts``) -- need their own capability
+``AC_audit_log_clear`` (all ``manage_hosts``) -- and ``AC_user_*``
+(``manage_users``) need their own capability
 wherever they appear in the action list, however deeply nested. The request
 is answered 403 with the ``command`` named before its first action runs, and
 the executor refuses the same commands when they come from an action file.
 
 The roles are not a sandbox: an operator drives the real keyboard and can
 launch programs, so whatever the desktop user could do by hand is within
-reach. They protect the host's own privileged state. Work an operator defers
-to another thread -- a scheduler job, a trigger, a hotkey binding -- runs
-later without the caller's role attached.
+reach. They protect the host's own privileged state.
+
+**Deferred work keeps its owner.** A scheduler job, a trigger, a hotkey
+binding, a webhook, an e-mail trigger or a watchdog rule registered by an
+authenticated caller is stored with that user (``job.owner`` and the like, a
+``DeferredOwner``) and later runs as them. The role is looked up in the user
+store when the work fires, not remembered: a user demoted since loses the
+privilege for work already registered, a user who no longer has
+``drive_input`` or was removed gets none of it run (the run is recorded as
+failed), and a promoted user gains the new role. Work registered without RBAC
+-- from the GUI, a script, a server with no user store -- has no owner and
+runs as before.
+
+Status calls (``AC_rest_api_status``, the REST API tab) report
+``"rbac": true``, ``"users_path"`` and ``"token": null`` while a user store is
+in use: the shared token is not shown where it is refused.
+
+A custom gate object that only implements ``check(client_ip=, header_value=)``
+is accepted: its verdict is used and the request is served with no user
+identity, as under the shared token. Implement ``authenticate(...)``
+returning an ``AuthResult`` to supply one.
 
 Every audit row of an RBAC request names the user: the ``viewer_id`` column
 holds the user id and the detail reads

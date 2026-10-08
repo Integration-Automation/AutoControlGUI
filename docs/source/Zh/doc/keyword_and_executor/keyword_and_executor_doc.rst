@@ -122,6 +122,25 @@ JSON 陣列（關鍵字），由執行者解析並執行。
        ["time_sleep", {"secs": 2}]
    ]
 
+只要閘門允許該套件，動作檔可以在同一份清單裡載入套件並使用它：
+
+.. code-block:: json
+
+   [
+       ["AC_add_package_to_executor", ["time"]],
+       ["time_sleep", [2]]
+   ]
+
+所有指令名稱會在第一個動作執行前先檢查，而 ``time_sleep`` 要等載入指令執行後
+才存在，所以這樣的清單以前不論閘門怎麼設定都會以 unknown command 被拒絕。
+現在符合下列全部條件的名稱會留到執行時才檢查：名稱以 ``<套件>_`` 開頭；檔案中
+較前面有一個 ``AC_add_package_to_executor`` 以字面值指名該套件（``["time"]``
+或 ``{"package": "time"}``\ ，不能是 ``${變數}``\ ）；而且閘門會放行該套件。
+其他情況——套件未被允許、名稱用在載入之前、``AC_*`` 名稱打錯——仍然在任何動作
+執行前就被拒絕。留到執行時的名稱若其實不存在（``time_slep``\ ），執行到它時
+該動作會以 ``Unknown action`` 失敗。``je_auto_control validate`` 與 REST 的
+事前檢查遵循同一條規則。
+
 查看目前執行者的指令字典：
 
 .. code-block:: python

@@ -142,6 +142,29 @@ class LibeiUnavailable(AutoControlException, RuntimeError):
     """
 
 
+class LibeiConsentNotGranted(LibeiUnavailable):
+    """The portal did not hand over a session; ``declined`` says if it refused.
+
+    Carries what :class:`oeffis.PortalConsentNotGranted` learned, so the
+    selector can tell "the user said no" from "there is no portal here"
+    without parsing a message.
+    """
+
+    def __init__(self, message: str, outcome: str, declined: bool) -> None:
+        super().__init__(message)
+        self.outcome = outcome
+        self.declined = declined
+
+
+class LibeiSessionRevoked(LibeiUnavailable):
+    """The compositor ended a session that had been live.
+
+    Unlike a paused device this does not come back, and unlike a missing
+    library it is somebody's decision — so it is its own type, and nothing
+    further is written to the context once it has been seen.
+    """
+
+
 def _load_symbols() -> Optional[BoundSymbols]:
     """Resolve every libei entry point, or None if one is missing.
 
@@ -186,6 +209,7 @@ class LibeiBackend:
         self._ei: Optional[int] = None
         self._backend_open = False
         self._handshake_complete = False
+        self._revoked = False
         self._session = None
         self._devices: Dict[int, int] = {}
         # Every device this sender holds a reference to, whichever
@@ -233,6 +257,10 @@ class LibeiBackend:
         with self._lock:
             if self.is_connected:
                 return
+            if self._revoked:
+                raise LibeiSessionRevoked(
+                    "this sender was disconnected by the compositor; call "
+                    "disconnect() before connecting again")
             sender = self._api.ei_new_sender(None)
             if not sender:
                 raise LibeiUnavailable("ei_new_sender returned NULL")
@@ -328,6 +356,9 @@ class LibeiBackend:
             return
         try:
             eis_fd, session = self._portal_connect()
+        except oeffis.PortalConsentNotGranted as error:
+            raise LibeiConsentNotGranted(
+                str(error), error.outcome, error.declined) from error
         except oeffis.OeffisUnavailable as error:
             raise LibeiUnavailable(str(error)) from error
         self._session = session
@@ -380,7 +411,13 @@ class LibeiBackend:
         elif event_type == EI_EVENT_DEVICE_REMOVED:
             self._forget_device(self._api.ei_event_get_device(event))
         elif event_type == EI_EVENT_DISCONNECT:
-            raise LibeiUnavailable("the compositor disconnected the sender")
+            # Nothing may be written after this. The devices used to stay
+            # marked as emulating, so the next emission pumped an empty queue,
+            # found them "ready" and wrote into a context the compositor had
+            # already dropped.
+            self._revoked = True
+            self._emulating.clear()
+            raise LibeiSessionRevoked("the compositor disconnected the sender")
 
     def _bind_seat(self, seat: int) -> None:
         """Ask a seat for the capabilities this sender emits.
@@ -518,6 +555,10 @@ class LibeiBackend:
         with self._lock:
             if self._ei is None:
                 raise LibeiUnavailable("libei sender is not connected")
+            if self._revoked:
+                raise LibeiSessionRevoked(
+                    "the compositor disconnected the sender; this session "
+                    "cannot send again")
             # Pause / resume arrive asynchronously; read them before deciding
             # the device is still usable.
             self._pump(0.0)
@@ -574,6 +615,7 @@ class LibeiBackend:
         self._ei = None
         self._backend_open = False
         self._handshake_complete = False
+        self._revoked = False
         if self._session is not None:
             # liboeffis is a different library and closing the portal session
             # is what actually revokes the grant, so this always runs.
@@ -599,6 +641,7 @@ def _quietly(action: Callable[[], object]) -> None:
 
 _DEFAULT_BACKEND: Optional[LibeiBackend] = None
 _PROBE_FAILED = False
+_PROBE_ERROR: Optional[BaseException] = None
 _DEFAULT_LOCK = threading.Lock()
 
 
@@ -609,7 +652,7 @@ def connected_backend() -> Optional[LibeiBackend]:
     where libei cannot be used must pay for that discovery once rather than
     on every keystroke. Callers treat None as "use the ydotool CLI".
     """
-    global _DEFAULT_BACKEND, _PROBE_FAILED
+    global _DEFAULT_BACKEND, _PROBE_FAILED, _PROBE_ERROR
     with _DEFAULT_LOCK:
         if _DEFAULT_BACKEND is not None:
             return _DEFAULT_BACKEND
@@ -621,11 +664,23 @@ def connected_backend() -> Optional[LibeiBackend]:
             return None
         try:
             backend.connect()
-        except (LibeiUnavailable, OSError, ValueError, AttributeError):
+        except (LibeiUnavailable, OSError, ValueError, AttributeError) as error:
             _PROBE_FAILED = True
+            _PROBE_ERROR = error
             return None
         _DEFAULT_BACKEND = backend
         return _DEFAULT_BACKEND
+
+
+def last_probe_error() -> Optional[BaseException]:
+    """Why the one probe :func:`connected_backend` makes failed, if it did.
+
+    ``connected_backend`` answers None for every reason there is, which is
+    right for "which path do I emit on" and useless for "why". The selector
+    reads this to tell a refused consent from an absent portal.
+    """
+    with _DEFAULT_LOCK:
+        return _PROBE_ERROR
 
 
 def get_default_backend() -> Optional[LibeiBackend]:
@@ -639,17 +694,19 @@ def get_default_backend() -> Optional[LibeiBackend]:
 
 def reset_default_backend() -> None:
     """Test hook — drop the cached backend so the probe runs fresh."""
-    global _DEFAULT_BACKEND, _PROBE_FAILED
+    global _DEFAULT_BACKEND, _PROBE_FAILED, _PROBE_ERROR
     with _DEFAULT_LOCK:
         if _DEFAULT_BACKEND is not None:
             _quietly(_DEFAULT_BACKEND.disconnect)
         _DEFAULT_BACKEND = None
         _PROBE_FAILED = False
+        _PROBE_ERROR = None
 
 
 __all__ = [
     "EI_DEVICE_CAP_BUTTON", "EI_DEVICE_CAP_KEYBOARD",
     "EI_DEVICE_CAP_POINTER_ABSOLUTE", "EI_DEVICE_CAP_SCROLL",
-    "HANDSHAKE_TIMEOUT", "LibeiBackend", "LibeiUnavailable",
-    "connected_backend", "get_default_backend", "reset_default_backend",
+    "HANDSHAKE_TIMEOUT", "LibeiBackend", "LibeiConsentNotGranted",
+    "LibeiSessionRevoked", "LibeiUnavailable", "connected_backend",
+    "get_default_backend", "last_probe_error", "reset_default_backend",
 ]

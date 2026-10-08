@@ -124,11 +124,18 @@ Builder 項目。視覺與視窗功能的 geometry / IO 操作皆可注入,因�
   (``AC_create_signing_keypair``)產生一組 Ed25519 金鑰:私鑰留在簽章機,執行端只拿
   公鑰,公鑰能驗章、不能簽章。``sign_action_file(path, private_key_path=...)`` 把 JSON
   envelope(``version`` 2、``algorithm`` ``ed25519``)寫進同一個 ``.sig`` sidecar;
-  ``verify_action_file(path, public_key_path=...)`` 負責驗證。行程由三個環境變數設定,
+  ``verify_action_file(path, public_key_path=...)`` 負責驗證。
+  ``create_signing_keypair(..., passphrase="...")``(``AC_create_signing_keypair`` 的
+  ``passphrase`` 欄位)會加密私鑰檔,只拿到檔案副本的人簽不了任何東西;簽章端之後傳
+  ``sign_action_file(..., passphrase="...")`` 或設定
+  ``JE_AUTOCONTROL_ACTION_SIGNING_PASSPHRASE``。沒有通行碼建立的金鑰照舊可以載入,
+  驗章也從不需要通行碼。行程由下列環境變數設定,
   ``action_signing_config()`` 會回報目前讀到的內容:
 
   * ``JE_AUTOCONTROL_ACTION_SIGNING_PRIVATE_KEY`` — 私鑰路徑;只設在簽章機。設了之後
     ``sign_action_file(path)`` 就用它簽。
+  * ``JE_AUTOCONTROL_ACTION_SIGNING_PASSPHRASE`` — 加密私鑰的通行碼;只設在簽章機,
+    ``action_signing_config()`` 不會回報它。
   * ``JE_AUTOCONTROL_ACTION_SIGNING_PUBLIC_KEY`` — 公鑰路徑,設在每個執行端。只有它而
     沒有私鑰時,該端點只能驗章:``AC_sign_action_file`` 與 ``AC_create_signing_keypair``
     會拋出例外,不會退回每位使用者的 HMAC 金鑰,HMAC sidecar 也不再通過驗證。
@@ -139,6 +146,9 @@ Builder 項目。視覺與視窗功能的 geometry / IO 操作皆可注入,因�
   簽章機產生金鑰組;在端點設定公鑰變數與遷移變數;用私鑰把每個檔案重簽一次;最後取消
   遷移變數。金鑰組簽章需要 ``cryptography`` —— 沒有該套件的平台(Windows arm64)上,
   這些呼叫會拋出帶安裝提示的 ``CryptographyUnavailableError``,HMAC 簽章仍可使用。
+  被強制驗章拒絕的檔案會拋出 ``AutoControlSignatureException``(屬於
+  ``AutoControlException``);REST 的 ``POST /execute_file`` 以 403 回應,MCP 的
+  ``ac_execute_action_file`` 工具則回傳錯誤結果。
 * **動作檔加密** — ``encrypt_action_file`` / ``decrypt_action_file`` 以
   Fernet(AES-128-CBC + HMAC)讓腳本內容在靜態時保密,金鑰來自每位使用者的
   0600 金鑰,或經 scrypt 與每個檔案各自的隨機鹽值衍生自通行碼。``AC_encrypt_action_file`` /
@@ -168,5 +178,5 @@ GUI
   filter)都會快照進 undo stack;**Ctrl+Z** 與 Undo 按鈕可還原前一狀態。
 * **觸發器分頁** — *Combine selected* 把選取的觸發器包成 AllOf / AnyOf /
   Sequence 複合觸發器;新增 **Cron** 觸發器型別。
-* **斷言分頁** — 新增 **VLM**(「畫面符合描述」)斷言型別。
+* **斷言分頁** — 新增 **VLM**\ (「畫面符合描述」)斷言型別。
 * 每個新的 ``AC_*`` 指令都可在視覺化 **Script Builder** 中建構。

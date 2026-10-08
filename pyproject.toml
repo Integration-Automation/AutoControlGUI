@@ -103,7 +103,7 @@ find = { namespaces = false }
 ]
 
 [project.optional-dependencies]
-gui = ["PySide6==6.11.2", "qt-material==2.17"]
+gui = ["PySide6==6.11.2"]
 webrtc = ["aiortc>=1.14.0", "av>=14.0.0"]
 signaling = ["fastapi>=0.115", "starlette>=1.0.1", "uvicorn>=0.32"]
 discovery = ["zeroconf>=0.149.16"]
@@ -275,7 +275,7 @@ ignore_missing_imports = true
 # unchecked, which is where they already were before the scope widened.
 module = [
     # [gui]
-    "PySide6", "PySide6.*", "qt_material", "qt_material.*",
+    "PySide6", "PySide6.*",
     # [webrtc] / [signaling] / [discovery]
     "aiortc", "aiortc.*", "av", "av.*",
     "fastapi", "fastapi.*", "uvicorn", "uvicorn.*",
@@ -326,3 +326,106 @@ module = ["numpy", "numpy.*"]
 follow_imports = "skip"
 follow_imports_for_stubs = true
 ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+# The strict tier: every function fully annotated, every generic container
+# parameterised. It holds each module written since v0.0.225 (plus the pytest
+# plugin that ships beside the package), so new code starts at this depth
+# instead of at the package-wide floor above, and an older module joins by
+# being fixed and named here.
+#
+# The list is checked against the tree, not remembered:
+# `test/unit_test/headless/test_typing_modernization_contract.py` fails when a
+# module exists that is neither in `test/verify/typing_strict_baseline.txt`
+# (the modules that predate this tier) nor matched below. A package that is new
+# as a whole is named with `.*` as well, so a file added to it is covered the
+# day it is written. Nothing here loosens a setting from `[tool.mypy]`.
+module = [
+    "je_auto_control.android.apps",
+    "je_auto_control.android.input",
+    "je_auto_control.android.screen",
+    "je_auto_control.android.session",
+    "je_auto_control.gui._journal_import",
+    "je_auto_control.gui._tab_close_icon",
+    "je_auto_control.gui.config_sync_tab",
+    "je_auto_control.gui.mobile_tab",
+    "je_auto_control.gui.navigation",
+    "je_auto_control.gui.rbac_users_panel",
+    "je_auto_control.gui.remote_desktop._connect_task",
+    "je_auto_control.gui.remote_desktop._webrtc_types",
+    "je_auto_control.gui.remote_desktop.webrtc_host_connection",
+    "je_auto_control.gui.remote_desktop.webrtc_host_media",
+    "je_auto_control.gui.remote_desktop.webrtc_host_sessions",
+    "je_auto_control.gui.remote_desktop.webrtc_host_trust",
+    "je_auto_control.gui.remote_desktop.webrtc_host_ui",
+    "je_auto_control.gui.remote_desktop.webrtc_panel_common",
+    "je_auto_control.gui.remote_desktop.webrtc_viewer_address_book",
+    "je_auto_control.gui.remote_desktop.webrtc_viewer_connection",
+    "je_auto_control.gui.remote_desktop.webrtc_viewer_files",
+    "je_auto_control.gui.remote_desktop.webrtc_viewer_media",
+    "je_auto_control.gui.remote_desktop.webrtc_viewer_ui",
+    "je_auto_control.gui.tab_registry",
+    "je_auto_control.gui.task_controller",
+    "je_auto_control.gui.theme",
+    "je_auto_control.gui.window_settings",
+    "je_auto_control.gui.workspace_tabs",
+    "je_auto_control.ios.apps",
+    "je_auto_control.ios.session",
+    "je_auto_control.linux_wayland.authorisation",
+    "je_auto_control.linux_wayland.ei_client",
+    "je_auto_control.linux_wayland.ei_transport",
+    "je_auto_control.linux_wayland.ei_worker",
+    "je_auto_control.linux_wayland.global_shortcuts",
+    "je_auto_control.linux_wayland.input_events",
+    "je_auto_control.utils.action_journal",
+    "je_auto_control.utils.action_journal.*",
+    "je_auto_control.utils.action_journal.events",
+    "je_auto_control.utils.action_journal.recorder",
+    "je_auto_control.utils.action_journal.sanitize",
+    "je_auto_control.utils.action_journal.store",
+    "je_auto_control.utils.action_signing.asymmetric",
+    "je_auto_control.utils.action_signing.config",
+    "je_auto_control.utils.agent.backends._computer_actions",
+    "je_auto_control.utils.agent.backends._computer_beta_path",
+    "je_auto_control.utils.agent.backends._computer_messages",
+    "je_auto_control.utils.agent.backends._computer_toolset_path",
+    "je_auto_control.utils.codegen.journal_import",
+    "je_auto_control.utils.config_sync.adapters",
+    "je_auto_control.utils.config_sync.assets",
+    "je_auto_control.utils.config_sync.outbox",
+    "je_auto_control.utils.config_sync.session",
+    "je_auto_control.utils.config_sync.store",
+    "je_auto_control.utils.config_sync.versions",
+    "je_auto_control.utils.generate_report.report_path",
+    "je_auto_control.utils.mcp_server._argument_policy",
+    "je_auto_control.utils.mcp_server._authz",
+    "je_auto_control.utils.mcp_server._connection_state",
+    "je_auto_control.utils.mcp_server._core_tools",
+    "je_auto_control.utils.mcp_server.disclosure",
+    "je_auto_control.utils.mcp_server.discovery",
+    "je_auto_control.utils.monitor_layout.macos_frame",
+    "je_auto_control.utils.ocr.tesseract_setup",
+    "je_auto_control.utils.path_guard.policy",
+    "je_auto_control.utils.rbac.__main__",
+    "je_auto_control.utils.rbac.admin",
+    "je_auto_control.utils.rbac.authorization",
+    "je_auto_control.utils.rbac.cli",
+    "je_auto_control.utils.rbac.deferred",
+    "je_auto_control.utils.rbac.policy",
+    "je_auto_control.utils.script_vars.execution",
+    "je_auto_control.utils.self_healing.eval_strategies",
+    "je_auto_control.utils.self_healing.evaluation",
+    "je_auto_control.utils.self_healing.template_revision",
+    "je_auto_control.utils.usb.passthrough._client_requests",
+    "je_auto_control.utils.usb.passthrough.client_errors",
+    "je_auto_control.utils.usb.passthrough.client_handle",
+    "je_auto_control.windows.core.utils.win32_layout_vk",
+    "je_auto_control.wrapper.capabilities",
+    "je_auto_control.wrapper.device_context",
+    "je_auto_control.wrapper.device_frame",
+    "je_auto_control.wrapper.mobile_commands",
+    "je_auto_control.wrapper.mobile_extensions",
+    "je_auto_control_pytest",
+]
+disallow_untyped_defs = true
+disallow_any_generics = true

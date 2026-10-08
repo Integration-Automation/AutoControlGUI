@@ -39,6 +39,11 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 PACKAGE = "je_auto_control"
+# Top-level modules the distribution ships beside the package (`py-modules` in
+# `pyproject.toml`). They are installed and imported like the package, so they
+# are checked like it; a path list that only named the package left the pytest
+# plugin outside the contract without anyone having decided that.
+EXTRA_MODULES = ("je_auto_control_pytest.py",)
 EXEMPT_FILE = Path(__file__).with_name("typing_contract_exempt.txt")
 
 # mypy resolves `sys.platform` tests against a single target. The supported
@@ -80,8 +85,8 @@ def _failing_modules(platform: str) -> set[str]:
     # `nosemgrep` only on the exact line it reports, and the audit rule reports
     # the call, not the argument. See `je_auto_control/android/adb_client.py`
     # for the same shape.
-    completed = subprocess.run(  # nosec B603  # nosemgrep: python.lang.security.audit.dangerous-subprocess-use-audit.dangerous-subprocess-use-audit  # reason: argv is `sys.executable` plus literals and one value from the module-level PLATFORMS tuple; no shell, no environment, no caller input
-        [sys.executable, "-m", "mypy", "--platform", platform, "-O", "json", PACKAGE],
+    completed = subprocess.run(  # nosec B603  # nosemgrep: python.lang.security.audit.dangerous-subprocess-use-audit.dangerous-subprocess-use-audit  # reason: argv is `sys.executable` plus literals and values from the module-level PLATFORMS / EXTRA_MODULES tuples; no shell, no environment, no caller input
+        [sys.executable, "-m", "mypy", "--platform", platform, "-O", "json", PACKAGE, *EXTRA_MODULES],
         cwd=REPO_ROOT,
         capture_output=True,
         text=True,
@@ -100,7 +105,7 @@ def _failing_modules(platform: str) -> set[str]:
         if record.get("severity") != "error":
             continue
         path = str(record.get("file", "")).replace("\\", "/")
-        if path.startswith(f"{PACKAGE}/") or path == f"{PACKAGE}.py":
+        if path.startswith(f"{PACKAGE}/") or path in (f"{PACKAGE}.py", *EXTRA_MODULES):
             modules.add(_module_name(path))
     if not modules and completed.returncode not in (0, 1):
         raise SystemExit(
@@ -153,7 +158,7 @@ def main() -> int:
     )
     args = parser.parse_args()
 
-    print(f"Type-checking {PACKAGE} for {len(PLATFORMS)} target platforms...")
+    print(f"Type-checking {PACKAGE} (+ {', '.join(EXTRA_MODULES)}) for {len(PLATFORMS)} target platforms...")
     failing = _measure()
 
     if args.fix:

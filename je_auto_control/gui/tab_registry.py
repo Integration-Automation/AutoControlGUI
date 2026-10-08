@@ -6,6 +6,10 @@ the tab is opened. :class:`TabEntry` holds one registered tab and builds the
 widget on first access to ``widget``, so the window no longer imports and
 constructs some fifty panels (with the timers and helper threads several of
 them start) before it can show the three it opens on.
+
+Closing a tab keeps its widget for the next open. :meth:`TabEntry.release`
+is the other choice: it calls the widget's optional ``dispose()`` and deletes
+it, and the next open builds a fresh one.
 """
 from dataclasses import dataclass, field
 from importlib import import_module
@@ -25,6 +29,8 @@ class TabSpec:
     module: str = ""
     class_name: str = ""
     default_visible: bool = False
+    # False for a panel that lays itself out and must not sit in the page's scroll area.
+    scrollable: bool = True
 
 
 def lazy_factory(module: str, class_name: str) -> WidgetFactory:
@@ -47,6 +53,9 @@ class TabEntry:
     default_visible: bool = False
     actions: MenuActions = ()
     on_build: Optional[Callable[[Any], None]] = None
+    scrollable: bool = True
+    # False when the factory hands back one fixed widget: releasing it would leave nothing to reopen.
+    releasable: bool = True
     _widget: Any = field(default=None, repr=False)
 
     @property
@@ -62,6 +71,26 @@ class TabEntry:
             if self.on_build is not None:
                 self.on_build(self._widget)
         return self._widget
+
+    def release(self) -> bool:
+        """Let go of the widget so the next open builds a new one; ``False`` if nothing was released.
+
+        The tab's side of the contract is optional: a widget with a
+        ``dispose()`` method has it called first, to stop its timers and
+        threads and drop the listeners it registered. The widget is then
+        scheduled for deletion.
+        """
+        widget = self._widget
+        if widget is None or not self.releasable:
+            return False
+        self._widget = None
+        dispose = getattr(widget, "dispose", None)
+        try:
+            if callable(dispose):
+                dispose()  # pylint: disable=not-callable  # reason: guarded by callable()
+        finally:
+            widget.deleteLater()
+        return True
 
 
 _GUI = "je_auto_control.gui"
@@ -102,6 +131,7 @@ TAB_SPECS: Tuple[TabSpec, ...] = (
     TabSpec("flakiness", "tab_flakiness", "system", f"{_GUI}.flakiness_tab", "FlakinessTab"),
     TabSpec("a11y_audit", "tab_a11y_audit", "core", f"{_GUI}.a11y_audit_tab", "A11yAuditTab"),
     TabSpec("device_matrix", "tab_device_matrix", "core", f"{_GUI}.device_matrix_tab", "DeviceMatrixTab"),
+    TabSpec("mobile", "tab_mobile", "core", f"{_GUI}.mobile_tab", "MobileTab"),
     TabSpec("media_checks", "tab_media_checks", "core", f"{_GUI}.media_checks_tab", "MediaChecksTab"),
     TabSpec("run_history", "tab_run_history", "automation", f"{_GUI}.run_history_tab", "RunHistoryTab"),
     TabSpec("profiler", "tab_profiler", "automation", f"{_GUI}.profiler_tab", "ProfilerTab"),
@@ -111,8 +141,9 @@ TAB_SPECS: Tuple[TabSpec, ...] = (
     TabSpec("dag_runner", "tab_dag_runner", "automation", f"{_GUI}.dag_tab", "DagTab"),
     TabSpec("chatops", "tab_chatops", "automation", f"{_GUI}.chatops_tab", "ChatOpsTab"),
     TabSpec("trace_replay", "tab_trace_replay", "automation", f"{_GUI}.trace_replay_tab", "TraceReplayTab"),
-    TabSpec("remote_desktop", "tab_remote_desktop", "system", default_visible=True),
+    TabSpec("remote_desktop", "tab_remote_desktop", "system", default_visible=True, scrollable=False),
     TabSpec("presence", "tab_presence", "system", f"{_GUI}.presence_tab", "PresenceTab"),
+    TabSpec("config_sync", "tab_config_sync", "system", f"{_GUI}.config_sync_tab", "ConfigSyncTab"),
     TabSpec("rest_api", "tab_rest_api", "system", f"{_GUI}.rest_api_tab", "RestApiTab"),
     TabSpec("admin_console", "tab_admin_console", "system", f"{_GUI}.admin_console_tab", "AdminConsoleTab"),
     TabSpec("audit_log", "tab_audit_log", "system", f"{_GUI}.audit_log_tab", "AuditLogTab"),

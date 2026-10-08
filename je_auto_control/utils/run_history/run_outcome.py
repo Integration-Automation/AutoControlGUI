@@ -9,20 +9,33 @@ per-thread failure count ``je_auto_control run`` already uses for its exit code.
 
 Each such run also gets its own variable scope: a job's ``AC_set_var`` used to
 stay in the module executor for whichever job, trigger or hotkey fired next.
+
+A run whose entry was registered by an authenticated user is executed as that
+user (``owner``), with the role the user store gives them at that moment.
 """
-from typing import Any, Callable
+from typing import TYPE_CHECKING, Any, Callable, Optional
 
 from je_auto_control.utils.exception.exceptions import AutoControlActionException
 
+if TYPE_CHECKING:
+    from je_auto_control.utils.rbac.deferred import DeferredOwner
 
-def run_counting_failures(run: Callable[[], Any]) -> Any:
-    """Call ``run()`` in a fresh variable scope; raise if an action it ran failed."""
+
+def run_counting_failures(run: Callable[[], Any],
+                          owner: "Optional[DeferredOwner]" = None) -> Any:
+    """Call ``run()`` in a fresh variable scope; raise if an action it ran failed.
+
+    ``owner`` is who registered the work; ``None`` runs it with no identity,
+    as before. An owner who was removed, or whose role no longer allows
+    running actions, raises ``AuthorizationError`` before anything runs.
+    """
     from je_auto_control.utils.executor.action_executor import (
         recorded_failures, reset_recorded_failures,
     )
+    from je_auto_control.utils.rbac.deferred import owner_scope
     from je_auto_control.utils.script_vars.execution import execution_scope
     reset_recorded_failures()
-    with execution_scope():
+    with owner_scope(owner), execution_scope():
         result = run()
     failures = recorded_failures()
     if failures:

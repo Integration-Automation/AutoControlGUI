@@ -141,12 +141,30 @@ def window_move(title_substring: str, x: int, y: int,
             "width": int(width), "height": int(height)}
 
 
+#: What each ShowWindow command the tools below send was asked to do.
+_SHOW_VERBS = {3: "maximise", 6: "minimise", 9: "restore"}
+
+
 def _show_command(title_substring: str, case_sensitive: bool,
                   cmd_show: int) -> int:
-    """Resolve the window then call ShowWindow with the given cmd."""
+    """Resolve the window then call ShowWindow with the given cmd.
+
+    ``show_window`` answers ``False`` when the handle stopped being a window
+    or when a command that activates the window (maximise, restore) was
+    refused the foreground. The tool used to return the handle either way,
+    so a client was told a refused request had worked; it is an error now,
+    as it is for ``ac_focus_window``. ``None`` (a backend that cannot tell)
+    is not a failure.
+    """
+    from je_auto_control.utils.exception.exceptions import AutoControlActionException
     from je_auto_control.windows.window import windows_window_manage as wm
     hwnd = _resolve_window_hwnd(title_substring, bool(case_sensitive))
-    wm.show_window(hwnd, int(cmd_show))
+    if wm.show_window(hwnd, int(cmd_show)) is False:
+        verb = _SHOW_VERBS.get(int(cmd_show), f"show (command {int(cmd_show)})")
+        raise AutoControlActionException(
+            f"could not {verb} {title_substring!r} (hwnd {hwnd}): the window is "
+            "gone, or Windows refused to bring it to the foreground -- it may "
+            "have changed state without becoming the active window")
     return hwnd
 
 
@@ -542,6 +560,12 @@ def normalize_ext(target):
 def file_association(target):
     from je_auto_control.utils.executor.action_executor import _file_association
     return _file_association(target)
+
+
+def probe_capabilities() -> Dict[str, Any]:
+    """Capability and authorisation states; the same data ``AC_`` returns."""
+    from je_auto_control.wrapper.capabilities import probe_capabilities as _probe
+    return _probe().to_dict()
 
 
 def get_clipboard() -> str:

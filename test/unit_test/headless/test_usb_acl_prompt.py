@@ -73,11 +73,28 @@ def test_dialog_remember_reflects_checkbox(qapp):
 # outlives the test that started it: the qapp fixture below reuses
 # QApplication.instance(), which in a full-suite run was created by an earlier
 # module and lives for the whole session. An orphaned chain therefore keeps
-# scanning topLevelWidgets() indefinitely and can press accept()/reject() on a
+# looking for a prompt indefinitely and can press accept()/reject() on a
 # later test's prompt. 2s of retries comfortably covers the 3s decide()
 # timeout these tests use.
 _DIALOG_RETRY_INTERVAL_MS = 20
 _DIALOG_MAX_ATTEMPTS = 100
+
+
+def _open_prompt():
+    """The prompt whose modal loop is running, or None.
+
+    Asked of Qt as one pointer (``activeModalWidget``), never by scanning
+    ``QApplication.topLevelWidgets()``: that scan is what took the Python 3.10
+    Linux and macOS squares down with SIGSEGV. PySide converts the returned
+    ``QList<QWidget*>`` element by element, allocating a wrapper for any window
+    Python has not seen; on 3.10/3.11 an allocation can run the cycle collector
+    on the spot, the collector destroys whatever window garbage the suite has
+    left, and the next pointer in the list is a freed widget.
+    """
+    widget = QApplication.activeModalWidget()
+    if isinstance(widget, UsbPassthroughPromptDialog) and widget.isVisible():
+        return widget
+    return None
 
 
 def _drive_dialog_when_visible(action: str) -> None:
@@ -87,18 +104,18 @@ def _drive_dialog_when_visible(action: str) -> None:
     remaining = {"attempts": _DIALOG_MAX_ATTEMPTS}
 
     def attempt():
-        for widget in QApplication.topLevelWidgets():
-            if isinstance(widget, UsbPassthroughPromptDialog) and widget.isVisible():
-                if action == "allow":
-                    widget.accept()
-                elif action == "deny":
-                    widget.reject()
-                elif action == "remember-allow":
-                    widget._remember_check.setChecked(True)
-                    widget.accept()
-                else:
-                    widget.reject()
-                return
+        widget = _open_prompt()
+        if widget is not None:
+            if action == "allow":
+                widget.accept()
+            elif action == "deny":
+                widget.reject()
+            elif action == "remember-allow":
+                widget._remember_check.setChecked(True)
+                widget.accept()
+            else:
+                widget.reject()
+            return
         # Try again shortly if the dialog hasn't appeared yet — but give up
         # rather than outlive this test.
         remaining["attempts"] -= 1
@@ -114,11 +131,10 @@ def _close_dialog_after(ms: int) -> None:
     remaining = {"attempts": _DIALOG_MAX_ATTEMPTS}
 
     def shut():
-        for widget in QApplication.topLevelWidgets():
-            if (isinstance(widget, UsbPassthroughPromptDialog)
-                    and widget.isVisible()):
-                widget.reject()
-                return
+        widget = _open_prompt()
+        if widget is not None:
+            widget.reject()
+            return
         remaining["attempts"] -= 1
         if remaining["attempts"] > 0:
             QTimer.singleShot(_DIALOG_RETRY_INTERVAL_MS, shut)

@@ -1,12 +1,27 @@
 """Standalone rendezvous service for WebRTC SDP exchange.
 
 Hosts register an offer keyed by their host ID; viewers fetch the offer,
-post an answer, and the host polls for it. The server is stateless beyond
-an in-memory dict with TTL eviction — restart loses pending sessions.
+post an answer, and the host polls for it. Sessions live in an in-memory
+dict with TTL eviction — restart loses pending sessions.
 
 It also serves ``GET`` / ``PUT /config/{user_id}``, the per-user bucket that
-:mod:`je_auto_control.utils.config_sync` pushes and pulls. Buckets are kept
-in memory as sent (no TTL), so they too are lost on restart.
+:mod:`je_auto_control.utils.config_sync` pushes and pulls. Buckets live in a
+SQLite file (``--config-db``, ``AC_SIGNALING_CONFIG_DB``, default
+``~/.je_auto_control/config_sync.sqlite3``; opened at the first ``/config``
+request), so they survive a restart. A ``PUT`` is a version-2 envelope::
+
+    {"version": 2, "base_revision": 3, "operation_id": "<unique id>",
+     "bucket": {"user_id": "...", "sections": {...}}}
+
+and is committed only while the stored bucket is still at ``base_revision``
+(``0`` = no bucket yet): ``200 {"ok": true, "revision": 4}``, or ``409
+{"detail": "revision conflict", "revision": <current>}`` when another write
+got there first. Repeating a ``PUT`` with the same ``operation_id`` returns
+the revision the first one produced. ``GET`` returns the bucket with
+``revision`` set to the committed revision and ``"version": 2``. A bare
+bucket (what clients sent before version 2) is answered ``428`` unless the
+server runs with ``--allow-blind-config-writes``, which restores the
+unconditional overwrite those clients expect.
 
 Run::
 
@@ -18,7 +33,9 @@ Optional ``--shared-secret`` requires every request to carry a matching
 
 Deployment: drop behind nginx + TLS on a small VPS. The server itself
 is single-process; for HA put two instances behind a sticky load balancer
-or swap the in-memory store for Redis (left as a follow-up).
+or swap the in-memory session store for Redis (left as a follow-up); the
+config buckets are already safe to share, as every commit is one SQLite
+transaction.
 """
 from __future__ import annotations
 
@@ -29,7 +46,8 @@ import os
 import threading
 import time
 from dataclasses import dataclass, field
-from typing import Annotated, Dict, List, Optional
+from pathlib import Path
+from typing import Annotated, Any, Dict, List, Optional, Tuple, Union
 
 try:
     from fastapi import Depends, FastAPI, Header, HTTPException, Request
@@ -43,16 +61,23 @@ except ImportError as exc:  # pragma: no cover - optional dep
         "pip install je_auto_control[signaling]"
     ) from exc
 
+from je_auto_control.utils.config_sync.client import ConfigBucket, ConfigSyncError
+from je_auto_control.utils.config_sync.store import (
+    ConfigStore, RevisionConflictError, StoreCapacityError,
+)
+
 
 _DEFAULT_TTL_S = 120.0
 _MAX_SDP_BYTES = 256 * 1024  # 256 KB; aiortc offers are typically ~4 KB
 # Live sessions at once. Any client allowed to post could otherwise create
 # sessions without limit -- 200 of them held 48 MB for the TTL.
 _MAX_SESSIONS = 1024
-# A config-sync bucket (hotkeys, triggers, address book) and how many users
-# may hold one at once.
+# A config-sync PUT body (the bucket plus its envelope) and how many users
+# may hold a bucket at once.
 _MAX_CONFIG_BYTES = 1024 * 1024
 _MAX_CONFIG_USERS = 1024
+#: The ``/config`` wire format this server speaks.
+CONFIG_WIRE_VERSION = 2
 _LOG = logging.getLogger("rd-signaling")
 _WEB_VIEWER_DIR = (
     __import__("pathlib").Path(__file__).parent / "web_viewer"
@@ -65,26 +90,6 @@ class _Session:
     answer_sdp: Optional[str] = None
     created_at: float = field(default_factory=time.monotonic)
     updated_at: float = field(default_factory=time.monotonic)
-
-
-class _ConfigStore:
-    """Thread-safe in-memory map of user id -> config-sync bucket."""
-
-    def __init__(self) -> None:
-        self._buckets: Dict[str, Dict] = {}
-        self._lock = threading.Lock()
-
-    def get(self, user_id: str) -> Optional[Dict]:
-        with self._lock:
-            return self._buckets.get(user_id)
-
-    def put(self, user_id: str, bucket: Dict) -> bool:
-        """Store ``bucket``; ``False`` when a new user would exceed the cap."""
-        with self._lock:
-            if user_id not in self._buckets and len(self._buckets) >= _MAX_CONFIG_USERS:
-                return False
-            self._buckets[user_id] = bucket
-            return True
 
 
 class _SessionStore:
@@ -320,37 +325,101 @@ def _validate_user_id(user_id: str) -> None:
 
 
 _CONFIG_RESPONSES = {
-    400: {"description": "invalid user_id or bucket"},
+    400: {"description": "invalid user_id, envelope or bucket"},
     404: {"description": "no bucket for this user"},
-    503: {"description": "too many users"},
+    409: {"description": "base_revision is not the current revision"},
+    428: {"description": "a write without base_revision / operation_id"},
+    503: {"description": "too many users, or the store is unavailable"},
     **_AUTH_RESPONSES,
 }
 
 
-def _register_config_routes(app: FastAPI, store: _ConfigStore, secret_dep) -> None:
+def _config_bucket(user_id: str, body: Any) -> ConfigBucket:
+    """Validate ``body`` as the bucket of ``user_id`` (400 otherwise)."""
+    try:
+        bucket = ConfigBucket.from_dict(body)
+    except ConfigSyncError as error:
+        raise HTTPException(status_code=400, detail=f"invalid bucket: {error}") from error  # NOSONAR
+    # Account isolation: the path names the account, the body cannot move it.
+    if bucket.user_id != user_id:
+        raise HTTPException(status_code=400, detail="bucket user_id mismatch")  # NOSONAR
+    return bucket
+
+
+def _config_envelope(body: Dict[str, Any]) -> Optional[Tuple[Any, int, str]]:
+    """``(bucket, base_revision, operation_id)`` of a version-2 PUT body.
+
+    ``None`` for a bare bucket -- the pre-version-2 body, recognised by
+    having neither ``version`` nor ``bucket``.
+    """
+    if "version" not in body and "bucket" not in body:
+        return None
+    base = body.get("base_revision")
+    operation = body.get("operation_id")
+    if (body.get("version") == CONFIG_WIRE_VERSION
+            and isinstance(base, int) and not isinstance(base, bool) and base >= 0
+            and isinstance(operation, str) and 0 < len(operation) <= 128
+            and operation.isprintable()):
+        return body.get("bucket"), base, operation
+    raise HTTPException(  # NOSONAR — see _CONFIG_RESPONSES
+        status_code=400,
+        detail="expected {version: 2, base_revision: int >= 0, operation_id: str, bucket: {...}}")
+
+
+def _commit_config(store: ConfigStore, user_id: str, body: Dict[str, Any],
+                   allow_blind_writes: bool) -> Union[int, JSONResponse]:
+    """Commit a PUT body; the new revision, or the 409 reply on a conflict."""
+    envelope = _config_envelope(body)
+    if envelope is None:
+        if not allow_blind_writes:
+            raise HTTPException(  # NOSONAR — see _CONFIG_RESPONSES
+                status_code=428,
+                detail="this server requires a version-2 write (base_revision and operation_id); "
+                       "unconditional writes need --allow-blind-config-writes")
+        return store.overwrite(user_id, _config_bucket(user_id, body))
+    payload, base, operation = envelope
+    bucket = _config_bucket(user_id, payload)
+    try:
+        return store.commit(user_id, bucket, base_revision=base, operation_id=operation)
+    except RevisionConflictError as conflict:
+        return JSONResponse({"detail": "revision conflict", "revision": conflict.current_revision},
+                            status_code=409)
+
+
+def _register_config_routes(app: FastAPI, store: ConfigStore, secret_dep,
+                            allow_blind_writes: bool = False) -> None:
     """``GET`` / ``PUT /config/{user_id}`` for :mod:`je_auto_control.utils.config_sync`.
 
-    The client has always called these; nothing served them, so every sync
-    failed. A bucket is stored as sent -- the merge happens client-side.
+    The merge happens client-side; the server's part is to keep the bucket
+    and to refuse a write that was not built on the current revision.
     """
     auth_only = [Depends(secret_dep)]
 
     @app.get("/config/{user_id}", responses=_CONFIG_RESPONSES, dependencies=auth_only)
     def _get_config(user_id: str) -> dict:
         _validate_user_id(user_id)
-        bucket = store.get(user_id)
+        try:
+            bucket = store.get(user_id)
+        except ConfigSyncError as error:
+            _LOG.error("config store read failed: %s", error)
+            raise HTTPException(status_code=503, detail="config store unavailable") from error  # NOSONAR
         if bucket is None:
             raise HTTPException(status_code=404, detail="no bucket")  # NOSONAR — see _CONFIG_RESPONSES
-        return bucket
+        return {**bucket.to_dict(), "version": CONFIG_WIRE_VERSION}
 
     @app.put("/config/{user_id}", responses=_CONFIG_RESPONSES, dependencies=auth_only)
-    def _put_config(user_id: str, bucket: Dict) -> dict:
+    def _put_config(user_id: str, body: Dict[str, Any]):
         _validate_user_id(user_id)
-        if bucket.get("user_id", user_id) != user_id:
-            raise HTTPException(status_code=400, detail="bucket user_id mismatch")  # NOSONAR — see _CONFIG_RESPONSES
-        if not store.put(user_id, bucket):
-            raise HTTPException(status_code=503, detail="too many users")  # NOSONAR — see _CONFIG_RESPONSES
-        return {"ok": True}
+        try:
+            outcome = _commit_config(store, user_id, body, allow_blind_writes)
+        except StoreCapacityError as error:
+            raise HTTPException(status_code=503, detail="too many users") from error  # NOSONAR
+        except ConfigSyncError as error:
+            _LOG.error("config store write failed: %s", error)
+            raise HTTPException(status_code=503, detail="config store unavailable") from error  # NOSONAR
+        if isinstance(outcome, JSONResponse):
+            return outcome
+        return {"ok": True, "revision": outcome, "version": CONFIG_WIRE_VERSION}
 
 
 def _register_request_logging(app: FastAPI) -> None:
@@ -365,8 +434,17 @@ def _register_request_logging(app: FastAPI) -> None:
 def create_app(shared_secret: Optional[str] = None,
                ttl_s: float = _DEFAULT_TTL_S,
                serve_web_viewer: bool = True,
-               cors_origins: Optional[list] = None) -> FastAPI:
-    """Build the FastAPI app. Importable for embedding in larger services."""
+               cors_origins: Optional[list] = None, *,
+               config_store_path: Union[str, Path, None] = None,
+               allow_blind_config_writes: bool = False) -> FastAPI:
+    """Build the FastAPI app. Importable for embedding in larger services.
+
+    ``config_store_path`` is the SQLite file behind ``/config`` (default
+    ``~/.je_auto_control/config_sync.sqlite3``); it is opened at the first
+    ``/config`` request, not here. ``allow_blind_config_writes`` accepts the
+    bare-bucket ``PUT`` of clients older than the version-2 envelope, which
+    overwrites without a revision check.
+    """
     app = FastAPI(title="AutoControl Signaling", version="1.0.0")
     store = _SessionStore(ttl_s=ttl_s)
     # Before CORS, so CORS wraps it and a browser still sees the 401 / 413.
@@ -375,7 +453,8 @@ def create_app(shared_secret: Optional[str] = None,
     _maybe_mount_viewer(app, serve_web_viewer)
     secret_dep = _build_secret_dependency(shared_secret)
     _register_routes(app, store, secret_dep)
-    _register_config_routes(app, _ConfigStore(), secret_dep)
+    _register_config_routes(app, ConfigStore(config_store_path, max_users=_MAX_CONFIG_USERS),
+                            secret_dep, allow_blind_config_writes)
     _register_request_logging(app)
     return app
 
@@ -398,6 +477,14 @@ def _build_arg_parser() -> argparse.ArgumentParser:
                         help="don't mount the bundled web viewer at /viewer")
     parser.add_argument("--cors-origin", action="append", default=None,
                         help="allowed CORS origin (repeatable; default: *)")
+    parser.add_argument("--config-db", default=None,
+                        help="SQLite file for config-sync buckets (default: "
+                             "$AC_SIGNALING_CONFIG_DB, else "
+                             "~/.je_auto_control/config_sync.sqlite3)")
+    parser.add_argument("--allow-blind-config-writes", action="store_true",
+                        help="accept the unconditional bucket PUT of clients older "
+                             "than the version-2 envelope (no revision check: "
+                             "concurrent pushes can overwrite each other)")
     return parser
 
 
@@ -419,6 +506,8 @@ def main(argv: Optional[list] = None) -> None:
         ttl_s=args.ttl_seconds,
         serve_web_viewer=not args.no_web_viewer,
         cors_origins=args.cors_origin,
+        config_store_path=args.config_db or os.environ.get("AC_SIGNALING_CONFIG_DB") or None,
+        allow_blind_config_writes=args.allow_blind_config_writes,
     )
     uvicorn.run(app, host=args.bind, port=args.port, log_level="info")
 

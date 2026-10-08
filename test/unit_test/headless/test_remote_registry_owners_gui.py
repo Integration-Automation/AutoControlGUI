@@ -24,6 +24,7 @@ from je_auto_control.utils.remote_desktop.connect_coordinator import parse_targe
 from je_auto_control.utils.remote_desktop.registry import (  # noqa: E402
     SCRIPT_OWNER, SLOT_HOST, SLOT_VIEWER, SLOT_WS_VIEWER, registry,
 )
+from headless._qt_settle import settle  # noqa: E402
 
 
 class _Viewer:
@@ -103,6 +104,7 @@ def _quick(target="tcp"):
     screen = connection_screen.QuickConnectScreen()
     address = {"tcp": "desk:5555", "ws": "ws://desk:8080/"}[target]
     screen._dispatch_target(parse_target(address), "tok")
+    settle(screen)
     return screen
 
 
@@ -113,6 +115,7 @@ def _tab(transport="TCP"):
     panel._token.setText("tok")
     panel._transport.setCurrentText(transport)
     panel._connect()
+    settle(panel)
     return panel
 
 
@@ -205,6 +208,7 @@ def test_quick_connect_changing_transport_ends_its_previous_session():
     screen = _quick("ws")
     first = screen._own_viewer()
     screen._dispatch_target(parse_target("desk:5555"), "tok")
+    settle(screen)
     assert not first.connected and registry.owner_of(SLOT_WS_VIEWER) is None
     assert registry.owner_of(SLOT_VIEWER) == screen._owner and screen._screen_window is not None
 
@@ -213,6 +217,7 @@ def test_a_panel_reconnecting_keeps_its_window():
     tab = _tab()
     first = tab._own_viewer()
     tab._connect()
+    settle(tab)
     assert not first.connected and tab._own_viewer().connected
     assert tab._screen_window is not None and tab._status.text() != _t("rd_viewer_displaced")
 
@@ -252,6 +257,7 @@ def test_a_panel_takes_over_a_scripts_session(monkeypatch):
     screen._disconnect()
     assert scripted.connected
     screen._dispatch_target(parse_target("desk:5555"), "tok")
+    settle(screen)
     assert not scripted.connected and registry.owner_of(SLOT_VIEWER) == screen._owner
 
 

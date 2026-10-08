@@ -10,6 +10,7 @@ from PySide6.QtWidgets import (
 )
 
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
+from je_auto_control.gui._journal_import import candidate_summary, pick_journal_candidate
 from je_auto_control.gui.language_wrapper.multi_language_wrapper import (
     language_wrapper,
 )
@@ -19,7 +20,7 @@ from je_auto_control.gui.script_builder.command_schema import (
 from je_auto_control.gui.script_builder.step_form_view import StepFormView
 from je_auto_control.gui.script_builder.step_list_view import StepTreeView
 from je_auto_control.gui.script_builder.step_model import (
-    Step, load_action_file, save_action_file, steps_to_actions,
+    Step, actions_to_steps, load_action_file, save_action_file, steps_to_actions,
 )
 from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.executor.action_executor import execute_action
@@ -78,6 +79,7 @@ class ScriptBuilderTab(TranslatableMixin, QWidget):
         bar.addStretch()
         for key, handler in (
             ("sb_load_json", self._on_load),
+            ("sb_import_journal", self._on_import_journal),
             ("sb_save_json", self._on_save),
             ("sb_run", self._on_run),
         ):
@@ -147,6 +149,23 @@ class ScriptBuilderTab(TranslatableMixin, QWidget):
             self._result.setPlainText(f"Loaded: {path}")
         except (AutoControlException, OSError, ValueError, TypeError) as error:
             QMessageBox.warning(self, "Error", str(error))
+
+    def _on_import_journal(self) -> None:
+        """Load the candidate built from an action journal run as steps to review."""
+        candidate = pick_journal_candidate(self)
+        if candidate is None:
+            return
+        try:
+            steps = actions_to_steps(candidate.actions)
+        except (AutoControlException, ValueError, TypeError) as error:
+            QMessageBox.warning(self, "Error", str(error))
+            return
+        self._file_extras = None
+        self._tree.load_steps(steps)
+        self._form.load_step(None)
+        self._result.setPlainText("\n".join((
+            f"Imported journal run {candidate.manifest['run_id']}: {len(steps)} step(s)",
+            candidate_summary(candidate))))
 
     def _on_run(self) -> None:
         try:

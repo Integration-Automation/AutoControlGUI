@@ -5,6 +5,7 @@ import time
 from typing import Any, Callable, Dict, Mapping, Optional
 
 from je_auto_control.utils.exception.exceptions import AutoControlException
+from je_auto_control.utils.script_vars.execution import run_level_scope
 
 
 # AutoControlException so `except AutoControlException` boundaries catch a
@@ -30,6 +31,14 @@ class StateMachine:
     (a template path, or ``{"image": ..., "detect_threshold": ...}``) and
     ``predicate`` (a callable). Any other ``if_*`` key is an error rather
     than a guard that silently always passes.
+
+    Variables: one :meth:`run` is one run. Started from Python it gets a
+    fresh variable scope that every ``on_enter`` action shares and that is
+    dropped when the machine stops; started from an action list
+    (``AC_run_state_machine``) it uses the scope of the list that called it,
+    as any nested step does. The default runner executes on the executor
+    running that list, so inside an ``AC_parallel`` branch the machine sees
+    the branch's variables.
     """
 
     def __init__(self, spec: Mapping[str, Any],
@@ -60,6 +69,10 @@ class StateMachine:
         Raises :class:`StateMachineError` on budget exhaustion or when
         a state has no fireable transition.
         """
+        with run_level_scope():
+            return self._drive()
+
+    def _drive(self) -> Dict[str, Any]:
         current = self._spec["initial"]
         if current not in self._states:
             raise StateMachineError(f"initial state {current!r} undefined")
@@ -148,9 +161,17 @@ def _validate_spec(spec: Mapping[str, Any]) -> None:
 
 
 def _default_execute_action(action: Any) -> Any:
-    """Lazy bridge to the main executor; isolates test imports."""
-    from je_auto_control.utils.executor.action_executor import execute_action
-    return execute_action([action] if not isinstance(action, list) else action)
+    """Lazy bridge to the executor running the calling list, else the module's.
+
+    An ``on_enter`` entry is one action -- ``["AC_name", {...}]`` -- or a
+    list of them. Every list used to be taken for a list of actions, so the
+    single action the documentation shows was rejected ("must be [name] or
+    [name, params]") and, the failure only being recorded, never ran.
+    """
+    from je_auto_control.utils.executor.action_executor import _running_executor
+    is_action_list = (isinstance(action, list) and bool(action)
+                      and not isinstance(action[0], str))
+    return _running_executor().execute_action(action if is_action_list else [action])
 
 
 def _after_ok(transition: Mapping[str, Any], _context: Mapping[str, Any],

@@ -106,6 +106,7 @@ english_word_dict = {
     "dm_col_error": "Error",
     "dm_summary": "{passed} passed, {failed} failed of {total}",
     "dm_error": "Run failed: {error}",
+    "dm_running": "Running...",
 
     # Media checks tab
     "media_audio_label": "Audio activity check",
@@ -178,6 +179,57 @@ english_word_dict = {
     "diag_col_detail": "Detail",
     "diag_status_ok": "OK",
     "diag_status_fail": "FAIL",
+    # Diagnostics tab: capability and authorisation states
+    "diag_capabilities_title": "What this session can do",
+    "diag_capabilities_refresh": "Refresh capabilities",
+    "diag_input_reask": "Ask for input permission again",
+    "diag_input_close": "End the input session",
+    "diag_cap_col_name": "Capability",
+    "diag_cap_col_state": "State",
+    "diag_cap_col_backend": "Backend",
+    "diag_cap_col_scope": "Reaches",
+    "diag_cap_col_detail": "Detail",
+    "diag_cap_col_fix": "What to do",
+    "cap_name_input": "Keyboard and mouse input",
+    "cap_name_capture": "Screen capture",
+    "cap_name_recording": "Recording your own input",
+    "cap_name_stop_shortcut": "Global stop key",
+    "cap_state_available": "Available",
+    "cap_state_not_requested": "Not asked yet",
+    "cap_state_requesting": "Waiting for your answer",
+    "cap_state_needs_permission": "Needs permission",
+    "cap_state_needs_setup": "Needs setup",
+    "cap_state_session_closed": "Session closed",
+    "cap_state_revoked": "Revoked by the desktop",
+    "cap_state_compositor_restarted": "Desktop was restarted",
+    "cap_state_unsupported": "Not supported",
+    "cap_state_unknown": "Not checked",
+    "cap_scope_desktop": "Whole desktop",
+    "cap_scope_xwayland": "X11 applications only (XWayland)",
+    "cap_fix_input_consent": (
+        "Choose Actions > Ask for input permission again, repeat the action, "
+        "and allow the request. To use ydotool instead, set "
+        "JE_AUTOCONTROL_WAYLAND_INPUT_BACKEND=cli before starting."),
+    "cap_fix_answer_dialog": "Answer the permission dialog on the desktop.",
+    "cap_fix_ydotool": (
+        "Install ydotool 1.0 or newer and run ydotoold with access to "
+        "/dev/uinput, or install libei and liboeffis."),
+    "cap_fix_xwayland": (
+        "Install the Wayland tools (ydotool or libei, and grim, "
+        "gnome-screenshot or spectacle) so the Wayland backend loads."),
+    "cap_fix_display": "Set DISPLAY to a running X server.",
+    "cap_fix_capture": (
+        "Allow the screenshot request, install grim, gnome-screenshot or "
+        "spectacle, or set JE_AUTOCONTROL_WAYLAND_CAPTURE_COMMAND."),
+    "cap_fix_record_setup": (
+        "Name the devices to read in JE_AUTOCONTROL_WAYLAND_RECORD_DEVICES "
+        "(comma-separated /dev/input/event* paths)."),
+    "cap_fix_record_permission": (
+        "Add your user to the input group and log in again, or add a udev "
+        "rule. Do not run the program as root for this."),
+    "cap_fix_stop_manual": (
+        "Stop a running script from the Actions menu or by ending the "
+        "process."),
 
     # USB devices tab
     "usb_backend_label": "Backend:",
@@ -226,6 +278,21 @@ english_word_dict = {
 
     # USB sharing panel (AnyDesk-style)
     "tab_usb_share": "USB Sharing",
+    "tab_mobile": "Mobile",
+    "mob_platform": "Platform",
+    "mob_device": "Device (adb serial / WebDriverAgent URL)",
+    "mob_adb_path": "adb path (blank = PATH)",
+    "mob_command": "Command",
+    "mob_params": "Parameters (JSON object)",
+    "mob_result": "Result",
+    "mob_probe": "Probe device",
+    "mob_run": "Run command",
+    "mob_fill_params": "Fill parameter template",
+    "mob_col_capability": "Capability",
+    "mob_col_state": "State",
+    "mob_col_reason": "Reason",
+    "mob_error": "Failed: {error}",
+    "mob_untested": "Built against fake ADB / WebDriverAgent; not verified on a device.",
     "usb_share_host_group": "Share USB on this machine",
     "usb_share_viewer_group": "Use a USB device",
     "usb_share_enable": "Enable sharing",
@@ -350,6 +417,35 @@ english_word_dict = {
         "Replace user config from this bundle? "
         "Existing files are renamed to .bak.<timestamp> first."),
     "rest_config_import_done": "Wrote {written} files; skipped {skipped}.",
+    "rest_token_rbac": "per-user tokens (user store: {path})",
+    "rest_running_rbac": "REST API is running with RBAC: the shared token is refused.",
+    "rest_users_group": "Users (RBAC)",
+    "rest_users_path": "User store:",
+    "rest_users_path_ph": "path of users.json (JE_AUTOCONTROL_RBAC_USERS)",
+    "rest_users_enable": "Authenticate REST requests against this user store",
+    "rest_users_col_id": "User ID",
+    "rest_users_col_name": "Name",
+    "rest_users_col_role": "Role",
+    "rest_users_id": "User ID:",
+    "rest_users_name": "Name:",
+    "rest_users_role": "Role:",
+    "rest_users_new_token": "New token (shown once):",
+    "rest_users_refresh": "Refresh users",
+    "rest_users_add": "Add user",
+    "rest_users_set_role": "Set role",
+    "rest_users_rotate": "Rotate token",
+    "rest_users_remove": "Remove user",
+    "rest_users_copy_token": "Copy new token",
+    "rest_users_remove_confirm": (
+        "Remove user {user}? Their token stops working and work they "
+        "scheduled no longer runs."
+    ),
+    "rest_users_no_store": "Enter the path of a user store first.",
+    "rest_users_no_user": "Enter or select a user ID first.",
+    "rest_users_count": "{count} user(s) in {path}",
+    "rest_users_token_issued": (
+        "Token for {user} issued. Copy it now: it cannot be shown again."
+    ),
 
     # Remote Desktop — WebRTC sub-tabs
     "rd_webrtc_host_tab": "WebRTC Host",
@@ -853,6 +949,19 @@ english_word_dict = {
     "rh_col_artifact": "Artifact",
     "rh_open_artifact": "Open artifact",
     "rh_no_artifact": "Selected run has no artifact.",
+    "rh_journal_start": "Start action journal…",
+    "rh_journal_stop": "Stop action journal",
+    "rh_journal_candidate": "Candidate script from journal…",
+    "rh_journal_off": "Action journal: off",
+    "rh_journal_on": "Action journal: run {run}, {n} step(s) → {path}",
+    "re_import_journal": "Import journal run…",
+    "sb_import_journal": "Import journal",
+    "jr_dialog_open": "Open action journal",
+    "jr_dialog_start": "Journal file to append to",
+    "jr_dialog_save_code": "Save candidate script",
+    "jr_pick_run": "Run",
+    "jr_no_runs": "This journal holds no runs.",
+    "jr_observed_only": "Observed path only: this candidate replays what the run did, not the script's control flow.",
     "rh_artifact_missing": "Artifact file no longer exists.",
     "rh_timeline_heading": "Timeline (oldest left → newest right)",
     "rh_preview_heading": "Preview",
@@ -1016,6 +1125,34 @@ english_word_dict = {
     "self_heal_col_template_path": "Template",
     "self_heal_col_description": "Description",
     "self_heal_col_duration_ms": "ms",
+    "self_heal_col_locator_version": "Version",
+    "self_heal_col_action_verified": "Verified",
+    "self_heal_verified_yes": "verified",
+    "self_heal_verified_no": "failed check",
+    "self_heal_verified_unknown": "not checked",
+    "self_heal_measure_title": "Measure versions and revise templates",
+    "self_heal_dataset_label": "Dataset:",
+    "self_heal_dataset_placeholder": "labelled dataset JSON",
+    "self_heal_candidate_label": "Candidate image:",
+    "self_heal_candidate_placeholder": "new template image to propose",
+    "self_heal_revision_label": "Revision id:",
+    "self_heal_revision_placeholder": "filled in by Propose",
+    "self_heal_report_placeholder": "Evaluation and revision results appear here",
+    "self_heal_browse_dataset": "Choose dataset…",
+    "self_heal_browse_candidate": "Choose candidate image…",
+    "self_heal_evaluate": "Evaluate dataset",
+    "self_heal_rev_propose": "Propose template revision",
+    "self_heal_rev_preview": "Preview revision",
+    "self_heal_rev_accept": "Accept revision",
+    "self_heal_rev_revert": "Revert revision",
+    "self_heal_rev_list": "List revisions",
+    "self_heal_done": "Done",
+    "self_heal_dataset_required": "Provide a dataset JSON path",
+    "self_heal_revision_required": "Provide a revision id",
+    "self_heal_propose_required": "Provide the template and a candidate image",
+    "self_heal_eval_passed": "Evaluation finished — thresholds met",
+    "self_heal_eval_failed": "Evaluation finished — thresholds NOT met",
+    "self_heal_accept_unvalidated": "This candidate has not been validated against labelled frames. Accept it anyway?",
 
     # WebRunner Tab
     "web_available": "WebRunner is installed.",
@@ -1095,6 +1232,42 @@ english_word_dict = {
     "presence_col_cursor": "Cursor",
     "presence_col_last_seen_iso": "Last seen",
 
+    # Config Sync Tab
+    "tab_config_sync": "Config Sync",
+    "config_sync_server_label": "Sync server URL:",
+    "config_sync_user_label": "User id:",
+    "config_sync_secret_label": "Shared secret:",
+    "config_sync_scripts_label": "Scripts folder (optional):",
+    "config_sync_assets_label": "Shared assets folder (optional):",
+    "config_sync_conflicts_title": "Conflicts: entries changed on two machines at once",
+    "config_sync_col_entry": "Entry",
+    "config_sync_col_choice": "Choice",
+    "config_sync_col_origin": "Changed on",
+    "config_sync_col_value": "Value",
+    "config_sync_run_btn": "Sync now",
+    "config_sync_cancel_btn": "Cancel sync",
+    "config_sync_refresh_btn": "Refresh sync status",
+    "config_sync_resolve_btn": "Keep selected candidate",
+    "config_sync_resync_btn": "Full resync (discard pending changes)",
+    "config_sync_required": "Server URL and user id are required",
+    "config_sync_busy": "A sync is already running",
+    "config_sync_resync_confirm": "Adopt the server's state and discard this machine's pending changes?",
+    "config_sync_no_conflict_selected": "Select a conflict candidate first",
+    "config_sync_error": "Error",
+    "config_sync_deleted": "(deleted)",
+    "config_sync_state_label": "State",
+    "config_sync_state_never": "never synced",
+    "config_sync_state_syncing": "syncing...",
+    "config_sync_state_synced": "synced",
+    "config_sync_state_pending": "changes waiting to be sent",
+    "config_sync_state_conflict": "conflict: a choice is needed",
+    "config_sync_state_offline": "offline: changes are queued",
+    "config_sync_state_cancelled": "cancelled",
+    "config_sync_state_resync_required": "retired: a full resync is required",
+    "config_sync_revision": "Last merged revision",
+    "config_sync_pending": "Pending changes",
+    "config_sync_last_success": "Last successful sync",
+
     # Chat-Ops Tab
     "chatops_root_label": "Script root:",
     "chatops_root_placeholder": "directory of .json scripts /run can execute",
@@ -1144,6 +1317,7 @@ english_word_dict = {
     "ocr_min_conf_invalid": "Min confidence must be a number",
     "ocr_regex_required": "Enter a regex pattern first",
     "ocr_regex_invalid": "Invalid regex",
+    "ocr_running": "Reading...",
 
     # Variables Tab
     "vars_current_group": "Current scope",
@@ -1266,6 +1440,7 @@ english_word_dict = {
     "rd_badge_running": "RUNNING · :{port} · {n} viewer(s)",
     "rd_badge_stopped": "STOPPED",
     "rd_badge_idle": "NOT CONNECTED",
+    "rd_viewer_connecting": "CONNECTING...",
     "rd_badge_live": "LIVE",
     "rd_host_id_group": "Host ID (share with viewers)",
     "rd_host_id_label": "Host ID:",
