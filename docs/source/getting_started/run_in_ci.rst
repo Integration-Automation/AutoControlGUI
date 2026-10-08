@@ -1,6 +1,6 @@
-================================
+=================================
 Running AutoControl in CI / Cloud
-================================
+=================================
 
 AutoControl is a GUI automation framework, so by default it expects a
 real display server. The provided Docker images let you run the same

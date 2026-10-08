@@ -4,10 +4,10 @@
 ``rich_clipboard`` 已加入 ``CF_HTML`` 以便把豐富內容貼進 Word / Outlook,但仍缺少另外兩種
 跨應用程式的剪貼簿格式:
 
-* **RTF**（``"Rich Text Format"``)——幾乎每個豐富編輯器都接受、用於樣式貼上的格式。
+* **RTF**\ （``"Rich Text Format"``)——幾乎每個豐富編輯器都接受、用於樣式貼上的格式。
   ``build_rtf`` / ``rtf_to_text`` 以純 Python 建立與剝除 RTF 控制字與 ``\uNNNN`` / ``\'XX``
   轉義,並具備完全可單元測試的往返。
-* **CSV / TSV**（Excel 讀取的已註冊 ``"Csv"`` 格式)——``rows_to_csv`` / ``csv_to_rows`` 是對
+* **CSV / TSV**\ （Excel 讀取的已註冊 ``"Csv"`` 格式)——``rows_to_csv`` / ``csv_to_rows`` 是對
   標準庫 ``csv`` 模組的薄包裝(可指定分隔符),讓表格能放上 / 讀下剪貼簿。
 
 這些編解碼器與平台無關且可無頭測試;只有實際的剪貼簿 I/O 為 Win32(在其他平台拋出

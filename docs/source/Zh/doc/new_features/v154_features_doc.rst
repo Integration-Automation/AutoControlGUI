@@ -34,5 +34,5 @@ result}`` JSONL,加上決定性的重播驅動器。
 執行器命令
 ----------
 
-``AC_replay_trace`` 透過執行器執行每一步的 ``action``(AC 動作清單)來重播 ``trace``(JSON 陣列或 JSONL),回傳
-``{count, results}``。它以 MCP 工具 ``ac_replay_trace``(有副作用)以及 Script Builder 中 **Flow** 分類下的命令提供。
+``AC_replay_trace`` 透過執行器執行每一步的 ``action``\ (AC 動作清單)來重播 ``trace``\ (JSON 陣列或 JSONL),回傳
+``{count, results}``。它以 MCP 工具 ``ac_replay_trace``\ (有副作用)以及 Script Builder 中 **Flow** 分類下的命令提供。

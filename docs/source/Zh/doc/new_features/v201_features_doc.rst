@@ -29,8 +29,8 @@ backend 進行無頭測試;真正的 UIA 呼叫位於 Windows 後端。不匯入
     set_view("Tiles", name="File List")        # 切換檢視
 
 控制項以 ``name`` / ``role`` / ``app_name`` / ``automation_id`` 定位(與其他原生控制動作相同)。
-``get_selection`` / ``list_views`` 回傳其字典(找不到控制項或模式則為 ``None``);``set_view``
-回傳 ``bool``(具名檢視不支援時為 False)。
+``get_selection`` / ``list_views`` 回傳其字典(找不到控制項或模式則為 ``None``);\ ``set_view``
+回傳 ``bool``\ (具名檢視不支援時為 False)。
 
 執行器指令
 ----------

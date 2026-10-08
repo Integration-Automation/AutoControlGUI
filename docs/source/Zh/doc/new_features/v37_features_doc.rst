@@ -20,8 +20,8 @@ SOC2             CC6.1         邏輯存取限制於授權主機                
 SOC2             CC6.3         最小權限、限時憑證                                  ``jit_credentials_used``
 SOC2             CC6.8         密鑰不硬編碼且經掃描                                ``secrets_scanned``
 SOC2             CC7.3         安全事件留存供審查                                  ``audit_logging_enabled``
-SOC2             CC8.1         變更需職責分離(maker-checker)審批                ``change_approval_required``
-ISO 27001        A.5.23        雲端/網路出口的資訊安全                            ``egress_allowlist_enforced``
+SOC2             CC8.1         變更需職責分離(maker-checker)審批                   ``change_approval_required``
+ISO 27001        A.5.23        雲端/網路出口的資訊安全                             ``egress_allowlist_enforced``
 ISO 27001        A.8.16        監控活動 / 稽核軌跡                                 ``audit_logging_enabled``
 ISO 27001        A.8.30        維護軟體物料清單                                    ``sbom_generated``
 ================ ============= =================================================== ==============================

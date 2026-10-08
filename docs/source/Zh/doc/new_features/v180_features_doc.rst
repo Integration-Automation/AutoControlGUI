@@ -34,8 +34,8 @@
 執行器指令
 ----------
 
-``AC_region_stability``(``frames`` / ``settle_threshold`` → ``{stable, mean_ssim, min_ssim}``)
-與 ``AC_match_persistence``(``template`` / ``frames`` / ``min_score`` / ``agree_px`` →
+``AC_region_stability``\ (``frames`` / ``settle_threshold`` → ``{stable, mean_ssim, min_ssim}``)
+與 ``AC_match_persistence``\ (``template`` / ``frames`` / ``min_score`` / ``agree_px`` →
 ``{persisted, n_hits, jitter}``)。兩者以 MCP 工具 ``ac_region_stability`` /
-``ac_match_persistence``(唯讀)及 Script Builder 指令 **Region Stability (frames)** /
-**Match Persistence (frames)**(位於 **Image** 分類下)形式提供。
+``ac_match_persistence``\ (唯讀)及 Script Builder 指令 **Region Stability (frames)** /
+**Match Persistence (frames)**\ (位於 **Image** 分類下)形式提供。

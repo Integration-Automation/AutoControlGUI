@@ -13,7 +13,7 @@ executor commands, MCP tools, Script Builder).
 
 
 Row schema validation
-====================
+=====================
 
 Validate scraped / loaded rows against a declarative schema before they
 reach an ERP or form — bad data caught here doesn't corrupt downstream::
@@ -37,7 +37,7 @@ Rules: ``type`` / ``required`` / ``regex`` / ``min`` / ``max`` /
 
 
 Field extraction
-===============
+================
 
 Pull structured values out of free text / OCR blobs with named regex
 presets (plus your own ``patterns``)::
@@ -54,7 +54,7 @@ Presets: ``email`` / ``url`` / ``ipv4`` / ``phone`` / ``date_iso`` /
 
 
 Row masking
-==========
+===========
 
 Mask sensitive columns before exporting rows / reports (the existing
 redaction is screenshot-only)::

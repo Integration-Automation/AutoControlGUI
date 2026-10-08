@@ -31,8 +31,8 @@ registry ``server.json`` 產生器,以及風險導向的測試選擇。
 
 支援的欄位型別:``first_name``、``last_name``、``name``、``username``、
 ``email``、``phone``、``city``、``company``、``word``、``sentence``、
-``uuid``、``bool``、``int``(min/max)、``float``(min/max/ndigits)、
-``choice``(choices)、``date``(start/end)。
+``uuid``、``bool``、``int``\ (min/max)、``float``\ (min/max/ndigits)、
+``choice``\ (choices)、``date``\ (start/end)。
 
 ``AC_generate_data`` 指令會寫出檔案(再交給 ``AC_load_data``)或直接
 回傳資料列。

@@ -17,7 +17,7 @@ executor commands, MCP tools, Script Builder).
 
 
 Python API
-=========
+==========
 
 ::
 
@@ -44,7 +44,7 @@ absent), ``change`` (present, value differs). Subscribe to a subset via
 
 
 Executor / MCP commands
-======================
+=======================
 
 * ``AC_observe_add`` — watch ``kind`` (``image`` / ``text`` / ``pixel``)
   for ``event`` and run ``actions`` when it fires (the watchdog pattern,

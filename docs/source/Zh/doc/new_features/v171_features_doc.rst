@@ -33,6 +33,6 @@
 執行器指令
 ----------
 
-``AC_match_subpixel``(``template`` / ``min_score`` / ``region`` / ``method`` →
-``{found, match}``)以 MCP 工具 ``ac_match_subpixel``(唯讀)及 Script Builder 指令
-**Match Template (sub-pixel)**(位於 **Image** 分類下)形式提供。
+``AC_match_subpixel``\ (``template`` / ``min_score`` / ``region`` / ``method`` →
+``{found, match}``)以 MCP 工具 ``ac_match_subpixel``\ (唯讀)及 Script Builder 指令
+**Match Template (sub-pixel)**\ (位於 **Image** 分類下)形式提供。

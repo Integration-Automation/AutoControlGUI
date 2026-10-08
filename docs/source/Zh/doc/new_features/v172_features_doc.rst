@@ -35,8 +35,8 @@ Grounding 自我一致性(提案共識)
 執行器指令
 ----------
 
-``AC_consensus_point``(``candidates`` / ``cluster_radius`` → ``{found, result}``)與
-``AC_consensus_element``(``candidates`` / ``elements`` → ``{found, element, agreement}``)。
-兩者以 MCP 工具 ``ac_consensus_point`` / ``ac_consensus_element``(唯讀)及 Script Builder 指令
-**Grounding Consensus Point** / **Grounding Consensus Element**(位於 **Native UI** 分類下)
+``AC_consensus_point``\ (``candidates`` / ``cluster_radius`` → ``{found, result}``)與
+``AC_consensus_element``\ (``candidates`` / ``elements`` → ``{found, element, agreement}``)。
+兩者以 MCP 工具 ``ac_consensus_point`` / ``ac_consensus_element``\ (唯讀)及 Script Builder 指令
+**Grounding Consensus Point** / **Grounding Consensus Element**\ (位於 **Native UI** 分類下)
 形式提供。

@@ -32,7 +32,7 @@
 執行器指令
 ----------
 
-``AC_act_in_view``(``target`` 加上 ``kind`` / ``direction`` / ``max_scrolls`` /
+``AC_act_in_view``\ (``target`` 加上 ``kind`` / ``direction`` / ``max_scrolls`` /
 ``scroll_amount`` / ``button`` → ``{acted, coords, scrolls}``)把 template 或文字目標捲入畫面並點擊。
 以對應的 ``ac_act_in_view`` MCP 工具及 Script Builder 指令(位於 **Flow** 分類下)形式提供。
-:func:`act_in_view`(接受任意 action 與 actionability 探針)則是 Python API 介面。
+:func:`act_in_view`\ (接受任意 action 與 actionability 探針)則是 Python API 介面。

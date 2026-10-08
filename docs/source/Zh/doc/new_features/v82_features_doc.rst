@@ -1,7 +1,7 @@
 分布漂移偵測
-==========
+============
 
-``stats`` 具備針對 A/B *實驗*結果(比例與平均)的雙樣本檢定,但沒有 Population Stability Index,也沒有
+``stats`` 具備針對 A/B *實驗*\ 結果(比例與平均)的雙樣本檢定,但沒有 Population Stability Index,也沒有
 Kolmogorov-Smirnov 雙樣本檢定來做經典的「今天的資料形狀是否與基準一致」檢查。本功能加入 PSI、KS,以及
 與 ``data_profile`` 搭配的類別漂移摘要。
 

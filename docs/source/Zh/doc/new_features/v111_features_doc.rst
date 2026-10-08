@@ -1,7 +1,7 @@
 雙向文字 QA(Trojan-Source 掃描)
 ================================
 
-``confusables`` 抓出相似的*字元*,但隱形的 Unicode *方向格式控制*是另一種危害。嵌入/覆寫
+``confusables`` 抓出相似的\ *字元*,但隱形的 Unicode *方向格式控制*\ 是另一種危害。嵌入/覆寫
 (LRE/RLE/LRO/RLO/PDF)、隔離(LRI/RLI/FSI/PDI)與標記(LRM/RLM/ALM)可以悄悄改變文字的呈現順序。這既是
 RTL 在地化 QA 的缺口,也是「Trojan Source」攻擊(CVE-2021-42574)的根源——覆寫控制讓原始碼讀起來與實際執行
 不同。

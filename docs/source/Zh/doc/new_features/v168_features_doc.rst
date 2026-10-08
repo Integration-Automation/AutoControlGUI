@@ -35,8 +35,8 @@ Canny 預設,因此不重複任何比對或幾何程式。``haystack`` 可注入
 執行器指令
 ----------
 
-``AC_edge_match``(``template`` / ``min_score`` / ``scales`` / ``region`` →
-``{found, match}``)與 ``AC_edge_match_all``(另加 ``max_results`` / ``nms_iou`` →
-``{count, matches}``)。兩者以 MCP 工具 ``ac_edge_match`` / ``ac_edge_match_all``(唯讀)及
+``AC_edge_match``\ (``template`` / ``min_score`` / ``scales`` / ``region`` →
+``{found, match}``)與 ``AC_edge_match_all``\ (另加 ``max_results`` / ``nms_iou`` →
+``{count, matches}``)。兩者以 MCP 工具 ``ac_edge_match`` / ``ac_edge_match_all``\ (唯讀)及
 Script Builder 指令 **Match Template (edge shape)** / **Match Template All (edge shape)**
 (位於 **Image** 分類下)形式提供。

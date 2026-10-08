@@ -1,5 +1,5 @@
 字串距離相似度量
-==============
+================
 
 ``fuzzy`` 只提供 difflib 的 gestalt ratio。本功能補上它缺少的編輯距離與 token 集合度量 ——
 Levenshtein / Damerau-Levenshtein、Jaro 與 Jaro-Winkler(短名稱/標籤的標準),以及字元 n-gram 的

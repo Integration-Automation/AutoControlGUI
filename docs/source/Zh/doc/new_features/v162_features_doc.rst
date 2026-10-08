@@ -39,6 +39,6 @@
 執行器指令
 ----------
 
-``AC_populate_table``(``grid`` / ``text_boxes`` / ``overlap`` → ``{n_rows, n_cols, cells,
-spans}``)以 MCP 工具 ``ac_populate_table``(唯讀)及 Script Builder 指令
-**Fill Table From Grid + OCR**(位於 **OCR** 分類下)形式提供。
+``AC_populate_table``\ (``grid`` / ``text_boxes`` / ``overlap`` → ``{n_rows, n_cols, cells,
+spans}``)以 MCP 工具 ``ac_populate_table``\ (唯讀)及 Script Builder 指令
+**Fill Table From Grid + OCR**\ (位於 **OCR** 分類下)形式提供。
