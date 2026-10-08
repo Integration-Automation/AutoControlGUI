@@ -29,7 +29,7 @@ entry points → execution core (`utils/executor/`) → headless capabilities (`
 | `je_auto_control/wrapper/` | Platform-neutral API (`auto_control_mouse/keyboard/screen/image/record/window.py`); `platform_wrapper.py` picks the backend; `backend_contract.py` types the seam; `window_backends/`. |
 | `je_auto_control/{windows,osx,linux_with_x11,linux_wayland}/` | Desktop OS backends; only the running OS's backend is imported. |
 | `je_auto_control/{android,ios}/` | Mobile device control (adb / uiautomator2, WebDriverAgent). |
-| `je_auto_control/gui/` | Optional PySide6 GUI (`[gui]` extra): `main_window.py`, tab registry `main_widget.py`, `script_builder/`, `remote_desktop/`, `language_wrapper/`. |
+| `je_auto_control/gui/` | Optional PySide6 GUI (`[gui]` extra): `main_window.py` (menus, navigation dock, theme), `main_widget.py` (the tabbed workspace), the tab table `tab_registry.py` (tabs are built on first open), `navigation.py`, `theme.py`, `script_builder/`, `remote_desktop/`, `language_wrapper/`. |
 | `autocontrol-lsp/` | Separate distribution: language server for `AC_*` action JSON, plus a `vscode/` client. |
 | `test/` | `unit_test/headless/` (CI gate), `unit_test/flow_control/`, `integrated_test/`, `gui_test/`, `manual_test/`, `verify/`. |
 | `docs/` | Sphinx docs, `API_LIFECYCLE.md`, `CAPABILITY_MATRIX.md`. |
@@ -108,8 +108,9 @@ wrapper/auto_control_record.record → OS listener (e.g. windows/record/win32_in
    `_handlers_scheduling.py`, `_handlers_remote.py`, `_handlers_locators.py`, `_handlers_operations.py`,
    `_handlers_qa.py`, `_handlers_executor_bridge.py` (a three-line delegation to an executor function), or
    `_handlers.py` for data, text and the WebRunner bridge.
-6. GUI: thin widget in `gui/`, registered in `gui/main_widget.py` (`_add_tab`) with commands exposed through
-   `menu_actions()`; strings in every `gui/language_wrapper/*.py` catalogue.
+6. GUI: thin widget in `gui/`, registered by one `TabSpec` row in `gui/tab_registry.py` (module and class name, so
+   it is imported only when opened) with commands exposed through `menu_actions()`; strings in every
+   `gui/language_wrapper/*.py` catalogue.
 7. Headless test in `test/unit_test/headless/`.
 8. Update `architecture_explore.md` (and `README.md` + `README/` translations if a quoted count changes), then run
    `python test/unit_test/headless/test_doc_line_counts.py --fix`. Regenerate the typed stub with

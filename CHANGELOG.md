@@ -15,6 +15,12 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Added
 
+- GUI: a navigation panel on the left of the main window lists every tab by
+  category, with a search box (`Ctrl+K`; `Ctrl+B` hides the panel).
+  `AutoControlGUIWidget.activate_tab(key)` opens a tab or brings it to the
+  front, and `current_tab_key()` names the tab on screen.
+- GUI: **View → Theme** switches between a dark and a light theme, both built
+  from the tokens in `gui/theme.py` (`AutoControlGUIUI.set_theme(name)`).
 - AI-agent documentation and a dedicated `AI.md` explain computer-use positioning, MCP aliases, safe tool selection, and OpenAI integration.
 - `AC_run_agent` now uses a focused computer-use allow-list by default instead of exposing the full `AC_*` command catalogue to the model.
 - `write_secret(secret)` / `AC_write_secret` (`secret`): type a password or
@@ -155,6 +161,17 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Changed
 
+- GUI tabs are built the first time they are opened. `AutoControlGUIWidget`
+  registers all 48 tabs from `gui/tab_registry.py` but constructs only the
+  three it opens on and its own forms; `list_registered_tabs()` builds
+  nothing, and reading `entry.widget` on a `_tab_entries` row builds that tab.
+  An embedder that relied on every tab existing after construction (a tab's
+  timer or listener started at start-up) has to open the tab first.
+- The main window no longer imports `qt_material`; it styles itself from
+  `gui/theme.py`. The `[gui]` extra still lists `qt-material` for now.
+- GUI text size "Auto" is 10 / 11 / 13 pt by screen height (was 12 / 14 / 16),
+  and the default window is 1280×800 (was 1000×760). The font family is the
+  platform's UI font instead of Lato.
 - `je_auto_control_dev`, the dev-channel package, declares what
   `je_auto_control` declares: the same pinned dependencies and platform
   markers (`defusedxml`, `cryptography` and the `opencv-python` bound are new

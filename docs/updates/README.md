@@ -58,6 +58,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261008-02 | 2026-10-08 | GUI: navigation panel with search, dark and light themes from tokens, tabs built on first open | #feature #gui #F1 #F2 | [2026-10](2026-10.md) |
 | U-20261008-01 | 2026-10-08 | The legacy CLI flags exit 1 when an action failed; reports go below TestPioneer's artifact directory | #feature #cli #report #testpioneer | [2026-10](2026-10.md) |
 | U-20261006-01 | 2026-10-06 | Make AutoControl discoverable and safer for AI agents | #feature #ai #mcp #docs | [2026-10](2026-10.md) |
 | U-20261001-10 | 2026-10-01 | The publish jobs install hash-locked build tooling and build with the locked setuptools | #release #ci #security #X-13 | [2026-10](2026-10.md) |
@@ -348,7 +349,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | File | Period | Entries |
 |---|---|---:|
-| [2026-10.md](2026-10.md) | 2026-10 | 12 |
+| [2026-10.md](2026-10.md) | 2026-10 | 13 |
 | [2026-09-e.md](2026-09-e.md) | 2026-09 | 7 |
 | [2026-09-d.md](2026-09-d.md) | 2026-09 | 55 |
 | [2026-09-c.md](2026-09-c.md) | 2026-09 | 38 |

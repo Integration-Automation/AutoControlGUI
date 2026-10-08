@@ -1,17 +1,20 @@
-"""Top-level window with menu bar, closable tabs, and live language switching."""
+"""Top-level window: menu bar, feature navigation, tabbed workspace, themes, live language switching."""
 import sys
 
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QAction, QActionGroup
+from PySide6.QtGui import QAction, QActionGroup, QKeySequence
 from PySide6.QtWidgets import (
-    QApplication, QFileDialog, QMainWindow, QMenu, QMessageBox,
+    QApplication, QDockWidget, QFileDialog, QMainWindow, QMenu, QMessageBox, QWidget,
 )
-from qt_material import QtStyleTools
 
 from je_auto_control.gui.language_wrapper.multi_language_wrapper import (
     language_wrapper,
 )
 from je_auto_control.gui.main_widget import AutoControlGUIWidget
+from je_auto_control.gui.navigation import NavigationPanel
+from je_auto_control.gui.theme import (
+    DEFAULT_THEME, THEMES, apply_theme, font_rule, prepare_application, theme_named,
+)
 
 
 def _t(key: str, default: str = "") -> str:
@@ -36,8 +39,14 @@ _TEXT_SIZE_PRESETS = (
 )
 
 
-class AutoControlGUIUI(QMainWindow, QtStyleTools):
-    """Main window: menu bar + AutoControlGUIWidget (which owns the tabs)."""
+_THEME_LABELS = {
+    "dark": ("menu_view_theme_dark", "Dark"),
+    "light": ("menu_view_theme_light", "Light"),
+}
+
+
+class AutoControlGUIUI(QMainWindow):
+    """Main window: menu bar, navigation panel and AutoControlGUIWidget (which owns the tabs)."""
 
     def __init__(self) -> None:
         super().__init__()
@@ -47,24 +56,25 @@ class AutoControlGUIUI(QMainWindow, QtStyleTools):
             windll.shell32.SetCurrentProcessExplicitAppUserModelID(self.app_id)
 
         self._user_font_pt: int = 0  # 0 means auto-detect from screen
-        self.apply_stylesheet(self, "dark_amber.xml")
-        # qt_material writes the theme into this window's stylesheet; capture it
-        # so _apply_font_pt can append the font rule instead of replacing (and
-        # thereby wiping) the theme.
-        self._theme_stylesheet: str = self.styleSheet()
+        self._theme_name: str = DEFAULT_THEME
+        # The theme's style sheet is kept so _apply_font_pt can append the
+        # font rule instead of replacing (and thereby wiping) the theme.
+        self._theme_stylesheet: str = apply_theme(self, theme_named(self._theme_name))
         self._apply_font_pt(self._user_font_pt)
 
         self.setWindowTitle(_t("application_name", "AutoControlGUI"))
-        self.resize(1000, 760)
+        self.resize(1280, 800)
 
         self.auto_control_gui_widget = AutoControlGUIWidget(parent=self)
         self.setCentralWidget(self.auto_control_gui_widget)
+        self._build_navigation()
 
         self._view_menu: QMenu = None
         self._actions_menu: QMenu = None
         self._tab_actions: list = []
         self._build_menu_bar()
         self.auto_control_gui_widget.tabs_changed.connect(self._rebuild_tabs_menu)
+        self.auto_control_gui_widget.tabs_changed.connect(self._refresh_navigation)
         self.auto_control_gui_widget.tabs_changed.connect(self._rebuild_actions_menu)
         self.auto_control_gui_widget.current_tab_changed.connect(
             self._rebuild_actions_menu,
@@ -74,6 +84,41 @@ class AutoControlGUIUI(QMainWindow, QtStyleTools):
         # called into the deleted C++ object.
         listener = self._on_language_changed
         self.destroyed.connect(lambda *_args: language_wrapper.remove_listener(listener))
+
+    # --- navigation ----------------------------------------------------------
+
+    def _build_navigation(self) -> None:
+        """Dock the searchable feature list on the left of the workspace."""
+        self.navigation = NavigationPanel(self)
+        self.navigation.feature_activated.connect(self.auto_control_gui_widget.activate_tab)
+        self._navigation_dock = QDockWidget(self)
+        self._navigation_dock.setObjectName("NavigationDock")
+        self._navigation_dock.setFeatures(QDockWidget.DockWidgetFeature.NoDockWidgetFeatures)
+        self._navigation_dock.setTitleBarWidget(QWidget(self._navigation_dock))
+        self._navigation_dock.setWidget(self.navigation)
+        self.addDockWidget(Qt.DockWidgetArea.LeftDockWidgetArea, self._navigation_dock)
+        self.resizeDocks([self._navigation_dock], [260], Qt.Orientation.Horizontal)
+        # Owned by the window, not by a menu: the menu bar is rebuilt on every
+        # language switch, and a shortcut on a per-menu action would be
+        # registered once more each time.
+        self._search_action = QAction(self)
+        self._search_action.setShortcut(QKeySequence("Ctrl+K"))
+        self._search_action.triggered.connect(self._focus_feature_search)
+        self.addAction(self._search_action)
+        self._sidebar_action = self._navigation_dock.toggleViewAction()
+        self._sidebar_action.setShortcut(QKeySequence("Ctrl+B"))
+        self.addAction(self._sidebar_action)
+        self._refresh_navigation()
+
+    def _refresh_navigation(self) -> None:
+        self.navigation.set_entries(
+            self.auto_control_gui_widget.list_registered_tabs(), _TAB_CATEGORIES,
+        )
+
+    def _focus_feature_search(self) -> None:
+        """Show the navigation panel and put the cursor in its search box (Ctrl+K)."""
+        self._navigation_dock.setVisible(True)
+        self.navigation.focus_search()
 
     # --- menu construction ---------------------------------------------------
 
@@ -122,13 +167,43 @@ class AutoControlGUIUI(QMainWindow, QtStyleTools):
 
     def _build_view_menu(self) -> QMenu:
         menu = QMenu(_t("menu_view", "View"), self)
+        self._search_action.setText(_t("menu_view_search", "Search Features..."))
+        menu.addAction(self._search_action)
+        self._sidebar_action.setText(_t("menu_view_sidebar", "Navigation Panel"))
+        menu.addAction(self._sidebar_action)
         tabs_menu = menu.addMenu(_t("menu_view_tabs", "Tabs"))
         self._view_menu = tabs_menu
         self._rebuild_tabs_menu()
         menu.addSeparator()
+        theme_menu = menu.addMenu(_t("menu_view_theme", "Theme"))
+        self._build_theme_menu(theme_menu)
         text_menu = menu.addMenu(_t("menu_view_text_size", "Text Size"))
         self._build_text_size_menu(text_menu)
         return menu
+
+    def _build_theme_menu(self, menu: QMenu) -> None:
+        group = QActionGroup(menu)
+        group.setExclusive(True)
+        for name in THEMES:
+            label_key, default_label = _THEME_LABELS.get(name, (name, name.title()))
+            action = QAction(_t(label_key, default_label), menu, checkable=True)
+            action.setData(name)
+            action.setChecked(name == self._theme_name)
+            action.triggered.connect(self._on_theme_selected)
+            group.addAction(action)
+            menu.addAction(action)
+
+    def _on_theme_selected(self) -> None:
+        action = self.sender()
+        if isinstance(action, QAction) and action.data():
+            self.set_theme(str(action.data()))
+
+    def set_theme(self, name: str) -> None:
+        """Switch to the theme called ``name`` (``dark`` or ``light``), keeping the text size."""
+        tokens = theme_named(name)
+        self._theme_name = tokens.name
+        self._theme_stylesheet = apply_theme(self, tokens)
+        self._apply_font_pt(self._user_font_pt)
 
     def _rebuild_tabs_menu(self) -> None:
         if self._view_menu is None:
@@ -177,21 +252,21 @@ class AutoControlGUIUI(QMainWindow, QtStyleTools):
             return 12
         height = screen.geometry().height()
         if height >= 2000:
-            return 16
+            return 13
         if height >= 1300:
-            return 14
-        return 12
+            return 11
+        return 10
 
     def _apply_font_pt(self, pt: int) -> None:
         """Apply the font size on top of the active theme stylesheet.
 
         The theme lives in this window's stylesheet, so the font rule is
         appended rather than assigned — assigning would replace (and wipe) the
-        qt_material theme on startup and on every text-size change.
+        theme on startup and on every text-size change. The font family is
+        the theme's; only the size is set here.
         """
         effective = pt if pt > 0 else self._detect_auto_font_pt()
-        font_rule = f"* {{ font-size: {effective}pt; font-family: 'Lato'; }}"
-        self.setStyleSheet(f"{self._theme_stylesheet}\n{font_rule}")
+        self.setStyleSheet(f"{self._theme_stylesheet}\n{font_rule(effective)}")
 
     def _on_text_size_selected(self) -> None:
         action = self.sender()
@@ -265,6 +340,8 @@ class AutoControlGUIUI(QMainWindow, QtStyleTools):
     def _on_language_changed(self, _language: str) -> None:
         self.setWindowTitle(_t("application_name", "AutoControlGUI"))
         self.auto_control_gui_widget.retranslate()
+        self.navigation.retranslate()
+        self._refresh_navigation()
         self._build_menu_bar()
 
     def _on_about(self) -> None:
@@ -296,6 +373,7 @@ class AutoControlGUIUI(QMainWindow, QtStyleTools):
 
 if "__main__" == __name__:
     app = QApplication(sys.argv)
+    prepare_application(app)
     window = AutoControlGUIUI()
     window.show()
     sys.exit(app.exec())

@@ -16,8 +16,10 @@ def start_autocontrol_gui() -> None:
     from PySide6.QtWidgets import QApplication
 
     from je_auto_control.gui.main_window import AutoControlGUIUI
+    from je_auto_control.gui.theme import prepare_application
 
     app = QApplication(sys.argv)
+    prepare_application(app)
     window = AutoControlGUIUI()
     window.show()
     sys.exit(app.exec())
