@@ -39,7 +39,8 @@ from je_auto_control.utils.usb.passthrough.session import (
     SessionError, UsbPassthroughSession,
 )
 from je_auto_control.utils.usb.passthrough.viewer_client import (
-    ClientHandle, UsbClientClosed, UsbClientError, UsbClientTimeout,
+    ClientHandle, UsbClientClosed, UsbClientDesynchronized, UsbClientError,
+    UsbClientTimeout,
     UsbPassthroughClient,
 )
 from je_auto_control.utils.usb.passthrough.webrtc_channel import (
@@ -57,7 +58,8 @@ __all__ = [
     "decode_frame", "encode_frame", "fragment_payload",
     "MAX_PAYLOAD_BYTES",
     "SessionError", "UsbPassthroughSession",
-    "ClientHandle", "UsbClientClosed", "UsbClientError", "UsbClientTimeout",
+    "ClientHandle", "UsbClientClosed", "UsbClientDesynchronized",
+    "UsbClientError", "UsbClientTimeout",
     "UsbPassthroughClient",
     "UsbChannelClient", "UsbChannelHost",
     "AclRule", "UsbAcl", "default_acl_path",

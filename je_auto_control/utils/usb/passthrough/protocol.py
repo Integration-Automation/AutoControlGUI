@@ -12,13 +12,28 @@ DataChannel message is already self-delimiting at the SCTP layer; the
 sender writes one frame per ``send()`` call. The 16 KiB payload cap
 keeps message sizes well under the recommended SCTP boundary.
 
+Request identity. Every payload that is a JSON object may carry an
+optional ``"request_id"`` string (1..64 characters). The viewer generates
+it and puts it in each request (OPEN, RESUME, LIST, CLOSE, CTRL, BULK,
+INT); the host copies it unchanged into every reply to that request
+(OPENED, LIST, CLOSED, CTRL, BULK, INT, ERROR), so the viewer pairs a
+reply with the request that asked for it rather than with whichever
+request of that kind is waiting. CREDIT frames never carry one: a credit
+is a grant on the claim, not an answer. The field is optional in both
+directions -- a host that receives no id (or one it cannot echo) replies
+exactly as it did before the field existed, and a viewer that receives
+no id falls back to pairing by kind.
+
 This module is pure data — no I/O, no asyncio, no peer connection.
 """
 from __future__ import annotations
 
 import enum
+import json
 import struct
 from dataclasses import dataclass
+from typing import Any, Optional
+
 from je_auto_control.utils.exception.exceptions import AutoControlException
 
 
@@ -26,6 +41,9 @@ _HEADER_FORMAT = "!BBH"
 HEADER_BYTES = struct.calcsize(_HEADER_FORMAT)
 MAX_PAYLOAD_BYTES = 16 * 1024
 FLAG_EOF = 0x01
+#: JSON key of the optional request identity, and the longest id a host echoes.
+REQUEST_ID_KEY = "request_id"
+MAX_REQUEST_ID_CHARS = 64
 
 
 class Opcode(enum.IntEnum):
@@ -126,8 +144,34 @@ def decode_frame(data: bytes) -> Frame:
     return Frame(op=op, flags=flags, claim_id=claim_id, payload=payload)
 
 
+def valid_request_id(value: Any) -> bool:
+    """True if ``value`` is a request id a peer may send and echo."""
+    return isinstance(value, str) and 0 < len(value) <= MAX_REQUEST_ID_CHARS
+
+
+def request_id_of(payload: bytes) -> Optional[str]:
+    """The ``request_id`` of a JSON payload, or ``None`` if it has none.
+
+    Never raises: an empty payload, one that is not a JSON object, or an
+    id that is not a 1..64 character string all mean "no id", which is
+    what a peer older than the field sends.
+    """
+    if not payload:
+        return None
+    try:
+        decoded = json.loads(bytes(payload).decode("utf-8"))
+    except ValueError:      # UnicodeDecodeError and JSONDecodeError both are
+        return None
+    if not isinstance(decoded, dict):
+        return None
+    value = decoded.get(REQUEST_ID_KEY)
+    return value if valid_request_id(value) else None
+
+
 __all__ = [
     "Frame", "Opcode", "ProtocolError",
     "decode_frame", "encode_frame", "fragment_payload",
+    "request_id_of", "valid_request_id",
     "MAX_PAYLOAD_BYTES", "HEADER_BYTES", "FLAG_EOF",
+    "REQUEST_ID_KEY", "MAX_REQUEST_ID_CHARS",
 ]

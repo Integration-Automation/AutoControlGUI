@@ -153,6 +153,84 @@ transfers share one already-authenticated channel instead of coupling
 in a second REST transport, and ACL filtering reuses the same logic as
 the claim decision.
 
+Request identity
+----------------
+
+Replies were originally paired with requests by kind alone: the one
+pending OPEN, the one pending LIST, the one pending exchange on a
+``claim_id``. A reply that arrived after its request had timed out was
+therefore handed to the *next* request of that kind -- ``open(bbbb)``
+bound the claim the host had opened for ``aaaa``, and a bulk read
+returned the previous read's data. The host accepts a ``timeout_ms`` of
+up to 60 s while the viewer gives up after 10 s by default, so this
+happened in ordinary use.
+
+Every JSON payload may now carry one extra, optional key::
+
+    "request_id": "<string, 1..64 characters>"
+
+- **Viewer → host.** The viewer generates the id and adds it to the
+  payload of every request: ``OPEN``, ``RESUME``, ``LIST``, ``CLOSE``,
+  ``CTRL``, ``BULK``, ``INT``. ``LIST`` and ``CLOSE`` used to have an
+  empty payload; they now send ``{"request_id": "..."}``.
+- **Host → viewer.** The host copies the id, unchanged, into every reply
+  to that request: ``OPENED``, ``LIST``, ``CLOSED``, the ``CTRL`` /
+  ``BULK`` / ``INT`` reply, and ``ERROR`` (including the "rate limited"
+  ERROR of a locked-out peer). A fragmented reply carries it once, in the
+  reassembled JSON.
+- ``CREDIT`` never carries an id. A credit is a grant on the claim, not
+  an answer, and the credit that follows a late reply is still valid.
+- The frame header is unchanged, and the id is opaque to the host.
+
+The viewer hands a reply to the request whose id it carries. A request
+that times out leaves a *tombstone*; the reply that later matches it is
+discarded -- that reply and no other. A late ``OPENED`` that succeeded
+means the host holds a device for a caller who already got a timeout, so
+the viewer sends ``CLOSE`` for that claim. (A late reply to ``RESUME``
+is left alone: the claim may have been resumed again and be in use.)
+
+Compatibility:
+
+================  =======================================================
+Viewer / host     Behaviour
+================  =======================================================
+new / new         Paired by id. A timeout costs only the timed-out
+                  request; the claim and the client stay usable.
+old / new         The viewer sends no id, so the host echoes none: every
+                  payload is byte-for-byte what it was. Paired by kind,
+                  with the original defect.
+new / old         The host ignores the unknown key and echoes nothing;
+                  replies are paired by kind. After a timeout the viewer
+                  stops instead of guessing (below).
+================  =======================================================
+
+Against a host that does not echo ids there is no way to tell a late
+reply from the answer to the next request. Discarding "the next reply"
+is not an option: if the host never sent the late one, that throws away
+a correct answer. So once a request has timed out the viewer refuses
+further requests of that kind with ``UsbClientDesynchronized``:
+
+- a transfer timeout makes that claim unusable (``ClientHandle.reusable``
+  is ``False``). ``close()`` still works -- ``CLOSED`` is a kind no late
+  transfer reply can be mistaken for -- and opening the device again
+  gives a clean claim. Other claims are unaffected;
+- an ``OPEN`` / ``RESUME`` timeout blocks further ``open`` / ``resume``
+  on that client (``UsbPassthroughClient.reusable`` is ``False``), and a
+  ``LIST`` timeout blocks further ``list_devices``. Reconnect the channel
+  and use a new client.
+
+The viewer learns that the host is current from the first reply that
+echoes one of its ids (``UsbPassthroughClient.peer_echoes_request_ids``).
+Until then a timeout is treated the cautious way; if the late reply then
+arrives with its id, the block is lifted.
+
+Two smaller pairing faults were fixed with this. An ``ERROR`` on
+``claim_id`` 0 -- the answer to a refused ``OPEN`` or a failed ``LIST``
+-- had no request to go to and the call timed out; with an id it fails
+the call it answers. And the tail of a reassembled message dropped for
+exceeding the 2 MiB cap was parsed as a message of its own; it is now
+skipped through its EOF frame.
+
 Backpressure
 ------------
 
