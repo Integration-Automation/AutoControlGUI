@@ -67,6 +67,19 @@ and the next ``open_tab(key)`` builds a new one. The forms the main widget
 builds for itself (Auto Click, Screenshot, Image Detection, Record, Script,
 Report) are closed but never released.
 
+Every tab that holds something beyond its widgets implements ``dispose()``:
+Scheduler, Triggers, Hotkeys, E-mail Triggers, Webhooks, REST API, Presence,
+Live HUD, Inspector, Profiler, Run History, Admin Console, USB Devices, USB
+Sharing, Config Sync and Remote Desktop. It stops the tab's timers, cancels
+its background tasks, removes its listener from the presence registry, gives
+back its share of the USB watcher, takes its tail off the logger and closes a
+loopback it opened -- on the call, not when Qt gets round to deleting the
+widget. The backend a tab only shows (the scheduler, a REST server, a remote
+desktop host) keeps running. A new tab does the same with one call,
+``release_resources(self, *releases)`` from ``je_auto_control.gui._dispose``;
+``test_gui_tab_dispose.py`` fails for a registered tab that creates a
+``QTimer`` or registers a listener without the method.
+
 The View menu
 -------------
 
@@ -80,6 +93,16 @@ The View menu
   uses ``qt-material``.
 * **View → Text Size** offers auto (screen-height based) and preset font
   sizes applied live, on top of the active theme.
+
+A theme or text-size change sets the window's style sheet once and restyles
+what is on screen. Qt re-applies a window's style sheet to every widget below
+it, visible or not, so the pages of the tabs that are not selected are taken
+out of the window's tree for the change
+(``WorkspaceTabWidget.restyle(apply)``) and put back one per event-loop turn,
+or at once when their tab is selected. With all 50 tabs open a switch held the
+window for 1.5-1.8 s; it holds it for about 0.3 s, and the rest follows in
+turns of at most 85 ms (measured with ``benchmarks/gui_workloads.py`` on the
+development machine).
 
 The contract test
 -----------------
@@ -115,7 +138,10 @@ Two scripts print a JSON report and never show a window (they run on Qt's
 process's memory. ``gui_workloads.py`` opens every tab once
 (``first_open_ms`` per tab), revisits them, types in the search box and
 switches theme while a 5 ms timer ticks; ``event_loop_p95_ms`` is how late
-those ticks arrive. ``--compare`` sets two reports side by side and refuses
+those ticks arrive. ``theme_switch_ms`` is the stall of a switch,
+``theme_deferred_ms`` how long the pages of the unselected tabs took to be
+restyled afterwards and ``theme_deferred_longest_turn_ms`` the longest single
+turn of that. ``--compare`` sets two reports side by side and refuses
 when the workload or the environment differs.
 
 Background work in a tab
@@ -154,6 +180,20 @@ What it adds to a plain worker:
   (close the session nobody will use), never to a slot of the dead widget.
 * **No worker touches a widget.** Work that is a widget's method, or closes
   over one, is refused with ``TaskUsageError`` before it starts.
+
+A Stop that joins a thread goes through ``je_auto_control.gui._slow_op``, which
+sits on the controller. ``SlowOp(self).run(backend.stop, on_done=...,
+on_error=...)`` runs one such call at a time: it returns ``False`` while an
+earlier one is out (a second click does nothing), ``busy`` is true until the
+outcome arrives -- the tab shows "Stopping…" meanwhile -- and ``on_done`` runs
+on the GUI thread once it is false again, which is where the code that used to
+follow the blocking call goes. The Scheduler, Triggers, Hotkeys, E-mail
+Triggers, Webhooks, REST API and USB Sharing tabs and the Remote Desktop host
+panel stop (and, where a start first stops, start) this way. The WebRTC panels
+let go of their session at once and hand its shutdown to a ``StopQueue``, so
+the next session can start while the old one closes. Callbacks are held
+weakly: pass a method and ``args=``, not a ``functools.partial`` or a lambda
+that closes over the tab.
 
 This is a GUI-internal API (it imports ``PySide6``) and is not re-exported by
 the package facade; the headless functions a tab calls stay usable without it.
