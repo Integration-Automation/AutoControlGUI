@@ -22,6 +22,7 @@ import contextvars
 import threading
 from contextlib import contextmanager
 from dataclasses import asdict, dataclass
+from enum import Enum
 from time import monotonic
 from typing import Any, Callable, Dict, Iterator, Mapping, Optional, TypeVar, Union
 
@@ -70,6 +71,19 @@ class DeviceCancelledError(DeviceError):
 
 class DeviceClosedError(DeviceError):
     """The session was closed (or broken by a timeout) and must be reopened."""
+
+
+class AlertNotPresentError(DeviceError, LookupError):
+    """No alert or system dialog is showing to accept or dismiss."""
+
+
+class AppState(str, Enum):
+    """Where an app is in its lifecycle. Compares equal to its string value."""
+
+    NOT_INSTALLED = "not_installed"
+    NOT_RUNNING = "not_running"
+    BACKGROUND = "background"
+    FOREGROUND = "foreground"
 
 
 class DeviceUnsupportedError(DeviceError):
@@ -339,6 +353,30 @@ class DeviceSession:
         """Gesture type to the backend call that performs it; overridden per platform."""
         return {}
 
+    def launch_app(self, app_id: str) -> None:
+        """Launch an app (Android package, iOS bundle id)."""
+        raise NotImplementedError
+
+    def stop_app(self, app_id: str) -> None:
+        """Stop an app."""
+        raise NotImplementedError
+
+    def app_state(self, app_id: str) -> AppState:
+        """Where an app is in its lifecycle."""
+        raise NotImplementedError
+
+    def answer_alert(self, accept: bool) -> str:
+        """Accept or dismiss the alert that is showing; returns what was pressed or read."""
+        raise NotImplementedError
+
+    def builtin_extension(self) -> Any:
+        """The backend's own install / files / clipboard / recording implementation."""
+        raise NotImplementedError
+
+    def wait_cancelled(self, timeout_s: float) -> bool:
+        """Sleep up to ``timeout_s``; ``True`` as soon as the session is cancelled."""
+        return self._cancel.wait(timeout_s)
+
     def invoke(self, operation: str, function: Callable[[], _Result],
                *, timeout_s: Optional[float] = None) -> _Result:
         """Run one device call under the session's timeout and cancel signal.
@@ -433,7 +471,8 @@ def bound_session(platform: str, device_id: Optional[str] = None) -> Optional[De
 
 
 __all__ = [
-    "CAPABILITY_NAMES", "DEFAULT_TIMEOUT_S", "DeviceCancelledError", "DeviceCapability",
+    "AlertNotPresentError", "AppState", "CAPABILITY_NAMES", "DEFAULT_TIMEOUT_S",
+    "DeviceCancelledError", "DeviceCapability",
     "DeviceClosedError", "DeviceContext", "DeviceError", "DevicePermissionError",
     "DeviceSession", "DeviceTimeoutError", "DeviceUnavailableError",
     "DeviceUnsupportedError", "Drag", "Gesture", "LongPress", "MOBILE_PLATFORMS",

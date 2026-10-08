@@ -235,3 +235,111 @@ every answer is in device points, ready for a gesture::
 ``self_heal_locate(..., frame=frame)`` runs the same template-then-VLM
 fallback and writes the same heal log; ``screen_region`` does not apply to a
 frame. ``self_heal_click`` still clicks the desktop mouse and takes no frame.
+
+App lifecycle and alerts
+========================
+
+::
+
+    from je_auto_control import (
+        AppState, accept_alert, launch_app, stop_app, wait_for_app,
+    )
+
+    launch_app(session, "com.example.shop")          # Android package / iOS bundle id
+    wait_for_app(session, "com.example.shop", timeout_s=15)
+    accept_alert(session)
+    assert stop_app(session, "com.example.shop") == AppState.NOT_RUNNING
+
+``AppState`` is ``not_installed``, ``not_running``, ``background`` or
+``foreground``, and compares equal to those strings.
+
+.. list-table::
+   :header-rows: 1
+   :widths: 22 39 39
+
+   * - Call
+     - Android
+     - iOS
+   * - ``launch_app``
+     - ``monkey -p <package> -c android.intent.category.LAUNCHER 1``, or
+       ``am start -n`` for a ``package/activity`` id
+     - WDA app launch
+   * - ``stop_app``
+     - ``am force-stop``
+     - WDA app terminate
+   * - ``app_state``
+     - ``pidof``, ``pm path`` and the resumed activity from ``dumpsys``
+     - WDA app state. WDA reports an app that is not installed as not
+       running, so ``not_installed`` is never returned.
+   * - ``wait_for_app``
+     - Polls ``app_state`` until the timeout, raising ``DeviceTimeoutError``;
+       cancelling the session ends the wait.
+     - Same.
+   * - ``accept_alert`` / ``dismiss_alert``
+     - Presses the standard dialog or permission button through
+       ``uiautomator2`` (``android:id/button1`` / ``button2``, the permission
+       controller's allow / deny buttons). Without ``uiautomator2`` it raises
+       ``DeviceUnsupportedError``; locate the button in a frame and tap it
+       instead.
+     - WDA alert accept / dismiss; returns the alert text.
+
+With no alert showing, both raise ``AlertNotPresentError``. An app id is
+validated before it reaches the device shell.
+
+A device-matrix spec may name an ``app_id``: the app is launched and in front
+before the first step and stopped afterwards whether the steps passed or not
+(``"keep_app": true`` leaves it running). ``DeviceResult.app_state`` records
+where it ended up.
+
+Install, files, clipboard, recording
+====================================
+
+These are the features a backend may not have. ``mobile_extension(session)``
+returns a :class:`MobileExtension`; ``capability(feature)`` says whether each
+of ``install``, ``files``, ``clipboard`` and ``recording`` can be used, and a
+method whose feature is missing raises ``DeviceUnsupportedError`` with the
+reason::
+
+    from je_auto_control import mobile_extension
+
+    extension = mobile_extension(session)
+    if extension.capability("recording").available:
+        extension.start_recording(time_limit_s=60)
+        ...
+        extension.stop_recording("run.mp4")
+
+.. list-table::
+   :header-rows: 1
+   :widths: 18 41 41
+
+   * - Feature
+     - Android
+     - iOS (WebDriverAgent)
+   * - ``install``
+     - ``adb install -r``
+     - ``needs_dependency``: WDA has no install endpoint.
+   * - ``files``
+     - ``adb push`` / ``adb pull``
+     - ``needs_dependency``: WDA has no file endpoint.
+   * - ``clipboard``
+     - Through ``uiautomator2``; ``needs_dependency`` without it, because
+       ``adb`` cannot reach the clipboard on current Android.
+     - Set only. Reading is allowed by WDA only while WDA itself is in front,
+       and raises ``DeviceUnsupportedError`` on a ``facebook-wda`` build
+       without ``get_clipboard``.
+   * - ``recording``
+     - ``adb shell screenrecord`` (180 s at most), stopped with ``SIGINT`` so
+       the file is finalised, then pulled and removed from the device. A
+       recording is device-side state: it is not stopped by closing the
+       session, only by ``stop_recording``.
+     - ``needs_dependency``: WDA has no recording endpoint.
+
+Nothing from ``adb`` is used for an iOS device. To add the missing iOS
+features, register an adapter around a host-side tool; it is asked first and
+WebDriverAgent covers what it does not provide::
+
+    from je_auto_control import register_mobile_extension
+
+    register_mobile_extension("ios", lambda session: MyTideviceAdapter(session))
+
+No such adapter ships with AutoControl.

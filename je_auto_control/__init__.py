@@ -1040,12 +1040,17 @@ from je_auto_control.utils.device_matrix import (
 )
 # Mobile device contexts (one isolated session per Android / iOS device)
 from je_auto_control.wrapper.device_context import (
+    AlertNotPresentError, AppState,
     DeviceCancelledError, DeviceCapability, DeviceClosedError, DeviceContext,
     DeviceError, DevicePermissionError, DeviceSession, DeviceTimeoutError,
     DeviceUnavailableError, DeviceUnsupportedError, Drag, LongPress, Pinch,
     Swipe, Tap, open_device, use_device,
 )
 from je_auto_control.wrapper.device_frame import DeviceFrame
+from je_auto_control.wrapper.mobile_extensions import (
+    MobileExtension, accept_alert, app_state, dismiss_alert, launch_app,
+    mobile_extension, register_mobile_extension, stop_app, wait_for_app,
+)
 # Media assertions (audio activity, video motion)
 from je_auto_control.utils.media_assert import (
     MediaAssertionResult, assert_audio_activity, assert_video_changes,
@@ -1947,6 +1952,9 @@ __all__ = [
     "DeviceError", "DevicePermissionError", "DeviceSession", "DeviceTimeoutError",
     "DeviceUnavailableError", "DeviceUnsupportedError", "open_device", "use_device",
     "DeviceFrame", "Drag", "LongPress", "Pinch", "Swipe", "Tap",
+    "AlertNotPresentError", "AppState", "MobileExtension", "accept_alert",
+    "app_state", "dismiss_alert", "launch_app", "mobile_extension",
+    "register_mobile_extension", "stop_app", "wait_for_app",
     # Media assertions
     "MediaAssertionResult", "assert_audio_activity", "assert_video_changes",
     "measure_audio_rms", "video_segment_motion",

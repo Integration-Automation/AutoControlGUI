@@ -29,7 +29,7 @@ DEFAULT_IME = "com.google.android.inputmethod.latin/.LatinIME"
 
 #: Shell command prefixes that put input into the device.
 _INPUT_PREFIXES = ("input ", "am broadcast", "am start", "am force-stop", "monkey ",
-                   "pm ", "screenrecord", "pkill")
+                   "pm install", "pm uninstall", "pm clear", "screenrecord", "pkill")
 
 
 def png_bytes(width: int, height: int, color: Tuple[int, int, int] = (0, 0, 0),
@@ -112,6 +112,7 @@ class FakeAndroidDevice:
             ("monkey -p ", self._launch),
             ("am force-stop ", self._stop),
             ("pidof ", self._pidof),
+            ("pm path ", self._pm_path),
             ("dumpsys activity activities", self._resumed),
             ("pkill -INT screenrecord", self._stop_recording),
             ("rm ", lambda _c: (0, "")),
@@ -152,7 +153,15 @@ class FakeAndroidDevice:
 
     def _pidof(self, command: str) -> Tuple[int, str]:
         package = shlex.split(command)[-1]
+        if package == "screenrecord":
+            return (0, "777\n") if self.recording else (1, "")
         return (0, "4242\n") if package in self.running else (1, "")
+
+    def _pm_path(self, command: str) -> Tuple[int, str]:
+        package = shlex.split(command)[-1]
+        if package in self.installed:
+            return 0, f"package:/data/app/{package}/base.apk\n"
+        return 1, ""
 
     def _resumed(self, _command: str) -> Tuple[int, str]:
         package = getattr(self, "foreground", "")
@@ -161,12 +170,33 @@ class FakeAndroidDevice:
         return 0, f"    topResumedActivity=ActivityRecord{{1 u0 {package}/.Main t7}}\n"
 
     def _stop_recording(self, _command: str) -> Tuple[int, str]:
-        self.recording = False
+        if self.recording:
+            self.recording = False
+            self.files[self.recording_path] = b"mp4-bytes"
         return 0, ""
 
 
+class FakeRecordingProcess:
+    """The ``Popen`` of ``adb shell screenrecord``: runs until the device stops recording."""
+
+    def __init__(self, device: FakeAndroidDevice) -> None:
+        self._device = device
+        self.killed = False
+
+    def poll(self) -> Optional[int]:
+        return None if self._device.recording else 0
+
+    def wait(self, timeout: Optional[float] = None) -> int:
+        if self._device.recording:
+            raise subprocess.TimeoutExpired("adb", timeout or 0)
+        return 0
+
+    def kill(self) -> None:
+        self.killed = True
+
+
 class FakeAdbHost:
-    """Replacement for ``subprocess.run`` in ``android.adb_client``."""
+    """Replacement for ``subprocess.run`` (and ``Popen``) in ``android.adb_client``."""
 
     def __init__(self) -> None:
         self.devices: Dict[str, FakeAndroidDevice] = {}
@@ -183,6 +213,17 @@ class FakeAdbHost:
     def calls_for(self, serial: str) -> List[List[str]]:
         """The adb argv (after ``-s serial``) of every call addressed to ``serial``."""
         return [args for target, args in self.calls if target == serial]
+
+    def popen(self, cmd: List[str], **_kwargs: Any) -> FakeRecordingProcess:
+        """Start a long-running adb invocation: only ``shell screenrecord`` is one."""
+        serial, args = self._split(cmd)
+        with self._lock:
+            self.calls.append((serial, list(args)))
+        device = self.devices[serial] if serial else next(iter(self.devices.values()))
+        device.shell_commands.append(args[1])
+        device.recording = True
+        device.recording_path = shlex.split(args[1])[-1]
+        return FakeRecordingProcess(device)
 
     def run(self, cmd: List[str], **_kwargs: Any) -> subprocess.CompletedProcess:
         """Answer one adb invocation."""

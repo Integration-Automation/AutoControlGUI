@@ -31,7 +31,9 @@ from dataclasses import asdict, dataclass, field
 from typing import Any, Dict, List, Optional
 
 from je_auto_control.utils.exception.exceptions import AutoControlException
-from je_auto_control.wrapper.device_context import DeviceContext, open_device, use_device
+from je_auto_control.wrapper.device_context import (
+    DeviceContext, DeviceError, DeviceSession, open_device, use_device,
+)
 
 
 @dataclass
@@ -43,6 +45,8 @@ class DeviceResult:
     success: bool
     duration_s: float = 0.0
     error: Optional[str] = None
+    #: State of the spec's ``app_id`` after the run (``None`` when it names none).
+    app_state: Optional[str] = None
 
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)
@@ -84,6 +88,41 @@ def _device_id(device: Dict[str, Any], index: int) -> str:
     return str(device.get("serial") or device.get("url") or f"device-{index}")
 
 
+def _run_with_app(runner: Any, actions: List[Any], session: DeviceSession,
+                  device: Dict[str, Any]) -> Optional[str]:
+    """Run ``actions`` around the spec's app; returns the app's state afterwards.
+
+    A spec with ``app_id`` gets the app launched and in front before the first
+    step, and stopped afterwards whether the steps passed or not — a failed or
+    cancelled run does not leave the app wherever the failure found it. Set
+    ``"keep_app": true`` to leave it running.
+    """
+    app_id = device.get("app_id")
+    if not app_id:
+        runner.execute_action(actions, raise_on_error=True)
+        return None
+    from je_auto_control.wrapper.mobile_extensions import launch_app, stop_app, wait_for_app
+    launch_app(session, str(app_id))
+    try:
+        wait_for_app(session, str(app_id), timeout_s=float(device.get("app_timeout_s", 15.0)))
+        runner.execute_action(actions, raise_on_error=True)
+    finally:
+        if not device.get("keep_app") and session.connected:
+            stop_app(session, str(app_id))
+    return str(session.app_state(str(app_id)).value)
+
+
+def _final_app_state(session: Optional[DeviceSession], device: Dict[str, Any]) -> Optional[str]:
+    """The spec's app state after a failed run, when it can still be asked."""
+    app_id = device.get("app_id")
+    if session is None or not app_id or not session.connected:
+        return None
+    try:
+        return str(session.app_state(str(app_id)).value)
+    except DeviceError:
+        return None
+
+
 def _run_one_device(actions: List[Any], device: Dict[str, Any],
                     index: int, var_name: str) -> DeviceResult:
     """Run ``actions`` against a single device on a fresh executor."""
@@ -93,22 +132,28 @@ def _run_one_device(actions: List[Any], device: Dict[str, Any],
     device_id = _device_id(device, index)
     platform = str(device.get("platform", ""))
     started = time.monotonic()
+    session: Optional[DeviceSession] = None
     try:
         context = DeviceContext.from_spec(device)
         if context is None:
             # Not a mobile spec: nothing to bind, the list runs as written.
             runner.execute_action(actions, raise_on_error=True)
-        else:
-            with open_device(context) as session, use_device(session):
-                runner.execute_action(actions, raise_on_error=True)
+            return DeviceResult(device_id, platform, True, time.monotonic() - started)
+        session = open_device(context)
+        with use_device(session):
+            app_state = _run_with_app(runner, actions, session, device)
         return DeviceResult(device_id, platform, True,
-                            time.monotonic() - started)
+                            time.monotonic() - started, app_state=app_state)
     # The executor's own containment set: an ImageNotFoundException or a
     # KeyError on one device used to abort the whole matrix.
     except (AutoControlException, OSError, RuntimeError, ArithmeticError,
             AttributeError, TypeError, ValueError, LookupError) as error:
         return DeviceResult(device_id, platform, False,
-                            time.monotonic() - started, repr(error))
+                            time.monotonic() - started, repr(error),
+                            app_state=_final_app_state(session, device))
+    finally:
+        if session is not None:
+            session.close()
 
 
 def run_on_devices(actions: List[Any],

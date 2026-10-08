@@ -42,6 +42,7 @@ from je_auto_control.android.client import (
 from je_auto_control.android.find import (
     ElementNotFoundError, click_element, dump_hierarchy, find_element,
 )
+from je_auto_control.android.apps import AndroidExtension
 from je_auto_control.android.input import ADB_KEYBOARD_IME, type_text
 from je_auto_control.android.screen import capture_frame
 from je_auto_control.android.session import AndroidSession
@@ -49,7 +50,8 @@ from je_auto_control.android.session import AndroidSession
 __all__ = [
     "ADB_KEYBOARD_IME", "AdbClient", "AdbDeviceMissingError", "AdbError",
     "AdbNotAvailable", "AdbTimeoutError", "AdbUnauthorizedError",
-    "AdbUnsupportedError", "AndroidDevice", "AndroidSession", "capture_frame",
+    "AdbUnsupportedError", "AndroidDevice", "AndroidExtension", "AndroidSession",
+    "capture_frame",
     "type_text",
     "ElementNotFoundError",
     "UIAutomatorDevice", "UIAutomatorUnavailableError",

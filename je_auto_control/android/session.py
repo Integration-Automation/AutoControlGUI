@@ -4,6 +4,7 @@ from __future__ import annotations
 from importlib.util import find_spec
 from typing import Any, Callable, Dict, Optional, Tuple
 
+from je_auto_control.android import apps as android_apps
 from je_auto_control.android import input as android_input
 from je_auto_control.android.adb_client import AdbClient, AdbError
 from je_auto_control.android.client import UIAutomatorDevice
@@ -11,15 +12,16 @@ from je_auto_control.android.input import ADB_KEYBOARD_IME, current_input_method
 from je_auto_control.android.screen import capture_frame
 from je_auto_control.wrapper.device_context import (
     CAPABILITY_NAMES, STATE_AVAILABLE, STATE_NEEDS_DEPENDENCY, STATE_NEEDS_PERMISSION,
-    DeviceCapability, DeviceContext, DeviceError, DeviceSession, Drag, LongPress,
-    Pinch, Swipe, Tap, bound_session,
+    AppState, DeviceCapability, DeviceContext, DeviceError, DeviceSession, Drag,
+    LongPress, Pinch, Swipe, Tap, bound_session,
 )
 from je_auto_control.wrapper.device_frame import DeviceFrame
+from je_auto_control.wrapper.mobile_extensions import EXTENSION_FEATURES, mobile_extension
 
 #: Capabilities plain ``adb`` provides once the device is authorised.
-_ADB_CAPABILITIES = ("input", "screenshot", "app_lifecycle", "install", "files", "recording")
+_ADB_CAPABILITIES = ("input", "screenshot", "app_lifecycle")
 #: Capabilities that need the uiautomator2 daemon on top of adb.
-_UI_CAPABILITIES = ("ui_tree", "multi_touch", "alerts", "clipboard")
+_UI_CAPABILITIES = ("ui_tree", "multi_touch", "alerts")
 _NEEDS_UI = "uiautomator2 is not installed: pip install uiautomator2"
 _UNAUTHORIZED = ("the device has not authorised this host: accept the USB debugging "
                  "prompt on the device, then check `adb devices`")
@@ -80,6 +82,9 @@ class AndroidSession(DeviceSession):
         for name in _UI_CAPABILITIES:
             found[name] = self._ui_capability(name)
         found["unicode_text"] = self._unicode_capability()
+        extension = mobile_extension(self)
+        for name in EXTENSION_FEATURES:
+            found[name] = extension.capability(name)
         return {name: found[name] for name in CAPABILITY_NAMES}
 
     def _blocker(self) -> Optional[Tuple[str, str]]:
@@ -123,6 +128,28 @@ class AndroidSession(DeviceSession):
     def _ui_or_none(self) -> Optional[UIAutomatorDevice]:
         """The uiautomator2 wrapper when that path can be used, else ``None``."""
         return self.ui_device if self.has_ui_automator else None
+
+    def launch_app(self, app_id: str) -> None:
+        """Launch a package's launcher activity, or a ``package/activity`` component."""
+        self.invoke("launch_app", lambda: android_apps.launch(self.adb, app_id))
+
+    def stop_app(self, app_id: str) -> None:
+        """Force-stop a package."""
+        self.invoke("stop_app", lambda: android_apps.stop(self.adb, app_id))
+
+    def app_state(self, app_id: str) -> AppState:
+        """Whether a package is installed, running, and in front."""
+        return self.invoke("app_state", lambda: android_apps.state(self.adb, app_id))
+
+    def answer_alert(self, accept: bool) -> str:
+        """Press the accepting or dismissing button of a system dialog (needs uiautomator2)."""
+        return self.invoke("answer_alert", lambda: android_apps.answer_dialog(
+            self._ui_or_none(), accept))
+
+    def builtin_extension(self) -> android_apps.AndroidExtension:
+        """Install, files, clipboard and recording over adb / uiautomator2."""
+        return android_apps.AndroidExtension(
+            lambda: self.adb, self._ui_or_none, self.device_id)
 
     def capture(self) -> DeviceFrame:
         """The current screen, upright, in the coordinates ``input tap`` takes."""

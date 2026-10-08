@@ -3,23 +3,21 @@ from __future__ import annotations
 
 from typing import Any, Callable, Dict, Optional, Tuple
 
+from je_auto_control.ios import apps as ios_apps
 from je_auto_control.ios import input as ios_input
 from je_auto_control.ios.client import IOSDevice, translate_device_errors
 from je_auto_control.ios.screen import capture_frame
 from je_auto_control.wrapper.device_context import (
     CAPABILITY_NAMES, STATE_AVAILABLE, STATE_NEEDS_DEPENDENCY,
-    DeviceCapability, DeviceContext, DeviceError, DeviceSession, Drag, LongPress,
-    Pinch, Swipe, Tap, bound_session,
+    AppState, DeviceCapability, DeviceContext, DeviceError, DeviceSession, Drag,
+    LongPress, Pinch, Swipe, Tap, bound_session,
 )
 from je_auto_control.wrapper.device_frame import DeviceFrame
+from je_auto_control.wrapper.mobile_extensions import EXTENSION_FEATURES, mobile_extension
 
 #: Capabilities WebDriverAgent itself provides.
 _WDA_CAPABILITIES = ("input", "unicode_text", "multi_touch", "screenshot", "ui_tree",
                      "app_lifecycle", "alerts")
-#: Capabilities WebDriverAgent has no endpoint for.
-_ADAPTER_CAPABILITIES = ("install", "files", "clipboard", "recording")
-_NEEDS_ADAPTER = ("WebDriverAgent has no API for this; it needs a host-side adapter "
-                  "(for example tidevice, pymobiledevice3 or Appium)")
 
 
 @translate_device_errors
@@ -66,8 +64,9 @@ class IOSSession(DeviceSession):
             state, reason = blocker
             return {name: DeviceCapability(name, state, reason) for name in CAPABILITY_NAMES}
         found = {name: DeviceCapability(name, STATE_AVAILABLE) for name in _WDA_CAPABILITIES}
-        for name in _ADAPTER_CAPABILITIES:
-            found[name] = self._adapter_capability(name)
+        extension = mobile_extension(self)
+        for name in EXTENSION_FEATURES:
+            found[name] = extension.capability(name)
         return {name: found[name] for name in CAPABILITY_NAMES}
 
     def _blocker(self) -> Optional[Tuple[str, str]]:
@@ -101,8 +100,26 @@ class IOSSession(DeviceSession):
             Pinch: lambda g: ios_input.pinch(g.scale, g.duration_s, device=device),
         }
 
-    def _adapter_capability(self, name: str) -> DeviceCapability:
-        return DeviceCapability(name, STATE_NEEDS_DEPENDENCY, _NEEDS_ADAPTER)
+    def launch_app(self, app_id: str) -> None:
+        """Launch (or bring to the front) the app with this bundle id."""
+        self.invoke("launch_app", lambda: ios_apps.launch(app_id, device=self.device))
+
+    def stop_app(self, app_id: str) -> None:
+        """Terminate the app with this bundle id."""
+        self.invoke("stop_app", lambda: ios_apps.stop(app_id, device=self.device))
+
+    def app_state(self, app_id: str) -> AppState:
+        """Whether the app is running and in front."""
+        return self.invoke("app_state", lambda: ios_apps.state(app_id, device=self.device))
+
+    def answer_alert(self, accept: bool) -> str:
+        """Accept or dismiss the alert that is showing; returns its text."""
+        return self.invoke("answer_alert", lambda: ios_apps.answer_alert(
+            accept, device=self.device))
+
+    def builtin_extension(self) -> ios_apps.WdaExtension:
+        """What WebDriverAgent offers of install / files / clipboard / recording."""
+        return ios_apps.WdaExtension(lambda: self.device)
 
     def _release(self) -> None:
         if not self._injected:

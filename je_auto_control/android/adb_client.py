@@ -7,7 +7,7 @@ import shutil
 import subprocess  # nosec B404  # reason: required to invoke the adb binary
 from dataclasses import dataclass
 from pathlib import Path
-from typing import List, Optional, Sequence
+from typing import List, Optional, Sequence, Tuple
 
 from je_auto_control.wrapper.device_context import (
     DeviceError, DevicePermissionError, DeviceTimeoutError, DeviceUnavailableError,
@@ -158,6 +158,37 @@ class AdbClient:
             ["shell", command], serial=serial, timeout=timeout,
         )
         return result.stdout.decode("utf-8", errors="replace")
+
+    def shell_status(self, command: str, *, serial: Optional[str] = None,
+                     timeout: Optional[float] = None) -> Tuple[int, str]:
+        """Run a shell command whose exit code is the answer: ``(code, stdout)``.
+
+        ``pidof`` and ``pm path`` exit non-zero to say "no". A non-zero exit
+        because the *device* failed (unauthorised, gone) is still raised, so
+        an unreachable device is never read as "not running".
+        """
+        result = self.run(["shell", command], serial=serial, timeout=timeout, check=False)
+        if result.returncode != 0:
+            stderr = result.stderr.decode("utf-8", errors="replace").strip()
+            error = _exit_error(["shell"], result.returncode, stderr)
+            if type(error) is not AdbError:
+                raise error
+        return result.returncode, result.stdout.decode("utf-8", errors="replace")
+
+    def spawn(self, args: Sequence[str], *,
+              serial: Optional[str] = None) -> "subprocess.Popen[bytes]":
+        """Start adb without waiting for it (a screen recording); the caller owns the process."""
+        cmd: List[str] = [self._adb]
+        target = serial if serial is not None else self._default_serial
+        if target:
+            cmd.extend(["-s", target])
+        cmd.extend(args)
+        try:
+            return subprocess.Popen(  # nosec B603  # nosemgrep  # reason: argv list, no shell, same adb path as run()
+                cmd, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL)
+        except OSError as error:
+            raise AdbError(f"{_describe(args)} failed: {error}") from error
 
     # --- device discovery ---------------------------------------------
 

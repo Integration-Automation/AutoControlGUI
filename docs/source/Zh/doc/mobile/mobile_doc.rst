@@ -215,3 +215,105 @@ iOS 只請求 WDA 的 ``/status``\ 。
 ``self_heal_locate(..., frame=frame)`` 跑的是同一套「先樣板、後 VLM」的退路，
 寫的也是同一份 heal log；\ ``screen_region`` 不適用於 frame。
 ``self_heal_click`` 仍然是點桌面的滑鼠，不接受 frame。
+
+App 生命週期與 alert
+====================
+
+::
+
+    from je_auto_control import (
+        AppState, accept_alert, launch_app, stop_app, wait_for_app,
+    )
+
+    launch_app(session, "com.example.shop")          # Android package / iOS bundle id
+    wait_for_app(session, "com.example.shop", timeout_s=15)
+    accept_alert(session)
+    assert stop_app(session, "com.example.shop") == AppState.NOT_RUNNING
+
+``AppState`` 是 ``not_installed``\ 、\ ``not_running``\ 、\ ``background`` 或
+``foreground``\ ，可以直接與這些字串比較。
+
+.. list-table::
+   :header-rows: 1
+   :widths: 22 39 39
+
+   * - 呼叫
+     - Android
+     - iOS
+   * - ``launch_app``
+     - ``monkey -p <package> -c android.intent.category.LAUNCHER 1``\ ；
+       id 寫成 ``package/activity`` 時用 ``am start -n``
+     - WDA app launch
+   * - ``stop_app``
+     - ``am force-stop``
+     - WDA app terminate
+   * - ``app_state``
+     - ``pidof``\ 、\ ``pm path``\ ，以及 ``dumpsys`` 裡的 resumed activity
+     - WDA app state。WDA 把沒安裝的 App 回報成沒在執行，所以不會回傳
+       ``not_installed``\ 。
+   * - ``wait_for_app``
+     - 輪詢 ``app_state`` 直到逾時，逾時丟 ``DeviceTimeoutError``\ ；
+       取消 session 會結束等待。
+     - 相同。
+   * - ``accept_alert`` / ``dismiss_alert``
+     - 透過 ``uiautomator2`` 按下標準對話框或權限按鈕（``android:id/button1`` /
+       ``button2``\ 、permission controller 的允許／拒絕按鈕）。沒有
+       ``uiautomator2`` 時丟 ``DeviceUnsupportedError``\ ；請改在 frame 裡定位
+       按鈕再點它。
+     - WDA alert accept / dismiss；回傳 alert 的文字。
+
+沒有 alert 時兩者都丟 ``AlertNotPresentError``\ 。App id 在送進裝置 shell 之前
+會先驗證。
+
+Device matrix 的裝置規格可以寫 ``app_id``\ ：第一個步驟之前會啟動 App 並等它到
+前景，步驟結束後不論成功與否都會停止它（\ ``"keep_app": true`` 則保留執行）。
+``DeviceResult.app_state`` 記錄它最後的狀態。
+
+安裝、檔案、剪貼簿、錄影
+========================
+
+這些是後端可能沒有的功能。\ ``mobile_extension(session)`` 回傳
+:class:`MobileExtension`\ ；\ ``capability(feature)`` 說明 ``install``\ 、
+``files``\ 、\ ``clipboard``\ 、\ ``recording`` 各自能不能用，缺少的功能呼叫時
+會丟 ``DeviceUnsupportedError`` 並附上原因::
+
+    from je_auto_control import mobile_extension
+
+    extension = mobile_extension(session)
+    if extension.capability("recording").available:
+        extension.start_recording(time_limit_s=60)
+        ...
+        extension.stop_recording("run.mp4")
+
+.. list-table::
+   :header-rows: 1
+   :widths: 18 41 41
+
+   * - 功能
+     - Android
+     - iOS（WebDriverAgent）
+   * - ``install``
+     - ``adb install -r``
+     - ``needs_dependency``\ ：WDA 沒有安裝的端點。
+   * - ``files``
+     - ``adb push`` / ``adb pull``
+     - ``needs_dependency``\ ：WDA 沒有檔案的端點。
+   * - ``clipboard``
+     - 透過 ``uiautomator2``\ ；沒裝時是 ``needs_dependency``\ ，因為新版
+       Android 上 ``adb`` 碰不到剪貼簿。
+     - 只能寫入。WDA 只在 WDA 自己位於前景時才允許讀取；\ ``facebook-wda``
+       版本沒有 ``get_clipboard`` 時丟 ``DeviceUnsupportedError``\ 。
+   * - ``recording``
+     - ``adb shell screenrecord``\ （最長 180 秒），以 ``SIGINT`` 停止好讓檔案
+       收尾，再拉回主機並從裝置刪除。錄影是裝置端的狀態：關閉 session 不會
+       停止它，只有 ``stop_recording`` 會。
+     - ``needs_dependency``\ ：WDA 沒有錄影的端點。
+
+iOS 裝置不會用到任何 ``adb`` 的東西。要補上 iOS 缺少的功能，請針對主機端工具
+註冊 adapter；它會先被詢問，它沒提供的部分仍由 WebDriverAgent 負責::
+
+    from je_auto_control import register_mobile_extension
+
+    register_mobile_extension("ios", lambda session: MyTideviceAdapter(session))
+
+AutoControl 本身沒有附帶這樣的 adapter。
