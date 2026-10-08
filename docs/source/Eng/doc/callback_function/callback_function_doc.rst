@@ -56,6 +56,8 @@ Load external package functions into the callback executor:
 
    from je_auto_control import package_manager
 
+   # The package gate refuses a package that has not been allowed
+   package_manager.allow_packages("time")
    # Add all functions from the 'time' module
    package_manager.add_package_to_callback_executor("time")
 

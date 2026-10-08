@@ -9,8 +9,8 @@ from je_auto_control.utils.agent.backends._computer_toolset import (
 )
 from je_auto_control.utils.agent.backends.base import (
     REQUEST_TIMEOUT_S, AgentBackendError, build_default_system_prompt,
-    encode_screenshot_b64, offered_tool_names, prune_old_screenshots,
-    require_offered,
+    compact_history, image_block, needs_compaction, offered_tool_names,
+    require_offered, summarise_steps,
 )
 
 
@@ -72,15 +72,24 @@ class AnthropicAgentBackend(AgentBackend):
             # A new run: the last run's conversation ended on an unanswered
             # tool_use, which the API rejects.
             self._conversation = []
-        # Track the previous turn's tool_result, if any.
-        self._ingest_history(history)
         # Always attach the latest screenshot so the model has fresh
         # state — text-only context drifts quickly during a long run.
         if screenshot:
             screenshot, self._scale = fit_screenshot(screenshot, self._tier)
         user_content = _build_user_content(screenshot)
-        self._conversation.append({"role": "user", "content": user_content})
-        prune_old_screenshots(self._conversation)
+        if needs_compaction(self._conversation, user_content):
+            # Sent turns are never edited (that broke the prompt cache and,
+            # with thinking blocks bound to the conversation, the request):
+            # past the screenshot limit a new history starts instead, whose
+            # summary holds the last tool's outcome in place of a tool_result.
+            self._conversation = compact_history(
+                self._conversation,
+                f"{summarise_steps(goal, history)}\n\n{_NEXT_TOOL_PROMPT}",
+                image_block(screenshot))
+        else:
+            # Track the previous turn's tool_result, if any.
+            self._ingest_history(history)
+            self._conversation.append({"role": "user", "content": user_content})
         client = self._resolve_client()
         try:
             response = client.messages.create(
@@ -177,21 +186,14 @@ class AnthropicAgentBackend(AgentBackend):
 
 def _build_user_content(screenshot: Optional[bytes]) -> List[Dict[str, Any]]:
     blocks: List[Dict[str, Any]] = []
-    encoded = encode_screenshot_b64(screenshot)
-    if encoded:
-        blocks.append({
-            "type": "image",
-            "source": {
-                "type": "base64",
-                "media_type": "image/png",
-                "data": encoded,
-            },
-        })
-    blocks.append({
-        "type": "text",
-        "text": "Latest screenshot above. Pick the next AC_* tool to call.",
-    })
+    image = image_block(screenshot)
+    if image is not None:
+        blocks.append(image)
+    blocks.append({"type": "text", "text": _NEXT_TOOL_PROMPT})
     return blocks
+
+
+_NEXT_TOOL_PROMPT = "Latest screenshot above. Pick the next AC_* tool to call."
 
 
 def _attr(block: Any, name: str) -> Any:

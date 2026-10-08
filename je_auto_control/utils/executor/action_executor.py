@@ -8070,10 +8070,10 @@ class Executor:
     @staticmethod
     def set_allow_arbitrary_packages(enabled: bool) -> None:
         """
-        Allow (True) or refuse (False) ``AC_add_package_to_executor`` /
+        Allow (True) or refuse (False, the default) ``AC_add_package_to_executor`` /
         ``AC_add_package_to_callback_executor`` for packages outside the allowlist. Python only,
-        never an action command, so an action list cannot open its own gate. Until it is called,
-        any package loads with a ``DeprecationWarning``.
+        never an action command, so an action list cannot open its own gate. The allowlist is
+        ``allow_packages`` plus the names in ``JE_AUTOCONTROL_ALLOWED_PACKAGES``.
         """
         package_manager.set_allow_arbitrary_packages(enabled)
 

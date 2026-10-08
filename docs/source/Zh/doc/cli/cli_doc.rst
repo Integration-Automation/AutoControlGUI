@@ -33,6 +33,20 @@ AutoControl 可以直接從命令列執行自動化腳本。
 
    python -m je_auto_control --execute_str '[["AC_screenshot", {"file_path": "test.png"}]]'
 
+放行動作檔要載入的套件
+======================
+
+``AC_add_package_to_executor`` 與 ``AC_add_package_to_callback_executor`` 會拒絕沒有被放行的套件。
+從命令列放行的方式有兩種：環境變數 ``JE_AUTOCONTROL_ALLOWED_PACKAGES``（以逗號分隔的套件名稱，含子模組），
+對上面的旗標、``start-server``、``start-rest`` 與 MCP server 等所有入口都適用；以及 ``je_auto_control run``
+的 ``--allow-package NAME``（可重複），只對該次執行有效。
+
+.. code-block:: bash
+
+   JE_AUTOCONTROL_ALLOWED_PACKAGES=time,my_plugins python -m je_auto_control -e "path/to/actions.json"
+
+   python -m je_auto_control.cli run script.json --allow-package time --allow-package my_plugins
+
 建立專案範本
 ============
 

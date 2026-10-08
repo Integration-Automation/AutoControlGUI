@@ -221,6 +221,11 @@ beta 工具也一樣:它宣告縮放後的大小為螢幕大小,再把模型給�
 ``final_message`` 為 ``"stopped"``。Executor：``AC_computer_use``。
 GUI：**Computer Use** 分頁，Actions 選單有 **停止**。關閉視窗時會請執行中的工作停止，最多等 10 秒。
 
+Anthropic 的兩個 backend（這一個，以及 ``AC_run_agent`` 背後的 ``AnthropicAgentBackend``）不會改寫已送出的回合。
+對話裡的截圖將超過三張（或合計超過 20 MB）時，下一個請求改開一段新的對話：只有一則訊息，內容是目標、
+目前為止執行過的動作與各自的結果，再加上當下的截圖。較早的回合與其中的 thinking 區塊不會重播，
+模型只憑這份摘要接續。OpenAI backend 仍是就地把較舊的截圖換成文字。
+
 
 WebRunner 接入 executor + MCP
 -----------------------------

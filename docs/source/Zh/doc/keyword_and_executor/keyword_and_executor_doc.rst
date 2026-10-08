@@ -82,19 +82,28 @@ JSON 陣列（關鍵字），由執行者解析並執行。
 
 你可以動態載入外部 Python 套件到執行者中：
 
-哪些套件可以載入由套件閘門決定。``AC_add_package_to_executor`` 能替任何動作清單匯入 ``os`` 或
-``subprocess``，所以由宿主程式列出它需要的套件：
+哪些套件可以載入由套件閘門決定。``AC_add_package_to_executor`` 原本能替任何動作清單匯入 ``os`` 或
+``subprocess``，所以 **沒有被放行的套件一律不載入**：不在允許清單上的套件在匯入前就被拒絕，該動作以
+``AutoControlExecuteActionException`` 失敗。列出一個套件也同時放行它的子模組。放行的方式有三種：
 
 .. code-block:: python
 
    from je_auto_control import executor
 
    executor.allow_packages("time")                # 這些套件與其子模組
-   executor.set_allow_arbitrary_packages(False)   # 其他套件在匯入前就拒絕
 
-這兩個開關都不是 ``AC_*`` 命令，所以動作清單不能自己打開閘門；被拒絕的套件會讓該動作以
-``AutoControlExecuteActionException`` 失敗。宿主程式呼叫任一個開關之前，任何套件仍會載入，但會發出
-``DeprecationWarning``；之後的版本會預設拒絕允許清單以外的套件。
+.. code-block:: bash
+
+   # 所有入口都適用：兩個 CLI、socket／REST／MCP server、排程器
+   JE_AUTOCONTROL_ALLOWED_PACKAGES=time,my_plugins je_auto_control start-server
+
+   # 只對 CLI 的這一次執行；旗標可以重複
+   je_auto_control run script.json --allow-package time --allow-package my_plugins
+
+``JE_AUTOCONTROL_ALLOWED_PACKAGES`` 是以逗號分隔的清單，只在行程啟動時讀一次；不是模組名稱（以點分隔的識別字）
+的項目會被略過並記錄到日誌。``executor.set_allow_arbitrary_packages(True)`` 會放行所有套件，也就是這一版之前的
+預設行為（當時任何套件都會載入，只發出 ``DeprecationWarning``）。以上都不是 ``AC_*`` 命令，所以動作清單不能
+自己打開閘門。
 
 
 .. code-block:: python
