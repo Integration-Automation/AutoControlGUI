@@ -446,7 +446,8 @@ def window_tools() -> List[MCPTool]:
         ),
         MCPTool(
             name="ac_window_minimize",
-            description="Minimise the first matching window.",
+            description=("Minimise the first matching window. Fails if the "
+                         "window is gone by the time the request is made."),
             input_schema=schema({
                 "title_substring": {"type": "string"},
                 "case_sensitive": {"type": "boolean"},
@@ -456,7 +457,8 @@ def window_tools() -> List[MCPTool]:
         ),
         MCPTool(
             name="ac_window_maximize",
-            description="Maximise the first matching window.",
+            description=("Maximise the first matching window. Fails if the "
+                         "window is gone or Windows refuses to activate it."),
             input_schema=schema({
                 "title_substring": {"type": "string"},
                 "case_sensitive": {"type": "boolean"},
@@ -467,7 +469,8 @@ def window_tools() -> List[MCPTool]:
         MCPTool(
             name="ac_window_restore",
             description=("Restore the first matching window to its previous "
-                         "size and position."),
+                         "size and position. Fails if the window is gone or "
+                         "Windows refuses to activate it."),
             input_schema=schema({
                 "title_substring": {"type": "string"},
                 "case_sensitive": {"type": "boolean"},

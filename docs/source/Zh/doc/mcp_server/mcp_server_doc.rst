@@ -37,7 +37,9 @@ list-changed 通知與 elicitation。
 視窗管理 (Windows)
   ``ac_list_windows``、``ac_focus_window``、``ac_wait_for_window``、
   ``ac_close_window``、``ac_window_move``、``ac_window_minimize``、
-  ``ac_window_maximize``、``ac_window_restore``。
+  ``ac_window_maximize``、``ac_window_restore``。最後三個在視窗已不存在時，
+  或（最大化與還原）Windows 拒絕把它帶到前景時，會回工具錯誤（``isError``）
+  ——此時視窗可能已改變狀態但沒有成為作用中視窗。以前不論結果都回傳視窗代碼。
 
 語意定位
   ``ac_a11y_list``、``ac_a11y_find``、``ac_a11y_click``、
