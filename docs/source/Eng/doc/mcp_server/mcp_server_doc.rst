@@ -289,6 +289,32 @@ box), start the same dispatcher behind HTTP:
 
 Bearer token can also come from ``JE_AUTOCONTROL_MCP_TOKEN``.
 
+**Roles (opt-in RBAC).** Set ``JE_AUTOCONTROL_RBAC_USERS`` to a user store
+file, or pass ``user_store=UserStore(path)`` to ``start_mcp_http_server`` /
+``HttpMCPServer``, and the HTTP transport authenticates each request as one
+user of that store instead of comparing a shared token (``auth_token`` and
+``JE_AUTOCONTROL_MCP_TOKEN`` are then not accepted, and a bearer token is
+always required). The store, its roles and how to create users are described
+under *Roles* in the operations-layer REST API chapter; both servers can
+share one file. Without a store nothing changes. The stdio transport has no
+bearer token and is never subject to RBAC.
+
+- A tool needs ``read_screen`` when it is marked ``readOnlyHint`` and
+  ``drive_input`` otherwise, so a ``viewer`` gets exactly the read-only
+  tools and an ``operator`` the rest. ``ac_remote_host_start`` / ``_stop``,
+  ``ac_usb_acl_add`` / ``_remove`` / ``_set_default``,
+  ``ac_usb_passthrough_enable``, ``ac_egress_allow`` / ``_reset`` and
+  ``ac_load_plugins`` need ``manage_hosts`` (``admin``).
+- ``tools/list`` returns only the tools the caller may call, and
+  ``tools/call`` on any other answers JSON-RPC error ``-32003``
+  (``Forbidden: ...``, ``data.required_capability``) without running it.
+- A tool that takes an action list (``ac_execute_actions`` and the like) is
+  refused the same way when the list contains a command the caller's role
+  does not grant, such as ``AC_sign_action_file`` for an operator.
+- A token whose role the store does not define gets HTTP 403.
+- Each audit line carries ``user_id`` and ``role``; a refused call is
+  recorded with ``"status": "denied"``.
+
 Browser requests are refused unless they come from this machine: a request
 whose ``Origin`` header is not a loopback origin gets 403, and when the
 server is bound to loopback so does one whose ``Host`` header does not name

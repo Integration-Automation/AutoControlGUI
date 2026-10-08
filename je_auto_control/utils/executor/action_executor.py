@@ -68,6 +68,7 @@ from je_auto_control.utils.generate_report.generate_xml_report import generate_x
 from je_auto_control.utils.json.json_file import read_action_json
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.mcp_server.http_transport import start_mcp_http_server
+from je_auto_control.utils.rbac.policy import authorize_command
 from je_auto_control.utils.mcp_server.server import start_mcp_stdio_server
 from je_auto_control.utils.package_manager.package_manager_class import package_manager
 from je_auto_control.utils.project.create_project_structure import create_project_dir
@@ -8118,6 +8119,7 @@ class Executor:
         Execute a single event
         """
         name = action[0]
+        authorize_command(name)  # RBAC; a no-op outside a server's user scope
         block_handler = self._block_commands.get(name)
         if block_handler is not None:
             args = action[1] if len(action) == 2 else {}

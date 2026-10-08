@@ -22,6 +22,7 @@ from je_auto_control.utils.executor.flow_data_commands import (
     exec_sql_to_var, exec_transform_var,
 )
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
+from je_auto_control.utils.rbac.authorization import authorization_scope, current_authorization
 from je_auto_control.wrapper.auto_control_image import locate_image_center
 from je_auto_control.wrapper.auto_control_screen import get_pixel
 from je_auto_control.utils.timeouts import deadline_after
@@ -461,6 +462,9 @@ class _ParallelRun:
         self._macros = dict(executor.macros)
         self._strict = getattr(executor_module._STRICT_BODIES, "value", False)
         self._macro_depth = getattr(_MACRO_DEPTH, "value", 0)
+        # The RBAC user is bound to the thread that accepted the request; a
+        # branch thread without it ran privileged commands unchecked.
+        self._caller = current_authorization()
         self.results: list = [None] * len(branches)
         self._failures: list = [0] * len(branches)
         self._errors: Dict[int, str] = {}
@@ -489,8 +493,9 @@ class _ParallelRun:
         _MACRO_DEPTH.value = self._macro_depth
         self._module.reset_recorded_failures()
         try:
-            self.results[index] = self._branch_executor().execute_action(
-                branch, raise_on_error=self._strict, _validated=True)
+            with authorization_scope(self._caller):
+                self.results[index] = self._branch_executor().execute_action(
+                    branch, raise_on_error=self._strict, _validated=True)
             self._failures[index] = self._module.recorded_failures()
         except AutoControlAssertionException as error:
             self._assertions[index] = error

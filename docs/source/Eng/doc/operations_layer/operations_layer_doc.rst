@@ -134,6 +134,90 @@ CLI::
 
    python -m je_auto_control.utils.rest_api --host 127.0.0.1 --port 9939
 
+Roles (opt-in RBAC)
+-------------------
+
+By default every caller holds the one shared token and may use every
+endpoint. Point the server at a user store and each caller gets a token of
+their own and a role instead:
+
+- **Switching it on**: set ``JE_AUTOCONTROL_RBAC_USERS`` to the user store
+  file, pass ``--users <file>`` to ``python -m je_auto_control.utils.rest_api``,
+  or pass ``user_store=UserStore(path)`` to ``RestApiServer`` /
+  ``start_rest_api_server``. Nothing else switches it on -- in particular a
+  ``~/.je_auto_control/users.json`` that merely exists does not.
+- **With it on, the shared token is refused.** A bearer token must belong to
+  one user of the store; a store that is empty or unreadable admits nobody.
+- **Without it, nothing changes**: the single shared token, no roles, no 403.
+
+Create the users from Python; the plain token is shown once and only its
+hash is stored::
+
+   import je_auto_control as ac
+
+   store = ac.UserStore("/etc/autocontrol/users.json")
+   token = store.add_user(user_id="alice", display_name="Alice", role="operator")
+   store.set_role("alice", "viewer")      # roles: viewer / operator / admin
+   store.rotate_token("alice")
+   store.remove_user("alice")
+
+A running server re-reads the file when it changes, so a removed user, a
+rotated token or a changed role applies to the next request.
+
+.. list-table::
+   :header-rows: 1
+
+   * - Capability
+     - Roles
+     - Endpoints
+   * - ``read_screen``
+     - viewer, operator, admin
+     - every ``GET`` except the two below, ``/metrics`` included
+   * - ``drive_input``
+     - operator, admin
+     - ``POST /execute``, ``/execute_file``, ``/usb/loopback/open``,
+       ``/usb/remote/open``
+   * - ``read_audit``
+     - admin
+     - ``GET /audit/list``, ``/audit/verify``
+   * - ``manage_hosts``
+     - admin
+     - ``POST /config/export``, ``/config/import``, ``/usb/passthrough/enable``,
+       ``/usb/acl/add``, ``/usb/acl/remove``, ``/usb/acl/default``, and any
+       route that has not been given a capability
+   * - ``sign_actions``
+     - admin
+     - the ``AC_sign_action_file`` command (see below)
+
+A role that lacks the capability gets ``403``
+``{"error": "forbidden", "required_capability": "...", "role": "..."}``.
+The same value is published per operation as ``x-required-capability`` in
+``/openapi.json``.
+
+Being allowed to ``POST /execute`` is being allowed to run actions, not every
+command. Signing an action file (``sign_actions``), reading the audit log
+(``read_audit``), and the commands that administer the host itself --
+``AC_admin_*``, starting or stopping the REST / MCP / remote-desktop /
+webhook servers, ``AC_usb_acl_*``, ``AC_usb_passthrough_enable``,
+``AC_config_import`` / ``AC_config_export``, ``AC_egress_allow`` /
+``AC_egress_reset``, ``AC_load_plugins``, ``AC_add_package_to_executor``,
+``AC_secret_init`` / ``set`` / ``remove`` / ``lock`` / ``unlock``,
+``AC_audit_log_clear`` (all ``manage_hosts``) -- need their own capability
+wherever they appear in the action list, however deeply nested. The request
+is answered 403 with the ``command`` named before its first action runs, and
+the executor refuses the same commands when they come from an action file.
+
+The roles are not a sandbox: an operator drives the real keyboard and can
+launch programs, so whatever the desktop user could do by hand is within
+reach. They protect the host's own privileged state. Work an operator defers
+to another thread -- a scheduler job, a trigger, a hotkey binding -- runs
+later without the caller's role attached.
+
+Every audit row of an RBAC request names the user: the ``viewer_id`` column
+holds the user id and the detail reads
+``POST /execute -> ok:200 user=alice role=operator`` (``forbidden:<capability>``
+for a refused one).
+
 Endpoint surface
 ----------------
 

@@ -9,6 +9,7 @@ from __future__ import annotations
 import threading
 from typing import Any, Dict, Optional
 
+from je_auto_control.utils.rbac.users import UserStore
 from je_auto_control.utils.rest_api.rest_server import RestApiServer
 
 
@@ -26,7 +27,8 @@ class _RestApiRegistry:
 
     def start(self, host: str = "127.0.0.1", port: int = 9939,
               *, token: Optional[str] = None,
-              enable_audit: bool = True) -> Dict[str, Any]:
+              enable_audit: bool = True,
+              user_store: Optional[UserStore] = None) -> Dict[str, Any]:
         """Stop any existing server, then start a fresh one with the config.
 
         The whole start lifecycle (stop existing → construct → bind →
@@ -40,7 +42,7 @@ class _RestApiRegistry:
                 previous.stop(timeout=2.0)
             server = RestApiServer(
                 host=host, port=int(port), token=token,
-                enable_audit=enable_audit,
+                enable_audit=enable_audit, user_store=user_store,
             )
             server.start()
             self._server = server

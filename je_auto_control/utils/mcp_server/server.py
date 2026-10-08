@@ -16,6 +16,7 @@ from typing import Any, Callable, Dict, List, Optional, TextIO
 
 from je_auto_control.utils.cli_output import utf8_stream
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
+from je_auto_control.utils.mcp_server._authz import authorize_tool_call, visible_tools
 from je_auto_control.utils.mcp_server.audit import AuditLogger
 from je_auto_control.utils.mcp_server.context import (
     OperationCancelledError, ToolCallContext,
@@ -522,7 +523,7 @@ class MCPServer(StatelessDispatchMixin, SubscriptionMixin, ClientRequestMixin):
         # client as "-32603 dictionary changed size during iteration".
         with self._tools_lock:
             tools = list(self._tools.values())
-        return {"tools": [tool.to_descriptor() for tool in tools]}
+        return {"tools": [tool.to_descriptor() for tool in visible_tools(tools)]}
 
     def _handle_resources_list(self) -> Dict[str, Any]:
         """List descriptors for every registered resource."""
@@ -615,6 +616,7 @@ class MCPServer(StatelessDispatchMixin, SubscriptionMixin, ClientRequestMixin):
         tool = self._tools.get(name)
         if tool is None:
             raise _MCPError(-32602, f"Unknown tool: {name}")
+        authorize_tool_call(tool, arguments, self._audit)  # RBAC; a no-op without a user
         violation = (validate_arguments(tool.input_schema, arguments)
                      or undeclared_arguments(tool.input_schema, arguments))
         if violation is not None:

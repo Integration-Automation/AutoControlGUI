@@ -1095,6 +1095,11 @@ from je_auto_control.utils.plugin_loader.plugin_loader import (
 from je_auto_control.utils.rest_api.rest_server import (
     RestApiServer, start_rest_api_server,
 )
+# RBAC for the REST API and the MCP HTTP transport (opt-in)
+from je_auto_control.utils.rbac import (
+    AuthorizationContext, AuthorizationError, UserAuthError, UserRecord,
+    UserStore, authorization_scope,
+)
 # Admin console (headless multi-host client)
 from je_auto_control.utils.admin import (
     AdminConsoleClient, AdminHost, default_admin_console,
@@ -1753,6 +1758,9 @@ __all__ = [
     "register_plugin_commands",
     # REST API
     "RestApiServer", "start_rest_api_server",
+    # RBAC
+    "AuthorizationContext", "AuthorizationError", "UserAuthError",
+    "UserRecord", "UserStore", "authorization_scope",
     # Admin console
     "AdminConsoleClient", "AdminHost", "default_admin_console",
     # WebRTC inspector
