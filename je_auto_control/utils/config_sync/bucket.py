@@ -60,6 +60,28 @@ class FullResyncRequired(ConfigSyncError):
     """
 
 
+class OperationMismatchError(ConfigSyncError):
+    """An ``operation_id`` was reused for a write with different content.
+
+    An operation id names one write: repeating it is how a client asks "did
+    my push arrive?", and the server answers with the revision of the first
+    attempt. Sending the same id with another bucket (or another base
+    revision) is a different write, and answering it the same way would
+    report as committed something the server discarded. Nothing was written;
+    push again under a fresh id. ``revision`` is the revision the id's first
+    write produced, when the server reported it.
+
+    Deliberately not a :class:`ConfigSyncConflict`: fetching and merging
+    again does not help while the id stays the same.
+    """
+
+    def __init__(self, message: str, operation_id: str = "",
+                 revision: Optional[int] = None) -> None:
+        super().__init__(message)
+        self.operation_id = operation_id
+        self.revision = revision
+
+
 def new_operation_id() -> str:
     """A fresh id for one push; reuse it when retrying that same push."""
     return uuid.uuid4().hex
@@ -250,5 +272,6 @@ def _peers(peers: Any) -> Dict[str, Dict[str, Any]]:
 
 __all__ = [
     "ConfigBucket", "ConfigSyncConflict", "ConfigSyncError", "FullResyncRequired",
+    "OperationMismatchError",
     "TOMBSTONE_RETENTION_S", "WIRE_VERSION", "is_tombstone", "new_operation_id",
 ]

@@ -55,7 +55,8 @@ from je_auto_control.utils.config_sync.assets import (
 )
 from je_auto_control.utils.config_sync.client import (
     DEFAULT_SYNC_ATTEMPTS, TOMBSTONE_RETENTION_S, WIRE_VERSION, ConflictRecord, ConfigBucket,
-    ConfigSyncClient, ConfigSyncConflict, ConfigSyncError, FullResyncRequired, SyncResult,
+    ConfigSyncClient, ConfigSyncConflict, ConfigSyncError, FullResyncRequired,
+    OperationMismatchError, SyncResult,
     batch_operation_id, is_tombstone, merge_buckets, new_operation_id,
 )
 from je_auto_control.utils.config_sync.outbox import (
@@ -84,7 +85,8 @@ __all__ = [
     "resolve_conflict", "run_full_resync", "run_sync", "sync_assets", "sync_status",
     "ConfigBucket", "ConfigStore", "ConfigStoreError", "ConflictRecord", "ConfigSyncClient",
     "ConfigSyncConflict", "ConfigSyncError", "DEFAULT_SYNC_ATTEMPTS", "DrainReport",
-    "FullResyncRequired", "MergeDecision", "OutboxError", "PeerState", "RevisionConflictError",
+    "FullResyncRequired", "MergeDecision", "OperationMismatchError", "OutboxError", "PeerState",
+    "RevisionConflictError",
     "StoreCapacityError", "SyncConflict", "SyncEntry", "SyncOperation", "SyncOutbox",
     "SyncResult", "TOMBSTONE_RETENTION_S", "WIRE_VERSION", "batch_operation_id",
     "collect_tombstones", "collectable_revision", "compare_vectors", "default_outbox_path",

@@ -14,7 +14,7 @@ from typing import TYPE_CHECKING, Any, Dict, List, Mapping, Optional, Sequence, 
 
 from je_auto_control.utils.config_sync.bucket import (
     TOMBSTONE_RETENTION_S, WIRE_VERSION, ConfigBucket, ConfigSyncConflict, ConfigSyncError,
-    FullResyncRequired, is_tombstone, new_operation_id,
+    FullResyncRequired, OperationMismatchError, is_tombstone, new_operation_id,
 )
 from je_auto_control.utils.config_sync.merge import (
     ConflictRecord, apply_operation, awaits_ack, batch_operation_id, merge_buckets, settle,
@@ -101,9 +101,7 @@ class ConfigSyncClient:
         if status == 404:
             return None
         if status == 409:
-            raise ConfigSyncConflict(
-                f"config sync {method}: the server is at another revision",
-                _conflict_revision(response.get("text")))
+            raise _refusal(method, response.get("text"), body)
         if status == 428:
             raise ConfigSyncError(
                 f"config sync {method} returned HTTP 428: the server only accepts "
@@ -135,7 +133,9 @@ class ConfigSyncClient:
         :class:`ConfigSyncConflict` when another machine pushed in between;
         nothing is overwritten. Pass the same ``operation_id`` when repeating
         a push whose reply never arrived: the server answers with the
-        revision the first attempt produced instead of a conflict.
+        revision the first attempt produced instead of a conflict. Reusing
+        an id for a different bucket or base revision raises
+        :class:`OperationMismatchError`.
         """
         if bucket.user_id != self._user_id:
             raise ConfigSyncError(
@@ -265,18 +265,32 @@ class ConfigSyncClient:
             f"config sync: still behind the server after {max_attempts} attempts")
 
 
-def _conflict_revision(text: Any) -> Optional[int]:
-    """The current revision a 409 reply names, when it names one."""
+#: ``code`` of the 409 that refuses an operation id reused for other content.
+_OPERATION_MISMATCH = "operation_mismatch"
+
+
+def _refusal(method: str, text: Any, sent: Optional[Mapping[str, Any]]) -> ConfigSyncError:
+    """The error a 409 reply stands for: a stale revision, or a reused operation id."""
     try:
-        revision = json.loads(text or "").get("revision")
-    except (json.JSONDecodeError, RecursionError, AttributeError, TypeError):
-        return None
-    return revision if isinstance(revision, int) and not isinstance(revision, bool) else None
+        reply = json.loads(text or "")
+    except (json.JSONDecodeError, RecursionError, TypeError):
+        reply = None
+    reply = reply if isinstance(reply, dict) else {}
+    found = reply.get("revision")
+    revision = found if isinstance(found, int) and not isinstance(found, bool) else None
+    if reply.get("code") == _OPERATION_MISMATCH:
+        operation_id = str((sent or {}).get("operation_id") or "")
+        return OperationMismatchError(
+            f"config sync {method}: operation id {operation_id!r} was already used for a "
+            "different write; nothing was written", operation_id=operation_id, revision=revision)
+    return ConfigSyncConflict(
+        f"config sync {method}: the server is at another revision", revision)
 
 
 __all__ = [
     "ConfigBucket", "ConflictRecord", "ConfigSyncClient", "ConfigSyncConflict",
-    "ConfigSyncError", "DEFAULT_SYNC_ATTEMPTS", "FullResyncRequired", "SyncResult",
+    "ConfigSyncError", "DEFAULT_SYNC_ATTEMPTS", "FullResyncRequired",
+    "OperationMismatchError", "SyncResult",
     "TOMBSTONE_RETENTION_S", "WIRE_VERSION", "batch_operation_id",
     "is_tombstone", "merge_buckets", "new_operation_id",
 ]

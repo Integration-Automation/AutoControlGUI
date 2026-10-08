@@ -30,6 +30,12 @@ server 重啟後仍在。檔案位置依序取自 ``--config-db PATH``、環境�
 重複的 ``operation_id`` 會回傳第一次 commit 產生的 revision 且不寫入任何東西,
 所以沒收到回覆的 client 直接重送同一個請求即可。每位使用者保留最近 256 個 operation id。
 
+一個 operation id 只代表 *一次* 寫入。Store 會記下每個 id 寫入內容的 SHA-256
+(base revision 加上去掉 ``revision`` 欄位的 bucket),同一個 id 帶著不同的 bucket 或
+base revision 送來時丟出 ``OperationMismatchError``\ (``.operation_id``、第一次寫入的
+``.revision``)且不寫入 —— 以前會被當成已提交來回覆。沒有記 hash 的舊版所留下的 id
+仍照舊方式回覆;既有資料庫在第一次使用時補上這個欄位。
+
 傳輸格式(version 2)
 ---------------------
 
@@ -45,6 +51,8 @@ server 重啟後仍在。檔案位置依序取自 ``--config-db PATH``、環境�
        ``{"version": 2, "base_revision": N, "operation_id": "...", "bucket": {...}}``
      - ``200 {"ok": true, "revision": N + 1, "version": 2}``;bucket 已不在 ``N`` 時
        ``409 {"detail": "revision conflict", "revision": <目前>}``(不寫入);
+       ``operation_id`` 已被用於另一次寫入時
+       ``409 {"code": "operation_mismatch", "revision": <第一次寫入的>}``(不寫入);
        envelope 或 bucket 格式錯誤、或 bucket 指名另一位使用者時 ``400``。
    * - ``PUT /config/{user_id}``,body 為裸 bucket(version 2 之前的格式)
      - ``428`` —— 除非 server 以 ``--allow-blind-config-writes``
@@ -78,6 +86,9 @@ Client
 它會重新 fetch 與 merge,最多 ``max_attempts``(預設 4)次,之後丟出 ``ConfigSyncConflict``。
 ``push(bucket)`` 以 ``bucket.revision`` 為基準,回傳已提交的 revision;落後時丟出
 ``ConfigSyncConflict``(``.revision`` 為 server 目前的 revision)而不是覆寫。
+``code`` 為 ``operation_mismatch`` 的 ``409`` 則丟出 ``OperationMismatchError``;
+它是 ``ConfigSyncError`` 但不是 ``ConfigSyncConflict``,所以 ``sync`` 不會重新 fetch 重試。
+還不認得這個 code 的 client 會把這個回覆當成一般的衝突。
 
 因果合併:時鐘不決定勝負
 ------------------------

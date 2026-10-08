@@ -17,7 +17,9 @@ and is committed only while the stored bucket is still at ``base_revision``
 (``0`` = no bucket yet): ``200 {"ok": true, "revision": 4}``, or ``409
 {"detail": "revision conflict", "revision": <current>}`` when another write
 got there first. Repeating a ``PUT`` with the same ``operation_id`` returns
-the revision the first one produced. ``GET`` returns the bucket with
+the revision the first one produced; the same ``operation_id`` with a
+different bucket or base revision is ``409 {"code": "operation_mismatch",
+"revision": <the first write's>}`` and writes nothing. ``GET`` returns the bucket with
 ``revision`` set to the committed revision and ``"version": 2``. A bare
 bucket (what clients sent before version 2) is answered ``428`` unless the
 server runs with ``--allow-blind-config-writes``, which restores the
@@ -61,7 +63,9 @@ except ImportError as exc:  # pragma: no cover - optional dep
         "pip install je_auto_control[signaling]"
     ) from exc
 
-from je_auto_control.utils.config_sync.client import ConfigBucket, ConfigSyncError
+from je_auto_control.utils.config_sync.bucket import (
+    ConfigBucket, ConfigSyncError, OperationMismatchError,
+)
 from je_auto_control.utils.config_sync.store import (
     ConfigStore, RevisionConflictError, StoreCapacityError,
 )
@@ -78,6 +82,8 @@ _MAX_CONFIG_BYTES = 1024 * 1024
 _MAX_CONFIG_USERS = 1024
 #: The ``/config`` wire format this server speaks.
 CONFIG_WIRE_VERSION = 2
+#: ``code`` of the 409 that refuses an operation id reused for other content.
+CONFIG_OPERATION_MISMATCH = "operation_mismatch"
 _LOG = logging.getLogger("rd-signaling")
 _WEB_VIEWER_DIR = (
     __import__("pathlib").Path(__file__).parent / "web_viewer"
@@ -327,7 +333,8 @@ def _validate_user_id(user_id: str) -> None:
 _CONFIG_RESPONSES = {
     400: {"description": "invalid user_id, envelope or bucket"},
     404: {"description": "no bucket for this user"},
-    409: {"description": "base_revision is not the current revision"},
+    409: {"description": "base_revision is not the current revision, or (code "
+                         "operation_mismatch) operation_id was used for another write"},
     428: {"description": "a write without base_revision / operation_id"},
     503: {"description": "too many users, or the store is unavailable"},
     **_AUTH_RESPONSES,
@@ -384,6 +391,13 @@ def _commit_config(store: ConfigStore, user_id: str, body: Dict[str, Any],
     except RevisionConflictError as conflict:
         return JSONResponse({"detail": "revision conflict", "revision": conflict.current_revision},
                             status_code=409)
+    except OperationMismatchError as mismatch:
+        # 409 like a revision conflict, so a client that knows only that
+        # status still learns nothing was written; ``code`` tells them apart.
+        return JSONResponse(
+            {"detail": "operation_id was already used for a different write",
+             "code": CONFIG_OPERATION_MISMATCH, "revision": mismatch.revision},
+            status_code=409)
 
 
 def _register_config_routes(app: FastAPI, store: ConfigStore, secret_dep,

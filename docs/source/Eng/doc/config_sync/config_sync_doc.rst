@@ -35,6 +35,14 @@ A repeated ``operation_id`` returns the revision its first commit produced and
 writes nothing, so a client whose reply was lost can simply send the same
 request again. The last 256 operation ids per user are remembered.
 
+An operation id names *one* write. The store keeps a SHA-256 of what each id
+wrote (the base revision plus the bucket without its ``revision`` field), and
+the same id sent with a different bucket or base revision raises
+``OperationMismatchError`` (``.operation_id``, ``.revision`` of the first
+write) and writes nothing -- before, it was answered as if it had been
+committed. An id recorded by a release that kept no hash is still answered
+the old way; the column is added to an existing database at first use.
+
 Wire format (version 2)
 -----------------------
 
@@ -50,6 +58,8 @@ Wire format (version 2)
        ``{"version": 2, "base_revision": N, "operation_id": "...", "bucket": {...}}``
      - ``200 {"ok": true, "revision": N + 1, "version": 2}``; ``409 {"detail": "revision conflict",
        "revision": <current>}`` when the bucket is no longer at ``N`` (nothing is written);
+       ``409 {"code": "operation_mismatch", "revision": <the first write's>}`` when
+       ``operation_id`` was already used for a different write (nothing is written);
        ``400`` for a malformed envelope or bucket, or a bucket naming another user.
    * - ``PUT /config/{user_id}`` with a bare bucket (the pre-version-2 body)
      - ``428`` -- unless the server runs with ``--allow-blind-config-writes``
@@ -88,7 +98,10 @@ machine pushed in between it fetches and merges again, up to ``max_attempts``
 (default 4) times, then raises ``ConfigSyncConflict``. ``push(bucket)`` uses
 ``bucket.revision`` as the base, returns the committed revision and raises
 ``ConfigSyncConflict`` (``.revision`` is the server's current one) instead of
-overwriting.
+overwriting. A ``409`` whose ``code`` is ``operation_mismatch`` raises
+``OperationMismatchError`` instead; it is a ``ConfigSyncError`` but not a
+``ConfigSyncConflict``, so ``sync`` does not fetch and retry it. A client
+from before this code existed sees that reply as an ordinary conflict.
 
 Causal merge: no clock picks a winner
 -------------------------------------
