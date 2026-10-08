@@ -11,7 +11,8 @@ matches neither.
 import re
 import sys
 import warnings
-from typing import Optional, Union, Tuple
+from contextlib import contextmanager
+from typing import Iterator, Optional, Union, Tuple
 
 from je_auto_control.utils.exception.exception_tags import (
     keyboard_press_key_error_message, keyboard_release_key_error_message,
@@ -25,7 +26,7 @@ from je_auto_control.utils.exception.exceptions import (
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.platform_id import is_windows, is_x11_unix
 from je_auto_control.utils.test_record.record_test_class import record_action_to_list
-from je_auto_control.utils.text_unicode.text_unicode import unicode_code_units
+from je_auto_control.utils.text_unicode.text_unicode import CONTROL_KEYS, unicode_code_units
 from je_auto_control.wrapper.platform_wrapper import (
     keyboard, keyboard_check, keyboard_key_aliases, keyboard_keys_table,
 )
@@ -80,14 +81,52 @@ def _resolve_keycode(keycode: Union[int, str]) -> int:
     return keycode
 
 
+def _backend_shift(is_shift: bool) -> bool:
+    """The ``is_shift`` to hand a key event whose Shift is already held.
+
+    Only the macOS backend takes the flag (it posts the Shift event itself);
+    everywhere else Shift is a key this module holds, see ``_shift_held``.
+    """
+    return is_shift and sys.platform == "darwin"
+
+
+@contextmanager
+def _shift_held(is_shift: bool) -> Iterator[None]:
+    """按住 Shift 直到區塊結束（Windows／X11）；macOS 由後端自己處理。
+    Hold Shift for the block on Windows and X11; a no-op without ``is_shift``
+    and on macOS, whose backend posts the Shift event from the flag.
+
+    ``is_shift`` used to reach the macOS backend only, so on Windows and X11
+    ``type_keyboard("a", is_shift=True)`` typed ``a`` while documenting Shift.
+    The release is in ``finally`` and never raises (``_release_still_held``):
+    a Shift left down changes every keystroke and click that follows.
+    """
+    if not is_shift or sys.platform == "darwin":
+        yield
+        return
+    still_held: list = []
+    try:
+        press_keyboard_key("shift", skip_record=True)
+        still_held.append("shift")
+        yield
+    finally:
+        _release_still_held(still_held, False)
+
+
 def press_keyboard_key(keycode: Union[int, str], is_shift: bool = False,
                        skip_record: bool = False) -> Optional[str]:
     """
     按下指定鍵
     Press a keyboard key
 
+    With ``is_shift`` the key goes down while Shift is held, on every platform.
+    On Windows and X11 Shift is pressed before the key and released right after
+    the key is down (the character is decided at key-down), so a lone press
+    never leaves Shift stuck; ``type_keyboard``, ``hotkey`` and ``write`` hold
+    it for their whole sequence instead.
+
     :param keycode: 鍵盤代碼或字串 Keycode or string
-    :param is_shift: 是否同時按下 Shift
+    :param is_shift: 是否同時按下 Shift Hold Shift while the key goes down
     :param skip_record: 是否跳過紀錄
     :return: keycode 字串
     """
@@ -100,7 +139,8 @@ def press_keyboard_key(keycode: Union[int, str], is_shift: bool = False,
         if sys.platform == "darwin":
             keyboard.press_key(keycode, is_shift=is_shift)
         elif is_windows() or is_x11_unix():
-            keyboard.press_key(keycode)
+            with _shift_held(is_shift):
+                keyboard.press_key(keycode)
         else:
             raise AutoControlKeyboardException(
                 f"press_keyboard_key: no backend for {sys.platform!r}")
@@ -121,6 +161,10 @@ def release_keyboard_key(keycode: Union[int, str], is_shift: bool = False,
     """
     放開指定鍵
     Release a keyboard key
+
+    ``is_shift`` reaches the macOS backend only: on Windows and X11 the Shift
+    of a press is already up by the time the key is released (see
+    ``press_keyboard_key``), so there is nothing left to release here.
     """
     autocontrol_logger.info(f"release_keyboard_key, keycode={keycode}, is_shift={is_shift}, skip_record={skip_record}")
     try:
@@ -185,11 +229,13 @@ def type_keyboard(keycode: Union[int, str], is_shift: bool = False,
     """
     autocontrol_logger.info(f"type_keyboard, keycode={keycode}, is_shift={is_shift}, skip_record={skip_record}")
     still_held: list = []
+    backend_shift = _backend_shift(is_shift)
     try:
-        press_keyboard_key(keycode, is_shift, skip_record=True)
-        still_held.append(keycode)
-        release_keyboard_key(keycode, is_shift, skip_record=True)
-        still_held.clear()
+        with _shift_held(is_shift):
+            press_keyboard_key(keycode, backend_shift, skip_record=True)
+            still_held.append(keycode)
+            release_keyboard_key(keycode, backend_shift, skip_record=True)
+            still_held.clear()
 
         if not skip_record:
             record_action_to_list("type_keyboard", {"keycode": keycode, "is_shift": is_shift})
@@ -207,7 +253,7 @@ def type_keyboard(keycode: Union[int, str], is_shift: bool = False,
         # TypeError, ValueError)` 名單的任何一項底下（實測確認）。也就是說最可能
         # 發生的失敗（鍵名不在對照表裡、平台不支援、後端出錯）根本走不到那個
         # `except`。`finally` 是唯一每條離開路徑都會跑到的地方。
-        _release_still_held(still_held, is_shift)
+        _release_still_held(still_held, backend_shift)
 
 def check_key_is_press(keycode: Union[int, str]) -> Optional[bool]:
     """
@@ -239,8 +285,32 @@ def check_key_is_press(keycode: Union[int, str]) -> Optional[bool]:
 # Whitespace that means a *key*, not a character. Sent as a Unicode code point
 # these are silently dropped by most applications — a newline especially, which
 # turns a multi-line `write` into one run-on line with nothing reported.
-WRITE_CONTROL_KEYS = {"\n": "return", "\r": "return", "\t": "tab",
-                      "\b": "back"}
+# One table for ``write`` and ``text_unicode``'s plans, so the two agree.
+WRITE_CONTROL_KEYS = CONTROL_KEYS
+
+#: The key a character shares with its unshifted partner on a US layout. Only a
+#: hint: Shift is added when the table really puts both on one key (see
+#: ``_needs_shift``), so a layout that separates them is left alone.
+_SHIFT_PARTNERS = {
+    "!": "1", "@": "2", "#": "3", "$": "4", "%": "5", "^": "6", "&": "7",
+    "*": "8", "(": "9", ")": "0", "_": "-", "+": "=", "{": "[", "}": "]",
+    "|": "\\", ":": ";", '"': "'", "<": ",", ">": ".", "?": "/", "~": "`",
+}
+
+
+def _needs_shift(single_char: str, key: int) -> bool:
+    """Whether typing ``single_char`` by its table key also needs Shift.
+
+    The tables list a capital under the same code as its lower-case letter
+    (Windows: one virtual key; X11: one keycode), so pressing it alone typed
+    ``hi`` for ``"Hi"``. X11 lists shifted punctuation the same way. macOS is
+    left as it was: its backend is not part of this change.
+    """
+    if sys.platform == "darwin":
+        return False
+    lowered = single_char.lower()
+    partner = lowered if lowered != single_char else _SHIFT_PARTNERS.get(single_char)
+    return partner is not None and keyboard_keys_table.get(partner) == key
 
 
 def _write_char_via_unicode(single_char: str) -> bool:
@@ -259,6 +329,25 @@ def _write_char_via_unicode(single_char: str) -> bool:
     return True
 
 
+def _write_one_char(single_char: str, is_shift: bool) -> None:
+    """Type one character of ``write``'s string, or raise if nothing can."""
+    key = keyboard_keys_table.get(single_char)
+    control_key = WRITE_CONTROL_KEYS.get(single_char)
+    if control_key is not None and control_key in keyboard_keys_table:
+        # Before the table lookup: a newline must press Enter, not type
+        # U+000A and not fall through to the space fallback below.
+        type_keyboard(control_key, is_shift, skip_record=True)
+    elif key is not None:
+        type_keyboard(key, is_shift or _needs_shift(single_char, key), skip_record=True)
+    elif _write_char_via_unicode(single_char):
+        pass
+    elif single_char.isspace():
+        type_keyboard("space", is_shift, skip_record=True)
+    else:
+        autocontrol_logger.error(f"write failed: {keyboard_write_cant_find_error_message}, char={single_char}")
+        raise AutoControlKeyboardException(keyboard_write_cant_find_error_message)
+
+
 def write(write_string: str, is_shift: bool = False) -> Optional[str]:
     """
     模擬輸入整個字串
@@ -270,34 +359,24 @@ def write(write_string: str, is_shift: bool = False) -> Optional[str]:
     backend supports them, and only raise where it does not — otherwise a single
     comma fails the whole string.
 
+    A capital letter is typed as a capital: the table gives it the key of its
+    lower-case letter, so Shift is held around it on Windows and X11 (it used
+    to come out lower case). A Windows line ending (CR LF) is one line break
+    and presses Enter once. ``is_shift`` holds Shift for every key typed from
+    the table.
+
     :param write_string: 要輸入的字串 String to type
-    :param is_shift: 是否同時按下 Shift
-    :return: 輸入的字串
+    :param is_shift: 是否同時按下 Shift Hold Shift for every key
+    :return: 輸入的字串 ``write_string``, unchanged
     """
     autocontrol_logger.info(f"write, write_string={write_string}, is_shift={is_shift}")
     try:
-        record_write_chars = []
-        for single_char in write_string:
-            key = keyboard_keys_table.get(single_char)
-            control_key = WRITE_CONTROL_KEYS.get(single_char)
-            if control_key is not None and control_key in keyboard_keys_table:
-                # Before the table lookup: a newline must press Enter, not type
-                # U+000A and not fall through to the space fallback below.
-                type_keyboard(control_key, is_shift, skip_record=True)
-            elif key is not None:
-                type_keyboard(key, is_shift, skip_record=True)
-            elif _write_char_via_unicode(single_char):
-                pass
-            elif single_char.isspace():
-                type_keyboard("space", is_shift, skip_record=True)
-            else:
-                autocontrol_logger.error(f"write failed: {keyboard_write_cant_find_error_message}, char={single_char}")
-                raise AutoControlKeyboardException(keyboard_write_cant_find_error_message)
-            record_write_chars.append(single_char)
-
-        result = "".join(record_write_chars)
+        # A Windows line ending is one Enter, not two: text read from a file
+        # used to gain an empty line after every line.
+        for single_char in write_string.replace("\r\n", "\n"):
+            _write_one_char(single_char, is_shift)
         record_action_to_list("write", {"write_string": write_string, "is_shift": is_shift})
-        return result
+        return write_string
 
     except (OSError, RuntimeError, AttributeError, TypeError, ValueError) as error:
         record_action_to_list("write", {"write_string": write_string}, repr(error))
@@ -318,8 +397,9 @@ def write_secret(secret: str) -> None:
     ``write`` logs the text it types, records it in the test record and returns it,
     so a password typed through it lands in the log and in every run record. Here the
     log gets the length only and the record a masked argument. Every character goes
-    through Unicode key events, which type the exact character: the virtual-key path
-    of ``write`` types a capital letter as lower case on Windows. A backend without
+    through Unicode key events, which type the exact character whatever the layout
+    and Caps Lock say; a line break, Tab or Backspace is pressed as its key, since
+    applications drop those when they arrive as Unicode characters. A backend without
     Unicode typing (Windows has it) raises before typing anything, rather than risk a
     wrong character. A failure never names the character.
 
@@ -332,8 +412,12 @@ def write_secret(secret: str) -> None:
             "write_secret: this platform's keyboard backend cannot type Unicode text exactly")
     autocontrol_logger.info(f"write_secret, {len(secret)} characters")
     try:
-        for single_char in secret:
-            _write_char_via_unicode(single_char)
+        for single_char in secret.replace("\r\n", "\n"):
+            control_key = WRITE_CONTROL_KEYS.get(single_char)
+            if control_key is not None and control_key in keyboard_keys_table:
+                type_keyboard(control_key, skip_record=True)
+            else:
+                _write_char_via_unicode(single_char)
     except (OSError, RuntimeError, AttributeError, TypeError, ValueError) as error:
         # The cause is dropped on purpose: its text could carry part of the secret.
         autocontrol_logger.error(f"write_secret failed: {type(error).__name__}")
@@ -353,21 +437,26 @@ def hotkey(key_code_list: list, is_shift: bool = False) -> Tuple[str, str]:
     autocontrol_logger.info(f"hotkey, key_code_list={key_code_list}, is_shift={is_shift}")
     # 已經按下去、還沒放開的鍵，**依按下的順序**。放開時倒著走。
     still_held: list = []
+    backend_shift = _backend_shift(is_shift)
     try:
         press_list = []
         release_list = []
 
-        for key in key_code_list:
-            press_list.append(press_keyboard_key(key, is_shift, skip_record=True))
-            # 按成功了才記——`press_keyboard_key` 丟例外時那個鍵並沒有被按下去，
-            # 記進來的話收尾會去放開一個從來沒按下的鍵。
-            still_held.append(key)
+        # Shift 在整組按鍵外面按住：`is_shift` 以前在 Windows／X11 完全沒作用。
+        # Shift is held around the whole chord; outside macOS ``is_shift`` used
+        # to do nothing at all.
+        with _shift_held(is_shift):
+            for key in key_code_list:
+                press_list.append(press_keyboard_key(key, backend_shift, skip_record=True))
+                # 按成功了才記——`press_keyboard_key` 丟例外時那個鍵並沒有被按下去，
+                # 記進來的話收尾會去放開一個從來沒按下的鍵。
+                still_held.append(key)
 
-        for key in reversed(key_code_list):
-            release_list.append(release_keyboard_key(key, is_shift, skip_record=True))
-            # 放開的順序與 `still_held` 的堆疊順序一致（都是反序），所以 `pop()`
-            # 拿到的必定就是剛放開的那一個——同一個鍵重複出現在清單裡也對。
-            still_held.pop()
+            for key in reversed(key_code_list):
+                release_list.append(release_keyboard_key(key, backend_shift, skip_record=True))
+                # 放開的順序與 `still_held` 的堆疊順序一致（都是反序），所以 `pop()`
+                # 拿到的必定就是剛放開的那一個——同一個鍵重複出現在清單裡也對。
+                still_held.pop()
 
         press_str = ",".join(filter(None, press_list))
         release_str = ",".join(filter(None, release_list))
@@ -385,7 +474,7 @@ def hotkey(key_code_list: list, is_shift: bool = False) -> Tuple[str, str]:
         # 每一次點選與按鍵都變成別的意思，而畫面上沒有任何跡象。
         # 為什麼是 `finally` 不是 `except`：見 `type_keyboard` 的同名說明
         # （`AutoControlKeyboardException` 不在那份 except 名單的任何一項底下）。
-        _release_still_held(still_held, is_shift)
+        _release_still_held(still_held, backend_shift)
 
 def send_key_event_to_window(window_title: str, keycode: Union[int, str]) -> None:
     """

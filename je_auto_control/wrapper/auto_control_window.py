@@ -18,7 +18,10 @@ from typing import List, Optional, Tuple, Union
 from je_auto_control.utils.exception.exceptions import AutoControlActionException
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.wrapper.window_backends import get_backend
-from je_auto_control.utils.timeouts import deadline_after
+from je_auto_control.utils.timeouts import clamp_poll_interval, deadline_after
+
+#: How long focus_window waits for the window to become the foreground one.
+_FOCUS_SETTLE_S = 1.0
 
 
 def list_windows(titled_only: bool = False) -> List[Tuple[int, str]]:
@@ -52,8 +55,27 @@ def find_window(title_substring: str,
     return None
 
 
+def _became_foreground(backend, hwnd: int, settle_s: float) -> bool:
+    """Poll until ``hwnd`` is the foreground window or ``settle_s`` runs out."""
+    deadline = time.monotonic() + max(0.0, float(settle_s))
+    while True:
+        if backend.foreground_window() == hwnd:
+            return True
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            return False
+        time.sleep(min(0.05, remaining))
+
+
 def focus_window(title_substring: str, case_sensitive: bool = False) -> int:
-    """Bring the first matching window to the foreground; return its hwnd."""
+    """Bring the first matching window to the foreground; return its hwnd.
+
+    On a backend that can confirm it (Windows), raises
+    ``AutoControlActionException`` when the window is not the foreground one
+    afterwards. Windows' foreground lock refuses a background process often,
+    and reporting success then sends the caller's next keystrokes to whatever
+    window the user has active.
+    """
     hit = find_window(title_substring, case_sensitive)
     if hit is None:
         raise AutoControlActionException(
@@ -67,6 +89,11 @@ def focus_window(title_substring: str, case_sensitive: bool = False) -> int:
     if backend.is_minimized(hwnd):
         backend.restore(hwnd)
     backend.set_foreground(hwnd)
+    confirms = getattr(backend, "confirms_foreground", False)
+    if confirms and not _became_foreground(backend, hwnd, _FOCUS_SETTLE_S):
+        raise AutoControlActionException(
+            f"focus_window: {title!r} (hwnd={hwnd}) did not become the "
+            f"foreground window; the system refused the request")
     autocontrol_logger.info("focused window hwnd=%s title=%r", hwnd, title)
     return hwnd
 
@@ -75,17 +102,23 @@ def wait_for_window(title_substring: str,
                     timeout: float = 10.0,
                     poll: float = 0.5,
                     case_sensitive: bool = False) -> int:
-    """Poll until a window with the given title appears; return its hwnd."""
-    poll = max(0.05, float(poll))
+    """Poll until a window with the given title appears; return its hwnd.
+
+    ``poll`` is clamped to a finite interval and never sleeps past ``timeout``:
+    ``poll=30`` with ``timeout=1`` used to wait 30 seconds, and ``poll=inf``
+    raised ``OverflowError``.
+    """
+    poll = clamp_poll_interval(poll)
     deadline = deadline_after(time.monotonic(), timeout)
     # Look first, then check the clock: with timeout=0 the loop never ran.
     while True:
         hit = find_window(title_substring, case_sensitive)
         if hit is not None:
             return hit[0]
-        if time.monotonic() >= deadline:
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
             break
-        time.sleep(poll)
+        time.sleep(min(poll, remaining))
     raise AutoControlActionException(
         f"wait_for_window timeout: {title_substring!r}"
     )
@@ -172,8 +205,14 @@ def _resolve_key(key: Union[int, str]) -> Tuple[int, str]:
     if isinstance(key, int):
         return int(key), ""
     name = str(key)
+    from je_auto_control.utils.cua_action.cua_action import resolve_key_name
     from je_auto_control.wrapper.platform_wrapper import keyboard_keys_table
+    # Exact name first, so a table that tells "A" from "a" keeps doing so; then
+    # the platform's own spelling ("enter" is "return" on Windows, "esc" is
+    # "escape"), which is how every other key-taking function resolves names.
     keycode = keyboard_keys_table.get(name)
+    if keycode is None:
+        keycode = keyboard_keys_table.get(resolve_key_name(name, keyboard_keys_table))
     if keycode is None:
         raise AutoControlActionException(f"unknown key name: {name!r}")
     # A one-character key is text: edit controls take their content from
@@ -278,10 +317,15 @@ def move_window_by_title(title_substring: str, x: int, y: int,
 
 def show_window_by_title(title_substring: str, cmd_show: int = 1,
                          case_sensitive: bool = False) -> bool:
-    """Show or restore a window (``cmd_show`` follows Win32 ShowWindow)."""
+    """Show or restore a window (``cmd_show`` follows Win32 ShowWindow).
+
+    ``False`` when nothing matched or the backend reports the request failed
+    (on Windows: the handle is no longer a window, or a command that activates
+    the window was refused the foreground).
+    """
     hit = find_window(title_substring, case_sensitive)
     if hit is None:
         return False
     backend = get_backend()
-    backend.show(hit[0], int(cmd_show))
-    return True
+    # A backend that cannot tell answers None, which is not a failure.
+    return backend.show(hit[0], int(cmd_show)) is not False

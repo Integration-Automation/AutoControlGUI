@@ -21,10 +21,18 @@ Run a script
    python -m je_auto_control.cli run script.json
    python -m je_auto_control.cli run script.json --var count=10 --var name=alice
    python -m je_auto_control.cli run script.json --dry-run
+   python -m je_auto_control.cli run script.json --allow-package time --allow-package my_plugins
 
 ``--var name=value`` is parsed as JSON when the value parses, otherwise
 it is treated as a plain string. ``--dry-run`` records every action
 through the executor without invoking any side effects.
+
+``--allow-package NAME`` (repeatable) puts a package, and its submodules, on
+the package gate's allowlist for this run: ``AC_add_package_to_executor`` and
+``AC_add_package_to_callback_executor`` refuse every package that has not
+been allowed. The ``JE_AUTOCONTROL_ALLOWED_PACKAGES`` environment variable
+(comma-separated names) does the same for every entry point, including the
+legacy flags below, ``start-server``, ``start-rest`` and the MCP server.
 
 List scheduler jobs
 -------------------

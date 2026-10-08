@@ -29,19 +29,40 @@ Errors:
 * ``UsbClientTimeout`` — peer did not reply within the timeout.
 * ``UsbClientError`` — peer replied with ``{ok: false}`` or ERROR.
 * ``UsbClientClosed`` — the client (or its handle) was shut down.
+* ``UsbClientDesynchronized`` — an earlier request timed out against a
+  host that does not echo request ids; see below.
+
+Pairing replies with requests. Every request carries a ``request_id``
+the host echoes (see ``protocol``), and a reply is handed to the request
+with that id. A reply whose request has already timed out matches a
+tombstone and is discarded -- that reply and no other.
+
+A host older than the field echoes nothing, and its replies are paired by
+kind (OPEN / LIST / claim) as they always were. That is only safe while
+no request has timed out: afterwards a reply could be the late one or the
+answer to the next request, and nothing on the wire says which. Dropping
+"the next reply" would throw away a correct answer whenever the host
+never sent the late one, so the client does not guess. It refuses further
+requests of that kind with :class:`UsbClientDesynchronized` -- a claim
+after a transfer timeout (close the handle and open the device again),
+OPEN/RESUME or LIST after theirs (reconnect the channel). Until the first
+echoed id arrives the peer's age is unknown and a timeout is treated the
+cautious way; the first echoed id lifts it.
 """
 from __future__ import annotations
 
 import base64
 import json
+import secrets
 import threading
-from dataclasses import dataclass
-from typing import Any, Callable, Dict, List, Optional
+from collections import OrderedDict
+from dataclasses import dataclass, field
+from typing import Any, Callable, Dict, List, Optional, Set, Tuple, Union
 
 from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.usb.passthrough.protocol import (
-    FLAG_EOF, Frame, Opcode,
+    FLAG_EOF, REQUEST_ID_KEY, Frame, Opcode, ProtocolError, valid_request_id,
 )
 
 #: Largest reassembled message: a 1 MiB endpoint transfer (the host's
@@ -53,6 +74,17 @@ _DEFAULT_REPLY_TIMEOUT_S = 10.0
 _DEFAULT_CREDIT_TIMEOUT_S = 30.0
 _INITIAL_CREDIT_GUESS = 16
 _CLIENT_SHUT_DOWN_MSG = "client is shut down"
+#: Where a request waits: one OPEN/RESUME, one LIST, and one exchange per
+#: claim id may be outstanding at a time.
+_Slot = Union[str, int]
+_OPEN_SLOT = "open"
+_LIST_SLOT = "list"
+#: Replies a host may split across frames, and those that are always one.
+_FRAGMENTED_REPLIES = (Opcode.LIST, Opcode.CTRL, Opcode.BULK, Opcode.INT)
+_SINGLE_FRAME_REPLIES = (Opcode.OPENED, Opcode.CLOSED, Opcode.ERROR)
+#: Ids of timed-out requests kept so their late replies are recognised.
+#: Forgetting one is harmless: a reply with an unknown id is dropped too.
+_MAX_TOMBSTONES = 256
 
 
 class UsbClientError(AutoControlException):
@@ -67,20 +99,58 @@ class UsbClientClosed(UsbClientError):
     """The client / handle was shut down before a reply arrived."""
 
 
+class UsbClientDesynchronized(UsbClientError):
+    """A timed-out request left replies impossible to pair; reconnect.
+
+    Raised instead of sending when an earlier request of the same kind
+    timed out and the host does not echo request ids: its late reply and
+    the answer to a new request would be indistinguishable. A claim is
+    recovered by closing its handle and opening the device again; OPEN /
+    RESUME and LIST by reconnecting the channel with a new client.
+    """
+
+
 @dataclass
 class _PendingRequest:
     """One outstanding viewer→host request awaiting a reply.
 
-    The reply is stored as ``(reply_op, reply_payload)`` rather than a
+    The reply is kept as its decoded JSON body rather than a
     :class:`Frame` because a reassembled payload (open question 2) may
     exceed the per-frame cap that :class:`Frame` enforces.
     """
 
+    send_op: Opcode
     expected_op: Opcode
-    event: threading.Event
+    slot: _Slot
+    event: threading.Event = field(default_factory=threading.Event)
+    request_id: str = ""
     reply_op: Optional[Opcode] = None
-    reply_payload: bytes = b""
+    reply_body: Dict[str, Any] = field(default_factory=dict)
     cancelled: bool = False
+
+    @property
+    def label(self) -> str:
+        return self.send_op.name
+
+    @property
+    def claim_id(self) -> int:
+        return self.slot if isinstance(self.slot, int) else 0
+
+    def timeout_message(self) -> str:
+        """What :class:`UsbClientTimeout` says when this request expires."""
+        if isinstance(self.slot, int):
+            return f"{self.label} timed out for claim {self.slot}"
+        return f"{self.label} timed out"
+
+
+def _desynchronized_message(slot: _Slot) -> str:
+    reason = ("an earlier request timed out and the host does not echo request "
+              "ids, so its late reply cannot be told from the next one")
+    if isinstance(slot, int):
+        return (f"claim {slot} cannot be reused: {reason}. "
+                "Close this handle and open the device again.")
+    return (f"no further {slot.upper()} on this client: {reason}. "
+            "Reconnect the USB channel and use a new client.")
 
 
 # ---------------------------------------------------------------------------
@@ -117,6 +187,16 @@ class ClientHandle:
     def closed(self) -> bool:
         with self._lock:
             return self._closed
+
+    @property
+    def reusable(self) -> bool:
+        """False once the handle is closed or its claim is desynchronised.
+
+        A transfer that timed out against a host that does not echo request
+        ids leaves the claim unable to pair replies; further transfers raise
+        :class:`UsbClientDesynchronized`. :meth:`close` still works.
+        """
+        return not self.closed and self._client.slot_reusable(self._claim_id)
 
     def control_transfer(self, *, bm_request_type: int, b_request: int,
                          w_value: int = 0, w_index: int = 0,
@@ -189,15 +269,23 @@ class UsbPassthroughClient:
         self._reply_timeout = float(reply_timeout_s)
         self._credit_timeout = float(credit_timeout_s)
         self._lock = threading.Lock()
-        self._pending: Dict[int, _PendingRequest] = {}
+        # One request per slot (pairing by kind, for hosts without ids)...
+        self._pending: Dict[_Slot, _PendingRequest] = {}
+        # ...and the same requests by the id a current host echoes.
+        self._by_id: Dict[str, _PendingRequest] = {}
+        self._tombstones: "OrderedDict[str, Opcode]" = OrderedDict()
+        self._desynced: Set[_Slot] = set()
+        self._peer_echoes_ids = False
+        self._id_prefix = secrets.token_hex(4)
+        self._id_counter = 0
         self._credits: Dict[int, int] = {}
         self._credit_events: Dict[int, threading.Event] = {}
         self._claim_locks: Dict[int, threading.Lock] = {}
-        self._open_pending: Optional[_PendingRequest] = None
-        self._list_pending: Optional[_PendingRequest] = None
         # Reassembly buffers for fragmented replies, keyed by claim_id
         # (open question 2). LIST uses claim_id 0.
         self._reasm: Dict[int, bytearray] = {}
+        # Claims whose current message overflowed: drop through its EOF.
+        self._reasm_skip: Set[int] = set()
         self._initial_credit_guess = max(1, int(initial_credit_guess))
         self._closed = False
 
@@ -208,104 +296,105 @@ class UsbPassthroughClient:
         with self._lock:
             self._closed = True
             pending: List[_PendingRequest] = list(self._pending.values())
-            if self._open_pending is not None:
-                pending.append(self._open_pending)
-            if self._list_pending is not None:
-                pending.append(self._list_pending)
             self._pending.clear()
-            self._open_pending = None
-            self._list_pending = None
+            self._by_id.clear()
+            self._tombstones.clear()
             self._reasm.clear()
+            self._reasm_skip.clear()
             credit_events = list(self._credit_events.values())
+            for request in pending:
+                request.cancelled = True
         for request in pending:
-            request.cancelled = True
             request.event.set()
         for event in credit_events:
             event.set()
+
+    @property
+    def peer_echoes_request_ids(self) -> bool:
+        """True once the host has echoed a request id this client issued."""
+        with self._lock:
+            return self._peer_echoes_ids
+
+    @property
+    def reusable(self) -> bool:
+        """False once the client is shut down or can no longer OPEN / RESUME.
+
+        See :class:`UsbClientDesynchronized`; a claim's own state is on
+        :attr:`ClientHandle.reusable`.
+        """
+        with self._lock:
+            return not self._closed and _OPEN_SLOT not in self._desynced
+
+    def slot_reusable(self, slot: _Slot) -> bool:
+        """Whether requests may still go out on a claim id, ``"open"`` or ``"list"``."""
+        with self._lock:
+            return slot not in self._desynced
 
     # --- Inbound transport entry point --------------------------------------
 
     def feed_frame(self, frame: Frame) -> None:
         """Hand a frame received from the transport to the client."""
-        if frame.op == Opcode.OPENED:
-            self._on_opened(frame)
-            return
-        if frame.op == Opcode.CLOSED:
-            self._complete_pending(frame.claim_id, frame.payload, Opcode.CLOSED)
-            return
         if frame.op == Opcode.CREDIT:
             self._on_credit(frame)
             return
-        if frame.op in (Opcode.CTRL, Opcode.BULK, Opcode.INT):
-            assembled = self._reassemble(frame)
-            if assembled is not None:
-                self._complete_pending(frame.claim_id, assembled, frame.op)
+        if frame.op in _FRAGMENTED_REPLIES:
+            payload = self._reassemble(frame)
+            if payload is None:
+                return
+        elif frame.op in _SINGLE_FRAME_REPLIES:
+            payload = bytes(frame.payload)
+        else:
+            autocontrol_logger.debug(
+                "passthrough client: ignoring incoming opcode %s", frame.op,
+            )
             return
-        if frame.op == Opcode.LIST:
-            self._on_list(frame)
-            return
-        if frame.op == Opcode.ERROR:
-            self._on_error(frame)
-            return
-        autocontrol_logger.debug(
-            "passthrough client: ignoring incoming opcode %s", frame.op,
-        )
+        self._route_reply(frame.op, int(frame.claim_id), payload)
 
     def _reassemble(self, frame: Frame) -> Optional[bytes]:
         """Buffer a fragment; return the full payload once EOF arrives.
 
         A message may not grow past :data:`_MAX_REASSEMBLED_BYTES`: a host
-        sending fragments without EOF grew the buffer without limit.
+        sending fragments without EOF grew the buffer without limit. The
+        rest of a message dropped that way is skipped through its EOF --
+        its tail used to be parsed as a message of its own. Nothing else
+        resets a buffer: a request that times out leaves its half-received
+        reply to finish and be discarded whole.
         """
         cid = int(frame.claim_id)
+        is_last = bool(frame.flags & FLAG_EOF)
         with self._lock:
+            if cid in self._reasm_skip:
+                if is_last:
+                    self._reasm_skip.discard(cid)
+                return None
             buffer = self._reasm.setdefault(cid, bytearray())
             if len(buffer) + len(frame.payload) > _MAX_REASSEMBLED_BYTES:
                 self._reasm.pop(cid, None)
+                if not is_last:
+                    self._reasm_skip.add(cid)
                 autocontrol_logger.warning(
                     "passthrough client: message on claim %d exceeds %d bytes; dropped",
                     cid, _MAX_REASSEMBLED_BYTES)
                 return None
             buffer.extend(frame.payload)
-            if not (frame.flags & FLAG_EOF):
+            if not is_last:
                 return None
-            full = bytes(buffer)
             self._reasm.pop(cid, None)
-        return full
+        return bytes(buffer)
 
     # --- Outbound: open / close ---------------------------------------------
 
     def open(self, *, vendor_id: str, product_id: str,
              serial: Optional[str] = None) -> ClientHandle:
-        request = _PendingRequest(
-            expected_op=Opcode.OPENED, event=threading.Event(),
-        )
-        with self._lock:
-            if self._closed:
-                raise UsbClientClosed(_CLIENT_SHUT_DOWN_MSG)
-            if self._open_pending is not None:
-                raise UsbClientError("another open is in progress")
-            self._open_pending = request
+        """Claim a device on the host; block until it answers."""
         body: Dict[str, Any] = {
             "vendor_id": vendor_id, "product_id": product_id,
         }
         if serial is not None:
             body["serial"] = serial
-        self._send(Frame(op=Opcode.OPEN,
-                         payload=json.dumps(body).encode("utf-8")))
-        if not request.event.wait(timeout=self._reply_timeout):
-            with self._lock:
-                if self._open_pending is request:
-                    self._open_pending = None
-            raise UsbClientTimeout("OPEN timed out")
-        if request.cancelled:
-            raise UsbClientClosed("client shut down before OPEN reply")
-        if request.reply_op is None:
-            raise UsbClientError("event signalled without a reply")
-        body = _decode_json(request.reply_payload)
-        if not body.get("ok"):
-            raise UsbClientError(body.get("error", "open failed"))
-        return self._bind_claim(body)
+        request = _PendingRequest(Opcode.OPEN, Opcode.OPENED, _OPEN_SLOT)
+        self._round_trip(request, body, busy="another open is in progress")
+        return self._bind_claim(_accepted_body(request, "open failed"))
 
     def resume(self, resume_token: str) -> ClientHandle:
         """Re-bind a claim after a reconnect using a token from ``open``.
@@ -315,36 +404,15 @@ class UsbPassthroughClient:
         for the same ``claim_id``; raises :class:`UsbClientError` if the
         token is unknown or expired.
         """
-        request = _PendingRequest(
-            expected_op=Opcode.OPENED, event=threading.Event(),
-        )
-        with self._lock:
-            if self._closed:
-                raise UsbClientClosed(_CLIENT_SHUT_DOWN_MSG)
-            if self._open_pending is not None:
-                raise UsbClientError("another open is in progress")
-            self._open_pending = request
-        self._send(Frame(
-            op=Opcode.RESUME,
-            payload=json.dumps({"resume_token": resume_token}).encode("utf-8"),
-        ))
-        if not request.event.wait(timeout=self._reply_timeout):
-            with self._lock:
-                if self._open_pending is request:
-                    self._open_pending = None
-            raise UsbClientTimeout("RESUME timed out")
-        if request.cancelled:
-            raise UsbClientClosed("client shut down before RESUME reply")
-        body = _decode_json(request.reply_payload)
-        if not body.get("ok"):
-            raise UsbClientError(body.get("error", "resume failed"))
-        return self._bind_claim(body)
+        request = _PendingRequest(Opcode.RESUME, Opcode.OPENED, _OPEN_SLOT)
+        self._round_trip(request, {"resume_token": resume_token},
+                         busy="another open is in progress")
+        return self._bind_claim(_accepted_body(request, "resume failed"))
 
     def _bind_claim(self, body: Dict[str, Any]) -> ClientHandle:
-        try:
-            claim_id = int(body["claim_id"])
-        except (KeyError, TypeError, ValueError) as error:
-            raise UsbClientError(f"host reply has no valid claim_id: {body!r}") from error
+        claim_id = _claim_id_in(body)
+        if claim_id is None:
+            raise UsbClientError(f"host reply has no valid claim_id: {body!r}")
         with self._lock:
             self._credits[claim_id] = self._initial_credit_guess
             self._credit_events[claim_id] = threading.Event()
@@ -356,117 +424,207 @@ class UsbPassthroughClient:
         Blocks until the host replies. Returns a list of dicts with
         ``vendor_id`` / ``product_id`` / ``serial`` / ``bus_location``.
         """
-        request = _PendingRequest(
-            expected_op=Opcode.LIST, event=threading.Event(),
-        )
-        with self._lock:
-            if self._closed:
-                raise UsbClientClosed(_CLIENT_SHUT_DOWN_MSG)
-            if self._list_pending is not None:
-                raise UsbClientError("another list is in progress")
-            self._list_pending = request
-        self._send(Frame(op=Opcode.LIST))
-        if not request.event.wait(timeout=self._reply_timeout):
-            with self._lock:
-                if self._list_pending is request:
-                    self._list_pending = None
-                self._reasm.pop(0, None)
-            raise UsbClientTimeout("LIST timed out")
-        if request.cancelled:
-            raise UsbClientClosed("client shut down before LIST reply")
-        body = _decode_json(request.reply_payload)
-        devices = body.get("devices")
+        request = _PendingRequest(Opcode.LIST, Opcode.LIST, _LIST_SLOT)
+        self._round_trip(request, {}, busy="another list is in progress")
+        if request.reply_op == Opcode.ERROR:
+            raise UsbClientError(request.reply_body.get("error", "host ERROR"))
+        devices = request.reply_body.get("devices")
         return list(devices) if isinstance(devices, list) else []
 
     def _exchange_close(self, claim_id: int) -> None:
-        request = _PendingRequest(
-            expected_op=Opcode.CLOSED, event=threading.Event(),
-        )
+        request = _PendingRequest(Opcode.CLOSE, Opcode.CLOSED, int(claim_id))
         with self._claim_lock(claim_id):
-            self._round_trip(claim_id, request,
-                             Frame(op=Opcode.CLOSE, claim_id=int(claim_id)), "CLOSE")
+            self._round_trip(request, {})
         self._forget_claim(claim_id)
 
     def _claim_lock(self, claim_id: int) -> threading.Lock:
-        """One exchange per claim at a time: replies carry only the claim id."""
+        """One exchange per claim at a time: an old host's replies carry only the claim id."""
         with self._lock:
             return self._claim_locks.setdefault(int(claim_id), threading.Lock())
 
-    def _round_trip(self, claim_id: int, request: "_PendingRequest",
-                    frame: Frame, label: str) -> None:
-        """Register ``request``, send ``frame`` and wait for its reply.
+    def _round_trip(self, request: "_PendingRequest", body: Dict[str, Any],
+                    *, busy: Optional[str] = None) -> None:
+        """Register ``request``, send it with its id, and wait for the reply.
 
         The entry is removed on every failure (a failed send or a missing
-        credit left it behind), and only if it is still this request's.
+        credit left it behind). On return the request holds a reply.
         """
-        cid = int(claim_id)
+        self._register(request, busy)
+        try:
+            if isinstance(request.slot, int):
+                self._consume_credit(request.slot)
+            payload = dict(body)
+            payload[REQUEST_ID_KEY] = request.request_id
+            self._send(Frame(op=request.send_op, claim_id=request.claim_id,
+                             payload=json.dumps(payload).encode("utf-8")))
+        except BaseException:
+            with self._lock:
+                self._unregister_locked(request)
+            raise
+        if not request.event.wait(timeout=self._reply_timeout) and self._expire(request):
+            raise UsbClientTimeout(request.timeout_message())
+        if request.cancelled:
+            raise UsbClientClosed(f"client shut down before {request.label} reply")
+        if request.reply_op is None:
+            raise UsbClientError("event signalled without a reply")
+
+    def _register(self, request: "_PendingRequest", busy: Optional[str]) -> None:
+        """Give ``request`` its id and its slot, or refuse to send it."""
         with self._lock:
             if self._closed:
                 raise UsbClientClosed(_CLIENT_SHUT_DOWN_MSG)
-            self._pending[cid] = request
-        try:
-            self._consume_credit(cid)
-            self._send(frame)
-        except BaseException:
-            self._drop_pending(cid, request)
-            raise
-        if not request.event.wait(timeout=self._reply_timeout):
-            self._drop_pending(cid, request)
-            raise UsbClientTimeout(f"{label} timed out for claim {cid}")
-        if request.cancelled:
-            raise UsbClientClosed(f"client shut down before {label} reply")
+            # CLOSE is exempt: its CLOSED reply is a kind no late transfer
+            # reply can be mistaken for, and the device must be released.
+            if request.send_op != Opcode.CLOSE and request.slot in self._desynced:
+                raise UsbClientDesynchronized(_desynchronized_message(request.slot))
+            if busy is not None and request.slot in self._pending:
+                raise UsbClientError(busy)
+            request.request_id = self._next_request_id_locked()
+            self._pending[request.slot] = request
+            self._by_id[request.request_id] = request
 
-    def _drop_pending(self, claim_id: int, request: "_PendingRequest") -> None:
+    def _next_request_id_locked(self) -> str:
+        self._id_counter += 1
+        return f"{self._id_prefix}-{self._id_counter}"
+
+    def _unregister_locked(self, request: "_PendingRequest") -> None:
+        if self._pending.get(request.slot) is request:
+            self._pending.pop(request.slot, None)
+        if self._by_id.get(request.request_id) is request:
+            self._by_id.pop(request.request_id, None)
+
+    def _expire(self, request: "_PendingRequest") -> bool:
+        """Give up on ``request``; False if its reply arrived just in time.
+
+        A host that echoes ids only needs the tombstone. One that does not
+        (or has not shown that it does) could deliver the late reply to the
+        slot's next request, so the slot stops taking requests instead.
+        """
         with self._lock:
-            if self._pending.get(claim_id) is request:
-                self._pending.pop(claim_id, None)
+            if self._by_id.get(request.request_id) is not request:
+                return False
+            self._unregister_locked(request)
+            self._bury_locked(request.request_id, request.send_op)
+            if not self._peer_echoes_ids:
+                self._desynced.add(request.slot)
+        return True
+
+    def _bury_locked(self, request_id: str, send_op: Opcode) -> None:
+        self._tombstones[request_id] = send_op
+        while len(self._tombstones) > _MAX_TOMBSTONES:
+            self._tombstones.popitem(last=False)
 
     # --- Outbound: transfers ------------------------------------------------
 
     def _exchange_transfer(self, claim_id: int, op: Opcode,
                            body: Dict[str, Any]) -> bytes:
-        request = _PendingRequest(expected_op=op, event=threading.Event())
-        frame = Frame(op=op, claim_id=int(claim_id),
-                      payload=json.dumps(body).encode("utf-8"))
+        request = _PendingRequest(op, op, int(claim_id))
         # Serialised per claim: a second transfer overwrote the first's
         # pending entry, and one caller received the other's data.
         with self._claim_lock(claim_id):
-            self._round_trip(claim_id, request, frame, op.name)
-        if request.reply_op is None:
-            raise UsbClientError("event signalled without a reply")
-        if request.reply_op == Opcode.ERROR:
-            err = _decode_json(request.reply_payload).get("error", "host ERROR")
-            raise UsbClientError(err)
-        body = _decode_json(request.reply_payload)
-        if not body.get("ok"):
-            raise UsbClientError(body.get("error", "transfer failed"))
+            self._round_trip(request, body)
+        reply = _accepted_body(request, "transfer failed")
         try:
-            return base64.b64decode(body.get("data") or "", validate=True)
+            return base64.b64decode(reply.get("data") or "", validate=True)
         except (TypeError, ValueError) as error:   # binascii.Error is a ValueError
             raise UsbClientError(f"host sent undecodable transfer data: {error}") from error
 
     # --- Inbound dispatch helpers ------------------------------------------
 
-    def _on_opened(self, frame: Frame) -> None:
+    def _route_reply(self, op: Opcode, claim_id: int, payload: bytes) -> None:
+        """Hand a complete reply to the request it answers, or drop it."""
+        body = _decode_json(payload)
+        request_id = body.get(REQUEST_ID_KEY)
+        orphan: Optional[int] = None
         with self._lock:
-            request = self._open_pending
-            self._open_pending = None
+            if isinstance(request_id, str) and valid_request_id(request_id):
+                request, orphan = self._take_by_id_locked(request_id, op, body)
+            else:
+                request = self._take_by_kind_locked(op, claim_id, payload)
+            if request is not None:
+                request.reply_op = op
+                request.reply_body = body
         if request is not None:
-            request.reply_op = frame.op
-            request.reply_payload = frame.payload
             request.event.set()
+        if orphan is not None:
+            self._release_orphan(orphan)
 
-    def _on_list(self, frame: Frame) -> None:
-        assembled = self._reassemble(frame)
-        if assembled is None:
-            return
-        with self._lock:
-            request = self._list_pending
-            self._list_pending = None
+    def _take_by_id_locked(self, request_id: str, op: Opcode, body: Dict[str, Any],
+                           ) -> Tuple[Optional[_PendingRequest], Optional[int]]:
+        """The request ``request_id`` names, plus a claim to release if any."""
+        request = self._by_id.get(request_id)
+        if request is None:
+            return None, self._discard_late_locked(request_id, op, body)
+        self._peer_echoes_ids_locked()
+        if op not in (request.expected_op, Opcode.ERROR):
+            autocontrol_logger.warning(
+                "passthrough client: %s reply to a %s request dropped",
+                op.name, request.label)
+            return None, None
+        self._unregister_locked(request)
+        return request, None
+
+    def _discard_late_locked(self, request_id: str, op: Opcode,
+                             body: Dict[str, Any]) -> Optional[int]:
+        """Drop a reply nobody is waiting for; return a claim it leaves open.
+
+        A late OPENED that succeeded means the host holds a device for a
+        caller that already got a timeout. A late RESUME is left alone: the
+        claim it names may have been resumed again and be in use.
+        """
+        sent_as = self._tombstones.pop(request_id, None)
+        if sent_as is None:
+            autocontrol_logger.warning(
+                "passthrough client: %s reply with unknown request id dropped", op.name)
+            return None
+        self._peer_echoes_ids_locked()
+        autocontrol_logger.debug(
+            "passthrough client: late reply to timed-out %s discarded", sent_as.name)
+        if sent_as == Opcode.OPEN and op == Opcode.OPENED and body.get("ok"):
+            return _claim_id_in(body)
+        return None
+
+    def _peer_echoes_ids_locked(self) -> None:
+        """The host echoed an id of ours: every reply is identifiable."""
+        self._peer_echoes_ids = True
+        self._desynced.clear()
+
+    def _take_by_kind_locked(self, op: Opcode, claim_id: int,
+                             payload: bytes) -> Optional[_PendingRequest]:
+        """Pair a reply that has no id the way hosts without ids require."""
+        slot: _Slot = claim_id
+        if op == Opcode.OPENED:
+            slot = _OPEN_SLOT
+        elif op == Opcode.LIST:
+            slot = _LIST_SLOT
+        request = self._pending.get(slot)
+        if op == Opcode.ERROR:
+            self._reasm.pop(claim_id, None)
+            if request is None:
+                autocontrol_logger.warning(
+                    "passthrough client: unsolicited ERROR for claim %s: %s",
+                    claim_id, payload[:200])
+        elif request is not None and request.expected_op != op:
+            return None
         if request is not None:
-            request.reply_op = Opcode.LIST
-            request.reply_payload = assembled
-            request.event.set()
+            self._unregister_locked(request)
+        return request
+
+    def _release_orphan(self, claim_id: int) -> None:
+        """CLOSE a claim whose OPEN had already timed out; nobody holds it."""
+        with self._lock:
+            if self._closed:
+                return
+            request_id = self._next_request_id_locked()
+            self._bury_locked(request_id, Opcode.CLOSE)   # its CLOSED is unwanted
+        try:
+            self._send(Frame(
+                op=Opcode.CLOSE, claim_id=claim_id,
+                payload=json.dumps({REQUEST_ID_KEY: request_id}).encode("utf-8")))
+        except (UsbClientError, ProtocolError) as error:
+            autocontrol_logger.warning(
+                "passthrough client: could not release claim %s left by a late "
+                "OPENED: %r", claim_id, error)
 
     def _on_credit(self, frame: Frame) -> None:
         try:
@@ -484,35 +642,6 @@ class UsbPassthroughClient:
             # so a grant between its check and its wait is never missed.
             if event is not None:
                 event.set()
-
-    def _on_error(self, frame: Frame) -> None:
-        # An unsolicited ERROR — route to whichever pending request matches
-        # the claim_id; if none, log and drop.
-        with self._lock:
-            request = self._pending.pop(int(frame.claim_id), None)
-            self._reasm.pop(int(frame.claim_id), None)
-        if request is None:
-            autocontrol_logger.warning(
-                "passthrough client: unsolicited ERROR for claim %s: %s",
-                frame.claim_id, frame.payload[:200],
-            )
-            return
-        request.reply_op = frame.op
-        request.reply_payload = frame.payload
-        request.event.set()
-
-    def _complete_pending(self, claim_id: int, payload: bytes,
-                          expected_op: Opcode) -> None:
-        with self._lock:
-            request = self._pending.get(int(claim_id))
-            if request is None:
-                return
-            if request.expected_op != expected_op:
-                return
-            self._pending.pop(int(claim_id), None)
-        request.reply_op = expected_op
-        request.reply_payload = payload
-        request.event.set()
 
     # --- Credit helpers ----------------------------------------------------
 
@@ -550,7 +679,7 @@ class UsbPassthroughClient:
 
     def pending_count(self) -> int:
         with self._lock:
-            return len(self._pending) + (1 if self._open_pending else 0)
+            return sum(1 for slot in self._pending if slot != _LIST_SLOT)
 
     # --- Internal ----------------------------------------------------------
 
@@ -582,6 +711,25 @@ def _endpoint_request(*, endpoint: int, direction: str, data: bytes,
     return body
 
 
+def _accepted_body(request: _PendingRequest, default_error: str) -> Dict[str, Any]:
+    """The reply's body, or :class:`UsbClientError` if the host refused."""
+    body = request.reply_body
+    if request.reply_op == Opcode.ERROR:
+        raise UsbClientError(body.get("error", "host ERROR"))
+    if not body.get("ok"):
+        raise UsbClientError(body.get("error", default_error))
+    return body
+
+
+def _claim_id_in(body: Dict[str, Any]) -> Optional[int]:
+    """The ``claim_id`` of an OPENED body if it is a usable one."""
+    try:
+        claim_id = int(body["claim_id"])
+    except (KeyError, TypeError, ValueError):
+        return None
+    return claim_id if 0 <= claim_id <= 0xFFFF else None
+
+
 def _decode_json(payload: bytes) -> Dict[str, Any]:
     if not payload:
         return {}
@@ -595,6 +743,6 @@ def _decode_json(payload: bytes) -> Dict[str, Any]:
 
 
 __all__ = [
-    "ClientHandle", "UsbClientClosed", "UsbClientError", "UsbClientTimeout",
-    "UsbPassthroughClient",
+    "ClientHandle", "UsbClientClosed", "UsbClientDesynchronized",
+    "UsbClientError", "UsbClientTimeout", "UsbPassthroughClient",
 ]

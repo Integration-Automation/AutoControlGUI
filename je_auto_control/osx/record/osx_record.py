@@ -38,4 +38,4 @@ class OSXRecorder(InputRecorder):
 
 
 # === 全域 Recorder 實例 Global Recorder Instance ===
-osx_recorder = OSXRecorder()
+osx_recorder: OSXRecorder = OSXRecorder()

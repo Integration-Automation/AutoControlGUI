@@ -40,7 +40,7 @@ jobs:
         run: "pip install --only-binary :all: ruff==0.16.0"
 
       - name: Run ruff
-        run: ruff check je_auto_control/
+        run: ruff check je_auto_control/ je_auto_control_pytest.py
 
   security:
     runs-on: ubuntu-latest
@@ -57,7 +57,7 @@ jobs:
         run: "pip install --only-binary :all: bandit==1.9.4"
 
       - name: Run bandit (recursive, skip tests + i18n dicts)
-        run: bandit -r je_auto_control/ -c pyproject.toml
+        run: bandit -r je_auto_control/ je_auto_control_pytest.py -c pyproject.toml
 
   pytest-headless:
     # The suite ran on Windows alone for its whole life, so every
@@ -150,10 +150,13 @@ jobs:
       # would hide exactly the breakage this job exists to find.
       #
       # `coverage run -m pytest`, NOT `pytest --cov`, and that is load-bearing:
-      # this package registers a `pytest11` entry point, so pytest imports
-      # `je_auto_control.utils.pytest_plugin.plugin` while loading plugins —
-      # which executes `je_auto_control/__init__.py`, the facade, and with it
-      # several hundred modules. pytest-cov only starts measuring after that,
+      # this package registers a `pytest11` entry point, and while it pointed
+      # at `je_auto_control.utils.pytest_plugin.plugin` pytest imported that
+      # submodule while loading plugins — which executes
+      # `je_auto_control/__init__.py`, the facade, and with it several hundred
+      # modules. (The entry point is the top-level `je_auto_control_pytest`
+      # now; `coverage run` stays because it does not depend on what a plugin
+      # imports.) pytest-cov only starts measuring after that,
       # so every one of those modules' import-time lines was recorded as never
       # executed. Measured on this tree: 11,962 statements, 24 points, and the
       # worst-hit files were the biggest ones (`action_executor` +786,
@@ -196,7 +199,7 @@ jobs:
         with:
           python-version: "3.12"
       - run: pip install -e .  # NOSONAR githubactions:S8541,githubactions:S8544  # reason: installs the checked-out project itself, there is no upstream version to lock and the build must run
-      - run: "pip install --only-binary :all: mypy==2.3.0"
+      - run: "pip install --only-binary :all: mypy==2.4.0"
       # Deliberately NOT installing the optional extras: the contract forces
       # every non-base third-party module to `Any` so the result cannot depend
       # on what is installed, and installing them here would only hide a

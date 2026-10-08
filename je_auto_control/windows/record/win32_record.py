@@ -38,4 +38,4 @@ class Win32Recorder(InputRecorder):
 
 
 # 全域錄製器實例 Global recorder instance
-win32_recorder = Win32Recorder()
+win32_recorder: Win32Recorder = Win32Recorder()

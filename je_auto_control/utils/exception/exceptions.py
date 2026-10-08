@@ -129,3 +129,13 @@ class AutoControlUnsupportedOperationException(
     slipped straight past all of them — aborting a whole script where a single
     action should have been reported as failed.
     """
+
+
+# Optional dependency
+class CryptographyUnavailableError(AutoControlException, RuntimeError):
+    """A feature needs ``cryptography`` and the package is not installed.
+
+    ``cryptography`` publishes no Windows arm64 wheel, so it is absent there by
+    design and the message carries the install hint. Inherits ``RuntimeError``
+    because that is what these accessors raised before the type existed.
+    """

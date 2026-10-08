@@ -174,8 +174,9 @@ class _WsViewer:
 
 def test_quick_connect_treats_a_ws_session_as_a_session(monkeypatch):
     viewer = _WsViewer()
-    monkeypatch.setattr(registry, "_ws_viewer", viewer)
+    monkeypatch.setattr(registry, "_ws_viewer", None)  # restored after the test
     screen = connection_screen.QuickConnectScreen()
+    registry.adopt("ws_viewer", viewer, screen._owner)   # the session this screen opened
     screen._refresh_viewer_status()
     assert screen._viewer_badge.text() == _t("rd_quick_connected")
     screen._on_window_closed()
@@ -184,8 +185,9 @@ def test_quick_connect_treats_a_ws_session_as_a_session(monkeypatch):
 
 def test_a_session_error_ends_the_quick_connect_session(monkeypatch, qapp):
     viewer = _WsViewer()
-    monkeypatch.setattr(registry, "_ws_viewer", viewer)
+    monkeypatch.setattr(registry, "_ws_viewer", None)  # restored after the test
     screen = connection_screen.QuickConnectScreen()
+    registry.adopt("ws_viewer", viewer, screen._owner)   # the session this screen opened
     screen._open_screen_window("desk")
     screen._on_error("connection reset")
     assert viewer.disconnected and screen._screen_window is None

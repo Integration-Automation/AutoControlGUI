@@ -83,20 +83,31 @@ Extending the Executor
 
 You can dynamically load external Python packages into the executor:
 
-The package gate decides which packages may load. ``AC_add_package_to_executor`` can import ``os`` or
-``subprocess`` for any action list, so the host program lists what it needs:
+The package gate decides which packages may load. ``AC_add_package_to_executor`` could import ``os`` or
+``subprocess`` for any action list, so **no package loads unless it has been allowed**; a package that is
+not on the allowlist is refused before it is imported, and its action fails with
+``AutoControlExecuteActionException``. A listed package also allows its submodules. There are three ways
+to allow one:
 
 .. code-block:: python
 
    from je_auto_control import executor
 
    executor.allow_packages("time")                # these, and their submodules
-   executor.set_allow_arbitrary_packages(False)   # refuse everything else before importing it
 
-Neither switch is an ``AC_*`` command, so an action list cannot open its own gate; a refused package fails
-its action with ``AutoControlExecuteActionException``. Until the host calls either switch, any package still
-loads but raises a ``DeprecationWarning``; a future release will refuse packages outside the allowlist by
-default.
+.. code-block:: bash
+
+   # every entry point: both CLIs, the socket / REST / MCP servers, the scheduler
+   JE_AUTOCONTROL_ALLOWED_PACKAGES=time,my_plugins je_auto_control start-server
+
+   # one run of the CLI; the flag may be repeated
+   je_auto_control run script.json --allow-package time --allow-package my_plugins
+
+``JE_AUTOCONTROL_ALLOWED_PACKAGES`` is a comma-separated list read once, when the process starts; an entry
+that is not a dotted module name is ignored and logged. ``executor.set_allow_arbitrary_packages(True)``
+opens the gate for every package, which is what releases before this one did by default (they loaded any
+package and raised a ``DeprecationWarning``). None of these is an ``AC_*`` command, so an action list
+cannot open its own gate.
 
 
 .. code-block:: python

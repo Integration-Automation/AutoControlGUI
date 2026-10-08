@@ -85,13 +85,20 @@ Type a sequence of characters one by one:
 
    write("Hello World")
 
+A capital letter is typed as a capital: ``write`` holds Shift around it on
+Windows and X11 (it used to arrive in lower case). A Windows line ending
+(CR LF) is one line break and presses Enter once, not twice. ``is_shift=True``
+holds Shift for every key, and does so on every platform; the same is true of
+``type_keyboard``, ``press_keyboard_key`` and ``hotkey``, where it used to be
+ignored outside macOS.
+
 ``write`` logs the text, records it in the test record and returns it. For a
 password or token use ``write_secret`` (``AC_write_secret`` with ``secret``):
 the log gets the length only, the record a masked value, it returns nothing, and
 an error never names a character. It types every character as a Unicode key
-event, so the text arrives exactly (``write`` types capitals as lower case on
-Windows); a backend without Unicode typing (only Windows has it) refuses before
-typing anything.
+event, so the text arrives exactly whatever the layout and Caps Lock say (line
+breaks, Tab and Backspace are pressed as keys); a backend without Unicode typing
+(only Windows has it) refuses before typing anything.
 
 .. code-block:: python
 

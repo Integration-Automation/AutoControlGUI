@@ -22,6 +22,7 @@ from je_auto_control.utils.executor.flow_data_commands import (
     exec_sql_to_var, exec_transform_var,
 )
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
+from je_auto_control.utils.rbac.authorization import authorization_scope, current_authorization
 from je_auto_control.wrapper.auto_control_image import locate_image_center
 from je_auto_control.wrapper.auto_control_screen import get_pixel
 from je_auto_control.utils.timeouts import deadline_after
@@ -459,8 +460,15 @@ class _ParallelRun:
         # parent's live command/macro maps concurrently.
         self._event_dict = dict(executor.event_dict)
         self._macros = dict(executor.macros)
+        # Each branch starts from what the parent could see when AC_parallel
+        # ran -- a branch used to start empty, so ${var} set before the
+        # block was unknown inside it -- and writes to its own copy.
+        self._variables = executor.variables.as_dict()
         self._strict = getattr(executor_module._STRICT_BODIES, "value", False)
         self._macro_depth = getattr(_MACRO_DEPTH, "value", 0)
+        # The RBAC user is bound to the thread that accepted the request; a
+        # branch thread without it ran privileged commands unchecked.
+        self._caller = current_authorization()
         self.results: list = [None] * len(branches)
         self._failures: list = [0] * len(branches)
         self._errors: Dict[int, str] = {}
@@ -477,6 +485,7 @@ class _ParallelRun:
         for name, handler in self._event_dict.items():
             branch_executor.event_dict.setdefault(name, handler)
         branch_executor.macros.update(self._macros)
+        branch_executor.variables.update_many(self._variables)
         return branch_executor
 
     def run_branch(self, index: int, branch: Any) -> None:
@@ -489,8 +498,9 @@ class _ParallelRun:
         _MACRO_DEPTH.value = self._macro_depth
         self._module.reset_recorded_failures()
         try:
-            self.results[index] = self._branch_executor().execute_action(
-                branch, raise_on_error=self._strict, _validated=True)
+            with authorization_scope(self._caller):
+                self.results[index] = self._branch_executor().execute_action(
+                    branch, raise_on_error=self._strict, _validated=True)
             self._failures[index] = self._module.recorded_failures()
         except AutoControlAssertionException as error:
             self._assertions[index] = error
@@ -519,8 +529,10 @@ def exec_parallel(executor: Any, args: Mapping[str, Any]) -> Dict[str, Any]:
     """Run each branch action list concurrently on its own isolated executor.
 
     ``branches`` is a list of action lists (or a JSON string of one). Each
-    branch runs on a fresh :class:`Executor` with a separate variable scope,
-    so concurrent branches never race on shared state. Custom commands
+    branch runs on a fresh :class:`Executor` whose variable scope is a fork of
+    the caller's: it starts with the variables visible when ``AC_parallel``
+    ran, and what a branch sets stays in that branch, so concurrent branches
+    never race on shared state and nothing flows back. Custom commands
     (registered via ``add_command_to_executor``) and ``AC_define_macro``
     macros are copied from the parent so a branch recognises them — otherwise
     a branch's fresh executor only has the stock command set and rejects them

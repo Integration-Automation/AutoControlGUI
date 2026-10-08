@@ -2,7 +2,8 @@
 from je_auto_control.utils.usb.passthrough import (
     AclRule, ClientHandle, FakeUsbBackend, Frame, LibusbBackend,
     LoopbackTransport, MAX_PAYLOAD_BYTES, Opcode, ProtocolError,
-    SessionError, UsbAcl, UsbBackend, UsbClientClosed, UsbClientError,
+    SessionError, UsbAcl, UsbBackend, UsbClientClosed,
+    UsbClientDesynchronized, UsbClientError,
     UsbClientTimeout, UsbHandle, UsbLoopback, UsbPassthroughClient,
     UsbPassthroughSession, decode_frame, default_acl_path,
     default_passthrough_backend, enable_usb_passthrough, encode_frame,
@@ -26,7 +27,8 @@ __all__ = [
     "enable_usb_passthrough", "encode_frame", "fragment_payload",
     "is_usb_passthrough_enabled", "LoopbackTransport", "UsbLoopback",
     # Viewer client (round 40)
-    "ClientHandle", "UsbClientClosed", "UsbClientError", "UsbClientTimeout",
+    "ClientHandle", "UsbClientClosed", "UsbClientDesynchronized",
+    "UsbClientError", "UsbClientTimeout",
     "UsbPassthroughClient",
     # Phase 2d ACL (round 41)
     "AclRule", "UsbAcl", "default_acl_path",

@@ -9,7 +9,7 @@ import secrets
 import threading
 from dataclasses import asdict, dataclass, field, replace
 from pathlib import Path
-from typing import Dict, List, Optional, Set
+from typing import Dict, List, Optional, Set, Tuple
 
 from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.json_store.json_store import atomic_write_text
@@ -34,11 +34,15 @@ class Capability:
     MANAGE_HOSTS = "manage_hosts"
     MANAGE_USERS = "manage_users"
     READ_AUDIT = "read_audit"
+    #: Signing an action file with this host's key. Separate from
+    #: ``DRIVE_INPUT`` so that being allowed to run actions is not being
+    #: allowed to approve the files that may be run.
+    SIGN_ACTIONS = "sign_actions"
 
     @classmethod
     def all(cls) -> List[str]:
         return [cls.READ_SCREEN, cls.DRIVE_INPUT, cls.MANAGE_HOSTS,
-                cls.MANAGE_USERS, cls.READ_AUDIT]
+                cls.MANAGE_USERS, cls.READ_AUDIT, cls.SIGN_ACTIONS]
 
 
 _ROLE_CAPABILITIES: Dict[str, Set[str]] = {
@@ -104,6 +108,9 @@ class UserStore:
         # Why the file on disk could not be read, if it could not. Saving
         # then would replace every user in it with what this instance holds.
         self._unreadable: Optional[str] = None
+        # What the file looked like when it was last read or written, so
+        # refresh() can tell that another process has changed it.
+        self._loaded_stamp: Optional[Tuple[int, int]] = None
         self._load()
 
     @property
@@ -185,37 +192,67 @@ class UserStore:
             record = self._users.get(user_id)
             return None if record is None else _copy(record)
 
-    def _load(self) -> None:
-        if not self._path.exists():
-            return
-        try:
-            body = json.loads(self._path.read_text(encoding="utf-8"))
-        except (OSError, ValueError) as error:  # ValueError: bad JSON or not UTF-8
-            self._mark_unreadable(repr(error))
-            return
-        users = body.get("users") if isinstance(body, dict) else None
-        if not isinstance(users, list):
-            self._mark_unreadable("no 'users' list")
-            return
-        with self._lock:
-            for entry in users:
-                if not isinstance(entry, dict):
-                    continue
-                record = UserRecord(
-                    user_id=str(entry.get("user_id", "")),
-                    display_name=str(entry.get("display_name", "")),
-                    role=str(entry.get("role", Role.VIEWER)),
-                    token_hash=str(entry.get("token_hash", "")),
-                    tags=_tags(entry.get("tags")),
-                )
-                if record.user_id:
-                    self._users[record.user_id] = record
+    def refresh(self) -> bool:
+        """Re-read the file if it changed on disk; ``True`` when it was re-read.
 
-    def _mark_unreadable(self, reason: str) -> None:
-        self._unreadable = reason
-        autocontrol_logger.error(
-            "user store %s unreadable (%s); no user can sign in and it will not be overwritten",
-            self._path, reason)
+        Users are managed from another process than the server that checks
+        their tokens. Without this a removed user, a rotated token or a
+        lowered role kept working until that server was restarted.
+        """
+        stamp = self._stamp()
+        with self._lock:
+            if stamp == self._loaded_stamp:
+                return False
+        self._load()
+        return True
+
+    def _stamp(self) -> Optional[Tuple[int, int]]:
+        """``(mtime_ns, size)`` of the file, or ``None`` when there is none."""
+        try:
+            status = self._path.stat()
+        except OSError:
+            return None
+        return status.st_mtime_ns, status.st_size
+
+    def _load(self) -> None:
+        stamp = self._stamp()
+        users, problem = self._read()
+        with self._lock:
+            self._users = users
+            self._unreadable = problem
+            self._loaded_stamp = stamp
+        if problem is not None:
+            autocontrol_logger.error(
+                "user store %s unreadable (%s); no user can sign in and it will not be overwritten",
+                self._path, problem)
+
+    def _read(self) -> Tuple[Dict[str, UserRecord], Optional[str]]:
+        """The users on disk, and why the file could not be read if it could not."""
+        if not self._path.exists():
+            return {}, None
+        try:
+            # The path is the operator's own choice of user store (constructor,
+            # JE_AUTOCONTROL_RBAC_USERS or --users); no request can set it.
+            body = json.loads(self._path.read_text(encoding="utf-8"))  # NOSONAR pythonsecurity:S8707
+        except (OSError, ValueError) as error:  # ValueError: bad JSON or not UTF-8
+            return {}, repr(error)
+        entries = body.get("users") if isinstance(body, dict) else None
+        if not isinstance(entries, list):
+            return {}, "no 'users' list"
+        users: Dict[str, UserRecord] = {}
+        for entry in entries:
+            if not isinstance(entry, dict):
+                continue
+            record = UserRecord(
+                user_id=str(entry.get("user_id", "")),
+                display_name=str(entry.get("display_name", "")),
+                role=str(entry.get("role", Role.VIEWER)),
+                token_hash=str(entry.get("token_hash", "")),
+                tags=_tags(entry.get("tags")),
+            )
+            if record.user_id:
+                users[record.user_id] = record
+        return users, None
 
     def _commit_locked(self, users: Dict[str, UserRecord]) -> None:
         """Save ``users``, then make them the store's; on any failure nothing changes.
@@ -237,6 +274,7 @@ class UserStore:
         except OSError as error:
             raise UserAuthError(f"could not save user store {self._path}: {error}") from error
         self._users = users
+        self._loaded_stamp = self._stamp()
 
 
 def _copy(record: UserRecord) -> UserRecord:

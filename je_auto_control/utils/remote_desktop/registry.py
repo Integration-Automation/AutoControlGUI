@@ -8,10 +8,35 @@ classes. Three transports are supported in parallel: plain TCP, WS
 (``WebSocketDesktop*``) and WebRTC (``WebRTCDesktop*``); each has its
 own host + viewer slot so JSON scripts can stand up, e.g., a TCP host
 and a WebRTC viewer in the same process if they want to.
-"""
-import ssl
-from typing import Any, Callable, Dict, Optional, Sequence
 
+Ownership. The TCP and WebSocket slots are shared with the GUI panels, so
+each occupant is recorded with the *owner* that put it there:
+
+* ``AC_remote_*`` / ``AC_ws_*`` commands, the MCP ``ac_remote_*`` tools and
+  any caller of the plain ``start_*`` / ``connect_*`` / ``stop_*`` /
+  ``disconnect_*`` methods are the :data:`SCRIPT_OWNER`. They keep their
+  documented meaning: they act on *the* active host or viewer of that
+  transport whoever opened it, and the ``*_status`` dictionaries say who
+  that is under ``"owner"``.
+* A GUI panel takes a token from :func:`new_owner`, hands its host or
+  viewer over with :meth:`_RemoteDesktopRegistry.adopt`, reads it back with
+  :meth:`_RemoteDesktopRegistry.owned` and closes it with
+  :meth:`_RemoteDesktopRegistry.release` - all three ignore a slot some
+  other owner holds.
+
+A slot still holds one occupant. When another owner replaces or closes it
+(:meth:`_RemoteDesktopRegistry.adopt`, :meth:`_RemoteDesktopRegistry.evict`,
+or the script-side methods above), the previous owner's ``on_displaced``
+callback is called with ``(slot, by)`` so it can drop its window and state.
+The callback runs on the thread that did the replacing.
+"""
+import itertools
+import ssl
+import threading
+from typing import Any, Callable, Dict, NamedTuple, Optional, Sequence
+
+from je_auto_control.utils.exception.exceptions import AutoControlException
+from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.remote_desktop.host import RemoteDesktopHost
 from je_auto_control.utils.remote_desktop.viewer import RemoteDesktopViewer
 from je_auto_control.utils.remote_desktop.ws_host import WebSocketDesktopHost
@@ -21,6 +46,36 @@ from je_auto_control.utils.remote_desktop.ws_viewer import (
 
 FrameCallback = Callable[[bytes], None]
 ErrorCallback = Callable[[Exception], None]
+#: ``on_displaced(slot, by)``: ``slot`` is the slot that was taken away and
+#: ``by`` the owner that took it.
+DisplacedCallback = Callable[[str, str], None]
+
+#: Owner recorded for everything the executor commands and MCP tools open.
+SCRIPT_OWNER = "script"
+
+SLOT_HOST = "host"
+SLOT_VIEWER = "viewer"
+SLOT_WS_HOST = "ws_host"
+SLOT_WS_VIEWER = "ws_viewer"
+_SLOT_ATTRS = {
+    SLOT_HOST: "_host", SLOT_VIEWER: "_viewer",
+    SLOT_WS_HOST: "_ws_host", SLOT_WS_VIEWER: "_ws_viewer",
+}
+_HOST_SLOTS = (SLOT_HOST, SLOT_WS_HOST)
+_owner_ids = itertools.count(1)
+
+
+def new_owner(label: str) -> str:
+    """Return an owner token unique in this process, e.g. ``"viewer-tab#3"``."""
+    return f"{label}#{next(_owner_ids)}"
+
+
+class _Claim(NamedTuple):
+    """Who put ``resource`` in a slot and how to tell them it is gone."""
+
+    resource: Any
+    owner: str
+    on_displaced: Optional[DisplacedCallback]
 
 
 def _load_webrtc_classes():
@@ -50,6 +105,162 @@ class _RemoteDesktopRegistry:
         self._ws_viewer: Optional[WebSocketDesktopViewer] = None
         self._webrtc_host: Optional[Any] = None  # WebRTCDesktopHost
         self._webrtc_viewer: Optional[Any] = None  # WebRTCDesktopViewer
+        self._claims: Dict[str, _Claim] = {}
+        self._lock = threading.Lock()
+
+    # ------------------------------------------------------------------
+    # Ownership of the TCP / WebSocket slots
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _attr(slot: str) -> str:
+        try:
+            return _SLOT_ATTRS[slot]
+        except KeyError:
+            raise AutoControlException(
+                f"unknown remote desktop slot {slot!r}; "
+                f"expected one of {sorted(_SLOT_ATTRS)}"
+            ) from None
+
+    def _claim_of(self, slot: str) -> Optional[_Claim]:
+        """Return the slot's occupant with its owner; call with the lock held.
+
+        An occupant nobody adopted (a test that set the attribute directly)
+        belongs to :data:`SCRIPT_OWNER`.
+        """
+        resource = getattr(self, self._attr(slot))
+        if resource is None:
+            return None
+        claim = self._claims.get(slot)
+        if claim is not None and claim.resource is resource:
+            return claim
+        return _Claim(resource, SCRIPT_OWNER, None)
+
+    def _take(self, slot: str,
+              only_owner: Optional[str] = None) -> Optional[_Claim]:
+        """Empty ``slot`` and return what it held, or None if left alone."""
+        with self._lock:
+            claim = self._claim_of(slot)
+            if claim is None:
+                return None
+            if only_owner is not None and claim.owner != only_owner:
+                return None
+            setattr(self, self._attr(slot), None)
+            self._claims.pop(slot, None)
+        return claim
+
+    def _shut(self, slot: str, claim: _Claim, timeout: float, by: str) -> None:
+        """Stop a displaced occupant, then tell its owner unless it asked."""
+        try:
+            if slot in _HOST_SLOTS:
+                claim.resource.stop(timeout=timeout)
+            else:
+                claim.resource.disconnect(timeout=timeout)
+        finally:
+            if claim.owner != by:
+                self._notify(slot, claim, by)
+
+    @staticmethod
+    def _notify(slot: str, claim: _Claim, by: str) -> None:
+        callback = claim.on_displaced
+        if callback is None:
+            return
+        try:
+            callback(slot, by)
+        except Exception as error:  # noqa: BLE001  # pylint: disable=broad-except  # reason: a displaced owner's callback must not undo the new owner's connect
+            autocontrol_logger.warning(
+                "remote desktop: %s owner %s failed handling displacement by %s: %r",
+                slot, claim.owner, by, error,
+            )
+
+    def adopt(self, slot: str, resource: Any, owner: str,
+              on_displaced: Optional[DisplacedCallback] = None,
+              timeout: float = 2.0) -> None:
+        """Put an already started host / connected viewer in ``slot`` for ``owner``.
+
+        Whatever the slot held is stopped; its owner, when it is someone
+        else, has ``on_displaced(slot, owner)`` called.
+        """
+        attr = self._attr(slot)
+        with self._lock:
+            previous = self._claim_of(slot)
+            setattr(self, attr, resource)
+            self._claims[slot] = _Claim(resource, owner, on_displaced)
+        if previous is not None and previous.resource is not resource:
+            self._shut(slot, previous, timeout, by=owner)
+
+    def evict(self, slot: str, by: str, timeout: float = 2.0) -> bool:
+        """Close whatever ``slot`` holds, whoever owns it; True if it held anything.
+
+        The owner is told through ``on_displaced(slot, by)`` unless it is
+        ``by`` itself. Panels call this before starting their own host or
+        viewer, so the old one has let go of its port or its seat first.
+        """
+        claim = self._take(slot)
+        if claim is None:
+            return False
+        self._shut(slot, claim, timeout, by=by)
+        return True
+
+    def release(self, slot: str, owner: str, timeout: float = 2.0) -> bool:
+        """Close ``slot`` only if ``owner`` holds it; True if it was closed."""
+        claim = self._take(slot, only_owner=owner)
+        if claim is None:
+            return False
+        self._shut(slot, claim, timeout, by=owner)
+        return True
+
+    def owner_of(self, slot: str) -> Optional[str]:
+        """Return the owner of ``slot``'s occupant, or None when it is empty."""
+        with self._lock:
+            claim = self._claim_of(slot)
+        return None if claim is None else claim.owner
+
+    def owned(self, slot: str, owner: str) -> Optional[Any]:
+        """Return ``slot``'s host / viewer if ``owner`` holds it, else None."""
+        with self._lock:
+            claim = self._claim_of(slot)
+        if claim is None or claim.owner != owner:
+            return None
+        return claim.resource
+
+    def _close(self, slot: str, owner: Optional[str], timeout: float) -> None:
+        if owner is None:
+            self.evict(slot, by=SCRIPT_OWNER, timeout=timeout)
+        else:
+            self.release(slot, owner, timeout=timeout)
+
+    def _host_status(self, slot: str) -> Dict[str, Any]:
+        with self._lock:
+            claim = self._claim_of(slot)
+        if claim is None:
+            return {
+                "running": False, "port": 0, "connected_clients": 0,
+                "host_id": None, "owner": None,
+            }
+        host = claim.resource
+        return {
+            "running": host.is_running,
+            "port": host.port,
+            "connected_clients": host.connected_clients,
+            "host_id": host.host_id,
+            "owner": claim.owner,
+        }
+
+    def _viewer_status(self, slot: str) -> Dict[str, Any]:
+        with self._lock:
+            claim = self._claim_of(slot)
+        if claim is None:
+            return {"connected": False, "host_id": None, "owner": None}
+        return {
+            "connected": claim.resource.connected,
+            "host_id": claim.resource.remote_host_id,
+            "owner": claim.owner,
+        }
+
+    # ------------------------------------------------------------------
+    # TCP transport
+    # ------------------------------------------------------------------
 
     @property
     def host(self) -> Optional[RemoteDesktopHost]:
@@ -78,29 +289,22 @@ class _RemoteDesktopRegistry:
             host_id=host_id, ssl_context=ssl_context,
         )
         host.start()
-        self._host = host
+        self.adopt(SLOT_HOST, host, SCRIPT_OWNER)
         return self.host_status()
 
-    def stop_host(self, timeout: float = 2.0) -> Dict[str, Any]:
-        """Stop the active host (if any) and clear the slot."""
-        if self._host is not None:
-            self._host.stop(timeout=timeout)
-            self._host = None
+    def stop_host(self, timeout: float = 2.0,
+                  owner: Optional[str] = None) -> Dict[str, Any]:
+        """Stop the active host (if any) and clear the slot.
+
+        With ``owner`` the host is stopped only if that owner started it.
+        Without, it is stopped whoever started it and that owner is told.
+        """
+        self._close(SLOT_HOST, owner, timeout)
         return self.host_status()
 
     def host_status(self) -> Dict[str, Any]:
-        host = self._host
-        if host is None:
-            return {
-                "running": False, "port": 0, "connected_clients": 0,
-                "host_id": None,
-            }
-        return {
-            "running": host.is_running,
-            "port": host.port,
-            "connected_clients": host.connected_clients,
-            "host_id": host.host_id,
-        }
+        """Describe the active host; ``"owner"`` names who started it."""
+        return self._host_status(SLOT_HOST)
 
     def connect_viewer(self, host: str, port: int, token: str,
                        timeout: float = 5.0,
@@ -127,30 +331,33 @@ class _RemoteDesktopRegistry:
             server_hostname=server_hostname,
         )
         viewer.connect(timeout=float(timeout))
-        self._viewer = viewer
+        self.adopt(SLOT_VIEWER, viewer, SCRIPT_OWNER)
         return self.viewer_status()
 
-    def disconnect_viewer(self, timeout: float = 2.0) -> Dict[str, Any]:
-        """Disconnect the active viewer (if any) and clear the slot."""
-        if self._viewer is not None:
-            self._viewer.disconnect(timeout=timeout)
-            self._viewer = None
+    def disconnect_viewer(self, timeout: float = 2.0,
+                          owner: Optional[str] = None) -> Dict[str, Any]:
+        """Disconnect the active viewer (if any) and clear the slot.
+
+        With ``owner`` the viewer is disconnected only if that owner opened
+        it. Without, it is disconnected whoever opened it and that owner is
+        told.
+        """
+        self._close(SLOT_VIEWER, owner, timeout)
         return self.viewer_status()
 
     def viewer_status(self) -> Dict[str, Any]:
-        viewer = self._viewer
-        if viewer is None:
-            return {"connected": False, "host_id": None}
-        return {
-            "connected": viewer.connected,
-            "host_id": viewer.remote_host_id,
-        }
+        """Describe the active viewer; ``"owner"`` names who opened it."""
+        return self._viewer_status(SLOT_VIEWER)
 
     def send_input(self, action: Dict[str, Any]) -> Dict[str, Any]:
-        """Forward ``action`` through the connected viewer, raise if offline."""
-        if self._viewer is None or not self._viewer.connected:
+        """Forward ``action`` through the connected viewer, raise if offline.
+
+        The viewer is the active one, whoever opened it.
+        """
+        viewer = self._viewer
+        if viewer is None or not viewer.connected:
             raise ConnectionError("no remote viewer is connected")
-        self._viewer.send_input(action)
+        viewer.send_input(action)
         return {"sent": True}
 
     # ------------------------------------------------------------------
@@ -176,28 +383,18 @@ class _RemoteDesktopRegistry:
             host_id=host_id, ssl_context=ssl_context,
         )
         host.start()
-        self._ws_host = host
+        self.adopt(SLOT_WS_HOST, host, SCRIPT_OWNER)
         return self.ws_host_status()
 
-    def stop_ws_host(self, timeout: float = 2.0) -> Dict[str, Any]:
-        if self._ws_host is not None:
-            self._ws_host.stop(timeout=timeout)
-            self._ws_host = None
+    def stop_ws_host(self, timeout: float = 2.0,
+                     owner: Optional[str] = None) -> Dict[str, Any]:
+        """Stop the WS host; with ``owner``, only if that owner started it."""
+        self._close(SLOT_WS_HOST, owner, timeout)
         return self.ws_host_status()
 
     def ws_host_status(self) -> Dict[str, Any]:
-        host = self._ws_host
-        if host is None:
-            return {
-                "running": False, "port": 0, "connected_clients": 0,
-                "host_id": None,
-            }
-        return {
-            "running": host.is_running,
-            "port": host.port,
-            "connected_clients": host.connected_clients,
-            "host_id": host.host_id,
-        }
+        """Describe the active WS host; ``"owner"`` names who started it."""
+        return self._host_status(SLOT_WS_HOST)
 
     def connect_ws_viewer(self, host: str, port: int, token: str,
                           path: str = "/",
@@ -219,28 +416,25 @@ class _RemoteDesktopRegistry:
             path=path,
         )
         viewer.connect(timeout=float(timeout))
-        self._ws_viewer = viewer
+        self.adopt(SLOT_WS_VIEWER, viewer, SCRIPT_OWNER)
         return self.ws_viewer_status()
 
-    def disconnect_ws_viewer(self, timeout: float = 2.0) -> Dict[str, Any]:
-        if self._ws_viewer is not None:
-            self._ws_viewer.disconnect(timeout=timeout)
-            self._ws_viewer = None
+    def disconnect_ws_viewer(self, timeout: float = 2.0,
+                             owner: Optional[str] = None) -> Dict[str, Any]:
+        """Disconnect the WS viewer; with ``owner``, only if that owner opened it."""
+        self._close(SLOT_WS_VIEWER, owner, timeout)
         return self.ws_viewer_status()
 
     def ws_viewer_status(self) -> Dict[str, Any]:
-        viewer = self._ws_viewer
-        if viewer is None:
-            return {"connected": False, "host_id": None}
-        return {
-            "connected": viewer.connected,
-            "host_id": viewer.remote_host_id,
-        }
+        """Describe the active WS viewer; ``"owner"`` names who opened it."""
+        return self._viewer_status(SLOT_WS_VIEWER)
 
     def ws_send_input(self, action: Dict[str, Any]) -> Dict[str, Any]:
-        if self._ws_viewer is None or not self._ws_viewer.connected:
+        """Forward ``action`` through the active WS viewer, whoever opened it."""
+        viewer = self._ws_viewer
+        if viewer is None or not viewer.connected:
             raise ConnectionError("no websocket viewer is connected")
-        self._ws_viewer.send_input(action)
+        viewer.send_input(action)
         return {"sent": True}
 
     # ------------------------------------------------------------------

@@ -5,6 +5,7 @@ import threading
 from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.executor.action_executor import execute_action
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
+from je_auto_control.utils.script_vars.execution import execution_scope
 
 _RECV_CHUNK_BYTES = 8192
 # Safety cap so a client that never sends the newline terminator can't make us
@@ -107,7 +108,9 @@ class TCPServerHandler(socketserver.BaseRequestHandler):
         else:
             try:
                 execute_str = json.loads(command_string)
-                for execute_return in execute_action(execute_str).values():
+                with execution_scope():  # one command, one variable scope
+                    execute_record = execute_action(execute_str)
+                for execute_return in execute_record.values():
                     socket.sendall(str(execute_return).encode("utf-8"))
                     socket.sendall("\n".encode("utf-8"))
                 socket.sendall("Return_Data_Over_JE".encode("utf-8"))

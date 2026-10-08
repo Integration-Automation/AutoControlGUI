@@ -226,6 +226,13 @@ Open + transfer
   情境是 *denied by ACL policy* — 去看 host 端的 prompt 對話框或 ACL
   規則。
 - ``UsbClientClosed`` — client 或其 handle 已 shutdown。
+- ``UsbClientDesynchronized`` — 先前有請求逾時，而 host 不帶回請求
+  編號（版本早於此欄位），遲到的回覆與下一個回覆無法分辨。此時不會
+  送出任何東西。傳輸逾時後，對 handle 呼叫 ``close()`` 再重新
+  ``open`` 裝置；``open`` / ``resume`` / ``list_devices`` 逾時後，
+  重新連線 channel 並使用新的 client。``handle.reusable`` 與
+  ``client.reusable`` 可在不拋例外的情況下查詢狀態。對新版 host，
+  逾時只損失逾時的那個請求。見設計文件的\ *請求識別*\ 。
 
 
 疑難排解對照表
@@ -244,6 +251,9 @@ transfer 上 ``credit exhausted``            viewer 送的 frame 超過 host ``i
                                             ``initial_credits``\ 。
 Transfer ``UsbClientTimeout``               host 程序忙或 WebRTC channel 壞了。看 *Packet
                                             Inspector* 分頁的 RTT / 封包遺失。
+``UsbClientDesynchronized``                 請求對不帶回請求編號的舊版 host 逾時。關閉 handle
+                                            再重新 open 裝置（傳輸），或重新連線（open /
+                                            list）。升級 host 即可解除此限制。
 OPEN 後 host 鍵盤停止運作                   Linux：HID 裝置被 claim 且 ``usbhid`` 被 detach。
                                             CLOSE 時 driver 會重新 attach；如果沒有，用
                                             ``udevadm trigger`` 救回。

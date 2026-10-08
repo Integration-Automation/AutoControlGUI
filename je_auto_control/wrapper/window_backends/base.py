@@ -25,6 +25,12 @@ class WindowManageBackend:
     answers, and a caller that cannot tell them apart will retry forever.
     """
 
+    #: Whether ``foreground_window()`` right after ``set_foreground(id)`` is a
+    #: reliable answer to "did it work". Only then does ``focus_window`` turn a
+    #: mismatch into an error; elsewhere a mismatch may only mean the platform
+    #: reports its foreground window under another id.
+    confirms_foreground: bool = False
+
     name: str = "abstract"
     available: bool = False
 
@@ -96,8 +102,12 @@ class WindowManageBackend:
         """
         self._unsupported("restore")
 
-    def show(self, window_id: int, cmd_show: int) -> None:
-        """Apply a platform show-state code (Win32 ``ShowWindow`` numbering)."""
+    def show(self, window_id: int, cmd_show: int) -> Optional[bool]:
+        """Apply a platform show-state code (Win32 ``ShowWindow`` numbering).
+
+        ``False`` when the platform reports the request failed, ``True`` when
+        it reports success, ``None`` when it cannot tell.
+        """
         self._unsupported("show")
 
     def close(self, window_id: int) -> bool:

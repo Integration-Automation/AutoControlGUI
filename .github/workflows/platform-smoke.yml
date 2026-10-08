@@ -27,8 +27,9 @@ jobs:
         #                    back to building from source and CMake could not
         #                    configure for ARM64. Twelve minutes, then failure.
         #   cryptography   — wheels stop at 46.0.3; 46.0.4 onwards ship none.
-        #                    Our floor is >=48.0.1 and that is a security floor
-        #                    (GHSA-537c-gmf6-5ccf), so it cannot be lowered.
+        #                    Our floor is >=50.0.0 and that is a security floor
+        #                    (GHSA-537c-gmf6-5ccf, GHSA-g6cj-pr64-35w5), so it
+        #                    cannot be lowered.
         #
         # Nothing in the package imports either one at import time, so what
         # this square proves is real: the install succeeds and the stable API
@@ -38,7 +39,7 @@ jobs:
         #
         #   pip install --dry-run --only-binary=:all: --platform win_arm64 \
         #       --python-version 3.12 --target /tmp/probe \
-        #       'opencv-python>=4.8,<6' 'cryptography>=48.0.1'
+        #       'opencv-python>=4.8,<6' 'cryptography>=50.0.0'
         #
         # When both resolve, drop the markers from pyproject.toml.
         os: [windows-2022, ubuntu-22.04, macos-14, ubuntu-22.04-arm, windows-11-arm]

@@ -3,9 +3,6 @@ import sys
 from je_auto_control.utils.exception.exception_tags import osx_import_error_message
 from je_auto_control.utils.exception.exceptions import AutoControlException
 
-if sys.platform not in ["darwin"]:
-    raise AutoControlException(osx_import_error_message)
-
 # osx keyboard virtual keycode
 
 osx_key_a = osx_key_A = 0x00
@@ -111,3 +108,12 @@ osx mouse virtual keycode
 osx_mouse_left = "Left"
 osx_mouse_middle = "Middle"
 osx_mouse_right = "Right"
+
+# The platform check sits below the tables on purpose. mypy checks this module
+# for every target; with the check on top, everything under it is unreachable
+# on a non-darwin target and the names above get no type, which mypy 2.4
+# reports in each importer ("Cannot determine type"). The tables are plain
+# integers, so defining them first costs nothing, and importing this module
+# anywhere but macOS still fails.
+if sys.platform not in ["darwin"]:
+    raise AutoControlException(osx_import_error_message)

@@ -367,6 +367,42 @@ so nested ``body`` / ``then`` / ``else`` lists keep their placeholders
 and re-bind each time they execute — letting ``AC_for_each`` iterate
 over a list while the body sees the current item.
 
+Variable scope per run
+----------------------
+
+Variables live for one top-level run, not for the life of the process.
+``execute_action_with_vars``, a REST ``/execute`` or ``/execute_file``
+request, an MCP tool call, a socket-server command, a scheduler job, a
+trigger / hotkey / webhook / e-mail firing, a ChatOps ``/run`` and a voice
+command each open a fresh ``VariableScope``. ``AC_set_var``, loop variables
+and macro parameters work as before inside that run and are gone when it
+ends, so a later run's ``${user}`` fails with ``Unknown variable`` instead of
+reading what an earlier caller set. To carry a value from one run to the
+next, pass it in again (``execute_action_with_vars(actions, variables)``, a
+webhook payload) or keep it outside the scope (a file, the secrets vault).
+
+Plain Python calls are unchanged: ``executor.execute_action(...)`` and the
+module-level ``execute_action(...)`` use the module executor's own scope,
+which lasts as long as the process -- this is the scope the GUI's Variables
+tab shows and scripts run from the GUI use. Wrap such calls in
+``execution_scope`` to isolate them the same way::
+
+   import je_auto_control as ac
+
+   with ac.execution_scope({"user": "alice"}) as scope:
+       ac.execute_action([["AC_set_var", {"name": "n", "value": 1}]])
+       ac.execute_action([["AC_inc_var", {"name": "n"}]])
+       scope.get_value("n")          # 2
+   # "user" and "n" are gone here
+
+The binding is per thread: concurrent server requests never see each other's
+variables, and the previous scope is restored when the block ends, error or
+not. Nested action lists (``AC_circuit_call``, ``AC_bulkhead_run``,
+``AC_run_chaos``, ``AC_run_dag`` and the like) run in the scope of the list
+that called them, also inside an ``AC_parallel`` branch; a branch starts from
+a copy of its parent's variables and its own writes stay in the branch.
+An executor you construct yourself (``Executor()``) always owns its scope.
+
 ::
 
    import je_auto_control as ac
@@ -525,12 +561,44 @@ Action-JSON commands (use the singleton in
 
    AC_start_remote_host       # token, bind, port, fps, quality, region
    AC_stop_remote_host
-   AC_remote_host_status      # → {running, port, connected_clients}
+   AC_remote_host_status      # → {running, port, connected_clients, host_id, owner}
 
    AC_remote_connect          # host, port, token, timeout
    AC_remote_disconnect
-   AC_remote_viewer_status    # → {connected}
+   AC_remote_viewer_status    # → {connected, host_id, owner}
    AC_remote_send_input       # action: {...}
+
+**Who owns the host and the viewer.** The registry holds one host and one
+viewer per transport (TCP, WebSocket), and records the *owner* that opened
+each: ``"script"`` for these commands, the ``AC_ws_*`` ones and the MCP
+``ac_remote_*`` tools, and a token of its own (``quick-connect#1``,
+``viewer-tab#2``, ``host-tab#3``) for each GUI panel. The ``*_status``
+results name it under ``owner`` (``None`` when nothing is active).
+
+- A script that uses only these commands behaves as it always did: a second
+  ``AC_remote_connect`` replaces the first, ``AC_remote_disconnect`` ends it.
+- In a process that also runs the GUI, the commands still act on *the*
+  active host or viewer of that transport, whoever opened it:
+  ``AC_remote_viewer_status`` and ``AC_remote_send_input`` see a session a
+  panel opened, ``AC_remote_connect`` replaces it and
+  ``AC_remote_disconnect`` / ``AC_stop_remote_host`` end it. The panel is
+  told, closes its remote-screen window and returns to idle.
+- A panel only reads, drives and disconnects the viewer it opened itself.
+  *Connect* on one panel still replaces the other panel's session on the
+  same transport — there is one viewer per transport — but the replaced
+  panel closes its window instead of freezing on the last frame, and its
+  *Disconnect* no longer reaches the session that replaced it. Starting a
+  host no longer disconnects any viewer. *Stop* on either host surface
+  stops the host shown as running, whoever started it.
+
+From Python the same model is ``remote_desktop_registry.adopt(slot,
+resource, owner, on_displaced)``, ``owned(slot, owner)``, ``release(slot,
+owner)``, ``evict(slot, by)`` and ``owner_of(slot)``, with ``slot`` one of
+``"host"``, ``"viewer"``, ``"ws_host"``, ``"ws_viewer"`` and owner tokens
+from ``je_auto_control.utils.remote_desktop.registry.new_owner(label)``.
+``stop_host`` / ``disconnect_viewer`` (and the ``ws`` pair) take an optional
+``owner=`` that limits them to that owner's host or viewer.
+``on_displaced(slot, by)`` runs on the thread that did the replacing.
 
 GUI: **Remote Desktop** tab opens to the **Quick Connect** screen
 (AnyDesk-style) by default — huge Host ID on one side, a single input
@@ -878,9 +946,24 @@ Three new message types form one transfer:
 * ``FILE_END``   — JSON ``{transfer_id, status, error?}``
 
 Transfers are bidirectional, chunked (256 KiB per chunk), and have
-*no aggregate size limit* and *no path restriction* on the
-destination — token holders are trusted users. Progress is reported
-locally on both sides without an extra wire message::
+*no aggregate size limit*. The two directions treat ``dest_path``
+differently, because the trust runs one way:
+
+* **Viewer → host**: ``dest_path`` is a path on the host, used as given.
+  The viewer holds the token, and token holders are trusted users.
+* **Host → viewer**: ``dest_path`` is a path *relative to the viewer's
+  download directory*. A viewer cannot vouch for the host it dialled, so
+  an absolute path, a drive or UNC path, a ``..`` component or a symlink
+  leading out of that directory fails the transfer (``on_complete`` gets
+  ``ok=False``) and nothing is written.
+
+The download directory is ``~/Downloads/AutoControl`` unless
+``JE_AUTOCONTROL_REMOTE_DOWNLOAD_DIR`` names another; it is created when
+the first file arrives. To choose it per viewer, pass
+``FileReceiver(base_dir=...)`` to ``set_file_receiver``. A receiver built
+without ``base_dir`` is unconfined — that is what the host uses.
+
+Progress is reported locally on both sides without an extra wire message::
 
    from je_auto_control.utils.remote_desktop import (
        FileReceiver, RemoteDesktopHost, RemoteDesktopViewer, send_file,
@@ -890,11 +973,13 @@ locally on both sides without an extra wire message::
    viewer.send_file("local.bin", "/tmp/uploaded.bin",
                     on_progress=lambda tid, done, total: print(done, total))
 
-   # Host pushes to all viewers (each viewer needs a FileReceiver)
+   # Host pushes to all viewers; each one stores it under its own
+   # download directory, here <download dir>/from_host/local.bin
    viewer.set_file_receiver(FileReceiver(
        on_progress=..., on_complete=...,
+       base_dir="~/Downloads/AutoControl",
    ))
-   host.send_file_to_viewers("local.bin", "/tmp/from_host.bin")
+   host.send_file_to_viewers("local.bin", "from_host/local.bin")
 
 GUI: *Send file...* opens a file picker + destination-path prompt and
 runs the upload on a ``QThread`` with a ``QProgressBar`` bound to the
@@ -903,11 +988,19 @@ dragEnter / drop of local files; each dropped file kicks off the same
 upload flow.
 
 .. warning::
-   Path is unrestricted and there is no size cap. Anyone with the
-   token can write any file to any location, and can fill the disk.
-   Keep ``trusted token holders == trusted users`` in mind, or wrap
-   the headless API in your own restricted ``FileReceiver`` subclass
-   that vets the destination path.
+   On the host, the path is unrestricted and there is no size cap.
+   Anyone with the token can write any file to any location on the
+   host, and can fill the disk. Keep ``trusted token holders == trusted
+   users`` in mind, or give the host a confined receiver with
+   ``host.set_file_receiver(FileReceiver(base_dir=...))``. A viewer is
+   confined to its download directory, but a host can still fill that
+   disk.
+
+.. note::
+   Before this change a host-pushed ``dest_path`` was an absolute path
+   on the viewer. Scripts that call
+   ``host.send_file_to_viewers(src, "/tmp/x.bin")`` now fail on the
+   viewer; send a relative path instead.
 
 
 Remote desktop — AnyDesk-style popout window
@@ -1019,6 +1112,10 @@ clicking through the GUI:
    ac_remote_viewer_send_input(action={
        "action": "type", "text": "hello",
    })
+
+The MCP tools are the same ``"script"`` owner as the ``AC_remote_*``
+commands: they act on the active host or viewer whoever opened it, and a
+GUI panel whose session they replace or end is told and closes its window.
 
 The status / observer tools (``ac_remote_host_status``,
 ``ac_remote_viewer_status``) are read-only and survive the MCP

@@ -108,10 +108,17 @@ class MCPTool:
         for the active call, which lets them report progress and
         observe cooperative cancellation. Handlers that do not
         declare ``ctx`` see the original behaviour unchanged.
+
+        Every call runs in its own variable scope: a tool that executes
+        actions (``ac_execute_actions``, the circuit / bulkhead / saga
+        tools) used to leave its variables in the module executor for the
+        next call, possibly another client's.
         """
-        if ctx is not None and _handler_accepts_ctx(self.handler):
-            return self.handler(ctx=ctx, **arguments)
-        return self.handler(**arguments)
+        from je_auto_control.utils.script_vars.execution import execution_scope
+        with execution_scope():
+            if ctx is not None and _handler_accepts_ctx(self.handler):
+                return self.handler(ctx=ctx, **arguments)
+            return self.handler(**arguments)
 
 
 @lru_cache(maxsize=512)

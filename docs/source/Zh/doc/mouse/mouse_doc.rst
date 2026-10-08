@@ -52,7 +52,9 @@ AutoControl 提供模擬滑鼠操作的功能，包括點擊、定位、捲動�
    click_mouse("mouse_left", x=500, y=300, clicks=2, interval=0.06)
 
 Windows 與 X11 依兩次點擊的時間差與位移判定雙擊，所以 ``interval`` 要小於系統的雙擊判定時間
-（Windows 預設 500 毫秒）。macOS 上這些點擊會被當成各自獨立的單擊。
+（Windows 預設 500 毫秒）。macOS 的應用程式讀的是事件上帶的點擊次數，所以在 macOS 上第 n 次點擊的
+點擊次數欄位（``kCGMouseEventClickState``）會設成 n；``interval`` 比系統的雙擊間隔還長時，每一下都當成
+單擊送出。
 
 游標位置
 ========
@@ -79,10 +81,17 @@ Windows 與 X11 依兩次點擊的時間差與位移判定雙擊，所以 ``inte
 
    from je_auto_control import mouse_scroll
 
-   # 向下捲動 5 個單位
+   # 向上捲動 5 格；負值向下
    mouse_scroll(scroll_value=5)
+   mouse_scroll(scroll_value=-5)
+
+每個平台都一樣：正值往上、負值往下。要在指定位置捲動就傳 ``x``／``y``：帶小數的
+座標會四捨五入到最近的像素，不是有限數值的座標會在游標移動之前丟出
+``AutoControlMouseException``。
 
 .. note::
 
-   在 Linux 上，可以使用 ``scroll_direction`` 參數指定捲動方向：
-   ``"scroll_up"``、``"scroll_down"``、``"scroll_left"``、``"scroll_right"``。
+   在 X11 與 Wayland 上，``scroll_direction`` 指定「正值」的方向：
+   ``"scroll_up"``\ （預設）、``"scroll_down"``、``"scroll_left"``、``"scroll_right"``。
+   預設值原本是 ``"scroll_down"``，所以 ``mouse_scroll(5)`` 在那裡往下、在 Windows 與
+   macOS 往上；要維持舊行為請明確傳 ``scroll_direction="scroll_down"``。

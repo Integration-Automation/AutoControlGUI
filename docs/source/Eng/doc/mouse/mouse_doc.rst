@@ -54,7 +54,10 @@ Press and immediately release a mouse button:
 
 Windows and X11 recognise a double-click from the timing and distance of the
 clicks, so keep ``interval`` under the system double-click time (500 ms by
-default on Windows). On macOS the clicks arrive as separate single clicks.
+default on Windows). macOS applications read a click count carried by the
+event instead, so there the n-th click has its click-state field
+(``kCGMouseEventClickState``) set to n; when ``interval`` is longer than the
+system double-click interval every click is sent as a single click.
 
 Position
 ========
@@ -81,10 +84,19 @@ Scroll the mouse wheel:
 
    from je_auto_control import mouse_scroll
 
-   # Scroll down by 5 units
+   # Scroll up by 5 notches; a negative value scrolls down
    mouse_scroll(scroll_value=5)
+   mouse_scroll(scroll_value=-5)
+
+A positive value scrolls up and a negative one down on every platform. Pass
+``x`` / ``y`` to scroll at a point: a fractional coordinate is rounded to the
+nearest pixel, and one that is not a finite number raises
+``AutoControlMouseException`` before the cursor moves.
 
 .. note::
 
-   On Linux, you can specify the scroll direction using the ``scroll_direction`` parameter:
-   ``"scroll_up"``, ``"scroll_down"``, ``"scroll_left"``, ``"scroll_right"``.
+   On X11 and Wayland ``scroll_direction`` names the direction a positive value
+   takes: ``"scroll_up"`` (the default), ``"scroll_down"``, ``"scroll_left"``,
+   ``"scroll_right"``. The default used to be ``"scroll_down"``, so
+   ``mouse_scroll(5)`` scrolled down there and up on Windows and macOS; pass
+   ``scroll_direction="scroll_down"`` to keep the old meaning.

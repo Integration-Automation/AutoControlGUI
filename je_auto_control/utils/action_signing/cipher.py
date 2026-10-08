@@ -17,7 +17,9 @@ from pathlib import Path
 from typing import Optional, Union
 
 from je_auto_control.utils.action_signing._key_file import load_or_create_key_file
-from je_auto_control.utils.exception.exceptions import AutoControlException
+from je_auto_control.utils.exception.exceptions import (
+    AutoControlException, CryptographyUnavailableError,
+)
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 
 
@@ -47,7 +49,7 @@ def _fernet_types() -> tuple:
     try:
         from cryptography.fernet import Fernet, InvalidToken
     except ImportError as error:
-        raise RuntimeError(
+        raise CryptographyUnavailableError(
             "Action-file encryption requires cryptography (pip install cryptography). "
             "It has no Windows arm64 wheel, so encryption is unavailable there."
         ) from error

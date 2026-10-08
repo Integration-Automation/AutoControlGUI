@@ -13,6 +13,9 @@ class WindowsWindowBackend(WindowManageBackend):
     """
 
     name = "win32"
+    # GetForegroundWindow answers with the HWND set_foreground was given, so
+    # a refused request can be told from a granted one.
+    confirms_foreground = True
 
     def __init__(self) -> None:
         self.available = sys.platform in ("win32", "cygwin", "msys")
@@ -46,8 +49,8 @@ class WindowsWindowBackend(WindowManageBackend):
     def restore(self, window_id: int) -> None:
         self._wm.show_window(window_id, self._wm.SW_RESTORE)
 
-    def show(self, window_id: int, cmd_show: int) -> None:
-        self._wm.show_window(window_id, int(cmd_show))
+    def show(self, window_id: int, cmd_show: int) -> Optional[bool]:
+        return bool(self._wm.show_window(window_id, int(cmd_show)))
 
     def close(self, window_id: int) -> bool:
         return self._wm.close_window(window_id)

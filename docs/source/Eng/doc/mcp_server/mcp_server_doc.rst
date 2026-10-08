@@ -75,7 +75,9 @@ Remote desktop (TCP host + viewer registry)
   ``ac_remote_host_status``, ``ac_remote_viewer_connect``,
   ``ac_remote_viewer_disconnect``, ``ac_remote_viewer_status``,
   ``ac_remote_viewer_send_input``. These wrap the same singleton
-  registry the GUI's Remote Desktop tab uses, so a model can spin
+  registry the GUI's Remote Desktop tab uses and act on its active host
+  or viewer whoever opened it (the status results name that ``owner``;
+  a GUI panel whose session a tool replaces or ends closes its window), so a model can spin
   up a host (``token``, ``bind``, ``port``, ``fps``, ``quality``,
   ``host_id``), open a viewer to another machine, query status, and
   forward mouse / keyboard / type / hotkey actions through the
@@ -289,6 +291,32 @@ box), start the same dispatcher behind HTTP:
 
 Bearer token can also come from ``JE_AUTOCONTROL_MCP_TOKEN``.
 
+**Roles (opt-in RBAC).** Set ``JE_AUTOCONTROL_RBAC_USERS`` to a user store
+file, or pass ``user_store=UserStore(path)`` to ``start_mcp_http_server`` /
+``HttpMCPServer``, and the HTTP transport authenticates each request as one
+user of that store instead of comparing a shared token (``auth_token`` and
+``JE_AUTOCONTROL_MCP_TOKEN`` are then not accepted, and a bearer token is
+always required). The store, its roles and how to create users are described
+under *Roles* in the operations-layer REST API chapter; both servers can
+share one file. Without a store nothing changes. The stdio transport has no
+bearer token and is never subject to RBAC.
+
+- A tool needs ``read_screen`` when it is marked ``readOnlyHint`` and
+  ``drive_input`` otherwise, so a ``viewer`` gets exactly the read-only
+  tools and an ``operator`` the rest. ``ac_remote_host_start`` / ``_stop``,
+  ``ac_usb_acl_add`` / ``_remove`` / ``_set_default``,
+  ``ac_usb_passthrough_enable``, ``ac_egress_allow`` / ``_reset`` and
+  ``ac_load_plugins`` need ``manage_hosts`` (``admin``).
+- ``tools/list`` returns only the tools the caller may call, and
+  ``tools/call`` on any other answers JSON-RPC error ``-32003``
+  (``Forbidden: ...``, ``data.required_capability``) without running it.
+- A tool that takes an action list (``ac_execute_actions`` and the like) is
+  refused the same way when the list contains a command the caller's role
+  does not grant, such as ``AC_sign_action_file`` for an operator.
+- A token whose role the store does not define gets HTTP 403.
+- Each audit line carries ``user_id`` and ``role``; a refused call is
+  recorded with ``"status": "denied"``.
+
 Browser requests are refused unless they come from this machine: a request
 whose ``Origin`` header is not a loopback origin gets 403, and when the
 server is bound to loopback so does one whose ``Host`` header does not name
@@ -436,6 +464,78 @@ clipboard reads, history, ...) survive:
        }
      }
    }
+
+Confining file arguments to root directories
+============================================
+
+Read-only mode limits *which tools* exist, not *which files* they open:
+``ac_load_dotenv``, ``ac_read_document`` or ``ac_extract_pdf_text`` will read
+any file the server process can. To bound that, give the server roots. It is
+off by default — a server with neither variable set behaves exactly as
+before, read-only mode included.
+
+``JE_AUTOCONTROL_MCP_PATH_ROOTS``
+    Directories separated by ``os.pathsep`` (``;`` on Windows, ``:``
+    elsewhere). Setting it turns the check on.
+
+``JE_AUTOCONTROL_MCP_PATH_ROOTS_FROM_CLIENT``
+    ``1`` / ``true`` / ``yes`` / ``on`` to also accept the directories the
+    client reports through ``roots/list``, in addition to the variable
+    above. It turns the check on by itself too; until the client has
+    answered, every file argument is refused rather than let through. Only
+    use it with a client you trust to describe the workspace — over HTTP any
+    caller that can reach the server can report roots.
+
+.. code-block:: json
+
+   {
+     "mcpServers": {
+       "autocontrol_safe": {
+         "command": "python",
+         "args": ["-m", "je_auto_control.utils.mcp_server"],
+         "env": {"JE_AUTOCONTROL_MCP_READONLY": "1",
+                 "JE_AUTOCONTROL_MCP_PATH_ROOTS": "C:/work/project"}
+       }
+     }
+   }
+
+With roots in force, every tool argument whose schema says
+``"format": "path"`` is resolved with ``os.path.realpath`` and must land
+inside a root. ``..``, a symlink or junction leading out, another drive and a
+UNC share are all judged by where they really lead; a path starting with
+``~`` has to be inside the roots both expanded and taken literally. A
+refusal is a tool execution error (``isError: true``, ``Invalid arguments
+for <tool>: ...``), like any other bad argument. The tool then receives the
+canonical absolute path that was checked, so a relative path is relative to
+the server's working directory.
+
+The annotation follows meaning, not the property's name: ``ac_json_query``'s
+``path`` is a JSONPath expression and is left alone. What it does **not**
+reach:
+
+* ``ac_execute_actions`` and the other tools that run an action list — an
+  action can open any file, which is why they are not read-only tools.
+* Arguments that are a path only sometimes: ``target`` of ``ac_open_path`` /
+  ``ac_plan_open`` / ``ac_file_association`` (path or URL or extension) and of
+  ``ac_act_in_view`` (template path or text), ``ac_handle_file_dialog``'s
+  ``path`` (keystrokes typed into another application), ``argv`` of
+  ``ac_launch_process`` / ``ac_shell``, and paths inside free-form objects
+  (``ac_run_suite`` ``spec``, ``ac_run_dag`` ``definition``,
+  ``ac_assert_all`` ``specs``).
+* Tools registered by plugins, unless their schema carries the annotation.
+
+``ac_resolve_ref`` / ``ac_resolve_refs`` follow the same roots for
+``file://`` references, and have a switch of their own for ``env://``:
+
+``JE_AUTOCONTROL_MCP_ENV_REF_ALLOW``
+    Comma-separated variable names, ``fnmatch`` patterns allowed
+    (``APP_*,HOME``). When set, ``env://NAME`` resolves only for a matching
+    name and anything else is a tool execution error. Unset, every variable
+    is readable, as before — including the ones that hold API keys.
+
+Programmatically, the same policy is ``server.argument_policy``
+(:class:`ArgumentPolicy` holding a :class:`je_auto_control.PathPolicy` and
+the allowlist); assign another to a server you build yourself.
 
 Confirmation prompts (elicitation)
 ==================================

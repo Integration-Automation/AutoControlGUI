@@ -5,9 +5,18 @@ we resolve a window's geometry by title and screenshot exactly its
 bounds, plus save every window's position and move them all back later
 (handy for test setup / teardown).
 
-Window geometry is read per-platform — on Windows via the Win32
-``GetWindowRect`` API; other platforms return ``None`` for now. The
-geometry / capture / list / move operations are all injectable so the
+Window geometry is read per-platform — on Windows via Win32; other
+platforms return ``None`` for now. Two rectangles are in play there and they
+are not interchangeable: a capture wants the *visible* frame (DWM's extended
+frame bounds), a saved layout wants ``GetWindowRect``, because that is the
+rectangle ``MoveWindow`` positions. It includes the invisible resize borders
+of Windows 10 / 11, so restoring the visible frame through ``MoveWindow``
+moved every window 7 px right and shrank it by 14 x 7 px on each round.
+
+Snap, grid and cascade lay windows out in the primary monitor's work area
+(the screen minus the taskbar), not the whole screen.
+
+The geometry / capture / list / move operations are all injectable so the
 logic is fully unit-testable without real windows. GUI-free.
 """
 import json
@@ -21,6 +30,7 @@ GeometryProvider = Callable[[str], Optional[Rect]]
 WindowLister = Callable[[], List[Tuple[int, str]]]
 WindowMover = Callable[[str, int, int, int, int], bool]
 SizeProvider = Callable[[], Tuple[int, int]]
+AreaProvider = Callable[[], Tuple[int, int, int, int]]
 
 
 def get_window_geometry(title: str,
@@ -58,6 +68,33 @@ def _win32_geometry(hwnd: int) -> Optional[Rect]:
 
 
 _DWMWA_EXTENDED_FRAME_BOUNDS = 9
+_SPI_GETWORKAREA = 0x0030
+
+
+def _win32_window_rect(hwnd: int) -> Optional[Rect]:
+    """``GetWindowRect`` as ``(x, y, width, height)``: what ``MoveWindow`` takes back."""
+    import ctypes
+    from ctypes import wintypes
+    rect = wintypes.RECT()
+    user32 = ctypes.windll.user32  # type: ignore[attr-defined]  # reason: win32-only ctypes
+    if user32.IsIconic(hwnd) or not user32.GetWindowRect(hwnd, ctypes.byref(rect)):
+        # A minimized window sits at (-32000, -32000); saving that would
+        # "restore" it off every screen.
+        return None
+    return (rect.left, rect.top,
+            rect.right - rect.left, rect.bottom - rect.top)
+
+
+def _win32_work_area() -> Optional[Rect]:
+    """The primary monitor's work area as ``(x, y, width, height)``, or ``None``."""
+    import ctypes
+    from ctypes import wintypes
+    rect = wintypes.RECT()
+    user32 = ctypes.windll.user32  # type: ignore[attr-defined]  # reason: win32-only ctypes
+    if not user32.SystemParametersInfoW(_SPI_GETWORKAREA, 0, ctypes.byref(rect), 0):
+        return None
+    width, height = rect.right - rect.left, rect.bottom - rect.top
+    return (rect.left, rect.top, width, height) if width > 0 and height > 0 else None
 
 
 def _default_capture(output_path: str, rect: Rect) -> None:
@@ -106,6 +143,11 @@ def save_window_layout(path: Optional[Union[str, Path]] = None, *,
     is given, also writes it as JSON for a later
     :func:`restore_window_layout`. Windows with no readable geometry are
     skipped.
+
+    The rectangle is the one ``MoveWindow`` positions (``GetWindowRect``), so
+    saving and restoring leaves a window exactly where it was. A layout file
+    written before this held the visible frame instead and still restores
+    7 px off; save it again.
     """
     layout: List[Dict[str, Any]] = []
     for hwnd, title in (lister or _default_lister)():
@@ -138,7 +180,8 @@ def _default_mover(title: str, x: int, y: int,
 
 
 def _handle_geometry(hwnd: int) -> Optional[Rect]:
-    return _win32_geometry(int(hwnd)) if sys.platform == "win32" else None
+    """The rectangle a layout stores for ``hwnd``: the one the mover takes."""
+    return _win32_window_rect(int(hwnd)) if sys.platform == "win32" else None
 
 
 def _exact_title_mover() -> WindowMover:
@@ -185,7 +228,8 @@ def restore_window_layout(layout: Union[List[Dict[str, Any]], str, Path], *,
     return restored
 
 
-def _snap_rect(position: str, width: int, height: int) -> Rect:
+def _snap_rect(position: str, width: int, height: int,
+               origin: Tuple[int, int] = (0, 0)) -> Rect:
     half_w = width // 2
     half_h = height // 2
     regions = {
@@ -205,7 +249,7 @@ def _snap_rect(position: str, width: int, height: int) -> Rect:
             f"unknown snap position {position!r}; "
             f"expected one of {sorted(regions)}",
         )
-    return rect
+    return (origin[0] + rect[0], origin[1] + rect[1], rect[2], rect[3])
 
 
 def _default_screen_size() -> Tuple[int, int]:
@@ -214,17 +258,46 @@ def _default_screen_size() -> Tuple[int, int]:
     return (int(size[0]), int(size[1]))
 
 
+def _default_work_area() -> Rect:
+    """Where windows may be laid out: the work area, else the whole screen."""
+    area = _win32_work_area() if sys.platform == "win32" else None
+    if area is not None:
+        return area
+    width, height = _default_screen_size()
+    return (0, 0, width, height)
+
+
+def _layout_area(screen_size: Optional[SizeProvider],
+                 work_area: Optional[AreaProvider]) -> Rect:
+    """The ``(x, y, width, height)`` to lay out in, from whichever provider was given.
+
+    ``screen_size`` only knows a size, so it means "this size, at the origin";
+    with neither, the work area is asked for.
+    """
+    if work_area is not None:
+        x, y, width, height = work_area()
+        return (int(x), int(y), int(width), int(height))
+    if screen_size is not None:
+        width, height = screen_size()
+        return (0, 0, int(width), int(height))
+    return _default_work_area()
+
+
 def snap_window(title: str, position: str = "left", *,
                 mover: Optional[WindowMover] = None,
-                screen_size: Optional[SizeProvider] = None) -> bool:
-    """Move/resize the window matching ``title`` to a screen region.
+                screen_size: Optional[SizeProvider] = None,
+                work_area: Optional[AreaProvider] = None) -> bool:
+    """Move/resize the window matching ``title`` to a region of the work area.
 
     ``position`` is one of left / right / top / bottom / top-left /
     top-right / bottom-left / bottom-right / max. Returns ``True`` when the
-    window moved. The size provider and mover are injectable for tests.
+    window moved. The region is cut from the work area (the screen minus the
+    taskbar), so the bottom of a snapped window is no longer under the
+    taskbar. ``work_area`` (``() -> (x, y, width, height)``), ``screen_size``
+    and the mover are injectable for tests.
     """
-    width, height = (screen_size or _default_screen_size)()
-    x, y, w, h = _snap_rect(position, int(width), int(height))
+    left, top, width, height = _layout_area(screen_size, work_area)
+    x, y, w, h = _snap_rect(position, width, height, (left, top))
     return (mover or _default_mover)(title, x, y, w, h)
 
 
@@ -253,37 +326,39 @@ def _grid_shape(count: int, rows: Optional[int],
 def arrange_grid(titles: List[str], *, rows: Optional[int] = None,
                  cols: Optional[int] = None, gap: int = 0,
                  mover: Optional[WindowMover] = None,
-                 screen_size: Optional[SizeProvider] = None) -> int:
+                 screen_size: Optional[SizeProvider] = None,
+                 work_area: Optional[AreaProvider] = None) -> int:
     """Tile the given window ``titles`` into a grid; return the count moved.
 
     ``rows`` / ``cols`` default to a near-square auto-shape for the number of
-    windows; ``gap`` spaces the cells. The mover and size provider are injectable
-    for tests. Windows beyond the grid capacity are left untouched.
+    windows; ``gap`` spaces the cells. The grid fills the work area (the screen
+    minus the taskbar). The mover and the size / work-area providers are
+    injectable for tests. Windows beyond the grid capacity are left untouched.
     """
     from je_auto_control.utils.window_layout import grid_rects
     titles = list(titles)
     if not titles:
         return 0
-    width, height = (screen_size or _default_screen_size)()
     grid_rows, grid_cols = _grid_shape(len(titles), rows, cols)
-    rects = grid_rects((0, 0, int(width), int(height)), grid_rows, grid_cols,
+    rects = grid_rects(_layout_area(screen_size, work_area), grid_rows, grid_cols,
                        gap=int(gap))
     return _move_into(titles, rects, mover or _default_mover)
 
 
 def arrange_cascade(titles: List[str], *, offset: int = 30,
                     mover: Optional[WindowMover] = None,
-                    screen_size: Optional[SizeProvider] = None) -> int:
+                    screen_size: Optional[SizeProvider] = None,
+                    work_area: Optional[AreaProvider] = None) -> int:
     """Cascade the given window ``titles`` diagonally; return the count moved.
 
     Each window is ``offset`` pixels down-right of the previous, sized to 60% of
-    the work area and clamped on-screen. The mover and size provider are injectable.
+    the work area and clamped inside it. The mover and the size / work-area
+    providers are injectable.
     """
     from je_auto_control.utils.window_layout import cascade_rects
     titles = list(titles)
     if not titles:
         return 0
-    width, height = (screen_size or _default_screen_size)()
-    rects = cascade_rects((0, 0, int(width), int(height)), len(titles),
+    rects = cascade_rects(_layout_area(screen_size, work_area), len(titles),
                           offset=int(offset))
     return _move_into(titles, rects, mover or _default_mover)

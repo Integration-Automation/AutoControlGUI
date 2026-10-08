@@ -58,6 +58,20 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261009-14 | 2026-10-09 | The package gate refuses unlisted packages by default | #done #security #breaking | [2026-10](2026-10.md) |
+| U-20261009-13 | 2026-10-09 | REST routes and MCP tools are authorised by role when a user store is configured | #done #security #rbac #A10 | [2026-10](2026-10.md) |
+| U-20261009-12 | 2026-10-09 | Remote-desktop hosts and viewers have owners | #done #remote-desktop #gui #C4 | [2026-10](2026-10.md) |
+| U-20261009-11 | 2026-10-09 | Anthropic agent history is append-only; long runs restart from a summary | #agent #A9 | [2026-10](2026-10.md) |
+| U-20261009-10 | 2026-10-09 | USB passthrough replies are paired by an echoed request id | #done #usb #protocol #A4 | [2026-10](2026-10.md) |
+| U-20261009-09 | 2026-10-09 | Opt-in roots for MCP file arguments; viewer keeps pushed files in its download directory | #done #security #mcp #remote-desktop #A6 | [2026-10](2026-10.md) |
+| U-20261009-08 | 2026-10-09 | Ed25519 action signatures keep the signing key away from execution; cryptography floor 50 | #done #security #signing #A5 #A11 | [2026-10](2026-10.md) |
+| U-20261009-07 | 2026-10-09 | Every top-level run gets its own variable scope | #done #executor #A3 | [2026-10](2026-10.md) |
+| U-20261009-06 | 2026-10-09 | macOS: click count on mouse events, minimised windows listed and restorable | #done #macos | [2026-10](2026-10.md) |
+| U-20261009-05 | 2026-10-09 | Templates at any path and in grayscale; OCR keeps the left box; negative centres floor | #done #image #ocr #A14 | [2026-10](2026-10.md) |
+| U-20261009-04 | 2026-10-09 | Windows: per-monitor DPI, every-monitor capture, honest focus and layout; macOS frame in points | #done #windows #dpi #capture #A8 #A12 | [2026-10](2026-10.md) |
+| U-20261009-03 | 2026-10-09 | Keyboard and mouse wrappers type and scroll what was asked | #done #input #A13 | [2026-10](2026-10.md) |
+| U-20261009-02 | 2026-10-09 | Typing contract passes on mypy 2.4; CI checks with 2.4.0 | #done #typing | [2026-10](2026-10.md) |
+| U-20261009-01 | 2026-10-09 | pytest plugin loads from a top-level module; start-up no longer imports the facade | #done #packaging #pytest #A1 | [2026-10](2026-10.md) |
 | U-20261008-02 | 2026-10-08 | GUI: navigation panel with search, dark and light themes from tokens, tabs built on first open | #feature #gui #F1 #F2 | [2026-10](2026-10.md) |
 | U-20261008-01 | 2026-10-08 | The legacy CLI flags exit 1 when an action failed; reports go below TestPioneer's artifact directory | #feature #cli #report #testpioneer | [2026-10](2026-10.md) |
 | U-20261006-01 | 2026-10-06 | Make AutoControl discoverable and safer for AI agents | #feature #ai #mcp #docs | [2026-10](2026-10.md) |
@@ -349,7 +363,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | File | Period | Entries |
 |---|---|---:|
-| [2026-10.md](2026-10.md) | 2026-10 | 13 |
+| [2026-10.md](2026-10.md) | 2026-10 | 27 |
 | [2026-09-e.md](2026-09-e.md) | 2026-09 | 7 |
 | [2026-09-d.md](2026-09-d.md) | 2026-09 | 55 |
 | [2026-09-c.md](2026-09-c.md) | 2026-09 | 38 |

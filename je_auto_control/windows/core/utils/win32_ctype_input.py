@@ -8,9 +8,12 @@ if sys.platform not in ["win32", "cygwin", "msys"]:
 
 import ctypes
 from ctypes import wintypes
+from typing import Any
 from je_auto_control.windows.core.utils.win32_vk import WIN32_EventF_UNICODE, WIN32_VkToVSC
 
-user32 = ctypes.WinDLL('user32', use_last_error=True)  # type: ignore[attr-defined]  # reason: win32-only ctypes
+# Annotated: on a non-Windows target mypy 2.4 treats this module as unreachable
+# past the guard above and cannot infer a type for importers to use.
+user32: Any = ctypes.WinDLL('user32', use_last_error=True)  # type: ignore[attr-defined]  # reason: win32-only ctypes
 
 Mouse: int = 0
 Keyboard: int = 1

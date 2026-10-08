@@ -5058,12 +5058,23 @@ def _add_work_queue_specs(specs: List[CommandSpec]) -> None:
         description="Delete a file to the OS recycle bin (recoverable).",
     ))
     specs.append(CommandSpec(
+        "AC_create_signing_keypair", "Security", "Create Signing Key Pair",
+        fields=(
+            FieldSpec("private_path", FieldType.STRING),
+            FieldSpec("public_path", FieldType.STRING),
+        ),
+        description="Create an Ed25519 key pair: keep the private key on the "
+                    "signing machine, give execution endpoints the public key.",
+    ))
+    specs.append(CommandSpec(
         "AC_sign_action_file", "Security", "Sign Action File",
         fields=(
             FieldSpec("path", FieldType.FILE_PATH),
             FieldSpec("key", FieldType.STRING, optional=True),
+            FieldSpec("private_key_path", FieldType.FILE_PATH, optional=True),
         ),
-        description="Write an HMAC-SHA256 signature sidecar for an action file.",
+        description="Write a signature sidecar for an action file "
+                    "(Ed25519 with a private key, else HMAC-SHA256).",
     ))
     specs.append(CommandSpec(
         "AC_verify_action_file", "Security", "Verify Action File",
@@ -5072,6 +5083,7 @@ def _add_work_queue_specs(specs: List[CommandSpec]) -> None:
             FieldSpec("key", FieldType.STRING, optional=True),
             FieldSpec("raise_on_fail", FieldType.BOOL, optional=True,
                       default=False),
+            FieldSpec("public_key_path", FieldType.FILE_PATH, optional=True),
         ),
         description="Verify an action file against its signature sidecar.",
     ))

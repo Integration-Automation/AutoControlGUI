@@ -741,6 +741,8 @@ from je_auto_control.utils.layered_config import (
 from je_auto_control.utils.config_schema import (
     ConfigField, ConfigSchema, coerce, validate_config,
 )
+# Opt-in confinement of file paths to configured root directories
+from je_auto_control.utils.path_guard import PathNotAllowedError, PathPolicy
 # URI-scheme secret/value reference resolver (env:// / file:// / secret://)
 from je_auto_control.utils.secret_ref import (
     RefResolver, SecretRefError, is_ref, resolve_ref, resolve_refs_in,
@@ -1095,6 +1097,11 @@ from je_auto_control.utils.plugin_loader.plugin_loader import (
 from je_auto_control.utils.rest_api.rest_server import (
     RestApiServer, start_rest_api_server,
 )
+# RBAC for the REST API and the MCP HTTP transport (opt-in)
+from je_auto_control.utils.rbac import (
+    AuthorizationContext, AuthorizationError, UserAuthError, UserRecord,
+    UserStore, authorization_scope,
+)
 # Admin console (headless multi-host client)
 from je_auto_control.utils.admin import (
     AdminConsoleClient, AdminHost, default_admin_console,
@@ -1129,11 +1136,13 @@ from je_auto_control.utils.secrets import (
     SecretManager, SecretStoreError, SecretStoreLocked,
     default_secret_manager, default_secret_store_path,
 )
-# Action-file security (HMAC-SHA256 sign/verify + Fernet encrypt, headless)
+# Action-file security (Ed25519 / HMAC-SHA256 sign/verify + Fernet encrypt, headless)
 from je_auto_control.utils.action_signing import (
-    VerifyResult, decrypt_action_file, encrypt_action_file,
+    SigningConfig, VerifyResult, action_signing_config, create_signing_keypair,
+    decrypt_action_file, encrypt_action_file,
     require_signed_actions, sign_action_file, verify_action_file,
 )
+from je_auto_control.utils.exception.exceptions import CryptographyUnavailableError
 # Observability (Prometheus metrics + OpenTelemetry traces, headless)
 from je_auto_control.utils.observability import (
     Counter as MetricCounter,
@@ -1170,6 +1179,7 @@ from je_auto_control.utils.scheduler.scheduler import (
     ScheduledJob, Scheduler, default_scheduler,
 )
 # Script variables (headless)
+from je_auto_control.utils.script_vars.execution import execution_scope
 from je_auto_control.utils.script_vars.interpolate import (
     interpolate_actions, interpolate_value, load_vars_from_json,
 )
@@ -1332,7 +1342,7 @@ __all__ = [
     "Scheduler", "ScheduledJob", "default_scheduler",
     # Script variables
     "interpolate_actions", "interpolate_value", "load_vars_from_json",
-    "VariableScope",
+    "VariableScope", "execution_scope",
     # Watchers
     "MouseWatcher", "PixelWatcher", "LogTail",
     # Window manager
@@ -1674,6 +1684,7 @@ __all__ = [
     "dotenv_values", "dump_dotenv", "load_dotenv", "parse_dotenv",
     "LayeredConfig", "SourceTrace", "deep_merge",
     "ConfigField", "ConfigSchema", "coerce", "validate_config",
+    "PathNotAllowedError", "PathPolicy",
     "RefResolver", "SecretRefError", "is_ref", "resolve_ref", "resolve_refs_in",
     "redact_config", "redact_secret_text",
     "EventEmitter", "post_cloudevent", "to_cloudevent",
@@ -1753,6 +1764,9 @@ __all__ = [
     "register_plugin_commands",
     # REST API
     "RestApiServer", "start_rest_api_server",
+    # RBAC
+    "AuthorizationContext", "AuthorizationError", "UserAuthError",
+    "UserRecord", "UserStore", "authorization_scope",
     # Admin console
     "AdminConsoleClient", "AdminHost", "default_admin_console",
     # WebRTC inspector
@@ -1783,6 +1797,8 @@ __all__ = [
     "default_secret_manager", "default_secret_store_path",
     # Action-file security (sign + encrypt)
     "VerifyResult", "sign_action_file", "verify_action_file",
+    "SigningConfig", "action_signing_config", "create_signing_keypair",
+    "CryptographyUnavailableError",
     "require_signed_actions", "encrypt_action_file", "decrypt_action_file",
     # Observability (Prometheus + OpenTelemetry)
     "MetricCounter", "MetricGauge", "MetricHistogram",

@@ -9,6 +9,10 @@ ordinary requests return their JSON-RPC response with
 ``Content-Type: application/json``. The default bind is
 ``127.0.0.1`` to honour the project's least-privilege policy.
 
+**RBAC.** With a user store -- ``user_store=`` or ``JE_AUTOCONTROL_RBAC_USERS``
+-- a bearer token must be one user's, the shared ``auth_token`` is not
+accepted, and each request is dispatched as that user (:mod:`._authz`).
+
 **Sessions.** ``initialize`` mints an ``Mcp-Session-Id`` and returns it as a
 response header; a client that echoes it back keeps one dispatcher scope
 across every connection it makes, and may open a standing server-to-client
@@ -25,7 +29,6 @@ session: its ``Mcp-Session-Id`` is ignored and none is minted. Its
 ``subscriptions/listen`` holds the response stream open for the change
 notifications it asked for, until the client closes it or the server stops.
 """
-import hmac
 import json
 import os
 import ssl
@@ -38,6 +41,7 @@ from je_auto_control.utils.http_headers import (
     bearer_challenge, log_safe, parse_content_length, wire_json_text,
 )
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
+from je_auto_control.utils.mcp_server._authz import check_bearer
 from je_auto_control.utils.mcp_server._http_stateless import (
     PROTOCOL_VERSION_HEADER, is_stateless, read_message, stateless_refusal,
     status_for, unsupported_header_refusal,
@@ -53,6 +57,10 @@ from je_auto_control.utils.mcp_server.http_sessions import (
     HttpSession, SESSION_HEADER, SessionRegistry, session_id_from_headers,
 )
 from je_auto_control.utils.mcp_server.server import MCPServer
+from je_auto_control.utils.rbac.authorization import (
+    AuthorizationContext, authorization_scope, user_store_from_env,
+)
+from je_auto_control.utils.rbac.users import UserStore
 
 DEFAULT_PATH = "/mcp"
 _MAX_BODY = 1_000_000
@@ -108,6 +116,8 @@ class _MCPHttpHandler(BaseHTTPRequestHandler):
     # Set once this request's body has been read off the socket, so a later
     # error response knows there is nothing left to drain.
     _body_consumed = False
+    # The RBAC user this request authenticated as; None under the shared token.
+    _caller: Optional[AuthorizationContext] = None
     # socketserver applies this to the connection socket in setup(); it bounds
     # every read (headers *and* body) so a stalled request cannot pin a worker.
     timeout = _REQUEST_TIMEOUT
@@ -132,10 +142,13 @@ class _MCPHttpHandler(BaseHTTPRequestHandler):
         if refused is not None:
             self._send_raw_json(refused.body, status=refused.status)
             return
-        if is_stateless(self.headers, message):
-            self._serve_stateless(bridge, line, message)
-            return
-        self._serve_in_session(bridge, line)
+        # One scope around every way the line is dispatched: each of them
+        # runs it on this thread.
+        with authorization_scope(self._caller):
+            if is_stateless(self.headers, message):
+                self._serve_stateless(bridge, line, message)
+                return
+            self._serve_in_session(bridge, line)
 
     def _serve_in_session(self, bridge: MCPServer, line: str) -> None:
         """Serve a handshake-era request under its session, or its connection."""
@@ -303,30 +316,18 @@ class _MCPHttpHandler(BaseHTTPRequestHandler):
         if not self._origin_allowed():
             self._send_json({"error": "origin not allowed"}, status=403)
             return False
-        expected: Optional[str] = self.server.auth_token  # type: ignore[attr-defined]
-        if expected is None:
+        self._caller, refusal = check_bearer(
+            self.headers.get("Authorization"), self.server.auth_token,  # type: ignore[attr-defined]
+            self.server.user_store)  # type: ignore[attr-defined]
+        if refusal is None:
             return True
-        # The scheme is case-insensitive (RFC 7235 2.1): "bearer tok" was
-        # refused here while the REST gate accepted it.
-        scheme, _, provided = self.headers.get("Authorization", "").strip().partition(" ")
+        status, text = refusal
         # 401 with a challenge for a missing *and* a wrong token: the MCP
         # authorization spec requires both, and RFC 9110 the header.
         challenge = {"WWW-Authenticate": bearer_challenge(
-            "autocontrol-mcp", self.headers.get("Authorization"))}
-        if scheme.lower() != "bearer":
-            self._send_json({"error": "missing bearer token"}, status=401,
-                            extra_headers=challenge)
-            return False
-        provided = provided.strip()
-        # Bytes: compare_digest raises TypeError on a non-ASCII str, and
-        # http.server decodes headers as latin-1, so a crafted token used to
-        # kill the request thread instead of being refused.
-        if not hmac.compare_digest(provided.encode("utf-8"),
-                                   expected.encode("utf-8")):
-            self._send_json({"error": "invalid bearer token"}, status=401,
-                            extra_headers=challenge)
-            return False
-        return True
+            "autocontrol-mcp", self.headers.get("Authorization"))} if status == 401 else None
+        self._send_json({"error": text}, status=status, extra_headers=challenge)
+        return False
 
     def _origin_allowed(self) -> bool:
         """True unless a browser on another site, or a rebound name, sent this.
@@ -574,10 +575,12 @@ class _MCPHttpServer(ThreadingHTTPServer):
 
     def __init__(self, server_address: Tuple[str, int],
                  mcp: MCPServer,
-                 auth_token: Optional[str] = None) -> None:
+                 auth_token: Optional[str] = None,
+                 user_store: Optional[UserStore] = None) -> None:
         super().__init__(server_address, _MCPHttpHandler)
         self.mcp = mcp
         self.auth_token = auth_token
+        self.user_store = user_store
         # Dropping a session releases the dispatcher state scoped to its id —
         # the same release a closing socket used to perform, moved to the
         # identity that actually owns that state.
@@ -631,8 +634,11 @@ class HttpMCPServer:
                  host: str = "127.0.0.1", port: int = 9940,
                  auth_token: Optional[str] = None,
                  ssl_context: Optional[ssl.SSLContext] = None,
+                 user_store: Optional[UserStore] = None,
                  ) -> None:
+        """``user_store`` switches RBAC on; ``None`` reads ``JE_AUTOCONTROL_RBAC_USERS``."""
         self._mcp = mcp if mcp is not None else MCPServer()
+        self._users = user_store if user_store is not None else user_store_from_env()
         self._address: Tuple[str, int] = (host, port)
         self._auth_token = auth_token if auth_token is not None else (
             os.environ.get("JE_AUTOCONTROL_MCP_TOKEN") or None
@@ -661,6 +667,7 @@ class HttpMCPServer:
             return
         self._server = _MCPHttpServer(
             self._address, self._mcp, auth_token=self._auth_token,
+            user_store=self._users,
         )
         if self._ssl_context is not None:
             # Defer the handshake so it runs in get_request() under a timeout
@@ -683,8 +690,8 @@ class HttpMCPServer:
         )
         self._thread.start()
         scheme = "https" if self._ssl_context is not None else "http"
-        autocontrol_logger.info("MCP %s listening on %s:%d", scheme,
-                                 *self._address)
+        autocontrol_logger.info("MCP %s listening on %s:%d (rbac=%s)", scheme,
+                                 *self._address, "on" if self._users is not None else "off")
 
     def stop(self, timeout: float = 2.0) -> None:
         if self._server is None:
@@ -706,11 +713,12 @@ def start_mcp_http_server(host: str = "127.0.0.1", port: int = 9940,
                           mcp: Optional[MCPServer] = None,
                           auth_token: Optional[str] = None,
                           ssl_context: Optional[ssl.SSLContext] = None,
+                          user_store: Optional[UserStore] = None,
                           ) -> HttpMCPServer:
     """Start and return an :class:`HttpMCPServer`; convenience wrapper."""
     server = HttpMCPServer(
         mcp=mcp, host=host, port=port,
-        auth_token=auth_token, ssl_context=ssl_context,
+        auth_token=auth_token, ssl_context=ssl_context, user_store=user_store,
     )
     server.start()
     return server

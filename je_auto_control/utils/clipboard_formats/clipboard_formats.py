@@ -39,11 +39,16 @@ _Format = Union[int, Dict[str, Any], Tuple[int, str]]
 
 
 def _coerce(item: _Format) -> Tuple[int, str]:
-    """Normalise a format descriptor (int / ``{id,name}`` / ``(id,name)``)."""
+    """Normalise a format descriptor (int / ``{id,name}`` / ``(id,name)``).
+
+    A missing or ``None`` name is ``""`` in every form: the pair form used to
+    give the string ``"None"``, so the same unnamed format compared unequal
+    across the two forms and ``diff_formats`` reported a change.
+    """
     if isinstance(item, dict):
         return int(item.get("id", 0)), str(item.get("name") or "")
     if isinstance(item, (tuple, list)):
-        return int(item[0]), str(item[1] if len(item) > 1 else "")
+        return int(item[0]), str((item[1] if len(item) > 1 else "") or "")
     return int(item), ""
 
 

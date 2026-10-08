@@ -59,7 +59,7 @@ Builder 項目。視覺與視窗功能的 geometry / IO 操作皆可注入,因�
   呼叫端同名的變數會恢復原值。
 * **同進程平行** — ``AC_parallel`` 讓多個分支動作清單並行執行,各自在
   獨立的全新 executor 上,因此分支不會在共享變數上互相 race(跨主機 DAG
-  的同進程版)。
+  的同進程版)。分支從呼叫端變數的一份複本開始;分支內設定的值只留在該分支。
 * **效能預算斷言** — ``assert_duration(action, max_ms)`` /
   ``AC_assert_duration`` 在區塊耗時超過預算時判失敗——銜接 profiler 與
   斷言 DSL 的延遲回歸守門。
@@ -95,13 +95,18 @@ Builder 項目。視覺與視窗功能的 geometry / IO 操作皆可注入,因�
 ========
 
 * **單一視窗擷取** — ``capture_window(title, output_path)`` 以標題解析視窗
-  geometry(Win32 ``GetWindowRect``)並精確擷取其範圍。``AC_capture_window``。
+  geometry(DWM 回報的可見外框)並精確擷取其範圍,視窗在哪個螢幕都可以。
+  ``AC_capture_window``。
 * **版面儲存 / 還原** — ``save_window_layout(path)`` 把每個視窗的位置快照
   成 JSON;``restore_window_layout(path)`` 再把它們全部移回(方便測試
-  setup / teardown)。``AC_save_window_layout`` / ``AC_restore_window_layout``。
-* **貼齊 / 平鋪** — ``snap_window(title, "left")`` 把視窗移到螢幕一半
-  (left / right / top / bottom)、四分之一(四個角)或 ``"max"``。
-  ``AC_snap_window``。
+  setup / teardown)。存下的是 ``MoveWindow`` 定位的那個矩形(Win32
+  ``GetWindowRect``),所以視窗會回到原本的位置。舊版存的版面檔記的是可見
+  外框,還原會右移 7 px、縮小 14 x 7 px,請重新儲存。
+  ``AC_save_window_layout`` / ``AC_restore_window_layout``。
+* **貼齊 / 平鋪** — ``snap_window(title, "left")`` 把視窗移到主螢幕\ *工作區*\
+  (螢幕扣掉工作列)的一半(left / right / top / bottom)、四分之一(四個角)
+  或 ``"max"``,貼齊後視窗底部不會被工作列蓋住。``arrange_grid`` 與
+  ``arrange_cascade`` 也排在同一個區域。``AC_snap_window``。
 
 
 檔案安全
@@ -114,6 +119,26 @@ Builder 項目。視覺與視窗功能的 geometry / IO 操作皆可注入,因�
   webhook、MCP 執行工具與 GUI -- 都會拒絕未簽章或被改過的檔案;自行載入時
   用 ``read_executable_action_json`` 可得到同樣的檢查。每位使用者的金鑰檔
   至少要有 32 位元組。``AC_sign_action_file`` / ``AC_verify_action_file``。
+* **簽章金鑰與執行權限分開(第 2 版簽章)** — HMAC 金鑰是一把共用密鑰,所以能在
+  某個端點執行動作的人,也能替它簽檔。``create_signing_keypair(private_path, public_path)``
+  (``AC_create_signing_keypair``)產生一組 Ed25519 金鑰:私鑰留在簽章機,執行端只拿
+  公鑰,公鑰能驗章、不能簽章。``sign_action_file(path, private_key_path=...)`` 把 JSON
+  envelope(``version`` 2、``algorithm`` ``ed25519``)寫進同一個 ``.sig`` sidecar;
+  ``verify_action_file(path, public_key_path=...)`` 負責驗證。行程由三個環境變數設定,
+  ``action_signing_config()`` 會回報目前讀到的內容:
+
+  * ``JE_AUTOCONTROL_ACTION_SIGNING_PRIVATE_KEY`` — 私鑰路徑;只設在簽章機。設了之後
+    ``sign_action_file(path)`` 就用它簽。
+  * ``JE_AUTOCONTROL_ACTION_SIGNING_PUBLIC_KEY`` — 公鑰路徑,設在每個執行端。只有它而
+    沒有私鑰時,該端點只能驗章:``AC_sign_action_file`` 與 ``AC_create_signing_keypair``
+    會拋出例外,不會退回每位使用者的 HMAC 金鑰,HMAC sidecar 也不再通過驗證。
+  * ``JE_AUTOCONTROL_ACCEPT_LEGACY_ACTION_SIGNATURES``(``1`` / ``true`` / ``yes`` /
+    ``on``)— 遷移模式:除第 2 版外也接受 HMAC sidecar,並在記錄中留下警告。
+
+  三個都沒設時行為完全不變:簽章仍是每位使用者的 HMAC。強制驗章的端點遷移步驟:在
+  簽章機產生金鑰組;在端點設定公鑰變數與遷移變數;用私鑰把每個檔案重簽一次;最後取消
+  遷移變數。金鑰組簽章需要 ``cryptography`` —— 沒有該套件的平台(Windows arm64)上,
+  這些呼叫會拋出帶安裝提示的 ``CryptographyUnavailableError``,HMAC 簽章仍可使用。
 * **動作檔加密** — ``encrypt_action_file`` / ``decrypt_action_file`` 以
   Fernet(AES-128-CBC + HMAC)讓腳本內容在靜態時保密,金鑰來自每位使用者的
   0600 金鑰,或經 scrypt 與每個檔案各自的隨機鹽值衍生自通行碼。``AC_encrypt_action_file`` /

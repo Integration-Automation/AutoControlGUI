@@ -30,6 +30,7 @@ here are load-bearing and neither is arbitrary:
 """
 import ctypes
 import math
+import numbers
 import sys
 import time
 import warnings
@@ -126,10 +127,15 @@ def _coordinate(value: object, axis: str) -> int:
     A non-numeric or infinite value raised ValueError / OverflowError, which
     callers catching AutoControlException missed; a value past int32 was
     truncated by ctypes and moved the cursor somewhere else while this
-    reported the requested point.
+    reported the requested point. A fractional value goes to the nearest
+    pixel: ``int()`` alone cut toward zero, so ``-0.6`` landed on 0 and
+    ``10.9`` on 10.
     """
     try:
-        number = int(value)  # type: ignore[call-overload]
+        if isinstance(value, numbers.Real) and not isinstance(value, numbers.Integral):
+            number = int(round(value))
+        else:
+            number = int(value)  # type: ignore[call-overload]
     except (TypeError, ValueError, OverflowError) as error:
         raise AutoControlMouseException(f"{axis} must be a number, got {value!r}") from error
     if not _INT32_MIN <= number <= _INT32_MAX:
@@ -280,6 +286,24 @@ def _click_plan(clicks: object, interval: object) -> Tuple[int, float]:
     return count, pause
 
 
+def _darwin_click(x: int, y: int, keycode: MouseKeycode, index: int,
+                  pause: float) -> None:
+    """Send click ``index`` (0-based) of a run to the macOS backend.
+
+    macOS applications read the click count off the event rather than timing
+    two clicks, so the n-th click carries n. A pause longer than the system
+    double-click interval is not a multi-click anywhere, so those clicks stay
+    single ones -- and a single click is the three-argument call this always
+    made. Does nothing off macOS, where the field does not exist.
+    """
+    if sys.platform != "darwin":
+        return
+    if not index or (pause and pause > mouse.double_click_interval()):
+        mouse.click_mouse(x, y, keycode)
+    else:
+        mouse.click_mouse(x, y, keycode, index + 1)
+
+
 def click_mouse(mouse_keycode: int | str, x: int | None = None,
                 y: int | None = None, clicks: int = 1,
                 interval: float = 0.0) -> Tuple[MouseKeycode, int, int]:
@@ -290,8 +314,11 @@ def click_mouse(mouse_keycode: int | str, x: int | None = None,
     All clicks land on the same point, ``interval`` seconds apart. Windows and
     X11 recognise a double-click from the timing and distance of two clicks,
     so keep ``interval`` under the system double-click time (500 ms by
-    default on Windows). macOS apps read a click count this backend does not
-    set, so there the clicks arrive as separate single clicks.
+    default on Windows). macOS apps read a click count carried by the event
+    instead, so there the n-th click of the run has its click-state field
+    (``kCGMouseEventClickState``) set to n -- unless ``interval`` is longer
+    than the system double-click interval, in which case every click is sent
+    as a single click, as the other platforms would treat it.
 
     :param mouse_keycode: 滑鼠按鍵代碼 Mouse keycode
     :param x: X 座標 X position
@@ -318,7 +345,7 @@ def click_mouse(mouse_keycode: int | str, x: int | None = None,
             # strings, so the int never matches any branch and the click is
             # silently dropped with no exception.
             if sys.platform == "darwin":
-                mouse.click_mouse(x, y, keycode)
+                _darwin_click(x, y, keycode, index, pause)
             else:
                 mouse.click_mouse(keycode, x, y)
         record_action_to_list("click_mouse", param)
@@ -340,7 +367,15 @@ def _scroll_to(x: Optional[int], y: Optional[int]) -> None:
     Query the cursor only when a coordinate is missing: when both are
     supplied the current position is never needed, so backends that cannot
     report it (e.g. Wayland) must not be forced to raise.
+
+    座標先驗證再夾限：NaN 在 ``min``／``max`` 裡會被悄悄換成桌面邊緣，
+    游標就移到那裡才滾。
+    Validated before the clamp: ``min`` / ``max`` quietly turn a NaN into the
+    desktop edge, so the cursor went there and the scroll happened anyway,
+    where ``set_mouse_position`` refuses the same value.
     """
+    x = None if x is None else _coordinate(x, "x")
+    y = None if y is None else _coordinate(y, "y")
     left, top, width, height = _scroll_bounds()
     # 兩個座標都給定時不會被讀到，見下面的三元運算。
     # Never read when both coordinates were supplied.
@@ -403,17 +438,20 @@ def _resolve_scroll_axis(scroll_direction: str) -> int:
 
 def mouse_scroll(scroll_value: int, x: Optional[int] = None,
                  y: Optional[int] = None,
-                 scroll_direction: str = "scroll_down"
+                 scroll_direction: str = "scroll_up"
                  ) -> Tuple[int, Union[int, str]]:
     """
     模擬滑鼠滾輪操作
     Simulate mouse scroll
 
-    每個平台的規則相同：``scroll_value`` 為負就反向，絕對值是滾動格數。
-    The sign of ``scroll_value`` reverses the direction on every platform, so a
-    call written on one works on the others. X11 and Wayland used to discard it
-    and always scroll ``scroll_direction``, which meant portable code scrolled
-    the opposite way there with no error and no warning.
+    每個平台的規則相同：正值往上、負值往下，絕對值是滾動格數。
+    A positive ``scroll_value`` scrolls up and a negative one down on every
+    platform, so a call written on one works on the others. Two things used
+    to break that on X11 and Wayland: the sign was discarded, and then the
+    default ``scroll_direction`` was ``"scroll_down"``, so ``mouse_scroll(3)``
+    went down there and up on Windows and macOS. The default is now
+    ``"scroll_up"``; pass ``scroll_direction="scroll_down"`` to keep the old
+    X11 / Wayland meaning of a positive count.
 
     :param scroll_value: 滾動數值，負數代表反向 Scroll value; negative reverses
     :param x: X 座標，指定時會先將游標移到該處 X position; the cursor moves here first

@@ -30,7 +30,9 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Any, Dict, Iterator, List, Optional, Tuple
 
-from je_auto_control.utils.exception.exceptions import AutoControlException
+from je_auto_control.utils.exception.exceptions import (
+    AutoControlException, CryptographyUnavailableError,
+)
 from je_auto_control.utils.json_store.json_store import _file_lock, atomic_write_text
 
 
@@ -50,7 +52,7 @@ def _fernet_types() -> tuple:
     try:
         from cryptography.fernet import Fernet, InvalidToken
     except ImportError as error:
-        raise RuntimeError(
+        raise CryptographyUnavailableError(
             "The secret vault requires cryptography (pip install cryptography). "
             "It has no Windows arm64 wheel, so the vault is unavailable there."
         ) from error

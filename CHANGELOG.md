@@ -15,6 +15,38 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Added
 
+- Action files can be signed with an Ed25519 key pair, so an endpoint that
+  verifies does not hold what signs: `create_signing_keypair(private_path,
+  public_path)` / `AC_create_signing_keypair`, `private_key_path=` on
+  `sign_action_file`, `public_key_path=` on `verify_action_file`, and the
+  environment variables `JE_AUTOCONTROL_ACTION_SIGNING_PRIVATE_KEY`,
+  `JE_AUTOCONTROL_ACTION_SIGNING_PUBLIC_KEY` and
+  `JE_AUTOCONTROL_ACCEPT_LEGACY_ACTION_SIGNATURES`. Nothing changes while none
+  of them is set. `CryptographyUnavailableError` (an `AutoControlException` and
+  a `RuntimeError`) replaces the bare `RuntimeError` raised without the
+  `cryptography` package.
+- Opt-in roles for the REST API and the MCP HTTP transport:
+  `JE_AUTOCONTROL_RBAC_USERS=<user store file>` (or `user_store=`, or `--users`
+  on the REST entry points). A bearer token then names a user, each route,
+  tool and privileged `AC_*` command needs a capability of that user's role,
+  and audit entries carry the user id. `UserStore`, `UserRecord`,
+  `AuthorizationContext`, `AuthorizationError`, `UserAuthError` and
+  `authorization_scope` are exported; `Capability.SIGN_ACTIONS` is new.
+- Opt-in confinement of MCP file arguments: `JE_AUTOCONTROL_MCP_PATH_ROOTS`,
+  `JE_AUTOCONTROL_MCP_PATH_ROOTS_FROM_CLIENT` and, for `env://` references,
+  `JE_AUTOCONTROL_MCP_ENV_REF_ALLOW`. Tool schemas mark file-path arguments
+  with `"format": "path"`. `PathPolicy` and `PathNotAllowedError` are exported.
+- `execution_scope(variables=None)`: a fresh variable scope for a block of
+  runs.
+- `JE_AUTOCONTROL_ALLOWED_PACKAGES` and `je_auto_control run --allow-package
+  NAME` allow packages at the package gate without Python glue.
+- USB passthrough requests carry an optional `request_id` that a current host
+  echoes; `UsbClientDesynchronized`, `ClientHandle.reusable`,
+  `UsbPassthroughClient.reusable`.
+- `remote_desktop_registry` records who opened each host and viewer
+  (`adopt`, `evict`, `release`, `owner_of`, `owned`; `owner=` on the stop and
+  disconnect methods), and every `*_status` result gains an `"owner"` key.
+- `mark_screen` returns `image_origin`; `render_marks(..., origin=)`.
 - GUI: a navigation panel on the left of the main window lists every tab by
   category, with a search box (`Ctrl+K`; `Ctrl+B` hides the panel).
   `AutoControlGUIWidget.activate_tab(key)` opens a tab or brings it to the
@@ -93,8 +125,8 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
   in one call: the clicks land on one point, `interval` seconds apart.
   Defaults keep the single click, and a single click records the same
   action as before. `AC_click_mouse`, the `ac_click_mouse` MCP tool and the
-  Script Builder take both parameters. On macOS the clicks still arrive as
-  separate single clicks (`Progress.md`).
+  Script Builder take both parameters. On macOS the n-th click sets the
+  click-state field (unverified on hardware, `Progress.md`).
 - **Drag pacing: `tween_drag` / `drag_path` take `step_delay_s` and
   `settle_s`** (seconds, default 0). `step_delay_s` rests after each move;
   `settle_s` rests on the start before the press, after the press and before
@@ -161,6 +193,84 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Changed
 
+- **Breaking: the package gate refuses by default.**
+  `AC_add_package_to_executor` / `AC_add_package_to_callback_executor` (and
+  the `package_manager` methods) no longer import a package that has not been
+  allowed; the `DeprecationWarning` release is over. Allow with
+  `executor.allow_packages(...)`, `JE_AUTOCONTROL_ALLOWED_PACKAGES` or
+  `--allow-package`; `executor.set_allow_arbitrary_packages(True)` restores
+  the old behaviour. `allow_packages` now rejects a name that is not a dotted
+  module name.
+- **Breaking: a file a remote-desktop host pushes lands below the viewer's
+  download directory.** `host.send_file_to_viewers(src, dest_path)`:
+  `dest_path` is now relative to `~/Downloads/AutoControl`
+  (`JE_AUTOCONTROL_REMOTE_DOWNLOAD_DIR`); an absolute path, a drive or UNC
+  path, `..` or a link leading outside fails the transfer. Viewer → host is
+  unchanged, and `FileReceiver()` without `base_dir` is unconfined as before.
+- **Variables no longer survive a run.** `execute_action_with_vars`, REST
+  `/execute` and `/execute_file`, every MCP tool call, each socket command,
+  scheduler jobs, trigger / hotkey / webhook / e-mail firings, ChatOps `/run`
+  and voice commands each get a fresh variable scope; a later `${name}` fails
+  with `Unknown variable` instead of reading the previous caller's value.
+  Direct `executor.execute_action(...)` from Python keeps the process scope.
+  An `AC_parallel` branch starts with a copy of the caller's variables, and
+  `AC_run_dag` local nodes run on the calling list's executor and scope.
+- **Windows is per-monitor DPI aware.** Importing the package asks for
+  per-monitor v2 (falling back to system awareness). On a monitor whose scale
+  differs from the primary's, coordinates and capture sizes are now physical
+  pixels: a point at an offset from that monitor's corner moves by
+  `its scale / primary scale`, and its screenshots are no longer downscaled.
+  Coordinates, regions, window layouts and templates recorded on such a
+  monitor have to be recorded again; the primary monitor is unaffected.
+- **Keyboard input on Windows and X11.** `write("Hi")` types `Hi` (it typed
+  `hi`); `is_shift=True` is honoured by `type_keyboard`, `hotkey`, `write` and
+  `press_keyboard_key`; CR LF is one Enter; `write_secret` and the Unicode
+  typing helpers press Return / Tab / Backspace as keys instead of sending
+  them as code points.
+- **`mouse_scroll` defaults to `scroll_direction="scroll_up"`**, so a positive
+  amount scrolls up on every platform; on X11 / Wayland it used to scroll
+  down. NaN, infinite and non-numeric coordinates raise before anything moves,
+  and fractional coordinates are rounded rather than truncated.
+- **Window management on Windows.** `focus_window` raises
+  `AutoControlActionException` when the window did not become the foreground
+  one; `show_window_by_title` and the z-order calls return the real result;
+  `list_windows` / `find_window` skip DWM-cloaked and zero-area windows;
+  `post_key` sends one `WM_CHAR` for a printable character (pass the integer
+  virtual-key code to get key messages) and `post_key_to_window` accepts
+  `"enter"` / `"esc"`; `save_window_layout` stores the rectangle `MoveWindow`
+  positions (re-save older layout files); snap / grid / cascade use the work
+  area; `wait_for_window` never sleeps past its timeout.
+- Screenshots of a region on Windows (`pil_screenshot`, `screenshot`,
+  `AC_screenshot`, `keyword_screenshot`, `capture_window`) capture any
+  monitor instead of returning black outside the primary one; a region
+  entirely off every monitor raises `AutoControlScreenException`.
+  `grab_logical` clips a region to the desktop and returns the clipped
+  origin, and set-of-marks renders the whole virtual desktop.
+- macOS: `click_mouse(clicks=n)` sets the click-state field on the n-th
+  click's events, `list_windows` includes minimised windows and `restore`
+  finds them, and `grab_logical` works in points across every display. None
+  of this has been run on a Mac yet (`Progress.md`).
+- With an Ed25519 key configured, a legacy HMAC signature is refused unless
+  `JE_AUTOCONTROL_ACCEPT_LEGACY_ACTION_SIGNATURES` is set, and an endpoint
+  holding only the public key refuses `AC_sign_action_file`.
+- A remote-desktop panel reads, drives and disconnects only the session it
+  opened; a panel whose session is replaced closes its window. Starting a
+  host no longer disconnects a viewer.
+- The Anthropic agent backends no longer rewrite turns they have sent: past
+  three screenshots the conversation restarts from a summary of the goal and
+  the actions so far plus the latest screenshot.
+- The `pytest11` entry point is the top-level module `je_auto_control_pytest`,
+  which imports only pytest; `je_auto_control.utils.pytest_plugin` re-exports
+  it. Reinstall for the new entry point to take effect.
+- `cryptography>=50.0.0` (was `>=48.0.1`). There is no `macosx_10_9_x86_64`
+  wheel at that floor, so an Intel Mac builds it from source.
+- Image and OCR: templates load from non-ASCII paths and may be grayscale; an
+  unreadable or unsupported template raises `ImageNotFoundException`;
+  `find_spans` finds a phrase that starts inside a long box; the centre of a
+  box with negative coordinates is floored.
+- `keyboard_layout` reports `None` for a Shift half that prints no single
+  character and labels ISO / UK / ABNT keys; a clipboard format named `None`
+  normalises to `""`.
 - GUI tabs are built the first time they are opened. `AutoControlGUIWidget`
   registers all 48 tabs from `gui/tab_registry.py` but constructs only the
   three it opens on and its own forms; `list_registered_tabs()` builds

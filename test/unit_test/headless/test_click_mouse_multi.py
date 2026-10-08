@@ -68,11 +68,14 @@ def test_an_integer_string_is_accepted(env):
 
 def test_macos_binds_every_click_xy_first(env, monkeypatch):
     calls = []
+    # The first click is the three-argument call it always was; the second
+    # also says it is the second, which macOS applications read off the
+    # event (test_osx_mouse_click_state.py).
     monkeypatch.setattr(auto_control_mouse, "mouse", types.SimpleNamespace(
-        click_mouse=lambda x, y, mouse_button: calls.append((x, y, mouse_button))))
+        click_mouse=lambda *args: calls.append(args)))
     monkeypatch.setattr(sys, "platform", "darwin")
     auto_control_mouse.click_mouse("mouse_left", 5, 6, clicks=2)
-    assert calls == [(5, 6, 1), (5, 6, 1)]
+    assert calls == [(5, 6, 1), (5, 6, 1, 2)]
 
 
 @pytest.mark.parametrize("clicks", [0, -1, True, False, 1.5, 2.0, "x", None])

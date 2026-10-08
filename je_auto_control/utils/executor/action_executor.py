@@ -60,6 +60,7 @@ from je_auto_control.utils.secrets import default_secret_manager
 from je_auto_control.utils.script_vars.interpolate import (
     interpolate_value,
 )
+from je_auto_control.utils.script_vars.execution import current_scope, execution_scope
 from je_auto_control.utils.script_vars.scope import VariableScope
 from je_auto_control.utils.http_client.http_client import http_request
 from je_auto_control.utils.generate_report.generate_html_report import generate_html, generate_html_report
@@ -68,6 +69,7 @@ from je_auto_control.utils.generate_report.generate_xml_report import generate_x
 from je_auto_control.utils.json.json_file import read_action_json
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.mcp_server.http_transport import start_mcp_http_server
+from je_auto_control.utils.rbac.policy import authorize_command
 from je_auto_control.utils.mcp_server.server import start_mcp_stdio_server
 from je_auto_control.utils.package_manager.package_manager_class import package_manager
 from je_auto_control.utils.project.create_project_structure import create_project_dir
@@ -2211,18 +2213,29 @@ def _human_type(text: str, base_delay: float = 0.05, jitter: float = 0.04,
     return {"chars": len(str(text)), "total_delay_s": round(sum(delays), 3)}
 
 
-def _sign_action_file(path: str, key: Optional[str] = None) -> Dict[str, Any]:
-    """Executor adapter: write an HMAC-SHA256 signature sidecar for a file."""
+def _sign_action_file(path: str, key: Optional[str] = None,
+                      private_key_path: Optional[str] = None) -> Dict[str, Any]:
+    """Executor adapter: write an Ed25519 or HMAC signature sidecar for a file."""
     from je_auto_control.utils.action_signing import sign_action_file
-    return {"signature_path": sign_action_file(path, key)}
+    return {"signature_path": sign_action_file(
+        path, key, private_key_path=private_key_path)}
+
+
+def _create_signing_keypair(private_path: str, public_path: str) -> Dict[str, Any]:
+    """Executor adapter: create an Ed25519 action-signing key pair."""
+    from je_auto_control.utils.action_signing import create_signing_keypair
+    create_signing_keypair(private_path, public_path)
+    return {"private_path": str(private_path), "public_path": str(public_path)}
 
 
 def _verify_action_file(path: str, key: Optional[str] = None,
-                        raise_on_fail: bool = False) -> Dict[str, Any]:
+                        raise_on_fail: bool = False,
+                        public_key_path: Optional[str] = None) -> Dict[str, Any]:
     """Executor adapter: verify an action file against its signature sidecar."""
     from je_auto_control.utils.action_signing import verify_action_file
     return verify_action_file(
         path, key, raise_on_fail=_as_bool(raise_on_fail),
+        public_key_path=public_key_path,
     ).to_dict()
 
 
@@ -7161,6 +7174,30 @@ class Executor:
             "AC_admin_broadcast_execute")},
     }
 
+    #: Whether :attr:`variables` follows the current ``execution_scope``. Only
+    #: the module-level executor does: it is the one object every server
+    #: request shares. A private Executor (an AC_parallel branch, a device
+    #: matrix runner, a resumable run) owns its scope outright.
+    _run_scoped = False
+
+    @property
+    def variables(self) -> VariableScope:
+        """The scope ``${var}`` and the variable commands read and write.
+
+        On the module executor inside an ``execution_scope`` that is the
+        run's own scope; otherwise it is this executor's own, which lives as
+        long as the executor does.
+        """
+        if self._run_scoped:
+            scope = current_scope()
+            if scope is not None:
+                return scope
+        return self._own_variables
+
+    @variables.setter
+    def variables(self, scope: VariableScope) -> None:
+        self._own_variables = scope
+
     def __init__(self):
         self._block_commands = BLOCK_COMMANDS
         self.variables = VariableScope()
@@ -7793,7 +7830,8 @@ class Executor:
             "AC_assert_any": _assert_any,
             "AC_assert_eventually": _assert_eventually,
 
-            # Action-file integrity (HMAC-SHA256 sign / verify)
+            # Action-file integrity (Ed25519 / HMAC-SHA256 sign / verify)
+            "AC_create_signing_keypair": _create_signing_keypair,
             "AC_sign_action_file": _sign_action_file,
             "AC_verify_action_file": _verify_action_file,
             "AC_encrypt_action_file": _encrypt_action_file,
@@ -8058,10 +8096,10 @@ class Executor:
     @staticmethod
     def set_allow_arbitrary_packages(enabled: bool) -> None:
         """
-        Allow (True) or refuse (False) ``AC_add_package_to_executor`` /
+        Allow (True) or refuse (False, the default) ``AC_add_package_to_executor`` /
         ``AC_add_package_to_callback_executor`` for packages outside the allowlist. Python only,
-        never an action command, so an action list cannot open its own gate. Until it is called,
-        any package loads with a ``DeprecationWarning``.
+        never an action command, so an action list cannot open its own gate. The allowlist is
+        ``allow_packages`` plus the names in ``JE_AUTOCONTROL_ALLOWED_PACKAGES``.
         """
         package_manager.set_allow_arbitrary_packages(enabled)
 
@@ -8118,6 +8156,7 @@ class Executor:
         Execute a single event
         """
         name = action[0]
+        authorize_command(name)  # RBAC; a no-op outside a server's user scope
         block_handler = self._block_commands.get(name)
         if block_handler is not None:
             args = action[1] if len(action) == 2 else {}
@@ -8345,6 +8384,7 @@ def _count_recorded_failure() -> None:
 
 # === 全域 Executor 實例 Global Executor Instance ===
 executor = Executor()
+executor._run_scoped = True  # the one executor every entry point shares
 package_manager.executor = executor
 
 
@@ -8372,7 +8412,15 @@ def execute_files(execute_files_list: list) -> List[Dict[str, str]]:
 
 def execute_action_with_vars(action_list: list, variables: dict
                              ) -> Dict[str, str]:
-    """Seed ``variables`` into the runtime scope and execute.
+    """Run ``action_list`` in a fresh variable scope seeded with ``variables``.
+
+    The scope belongs to this run: ``AC_set_var``, loop variables and macro
+    parameters work as usual inside it and are gone when it returns, so the
+    next run's ``${name}`` fails with ``Unknown variable`` instead of quietly
+    reading this caller's value. Plain ``executor.execute_action(...)`` keeps
+    the executor's process-lifetime scope; wrap it in
+    :func:`~je_auto_control.utils.script_vars.execution.execution_scope` to
+    isolate it the same way.
 
     Interpolation happens at dispatch time through the executor's runtime
     resolver, which defers nested action bodies (loops/branches/try). Doing a
@@ -8383,5 +8431,5 @@ def execute_action_with_vars(action_list: list, variables: dict
     landed in logs and record keys. Seeding the scope and letting the runtime
     resolver interpolate per action fixes both.
     """
-    executor.variables.update_many(variables)
-    return executor.execute_action(action_list)
+    with execution_scope(variables):
+        return executor.execute_action(action_list)

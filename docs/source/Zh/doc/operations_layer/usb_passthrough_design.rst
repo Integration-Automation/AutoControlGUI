@@ -138,6 +138,74 @@ viewer 端用 ``UsbPassthroughClient.list_devices()`` 取得。讓列舉與傳�
 共用同一條已通過 auth gate 的 channel，避免再耦合一層 REST transport，
 也讓 ACL 過濾與 claim 決策走同一份邏輯。
 
+請求識別
+--------
+
+回覆原本只依種類配對：等待中的那一個 OPEN、那一個 LIST、某個
+``claim_id`` 上的那一次交換。請求逾時後才到的回覆因此會交給同種類的
+*下一個*\ 請求——``open(bbbb)`` 綁到 host 為 ``aaaa`` 開的 claim，bulk
+讀取拿到上一次讀取的資料。host 接受最長 60 秒的 ``timeout_ms``\ ，
+viewer 預設 10 秒就放棄，所以正常使用就會遇到。
+
+現在每個 JSON payload 都可以多帶一個選用的 key::
+
+    "request_id": "<字串，1..64 個字元>"
+
+- **viewer → host。** 編號由 viewer 產生，加在每個請求的 payload 裡：
+  ``OPEN``\ 、``RESUME``\ 、``LIST``\ 、``CLOSE``\ 、``CTRL``\ 、
+  ``BULK``\ 、``INT``\ 。``LIST`` 與 ``CLOSE`` 原本 payload 是空的，
+  現在送 ``{"request_id": "..."}``\ 。
+- **host → viewer。** host 把編號原樣放進該請求的每一個回覆：
+  ``OPENED``\ 、``LIST``\ 、``CLOSED``\ 、``CTRL`` / ``BULK`` /
+  ``INT`` 的回覆，以及 ``ERROR``\ （包含被鎖定時的「rate limited」
+  ERROR）。分片的回覆只帶一次，在重組後的 JSON 裡。
+- ``CREDIT`` 不帶編號。credit 是對 claim 的授權而不是回覆，遲到回覆
+  後面跟著的 credit 仍然有效。
+- frame header 沒有變動；host 不解讀編號的內容。
+
+viewer 把回覆交給編號相符的請求。逾時的請求會留下一個 *tombstone*\ ；
+之後與它相符的回覆會被丟棄——只丟那一個。遲到但成功的 ``OPENED``
+代表 host 為一個已經收到逾時的呼叫端佔著裝置，所以 viewer 會對那個
+claim 送 ``CLOSE``\ 。（``RESUME`` 的遲到回覆不處理：那個 claim 可能
+已經再次 resume 並在使用中。）
+
+相容性：
+
+================  =======================================================
+viewer / host     行為
+================  =======================================================
+新 / 新           依編號配對。逾時只損失逾時的那個請求，claim 與 client
+                  都能繼續使用。
+舊 / 新           viewer 不送編號，host 就不帶回：每個 payload 與以前
+                  逐位元組相同。依種類配對，原本的缺陷仍在。
+新 / 舊           host 忽略不認得的 key，也不帶回編號；回覆依種類配對。
+                  逾時之後 viewer 會停下來而不是猜（見下）。
+================  =======================================================
+
+對不帶回編號的 host，無法分辨遲到的回覆與下一個請求的回覆。「丟掉
+下一個回覆」不可行：如果 host 根本沒送出那個遲到的回覆，丟掉的就是
+正確的回覆。所以請求逾時之後，viewer 會以 ``UsbClientDesynchronized``
+拒絕同種類的後續請求：
+
+- 傳輸逾時讓該 claim 不能再用（``ClientHandle.reusable`` 為
+  ``False``\ ）。``close()`` 仍然可用——遲到的傳輸回覆不會被誤認成
+  ``CLOSED``\ ——重新 open 裝置就得到乾淨的 claim。其他 claim 不受
+  影響；
+- ``OPEN`` / ``RESUME`` 逾時會擋住該 client 之後的 ``open`` /
+  ``resume``\ （``UsbPassthroughClient.reusable`` 為 ``False``\ ），
+  ``LIST`` 逾時會擋住之後的 ``list_devices``\ 。請重新連線 channel
+  並使用新的 client。
+
+viewer 從第一個帶回自己編號的回覆得知 host 是新版
+（``UsbPassthroughClient.peer_echoes_request_ids``\ ）。在那之前逾時
+一律以保守方式處理；之後若遲到的回覆帶著編號到達，就解除限制。
+
+同時修正了兩個較小的配對問題。``claim_id`` 為 0 的 ``ERROR``\ ——
+被拒絕的 ``OPEN`` 或失敗的 ``LIST`` 的回覆——原本沒有請求可以交付，
+呼叫會逾時；帶編號之後會讓對應的呼叫失敗。另外，因超過 2 MiB 上限
+而被丟棄的重組訊息，其尾段原本會被當成獨立的訊息解析；現在會一路
+略過到它的 EOF frame。
+
 Backpressure
 -------------
 

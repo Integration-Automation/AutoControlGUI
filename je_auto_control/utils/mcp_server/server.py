@@ -15,7 +15,9 @@ import time
 from typing import Any, Callable, Dict, List, Optional, TextIO
 
 from je_auto_control.utils.cli_output import utf8_stream
+from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
+from je_auto_control.utils.mcp_server._authz import authorize_tool_call, visible_tools
 from je_auto_control.utils.mcp_server.audit import AuditLogger
 from je_auto_control.utils.mcp_server.context import (
     OperationCancelledError, ToolCallContext,
@@ -36,6 +38,7 @@ from je_auto_control.utils.mcp_server.tools import (
 from je_auto_control.utils.mcp_server.tools._validation import (
     undeclared_arguments, validate_arguments,
 )
+from je_auto_control.utils.mcp_server._argument_policy import ArgumentPolicy
 from je_auto_control.utils.mcp_server._client_requests import (
     ClientRequestMixin,
 )
@@ -81,6 +84,9 @@ class MCPServer(StatelessDispatchMixin, SubscriptionMixin, ClientRequestMixin):
                         else AuditLogger())
         self._rate_limiter = rate_limiter
         self._log_bridge = log_bridge
+        #: Path roots and env:// allowlist for tool arguments; off unless the
+        #: environment configures them. Assign another to change it.
+        self.argument_policy = ArgumentPolicy.from_env()
         self._stop = threading.Event()
         self._initialized = False
         self._peer_era: Optional[str] = None  # the stdio peer's; see _note_peer_era
@@ -522,7 +528,7 @@ class MCPServer(StatelessDispatchMixin, SubscriptionMixin, ClientRequestMixin):
         # client as "-32603 dictionary changed size during iteration".
         with self._tools_lock:
             tools = list(self._tools.values())
-        return {"tools": [tool.to_descriptor() for tool in tools]}
+        return {"tools": [tool.to_descriptor() for tool in visible_tools(tools)]}
 
     def _handle_resources_list(self) -> Dict[str, Any]:
         """List descriptors for every registered resource."""
@@ -604,7 +610,9 @@ class MCPServer(StatelessDispatchMixin, SubscriptionMixin, ClientRequestMixin):
 
         Raises :class:`_MCPError` when the request is malformed, the tool is
         unknown or the rate limit is hit, and :class:`_InvalidToolArguments`
-        when the arguments fail the tool's schema.
+        when the arguments fail the tool's schema or name a path or value
+        reference the configured :attr:`argument_policy` refuses. The
+        arguments returned carry the canonical form of every checked path.
         """
         name = params.get("name")
         arguments = params.get("arguments") or {}
@@ -615,10 +623,15 @@ class MCPServer(StatelessDispatchMixin, SubscriptionMixin, ClientRequestMixin):
         tool = self._tools.get(name)
         if tool is None:
             raise _MCPError(-32602, f"Unknown tool: {name}")
+        authorize_tool_call(tool, arguments, self._audit)  # RBAC; a no-op without a user
         violation = (validate_arguments(tool.input_schema, arguments)
                      or undeclared_arguments(tool.input_schema, arguments))
         if violation is not None:
             raise _InvalidToolArguments(f"Invalid arguments for {name}: {violation}")
+        try:
+            arguments = self.argument_policy.apply(name, tool.input_schema, arguments)
+        except AutoControlException as error:
+            raise _InvalidToolArguments(f"Invalid arguments for {name}: {error}") from error
         if self._rate_limiter is not None and not self._rate_limiter.try_acquire():
             raise _MCPError(-32000, f"Rate limit exceeded for tool {name!r}")
         self._maybe_confirm_destructive(name, tool, arguments)

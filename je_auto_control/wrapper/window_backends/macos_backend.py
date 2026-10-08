@@ -3,9 +3,9 @@
 Reading and acting are two different APIs on macOS, with two different
 permission stories, and this backend needs both:
 
-* **Quartz** (``CGWindowListCopyWindowInfo``) enumerates every on-screen
-  window with its id, title, owning pid and bounds. It needs no grant, so
-  listing, rectangles and ownership work out of the box.
+* **Quartz** (``CGWindowListCopyWindowInfo``) enumerates windows with their
+  id, title, owning pid and bounds. It needs no grant, so listing, rectangles
+  and ownership work out of the box.
 * **The accessibility API** is the only way to *move*, *close*, *minimise* or
   *raise* someone else's window. It is gated by TCC: the user grants
   Accessibility to the interpreter, and until they do every action silently
@@ -17,6 +17,16 @@ Quartz has no window handle that the accessibility API accepts, so a
 ``CGWindowID`` is matched to its ``AXUIElement`` by owner, title and frame.
 That is what the two APIs give us to work with; the alternative is a private
 symbol (``_AXUIElementGetWindow``) this project will not depend on.
+
+**A minimised window is off screen, not gone.** Quartz's on-screen list leaves
+it out, so one window is always looked up by id
+(``kCGWindowListOptionIncludingWindow``), which answers for it wherever it is.
+Looking it up in the on-screen list instead made ``minimize`` a one-way trip:
+the window vanished from ``list_windows`` and ``restore`` blamed a missing
+Accessibility grant that had in fact been given. ``list_windows`` includes
+minimised windows, as the Windows backend's does, but Quartz cannot tell a
+minimised window from the many other things an application keeps off screen,
+so that half asks the accessibility API and is empty without the grant.
 """
 import sys
 from typing import Any, List, Optional, Tuple
@@ -61,28 +71,84 @@ class MacOSWindowBackend(WindowManageBackend):
         found = Quartz.CGWindowListCopyWindowInfo(options, Quartz.kCGNullWindowID)
         return list(found or [])
 
+    def _off_screen_info(self, on_screen: List[dict]) -> List[dict]:
+        """Application-layer windows Quartz knows of that are not on screen.
+
+        Far more than the minimised ones: hidden applications, other Spaces
+        and windows an application built and never showed are all here.
+        """
+        import Quartz
+
+        shown = {_number(info) for info in on_screen}
+        options = (Quartz.kCGWindowListOptionAll
+                   | Quartz.kCGWindowListExcludeDesktopElements)
+        found = Quartz.CGWindowListCopyWindowInfo(options, Quartz.kCGNullWindowID)
+        return [info for info in (found or [])
+                if _number(info) and _number(info) not in shown
+                and _is_application_layer(info)]
+
+    def _minimized_info(self, on_screen: List[dict]) -> List[dict]:
+        """The off-screen windows whose accessibility element says minimised.
+
+        One ``AXWindows`` query per owning process, not per window. Without
+        the Accessibility grant no element is found and this is empty, which
+        leaves the listing at what is on screen.
+        """
+        import Quartz
+
+        minimized = []
+        elements: dict = {}
+        for info in self._off_screen_info(on_screen):
+            pid = int(info.get(Quartz.kCGWindowOwnerPID, 0) or 0)
+            if not pid:
+                continue
+            if pid not in elements:
+                elements[pid] = self._ax_windows_for(pid)
+            window = _match_info(elements[pid], info)
+            if window is not None and _ax_minimized(window):
+                minimized.append(info)
+        return minimized
+
     def list_windows(self) -> List[Tuple[int, str]]:
         import Quartz
 
+        on_screen = self._window_info()
         windows = []
-        for info in self._window_info():
+        # On-screen windows first, in Quartz's front-to-back order; minimised
+        # ones are behind everything, so they follow.
+        for info in on_screen + self._minimized_info(on_screen):
             # Layer 0 is the ordinary application layer. Menu bars, the Dock
             # and status items live above it and are not windows a caller
             # means when they say "the Safari window".
-            if int(info.get(Quartz.kCGWindowLayer, 0) or 0) != 0:
+            if not _is_application_layer(info):
                 continue
-            number = int(info.get(Quartz.kCGWindowNumber, 0) or 0)
+            number = _number(info)
             if not number:
                 continue
             windows.append((number, str(info.get(Quartz.kCGWindowName, "") or "")))
         return windows
 
     def _info_for(self, window_id: int) -> Optional[dict]:
+        """Quartz's description of one window, on screen or not, or None.
+
+        Asked for by id rather than searched for in the on-screen list, which
+        is what lets a minimised window be found again and restored.
+        """
         import Quartz
 
-        for info in self._window_info():
-            if int(info.get(Quartz.kCGWindowNumber, 0) or 0) == int(window_id):
-                return info
+        wanted = int(window_id)
+        if wanted <= 0:
+            return None
+        # Asked by id first. On a real window server (macos-14) that query
+        # came back without a window the same process had just minimised, so
+        # the complete list is the second source rather than a failure.
+        for option, relative_to in (
+                (Quartz.kCGWindowListOptionIncludingWindow, wanted),
+                (Quartz.kCGWindowListOptionAll, Quartz.kCGNullWindowID)):
+            found = Quartz.CGWindowListCopyWindowInfo(option, relative_to)
+            for info in found or []:
+                if _number(info) == wanted:
+                    return info
         return None
 
     def foreground_window(self) -> int:
@@ -150,11 +216,7 @@ class MacOSWindowBackend(WindowManageBackend):
         pid = int(info.get(Quartz.kCGWindowOwnerPID, 0) or 0)
         if not pid:
             return None
-        bounds = info.get(Quartz.kCGWindowBounds) or {}
-        return _best_match(
-            self._ax_windows_for(pid),
-            (int(bounds.get("X", 0)), int(bounds.get("Y", 0))),
-            str(info.get(Quartz.kCGWindowName, "") or ""))
+        return _match_info(self._ax_windows_for(pid), info)
 
     def _require_ax_window(self, window_id: int, operation: str):
         window = self._ax_window(window_id)
@@ -163,16 +225,17 @@ class MacOSWindowBackend(WindowManageBackend):
         return window
 
     def is_minimized(self, window_id: int) -> bool:
-        import ApplicationServices as ax
+        import Quartz
 
         window = self._ax_window(window_id)
-        if window is None:
-            # A minimised window is not in the on-screen list at all, so
-            # failing to find it is itself the answer here.
-            return self._info_for(window_id) is None
-        _error, value = ax.AXUIElementCopyAttributeValue(
-            window, "AXMinimized", None)
-        return bool(value)
+        if window is not None:
+            return _ax_minimized(window)
+        # No element to ask -- the Accessibility grant is missing, or the
+        # match failed. Quartz still knows whether the window is on screen,
+        # which is the nearest answer it has; a window it has never heard of
+        # is not minimised, it is gone.
+        info = self._info_for(window_id)
+        return info is not None and not info.get(Quartz.kCGWindowIsOnscreen)
 
     def set_foreground(self, window_id: int) -> None:
         import AppKit
@@ -254,6 +317,40 @@ class MacOSWindowBackend(WindowManageBackend):
     # no equivalent of PostMessage or XSendEvent: an event goes to whatever
     # has focus, and there is no way to address one window without raising it.
     # Refusing says so; a "success" that focused something else would not.
+
+
+def _number(info: dict) -> int:
+    """The ``CGWindowID`` in a Quartz window-info dictionary, or 0."""
+    import Quartz
+
+    return int(info.get(Quartz.kCGWindowNumber, 0) or 0)
+
+
+def _is_application_layer(info: dict) -> bool:
+    """Whether a Quartz window sits on layer 0, where ordinary windows live."""
+    import Quartz
+
+    return int(info.get(Quartz.kCGWindowLayer, 0) or 0) == 0
+
+
+def _ax_minimized(window: Any) -> bool:
+    """Whether an accessibility window reports itself minimised."""
+    import ApplicationServices as ax
+
+    _error, value = ax.AXUIElementCopyAttributeValue(
+        window, "AXMinimized", None)
+    return bool(value)
+
+
+def _match_info(candidates: list, info: dict):
+    """The accessibility window among ``candidates`` that ``info`` describes."""
+    import Quartz
+
+    bounds = info.get(Quartz.kCGWindowBounds) or {}
+    return _best_match(
+        candidates,
+        (int(bounds.get("X", 0)), int(bounds.get("Y", 0))),
+        str(info.get(Quartz.kCGWindowName, "") or ""))
 
 
 def _best_match(candidates: list, wanted_origin: Tuple[int, int],

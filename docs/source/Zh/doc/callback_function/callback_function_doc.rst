@@ -55,6 +55,8 @@
 
    from je_auto_control import package_manager
 
+   # 套件閘門會拒絕沒有被放行的套件
+   package_manager.allow_packages("time")
    # 載入 time 模組的所有函式
    package_manager.add_package_to_callback_executor("time")
 

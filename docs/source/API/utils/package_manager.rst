@@ -25,6 +25,8 @@ PackageManager
       ``event_dict``.
 
       :param str package: Package name to load.
+      :raises AutoControlExecuteActionException: the package gate refused the package
+         (see ``allow_packages``); nothing is imported.
 
       Functions are added with the naming convention ``package_function``.
       For example, ``time.sleep`` becomes ``time_sleep``.
@@ -47,15 +49,19 @@ PackageManager
 
    .. method:: allow_packages(*packages)
 
-      Adds packages, and their submodules, to the package gate's allowlist.
+      Adds packages, and their submodules, to the package gate's allowlist. The allowlist starts
+      from the comma-separated names in the ``JE_AUTOCONTROL_ALLOWED_PACKAGES`` environment
+      variable, read when the manager is created; ``je_auto_control run --allow-package NAME``
+      adds to it for one run. Raises ``AutoControlExecuteActionException`` for a name that is not
+      a dotted module name.
 
    .. method:: set_allow_arbitrary_packages(enabled)
 
-      Allows (``True``) or refuses (``False``) packages outside the allowlist. Until either switch
-      is called, any package loads with a ``DeprecationWarning``. ``add_package_to_executor`` and
-      ``add_package_to_callback_executor`` check the gate before importing and raise
-      ``AutoControlExecuteActionException`` for a refused package. The ``Executor`` has the same two
-      static methods; neither is an ``AC_*`` command.
+      Allows (``True``) or refuses (``False``, the default) packages outside the allowlist.
+      ``add_package_to_executor`` and ``add_package_to_callback_executor`` check the gate before
+      importing and raise ``AutoControlExecuteActionException`` for a refused package, so with
+      nothing configured no package loads. The ``Executor`` has the same two static methods;
+      neither is an ``AC_*`` command.
 
    .. method:: add_package_to_target(package, target)
 
@@ -69,6 +75,9 @@ PackageManager
 .. code-block:: python
 
    from je_auto_control import package_manager
+
+   # Nothing loads until it is allowed (the package gate)
+   package_manager.allow_packages("os")
 
    # Add 'os' module to the executor
    package_manager.add_package_to_executor("os")

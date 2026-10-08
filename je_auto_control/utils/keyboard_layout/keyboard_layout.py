@@ -20,7 +20,7 @@ Falls back to the US table where the OS cannot answer, and returns an empty
 mapping off Windows. Imports no ``PySide6``.
 """
 import sys
-from typing import Dict, Optional, Tuple
+from typing import Any, Callable, Dict, Optional, Tuple
 
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 
@@ -43,7 +43,30 @@ US_PRINTABLE_VK: Dict[int, Tuple[str, str]] = {
 _VK_SHIFT = 0x10
 _VK_SPACE = 0x20
 _MAPVK_VK_TO_VSC = 0
-_LAYOUT_CACHE: Dict[int, Dict[int, Tuple[str, str]]] = {}
+#: Keys the US table has no row for but other layouts print from: ABNT C1/C2
+#: (Brazilian), OEM_8 (UK and others), OEM_AX, and OEM_102 -- the extra key
+#: beside left Shift on ISO boards (``<`` on German, French and Nordic ones).
+#: Without them those keys never had a label on any layout.
+_EXTRA_CANDIDATE_VK: Tuple[int, ...] = (0xC1, 0xC2, 0xDF, 0xE1, 0xE2)
+
+#: ``{vk: (unshifted, shifted)}``; the shifted half is ``None`` for a key whose
+#: Shift level prints no single character (a dead key, typically).
+CharTable = Dict[int, Tuple[str, Optional[str]]]
+_LAYOUT_CACHE: Dict[int, CharTable] = {}
+
+
+def _user32() -> Any:
+    """A ``user32`` handle of this module's own.
+
+    ``ctypes.windll.user32`` is one object for the whole process, so a
+    prototype set on it is set for everybody: after ``ToUnicodeEx.argtypes``
+    was declared there with a ``c_char`` array, another caller passing the
+    usual ``c_ubyte`` array got ``ArgumentError``. A separate ``WinDLL``
+    carries its own prototypes.
+    """
+    import ctypes
+    # getattr: the name exists on Windows only, which is where this is called.
+    return getattr(ctypes, "WinDLL")("user32")
 
 
 def foreground_keyboard_layout() -> Optional[int]:
@@ -51,8 +74,7 @@ def foreground_keyboard_layout() -> Optional[int]:
     if not sys.platform.startswith("win"):
         return None
     try:
-        import ctypes
-        user32 = ctypes.windll.user32
+        user32 = _user32()
         window = user32.GetForegroundWindow()
         thread_id = user32.GetWindowThreadProcessId(window, None) if window else 0
         return int(user32.GetKeyboardLayout(thread_id))
@@ -61,8 +83,12 @@ def foreground_keyboard_layout() -> Optional[int]:
         return None
 
 
-def _translator(user32, layout: int):
-    """Return ``translate(vk, shifted) -> str`` for one layout."""
+def _translator(user32: Any, layout: int) -> Callable[[int, bool], str]:
+    """Return ``translate(vk, shifted) -> str`` for one layout.
+
+    ``user32`` must be a private handle (:func:`_user32`): the prototypes
+    below are set on whatever is passed in.
+    """
     import ctypes
     from ctypes import wintypes
     user32.ToUnicodeEx.argtypes = [
@@ -90,22 +116,27 @@ def _translator(user32, layout: int):
     return _translate
 
 
-def _build_table(translate) -> Dict[int, Tuple[str, str]]:
-    """Translate every candidate key, keeping only the printable results."""
-    table: Dict[int, Tuple[str, str]] = {}
-    for vk in US_PRINTABLE_VK:
+def _build_table(translate: Callable[[int, bool], str]) -> CharTable:
+    """Translate every candidate key, keeping only the printable results.
+
+    A key whose Shift level is a dead key (Shift+6 on US-International) or
+    prints nothing gets ``None`` for that half. It used to repeat the
+    unshifted character, so Shift+6 was labelled ``6``.
+    """
+    table: CharTable = {}
+    for vk in (*US_PRINTABLE_VK, *_EXTRA_CANDIDATE_VK):
         plain, shifted = translate(vk, False), translate(vk, True)
         if len(plain) == 1 and plain.isprintable():
             usable = len(shifted) == 1 and shifted.isprintable()
-            table[vk] = (plain, shifted if usable else plain)
+            table[vk] = (plain, shifted if usable else None)
     translate(_VK_SPACE, False)          # flush any dead-key state left behind
     return table
 
 
-def layout_char_table(layout: Optional[int] = None
-                      ) -> Dict[int, Tuple[str, str]]:
+def layout_char_table(layout: Optional[int] = None) -> CharTable:
     """``{vk: (unshifted, shifted)}`` for ``layout`` (default: the foreground one).
 
+    ``shifted`` is ``None`` where Shift plus the key prints no character.
     Empty off Windows or when the OS will not answer, so callers can fall back
     to :data:`US_PRINTABLE_VK`.
     """
@@ -116,8 +147,7 @@ def layout_char_table(layout: Optional[int] = None
     if layout in _LAYOUT_CACHE:
         return _LAYOUT_CACHE[layout]
     try:
-        import ctypes
-        table = _build_table(_translator(ctypes.windll.user32, layout))
+        table = _build_table(_translator(_user32(), layout))
     except (OSError, AttributeError, ValueError) as error:
         autocontrol_logger.info("layout table build failed: %r", error)
         return {}
@@ -125,7 +155,7 @@ def layout_char_table(layout: Optional[int] = None
     return table
 
 
-def char_table(layout: Optional[int] = None) -> Dict[int, Tuple[str, str]]:
+def char_table(layout: Optional[int] = None) -> CharTable:
     """The layout's table, or the US table when the layout cannot be read.
 
     Not merged: a key missing from the layout's table (a dead key such as
@@ -135,7 +165,7 @@ def char_table(layout: Optional[int] = None) -> Dict[int, Tuple[str, str]]:
 
 
 def vk_to_char(vk: int, shifted: bool = False,
-               table: Optional[Dict[int, Tuple[str, str]]] = None
+               table: Optional[CharTable] = None
                ) -> Optional[str]:
     """The character this key produces, or ``None`` if it produces none."""
     pair = (char_table() if table is None else table).get(int(vk))

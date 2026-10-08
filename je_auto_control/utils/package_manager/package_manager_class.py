@@ -1,6 +1,6 @@
 import importlib
+import os
 import re
-import warnings
 from importlib.util import find_spec
 from inspect import getmembers, isfunction, isbuiltin, isclass
 from types import ModuleType
@@ -10,8 +10,31 @@ from je_auto_control.utils.exception.exceptions import AutoControlExecuteActionE
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 
 _PACKAGE_NAME_RE = re.compile(r"^[A-Za-z_]\w*(\.[A-Za-z_]\w*)*$")
-# warnings.warn -> _check_allowed -> add_package_to_* -> the command's caller
-_GATE_WARNING_STACKLEVEL = 3
+
+#: Comma-separated package names the gate allows, for hosts with no Python of
+#: their own to call ``executor.allow_packages``: the CLIs, the socket / REST /
+#: MCP servers and the scheduler. Read once, when a manager is created.
+ALLOWED_PACKAGES_ENV = "JE_AUTOCONTROL_ALLOWED_PACKAGES"
+
+
+def is_package_name(name: object) -> bool:
+    """Whether ``name`` is a dotted Python module name, the only thing the gate lists."""
+    return isinstance(name, str) and bool(_PACKAGE_NAME_RE.match(name))
+
+
+def _packages_from_environment() -> set[str]:
+    """The names in ``JE_AUTOCONTROL_ALLOWED_PACKAGES``; what is not a module name is skipped."""
+    allowed: set[str] = set()
+    for raw in os.environ.get(ALLOWED_PACKAGES_ENV, "").split(","):
+        name = raw.strip()
+        if not name:
+            continue
+        if is_package_name(name):
+            allowed.add(name)
+        else:
+            # Importing the package must not fail on a typo in the environment.
+            autocontrol_logger.error("%s: ignored %r, not a package name", ALLOWED_PACKAGES_ENV, name)
+    return allowed
 
 
 class PackageManager:
@@ -26,15 +49,15 @@ class PackageManager:
         self.installed_package_dict: dict[str, ModuleType] = {}
         self.executor = None
         self.callback_executor = None
-        # Package gate (workspace X-12). None = not configured: any package still loads, with a
-        # DeprecationWarning. False = only ``allowed_packages``; True = any package, silently.
-        self.allow_arbitrary_packages: Optional[bool] = None
-        self.allowed_packages: set[str] = set()
+        # Package gate (workspace X-12). False (the default) = only ``allowed_packages``;
+        # True = any package. The allowlist starts from JE_AUTOCONTROL_ALLOWED_PACKAGES.
+        self.allow_arbitrary_packages: bool = False
+        self.allowed_packages: set[str] = _packages_from_environment()
 
     def set_allow_arbitrary_packages(self, enabled: bool) -> None:
         """
         設定是否允許載入允許清單以外的套件
-        Allow (True) or refuse (False) packages outside :attr:`allowed_packages`.
+        Allow (True) or refuse (False, the default) packages outside :attr:`allowed_packages`.
         Deliberately not an ``AC_*`` command: an action list must not open its own gate.
         """
         self.allow_arbitrary_packages = bool(enabled)
@@ -43,7 +66,13 @@ class PackageManager:
         """
         把套件加入允許清單（連同其子模組）
         Add packages to the allowlist; a listed package also allows its submodules.
+
+        :raises AutoControlExecuteActionException: a name is not a dotted module name (none is added)
         """
+        for package in packages:
+            if not is_package_name(package):
+                raise AutoControlExecuteActionException(
+                    f"cannot allow {package!r}: not a package name")
         self.allowed_packages.update(packages)
 
     def _is_allowlisted(self, package: str) -> bool:
@@ -54,19 +83,14 @@ class PackageManager:
         """Refuse ``package`` before it is imported, unless the gate lets it through."""
         if isinstance(package, str) and self._is_allowlisted(package):
             return
-        if self.allow_arbitrary_packages is True:
+        if self.allow_arbitrary_packages:
             return
-        if self.allow_arbitrary_packages is False:
-            raise AutoControlExecuteActionException(
-                f"package {package!r} is not allowed; the host must call "
-                "executor.allow_packages(...) or executor.set_allow_arbitrary_packages(True)"
-            )
-        warnings.warn(
-            f"loading package {package!r} that is not on the allowlist; a future release will refuse "
-            "it by default. Call executor.allow_packages(...) for the packages you load, or "
-            "executor.set_allow_arbitrary_packages(True) to keep loading any package.",
-            DeprecationWarning,
-            stacklevel=_GATE_WARNING_STACKLEVEL,
+        raise AutoControlExecuteActionException(
+            f"package {package!r} is not allowed. To allow it: list it in the "
+            f"{ALLOWED_PACKAGES_ENV} environment variable (comma-separated), pass "
+            "--allow-package NAME to `je_auto_control run`, or call "
+            "executor.allow_packages(...) from Python; "
+            "executor.set_allow_arbitrary_packages(True) allows every package."
         )
 
     def check_package(self, package: str) -> Optional[ModuleType]:
