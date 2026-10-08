@@ -52,8 +52,8 @@ def _sink_scroll(event: Dict[str, Any]) -> None:
     # direction on every backend, X11 and Wayland included. They used to
     # discard it and always scroll ``scroll_direction``, so a macro
     # recorded on Windows replayed backwards there, silently. The direction
-    # is named too: X11 and Wayland default to ``scroll_down`` for a positive
-    # value, the recorders' "up".
+    # is named too, so a positive value is the recorders' "up" whatever the
+    # default is (it was ``scroll_down`` on X11 and Wayland).
     mouse_scroll(int(event.get("value", event.get("delta", 1))),
                  scroll_direction="scroll_up")
 

@@ -40,7 +40,7 @@ def _install_common(monkeypatch, get_position):
     monkeypatch.setattr(acm, "screen_size", lambda: (1920, 1080))
     monkeypatch.setattr(acm, "mouse", fake_mouse)
     monkeypatch.setattr(acm, "special_mouse_keys_table",
-                        {"scroll_down": 5}, raising=False)
+                        {"scroll_up": 4, "scroll_down": 5}, raising=False)
     monkeypatch.setattr(sys, "platform", "linux")
 
     def _set_pos(x, y):

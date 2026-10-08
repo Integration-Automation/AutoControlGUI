@@ -83,12 +83,17 @@ Windows 的按鍵表也收常見的別名（``ctrl``、``alt``、``enter``、``e
 
    write("Hello World")
 
+大寫字母會打成大寫：``write`` 在 Windows 與 X11 會在那個鍵外面按住 Shift（以前會
+打成小寫）。Windows 換行（CR LF）是一個換行，只按一次 Enter，不是兩次。
+``is_shift=True`` 會在每個鍵外面按住 Shift，而且每個平台都有效；``type_keyboard``、
+``press_keyboard_key`` 與 ``hotkey`` 也一樣，以前在 macOS 以外會被忽略。
+
 ``write`` 會把文字寫進 log、記進測試紀錄並回傳。密碼或 token 請用
 ``write_secret``\ （命令是 ``AC_write_secret``，參數 ``secret``）：log 只記長度、
 紀錄只留遮蔽值、不回傳任何東西，錯誤訊息也不會帶出任何字元。它把每個字元都以
-Unicode 按鍵事件送出，所以送到的文字一字不差（``write`` 在 Windows 上會把大寫打
-成小寫）；鍵盤後端不支援 Unicode 輸入時（目前只有 Windows 支援），在打任何字之前
-就拒絕。
+Unicode 按鍵事件送出，所以不論鍵盤配置與 Caps Lock 狀態，送到的文字一字不差
+（換行、Tab 與 Backspace 以按鍵送出）；鍵盤後端不支援 Unicode 輸入時（目前只有
+Windows 支援），在打任何字之前就拒絕。
 
 .. code-block:: python
 

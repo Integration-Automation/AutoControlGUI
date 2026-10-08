@@ -83,7 +83,7 @@ def _fake_release_mouse(mouse_keycode: Any, x: Any = None,
 
 
 def _fake_mouse_scroll(scroll_value: int, x: Any = None, y: Any = None,
-                        scroll_direction: str = "scroll_down"
+                        scroll_direction: str = "scroll_up"
                         ) -> Tuple[int, str]:
     with _STATE_LOCK:
         _STATE.mouse_actions.append(

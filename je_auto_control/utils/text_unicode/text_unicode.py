@@ -25,6 +25,13 @@ from je_auto_control.utils.exception.exceptions import AutoControlKeyboardExcept
 
 Sink = Callable[[Dict[str, Any]], None]
 
+#: Whitespace that means a *key*, not a character, and the key it means. Sent
+#: as a Unicode code point these are dropped by most applications (a line feed
+#: especially), so multi-line text arrived as one run-on line with no error.
+#: ``write`` uses the same table (``WRITE_CONTROL_KEYS``).
+CONTROL_KEYS: Dict[str, str] = {"\n": "return", "\r": "return", "\t": "tab",
+                                "\b": "back"}
+
 
 def unicode_code_units(text: str) -> List[int]:
     """Return the UTF-16 code units of ``text`` (surrogate pairs for > U+FFFF)."""
@@ -49,11 +56,21 @@ def plan_paste(text: str, *, modifier: str = "ctrl") -> List[Dict[str, Any]]:
 def plan_unicode_keys(text: str) -> List[Dict[str, Any]]:
     """Return the op-plan to enter ``text`` as character-carrying key events.
 
-    One op per UTF-16 code unit, so a character above U+FFFF becomes the two
-    surrogates the platform layer has to send separately.
+    One ``unicode_unit`` op per UTF-16 code unit, so a character above U+FFFF
+    becomes the two surrogates the platform layer has to send separately. A
+    line break, Tab or Backspace is a ``key`` op naming the key to press
+    (:data:`CONTROL_KEYS`) instead of code point 10 / 13 / 9 / 8, which
+    applications drop; CR LF is one line break, as in ``write``.
     """
-    return [{"op": "unicode_unit", "unit": unit}
-            for unit in unicode_code_units(text)]
+    plan: List[Dict[str, Any]] = []
+    for char in (text or "").replace("\r\n", "\n"):
+        key = CONTROL_KEYS.get(char)
+        if key is not None:
+            plan.append({"op": "key", "key": key})
+        else:
+            plan.extend({"op": "unicode_unit", "unit": unit}
+                        for unit in unicode_code_units(char))
+    return plan
 
 
 def unicode_keys_supported() -> bool:
@@ -74,6 +91,9 @@ def _default_sink(event: Dict[str, Any]) -> None:
     elif op == "hotkey":
         from je_auto_control.wrapper.auto_control_keyboard import hotkey
         hotkey(list(event["keys"]))
+    elif op == "key":
+        from je_auto_control.wrapper.auto_control_keyboard import type_keyboard
+        type_keyboard(event["key"])
     elif op == "unicode_unit":
         from je_auto_control.wrapper.platform_wrapper import keyboard
         # 平台縫沒有承諾這個成員——只有 Windows 有——所以照 `unicode_keys_supported`
@@ -113,7 +133,9 @@ def type_unicode_keys(text: str, *,
 
     Requires a backend exposing ``type_unicode_unit`` (Windows today); callers
     that need a guaranteed route on every platform should use
-    :func:`type_unicode_text`.
+    :func:`type_unicode_text`. Line breaks, Tab and Backspace are pressed as
+    keys (see :func:`plan_unicode_keys`), so a custom ``sink`` receives
+    ``{"op": "key", "key": ...}`` for them.
     """
     plan = plan_unicode_keys(text)
     return _dispatch(plan, text, sink, "keys")

@@ -30,6 +30,7 @@ here are load-bearing and neither is arbitrary:
 """
 import ctypes
 import math
+import numbers
 import sys
 import time
 import warnings
@@ -126,10 +127,15 @@ def _coordinate(value: object, axis: str) -> int:
     A non-numeric or infinite value raised ValueError / OverflowError, which
     callers catching AutoControlException missed; a value past int32 was
     truncated by ctypes and moved the cursor somewhere else while this
-    reported the requested point.
+    reported the requested point. A fractional value goes to the nearest
+    pixel: ``int()`` alone cut toward zero, so ``-0.6`` landed on 0 and
+    ``10.9`` on 10.
     """
     try:
-        number = int(value)  # type: ignore[call-overload]
+        if isinstance(value, numbers.Real) and not isinstance(value, numbers.Integral):
+            number = int(round(value))
+        else:
+            number = int(value)  # type: ignore[call-overload]
     except (TypeError, ValueError, OverflowError) as error:
         raise AutoControlMouseException(f"{axis} must be a number, got {value!r}") from error
     if not _INT32_MIN <= number <= _INT32_MAX:
@@ -340,7 +346,15 @@ def _scroll_to(x: Optional[int], y: Optional[int]) -> None:
     Query the cursor only when a coordinate is missing: when both are
     supplied the current position is never needed, so backends that cannot
     report it (e.g. Wayland) must not be forced to raise.
+
+    座標先驗證再夾限：NaN 在 ``min``／``max`` 裡會被悄悄換成桌面邊緣，
+    游標就移到那裡才滾。
+    Validated before the clamp: ``min`` / ``max`` quietly turn a NaN into the
+    desktop edge, so the cursor went there and the scroll happened anyway,
+    where ``set_mouse_position`` refuses the same value.
     """
+    x = None if x is None else _coordinate(x, "x")
+    y = None if y is None else _coordinate(y, "y")
     left, top, width, height = _scroll_bounds()
     # 兩個座標都給定時不會被讀到，見下面的三元運算。
     # Never read when both coordinates were supplied.
@@ -403,17 +417,20 @@ def _resolve_scroll_axis(scroll_direction: str) -> int:
 
 def mouse_scroll(scroll_value: int, x: Optional[int] = None,
                  y: Optional[int] = None,
-                 scroll_direction: str = "scroll_down"
+                 scroll_direction: str = "scroll_up"
                  ) -> Tuple[int, Union[int, str]]:
     """
     模擬滑鼠滾輪操作
     Simulate mouse scroll
 
-    每個平台的規則相同：``scroll_value`` 為負就反向，絕對值是滾動格數。
-    The sign of ``scroll_value`` reverses the direction on every platform, so a
-    call written on one works on the others. X11 and Wayland used to discard it
-    and always scroll ``scroll_direction``, which meant portable code scrolled
-    the opposite way there with no error and no warning.
+    每個平台的規則相同：正值往上、負值往下，絕對值是滾動格數。
+    A positive ``scroll_value`` scrolls up and a negative one down on every
+    platform, so a call written on one works on the others. Two things used
+    to break that on X11 and Wayland: the sign was discarded, and then the
+    default ``scroll_direction`` was ``"scroll_down"``, so ``mouse_scroll(3)``
+    went down there and up on Windows and macOS. The default is now
+    ``"scroll_up"``; pass ``scroll_direction="scroll_down"`` to keep the old
+    X11 / Wayland meaning of a positive count.
 
     :param scroll_value: 滾動數值，負數代表反向 Scroll value; negative reverses
     :param x: X 座標，指定時會先將游標移到該處 X position; the cursor moves here first

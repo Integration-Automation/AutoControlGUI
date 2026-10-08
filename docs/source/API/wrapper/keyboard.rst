@@ -61,7 +61,9 @@ press_keyboard_key
 
    :param keycode: Key name or key code to press.
    :type keycode: int or str
-   :param bool is_shift: Whether to press Shift simultaneously.
+   :param bool is_shift: Press the key with Shift held. On Windows and X11
+      Shift goes down before the key and comes back up as soon as the key is
+      down, so a lone press never leaves Shift stuck.
    :param bool skip_record: If ``True``, this action will not be recorded.
    :returns: The key code that was pressed.
    :rtype: str
@@ -77,7 +79,8 @@ release_keyboard_key
 
    :param keycode: Key name or key code to release.
    :type keycode: int or str
-   :param bool is_shift: Whether Shift was pressed.
+   :param bool is_shift: Whether Shift was pressed. Used by the macOS backend
+      only; on Windows and X11 the Shift of a press is already released.
    :param bool skip_record: If ``True``, this action will not be recorded.
    :returns: The key code that was released.
    :rtype: str
@@ -93,7 +96,9 @@ type_keyboard
 
    :param keycode: Key name or key code to type.
    :type keycode: int or str
-   :param bool is_shift: Whether to press Shift simultaneously.
+   :param bool is_shift: Hold Shift around the key (pressed first, released
+      last, also when the key fails). Works on every platform; it used to be
+      ignored on Windows and X11.
    :param bool skip_record: If ``True``, this action will not be recorded.
    :returns: The key code that was typed.
    :rtype: str
