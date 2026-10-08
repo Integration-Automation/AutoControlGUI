@@ -1,5 +1,12 @@
-"""Accessibility tab: browse the OS UI tree and click elements by role/name."""
-from typing import Optional
+"""Accessibility tab: browse the OS UI tree and click elements by role/name.
+
+The three commands run off the GUI thread (:class:`~je_auto_control.gui._tab_task.TabTask`):
+a desktop listing is hundreds of cross-process calls, and the tree being read
+includes this window, which can only answer while its own thread is free. The
+backend gives each thread its own automation object, so the worker is safe.
+"""
+import functools
+from typing import List, Optional
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
@@ -8,7 +15,9 @@ from PySide6.QtWidgets import (
     QVBoxLayout, QWidget,
 )
 
+from je_auto_control.gui._dispose import release_resources
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
+from je_auto_control.gui._tab_task import TabTask
 from je_auto_control.gui.language_wrapper.multi_language_wrapper import (
     language_wrapper,
 )
@@ -17,14 +26,37 @@ from je_auto_control.utils.accessibility.accessibility_api import (
     list_accessibility_elements,
 )
 from je_auto_control.utils.accessibility.element import (
-    AccessibilityNotAvailableError,
+    AccessibilityElement, AccessibilityNotAvailableError,
 )
 
 _COLUMN_COUNT = 5
+_LIST, _FOCUSED, _CLICK = "list", "focused", "click"
 
 
 def _t(key: str) -> str:
     return language_wrapper.translate(key, key)
+
+
+def _list_matching(app: Optional[str], window: Optional[str], name_filter: str) -> List[AccessibilityElement]:
+    """Worker thread: list the elements and keep those whose name contains ``name_filter``."""
+    # Scoping to one window is not just a filter: the desktop tree is orders
+    # of magnitude larger, so this is both faster and less ambiguous than
+    # listing everything and filtering by name.
+    elements = list_accessibility_elements(app_name=app, window_title=window)
+    if name_filter:
+        elements = [element for element in elements if name_filter in element.name.lower()]
+    return elements
+
+
+def _focused(app: Optional[str]) -> List[AccessibilityElement]:
+    """Worker thread: the focused element as a list of none or one."""
+    element = focused_accessibility_element(app_name=app)
+    return [] if element is None else [element]
+
+
+def _click(name: Optional[str], role: Optional[str], app: Optional[str]) -> bool:
+    """Worker thread: click the element; whether one matched."""
+    return bool(click_accessibility_element(name=name, role=role, app_name=app))
 
 
 class AccessibilityTab(TranslatableMixin, QWidget):
@@ -44,8 +76,23 @@ class AccessibilityTab(TranslatableMixin, QWidget):
         header.setSectionResizeMode(QHeaderView.Interactive)
         header.setStretchLastSection(True)
         self._status = QLabel()
+        self._task = TabTask(self)          # one command at a time, off the GUI thread
+        self._task.result.connect(self._on_result)
+        self._task.error.connect(self._on_error)
         self._apply_table_headers()
         self._build_layout()
+
+    def dispose(self) -> None:
+        """Release what the tab holds beyond its widgets: the command still running, whose answer is dropped.
+
+        Called by ``close_tab(key, release=True)`` before the widget is deleted; safe to call twice.
+        """
+        release_resources(self)
+
+    def _start(self, tag: str, work) -> None:
+        """Run ``work`` off the GUI thread as the command ``tag``; say so, or that one is still running."""
+        self._task.start(work, tag=tag)     # False while busy: the status below is true either way
+        self._status.setText(_t("task_running"))
 
     def retranslate(self) -> None:
         TranslatableMixin.retranslate(self)
@@ -90,35 +137,34 @@ class AccessibilityTab(TranslatableMixin, QWidget):
     def _refresh(self) -> None:
         app = self._app_filter.text().strip() or None
         window = self._window_filter.text().strip() or None
-        try:
-            # Scoping to one window is not just a filter: the desktop tree is
-            # orders of magnitude larger, so this is both faster and less
-            # ambiguous than listing everything and filtering by name.
-            elements = list_accessibility_elements(app_name=app,
-                                                   window_title=window)
-        except AccessibilityNotAvailableError as error:
-            self._status.setText(str(error))
-            self._table.setRowCount(0)
-            return
         name_filter = self._name_filter.text().strip().lower()
-        if name_filter:
-            elements = [e for e in elements
-                        if name_filter in e.name.lower()]
-        self._populate(elements)
-        self._status.setText(
-            _t("a11y_count_label").replace("{n}", str(len(elements))),
-        )
+        self._start(_LIST, functools.partial(_list_matching, app, window, name_filter))
 
     def _show_focused(self) -> None:
         app = self._app_filter.text().strip() or None
-        try:
-            element = focused_accessibility_element(app_name=app)
-        except AccessibilityNotAvailableError as error:
-            self._status.setText(str(error))
+        self._start(_FOCUSED, functools.partial(_focused, app))
+
+    def _on_result(self, value: object) -> None:
+        """GUI thread: the command ``self._task.tag`` answered."""
+        tag = self._task.tag
+        if tag == _CLICK:
+            self._status.setText("" if value else _t("a11y_click_not_found"))
             return
-        self._populate([] if element is None else [element])
-        self._status.setText(_t("a11y_no_focus") if element is None
-                             else _t("a11y_count_label").replace("{n}", "1"))
+        elements = list(value) if isinstance(value, list) else []
+        self._populate(elements)
+        if tag == _FOCUSED and not elements:
+            self._status.setText(_t("a11y_no_focus"))
+            return
+        self._status.setText(_t("a11y_count_label").replace("{n}", str(len(elements))))
+
+    def _on_error(self, error: object) -> None:
+        """GUI thread: the command failed -- typically no accessibility backend on this machine."""
+        tag = self._task.tag
+        self._status.setText(str(error))
+        if tag == _LIST:
+            self._table.setRowCount(0)
+        elif tag == _CLICK and isinstance(error, AccessibilityNotAvailableError):
+            QMessageBox.warning(self, _t("a11y_click_selected"), str(error))
 
     def _populate(self, elements) -> None:
         self._table.setRowCount(len(elements))
@@ -142,12 +188,4 @@ class AccessibilityTab(TranslatableMixin, QWidget):
         app = self._table.item(row, 0).text() or None
         role = self._table.item(row, 1).text() or None
         name = self._table.item(row, 2).text() or None
-        try:
-            ok = click_accessibility_element(
-                name=name, role=role, app_name=app,
-            )
-        except AccessibilityNotAvailableError as error:
-            QMessageBox.warning(self, _t("a11y_click_selected"), str(error))
-            return
-        if not ok:
-            self._status.setText(_t("a11y_click_not_found"))
+        self._start(_CLICK, functools.partial(_click, name, role, app))
