@@ -40,7 +40,8 @@ from je_auto_control.utils.executor.run_control import (
     stoppable_run,
 )
 from je_auto_control.utils.config_sync.session import (
-    config_sync_full_resync, config_sync_resolve, config_sync_run, config_sync_status,
+    config_sync_collect_blobs, config_sync_full_resync, config_sync_resolve,
+    config_sync_run, config_sync_status,
 )
 from je_auto_control.utils.llm.planner import (
     plan_actions as llm_plan_actions,
@@ -7809,6 +7810,7 @@ class Executor:
             "AC_config_sync_status": config_sync_status,
             "AC_config_sync_resolve": config_sync_resolve,
             "AC_config_sync_full_resync": config_sync_full_resync,
+            "AC_config_sync_collect_blobs": config_sync_collect_blobs,
             "AC_check_compatibility": _check_compatibility,
             "AC_ts_rate": _ts_rate,
             "AC_ts_downsample": _ts_downsample,

@@ -160,8 +160,13 @@ def test_a_tombstone_waits_for_a_device_that_only_uses_the_old_sync(server):
     # The desktop syncs its stale copy: the deletion wins instead of the entry returning.
     desktop, _ = _client("desktop").sync(desktop)
     assert desktop.values("hotkeys") == {}
-    # Everyone has acknowledged it now, so the next commit may drop it.
+    # Everyone has acknowledged it now, but it is held for the machines that
+    # have not synced yet ...
     laptop, _ = _client("laptop").sync(laptop)
+    assert SyncEntry.from_dict("hk1", server.body["sections"]["hotkeys"]["hk1"]).deleted
+    # ... until the hold has passed; then the next commit drops it.
+    stamp = server.body["sections"]["hotkeys"]["hk1"]["deleted_at"]
+    laptop, _ = _client("laptop").sync(laptop, now=stamp + 31 * 24 * 3600.0)
     assert "hk1" not in server.body["sections"]["hotkeys"]
 
 

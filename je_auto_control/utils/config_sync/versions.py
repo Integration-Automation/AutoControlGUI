@@ -20,6 +20,15 @@ when every peer that is still part of the group has acknowledged a revision
 that includes it; a peer that stayed away too long is *retired* and must do
 an explicit full resync, so it cannot bring deleted entries back.
 
+That rule only knows the devices the bucket lists. A machine that has an
+entry but has never synced is not among them, and once the tombstone is gone
+its copy would simply be added again. So an acknowledged tombstone is also
+*held* for :data:`TOMBSTONE_HOLD_S` after the revision that first carried it:
+a machine that joins inside that time meets the deletion, and its copy
+becomes a conflict for a person to settle instead of a silent return. This is
+the one place a clock is read, and it can only keep a tombstone longer --
+acknowledgement by every listed device stays necessary whatever the clocks say.
+
 Pure standard library; imports no ``PySide6``.
 """
 from __future__ import annotations
@@ -30,6 +39,11 @@ from dataclasses import dataclass, field
 from typing import Any, Dict, Iterable, List, Mapping, Optional, Tuple
 
 from je_auto_control.utils.config_sync.bucket import ConfigSyncError
+
+#: How long a tombstone every listed device has acknowledged is still kept,
+#: counted from the revision that first carried it, for the machines the
+#: bucket does not list yet.
+TOMBSTONE_HOLD_S = 30 * 24 * 3600.0
 
 #: Relations :func:`compare_vectors` reports.
 EQUAL = "equal"
@@ -78,6 +92,10 @@ class SyncEntry:
     entry includes; ``origin`` and ``operation_id`` name the change that
     produced it. ``siblings`` is non-empty while the entry is an unresolved
     conflict -- then ``value`` is ``None`` and the candidates are there.
+    ``deleted_revision`` and ``deleted_at`` are set on a tombstone by the
+    commit that first carries it: the revision peers must acknowledge, and
+    that commit's wall-clock time (for :data:`TOMBSTONE_HOLD_S`; ``0`` when
+    an older client stamped it).
     """
     key: str
     value: Optional[Mapping[str, Any]] = None
@@ -88,6 +106,7 @@ class SyncEntry:
     modified_at: float = 0.0
     deleted_revision: int = 0
     siblings: Tuple["SyncEntry", ...] = ()
+    deleted_at: float = 0.0
 
     @property
     def is_deleted(self) -> bool:
@@ -142,6 +161,8 @@ class SyncEntry:
         }
         if self.deleted_revision:
             body["deleted_revision"] = int(self.deleted_revision)
+        if self.deleted_at:
+            body["deleted_at"] = float(self.deleted_at)
         if self.siblings:
             body["siblings"] = [sibling.to_dict() for sibling in self.siblings]
         return body
@@ -165,6 +186,7 @@ class SyncEntry:
             modified_at=_number(key, body.get("last_modified", 0.0)),
             deleted_revision=int(_number(key, body.get("deleted_revision", 0))),
             siblings=tuple(cls.from_dict(key, sibling, _depth=1) for sibling in siblings),
+            deleted_at=_number(key, body.get("deleted_at", 0.0)),
         )
 
 
@@ -267,7 +289,8 @@ def _conflicted(key: str, left: SyncEntry, right: SyncEntry) -> SyncEntry:
         # There is nothing to choose between, so it is not a conflict.
         return SyncEntry(key=key, value=only.value, vector=vector, origin=only.origin,
                          operation_id=only.operation_id, deleted=only.deleted,
-                         modified_at=only.modified_at, deleted_revision=only.deleted_revision)
+                         modified_at=only.modified_at, deleted_revision=only.deleted_revision,
+                         deleted_at=only.deleted_at)
     return SyncEntry(
         key=key, vector=vector, siblings=tuple(survivors),
         operation_id="conflict:" + "+".join(_identity(candidate) for candidate in survivors))
@@ -364,25 +387,35 @@ def collectable_revision(peers: Iterable[PeerState]) -> int:
     return min(acked) if acked else 0
 
 
-def collect_tombstones(entries: Mapping[str, SyncEntry], peers: Iterable[PeerState],
+def collect_tombstones(entries: Mapping[str, SyncEntry], peers: Iterable[PeerState], *,
+                       now: Optional[float] = None, hold_s: float = TOMBSTONE_HOLD_S,
                        ) -> Dict[str, SyncEntry]:
     """``entries`` without the tombstones every active peer has acknowledged.
 
     A tombstone is dropped only when its ``deleted_revision`` -- the server
     revision that first carried it -- is at or below what each active peer
-    has merged. Age is never a reason: a tombstone dropped while a machine
-    that still holds the entry is merely offline lets that machine bring the
-    entry back. A tombstone not yet stamped with a revision is always kept.
+    has merged. Age is never a reason to drop one: a tombstone dropped while
+    a machine that still holds the entry is merely offline lets that machine
+    bring the entry back. A tombstone not yet stamped with a revision is
+    always kept.
+
+    Given ``now``, age is a reason to *keep* one a little longer: an
+    acknowledged tombstone stamped (``deleted_at``) less than ``hold_s`` ago
+    stays, for the machines not listed among ``peers`` yet. Without ``now``,
+    or for a tombstone that carries no stamp, acknowledgement alone decides.
     """
     horizon = collectable_revision(peers)
+    held_after = None if now is None else float(now) - max(0.0, float(hold_s))
     return {key: entry for key, entry in entries.items()
             if not (entry.deleted and not entry.siblings
-                    and 0 < entry.deleted_revision <= horizon)}
+                    and 0 < entry.deleted_revision <= horizon
+                    and not (held_after is not None and entry.deleted_at > held_after))}
 
 
 __all__ = [
     "AFTER", "BEFORE", "CONCURRENT", "CONFLICT", "EQUAL", "KEPT_LEFT", "KEPT_RIGHT",
     "MergeDecision", "PeerState", "SyncConflict", "SyncEntry", "SyncOperation",
+    "TOMBSTONE_HOLD_S",
     "collect_tombstones", "collectable_revision", "compare_vectors", "is_versioned",
     "join_vectors", "merge_collections", "merge_entries",
 ]

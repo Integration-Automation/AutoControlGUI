@@ -43,8 +43,10 @@ Behaviour:
 
 - Initial snapshot taken on ``start()`` *without* sending — pre-existing
   files are treated as already-synced.
-- Each tick scans the directory; files with a newer ``mtime`` than the
-  snapshot are sent.
+- Each tick scans the directory; files whose ``mtime`` or size differs from
+  the snapshot are sent. A file recorded within two seconds of its own last
+  write is also compared by content, so an edit in the same clock tick is
+  not missed.
 - A failing sender is retried on the next tick (the snapshot only
   records successful sends).
 - Local deletions stop being tracked but do not call the sender.

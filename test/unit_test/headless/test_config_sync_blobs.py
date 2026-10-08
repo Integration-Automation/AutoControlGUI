@@ -42,7 +42,9 @@ def test_a_blob_round_trips_and_is_stored_once(tmp_path):
     assert store.get("alice", _sha(data)) == data and store.has("alice", _sha(data))
     usage = store.usage("alice")
     assert (usage["used"], usage["count"]) == (len(data), 1)
-    assert usage["blobs"] == [{"sha256": _sha(data), "size": len(data)}]
+    (listed,) = usage["blobs"]
+    assert (listed["sha256"], listed["size"]) == (_sha(data), len(data))
+    assert 0.0 <= listed["age_s"] < 3600.0
 
 
 def test_building_a_store_creates_nothing(tmp_path):
@@ -231,6 +233,8 @@ def test_the_transport_speaks_the_blob_routes():
     data = b"\x00\xff binary"
 
     def perform(call):
+        if call["url"].endswith("/blobs/alice"):
+            return _reply(200, text=json.dumps({"max_blob_bytes": 1024, "blobs": []}))
         calls.append(call)
         return {"PUT": _reply(201), "GET": _reply(200, data), "HEAD": _reply(200)}[call["method"]]
 
@@ -325,10 +329,21 @@ def test_assets_travel_between_two_folders_through_a_real_server(live_server, tm
     (source / "huge.bin").write_bytes(b"z" * 200_001)
     again = publish_assets(AssetManifest.from_directory(source), transport)
     assert list(again.failed) == ["huge.bin"]
-    # The server answers 413 from the declared length and closes; a client still
-    # writing the body can see the reset before it reads that answer (Windows).
+    # The transport learned the limit from the listing and never sent the body,
+    # so the reason no longer depends on who wins the race between the server's
+    # 413-and-close and the client still writing (a reset, on Windows).
     reason = again.failed["huge.bin"]
-    assert "larger" in reason or "asset PUT" in reason
+    assert "larger" in reason and "200001 bytes; the limit is 200000" in reason
+    assert transport.max_blob_bytes() == 200_000
+    # Housekeeping: what no entry names any more can be collected. Both blobs
+    # were stored a moment ago, so the default grace period keeps them.
+    from je_auto_control.utils.config_sync import collect_unreferenced_blobs
+    kept = collect_unreferenced_blobs(transport, [_sha(picture)])
+    assert kept["deleted"] == [] and kept["recent"] == [_sha(b"small")]
+    swept = collect_unreferenced_blobs(transport, [_sha(picture)], min_age_s=0)
+    assert swept["deleted"] == [_sha(b"small")] and swept["freed"] == 5 and not swept["failed"]
+    assert transport.has(_sha(picture)) is True and transport.has(_sha(b"small")) is False
+    assert transport.usage()["count"] == 1
 
 
 def test_config_sync_run_can_use_the_server_for_assets(tmp_path):

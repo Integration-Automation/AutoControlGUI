@@ -15,7 +15,9 @@ ac`` gives ``ac.config_sync_run`` and its three siblings, ``ac.run_sync``,
 ``ac.HttpAssetTransport``, ``ac.ConfigStore``, ``ac.BlobStore``, the errors
 (``ac.ConfigSyncError``, ``ac.ConfigSyncConflict``, ``ac.FullResyncRequired``,
 ``ac.OperationMismatchError``, ``ac.ConfigStoreError``,
-``ac.RevisionConflictError``) and ``ac.CONFIG_SYNC_WIRE_VERSION`` (the module's
+``ac.RevisionConflictError``), blob housekeeping
+(``ac.config_sync_collect_blobs``, ``ac.collect_unreferenced_blobs``,
+``ac.referenced_blob_digests``) and ``ac.CONFIG_SYNC_WIRE_VERSION`` (the module's
 ``WIRE_VERSION``, ``2``). The rest stays importable from
 ``je_auto_control.utils.config_sync``.
 
@@ -176,9 +178,11 @@ stored versioned with ``{"<device id>": n}`` as its vector. ``peers`` gains
 ``{"<device id>": {"acked_revision": <committed revision>, "last_seen": ...,
 "retired": false}}``. A version-2 client from before this release reads all of
 it: it already understood both entry shapes and ignores peers it does not
-know. Let every machine sync once with this release before deleting entries
-on any of them -- a tombstone only waits for devices already listed under
-``peers``.
+know. A tombstone only *waits* for devices already listed under ``peers``, so
+a machine that has not synced yet is covered by the hold described below
+instead: a deletion stays in the bucket for thirty days, and such a machine
+meets it when it first syncs inside that time. Let every machine sync once
+within thirty days of a deletion, or before deleting at all.
 
 Deletions and retired devices
 -----------------------------
@@ -187,6 +191,30 @@ A deletion is a tombstone. A versioned tombstone is **never dropped by age**:
 ``collect_tombstones`` removes it only when every active device recorded
 under the bucket's ``peers`` has acknowledged a revision that includes it.
 ``ConfigSyncClient.push_operations`` maintains those acknowledgements.
+
+**Held for the machines the bucket does not list yet.** Acknowledgement only
+covers the devices under ``peers``. A machine that holds the entry but has
+never synced is not one of them, and once the tombstone was gone its first
+sync simply added the entry again, with no conflict and no report. So an
+acknowledged tombstone is also kept for ``TOMBSTONE_HOLD_S`` (thirty days)
+from the commit that first carried it. A machine that joins inside that time
+meets the deletion: its versioned copy becomes a **conflict** (the deletion
+and the copy, for a person to settle with ``config_sync_resolve``), and a
+flat copy stays deleted and is reported in a ``ConflictRecord``. After the
+hold the next commit by any device drops the tombstone, so the bucket does
+not grow for ever; a machine that first syncs later than that can still bring
+the entry back.
+
+The commit that first carries a tombstone stamps it with ``deleted_at`` (that
+device's wall clock) next to ``deleted_revision``. Age is only ever a reason
+to *keep* a tombstone longer: a wrong clock can shorten or lengthen the hold,
+never the wait for the listed devices. ``ConfigSyncClient(...,
+tombstone_hold_s=0)`` restores the earlier rule for the buckets that client
+commits, and ``collect_tombstones(entries, peers, now=..., hold_s=...)``
+applies the hold only when ``now`` is given. A tombstone stamped by a release
+from before this has no ``deleted_at`` and is dropped on acknowledgement as
+before; such a release also drops acknowledged tombstones without holding
+them, so the hold is only as good as the oldest client still committing.
 A device joins ``peers`` with its first push; ``push_operations([])`` from a
 device the bucket does not list is such a push when the bucket holds entries
 (their later deletion must wait for it) and writes nothing when it holds
@@ -370,7 +398,9 @@ content-addressed blobs per account:
    * - ``DELETE /blobs/{user_id}/{sha256}``
      - ``200 {"deleted": true | false}``
    * - ``GET /blobs/{user_id}``
-     - ``200 {"used", "quota", "count", "max_blob_bytes", "blobs": [{"sha256", "size"}]}``
+     - ``200 {"used", "quota", "count", "max_blob_bytes", "blobs": [{"sha256", "size",
+       "age_s"}]}``; ``age_s`` is the seconds since the blob was last stored, by the
+       server's clock (a ``PUT`` of content already held counts)
 
 The rules are the ones ``/config`` follows: every request needs the shared
 secret (``X-Signaling-Secret``, ``401`` otherwise); the account is the one in
@@ -402,10 +432,12 @@ The folder is created at the first upload, not at start-up. Storage is
 ``je_auto_control.utils.config_sync.blobs.BlobStore`` (``put`` / ``get`` /
 ``has`` / ``delete`` / ``usage``); each account's blobs are in a folder named
 by a hash of the account id, and a blob is written to a temporary file and
-renamed. Nothing removes blobs by itself: ``DELETE`` the ones no script
-refers to any more when ``used`` approaches ``quota``. The quota is enforced
-by one server process; two processes sharing one folder can each admit a blob
-at the same moment and overshoot by that much.
+renamed. A write holds the lock file ``<blob folder>/store.lock`` (the helper
+the shared JSON stores use), so the quota check and the write are one step
+for **every** server process sharing the folder, not only for the threads of
+one. A lock another process keeps for more than ten seconds is
+``BlobStoreBusyError`` (``503``) and nothing is written; a lock left by a
+process that died is taken over after thirty seconds.
 
 ``HttpAssetTransport`` goes through ``je_auto_control.utils.http_client`` (the
 egress policy applies) and does not follow redirects. A refused upload says
@@ -414,6 +446,65 @@ why -- too large, quota used up, wrong secret, or a server that predates
 without stopping the other files. The ``/blobs`` routes are additions: the
 ``/config`` wire format is still version 2, and a client that does not use
 them is unaffected.
+
+**Too large is decided before the upload.** The server refuses an oversized
+``PUT`` from its declared length and closes the connection; a client still
+sending the body could see the reset instead of the ``413``, and the failure
+read as a connection error. The transport therefore reads ``max_blob_bytes``
+from the listing before its first upload (``transport.max_blob_bytes()``,
+asked once and remembered) and refuses a larger file itself, without sending
+it: ``asset PUT <sha256>: the file is larger than the server accepts for one
+blob (<size> bytes; the limit is <limit>)``.
+
+.. list-table::
+   :header-rows: 1
+
+   * - Client
+     - Server
+     - An oversized file
+   * - this release
+     - reports ``max_blob_bytes`` (every release that serves ``/blobs``)
+     - refused locally with the message above; no body is sent
+   * - this release
+     - does not report it, or the listing could not be read
+     - sent; the server's ``413`` reads "larger than the server accepts". If the
+       upload is cut off instead, the listing is asked once more and the same
+       reason is given when the file is over the limit it reports
+   * - this release
+     - no ``/blobs`` at all
+     - the ``PUT`` is answered ``404`` / ``405``: "does not serve /blobs"
+   * - an earlier release
+     - any
+     - as before: ``413``, or a connection error when the reset wins
+
+**Housekeeping.** Nothing on the server removes a blob by itself, so the
+scripts deleted or replaced over time keep counting against the quota.
+``config_sync_collect_blobs(server_url, user_id, keep=None, min_age_s=86400,
+dry_run=False, **options)`` deletes the account's blobs that nothing names any
+more and returns ``{"deleted": [sha256...], "freed": bytes, "kept": n,
+"recent": [sha256...], "failed": {sha256: why}, "dry_run": bool,
+"referenced": n}``. What it keeps:
+
+* every SHA-256 named by an entry of the server's bucket (any section, every
+  candidate of an entry still in conflict), of this machine's last merged
+  state and of its changes still waiting in the outbox
+  (``referenced_blob_digests``);
+* the digests in ``keep`` (a list or one comma-separated string) -- name
+  there what you published yourself with ``publish_assets``, which no bucket
+  entry refers to;
+* any blob stored less than ``min_age_s`` ago (default one day): a machine
+  uploads a file just before it commits the entry naming it. The age is the
+  server's ``age_s``, so no two clocks are compared.
+
+``dry_run=True`` deletes nothing and lists what would go. A server that
+cannot be reached is ``ConfigSyncError`` and nothing is deleted; a blob that
+cannot be deleted is listed under ``failed`` and the rest still go. A blob
+removed while some machine still has the file is uploaded again by that
+machine's next sync. Against a server from before ``age_s`` nothing is
+collected unless ``min_age_s=0``. ``collect_unreferenced_blobs(transport,
+referenced, min_age_s=..., dry_run=...)`` is the same sweep for a set of
+digests you supply; it takes an ``HttpAssetTransport`` only, because a folder
+behind ``DirectoryAssetTransport`` may hold other users' files.
 
 One call, three surfaces
 ------------------------
@@ -472,10 +563,10 @@ locators_path=...)`` decides, and the report's ``sections`` lists the result.
 
 A path **adds** its section to the default three; it does not narrow the sync
 to it, so ``scripts_dir`` alone also syncs this machine's hotkeys, triggers
-and address book. That default is deliberate -- the GUI tab has a scripts
-folder and no section picker, and hotkeys and triggers need that folder to
-turn their script paths into portable references -- so it is unchanged; name
-``sections`` when you want less. ``sections`` is a list or one comma-separated
+and address book. That default is deliberate -- hotkeys and triggers need
+that folder to turn their script paths into portable references -- so it is
+unchanged; name ``sections`` (or untick sections in the GUI tab) when you
+want less. ``sections`` is a list or one comma-separated
 string. An unknown name, a section whose path is missing, and a choice that
 names nothing (``[]``, ``","``) are each ``ConfigSyncError``; a name given
 twice is synced once.
@@ -498,8 +589,11 @@ twice is synced once.
    * - ``AC_config_sync_full_resync``
      - ``ac_config_sync_full_resync``
      - adopt the server's state after being retired; pending changes are discarded and listed
+   * - ``AC_config_sync_collect_blobs``
+     - ``ac_config_sync_collect_blobs``
+     - delete the server's blobs no entry names any more (``keep``, ``min_age_s``, ``dry_run``)
 
-All four are Script Builder commands under **Data**, and all four share one
+All five are Script Builder commands under **Data**, and all five share one
 shape: ``(server_url, user_id, ..., **options)`` with the options listed
 above. ``config_sync_status(server_url, user_id, outbox_path=None, **options)``
 reads only ``outbox_path`` (still accepted positionally); the other options
@@ -519,8 +613,25 @@ until the next automatic attempt while a retry delay is running), the last merge
 revision, the number of pending changes, the last successful sync and the
 last error, and lists every conflict with its candidates. Its commands --
 *Sync now*, *Cancel sync*, *Refresh sync status*, *Keep selected candidate*,
-*Full resync* -- are in the Actions menu. A sync runs on a worker thread;
-cancelling, or closing the tab, releases it.
+*Full resync*, *Delete unused blobs on the server* (after a confirmation; it
+runs ``config_sync_collect_blobs`` with the defaults) -- are in the Actions
+menu. A sync runs on a worker thread; cancelling, or closing the tab,
+releases it.
+
+The inputs are the server URL, the user id, the shared secret, the scripts
+folder, the locator repository file and the shared assets folder, then:
+
+* **Sections to sync** -- one checkbox per section of ``SYNCABLE_SECTIONS``.
+  With every box ticked the tab passes no ``sections`` and the default above
+  applies. Unticking one passes the ticked ones as ``sections``; a ticked
+  section whose path is empty is left out rather than refused, and with
+  nothing left the tab says so and does not sync. The status lists the
+  sections the last sync covered.
+* **Keep large scripts on the sync server** -- passes ``assets_server=True``
+  and greys out the shared assets folder, which it replaces.
+
+Everything but the secret is remembered between runs in the GUI settings file
+(``WindowSettings.load_form`` / ``save_form``, form ``config_sync``).
 
 Folder mirror and clipboard: no echo
 ------------------------------------
@@ -538,6 +649,15 @@ A file received into a mirrored folder is therefore not sent back, with no
 wiring in the caller; when no engine mirrors the folder the file is not even
 hashed. ``FolderSyncEngine.relative_name(path)`` says whether an engine
 covers a path (a subfolder only with ``include_subdirs``).
+
+**What counts as a change.** The engine records each file's modification
+time and size and pushes a file whose either one differs from the record --
+no longer only a file whose time is *later*, so a file put back with an older
+time is pushed too. A time alone cannot tell two writes in one clock tick
+apart (an edit made right after a received file was noted went unsent), so a
+file recorded within ``RACY_WINDOW_S`` (2 s) of its own last write is also
+remembered by SHA-256 and compared by content until that window has passed.
+An older file is never read to decide whether it changed.
 
 **Files still being written.** A changed file is pushed only once two polls
 in a row see the same size and modification time, so a large copy is sent

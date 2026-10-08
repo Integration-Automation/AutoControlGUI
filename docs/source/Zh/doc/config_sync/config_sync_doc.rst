@@ -12,7 +12,9 @@
 ``ac.SyncAdapter`` 與五個具體 adapter(``ac.ScriptSyncAdapter`` ……)、
 ``ac.DirectoryAssetTransport``、``ac.HttpAssetTransport``、``ac.ConfigStore``、``ac.BlobStore``、
 各個錯誤(``ac.ConfigSyncError``、``ac.ConfigSyncConflict``、``ac.FullResyncRequired``、
-``ac.OperationMismatchError``、``ac.ConfigStoreError``、``ac.RevisionConflictError``)
+``ac.OperationMismatchError``、``ac.ConfigStoreError``、``ac.RevisionConflictError``)、
+blob 清理(``ac.config_sync_collect_blobs``、``ac.collect_unreferenced_blobs``、
+``ac.referenced_blob_digests``)
 以及 ``ac.CONFIG_SYNC_WIRE_VERSION``(模組內的 ``WIRE_VERSION``,值為 ``2``)。
 其餘的仍可從 ``je_auto_control.utils.config_sync`` 匯入。
 
@@ -150,8 +152,9 @@ Client
 vector 為 ``{"<裝置 id>": n}``。``peers`` 多出
 ``{"<裝置 id>": {"acked_revision": <提交的 revision>, "last_seen": ..., "retired": false}}``。
 這個版本之前的 version-2 client 讀得懂全部內容:它本來就認得兩種 entry 形狀,
-不認得的 peer 會忽略。請讓每台機器都先用這個版本同步一次,再在任何一台上刪除 entry ——
-tombstone 只會等已列在 ``peers`` 下的裝置。
+不認得的 peer 會忽略。Tombstone 只會 *等* 已列在 ``peers`` 下的裝置,還沒同步過的機器改由下面說明的
+保留期涵蓋:刪除會在 bucket 裡留三十天,這樣的機器在這段時間內第一次同步時會遇到它。
+請讓每台機器在刪除後的三十天內同步一次,或是在刪除之前就先同步過。
 
 刪除與退休裝置
 --------------
@@ -159,6 +162,22 @@ tombstone 只會等已列在 ``peers`` 下的裝置。
 刪除是一個 tombstone。Versioned tombstone **絕不因時間而丟棄**:``collect_tombstones``
 只在 bucket 的 ``peers`` 記錄的每台有效裝置都已確認包含它的 revision 之後才移除。
 ``ConfigSyncClient.push_operations`` 負責維護這些確認。
+
+**為 bucket 還沒列出的機器保留。** 確認只涵蓋 ``peers`` 下的裝置。手上有那筆 entry、
+但從沒同步過的機器不在其中;tombstone 一旦被移除,它的第一次同步就會把 entry 直接加回來,
+沒有衝突也沒有回報。所以已被確認的 tombstone 還會從第一次帶著它的那次提交起再保留
+``TOMBSTONE_HOLD_S``(三十天)。在這段時間內加入的機器會遇到這筆刪除:它的 versioned 副本變成
+**衝突**(刪除與副本並存,由人用 ``config_sync_resolve`` 決定),扁平副本則維持刪除並回報於
+``ConflictRecord``。保留期過後,任何裝置的下一次提交會移除 tombstone,所以 bucket 不會無限成長;
+比這更晚才第一次同步的機器仍然可能把 entry 帶回來。
+
+第一次帶著 tombstone 的那次提交,會在 ``deleted_revision`` 旁邊蓋上 ``deleted_at``(該裝置的時鐘)。
+時間只會是 *多留一陣子* 的理由:時鐘不準只會讓保留期變短或變長,不會影響對已列出裝置的等待。
+``ConfigSyncClient(..., tombstone_hold_s=0)`` 可讓該 client 提交的 bucket 回到先前的規則;
+``collect_tombstones(entries, peers, now=..., hold_s=...)`` 只有在給了 ``now`` 時才套用保留期。
+這個版本之前蓋章的 tombstone 沒有 ``deleted_at``,和以前一樣在確認後就移除;那樣的版本也不會保留
+已確認的 tombstone,所以保留期的效果取決於仍在提交的最舊 client。
+
 裝置在第一次 push 時加入 ``peers``;bucket 還沒列出的裝置呼叫 ``push_operations([])``,
 在 bucket 有 entry 時就是這樣的一次 push(之後的刪除必須等它),在 bucket 沒有任何 entry 時
 不寫入任何東西 —— 空帳號的第一次同步不會提交 revision。
@@ -314,7 +333,9 @@ Adapter:同步什麼、什麼留在本機
    * - ``DELETE /blobs/{user_id}/{sha256}``
      - ``200 {"deleted": true | false}``
    * - ``GET /blobs/{user_id}``
-     - ``200 {"used", "quota", "count", "max_blob_bytes", "blobs": [{"sha256", "size"}]}``
+     - ``200 {"used", "quota", "count", "max_blob_bytes", "blobs": [{"sha256", "size",
+       "age_s"}]}``;``age_s`` 是以 server 的時鐘計算、距離該 blob 上次被存入的秒數
+       (``PUT`` 已經持有的內容也算一次)
 
 規則和 ``/config`` 相同:每個請求都要帶共享密鑰(``X-Signaling-Secret``,否則 ``401``);
 帳號就是路徑中的那個,所以一個帳號無法讀取、列出或刪除另一個帳號的 blob;
@@ -343,13 +364,62 @@ Adapter:同步什麼、什麼留在本機
 資料夾在第一次上傳時才建立,不是啟動時。儲存由
 ``je_auto_control.utils.config_sync.blobs.BlobStore`` 負責(``put`` / ``get`` / ``has`` /
 ``delete`` / ``usage``);每個帳號的 blob 放在以帳號 id 的 hash 命名的資料夾,blob 先寫到暫存檔再改名。
-沒有任何東西會自動移除 blob:``used`` 接近 ``quota`` 時,請 ``DELETE`` 已經沒有腳本引用的那些。
-配額由單一 server 行程執行;兩個行程共用同一個資料夾時,可能在同一時刻各放行一個 blob 而超出這麼多。
+寫入時會持有鎖檔 ``<blob 資料夾>/store.lock``(和共用 JSON store 相同的 helper),
+所以配額檢查與寫入對 **每一個** 共用該資料夾的 server 行程都是同一步,不只是單一行程內的執行緒。
+鎖被另一個行程持有超過十秒時是 ``BlobStoreBusyError``(``503``),不寫入任何東西;
+行程當掉留下的鎖會在三十秒後被接手。
 
 ``HttpAssetTransport`` 經由 ``je_auto_control.utils.http_client``(egress policy 適用),不跟隨轉址。
 被拒絕的上傳會說明原因 —— 太大、配額用完、密鑰錯誤、或 server 還沒有 ``/blobs`` ——
 ``publish_assets`` 會把它逐檔回報在 ``failed``,不會中斷其他檔案。``/blobs`` 路由是新增的:
 ``/config`` 的傳輸格式仍是 version 2,不使用它們的 client 不受影響。
+
+**「太大」在上傳之前就決定。** Server 依宣告的長度拒絕過大的 ``PUT`` 並關閉連線;
+還在送 body 的 client 可能先看到連線被重設而不是 ``413``,失敗就被讀成連線錯誤。
+所以 transport 會在第一次上傳前從清單讀出 ``max_blob_bytes``
+(``transport.max_blob_bytes()``,只問一次並記住),比它大的檔案由本機直接拒絕、不送出:
+``asset PUT <sha256>: the file is larger than the server accepts for one blob
+(<size> bytes; the limit is <limit>)``。
+
+.. list-table::
+   :header-rows: 1
+
+   * - Client
+     - Server
+     - 過大的檔案
+   * - 這個版本
+     - 回報 ``max_blob_bytes``(所有提供 ``/blobs`` 的版本)
+     - 在本機以上述訊息拒絕;不送出 body
+   * - 這個版本
+     - 沒有回報,或清單讀不到
+     - 照常送出;server 的 ``413`` 會讀成「larger than the server accepts」。若上傳是被切斷的,
+       會再問一次清單,檔案超過它回報的上限時給出同樣的原因
+   * - 這個版本
+     - 完全沒有 ``/blobs``
+     - ``PUT`` 得到 ``404`` / ``405``:「does not serve /blobs」
+   * - 較早的版本
+     - 任何
+     - 和以前一樣:``413``,或在重設先到時是連線錯誤
+
+**清理。** Server 上沒有任何東西會自動移除 blob,所以被刪除或被取代的腳本會一直佔用配額。
+``config_sync_collect_blobs(server_url, user_id, keep=None, min_age_s=86400,
+dry_run=False, **options)`` 刪除該帳號已經沒有任何東西引用的 blob,並回傳
+``{"deleted": [sha256...], "freed": bytes, "kept": n, "recent": [sha256...],
+"failed": {sha256: 原因}, "dry_run": bool, "referenced": n}``。會保留的有:
+
+* server 的 bucket、本機上次合併的狀態、以及本機還在 outbox 等待送出的變更中,
+  任何 entry 指名的 SHA-256(任何 section,包含仍在衝突中的每個候選;``referenced_blob_digests``);
+* ``keep`` 裡的 digest(list 或一個逗號分隔的字串)—— 自己用 ``publish_assets`` 發佈、
+  沒有任何 bucket entry 引用的內容請列在這裡;
+* 存入不到 ``min_age_s`` 的 blob(預設一天):機器會在提交引用它的 entry 之前先上傳檔案。
+  年齡用的是 server 的 ``age_s``,不會比較兩台機器的時鐘。
+
+``dry_run=True`` 不刪除任何東西,只列出會被刪的。連不到 server 是 ``ConfigSyncError``,
+不會刪除任何東西;刪不掉的 blob 列在 ``failed``,其餘照常處理。某台機器還有檔案時被移除的 blob,
+會在那台機器下次同步時重新上傳。面對還沒有 ``age_s`` 的 server,除非 ``min_age_s=0`` 否則什麼都不收。
+``collect_unreferenced_blobs(transport, referenced, min_age_s=..., dry_run=...)``
+是對你自己提供的 digest 集合做同樣的清理;它只接受 ``HttpAssetTransport``,因為
+``DirectoryAssetTransport`` 背後的資料夾可能有其他使用者的檔案。
 
 一個呼叫,三個介面
 ------------------
@@ -400,9 +470,9 @@ locators_path=...)`` 決定,回報的 ``sections`` 會列出結果。
      - 正好這兩個
 
 路徑是把它的 section **加到** 預設的三個上,不是把同步縮小到它,所以只傳 ``scripts_dir``
-也會同步本機的快捷鍵、觸發器與通訊錄。這個預設是刻意的 —— GUI 分頁只有腳本資料夾、沒有 section
-選擇器,而且快捷鍵與觸發器需要那個資料夾才能把腳本路徑變成可攜的參照 —— 所以維持不變;
-想少同步一些就指名 ``sections``。``sections`` 可以是 list 或一個逗號分隔的字串。
+也會同步本機的快捷鍵、觸發器與通訊錄。這個預設是刻意的 —— 快捷鍵與觸發器需要那個資料夾
+才能把腳本路徑變成可攜的參照 —— 所以維持不變;
+想少同步一些就指名 ``sections``(或在 GUI 分頁取消勾選 section)。``sections`` 可以是 list 或一個逗號分隔的字串。
 不認得的名稱、缺少路徑的 section、以及什麼都沒指名的選擇(``[]``、``","``)都是
 ``ConfigSyncError``;同一個名稱寫兩次只同步一次。
 
@@ -424,8 +494,11 @@ locators_path=...)`` 決定,回報的 ``sections`` 會列出結果。
    * - ``AC_config_sync_full_resync``
      - ``ac_config_sync_full_resync``
      - 被退休後採用 server 的狀態;待送變更會被捨棄並列出
+   * - ``AC_config_sync_collect_blobs``
+     - ``ac_config_sync_collect_blobs``
+     - 刪除 server 上已沒有 entry 指名的 blob(``keep``、``min_age_s``、``dry_run``)
 
-四個都是 Script Builder **Data** 分類下的指令,而且形狀一致:
+五個都是 Script Builder **Data** 分類下的指令,而且形狀一致:
 ``(server_url, user_id, ..., **options)``,options 即上面列的那些。
 ``config_sync_status(server_url, user_id, outbox_path=None, **options)`` 只讀 ``outbox_path``
 (仍可用位置參數傳);其他選項會被接受,讓同一個 options dict 可以傳給每一個呼叫,
@@ -441,8 +514,20 @@ GUI
 
 **設定同步** 分頁(分類 *system*)顯示狀態(退避期間會附上距離下次自動重試的秒數)、最後合併的 revision、待送變更數、
 上次成功同步與最後的錯誤,並列出每個衝突及其候選。它的指令 —— *立即同步*、*取消同步*、
-*重新整理同步狀態*、*保留所選候選*、*完整重新同步* —— 在 Actions 選單。
+*重新整理同步狀態*、*保留所選候選*、*完整重新同步*、*刪除伺服器上未使用的 blob*
+(會先確認;以預設值執行 ``config_sync_collect_blobs``)—— 在 Actions 選單。
 同步在 worker 執行緒上執行;取消或關閉分頁都會釋放它。
+
+輸入欄位有 server URL、使用者 id、共享密鑰、腳本資料夾、定位器儲存庫檔案與共享資產資料夾,另外還有:
+
+* **要同步的區段** —— ``SYNCABLE_SECTIONS`` 的每個 section 一個核取方塊。全部勾選時分頁不傳
+  ``sections``,套用上面的預設。取消勾選任何一個,就把勾選的那些當成 ``sections`` 傳入;
+  勾選了但路徑是空的 section 會被略過而不是拒絕,若一個都不剩,分頁會說明並且不同步。
+  狀態會列出上次同步涵蓋的 section。
+* **把大型腳本存放在同步伺服器上** —— 傳 ``assets_server=True``,並把它取代的共享資產資料夾欄位反灰。
+
+除了密鑰之外,其餘都會記在 GUI 設定檔裡(``WindowSettings.load_form`` / ``save_form``,
+表單 ``config_sync``),下次開啟時還原。
 
 資料夾鏡像與剪貼簿:不回送
 --------------------------
@@ -456,6 +541,12 @@ GUI
 每個資料夾包含該檔案、而且還存在的引擎都會記下內容的 SHA-256。所以收進鏡像資料夾的檔案不會被送回去,
 呼叫端不需要接線;沒有引擎鏡像那個資料夾時,檔案連 hash 都不會算。
 ``FolderSyncEngine.relative_name(path)`` 回報引擎是否涵蓋某個路徑(子資料夾需要 ``include_subdirs``)。
+
+**什麼算是變更。** 引擎記下每個檔案的修改時間與大小,兩者任一和紀錄不同就推送 ——
+不再只看時間是否 *較晚*,所以被換回較舊時間的檔案也會推送。光靠時間分不出同一個時間刻度內的兩次寫入
+(剛把收到的檔案記下之後緊接著的本機編輯,以前不會被送出),所以在檔案自己最後一次寫入後
+``RACY_WINDOW_S``\ (2 秒)內被記錄的檔案,還會以 SHA-256 記下內容,在這段時間過去之前以內容比對。
+較舊的檔案不會為了判斷是否變更而被讀取。
 
 **還在寫入的檔案。** 變更過的檔案要連續兩次輪詢看到相同的大小與修改時間才會推送,
 所以大檔案的複製會晚一次輪詢整個送出,而不是現在就送出截斷的前半段(一直在變的檔案,例如

@@ -288,6 +288,10 @@ from je_auto_control.utils.config_sync import (
     HotkeySyncAdapter, HttpAssetTransport, LocatorSyncAdapter, OperationMismatchError,
     RevisionConflictError, ScriptSyncAdapter, TriggerSyncAdapter, run_sync,
 )
+# ... and blob housekeeping: the server's blobs that no entry names any more
+from je_auto_control.utils.config_sync import (
+    collect_unreferenced_blobs, config_sync_collect_blobs, referenced_blob_digests,
+)
 # The /config wire format; named for what it versions (the module calls it WIRE_VERSION)
 from je_auto_control.utils.config_sync import WIRE_VERSION as CONFIG_SYNC_WIRE_VERSION
 # Step-through debugger / tracer for action lists
@@ -1811,6 +1815,7 @@ __all__ = [
     "DirectoryAssetTransport", "HotkeySyncAdapter", "HttpAssetTransport",
     "LocatorSyncAdapter", "OperationMismatchError", "RevisionConflictError",
     "ScriptSyncAdapter", "TriggerSyncAdapter", "run_sync",
+    "collect_unreferenced_blobs", "config_sync_collect_blobs", "referenced_blob_digests",
     "ConfigField", "ConfigSchema", "coerce", "validate_config",
     "PathNotAllowedError", "PathPolicy",
     "RefResolver", "SecretRefError", "is_ref", "resolve_ref", "resolve_refs_in",

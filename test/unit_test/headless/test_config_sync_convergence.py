@@ -214,7 +214,9 @@ def test_a_deletion_reaches_an_offline_machine_however_long_it_was_away(server):
 
 
 def test_retired_peer_requires_full_sync(server):
-    client = _client()
+    # No hold: this is about who a tombstone waits for, not for how long it is
+    # kept afterwards (test_config_sync_unlisted_device.py covers that).
+    client = ConfigSyncClient("https://sync.invalid", user_id="alice", tombstone_hold_s=0)
     entry = SyncEntry.create("hk1", {"combo": "ctrl+a"}, "laptop")
     client.push_operations([_op(entry)], device_id="laptop")
     client.push_operations([], device_id="desktop")

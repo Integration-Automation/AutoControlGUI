@@ -9322,6 +9322,24 @@ def config_sync_tools() -> List[MCPTool]:
             handler=h_sync.config_sync_full_resync,
             annotations=DESTRUCTIVE,
         ),
+        MCPTool(
+            name="ac_config_sync_collect_blobs",
+            description=("DELETE this account's asset blobs on the sync server that no "
+                         "entry names any more (scripts deleted or replaced keep "
+                         "counting against the quota until this runs). Kept: every "
+                         "SHA-256 named by the server's bucket, this machine's merged "
+                         "state and its unsent changes, the digests in 'keep', and "
+                         "any blob stored less than 'min_age_s' seconds ago (default "
+                         "86400). dry_run=true deletes nothing and lists what would "
+                         "go. Returns {deleted, freed, kept, recent, failed, dry_run, "
+                         "referenced}."),
+            input_schema=schema({**target, **options,
+                                 "keep": {"type": "array", "items": {"type": "string"}},
+                                 "min_age_s": {"type": "number"},
+                                 "dry_run": {"type": "boolean"}}, required),
+            handler=h_sync.config_sync_collect_blobs,
+            annotations=DESTRUCTIVE,
+        ),
     ]
 
 

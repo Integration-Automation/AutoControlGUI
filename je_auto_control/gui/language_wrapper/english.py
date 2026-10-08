@@ -1286,6 +1286,23 @@ english_word_dict = {
     "config_sync_secret_label": "Shared secret:",
     "config_sync_scripts_label": "Scripts folder (optional):",
     "config_sync_assets_label": "Shared assets folder (optional):",
+    "config_sync_locators_label": "Locator repository file (optional):",
+    "config_sync_sections_label": "Sections to sync:",
+    "config_sync_section_hotkeys": "Hotkeys",
+    "config_sync_section_triggers": "Triggers",
+    "config_sync_section_address_book": "Address book",
+    "config_sync_section_scripts": "Scripts (needs the folder)",
+    "config_sync_section_locators": "Locators (needs the file)",
+    "config_sync_assets_server_label": "Keep large scripts on the sync server instead of a shared folder",
+    "config_sync_no_sections": "Tick at least one section to sync (scripts and locators need their path)",
+    "config_sync_sections_covered": "Sections synced",
+    "config_sync_collect_btn": "Delete unused blobs on the server",
+    "config_sync_collect_confirm":
+        "Delete this account's blobs on the sync server that no synced entry refers to "
+        "any more? Blobs stored within the last day are kept.",
+    "config_sync_collect_done":
+        "Blobs: {deleted} deleted ({freed} bytes freed), {kept} in use, "
+        "{recent} too recent to judge",
     "config_sync_conflicts_title": "Conflicts: entries changed on two machines at once",
     "config_sync_col_entry": "Entry",
     "config_sync_col_choice": "Choice",

@@ -32,7 +32,8 @@ content-addressed blobs per account::
     GET    /blobs/{user_id}/{sha256}   the bytes, or 404
     HEAD   /blobs/{user_id}/{sha256}   200 / 404, no body
     DELETE /blobs/{user_id}/{sha256}   {"deleted": true | false}
-    GET    /blobs/{user_id}            {"used", "quota", "count", "blobs": [...]}
+    GET    /blobs/{user_id}            {"used", "quota", "count", "max_blob_bytes",
+                                        "blobs": [{"sha256", "size", "age_s"}]}
 
 under the rules ``/config`` follows: the shared secret, the account named by
 the path (one account never reads another's blob), and a size cap checked

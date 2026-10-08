@@ -30,11 +30,20 @@ call :func:`note_incoming` just before they rename a finished file into
 place; every live engine whose folder holds it records the content's hash
 through :meth:`FolderSyncEngine.note_received` and leaves the file alone
 until it changes locally.
+
+**A change is anything that differs from what was last recorded.** The engine
+remembers each file's modification time and size and pushes a file whose
+either one differs -- including a file put back with an *older* time. A time
+alone cannot tell two writes in one clock tick apart, so a file recorded
+within :data:`RACY_WINDOW_S` of its own last write is also remembered by
+content hash and compared by content until that window has passed; an older
+file is never read to decide whether it changed.
 """
 from __future__ import annotations
 
 import hashlib
 import threading
+import time
 import weakref
 from pathlib import Path
 from typing import Callable, Dict, List, NamedTuple, Optional, Sequence, Tuple, Union
@@ -48,14 +57,40 @@ _MAX_RECEIVED_NOTES = 4096
 #: Name endings that mark a file as still being written; never mirrored.
 IN_PROGRESS_SUFFIXES = (".part", ".partial", ".tmp", ".crdownload")
 
+#: A file recorded this soon after its last write is compared by content too:
+#: within one tick of the file system's clock (2 s on FAT, far less elsewhere)
+#: a second write leaves the modification time as it was.
+RACY_WINDOW_S = 2.0
+_RACY_WINDOW_NS = int(RACY_WINDOW_S * 1_000_000_000)
+
 _ENGINES: "weakref.WeakSet[FolderSyncEngine]" = weakref.WeakSet()
 _ENGINES_LOCK = threading.Lock()
+
+
+def _wall_ns() -> int:
+    """The wall clock in nanoseconds, the unit file times are compared in."""
+    return time.time_ns()
 
 
 class _FileState(NamedTuple):
     """What one scan saw of a file: its mtime, and (mtime ns, size) to compare."""
     mtime: float
     signature: Tuple[int, int]
+
+
+class _Known(NamedTuple):
+    """What the engine last recorded of a file it considers in sync.
+
+    ``digest`` is set only while the file's time cannot tell a later write
+    apart from the recorded one (see :data:`RACY_WINDOW_S`).
+    """
+    signature: Tuple[int, int]
+    digest: Optional[str] = None
+
+
+def _is_racy(signature: Tuple[int, int], now_ns: int) -> bool:
+    """Whether a write made now could still carry this file's recorded time."""
+    return signature[0] + _RACY_WINDOW_NS >= now_ns
 
 
 def _file_digest(path: Path) -> Optional[str]:
@@ -94,7 +129,7 @@ class FolderSyncEngine:
         self._include_subdirs = bool(include_subdirs)
         self._wait_until_stable = bool(wait_until_stable)
         self._ignore_suffixes = tuple(suffix.lower() for suffix in ignore_suffixes)
-        self._snapshot: Dict[str, float] = {}  # rel_path -> mtime
+        self._snapshot: Dict[str, _Known] = {}  # rel_path -> what was last in sync
         # rel_path -> what the last poll saw of a changed file not pushed yet
         self._settling: Dict[str, Tuple[int, int]] = {}
         self._received: Dict[str, str] = {}  # rel_path -> sha256 of what the peer sent
@@ -189,17 +224,41 @@ class FolderSyncEngine:
     def _digest(path: Path) -> Optional[str]:
         return _file_digest(path)
 
-    def _is_echo(self, rel: str) -> bool:
-        """Whether ``rel`` still holds exactly what the peer sent."""
+    def _echo_digest(self, rel: str) -> Optional[str]:
+        """The hash ``rel`` holds if that is still exactly what the peer sent."""
         with self._received_lock:
             noted = self._received.get(rel)
         if noted is None:
-            return False
+            return None
         if self._digest(self._watch / rel) == noted:
-            return True
+            return noted
         # Edited here since it arrived: it is a local change again.
         with self._received_lock:
             self._received.pop(rel, None)
+        return None
+
+    def _known(self, rel: str, state: _FileState, now_ns: int,
+               digest: Optional[str] = None) -> _Known:
+        """The record of ``rel`` as it is now, with its hash while its time is racy."""
+        if not _is_racy(state.signature, now_ns):
+            return _Known(state.signature)
+        return _Known(state.signature, digest or self._digest(self._watch / rel))
+
+    def _has_changed(self, rel: str, state: _FileState, now_ns: int) -> bool:
+        """Whether ``rel`` differs from what was last recorded as in sync."""
+        known = self._snapshot.get(rel)
+        if known is None or known.signature != state.signature:
+            return True
+        if known.digest is None:
+            return False
+        digest = self._digest(self._watch / rel)
+        if digest is None:
+            return False        # unreadable right now; looked at again next poll
+        if digest != known.digest:
+            return True
+        if not _is_racy(state.signature, now_ns):
+            # From here on a write gets a later time: stop reading the file.
+            self._snapshot[rel] = _Known(state.signature)
         return False
 
     def _has_settled(self, rel: str, state: _FileState) -> bool:
@@ -217,17 +276,20 @@ class FolderSyncEngine:
         engine themselves can call it directly.
         """
         current = self._scan()
+        now_ns = _wall_ns()
         if not self._ready.is_set():
-            self._snapshot = {rel: state.mtime for rel, state in current.items()}
+            self._snapshot = {rel: self._known(rel, state, now_ns)
+                              for rel, state in current.items()}
             self._ready.set()
             return []
         pushed: List[str] = []
         changed = [(rel, state) for rel, state in current.items()
-                   if self._snapshot.get(rel, float("-inf")) < state.mtime]
+                   if self._has_changed(rel, state, now_ns)]
         for rel, state in changed:
-            if self._is_echo(rel):
-                self._snapshot[rel] = state.mtime
-            elif self._has_settled(rel, state) and self._push(rel, state.mtime):
+            echoed = self._echo_digest(rel)
+            if echoed is not None:
+                self._snapshot[rel] = self._known(rel, state, now_ns, echoed)
+            elif self._has_settled(rel, state) and self._push(rel, state, now_ns):
                 pushed.append(rel)
         self._forget(current, {rel for rel, _state in changed})
         return pushed
@@ -240,19 +302,22 @@ class FolderSyncEngine:
         # retry promise made in this engine's docstring. Successful
         # sends already updated ``_snapshot[rel]``.
         self._snapshot = {
-            rel: mtime for rel, mtime in self._snapshot.items()
+            rel: known for rel, known in self._snapshot.items()
             if rel in current
         }
         self._settling = {rel: seen for rel, seen in self._settling.items() if rel in waiting}
 
-    def _push(self, rel: str, mtime: float) -> bool:
+    def _push(self, rel: str, state: _FileState, now_ns: int) -> bool:
+        # Hashed before the send: a write that slips in during it is then a
+        # difference from this record, and goes out on the next poll.
+        known = self._known(rel, state, now_ns)
         try:
             self._sender(str(self._watch / rel), rel)
         except (RuntimeError, OSError, ValueError) as error:
             # _settling keeps the file's state, so the retry is the next tick.
             autocontrol_logger.warning("folder sync push %s: %r", rel, error)
             return False
-        self._snapshot[rel] = mtime
+        self._snapshot[rel] = known
         self._settling.pop(rel, None)
         autocontrol_logger.info("folder sync: pushed %s", rel)
         return True
@@ -315,4 +380,6 @@ def note_incoming(final_path: Union[str, Path],
     return len(covering)
 
 
-__all__ = ["FolderSyncEngine", "IN_PROGRESS_SUFFIXES", "live_engines", "note_incoming"]
+__all__ = [
+    "FolderSyncEngine", "IN_PROGRESS_SUFFIXES", "RACY_WINDOW_S", "live_engines", "note_incoming",
+]
