@@ -6,6 +6,16 @@
 (``python -m je_auto_control.utils.remote_desktop.signaling_server``,需要 ``[signaling]`` extra)
 以 ``GET`` / ``PUT /config/{user_id}`` 提供它。
 
+腳本需要的名稱都在套件門面上:``import je_auto_control as ac`` 之後有
+``ac.config_sync_run`` 與另外三個入口、``ac.run_sync``、``ac.ConfigSyncClient``、
+``ac.ConfigBucket``、``ac.SyncOutbox``、``ac.SyncEntry``、``ac.SyncOperation``、
+``ac.SyncAdapter`` 與五個具體 adapter(``ac.ScriptSyncAdapter`` ……)、
+``ac.DirectoryAssetTransport``、``ac.HttpAssetTransport``、``ac.ConfigStore``、``ac.BlobStore``、
+各個錯誤(``ac.ConfigSyncError``、``ac.ConfigSyncConflict``、``ac.FullResyncRequired``、
+``ac.OperationMismatchError``、``ac.ConfigStoreError``、``ac.RevisionConflictError``)
+以及 ``ac.CONFIG_SYNC_WIRE_VERSION``(模組內的 ``WIRE_VERSION``,值為 ``2``)。
+其餘的仍可從 ``je_auto_control.utils.config_sync`` 匯入。
+
 Server:持久化、檢查修訂版的 bucket
 -----------------------------------
 

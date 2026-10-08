@@ -7,6 +7,18 @@ has one *bucket* on a sync server; the signaling server
 (``python -m je_auto_control.utils.remote_desktop.signaling_server``, the
 ``[signaling]`` extra) serves it at ``GET`` / ``PUT /config/{user_id}``.
 
+Everything a script needs is on the package facade: ``import je_auto_control as
+ac`` gives ``ac.config_sync_run`` and its three siblings, ``ac.run_sync``,
+``ac.ConfigSyncClient``, ``ac.ConfigBucket``, ``ac.SyncOutbox``, ``ac.SyncEntry``,
+``ac.SyncOperation``, ``ac.SyncAdapter`` and the five concrete adapters
+(``ac.ScriptSyncAdapter`` ...), ``ac.DirectoryAssetTransport``,
+``ac.HttpAssetTransport``, ``ac.ConfigStore``, ``ac.BlobStore``, the errors
+(``ac.ConfigSyncError``, ``ac.ConfigSyncConflict``, ``ac.FullResyncRequired``,
+``ac.OperationMismatchError``, ``ac.ConfigStoreError``,
+``ac.RevisionConflictError``) and ``ac.CONFIG_SYNC_WIRE_VERSION`` (the module's
+``WIRE_VERSION``, ``2``). The rest stays importable from
+``je_auto_control.utils.config_sync``.
+
 Server: persistent, revision-checked buckets
 --------------------------------------------
 
