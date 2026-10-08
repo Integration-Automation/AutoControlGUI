@@ -199,6 +199,13 @@ from je_auto_control.utils.vision import (
 from je_auto_control.utils.self_healing import (
     HealEvent, HealEventLog, HealOutcome, SelfHealError,
     default_heal_log, self_heal_click, self_heal_locate,
+    # measurement: labelled evaluation of strategy versions, template revisions
+    EvaluationSample, HealingComparison, HealingEvaluationError,
+    TemplateRevision, TemplateRevisionError, TemplateRevisionStore,
+    accept_template_revision, evaluate_healing_dataset, evaluate_locators,
+    heal_context, list_template_revisions, preview_template_revision,
+    propose_template_revision, revert_template_revision,
+    template_match_strategy,
 )
 # Screenshot PII redaction (blur regions before VLM upload / audit log).
 from je_auto_control.utils.redaction import (
@@ -1950,6 +1957,12 @@ __all__ = [
     # Self-healing locator (image → VLM fallback)
     "HealEvent", "HealEventLog", "HealOutcome", "SelfHealError",
     "default_heal_log", "self_heal_click", "self_heal_locate",
+    "EvaluationSample", "HealingComparison", "HealingEvaluationError",
+    "TemplateRevision", "TemplateRevisionError", "TemplateRevisionStore",
+    "accept_template_revision", "evaluate_healing_dataset", "evaluate_locators",
+    "heal_context", "list_template_revisions", "preview_template_revision",
+    "propose_template_revision", "revert_template_revision",
+    "template_match_strategy",
     # Screenshot redaction (PII blur)
     "POLICY_MODERATE", "POLICY_OFF", "POLICY_STRICT",
     "RedactionEngine", "RedactionPolicy", "RedactionResult",

@@ -30,6 +30,134 @@
 Executor：``AC_self_heal_locate / _click / _log_list / _log_clear``。
 MCP：``ac_self_heal_*``。GUI：**Self-Healing** 分頁。
 
+``screen_region`` 是螢幕座標的 ``[x1, y1, x2, y2]``，**兩種**策略都受它限制；
+以前只有 VLM 收到它，樣板比對可能在區域之外回報命中。
+
+**找到不等於驗證過。** ``HealOutcome.found`` 只表示某個策略回傳了一個點。
+點擊有沒有達到目的是另一個欄位 ``action_verified``，由呼叫端傳入的檢查填入——
+沒有檢查時是 ``None``，絕不從命中推論::
+
+    outcome = self_heal_click(
+        template_path="submit.png",
+        description="綠色的 Submit 按鈕",
+        verify=lambda result: dialog_is_open(),
+    )
+    outcome.found            # 回傳了一個點
+    outcome.action_verified  # 檢查結果 True / False，沒有檢查則為 None
+
+自愈記錄新增選用欄位（``schema_version``、``run_id``、``step_id``、``locator_id``、
+``locator_version``、``backend``、``model``、``screen_region``、``image_ms``、
+``vlm_ms``、``action``、``action_verified``）。這些欄位出現之前寫入的記錄仍可讀取，
+缺少的欄位為 ``None``。識別資訊由呼叫端標註::
+
+    from je_auto_control import heal_context
+
+    with heal_context(run_id="nightly-42", locator_id="submit", locator_version="v2"):
+        self_heal_click(template_path="submit.png")
+
+從 JSON 動作或 MCP 呼叫時，把同樣的鍵放在 ``AC_self_heal_locate`` /
+``AC_self_heal_click`` 的 ``context`` 參數。JSON 步驟無法攜帶檢查函式，所以它的
+``action_verified`` 會維持 ``None``。``AC_heal_stats`` 另外回報
+``action_verification``（``actions`` / ``verified`` / ``failed`` / ``unchecked``），
+與只計算「有回傳座標」的 ``healed`` 分開。
+
+量測定位器版本
+~~~~~~~~~~~~~~
+
+``evaluate_locators`` 讓每個策略版本跑同一批已標註的畫面——每個樣本只有一張
+擷取畫面、一個區域、一組原點與縮放，所有版本收到同一個 request 物件——再替答案計分::
+
+    from je_auto_control import (
+        EvaluationSample, evaluate_locators, template_match_strategy,
+    )
+
+    samples = [
+        EvaluationSample("submit", frame, expected_box=(100, 60, 156, 92),
+                         template="submit.png"),
+        EvaluationSample("left-monitor-150", hidpi_frame,
+                         expected_box=(-1880, -180, -1824, -148),
+                         origin=(-1920, -300), scale=1.5, template="submit.png"),
+        EvaluationSample("dialog-closed", other_frame, expect_miss=True,
+                         template="submit.png"),
+    ]
+    comparison = evaluate_locators(samples, {
+        "v1": template_match_strategy(0.9),
+        "v2": template_match_strategy(0.9, scales=(1.0, 1.25, 1.5, 2.0)),
+    })
+    report = comparison.report("v2")
+    report.accuracy          # Ratio(分子, 分母)；分母為 0 時 .value 是 None
+    report.recovery_rate     # v1 失敗而 v2 正確命中的目標
+    report.p50_ms, report.p95_ms
+    comparison.failures("v2")
+
+計分方式：
+
+* 命中點落在 ``expected_box`` 內才是 ``correct``；落在別處，或樣本標為
+  ``expect_miss`` 卻命中，都是 ``false_positive``——有找到，但不算恢復；
+* 既沒有 ``expected_box`` 也沒有 ``expect_miss`` 的樣本是 ``unknown``，
+  只計入命中率，不計入任何宣稱正確的比率；
+* 策略拋出例外記為 ``error``，即使該樣本預期 miss；
+* 策略若修改了畫面，會以 ``HealingEvaluationError`` 拒絕：下一個版本量到的
+  就不是同一張圖了。
+
+座標一律是螢幕座標。``origin`` 是畫面左上角像素的螢幕位置（在主螢幕左方或上方的
+螢幕為負值），``scale`` 是每一個螢幕單位對應的畫面像素數。
+
+資料集也可以是一個 JSON 檔，畫面影像放在它旁邊；Executor 指令、MCP 工具與 GUI
+評估的就是這種檔案::
+
+    {"schema_version": 1,
+     "samples": [{"id": "submit", "frame": "frames/submit.png",
+                  "template": "submit.png",
+                  "expected_box": [100, 60, 156, 92],
+                  "origin": [0, 0], "scale": 1.0, "region": null}],
+     "versions": {"v1": {"strategy": "template", "threshold": 0.9},
+                  "v2": {"strategy": "template", "threshold": 0.9,
+                         "scales": [1.0, 1.5]}},
+     "thresholds": {"v2": {"min_correct": 1, "max_false_positive": 0}}}
+
+    from je_auto_control import evaluate_healing_dataset
+    payload = evaluate_healing_dataset("dataset.json")
+    payload["passed"], payload["violations"]
+
+影像路徑相對於資料集檔案，且不得離開它所在的目錄。JSON 裡只能指名 ``template``
+策略；要評估 VLM，請把包裝它的 callable 傳給 ``evaluate_locators``。
+
+``benchmarks/self_healing/run.py`` 是固定的回歸資料集：十張在記憶體中繪製的畫面
+（一般、125%／150% 縮放、負原點螢幕、必須選中兩個相同目標中第二個的區域、
+改版後的控制項、目標不存在、相似的鄰近控制項、一張未標註畫面）與三個版本。
+它不擷取螢幕::
+
+    python benchmarks/self_healing/run.py --check --json report.json
+
+候選樣板修訂
+~~~~~~~~~~~~
+
+自愈得到的點絕不直接覆寫樣板。新影像只是候選，必須先預覽才能取代任何東西::
+
+    from je_auto_control import (
+        propose_template_revision, preview_template_revision,
+        accept_template_revision, revert_template_revision,
+    )
+
+    revision = propose_template_revision("submit.png", "submit_new.png")
+    preview = preview_template_revision(revision.revision_id,
+                                        dataset_path="dataset.json")
+    preview["revision"]["validated"]
+    accept_template_revision(revision.revision_id)   # 保留備份
+    revert_template_revision(revision.revision_id)   # 還原備份
+
+``propose`` 與 ``preview`` 都不會動到樣板。給了資料集（或 ``samples=``）時，
+preview 會讓現行樣板與候選樣板跑同一批畫面；候選必須至少正確一次、正確次數不少於
+現行樣板、且沒有 false positive 或 error，才會標為 ``validated``。``accept`` 會拒絕
+未驗證的候選，除非傳入 ``allow_unvalidated=True``；樣板檔在修訂之後被別人改過時，
+``accept`` 與 ``revert`` 都會拒絕。修訂存放在 ``~/.je_auto_control/template_revisions``。
+
+Executor：``AC_self_heal_evaluate``、``AC_self_heal_revision_propose /
+_preview / _accept / _revert / _list``。MCP：``ac_self_heal_evaluate``、
+``ac_self_heal_revision_*``。GUI：**Self-Healing** 分頁 → Actions 選單
+（*評估資料集*、*提出／預覽／接受／回復修訂*）。
+
 
 錨點定位器
 ----------

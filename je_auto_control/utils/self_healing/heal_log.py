@@ -1,9 +1,15 @@
-"""Append-only JSON-lines log of self-healing locator events."""
+"""Append-only JSON-lines log of self-healing locator events.
+
+A line written before the version / context fields existed has none of them
+and still loads: every field added since is optional. A line written by a
+newer build may carry fields this one does not know; they are dropped rather
+than costing the reader the whole event.
+"""
 from __future__ import annotations
 
 import json
 import threading
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, fields
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -22,6 +28,25 @@ class HealEvent:
     description: Optional[str] = None
     image_error: Optional[str] = None
     vlm_error: Optional[str] = None
+    # --- added with schema_version 2; absent from older lines -------------
+    #: ``None`` on a line written before the field existed.
+    schema_version: Optional[int] = None
+    run_id: Optional[str] = None
+    step_id: Optional[str] = None
+    locator_id: Optional[str] = None
+    locator_version: Optional[str] = None
+    backend: Optional[str] = None
+    model: Optional[str] = None
+    #: ``[x1, y1, x2, y2]`` both strategies were confined to, if any.
+    screen_region: Optional[List[int]] = None
+    image_ms: Optional[float] = None
+    vlm_ms: Optional[float] = None
+    #: What was done with the hit (``"click"``); ``None`` for a bare locate.
+    action: Optional[str] = None
+    #: ``True`` / ``False`` once a caller-supplied check ran after the action;
+    #: ``None`` when nothing verified it. A located element is not a verified
+    #: action, so this is never inferred from ``method``.
+    action_verified: Optional[bool] = None
 
     def to_dict(self) -> Dict[str, Any]:
         """Return a plain-dict snapshot safe for JSON / network transport."""
@@ -100,13 +125,25 @@ def _parse_line(raw: str) -> Optional[HealEvent]:
         payload = json.loads(text)
     except ValueError:
         return None
+    if not isinstance(payload, dict):
+        return None
+    known = {name: payload[name] for name in _FIELD_NAMES if name in payload}
     try:
-        return HealEvent(**payload)
+        return HealEvent(**known)
     except TypeError:
         return None
+
+
+#: Schema written by this build. 1 is the original eight-field line, which
+#: carried no ``schema_version`` key at all.
+HEAL_EVENT_SCHEMA_VERSION = 2
+
+_FIELD_NAMES = frozenset(spec.name for spec in fields(HealEvent))
 
 
 default_heal_log = HealEventLog()
 
 
-__all__ = ["HealEvent", "HealEventLog", "default_heal_log"]
+__all__ = [
+    "HEAL_EVENT_SCHEMA_VERSION", "HealEvent", "HealEventLog", "default_heal_log",
+]

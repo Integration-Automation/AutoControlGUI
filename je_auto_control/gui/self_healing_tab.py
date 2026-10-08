@@ -1,14 +1,18 @@
 """Self-Healing Locator tab.
 
 Fire a template-first / VLM-fallback locate from the GUI and browse the
-audit log of every healing attempt the runtime has performed.
+audit log of every healing attempt the runtime has performed. The second
+group measures locator versions against a labelled dataset and walks a
+candidate template revision through propose / preview / accept / revert; every
+one of those is a call into ``utils.self_healing`` and nothing more.
 """
-from typing import Optional
+import json
+from typing import Callable, Optional, Sequence
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QCheckBox, QDoubleSpinBox, QFileDialog, QFormLayout, QGroupBox,
-    QLabel, QLineEdit, QMessageBox,
+    QLabel, QLineEdit, QMessageBox, QPlainTextEdit,
     QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget,
 )
 
@@ -17,13 +21,20 @@ from je_auto_control.gui.language_wrapper.multi_language_wrapper import (
     language_wrapper,
 )
 from je_auto_control.utils.self_healing import (
-    HealOutcome, default_heal_log, self_heal_click, self_heal_locate,
+    HealOutcome, accept_template_revision, default_heal_log,
+    evaluate_healing_dataset, list_template_revisions,
+    preview_template_revision, propose_template_revision,
+    revert_template_revision, self_heal_click, self_heal_locate,
 )
 from je_auto_control.utils.exception.exceptions import AutoControlException
 
 
 _COLUMNS = ("timestamp", "method", "coordinates",
-            "template_path", "description", "duration_ms")
+            "template_path", "description", "duration_ms",
+            "locator_version", "action_verified")
+
+_SLOT_ERRORS = (AutoControlException, OSError, ValueError, RuntimeError)
+_IMAGE_FILTER = "Images (*.png *.jpg *.bmp);;All (*)"
 
 
 def _t(key: str) -> str:
@@ -45,6 +56,11 @@ class SelfHealingTab(TranslatableMixin, QWidget):
         self._click_check = QCheckBox()
         self._status = QLabel()
         self._table = QTableWidget(0, len(_COLUMNS))
+        self._dataset_input = QLineEdit()
+        self._candidate_input = QLineEdit()
+        self._revision_input = QLineEdit()
+        self._report_view = QPlainTextEdit()
+        self._report_view.setReadOnly(True)
         self._build_layout()
 
     def retranslate(self) -> None:
@@ -59,6 +75,8 @@ class SelfHealingTab(TranslatableMixin, QWidget):
         root = QVBoxLayout(self)
         root.addWidget(self._build_form_group())
         root.addWidget(self._table, stretch=1)
+        root.addWidget(self._build_measure_group())
+        root.addWidget(self._report_view, stretch=1)
         root.addWidget(self._status)
         self._apply_translations()
         self.refresh_log()
@@ -73,6 +91,15 @@ class SelfHealingTab(TranslatableMixin, QWidget):
         self._group_box = group
         return group
 
+    def _build_measure_group(self) -> QGroupBox:
+        group = QGroupBox()
+        form = QFormLayout(group)
+        form.addRow(QLabel(), self._dataset_input)
+        form.addRow(QLabel(), self._candidate_input)
+        form.addRow(QLabel(), self._revision_input)
+        self._measure_box = group
+        return group
+
     def menu_actions(self) -> list:
         """Expose tab commands to the window-level Actions menu."""
         return [
@@ -81,6 +108,14 @@ class SelfHealingTab(TranslatableMixin, QWidget):
             ("self_heal_click_btn", self._on_click),
             ("self_heal_refresh", self.refresh_log),
             ("self_heal_clear", self._on_clear_log),
+            ("self_heal_browse_dataset", self._on_browse_dataset),
+            ("self_heal_evaluate", self._on_evaluate),
+            ("self_heal_browse_candidate", self._on_browse_candidate),
+            ("self_heal_rev_propose", self._on_propose_revision),
+            ("self_heal_rev_preview", self._on_preview_revision),
+            ("self_heal_rev_accept", self._on_accept_revision),
+            ("self_heal_rev_revert", self._on_revert_revision),
+            ("self_heal_rev_list", self._on_list_revisions),
         ]
 
     # --- translation -----------------------------------------------
@@ -90,16 +125,19 @@ class SelfHealingTab(TranslatableMixin, QWidget):
         self._template_input.setPlaceholderText(_t("self_heal_template_placeholder"))
         self._description_input.setPlaceholderText(_t("self_heal_desc_placeholder"))
         self._click_check.setText(_t("self_heal_click_check"))
-        layout = self._group_box.layout()
-        if isinstance(layout, QFormLayout):
-            labels = (
-                "self_heal_template_label", "self_heal_desc_label",
-                "self_heal_threshold_label", "",
-            )
-            for row, key in enumerate(labels):
-                item = layout.itemAt(row, QFormLayout.LabelRole)
-                if item is not None and isinstance(item.widget(), QLabel):
-                    item.widget().setText(_t(key) if key else "")
+        _set_form_labels(self._group_box, (
+            "self_heal_template_label", "self_heal_desc_label",
+            "self_heal_threshold_label", "",
+        ))
+        self._measure_box.setTitle(_t("self_heal_measure_title"))
+        self._dataset_input.setPlaceholderText(_t("self_heal_dataset_placeholder"))
+        self._candidate_input.setPlaceholderText(_t("self_heal_candidate_placeholder"))
+        self._revision_input.setPlaceholderText(_t("self_heal_revision_placeholder"))
+        self._report_view.setPlaceholderText(_t("self_heal_report_placeholder"))
+        _set_form_labels(self._measure_box, (
+            "self_heal_dataset_label", "self_heal_candidate_label",
+            "self_heal_revision_label",
+        ))
         headers = [_t(f"self_heal_col_{name}") for name in _COLUMNS]
         self._table.setHorizontalHeaderLabels(headers)
 
@@ -107,11 +145,104 @@ class SelfHealingTab(TranslatableMixin, QWidget):
 
     def _on_browse_template(self) -> None:
         path, _selected = QFileDialog.getOpenFileName(
-            self, _t("self_heal_browse"), "",
-            "Images (*.png *.jpg *.bmp);;All (*)",
+            self, _t("self_heal_browse"), "", _IMAGE_FILTER,
         )
         if path:
             self._template_input.setText(path)
+
+    def _on_browse_dataset(self) -> None:
+        path, _selected = QFileDialog.getOpenFileName(
+            self, _t("self_heal_browse_dataset"), "", "JSON (*.json);;All (*)",
+        )
+        if path:
+            self._dataset_input.setText(path)
+
+    def _on_browse_candidate(self) -> None:
+        path, _selected = QFileDialog.getOpenFileName(
+            self, _t("self_heal_browse_candidate"), "", _IMAGE_FILTER,
+        )
+        if path:
+            self._candidate_input.setText(path)
+
+    # --- measurement and template revisions -------------------------
+
+    def _show(self, call: Callable[[], object]) -> Optional[object]:
+        """Run a headless call; show its JSON result, or its error in the status."""
+        try:
+            result = call()
+        except _SLOT_ERRORS as error:
+            self._status.setText(f"{_t('self_heal_error')}: {error}")
+            return None
+        self._report_view.setPlainText(
+            json.dumps(result, ensure_ascii=False, indent=2, default=str))
+        self._status.setText(_t("self_heal_done"))
+        return result
+
+    def _revision_id(self) -> Optional[str]:
+        revision_id = self._revision_input.text().strip()
+        if not revision_id:
+            self._status.setText(_t("self_heal_revision_required"))
+            return None
+        return revision_id
+
+    def _on_evaluate(self) -> None:
+        dataset = self._dataset_input.text().strip()
+        if not dataset:
+            self._status.setText(_t("self_heal_dataset_required"))
+            return
+        result = self._show(lambda: evaluate_healing_dataset(dataset))
+        if isinstance(result, dict):
+            self._status.setText(_t(
+                "self_heal_eval_passed" if result.get("passed") else "self_heal_eval_failed"))
+
+    def _on_propose_revision(self) -> None:
+        template = self._template_input.text().strip()
+        candidate = self._candidate_input.text().strip()
+        if not template or not candidate:
+            self._status.setText(_t("self_heal_propose_required"))
+            return
+        result = self._show(
+            lambda: propose_template_revision(template, candidate).to_dict())
+        if isinstance(result, dict):
+            self._revision_input.setText(str(result["revision_id"]))
+
+    def _on_preview_revision(self) -> None:
+        revision_id = self._revision_id()
+        if revision_id is None:
+            return
+        dataset = self._dataset_input.text().strip() or None
+        threshold = float(self._threshold.value())
+        self._show(lambda: preview_template_revision(
+            revision_id, dataset_path=dataset, detect_threshold=threshold))
+
+    def _on_accept_revision(self) -> None:
+        revision_id = self._revision_id()
+        if revision_id is None:
+            return
+        self._show(lambda: self._accept(revision_id))
+
+    def _accept(self, revision_id: str) -> dict:
+        """Accept a validated revision; an unvalidated one only after a prompt."""
+        pending = {item.revision_id: item for item in list_template_revisions()}
+        revision = pending.get(revision_id)
+        allow = False
+        if revision is not None and not revision.validated:
+            reply = QMessageBox.question(
+                self, _t("self_heal_rev_accept"), _t("self_heal_accept_unvalidated"),
+            )
+            if reply != QMessageBox.Yes:
+                return {"accepted": False, "revision_id": revision_id}
+            allow = True
+        return accept_template_revision(revision_id, allow_unvalidated=allow).to_dict()
+
+    def _on_revert_revision(self) -> None:
+        revision_id = self._revision_id()
+        if revision_id is None:
+            return
+        self._show(lambda: revert_template_revision(revision_id).to_dict())
+
+    def _on_list_revisions(self) -> None:
+        self._show(lambda: [item.to_dict() for item in list_template_revisions()])
 
     def _collect_inputs(self):
         template = self._template_input.text().strip() or None
@@ -178,6 +309,8 @@ class SelfHealingTab(TranslatableMixin, QWidget):
                 _format_coordinates(event.coordinates),
                 event.template_path or "", event.description or "",
                 f"{event.duration_ms:.1f}",
+                event.locator_version or "",
+                _format_verified(event.action, event.action_verified),
             )
             for col, text in enumerate(values):
                 item = QTableWidgetItem(str(text))
@@ -190,6 +323,26 @@ def _format_coordinates(coords) -> str:
     if coords is None:
         return ""
     return f"({coords[0]}, {coords[1]})"
+
+
+def _format_verified(action: Optional[str], verified: Optional[bool]) -> str:
+    """Empty for a bare locate; otherwise whether the action was checked."""
+    if action is None:
+        return ""
+    if verified is None:
+        return _t("self_heal_verified_unknown")
+    return _t("self_heal_verified_yes" if verified else "self_heal_verified_no")
+
+
+def _set_form_labels(group: QGroupBox, keys: Sequence[str]) -> None:
+    """Translate the label column of ``group``'s form, row by row."""
+    layout = group.layout()
+    if not isinstance(layout, QFormLayout):
+        return
+    for row, key in enumerate(keys):
+        item = layout.itemAt(row, QFormLayout.LabelRole)
+        if item is not None and isinstance(item.widget(), QLabel):
+            item.widget().setText(_t(key) if key else "")
 
 
 __all__ = ["SelfHealingTab"]

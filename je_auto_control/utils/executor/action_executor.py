@@ -167,14 +167,21 @@ def _self_heal_locate(template_path: Optional[str] = None,
                       detect_threshold: float = 0.9,
                       screen_region: Optional[List[int]] = None,
                       model: Optional[str] = None,
-                      raise_on_miss: bool = False) -> Dict[str, Any]:
-    """Executor adapter: template-first locate with VLM fallback."""
-    outcome = _self_heal_locate_impl(
-        template_path=template_path, description=description,
-        detect_threshold=float(detect_threshold),
-        screen_region=screen_region, model=model,
-        raise_on_miss=_as_bool(raise_on_miss),
-    )
+                      raise_on_miss: bool = False,
+                      context: Optional[Dict[str, str]] = None) -> Dict[str, Any]:
+    """Executor adapter: template-first locate with VLM fallback.
+
+    ``context`` stamps ``run_id`` / ``step_id`` / ``locator_id`` /
+    ``locator_version`` / ``backend`` on the logged event.
+    """
+    from je_auto_control.utils.self_healing import heal_context
+    with heal_context(**(context or {})):
+        outcome = _self_heal_locate_impl(
+            template_path=template_path, description=description,
+            detect_threshold=float(detect_threshold),
+            screen_region=screen_region, model=model,
+            raise_on_miss=_as_bool(raise_on_miss),
+        )
     return outcome.to_dict()
 
 
@@ -184,15 +191,22 @@ def _self_heal_click(template_path: Optional[str] = None,
                      detect_threshold: float = 0.9,
                      screen_region: Optional[List[int]] = None,
                      model: Optional[str] = None,
-                     raise_on_miss: bool = False) -> Dict[str, Any]:
-    """Executor adapter: locate with self-heal, then click."""
-    outcome = _self_heal_click_impl(
-        template_path=template_path, description=description,
-        mouse_keycode=mouse_keycode,
-        detect_threshold=float(detect_threshold),
-        screen_region=screen_region, model=model,
-        raise_on_miss=_as_bool(raise_on_miss),
-    )
+                     raise_on_miss: bool = False,
+                     context: Optional[Dict[str, str]] = None) -> Dict[str, Any]:
+    """Executor adapter: locate with self-heal, then click.
+
+    The result's ``action_verified`` stays ``None``: a JSON step cannot carry
+    the check, so the click is recorded as located and unverified.
+    """
+    from je_auto_control.utils.self_healing import heal_context
+    with heal_context(**(context or {})):
+        outcome = _self_heal_click_impl(
+            template_path=template_path, description=description,
+            mouse_keycode=mouse_keycode,
+            detect_threshold=float(detect_threshold),
+            screen_region=screen_region, model=model,
+            raise_on_miss=_as_bool(raise_on_miss),
+        )
     return outcome.to_dict()
 
 
@@ -205,6 +219,52 @@ def _self_heal_log_list(limit: int = 50) -> List[Dict[str, Any]]:
 def _self_heal_log_clear() -> Dict[str, Any]:
     default_heal_log.clear()
     return {"cleared": True, "path": str(default_heal_log.path)}
+
+
+def _self_heal_evaluate(dataset_path: str,
+                        versions: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    """Executor adapter: score strategy versions on a labelled dataset file."""
+    from je_auto_control.utils.self_healing import evaluate_healing_dataset
+    return evaluate_healing_dataset(dataset_path, versions=versions)
+
+
+def _self_heal_revision_propose(template_path: str, candidate_path: str,
+                                source: str = "manual",
+                                note: Optional[str] = None) -> Dict[str, Any]:
+    """Executor adapter: store a candidate template; the template is untouched."""
+    from je_auto_control.utils.self_healing import propose_template_revision
+    return propose_template_revision(
+        template_path, candidate_path, source=source, note=note).to_dict()
+
+
+def _self_heal_revision_preview(revision_id: str,
+                                dataset_path: Optional[str] = None,
+                                detect_threshold: float = 0.9) -> Dict[str, Any]:
+    """Executor adapter: current vs candidate, validated when given a dataset."""
+    from je_auto_control.utils.self_healing import preview_template_revision
+    return preview_template_revision(
+        revision_id, dataset_path=dataset_path or None,
+        detect_threshold=float(detect_threshold))
+
+
+def _self_heal_revision_accept(revision_id: str,
+                               allow_unvalidated: bool = False) -> Dict[str, Any]:
+    """Executor adapter: replace the template with a validated candidate."""
+    from je_auto_control.utils.self_healing import accept_template_revision
+    return accept_template_revision(
+        revision_id, allow_unvalidated=_as_bool(allow_unvalidated)).to_dict()
+
+
+def _self_heal_revision_revert(revision_id: str) -> Dict[str, Any]:
+    """Executor adapter: restore the template an accepted revision replaced."""
+    from je_auto_control.utils.self_healing import revert_template_revision
+    return revert_template_revision(revision_id).to_dict()
+
+
+def _self_heal_revision_list() -> List[Dict[str, Any]]:
+    """Executor adapter: every stored template revision, oldest first."""
+    from je_auto_control.utils.self_healing import list_template_revisions
+    return [revision.to_dict() for revision in list_template_revisions()]
 
 
 def _run_dag(definition: Dict[str, Any],
@@ -7815,6 +7875,12 @@ class Executor:
             "AC_self_heal_click": _self_heal_click,
             "AC_self_heal_log_list": _self_heal_log_list,
             "AC_self_heal_log_clear": _self_heal_log_clear,
+            "AC_self_heal_evaluate": _self_heal_evaluate,
+            "AC_self_heal_revision_propose": _self_heal_revision_propose,
+            "AC_self_heal_revision_preview": _self_heal_revision_preview,
+            "AC_self_heal_revision_accept": _self_heal_revision_accept,
+            "AC_self_heal_revision_revert": _self_heal_revision_revert,
+            "AC_self_heal_revision_list": _self_heal_revision_list,
 
             # Assertion DSL (verify screen state; raise on mismatch)
             "AC_assert_text": _assert_text,
