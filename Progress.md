@@ -205,21 +205,23 @@ pip install --dry-run --only-binary=:all: --platform win_arm64 --python-version 
 
 ---
 
-## macOS 的修正只對著假的 Quartz 驗過
+## macOS 的修正：CI 驗到一半，其餘要一台真的 Mac
 
-`TODO` — 要一台真的 Mac（Retina，最好接第二個螢幕）；CI 的 macos-14 能跑其中一部分
+`TODO` — 要一台真的 Mac（Retina，最好接第二個螢幕）
 
-U-20261009-06 與 -04 改了四件事，全部在 Windows 上以假的 pyobjc／Quartz 物件測試：
+U-20261009-06 與 -04 的 macOS 部分是在 Windows 上對假的 pyobjc／Quartz 寫的。2026-10-09 在 CI 的 macos-14（3.10 與 3.14）跑過的：
 
-- **`click_mouse(clicks=2)`**：按下與放開現在帶 `kCGMouseEventClickState`（第 n 次點擊是 n）。應用程式是否因此認得雙擊，沒看過。
-  `test_osx_mouse_click_state.py` 有三個只在 darwin 跑的測試會把欄位讀回來，第一次執行在 CI。
-- **還原最小化視窗**：`_info_for` 改用 `kCGWindowListOptionIncludingWindow`，`list_windows` 會附上最小化的視窗。
-  `test_window_backend_macos_real.py` 會在 macOS CI 真的開一個視窗、最小化、列出、還原，**從沒執行過**；
-  `test_a_really_minimised_window_stays_in_the_listing` 依賴最小化視窗的 Quartz 邊界或標題仍對得上它的 AX 元素，最可能紅。
-  沒加 AX 逾時，沒回應的 app 會拖慢列出；同一行程裡與最小化視窗同原點或同標題的螢幕外輔助視窗可能被誤列。
-- **`grab_logical`**（`utils/monitor_layout/macos_frame.py`）：改成點座標、逐螢幕擷取後拼接。三個假設要實機確認：
+- **還原最小化視窗**：`test_window_backend_macos_real.py` 的兩個測試（真的開視窗、最小化、以 id 查、列出、還原）通過。
+  第一次執行時是紅的：`kCGWindowListOptionIncludingWindow` 以 id 查不到同一行程剛最小化的視窗，`_info_for` 因此加了以完整清單查找的後備路徑。
+- **點擊次數欄位**：`test_osx_mouse_click_state.py` 的 darwin 專屬測試通過——真的 Quartz 事件會保存寫進去的 `kCGMouseEventClickState`，`doubleClickInterval()` 是正數。
+
+還沒驗的：
+
+- **應用程式是否把 `click_mouse(clicks=2)` 認成雙擊**：只確認了欄位的值，沒有對真的應用程式送事件。
+- **`grab_logical`**（`utils/monitor_layout/macos_frame.py`，點座標、逐螢幕擷取後拼接）完全沒在 macOS 跑過。三個假設要實機確認：
   `screencapture -R` 接受含負值的全域點座標、Pillow 的 `scale_down=True` 給出點尺寸的影像、`CGDisplayBounds` 與 Quartz 滑鼠事件同一個座標空間。
-  每一格要為每個螢幕各開一次 `screencapture`。
+  每一格要為每個螢幕各開一次 `screencapture`。CI 的 runner 是 1x 單螢幕，測不到 Retina 與副螢幕。
+- **`list_windows` 在真的桌面上的成本與誤列**：沒加 AX 逾時，沒回應的 app 會拖慢列出；同一行程裡與最小化視窗同原點或同標題的螢幕外輔助視窗可能被誤列。
 
 ---
 
