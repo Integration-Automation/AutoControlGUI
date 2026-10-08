@@ -718,18 +718,41 @@ canonical absolute path that was checked, so a relative path is relative to
 the server's working directory.
 
 The annotation follows meaning, not the property's name: ``ac_json_query``'s
-``path`` is a JSONPath expression and is left alone. What it does **not**
-reach:
+``path`` is a JSONPath expression and is left alone.
+
+**Arguments that are a path only sometimes** carry a second annotation,
+``"format": "path-or-other"``: ``target`` of ``ac_open_path`` /
+``ac_plan_open`` (path or URL), of ``ac_file_association`` (path or
+extension) and of ``ac_act_in_view`` (template path or text), and ``path`` of
+``ac_handle_file_dialog``. Such a value is held to the roots when it *is* a
+path, which means one of:
+
+* it looks like an absolute path -- it starts with ``/``, ``\``, ``~`` or a
+  drive (``C:\`` / ``C:/``), UNC shares included -- whether or not it exists;
+* it is a ``file:`` URL, judged by the file it names;
+* it names something that exists, relative to the server's working directory
+  (``..``, ``notes.txt``).
+
+Anything else -- ``https://...``, ``.txt``, the text ``Submit`` -- passes
+untouched, and a value that passes the check reaches the tool exactly as it
+was sent (it is not rewritten to the canonical path, because the same string
+may be the text the caller meant). Two consequences to know about: a *text*
+target that looks like an absolute path (``/help``) or happens to name an
+existing file outside the roots is refused while roots are configured, and
+``ac_handle_file_dialog`` types into another application, whose own current
+directory decides what a relative name means -- only what the server can
+judge is judged.
+
+What the roots do **not** reach:
 
 * ``ac_execute_actions`` and the other tools that run an action list — an
   action can open any file, which is why they are not read-only tools.
-* Arguments that are a path only sometimes: ``target`` of ``ac_open_path`` /
-  ``ac_plan_open`` / ``ac_file_association`` (path or URL or extension) and of
-  ``ac_act_in_view`` (template path or text), ``ac_handle_file_dialog``'s
-  ``path`` (keystrokes typed into another application), ``argv`` of
-  ``ac_launch_process`` / ``ac_shell``, and paths inside free-form objects
-  (``ac_run_suite`` ``spec``, ``ac_run_dag`` ``definition``,
-  ``ac_assert_all`` ``specs``).
+* ``argv`` of ``ac_launch_process`` and ``command`` of ``ac_shell``, on
+  purpose: a command line is a program, the program decides what its
+  arguments mean, and refusing the ones that read as paths would confine
+  nothing. Do not offer these tools to a client you want confined.
+* Paths inside free-form objects (``ac_run_suite`` ``spec``, ``ac_run_dag``
+  ``definition``, ``ac_assert_all`` ``specs``).
 * Tools registered by plugins, unless their schema carries the annotation.
 
 ``ac_resolve_ref`` / ``ac_resolve_refs`` follow the same roots for

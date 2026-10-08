@@ -612,16 +612,33 @@ process 內量測兩種模式。以 680 個工具的 registry 量測(2026-10-09,
 伺服器的工作目錄。
 
 這個標記看的是語意，不是屬性名稱：``ac_json_query`` 的 ``path`` 是 JSONPath，不受影響。
-它**涵蓋不到**的地方：
+
+**只有某些情況下才是路徑的參數**\ 帶第二種標記 ``"format": "path-or-other"``：
+``ac_open_path`` / ``ac_plan_open`` 的 ``target``（路徑或 URL）、``ac_file_association``
+的 ``target``（路徑或副檔名）、``ac_act_in_view`` 的 ``target``（樣板路徑或文字），以及
+``ac_handle_file_dialog`` 的 ``path``。這類值\ *是*\ 路徑時才受根目錄約束，也就是符合
+下列其中一項：
+
+* 看起來是絕對路徑——以 ``/``、``\``、``~`` 或磁碟機（``C:\`` / ``C:/``）開頭，含 UNC
+  共用——不論它是否存在；
+* 是 ``file:`` URL，依它指向的檔案判斷；
+* 相對於伺服器的工作目錄，它指向某個存在的東西（``..``、``notes.txt``）。
+
+其他的值——``https://...``、``.txt``、文字 ``Submit``——原樣通過；通過檢查的值也會原封不動
+交給工具（不會改寫成標準化路徑，因為同一個字串可能就是呼叫者要找的文字）。有兩點要知道：
+設定了根目錄時，看起來像絕對路徑（``/help``）或剛好是根目錄外某個現存檔案名稱的\ *文字*\
+目標會被拒絕；``ac_handle_file_dialog`` 是把字打進別的應用程式，相對名稱的意義由那個程式
+自己的目前目錄決定——伺服器只判斷它判斷得了的部分。
+
+根目錄**涵蓋不到**的地方：
 
 * ``ac_execute_actions`` 與其他執行動作清單的工具——動作可以開任何檔案，這也是它們不屬於
   唯讀工具的原因。
-* 只有某些情況下才是路徑的參數：``ac_open_path`` / ``ac_plan_open`` /
-  ``ac_file_association`` 的 ``target``（路徑、URL 或副檔名）、``ac_act_in_view`` 的
-  ``target``（樣板路徑或文字）、``ac_handle_file_dialog`` 的 ``path``（打進別的應用程式的
-  按鍵）、``ac_launch_process`` / ``ac_shell`` 的 ``argv``，以及自由格式物件裡的路徑
-  （``ac_run_suite`` 的 ``spec``、``ac_run_dag`` 的 ``definition``、``ac_assert_all`` 的
-  ``specs``）。
+* ``ac_launch_process`` 的 ``argv`` 與 ``ac_shell`` 的 ``command``，這是刻意的：命令列就是
+  一個程式，參數的意義由該程式決定，只拒絕看起來像路徑的參數並不能限制任何東西。不要把這些
+  工具提供給你想限制的 client。
+* 自由格式物件裡的路徑（``ac_run_suite`` 的 ``spec``、``ac_run_dag`` 的 ``definition``、
+  ``ac_assert_all`` 的 ``specs``）。
 * 外掛註冊的工具，除非它的 schema 也帶這個標記。
 
 ``ac_resolve_ref`` / ``ac_resolve_refs`` 的 ``file://`` 參照套用同一組根目錄；``env://``
