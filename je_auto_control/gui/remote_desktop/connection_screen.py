@@ -29,6 +29,7 @@ from PySide6.QtWidgets import (
 )
 
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
+from je_auto_control.gui._weak_call import WeakCall
 from je_auto_control.gui.remote_desktop._connect_task import connect_viewer
 from je_auto_control.gui.remote_desktop.connection_recent import _RecentConnectionsMixin
 from je_auto_control.gui.remote_desktop._helpers import (
@@ -451,7 +452,10 @@ class QuickConnectScreen(_RecentConnectionsMixin, TranslatableMixin, QWidget):
                 "on_cursor": self._cursor_moved.emit}
 
     def _begin_connect(self, slot: str, build, on_live) -> None:
-        """Take ``slot``, build the viewer, and connect it off the GUI thread (see ``_connect_task``)."""
+        """Take ``slot``, build the viewer, and connect it off the GUI thread (see ``_connect_task``).
+
+        ``on_live`` is a method of this screen or a partial of one; it is held weakly.
+        """
         self._cancel_pending_connect()
         self._take_slot(slot)
         try:
@@ -459,14 +463,16 @@ class QuickConnectScreen(_RecentConnectionsMixin, TranslatableMixin, QWidget):
         except (OSError, RuntimeError, ValueError, AutoControlException) as error:
             self._on_connect_failed(error)
             return
-
-        def connected(live_viewer) -> None:
-            registry.adopt(slot, live_viewer, self._owner, displaced_notifier(self))
-            on_live()
         self._connect_task = connect_viewer(
-            self, viewer, on_connected=connected, on_failed=self._on_connect_failed)
+            self, viewer, on_connected=functools.partial(self._on_viewer_live, slot, WeakCall(on_live)),
+            on_failed=self._on_connect_failed)
         self._connect_task.finished.connect(self._on_connect_finished)
         self._refresh_status()
+
+    def _on_viewer_live(self, slot: str, on_live: WeakCall, live_viewer) -> None:
+        """GUI thread: the connect succeeded; register the viewer and show it."""
+        registry.adopt(slot, live_viewer, self._owner, displaced_notifier(self))
+        on_live()
 
     def _cancel_pending_connect(self) -> None:
         task, self._connect_task = self._connect_task, None
@@ -483,12 +489,17 @@ class QuickConnectScreen(_RecentConnectionsMixin, TranslatableMixin, QWidget):
         QMessageBox.warning(self, _t("rd_quick_connect_btn"), str(error))
 
     def _do_tcp_connect(self, host: str, port: int, token: str) -> None:
-        def live() -> None:
-            self._remember_tcp(host, port)
-            self._open_screen_window(f"{host}:{port}")
-
         self._begin_connect(SLOT_VIEWER, lambda: RemoteDesktopViewer(
-            host=host, port=port, token=token, **self._viewer_callbacks()), live)
+            host=host, port=port, token=token, **self._viewer_callbacks()),
+            functools.partial(self._tcp_live, host, port))
+
+    def _tcp_live(self, host: str, port: int) -> None:
+        self._remember_tcp(host, port)
+        self._open_screen_window(f"{host}:{port}")
+
+    def _ws_live(self, base: str, path: str) -> None:
+        self._remember_url(f"{base}{path}")
+        self._open_screen_window(base)
 
     def _do_ws_connect(self, target: ConnectTarget, token: str) -> None:
         host, port, path = target.host or "", target.port or 0, target.path or "/"
@@ -496,14 +507,9 @@ class QuickConnectScreen(_RecentConnectionsMixin, TranslatableMixin, QWidget):
         # wss:// was dialled as plain ws://: the session went unencrypted to
         # a host the operator took for TLS, and a real TLS host was unreachable.
         ssl_context = _build_verifying_client_context() if scheme == "wss" else None
-
-        def live() -> None:
-            self._remember_url(f"{scheme}://{host}:{port}{path}")
-            self._open_screen_window(f"{scheme}://{host}:{port}")
-
         self._begin_connect(SLOT_WS_VIEWER, lambda: WebSocketDesktopViewer(
             host=host, port=port, token=token, path=path, ssl_context=ssl_context,
-            **self._viewer_callbacks()), live)
+            **self._viewer_callbacks()), functools.partial(self._ws_live, f"{scheme}://{host}:{port}", path))
 
     def _on_remote_cursor(self, x: int, y: int) -> None:
         """Cursor update, delivered on the GUI thread by ``_cursor_moved``."""

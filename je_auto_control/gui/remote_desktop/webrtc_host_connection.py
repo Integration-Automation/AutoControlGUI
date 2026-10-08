@@ -21,6 +21,7 @@ from je_auto_control.gui.remote_desktop.webrtc_workers import (
     HostPublishLoopWorker, generate_host_id, retire_worker,
 )
 from je_auto_control.gui._slow_op import stop_each
+from je_auto_control.gui._weak_call import weak_slot
 from je_auto_control.gui.task_controller import CancellationToken, task_controller
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.remote_desktop import (
@@ -159,8 +160,9 @@ class _HostConnectionMixin(_PanelPart):
         # used to freeze the window; the backend takes no timeout or cancel.
         task = task_controller().submit(functools.partial(_create_offer, host), owner=self,
                                         discard=functools.partial(_drop_offer, host))
-        task.result.connect(functools.partial(self._show_offer, host))
-        task.error.connect(functools.partial(self._show_offer_error, host))
+        # Weak: the task is this panel's child and must not be what keeps it alive.
+        task.result.connect(weak_slot(self._show_offer, host))
+        task.error.connect(weak_slot(self._show_offer_error, host))
 
     def _show_offer_error(self, host: MultiViewerHostT, error: Exception) -> None:
         if self._multi_host is host:        # a host stopped meanwhile fails by design

@@ -16,6 +16,7 @@ panel.
 """
 from __future__ import annotations
 
+import functools
 import urllib.error
 import urllib.parse
 from email.message import Message
@@ -252,12 +253,12 @@ class UsbBrowserTab(TranslatableMixin, QWidget):
 
     def _start_local_open(self, vid: str, pid: str,
                           serial: Optional[str]) -> None:
-        # The lambda below runs on the GUI thread: start_worker relays it.
+        # on_done runs on the GUI thread (start_worker relays it) and is held weakly.
         self._open_thread = start_worker(
             self, _CallWorker(lambda: open_local_descriptor(
                 vendor_id=vid, product_id=pid, serial=serial,
             )),
-            on_done=lambda descriptor: self._on_local_opened(vid, pid, descriptor),
+            on_done=functools.partial(self._on_local_opened, vid, pid),
             on_fail=self._apply_failure, on_thread_done=self._on_open_done)
 
     def _on_open_done(self) -> None:

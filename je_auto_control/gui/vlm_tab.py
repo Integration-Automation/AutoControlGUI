@@ -110,4 +110,7 @@ class VLMTab(TranslatableMixin, QWidget):
         description, model = inputs
         self._run_off_gui_thread(
             lambda: click_by_description(description, model=model),
-            lambda ok: self._status.setText(_t("vlm_ok") if ok else _t("vlm_not_found")))
+            self._show_clicked)
+
+    def _show_clicked(self, ok) -> None:
+        self._status.setText(_t("vlm_ok") if ok else _t("vlm_not_found"))

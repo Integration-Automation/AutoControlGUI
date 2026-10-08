@@ -37,6 +37,7 @@ from typing import Any, Callable, Dict, Optional
 
 from PySide6.QtCore import QObject, Signal
 
+from je_auto_control.gui._weak_call import WeakCall
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 
 #: How long interpreter exit waits, in all, for running workers to stop.
@@ -116,7 +117,13 @@ def _reaper() -> _Reaper:
 
 
 class _Relay(QObject):
-    """GUI-thread receiver for a worker's outcome, owned by the tab."""
+    """GUI-thread receiver for a worker's outcome, owned by the tab.
+
+    The callbacks are normally methods of the tab this relay is a child of,
+    so they are held weakly (:mod:`je_auto_control.gui._weak_call`): held
+    strongly, the relay could be the last holder of a parentless tab and
+    destroy it from inside its own destructor.
+    """
 
     thread_ended = Signal()
     crashed = Signal(str)
@@ -126,9 +133,9 @@ class _Relay(QObject):
                  on_thread_done: Callable[[], None],
                  on_fail: Optional[Callable[[str], None]]) -> None:
         super().__init__(parent)
-        self._on_done = on_done
-        self._on_thread_done = on_thread_done
-        self._on_fail = on_fail
+        self._on_done = WeakCall(on_done)
+        self._on_thread_done = WeakCall(on_thread_done)
+        self._on_fail = WeakCall(on_fail)
         self.thread_ended.connect(self.thread_done)
         self.crashed.connect(self.fail)
 
@@ -138,8 +145,7 @@ class _Relay(QObject):
 
     def fail(self, message: str) -> None:
         """Forward the worker's failure (runs on the GUI thread)."""
-        if self._on_fail is not None:
-            self._on_fail(message)
+        self._on_fail(message)
 
     def thread_done(self) -> None:
         """Forward the thread's end (runs on the GUI thread), then go away."""
@@ -204,8 +210,10 @@ def start_worker(owner: QObject, worker: QObject, *,
     Call from the GUI thread. ``worker`` must have a ``finished`` signal and
     may have ``failed``. ``on_done`` / ``on_fail`` / ``on_thread_done`` run on
     the GUI thread, and only while ``owner`` exists: destroying ``owner``
-    mid-run drops them and leaves the work to finish on its own. The worker is
-    deleted once the GUI thread has seen its thread end.
+    mid-run drops them and leaves the work to finish on its own. A bound
+    method (or a ``functools.partial`` of one) is held weakly, so pass those
+    rather than a lambda that closes over ``owner``. The worker is deleted
+    once the GUI thread has seen its thread end.
     """
     reaper = _reaper()
     relay = _Relay(owner, on_done, on_thread_done, on_fail)
