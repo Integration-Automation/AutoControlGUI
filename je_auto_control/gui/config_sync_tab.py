@@ -12,7 +12,7 @@ the event, so a sync waiting on the network does not outlive its view.
 """
 import threading
 import time
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
@@ -89,7 +89,7 @@ class ConfigSyncTab(TranslatableMixin, QWidget):
         self._apply_translations()
         self._render()
 
-    def menu_actions(self) -> list:
+    def menu_actions(self) -> List[Tuple[str, Callable[[], None]]]:
         """Expose tab commands to the window-level Actions menu."""
         return [
             ("config_sync_run_btn", self.sync_now),

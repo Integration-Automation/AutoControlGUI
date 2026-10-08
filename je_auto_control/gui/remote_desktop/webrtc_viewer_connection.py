@@ -6,7 +6,7 @@ still owns every widget and slot under its original name.
 from __future__ import annotations
 
 import functools
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Callable, Optional
 
 from PySide6.QtCore import QTimer
 from PySide6.QtWidgets import (
@@ -83,7 +83,8 @@ class _ViewerConnectionMixin(_PanelPart):
             offer_sdp, expected_dtls,
             functools.partial(self._push_answer, host_id, expected_dtls, offer_sdp))
 
-    def _answer_off_thread(self, offer_sdp: str, expected_dtls: Optional[str], on_answer) -> None:
+    def _answer_off_thread(self, offer_sdp: str, expected_dtls: Optional[str],
+                           on_answer: Callable[[str], None]) -> None:
         """Run ``process_offer`` on a worker; ``on_answer(answer)`` only if this viewer is still current."""
         try:
             viewer = self._require_viewer()

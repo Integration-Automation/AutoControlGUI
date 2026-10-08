@@ -5,6 +5,7 @@ still owns every widget and slot under its original name.
 """
 from __future__ import annotations
 
+from typing import Any, Dict, Optional
 
 from PySide6.QtWidgets import (
     QFileDialog, QInputDialog, QMessageBox,
@@ -30,14 +31,15 @@ class _ViewerAddressBookMixin(_PanelPart):
     """Methods of ``_WebRTCViewerPanel``; the module docstring says which group."""
 
     @staticmethod
-    def _wol_defaults(entry) -> tuple[str, str]:
+    def _wol_defaults(entry: Optional[Dict[str, Any]]) -> tuple[str, str]:
         """Return (mac, broadcast) pre-fill values from a book entry."""
         if entry is None:
             return "", ""
         return (entry.get("mac_address", "") or "",
                 entry.get("broadcast_address", "") or "")
 
-    def _persist_wol_entry(self, entry, mac: str, broadcast: str) -> None:
+    def _persist_wol_entry(self, entry: Optional[Dict[str, Any]], mac: str,
+                           broadcast: str) -> None:
         """Save the MAC / broadcast just used back onto the book entry."""
         if entry is None:
             return
@@ -156,7 +158,7 @@ class _ViewerAddressBookMixin(_PanelPart):
             self._address_book.list_entries(), tag_filter=active_tag,
         )
 
-    def _on_address_tags(self, entry: dict) -> None:
+    def _on_address_tags(self, entry: Dict[str, Any]) -> None:
         existing = entry.get("tags", []) or []
         text, ok = QInputDialog.getText(
             self, _t("rd_webrtc_edit_tags"),
@@ -176,19 +178,19 @@ class _ViewerAddressBookMixin(_PanelPart):
             autocontrol_logger.debug("set_tags: %r", error)
         self._refresh_address_book()
 
-    def _on_address_chosen(self, entry: dict) -> None:
+    def _on_address_chosen(self, entry: Dict[str, Any]) -> None:
         self._server_edit.setText(entry.get("server_url", ""))
         self._host_id_edit.setText(entry.get("host_id", ""))
         self._on_connect_via_server()
 
-    def _on_address_removed(self, entry: dict) -> None:
+    def _on_address_removed(self, entry: Dict[str, Any]) -> None:
         self._address_book.remove(
             host_id=entry.get("host_id", ""),
             server_url=entry.get("server_url", ""),
         )
         self._refresh_address_book()
 
-    def _on_address_favorite(self, entry: dict) -> None:
+    def _on_address_favorite(self, entry: Dict[str, Any]) -> None:
         try:
             self._address_book.toggle_favorite(
                 host_id=entry.get("host_id", ""),
@@ -228,7 +230,7 @@ class _ViewerAddressBookMixin(_PanelPart):
         dialog.chosen.connect(self._on_lan_chosen)
         dialog.exec()
 
-    def _on_lan_chosen(self, svc: dict) -> None:
+    def _on_lan_chosen(self, svc: Dict[str, Any]) -> None:
         host_id = svc.get("host_id", "")
         signaling = svc.get("signaling_url", "")
         if host_id:

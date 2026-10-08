@@ -5,9 +5,9 @@ still owns every widget and slot under its original name.
 """
 from __future__ import annotations
 
-from typing import Optional
+from typing import Callable, Dict, Optional
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import QPoint, Qt
 from PySide6.QtWidgets import (
     QTableWidgetItem,
 )
@@ -86,7 +86,7 @@ class _HostSessionsMixin(_PanelPart):
             poller.start()
             self._session_pollers[sid] = poller
 
-    def _make_session_stats_handler(self, session_id: str):
+    def _make_session_stats_handler(self, session_id: str) -> Callable[[StatsSnapshot], None]:
         """Closure capturing session_id for the per-session poller."""
         def _handle(snapshot: StatsSnapshot) -> None:
             default_webrtc_inspector().record(snapshot)
@@ -163,7 +163,7 @@ class _HostSessionsMixin(_PanelPart):
             self._sessions_table.setItem(row, 3, QTableWidgetItem(state))
             self._sessions_table.setItem(row, 4, QTableWidgetItem(connected))
 
-    def _on_sessions_context_menu(self, position) -> None:
+    def _on_sessions_context_menu(self, position: QPoint) -> None:
         from PySide6.QtWidgets import QMenu
         if self._multi_host is None:
             return
@@ -189,7 +189,7 @@ class _HostSessionsMixin(_PanelPart):
         )
         self._dispatch_session_menu(chosen, actions, sid, viewer_id)
 
-    def _dispatch_session_menu(self, chosen, actions: dict,
+    def _dispatch_session_menu(self, chosen: object, actions: Dict[str, object],
                                sid: str, viewer_id: str) -> None:
         """Run the action chosen from the sessions context menu."""
         if chosen is actions["disconnect"]:

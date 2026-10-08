@@ -80,27 +80,27 @@ def _click_repeats(action: str) -> int:
     return {"double_click": 2, "triple_click": 3}.get(action, 1)
 
 
-def _action_screenshot(_payload):
+def _action_screenshot(_payload: Dict[str, Any]) -> Dict[str, Any]:
     return {"tool": "AC_screenshot", "input": {}}
 
 
-def _action_cursor_position(_payload):
+def _action_cursor_position(_payload: Dict[str, Any]) -> Dict[str, Any]:
     return {"tool": "AC_get_mouse_position", "input": {}}
 
 
-def _action_mouse_move(payload):
+def _action_mouse_move(payload: Dict[str, Any]) -> Dict[str, Any]:
     x, y = _xy(payload.get("coordinate"))
     return {"tool": "AC_set_mouse_position", "input": {"x": x, "y": y}}
 
 
-def _action_type(payload):
+def _action_type(payload: Dict[str, Any]) -> Dict[str, Any]:
     return {
         "tool": "AC_write",
         "input": {"write_string": str(payload.get("text") or "")},
     }
 
 
-def _action_wait(payload):
+def _action_wait(payload: Dict[str, Any]) -> Dict[str, Any]:
     duration = payload.get("duration")
     # An explicit 0 is a valid "don't wait" — only fall back when unset.
     seconds = _number(duration, "duration") if duration is not None else 1.0
@@ -156,7 +156,7 @@ def _with_modifiers(decision: Dict[str, Any], combo: str) -> Dict[str, Any]:
             "input": {"modifiers": keys, "actions": actions}}
 
 
-def _click_decision(action: str, coordinate) -> Dict[str, Any]:
+def _click_decision(action: str, coordinate: Any) -> Dict[str, Any]:
     button = _click_button(action)
     repeats = _click_repeats(action)
     inputs: Dict[str, Any] = {"mouse_keycode": button}
