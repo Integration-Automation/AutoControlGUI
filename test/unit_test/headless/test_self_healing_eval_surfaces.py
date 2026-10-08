@@ -158,7 +158,9 @@ def test_context_reaches_the_log_from_executor_and_mcp(tmp_path, monkeypatch):
 
 @pytest.fixture
 def tab(workspace):
-    pytest.importorskip("PySide6")
+    # QtWidgets, not the bare package: an image without libEGL imports
+    # PySide6 and then fails on the widgets module.
+    pytest.importorskip("PySide6.QtWidgets", exc_type=ImportError)
     from PySide6.QtWidgets import QApplication
     app = QApplication.instance() or QApplication([])
     from je_auto_control.gui.self_healing_tab import SelfHealingTab

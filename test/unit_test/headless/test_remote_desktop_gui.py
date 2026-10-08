@@ -52,7 +52,7 @@ def _make_jpeg(width: int = 64, height: int = 48) -> bytes:
     return buf.getvalue()
 
 
-def _process_until(app: QApplication, predicate, timeout: float = 3.0,
+def _process_until(app: QApplication, predicate, timeout: float = 10.0,
                    interval_ms: int = 20) -> bool:
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:

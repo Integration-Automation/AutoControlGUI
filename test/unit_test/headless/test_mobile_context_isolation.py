@@ -165,7 +165,7 @@ def test_adb_timeout_is_a_framework_timeout(monkeypatch):
     import subprocess
 
     def slow(cmd, **kwargs):
-        raise subprocess.TimeoutExpired(cmd, kwargs.get("timeout"))
+        raise subprocess.TimeoutExpired(cmd, kwargs.get("timeout"))  # nosemgrep
 
     monkeypatch.setattr("je_auto_control.android.adb_client.subprocess.run", slow)
     session = open_device(_android("left"))

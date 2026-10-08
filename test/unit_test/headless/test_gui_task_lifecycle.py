@@ -242,7 +242,9 @@ def test_a_timeout_cancels_the_work_and_reports_it(qapp):
     assert _pump(qapp, lambda: bool(errors))
     assert isinstance(errors[0], TaskTimeout) and isinstance(errors[0], TimeoutError)
     assert handle.state == "timed_out" and handle.wait(3.0)
-    assert network.active == 0 and 0 < deadlines[0] <= 0.1
+    # A hair over 0.1 is the clock's rounding (0.10000000000002274 on the
+    # Windows 3.10 and 3.11 runners), not a longer deadline.
+    assert network.active == 0 and 0 < deadlines[0] <= 0.1 + 1e-6
     _destroy(qapp, owner)
 
 

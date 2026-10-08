@@ -62,7 +62,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     for violation in payload["violations"]:
         print(f"THRESHOLD {violation}")
     if args.json:
-        Path(args.json).write_text(json.dumps(payload, indent=2, sort_keys=True),
+        Path(args.json).write_text(json.dumps(payload, indent=2, sort_keys=True),  # NOSONAR pythonsecurity:S8707
                                    encoding="utf-8")
     return 1 if args.check and payload["violations"] else 0
 

@@ -13,6 +13,7 @@ same screen looks like. ``origin`` is the screen coordinate of the frame's
 top-left corner and may be negative (a monitor left of or above the primary).
 """
 import json
+import math
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -73,7 +74,7 @@ def _build_sample(entry: Dict[str, Any], template: np.ndarray,
     for target in entry.get("targets", ()):
         at_x, at_y = target["at"]
         element = draw_element(base_width, base_height, target.get("style", STYLE_NORMAL))
-        if scale != 1.0:
+        if not math.isclose(scale, 1.0):
             # INTER_AREA / INTER_CUBIC on purpose: the strategy under test
             # resizes with INTER_LINEAR, so a scaled match is close, not exact.
             element = cv2.resize(element, None, fx=scale, fy=scale,

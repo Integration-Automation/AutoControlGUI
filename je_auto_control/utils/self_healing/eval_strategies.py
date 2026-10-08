@@ -17,6 +17,7 @@ by passing :func:`evaluation.evaluate_locators` a callable that wraps one.
 from __future__ import annotations
 
 import json
+import math
 import os
 from dataclasses import dataclass
 from pathlib import Path
@@ -59,7 +60,7 @@ def _best_match(area: Any, template: Any, scales: Sequence[float],
     import cv2
     best: Tuple[float, Tuple[int, int], Tuple[int, int]] = (-1.0, (0, 0), (0, 0))
     for scale in scales:
-        scaled = template if scale == 1.0 else cv2.resize(
+        scaled = template if math.isclose(scale, 1.0) else cv2.resize(
             template, None, fx=scale, fy=scale, interpolation=cv2.INTER_LINEAR)
         height, width = scaled.shape[:2]
         if height < 1 or width < 1 or height > area.shape[0] or width > area.shape[1]:

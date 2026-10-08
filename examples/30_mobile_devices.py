@@ -79,7 +79,8 @@ class OfflineAdb(AdbClient):
     def run(self, args: Sequence[str], **_options: Any) -> "subprocess.CompletedProcess[bytes]":
         """Answer one adb invocation from canned replies."""
         self.sent.append(" ".join(args))
-        return subprocess.CompletedProcess(list(args), 0, self._reply(list(args)), b"")
+        reply = self._reply(list(args))  # a canned answer; nothing is spawned
+        return subprocess.CompletedProcess(list(args), 0, reply, b"")  # nosemgrep
 
     def _reply(self, args: List[str]) -> bytes:
         if args[:1] == ["devices"]:

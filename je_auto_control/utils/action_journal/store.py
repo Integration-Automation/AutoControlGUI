@@ -75,7 +75,8 @@ def _fold(path: Path, run_id: Optional[str]) -> JournalContents:
     events: Dict[Tuple[str, str], ActionEvent] = {}
     lines: Dict[str, int] = {}
     torn: List[int] = []
-    with path.open("r", encoding="utf-8", errors="replace") as handle:
+    # The journal path is the operator's own (start_action_journal / --from-log).
+    with path.open("r", encoding="utf-8", errors="replace") as handle:  # NOSONAR pythonsecurity:S8707
         for number, raw in enumerate(handle, start=1):
             if not raw.strip():
                 continue

@@ -7,6 +7,7 @@ client in ``viewer_client`` owns both.
 from __future__ import annotations
 
 import json
+import math
 import threading
 from dataclasses import dataclass, field
 from typing import Any, Dict, Optional, Union
@@ -83,7 +84,7 @@ def device_timeout_s(body: Dict[str, Any]) -> float:
     value = body.get("timeout_ms")
     if isinstance(value, bool) or not isinstance(value, (int, float)):
         return 0.0
-    if value != value or value <= 0:     # NaN compares unequal to itself
+    if math.isnan(value) or value <= 0:
         return 0.0
     return min(float(value), float(MAX_DEVICE_TIMEOUT_MS)) / 1000.0
 

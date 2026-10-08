@@ -66,7 +66,8 @@ def _run_child() -> Dict[str, Any]:
     env.setdefault("QT_QPA_PLATFORM", "offscreen")
     env[bench.SETTINGS_ENV] = "off"
     start = time.perf_counter()
-    done = subprocess.run([sys.executable, os.path.abspath(__file__), "--child"],  # nosec B603  # reason: fixed argv
+    argv = [sys.executable, os.path.abspath(__file__), "--child"]
+    done = subprocess.run(argv,  # nosec B603  # nosemgrep  # reason: this file, this interpreter
                           capture_output=True, text=True, env=env, timeout=300, check=False)
     elapsed = (time.perf_counter() - start) * 1000
     if done.returncode != 0:

@@ -87,7 +87,7 @@ class TabEntry:
         dispose = getattr(widget, "dispose", None)
         try:
             if callable(dispose):
-                dispose()
+                dispose()  # pylint: disable=not-callable  # reason: guarded by callable()
         finally:
             widget.deleteLater()
         return True

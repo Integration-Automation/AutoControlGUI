@@ -14,7 +14,7 @@ from je_auto_control.utils.action_journal.events import (
     SCHEMA_VERSION, STATUS_ERROR, STATUS_INCOMPLETE, STATUS_OK, ActionEvent,
     JournalFormatError,
 )
-from je_auto_control.utils.action_journal.sanitize import REASON_SECRET, sanitise_params
+from je_auto_control.utils.action_journal.sanitize import REASON_MASKED, sanitise_params
 from je_auto_control.utils.action_journal.store import (
     ActionJournal, list_journal_runs, load_journal, read_events,
 )
@@ -91,7 +91,7 @@ def test_redaction_precedes_append(tmp_path, monkeypatch, fake_executor):
     events = read_events(path)
     literal, reference = _by_command(events, "AC_fake_step")[:2]
     assert literal.params == {"user": "ada", "password": "***"}
-    assert literal.unreplayable == {"params.password": REASON_SECRET}
+    assert literal.unreplayable == {"params.password": REASON_MASKED}
     # A reference names the secret without holding it, so it stays replayable.
     assert reference.params == {"password": "${pw}"}
     assert reference.unreplayable == {}

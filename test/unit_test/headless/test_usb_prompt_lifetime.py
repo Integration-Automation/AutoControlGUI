@@ -145,6 +145,12 @@ def test_many_workers_get_their_own_verdicts_and_leave_no_dialog(
     # No flush of deferred deletes and no collection has run: each dialog went
     # when its slot returned, on the GUI thread, not later and not elsewhere.
     assert len(seen) == total
+    # The last slot can still be unwinding when the last worker is seen dead,
+    # so the event loop gets a moment; the collector stays off throughout.
+    settle_until = time.monotonic() + 5.0
+    while any(ref() is not None for ref in seen) and time.monotonic() < settle_until:
+        qapp.processEvents()
+        time.sleep(0.01)
     assert [ref for ref in seen if ref() is not None] == []
 
 

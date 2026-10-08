@@ -24,6 +24,7 @@ Pure standard library; imports no ``PySide6``.
 """
 from __future__ import annotations
 
+import math
 import uuid
 from dataclasses import dataclass, field
 from typing import Any, Dict, Iterable, List, Mapping, Optional, Tuple
@@ -168,7 +169,7 @@ class SyncEntry:
 
 
 def _number(key: str, value: Any) -> float:
-    if isinstance(value, bool) or not isinstance(value, (int, float)) or value != value:
+    if isinstance(value, bool) or not isinstance(value, (int, float)) or math.isnan(value):
         raise ConfigSyncError(f"entry {key!r}: expected a number, got {value!r}")
     return float(value)
 

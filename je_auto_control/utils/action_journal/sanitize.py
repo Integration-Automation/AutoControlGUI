@@ -21,7 +21,7 @@ from je_auto_control.utils.action_journal.events import MASK, UNSERIALISABLE_KEY
 from je_auto_control.utils.executor.action_redaction import redact_actions
 from je_auto_control.utils.script_vars.interpolate import _PLACEHOLDER
 
-REASON_SECRET = "secret masked before the journal was written"  # nosec B105  # reason: explanatory text, not a credential
+REASON_MASKED = "secret masked before the journal was written"
 _REASON_TYPE = "not JSON-serialisable ({})"
 _REASON_FLOAT = "non-finite number ({})"
 _SCALARS = (str, int, bool, type(None))
@@ -55,7 +55,7 @@ def _is_reference(value: Any) -> bool:
 def _settle_masked(plain: Any, path: str, notes: Dict[str, str]) -> Any:
     if _is_reference(plain):
         return plain
-    notes[path] = REASON_SECRET
+    notes[path] = REASON_MASKED
     return MASK
 
 

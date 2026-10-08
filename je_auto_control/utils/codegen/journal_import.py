@@ -43,7 +43,7 @@ from je_auto_control.utils.action_journal.events import (
     JournalFormatError,
 )
 from je_auto_control.utils.action_journal.sanitize import (
-    REASON_SECRET, replace_unreplayable,
+    REASON_MASKED, replace_unreplayable,
 )
 from je_auto_control.utils.action_journal.store import (
     JournalContents, list_journal_runs, load_journal,
@@ -205,7 +205,7 @@ class _Builder:
             return None if name in self._macros else (
                 f"macro {name!r} is not defined in this run")
         lost = [path for path, reason in event.unreplayable.items()
-                if reason != REASON_SECRET]
+                if reason != REASON_MASKED]
         if lost:
             return f"{', '.join(sorted(lost))} could not be stored"
         return None

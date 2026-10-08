@@ -127,7 +127,7 @@ class CancellationToken:
         if progress is None or self._event.is_set():
             return
         try:
-            progress(value)
+            progress(value)  # pylint: disable=not-callable  # reason: checked for None above
         except RuntimeError:  # reason: the worker object went away with the application
             pass
 
