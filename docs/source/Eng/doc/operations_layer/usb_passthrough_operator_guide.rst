@@ -242,6 +242,15 @@ Errors:
   The most common case is *denied by ACL policy* — go check the
   prompt dialog or the ACL rule on the host.
 - ``UsbClientClosed`` — the client or its handle was already shut down.
+- ``UsbClientDesynchronized`` — an earlier request timed out and the
+  host does not echo request ids (it predates them), so a late reply
+  could not be told from the next one. Nothing was sent. After a
+  transfer timeout, ``close()`` the handle and ``open`` the device
+  again; after an ``open`` / ``resume`` / ``list_devices`` timeout,
+  reconnect the channel and use a new client. ``handle.reusable`` and
+  ``client.reusable`` report the state without raising. Against a
+  current host a timeout costs only the request that timed out. See
+  *Request identity* in the design document.
 
 
 Troubleshooting matrix
@@ -262,6 +271,10 @@ Symptom                                     Likely cause / fix
 Transfer ``UsbClientTimeout``               Host process is busy or the WebRTC channel is
                                             broken. Inspect the *Packet Inspector* tab for
                                             RTT / packet loss.
+``UsbClientDesynchronized``                 A request timed out against a host too old to
+                                            echo request ids. Close the handle and open the
+                                            device again (transfer), or reconnect (open /
+                                            list). Upgrading the host removes the limit.
 After OPEN, host's keyboard stops working   Linux: a HID device was claimed and
                                             ``usbhid`` was detached. The driver re-attaches
                                             on CLOSE; if not, ``udevadm trigger`` to recover.

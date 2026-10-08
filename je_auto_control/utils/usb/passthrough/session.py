@@ -54,6 +54,14 @@ received decrements the budget; the host returns a CREDIT(1) frame
 alongside every transfer reply so a well-behaved peer never stalls.
 A peer that exhausts its budget gets ERROR("credit exhausted") and is
 expected to wait for CREDIT before retrying.
+
+Request identity: a request payload may carry ``"request_id": "<1..64
+chars>"`` next to the fields above (LIST and CLOSE, which have no other
+fields, then send ``{"request_id": "..."}``). Every reply to that request
+-- OPENED, LIST, CLOSED, the transfer reply, or ERROR -- carries the same
+value under the same key; CREDIT never does. A request without a usable
+id is answered exactly as before, so a viewer older than the field sees
+no change. See ``protocol`` for the rule in full.
 """
 from __future__ import annotations
 
@@ -70,7 +78,8 @@ from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.usb.passthrough.acl import UsbAcl, normalize_usb_id
 from je_auto_control.utils.usb.passthrough.backend import UsbBackend, UsbHandle
 from je_auto_control.utils.usb.passthrough.protocol import (
-    Frame, Opcode, fragment_payload,
+    MAX_PAYLOAD_BYTES, REQUEST_ID_KEY, Frame, Opcode, fragment_payload,
+    request_id_of,
 )
 
 
@@ -192,16 +201,24 @@ class UsbPassthroughSession:
 
     def handle_frame(self, frame: Frame) -> List[Frame]:
         """Process one frame, with abuse tracking, and return replies."""
+        request_id = request_id_of(frame.payload)
         if self._abuse.is_locked():
-            return [_error_frame(frame.claim_id, "rate limited; locked out")]
-        replies = self._dispatch(frame)
+            return [_with_request_id(
+                _error_frame(frame.claim_id, "rate limited; locked out"), request_id)]
+        replies = [_with_request_id(reply, request_id)
+                   for reply in self._dispatch(frame, request_id)]
         if _is_misbehaviour(replies) and self._abuse.record_strike():
             self._audit("usb_rate_limited", "?", "?", None,
                         detail="viewer locked out for repeated failures")
         return replies
 
-    def _dispatch(self, frame: Frame) -> List[Frame]:
-        """Route one incoming frame; return zero or more reply frames."""
+    def _dispatch(self, frame: Frame, request_id: Optional[str] = None) -> List[Frame]:
+        """Route one incoming frame; return zero or more reply frames.
+
+        Replies that may be fragmented (LIST, transfers) are built with
+        ``request_id`` already inside; the single-frame ones are stamped
+        by :meth:`handle_frame`.
+        """
         if frame.op == Opcode.OPEN:
             return [self._handle_open(frame)]
         if frame.op == Opcode.RESUME:
@@ -209,16 +226,16 @@ class UsbPassthroughSession:
         if frame.op == Opcode.CLOSE:
             return [self._handle_close(frame)]
         if frame.op == Opcode.CTRL:
-            return self._handle_transfer(frame, _control_handler)
+            return self._handle_transfer(frame, _control_handler, request_id)
         if frame.op == Opcode.BULK:
-            return self._handle_transfer(frame, _bulk_handler)
+            return self._handle_transfer(frame, _bulk_handler, request_id)
         if frame.op == Opcode.INT:
-            return self._handle_transfer(frame, _interrupt_handler)
+            return self._handle_transfer(frame, _interrupt_handler, request_id)
         if frame.op == Opcode.CREDIT:
             self._handle_credit(frame)
             return []
         if frame.op == Opcode.LIST:
-            return self._handle_list(frame)
+            return self._handle_list(frame, request_id)
         if frame.op in (Opcode.OPENED, Opcode.CLOSED, Opcode.ERROR):
             # Responses we don't expect to receive on the host side here.
             return []
@@ -226,7 +243,8 @@ class UsbPassthroughSession:
 
     # --- LIST ---------------------------------------------------------------
 
-    def _handle_list(self, frame: Frame) -> List[Frame]:
+    def _handle_list(self, frame: Frame,
+                     request_id: Optional[str] = None) -> List[Frame]:
         """Enumerate backend devices the ACL would not outright deny.
 
         Resolves open question 3: the device list rides the same ``usb``
@@ -248,7 +266,7 @@ class UsbPassthroughSession:
             for dev in devices
             if self._list_visible(dev.vendor_id, dev.product_id, dev.serial)
         ]
-        payload = _encode_json_payload({"devices": visible})
+        payload = _encode_json_payload(_identified({"devices": visible}, request_id))
         return fragment_payload(Opcode.LIST, frame.claim_id, payload)
 
     def _list_visible(self, vendor_id: str, product_id: str,
@@ -444,7 +462,7 @@ class UsbPassthroughSession:
 
     def _handle_transfer(self, frame: Frame,
                          dispatcher: Callable[[UsbHandle, Dict[str, Any]], bytes],
-                         ) -> List[Frame]:
+                         request_id: Optional[str] = None) -> List[Frame]:
         with self._lock:
             claim = self._claims.get(int(frame.claim_id))
             if claim is None:
@@ -464,14 +482,14 @@ class UsbPassthroughSession:
         try:
             result_bytes = dispatcher(handle, request)
         except Exception as error:  # noqa: BLE001  # pylint: disable=broad-except  # reason: backends raise their own error types
-            reply_payload = _encode_json_payload(
-                {"ok": False, "error": str(error)},
-            )
+            reply_payload = _encode_json_payload(_identified(
+                {"ok": False, "error": str(error)}, request_id,
+            ))
         else:
-            reply_payload = _encode_json_payload({
+            reply_payload = _encode_json_payload(_identified({
                 "ok": True,
                 "data": base64.b64encode(result_bytes).decode("ascii"),
-            })
+            }, request_id))
         # Fragment so an oversize IN transfer (open question 2) spans
         # multiple EOF-terminated frames instead of breaching the cap.
         frames = fragment_payload(
@@ -624,6 +642,36 @@ def _error_frame(claim_id: int, message: str) -> Frame:
         op=Opcode.ERROR, claim_id=claim_id,
         payload=_encode_json_payload({"error": message}),
     )
+
+
+#: Replies that are always one frame, so the id can be added after the fact.
+_SINGLE_FRAME_REPLIES = (Opcode.OPENED, Opcode.CLOSED, Opcode.ERROR)
+
+
+def _identified(body: Dict[str, Any], request_id: Optional[str]) -> Dict[str, Any]:
+    """``body`` with the request's id added, if the request had one."""
+    if request_id is not None:
+        body[REQUEST_ID_KEY] = request_id
+    return body
+
+
+def _with_request_id(frame: Frame, request_id: Optional[str]) -> Frame:
+    """Echo ``request_id`` in a single-frame reply; other frames pass through.
+
+    CREDIT is a grant rather than a reply and never carries an id; LIST and
+    transfer replies got theirs before they were fragmented.
+    """
+    if request_id is None or frame.op not in _SINGLE_FRAME_REPLIES:
+        return frame
+    try:
+        body = _decode_json_payload(frame.payload)
+    except ValueError:
+        return frame
+    payload = _encode_json_payload(_identified(body, request_id))
+    if len(payload) > MAX_PAYLOAD_BYTES:
+        return frame    # an unidentified reply still beats none at all
+    return Frame(op=frame.op, flags=frame.flags, claim_id=frame.claim_id,
+                 payload=payload)
 
 
 def _encode_json_payload(obj: object) -> bytes:
