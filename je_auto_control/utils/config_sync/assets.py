@@ -17,7 +17,7 @@ from dataclasses import dataclass, field
 from pathlib import Path, PurePosixPath
 from typing import Any, Dict, Iterable, List, Mapping, Optional, Protocol, Tuple, Union
 
-from je_auto_control.utils.config_sync.client import ConfigSyncError
+from je_auto_control.utils.config_sync.bucket import ConfigSyncError
 
 _SHA256_HEX_CHARS = 64
 

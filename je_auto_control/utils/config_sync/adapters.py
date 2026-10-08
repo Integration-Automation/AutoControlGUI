@@ -29,7 +29,7 @@ from dataclasses import dataclass, field, fields
 from pathlib import Path, PurePosixPath
 from typing import Any, ClassVar, Dict, Iterable, List, Mapping, Optional, Set, Tuple, Union
 
-from je_auto_control.utils.config_sync.client import ConfigSyncError
+from je_auto_control.utils.config_sync.bucket import ConfigSyncError
 from je_auto_control.utils.config_sync.versions import SyncEntry, SyncOperation
 from je_auto_control.utils.exception.exceptions import AutoControlException
 

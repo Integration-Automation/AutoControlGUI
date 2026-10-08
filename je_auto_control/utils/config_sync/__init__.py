@@ -15,8 +15,11 @@ and answers a repeated operation id with the revision of the first attempt.
 
 This package is the **headless client** side:
 
-* :mod:`.client` -- :class:`ConfigBucket`, :class:`ConfigSyncClient`
-  (``fetch`` / ``push`` / ``sync`` / ``push_operations`` / ``full_resync``).
+* :mod:`.bucket` -- :class:`ConfigBucket` and the error types.
+* :mod:`.merge` -- :func:`merge_buckets` and the per-operation merge.
+* :mod:`.client` -- :class:`ConfigSyncClient`
+  (``fetch`` / ``push`` / ``sync`` / ``push_operations`` / ``full_resync``);
+  it still exports every name of the two modules above.
 * :mod:`.versions` -- :class:`SyncEntry` with a version vector, and
   :func:`merge_entries`: the change made knowing the other wins; two changes
   to one key made apart are *both kept* as a conflict. No clock is consulted.

@@ -22,7 +22,7 @@ import time
 from pathlib import Path
 from typing import Any, ContextManager, Optional, Union
 
-from je_auto_control.utils.config_sync.client import ConfigBucket, ConfigSyncError
+from je_auto_control.utils.config_sync.bucket import ConfigBucket, ConfigSyncError
 from je_auto_control.utils.sqlite_support import autocommit_connection, sqlite_errors_as
 
 #: How many distinct users may hold a bucket in one store.
