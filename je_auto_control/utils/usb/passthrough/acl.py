@@ -274,6 +274,11 @@ class UsbAcl:
                 except TimeoutError as error:
                     raise UsbAclBusyError(
                         f"usb acl {self._path} is locked by another process") from error
+                except OSError as error:
+                    # Nowhere to put a lock file (a read-only directory): the
+                    # save below fails and says so too, as it always has.
+                    autocontrol_logger.warning(
+                        "usb acl %s changed without its lock file: %r", self._path, error)
                 yield
 
     def add_rule(self, rule: AclRule, *, persist: bool = True) -> None:

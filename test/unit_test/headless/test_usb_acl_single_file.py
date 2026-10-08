@@ -230,6 +230,25 @@ def test_a_change_that_cannot_get_the_lock_is_refused_not_applied(tmp_path, monk
     assert len(UsbAcl(path=path).list_rules()) == 2
 
 
+def test_a_directory_that_cannot_hold_a_lock_file_does_not_block_the_change(
+        tmp_path, monkeypatch, caplog):
+    """As before the lock existed: the rule applies and the failure is logged."""
+    from contextlib import contextmanager
+
+    from je_auto_control.utils.usb.passthrough import acl as acl_module
+
+    @contextmanager
+    def no_lock(_path):
+        raise PermissionError(13, "read-only directory")
+        yield  # pragma: no cover
+    monkeypatch.setattr(acl_module, "_file_lock", no_lock)
+    caplog.set_level(logging.WARNING, logger=autocontrol_logger.name)
+    acl = UsbAcl(path=tmp_path / "usb_acl.json")
+    acl.add_rule(_rule(1))
+    assert len(acl.list_rules()) == 1
+    assert any("without its lock file" in record.getMessage() for record in caplog.records)
+
+
 def test_an_in_memory_change_needs_no_lock(tmp_path, monkeypatch):
     path = tmp_path / "usb_acl.json"
     acl = UsbAcl(path=path)
