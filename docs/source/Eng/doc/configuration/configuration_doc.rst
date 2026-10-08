@@ -260,4 +260,7 @@ See :doc:`../operations_layer/operations_layer_doc` and
    * - ``AC_SIGNALING_CONFIG_DB``
      - unset / a path
      - SQLite file the signaling server keeps config-sync buckets in. Unset:
-       ``~/.je_auto_control/config_sync.sqlite3``.
+       ``~/.je_auto_control/config_sync.sqlite3``. Asset blobs (``/blobs``)
+       go in a folder of the same path with ``.blobs`` added unless
+       ``--blob-dir`` says otherwise; ``--max-blob-bytes`` and
+       ``--blob-quota-bytes`` bound them (flags only, no variable).

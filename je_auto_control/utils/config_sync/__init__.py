@@ -71,9 +71,9 @@ from je_auto_control.utils.config_sync.outbox import (
     DrainReport, OutboxError, SyncOutbox, default_outbox_path,
 )
 from je_auto_control.utils.config_sync.session import (
-    SyncRunReport, config_sync_full_resync, config_sync_resolve, config_sync_run,
-    config_sync_status, default_adapters, default_device_id, resolve_conflict,
-    run_full_resync, run_sync, sync_status,
+    SYNCABLE_SECTIONS, SyncRunReport, config_sync_full_resync, config_sync_resolve,
+    config_sync_run, config_sync_status, default_adapters, default_device_id, resolve_conflict,
+    resolve_sections, run_full_resync, run_sync, sync_status,
 )
 from je_auto_control.utils.config_sync.store import (
     ConfigStore, ConfigStoreError, RevisionConflictError, StoreCapacityError,
@@ -92,6 +92,7 @@ __all__ = [
     "TriggerSyncAdapter", "config_sync_full_resync", "config_sync_resolve", "config_sync_run",
     "config_sync_status", "default_adapters", "default_device_id", "publish_assets",
     "resolve_conflict", "run_full_resync", "run_sync", "sync_assets", "sync_status",
+    "SYNCABLE_SECTIONS", "resolve_sections",
     "ConfigBucket", "ConfigStore", "ConfigStoreError", "ConflictRecord", "ConfigSyncClient",
     "ConfigSyncConflict", "ConfigSyncError", "DEFAULT_SYNC_ATTEMPTS", "DrainReport",
     "FullResyncRequired", "MergeDecision", "OperationMismatchError", "OutboxError", "PeerState",

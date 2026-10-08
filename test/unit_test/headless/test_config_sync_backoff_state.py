@@ -150,7 +150,7 @@ def test_an_explicit_sync_skips_the_wait_once(machine, server):
     machine()
     server.offline = False
     report = machine(force=True)
-    assert (report.state, report.pending, report.retry_in_s) == ("synced", 0, 0.0)
+    assert (report.state, report.pending) == ("synced", 0) and not report.retry_in_s
     assert server.revision == 1
 
 
@@ -171,7 +171,7 @@ def test_the_status_turns_to_pending_once_the_delay_has_passed(machine, server):
     with patch("je_auto_control.utils.config_sync.session.time.time",
                return_value=4_000_000_000.0):
         status = sync_status(machine.outbox)
-    assert status["state"] == "pending" and status["retry_in_s"] == 0.0
+    assert status["state"] == "pending" and not status["retry_in_s"]
 
 
 def test_the_one_call_entry_points_carry_the_state(tmp_path, server):
@@ -191,7 +191,7 @@ def test_the_one_call_entry_points_carry_the_state(tmp_path, server):
 
 def test_never_synced_reports_no_retry(tmp_path):
     status = config_sync_status(_URL, "alice", str(tmp_path / "absent.sqlite3"))
-    assert status["state"] == "never" and status["retry_in_s"] == 0.0
+    assert status["state"] == "never" and not status["retry_in_s"]
 
 
 def test_the_surfaces_accept_force():

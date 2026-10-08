@@ -141,12 +141,12 @@ class BlobStore:
     def usage(self, user_id: str) -> Dict[str, Any]:
         """``{"used", "quota", "count", "max_blob_bytes", "blobs"}`` for the account."""
         try:
-            blobs = sorted(({"sha256": entry.name, "size": entry.stat().st_size}
-                            for entry in self._entries(self._account_dir(user_id))),
-                           key=lambda blob: str(blob["sha256"]))
+            sizes = {entry.name: entry.stat().st_size
+                     for entry in self._entries(self._account_dir(user_id))}
         except OSError as error:
             raise BlobStoreError(f"cannot list blobs: {error}") from error
-        return {"used": sum(int(blob["size"]) for blob in blobs), "quota": self._quota_bytes,
+        blobs = [{"sha256": digest, "size": size} for digest, size in sorted(sizes.items())]
+        return {"used": sum(sizes.values()), "quota": self._quota_bytes,
                 "count": len(blobs), "max_blob_bytes": self._max_blob_bytes, "blobs": blobs}
 
     def put(self, user_id: str, sha256: Any, data: bytes) -> bool:
