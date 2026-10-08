@@ -20,7 +20,7 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 | 指標 | 數值 |
 | --- | ---: |
 | Python 模組總數（含周邊子專案） | 1,152 |
-| 程式碼總行數 | 179,671 |
+| 程式碼總行數 | 179,684 |
 | `je_auto_control/utils/` 子套件數 | 311 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 848 |
 | 套件門面 `__all__` 公開名稱數 | 1,244 |
@@ -963,7 +963,7 @@ GUI 是**選用 extra**（`pip install je_auto_control[gui]`，PySide6），且�
 | diagnostics | `diagnostics_tab.py` | 91 | 執行子系統檢查並顯示結果。 |
 | report | `_report_tab.py` | 81 | 產生 HTML／JSON／XML 報表。 |
 
-#### 遠端桌面 GUI（`gui/remote_desktop/`，32 檔／7,350 行）
+#### 遠端桌面 GUI（`gui/remote_desktop/`，32 檔／7,363 行）
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -972,7 +972,7 @@ GUI 是**選用 extra**（`pip install je_auto_control[gui]`，PySide6），且�
 | `advanced_group.py` | 92 | 兩個 WebRTC 面板共用的 Advanced STUN／TURN（含選用硬體編碼器）群組，含它寫回面板的 Protocol。 |
 | `trusted_group.py` | 70 | WebRTC host 面板的信任 viewer 清單群組（移除／清空／匯入／匯出），含它寫回面板的 Protocol。 |
 | `connection_screen.py` | 749 | Quick Connect —— AnyDesk 風格單畫面入口。 |
-| `viewer_panel.py` | 573 | 「控制另一台機器」子分頁。 |
+| `viewer_panel.py` | 586 | 「控制另一台機器」子分頁。 |
 | `webrtc_known_hosts.py` | 346 | TOFU 釘選庫瀏覽器：`KnownHostsDialog` 與帶外釘選用的小表單。由 `webrtc_dialogs` 再匯出。 |
 | `host_panel.py` | 371 | 「分享這台機器」子分頁。 |
 | `frame_display.py` | 228 | 繪製 JPEG 影格並發出遠端輸入事件的元件。 |
@@ -1085,7 +1085,7 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 
 | 層／子系統 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `gui/` | 119 | 32,109 |
+| `gui/` | 119 | 32,122 |
 | `utils/mcp_server/` | 41 | 20,731 |
 | `utils/remote_desktop/` | 56 | 13,513 |
 | `utils/executor/` | 8 | 9,972 |
@@ -1106,5 +1106,5 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 861 |
 | 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 714 | 65,454 |
-| **總計** | **1,140** | **178,854** |
+| **總計** | **1,140** | **178,867** |
 

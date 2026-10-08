@@ -88,6 +88,8 @@ class _ViewerPanel(TranslatableMixin, QWidget):
         # itself stays compact instead of devoting half its height to a
         # blank frame area.
         self._screen_window: Optional[RemoteScreenWindow] = None
+        # The newest frame that arrived before the screen window existed.
+        self._pending_frame: Optional[QImage] = None
         self._connect_btn: Optional[QPushButton] = None
         self._disconnect_btn: Optional[QPushButton] = None
         self._action_row: Optional[QWidget] = None
@@ -290,6 +292,9 @@ class _ViewerPanel(TranslatableMixin, QWidget):
         # operator gets a real workspace and the control panel stays
         # uncluttered.
         window = self._ensure_screen_window()
+        pending, self._pending_frame = self._pending_frame, None
+        if pending is not None:
+            window.set_image(pending)
         window.show()
         window.raise_()
         window.activateWindow()
@@ -377,6 +382,7 @@ class _ViewerPanel(TranslatableMixin, QWidget):
     def _close_screen_window(self) -> None:
         window = self._screen_window
         self._screen_window = None
+        self._pending_frame = None
         if window is not None:
             try:
                 window.closed.disconnect(self._on_screen_window_closed)
@@ -406,7 +412,14 @@ class _ViewerPanel(TranslatableMixin, QWidget):
 
     def _on_frame_main(self, payload: bytes) -> None:
         image = QImage.fromData(payload, "JPEG")
-        if image.isNull() or self._screen_window is None:
+        if image.isNull():
+            return
+        if self._screen_window is None:
+            # The connect answers on a worker, so the host's first frame can
+            # be here before _on_connected has opened the window. A host that
+            # sends only changed frames would never send it again, and a
+            # still remote screen stayed blank.
+            self._pending_frame = image
             return
         self._screen_window.set_image(image)
 
