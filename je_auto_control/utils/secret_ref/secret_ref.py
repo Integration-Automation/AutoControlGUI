@@ -9,11 +9,21 @@ rather than the value. This adds that resolver.
 Pure standard library (``os`` / ``re``); imports no ``PySide6``. The env reader,
 secret resolver, and base directory are injectable, so resolution is safe and
 deterministic in CI.
+
+Two optional restrictions, both off unless given: ``env_allowlist`` names the
+only environment variables ``env://`` may read (``fnmatch`` patterns such as
+``APP_*``), and ``path_policy`` confines ``file://`` to that policy's roots.
+The MCP server builds both from its environment, because a model that can ask
+for ``env://ANTHROPIC_API_KEY`` or ``file:///etc/passwd`` gets the value back.
 """
+import fnmatch
 import os
 import re
 from pathlib import Path
-from typing import Any, Callable, Mapping, Optional
+from typing import TYPE_CHECKING, Any, Callable, Iterable, Mapping, Optional, Tuple
+
+if TYPE_CHECKING:
+    from je_auto_control.utils.path_guard.policy import PathPolicy
 
 from je_auto_control.utils.exception.exceptions import AutoControlException
 
@@ -21,6 +31,10 @@ _REF_RE = re.compile(r"^(env|file|secret)://(.*)$", re.DOTALL)
 
 EnvReader = Mapping[str, str]
 SecretResolver = Callable[[str], Optional[str]]
+
+#: Comma-separated ``fnmatch`` patterns: the only variables ``env://`` may read
+#: through the MCP server's ``ac_resolve_ref`` / ``ac_resolve_refs``.
+MCP_ENV_REF_ALLOW_ENV = "JE_AUTOCONTROL_MCP_ENV_REF_ALLOW"
 
 
 
@@ -62,6 +76,18 @@ def refuse_secret_refs(obj: Any) -> None:
             "reference ${secrets.NAME} in the step that needs the value")
 
 
+def env_allowlist_from_env(
+        environ: Optional[Mapping[str, str]] = None) -> Optional[Tuple[str, ...]]:
+    """Read ``JE_AUTOCONTROL_MCP_ENV_REF_ALLOW``; ``None`` (unset) means no restriction.
+
+    A value that names nothing, such as a lone comma, allows no variable at all.
+    """
+    raw = (os.environ if environ is None else environ).get(MCP_ENV_REF_ALLOW_ENV)
+    if raw is None or not raw.strip():
+        return None
+    return tuple(entry.strip() for entry in raw.split(",") if entry.strip())
+
+
 def _default_secret(name: str) -> str:
     from je_auto_control.utils.governance import default_broker
     token = default_broker.lease(name, ttl=1.0)
@@ -79,10 +105,40 @@ class RefResolver:
 
     def __init__(self, *, env: Optional[EnvReader] = None,
                  secret_resolver: Optional[SecretResolver] = None,
-                 base_dir: Optional[str] = None) -> None:
+                 base_dir: Optional[str] = None,
+                 env_allowlist: Optional[Iterable[str]] = None,
+                 path_policy: Optional["PathPolicy"] = None) -> None:
         self._env = env
         self._secret_resolver = secret_resolver
         self._base_dir = base_dir
+        self._env_allowlist = None if env_allowlist is None else tuple(env_allowlist)
+        self._path_policy = path_policy
+
+    def check_all(self, obj: Any) -> None:
+        """Raise ``SecretRefError`` for any reference in ``obj`` the restrictions refuse.
+
+        Nothing is read: this is the gate a server runs on a request before it
+        hands the structure to a resolver.
+        """
+        if isinstance(obj, dict):
+            for value in obj.values():
+                self.check_all(value)
+        elif isinstance(obj, list):
+            for item in obj:
+                self.check_all(item)
+        elif isinstance(obj, str):
+            match = _REF_RE.match(obj)
+            if match is not None and match.group(1) == "env":
+                self._check_env(match.group(2))
+            elif match is not None and match.group(1) == "file":
+                self._file_target(match.group(2))
+
+    def _check_env(self, name: str) -> None:
+        allowed = self._env_allowlist
+        if allowed is None:
+            return
+        if not any(fnmatch.fnmatchcase(name, pattern) for pattern in allowed):
+            raise SecretRefError(f"env var {name!r} is not on the env:// allowlist")
 
     def resolve(self, ref: str) -> str:
         """Resolve a single reference string to its value."""
@@ -109,12 +165,22 @@ class RefResolver:
         return obj
 
     def _resolve_env(self, name: str) -> str:
+        self._check_env(name)
         source = self._env if self._env is not None else os.environ
         if name not in source:
             raise SecretRefError(f"env var {name!r} is not set")
         return source[name]
 
     def _resolve_file(self, path: str) -> str:
+        resolved = self._file_target(path)
+        try:
+            return Path(resolved).read_text(encoding="utf-8")
+        # ValueError: an embedded NUL, or a file that is not UTF-8.
+        except (OSError, ValueError) as error:
+            raise SecretRefError(f"cannot read {path!r}: {error}") from error
+
+    def _file_target(self, path: str) -> str:
+        """The real path a ``file://`` target names, refused if it is out of bounds."""
         if _DRIVE_URL_PATH.match(path):
             path = path[1:]  # file:///C:/x names C:/x, not the drive-relative /C:/x
         if "\0" in path:
@@ -128,11 +194,13 @@ class RefResolver:
             resolved = os.path.realpath(os.path.join(base, path))
             if not _is_within(base, resolved):
                 raise SecretRefError(f"path escapes base dir: {path!r}")
-        try:
-            return Path(resolved).read_text(encoding="utf-8")
-        # ValueError: an embedded NUL, or a file that is not UTF-8.
-        except (OSError, ValueError) as error:
-            raise SecretRefError(f"cannot read {path!r}: {error}") from error
+        if self._path_policy is not None and self._path_policy.enabled:
+            from je_auto_control.utils.path_guard.path_guard import PathNotAllowedError
+            try:
+                self._path_policy.validate(resolved, operation="file:// reference")
+            except PathNotAllowedError as error:
+                raise SecretRefError(str(error)) from error
+        return resolved
 
     def _resolve_secret(self, name: str) -> str:
         resolver = self._secret_resolver

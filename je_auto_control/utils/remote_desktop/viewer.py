@@ -13,7 +13,7 @@ from je_auto_control.utils.remote_desktop.clipboard_sync import (
     ClipboardSyncError, decode as decode_clipboard, encode_image, encode_text,
 )
 from je_auto_control.utils.remote_desktop.file_transfer import (
-    FileReceiver, FileTransferError, send_file,
+    FileReceiver, FileTransferError, default_download_dir, send_file,
 )
 from je_auto_control.utils.remote_desktop.host_id import validate_host_id
 from je_auto_control.utils.remote_desktop.protocol import (
@@ -293,12 +293,19 @@ class RemoteDesktopViewer:
         self._channel.send_typed(MessageType.CLIPBOARD, encode_image(png_bytes))
 
     def set_file_receiver(self, receiver: FileReceiver) -> None:
-        """Replace the default ``FileReceiver`` used for incoming files."""
+        """Replace the default ``FileReceiver`` used for incoming files.
+
+        The default keeps what the host pushes inside
+        :func:`~je_auto_control.utils.remote_desktop.file_transfer.default_download_dir`;
+        pass ``FileReceiver(base_dir=...)`` to choose the directory.
+        """
         self._file_receiver = receiver
 
     def _ensure_file_receiver(self) -> FileReceiver:
         if self._file_receiver is None:
-            self._file_receiver = FileReceiver()
+            # Confined: the host names the destination, and a viewer cannot
+            # vouch for the host it dialled.
+            self._file_receiver = FileReceiver(base_dir=default_download_dir())
         return self._file_receiver
 
     def send_file(self, source_path: str, dest_path: str,

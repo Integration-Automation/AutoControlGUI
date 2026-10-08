@@ -878,9 +878,24 @@ Three new message types form one transfer:
 * ``FILE_END``   — JSON ``{transfer_id, status, error?}``
 
 Transfers are bidirectional, chunked (256 KiB per chunk), and have
-*no aggregate size limit* and *no path restriction* on the
-destination — token holders are trusted users. Progress is reported
-locally on both sides without an extra wire message::
+*no aggregate size limit*. The two directions treat ``dest_path``
+differently, because the trust runs one way:
+
+* **Viewer → host**: ``dest_path`` is a path on the host, used as given.
+  The viewer holds the token, and token holders are trusted users.
+* **Host → viewer**: ``dest_path`` is a path *relative to the viewer's
+  download directory*. A viewer cannot vouch for the host it dialled, so
+  an absolute path, a drive or UNC path, a ``..`` component or a symlink
+  leading out of that directory fails the transfer (``on_complete`` gets
+  ``ok=False``) and nothing is written.
+
+The download directory is ``~/Downloads/AutoControl`` unless
+``JE_AUTOCONTROL_REMOTE_DOWNLOAD_DIR`` names another; it is created when
+the first file arrives. To choose it per viewer, pass
+``FileReceiver(base_dir=...)`` to ``set_file_receiver``. A receiver built
+without ``base_dir`` is unconfined — that is what the host uses.
+
+Progress is reported locally on both sides without an extra wire message::
 
    from je_auto_control.utils.remote_desktop import (
        FileReceiver, RemoteDesktopHost, RemoteDesktopViewer, send_file,
@@ -890,11 +905,13 @@ locally on both sides without an extra wire message::
    viewer.send_file("local.bin", "/tmp/uploaded.bin",
                     on_progress=lambda tid, done, total: print(done, total))
 
-   # Host pushes to all viewers (each viewer needs a FileReceiver)
+   # Host pushes to all viewers; each one stores it under its own
+   # download directory, here <download dir>/from_host/local.bin
    viewer.set_file_receiver(FileReceiver(
        on_progress=..., on_complete=...,
+       base_dir="~/Downloads/AutoControl",
    ))
-   host.send_file_to_viewers("local.bin", "/tmp/from_host.bin")
+   host.send_file_to_viewers("local.bin", "from_host/local.bin")
 
 GUI: *Send file...* opens a file picker + destination-path prompt and
 runs the upload on a ``QThread`` with a ``QProgressBar`` bound to the
@@ -903,11 +920,19 @@ dragEnter / drop of local files; each dropped file kicks off the same
 upload flow.
 
 .. warning::
-   Path is unrestricted and there is no size cap. Anyone with the
-   token can write any file to any location, and can fill the disk.
-   Keep ``trusted token holders == trusted users`` in mind, or wrap
-   the headless API in your own restricted ``FileReceiver`` subclass
-   that vets the destination path.
+   On the host, the path is unrestricted and there is no size cap.
+   Anyone with the token can write any file to any location on the
+   host, and can fill the disk. Keep ``trusted token holders == trusted
+   users`` in mind, or give the host a confined receiver with
+   ``host.set_file_receiver(FileReceiver(base_dir=...))``. A viewer is
+   confined to its download directory, but a host can still fill that
+   disk.
+
+.. note::
+   Before this change a host-pushed ``dest_path`` was an absolute path
+   on the viewer. Scripts that call
+   ``host.send_file_to_viewers(src, "/tmp/x.bin")`` now fail on the
+   viewer; send a relative path instead.
 
 
 Remote desktop — AnyDesk-style popout window

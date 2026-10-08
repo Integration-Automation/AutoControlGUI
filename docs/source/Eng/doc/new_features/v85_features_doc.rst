@@ -47,3 +47,13 @@ Their results are recorded (the executor record, the MCP result), so they
 refuse ``secret://`` with ``SecretRefError``: secret values never enter those
 records. Reference ``${secrets.NAME}`` in the step that needs the value, or call
 ``resolve_ref`` from Python.
+
+``RefResolver`` takes two optional restrictions, both off unless given:
+``env_allowlist`` (the only variable names ``env://`` may read, ``fnmatch``
+patterns allowed) and ``path_policy`` (a ``PathPolicy`` whose roots ``file://``
+must stay inside). ``RefResolver.check_all(obj)`` applies them to a structure
+without reading anything. The MCP server builds both from
+``JE_AUTOCONTROL_MCP_ENV_REF_ALLOW`` and ``JE_AUTOCONTROL_MCP_PATH_ROOTS``
+for ``ac_resolve_ref`` / ``ac_resolve_refs``; see the MCP server page. The
+executor commands are not restricted — an action file can already read any
+variable or file.

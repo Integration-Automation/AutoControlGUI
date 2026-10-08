@@ -37,3 +37,10 @@ governance 憑證 broker。``resolve_refs_in`` 走訪巢狀 dict/list 並就地�
 **Security** 分類下的命令提供。它們的結果會被記錄（executor 紀錄、MCP 回應），所以遇到 ``secret://``
 會丟 ``SecretRefError``：祕密的值不進這些紀錄。需要值的步驟請引用 ``${secrets.NAME}``，或在 Python
 裡呼叫 ``resolve_ref``。
+
+``RefResolver`` 有兩個選用的限制，沒給就不生效：``env_allowlist``（``env://`` 只能讀的變數名稱，
+可用 ``fnmatch`` 樣式）與 ``path_policy``（``PathPolicy``，``file://`` 必須留在它的根目錄內）。
+``RefResolver.check_all(obj)`` 只檢查一個結構、不讀取任何東西。MCP 伺服器依
+``JE_AUTOCONTROL_MCP_ENV_REF_ALLOW`` 與 ``JE_AUTOCONTROL_MCP_PATH_ROOTS`` 為
+``ac_resolve_ref`` / ``ac_resolve_refs`` 建立這兩個限制，詳見 MCP 伺服器頁面。executor 指令不受
+限制——動作檔本來就能讀任何變數或檔案。

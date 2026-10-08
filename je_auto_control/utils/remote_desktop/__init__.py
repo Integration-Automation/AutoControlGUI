@@ -17,7 +17,8 @@ from je_auto_control.utils.remote_desktop.clipboard_sync import (
     ClipboardSyncError,
 )
 from je_auto_control.utils.remote_desktop.file_transfer import (
-    FileReceiver, FileSendResult, FileTransferError, send_file,
+    FileReceiver, FileSendResult, FileTransferError, confine_destination,
+    default_download_dir, send_file,
 )
 from je_auto_control.utils.remote_desktop.host import RemoteDesktopHost
 from je_auto_control.utils.remote_desktop.host_access import (
@@ -183,7 +184,8 @@ __all__ = [
     "AudioBackendError", "AudioCapture", "AudioPlayer",
     "is_audio_backend_available",
     "ClipboardSyncError",
-    "FileReceiver", "FileSendResult", "FileTransferError", "send_file",
+    "FileReceiver", "FileSendResult", "FileTransferError", "confine_destination",
+    "default_download_dir", "send_file",
     "PresenceError", "PresenceListener", "PresenceRegistry",
     "ROLE_CONTROLLER", "ROLE_OBSERVER", "ViewerPresence",
     "default_presence_registry",
