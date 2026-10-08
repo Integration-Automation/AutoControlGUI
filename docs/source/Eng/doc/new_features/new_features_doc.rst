@@ -403,6 +403,14 @@ that called them, also inside an ``AC_parallel`` branch; a branch starts from
 a copy of its parent's variables and its own writes stay in the branch.
 An executor you construct yourself (``Executor()``) always owns its scope.
 
+A thread you start inside the block does **not** join the run: it sees the
+process scope, as do pool workers and timers. This holds on every build --
+including free-threaded Python and ``-X thread_inherit_context=1``, where a
+new thread begins with a copy of its creator's context -- because a binding
+counts only on the thread that made it. To run something on another thread on
+behalf of the run, hand it the values (or open an ``execution_scope`` there).
+Coroutines and tasks on the binding thread share the run.
+
 Four more callers have a scope chosen for them rather than the process scope:
 
 * ``je_auto_control run --dry-run --var name=value`` seeds the variables into
