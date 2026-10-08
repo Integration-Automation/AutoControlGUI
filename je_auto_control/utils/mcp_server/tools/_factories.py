@@ -9242,7 +9242,8 @@ def config_sync_tools() -> List[MCPTool]:
     target = {"server_url": {"type": "string"}, "user_id": {"type": "string"}}
     options = {
         "device_id": {"type": "string"}, "secret": {"type": "string"},
-        "sections": {"type": "array", "items": {"type": "string"}},
+        "sections": {"type": "array", "items": {
+            "type": "string", "enum": list(h_sync.SYNCABLE_SECTIONS)}},
         "scripts_dir": {"type": "string", "format": "path"},
         "locators_path": {"type": "string", "format": "path"},
         "outbox_path": {"type": "string", "format": "path"},
@@ -9255,7 +9256,10 @@ def config_sync_tools() -> List[MCPTool]:
             name="ac_config_sync_run",
             description=("Sync this machine's hotkeys, triggers, address book (and "
                          "scripts / locators when their paths are given) with the "
-                         "config-sync server once. Local changes are queued durably "
+                         "config-sync server once. A path ADDS its section to those "
+                         "three; pass sections (e.g. [\"scripts\"]) to sync only the "
+                         "ones named. The result's 'sections' lists what was covered. "
+                         "Local changes are queued durably "
                          "and sent on top of the server's revision; concurrent edits "
                          "of one entry are kept as a conflict. Received hotkeys and "
                          "triggers are created DISABLED and nothing is run. Returns "

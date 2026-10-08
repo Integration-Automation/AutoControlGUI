@@ -329,10 +329,37 @@ delay has run out.
 
 Options: ``device_id`` (default: an id created once in
 ``~/.je_auto_control/config_sync_device_id``), ``secret`` (default
-``$AC_SIGNALING_SECRET``), ``sections`` (default ``hotkeys``, ``triggers``,
-``address_book``; ``scripts`` and ``locators`` join when their path is
-given), ``scripts_dir``, ``locators_path``, ``outbox_path``, ``assets_dir``,
+``$AC_SIGNALING_SECRET``), ``sections`` (below), ``scripts_dir``, ``locators_path``, ``outbox_path``, ``assets_dir``,
 ``timeout_s``, ``wait``, ``force``, ``max_attempts``.
+
+**Which sections a sync covers.** ``resolve_sections(sections, scripts_dir=...,
+locators_path=...)`` decides, and the report's ``sections`` lists the result.
+
+.. list-table::
+   :header-rows: 1
+
+   * - You pass
+     - Synced
+   * - nothing
+     - ``hotkeys``, ``triggers``, ``address_book``
+   * - ``scripts_dir``
+     - ``hotkeys``, ``triggers``, ``address_book``, ``scripts``
+   * - ``scripts_dir`` and ``locators_path``
+     - those four and ``locators``
+   * - ``sections="scripts"`` and ``scripts_dir``
+     - ``scripts`` only
+   * - ``sections=["hotkeys", "scripts"]`` and ``scripts_dir``
+     - exactly those two
+
+A path **adds** its section to the default three; it does not narrow the sync
+to it, so ``scripts_dir`` alone also syncs this machine's hotkeys, triggers
+and address book. That default is deliberate -- the GUI tab has a scripts
+folder and no section picker, and hotkeys and triggers need that folder to
+turn their script paths into portable references -- so it is unchanged; name
+``sections`` when you want less. ``sections`` is a list or one comma-separated
+string. An unknown name, a section whose path is missing, and a choice that
+names nothing (``[]``, ``","``) are each ``ConfigSyncError``; a name given
+twice is synced once.
 
 .. list-table::
    :header-rows: 1

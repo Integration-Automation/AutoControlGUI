@@ -275,10 +275,35 @@ Adapter:同步什麼、什麼留在本機
 ``config_sync_status`` 的 ``retry_in_s`` 是即時計算的,延遲結束後顯示 ``pending`` 而不是 ``backing_off``。
 
 選項:``device_id``(預設:在 ``~/.je_auto_control/config_sync_device_id`` 建立一次的 id)、
-``secret``(預設 ``$AC_SIGNALING_SECRET``)、``sections``(預設 ``hotkeys``、``triggers``、
-``address_book``;給了路徑時加入 ``scripts`` 與 ``locators``)、``scripts_dir``、
+``secret``(預設 ``$AC_SIGNALING_SECRET``)、``sections``(見下)、``scripts_dir``、
 ``locators_path``、``outbox_path``、``assets_dir``、``timeout_s``、``wait``、``force``、
 ``max_attempts``。
+
+**一次同步涵蓋哪些 section。** 由 ``resolve_sections(sections, scripts_dir=...,
+locators_path=...)`` 決定,回報的 ``sections`` 會列出結果。
+
+.. list-table::
+   :header-rows: 1
+
+   * - 傳入
+     - 同步的 section
+   * - 什麼都不傳
+     - ``hotkeys``、``triggers``、``address_book``
+   * - ``scripts_dir``
+     - ``hotkeys``、``triggers``、``address_book``、``scripts``
+   * - ``scripts_dir`` 與 ``locators_path``
+     - 以上四個再加 ``locators``
+   * - ``sections="scripts"`` 與 ``scripts_dir``
+     - 只有 ``scripts``
+   * - ``sections=["hotkeys", "scripts"]`` 與 ``scripts_dir``
+     - 正好這兩個
+
+路徑是把它的 section **加到** 預設的三個上,不是把同步縮小到它,所以只傳 ``scripts_dir``
+也會同步本機的快捷鍵、觸發器與通訊錄。這個預設是刻意的 —— GUI 分頁只有腳本資料夾、沒有 section
+選擇器,而且快捷鍵與觸發器需要那個資料夾才能把腳本路徑變成可攜的參照 —— 所以維持不變;
+想少同步一些就指名 ``sections``。``sections`` 可以是 list 或一個逗號分隔的字串。
+不認得的名稱、缺少路徑的 section、以及什麼都沒指名的選擇(``[]``、``","``)都是
+``ConfigSyncError``;同一個名稱寫兩次只同步一次。
 
 .. list-table::
    :header-rows: 1

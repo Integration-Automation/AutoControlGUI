@@ -3563,7 +3563,10 @@ def _add_resilience_specs(specs: List[CommandSpec]) -> None:
         ),
         description="Sync settings with the server once. Received hotkeys and "
                     "triggers arrive disabled; nothing is run. 'force' skips the "
-                    "retry delay left by an earlier failure (state backing_off).",
+                    "retry delay left by an earlier failure (state backing_off). "
+                    "Without 'sections' this syncs hotkeys, triggers and the address "
+                    "book, plus scripts / locators when their path is given; set "
+                    "sections (e.g. scripts) to sync only those.",
     ))
     specs.append(CommandSpec(
         "AC_config_sync_status", "Data", "Config Sync: Status",

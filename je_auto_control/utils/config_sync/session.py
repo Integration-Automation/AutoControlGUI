@@ -46,8 +46,14 @@ STATE_BACKING_OFF = "backing_off"
 STATE_CANCELLED = "cancelled"
 STATE_RESYNC_REQUIRED = "resync_required"
 
-#: Sections synced when the caller does not choose.
+#: Sections synced when the caller does not choose: the three stores every
+#: machine has. ``scripts`` and ``locators`` join them when their path is given.
 DEFAULT_SECTIONS = ("hotkeys", "triggers", "address_book")
+#: Every section :func:`default_adapters` can build, and the option each needs.
+SYNCABLE_SECTIONS: Dict[str, Optional[str]] = {
+    "hotkeys": None, "triggers": None, "address_book": None,
+    "scripts": "scripts_dir", "locators": "locators_path",
+}
 _STATUS = "status"
 _UNAPPLIED = "unapplied"
 _OPTIONS = frozenset({
@@ -74,6 +80,8 @@ class SyncRunReport:
     revision: int = 0
     pending: int = 0
     conflicts: List[str] = field(default_factory=list)
+    #: The sections this run covered, in the order they were synced.
+    sections: List[str] = field(default_factory=list)
     applied: Dict[str, Dict[str, Any]] = field(default_factory=dict)
     withheld: Dict[str, str] = field(default_factory=dict)
     assets: Dict[str, Any] = field(default_factory=dict)
@@ -85,10 +93,60 @@ class SyncRunReport:
     def to_dict(self) -> Dict[str, Any]:
         """A JSON-ready copy."""
         return {"state": self.state, "revision": self.revision, "pending": self.pending,
-                "conflicts": list(self.conflicts), "applied": dict(self.applied),
+                "conflicts": list(self.conflicts), "sections": list(self.sections),
+                "applied": dict(self.applied),
                 "withheld": dict(self.withheld), "assets": dict(self.assets),
                 "error": self.error, "finished_at": self.finished_at,
                 "last_success": self.last_success, "retry_in_s": self.retry_in_s}
+
+
+def resolve_sections(sections: Any = None, *, scripts_dir: Optional[str] = None,
+                     locators_path: Optional[str] = None) -> List[str]:
+    """The sections a sync covers, in order, for the caller's choice.
+
+    ``None`` (or ``""``, an empty form field) is the default:
+    :data:`DEFAULT_SECTIONS` -- this machine's hotkeys, triggers and address
+    book -- plus ``scripts`` when ``scripts_dir`` is given and ``locators``
+    when ``locators_path`` is. Giving a path therefore *adds* a section; it
+    does not narrow the sync to it. To sync only some sections, name them: a
+    list, or one comma-separated string (``"scripts"``).
+
+    A named section must be one of :data:`SYNCABLE_SECTIONS` and its store
+    must have been given; a choice that names nothing (``[]``, ``","``) is an
+    error rather than a silent fall back to everything.
+    """
+    if sections is None or sections == "":
+        return [*DEFAULT_SECTIONS, *(["scripts"] if scripts_dir else []),
+                *(["locators"] if locators_path else [])]
+    given = {"scripts_dir": scripts_dir, "locators_path": locators_path}
+    wanted: List[str] = []
+    for name in _section_names(sections):
+        needs = _checked_section(name)
+        if needs is not None and not given[needs]:
+            raise ConfigSyncError(f"cannot sync section {name!r}: its {needs} is missing")
+        if name not in wanted:
+            wanted.append(name)
+    if not wanted:
+        raise ConfigSyncError(
+            "sections names no section; omit it for the default "
+            f"({', '.join(DEFAULT_SECTIONS)}) or name some of: {', '.join(SYNCABLE_SECTIONS)}")
+    return wanted
+
+
+def _section_names(sections: Any) -> List[Any]:
+    """The names in a ``sections`` value: a list as it is, a string split on commas."""
+    if isinstance(sections, str):
+        # "a,,b" and a trailing comma name nothing extra.
+        return [name.strip() for name in sections.split(",") if name.strip()]
+    return [name.strip() if isinstance(name, str) else name for name in sections]
+
+
+def _checked_section(name: Any) -> Optional[str]:
+    """The option ``name`` needs (``None`` for none); an unknown name is an error."""
+    if not isinstance(name, str) or name not in SYNCABLE_SECTIONS:
+        raise ConfigSyncError(
+            f"cannot sync section {name!r}: unknown; choose from {', '.join(SYNCABLE_SECTIONS)}")
+    return SYNCABLE_SECTIONS[name]
 
 
 def default_adapters(device_id: str, *, sections: Optional[Sequence[str]] = None,
@@ -96,13 +154,14 @@ def default_adapters(device_id: str, *, sections: Optional[Sequence[str]] = None
                      locators_path: Optional[str] = None) -> List[SyncAdapter]:
     """Adapters over this process's hotkey daemon, trigger engine and address book.
 
-    ``scripts`` needs ``scripts_dir`` and ``locators`` needs ``locators_path``;
-    naming a section whose store was not given, or an unknown section, is an
-    error rather than a silent omission.
+    Which sections is decided by :func:`resolve_sections`: without
+    ``sections`` that is hotkeys, triggers and the address book, plus
+    ``scripts`` / ``locators`` when their path is given -- so pass
+    ``sections=["scripts"]`` to sync scripts and nothing else. Naming a
+    section whose store was not given, or an unknown section, is an error
+    rather than a silent omission.
     """
-    wanted = list(sections) if sections else [
-        *DEFAULT_SECTIONS, *(["scripts"] if scripts_dir else []),
-        *(["locators"] if locators_path else [])]
+    wanted = resolve_sections(sections, scripts_dir=scripts_dir, locators_path=locators_path)
     return [_build_adapter(name, device_id, scripts_dir, locators_path) for name in wanted]
 
 
@@ -122,8 +181,7 @@ def _build_adapter(name: str, device_id: str, scripts_dir: Optional[str],
     if name == "locators" and locators_path:
         from je_auto_control.utils.element_repository import ElementRepository
         return LocatorSyncAdapter(device_id, ElementRepository(locators_path))
-    raise ConfigSyncError(
-        f"cannot sync section {name!r}: unknown, or its scripts_dir / locators_path is missing")
+    raise ConfigSyncError(f"cannot sync section {name!r}: its store was not given")
 
 
 def _conflict_names(bucket: ConfigBucket) -> List[str]:
@@ -252,7 +310,8 @@ def run_sync(client: ConfigSyncClient, outbox: SyncOutbox, adapters: Sequence[Sy
     :func:`run_full_resync`.
     """
     baseline = outbox.load_baseline() or ConfigBucket(user_id=client.user_id)
-    report = SyncRunReport(revision=baseline.revision)
+    report = SyncRunReport(revision=baseline.revision,
+                           sections=[adapter.section for adapter in adapters])
     report.withheld = _stage(outbox, adapters, baseline)
     manifest = _script_assets(adapters, baseline)
     if asset_transport is not None and manifest is not None:
@@ -286,7 +345,8 @@ def run_full_resync(client: ConfigSyncClient, outbox: SyncOutbox,
     offered again by the next :func:`run_sync`.
     """
     baseline = outbox.load_baseline() or ConfigBucket(user_id=client.user_id)
-    report = SyncRunReport(revision=baseline.revision)
+    report = SyncRunReport(revision=baseline.revision,
+                           sections=[adapter.section for adapter in adapters])
     try:
         adopted = client.full_resync(device_id=device_id)
     except ConfigSyncError as error:
@@ -380,10 +440,7 @@ def _session(server_url: str, user_id: str, options: Mapping[str, Any],
         device_id=device_id,
         secret=chosen.get("secret") or os.environ.get("AC_SIGNALING_SECRET") or None)
     outbox = SyncOutbox(chosen.get("outbox_path"), account=user_id, endpoint=client.server_url)
-    sections = chosen.get("sections")
-    if isinstance(sections, str):
-        sections = [name.strip() for name in sections.split(",") if name.strip()]
-    adapters = default_adapters(device_id, sections=sections,
+    adapters = default_adapters(device_id, sections=options.get("sections"),
                                 scripts_dir=chosen.get("scripts_dir"),
                                 locators_path=chosen.get("locators_path"))
     return client, outbox, adapters, device_id
@@ -394,7 +451,11 @@ def config_sync_run(server_url: str, user_id: str, *,
     """Sync this machine's settings with ``server_url`` once; returns the report.
 
     Options: ``device_id`` (default: this machine's stored id), ``secret``
-    (default ``$AC_SIGNALING_SECRET``), ``sections``, ``scripts_dir``,
+    (default ``$AC_SIGNALING_SECRET``), ``sections`` (see
+    :func:`resolve_sections`: the default is this machine's hotkeys,
+    triggers and address book, and ``scripts_dir`` / ``locators_path`` *add*
+    their section -- pass ``sections="scripts"`` to sync scripts alone; the
+    report's ``sections`` lists what was covered), ``scripts_dir``,
     ``locators_path``, ``outbox_path``, ``assets_dir`` (a folder both
     machines reach, for scripts too large to inline), ``timeout_s``,
     ``wait`` (sleep through a retry back-off instead of returning
@@ -445,7 +506,7 @@ __all__ = [
     "DEFAULT_SECTIONS", "STATE_BACKING_OFF", "STATE_CANCELLED", "STATE_CONFLICT",
     "STATE_OFFLINE", "STATE_PENDING",
     "STATE_RESYNC_REQUIRED", "STATE_SYNCED", "SyncRunReport", "config_sync_full_resync",
-    "config_sync_resolve", "config_sync_run", "config_sync_status", "default_adapters",
-    "default_device_id", "default_device_id_path", "resolve_conflict", "run_full_resync",
-    "run_sync", "sync_status",
+    "SYNCABLE_SECTIONS", "config_sync_resolve", "config_sync_run", "config_sync_status",
+    "default_adapters", "default_device_id", "default_device_id_path", "resolve_conflict",
+    "resolve_sections", "run_full_resync", "run_sync", "sync_status",
 ]
