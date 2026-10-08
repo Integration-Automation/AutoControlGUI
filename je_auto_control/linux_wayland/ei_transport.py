@@ -223,7 +223,7 @@ def decode_batch(raw: Any) -> List[InputEvent]:
     return events
 
 
-def _checked(kind: Any, code: Any, value: Any) -> tuple:
+def _checked(kind: Any, code: Any, value: Any) -> Tuple[int, int, int]:
     """One event's three fields, or a refusal naming what is wrong."""
     for part in (kind, code, value):
         if isinstance(part, bool) or not isinstance(part, int):

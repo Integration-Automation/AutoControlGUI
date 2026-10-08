@@ -1,13 +1,13 @@
 """Signals, defaults and config readers shared by the WebRTC host and viewer panels."""
 from __future__ import annotations
 
-from typing import Optional
+from typing import Optional, Tuple
 
 from PySide6.QtCore import QObject, Signal
 from PySide6.QtGui import QImage
 from PySide6.QtWidgets import QWidget
 
-from je_auto_control.gui.remote_desktop._webrtc_types import WebRTCConfigT
+from je_auto_control.gui.remote_desktop._webrtc_types import AvFrameT, WebRTCConfigT
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
 
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
@@ -27,7 +27,7 @@ _QUALITY_DOT_STYLE = "background-color: #555; border-radius: 7px;"
 _JSON_FILE_FILTER = "JSON (*.json);;All (*)"
 
 
-def _av_frame_to_qimage(frame) -> Optional[QImage]:
+def _av_frame_to_qimage(frame: AvFrameT) -> Optional[QImage]:
     """Convert an aiortc/av video frame to a Qt-owned QImage."""
     try:
         arr = frame.to_ndarray(format="rgb24")
@@ -70,13 +70,13 @@ class _PanelPart(TranslatableMixin, QWidget):
     """
 
 
-def _checked_or(panel, attr: str, default: bool = False) -> bool:
+def _checked_or(panel: QWidget, attr: str, default: bool = False) -> bool:
     """Return ``panel.<attr>.isChecked()`` if the widget exists, else default."""
     widget = getattr(panel, attr, None)
     return widget.isChecked() if widget is not None else default
 
 
-def _read_region(panel) -> Optional[tuple]:
+def _read_region(panel: QWidget) -> Optional[Tuple[int, ...]]:
     edit = getattr(panel, "_region_edit", None)
     if edit is None:
         return None
@@ -90,7 +90,7 @@ def _read_region(panel) -> Optional[tuple]:
     return tuple(parts) if len(parts) == 4 else None
 
 
-def _read_webrtc_config(panel) -> WebRTCConfigT:
+def _read_webrtc_config(panel: QWidget) -> WebRTCConfigT:
     """Build a WebRTCConfig from the advanced group + monitor/fps fields."""
     from je_auto_control.utils.remote_desktop.webrtc_transport import (
         _DEFAULT_STUN_SERVERS,

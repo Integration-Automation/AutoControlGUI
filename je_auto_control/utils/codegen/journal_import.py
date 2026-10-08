@@ -34,7 +34,9 @@ import os
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple, Union
+from typing import (
+    Any, Dict, FrozenSet, List, Mapping, Optional, Sequence, Set, Tuple, Union,
+)
 
 from je_auto_control.utils.action_journal.events import (
     SCHEMA_VERSION, STATUS_ERROR, STATUS_INCOMPLETE, STATUS_OK, ActionEvent,
@@ -91,7 +93,7 @@ class CandidateScript:
                 "observed_path_only": self.observed_path_only}
 
 
-def _nesting_commands() -> frozenset:
+def _nesting_commands() -> FrozenSet[str]:
     """Commands whose arguments hold action lists the executor runs."""
     from je_auto_control.utils.executor.action_executor import Executor
     return frozenset(FLOW_BODY_KEYS) | frozenset(FLOW_BRANCH_LIST_KEYS) | frozenset(
@@ -106,8 +108,8 @@ class _Run:
         self.lines = contents.lines
         self.children: Dict[str, List[ActionEvent]] = {}
         self.roots: List[ActionEvent] = []
-        self.orphans: set = set()
-        seen: set = set()
+        self.orphans: Set[str] = set()
+        seen: Set[str] = set()
         for event in self.events:
             if event.parent_id is None:
                 self.roots.append(event)
@@ -119,7 +121,7 @@ class _Run:
                 self.orphans.add(event.step_id)
             seen.add(event.step_id)
 
-    def detached(self, nesting: frozenset) -> set:
+    def detached(self, nesting: FrozenSet[str]) -> Set[str]:
         """Roots that ran on another thread *inside* a nesting root step.
 
         A runner that hands work to a thread pool (the DAG runner, a device
@@ -166,7 +168,8 @@ class _Builder:
         self.steps: List[Dict[str, Any]] = []
         self.warnings: List[str] = []
         self.observed = False
-        self._macros: set = set()
+        # Names as the journal recorded them: read from a file, so not known to be strings.
+        self._macros: Set[object] = set()
 
     def build(self) -> None:
         """Walk every root step of the run."""

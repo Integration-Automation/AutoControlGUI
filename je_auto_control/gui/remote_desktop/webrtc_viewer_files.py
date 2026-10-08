@@ -5,7 +5,7 @@ still owns every widget and slot under its original name.
 """
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Any, Optional, Sequence
 
 
 from PySide6.QtCore import QTimer
@@ -99,7 +99,7 @@ class _ViewerFilesMixin(_PanelPart):
             return
         self._on_delete_names(names)
 
-    def _on_pull_names(self, names) -> None:
+    def _on_pull_names(self, names: Sequence[str]) -> None:
         if self._viewer is None or not self._viewer.authenticated:
             return
         try:
@@ -108,7 +108,7 @@ class _ViewerFilesMixin(_PanelPart):
         except (RuntimeError, OSError, ValueError) as error:
             QMessageBox.warning(self, "WebRTC", str(error))
 
-    def _on_delete_names(self, names) -> None:
+    def _on_delete_names(self, names: Sequence[str]) -> None:
         if not names or self._viewer is None or not self._viewer.authenticated:
             return
         confirm_text = (
@@ -128,7 +128,7 @@ class _ViewerFilesMixin(_PanelPart):
         except (RuntimeError, OSError, ValueError) as error:
             QMessageBox.warning(self, "WebRTC", str(error))
 
-    def _on_upload_paths(self, paths) -> None:
+    def _on_upload_paths(self, paths: Sequence[str]) -> None:
         if self._viewer is None or not self._viewer.authenticated:
             QMessageBox.information(
                 self, "WebRTC", _t("rd_webrtc_cad_not_connected"),
@@ -157,11 +157,11 @@ class _ViewerFilesMixin(_PanelPart):
         if clipboard is not None:
             clipboard.setText(name)
 
-    def _on_inbox_listing(self, files) -> None:
+    def _on_inbox_listing(self, files: object) -> None:
         from datetime import datetime
         if not isinstance(files, list):
             return
-        def _format_mtime(value):
+        def _format_mtime(value: Any) -> str:  # a field of the remote host's JSON listing
             try:
                 return datetime.fromtimestamp(float(value)).strftime(
                     "%Y-%m-%d %H:%M:%S",
@@ -170,7 +170,7 @@ class _ViewerFilesMixin(_PanelPart):
                 return str(value)
         self._remote_files_table.populate(files, _format_mtime)
 
-    def _on_inbox_op_result(self, name: str, ok: bool, error) -> None:
+    def _on_inbox_op_result(self, name: str, ok: bool, error: object) -> None:
         if ok:
             self._status_label.setText(
                 _t("rd_webrtc_browse_op_ok").format(name=name),
@@ -208,13 +208,13 @@ class _ViewerFilesMixin(_PanelPart):
         except (RuntimeError, OSError, ValueError) as error:
             QMessageBox.warning(self, "WebRTC", str(error))
 
-    def _on_received_file(self, path) -> None:
+    def _on_received_file(self, path: object) -> None:
         # Called from the asyncio thread, which has no Qt event loop:
         # QTimer.singleShot would never fire. Emit a signal — Qt queues the
         # status update onto the GUI thread.
         self._signals.file_received.emit(path)
 
-    def _on_file_received_ui(self, path) -> None:
+    def _on_file_received_ui(self, path: object) -> None:
         self._status_label.setText(
             _t("rd_webrtc_file_received").format(name=str(path)),
         )

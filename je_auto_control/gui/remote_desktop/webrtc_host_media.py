@@ -16,6 +16,7 @@ from PySide6.QtWidgets import (
 from je_auto_control.gui.remote_desktop._helpers import (
     _t,
 )
+from je_auto_control.gui.remote_desktop._webrtc_types import AvFrameT
 from je_auto_control.gui.remote_desktop.blanking_overlay import BlankingOverlay
 from je_auto_control.gui.remote_desktop.annotation_overlay import (
     HostAnnotationOverlay,
@@ -244,7 +245,7 @@ class _HostMediaMixin(_PanelPart):
             self._adaptive_poller = None
         self._adaptive_controller = None
 
-    def _on_annotation_event(self, data) -> None:
+    def _on_annotation_event(self, data: object) -> None:
         if not isinstance(data, dict):
             return
         if self._annotation_overlay is None:
@@ -263,7 +264,7 @@ class _HostMediaMixin(_PanelPart):
             return
         host.set_viewer_video_callback(self._on_viewer_video_av_frame)
 
-    def _on_viewer_video_av_frame(self, frame) -> None:
+    def _on_viewer_video_av_frame(self, frame: AvFrameT) -> None:
         image = _av_frame_to_qimage(frame)
         if image is not None:
             self._signals.viewer_video_frame.emit(image)

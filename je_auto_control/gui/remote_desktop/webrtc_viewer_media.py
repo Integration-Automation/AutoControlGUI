@@ -13,7 +13,7 @@ from PySide6.QtWidgets import (
     QFileDialog, QMessageBox,
 )
 
-from je_auto_control.gui.remote_desktop._webrtc_types import SessionRecorderT
+from je_auto_control.gui.remote_desktop._webrtc_types import AvFrameT, SessionRecorderT
 from je_auto_control.gui.remote_desktop._helpers import (
     _t,
 )
@@ -194,7 +194,7 @@ class _ViewerMediaMixin(_PanelPart):
             pass
 
     # called from asyncio thread
-    def _on_av_frame(self, frame) -> None:
+    def _on_av_frame(self, frame: AvFrameT) -> None:
         if self._recorder is not None:
             try:
                 self._recorder.write_frame(frame)

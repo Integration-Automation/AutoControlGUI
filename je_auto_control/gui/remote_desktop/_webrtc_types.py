@@ -7,6 +7,12 @@ the names below instead; calls keep using the package's own names.
 """
 from typing import TYPE_CHECKING, Any
 
+#: An ``av.VideoFrame``. PyAV belongs to the optional ``webrtc`` extra, which the
+#: typing contract reads as ``Any`` on purpose (its result must not depend on
+#: which extras are installed), so the frame cannot be named more precisely.
+#: This alias is the one place the panel modules let that ``Any`` in.
+AvFrameT = Any
+
 if TYPE_CHECKING:
     from je_auto_control.utils.remote_desktop.multi_viewer import (
         MultiViewerHost as MultiViewerHostT,
@@ -23,4 +29,4 @@ if TYPE_CHECKING:
 else:
     MultiViewerHostT = SessionRecorderT = WebRTCConfigT = WebRTCDesktopViewerT = Any
 
-__all__ = ["MultiViewerHostT", "SessionRecorderT", "WebRTCConfigT", "WebRTCDesktopViewerT"]
+__all__ = ["AvFrameT", "MultiViewerHostT", "SessionRecorderT", "WebRTCConfigT", "WebRTCDesktopViewerT"]

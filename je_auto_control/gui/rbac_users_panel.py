@@ -9,7 +9,7 @@ A token is shown once, in the "new token" field, right after ``add`` or
 ``rotate``; the next operation clears it. It is never written to a log.
 """
 import os
-from typing import List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QGuiApplication
@@ -161,7 +161,7 @@ class RbacUsersPanel(TranslatableMixin, QGroupBox):
             return None
         return path, user_id
 
-    def _show_token(self, issued: dict) -> None:
+    def _show_token(self, issued: Dict[str, Any]) -> None:
         self._reload()
         self._token_value.setText(str(issued["token"]))
         self._status_label.setText(

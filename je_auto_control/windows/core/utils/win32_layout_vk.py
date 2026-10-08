@@ -73,7 +73,7 @@ def layout_virtual_key(character: str) -> Optional[int]:
     return virtual_key if shift_state == 0 and virtual_key else None
 
 
-class LayoutKeyTable(dict):
+class LayoutKeyTable(Dict[str, int]):
     """A key table whose layout-dependent names are resolved at lookup time.
 
     A plain ``dict`` in every other respect: the layout names are stored with

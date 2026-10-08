@@ -97,3 +97,42 @@ GUI 設定檔):
 (每個分頁的 ``first_open_ms``)、再切回去、在搜尋框輸入、切換主題,同時有一個 5 ms
 的計時器在跳;``event_loop_p95_ms`` 就是那些 tick 晚到多久。``--compare`` 把兩份
 報告並排,工作量或環境不同時拒絕比較。
+
+分頁裡的背景工作
+----------------
+
+需要等待網路對端或裝置的分頁,透過 ``je_auto_control.gui.task_controller``
+啟動工作,而不是自己開執行緒:
+
+.. code-block:: python
+
+   from je_auto_control.gui.task_controller import CancellationToken, task_controller
+
+   def fetch(url: str, token: CancellationToken) -> dict:
+       token.raise_if_cancelled()
+       return download(url, timeout=token.remaining(default=10.0))
+
+   url = self._url_edit.text()                      # 先把 widget 的值讀出來
+   handle = task_controller().submit(
+       functools.partial(fetch, url), owner=self, timeout_s=30.0)
+   handle.result.connect(self._show)                # 在 GUI 執行緒發出
+   handle.error.connect(self._show_error)           # 例外物件本身
+   handle.finished.connect(self._enable_button)     # 無論結果如何都只發一次
+
+相較於單純的 worker,它多了這些:
+
+* **取消會傳到後端。** 工作會收到 ``CancellationToken``:以
+  ``raise_if_cancelled()`` / ``wait()`` 輪詢、把 ``remaining()`` 交給接受逾時的
+  後端,並用 ``on_cancel()`` 登記如何釋放手上的資源。``handle.cancel()`` 會在
+  呼叫取消的執行緒上立刻執行那些釋放動作。
+* **有型別的結果。** ``result`` 帶回傳值、``error`` 帶例外、``progress`` 帶
+  ``token.report_progress()`` 傳入的內容。逾時回報為 ``TaskTimeout``,取消回報為
+  ``TaskCancelled``。
+* **擁有者消失。** handle 是 ``owner`` 的子物件。分頁被銷毀時工作會被取消,之後
+  才到的結果交給 ``discard=``\ (關掉已經沒人要用的工作階段),絕不會送到已銷毀
+  widget 的 slot。
+* **worker 不碰 widget。** 工作若是 widget 的方法,或閉包裡抓著 widget,會在啟動
+  前以 ``TaskUsageError`` 拒絕。
+
+這是 GUI 內部 API(會 import ``PySide6``),套件 facade 不會重新匯出;分頁所呼叫的
+無頭函式不需要它也能使用。

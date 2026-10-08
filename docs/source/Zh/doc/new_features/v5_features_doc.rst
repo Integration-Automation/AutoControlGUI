@@ -160,8 +160,8 @@ SQL
 查詢僅限單句唯讀的 ``SELECT`` / ``WITH``,以唯讀連線執行,且值一律以
 參數綁定(絕不字串拼接)。
 
-執行器指令:``AC_sql_to_var``(列 / 單列 / 純量存入變數)與
-``AC_assert_db``(對純量查詢以 eq / ne / lt / gt / contains / ... 斷言)。
+執行器指令:``AC_sql_to_var``\ (列 / 單列 / 純量存入變數)與
+``AC_assert_db``\ (對純量查詢以 eq / ne / lt / gt / contains / ... 斷言)。
 
 
 Email(SMTP)

@@ -7,7 +7,7 @@ A thin wrapper over the headless API: the command list is
 action file.
 """
 import json
-from typing import Any, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
@@ -81,7 +81,7 @@ class MobileTab(TranslatableMixin, QWidget):
         root.addWidget(self._tr(QLabel(), "mob_result"))
         root.addWidget(self._result, stretch=1)
 
-    def menu_actions(self) -> list:
+    def menu_actions(self) -> List[Tuple[str, Callable[[], None]]]:
         """Expose tab commands to the window-level Actions menu."""
         return [
             ("mob_probe", self._on_probe),

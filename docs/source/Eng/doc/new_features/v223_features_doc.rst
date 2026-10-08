@@ -117,3 +117,43 @@ process's memory. ``gui_workloads.py`` opens every tab once
 switches theme while a 5 ms timer ticks; ``event_loop_p95_ms`` is how late
 those ticks arrive. ``--compare`` sets two reports side by side and refuses
 when the workload or the environment differs.
+
+Background work in a tab
+------------------------
+
+A tab that waits on a network peer or a device starts that work through
+``je_auto_control.gui.task_controller`` instead of a bare thread:
+
+.. code-block:: python
+
+   from je_auto_control.gui.task_controller import CancellationToken, task_controller
+
+   def fetch(url: str, token: CancellationToken) -> dict:
+       token.raise_if_cancelled()
+       return download(url, timeout=token.remaining(default=10.0))
+
+   url = self._url_edit.text()                      # read the widget first
+   handle = task_controller().submit(
+       functools.partial(fetch, url), owner=self, timeout_s=30.0)
+   handle.result.connect(self._show)                # emitted on the GUI thread
+   handle.error.connect(self._show_error)           # the exception object
+   handle.finished.connect(self._enable_button)     # once, whatever happened
+
+What it adds to a plain worker:
+
+* **Cancellation reaches the backend.** The work receives a
+  ``CancellationToken``: it polls ``raise_if_cancelled()`` / ``wait()``, hands
+  ``remaining()`` to a backend that takes a timeout, and registers how to let
+  go of what it holds with ``on_cancel()``. ``handle.cancel()`` runs those at
+  once, on the cancelling thread.
+* **Typed outcomes.** ``result`` carries the return value, ``error`` the
+  exception, ``progress`` whatever ``token.report_progress()`` was given. A
+  timeout is reported as ``TaskTimeout``, a cancellation as ``TaskCancelled``.
+* **Owner death.** The handle is a child of ``owner``. Destroying the tab
+  cancels the work, and a result that arrives afterwards goes to ``discard=``
+  (close the session nobody will use), never to a slot of the dead widget.
+* **No worker touches a widget.** Work that is a widget's method, or closes
+  over one, is refused with ``TaskUsageError`` before it starts.
+
+This is a GUI-internal API (it imports ``PySide6``) and is not re-exported by
+the package facade; the headless functions a tab calls stay usable without it.

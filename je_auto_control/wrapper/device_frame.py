@@ -17,7 +17,7 @@ import io
 import os
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Optional, Tuple, Union
+from typing import Any, Dict, Optional, Tuple, Union
 
 from je_auto_control.utils.exception.exceptions import ImageNotFoundException
 from je_auto_control.wrapper.device_context import DeviceError
@@ -128,7 +128,7 @@ class DeviceFrame:
         self.image.save(str(target), format="PNG")
         return str(target)
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> Dict[str, Any]:
         """Geometry only (no pixels), for executor / MCP results."""
         return {"platform": self.platform, "device_id": self.device_id,
                 "orientation": self.orientation,
