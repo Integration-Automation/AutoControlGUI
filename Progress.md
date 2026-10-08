@@ -278,26 +278,10 @@ socket server 的執行也都用同一個 `executor`；`for_each` 的迴圈變�
 一回合多個呼叫逐一執行後一次回覆、每個 `tool_result` 帶 `toolset_name`、截圖縮到高解析度層級的 2576 px／4784 visual tokens 內並換算座標、`zoom` 以全解析度裁切回覆），
 `claude-opus-5-5` 自動使用它；其他模型仍預設 beta 形式，因為 toolset 只以假 client 測過、還沒對真的 API 跑過。
 
-**附帶**：`AC_run_agent backend="openai"` 送出全部約 740 個工具，超過 OpenAI Chat Completions 的 128 個上限，
-所以一定失敗——與「`AC_run_agent` 預設工具集」那一條 DECIDE 一起決定。
+**附帶**：`AC_run_agent` 現在預設只提供一組聚焦的 computer-use 工具，OpenAI 不再收到整個命令目錄；需要更大的工具集時，應由應用程式明確用 `export_openai_tools(only=[...])` 建立 agent。
 
 ---
 
-## MCP registry 的 server 名稱與專案網址還是舊組織
-
-`DECIDE` — 要發布到 MCP registry 前得先定名稱，改名會影響已發布的項目
-
-`utils/mcp_registry/registry.py` 的 `_SERVER_NAME` 是 `io.github.intergration-automation-testing/autocontrol`，
-`_REPO_URL` 與 `pyproject.toml` 的 Homepage / Code、`README.md` 的 clone 網址都還是
-`Intergration-Automation-Testing/AutoControl`；repo 現在在 `Integration-Automation/AutoControlGUI`（舊網址只是轉址）。
-registry 以 GitHub 帳號驗證 `io.github.<org>/` 命名空間，舊組織名發布不了。
-
-**做法**：決定正式名稱（例如 `io.github.integration-automation/autocontrol`），在同一輪改 `registry.py`、
-`pyproject.toml`、三份 README 的網址。
-
-[Answer] io.github.integration-automation/autocontrol`
-
----
 
 ## pytest11 進入點會把整個門面拉進每一次 pytest
 

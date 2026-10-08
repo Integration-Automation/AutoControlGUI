@@ -689,6 +689,30 @@ def _presence_clear() -> Dict[str, Any]:
     return {"cleared": True}
 
 
+_DEFAULT_AGENT_TOOLSET = [
+    "AC_screenshot",
+    "AC_screen_size",
+    "AC_set_mouse_position",
+    "AC_get_mouse_position",
+    "AC_click_mouse",
+    "AC_mouse_scroll",
+    "AC_drag",
+    "AC_write",
+    "AC_type_keyboard",
+    "AC_hotkey",
+    "AC_press_key",
+    "AC_locate_image_center",
+    "AC_click_text",
+    "AC_wait_text",
+    "AC_wait_image",
+    "AC_a11y_find",
+    "AC_a11y_click",
+    "AC_list_windows",
+    "AC_focus_window",
+    "AC_assert_text",
+]
+
+
 def _run_agent(goal: str,
                backend: str = "anthropic",
                max_steps: int = 25,
@@ -698,8 +722,11 @@ def _run_agent(goal: str,
     """Executor adapter: drive the closed-loop ``AgentLoop`` against ``goal``.
 
     ``backend`` selects between the production backends (Anthropic /
-    OpenAI). The Anthropic computer-use raw path remains available
-    via :func:`_computer_use` / ``AC_computer_use``.
+    OpenAI). Both receive a small, safe computer-use toolset by default;
+    the raw Anthropic computer-use path remains available via
+    :func:`_computer_use` / ``AC_computer_use``. Applications that need a
+    larger custom toolset should construct the agent backend directly with
+    ``export_*_tools(only=[...])``.
     """
     from je_auto_control.utils.agent import AgentBudget, AgentLoop
     from je_auto_control.utils.agent.agent_loop import AgentBackend
@@ -712,14 +739,14 @@ def _run_agent(goal: str,
     name = (backend or "anthropic").strip().lower()
     backend_obj: AgentBackend
     if name == "anthropic":
-        tools = export_anthropic_tools()
+        tools = export_anthropic_tools(only=_DEFAULT_AGENT_TOOLSET)
         backend_obj = AnthropicAgentBackend(
             tools=tools,
             model=model or "claude-opus-4-7",
             max_tokens=int(max_tokens),
         )
     elif name == "openai":
-        tools = export_openai_tools()
+        tools = export_openai_tools(only=_DEFAULT_AGENT_TOOLSET)
         # OpenAIAgentBackend does not accept max_tokens (Anthropic-only).
         backend_obj = OpenAIAgentBackend(
             tools=tools,

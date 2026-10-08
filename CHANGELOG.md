@@ -15,6 +15,8 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Added
 
+- AI-agent documentation and a dedicated `AI.md` explain computer-use positioning, MCP aliases, safe tool selection, and OpenAI integration.
+- `AC_run_agent` now uses a focused computer-use allow-list by default instead of exposing the full `AC_*` command catalogue to the model.
 - `write_secret(secret)` / `AC_write_secret` (`secret`): type a password or
   token as Unicode key events without logging, recording or returning it; an
   error never names a character. Refuses on a backend without Unicode typing.

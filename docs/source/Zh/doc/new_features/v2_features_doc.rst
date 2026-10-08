@@ -369,9 +369,9 @@ helper（``je_auto_control.gui.flow_editor.layout_steps``）可單元
 （規劃 → 執行 → 驗證 → 重試）開放給 JSON action 與 MCP。參數：
 
 * ``goal`` — 自然語言目標。
-* ``backend`` — ``"anthropic"``（透過 ``export_anthropic_tools()``
-  以 tool-use messages 驅動；每張截圖先縮到模型的影像層級內，工具呼叫的 ``x`` / ``y`` 再換算回螢幕）或 ``"openai"``（``export_openai_tools()``
-  + Chat Completions function calling）。
+* ``backend`` — ``"anthropic"`` 或 ``"openai"``。``AC_run_agent`` 預設只提供聚焦、低風險的
+  computer-use allow-list，不再把完整的 ``AC_*`` 命令目錄交給模型。需要自訂工具集時，
+  可直接用 ``export_anthropic_tools(only=[...])`` 或 ``export_openai_tools(only=[...])`` 建立 backend。
 * ``max_steps``（預設 25）、``wall_seconds``（預設 300.0）。
 * ``model`` / ``max_tokens`` — backend 專屬覆寫。
 

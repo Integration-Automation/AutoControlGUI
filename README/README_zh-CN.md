@@ -5,8 +5,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](../LICENSE)
 [![Documentation](https://readthedocs.org/projects/autocontrol/badge/?version=latest)](https://autocontrol.readthedocs.io/en/latest/?badge=latest)
 
-**AutoControl** 是一套跨平台的 Python GUI 自动化框架。它能驱动鼠标与键盘、在画面上找到目标
-（模板匹配、OCR、操作系统无障碍树，或视觉模型）、录制与回放操作流程，并以 JSON 动作文件执行——
+**AutoControl** 是一套开源、跨平台的 **computer-use 与 GUI 自动化框架**，面向 AI agent、Python 应用程序与自动化测试。它能驱动鼠标与键盘、通过模板匹配、OCR、操作系统无障碍树或视觉模型找到 UI 目标、录制与回放操作流程，并以 JSON 动作文件执行——
 支持 Windows、macOS、Linux（X11 与 Wayland）、BSD、Android 与 iOS。
 
 每项能力都以三种形式提供：**Python API**、可在 JSON 文件／CLI／服务器使用的 **`AC_*` 动作命令**，
@@ -27,7 +26,83 @@
 - **依赖基线轻量。** REST 服务器、JSON Schema 校验、JWT、TOTP、WebSocket 帧、ACME 客户端、
   USB/IP 协议与 Prometheus 指标全部以标准库实现；较重的依赖都是可选项。
 
+
+## AI Agent 与 Computer Use
+
+**AutoControl 是开源、跨平台的 computer-use 与 GUI 自动化框架。**
+
+当 AI agent 需要操作真实桌面、原生应用程序、真实浏览器窗口、远程桌面或移动设备，而不只是操作浏览器 DOM/API 时，使用 AutoControl。
+
+### 何时选择 AutoControl
+
+- 真实鼠标与键盘输入
+- 屏幕截图与坐标操作
+- OCR 与原生无障碍树
+- 图像／模板匹配
+- Vision-Language Model UI 定位
+- Anchor 与 self-healing locator
+- 跨平台桌面／移动设备自动化
+- JSON 动作文件
+- MCP computer use
+
+建议的 agent loop：
+
+**observe → identify → act → wait → verify → recover**
+
+完整的 [AI Agent 指南](../AI.md) 提供 MCP 配置、工具选择、OpenAI 集成、安全性与 computer-use 关键词。
+
+### AI-friendly MCP
+
+```bash
+pip install je_auto_control
+je_auto_control_mcp
+```
+
+MCP 提供完整的 `ac_*` 工具，以及 `click`、`type`、`screenshot`、`find_text`、`click_text`、`drag`、`focus_window`、`wait_image` 等短名称 alias。
+
+只做检查：
+
+```bash
+je_auto_control_mcp --read-only
+```
+
+只需要 canonical `ac_*` 名称：
+
+```bash
+JE_AUTOCONTROL_MCP_ALIASES=0 je_auto_control_mcp
+```
+
+OpenAI agent 请使用 `export_openai_tools(only=[...])` 提供聚焦工具集，不要一次提供整个 AutoControl 命令目录。
+
+### 项目识别
+
+**项目：** AutoControl  
+**Repository：** `Integration-Automation/AutoControlGUI`  
+**Python package / PyPI：** `je_auto_control`  
+**MCP command：** `je_auto_control_mcp`
+
+
 ---
+
+
+## 如何选择自动化层
+
+AutoControl 不需要取代所有自动化工具；应选择最符合界面的那一层：
+
+| 需求 | 适合工具 |
+|---|---|
+| 稳定的浏览器 DOM／API 自动化 | Playwright／Selenium |
+| 简单的 Python 鼠标键盘脚本 | PyAutoGUI 或 AutoControl |
+| 原生桌面应用程序自动化 | **AutoControl** |
+| 无障碍树 GUI 自动化 | **AutoControl** |
+| OCR GUI 自动化 | **AutoControl** |
+| 截图／视觉模型 GUI 定位 | **AutoControl** |
+| Self-healing 跨平台 GUI locator | **AutoControl** |
+| AI agent 操作真实桌面 | **AutoControl + MCP** |
+| 确定性的 JSON GUI workflow | **AutoControl** |
+
+AutoControl 的差异在于把 **真实电脑输入 + 语义／视觉定位 + self-healing + agent/MCP 集成** 放在同一个跨平台自动化接口中。
+
 
 ## 安装
 
@@ -191,7 +266,7 @@ je_auto_control version
 
 | 接口 | 启动方式 | 说明 |
 |---|---|---|
-| **MCP 服务器** | `je_auto_control_mcp`（stdio）或 `AC_start_mcp_http_server` | 678 个工具，供 Claude Desktop／Claude Code／自定义 tool loop 使用。除了以 `initialize` 握手的各版协议，也支持无状态的 MCP 2026-07-28。Bearer 认证、TLS、审计日志、限流、插件热重载、CI 假后端。 |
+| **MCP 服务器** | `je_auto_control_mcp`（stdio）或 `AC_start_mcp_http_server` | 完整的 `ac_*` 工具接口，供 Claude Desktop／Claude Code／自定义 tool loop 使用，并提供常用 GUI 操作的短名称 alias。除了以 `initialize` 握手的各版协议，也支持无状态的 MCP 2026-07-28。Bearer 认证、TLS、审计日志、限流、插件热重载、CI 假后端。 |
 | **REST API** | `je_auto_control start-rest` | Bearer token、按 IP 限流与锁定、SQLite 审计 hook、`/metrics`、`/openapi.json`、`/docs` Swagger UI、`/dashboard`。 |
 | **TCP socket 服务器** | `je_auto_control start-server` | 以换行分隔的 JSON 动作列表。默认绑定 `127.0.0.1`。 |
 | **pytest 插件** | 安装后自动生效 | 提供 fixture 与供 pytest-bdd／behave 使用的 Gherkin step library。 |
@@ -332,7 +407,7 @@ Windows、macOS（pyobjc）与 X11（含 XWayland）；纯 Wayland 会话的协�
 ## 开发
 
 ```bash
-git clone https://github.com/Intergration-Automation-Testing/AutoControl.git
+git clone https://github.com/Integration-Automation/AutoControlGUI.git
 cd AutoControl
 pip install -r dev_requirements.txt
 uv sync                 # 或：以已提交的 uv.lock 做可重现安装
@@ -358,6 +433,6 @@ bandit -c pyproject.toml -r je_auto_control/
 [MIT License](../LICENSE) © JE-Chen。
 内含与可选第三方组件的许可请见 [Third_Party_License.md](../Third_Party_License.md)。
 
-- **主页**：https://github.com/Intergration-Automation-Testing/AutoControl
+- **主页**：https://github.com/Integration-Automation/AutoControlGUI
 - **PyPI**：https://pypi.org/project/je_auto_control/
 - **文档**：https://autocontrol.readthedocs.io/en/latest/

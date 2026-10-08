@@ -16,13 +16,13 @@ from typing import Any, Dict, List
 
 _SCHEMA_URL = ("https://static.modelcontextprotocol.io/schemas/"
                "2025-09-29/server.schema.json")
-_SERVER_NAME = "io.github.intergration-automation-testing/autocontrol"
-_REPO_URL = "https://github.com/Intergration-Automation-Testing/AutoControl"
+_SERVER_NAME = "io.github.Integration-Automation/autocontrolgui"
+_REPO_URL = "https://github.com/Integration-Automation/AutoControlGUI"
 _PYPI_NAME = "je_auto_control"
 _DEFAULT_VERSION = "0.0.189"
 # The registry schema caps description at 100 characters; the old 161 would
 # have been rejected on publish.
-_DESCRIPTION = "Cross-platform GUI automation: mouse, keyboard, image/OCR and accessibility as MCP tools"
+_DESCRIPTION = "Cross-platform computer-use and GUI automation for AI agents via MCP"
 _MAX_DESCRIPTION = 100
 # The one _meta key the registry schema defines for publisher data.
 _META_KEY = "io.modelcontextprotocol.registry/publisher-provided"
