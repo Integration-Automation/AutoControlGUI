@@ -54,6 +54,7 @@ class SelfHealingTab(TranslatableMixin, QWidget):
         self._threshold.setSingleStep(0.05)
         self._threshold.setValue(0.9)
         self._click_check = QCheckBox()
+        self._verify_input = QLineEdit()
         self._status = QLabel()
         self._table = QTableWidget(0, len(_COLUMNS))
         self._dataset_input = QLineEdit()
@@ -88,6 +89,7 @@ class SelfHealingTab(TranslatableMixin, QWidget):
         form.addRow(QLabel(), self._description_input)
         form.addRow(QLabel(), self._threshold)
         form.addRow(QLabel(), self._click_check)
+        form.addRow(QLabel(), self._verify_input)
         self._group_box = group
         return group
 
@@ -125,9 +127,10 @@ class SelfHealingTab(TranslatableMixin, QWidget):
         self._template_input.setPlaceholderText(_t("self_heal_template_placeholder"))
         self._description_input.setPlaceholderText(_t("self_heal_desc_placeholder"))
         self._click_check.setText(_t("self_heal_click_check"))
+        self._verify_input.setPlaceholderText(_t("self_heal_verify_placeholder"))
         _set_form_labels(self._group_box, (
             "self_heal_template_label", "self_heal_desc_label",
-            "self_heal_threshold_label", "",
+            "self_heal_threshold_label", "", "self_heal_verify_label",
         ))
         self._measure_box.setTitle(_t("self_heal_measure_title"))
         self._dataset_input.setPlaceholderText(_t("self_heal_dataset_placeholder"))
@@ -267,7 +270,7 @@ class SelfHealingTab(TranslatableMixin, QWidget):
             if do_click or self._click_check.isChecked():
                 outcome = self_heal_click(
                     template_path=template, description=description,
-                    detect_threshold=threshold,
+                    detect_threshold=threshold, verify=self._verify_spec(),
                 )
             else:
                 outcome = self_heal_locate(
@@ -280,11 +283,23 @@ class SelfHealingTab(TranslatableMixin, QWidget):
         self._report_outcome(outcome)
         self.refresh_log()
 
+    def _verify_spec(self) -> Optional[dict]:
+        """The post-click check typed as JSON, or ``None`` when the field is empty."""
+        text = self._verify_input.text().strip()
+        if not text:
+            return None
+        spec = json.loads(text)  # a ValueError is shown by the caller
+        if not isinstance(spec, dict):
+            raise ValueError(_t("self_heal_verify_invalid"))
+        return spec
+
     def _report_outcome(self, outcome: HealOutcome) -> None:
         if not outcome.found:
             self._status.setText(_t("self_heal_miss"))
             return
         suffix = f" ({outcome.method})"
+        if outcome.action is not None:
+            suffix += " · " + _format_verified(outcome.action, outcome.action_verified)
         coords = outcome.coordinates or (0, 0)
         text = _t("self_heal_hit").replace("{x}", str(coords[0])) \
                                    .replace("{y}", str(coords[1]))

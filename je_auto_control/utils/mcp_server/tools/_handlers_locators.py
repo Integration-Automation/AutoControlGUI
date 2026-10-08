@@ -299,7 +299,8 @@ def self_heal_click(template_path: Optional[str] = None,
                     screen_region: Optional[List[int]] = None,
                     model: Optional[str] = None,
                     raise_on_miss: bool = False,
-                    context: Optional[Dict[str, str]] = None) -> Dict[str, Any]:
+                    context: Optional[Dict[str, str]] = None,
+                    verify: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     from je_auto_control.utils.self_healing import heal_context
     from je_auto_control.utils.self_healing import self_heal_click as _impl
     with heal_context(**(context or {})):
@@ -308,7 +309,7 @@ def self_heal_click(template_path: Optional[str] = None,
             mouse_keycode=mouse_keycode,
             detect_threshold=float(detect_threshold),
             screen_region=screen_region, model=model,
-            raise_on_miss=bool(raise_on_miss),
+            raise_on_miss=bool(raise_on_miss), verify=verify,
         ).to_dict()
 
 

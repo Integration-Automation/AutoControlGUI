@@ -56,8 +56,31 @@ MCP：``ac_self_heal_*``。GUI：**Self-Healing** 分頁。
         self_heal_click(template_path="submit.png")
 
 從 JSON 動作或 MCP 呼叫時，把同樣的鍵放在 ``AC_self_heal_locate`` /
-``AC_self_heal_click`` 的 ``context`` 參數。JSON 步驟無法攜帶檢查函式，所以它的
-``action_verified`` 會維持 ``None``。``AC_heal_stats`` 另外回報
+``AC_self_heal_click`` 的 ``context`` 參數。
+
+JSON 步驟無法攜帶 callable，所以 ``verify`` 也可以是一個物件——用在
+``AC_self_heal_click``、MCP 工具 ``ac_self_heal_click``、自愈分頁的「點擊後驗證」欄位，以及
+Python::
+
+    ["AC_self_heal_click", {
+        "template_path": "submit.png",
+        "verify": {"type": "image_gone", "timeout_s": 3}}]
+
+==================  ==========================================================
+``type``            成立的條件
+==================  ==========================================================
+``image_gone``      找不到 ``template_path``（預設：被點擊的那張樣板）
+``image_present``   找得到 ``template_path``
+``text_present``    OCR 引擎讀到 ``text``（``lang``、``min_confidence``、
+                    ``case_sensitive`` 與 ``find_text_matches`` 相同）
+==================  ==========================================================
+
+共用選項：``screen_region``（``[x1, y1, x2, y2]``；預設為點擊本身的區域）、``timeout_s``
+（預設 2，檢查會重複到成立或時間用完）與 ``poll_s``（預設 0.2）；影像類型另有
+``detect_threshold``（預設 0.9）。物件會在點擊之前驗證——未知的類型或選項會丟
+``HealVerificationError``，而且不會點擊。無法執行的檢查（樣板讀不到、沒有 OCR 引擎、擷取
+失敗）會在點擊\ *之後*\ 丟同一個錯誤，事件記錄的 ``action_verified`` 是 ``None``：「沒辦法
+看」絕不回報成「不見了」。沒有 ``verify`` 時該欄位維持 ``None``。``AC_heal_stats`` 另外回報
 ``action_verification``（``actions`` / ``verified`` / ``failed`` / ``unchecked``），
 與只計算「有回傳座標」的 ``healed`` 分開。
 

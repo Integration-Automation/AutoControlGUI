@@ -196,11 +196,13 @@ def _self_heal_click(template_path: Optional[str] = None,
                      screen_region: Optional[List[int]] = None,
                      model: Optional[str] = None,
                      raise_on_miss: bool = False,
-                     context: Optional[Dict[str, str]] = None) -> Dict[str, Any]:
+                     context: Optional[Dict[str, str]] = None,
+                     verify: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     """Executor adapter: locate with self-heal, then click.
 
-    The result's ``action_verified`` stays ``None``: a JSON step cannot carry
-    the check, so the click is recorded as located and unverified.
+    ``verify`` is the declarative post-click check (``{"type": "image_gone" |
+    "image_present" | "text_present", ...}``) that fills ``action_verified``;
+    without it the click is recorded as located and unverified (``None``).
     """
     from je_auto_control.utils.self_healing import heal_context
     with heal_context(**(context or {})):
@@ -209,7 +211,7 @@ def _self_heal_click(template_path: Optional[str] = None,
             mouse_keycode=mouse_keycode,
             detect_threshold=float(detect_threshold),
             screen_region=screen_region, model=model,
-            raise_on_miss=_as_bool(raise_on_miss),
+            raise_on_miss=_as_bool(raise_on_miss), verify=verify,
         )
     return outcome.to_dict()
 

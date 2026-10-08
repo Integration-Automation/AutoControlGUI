@@ -66,6 +66,7 @@ def test_a_zero_interval_is_refused(monkeypatch):
     ("self_healing_tab", "SelfHealingTab",
      lambda m, mp: (mp.setattr(m, "self_heal_click", _raiser(AutoControlMouseException("click failed"))),
                     {"_collect_inputs": lambda: ("t.png", "", 0.8), "_status": _Text(),
+                     "_verify_spec": lambda: None,
                      "_click_check": types.SimpleNamespace(isChecked=lambda: True)})[1]),
 ])
 def test_framework_errors_are_shown_by_the_slot(module_name, cls_name, setup, monkeypatch):

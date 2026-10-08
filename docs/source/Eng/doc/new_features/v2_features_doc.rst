@@ -61,8 +61,37 @@ Stamp the ids from the caller's side::
         self_heal_click(template_path="submit.png")
 
 From a JSON action or MCP, pass the same keys as ``context`` on
-``AC_self_heal_locate`` / ``AC_self_heal_click``. A JSON step cannot carry a
-check, so its ``action_verified`` stays ``None``. ``AC_heal_stats`` reports
+``AC_self_heal_locate`` / ``AC_self_heal_click``.
+
+A JSON step cannot carry a callable, so ``verify`` may also be an object —
+on ``AC_self_heal_click``, on the ``ac_self_heal_click`` MCP tool, in the
+Self-Healing tab's *Verify after click* field, and from Python::
+
+    ["AC_self_heal_click", {
+        "template_path": "submit.png",
+        "verify": {"type": "image_gone", "timeout_s": 3}}]
+
+==================  ==========================================================
+``type``            holds when
+==================  ==========================================================
+``image_gone``      ``template_path`` (default: the clicked template) is no
+                    longer found
+``image_present``   ``template_path`` is found
+``text_present``    the OCR engine reads ``text`` (``lang``,
+                    ``min_confidence``, ``case_sensitive`` as for
+                    ``find_text_matches``)
+==================  ==========================================================
+
+Common options: ``screen_region`` (``[x1, y1, x2, y2]``; default: the click's
+own region), ``timeout_s`` (default 2, the check is repeated until it holds or
+the time is up) and ``poll_s`` (default 0.2); image types also take
+``detect_threshold`` (default 0.9). The object is validated before anything is
+clicked — an unknown type or option raises ``HealVerificationError`` and no
+click happens. A check that cannot be carried out (unreadable template, no OCR
+engine, failed capture) raises the same error *after* the click and the event
+is logged with ``action_verified`` ``None``: "could not look" is never
+reported as "gone". Without ``verify`` the field stays ``None``.
+``AC_heal_stats`` reports
 ``action_verification`` (``actions`` / ``verified`` / ``failed`` /
 ``unchecked``) apart from ``healed``, which only counts returned points.
 
