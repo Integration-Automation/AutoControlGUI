@@ -38,9 +38,12 @@ The ACL is protected by an HMAC-SHA256 signature held in the file itself,
 under ``signature``. It covers the rest of the object in a canonical form
 (sorted keys, no insignificant whitespace), so re-indenting the file does not
 break it and changing any value does. On load a mismatch makes the ACL fail
-closed (default-deny, ``integrity_ok`` False) so a process that silently
-rewrites the JSON cannot grant itself access without also forging the
-signature.
+closed (``integrity_ok`` False) so a process that silently rewrites the JSON
+cannot grant itself access without also forging the signature. Failing closed
+means ``decide()`` answers ``"deny"`` for every device -- also when the
+instance was built with ``default_policy="allow"``, and also for rules it had
+read from an earlier, intact version of the file -- until the file reads
+intact again or the operator saves a change (which re-signs it).
 
 **One file, one lock.** The signature used to live in a sidecar
 ``<acl>.sig``, written after the data. Two instances, or two processes, could
@@ -244,13 +247,17 @@ class UsbAcl:
 
     @property
     def integrity_ok(self) -> bool:
-        """False once a signature mismatch was seen on load."""
+        """False from a read that failed the signature check until a good read or a save.
+
+        While it is False :meth:`decide` denies every device.
+        """
         return self._integrity_ok
 
     @property
     def default_policy(self) -> str:
+        """The policy for a device no rule matches; ``"deny"`` while ``integrity_ok`` is False."""
         with self._lock:
-            return self._state.default
+            return self._state.default if self._integrity_ok else "deny"
 
     def list_rules(self) -> List[AclRule]:
         with self._lock:
@@ -370,8 +377,16 @@ class UsbAcl:
 
     def decide(self, *, vendor_id: str, product_id: str,
                serial: Optional[str]) -> str:
-        """Return ``"allow"`` / ``"deny"`` / ``"prompt"`` for one OPEN."""
+        """Return ``"allow"`` / ``"deny"`` / ``"prompt"`` for one OPEN.
+
+        ``"deny"`` for every device while the file fails its integrity check,
+        whatever ``default_policy`` the instance was built with and whatever
+        rules it had read before: an allow-by-default ACL used to keep
+        allowing next to ``integrity_ok`` False.
+        """
         with self._lock:
+            if not self._integrity_ok:
+                return "deny"
             for rule in self._state.rules:
                 if rule.matches(vendor_id=vendor_id,
                                 product_id=product_id, serial=serial):
@@ -518,6 +533,9 @@ class UsbAcl:
                 "(fail closed, default-deny)", self._path,
             )
             return
+        # Intact again (restored by the operator, or rewritten by another
+        # instance): the lockdown a bad read started ends with a good one.
+        self._integrity_ok = True
         if payload is None:
             self._set_aside("unparseable: not a JSON object")
             return
