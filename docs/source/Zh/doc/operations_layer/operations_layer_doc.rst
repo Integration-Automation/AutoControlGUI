@@ -227,6 +227,15 @@ webhook、e-mail 觸發器或 watchdog 規則，會連同該使用者一起存�
 的使用者則取得新角色。沒有 RBAC 時註冊的工作（GUI、腳本、沒有使用者存放檔的伺服器）
 沒有擁有者，行為與以前相同。
 
+螢幕 observer 的監看（``AC_observe_add``、MCP 工具 ``ac_observe_add``、
+``ScreenObserver.add``）是同一類延後工作：不論是誰呼叫 ``AC_observe_poll``、或由哪條
+執行緒偵測到變化，回呼都以加入它的使用者（``rule.owner``）的身分執行；擁有者被移除或
+降級時回呼會被拒絕。狀態機（``StateMachine``、``AC_run_state_machine``）與 planner 的
+執行（``run_from_description``、``AC_llm_run``）通常就在提出要求的那個請求裡執行，身分
+就是該請求的；``StateMachine`` 另外會記住建立它的使用者，``run_from_description`` 則
+接受 ``owner=capture_owner()``，所以交給另一條執行緒執行時仍以該使用者的身分執行，而
+不是沒有身分。
+
 使用者存放檔啟用時，狀態查詢（``AC_rest_api_status``、REST API 分頁）回報
 ``"rbac": true``、``"users_path"`` 與 ``"token": null``：共用 token 會被拒絕，所以不再
 顯示它。

@@ -13,6 +13,12 @@ looked up again at that moment, not remembered: a user who was demoted loses
 the privilege for work already registered, and work whose user was removed
 does not run.
 
+An observer callback is the same kind of work and is run the same way. A
+state machine and a planner run are usually executed by the request that
+asked for them, on its thread and in its scope; they keep the caller as an
+owner for the case where they are not (:func:`adopted_scope`): built in a
+request, run on a thread that has no scope of its own.
+
 Registered outside any RBAC scope -- no user store configured, the GUI, a
 script -- there is no owner and nothing changes.
 """
@@ -102,4 +108,21 @@ def owner_scope(owner: Optional[DeferredOwner],
         yield
 
 
-__all__ = ["DeferredOwner", "capture_owner", "owner_scope", "resolve_owner"]
+@contextlib.contextmanager
+def adopted_scope(owner: Optional[DeferredOwner],
+                  capability: str = Capability.DRIVE_INPUT) -> Iterator[None]:
+    """Run the enclosed work as ``owner`` unless a caller is already being served.
+
+    For work that normally runs inside the request that asked for it. There
+    the request's own scope stands -- it is the live authorisation, and the
+    work must not swap it for whoever built the object. On a thread with no
+    scope (the work was handed to a worker) it behaves as :func:`owner_scope`.
+    """
+    if owner is None or current_authorization() is not None:
+        yield
+        return
+    with owner_scope(owner, capability):
+        yield
+
+
+__all__ = ["DeferredOwner", "adopted_scope", "capture_owner", "owner_scope", "resolve_owner"]

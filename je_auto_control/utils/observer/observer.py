@@ -11,6 +11,12 @@ presence) with an ``on_event`` callback. Detection is decoupled from the
 screen: predicates are injectable, so transition logic is unit-tested with
 synthetic values via :meth:`ScreenObserver.poll_once`; :meth:`start` adds an
 optional background polling thread. Imports no ``PySide6`` — fully headless.
+
+A callback fires long after the request that registered it. A watch added by
+an authenticated RBAC user keeps that user as its owner and fires as them,
+with the role the user store gives them at that moment
+(:mod:`je_auto_control.utils.rbac.deferred`); added outside any RBAC scope it
+has no owner and fires as before.
 """
 import threading
 import time
@@ -19,6 +25,7 @@ from typing import Any, Callable, Dict, List, Optional, Sequence
 
 from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
+from je_auto_control.utils.rbac.deferred import DeferredOwner, capture_owner, owner_scope
 from je_auto_control.utils.timeouts import clamp_poll_interval
 
 EVENT_APPEAR = "appear"
@@ -43,6 +50,8 @@ class WatchRule:
     on_event: Callable[[str, Any], None]
     events: Sequence[str] = _ALL_EVENTS
     last: Any = _UNSET
+    #: Who registered the watch; its callback runs as them. ``None`` outside RBAC.
+    owner: Optional[DeferredOwner] = None
 
 
 def _transition(last: Any, value: Any) -> Optional[str]:
@@ -81,9 +90,13 @@ class ScreenObserver:
     def add(self, name: str, predicate: Callable[[], Any],
             on_event: Callable[[str, Any], None], *,
             events: Optional[Sequence[str]] = None) -> WatchRule:
-        """Register a watch; ``events`` defaults to all three transitions."""
+        """Register a watch; ``events`` defaults to all three transitions.
+
+        The caller being served, if any, becomes the watch's owner.
+        """
         rule = WatchRule(name=name, predicate=predicate, on_event=on_event,
-                         events=tuple(events) if events else _ALL_EVENTS)
+                         events=tuple(events) if events else _ALL_EVENTS,
+                         owner=capture_owner())
         with self._lock:
             self._rules.append(rule)
         return rule
@@ -153,7 +166,11 @@ class ScreenObserver:
 
     def _fire(self, rule: WatchRule, event: str, value: Any) -> None:
         try:
-            rule.on_event(event, value)
+            # As the user who registered the watch, with the role they hold
+            # now -- whoever's poll this is. A removed or demoted owner's
+            # callback is refused here, once per transition.
+            with owner_scope(rule.owner):
+                rule.on_event(event, value)
         except Exception as error:  # noqa: BLE001  # reason: logged; the other rules keep running
             autocontrol_logger.info(
                 "observer %r handler error: %r", rule.name, error)

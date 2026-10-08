@@ -253,6 +253,17 @@ failed), and a promoted user gains the new role. Work registered without RBAC
 -- from the GUI, a script, a server with no user store -- has no owner and
 runs as before.
 
+A screen-observer watch (``AC_observe_add``, the ``ac_observe_add`` MCP tool,
+``ScreenObserver.add``) is deferred work of the same kind: its callback fires
+as the user who added it (``rule.owner``), whoever's ``AC_observe_poll`` or
+whichever thread detects the transition, and a removed or demoted owner's
+callback is refused. A state machine (``StateMachine``, ``AC_run_state_machine``)
+and a planner run (``run_from_description``, ``AC_llm_run``) normally execute
+inside the request that asked for them and are that request's; a
+``StateMachine`` also remembers the user who built it, and
+``run_from_description`` takes ``owner=capture_owner()``, so one handed to
+another thread still runs as that user instead of as nobody.
+
 Status calls (``AC_rest_api_status``, the REST API tab) report
 ``"rbac": true``, ``"users_path"`` and ``"token": null`` while a user store is
 in use: the shared token is not shown where it is refused.
