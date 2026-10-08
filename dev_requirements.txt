@@ -34,4 +34,4 @@ coverage==7.15.4
 # The complexity limit in CLAUDE.md is measured by this, both in the
 # pre-commit list and by test/unit_test/headless/test_complexity_budget.py.
 radon==6.0.1
-mypy>=2.3.0
+mypy>=2.4.0
