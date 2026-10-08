@@ -59,6 +59,88 @@ fails at the first failed action. An action list the executor would refuse
 Executor command: ``AC_generate_code``. CLI: ``je_auto_control codegen``.
 
 
+Action journal and candidate scripts
+====================================
+
+The action journal is an opt-in, append-only JSON-lines record of every action
+the executor runs -- whichever entry point started it (Python, CLI, GUI, REST,
+socket, MCP)::
+
+    from je_auto_control import (
+        start_action_journal, stop_action_journal, read_events,
+        generate_candidate_from_log,
+    )
+
+    run_id = start_action_journal("journal.jsonl")["run_id"]
+    execute_action(actions)
+    stop_action_journal()
+
+    for event in read_events("journal.jsonl", run_id=run_id):
+        print(event.sequence, event.command, event.status, event.parent_id)
+
+With no journal started, dispatch pays one global read per action and allocates
+nothing. Each event (``ActionEvent``, ``schema_version`` 1) carries:
+
+* ``run_id`` / ``step_id`` / ``parent_id`` / ``sequence`` -- a step nested in a
+  block names the block as its parent; an ``AC_parallel`` branch keeps the
+  block as parent and its ``branch`` index, and ``sequence`` is the order the
+  steps started in (also the order of the lines in the file);
+* ``command`` and ``params`` -- the arguments *as written*: ``${var}`` and
+  ``${secrets.NAME}`` references stay references. Secrets are masked **before**
+  the line is written (the same rules as the executor's log, plus tuples), and
+  a value JSON cannot hold is replaced by ``{"$unserialisable": "<type>"}``;
+* ``unreplayable`` -- for each such path (``params.password``,
+  ``params.body[0][1].token``) the reason it cannot be replayed;
+* ``status`` -- ``ok``, ``error`` or ``incomplete``. A step is written when it
+  starts and again when it ends, so a step whose end never reached the file
+  (the process died, ``Ctrl+C``) reads back as ``incomplete``, never as a
+  success;
+* ``outcome`` -- the returned value by type and size only (numbers and booleans
+  by value); returned text is never stored, and an outcome is never an input.
+
+Everything recorded between start and stop belongs to one ``run_id`` (pass
+``run_id=`` to choose it). If the journal file cannot be written, journalling
+stops and the automation continues; ``action_journal_status()`` reports the
+error. Steps a runner hands to a thread pool other than ``AC_parallel`` (the
+DAG runner, a device matrix) are recorded without a parent.
+
+``generate_candidate_from_log(path, run_id=..., target="pytest",
+style="actions")`` turns one run into a ``CandidateScript`` -- ``code``,
+``actions``, ``manifest``, ``warnings`` and ``observed_path_only``:
+
+* a top-level step is emitted as it was written, so a recorded ``AC_loop`` /
+  ``AC_if_*`` / ``AC_parallel`` keeps its control flow;
+* where a block cannot be rebuilt (the journal started inside it, its
+  arguments could not be stored, it calls a macro the run did not define) the
+  steps that actually ran beneath it are emitted instead, marked ``observed``
+  in the manifest, and ``observed_path_only`` is true -- the candidate replays
+  the path that run took, and no branch that did not run is invented. Inside
+  an observed ``AC_retry`` only the last attempt is kept (the manifest counts
+  the attempts);
+* a masked secret becomes a ``${journal_redacted_N_M}`` reference, which fails
+  as an unknown variable until you replace it;
+* failed and unfinished steps are kept (they are the script's input) and
+  listed in the warnings;
+* the manifest records, per step, the journal line it came from, and the
+  checks that were run: the source is parsed, command names are looked up and
+  the list goes through the executor's dry run. Nothing read from the log is
+  executed or evaluated.
+
+Executor commands: ``AC_journal_start`` / ``AC_journal_stop`` /
+``AC_journal_status`` / ``AC_journal_read`` / ``AC_journal_runs`` and
+``AC_generate_code_from_journal``. MCP tools: ``ac_journal_start`` /
+``ac_journal_stop`` / ``ac_journal_status`` / ``ac_journal_read`` /
+``ac_journal_runs`` and ``ac_generate_code_from_log``. CLI::
+
+    je_auto_control codegen --from-log journal.jsonl --run-id RUN \
+        --target pytest -o test_flow.py --manifest test_flow.manifest.json
+
+``--run-id`` may be omitted when the journal holds one run; ``--style``
+defaults to ``actions`` here (``calls`` for an action file). GUI: Run History
+tab → Actions menu (start / stop the journal, save a candidate script);
+Recording Editor → *Import journal run…*; Script Builder → *Import journal*.
+
+
 HTTP / API
 ==========
 

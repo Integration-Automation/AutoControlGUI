@@ -1221,6 +1221,15 @@ from je_auto_control.utils.codegen.codegen import (
     generate_code,
     generate_code_file,
 )
+# action journal (opt-in JSONL record of executed actions) + candidate scripts
+from je_auto_control.utils.action_journal import (
+    ActionEvent, ActionJournal, ActionJournalError, JournalFormatError,
+    action_journal_status, list_journal_runs, read_events,
+    start_action_journal, stop_action_journal,
+)
+from je_auto_control.utils.codegen.journal_import import (
+    CandidateScript, JournalImportError, generate_candidate_from_log,
+)
 # HTTP/API request action (dependency-free, stdlib urllib)
 from je_auto_control.utils.http_client.http_client import http_request
 # Ad-hoc read-only SQL query against SQLite
@@ -1331,6 +1340,10 @@ __all__ = [
     "execute_action", "execute_files", "executor",
     "execute_action_with_vars", "record_to_json",
     "generate_code", "generate_code_file", "http_request", "query_sqlite",
+    "ActionEvent", "ActionJournal", "ActionJournalError", "JournalFormatError",
+    "action_journal_status", "list_journal_runs", "read_events",
+    "start_action_journal", "stop_action_journal",
+    "CandidateScript", "JournalImportError", "generate_candidate_from_log",
     "send_email", "assert_pdf_text", "extract_pdf_text", "pdf_metadata",
     "pdf_page_count",
     "add_command_to_executor", "test_record_instance", "pil_screenshot",

@@ -553,6 +553,61 @@ def system_tools() -> List[MCPTool]:
             handler=h_runs.list_run_history,
             annotations=READ_ONLY,
         ),
+        MCPTool(
+            name="ac_journal_start",
+            description=("Start the structured action journal: every action "
+                         "the executor runs from now on (any entry point) is "
+                         "appended to a JSON-lines file with its run/step/"
+                         "parent ids, arguments (secrets masked before they "
+                         "are written) and how it ended. path defaults to "
+                         "~/.je_auto_control/action_journal.jsonl. Returns "
+                         "the path and the run_id."),
+            input_schema=schema({
+                "path": {"type": "string", "format": "path"},
+                "run_id": {"type": "string"},
+                "session": {"type": "string",
+                            "description": "Free label (device / session) stored on each event."},
+            }),
+            handler=h_runs.journal_start,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
+        MCPTool(
+            name="ac_journal_stop",
+            description="Stop the action journal; returns its path, run_id and event count.",
+            input_schema=schema({}),
+            handler=h_runs.journal_stop,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
+        MCPTool(
+            name="ac_journal_status",
+            description="Report whether an action journal is started and where it writes.",
+            input_schema=schema({}),
+            handler=h_runs.journal_status,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_journal_read",
+            description=("Read the events of an action journal file, oldest "
+                         "first. run_id keeps one run; limit keeps the last N. "
+                         "A step with no recorded end has status 'incomplete'."),
+            input_schema=schema({
+                "path": {"type": "string", "format": "path"},
+                "run_id": {"type": "string"},
+                "limit": {"type": "integer", "minimum": 0},
+            }, required=["path"]),
+            handler=h_runs.journal_read,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_journal_runs",
+            description=("List the runs an action journal file holds, with "
+                         "their event and ok/error/incomplete counts."),
+            input_schema=schema({
+                "path": {"type": "string", "format": "path"},
+            }, required=["path"]),
+            handler=h_runs.journal_runs,
+            annotations=READ_ONLY,
+        ),
     ]
 
 
@@ -8776,6 +8831,29 @@ def codegen_tools() -> List[MCPTool]:
                 "output": {"type": "string", "format": "path"},
             }, required=["source"]),
             handler=hq.generate_code,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
+        MCPTool(
+            name="ac_generate_code_from_log",
+            description=("Build a reviewable candidate script from one run of "
+                         "an action journal (see ac_journal_start). Returns "
+                         "code, the action list, a provenance manifest (each "
+                         "step's journal line and whether it was recorded or "
+                         "only observed), warnings and observed_path_only. "
+                         "Nothing from the log is executed: the candidate is "
+                         "parsed, its command names checked and dry-run only. "
+                         "run_id may be omitted when the journal holds one run. "
+                         "Pass 'output' to also write the code."),
+            input_schema=schema({
+                "path": {"type": "string", "format": "path",
+                         "description": "The journal (.jsonl) file."},
+                "run_id": {"type": "string"},
+                "target": {"type": "string",
+                           "enum": ["pytest", "python", "robot"]},
+                "style": {"type": "string", "enum": ["calls", "actions"]},
+                "output": {"type": "string", "format": "path"},
+            }, required=["path"]),
+            handler=hq.generate_code_from_log,
             annotations=SIDE_EFFECT_ONLY,
         ),
     ]

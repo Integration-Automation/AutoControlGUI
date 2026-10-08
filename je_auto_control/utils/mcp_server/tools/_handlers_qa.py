@@ -236,6 +236,20 @@ def generate_code(source: Any, target: str = "pytest",
     return {"code": _gen(actions, target=target, name=name, style=style)}
 
 
+def generate_code_from_log(path: str, run_id: Optional[str] = None,
+                           target: str = "pytest", style: str = "actions",
+                           output: Optional[str] = None) -> Dict[str, Any]:
+    from je_auto_control.utils.codegen.journal_import import (
+        generate_candidate_from_log, only_run_id, write_candidate,
+    )
+    candidate = generate_candidate_from_log(
+        path, run_id=run_id or only_run_id(path), target=target, style=style)
+    result = candidate.to_dict()
+    if output:
+        result.update(write_candidate(candidate, output))
+    return result
+
+
 # --- Visual regression + state machine -------------------------------------
 
 def take_golden(path: str, region: Optional[List[int]] = None) -> str:

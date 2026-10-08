@@ -1266,6 +1266,15 @@ def AC_generate_code(
 ) -> str:
     """Render an action list/file as code, optionally writing a file."""
 
+def AC_generate_code_from_journal(
+    path: str,
+    run_id: str | None = ...,
+    target: str = ...,
+    style: str = ...,
+    output: str | None = ...,
+) -> Dict[str, Any]:
+    """Build a candidate script from one journal run, optionally writing it."""
+
 def AC_generate_data(
     schema: Dict[str, Any],
     count: int = ...,
@@ -1553,6 +1562,21 @@ def AC_is_composing() -> Dict[str, Any]:
 
 def AC_is_idle(threshold: Any) -> Dict[str, Any]:
     """Adapter: whether the user has been idle for >= ``threshold`` seconds."""
+
+def AC_journal_read(path: str, run_id: str | None = ..., limit: int = ...) -> List[Dict[str, Any]]:
+    """Read a journal's events as dicts (the last ``limit`` when positive)."""
+
+def AC_journal_runs(path: str) -> List[Dict[str, Any]]:
+    """Summarise each run a journal file holds."""
+
+def AC_journal_start(path: str | None = ..., run_id: str | None = ..., session: str | None = ...) -> Dict[str, Any]:
+    """Start journalling every executed action to ``path``."""
+
+def AC_journal_status() -> Dict[str, Any]:
+    """Report whether an action journal is started."""
+
+def AC_journal_stop() -> Dict[str, Any]:
+    """Stop the action journal."""
 
 def AC_json_extract(data: Any, mapping: Any) -> Dict[str, Any]:
     """Adapter: extract a {key: path} mapping from data into a flat dict."""
