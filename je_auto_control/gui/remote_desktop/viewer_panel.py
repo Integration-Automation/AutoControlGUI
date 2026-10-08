@@ -15,7 +15,8 @@ from je_auto_control.gui._daemon_thread import DaemonThread
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
 from je_auto_control.gui.remote_desktop._helpers import (
     _CollapsibleSection, _StatusBadge, _build_insecure_client_context,
-    _build_verifying_client_context, _t, wire_remote_input,
+    _build_verifying_client_context, _t, displaced_notifier,
+    wire_remote_input,
 )
 from je_auto_control.gui.remote_desktop.remote_screen_window import (
     RemoteScreenWindow,
@@ -30,7 +31,9 @@ from je_auto_control.utils.remote_desktop.audio import (
 from je_auto_control.utils.remote_desktop.host_id import (
     HostIdError, parse_host_id,
 )
-from je_auto_control.utils.remote_desktop.registry import registry
+from je_auto_control.utils.remote_desktop.registry import (
+    SLOT_VIEWER, new_owner, registry,
+)
 
 
 class _ViewerPanel(TranslatableMixin, QWidget):
@@ -42,10 +45,15 @@ class _ViewerPanel(TranslatableMixin, QWidget):
     _clipboard_signal = Signal(str, object)
     _file_progress_signal = Signal(str, int, int)
     _file_complete_signal = Signal(str, bool, str, str)
+    # Another owner took the viewer slot; emitted from that owner's thread.
+    _displaced = Signal(str, str)
 
     def __init__(self, parent: Optional[QWidget] = None) -> None:
         super().__init__(parent)
         self._tr_init()
+        # This panel's name in the registry: it only ever reads, drives and
+        # disconnects the viewer it opened itself.
+        self._owner = new_owner("viewer-tab")
         self._host_field = QLineEdit("127.0.0.1")
         self._port = QSpinBox()
         # 0 is "not entered yet", which _connect refuses; with a minimum of 1
@@ -195,6 +203,7 @@ class _ViewerPanel(TranslatableMixin, QWidget):
         self._clipboard_signal.connect(self._on_clipboard_main)
         self._file_progress_signal.connect(self._on_file_progress_main)
         self._file_complete_signal.connect(self._on_file_complete_main)
+        self._displaced.connect(self._on_displaced)
         # Input-forwarding signals come from the popup window (see
         # _ensure_screen_window). They aren't wired here because the
         # window is created lazily on connect.
@@ -220,7 +229,7 @@ class _ViewerPanel(TranslatableMixin, QWidget):
         viewer_cls = (WebSocketDesktopViewer
                       if transport in ("WebSocket", "WSS")
                       else RemoteDesktopViewer)
-        registry.disconnect_viewer()
+        registry.evict(SLOT_VIEWER, by=self._owner)
         try:
             viewer = viewer_cls(
                 host=host, port=port, token=token,
@@ -246,7 +255,7 @@ class _ViewerPanel(TranslatableMixin, QWidget):
         except (OSError, RuntimeError, ValueError, AutoControlException) as error:
             QMessageBox.warning(self, _t("rd_viewer_connect"), str(error))
             return
-        registry._viewer = viewer  # noqa: SLF001  centralised lifecycle ownership
+        registry.adopt(SLOT_VIEWER, viewer, self._owner, displaced_notifier(self))
         self._connected = True
         self._start_audio_player_if_requested()
         # AnyDesk-style: open the live screen in its own window so the
@@ -294,8 +303,19 @@ class _ViewerPanel(TranslatableMixin, QWidget):
             except (OSError, RuntimeError):
                 pass
 
+    def _own_viewer(self):
+        """The viewer this panel opened, or None once it is gone or replaced."""
+        return registry.owned(SLOT_VIEWER, self._owner)
+
+    def _on_displaced(self, _slot: str, _by: str) -> None:
+        """GUI thread: another panel or a script took this panel's session."""
+        if self._own_viewer() is not None:
+            return  # reconnected since; the notice is about the old session
+        self._disconnect()
+        self._status.setText(_t("rd_viewer_displaced"))
+
     def _disconnect(self) -> None:
-        registry.disconnect_viewer()
+        registry.release(SLOT_VIEWER, self._owner)
         self._stop_audio_player()
         self._connected = False
         self._close_screen_window()
@@ -342,7 +362,8 @@ class _ViewerPanel(TranslatableMixin, QWidget):
             self._disconnect()
 
     def _refresh_status(self) -> None:
-        live = self._connected and registry.viewer_status()["connected"]
+        viewer = self._own_viewer()
+        live = self._connected and viewer is not None and viewer.connected
         if live:
             self._badge.set_state("live", _t("rd_badge_live"))
         else:
@@ -424,7 +445,7 @@ class _ViewerPanel(TranslatableMixin, QWidget):
     # --- input forwarding ---------------------------------------------
 
     def _send(self, action: dict) -> None:
-        viewer = registry.viewer
+        viewer = self._own_viewer()
         if viewer is None or not viewer.connected:
             return
         try:
@@ -435,7 +456,7 @@ class _ViewerPanel(TranslatableMixin, QWidget):
     # --- clipboard / file transfer (viewer -> host) -------------------
 
     def _push_clipboard_to_host(self) -> None:
-        viewer = registry.viewer
+        viewer = self._own_viewer()
         if viewer is None or not viewer.connected:
             QMessageBox.warning(self, _t("rd_viewer_push_clipboard"),
                                 _t("rd_viewer_status_idle"))
@@ -453,7 +474,7 @@ class _ViewerPanel(TranslatableMixin, QWidget):
         self._status.setText(_t("rd_clipboard_sent"))
 
     def _on_send_file_clicked(self) -> None:
-        viewer = registry.viewer
+        viewer = self._own_viewer()
         if viewer is None or not viewer.connected:
             QMessageBox.warning(self, _t("rd_viewer_send_file"),
                                 _t("rd_viewer_status_idle"))
@@ -466,7 +487,7 @@ class _ViewerPanel(TranslatableMixin, QWidget):
         self._upload_file(source)
 
     def _on_files_dropped(self, paths) -> None:
-        viewer = registry.viewer
+        viewer = self._own_viewer()
         if viewer is None or not viewer.connected:
             return
         for path in paths:
@@ -482,7 +503,7 @@ class _ViewerPanel(TranslatableMixin, QWidget):
         )
         if not ok or not dest:
             return
-        viewer = registry.viewer
+        viewer = self._own_viewer()
         if viewer is None:
             return
         thread = _FileSendThread(viewer, source_path, dest, self)

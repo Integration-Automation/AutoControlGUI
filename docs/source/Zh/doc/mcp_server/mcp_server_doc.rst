@@ -74,7 +74,9 @@ list-changed 通知與 elicitation。
   ``ac_remote_host_status``、``ac_remote_viewer_connect``、
   ``ac_remote_viewer_disconnect``、``ac_remote_viewer_status``、
   ``ac_remote_viewer_send_input``。這組工具直接包裝 GUI 的「遠端
-  桌面」分頁所用的 process-global registry,模型可以代為啟動 host
+  桌面」分頁所用的 process-global registry,作用在目前那一個 host 或
+  viewer,不論是誰開的(狀態結果以 ``owner`` 回報;連線被工具取代或結束的
+  GUI 面板會關掉自己的視窗),模型可以代為啟動 host
   (``token``、``bind``、``port``、``fps``、``quality``、
   ``host_id``)、連線 viewer 至另一台主機、查詢狀態,並透過目前的
   viewer 將滑鼠 / 鍵盤 / type / hotkey 動作轉送給遠端 host。狀態

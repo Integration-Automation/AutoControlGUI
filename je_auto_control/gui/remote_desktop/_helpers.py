@@ -201,6 +201,30 @@ class _CollapsibleSection(QGroupBox):
         self._body.setLayout(layout)
 
 
+def displaced_notifier(panel: QWidget) -> Callable[[str, str], None]:
+    """Return the registry ``on_displaced`` callback for ``panel``.
+
+    The registry calls it on whichever thread replaced the panel's host or
+    viewer - an executor or MCP thread as easily as the GUI thread - and may
+    do so long after the panel is gone. It emits ``panel._displaced(slot,
+    by)``, which Qt queues to the GUI thread when the caller is another one,
+    holds the panel only weakly, and does nothing once it is destroyed.
+    """
+    ref = weakref.ref(panel)
+
+    def notify(slot: str, by: str) -> None:
+        target = ref()
+        if target is None:
+            return
+        try:
+            target._displaced.emit(slot, by)  # noqa: SLF001  # reason: the panel's own signal
+        except RuntimeError:
+            # The Qt object was deleted while Python still held the wrapper.
+            return
+
+    return notify
+
+
 def _short_fp(fp: Optional[str]) -> str:
     if not fp:
         return ""
