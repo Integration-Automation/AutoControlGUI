@@ -100,6 +100,12 @@ start 到 stop 之間記下的一切屬於同一個 ``run_id``(可用 ``run_id=`
 ``AC_parallel`` 以外,交給執行緒池執行的步驟(DAG runner、device matrix)記錄時沒有
 parent。
 
+日誌開著的時候開始的執行歷史列,會記下那個日誌的檔案與 run id
+(``RunRecord.journal_path`` / ``journal_run_id``;也可以自己傳給
+``HistoryStore.start_run`` 或呼叫 ``link_journal``)。``AC_history_list``、
+``ac_list_run_history``、REST 的歷史路由與執行歷史分頁的明細都會顯示這兩個值。既有的
+``run_history.sqlite`` 第一次開啟時會補上這兩個欄位;清除歷史不會刪除日誌檔。
+
 ``generate_candidate_from_log(path, run_id=..., target="pytest", style="actions")``
 把一次執行轉成 ``CandidateScript``——``code``、``actions``、``manifest``、``warnings``
 與 ``observed_path_only``:

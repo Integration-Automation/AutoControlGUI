@@ -2278,6 +2278,8 @@ def _history_list_as_dicts(limit: int = 100,
             "started_at": r.started_at, "finished_at": r.finished_at,
             "status": r.status, "error_text": r.error_text,
             "duration_seconds": r.duration_seconds,
+            "journal_path": r.journal_path,
+            "journal_run_id": r.journal_run_id,
         }
         for r in rows
     ]

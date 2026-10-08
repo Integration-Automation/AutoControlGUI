@@ -115,6 +115,14 @@ stops and the automation continues; ``action_journal_status()`` reports the
 error. Steps a runner hands to a thread pool other than ``AC_parallel`` (the
 DAG runner, a device matrix) are recorded without a parent.
 
+A run-history row started while a journal is on records that journal's file
+and run id (``RunRecord.journal_path`` / ``journal_run_id``; pass them to
+``HistoryStore.start_run`` or call ``link_journal`` to set them yourself).
+``AC_history_list``, ``ac_list_run_history``, the REST history route and the
+Run History tab's detail show both. An existing ``run_history.sqlite`` gains
+the two columns the first time it is opened; clearing history never deletes a
+journal file.
+
 ``generate_candidate_from_log(path, run_id=..., target="pytest",
 style="actions")`` turns one run into a ``CandidateScript`` -- ``code``,
 ``actions``, ``manifest``, ``warnings`` and ``observed_path_only``:

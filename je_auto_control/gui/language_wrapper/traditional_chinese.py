@@ -824,6 +824,7 @@ traditional_chinese_word_dict = {
     "rh_journal_candidate": "從日誌產生候選腳本…",
     "rh_journal_off": "動作日誌：未啟用",
     "rh_journal_on": "動作日誌：執行 {run}，{n} 個步驟 → {path}",
+    "rh_journal_link": "日誌執行 {run},位於 {path}",
     "re_import_journal": "匯入日誌的執行…",
     "sb_import_journal": "匯入日誌",
     "jr_dialog_open": "開啟動作日誌",

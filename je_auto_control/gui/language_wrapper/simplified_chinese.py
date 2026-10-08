@@ -823,6 +823,7 @@ simplified_chinese_word_dict = {
     "rh_journal_candidate": "从日志生成候选脚本…",
     "rh_journal_off": "动作日志：未启用",
     "rh_journal_on": "动作日志：运行 {run}，{n} 个步骤 → {path}",
+    "rh_journal_link": "日志运行 {run},位于 {path}",
     "re_import_journal": "导入日志的运行…",
     "sb_import_journal": "导入日志",
     "jr_dialog_open": "打开动作日志",

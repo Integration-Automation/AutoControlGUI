@@ -844,6 +844,7 @@ japanese_word_dict = {
     "rh_journal_candidate": "ジャーナルから候補スクリプトを作成…",
     "rh_journal_off": "アクションジャーナル: オフ",
     "rh_journal_on": "アクションジャーナル: 実行 {run}、{n} ステップ → {path}",
+    "rh_journal_link": "ジャーナル実行 {run}({path})",
     "re_import_journal": "ジャーナルの実行を取り込む…",
     "sb_import_journal": "ジャーナル取込",
     "jr_dialog_open": "アクションジャーナルを開く",

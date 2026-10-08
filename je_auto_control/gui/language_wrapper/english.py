@@ -954,6 +954,7 @@ english_word_dict = {
     "rh_journal_candidate": "Candidate script from journal…",
     "rh_journal_off": "Action journal: off",
     "rh_journal_on": "Action journal: run {run}, {n} step(s) → {path}",
+    "rh_journal_link": "Journal run {run} in {path}",
     "re_import_journal": "Import journal run…",
     "sb_import_journal": "Import journal",
     "jr_dialog_open": "Open action journal",
