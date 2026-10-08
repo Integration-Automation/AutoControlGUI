@@ -69,6 +69,19 @@ class IOSSession(DeviceSession):
             found[name] = extension.capability(name)
         return {name: found[name] for name in CAPABILITY_NAMES}
 
+    def _versions(self, ready: bool) -> Tuple[str, str, str]:
+        """WebDriverAgent's build and the iOS release, from ``/status``."""
+        if not ready:
+            return "wda", "", ""
+        try:
+            status = _wda_status(self.device.handle)
+        except (DeviceError, OSError):
+            return "wda", "", ""
+        build = status.get("build") or {}
+        system = status.get("os") or {}
+        version = build.get("version") or build.get("time") or "unknown"
+        return "wda", str(version), str(system.get("version") or "")
+
     def _blocker(self) -> Optional[Tuple[str, str]]:
         """Why nothing can be used: ``(state, reason)``, or ``None`` when WDA answers."""
         try:

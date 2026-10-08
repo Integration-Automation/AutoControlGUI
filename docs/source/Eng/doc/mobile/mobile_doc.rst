@@ -343,3 +343,122 @@ WebDriverAgent covers what it does not provide::
     register_mobile_extension("ios", lambda session: MyTideviceAdapter(session))
 
 No such adapter ships with AutoControl.
+
+Commands, MCP tools, Script Builder, GUI
+========================================
+
+Every mobile command is described once, in
+``je_auto_control.MOBILE_COMMANDS`` (``wrapper/mobile_commands.py``). The
+executor's ``AC_android_*`` / ``AC_ios_*`` commands, the ``ac_android_*`` /
+``ac_ios_*`` MCP tools, the Script Builder's **Android** and **iOS**
+categories and the **Mobile** tab are all generated from that table, so a
+command cannot exist on one surface and be missing from another
+(``test_mobile_surface_parity.py`` fails if it does).
+
+Each command takes an optional address — ``serial`` and ``adb_path`` on
+Android, ``url`` on iOS — plus ``device_timeout_s``. Without an address it
+runs on the session bound by ``use_device`` (a device-matrix worker), else on
+the backend's default device. Unknown parameters are rejected.
+
+.. list-table::
+   :header-rows: 1
+   :widths: 24 38 38
+
+   * - Group
+     - Android
+     - iOS
+   * - Device
+     - ``AC_android_device_info``, ``AC_android_screen_info``,
+       ``AC_android_list_devices``
+     - ``AC_ios_device_info``, ``AC_ios_screen_info``
+   * - Input
+     - ``AC_android_tap``, ``_swipe``, ``_long_press``, ``_drag``,
+       ``_pinch``, ``_key``, ``_text``, ``_type_text``
+     - ``AC_ios_tap``, ``_swipe``, ``_long_press``, ``_drag``, ``_pinch``,
+       ``_press_key``, ``_type``
+   * - Screen and locating
+     - ``AC_android_screenshot``, ``_find_image``, ``_find_text``,
+       ``_find_by_description``, ``_self_heal``, ``_find_element``,
+       ``_click_element``, ``_dump_hierarchy``
+     - ``AC_ios_screenshot``, ``_find_image``, ``_find_text``,
+       ``_find_by_description``, ``_self_heal``, ``_find_element``,
+       ``_click_element``, ``_dump_source``
+   * - Apps and alerts
+     - ``AC_android_launch_app``, ``_stop_app``, ``_app_state``,
+       ``_wait_for_app``, ``_alert_accept``, ``_alert_dismiss``
+     - the same six under ``AC_ios_``
+   * - Extensions
+     - ``AC_android_install_app``, ``_push_file``, ``_pull_file``,
+       ``_get_clipboard``, ``_set_clipboard``, ``_start_recording``,
+       ``_stop_recording``
+     - the same seven under ``AC_ios_``; all but ``_set_clipboard`` raise
+       ``DeviceUnsupportedError`` until an adapter is registered
+   * - Shell
+     - ``AC_android_shell``
+     - none: there is no shell to run on iOS
+
+The ``_find_*`` and ``_self_heal`` commands take ``tap`` to tap what they
+find. ``AC_android_shell`` runs an arbitrary command on the device and is
+deliberately not offered as an MCP tool.
+
+From Python the same table is reachable as
+``run_mobile_command(name, params)`` and ``mobile_capability_matrix()``; the
+latter also lists the desktop features with no mobile counterpart (window
+management, mouse buttons and wheel, keyboard shortcuts, the desktop
+accessibility tree, COM, USB host passthrough, global hotkeys, desktop
+capture) with the limitation and the alternative for each.
+
+**Mobile tab.** Pick the platform, enter the serial or WebDriverAgent URL,
+choose a command and edit its parameters as a JSON object. *Probe device*,
+*Run command* and *Fill parameter template* are in the Actions menu. Probing
+shows the capability table and the setup report and sends no input. Both
+actions run on the GUI thread and block it until the device answers or the
+timeout passes.
+
+Setup
+=====
+
+.. warning::
+
+   Untested on hardware. These are the steps the code is written for; none of
+   them was carried out against a real emulator, phone or WebDriverAgent.
+
+Android emulator or device
+--------------------------
+
+1. Install `Android platform-tools
+   <https://developer.android.com/tools/releases/platform-tools>`_ and put
+   ``adb`` on ``PATH`` (or pass ``adb_path``).
+2. Emulator: start an AVD; it appears as ``emulator-5554``. Device: enable
+   *Developer options* and *USB debugging*, connect it, and accept the
+   authorisation prompt. Over Wi-Fi: ``adb connect <ip>:5555``.
+3. ``adb devices`` must show the serial in state ``device``. ``unauthorized``
+   surfaces here as ``needs_permission`` / ``DevicePermissionError``.
+4. Optional, for the widget tree, pinch, dialogs, clipboard and Unicode text:
+   ``pip install uiautomator2``.
+5. Optional, for Unicode text without ``uiautomator2``: install ADBKeyBoard
+   and select it with ``adb shell ime set com.android.adbkeyboard/.AdbIME``.
+6. Check: ``AC_android_device_info`` (or the Mobile tab's *Probe device*)
+   reports the adb build, the Android release and each capability.
+
+iOS device or simulator, local or remote WebDriverAgent
+-------------------------------------------------------
+
+Building and signing WebDriverAgent needs a Mac with Xcode; for a physical
+device it also needs an Apple developer signing identity. AutoControl does
+not build or install it.
+
+1. On the Mac, build and run WebDriverAgent on the device or simulator
+   (``xcodebuild ... test`` on the ``WebDriverAgentRunner`` scheme) and make
+   port 8100 reachable — ``iproxy 8100 8100`` for a USB device.
+2. On the host that runs AutoControl (any OS): ``pip install facebook-wda``.
+3. Local: the URL is ``http://localhost:8100``. Remote: use the Mac's or the
+   device's address, for example ``http://192.168.1.20:8100``. WebDriverAgent
+   has no authentication, so keep it on a trusted network or behind a tunnel.
+4. Check: ``AC_ios_device_info`` with ``url`` reports the WebDriverAgent
+   build and the iOS version from ``/status``; an endpoint that does not
+   answer is reported as ``needs_dependency`` with the connection error.
+
+Driving a remote WebDriverAgent from Windows or Linux is the supported way to
+use iOS from those hosts. That is not a claim that Xcode builds or signing
+were verified on them.

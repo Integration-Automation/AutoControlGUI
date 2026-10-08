@@ -317,3 +317,113 @@ iOS 裝置不會用到任何 ``adb`` 的東西。要補上 iOS 缺少的功能�
     register_mobile_extension("ios", lambda session: MyTideviceAdapter(session))
 
 AutoControl 本身沒有附帶這樣的 adapter。
+
+指令、MCP 工具、Script Builder、GUI
+===================================
+
+每個行動指令只描述一次，就在 ``je_auto_control.MOBILE_COMMANDS``
+（``wrapper/mobile_commands.py``\ ）。Executor 的 ``AC_android_*`` / ``AC_ios_*``
+指令、\ ``ac_android_*`` / ``ac_ios_*`` MCP 工具、Script Builder 的 **Android** 與
+**iOS** 分類，以及 **Mobile** 分頁，全部由這張表產生，所以不會有指令只出現在
+某一個介面、卻在另一個介面缺席（缺了 ``test_mobile_surface_parity.py`` 就會失敗）。
+
+每個指令都接受選用的位址——Android 是 ``serial`` 與 ``adb_path``\ ，iOS 是
+``url``\ ——以及 ``device_timeout_s``\ 。沒寫位址時會跑在 ``use_device`` 綁定的
+session（device matrix 的 worker）上，否則跑在後端的預設裝置上。不認得的參數
+會被拒絕。
+
+.. list-table::
+   :header-rows: 1
+   :widths: 24 38 38
+
+   * - 分組
+     - Android
+     - iOS
+   * - 裝置
+     - ``AC_android_device_info``\ 、\ ``AC_android_screen_info``\ 、
+       ``AC_android_list_devices``
+     - ``AC_ios_device_info``\ 、\ ``AC_ios_screen_info``
+   * - 輸入
+     - ``AC_android_tap``\ 、\ ``_swipe``\ 、\ ``_long_press``\ 、\ ``_drag``\ 、
+       ``_pinch``\ 、\ ``_key``\ 、\ ``_text``\ 、\ ``_type_text``
+     - ``AC_ios_tap``\ 、\ ``_swipe``\ 、\ ``_long_press``\ 、\ ``_drag``\ 、
+       ``_pinch``\ 、\ ``_press_key``\ 、\ ``_type``
+   * - 畫面與定位
+     - ``AC_android_screenshot``\ 、\ ``_find_image``\ 、\ ``_find_text``\ 、
+       ``_find_by_description``\ 、\ ``_self_heal``\ 、\ ``_find_element``\ 、
+       ``_click_element``\ 、\ ``_dump_hierarchy``
+     - ``AC_ios_screenshot``\ 、\ ``_find_image``\ 、\ ``_find_text``\ 、
+       ``_find_by_description``\ 、\ ``_self_heal``\ 、\ ``_find_element``\ 、
+       ``_click_element``\ 、\ ``_dump_source``
+   * - App 與 alert
+     - ``AC_android_launch_app``\ 、\ ``_stop_app``\ 、\ ``_app_state``\ 、
+       ``_wait_for_app``\ 、\ ``_alert_accept``\ 、\ ``_alert_dismiss``
+     - 同樣六個，前綴為 ``AC_ios_``
+   * - 擴充功能
+     - ``AC_android_install_app``\ 、\ ``_push_file``\ 、\ ``_pull_file``\ 、
+       ``_get_clipboard``\ 、\ ``_set_clipboard``\ 、\ ``_start_recording``\ 、
+       ``_stop_recording``
+     - 同樣七個，前綴為 ``AC_ios_``\ ；在註冊 adapter 之前，除了
+       ``_set_clipboard`` 以外都會丟 ``DeviceUnsupportedError``
+   * - Shell
+     - ``AC_android_shell``
+     - 無：iOS 沒有可以執行的 shell
+
+``_find_*`` 與 ``_self_heal`` 指令可以帶 ``tap`` 來點擊找到的位置。
+``AC_android_shell`` 會在裝置上執行任意指令，刻意不提供成 MCP 工具。
+
+在 Python 裡，同一張表可以透過 ``run_mobile_command(name, params)`` 與
+``mobile_capability_matrix()`` 取用；後者同時列出沒有行動對應的桌面功能
+（視窗管理、滑鼠按鍵與滾輪、鍵盤快速鍵、桌面無障礙樹、COM、USB 主機轉接、
+全域熱鍵、桌面擷取），以及每一項的限制與替代做法。
+
+**Mobile 分頁。** 選平台、輸入 serial 或 WebDriverAgent URL、選指令，並以 JSON
+物件編輯參數。「探測裝置」、「執行指令」、「填入參數範本」都在 Actions 選單。
+探測會顯示能力表與設定報告，不送出任何輸入。這兩個動作都在 GUI 執行緒上執行，
+在裝置回應或逾時之前會卡住介面。
+
+設定
+====
+
+.. warning::
+
+   尚未在實機上測試。以下是程式碼預期的步驟；沒有任何一步實際對真的模擬器、
+   手機或 WebDriverAgent 執行過。
+
+Android 模擬器或實機
+--------------------
+
+1. 安裝 `Android platform-tools
+   <https://developer.android.com/tools/releases/platform-tools>`_\ ，並把
+   ``adb`` 放進 ``PATH``\ （或傳入 ``adb_path``\ ）。
+2. 模擬器：啟動 AVD，它會以 ``emulator-5554`` 出現。實機：開啟「開發人員選項」
+   與「USB 偵錯」，接上後在裝置上接受授權提示。走 Wi-Fi：
+   ``adb connect <ip>:5555``\ 。
+3. ``adb devices`` 必須顯示該 serial 的狀態為 ``device``\ 。\ ``unauthorized``
+   在這裡會呈現為 ``needs_permission`` / ``DevicePermissionError``\ 。
+4. 選用（元件樹、pinch、對話框、剪貼簿、Unicode 文字需要）：
+   ``pip install uiautomator2``\ 。
+5. 選用（不裝 ``uiautomator2`` 而要輸入 Unicode）：安裝 ADBKeyBoard，並以
+   ``adb shell ime set com.android.adbkeyboard/.AdbIME`` 選用它。
+6. 檢查：\ ``AC_android_device_info``\ （或 Mobile 分頁的「探測裝置」）會回報
+   adb 版本、Android 版本與每一項能力。
+
+iOS 實機或模擬器，本機或遠端 WebDriverAgent
+-------------------------------------------
+
+建置與簽署 WebDriverAgent 需要裝有 Xcode 的 Mac；實機還需要 Apple 開發者簽章
+身分。AutoControl 不負責建置或安裝它。
+
+1. 在 Mac 上對裝置或模擬器建置並執行 WebDriverAgent（對
+   ``WebDriverAgentRunner`` scheme 執行 ``xcodebuild ... test``\ ），並讓 8100
+   埠可以連到——USB 裝置用 ``iproxy 8100 8100``\ 。
+2. 在執行 AutoControl 的主機（任何作業系統）：\ ``pip install facebook-wda``\ 。
+3. 本機：URL 是 ``http://localhost:8100``\ 。遠端：使用 Mac 或裝置的位址，例如
+   ``http://192.168.1.20:8100``\ 。WebDriverAgent 沒有任何驗證機制，請放在可信任
+   的網路或通道後面。
+4. 檢查：帶 ``url`` 的 ``AC_ios_device_info`` 會從 ``/status`` 回報
+   WebDriverAgent 版本與 iOS 版本；沒有回應的端點會回報為
+   ``needs_dependency``\ ，並附上連線錯誤。
+
+從 Windows 或 Linux 操作遠端的 WebDriverAgent，是這些主機使用 iOS 的支援方式。
+這並不代表已在這些主機上驗證過 Xcode 建置或簽署。

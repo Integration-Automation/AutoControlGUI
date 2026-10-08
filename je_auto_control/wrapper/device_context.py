@@ -21,10 +21,10 @@ from __future__ import annotations
 import contextvars
 import threading
 from contextlib import contextmanager
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from enum import Enum
 from time import monotonic
-from typing import Any, Callable, Dict, Iterator, Mapping, Optional, TypeVar, Union
+from typing import Any, Callable, Dict, Iterator, Mapping, Optional, Tuple, TypeVar, Union
 
 from je_auto_control.utils.exception.exceptions import AutoControlException
 
@@ -113,6 +113,34 @@ class DeviceCapability:
     def to_dict(self) -> Dict[str, Any]:
         """JSON-safe form for executor, MCP and GUI consumers."""
         return asdict(self)
+
+
+@dataclass(frozen=True)
+class DeviceSetupReport:
+    """What a device's backend is, which version answered, and what it can do.
+
+    ``state`` and ``reason`` are those of the ``input`` capability: whether
+    the device can be driven at all, and if not, what to fix first.
+    """
+
+    platform: str
+    device_id: str
+    backend: str
+    backend_version: str = ""
+    os_version: str = ""
+    state: str = STATE_AVAILABLE
+    reason: str = ""
+    capabilities: Mapping[str, DeviceCapability] = field(default_factory=dict)
+
+    def to_dict(self) -> Dict[str, Any]:
+        """JSON-safe form for executor, MCP and GUI consumers."""
+        return {
+            "platform": self.platform, "device_id": self.device_id,
+            "backend": self.backend, "backend_version": self.backend_version,
+            "os_version": self.os_version, "state": self.state, "reason": self.reason,
+            "capabilities": {name: capability.to_dict()
+                             for name, capability in self.capabilities.items()},
+        }
 
 
 @dataclass(frozen=True)
@@ -328,6 +356,21 @@ class DeviceSession:
         """What this device can do right now. Sends no input to the device."""
         raise NotImplementedError
 
+    def setup_report(self) -> DeviceSetupReport:
+        """Backend, versions and capabilities, for checking a setup. Sends no input."""
+        capabilities = self.capabilities()
+        ready = capabilities["input"]
+        backend, backend_version, os_version = self.invoke(
+            "setup_report", lambda: self._versions(ready.available))
+        return DeviceSetupReport(
+            platform=self.platform, device_id=self.device_id, backend=backend,
+            backend_version=backend_version, os_version=os_version,
+            state=ready.state, reason=ready.reason, capabilities=capabilities)
+
+    def _versions(self, ready: bool) -> Tuple[str, str, str]:
+        """``(backend, backend version, OS version)``; empty where it cannot be read."""
+        raise NotImplementedError
+
     def capture(self) -> Any:
         """The current screen as a :class:`~je_auto_control.wrapper.device_frame.DeviceFrame`."""
         raise NotImplementedError
@@ -474,6 +517,7 @@ __all__ = [
     "AlertNotPresentError", "AppState", "CAPABILITY_NAMES", "DEFAULT_TIMEOUT_S",
     "DeviceCancelledError", "DeviceCapability",
     "DeviceClosedError", "DeviceContext", "DeviceError", "DevicePermissionError",
+    "DeviceSetupReport",
     "DeviceSession", "DeviceTimeoutError", "DeviceUnavailableError",
     "DeviceUnsupportedError", "Drag", "Gesture", "LongPress", "MOBILE_PLATFORMS",
     "PLATFORM_ANDROID", "PLATFORM_IOS", "Pinch", "STATE_AVAILABLE",

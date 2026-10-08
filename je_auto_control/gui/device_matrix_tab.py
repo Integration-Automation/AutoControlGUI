@@ -33,12 +33,13 @@ class DeviceMatrixTab(TranslatableMixin, QWidget):
         self._tr_init()
         self._devices = QPlainTextEdit()
         self._devices.setPlaceholderText(
-            '[{"platform": "android", "serial": "emulator-5554"}]',
+            '[{"platform": "android", "serial": "emulator-5554", '
+            '"app_id": "com.example.app"}]',
         )
         self._actions = QPlainTextEdit()
+        # No serial needed: each device's own session is bound while it runs.
         self._actions.setPlaceholderText(
-            '[["AC_android_tap", {"x": 1, "y": 2, '
-            '"serial": "${device.serial}"}]]',
+            '[["AC_android_tap", {"x": 1, "y": 2}]]',
         )
         self._parallel = QSpinBox()
         self._parallel.setRange(1, 64)

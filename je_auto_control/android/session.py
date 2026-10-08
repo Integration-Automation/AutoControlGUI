@@ -87,6 +87,20 @@ class AndroidSession(DeviceSession):
             found[name] = extension.capability(name)
         return {name: found[name] for name in CAPABILITY_NAMES}
 
+    def _versions(self, ready: bool) -> Tuple[str, str, str]:
+        """adb's build and, when the device answers, its Android release."""
+        try:
+            adb_version = self.adb.version()
+        except DeviceError:
+            return "adb", "", ""
+        if not ready:
+            return "adb", adb_version, ""
+        try:
+            release = self.adb.shell("getprop ro.build.version.release").strip()
+        except DeviceError:
+            release = ""
+        return "adb", adb_version, release
+
     def _blocker(self) -> Optional[Tuple[str, str]]:
         """Why nothing can be used: ``(state, reason)``, or ``None`` when adb sees the device."""
         try:

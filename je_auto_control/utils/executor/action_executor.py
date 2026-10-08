@@ -1783,6 +1783,12 @@ def _ac_android_dump_hierarchy(serial: Optional[str] = None) -> str:
     return dump_hierarchy(device=device)
 
 
+def _mobile_command_handlers() -> Dict[str, Callable[..., Any]]:
+    """The generated ``AC_android_*`` / ``AC_ios_*`` handlers (see ``wrapper.mobile_commands``)."""
+    from je_auto_control.wrapper.mobile_commands import generated_handlers
+    return generated_handlers()
+
+
 # === iOS executor adapters (WebDriverAgent / facebook-wda) ==================
 
 def _ios_device(url: Optional[str]) -> Any:
@@ -7983,6 +7989,9 @@ class Executor:
             "AC_android_screenshot": _ac_android_screenshot,
             "AC_android_list_devices": _ac_android_list_devices,
             "AC_android_shell": _ac_android_shell,
+            # Android / iOS sessions, gestures, locating, apps and extensions:
+            # generated from the table the MCP tools and builder schema share.
+            **_mobile_command_handlers(),
 
             # LLM action planner
             "AC_llm_plan": _llm_plan_for_executor,
