@@ -38,7 +38,7 @@ def test_a_bucket_round_trips(client):
     assert client.put("/config/alice", json=_put(bucket), headers=_SECRET).status_code == 200
     # The revision is the one the server committed, not the one the client sent.
     assert client.get("/config/alice", headers=_SECRET).json() == {
-        **bucket, "revision": 1, "version": 2}
+        **bucket, "revision": 1, "version": 2, "peers": {}}
 
 
 def test_config_routes_need_the_secret(client):

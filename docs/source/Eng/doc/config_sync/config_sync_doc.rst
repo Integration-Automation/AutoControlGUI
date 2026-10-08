@@ -44,7 +44,7 @@ Wire format (version 2)
    * - Request
      - Reply
    * - ``GET /config/{user_id}``
-     - ``200`` with ``{"user_id", "sections", "revision": <committed>, "version": 2}``,
+     - ``200`` with ``{"user_id", "sections", "peers", "revision": <committed>, "version": 2}``,
        or ``404`` when the user has no bucket.
    * - ``PUT /config/{user_id}`` with
        ``{"version": 2, "base_revision": N, "operation_id": "...", "bucket": {...}}``
@@ -89,3 +89,80 @@ machine pushed in between it fetches and merges again, up to ``max_attempts``
 ``bucket.revision`` as the base, returns the committed revision and raises
 ``ConfigSyncConflict`` (``.revision`` is the server's current one) instead of
 overwriting.
+
+Causal merge: no clock picks a winner
+-------------------------------------
+
+An entry written with a device id is *versioned*
+(``je_auto_control.utils.config_sync.versions.SyncEntry``): it carries a
+version vector (per device, how many of that device's changes it includes),
+the ``origin`` device and an ``operation_id``. ``merge_entries(left, right)``
+returns a ``MergeDecision``:
+
+* the entry made *knowing* the other supersedes it -- nothing is reported;
+* two changes to the same key made apart are **both kept**: ``decision.conflict``
+  is a ``SyncConflict(key, local, remote)`` and ``decision.entry`` holds the
+  candidates as ``siblings`` until someone calls
+  ``entry.resolved(value, origin)``. An edit made apart from a delete is a
+  conflict too;
+* changes to different keys never conflict (``merge_collections``).
+
+``modified_at`` is carried for display only. Whatever the clocks of the
+machines say, the decision is the same, and it is the same on every machine.
+
+.. code-block:: python
+
+    bucket.upsert("hotkeys", "hk1", {"combo": "ctrl+a"}, origin="laptop")   # versioned
+    bucket.remove("hotkeys", "hk1", origin="laptop")                        # versioned tombstone
+    bucket.values("hotkeys")        # live values; entries still in conflict are left out
+    bucket.conflicts()              # [(section, SyncEntry with .siblings), ...]
+
+``upsert`` / ``remove`` *without* ``origin`` still write the older flat entry
+stamped with ``last_modified``, and two flat entries still merge by "later
+wins" (reported in ``ConflictRecord``); a versioned entry supersedes a flat
+copy of the same id. ``ConflictRecord.unresolved`` is true for a causal
+conflict, where nothing was dropped.
+
+Deletions and retired devices
+-----------------------------
+
+A deletion is a tombstone. A versioned tombstone is **never dropped by age**:
+``collect_tombstones`` removes it only when every active device recorded
+under the bucket's ``peers`` has acknowledged a revision that includes it.
+``ConfigSyncClient.push_operations`` maintains those acknowledgements.
+
+A device that will not come back is retired with
+``client.retire_peer(device_id)`` (or automatically with
+``push_operations(..., max_offline_s=...)``, which compares ``last_seen``
+stamps -- the only use of a clock, and it never decides between two values).
+Tombstones stop waiting for a retired device, so when it does return its
+pushes are refused with ``FullResyncRequired``; it must call
+``client.full_resync(device_id=...)``, replace its local state with the
+returned bucket and discard its pending operations. Merging instead could
+bring deleted entries back.
+
+Offline outbox
+--------------
+
+``SyncOutbox(db_path, account=..., endpoint=...)`` is a SQLite queue of
+``SyncOperation(section, entry)`` not yet on the server (default file
+``~/.je_auto_control/config_sync_outbox.sqlite3``; one file can hold several
+accounts and endpoints, each isolated).
+
+.. code-block:: python
+
+    from je_auto_control.utils.config_sync import SyncEntry, SyncOperation, SyncOutbox
+
+    outbox = SyncOutbox(account="alice", endpoint="https://sync.example")
+    outbox.enqueue(SyncOperation("hotkeys", SyncEntry.create("hk1", {"combo": "ctrl+a"}, "laptop")))
+    report = outbox.drain(
+        lambda batch: client.push_operations(batch, device_id="laptop"), cancel=stop_event)
+    # DrainReport(sent, pending, attempts, offline, cancelled, error)
+
+Operations are queued under their operation id (queueing one twice is a
+no-op), survive a restart, and are resent with the same ids -- applying a
+batch the server already has changes nothing. A failed send backs off
+2 s, 4 s, 8 s ... up to 300 s (``base_delay_s`` / ``max_delay_s``), a drain
+makes at most ``max_attempts`` sends (default 5), ``wait=False`` returns
+instead of sleeping through a back-off, and setting ``cancel`` ends a drain
+even in the middle of a wait.
