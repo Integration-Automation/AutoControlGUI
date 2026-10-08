@@ -3,8 +3,19 @@ Structural validation for action lists.
 
 Validates the outer shape (``[name]`` / ``[name, params]``), that names are in the
 executor allowlist, and that flow-control nested bodies are themselves valid lists.
+
+Names a list brings in itself. ``AC_add_package_to_executor`` registers a
+package's members as ``<package>_<member>`` commands when it runs, which is
+after validation: a list that loaded a package and then used it was rejected
+for an unknown command before its first action. A validator given a
+``loadable`` predicate (the package gate's verdict, without importing
+anything) therefore leaves such a name to run time -- but only a name that
+starts with ``<package>_``, only after a load command that names that
+package literally, earlier in the walk, and only if the gate would let the
+load through. Every other unknown name is rejected up front as before, and
+so is a deferred name that turns out not to exist, when its action runs.
 """
-from typing import Any, Iterable, Iterator, List, Tuple
+from typing import Any, Callable, Iterable, Iterator, List, Optional, Tuple
 
 from je_auto_control.utils.exception.exceptions import AutoControlActionException
 
@@ -69,28 +80,80 @@ FLOW_BRANCH_LIST_KEYS = {
 }
 
 
-def validate_actions(actions: Any, known_commands: Iterable[str]) -> None:
-    """Validate an action list recursively; raise on the first problem."""
+#: Commands that register a package's members on the executor when they run.
+PACKAGE_LOAD_COMMANDS = frozenset({"AC_add_package_to_executor"})
+
+
+class _SelfLoadedNames:
+    """Command names the list being walked will register by loading a package."""
+
+    def __init__(self, loadable: Optional[Callable[[str], bool]]) -> None:
+        self._loadable = loadable
+        self._prefixes: List[str] = []
+
+    def note(self, name: Any, action: list) -> None:
+        """Remember the package ``action`` loads, if it is a load the gate allows."""
+        if self._loadable is None or name not in PACKAGE_LOAD_COMMANDS:
+            return
+        package = _literal_package(action)
+        if package is not None and self._loadable(package):
+            self._prefixes.append(package + "_")
+
+    def covers(self, name: str) -> bool:
+        """Whether ``name`` could be a member of a package loaded so far."""
+        return any(name.startswith(prefix) and len(name) > len(prefix)
+                   for prefix in self._prefixes)
+
+
+def _literal_package(action: list) -> Optional[str]:
+    """The package a load command names: ``[name, [pkg]]`` or ``[name, {"package": pkg}]``."""
+    if len(action) != 2:
+        return None
+    params = action[1]
+    if isinstance(params, dict):
+        package = params.get("package")
+    elif isinstance(params, list) and len(params) == 1:
+        package = params[0]
+    else:
+        return None
+    return package if isinstance(package, str) else None
+
+
+def validate_actions(actions: Any, known_commands: Iterable[str],
+                     loadable: Optional[Callable[[str], bool]] = None) -> None:
+    """Validate an action list recursively; raise on the first problem.
+
+    ``loadable`` says whether the package gate would let the list load a
+    package; with it, names of a package the list itself loads earlier are
+    left to run time (see the module docstring). Without it every name must
+    be in ``known_commands``.
+    """
     known = set(known_commands)
-    for trail, name in _iter_actions(actions, "root"):
-        if not isinstance(name, str) or name not in known:
+    self_loaded = _SelfLoadedNames(loadable)
+    for trail, name, action in _iter_actions(actions, "root"):
+        if not isinstance(name, str) or (name not in known and not self_loaded.covers(name)):
             raise AutoControlActionException(f"{trail}: unknown command {name!r}")
+        self_loaded.note(name, action)
 
 
 def unknown_command_names(actions: Any,
-                          known_commands: Iterable[str]) -> List[str]:
+                          known_commands: Iterable[str],
+                          loadable: Optional[Callable[[str], bool]] = None,
+                          ) -> List[str]:
     """Return every unrecognised command name in ``actions``, in order.
 
     Structural problems still raise, exactly as :func:`validate_actions` does;
     the only difference is that an unknown *name* is collected instead of
     ending the walk. A boundary that has to answer a caller — the REST API —
     reports the whole list, so a client fixes every typo in one round trip
-    rather than one per request.
+    rather than one per request. ``loadable`` is as in :func:`validate_actions`.
     """
     known = set(known_commands)
+    self_loaded = _SelfLoadedNames(loadable)
     unknown: List[str] = []
-    for _trail, name in _iter_actions(actions, "root"):
-        if isinstance(name, str) and name in known:
+    for _trail, name, action in _iter_actions(actions, "root"):
+        if isinstance(name, str) and (name in known or self_loaded.covers(name)):
+            self_loaded.note(name, action)
             continue
         label = name if isinstance(name, str) else repr(name)
         if label not in unknown:
@@ -98,8 +161,8 @@ def unknown_command_names(actions: Any,
     return unknown
 
 
-def _iter_actions(actions: Any, trail: str) -> Iterator[Tuple[str, Any]]:
-    """Yield ``(trail, command_name)`` for every action in the tree, in order.
+def _iter_actions(actions: Any, trail: str) -> Iterator[Tuple[str, Any, list]]:
+    """Yield ``(trail, command_name, action)`` for every action in the tree, in order.
 
     Structural problems raise as they are met, but whether the name is in the
     allowlist is left to the caller. That is what lets "reject the first
@@ -120,7 +183,7 @@ def _iter_actions(actions: Any, trail: str) -> Iterator[Tuple[str, Any]]:
             raise AutoControlActionException(
                 f"{node}: must be [name] or [name, params]"
             )
-        yield node, action[0]
+        yield node, action[0], action
         if len(action) == 2 and not isinstance(action[1], (dict, list)):
             raise AutoControlActionException(
                 f"{node}: params must be dict or list"
@@ -129,7 +192,7 @@ def _iter_actions(actions: Any, trail: str) -> Iterator[Tuple[str, Any]]:
 
 
 def _iter_nested_actions(name: Any, action: list,
-                         trail: str) -> Iterator[Tuple[str, Any]]:
+                         trail: str) -> Iterator[Tuple[str, Any, list]]:
     """Yield the actions held in a flow-control command's nested body keys."""
     # ``name`` arrives unvalidated — the collector does not stop on a bad one —
     # and an unhashable name would blow up the two lookups below.
@@ -154,6 +217,6 @@ def _iter_nested_actions(name: Any, action: list,
 
 __all__ = [
     "BLOCK_REQUIRED_KEYS",
-    "FLOW_BODY_KEYS", "FLOW_BRANCH_LIST_KEYS",
+    "FLOW_BODY_KEYS", "FLOW_BRANCH_LIST_KEYS", "PACKAGE_LOAD_COMMANDS",
     "validate_actions", "unknown_command_names",
 ]

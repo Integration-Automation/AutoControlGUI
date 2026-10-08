@@ -29,7 +29,8 @@ from je_auto_control.utils.usb.passthrough.flags import (
     is_usb_passthrough_enabled,
 )
 from je_auto_control.utils.usb.passthrough.protocol import (
-    Frame, Opcode, ProtocolError, decode_frame, encode_frame,
+    HEADER_BYTES, MAX_PAYLOAD_BYTES, REQUEST_ID_KEY, Frame, Opcode,
+    ProtocolError, decode_frame, encode_frame, request_id_of,
 )
 from je_auto_control.utils.usb.passthrough.session import UsbPassthroughSession
 from je_auto_control.utils.usb.passthrough.viewer_client import (
@@ -62,11 +63,32 @@ def _as_bytes(raw: Any) -> bytes:
     raise TypeError(f"usb channel expects binary frames, got {type(raw).__name__}")
 
 
-def _error_bytes(message: str) -> bytes:
+def _error_bytes(message: str, request_id: Optional[str] = None) -> bytes:
+    """An ERROR frame, echoing ``request_id`` so the viewer can pair it."""
+    body = {"error": message}
+    if request_id is not None:
+        body[REQUEST_ID_KEY] = request_id
     return encode_frame(Frame(
-        op=Opcode.ERROR,
-        payload=json.dumps({"error": message}).encode("utf-8"),
+        op=Opcode.ERROR, payload=json.dumps(body).encode("utf-8"),
     ))
+
+
+def _request_id_in(raw: Any) -> Optional[str]:
+    """The request id in a raw channel message, readable or not as a frame.
+
+    The errors this adapter sends are decided before a session sees the
+    frame -- the feature is off, the frame does not decode, the host has
+    no session -- so the id has to be read here for the viewer to get the
+    error rather than a timeout. Never raises: a message that is not
+    binary, is shorter than a header, or whose payload is over the cap or
+    not a JSON object with an id simply has none.
+    """
+    if not isinstance(raw, (bytes, bytearray, memoryview)):
+        return None
+    payload = bytes(raw)[HEADER_BYTES:]
+    if len(payload) > MAX_PAYLOAD_BYTES:
+        return None
+    return request_id_of(payload)
 
 
 class UsbChannelHost:
@@ -111,21 +133,22 @@ class UsbChannelHost:
             return self._session
 
     def _on_message(self, raw: Any) -> None:
+        request_id = _request_id_in(raw)
         if not self._enabled():
-            self._reply(_error_bytes("usb passthrough disabled"))
+            self._reply(_error_bytes("usb passthrough disabled", request_id))
             return
         try:
             frame = decode_frame(_as_bytes(raw))
         except (ProtocolError, TypeError) as error:
-            self._reply(_error_bytes(f"bad frame: {error}"))
+            self._reply(_error_bytes(f"bad frame: {error}", request_id))
             return
         try:
             session = self._ensure_session()
         except Exception as error:  # noqa: BLE001  # pylint: disable=broad-except  # reason: backend construction can fail many ways; report, don't crash the channel
-            self._reply(_error_bytes(f"usb backend unavailable: {error}"))
+            self._reply(_error_bytes(f"usb backend unavailable: {error}", request_id))
             return
         if session is None:
-            self._reply(_error_bytes("no usb session on host"))
+            self._reply(_error_bytes("no usb session on host", request_id))
             return
         for reply in session.handle_frame(frame):
             self._reply(encode_frame(reply))

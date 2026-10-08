@@ -26,7 +26,7 @@
 名稱——``linear`` / ``ease_in_out_quad`` / ``ease_out_cubic`` / ``ease_in_cubic``),且不重複共用的交接點。
 ``move_along_path`` 沿路徑發出移動事件;``drag_path`` 在第一個路徑點按下、移動經過整段路徑、在最後一點放開——
 用於多停靠點拖曳。兩者皆可傳入 ``sink`` 以供無頭測試。``drag_path`` 也接受 ``tween_drag`` 的節奏參數
-``step_delay_s``(每次移動後)與 ``settle_s``(按下前、按下後、放開前),而且和它一樣,任何一步丟出例外時會在
+``step_delay_s``\ (每次移動後)與 ``settle_s``\ (按下前、按下後、放開前),而且和它一樣,任何一步丟出例外時會在
 游標停下的位置放開按鍵。
 
 執行器命令

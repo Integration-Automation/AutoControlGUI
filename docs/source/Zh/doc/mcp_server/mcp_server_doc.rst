@@ -37,7 +37,9 @@ list-changed 通知與 elicitation。
 視窗管理 (Windows)
   ``ac_list_windows``、``ac_focus_window``、``ac_wait_for_window``、
   ``ac_close_window``、``ac_window_move``、``ac_window_minimize``、
-  ``ac_window_maximize``、``ac_window_restore``。
+  ``ac_window_maximize``、``ac_window_restore``。最後三個在視窗已不存在時，
+  或（最大化與還原）Windows 拒絕把它帶到前景時，會回工具錯誤（``isError``）
+  ——此時視窗可能已改變狀態但沒有成為作用中視窗。以前不論結果都回傳視窗代碼。
 
 語意定位
   ``ac_a11y_list``、``ac_a11y_find``、``ac_a11y_click``、
@@ -612,7 +614,7 @@ process 內量測兩種模式。以 680 個工具的 registry 量測(2026-10-09,
     只有名稱符合時才會解析，其餘回工具執行錯誤。沒設時和以前一樣，任何變數都讀得到——
     包括放 API 金鑰的那些。
 
-在程式裡，同一份設定是 ``server.argument_policy``（:class:`ArgumentPolicy`，內含
+在程式裡，同一份設定是 ``server.argument_policy``\ （:class:`ArgumentPolicy`，內含
 :class:`je_auto_control.PathPolicy` 與允許清單）；自己建立的伺服器可以指派另一個。
 
 破壞性動作確認(Elicitation)

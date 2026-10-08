@@ -165,12 +165,12 @@ def get_visible_text(name=None, role=None, app_name=None, automation_id=None):
 
 
 def _observe_handler(actions):
-    from je_auto_control.utils.executor.action_executor import executor
-
-    def handler(_event, _value):
-        if actions:
-            executor.execute_action(list(actions))
-    return handler
+    # The executor's own builder: each firing runs in a fresh variable scope
+    # seeded with what the registering tool call could see (normally nothing).
+    from je_auto_control.utils.executor.action_executor import (
+        _observe_handler as build_handler,
+    )
+    return build_handler(actions)
 
 
 def circuit_call(name, actions, threshold=5, reset_s=30.0):

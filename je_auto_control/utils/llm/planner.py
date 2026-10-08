@@ -14,6 +14,7 @@ from je_auto_control.utils.executor.action_schema import validate_actions
 from je_auto_control.utils.llm.backends import (
     LLMBackend, LLMNotAvailableError, get_backend,
 )
+from je_auto_control.utils.script_vars.execution import run_level_scope
 
 _SYSTEM_PROMPT = (
     "You translate plain-language automation instructions into a strict "
@@ -73,7 +74,16 @@ def run_from_description(description: str,
                          backend: Optional[LLMBackend] = None,
                          model: Optional[str] = None,
                          max_tokens: int = 2048) -> Dict[str, Any]:
-    """Plan a description and execute it on ``executor`` in one call."""
+    """Plan a description and execute it on ``executor`` in one call.
+
+    The plan is a run of its own: called from Python it gets a fresh variable
+    scope, so what a model-written ``AC_set_var`` sets is gone when the call
+    returns and the plan cannot read what an earlier call left behind. Called
+    from inside a run (``AC_llm_run`` in an action list, or a block wrapped
+    in ``execution_scope``) it is a step of that run and shares its variables
+    -- wrap the call in ``execution_scope({...})`` to hand the plan values.
+    An executor you constructed yourself always uses its own scope.
+    """
     actions = plan_actions(
         description,
         known_commands=executor.known_commands(),
@@ -84,7 +94,8 @@ def run_from_description(description: str,
     )
     # A top-level run: ``_validated=True`` would mark it as a nested body,
     # and a stray AC_break from the model would escape as a raw LoopBreak.
-    record = executor.execute_action(actions)
+    with run_level_scope():
+        record = executor.execute_action(actions)
     return {"actions": actions, "record": record}
 
 

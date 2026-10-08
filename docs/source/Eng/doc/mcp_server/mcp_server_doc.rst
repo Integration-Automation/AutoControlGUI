@@ -38,7 +38,11 @@ Screen / image / OCR
 Window management (Windows)
   ``ac_list_windows``, ``ac_focus_window``, ``ac_wait_for_window``,
   ``ac_close_window``, ``ac_window_move``, ``ac_window_minimize``,
-  ``ac_window_maximize``, ``ac_window_restore``.
+  ``ac_window_maximize``, ``ac_window_restore``. The last three answer with
+  a tool error (``isError``) when the window is gone or, for maximise and
+  restore, when Windows refuses to bring it to the foreground -- the window
+  may then have changed state without becoming the active one. They used to
+  return the window handle either way.
 
 Semantic locators
   ``ac_a11y_list``, ``ac_a11y_find``, ``ac_a11y_click``,

@@ -37,9 +37,9 @@ AutoControl 可以直接從命令列執行自動化腳本。
 ======================
 
 ``AC_add_package_to_executor`` 與 ``AC_add_package_to_callback_executor`` 會拒絕沒有被放行的套件。
-從命令列放行的方式有兩種：環境變數 ``JE_AUTOCONTROL_ALLOWED_PACKAGES``（以逗號分隔的套件名稱，含子模組），
+從命令列放行的方式有兩種：環境變數 ``JE_AUTOCONTROL_ALLOWED_PACKAGES``\ （以逗號分隔的套件名稱，含子模組），
 對上面的旗標、``start-server``、``start-rest`` 與 MCP server 等所有入口都適用；以及 ``je_auto_control run``
-的 ``--allow-package NAME``（可重複），只對該次執行有效。
+的 ``--allow-package NAME``\ （可重複），只對該次執行有效。
 
 .. code-block:: bash
 

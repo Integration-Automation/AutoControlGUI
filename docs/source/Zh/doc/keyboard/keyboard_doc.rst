@@ -35,6 +35,16 @@ Windows 的按鍵表也收常見的別名（``ctrl``、``alt``、``enter``、``e
    keyboard_key_name(27)     # Windows 上是 "escape"
    keyboard_key_name(0xBB)   # "oem_plus"
 
+Windows 上有八個名字代表的是\ *字元*\ 而不是按鍵位置：``slash``\ （``/``\ ）、
+``backslash``\ （``\``\ ）、``semicolon``\ （``;``\ ）、``quote``\ （``'``\ ）、
+``backquote``\ （反引號）、``bracketleft``\ （``[``\ ）、``bracketright``\ （``]``\ ）
+與 ``equal``\ （``=``\ ）。它們在查表的當下才解析：向前景視窗的鍵盤配置詢問哪個鍵
+打得出該字元（``VkKeyScanExW``\ ），所以在 ``;`` 不在美式位置的配置上，
+``press_keyboard_key("semicolon")`` 仍會按到正確的鍵。配置上沒有不加修飾鍵就能
+打出該字元的鍵時——德文鍵盤的 ``/`` 是 Shift+7——這個名字退回美式位置的鍵。
+``oem_1`` … ``oem_8`` 仍然是固定位置；``keys_table`` 列出這八個名字時顯示的是
+美式位置的鍵碼。
+
 按下與釋放
 ==========
 

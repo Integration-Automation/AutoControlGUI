@@ -22,7 +22,6 @@ AutoControl 所有功能的完整使用指南。
    doc/socket_driver/socket_driver_doc
    doc/mcp_server/mcp_server_doc
    doc/ai_agents/ai_agents_doc
-   doc/ai_agents/ai_agents_doc
    doc/critical_exit/critical_exit_doc
    doc/cli/cli_doc
    doc/config_sync/config_sync_doc

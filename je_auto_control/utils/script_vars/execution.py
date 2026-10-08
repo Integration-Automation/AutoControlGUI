@@ -17,6 +17,11 @@ scope first and re-binds it there with :func:`bound_scope`.
 Outside any ``execution_scope`` the module executor falls back to its own
 process-lifetime scope, which is what plain ``executor.execute_action(...)``
 calls and the GUI's Variables tab use.
+
+Things that are a run of their own when called from Python but a nested step
+when called from an action list -- a state machine, a plan generated from a
+description -- use :func:`run_level_scope`: they join the enclosing run if
+there is one and otherwise get a scope that lasts exactly as long as they do.
 """
 from contextlib import contextmanager
 from contextvars import ContextVar
@@ -41,6 +46,24 @@ def bound_scope(scope: VariableScope) -> Iterator[VariableScope]:
         yield scope
     finally:
         _ACTIVE.reset(token)
+
+
+@contextmanager
+def run_level_scope() -> Iterator[VariableScope]:
+    """Join the enclosing run's scope, or open a fresh one for the block.
+
+    Inside an :func:`execution_scope` (or a scope re-bound with
+    :func:`bound_scope`) the block is a step of that run and shares its
+    variables, as any nested action list does. With no run in progress the
+    block is the run: it gets an empty scope that is dropped when it ends, so
+    what it sets never reaches the process scope or the next caller.
+    """
+    active = _ACTIVE.get()
+    if active is not None:
+        yield active
+        return
+    with execution_scope() as scope:
+        yield scope
 
 
 @contextmanager

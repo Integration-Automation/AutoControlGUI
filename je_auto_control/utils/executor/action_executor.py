@@ -3689,10 +3689,22 @@ def _seed_everything(seed: int = 0) -> Dict[str, Any]:
 
 
 def _observe_handler(actions: List[Any]) -> Callable[[str, Any], None]:
-    """Build an observer callback that runs an action list on each event."""
+    """Build an observer callback that runs an action list on each event.
+
+    The callback fires long after the run that registered it has ended -- on
+    the observer's thread, or inside whichever run calls ``AC_observe_poll``
+    -- so it cannot share a run's scope. It keeps a snapshot of the variables
+    visible at registration, and every firing runs on the module executor in
+    a fresh scope seeded from that snapshot: the actions see what the
+    registering run had set, and what they set reaches neither the process
+    scope, the run that polled, nor the next firing.
+    """
+    snapshot = _running_executor().variables.as_dict()
+
     def handler(_event: str, _value: Any) -> None:
         if actions:
-            _running_executor().execute_action(list(actions))
+            with execution_scope(dict(snapshot)):
+                executor.execute_action(list(actions))
     return handler
 
 
@@ -8339,7 +8351,16 @@ class Executor:
         failed" *before* the first action moves anything.
         """
         return unknown_command_names(self._unwrap_action_list(action_list),
-                                     self.known_commands())
+                                     self.known_commands(), self._self_loadable())
+
+    def _self_loadable(self) -> Optional[Callable[[str], bool]]:
+        """The package gate's verdict, on the executor a load command fills.
+
+        ``AC_add_package_to_executor`` registers ``<package>_<member>`` names
+        on the package manager's executor, so only there may validation leave
+        such a name to run time; anywhere else it would never appear.
+        """
+        return package_manager.would_allow if package_manager.executor is self else None
 
     def _resolve_runtime_args(self, args: Any, command: str = "") -> Any:
         """Interpolate ``${var}`` placeholders against the current scope.
@@ -8441,7 +8462,7 @@ class Executor:
         """The body of :meth:`execute_action`, with strictness already settled."""
         action_list = self._unwrap_action_list(action_list)
         if not _validated:
-            validate_actions(action_list, self.known_commands())
+            validate_actions(action_list, self.known_commands(), self._self_loadable())
 
         execute_record_dict: Dict[str, Any] = {}
         for action in action_list:

@@ -411,7 +411,7 @@ Wayland libei native backend
 
 對 ``libei.so.*`` 的 ctypes 綁定，繞過 CLI shim 取得微秒級延遲。
 以 ``JE_AUTOCONTROL_WAYLAND_INPUT_BACKEND=libei|cli|auto`` 啟用；
-``auto``（預設）在 libei 可載入時用 libei，否則用 CLI，現有
+``auto``\ （預設）在 libei 可載入時用 libei，否則用 CLI，現有
 部署不會中斷。
 
 
@@ -505,7 +505,7 @@ helper（``je_auto_control.gui.flow_editor.layout_steps``）可單元
 * ``backend`` — ``"anthropic"`` 或 ``"openai"``。``AC_run_agent`` 預設只提供聚焦、低風險的
   computer-use allow-list，不再把完整的 ``AC_*`` 命令目錄交給模型。需要自訂工具集時，
   可直接用 ``export_anthropic_tools(only=[...])`` 或 ``export_openai_tools(only=[...])`` 建立 backend。
-* ``max_steps``（預設 25）、``wall_seconds``（預設 300.0）。
+* ``max_steps``\ （預設 25）、``wall_seconds``\ （預設 300.0）。
 * ``model`` / ``max_tokens`` — backend 專屬覆寫。
 
 每次向模型發出的請求 120 秒逾時，對話裡只重送最新的三張截圖（較早的換成一行文字），
@@ -539,7 +539,7 @@ Anthropic 原生 Computer-Use 路徑（``computer_20251124``）仍透過
    redacted_bytes, result = redact_png_bytes(png_bytes, policy=POLICY_STRICT)
 
 ``AC_redact_screenshot`` 與 ``ac_redact_screenshot`` 從磁碟讀取
-PNG、跑 engine、寫回 ``output_path``（未指定時覆蓋原檔），並回傳
+PNG、跑 engine、寫回 ``output_path``\ （未指定時覆蓋原檔），並回傳
 合併後的 bounding box list 供稽核。
 
 
