@@ -798,6 +798,11 @@ handshake era's unprompted run.
 Audit log
 =========
 
+The audit log is **off by default**: without the variable below (and
+without an ``AuditLogger(path=...)`` handed to ``MCPServer``) nothing is
+recorded and no file is created -- not in the working directory either, which
+an earlier docstring wrongly named as the default.
+
 Set ``JE_AUTOCONTROL_MCP_AUDIT=/path/to/audit.jsonl`` to append one
 JSONL record per ``tools/call``: timestamp, tool name, sanitised
 arguments (``password`` / ``passphrase`` / ``token`` / ``secret`` /

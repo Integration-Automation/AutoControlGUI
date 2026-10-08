@@ -203,7 +203,8 @@ MCP 伺服器
        不限制；設了卻沒有指名任何變數時，一個都不允許。
    * - ``JE_AUTOCONTROL_MCP_AUDIT``
      - 未設定 / 路徑
-     - 每一次 ``tools/call`` 寫入一筆記錄的 JSON-lines 檔案。
+     - 每一次 ``tools/call`` 寫入一筆記錄的 JSON-lines 檔案。未設定或空字串時
+       不寫任何稽核紀錄。
    * - ``JE_AUTOCONTROL_MCP_ERROR_SHOTS``
      - 未設定 / 目錄
      - 工具每次失敗時，在這裡存一張截圖。

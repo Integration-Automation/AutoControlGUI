@@ -677,6 +677,10 @@ process 內量測兩種模式。以 680 個工具的 registry 量測(2026-10-09,
 稽核 Log
 ========
 
+稽核 log **預設關閉**:沒有設定下面的變數(也沒有把 ``AuditLogger(path=...)``
+交給 ``MCPServer``)時,不會記錄任何東西,也不會建立任何檔案——工作目錄裡也不會;
+先前的 docstring 把工作目錄寫成預設值是錯的。
+
 設定 ``JE_AUTOCONTROL_MCP_AUDIT=/path/to/audit.jsonl``,每次
 ``tools/call`` 都會寫一筆 JSONL:時間戳、工具名稱、過濾過的參數
 (``password`` / ``passphrase`` / ``token`` / ``secret`` / ``api_key`` /
