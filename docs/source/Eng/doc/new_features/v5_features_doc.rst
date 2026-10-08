@@ -112,8 +112,18 @@ nothing. Each event (``ActionEvent``, ``schema_version`` 1) carries:
 Everything recorded between start and stop belongs to one ``run_id`` (pass
 ``run_id=`` to choose it). If the journal file cannot be written, journalling
 stops and the automation continues; ``action_journal_status()`` reports the
-error. Steps a runner hands to a thread pool other than ``AC_parallel`` (the
-DAG runner, a device matrix) are recorded without a parent.
+error. Steps the DAG runner (``AC_run_dag``) and the device matrix
+(``AC_run_device_matrix``) hand to their thread pools name the step that ran
+the runner as parent, with the node's or device's index as ``branch``; the
+body of ``AC_bulkhead_run`` runs on the calling thread and is nested the same
+way. A pool of your own does it with ``carry_step``::
+
+    from je_auto_control.utils.action_journal.recorder import carry_step
+    pool.submit(carry_step(work, index), *args)   # call on the submitting thread
+
+A journal written before this holds those steps without a parent; candidate
+generation still recognises them by time containment and lists them as
+``detached``.
 
 A run-history row started while a journal is on records that journal's file
 and run id (``RunRecord.journal_path`` / ``journal_run_id``; pass them to

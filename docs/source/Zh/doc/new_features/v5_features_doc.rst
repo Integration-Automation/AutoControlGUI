@@ -96,9 +96,16 @@ Python、CLI、GUI、REST、socket 還是 MCP 進來的::
   artifacts 的步驟寫出的行和以前一樣,舊的行讀回來 ``artifacts == ()``。
 
 start 到 stop 之間記下的一切屬於同一個 ``run_id``(可用 ``run_id=`` 指定)。日誌檔寫不
-進去時,日誌會停止而自動化繼續執行;``action_journal_status()`` 會回報錯誤。除了
-``AC_parallel`` 以外,交給執行緒池執行的步驟(DAG runner、device matrix)記錄時沒有
-parent。
+進去時,日誌會停止而自動化繼續執行;``action_journal_status()`` 會回報錯誤。DAG runner
+(``AC_run_dag``)與 device matrix(``AC_run_device_matrix``)交給執行緒池的步驟,會以執行
+該 runner 的步驟為 parent,``branch`` 是節點或裝置的索引;``AC_bulkhead_run`` 的 body 在
+呼叫的執行緒上執行,巢狀關係相同。自己的執行緒池用 ``carry_step``::
+
+    from je_auto_control.utils.action_journal.recorder import carry_step
+    pool.submit(carry_step(work, index), *args)   # 在送出工作的執行緒上呼叫
+
+在這之前寫下的日誌裡,這些步驟沒有 parent;產生候選腳本時仍會用時間包含關係認出它們,
+並列為 ``detached``。
 
 日誌開著的時候開始的執行歷史列,會記下那個日誌的檔案與 run id
 (``RunRecord.journal_path`` / ``journal_run_id``;也可以自己傳給

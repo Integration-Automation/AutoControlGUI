@@ -9,7 +9,9 @@ from the GUI, the CLI, the REST, socket and MCP servers alike, because they
 all end in ``Executor._run_one_action`` -- is written when it starts and again
 when it ends. The parent of a nested action is whatever action is running on
 the same thread; an ``AC_parallel`` branch runs on a new thread, so the block
-hands its own step over with :func:`branch_scope`.
+hands its own step over with :func:`branch_scope`. A runner that submits work
+to a thread pool (the DAG runner, the device matrix) wraps what it submits in
+:func:`carry_step` for the same reason.
 
 Pure standard library; imports no ``PySide6``.
 """
@@ -20,7 +22,7 @@ import time
 import uuid
 from pathlib import Path
 from types import TracebackType
-from typing import Any, Dict, List, Optional, Tuple, Type, Union
+from typing import Any, Callable, Dict, List, Optional, Tuple, Type, TypeVar, Union
 
 from je_auto_control.utils.action_journal.events import (
     STATUS_ERROR, STATUS_INCOMPLETE, STATUS_OK, ActionEvent,
@@ -280,25 +282,49 @@ def _note_after_end(session: _Session, entry: Dict[str, str]) -> bool:
 class _BranchScope:
     """Binds the parent step and branch index of a worker thread for a block."""
 
-    __slots__ = ("_parent", "_index")
+    __slots__ = ("_parent", "_index", "_before")
 
     def __init__(self, parent: Optional[str], index: Optional[int] = None) -> None:
         self._parent = parent
         self._index = index
+        self._before: Tuple[Optional[str], Optional[int]] = (None, None)
 
     def __enter__(self) -> "_BranchScope":
+        # Restored on exit: a pool thread is reused, and a scope may be
+        # entered on a thread that is itself a branch.
+        self._before = (getattr(_LOCAL, "parent", None), getattr(_LOCAL, "branch", None))
         _LOCAL.parent = self._parent
         _LOCAL.branch = self._index
         return self
 
     def __exit__(self, *_exc: Any) -> None:
-        _LOCAL.parent = None
-        _LOCAL.branch = None
+        _LOCAL.parent, _LOCAL.branch = self._before
 
 
 def branch_scope(parent: Optional[str], index: Optional[int] = None) -> _BranchScope:
     """Make ``parent`` the parent of what this (new) thread runs, as branch ``index``."""
     return _BranchScope(parent, index)
+
+
+_Work = TypeVar("_Work", bound=Callable[..., Any])
+
+
+def carry_step(work: _Work, index: Optional[int] = None) -> _Work:
+    """``work`` bound to the step running here, for a call on another thread.
+
+    Call this on the thread that hands the work over (it reads that thread's
+    running step); what ``work`` runs on the pool thread is then recorded as
+    that step's child, branch ``index``. With no journal started, ``work`` is
+    returned untouched.
+    """
+    if _ACTIVE is None:
+        return work
+    parent = current_step()
+
+    def carried(*args: Any, **kwargs: Any) -> Any:
+        with branch_scope(parent, index):
+            return work(*args, **kwargs)
+    return carried  # type: ignore[return-value]  # reason: same call signature as work
 
 
 def start_action_journal(path: Union[str, Path, None] = None, *,

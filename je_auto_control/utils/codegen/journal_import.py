@@ -124,9 +124,11 @@ class _Run:
     def detached(self, nesting: FrozenSet[str]) -> Set[str]:
         """Roots that ran on another thread *inside* a nesting root step.
 
-        A runner that hands work to a thread pool (the DAG runner, a device
-        matrix) records its steps without a parent. Emitting them next to the
-        block that ran them would run them twice.
+        A journal written before the DAG runner and the device matrix handed
+        their step to the pool threads holds such steps without a parent, as
+        does any other runner with a pool of its own. Emitting them next to
+        the block that ran them would run them twice. A journal written since
+        records the parent, and nothing in it is guessed from timestamps.
         """
         hosts = [root for root in self.roots
                  if root.command in nesting and root.finished_at is not None]
