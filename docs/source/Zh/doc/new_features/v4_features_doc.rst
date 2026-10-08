@@ -114,6 +114,26 @@ Builder 項目。視覺與視窗功能的 geometry / IO 操作皆可注入,因�
   webhook、MCP 執行工具與 GUI -- 都會拒絕未簽章或被改過的檔案;自行載入時
   用 ``read_executable_action_json`` 可得到同樣的檢查。每位使用者的金鑰檔
   至少要有 32 位元組。``AC_sign_action_file`` / ``AC_verify_action_file``。
+* **簽章金鑰與執行權限分開(第 2 版簽章)** — HMAC 金鑰是一把共用密鑰,所以能在
+  某個端點執行動作的人,也能替它簽檔。``create_signing_keypair(private_path, public_path)``
+  (``AC_create_signing_keypair``)產生一組 Ed25519 金鑰:私鑰留在簽章機,執行端只拿
+  公鑰,公鑰能驗章、不能簽章。``sign_action_file(path, private_key_path=...)`` 把 JSON
+  envelope(``version`` 2、``algorithm`` ``ed25519``)寫進同一個 ``.sig`` sidecar;
+  ``verify_action_file(path, public_key_path=...)`` 負責驗證。行程由三個環境變數設定,
+  ``action_signing_config()`` 會回報目前讀到的內容:
+
+  * ``JE_AUTOCONTROL_ACTION_SIGNING_PRIVATE_KEY`` — 私鑰路徑;只設在簽章機。設了之後
+    ``sign_action_file(path)`` 就用它簽。
+  * ``JE_AUTOCONTROL_ACTION_SIGNING_PUBLIC_KEY`` — 公鑰路徑,設在每個執行端。只有它而
+    沒有私鑰時,該端點只能驗章:``AC_sign_action_file`` 與 ``AC_create_signing_keypair``
+    會拋出例外,不會退回每位使用者的 HMAC 金鑰,HMAC sidecar 也不再通過驗證。
+  * ``JE_AUTOCONTROL_ACCEPT_LEGACY_ACTION_SIGNATURES``(``1`` / ``true`` / ``yes`` /
+    ``on``)— 遷移模式:除第 2 版外也接受 HMAC sidecar,並在記錄中留下警告。
+
+  三個都沒設時行為完全不變:簽章仍是每位使用者的 HMAC。強制驗章的端點遷移步驟:在
+  簽章機產生金鑰組;在端點設定公鑰變數與遷移變數;用私鑰把每個檔案重簽一次;最後取消
+  遷移變數。金鑰組簽章需要 ``cryptography`` —— 沒有該套件的平台(Windows arm64)上,
+  這些呼叫會拋出帶安裝提示的 ``CryptographyUnavailableError``,HMAC 簽章仍可使用。
 * **動作檔加密** — ``encrypt_action_file`` / ``decrypt_action_file`` 以
   Fernet(AES-128-CBC + HMAC)讓腳本內容在靜態時保密,金鑰來自每位使用者的
   0600 金鑰,或經 scrypt 與每個檔案各自的隨機鹽值衍生自通行碼。``AC_encrypt_action_file`` /

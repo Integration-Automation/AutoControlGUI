@@ -55,3 +55,19 @@ def load_or_create_key_file(path: Path, generate: Callable[[], bytes],
             "must then be signed or encrypted again)",
         )
     return key
+
+
+def write_new_file(path: Path, data: bytes, mode: int) -> None:
+    """Write ``data`` to a file that must not exist yet, created with ``mode``.
+
+    ``O_EXCL`` makes the refusal atomic, so a key already at ``path`` -- the
+    public key an endpoint trusts, say -- can never be replaced through here.
+    Raises :class:`AutoControlException` when ``path`` exists.
+    """
+    path.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        descriptor = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, mode)
+    except FileExistsError as error:
+        raise AutoControlException(f"key file {str(path)!r} already exists") from error
+    with os.fdopen(descriptor, "wb") as key_file:
+        key_file.write(data)
