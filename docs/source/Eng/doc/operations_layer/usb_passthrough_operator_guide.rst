@@ -156,11 +156,29 @@ Decision precedence:
 ACL file integrity (HMAC)
 -------------------------
 
-The ACL is protected by an HMAC-SHA256 signature stored in a sidecar
-``usb_acl.json.sig``. On load the signature is verified against the
-file bytes; a mismatch makes the ACL **fail closed** (default-deny,
+The ACL is protected by an HMAC-SHA256 signature stored in the file
+itself, under ``"signature"``. It covers every other field in a canonical
+form, so re-indenting the file is harmless and changing any value is not.
+On load a mismatch makes the ACL **fail closed** (default-deny,
 ``UsbAcl.integrity_ok`` reports ``False``). This stops a process that
 silently rewrites the JSON from granting itself access.
+
+The signature used to be a sidecar ``usb_acl.json.sig`` written after the
+data, so the GUI and a host session -- or two processes -- could read new
+data against the old signature and fall back to deny-all on a file nobody
+had touched. Data and signature are now one file replaced in one rename.
+A change (add / remove / import / set default) additionally holds
+``usb_acl.json.lock`` while it re-reads, changes and writes, so two writers
+no longer save over each other's rules; if the lock cannot be had within
+ten seconds the change raises ``UsbAclBusyError`` and nothing is changed
+(a lock left by a process that died is taken over after thirty seconds).
+
+- A file in the old two-file layout still loads and is rewritten as one file
+  (the ``.sig`` is removed) on the next save. **A version older than this
+  one cannot read the new file**: it sees a key without a sidecar and denies
+  everything. Hand-editing the file now invalidates it unless you also
+  recompute the signature -- use the GUI, the ``AC_usb_acl_*`` commands or
+  ``UsbAcl`` instead.
 
 - By default the signing key is a random 32-byte file
   ``usb_acl.json.key`` (mode ``0600`` on POSIX), created on first save.

@@ -376,8 +376,11 @@ Stored in ``~/.je_auto_control/usb_acl.json``::
 - Allow rules can be persisted with a "remember" checkbox in the
   prompt.
 
-**Resolved (OQ8):** HMAC-SHA256 implemented. The ACL carries a sidecar
-``<acl>.sig`` signature, verified on load; a mismatch fails closed
+**Resolved (OQ8):** HMAC-SHA256 implemented. The ACL carries its
+signature in the file itself (``"signature"``; earlier versions wrote a
+sidecar ``<acl>.sig``, which is still read and replaced on the next save, so
+that data and signature can no longer be read from two different writes),
+verified on load; changes run under ``<acl>.lock``. A mismatch fails closed
 (default-deny, ``integrity_ok`` False) so a process that silently
 rewrites the JSON cannot grant itself access without also forging the
 signature. The signing key is pluggable — a deployment can pass a
