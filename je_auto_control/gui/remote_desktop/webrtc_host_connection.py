@@ -6,6 +6,7 @@ still owns every widget and slot under its original name.
 from __future__ import annotations
 
 import functools
+import threading
 from typing import TYPE_CHECKING, Optional, Tuple
 
 from PySide6.QtCore import QTimer
@@ -50,6 +51,32 @@ def _drop_offer(host: MultiViewerHostT, outcome: Tuple[str, str]) -> None:
         autocontrol_logger.debug("dropping an unused offer: %r", error)
 
 
+#: One zeroconf registration change at a time: Publish stops the old advertiser and starts the
+#: next under the same name, and the name is only free once the goodbye packets have gone out.
+_ADVERTISE_LOCK = threading.Lock()
+
+
+def _start_advertiser(host_id: str, signaling_url: str, _token: CancellationToken) -> HostAdvertiser:
+    """Worker thread: register the host on the LAN (zeroconf probes the name first, about a second)."""
+    from je_auto_control.utils.remote_desktop.lan_discovery import HostAdvertiser
+    with _ADVERTISE_LOCK:
+        return HostAdvertiser(host_id=host_id, signaling_url=signaling_url)
+
+
+def _stop_advertiser(advertiser: HostAdvertiser) -> None:
+    """Worker thread: unregister (goodbye packets) and close, which joins zeroconf's thread."""
+    with _ADVERTISE_LOCK:
+        try:
+            advertiser.stop()
+        except (RuntimeError, OSError) as error:
+            autocontrol_logger.debug("lan advertise stop: %r", error)
+
+
+def _advertise_failed(error: object) -> None:
+    """GUI thread: LAN discovery is a convenience; a host that cannot advertise still publishes."""
+    autocontrol_logger.debug("lan advertise: %r", error)
+
+
 class _HostConnectionMixin(_PanelPart):
     """Methods of ``_WebRTCHostPanel``; the module docstring says which group."""
 
@@ -58,6 +85,8 @@ class _HostConnectionMixin(_PanelPart):
     _publish_loop: Optional[HostPublishLoopWorker]
     _manual_session_id: Optional[str]
     _lan_advertiser: Optional[HostAdvertiser]
+    #: Bumped by every start and stop, so an advertiser that reports late knows it is not wanted.
+    _advertise_generation = 0
 
     def _on_regen_id(self) -> None:
         self._host_id_edit.setText(generate_host_id())
@@ -88,31 +117,34 @@ class _HostConnectionMixin(_PanelPart):
         self._start_lan_advertise()
 
     def _start_lan_advertise(self) -> None:
+        """Advertise this host on the LAN, off the GUI thread; the old advertiser is stopped first."""
         try:
-            from je_auto_control.utils.remote_desktop.lan_discovery import (
-                HostAdvertiser, is_discovery_available,
-            )
+            from je_auto_control.utils.remote_desktop.lan_discovery import is_discovery_available
         except ImportError:
             return
         if not is_discovery_available():
             return
-        try:
-            if self._lan_advertiser is not None:
-                self._lan_advertiser.stop()
-            self._lan_advertiser = HostAdvertiser(
-                host_id=self._host_id_edit.text().strip(),
-                signaling_url=self._server_edit.text().strip(),
-            )
-        except (RuntimeError, OSError) as error:
-            autocontrol_logger.debug("lan advertise: %r", error)
+        self._stop_lan_advertise()
+        task = task_controller().submit(
+            functools.partial(_start_advertiser, self._host_id_edit.text().strip(),
+                              self._server_edit.text().strip()),
+            owner=self, discard=_stop_advertiser)
+        task.result.connect(weak_slot(self._advertiser_started, self._advertise_generation))
+        task.error.connect(_advertise_failed)
+
+    def _advertiser_started(self, generation: int, advertiser: HostAdvertiser) -> None:
+        """GUI thread: the registration is up -- unless Stop or another Publish came first."""
+        if generation != self._advertise_generation:
+            self._stops.retire(functools.partial(_stop_advertiser, advertiser))
+            return
+        self._lan_advertiser = advertiser
 
     def _stop_lan_advertise(self) -> None:
-        if self._lan_advertiser is not None:
-            try:
-                self._lan_advertiser.stop()
-            except (RuntimeError, OSError):
-                pass
-            self._lan_advertiser = None
+        """Let go of the advertiser; unregistering sends packets and joins a thread, so off-thread."""
+        self._advertise_generation += 1     # a registration still on its way is stopped when it reports
+        advertiser, self._lan_advertiser = self._lan_advertiser, None
+        if advertiser is not None:
+            self._stops.retire(functools.partial(_stop_advertiser, advertiser))
 
     def _on_loop_offer_published(self, session_id: str) -> None:
         autocontrol_logger.debug("publish loop: offer for %s", session_id)
