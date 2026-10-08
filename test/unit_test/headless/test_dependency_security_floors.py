@@ -14,7 +14,7 @@ _PYPROJECT = pathlib.Path(__file__).resolve().parents[3] / "pyproject.toml"
 
 #: requirement name -> (minimum version, why).
 _FLOORS = {
-    "cryptography": ("48.0.1", "GHSA-537c-gmf6-5ccf"),
+    "cryptography": ("50.0.0", "GHSA-537c-gmf6-5ccf, GHSA-g6cj-pr64-35w5 (PKCS#7 decryption oracle)"),
     "starlette": ("1.0.1", "CVE-2026-48710, Host-header path confusion (signaling server)"),
     "zeroconf": ("0.149.16", "CVE-2026-47180 and siblings, mDNS memory / CPU exhaustion (discovery)"),
 }

@@ -451,7 +451,7 @@ wheels = [
 
 [[package]]
 name = "je-auto-control"
-version = "0.0.226"
+version = "0.0.227"
 source = { editable = "." }
 dependencies = [
     { name = "cryptography", marker = "platform_machine != 'ARM64' or sys_platform != 'win32'" },
@@ -509,7 +509,7 @@ requires-dist = [
     { name = "av", marker = "extra == 'webrtc'", specifier = ">=14.0.0" },
     { name = "babel", marker = "extra == 'locale'", specifier = ">=2.12" },
     { name = "boto3", marker = "extra == 's3'", specifier = ">=1.34" },
-    { name = "cryptography", marker = "platform_machine != 'ARM64' or sys_platform != 'win32'", specifier = ">=48.0.1" },
+    { name = "cryptography", marker = "platform_machine != 'ARM64' or sys_platform != 'win32'", specifier = ">=50.0.0" },
     { name = "defusedxml", specifier = "==0.7.1" },
     { name = "fastapi", marker = "extra == 'signaling'", specifier = ">=0.115" },
     { name = "je-open-cv", marker = "platform_machine != 'ARM64' or sys_platform != 'win32'", specifier = "==0.0.22" },
