@@ -13,6 +13,7 @@ from PySide6.QtWidgets import (
 
 from je_auto_control.gui._daemon_thread import DaemonThread
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
+from je_auto_control.gui._dispose import release_resources
 from je_auto_control.gui.remote_desktop._connect_task import connect_viewer
 from je_auto_control.gui.remote_desktop._helpers import (
     _CollapsibleSection, _StatusBadge, _build_insecure_client_context,
@@ -218,6 +219,19 @@ class _ViewerPanel(TranslatableMixin, QWidget):
         # window is created lazily on connect.
 
     # --- connection lifecycle ------------------------------------------
+
+    def dispose(self) -> None:
+        """Release what the panel holds beyond its widgets: the connect still out, its audio player, its window.
+
+        Called through ``RemoteDesktopTab.dispose()``; safe to call twice. The
+        session this panel opened is deliberately left connected: it belongs
+        to the registry, where scripts (``AC_remote_*``) and the other panels
+        still see it and can disconnect it. Only what nobody else could
+        reach goes -- a connect that has not answered is cancelled and the
+        viewer it may still produce is disconnected.
+        """
+        release_resources(self, self._cancel_pending_connect, self._stop_audio_player,
+                          self._close_screen_window)
 
     def _connect(self) -> None:
         host = self._host_field.text().strip()

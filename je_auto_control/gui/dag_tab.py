@@ -9,6 +9,7 @@ from PySide6.QtWidgets import (
     QTableWidget, QTableWidgetItem, QTextEdit, QVBoxLayout, QWidget,
 )
 
+from je_auto_control.gui._dispose import release_resources
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
 from je_auto_control.gui._worker_thread import WorkerHandle, start_worker
 from je_auto_control.gui.language_wrapper.multi_language_wrapper import (
@@ -86,6 +87,14 @@ class DagTab(TranslatableMixin, QWidget):
         root.addWidget(self._status_label)
         root.addWidget(self._table, stretch=3)
         self._apply_translations()
+
+    def dispose(self) -> None:
+        """Release what the tab holds beyond its widgets: the run still out, which is asked to stop.
+
+        The worker ends once the nodes already running have finished and its outcome is dropped. Called by
+        ``close_tab(key, release=True)`` before the widget is deleted; safe to call twice.
+        """
+        release_resources(self)
 
     def menu_actions(self) -> list:
         """Expose tab commands to the window-level Actions menu."""

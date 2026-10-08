@@ -9,6 +9,7 @@ from PySide6.QtWidgets import (
     QSpinBox, QTextEdit, QVBoxLayout, QWidget,
 )
 
+from je_auto_control.gui._dispose import release_resources
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
 from je_auto_control.gui._worker_thread import WorkerHandle, start_worker
 from je_auto_control.gui.language_wrapper.multi_language_wrapper import (
@@ -108,6 +109,14 @@ class ComputerUseTab(TranslatableMixin, QWidget):
         self._max_tokens_label.setText(_t("computer_use_max_tokens_label"))
         self._output_label.setText(_t("computer_use_output_label"))
         self._goal_input.setPlaceholderText(_t("computer_use_goal_placeholder"))
+
+    def dispose(self) -> None:
+        """Release what the tab holds beyond its widgets: the run still out, which is asked to stop.
+
+        The worker ends before its next step and its outcome is dropped. Called by
+        ``close_tab(key, release=True)`` before the widget is deleted; safe to call twice.
+        """
+        release_resources(self)
 
     def menu_actions(self) -> list:
         """Expose tab commands to the window-level Actions menu."""

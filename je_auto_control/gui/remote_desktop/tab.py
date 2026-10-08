@@ -161,11 +161,14 @@ class RemoteDesktopTab(TranslatableMixin, QWidget):
         return sub_panels
 
     def dispose(self) -> None:
-        """Release what the sub-panels hold beyond their widgets: every status, preview and reconnect timer.
+        """Release what the sub-panels hold beyond their widgets, through each panel's own ``dispose()``.
 
-        Called by ``close_tab(key, release=True)``; safe to call twice. A host
-        or a session a panel opened is left running -- it belongs to the
-        registry, where scripts and the other panels still see it.
+        Called by ``close_tab(key, release=True)``; safe to call twice.
+        Timers stop, connects and transfers still out are cancelled and the
+        pop-out windows close. A TCP / WebSocket host or session a panel
+        opened is left running -- it belongs to the registry, where scripts
+        and the other panels still see it. A WebRTC host or session belongs to
+        its panel alone and is ended with it.
         """
         disposals = [getattr(panel, "dispose", None) for panel in self._sub_panels]
         release_resources(self, *(dispose for dispose in disposals if callable(dispose)))

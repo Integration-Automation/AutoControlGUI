@@ -33,6 +33,7 @@ mechanism, with two levels of use.
 import atexit
 import threading
 import time
+import weakref
 from typing import Any, Callable, Dict, Optional
 
 from PySide6.QtCore import QObject, Signal
@@ -74,6 +75,22 @@ class WorkerHandle:
     def __init__(self, worker: QObject) -> None:
         self.worker = worker
         self._thread: Optional[threading.Thread] = None
+        self._owner: Optional["weakref.ref[QObject]"] = None
+        self._relay: Optional["weakref.ref[_Relay]"] = None
+
+    def cancel(self) -> None:
+        """Ask the worker to stop if it can, and deliver neither its result nor its failure.
+
+        A worker with ``request_stop()`` ends at its next checkpoint; one
+        without runs to its end. ``on_thread_done`` still runs when the thread
+        ends -- it is the tab's bookkeeping, not an outcome.
+        """
+        request_stop = getattr(self.worker, "request_stop", None)
+        if callable(request_stop):
+            request_stop()
+        relay = self._relay() if self._relay is not None else None
+        if relay is not None:
+            relay.drop_outcome()
 
     def isRunning(self) -> bool:  # noqa: N802  # reason: the QThread spelling its callers use
         """Whether ``run()`` has not returned yet."""
@@ -143,6 +160,10 @@ class _Relay(QObject):
         """Forward the worker's result (runs on the GUI thread)."""
         self._on_done(value)
 
+    def drop_outcome(self) -> None:
+        """Deliver neither the result nor the failure from now on; the thread's end is still reported."""
+        self._on_done = self._on_fail = WeakCall(None)
+
     def fail(self, message: str) -> None:
         """Forward the worker's failure (runs on the GUI thread)."""
         self._on_fail(message)
@@ -171,6 +192,18 @@ def _stop_running_workers() -> None:
 
 
 atexit.register(_stop_running_workers)
+
+
+def cancel_workers(owner: QObject) -> int:
+    """Cancel every worker :func:`start_worker` is still running for ``owner``; return how many.
+
+    What a tab's ``dispose()`` needs: see :meth:`WorkerHandle.cancel`.
+    """
+    handles = [handle for handle in list(_RUNNING)
+               if handle._owner is not None and handle._owner() is owner]  # noqa: SLF001  # reason: own class
+    for handle in handles:
+        handle.cancel()
+    return len(handles)
 
 
 def running_threads() -> int:
@@ -222,6 +255,7 @@ def start_worker(owner: QObject, worker: QObject, *,
     if failed is not None:
         failed.connect(relay.fail)
     handle = WorkerHandle(worker)
+    handle._owner, handle._relay = weakref.ref(owner), weakref.ref(relay)  # noqa: SLF001  # reason: set once
     _RUNNING[handle] = worker
     thread = threading.Thread(target=_run, args=(handle, relay, reaper),
                               name=f"gui-worker-{type(worker).__name__}", daemon=True)

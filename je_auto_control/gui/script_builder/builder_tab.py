@@ -14,6 +14,7 @@ from PySide6.QtWidgets import (
     QTextEdit, QToolButton, QVBoxLayout, QWidget,
 )
 
+from je_auto_control.gui._dispose import release_resources
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
 from je_auto_control.gui._journal_import import candidate_summary, pick_journal_candidate
 from je_auto_control.gui._tab_task import TabTask, was_stopped
@@ -62,6 +63,14 @@ class ScriptBuilderTab(TranslatableMixin, QWidget):
         self._runs.error.connect(self._show_run_error)
         self._build_layout()
         self._wire_signals()
+
+    def dispose(self) -> None:
+        """Release what the tab holds beyond its widgets: the command still running in the background.
+
+        A script run is stopped; other work cannot be interrupted, so it runs to its end and its
+        result is dropped. Called by ``close_tab(key, release=True)``; safe to call twice.
+        """
+        release_resources(self)
 
     def retranslate(self) -> None:
         TranslatableMixin.retranslate(self)

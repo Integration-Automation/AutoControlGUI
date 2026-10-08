@@ -18,6 +18,7 @@ from PySide6.QtWidgets import (
 )
 
 import je_auto_control as ac
+from je_auto_control.gui._dispose import release_resources
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
 from je_auto_control.gui._tab_task import TabTask
 from je_auto_control.gui.language_wrapper.multi_language_wrapper import (
@@ -98,6 +99,14 @@ class MobileTab(TranslatableMixin, QWidget):
         root.addWidget(self._table, stretch=1)
         root.addWidget(self._tr(QLabel(), "mob_result"))
         root.addWidget(self._result, stretch=1)
+
+    def dispose(self) -> None:
+        """Release what the tab holds beyond its widgets: the command still running in the background.
+
+        A script run is stopped; other work cannot be interrupted, so it runs to its end and its
+        result is dropped. Called by ``close_tab(key, release=True)``; safe to call twice.
+        """
+        release_resources(self)
 
     def menu_actions(self) -> List[Tuple[str, Callable[[], None]]]:
         """Expose tab commands to the window-level Actions menu."""
