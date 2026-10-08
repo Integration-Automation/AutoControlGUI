@@ -103,6 +103,19 @@ def test_an_edit_made_apart_from_a_delete_is_a_conflict_not_a_silent_loss():
     assert merge_entries(base, tombstone).entry == tombstone
 
 
+def test_the_same_value_made_apart_is_not_a_conflict():
+    """Two machines that each already had the entry agree; nothing to choose."""
+    left = SyncEntry.create("hk1", {"combo": "ctrl+a"}, "laptop")
+    right = SyncEntry.create("hk1", {"combo": "ctrl+a"}, "desktop")
+    decision = merge_entries(left, right)
+    assert decision.conflict is None and not decision.entry.in_conflict
+    assert decision.entry.value == {"combo": "ctrl+a"}
+    assert decision.entry.vector == {"laptop": 1, "desktop": 1}
+    assert merge_entries(right, left).entry == decision.entry
+    for side in (left, right):
+        assert merge_entries(side, decision.entry).entry == decision.entry
+
+
 def test_resolving_a_conflict_supersedes_every_sibling():
     base = SyncEntry.create("hk1", {"combo": "a"}, "laptop")
     left, right = base.edited({"combo": "l"}, "laptop"), base.edited({"combo": "r"}, "desktop")

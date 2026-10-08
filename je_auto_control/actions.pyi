@@ -705,6 +705,25 @@ def AC_config_export() -> Dict[str, Any]:
 def AC_config_import(bundle: Dict[str, Any], dry_run: bool = ...) -> Dict[str, Any]:
     """Executor adapter: apply a config bundle dict to the user config root."""
 
+def AC_config_sync_full_resync(server_url: str, user_id: str, **options: Any) -> Dict[str, Any]:
+    """Adopt the server's state after this device was retired; see :func:`run_full_resync`."""
+
+def AC_config_sync_resolve(
+    server_url: str,
+    user_id: str,
+    section: str,
+    key: str,
+    choice: int,
+    **options: Any,
+) -> Dict[str, Any]:
+    """Pick one side of a conflict; see :func:`resolve_conflict`."""
+
+def AC_config_sync_run(server_url: str, user_id: str, *, cancel: Any = ..., **options: Any) -> Dict[str, Any]:
+    """Sync this machine's settings with ``server_url`` once; returns the report."""
+
+def AC_config_sync_status(server_url: str, user_id: str, outbox_path: Optional[str] = ...) -> Dict[str, Any]:
+    """The recorded sync state for this account and server; no network."""
+
 def AC_confusable_compare(first: str, second: str) -> Dict[str, Any]:
     """Adapter: whether two strings render to the same skeleton."""
 

@@ -141,3 +141,122 @@ Client
 套用 server 已有的批次不會改變任何東西。送出失敗時退避 2 秒、4 秒、8 秒……最多 300 秒
 (``base_delay_s`` / ``max_delay_s``),一次 drain 最多送 ``max_attempts`` 次(預設 5),
 ``wait=False`` 會直接返回而不在退避期間睡眠,設定 ``cancel`` 即使在等待中途也會結束 drain。
+
+Adapter:同步什麼、什麼留在本機
+--------------------------------
+
+``je_auto_control.utils.config_sync.adapters`` 把一個 bucket section 接到一個本機儲存。
+``SyncAdapter.snapshot()`` 回傳以上次合併狀態為基準的 ``{key: SyncEntry}``,
+``apply(entries)`` 把合併後的 entry 寫回並回傳 ``ApplyReport``
+(``written`` / ``removed`` / ``skipped`` / ``conflicts`` / ``left_disabled``)。
+
+.. list-table::
+   :header-rows: 1
+
+   * - Section
+     - Adapter
+     - 本機儲存
+   * - ``scripts``
+     - ``ScriptSyncAdapter(origin, scripts_dir)``
+     - 資料夾下的 ``*.json`` 動作檔,以相對路徑為 key
+   * - ``locators``
+     - ``LocatorSyncAdapter(origin, repository)``
+     - 一個 ``ElementRepository``
+   * - ``hotkeys``
+     - ``HotkeySyncAdapter(origin, daemon, scripts_dir=...)``
+     - ``HotkeyDaemon`` 的綁定
+   * - ``triggers``
+     - ``TriggerSyncAdapter(origin, engine, scripts_dir=...)``
+     - ``TriggerEngine`` 的 image / window / pixel / file / cron 觸發器
+   * - ``address_book``
+     - ``AddressBookSyncAdapter(origin, book)``
+     - 遠端桌面的 ``AddressBook``
+
+每個 adapter 都遵守三條規則:
+
+* **秘密留在本機。** 名稱顯示為秘密的欄位(``password``、``token``、``api_key`` ……)
+  以 ``{"$local": "secret"}`` 送出;接收端保留自己的值。``${secrets.NAME}`` 參照原樣傳送。
+  含有明文秘密的腳本完全不同步,並列在 ``withheld``。
+* **機器路徑留在本機。** ``scripts_dir`` 內的路徑以相對參照傳送,並對接收端自己的資料夾解析。
+  其他路徑變成 ``{"$local": "path"}``;需要它而本機沒有對應值的項目回報在 ``skipped``
+  —— 而且它在本機不存在 *不會* 被當成對其他機器的刪除。
+* **同步絕不啟用任何東西。** ``enabled`` 不同步。送達的快捷鍵或觸發器以 **停用** 狀態建立
+  (``HotkeyDaemon.bind(..., enabled=False)``),既有的保留本機給它的狀態,
+  沒有任何 adapter 會啟動引擎或執行腳本。複合觸發器(all-of / any-of / sequence)不同步。
+
+資產
+----
+
+64 KiB 以內的腳本連同它的 SHA-256 放在 entry 內傳送;內容與 hash 不符就不寫入。
+更大的腳本與其他檔案(樣板圖)經由 ``AssetTransport`` 傳送:
+
+.. code-block:: python
+
+    from je_auto_control.utils.config_sync.assets import (
+        AssetManifest, DirectoryAssetTransport, publish_assets, sync_assets)
+
+    transport = DirectoryAssetTransport("//nas/autocontrol-assets")   # 兩台機器都能存取的資料夾
+    manifest = AssetManifest.from_directory("scripts", ("*.png",))
+    publish_assets(manifest, transport)                              # 傳送端
+    result = sync_assets(AssetManifest(root=their_scripts, assets=manifest.assets), transport)
+    # AssetSyncResult(transferred, unchanged, failed, hashes, cancelled)
+
+``sync_assets`` 在寫入 *之前* 以 SHA-256 與大小檢查每個檔案、以原子方式取代目的檔、
+檢查失敗時不動既有檔案,並拒絕會離開資料夾的路徑。隨附的 transport 是
+``DirectoryAssetTransport``;其他 blob 儲存請實作 ``fetch`` / ``store`` / ``has``。
+
+一個呼叫,三個介面
+------------------
+
+``config_sync_run(server_url, user_id, **options)`` 執行整個循環 —— 把本機變更入列、
+清空 outbox、合併、套用 —— 並回傳
+``{state, revision, pending, conflicts, applied, withheld, assets, error}``,
+``state`` 為 ``synced`` / ``pending`` / ``conflict`` / ``offline`` / ``cancelled`` /
+``resync_required`` 之一。連不到 server 不是例外:變更留在佇列,狀態為 ``offline``。
+
+選項:``device_id``(預設:在 ``~/.je_auto_control/config_sync_device_id`` 建立一次的 id)、
+``secret``(預設 ``$AC_SIGNALING_SECRET``)、``sections``(預設 ``hotkeys``、``triggers``、
+``address_book``;給了路徑時加入 ``scripts`` 與 ``locators``)、``scripts_dir``、
+``locators_path``、``outbox_path``、``assets_dir``、``timeout_s``、``wait``、``max_attempts``。
+
+.. list-table::
+   :header-rows: 1
+
+   * - Executor 指令
+     - MCP 工具
+     - 作用
+   * - ``AC_config_sync_run``
+     - ``ac_config_sync_run``
+     - 同步一次
+   * - ``AC_config_sync_status``
+     - ``ac_config_sync_status``(唯讀)
+     - 已記錄的狀態;不連網、不建立任何東西
+   * - ``AC_config_sync_resolve``
+     - ``ac_config_sync_resolve``
+     - 保留 ``section`` / ``key`` 的第 ``choice`` 個候選
+   * - ``AC_config_sync_full_resync``
+     - ``ac_config_sync_full_resync``
+     - 被退休後採用 server 的狀態;待送變更會被捨棄並列出
+
+四個都是 Script Builder **Data** 分類下的指令。
+
+.. code-block:: json
+
+    [["AC_config_sync_run", {"server_url": "https://sync.example", "user_id": "alice",
+                             "secret": "${secrets.sync}", "scripts_dir": "scripts"}]]
+
+GUI
+---
+
+**設定同步** 分頁(分類 *system*)顯示狀態、最後合併的 revision、待送變更數、
+上次成功同步與最後的錯誤,並列出每個衝突及其候選。它的指令 —— *立即同步*、*取消同步*、
+*重新整理同步狀態*、*保留所選候選*、*完整重新同步* —— 在 Actions 選單。
+同步在 worker 執行緒上執行;取消或關閉分頁都會釋放它。
+
+資料夾鏡像與剪貼簿:不回送
+--------------------------
+
+``FolderSyncEngine.note_received(remote_name, sha256=...)`` 把監看資料夾中的檔案標記為
+來自對端;在內容於本機變更之前,引擎不會把它推回去。``FolderSyncEngine.poll_once()``
+可隨時執行一次差異比對。``ClipboardEchoGuard``(``note_remote`` / ``should_send`` / ``reset``)
+為自動轉送剪貼簿變更的程式做同樣的事:剛從對端送達、或已經送過的內容不會再送一次。

@@ -113,6 +113,7 @@ TAB_SPECS: Tuple[TabSpec, ...] = (
     TabSpec("trace_replay", "tab_trace_replay", "automation", f"{_GUI}.trace_replay_tab", "TraceReplayTab"),
     TabSpec("remote_desktop", "tab_remote_desktop", "system", default_visible=True),
     TabSpec("presence", "tab_presence", "system", f"{_GUI}.presence_tab", "PresenceTab"),
+    TabSpec("config_sync", "tab_config_sync", "system", f"{_GUI}.config_sync_tab", "ConfigSyncTab"),
     TabSpec("rest_api", "tab_rest_api", "system", f"{_GUI}.rest_api_tab", "RestApiTab"),
     TabSpec("admin_console", "tab_admin_console", "system", f"{_GUI}.admin_console_tab", "AdminConsoleTab"),
     TabSpec("audit_log", "tab_audit_log", "system", f"{_GUI}.audit_log_tab", "AuditLogTab"),

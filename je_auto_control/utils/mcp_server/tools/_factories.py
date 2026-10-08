@@ -18,6 +18,7 @@ from je_auto_control.utils.mcp_server.tools import _handlers_system as h_system
 from je_auto_control.utils.mcp_server.tools import _handlers_runs as h_runs
 from je_auto_control.utils.mcp_server.tools import _handlers_scheduling as h_sched
 from je_auto_control.utils.mcp_server.tools import _handlers_remote as h_remote
+from je_auto_control.utils.config_sync import session as h_sync
 from je_auto_control.utils.mcp_server.tools._base import (
     DESTRUCTIVE, MCPTool, MCPToolAnnotations, NON_DESTRUCTIVE, READ_ONLY,
     SIDE_EFFECT_ONLY, schema,
@@ -8994,6 +8995,67 @@ def media_assert_tools() -> List[MCPTool]:
     ]
 
 
+def config_sync_tools() -> List[MCPTool]:
+    target = {"server_url": {"type": "string"}, "user_id": {"type": "string"}}
+    options = {
+        "device_id": {"type": "string"}, "secret": {"type": "string"},
+        "sections": {"type": "array", "items": {"type": "string"}},
+        "scripts_dir": {"type": "string", "format": "path"},
+        "locators_path": {"type": "string", "format": "path"},
+        "outbox_path": {"type": "string", "format": "path"},
+        "assets_dir": {"type": "string", "format": "path"},
+        "timeout_s": {"type": "number"},
+    }
+    required = ["server_url", "user_id"]
+    return [
+        MCPTool(
+            name="ac_config_sync_run",
+            description=("Sync this machine's hotkeys, triggers, address book (and "
+                         "scripts / locators when their paths are given) with the "
+                         "config-sync server once. Local changes are queued durably "
+                         "and sent on top of the server's revision; concurrent edits "
+                         "of one entry are kept as a conflict. Received hotkeys and "
+                         "triggers are created DISABLED and nothing is run. Returns "
+                         "{state, revision, pending, conflicts, applied, error}."),
+            input_schema=schema({**target, **options, "wait": {"type": "boolean"},
+                                 "max_attempts": {"type": "integer"}}, required),
+            handler=h_sync.config_sync_run,
+            annotations=DESTRUCTIVE,
+        ),
+        MCPTool(
+            name="ac_config_sync_status",
+            description=("Report the recorded config-sync state for an account and "
+                         "server without touching the network: {state, revision, "
+                         "pending, conflicts, conflict_details, last_success, error}."),
+            input_schema=schema({**target, "outbox_path": options["outbox_path"]}, required),
+            handler=h_sync.config_sync_status,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_config_sync_resolve",
+            description=("Settle a config-sync conflict by keeping candidate number "
+                         "'choice' (0-based, as listed in conflict_details) of "
+                         "'section'/'key'. Applied locally and queued; the next sync "
+                         "sends it."),
+            input_schema=schema({**target, "section": {"type": "string"},
+                                 "key": {"type": "string"}, "choice": {"type": "integer"},
+                                 **options},
+                                required + ["section", "key", "choice"]),
+            handler=h_sync.config_sync_resolve,
+            annotations=DESTRUCTIVE,
+        ),
+        MCPTool(
+            name="ac_config_sync_full_resync",
+            description=("After this device was retired from the sync group: adopt "
+                         "the server's state and DISCARD this machine's pending "
+                         "changes (listed under 'withheld')."),
+            input_schema=schema({**target, **options}, required),
+            handler=h_sync.config_sync_full_resync,
+            annotations=DESTRUCTIVE,
+        ),
+    ]
+
+
 ALL_FACTORIES = (
     mouse_tools, keyboard_tools, screen_tools, image_and_ocr_tools,
     window_tools, system_tools, recording_tools, drag_and_send_tools,
@@ -9060,4 +9122,5 @@ ALL_FACTORIES = (
     visual_regression_tools, state_machine_tools, codegen_tools,
     flakiness_tools, suite_tools, quarantine_tools,
     a11y_audit_tools, device_matrix_tools, media_assert_tools,
+    config_sync_tools,
 )

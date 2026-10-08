@@ -22,6 +22,13 @@ This package is the **headless client** side:
   to one key made apart are *both kept* as a conflict. No clock is consulted.
 * :mod:`.outbox` -- :class:`SyncOutbox`, the durable queue of changes not
   yet on the server (resent by operation id, bounded back-off, cancellable).
+* :mod:`.adapters` -- :class:`SyncAdapter` and the script, locator, hotkey,
+  trigger and address-book adapters. Secrets and machine paths leave only as
+  references, and applying synced data never enables a hotkey or trigger.
+* :mod:`.assets` -- :func:`sync_assets`: files fetched by SHA-256, verified,
+  then replaced atomically.
+* :mod:`.session` -- :func:`run_sync`, the whole cycle behind the GUI tab,
+  the ``AC_config_sync_*`` commands and the MCP tools.
 
 Each section maps an entry id to an entry. Section names are free-form;
 ``hotkeys``, ``triggers``, ``address_book`` and ``custom`` are the
@@ -35,6 +42,14 @@ away must do an explicit full resync. Entries written without a device id
 keep the older rule: the later ``last_modified`` wins and the loser is
 reported in a ``ConflictRecord``.
 """
+from je_auto_control.utils.config_sync.adapters import (
+    AddressBookSyncAdapter, ApplyReport, HotkeySyncAdapter, LocatorSyncAdapter,
+    ScriptSyncAdapter, SyncAdapter, TriggerSyncAdapter,
+)
+from je_auto_control.utils.config_sync.assets import (
+    AssetManifest, AssetRef, AssetSyncError, AssetSyncResult, AssetTransport,
+    DirectoryAssetTransport, publish_assets, sync_assets,
+)
 from je_auto_control.utils.config_sync.client import (
     DEFAULT_SYNC_ATTEMPTS, TOMBSTONE_RETENTION_S, WIRE_VERSION, ConflictRecord, ConfigBucket,
     ConfigSyncClient, ConfigSyncConflict, ConfigSyncError, FullResyncRequired, SyncResult,
@@ -42,6 +57,11 @@ from je_auto_control.utils.config_sync.client import (
 )
 from je_auto_control.utils.config_sync.outbox import (
     DrainReport, OutboxError, SyncOutbox, default_outbox_path,
+)
+from je_auto_control.utils.config_sync.session import (
+    SyncRunReport, config_sync_full_resync, config_sync_resolve, config_sync_run,
+    config_sync_status, default_adapters, default_device_id, resolve_conflict,
+    run_full_resync, run_sync, sync_status,
 )
 from je_auto_control.utils.config_sync.store import (
     ConfigStore, ConfigStoreError, RevisionConflictError, StoreCapacityError,
@@ -53,6 +73,12 @@ from je_auto_control.utils.config_sync.versions import (
 )
 
 __all__ = [
+    "AddressBookSyncAdapter", "ApplyReport", "AssetManifest", "AssetRef", "AssetSyncError",
+    "AssetSyncResult", "AssetTransport", "DirectoryAssetTransport", "HotkeySyncAdapter",
+    "LocatorSyncAdapter", "ScriptSyncAdapter", "SyncAdapter", "SyncRunReport",
+    "TriggerSyncAdapter", "config_sync_full_resync", "config_sync_resolve", "config_sync_run",
+    "config_sync_status", "default_adapters", "default_device_id", "publish_assets",
+    "resolve_conflict", "run_full_resync", "run_sync", "sync_assets", "sync_status",
     "ConfigBucket", "ConfigStore", "ConfigStoreError", "ConflictRecord", "ConfigSyncClient",
     "ConfigSyncConflict", "ConfigSyncError", "DEFAULT_SYNC_ATTEMPTS", "DrainReport",
     "FullResyncRequired", "MergeDecision", "OutboxError", "PeerState", "RevisionConflictError",

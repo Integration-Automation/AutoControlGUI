@@ -89,10 +89,19 @@ class SyncOutbox:
         self._max_delay = max(self._base_delay, float(max_delay_s))
         self._resolved_path: Optional[str] = None
 
+    @property
+    def path(self) -> Path:
+        """Where the database lives (resolving the default if none was given)."""
+        configured = self._configured_path
+        return Path(configured) if configured is not None else default_outbox_path()
+
+    def exists(self) -> bool:
+        """Whether the database file is there; asking does not create it."""
+        return self.path.is_file()
+
     def _connection(self) -> ContextManager[Any]:
         if self._resolved_path is None:
-            configured = self._configured_path
-            path = Path(configured) if configured is not None else default_outbox_path()
+            path = self.path
             try:
                 path.parent.mkdir(parents=True, exist_ok=True)
             except OSError as error:

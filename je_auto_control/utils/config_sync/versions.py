@@ -259,8 +259,11 @@ def _conflicted(key: str, left: SyncEntry, right: SyncEntry) -> SyncEntry:
                             for other in pool)]
     survivors.sort(key=_identity)
     vector = join_vectors(left.vector, right.vector)
-    if len(survivors) == 1:
-        only = survivors[0]
+    only = survivors[0]
+    if all(other.value == only.value and other.deleted == only.deleted for other in survivors):
+        # One candidate left -- or several that say the same thing, as when
+        # two machines each already had the same entry before first syncing.
+        # There is nothing to choose between, so it is not a conflict.
         return SyncEntry(key=key, value=only.value, vector=vector, origin=only.origin,
                          operation_id=only.operation_id, deleted=only.deleted,
                          modified_at=only.modified_at, deleted_revision=only.deleted_revision)

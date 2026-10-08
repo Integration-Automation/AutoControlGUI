@@ -166,3 +166,140 @@ batch the server already has changes nothing. A failed send backs off
 makes at most ``max_attempts`` sends (default 5), ``wait=False`` returns
 instead of sleeping through a back-off, and setting ``cancel`` ends a drain
 even in the middle of a wait.
+
+Adapters: what is synced, and what stays on the machine
+--------------------------------------------------------
+
+``je_auto_control.utils.config_sync.adapters`` connects one bucket section to
+one local store. ``SyncAdapter.snapshot()`` returns ``{key: SyncEntry}``
+measured against the state last merged, and ``apply(entries)`` writes merged
+entries back and returns an ``ApplyReport`` (``written`` / ``removed`` /
+``skipped`` / ``conflicts`` / ``left_disabled``).
+
+.. list-table::
+   :header-rows: 1
+
+   * - Section
+     - Adapter
+     - Local store
+   * - ``scripts``
+     - ``ScriptSyncAdapter(origin, scripts_dir)``
+     - ``*.json`` action files under a folder, by relative path
+   * - ``locators``
+     - ``LocatorSyncAdapter(origin, repository)``
+     - an ``ElementRepository``
+   * - ``hotkeys``
+     - ``HotkeySyncAdapter(origin, daemon, scripts_dir=...)``
+     - a ``HotkeyDaemon``'s bindings
+   * - ``triggers``
+     - ``TriggerSyncAdapter(origin, engine, scripts_dir=...)``
+     - a ``TriggerEngine``'s image / window / pixel / file / cron triggers
+   * - ``address_book``
+     - ``AddressBookSyncAdapter(origin, book)``
+     - the remote-desktop ``AddressBook``
+
+Three rules hold for every adapter:
+
+* **Secrets stay local.** A field whose name marks it as a secret
+  (``password``, ``token``, ``api_key`` ...) leaves as
+  ``{"$local": "secret"}``; the receiving machine keeps its own value. A
+  ``${secrets.NAME}`` reference travels as it is. A script containing a
+  literal secret is not synced at all and is listed under ``withheld``.
+* **Machine paths stay local.** A path inside ``scripts_dir`` travels as a
+  relative reference and is resolved against the receiver's own folder. Any
+  other path becomes ``{"$local": "path"}``; an item that needs it and has no
+  local value is reported under ``skipped`` -- and its absence here is *not*
+  turned into a deletion for the other machines.
+* **Syncing never enables anything.** ``enabled`` is not synced. A hotkey or
+  trigger that arrives is created **disabled** (``HotkeyDaemon.bind(...,
+  enabled=False)``), an existing one keeps the state this machine gave it,
+  and no adapter starts an engine or runs a script. Composite triggers
+  (all-of / any-of / sequence) are not synced.
+
+Assets
+------
+
+A script up to 64 KiB travels inside its entry together with its SHA-256;
+content that does not match the hash is not written. Larger scripts and
+other files (template images) travel through an ``AssetTransport``:
+
+.. code-block:: python
+
+    from je_auto_control.utils.config_sync.assets import (
+        AssetManifest, DirectoryAssetTransport, publish_assets, sync_assets)
+
+    transport = DirectoryAssetTransport("//nas/autocontrol-assets")   # a folder both machines reach
+    manifest = AssetManifest.from_directory("scripts", ("*.png",))
+    publish_assets(manifest, transport)                              # sender
+    result = sync_assets(AssetManifest(root=their_scripts, assets=manifest.assets), transport)
+    # AssetSyncResult(transferred, unchanged, failed, hashes, cancelled)
+
+``sync_assets`` checks every file against its SHA-256 and size *before*
+writing, replaces the destination atomically, leaves the existing file alone
+when the check fails, and refuses a path that would leave the folder.
+``DirectoryAssetTransport`` is the transport that ships; implement
+``fetch`` / ``store`` / ``has`` for any other blob store.
+
+One call, three surfaces
+------------------------
+
+``config_sync_run(server_url, user_id, **options)`` runs the whole cycle --
+queue local changes, drain the outbox, merge, apply -- and returns
+``{state, revision, pending, conflicts, applied, withheld, assets, error}``
+with ``state`` one of ``synced`` / ``pending`` / ``conflict`` / ``offline`` /
+``cancelled`` / ``resync_required``. Being unable to reach the server is not
+an exception: the changes stay queued and the state is ``offline``.
+
+Options: ``device_id`` (default: an id created once in
+``~/.je_auto_control/config_sync_device_id``), ``secret`` (default
+``$AC_SIGNALING_SECRET``), ``sections`` (default ``hotkeys``, ``triggers``,
+``address_book``; ``scripts`` and ``locators`` join when their path is
+given), ``scripts_dir``, ``locators_path``, ``outbox_path``, ``assets_dir``,
+``timeout_s``, ``wait``, ``max_attempts``.
+
+.. list-table::
+   :header-rows: 1
+
+   * - Executor command
+     - MCP tool
+     - Does
+   * - ``AC_config_sync_run``
+     - ``ac_config_sync_run``
+     - sync once
+   * - ``AC_config_sync_status``
+     - ``ac_config_sync_status`` (read-only)
+     - recorded state, no network, creates nothing
+   * - ``AC_config_sync_resolve``
+     - ``ac_config_sync_resolve``
+     - keep candidate ``choice`` of ``section`` / ``key``
+   * - ``AC_config_sync_full_resync``
+     - ``ac_config_sync_full_resync``
+     - adopt the server's state after being retired; pending changes are discarded and listed
+
+All four are Script Builder commands under **Data**.
+
+.. code-block:: json
+
+    [["AC_config_sync_run", {"server_url": "https://sync.example", "user_id": "alice",
+                             "secret": "${secrets.sync}", "scripts_dir": "scripts"}]]
+
+GUI
+---
+
+The **Config Sync** tab (category *system*) shows the state, the last merged
+revision, the number of pending changes, the last successful sync and the
+last error, and lists every conflict with its candidates. Its commands --
+*Sync now*, *Cancel sync*, *Refresh sync status*, *Keep selected candidate*,
+*Full resync* -- are in the Actions menu. A sync runs on a worker thread;
+cancelling, or closing the tab, releases it.
+
+Folder mirror and clipboard: no echo
+------------------------------------
+
+``FolderSyncEngine.note_received(remote_name, sha256=...)`` marks a file in
+the watched folder as having come from the peer; the engine does not push it
+back until its content changes locally. ``FolderSyncEngine.poll_once()`` runs
+one diff pass on demand. ``ClipboardEchoGuard`` (``note_remote`` /
+``should_send`` / ``reset``) does the same for code that forwards clipboard
+changes automatically: content that just arrived from the peer, or was
+already sent, is not sent again.
