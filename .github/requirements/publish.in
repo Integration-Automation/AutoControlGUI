@@ -4,7 +4,7 @@
 #   uv pip compile .github/requirements/publish.in --generate-hashes --python-version 3.12 --python-platform x86_64-manylinux_2_28 --only-binary :all: --exclude-newer 2026-09-24 -o .github/requirements/publish.txt
 # --python-version is the one both jobs set up. --exclude-newer leaves out the uploads of the last 7 days:
 # move the date when regenerating.
-build==1.5.0
+build==1.6.1
 twine==6.2.0
 # The build backend. The jobs run `python -m build --no-isolation`, so the backend is this locked one and
 # not whatever is newest on PyPI when the job runs. It must satisfy `build-system.requires` in pyproject.toml
