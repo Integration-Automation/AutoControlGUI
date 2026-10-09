@@ -77,14 +77,17 @@ def test_last_seen_ts_committed_before_reply(monkeypatch):
         executed.append(1)
         return CommandResult(text="ran")
 
-    router.register("run", do_run)
+    # A command answered on the poll thread: /run itself now executes on a
+    # worker, whose failed reply is logged rather than raised here (covered
+    # by test_chatops_slack_background_run.py).
+    router.register("job", do_run)
     bot = SlackBot(token="xoxb-test", channel_id="C1", router=router)
 
     # Slack returns newest-first; only the older message ("1") is reached
     # before the reply fails.
     monkeypatch.setattr(bot, "_fetch_messages", lambda: [
-        {"ts": "2", "text": "/run a", "user": "U1"},
-        {"ts": "1", "text": "/run b", "user": "U1"},
+        {"ts": "2", "text": "/job a", "user": "U1"},
+        {"ts": "1", "text": "/job b", "user": "U1"},
     ])
     monkeypatch.setattr(bot, "_is_self", lambda msg: False)
 

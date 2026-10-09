@@ -495,10 +495,29 @@ reply's ``metadata["run_id"]`` and in ``AC_list_executions`` while it
 lasts): ``AC_stop_execution``, the MCP ``ac_stop_execution`` tool and the
 GUI's stop-all end it, **including a stop-all that names no run**, and the
 reply is ``run stopped.``. ``/stop`` asks the chat-started runs to stop;
-``/stop <run-id>`` asks the one named, wherever it was started. The Slack
-adapter handles one message at a time, so a ``/stop`` posted while its own
-``/run`` is still going is read after that run has ended -- stop such a run
-from the GUI, an action list or MCP. ``/screenshot`` writes into the
+``/stop <run-id>`` asks the one named, wherever it was started.
+
+The Slack adapter (``SlackBot``) runs ``/run`` on a worker thread and keeps
+polling while it lasts, so **a** ``/stop`` **posted to the channel ends the
+bot's own run**: it is read at the next poll (``poll_interval_s``, 5 s by
+default, 1 s at least), answered ``stop requested: <run-id>``, and the run
+then answers in its own thread ``run stopped. (stopped from chat by <user>)``
+-- always in that order. The reply to ``/run`` therefore arrives when the
+script ends, not before the next message is read. One ``/run`` executes at a
+time per bot: a second one while it is going is not queued but answered
+``run: already running (<run-id>); wait for it to end or /stop it first.``
+(before, the two ran one after the other). Every other command is still
+dispatched and answered on the poll thread. Which commands run on the worker
+is ``SlackBot(background_commands=frozenset({"run"}))``; a custom long
+command listed there becomes a stoppable run named ``chatops-<first
+argument>-<id>`` the same way. ``bot.stop(timeout=10.0)`` ends the poll loop,
+stops the running command, waits up to ``timeout`` seconds for its worker and
+returns whether none is left; ``bot.wait_idle(timeout)`` waits without
+stopping anything and ``bot.running_run_id`` names the run in progress. When
+the reply of a worker cannot be posted the failure is logged (the poll thread
+is not there to raise to) and the command is not run again.
+
+``/screenshot`` writes into the
 context's ``screenshot_dir`` (default: ``je_auto_control_chatops`` in the
 temp directory) and keeps only the file name it is given. The Slack
 adapter goes through the package HTTP client, so the egress policy applies.

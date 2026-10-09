@@ -439,9 +439,24 @@ Chat-ops 機器人
 （id 在回覆的 ``metadata["run_id"]`` 裡，執行期間也列在 ``AC_list_executions``）：
 ``AC_stop_execution``、MCP 的 ``ac_stop_execution`` 工具與 GUI 的「全部停止」都能結束它，
 **包含不指名的全部停止**，回覆是 ``run stopped.``。``/stop`` 要求由聊天啟動的執行停止；
-``/stop <run-id>`` 要求指名的那一個停止，不論它從哪裡啟動。Slack adapter 一次處理一則訊息，
-所以在自己的 ``/run`` 還在跑時送出的 ``/stop`` 要等那次執行結束後才會被讀到——
-這種執行請從 GUI、action list 或 MCP 停止。``/screenshot [name]`` 寫進 context 的 ``screenshot_dir``
+``/stop <run-id>`` 要求指名的那一個停止，不論它從哪裡啟動。
+
+Slack adapter（``SlackBot``）把 ``/run`` 放到工作執行緒上執行，執行期間繼續輪詢，所以
+**貼到頻道的** ``/stop`` **停得掉 bot 自己的執行**：它在下一次輪詢被讀到
+（``poll_interval_s``，預設 5 秒、最少 1 秒），回覆 ``stop requested: <run-id>``，
+接著那次執行在自己的討論串回覆 ``run stopped. (stopped from chat by <使用者>)``——
+一定是這個順序。``/run`` 的回覆因此是在腳本結束時送出，而不是在讀下一則訊息之前。
+每個 bot 同時只執行一個 ``/run``：執行中再送一個不會排隊，而是回覆
+``run: already running (<run-id>); wait for it to end or /stop it first.``\
+（以前兩個會依序執行）。其他命令仍在輪詢執行緒上分派與回覆。哪些命令放到工作執行緒
+由 ``SlackBot(background_commands=frozenset({"run"}))`` 決定；列在裡面的自訂長時間命令
+同樣成為名稱為 ``chatops-<第一個參數>-<id>`` 的可停止執行。``bot.stop(timeout=10.0)``
+結束輪詢、停止執行中的命令、最多等 ``timeout`` 秒讓工作執行緒結束，並回傳是否已沒有
+工作執行緒；``bot.wait_idle(timeout)`` 只等待、不停止任何東西；``bot.running_run_id``
+是執行中的 run id。工作執行緒的回覆送不出去時只記錄在 log（沒有輪詢執行緒可以往上拋），
+命令不會被重新執行。
+
+``/screenshot [name]`` 寫進 context 的 ``screenshot_dir``
 （預設為暫存目錄下的 ``je_auto_control_chatops``），給的名稱只保留檔名。
 Slack adapter 走套件的 HTTP client，所以出站政策同樣適用。
 RBAC 透過 ``required_role`` 參數。
