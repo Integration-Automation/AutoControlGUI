@@ -190,10 +190,15 @@ CLI::
      - 端點
    * - ``read_screen``
      - viewer、operator、admin
-     - 除下列兩個之外的所有 ``GET``，包含 ``/metrics``
+     - 觀察目前狀態的 ``GET`` 路由：``/screenshot``、``/mouse_position``、
+       ``/screen_size``、``/windows``、``/sessions``、``/commands``、``/jobs``、
+       ``/inspector/recent``、``/inspector/summary``、``/usb/devices``、
+       ``/usb/events``、``/usb/passthrough/status``、``/usb/loopback/devices``、
+       ``/usb/remote/devices``、``/diagnose``、``/metrics``、``/openapi.json``
    * - ``read_data``
      - operator、admin
-     - 沒有 REST 路由；回傳主機資料而非畫面的 MCP 工具（見 MCP 章節）
+     - ``GET /history``、``GET /usb/acl``；以及回傳主機資料而非畫面的 MCP 工具
+       （見 MCP 章節）
    * - ``drive_input``
      - operator、admin
      - ``POST /execute``、``/execute_file``、``/usb/loopback/open``、
@@ -216,6 +221,21 @@ CLI::
 角色沒有該能力時回 ``403``
 ``{"error": "forbidden", "required_capability": "...", "role": "..."}``。
 同一個值也以 ``x-required-capability`` 列在 ``/openapi.json`` 的每個 operation 上。
+
+**保存的紀錄在 REST 與 MCP 都需要** ``read_data``\ **。** 回傳主機保存的紀錄或設定的
+路由需要 ``read_data``；觀察目前狀態的路由需要 ``read_screen``。``GET /history``\
+（執行歷史，與 MCP 工具 ``ac_list_run_history`` 相同）與 ``GET /usb/acl``\ （保存的
+USB ACL，與 ``ac_usb_acl_list`` 相同）以前只需要 ``read_screen``，所以\ **viewer 的
+token 現在在這兩個路由會得到 403**\ ；``operator`` 與 ``admin`` 不受影響，沒有使用者
+存放檔的伺服器也不受影響（共用 token 不受任何角色限制）。其餘 ``GET`` 的能力不變：
+有對應 MCP 工具的路由（``/jobs`` 與 ``ac_scheduler_list_jobs``、``/sessions`` 與
+``ac_remote_host_status``、``/usb/passthrough/status``、USB 裝置清單……）原本就與工具
+一致。有一個測試會把每個路由與讀取同一個來源的唯讀 MCP 工具配對，兩者不一致時失敗。
+
+內建的 dashboard 不會呼叫這兩個路由。token 的角色缺少某個面板需要的能力時——稽核
+面板需要 ``read_audit``——該面板現在顯示
+``not available to role '<角色>': needs the '<能力>' capability``，而不是
+``HTTP 403 on <路徑>``；其他面板照常更新。
 
 可以 ``POST /execute`` 代表可以執行動作，不代表可以執行每一個指令。替動作檔簽章
 （``sign_actions``）、讀取稽核紀錄（``read_audit``），以及管理主機本身的指令——

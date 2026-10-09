@@ -7,6 +7,13 @@ posts replies with ``chat.postMessage``. Suitable for internal
 infrastructure where the bot lives on a private network and pulls
 work rather than receiving pushes.
 
+A command named in ``background_commands`` (``/run`` by default) executes on
+a worker thread and is answered when it ends, so the poll loop keeps reading
+while it lasts -- that is what lets a ``/stop`` posted to the channel reach
+the bot's own run. One such command runs at a time per bot; a second is
+refused with a reply. Every other command is dispatched and answered on the
+poll thread, as before.
+
 Three pieces of state are tracked per channel:
 
 * ``last_seen_ts`` — the Slack timestamp of the most-recent message we
@@ -23,10 +30,14 @@ import urllib.error
 import urllib.parse
 import urllib.request
 from dataclasses import dataclass, field
-from typing import Any, Dict, Optional
+from typing import Any, Dict, FrozenSet, List, Optional
 
-from je_auto_control.utils.chatops.router import CommandResult, CommandRouter
+from je_auto_control.utils.chatops.handlers import chatops_run_id
+from je_auto_control.utils.chatops.router import (
+    ChatOpsError, CommandResult, CommandRouter,
+)
 from je_auto_control.utils.exception.exceptions import AutoControlException
+from je_auto_control.utils.executor.run_control import StopToken, stoppable_run
 from je_auto_control.utils.http_client.http_client import build_call, perform_call
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 
@@ -36,6 +47,17 @@ _HTTP_TIMEOUT = 15.0
 _MIN_POLL_INTERVAL = 1.0
 _MAX_PAGES = 20  # 1000 messages per poll
 _MAX_BACKOFF = 60.0
+#: How long the poll thread waits for a started command to be listed as a run.
+_START_WAIT = 10.0
+#: How long :meth:`SlackBot.stop` waits for the running command by default.
+_JOIN_TIMEOUT = 10.0
+#: What the name of every worker thread begins with.
+_WORKER_PREFIX = "chatops-slack-"
+#: What a dispatch may fail with beyond what the router already contains:
+#: defence in depth, as wide as the router's own boundary. An ImportError
+#: from a handler's lazy import ended ``run_forever`` for good.
+_ROUTE_ERRORS = (RuntimeError, ValueError, TypeError, LookupError, AttributeError,
+                 ImportError, ArithmeticError, OSError, AutoControlException)
 
 
 class SlackError(AutoControlException, RuntimeError):
@@ -44,7 +66,11 @@ class SlackError(AutoControlException, RuntimeError):
 
 @dataclass
 class SlackBot:
-    """Polling Slack adapter wrapped around a :class:`CommandRouter`."""
+    """Polling Slack adapter wrapped around a :class:`CommandRouter`.
+
+    ``background_commands`` names the commands that run on a worker thread
+    (case-insensitive, without the prefix); see the module docstring.
+    """
 
     token: str
     channel_id: str
@@ -53,6 +79,16 @@ class SlackBot:
     last_seen_ts: Optional[str] = None
     _bot_user_id: Optional[str] = None
     _stop: threading.Event = field(default_factory=threading.Event)
+    background_commands: FrozenSet[str] = frozenset({"run"})
+    # The one background command in progress: its thread and its stop token.
+    _worker: Optional[threading.Thread] = field(default=None, init=False, repr=False)
+    _run_token: Optional[StopToken] = field(default=None, init=False, repr=False)
+    _state_lock: threading.Lock = field(
+        default_factory=threading.Lock, init=False, repr=False)
+    # Held while one message is dispatched and answered, and by the worker
+    # while it posts its reply: the answer to a /stop is posted before the
+    # "stopped" reply of the run it ended.
+    _turn: threading.Lock = field(default_factory=threading.Lock, init=False, repr=False)
 
     def __post_init__(self) -> None:
         if not self.token or not self.token.startswith("xox"):
@@ -63,11 +99,19 @@ class SlackBot:
             raise SlackError(
                 f"poll_interval_s must be >= {_MIN_POLL_INTERVAL}",
             )
+        if isinstance(self.background_commands, str):
+            raise SlackError("background_commands must be a set of command names")
+        self.background_commands = frozenset(
+            str(name).strip().lower() for name in self.background_commands)
 
     # --- polling -------------------------------------------------
 
     def poll_once(self) -> int:
-        """Pull new messages, dispatch each through the router. Returns count."""
+        """Pull new messages, dispatch each through the router. Returns count.
+
+        A background command counts once it is started (or refused); the call
+        returns without waiting for it.
+        """
         messages = self._fetch_messages()
         if not messages:
             return 0
@@ -87,7 +131,7 @@ class SlackBot:
             if self._is_self(msg):
                 continue
             text = str(msg.get("text") or "")
-            if self._route_one(text, msg) is not None:
+            if self._handle(text, msg):
                 dispatched += 1
         return dispatched
 
@@ -111,10 +155,71 @@ class SlackBot:
                 return
             stop.wait(self.poll_interval_s + backoff)
 
-    def stop(self) -> None:
+    def stop(self, timeout: float = _JOIN_TIMEOUT) -> bool:
+        """End the poll loop, stop the running background command and join it.
+
+        The command is asked to stop the way ``/stop`` asks, and its worker is
+        waited for up to ``timeout`` seconds; it still posts its reply. Returns
+        whether no worker is left. ``False`` means the command is inside a
+        call that cannot be interrupted (the worker is a daemon thread and
+        ends with the process), or that this was called from a command
+        handler, which holds the turn the worker needs to post its reply.
+        Until :meth:`run_forever` is called again a background command is
+        refused rather than started.
+        """
         self._stop.set()
+        with self._state_lock:
+            worker, token = self._worker, self._run_token
+        if worker is None or not worker.is_alive():
+            return True
+        if token is not None:
+            token.stop("the bot was stopped")
+        return self._join(worker, timeout)
+
+    def wait_idle(self, timeout: float = _JOIN_TIMEOUT) -> bool:
+        """Wait up to ``timeout`` seconds for the running background command to end.
+
+        Nothing is stopped. Returns whether the bot has no command running.
+        """
+        with self._state_lock:
+            worker = self._worker
+        if worker is None or not worker.is_alive():
+            return True
+        return self._join(worker, timeout)
+
+    @property
+    def running_run_id(self) -> Optional[str]:
+        """The run id of the background command in progress, or ``None``."""
+        with self._state_lock:
+            if self._worker is None or not self._worker.is_alive():
+                return None
+            return self._run_token.run_id if self._run_token is not None else None
+
+    @staticmethod
+    def _join(worker: threading.Thread, timeout: float) -> bool:
+        """Join ``worker`` for at most ``timeout`` seconds; whether it has ended."""
+        if worker is threading.current_thread():
+            return False  # called from the command itself: it cannot wait for itself
+        worker.join(max(0.0, float(timeout)))
+        if worker.is_alive():
+            autocontrol_logger.warning(
+                f"chatops slack: {worker.name} is still running after {timeout}s")
+            return False
+        return True
 
     # --- routing -------------------------------------------------
+
+    def _handle(self, text: str, message: Dict[str, Any]) -> bool:
+        """Dispatch one message; whether it was a command."""
+        with self._turn:
+            argv = self._background_argv(text)
+            if argv is None:
+                return self._route_one(text, message) is not None
+            return self._start_background(argv, text, message)
+
+    def _context(self, message: Dict[str, Any]) -> Dict[str, Any]:
+        return {"slack_user": message.get("user"), "slack_ts": message.get("ts"),
+                "slack_channel": self.channel_id}
 
     def _route_one(self, text: str,
                    message: Dict[str, Any]) -> Optional[CommandResult]:
@@ -122,21 +227,86 @@ class SlackBot:
         # this is defence in depth so a framework error surfaces as a chat
         # reply rather than escaping poll_once and stopping run_forever.
         try:
-            result = self.router.dispatch(
-                text, context={"slack_user": message.get("user"),
-                                "slack_ts": message.get("ts"),
-                                "slack_channel": self.channel_id},
-            )
-        # Defence in depth, as wide as the router's own boundary: an
-        # ImportError from a handler's lazy import ended run_forever for good.
-        except (RuntimeError, ValueError, TypeError, LookupError, AttributeError,
-                ImportError, ArithmeticError, OSError, AutoControlException) as error:
+            result = self.router.dispatch(text, context=self._context(message))
+        except _ROUTE_ERRORS as error:
             self.post_message(f"router error: {error}")
             return None
         if result is None:
             return None
         self.post_message(result.text, thread_ts=str(message.get("ts") or ""))
         return result
+
+    # --- background commands -------------------------------------
+
+    def _background_argv(self, text: str) -> Optional[List[str]]:
+        """The parsed command when ``text`` is one that runs in the background."""
+        try:
+            argv = self.router.parse(text)
+        except ChatOpsError:
+            return None  # the synchronous path answers with the parse error
+        if not argv or argv[0].lower() not in self.background_commands:
+            return None
+        return argv
+
+    def _start_background(self, argv: List[str], text: str,
+                          message: Dict[str, Any]) -> bool:
+        """Start ``text`` on a worker, or say why not; always ``True`` (it was a command)."""
+        name = argv[0].lower()
+        listed = threading.Event()
+        refusal = ""
+        with self._state_lock:
+            if self._worker is not None and self._worker.is_alive():
+                running = self._run_token.run_id if self._run_token is not None else "?"
+                refusal = (f"{name}: already running ({running}); wait for it to end "
+                           f"or {self.router.prefix}stop it first.")
+            elif self._stop.is_set():
+                refusal = f"{name}: the bot is stopping; not started."
+            else:
+                token = StopToken(chatops_run_id(argv[1] if len(argv) > 1 else name))
+                self._run_token = token
+                self._worker = threading.Thread(
+                    target=self._run_background, args=(text, message, token, listed),
+                    name=f"{_WORKER_PREFIX}{token.run_id}", daemon=True)
+                self._worker.start()
+        if refusal:
+            self.post_message(refusal, thread_ts=str(message.get("ts") or ""))
+            return True
+        # The next message may be the /stop for this run: read it only once
+        # the run is listed (or has already ended).
+        listed.wait(_START_WAIT)
+        return True
+
+    def _run_background(self, text: str, message: Dict[str, Any],
+                        token: StopToken, listed: threading.Event) -> None:
+        """Worker thread: run one command as a stoppable run, then post its reply."""
+        try:
+            reply = self._dispatch_stoppable(text, message, token, listed)
+        finally:
+            listed.set()
+        if not reply:
+            return
+        with self._turn:
+            try:
+                self.post_message(reply, thread_ts=str(message.get("ts") or ""))
+            except SlackError as error:
+                # Nobody to raise to: the command has run and is not retried.
+                autocontrol_logger.warning(
+                    f"chatops slack: reply of {token.run_id} not posted: {error}")
+
+    def _dispatch_stoppable(self, text: str, message: Dict[str, Any],
+                            token: StopToken, listed: threading.Event) -> str:
+        """Dispatch ``text`` inside the run named by ``token``; the reply text.
+
+        ``/run`` joins the run it finds itself in, so ``token`` is the one
+        ``/stop`` and :meth:`stop` address, from before the script is opened.
+        """
+        try:
+            with stoppable_run(token=token):
+                listed.set()
+                result = self.router.dispatch(text, context=self._context(message))
+        except _ROUTE_ERRORS as error:
+            return f"router error: {error}"
+        return result.text if result is not None else ""
 
     # --- HTTP wrappers -------------------------------------------
 

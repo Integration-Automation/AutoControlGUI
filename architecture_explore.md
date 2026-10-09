@@ -20,7 +20,7 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 | 指標 | 數值 |
 | --- | ---: |
 | Python 模組總數（含周邊子專案） | 1,176 |
-| 程式碼總行數 | 188,115 |
+| 程式碼總行數 | 188,294 |
 | `je_auto_control/utils/` 子套件數 | 311 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 852 |
 | 套件門面 `__all__` 公開名稱數 | 1,244 |
@@ -539,12 +539,12 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.11 伺服器、網路協定與外部整合
 
-> 24 個套件、約 7,241 行。
+> 24 個套件、約 7,411 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
 | `utils/acme_v2/` | 617 | 完整 ACME v2 用戶端（RFC 8555），不依賴 certbot |
-| `utils/chatops/` | 758 | Chat-ops bot：接收 Slack／Discord／webhook 的 slash 指令並路由到動作 |
+| `utils/chatops/` | 928 | Chat-ops bot：接收 Slack／Discord／webhook 的 slash 指令並路由到動作 |
 | `utils/cookie_jar/` | 191 | RFC 6265 cookie jar |
 | `utils/email_send/` | 118 | SMTP 寄信（email 觸發器的發送端搭檔） |
 | `utils/events/` | 106 | 對外 CloudEvents 發送（執行生命週期事件） |
@@ -642,7 +642,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.14 安全、機密與合規
 
-> 13 個套件、約 3,931 行。
+> 13 個套件、約 3,940 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -651,7 +651,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/governance/` | 242 | 治理：maker-checker 核准閘門與即時憑證租約 |
 | `utils/license_policy/` | 240 | 以 SBOM 元件評估 SPDX 授權允許／拒絕政策 |
 | `utils/provenance/` | 126 | SLSA 建置來源證明（in-toto v1） |
-| `utils/rbac/` | 1,185 | 角色型存取控制：使用者、角色與權杖驗證（尚未接到 REST／MCP） |
+| `utils/rbac/` | 1,194 | 角色型存取控制：使用者、角色與權杖驗證（尚未接到 REST／MCP） |
 | `utils/redaction/` | 508 | 截圖遮蔽層：規則偵測 + 政策 + 協調器（上傳 VLM 前先遮） |
 | `utils/sbom/` | 170 | SBOM（CycloneDX）產生 |
 | `utils/secret_ref/` | 242 | URI scheme 形式的值參照解析 |
@@ -1119,6 +1119,6 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `osx/` | 17 | 981 |
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 861 |
-| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 724 | 68,664 |
-| **總計** | **1,164** | **187,275** |
+| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 724 | 68,843 |
+| **總計** | **1,164** | **187,454** |
 

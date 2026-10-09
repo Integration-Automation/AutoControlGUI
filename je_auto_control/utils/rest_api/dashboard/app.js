@@ -40,10 +40,30 @@ async function fetchJson(path) {
   const resp = await fetch(path, {
     headers: { Authorization: `Bearer ${token}` },
   });
+  if (resp.status === 403) {
+    throw new Error(await forbiddenMessage(resp, path));
+  }
   if (!resp.ok) {
     throw new Error(`HTTP ${resp.status} on ${path}`);
   }
   return resp.json();
+}
+
+// A 403 is the server saying this token's role may not read the panel, not
+// that the panel is broken: say which capability is missing. The body is
+// {"error": "forbidden", "required_capability": "...", "role": "..."}.
+async function forbiddenMessage(resp, path) {
+  let body = null;
+  try {
+    body = await resp.json();
+  } catch (_error) {
+    body = null;
+  }
+  if (!body || !body.required_capability) {
+    return `HTTP 403 on ${path}`;
+  }
+  const role = body.role ? `role '${body.role}'` : "this token";
+  return `not available to ${role}: needs the '${body.required_capability}' capability`;
 }
 
 function panelEl(name) {

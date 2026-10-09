@@ -4,7 +4,9 @@ Three surfaces, one rule each:
 
 * **REST routes** are listed one by one. A route missing from the list needs
   ``manage_hosts``, so a route added without a decision is admin-only rather
-  than open.
+  than open. A ``GET`` route that returns records or configuration the host
+  keeps needs ``read_data`` like the MCP tool reading the same thing; one
+  that observes live state needs ``read_screen``.
 * **MCP tools** follow their own annotation -- a tool marked read-only needs
   ``read_screen``, any other ``drive_input`` -- except the ones named here:
   those that change how the host itself is exposed, those that manage users,
@@ -41,7 +43,7 @@ _DATA = Capability.READ_DATA
 REST_ROUTE_CAPABILITIES: Dict[Tuple[str, str], str] = {
     ("GET", "/metrics"): _READ,
     ("GET", "/jobs"): _READ,
-    ("GET", "/history"): _READ,
+    ("GET", "/history"): _DATA,  # run history, as ac_list_run_history
     ("GET", "/screenshot"): _READ,
     ("GET", "/mouse_position"): _READ,
     ("GET", "/screen_size"): _READ,
@@ -53,7 +55,7 @@ REST_ROUTE_CAPABILITIES: Dict[Tuple[str, str], str] = {
     ("GET", "/usb/devices"): _READ,
     ("GET", "/usb/events"): _READ,
     ("GET", "/usb/passthrough/status"): _READ,
-    ("GET", "/usb/acl"): _READ,
+    ("GET", "/usb/acl"): _DATA,  # the stored ACL, as ac_usb_acl_list
     ("GET", "/usb/loopback/devices"): _READ,
     ("GET", "/usb/remote/devices"): _READ,
     ("GET", "/diagnose"): _READ,
@@ -71,6 +73,12 @@ REST_ROUTE_CAPABILITIES: Dict[Tuple[str, str], str] = {
     ("POST", "/usb/acl/remove"): _HOSTS,
     ("POST", "/usb/acl/default"): _HOSTS,
 }
+
+#: The routes that need ``read_data``: the ones returning records or
+#: configuration the host keeps, by the rule :data:`DATA_TOOLS` states. Each
+#: has an MCP tool reading the same thing, and the two must agree.
+DATA_ROUTES = frozenset(
+    route for route, needed in REST_ROUTE_CAPABILITIES.items() if needed == _DATA)
 
 #: Commands that need more than ``drive_input``. Every other command is
 #: covered by the capability of the surface that submitted the action list.
@@ -267,7 +275,8 @@ def _leading_names(node: Any, depth: int) -> Iterator[str]:
 
 
 __all__ = [
-    "COMMAND_CAPABILITIES", "DATA_TOOLS", "REST_ROUTE_CAPABILITIES", "TOOL_CAPABILITIES",
+    "COMMAND_CAPABILITIES", "DATA_ROUTES", "DATA_TOOLS", "REST_ROUTE_CAPABILITIES",
+    "TOOL_CAPABILITIES",
     "authorize_command", "capability_for_command", "capability_for_route",
     "capability_for_tool", "denied_command_in",
 ]

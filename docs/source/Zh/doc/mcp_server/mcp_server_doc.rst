@@ -324,9 +324,13 @@ Bearer token 也可從 ``JE_AUTOCONTROL_MCP_TOKEN`` 環境變數讀取。
 - 一次呼叫要花多少錢不是一種能力。``ac_vlm_locate`` 與 ``ac_self_heal_locate`` 讀的是
   畫面，雖然呼叫可能被模型供應商計費，仍然是 ``read_screen``；要限制花費，請用
   rate limiter，或不要在 viewer 連得到的伺服器上設定 VLM 後端。
-- 這個分類只涵蓋 MCP 工具。REST 的 ``GET /history`` 與 ``GET /usb/acl`` 仍然只需要
-  ``read_screen``\ （如維運章節的 REST 表格所列），所以 viewer 的 token 在那裡讀得到
-  同樣的執行歷史與 USB ACL。
+- REST API 依同一條規則：``GET /history`` 與 ``GET /usb/acl`` 和
+  ``ac_list_run_history``、``ac_usb_acl_list`` 一樣需要 ``read_data``，所以 viewer 的
+  token 在那裡也讀不到執行歷史與 USB ACL（見維運章節的 REST 表格）。
+- 這個分類涵蓋工具，不涵蓋 resource：``resources/read`` 不檢查能力，所以任何通過驗證
+  的角色仍然讀得到 ``autocontrol://history``\ （最近 100 筆執行歷史）與
+  ``autocontrol://files/`` 底下的動作檔。viewer 不該看到時，請用不含它們的 resource
+  provider 啟動伺服器。
 - 回報這個行程目前狀態、而不是保存紀錄的工具——``ac_list_executions``、
   ``ac_scheduler_list_jobs``、``ac_trigger_list``、``ac_hotkey_list``、
   ``ac_observe_list``、``ac_watchdog_list``、``ac_journal_status``、USB 裝置清單——
