@@ -2,7 +2,7 @@
 
 ## 跨平台與 GUI 全面改版
 
-`WIP` — 計畫 A–H 的程式都已交付（A 在 U-20261009-01…14，B–H 在 U-20261009-15…26，留下的缺口在 U-20261009-27…32）；還沒做到的是**實機驗證**、要維護者決定的幾件事，與下面各節列的少數缺口
+`WIP` — 計畫 A–H 的程式都已交付（A 在 U-20261009-01…14，B–H 在 U-20261009-15…26，留下的缺口在 U-20261009-27…37）；還沒做到的是**實機驗證**、要維護者決定的幾件事，與下面各節列的少數缺口
 
 核准設計：[跨平台自動化與 GUI 改版](docs/superpowers/specs/2026-10-02-platform-gui-modernization-design.md)。
 實作計畫：[分階段交付計畫](docs/superpowers/plans/2026-10-02-modernization-index.md)。
@@ -36,7 +36,6 @@
 | 檔案 | 行數 | 為何還沒拆 |
 | --- | ---: | --- |
 | `utils/mcp_server/tools/_handlers_executor_bridge.py` | 1,429 | 2026-09-23 拆 `_handlers.py` 時新建。253 個純委派（中位數 3 行）：`from action_executor import _x` 再 `return _x(...)`,沒有分支。**不套用 flat data tables 條款**——那一條講的是「一個對照表或清單」,這裡是 252 個函式定義。再切下去只能照 MCP 工廠領域分（159 個領域）,那會把同一種委派散進十幾個檔,而它們之間沒有語意邊界。規則照舊:只准變短。 |
-| `utils/accessibility/backends/windows_backend.py` | 805 | 已拆出 `windows_query.py`（193）、`windows_state.py`（98）與 `windows_reads.py`（142,2026-09-23;拆完 801,同日加焦點查詢的委派 +4）。剩下的是同一套 UIA COM 生命週期管理,再拆會把 `CoInitialize`／介面釋放的配對邏輯切散。 |
 
 **本質豁免（依 `CLAUDE.md` 的「flat data tables」條款,不算既有豁免）**:
 `utils/mcp_server/tools/_factories.py`（9,001,MCP 工具註冊表）、
@@ -227,7 +226,7 @@ U-20261009-06 與 -04 的 macOS 部分是在 Windows 上對假的 pyobjc／Quart
 
 ## 安全與伺服器：留下的缺口
 
-`TODO` — U-20261009-29、-30 之後還開著的
+`TODO` — U-20261009-29、-30、-34、-35 之後還開著的
 
 **要維護者過目或決定的：**
 
@@ -235,7 +234,6 @@ U-20261009-06 與 -04 的 macOS 部分是在 Windows 上對假的 pyobjc／Quart
   `ac_list_run_history`、`ac_costs_*`、`ac_trace_export`、`ac_self_heal_log_list`、`ac_usb_acl_list`、`ac_vlm_locate`／`ac_self_heal_locate`（會花 VLM 費用）。
 - Script Builder 現在永遠不顯示 `AC_user_add`／`AC_user_rotate_token` 回傳的 token（要從 Users 群組、CLI 或腳本取得）。
 - 唯讀模式現在在三種工具模式都強制執行，而外掛工具一律被登記成會變更的：**唯讀的 MCP server 不會執行任何外掛工具**。要不要讓外掛宣告自己唯讀。
-- `UsbAcl(path, default_policy="allow")` 遇到被竄改的檔案會回報 `integrity_ok False`，但 `decide()` 仍回 allow（早於這批修改；倉庫內的呼叫端都用預設的 deny）。
 - 設定同步：一台裝置加入「已經有內容」的 bucket 時仍會多提交一個 revision（這個登記是之後的刪除會等它的依據；要拿掉是 `merge.awaits_ack` 的一行，代價是那個保證）。
 
 **還沒做的：**
@@ -243,8 +241,9 @@ U-20261009-06 與 -04 的 macOS 部分是在 Windows 上對假的 pyobjc／Quart
 - **Intel Mac 安裝要編譯 `cryptography`**（下限 50 沒有 `macosx_10_9_x86_64` wheel），沒有在 Intel Mac 上實際編過。
 - **簽章**：能執行寫檔指令的人仍能換掉公鑰檔本身；遷移模式開著時 HMAC 簽章會被接受。Windows 上新建的私鑰檔只有目前使用者可讀
   （SYSTEM、Administrators、備份代理因此讀不到），沒在 FAT／網路磁碟或提權帳號下試過；POSIX 的權限位元檢查在這台機器上是跳過的。
-- **RBAC**：observer 的 predicate 仍不帶身分（只讀螢幕）；`AC_llm_run` 沒有 `owner` 參數；沒對真的 client（Claude Desktop、VS Code、內建 dashboard）試過。
+- **RBAC**：observer 的 predicate 仍不帶身分（只讀螢幕）；沒對真的 client（Claude Desktop、VS Code、內建 dashboard）試過。
   MCP HTTP 的 `list_changed` 廣播遇到停住的 client，會讓註冊的執行緒在每條串流上最多等 30 秒。
+  MCP 的 `notifications/cancelled` 只設定該次呼叫的 `cancelled_event`，不會停掉 executor 的執行（要接到 `StopToken`）。
 - **MCP 路徑根目錄**管不到的：執行動作清單的工具、自由格式物件裡的路徑、沒標註的外掛工具、`ac_launch_process` 的 `argv` 與 `ac_shell` 的 `command`（刻意不管）。
   `path-or-other` 有已知的誤判：開了根目錄時，像 `/help` 這種文字目標或剛好對到根目錄外既有檔案的值會被拒絕。
   檔案 symlink 的跳脫在這台機器上建不出來；POSIX 的 `file:` URL、`:` 分隔與 `~` 沒在 Linux／macOS 跑。
@@ -252,15 +251,14 @@ U-20261009-06 與 -04 的 macOS 部分是在 Windows 上對假的 pyobjc／Quart
 - **USB passthrough**：沒對真的舊版 host、真的 WebRTC 通道或真的 USB 裝置跑過。`usb_acl.json` 改成單一檔案（簽章內嵌）之後，**舊版讀不了新檔、會全部拒絕**；
   沒有對真的舊版安裝做過降版測試。
 - **設定同步**：
-  - 沒有做過真的兩台機器同步；CI 新加的 `[signaling]` 安裝行與版本 pin 還沒在任何 runner 上跑過。
-  - 過渡期風險：墓碑只等已經列在 `peers` 底下的裝置，所以每台機器都要先用這一版同步一次，之後才能有人刪東西。
+  - 沒有做過真的兩台機器同步，也沒有真的多行程 server；伺服器端的測試在本機是略過的（共用環境沒裝 `fastapi`），只在 CI 跑。
+  - 墓碑：已確認的刪除現在會保留 30 天（`TOMBSTONE_HOLD_S`），沒被列過的機器帶舊資料來時變成衝突。剩下的風險：超過 30 天才第一次同步的機器
+    仍可能讓項目復活；舊版 client 提交時會丟掉保留中的墓碑並去掉 `deleted_at`，所以保護程度取決於還在提交的最舊 client。沒對真的舊版安裝跑過。
   - `ConfigBucket.upsert` 不帶 `origin=` 時現在存的是帶版本的項目，直接讀 `bucket.sections[s][id]["field"]` 的程式會壞（`bucket.values(section)` 兩種形狀都能讀）。
   - 沒有自動的剪貼簿轉送，所以 `automatic=True`（`ClipboardEchoGuard.should_send`）在產品裡沒有呼叫端。
-  - 上傳超過伺服器上限的 blob 時，伺服器依宣告長度回 413 就關閉連線；還在送 body 的 client 可能先看到連線被重設（Windows 的 CI 上發生過），
-    回報的就是連線錯誤而不是「太大」。`HttpAssetTransport` 沒有先問上限。
-  - 資料夾鏡像靠修改時間判斷變更：對方送來的檔案落地後，同一個時間刻度內的本機編輯不會被推送（CI 上的測試因此要把 mtime 往後推）。
-  - blob：沒有自動回收（只有 `DELETE` 與用量清單）；配額是單一行程內的鎖，兩個 server 行程共用一個資料夾時可能超出一個 blob。
-  - Config Sync 分頁沒有區段選擇與 `assets_server` 開關；`examples/29_config_sync.py` 還是從 `utils.config_sync` 匯入而不是門面。
+  - blob：鎖檔超過 30 秒會被視為過期而接管，單次寫入比這更久時仍可能超出配額；用 `publish_assets` 手動上傳的 blob 沒有 bucket 項目引用，
+    回收（`AC_config_sync_collect_blobs`）時要自己列在 `keep`；對沒有 `age_s` 的舊 server，除非 `min_age_s=0` 否則什麼都不收。
+  - 資料夾鏡像的「同刻度」判斷（`RACY_WINDOW_S` 2 秒內以內容比對）與 `os.utime(ns=)` 只在 NTFS 上跑過。
 
 ---
 
@@ -298,24 +296,27 @@ U-20261009-18 的每一個裝置面呼叫都只對假的 ADB／uiautomator2／WD
 
 ## GUI：留下的缺口
 
-`TODO` — U-20261009-27、-28 之後還開著的
+`TODO` — U-20261009-27、-28、-34、-36 之後還開著的
 
-- **Accessibility 分頁的 3 個動作與 A11y Audit 仍在 GUI 執行緒上**：Windows 的 UIA 後端（`accessibility/backends/windows_backend.py`）快取一個 COM 自動化物件、
-  沒有做每個執行緒的 COM 初始化；開發環境沒裝 `comtypes`，無法驗證搬到別的執行緒後還能用，所以沒有盲改。要先改後端（擁有 COM apartment 的執行緒，或每執行緒初始化）。
-  **同一個原因的新風險**：從 GUI 啟動的腳本現在跑在工作執行緒上，腳本裡的 `AC_a11y_*` 會從新的執行緒呼叫 UIA，這條路徑沒有實際跑過。
-- **stop 叫不醒的等待**：`AC_wait_window`、`AC_wait_text`、smart wait、`AC_expect_poll` 用的是自己的 `time.sleep`，會跑到自己的逾時；
-  已經進到後端的單一指令（一次影像搜尋、OCR、HTTP 請求、shell 指令）不會被打斷。非腳本的分頁工作在後端無法取消，只是結果被丟掉。
-  ChatOps 的 router 會接住 `AutoControlException`，被停止的 `/run` 回的是「run failed: ExecutionStopped …」而不是「Stopped.」。沒有 stop／list 的 MCP 工具。
-- **WebRTC 停止路徑裡沒搬的**：`StatsPoller.stop()`、`_stop_adaptive`、`_stop_lan_advertise`，沒量過它們會不會卡。
-- **`dispose()`**：`RemoteDesktopTab.dispose()` 只停計時器，連線中的 viewer 或 host 刻意留在 registry；`_ViewerPanel`、`QuickConnectScreen` 與 WebRTC 面板自己沒有 `dispose()`；
-  只在需要時才開 worker 的分頁（computer use、DAG、VLM、USB browser）沒有。
-- **切換主題後約 0.4 秒內**，被暫存的分頁其 `window()` 不是主視窗；關閉後留作隱藏子元件的分頁仍是同步重設樣式。基準（`benchmarks/gui_*.py`）CI 仍不設門檻。
-- **一個沒修的隱患**：`webrtc_host_connection._produce_offer` 與 `webrtc_viewer_connection._answer_off_thread` 把工作結果接到對面板的強參照回呼上；
-  沒有 parent 的面板（測試裡）會因此在孫物件的解構子裡被銷毀而中止行程。應用程式裡面板都有 parent。`SlowOp` 已改成弱參照，這兩處還沒。
+- **Windows UIA 後端的執行緒模型完全沒對真的 COM 驗過**：現在每個呼叫執行緒各有一個自動化物件（`accessibility/backends/windows_automation.py`；
+  主執行緒 STA、其他執行緒進 MTA），Accessibility 分頁與 A11y Audit 已移出 GUI 執行緒。開發環境沒裝 `comtypes`，CI 也沒有同時有 `comtypes` 與桌面的 job，
+  測試全是假 COM 物件。未驗證的假設：MTA 工作執行緒上的 UIA 呼叫可用；焦點事件 callback 不需要 message pump；
+  `import comtypes` 第一次發生在已經是 MTA 的執行緒上會丟 `OSError`（憑記憶，沒處理）。`AC_wait_for_focus_change` 的原生 `Queue.get` 仍不會被 stop 叫醒。
+- **stop 還叫不醒的**：已經進到後端的單一指令（一次影像搜尋、OCR、HTTP 請求、shell 指令）、單一手勢內的節奏 sleep、`AC_wait_for_focus_change`；
+  MCP 自己的輪詢（`ac_wait_for_image`／`ac_wait_for_pixel`）不在可停止的執行裡。非腳本的分頁工作在後端無法取消，只是結果被丟掉。
+  ChatOps 的 `/run` 只有在腳本自己含 `AC_run_stoppable` 時才停得掉（刻意沒有整個包起來：那會讓 GUI 的「全部停止」也停掉聊天裡的執行，要維護者決定）。
+  新轉成可停止的等待裡，`AC_handle_file_dialog`、`AC_wait_until_app_idle`、`AC_wait_for_composition_commit`、`AC_wait_for_unlock` 與行動裝置的 `wait_for_app` 只對假探針測過。
+- **WebRTC**：`StatsPoller.start()` 會在 GUI 執行緒上最多等 2 秒（`future.result(timeout=2.0)`，是啟動路徑，沒動）。LAN 廣播的註冊與取消已移出 GUI 執行緒，
+  但真的 zeroconf 的時間與名稱衝突行為只對假物件測過。
+- **`DECIDE`：釋放 Remote Desktop 分頁時，WebRTC 的 host 與 viewer session 現在會被結束**（TCP／WebSocket 的仍留在 registry）。理由：WebRTC host 只屬於面板，
+  面板釋放後沒有東西能停它，會在看不到的情況下繼續分享畫面。要改回去是拿掉兩個 `dispose()` 裡的 `self._stop_host_if_any` 與 `self._end_session_for_good`。
+- **切換主題後那幾個事件迴圈回合內**，以被暫存的頁面為 parent 的 `QMessageBox` 會相對於隱藏的暫存 widget 定位（只影響位置）。
+  系統匣路徑在 offscreen 下沒有 tray，`_on_tray_open` 是直接呼叫測的。基準（`benchmarks/gui_*.py`）CI 仍不設門檻。
 - **把 Python 建的 widget 放進分頁列在結束時崩潰**：已查明觸發條件——分頁列按鈕上接了 Python callable、又有排隊中的 `deleteLater()`、而行程經 `os._exit` 離開；
   先把 deferred delete 沖掉就不會。機制（Qt 在行程結束時釋放那個 slot）是推論，沒有 C 堆疊可看。`_tab_close_icon.py` 沒有改回自訂按鈕。
-- **對真實 Qt 型別的型別檢查**：`test/verify/typing_extras_exempt.txt` 列著 70 個模組（66 個在 `gui/`、4 個在 `utils/remote_desktop/`，共 711 個錯誤，
-  多半是 mixin 呼叫它所混入的 widget 的方法），只准變少。
+- **對真實 Qt 型別的型別檢查**：`test/verify/typing_extras_exempt.txt` 從 70 個模組降到 18 個（11 個 WebRTC 面板 mixin、`navigation`、`step_form_view`、
+  `triggers_tab`，與 4 個對 aiortc／av 型別的 `utils/remote_desktop` 模組），只准變少。`QImage.fromData(x, "JPEG")` 的 5 處保留 `# type: ignore[arg-type]`：
+  stub 要 bytes，實際的 binding 對 bytes 丟 `ValueError`。
 - 遠端桌面的輸入改成佇列送出後，`AC_remote_send_input` 回的 `{"sent": True}` 意思是「已排入」；`SO_SNDTIMEO` 的 POSIX 包法與經 TLS socket 的行為沒在這台機器上驗過。
 - 沒在 macOS／Linux 上看過新的關閉鈕、捲動與重設樣式；沒在真的多螢幕桌面試過視窗位置還原；PyBreeze 沒有對這一版跑過；各語系新增的字串（日文、簡體中文）沒有母語者看過。
 
@@ -328,10 +329,8 @@ U-20261009-18 的每一個裝置面呼叫都只對假的 ADB／uiautomator2／WD
 - **`DECIDE`：`pytest --cov` 可以放行了嗎**。進入點搬到 `je_auto_control_pytest` 之後重新量過（2026-10-09）：`coverage run -m pytest` 87.35%，`pytest --cov` 87.32%。
   `CLAUDE.md` 與 `test_coverage_measurement.py` 仍規定只能用 `coverage run`；要不要放寬由維護者決定。
 - **本機的共用 `.venv` 裝著 `je_auto_control_dev 0.0.136`**，它的 `pytest11` 進入點還是舊的重量級路徑；重裝即可，不影響 CI。
-- **三個新的 CI job 還沒在 GitHub 上跑過**（`typing-extras`、`docs`、`free-threaded-scope`）；`free-threaded-scope` 用的是 `3.14t`，setup-python 在 Windows 上怎麼命名那個直譯器沒驗過，紅了就拿掉。
-- **free-threaded**：變數範圍已修成只在綁定它的執行緒上有效，並在 3.14.8t（Windows）跑過。`rbac/authorization.py`、`self_healing/locator.py`、`wrapper/device_context.py`
-  也用 `ContextVar`，在 free-threaded 版上仍會被執行緒繼承，沒有檢查。
-- **macOS smoke 的三個新探針**（click-state 讀回、最小化視窗以 id 查找、`grab_logical` 的點座標）是「只回報、不斷言」；等在 runner 上量到一次，再從 `REPORTED` 移到 `PROBES`。
+- **free-threaded**：呼叫者身分、綁定的裝置、自愈的執行標記與 stop token 都改成只在設定它的執行緒上有效（`utils/thread_bound.py`）。
+  這台機器沒有 free-threaded 直譯器：驗證用的是模擬繼承與真的 `-X thread_inherit_context=1`（3.14.7，GIL 開著）；`free-threaded-scope` job（3.14t）是第一次真的跑。
 - **能力探測**：Windows 的鎖定工作站、session 0、低完整性與擷取失敗分支只用假資料判斷；macOS 的三個 preflight 呼叫只對假物件跑過，
   pyobjc 的 `Quartz` 有沒有 `CGPreflightListenEventAccess` 未知（沒有的話 `recording`／`stop_shortcut` 回 `unknown`）。
 - **Windows 的版面鍵名**（`slash` 等 8 個）只在美式配置上實際呼叫過。
@@ -386,18 +385,3 @@ U-20261009-11 之後，Anthropic 的兩條路徑（`anthropic.py`、`anthropic_c
 - 模型只憑摘要能不能接著做——上限是 3，大約每 3 張截圖就壓縮一次，摘要最多列最新 60 個動作、每個截到 240 字元。
 - 真的桌面 PNG 的請求大小離 32 MB 多遠。
 - 兩個後端都沒送 `cache_control`，所以現在本來就沒有 prompt cache；要開的話是另一個請求形狀的改動。
-
----
-
-## Python 3.10 的 headless segfault：已修，等 CI 確認
-
-`TODO` — 修正在 U-20261009-25；要看 ubuntu-22.04 與 macos-14 的 3.10 `pytest-headless` 連續幾次都綠才能結案
-
-`test_usb_acl_prompt.py::test_bridge_remember_persists_acl_rule` 在 3.10 間歇 SIGSEGV（2026-09-26 三次、09-30 一次、2026-10-08 四次）。
-查到的機制：每個 `UsbPassthroughPromptDialog` 都因 `TranslatableMixin._tr(self, …)` 把自己存進自己的登錄表而成為參照循環，被丟掉後要等循環回收；
-3.10／3.11 的回收會在配置物件時發生，測試掃 `QApplication.topLevelWidgets()` 的當下若剛好回收，清單裡的指標就指向已銷毀的 widget。
-在 Windows 的 3.10.22 上以探針確定性重現（存取違規），修掉循環後不再發生；CI 那個崩潰本身沒在這台機器重現。
-被銷毀的是不是那兩個被丟掉的對話框、為什麼只有 Linux／macOS，是推論。
-
----
-

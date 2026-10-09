@@ -22,6 +22,7 @@ from je_auto_control.gui.remote_desktop.webrtc_workers import (
     retire_worker,
 )
 from je_auto_control.gui._slow_op import stop_each
+from je_auto_control.gui._weak_call import WeakCall, weak_slot
 from je_auto_control.gui.task_controller import CancellationToken, task_controller
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.remote_desktop import (
@@ -86,25 +87,29 @@ class _ViewerConnectionMixin(_PanelPart):
 
     def _answer_off_thread(self, offer_sdp: str, expected_dtls: Optional[str],
                            on_answer: Callable[[str], None]) -> None:
-        """Run ``process_offer`` on a worker; ``on_answer(answer)`` only if this viewer is still current."""
+        """Run ``process_offer`` on a worker; ``on_answer(answer)`` only if this viewer is still current.
+
+        ``on_answer`` is a method of this panel or a ``functools.partial`` of
+        one: it is held weakly, as is the delivery itself, because the task is
+        this panel's child and must not be what keeps the panel alive.
+        """
         try:
             viewer = self._require_viewer()
         except RuntimeError as error:
             self._show_error(error)
             return
-
-        def deliver(answer: str) -> None:
-            if self._viewer is viewer:      # not stopped or replaced while the answer was made
-                on_answer(answer)
-
-        def fail(error: Exception) -> None:
-            if self._viewer is viewer:      # a viewer stopped meanwhile fails by design
-                self._show_error(error)
-
         task = task_controller().submit(
             functools.partial(_process_offer, viewer, offer_sdp, expected_dtls), owner=self)
-        task.result.connect(deliver)
-        task.error.connect(fail)
+        task.result.connect(weak_slot(self._deliver_answer, viewer, WeakCall(on_answer)))
+        task.error.connect(weak_slot(self._answer_failed, viewer))
+
+    def _deliver_answer(self, viewer: WebRTCDesktopViewerT, on_answer: WeakCall, answer: str) -> None:
+        if self._viewer is viewer:          # not stopped or replaced while the answer was made
+            on_answer(answer)
+
+    def _answer_failed(self, viewer: WebRTCDesktopViewerT, error: Exception) -> None:
+        if self._viewer is viewer:          # a viewer stopped meanwhile fails by design
+            self._show_error(error)
 
     def _push_answer(self, host_id: str, expected_dtls: Optional[str], offer_sdp: str, answer: str) -> None:
         # First-time TOFU: stash the DTLS fingerprint we just observed

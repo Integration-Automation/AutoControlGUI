@@ -57,13 +57,30 @@ Actions 選單
 
 凡是在 widget 之外還握有東西的分頁都實作了 ``dispose()``:排程、觸發器、熱鍵、
 E-mail 觸發器、Webhooks、REST API、Presence、Live HUD、Inspector、Profiler、
-Run History、Admin Console、USB Devices、USB Sharing、Config Sync 與遠端桌面。
+Run History、Admin Console、USB Devices、USB Sharing、Config Sync 與遠端桌面,
+以及每一個會在背景執行指令的分頁(Script Builder、VLM、OCR、LLM Planner、
+Computer Use、DAG、Self Healing、Test Suite、Assertions、Device Matrix、Mobile、
+Media Checks、WebRunner、ChatOps、USB Browser、Accessibility、A11y Audit)。
 它會停掉分頁的計時器、取消背景工作、把監聽從 presence registry 移除、歸還 USB
 watcher 的持有、把 log tail 從 logger 拿掉,並關閉自己開的 loopback——在呼叫當下
-完成,而不是等 Qt 之後刪除 widget。分頁只是顯示的後端(排程器、REST 伺服器、遠端
-桌面 host)會繼續執行。新的分頁用 ``je_auto_control.gui._dispose`` 的
-``release_resources(self, *releases)`` 一行就能做到;已註冊的分頁若建立 ``QTimer``
-或註冊監聽卻沒有這個方法,``test_gui_tab_dispose.py`` 會失敗。
+完成,而不是等 Qt 之後刪除 widget。背景工作的取消方式,與稍後刪除分頁時會發生的
+相同:腳本會被停止,Computer Use 或 DAG 的執行會被要求停止,無法中斷的工作(模型
+請求、裝置清單)會跑完,但結果被丟棄。分頁只是顯示的後端(排程器、REST 伺服器、
+遠端桌面 host)會繼續執行。新的分頁用 ``je_auto_control.gui._dispose`` 的
+``release_resources(self, *releases)`` 一行就能做到;已註冊的分頁若建立 ``QTimer``、
+註冊監聽或啟動背景工作卻沒有這個方法,``test_gui_tab_dispose.py`` 會失敗。
+
+遠端桌面的 ``dispose()`` 會逐一呼叫它的五個面板。面板開啟的 TCP 或 WebSocket host
+與連線會繼續執行:它們屬於 registry,腳本(``AC_remote_*``)與其他面板仍看得到、
+也能停止它們;被放掉的只有面板自己的計時器、尚未回應的連線嘗試與彈出視窗。WebRTC
+的 host 與連線只屬於它的面板——面板不在了就沒有人能停止它,host 會在沒有人看得到的
+情況下繼續分享畫面——所以放掉分頁時會結束它,和 Stop 指令一樣在背景進行。
+
+交給背景工作的回呼是弱參照:請傳分頁的方法(或它的 ``functools.partial``),不要傳
+把分頁包進去的 lambda 或巢狀函式。工作的 handle 是分頁的子物件,若回呼讓分頁活著,
+handle 就成了一個沒有其他人參照的分頁的最後持有者——分頁於是在自己子物件的解構子裡
+被銷毀。``je_auto_control.gui._weak_call`` 的 ``weak_slot`` 會做出接到 handle 訊號的
+slot;新增強參照回呼時 ``test_gui_weak_callbacks.py`` 會失敗。
 
 View 選單
 ---------
@@ -81,7 +98,12 @@ View 選單
 會先移出視窗的樹(``WorkspaceTabWidget.restyle(apply)``),之後每一輪事件迴圈放回
 一頁,若分頁被選取則立刻放回。50 個分頁全開時,切換主題原本會卡住視窗 1.5–1.8 秒;
 現在約 0.3 秒,其餘分成每輪最多 85 毫秒完成(在開發機上以
-``benchmarks/gui_workloads.py`` 量測)。
+``benchmarks/gui_workloads.py`` 量測)。已關閉分頁的內容(隱藏地留在分頁元件底下)
+也會和其他頁面一起移出、放回。
+
+頁面移出樹的期間,它的 ``window()`` 不是主視窗。分頁裡需要「自己所屬的視窗」的程式
+——要把它叫到前面,或擺放對話框——請改用 ``je_auto_control.gui.workspace_tabs`` 的
+``real_window(widget)``,不要用 ``widget.window()``。
 
 契約測試
 --------

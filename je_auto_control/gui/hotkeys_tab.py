@@ -10,6 +10,7 @@ from PySide6.QtWidgets import (
 from je_auto_control.gui._dispose import release_resources
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
 from je_auto_control.gui._slow_op import SlowOp
+from je_auto_control.gui._qt_typed import filled_item
 from je_auto_control.gui.language_wrapper.multi_language_wrapper import (
     language_wrapper,
 )
@@ -130,7 +131,7 @@ class HotkeysTab(TranslatableMixin, QWidget):
         row = self._table.currentRow()
         if row < 0:
             return
-        bid = self._table.item(row, 0).text()
+        bid = filled_item(self._table, row, 0).text()
         default_hotkey_daemon.unbind(bid)
         self._refresh()
 

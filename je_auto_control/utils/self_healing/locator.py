@@ -25,7 +25,6 @@ tool are thin shells over it.
 from __future__ import annotations
 
 from contextlib import contextmanager
-from contextvars import ContextVar
 from dataclasses import asdict, dataclass, replace
 from datetime import datetime, timezone
 from time import monotonic
@@ -40,6 +39,7 @@ from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.self_healing.heal_log import (
     HEAL_EVENT_SCHEMA_VERSION, HealEvent, HealEventLog, default_heal_log,
 )
+from je_auto_control.utils.thread_bound import ThreadBoundVar
 
 
 METHOD_IMAGE = "image"
@@ -50,7 +50,11 @@ ACTION_CLICK = "click"
 #: Keys :func:`heal_context` accepts; each is a string column of the heal log.
 CONTEXT_KEYS = ("run_id", "step_id", "locator_id", "locator_version", "backend")
 
-_context: ContextVar[Mapping[str, str]] = ContextVar("self_heal_context")
+# Thread-bound: where a new thread inherits its creator's context variables (a
+# free-threaded build), a thread started inside a heal_context block would
+# otherwise stamp its own, unrelated heal events with that run and step.
+_NO_CONTEXT: Mapping[str, str] = {}
+_context: ThreadBoundVar[Mapping[str, str]] = ThreadBoundVar("self_heal_context", _NO_CONTEXT)
 
 
 @contextmanager
@@ -60,11 +64,12 @@ def heal_context(**values: Optional[str]) -> Iterator[None]:
     Accepts the :data:`CONTEXT_KEYS` (``run_id``, ``step_id``, ``locator_id``,
     ``locator_version``, ``backend``); ``None`` values are ignored and an
     unknown key raises ``ValueError``. Nested blocks layer over outer ones.
+    The stamp applies on the calling thread only, on every build.
     """
     unknown = sorted(set(values) - set(CONTEXT_KEYS))
     if unknown:
         raise ValueError(f"unknown heal context key(s) {unknown}; expected {list(CONTEXT_KEYS)}")
-    merged = dict(_context.get({}))
+    merged = dict(_context.get())
     merged.update({key: str(value) for key, value in values.items() if value is not None})
     token = _context.set(merged)
     try:
@@ -338,7 +343,7 @@ def _as_event(outcome: HealOutcome) -> HealEvent:
         [int(outcome.coordinates[0]), int(outcome.coordinates[1])]
         if outcome.coordinates is not None else None
     )
-    context = _context.get({})
+    context = _context.get()
     return HealEvent(
         timestamp=datetime.now(timezone.utc).isoformat(timespec="seconds"),
         method=outcome.method,

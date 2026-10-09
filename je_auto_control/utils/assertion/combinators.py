@@ -42,6 +42,7 @@ from je_auto_control.utils.assertion.assertions import (
 from je_auto_control.utils.exception.exceptions import (
     AutoControlAssertionException,
 )
+from je_auto_control.utils.executor.run_control import pause
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 
 # Map each spec ``kind`` to the headless assertion it dispatches to.
@@ -223,7 +224,7 @@ def assert_eventually(spec: Mapping[str, Any],
             return last
         if time.monotonic() >= deadline:
             break
-        time.sleep(min(poll, max(deadline - time.monotonic(), 0.0)))
+        pause(min(poll, max(deadline - time.monotonic(), 0.0)), time.sleep)
     message = (
         f"assert_eventually failed after {timeout}s / {attempts} attempts: "
         f"{last.message}"

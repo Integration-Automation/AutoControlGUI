@@ -19,6 +19,7 @@ from je_auto_control.utils.config_sync.bucket import (
 from je_auto_control.utils.config_sync.merge import (
     ConflictRecord, apply_operation, awaits_ack, batch_operation_id, merge_buckets, settle,
 )
+from je_auto_control.utils.config_sync.versions import TOMBSTONE_HOLD_S
 from je_auto_control.utils.exception.exceptions import AutoControlException
 
 if TYPE_CHECKING:
@@ -50,12 +51,18 @@ class ConfigSyncClient:
 
     Methods are intentionally small and synchronous — the GUI wraps
     them in QThread workers when wiring up periodic sync.
+
+    ``tombstone_hold_s`` is how long a deletion every listed device has
+    acknowledged is still kept in the bucket this client commits (default
+    :data:`~je_auto_control.utils.config_sync.versions.TOMBSTONE_HOLD_S`,
+    thirty days), so a machine that has not synced yet still meets it.
     """
 
     def __init__(self, server_url: str, *,
                  user_id: str, secret: Optional[str] = None,
                  timeout_s: float = _DEFAULT_TIMEOUT_S,
-                 device_id: Optional[str] = None) -> None:
+                 device_id: Optional[str] = None,
+                 tombstone_hold_s: float = TOMBSTONE_HOLD_S) -> None:
         if not server_url:
             raise ConfigSyncError("server_url is required")
         if not user_id:
@@ -65,6 +72,7 @@ class ConfigSyncClient:
         self._secret = secret
         self._timeout = float(timeout_s)
         self._device_id = device_id or None
+        self._tombstone_hold_s = max(0.0, float(tombstone_hold_s))
 
     @property
     def device_id(self) -> str:
@@ -198,7 +206,7 @@ class ConfigSyncClient:
             remote = self.fetch() or ConfigBucket(user_id=self._user_id)
             self._require_active(remote, device)
             merged, conflicts = merge_buckets(local, remote)
-            settle(merged, device, remote.revision + 1, stamp, None)
+            settle(merged, device, remote.revision + 1, stamp, None, self._tombstone_hold_s)
             try:
                 self.push(merged, base_revision=remote.revision)
             except ConfigSyncConflict:
@@ -238,7 +246,8 @@ class ConfigSyncClient:
             changed = [apply_operation(merged, operation, conflicts) for operation in operations]
             if not any(changed) and not awaits_ack(remote, device_id):
                 return SyncResult(bucket=remote, revision=remote.revision, conflicts=conflicts)
-            settle(merged, device_id, remote.revision + 1, stamp, max_offline_s)
+            settle(merged, device_id, remote.revision + 1, stamp, max_offline_s,
+                   self._tombstone_hold_s)
             try:
                 revision = self.push(merged, base_revision=remote.revision,
                                      operation_id=batch_operation_id(remote.revision, operations))

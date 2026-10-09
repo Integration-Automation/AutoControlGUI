@@ -163,6 +163,14 @@ On load a mismatch makes the ACL **fail closed** (default-deny,
 ``UsbAcl.integrity_ok`` reports ``False``). This stops a process that
 silently rewrites the JSON from granting itself access.
 
+Failing closed means ``decide()`` answers ``"deny"`` for **every** device:
+also when the instance was built with ``default_policy="allow"``, and also
+for allow rules it had read from an earlier, intact version of the file (an
+allow-by-default ACL used to keep allowing next to ``integrity_ok False``).
+``default_policy`` reports ``"deny"`` for as long as that lasts. Decisions
+return to normal once the file reads intact again, or once the operator saves
+a change, which re-signs it.
+
 The signature used to be a sidecar ``usb_acl.json.sig`` written after the
 data, so the GUI and a host session -- or two processes -- could read new
 data against the old signature and fall back to deny-all on a file nobody

@@ -15,13 +15,13 @@ from __future__ import annotations
 
 import contextlib
 import os
-from contextvars import ContextVar
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Iterator, Optional
 
 from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.rbac.users import UserAuthError, UserStore, can
+from je_auto_control.utils.thread_bound import ThreadBoundVar
 
 #: Names the user store file. Setting it is what switches RBAC on for the
 #: REST API and the MCP HTTP transport; unset or empty leaves both on their
@@ -79,12 +79,20 @@ def resolve_token(store: UserStore, token: str) -> Optional[AuthorizationContext
     return AuthorizationContext(user_id=record.user_id, role=record.role, store=store)
 
 
-_CURRENT: ContextVar[Optional[AuthorizationContext]] = ContextVar(
-    "je_auto_control_authorization", default=None)
+# Bound to the thread that entered the scope: on a free-threaded build (and
+# under ``-X thread_inherit_context=1``) a new thread starts with a copy of its
+# creator's context, and a scheduler or observer thread first started while an
+# admin's request was being served would have gone on running as that admin.
+_CURRENT: ThreadBoundVar[Optional[AuthorizationContext]] = ThreadBoundVar(
+    "je_auto_control_authorization", None)
 
 
 def current_authorization() -> Optional[AuthorizationContext]:
-    """The caller this thread is serving, or ``None`` outside any RBAC scope."""
+    """The caller this thread is serving, or ``None`` outside any RBAC scope.
+
+    ``None`` also on a thread that was merely started inside a scope: the
+    scope counts on the thread that entered it, on every build.
+    """
     return _CURRENT.get()
 
 
@@ -92,7 +100,9 @@ def current_authorization() -> Optional[AuthorizationContext]:
 def authorization_scope(context: Optional[AuthorizationContext]) -> Iterator[None]:
     """Serve the enclosed work as ``context``; ``None`` clears any outer scope.
 
-    The scope belongs to the calling thread. Work handed to another thread --
+    The scope belongs to the calling thread, also where a new thread inherits
+    its creator's context variables (a free-threaded build). Work handed to
+    another thread --
     a scheduler job, a trigger, a hotkey -- runs outside it, which is why
     those registries store the caller and re-enter a scope when the work
     fires (:mod:`je_auto_control.utils.rbac.deferred`).

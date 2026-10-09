@@ -13,7 +13,7 @@ a live window until the cycle collector ran, and the collector destroyed the
 C++ object wherever it happened to be — on Python 3.10/3.11 that can be in the
 middle of a PySide call that is still walking a list of widgets.
 """
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, TypeVar
 
 from PySide6.QtWidgets import (
     QAbstractButton, QGroupBox, QLabel, QLineEdit, QTabWidget, QWidget,
@@ -22,6 +22,10 @@ from PySide6.QtWidgets import (
 from je_auto_control.gui.language_wrapper.multi_language_wrapper import (
     language_wrapper,
 )
+
+
+#: ``_tr`` hands back the widget it was given, as the class it was given.
+_W = TypeVar("_W", bound=QWidget)
 
 
 def _default_setter(widget: QWidget) -> str:
@@ -41,7 +45,7 @@ class TranslatableMixin:
         self._tr_registry: List[Tuple[Optional[QWidget], str, str]] = []
         self._tr_tabs: List[Tuple[QTabWidget, int, str]] = []
 
-    def _tr(self, widget: QWidget, key: str, setter: str = "") -> QWidget:
+    def _tr(self, widget: _W, key: str, setter: str = "") -> _W:
         """Set ``widget`` text from ``key`` now and on every retranslate."""
         if not hasattr(self, "_tr_registry"):
             self._tr_init()

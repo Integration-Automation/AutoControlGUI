@@ -19,15 +19,15 @@ import os
 import threading
 import time
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple
+from typing import Any, Dict, Iterable, List, Mapping, Optional, Sequence, Set, Tuple
 
 from je_auto_control.utils.config_sync.adapters import (
     AddressBookSyncAdapter, HotkeySyncAdapter, LocatorSyncAdapter, ScriptSyncAdapter,
     SyncAdapter, TriggerSyncAdapter,
 )
 from je_auto_control.utils.config_sync.assets import (
-    AssetManifest, AssetTransport, DirectoryAssetTransport, HttpAssetTransport,
-    publish_assets, sync_assets,
+    DEFAULT_BLOB_GRACE_S, AssetManifest, AssetTransport, DirectoryAssetTransport,
+    HttpAssetTransport, collect_unreferenced_blobs, publish_assets, sync_assets,
 )
 from je_auto_control.utils.config_sync.client import (
     ConfigBucket, ConfigSyncClient, ConfigSyncError, FullResyncRequired, SyncResult,
@@ -487,6 +487,78 @@ def _asset_transport(client: ConfigSyncClient,
         secret=options.get("secret") or os.environ.get("AC_SIGNALING_SECRET") or None)
 
 
+def _digests_in(node: Any, found: Set[str]) -> None:
+    """Add every ``sha256`` value found anywhere inside ``node`` to ``found``."""
+    if isinstance(node, Mapping):
+        digest = node.get("sha256")
+        if isinstance(digest, str) and len(digest) == 64:
+            found.add(digest.lower())
+        for value in node.values():
+            _digests_in(value, found)
+    elif isinstance(node, (list, tuple)):
+        for value in node:
+            _digests_in(value, found)
+
+
+def referenced_blob_digests(*buckets: Optional[ConfigBucket],
+                            operations: Iterable[SyncOperation] = ()) -> Set[str]:
+    """Every SHA-256 the entries of ``buckets`` (and ``operations``) name.
+
+    What blob housekeeping must keep: the digest of each script too large to
+    travel in its entry, in any section, including every candidate of an
+    entry still in conflict. A deleted entry names nothing, so its blob is
+    free to go. ``None`` buckets are skipped.
+    """
+    found: Set[str] = set()
+    for bucket in buckets:
+        if bucket is not None:
+            _digests_in(bucket.sections, found)
+    for operation in operations:
+        _digests_in(operation.entry.to_dict(), found)
+    return found
+
+
+def config_sync_collect_blobs(server_url: str, user_id: str, *, keep: Any = None,
+                              min_age_s: float = DEFAULT_BLOB_GRACE_S,
+                              dry_run: bool = False, **options: Any) -> Dict[str, Any]:
+    """Delete this account's blobs on the sync server that no entry names any more.
+
+    Nothing on the server removes a blob by itself, so the scripts deleted or
+    replaced over time keep counting against the account's quota until this
+    is run. What is kept: every digest named by the server's bucket, by this
+    machine's last merged state and by its changes still waiting to be sent,
+    plus ``keep`` (a list, or one comma-separated string of SHA-256 digests)
+    -- name there whatever you published yourself with
+    :func:`~je_auto_control.utils.config_sync.assets.publish_assets`, which no
+    bucket entry refers to. A blob stored less than ``min_age_s`` ago
+    (default one day) is kept as well: another machine may have uploaded it
+    for an entry it has not committed yet.
+
+    Returns :func:`~je_auto_control.utils.config_sync.assets.collect_unreferenced_blobs`'s
+    result plus ``"referenced"``, how many digests were protected. With
+    ``dry_run`` nothing is deleted. Takes the options of
+    :func:`config_sync_run`; ``secret``, ``timeout_s`` and ``outbox_path``
+    matter. A server that cannot be reached is :class:`ConfigSyncError` and
+    nothing is deleted. A blob removed while a machine still has the file is
+    uploaded again by that machine's next sync.
+    """
+    chosen = _chosen(options)
+    secret = chosen.get("secret") or os.environ.get("AC_SIGNALING_SECRET") or None
+    client = ConfigSyncClient(server_url, user_id=user_id, secret=secret,
+                              timeout_s=float(chosen.get("timeout_s", 5.0)))
+    outbox = SyncOutbox(chosen.get("outbox_path"), account=user_id, endpoint=client.server_url)
+    stored = outbox.exists()
+    referenced = referenced_blob_digests(
+        client.fetch(), outbox.load_baseline() if stored else None,
+        operations=outbox.pending() if stored else ())
+    referenced.update(str(digest).lower() for digest in _section_names(keep or ()))
+    transport = HttpAssetTransport(client.server_url, user_id=user_id, secret=secret,
+                                   timeout_s=client.timeout_s)
+    result = collect_unreferenced_blobs(transport, referenced, min_age_s=min_age_s,
+                                        dry_run=bool(dry_run))
+    return {**result, "referenced": len(referenced)}
+
+
 def config_sync_status(server_url: str, user_id: str, outbox_path: Optional[str] = None,
                        **options: Any) -> Dict[str, Any]:
     """The recorded sync state for this account and server; no network.
@@ -519,8 +591,10 @@ def config_sync_resolve(server_url: str, user_id: str, section: str, key: str,
 __all__ = [
     "DEFAULT_SECTIONS", "STATE_BACKING_OFF", "STATE_CANCELLED", "STATE_CONFLICT",
     "STATE_OFFLINE", "STATE_PENDING",
-    "STATE_RESYNC_REQUIRED", "STATE_SYNCED", "SyncRunReport", "config_sync_full_resync",
+    "STATE_RESYNC_REQUIRED", "STATE_SYNCED", "SyncRunReport", "config_sync_collect_blobs",
+    "config_sync_full_resync",
     "SYNCABLE_SECTIONS", "config_sync_resolve", "config_sync_run", "config_sync_status",
-    "default_adapters", "default_device_id", "default_device_id_path", "resolve_conflict",
+    "default_adapters", "default_device_id", "default_device_id_path",
+    "referenced_blob_digests", "resolve_conflict",
     "resolve_sections", "run_full_resync", "run_sync", "sync_status",
 ]

@@ -21,6 +21,7 @@ import sys
 import time
 from typing import Any, Callable, Dict, Optional, Sequence
 
+from je_auto_control.utils.executor.run_control import pause
 from je_auto_control.utils.settle_detector import SettleTracker, settle_point
 from je_auto_control.utils.timeouts import clamp_poll_interval, deadline_after
 
@@ -47,7 +48,7 @@ def wait_until_app_idle(*, busy_probe: Optional[BusyProbe] = None,
                         quiet_samples: int = 3, timeout_s: float = 10.0,
                         interval_s: float = 0.1,
                         clock: Callable[[], float] = time.monotonic,
-                        sleep: Callable[[float], None] = time.sleep
+                        sleep: Callable[[float], None] = pause
                         ) -> Dict[str, Any]:
     """Block until the app reads idle for ``quiet_samples`` polls, or timeout.
 

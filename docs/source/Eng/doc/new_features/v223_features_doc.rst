@@ -70,15 +70,41 @@ Report) are closed but never released.
 Every tab that holds something beyond its widgets implements ``dispose()``:
 Scheduler, Triggers, Hotkeys, E-mail Triggers, Webhooks, REST API, Presence,
 Live HUD, Inspector, Profiler, Run History, Admin Console, USB Devices, USB
-Sharing, Config Sync and Remote Desktop. It stops the tab's timers, cancels
-its background tasks, removes its listener from the presence registry, gives
-back its share of the USB watcher, takes its tail off the logger and closes a
-loopback it opened -- on the call, not when Qt gets round to deleting the
-widget. The backend a tab only shows (the scheduler, a REST server, a remote
-desktop host) keeps running. A new tab does the same with one call,
+Sharing, Config Sync and Remote Desktop, and every tab that runs a command in
+the background (Script Builder, VLM, OCR, LLM Planner, Computer Use, DAG, Self
+Healing, Test Suite, Assertions, Device Matrix, Mobile, Media Checks,
+WebRunner, ChatOps, USB Browser, Accessibility, A11y Audit). It stops the
+tab's timers, cancels its background work, removes its listener from the
+presence registry, gives back its share of the USB watcher, takes its tail off
+the logger and closes a loopback it opened -- on the call, not when Qt gets
+round to deleting the widget. Background work is cancelled the way deleting
+the tab would cancel it a moment later: a script run is stopped, a Computer
+Use or DAG run is asked to stop, and work that cannot be interrupted (a model
+request, a device listing) runs to its end with its answer dropped. The
+backend a tab only shows (the scheduler, a REST server, a remote desktop host)
+keeps running. A new tab does the same with one call,
 ``release_resources(self, *releases)`` from ``je_auto_control.gui._dispose``;
 ``test_gui_tab_dispose.py`` fails for a registered tab that creates a
-``QTimer`` or registers a listener without the method.
+``QTimer``, registers a listener or starts background work without the
+method.
+
+Remote Desktop's ``dispose()`` goes through each of its five panels. A TCP or
+WebSocket host or session a panel opened is left running: it belongs to the
+registry, where scripts (``AC_remote_*``) and the other panels still see it
+and can stop it; only the panel's own timer, a connect that has not answered
+and the pop-out window go. A WebRTC host or session belongs to its panel
+alone -- with the panel gone nothing could stop it, and a host would go on
+sharing the screen unseen -- so releasing the tab ends it, in the background
+as the Stop command does.
+
+A callback given to a background task is held weakly: pass a method of the
+tab (or a ``functools.partial`` of one), not a lambda or a nested function
+that closes over the tab. The task's handle is a child of the tab, and a
+callback that kept the tab alive made the handle the last holder of a tab
+nobody else referenced -- it was then destroyed from inside its own child's
+destructor. ``weak_slot`` in ``je_auto_control.gui._weak_call`` makes the slot
+for a handle's signal, and ``test_gui_weak_callbacks.py`` fails a new strong
+one.
 
 The View menu
 -------------
@@ -102,7 +128,13 @@ out of the window's tree for the change
 or at once when their tab is selected. With all 50 tabs open a switch held the
 window for 1.5-1.8 s; it holds it for about 0.3 s, and the rest follows in
 turns of at most 85 ms (measured with ``benchmarks/gui_workloads.py`` on the
-development machine).
+development machine). The page of a closed tab, which is kept hidden under the
+tab widget, is taken out and put back with the others.
+
+While a page is out of the tree its ``window()`` is not the main window. Code
+in a tab that needs the window it belongs to -- to raise it, or to place a
+dialog -- calls ``real_window(widget)`` from
+``je_auto_control.gui.workspace_tabs`` instead of ``widget.window()``.
 
 The contract test
 -----------------

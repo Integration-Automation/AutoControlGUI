@@ -236,6 +236,7 @@ class _ViewerMediaMixin(_PanelPart):
         self._signals.stats.emit(snapshot)
 
     def _stop_stats_polling(self) -> None:
+        # Stays on the GUI thread: StatsPoller.stop() cannot block (see its docstring).
         if self._stats_poller is not None:
             self._stats_poller.stop()
             self._stats_poller = None

@@ -1145,6 +1145,22 @@ simplified_chinese_word_dict = {
     "config_sync_secret_label": "共享密钥:",
     "config_sync_scripts_label": "脚本文件夹(可选):",
     "config_sync_assets_label": "共享资源文件夹(可选):",
+    "config_sync_locators_label": "定位器仓库文件(可选):",
+    "config_sync_sections_label": "要同步的分区:",
+    "config_sync_section_hotkeys": "快捷键",
+    "config_sync_section_triggers": "触发器",
+    "config_sync_section_address_book": "通讯录",
+    "config_sync_section_scripts": "脚本(需要文件夹)",
+    "config_sync_section_locators": "定位器(需要文件)",
+    "config_sync_assets_server_label": "把大型脚本存放在同步服务器上,而不是共享文件夹",
+    "config_sync_no_sections": "请至少勾选一个要同步的分区(脚本和定位器需要填写路径)",
+    "config_sync_sections_covered": "已同步的分区",
+    "config_sync_collect_btn": "删除服务器上未使用的 blob",
+    "config_sync_collect_confirm":
+        "删除此账号在同步服务器上、已没有任何同步条目引用的 blob?最近一天内存入的 blob 会保留"
+        "。",
+    "config_sync_collect_done":
+        "Blob:已删除 {deleted} 个(释放 {freed} 字节),使用中 {kept} 个,{recent} 个太新暂不判定",
     "config_sync_conflicts_title": "冲突:两台机器同时修改的条目",
     "config_sync_col_entry": "条目",
     "config_sync_col_choice": "候选",

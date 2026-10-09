@@ -14,6 +14,7 @@ from PySide6.QtWidgets import (
     QTextEdit, QVBoxLayout, QWidget,
 )
 
+from je_auto_control.gui._dispose import release_resources
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
 from je_auto_control.gui.language_wrapper.multi_language_wrapper import (
     language_wrapper,
@@ -95,6 +96,14 @@ class OCRReaderTab(TranslatableMixin, QWidget):
         root.addWidget(self._tr(QLabel(), "ocr_results_label"))
         root.addWidget(self._result, stretch=1)
         root.addWidget(self._status)
+
+    def dispose(self) -> None:
+        """Release what the tab holds beyond its widgets: the command still running in the background.
+
+        A script run is stopped; other work cannot be interrupted, so it runs to its end and its
+        result is dropped. Called by ``close_tab(key, release=True)``; safe to call twice.
+        """
+        release_resources(self)
 
     def menu_actions(self) -> list:
         """Expose tab commands to the window-level Actions menu."""

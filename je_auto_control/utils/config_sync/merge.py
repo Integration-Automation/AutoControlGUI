@@ -20,7 +20,8 @@ from je_auto_control.utils.config_sync.bucket import (
     TOMBSTONE_RETENTION_S, ConfigBucket, ConfigSyncError, is_tombstone,
 )
 from je_auto_control.utils.config_sync.versions import (
-    PeerState, SyncConflict, SyncEntry, SyncOperation, collect_tombstones, merge_entries,
+    TOMBSTONE_HOLD_S, PeerState, SyncConflict, SyncEntry, SyncOperation, collect_tombstones,
+    merge_entries,
 )
 
 
@@ -215,13 +216,15 @@ def awaits_ack(bucket: ConfigBucket, device_id: str) -> bool:
 
 
 def settle(bucket: ConfigBucket, device_id: str, revision: int, now: float,
-            max_offline_s: Optional[float]) -> None:
+            max_offline_s: Optional[float], hold_s: float = TOMBSTONE_HOLD_S) -> None:
     """Prepare ``bucket`` to be committed as ``revision`` by ``device_id``.
 
-    Stamps new tombstones with the revision that first carries them, records
-    that this device has merged up to it, retires peers unseen for longer
-    than ``max_offline_s`` (when given), and drops the tombstones every
-    remaining peer has acknowledged.
+    Stamps new tombstones with the revision that first carries them (and
+    ``now``), records that this device has merged up to it, retires peers
+    unseen for longer than ``max_offline_s`` (when given), and drops the
+    tombstones every remaining peer has acknowledged -- once they are also
+    older than ``hold_s``, so a machine the bucket does not list yet still
+    meets a recent deletion (see :func:`collect_tombstones`).
     """
     peers = bucket.peer_states()
     peers[device_id] = PeerState(device_id, acked_revision=revision, last_seen=now)
@@ -231,15 +234,16 @@ def settle(bucket: ConfigBucket, device_id: str, revision: int, now: float,
                  for device, peer in peers.items()}
     bucket.peers = {device: peer.to_dict() for device, peer in peers.items()}
     for section in list(bucket.sections):
-        versioned = _stamped(bucket.sync_entries(section), revision)
-        kept = collect_tombstones(versioned, peers.values())
+        versioned = _stamped(bucket.sync_entries(section), revision, now)
+        kept = collect_tombstones(versioned, peers.values(), now=now, hold_s=hold_s)
         flat = {key: body for key, body in bucket.sections[section].items() if key not in versioned}
         bucket.sections[section] = {**flat, **{key: entry.to_dict() for key, entry in kept.items()}}
 
 
-def _stamped(entries: Mapping[str, SyncEntry], revision: int) -> Dict[str, SyncEntry]:
-    """``entries`` with each new tombstone marked as first carried by ``revision``."""
-    return {key: (replace(entry, deleted_revision=revision)
+def _stamped(entries: Mapping[str, SyncEntry], revision: int,
+             now: float) -> Dict[str, SyncEntry]:
+    """``entries`` with each new tombstone marked as first carried by ``revision``, at ``now``."""
+    return {key: (replace(entry, deleted_revision=revision, deleted_at=float(now))
                   if entry.deleted and not entry.deleted_revision else entry)
             for key, entry in entries.items()}
 

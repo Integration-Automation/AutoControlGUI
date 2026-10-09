@@ -912,6 +912,17 @@ def AC_config_export() -> Dict[str, Any]:
 def AC_config_import(bundle: Dict[str, Any], dry_run: bool = ...) -> Dict[str, Any]:
     """Executor adapter: apply a config bundle dict to the user config root."""
 
+def AC_config_sync_collect_blobs(
+    server_url: str,
+    user_id: str,
+    *,
+    keep: Any = ...,
+    min_age_s: float = ...,
+    dry_run: bool = ...,
+    **options: Any,
+) -> Dict[str, Any]:
+    """Delete this account's blobs on the sync server that no entry names any more."""
+
 def AC_config_sync_full_resync(server_url: str, user_id: str, **options: Any) -> Dict[str, Any]:
     """Adopt the server's state after this device was retired; see :func:`run_full_resync`."""
 
@@ -2036,7 +2047,7 @@ def AC_llm_run(
     model: str | None = ...,
     max_tokens: int = ...,
 ) -> Dict[str, Any]:
-    """Executor adapter: plan and execute against the global executor."""
+    """Executor adapter: plan and execute, as the caller this thread already serves (so no ``owner``)."""
 
 def AC_load_data(source: Dict[str, Any]) -> List[Dict[str, Any]]:
     """Executor adapter: load tabular rows from a data source spec."""

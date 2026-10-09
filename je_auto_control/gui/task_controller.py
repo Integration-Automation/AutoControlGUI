@@ -16,8 +16,12 @@ what a bare worker cannot express:
 * **Typed outcomes.** :attr:`TaskHandle.result` carries the return value,
   :attr:`TaskHandle.error` the exception object (not its text) and
   :attr:`TaskHandle.progress` whatever the work reports. All three are emitted
-  on the GUI thread, so a lambda connected to them is safe.
-* **Owner death.** The handle is a child of ``owner``. Destroying the owner
+  on the GUI thread. Connect them to a method of the owner, or through
+  :func:`je_auto_control.gui._weak_call.weak_slot` when it needs arguments:
+  the handle is the owner's child, and a lambda or a ``functools.partial``
+  that holds the owner would make the handle what keeps the owner alive.
+* **Owner death.** The handle is a child of ``owner``, and the controller
+  itself only holds the owner weakly. Destroying the owner
   cancels the work; a result that is ready but not delivered yet, or arrives
   later, goes to ``discard`` (close the session nobody will use) and never to
   a slot of the dead widget.
@@ -28,6 +32,7 @@ what a bare worker cannot express:
 import functools
 import threading
 import time
+import weakref
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from PySide6.QtCore import QObject, QTimer, Signal
@@ -371,7 +376,8 @@ class TaskController:
     """
 
     def __init__(self) -> None:
-        self._active: Dict[TaskHandle, Tuple[QObject, Callable[..., None]]] = {}
+        # The owner is held weakly: a running task must not keep its tab alive.
+        self._active: Dict[TaskHandle, Tuple["weakref.ref[QObject]", Callable[..., None]]] = {}
 
     def submit(self, work: Work, *, owner: QObject, timeout_s: Optional[float] = None,
                discard: Optional[Callable[[Any], object]] = None) -> TaskHandle:
@@ -400,13 +406,14 @@ class TaskController:
         # A plain function, not a slot of the handle: the handle dies with the
         # owner, and this has to run exactly then.
         owner.destroyed.connect(owner_destroyed)
-        self._active[handle] = (owner, owner_destroyed)
+        self._active[handle] = (weakref.ref(owner), owner_destroyed)
         handle._start(worker, timeout_s, self._forget)  # noqa: SLF001  # reason: the handle's second-phase start
         return handle
 
     def _forget(self, handle: TaskHandle) -> None:
         """GUI thread: ``handle``'s thread ended while its owner is still alive."""
-        owner, owner_destroyed = self._active.pop(handle, (None, None))
+        owner_ref, owner_destroyed = self._active.pop(handle, (None, None))
+        owner = owner_ref() if owner_ref is not None else None
         if owner is None:
             return
         try:
@@ -421,7 +428,7 @@ class TaskController:
         still owns its tasks.
         """
         handles = [handle for handle, (task_owner, _hook) in self._active.items()
-                   if owner is None or task_owner is owner]
+                   if owner is None or task_owner() is owner]
         return sum(1 for handle in handles if handle.cancel())
 
     def active_count(self) -> int:

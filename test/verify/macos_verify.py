@@ -85,6 +85,12 @@ EXPECTED: Dict[str, Any] = {
     # them is at the application layer — they are menu bar and system UI. So
     # the count is reported and not asserted.
     "window-management": True,
+    # Measured on a macos-14 arm64 runner, 2026-10-09 (Python 3.12): 3 of 3 and
+    # 1 of 1 reused tests passed with none skipped, and the point-based grab
+    # returned the region it was asked for on a 1920x1080 display at scale 1.
+    "click-state-readback": True,
+    "minimised-window-by-id": True,
+    "grab-logical-points": True,
 }
 
 #: The real-framework tests the two "reuse" probes run, and how many results
@@ -466,21 +472,15 @@ PROBES: List[Tuple[str, Callable[[], Outcome]]] = [
     ("accessibility-tree", probe_accessibility),
     ("recorder", probe_recorder),
     ("window-management", probe_window_management),
-]
-
-#: Probes no runner has measured yet: run and printed in both modes, judged in
-#: neither. Each was written on Windows, against the tests or fakes it names.
-#:
-#: ``click-state-readback`` and ``minimised-window-by-id`` re-run tests that
-#: did pass on macos-14 inside the headless suite (2026-10-09, Python 3.10 and
-#: 3.14) -- but as a child pytest of *this* job, with a skip counted as "did
-#: not work", they have not run anywhere. ``grab-logical-points`` has never
-#: executed on a Mac at all.
-REPORTED: List[Tuple[str, Callable[[], Outcome]]] = [
     ("click-state-readback", probe_click_state),
     ("minimised-window-by-id", probe_minimised_window),
     ("grab-logical-points", probe_grab_logical),
 ]
+
+#: Probes no runner has measured yet: run and printed in both modes, judged in
+#: neither. Empty since 2026-10-09, when the three that were here were measured
+#: on a macos-14 runner and moved to :data:`PROBES`. A new probe starts here.
+REPORTED: List[Tuple[str, Callable[[], Outcome]]] = []
 
 
 def main(argv: Optional[List[str]] = None) -> int:
@@ -498,10 +498,11 @@ def main(argv: Optional[List[str]] = None) -> int:
 
     outcomes = {name: probe(name, fn) for name, fn in PROBES}
     print("-" * 72)
-    print("reported, not asserted — no runner has measured these yet:")
+    if REPORTED:
+        print("reported, not asserted — no runner has measured these yet:")
     reported = {name: probe(name, fn) for name, fn in REPORTED}
-
-    print("-" * 72)
+    if REPORTED:
+        print("-" * 72)
     if options.measure:
         _print_measurement({**outcomes, **reported})
         return 0

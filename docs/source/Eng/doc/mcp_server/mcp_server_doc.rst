@@ -64,7 +64,9 @@ Recording / replay
 
 Action executor / history
   ``ac_execute_actions``, ``ac_execute_action_file``,
-  ``ac_list_action_commands``, ``ac_list_run_history``.
+  ``ac_list_action_commands``, ``ac_list_run_history``,
+  ``ac_stop_execution``, ``ac_list_executions`` (stop / list the stoppable
+  runs; a list becomes stoppable by wrapping it in ``AC_run_stoppable``).
 
 Scheduler / triggers / hotkeys
   ``ac_scheduler_add_job``, ``ac_scheduler_remove_job``,

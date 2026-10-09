@@ -50,9 +50,9 @@ class RestApiTab(TranslatableMixin, QWidget):
         self._audit_check = QCheckBox()
         self._audit_check.setChecked(True)
         self._url_value = QLabel("-")
-        self._url_value.setTextInteractionFlags(Qt.TextSelectableByMouse)
+        self._url_value.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
         self._token_value = QLabel("-")
-        self._token_value.setTextInteractionFlags(Qt.TextSelectableByMouse)
+        self._token_value.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
         self._status_label = QLabel()
         # Start replaces a running server and Stop joins its thread: both off the GUI thread.
         self._server_op = SlowOp(self)

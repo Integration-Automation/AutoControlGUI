@@ -268,6 +268,11 @@ jobs:
   # on 3.14 (test_execution_scope_threads.py); this runs the same three files
   # on a real free-threaded interpreter with the GIL off.
   #
+  # The same rule covers the other per-thread state kept in context variables
+  # -- the caller a request is served as, the device bound by use_device, the
+  # heal-event stamp and a run's stop token (utils/thread_bound.py) -- whose
+  # tests are the fourth file, test_thread_bound_context.py.
+  #
   # The project is not pip-installed: opencv-python ships abi3 wheels only,
   # which a free-threaded interpreter cannot load, and nothing these tests
   # import needs it. The packages below are what importing the executor needs,
@@ -299,7 +304,7 @@ jobs:
         env:
           PYTHON_GIL: "0"
           PYTHONPATH: ${{ github.workspace }}
-        run: '"$FT_PYTHON" -X thread_inherit_context=1 -m pytest -q -p no:cacheprovider test/unit_test/headless/test_execution_scope_threads.py test/unit_test/headless/test_execution_scope_isolation.py test/unit_test/headless/test_scope_run_level_callers.py'
+        run: '"$FT_PYTHON" -X thread_inherit_context=1 -m pytest -q -p no:cacheprovider test/unit_test/headless/test_execution_scope_threads.py test/unit_test/headless/test_execution_scope_isolation.py test/unit_test/headless/test_scope_run_level_callers.py test/unit_test/headless/test_thread_bound_context.py'
 
   # Sphinx with warnings as errors. The headless suite reads every page with
   # the `dummy` builder when Sphinx is installed (test_sphinx_docs_build.py),

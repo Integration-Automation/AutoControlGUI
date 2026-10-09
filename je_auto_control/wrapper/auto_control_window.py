@@ -16,6 +16,7 @@ import time
 from typing import List, Optional, Tuple, Union
 
 from je_auto_control.utils.exception.exceptions import AutoControlActionException
+from je_auto_control.utils.executor.run_control import pause
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.wrapper.window_backends import get_backend
 from je_auto_control.utils.timeouts import clamp_poll_interval, deadline_after
@@ -118,7 +119,7 @@ def wait_for_window(title_substring: str,
         remaining = deadline - time.monotonic()
         if remaining <= 0:
             break
-        time.sleep(min(poll, remaining))
+        pause(min(poll, remaining), time.sleep)
     raise AutoControlActionException(
         f"wait_for_window timeout: {title_substring!r}"
     )

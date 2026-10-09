@@ -19,6 +19,7 @@ from PySide6.QtWidgets import (
 )
 
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
+from je_auto_control.gui._qt_typed import filled_item
 from je_auto_control.gui.language_wrapper.multi_language_wrapper import (
     language_wrapper,
 )
@@ -58,7 +59,7 @@ class RbacUsersPanel(TranslatableMixin, QGroupBox):
         self._token_value.setReadOnly(True)
         self._status_label = QLabel()
         self._status_label.setWordWrap(True)
-        self._status_label.setTextInteractionFlags(Qt.TextSelectableByMouse)
+        self._status_label.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
         self._build_layout()
         self._retitle_columns()
 
@@ -144,9 +145,9 @@ class RbacUsersPanel(TranslatableMixin, QGroupBox):
         row = self._table.currentRow()
         if row < 0 or self._table.item(row, 0) is None:
             return
-        self._id_input.setText(self._table.item(row, 0).text())
-        self._name_input.setText(self._table.item(row, 1).text())
-        self._role_input.setCurrentText(self._table.item(row, 2).text())
+        self._id_input.setText(filled_item(self._table, row, 0).text())
+        self._name_input.setText(filled_item(self._table, row, 1).text())
+        self._role_input.setCurrentText(filled_item(self._table, row, 2).text())
 
     def _target(self) -> Optional[Tuple[str, str]]:
         """``(store path, user id)`` of the operation, or ``None`` with the reason shown."""

@@ -80,7 +80,7 @@ class PresenceTab(TranslatableMixin, QWidget):
         root.addWidget(self._table, stretch=1)
         root.addWidget(self._status)
         header = self._table.horizontalHeader()
-        header.setSectionResizeMode(QHeaderView.Stretch)
+        header.setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
         self._apply_translations()
 
     def menu_actions(self) -> list:
@@ -116,7 +116,7 @@ class PresenceTab(TranslatableMixin, QWidget):
                   cursor, row.last_seen_iso)
         for col, text in enumerate(values):
             item = QTableWidgetItem(str(text))
-            item.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
+            item.setFlags(Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsEnabled)
             self._table.setItem(index, col, item)
 
     def _on_registry_event(self, _viewer_id: str,

@@ -240,6 +240,8 @@ class _HostMediaMixin(_PanelPart):
         self._host_quality_dot.setToolTip(_t("rd_webrtc_quality_unknown"))
 
     def _stop_adaptive(self) -> None:
+        # Stays on the GUI thread: StatsPoller.stop() cannot block (see its docstring),
+        # and the controller is only dropped.
         if self._adaptive_poller is not None:
             self._adaptive_poller.stop()
             self._adaptive_poller = None

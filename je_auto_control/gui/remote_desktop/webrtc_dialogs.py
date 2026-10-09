@@ -481,7 +481,8 @@ class LanBrowseDialog(QDialog):
         row = self._table.currentRow()
         if row < 0:
             return
-        host_id = self._table.item(row, 0).text() if self._table.item(row, 0) else ""
+        item = self._table.item(row, 0)
+        host_id = item.text() if item is not None else ""
         if host_id and host_id in [s.get("host_id") for s in self._services.values()]:
             for svc in self._services.values():
                 if svc.get("host_id") == host_id:

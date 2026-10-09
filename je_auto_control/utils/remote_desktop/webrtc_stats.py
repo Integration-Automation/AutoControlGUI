@@ -64,6 +64,13 @@ class StatsPoller:
         self._task = asyncio.ensure_future(self._loop())
 
     def stop(self) -> None:
+        """Stop polling; safe from any thread, and it never waits.
+
+        It sets a flag and asks the bridge's loop to cancel the poll task
+        (``call_soon_threadsafe``): no thread is joined, no future is waited
+        for and no socket is closed, so a GUI slot may call it directly. The
+        loop finishes a sample that is already in flight on its own time.
+        """
         self._stopped = True
         if self._task is None:
             return

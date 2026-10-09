@@ -3617,6 +3617,18 @@ def _add_resilience_specs(specs: List[CommandSpec]) -> None:
                     "pending local changes are discarded.",
     ))
     specs.append(CommandSpec(
+        "AC_config_sync_collect_blobs", "Data", "Config Sync: Collect Unused Blobs",
+        fields=sync_target + (
+            FieldSpec("keep", FieldType.STRING, optional=True,
+                      placeholder="sha256,sha256"),
+            FieldSpec("min_age_s", FieldType.FLOAT, optional=True, default=86400.0),
+            FieldSpec("dry_run", FieldType.BOOL, optional=True, default=False),
+        ) + sync_options,
+        description="Delete the account's asset blobs on the sync server that no "
+                    "entry names any more. Blobs newer than min_age_s and the "
+                    "digests in 'keep' stay; dry_run only lists what would go.",
+    ))
+    specs.append(CommandSpec(
         "AC_detect_drift", "Data", "Data Drift: Detect (PSI + KS)",
         fields=(
             FieldSpec("reference", FieldType.STRING,

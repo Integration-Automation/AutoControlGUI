@@ -78,10 +78,10 @@ class AdminConsoleTab(TranslatableMixin, QWidget):
         # proxy and the operator can paste an https://… URL here.
         self._url_input.setPlaceholderText("http://host:9939")  # NOSONAR python:S5332
         self._token_input = QLineEdit()
-        self._token_input.setEchoMode(QLineEdit.Password)
+        self._token_input.setEchoMode(QLineEdit.EchoMode.Password)
         self._table = QTableWidget(0, 5)
         self._table.horizontalHeader().setSectionResizeMode(
-            QHeaderView.ResizeToContents,
+            QHeaderView.ResizeMode.ResizeToContents,
         )
         self._actions_input = QTextEdit()
         self._actions_input.setPlaceholderText('[["AC_get_mouse_position"]]')
@@ -270,7 +270,7 @@ class AdminConsoleTab(TranslatableMixin, QWidget):
     def _icon_for(png: Optional[bytes]) -> Optional[QIcon]:
         if not png:
             return None
-        image = QImage.fromData(png, "PNG")
+        image = QImage.fromData(png, "PNG")  # type: ignore[arg-type]  # reason: the stub says bytes; PySide6 raises ValueError for bytes
         if image.isNull():
             return None
         scaled = image.scaled(

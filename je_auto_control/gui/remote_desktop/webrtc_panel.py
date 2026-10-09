@@ -27,6 +27,7 @@ from PySide6.QtWidgets import (
 
 from je_auto_control.gui.remote_desktop._webrtc_types import MultiViewerHostT, SessionRecorderT, WebRTCDesktopViewerT
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
+from je_auto_control.gui._dispose import release_resources
 from je_auto_control.gui._slow_op import StopQueue
 from je_auto_control.gui.remote_desktop._helpers import (
     _t,
@@ -49,6 +50,7 @@ from je_auto_control.gui.remote_desktop.webrtc_workers import (
     HostPublishLoopWorker, ViewerAnswerPushWorker, ViewerSignalingWorker,
 )
 from je_auto_control.gui.task_controller import TaskHandle
+from je_auto_control.gui.workspace_tabs import real_window
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.remote_desktop import (
     default_address_book,
@@ -155,10 +157,27 @@ class _WebRTCHostPanel(_HostUiMixin, _HostTrustMixin, _HostMediaMixin, _HostSess
         if signaling_url and hasattr(self, "_server_edit"):
             self._server_edit.setText(signaling_url)
 
+    def dispose(self) -> None:
+        """Release what the panel holds beyond its widgets -- including the host it runs.
+
+        Called through ``RemoteDesktopTab.dispose()``; safe to call twice.
+        The TCP panels leave their host in the registry, where scripts and
+        the other panels still reach it. A WebRTC host belongs to this panel
+        alone: with the panel gone nothing could stop it, and it would go on
+        sharing the screen unseen. So it is stopped here, in the background as
+        for Stop, together with the signaling loop, the LAN advertiser, the
+        offer or file push still out and the tray icon.
+        """
+        release_resources(self, self._stop_host_if_any, self._hide_tray)
+
+    def _hide_tray(self) -> None:
+        if self._tray is not None:
+            self._tray.hide()
+
     def _on_tray_open(self) -> None:
-        win = self.window()
-        if win is None:
-            return
+        # Not self.window(): for a few event-loop turns after a theme switch
+        # this page is parked outside the main window's tree.
+        win = real_window(self)
         win.showNormal()
         win.raise_()
         win.activateWindow()
@@ -321,6 +340,23 @@ class _WebRTCViewerPanel(_ViewerUiMixin, _ViewerFilesMixin, _ViewerAddressBookMi
             for widget in (self._answer_btn, self._connect_btn):
                 widget.setEnabled(False)
             self._status_label.setText(_t("rd_webrtc_unavailable"))
+
+    def dispose(self) -> None:
+        """Release what the panel holds beyond its widgets -- including the session it is in.
+
+        Called through ``RemoteDesktopTab.dispose()``; safe to call twice.
+        The TCP panels leave their session in the registry, where scripts and
+        the other panels still reach it. A WebRTC session belongs to this
+        panel alone, so it is ended here, in the background as for Stop:
+        the pending reconnect, the signaling workers, the recording, the
+        folder sync, the upload still out and the pop-out window go with it.
+        """
+        release_resources(self, self._end_session_for_good)
+
+    def _end_session_for_good(self) -> None:
+        self._user_initiated_disconnect = True      # a late "disconnected" must not schedule a reconnect
+        self._stop_viewer_if_any()
+        self._close_screen_window()
 
     def _ensure_screen_window(self) -> RemoteScreenWindow:
         if self._screen_window is not None:

@@ -238,6 +238,34 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Changed
 
+- Stop: inside a stoppable run the polling waits (`AC_wait_window`,
+  `AC_wait_text`, the smart waits, `AC_expect_poll`, `AC_assert_eventually`,
+  `AC_wait_actionable` and others) end with `ExecutionStopped` as soon as a
+  stop is requested instead of running to their timeout. `expect_poll`,
+  `wait_until_app_idle`, `wait_for_unlock`, `build_verifier`,
+  `run_with_budget` and `TokenBucket.acquire` default their `sleep` to
+  `run_control.pause`.
+- ChatOps: a stopped command replies "`<name>` stopped." rather than a failure
+  naming `ExecutionStopped`.
+- USB ACL: while the file fails its integrity check `UsbAcl.decide()` denies
+  every device and `default_policy` reads `"deny"`, also for an instance built
+  with `default_policy="allow"`.
+- Config sync: an acknowledged deletion is kept for 30 days
+  (`tombstone_hold_s=0` restores immediate collection). `HttpAssetTransport`
+  asks the server's blob limit once and refuses a larger file without sending
+  it. Blob listings carry `age_s`.
+- Folder mirror: a file whose size changes at an unchanged modification time,
+  or whose modification time goes backwards, is now pushed.
+- GUI: releasing the Remote Desktop tab (`close_tab(..., release=True)`) ends
+  a running WebRTC host or viewer session; TCP and WebSocket sessions keep
+  running. Releasing any tab stops its background work at once. Callbacks
+  given to `start_worker`, `connect_viewer` and `start_panel_task` are held
+  weakly.
+- Accessibility (Windows): each calling thread gets its own UI Automation
+  object, with COM initialised on that thread at its first call.
+- Threads: a thread started inside `authorization_scope`, `use_device`,
+  `heal_context` or a stoppable run no longer sees that state on builds where
+  threads inherit context (free-threaded Python, `-X thread_inherit_context=1`).
 - Config sync: `ConfigBucket.upsert` / `remove` without `origin=` now store a
   versioned entry (`{"value", "vector", "origin", ...}`) instead of the flat
   value. Read values with `bucket.values(section)`, or pass `versioned=False`

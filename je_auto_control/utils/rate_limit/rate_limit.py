@@ -21,6 +21,7 @@ import time
 from typing import Callable, Dict, Optional
 
 from je_auto_control.utils.exception.exceptions import AutoControlException
+from je_auto_control.utils.executor.run_control import pause
 
 
 def _positive_finite(value: float) -> bool:
@@ -90,7 +91,7 @@ class TokenBucket:
             return (n - self._tokens) / self._rate
 
     def acquire(self, n: float = 1.0, *, timeout: Optional[float] = None,
-                sleep: Callable[[float], None] = time.sleep) -> bool:
+                sleep: Callable[[float], None] = pause) -> bool:
         """Block until ``n`` tokens are taken or ``timeout`` elapses."""
         self._check_request(n)
         # A NaN deadline is never reached, so the wait never timed out.

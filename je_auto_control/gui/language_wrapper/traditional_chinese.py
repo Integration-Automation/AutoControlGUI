@@ -1152,6 +1152,23 @@ traditional_chinese_word_dict = {
     "config_sync_secret_label": "共享密鑰:",
     "config_sync_scripts_label": "腳本資料夾(選填):",
     "config_sync_assets_label": "共享資產資料夾(選填):",
+    "config_sync_locators_label": "定位器儲存庫檔案(選填):",
+    "config_sync_sections_label": "要同步的區段:",
+    "config_sync_section_hotkeys": "快捷鍵",
+    "config_sync_section_triggers": "觸發器",
+    "config_sync_section_address_book": "通訊錄",
+    "config_sync_section_scripts": "腳本(需要資料夾)",
+    "config_sync_section_locators": "定位器(需要檔案)",
+    "config_sync_assets_server_label": "把大型腳本存放在同步伺服器上,而不是共享資料夾",
+    "config_sync_no_sections": "請至少勾選一個要同步的區段(腳本與定位器需要填寫路徑)",
+    "config_sync_sections_covered": "已同步的區段",
+    "config_sync_collect_btn": "刪除伺服器上未使用的 blob",
+    "config_sync_collect_confirm":
+        "刪除此帳號在同步伺服器上、已沒有任何同步項目引用的 blob?最近一天內存入的 blob 會保留"
+        "。",
+    "config_sync_collect_done":
+        "Blob:已刪除 {deleted} 個(釋放 {freed} 位元組),使用中 {kept} 個,{recent} 個太新尚不判"
+        "定",
     "config_sync_conflicts_title": "衝突:兩台機器同時修改的項目",
     "config_sync_col_entry": "項目",
     "config_sync_col_choice": "候選",

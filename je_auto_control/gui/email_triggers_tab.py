@@ -42,7 +42,7 @@ class EmailTriggersTab(TranslatableMixin, QWidget):
         self._user_input = QLineEdit()
         self._user_input.setPlaceholderText("user@example.com")
         self._password_input = QLineEdit()
-        self._password_input.setEchoMode(QLineEdit.Password)
+        self._password_input.setEchoMode(QLineEdit.EchoMode.Password)
         self._password_input.setPlaceholderText(_t("eml_password_placeholder"))
         self._mailbox_input = QLineEdit("INBOX")
         self._search_input = QLineEdit("UNSEEN")
@@ -57,11 +57,11 @@ class EmailTriggersTab(TranslatableMixin, QWidget):
         self._status_label = QLabel()
         self._watcher_op = SlowOp(self)
         self._table = QTableWidget(0, 7)
-        self._table.setEditTriggers(QAbstractItemView.NoEditTriggers)
-        self._table.setSelectionBehavior(QAbstractItemView.SelectRows)
+        self._table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
+        self._table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         self._table.verticalHeader().setVisible(False)
         self._table.horizontalHeader().setSectionResizeMode(
-            QHeaderView.Interactive,
+            QHeaderView.ResizeMode.Interactive,
         )
         self._table.horizontalHeader().setStretchLastSection(True)
         self._apply_table_headers()
@@ -253,5 +253,5 @@ class EmailTriggersTab(TranslatableMixin, QWidget):
             )
             for col, text in enumerate(values):
                 item = QTableWidgetItem(text)
-                item.setFlags(item.flags() & ~Qt.ItemIsEditable)
+                item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
                 self._table.setItem(row, col, item)

@@ -18,7 +18,6 @@ family whichever backend failed.
 """
 from __future__ import annotations
 
-import contextvars
 import threading
 from contextlib import contextmanager
 from dataclasses import asdict, dataclass, field
@@ -27,6 +26,7 @@ from time import monotonic
 from typing import Any, Callable, Dict, Iterator, Mapping, Optional, Tuple, TypeVar, Union
 
 from je_auto_control.utils.exception.exceptions import AutoControlException
+from je_auto_control.utils.thread_bound import ThreadBoundVar
 
 PLATFORM_ANDROID = "android"
 PLATFORM_IOS = "ios"
@@ -481,16 +481,19 @@ def open_device(context: DeviceContext, **transports: Any) -> DeviceSession:
     return IOSSession(context, **transports)
 
 
-_BOUND: "contextvars.ContextVar[Optional[DeviceSession]]" = contextvars.ContextVar(
-    "je_auto_control_device_session", default=None)
+_BOUND: "ThreadBoundVar[Optional[DeviceSession]]" = ThreadBoundVar(
+    "je_auto_control_device_session", None)
 
 
 @contextmanager
 def use_device(session: DeviceSession) -> Iterator[DeviceSession]:
     """Make ``session`` the device that mobile commands without an address target.
 
-    The binding lives in a context variable, so it is visible only to the
-    thread that made it: two device-matrix workers each see their own device.
+    The binding is visible only to the thread that made it: two device-matrix
+    workers each see their own device, and a thread started inside the block
+    does not reach the device by leaving an address out -- also on a
+    free-threaded build, where a new thread inherits its creator's context
+    variables.
     """
     token = _BOUND.set(session)
     try:

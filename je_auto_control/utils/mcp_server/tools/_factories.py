@@ -553,6 +553,35 @@ def system_tools() -> List[MCPTool]:
             annotations=DESTRUCTIVE,
         ),
         MCPTool(
+            name="ac_stop_execution",
+            description=("Ask a stoppable run to stop; returns {stopped: N} "
+                         "at once and the run ends at its next checkpoint "
+                         "(between actions, or inside a wait). A run is "
+                         "stoppable when its action list is wrapped in an "
+                         "AC_run_stoppable block (give it a run_id) or it "
+                         "was started with a run_id from Python or the GUI. "
+                         "Without run_id every stoppable run is asked. A "
+                         "second request for the same run also interrupts "
+                         "its cleanup."),
+            input_schema=schema({
+                "run_id": {"type": "string",
+                           "description": "The run to stop (see ac_list_executions)."},
+                "reason": {"type": "string",
+                           "description": "Stored on the run and shown in its stop error."},
+            }),
+            handler=h_runs.stop_execution,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
+        MCPTool(
+            name="ac_list_executions",
+            description=("Return the stoppable runs in progress as "
+                         "[{run_id, started_at, stopping}]; run_id is what "
+                         "ac_stop_execution takes."),
+            input_schema=schema({}),
+            handler=h_runs.list_executions,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
             name="ac_list_action_commands",
             description="Return every action command name the executor recognises.",
             input_schema=schema({}),
@@ -9320,6 +9349,24 @@ def config_sync_tools() -> List[MCPTool]:
                          "changes (listed under 'withheld')."),
             input_schema=schema({**target, **options}, required),
             handler=h_sync.config_sync_full_resync,
+            annotations=DESTRUCTIVE,
+        ),
+        MCPTool(
+            name="ac_config_sync_collect_blobs",
+            description=("DELETE this account's asset blobs on the sync server that no "
+                         "entry names any more (scripts deleted or replaced keep "
+                         "counting against the quota until this runs). Kept: every "
+                         "SHA-256 named by the server's bucket, this machine's merged "
+                         "state and its unsent changes, the digests in 'keep', and "
+                         "any blob stored less than 'min_age_s' seconds ago (default "
+                         "86400). dry_run=true deletes nothing and lists what would "
+                         "go. Returns {deleted, freed, kept, recent, failed, dry_run, "
+                         "referenced}."),
+            input_schema=schema({**target, **options,
+                                 "keep": {"type": "array", "items": {"type": "string"}},
+                                 "min_age_s": {"type": "number"},
+                                 "dry_run": {"type": "boolean"}}, required),
+            handler=h_sync.config_sync_collect_blobs,
             annotations=DESTRUCTIVE,
         ),
     ]
