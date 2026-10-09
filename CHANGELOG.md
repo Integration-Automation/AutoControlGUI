@@ -238,6 +238,23 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Changed
 
+- RBAC: 29 MCP tools that return stored records or configuration (run history,
+  costs, traces, heal logs, journals, the USB ACL, lease tokens, mobile
+  clipboards) now need `read_data` instead of `read_screen`. The built-in
+  `viewer` role can no longer call them; `operator` and `admin` are unaffected.
+- MCP plug-ins: a callable with `mcp_read_only = True` is offered on a
+  read-only server and to `viewer`. The declaration is trusted, not verified.
+- ChatOps: `/run` is ended by a stop-all (`AC_stop_execution` without a run id,
+  the GUI's stop-all, MCP `ac_stop_execution`); `/stop [run-id]` is new.
+- Config sync: a device's first sync against a non-empty bucket no longer
+  commits a revision or adds itself to `peers`. A device that has only read the
+  bucket and first sends an edit more than 30 days after the entry was deleted
+  elsewhere re-creates it without a conflict.
+- Logging: a command's result is masked before it is logged, so fields named
+  `token`, `password`, `secret`, `api_key` and the like read `***` in the
+  `execute: [...] -> ...` line. The returned record is unchanged.
+- Script Builder: the result of `AC_jwt_encode` is masked like the user-token
+  commands; read it through **One-time values**.
 - Stop: inside a stoppable run the polling waits (`AC_wait_window`,
   `AC_wait_text`, the smart waits, `AC_expect_poll`, `AC_assert_eventually`,
   `AC_wait_actionable` and others) end with `ExecutionStopped` as soon as a

@@ -2,7 +2,7 @@
 
 ## 跨平台與 GUI 全面改版
 
-`WIP` — 計畫 A–H 的程式都已交付（A 在 U-20261009-01…14，B–H 在 U-20261009-15…26，留下的缺口在 U-20261009-27…37）；還沒做到的是**實機驗證**、要維護者決定的幾件事，與下面各節列的少數缺口
+`WIP` — 計畫 A–H 的程式都已交付（A 在 U-20261009-01…14，B–H 在 U-20261009-15…26，留下的缺口在 U-20261009-27…38）；還沒做到的是**實機驗證**、要維護者決定的幾件事，與下面各節列的少數缺口
 
 核准設計：[跨平台自動化與 GUI 改版](docs/superpowers/specs/2026-10-02-platform-gui-modernization-design.md)。
 實作計畫：[分階段交付計畫](docs/superpowers/plans/2026-10-02-modernization-index.md)。
@@ -226,15 +226,14 @@ U-20261009-06 與 -04 的 macOS 部分是在 Windows 上對假的 pyobjc／Quart
 
 ## 安全與伺服器：留下的缺口
 
-`TODO` — U-20261009-29、-30、-34、-35 之後還開著的
+`TODO` — U-20261009-29、-30、-34、-35、-37 之後還開著的
 
 **要維護者過目或決定的：**
 
-- `utils/rbac/policy.py` 的 `DATA_TOOLS`（42 個需要 `read_data` 的工具）是實作時分的類；刻意留在 `read_screen` 的有
-  `ac_list_run_history`、`ac_costs_*`、`ac_trace_export`、`ac_self_heal_log_list`、`ac_usb_acl_list`、`ac_vlm_locate`／`ac_self_heal_locate`（會花 VLM 費用）。
-- Script Builder 現在永遠不顯示 `AC_user_add`／`AC_user_rotate_token` 回傳的 token（要從 Users 群組、CLI 或腳本取得）。
-- 唯讀模式現在在三種工具模式都強制執行，而外掛工具一律被登記成會變更的：**唯讀的 MCP server 不會執行任何外掛工具**。要不要讓外掛宣告自己唯讀。
-- 設定同步：一台裝置加入「已經有內容」的 bucket 時仍會多提交一個 revision（這個登記是之後的刪除會等它的依據；要拿掉是 `merge.awaits_ack` 的一行，代價是那個保證）。
+- **`DECIDE`：REST 的 `GET /history` 與 `GET /usb/acl` 仍只要 `read_screen`**（`REST_ROUTE_CAPABILITIES`；REST 文件寫 viewer 可以用「除了兩個以外的所有 GET」）。
+  MCP 那邊同樣的資料已改成要 `read_data`（`DATA_TOOLS` 42 → 71），所以 viewer 的 token 經 MCP 讀不到執行歷史與 USB ACL，經 REST 仍讀得到。
+- **`DECIDE`：`AC_lease_secret`／`AC_lease_active` 回傳的租約 token 在 Script Builder 仍以明文顯示**（後者巢狀在 `leases` 底下，遮蔽與一次性顯示都只看最上層欄位）。
+  `AC_rest_api_start`／`AC_rest_api_status` 回傳共用的 REST bearer token，沒有 Script Builder schema，從 raw JSON 檢視執行時明文顯示。
 
 **還沒做的：**
 
@@ -254,6 +253,8 @@ U-20261009-06 與 -04 的 macOS 部分是在 Windows 上對假的 pyobjc／Quart
   - 沒有做過真的兩台機器同步，也沒有真的多行程 server；伺服器端的測試在本機是略過的（共用環境沒裝 `fastapi`），只在 CI 跑。
   - 墓碑：已確認的刪除現在會保留 30 天（`TOMBSTONE_HOLD_S`），沒被列過的機器帶舊資料來時變成衝突。剩下的風險：超過 30 天才第一次同步的機器
     仍可能讓項目復活；舊版 client 提交時會丟掉保留中的墓碑並去掉 `deleted_at`，所以保護程度取決於還在提交的最舊 client。沒對真的舊版安裝跑過。
+  - 加入 bucket 不再提交 revision 之後變弱的保證：只讀過 bucket 的裝置改了某個項目，而且在該項目於別處被刪除超過 30 天之後才第一次送出那個編輯，
+    項目會被重新建立而沒有衝突（以前墓碑會無限期等它）。只讀的裝置不再出現在 `peers`，所以 `max_offline_s` 退役與 `FullResyncRequired` 不會套用到它。
   - `ConfigBucket.upsert` 不帶 `origin=` 時現在存的是帶版本的項目，直接讀 `bucket.sections[s][id]["field"]` 的程式會壞（`bucket.values(section)` 兩種形狀都能讀）。
   - 沒有自動的剪貼簿轉送，所以 `automatic=True`（`ClipboardEchoGuard.should_send`）在產品裡沒有呼叫端。
   - blob：鎖檔超過 30 秒會被視為過期而接管，單次寫入比這更久時仍可能超出配額；用 `publish_assets` 手動上傳的 blob 沒有 bucket 項目引用，
@@ -296,15 +297,18 @@ U-20261009-18 的每一個裝置面呼叫都只對假的 ADB／uiautomator2／WD
 
 ## GUI：留下的缺口
 
-`TODO` — U-20261009-27、-28、-34、-36 之後還開著的
+`TODO` — U-20261009-27、-28、-34、-36、-38 之後還開著的
 
 - **Windows UIA 後端的執行緒模型完全沒對真的 COM 驗過**：現在每個呼叫執行緒各有一個自動化物件（`accessibility/backends/windows_automation.py`；
   主執行緒 STA、其他執行緒進 MTA），Accessibility 分頁與 A11y Audit 已移出 GUI 執行緒。開發環境沒裝 `comtypes`，CI 也沒有同時有 `comtypes` 與桌面的 job，
   測試全是假 COM 物件。未驗證的假設：MTA 工作執行緒上的 UIA 呼叫可用；焦點事件 callback 不需要 message pump；
   `import comtypes` 第一次發生在已經是 MTA 的執行緒上會丟 `OSError`（憑記憶，沒處理）。`AC_wait_for_focus_change` 的原生 `Queue.get` 仍不會被 stop 叫醒。
+- **Script Builder 的一次性值**：在區塊指令（`AC_loop`、`AC_try`、`AC_if_*`）裡產生的 token 拿不到——區塊只記錄自己的摘要，巢狀指令的結果不在任何紀錄裡（結果畫面會說明並列出指令）。
+  要補需要 executor 的結果掛鉤（`utils/executor/action_executor.py` 的 `_run_one_action` 與 `gui/script_builder/step_model.py::nested_sensitive_commands`）。
+  對話框開過之後結果畫面仍顯示「有值可看」那一行；複製到系統剪貼簿的 token 關閉時不清除；對話框從未實際顯示過。
 - **stop 還叫不醒的**：已經進到後端的單一指令（一次影像搜尋、OCR、HTTP 請求、shell 指令）、單一手勢內的節奏 sleep、`AC_wait_for_focus_change`；
   MCP 自己的輪詢（`ac_wait_for_image`／`ac_wait_for_pixel`）不在可停止的執行裡。非腳本的分頁工作在後端無法取消，只是結果被丟掉。
-  ChatOps 的 `/run` 只有在腳本自己含 `AC_run_stoppable` 時才停得掉（刻意沒有整個包起來：那會讓 GUI 的「全部停止」也停掉聊天裡的執行，要維護者決定）。
+  ChatOps：`SlackBot.poll_once` 在輪詢執行緒上依序分派，所以同一個 bot 自己的 `/run` 還在跑時貼的 `/stop` 要等它結束才會被讀到（不帶參數的 `/stop` 因此只停 `chatops-` 開頭的執行）；沒對真的 Slack workspace 跑過。
   新轉成可停止的等待裡，`AC_handle_file_dialog`、`AC_wait_until_app_idle`、`AC_wait_for_composition_commit`、`AC_wait_for_unlock` 與行動裝置的 `wait_for_app` 只對假探針測過。
 - **WebRTC**：`StatsPoller.start()` 會在 GUI 執行緒上最多等 2 秒（`future.result(timeout=2.0)`，是啟動路徑，沒動）。LAN 廣播的註冊與取消已移出 GUI 執行緒，
   但真的 zeroconf 的時間與名稱衝突行為只對假物件測過。
