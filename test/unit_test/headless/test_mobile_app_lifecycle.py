@@ -112,7 +112,8 @@ def test_matrix_stops_the_app_it_started_even_when_the_run_fails(adb_host):
     phone = adb_host.devices["phone"]
     spec = {"platform": "android", "serial": "phone", "adb_path": "fake-adb", "app_id": APP}
     passed = run_on_devices([["AC_android_tap", {"x": 1, "y": 2}]], [dict(spec)])
-    assert passed.results[0].success and passed.results[0].app_state == "not_running"
+    assert passed.results[0].success
+    assert passed.results[0].app_state == "not_running"
     failed = run_on_devices([["AC_android_key", {"key": "HOME; reboot"}]], [dict(spec)])
     assert failed.results[0].success is False
     assert failed.results[0].app_state == "not_running"
@@ -175,7 +176,8 @@ def test_clipboard_file_recording_capabilities(adb_host, tmp_path, monkeypatch):
     assert extension.get_clipboard() == "copied 文字"
 
     remote = extension.start_recording(time_limit_s=30)
-    assert phone.recording and remote == "/sdcard/autocontrol_recording.mp4"
+    assert phone.recording
+    assert remote == "/sdcard/autocontrol_recording.mp4"
     with pytest.raises(DeviceError, match="already running"):
         extension.start_recording()
     saved = mobile_extension(session).stop_recording(str(tmp_path / "run.mp4"))
@@ -228,7 +230,8 @@ def test_adapter_absent_reports_dependency(adb_host, no_uiautomator):
     assert capabilities["clipboard"].available
     # Android without uiautomator2: adb covers files, nothing covers the clipboard.
     android = _android().capabilities()
-    assert android["files"].available and android["recording"].available
+    assert android["files"].available
+    assert android["recording"].available
     assert android["clipboard"].state == "needs_dependency"
     assert "uiautomator2" in android["clipboard"].reason
     with pytest.raises(DeviceUnsupportedError):

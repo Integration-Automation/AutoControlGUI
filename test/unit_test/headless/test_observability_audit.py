@@ -26,7 +26,8 @@ def test_to_otel_emits_otlp_spans():
     trace = AgentTrace()
     trace.record("chat", model="m", system="openai", input_tokens=3, duration_s=0.25)
     span = trace.to_otel()[0]
-    assert len(span["traceId"]) == 32 and len(span["spanId"]) == 16
+    assert len(span["traceId"]) == 32
+    assert len(span["spanId"]) == 16
     assert int(span["endTimeUnixNano"]) - int(span["startTimeUnixNano"]) == 250_000_000
     assert (span["kind"], span["status"]["code"]) == (3, 1)
     assert {"key": "gen_ai.usage.input_tokens", "value": {"intValue": "3"}} in span["attributes"]

@@ -60,13 +60,15 @@ def test_a_save_writes_data_and_signature_into_one_file(tmp_path):
     acl = UsbAcl(path=path)
     acl.add_rule(_rule(1))
     stored = json.loads(path.read_text(encoding="utf-8"))
-    assert stored["version"] == 1 and len(stored["rules"]) == 1
+    assert stored["version"] == 1
+    assert len(stored["rules"]) == 1
     assert stored["signature"]["algorithm"] == "hmac-sha256"
     assert len(stored["signature"]["value"]) == 64
     assert not (tmp_path / "usb_acl.json.sig").exists()
     assert not (tmp_path / "usb_acl.json.lock").exists(), "the lock is released"
     reopened = UsbAcl(path=path)
-    assert reopened.integrity_ok and reopened.verify_integrity()
+    assert reopened.integrity_ok
+    assert reopened.verify_integrity()
     assert _products(reopened) == [("1050", "0001")]
 
 
@@ -79,7 +81,8 @@ def test_the_signature_covers_the_content_not_its_formatting(tmp_path):
     stored["rules"][0]["product_id"] = "ffff"
     path.write_text(json.dumps(stored, indent=2), encoding="utf-8")
     tampered = UsbAcl(path=path)
-    assert tampered.integrity_ok is False and tampered.verify_integrity() is False
+    assert tampered.integrity_ok is False
+    assert tampered.verify_integrity() is False
     assert tampered.list_rules() == []
     assert tampered.decide(vendor_id="1050", product_id="ffff", serial=None) == "deny"
 
@@ -125,7 +128,8 @@ def test_an_explicit_key_signs_and_verifies_the_single_file(tmp_path):
 def test_a_signed_two_file_acl_loads_and_is_rewritten_as_one_file(tmp_path):
     path = _legacy_layout(tmp_path, _ONE_RULE)
     acl = UsbAcl(path=path)
-    assert acl.integrity_ok and acl.verify_integrity()
+    assert acl.integrity_ok
+    assert acl.verify_integrity()
     assert acl.decide(vendor_id="1050", product_id="0407", serial=None) == "allow"
     assert (tmp_path / "usb_acl.json.sig").exists(), "reading changes nothing on disk"
     acl.add_rule(_rule(2))
@@ -138,13 +142,15 @@ def test_a_two_file_acl_with_a_wrong_signature_still_fails_closed(tmp_path):
     path = _legacy_layout(tmp_path, _ONE_RULE)
     path.write_text(json.dumps({**_ONE_RULE, "default": "allow"}), encoding="utf-8")
     acl = UsbAcl(path=path)
-    assert acl.integrity_ok is False and acl.list_rules() == []
+    assert acl.integrity_ok is False
+    assert acl.list_rules() == []
 
 
 def test_an_unsigned_file_from_before_signing_still_loads(tmp_path):
     path = _legacy_layout(tmp_path, _ONE_RULE, signed=False)
     acl = UsbAcl(path=path)
-    assert acl.integrity_ok and len(acl.list_rules()) == 1
+    assert acl.integrity_ok
+    assert len(acl.list_rules()) == 1
     assert UsbAcl(path=path, require_signature=True).integrity_ok is False
 
 
@@ -175,7 +181,8 @@ def test_two_instances_changing_one_file_never_see_a_torn_pair(tmp_path, caplog)
         thread.start()
     for thread in threads:
         thread.join(_WAIT)
-    assert failures == [] and not any(thread.is_alive() for thread in threads)
+    assert failures == []
+    assert not any(thread.is_alive() for thread in threads)
     assert all(acl.integrity_ok for acl in instances)
     assert _mismatches(caplog) == []
     final = UsbAcl(path=path)
@@ -213,7 +220,8 @@ def test_a_child_process_and_this_one_keep_each_others_rules(tmp_path):
     final = UsbAcl(path=path)
     assert final.integrity_ok
     vendors = [vendor for vendor, _product in _products(final)]
-    assert vendors.count("cccc") == _PER_WRITER and vendors.count("dddd") == _PER_WRITER
+    assert vendors.count("cccc") == _PER_WRITER
+    assert vendors.count("dddd") == _PER_WRITER
 
 
 def test_a_change_that_cannot_get_the_lock_is_refused_not_applied(tmp_path, monkeypatch):
@@ -256,4 +264,5 @@ def test_an_in_memory_change_needs_no_lock(tmp_path, monkeypatch):
     monkeypatch.setattr(json_store, "_LOCK_WAIT_S", 0.2)
     (tmp_path / "usb_acl.json.lock").write_text("held", encoding="utf-8")
     acl.add_rule(_rule(1), persist=False)
-    assert len(acl.list_rules()) == 1 and not path.exists()
+    assert len(acl.list_rules()) == 1
+    assert not path.exists()

@@ -53,7 +53,8 @@ def test_mcp_shell_command_keeps_output_it_cannot_decode_strictly():
     from je_auto_control.utils.mcp_server.tools._handlers_system import shell_command
     script = "import sys; sys.stdout.buffer.write(bytes([111, 107, 32, 255, 254]))"
     result = shell_command(f'"{sys.executable}" -c "{script}"', timeout=30)
-    assert result["exit_code"] == 0 and result["stdout"].startswith("ok ")
+    assert result["exit_code"] == 0
+    assert result["stdout"].startswith("ok ")
 
 
 def test_a_command_that_cannot_start_raises_and_logs_no_arguments(monkeypatch):
@@ -69,7 +70,8 @@ def test_a_command_that_cannot_start_raises_and_logs_no_arguments(monkeypatch):
     manager = shell_exec.ShellManager()
     with pytest.raises(AutoControlActionException, match="could not start"):
         manager.exec_shell(["curl", "-H", f"Authorization: Bearer {_SECRET}"])
-    assert logged and _SECRET not in repr(logged)
+    assert logged
+    assert _SECRET not in repr(logged)
 
 
 def test_read_file_to_var_drops_a_byte_order_mark(tmp_path):
@@ -126,7 +128,8 @@ def test_adb_errors_carry_no_arguments_and_no_permissions_is_a_state(monkeypatch
                "usb:1-1 transport_id:3\n").encode()
     monkeypatch.setattr(adb_client.subprocess, "run", lambda *a, **k: _completed(0, stdout=listing))
     [device] = client.list_devices()
-    assert device.state == "no permissions" and device.transport_id == "3"
+    assert device.state == "no permissions"
+    assert device.transport_id == "3"
 
 
 # --- USB/IP -------------------------------------------------------------------------------------
@@ -185,7 +188,7 @@ def _recv(sock, n):
     return bytes(buf)
 
 
-@pytest.fixture()
+@pytest.fixture
 def imported(monkeypatch):
     from je_auto_control.utils.usbip import (
         FakeUrbBackend, OP_REQ_IMPORT, PROTOCOL_VERSION, UrbResponse, UsbIpServer,
@@ -221,6 +224,7 @@ def test_an_isochronous_urb_is_refused_and_the_connection_goes_on(imported):
     imported.sendall(_submit(8, 2) + b"\x00" * 32)   # two 16-byte packet descriptors
     reply = _recv(imported, 48)
     status = struct.unpack("!i", reply[20:24])[0]
-    assert struct.unpack("!I", reply[4:8])[0] == 8 and status == -95
+    assert struct.unpack("!I", reply[4:8])[0] == 8
+    assert status == -95
     imported.sendall(_submit(9, -1))
     assert _recv(imported, 48 + 4)[-4:] == b"PONG"

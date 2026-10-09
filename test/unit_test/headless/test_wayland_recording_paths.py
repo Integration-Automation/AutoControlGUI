@@ -122,7 +122,8 @@ def test_physical_reader_excludes_virtual_device():
     assert opened[0].closed is True
     assert recorder.is_recording is False
 
-    assert YDOTOOL.is_virtual and not KEYBOARD.is_virtual
+    assert YDOTOOL.is_virtual
+    assert not KEYBOARD.is_virtual
     # A Bluetooth keyboard sits under /devices/virtual too, and is real.
     assert BLUETOOTH.is_virtual is False
     # A uinput device that does not admit to BUS_VIRTUAL is still caught.
@@ -242,7 +243,8 @@ def test_a_device_is_described_from_sysfs_without_opening_it(tmp_path):
                                            str(virtual_root))
     assert described.name == "ydotoold virtual device"
     assert described.bustype == events_mod.BUS_VIRTUAL
-    assert described.origin_known and described.is_virtual
+    assert described.origin_known
+    assert described.is_virtual
 
     listed = events_mod.list_input_devices(str(virtual_root), "/dev/input")
     assert [device.path for device in listed] == ["/dev/input/event19"]
@@ -360,7 +362,8 @@ def test_the_listener_thread_stops_when_the_session_closes():
                             1, {}])
         assert pressed.wait(5)
         listener = session._thread
-    assert listener is not None and not listener.is_alive()
+    assert listener is not None
+    assert not listener.is_alive()
     assert bus.closed == 1
 
 

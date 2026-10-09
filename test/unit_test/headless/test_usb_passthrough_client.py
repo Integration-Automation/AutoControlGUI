@@ -78,7 +78,7 @@ class _Loop:
                     self._client.feed_frame(reply)
 
 
-@pytest.fixture()
+@pytest.fixture
 def loop():
     backend = FakeUsbBackend(devices=[_SAMPLE])
     host = UsbPassthroughSession(backend)

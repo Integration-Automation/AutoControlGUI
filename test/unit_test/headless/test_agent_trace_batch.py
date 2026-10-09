@@ -71,7 +71,8 @@ def test_to_otel_shape():
     assert otel[0]["status"]["code"] == 2
     assert {"key": "gen_ai.operation.name", "value": {"stringValue": "chat"}} \
         in otel[0]["attributes"]
-    assert len(otel[0]["traceId"]) == 32 and len(otel[0]["spanId"]) == 16
+    assert len(otel[0]["traceId"]) == 32
+    assert len(otel[0]["spanId"]) == 16
     assert int(otel[0]["endTimeUnixNano"]) >= int(otel[0]["startTimeUnixNano"]) > 0
 
 

@@ -37,7 +37,8 @@ _OPENAI_FAKE_TOOLS = [
 def test_encode_screenshot_b64_handles_none_and_bytes():
     assert encode_screenshot_b64(None) is None
     encoded = encode_screenshot_b64(b"\x89PNG\r\n\x1a\n")
-    assert isinstance(encoded, str) and len(encoded) > 0
+    assert isinstance(encoded, str)
+    assert len(encoded) > 0
 
 
 def test_default_system_prompt_includes_goal():

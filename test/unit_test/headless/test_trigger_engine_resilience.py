@@ -22,7 +22,7 @@ class _RogueTrigger(_TriggerBase):
         raise RuntimeError("boom")
 
 
-@pytest.fixture()
+@pytest.fixture
 def engine():
     made = TriggerEngine(executor=lambda actions: None, tick_seconds=0.05)
     yield made

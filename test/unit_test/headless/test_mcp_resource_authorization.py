@@ -45,7 +45,7 @@ class _Provider(ResourceProvider):
         """Nothing to release."""
 
 
-@pytest.fixture()
+@pytest.fixture
 def provider():
     return _Provider()
 
@@ -129,5 +129,6 @@ def test_a_refusal_is_recorded_in_the_audit_log(provider):
         server.handle_line(json.dumps({"jsonrpc": "2.0", "id": 1, "method": "resources/read",
                                        "params": {"uri": _HISTORY}}))
     assert len(records) == 1
-    assert records[0]["status"] == "denied" and records[0]["arguments"] == {"uri": _HISTORY}
+    assert records[0]["status"] == "denied"
+    assert records[0]["arguments"] == {"uri": _HISTORY}
     assert records[0]["tool"] == "resources/read"

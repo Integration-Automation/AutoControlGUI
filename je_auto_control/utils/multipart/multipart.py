@@ -32,11 +32,11 @@ class MultipartFile:
 
     name: str
     filename: str
-    content: Union[str, bytes]
+    content: str | bytes
     content_type: str = "application/octet-stream"
 
 
-def _to_bytes(value: Union[str, bytes]) -> bytes:
+def _to_bytes(value: str | bytes) -> bytes:
     return value if isinstance(value, bytes) else str(value).encode("utf-8")
 
 
@@ -68,13 +68,13 @@ def _unquote_param(value: str) -> str:
     return re.sub(r"%(22|0D|0A)", lambda match: _PARAM_UNESCAPES[match.group(0)], value)
 
 
-def _field_part(boundary: str, name: str, value: Union[str, bytes]) -> bytes:
+def _field_part(boundary: str, name: str, value: str | bytes) -> bytes:
     head = (f"--{boundary}\r\n"
             f'Content-Disposition: form-data; name="{_quote_param(name)}"\r\n\r\n')
     return head.encode("utf-8") + _to_bytes(value) + b"\r\n"
 
 
-def _as_file(spec: Union[MultipartFile, Mapping[str, Any]]) -> MultipartFile:
+def _as_file(spec: MultipartFile | Mapping[str, Any]) -> MultipartFile:
     if isinstance(spec, MultipartFile):
         return spec
     return MultipartFile(name=spec["name"], filename=spec["filename"],

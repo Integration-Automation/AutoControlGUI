@@ -49,7 +49,8 @@ def _settle(app) -> None:
 def test_the_suite_runs_with_the_store_switched_off():
     assert os.environ.get(SETTINGS_ENV) == "off"
     store = WindowSettings()
-    assert settings_path() is None and store.path is None
+    assert settings_path() is None
+    assert store.path is None
     assert store.save(WindowState(theme="light")) is False
     assert store.load() == WindowState()
 
@@ -118,12 +119,16 @@ def test_the_page_relation_survives_the_wrapper(qapp):
     assert tabs.addTab(first, "One") == 0
     assert tabs.insertTab(0, second, "Two") == 0
     assert (tabs.indexOf(first), tabs.indexOf(second), tabs.indexOf(QLabel())) == (1, 0, -1)
-    assert tabs.widget(0) is second and tabs.widget(1) is first and tabs.widget(7) is None
+    assert tabs.widget(0) is second
+    assert tabs.widget(1) is first
+    assert tabs.widget(7) is None
     tabs.setCurrentWidget(first)
-    assert tabs.currentIndex() == 1 and tabs.currentWidget() is first
+    assert tabs.currentIndex() == 1
+    assert tabs.currentWidget() is first
     # What Qt itself holds is the holder, with the page inside a scroll area.
     holder = QTabWidget.widget(tabs, 1)
-    assert isinstance(holder, PageHolder) and holder.findChild(QScrollArea) is not None
+    assert isinstance(holder, PageHolder)
+    assert holder.findChild(QScrollArea) is not None
     assert holder.isAncestorOf(first)
     tabs.deleteLater()
 
@@ -133,12 +138,16 @@ def test_a_removed_page_is_kept_hidden_and_can_come_back(qapp):
     page = QLabel("kept")
     tabs.addTab(page, "Kept")
     tabs.removeTab(0)
-    assert tabs.count() == 0 and tabs.indexOf(page) == -1
-    assert page.parent() is tabs and page.isHidden()
+    assert tabs.count() == 0
+    assert tabs.indexOf(page) == -1
+    assert page.parent() is tabs
+    assert page.isHidden()
     tabs.addTab(page, "Kept")
-    assert tabs.indexOf(page) == 0 and tabs.currentWidget() is page
+    assert tabs.indexOf(page) == 0
+    assert tabs.currentWidget() is page
     tabs.clear()
-    assert tabs.count() == 0 and page.parent() is tabs
+    assert tabs.count() == 0
+    assert page.parent() is tabs
     tabs.deleteLater()
 
 
@@ -150,12 +159,15 @@ def test_a_narrow_window_scrolls_the_page_instead_of_squeezing_it(qapp):
     tabs.show()
     _settle(qapp)
     area = QTabWidget.widget(tabs, 0).findChild(QScrollArea)
-    assert page.width() >= 600 and page.height() >= 500
+    assert page.width() >= 600
+    assert page.height() >= 500
     assert area.viewport().width() < 600
-    assert area.horizontalScrollBar().maximum() > 0 and area.verticalScrollBar().maximum() > 0
+    assert area.horizontalScrollBar().maximum() > 0
+    assert area.verticalScrollBar().maximum() > 0
     tabs.resize(900, 800)
     _settle(qapp)
-    assert area.horizontalScrollBar().maximum() == 0 and page.width() > 600
+    assert area.horizontalScrollBar().maximum() == 0
+    assert page.width() > 600
     tabs.hide()
     tabs.deleteLater()
 
@@ -165,8 +177,11 @@ def test_a_panel_that_scrolls_itself_is_not_wrapped_again(qapp):
     panel = _Big()
     tabs.addTab(panel, "Panel", scrollable=False)
     holder = QTabWidget.widget(tabs, 0)
-    assert holder.findChild(QScrollArea) is None and panel.parent() is holder
-    assert tabs.indexOf(panel) == 0 and tabs.currentWidget() is panel and not tabs.is_scrollable(0)
+    assert holder.findChild(QScrollArea) is None
+    assert panel.parent() is holder
+    assert tabs.indexOf(panel) == 0
+    assert tabs.currentWidget() is panel
+    assert not tabs.is_scrollable(0)
     tabs.resize(320, 260)
     tabs.show()
     _settle(qapp)
@@ -179,13 +194,18 @@ def test_a_deferred_tab_has_a_title_and_no_page_until_filled(qapp):
     tabs = WorkspaceTabWidget()
     tabs.addTab(QLabel("front"), "Front")
     assert tabs.insert_deferred_tab(1, "later", "Later") == 1
-    assert tabs.tabText(1) == "Later" and tabs.widget(1) is None
-    assert tabs.deferred_key(1) == "later" and tabs.index_of_deferred("later") == 1
-    assert tabs.deferred_key(0) == "" and tabs.index_of_deferred("") == -1
+    assert tabs.tabText(1) == "Later"
+    assert tabs.widget(1) is None
+    assert tabs.deferred_key(1) == "later"
+    assert tabs.index_of_deferred("later") == 1
+    assert tabs.deferred_key(0) == ""
+    assert tabs.index_of_deferred("") == -1
     page = QLabel("built")
     assert tabs.fill_deferred("later", page) is True
-    assert tabs.widget(1) is page and tabs.indexOf(page) == 1
-    assert tabs.deferred_key(1) == "" and tabs.index_of_deferred("later") == -1
+    assert tabs.widget(1) is page
+    assert tabs.indexOf(page) == 1
+    assert tabs.deferred_key(1) == ""
+    assert tabs.index_of_deferred("later") == -1
     assert tabs.fill_deferred("later", QLabel()) is False
     tabs.deleteLater()
 
@@ -201,21 +221,26 @@ def test_the_cross_is_drawn_in_code_and_cached(qapp, tmp_path):
         image = QImage(str(tmp_path / name))
         assert (image.width(), image.height()) == (side, side)
         centre, corner = image.pixelColor(side // 2, side // 2), image.pixelColor(0, 0)
-        assert corner.alpha() == 0 and centre.alpha() > 200
+        assert corner.alpha() == 0
+        assert centre.alpha() > 200
         assert (centre.red(), centre.green(), centre.blue()) == (0xE7, 0xE9, 0xEE)
     stamp = path.stat().st_mtime_ns
-    assert cross_file("#e7e9ee", 255, tmp_path) == path and path.stat().st_mtime_ns == stamp
+    assert cross_file("#e7e9ee", 255, tmp_path) == path
+    assert path.stat().st_mtime_ns == stamp
 
 
 def test_the_style_sheet_points_the_close_button_at_the_cross(qapp, tmp_path):
     dark, light = close_button_rules(DARK, tmp_path), close_button_rules(LIGHT, tmp_path)
     assert dark != light
     for rules, tokens in ((dark, DARK), (light, LIGHT)):
-        assert "QTabBar::close-button {" in rules and "QTabBar::close-button:hover {" in rules
+        assert "QTabBar::close-button {" in rules
+        assert "QTabBar::close-button:hover {" in rules
         rest = tmp_path / f"tab_close_{tokens.text_muted.lstrip('#')}_255.png"
         hover = tmp_path / f"tab_close_{tokens.text.lstrip('#')}_255.png"
-        assert rest.is_file() and hover.is_file()
-        assert f'url("{rest.as_posix()}")' in rules and f'url("{hover.as_posix()}")' in rules
+        assert rest.is_file()
+        assert hover.is_file()
+        assert f'url("{rest.as_posix()}")' in rules
+        assert f'url("{hover.as_posix()}")' in rules
         assert tokens.hover in rules
 
 
@@ -266,11 +291,14 @@ class _Tab:
 def test_release_disposes_deletes_and_the_next_open_builds_anew():
     log = []
     entry = TabEntry("k", "tab_k", lambda: _Tab(log))
-    assert entry.release() is False and log == []        # never built: nothing to let go of
+    assert entry.release() is False
+    assert log == []  # never built: nothing to let go of
     first = entry.widget
     assert entry.release() is True
-    assert log == ["dispose", "deleted"] and not entry.built
-    assert entry.widget is not first and entry.built
+    assert log == ["dispose", "deleted"]
+    assert not entry.built
+    assert entry.widget is not first
+    assert entry.built
 
 
 def test_release_without_a_dispose_hook_still_deletes():
@@ -282,7 +310,8 @@ def test_release_without_a_dispose_hook_still_deletes():
 
     entry = TabEntry("k", "tab_k", _Plain)
     _ = entry.widget
-    assert entry.release() is True and log == ["deleted"]
+    assert entry.release() is True
+    assert log == ["deleted"]
 
 
 def test_a_failing_dispose_still_deletes_the_widget():
@@ -291,7 +320,8 @@ def test_a_failing_dispose_still_deletes_the_widget():
     _ = entry.widget
     with pytest.raises(RuntimeError):
         entry.release()
-    assert log == ["dispose", "deleted"] and not entry.built
+    assert log == ["dispose", "deleted"]
+    assert not entry.built
 
 
 def test_a_fixed_widget_is_never_released():
@@ -299,7 +329,9 @@ def test_a_fixed_widget_is_never_released():
     fixed = _Tab(log)
     entry = TabEntry("k", "tab_k", lambda: fixed, releasable=False)
     _ = entry.widget
-    assert entry.release() is False and log == [] and entry.widget is fixed
+    assert entry.release() is False
+    assert log == []
+    assert entry.widget is fixed
 
 
 def test_only_remote_desktop_opts_out_of_page_scrolling():
@@ -385,7 +417,8 @@ def runs(tmp_path_factory):
 def test_a_first_run_has_the_defaults(runs):
     first = runs[0]
     assert (first["theme"], first["text"], first["nav_hidden"]) == ("dark", 0, False)
-    assert first["size"] == [1280, 800] and first["checked_theme"] == ["dark"]
+    assert first["size"] == [1280, 800]
+    assert first["checked_theme"] == ["dark"]
     assert first["close_rule"]
 
 
@@ -395,12 +428,15 @@ def test_the_next_run_looks_like_the_last_one(runs):
     assert (second["theme"], second["text"], second["sheet"]) == ("light", 14, True)
     assert second["checked_theme"] == ["light"]
     assert second["size"] == [700, 500]      # inside the 800x800 offscreen screen, so not clamped
-    assert abs(second["nav_width"] - first["width_set"]) <= 2 and first["width_set"] != DEFAULT_NAVIGATION_WIDTH
+    assert abs(second["nav_width"] - first["width_set"]) <= 2
+    assert first["width_set"] != DEFAULT_NAVIGATION_WIDTH
 
 
 def test_hiding_the_panel_is_remembered_without_closing(runs):
     _first, second, third, _path = runs
-    assert second["toggle_enabled"] and second["nav_hidden"] is False and second["hidden_now"] is True
+    assert second["toggle_enabled"]
+    assert second["nav_hidden"] is False
+    assert second["hidden_now"] is True
     assert third["nav_hidden"] is True
     # A hidden panel keeps the width it had.
     assert WindowSettings(runs[3]).load().navigation_width == runs[0]["width_set"]
@@ -410,8 +446,10 @@ def test_closing_keeps_the_widget_and_releasing_lets_it_go(runs):
     third = runs[2]
     assert third["open_returns_widget"]
     assert third["closed_kept"] == [False, True]
-    assert third["released"] is True and third["disposed"] == ["dispose"]
-    assert third["built_after_release"] is False and third["fresh_widget"]
+    assert third["released"] is True
+    assert third["disposed"] == ["dispose"]
+    assert third["built_after_release"] is False
+    assert third["fresh_widget"]
     # The widget's own forms hold attributes its slots read; they are closed, never released.
     assert third["own_form"] == [False, True]
     assert third["unknown"] == [None, False]

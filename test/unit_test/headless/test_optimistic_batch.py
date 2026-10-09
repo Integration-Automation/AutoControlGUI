@@ -62,7 +62,8 @@ def test_executor_round_trip():
     rec = ac.execute_action([[
         "AC_cas_put", {"name": name, "key": "k", "value": json.dumps({"x": 1})}]])
     out = next(v for v in rec.values() if isinstance(v, dict))
-    assert out["ok"] is True and out["version"] == 1
+    assert out["ok"] is True
+    assert out["version"] == 1
     stale = ac.execute_action([[
         "AC_cas_put", {"name": name, "key": "k", "value": "2",
                        "expected_version": 99}]])
@@ -86,4 +87,5 @@ def test_wiring():
 def test_facade_exports():
     for attr in ("VersionedStore", "VersionConflict", "check_if_match",
                  "if_match_header"):
-        assert hasattr(ac, attr) and attr in ac.__all__
+        assert hasattr(ac, attr)
+        assert attr in ac.__all__

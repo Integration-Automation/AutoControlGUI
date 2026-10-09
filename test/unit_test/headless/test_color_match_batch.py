@@ -31,7 +31,8 @@ def test_finds_the_colour_target():
     match = match_color(_patch(RED, GREEN), haystack=_scene(), channels=("h",),
                         min_score=0.7)
     assert match is not None
-    assert abs(match.x - 40) <= 1 and abs(match.y - 50) <= 1
+    assert abs(match.x - 40) <= 1
+    assert abs(match.y - 50) <= 1
     assert match.score >= 0.99
 
 
@@ -65,4 +66,5 @@ def test_wiring():
 
 def test_facade_exports():
     for name in ("match_color", "match_color_all"):
-        assert hasattr(ac, name) and name in ac.__all__
+        assert hasattr(ac, name)
+        assert name in ac.__all__

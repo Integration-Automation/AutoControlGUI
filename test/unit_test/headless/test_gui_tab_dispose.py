@@ -91,7 +91,8 @@ def test_a_tab_that_polls_a_backend_stops_polling_and_leaves_the_backend_running
         sync()                              # what showing the tab does: poll a running engine
     assert _active_timers(tab) == 1
     tab.dispose()
-    assert _active_timers(tab) == 0 and engine.is_running
+    assert _active_timers(tab) == 0
+    assert engine.is_running
     tab.dispose()                           # safe to call twice
 
 
@@ -123,9 +124,11 @@ def test_the_presence_tab_leaves_the_registry_and_stops_its_timer(monkeypatch):
     registry = PresenceRegistry()
     monkeypatch.setattr(presence_tab, "default_presence_registry", lambda: registry)
     tab = presence_tab.PresenceTab()
-    assert len(registry._listeners) == 1 and _active_timers(tab) == 1  # noqa: SLF001
+    assert len(registry._listeners) == 1
+    assert _active_timers(tab) == 1  # noqa: SLF001
     tab.dispose()
-    assert registry._listeners == [] and _active_timers(tab) == 0  # noqa: SLF001
+    assert registry._listeners == []
+    assert _active_timers(tab) == 0  # noqa: SLF001
     tab.dispose()
 
 
@@ -134,13 +137,15 @@ def test_the_live_hud_takes_its_tail_off_the_logger_and_stops_sampling(monkeypat
     before = len(autocontrol_logger.handlers)
     hud = live_hud_tab.LiveHUDTab()
     hud._start()
-    assert len(autocontrol_logger.handlers) == before + 1 and _active_timers(hud) == 1
+    assert len(autocontrol_logger.handlers) == before + 1
+    assert _active_timers(hud) == 1
     hud.dispose()
-    assert len(autocontrol_logger.handlers) == before and _active_timers(hud) == 0
+    assert len(autocontrol_logger.handlers) == before
+    assert _active_timers(hud) == 0
     assert all(isinstance(handler, logging.Handler) for handler in autocontrol_logger.handlers)
 
 
-@pytest.fixture()
+@pytest.fixture
 def watcher(monkeypatch):
     holds = []
     for module in (usb_devices_tab, usb_passthrough_panel):
@@ -152,9 +157,11 @@ def watcher(monkeypatch):
 def test_the_usb_devices_tab_gives_back_its_share_of_the_watcher(watcher):
     tab = usb_devices_tab.UsbDevicesTab()
     tab._auto_check.setChecked(True)
-    assert len(watcher) == 1 and _active_timers(tab) == 1
+    assert len(watcher) == 1
+    assert _active_timers(tab) == 1
     tab.dispose()
-    assert watcher == [] and _active_timers(tab) == 0
+    assert watcher == []
+    assert _active_timers(tab) == 0
     tab.dispose()
     assert watcher == []                    # given back once
 
@@ -172,9 +179,13 @@ def test_the_usb_sharing_panel_closes_its_loopback_and_gives_back_the_watcher(wa
                                                       loopback_factory=_Loop)
     panel._enable_sharing()
     panel._auto_check.setChecked(True)
-    assert len(watcher) == 1 and _active_timers(panel) == 1 and panel._loopback is not None
+    assert len(watcher) == 1
+    assert _active_timers(panel) == 1
+    assert panel._loopback is not None
     panel.dispose()
-    assert watcher == [] and _active_timers(panel) == 0 and panel._loopback is None
+    assert watcher == []
+    assert _active_timers(panel) == 0
+    assert panel._loopback is None
     assert closed.wait(10.0)                # off the GUI thread, as for the Stop command
     assert pump_until(lambda: switched == [True, False])
     panel.dispose()
@@ -228,7 +239,8 @@ def test_a_release_that_raises_does_not_keep_the_others_from_running():
         raise RuntimeError("already gone")
 
     _dispose.release_resources(owner, broken, lambda: ran.append(1))
-    assert ran == [1] and not timer.isActive()
+    assert ran == [1]
+    assert not timer.isActive()
 
 
 def test_releasing_a_tab_through_the_registry_runs_its_dispose(monkeypatch):
@@ -239,7 +251,9 @@ def test_releasing_a_tab_through_the_registry_runs_its_dispose(monkeypatch):
     tab = entry.widget
     tab.sync_with_engine()
     assert _active_timers(tab) == 1
-    assert entry.release() and _active_timers(tab) == 0 and not entry.built
+    assert entry.release()
+    assert _active_timers(tab) == 0
+    assert not entry.built
 
 
 # --- every tab that holds something has the hook -----------------------------------------------------------------
@@ -317,5 +331,7 @@ def test_the_guard_covers_tabs_that_only_hold_background_work():
 
 def test_the_guard_reads_real_tab_classes():
     checked = [name for _module, name in _tab_classes()]
-    assert "SchedulerTab" in checked and "PresenceTab" in checked and len(checked) >= 30
+    assert "SchedulerTab" in checked
+    assert "PresenceTab" in checked
+    assert len(checked) >= 30
     assert _GUI_DIR.joinpath("_dispose.py").is_file()

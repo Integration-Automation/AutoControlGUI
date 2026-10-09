@@ -68,7 +68,8 @@ def test_executor_round_trip():
          "qs": json.dumps([50, 90])},
     ]])
     payload = next(v for v in rec.values() if isinstance(v, dict))["percentiles"]
-    assert "50" in payload and "90" in payload
+    assert "50" in payload
+    assert "90" in payload
 
 
 def test_wiring():

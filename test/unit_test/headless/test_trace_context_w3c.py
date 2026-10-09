@@ -38,7 +38,8 @@ def test_parsing_stops_after_32_members_and_stays_linear():
     header = ",".join(f"k{i}=v" for i in range(20000))
     started = time.perf_counter()
     items = parse_tracestate(header)
-    assert len(items) == 32 and items[0] == ("k0", "v")
+    assert len(items) == 32
+    assert items[0] == ("k0", "v")
     assert time.perf_counter() - started < 1.0          # 16k members took 6.4 s
 
 

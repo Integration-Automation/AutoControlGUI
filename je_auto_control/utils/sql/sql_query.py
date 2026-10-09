@@ -52,7 +52,7 @@ def _shape(cursor: "sqlite3.Cursor", fetch: str) -> _FetchResult:
 
 
 def query_sqlite(database: str, query: str,
-                 params: Optional[Union[list, tuple, dict]] = None,
+                 params: Optional[list | tuple | dict] = None,
                  fetch: str = "all") -> _FetchResult:
     """Run a read-only SELECT/WITH against ``database`` and return its result.
 

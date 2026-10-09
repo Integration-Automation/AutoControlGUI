@@ -19,7 +19,7 @@ import os
 import pprint
 import re
 import textwrap
-from typing import Any, Dict, Sequence, Tuple, Union
+from typing import Any, Dict, Sequence, Tuple
 
 from je_auto_control.utils.json.json_file import read_action_json
 from je_auto_control.utils.json_store.json_store import atomic_write_text
@@ -255,7 +255,7 @@ _RENDERERS = {
 }
 
 
-def generate_code(actions: Union[Sequence, Dict[str, Any]], target: str = "pytest",
+def generate_code(actions: Sequence | Dict[str, Any], target: str = "pytest",
                   name: str = "recorded_flow", style: str = "calls",
                   failure_bundle: bool = False) -> str:
     """Render ``actions`` as source code for ``target`` (pytest/python/robot).

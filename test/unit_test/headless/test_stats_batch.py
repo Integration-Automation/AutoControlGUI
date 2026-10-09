@@ -29,7 +29,8 @@ def test_describe():
     assert summary["n"] == 8
     assert summary["mean"] == pytest.approx(5.0)
     assert summary["stdev"] == pytest.approx(2.0)   # population stdev
-    assert summary["min"] == 2 and summary["max"] == 9
+    assert summary["min"] == 2
+    assert summary["max"] == 9
     assert "p95" in summary
 
 
@@ -93,7 +94,8 @@ def test_executor_round_trip():
         "AC_describe_stats", {"values": json.dumps([10, 20, 30, 40])},
     ]])
     summary = next(v for v in rec.values() if isinstance(v, dict))
-    assert summary["n"] == 4 and summary["mean"] == pytest.approx(25.0)
+    assert summary["n"] == 4
+    assert summary["mean"] == pytest.approx(25.0)
 
     rec2 = ac.execute_action([[
         "AC_ab_significance",

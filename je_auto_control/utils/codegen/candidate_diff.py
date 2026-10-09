@@ -18,7 +18,7 @@ import difflib
 import json
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Sequence, Union
+from typing import Any, Dict, List, Optional, Sequence
 
 from je_auto_control.utils.codegen.journal_import import CandidateScript, JournalImportError
 from je_auto_control.utils.json.json_file import read_action_json
@@ -110,7 +110,7 @@ def diff_candidate(candidate: CandidateScript, *, actions: Optional[Sequence[Any
     return diff_code(code or "", candidate.code, before_label=before_label, context=context)
 
 
-def diff_candidate_against_file(candidate: CandidateScript, path: Union[str, Path], *,
+def diff_candidate_against_file(candidate: CandidateScript, path: str | Path, *,
                                 context: int = 3) -> CandidateDiff:
     """Diff ``candidate`` against a file: a ``.json`` action file, or any other file as code.
 

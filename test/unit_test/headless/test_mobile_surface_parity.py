@@ -126,7 +126,8 @@ def test_every_capability_is_covered_on_both_platforms():
     # Desktop-only features say what the limit is and what to use instead.
     assert DESKTOP_ONLY_FEATURES
     for row in matrix["desktop_only"]:
-        assert row["limitation"] and row["alternative"]
+        assert row["limitation"]
+        assert row["alternative"]
 
 
 # --- the generated commands really run ---------------------------------
@@ -176,7 +177,8 @@ def test_ios_command_without_a_backend_feature_says_why(tmp_path):
     with use_device(_ios(handle)):
         with pytest.raises(DeviceUnsupportedError) as caught:
             run_mobile_command("AC_ios_install_app", {"path": str(tmp_path / "a.ipa")})
-        assert caught.value.reason and caught.value.alternative
+        assert caught.value.reason
+        assert caught.value.alternative
         assert run_mobile_command("AC_ios_long_press", {"x": 1, "y": 2}) is None
     assert handle.input_calls == [{"op": "tap_hold", "x": 1, "y": 2, "duration": 1.0}]
 

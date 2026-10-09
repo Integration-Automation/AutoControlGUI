@@ -90,7 +90,8 @@ def test_the_environment_flag_is_enforced_the_same_way(monkeypatch):
     server = MCPServer(tools=[tools.make("look", READ_ONLY)])
     server.register_tool(tools.make("plugin_poke", DESTRUCTIVE))
     assert _listed(server) == {"look"}
-    assert "error" in _call(server, "plugin_poke") and tools.ran == []
+    assert "error" in _call(server, "plugin_poke")
+    assert tools.ran == []
 
 
 def test_a_server_that_is_not_read_only_is_unchanged():

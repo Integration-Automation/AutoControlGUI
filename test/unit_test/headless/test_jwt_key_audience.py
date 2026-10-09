@@ -75,7 +75,8 @@ def test_the_adapter_reports_an_unclaimed_audience():
     from je_auto_control.utils.executor.action_executor import _jwt_decode
     token = encode_jwt({"aud": "svc-a"}, KEY)
     result = _jwt_decode(token, KEY)
-    assert result["ok"] is False and "aud" in result["error"]
+    assert result["ok"] is False
+    assert "aud" in result["error"]
     assert _jwt_decode(token, KEY, audience="svc-a")["ok"] is True
 
 

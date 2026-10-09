@@ -1,4 +1,4 @@
-from typing import Tuple, Union
+from typing import Tuple
 
 from defusedxml.minidom import parseString  # nosec B405  # nosemgrep: python.lang.security.use-defused-xml.use-defused-xml  # reason: defusedxml is the safe replacement
 
@@ -9,7 +9,7 @@ from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.xml.change_xml_structure.change_xml_structure import dict_to_elements_tree
 
 
-def generate_xml() -> Tuple[Union[str, bytes], Union[str, bytes]]:
+def generate_xml() -> Tuple[str | bytes, str | bytes]:
     """
     Generate XML strings from test records.
     從測試紀錄生成 XML 字串

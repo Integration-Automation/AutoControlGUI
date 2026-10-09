@@ -39,7 +39,8 @@ def test_a_blob_round_trips_and_is_stored_once(tmp_path):
     data = b"template image bytes"
     assert store.put("alice", _sha(data), data) is True
     assert store.put("alice", _sha(data), data) is False, "already held: nothing written"
-    assert store.get("alice", _sha(data)) == data and store.has("alice", _sha(data))
+    assert store.get("alice", _sha(data)) == data
+    assert store.has("alice", _sha(data))
     usage = store.usage("alice")
     assert (usage["used"], usage["count"]) == (len(data), 1)
     (listed,) = usage["blobs"]
@@ -49,7 +50,8 @@ def test_a_blob_round_trips_and_is_stored_once(tmp_path):
 
 def test_building_a_store_creates_nothing(tmp_path):
     store = BlobStore(tmp_path / "blobs")
-    assert store.get("alice", _sha(b"x")) is None and not store.has("alice", _sha(b"x"))
+    assert store.get("alice", _sha(b"x")) is None
+    assert not store.has("alice", _sha(b"x"))
     assert store.usage("alice")["used"] == 0
     assert not (tmp_path / "blobs").exists()
 
@@ -70,7 +72,8 @@ def test_accounts_cannot_read_each_other(tmp_path):
     store = BlobStore(tmp_path / "blobs")
     data = b"alice's"
     store.put("alice", _sha(data), data)
-    assert store.get("bob", _sha(data)) is None and not store.has("bob", _sha(data))
+    assert store.get("bob", _sha(data)) is None
+    assert not store.has("bob", _sha(data))
     # An account id is never a path: this one would climb out if it were.
     store.put("../../evil", _sha(data), data)
     assert all(tmp_path / "blobs" in path.parents for path in (tmp_path / "blobs").rglob("*"))
@@ -136,16 +139,20 @@ def test_put_get_head_and_delete(app_options):
     client = _test_client(**app_options)
     data = bytes(range(256)) * 4            # not text: it must come back byte for byte
     first = _put(client, "alice", data)
-    assert first.status_code == 201 and first.json() == {
-        "ok": True, "sha256": _sha(data), "size": len(data), "stored": True}
+    assert first.status_code == 201
+    assert (first.json() == {
+        "ok": True, "sha256": _sha(data), "size": len(data), "stored": True})
     again = _put(client, "alice", data)
-    assert again.status_code == 200 and again.json()["stored"] is False
+    assert again.status_code == 200
+    assert again.json()["stored"] is False
     got = client.get(f"/blobs/alice/{_sha(data)}", headers=_SECRET)
-    assert got.status_code == 200 and got.content == data
+    assert got.status_code == 200
+    assert got.content == data
     assert got.headers["content-type"] == "application/octet-stream"
     assert client.head(f"/blobs/alice/{_sha(data)}", headers=_SECRET).status_code == 200
     listing = client.get("/blobs/alice", headers=_SECRET).json()
-    assert listing["used"] == len(data) and listing["count"] == 1
+    assert listing["used"] == len(data)
+    assert listing["count"] == 1
     assert client.delete(f"/blobs/alice/{_sha(data)}", headers=_SECRET).json() == {"deleted": True}
     assert client.get(f"/blobs/alice/{_sha(data)}", headers=_SECRET).status_code == 404
     assert client.head(f"/blobs/alice/{_sha(data)}", headers=_SECRET).status_code == 404
@@ -195,7 +202,8 @@ def test_the_quota_and_bad_digests_have_their_own_statuses(app_options):
     client = _test_client(**app_options, max_blob_bytes=10, blob_quota_bytes=15)
     assert _put(client, "alice", b"a" * 10).status_code == 201
     over = _put(client, "alice", b"b" * 10)
-    assert over.status_code == 507 and "quota" in over.json()["detail"]
+    assert over.status_code == 507
+    assert "quota" in over.json()["detail"]
     assert _put(client, "alice", b"abc", digest=_sha(b"other")).status_code == 400
     assert _put(client, "alice", b"abc", digest="not-a-digest").status_code == 400
     assert client.get("/blobs/alice/not-a-digest", headers=_SECRET).status_code == 400
@@ -245,10 +253,12 @@ def test_the_transport_speaks_the_blob_routes():
         assert transport.has(_sha(data)) is True
     put, get, head = calls
     assert put["url"] == f"https://sync.invalid/blobs/alice/{_sha(data)}" == get["url"]
-    assert put["body"] == data and put["headers"]["X-Signaling-Secret"] == "s3cret"
+    assert put["body"] == data
+    assert put["headers"]["X-Signaling-Secret"] == "s3cret"
     assert put["headers"]["Content-Type"] == "application/octet-stream"
     assert all(call["follow_redirects"] is False for call in calls)
-    assert get["want_bytes"] is True and head["method"] == "HEAD"
+    assert get["want_bytes"] is True
+    assert head["method"] == "HEAD"
 
 
 @pytest.mark.parametrize("status, words", [
@@ -313,7 +323,8 @@ def test_assets_travel_between_two_folders_through_a_real_server(live_server, tm
     manifest = AssetManifest.from_directory(source)
 
     published = publish_assets(manifest, transport)
-    assert sorted(published.transferred) == ["img/logo.png", "notes.txt"] and not published.failed
+    assert sorted(published.transferred) == ["img/logo.png", "notes.txt"]
+    assert not published.failed
     assert publish_assets(manifest, transport).unchanged == ["img/logo.png", "notes.txt"]
 
     received = sync_assets(AssetManifest(root=target, assets=manifest.assets), transport)
@@ -333,16 +344,21 @@ def test_assets_travel_between_two_folders_through_a_real_server(live_server, tm
     # so the reason no longer depends on who wins the race between the server's
     # 413-and-close and the client still writing (a reset, on Windows).
     reason = again.failed["huge.bin"]
-    assert "larger" in reason and "200001 bytes; the limit is 200000" in reason
+    assert "larger" in reason
+    assert "200001 bytes; the limit is 200000" in reason
     assert transport.max_blob_bytes() == 200_000
     # Housekeeping: what no entry names any more can be collected. Both blobs
     # were stored a moment ago, so the default grace period keeps them.
     from je_auto_control.utils.config_sync import collect_unreferenced_blobs
     kept = collect_unreferenced_blobs(transport, [_sha(picture)])
-    assert kept["deleted"] == [] and kept["recent"] == [_sha(b"small")]
+    assert kept["deleted"] == []
+    assert kept["recent"] == [_sha(b"small")]
     swept = collect_unreferenced_blobs(transport, [_sha(picture)], min_age_s=0)
-    assert swept["deleted"] == [_sha(b"small")] and swept["freed"] == 5 and not swept["failed"]
-    assert transport.has(_sha(picture)) is True and transport.has(_sha(b"small")) is False
+    assert swept["deleted"] == [_sha(b"small")]
+    assert swept["freed"] == 5
+    assert not swept["failed"]
+    assert transport.has(_sha(picture)) is True
+    assert transport.has(_sha(b"small")) is False
     assert transport.usage()["count"] == 1
 
 

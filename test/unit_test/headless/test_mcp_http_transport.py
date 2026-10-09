@@ -16,7 +16,7 @@ from je_auto_control.utils.mcp_server.server import MCPServer
 _TEST_SCHEME = "http"  # NOSONAR localhost-only ephemeral test server; TLS out of scope
 
 
-@pytest.fixture()
+@pytest.fixture
 def http_server():
     """Spin up an HttpMCPServer on an ephemeral port with empty providers."""
     mcp = MCPServer(

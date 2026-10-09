@@ -83,7 +83,8 @@ def test_boxes_that_do_not_overlap_never_match():
     far = [{"x": 100, "y": 100, "width": 10, "height": 10},
            {"x": 200, "y": 200, "width": 10, "height": 10}]
     result = match_elements([near], far, iou_threshold=0)
-    assert result["matched"] == [] and result["removed"] == [near]
+    assert result["matched"] == []
+    assert result["removed"] == [near]
     carried = assign_stable_ids([dict(far[0])], [dict(near, id=7)], iou_threshold=0)
     assert carried[0]["id"] != 7
 

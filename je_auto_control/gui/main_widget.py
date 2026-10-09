@@ -1,6 +1,6 @@
 """Workspace widget: owns the tab bar and the registry of every tab it can open."""
 import json
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional
 
 from PySide6.QtCore import QTimer, Signal, QObject
 from PySide6.QtGui import QKeyEvent, Qt
@@ -175,7 +175,7 @@ class AutoControlGUIWidget(
     # --- tab registry API ----------------------------------------------------
 
     def _add_tab(
-            self, key: str, title_key: str, widget: Union[QWidget, WidgetFactory],
+            self, key: str, title_key: str, widget: QWidget | WidgetFactory,
             category: str = "core", default_visible: bool = False,
             actions: MenuActions = (), scrollable: bool = True,
     ) -> None:

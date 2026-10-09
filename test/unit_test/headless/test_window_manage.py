@@ -15,7 +15,7 @@ pytestmark = pytest.mark.skipif(not _WINDOWS,
                                 reason="window management is Windows-only")
 
 
-@pytest.fixture()
+@pytest.fixture
 def wm(monkeypatch):
     """The Win32 backend module, with every call stubbed out."""
     from je_auto_control.windows.window import windows_window_manage as module

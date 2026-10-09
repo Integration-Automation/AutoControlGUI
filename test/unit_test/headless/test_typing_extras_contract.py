@@ -79,7 +79,8 @@ def test_extras_mode_refuses_to_run_without_the_libraries(tmp_path, monkeypatch)
     monkeypatch.setattr(script, "_missing_extras", lambda: ["aiortc"])
     with pytest.raises(SystemExit) as stopped:
         script._extras_config(tmp_path)
-    assert "aiortc" in str(stopped.value) and "gui,webrtc" in str(stopped.value)
+    assert "aiortc" in str(stopped.value)
+    assert "gui,webrtc" in str(stopped.value)
 
 
 def test_extras_mode_stops_when_the_override_was_reworded(tmp_path, monkeypatch):
@@ -111,7 +112,9 @@ def test_the_two_lists_stay_apart():
 
 def test_the_required_job_still_installs_no_extras():
     job = _job("typing-stable-api")
-    assert "pip install -e ." in job and "[gui" not in job and "webrtc" not in job
+    assert "pip install -e ." in job
+    assert "[gui" not in job
+    assert "webrtc" not in job
     assert "typing_contract_verify.py --extras" not in job
 
 

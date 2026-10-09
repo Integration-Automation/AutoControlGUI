@@ -77,7 +77,8 @@ class _Target:
 def test_a_bound_method_is_held_weakly_with_its_leading_arguments():
     target = _Target()
     call = WeakCall(target.take, ("a",))
-    assert call("value") is True and target.seen == [(("a", "value"), {})]
+    assert call("value") is True
+    assert target.seen == [(("a", "value"), {})]
     del target
     gc.collect()
     assert call("late") is False
@@ -87,15 +88,18 @@ def test_a_partial_of_a_bound_method_is_taken_apart():
     target = _Target()
     call = WeakCall(functools.partial(functools.partial(target.take, 1, key="k"), 2), (3,))
     seen = weakref.ref(target)
-    assert call(4) is True and target.seen == [((1, 2, 3, 4), {"key": "k"})]
+    assert call(4) is True
+    assert target.seen == [((1, 2, 3, 4), {"key": "k"})]
     del target
     gc.collect()
-    assert seen() is None and call(5) is False
+    assert seen() is None
+    assert call(5) is False
 
 
 def test_a_plain_function_and_none_are_accepted():
     seen = []
-    assert WeakCall(seen.append)("x") is True and seen == ["x"]
+    assert WeakCall(seen.append)("x") is True
+    assert seen == ["x"]
     assert WeakCall(None)("x") is False
     slot = weak_slot(seen.append)
     slot("y")

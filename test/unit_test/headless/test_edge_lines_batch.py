@@ -29,7 +29,8 @@ def test_find_lines_classifies_orientation():
 
 def test_find_lines_orientation_filter():
     horizontals = find_lines(_grid_image(), min_length=80, orientation="horizontal")
-    assert horizontals and all(h["orientation"] == "horizontal" for h in horizontals)
+    assert horizontals
+    assert all(h["orientation"] == "horizontal" for h in horizontals)
 
 
 def test_find_grid_recovers_rows_cols_cells():
@@ -70,4 +71,5 @@ def test_wiring():
 
 def test_facade_exports():
     for attr in ("find_lines", "find_grid", "find_separators"):
-        assert hasattr(ac, attr) and attr in ac.__all__
+        assert hasattr(ac, attr)
+        assert attr in ac.__all__

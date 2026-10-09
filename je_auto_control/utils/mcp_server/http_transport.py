@@ -37,7 +37,7 @@ import os
 import ssl
 import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from typing import Any, Callable, Dict, Optional, Tuple, Union
+from typing import Any, Callable, Dict, Optional, Tuple
 
 from je_auto_control.utils.http_headers import bearer_challenge, log_safe
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
@@ -520,7 +520,7 @@ class HttpMCPServer:
                  auth_token: Optional[str] = None,
                  ssl_context: Optional[ssl.SSLContext] = None,
                  user_store: Optional[UserStore] = None,
-                 tool_mode: Union[str, ToolMode, None] = None,
+                 tool_mode: str | ToolMode | None = None,
                  ) -> None:
         """``user_store`` switches RBAC on; ``None`` reads ``JE_AUTOCONTROL_RBAC_USERS``.
 
@@ -636,7 +636,7 @@ def start_mcp_http_server(host: str = "127.0.0.1", port: int = 9940,
                           auth_token: Optional[str] = None,
                           ssl_context: Optional[ssl.SSLContext] = None,
                           user_store: Optional[UserStore] = None,
-                          tool_mode: Union[str, ToolMode, None] = None,
+                          tool_mode: str | ToolMode | None = None,
                           ) -> HttpMCPServer:
     """Start and return an :class:`HttpMCPServer`; convenience wrapper.
 

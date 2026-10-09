@@ -87,4 +87,5 @@ def test_facade_exports():
     for attr in ("luhn_validate", "luhn_check_digit", "verhoeff_validate",
                  "verhoeff_check_digit", "damm_validate", "damm_check_digit",
                  "mod97_10_validate", "mod97_10_check_digits"):
-        assert hasattr(ac, attr) and attr in ac.__all__
+        assert hasattr(ac, attr)
+        assert attr in ac.__all__

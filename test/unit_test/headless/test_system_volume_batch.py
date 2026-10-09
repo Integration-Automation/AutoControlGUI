@@ -121,4 +121,5 @@ def test_wiring():
 def test_facade_exports():
     for name in ("get_volume", "set_volume", "change_volume", "is_muted",
                  "set_mute", "mute", "unmute", "toggle_mute"):
-        assert hasattr(ac, name) and name in ac.__all__
+        assert hasattr(ac, name)
+        assert name in ac.__all__

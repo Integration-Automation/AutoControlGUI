@@ -52,7 +52,8 @@ def test_the_profiler_report_is_frozen_at_stop(monkeypatch):
                         lambda: clock[0])
     profiler = ResourceProfiler()
     profiler._psutil = None   # FPS-only mode: no sampling thread
-    assert profiler.report().duration_s == 0 and profiler.report().fps_avg == 0
+    assert profiler.report().duration_s == 0
+    assert profiler.report().fps_avg == 0
     profiler.start()
     for _ in range(10):
         profiler.tick_frame()
@@ -60,7 +61,8 @@ def test_the_profiler_report_is_frozen_at_stop(monkeypatch):
     profiler.stop()
     clock[0] += 60.0
     report = profiler.report()
-    assert report.duration_s == 2.0 and report.fps_avg == 5.0
+    assert report.duration_s == 2.0
+    assert report.fps_avg == 5.0
 
 
 def test_speedscope_recognises_the_export():
@@ -169,13 +171,15 @@ def test_a_failing_notifier_is_not_shown(monkeypatch):
                         lambda _argv, **_kw: types.SimpleNamespace(returncode=1))
     assert notifier.notify("t", "m", system="Linux").shown is False
     _argv, env = notifier._notify_spec("Windows", "t", "m")
-    assert env["AC_NOTIFY_APP_ID"].endswith("powershell.exe") and "WindowsPowerShell" in env["AC_NOTIFY_APP_ID"]
+    assert env["AC_NOTIFY_APP_ID"].endswith("powershell.exe")
+    assert "WindowsPowerShell" in env["AC_NOTIFY_APP_ID"]
 
 
 def test_a_region_past_the_edge_ignores_the_padding():
     from je_auto_control.utils.color_stats.color_stats import region_color_stats
     stats = region_color_stats(Image.new("RGB", (100, 100), (255, 0, 0)), region=(50, 50, 150, 150))
-    assert stats.average_rgb == (255, 0, 0) and stats.dominant_fraction == 1.0
+    assert stats.average_rgb == (255, 0, 0)
+    assert stats.dominant_fraction == 1.0
 
 
 def test_an_unopenable_database_is_an_action_error(monkeypatch, tmp_path):

@@ -514,4 +514,5 @@ def test_a_real_helper_process_reports_a_missing_library():
     assert missing.value.capability == "input"
     assert children[0].poll() == 1
     assert ei_client.active_worker_count() == 0
-    assert children[0].stdin.closed and children[0].stdout.closed
+    assert children[0].stdin.closed
+    assert children[0].stdout.closed

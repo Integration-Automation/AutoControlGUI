@@ -118,4 +118,5 @@ def test_wiring():
 def test_facade_exports():
     for name in ("compare_field_value", "verify_field_value",
                  "fill_and_verify"):
-        assert hasattr(ac, name) and name in ac.__all__
+        assert hasattr(ac, name)
+        assert name in ac.__all__

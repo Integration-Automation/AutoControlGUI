@@ -26,7 +26,7 @@ class _FakeReader:
         self.metadata = metadata or {}
 
 
-@pytest.fixture()
+@pytest.fixture
 def fake_pdf(monkeypatch):
     reader = _FakeReader(
         ["Invoice 123\nAmount due", "Total: $50.00", "Thank you"],

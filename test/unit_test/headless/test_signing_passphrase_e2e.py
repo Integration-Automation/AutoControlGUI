@@ -56,7 +56,7 @@ def _clean_environment(monkeypatch, tmp_path):
                         lambda: tmp_path / "home" / "action_signing_key")
 
 
-@pytest.fixture()
+@pytest.fixture
 def action_file(tmp_path):
     path = tmp_path / "flow.json"
     path.write_text(json.dumps([[_PROBE, {"value": "signed"}]]), encoding="utf-8")
@@ -65,7 +65,7 @@ def action_file(tmp_path):
 
 # --- the passphrase ---------------------------------------------------------
 
-@pytest.fixture()
+@pytest.fixture
 def locked_keys(tmp_path):
     private, public = tmp_path / "signer" / "private.pem", tmp_path / "public.pem"
     create_signing_keypair(private, public, passphrase=_SECRET)
@@ -152,7 +152,7 @@ def test_the_commands_take_a_passphrase_and_it_is_not_logged(tmp_path, action_fi
 
 # --- enforced signatures, end to end ----------------------------------------
 
-@pytest.fixture()
+@pytest.fixture
 def probe(monkeypatch):
     values = []
     monkeypatch.setitem(executor.event_dict, _PROBE,
@@ -160,7 +160,7 @@ def probe(monkeypatch):
     return values
 
 
-@pytest.fixture()
+@pytest.fixture
 def endpoint(monkeypatch, locked_keys):
     """An execution endpoint: signatures enforced, the public key and nothing else."""
     monkeypatch.setenv(PUBLIC_ENV, str(locked_keys[1]))
@@ -187,7 +187,7 @@ def _post(server, path, body, token=None, headers=None):
         return error.code, json.loads(error.read().decode("utf-8"))
 
 
-@pytest.fixture()
+@pytest.fixture
 def rest():
     server = RestApiServer(host="127.0.0.1", port=0, token="rest-token", enable_audit=False)
     server.start()
@@ -202,13 +202,16 @@ def _rest_run(server, path):
 def test_rest_execute_file_runs_a_signed_file_and_refuses_the_rest(
         rest, endpoint, action_file, probe, tmp_path):
     status, body = _rest_run(rest, action_file)
-    assert status == 403 and "missing signature sidecar" in body["error"]
+    assert status == 403
+    assert "missing signature sidecar" in body["error"]
     _sign(endpoint, action_file)
     status, body = _rest_run(rest, action_file)
-    assert status == 200 and probe == ["signed"]
+    assert status == 200
+    assert probe == ["signed"]
     action_file.write_text(json.dumps([[_PROBE, {"value": "tampered"}]]), encoding="utf-8")
     status, body = _rest_run(rest, action_file)
-    assert status == 403 and "signature mismatch" in body["error"]
+    assert status == 403
+    assert "signature mismatch" in body["error"]
     assert probe == ["signed"], "the tampered file did not run"
 
 
@@ -221,13 +224,15 @@ def test_rest_execute_file_refuses_another_key_and_an_hmac_sidecar(
     sign_action_file(action_file, private_key_path=other_private)
     monkeypatch.setenv(PUBLIC_ENV, str(endpoint[1]))
     status, body = _rest_run(rest, action_file)
-    assert status == 403 and "different key" in body["error"]
+    assert status == 403
+    assert "different key" in body["error"]
     # An HMAC sidecar, which anyone able to execute could have written.
     monkeypatch.delenv(PUBLIC_ENV)
     sign_action_file(action_file, key="shared-secret")
     monkeypatch.setenv(PUBLIC_ENV, str(endpoint[1]))
     status, body = _rest_run(rest, action_file)
-    assert status == 403 and "legacy HMAC signature refused" in body["error"]
+    assert status == 403
+    assert "legacy HMAC signature refused" in body["error"]
     assert probe == []
 
 
@@ -237,7 +242,8 @@ def test_rest_cannot_sign_on_an_execution_endpoint(rest, endpoint, action_file, 
     assert status == 200
     assert "verifies only" in str(list(body["result"].values())[0])
     assert not action_file.with_name("flow.json.sig").exists()
-    assert _rest_run(rest, action_file)[0] == 403 and probe == []
+    assert _rest_run(rest, action_file)[0] == 403
+    assert probe == []
 
 
 def test_rest_execute_file_without_enforcement_is_unchanged(rest, action_file, probe):
@@ -245,7 +251,7 @@ def test_rest_execute_file_without_enforcement_is_unchanged(rest, action_file, p
     assert probe == ["signed"]
 
 
-@pytest.fixture()
+@pytest.fixture
 def mcp():
     tools = [tool for tool in build_default_tool_registry(read_only=False, aliases=False)
              if tool.name == "ac_execute_action_file"]
@@ -266,13 +272,16 @@ def _mcp_run(server, path):
 def test_mcp_execute_action_file_runs_a_signed_file_and_refuses_the_rest(
         mcp, endpoint, action_file, probe):
     is_error, text = _mcp_run(mcp, action_file)
-    assert is_error and "missing signature sidecar" in text
+    assert is_error
+    assert "missing signature sidecar" in text
     _sign(endpoint, action_file)
     is_error, _text = _mcp_run(mcp, action_file)
-    assert not is_error and probe == ["signed"]
+    assert not is_error
+    assert probe == ["signed"]
     action_file.write_text(json.dumps([[_PROBE, {"value": "tampered"}]]), encoding="utf-8")
     is_error, text = _mcp_run(mcp, action_file)
-    assert is_error and "signature mismatch" in text
+    assert is_error
+    assert "signature mismatch" in text
     assert probe == ["signed"]
 
 

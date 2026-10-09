@@ -92,7 +92,8 @@ def test_every_machine_sees_the_same_conflict_and_one_choice_settles_it(server):
     _push("tablet", [SyncEntry.create("hk1", {"combo": "ctrl+a"}, "tablet")], now=_T0 + _DAY)
     seen = [_push(device, now=_T0 + _DAY).bucket.get_entry("hotkeys", "hk1")
             for device in ("laptop", "desktop", "tablet")]
-    assert seen[0] == seen[1] == seen[2] and seen[0].in_conflict
+    assert seen[0] == seen[1] == seen[2]
+    assert seen[0].in_conflict
     # A person on the desktop decides the deletion stands.
     _push("desktop", [seen[1].resolved(None, "desktop")], now=_T0 + _DAY)
     for device in ("laptop", "tablet", "desktop"):
@@ -107,7 +108,8 @@ def test_a_flat_copy_from_an_unlisted_machine_stays_deleted(server):
     local.upsert("hotkeys", "hk1", {"combo": "ctrl+a", "last_modified": _T0 + 5},
                  versioned=False)
     merged, conflicts = _client("tablet").sync(local, now=_T0 + _DAY)
-    assert merged.values("hotkeys") == {} and server.bucket().values("hotkeys") == {}
+    assert merged.values("hotkeys") == {}
+    assert server.bucket().values("hotkeys") == {}
     assert [(record.entry_id, record.unresolved) for record in conflicts] == [("hk1", False)]
 
 
@@ -187,10 +189,13 @@ def test_the_stamp_is_written_once_and_survives_the_bucket_shape():
     bucket.put_entry("hotkeys", base.removed("laptop"))
     settle(bucket, "laptop", 5, _T0, None)
     stored = bucket.sections["hotkeys"]["hk1"]
-    assert stored["deleted_revision"] == 5 and stored["deleted_at"] == pytest.approx(_T0)
+    assert stored["deleted_revision"] == 5
+    assert stored["deleted_at"] == pytest.approx(_T0)
     again = ConfigBucket.from_dict(bucket.to_dict())
     settle(again, "desktop", 6, _T0 + _DAY, None)
     kept = again.get_entry("hotkeys", "hk1")
-    assert kept.deleted_revision == 5 and kept.deleted_at == pytest.approx(_T0)
+    assert kept.deleted_revision == 5
+    assert kept.deleted_at == pytest.approx(_T0)
     # A live entry carries neither field.
-    assert "deleted_at" not in base.to_dict() and "deleted_revision" not in base.to_dict()
+    assert "deleted_at" not in base.to_dict()
+    assert "deleted_revision" not in base.to_dict()

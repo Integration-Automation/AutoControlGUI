@@ -23,26 +23,30 @@ def test_snap_inside_and_near_and_far():
 def test_validate_rejects_out_of_bounds():
     result = validate_action({"type": "click", "x": 9999, "y": 5},
                              screen_size=(1920, 1080))
-    assert result["ok"] is False and result["reason"] == "out of bounds"
+    assert result["ok"] is False
+    assert result["reason"] == "out of bounds"
 
 
 def test_validate_snaps_near_miss():
     result = validate_action({"type": "click", "x": 118, "y": 109},
                              screen_size=(1920, 1080), targets=_ELEMENTS)
-    assert result["ok"] is True and result["snapped"] == [120, 110]
+    assert result["ok"] is True
+    assert result["snapped"] == [120, 110]
 
 
 def test_validate_in_bounds_no_snap():
     result = validate_action({"type": "click", "x": 500, "y": 500},
                              screen_size=(1920, 1080), targets=_ELEMENTS)
-    assert result["ok"] is True and result["reason"] == "in bounds"
+    assert result["ok"] is True
+    assert result["reason"] == "in bounds"
     assert result["snapped"] is None
 
 
 def test_validate_no_coordinate_passes():
     result = validate_action({"type": "type", "text": "hi"},
                              screen_size=(1920, 1080))
-    assert result["ok"] is True and result["reason"] == "no coordinate"
+    assert result["ok"] is True
+    assert result["reason"] == "no coordinate"
 
 
 # --- wiring ---------------------------------------------------------------
@@ -59,4 +63,5 @@ def test_wiring():
 
 def test_facade_exports():
     for attr in ("in_bounds", "snap_to_element", "validate_action"):
-        assert hasattr(ac, attr) and attr in ac.__all__
+        assert hasattr(ac, attr)
+        assert attr in ac.__all__

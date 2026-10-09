@@ -24,7 +24,7 @@ from headless._qt_settle import pump_until  # noqa: E402
 ROOT = pathlib.Path(__file__).resolve().parents[3]
 
 
-@pytest.fixture()
+@pytest.fixture
 def qapp():
     return QApplication.instance() or QApplication([])
 
@@ -38,7 +38,7 @@ def _page(text):
     return page
 
 
-@pytest.fixture()
+@pytest.fixture
 def workspace(qapp):
     window = QWidget()
     layout = QVBoxLayout(window)
@@ -67,9 +67,12 @@ def test_a_restyle_touches_the_selected_page_and_defers_the_others(workspace):
     window, tabs, pages = workspace
     assert [_size(page) for page in pages] == [9, 9, 9]
     parked = tabs.restyle(lambda: window.setStyleSheet("* { font-size: 17pt; }"))
-    assert parked == 2 and tabs.parked_pages() == 2
-    assert _in_window(pages[0], window) and _size(pages[0]) == 17
-    assert not _in_window(pages[1], window) and not _in_window(pages[2], window)
+    assert parked == 2
+    assert tabs.parked_pages() == 2
+    assert _in_window(pages[0], window)
+    assert _size(pages[0]) == 17
+    assert not _in_window(pages[1], window)
+    assert not _in_window(pages[2], window)
     # Still the tab's page for every caller that speaks in pages.
     assert [tabs.indexOf(page) for page in pages] == [0, 1, 2]
     assert [tabs.widget(index) for index in range(3)] == pages
@@ -83,8 +86,10 @@ def test_selecting_a_tab_puts_its_page_back_at_once(workspace):
     window, tabs, pages = workspace
     tabs.restyle(lambda: window.setStyleSheet("* { font-size: 15pt; }"))
     tabs.setCurrentIndex(2)
-    assert _in_window(pages[2], window) and _size(pages[2]) == 15
-    assert tabs.parked_pages() == 1 and tabs.currentWidget() is pages[2]
+    assert _in_window(pages[2], window)
+    assert _size(pages[2]) == 15
+    assert tabs.parked_pages() == 1
+    assert tabs.currentWidget() is pages[2]
 
 
 def test_a_second_restyle_before_the_first_drained_ends_on_the_last_style(workspace):
@@ -92,30 +97,40 @@ def test_a_second_restyle_before_the_first_drained_ends_on_the_last_style(worksp
     tabs.restyle(lambda: window.setStyleSheet("* { font-size: 15pt; }"))
     assert tabs.restyle(lambda: window.setStyleSheet("* { font-size: 21pt; }")) == 0
     tabs.finish_restyle()
-    assert tabs.parked_pages() == 0 and [_size(page) for page in pages] == [21, 21, 21]
+    assert tabs.parked_pages() == 0
+    assert [_size(page) for page in pages] == [21, 21, 21]
 
 
 def test_closing_a_tab_whose_page_is_parked_keeps_the_page(workspace):
     window, tabs, pages = workspace
     tabs.restyle(lambda: window.setStyleSheet("* { font-size: 15pt; }"))
     tabs.removeTab(1)
-    assert pages[1].parent() is tabs and pages[1].isHidden() and tabs.count() == 2
-    assert tabs.indexOf(pages[1]) == -1 and tabs.indexOf(pages[2]) == 1
+    assert pages[1].parent() is tabs
+    assert pages[1].isHidden()
+    assert tabs.count() == 2
+    assert tabs.indexOf(pages[1]) == -1
+    assert tabs.indexOf(pages[2]) == 1
     tabs.finish_restyle()
     tabs.insertTab(1, pages[1], "two")
-    assert tabs.widget(1) is pages[1] and _size(pages[1]) == 15
+    assert tabs.widget(1) is pages[1]
+    assert _size(pages[1]) == 15
 
 
 def test_the_page_of_a_closed_tab_is_not_restyled_in_the_same_slot(workspace):
     """A closed tab's page is kept as a hidden child of the tab widget, and was restyled with the window."""
     window, tabs, pages = workspace
     tabs.removeTab(1)
-    assert pages[1].parent() is tabs and _size(pages[1]) == 9
+    assert pages[1].parent() is tabs
+    assert _size(pages[1]) == 9
     parked = tabs.restyle(lambda: window.setStyleSheet("* { font-size: 17pt; }"))
-    assert parked == 2 and tabs.parked_pages() == 2            # the other tab's page and the closed one
-    assert not _in_window(pages[1], window) and pages[1].isHidden()
+    assert parked == 2
+    assert tabs.parked_pages() == 2  # the other tab's page and the closed one
+    assert not _in_window(pages[1], window)
+    assert pages[1].isHidden()
     assert pump_until(lambda: tabs.parked_pages() == 0)
-    assert pages[1].parent() is tabs and pages[1].isHidden() and tabs.indexOf(pages[1]) == -1
+    assert pages[1].parent() is tabs
+    assert pages[1].isHidden()
+    assert tabs.indexOf(pages[1]) == -1
     assert _size(pages[1]) == 17, "the closed page came back with the old style"
     assert pump_until(lambda: tabs._parking is None)
 
@@ -126,10 +141,13 @@ def test_reopening_a_closed_tab_during_a_restyle_takes_its_page_out_of_the_queue
     tabs.restyle(lambda: window.setStyleSheet("* { font-size: 15pt; }"))
     tabs.insertTab(1, pages[1], "two")
     tabs.setCurrentIndex(1)
-    assert _in_window(pages[1], window) and _size(pages[1]) == 15 and not pages[1].isHidden()
+    assert _in_window(pages[1], window)
+    assert _size(pages[1]) == 15
+    assert not pages[1].isHidden()
     assert pump_until(lambda: tabs.parked_pages() == 0)
     assert pump_until(lambda: tabs._parking is None)
-    assert tabs.widget(1) is pages[1] and _in_window(pages[1], window)    # not taken back out as "closed"
+    assert tabs.widget(1) is pages[1]
+    assert _in_window(pages[1], window)  # not taken back out as "closed"
 
 
 def test_finishing_a_restyle_brings_closed_pages_back_too(workspace):
@@ -137,7 +155,9 @@ def test_finishing_a_restyle_brings_closed_pages_back_too(workspace):
     tabs.removeTab(2)
     tabs.restyle(lambda: window.setStyleSheet("* { font-size: 15pt; }"))
     tabs.finish_restyle()
-    assert tabs.parked_pages() == 0 and pages[2].parent() is tabs and pages[2].isHidden()
+    assert tabs.parked_pages() == 0
+    assert pages[2].parent() is tabs
+    assert pages[2].isHidden()
     assert _size(pages[2]) == 15
 
 
@@ -145,11 +165,13 @@ def test_a_parked_page_still_finds_the_real_window(workspace):
     """``page.window()`` is the parking widget for a few event-loop turns; ``real_window`` sees through it."""
     window, tabs, pages = workspace
     tabs.removeTab(2)
-    assert real_window(pages[1]) is window and real_window(pages[2]) is window
+    assert real_window(pages[1]) is window
+    assert real_window(pages[2]) is window
     tabs.restyle(lambda: window.setStyleSheet("* { font-size: 15pt; }"))
     parking = pages[1].window()
     assert parking is not window
-    assert real_window(pages[1]) is window and real_window(pages[1].label) is window
+    assert real_window(pages[1]) is window
+    assert real_window(pages[1].label) is window
     assert real_window(pages[2]) is window                      # the closed tab's page
     parking.show()                          # what ``self.window().showNormal()`` in a page would have done
     parking.showNormal()
@@ -192,7 +214,8 @@ def test_a_single_tab_has_nothing_to_park(qapp):
     tabs = WorkspaceTabWidget()
     tabs.addTab(_page("only"), "only")
     applied = []
-    assert tabs.restyle(lambda: applied.append(1)) == 0 and applied == [1]
+    assert tabs.restyle(lambda: applied.append(1)) == 0
+    assert applied == [1]
     assert tabs._parking is None or pump_until(lambda: tabs._parking is None)
     tabs.deleteLater()
 
@@ -261,7 +284,8 @@ def window_report():
 
 
 def test_a_theme_switch_sets_the_style_sheet_once_with_the_font_rule(window_report):
-    assert window_report["sheet_sets_for_a_theme"] == 1 and window_report["theme_and_font_in_one"]
+    assert window_report["sheet_sets_for_a_theme"] == 1
+    assert window_report["theme_and_font_in_one"]
 
 
 def test_a_theme_switch_leaves_only_the_selected_page_in_the_tree(window_report):
@@ -272,10 +296,12 @@ def test_a_theme_switch_leaves_only_the_selected_page_in_the_tree(window_report)
 
 
 def test_setting_the_same_text_size_again_restyles_nothing(window_report):
-    assert window_report["sets_for_an_unchanged_size"] == 0 and window_report["sets_for_a_new_size"] == 1
+    assert window_report["sets_for_an_unchanged_size"] == 0
+    assert window_report["sets_for_a_new_size"] == 1
 
 
 def test_every_page_comes_back_with_the_new_theme_and_size(window_report):
-    assert window_report["all_back"] and window_report["labels"] > 10
+    assert window_report["all_back"]
+    assert window_report["labels"] > 10
     assert window_report["label_sizes"] == [16]
     assert window_report["label_text_colours"] == [window_report["light_text"]]

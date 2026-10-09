@@ -29,7 +29,8 @@ def test_redact_config_does_not_mutate_input():
 
 def test_redact_config_lists():
     out = redact_config({"items": [{"token": _SECRET}, {"ok": "fine"}]})
-    assert out["items"][0]["token"] == "***" and out["items"][1]["ok"] == "fine"
+    assert out["items"][0]["token"] == "***"
+    assert out["items"][1]["ok"] == "fine"
 
 
 def test_custom_mask():
@@ -40,8 +41,10 @@ def test_custom_mask():
 def test_redact_text_masks_token_keeps_words():
     line = f"error: key {_AWS} was rejected"
     out = redact_secret_text(line)
-    assert _AWS not in out and "***" in out
-    assert "error:" in out and "rejected" in out
+    assert _AWS not in out
+    assert "***" in out
+    assert "error:" in out
+    assert "rejected" in out
 
 
 def test_redact_text_keeps_plain_line():
@@ -75,4 +78,5 @@ def test_wiring():
 
 def test_facade_exports():
     for attr in ("redact_config", "redact_secret_text"):
-        assert hasattr(ac, attr) and attr in ac.__all__
+        assert hasattr(ac, attr)
+        assert attr in ac.__all__

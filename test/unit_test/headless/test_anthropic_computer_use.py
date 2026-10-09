@@ -111,7 +111,8 @@ def test_double_and_triple_click_repeat():
 def test_left_click_without_coordinate_uses_current_cursor():
     out = _decision_from_computer_action({"action": "left_click"})
     assert out["tool"] == "AC_click_mouse"
-    assert "x" not in out["input"] and "y" not in out["input"]
+    assert "x" not in out["input"]
+    assert "y" not in out["input"]
 
 
 def test_drag_requires_both_endpoints():

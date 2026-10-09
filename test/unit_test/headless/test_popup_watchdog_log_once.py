@@ -21,7 +21,7 @@ def _no_ambient_rbac(monkeypatch):
     monkeypatch.delenv(USERS_ENV, raising=False)
 
 
-@pytest.fixture()
+@pytest.fixture
 def users(tmp_path):
     store = UserStore(tmp_path / "users.json")
     store.tokens = {role: store.add_user(user_id=f"{role}-user", display_name=role, role=role)
@@ -29,7 +29,7 @@ def users(tmp_path):
     return store
 
 
-@pytest.fixture()
+@pytest.fixture
 def lines(caplog):
     """The watchdog's log lines, read lazily."""
     caplog.set_level(logging.DEBUG, logger=autocontrol_logger.name)
@@ -55,7 +55,8 @@ def test_a_refused_owner_is_logged_once_however_often_it_is_polled(users, lines)
     for _poll in range(25):
         assert watchdog.check_once() == 0
     assert hits == []
-    assert len(lines()) == 1 and "no longer in the user store" in lines()[0]
+    assert len(lines()) == 1
+    assert "no longer in the user store" in lines()[0]
 
 
 def test_a_changed_refusal_is_logged_again(users, lines):
@@ -68,7 +69,8 @@ def test_a_changed_refusal_is_logged_again(users, lines):
     for _poll in range(5):
         watchdog.check_once()
     assert len(lines()) == 2
-    assert "drive_input" in lines()[0] and "no longer in the user store" in lines()[1]
+    assert "drive_input" in lines()[0]
+    assert "no longer in the user store" in lines()[1]
 
 
 def test_recovery_is_logged_once_and_a_later_refusal_is_reported_again(users, lines):
@@ -95,7 +97,8 @@ def test_each_rule_keeps_its_own_state(users, lines):
     for _poll in range(4):
         watchdog.check_once()
     assert len(lines()) == 2
-    assert "'first'" in lines()[0] and "'second'" in lines()[1]
+    assert "'first'" in lines()[0]
+    assert "'second'" in lines()[1]
 
 
 def test_a_matcher_that_raises_every_poll_is_logged_once(lines):
@@ -106,7 +109,8 @@ def test_a_matcher_that_raises_every_poll_is_logged_once(lines):
     watchdog.add_rule(WatchdogRule("broken", matcher=broken, action=lambda: None))
     for _poll in range(10):
         assert watchdog.check_once() == 0
-    assert len(lines()) == 1 and "no display" in lines()[0]
+    assert len(lines()) == 1
+    assert "no display" in lines()[0]
 
 
 def test_a_rule_that_never_fails_logs_nothing(lines):

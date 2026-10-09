@@ -13,7 +13,7 @@ from je_auto_control.utils.deterministic import (
 
 # --- agent memory ---------------------------------------------------------
 
-@pytest.fixture()
+@pytest.fixture
 def mem(tmp_path):
     return AgentMemory(str(tmp_path / "mem.db"))
 

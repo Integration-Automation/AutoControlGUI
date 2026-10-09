@@ -25,7 +25,8 @@ def test_an_affected_statement_needs_an_action_statement():
 def test_provenance_leaves_out_empty_timestamps():
     statement = build_provenance([subject_for_bytes("a.txt", b"x")])
     metadata = statement["predicate"]["runDetails"]["metadata"]
-    assert "startedOn" not in metadata and "finishedOn" not in metadata
+    assert "startedOn" not in metadata
+    assert "finishedOn" not in metadata
 
 
 def test_a_nameless_subject_is_reported_not_raised(tmp_path):
@@ -33,7 +34,8 @@ def test_a_nameless_subject_is_reported_not_raised(tmp_path):
     path.write_bytes(b"x")
     statement = {"subject": [{"digest": {"sha256": "0" * 64}}]}
     mismatches = verify_provenance(statement, {"a.txt": str(path)})
-    assert mismatches and mismatches[0]["name"] == "a.txt"
+    assert mismatches
+    assert mismatches[0]["name"] == "a.txt"
 
 
 @pytest.mark.parametrize("lower, higher", [

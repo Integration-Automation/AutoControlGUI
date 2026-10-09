@@ -75,7 +75,8 @@ def test_a_bundle_entry_without_content_is_refused(tmp_path):
     target = tmp_path / "admin_hosts.json"
     target.write_text('{"hosts": []}', encoding="utf-8")
     report = import_config_bundle(_bundle({"format": "json"}), root=tmp_path)
-    assert report.skipped == ["admin_hosts.json"] and report.written == []
+    assert report.skipped == ["admin_hosts.json"]
+    assert report.written == []
     assert json.loads(target.read_text(encoding="utf-8")) == {"hosts": []}
 
 

@@ -64,7 +64,8 @@ def test_an_inline_worker_runs_and_reports_on_the_gui_thread(qapp):
                                           gui=QThread.currentThread() is qapp.thread()),
         on_thread_done=lambda: seen.update(done=True))
     assert _pump(qapp, lambda: seen.get("done")), "the worker never ran"
-    assert seen["value"] == 42 and seen["gui"] is True
+    assert seen["value"] == 42
+    assert seen["gui"] is True
     assert thread is not None
     failures = []
     start_worker(owner, _Worker(0, fail=True), on_done=lambda _v: None,

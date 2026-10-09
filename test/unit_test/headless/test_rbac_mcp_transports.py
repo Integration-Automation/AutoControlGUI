@@ -39,7 +39,7 @@ def _no_ambient_rbac(monkeypatch):
     monkeypatch.delenv("JE_AUTOCONTROL_MCP_TOKEN", raising=False)
 
 
-@pytest.fixture()
+@pytest.fixture
 def users(tmp_path):
     store = UserStore(tmp_path / "users.json")
     store.tokens = {
@@ -49,7 +49,7 @@ def users(tmp_path):
     return store
 
 
-@pytest.fixture()
+@pytest.fixture
 def serve(tmp_path, users):
     """Start RBAC servers over three fake tools; ``calls`` records who ran what."""
     calls = []
@@ -132,8 +132,10 @@ def test_sse_post_needs_a_users_token(serve):
     server = serve(auth_token="shared-secret")
     for token in (None, "shared-secret", "wrong"):
         status, headers, raw = _exchange(server, _request("tools/list"), token, {"Accept": _SSE})
-        assert status == 401 and "text/event-stream" not in headers.get("Content-Type", "")
-        assert "WWW-Authenticate" in headers and "tools" not in raw
+        assert status == 401
+        assert "text/event-stream" not in headers.get("Content-Type", "")
+        assert "WWW-Authenticate" in headers
+        assert "tools" not in raw
 
 
 @pytest.mark.parametrize("role", Role.all())
@@ -141,7 +143,8 @@ def test_sse_post_lists_and_runs_only_what_the_role_grants(serve, users, role):
     server = serve()
     token = users.tokens[role]
     status, headers, events = _sse(server, _request("tools/list"), token)
-    assert status == 200 and "text/event-stream" in headers["Content-Type"]
+    assert status == 200
+    assert "text/event-stream" in headers["Content-Type"]
     assert [tool["name"] for tool in events[-1]["result"]["tools"]] == _VISIBLE[role]
     for name in _ALL:
         _status, _headers, events = _sse(server, _call(name), token)
@@ -196,7 +199,8 @@ def test_session_requests_are_authorised_one_by_one(serve, users):
     own = {"Mcp-Session-Id": _initialize(server, users.tokens[Role.OPERATOR])}
     status, _headers, raw = _exchange(server, _call("ac_load_plugins"),
                                       users.tokens[Role.OPERATOR], own)
-    assert status == 200 and json.loads(raw)["error"]["code"] == -32003
+    assert status == 200
+    assert json.loads(raw)["error"]["code"] == -32003
     assert _exchange(server, _call("peek"), None, session)[0] == 401
     assert server.calls == [("ac_load_plugins", "admin-user")]
 
@@ -241,7 +245,8 @@ def test_stateless_requests_need_a_users_token(serve):
     for token in (None, "shared-secret"):
         status, _headers, raw = _exchange(server, _stateless("tools/list"), token,
                                           _stateless_headers("tools/list"))
-        assert status == 401 and "tools" not in raw
+        assert status == 401
+        assert "tools" not in raw
 
 
 @pytest.mark.parametrize("role", Role.all())
@@ -250,7 +255,8 @@ def test_stateless_lists_and_runs_only_what_the_role_grants(serve, users, role):
     token = users.tokens[role]
     status, headers, raw = _exchange(server, _stateless("tools/list"), token,
                                      _stateless_headers("tools/list"))
-    assert status == 200 and "Mcp-Session-Id" not in headers
+    assert status == 200
+    assert "Mcp-Session-Id" not in headers
     assert [tool["name"] for tool in json.loads(raw)["result"]["tools"]] == _VISIBLE[role]
     for name in ("peek", "ac_load_plugins"):
         body = _stateless("tools/call", {"name": name, "arguments": {}})
@@ -270,7 +276,8 @@ def test_stateless_sse_reply_is_authorised_too(serve, users):
     body = _stateless("tools/call", {"name": "peek", "arguments": {}})
     headers = {**_stateless_headers("tools/call", "peek"), "Accept": _SSE}
     status, _headers, raw = _exchange(server, body, users.tokens[Role.VIEWER], headers)
-    assert status == 200 and _events(raw)[-1]["result"]["isError"] is False
+    assert status == 200
+    assert _events(raw)[-1]["result"]["isError"] is False
     assert _exchange(server, body, "wrong", headers)[0] == 401
     assert server.calls == [("peek", "viewer-user")]
 
@@ -333,7 +340,7 @@ def test_a_viewer_may_listen_and_gets_only_the_change_signal(serve, users):
 
 # --- TLS --------------------------------------------------------------------
 
-@pytest.fixture()
+@pytest.fixture
 def tls(tmp_path):
     """``(server context, client context)`` for a throwaway loopback certificate."""
     x509 = pytest.importorskip("cryptography.x509", exc_type=ImportError)
@@ -376,7 +383,8 @@ def test_rbac_over_tls_json_and_sse(serve, users, tls):
         assert [tool["name"] for tool in json.loads(raw)["result"]["tools"]] == _VISIBLE[role]
     status, _headers, raw = _exchange(server, _call("poke"), users.tokens[Role.VIEWER],
                                       {"Accept": _SSE}, context=client_context)
-    assert status == 200 and _events(raw)[-1]["error"]["code"] == -32003
+    assert status == 200
+    assert _events(raw)[-1]["error"]["code"] == -32003
     _status, _headers, raw = _exchange(server, _call("poke"), users.tokens[Role.OPERATOR],
                                        {"Accept": _SSE}, context=client_context)
     assert "result" in _events(raw)[-1]

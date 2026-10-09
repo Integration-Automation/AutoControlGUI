@@ -68,7 +68,8 @@ def test_arrange_counts_only_successful_moves():
         return title != "b"           # "b" fails to move
 
     moved = arrange_grid(["a", "b", "c", "d"], mover=flaky, screen_size=_screen())
-    assert moved == 3 and len(calls) == 4
+    assert moved == 3
+    assert len(calls) == 4
 
 
 # --- wiring ---------------------------------------------------------------
@@ -86,4 +87,5 @@ def test_wiring():
 
 def test_facade_exports():
     for attr in ("arrange_grid", "arrange_cascade"):
-        assert hasattr(ac, attr) and attr in ac.__all__
+        assert hasattr(ac, attr)
+        assert attr in ac.__all__

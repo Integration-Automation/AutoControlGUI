@@ -54,7 +54,8 @@ def test_a_refused_show_command_is_an_error(show, name, command, verb):
     assert show.calls == [(456, command)]
     message = str(refused.value)
     assert f"could not {verb} 'Notepad' (hwnd 456)" in message
-    assert "refused" in message and "gone" in message
+    assert "refused" in message
+    assert "gone" in message
 
 
 @pytest.mark.parametrize("name, command, _verb", _TOOLS)

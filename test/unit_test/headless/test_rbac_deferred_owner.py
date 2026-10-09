@@ -55,7 +55,7 @@ def _no_ambient_rbac(monkeypatch):
     monkeypatch.delenv(USERS_ENV, raising=False)
 
 
-@pytest.fixture()
+@pytest.fixture
 def history(monkeypatch):
     fake = _FakeHistory()
     for module in (scheduler_module, trigger_engine, hotkey_daemon, webhook_server,
@@ -65,7 +65,7 @@ def history(monkeypatch):
     return fake
 
 
-@pytest.fixture()
+@pytest.fixture
 def ran(monkeypatch):
     """Names of the commands that actually ran: the privileged one and a plain probe."""
     names = []
@@ -75,7 +75,7 @@ def ran(monkeypatch):
     return names
 
 
-@pytest.fixture()
+@pytest.fixture
 def users(tmp_path):
     store = UserStore(tmp_path / "users.json")
     store.tokens = {
@@ -85,7 +85,7 @@ def users(tmp_path):
     return store
 
 
-@pytest.fixture()
+@pytest.fixture
 def script(tmp_path):
     path = tmp_path / "job.json"
     path.write_text(json.dumps([[_PROBE], [_SIGN, {"path": "x"}]]), encoding="utf-8")
@@ -182,7 +182,8 @@ def test_work_of_a_user_demoted_to_viewer_or_removed_does_not_run(
     fire()
     assert ran == []
     status, error = history.finished[-1]
-    assert status == "error" and "drive_input" in error
+    assert status == "error"
+    assert "drive_input" in error
     users.remove_user("operator-user")
     fire()
     assert ran == []
@@ -246,7 +247,8 @@ def test_an_owner_survives_being_saved_and_is_optional_in_an_old_entry(users, mo
     saved = json.loads(json.dumps(DeferredOwner("admin-user", Role.ADMIN, users).to_dict()))
     assert saved == {"user_id": "admin-user", "role": "admin"}
     loaded = DeferredOwner.from_dict(saved)
-    assert loaded == DeferredOwner("admin-user", Role.ADMIN) and loaded.store is None
+    assert loaded == DeferredOwner("admin-user", Role.ADMIN)
+    assert loaded.store is None
     for old_entry in (None, {}, {"user_id": ""}, {"user_id": 3, "role": "admin"}, "admin"):
         assert DeferredOwner.from_dict(old_entry) is None
     # Read back from a file there is no store attached: the configured one is asked.
@@ -261,9 +263,11 @@ def test_an_owner_survives_being_saved_and_is_optional_in_an_old_entry(users, mo
 def test_job_records_built_the_old_way_still_construct():
     """``owner`` is keyword-only, so positional construction is unchanged."""
     job = ScheduledJob("id", "script.json", 5.0, None, True, None, 0, True, 1.0)
-    assert job.owner is None and job.next_run_ts == pytest.approx(1.0)
+    assert job.owner is None
+    assert job.next_run_ts == pytest.approx(1.0)
     trigger = WindowAppearsTrigger("id", "script.json", True, True, 0, 0.5, 0.0, "title")
-    assert trigger.owner is None and trigger.title_substring == "title"
+    assert trigger.owner is None
+    assert trigger.title_substring == "title"
 
 
 def test_owner_scope_restores_the_thread_and_refuses_before_running(users):

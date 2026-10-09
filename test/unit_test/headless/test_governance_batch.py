@@ -7,7 +7,8 @@ from je_auto_control.utils.governance import ApprovalGate
 def test_request_returns_pending_token():
     gate = ApprovalGate()
     token = gate.request("delete prod table", requester="alice")
-    assert token and gate.status(token) == "pending"
+    assert token
+    assert gate.status(token) == "pending"
     assert gate.is_approved(token) is False
 
 

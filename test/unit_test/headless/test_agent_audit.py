@@ -153,4 +153,5 @@ def test_backend_errors_are_in_the_framework_family():
     from je_auto_control.utils.llm.backends.base import LLMNotAvailableError
     from je_auto_control.utils.vision.backends.base import VLMNotAvailableError
     for error in (AgentBackendError, LLMNotAvailableError, VLMNotAvailableError):
-        assert issubclass(error, AutoControlException) and issubclass(error, RuntimeError)
+        assert issubclass(error, AutoControlException)
+        assert issubclass(error, RuntimeError)

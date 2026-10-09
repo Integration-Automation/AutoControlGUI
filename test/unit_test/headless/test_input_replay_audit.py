@@ -112,7 +112,8 @@ def test_drags_release_the_button_when_a_move_fails(drag):
 
     with pytest.raises(OSError):
         drag(sink)
-    assert sent[0] == "press" and sent[-1] == "release"
+    assert sent[0] == "press"
+    assert sent[-1] == "release"
 
 
 def test_plain_mouse_button_names_resolve():

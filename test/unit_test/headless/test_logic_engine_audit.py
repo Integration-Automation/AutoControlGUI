@@ -93,7 +93,8 @@ def test_if_image_found_fires_only_once_the_image_is_on_screen(monkeypatch):
     spec = _machine([{"if_image_found": "welcome.png", "go_to": "done"},
                      {"after": 5, "go_to": "s"}])
     assert run_state_machine(spec, execute_action=lambda action: None)["final_state"] == "done"
-    assert polls[-1] == "welcome.png" and len(polls) == 3
+    assert polls[-1] == "welcome.png"
+    assert len(polls) == 3
 
 
 def test_an_after_guard_waits_for_its_timer():

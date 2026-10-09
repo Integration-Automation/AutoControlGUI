@@ -206,8 +206,10 @@ def test_a_dry_run_deletes_nothing_and_says_what_would_go():
     wire = _Wire(listing={"blobs": [_row(b"orphan", 2 * _DAY)]})
     with patch(_PERFORM, new=wire):
         result = collect_unreferenced_blobs(_transport(), [], dry_run=True)
-    assert result["deleted"] == [_sha(b"orphan")] and result["dry_run"] is True
-    assert wire.deleted == [] and "DELETE" not in wire.methods()
+    assert result["deleted"] == [_sha(b"orphan")]
+    assert result["dry_run"] is True
+    assert wire.deleted == []
+    assert "DELETE" not in wire.methods()
 
 
 def test_a_server_that_reports_no_ages_has_nothing_collected_unless_asked():
@@ -229,7 +231,8 @@ def test_one_blob_that_cannot_be_deleted_does_not_stop_the_others():
 
     with patch(_PERFORM, new=perform):
         result = collect_unreferenced_blobs(_transport(), [])
-    assert result["deleted"] == [_sha(b"two")] and list(result["failed"]) == [_sha(b"one")]
+    assert result["deleted"] == [_sha(b"two")]
+    assert list(result["failed"]) == [_sha(b"one")]
 
 
 @pytest.mark.parametrize("bad", [-1, "soon", True, float("nan"), None])
@@ -287,8 +290,10 @@ def test_config_sync_collect_blobs_keeps_what_the_bucket_this_machine_and_keep_n
         result = config_sync_collect_blobs(
             "https://sync.invalid/", "alice", keep=_sha(b"published by hand"),
             outbox_path=str(outbox_path), secret="s3cret")
-    assert result["deleted"] == [_sha(b"orphan")] and result["kept"] == 4
-    assert result["referenced"] == 4 and wire.deleted == [_sha(b"orphan")]
+    assert result["deleted"] == [_sha(b"orphan")]
+    assert result["kept"] == 4
+    assert result["referenced"] == 4
+    assert wire.deleted == [_sha(b"orphan")]
 
 
 def test_collecting_for_an_account_that_never_synced_here_creates_no_outbox(tmp_path):
@@ -297,8 +302,10 @@ def test_collecting_for_an_account_that_never_synced_here_creates_no_outbox(tmp_
     with patch(_PERFORM, new=wire), patch.object(ConfigSyncClient, "fetch", return_value=None):
         result = config_sync_collect_blobs("https://sync.invalid", "alice", dry_run=True,
                                            outbox_path=str(outbox_path))
-    assert result["deleted"] == [_sha(b"orphan")] and result["dry_run"] is True
-    assert not outbox_path.exists() and wire.deleted == []
+    assert result["deleted"] == [_sha(b"orphan")]
+    assert result["dry_run"] is True
+    assert not outbox_path.exists()
+    assert wire.deleted == []
 
 
 def test_an_unreachable_server_deletes_nothing(tmp_path):
@@ -349,7 +356,9 @@ def test_two_stores_on_one_folder_share_the_quota(tmp_path):
         thread.join(timeout=60)
     assert not any(thread.is_alive() for thread in threads)
     usage = stores[0].usage("alice")
-    assert usage["used"] == 30 and usage["count"] == 3 and len(refused) == 13
+    assert usage["used"] == 30
+    assert usage["count"] == 3
+    assert len(refused) == 13
     assert not (tmp_path / "blobs" / "store.lock").exists(), "the lock is released"
     assert stores[1].usage("alice")["count"] == 3, "the lock file is not listed as a blob"
 
@@ -392,7 +401,8 @@ def test_the_command_runs_from_an_action_list(tmp_path):
             "server_url": "https://sync.invalid", "user_id": "alice", "dry_run": True,
             "outbox_path": str(tmp_path / "o.sqlite3")}]])
     (result,) = record.values()
-    assert result["deleted"] == [_sha(b"orphan")] and result["dry_run"] is True
+    assert result["deleted"] == [_sha(b"orphan")]
+    assert result["dry_run"] is True
 
 
 # --- against the real server (needs the [signaling] extra; skipped without it) ------------
@@ -409,7 +419,10 @@ def test_the_server_listing_carries_the_limit_and_the_ages(tmp_path):
     assert client.put(f"/blobs/alice/{_sha(data)}", content=data,
                       headers=headers).status_code == 201
     listing = client.get("/blobs/alice", headers=headers).json()
-    assert listing["max_blob_bytes"] == 64 and listing["count"] == 1
+    assert listing["max_blob_bytes"] == 64
+    assert listing["count"] == 1
     (row,) = listing["blobs"]
-    assert row["sha256"] == _sha(data) and row["size"] == len(data)
-    assert isinstance(row["age_s"], float) and 0.0 <= row["age_s"] < 3600.0
+    assert row["sha256"] == _sha(data)
+    assert row["size"] == len(data)
+    assert isinstance(row["age_s"], float)
+    assert 0.0 <= row["age_s"] < 3600.0

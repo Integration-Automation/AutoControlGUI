@@ -168,7 +168,8 @@ def test_a_tampered_asset_is_refused_and_the_old_file_survives(tmp_path):
             return b"evil bits"
 
     result = sync_assets(manifest, _Tampering())
-    assert "template.png" in result.failed and result.transferred == []
+    assert "template.png" in result.failed
+    assert result.transferred == []
     assert (root / "template.png").read_bytes() == b"old image"
     assert [path.name for path in root.iterdir()] == ["template.png"], "no temp file left"
 
@@ -230,7 +231,8 @@ def test_secret_is_local(tmp_path, server):
     # The desktop pushes its own older version of the same key: a conflict,
     # not a silent overwrite of either side.
     report = desktop.sync()
-    assert report.state == "conflict" and report.conflicts == ["custom/vpn"]
+    assert report.state == "conflict"
+    assert report.conflicts == ["custom/vpn"]
     resolved = resolve_conflict(desktop.outbox, desktop.adapters, device_id="desktop",
                                 section="custom", key="vpn", choice=_sibling(server, "laptop"))
     assert resolved["value"]["host"] == "10.0.0.1"
@@ -259,7 +261,8 @@ def test_machine_paths_travel_as_references(tmp_path, server):
 
     report = desktop.sync()
     assert Path(desktop_store["in"]["script_path"]) == desktop.scripts / "run.json"
-    assert "out" in report.applied["custom"]["skipped"] and "out" not in desktop_store
+    assert "out" in report.applied["custom"]["skipped"]
+    assert "out" not in desktop_store
     # Not having it here is not a deletion for the laptop.
     desktop.sync()
     laptop.sync()
@@ -312,7 +315,9 @@ def test_sync_never_enables_trigger(tmp_path, server):
     assert sorted(report.applied["triggers"]["left_disabled"]) == ["both", "cron", "img"]
     assert Path(received["img"].image_path) == desktop.scripts / "t.png"
     assert received["cron"].cron == "0 9 * * *"
-    assert not target.is_running and not source.is_running and ran == []
+    assert not target.is_running
+    assert not source.is_running
+    assert ran == []
     assert "enabled" not in json.dumps(server.body["sections"]["triggers"])
 
     # The laptop edits its (enabled) trigger; the desktop's stays off.
@@ -320,14 +325,16 @@ def test_sync_never_enables_trigger(tmp_path, server):
     laptop.sync()
     desktop.sync()
     cron = next(t for t in target.list_triggers() if t.trigger_id == "cron")
-    assert cron.cron == "30 9 * * *" and cron.enabled is False
+    assert cron.cron == "30 9 * * *"
+    assert cron.enabled is False
     # Once this machine's user enables it, a later sync leaves that alone too.
     target.set_enabled("cron", True)
     next(t for t in source.list_triggers() if t.trigger_id == "cron").cron = "45 9 * * *"
     laptop.sync()
     desktop.sync()
     cron = next(t for t in target.list_triggers() if t.trigger_id == "cron")
-    assert cron.cron == "45 9 * * *" and cron.enabled is True
+    assert cron.cron == "45 9 * * *"
+    assert cron.enabled is True
     assert next(t for t in source.list_triggers() if t.trigger_id == "img").enabled is True
 
 
@@ -341,7 +348,8 @@ def test_sync_never_enables_a_hotkey(tmp_path, server):
     report = desktop.sync()
 
     [binding] = target.list_bindings()
-    assert binding.combo == "ctrl+alt+k" and binding.enabled is False
+    assert binding.combo == "ctrl+alt+k"
+    assert binding.enabled is False
     assert Path(binding.script_path) == desktop.scripts / "a.json"
     assert report.applied["hotkeys"]["left_disabled"] == ["hk1"]
     assert not target.is_running
@@ -400,7 +408,8 @@ def test_locators_and_address_book_round_trip(tmp_path, server):
     books[1].remove(host_id="host1", server_url="https://rd.invalid")
     desktop.sync()
     laptop.sync()
-    assert repos[0].all() == {} and books[0].list_entries() == []
+    assert repos[0].all() == {}
+    assert books[0].list_entries() == []
 
 
 # --- status, offline, resync -----------------------------------------------
@@ -411,7 +420,8 @@ def test_offline_changes_wait_in_the_outbox_and_the_status_says_so(tmp_path, ser
     laptop.adapters = [_DictAdapter("laptop", store)]
     server.offline = True
     report = laptop.sync(max_attempts=2)
-    assert (report.state, report.pending) == ("offline", 1) and report.error
+    assert (report.state, report.pending) == ("offline", 1)
+    assert report.error
     assert laptop.sync(max_attempts=1).pending == 1, "the same edit is not queued twice"
     status = sync_status(laptop.outbox)
     assert (status["state"], status["pending"], status["revision"]) == ("offline", 1, 0)
@@ -420,7 +430,8 @@ def test_offline_changes_wait_in_the_outbox_and_the_status_says_so(tmp_path, ser
     report = laptop.sync()
     assert (report.state, report.pending, report.revision) == ("synced", 0, 1)
     status = config_sync_status(_URL, "alice", str(laptop.home / "outbox.sqlite3"))
-    assert status["state"] == "synced" and status["last_success"] > 0
+    assert status["state"] == "synced"
+    assert status["last_success"] > 0
 
 
 def test_a_cancelled_sync_stops_and_keeps_its_changes(tmp_path, server):
@@ -430,7 +441,9 @@ def test_a_cancelled_sync_stops_and_keeps_its_changes(tmp_path, server):
     cancel = threading.Event()
     cancel.set()
     report = laptop.sync(cancel=cancel)
-    assert report.state == "cancelled" and report.pending == 1 and server.revision == 0
+    assert report.state == "cancelled"
+    assert report.pending == 1
+    assert server.revision == 0
 
 
 def test_a_retired_device_is_told_to_resync_and_adopts_the_server_state(tmp_path, server):
@@ -456,7 +469,8 @@ def test_a_retired_device_is_told_to_resync_and_adopts_the_server_state(tmp_path
 
     report = run_full_resync(desktop.client, desktop.outbox, desktop.adapters,
                              device_id="desktop")
-    assert report.state == "synced" and "custom/a" in report.withheld
+    assert report.state == "synced"
+    assert "custom/a" in report.withheld
     assert desktop_store == {}, "the deleted entry did not come back"
     assert desktop.sync().state == "synced"
 
@@ -464,7 +478,8 @@ def test_a_retired_device_is_told_to_resync_and_adopts_the_server_state(tmp_path
 def test_the_device_id_is_created_once_and_kept(tmp_path, monkeypatch):
     monkeypatch.setattr(Path, "home", classmethod(lambda cls: tmp_path))
     first = default_device_id()
-    assert first and default_device_id() == first
+    assert first
+    assert default_device_id() == first
     assert (tmp_path / ".je_auto_control" / "config_sync_device_id").read_text(
         encoding="utf-8").strip() == first
 
@@ -513,7 +528,8 @@ def test_a_folder_mirror_does_not_push_back_what_it_received(tmp_path):
     (watch / "report.txt").write_bytes(incoming)
     (watch / "mine.txt").write_text("made here", encoding="utf-8")
     assert engine.poll_once() == ["mine.txt"]
-    assert engine.poll_once() == [] and sent == ["mine.txt"]
+    assert engine.poll_once() == []
+    assert sent == ["mine.txt"]
 
     # Edited here afterwards: now it is a local change and goes out.
     (watch / "report.txt").write_bytes(b"edited locally")
@@ -528,7 +544,8 @@ def test_a_received_file_noted_after_it_landed_is_not_echoed(tmp_path):
     engine.poll_once()
     (watch / "a.bin").write_bytes(b"payload")
     engine.note_received("a.bin")
-    assert engine.poll_once() == [] and sent == []
+    assert engine.poll_once() == []
+    assert sent == []
 
 
 # --- the delivery surfaces: executor, MCP, Script Builder, facade ----------
@@ -550,8 +567,10 @@ def test_the_commands_run_from_an_action_list(tmp_path, server):
         ["AC_config_sync_status", {**target, "outbox_path": options["outbox_path"]}],
     ])
     run, status = list(record.values())
-    assert run["state"] == "synced" and run["revision"] == 1
-    assert status["state"] == "synced" and status["pending"] == 0
+    assert run["state"] == "synced"
+    assert run["revision"] == 1
+    assert status["state"] == "synced"
+    assert status["pending"] == 0
     assert set(server.body["sections"]["scripts"]) == {"a.json"}
     json.dumps(record)
 
@@ -579,10 +598,13 @@ def test_every_surface_knows_the_commands():
         assert "ac_" + command[3:] in tools
     assert tools["ac_config_sync_status"].annotations.read_only
     for acting in ("ac_config_sync_run", "ac_config_sync_resolve", "ac_config_sync_full_resync"):
-        assert tools[acting].annotations.destructive and not tools[acting].annotations.read_only
+        assert tools[acting].annotations.destructive
+        assert not tools[acting].annotations.read_only
     read_only = {tool.name
                  for tool in build_default_tool_registry(read_only=True, aliases=False)}
-    assert "ac_config_sync_run" not in read_only and "ac_config_sync_status" in read_only
+    assert "ac_config_sync_run" not in read_only
+    assert "ac_config_sync_status" in read_only
     for name in ("ConfigSyncClient", "SyncEntry", "SyncOutbox", "merge_entries", "sync_assets",
                  "config_sync_run", "SyncAdapter", "ConfigStore"):
-        assert name in ac.__all__ and hasattr(ac, name)
+        assert name in ac.__all__
+        assert hasattr(ac, name)

@@ -316,7 +316,8 @@ def test_a_macos_region_is_captured_in_points():
     capture = _ScreenCapture()
     image, origin_x, origin_y = grab_logical((90, 40, 100, 60), grabber=capture, displays=_displays)
     assert (image.size, origin_x, origin_y) == ((100, 60), 90, 40)
-    assert image.getpixel((10, 10)) == _BLUE and image.getpixel((5, 5)) == _WHITE
+    assert image.getpixel((10, 10)) == _BLUE
+    assert image.getpixel((5, 5)) == _WHITE
     assert capture.rectangles == [(90, 40, 190, 100)]
 
 

@@ -201,4 +201,5 @@ def test_the_scope_tests_pass_with_real_context_inheritance():
         cwd=REPO_ROOT, env=env, capture_output=True, text=True, encoding="utf-8",
         errors="replace", timeout=300, check=False)
     assert done.returncode == 0, (done.stdout + done.stderr)[-3000:]
-    assert " passed" in done.stdout and " failed" not in done.stdout
+    assert " passed" in done.stdout
+    assert " failed" not in done.stdout

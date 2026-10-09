@@ -28,12 +28,15 @@ def _cfg():
 def test_matches_after_a_few_polls():
     seq = iter([1, 3, 5, 5])
     result = expect_poll(lambda: next(seq), to_equal(5), **_cfg())
-    assert result.ok and result.attempts == 3 and result.value == 5
+    assert result.ok
+    assert result.attempts == 3
+    assert result.value == 5
 
 
 def test_times_out_when_never_matching():
     result = expect_poll(lambda: 0, to_equal(9), **_cfg())
-    assert result.ok is False and result.attempts == 21      # 20 sleeps + first
+    assert result.ok is False
+    assert result.attempts == 21  # 20 sleeps + first
 
 
 def test_contains_gt_regex_matchers():
@@ -46,7 +49,8 @@ def test_to_be_stable_requires_repeats():
     vals = iter([7, 8, 8, 8, 8])
     # not stable until three equal in a row
     result = expect_poll(lambda: next(vals), to_be_stable(3), **_cfg())
-    assert result.ok and result.value == 8
+    assert result.ok
+    assert result.value == 8
 
 
 def test_assert_poll_raises_on_timeout():
@@ -57,7 +61,8 @@ def test_assert_poll_raises_on_timeout():
 
 def test_assert_poll_returns_result_on_success():
     result = assert_poll(lambda: "ready", to_equal("ready"), timeout_s=0)
-    assert result.ok and result.value == "ready"
+    assert result.ok
+    assert result.value == "ready"
 
 
 # --- wiring ---------------------------------------------------------------
@@ -77,13 +82,15 @@ def test_executor_polls_nested_action():
     from je_auto_control.utils.executor.action_executor import _expect_poll
     result = _expect_poll(["AC_fuse_elements"], key="count", op="equals",
                           expected=0, timeout_s=0.0)
-    assert result["ok"] is True and result["value"] == 0
+    assert result["ok"] is True
+    assert result["value"] == 0
 
 
 def test_facade_exports():
     for attr in ("expect_poll", "assert_poll", "to_equal", "to_contain",
                  "to_be_stable"):
-        assert hasattr(ac, attr) and attr in ac.__all__
+        assert hasattr(ac, attr)
+        assert attr in ac.__all__
 
 
 @pytest.mark.parametrize("bad_interval", [0.0, -1.0])

@@ -58,7 +58,8 @@ def test_an_edit_of_another_size_in_the_same_tick_is_pushed(watch, clock):
     assert engine.poll_once() == ["a.txt"]
     _write(watch / "a.txt", b"second, and longer")
     assert engine.poll_once() == ["a.txt"]
-    assert engine.poll_once() == [] and sent == ["a.txt", "a.txt"]
+    assert engine.poll_once() == []
+    assert sent == ["a.txt", "a.txt"]
 
 
 def test_an_edit_of_the_same_size_in_the_same_tick_is_pushed(watch, clock):
@@ -77,7 +78,8 @@ def test_an_edit_in_the_tick_a_received_file_was_noted_in_is_pushed(watch, clock
     incoming = b"from peer"
     engine.note_received("r.txt", sha256=hashlib.sha256(incoming).hexdigest())
     _write(watch / "r.txt", incoming)
-    assert engine.poll_once() == [] and sent == [], "what the peer sent is not pushed back"
+    assert engine.poll_once() == [], "what the peer sent is not pushed back"
+    assert sent == [], "what the peer sent is not pushed back"
     _write(watch / "r.txt", b"FROM HERE")       # same size, same tick
     assert engine.poll_once() == ["r.txt"]
     assert engine.poll_once() == []
@@ -113,7 +115,8 @@ def test_a_failed_push_in_the_same_tick_is_still_retried(watch, clock):
     engine.poll_once()
     _write(watch / "a.txt", b"data")
     assert engine.poll_once() == []
-    assert engine.poll_once() == ["a.txt"] and attempts == ["a.txt", "a.txt"]
+    assert engine.poll_once() == ["a.txt"]
+    assert attempts == ["a.txt", "a.txt"]
 
 
 def test_waiting_until_stable_still_holds_a_changing_file_back(watch, clock):
@@ -140,13 +143,16 @@ def test_content_is_read_only_while_the_time_cannot_be_trusted(watch, clock, mon
     engine = _engine(watch, sent)
     _write(watch / "a.txt", b"first")
     assert engine.poll_once() == ["a.txt"]
-    assert engine.poll_once() == [] and read, "written this tick: compared by content"
+    assert engine.poll_once() == [], "written this tick: compared by content"
+    assert read, "written this tick: compared by content"
     # Long after the write, a later edit cannot share its tick any more.
     clock[0] = _TICK_NS + 60 * _SECOND_NS
     assert engine.poll_once() == []
     del read[:]
-    assert engine.poll_once() == [] and read == [], "an old file is compared by time and size"
+    assert engine.poll_once() == [], "an old file is compared by time and size"
+    assert read == [], "an old file is compared by time and size"
     # A file that was already old when first seen is never read at all.
     _write(watch / "old.txt", b"old", tick_ns=_TICK_NS - 3600 * _SECOND_NS)
     assert engine.poll_once() == ["old.txt"]
-    assert engine.poll_once() == [] and read == []
+    assert engine.poll_once() == []
+    assert read == []

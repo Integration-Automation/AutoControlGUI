@@ -70,7 +70,8 @@ def test_measure_mode_lists_reported_probes_with_the_rest(verify, monkeypatch, c
     _probes(verify, monkeypatch, [("a", True)], [("new", False)], {})
     assert verify.main(["--measure"]) == 0
     output = capsys.readouterr().out
-    assert '"a": True,' in output and '"new": False,' in output
+    assert '"a": True,' in output
+    assert '"new": False,' in output
 
 
 def test_no_shipped_probe_is_both_asserted_and_reported(verify):

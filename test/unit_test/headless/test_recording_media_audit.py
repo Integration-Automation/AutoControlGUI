@@ -27,7 +27,7 @@ class _Backend:
         return list(self.tree[:max_results])     # walks stop at max_results, as the real ones do
 
 
-@pytest.fixture()
+@pytest.fixture
 def tree(monkeypatch):
     holder = []
     monkeypatch.setattr(accessibility_api, "get_backend", lambda: _Backend(holder))
@@ -111,7 +111,9 @@ def test_sixteen_bit_and_odd_shaped_images_are_processed():
     scan = np.zeros((40, 60), np.uint16)
     scan[:, 30:] = 60000
     result = preprocess_image(scan, steps=("grayscale", "binarize"))
-    assert result.dtype == np.uint8 and result.max() == 255 and result[:, :30].max() == 0
+    assert result.dtype == np.uint8
+    assert result.max() == 255
+    assert result[:, :30].max() == 0
     assert binarize(scan, method="adaptive_gaussian").dtype == np.uint8
     assert to_grayscale(np.zeros((10, 10, 1), np.uint8)).shape == (10, 10)
     assert binarize(np.random.rand(20, 20, 3).astype(np.float32)).dtype == np.uint8

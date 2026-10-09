@@ -18,7 +18,7 @@ _NEW_COMMANDS = [
 ]
 
 
-@pytest.fixture()
+@pytest.fixture
 def temp_acl(monkeypatch, tmp_path):
     """Point UsbAcl at a temp path so the user's real ACL is untouched."""
     monkeypatch.setattr(

@@ -27,7 +27,7 @@ def isolated_usb(monkeypatch, tmp_path):
     )
 
 
-@pytest.fixture()
+@pytest.fixture
 def server():
     s = RestApiServer(host="127.0.0.1", port=0, enable_audit=False)
     s.start()
@@ -69,7 +69,8 @@ def test_acl_add_then_list(server):
     status, payload = _post(server, "/usb/acl/add", {
         "vendor_id": "1050", "product_id": "0407", "allow": True,
     }, token=server.token)
-    assert status == 200 and payload["added"] is True
+    assert status == 200
+    assert payload["added"] is True
     status, listed = _get(server, "/usb/acl", token=server.token)
     assert status == 200
     assert listed["default"] == "deny"
@@ -88,7 +89,8 @@ def test_acl_default_validates_policy(server):
     assert exc.value.code == 400
     status, payload = _post(server, "/usb/acl/default", {"policy": "allow"},
                             token=server.token)
-    assert status == 200 and payload["default"] == "allow"
+    assert status == 200
+    assert payload["default"] == "allow"
 
 
 def test_loopback_list_and_open(server):
@@ -100,7 +102,8 @@ def test_loopback_list_and_open(server):
     status, opened = _post(server, "/usb/loopback/open", {
         "vendor_id": "1050", "product_id": "0407", "serial": "ABC123",
     }, token=server.token)
-    assert status == 200 and opened["ok"] is True
+    assert status == 200
+    assert opened["ok"] is True
     assert "descriptor" in opened
 
 

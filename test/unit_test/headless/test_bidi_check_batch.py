@@ -58,7 +58,8 @@ def test_trojan_source_flag():
 def test_executor_round_trip():
     rec = ac.execute_action([["AC_bidi_check", {"text": _TROJAN}]])
     out = next(v for v in rec.values() if isinstance(v, dict))
-    assert out["trojan_source"] is True and out["has_controls"] is True
+    assert out["trojan_source"] is True
+    assert out["has_controls"] is True
     rec2 = ac.execute_action([["AC_bidi_strip", {"text": _TROJAN}]])
     assert next(v for v in rec2.values() if isinstance(v, dict))["text"] == _PLAIN
 
@@ -78,7 +79,8 @@ def test_facade_exports():
     for attr in ("base_direction", "bidi_controls", "detect_bidi_issues",
                  "has_bidi_controls", "is_bidi_balanced", "is_trojan_source",
                  "strip_bidi_controls"):
-        assert hasattr(ac, attr) and attr in ac.__all__
+        assert hasattr(ac, attr)
+        assert attr in ac.__all__
     # the report bundles everything
     assert set(detect_bidi_issues(_TROJAN)) == {
         "controls", "has_controls", "balanced", "base_direction",

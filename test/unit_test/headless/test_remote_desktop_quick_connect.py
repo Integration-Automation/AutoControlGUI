@@ -155,7 +155,9 @@ def test_publish_via_signaling_emits_host_handoff(qapp):
         token, host_id = captured[0]
         assert token == "ttt"
         # host_id should be the 9-digit ID of the running TCP host.
-        assert host_id and len(host_id) == 9 and host_id.isdigit()
+        assert host_id
+        assert len(host_id) == 9
+        assert host_id.isdigit()
         screen._stop_hosting()  # noqa: SLF001
     finally:
         screen.deleteLater()

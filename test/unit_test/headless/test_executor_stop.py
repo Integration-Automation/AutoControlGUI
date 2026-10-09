@@ -48,7 +48,7 @@ class _Fakes:
         raise AutoControlException("boom")
 
 
-@pytest.fixture()
+@pytest.fixture
 def fakes() -> _Fakes:
     return _Fakes()
 
@@ -93,7 +93,8 @@ def test_stop_wakes_a_sleep_and_skips_the_rest(fakes):
     thread.join(_WAIT)
     assert not thread.is_alive()
     assert isinstance(outcome["error"], ExecutionStopped)
-    assert outcome["error"].run_id == "sleeper" and outcome["error"].reason == "user"
+    assert outcome["error"].run_id == "sleeper"
+    assert outcome["error"].reason == "user"
     assert "after" not in fakes.calls
     assert time.monotonic() - started < 30
     assert active_executions() == []
@@ -300,6 +301,7 @@ def test_execute_action_with_vars_run_id(monkeypatch):
 
 def test_facade_and_commands():
     for name in ("ExecutionStopped", "StopToken", "active_executions", "stop_execution", "stoppable_run"):
-        assert name in ac.__all__ and hasattr(ac, name)
+        assert name in ac.__all__
+        assert hasattr(ac, name)
     assert issubclass(ac.ExecutionStopped, AutoControlException)
     assert {"AC_run_stoppable", "AC_stop_execution", "AC_list_executions"} <= ac.executor.known_commands()

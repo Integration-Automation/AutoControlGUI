@@ -29,7 +29,7 @@ from je_auto_control.wrapper import (
 BSD = "freebsd14"
 
 
-@pytest.fixture()
+@pytest.fixture
 def keyboard_env(monkeypatch):
     """A recording keyboard backend, with the key table and recorder silenced."""
     calls: list = []
@@ -104,7 +104,7 @@ def test_an_unknown_key_name_never_reaches_the_backend(keyboard_env,
     assert checked == [65]
 
 
-@pytest.fixture()
+@pytest.fixture
 def mouse_env(monkeypatch):
     """A recording mouse backend with an X11-shaped button table."""
     calls: list = []

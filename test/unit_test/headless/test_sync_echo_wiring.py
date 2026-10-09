@@ -65,7 +65,8 @@ def test_a_file_is_pushed_only_once_it_stopped_changing(watch):
     os.utime(target, (time.time() + 5, time.time() + 5))
     assert engine.poll_once() == [], "it changed since the last poll: still being written"
     assert engine.poll_once() == ["big.bin"], "same size and mtime on two polls"
-    assert engine.poll_once() == [] and sent == ["big.bin"]
+    assert engine.poll_once() == []
+    assert sent == ["big.bin"]
 
 
 def test_the_wait_can_be_turned_off(watch):
@@ -81,7 +82,8 @@ def test_in_progress_names_are_never_mirrored(watch, name):
     sent = []
     engine = _engine(watch, sent)
     (watch / name).write_bytes(b"partial")
-    assert _polls(engine) == [] and sent == []
+    assert _polls(engine) == []
+    assert sent == []
     # The sender's convention: write under such a name, rename when complete.
     os.replace(watch / name, watch / "done.bin")
     assert _polls(engine) == ["done.bin"]
@@ -98,7 +100,8 @@ def test_a_failed_push_is_still_retried(watch):
     engine = FolderSyncEngine(watch_dir=watch, sender=flaky)
     engine.poll_once()
     (watch / "retry.txt").write_text("data", encoding="utf-8")
-    assert _polls(engine, 4) == ["retry.txt"] and attempts == ["retry.txt", "retry.txt"]
+    assert _polls(engine, 4) == ["retry.txt"]
+    assert attempts == ["retry.txt", "retry.txt"]
 
 
 # --- received files are noted by the receivers ------------------------------------
@@ -116,8 +119,10 @@ def test_a_file_the_webrtc_receiver_writes_into_a_mirror_is_not_pushed_back(watc
     assert _polls(engine, 2) == [], "the part file is not mirrored while it is written"
     receiver.handle_message(b"hello")
     receiver.handle_message(json.dumps({"type": "file_end"}), on_done=done.append)
-    assert done and (watch / "from-peer.txt").read_bytes() == b"hello"
-    assert _polls(engine) == [] and sent == []
+    assert done
+    assert (watch / "from-peer.txt").read_bytes() == b"hello"
+    assert _polls(engine) == []
+    assert sent == []
     # A local edit afterwards is this machine's change again -- even in the
     # clock tick the file arrived in: the mirror compares what it recorded,
     # not only whether the time moved on.
@@ -136,8 +141,10 @@ def test_a_file_the_tcp_receiver_writes_into_a_mirror_is_not_pushed_back(watch):
     receiver.handle_chunk(encode_chunk(transfer_id, b"abc"))
     assert _polls(engine, 2) == []
     receiver.handle_end(encode_end(transfer_id))
-    assert outcome and outcome[0][1] is True
-    assert _polls(engine) == [] and sent == []
+    assert outcome
+    assert outcome[0][1] is True
+    assert _polls(engine) == []
+    assert sent == []
 
 
 def test_a_mirror_of_another_folder_is_not_told(watch, tmp_path):
@@ -161,7 +168,8 @@ def test_a_subfolder_is_only_covered_when_the_mirror_includes_subfolders(watch):
     nested = watch / "sub" / "z.bin"
     nested.write_bytes(b"z")
     assert note_incoming(nested) == 1
-    assert flat._received == {} and list(deep._received) == ["sub/z.bin"]  # noqa: SLF001
+    assert flat._received == {}
+    assert list(deep._received) == ["sub/z.bin"]  # noqa: SLF001
 
 
 def test_a_stopped_and_forgotten_engine_is_not_kept_alive(watch):

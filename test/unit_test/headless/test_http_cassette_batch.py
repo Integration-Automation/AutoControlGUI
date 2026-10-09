@@ -73,7 +73,8 @@ def test_executor_round_trip():
         {"cassette": json.dumps(cassette), "url": "https://api.example.com/p"},
     ]])
     response = next(v for v in rec.values() if isinstance(v, dict))["response"]
-    assert response["status"] == 200 and response["json"] == {"ok": True}
+    assert response["status"] == 200
+    assert response["json"] == {"ok": True}
 
 
 def test_http_request_still_works_after_refactor():

@@ -113,7 +113,8 @@ def test_enable_adds_to_the_list_and_reports_what_happened():
     assert outcome["unavailable"] == ["fx_404"]
     assert _names(_rpc(server, "tools/list")) == list(CORE_TOOL_NAMES) + ["fx_001"]
     again = _call(server, "ac_tools_enable", {"names": ["fx_001"]})
-    assert again["enabled"] == [] and again["already_enabled"] == ["fx_001"]
+    assert again["enabled"] == []
+    assert again["already_enabled"] == ["fx_001"]
     assert _call(server, "ac_tools_disable", {"names": ["fx_001"]})["disabled"] == ["fx_001"]
     assert _names(_rpc(server, "tools/list")) == list(CORE_TOOL_NAMES)
 
@@ -157,7 +158,8 @@ def test_view_api_returns_typed_results():
     assert result.enabled == ("fx_002",)
     page = view.list_page(None)
     assert isinstance(page, ToolPage)
-    assert page.next_cursor is None and page.snapshot_id
+    assert page.next_cursor is None
+    assert page.snapshot_id
     assert [tool.name for tool in page.tools] == list(CORE_TOOL_NAMES) + ["fx_002"]
     with pytest.raises(ToolDisclosureError):
         view.enable("fx_003")  # a bare string is not a list of names
@@ -227,7 +229,8 @@ def test_cursor_snapshot_survives_plugin_change():
     # The original snapshot, whole: no page mixes the two registries.
     assert names == list(CORE_TOOL_NAMES) + [f"fx_{number:03d}" for number in range(7)]
     fresh, _pages = _all_pages(server)
-    assert "plugin_fx_new" in fresh and "fx_005" not in fresh
+    assert "plugin_fx_new" in fresh
+    assert "fx_005" not in fresh
     assert _rpc(server, "tools/list")["result"]["_meta"][SNAPSHOT_META] != snapshot
 
 
@@ -273,7 +276,8 @@ def _open_session(port):
     status, session_id, _body = _post(port, {
         "jsonrpc": "2.0", "id": 1, "method": "initialize",
         "params": {"protocolVersion": "2025-11-25", "capabilities": {}}})
-    assert status == 200 and session_id
+    assert status == 200
+    assert session_id
     return session_id
 
 
@@ -298,7 +302,8 @@ def test_two_http_sessions_do_not_share_enabled_tools():
         status, _sid, body = _post(port, {
             "jsonrpc": "2.0", "id": 4, "method": "tools/call",
             "params": {"name": "fx_002", "arguments": {}}}, second)
-        assert status == 200 and json.loads(body)["error"]["code"] == -32602
+        assert status == 200
+        assert json.loads(body)["error"]["code"] == -32602
         assert mcp.disclosure.session_count == 2
         # Ending the session releases its view.
         connection = http.client.HTTPConnection("127.0.0.1", port, timeout=10)

@@ -141,7 +141,8 @@ def window():
 def test_default_workflow_and_full_catalog(window):
     default_keys = window["default_keys"]
     assert default_keys == ['record', 'script_builder', 'remote_desktop']
-    assert default_keys == DEFAULT_WORKFLOW and window["front"] == "record"
+    assert default_keys == DEFAULT_WORKFLOW
+    assert window["front"] == "record"
     registered = [spec.key for spec in TAB_SPECS]
     assert window["registered"] == registered
     assert sorted(window["navigation_lists"]) == sorted(registered)
@@ -174,7 +175,8 @@ def test_small_window_is_usable(window):
     assert small["window"] == [640, 420]
     horizontal_content_clipped = not small["page_keeps_minimum"]
     assert horizontal_content_clipped is False
-    assert small["taller_than_view"] and small["scrolls"]
+    assert small["taller_than_view"]
+    assert small["scrolls"]
 
 
 # --- a feature that cannot run says why -----------------------------------------------------------
@@ -224,7 +226,8 @@ def desktop(monkeypatch):
 
 
 def test_mixed_dpi_geometry(desktop):
-    assert geo.capture_ratio(PRIMARY) == 1.0 and geo.capture_ratio(SCALED) == 1.25
+    assert geo.capture_ratio(PRIMARY) == 1.0
+    assert geo.capture_ratio(SCALED) == 1.25
     # Scaled within the screen, anchored at its corner.
     assert geo.native_region(PRIMARY, QRect(100, 50, 200, 100)) == (100, 50, 200, 100)
     assert geo.native_region(SCALED, QRect(0, 0, 1536, 864)) == (1920, -164, 1920, 1080)
@@ -232,12 +235,14 @@ def test_mixed_dpi_geometry(desktop):
 
 
 def test_a_native_point_finds_the_screen_it_is_on(desktop):
-    assert geo.screen_at_native(0, 0) is PRIMARY and geo.screen_at_native(1919, 1079) is PRIMARY
+    assert geo.screen_at_native(0, 0) is PRIMARY
+    assert geo.screen_at_native(1919, 1079) is PRIMARY
     assert geo.screen_at_native(1920, -164) is SCALED
     # Inside the scaled screen's native rectangle, outside its logical one.
     assert geo.screen_at_native(1920 + 1900, -164 + 1000) is SCALED
     assert geo.screen_at_native(1920 + 1920, 0) is None
-    assert geo.screen_at_native(1920, -165) is None and geo.screen_at_native(500, 1080) is None
+    assert geo.screen_at_native(1920, -165) is None
+    assert geo.screen_at_native(500, 1080) is None
 
 
 def test_native_and_logical_points_round_trip(desktop):
@@ -246,7 +251,8 @@ def test_native_and_logical_points_round_trip(desktop):
     for x, y in ((0, 0), (300, 200), (1535, 863)):
         left, top, _width, _height = geo.native_region(SCALED, QRect(x, y, 1, 1))
         back = geo.logical_point(SCALED, left, top)
-        assert abs(back.x() - (1920 + x)) <= 0.5 and abs(back.y() - (-164 + y)) <= 0.5
+        assert abs(back.x() - (1920 + x)) <= 0.5
+        assert abs(back.y() - (-164 + y)) <= 0.5
 
 
 def test_macos_takes_points_whatever_the_ratio(monkeypatch):
@@ -255,7 +261,8 @@ def test_macos_takes_points_whatever_the_ratio(monkeypatch):
     monkeypatch.setattr(geo, "QGuiApplication", types.SimpleNamespace(screens=lambda: [retina]))
     assert geo.capture_ratio(retina) == 1.0
     assert geo.native_region(retina, QRect(10, 20, 300, 200)) == (10, 20, 300, 200)
-    assert geo.screen_at_native(1511, 981) is retina and geo.screen_at_native(1512, 0) is None
+    assert geo.screen_at_native(1511, 981) is retina
+    assert geo.screen_at_native(1512, 0) is None
     assert geo.logical_point(retina, 700, 400) == QPointF(700, 400)
 
 
@@ -271,8 +278,10 @@ def _load(name):
 def test_percentiles_and_summaries():
     bench = _load("_gui_bench")
     samples = list(range(1, 101))
-    assert bench.percentile(samples, 95) == 95 and bench.percentile(samples, 50) == 50
-    assert bench.percentile([7.0], 95) == 7.0 and bench.percentile([], 95) == 0.0
+    assert bench.percentile(samples, 95) == 95
+    assert bench.percentile(samples, 50) == 50
+    assert bench.percentile([7.0], 95) == 7.0
+    assert bench.percentile([], 95) == 0.0
     assert bench.summary([3, 1, 2]) == {"median": 2, "min": 1, "max": 3, "samples": [3, 1, 2]}
     assert bench.summary([])["median"] is None
 
@@ -298,15 +307,20 @@ def test_the_startup_benchmark_reports_what_it_documents(tmp_path):
     report_path = tmp_path / "startup.json"
     _child([str(BENCHMARKS / "gui_startup.py"), "--runs", "1", "--output", str(report_path)])
     report = json.loads(report_path.read_text(encoding="utf-8"))
-    assert report["benchmark"] == "gui_startup" and report["runs"] == 1
-    assert report["environment"]["qt_platform"] == "offscreen" and report["environment"]["python"]
-    assert report["startup_ms"]["median"] > 0 and report["process_ms"]["median"] >= report["startup_ms"]["median"]
+    assert report["benchmark"] == "gui_startup"
+    assert report["runs"] == 1
+    assert report["environment"]["qt_platform"] == "offscreen"
+    assert report["environment"]["python"]
+    assert report["startup_ms"]["median"] > 0
+    assert report["process_ms"]["median"] >= report["startup_ms"]["median"]
     assert set(report["phases_ms"]) == {"import_qt", "import_gui", "build_window", "first_frame"}
     assert report["memory"]["rss_mb"]["median"] > 0
-    assert report["tabs_registered"] == len(TAB_SPECS) and report["tabs_built"] < 10
+    assert report["tabs_registered"] == len(TAB_SPECS)
+    assert report["tabs_built"] < 10
     compared = json.loads(_child([str(BENCHMARKS / "gui_startup.py"), "--compare",
                                   str(report_path), str(report_path)], timeout=60))
-    assert compared["comparable"] is True and compared["changes"]["startup_ms.median"]["delta"] == 0
+    assert compared["comparable"] is True
+    assert compared["changes"]["startup_ms.median"]["delta"] == 0
 
 
 def test_the_workload_benchmark_reports_what_it_documents(tmp_path):
@@ -314,10 +328,14 @@ def test_the_workload_benchmark_reports_what_it_documents(tmp_path):
     _child([str(BENCHMARKS / "gui_workloads.py"), "--tabs", "record,variables,no_such_tab",
             "--output", str(report_path)])
     report = json.loads(report_path.read_text(encoding="utf-8"))
-    assert report["benchmark"] == "gui_workloads" and report["tabs_opened"] == 2
+    assert report["benchmark"] == "gui_workloads"
+    assert report["tabs_opened"] == 2
     assert set(report["first_open_ms"]) == {"record", "variables"}
     assert all(value >= 0 for value in report["first_open_ms"].values())
-    assert report["event_loop_p95_ms"] >= 0 and report["event_loop_ticks"] > 0
+    assert report["event_loop_p95_ms"] >= 0
+    assert report["event_loop_ticks"] > 0
     assert report["idle_event_loop_p95_ms"] >= 0
-    assert report["memory"]["rss_mb"] > 0 and report["environment"]["qt_platform"] == "offscreen"
-    assert len(report["switch_ms"]["samples"]) == 2 and len(report["theme_switch_ms"]["samples"]) == 2
+    assert report["memory"]["rss_mb"] > 0
+    assert report["environment"]["qt_platform"] == "offscreen"
+    assert len(report["switch_ms"]["samples"]) == 2
+    assert len(report["theme_switch_ms"]["samples"]) == 2

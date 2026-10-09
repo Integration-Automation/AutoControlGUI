@@ -287,8 +287,10 @@ def test_slack_poll_once_dispatches_new_messages():
          patch.object(bot, "_api_post", side_effect=fake_post):
         count = bot.poll_once()
     assert count == 1
-    assert captured and captured[0]["slack_user"] == "U2"
-    assert posts and posts[0][0] == "chat.postMessage"
+    assert captured
+    assert captured[0]["slack_user"] == "U2"
+    assert posts
+    assert posts[0][0] == "chat.postMessage"
     assert posts[0][1]["text"] == "pong"
     assert bot.last_seen_ts == "100.5"
 

@@ -21,7 +21,8 @@ def test_returns_when_predicate_becomes_false():
 def test_already_gone_returns_immediately():
     outcome = wait_until_gone(lambda: False, timeout_s=5.0,
                               poll_interval_s=0.001)
-    assert outcome.succeeded is True and outcome.samples_taken == 1
+    assert outcome.succeeded is True
+    assert outcome.samples_taken == 1
 
 
 def test_timeout_when_always_present():
@@ -65,4 +66,5 @@ def test_wiring():
 def test_facade_exports():
     for attr in ("wait_until_gone", "wait_until_image_gone",
                  "wait_until_text_gone"):
-        assert hasattr(ac, attr) and attr in ac.__all__
+        assert hasattr(ac, attr)
+        assert attr in ac.__all__

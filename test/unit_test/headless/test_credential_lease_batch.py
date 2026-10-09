@@ -71,7 +71,8 @@ def test_active_excludes_expired_and_hides_values():
     clock.now += 20.0
     active = broker.active()
     assert [a["token"] for a in active] == [live]
-    assert "value" not in active[0] and "s3cr3t" not in str(active[0])
+    assert "value" not in active[0]
+    assert "s3cr3t" not in str(active[0])
 
 
 # --- wiring ---------------------------------------------------------------

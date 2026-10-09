@@ -28,7 +28,7 @@ import time
 import uuid
 from pathlib import Path
 from types import TracebackType
-from typing import Any, Callable, Dict, List, Optional, Tuple, Type, TypeVar, Union
+from typing import Any, Callable, Dict, List, Optional, Tuple, Type, TypeVar
 
 from je_auto_control.utils.action_journal.events import (
     STATUS_ERROR, STATUS_INCOMPLETE, STATUS_OK, ActionEvent,
@@ -280,7 +280,7 @@ def _fail(session: _Session, error: OSError) -> None:
             _ACTIVE, _LAST = None, session
 
 
-def step(action: Any) -> Union[_Step, _NullStep]:
+def step(action: Any) -> _Step | _NullStep:
     """A context manager recording ``action``; a shared no-op when journalling is off."""
     session = _ACTIVE
     if session is None:
@@ -389,7 +389,7 @@ def carry_step(work: _Work, index: Optional[int] = None) -> _Work:
     return carried  # type: ignore[return-value]  # reason: same call signature as work
 
 
-def start_action_journal(path: Union[str, Path, None] = None, *,
+def start_action_journal(path: str | Path | None = None, *,
                          run_id: Optional[str] = None,
                          session: Optional[str] = None) -> Dict[str, Any]:
     """Start writing every executed action to the journal at ``path``.

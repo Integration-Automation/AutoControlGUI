@@ -129,7 +129,8 @@ def test_cua_keys_resolve_to_this_platforms_names(monkeypatch):
 
 def test_a_double_click_clicks_twice():
     command = cua_action.to_ac_command({"type": "double_click", "x": 1, "y": 2})
-    assert command[0] == "AC_loop" and command[1]["times"] == 2
+    assert command[0] == "AC_loop"
+    assert command[1]["times"] == 2
 
 
 def test_scrolls_carry_their_direction(monkeypatch):

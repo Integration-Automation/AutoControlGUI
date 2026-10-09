@@ -58,7 +58,8 @@ def test_false_positive_is_not_recovery():
     comparison = evaluate_locators(
         samples, {"v1": _never, "v2": _always((5, 5))})
     report = comparison.report("v2")
-    assert report.correct == 1 and report.false_positive == 1
+    assert report.correct == 1
+    assert report.false_positive == 1
     assert report.located == 2
     assert report.recovery_rate == Ratio(1, 2)
     assert comparison.report("v1").miss == 2
@@ -91,11 +92,14 @@ def test_same_frame_versions_are_comparable():
     sample = EvaluationSample("s", frame, expected_box=(0, 0, 5, 5),
                               origin=(-1920, -200), scale=1.5)
     comparison = evaluate_locators([sample], {"a": record("a"), "b": record("b")})
-    assert seen["a"].frame is frame and seen["b"].frame is frame
+    assert seen["a"].frame is frame
+    assert seen["b"].frame is frame
     assert seen["a"] is seen["b"]
-    assert seen["a"].origin == (-1920, -200) and seen["a"].scale == 1.5
+    assert seen["a"].origin == (-1920, -200)
+    assert seen["a"].scale == 1.5
     hashes = {row.frame_hash for row in comparison.results}
-    assert len(hashes) == 1 and None not in hashes
+    assert len(hashes) == 1
+    assert None not in hashes
 
 
 def test_region_passed_to_both_strategies():
@@ -142,7 +146,8 @@ def test_strategy_error_is_its_own_bucket():
     samples = [EvaluationSample("s", _frame(), expect_miss=True)]
     report = evaluate_locators(samples, {"broken": broken}).report("broken")
     # Raising on a sample that expects a miss is not a correct rejection.
-    assert report.error == 1 and report.true_negative == 0
+    assert report.error == 1
+    assert report.true_negative == 0
     assert report.accuracy == Ratio(0, 1)
 
 
@@ -244,10 +249,12 @@ def test_click_without_a_check_is_located_but_not_verified(monkeypatch, temp_log
     clicks = []
     _patch_hit(monkeypatch, clicks)
     outcome = self_heal_click(template_path="t.png", log=temp_log)
-    assert outcome.found is True and outcome.action == "click"
+    assert outcome.found is True
+    assert outcome.action == "click"
     assert outcome.action_verified is None
     event = temp_log.list_events()[0]
-    assert event.action == "click" and event.action_verified is None
+    assert event.action == "click"
+    assert event.action_verified is None
     assert clicks == [(7, 9)]
 
 
@@ -259,7 +266,8 @@ def test_click_records_what_the_check_said(monkeypatch, temp_log, verdict):
     assert outcome.found is True
     assert outcome.action_verified is verdict
     events = temp_log.list_events()
-    assert len(events) == 1 and events[0].action_verified is verdict
+    assert len(events) == 1
+    assert events[0].action_verified is verdict
 
 
 def test_a_failed_click_is_still_logged_and_never_verified(monkeypatch, temp_log):
@@ -272,13 +280,15 @@ def test_a_failed_click_is_still_logged_and_never_verified(monkeypatch, temp_log
     with pytest.raises(OSError):
         self_heal_click(template_path="t.png", log=temp_log, verify=lambda result: True)
     event = temp_log.list_events()[0]
-    assert event.action == "click" and event.action_verified is None
+    assert event.action == "click"
+    assert event.action_verified is None
 
 
 def test_bare_locate_has_no_action(monkeypatch, temp_log):
     _patch_hit(monkeypatch, [])
     outcome = self_heal_locate(template_path="t.png", log=temp_log)
-    assert outcome.action is None and outcome.action_verified is None
+    assert outcome.action is None
+    assert outcome.action_verified is None
 
 
 # --- heal log schema -----------------------------------------------------
@@ -295,7 +305,8 @@ def test_old_format_lines_still_load(tmp_path):
                     encoding="utf-8")
     events = HealEventLog(path=path).list_events()
     assert len(events) == 2
-    assert events[0].schema_version is None and events[0].locator_version is None
+    assert events[0].schema_version is None
+    assert events[0].locator_version is None
     assert events[0].coordinates == [1, 2]
     assert events[1].locator_version == "v9"
 
@@ -311,7 +322,8 @@ def test_context_is_stamped_on_events(monkeypatch, temp_log):
     assert inside.model == "m-1"
     assert inside.schema_version == HEAL_EVENT_SCHEMA_VERSION
     assert inside.image_ms is not None
-    assert outside.run_id is None and outside.locator_version is None
+    assert outside.run_id is None
+    assert outside.locator_version is None
 
 
 def test_unknown_context_key_is_rejected():

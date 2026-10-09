@@ -53,7 +53,8 @@ def test_the_second_identical_device_opens_by_serial():
     devices = [_Device("AAA"), _Device("BBB")]
     handle = _backend(devices, []).open(vendor_id="046d", product_id="c52b", serial="BBB")
     handle.bulk_transfer(endpoint=0x81, direction="in", length=4)
-    assert devices[1].transfers and not devices[0].transfers
+    assert devices[1].transfers
+    assert not devices[0].transfers
 
 
 @pytest.mark.parametrize("endpoint, direction", [(0x02, "in"), (0x81, "out")])
@@ -115,7 +116,8 @@ def test_a_screenshot_failure_in_the_vlm_fallback_is_a_miss(monkeypatch):
     monkeypatch.setattr(auto_control_image, "locate_image_center", no_template)
     monkeypatch.setattr(vlm_api, "locate_by_description", no_screen)
     coords, error = locator._try_vlm("the OK button", None, None)
-    assert coords is None and "capture failed" in error
+    assert coords is None
+    assert "capture failed" in error
 
 
 @pytest.mark.parametrize("role, interactive", [

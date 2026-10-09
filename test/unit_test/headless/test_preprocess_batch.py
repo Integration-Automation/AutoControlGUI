@@ -75,7 +75,8 @@ def test_deskew_reduces_skew():
 
 def test_pipeline_chains_steps():
     out = preprocess_image(_color(), steps=("grayscale", "upscale", "binarize"))
-    assert out.ndim == 2 and out.shape == (80, 120)
+    assert out.ndim == 2
+    assert out.shape == (80, 120)
     assert sorted(set(out.flatten().tolist())) == [0, 255]
 
 
@@ -99,7 +100,8 @@ def test_wiring():
 def test_facade_exports():
     for attr in ("preprocess_image", "to_grayscale", "binarize", "upscale",
                  "deskew", "enhance_contrast"):
-        assert hasattr(ac, attr) and attr in ac.__all__
+        assert hasattr(ac, attr)
+        assert attr in ac.__all__
 
 
 def test_executor_writes_output(tmp_path):
@@ -109,5 +111,7 @@ def test_executor_writes_output(tmp_path):
     out = tmp_path / "out.png"
     result = _preprocess_image(str(out), source=str(src),
                                steps=["grayscale", "binarize"])
-    assert result["path"] == str(out) and out.exists()
-    assert result["width"] == 60 and result["height"] == 40
+    assert result["path"] == str(out)
+    assert out.exists()
+    assert result["width"] == 60
+    assert result["height"] == 40

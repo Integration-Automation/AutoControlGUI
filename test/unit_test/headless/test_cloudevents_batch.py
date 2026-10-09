@@ -13,7 +13,8 @@ def test_envelope_has_required_fields():
     assert event["source"] == "/runs/42"
     assert event["subject"] == "run-42"
     assert event["data"] == {"ok": True}
-    assert event["id"] and event["time"]
+    assert event["id"]
+    assert event["time"]
     assert event["datacontenttype"] == "application/json"
 
 
@@ -25,7 +26,8 @@ def test_ids_are_unique():
 
 def test_explicit_id_and_time_preserved():
     event = to_cloudevent("t", "s", None, event_id="fixed", time="2026-06-20T00:00:00Z")
-    assert event["id"] == "fixed" and event["time"] == "2026-06-20T00:00:00Z"
+    assert event["id"] == "fixed"
+    assert event["time"] == "2026-06-20T00:00:00Z"
 
 
 def test_emitter_uses_default_sink():

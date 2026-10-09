@@ -42,7 +42,7 @@ def _no_ambient_rbac(monkeypatch):
     monkeypatch.delenv(USERS_ENV, raising=False)
 
 
-@pytest.fixture()
+@pytest.fixture
 def ran(monkeypatch):
     """Which commands actually ran, and as whom."""
     calls = []
@@ -57,7 +57,7 @@ def ran(monkeypatch):
     return calls
 
 
-@pytest.fixture()
+@pytest.fixture
 def users(tmp_path):
     store = UserStore(tmp_path / "users.json")
     store.tokens = {role: store.add_user(user_id=f"{role}-user", display_name=role, role=role)
@@ -65,7 +65,7 @@ def users(tmp_path):
     return store
 
 
-@pytest.fixture()
+@pytest.fixture
 def observer(monkeypatch):
     """A fresh observer standing in for the process-wide one; never started."""
     fresh = ScreenObserver()
@@ -123,7 +123,8 @@ def test_an_operators_watch_cannot_run_a_privileged_command(how, users, observer
         rule = _register_watch(how, observer, monkeypatch)
     assert rule.owner == DeferredOwner("operator-user", Role.OPERATOR)
     status, fired = _on_thread(observer.poll_once)
-    assert status == "ok" and len(fired) == 1
+    assert status == "ok"
+    assert len(fired) == 1
     assert ran == [(_PROBE, "operator-user")]
 
 
@@ -216,7 +217,8 @@ def test_a_removed_users_state_machine_does_not_run(users, ran):
         machine = _machine()
     users.remove_user("operator-user")
     status, error = _on_thread(machine.run)
-    assert status == "error" and "no longer in the user store" in str(error)
+    assert status == "error"
+    assert "no longer in the user store" in str(error)
     assert ran == []
 
 
@@ -268,7 +270,7 @@ def test_a_plan_without_rbac_runs_as_before(ran):
 _LLM_RUN = [["AC_llm_run", {"description": "sign it"}]]
 
 
-@pytest.fixture()
+@pytest.fixture
 def fake_llm(monkeypatch):
     monkeypatch.setattr("je_auto_control.utils.llm.planner.get_backend", _FakeBackend)
 

@@ -20,7 +20,8 @@ def _tree():
 
 def test_flatten_keeps_only_interactive():
     roles = [(e["role"], e["name"]) for e in flatten_tree(_tree())]
-    assert ("button", "Save") in roles and ("textbox", "Search") in roles
+    assert ("button", "Save") in roles
+    assert ("textbox", "Search") in roles
     assert ("label", "static") not in roles      # non-interactive dropped
     assert ("window", "App") not in roles
 
@@ -62,4 +63,5 @@ def test_wiring():
 
 def test_facade_exports():
     for attr in ("flatten_tree", "observation_index", "serialize_observation"):
-        assert hasattr(ac, attr) and attr in ac.__all__
+        assert hasattr(ac, attr)
+        assert attr in ac.__all__

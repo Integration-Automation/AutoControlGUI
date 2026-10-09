@@ -58,7 +58,9 @@ def test_executor_adapter_planning():
     events, slept = [], []
     from je_auto_control.utils.key_hold import hold_key as _hk
     _hk("space", 0.2, sink=events.append, sleep=slept.append)
-    assert events and events[0]["op"] == "press" and events[-1]["op"] == "release"
+    assert events
+    assert events[0]["op"] == "press"
+    assert events[-1]["op"] == "release"
 
 
 def test_wiring():
@@ -74,4 +76,5 @@ def test_wiring():
 
 def test_facade_exports():
     for attr in ("plan_key_hold", "hold_key"):
-        assert hasattr(ac, attr) and attr in ac.__all__
+        assert hasattr(ac, attr)
+        assert attr in ac.__all__

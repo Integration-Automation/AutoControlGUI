@@ -13,7 +13,8 @@ def test_sbom_core_shape():
     sbom = build_sbom("je_auto_control")
     assert sbom["bomFormat"] == "CycloneDX"
     assert sbom["specVersion"] == "1.6"
-    assert isinstance(sbom["components"], list) and sbom["components"]
+    assert isinstance(sbom["components"], list)
+    assert sbom["components"]
     comp = sbom["components"][0]
     assert {"type", "name", "version", "purl"} <= set(comp)
     assert comp["purl"].startswith("pkg:pypi/")
@@ -60,8 +61,10 @@ def test_merge_results_sums_and_concatenates():
         {"total": 3, "passed": 2, "failed": 1, "results": ["a", "b"]},
         {"total": 2, "passed": 2, "failed": 0, "results": ["c"]},
     ])
-    assert merged["total"] == 5 and merged["passed"] == 4
-    assert merged["failed"] == 1 and merged["shards"] == 2
+    assert merged["total"] == 5
+    assert merged["passed"] == 4
+    assert merged["failed"] == 1
+    assert merged["shards"] == 2
     assert merged["results"] == ["a", "b", "c"]
 
 

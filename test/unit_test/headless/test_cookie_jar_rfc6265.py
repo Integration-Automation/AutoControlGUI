@@ -71,11 +71,13 @@ def test_a_negative_max_age_deletes():
 @pytest.mark.parametrize("header", ["a=b\r\nX-Injected: 1", "a=b" + chr(0) + "c", "a=" + chr(0x7F)])
 def test_a_control_character_ignores_the_whole_header(header):
     jar = CookieJar().update(header)
-    assert len(jar) == 0 and parse_set_cookie(header) is None
+    assert len(jar) == 0
+    assert parse_set_cookie(header) is None
 
 
 def test_only_space_and_tab_are_trimmed():
     nbsp = chr(0xA0)
     parsed = parse_set_cookie(f"\t a =  b{nbsp}\t; Path=/ ")
-    assert parsed["name"] == "a" and parsed["value"] == f"b{nbsp}"
+    assert parsed["name"] == "a"
+    assert parsed["value"] == f"b{nbsp}"
     assert parse_set_cookie("a=b\t;\tHttpOnly")["attributes"] == {"httponly": ""}

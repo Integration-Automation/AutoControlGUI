@@ -52,7 +52,8 @@ def _pump(qapp, done, timeout_s=5.0):
 def test_the_tab_is_registered_once_and_exposes_its_commands(tab):
     from je_auto_control.gui.tab_registry import TAB_SPECS
     specs = [spec for spec in TAB_SPECS if spec.key == "config_sync"]
-    assert len(specs) == 1 and specs[0].class_name == "ConfigSyncTab"
+    assert len(specs) == 1
+    assert specs[0].class_name == "ConfigSyncTab"
     actions = tab.menu_actions()
     assert [key for key, _handler in actions] == [
         "config_sync_run_btn", "config_sync_cancel_btn", "config_sync_refresh_btn",
@@ -83,10 +84,12 @@ def test_every_text_exists_in_all_four_languages(tab):
 
 def test_refresh_shows_revision_pending_and_conflicts(tab):
     tab.refresh_status()
-    assert "7" in tab._detail.text() and "2" in tab._detail.text()  # noqa: SLF001
+    assert "7" in tab._detail.text()
+    assert "2" in tab._detail.text()  # noqa: SLF001
     table = tab._conflicts  # noqa: SLF001
     assert table.rowCount() == 2
-    assert table.item(0, 0).text() == "hotkeys/hk1" and table.item(1, 2).text() == "desktop"
+    assert table.item(0, 0).text() == "hotkeys/hk1"
+    assert table.item(1, 2).text() == "desktop"
 
 
 def test_server_and_user_are_required(tab, monkeypatch):
@@ -95,7 +98,8 @@ def test_server_and_user_are_required(tab, monkeypatch):
                         lambda *args, **kwargs: called.append(args))
     tab._inputs["server"].setText("")  # noqa: SLF001
     tab.sync_now()
-    assert called == [] and not tab.is_busy()
+    assert called == []
+    assert not tab.is_busy()
 
 
 def test_sync_runs_off_the_gui_thread_and_can_be_cancelled(tab, qapp, monkeypatch):
@@ -150,7 +154,8 @@ def test_a_full_resync_needs_confirmation(tab, qapp, monkeypatch):
                         lambda *args, **options: ran.append(args) or {"state": "synced"})
     monkeypatch.setattr(ConfigSyncTab, "_confirm", lambda _self, _question: False)
     tab.full_resync()
-    assert ran == [] and not tab.is_busy()
+    assert ran == []
+    assert not tab.is_busy()
     monkeypatch.setattr(ConfigSyncTab, "_confirm", lambda _self, _question: True)
     tab.full_resync()
     assert _pump(qapp, lambda: tab._worker is None)  # noqa: SLF001
@@ -185,7 +190,9 @@ def test_a_retry_delay_reads_as_waiting_not_as_offline(tab, monkeypatch):
     shown = tab._state.text()  # noqa: SLF001
     waiting = language_wrapper.translate("config_sync_state_backing_off", "")
     offline = language_wrapper.translate("config_sync_state_offline", "")
-    assert waiting and waiting in shown and offline not in shown
+    assert waiting
+    assert waiting in shown
+    assert offline not in shown
     assert "42" in shown, "the seconds until the next automatic attempt, rounded up"
     monkeypatch.setattr(tab_module.session, "config_sync_status",
                         lambda _url, _user: {"state": "synced", "retry_in_s": 0.0})
@@ -209,7 +216,8 @@ def test_every_section_ticked_leaves_the_choice_to_the_session(tab, qapp, monkey
     assert list(tab._sections) == list(tab_module.session.SYNCABLE_SECTIONS)  # noqa: SLF001
     assert all(box.isChecked() for box in tab._sections.values())  # noqa: SLF001
     options = _options_of_a_sync(tab, qapp, monkeypatch)
-    assert "sections" not in options and "assets_server" not in options
+    assert "sections" not in options
+    assert "assets_server" not in options
 
 
 def test_unticking_a_section_names_the_rest(tab, qapp, monkeypatch, tmp_path):
@@ -245,7 +253,8 @@ def test_the_assets_server_switch_replaces_the_shared_folder(tab, qapp, monkeypa
     tab._assets_server.setChecked(True)  # noqa: SLF001
     assert not tab._inputs["assets"].isEnabled()  # noqa: SLF001
     options = _options_of_a_sync(tab, qapp, monkeypatch)
-    assert options["assets_server"] is True and "assets_dir" not in options
+    assert options["assets_server"] is True
+    assert "assets_dir" not in options
     tab._assets_server.setChecked(False)  # noqa: SLF001
     assert tab._inputs["assets"].isEnabled()  # noqa: SLF001
 
@@ -296,7 +305,8 @@ def test_collecting_blobs_needs_confirmation_and_reports_what_it_did(tab, qapp, 
     monkeypatch.setattr(tab_module.session, "config_sync_collect_blobs", collect)
     monkeypatch.setattr(ConfigSyncTab, "_confirm", lambda _self, _question: False)
     tab.collect_blobs()
-    assert ran == [] and not tab.is_busy()
+    assert ran == []
+    assert not tab.is_busy()
     monkeypatch.setattr(ConfigSyncTab, "_confirm", lambda _self, _question: True)
     tab._inputs["secret"].setText("s3cret")  # noqa: SLF001
     for box in tab._sections.values():  # noqa: SLF001
@@ -305,4 +315,6 @@ def test_collecting_blobs_needs_confirmation_and_reports_what_it_did(tab, qapp, 
     assert _pump(qapp, lambda: tab._worker is None and ran)  # noqa: SLF001
     assert ran == [("https://sync.invalid", "alice", {"secret": "s3cret"})]
     shown = tab._detail.text()  # noqa: SLF001
-    assert "4096" in shown and "2" in shown and "3" in shown
+    assert "4096" in shown
+    assert "2" in shown
+    assert "3" in shown

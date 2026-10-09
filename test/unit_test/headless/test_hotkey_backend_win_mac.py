@@ -454,7 +454,8 @@ def test_the_tap_is_enabled_while_running_and_disabled_after(mac_backend,
     module = quartz()
     mac_backend.run_forever(_context([_binding()]))
     assert module.enabled == [True, False]
-    assert module.sources_added and module.sources_removed
+    assert module.sources_added
+    assert module.sources_removed
 
 
 def test_a_mac_without_accessibility_permission_gives_up_with_a_reason(

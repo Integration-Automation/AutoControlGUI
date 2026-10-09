@@ -27,8 +27,10 @@ def test_comment_and_leading_space_rule():
 def test_retry_and_id_persist_across_events():
     stream = "retry: 3000\nid: a\ndata: one\n\ndata: two\n\n"
     first, second = parse_event_stream(stream)
-    assert first.retry == 3000 and first.id == "a"
-    assert second.retry == 3000 and second.id == "a"   # both persist
+    assert first.retry == 3000
+    assert first.id == "a"
+    assert second.retry == 3000
+    assert second.id == "a"  # both persist
 
 
 def test_blank_data_does_not_dispatch():
@@ -71,4 +73,5 @@ def test_wiring():
 
 def test_facade_exports():
     for attr in ("SSEEvent", "SSEParser", "parse_event_stream"):
-        assert hasattr(ac, attr) and attr in ac.__all__
+        assert hasattr(ac, attr)
+        assert attr in ac.__all__

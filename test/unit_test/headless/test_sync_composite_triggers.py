@@ -91,8 +91,10 @@ def test_an_all_of_trigger_reaches_the_other_machine_with_its_children(pair, ser
     assert (received.repeat, received.cooldown_seconds) == (True, 30.0)
     assert Path(received.script_path) == desktop.scripts / "report.json"
     cron, image = received.children
-    assert isinstance(cron, CronTrigger) and cron.cron == "0 9 * * *"
-    assert isinstance(image, ImageAppearsTrigger) and image.threshold == pytest.approx(0.9)
+    assert isinstance(cron, CronTrigger)
+    assert cron.cron == "0 9 * * *"
+    assert isinstance(image, ImageAppearsTrigger)
+    assert image.threshold == pytest.approx(0.9)
     # The child's path was made portable and resolved against this machine's folder.
     assert Path(image.image_path) == desktop.scripts / "logo.png"
     assert [child.trigger_id for child in received.children] == ["at-nine", "logo"]
@@ -108,13 +110,15 @@ def test_a_composite_arrives_disabled_and_nothing_runs(pair):
     received = desktop.triggers()["morning"]
     assert received.enabled is False
     assert all(child.enabled is False for child in received.children)
-    assert desktop.ran == [] and laptop.ran == []
+    assert desktop.ran == []
+    assert laptop.ran == []
     # ... and it stays disabled when the definition is updated later.
     laptop.triggers()["morning"].cooldown_seconds = 60.0
     laptop.sync()
     desktop.sync()
     again = desktop.triggers()["morning"]
-    assert again.cooldown_seconds == pytest.approx(60.0) and again.enabled is False
+    assert again.cooldown_seconds == pytest.approx(60.0)
+    assert again.enabled is False
 
 
 def test_a_composite_this_machine_enabled_stays_enabled_across_an_update(pair):
@@ -151,7 +155,8 @@ def test_any_of_sequence_and_nesting_round_trip(pair, server):
     assert either.children[0].title_substring == "Report"
     # Unchanged on both sides: nothing more is sent.
     before = server.revision
-    assert laptop.sync().pending == 0 and desktop.sync().pending == 0
+    assert laptop.sync().pending == 0
+    assert desktop.sync().pending == 0
     assert server.revision == before
 
 

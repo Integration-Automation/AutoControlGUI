@@ -15,7 +15,8 @@ def test_regex_title_appears():
 
     outcome = wait_until_window_title(r".*— Checkout$", timeout_s=5.0,
                                       poll_interval_s=0.001, title_lister=lister)
-    assert isinstance(outcome, WaitOutcome) and outcome.succeeded is True
+    assert isinstance(outcome, WaitOutcome)
+    assert outcome.succeeded is True
 
 
 def test_substring_mode():
@@ -36,7 +37,8 @@ def test_timeout_when_never_matches():
     outcome = wait_until_window_title(
         "Nope", timeout_s=0.03, poll_interval_s=0.001,
         title_lister=lambda: ["Editor", "Browser"])
-    assert outcome.succeeded is False and "timeout" in outcome.reason
+    assert outcome.succeeded is False
+    assert "timeout" in outcome.reason
 
 
 def test_validation():

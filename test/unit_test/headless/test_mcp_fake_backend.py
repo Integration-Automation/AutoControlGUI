@@ -10,7 +10,7 @@ from je_auto_control.utils.mcp_server.tools import (
 )
 
 
-@pytest.fixture()
+@pytest.fixture
 def fake_backend():
     """Install the fake backend for the duration of the test."""
     reset_fake_state()

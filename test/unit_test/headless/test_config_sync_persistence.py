@@ -150,7 +150,8 @@ def test_stale_revision_conflicts(db):
     client = _client(db)
     first = client.put("/config/alice", json=_envelope(_bucket(combo="first"), 0, "a"),
                        headers=_SECRET)
-    assert first.status_code == 200 and first.json()["revision"] == 1
+    assert first.status_code == 200
+    assert first.json()["revision"] == 1
     stale_response = client.put("/config/alice", json=_envelope(_bucket(combo="second"), 0, "b"),
                                 headers=_SECRET)
     assert stale_response.status_code == 409
@@ -194,7 +195,8 @@ def test_a_blind_write_is_refused_unless_the_compatibility_setting_is_on(db):
     assert compat.put("/config/alice", json=_bucket(combo="one").to_dict(),
                       headers=_SECRET).status_code == 200
     reply = compat.put("/config/alice", json=_bucket(combo="two").to_dict(), headers=_SECRET)
-    assert reply.status_code == 200 and reply.json()["revision"] == 2
+    assert reply.status_code == 200
+    assert reply.json()["revision"] == 2
     assert compat.get("/config/alice", headers=_SECRET).json()["revision"] == 2
 
 

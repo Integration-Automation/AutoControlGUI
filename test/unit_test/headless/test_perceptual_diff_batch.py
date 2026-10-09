@@ -24,13 +24,15 @@ def _block():
 
 def test_identical_has_no_diff():
     result = perceptual_diff(_base(), _base().copy())
-    assert result.diff_pixels == 0 and result.diff_ratio == pytest.approx(0.0)
+    assert result.diff_pixels == 0
+    assert result.diff_ratio == pytest.approx(0.0)
 
 
 def test_solid_block_is_counted():
     result = perceptual_diff(_base(), _block())
     assert isinstance(result, PerceptualDiffResult)
-    assert result.diff_pixels == 1200 and len(result.regions) == 1
+    assert result.diff_pixels == 1200
+    assert len(result.regions) == 1
     assert result.diff_ratio == pytest.approx(0.1)
 
 
@@ -88,4 +90,5 @@ def test_wiring():
 
 def test_facade_exports():
     for attr in ("perceptual_diff", "assert_perceptual", "PerceptualDiffResult"):
-        assert hasattr(ac, attr) and attr in ac.__all__
+        assert hasattr(ac, attr)
+        assert attr in ac.__all__

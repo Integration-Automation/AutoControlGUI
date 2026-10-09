@@ -78,7 +78,8 @@ def test_executor_round_trip():
         {"records": json.dumps(_records(99, 1)), "target": 0.99},
     ]])
     payload = next(v for v in rec2.values() if isinstance(v, dict))
-    assert "firing" in payload and "alerts" in payload
+    assert "firing" in payload
+    assert "alerts" in payload
 
 
 def test_wiring():

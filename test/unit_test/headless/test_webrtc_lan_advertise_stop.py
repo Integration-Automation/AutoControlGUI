@@ -71,7 +71,7 @@ class _Advertiser:
             self._owner.log.append(("stop", self.host_id, threading.current_thread() is threading.main_thread()))
 
 
-@pytest.fixture()
+@pytest.fixture
 def advertisers(monkeypatch):
     fake = _Advertisers()
     monkeypatch.setattr(lan_discovery, "HostAdvertiser", fake.build)
@@ -109,7 +109,8 @@ def test_stop_lets_go_of_the_advertiser_at_once_and_closes_it_in_the_background(
     assert pump_until(lambda: panel._lan_advertiser is not None)
     advertisers.hold_stop.clear()
     assert _timed(panel._stop_lan_advertise) < _PROMPT_S
-    assert panel._lan_advertiser is None and panel._stops.pending == 1
+    assert panel._lan_advertiser is None
+    assert panel._stops.pending == 1
     assert advertisers.stop_entered.wait(10.0)
     panel._stop_lan_advertise()                     # nothing left to stop
     assert panel._stops.pending == 1
@@ -140,7 +141,8 @@ def test_an_advertiser_that_comes_up_after_stop_is_closed(advertisers):
     panel._stop_lan_advertise()                     # Stop while the name is still being probed
     advertisers.hold_build.set()
     assert pump_until(lambda: [entry[0] for entry in advertisers.log] == ["build", "stop"])
-    assert panel._lan_advertiser is None and settle_op(panel._stops)
+    assert panel._lan_advertiser is None
+    assert settle_op(panel._stops)
 
 
 def test_an_advertiser_that_comes_up_for_a_panel_that_is_gone_is_closed(advertisers, qapp):
@@ -175,4 +177,5 @@ def test_a_stats_poller_stop_only_schedules_a_cancel(monkeypatch):
     task = _Task()
     poller._task = task
     poller.stop()
-    assert scheduled == [task.cancel] and poller._task is None
+    assert scheduled == [task.cancel]
+    assert poller._task is None

@@ -52,12 +52,14 @@ def test_an_unauthenticated_bad_body_gets_401_not_400(server):
 
 def test_unauthenticated_bodies_count_against_the_rate_limit(server):
     statuses = {_post(server, b"x" * 1000)[0] for _ in range(40)}
-    assert 429 in statuses and 400 not in statuses
+    assert 429 in statuses
+    assert 400 not in statuses
 
 
 def test_the_authorised_body_still_reaches_the_handler(server):
     status, body = _post(server, json.dumps({"actions": []}).encode(), token=TOKEN)
-    assert status == 200 and json.loads(body) == {"ok": True}
+    assert status == 200
+    assert json.loads(body) == {"ok": True}
     assert server.calls == [{"actions": []}]
 
 

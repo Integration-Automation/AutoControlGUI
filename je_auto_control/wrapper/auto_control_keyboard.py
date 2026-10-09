@@ -12,7 +12,7 @@ import re
 import sys
 import warnings
 from contextlib import contextmanager
-from typing import Iterator, Optional, Union, Tuple
+from typing import Iterator, Optional, Tuple
 
 from je_auto_control.utils.exception.exception_tags import (
     keyboard_press_key_error_message, keyboard_release_key_error_message,
@@ -64,7 +64,7 @@ def keyboard_key_name(keycode: int) -> Optional[str]:
     return min(names, key=lambda name: (_TYPABLE_KEY_NAME.fullmatch(name) is None, len(name), name))
 
 
-def _resolve_keycode(keycode: Union[int, str]) -> int:
+def _resolve_keycode(keycode: int | str) -> int:
     """
     將字串鍵名轉換成對應的 keycode
     Resolve string key name to keycode
@@ -113,7 +113,7 @@ def _shift_held(is_shift: bool) -> Iterator[None]:
         _release_still_held(still_held, False)
 
 
-def press_keyboard_key(keycode: Union[int, str], is_shift: bool = False,
+def press_keyboard_key(keycode: int | str, is_shift: bool = False,
                        skip_record: bool = False) -> Optional[str]:
     """
     按下指定鍵
@@ -156,7 +156,7 @@ def press_keyboard_key(keycode: Union[int, str], is_shift: bool = False,
         raise AutoControlKeyboardException(f"{keyboard_press_key_error_message} {repr(error)}") from error
 
 
-def release_keyboard_key(keycode: Union[int, str], is_shift: bool = False,
+def release_keyboard_key(keycode: int | str, is_shift: bool = False,
                          skip_record: bool = False) -> Optional[str]:
     """
     放開指定鍵
@@ -214,7 +214,7 @@ def _release_still_held(still_held: list, is_shift: bool) -> None:
                 f"failed to release a still-held key {key!r}: {repr(error)}")
 
 
-def type_keyboard(keycode: Union[int, str], is_shift: bool = False,
+def type_keyboard(keycode: int | str, is_shift: bool = False,
                   skip_record: bool = False) -> Optional[str]:
     """
     模擬輸入 (按下再放開)
@@ -255,7 +255,7 @@ def type_keyboard(keycode: Union[int, str], is_shift: bool = False,
         # `except`。`finally` 是唯一每條離開路徑都會跑到的地方。
         _release_still_held(still_held, backend_shift)
 
-def check_key_is_press(keycode: Union[int, str]) -> Optional[bool]:
+def check_key_is_press(keycode: int | str) -> Optional[bool]:
     """
     檢查某個鍵是否正在被按下
     Check if a key is currently pressed
@@ -485,7 +485,7 @@ def hotkey(key_code_list: list, is_shift: bool = False) -> Tuple[str, str]:
         # （`AutoControlKeyboardException` 不在那份 except 名單的任何一項底下）。
         _release_still_held(still_held, backend_shift)
 
-def send_key_event_to_window(window_title: str, keycode: Union[int, str]) -> None:
+def send_key_event_to_window(window_title: str, keycode: int | str) -> None:
     """
     將鍵盤事件送到指定視窗（**已棄用**，改用 ``post_key_to_window``）
     Send a key event to a specific window. **Deprecated** — use

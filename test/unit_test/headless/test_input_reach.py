@@ -74,4 +74,5 @@ def test_wiring():
     from je_auto_control.utils.mcp_server.tools import build_default_tool_registry
     assert "ac_input_reachable" in {t.name for t in build_default_tool_registry()}
     for attr in ("input_desktop_available", "input_reaches_system"):
-        assert hasattr(ac, attr) and attr in ac.__all__
+        assert hasattr(ac, attr)
+        assert attr in ac.__all__

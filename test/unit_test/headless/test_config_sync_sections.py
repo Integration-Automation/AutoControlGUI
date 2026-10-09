@@ -121,4 +121,5 @@ def test_the_mcp_schema_lists_the_sections():
     run = tools["ac_config_sync_run"]
     assert set(run.input_schema["properties"]["sections"]["items"]["enum"]) == set(
         SYNCABLE_SECTIONS)
-    assert "sections" in run.description and "address book" in run.description
+    assert "sections" in run.description
+    assert "address book" in run.description

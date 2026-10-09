@@ -39,7 +39,8 @@ def test_a_title_containing_open_is_not_the_open_dialog(monkeypatch):
     from je_auto_control.utils.file_dialog.file_dialog import FileDialogDriver
     backend = _Backend([(1, "How to reopen closed tabs - Google Chrome")])
     monkeypatch.setattr(window_backends, "get_backend", lambda: backend)
-    assert FileDialogDriver().wait_window("Open", 0) is False and backend.fronted == []
+    assert FileDialogDriver().wait_window("Open", 0) is False
+    assert backend.fronted == []
 
 
 def test_the_dialog_is_brought_to_the_front_before_anything_is_typed(monkeypatch):
@@ -51,7 +52,9 @@ def test_the_dialog_is_brought_to_the_front_before_anything_is_typed(monkeypatch
     driver.type_path = typed.append
     driver.confirm = typed.append
     outcome = handle_file_dialog(r"C:\secret\payroll.xlsx", action="save", timeout_s=0, driver=driver)
-    assert backend.fronted == [2] and outcome["handled"] is False and typed == []
+    assert backend.fronted == [2]
+    assert outcome["handled"] is False
+    assert typed == []
 
 
 # --- watchdog ---------------------------------------------------------------------------------------
@@ -128,7 +131,8 @@ def test_an_empty_process_name_is_refused():
 def test_an_unregistered_file_type_has_no_application():
     from je_auto_control.utils.file_assoc.file_assoc import file_association
     info = file_association(".nonexistentext123")
-    assert info["exe"] is None and info["friendly"] is None
+    assert info["exe"] is None
+    assert info["friendly"] is None
 
 
 # --- file drops ---------------------------------------------------------------------------------------
@@ -163,5 +167,6 @@ def test_the_window_manager_acts_on_the_selected_window(monkeypatch):
     table.setCurrentCell(1, 0)
     tab._on_focus()  # noqa: SLF001
     tab._on_close()  # noqa: SLF001   (refreshes the table)
-    assert backend.closed == [200] and backend.fronted == [200]
+    assert backend.closed == [200]
+    assert backend.fronted == [200]
     tab.deleteLater()

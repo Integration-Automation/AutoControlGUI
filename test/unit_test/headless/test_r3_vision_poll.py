@@ -23,7 +23,8 @@ def test_sleep_is_clamped_to_remaining_time():
     assert result.ok is False
     # No single sleep may exceed the time left, and the poll must not overshoot
     # the deadline. The old code slept the full 100s on the first miss.
-    assert sleeps and max(sleeps) <= 0.05 + 1e-9
+    assert sleeps
+    assert max(sleeps) <= 0.05 + 1e-9
     assert times[0] <= 0.05 + 1e-9
 
 

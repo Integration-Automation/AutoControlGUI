@@ -91,7 +91,7 @@ def _draw_text(draw: ImageDraw.ImageDraw, ann: Dict[str, Any]) -> None:
 
 def annotate_screenshot(source: ImageSource,
                         annotations: List[Dict[str, Any]],
-                        output_path: Union[str, Path]) -> str:
+                        output_path: str | Path) -> str:
     """Draw ``annotations`` onto ``source`` and save the result as PNG.
 
     Returns the output path. ``source`` may be a file path, PNG bytes, or a

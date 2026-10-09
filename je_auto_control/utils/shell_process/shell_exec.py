@@ -6,7 +6,7 @@ import signal
 import subprocess  # nosec B404  # reason: ShellManager intentionally invokes user-supplied subprocesses without shell
 import sys
 from threading import Thread
-from typing import List, Optional, Union
+from typing import List, Optional
 
 from je_auto_control.utils.exception.exceptions import AutoControlActionException
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
@@ -28,7 +28,7 @@ def console_encoding() -> str:
     return locale.getpreferredencoding(False)
 
 
-def command_args(shell_command: Union[str, List[str]]) -> Union[str, List[str]]:
+def command_args(shell_command: str | List[str]) -> str | List[str]:
     """What to hand ``subprocess`` for ``shell_command``, never through a shell.
 
     A list is the argv. A string is split with POSIX rules, except on
@@ -49,7 +49,7 @@ _BATCH_SUFFIXES = (".bat", ".cmd")
 _CMD_METACHARACTERS = frozenset('&|<>^%!"\r\n')
 
 
-def refuse_batch_metacharacters(args: Union[str, List[str]]) -> None:
+def refuse_batch_metacharacters(args: str | List[str]) -> None:
     """Refuse an argv list for a .bat / .cmd file whose arguments hold cmd syntax.
 
     Windows runs a batch file through cmd.exe, which parses the command line
@@ -66,7 +66,7 @@ def refuse_batch_metacharacters(args: Union[str, List[str]]) -> None:
             raise ValueError(f"batch file argument {arg!r} contains cmd metacharacters")
 
 
-def program_of(shell_command: Union[str, List[str], None]) -> str:
+def program_of(shell_command: str | List[str] | None) -> str:
     """The program a command runs, which is all of it that may be logged.
 
     The arguments can hold a ``${secrets.*}`` value already filled in, and
@@ -100,7 +100,7 @@ def _kill_tree(process: subprocess.Popen) -> None:
         pass
 
 
-def run_captured(argv: Union[str, List[str]], timeout_s: float,
+def run_captured(argv: str | List[str], timeout_s: float,
                  input_bytes: Optional[bytes] = None) -> subprocess.CompletedProcess:
     """Run ``argv`` (no shell), capturing stdout and stderr as bytes, for at most ``timeout_s``.
 
@@ -143,17 +143,17 @@ class ShellManager:
             (UTF-8 turned ``磁碟區`` into replacement characters)
         :param program_buffer: buffer size
         """
-        self.read_program_error_output_from_thread: Union[Thread, None] = None
-        self.read_program_output_from_thread: Union[Thread, None] = None
+        self.read_program_error_output_from_thread: Thread | None = None
+        self.read_program_output_from_thread: Thread | None = None
         self.still_run_shell: bool = False
-        self.process: Union[subprocess.Popen, None] = None
+        self.process: subprocess.Popen | None = None
         self.run_output_queue: queue.Queue = queue.Queue()
         self.run_error_queue: queue.Queue = queue.Queue()
         self.program_encoding: str = shell_encoding or console_encoding()
         self.program_buffer: int = program_buffer
 
-    def exec_shell(self, shell_command: Union[str, List[str], None] = None, *,
-                   command: Union[str, List[str], None] = None) -> None:
+    def exec_shell(self, shell_command: str | List[str] | None = None, *,
+                   command: str | List[str] | None = None) -> None:
         """
         Execute shell command with shell=False.
         執行 shell 指令 (shell=False，呼叫端需自備 argv 或可被 shlex 切分的字串)

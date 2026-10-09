@@ -45,7 +45,8 @@ def test_write_dataset_json_and_csv(tmp_path):
 
 def test_build_server_manifest_core_fields():
     m = build_server_manifest()
-    assert m["name"] and m["version"]
+    assert m["name"]
+    assert m["version"]
     assert m["packages"][0]["registryType"] == "pypi"
     assert m["repository"]["source"] == "github"
     assert "_meta" not in m
@@ -64,7 +65,7 @@ def test_manifest_include_tools_embeds_live_list(tmp_path):
 
 # --- risk-based test selection -------------------------------------------
 
-@pytest.fixture()
+@pytest.fixture
 def history(tmp_path):
     from je_auto_control.utils.run_history import HistoryStore
     store = HistoryStore(str(tmp_path / "h.sqlite"))

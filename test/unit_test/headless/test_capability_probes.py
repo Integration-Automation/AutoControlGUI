@@ -40,7 +40,8 @@ def _states(snapshot):
 def test_an_ordinary_windows_session_is_available_with_the_uipi_hint():
     snapshot = _windows()
     assert set(_states(snapshot).values()) == {"available"}
-    assert "UIPI" in snapshot.input.detail and "medium" in snapshot.input.detail
+    assert "UIPI" in snapshot.input.detail
+    assert "medium" in snapshot.input.detail
     assert snapshot.backend_version == "win32-test 1.2"
     assert snapshot.to_dict()["backend_version"] == "win32-test 1.2"
     assert _windows(integrity="high").input.detail == ""
@@ -64,7 +65,8 @@ def test_a_locked_workstation_needs_the_user(desktop):
 
 def test_low_integrity_cannot_inject_but_can_still_capture():
     states = _states(_windows(integrity="low"))
-    assert states["input"] == "needs_permission" and states["capture"] == "available"
+    assert states["input"] == "needs_permission"
+    assert states["capture"] == "available"
     assert _windows(integrity="low").input.recovery_key == "cap_fix_win_integrity"
 
 
@@ -176,7 +178,8 @@ def test_the_facts_are_exported_and_every_catalogue_has_the_new_advice():
     from je_auto_control.gui.language_wrapper import (
         english, japanese, simplified_chinese, traditional_chinese,
     )
-    assert ac.WindowsFacts is WindowsFacts and ac.MacFacts is MacFacts
+    assert ac.WindowsFacts is WindowsFacts
+    assert ac.MacFacts is MacFacts
     wanted = {"cap_fix_win_session0", "cap_fix_win_locked", "cap_fix_win_integrity",
               "cap_fix_win_capture", "cap_fix_mac_accessibility",
               "cap_fix_mac_screen_recording", "cap_fix_mac_input_monitoring",
@@ -191,12 +194,15 @@ def test_the_facts_are_exported_and_every_catalogue_has_the_new_advice():
 def test_the_live_windows_session_can_be_read_without_touching_it():
     facts = probes.read_windows_facts()
     assert facts.integrity in ("untrusted", "low", "medium", "high", "system")
-    assert isinstance(facts.session_id, int) and facts.session_id >= 0
+    assert isinstance(facts.session_id, int)
+    assert facts.session_id >= 0
     assert isinstance(facts.input_desktop, str)
-    assert isinstance(facts.hook_access, bool) and isinstance(facts.capture_ok, bool)
+    assert isinstance(facts.hook_access, bool)
+    assert isinstance(facts.capture_ok, bool)
     assert probes.cheap_backend_version("win32").startswith("Windows ")
     snapshot = probe_capabilities()
-    assert snapshot.platform == "win32" and len(snapshot.capabilities) == 4
+    assert snapshot.platform == "win32"
+    assert len(snapshot.capabilities) == 4
     assert all(item.state is not CapabilityStatus.UNKNOWN for item in snapshot.capabilities)
     # A state that is not usable always says why.
     assert all(item.usable or item.detail for item in snapshot.capabilities)
@@ -208,5 +214,6 @@ def test_the_live_macos_session_can_be_asked_without_prompting():
     for value in (facts.accessibility, facts.screen_recording, facts.input_monitoring):
         assert value is None or isinstance(value, bool)
     snapshot = probe_capabilities()
-    assert snapshot.platform == "darwin" and len(snapshot.capabilities) == 4
+    assert snapshot.platform == "darwin"
+    assert len(snapshot.capabilities) == 4
     assert all(item.detail for item in snapshot.capabilities)

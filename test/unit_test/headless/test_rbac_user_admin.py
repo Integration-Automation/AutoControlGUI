@@ -56,7 +56,7 @@ def _isolated(monkeypatch):
     return events
 
 
-@pytest.fixture()
+@pytest.fixture
 def users(tmp_path):
     store = UserStore(tmp_path / "users.json")
     store.tokens = {
@@ -76,7 +76,8 @@ def test_bootstrap_then_manage_without_any_scope(tmp_path, _isolated):
     path = str(tmp_path / "new" / "users.json")
     issued = admin.add_user("alice", role=Role.ADMIN, display_name="Alice",
                             tags=["ops"], users_path=path)
-    assert issued["role"] == Role.ADMIN and issued["tags"] == ["ops"]
+    assert issued["role"] == Role.ADMIN
+    assert issued["tags"] == ["ops"]
     assert UserStore(path).authenticate(issued["token"]).user_id == "alice"
     admin.add_user("bob", users_path=path)
     assert admin.set_user_role("bob", Role.OPERATOR, users_path=path) == {
@@ -139,7 +140,8 @@ def test_an_issued_token_serialises_but_does_not_print(tmp_path):
     token = issued["token"]
     assert json.loads(json.dumps(issued))["token"] == token
     for text in (str(issued), repr(issued), f"{issued}", "%s" % (issued,), str({"r": issued})):
-        assert token not in text and "<shown once>" in text
+        assert token not in text
+        assert "<shown once>" in text
 
 
 def test_the_executor_returns_the_token_and_logs_none_of_it(tmp_path, caplog):
@@ -159,7 +161,8 @@ def test_the_executor_returns_the_token_and_logs_none_of_it(tmp_path, caplog):
     assert UserStore(path).authenticate(rotated["token"]).user_id == "alice"
     logged = "\n".join(entry.getMessage() for entry in caplog.records)
     assert "AC_user_add" in logged, "the run was logged"
-    assert added["token"] not in logged and rotated["token"] not in logged
+    assert added["token"] not in logged
+    assert rotated["token"] not in logged
     assert added["token"] not in (tmp_path / "u.json").read_text(encoding="utf-8")
 
 
@@ -177,7 +180,8 @@ def test_the_real_audit_writer_is_given_no_token(tmp_path, monkeypatch):
     rotated = admin.rotate_user_token("alice", users_path=str(tmp_path / "u.json"))
     assert [event for event, _fields in rows] == ["rbac_user_added", "rbac_user_token_rotated"]
     assert rows[0][1] == {"viewer_id": "local", "detail": "user=alice role=admin"}
-    assert issued["token"] not in json.dumps(rows) and rotated["token"] not in json.dumps(rows)
+    assert issued["token"] not in json.dumps(rows)
+    assert rotated["token"] not in json.dumps(rows)
 
 
 # --- AC_* commands ----------------------------------------------------------
@@ -224,7 +228,7 @@ class _FakeAudit:
         self.rows.append({"event_type": event_type, **fields})
 
 
-@pytest.fixture()
+@pytest.fixture
 def rest():
     started = []
 
@@ -244,7 +248,8 @@ def test_users_are_managed_over_rest_by_an_admin_only(rest, users):
     server = rest(user_store=users)
     body = {"actions": [["AC_user_add", {"user_id": "carol", "role": "operator"}]]}
     status, reply = _call(server, "POST", "/execute", users.tokens[Role.OPERATOR], body)
-    assert status == 403 and reply["required_capability"] == Capability.MANAGE_USERS
+    assert status == 403
+    assert reply["required_capability"] == Capability.MANAGE_USERS
     assert users.get("carol") is None
     status, reply = _call(server, "POST", "/execute", users.tokens[Role.ADMIN], body)
     assert status == 200
@@ -259,7 +264,7 @@ def test_users_are_managed_over_rest_by_an_admin_only(rest, users):
 
 # --- MCP --------------------------------------------------------------------
 
-@pytest.fixture()
+@pytest.fixture
 def mcp_http(tmp_path):
     registry = [tool for tool in build_default_tool_registry(read_only=False, aliases=False)
                 if tool.name in _USER_TOOLS]
@@ -307,7 +312,8 @@ def test_an_admin_manages_users_over_mcp_and_the_audit_holds_no_token(mcp_http, 
     _status, body = _rpc(server, "tools/call", {
         "name": "ac_user_add", "arguments": {"user_id": "dave", "role": "viewer"}}, admin_token)
     added = _tool_result(body)
-    assert added["user_id"] == "dave" and users.authenticate(added["token"]).role == Role.VIEWER
+    assert added["user_id"] == "dave"
+    assert users.authenticate(added["token"]).role == Role.VIEWER
     _status, body = _rpc(server, "tools/call", {
         "name": "ac_user_rotate_token", "arguments": {"user_id": "dave"}}, admin_token)
     rotated = _tool_result(body)
@@ -324,7 +330,8 @@ def test_an_admin_manages_users_over_mcp_and_the_audit_holds_no_token(mcp_http, 
         "name": "ac_user_remove", "arguments": {"user_id": "dave"}}, admin_token)
     assert _tool_result(body) == {"user_id": "dave", "removed": True}
     audit = server.audit_path.read_text(encoding="utf-8")
-    assert added["token"] not in audit and rotated["token"] not in audit
+    assert added["token"] not in audit
+    assert rotated["token"] not in audit
     assert all(json.loads(line)["user_id"] for line in audit.splitlines())
 
 
@@ -347,7 +354,8 @@ def test_the_cli_bootstraps_the_first_admin(tmp_path, capsys):
     assert UserStore(path).authenticate(out[1]).role == Role.ADMIN
     assert cli.main(["users", "--users", path, "--json", "add", "bob"]) == 0
     bob = json.loads(capsys.readouterr().out)
-    assert bob["role"] == Role.VIEWER and UserStore(path).authenticate(bob["token"])
+    assert bob["role"] == Role.VIEWER
+    assert UserStore(path).authenticate(bob["token"])
     assert cli.main(["users", "--users", path, "set-role", "bob", "operator"]) == 0
     assert cli.main(["users", "--users", path, "rotate-token", "bob"]) == 0
     rotated = capsys.readouterr().out.splitlines()[-1]
@@ -384,7 +392,8 @@ def test_data_tools_need_more_than_read_screen(users):
         assert by_name[name].annotations.read_only, f"{name} is covered by drive_input already"
         assert capability_for_tool(name, True) == Capability.READ_DATA
     assert can(Role.VIEWER, Capability.READ_DATA) is False
-    assert can(Role.OPERATOR, Capability.READ_DATA) and can(Role.ADMIN, Capability.READ_DATA)
+    assert can(Role.OPERATOR, Capability.READ_DATA)
+    assert can(Role.ADMIN, Capability.READ_DATA)
     with authorization_scope(AuthorizationContext("viewer-user", Role.VIEWER)):
         listed = MCPServer(tools=registry).handle_line(
             json.dumps({"jsonrpc": "2.0", "id": 1, "method": "tools/list"}))
@@ -446,7 +455,8 @@ def test_a_viewer_is_refused_a_stored_record_tool_and_an_operator_is_not():
     assert ran == []
     with authorization_scope(AuthorizationContext("op", Role.OPERATOR)):
         allowed = json.loads(server.handle_line(call))
-    assert allowed["result"]["isError"] is False and ran == ["history"]
+    assert allowed["result"]["isError"] is False
+    assert ran == ["history"]
 
 
 def test_an_alias_needs_what_its_tool_needs():
@@ -492,8 +502,11 @@ def test_status_reports_rbac_instead_of_a_token_that_is_refused(users):
         assert (shared["token"], shared["rbac"], shared["users_path"]) == ("shared", False, None)
         status = rest_api_registry.start(port=0, token="shared", enable_audit=False,
                                          user_store=users)
-        assert status["running"] is True and status["rbac"] is True
-        assert status["token"] is None and status["users_path"] == str(users.path)
+        assert status["running"] is True
+        assert status["rbac"] is True
+        assert status["token"] is None
+        assert status["users_path"] == str(users.path)
     finally:
         stopped = rest_api_registry.stop()
-    assert stopped["rbac"] is False and stopped["token"] is None
+    assert stopped["rbac"] is False
+    assert stopped["token"] is None

@@ -17,7 +17,8 @@ def test_record_step_indexes_and_keeps_result():
     trace = _trace()
     assert [s["step"] for s in trace] == [0, 1]
     assert trace[0]["observation"] == "obs0"
-    assert "result" not in trace[0] and trace[1]["result"] == {"ok": True}
+    assert "result" not in trace[0]
+    assert trace[1]["result"] == {"ok": True}
 
 
 def test_jsonl_round_trip():
@@ -55,4 +56,5 @@ def test_wiring():
 
 def test_facade_exports():
     for attr in ("record_step", "to_jsonl", "from_jsonl", "replay_trace"):
-        assert hasattr(ac, attr) and attr in ac.__all__
+        assert hasattr(ac, attr)
+        assert attr in ac.__all__

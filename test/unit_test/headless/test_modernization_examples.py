@@ -125,7 +125,8 @@ def test_the_guard_reports_an_effect_the_script_swallowed(body, kind, tmp_path):
     script.write_text(body, encoding="utf-8")
     code, effects, output = _run_guarded(script, [], tmp_path)
     assert code == 0, output
-    assert len(effects) == 1 and effects[0].startswith(f"{kind}: "), effects
+    assert len(effects) == 1, effects
+    assert effects[0].startswith(f"{kind}: "), effects
 
 
 def test_the_guard_allows_loopback(tmp_path):
@@ -135,7 +136,8 @@ def test_the_guard_allows_loopback(tmp_path):
         "client = socket.socket()\nclient.connect(server.getsockname())\nprint('connected')\n",
         encoding="utf-8")
     code, effects, output = _run_guarded(script, [], tmp_path)
-    assert (code, effects) == (0, []) and "connected" in output, output
+    assert (code, effects) == (0, []), output
+    assert "connected" in output, output
 
 
 # --- configuration --------------------------------------------------------
@@ -170,8 +172,8 @@ def test_readme_configuration_parity():
         "documented in the configuration reference and read by nothing")
 
     readme, simplified, traditional = (_names([REPO_ROOT / name]) for name in READMES)
-    assert simplified == readme and traditional == readme, (
-        "the three READMEs name different environment variables")
+    assert simplified == readme, "the three READMEs name different environment variables"
+    assert traditional == readme, "the three READMEs name different environment variables"
     assert readme - in_code == set(), "README.md names a variable nothing reads"
     assert README_UNDOCUMENTED == frozenset(), "the README lists every variable; keep it that way"
     assert in_code - readme == set(), (
@@ -270,7 +272,8 @@ GENERATED = {"probe-capabilities": render_probe_block, "mobile-matrix": render_m
 
 def _block(text: str, name: str) -> str:
     begin, end = (_BLOCK.format(name=name, edge=edge) for edge in ("begin", "end"))
-    assert text.count(begin) == 1 and text.count(end) == 1, f"markers of {name} are missing"
+    assert text.count(begin) == 1, f"markers of {name} are missing"
+    assert text.count(end) == 1, f"markers of {name} are missing"
     return text.split(begin, 1)[1].split(end, 1)[0].strip("\n")
 
 
@@ -301,7 +304,8 @@ def test_matrix_does_not_claim_hardware_for_mobile():
     """The mobile row stays honest until a job drives a real device."""
     row = next(line for line in _matrix_text().splitlines()
                if line.startswith("| Android and iOS bridges"))
-    assert "mocked CI" in row and "hardware" not in row.replace("hardware-unverified", "")
+    assert "mocked CI" in row
+    assert "hardware" not in row.replace("hardware-unverified", "")
 
 
 def _fix() -> None:

@@ -30,7 +30,8 @@ def test_a_locked_file_propagates_and_stays_in_place(tmp_path, monkeypatch):
     _locked(monkeypatch, path)
     with pytest.raises(PermissionError):
         load_json_or_quarantine(path, "known_hosts")
-    assert path.exists() and not list(tmp_path.glob("*.corrupt-*"))
+    assert path.exists()
+    assert not list(tmp_path.glob("*.corrupt-*"))
 
 
 def test_damaged_content_is_still_quarantined(tmp_path):

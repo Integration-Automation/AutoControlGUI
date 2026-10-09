@@ -17,7 +17,7 @@ import io
 import os
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, Optional, Tuple, Union
+from typing import Any, Dict, Optional, Tuple
 
 from je_auto_control.utils.exception.exceptions import ImageNotFoundException
 from je_auto_control.wrapper.device_context import DeviceError
@@ -121,7 +121,7 @@ class DeviceFrame:
         self.image.save(buffer, format="PNG")
         return buffer.getvalue()
 
-    def save(self, file_path: Union[str, "os.PathLike[str]"]) -> str:
+    def save(self, file_path: str | "os.PathLike[str]") -> str:
         """Write the frame as a PNG; returns the path."""
         target = Path(file_path)
         target.parent.mkdir(parents=True, exist_ok=True)

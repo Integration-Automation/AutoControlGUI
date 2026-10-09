@@ -31,7 +31,7 @@ def _journal_off():
     recorder.stop_action_journal()
 
 
-@pytest.fixture()
+@pytest.fixture
 def fake_executor(monkeypatch):
     import je_auto_control.utils.secrets as secrets_module
     monkeypatch.setattr(secrets_module, "default_secret_manager",
@@ -73,7 +73,8 @@ def test_the_escaped_form_an_error_repr_holds_is_masked_too(tmp_path, fake_execu
     fake_executor.execute_action([["AC_fake_fail", {"text": "${secrets.quoted}"}]])
     recorder.stop_action_journal()
     text = _file_text(journal)
-    assert "quoted" not in text.replace("secrets.quoted", "") and "one" not in text
+    assert "quoted" not in text.replace("secrets.quoted", "")
+    assert "one" not in text
     assert MASK in read_events(journal)[0].error
 
 
@@ -148,4 +149,5 @@ def test_values_are_dropped_when_the_journal_stops(tmp_path):
     recorder.note_secret_value(PLAIN)
     stopped = recorder.stop_action_journal()
     assert PLAIN not in repr(stopped)
-    assert recorder._LAST is not None and recorder._LAST.secret_values() == ()
+    assert recorder._LAST is not None
+    assert recorder._LAST.secret_values() == ()

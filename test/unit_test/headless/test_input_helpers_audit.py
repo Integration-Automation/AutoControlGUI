@@ -45,7 +45,8 @@ def test_the_cleanup_release_stays_where_the_button_went_down(mouse):
 def test_waypoints_round_to_the_nearest_pixel():
     assert plan_path([[-0.6, 10.9]]) == [[-1, 11]]
     path = plan_path([[100.7, -1.7], [200.2, 5.4]], per_segment_steps=2)
-    assert path[0] == [101, -2] and path[-1] == [200, 5]
+    assert path[0] == [101, -2]
+    assert path[-1] == [200, 5]
 
 
 @pytest.mark.parametrize("duration, rate", [(float("nan"), None), (float("inf"), None),

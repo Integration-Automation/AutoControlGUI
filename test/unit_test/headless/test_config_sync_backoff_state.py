@@ -89,10 +89,13 @@ def test_a_drain_inside_the_delay_says_it_is_backing_off(tmp_path):
     report = outbox.drain(sent.append, wait=False, clock=lambda: 1010.0)
     assert sent == []
     # offline stays true for callers that only ask "did the queue get out?".
-    assert report.backing_off and report.offline and not report.cancelled
+    assert report.backing_off
+    assert report.offline
+    assert not report.cancelled
     assert report.retry_in_s == pytest.approx(50.0)
     assert report.error == "refused", "the reason for the wait is the failure that caused it"
-    assert report.pending == 1 and report.attempts == 0
+    assert report.pending == 1
+    assert report.attempts == 0
 
 
 def test_force_skips_the_wait_once(tmp_path):
@@ -109,7 +112,9 @@ def test_force_skips_the_wait_once(tmp_path):
                           clock=lambda: 1010.0)
     # One forced attempt -- not five: the delay it earned is waited out as usual.
     assert attempts == [1]
-    assert report.offline and not report.backing_off and report.error == "refused again"
+    assert report.offline
+    assert not report.backing_off
+    assert report.error == "refused again"
     assert report.retry_in_s == pytest.approx(120.0)
 
 
@@ -121,7 +126,8 @@ def test_a_failure_in_this_drain_is_offline_and_names_the_next_attempt(tmp_path)
         raise ConfigSyncError("refused")
 
     report = outbox.drain(down, wait=False, clock=lambda: 500.0)
-    assert report.offline and not report.backing_off
+    assert report.offline
+    assert not report.backing_off
     assert report.retry_in_s == pytest.approx(8.0)
 
 
@@ -130,7 +136,8 @@ def test_a_failure_in_this_drain_is_offline_and_names_the_next_attempt(tmp_path)
 def test_a_sync_inside_the_delay_reports_backing_off_not_offline(machine, server):
     server.offline = True
     first = machine()
-    assert first.state == "offline" and first.retry_in_s > 0
+    assert first.state == "offline"
+    assert first.retry_in_s > 0
     requests = server.requests
 
     server.offline = False                      # the network is back ...
@@ -139,10 +146,12 @@ def test_a_sync_inside_the_delay_reports_backing_off_not_offline(machine, server
     assert 0 < second.retry_in_s <= 120.0
     assert second.error == first.error
     assert server.requests == requests, "a run that is waiting does not contact the server"
-    assert second.pending == 1 and second.to_dict()["retry_in_s"] == second.retry_in_s
+    assert second.pending == 1
+    assert second.to_dict()["retry_in_s"] == second.retry_in_s
 
     status = sync_status(machine.outbox)
-    assert status["state"] == "backing_off" and 0 < status["retry_in_s"] <= 120.0
+    assert status["state"] == "backing_off"
+    assert 0 < status["retry_in_s"] <= 120.0
 
 
 def test_an_explicit_sync_skips_the_wait_once(machine, server):
@@ -150,7 +159,8 @@ def test_an_explicit_sync_skips_the_wait_once(machine, server):
     machine()
     server.offline = False
     report = machine(force=True)
-    assert (report.state, report.pending) == ("synced", 0) and not report.retry_in_s
+    assert (report.state, report.pending) == ("synced", 0)
+    assert not report.retry_in_s
     assert server.revision == 1
 
 
@@ -159,7 +169,8 @@ def test_forcing_while_the_server_is_still_down_is_offline_again(machine, server
     machine()
     requests = server.requests
     report = machine(force=True)
-    assert report.state == "offline" and report.retry_in_s > 120.0, "the delay doubled"
+    assert report.state == "offline", "the delay doubled"
+    assert report.retry_in_s > 120.0, "the delay doubled"
     assert server.requests > requests
 
 
@@ -171,7 +182,8 @@ def test_the_status_turns_to_pending_once_the_delay_has_passed(machine, server):
     with patch("je_auto_control.utils.config_sync.session.time.time",
                return_value=4_000_000_000.0):
         status = sync_status(machine.outbox)
-    assert status["state"] == "pending" and not status["retry_in_s"]
+    assert status["state"] == "pending"
+    assert not status["retry_in_s"]
 
 
 def test_the_one_call_entry_points_carry_the_state(tmp_path, server):
@@ -183,7 +195,8 @@ def test_the_one_call_entry_points_carry_the_state(tmp_path, server):
     server.offline = True
     assert config_sync_run(_URL, "alice", **options)["state"] == "offline"
     waiting = config_sync_run(_URL, "alice", **options)
-    assert waiting["state"] == "backing_off" and waiting["retry_in_s"] > 0
+    assert waiting["state"] == "backing_off"
+    assert waiting["retry_in_s"] > 0
     assert config_sync_status(_URL, "alice", options["outbox_path"])["state"] == "backing_off"
     server.offline = False
     assert config_sync_run(_URL, "alice", force=True, **options)["state"] == "synced"
@@ -191,7 +204,8 @@ def test_the_one_call_entry_points_carry_the_state(tmp_path, server):
 
 def test_never_synced_reports_no_retry(tmp_path):
     status = config_sync_status(_URL, "alice", str(tmp_path / "absent.sqlite3"))
-    assert status["state"] == "never" and not status["retry_in_s"]
+    assert status["state"] == "never"
+    assert not status["retry_in_s"]
 
 
 def test_the_surfaces_accept_force():

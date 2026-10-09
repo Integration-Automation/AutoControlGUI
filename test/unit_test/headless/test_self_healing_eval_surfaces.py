@@ -64,7 +64,8 @@ def _counts(payload):
 
 def test_facade_exports_the_names():
     for name in _FACADE:
-        assert name in ac.__all__ and hasattr(ac, name), name
+        assert name in ac.__all__, name
+        assert hasattr(ac, name), name
 
 
 def test_commands_are_registered_and_in_the_script_builder():
@@ -83,7 +84,8 @@ def test_executor_and_mcp_return_the_same_evaluation(workspace):
     from_api = ac.evaluate_healing_dataset(dataset)
     for payload in (from_executor, from_mcp, from_api):
         assert payload["versions"]["old"]["miss"] == 1
-        assert payload["violations"] and payload["passed"] is False
+        assert payload["violations"]
+        assert payload["passed"] is False
     assert _counts(from_executor) == _counts(from_mcp) == _counts(from_api)
 
 
@@ -121,7 +123,8 @@ def test_revision_lifecycle_through_mcp(workspace):
         template_path=str(template),
         candidate_path=str(workspace / "candidate.png"))["revision_id"]
     preview = _mcp("ac_self_heal_revision_preview").handler(revision_id=revision_id)
-    assert preview["comparison"] is None and preview["revision"]["validated"] is False
+    assert preview["comparison"] is None
+    assert preview["revision"]["validated"] is False
     accepted = _mcp("ac_self_heal_revision_accept").handler(
         revision_id=revision_id, allow_unvalidated=True)
     assert accepted["status"] == "accepted"
@@ -142,13 +145,15 @@ def test_context_reaches_the_log_from_executor_and_mcp(tmp_path, monkeypatch):
     monkeypatch.setattr(locator_mod, "_click_at", lambda coords, keycode: None)
     result = action_executor.executor.event_dict["AC_self_heal_click"](
         template_path="t.png", context={"locator_version": "v2", "run_id": "r1"})
-    assert result["found"] is True and result["action"] == "click"
+    assert result["found"] is True
+    assert result["action"] == "click"
     assert result["action_verified"] is None
     _mcp("ac_self_heal_locate").handler(
         template_path="t.png", context={"locator_version": "v3"})
     first, second = log.list_events()
     assert (first.locator_version, first.run_id) == ("v2", "r1")
-    assert second.locator_version == "v3" and second.run_id is None
+    assert second.locator_version == "v3"
+    assert second.run_id is None
     with pytest.raises(ValueError):
         _mcp("ac_self_heal_locate").handler(template_path="t.png", context={"x": "y"})
 
@@ -178,7 +183,8 @@ def test_tab_commands_are_menu_actions_with_translations(tab):
     wanted = {"self_heal_evaluate", "self_heal_rev_propose", "self_heal_rev_preview",
               "self_heal_rev_accept", "self_heal_rev_revert", "self_heal_rev_list",
               "self_heal_browse_dataset", "self_heal_browse_candidate"}
-    assert wanted <= set(actions) and all(callable(actions[key]) for key in wanted)
+    assert wanted <= set(actions)
+    assert all(callable(actions[key]) for key in wanted)
     for module in (english, japanese, simplified_chinese, traditional_chinese):
         catalogue = next(value for value in vars(module).values()
                          if isinstance(value, dict) and "self_heal_refresh" in value)
@@ -198,13 +204,15 @@ def test_tab_evaluates_and_walks_a_revision(tab, workspace, monkeypatch):
     tab._dataset_input.setText(str(workspace / "dataset.json"))
     actions["self_heal_evaluate"]()
     shown = json.loads(tab._report_view.toPlainText())
-    assert shown["versions"]["old"]["miss"] == 1 and shown["passed"] is False
+    assert shown["versions"]["old"]["miss"] == 1
+    assert shown["passed"] is False
 
     tab._template_input.setText(str(template))
     tab._candidate_input.setText(str(workspace / "candidate.png"))
     actions["self_heal_rev_propose"]()
     revision_id = tab._revision_input.text()
-    assert len(revision_id) == 12 and template.read_bytes() == before
+    assert len(revision_id) == 12
+    assert template.read_bytes() == before
 
     # Not validated yet: the tab asks, and "No" leaves the template alone.
     monkeypatch.setattr(module.QMessageBox, "question",

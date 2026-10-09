@@ -31,8 +31,10 @@ def test_new_root_is_deterministic_with_injected_rng():
     rng = _seeded_rng()
     ctx = new_root_context(rng)
     again = new_root_context(_seeded_rng())
-    assert ctx.trace_id == again.trace_id and ctx.span_id == again.span_id
-    assert len(ctx.trace_id) == 32 and len(ctx.span_id) == 16
+    assert ctx.trace_id == again.trace_id
+    assert ctx.span_id == again.span_id
+    assert len(ctx.trace_id) == 32
+    assert len(ctx.span_id) == 16
 
 
 def test_child_keeps_trace_changes_span():
@@ -79,7 +81,8 @@ def test_extract_is_case_insensitive_and_roundtrips():
 def test_executor_inject_then_extract():
     rec = ac.execute_action([["AC_trace_inject", {}]])
     out = next(v for v in rec.values() if isinstance(v, dict))
-    assert out["trace_id"] and out["headers"]["traceparent"]
+    assert out["trace_id"]
+    assert out["headers"]["traceparent"]
     rec2 = ac.execute_action([[
         "AC_trace_extract",
         {"headers": json.dumps(out["headers"])},
@@ -111,4 +114,5 @@ def test_wiring():
 def test_facade_exports():
     for attr in ("SpanContext", "TraceContextError", "new_root_context",
                  "parse_traceparent", "inject_context", "extract_context"):
-        assert hasattr(ac, attr) and attr in ac.__all__
+        assert hasattr(ac, attr)
+        assert attr in ac.__all__

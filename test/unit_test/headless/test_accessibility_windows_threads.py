@@ -149,7 +149,7 @@ class _Automation(_Bound):
         self._handlers.remove(handler)
 
 
-@pytest.fixture()
+@pytest.fixture
 def world(monkeypatch):
     """A fake ``comtypes`` whose objects are thread-bound, and a recorder in place of ``CoInitializeEx``."""
     state = _World()
@@ -186,7 +186,7 @@ def world(monkeypatch):
     return state
 
 
-@pytest.fixture()
+@pytest.fixture
 def backend(world):
     return backend_module.WindowsAccessibilityBackend()
 
@@ -232,7 +232,8 @@ def test_the_doubles_catch_what_the_backend_used_to_do(world):
     assert [element.name for element in shared.list_elements()] == ["Editor", "Field"]
     with pytest.raises(OSError, match="RPC_E_WRONG_THREAD"):
         _on_thread(shared.list_elements)
-    assert world.violations and "_Automation.ElementFromHandle" in world.violations[0]
+    assert world.violations
+    assert "_Automation.ElementFromHandle" in world.violations[0]
     assert len(world.automations) == 1
 
 
@@ -247,7 +248,8 @@ def test_each_thread_initialises_com_before_its_first_com_call(backend, world):
     for ident in (main, first, second):
         on_thread = [(kind, name) for kind, name, thread in world.calls if thread == ident]
         assert on_thread[0] == ("COM", "CoInitializeEx"), on_thread[:3]
-    assert len(world.automations) == 3 and world.violations == []
+    assert len(world.automations) == 3
+    assert world.violations == []
 
 
 def test_every_read_and_action_stays_on_the_calling_thread(backend, world):
@@ -288,14 +290,17 @@ def test_many_threads_at_once_each_keep_to_their_own_objects(backend, world):
         thread.start()
     for thread in threads:
         thread.join(30.0)
-    assert errors == [] and results == [("hello", 2)] * 30
-    assert world.violations == [] and len(world.automations) == 6
+    assert errors == []
+    assert results == [("hello", 2)] * 30
+    assert world.violations == []
+    assert len(world.automations) == 6
 
 
 def test_a_focus_subscription_is_added_and_removed_on_the_thread_that_waits(backend, world, monkeypatch):
     monkeypatch.setattr(backend, "_make_focus_handler", lambda sink: object())
     worker, result = _on_thread(lambda: backend.wait_for_focus_change(timeout=0.01))
-    assert result is None and world.violations == []
+    assert result is None
+    assert world.violations == []
     events = [(name, thread) for kind, name, thread in world.calls
               if kind == "_Automation" and "FocusChangedEventHandler" in name]
     assert events == [("AddFocusChangedEventHandler", worker), ("RemoveFocusChangedEventHandler", worker)]
@@ -323,12 +328,13 @@ def test_the_executor_command_works_from_a_worker_thread_after_the_main_thread_u
     assert world.violations == []
     assert len(world.automations) == 2
     answers = list(record.values())
-    assert [row["name"] for row in answers[0]] == ["Editor", "Field"] and answers[1]["name"] == "Field"
+    assert [row["name"] for row in answers[0]] == ["Editor", "Field"]
+    assert answers[1]["name"] == "Field"
 
 
 # --- the apartment -----------------------------------------------------------------------------------------------
 
-@pytest.fixture()
+@pytest.fixture
 def fresh_thread_state(monkeypatch):
     monkeypatch.setattr(windows_automation, "_entered", threading.local())
 
@@ -382,5 +388,6 @@ def test_a_per_thread_attribute_is_one_value_per_thread_and_per_instance():
     first.slot = "main"
     assert _on_thread(lambda: first.slot)[1] is None
     assert _on_thread(lambda: (setattr(first, "slot", "worker"), first.slot)[1])[1] == "worker"
-    assert first.slot == "main" and second.slot is None
+    assert first.slot == "main"
+    assert second.slot is None
     assert isinstance(_Holder.slot, PerThread)

@@ -11,7 +11,7 @@ functions raise a clear error only when actually called without Babel installed.
 Imports no ``PySide6``.
 """
 import datetime
-from typing import Any, Union
+from typing import Any
 
 
 def _numbers() -> Any:
@@ -46,18 +46,18 @@ def parse_number(text: str, locale: str = "en_US") -> int:
     return int(value)
 
 
-def format_decimal(value: Union[int, float], locale: str = "en_US") -> str:
+def format_decimal(value: int | float, locale: str = "en_US") -> str:
     """Format a number the way ``locale`` writes decimals."""
     return _numbers().format_decimal(value, locale=locale)
 
 
-def format_currency(value: Union[int, float], currency: str,
+def format_currency(value: int | float, currency: str,
                     locale: str = "en_US") -> str:
     """Format ``value`` as ``currency`` (ISO 4217) for ``locale``."""
     return _numbers().format_currency(value, currency, locale=locale)
 
 
-def format_date(value: Union[str, datetime.date], locale: str = "en_US",
+def format_date(value: str | datetime.date, locale: str = "en_US",
                 fmt: str = "medium") -> str:
     """Format a date (or ISO ``YYYY-MM-DD`` string) for ``locale``."""
     try:

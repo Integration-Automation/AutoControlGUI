@@ -70,7 +70,7 @@ import threading
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Annotated, Any, Dict, List, Optional, Tuple, Union
+from typing import Annotated, Any, Dict, List, Optional, Tuple
 
 try:
     from fastapi import Depends, FastAPI, Header, HTTPException, Request
@@ -408,7 +408,7 @@ def _config_envelope(body: Dict[str, Any]) -> Optional[Tuple[Any, int, str]]:
 
 
 def _commit_config(store: ConfigStore, user_id: str, body: Dict[str, Any],
-                   allow_blind_writes: bool) -> Union[int, JSONResponse]:
+                   allow_blind_writes: bool) -> int | JSONResponse:
     """Commit a PUT body; the new revision, or the 409 reply on a conflict."""
     envelope = _config_envelope(body)
     if envelope is None:
@@ -543,8 +543,8 @@ def _register_blob_routes(app: FastAPI, blobs: BlobStore, secret_dep) -> None:
         return _blob_call(blobs.usage, user_id)
 
 
-def _blob_root(blob_store_path: Union[str, Path, None],
-               config_store_path: Union[str, Path, None]) -> Path:
+def _blob_root(blob_store_path: str | Path | None,
+               config_store_path: str | Path | None) -> Path:
     """Where blobs go: the given folder, else beside the config database."""
     if blob_store_path is not None:
         return Path(blob_store_path)
@@ -565,9 +565,9 @@ def create_app(shared_secret: Optional[str] = None,
                ttl_s: float = _DEFAULT_TTL_S,
                serve_web_viewer: bool = True,
                cors_origins: Optional[list] = None, *,
-               config_store_path: Union[str, Path, None] = None,
+               config_store_path: str | Path | None = None,
                allow_blind_config_writes: bool = False,
-               blob_store_path: Union[str, Path, None] = None,
+               blob_store_path: str | Path | None = None,
                max_blob_bytes: int = DEFAULT_MAX_BLOB_BYTES,
                blob_quota_bytes: int = DEFAULT_BLOB_QUOTA_BYTES) -> FastAPI:
     """Build the FastAPI app. Importable for embedding in larger services.

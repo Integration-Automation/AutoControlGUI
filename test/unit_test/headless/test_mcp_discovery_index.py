@@ -182,7 +182,8 @@ def test_discover_and_schema_tools_go_through_the_dispatcher():
     server = _progressive()
     found = _payload(_call(server, "ac_tools_search", {"query": "mouse", "limit": 1}))
     assert [item["name"] for item in found["tools"]] == ["fx_click"]
-    assert found["total"] == 2 and found["truncated"] is True
+    assert found["total"] == 2
+    assert found["truncated"] is True
     assert "inputSchema" not in found["tools"][0]
     assert found["tools"][0]["enabled"] is False
     described = _payload(_call(server, "ac_tools_schema", {"name": "fx_shot"}))

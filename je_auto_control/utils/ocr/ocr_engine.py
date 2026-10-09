@@ -12,7 +12,7 @@ CJK games where tesseract.exe + language packs are a nuisance.
 import re
 import time
 from dataclasses import dataclass
-from typing import List, Optional, Pattern, Sequence, Tuple, Union
+from typing import List, Optional, Pattern, Sequence, Tuple
 
 from je_auto_control.utils.exception.exceptions import AutoControlActionException
 from je_auto_control.utils.executor.run_control import pause
@@ -88,7 +88,7 @@ def _grab(region: Optional[Sequence[int]]):
     return grab_logical(region, grabber=_load_image_grab())
 
 
-def _resolve(backend: Optional[Union[str, OCRBackend]]) -> OCRBackend:
+def _resolve(backend: Optional[str | OCRBackend]) -> OCRBackend:
     if backend is None or isinstance(backend, str):
         return get_backend(backend)
     return backend
@@ -99,7 +99,7 @@ def find_text_matches(target: str,
                       region: Optional[Sequence[int]] = None,
                       min_confidence: float = 60.0,
                       case_sensitive: bool = False,
-                      backend: Optional[Union[str, OCRBackend]] = None,
+                      backend: Optional[str | OCRBackend] = None,
                       ) -> List[TextMatch]:
     """Return every on-screen match for ``target`` as TextMatch records.
 
@@ -141,7 +141,7 @@ def _merge_span(span: List[TextMatch]) -> TextMatch:
 def read_text_in_region(region: Optional[Sequence[int]] = None,
                         lang: str = "eng",
                         min_confidence: float = 60.0,
-                        backend: Optional[Union[str, OCRBackend]] = None,
+                        backend: Optional[str | OCRBackend] = None,
                         ) -> List[TextMatch]:
     """Return every OCR hit in ``region`` (or whole screen) as TextMatch records."""
     engine = _resolve(backend)
@@ -153,12 +153,12 @@ def read_text_in_region(region: Optional[Sequence[int]] = None,
     ) for m in matches]
 
 
-def find_text_regex(pattern: Union[str, Pattern[str]],
+def find_text_regex(pattern: str | Pattern[str],
                     lang: str = "eng",
                     region: Optional[Sequence[int]] = None,
                     min_confidence: float = 60.0,
                     flags: int = 0,
-                    backend: Optional[Union[str, OCRBackend]] = None,
+                    backend: Optional[str | OCRBackend] = None,
                     ) -> List[TextMatch]:
     """Return every match whose text matches ``pattern`` (regex search)."""
     compiled = pattern if isinstance(pattern, re.Pattern) else re.compile(pattern, flags)
@@ -173,7 +173,7 @@ def locate_text_center(target: str,
                        region: Optional[Sequence[int]] = None,
                        min_confidence: float = 60.0,
                        case_sensitive: bool = False,
-                       backend: Optional[Union[str, OCRBackend]] = None,
+                       backend: Optional[str | OCRBackend] = None,
                        ) -> Tuple[int, int]:
     """Return the centre (x, y) of the first match; raise if not found."""
     hits = find_text_matches(target, lang, region, min_confidence,
@@ -190,7 +190,7 @@ def wait_for_text(target: str,
                   poll: float = 0.5,
                   min_confidence: float = 60.0,
                   case_sensitive: bool = False,
-                  backend: Optional[Union[str, OCRBackend]] = None,
+                  backend: Optional[str | OCRBackend] = None,
                   ) -> Tuple[int, int]:
     """Poll until ``target`` appears on screen; raise on timeout."""
     poll = max(0.05, float(poll))
@@ -208,12 +208,12 @@ def wait_for_text(target: str,
 
 
 def click_text(target: str,
-               mouse_keycode: Union[int, str] = "mouse_left",
+               mouse_keycode: int | str = "mouse_left",
                lang: str = "eng",
                region: Optional[Sequence[int]] = None,
                min_confidence: float = 60.0,
                case_sensitive: bool = False,
-               backend: Optional[Union[str, OCRBackend]] = None,
+               backend: Optional[str | OCRBackend] = None,
                ) -> Tuple[int, int]:
     """Locate ``target`` text and click its centre."""
     from je_auto_control.wrapper.auto_control_mouse import click_mouse, set_mouse_position

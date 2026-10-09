@@ -8,14 +8,16 @@ def test_in_order_is_ok():
     assert t.observe("s", 1)["status"] == "ok"
     assert t.observe("s", 2)["status"] == "ok"
     assert t.observe("s", 3)["status"] == "ok"
-    assert t.gaps("s") == [] and t.high_water("s") == 3
+    assert t.gaps("s") == []
+    assert t.high_water("s") == 3
 
 
 def test_gap_detected_and_filled_by_reorder():
     t = SequenceTracker()
     t.observe("s", 1)
     result = t.observe("s", 4)               # skipped 2, 3
-    assert result["status"] == "gap" and result["missing"] == [2, 3]
+    assert result["status"] == "gap"
+    assert result["missing"] == [2, 3]
     assert t.observe("s", 3)["status"] == "reorder"
     assert t.gaps("s") == [2]                # 3 filled, 2 still missing
     t.observe("s", 2)
@@ -33,7 +35,8 @@ def test_streams_are_independent():
     t = SequenceTracker()
     t.observe("a", 5)
     assert t.observe("b", 1)["status"] == "ok"      # first on stream b
-    assert t.high_water("a") == 5 and t.high_water("b") == 1
+    assert t.high_water("a") == 5
+    assert t.high_water("b") == 1
 
 
 # --- wiring ---------------------------------------------------------------
@@ -45,7 +48,8 @@ def test_executor_round_trip():
     rec = ac.execute_action([[
         "AC_sequence_observe", {"name": name, "stream_id": "s", "seq": 5}]])
     out = next(v for v in rec.values() if isinstance(v, dict))
-    assert out["status"] == "gap" and out["missing"] == [2, 3, 4]
+    assert out["status"] == "gap"
+    assert out["missing"] == [2, 3, 4]
 
 
 def test_wiring():
@@ -57,4 +61,5 @@ def test_wiring():
 
 
 def test_facade_exports():
-    assert hasattr(ac, "SequenceTracker") and "SequenceTracker" in ac.__all__
+    assert hasattr(ac, "SequenceTracker")
+    assert "SequenceTracker" in ac.__all__

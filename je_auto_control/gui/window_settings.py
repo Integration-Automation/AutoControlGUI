@@ -18,7 +18,7 @@ import os
 import re
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, Mapping, Optional, Tuple, Union
+from typing import Any, Dict, Mapping, Optional, Tuple
 
 from PySide6.QtCore import QByteArray, QSettings
 
@@ -87,7 +87,7 @@ def _as_bytes(value: Any) -> bytes:
 class WindowSettings:
     """Load and save a :class:`WindowState`; a store without a path does neither."""
 
-    def __init__(self, path: Union[str, Path, None] = _UNSET) -> None:
+    def __init__(self, path: str | Path | None = _UNSET) -> None:
         resolved = settings_path() if path is _UNSET else path
         self._path: Optional[Path] = None if resolved is None else Path(resolved)
 

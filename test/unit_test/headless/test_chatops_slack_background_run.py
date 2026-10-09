@@ -92,7 +92,7 @@ def _workers():
             if thread.name.startswith(_WORKER_PREFIX) and thread.is_alive()]
 
 
-@pytest.fixture()
+@pytest.fixture
 def script(monkeypatch):
     fake = _Script()
     monkeypatch.setitem(executor.event_dict, "AC_fake_slack_held", fake.held)
@@ -101,7 +101,7 @@ def script(monkeypatch):
     stop_execution()
 
 
-@pytest.fixture()
+@pytest.fixture
 def root(tmp_path, monkeypatch):
     (tmp_path / "long job.json").write_text(
         json.dumps([["AC_fake_slack_held"], ["AC_fake_slack_mark"]]), encoding="utf-8")
@@ -110,12 +110,12 @@ def root(tmp_path, monkeypatch):
     return tmp_path
 
 
-@pytest.fixture()
+@pytest.fixture
 def slack():
     return _FakeSlack()
 
 
-@pytest.fixture()
+@pytest.fixture
 def bot(slack, script, root, monkeypatch):
     """A bot with the default commands whose Slack calls go to the fake."""
     made = _make_bot(slack, monkeypatch, register_chatops_default_commands(CommandRouter()))
@@ -162,7 +162,8 @@ def _start_long_run(bot, slack, script, ts=1):
     assert poll.count == 1
     assert script.entered.wait(_WAIT)
     run_id = bot.running_run_id
-    assert run_id is not None and run_id.startswith(f"{CHATOPS_RUN_PREFIX}long_job-")
+    assert run_id is not None
+    assert run_id.startswith(f"{CHATOPS_RUN_PREFIX}long_job-")
     return poll, run_id
 
 
@@ -267,7 +268,8 @@ def test_a_run_is_accepted_again_once_the_first_has_ended(bot, slack, script):
 def test_wait_idle_does_not_stop_the_run(bot, slack, script):
     _poll, run_id = _start_long_run(bot, slack, script)
     assert bot.wait_idle(timeout=0.2) is False
-    assert bot.running_run_id == run_id and slack.texts() == []
+    assert bot.running_run_id == run_id
+    assert slack.texts() == []
 
 
 # --- the other commands stay where they were ---------------------------------
@@ -280,7 +282,8 @@ def test_other_commands_are_answered_on_the_poll_thread_during_a_run(bot, slack,
     assert asked.count == 2
     texts = slack.texts()
     assert len(texts) == 2, "both replies were posted before poll_once returned"
-    assert texts[0].startswith("Available commands:") and texts[1].startswith("scripts under")
+    assert texts[0].startswith("Available commands:")
+    assert texts[1].startswith("scripts under")
     assert all(thread is asked.thread for thread in slack.post_threads)
     assert bot.running_run_id == run_id
 
@@ -318,7 +321,8 @@ def test_only_the_listed_commands_run_in_the_background(slack, script, root, mon
         assert script.entered.wait(_WAIT)
         assert made.background_commands == frozenset({"deploy"})
         # The two handlers run on different threads, so their order is not fixed.
-        assert len(seen) == 2 and poll.thread in seen
+        assert len(seen) == 2
+        assert poll.thread in seen
         assert [thread.name.startswith(_WORKER_PREFIX) for thread in seen].count(True) == 1
         assert (made.running_run_id or "").startswith(f"{CHATOPS_RUN_PREFIX}site-")
         slack.say(3, "/stop")
@@ -350,7 +354,8 @@ def test_a_stopped_bot_refuses_a_run_instead_of_starting_a_worker(bot, slack, sc
     slack.say(1, "/run quick.json")
     assert _Poll(bot).count == 1
     assert slack.texts() == ["run: the bot is stopping; not started."]
-    assert _workers() == [] and script.after == []
+    assert _workers() == []
+    assert script.after == []
 
 
 def test_run_forever_keeps_reading_during_a_run_and_stop_ends_both(bot, slack, script):

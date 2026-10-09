@@ -29,7 +29,7 @@ from dataclasses import asdict, dataclass, replace
 from datetime import datetime, timezone
 from time import monotonic
 from typing import (
-    Any, Callable, Dict, Iterator, List, Mapping, Optional, Sequence, Tuple, Union,
+    Any, Callable, Dict, Iterator, List, Mapping, Optional, Sequence, Tuple,
 )
 
 from je_auto_control.utils.exception.exceptions import (
@@ -150,8 +150,7 @@ def self_heal_click(template_path: Optional[str] = None,
                     model: Optional[str] = None,
                     log: Optional[HealEventLog] = None,
                     raise_on_miss: bool = False,
-                    verify: Union[Callable[[HealOutcome], bool],
-                                  Mapping[str, Any], None] = None,
+                    verify: Callable[[HealOutcome], bool] | Mapping[str, Any] | None = None,
                     ) -> HealOutcome:
     """``self_heal_locate`` + a click at the resolved coordinates.
 

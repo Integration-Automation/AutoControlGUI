@@ -36,13 +36,15 @@ def test_status_flip_carries_failure_signature():
     flips = diff_runs(_before(), _after())["status_flips"]
     assert len(flips) == 1
     assert flips[0]["name"] == "submit"
-    assert flips[0]["from"] == "ok" and flips[0]["to"] == "error"
+    assert flips[0]["from"] == "ok"
+    assert flips[0]["to"] == "error"
     assert len(flips[0]["signature"]) == 12       # failure_signature attached
 
 
 def test_timing_regression_detected_with_ratio():
     regs = diff_runs(_before(), _after())["timing_regressions"]
-    assert len(regs) == 1 and regs[0]["name"] == "open_form"
+    assert len(regs) == 1
+    assert regs[0]["name"] == "open_form"
     assert regs[0]["ratio"] == pytest.approx(2.5)
     # a small slowdown under the factor is not a regression
     slow = diff_runs([{"name": "a", "duration": 1.0}],
@@ -64,7 +66,9 @@ def test_identical_runs():
 
 def test_summary_lists_changes():
     summary = summarize_run_diff(diff_runs(_before(), _after()))
-    assert "added" in summary and "flip" in summary and "regression" in summary
+    assert "added" in summary
+    assert "flip" in summary
+    assert "regression" in summary
 
 
 # --- wiring ---------------------------------------------------------------
@@ -90,4 +94,5 @@ def test_wiring():
 
 def test_facade_exports():
     for name in ("diff_runs", "summarize_run_diff"):
-        assert hasattr(ac, name) and name in ac.__all__
+        assert hasattr(ac, name)
+        assert name in ac.__all__

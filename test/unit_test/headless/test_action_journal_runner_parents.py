@@ -19,7 +19,7 @@ def _journal_off():
     recorder.stop_action_journal()
 
 
-@pytest.fixture()
+@pytest.fixture
 def fake_executor():
     executor = Executor()
     executor.event_dict["AC_fake_step"] = lambda **kwargs: kwargs.get("n", 0)

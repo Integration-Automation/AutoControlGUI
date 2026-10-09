@@ -21,7 +21,7 @@ from je_auto_control.utils.exception.exceptions import (
 )
 
 
-@pytest.fixture()
+@pytest.fixture
 def never_pressed(monkeypatch):
     """Stub the keyboard poll so the exit key is never seen as pressed."""
     monkeypatch.setattr(
@@ -30,7 +30,7 @@ def never_pressed(monkeypatch):
     )
 
 
-@pytest.fixture()
+@pytest.fixture
 def no_real_interrupt(monkeypatch):
     """Stub the interrupt and count calls, so pytest is never interrupted."""
     calls = {"count": 0}

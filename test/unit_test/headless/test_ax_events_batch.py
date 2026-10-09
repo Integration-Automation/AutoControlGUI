@@ -56,7 +56,8 @@ def test_executor_adapter_wraps_element(monkeypatch):
     from je_auto_control.utils.executor.action_executor import (
         _wait_for_focus_change)
     out = _wait_for_focus_change(1.5)
-    assert out["changed"] is True and out["element"]["name"] == "Username"
+    assert out["changed"] is True
+    assert out["element"]["name"] == "Username"
     _inject(monkeypatch, _FakeBackend(None))
     assert _wait_for_focus_change(0.1)["changed"] is False
 

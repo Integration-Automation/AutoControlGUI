@@ -101,7 +101,8 @@ def test_the_failure_bundle_masks_nested_mappings_tuples_and_reprs(tmp_path):
         events=[{"step": 1, "cfg": types.MappingProxyType({"password": "hunter2"})}])
     with zipfile.ZipFile(path) as archive:
         manifest = archive.read("manifest.json").decode("utf-8")
-    assert "hunter2" not in manifest and "Bearer abc" not in manifest
+    assert "hunter2" not in manifest
+    assert "Bearer abc" not in manifest
     assert json.loads(manifest)["context"]["last_action"][0] == "AC_secret_set"
 
 

@@ -37,8 +37,10 @@ def test_place_labels_stays_in_bounds():
     labels = place_labels(marks, label_width=22, label_height=16,
                           bounds=[800, 600])
     x, y, w, h = labels[0]["label"]
-    assert x >= 0 and y >= 0
-    assert x + w <= 800 and y + h <= 600
+    assert x >= 0
+    assert y >= 0
+    assert x + w <= 800
+    assert y + h <= 600
 
 
 def test_place_labels_default_above_when_room():
@@ -92,4 +94,5 @@ def test_wiring():
 
 def test_facade_exports():
     for name in ("place_labels", "label_color"):
-        assert hasattr(ac, name) and name in ac.__all__
+        assert hasattr(ac, name)
+        assert name in ac.__all__

@@ -118,7 +118,8 @@ def test_push_operations_from_an_unlisted_device_with_no_change_does_not_push(se
     entry = SyncEntry.create("a", {"v": 1}, "laptop")
     client.push_operations([_op(entry)], device_id="laptop", now=_T0)
     result = client.push_operations([], device_id="desktop", now=_T0)
-    assert result.pushed is False and result.revision == 1
+    assert result.pushed is False
+    assert result.revision == 1
     assert result.bucket.values("custom") == {"a": {"v": 1}}
     assert server.puts == 1
     assert awaits_ack(server.bucket(), "desktop") is False
@@ -190,7 +191,8 @@ def test_inside_the_hold_an_edit_made_meanwhile_becomes_a_conflict(tmp_path, ser
     assert sorted(sibling.deleted for sibling in entry.siblings) == [False, True]
     assert server.bucket().values("custom") == {}, "nothing came back by itself"
     seen = laptop.sync()
-    assert laptop.store == {} and seen.conflicts == ["custom/a"]
+    assert laptop.store == {}
+    assert seen.conflicts == ["custom/a"]
 
 
 def test_the_conflict_is_the_same_by_the_clock_until_the_hold_runs_out(server):
@@ -218,7 +220,8 @@ def test_past_the_hold_an_untouched_copy_is_still_removed(tmp_path, server):
     report = desktop.sync()
     assert desktop.store == {}, "its own baseline says the entry was deleted elsewhere"
     assert report.applied["custom"]["removed"] == ["a"]
-    assert server.bucket().values("custom") == {} and server.puts == puts
+    assert server.bucket().values("custom") == {}
+    assert server.puts == puts
 
 
 def test_past_the_hold_an_edit_from_a_device_that_only_pulled_brings_the_entry_back(

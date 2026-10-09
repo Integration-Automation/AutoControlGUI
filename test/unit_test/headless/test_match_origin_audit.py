@@ -53,7 +53,8 @@ def test_subpixel_auto_and_scale_matches_are_in_screen_coordinates():
     from je_auto_control.utils.subpixel_match.subpixel_match import match_subpixel
     sub = match_subpixel(TEMPLATE, region=REGION, min_score=0.9)
     assert (sub.x, sub.y) == (TRUE_X, TRUE_Y)
-    assert abs(sub.cx - (TRUE_X + 15)) < 1 and abs(sub.cy - (TRUE_Y + 10)) < 1
+    assert abs(sub.cx - (TRUE_X + 15)) < 1
+    assert abs(sub.cy - (TRUE_Y + 10)) < 1
     assert (match_auto(TEMPLATE, region=REGION)[0].x, match_auto(TEMPLATE, region=REGION)[0].y) == (
         TRUE_X, TRUE_Y)
     best = detect_scale(TEMPLATE, region=REGION, scales=[1.0])

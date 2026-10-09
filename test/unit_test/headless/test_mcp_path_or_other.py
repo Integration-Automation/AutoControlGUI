@@ -54,7 +54,7 @@ def registry():
             for tool in build_default_tool_registry(read_only=False, aliases=False)}
 
 
-@pytest.fixture()
+@pytest.fixture
 def harness(registry, tmp_path, monkeypatch):
     """A server over the real schemas with recording handlers, rooted at ``root``."""
     root = tmp_path / "root"
@@ -104,7 +104,8 @@ def test_the_marked_tools_are_found_as_path_taking_by_the_search_index(registry)
     index = ToolIndex(registry[name] for name in _MARKED)
     for name in _MARKED:
         rows = [row for row in index.search(name, limit=10) if row.name == name]
-        assert rows and rows[0].takes_paths, name
+        assert rows, name
+        assert rows[0].takes_paths, name
 
 
 # --- what counts as a path ---------------------------------------------------------------------
@@ -131,7 +132,9 @@ def test_a_relative_name_that_exists_is_a_path(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     (tmp_path / "Save").write_text("x", encoding="utf-8")
     (tmp_path / "sub").mkdir()
-    assert looks_like_path("Save") and looks_like_path("sub") and looks_like_path("./Save")
+    assert looks_like_path("Save")
+    assert looks_like_path("sub")
+    assert looks_like_path("./Save")
     assert not looks_like_path("Open")
 
 
@@ -140,7 +143,9 @@ def test_a_relative_name_that_exists_is_a_path(tmp_path, monkeypatch):
 @pytest.mark.parametrize("tool, argument", sorted(_MARKED.items()))
 def test_a_path_outside_the_roots_is_refused_and_the_handler_never_runs(harness, tool, argument):
     is_error, text = harness.call(tool, **{argument: str(harness.outside / "secret.txt")})
-    assert is_error and f"Invalid arguments for {tool}" in text and "outside the allowed" in text
+    assert is_error
+    assert f"Invalid arguments for {tool}" in text
+    assert "outside the allowed" in text
     assert harness.calls == []
 
 
@@ -155,13 +160,17 @@ def test_a_path_inside_the_roots_reaches_the_handler_unchanged(harness, tool, ar
 @pytest.mark.parametrize("escape", ["..", "..\\..", "../outside/secret.txt"])
 def test_a_relative_path_that_exists_outside_the_roots_is_refused(harness, escape):
     is_error, text = harness.call("ac_open_path", target=escape.replace("\\", os.sep))
-    assert is_error and "outside the allowed" in text and harness.calls == []
+    assert is_error
+    assert "outside the allowed" in text
+    assert harness.calls == []
 
 
 def test_a_file_url_is_judged_by_the_file_it_names(harness):
     outside = (harness.outside / "secret.txt").as_uri()
     is_error, text = harness.call("ac_open_path", target=outside)
-    assert is_error and "outside the allowed" in text and harness.calls == []
+    assert is_error
+    assert "outside the allowed" in text
+    assert harness.calls == []
     inside = (harness.root / "inside.txt").as_uri()
     assert harness.call("ac_open_path", target=inside)[0] is False
     assert harness.calls == [("ac_open_path", {"target": inside})]
@@ -203,7 +212,8 @@ def test_without_roots_nothing_is_judged(registry, tmp_path, monkeypatch):
     line = server.handle_line(json.dumps({
         "jsonrpc": "2.0", "id": 1, "method": "tools/call",
         "params": {"name": "ac_open_path", "arguments": {"target": str(tmp_path / "any.txt")}}}))
-    assert json.loads(line)["result"]["isError"] is False and len(calls) == 1
+    assert json.loads(line)["result"]["isError"] is False
+    assert len(calls) == 1
 
 
 # --- the policy on its own --------------------------------------------------------------------------

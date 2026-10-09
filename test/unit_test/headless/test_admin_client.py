@@ -7,7 +7,7 @@ from je_auto_control.utils.admin.admin_client import (
 from je_auto_control.utils.rest_api.rest_server import RestApiServer
 
 
-@pytest.fixture()
+@pytest.fixture
 def two_servers():
     a = RestApiServer(host="127.0.0.1", port=0, enable_audit=False)
     b = RestApiServer(host="127.0.0.1", port=0, enable_audit=False)
@@ -20,7 +20,7 @@ def two_servers():
         b.stop(timeout=1.0)
 
 
-@pytest.fixture()
+@pytest.fixture
 def client(tmp_path):
     return AdminConsoleClient(persist_path=tmp_path / "hosts.json")
 
@@ -89,7 +89,8 @@ def test_bad_token_marks_host_unhealthy(client, two_servers):
     client.add_host(label="bad", base_url=_url(a), token="not-the-token")
     status = client.poll_all(labels=["bad"])[0]
     assert status.healthy is False
-    assert status.error is not None and "401" in status.error
+    assert status.error is not None
+    assert "401" in status.error
 
 
 def test_broadcast_execute_runs_on_all_hosts(client, two_servers):

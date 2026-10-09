@@ -72,7 +72,8 @@ def test_load_or_create_regenerates_corrupt_file(tmp_path: Path):
     target = tmp_path / "host_id"
     target.write_text("not-a-valid-id", encoding="utf-8")
     new_id = load_or_create_host_id(target)
-    assert new_id.isdigit() and len(new_id) == 9
+    assert new_id.isdigit()
+    assert len(new_id) == 9
     # Corrupt content was rewritten with the new valid ID.
     assert target.read_text(encoding="utf-8").strip() == new_id
 

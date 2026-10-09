@@ -28,20 +28,23 @@ def test_refine_peak_symmetric_is_zero():
                      [0.0, 1.0, 0.0],
                      [0.0, 0.0, 0.0]], dtype=np.float32)
     offset_x, offset_y = refine_peak(smap, (1, 1))
-    assert abs(offset_x) < 1e-9 and abs(offset_y) < 1e-9
+    assert abs(offset_x) < 1e-9
+    assert abs(offset_y) < 1e-9
 
 
 def test_refine_peak_biased_offset_sign():
     # right neighbour higher than left → peak nudged toward +x
     row = np.array([[0.2, 1.0, 0.6]], dtype=np.float32)
     offset_x, offset_y = refine_peak(row, (1, 0))
-    assert offset_x > 0.0 and abs(offset_y) < 1e-9
+    assert offset_x > 0.0
+    assert abs(offset_y) < 1e-9
 
 
 def test_match_subpixel_locates_and_centres():
     match = match_subpixel(_template(), haystack=_haystack(20, 30), min_score=0.8)
     assert match is not None
-    assert match.x == 30 and match.y == 20
+    assert match.x == 30
+    assert match.y == 20
     # exact alignment → offset ~0, cx ≈ integer centre
     assert abs(match.cx - (30 + 12)) < 0.6
     assert abs(match.cy - (20 + 12)) < 0.6
@@ -66,4 +69,5 @@ def test_wiring():
 
 def test_facade_exports():
     for name in ("match_subpixel", "refine_peak", "SubPixelMatch"):
-        assert hasattr(ac, name) and name in ac.__all__
+        assert hasattr(ac, name)
+        assert name in ac.__all__

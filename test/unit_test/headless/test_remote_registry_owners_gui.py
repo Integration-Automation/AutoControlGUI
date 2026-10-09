@@ -143,7 +143,8 @@ def test_each_panel_registers_under_its_own_owner():
     first, second = _quick(), connection_screen.QuickConnectScreen()
     assert first._owner != second._owner
     assert registry.owner_of(SLOT_VIEWER) == first._owner
-    assert first._own_viewer().connected and first._screen_window is not None
+    assert first._own_viewer().connected
+    assert first._screen_window is not None
     assert first._viewer_badge.text() == _t("rd_quick_connected")
     # A second Quick Connect screen does not take the first one's session for its own.
     second._refresh_status()
@@ -157,7 +158,8 @@ def test_quick_connect_disconnect_leaves_the_viewer_tabs_session_alone():
     screen._disconnect()
     screen._on_window_closed()
     screen._on_error("stale error from an earlier session")
-    assert tab._own_viewer().connected and tab._screen_window is not None
+    assert tab._own_viewer().connected
+    assert tab._screen_window is not None
 
 
 def test_the_viewer_tabs_disconnect_leaves_quick_connects_session_alone():
@@ -165,7 +167,8 @@ def test_the_viewer_tabs_disconnect_leaves_quick_connects_session_alone():
     tab = viewer_panel._ViewerPanel()
     tab._disconnect()
     tab._on_error_main("stale error")
-    assert screen._own_viewer().connected and screen._screen_window is not None
+    assert screen._own_viewer().connected
+    assert screen._screen_window is not None
 
 
 def test_a_panel_only_drives_its_own_viewer():
@@ -185,18 +188,22 @@ def test_the_viewer_tab_connecting_closes_quick_connects_session():
     screen = _quick()
     old = screen._own_viewer()
     tab = _tab()
-    assert not old.connected and _idle(screen)
+    assert not old.connected
+    assert _idle(screen)
     assert screen._viewer_badge.text() == _t("rd_quick_disconnected")
     # Its Disconnect no longer reaches the session that replaced it.
     screen._disconnect()
-    assert tab._own_viewer().connected and tab._screen_window is not None
+    assert tab._own_viewer().connected
+    assert tab._screen_window is not None
 
 
 def test_quick_connect_connecting_closes_the_viewer_tabs_session():
     tab = _tab()
     old = tab._own_viewer()
     screen = _quick()
-    assert not old.connected and _idle(tab) and tab._connected is False
+    assert not old.connected
+    assert _idle(tab)
+    assert tab._connected is False
     assert tab._status.text() == _t("rd_viewer_displaced")
     assert tab._badge.text() == _t("rd_badge_idle")
     tab._disconnect()
@@ -207,7 +214,8 @@ def test_a_ws_quick_connect_session_survives_a_tcp_connect_elsewhere():
     screen = _quick("ws")
     tab = _tab()
     assert registry.owner_of(SLOT_WS_VIEWER) == screen._owner
-    assert screen._own_viewer().connected and screen._screen_window is not None
+    assert screen._own_viewer().connected
+    assert screen._screen_window is not None
     assert tab._own_viewer().connected
 
 
@@ -216,8 +224,10 @@ def test_quick_connect_changing_transport_ends_its_previous_session():
     first = screen._own_viewer()
     screen._dispatch_target(parse_target("desk:5555"), "tok")
     settle(screen)
-    assert not first.connected and registry.owner_of(SLOT_WS_VIEWER) is None
-    assert registry.owner_of(SLOT_VIEWER) == screen._owner and screen._screen_window is not None
+    assert not first.connected
+    assert registry.owner_of(SLOT_WS_VIEWER) is None
+    assert registry.owner_of(SLOT_VIEWER) == screen._owner
+    assert screen._screen_window is not None
 
 
 def test_a_panel_reconnecting_keeps_its_window():
@@ -225,24 +235,29 @@ def test_a_panel_reconnecting_keeps_its_window():
     first = tab._own_viewer()
     tab._connect()
     settle(tab)
-    assert not first.connected and tab._own_viewer().connected
-    assert tab._screen_window is not None and tab._status.text() != _t("rd_viewer_displaced")
+    assert not first.connected
+    assert tab._own_viewer().connected
+    assert tab._screen_window is not None
+    assert tab._status.text() != _t("rd_viewer_displaced")
 
 
 def test_a_late_notice_about_an_old_session_does_not_close_the_new_one():
     tab = _tab()
     tab._on_displaced(SLOT_VIEWER, SCRIPT_OWNER)      # queued before the reconnect, delivered after
-    assert tab._own_viewer().connected and tab._screen_window is not None
+    assert tab._own_viewer().connected
+    assert tab._screen_window is not None
     screen = _quick("ws")
     screen._on_displaced(SLOT_VIEWER, SCRIPT_OWNER)
-    assert screen._own_viewer().connected and screen._screen_window is not None
+    assert screen._own_viewer().connected
+    assert screen._screen_window is not None
 
 
 def test_a_script_connect_closes_the_panels_session(monkeypatch):
     _script_connect(monkeypatch)
     tab = _tab()
     registry.connect_viewer("desk", 5555, "tok")
-    assert _idle(tab) and tab._status.text() == _t("rd_viewer_displaced")
+    assert _idle(tab)
+    assert tab._status.text() == _t("rd_viewer_displaced")
     assert registry.viewer_status()["owner"] == SCRIPT_OWNER
     tab._disconnect()
     assert registry.viewer_status()["connected"] is True
@@ -251,7 +266,8 @@ def test_a_script_connect_closes_the_panels_session(monkeypatch):
 def test_a_script_disconnect_closes_the_panels_session():
     screen = _quick()
     registry.disconnect_viewer()
-    assert _idle(screen) and screen._viewer_badge.text() == _t("rd_quick_disconnected")
+    assert _idle(screen)
+    assert screen._viewer_badge.text() == _t("rd_quick_disconnected")
 
 
 def test_a_panel_takes_over_a_scripts_session(monkeypatch):
@@ -265,7 +281,8 @@ def test_a_panel_takes_over_a_scripts_session(monkeypatch):
     assert scripted.connected
     screen._dispatch_target(parse_target("desk:5555"), "tok")
     settle(screen)
-    assert not scripted.connected and registry.owner_of(SLOT_VIEWER) == screen._owner
+    assert not scripted.connected
+    assert registry.owner_of(SLOT_VIEWER) == screen._owner
 
 
 def test_a_frame_delivered_before_the_connect_result_is_shown_when_the_window_opens(qapp):
@@ -315,19 +332,23 @@ def test_starting_a_host_leaves_every_viewer_alone():
     tab, screen = _tab(), _quick("ws")
     _host_tab()
     connection_screen.QuickConnectScreen()._start_hosting()
-    assert tab._own_viewer().connected and screen._own_viewer().connected
+    assert tab._own_viewer().connected
+    assert screen._own_viewer().connected
 
 
 def test_quick_connect_hosting_replaces_the_host_tabs_host_and_tells_it(qapp):
     tab = _host_tab()
     first = registry.host
-    assert tab._shared is not None and registry.owner_of(SLOT_HOST) == tab._owner
+    assert tab._shared is not None
+    assert registry.owner_of(SLOT_HOST) == tab._owner
     screen = connection_screen.QuickConnectScreen()
     screen._start_hosting()
-    assert not first.is_running and registry.owner_of(SLOT_HOST) == screen._owner
+    assert not first.is_running
+    assert registry.owner_of(SLOT_HOST) == screen._owner
     assert tab._shared is None                       # no share text for a host it does not run
     tab._copy_share_text()
-    assert qapp.messages == [_t("rd_host_copy_share_unavailable")] and registry.host.is_running
+    assert qapp.messages == [_t("rd_host_copy_share_unavailable")]
+    assert registry.host.is_running
 
 
 def test_stop_stops_the_host_on_show_and_tells_its_owner():
@@ -336,13 +357,16 @@ def test_stop_stops_the_host_on_show_and_tells_its_owner():
     screen = connection_screen.QuickConnectScreen()
     assert screen._host_id_label.text() != "---"     # it shows the host as running
     screen._stop_hosting()
-    assert not running.is_running and registry.host is None and tab._shared is None
+    assert not running.is_running
+    assert registry.host is None
+    assert tab._shared is None
 
 
 def test_a_script_stopping_the_host_clears_the_panels_share_text():
     tab = _host_tab()
     registry.stop_host()
-    assert tab._shared is None and registry.host_status()["running"] is False
+    assert tab._shared is None
+    assert registry.host_status()["running"] is False
 
 
 # --- delivery --------------------------------------------------------------------------------------------------
@@ -367,9 +391,11 @@ def test_a_notice_from_another_thread_is_handled_on_the_gui_thread(qapp, monkeyp
     worker = threading.Thread(target=registry.disconnect_viewer, daemon=True)
     worker.start()
     worker.join(5.0)
-    assert handled == [] and tab._screen_window is not None      # nothing touched off the GUI thread
+    assert handled == []
+    assert tab._screen_window is not None  # nothing touched off the GUI thread
     assert _pump_until(qapp, lambda: bool(handled))
-    assert handled == [threading.main_thread()] and _idle(tab)
+    assert handled == [threading.main_thread()]
+    assert _idle(tab)
 
 
 def test_a_notice_for_a_destroyed_panel_is_dropped(qapp):

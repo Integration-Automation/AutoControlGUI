@@ -41,14 +41,16 @@ def test_real_pillow_hashing(tmp_path):
     pil_image.new("RGB", (64, 64), (255, 255, 255)).save(white)
 
     h_black = average_hash(str(black))
-    assert isinstance(h_black, str) and h_black
+    assert isinstance(h_black, str)
+    assert h_black
     assert average_hash(str(black)) == h_black                    # stable
     assert isinstance(dhash(str(black)), str)
 
     # two solid-but-different images dedupe down by perceptual hash
     unique = dedupe_images([str(black), str(black), str(white)],
                            max_distance=0)
-    assert len(unique) <= 3 and str(black) in unique
+    assert len(unique) <= 3
+    assert str(black) in unique
 
 
 # --- wiring ---------------------------------------------------------------

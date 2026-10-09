@@ -12,7 +12,7 @@ import json
 import sys
 import threading
 import time
-from typing import Any, Callable, Dict, List, Optional, TextIO, Union
+from typing import Any, Callable, Dict, List, Optional, TextIO
 
 from je_auto_control.utils.cli_output import utf8_stream
 from je_auto_control.utils.exception.exceptions import AutoControlException
@@ -83,7 +83,7 @@ class MCPServer(ConnectionStateMixin, StatelessDispatchMixin, SubscriptionMixin,
                  audit_logger: Optional[AuditLogger] = None,
                  rate_limiter: Optional[RateLimiter] = None,
                  log_bridge: Optional[MCPLogBridge] = None,
-                 tool_mode: Union[str, ToolMode, None] = None,
+                 tool_mode: str | ToolMode | None = None,
                  read_only: Optional[bool] = None,
                  ) -> None:
         registry = tools if tools is not None else build_default_tool_registry(read_only=read_only)
@@ -633,7 +633,7 @@ def _parse_request(line: str) -> "tuple[Optional[Dict[str, Any]], Optional[str]]
 
 
 def start_mcp_stdio_server(read_only: Optional[bool] = None,
-                           tool_mode: Union[str, ToolMode, None] = None) -> MCPServer:
+                           tool_mode: str | ToolMode | None = None) -> MCPServer:
     """Start a stdio MCP server in the foreground; blocks until EOF.
 
     ``read_only=True`` offers only tools marked read-only; ``None`` leaves

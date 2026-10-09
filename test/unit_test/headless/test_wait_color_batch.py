@@ -18,7 +18,8 @@ def test_succeeds_when_colour_reaches_fraction():
     outcome = wait_until_color(
         target_rgb=(0, 200, 0), tolerance=10, min_fraction=0.5, present=True,
         timeout_s=1.0, poll_interval_s=0.001, sampler=lambda region: green)
-    assert isinstance(outcome, WaitOutcome) and outcome.succeeded is True
+    assert isinstance(outcome, WaitOutcome)
+    assert outcome.succeeded is True
 
 
 def test_times_out_when_colour_absent():
@@ -26,7 +27,8 @@ def test_times_out_when_colour_absent():
     outcome = wait_until_color(
         target_rgb=(255, 0, 0), min_fraction=0.5, present=True,
         timeout_s=0.03, poll_interval_s=0.001, sampler=lambda region: blank)
-    assert outcome.succeeded is False and "timeout" in outcome.reason
+    assert outcome.succeeded is False
+    assert "timeout" in outcome.reason
 
 
 def test_vanish_succeeds_when_below_fraction():
@@ -78,4 +80,5 @@ def test_wiring():
 
 
 def test_facade_exports():
-    assert hasattr(ac, "wait_until_color") and "wait_until_color" in ac.__all__
+    assert hasattr(ac, "wait_until_color")
+    assert "wait_until_color" in ac.__all__

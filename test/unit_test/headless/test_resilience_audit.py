@@ -51,7 +51,8 @@ def test_a_token_bucket_refuses_impossible_requests(n):
 def test_the_sliding_window_wait_is_long_enough():
     now = [0.0]
     limiter = SlidingWindowLimiter(2, 10.0, clock=lambda: now[0])
-    assert limiter.try_acquire() and limiter.try_acquire()
+    assert limiter.try_acquire()
+    assert limiter.try_acquire()
     now[0] = 5.0
     wait = limiter.time_until_available()
     now[0] = 5.0 + wait - 0.5

@@ -178,4 +178,5 @@ def test_a_bare_max_age_is_not_fresh():
 def test_a_null_problem_type_is_about_blank():
     problem = parse_problem({"status": 400, "headers": {"Content-Type": "application/problem+json"},
                              "json": {"type": None, "title": "x"}})
-    assert problem is not None and problem.type == "about:blank"
+    assert problem is not None
+    assert problem.type == "about:blank"

@@ -180,7 +180,9 @@ def test_push_round_trip_uses_put():
     method, body = calls[0]
     assert method == "PUT"
     # Version 2: the bucket travels in an envelope naming what it was built on.
-    assert body["version"] == 2 and body["base_revision"] == 0 and body["operation_id"]
+    assert body["version"] == 2
+    assert body["base_revision"] == 0
+    assert body["operation_id"]
     assert body["bucket"]["user_id"] == "alice"
     assert "hk1" in body["bucket"]["sections"]["hotkeys"]
     assert local.revision == 1

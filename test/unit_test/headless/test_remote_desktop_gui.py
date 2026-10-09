@@ -185,7 +185,8 @@ def test_a_frame_that_beats_the_connect_result_is_shown(qapp):
         import types
         fake_viewer = types.SimpleNamespace(connected=True, disconnect=lambda *a, **k: None)
         panel._on_connected(fake_viewer)  # noqa: SLF001
-        assert window.display.has_image() and shown == ["show"]
+        assert window.display.has_image()
+        assert shown == ["show"]
         assert panel._early_frame is None  # noqa: SLF001
     finally:
         registry.evict("viewer", by=panel._owner)  # noqa: SLF001

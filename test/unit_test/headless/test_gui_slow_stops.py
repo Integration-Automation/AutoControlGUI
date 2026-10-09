@@ -70,7 +70,7 @@ class _Owner(QWidget):
         self.seen.append(("failed", self.op.busy, *values))
 
 
-@pytest.fixture()
+@pytest.fixture
 def owner():
     widget = _Owner()
     yield widget
@@ -142,10 +142,12 @@ def test_stop_returns_at_once_shows_stopping_and_ignores_a_second_click(  # noqa
         assert _timed(tab._on_stop) < _PROMPT_S, "Stop waited for the join on the GUI thread"
         assert engine.gate.entered.wait(10.0)
         assert engine.gate.threads[0] is not threading.main_thread()
-        assert op.busy and status.text() == _t("gui_op_stopping")
+        assert op.busy
+        assert status.text() == _t("gui_op_stopping")
         tab._on_stop()                      # a second click
         tab._on_start()                     # and a Start while the join is still out
-        assert engine.gate.calls == 1 and engine.starts == 0
+        assert engine.gate.calls == 1
+        assert engine.starts == 0
         assert status.text() == _t("gui_op_stopping")
     finally:
         engine.gate.release.set()
@@ -187,7 +189,7 @@ class _RestRegistry:
             return {"running": self.running, "url": "http://127.0.0.1:1", "token": "tok", "rbac": False}
 
 
-@pytest.fixture()
+@pytest.fixture
 def rest(monkeypatch):
     fake = _RestRegistry()
     monkeypatch.setattr(rest_api_tab, "rest_api_registry", fake)
@@ -201,8 +203,10 @@ def rest(monkeypatch):
 def test_rest_stop_is_off_the_gui_thread_and_the_refresh_timer_does_not_wait_for_the_lock(rest):
     tab, fake = rest
     assert _timed(tab._on_stop) < _PROMPT_S
-    assert fake.gate.entered.wait(10.0) and fake.gate.threads[0] is not threading.main_thread()
-    assert tab._status_label.text() == _t("gui_op_stopping") and tab._url_value.text() == "-"
+    assert fake.gate.entered.wait(10.0)
+    assert fake.gate.threads[0] is not threading.main_thread()
+    assert tab._status_label.text() == _t("gui_op_stopping")
+    assert tab._url_value.text() == "-"
     asked = fake.status_calls
     assert _timed(tab._refresh_status) < _PROMPT_S      # what the 2 s timer calls
     assert fake.status_calls == asked, "status() would have waited for the registry's lock"
@@ -223,8 +227,10 @@ def test_rest_start_replaces_the_server_off_the_gui_thread(rest):
     assert tab._status_label.text() == _t("gui_op_starting")
     fake.gate.release.set()
     assert settle_op(tab._server_op)
-    assert fake.starts[0]["port"] == 4321 and fake.starts[0]["token"] == "tok"
-    assert tab._status_label.text() == _t("rest_running") and tab._shared_token == "tok"
+    assert fake.starts[0]["port"] == 4321
+    assert fake.starts[0]["token"] == "tok"
+    assert tab._status_label.text() == _t("rest_running")
+    assert tab._shared_token == "tok"
 
 
 def test_a_rest_start_that_fails_is_reported_once_it_fails(rest, qapp):
@@ -236,7 +242,8 @@ def test_a_rest_start_that_fails_is_reported_once_it_fails(rest, qapp):
     fake.start = refuse
     tab._on_start()
     assert settle_op(tab._server_op)
-    assert qapp.messages == ["address already in use"] and not tab._server_op.busy
+    assert qapp.messages == ["address already in use"]
+    assert not tab._server_op.busy
 
 
 # --- USB sharing -----------------------------------------------------------------------------------------------
@@ -256,16 +263,20 @@ def test_usb_sharing_closes_its_loopback_off_the_gui_thread(monkeypatch, tmp_pat
     panel._enable_sharing()
     try:
         assert _timed(panel._disable_sharing) < _PROMPT_S
-        assert gate.entered.wait(10.0) and gate.threads[0] is not threading.main_thread()
+        assert gate.entered.wait(10.0)
+        assert gate.threads[0] is not threading.main_thread()
         assert panel._loopback is None, "the panel lets go at once: nothing opens a device through it"
         assert panel._host_badge.text() == _t("gui_op_stopping")
         panel._disable_sharing()
         panel._enable_sharing()             # ignored until the close reported
-        assert gate.calls == 1 and len(opened) == 1 and switched == [True]
+        assert gate.calls == 1
+        assert len(opened) == 1
+        assert switched == [True]
     finally:
         gate.release.set()
     assert settle_op(panel._share_op)
-    assert switched == [True, False] and panel._host_badge.text() == _t("usb_share_sharing_off")
+    assert switched == [True, False]
+    assert panel._host_badge.text() == _t("usb_share_sharing_off")
     panel._enable_sharing()
     assert len(opened) == 2
     opened[-1].close = lambda: None
@@ -297,7 +308,7 @@ class _Host:
         return None
 
 
-@pytest.fixture()
+@pytest.fixture
 def host(monkeypatch):
     for attr in ("_host", "_viewer", "_ws_host", "_ws_viewer"):
         monkeypatch.setattr(registry, attr, None)
@@ -327,17 +338,23 @@ def test_host_stop_joins_off_the_gui_thread_and_clears_the_slot_when_it_reports(
     running = registry.host
     _Host.gate = _Gate()
     assert _timed(host._stop) < _PROMPT_S
-    assert _Host.gate.entered.wait(10.0) and _Host.gate.threads[0] is not threading.main_thread()
+    assert _Host.gate.entered.wait(10.0)
+    assert _Host.gate.threads[0] is not threading.main_thread()
     assert host._badge.text() == _t("gui_op_stopping")
-    assert not host._start_btn.isEnabled() and not host._stop_btn.isEnabled()
+    assert not host._start_btn.isEnabled()
+    assert not host._stop_btn.isEnabled()
     host._stop()
     host._start()                           # ignored: the port is not free yet
-    assert _Host.gate.calls == 1 and _Host.order == [("start", "one"), ("stop", "one")]
+    assert _Host.gate.calls == 1
+    assert _Host.order == [("start", "one"), ("stop", "one")]
     _Host.gate.release.set()
     assert settle_op(host._host_op)
-    assert not running.is_running and registry.host is None and host._shared is None
+    assert not running.is_running
+    assert registry.host is None
+    assert host._shared is None
     assert host._badge.text() == _t("rd_badge_stopped")
-    assert host._start_btn.isEnabled() and host._stop_btn.isEnabled()
+    assert host._start_btn.isEnabled()
+    assert host._stop_btn.isEnabled()
 
 
 def test_host_start_stops_the_old_host_before_the_new_one_binds(host):
@@ -351,8 +368,10 @@ def test_host_start_stops_the_old_host_before_the_new_one_binds(host):
     _Host.gate.release.set()
     assert settle_op(host._host_op)
     assert _Host.order == [("start", "one"), ("stop", "one"), ("start", "two")]
-    assert registry.host.kwargs["token"] == "two" and registry.owner_of(SLOT_HOST) == host._owner
-    assert host._shared["host"] is registry.host and host._shared["token"] == "two"
+    assert registry.host.kwargs["token"] == "two"
+    assert registry.owner_of(SLOT_HOST) == host._owner
+    assert host._shared["host"] is registry.host
+    assert host._shared["token"] == "two"
 
 
 def test_a_host_that_comes_up_for_a_panel_that_is_gone_is_stopped(qapp, host):
@@ -377,9 +396,11 @@ def test_slow_op_reports_once_idle_again_and_passes_leading_arguments(owner):
     changes = []
     owner.op.busy_changed.connect(changes.append)
     assert owner.op.run(lambda: 7, on_done=owner.done, on_error=owner.failed, args=("ctx",))
-    assert owner.op.busy and not owner.op.run(lambda: 8)
+    assert owner.op.busy
+    assert not owner.op.run(lambda: 8)
     assert settle_op(owner.op)
-    assert owner.seen == [("done", False, "ctx", 7)] and changes == [True, False]
+    assert owner.seen == [("done", False, "ctx", 7)]
+    assert changes == [True, False]
     error = OSError("no")
 
     def fail():
@@ -395,7 +416,8 @@ def test_work_that_holds_a_widget_is_refused(owner):
         owner.op.run(owner.close)
     with pytest.raises(TaskUsageError):
         owner.stops.retire(owner.close)
-    assert not owner.op.busy and owner.stops.pending == 0
+    assert not owner.op.busy
+    assert owner.stops.pending == 0
 
 
 def test_a_stop_queue_counts_what_is_out_and_says_when_it_drained(owner):
@@ -405,10 +427,12 @@ def test_a_stop_queue_counts_what_is_out_and_says_when_it_drained(owner):
     owner.stops.retire(second)
     assert owner.stops.pending == 2
     first.release.set()
-    assert pump_until(lambda: owner.stops.pending == 1) and drained == []
+    assert pump_until(lambda: owner.stops.pending == 1)
+    assert drained == []
     second.release.set()
     assert settle_op(owner.stops)
-    assert drained == [0] and owner.seen == [("done", False, "first", None)]
+    assert drained == [0]
+    assert owner.seen == [("done", False, "first", None)]
 
 
 def test_stop_each_runs_every_stop_even_after_one_failed():

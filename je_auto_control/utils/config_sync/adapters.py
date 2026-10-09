@@ -27,7 +27,7 @@ import hashlib
 import json
 from dataclasses import dataclass, field, fields
 from pathlib import Path, PurePosixPath
-from typing import Any, ClassVar, Dict, Iterable, List, Mapping, Optional, Set, Tuple, Union
+from typing import Any, ClassVar, Dict, Iterable, List, Mapping, Optional, Set, Tuple
 
 from je_auto_control.utils.config_sync.bucket import ConfigSyncError
 from je_auto_control.utils.config_sync.versions import SyncEntry, SyncOperation
@@ -81,7 +81,7 @@ class SyncAdapter:
     #: Fields that describe this machine only and are never sent.
     local_fields: ClassVar[Tuple[str, ...]] = ()
 
-    def __init__(self, origin: str, *, scripts_dir: Union[str, Path, None] = None) -> None:
+    def __init__(self, origin: str, *, scripts_dir: str | Path | None = None) -> None:
         if not origin:
             raise ConfigSyncError("an adapter needs this device's id")
         self.origin = origin
@@ -300,7 +300,7 @@ class ScriptSyncAdapter(SyncAdapter):
 
     section = "scripts"
 
-    def __init__(self, origin: str, scripts_dir: Union[str, Path]) -> None:
+    def __init__(self, origin: str, scripts_dir: str | Path) -> None:
         super().__init__(origin, scripts_dir=scripts_dir)
         self._root = Path(scripts_dir)
         #: Scripts left out of the last snapshot, and why.
@@ -393,7 +393,7 @@ class HotkeySyncAdapter(SyncAdapter):
     arms_on_enable = True
 
     def __init__(self, origin: str, daemon: Any, *,
-                 scripts_dir: Union[str, Path, None] = None) -> None:
+                 scripts_dir: str | Path | None = None) -> None:
         super().__init__(origin, scripts_dir=scripts_dir)
         self._daemon = daemon
 
@@ -459,7 +459,7 @@ class TriggerSyncAdapter(SyncAdapter):
     arms_on_enable = True
 
     def __init__(self, origin: str, engine: Any, *,
-                 scripts_dir: Union[str, Path, None] = None) -> None:
+                 scripts_dir: str | Path | None = None) -> None:
         super().__init__(origin, scripts_dir=scripts_dir)
         self._engine = engine
         #: Triggers left out of the last snapshot, and why.

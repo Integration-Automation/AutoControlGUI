@@ -167,5 +167,6 @@ def test_anchor_description_includes_app_name():
         verify_step=lambda _a, _r: _a["x"] == 9,
         vlm_locate=vlm,
     ).replay(actions)
-    assert captured and "ShopApp" in captured[0]
+    assert captured
+    assert "ShopApp" in captured[0]
     assert "Submit" in captured[0]

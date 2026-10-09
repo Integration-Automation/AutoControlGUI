@@ -39,7 +39,7 @@ def _fresh_warnings():
     _private_file._warned.clear()
 
 
-@pytest.fixture()
+@pytest.fixture
 def warnings(caplog):
     caplog.set_level(logging.DEBUG, logger=autocontrol_logger.name)
     return lambda: [record.getMessage() for record in caplog.records
@@ -80,7 +80,7 @@ def test_each_group_is_named_once():
 
 # --- the decisions around it, with a fake platform ------------------------------------------
 
-@pytest.fixture()
+@pytest.fixture
 def fake_windows(monkeypatch):
     """Pretend to be Windows; ``calls`` records what was asked of the platform layer."""
     calls = {"created": [], "sddl": f"D:P(A;;FA;;;{_USER})"}
@@ -99,7 +99,8 @@ def test_a_private_key_is_created_through_the_restricting_call(fake_windows, tmp
     write_new_file(private, b"private", 0o600)
     write_new_file(public, b"public", 0o644)
     assert fake_windows["created"] == [private], "the public half is meant to be read"
-    assert private.read_bytes() == b"private" and public.read_bytes() == b"public"
+    assert private.read_bytes() == b"private"
+    assert public.read_bytes() == b"public"
 
 
 def test_the_per_user_key_file_is_created_the_same_way(fake_windows, tmp_path):
@@ -132,7 +133,8 @@ def test_when_the_access_list_cannot_be_set_the_key_is_created_and_it_is_said(
     private = tmp_path / "private.pem"
     write_new_file(private, b"private", 0o600)
     assert private.read_bytes() == b"private"
-    assert len(warnings()) == 1 and "could not restrict" in warnings()[0]
+    assert len(warnings()) == 1
+    assert "could not restrict" in warnings()[0]
 
 
 def test_loading_a_key_others_can_read_warns_once(fake_windows, tmp_path, warnings):
@@ -143,7 +145,8 @@ def test_loading_a_key_others_can_read_warns_once(fake_windows, tmp_path, warnin
     for _load in range(5):
         assert warn_if_exposed(path, "the private signing key") == ["Users", "Authenticated Users"]
     assert len(warnings()) == 1
-    assert "Users, Authenticated Users" in warnings()[0] and "icacls" in warnings()[0]
+    assert "Users, Authenticated Users" in warnings()[0]
+    assert "icacls" in warnings()[0]
 
 
 def test_loading_a_key_only_its_owner_can_read_says_nothing(fake_windows, tmp_path, warnings):
@@ -178,7 +181,8 @@ def test_the_signer_warns_about_an_exposed_private_key_and_still_signs(
     sign_action_file(flow, private_key_path=private)
     assert verify_action_file(flow, public_key_path=public).verified
     exposed = [line for line in warnings() if "readable by Everyone" in line]
-    assert len(exposed) == 1 and "private signing key" in exposed[0]
+    assert len(exposed) == 1
+    assert "private signing key" in exposed[0]
 
 
 def test_key_file_module_uses_the_shared_helper():
@@ -208,7 +212,9 @@ def test_a_new_private_file_has_a_protected_list_naming_this_user_only(tmp_path)
     assert user.startswith("S-1-5-")
     _owner, _sep, dacl = sddl.partition("D:")
     assert dacl.startswith("P"), "protected: nothing is inherited from the directory"
-    assert dacl.count("(") == 1 and dacl.startswith("P(A;;FA;;;") and dacl.endswith(")")
+    assert dacl.count("(") == 1
+    assert dacl.startswith("P(A;;FA;;;")
+    assert dacl.endswith(")")
     assert _names_only(dacl[len("P(A;;FA;;;"):-1], user)
     assert exposure(path) == []
 
@@ -229,7 +235,8 @@ def test_a_created_signing_key_is_restricted_and_its_public_half_is_not(tmp_path
     create_signing_keypair(private, public)
     user = _private_file._current_user_sid()
     _owner, _sep, dacl = _private_file._windows_dacl_sddl(private).partition("D:")
-    assert dacl.startswith("P(A;;FA;;;") and dacl.count("(") == 1
+    assert dacl.startswith("P(A;;FA;;;")
+    assert dacl.count("(") == 1
     assert _names_only(dacl[len("P(A;;FA;;;"):-1], user)
     assert "P(" not in _private_file._windows_dacl_sddl(public), "inherits, as before"
     assert b"PRIVATE KEY" in private.read_bytes()
@@ -273,7 +280,8 @@ def test_the_real_reader_reports_a_file_opened_up_to_everyone(tmp_path):
 def test_posix_exposure_follows_the_mode_bits(tmp_path):
     path = tmp_path / "key"
     os.close(open_new_private_file(path))
-    assert stat.S_IMODE(path.stat().st_mode) == 0o600 and exposure(path) == []
+    assert stat.S_IMODE(path.stat().st_mode) == 0o600
+    assert exposure(path) == []
     path.chmod(0o644)
     assert exposure(path) == ["group", "others"]
     path.chmod(0o640)

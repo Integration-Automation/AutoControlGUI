@@ -12,7 +12,9 @@ B = "line1\nCHANGED\nline3\nline4\n"
 def test_unified_diff_format():
     diff = unified_diff(A, B)
     assert "@@" in diff
-    assert "-line2" in diff and "+CHANGED" in diff and "+line4" in diff
+    assert "-line2" in diff
+    assert "+CHANGED" in diff
+    assert "+line4" in diff
 
 
 def test_apply_unified_round_trip():
@@ -46,14 +48,16 @@ def test_three_way_one_side_unchanged():
 def test_three_way_identical_changes():
     same = "A\nb\nc\nd\ne\n"
     result = three_way_merge(BASE, same, same)
-    assert result.clean is True and result.text == same
+    assert result.clean is True
+    assert result.text == same
 
 
 def test_three_way_conflict():
     result = three_way_merge(BASE, "X\nb\nc\nd\ne\n", "Y\nb\nc\nd\ne\n")
     assert result.clean is False
     assert result.conflicts == 1
-    assert "<<<<<<<" in result.text and ">>>>>>>" in result.text
+    assert "<<<<<<<" in result.text
+    assert ">>>>>>>" in result.text
 
 
 # --- wiring ---------------------------------------------------------------

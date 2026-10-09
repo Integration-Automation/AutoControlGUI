@@ -29,7 +29,8 @@ def test_a_filled_cell_is_returned_and_a_missing_one_is_a_typed_error():
     table = QTableWidget(1, 2)
     item = QTableWidgetItem("job-1")
     table.setItem(0, 0, item)
-    assert filled_item(table, 0, 0) is item and filled_item(table, 0, 0).text() == "job-1"
+    assert filled_item(table, 0, 0) is item
+    assert filled_item(table, 0, 0).text() == "job-1"
     with pytest.raises(AutoControlException, match="row 0, column 1"):
         filled_item(table, 0, 1)
     table.deleteLater()
@@ -43,7 +44,8 @@ def test_tr_hands_back_the_widget_it_was_given():
 
     tab = _Tab()
     button = QPushButton()
-    assert tab._tr(button, "audit_run") is button and button.text() != ""
+    assert tab._tr(button, "audit_run") is button
+    assert button.text() != ""
     button.deleteLater()
 
 

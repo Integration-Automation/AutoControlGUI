@@ -50,7 +50,7 @@ def _tool(name):
                    handler=lambda: {"ran": name}, input_schema=schema({}))
 
 
-@pytest.fixture()
+@pytest.fixture
 def users(tmp_path):
     store = UserStore(tmp_path / "users.json")
     store.tokens = {name: store.add_user(user_id=name, display_name=name, role=Role.OPERATOR)
@@ -58,7 +58,7 @@ def users(tmp_path):
     return store
 
 
-@pytest.fixture()
+@pytest.fixture
 def serve():
     started = []
 
@@ -100,7 +100,8 @@ def _call(name, arguments=None, msg_id=2):
 
 def _open_session(server, token=None):
     status, session, _body = _request(server, _INITIALIZE, token=token)
-    assert status == 200 and session
+    assert status == 200
+    assert session
     return session
 
 
@@ -154,7 +155,8 @@ def test_registry_refuses_to_terminate_for_another_owner():
     session = registry.create(owner="alice")
     with pytest.raises(SessionOwnerMismatch):
         registry.terminate(session.id, owner="bob")
-    assert dropped == [] and not session.closed.is_set()
+    assert dropped == []
+    assert not session.closed.is_set()
     assert registry.terminate(session.id, owner="alice") is session
     assert dropped == [session]
 
@@ -176,9 +178,11 @@ def test_another_user_cannot_post_into_the_session(serve, users):
     session = _open_session(server, users.tokens["alice"])
     listing = {"jsonrpc": "2.0", "id": 2, "method": "tools/list"}
     status, _session, body = _request(server, listing, users.tokens["bob"], session)
-    assert status == 403 and "another user" in body["error"]
+    assert status == 403
+    assert "another user" in body["error"]
     status, _session, body = _request(server, listing, users.tokens["alice"], session)
-    assert status == 200 and {tool["name"] for tool in body["result"]["tools"]} == {"peek", "look"}
+    assert status == 200
+    assert {tool["name"] for tool in body["result"]["tools"]} == {"peek", "look"}
 
 
 def test_another_user_cannot_attach_to_the_stream(serve, users):
@@ -215,9 +219,11 @@ def test_another_user_cannot_read_the_enabled_tool_view(serve, users):
     alice, bob = users.tokens["alice"], users.tokens["bob"]
     session = _open_session(server, alice)
     status, _session, body = _request(server, _call(ENABLE_TOOL, {"names": ["peek"]}), alice, session)
-    assert status == 200 and body["result"]["isError"] is False
+    assert status == 200
+    assert body["result"]["isError"] is False
     status, _session, body = _request(server, _call(STATE_TOOL), bob, session)
-    assert status == 403 and "peek" not in json.dumps(body)
+    assert status == 403
+    assert "peek" not in json.dumps(body)
     status, _session, body = _request(
         server, {"jsonrpc": "2.0", "id": 3, "method": "tools/list"}, bob, session)
     assert status == 403
@@ -225,7 +231,8 @@ def test_another_user_cannot_read_the_enabled_tool_view(serve, users):
     own = _open_session(server, bob)
     status, _session, body = _request(
         server, {"jsonrpc": "2.0", "id": 4, "method": "tools/list"}, bob, own)
-    assert status == 200 and "peek" not in {tool["name"] for tool in body["result"]["tools"]}
+    assert status == 200
+    assert "peek" not in {tool["name"] for tool in body["result"]["tools"]}
 
 
 def test_the_same_user_keeps_the_session_across_connections(serve, users):
@@ -234,7 +241,8 @@ def test_the_same_user_keeps_the_session_across_connections(serve, users):
     for _attempt in range(2):
         status, echoed, _body = _request(server, {"jsonrpc": "2.0", "id": 5, "method": "ping"},
                                          users.tokens["alice"], session)
-        assert status == 200 and echoed == session
+        assert status == 200
+        assert echoed == session
 
 
 # --- RBAC off: nobody is identified, so nothing changes -----------------------------------
@@ -245,7 +253,8 @@ def test_without_rbac_the_session_id_works_for_every_caller(serve, token):
     session = _open_session(server, token)
     status, _session, body = _request(
         server, {"jsonrpc": "2.0", "id": 2, "method": "tools/list"}, token, session)
-    assert status == 200 and len(body["result"]["tools"]) == 2
+    assert status == 200
+    assert len(body["result"]["tools"]) == 2
     connection, response = _open_stream(server, session, token)
     try:
         assert response.status == 200
@@ -285,7 +294,8 @@ def test_start_mcp_http_server_takes_tool_mode():
         _status, _session, body = _request(
             server, {"jsonrpc": "2.0", "id": 2, "method": "tools/list"}, session=session)
         names = {tool["name"] for tool in body["result"]["tools"]}
-        assert ENABLE_TOOL in names and "peek" not in names
+        assert ENABLE_TOOL in names
+        assert "peek" not in names
     finally:
         server.stop(timeout=2.0)
 
@@ -319,7 +329,8 @@ def test_the_plugin_watcher_thread_reaches_an_http_session(serve, tmp_path):
         assert response.status == 200
         (tmp_path / "late.py").write_text("def AC_late():\n    return 'late'\n", encoding="utf-8")
         event = _next_event(response)
-        assert event is not None and event["method"] == "notifications/tools/list_changed"
+        assert event is not None
+        assert event["method"] == "notifications/tools/list_changed"
         _status, _session, body = _request(
             server, {"jsonrpc": "2.0", "id": 2, "method": "tools/list"}, session=session)
         assert "plugin_ac_late" in {tool["name"] for tool in body["result"]["tools"]}

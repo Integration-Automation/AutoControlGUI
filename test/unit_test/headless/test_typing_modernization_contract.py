@@ -158,7 +158,8 @@ def test_exemptions_remain_empty():
 
 def test_the_strict_tier_never_relaxes_a_package_wide_setting():
     base = _pyproject()["tool"]["mypy"]
-    assert base["check_untyped_defs"] is True and base["no_implicit_optional"] is True
+    assert base["check_untyped_defs"] is True
+    assert base["no_implicit_optional"] is True
     assert "ignore_errors" not in base
     for block in base["overrides"]:
         assert "ignore_errors" not in block, f"ignore_errors in the override for {block['module']}"

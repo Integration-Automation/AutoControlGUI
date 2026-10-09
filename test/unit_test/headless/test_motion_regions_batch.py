@@ -25,7 +25,8 @@ def test_changed_regions_locates_the_block():
     regions = changed_regions(_before(), _after_block(), min_area=50)
     assert len(regions) == 1
     box = regions[0]
-    assert 30 <= box["x"] <= 55 and 25 <= box["y"] <= 45   # ~the (50,40) block
+    assert 30 <= box["x"] <= 55
+    assert 25 <= box["y"] <= 45  # ~the (50,40) block
 
 
 def test_has_motion_true_and_false():
@@ -67,4 +68,5 @@ def test_wiring():
 
 def test_facade_exports():
     for attr in ("changed_regions", "has_motion", "activity_score"):
-        assert hasattr(ac, attr) and attr in ac.__all__
+        assert hasattr(ac, attr)
+        assert attr in ac.__all__

@@ -37,7 +37,8 @@ def test_redact_modes():
     assert redact_pii_text("4111111111111111", mode="partial") == \
         "************1111"
     out = redact_pii_text("a@b.com", mode="hash")
-    assert out.startswith("[email:") and out.endswith("]")
+    assert out.startswith("[email:")
+    assert out.endswith("]")
 
 
 def test_no_pii_unchanged():

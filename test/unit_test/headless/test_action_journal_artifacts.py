@@ -22,7 +22,7 @@ def _journal_off():
     recorder.stop_action_journal()
 
 
-@pytest.fixture()
+@pytest.fixture
 def fake_executor():
     executor = Executor()
 
@@ -137,10 +137,12 @@ def test_lines_without_the_field_read_as_before_and_steps_without_artifacts_omit
            "status": "ok", "finished_at": 2.0, "error": None, "outcome": None}
     old.write_text(json.dumps(start) + "\n" + json.dumps(end) + "\n", encoding="utf-8")
     events = read_events(old)
-    assert events[0].artifacts == () and events[0].status == "ok"
+    assert events[0].artifacts == ()
+    assert events[0].status == "ok"
     assert SCHEMA_VERSION == 1
     event = ActionEvent(run_id="r", step_id="s", sequence=1, command="AC_x")
-    assert "artifacts" not in event.to_dict() and "artifacts" not in event.end_dict()
+    assert "artifacts" not in event.to_dict()
+    assert "artifacts" not in event.end_dict()
     journal = tmp_path / "journal.jsonl"
     recorder.start_action_journal(journal)
     fake_executor.execute_action([["AC_fake_trace"], ["AC_fake_fail"]])

@@ -62,7 +62,8 @@ def test_open_path_returns_opener_result():
 def test_executor_pure_plan_path():
     from je_auto_control.utils.executor.action_executor import _plan_open
     plan = _plan_open("https://example.com")
-    assert plan["backend"] == "webbrowser" and plan["kind"] == "url"
+    assert plan["backend"] == "webbrowser"
+    assert plan["kind"] == "url"
 
 
 def test_wiring():
@@ -78,4 +79,5 @@ def test_wiring():
 
 def test_facade_exports():
     for name in ("plan_open", "open_path"):
-        assert hasattr(ac, name) and name in ac.__all__
+        assert hasattr(ac, name)
+        assert name in ac.__all__

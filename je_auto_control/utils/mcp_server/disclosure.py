@@ -45,7 +45,7 @@ from collections import OrderedDict
 from dataclasses import dataclass
 from enum import Enum
 from typing import (
-    TYPE_CHECKING, Any, Callable, Dict, List, Mapping, Optional, Sequence, Tuple, Union,
+    TYPE_CHECKING, Any, Callable, Dict, List, Mapping, Optional, Sequence, Tuple,
 )
 
 from je_auto_control.utils.exception.exceptions import AutoControlException
@@ -101,7 +101,7 @@ class ToolMode(str, Enum):
     STATIC = "static"
 
 
-def resolve_mode(explicit: Union[str, ToolMode, None],
+def resolve_mode(explicit: str | ToolMode | None,
                  environ: Optional[Mapping[str, str]] = None) -> ToolMode:
     """The mode ``explicit`` names, else the one ``JE_AUTOCONTROL_MCP_TOOL_MODE`` does.
 
@@ -434,7 +434,7 @@ class ToolDisclosure:
     """
 
     def __init__(self, server: "MCPServer",
-                 mode: Union[str, ToolMode, None] = None, *,
+                 mode: str | ToolMode | None = None, *,
                  read_only: Optional[bool] = None,
                  profile: Optional[Sequence[str]] = None,
                  page_size: int = DEFAULT_PAGE_SIZE) -> None:

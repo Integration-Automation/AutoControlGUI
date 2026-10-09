@@ -221,4 +221,5 @@ def test_every_name_that_existed_before_is_still_there():
     for name in ("plus", "minus", "comma", "period", "ctrl", "enter", "oem_1", "oem_8",
                  "oem_102", "a", "A", "f24", "LAUNCH_APP2"):
         assert name in table, name
-    assert dict(table)["plus"] == 0xBB and dict(table)["minus"] == 0xBD
+    assert dict(table)["plus"] == 0xBB
+    assert dict(table)["minus"] == 0xBD

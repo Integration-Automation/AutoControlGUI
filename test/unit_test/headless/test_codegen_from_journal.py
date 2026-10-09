@@ -55,7 +55,7 @@ def _write(path, *lines):
     return path
 
 
-@pytest.fixture()
+@pytest.fixture
 def device_calls(monkeypatch):
     """Every action the executor would really dispatch while a test runs."""
     calls = []
@@ -86,7 +86,8 @@ def test_run_filter_and_provenance(tmp_path):
     lines = path.read_text(encoding="utf-8").splitlines()
     for step in steps:  # each step points at the line it was read from
         source = json.loads(lines[step["line"] - 1])
-        assert source["command"] == step["command"] and source["run_id"] == selected_run
+        assert source["command"] == step["command"]
+        assert source["run_id"] == selected_run
     assert candidate.manifest["event_count"] == 4
     assert candidate.manifest["validation"] == {
         "ast": True, "unknown_commands": [], "dry_run": True}
@@ -114,9 +115,11 @@ def test_observed_branch_is_labelled(tmp_path):
     assert modes == {"t-2": ("observed", True), "t-3": ("observed", False),
                      "t-4": ("observed", True)}
     text = " ".join(candidate.warnings)
-    assert "observed" in text and "'login' is not defined" in text
+    assert "observed" in text
+    assert "'login' is not defined" in text
     # Nothing that did not run is invented: no branch, no macro call.
-    assert "AC_call_macro" not in candidate.code and "AC_if" not in candidate.code
+    assert "AC_call_macro" not in candidate.code
+    assert "AC_if" not in candidate.code
 
 
 def test_a_macro_defined_in_the_run_is_rebuilt_not_observed(tmp_path):
@@ -128,7 +131,8 @@ def test_a_macro_defined_in_the_run_is_rebuilt_not_observed(tmp_path):
     ]
     _record(path, "macro", script)
     candidate = generate_candidate_from_log(path, run_id="macro")
-    assert candidate.actions == script and candidate.observed_path_only is False
+    assert candidate.actions == script
+    assert candidate.observed_path_only is False
 
 
 def test_secret_reference_survives_codegen(tmp_path):
@@ -142,7 +146,8 @@ def test_secret_reference_survives_codegen(tmp_path):
     assert candidate.actions[0][1]["password"] == "${secrets.db_password}"
     # The literal was masked before it reached the file, so the candidate
     # cannot hold it -- and it does not replay the mask as if it were a value.
-    assert PASSWORD not in candidate.code and PASSWORD not in json.dumps(candidate.manifest)
+    assert PASSWORD not in candidate.code
+    assert PASSWORD not in json.dumps(candidate.manifest)
     assert candidate.actions[1][1]["password"] == "${journal_redacted_1_1}"
     assert "'***'" not in candidate.code
     assert any("params.password is not replayable" in text for text in candidate.warnings)
@@ -241,7 +246,8 @@ def test_failed_and_unfinished_steps_are_flagged_not_dropped(tmp_path):
     candidate = generate_candidate_from_log(path, run_id="hand")
     assert len(candidate.actions) == 2
     text = " ".join(candidate.warnings)
-    assert "1 emitted step(s) failed" in text and "did not finish" in text
+    assert "1 emitted step(s) failed" in text
+    assert "did not finish" in text
     assert "skipped unreadable line(s) 3" in text
 
 
@@ -265,7 +271,8 @@ def test_cli_from_log(tmp_path, capsys, device_calls):
     _write(path, _line("t-1", 1, "AC_write", params={"write_string": "hello"}))
     assert cli.main(["codegen", "--from-log", str(path)]) == 0
     out = capsys.readouterr().out
-    assert "def test_journal_run_hand" in out and "'hello'" in out
+    assert "def test_journal_run_hand" in out
+    assert "'hello'" in out
 
     output, manifest = tmp_path / "test_candidate.py", tmp_path / "candidate.json"
     assert cli.main(["codegen", "--from-log", str(path), "--run-id", "hand",
@@ -273,7 +280,8 @@ def test_cli_from_log(tmp_path, capsys, device_calls):
                      "--manifest", str(manifest)]) == 0
     ast.parse(output.read_text(encoding="utf-8"))
     saved = json.loads(manifest.read_text(encoding="utf-8"))
-    assert saved["run_id"] == "hand" and saved["warnings"] == []
+    assert saved["run_id"] == "hand"
+    assert saved["warnings"] == []
 
     with path.open("a", encoding="utf-8") as handle:
         handle.write(_line("u-1", 1, "AC_write", params={}).replace('"hand"', '"two"') + "\n")
@@ -298,7 +306,8 @@ def test_executor_command_and_mcp_handler(tmp_path, device_calls):
                   _line("t-1", 1, "AC_write", params={"write_string": "hello"}))
     output = tmp_path / "out.py"
     result = _generate_code_from_journal(str(path), output=str(output))
-    assert result["manifest"]["run_id"] == "hand" and result["observed_path_only"] is False
+    assert result["manifest"]["run_id"] == "hand"
+    assert result["observed_path_only"] is False
     assert output.read_text(encoding="utf-8") == result["code"]
     handled = _handlers_qa.generate_code_from_log(str(path), run_id="hand", target="robot")
     assert handled["actions"] == [["AC_write", {"write_string": "hello"}]]

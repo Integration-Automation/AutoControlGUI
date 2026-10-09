@@ -30,12 +30,14 @@ def test_non_wide_uses_single_byte():
     blob = build_dropfiles(["ab.txt"], wide=False)
     assert struct.unpack("<5I", blob[:20])[4] == 0
     parsed = parse_dropfiles(blob)
-    assert parsed["paths"] == ["ab.txt"] and parsed["wide"] is False
+    assert parsed["paths"] == ["ab.txt"]
+    assert parsed["wide"] is False
 
 
 def test_point_and_non_client_flags():
     parsed = parse_dropfiles(build_dropfiles(["x"], point=(5, 9), non_client=True))
-    assert parsed["point"] == [5, 9] and parsed["non_client"] is True
+    assert parsed["point"] == [5, 9]
+    assert parsed["non_client"] is True
 
 
 def test_empty_paths_and_short_data_raise():
@@ -61,4 +63,5 @@ def test_wiring():
 def test_facade_exports():
     for name in ("build_dropfiles", "parse_dropfiles",
                  "set_clipboard_files", "get_clipboard_files"):
-        assert hasattr(ac, name) and name in ac.__all__
+        assert hasattr(ac, name)
+        assert name in ac.__all__

@@ -121,7 +121,8 @@ def test_a_resend_through_the_server_is_still_200(db):
     client = _app(db)
     first = client.put("/config/alice", json=_envelope(_bucket()), headers=_SECRET).json()
     again = client.put("/config/alice", json=_envelope(_bucket()), headers=_SECRET)
-    assert again.status_code == 200 and again.json()["revision"] == first["revision"]
+    assert again.status_code == 200
+    assert again.json()["revision"] == first["revision"]
 
 
 # --- the client ----------------------------------------------------------------
@@ -141,7 +142,8 @@ def test_the_client_raises_the_typed_error():
     with pytest.raises(OperationMismatchError) as raised:
         _push_against(_reply(409, {"detail": "operation id reused with other content",
                                    "code": "operation_mismatch", "revision": 7}))
-    assert raised.value.revision == 7 and raised.value.operation_id == "op-1"
+    assert raised.value.revision == 7
+    assert raised.value.operation_id == "op-1"
 
 
 def test_a_plain_409_is_still_a_revision_conflict():

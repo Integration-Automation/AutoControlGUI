@@ -53,7 +53,8 @@ def test_assign_node_paths_and_find_by_path():
     assert root.children[0].attributes["path"] == "0.0"
     assert root.children[0].children[1].attributes["path"] == "0.0.1"
     node = find_by_path(root, "0.0.1")
-    assert node is not None and node.name == "Name"
+    assert node is not None
+    assert node.name == "Name"
     assert find_by_path(root, "0.0.9") is None   # out of range
     assert find_by_path(root, "1.0") is None      # bad root
 
@@ -103,4 +104,5 @@ def test_wiring():
 def test_facade_exports():
     for name in ("control_type_name", "humanize_role", "humanize_tree",
                  "assign_node_paths", "find_by_path"):
-        assert hasattr(ac, name) and name in ac.__all__
+        assert hasattr(ac, name)
+        assert name in ac.__all__

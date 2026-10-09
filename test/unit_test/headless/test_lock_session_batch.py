@@ -39,7 +39,8 @@ def test_plan_lock_session_available_per_os():
     if plan["backend"] == "LockWorkStation":
         assert plan["argv"] is None
     else:
-        assert isinstance(plan["argv"], list) and len(plan["argv"]) >= 1
+        assert isinstance(plan["argv"], list)
+        assert len(plan["argv"]) >= 1
 
 
 # --- wait for unlock / lock -----------------------------------------------
@@ -136,4 +137,5 @@ def test_wiring():
 def test_facade_exports():
     for name in ("lock_session", "plan_lock_session", "wait_for_unlock",
                  "wait_for_lock", "classify_lock_transitions"):
-        assert hasattr(ac, name) and name in ac.__all__
+        assert hasattr(ac, name)
+        assert name in ac.__all__

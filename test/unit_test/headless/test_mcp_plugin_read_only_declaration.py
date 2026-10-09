@@ -37,7 +37,7 @@ def _no_ambient_configuration(monkeypatch):
     monkeypatch.setenv("JE_AUTOCONTROL_MCP_TOOL_PROFILE", f"{_PEEK},{_POKE}")
 
 
-@pytest.fixture()
+@pytest.fixture
 def log_records():
     """Records the framework logger emits (it does not propagate to caplog)."""
     records = []
@@ -112,7 +112,8 @@ def test_a_plugin_tool_is_mutating_by_default():
 def test_a_declared_tool_is_read_only_and_claims_nothing_else():
     plugin = _Plugin()
     hints = make_plugin_tool("AC_peek", plugin.commands["AC_peek"]).annotations.to_dict()
-    assert hints["readOnlyHint"] is True and hints["destructiveHint"] is False
+    assert hints["readOnlyHint"] is True
+    assert hints["destructiveHint"] is False
     assert hints["idempotentHint"] is False, "only read-only was declared"
     assert make_plugin_tool("AC_poke", plugin.commands["AC_poke"]).annotations.read_only is False
 
@@ -164,7 +165,8 @@ def test_a_declared_tool_runs_on_a_read_only_server(mode):
     assert register_plugin_tools(server, plugin.commands) == [_PEEK, _POKE]
     _enable(server, mode, _PEEK)
     listed = _listed(server)
-    assert _PEEK in listed and _POKE not in listed
+    assert _PEEK in listed
+    assert _POKE not in listed
     assert _call(server, _PEEK)["result"]["isError"] is False
     assert _call(server, _POKE)["error"]["code"] == -32602
     assert plugin.ran == ["peek"]
@@ -176,7 +178,8 @@ def test_an_undeclared_plugin_tool_still_does_not_run_read_only(mode):
     server = MCPServer(tools=[], read_only=True, tool_mode=mode)
     register_plugin_tools(server, plugin.commands)
     assert not {_PEEK, _POKE} & _listed(server)
-    assert "error" in _call(server, _PEEK) and "error" in _call(server, _POKE)
+    assert "error" in _call(server, _PEEK)
+    assert "error" in _call(server, _POKE)
     assert plugin.ran == []
 
 
@@ -207,7 +210,8 @@ def test_a_viewer_may_call_the_declared_tool_and_only_that_one(mode):
         _enable(server, mode, _PEEK)
         listed = _listed(server)
         peek, poke = _call(server, _PEEK), _call(server, _POKE)
-    assert _PEEK in listed and _POKE not in listed
+    assert _PEEK in listed
+    assert _POKE not in listed
     assert peek["result"]["isError"] is False
     assert "error" in poke
     assert plugin.ran == ["peek"]
@@ -225,7 +229,8 @@ def test_the_declared_tool_needs_read_screen_and_a_role_without_it_is_refused():
     server = MCPServer(tools=tools)
     with authorization_scope(AuthorizationContext("nobody", "no-such-role")):
         refused = _call(server, _PEEK)
-    assert "error" in refused and plugin.ran == []
+    assert "error" in refused
+    assert plugin.ran == []
 
 
 def test_registration_logs_which_tools_declared_it(log_records):
@@ -233,7 +238,9 @@ def test_registration_logs_which_tools_declared_it(log_records):
     register_plugin_tools(MCPServer(tools=[]), plugin.commands)
     declared = [record.getMessage() for record in log_records
                 if "trusted, not verified" in record.getMessage()]
-    assert len(declared) == 1 and _PEEK in declared[0] and _POKE not in declared[0]
+    assert len(declared) == 1
+    assert _PEEK in declared[0]
+    assert _POKE not in declared[0]
 
 
 def test_the_watcher_honours_and_logs_the_declaration(tmp_path, log_records):

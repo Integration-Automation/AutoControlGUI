@@ -97,7 +97,8 @@ def test_remove_without_origin_leaves_a_versioned_tombstone():
     bucket.upsert("hotkeys", "hk1", {"combo": "ctrl+a"}, origin="laptop")
     assert bucket.remove("hotkeys", "hk1") is True          # used to raise: "needs origin="
     entry = bucket.get_entry("hotkeys", "hk1")
-    assert entry.deleted and entry.vector == {"laptop": 1, default_device_id(): 1}
+    assert entry.deleted
+    assert entry.vector == {"laptop": 1, default_device_id(): 1}
     assert bucket.remove("hotkeys", "hk1") is False
 
 
@@ -138,7 +139,8 @@ def test_the_old_sync_records_this_device_as_a_peer(server):
     local.upsert("hotkeys", "hk1", {"combo": "ctrl+a"}, origin="laptop")
     merged, _conflicts = _client("laptop").sync(local)
     peer = PeerState.from_dict("laptop", server.body["peers"]["laptop"])
-    assert peer.acked_revision == merged.revision == 1 and not peer.retired
+    assert peer.acked_revision == merged.revision == 1
+    assert not peer.retired
     assert merged.peers == server.body["peers"]
 
 
@@ -190,7 +192,8 @@ def test_a_flat_bucket_file_after_its_first_sync_with_this_code(server):
     merged, _conflicts = _client("laptop").sync(local)
     stored = server.body["sections"]["hotkeys"]
     assert stored["old"] == {"combo": "ctrl+o", "last_modified": 100.0}
-    assert stored["edited"]["value"] == {"combo": "ctrl+E"} and stored["edited"]["vector"] == {"laptop": 1}
+    assert stored["edited"]["value"] == {"combo": "ctrl+E"}
+    assert stored["edited"]["vector"] == {"laptop": 1}
     assert stored["new"]["vector"] == {"laptop": 1}
     assert server.body["peers"]["laptop"]["acked_revision"] == 4
     assert merged.values("hotkeys") == {

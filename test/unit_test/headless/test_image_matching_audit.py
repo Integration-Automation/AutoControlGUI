@@ -45,7 +45,8 @@ def test_rotated_matches_on_a_light_background_and_report_screen_coordinates(off
     screen[40:40 + height, 50:50 + width] = np.where(mask > 0, rotated, 255)
     offset_screen(screen)
     match = match_rotated(template, angles=(30.0,), min_score=0.9)
-    assert match is not None and (match.x, match.y) == (550, 340)
+    assert match is not None
+    assert (match.x, match.y) == (550, 340)
 
 
 def test_rotated_sqdiff_picks_the_best_spot():

@@ -114,7 +114,7 @@ def _tree_connection():
     )
 
 
-@pytest.fixture()
+@pytest.fixture
 def backend(monkeypatch):
     """An available backend whose bus is the fake tree above."""
     connection = _tree_connection()

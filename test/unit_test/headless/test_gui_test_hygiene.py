@@ -81,9 +81,12 @@ def test_deleting_records_what_a_block_builds_and_deletes_it():
         nested = QWidget(first)
         assert made[:2] == [first, second]
     assert "__init__" not in vars(_Child), "an inherited __init__ was left overridden"
-    assert Shiboken.isValid(first) and Shiboken.isValid(second)     # scheduled, not yet deleted
+    assert Shiboken.isValid(first)
+    assert Shiboken.isValid(second)  # scheduled, not yet deleted
     app.sendPostedEvents(None, QEvent.Type.DeferredDelete.value)    # what conftest's flush does
-    assert not Shiboken.isValid(first) and not Shiboken.isValid(second) and not Shiboken.isValid(nested)
+    assert not Shiboken.isValid(first)
+    assert not Shiboken.isValid(second)
+    assert not Shiboken.isValid(nested)
     untracked = _Panel()                    # outside the block nothing is recorded
     assert Shiboken.isValid(untracked)
     untracked.deleteLater()

@@ -29,7 +29,8 @@ _TOKEN_COMMANDS = {"AC_user_add", "AC_user_rotate_token"}
 @pytest.mark.parametrize("command", _USER_COMMANDS)
 def test_every_user_command_has_a_schema_entry_matching_the_executor(command):
     spec = COMMAND_SPECS[command]
-    assert spec.category == "Security" and spec.description
+    assert spec.category == "Security"
+    assert spec.description
     accepted = inspect.signature(executor.event_dict[command]).parameters
     assert [field.name for field in spec.fields if field.name not in accepted] == []
     required = {name for name, parameter in accepted.items()
@@ -40,7 +41,8 @@ def test_every_user_command_has_a_schema_entry_matching_the_executor(command):
 def test_role_fields_offer_exactly_the_three_roles():
     for command in ("AC_user_add", "AC_user_set_role"):
         role = next(field for field in COMMAND_SPECS[command].fields if field.name == "role")
-        assert role.field_type is FieldType.ENUM and list(role.choices) == Role.all()
+        assert role.field_type is FieldType.ENUM
+        assert list(role.choices) == Role.all()
 
 
 def test_only_the_token_returning_commands_are_marked():
@@ -59,10 +61,12 @@ def test_a_run_record_is_shown_without_the_token(tmp_path):
     record = execute_action(actions)
     tokens = [value["token"] for value in record.values() if isinstance(value, dict)
               and "token" in value]
-    assert len(tokens) == 2 and all(len(token) > 20 for token in tokens)
+    assert len(tokens) == 2
+    assert all(len(token) > 20 for token in tokens)
     shown = json.dumps(displayable_record(record), default=str)
     assert not any(token in shown for token in tokens)
-    assert "ann" in shown and "operator" in shown, "everything but the token stays readable"
+    assert "ann" in shown, "everything but the token stays readable"
+    assert "operator" in shown, "everything but the token stays readable"
     assert UserStore(users).authenticate(tokens[1]).user_id == "ann", "the record itself is intact"
 
 
@@ -80,7 +84,8 @@ def test_a_marked_result_inside_a_nested_record_is_masked():
     nested = {"execute: ['AC_try', {}]": {"body": [
         {"execute: ['AC_user_add', {'user_id': 'x'}]": {"user_id": "x", "token": "tok-value"}}]}}
     shown = json.dumps(displayable_record(nested))
-    assert "tok-value" not in shown and '"user_id": "x"' in shown
+    assert "tok-value" not in shown
+    assert '"user_id": "x"' in shown
 
 
 def test_a_marked_command_answering_with_something_else_is_hidden_whole():
@@ -128,7 +133,8 @@ def test_the_builder_tab_does_not_put_the_token_in_its_result_pane(monkeypatch, 
         from headless._qt_settle import settle
         assert settle(tab._runs, "task")
         text = tab._result.toPlainText()
-        assert len(seen) == 1 and seen[0] not in text
+        assert len(seen) == 1
+        assert seen[0] not in text
         assert "eve" in text
     finally:
         tab.deleteLater()

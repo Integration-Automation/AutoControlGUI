@@ -39,7 +39,8 @@ def test_crlf_text_keeps_its_line_endings_through_a_diff():
 def test_a_merge_keeps_a_form_feed_inside_a_line():
     base = f"a{FF}q{LF}r{LF}s"
     merged = three_way_merge(base, f"a{FF}q{LF}R{LF}s", f"a{FF}q{LF}r{LF}S")
-    assert merged.clean and merged.text == f"a{FF}q{LF}R{LF}S"
+    assert merged.clean
+    assert merged.text == f"a{FF}q{LF}R{LF}S"
 
 
 def test_skeletons_decompose_before_and_after_mapping():
@@ -62,7 +63,8 @@ def test_the_fuzzy_fallback_is_symmetric_and_an_indel_ratio():
     similarity = fuzzy_match._similarity   # noqa: SLF001
     assert similarity("Settings", "Preferences") == similarity("Preferences", "Settings")
     assert abs(similarity("Settings", "Preferences") - 12 / 38) < 1e-9
-    assert similarity("", "") == 1.0 and similarity("a", "") == 0.0
+    assert similarity("", "") == 1.0
+    assert similarity("a", "") == 0.0
     rng = random.Random(7)
     for _ in range(300):
         left = "".join(rng.choice("abc") for _ in range(rng.randint(0, 9)))

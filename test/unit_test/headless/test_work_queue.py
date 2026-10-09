@@ -9,7 +9,7 @@ import je_auto_control as ac
 from je_auto_control.utils.work_queue import WorkQueue
 
 
-@pytest.fixture()
+@pytest.fixture
 def q(tmp_path):
     return WorkQueue(str(tmp_path / "q.db"), "test")
 
@@ -37,7 +37,8 @@ def test_complete_records_success(q):
     item = q.get_next()
     q.complete(item.id, output={"ok": True})
     stats = q.stats()
-    assert stats["success"] == 1 and stats["new"] == 0
+    assert stats["success"] == 1
+    assert stats["new"] == 0
 
 
 def test_application_error_retries_then_fails(q):

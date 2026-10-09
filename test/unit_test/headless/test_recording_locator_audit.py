@@ -52,7 +52,8 @@ def test_a_no_op_verdict_repeats_the_action_in_every_form(verdict):
 
     outcome = run_with_repair(act, lambda: len(calls) >= 2, verdict_for=lambda: verdict,
                               sleep=lambda _s: None)
-    assert outcome.ok and len(calls) == 2
+    assert outcome.ok
+    assert len(calls) == 2
 
 
 def test_a_torn_multibyte_line_skips_only_itself(tmp_path):

@@ -86,4 +86,5 @@ def test_to_dict_includes_average_and_share(profiler):
     assert payload["name"] == "a"
     assert payload["calls"] == 1
     assert payload["average_seconds"] == pytest.approx(0.4)
-    assert "min_seconds" in payload and "max_seconds" in payload
+    assert "min_seconds" in payload
+    assert "max_seconds" in payload

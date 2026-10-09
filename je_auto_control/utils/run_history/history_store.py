@@ -10,7 +10,7 @@ import threading
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING, Callable, List, Optional, Sequence, Tuple, Union
+from typing import TYPE_CHECKING, Callable, List, Optional, Sequence, Tuple
 
 from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
@@ -126,7 +126,7 @@ class HistoryStore:
     """SQLite-backed run log. Safe to share across threads."""
 
     def __init__(self,
-                 path: Union[str, Path, Callable[[], Path]] = _IN_MEMORY_DB,
+                 path: str | Path | Callable[[], Path] = _IN_MEMORY_DB,
                  ) -> None:
         # A callable is resolved on first use. The module-level
         # ``default_history_store`` is built while the package imports, and

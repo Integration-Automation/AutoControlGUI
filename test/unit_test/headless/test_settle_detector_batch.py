@@ -30,7 +30,8 @@ def test_tracker_incremental_and_reset():
     tracker = SettleTracker(quiet_samples=2, max_churn=1.0)
     assert tracker.update(0.5).settled is False
     state = tracker.update(0.4)
-    assert state.settled is True and state.quiet_run == 2
+    assert state.settled is True
+    assert state.quiet_run == 2
     tracker.reset()
     assert tracker.update(0.3).settled is False   # run cleared
 
@@ -49,4 +50,5 @@ def test_wiring():
 
 def test_facade_exports():
     for name in ("settle_point", "is_settled", "SettleTracker", "SettleState"):
-        assert hasattr(ac, name) and name in ac.__all__
+        assert hasattr(ac, name)
+        assert name in ac.__all__

@@ -18,7 +18,8 @@ def test_generate_sop_structure_and_html():
         ["AC_write", {"write_string": "<b>hi</b>"}],
     ]
     doc = generate_sop(actions, title="Login Flow")
-    assert doc["title"] == "Login Flow" and doc["step_count"] == 3
+    assert doc["title"] == "Login Flow"
+    assert doc["step_count"] == 3
     assert [s["n"] for s in doc["steps"]] == [1, 2, 3]
     assert doc["steps"][1]["description"] == "Click the mouse"
     # HTML escapes user content and is well-formed

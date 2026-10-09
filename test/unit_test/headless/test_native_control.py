@@ -55,7 +55,7 @@ class _FakeBackend(AccessibilityBackend):
         return [["Sam", "30"], ["Lee", "25"]]
 
 
-@pytest.fixture()
+@pytest.fixture
 def fake(monkeypatch):
     backend = _FakeBackend()
     monkeypatch.setattr(api, "get_backend", lambda: backend)

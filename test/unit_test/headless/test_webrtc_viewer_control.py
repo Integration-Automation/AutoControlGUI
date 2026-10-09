@@ -498,7 +498,8 @@ def test_a_file_pushed_by_the_host_lands_and_is_announced(viewer,
     channel.fire("message", b"data")
     channel.fire("message", json.dumps({"type": "file_end"}))
     assert (inbox / "pushed.txt").read_bytes() == b"data"
-    assert seen and seen[0].name == "pushed.txt"
+    assert seen
+    assert seen[0].name == "pushed.txt"
 
 
 def test_a_file_arriving_with_no_listener_is_still_written(viewer,

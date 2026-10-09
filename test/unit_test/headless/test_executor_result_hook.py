@@ -20,7 +20,7 @@ from je_auto_control.utils.executor.result_hook import StepPosition, observe_res
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 
 
-@pytest.fixture()
+@pytest.fixture
 def runner():
     """An executor with three fake commands: one answers, one fails, one hands back its argument."""
     executor = Executor()
@@ -64,8 +64,8 @@ def test_a_command_in_a_loop_is_reported_once_per_iteration_with_its_path(runner
     assert issued == [
         ({"token": "issued-n"}, (StepPosition(1, 2, "AC_loop"), StepPosition(run, 2, "AC_fake_issue")))
         for run in (1, 2, 3)]
-    assert seen[-1][0] == "AC_loop" and seen[-1][3] == (StepPosition(1, 2, "AC_loop"),), \
-        "the block itself is reported last, at its own position"
+    assert seen[-1][0] == "AC_loop", "the block itself is reported last, at its own position"
+    assert seen[-1][3] == (StepPosition(1, 2, "AC_loop"),), "the block itself is reported last, at its own position"
     assert "issued-n" not in repr(record), "the block still records only its summary"
 
 
@@ -109,8 +109,10 @@ def test_the_run_returns_and_logs_the_same_with_and_without_a_hook(runner, caplo
     plain_record, plain_log = run()
     seen, hook = _recorder()
     hooked_record, hooked_log = run(result_callback=hook)
-    assert hooked_record == plain_record and hooked_log == plain_log
-    assert len(seen) == 4 and "issued-" not in "\n".join(hooked_log)
+    assert hooked_record == plain_record
+    assert hooked_log == plain_log
+    assert len(seen) == 4
+    assert "issued-" not in "\n".join(hooked_log)
 
 
 def test_a_hook_that_raises_does_not_fail_the_run_and_only_its_type_is_logged(runner, caplog):
@@ -127,7 +129,8 @@ def test_a_hook_that_raises_does_not_fail_the_run_and_only_its_type_is_logged(ru
     assert list(record.values()) == [{"token": "issued-n"}, 2]
     logged = "\n".join(entry.getMessage() for entry in caplog.records)
     assert "result hook raised ValueError" in logged
-    assert "issued-n" not in logged and "saw" not in logged
+    assert "issued-n" not in logged
+    assert "saw" not in logged
 
 
 def test_the_hook_ends_with_its_run_and_with_its_block(runner):
@@ -152,7 +155,8 @@ def test_the_hook_ends_when_the_run_raises(runner):
         runner.execute_action([["AC_loop", {"times": 1, "body": [["AC_fake_fail"]]}]],
                               raise_on_error=True, result_callback=hook)
     runner.execute_action([["AC_fake_issue"]])
-    assert seen == [] and result_hook.enter_list() is None
+    assert seen == []
+    assert result_hook.enter_list() is None
 
 
 def test_another_thread_and_a_thread_started_by_the_run_are_not_observed(runner):

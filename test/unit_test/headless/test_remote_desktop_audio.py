@@ -54,7 +54,7 @@ class _FakeSounddevice:
         return self.last_output
 
 
-@pytest.fixture()
+@pytest.fixture
 def fake_sd(monkeypatch):
     fake = _FakeSounddevice()
 

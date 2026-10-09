@@ -92,7 +92,8 @@ def test_a_spanning_box_is_counted_once_at_its_anchor():
     assert {"row": 0, "col": 0, "text": "Merged Header"} in result["cells"]
     assert result["spans"][0]["col_span"] == 2
     sliver = populate_table(_GRID, [{"x": 20, "y": 5, "width": 85, "height": 20, "text": "Wide"}])
-    assert sliver["spans"] == [] and {"row": 0, "col": 0, "text": "Wide"} in sliver["cells"]
+    assert sliver["spans"] == []
+    assert {"row": 0, "col": 0, "text": "Wide"} in sliver["cells"]
 
 
 def test_tesseract_boxes_are_read_and_bad_boxes_are_value_errors():

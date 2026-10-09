@@ -44,7 +44,8 @@ def _panels_deleted():
 def test_positional_arguments_survive_a_round_trip():
     actions = [["AC_type_keyboard", ["a"]], ["AC_click_mouse", {"mouse_keycode": "mouse_left"}]]
     steps = actions_to_steps(actions)
-    assert steps[0].args == ["a"] and steps_to_actions(steps) == actions
+    assert steps[0].args == ["a"]
+    assert steps_to_actions(steps) == actions
 
 
 @pytest.mark.parametrize("action", [["AC_x", {}, "extra"], ["AC_x", "abc"]])
@@ -91,7 +92,8 @@ def test_a_positional_step_has_no_editors_to_overwrite_it():
     step = Step("AC_type_keyboard", args=["a"])
     form = StepFormView()
     form.load_step(step)
-    assert form._editors == {} and step.params == {}
+    assert form._editors == {}
+    assert step.params == {}
 
 
 # --- the tree and the tab ----------------------------------------------------------------------------------------

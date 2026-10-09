@@ -16,11 +16,13 @@ def test_parse_all_stars_matches_every_minute():
 
 def test_parse_comma_list_and_step():
     expr = parse_cron("0,30 * * * *")
-    assert 0 in expr.minutes and 30 in expr.minutes
+    assert 0 in expr.minutes
+    assert 30 in expr.minutes
     assert 15 not in expr.minutes
 
     every_five = parse_cron("*/5 * * * *")
-    assert 0 in every_five.minutes and 55 in every_five.minutes
+    assert 0 in every_five.minutes
+    assert 55 in every_five.minutes
     assert 7 not in every_five.minutes
 
 

@@ -148,7 +148,7 @@ def test_focusing_a_window_that_has_closed_is_shown(qapp, monkeypatch):
 
 # --- USB sharing -----------------------------------------------------------------------------
 
-@pytest.fixture()
+@pytest.fixture
 def usb_panel(qapp, tmp_path):
     panel_mod = pytest.importorskip("je_auto_control.gui.usb_passthrough_panel",
                                     reason="gui stack not importable", exc_type=ImportError)
@@ -176,7 +176,8 @@ def test_destroying_the_usb_panel_stops_sharing(qapp, usb_panel):
     panel.deleteLater()
     del panel
     _flush_deletes(qapp)
-    assert closed == [1] and not is_usb_passthrough_enabled()
+    assert closed == [1]
+    assert not is_usb_passthrough_enabled()
 
 
 def test_a_usb_row_without_ids_is_reported_not_raised(qapp, usb_panel):
@@ -198,7 +199,8 @@ def test_the_live_hud_polls_only_while_shown_and_detaches_its_tail(qapp):
     hud = LiveHUDTab()
     tail = hud._log_tail  # noqa: SLF001
     hud._start()  # noqa: SLF001
-    assert tail in autocontrol_logger.handlers and not hud._timer.isActive()  # noqa: SLF001
+    assert tail in autocontrol_logger.handlers
+    assert not hud._timer.isActive()  # noqa: SLF001
     hud.show()
     assert hud._timer.isActive()  # noqa: SLF001
     hud.hide()
@@ -223,7 +225,8 @@ def test_a_hidden_tab_is_owned_and_stays_hidden(qapp):
     owner, page = _Owner(), QWidget()
     AutoControlGUIWidget._add_tab(owner, "k", "k", page)
     owner.show()
-    assert page.parent() is owner and not page.isVisible()
+    assert page.parent() is owner
+    assert not page.isVisible()
     owner.deleteLater()
 
 
@@ -254,7 +257,8 @@ def test_a_choice_outside_the_list_is_kept(qapp):
     sfv._set_enum_value(combo, "mouse_x1")  # noqa: SLF001
     assert combo.currentText() == "mouse_x1"
     sfv._set_enum_value(combo, "mouse_right")  # noqa: SLF001
-    assert combo.currentText() == "mouse_right" and combo.count() == 3
+    assert combo.currentText() == "mouse_right"
+    assert combo.count() == 3
 
 
 def test_each_usb_prompt_dialog_is_deleted(qapp, monkeypatch):

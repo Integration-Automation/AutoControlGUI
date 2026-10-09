@@ -77,4 +77,5 @@ def test_wiring():
 
 def test_facade_exports():
     for attr in ("image_histogram", "compare_histograms", "histogram_changed"):
-        assert hasattr(ac, attr) and attr in ac.__all__
+        assert hasattr(ac, attr)
+        assert attr in ac.__all__

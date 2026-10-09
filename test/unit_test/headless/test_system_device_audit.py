@@ -33,7 +33,8 @@ def test_keep_awake_children_end_with_this_process():
     assert "-w" in idle_keepawake._caffeinate_argv(plan)
     assert str(os.getpid()) in idle_keepawake._caffeinate_argv(plan)
     argv = idle_keepawake._systemd_argv(plan)
-    assert "infinity" not in argv and f"--pid={os.getpid()}" in argv
+    assert "infinity" not in argv
+    assert f"--pid={os.getpid()}" in argv
 
 
 def test_windows_keep_awake_is_held_by_its_own_thread(monkeypatch):
@@ -50,8 +51,10 @@ def test_windows_keep_awake_is_held_by_its_own_thread(monkeypatch):
     release = idle_keepawake._win_keep_awake(0x80000003)
     release()
     holders = {ident for ident, _flags in threads}
-    assert len(holders) == 1 and threading.get_ident() not in holders
-    assert threads[0][1] == 0x80000003 and threads[-1][1] == 0x80000000
+    assert len(holders) == 1
+    assert threading.get_ident() not in holders
+    assert threads[0][1] == 0x80000003
+    assert threads[-1][1] == 0x80000000
 
 
 @pytest.mark.parametrize("check", [verhoeff_validate, damm_validate])
