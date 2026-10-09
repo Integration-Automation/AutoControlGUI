@@ -58,6 +58,9 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261009-36 | 2026-10-09 | GUI: task callbacks held weakly, dispose() on every panel and tab with background work, per-thread UI Automation, 52 fewer typing exemptions | #done #gui #accessibility #typing | [2026-10](2026-10.md) |
+| U-20261009-35 | 2026-10-09 | Config sync: oversize blobs refused before upload, unused blobs collected, a deletion held for 30 days, the mirror sees same-tick edits | #done #sync | [2026-10](2026-10.md) |
+| U-20261009-34 | 2026-10-09 | A stop wakes the polling waits; MCP can stop and list runs; a USB ACL file that fails its check denies everything; per-thread context | #done #executor #mcp #security #rbac | [2026-10](2026-10.md) |
 | U-20261009-33 | 2026-10-09 | The three newer macOS probes are asserted; the Python 3.10 segfault item is closed | #done #macos #ci | [2026-10](2026-10.md) |
 | U-20261009-32 | 2026-10-09 | READMEs list every environment variable, Sphinx builds without warnings, typing is also checked against the real Qt types | #done #docs #ci #typing | [2026-10](2026-10.md) |
 | U-20261009-31 | 2026-10-09 | Journal artifacts and exact-match secret masking, a Robot structure check, a VLM strategy and verified heals, real capability probes | #done #journal #self-healing #capabilities | [2026-10](2026-10.md) |
@@ -382,7 +385,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | File | Period | Entries |
 |---|---|---:|
-| [2026-10.md](2026-10.md) | 2026-10 | 46 |
+| [2026-10.md](2026-10.md) | 2026-10 | 49 |
 | [2026-09-e.md](2026-09-e.md) | 2026-09 | 7 |
 | [2026-09-d.md](2026-09-d.md) | 2026-09 | 55 |
 | [2026-09-c.md](2026-09-c.md) | 2026-09 | 38 |
