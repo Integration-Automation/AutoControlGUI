@@ -152,8 +152,9 @@ def test_only_authorized_tools_are_indexed():
             "", limit=MAX_SEARCH_LIMIT)]
         assert hidden_tool not in search_names
         assert "fx_where" in search_names
+        index = server.disclosure.index()
         with pytest.raises(ToolDiscoveryError):
-            server.disclosure.index().get_schema(hidden_tool)
+            index.get_schema(hidden_tool)
     # No user store, no RBAC: the same server indexes everything.
     assert hidden_tool in [item.name for item in server.disclosure.index().search(
         "", limit=MAX_SEARCH_LIMIT)]
@@ -182,7 +183,8 @@ def test_discover_and_schema_tools_go_through_the_dispatcher():
     server = _progressive()
     found = _payload(_call(server, "ac_tools_search", {"query": "mouse", "limit": 1}))
     assert [item["name"] for item in found["tools"]] == ["fx_click"]
-    assert found["total"] == 2 and found["truncated"] is True
+    assert found["total"] == 2
+    assert found["truncated"] is True
     assert "inputSchema" not in found["tools"][0]
     assert found["tools"][0]["enabled"] is False
     described = _payload(_call(server, "ac_tools_schema", {"name": "fx_shot"}))

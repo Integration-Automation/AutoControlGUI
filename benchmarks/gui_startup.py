@@ -97,8 +97,8 @@ def run(runs: int) -> Dict[str, Any]:
     }
 
 
-def main(argv: Optional[List[str]] = None) -> int:
-    """Command line entry point."""
+def main(argv: Optional[List[str]] = None) -> None:
+    """Command line entry point; a failure leaves as an exception, so there is no status to return."""
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--runs", type=int, default=5, help="cold starts to measure (default 5)")
     parser.add_argument("--output", help="write the JSON report here instead of stdout")
@@ -109,10 +109,9 @@ def main(argv: Optional[List[str]] = None) -> int:
         _child()
     if args.compare:
         bench.emit(bench.compare(bench.load(args.compare[0]), bench.load(args.compare[1])), args.output)
-        return 0
+        return
     bench.emit(run(args.runs), args.output)
-    return 0
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    main()

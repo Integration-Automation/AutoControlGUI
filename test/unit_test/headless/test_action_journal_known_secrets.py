@@ -31,7 +31,7 @@ def _journal_off():
     recorder.stop_action_journal()
 
 
-@pytest.fixture()
+@pytest.fixture
 def fake_executor(monkeypatch):
     import je_auto_control.utils.secrets as secrets_module
     monkeypatch.setattr(secrets_module, "default_secret_manager",
@@ -73,7 +73,8 @@ def test_the_escaped_form_an_error_repr_holds_is_masked_too(tmp_path, fake_execu
     fake_executor.execute_action([["AC_fake_fail", {"text": "${secrets.quoted}"}]])
     recorder.stop_action_journal()
     text = _file_text(journal)
-    assert "quoted" not in text.replace("secrets.quoted", "") and "one" not in text
+    assert "quoted" not in text.replace("secrets.quoted", "")
+    assert "one" not in text
     assert MASK in read_events(journal)[0].error
 
 
@@ -108,13 +109,14 @@ def test_a_secret_cut_by_the_length_limit_leaves_no_prefix(tmp_path, fake_execut
 
 def test_write_secret_input_and_vault_reads_are_noted(tmp_path, monkeypatch):
     import je_auto_control.wrapper.auto_control_keyboard as keyboard_module
+    from je_auto_control.utils.exception.exceptions import AutoControlKeyboardException
     from je_auto_control.utils.secret_ref.secret_ref import RefResolver
     noted = []
     monkeypatch.setattr(recorder, "note_secret_value",
                         lambda value: noted.append(value) or True)
     # Refuse before any key event: the note has to happen first.
     monkeypatch.setattr(keyboard_module, "keyboard", object())
-    with pytest.raises(Exception):
+    with pytest.raises(AutoControlKeyboardException, match="cannot type Unicode"):
         keyboard_module.write_secret(PLAIN)
     resolver = RefResolver(secret_resolver=lambda name: f"value-of-{name}")
     assert resolver.resolve("secret://db") == "value-of-db"
@@ -148,4 +150,5 @@ def test_values_are_dropped_when_the_journal_stops(tmp_path):
     recorder.note_secret_value(PLAIN)
     stopped = recorder.stop_action_journal()
     assert PLAIN not in repr(stopped)
-    assert recorder._LAST is not None and recorder._LAST.secret_values() == ()
+    assert recorder._LAST is not None
+    assert recorder._LAST.secret_values() == ()

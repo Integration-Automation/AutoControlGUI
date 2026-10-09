@@ -206,8 +206,9 @@ def test_removed_tool_cannot_run():
 def test_the_core_tools_cannot_be_shadowed_or_removed():
     recorder = _Recorder()
     server = MCPServer(tools=recorder.tools(), tool_mode="progressive")
+    shadow = recorder.tool("ac_tools_enable")
     with pytest.raises(ToolDisclosureError):
-        server.register_tool(recorder.tool("ac_tools_enable"))
+        server.register_tool(shadow)
     with pytest.raises(ToolDisclosureError):
         server.unregister_tool("ac_tools_search")
     assert _names(_rpc(server, "tools/list")) == list(CORE_TOOL_NAMES)

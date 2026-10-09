@@ -41,8 +41,10 @@ def test_file_association_uses_injected_resolver():
 def test_file_association_missing_fields_default_to_none():
     info = file_association(".xyz", resolver=lambda ext: {})
     assert info["ext"] == ".xyz"
-    assert info["exe"] is None and info["friendly"] is None
-    assert info["command"] is None and info["content_type"] is None
+    assert info["exe"] is None
+    assert info["friendly"] is None
+    assert info["command"] is None
+    assert info["content_type"] is None
 
 
 def test_file_association_normalizes_before_resolving():
@@ -76,4 +78,5 @@ def test_wiring():
 
 def test_facade_exports():
     for name in ("normalize_ext", "file_association"):
-        assert hasattr(ac, name) and name in ac.__all__
+        assert hasattr(ac, name)
+        assert name in ac.__all__

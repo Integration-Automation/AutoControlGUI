@@ -48,7 +48,7 @@ class _Fakes:
         raise AutoControlException("boom")
 
 
-@pytest.fixture()
+@pytest.fixture
 def fakes() -> _Fakes:
     return _Fakes()
 
@@ -93,7 +93,8 @@ def test_stop_wakes_a_sleep_and_skips_the_rest(fakes):
     thread.join(_WAIT)
     assert not thread.is_alive()
     assert isinstance(outcome["error"], ExecutionStopped)
-    assert outcome["error"].run_id == "sleeper" and outcome["error"].reason == "user"
+    assert outcome["error"].run_id == "sleeper"
+    assert outcome["error"].reason == "user"
     assert "after" not in fakes.calls
     assert time.monotonic() - started < 30
     assert active_executions() == []
@@ -105,8 +106,9 @@ def test_stop_is_not_recorded_and_not_caught_by_try_or_retry(fakes):
     actions = [["AC_try", {"body": [["AC_retry", {"body": [["AC_fake"]], "max_attempts": 3}]],
                           "catch": [["AC_fake", {"tag": "catch"}]],
                           "finally": [["AC_fake", {"tag": "finally"}]]}]]
+    run = stoppable_run(token=token)
     with pytest.raises(ExecutionStopped):
-        with stoppable_run(token=token):
+        with run:
             fakes.executor.execute_action(actions)
     assert fakes.calls == []  # stopped before the first action: no try was entered
 
@@ -149,8 +151,9 @@ def test_stop_ends_a_loop_with_an_empty_body(fakes):
     token_seen = []
     fakes.executor.event_dict["AC_fake_stop_self"] = lambda: token_seen.append(current_stop_token().stop())
     actions = [["AC_fake_stop_self"], ["AC_loop", {"times": 5, "body": []}]]
+    run = stoppable_run(token=token)
     with pytest.raises(ExecutionStopped):
-        with stoppable_run(token=token):
+        with run:
             fakes.executor.execute_action(actions)
     assert token_seen == [True]
 
@@ -158,8 +161,9 @@ def test_stop_ends_a_loop_with_an_empty_body(fakes):
 def test_stop_under_raise_on_error_false_still_raises(fakes):
     token = StopToken()
     fakes.executor.event_dict["AC_fake_stop_self"] = token.stop
+    run = stoppable_run(token=token)
     with pytest.raises(ExecutionStopped):
-        with stoppable_run(token=token):
+        with run:
             fakes.executor.execute_action(
                 [["AC_fake_fail"], ["AC_fake_stop_self"], ["AC_fake", {"tag": "never"}]],
                 raise_on_error=False)
@@ -179,8 +183,9 @@ def test_held_key_and_button_are_released_only_when_stopped(fakes, monkeypatch):
                ["AC_release_keyboard_key", {"keycode": "a"}],
                ["AC_press_mouse", {"mouse_keycode": "mouse_left"}],
                ["AC_fake_stop_self"], ["AC_fake"]]
+    run = stoppable_run(token=token)
     with pytest.raises(ExecutionStopped):
-        with stoppable_run(token=token):
+        with run:
             fakes.executor.execute_action(actions)
     assert released == [("mouse", "mouse_left"), ("key", "shift")]
 
@@ -232,8 +237,9 @@ def test_swallowed_stop_is_raised_again_at_the_next_checkpoint(fakes):
         return "not raised"
 
     fakes.executor.event_dict["AC_fake_swallow"] = swallow
+    run = stoppable_run(token=token)
     with pytest.raises(ExecutionStopped):
-        with stoppable_run(token=token):
+        with run:
             fakes.executor.execute_action([["AC_fake_swallow"], ["AC_fake", {"tag": "never"}]])
     assert fakes.calls == []
 
@@ -300,6 +306,7 @@ def test_execute_action_with_vars_run_id(monkeypatch):
 
 def test_facade_and_commands():
     for name in ("ExecutionStopped", "StopToken", "active_executions", "stop_execution", "stoppable_run"):
-        assert name in ac.__all__ and hasattr(ac, name)
+        assert name in ac.__all__
+        assert hasattr(ac, name)
     assert issubclass(ac.ExecutionStopped, AutoControlException)
     assert {"AC_run_stoppable", "AC_stop_execution", "AC_list_executions"} <= ac.executor.known_commands()

@@ -13,7 +13,8 @@ _BOXES = [
 
 def test_cluster_groups_rows_and_orders_columns():
     grid = cluster_grid(_BOXES)
-    assert len(grid) == 2 and [len(r) for r in grid] == [3, 3]
+    assert len(grid) == 2
+    assert [len(r) for r in grid] == [3, 3]
     assert [b[0] for b in grid[0]] == [10, 110, 210]   # left-to-right
     assert [b[1] for b in grid[0]] == [100, 100, 100]   # top row
 
@@ -21,8 +22,10 @@ def test_cluster_groups_rows_and_orders_columns():
 def test_locate_cell_returns_center():
     cell = locate_cell(_BOXES, 1, 2)
     assert cell["found"] is True
-    assert cell["center"] == [220, 205] and cell["box"] == [210, 200, 20, 10]
-    assert cell["rows"] == 2 and cell["cols"] == 3
+    assert cell["center"] == [220, 205]
+    assert cell["box"] == [210, 200, 20, 10]
+    assert cell["rows"] == 2
+    assert cell["cols"] == 3
 
 
 def test_out_of_range():
@@ -50,7 +53,8 @@ def test_executor_round_trip():
                                               [110, 100, 20, 10]]),
                          "row": 0, "col": 1}]])
     out = next(v for v in rec.values() if isinstance(v, dict))
-    assert out["found"] is True and out["center"] == [120, 105]
+    assert out["found"] is True
+    assert out["center"] == [120, 105]
 
 
 def test_wiring():
@@ -66,4 +70,5 @@ def test_wiring():
 
 def test_facade_exports():
     for attr in ("cluster_grid", "locate_cell"):
-        assert hasattr(ac, attr) and attr in ac.__all__
+        assert hasattr(ac, attr)
+        assert attr in ac.__all__

@@ -68,4 +68,5 @@ def test_wiring():
 def test_facade_exports():
     for attr in ("canonicalize_url", "normalize_url", "urls_equal",
                  "build_query", "parse_query"):
-        assert hasattr(ac, attr) and attr in ac.__all__
+        assert hasattr(ac, attr)
+        assert attr in ac.__all__

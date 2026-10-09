@@ -32,7 +32,8 @@ def test_detect_scale_finds_the_rendering_scale():
     assert result["margin"] > 0.3   # clearly beats the runner-up
     # centre near the embedded 60x60 block at (50,60)
     cx, cy = result["center"]
-    assert 70 <= cx <= 110 and 80 <= cy <= 120
+    assert 70 <= cx <= 110
+    assert 80 <= cy <= 120
 
 
 def test_detect_scale_at_unity():
@@ -65,7 +66,8 @@ def test_executor_pure_path():
     from je_auto_control.utils.executor.action_executor import _detect_scale
     # pass ndarrays straight through (executor coerces only str args)
     out = _detect_scale(template, _haystack_at(template, 2.0))
-    assert out["found"] is True and out["result"]["scale_percent"] == 200
+    assert out["found"] is True
+    assert out["result"]["scale_percent"] == 200
 
 
 def test_wiring():
@@ -81,4 +83,5 @@ def test_wiring():
 
 def test_facade_exports():
     for name in ("detect_scale", "scale_sweep"):
-        assert hasattr(ac, name) and name in ac.__all__
+        assert hasattr(ac, name)
+        assert name in ac.__all__

@@ -67,4 +67,5 @@ def test_facade_exports():
     for name in ("build_rtf", "rtf_to_text", "rows_to_csv", "csv_to_rows",
                  "set_clipboard_rtf", "get_clipboard_rtf",
                  "set_clipboard_csv", "get_clipboard_csv"):
-        assert hasattr(ac, name) and name in ac.__all__
+        assert hasattr(ac, name)
+        assert name in ac.__all__

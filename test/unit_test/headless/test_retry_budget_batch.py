@@ -81,10 +81,10 @@ def test_run_with_budget_exhausts_attempts_and_reraises():
         attempts["n"] += 1
         raise ValueError("nope")
 
+    budget = RetryBudget(max_attempts=3, jitter=JITTER_NONE)
     with pytest.raises(ValueError):
         run_with_budget(
-            always_fail, RetryBudget(max_attempts=3, jitter=JITTER_NONE),
-            clock=lambda: 0.0, sleep=lambda _s: None)
+            always_fail, budget, clock=lambda: 0.0, sleep=lambda _s: None)
     assert attempts["n"] == 3
 
 
@@ -96,10 +96,10 @@ def test_run_with_budget_respects_deadline():
         attempts["n"] += 1
         raise RuntimeError("slow")
 
+    budget = RetryBudget(max_attempts=None, deadline_s=5.0, jitter=JITTER_NONE)
     with pytest.raises(RuntimeError):
         run_with_budget(
-            always_fail,
-            RetryBudget(max_attempts=None, deadline_s=5.0, jitter=JITTER_NONE),
+            always_fail, budget,
             clock=lambda: next(ticks), sleep=lambda _s: None)
     # gave up on the deadline, not after many attempts
     assert attempts["n"] == 2
@@ -109,10 +109,10 @@ def test_run_with_budget_propagates_unlisted_exception():
     def boom():
         raise KeyError("uncaught")
 
+    budget = RetryBudget(max_attempts=5, exceptions=(ValueError,))
     with pytest.raises(KeyError):
         run_with_budget(
-            boom, RetryBudget(max_attempts=5, exceptions=(ValueError,)),
-            clock=lambda: 0.0, sleep=lambda _s: None)
+            boom, budget, clock=lambda: 0.0, sleep=lambda _s: None)
 
 
 def test_run_with_budget_caps_sleep_to_remaining_deadline():
@@ -167,4 +167,5 @@ def test_wiring():
 def test_facade_exports():
     for name in ("RetryBudget", "run_with_budget", "backoff_delay",
                  "jittered_delay"):
-        assert hasattr(ac, name) and name in ac.__all__
+        assert hasattr(ac, name)
+        assert name in ac.__all__

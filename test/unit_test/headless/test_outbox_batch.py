@@ -38,7 +38,8 @@ def test_drain_retries_then_dead_letters():
     box.drain(always_fail, max_attempts=5)
     assert box.pending() == []
     dead = box.dead_letters()
-    assert len(dead) == 1 and dead[0]["error"] == "sink down"
+    assert len(dead) == 1
+    assert dead[0]["error"] == "sink down"
 
 
 def test_drain_resumes_after_transient_failure():
@@ -83,7 +84,8 @@ def test_executor_round_trip():
     rec = ac.execute_action([[
         "AC_outbox_enqueue", {"name": name, "event": '{"type": "x"}'}]])
     out = next(v for v in rec.values() if isinstance(v, dict))
-    assert out["id"] == "1" and out["pending"] == 1
+    assert out["id"] == "1"
+    assert out["pending"] == 1
     rec2 = ac.execute_action([["AC_outbox_pending", {"name": name}]])
     pending = next(v for v in rec2.values() if isinstance(v, dict))["pending"]
     assert pending[0]["event"]["type"] == "x"
@@ -101,4 +103,5 @@ def test_wiring():
 
 
 def test_facade_exports():
-    assert hasattr(ac, "Outbox") and "Outbox" in ac.__all__
+    assert hasattr(ac, "Outbox")
+    assert "Outbox" in ac.__all__

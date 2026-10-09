@@ -21,11 +21,11 @@ document.addEventListener("DOMContentLoaded", () => {
   }
   saveBtn.addEventListener("click", () => {
     sessionStorage.setItem(BEARER_STASH, tokenInput.value.trim());
-    refreshAll();
+    refreshAndReport();
   });
   serverInfo.textContent = `${location.protocol}//${location.host}`;
-  refreshAll();
-  pollTimer = setInterval(refreshAll, POLL_MS);
+  refreshAndReport();
+  pollTimer = setInterval(refreshAndReport, POLL_MS);
 });
 
 function getToken() {
@@ -59,7 +59,7 @@ async function forbiddenMessage(resp, path) {
   } catch (_error) {
     body = null;
   }
-  if (!body || !body.required_capability) {
+  if (!body?.required_capability) {
     return `HTTP 403 on ${path}`;
   }
   const role = body.role ? `role '${body.role}'` : "this token";
@@ -126,6 +126,14 @@ async function refreshAll() {
     refreshUsb(),
     refreshAudit(),
   ]);
+}
+
+// Each panel reports its own failure, so a rejection here is one nothing
+// caught: show it on every panel instead of leaving it to the console.
+function refreshAndReport() {
+  refreshAll().catch((error) => {
+    PANELS.forEach((name) => setPanelStatus(name, String(error.message || error), "error"));
+  });
 }
 
 async function refreshDiagnostics() {

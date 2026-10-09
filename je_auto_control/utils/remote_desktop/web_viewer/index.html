@@ -595,7 +595,8 @@ async function pollOffer(hostId, deadlineMs) {
     } catch (error) {
       if (!String(error).includes("404")) throw error;
     }
-    await new Promise(r => setTimeout(r, 1000));
+    // NOSONAR javascript:S9382 - reason: polling, each attempt waits for the last
+    await new Promise(r => setTimeout(r, 1000));  // NOSONAR
   }
   throw new Error("timed out waiting for host offer");
 }
@@ -946,9 +947,11 @@ async function sendLocalFile(file) {
   setStatus(t("msg_sending", { name: file.name, sent: 0, total: file.size }));
   while (offset < file.size) {
     const slice = file.slice(offset, offset + chunkSize);
-    const buf = await slice.arrayBuffer();
+    // NOSONAR javascript:S9382 - reason: chunks go out in file order, and the
+    // inner wait is backpressure on the one data channel; neither can be parallel.
+    const buf = await slice.arrayBuffer();  // NOSONAR
     while (filesChannel.bufferedAmount > 4 * 1024 * 1024) {
-      await new Promise((r) => setTimeout(r, 20));
+      await new Promise((r) => setTimeout(r, 20));  // NOSONAR
     }
     filesChannel.send(buf);
     offset += buf.byteLength;
@@ -1205,7 +1208,8 @@ filesPanel.addEventListener("drop", async (e) => {
   if (!filesChannel || filesChannel.readyState !== "open") return;
   const droppedFiles = Array.from(e.dataTransfer.files || []);
   for (const f of droppedFiles) {
-    try { await sendLocalFile(f); } catch (err) {
+    // NOSONAR javascript:S9382 - reason: one transfer at a time on the files channel
+    try { await sendLocalFile(f); } catch (err) {  // NOSONAR
       setStatus(t("msg_upload_failed",
         { name: f.name, error: String(err) }), "#ff6666");
     }
@@ -1225,10 +1229,11 @@ els.themeBtn.addEventListener("click", toggleTheme);
 els.fullscreenBtn.addEventListener("click", toggleFullscreen);
 
 if ("serviceWorker" in navigator) {
-  // This file is a plain <script>, not a module, so top-level await is
-  // not legal here. Service-worker registration is best-effort: any
-  // rejection is silently swallowed.
-  navigator.serviceWorker.register("sw.js").catch(() => {});  // NOSONAR non-module script, top-level await illegal here
+  // Registered once the page has loaded, so it never competes with the
+  // first paint. Registration is best-effort: a rejection is swallowed.
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("sw.js").catch(() => {});
+  });
 }
 </script>
 </body>

@@ -47,8 +47,9 @@ def test_a_palette_image_is_read_by_colour_not_index():
 
 @pytest.mark.parametrize("scale", [0, -2, float("nan")])
 def test_upscale_refuses_a_non_positive_scale(scale):
+    image = np.zeros((4, 4), dtype=np.uint8)
     with pytest.raises(ValueError):
-        pre.upscale(np.zeros((4, 4), dtype=np.uint8), scale=scale)
+        pre.upscale(image, scale=scale)
 
 
 def test_the_adaptive_steps_take_block_size_and_c():
@@ -76,7 +77,8 @@ def test_deskew_sees_light_and_dark_themes(dark_theme):
 def test_non_ascii_paths_round_trip(tmp_path):
     path = tmp_path / "測試.png"
     write_image(path, np.full((3, 5, 3), 200, dtype=np.uint8))
-    assert path.exists() and read_image(path, cv2.IMREAD_COLOR).shape == (3, 5, 3)
+    assert path.exists()
+    assert read_image(path, cv2.IMREAD_COLOR).shape == (3, 5, 3)
     assert pre.to_grayscale(str(path)).shape == (3, 5)
 
 
@@ -92,7 +94,8 @@ def test_a_red_glyph_matches_its_copy_and_not_a_green_one():
     haystack[30:50, 20:40] = _plus((255, 0, 0))
     haystack[30:50, 80:100] = _plus((0, 255, 0))
     match = match_color(_plus((255, 0, 0)), haystack=haystack, min_score=0.9)
-    assert match is not None and (match.x, match.y) == (20, 30)
+    assert match is not None
+    assert (match.x, match.y) == (20, 30)
 
 
 @pytest.mark.parametrize("mode", ["RGBA", "L"])
@@ -105,7 +108,8 @@ def test_a_golden_of_another_size_is_a_mismatch(tmp_path):
     golden = tmp_path / "g.png"
     Image.new("RGB", (10, 10)).save(golden)
     result = compare_to_golden(str(golden), actual=Image.new("RGB", (12, 10)))
-    assert result.matched is False and result.diff_pct == 100.0
+    assert result.matched is False
+    assert result.diff_pct == 100.0
 
 
 def test_an_approval_extension_cannot_leave_the_folder(tmp_path):

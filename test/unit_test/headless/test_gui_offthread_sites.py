@@ -49,7 +49,7 @@ class _Gate:
         return bool(self.threads) and all(ident != threading.get_ident() for ident in self.threads)
 
 
-@pytest.fixture()
+@pytest.fixture
 def boxes(monkeypatch):
     _app = QApplication.instance() or QApplication([])
     shown = []
@@ -115,7 +115,8 @@ def test_media_checks_run_off_thread(boxes, monkeypatch):
     assert not video.calls
     audio.release.set()
     assert settle(tab._runs, "task")
-    assert tab._result.text() == "heard sound" and audio.off_gui_thread()
+    assert tab._result.text() == "heard sound"
+    assert audio.off_gui_thread()
     assert audio.calls[0][1]["raise_on_fail"] is False
 
     tab._video_path.setText("clip.mp4")
@@ -142,7 +143,8 @@ def test_assertion_runs_off_thread(boxes, monkeypatch):
     gate.release.set()
     assert settle(tab._runs, "task")
     assert gate.off_gui_thread()
-    assert tab._result.text().startswith(_t("assert_passed")) and "found" in tab._result.text()
+    assert tab._result.text().startswith(_t("assert_passed"))
+    assert "found" in tab._result.text()
 
 
 def test_a_short_pixel_coordinate_is_still_explained(boxes):
@@ -167,7 +169,8 @@ def test_self_heal_locate_runs_off_thread(boxes, monkeypatch):
     assert gate.entered.wait(_WAIT)
     gate.release.set()
     assert settle(tab._runs, "task")
-    assert gate.off_gui_thread() and "(template)" in tab._status.text()
+    assert gate.off_gui_thread()
+    assert "(template)" in tab._status.text()
     assert gate.calls[0][1]["template_path"] == "button.png"
 
 
@@ -180,7 +183,7 @@ class _FakeSession:
         self.send_file = send
 
 
-@pytest.fixture()
+@pytest.fixture
 def quick_connect(boxes, monkeypatch, tmp_path):
     from je_auto_control.gui.remote_desktop import connection_screen
     from je_auto_control.utils.remote_desktop.address_book import AddressBook
@@ -214,7 +217,8 @@ def test_a_failed_upload_is_reported_and_a_disconnect_is_not(quick_connect, boxe
     monkeypatch.setattr(screen, "_own_viewer", lambda: _FakeSession(failing))
     screen._on_files_dropped(["a.txt", "b.txt"])
     assert settle(screen._uploads, "task")
-    assert boxes == ["disk full on the host"] and len(failing.calls) == 1
+    assert boxes == ["disk full on the host"]
+    assert len(failing.calls) == 1
 
     boxes.clear()
     closing = _Gate(error=OSError("socket closed"))
@@ -240,7 +244,7 @@ def test_nothing_is_uploaded_without_a_session(quick_connect, monkeypatch):
 
 # --- WebRTC panels ------------------------------------------------------------------------------------------
 
-@pytest.fixture()
+@pytest.fixture
 def webrtc_panel(boxes):
     pytest.importorskip("av")
     pytest.importorskip("aiortc")
@@ -261,7 +265,8 @@ def test_apply_answer_runs_off_thread_and_consumes_the_session(webrtc_panel, box
     assert len(gate.calls) == 1
     gate.release.set()
     assert settle(panel, "_answer_task")
-    assert gate.off_gui_thread() and gate.calls[0][0] == ("sess-1", "v=0 answer")
+    assert gate.off_gui_thread()
+    assert gate.calls[0][0] == ("sess-1", "v=0 answer")
     assert panel._manual_session_id is None
     assert panel._status_label.text() == _t("rd_webrtc_answer_applied")
 
@@ -305,7 +310,8 @@ def test_host_file_push_runs_off_thread(webrtc_panel, boxes, monkeypatch):
     assert boxes == [_t("rd_file_busy")]
     gate.release.set()
     assert settle(panel, "_file_task")
-    assert gate.off_gui_thread() and gate.calls[0][0] == ("C:/tmp/report.pdf",)
+    assert gate.off_gui_thread()
+    assert gate.calls[0][0] == ("C:/tmp/report.pdf",)
     assert boxes[-1] == _t("rd_webrtc_push_done").format(n=2, name="C:/tmp/report.pdf")
 
 
@@ -339,5 +345,6 @@ def test_an_upload_that_fails_for_every_file_is_reported(webrtc_panel, boxes):
     panel._viewer = types.SimpleNamespace(authenticated=True, send_file=failing)
     panel._on_upload_paths(["a.bin", "b.bin"])
     assert settle(panel, "_file_task")
-    assert boxes == ["files channel not open yet"] and len(failing.calls) == 2
+    assert boxes == ["files channel not open yet"]
+    assert len(failing.calls) == 2
     panel._viewer = None

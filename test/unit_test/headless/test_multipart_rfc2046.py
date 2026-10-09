@@ -34,7 +34,8 @@ def test_a_generated_boundary_avoids_the_content(monkeypatch):
 def test_a_boundary_rfc_2046_does_not_allow_is_refused(boundary):
     with pytest.raises(MultipartError) as caught:
         build_multipart({"a": "1"}, boundary=boundary)
-    assert isinstance(caught.value, AutoControlException) and isinstance(caught.value, ValueError)
+    assert isinstance(caught.value, AutoControlException)
+    assert isinstance(caught.value, ValueError)
 
 
 @pytest.mark.parametrize("boundary, parameter", [("simple-B_1.x", "simple-B_1.x"), ("with space", '"with space"'),

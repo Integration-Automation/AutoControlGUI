@@ -172,7 +172,7 @@ class AuthorisationLedger:
                 current, state=state, detail=detail,
                 compositor=granted_by if granted else current.compositor)
             self._records[channel] = updated
-            return updated
+            return updated  # NOSONAR python:S5886  # reason: dataclasses.replace returns its argument's type
 
     def reset(self, channel: Optional[str] = None) -> None:
         """Forget ``channel`` (or every channel), so it may be asked again."""

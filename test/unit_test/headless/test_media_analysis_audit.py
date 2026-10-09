@@ -50,7 +50,8 @@ def test_an_unreadable_video_is_an_error_not_zero_motion(tmp_path):
 
 def test_a_negative_ignore_box_still_ignores_its_visible_part():
     keep = _keep_mask((10, 10), [(-5, 0, 10, 10)])
-    assert not keep[:, :5].any() and keep[:, 5:].all()
+    assert not keep[:, :5].any()
+    assert keep[:, 5:].all()
 
 
 def test_masked_pixels_do_not_dilute_the_difference():
@@ -58,14 +59,16 @@ def test_masked_pixels_do_not_dilute_the_difference():
     actual = Image.new("RGB", (10, 10), (255, 255, 255))
     differing, total, _overlay = image_difference(
         actual, expected, masks=[MaskRegion(0, 0, 8, 9)])
-    assert total == 10 * 10 - 9 * 10 and differing == total
+    assert total == 10 * 10 - 9 * 10
+    assert differing == total
 
 
 def test_grayscale_arrays_are_compared_as_images():
     gray = np.zeros((4, 4), np.uint8)
     gray[2, 3] = 255
     rgb = _to_rgb(gray)
-    assert rgb.shape == (4, 4, 3) and rgb[2, 3].tolist() == [255, 255, 255]
+    assert rgb.shape == (4, 4, 3)
+    assert rgb[2, 3].tolist() == [255, 255, 255]
 
 
 def test_the_video_report_loader_takes_paths_and_pil_frames(tmp_path):

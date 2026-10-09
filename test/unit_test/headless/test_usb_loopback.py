@@ -75,5 +75,5 @@ def test_loopback_after_close_rejects_calls(tmp_path):
     acl = _allow_all_acl(tmp_path, _SAMPLE)
     loop = UsbLoopback(backend=backend, acl=acl)
     loop.close()
-    with pytest.raises(Exception):
+    with pytest.raises(UsbClientError, match="shut down"):
         loop.list_devices()

@@ -35,7 +35,8 @@ def test_a_stale_claim_can_be_reclaimed(queue, tmp_path):
         conn.execute("UPDATE work_items SET updated=?", (time.time() - 3600,))
     assert queue.get_next() is None, "without a lease nothing changes"
     reclaimed = queue.get_next(stale_after_s=60)
-    assert reclaimed is not None and reclaimed.id == item_id
+    assert reclaimed is not None
+    assert reclaimed.id == item_id
 
 
 def test_a_fresh_claim_is_not_reclaimed(queue):
@@ -99,8 +100,9 @@ def test_a_corrupt_history_database_raises_a_framework_error(tmp_path):
 
 
 def test_a_corrupt_audit_database_raises_a_framework_error(tmp_path):
+    corrupt = _corrupt(tmp_path / "audit.db")
     with pytest.raises(AuditLogError):
-        AuditLog(_corrupt(tmp_path / "audit.db"))
+        AuditLog(corrupt)
 
 
 def test_two_audit_writers_on_one_file_keep_the_chain(tmp_path):

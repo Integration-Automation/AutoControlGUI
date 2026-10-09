@@ -10,7 +10,7 @@ from je_auto_control.utils.executor.action_executor import Executor
 from je_auto_control.utils.executor.action_schema import validate_actions
 
 
-@pytest.fixture()
+@pytest.fixture
 def executor_with_hooks():
     """Return a fresh Executor plus a mutable counter for assertions."""
     executor = Executor()
@@ -157,7 +157,7 @@ def test_ac_while_var_unknown_op_raises(executor_with_hooks):
 
 # === AC_try (try / catch / finally) ========================================
 
-@pytest.fixture()
+@pytest.fixture
 def executor_try():
     """Executor with a noop, a failer, and a capture hook for try tests."""
     executor = Executor()

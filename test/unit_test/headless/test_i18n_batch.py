@@ -9,7 +9,8 @@ from je_auto_control.utils.i18n_test import (
 
 def test_pseudo_localize_pads_and_preserves_placeholders():
     out = pseudo_localize("Hello {name}", expansion=0.5)
-    assert out.startswith("⟦") and out.endswith("⟧")
+    assert out.startswith("⟦")
+    assert out.endswith("⟧")
     assert "{name}" in out                         # placeholder intact
     assert len(out) > len("Hello {name}") + 2      # padded/expanded
     assert "Hèllo" in out or "Hèllò" in out        # accented

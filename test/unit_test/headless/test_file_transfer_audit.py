@@ -60,14 +60,16 @@ def test_a_failed_transfer_keeps_the_existing_file(tmp_path):
 def test_more_data_than_announced_fails(tmp_path):
     receiver, done = _receiver()
     _transfer(receiver, tmp_path / "f.bin", [b"x" * 10], 1)
-    assert done[0][0] is False and "announced" in done[0][1]
+    assert done[0][0] is False
+    assert "announced" in done[0][1]
     assert not (tmp_path / "f.bin").exists()
 
 
 def test_a_short_transfer_is_not_a_success(tmp_path):
     receiver, done = _receiver()
     _transfer(receiver, tmp_path / "f.bin", [b"abc"], 1000)
-    assert done[0][0] is False and "3 of 1000" in done[0][1]
+    assert done[0][0] is False
+    assert "3 of 1000" in done[0][1]
     assert os.listdir(tmp_path) == []
 
 
@@ -75,7 +77,8 @@ def test_a_bad_destination_fails_the_transfer_instead_of_raising(tmp_path):
     receiver, done = _receiver()
     tid = ft.new_transfer_id()
     receiver.handle_begin(ft.encode_begin(tid, str(tmp_path / "a\x00b"), 1))
-    assert done and done[0][0] is False
+    assert done
+    assert done[0][0] is False
 
 
 def test_a_repeated_transfer_id_does_not_replace_the_first(tmp_path):
@@ -113,7 +116,8 @@ _END = json.dumps({"type": "file_end", "transfer_id": "t"})
 def test_names_windows_would_redirect_are_refused(tmp_path, name):
     send, events = _inbox(tmp_path)
     send(_begin(name, 1))
-    assert events["errors"] and not events["done"]
+    assert events["errors"]
+    assert not events["done"]
 
 
 def test_the_inbox_rejects_more_data_than_announced(tmp_path):
@@ -130,7 +134,8 @@ def test_the_inbox_rejects_a_truncated_file_and_keeps_the_old_copy(tmp_path):
     send(_begin("keep.txt", 1000))
     send(b"abc")
     send(_END)
-    assert events["errors"] and not events["done"]
+    assert events["errors"]
+    assert not events["done"]
     assert (tmp_path / "keep.txt").read_bytes() == b"IMPORTANT"
     assert os.listdir(tmp_path) == ["keep.txt"]
 
@@ -141,7 +146,8 @@ def test_the_inbox_replaces_a_file_only_when_complete(tmp_path):
     send(_begin("keep.txt", 3))
     send(b"new")
     send(_END)
-    assert events["done"] and (tmp_path / "keep.txt").read_bytes() == b"new"
+    assert events["done"]
+    assert (tmp_path / "keep.txt").read_bytes() == b"new"
     assert os.listdir(tmp_path) == ["keep.txt"]
 
 

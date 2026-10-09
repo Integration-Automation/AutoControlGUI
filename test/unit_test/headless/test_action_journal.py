@@ -30,7 +30,7 @@ def _journal_off():
     recorder.stop_action_journal()
 
 
-@pytest.fixture()
+@pytest.fixture
 def fake_executor():
     """A private executor with fake commands; ``calls`` lists what they received."""
     executor = Executor()
@@ -86,7 +86,8 @@ def test_redaction_precedes_append(tmp_path, monkeypatch, fake_executor):
     journal_text = path.read_text(encoding="utf-8")
     assert password not in journal_text
     # Not masked afterwards: no line handed to the file ever held it.
-    assert written and all(password not in line for line in written)
+    assert written
+    assert all(password not in line for line in written)
 
     events = read_events(path)
     literal, reference = _by_command(events, "AC_fake_step")[:2]
@@ -96,7 +97,8 @@ def test_redaction_precedes_append(tmp_path, monkeypatch, fake_executor):
     assert reference.params == {"password": "${pw}"}
     assert reference.unreplayable == {}
     failed = _by_command(events, "AC_fake_fail")[0]
-    assert failed.status == STATUS_ERROR and "RuntimeError" in failed.error
+    assert failed.status == STATUS_ERROR
+    assert "RuntimeError" in failed.error
 
 
 def test_parallel_parent_and_order(tmp_path, fake_executor):
@@ -115,7 +117,8 @@ def test_parallel_parent_and_order(tmp_path, fake_executor):
     assert all(event.run_id == run_id for event in events)
     assert len(events) == 6
     parallel = _by_command(events, "AC_parallel")[0]
-    assert parallel.parent_id is None and parallel.status == STATUS_OK
+    assert parallel.parent_id is None
+    assert parallel.status == STATUS_OK
     for branch, expected in ((0, [10, 11]), (1, [20, 21])):
         steps = [event for event in events if event.branch == branch]
         assert [event.params["n"] for event in steps] == expected
@@ -199,9 +202,11 @@ def test_outcome_text_and_unserialisable_arguments_are_not_stored(tmp_path, fake
 
 def test_vault_commands_mask_every_argument_but_keep_references():
     params, notes = sanitise_params("AC_secret_set", {"name": "db", "value": PASSWORD})
-    assert params == {"name": "***", "value": "***"} and len(notes) == 2
+    assert params == {"name": "***", "value": "***"}
+    assert len(notes) == 2
     params, notes = sanitise_params("AC_write_secret", {"text": "${secrets.db}"})
-    assert params == {"text": "${secrets.db}"} and notes == {}
+    assert params == {"text": "${secrets.db}"}
+    assert notes == {}
 
 
 def test_stopping_inside_a_script_still_ends_the_running_steps(tmp_path, fake_executor):
@@ -234,9 +239,12 @@ def test_executor_commands_read_and_list_runs(tmp_path, fake_executor):
     ])
     runs, tail, status = record.values()
     assert [run["run_id"] for run in runs] == ["first", "second"]
-    assert runs[0]["events"] == 2 and runs[0]["ok"] == 1 and runs[0]["error"] == 1
+    assert runs[0]["events"] == 2
+    assert runs[0]["ok"] == 1
+    assert runs[0]["error"] == 1
     assert [event["command"] for event in tail] == ["AC_fake_fail"]
-    assert status["active"] is False and status["last"]["run_id"] == "second"
+    assert status["active"] is False
+    assert status["last"]["run_id"] == "second"
     assert list_journal_runs(path) == runs
 
 
@@ -258,7 +266,8 @@ def test_a_failed_write_stops_the_journal_not_the_run(tmp_path, monkeypatch, fak
         [["AC_fake_step", {"n": 1}], ["AC_fake_step", {"n": 2}]])
     assert list(record.values()) == [1, 2]
     status = recorder.action_journal_status()
-    assert status["active"] is False and "disk full" in status["last"]["error"]
+    assert status["active"] is False
+    assert "disk full" in status["last"]["error"]
 
 
 def test_reading_validates_the_schema_and_skips_torn_lines(tmp_path):
@@ -271,7 +280,8 @@ def test_reading_validates_the_schema_and_skips_torn_lines(tmp_path):
     journal.append(ActionEvent(run_id="r", step_id="s-2", sequence=2, command="AC_y"))
     contents = load_journal(path)
     assert [item.step_id for item in contents.events] == ["s-1", "s-2"]
-    assert contents.torn_lines == (2,) and contents.lines == {"s-1": 1, "s-2": 3}
+    assert contents.torn_lines == (2,)
+    assert contents.lines == {"s-1": 1, "s-2": 3}
     assert journal.read(run_id="other") == []
     assert event.schema_version == SCHEMA_VERSION == 1
 
@@ -307,7 +317,8 @@ def test_concurrent_top_level_runs_share_one_ordered_file(tmp_path, fake_executo
         thread.join()
     recorder.stop_action_journal()
     events = read_events(path)
-    assert len(events) == 60 and {event.status for event in events} == {STATUS_OK}
+    assert len(events) == 60
+    assert {event.status for event in events} == {STATUS_OK}
     assert [event.sequence for event in events] == list(range(1, 61))
 
 
@@ -324,4 +335,5 @@ def test_every_surface_is_wired():
     for name in ("ActionEvent", "ActionJournal", "read_events", "start_action_journal",
                  "stop_action_journal", "action_journal_status", "list_journal_runs",
                  "JournalFormatError", "ActionJournalError"):
-        assert name in ac.__all__ and hasattr(ac, name)
+        assert name in ac.__all__
+        assert hasattr(ac, name)

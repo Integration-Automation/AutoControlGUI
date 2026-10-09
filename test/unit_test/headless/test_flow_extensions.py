@@ -85,5 +85,6 @@ def test_define_macro_accepts_comma_separated_params():
 
 
 def test_call_unknown_macro_raises():
+    executor = Executor()
     with pytest.raises(AutoControlActionException):
-        exec_call_macro(Executor(), {"name": "does-not-exist"})
+        exec_call_macro(executor, {"name": "does-not-exist"})

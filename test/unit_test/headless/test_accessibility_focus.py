@@ -65,8 +65,9 @@ def use_backend(monkeypatch):
 # --- base contract ------------------------------------------------------------
 
 def test_a_backend_without_focus_support_says_so():
+    backend = AccessibilityBackend()
     with pytest.raises(AccessibilityNotAvailableError, match="focused_element"):
-        AccessibilityBackend().focused_element()
+        backend.focused_element()
 
 
 # --- public API ---------------------------------------------------------------

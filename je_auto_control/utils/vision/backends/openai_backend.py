@@ -86,8 +86,10 @@ def _sdk_errors() -> tuple:
     with an injected client and no SDK installed there is nothing of the
     SDK's to catch.
     """
+    errors: tuple = ()
     try:
         import openai  # nosemgrep: codacy.python.openai.import-without-guardrails  # reason: error type only
     except ImportError:
-        return ()
-    return (openai.OpenAIError,)
+        return errors
+    errors += (openai.OpenAIError,)
+    return errors

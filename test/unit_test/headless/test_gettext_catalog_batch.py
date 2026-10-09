@@ -111,4 +111,5 @@ def test_wiring():
 def test_facade_exports():
     for attr in ("GettextCatalog", "parse_po", "parse_po_file", "read_mo",
                  "read_mo_file"):
-        assert hasattr(ac, attr) and attr in ac.__all__
+        assert hasattr(ac, attr)
+        assert attr in ac.__all__

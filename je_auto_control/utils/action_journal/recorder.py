@@ -28,7 +28,7 @@ import time
 import uuid
 from pathlib import Path
 from types import TracebackType
-from typing import Any, Callable, Dict, List, Optional, Tuple, Type, TypeVar, Union
+from typing import Any, Callable, Dict, List, Optional, Tuple, Type, TypeVar
 
 from je_auto_control.utils.action_journal.events import (
     STATUS_ERROR, STATUS_INCOMPLETE, STATUS_OK, ActionEvent,
@@ -92,7 +92,7 @@ class _Session:
                 event, sequence=sequence, step_id=f"{self.token}-{sequence}")
             self.journal.append(numbered)
             self.started = sequence
-        return numbered
+        return numbered  # NOSONAR python:S5886  # reason: replace() returns its argument's type
 
     def status(self) -> Dict[str, Any]:
         """The session as a JSON-ready dict."""
@@ -263,7 +263,7 @@ class _Step:
         found = self.artifacts + [
             item for item in artifacts_of_step(params, self._result, event.started_at)
             if item not in self.artifacts]
-        return dataclasses.replace(
+        return dataclasses.replace(  # NOSONAR python:S5886  # reason: replace() returns its argument's type
             event, status=status, error=error, outcome=outcome,
             finished_at=time.time(), artifacts=_masked_artifacts(found, known))
 
@@ -280,7 +280,7 @@ def _fail(session: _Session, error: OSError) -> None:
             _ACTIVE, _LAST = None, session
 
 
-def step(action: Any) -> Union[_Step, _NullStep]:
+def step(action: Any) -> _Step | _NullStep:
     """A context manager recording ``action``; a shared no-op when journalling is off."""
     session = _ACTIVE
     if session is None:
@@ -389,7 +389,7 @@ def carry_step(work: _Work, index: Optional[int] = None) -> _Work:
     return carried  # type: ignore[return-value]  # reason: same call signature as work
 
 
-def start_action_journal(path: Union[str, Path, None] = None, *,
+def start_action_journal(path: str | Path | None = None, *,
                          run_id: Optional[str] = None,
                          session: Optional[str] = None) -> Dict[str, Any]:
     """Start writing every executed action to the journal at ``path``.

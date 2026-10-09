@@ -38,7 +38,7 @@ def qapp(monkeypatch):
     for box in ("warning", "information", "question", "critical"):
         monkeypatch.setattr(QMessageBox, box, lambda *args: messages.append(args[-1]))
     app.messages = messages
-    yield app
+    return app
 
 
 @pytest.fixture(autouse=True)
@@ -84,7 +84,7 @@ def _element(name):
                                 app_name="app.exe", process_id=7, native_id=name.lower())
 
 
-@pytest.fixture()
+@pytest.fixture
 def backend(monkeypatch):
     fake = _Backend(monkeypatch)
     yield fake
@@ -108,7 +108,8 @@ def test_refresh_lists_on_a_worker_thread_and_fills_the_table_when_it_answers(ba
     tab._name_filter.setText("OK")
     backend.hold.clear()
     assert _timed(tab._refresh) < _PROMPT_S
-    assert tab._status.text() == _t("task_running") and tab._table.rowCount() == 0
+    assert tab._status.text() == _t("task_running")
+    assert tab._table.rowCount() == 0
     tab._refresh()                          # a second command while one runs starts nothing
     backend.hold.set()
     assert _idle(tab)
@@ -121,11 +122,13 @@ def test_refresh_lists_on_a_worker_thread_and_fills_the_table_when_it_answers(ba
 def test_a_listing_that_fails_says_why_and_empties_the_table(backend):
     tab = accessibility_tab.AccessibilityTab()
     tab._refresh()
-    assert _idle(tab) and tab._table.rowCount() == 3
+    assert _idle(tab)
+    assert tab._table.rowCount() == 3
     backend.error = AccessibilityNotAvailableError("install comtypes")
     tab._refresh()
     assert _idle(tab)
-    assert tab._status.text() == "install comtypes" and tab._table.rowCount() == 0
+    assert tab._status.text() == "install comtypes"
+    assert tab._table.rowCount() == 0
 
 
 def test_show_focused_reads_off_thread_and_reports_nothing_focused(backend):
@@ -133,28 +136,33 @@ def test_show_focused_reads_off_thread_and_reports_nothing_focused(backend):
     tab._show_focused()
     assert _idle(tab)
     assert backend.threads[0] is not threading.main_thread()
-    assert tab._table.rowCount() == 1 and tab._table.item(0, 2).text() == "Field"
+    assert tab._table.rowCount() == 1
+    assert tab._table.item(0, 2).text() == "Field"
     assert tab._status.text() == _t("a11y_count_label").replace("{n}", "1")
     backend.focused = None
     tab._show_focused()
     assert _idle(tab)
-    assert tab._table.rowCount() == 0 and tab._status.text() == _t("a11y_no_focus")
+    assert tab._table.rowCount() == 0
+    assert tab._status.text() == _t("a11y_no_focus")
 
 
 def test_click_selected_clicks_off_thread_and_reports_a_miss_or_a_missing_backend(backend, qapp):
     tab = accessibility_tab.AccessibilityTab()
     tab._click_selected()
-    assert tab._status.text() == _t("a11y_no_selection") and backend.calls == []
+    assert tab._status.text() == _t("a11y_no_selection")
+    assert backend.calls == []
     tab._refresh()
     assert _idle(tab)
     tab._table.setCurrentCell(1, 0)
     tab._click_selected()
     assert _idle(tab)
     assert backend.calls[-1] == ("click", {"name": "Cancel", "role": "ControlType_50000", "app_name": "app.exe"})
-    assert backend.threads[-1] is not threading.main_thread() and tab._status.text() == ""
+    assert backend.threads[-1] is not threading.main_thread()
+    assert tab._status.text() == ""
     backend.clicked = False
     tab._click_selected()
-    assert _idle(tab) and tab._status.text() == _t("a11y_click_not_found")
+    assert _idle(tab)
+    assert tab._status.text() == _t("a11y_click_not_found")
     backend.error = AccessibilityNotAvailableError("no backend")
     tab._click_selected()
     assert _idle(tab)
@@ -191,8 +199,11 @@ def test_the_audit_runs_off_thread_and_renders_its_report(monkeypatch):
     tab._on_run()                           # ignored while the first runs
     hold.set()
     assert _idle(tab)
-    assert len(threads) == 1 and threads[0][0] is not threading.main_thread() and threads[0][1] == "app.exe"
-    assert tab._table.rowCount() == 1 and tab._table.item(0, 3).text() == "no name"
+    assert len(threads) == 1
+    assert threads[0][0] is not threading.main_thread()
+    assert threads[0][1] == "app.exe"
+    assert tab._table.rowCount() == 1
+    assert tab._table.item(0, 3).text() == "no name"
     assert tab._summary.text() == _t("audit_summary").replace("{errors}", "1").replace("{warnings}", "0")
 
 
@@ -212,4 +223,5 @@ def test_the_contrast_check_still_answers_at_once():
     tab._fg.setText("0, 0, 0")
     tab._bg.setText("255, 255, 255")
     tab._on_contrast()
-    assert "21.00" in tab._summary.text() and "PASS" in tab._summary.text()
+    assert "21.00" in tab._summary.text()
+    assert "PASS" in tab._summary.text()

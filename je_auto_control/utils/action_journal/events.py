@@ -186,7 +186,7 @@ def apply_end(event: ActionEvent, data: Mapping[str, Any], where: str) -> Action
         raise JournalFormatError(f"{where}: 'error' must be a string")
     # An end line without the field keeps what the start line carried.
     artifacts = read_artifacts(data, where) if "artifacts" in data else event.artifacts
-    return dataclasses.replace(
+    return dataclasses.replace(  # NOSONAR python:S5886  # reason: replace() returns its argument's type
         event, status=data.get("status", STATUS_INCOMPLETE),
         finished_at=_number(data, "finished_at", where), error=error, outcome=outcome,
         artifacts=artifacts)

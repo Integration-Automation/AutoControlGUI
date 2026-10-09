@@ -190,7 +190,7 @@ def describe_action(action: Any) -> str:
 
 def _mask(argument: Any) -> Any:
     if isinstance(argument, dict):
-        return {key: _MASK for key in argument}
+        return dict.fromkeys(argument, _MASK)
     if isinstance(argument, list):
         return [_MASK for _ in argument]
     return _MASK

@@ -102,11 +102,13 @@ _Result = TypeVar("_Result")
 
 def _sdk_errors() -> tuple:
     """facebook-wda's base error (an invalid session, a crashed app...), if installed."""
+    errors: tuple = ()
     try:
         from wda import exceptions as wda_exceptions
     except ImportError:
-        return ()
-    return (wda_exceptions.WDAError,)
+        return errors
+    errors += (wda_exceptions.WDAError,)
+    return errors
 
 
 def translate_device_errors(function: Callable[..., _Result]) -> Callable[..., _Result]:

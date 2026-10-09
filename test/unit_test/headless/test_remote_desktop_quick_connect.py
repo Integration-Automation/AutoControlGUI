@@ -100,7 +100,7 @@ def test_start_hosting_registers_host_and_refreshes_badge(qapp):
 
 # --- end-to-end via the screen's public connect flow --------------------
 
-def test_quick_connect_round_trips_frame_to_popup(qapp):
+def test_quick_connect_round_trips_frame_to_popup(qapp, monkeypatch):
     from je_auto_control.gui.remote_desktop.connection_screen import (
         QuickConnectScreen,
     )
@@ -112,7 +112,7 @@ def test_quick_connect_round_trips_frame_to_popup(qapp):
         frame_provider=lambda: jpeg,
     )
     host.start()
-    registry._host = host  # noqa: SLF001  test-only injection
+    monkeypatch.setattr(registry, "_host", host)  # test-only injection
     try:
         screen = QuickConnectScreen()
         try:
@@ -134,7 +134,6 @@ def test_quick_connect_round_trips_frame_to_popup(qapp):
             screen.deleteLater()
     finally:
         host.stop(timeout=1.0)
-        registry._host = None  # noqa: SLF001
 
 
 def test_publish_via_signaling_emits_host_handoff(qapp):
@@ -155,7 +154,9 @@ def test_publish_via_signaling_emits_host_handoff(qapp):
         token, host_id = captured[0]
         assert token == "ttt"
         # host_id should be the 9-digit ID of the running TCP host.
-        assert host_id and len(host_id) == 9 and host_id.isdigit()
+        assert host_id
+        assert len(host_id) == 9
+        assert host_id.isdigit()
         screen._stop_hosting()  # noqa: SLF001
     finally:
         screen.deleteLater()
@@ -311,7 +312,7 @@ def test_recent_connections_populated_after_connect(qapp, tmp_path,
         frame_provider=lambda: jpeg,
     )
     host.start()
-    registry._host = host  # noqa: SLF001
+    monkeypatch.setattr(registry, "_host", host)
     try:
         screen = cs_mod.QuickConnectScreen()
         try:
@@ -331,4 +332,3 @@ def test_recent_connections_populated_after_connect(qapp, tmp_path,
             screen.deleteLater()
     finally:
         host.stop(timeout=1.0)
-        registry._host = None  # noqa: SLF001

@@ -175,7 +175,8 @@ def test_a_viewer_with_no_microphone_still_answers(monkeypatch):
 
 
 def test_the_answer_attaches_both_streams_the_config_asks_for(screen_track,
-                                                              opus_track):
+                                                              opus_track,
+                                                              monkeypatch):
     config = WebRTCConfig(share_my_screen=True, share_my_audio_opus=True)
     viewer = _viewer(config=config)
 
@@ -185,11 +186,8 @@ def test_the_answer_attaches_both_streams_the_config_asks_for(screen_track,
             self.transceivers = [Transceiver("video"), Transceiver("video"),
                                  Transceiver("audio")]
 
-    viewer_module.RTCPeerConnection = _PcWithSlots
-    try:
-        viewer.process_offer("v=0 host-offer")
-    finally:
-        viewer_module.RTCPeerConnection = FakePeerConnection
+    monkeypatch.setattr(viewer_module, "RTCPeerConnection", _PcWithSlots)
+    viewer.process_offer("v=0 host-offer")
     assert viewer._viewer_screen_track is screen_track[0]
     assert viewer._opus_audio_track is opus_track[0]
 

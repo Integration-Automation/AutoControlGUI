@@ -26,10 +26,12 @@ def _candidate(actions=None, code="print('new')\n"):
 
 def test_an_action_diff_counts_what_was_added_and_removed():
     diff = diff_actions(_OLD, _NEW)
-    assert isinstance(diff, CandidateDiff) and diff.kind == "actions"
+    assert isinstance(diff, CandidateDiff)
+    assert diff.kind == "actions"
     assert (diff.added, diff.removed, diff.identical) == (2, 1, False)
     rows = diff.text.splitlines()
-    assert rows[0] == "--- current" and rows[1] == "+++ candidate"
+    assert rows[0] == "--- current"
+    assert rows[1] == "+++ candidate"
     assert '-["AC_set_var", {"name": "b", "value": 2}]' in rows
     assert '+["AC_set_var", {"name": "b", "value": 3}]' in rows
     assert ' ["AC_set_var", {"name": "a", "value": 1}]' in rows       # context, unchanged
@@ -37,7 +39,9 @@ def test_an_action_diff_counts_what_was_added_and_removed():
 
 def test_identical_sides_have_an_empty_diff():
     diff = diff_actions(_OLD, json.loads(json.dumps(_OLD)))
-    assert diff.identical and diff.text == "" and diff.to_dict()["identical"] is True
+    assert diff.identical
+    assert diff.text == ""
+    assert diff.to_dict()["identical"] is True
 
 
 def test_key_order_is_not_a_change():
@@ -58,8 +62,10 @@ def test_a_change_deep_in_a_nested_body_shows_as_its_own_line():
 
 def test_a_code_diff_is_line_by_line():
     diff = diff_code("a = 1\nb = 2\n", "a = 1\nb = 3\n", before_label="old.py")
-    assert diff.kind == "code" and (diff.added, diff.removed) == (1, 1)
-    assert diff.text.splitlines()[0] == "--- old.py" and "+b = 3" in diff.text
+    assert diff.kind == "code"
+    assert (diff.added, diff.removed) == (1, 1)
+    assert diff.text.splitlines()[0] == "--- old.py"
+    assert "+b = 3" in diff.text
 
 
 def test_diff_candidate_takes_exactly_one_side():
@@ -79,11 +85,13 @@ def test_against_a_file_the_suffix_picks_what_is_compared(tmp_path):
     actions_file = tmp_path / "flow.json"
     actions_file.write_text(json.dumps(_OLD), encoding="utf-8")
     by_actions = diff_candidate_against_file(candidate, actions_file)
-    assert by_actions.kind == "actions" and by_actions.before_label == str(actions_file)
+    assert by_actions.kind == "actions"
+    assert by_actions.before_label == str(actions_file)
     script = tmp_path / "flow.py"
     script.write_text("print('old')\n", encoding="utf-8")
     by_code = diff_candidate_against_file(candidate, script)
-    assert by_code.kind == "code" and (by_code.added, by_code.removed) == (1, 1)
+    assert by_code.kind == "code"
+    assert (by_code.added, by_code.removed) == (1, 1)
 
 
 def test_a_missing_file_makes_the_whole_candidate_new(tmp_path):
@@ -94,12 +102,13 @@ def test_a_missing_file_makes_the_whole_candidate_new(tmp_path):
 
 def test_the_facade_exports_the_diff():
     for name in ("CandidateDiff", "diff_candidate", "diff_candidate_against_file"):
-        assert name in je_auto_control.__all__ and hasattr(je_auto_control, name)
+        assert name in je_auto_control.__all__
+        assert hasattr(je_auto_control, name)
 
 
 # --- the command and the MCP tool ---------------------------------------------------------------------------------
 
-@pytest.fixture()
+@pytest.fixture
 def journal(tmp_path):
     path = tmp_path / "run.jsonl"
     rows = [json.dumps({
@@ -117,8 +126,10 @@ def test_the_command_returns_a_diff_against_the_named_file(journal, tmp_path):
     previous.write_text(json.dumps(candidate.actions[:1]), encoding="utf-8")
     command = executor.event_dict["AC_generate_code_from_journal"]
     result = command(str(journal), diff_against=str(previous))
-    assert result["diff"]["kind"] == "actions" and result["diff"]["added"] == len(candidate.actions) - 1
-    assert result["diff"]["removed"] == 0 and "diff" not in command(str(journal))
+    assert result["diff"]["kind"] == "actions"
+    assert result["diff"]["added"] == len(candidate.actions) - 1
+    assert result["diff"]["removed"] == 0
+    assert "diff" not in command(str(journal))
 
 
 def test_the_diff_is_taken_before_the_output_overwrites_the_same_file(journal, tmp_path):
@@ -126,6 +137,7 @@ def test_the_diff_is_taken_before_the_output_overwrites_the_same_file(journal, t
     output.write_text("# an earlier export\n", encoding="utf-8")
     result = _handlers_qa.generate_code_from_log(str(journal), output=str(output),
                                                  diff_against=str(output))
-    assert result["diff"]["kind"] == "code" and result["diff"]["removed"] == 1
+    assert result["diff"]["kind"] == "code"
+    assert result["diff"]["removed"] == 1
     assert "-# an earlier export" in result["diff"]["text"]
     assert output.read_text(encoding="utf-8") == result["code"]

@@ -122,7 +122,8 @@ def test_the_real_driver_refuses_hwnd_zero_and_keeps_windll_clean():
 def test_executor_plan_path_is_pure():
     from je_auto_control.utils.executor.action_executor import _plan_file_drop
     plan = _plan_file_drop('["C:\\\\a\\\\one.txt"]', "[3, 4]")
-    assert plan["point"] == [3, 4] and plan["paths"] == ["C:\\a\\one.txt"]
+    assert plan["point"] == [3, 4]
+    assert plan["paths"] == ["C:\\a\\one.txt"]
 
 
 def test_wiring():
@@ -138,4 +139,5 @@ def test_wiring():
 
 def test_facade_exports():
     for name in ("plan_file_drop", "drop_files"):
-        assert hasattr(ac, name) and name in ac.__all__
+        assert hasattr(ac, name)
+        assert name in ac.__all__

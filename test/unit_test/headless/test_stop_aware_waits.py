@@ -314,7 +314,8 @@ def test_outside_a_stoppable_run_the_waits_still_sleep_on_time_sleep(monkeypatch
     values = iter([0, 0, 1])
     result = expect_poll(lambda: next(values), lambda value: value == 1,
                          timeout_s=5.0, interval_s=0.01)
-    assert result.ok and result.attempts == 3
+    assert result.ok
+    assert result.attempts == 3
     assert slept == [0.01, 0.01]
     assert run_control.current_stop_token() is None
 
@@ -325,4 +326,5 @@ def test_a_wait_that_succeeds_inside_a_stoppable_run_returns_normally():
     with stoppable_run() as token:
         result = expect_poll(lambda: next(values), lambda value: value == 1,
                              timeout_s=5.0, interval_s=0.01)
-    assert result.ok and not token.stopped
+    assert result.ok
+    assert not token.stopped

@@ -7,7 +7,7 @@ from je_auto_control.utils.remote_desktop.input_dispatch import (
 )
 
 
-@pytest.fixture()
+@pytest.fixture
 def fake_wrappers(monkeypatch):
     calls = []
 

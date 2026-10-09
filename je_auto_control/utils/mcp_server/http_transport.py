@@ -37,7 +37,7 @@ import os
 import ssl
 import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from typing import Any, Callable, Dict, Optional, Tuple, Union
+from typing import Any, Callable, Dict, Optional, Tuple
 
 from je_auto_control.utils.http_headers import bearer_challenge, log_safe
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
@@ -73,6 +73,7 @@ from je_auto_control.utils.rbac.authorization import (
 from je_auto_control.utils.rbac.users import UserStore
 
 DEFAULT_PATH = "/mcp"
+_UNKNOWN_PATH = "unknown path"
 # Bound per-request reads so a client that declares a Content-Length then
 # stalls (body underrun) can't pin a worker thread forever.
 _REQUEST_TIMEOUT = 30.0
@@ -133,7 +134,7 @@ class _MCPHttpHandler(HttpResponseMixin, BaseHTTPRequestHandler):
         if not self._caller_allowed():
             return
         if self.path != DEFAULT_PATH:
-            self._send_json({"error": "unknown path"}, status=404)
+            self._send_json({"error": _UNKNOWN_PATH}, status=404)
             return
         line = self._read_body()
         if line is None:
@@ -373,7 +374,7 @@ class _MCPHttpHandler(HttpResponseMixin, BaseHTTPRequestHandler):
         if not self._authorize():
             return
         if self.path != DEFAULT_PATH:
-            self._send_json({"error": "unknown path"}, status=404)
+            self._send_json({"error": _UNKNOWN_PATH}, status=404)
             return
         if not self._client_accepts_sse():
             self._send_json(
@@ -446,7 +447,7 @@ class _MCPHttpHandler(HttpResponseMixin, BaseHTTPRequestHandler):
             return
         if self.path != DEFAULT_PATH:
             # GET and POST answer 404 here; DELETE /anything ended the session.
-            self._send_json({"error": "unknown path"}, status=404)
+            self._send_json({"error": _UNKNOWN_PATH}, status=404)
             return
         registry: SessionRegistry = self.server.sessions  # type: ignore[attr-defined]
         header_id = session_id_from_headers(self.headers)
@@ -520,7 +521,7 @@ class HttpMCPServer:
                  auth_token: Optional[str] = None,
                  ssl_context: Optional[ssl.SSLContext] = None,
                  user_store: Optional[UserStore] = None,
-                 tool_mode: Union[str, ToolMode, None] = None,
+                 tool_mode: str | ToolMode | None = None,
                  ) -> None:
         """``user_store`` switches RBAC on; ``None`` reads ``JE_AUTOCONTROL_RBAC_USERS``.
 
@@ -636,7 +637,7 @@ def start_mcp_http_server(host: str = "127.0.0.1", port: int = 9940,
                           auth_token: Optional[str] = None,
                           ssl_context: Optional[ssl.SSLContext] = None,
                           user_store: Optional[UserStore] = None,
-                          tool_mode: Union[str, ToolMode, None] = None,
+                          tool_mode: str | ToolMode | None = None,
                           ) -> HttpMCPServer:
     """Start and return an :class:`HttpMCPServer`; convenience wrapper.
 

@@ -1,5 +1,6 @@
 _TOKEN_LABEL_ZH = "Token："
 _BROWSE = "瀏覽..."  # NOSONAR python:S1192 — shared button label
+_RUNNING = "執行中..."
 
 traditional_chinese_word_dict = {
     # Main
@@ -1116,7 +1117,7 @@ traditional_chinese_word_dict = {
     "computer_use_run_btn": "執行",
     "computer_use_stop_btn": "停止",
     "computer_use_stopping": "目前步驟結束後停止…",
-    "computer_use_running": "執行中...",
+    "computer_use_running": _RUNNING,
     "computer_use_already_running": "已有任務執行中，請稍候。",
     "computer_use_success": "成功達成目標。",
     "computer_use_failure": "未達目標即停止。",
@@ -1263,7 +1264,7 @@ traditional_chinese_word_dict = {
     "ocr_regex_required": "請先輸入 regex 樣式",
     "ocr_regex_invalid": "Regex 不正確",
     "ocr_running": "辨識中...",
-    "dm_running": "執行中...",
+    "dm_running": _RUNNING,
 
     # Variables Tab
     "vars_current_group": "目前作用域",
@@ -1302,10 +1303,10 @@ traditional_chinese_word_dict = {
     "llm_planning": "規劃中...",
     "llm_plan_count": "已規劃 {n} 個指令",
     "llm_no_plan": "請先按下「規劃」",
-    "llm_running": "執行中...",
+    "llm_running": _RUNNING,
     "llm_run_done": "完成",
     # Background runs shared by the tabs (gui/_tab_task.py)
-    "task_running": "執行中...",
+    "task_running": _RUNNING,
     "task_busy": "已在執行中：請等它結束，或先停止。",
     "task_stopping": "正在停止...",
     "task_stopped": "已停止。",

@@ -37,7 +37,7 @@ def qapp(monkeypatch):
     monkeypatch.setattr(registry, "_viewer", None)
     monkeypatch.setattr(registry, "_ws_viewer", None)
     app.messages = messages
-    yield app
+    return app
 
 
 @pytest.fixture(autouse=True)
@@ -57,7 +57,8 @@ def test_remote_annotations_are_checked_and_bounded():
     for step in range(6000):
         panel._on_annotation_event({"action": "point", "x": step, "y": step})
     strokes = panel._annotation_overlay._strokes
-    assert len(strokes) == 1 and strokes[0]["width"] == 32
+    assert len(strokes) == 1
+    assert strokes[0]["width"] == 32
     assert len(strokes[0]["points"]) == 5000
     panel._annotation_overlay.hide()
 
@@ -200,7 +201,8 @@ def test_a_session_error_ends_the_quick_connect_session(monkeypatch, qapp):
     registry.adopt("ws_viewer", viewer, screen._owner)   # the session this screen opened
     screen._open_screen_window("desk")
     screen._on_error("connection reset")
-    assert viewer.disconnected and screen._screen_window is None
+    assert viewer.disconnected
+    assert screen._screen_window is None
     assert qapp.messages == ["connection reset"]
 
 
@@ -212,4 +214,6 @@ def test_an_approval_box_closes_when_the_host_stops_waiting(monkeypatch, qapp):
     request = connection_screen._ApprovalRequest(types.SimpleNamespace(address=("10.0.0.2", 5), transport="tcp"))
     started = time.monotonic()
     connection_screen.QuickConnectScreen()._show_approval_dialog(request)
-    assert time.monotonic() - started < 3 and request.decision == "denied" and request.event.is_set()
+    assert time.monotonic() - started < 3
+    assert request.decision == "denied"
+    assert request.event.is_set()

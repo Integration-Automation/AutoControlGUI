@@ -283,7 +283,7 @@ class _Call:
         """Run the call and keep whatever it returned or raised."""
         try:
             self.result = self._function()
-        except BaseException as error:  # noqa: BLE001  # reason: re-raised on the calling thread by DeviceSession.invoke
+        except BaseException as error:  # NOSONAR python:S5754  # noqa: BLE001  # reason: re-raised by invoke
             self.error = error
         finally:
             self.done.set()

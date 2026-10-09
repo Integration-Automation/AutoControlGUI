@@ -17,7 +17,7 @@ import threading
 import urllib.parse
 from dataclasses import dataclass, field
 from pathlib import Path, PurePosixPath
-from typing import Any, Dict, Iterable, List, Mapping, Optional, Protocol, Tuple, Union
+from typing import Any, Dict, Iterable, List, Mapping, Optional, Protocol, Tuple
 
 from je_auto_control.utils.config_sync.bucket import ConfigSyncError
 from je_auto_control.utils.exception.exceptions import AutoControlException
@@ -33,7 +33,7 @@ class AssetSyncError(ConfigSyncError):
     """An asset could not be read, fetched, verified or written."""
 
 
-def file_sha256(path: Union[str, Path]) -> str:
+def file_sha256(path: str | Path) -> str:
     """The SHA-256 of a file's content, read in chunks."""
     digest = hashlib.sha256()
     with open(path, "rb") as handle:
@@ -68,7 +68,7 @@ class AssetManifest:
     assets: Tuple[AssetRef, ...] = ()
 
     @classmethod
-    def from_directory(cls, root: Union[str, Path],
+    def from_directory(cls, root: str | Path,
                        patterns: Iterable[str] = ("*",)) -> "AssetManifest":
         """List the files under ``root`` matching any of ``patterns`` (recursive)."""
         base = Path(root)
@@ -81,7 +81,7 @@ class AssetManifest:
         return cls(root=base, assets=tuple(found[key] for key in sorted(found)))
 
     @classmethod
-    def from_entries(cls, root: Union[str, Path],
+    def from_entries(cls, root: str | Path,
                      entries: Mapping[str, Mapping[str, Any]]) -> "AssetManifest":
         """Build a manifest from ``{relative path: {"sha256": ..., "size": ...}}``."""
         refs = []
@@ -129,7 +129,7 @@ class DirectoryAssetTransport:
     Blobs are named by their hash, so identical files are stored once.
     """
 
-    def __init__(self, directory: Union[str, Path]) -> None:
+    def __init__(self, directory: str | Path) -> None:
         self._directory = Path(directory)
 
     def _blob(self, sha256: str) -> Path:
@@ -438,7 +438,7 @@ def publish_assets(manifest: AssetManifest, transport: AssetTransport, *,
 
 def _checked_grace(min_age_s: Any) -> float:
     if isinstance(min_age_s, bool) or not isinstance(min_age_s, (int, float)) \
-            or not min_age_s >= 0:
+            or not min_age_s >= 0:  # NOSONAR python:S1940  # reason: `< 0` would let NaN through
         raise AssetSyncError(f"min_age_s must be a number >= 0, got {min_age_s!r}")
     return float(min_age_s)
 

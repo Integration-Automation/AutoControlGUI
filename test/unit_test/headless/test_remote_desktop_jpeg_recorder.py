@@ -19,7 +19,9 @@ def test_records_three_frames(tmp_path):
     assert manifest["frame_count"] == 3
     assert len(manifest["entries"]) == 3
     for entry in manifest["entries"]:
-        assert "filename" in entry and "timestamp" in entry and "size" in entry
+        assert "filename" in entry
+        assert "timestamp" in entry
+        assert "size" in entry
         target = manifest_path.parent / entry["filename"]
         assert target.exists()
         assert target.stat().st_size == entry["size"]

@@ -33,7 +33,7 @@ def qapp(monkeypatch):
     for box in ("warning", "information", "question", "critical"):
         monkeypatch.setattr(QMessageBox, box, lambda *args: messages.append(args[-1]))
     app.messages = messages
-    yield app
+    return app
 
 
 @pytest.fixture(autouse=True)
@@ -74,11 +74,13 @@ def test_host_stop_lets_go_at_once_and_closes_the_sessions_in_the_background():
     panel._multi_host = types.SimpleNamespace(stop_all=gate, session_count=lambda: 0)
     try:
         assert _timed(panel._on_stop) < _PROMPT_S
-        assert gate.entered.wait(10.0) and gate.threads[0] is not threading.main_thread()
+        assert gate.entered.wait(10.0)
+        assert gate.threads[0] is not threading.main_thread()
         assert panel._multi_host is None
         assert panel._status_label.text() == _t("gui_op_stopping")
         panel._on_stop()                    # a second click has no host left to stop
-        assert gate.calls == 1 and panel._status_label.text() == _t("gui_op_stopping")
+        assert gate.calls == 1
+        assert panel._status_label.text() == _t("gui_op_stopping")
     finally:
         gate.release.set()
     assert settle_op(panel._stops)
@@ -109,13 +111,16 @@ def test_disconnecting_one_session_is_off_the_gui_thread_and_not_repeated():
     panel._sessions_table.setCurrentCell(0, 1)
     try:
         assert _timed(panel._on_disconnect_selected) < _PROMPT_S
-        assert gate.entered.wait(10.0) and gate.threads[0] is not threading.main_thread()
+        assert gate.entered.wait(10.0)
+        assert gate.threads[0] is not threading.main_thread()
         panel._on_disconnect_selected()     # the same row, clicked again
-        assert gate.calls == 1 and counts == []
+        assert gate.calls == 1
+        assert counts == []
     finally:
         gate.release.set()
     assert settle_op(panel._stops)
-    assert counts == [0] and panel._stopping_sessions == set()
+    assert counts == [0]
+    assert panel._stopping_sessions == set()
 
 
 def test_viewer_stop_hands_sync_recorder_and_viewer_to_the_background_in_order():
@@ -127,8 +132,11 @@ def test_viewer_stop_hands_sync_recorder_and_viewer_to_the_background_in_order()
     panel._viewer = types.SimpleNamespace(stop=gates[2], authenticated=False)
     try:
         assert _timed(panel._on_stop) < _PROMPT_S
-        assert gates[0].entered.wait(10.0) and gates[0].threads[0] is not threading.main_thread()
-        assert panel._viewer is None and panel._recorder is None and panel._sync_engine is None
+        assert gates[0].entered.wait(10.0)
+        assert gates[0].threads[0] is not threading.main_thread()
+        assert panel._viewer is None
+        assert panel._recorder is None
+        assert panel._sync_engine is None
         assert panel._status_label.text() == _t("gui_op_stopping")
         panel._on_stop()
     finally:
@@ -145,8 +153,10 @@ def test_stopping_a_recording_reports_when_the_file_is_finalised(qapp):
     panel._recorder = types.SimpleNamespace(stop=gate, has_output=True, output_path="out.mp4")
     try:
         assert _timed(lambda: panel._on_toggle_recording(False)) < _PROMPT_S
-        assert gate.entered.wait(10.0) and gate.threads[0] is not threading.main_thread()
-        assert not panel._record_btn.isEnabled() and panel._record_btn.text() == _t("gui_op_stopping")
+        assert gate.entered.wait(10.0)
+        assert gate.threads[0] is not threading.main_thread()
+        assert not panel._record_btn.isEnabled()
+        assert panel._record_btn.text() == _t("gui_op_stopping")
         assert qapp.messages == [], "saved was announced before the file was finalised"
         panel._on_toggle_recording(False)
         assert gate.calls == 1
@@ -154,7 +164,8 @@ def test_stopping_a_recording_reports_when_the_file_is_finalised(qapp):
         gate.release.set()
     assert settle_op(panel._stops)
     assert qapp.messages == [_t("rd_webrtc_recording_saved").format(path="out.mp4")]
-    assert panel._record_btn.isEnabled() and panel._record_btn.text() == _t("rd_webrtc_start_recording")
+    assert panel._record_btn.isEnabled()
+    assert panel._record_btn.text() == _t("rd_webrtc_start_recording")
 
 
 def test_stopping_folder_sync_joins_the_watcher_off_the_gui_thread():
@@ -163,13 +174,16 @@ def test_stopping_folder_sync_joins_the_watcher_off_the_gui_thread():
     panel._sync_engine = types.SimpleNamespace(stop=gate)
     try:
         assert _timed(lambda: panel._on_toggle_sync(False)) < _PROMPT_S
-        assert gate.entered.wait(10.0) and gate.threads[0] is not threading.main_thread()
-        assert panel._sync_engine is None and _off(panel._sync_btn)
+        assert gate.entered.wait(10.0)
+        assert gate.threads[0] is not threading.main_thread()
+        assert panel._sync_engine is None
+        assert _off(panel._sync_btn)
         assert panel._sync_btn.text() == _t("gui_op_stopping")
         panel._on_toggle_sync(False)
         assert gate.calls == 1
     finally:
         gate.release.set()
     assert settle_op(panel._stops)
-    assert not _off(panel._sync_btn) and panel._sync_btn.text() == _t("rd_webrtc_sync_start")
+    assert not _off(panel._sync_btn)
+    assert panel._sync_btn.text() == _t("rd_webrtc_sync_start")
     assert pump_until(lambda: panel._stops.pending == 0)

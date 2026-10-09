@@ -33,8 +33,9 @@ def test_empty_is_full_budget():
 
 
 def test_bad_target_raises():
+    records = _records(1, 0)
     with pytest.raises(AutoControlException):
-        evaluate_slo(_records(1, 0), 1.5, now=1)
+        evaluate_slo(records, 1.5, now=1)
 
 
 def test_window_excludes_old_records():
@@ -78,7 +79,8 @@ def test_executor_round_trip():
         {"records": json.dumps(_records(99, 1)), "target": 0.99},
     ]])
     payload = next(v for v in rec2.values() if isinstance(v, dict))
-    assert "firing" in payload and "alerts" in payload
+    assert "firing" in payload
+    assert "alerts" in payload
 
 
 def test_wiring():

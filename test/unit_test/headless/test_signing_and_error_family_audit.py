@@ -28,8 +28,9 @@ def test_an_unsigned_file_is_not_sent_to_a_remote_host(tmp_path, monkeypatch):
             return [{"ok": True, "result": "ran"}]
 
     monkeypatch.setattr(admin_client, "default_admin_console", lambda: _Console())
+    node = DagNode(id="n", host="remote-1", action_file=str(script))
     with pytest.raises(AutoControlException):
-        runner._default_remote_runner(DagNode(id="n", host="remote-1", action_file=str(script)), None)
+        runner._default_remote_runner(node, None)
     assert sent == []
 
 

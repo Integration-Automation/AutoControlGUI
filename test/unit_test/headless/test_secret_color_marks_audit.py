@@ -82,8 +82,9 @@ def test_a_blank_screen_does_not_match_a_coloured_glyph():
 def test_an_image_opencv_cannot_convert_is_a_framework_error():
     from je_auto_control.utils.color_match import match_color
     from je_auto_control.utils.exception.exceptions import AutoControlException
+    needle, haystack = _plus((255, 0, 0)), np.zeros((40, 40, 3), np.float64)
     with pytest.raises(AutoControlException):
-        match_color(_plus((255, 0, 0)), haystack=np.zeros((40, 40, 3), np.float64))
+        match_color(needle, haystack=haystack)
 
 
 # --- mark labels -------------------------------------------------------------------------------------------
@@ -95,7 +96,8 @@ def _overlap(a, b):
 def test_a_label_stays_beside_a_mark_on_another_monitor():
     from je_auto_control.utils.marks_layout.marks_layout import place_labels
     [placed] = place_labels([{"id": 1, "bbox": [-500, 300, 80, 30]}])
-    assert placed["label"][0] == -500 and abs(placed["label"][1] - 300) <= 20
+    assert placed["label"][0] == -500
+    assert abs(placed["label"][1] - 300) <= 20
     [top] = place_labels([{"id": 2, "bbox": [10, 0, 80, 30]}])
     assert top["label"][1] >= 0
 
@@ -120,7 +122,8 @@ def test_a_snapshot_matches_its_own_payload(tmp_path):
     from je_auto_control.utils.json_contract.json_contract import match_json, snapshot_json
     for index, payload in enumerate(({"point": (10, 20)}, {1: "one"}, {"ratio": math.nan})):
         path = tmp_path / f"snap{index}.json"
-        assert snapshot_json(payload, str(path)) and snapshot_json(payload, str(path))
+        assert snapshot_json(payload, str(path))
+        assert snapshot_json(payload, str(path))
     assert match_json((1, 2), [1, 2]).ok
     assert not match_json({"a": 1, "b": 2}, {"a": 9, "b": 8}, ignore="$.ts").ok
 

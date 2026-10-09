@@ -12,7 +12,7 @@ from je_auto_control.utils.remote_desktop.file_sync import FolderSyncEngine
 from je_auto_control.utils.rest_api.rest_registry import _RestApiRegistry
 
 
-@pytest.fixture()
+@pytest.fixture
 def watch_dir(tmp_path):
     return tmp_path
 

@@ -16,7 +16,7 @@ from je_auto_control.utils.remote_desktop.input_dispatch import InputDispatchErr
 _ORIGIN = (1920, -164)
 
 
-@pytest.fixture()
+@pytest.fixture
 def calls(monkeypatch):
     recorded = []
 

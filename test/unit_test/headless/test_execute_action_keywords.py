@@ -12,7 +12,7 @@ import je_auto_control as ac
 from je_auto_control.utils.exception.exceptions import AutoControlException
 
 
-@pytest.fixture()
+@pytest.fixture
 def fake_command():
     """One inert command on the shared executor, removed afterwards."""
     calls = []
@@ -30,12 +30,14 @@ def fake_command():
 
 def test_a_positional_call_behaves_as_before(fake_command):
     record = ac.execute_action([["AC_facade_fake", {"n": 1}]])
-    assert list(record.values()) == [1] and fake_command == [{"n": 1}]
+    assert list(record.values()) == [1]
+    assert fake_command == [{"n": 1}]
 
 
 def test_dry_run_is_forwarded(fake_command):
     record = ac.execute_action([["AC_facade_fake", {"n": 1}]], dry_run=True)
-    assert fake_command == [] and list(record.values()) == ["(not executed)"]
+    assert fake_command == []
+    assert list(record.values()) == ["(not executed)"]
 
 
 def test_raise_on_error_is_forwarded(fake_command):
@@ -59,5 +61,6 @@ def test_the_keywords_are_keyword_only_and_match_the_executor():
         assert module_level[name].kind is inspect.Parameter.KEYWORD_ONLY
         assert module_level[name].default == method[name].default
     assert "_validated" not in module_level
+    signature = inspect.signature(ac.execute_action)
     with pytest.raises(TypeError):
-        inspect.signature(ac.execute_action).bind([["AC_facade_fake"]], True)
+        signature.bind([["AC_facade_fake"]], True)

@@ -34,7 +34,7 @@ class _Recorder(BaseHTTPRequestHandler):
         return
 
 
-@pytest.fixture()
+@pytest.fixture
 def serve():
     servers = []
 
@@ -88,7 +88,8 @@ def test_the_bearer_token_does_not_follow_a_redirect_to_another_host(serve):
     target, target_url = serve(body=b'{"devices": []}')
     _, redirecting_url = serve(302, {"Location": target_url + "/usb/devices"})
     assert fetch_remote_devices(base_url=redirecting_url, token="tok-123") == []
-    assert target.seen and "Authorization" not in target.seen[0]
+    assert target.seen
+    assert "Authorization" not in target.seen[0]
 
 
 # --- the address book and the target parser -----------------------------------------------------------------
@@ -100,7 +101,8 @@ def test_address_book_tags_and_times_are_normalised_on_load(tmp_path):
         {"host_id": "b", "server_url": "u", "tags": [1, " home ", ""]},
     ]}), encoding="utf-8")
     first, second = AddressBook(path).list_entries()
-    assert first["tags"] == [] and "last_used" not in first
+    assert first["tags"] == []
+    assert "last_used" not in first
     assert second["tags"] == ["home"]
 
 

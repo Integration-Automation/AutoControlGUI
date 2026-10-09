@@ -11,7 +11,7 @@ Every function is pure (URL in, URL/bool/list out), so it is fully deterministic
 in CI.
 """
 import re
-from typing import List, Mapping, Optional, Sequence, Tuple, Union
+from typing import List, Mapping, Optional, Sequence, Tuple
 from urllib.parse import SplitResult, parse_qsl, urlencode, urlsplit
 
 _DEFAULT_PORTS = {"http": 80, "https": 443, "ftp": 21, "ws": 80, "wss": 443}
@@ -169,7 +169,7 @@ def urls_equal(first: str, second: str) -> bool:
     return canonicalize_url(first) == canonicalize_url(second)
 
 
-def build_query(params: Union[Mapping[str, object], QueryPairs], *,
+def build_query(params: Mapping[str, object] | QueryPairs, *,
                 sort: bool = False, doseq: bool = True) -> str:
     """Encode a mapping or pair-list into a query string."""
     items: List[Tuple[str, object]] = (list(params.items())

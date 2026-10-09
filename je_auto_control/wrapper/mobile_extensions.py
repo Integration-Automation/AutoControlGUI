@@ -20,7 +20,7 @@ from __future__ import annotations
 
 import threading
 from time import monotonic
-from typing import Any, Callable, Dict, Optional, Protocol, runtime_checkable
+from typing import Any, Callable, Dict, Optional, Protocol, cast, runtime_checkable
 
 from je_auto_control.utils.executor.run_control import checkpoint
 from je_auto_control.wrapper.device_context import (
@@ -126,8 +126,9 @@ def mobile_extension(session: DeviceSession) -> MobileExtension:
         factory = _FACTORIES.get(session.platform)
     if factory is None:
         return builtin
-    layered: MobileExtension = _Layered(factory(session), builtin)
-    return layered
+    # _Layered forwards the extension methods through __getattr__, which no
+    # type checker can see as satisfying the protocol.
+    return cast(MobileExtension, _Layered(factory(session), builtin))
 
 
 def launch_app(session: DeviceSession, app_id: str) -> AppState:

@@ -39,5 +39,5 @@ def test_the_security_floor_holds(name):
               if re.match(rf"{name}\b", requirement)]
     assert bounds, f"{name} is no longer a requirement; drop its floor here"
     for bound in bounds:
-        assert bound and _version(bound.group(1)) >= _version(minimum), (
-            f"{name} must be >= {minimum} ({reason})")
+        assert bound, f"{name} must be >= {minimum} ({reason})"
+        assert _version(bound.group(1)) >= _version(minimum), f"{name} must be >= {minimum} ({reason})"

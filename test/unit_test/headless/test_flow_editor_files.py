@@ -26,7 +26,8 @@ def test_a_bare_list_stays_a_bare_list(tmp_path):
     source.write_text(json.dumps(_WRAPPED["auto_control"]), encoding="utf-8")
     steps, extras = load_action_file(str(source))
     save_action_file(str(source), steps, extras)
-    assert extras is None and json.loads(source.read_text(encoding="utf-8")) == _WRAPPED["auto_control"]
+    assert extras is None
+    assert json.loads(source.read_text(encoding="utf-8")) == _WRAPPED["auto_control"]
 
 
 def test_the_flow_editor_opens_a_file_with_a_bom_and_saves_its_keys(monkeypatch, tmp_path):

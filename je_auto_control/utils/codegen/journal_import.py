@@ -37,7 +37,7 @@ import re
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import (
-    Any, Dict, FrozenSet, List, Mapping, Optional, Sequence, Set, Tuple, Union,
+    Any, Dict, FrozenSet, List, Mapping, Optional, Sequence, Set, Tuple,
 )
 
 from je_auto_control.utils.action_journal.events import (
@@ -337,7 +337,7 @@ def _script_name(run_id: str) -> str:
     return "journal_run_" + re.sub(r"\W+", "_", run_id)[:40]
 
 
-def generate_candidate_from_log(path: Union[str, Path], *, run_id: str,
+def generate_candidate_from_log(path: str | Path, *, run_id: str,
                                 target: str = "pytest",
                                 style: str = "actions") -> CandidateScript:
     """Build a reviewable candidate script from run ``run_id`` of a journal.
@@ -377,7 +377,7 @@ def generate_candidate_from_log(path: Union[str, Path], *, run_id: str,
                            actions=builder.actions, observed_path_only=builder.observed)
 
 
-def only_run_id(path: Union[str, Path]) -> str:
+def only_run_id(path: str | Path) -> str:
     """The id of the journal's single run; raise when there is none or several."""
     runs = [run["run_id"] for run in list_journal_runs(os.path.realpath(os.fspath(path)))]
     if len(runs) != 1:
@@ -387,8 +387,8 @@ def only_run_id(path: Union[str, Path]) -> str:
     return runs[0]
 
 
-def write_candidate(candidate: CandidateScript, output: Union[str, Path],
-                    manifest: Optional[Union[str, Path]] = None) -> Mapping[str, str]:
+def write_candidate(candidate: CandidateScript, output: str | Path,
+                    manifest: Optional[str | Path] = None) -> Mapping[str, str]:
     """Write the candidate's code (and its manifest, when a path is given)."""
     written = {"output": os.path.realpath(os.fspath(output))}
     atomic_write_text(written["output"], candidate.code)

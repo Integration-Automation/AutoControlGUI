@@ -49,8 +49,9 @@ def test_codec_provider_base_is_abstract():
     class _Stub(CodecProvider):
         pass
 
+    stub = _Stub()
     with pytest.raises(NotImplementedError):
-        _Stub().encode_jpeg(b"x")
+        stub.encode_jpeg(b"x")
 
 
 # --- host integration (codec lives in AUTH_OK) -------------------------

@@ -238,7 +238,8 @@ def test_the_facade_and_the_script_builder_expose_the_key_pair_command():
     from je_auto_control.gui.script_builder.command_schema import _build_specs
     for name in ("create_signing_keypair", "action_signing_config", "SigningConfig",
                  "CryptographyUnavailableError"):
-        assert name in je_auto_control.__all__ and hasattr(je_auto_control, name)
+        assert name in je_auto_control.__all__
+        assert hasattr(je_auto_control, name)
     specs = {spec.command: spec for spec in _build_specs()}
     assert [field.name for field in specs["AC_create_signing_keypair"].fields] == [
         "private_path", "public_path", "passphrase"]

@@ -24,13 +24,15 @@ def _block():
 
 def test_identical_has_no_diff():
     result = perceptual_diff(_base(), _base().copy())
-    assert result.diff_pixels == 0 and result.diff_ratio == pytest.approx(0.0)
+    assert result.diff_pixels == 0
+    assert result.diff_ratio == pytest.approx(0.0)
 
 
 def test_solid_block_is_counted():
     result = perceptual_diff(_base(), _block())
     assert isinstance(result, PerceptualDiffResult)
-    assert result.diff_pixels == 1200 and len(result.regions) == 1
+    assert result.diff_pixels == 1200
+    assert len(result.regions) == 1
     assert result.diff_ratio == pytest.approx(0.1)
 
 
@@ -64,13 +66,15 @@ def test_threshold_tolerates_small_colour_shift():
 
 
 def test_size_mismatch_raises():
+    base, small = _base(), np.zeros((10, 10, 3), dtype=np.uint8)
     with pytest.raises(ValueError):
-        perceptual_diff(_base(), np.zeros((10, 10, 3), dtype=np.uint8))
+        perceptual_diff(base, small)
 
 
 def test_assert_perceptual_raises_over_budget():
+    base, block = _base(), _block()
     with pytest.raises(AutoControlActionException):
-        assert_perceptual(_base(), _block(), max_diff_ratio=0.0)
+        assert_perceptual(base, block, max_diff_ratio=0.0)
     assert assert_perceptual(_base(), _base().copy()).diff_pixels == 0
 
 
@@ -88,4 +92,5 @@ def test_wiring():
 
 def test_facade_exports():
     for attr in ("perceptual_diff", "assert_perceptual", "PerceptualDiffResult"):
-        assert hasattr(ac, attr) and attr in ac.__all__
+        assert hasattr(ac, attr)
+        assert attr in ac.__all__

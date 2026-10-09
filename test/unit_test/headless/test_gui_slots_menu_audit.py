@@ -54,7 +54,8 @@ def test_a_zero_interval_is_refused(monkeypatch):
     stub = types.SimpleNamespace(interval_input=_Text("0"),
                                  timer=types.SimpleNamespace(start=lambda: started.append(1)))
     tab.AutoClickTabMixin._start_auto_click(stub)
-    assert warned and not started
+    assert warned
+    assert not started
 
 
 def test_a_data_source_error_is_shown_by_the_slot(monkeypatch):
@@ -101,7 +102,8 @@ def test_the_planner_run_slot_shows_an_assertion_failure(monkeypatch):
     planner._planned_actions = [["AC_assert_var", {}]]
     planner._on_run()
     assert settle(planner._runs, "task")
-    assert warned and "var mismatch" in planner._status.text()
+    assert warned
+    assert "var mismatch" in planner._status.text()
 
 
 def test_a_broken_recording_folder_is_reported(monkeypatch, tmp_path):
@@ -147,7 +149,8 @@ def test_a_recording_that_does_not_start_is_reported(monkeypatch):
     monkeypatch.setattr(tab, "record", lambda: False)
     stub = types.SimpleNamespace(_record_status_key="record_idle", _apply_record_status_label=lambda: None)
     tab.RecordTabMixin._start_record(stub)
-    assert warned and stub._record_status_key == "record_idle"
+    assert warned
+    assert stub._record_status_key == "record_idle"
 
 
 def test_a_template_is_cropped_into_a_non_ascii_folder(monkeypatch, tmp_path):

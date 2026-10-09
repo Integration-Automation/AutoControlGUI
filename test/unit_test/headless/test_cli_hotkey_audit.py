@@ -95,10 +95,10 @@ class _Hook:
         return []
 
 
-def test_a_second_recording_stops_the_first_hook():
+def test_a_second_recording_stops_the_first_hook(monkeypatch):
     recorder = InputRecorder()
     recorder.new_hook = _Hook
-    _Hook.live = 0
+    monkeypatch.setattr(_Hook, "live", 0)
     recorder.record()
     recorder.record()
     recorder.stop_record()
@@ -120,8 +120,9 @@ def test_an_unmappable_key_is_refused():
 
 @pytest.mark.skipif(sys.platform != "win32", reason="bind() checks the Windows key table on Windows")
 def test_bind_refuses_a_combo_windows_cannot_register():
+    daemon = hotkey_daemon.HotkeyDaemon()
     with pytest.raises(ValueError):
-        hotkey_daemon.HotkeyDaemon().bind("ctrl+foo", "s.json")
+        daemon.bind("ctrl+foo", "s.json")
 
 
 class _User32:

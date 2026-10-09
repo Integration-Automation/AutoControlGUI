@@ -18,7 +18,7 @@ from je_auto_control.utils.shell_process import shell_exec
 _VOLUME = "磁碟區"
 
 
-@pytest.fixture()
+@pytest.fixture
 def utf8_mode_on_windows(monkeypatch):
     monkeypatch.setattr(sys, "platform", "win32")
     monkeypatch.setattr(locale, "getpreferredencoding", lambda do_setlocale=True: "utf-8")

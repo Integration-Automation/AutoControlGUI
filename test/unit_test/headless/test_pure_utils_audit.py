@@ -16,14 +16,17 @@ def test_zero_weight_candidates_do_not_divide_by_zero():
     )
     mixed = consensus_point([{"x": 10, "y": 10, "weight": 0.0},
                              {"x": 500, "y": 500, "weight": 1.0}])
-    assert mixed.point == [500, 500] and mixed.agreement == 1.0
+    assert mixed.point == [500, 500]
+    assert mixed.agreement == 1.0
     silent = consensus_point([{"x": 10, "y": 10, "weight": 0},
                               {"x": 12, "y": 12, "weight": 0},
                               {"x": 400, "y": 400, "weight": 0}])
-    assert silent.point == [11, 11] and silent.n_clusters == 2
+    assert silent.point == [11, 11]
+    assert silent.n_clusters == 2
     winner, agreement = consensus_element([{"x": 10, "y": 10, "weight": 0.0}],
                                           [{"x": 0, "y": 0, "width": 20, "height": 20}])
-    assert winner["width"] == 20 and agreement == 1.0
+    assert winner["width"] == 20
+    assert agreement == 1.0
     with pytest.raises(ValueError):
         consensus_point([[1, 1, float("nan")]])
     with pytest.raises(ValueError):
@@ -69,7 +72,8 @@ def test_accent_position_and_decomposed_input_collate():
     assert compare("éa", "eá") != 0
     assert compare("éa", "eá", strength="secondary") != 0
     assert compare("éa", "eá", strength="primary") == 0
-    assert compare("e", "é") == -1 and compare("resume", "résumé") == -1
+    assert compare("e", "é") == -1
+    assert compare("resume", "résumé") == -1
     swedish = "abcdefghijklmnopqrstuvwxyzåäö"
     decomposed = "a" + chr(0x30A)
     assert sort_strings([decomposed, "z", "b"], tailoring=swedish) == ["b", "z", decomposed]

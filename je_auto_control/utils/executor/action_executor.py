@@ -1,6 +1,6 @@
 import threading
 import types
-from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple, Union
+from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple
 
 from je_auto_control.utils.exception.exception_tags import (
     action_is_null_error_message, add_command_exception_error_message,
@@ -2408,7 +2408,7 @@ def _decrypt_action_file(enc_path: str, key: Optional[str] = None,
 
 
 def _annotate_screenshot(source: str,
-                         annotations: Union[List[Dict[str, Any]], str],
+                         annotations: List[Dict[str, Any]] | str,
                          output_path: str) -> Dict[str, Any]:
     """Executor adapter: draw annotations onto a screenshot and save it.
 
@@ -2435,7 +2435,7 @@ def _move_to_trash(path: str) -> Dict[str, Any]:
     return {"trashed": move_to_trash(path)}
 
 
-def _read_qr(region: Optional[Union[List[int], str]] = None) -> Dict[str, Any]:
+def _read_qr(region: Optional[List[int] | str] = None) -> Dict[str, Any]:
     """Executor adapter: decode QR codes in a screen region.
 
     ``region`` is ``[x1, y1, x2, y2]`` (or a JSON string for the builder);
@@ -2515,14 +2515,14 @@ def _save_window_layout(path: Optional[str] = None) -> Dict[str, Any]:
     return {"count": len(layout), "path": path, "layout": layout}
 
 
-def _restore_window_layout(layout: Union[List[Dict[str, Any]], str]
+def _restore_window_layout(layout: List[Dict[str, Any]] | str
                            ) -> Dict[str, Any]:
     """Executor adapter: move windows back to a saved layout (list or path)."""
     from je_auto_control.utils.window_capture import restore_window_layout
     return {"restored": restore_window_layout(layout)}
 
 
-def _region_color_stats(region: Optional[Union[List[int], str]] = None,
+def _region_color_stats(region: Optional[List[int] | str] = None,
                         buckets: int = 8) -> Dict[str, Any]:
     """Executor adapter: average + dominant colour of a screen region.
 
@@ -8379,7 +8379,7 @@ class Executor:
         """Return the set of all command names the executor recognises."""
         return set(self.event_dict.keys()) | set(self._block_commands.keys())
 
-    def unknown_commands_in(self, action_list: Union[list, dict]) -> List[str]:
+    def unknown_commands_in(self, action_list: list | dict) -> List[str]:
         """Return the unrecognised command names in ``action_list``, in order.
 
         Nothing is executed. Structural problems raise exactly as
@@ -8457,7 +8457,7 @@ class Executor:
             return event()
         raise AutoControlActionException(cant_execute_action_error_message + " " + describe_action(action))
 
-    def execute_action(self, action_list: Union[list, dict],
+    def execute_action(self, action_list: list | dict,
                        raise_on_error: bool = False,
                        _validated: bool = False,
                        dry_run: bool = False,
@@ -8502,7 +8502,7 @@ class Executor:
             _STRICT_BODIES.value = inherited
             _RUNNING.value = running
 
-    def _execute_list(self, action_list: Union[list, dict], raise_on_error: bool,
+    def _execute_list(self, action_list: list | dict, raise_on_error: bool,
                       _validated: bool, dry_run: bool,
                       step_callback: Optional[Callable[[list], None]],
                       ) -> Dict[str, str]:
@@ -8573,7 +8573,7 @@ class Executor:
         _count_recorded_failure()
 
     @staticmethod
-    def _unwrap_action_list(action_list: Union[list, dict]) -> list:
+    def _unwrap_action_list(action_list: list | dict) -> list:
         """Normalise the ``action_list`` argument or raise on invalid input."""
         actions: Any = action_list
         if isinstance(actions, dict):
@@ -8703,7 +8703,7 @@ def add_command_to_executor(command_dict: dict) -> None:
             raise AutoControlAddCommandException(add_command_exception_error_message)
 
 
-def execute_action(action_list: Union[list, dict], *,
+def execute_action(action_list: list | dict, *,
                    raise_on_error: bool = False, dry_run: bool = False,
                    step_callback: Optional[Callable[[list], None]] = None,
                    result_callback: Optional[ResultHook] = None,

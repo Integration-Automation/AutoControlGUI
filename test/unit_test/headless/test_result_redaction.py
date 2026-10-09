@@ -65,7 +65,8 @@ def test_a_secret_named_field_is_masked_at_any_depth_for_any_command():
     before = copy.deepcopy(_DEEP)
     shown = redact_result("AC_anything", _DEEP)
     assert _DEEP == before, "the result is not changed"
-    assert shown["token"] == "***" and shown["running"] is True
+    assert shown["token"] == "***"
+    assert shown["running"] is True
     assert shown["leases"] == [{"token": "***", "name": "db"}, {"Token": "***", "name": "api"}]
     assert shown["http"]["headers"] == {"Set-Cookie": "***", "Content-Type": "text/plain"}
     assert shown["pairs"] == [{"password": "***"}, {"note": "plain"}]
@@ -153,8 +154,9 @@ def test_the_approval_request_id_is_readable_in_the_builder_and_not_offered(tmp_
     approved = execute_action([["AC_approval_approve", {"token": request_id, "approver": "checker", "db": db}]])
     assert list(approved.values())[0] == {"approved": True}, "the id shown is the one the checker uses"
     record, logged = _logged_run(caplog, actions)
-    assert "AC_approval_request" in logged and list(record.values())[0]["token"] not in logged, \
-        "the log keeps masking it: the exemption is for the person reading their own run"
+    masked = "the log keeps masking it: the exemption is for the person reading their own run"
+    assert "AC_approval_request" in logged, masked
+    assert list(record.values())[0]["token"] not in logged, masked
 
 
 # --- the commands that were printed in plain text ----------------------------
@@ -167,15 +169,18 @@ def test_a_lease_token_is_masked_in_the_builder_and_offered_once():
     try:
         shown = displayable_record(record)
         text = json.dumps(shown, default=str)
-        assert issued["token"] not in text and "redaction-db" in text
+        assert issued["token"] not in text
+        assert "redaction-db" in text
         assert list(shown.values())[0] == {"token": "***", "ttl": 5.0}
         mine = [lease for lease in list(shown.values())[1]["leases"] if lease["name"] == "redaction-db"]
-        assert mine and all(lease["token"] == "***" for lease in mine)
+        assert mine
+        assert all(lease["token"] == "***" for lease in mine)
         assert (values[0].command, values[0].subject, values[0].name, values[0].value) == (
             "AC_lease_secret", "redaction-db", "token", issued["token"])
         listed = [value for value in values[1:] if value.subject == "redaction-db"]
         assert [(value.command, value.value) for value in listed] == [("AC_lease_active", issued["token"])]
-        assert listed[0].name.startswith("leases[") and listed[0].name.endswith("].token")
+        assert listed[0].name.startswith("leases[")
+        assert listed[0].name.endswith("].token")
         assert text.count('"***"') == len(values), "what is offered is exactly what is masked"
     finally:
         execute_action([["AC_revoke_lease", {"token": issued["token"]}]])

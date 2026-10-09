@@ -45,7 +45,7 @@ def _clean_environment(monkeypatch, tmp_path):
                         lambda: tmp_path / "home" / "action_signing_key")
 
 
-@pytest.fixture()
+@pytest.fixture
 def probe(monkeypatch):
     values = []
     monkeypatch.setitem(executor.event_dict, _PROBE,
@@ -53,21 +53,21 @@ def probe(monkeypatch):
     return values
 
 
-@pytest.fixture()
+@pytest.fixture
 def action_file(tmp_path):
     path = tmp_path / "flow.json"
     path.write_text(json.dumps([[_PROBE, {"value": "signed"}]]), encoding="utf-8")
     return path
 
 
-@pytest.fixture()
+@pytest.fixture
 def keys(tmp_path):
     private, public = tmp_path / "signer" / "private.pem", tmp_path / "public.pem"
     create_signing_keypair(private, public, passphrase=_PHRASE)
     return private, public
 
 
-@pytest.fixture()
+@pytest.fixture
 def endpoint(monkeypatch, keys):
     """An execution endpoint: signatures enforced, the public key and nothing else."""
     monkeypatch.setenv(PUBLIC_ENV, str(keys[1]))
@@ -75,7 +75,7 @@ def endpoint(monkeypatch, keys):
     return keys
 
 
-@pytest.fixture()
+@pytest.fixture
 def server():
     running = start_autocontrol_socket_server("127.0.0.1", 0)
     yield running
@@ -110,10 +110,12 @@ def _sign(keys, path):
 def test_the_socket_server_runs_a_signed_file_and_refuses_the_rest(
         server, endpoint, action_file, probe):
     reply = _run_file(server, action_file)
-    assert "missing signature sidecar" in reply and probe == []
+    assert "missing signature sidecar" in reply
+    assert probe == []
     _sign(endpoint, action_file)
     reply = _run_file(server, action_file)
-    assert probe == ["signed"] and "signature" not in reply
+    assert probe == ["signed"]
+    assert "signature" not in reply
     action_file.write_text(json.dumps([[_PROBE, {"value": "tampered"}]]), encoding="utf-8")
     reply = _run_file(server, action_file)
     assert "signature mismatch" in reply
@@ -163,4 +165,5 @@ def test_one_refused_file_does_not_stop_the_actions_around_it(
 
 def test_without_enforcement_the_socket_server_is_unchanged(server, action_file, probe):
     reply = _run_file(server, action_file)
-    assert probe == ["signed"] and "signature" not in reply
+    assert probe == ["signed"]
+    assert "signature" not in reply

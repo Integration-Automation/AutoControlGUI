@@ -25,7 +25,8 @@ def test_added_required_breaks_backward():
     assert is_backward_compatible(_BASE, new) is False
     assert is_forward_compatible(_BASE, new) is True
     [change] = list(check_compatibility(_BASE, new)["breaking"])
-    assert change["kind"] == "field_added" and change["path"] == "email"
+    assert change["kind"] == "field_added"
+    assert change["path"] == "email"
 
 
 def test_added_optional_is_compatible_both_ways():
@@ -33,7 +34,8 @@ def test_added_optional_is_compatible_both_ways():
                           "name": {"type": "string"},
                           "nick": {"type": "string"}},
            "required": ["id"]}
-    assert is_backward_compatible(_BASE, new) and is_forward_compatible(_BASE, new)
+    assert is_backward_compatible(_BASE, new)
+    assert is_forward_compatible(_BASE, new)
 
 
 def test_removed_required_field_breaks_forward():
@@ -75,7 +77,8 @@ def test_executor_round_trip():
         "AC_check_compatibility",
         {"old": json.dumps(_BASE), "new": json.dumps(new)}]])
     report = next(v for v in rec.values() if isinstance(v, dict))
-    assert report["compatible"] is False and report["mode"] == "backward"
+    assert report["compatible"] is False
+    assert report["mode"] == "backward"
 
 
 def test_wiring():
@@ -91,4 +94,5 @@ def test_facade_exports():
     for attr in ("SchemaChange", "check_compatibility", "diff_schemas",
                  "is_backward_compatible", "is_forward_compatible",
                  "is_full_compatible"):
-        assert hasattr(ac, attr) and attr in ac.__all__
+        assert hasattr(ac, attr)
+        assert attr in ac.__all__

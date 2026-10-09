@@ -13,14 +13,16 @@ def test_group_paragraphs_splits_on_large_gap():
              _line(120, "b1"), _line(145, "b2")]
     paras = group_paragraphs(lines, line_gap_factor=1.6)
     assert len(paras) == 2
-    assert paras[0]["text"] == "a1 a2" and paras[1]["text"] == "b1 b2"
+    assert paras[0]["text"] == "a1 a2"
+    assert paras[1]["text"] == "b1 b2"
     assert paras[0]["n_lines"] == 2
 
 
 def test_group_paragraphs_single_block():
     lines = [_line(0, "x"), _line(25, "y"), _line(50, "z")]
     paras = group_paragraphs(lines)
-    assert len(paras) == 1 and paras[0]["text"] == "x y z"
+    assert len(paras) == 1
+    assert paras[0]["text"] == "x y z"
 
 
 def test_detect_lists_bullets_and_ordinals():
@@ -28,12 +30,14 @@ def test_detect_lists_bullets_and_ordinals():
              _line(60, "a. third"), _line(90, "not a list item")]
     items = detect_lists(lines)
     assert [i["text"] for i in items] == ["first", "second", "third"]
-    assert items[0]["marker"] == "•" and items[1]["marker"] == "2)"
+    assert items[0]["marker"] == "•"
+    assert items[1]["marker"] == "2)"
 
 
 def test_detect_lists_indent_recorded():
     items = detect_lists([_line(0, "- top", x=10), _line(30, "- nested", x=40)])
-    assert items[0]["indent"] == 10 and items[1]["indent"] == 40
+    assert items[0]["indent"] == 10
+    assert items[1]["indent"] == 40
 
 
 def test_empty():
@@ -56,4 +60,5 @@ def test_wiring():
 
 def test_facade_exports():
     for name in ("group_paragraphs", "detect_lists"):
-        assert hasattr(ac, name) and name in ac.__all__
+        assert hasattr(ac, name)
+        assert name in ac.__all__

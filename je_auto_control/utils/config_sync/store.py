@@ -24,7 +24,7 @@ import hashlib
 import json
 import time
 from pathlib import Path
-from typing import Any, ContextManager, Optional, Union
+from typing import Any, ContextManager, Optional
 
 from je_auto_control.utils.config_sync.bucket import (
     ConfigBucket, ConfigSyncError, OperationMismatchError,
@@ -115,7 +115,7 @@ class ConfigStore:
     a store (as ``create_app`` does) has no side effect on disk.
     """
 
-    def __init__(self, db_path: Union[str, Path, None] = None, *,
+    def __init__(self, db_path: str | Path | None = None, *,
                  max_users: int = DEFAULT_MAX_USERS,
                  max_operations: int = DEFAULT_MAX_OPERATIONS) -> None:
         self._configured_path = db_path

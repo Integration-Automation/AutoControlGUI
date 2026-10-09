@@ -19,7 +19,9 @@ def _dates(rule_text, count):
 def test_parse_rrule_fields():
     rule = parse_rrule("RRULE:FREQ=MONTHLY;INTERVAL=2;BYDAY=2TU,-1FR;COUNT=5")
     assert isinstance(rule, Recurrence)
-    assert rule.freq == "MONTHLY" and rule.interval == 2 and rule.count == 5
+    assert rule.freq == "MONTHLY"
+    assert rule.interval == 2
+    assert rule.count == 5
     assert rule.by_day == ((2, 1), (-1, 4))
 
 

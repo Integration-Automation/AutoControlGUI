@@ -4,9 +4,9 @@ from defusedxml import ElementTree as DefusedET  # nosec B405  # nosemgrep: pyth
 from xml.etree import ElementTree  # nosec B405  # nosemgrep: python.lang.security.use-defused-xml.use-defused-xml  # reason: only used to construct trees, not to parse untrusted data
 from typing import Any, Dict
 
-# Characters XML 1.0 cannot hold at all, not even as a character reference.
-_XML_INVALID = re.compile(
-    "[^\x09\x0a\x0d\x20-\ud7ff\ue000-\ufffd\U00010000-\U0010ffff]")
+# Characters XML 1.0 cannot hold at all, not even as a character reference:
+# the C0 controls except tab / LF / CR, the surrogates, and U+FFFE / U+FFFF.
+_XML_INVALID = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\ud800-\udfff\ufffe\uffff]")
 
 
 # An XML Name, optionally prefixed: a key such as "b><evil/><c" was written

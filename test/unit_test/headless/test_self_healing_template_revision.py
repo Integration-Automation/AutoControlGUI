@@ -84,7 +84,8 @@ def store(tmp_path):
 def test_propose_leaves_the_template_alone(store, files):
     before = files["template"].read_bytes()
     revision = store.propose(files["template"], files["new"], source="vlm", note="redesign")
-    assert revision.status == STATUS_PENDING and revision.validated is False
+    assert revision.status == STATUS_PENDING
+    assert revision.validated is False
     assert files["template"].read_bytes() == before
     assert Path(revision.candidate_file).read_bytes() == files["new"].read_bytes()
     assert [item.revision_id for item in store.list_revisions()] == [revision.revision_id]
@@ -96,7 +97,8 @@ def test_unvalidated_candidate_is_not_accepted(store, files):
     revision = store.propose(files["template"], files["new"])
     preview = store.preview(revision.revision_id)
     assert preview["comparison"] is None
-    assert preview["current"]["width"] == 30 and preview["candidate"]["height"] == 20
+    assert preview["current"]["width"] == 30
+    assert preview["candidate"]["height"] == 20
     assert preview["current"]["sha256"] != preview["candidate"]["sha256"]
     with pytest.raises(TemplateRevisionError, match="not been validated"):
         store.accept(revision.revision_id)
@@ -108,7 +110,8 @@ def test_preview_with_a_dataset_validates_then_accept_and_revert(store, files):
     revision = store.propose(files["template"], files["new"])
     preview = store.preview(revision.revision_id, dataset_path=files["dataset"])
     versions = preview["comparison"]["versions"]
-    assert versions["current"]["correct"] == 0 and versions["current"]["miss"] == 1
+    assert versions["current"]["correct"] == 0
+    assert versions["current"]["miss"] == 1
     assert versions["candidate"]["correct"] == 1
     assert versions["candidate"]["false_positive"] == 0
     assert preview["revision"]["validated"] is True
@@ -133,7 +136,8 @@ def test_a_candidate_that_hits_the_wrong_thing_is_not_validated(store, files):
     revision = store.propose(files["template"], files["other"])
     preview = store.preview(revision.revision_id, dataset_path=files["dataset"])
     candidate = preview["comparison"]["versions"]["candidate"]
-    assert candidate["false_positive"] == 1 and candidate["located"] == 1
+    assert candidate["false_positive"] == 1
+    assert candidate["located"] == 1
     assert preview["revision"]["validated"] is False
     with pytest.raises(TemplateRevisionError):
         store.accept(revision.revision_id)
@@ -151,7 +155,8 @@ def test_preview_takes_samples_built_in_code(store, files):
 def test_allow_unvalidated_is_an_explicit_opt_in(store, files):
     revision = store.propose(files["template"], files["new"])
     accepted = store.accept(revision.revision_id, allow_unvalidated=True)
-    assert accepted.status == STATUS_ACCEPTED and accepted.validated is False
+    assert accepted.status == STATUS_ACCEPTED
+    assert accepted.validated is False
 
 
 def test_a_template_changed_underneath_is_never_overwritten(store, files):
@@ -216,7 +221,8 @@ def test_region_outside_the_frame_is_a_miss_not_an_error():
     sample = EvaluationSample("s", _frame((NEW, 5, 5)), expected_box=(5, 5, 35, 25),
                               region=(5000, 5000, 5100, 5100), template=NEW)
     report = evaluate_locators([sample], {"v": template_match_strategy()}).report("v")
-    assert report.miss == 1 and report.error == 0
+    assert report.miss == 1
+    assert report.error == 0
 
 
 def test_missing_template_is_an_error_outcome():
@@ -232,7 +238,8 @@ def test_dataset_file_round_trip(files):
     # The old template misses the redesigned control and rejects the other frame.
     assert payload["versions"]["v1"]["miss"] == 1
     assert payload["versions"]["v1"]["true_negative"] == 1
-    assert payload["passed"] is False and len(payload["violations"]) == 1
+    assert payload["passed"] is False
+    assert len(payload["violations"]) == 1
     json.dumps(payload)
 
 
@@ -290,7 +297,8 @@ def benchmark(monkeypatch):
 def test_benchmark_counts_are_fixed(benchmark):
     payload = benchmark.report()
     versions = payload["versions"]
-    assert payload["baseline"] == "v1-exact" and payload["passed"] is True
+    assert payload["baseline"] == "v1-exact"
+    assert payload["passed"] is True
     exact, multi, loose = (versions[name] for name in (
         "v1-exact", "v2-multiscale", "v3-loose"))
     assert all(report["total"] == 10 and report["unknown"] == 1
@@ -303,7 +311,8 @@ def test_benchmark_counts_are_fixed(benchmark):
     assert loose["located"] > multi["located"]
     assert loose["false_positive"] == 1
     assert loose["accuracy"]["numerator"] < multi["accuracy"]["numerator"]
-    assert exact["p50_ms"] is not None and exact["p95_ms"] >= exact["p50_ms"]
+    assert exact["p50_ms"] is not None
+    assert exact["p95_ms"] >= exact["p50_ms"]
 
 
 def test_benchmark_covers_failing_scaled_and_negative_cases(benchmark):

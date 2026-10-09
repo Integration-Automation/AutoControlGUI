@@ -215,7 +215,8 @@ class SlackBot:
             argv = self._background_argv(text)
             if argv is None:
                 return self._route_one(text, message) is not None
-            return self._start_background(argv, text, message)
+            self._start_background(argv, text, message)
+            return True
 
     def _context(self, message: Dict[str, Any]) -> Dict[str, Any]:
         return {"slack_user": message.get("user"), "slack_ts": message.get("ts"),
@@ -249,8 +250,8 @@ class SlackBot:
         return argv
 
     def _start_background(self, argv: List[str], text: str,
-                          message: Dict[str, Any]) -> bool:
-        """Start ``text`` on a worker, or say why not; always ``True`` (it was a command)."""
+                          message: Dict[str, Any]) -> None:
+        """Start ``text`` on a worker, or say why not."""
         name = argv[0].lower()
         listed = threading.Event()
         refusal = ""
@@ -270,11 +271,10 @@ class SlackBot:
                 self._worker.start()
         if refusal:
             self.post_message(refusal, thread_ts=str(message.get("ts") or ""))
-            return True
+            return
         # The next message may be the /stop for this run: read it only once
         # the run is listed (or has already ended).
         listed.wait(_START_WAIT)
-        return True
 
     def _run_background(self, text: str, message: Dict[str, Any],
                         token: StopToken, listed: threading.Event) -> None:

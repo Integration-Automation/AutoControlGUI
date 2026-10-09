@@ -53,7 +53,8 @@ def test_profiles_survive_huge_values_and_keep_bools_apart():
     exact = profile_rows([{"v": 10 ** 400}, {"v": 2 ** 60 + 1}])["columns"]["v"]
     assert (exact["min"], exact["max"], exact["mean"]) == (2 ** 60 + 1, 10 ** 400, None)
     column = profile_rows([{"v": True}, {"v": 1}, {"v": 2}])["columns"]["v"]
-    assert column["distinct"] == 3 and column["inferred_type"] == "mixed"
+    assert column["distinct"] == 3
+    assert column["inferred_type"] == "mixed"
     assert {entry["value"] for entry in column["top_values"]} == {True, 1, 2}
 
 
@@ -86,8 +87,9 @@ def test_sixteen_bit_images_are_read_and_opencv_errors_are_framework_errors(monk
         raise cv2.error("degenerate input")
 
     monkeypatch.setattr(cv2, "HoughLinesP", broken)
+    image = _divider(100)
     with pytest.raises(AutoControlException):
-        find_lines(_divider(100), min_length=20)
+        find_lines(image, min_length=20)
 
 
 # --- annotations ----------------------------------------------------------------------
@@ -148,7 +150,8 @@ def test_a_step_that_took_no_time_can_regress_and_infinite_durations_are_not_com
     from je_auto_control.utils.run_diff import diff_runs
     [regression] = diff_runs([{"name": "a", "duration": 0.0}],
                              [{"name": "a", "duration": 30.0}])["timing_regressions"]
-    assert regression["ratio"] is None and regression["after"] == 30.0
+    assert regression["ratio"] is None
+    assert regression["after"] == 30.0
     assert not diff_runs([{"name": "a", "duration": 0.0}], [{"name": "a", "duration": 0.05}])["timing_regressions"]
     assert not diff_runs([{"name": "a", "duration": 1.0}],
                          [{"name": "a", "duration": float("inf")}])["timing_regressions"]
@@ -170,7 +173,8 @@ def test_an_empty_baggage_key_is_refused():
     from je_auto_control.utils.baggage import Baggage, format_baggage, parse_baggage
     with pytest.raises(ValueError):
         Baggage({"": "x"})
+    baggage = Baggage()
     with pytest.raises(ValueError):
-        Baggage().set("", "x")
+        baggage.set("", "x")
     header = format_baggage(Baggage({"user id": "a,b;c=d"}))
     assert parse_baggage(header).to_dict() == {"user id": "a,b;c=d"}

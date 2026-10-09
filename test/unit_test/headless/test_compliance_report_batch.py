@@ -44,7 +44,9 @@ def test_framework_filter():
 def test_html_render_contains_controls():
     report = build_compliance_report(FULL_EVIDENCE)
     out = render_compliance_html(report)
-    assert "<table" in out and "CC6.1" in out and "A.8.30" in out
+    assert "<table" in out
+    assert "CC6.1" in out
+    assert "A.8.30" in out
 
 
 def test_write_json_and_html(tmp_path):

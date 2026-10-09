@@ -34,7 +34,7 @@ def qapp(monkeypatch):
     monkeypatch.setattr(registry, "_ws_viewer", None)
     monkeypatch.setattr(registry, "_host", None)
     app.warnings = warnings
-    yield app
+    return app
 
 
 class _FakeViewer:
@@ -61,7 +61,8 @@ def test_quick_connect_dials_wss_with_a_verifying_tls_context(qapp, monkeypatch)
     screen._dispatch_target(parse_target("wss://desk:8443/"), "tok")
     settle(screen)
     context = made[0].kwargs.get("ssl_context")
-    assert isinstance(context, ssl.SSLContext) and context.verify_mode == ssl.CERT_REQUIRED
+    assert isinstance(context, ssl.SSLContext)
+    assert context.verify_mode == ssl.CERT_REQUIRED
     assert qapp.warnings == ["refused"]
 
 
@@ -124,7 +125,8 @@ def test_a_closed_window_outliving_its_owner_does_not_abort(owner):
     # The input connections held the owner, so the window's deferred delete
     # released it, and the owner deleted that window again: Qt aborted.
     done = run_probe(_CLOSE_PROBE, owner)
-    assert done.returncode == 0 and "flushed" in done.stdout, done.stderr[-2000:]
+    assert done.returncode == 0, done.stderr[-2000:]
+    assert "flushed" in done.stdout, done.stderr[-2000:]
 
 
 # --- the legacy viewer ----------------------------------------------------------------------------------------
@@ -146,7 +148,8 @@ def test_a_ticked_audio_box_plays_with_the_advanced_section_collapsed(monkeypatc
     panel = viewer_panel._ViewerPanel()
     panel._enable_audio.setChecked(True)
     panel._start_audio_player_if_requested()
-    assert panel._audio_player is not None and panel._audio_player.started
+    assert panel._audio_player is not None
+    assert panel._audio_player.started
 
 
 def test_a_reconnect_stops_the_previous_player():
@@ -166,7 +169,8 @@ def test_a_session_error_closes_the_window_and_the_player(qapp):
     panel._ensure_screen_window()
     player = panel._audio_player = _FakePlayer()
     panel._on_error_main("connection reset")
-    assert panel._screen_window is None and player.stopped
+    assert panel._screen_window is None
+    assert player.stopped
     assert qapp.warnings == ["connection reset"]
 
 
@@ -208,7 +212,9 @@ def test_the_share_text_quotes_the_running_host_not_the_edited_fields(monkeypatc
     monkeypatch.setattr(QMessageBox, "question", lambda *args: QMessageBox.StandardButton.Yes)
     panel._copy_share_text()
     text = QApplication.clipboard().text()
-    assert "tok-at-start" in text and "edited-later" not in text and "Transport: TCP" in text
+    assert "tok-at-start" in text
+    assert "edited-later" not in text
+    assert "Transport: TCP" in text
 
 
 def test_the_hidden_preview_reads_no_frames(monkeypatch):
@@ -226,7 +232,8 @@ def test_address_book_dates_before_1970_and_naive_ones_sort():
                {"host_id": "c", "last_used": "2026-01-01T00:00:00+00:00"}]
     book = AddressBookList()
     book.populate(entries)
-    assert book.count() == 3 and book.item(0).text().startswith("(unnamed) - c")
+    assert book.count() == 3
+    assert book.item(0).text().startswith("(unnamed) - c")
 
 
 def test_a_naive_last_seen_is_compared_as_utc():

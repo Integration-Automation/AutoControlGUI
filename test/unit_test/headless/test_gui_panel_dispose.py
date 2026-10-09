@@ -101,7 +101,7 @@ def qapp(monkeypatch, tmp_path):
     monkeypatch.setattr(host_panel, "is_audio_backend_available", lambda: False)
     book = AddressBook(tmp_path / "book.json")        # never the operator's own address book
     monkeypatch.setattr(connection_screen, "default_address_book", lambda: book)
-    yield app
+    return app
 
 
 @pytest.fixture(autouse=True)
@@ -132,16 +132,19 @@ def test_the_viewer_panel_closes_its_window_and_leaves_the_session_in_the_regist
     panel = _viewer_tab()
     assert settle(panel)
     viewer = panel._own_viewer()
-    assert viewer.connected and panel._screen_window is not None
+    assert viewer.connected
+    assert panel._screen_window is not None
     panel.dispose()
-    assert panel._screen_window is None and _active_timers(panel) == 0
-    assert registry.owned(SLOT_VIEWER, panel._owner) is viewer and viewer.connected
+    assert panel._screen_window is None
+    assert _active_timers(panel) == 0
+    assert registry.owned(SLOT_VIEWER, panel._owner) is viewer
+    assert viewer.connected
     panel.dispose()                         # safe to call twice
     assert viewer.connected
 
 
-def test_the_viewer_panel_gives_up_a_connect_that_has_not_answered():
-    _Viewer.gate = threading.Event()
+def test_the_viewer_panel_gives_up_a_connect_that_has_not_answered(monkeypatch):
+    monkeypatch.setattr(_Viewer, "gate", threading.Event())
     panel = _viewer_tab()
     assert panel._connect_task is not None
     panel.dispose()
@@ -149,7 +152,8 @@ def test_the_viewer_panel_gives_up_a_connect_that_has_not_answered():
     _Viewer.gate.set()
     # The viewer that connects anyway is disconnected, and never adopted.
     assert pump_until(lambda: _Viewer.made[-1].disconnects == 1)
-    assert registry.owner_of(SLOT_VIEWER) is None and panel._screen_window is None
+    assert registry.owner_of(SLOT_VIEWER) is None
+    assert panel._screen_window is None
 
 
 def test_quick_connect_stops_polling_and_leaves_its_host_and_session_running():
@@ -159,17 +163,22 @@ def test_quick_connect_stops_polling_and_leaves_its_host_and_session_running():
     screen._dispatch_target(parse_target("desk:5555"), "tok")
     assert settle(screen)
     host, viewer = registry.host, screen._own_viewer()
-    assert host.is_running and viewer.connected and screen._screen_window is not None
+    assert host.is_running
+    assert viewer.connected
+    assert screen._screen_window is not None
     assert _active_timers(screen) == 1
     screen.dispose()
-    assert _active_timers(screen) == 0 and screen._screen_window is None
-    assert registry.owner_of(SLOT_HOST) == screen._owner and host.is_running
-    assert registry.owned(SLOT_VIEWER, screen._owner) is viewer and viewer.connected
+    assert _active_timers(screen) == 0
+    assert screen._screen_window is None
+    assert registry.owner_of(SLOT_HOST) == screen._owner
+    assert host.is_running
+    assert registry.owned(SLOT_VIEWER, screen._owner) is viewer
+    assert viewer.connected
     screen.dispose()
 
 
-def test_quick_connect_gives_up_a_connect_that_has_not_answered():
-    _Viewer.gate = threading.Event()
+def test_quick_connect_gives_up_a_connect_that_has_not_answered(monkeypatch):
+    monkeypatch.setattr(_Viewer, "gate", threading.Event())
     screen = connection_screen.QuickConnectScreen()
     screen._dispatch_target(parse_target("desk:5555"), "tok")
     assert screen._connect_task is not None
@@ -177,7 +186,8 @@ def test_quick_connect_gives_up_a_connect_that_has_not_answered():
     assert screen._connect_task is None
     _Viewer.gate.set()
     assert pump_until(lambda: _Viewer.made[-1].disconnects == 1)
-    assert screen._own_viewer() is None and screen._screen_window is None
+    assert screen._own_viewer() is None
+    assert screen._screen_window is None
 
 
 # --- remote desktop: the WebRTC panels, whose session nobody else could reach -------------------------------------
@@ -192,7 +202,7 @@ class _Gate:
         self.release.wait(30.0)
 
 
-@pytest.fixture()
+@pytest.fixture
 def webrtc():
     pytest.importorskip("av", exc_type=ImportError)
     pytest.importorskip("aiortc", exc_type=ImportError)
@@ -207,10 +217,12 @@ def test_the_webrtc_host_panel_stops_the_host_only_it_could_stop(webrtc):
     panel._multi_host = types.SimpleNamespace(stop_all=gate, session_count=lambda: 0)
     panel.dispose()
     assert panel._multi_host is None
-    assert gate.entered.wait(10.0) and gate.threads[0] is not threading.main_thread()
+    assert gate.entered.wait(10.0)
+    assert gate.threads[0] is not threading.main_thread()
     panel.dispose()                         # safe to call twice: no host left
     gate.release.set()
-    assert settle_op(panel._stops) and len(gate.threads) == 1
+    assert settle_op(panel._stops)
+    assert len(gate.threads) == 1
 
 
 def test_the_webrtc_viewer_panel_ends_its_session_and_cancels_the_reconnect(webrtc):
@@ -219,8 +231,10 @@ def test_the_webrtc_viewer_panel_ends_its_session_and_cancels_the_reconnect(webr
     panel._viewer = types.SimpleNamespace(stop=gate, authenticated=False, _pc=None)
     panel._reconnect_timer.start(60_000)
     panel.dispose()
-    assert panel._viewer is None and not panel._reconnect_timer.isActive()
-    assert gate.entered.wait(10.0) and gate.threads[0] is not threading.main_thread()
+    assert panel._viewer is None
+    assert not panel._reconnect_timer.isActive()
+    assert gate.entered.wait(10.0)
+    assert gate.threads[0] is not threading.main_thread()
     panel._maybe_schedule_auto_reconnect()  # a late "disconnected" from the session that was ended
     assert not panel._reconnect_timer.isActive()
     gate.release.set()
@@ -262,7 +276,8 @@ def test_a_released_computer_use_tab_stops_its_run_and_drops_the_outcome(monkeyp
     tab.dispose()
     assert seen[0].is_set()
     assert pump_until(lambda: tab._thread is None)      # the thread's end is still booked
-    assert tab._status.text() == before and tab._output.toPlainText() == ""
+    assert tab._status.text() == before
+    assert tab._output.toPlainText() == ""
     tab.dispose()
 
 
@@ -299,7 +314,8 @@ def test_a_released_vlm_tab_drops_the_answer_of_the_request_still_out(monkeypatc
     tab.dispose()
     release.set()
     assert pump_until(lambda: tab._vlm_thread is None)
-    assert tab._last_result.text() == "" and tab._status.text() == ""
+    assert tab._last_result.text() == ""
+    assert tab._status.text() == ""
 
 
 def test_a_released_usb_browser_tab_drops_the_open_still_out(monkeypatch):
@@ -362,7 +378,8 @@ def test_cancelling_an_owners_workers_stops_them_and_keeps_only_the_end(fail):
     start_worker(owner, worker, on_done=owner.done, on_fail=owner.fail, on_thread_done=owner.ended)
     start_worker(other, bystander, on_done=other.done, on_fail=other.fail, on_thread_done=other.ended)
     assert cancel_workers(owner) == 1
-    assert worker.stop.is_set() and not bystander.stop.is_set()
+    assert worker.stop.is_set()
+    assert not bystander.stop.is_set()
     assert pump_until(lambda: owner.seen == ["ended"])
     bystander.stop.set()
     assert pump_until(lambda: other.seen == [("done", "value"), "ended"])

@@ -70,7 +70,7 @@ import threading
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Annotated, Any, Dict, List, Optional, Tuple, Union
+from typing import Annotated, Any, Dict, List, Optional, Tuple
 
 try:
     from fastapi import Depends, FastAPI, Header, HTTPException, Request
@@ -187,7 +187,8 @@ class _AnswerIn(BaseModel):
     sdp: str
 
 
-_AUTH_RESPONSES = {401: {"description": "bad shared secret"}}
+_UNAUTHORISED_DETAIL = "bad shared secret"
+_AUTH_RESPONSES = {401: {"description": _UNAUTHORISED_DETAIL}}
 _VALIDATION_RESPONSES = {
     400: {"description": "invalid host_id or sdp"},
     **_AUTH_RESPONSES,
@@ -210,7 +211,7 @@ def _build_secret_dependency(shared_secret: Optional[str]):
         ] = None,
     ) -> None:
         if not _secret_matches(x_signaling_secret, shared_secret):
-            raise HTTPException(status_code=401, detail="bad shared secret")
+            raise HTTPException(status_code=401, detail=_UNAUTHORISED_DETAIL)
     return _check
 
 
@@ -332,7 +333,7 @@ def _guard_refusal(request: Request, shared_secret: Optional[str],
     if not path.startswith(("/sessions", "/config", "/blobs")) or request.method == "OPTIONS":
         return None
     if not _secret_matches(request.headers.get("X-Signaling-Secret"), shared_secret):
-        return JSONResponse({"detail": "bad shared secret"}, status_code=401)
+        return JSONResponse({"detail": _UNAUTHORISED_DETAIL}, status_code=401)
     if request.method not in ("POST", "PUT"):
         return None
     length = request.headers.get("Content-Length")
@@ -408,7 +409,7 @@ def _config_envelope(body: Dict[str, Any]) -> Optional[Tuple[Any, int, str]]:
 
 
 def _commit_config(store: ConfigStore, user_id: str, body: Dict[str, Any],
-                   allow_blind_writes: bool) -> Union[int, JSONResponse]:
+                   allow_blind_writes: bool) -> int | JSONResponse:
     """Commit a PUT body; the new revision, or the 409 reply on a conflict."""
     envelope = _config_envelope(body)
     if envelope is None:
@@ -449,7 +450,7 @@ def _register_config_routes(app: FastAPI, store: ConfigStore, secret_dep,
         try:
             bucket = store.get(user_id)
         except ConfigSyncError as error:
-            _LOG.error("config store read failed: %s", error)
+            _LOG.exception("config store read failed: %s", error)
             raise HTTPException(status_code=503, detail="config store unavailable") from error  # NOSONAR
         if bucket is None:
             raise HTTPException(status_code=404, detail="no bucket")  # NOSONAR — see _CONFIG_RESPONSES
@@ -463,7 +464,7 @@ def _register_config_routes(app: FastAPI, store: ConfigStore, secret_dep,
         except StoreCapacityError as error:
             raise HTTPException(status_code=503, detail="too many users") from error  # NOSONAR
         except ConfigSyncError as error:
-            _LOG.error("config store write failed: %s", error)
+            _LOG.exception("config store write failed: %s", error)
             raise HTTPException(status_code=503, detail="config store unavailable") from error  # NOSONAR
         if isinstance(outcome, JSONResponse):
             return outcome
@@ -543,8 +544,8 @@ def _register_blob_routes(app: FastAPI, blobs: BlobStore, secret_dep) -> None:
         return _blob_call(blobs.usage, user_id)
 
 
-def _blob_root(blob_store_path: Union[str, Path, None],
-               config_store_path: Union[str, Path, None]) -> Path:
+def _blob_root(blob_store_path: str | Path | None,
+               config_store_path: str | Path | None) -> Path:
     """Where blobs go: the given folder, else beside the config database."""
     if blob_store_path is not None:
         return Path(blob_store_path)
@@ -565,9 +566,9 @@ def create_app(shared_secret: Optional[str] = None,
                ttl_s: float = _DEFAULT_TTL_S,
                serve_web_viewer: bool = True,
                cors_origins: Optional[list] = None, *,
-               config_store_path: Union[str, Path, None] = None,
+               config_store_path: str | Path | None = None,
                allow_blind_config_writes: bool = False,
-               blob_store_path: Union[str, Path, None] = None,
+               blob_store_path: str | Path | None = None,
                max_blob_bytes: int = DEFAULT_MAX_BLOB_BYTES,
                blob_quota_bytes: int = DEFAULT_BLOB_QUOTA_BYTES) -> FastAPI:
     """Build the FastAPI app. Importable for embedding in larger services.

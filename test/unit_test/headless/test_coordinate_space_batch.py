@@ -14,7 +14,8 @@ def test_normalized_space_round_trip():
     mx, my = space.to_model(960, 540)
     assert (mx, my) == (500, 500)
     px, py = space.to_physical(500, 500)
-    assert abs(px - 960) <= 1 and abs(py - 540) <= 1
+    assert abs(px - 960) <= 1
+    assert abs(py - 540) <= 1
 
 
 def test_to_physical_scales_from_grid():
@@ -25,7 +26,8 @@ def test_to_physical_scales_from_grid():
 
 def test_xga_preserves_aspect_and_fits():
     space = xga_space(1920, 1080)        # 16:9 fits in 1024x768
-    assert space.model_w <= 1024 and space.model_h <= 768
+    assert space.model_w <= 1024
+    assert space.model_h <= 768
     # aspect ratio preserved
     assert abs(space.model_w / space.model_h - 1920 / 1080) < 0.02
     assert space.model_w == 1024         # width-bound for 16:9
@@ -63,7 +65,8 @@ def test_executor_round_trip():
          "model_w": 1000, "model_h": 1000},
     ]])
     point = next(v for v in rec.values() if isinstance(v, dict))
-    assert abs(point["x"] - 960) <= 1 and abs(point["y"] - 540) <= 1
+    assert abs(point["x"] - 960) <= 1
+    assert abs(point["y"] - 540) <= 1
 
 
 def test_wiring():

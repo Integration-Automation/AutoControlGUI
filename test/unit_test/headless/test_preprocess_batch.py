@@ -36,8 +36,9 @@ def test_upscale_doubles_dimensions():
 
 
 def test_upscale_rejects_unknown_interp():
+    image = _color()
     with pytest.raises(ValueError):
-        upscale(_color(), interp="magic")
+        upscale(image, interp="magic")
 
 
 def test_binarize_otsu_is_two_valued():
@@ -49,8 +50,9 @@ def test_binarize_adaptive_keeps_shape():
 
 
 def test_binarize_rejects_unknown_method():
+    image = _color()
     with pytest.raises(ValueError):
-        binarize(_color(), method="triangle")
+        binarize(image, method="triangle")
 
 
 def test_denoise_and_contrast_keep_grayscale_shape():
@@ -75,13 +77,15 @@ def test_deskew_reduces_skew():
 
 def test_pipeline_chains_steps():
     out = preprocess_image(_color(), steps=("grayscale", "upscale", "binarize"))
-    assert out.ndim == 2 and out.shape == (80, 120)
+    assert out.ndim == 2
+    assert out.shape == (80, 120)
     assert sorted(set(out.flatten().tolist())) == [0, 255]
 
 
 def test_pipeline_rejects_unknown_step():
+    image = _color()
     with pytest.raises(ValueError):
-        preprocess_image(_color(), steps=("sharpen",))
+        preprocess_image(image, steps=("sharpen",))
 
 
 # --- wiring ---------------------------------------------------------------
@@ -99,7 +103,8 @@ def test_wiring():
 def test_facade_exports():
     for attr in ("preprocess_image", "to_grayscale", "binarize", "upscale",
                  "deskew", "enhance_contrast"):
-        assert hasattr(ac, attr) and attr in ac.__all__
+        assert hasattr(ac, attr)
+        assert attr in ac.__all__
 
 
 def test_executor_writes_output(tmp_path):
@@ -109,5 +114,7 @@ def test_executor_writes_output(tmp_path):
     out = tmp_path / "out.png"
     result = _preprocess_image(str(out), source=str(src),
                                steps=["grayscale", "binarize"])
-    assert result["path"] == str(out) and out.exists()
-    assert result["width"] == 60 and result["height"] == 40
+    assert result["path"] == str(out)
+    assert out.exists()
+    assert result["width"] == 60
+    assert result["height"] == 40

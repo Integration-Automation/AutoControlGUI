@@ -35,7 +35,8 @@ def test_rest_usb_booleans_must_be_json_booleans(monkeypatch):
     monkeypatch.setattr(commands, "passthrough_enable", lambda enabled: calls.append(enabled) or {})
     context = rest_handlers.RouteContext(query="", body={"enabled": "false"}, client_ip="127.0.0.1")
     status, _payload = rest_handlers.handle_usb_passthrough_enable(context)
-    assert status == 400 and calls == []
+    assert status == 400
+    assert calls == []
     context = rest_handlers.RouteContext(
         query="", body={"vendor_id": "1234", "product_id": "abcd", "allow": "false"},
         client_ip="127.0.0.1")
@@ -47,7 +48,8 @@ def test_po_entries_need_no_blank_line(newline):
     source = newline.join(['msgid ""', 'msgstr "Content-Type: text/plain; charset=UTF-8\\n"', "",
                            'msgid "a"', 'msgstr "A"', 'msgid "b"', 'msgstr "B"', ""])
     catalog = parse_po(source)
-    assert catalog.gettext("a") == "A" and catalog.gettext("b") == "B"
+    assert catalog.gettext("a") == "A"
+    assert catalog.gettext("b") == "B"
 
 
 def test_plural_categories_use_the_absolute_value():

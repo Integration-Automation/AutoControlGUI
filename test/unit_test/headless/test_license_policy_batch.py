@@ -51,7 +51,8 @@ def test_evaluate_sbom_violations():
     violations = evaluate_sbom(COMPONENTS, allow=ALLOW)
     by_name = {v["name"]: v["status"] for v in violations}
     assert by_name == {"b": "denied", "c": "unknown"}
-    assert "a" not in by_name and "d" not in by_name
+    assert "a" not in by_name
+    assert "d" not in by_name
 
 
 def test_deny_takes_precedence_in_sbom():

@@ -46,7 +46,7 @@ import threading
 import time
 import weakref
 from pathlib import Path
-from typing import Callable, Dict, List, NamedTuple, Optional, Sequence, Tuple, Union
+from typing import Callable, Dict, List, NamedTuple, Optional, Sequence, Tuple
 
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 
@@ -182,7 +182,7 @@ class FolderSyncEngine:
         """
         return self._ready.wait(timeout)
 
-    def relative_name(self, path: Union[str, Path]) -> Optional[str]:
+    def relative_name(self, path: str | Path) -> Optional[str]:
         """``path`` as this engine names it, or ``None`` if it does not mirror it.
 
         A file directly in the watched folder is covered; one in a subfolder
@@ -358,8 +358,8 @@ def live_engines() -> List[FolderSyncEngine]:
         return list(_ENGINES)
 
 
-def note_incoming(final_path: Union[str, Path],
-                  content_path: Union[str, Path, None] = None) -> int:
+def note_incoming(final_path: str | Path,
+                  content_path: str | Path | None = None) -> int:
     """Tell every engine mirroring ``final_path``'s folder that the peer sent it.
 
     For the code that receives a file. Call it *before* the finished file is

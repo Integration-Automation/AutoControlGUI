@@ -7,7 +7,8 @@ from je_auto_control.utils.notify import notifier
 def test_notify_spec_linux_uses_notify_send():
     argv, env = notifier._notify_spec("Linux", "Title", "Body")
     assert argv[0] == "notify-send"
-    assert "Title" in argv and "Body" in argv
+    assert "Title" in argv
+    assert "Body" in argv
     assert env == {}
 
 

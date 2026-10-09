@@ -185,9 +185,11 @@ def test_internal_names_jeffrey_rpa_imports():
     from je_auto_control.wrapper.auto_control_keyboard import (
         WRITE_CONTROL_KEYS,
     )
-    assert callable(enumerate_monitors) and callable(logical_virtual_rect)
+    assert callable(enumerate_monitors)
+    assert callable(logical_virtual_rect)
     # Jeffrey_RPA falls back to its own table unless this is a non-empty dict.
-    assert isinstance(WRITE_CONTROL_KEYS, dict) and WRITE_CONTROL_KEYS
+    assert isinstance(WRITE_CONTROL_KEYS, dict)
+    assert WRITE_CONTROL_KEYS
 
 
 @pytest.mark.parametrize("name, keywords", [
@@ -224,8 +226,10 @@ def test_key_tables_jeffrey_rpa_reads():
 
     keyboard = platform_wrapper.keyboard_keys_table
     mouse = platform_wrapper.mouse_keys_table
-    assert isinstance(keyboard, dict) and len(keyboard) >= 100
-    assert isinstance(mouse, dict) and len(mouse) >= 3
+    assert isinstance(keyboard, dict)
+    assert len(keyboard) >= 100
+    assert isinstance(mouse, dict)
+    assert len(mouse) >= 3
     for name in ("mouse_left", "mouse_right", "mouse_middle"):
         assert name in mouse, name
     for name in ("up", "down", "left", "right", "space", "tab", "shift",

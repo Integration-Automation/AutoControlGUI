@@ -29,7 +29,7 @@ import secrets
 import threading
 import time
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional
 
 from je_auto_control.utils.config_sync.bucket import ConfigSyncError
 
@@ -89,7 +89,7 @@ class BlobStore:
     ``create_app`` does) has no side effect.
     """
 
-    def __init__(self, root: Union[str, Path, None] = None, *,
+    def __init__(self, root: str | Path | None = None, *,
                  max_blob_bytes: int = DEFAULT_MAX_BLOB_BYTES,
                  quota_bytes: int = DEFAULT_BLOB_QUOTA_BYTES,
                  max_users: int = DEFAULT_MAX_BLOB_USERS) -> None:

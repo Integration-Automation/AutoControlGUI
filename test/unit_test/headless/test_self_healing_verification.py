@@ -16,12 +16,12 @@ from je_auto_control.utils.self_healing import locator as locator_mod
 from je_auto_control.utils.self_healing import verification
 
 
-@pytest.fixture()
+@pytest.fixture
 def temp_log(tmp_path):
     return HealEventLog(tmp_path / "heal.jsonl")
 
 
-@pytest.fixture()
+@pytest.fixture
 def screen(monkeypatch):
     """A fake screen: which templates and texts are on it, and what was clicked."""
     state = {"images": {"submit.png"}, "texts": set(), "clicks": [], "probes": []}
@@ -62,7 +62,8 @@ def screen(monkeypatch):
 def test_a_declarative_check_fills_action_verified(screen, temp_log, spec, verified):
     outcome = self_heal_click(template_path="submit.png", log=temp_log,
                               verify={**spec, "timeout_s": 0})
-    assert outcome.found is True and outcome.action == "click"
+    assert outcome.found is True
+    assert outcome.action == "click"
     assert outcome.action_verified is verified
     assert screen["clicks"] == [((10, 20), "mouse_left")]
     assert temp_log.list_events()[0].action_verified is verified
@@ -78,7 +79,8 @@ def test_the_json_command_carries_the_check(screen, temp_log, monkeypatch):
         "template_path": "submit.png",
         "verify": {"type": "image_gone", "timeout_s": 0}}]], raise_on_error=True)
     result = next(iter(record.values()))
-    assert result["action_verified"] is True and result["action"] == "click"
+    assert result["action_verified"] is True
+    assert result["action"] == "click"
 
 
 def test_the_mcp_handler_carries_the_check(screen, temp_log, monkeypatch):
@@ -120,7 +122,8 @@ def test_a_malformed_check_is_refused_before_anything_is_clicked(screen, temp_lo
     ]:
         with pytest.raises(HealVerificationError, match=message):
             self_heal_click(template_path="submit.png", log=temp_log, verify=spec)
-    assert screen["clicks"] == [] and temp_log.list_events() == []
+    assert screen["clicks"] == []
+    assert temp_log.list_events() == []
 
 
 def test_an_image_check_needs_a_template_when_the_click_had_none(screen, monkeypatch):
@@ -143,7 +146,7 @@ def test_a_check_that_cannot_run_raises_and_is_logged_unverified(screen, temp_lo
     assert len(screen["clicks"]) == 1
 
 
-def test_the_check_is_polled_until_it_holds_or_time_runs_out():
+def test_the_check_is_polled_until_it_holds_or_time_runs_out(monkeypatch):
     now = [0.0]
     slept = []
     answers = iter([False, False, True])
@@ -154,16 +157,14 @@ def test_the_check_is_polled_until_it_holds_or_time_runs_out():
 
     verify = build_verifier({"type": "text_present", "text": "x", "timeout_s": 5, "poll_s": 1},
                             clock=lambda: now[0], sleep=sleep)
-    original = verification.text_on_screen
-    verification.text_on_screen = lambda *args, **kwargs: next(answers)
-    try:
-        assert verify(None) is True and slept == [1.0, 1.0]
-        verification.text_on_screen = lambda *args, **kwargs: False
-        slept.clear()
-        assert verify(None) is False
-        assert len(slept) == 5 and now[0] >= 7.0
-    finally:
-        verification.text_on_screen = original
+    monkeypatch.setattr(verification, "text_on_screen", lambda *args, **kwargs: next(answers))
+    assert verify(None) is True
+    assert slept == [1.0, 1.0]
+    monkeypatch.setattr(verification, "text_on_screen", lambda *args, **kwargs: False)
+    slept.clear()
+    assert verify(None) is False
+    assert len(slept) == 5
+    assert now[0] >= 7.0
 
 
 def test_image_on_screen_tells_absent_from_unreadable(monkeypatch):

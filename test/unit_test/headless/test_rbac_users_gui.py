@@ -43,7 +43,7 @@ def _isolated(monkeypatch):
     rest_api_registry.stop()
 
 
-@pytest.fixture()
+@pytest.fixture
 def tab(app):
     widget = RestApiTab()
     yield widget
@@ -81,7 +81,8 @@ def test_shared_token_mode_shows_the_token(tab):
     assert tab._status_label.text() == _t("rest_running")
     tab._on_stop()
     assert settle_op(tab._server_op)
-    assert tab._token_value.text() == "-" and tab._shared_token is None
+    assert tab._token_value.text() == "-"
+    assert tab._shared_token is None
 
 
 def test_rbac_mode_names_the_user_store_instead_of_a_refused_token(tab, tmp_path):
@@ -95,9 +96,12 @@ def test_rbac_mode_names_the_user_store_instead_of_a_refused_token(tab, tmp_path
     tab._on_start()
     assert settle_op(tab._server_op)
     server = rest_api_registry.server
-    assert server.user_store is not None and server.user_store.path == path.resolve()
+    assert server.user_store is not None
+    assert server.user_store.path == path.resolve()
     shown = tab._token_value.text()
-    assert "shared-secret" not in shown and server.token not in shown and token not in shown
+    assert "shared-secret" not in shown
+    assert server.token not in shown
+    assert token not in shown
     assert str(path.resolve()) in shown
     assert tab._shared_token is None, "nothing for Copy token to hand out"
     assert tab._status_label.text() == _t("rest_running_rbac")
@@ -125,7 +129,7 @@ def test_the_tab_offers_the_user_commands_in_its_menu(tab):
 
 # --- the users group --------------------------------------------------------
 
-@pytest.fixture()
+@pytest.fixture
 def panel(app, tmp_path):
     widget = RbacUsersPanel()
     widget._path_input.setText(str(tmp_path / "users.json"))
@@ -137,11 +141,13 @@ def test_the_path_defaults_to_the_configured_store(app, tmp_path, monkeypatch):
     monkeypatch.setenv(USERS_ENV, str(tmp_path / "configured.json"))
     widget = RbacUsersPanel()
     assert widget.users_path() == str(tmp_path / "configured.json")
-    assert widget._enable_check.isChecked() and widget.user_store() is not None
+    assert widget._enable_check.isChecked()
+    assert widget.user_store() is not None
     widget.deleteLater()
     empty = RbacUsersPanel()
     empty._path_input.clear()
-    assert empty.users_path() is None and empty.user_store() is None
+    assert empty.users_path() is None
+    assert empty.user_store() is None
     empty.refresh()
     assert empty._status_label.text() == _t("rest_users_no_store")
     empty.deleteLater()
@@ -168,14 +174,16 @@ def test_select_a_row_then_change_role_rotate_and_remove(panel, tmp_path, monkey
     first_token = panel._token_value.text()
     panel._id_input.clear()
     panel._table.selectRow(1)
-    assert panel._id_input.text() == "bob" and panel._role_input.currentText() == "viewer"
+    assert panel._id_input.text() == "bob"
+    assert panel._role_input.currentText() == "viewer"
     panel._role_input.setCurrentText(Role.OPERATOR)
     panel._on_set_role()
     assert _rows(panel)[1] == ("bob", "Bob", "operator")
     assert panel._token_value.text() == ""
     panel._on_rotate()
     rotated = panel._token_value.text()
-    assert rotated and rotated != first_token
+    assert rotated
+    assert rotated != first_token
     assert UserStore(store_path).authenticate(rotated).user_id == "bob"
     answers = iter([QMessageBox.StandardButton.No, QMessageBox.StandardButton.Yes])
     monkeypatch.setattr(rbac_users_panel.QMessageBox, "question",
@@ -194,7 +202,8 @@ def test_errors_are_shown_in_the_panel_not_in_a_dialog(panel, monkeypatch):
     _fill(panel, "alice", Role.ADMIN)
     panel._on_add()
     panel._on_add()
-    assert "already exists" in panel._status_label.text() and panel._token_value.text() == ""
+    assert "already exists" in panel._status_label.text()
+    assert panel._token_value.text() == ""
     panel._on_remove()
     assert "only admin" in panel._status_label.text()
     _fill(panel, "nobody")
@@ -228,6 +237,8 @@ def test_every_new_key_is_translated_in_all_four_catalogues():
         for key in keys:
             assert words.get(key), f"{language} lacks {key}"
     for words in catalogues.values():
-        assert "{path}" in words["rest_token_rbac"] and "{user}" in words["rest_users_remove_confirm"]
-        assert "{count}" in words["rest_users_count"] and "{path}" in words["rest_users_count"]
+        assert "{path}" in words["rest_token_rbac"]
+        assert "{user}" in words["rest_users_remove_confirm"]
+        assert "{count}" in words["rest_users_count"]
+        assert "{path}" in words["rest_users_count"]
         assert "{user}" in words["rest_users_token_issued"]

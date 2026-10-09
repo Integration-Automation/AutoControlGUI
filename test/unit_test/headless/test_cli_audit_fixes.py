@@ -100,4 +100,5 @@ def test_the_plugin_survives_a_failed_screenshot(tmp_path, monkeypatch):
     item = types.SimpleNamespace(nodeid="t.py::test_x",
                                  add_report_section=lambda *args: sections.append(args))
     assert plugin._capture_failure_screenshot(item, tmp_path) is None
-    assert sections and "no display" in sections[0][2]
+    assert sections
+    assert "no display" in sections[0][2]

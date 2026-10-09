@@ -36,7 +36,8 @@ def test_box_outside_grid_is_dropped():
 
 def test_populate_table_reports_dims_and_cells():
     result = populate_table(GRID, _header_grid_boxes())
-    assert result["n_rows"] == 2 and result["n_cols"] == 2
+    assert result["n_rows"] == 2
+    assert result["n_cols"] == 2
     assert {"row": 1, "col": 1, "text": "30"} in result["cells"]
     assert result["spans"] == []
 
@@ -69,4 +70,5 @@ def test_wiring():
 def test_facade_exports():
     for name in ("assign_text_to_grid", "populate_table",
                  "table_to_records", "table_to_csv"):
-        assert hasattr(ac, name) and name in ac.__all__
+        assert hasattr(ac, name)
+        assert name in ac.__all__

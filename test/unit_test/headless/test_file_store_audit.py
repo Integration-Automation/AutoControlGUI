@@ -63,8 +63,9 @@ def test_an_asset_without_db_survives_to_the_next_command():
 
 @pytest.mark.parametrize("value, asset_type", [("eighty", "int"), ("x", "integer")])
 def test_an_unreadable_asset_is_refused_when_set(value, asset_type):
+    store = assets.AssetStore(None)
     with pytest.raises(ValueError):
-        assets.AssetStore(None).set("port", value, asset_type=asset_type)
+        store.set("port", value, asset_type=asset_type)
 
 
 def _bundle(entry):
@@ -75,7 +76,8 @@ def test_a_bundle_entry_without_content_is_refused(tmp_path):
     target = tmp_path / "admin_hosts.json"
     target.write_text('{"hosts": []}', encoding="utf-8")
     report = import_config_bundle(_bundle({"format": "json"}), root=tmp_path)
-    assert report.skipped == ["admin_hosts.json"] and report.written == []
+    assert report.skipped == ["admin_hosts.json"]
+    assert report.written == []
     assert json.loads(target.read_text(encoding="utf-8")) == {"hosts": []}
 
 

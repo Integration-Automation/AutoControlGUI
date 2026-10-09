@@ -73,8 +73,10 @@ def _run(tmp_path, name, store):
 
 def test_the_first_sync_of_an_empty_account_writes_nothing(tmp_path, server):
     report, outbox = _run(tmp_path, "laptop", {})
-    assert report.state == "synced" and report.revision == 0
-    assert server.puts == 0 and server.body is None
+    assert report.state == "synced"
+    assert report.revision == 0
+    assert server.puts == 0
+    assert server.body is None
     assert sync_status(outbox)["state"] == "synced"
     # ... and it stays that way however often it is repeated.
     _run(tmp_path, "laptop", {})
@@ -88,7 +90,8 @@ def test_push_operations_with_nothing_on_either_side_does_not_push(server):
 
 def test_the_first_real_change_still_creates_the_bucket_and_lists_the_device(tmp_path, server):
     report, _outbox = _run(tmp_path, "laptop", {"a": {"v": 1}})
-    assert report.revision == 1 and server.puts == 1
+    assert report.revision == 1
+    assert server.puts == 1
     assert list(server.body["peers"]) == ["laptop"]
 
 
@@ -97,12 +100,15 @@ def test_joining_a_bucket_that_holds_entries_commits_nothing_either(tmp_path, se
     store = {}
     report, _outbox = _run(tmp_path, "desktop", store)
     assert store == {"a": {"v": 1}}
-    assert report.state == "synced" and report.revision == 1
-    assert server.puts == 1 and list(server.body["peers"]) == ["laptop"]
+    assert report.state == "synced"
+    assert report.revision == 1
+    assert server.puts == 1
+    assert list(server.body["peers"]) == ["laptop"]
     # The desktop's first real change is what lists it ...
     store["b"] = {"v": 2}
     report, _outbox = _run(tmp_path, "desktop", store)
-    assert report.revision == 2 and set(server.body["peers"]) == {"laptop", "desktop"}
+    assert report.revision == 2
+    assert set(server.body["peers"]) == {"laptop", "desktop"}
     # ... and once listed, a further sync with nothing new writes nothing.
     _run(tmp_path, "desktop", store)
     assert server.puts == 2
@@ -119,4 +125,5 @@ def test_a_bucket_emptied_of_entries_is_not_joined_either(server):
     assert server.body["sections"]["custom"] == {}
     puts = server.puts
     result = client.push_operations([], device_id="desktop")
-    assert not result.pushed and server.puts == puts
+    assert not result.pushed
+    assert server.puts == puts

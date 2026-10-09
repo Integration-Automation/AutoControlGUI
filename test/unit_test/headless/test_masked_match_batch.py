@@ -55,7 +55,8 @@ def test_alpha_channel_is_the_implicit_mask():
     rgba = np.dstack([tmpl, tmpl, tmpl, mask])     # alpha == the core mask
     hit = match_masked(rgba, haystack=_scene_with_different_border(),
                        min_score=0.9)
-    assert hit is not None and (hit.x, hit.y) == (40, 30)
+    assert hit is not None
+    assert (hit.x, hit.y) == (40, 30)
 
 
 def test_absent_template_returns_none():
@@ -76,8 +77,9 @@ def test_match_all_dedupes_to_one():
 def test_mask_shape_mismatch_raises():
     tmpl, _ = _template_with_border()
     bad = np.zeros((5, 5), dtype=np.uint8)
+    haystack = _scene_with_different_border()
     with pytest.raises(ValueError):
-        match_masked(tmpl, mask=bad, haystack=_scene_with_different_border())
+        match_masked(tmpl, mask=bad, haystack=haystack)
 
 
 # --- wiring ---------------------------------------------------------------
@@ -95,4 +97,5 @@ def test_wiring():
 
 def test_facade_exports():
     for attr in ("match_masked", "match_masked_all"):
-        assert hasattr(ac, attr) and attr in ac.__all__
+        assert hasattr(ac, attr)
+        assert attr in ac.__all__

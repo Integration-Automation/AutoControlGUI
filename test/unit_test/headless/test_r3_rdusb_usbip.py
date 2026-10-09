@@ -153,7 +153,8 @@ def test_server_replies_negative_status_without_killing_worker():
         header = _recv(sock, 20)
         body = _recv(sock, 28)
         # Pre-fix the worker died on struct.error and these reads got EOF.
-        assert len(header) == 20 and len(body) == 28
+        assert len(header) == 20
+        assert len(body) == 28
         assert int.from_bytes(header[:4], "big") == USBIP_RET_SUBMIT
         assert struct.unpack("!i", body[:4])[0] == -19
         sock.close()

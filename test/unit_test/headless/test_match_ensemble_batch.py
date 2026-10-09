@@ -11,7 +11,8 @@ def test_vote_centers_majority_agrees():
                           agree_px=10, min_votes=2)
     assert result is not None
     assert abs(result["point"][0] - 99) <= 4
-    assert result["votes"] == 3 and result["n_candidates"] == 4
+    assert result["votes"] == 3
+    assert result["n_candidates"] == 4
 
 
 def test_vote_centers_too_few_votes_is_none():
@@ -52,4 +53,5 @@ def test_wiring():
 
 def test_facade_exports():
     for name in ("match_ensemble", "vote_centers"):
-        assert hasattr(ac, name) and name in ac.__all__
+        assert hasattr(ac, name)
+        assert name in ac.__all__

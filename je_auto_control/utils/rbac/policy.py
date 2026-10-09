@@ -198,7 +198,7 @@ TOOL_CAPABILITIES: Dict[str, str] = {
     "ac_user_set_role": _USERS,
     "ac_user_rotate_token": _USERS,
     "ac_user_list": _USERS,
-    **{name: _DATA for name in DATA_TOOLS},
+    **dict.fromkeys(DATA_TOOLS, _DATA),
 }
 
 

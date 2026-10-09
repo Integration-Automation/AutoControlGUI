@@ -46,7 +46,8 @@ def test_changed_regions_locates_the_block():
     assert len(regions) == 1
     box = regions[0]
     # the changed blob overlaps the (40,30)-(60,50) block
-    assert 30 <= box["x"] <= 50 and 20 <= box["y"] <= 40
+    assert 30 <= box["x"] <= 50
+    assert 20 <= box["y"] <= 40
     assert box["area"] >= 20
 
 
@@ -57,8 +58,9 @@ def test_changed_regions_empty_when_identical():
 
 def test_size_mismatch_raises():
     small = np.zeros((40, 40), dtype=np.uint8)
+    base = _base()
     with pytest.raises(ValueError):
-        ssim_compare(_base(), small)
+        ssim_compare(base, small)
 
 
 # --- wiring ---------------------------------------------------------------
@@ -76,4 +78,5 @@ def test_wiring():
 
 def test_facade_exports():
     for attr in ("ssim_compare", "ssim_changed_regions"):
-        assert hasattr(ac, attr) and attr in ac.__all__
+        assert hasattr(ac, attr)
+        assert attr in ac.__all__

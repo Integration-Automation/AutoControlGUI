@@ -338,7 +338,8 @@ def test_get_pixel_grabs_a_one_by_one_region_at_the_point():
          patch.object(wayland_capture.subprocess, "run",
                       side_effect=_fake_capture(captured, png)):
         assert wayland_screen.get_pixel(7, 9) == (10, 20, 30)
-    assert "-g" in captured[0] and "7,9 1x1" in captured[0]
+    assert "-g" in captured[0]
+    assert "7,9 1x1" in captured[0]
 
 
 def _one_pixel_png(rgb) -> bytes:

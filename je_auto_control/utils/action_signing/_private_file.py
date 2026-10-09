@@ -39,7 +39,7 @@ _BROAD_PRINCIPALS = {
     "BG": ("S-1-5-32-546", "Guests"),
     "NU": ("S-1-5-2", "Network"),
 }
-_BROAD_BY_SID = {sid: name for sid, name in _BROAD_PRINCIPALS.values()}
+_BROAD_BY_SID = dict(_BROAD_PRINCIPALS.values())
 # Two-letter SDDL rights that include reading the file's data.
 _READ_RIGHTS = frozenset({"FA", "FR", "GA", "GR", "CC"})
 _FILE_READ_DATA = 0x1

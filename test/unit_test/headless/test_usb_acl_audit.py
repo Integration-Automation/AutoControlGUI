@@ -42,7 +42,8 @@ def test_a_damaged_file_is_kept_aside_not_overwritten(tmp_path):
     acl = UsbAcl(path=path)
     assert acl.decide(vendor_id="aaaa", product_id="0001", serial=None) == "deny"
     kept = [p for p in tmp_path.iterdir() if p.name.startswith("usb_acl.json.corrupt-")]
-    assert len(kept) == 1 and kept[0].read_bytes() == damaged
+    assert len(kept) == 1
+    assert kept[0].read_bytes() == damaged
 
 
 @pytest.mark.parametrize("vendor, product", [("01050", "0407"), ("1050:0407", "0407"), ("10_50", "0407")])

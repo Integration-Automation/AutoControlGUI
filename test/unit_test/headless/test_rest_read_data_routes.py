@@ -77,7 +77,7 @@ def _no_ambient_rbac(monkeypatch):
     monkeypatch.delenv(USERS_ENV, raising=False)
 
 
-@pytest.fixture()
+@pytest.fixture
 def users(tmp_path):
     """A store with one user per role; ``tokens`` maps the role to its token."""
     store = UserStore(tmp_path / "users.json")
@@ -98,7 +98,7 @@ class _FakeAudit:
         self.rows.append({"event_type": event_type, **fields})
 
 
-@pytest.fixture()
+@pytest.fixture
 def rest(monkeypatch):
     """Start REST servers on ephemeral ports whose data routes only record the call."""
     served = []
@@ -355,4 +355,5 @@ def test_the_dashboard_names_the_missing_capability_on_a_403():
     """Read from the source: there is no JavaScript runtime in the test environment."""
     script = _dashboard_script()
     assert "resp.status === 403" in script
-    assert "required_capability" in script and "not available to" in script
+    assert "required_capability" in script
+    assert "not available to" in script

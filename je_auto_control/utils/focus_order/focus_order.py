@@ -17,7 +17,7 @@ duplicated. ``focus_control`` is a thin dispatch onto the injectable
 ``accessibility.backends.get_backend()`` seam; the real ``SetFocus`` call lives in
 the Windows backend. Imports no ``PySide6``.
 """
-from typing import Any, Dict, List, Optional, Sequence, Union
+from typing import Any, Dict, List, Optional, Sequence
 
 from je_auto_control.utils.accessibility.element import AccessibilityElement
 from je_auto_control.utils.ax_tree_walk import humanize_role
@@ -44,7 +44,7 @@ _INTERACTIVE_KEYS = frozenset({
 })
 
 
-def _role_key(role: Union[str, int]) -> str:
+def _role_key(role: str | int) -> str:
     """``role`` as a lookup key: humanized, AX prefix dropped, lower case, no spaces."""
     text = humanize_role(role)
     if text.startswith("AX") and text[2:3].isupper():
@@ -52,7 +52,7 @@ def _role_key(role: Union[str, int]) -> str:
     return "".join(text.lower().split()).replace("_", "")
 
 
-def is_interactive_role(role: Union[str, int]) -> bool:
+def is_interactive_role(role: str | int) -> bool:
     """Return True if ``role`` is one that normally accepts keyboard focus (any platform's spelling)."""
     return _role_key(role) in _INTERACTIVE_KEYS
 

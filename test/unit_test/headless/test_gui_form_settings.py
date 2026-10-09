@@ -15,7 +15,7 @@ from je_auto_control.gui.window_settings import WindowSettings, WindowState  # n
 _NEVER_SAVED = "phrase-0451-never-on-disk"
 
 
-@pytest.fixture()
+@pytest.fixture
 def qapp(monkeypatch):
     monkeypatch.setattr(config_sync_tab.session, "config_sync_status", lambda _url, _user: {})
     return QApplication.instance() or QApplication([])
@@ -28,7 +28,8 @@ def test_a_form_round_trips_beside_the_window_state(tmp_path):
     assert store.save_form("config_sync", {"server": "https://sync.invalid", "user": "alice"})
     again = WindowSettings(tmp_path / "gui.ini")
     assert again.load_form("config_sync") == {"server": "https://sync.invalid", "user": "alice"}
-    assert again.load().theme == "light" and again.load().text_size == 14
+    assert again.load().theme == "light"
+    assert again.load().text_size == 14
     assert again.load_form("another") == {}
 
 
@@ -37,13 +38,15 @@ def test_saving_a_form_replaces_its_fields_and_leaves_other_forms(tmp_path):
     store.save_form("one", {"a": "1", "b": "2"})
     store.save_form("two", {"a": "x"})
     store.save_form("one", {"a": "3"})
-    assert store.load_form("one") == {"a": "3"} and store.load_form("two") == {"a": "x"}
+    assert store.load_form("one") == {"a": "3"}
+    assert store.load_form("two") == {"a": "x"}
 
 
 def test_a_store_that_is_off_remembers_nothing(tmp_path):
     store = WindowSettings(None)
     assert store.save_form("config_sync", {"server": "x"}) is False
-    assert store.load_form("config_sync") == {} and list(tmp_path.iterdir()) == []
+    assert store.load_form("config_sync") == {}
+    assert list(tmp_path.iterdir()) == []
 
 
 @pytest.mark.parametrize("name", ["", "has space", "a/b", "1st", "x" * 80])
@@ -92,7 +95,8 @@ def test_starting_a_sync_saves_the_form(qapp, tmp_path, monkeypatch):
     tab._inputs["secret"].setText(_NEVER_SAVED)
     tab.sync_now()
     saved = WindowSettings(path).load_form("config_sync")
-    assert saved["user"] == "bob" and "secret" not in saved
+    assert saved["user"] == "bob"
+    assert "secret" not in saved
     assert _NEVER_SAVED not in path.read_text(encoding="utf-8")
     worker = tab._worker
     assert worker is None or worker.wait(10.0)

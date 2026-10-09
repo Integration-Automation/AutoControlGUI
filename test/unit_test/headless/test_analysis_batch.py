@@ -20,7 +20,8 @@ def test_heal_stats_metrics():
          "image_error": "not found", "template_path": "btn.png"},
     ]
     stats = heal_stats(events)
-    assert stats["total"] == 3 and stats["healed"] == 2
+    assert stats["total"] == 3
+    assert stats["healed"] == 2
     assert stats["heal_rate"] == pytest.approx(round(2 / 3, 4))
     assert stats["by_method"] == {"image": 1, "vlm": 2}
     assert stats["fallbacks"] == 2
@@ -31,7 +32,8 @@ def test_heal_stats_metrics():
 
 def test_heal_stats_empty():
     stats = heal_stats([])
-    assert stats["total"] == 0 and stats["heal_rate"] == pytest.approx(0.0)
+    assert stats["total"] == 0
+    assert stats["heal_rate"] == pytest.approx(0.0)
 
 
 # --- secrets scan ---------------------------------------------------------

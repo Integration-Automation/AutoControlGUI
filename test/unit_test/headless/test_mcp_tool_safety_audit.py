@@ -38,7 +38,8 @@ _OUTWARD = ["ac_s3_delete", "ac_egress_allow", "ac_lease_secret", "ac_approval_a
 @pytest.mark.parametrize("name", _RUN_ACTIONS + _SEND_INPUT + _OUTWARD)
 def test_tools_that_act_are_destructive(registry, name):
     annotations = registry[name].annotations
-    assert annotations.destructive and not annotations.read_only
+    assert annotations.destructive
+    assert not annotations.read_only
 
 
 @pytest.mark.parametrize("name", ["ac_export_sarif", "ac_compliance_report", "ac_assert_visual"])
@@ -88,12 +89,14 @@ def _echo_server() -> MCPServer:
 @pytest.mark.parametrize("extra", ["bogus", "ctx"])
 def test_an_undeclared_argument_is_a_tool_execution_error(extra):
     reply = _call(_echo_server(), "echo", {"text": "hi", extra: 1})
-    assert reply["result"]["isError"] is True and extra in reply["result"]["content"][0]["text"]
+    assert reply["result"]["isError"] is True
+    assert extra in reply["result"]["content"][0]["text"]
 
 
 def test_declared_arguments_still_work():
     reply = _call(_echo_server(), "echo", {"text": "hi"})
-    assert "error" not in reply and reply["result"]["content"][0]["text"] == "hi"
+    assert "error" not in reply
+    assert reply["result"]["content"][0]["text"] == "hi"
 
 
 @pytest.mark.parametrize("name", ["creds.txt", "a.json::$DATA", "sub\\a.json", "C:a.json"])

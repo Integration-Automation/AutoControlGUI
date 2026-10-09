@@ -15,7 +15,7 @@ from je_auto_control.utils.run_history.history_store import HistoryStore  # noqa
 @pytest.fixture(scope="module")
 def qapp():
     app = QApplication.instance() or QApplication([])
-    yield app
+    return app
 
 
 def test_detail_shows_the_journal_run_only_for_a_linked_row(qapp, monkeypatch):
@@ -29,7 +29,8 @@ def test_detail_shows_the_journal_run_only_for_a_linked_row(qapp, monkeypatch):
         tab._timer.stop()
         tab._table.selectRow(0)
         caption = tab._thumb_caption.text()
-        assert "run-77" in caption and "journal.jsonl" in caption
+        assert "run-77" in caption
+        assert "journal.jsonl" in caption
         tab._table.selectRow(1)
         assert "run-77" not in tab._thumb_caption.text()
     finally:

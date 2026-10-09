@@ -65,4 +65,5 @@ def test_wiring():
 
 
 def test_facade_exports():
-    assert hasattr(ac, "format_list") and "format_list" in ac.__all__
+    assert hasattr(ac, "format_list")
+    assert "format_list" in ac.__all__

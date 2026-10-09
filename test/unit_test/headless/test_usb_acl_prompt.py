@@ -31,8 +31,7 @@ from je_auto_control.utils.usb.passthrough.backend import (  # noqa: E402
 
 @pytest.fixture(scope="module")
 def qapp():
-    app = QApplication.instance() or QApplication([])
-    yield app
+    return QApplication.instance() or QApplication([])
 
 
 # ---------------------------------------------------------------------------

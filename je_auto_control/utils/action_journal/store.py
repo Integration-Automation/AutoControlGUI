@@ -13,7 +13,7 @@ import os
 import threading
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple
 
 from je_auto_control.utils.action_journal.events import (
     RECORD_END, STATUS_ERROR, STATUS_INCOMPLETE, STATUS_OK, ActionEvent,
@@ -30,7 +30,7 @@ def default_journal_path() -> Path:
 class ActionJournal:
     """Thread-safe append-only journal file. Appending creates it."""
 
-    def __init__(self, path: Union[str, Path, None] = None) -> None:
+    def __init__(self, path: str | Path | None = None) -> None:
         self._path = Path(path) if path is not None else default_journal_path()
         self._lock = threading.Lock()
 
@@ -102,7 +102,7 @@ def _fold(path: Path, run_id: Optional[str]) -> JournalContents:
     return JournalContents(tuple(events.values()), lines, tuple(torn))
 
 
-def load_journal(path: Union[str, Path], *, run_id: Optional[str] = None
+def load_journal(path: str | Path, *, run_id: Optional[str] = None
                  ) -> JournalContents:
     """Read ``path`` with line numbers and the torn lines it skipped.
 
@@ -116,7 +116,7 @@ def load_journal(path: Union[str, Path], *, run_id: Optional[str] = None
     return _fold(file_path, run_id)
 
 
-def read_events(path: Union[str, Path], *, run_id: Optional[str] = None
+def read_events(path: str | Path, *, run_id: Optional[str] = None
                 ) -> List[ActionEvent]:
     """The events in the journal at ``path``, in the order they started.
 
@@ -126,7 +126,7 @@ def read_events(path: Union[str, Path], *, run_id: Optional[str] = None
     return list(load_journal(path, run_id=run_id).events)
 
 
-def list_journal_runs(path: Union[str, Path]) -> List[Dict[str, Any]]:
+def list_journal_runs(path: str | Path) -> List[Dict[str, Any]]:
     """One summary per run in the journal at ``path``, oldest first."""
     runs: Dict[str, Dict[str, Any]] = {}
     for event in load_journal(path).events:

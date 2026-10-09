@@ -73,6 +73,7 @@ def test_wiring():
 
 
 def test_facade_exports():
-    assert hasattr(ac, "feature_match") and "feature_match" in ac.__all__
+    assert hasattr(ac, "feature_match")
+    assert "feature_match" in ac.__all__
     assert isinstance(feature_match(_template(), haystack=_scene(),
                                     min_inliers=8), FeatureMatch)

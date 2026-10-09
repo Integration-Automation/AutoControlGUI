@@ -37,8 +37,9 @@ def _script(tmp_path, actions=None):
 # --- one loader for every execution path ------------------------------------
 
 def test_an_unsigned_file_is_refused_when_enforced(tmp_path, enforced):
+    path = str(_script(tmp_path))
     with pytest.raises(AutoControlException, match="missing signature"):
-        json_file.read_executable_action_json(str(_script(tmp_path)))
+        json_file.read_executable_action_json(path)
 
 
 def test_a_signed_file_loads_when_enforced(tmp_path, enforced, monkeypatch):
@@ -90,8 +91,9 @@ def test_the_cli_run_command_refuses_an_unsigned_file(tmp_path, enforced, capsys
 
 def test_the_mcp_run_tool_refuses_an_unsigned_file(tmp_path, enforced):
     from je_auto_control.utils.mcp_server.tools import _handlers_runs
+    path = str(_script(tmp_path))
     with pytest.raises(AutoControlException, match="missing signature"):
-        _handlers_runs.execute_action_file(str(_script(tmp_path)))
+        _handlers_runs.execute_action_file(path)
 
 
 # --- key files ----------------------------------------------------------------
@@ -117,8 +119,9 @@ def test_an_existing_key_file_is_never_overwritten(tmp_path):
 
 
 def test_an_empty_explicit_signing_key_is_refused(tmp_path):
+    path = _script(tmp_path)
     with pytest.raises(AutoControlException, match="empty"):
-        signer.sign_action_file(_script(tmp_path), b"")
+        signer.sign_action_file(path, b"")
 
 
 # --- passphrase encryption ----------------------------------------------------

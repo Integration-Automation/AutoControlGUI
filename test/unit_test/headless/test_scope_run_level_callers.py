@@ -77,10 +77,13 @@ def test_run_level_scope_joins_the_enclosing_run(seen):
 
 
 def test_run_level_scope_is_dropped_after_an_error(seen):
-    with pytest.raises(RuntimeError):
+    def fail_inside_the_scope():
         with run_level_scope():
             executor.execute_action([_SET_USER])
             raise RuntimeError("boom")
+
+    with pytest.raises(RuntimeError):
+        fail_inside_the_scope()
     assert current_scope() is None
     assert "user" not in executor.variables
 

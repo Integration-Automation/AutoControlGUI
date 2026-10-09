@@ -67,7 +67,7 @@ class _Script:
         self.calls.append("after")
 
 
-@pytest.fixture()
+@pytest.fixture
 def script(monkeypatch):
     _app = QApplication.instance() or QApplication([])
     fake = _Script()
@@ -93,14 +93,16 @@ def test_one_run_at_a_time_and_the_outcome_arrives_on_the_gui_thread(script):
     started = time.monotonic()
     assert runs.start_script(lambda: executor.execute_action([["AC_fake_held"]]))
     assert time.monotonic() - started < 5.0, "starting a run held the GUI thread"
-    assert runs.running and not runs.stopping
+    assert runs.running
+    assert not runs.stopping
     assert script.entered.wait(_WAIT)
     assert not runs.start_script(lambda: None), "a second run started while one was running"
     assert not runs.start(lambda: None)
     script.gate.set()
     assert settle(runs, "task")
     assert [ident for ident, _value in delivered] == [threading.get_ident()]
-    assert script.threads and script.threads[0] != threading.get_ident()
+    assert script.threads
+    assert script.threads[0] != threading.get_ident()
     assert not runs.running
     assert runs.start(lambda: 7)        # free again once the outcome was delivered
     assert settle(runs, "task")
@@ -120,7 +122,9 @@ def test_stop_ends_a_waiting_script_and_reports_it_once_the_worker_has_unwound(s
     assert time.monotonic() - started < 5.0, "Stop waited for the worker"
     assert runs.stopping
     assert settle(runs, "task")
-    assert len(errors) == 1 and was_stopped(errors[0]) and isinstance(errors[0], ExecutionStopped)
+    assert len(errors) == 1
+    assert was_stopped(errors[0])
+    assert isinstance(errors[0], ExecutionStopped)
     assert finished == [None]           # the tab is free before `finished` is emitted
     assert script.calls == ["mark"]
     assert runs.stop() is False         # nothing left to stop
@@ -168,7 +172,8 @@ def test_the_auto_click_stop_also_stops_scripts(script):
 
     AutoClickTabMixin._stop_auto_click(_Host())
     assert settle(runs, "task")
-    assert errors and was_stopped(errors[0])
+    assert errors
+    assert was_stopped(errors[0])
 
 
 # --- re-entrancy: a script that drives this window ----------------------------------------------------------
@@ -283,7 +288,8 @@ def test_playback_to_the_end_returns_to_idle(script):
     host._playback_record()
     assert settle(host._playback_runs, "task")
     assert _t("record_idle") in host.record_status_label.text()
-    assert script.calls == ["mark"] and script.boxes == []
+    assert script.calls == ["mark"]
+    assert script.boxes == []
 
 
 # --- script builder -----------------------------------------------------------------------------------------
@@ -318,7 +324,8 @@ def test_builder_run_and_stop(script):
 def test_builder_with_no_steps_starts_nothing(script):
     tab = _builder([])
     tab._on_run()
-    assert tab._runs.task is None and script.boxes == ["No steps to run"]
+    assert tab._runs.task is None
+    assert script.boxes == ["No steps to run"]
 
 
 # --- LLM planner --------------------------------------------------------------------------------------------
@@ -327,12 +334,14 @@ def test_planner_run_and_stop(script):
     from je_auto_control.gui.llm_planner_tab import LLMPlannerTab
     tab = LLMPlannerTab()
     tab._on_run()
-    assert tab._status.text() == _t("llm_no_plan") and tab._runs.task is None
+    assert tab._status.text() == _t("llm_no_plan")
+    assert tab._runs.task is None
     tab._planned_actions = [["AC_fake_mark"]]
     tab._on_run()
     assert tab._status.text() == _t("llm_running")
     assert settle(tab._runs, "task")
-    assert tab._status.text() == _t("llm_run_done") and "marked" in tab._result_view.toPlainText()
+    assert tab._status.text() == _t("llm_run_done")
+    assert "marked" in tab._result_view.toPlainText()
 
     tab._planned_actions = list(_LONG)
     script.entered.clear()
@@ -355,7 +364,8 @@ def test_suite_run_and_stop(script):
     tab._on_run()
     assert tab._summary.text() == _t("task_running")
     assert settle(tab._runs, "task")
-    assert tab._table.rowCount() == 1 and tab._last_result is not None
+    assert tab._table.rowCount() == 1
+    assert tab._last_result is not None
 
     tab._spec.setPlainText(json.dumps({"name": "s", "cases": [
         {"name": "long", "actions": _LONG}, {"name": "never", "actions": [["AC_fake_after"]]}]}))
@@ -370,7 +380,8 @@ def test_suite_run_and_stop(script):
 
     tab._spec.setPlainText("{not json")
     tab._on_run()
-    assert tab._runs.task is None and "{error}" not in tab._summary.text()
+    assert tab._runs.task is None
+    assert "{error}" not in tab._summary.text()
 
 
 # --- ChatOps ------------------------------------------------------------------------------------------------

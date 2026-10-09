@@ -29,7 +29,9 @@ def test_the_read_only_flag_reaches_the_server(monkeypatch):
     monkeypatch.setattr(server_mod.MCPServer, "serve_stdio", lambda self: served.append(self))
     server_mod.start_mcp_stdio_server(read_only=True)
     names = set(served[0]._tools)  # noqa: SLF001
-    assert names and "ac_click_mouse" not in names and "ac_type_text" not in names
+    assert names
+    assert "ac_click_mouse" not in names
+    assert "ac_type_text" not in names
 
 
 def test_mcp_stdio_speaks_utf8_whatever_the_code_page(monkeypatch):
@@ -48,7 +50,8 @@ def test_mcp_stdio_speaks_utf8_whatever_the_code_page(monkeypatch):
     stdout.flush()
     raw = stdout.buffer.getvalue()
     reply = json.loads(raw.decode("utf-8"))
-    assert reply["result"]["content"][0]["text"] == _CJK and b"\r\n" not in raw
+    assert reply["result"]["content"][0]["text"] == _CJK
+    assert b"\r\n" not in raw
 
 
 def test_several_listings_are_one_json_document(monkeypatch, capsys):
@@ -81,7 +84,8 @@ def test_a_port_out_of_range_is_a_usage_error(port, capsys):
     from je_auto_control.cli import main
     with pytest.raises(SystemExit) as exit_info:
         main(["start-server", "--port", port])
-    assert exit_info.value.code == 2 and "Traceback" not in capsys.readouterr().err
+    assert exit_info.value.code == 2
+    assert "Traceback" not in capsys.readouterr().err
 
 
 # --- codegen -----------------------------------------------------------------------------------
@@ -115,7 +119,8 @@ def test_action_shapes_the_executor_refuses_are_refused(actions):
 
 def test_a_function_name_does_not_shadow_the_modules_names():
     code = generate_code([["AC_screen_size"]], target="python", name="ac")
-    assert "def flow_ac():" in code and "def ac(" not in code
+    assert "def flow_ac():" in code
+    assert "def ac(" not in code
 
 
 def test_the_actions_style_keeps_key_order():
@@ -130,7 +135,8 @@ def test_robot_output_takes_a_lone_surrogate_and_keeps_sigils_out_of_names():
     payload = re.search(r"b64decode\('([^']+)'\)", code).group(1)
     assert json.loads(base64.b64decode(payload))[0][1]["write_string"] == chr(0xD83D)
     test_name = code.split("*** Test Cases ***\n", 1)[1].splitlines()[0]
-    assert not re.search(r"[$@&%]\{", test_name) and "raise_on_error=True" in code
+    assert not re.search(r"[$@&%]\{", test_name)
+    assert "raise_on_error=True" in code
 
 
 # --- report writers ------------------------------------------------------------------------------

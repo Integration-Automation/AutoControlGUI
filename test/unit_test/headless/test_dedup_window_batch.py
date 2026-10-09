@@ -61,4 +61,5 @@ def test_wiring():
 
 
 def test_facade_exports():
-    assert hasattr(ac, "DedupWindow") and "DedupWindow" in ac.__all__
+    assert hasattr(ac, "DedupWindow")
+    assert "DedupWindow" in ac.__all__

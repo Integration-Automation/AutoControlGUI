@@ -72,7 +72,8 @@ def test_a_vlm_version_is_scored_like_any_other_and_its_calls_are_counted():
     assert report.usage == ModelUsage(3, 3000, 60, report.usage.cost)
     assert math.isclose(report.usage.cost, 3 * (1000 * 5.0 + 20 * 25.0) / 1e6)
     row = comparison.results[0]
-    assert row.usage.calls == 1 and row.to_dict()["model_calls"] == 1
+    assert row.usage.calls == 1
+    assert row.to_dict()["model_calls"] == 1
     assert all(image.startswith(_PNG) and model == "m-1" for image, _d, model in backend.seen)
     assert "model calls  3" in format_comparison(comparison)
 
@@ -103,7 +104,8 @@ def test_the_region_crop_is_what_the_model_sees_and_the_reply_is_mapped_back():
     row = comparison.results[0]
     # region -> frame pixels (40, 20)-(160, 100); reply (15, 10) -> frame (55, 30)
     # -> screen (-1920 + 27, -300 + 15)
-    assert row.coordinates == (-1893, -285) and row.outcome == "correct"
+    assert row.coordinates == (-1893, -285)
+    assert row.outcome == "correct"
     image = backend.seen[0][0]
     assert (int.from_bytes(image[16:20], "big"), int.from_bytes(image[20:24], "big")) == (120, 80)
 
@@ -124,8 +126,11 @@ def test_a_failed_request_is_an_error_and_a_call_and_no_description_is_neither()
     backend = FakeBackend({"boom": VLMRequestError("rate limited")})
     comparison = evaluate_locators(samples, {"vlm": vlm_strategy(backend)})
     boom, silent = comparison.results
-    assert boom.outcome == "error" and "rate limited" in boom.error and boom.usage.calls == 1
-    assert silent.outcome == "error" and "no description" in silent.error
+    assert boom.outcome == "error"
+    assert "rate limited" in boom.error
+    assert boom.usage.calls == 1
+    assert silent.outcome == "error"
+    assert "no description" in silent.error
     assert silent.usage.calls == 0
     assert comparison.report("vlm").usage.calls == 1
 

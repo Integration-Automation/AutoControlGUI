@@ -36,8 +36,9 @@ def test_the_first_retry_sleep_respects_max_backoff():
     def fail():
         raise ValueError("x")
 
+    policy = RetryPolicy(max_attempts=3, backoff=10, max_backoff=1)
     with pytest.raises(ValueError):
-        RetryPolicy(max_attempts=3, backoff=10, max_backoff=1).run(fail, sleep=slept.append)
+        policy.run(fail, sleep=slept.append)
     assert slept == [1, 1]
 
 
@@ -51,7 +52,8 @@ def test_a_token_bucket_refuses_impossible_requests(n):
 def test_the_sliding_window_wait_is_long_enough():
     now = [0.0]
     limiter = SlidingWindowLimiter(2, 10.0, clock=lambda: now[0])
-    assert limiter.try_acquire() and limiter.try_acquire()
+    assert limiter.try_acquire()
+    assert limiter.try_acquire()
     now[0] = 5.0
     wait = limiter.time_until_available()
     now[0] = 5.0 + wait - 0.5
@@ -81,8 +83,9 @@ def test_loop_guard_reports_the_longest_pattern():
 
 @pytest.mark.parametrize("ttl", [float("nan"), float("inf"), 0, -1])
 def test_a_lease_needs_a_finite_positive_ttl(ttl):
+    broker = CredentialBroker(clock=lambda: 0.0)
     with pytest.raises(CredentialBrokerError):
-        CredentialBroker(clock=lambda: 0.0).lease("db", ttl)
+        broker.lease("db", ttl)
 
 
 def test_approval_commands_share_a_gate_without_db():

@@ -22,7 +22,7 @@ import threading
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Callable, ContextManager, List, Optional, Sequence, Union
+from typing import Any, Callable, ContextManager, List, Optional, Sequence
 
 from je_auto_control.utils.config_sync.client import (
     ConfigBucket, ConfigSyncError, FullResyncRequired,
@@ -86,7 +86,7 @@ class DrainReport:
 class SyncOutbox:
     """The pending operations of one account on one sync endpoint."""
 
-    def __init__(self, db_path: Union[str, Path, None] = None, *, account: str, endpoint: str,
+    def __init__(self, db_path: str | Path | None = None, *, account: str, endpoint: str,
                  base_delay_s: float = DEFAULT_BASE_DELAY_S,
                  max_delay_s: float = DEFAULT_MAX_DELAY_S) -> None:
         if not account or not endpoint:

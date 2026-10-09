@@ -41,7 +41,8 @@ def test_the_lan_browser_stops_however_the_dialog_ends(qapp, monkeypatch, ending
     _Browser.instances.clear()
     dialog = LanBrowseDialog()
     getattr(dialog, ending)()
-    assert _Browser.instances and _Browser.instances[0].stopped
+    assert _Browser.instances
+    assert _Browser.instances[0].stopped
     dialog.deleteLater()
 
 

@@ -26,7 +26,8 @@ def test_a_stopped_run_answers_stopped(tmp_path):
     result = _router().dispatch("/run long.json", context={"script_root": str(tmp_path)})
     assert isinstance(result, CommandResult)
     assert result.text == "run stopped. (operator said so)"
-    assert "failed" not in result.text and "ExecutionStopped" not in result.text
+    assert "failed" not in result.text
+    assert "ExecutionStopped" not in result.text
     assert result.succeeded is False
     assert result.metadata == {"stopped": True, "run_id": "chat-run",
                                "reason": "operator said so"}

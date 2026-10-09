@@ -112,8 +112,9 @@ def test_deleting_a_file_names_it(viewer):
 
 @pytest.mark.parametrize("method", ["request_inbox_file", "delete_inbox_file"])
 def test_an_empty_name_is_refused_before_it_reaches_the_wire(viewer, method):
+    file_request = getattr(viewer, method)
     with pytest.raises(ValueError, match="name required"):
-        getattr(viewer, method)("")
+        file_request("")
     assert _sent(viewer) == []
 
 
@@ -498,7 +499,8 @@ def test_a_file_pushed_by_the_host_lands_and_is_announced(viewer,
     channel.fire("message", b"data")
     channel.fire("message", json.dumps({"type": "file_end"}))
     assert (inbox / "pushed.txt").read_bytes() == b"data"
-    assert seen and seen[0].name == "pushed.txt"
+    assert seen
+    assert seen[0].name == "pushed.txt"
 
 
 def test_a_file_arriving_with_no_listener_is_still_written(viewer,

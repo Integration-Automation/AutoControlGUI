@@ -54,8 +54,9 @@ def test_reopen_preserves_bucket(db):
 def test_a_stale_base_revision_is_refused_and_nothing_is_written(db):
     store = ConfigStore(db)
     store.commit("alice", _bucket(combo="first"), base_revision=0, operation_id="a")
+    second = _bucket(combo="second")
     with pytest.raises(RevisionConflictError) as raised:
-        store.commit("alice", _bucket(combo="second"), base_revision=0, operation_id="b")
+        store.commit("alice", second, base_revision=0, operation_id="b")
     assert raised.value.current_revision == 1
     assert store.get("alice").sections["hotkeys"]["hk1"]["combo"] == "first"
 
@@ -104,23 +105,28 @@ def test_concurrent_commits_from_one_base_admit_exactly_one(db):
 
 
 def test_a_bucket_cannot_be_committed_under_another_user(db):
+    store = ConfigStore(db)
+    bobs = _bucket("bob")
     with pytest.raises(ConfigStoreError):
-        ConfigStore(db).commit("alice", _bucket("bob"), base_revision=0, operation_id="x")
+        store.commit("alice", bobs, base_revision=0, operation_id="x")
 
 
 def test_the_user_limit_is_enforced_inside_the_commit(db):
     store = ConfigStore(db, max_users=1)
     store.commit("alice", _bucket("alice"), base_revision=0, operation_id="a")
+    bobs = _bucket("bob")
     with pytest.raises(StoreCapacityError):
-        store.commit("bob", _bucket("bob"), base_revision=0, operation_id="b")
+        store.commit("bob", bobs, base_revision=0, operation_id="b")
     assert store.commit("alice", _bucket("alice"), base_revision=1, operation_id="c") == 2
 
 
 @pytest.mark.parametrize("base, operation", [(-1, "op"), (True, "op"), ("0", "op"), (0, ""),
                                              (0, "x" * 200), (0, None)])
 def test_malformed_commit_arguments_are_refused(db, base, operation):
+    store = ConfigStore(db)
+    bucket = _bucket()
     with pytest.raises(ConfigStoreError):
-        ConfigStore(db).commit("alice", _bucket(), base_revision=base, operation_id=operation)
+        store.commit("alice", bucket, base_revision=base, operation_id=operation)
 
 
 def test_building_a_store_touches_nothing_until_first_use(db):
@@ -140,8 +146,9 @@ def test_the_default_path_is_resolved_at_call_time(tmp_path, monkeypatch):
 def test_a_database_failure_is_a_framework_error(tmp_path):
     not_a_database = tmp_path / "junk.sqlite3"
     not_a_database.write_bytes(b"this is not sqlite" * 64)
+    store = ConfigStore(not_a_database)
     with pytest.raises(ConfigSyncError):
-        ConfigStore(not_a_database).get("alice")
+        store.get("alice")
 
 
 # --- the server ------------------------------------------------------------
@@ -150,7 +157,8 @@ def test_stale_revision_conflicts(db):
     client = _client(db)
     first = client.put("/config/alice", json=_envelope(_bucket(combo="first"), 0, "a"),
                        headers=_SECRET)
-    assert first.status_code == 200 and first.json()["revision"] == 1
+    assert first.status_code == 200
+    assert first.json()["revision"] == 1
     stale_response = client.put("/config/alice", json=_envelope(_bucket(combo="second"), 0, "b"),
                                 headers=_SECRET)
     assert stale_response.status_code == 409
@@ -194,7 +202,8 @@ def test_a_blind_write_is_refused_unless_the_compatibility_setting_is_on(db):
     assert compat.put("/config/alice", json=_bucket(combo="one").to_dict(),
                       headers=_SECRET).status_code == 200
     reply = compat.put("/config/alice", json=_bucket(combo="two").to_dict(), headers=_SECRET)
-    assert reply.status_code == 200 and reply.json()["revision"] == 2
+    assert reply.status_code == 200
+    assert reply.json()["revision"] == 2
     assert compat.get("/config/alice", headers=_SECRET).json()["revision"] == 2
 
 

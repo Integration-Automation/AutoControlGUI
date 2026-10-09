@@ -214,8 +214,9 @@ def test_an_empty_answer_is_refused_before_it_reaches_aiortc(bridge, answer):
 
 
 def test_accept_answer_before_create_offer_is_a_runtime_error(bridge):
+    host = _host()
     with pytest.raises(RuntimeError, match="create_offer"):
-        _host().accept_answer("v=0 answer")
+        host.accept_answer("v=0 answer")
 
 
 def test_accept_answer_applies_it_and_arms_the_auth_deadline(bridge):
@@ -316,12 +317,13 @@ def test_a_candidate_with_neither_ip_nor_address_yields_no_ip():
     assert WebRTCDesktopHost._extract_remote_ip(report) is None
 
 
-def test_stats_that_cannot_be_read_leave_the_ip_unknown(bridge):
+def test_stats_that_cannot_be_read_leave_the_ip_unknown(bridge, monkeypatch):
     # The IP feeds the whitelist check and the audit log; failing to read it
     # must not fail the connection.
     host = _host()
     host.create_offer()
-    FakePeerConnection.instances[0].stats_error = RuntimeError("pc already closed")
+    monkeypatch.setattr(FakePeerConnection.instances[0], "stats_error",
+                        RuntimeError("pc already closed"))
     asyncio.run(host._snapshot_remote_ip())
     assert host._remote_ip is None
 

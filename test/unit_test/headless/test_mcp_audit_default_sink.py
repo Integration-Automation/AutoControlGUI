@@ -20,7 +20,7 @@ from je_auto_control.utils.mcp_server.tools._base import READ_ONLY, schema
 _ENV = "JE_AUTOCONTROL_MCP_AUDIT"
 
 
-@pytest.fixture()
+@pytest.fixture
 def cwd(tmp_path, monkeypatch):
     """Run in an empty directory, so anything written to the cwd shows up."""
     monkeypatch.chdir(tmp_path)
@@ -34,7 +34,8 @@ def _record(logger):
 def test_without_a_path_or_the_variable_nothing_is_written(cwd, monkeypatch):
     monkeypatch.delenv(_ENV, raising=False)
     logger = AuditLogger()
-    assert logger.enabled is False and logger.path is None
+    assert logger.enabled is False
+    assert logger.path is None
     _record(logger)
     assert os.listdir(cwd) == []
 
@@ -43,7 +44,8 @@ def test_an_empty_variable_is_the_same_as_unset(cwd, monkeypatch):
     monkeypatch.setenv(_ENV, "")
     logger = AuditLogger()
     _record(logger)
-    assert logger.enabled is False and os.listdir(cwd) == []
+    assert logger.enabled is False
+    assert os.listdir(cwd) == []
 
 
 def test_a_default_server_writes_no_audit_file_into_the_cwd(cwd, monkeypatch):
@@ -62,7 +64,8 @@ def test_the_variable_names_the_sink(cwd, monkeypatch):
     target.parent.mkdir()
     monkeypatch.setenv(_ENV, str(target))
     logger = AuditLogger()
-    assert logger.enabled and logger.path == os.path.realpath(target)
+    assert logger.enabled
+    assert logger.path == os.path.realpath(target)
     _record(logger)
     assert json.loads(target.read_text(encoding="utf-8"))["tool"] == "peek"
 

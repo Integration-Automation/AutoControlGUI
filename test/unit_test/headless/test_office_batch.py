@@ -36,7 +36,9 @@ def test_powerpoint_roundtrip(tmp_path):
     write_presentation(path, [{"title": "Intro", "body": ["alpha", "beta"]}])
     slides = read_presentation(path)["slides"]
     flat = " ".join(slides[0])
-    assert "Intro" in flat and "alpha" in flat and "beta" in flat
+    assert "Intro" in flat
+    assert "alpha" in flat
+    assert "beta" in flat
 
 
 def test_read_missing_file_raises():

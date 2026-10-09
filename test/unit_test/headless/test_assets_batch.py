@@ -85,7 +85,8 @@ def test_executor_round_trip(tmp_path):
     rec = ac.execute_action([["AC_get_asset",
                               {"name": "n", "environment": "prod", "db": db}]])
     asset = next(v for v in rec.values() if isinstance(v, dict))
-    assert asset["value"] == 5 and asset["type"] == "int"
+    assert asset["value"] == 5
+    assert asset["type"] == "int"
 
 
 def test_wiring():

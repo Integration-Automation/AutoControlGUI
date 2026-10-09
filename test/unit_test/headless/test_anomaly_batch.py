@@ -38,7 +38,8 @@ def test_detect_anomalies_records():
     results = detect_anomalies(_SERIES, method="mad")
     assert len(results) == len(_SERIES)
     spike = results[6]
-    assert spike["index"] == 6 and spike["value"] == 95
+    assert spike["index"] == 6
+    assert spike["value"] == 95
     assert spike["is_anomaly"] is True
     assert results[0]["is_anomaly"] is False
 
@@ -73,4 +74,5 @@ def test_wiring():
 def test_facade_exports():
     for attr in ("detect_anomalies", "ewma_control", "mad_anomalies",
                  "mad_scores", "zscore_anomalies", "zscore_scores"):
-        assert hasattr(ac, attr) and attr in ac.__all__
+        assert hasattr(ac, attr)
+        assert attr in ac.__all__

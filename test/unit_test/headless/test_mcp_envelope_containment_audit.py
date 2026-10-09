@@ -66,7 +66,8 @@ def test_a_plain_post_to_a_concurrent_server_answers_in_its_body():
             status, text = response.status, response.read().decode("utf-8")
     finally:
         http.stop(timeout=1.0)
-    assert status == 200 and json.loads(text)["result"]["isError"] is False
+    assert status == 200
+    assert json.loads(text)["result"]["isError"] is False
 
 
 def test_an_unwritable_audit_log_does_not_fail_a_tool_that_ran(tmp_path):
@@ -74,7 +75,8 @@ def test_an_unwritable_audit_log_does_not_fail_a_tool_that_ran(tmp_path):
     tool = MCPTool(name="act", description="acts", input_schema=schema({}), handler=lambda: ran.append(1) or "done")
     server = MCPServer(tools=[tool], audit_logger=AuditLogger(str(tmp_path / "missing" / "audit.jsonl")))
     reply = _call(server, "act")
-    assert ran == [1] and reply["result"]["isError"] is False
+    assert ran == [1]
+    assert reply["result"]["isError"] is False
     assert "audit.jsonl" not in json.dumps(reply)
 
 
@@ -100,7 +102,8 @@ def test_json_document_tools_take_a_root_array(name, arguments):
 ])
 def test_malformed_envelopes_are_invalid_requests(message, code, reply_id):
     reply = json.loads(MCPServer(tools=[]).handle_line(json.dumps(message)))
-    assert reply["error"]["code"] == code and reply["id"] == reply_id
+    assert reply["error"]["code"] == code
+    assert reply["id"] == reply_id
 
 
 def test_a_null_id_is_a_request_and_a_missing_id_a_notification():

@@ -159,7 +159,8 @@ def test_pyproject_registers_pytest11_entry_point():
 
 # === plugin via pytester ==================================================
 
-pytest_plugins = ["pytester"]
+# pytester is for this module only; a conftest.py would load it for every test under it.
+pytest_plugins = ["pytester"]  # NOSONAR python:S8999  # reason: see the line above
 
 
 def test_plugin_capture_screenshot_on_failure(pytester, monkeypatch):

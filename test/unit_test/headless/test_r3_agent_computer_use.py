@@ -115,8 +115,9 @@ def test_max_tokens_truncation_without_tool_use_raises():
         [SimpleNamespace(type="text", text="partial plan")],
         stop_reason="max_tokens",
     )
+    backend = _backend(client)
     with pytest.raises(AgentBackendError):
-        _backend(client).decide_next_action("goal", None, [])
+        backend.decide_next_action("goal", None, [])
 
 
 def test_complete_final_answer_still_stops():

@@ -54,6 +54,7 @@ from je_auto_control.android.adb_client import AdbClient
 
 _SERIAL = "emulator-5554"
 _SIZE = (1080, 1920)
+_SHELL_PREFIX = "shell "
 _INPUT_COMMANDS = ("input ", "am broadcast", "am start", "monkey ")
 
 
@@ -103,8 +104,8 @@ class OfflineAdb(AdbClient):
     @property
     def input_sent(self) -> List[str]:
         """The shell commands that would have acted on a device."""
-        return [line[len("shell "):] for line in self.sent
-                if line.startswith("shell ") and line[len("shell "):].startswith(_INPUT_COMMANDS)]
+        return [line[len(_SHELL_PREFIX):] for line in self.sent
+                if line.startswith(_SHELL_PREFIX) and line[len(_SHELL_PREFIX):].startswith(_INPUT_COMMANDS)]
 
 
 def show_report(report: ac.DeviceSetupReport) -> None:

@@ -126,8 +126,9 @@ def test_track_refuses_to_start_without_a_sounddevice_backend(monkeypatch):
     async def _build():
         OpusMicAudioTrack()
 
+    building = _build()
     with pytest.raises(AudioBackendError, match="sounddevice"):
-        asyncio.run(_build())
+        asyncio.run(building)
 
 
 def test_track_starts_capture_at_the_rate_opus_wants():
@@ -401,7 +402,8 @@ def test_stopping_a_receiver_that_never_consumed_still_closes_the_player():
     assert _FakePlayer.instances[0].stopped
 
 
-def test_a_player_that_fails_to_close_does_not_escape_stop():
+def test_a_player_that_fails_to_close_does_not_escape_stop(monkeypatch):
     receiver = OpusMicReceiver()
-    _FakePlayer.instances[0].stop_error = OSError("stream already closed")
+    monkeypatch.setattr(
+        _FakePlayer.instances[0], "stop_error", OSError("stream already closed"))
     receiver.stop()

@@ -12,7 +12,7 @@ import json
 import sys
 import threading
 import time
-from typing import Any, Callable, Dict, List, Optional, TextIO, Union
+from typing import Any, Callable, Dict, List, Optional, TextIO
 
 from je_auto_control.utils.cli_output import utf8_stream
 from je_auto_control.utils.exception.exceptions import AutoControlException
@@ -53,7 +53,7 @@ from je_auto_control.utils.mcp_server._input_required import (
 from je_auto_control.utils.mcp_server._stateless import StatelessDispatchMixin
 from je_auto_control.utils.mcp_server._subscriptions import NO_RESPONSE, SubscriptionMixin
 from je_auto_control.utils.mcp_server._protocol import (
-    PROTOCOL_VERSION,  # noqa: F401  # reason: re-exported; callers import it from server
+    PROTOCOL_VERSION as PROTOCOL_VERSION,  # explicit re-export: callers import it from server
     _capture_error_screenshot, negotiate_protocol_version,
     _coerce_params, _DISPATCH_ERRORS, _error_response, _invalid_envelope, _InvalidToolArguments,
     _is_hashable,
@@ -83,7 +83,7 @@ class MCPServer(ConnectionStateMixin, StatelessDispatchMixin, SubscriptionMixin,
                  audit_logger: Optional[AuditLogger] = None,
                  rate_limiter: Optional[RateLimiter] = None,
                  log_bridge: Optional[MCPLogBridge] = None,
-                 tool_mode: Union[str, ToolMode, None] = None,
+                 tool_mode: str | ToolMode | None = None,
                  read_only: Optional[bool] = None,
                  ) -> None:
         registry = tools if tools is not None else build_default_tool_registry(read_only=read_only)
@@ -633,7 +633,7 @@ def _parse_request(line: str) -> "tuple[Optional[Dict[str, Any]], Optional[str]]
 
 
 def start_mcp_stdio_server(read_only: Optional[bool] = None,
-                           tool_mode: Union[str, ToolMode, None] = None) -> MCPServer:
+                           tool_mode: str | ToolMode | None = None) -> MCPServer:
     """Start a stdio MCP server in the foreground; blocks until EOF.
 
     ``read_only=True`` offers only tools marked read-only; ``None`` leaves

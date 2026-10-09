@@ -9,6 +9,9 @@ _STOP_HOST_JA = "ホスト停止"
 _CLEAR_ALL_JA = "すべて削除"
 _BROWSE = "参照..."  # NOSONAR python:S1192 — shared button label
 _LOCATE_CLICK = "検索してクリック"  # NOSONAR python:S1192
+_HOTKEYS = "ホットキー"
+_ACTION = "アクション"
+_RUNNING = "実行中..."
 
 japanese_word_dict = {
     "application_name": "AutoControlGUI",
@@ -25,7 +28,7 @@ japanese_word_dict = {
     "tab_scheduler": "スケジューラー",
     "tab_socket_server": "ソケットサーバー",
     "tab_live_hud": "ライブ HUD",
-    "tab_hotkeys": "ホットキー",
+    "tab_hotkeys": _HOTKEYS,
     "tab_triggers": "トリガー",
     "tab_webhooks": "Webhook",
     "tab_email_triggers": "Email トリガー",
@@ -843,7 +846,7 @@ japanese_word_dict = {
     "rh_source_all": "すべて",
     "rh_source_scheduler": "スケジューラー",
     "rh_source_trigger": "トリガー",
-    "rh_source_hotkey": "ホットキー",
+    "rh_source_hotkey": _HOTKEYS,
     "rh_source_manual": "手動",
     "rh_source_rest": "REST",
     "rh_refresh": "更新",
@@ -995,7 +998,7 @@ japanese_word_dict = {
     "prof_paused": "プロファイラは停止中です。",
     "prof_total_label": "{n} アクションを記録",
     "prof_total_empty": "サンプルがまだありません。",
-    "prof_col_name": "アクション",
+    "prof_col_name": _ACTION,
     "prof_col_calls": "回数",
     "prof_col_total": "合計",
     "prof_col_avg": "平均",
@@ -1139,7 +1142,7 @@ japanese_word_dict = {
     "computer_use_run_btn": "実行",
     "computer_use_stop_btn": "停止",
     "computer_use_stopping": "現在のステップの後で停止します…",
-    "computer_use_running": "実行中...",
+    "computer_use_running": _RUNNING,
     "computer_use_already_running": "既に実行中です。少々お待ちください。",
     "computer_use_success": "目標達成しました。",
     "computer_use_failure": "目標達成前に停止しました。",
@@ -1190,7 +1193,7 @@ japanese_word_dict = {
     "config_sync_assets_label": "共有アセットフォルダー (任意):",
     "config_sync_locators_label": "ロケーターリポジトリファイル (任意):",
     "config_sync_sections_label": "同期するセクション:",
-    "config_sync_section_hotkeys": "ホットキー",
+    "config_sync_section_hotkeys": _HOTKEYS,
     "config_sync_section_triggers": "トリガー",
     "config_sync_section_address_book": "アドレス帳",
     "config_sync_section_scripts": "スクリプト (フォルダーが必要)",
@@ -1266,7 +1269,7 @@ japanese_word_dict = {
     "trace_last_btn": "末尾へ",
     "trace_status": "フレーム {step} / {total} ({seconds}秒)",
     "trace_col_timestamp": "時刻",
-    "trace_col_action_name": "アクション",
+    "trace_col_action_name": _ACTION,
     "trace_col_args": "引数",
     "trace_col_error": "エラー",
 
@@ -1288,7 +1291,7 @@ japanese_word_dict = {
     "ocr_regex_required": "先に正規表現を入力",
     "ocr_regex_invalid": "正規表現が不正",
     "ocr_running": "読み取り中...",
-    "dm_running": "実行中...",
+    "dm_running": _RUNNING,
 
     # Variables Tab
     "vars_current_group": "現在のスコープ",
@@ -1327,10 +1330,10 @@ japanese_word_dict = {
     "llm_planning": "計画中...",
     "llm_plan_count": "{n} 個のアクションを計画",
     "llm_no_plan": "まず「プラン作成」を押してください",
-    "llm_running": "実行中...",
+    "llm_running": _RUNNING,
     "llm_run_done": "完了",
     # Background runs shared by the tabs (gui/_tab_task.py)
-    "task_running": "実行中...",
+    "task_running": _RUNNING,
     "task_busy": "すでに実行中です。終了を待つか、先に停止してください。",
     "task_stopping": "停止中...",
     "task_stopped": "停止しました。",
@@ -1488,7 +1491,7 @@ japanese_word_dict = {
     "menu_language": "言語",
     "menu_help": "ヘルプ",
     "menu_help_about": "AutoControlGUI について",
-    "menu_actions": "アクション",
+    "menu_actions": _ACTION,
     "menu_actions_none": "（このタブにアクションはありません）",
     "menu_choose_script_dir": "スクリプトフォルダーを選択...",
     "execute_editor_script": "エディター内容を実行",

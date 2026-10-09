@@ -24,7 +24,8 @@ def test_add_may_insert_at_the_array_length():
 def test_add_does_not_share_its_value_with_the_patch():
     patch = [{"op": "add", "path": "/x", "value": {}}, {"op": "add", "path": "/x/k", "value": 1}]
     result = apply_patch({}, patch)
-    assert patch[0]["value"] == {} and result == {"x": {"k": 1}}
+    assert patch[0]["value"] == {}
+    assert result == {"x": {"k": 1}}
 
 
 def test_move_onto_itself_still_needs_the_source():
@@ -98,4 +99,5 @@ def test_two_insertions_at_one_point_conflict():
 
 def test_an_identical_change_on_both_sides_is_applied_once():
     merged = three_way_merge("1\n2\n3\n", "1\nI\n2\n3\n", "1\nI\n2\n3\nZ\n")
-    assert merged.clean and merged.text == "1\nI\n2\n3\nZ\n"
+    assert merged.clean
+    assert merged.text == "1\nI\n2\n3\nZ\n"

@@ -18,7 +18,8 @@ def test_mark_elements_numbers_and_centers():
     marks = mark_elements(elements)
     assert [m["id"] for m in marks] == [1, 2]
     assert marks[0]["center"] == [50, 10]
-    assert marks[1]["role"] == "edit" and marks[1]["text"] == "user"
+    assert marks[1]["role"] == "edit"
+    assert marks[1]["text"] == "user"
 
 
 def test_resolve_mark():

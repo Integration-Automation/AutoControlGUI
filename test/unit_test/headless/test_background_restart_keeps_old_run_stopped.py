@@ -169,7 +169,8 @@ def test_restart_does_not_revive_the_stuck_run(monkeypatch, tmp_path, build):
             "start() cleared the event the stuck loop is waiting on: it will "
             "resume beside the new run")
         second = _run_event(_StuckThread.created[-1])
-        assert second is not first and not second.is_set()
+        assert second is not first
+        assert not second.is_set()
     finally:
         service.stop()
 
@@ -190,5 +191,5 @@ def test_slack_bot_second_run_leaves_the_first_stopped(monkeypatch):
     bot.run_forever()
     monkeypatch.setattr(bot, "poll_once", lambda: None)
     bot.run_forever(max_iterations=1)
-    assert first_run and first_run[0].is_set(), (
-        "the second run_forever() cleared the first run's event")
+    assert first_run, "the second run_forever() cleared the first run's event"
+    assert first_run[0].is_set(), "the second run_forever() cleared the first run's event"

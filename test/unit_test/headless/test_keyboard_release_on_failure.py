@@ -133,8 +133,8 @@ def test_hotkey_releases_the_rest_when_a_release_fails(recorder):
     # `esc` genuinely could not be released — that is the backend's answer, and
     # the cleanup does not pretend otherwise. What must not happen is the other
     # two staying down because of it.
-    assert "shift" not in rec.still_held and "ctrl" not in rec.still_held, (
-        f"one failing release stranded the others: {rec.still_held}")
+    assert "shift" not in rec.still_held, f"one failing release stranded the others: {rec.still_held}"
+    assert "ctrl" not in rec.still_held, f"one failing release stranded the others: {rec.still_held}"
 
 
 def test_hotkey_never_releases_a_key_it_did_not_press(recorder):

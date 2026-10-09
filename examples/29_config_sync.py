@@ -61,6 +61,7 @@ from urllib.parse import unquote
 import je_auto_control as ac
 
 _USER = "alice"
+_SCRIPT = "login.json"
 
 
 def _handler(store_path: Path) -> type:
@@ -182,10 +183,10 @@ def _walkthrough(root: Path) -> Tuple[List[str], Dict[str, Any]]:
     seen: Dict[str, Any] = {}
     try:
         print("1. a script written on the laptop reaches the desktop")
-        laptop.write("login.json", [["AC_set_var", {"name": "user", "value": "alice"}]])
+        laptop.write(_SCRIPT, [["AC_set_var", {"name": "user", "value": "alice"}]])
         laptop.sync()
         desktop.sync()
-        seen["arrived"] = desktop.read("login.json")
+        seen["arrived"] = desktop.read(_SCRIPT)
 
         print("2. the server restarts; the bucket is still there")
         committed = ac.ConfigStore(store_path).revision(_USER)
@@ -207,8 +208,8 @@ def _walkthrough(root: Path) -> Tuple[List[str], Dict[str, Any]]:
 
         print("4. both machines edit login.json apart: neither edit is dropped")
         desktop.sync()
-        laptop.write("login.json", [["AC_set_var", {"name": "user", "value": "from-laptop"}]])
-        desktop.write("login.json", [["AC_set_var", {"name": "user", "value": "from-desktop"}]])
+        laptop.write(_SCRIPT, [["AC_set_var", {"name": "user", "value": "from-laptop"}]])
+        desktop.write(_SCRIPT, [["AC_set_var", {"name": "user", "value": "from-desktop"}]])
         laptop.sync()
         seen["conflict"] = desktop.sync()
         details = desktop.status()["conflict_details"]
@@ -223,7 +224,7 @@ def _walkthrough(root: Path) -> Tuple[List[str], Dict[str, Any]]:
             desktop.resolve(details[0]["key"], choices.index("laptop"))
         seen["resolved"] = desktop.sync()
         laptop.sync()
-        seen["final"] = (laptop.read("login.json"), desktop.read("login.json"))
+        seen["final"] = (laptop.read(_SCRIPT), desktop.read(_SCRIPT))
     finally:
         server.stop()
     return _check(seen), seen

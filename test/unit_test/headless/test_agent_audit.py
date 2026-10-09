@@ -80,17 +80,20 @@ def test_a_garbled_coordinate_is_a_backend_error(coordinate):
 
 
 def test_computer_use_refuses_a_tool_it_did_not_offer():
+    backend = _computer_use()
+    response = _response(
+        {"type": "tool_use", "name": "AC_shell_command", "id": "t1", "input": {}})
     with pytest.raises(AgentBackendError, match="only 'computer'"):
-        _computer_use()._handle_response(_response(
-            {"type": "tool_use", "name": "AC_shell_command", "id": "t1", "input": {}}))
+        backend._handle_response(response)
 
 
 def test_the_messages_backend_refuses_a_tool_it_did_not_offer():
     backend = AnthropicAgentBackend(tools=[{"name": "AC_click_mouse"}], client=object())
+    response = _response(
+        {"type": "tool_use", "name": "AC_shell_command", "id": "t1",
+         "input": {"shell_command": "rm -rf somedir"}})
     with pytest.raises(AgentBackendError, match="not offered"):
-        backend._handle_response(_response(
-            {"type": "tool_use", "name": "AC_shell_command", "id": "t1",
-             "input": {"shell_command": "rm -rf somedir"}}))
+        backend._handle_response(response)
 
 
 @pytest.mark.parametrize("arguments", ["[1, 2]", '"x"', "not json"])
@@ -153,4 +156,5 @@ def test_backend_errors_are_in_the_framework_family():
     from je_auto_control.utils.llm.backends.base import LLMNotAvailableError
     from je_auto_control.utils.vision.backends.base import VLMNotAvailableError
     for error in (AgentBackendError, LLMNotAvailableError, VLMNotAvailableError):
-        assert issubclass(error, AutoControlException) and issubclass(error, RuntimeError)
+        assert issubclass(error, AutoControlException)
+        assert issubclass(error, RuntimeError)

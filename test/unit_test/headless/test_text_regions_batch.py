@@ -67,4 +67,5 @@ def test_wiring():
 
 def test_facade_exports():
     for attr in ("find_text_regions", "find_text_lines"):
-        assert hasattr(ac, attr) and attr in ac.__all__
+        assert hasattr(ac, attr)
+        assert attr in ac.__all__

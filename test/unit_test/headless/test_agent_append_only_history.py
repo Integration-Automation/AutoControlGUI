@@ -195,7 +195,8 @@ def test_summary_names_the_goal_and_bounds_each_action():
     ]
     summary = base.summarise_steps(GOAL, steps)
     assert GOAL in summary
-    assert "AC_click_mouse" in summary and '"x": 1' in summary
+    assert "AC_click_mouse" in summary
+    assert '"x": 1' in summary
     assert "error: ValueError: boom" in summary
     assert len(summary) < 2000
     many = [AgentStep(index=i, tool="AC_press_key", arguments={"key": "a"}) for i in range(500)]

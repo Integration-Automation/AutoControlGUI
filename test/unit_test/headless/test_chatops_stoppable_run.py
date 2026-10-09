@@ -41,7 +41,7 @@ class _Script:
         self.after.append("ran")
 
 
-@pytest.fixture()
+@pytest.fixture
 def script(monkeypatch):
     fake = _Script()
     monkeypatch.setitem(executor.event_dict, "AC_fake_chat_held", fake.held)
@@ -51,7 +51,7 @@ def script(monkeypatch):
     assert active_executions() == [], "a chat run outlived its test"
 
 
-@pytest.fixture()
+@pytest.fixture
 def root(tmp_path):
     (tmp_path / "long job.json").write_text(
         json.dumps([["AC_fake_chat_held"], ["AC_fake_chat_mark"]]), encoding="utf-8")
@@ -96,7 +96,8 @@ def test_the_run_id_names_the_script_and_is_one_word():
 
 def test_a_run_is_listed_while_it_lasts_and_reports_its_id(script, root):
     reply = _router().dispatch("/run quick.json", context={"script_root": str(root)})
-    assert reply.succeeded and reply.text == "ran quick.json: 1 action(s) executed"
+    assert reply.succeeded
+    assert reply.text == "ran quick.json: 1 action(s) executed"
     assert reply.metadata["run_id"].startswith("chatops-quick-")
     assert script.seen_ids == [reply.metadata["run_id"]]
     assert active_executions() == []
@@ -109,7 +110,8 @@ def test_a_bare_stop_all_ends_a_chat_run(script, root):
     assert run_id.startswith("chatops-long_job-")
     assert stop_execution(reason="stop-all") == 1
     reply = run.result()
-    assert reply.text == "run stopped. (stop-all)" and reply.succeeded is False
+    assert reply.text == "run stopped. (stop-all)"
+    assert reply.succeeded is False
     assert reply.metadata == {"stopped": True, "run_id": run_id, "reason": "stop-all"}
     assert script.after == [], "the action after the stop still ran"
     assert active_executions() == []
@@ -131,7 +133,8 @@ def test_chat_stop_ends_the_chat_run_and_leaves_other_runs_alone(script, root):
     (run_id,) = _chat_runs()
     with stoppable_run("gui-run") as other:
         reply = router.dispatch("/stop", context={"slack_user": "U1"})
-        assert reply.succeeded and reply.text == f"stop requested: {run_id}"
+        assert reply.succeeded
+        assert reply.text == f"stop requested: {run_id}"
         assert reply.metadata["stopped"] == [run_id]
         assert other.stopped is False, "a bare /stop reached a run chat did not start"
     stopped = run.result()
@@ -148,17 +151,22 @@ def test_chat_stop_by_id_reaches_any_run_and_says_so_when_there_is_none(script):
                                 "Other runs in progress: gui-run (/stop <run-id>).")
         assert other.stopped is False
         missing = router.dispatch("/stop nope")
-        assert missing.succeeded is False and missing.text.startswith("no run named 'nope'")
+        assert missing.succeeded is False
+        assert missing.text.startswith("no run named 'nope'")
         named = router.dispatch("/stop gui-run")
-        assert named.succeeded and named.text == "stop requested: gui-run"
-        assert other.stopped and other.reason == "stopped from chat"
+        assert named.succeeded
+        assert named.text == "stop requested: gui-run"
+        assert other.stopped
+        assert other.reason == "stopped from chat"
     idle = router.dispatch("/stop")
-    assert idle.text == "no chat-started run is in progress." and idle.succeeded is False
+    assert idle.text == "no chat-started run is in progress."
+    assert idle.succeeded is False
 
 
 def test_stop_takes_at_most_one_argument():
     reply = _router().dispatch("/stop a b")
-    assert reply.succeeded is False and "usage: /stop [run-id]" in reply.text
+    assert reply.succeeded is False
+    assert "usage: /stop [run-id]" in reply.text
     assert cmd_stop([], {}).succeeded is False
 
 
@@ -185,4 +193,5 @@ def test_inside_a_stoppable_run_the_chat_run_joins_it(script, root):
 
 def test_stop_is_listed_in_help():
     text = _router().dispatch("/help").text
-    assert "/stop" in text and "/run" in text
+    assert "/stop" in text
+    assert "/run" in text

@@ -12,14 +12,14 @@ import threading
 import time
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Any, Callable, Dict, Iterator, Optional, TypeVar, Union
+from typing import Any, Callable, Dict, Iterator, Optional, TypeVar
 
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 
 _Result = TypeVar("_Result")
 
 
-def atomic_write_text(path: Union[str, Path], text: str,
+def atomic_write_text(path: str | Path, text: str,
                       encoding: str = "utf-8") -> None:
     """Atomically write ``text`` to ``path`` via a sibling temp file + rename.
 
@@ -31,7 +31,7 @@ def atomic_write_text(path: Union[str, Path], text: str,
     _atomic_write(path, lambda handle_fd: _write_text_fd(handle_fd, text, encoding))
 
 
-def atomic_write_bytes(path: Union[str, Path], data: bytes) -> None:
+def atomic_write_bytes(path: str | Path, data: bytes) -> None:
     """Atomically write ``data`` to ``path``, byte for byte.
 
     Like :func:`atomic_write_text` -- same temp file, same rename, and on
@@ -49,7 +49,7 @@ def _write_text_fd(handle_fd: int, text: str, encoding: str) -> None:
         handle.write(text)
 
 
-def _atomic_write(path: Union[str, Path], write: Callable[[int], None]) -> None:
+def _atomic_write(path: str | Path, write: Callable[[int], None]) -> None:
     file_path = Path(path)
     directory = str(file_path.parent) or "."
     handle_fd, tmp_name = tempfile.mkstemp(
@@ -77,7 +77,10 @@ def _replace(source: str, destination: str) -> None:
     deadline = time.monotonic() + _REPLACE_WAIT_S
     while True:
         try:
-            os.replace(source, destination)
+            # ``source`` is the mkstemp() sibling _atomic_write made; ``destination``
+            # is the file its caller asked to write. This is the shared atomic
+            # writer: it joins no path and takes none from a request itself.
+            os.replace(source, destination)  # NOSONAR pythonsecurity:S8707  # reason: see above
             return
         except PermissionError:
             if time.monotonic() > deadline:
@@ -85,7 +88,7 @@ def _replace(source: str, destination: str) -> None:
             time.sleep(0.01)
 
 
-def append_json_line(path: Union[str, Path], line: str) -> None:
+def append_json_line(path: str | Path, line: str) -> None:
     """Append ``line`` and a newline to a JSON-lines file.
 
     If the file does not end in a newline -- the last write was cut off --
@@ -102,7 +105,7 @@ def append_json_line(path: Union[str, Path], line: str) -> None:
         handle.write(line.encode("utf-8") + b"\n")
 
 
-def read_json_dict(path: Optional[Union[str, Path]]) -> Dict[str, Any]:
+def read_json_dict(path: Optional[str | Path]) -> Dict[str, Any]:
     """Return the JSON object at ``path``, or ``{}`` if missing/unreadable."""
     if path is None:
         return {}
@@ -128,7 +131,7 @@ def _read_json_object(path: Path) -> Dict[str, Any]:
     return data
 
 
-def write_json_dict(path: Union[str, Path], data: Dict[str, Any]) -> None:
+def write_json_dict(path: str | Path, data: Dict[str, Any]) -> None:
     """Write ``data`` as indented JSON to ``path`` (creating parent dirs)."""
     file_path = Path(path)
     file_path.parent.mkdir(parents=True, exist_ok=True)
@@ -192,7 +195,7 @@ class SharedJsonDict:
     locators) where writing back an empty dict would erase the file.
     """
 
-    def __init__(self, path: Optional[Union[str, Path]], *,
+    def __init__(self, path: Optional[str | Path], *,
                  strict: bool = False) -> None:
         self._path = Path(path) if path is not None else None
         self._memory: Dict[str, Any] = {}
@@ -228,7 +231,7 @@ class SharedJsonDict:
         return result
 
 
-def quarantine_file(path: Union[str, Path], label: str, reason: Any) -> Optional[Path]:
+def quarantine_file(path: str | Path, label: str, reason: Any) -> Optional[Path]:
     """Move an unusable store file aside as ``<name>.corrupt-<time>``; return where.
 
     A store that reads a damaged file as empty and then saves replaces every
@@ -247,7 +250,7 @@ def quarantine_file(path: Union[str, Path], label: str, reason: Any) -> Optional
     return target
 
 
-def load_json_or_quarantine(path: Union[str, Path], label: str) -> Any:
+def load_json_or_quarantine(path: str | Path, label: str) -> Any:
     """The JSON at ``path``, ``None`` when missing; damaged content is quarantined.
 
     See :func:`quarantine_file`. A UTF-8 BOM is accepted. Only content that

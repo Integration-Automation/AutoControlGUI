@@ -12,7 +12,8 @@ def test_parse_multiple_links_and_params():
     links = parse_link_header(_HEADER)
     assert len(links) == 2
     assert links[0].uri == "https://api.example.com/x?page=2"
-    assert links[0].rel == "next" and links[0].params["title"] == "Page 2"
+    assert links[0].rel == "next"
+    assert links[0].params["title"] == "Page 2"
     assert links[1].rel == "last"
 
 
@@ -26,16 +27,19 @@ def test_links_by_rel_and_next_url():
 def test_quoted_value_with_comma():
     header = '<https://api/x>; rel="next"; title="a, b, c"'
     [link] = parse_link_header(header)
-    assert link.params["title"] == "a, b, c" and link.rel == "next"
+    assert link.params["title"] == "a, b, c"
+    assert link.rel == "next"
 
 
 def test_space_separated_rel_indexes_each():
     indexed = links_by_rel('<https://api/x>; rel="next prefetch"')
-    assert "next" in indexed and "prefetch" in indexed
+    assert "next" in indexed
+    assert "prefetch" in indexed
 
 
 def test_empty_header():
-    assert parse_link_header("") == [] and next_url("") is None
+    assert parse_link_header("") == []
+    assert next_url("") is None
 
 
 def test_paginate_follows_next_over_injected_fetch():
@@ -80,4 +84,5 @@ def test_wiring():
 def test_facade_exports():
     for attr in ("Link", "parse_link_header", "links_by_rel", "next_url",
                  "paginate"):
-        assert hasattr(ac, attr) and attr in ac.__all__
+        assert hasattr(ac, attr)
+        assert attr in ac.__all__

@@ -18,9 +18,10 @@ def test_desktop_probe_is_cached_then_expires(monkeypatch):
     # Input primitives ask constantly, so it must be cached — but not for so
     # long that an unlocked machine still reports locked.
     monkeypatch.setattr(reach.sys, "platform", "win32")
-    reach._desktop_cache = (time.monotonic(), False)
+    monkeypatch.setattr(reach, "_desktop_cache", (time.monotonic(), False))
     assert reach.input_desktop_available() is False
-    reach._desktop_cache = (time.monotonic() - reach.DESKTOP_CACHE_SEC - 1, False)
+    monkeypatch.setattr(
+        reach, "_desktop_cache", (time.monotonic() - reach.DESKTOP_CACHE_SEC - 1, False))
     assert reach.input_desktop_available() is not False
 
 
@@ -74,4 +75,5 @@ def test_wiring():
     from je_auto_control.utils.mcp_server.tools import build_default_tool_registry
     assert "ac_input_reachable" in {t.name for t in build_default_tool_registry()}
     for attr in ("input_desktop_available", "input_reaches_system"):
-        assert hasattr(ac, attr) and attr in ac.__all__
+        assert hasattr(ac, attr)
+        assert attr in ac.__all__

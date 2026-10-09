@@ -18,7 +18,7 @@ import os
 import re
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, Mapping, Optional, Tuple, Union
+from typing import Any, Dict, Mapping, Optional, Tuple
 
 from PySide6.QtCore import QByteArray, QSettings
 
@@ -32,7 +32,7 @@ _WIDTH_RANGE = (200, 800)
 _TEXT_SIZE_RANGE = (6, 48)
 _GROUP = "main_window"
 _FORMS_GROUP = "forms"
-_FORM_NAME = re.compile(r"[A-Za-z][A-Za-z0-9_]{0,63}")
+_FORM_NAME = re.compile(r"[A-Za-z]\w{0,63}", re.ASCII)
 #: A remembered field longer than this was not typed into a one-line input.
 _FORM_VALUE_LIMIT = 2048
 _UNSET: Any = object()
@@ -87,7 +87,7 @@ def _as_bytes(value: Any) -> bytes:
 class WindowSettings:
     """Load and save a :class:`WindowState`; a store without a path does neither."""
 
-    def __init__(self, path: Union[str, Path, None] = _UNSET) -> None:
+    def __init__(self, path: str | Path | None = _UNSET) -> None:
         resolved = settings_path() if path is _UNSET else path
         self._path: Optional[Path] = None if resolved is None else Path(resolved)
 

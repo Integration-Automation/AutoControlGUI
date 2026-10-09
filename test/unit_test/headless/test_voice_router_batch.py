@@ -29,7 +29,8 @@ def test_fuzzy_match_tolerates_noise():
     router = VoiceRouter(threshold=0.6)
     router.register("save file", [["AC_save", {}]])
     matched = router.match("save the file")
-    assert matched is not None and matched.phrase == "save file"
+    assert matched is not None
+    assert matched.phrase == "save file"
 
 
 def test_no_match_below_threshold():

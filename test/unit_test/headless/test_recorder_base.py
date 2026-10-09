@@ -292,5 +292,6 @@ def test_each_recording_gets_a_fresh_hook():
 
 
 def test_a_backend_must_supply_a_hook():
+    recorder = InputRecorder()
     with pytest.raises(NotImplementedError):
-        InputRecorder().record()
+        recorder.record()

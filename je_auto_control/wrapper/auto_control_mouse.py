@@ -34,7 +34,7 @@ import numbers
 import sys
 import time
 import warnings
-from typing import Any, Dict, Optional, Tuple, Union
+from typing import Any, Dict, Optional, Tuple
 
 from je_auto_control.utils.exception.exception_tags import (
     mouse_click_mouse_error_message, mouse_get_position_error_message, mouse_press_mouse_error_message,
@@ -66,7 +66,7 @@ def get_mouse_table() -> dict:
     return mouse_keys_table
 
 
-def mouse_preprocess(mouse_keycode: Union[int, str], x: Optional[int],
+def mouse_preprocess(mouse_keycode: int | str, x: Optional[int],
                      y: Optional[int]) -> Tuple[MouseKeycode, int, int]:
     """
     前置處理：檢查 keycode 並補齊座標
@@ -193,7 +193,7 @@ def set_mouse_position(x: int, y: int) -> tuple[int, int]:
         raise
 
 
-def press_mouse(mouse_keycode: Union[int, str], x: Optional[int] = None,
+def press_mouse(mouse_keycode: int | str, x: Optional[int] = None,
                 y: Optional[int] = None) -> tuple[MouseKeycode, int, int] | None:
     """
     按下滑鼠按鍵
@@ -226,7 +226,7 @@ def press_mouse(mouse_keycode: Union[int, str], x: Optional[int] = None,
         raise
 
 
-def release_mouse(mouse_keycode: Union[int, str], x: Optional[int] = None,
+def release_mouse(mouse_keycode: int | str, x: Optional[int] = None,
                   y: Optional[int] = None) -> tuple[MouseKeycode, int, int] | None:
     """
     放開滑鼠按鍵
@@ -439,7 +439,7 @@ def _resolve_scroll_axis(scroll_direction: str) -> int:
 def mouse_scroll(scroll_value: int, x: Optional[int] = None,
                  y: Optional[int] = None,
                  scroll_direction: str = "scroll_up"
-                 ) -> Tuple[int, Union[int, str]]:
+                 ) -> Tuple[int, int | str]:
     """
     模擬滑鼠滾輪操作
     Simulate mouse scroll
@@ -485,7 +485,7 @@ def mouse_scroll(scroll_value: int, x: Optional[int] = None,
         # The one branch in this file that spells OS names; the module
         # docstring says why. The names are `is_windows()`'s plus
         # `is_macos()`'s, and the seam test pins the behaviour on each.
-        direction: Union[int, str] = scroll_direction
+        direction: int | str = scroll_direction
         if (sys.platform == "win32" or sys.platform == "cygwin"
                 or sys.platform == "msys" or sys.platform == "darwin"):
             mouse.scroll(scroll_value)
@@ -504,8 +504,8 @@ def mouse_scroll(scroll_value: int, x: Optional[int] = None,
         raise AutoControlMouseException(mouse_scroll_error_message + " " + repr(error)) from error
 
 
-def send_mouse_event_to_window(window: Union[int, str],
-                               mouse_keycode: Union[int, str],
+def send_mouse_event_to_window(window: int | str,
+                               mouse_keycode: int | str,
                                x: Optional[int] = None,
                                y: Optional[int] = None) -> None:
     """
@@ -557,7 +557,7 @@ def send_mouse_event_to_window(window: Union[int, str],
         autocontrol_logger.error(f"send_mouse_event_to_window failed: {repr(error)}")
 
 
-def _button_name_for_post(mouse_keycode: Union[int, str]) -> str:
+def _button_name_for_post(mouse_keycode: int | str) -> str:
     """把舊介面收的按鍵代碼轉成投遞路徑用的按鍵名。
 
     舊介面同時吃名稱（``mouse_left``）與底層代碼元組；後者反查回名稱，查不到就

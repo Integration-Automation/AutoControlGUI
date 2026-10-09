@@ -22,7 +22,7 @@ from je_auto_control.wrapper.device_context import (
     DeviceCapability, DeviceError,
 )
 
-_PACKAGE = re.compile(r"[A-Za-z0-9_]+(?:\.[A-Za-z0-9_]+)+")
+_PACKAGE = re.compile(r"\w+(?:\.\w+)+", re.ASCII)
 _COMPONENT = re.compile(r"[A-Za-z0-9_.]+/[A-Za-z0-9_.$]+")
 _RESUMED = re.compile(
     r"(?:topResumedActivity|mResumedActivity|ResumedActivity)[=:]\s*ActivityRecord\{\S+ \S+ ([\w.]+)/")

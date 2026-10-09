@@ -27,7 +27,8 @@ def test_match_iou_recorded():
 def test_no_match_below_threshold():
     result = match_elements([_b(0, 0, 10, 10)], [_b(50, 0, 10, 10)],
                             iou_threshold=0.5)
-    assert result["matched"] == [] and len(result["added"]) == 1
+    assert result["matched"] == []
+    assert len(result["added"]) == 1
     assert len(result["removed"]) == 1
 
 
@@ -61,4 +62,5 @@ def test_wiring():
 
 def test_facade_exports():
     for attr in ("match_elements", "assign_stable_ids"):
-        assert hasattr(ac, attr) and attr in ac.__all__
+        assert hasattr(ac, attr)
+        assert attr in ac.__all__

@@ -13,7 +13,7 @@ that lists nothing and refuses actions with a reason, so importing never
 fails and callers get an answer rather than an ``ImportError``.
 """
 import time
-from typing import List, Optional, Tuple, Union
+from typing import List, Optional, Tuple
 
 from je_auto_control.utils.exception.exceptions import AutoControlActionException
 from je_auto_control.utils.executor.run_control import pause
@@ -159,7 +159,7 @@ def foreground_window() -> Optional[Tuple[int, str]]:
     return hwnd, titles.get(hwnd, "")
 
 
-def post_key_to_window(title_substring: str, key: Union[int, str],
+def post_key_to_window(title_substring: str, key: int | str,
                        case_sensitive: bool = False) -> bool:
     """Type one key into a window **without focusing it**. ``False`` if no match.
 
@@ -201,7 +201,7 @@ def post_click_to_window(title_substring: str, button: str = "left",
     return backend.post_click(hit[0], _mouse_button_name(button), int(x), int(y))
 
 
-def _resolve_key(key: Union[int, str]) -> Tuple[int, str]:
+def _resolve_key(key: int | str) -> Tuple[int, str]:
     """``(virtual key code, character to also post as WM_CHAR)``."""
     if isinstance(key, int):
         return int(key), ""

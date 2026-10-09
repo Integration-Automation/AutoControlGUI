@@ -27,7 +27,7 @@ from je_auto_control.gui.task_controller import (  # noqa: E402
 from je_auto_control.utils.exception.exceptions import AutoControlException  # noqa: E402
 
 
-@pytest.fixture()
+@pytest.fixture
 def qapp():
     return QApplication.instance() or QApplication([])
 
@@ -113,10 +113,13 @@ def test_ui_tick_continues_during_network_wait(qapp):
     # The "network" is still waiting: the event loop must keep delivering ticks.
     assert _pump(qapp, lambda: len(ticks) >= 5), "the GUI thread did not tick during the wait"
     ui_ticks_during_work = len(ticks)
-    assert ui_ticks_during_work > 0 and results == [] and handle.isRunning()
+    assert ui_ticks_during_work > 0
+    assert results == []
+    assert handle.isRunning()
     network.release.set()
     assert _pump(qapp, lambda: bool(results))
-    assert handle.state == "done" and network.active == 1
+    assert handle.state == "done"
+    assert network.active == 1
     results[0].close()
     timer.stop()
     _destroy(qapp, owner)
@@ -130,7 +133,8 @@ def test_cancel_releases_session(qapp):
     handle = controller.submit(network.connect, owner=owner)
     handle.result.connect(lambda value: outcomes.append(("result", value)))
     handle.error.connect(lambda error: outcomes.append(("error", error)))
-    assert network.entered.wait(3.0) and network.active == 1
+    assert network.entered.wait(3.0)
+    assert network.active == 1
     handle.cancel()
     # Released at once, on the cancelling thread -- not when the backend gives up.
     assert network.active == 0
@@ -138,7 +142,8 @@ def test_cancel_releases_session(qapp):
     assert _pump(qapp, lambda: not controller.active_count())
     active_sessions_after_close = network.active
     assert active_sessions_after_close == 0
-    assert outcomes == [] and handle.state == "cancelled"
+    assert outcomes == []
+    assert handle.state == "cancelled"
     _destroy(qapp, owner)
 
 
@@ -150,10 +155,12 @@ def test_a_result_finished_before_cancel_is_discarded_not_delivered(qapp):
     handle = TaskController().submit(network.connect, owner=owner,
                                      discard=lambda session: session.close())
     handle.result.connect(delivered.append)
-    assert handle.wait(3.0) and network.active == 1
+    assert handle.wait(3.0)
+    assert network.active == 1
     handle.cancel()                            # the result is done but not delivered yet
     qapp.processEvents()
-    assert delivered == [] and network.active == 0
+    assert delivered == []
+    assert network.active == 0
 
 
 def test_owner_death_drops_result(qapp):
@@ -185,11 +192,13 @@ def test_owner_death_after_completion_discards_the_undelivered_result(qapp):
     handle = TaskController().submit(network.connect, owner=owner,
                                      discard=lambda session: session.close())
     handle.result.connect(received.append)
-    assert handle.wait(3.0) and network.active == 1     # done; the delivery is still queued
+    assert handle.wait(3.0)
+    assert network.active == 1  # done; the delivery is still queued
     owner.deleteLater()
     qapp.sendPostedEvents(None, QEvent.Type.DeferredDelete.value)
     qapp.processEvents()
-    assert received == [] and network.active == 0
+    assert received == []
+    assert network.active == 0
 
 
 def test_no_worker_touches_widget(qapp):
@@ -211,17 +220,24 @@ def test_no_worker_touches_widget(qapp):
                                          seen.update(result_gui=QThread.currentThread() is gui_thread)))
     handle.finished.connect(lambda: seen.update(finished_gui=QThread.currentThread() is gui_thread))
     assert _pump(qapp, lambda: "finished_gui" in seen)
-    assert seen["work_on_gui"] is False and seen["args"] is CancellationToken
-    assert seen["progress"] == 40 and seen["progress_gui"] and seen["result_gui"] and seen["finished_gui"]
+    assert seen["work_on_gui"] is False
+    assert seen["args"] is CancellationToken
+    assert seen["progress"] == 40
+    assert seen["progress_gui"]
+    assert seen["result_gui"]
+    assert seen["finished_gui"]
     assert owner.text() == "payload"
 
     # Work that could reach a widget is refused before it starts.
+    refusing = TaskController()
     with pytest.raises(TaskUsageError):
-        TaskController().submit(owner.setText, owner=owner)                  # a widget's own method
+        refusing.submit(owner.setText, owner=owner)                          # a widget's own method
+    refusing = TaskController()
     with pytest.raises(TaskUsageError):
-        TaskController().submit(lambda _token: owner.text(), owner=owner)    # closes over the widget
+        refusing.submit(lambda _token: owner.text(), owner=owner)            # closes over the widget
+    refusing, bound_to_widget = TaskController(), functools.partial(lambda label, _token: label, owner)
     with pytest.raises(TaskUsageError):
-        TaskController().submit(functools.partial(lambda label, _token: label, owner), owner=owner)
+        refusing.submit(bound_to_widget, owner=owner)
     assert issubclass(TaskUsageError, AutoControlException)
     _destroy(qapp, owner)
 
@@ -239,7 +255,8 @@ def test_errors_arrive_typed_on_the_gui_thread(qapp):
     handle = TaskController().submit(work, owner=owner)
     handle.error.connect(lambda error: errors.append((error, QThread.currentThread() is qapp.thread())))
     assert _pump(qapp, lambda: bool(errors))
-    assert isinstance(errors[0][0], BackendDown) and errors[0][1] is True
+    assert isinstance(errors[0][0], BackendDown)
+    assert errors[0][1] is True
     assert handle.state == "failed"
     _destroy(qapp, owner)
 
@@ -256,11 +273,14 @@ def test_a_timeout_cancels_the_work_and_reports_it(qapp):
     handle = TaskController().submit(work, owner=owner, timeout_s=0.1)
     handle.error.connect(errors.append)
     assert _pump(qapp, lambda: bool(errors))
-    assert isinstance(errors[0], TaskTimeout) and isinstance(errors[0], TimeoutError)
-    assert handle.state == "timed_out" and handle.wait(3.0)
+    assert isinstance(errors[0], TaskTimeout)
+    assert isinstance(errors[0], TimeoutError)
+    assert handle.state == "timed_out"
+    assert handle.wait(3.0)
     # A hair over 0.1 is the clock's rounding (0.10000000000002274 on the
     # Windows 3.10 and 3.11 runners), not a longer deadline.
-    assert network.active == 0 and 0 < deadlines[0] <= 0.1 + 1e-6
+    assert network.active == 0
+    assert 0 < deadlines[0] <= 0.1 + 1e-6
     _destroy(qapp, owner)
 
 
@@ -271,8 +291,10 @@ def test_the_token_wakes_a_waiting_backend_and_raises_typed():
     token.on_cancel(lambda: released.append("a"))
     threading.Timer(0.05, token.cancel).start()
     started = time.monotonic()
-    assert token.wait(5.0) is True and time.monotonic() - started < 2.0
-    assert released == ["a"] and token.cancelled
+    assert token.wait(5.0) is True
+    assert time.monotonic() - started < 2.0
+    assert released == ["a"]
+    assert token.cancelled
     token.on_cancel(lambda: released.append("late"))       # already cancelled: released at once
     assert released == ["a", "late"]
     with pytest.raises(TaskCancelled):
@@ -300,9 +322,12 @@ def test_cancel_all_for_an_owner_leaves_other_owners_running(qapp):
     controller = TaskController()
     controller.submit(one.connect, owner=closing)
     kept = controller.submit(other.connect, owner=staying)
-    assert one.entered.wait(3.0) and other.entered.wait(3.0)
+    assert one.entered.wait(3.0)
+    assert other.entered.wait(3.0)
     controller.cancel_all(closing)
-    assert one.active == 0 and other.active == 1 and kept.isRunning()
+    assert one.active == 0
+    assert other.active == 1
+    assert kept.isRunning()
     controller.cancel_all()
     assert other.active == 0
     assert _pump(qapp, lambda: controller.active_count() == 0)
@@ -353,7 +378,7 @@ class _SlowViewer:
         self.receiver = receiver
 
 
-@pytest.fixture()
+@pytest.fixture
 def remote_panels(qapp, monkeypatch, tmp_path):
     from PySide6.QtWidgets import QMessageBox
     from je_auto_control.gui.remote_desktop import connection_screen, viewer_panel
@@ -391,12 +416,16 @@ def test_the_viewer_tab_connects_without_holding_the_gui_thread(qapp, remote_pan
     timer = QTimer(panel)
     timer.timeout.connect(lambda: ticks.append(1))
     timer.start(5)
-    assert _pump(qapp, lambda: len(ticks) >= 5) and panel._connect_task is not None
-    assert registry.owned("viewer", panel._owner) is None and panel._screen_window is None
+    assert _pump(qapp, lambda: len(ticks) >= 5)
+    assert panel._connect_task is not None
+    assert registry.owned("viewer", panel._owner) is None
+    assert panel._screen_window is None
     viewer.answer.set()
     assert _pump(qapp, lambda: panel._connect_task is None)
-    assert registry.owned("viewer", panel._owner) is viewer and panel._screen_window is not None
-    assert viewer.timeout == pytest.approx(5.0) and warnings == []
+    assert registry.owned("viewer", panel._owner) is viewer
+    assert panel._screen_window is not None
+    assert viewer.timeout == pytest.approx(5.0)
+    assert warnings == []
     timer.stop()
     panel._disconnect()
 
@@ -411,8 +440,10 @@ def test_disconnect_during_a_connect_drops_the_viewer_that_answers_late(qapp, re
     assert panel._connect_task is None
     viewer.answer.set()                       # ... and then the host answers
     assert _pump(qapp, lambda: viewer.disconnects >= 1), "the late session stayed open"
-    assert not viewer.connected and registry.owned("viewer", panel._owner) is None
-    assert panel._screen_window is None and warnings == []
+    assert not viewer.connected
+    assert registry.owned("viewer", panel._owner) is None
+    assert panel._screen_window is None
+    assert warnings == []
 
 
 def test_a_second_connect_supersedes_the_first(qapp, remote_panels):
@@ -424,11 +455,12 @@ def test_a_second_connect_supersedes_the_first(qapp, remote_panels):
     first.answer.set()
     second.answer.set()
     assert _pump(qapp, lambda: panel._connect_task is None and first.disconnects >= 1)
-    assert registry.owned("viewer", panel._owner) is second and not first.connected
+    assert registry.owned("viewer", panel._owner) is second
+    assert not first.connected
     panel._disconnect()
 
 
-def test_quick_connect_does_not_hold_the_gui_thread(qapp, remote_panels):
+def test_quick_connect_does_not_hold_the_gui_thread(qapp, remote_panels, monkeypatch):
     from je_auto_control.utils.remote_desktop.connect_coordinator import parse_target
     _panel, connection_screen, registry, warnings = remote_panels
     screen = connection_screen.QuickConnectScreen()
@@ -436,25 +468,24 @@ def test_quick_connect_does_not_hold_the_gui_thread(qapp, remote_panels):
     screen._dispatch_target(parse_target("desk:5555"), "tok")
     assert time.monotonic() - started < 1.0
     viewer = _SlowViewer.made[0]
-    assert screen._connect_task is not None and registry.owned("viewer", screen._owner) is None
+    assert screen._connect_task is not None
+    assert registry.owned("viewer", screen._owner) is None
     viewer.answer.set()
     assert _pump(qapp, lambda: screen._connect_task is None)
-    assert registry.owned("viewer", screen._owner) is viewer and screen._screen_window is not None
+    assert registry.owned("viewer", screen._owner) is viewer
+    assert screen._screen_window is not None
     screen._disconnect()
     # A refusal arrives as a warning, on the GUI thread, and adopts nothing.
-    monkeypatch_refuse = _SlowViewer.refuse
-    _SlowViewer.refuse = True
-    try:
-        screen._dispatch_target(parse_target("desk:5555"), "tok")
-        _SlowViewer.made[1].answer.set()
-        assert _pump(qapp, lambda: screen._connect_task is None)
-    finally:
-        _SlowViewer.refuse = monkeypatch_refuse
-    assert warnings == ["refused"] and registry.owned("viewer", screen._owner) is None
+    monkeypatch.setattr(_SlowViewer, "refuse", True)
+    screen._dispatch_target(parse_target("desk:5555"), "tok")
+    _SlowViewer.made[1].answer.set()
+    assert _pump(qapp, lambda: screen._connect_task is None)
+    assert warnings == ["refused"]
+    assert registry.owned("viewer", screen._owner) is None
     screen._refresh_timer.stop()
 
 
-@pytest.fixture()
+@pytest.fixture
 def webrtc_panel(qapp, monkeypatch):
     pytest.importorskip("av")
     pytest.importorskip("aiortc")
@@ -499,11 +530,13 @@ def test_the_webrtc_host_makes_its_offer_off_the_gui_thread(qapp, webrtc_panel):
     panel._multi_host = host
     started = time.monotonic()
     panel._produce_offer()
-    assert time.monotonic() - started < 1.0 and host.entered.wait(3.0)
+    assert time.monotonic() - started < 1.0
+    assert host.entered.wait(3.0)
     assert panel._offer_view.toPlainText() == ""
     host.release.set()
     assert _pump(qapp, lambda: panel._offer_view.toPlainText() == "v=0 offer")
-    assert panel._manual_session_id == "session-1" and host.on_gui == [False]
+    assert panel._manual_session_id == "session-1"
+    assert host.on_gui == [False]
 
     # Stopped while the offer was being made: the session is ended, nothing is shown or reported.
     for failure in (None, RuntimeError("the host is shutting down")):
@@ -516,7 +549,8 @@ def test_the_webrtc_host_makes_its_offer_off_the_gui_thread(qapp, webrtc_panel):
         panel._multi_host = None
         late.release.set()
         assert _pump(qapp, lambda: not task_controller().active_count())
-        assert panel._offer_view.toPlainText() == "" and webrtc_panel.warnings == []
+        assert panel._offer_view.toPlainText() == ""
+        assert webrtc_panel.warnings == []
         assert late.stopped == ([] if failure else ["session-1"])
     panel._annotation_overlay = None
 
@@ -527,7 +561,8 @@ def test_the_webrtc_viewer_answers_off_the_gui_thread(qapp, webrtc_panel):
     panel._viewer = viewer
     started = time.monotonic()
     panel._produce_answer("v=0 offer")
-    assert time.monotonic() - started < 1.0 and viewer.entered.wait(3.0)
+    assert time.monotonic() - started < 1.0
+    assert viewer.entered.wait(3.0)
     viewer.release.set()
     assert _pump(qapp, lambda: panel._answer_view.toPlainText() == "answer to v=0 offer")
     assert viewer.on_gui == [False]
@@ -540,7 +575,8 @@ def test_the_webrtc_viewer_answers_off_the_gui_thread(qapp, webrtc_panel):
     panel._viewer = None                         # Stop, while the answer is being made
     replaced.release.set()
     assert _pump(qapp, lambda: not task_controller().active_count())
-    assert panel._answer_view.toPlainText() == "" and webrtc_panel.warnings == []
+    assert panel._answer_view.toPlainText() == ""
+    assert webrtc_panel.warnings == []
 
     failing = _SlowSdp()
     failing.fail = ValueError("fingerprint mismatch")
@@ -573,9 +609,11 @@ def test_the_ocr_tab_reads_off_the_gui_thread(qapp, monkeypatch):
     tab._region.setText("1, 2, 30, 40")
     started = time.monotonic()
     tab._on_dump()
-    assert time.monotonic() - started < 1.0 and tab._task is not None
+    assert time.monotonic() - started < 1.0
+    assert tab._task is not None
     tab._on_dump()                                         # one read at a time
-    assert _pump(qapp, lambda: bool(calls)) and tab._result.toPlainText() == ""
+    assert _pump(qapp, lambda: bool(calls))
+    assert tab._result.toPlainText() == ""
     release.set()
     assert _pump(qapp, lambda: tab._task is None)
     assert calls == [({"region": [1, 2, 30, 40], "min_confidence": 60.0, "lang": "eng"}, False)]
@@ -586,7 +624,8 @@ def test_the_ocr_tab_reads_off_the_gui_thread(qapp, monkeypatch):
     assert warnings == ["tesseract is not installed"]
     tab._min_conf.setText("high")
     tab._on_dump()                                         # bad input never leaves the GUI thread
-    assert tab._task is None and len(calls) == 1
+    assert tab._task is None
+    assert len(calls) == 1
 
 
 def test_the_device_matrix_run_leaves_the_gui_thread(qapp, monkeypatch):
@@ -612,14 +651,17 @@ def test_the_device_matrix_run_leaves_the_gui_thread(qapp, monkeypatch):
     tab._actions.setPlainText("[]")
     started = time.monotonic()
     tab._on_run()
-    assert time.monotonic() - started < 1.0 and tab._table.rowCount() == 0
+    assert time.monotonic() - started < 1.0
+    assert tab._table.rowCount() == 0
     release.set()
     assert _pump(qapp, lambda: tab._task is None)
-    assert threads == [False] and tab._table.rowCount() == 1
+    assert threads == [False]
+    assert tab._table.rowCount() == 1
     tab._devices.setPlainText("[]")
     tab._on_run()
     assert _pump(qapp, lambda: tab._task is None)
     assert "non-empty" in tab._summary.text()
     tab._devices.setPlainText("{not json")
     tab._on_run()
-    assert tab._task is None and len(threads) == 2
+    assert tab._task is None
+    assert len(threads) == 2

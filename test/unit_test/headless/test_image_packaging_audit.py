@@ -50,7 +50,8 @@ def test_escalation_ends_the_repair_and_changed_screens_are_not_re_acted():
     calls = []
     outcome = run_with_repair(lambda: calls.append("act"), lambda: False,
                               apply_tactic=calls.append, verdict_for=lambda: "changed_elsewhere")
-    assert calls == ["act", "escalate"] and outcome.detail == "escalated"
+    assert calls == ["act", "escalate"]
+    assert outcome.detail == "escalated"
     calls.clear()
     run_with_repair(lambda: calls.append("act"), lambda: False,
                     apply_tactic=calls.append, verdict_for=lambda: "changed")
@@ -76,7 +77,8 @@ def test_stub_signatures_keep_keyword_only_and_positional_only_markers():
 
     rendered = generator._render_parameters(inspect.signature(handler))
     ast.parse(f"def f({rendered}): ...")
-    assert "/" in rendered and "*, c" in rendered
+    assert "/" in rendered
+    assert "*, c" in rendered
 
 
 def test_a_docstring_cannot_break_the_stub():
@@ -89,8 +91,9 @@ def test_a_docstring_cannot_break_the_stub():
 def test_provenance_reports_subjects_nobody_checked():
     statement = build_provenance([subject_for_bytes("a.whl", b"a")])
     assert [m["name"] for m in verify_provenance(statement, {})] == ["a.whl"]
+    same_name = [subject_for_bytes("x.whl", b"1"), subject_for_bytes("x.whl", b"2")]
     with pytest.raises(ValueError, match="share names"):
-        build_provenance([subject_for_bytes("x.whl", b"1"), subject_for_bytes("x.whl", b"2")])
+        build_provenance(same_name)
 
 
 def test_a_decimal_point_does_not_end_a_sentence():

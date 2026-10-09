@@ -115,6 +115,7 @@ def test_the_candidate_manifest_says_which_check_ran(tmp_path):
     robot = generate_candidate_from_log(journal, run_id="robot-run", target="robot")
     checks = robot.manifest["validation"]
     assert checks["ast"] is None
-    assert checks["robot_structure"] is True and checks["robot_parser"] is False
+    assert checks["robot_structure"] is True
+    assert checks["robot_parser"] is False
     python = generate_candidate_from_log(journal, run_id="robot-run", target="pytest")
     assert "robot_structure" not in python.manifest["validation"]

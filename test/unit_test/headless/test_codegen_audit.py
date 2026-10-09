@@ -59,5 +59,7 @@ def test_the_executor_wrapper_is_accepted(tmp_path):
 @pytest.mark.parametrize("name", ["*** Keywords ***", "# nightly", "| row", "${secret} run", "a\\b"])
 def test_a_robot_test_name_stays_a_test_name(name):
     line = generate_code(ACTIONS, target="robot", name=name).splitlines()[4]
-    assert line and line[0] not in "*#| "
-    assert "${" not in line and "\\" not in line
+    assert line
+    assert line[0] not in "*#| "
+    assert "${" not in line
+    assert "\\" not in line

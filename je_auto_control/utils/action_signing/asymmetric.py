@@ -24,7 +24,6 @@ platform -- is reported with a warning when it is loaded, and still loads.
 signing must keep working without it. This module is GUI-free and imports no Qt.
 """
 import base64
-import binascii
 import hashlib
 import json
 from pathlib import Path
@@ -225,6 +224,6 @@ def envelope_failure(sidecar_text: str, data: bytes, public_key: Any) -> Optiona
     try:
         signature = base64.b64decode(envelope["signature"], validate=True)
         public_key.verify(signature, _CONTEXT + data)
-    except (binascii.Error, ValueError, _ed25519().invalid_signature):
+    except (ValueError, _ed25519().invalid_signature):  # binascii.Error is a ValueError
         return "signature mismatch (tampered or wrong key)"
     return None

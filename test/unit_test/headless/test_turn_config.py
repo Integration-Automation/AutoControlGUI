@@ -40,7 +40,8 @@ def test_turnserver_conf_omits_tls_lines_when_no_cert():
 def test_systemd_unit_references_conf_path():
     unit = render_systemd_unit(conf_path="/etc/turnserver.conf")
     assert "ExecStart=/usr/bin/turnserver -c /etc/turnserver.conf" in unit
-    assert "[Service]" in unit and "[Install]" in unit
+    assert "[Service]" in unit
+    assert "[Install]" in unit
 
 
 def test_docker_compose_uses_host_network():

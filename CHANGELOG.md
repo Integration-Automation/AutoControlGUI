@@ -15,6 +15,26 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ## Unreleased
 
+### Changed
+
+- `is_package_name` (the gate behind `AC_add_package_to_executor` and
+  `JE_AUTOCONTROL_ALLOWED_PACKAGES`) no longer accepts a name with a trailing
+  newline. The pattern it replaced let one through because `$` matches before
+  a final newline; such a name could never be imported.
+- `agent_trace.operation` records an `error` span when its block is left by a
+  `KeyboardInterrupt`, `SystemExit` or `GeneratorExit`, where it used to record
+  nothing. The exception propagates as before.
+- The signaling server logs a traceback when the config store fails; the HTTP
+  responses are unchanged.
+
+### Security
+
+- `examples/18_slack_daily_report.py` resolves both paths it writes (the HTML
+  report and the PDF) with `os.path.realpath` and refuses one that leaves the
+  report directory. The PDF path was not checked before.
+- The REST dashboard reports a failed refresh on its panels instead of leaving
+  the promise rejection unhandled.
+
 ## [1.0.0] - 2026-10-09
 
 The first release under semantic versioning. `docs/API_LIFECYCLE.md` says what

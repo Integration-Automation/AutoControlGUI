@@ -91,7 +91,8 @@ def test_scan_components_with_injected_fetcher():
 
     findings = scan_components(components, None, fetcher=fetcher)
     assert calls == [("PyPI", "foo")]
-    assert findings and findings[0]["id"] == "GHSA-foo"
+    assert findings
+    assert findings[0]["id"] == "GHSA-foo"
 
 
 def test_findings_to_sarif_bridge():

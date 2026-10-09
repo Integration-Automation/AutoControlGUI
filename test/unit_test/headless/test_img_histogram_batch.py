@@ -56,8 +56,9 @@ def test_distance_method_semantics():
 
 
 def test_unknown_space_and_method_raise():
+    image = _palette_a()
     with pytest.raises(ValueError):
-        image_histogram(_palette_a(), space="cmyk")
+        image_histogram(image, space="cmyk")
     with pytest.raises(ValueError):
         compare_histograms([1.0], [1.0], method="cosine")
 
@@ -77,4 +78,5 @@ def test_wiring():
 
 def test_facade_exports():
     for attr in ("image_histogram", "compare_histograms", "histogram_changed"):
-        assert hasattr(ac, attr) and attr in ac.__all__
+        assert hasattr(ac, attr)
+        assert attr in ac.__all__

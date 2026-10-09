@@ -81,7 +81,8 @@ def test_the_real_client_syncs_through_the_server(tmp_path):
         assert sync.fetch() is None
         assert sync.push(ConfigBucket(user_id="alice")) == 1
         fetched = sync.fetch()
-        assert fetched.user_id == "alice" and fetched.revision == 1
+        assert fetched.user_id == "alice"
+        assert fetched.revision == 1
         # A second machine that never saw revision 1 cannot overwrite it ...
         from je_auto_control.utils.config_sync.client import ConfigSyncConflict
         other = ConfigSyncClient(f"http://127.0.0.1:{port}", user_id="alice", secret="s3cret")
@@ -92,7 +93,8 @@ def test_the_real_client_syncs_through_the_server(tmp_path):
         assert raised.value.revision == 1
         # ... but syncing merges on top of it.
         merged, _conflicts = other.sync(stale)
-        assert merged.revision == 2 and "hk1" in sync.fetch().entries("hotkeys")
+        assert merged.revision == 2
+        assert "hk1" in sync.fetch().entries("hotkeys")
     finally:
         server.should_exit = True
         thread.join(timeout=10)

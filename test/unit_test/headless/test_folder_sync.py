@@ -7,7 +7,7 @@ import pytest
 from je_auto_control.utils.remote_desktop.file_sync import FolderSyncEngine
 
 
-@pytest.fixture()
+@pytest.fixture
 def watch_dir(tmp_path):
     """A dedicated watch dir, so a test can stage files beside it."""
     target = tmp_path / "watch"

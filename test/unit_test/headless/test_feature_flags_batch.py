@@ -33,13 +33,15 @@ def _store():
 
 def test_targeting_match():
     result = evaluate_flag(_store(), "checkout", {"country": "US"})
-    assert result["value"] is True and result["reason"] == "TARGETING_MATCH"
+    assert result["value"] is True
+    assert result["reason"] == "TARGETING_MATCH"
 
 
 def test_rollout_split_reason():
     result = evaluate_flag(_store(), "checkout",
                            {"plan": "premium", "targeting_key": "user1"})
-    assert result["reason"] == "SPLIT" and result["variant"] in ("on", "off")
+    assert result["reason"] == "SPLIT"
+    assert result["variant"] in ("on", "off")
 
 
 def test_fallthrough_split():
@@ -49,7 +51,8 @@ def test_fallthrough_split():
 
 def test_kill_switch():
     result = evaluate_flag(_store(), "killed", {})
-    assert result["reason"] == "DISABLED" and result["value"] is False
+    assert result["reason"] == "DISABLED"
+    assert result["value"] is False
     assert is_enabled(_store(), "killed", {}) is False
 
 

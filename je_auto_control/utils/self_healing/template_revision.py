@@ -234,11 +234,12 @@ class TemplateRevisionStore:
         validated = _is_validated(current, candidate)
         with self._lock:
             latest = self._require(self._load(), revision_id)
-            updated = self._put(replace(latest, validated=validated, validation={
+            revised = replace(latest, validated=validated, validation={
                 "detect_threshold": float(detect_threshold),
                 VERSION_CURRENT: current.to_dict(),
                 VERSION_CANDIDATE: candidate.to_dict(),
-            }))
+            })
+            updated = self._put(revised)  # NOSONAR python:S5655  # reason: replace() returns its argument's type
         payload["revision"] = updated.to_dict()
         payload["comparison"] = comparison.to_dict()
         return payload
@@ -263,8 +264,8 @@ class TemplateRevisionStore:
             backup = candidate.parent / f"backup{template.suffix.lower()}"
             atomic_write_bytes(backup, template.read_bytes())
             atomic_write_bytes(template, candidate.read_bytes())
-            return self._put(replace(revision, status=STATUS_ACCEPTED,
-                                     backup_file=str(backup)))
+            accepted = replace(revision, status=STATUS_ACCEPTED, backup_file=str(backup))
+            return self._put(accepted)  # NOSONAR python:S5655  # reason: replace() returns its argument's type
 
     def revert(self, revision_id: str) -> TemplateRevision:
         """Restore the template an accepted revision replaced."""
@@ -280,7 +281,8 @@ class TemplateRevisionStore:
                     f"{template} changed since revision {revision_id} was accepted; "
                     "reverting would discard that change")
             atomic_write_bytes(template, backup.read_bytes())
-            return self._put(replace(revision, status=STATUS_REVERTED))
+            reverted = replace(revision, status=STATUS_REVERTED)
+            return self._put(reverted)  # NOSONAR python:S5655  # reason: replace() returns its argument's type
 
 
 def _preview_samples(samples: Optional[Sequence[EvaluationSample]],

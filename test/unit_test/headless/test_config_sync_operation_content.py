@@ -39,8 +39,9 @@ def db(tmp_path):
 def test_the_same_id_with_other_content_is_refused_and_nothing_is_written(db):
     store = ConfigStore(db)
     first = store.commit("alice", _bucket("ctrl+a"), base_revision=0, operation_id="op-1")
+    other = _bucket("ctrl+b")
     with pytest.raises(OperationMismatchError) as raised:
-        store.commit("alice", _bucket("ctrl+b"), base_revision=0, operation_id="op-1")
+        store.commit("alice", other, base_revision=0, operation_id="op-1")
     assert raised.value.operation_id == "op-1"
     assert raised.value.revision == first
     assert store.revision("alice") == first
@@ -65,8 +66,9 @@ def test_a_true_resend_is_still_answered_with_the_first_revision(db):
 def test_the_same_content_on_another_base_is_a_different_write(db):
     store = ConfigStore(db)
     store.commit("alice", _bucket(), base_revision=0, operation_id="op-1")
+    same = _bucket()
     with pytest.raises(OperationMismatchError):
-        store.commit("alice", _bucket(), base_revision=1, operation_id="op-1")
+        store.commit("alice", same, base_revision=1, operation_id="op-1")
 
 
 def test_an_operation_recorded_before_the_hash_existed_is_still_a_resend(db):
@@ -90,8 +92,9 @@ def test_an_operation_recorded_before_the_hash_existed_is_still_a_resend(db):
     assert store.commit("alice", _bucket("ctrl+z"), base_revision=0, operation_id="old") == 1
     # ... and a write made from now on is recorded with its content.
     assert store.commit("alice", _bucket("ctrl+b"), base_revision=1, operation_id="new") == 2
+    other = _bucket("ctrl+c")
     with pytest.raises(OperationMismatchError):
-        store.commit("alice", _bucket("ctrl+c"), base_revision=1, operation_id="new")
+        store.commit("alice", other, base_revision=1, operation_id="new")
 
 
 # --- the server ----------------------------------------------------------------
@@ -121,7 +124,8 @@ def test_a_resend_through_the_server_is_still_200(db):
     client = _app(db)
     first = client.put("/config/alice", json=_envelope(_bucket()), headers=_SECRET).json()
     again = client.put("/config/alice", json=_envelope(_bucket()), headers=_SECRET)
-    assert again.status_code == 200 and again.json()["revision"] == first["revision"]
+    assert again.status_code == 200
+    assert again.json()["revision"] == first["revision"]
 
 
 # --- the client ----------------------------------------------------------------
@@ -138,15 +142,18 @@ def _push_against(reply):
 
 
 def test_the_client_raises_the_typed_error():
+    reply = _reply(409, {"detail": "operation id reused with other content",
+                         "code": "operation_mismatch", "revision": 7})
     with pytest.raises(OperationMismatchError) as raised:
-        _push_against(_reply(409, {"detail": "operation id reused with other content",
-                                   "code": "operation_mismatch", "revision": 7}))
-    assert raised.value.revision == 7 and raised.value.operation_id == "op-1"
+        _push_against(reply)
+    assert raised.value.revision == 7
+    assert raised.value.operation_id == "op-1"
 
 
 def test_a_plain_409_is_still_a_revision_conflict():
+    reply = _reply(409, {"detail": "revision conflict", "revision": 3})
     with pytest.raises(ConfigSyncConflict) as raised:
-        _push_against(_reply(409, {"detail": "revision conflict", "revision": 3}))
+        _push_against(reply)
     assert raised.value.revision == 3
 
 
@@ -160,7 +167,8 @@ def test_a_mismatch_is_not_retried_by_sync():
         return _reply(409, {"code": "operation_mismatch", "revision": 1})
 
     client = ConfigSyncClient("http://127.0.0.1:9", user_id="alice")
+    bucket = _bucket()
     with patch("je_auto_control.utils.http_client.http_client.perform_call", new=perform):
         with pytest.raises(OperationMismatchError):
-            client.sync(_bucket())
+            client.sync(bucket)
     assert calls == ["GET", "PUT"]

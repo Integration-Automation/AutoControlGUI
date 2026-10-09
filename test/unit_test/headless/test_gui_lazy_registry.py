@@ -41,7 +41,8 @@ def test_importing_the_registry_loads_no_qt():
 def test_every_lazy_tab_names_a_class_that_exists(spec):
     """Read, not imported: a typo here would otherwise surface when a user opens the tab."""
     found = importlib.util.find_spec(spec.module)
-    assert found is not None and found.origin, spec.module
+    assert found is not None, spec.module
+    assert found.origin, spec.module
     source = pathlib.Path(found.origin).read_text(encoding="utf-8")
     assert (f"class {spec.class_name}(" in source or f"import {spec.class_name}" in source
             or f"{spec.class_name}," in source or f'"{spec.class_name}"' in source), (spec.module, spec.class_name)
@@ -55,17 +56,21 @@ def test_an_entry_builds_its_widget_once_and_only_when_asked():
         return built[-1]
 
     entry = TabEntry("k", "tab_k", factory, on_build=adopted.append)
-    assert not entry.built and built == []
+    assert not entry.built
+    assert built == []
     first = entry.widget
-    assert entry.built and entry.widget is first
-    assert built == [first] and adopted == [first]
+    assert entry.built
+    assert entry.widget is first
+    assert built == [first]
+    assert adopted == [first]
 
 
 def test_a_lazy_factory_imports_at_call_time():
     factory = lazy_factory("collections", "OrderedDict")
     assert type(factory()).__name__ == "OrderedDict"
+    missing = lazy_factory("je_auto_control.gui.no_such_tab", "Missing")
     with pytest.raises(ModuleNotFoundError):
-        lazy_factory("je_auto_control.gui.no_such_tab", "Missing")()
+        missing()
 
 
 _PROBE = r"""
@@ -147,7 +152,8 @@ def test_every_spec_is_registered_in_order(report):
 def test_only_the_start_tabs_and_the_widgets_own_forms_are_built(report):
     # Record is in front; Script Builder and Remote Desktop have a tab but wait for the first click.
     assert set(report["built_at_start"]) == OWN_TABS - {"remote_desktop"}
-    assert report["open_at_start"] == OPEN_AT_START and report["current_at_start"] == "record"
+    assert report["open_at_start"] == OPEN_AT_START
+    assert report["current_at_start"] == "record"
     assert not report["variables_imported_at_start"]
     assert not report["presence_imported_at_start"]
     assert not report["script_builder_imported_at_start"]
@@ -170,7 +176,8 @@ def test_opening_builds_the_tab_and_reopening_reuses_it(report):
     assert report["variables_imported_after_open"]
     assert report["current_after_open"] == "variables"
     assert report["hidden_is_owned"]
-    assert report["activated"] and report["same_widget_on_reopen"]
+    assert report["activated"]
+    assert report["same_widget_on_reopen"]
     # Registration order, not opening order: Variables sits between Script Builder and Remote Desktop.
     assert report["tab_order"] == ["record", "script_builder", "variables", "remote_desktop"]
 

@@ -73,9 +73,9 @@ def _machine(transitions, **extra):
 
 
 def test_an_unimplemented_guard_is_an_error_not_a_pass():
+    machine = _machine([{"if_pixel": [1, 2], "go_to": "done"}])
     with pytest.raises(StateMachineError, match="unknown guard"):
-        run_state_machine(_machine([{"if_pixel": [1, 2], "go_to": "done"}]),
-                          execute_action=lambda action: None)
+        run_state_machine(machine, execute_action=lambda action: None)
 
 
 def test_if_image_found_fires_only_once_the_image_is_on_screen(monkeypatch):
@@ -93,7 +93,8 @@ def test_if_image_found_fires_only_once_the_image_is_on_screen(monkeypatch):
     spec = _machine([{"if_image_found": "welcome.png", "go_to": "done"},
                      {"after": 5, "go_to": "s"}])
     assert run_state_machine(spec, execute_action=lambda action: None)["final_state"] == "done"
-    assert polls[-1] == "welcome.png" and len(polls) == 3
+    assert polls[-1] == "welcome.png"
+    assert len(polls) == 3
 
 
 def test_an_after_guard_waits_for_its_timer():

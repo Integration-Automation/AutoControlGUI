@@ -119,7 +119,8 @@ def test_a_transfer_arrives_in_pieces_and_reports_progress(bridge, tmp_path):
                             progress.append((n, total)))
     receiver.handle_message(_end(), on_done=done.append)
     assert progress == [(3, 6), (6, 6)]
-    assert done and done[0].read_bytes() == b"abcdef"
+    assert done
+    assert done[0].read_bytes() == b"abcdef"
 
 
 @pytest.mark.parametrize("chunk", [b"raw", bytearray(b"raw"),
@@ -181,7 +182,8 @@ def test_a_malformed_envelope_is_reported_not_raised(bridge, tmp_path):
     receiver = _receiver(tmp_path)
     errors = []
     receiver.handle_message("{not json", on_error=errors.append)
-    assert errors and "bad envelope" in errors[0]
+    assert errors
+    assert "bad envelope" in errors[0]
 
 
 def test_an_unknown_envelope_type_is_ignored(bridge, tmp_path):
@@ -284,11 +286,12 @@ def test_a_read_failure_mid_transfer_aborts_the_receiver_too(bridge, tmp_path):
         return _Failing(handle) if self == source else handle
 
     channel = _Channel()
+    sender = FileTransferSender(channel)
     monkey = pytest.MonkeyPatch()
     monkey.setattr(type(source), "open", _open)
     try:
         with pytest.raises(FileTransferError, match="read failed"):
-            FileTransferSender(channel).send(source, chunk_size=4)
+            sender.send(source, chunk_size=4)
     finally:
         monkey.undo()
     assert json.loads(channel.messages[-1])["type"] == "file_abort"

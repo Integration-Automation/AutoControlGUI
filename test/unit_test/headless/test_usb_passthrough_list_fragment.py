@@ -10,6 +10,7 @@ from je_auto_control.utils.usb.passthrough import (
 from je_auto_control.utils.usb.passthrough.backend import (
     BackendDevice, FakeUsbBackend,
 )
+from je_auto_control.utils.usb.passthrough.client_errors import UsbClientError
 
 
 _SAMPLE = BackendDevice(vendor_id="1050", product_id="0407", serial="ABC123")
@@ -158,7 +159,7 @@ def test_client_resume_unknown_token_raises():
     host = UsbPassthroughSession(FakeUsbBackend(devices=[_SAMPLE]))
     loop = _SyncLoop(host)
     try:
-        with pytest.raises(Exception):
+        with pytest.raises(UsbClientError):
             loop.client.resume("not-a-real-token")
     finally:
         loop.client.shutdown()

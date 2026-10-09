@@ -89,15 +89,15 @@ def test_take_golden_creates_parents(tmp_path):
 
 
 def test_compare_raises_when_golden_missing(tmp_path):
+    actual = _solid(4, 4, (0, 0, 0))
     with pytest.raises(FileNotFoundError):
-        compare_to_golden(
-            tmp_path / "missing.png", actual=_solid(4, 4, (0, 0, 0)),
-        )
+        compare_to_golden(tmp_path / "missing.png", actual=actual)
 
 
 def test_image_difference_rejects_size_mismatch():
+    large, small = _solid(8, 8, (0, 0, 0)), _solid(4, 4, (0, 0, 0))
     with pytest.raises(ValueError):
-        image_difference(_solid(8, 8, (0, 0, 0)), _solid(4, 4, (0, 0, 0)))
+        image_difference(large, small)
 
 
 def test_write_diff_persists_overlay(tmp_path):

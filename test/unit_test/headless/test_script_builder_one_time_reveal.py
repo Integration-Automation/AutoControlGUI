@@ -87,7 +87,8 @@ def test_a_failed_or_empty_command_has_nothing_to_reveal(tmp_path):
     UserStore(users).add_user(user_id="root", display_name="root", role="admin")
     record, values, _truncated = _collected(
         [["AC_user_rotate_token", {"user_id": "nobody", "users_path": users}]])
-    assert "nobody" in list(record.values())[0] and values == []
+    assert "nobody" in list(record.values())[0]
+    assert values == []
     collector = OneTimeCollector()
     collector.note("AC_user_add", {"user_id": "x"}, None, _TOP)
     collector.note("AC_user_add", {"user_id": "x"}, {"user_id": "x", "token": ""}, _TOP)
@@ -129,7 +130,8 @@ def test_a_block_that_returns_its_body_record_does_not_offer_a_value_twice(tmp_p
     assert [(value.command, len(value.path), value.subject) for value in values] == [
         ("AC_user_add", 2, "bob")]
     shown = json.dumps(displayable_record(record), default=str)
-    assert values[0].value in json.dumps(record, default=str) and values[0].value not in shown
+    assert values[0].value in json.dumps(record, default=str)
+    assert values[0].value not in shown
 
 
 def test_a_value_only_a_parallel_branch_produced_is_taken_from_the_block_result():
@@ -148,12 +150,15 @@ def test_the_number_of_values_kept_for_one_run_is_bounded(tmp_path):
     users = str(tmp_path / "users.json")
     actions = steps_to_actions([_user_steps(users)[0], _loop_step(users, times=6)])
     _record, values, truncated = _collected(actions, limit=4)
-    assert len(values) == 4 and truncated
+    assert len(values) == 4
+    assert truncated
     assert [value.step for value in values] == [1, 2, 2, 2], "the first ones are the ones kept"
     _record, values, truncated = _collected(
         [["AC_user_rotate_token", {"user_id": "ann", "users_path": users}]], limit=1)
-    assert len(values) == 1 and not truncated, "exactly at the limit nothing was left out"
-    assert MAX_ONE_TIME_VALUES == 200 and OneTimeCollector().limit == 200
+    assert len(values) == 1, "exactly at the limit nothing was left out"
+    assert not truncated, "exactly at the limit nothing was left out"
+    assert MAX_ONE_TIME_VALUES == 200
+    assert OneTimeCollector().limit == 200
 
 
 def test_everything_revealed_is_exactly_what_the_display_masks(tmp_path):
@@ -163,7 +168,8 @@ def test_everything_revealed_is_exactly_what_the_display_masks(tmp_path):
     raw = json.dumps(record, default=str)
     assert shown.count('"***"') == len(values) == 2
     for value in values:
-        assert value.value in raw and value.value not in shown
+        assert value.value in raw
+        assert value.value not in shown
 
 
 def test_a_signed_jwt_is_masked_revealed_once_and_kept_out_of_the_log(caplog):
@@ -180,7 +186,8 @@ def test_a_signed_jwt_is_masked_revealed_once_and_kept_out_of_the_log(caplog):
     assert token not in json.dumps(displayable_record(record))
     assert [(value.step, value.name, value.value) for value in values] == [(1, "token", token)]
     logged = "\n".join(entry.getMessage() for entry in caplog.records)
-    assert "AC_jwt_encode" in logged and token not in logged
+    assert "AC_jwt_encode" in logged
+    assert token not in logged
 
 
 def test_a_result_is_logged_with_its_secret_named_fields_masked_at_any_depth(caplog):
@@ -194,7 +201,8 @@ def test_a_result_is_logged_with_its_secret_named_fields_masked_at_any_depth(cap
     issued, active = record.values()
     assert issued["token"] in [lease["token"] for lease in active["leases"]]
     logged = "\n".join(entry.getMessage() for entry in caplog.records)
-    assert "AC_lease_active" in logged and "'name': 'db'" in logged
+    assert "AC_lease_active" in logged
+    assert "'name': 'db'" in logged
     assert issued["token"] not in logged
     execute_action([["AC_revoke_lease", {"token": issued["token"]}]])
 
@@ -244,7 +252,7 @@ class _FakeClipboard:
         self.text = ""
 
 
-@pytest.fixture()
+@pytest.fixture
 def builder(monkeypatch):
     """A Script Builder tab, its module, and the fake standing in for the clipboard."""
     pytest.importorskip("PySide6.QtWidgets", exc_type=ImportError)
@@ -297,9 +305,11 @@ def test_the_result_pane_masks_and_says_values_are_available(builder, tmp_path):
     _run(tab, _user_steps(str(tmp_path / "users.json")))
     text = tab._result.toPlainText()
     tokens = [value.value for value in tab._one_time]
-    assert len(tokens) == 2 and all(len(token) > 20 for token in tokens)
+    assert len(tokens) == 2
+    assert all(len(token) > 20 for token in tokens)
     assert not any(token in text for token in tokens)
-    assert '"token": "***"' in text and "ann" in text, "the masked record is still shown"
+    assert '"token": "***"' in text, "the masked record is still shown"
+    assert "ann" in text, "the masked record is still shown"
     assert _translated("sb_one_time_available", count=2) in text
     assert tab._reveal_btn.isEnabled()
     assert tab._reveal_dialog is None, "nothing opens by itself"
@@ -316,10 +326,13 @@ def test_the_dialog_shows_each_value_labelled_by_its_step_and_only_once(builder,
         " · ".join((_translated("sb_one_time_step", step=1), "User: Add", "ann", "token")),
         " · ".join((_translated("sb_one_time_step", step=3), "User: Rotate Token", "ann", "token")),
     ]
-    assert not dialog.isVisible() and not dialog.isModal(), "built, not shown"
-    assert tab._one_time == [] and not tab._reveal_btn.isEnabled()
+    assert not dialog.isVisible(), "built, not shown"
+    assert not dialog.isModal(), "built, not shown"
+    assert tab._one_time == []
+    assert not tab._reveal_btn.isEnabled()
     assert tab._take_one_time_dialog() is None, "a second reveal has nothing left"
-    assert dialog.copy_value(1) and clipboard.copied == [tokens[1]]
+    assert dialog.copy_value(1)
+    assert clipboard.copied == [tokens[1]]
     assert UserStore(users).authenticate(clipboard.copied[0]).user_id == "ann", \
         "what is copied is the live token"
     assert not dialog.copy_value(5)
@@ -334,7 +347,8 @@ def test_a_token_issued_inside_a_block_is_offered_and_labelled_by_its_path(build
     assert "block" not in text.lower(), "nothing is reported as unavailable any more"
     dialog = tab._take_one_time_dialog()
     tokens = dialog.shown_values()
-    assert len(set(tokens)) == 3 and not any(token in text for token in tokens)
+    assert len(set(tokens)) == 3
+    assert not any(token in text for token in tokens)
 
     def nested(run: int) -> str:
         path = " › ".join((
@@ -371,7 +385,8 @@ def test_the_pane_says_the_values_were_shown_once_the_dialog_was_opened(builder,
     assert available in tab._result.toPlainText()
     dialog = tab._take_one_time_dialog()
     text = tab._result.toPlainText()
-    assert available not in text and _translated("sb_one_time_shown") in text
+    assert available not in text
+    assert _translated("sb_one_time_shown") in text
     assert '"token": "***"' in text, "the masked record stays"
     dialog.reject()
     assert _translated("sb_one_time_shown") in tab._result.toPlainText()
@@ -391,11 +406,15 @@ def test_closing_the_dialog_forgets_every_value(builder, tmp_path):
     dialog = tab._take_one_time_dialog()
     assert tab._reveal_dialog is dialog
     dialog.reject()  # what the Close button and the window's close box do
-    assert dialog.shown_values() == ["", ""] and dialog.labels() == []
-    assert not dialog.copy_value(0) and clipboard.copied == []
-    assert tab._reveal_dialog is None and tab._one_time == []
+    assert dialog.shown_values() == ["", ""]
+    assert dialog.labels() == []
+    assert not dialog.copy_value(0)
+    assert clipboard.copied == []
+    assert tab._reveal_dialog is None
+    assert tab._one_time == []
     assert tab._take_one_time_dialog() is None
-    assert clipboard.cleared == 0 and clipboard.text == "somebody else's note"
+    assert clipboard.cleared == 0
+    assert clipboard.text == "somebody else's note"
 
 
 def test_clearing_is_offered_only_after_a_copy_and_clears_a_value_still_on_the_clipboard(
@@ -404,14 +423,19 @@ def test_clearing_is_offered_only_after_a_copy_and_clears_a_value_still_on_the_c
     _run(tab, _user_steps(str(tmp_path / "users.json")))
     dialog = tab._take_one_time_dialog()
     tokens = dialog.shown_values()
-    assert not dialog.can_clear_clipboard() and not dialog._clear_btn.isEnabled()
-    assert not dialog.clear_clipboard() and clipboard.cleared == 0, "nothing was copied from here"
+    assert not dialog.can_clear_clipboard()
+    assert not dialog._clear_btn.isEnabled()
+    assert not dialog.clear_clipboard(), "nothing was copied from here"
+    assert clipboard.cleared == 0, "nothing was copied from here"
     dialog.copy_value(0)
     dialog.copy_value(1)
-    assert dialog.can_clear_clipboard() and clipboard.text == tokens[1]
+    assert dialog.can_clear_clipboard()
+    assert clipboard.text == tokens[1]
     dialog._clear_btn.click()  # "Close and clear clipboard"
-    assert clipboard.cleared == 1 and clipboard.text == ""
-    assert dialog.shown_values() == ["", ""] and tab._reveal_dialog is None, "it also closed"
+    assert clipboard.cleared == 1
+    assert clipboard.text == ""
+    assert dialog.shown_values() == ["", ""], "it also closed"
+    assert tab._reveal_dialog is None, "it also closed"
     assert not dialog.can_clear_clipboard()
 
 
@@ -422,7 +446,8 @@ def test_clearing_leaves_content_somebody_else_put_on_the_clipboard(builder, tmp
     dialog.copy_value(0)
     clipboard.text = "a paragraph copied in another window"
     dialog.close_and_clear()
-    assert clipboard.cleared == 0 and clipboard.text == "a paragraph copied in another window"
+    assert clipboard.cleared == 0
+    assert clipboard.text == "a paragraph copied in another window"
     assert dialog.shown_values() == ["", ""], "the dialog still closed and forgot"
 
 
@@ -433,7 +458,9 @@ def test_an_earlier_copy_from_the_dialog_still_on_the_clipboard_is_cleared(build
     first = dialog.shown_values()[0]
     dialog.copy_value(1)
     dialog.copy_value(0)
-    assert clipboard.text == first and dialog.clear_clipboard() and clipboard.text == ""
+    assert clipboard.text == first
+    assert dialog.clear_clipboard()
+    assert clipboard.text == ""
     assert not dialog.clear_clipboard(), "a second clear has nothing of this dialog's to remove"
     dialog.reject()
 
@@ -445,7 +472,8 @@ def test_a_plain_close_after_a_copy_leaves_the_clipboard_for_pasting(builder, tm
     token = dialog.shown_values()[0]
     dialog.copy_value(0)
     dialog.reject()
-    assert clipboard.cleared == 0 and clipboard.text == token
+    assert clipboard.cleared == 0
+    assert clipboard.text == token
     assert not dialog.clear_clipboard(), "once closed the dialog no longer knows the value"
 
 
@@ -459,7 +487,8 @@ def test_the_button_opens_the_dialog_without_a_nested_event_loop(builder, tmp_pa
     assert opened == [], "a click with nothing pending opens nothing"
     _run(tab, _user_steps(str(tmp_path / "users.json")))
     tab._reveal_btn.click()
-    assert opened == [tab._reveal_dialog] and len(opened[0].shown_values()) == 2
+    assert opened == [tab._reveal_dialog]
+    assert len(opened[0].shown_values()) == 2
     opened[0].reject()
 
 
@@ -469,7 +498,8 @@ def test_the_next_run_drops_values_nobody_revealed(builder, tmp_path):
     _run(tab, _user_steps(users))
     assert len(tab._one_time) == 2
     _run(tab, [Step("AC_user_list", {"users_path": users})])
-    assert tab._one_time == [] and not tab._reveal_btn.isEnabled()
+    assert tab._one_time == []
+    assert not tab._reveal_btn.isEnabled()
     assert _translated("sb_one_time_available", count=2) not in tab._result.toPlainText()
 
 
@@ -479,7 +509,9 @@ def test_the_next_run_empties_a_dialog_still_holding_values(builder, tmp_path):
     _run(tab, _user_steps(users))
     dialog = tab._take_one_time_dialog()
     _run(tab, [Step("AC_user_list", {"users_path": users})])
-    assert dialog.shown_values() == ["", ""] and not dialog.copy_value(0) and clipboard.copied == []
+    assert dialog.shown_values() == ["", ""]
+    assert not dialog.copy_value(0)
+    assert clipboard.copied == []
     assert tab._reveal_dialog is None
 
 
@@ -488,7 +520,8 @@ def test_disposing_the_tab_forgets_pending_values_and_the_dialog(builder, tmp_pa
     users = str(tmp_path / "users.json")
     _run(tab, _user_steps(users))
     tab.dispose()
-    assert tab._one_time == [] and not tab._reveal_btn.isEnabled()
+    assert tab._one_time == []
+    assert not tab._reveal_btn.isEnabled()
     _run(tab, _user_steps(users)[2:])
     dialog = tab._take_one_time_dialog()
     tab.dispose()
@@ -500,7 +533,8 @@ def test_a_failed_step_offers_nothing(builder, tmp_path):
     users = str(tmp_path / "users.json")
     UserStore(users).add_user(user_id="root", display_name="root", role="admin")
     _run(tab, [Step("AC_user_rotate_token", {"user_id": "nobody", "users_path": users})])
-    assert tab._one_time == [] and not tab._reveal_btn.isEnabled()
+    assert tab._one_time == []
+    assert not tab._reveal_btn.isEnabled()
     assert "nobody" in tab._result.toPlainText()
 
 
@@ -513,8 +547,10 @@ def test_a_run_that_was_stopped_or_failed_still_offers_what_it_had_issued(builde
         tab._collector.note("AC_user_add", {"user_id": "ann"}, {"user_id": "ann", "token": "tok-early"}, _TOP)
         tab._show_run_error(error)
         text = tab._result.toPlainText()
-        assert _translated("sb_one_time_available", count=1) in text and "tok-early" not in text
-        assert [value.value for value in tab._one_time] == ["tok-early"] and tab._reveal_btn.isEnabled()
+        assert _translated("sb_one_time_available", count=1) in text
+        assert "tok-early" not in text
+        assert [value.value for value in tab._one_time] == ["tok-early"]
+        assert tab._reveal_btn.isEnabled()
         tab._forget_one_time()
     assert warned == ["the run broke"]
 

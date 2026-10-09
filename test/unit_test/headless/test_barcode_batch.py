@@ -49,4 +49,5 @@ def test_wiring():
 
 
 def test_facade_exports():
-    assert hasattr(ac, "read_barcodes") and "read_barcodes" in ac.__all__
+    assert hasattr(ac, "read_barcodes")
+    assert "read_barcodes" in ac.__all__

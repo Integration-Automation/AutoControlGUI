@@ -475,7 +475,8 @@ def test_host_echoes_the_id_on_every_reply_kind():
 
     listed = _joined(session.handle_frame(
         _request(Opcode.LIST, request_id="r-list")), Opcode.LIST)
-    assert listed["request_id"] == "r-list" and len(listed["devices"]) == 1
+    assert listed["request_id"] == "r-list"
+    assert len(listed["devices"]) == 1
 
     for op in (Opcode.CTRL, Opcode.BULK, Opcode.INT):
         body = _CTRL_BODY if op == Opcode.CTRL else {
@@ -520,7 +521,8 @@ def test_host_ignores_an_id_it_cannot_echo(bad_id):
     session = _session()
     opened = _joined(session.handle_frame(
         _request(Opcode.OPEN, request_id=bad_id, **_OPEN_BODY)), Opcode.OPENED)
-    assert opened["ok"] is True and "request_id" not in opened
+    assert opened["ok"] is True
+    assert "request_id" not in opened
 
 
 def test_host_echoes_the_id_when_the_peer_is_locked_out():
@@ -530,7 +532,8 @@ def test_host_echoes_the_id_when_the_peer_is_locked_out():
     assert session.is_locked_out()
     reply = _joined(session.handle_frame(
         _request(Opcode.OPEN, request_id="r", **_OPEN_BODY)), Opcode.ERROR)
-    assert reply["request_id"] == "r" and "locked out" in reply["error"]
+    assert reply["request_id"] == "r"
+    assert "locked out" in reply["error"]
 
 
 def test_host_echoes_the_id_on_a_fragmented_reply():

@@ -222,8 +222,9 @@ def test_worker_death_releases_pressed_keys():
     client.start()
     client.send([InputEvent(EV_KEY, KEY_A, 1)], timeout_s=5.0)
     workers[0].crash()
+    press_b = [InputEvent(EV_KEY, KEY_B, 1)]
     with pytest.raises(transport.EiWorkerDied) as died:
-        client.send([InputEvent(EV_KEY, KEY_B, 1)], timeout_s=5.0)
+        client.send(press_b, timeout_s=5.0)
     assert died.value.pressed_keys == (KEY_A,)
     assert orphaned == [[KEY_A]]
     assert client.pressed == ()
@@ -233,7 +234,7 @@ def test_worker_death_releases_pressed_keys():
     assert not isinstance(died.value, libei_mod.LibeiUnavailable)
     assert isinstance(died.value, AutoControlException)
     with pytest.raises(transport.EiWorkerDied):
-        client.send([InputEvent(EV_KEY, KEY_B, 1)], timeout_s=5.0)
+        client.send(press_b, timeout_s=5.0)
 
 
 def test_missing_dependency_is_typed():
@@ -260,8 +261,9 @@ def test_a_batch_is_bounded_before_anything_is_written():
         client.send(too_many, timeout_s=1.0)
     with pytest.raises(transport.EiProtocolError):
         client.send([], timeout_s=1.0)
+    unknown_type = [InputEvent(99, 1, 1)]
     with pytest.raises(transport.EiProtocolError):
-        client.send([InputEvent(99, 1, 1)], timeout_s=1.0)
+        client.send(unknown_type, timeout_s=1.0)
     assert backend.calls == []
     full = [InputEvent(EV_KEY, KEY_A, index % 2 ^ 1)
             for index in range(transport.MAX_BATCH)]
@@ -271,15 +273,18 @@ def test_a_batch_is_bounded_before_anything_is_written():
 
 def test_a_frame_is_bounded_in_both_directions():
     oversized = transport._LENGTH.pack(transport.MAX_FRAME_BYTES + 1)
+    too_long = io.BytesIO(oversized + b"x")
     with pytest.raises(transport.EiProtocolError):
-        transport.read_frame(io.BytesIO(oversized + b"x"))
+        transport.read_frame(too_long)
+    sink = io.BytesIO()
     with pytest.raises(transport.EiProtocolError):
-        transport.write_frame(io.BytesIO(),
-                              {"pad": "x" * transport.MAX_FRAME_BYTES})
+        transport.write_frame(sink, {"pad": "x" * transport.MAX_FRAME_BYTES})
+    cut_short = io.BytesIO(transport._LENGTH.pack(10) + b"abc")
     with pytest.raises(transport.EiProtocolError):
-        transport.read_frame(io.BytesIO(transport._LENGTH.pack(10) + b"abc"))
+        transport.read_frame(cut_short)
+    not_an_object = io.BytesIO(transport._LENGTH.pack(2) + b"[]")
     with pytest.raises(transport.EiProtocolError):
-        transport.read_frame(io.BytesIO(transport._LENGTH.pack(2) + b"[]"))
+        transport.read_frame(not_an_object)
     assert transport.read_frame(io.BytesIO(b"")) is None
 
     stream = io.BytesIO()
@@ -307,10 +312,10 @@ def test_a_deadline_stops_the_batch_and_a_late_answer_is_dropped():
     client, _workers = _client(backend)
     client.start()
 
+    press_both = [InputEvent(EV_KEY, KEY_A, 1), InputEvent(EV_KEY, KEY_B, 1)]
     started = time.monotonic()
     with pytest.raises(transport.EiWorkerTimeout) as late:
-        client.send([InputEvent(EV_KEY, KEY_A, 1),
-                     InputEvent(EV_KEY, KEY_B, 1)], timeout_s=0.2)
+        client.send(press_both, timeout_s=0.2)
     assert time.monotonic() - started < 5.0
     assert not isinstance(late.value, libei_mod.LibeiUnavailable)
     # Nothing came back, so the worst is assumed about what is down.
@@ -337,12 +342,11 @@ def test_a_caller_can_cancel_a_request():
     client, _workers = _client(backend)
     client.start()
     cancel = threading.Event()
+    press_both = [InputEvent(EV_KEY, KEY_A, 1), InputEvent(EV_KEY, KEY_B, 1)]
     threading.Timer(0.1, cancel.set).start()
 
     with pytest.raises(transport.EiWorkerCancelled):
-        client.send([InputEvent(EV_KEY, KEY_A, 1),
-                     InputEvent(EV_KEY, KEY_B, 1)], timeout_s=30.0,
-                    cancel=cancel)
+        client.send(press_both, timeout_s=30.0, cancel=cancel)
 
     release_stuck.set()
     client.close()
@@ -373,8 +377,9 @@ def test_a_revoked_session_in_the_helper_is_revoked_in_the_parent():
         "the compositor disconnected the sender")
     client, _workers = _client(backend)
     client.start()
+    worker_backend = ei_client.WorkerBackend(client, timeout_s=5.0)
     with pytest.raises(libei_mod.LibeiSessionRevoked):
-        ei_client.WorkerBackend(client, timeout_s=5.0).press_key(KEY_A)
+        worker_backend.press_key(KEY_A)
     client.close()
 
 
@@ -514,4 +519,5 @@ def test_a_real_helper_process_reports_a_missing_library():
     assert missing.value.capability == "input"
     assert children[0].poll() == 1
     assert ei_client.active_worker_count() == 0
-    assert children[0].stdin.closed and children[0].stdout.closed
+    assert children[0].stdin.closed
+    assert children[0].stdout.closed

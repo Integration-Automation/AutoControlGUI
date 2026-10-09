@@ -10,7 +10,7 @@ import threading
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING, Callable, List, Optional, Sequence, Tuple, Union
+from typing import TYPE_CHECKING, Callable, List, Optional, Sequence, Tuple
 
 from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
@@ -109,6 +109,11 @@ def _validate_status(status: str) -> None:
         )
 
 
+def _status_clause(count: int) -> str:
+    """``AND status IN (?, ...)`` with ``count`` placeholders: the only text a query is ever built from."""
+    return f"AND status IN ({', '.join('?' * count)}) "
+
+
 def _active_journal() -> Tuple[Optional[str], Optional[str]]:
     """``(path, run_id)`` of the action journal now started, else two ``None``."""
     from je_auto_control.utils.action_journal.recorder import action_journal_status
@@ -126,7 +131,7 @@ class HistoryStore:
     """SQLite-backed run log. Safe to share across threads."""
 
     def __init__(self,
-                 path: Union[str, Path, Callable[[], Path]] = _IN_MEMORY_DB,
+                 path: str | Path | Callable[[], Path] = _IN_MEMORY_DB,
                  ) -> None:
         # A callable is resolved on first use. The module-level
         # ``default_history_store`` is built while the package imports, and
@@ -267,11 +272,13 @@ class HistoryStore:
             _validate_source(source_type)
         path = None if script_path is None else str(script_path)
         wanted = None if statuses is None else [str(status) for status in statuses]
-        status_clause = "" if wanted is None else f"AND status IN ({', '.join('?' * len(wanted))}) "
+        status_clause = "" if wanted is None else _status_clause(len(wanted))
         if wanted == []:
             return []
         with self._lock:
-            rows = self._connection().execute(
+            # reason (both nosemgrep): status_clause is "?" placeholders only; every value is a bound parameter
+            # nosemgrep: python.sqlalchemy.security.sqlalchemy-execute-raw-query.sqlalchemy-execute-raw-query
+            rows = self._connection().execute(  # nosemgrep: python_sql_rule-hardcoded-sql-expression
                 "SELECT * FROM runs "
                 "WHERE (? IS NULL OR source_type = ?) "
                 "AND (? IS NULL OR script_path = ?) "

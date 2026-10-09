@@ -91,12 +91,15 @@ def test_journal_to_script_to_device_result(adb_host, tmp_path):
         finally:
             stopped = ac.stop_action_journal()
     recorded = list(adb_host.devices["recorded-on"].input_calls)
-    assert stopped["events"] == 5 and len(recorded) == 4      # the loop body ran twice
+    assert stopped["events"] == 5
+    assert len(recorded) == 4  # the loop body ran twice
 
     candidate = ac.generate_candidate_from_log(journal, run_id="checkout")
     manifest = candidate.manifest
-    assert manifest["executed"] is False and manifest["outcomes_used_as_input"] is False
-    assert candidate.observed_path_only is False and candidate.actions == _RUN
+    assert manifest["executed"] is False
+    assert manifest["outcomes_used_as_input"] is False
+    assert candidate.observed_path_only is False
+    assert candidate.actions == _RUN
     assert {event.session for event in ac.read_events(journal, run_id="checkout")} == {
         "recorded-on"}
     compile(candidate.code, "candidate.py", "exec")
@@ -154,7 +157,8 @@ class _Wire:
         if method == "GET":
             bucket = store.get(client.user_id)
             return None if bucket is None else {**bucket.to_dict(), "version": 2}
-        assert body is not None and body["version"] == 2, "the client must send a v2 envelope"
+        assert body is not None, "the client must send a v2 envelope"
+        assert body["version"] == 2, "the client must send a v2 envelope"
         try:
             revision = store.commit(
                 client.user_id, ConfigBucket.from_dict(body["bucket"]),
@@ -187,7 +191,8 @@ def test_sync_restart_and_gui_session(wire, tmp_path):
     (tmp_path / "laptop" / "scripts" / "login.json").write_text(json.dumps(script), "utf-8")
 
     first = sync_session.config_sync_run(_SERVER, _USER, **laptop)
-    assert first["state"] == "synced" and first["pending"] == 0
+    assert first["state"] == "synced"
+    assert first["pending"] == 0
     committed_revision = ac.ConfigStore(wire.store_path).revision(_USER)
     assert committed_revision >= 1
 
@@ -199,7 +204,8 @@ def test_sync_restart_and_gui_session(wire, tmp_path):
     reopened_sync = sync_session.config_sync_status(_SERVER, _USER, laptop["outbox_path"])
     assert len(wire.requests) == requests_before
     assert reopened_sync["revision"] == committed_revision
-    assert reopened_sync["state"] == "synced" and reopened_sync["pending"] == 0
+    assert reopened_sync["state"] == "synced"
+    assert reopened_sync["pending"] == 0
 
     # The other machine gets the script from the reopened store.
     second = sync_session.config_sync_run(_SERVER, _USER, **desktop)
@@ -211,11 +217,13 @@ def test_sync_restart_and_gui_session(wire, tmp_path):
     wire.offline = True
     (tmp_path / "laptop" / "scripts" / "report.json").write_text("[]", "utf-8")
     offline = sync_session.config_sync_run(_SERVER, _USER, **laptop)
-    assert offline["state"] == "offline" and offline["pending"] == 1
+    assert offline["state"] == "offline"
+    assert offline["pending"] == 1
     assert sync_session.config_sync_status(_SERVER, _USER, laptop["outbox_path"])["pending"] == 1
     wire.offline = False
     back = sync_session.config_sync_run(_SERVER, _USER, wait=True, **laptop)
-    assert back["state"] == "synced" and back["pending"] == 0
+    assert back["state"] == "synced"
+    assert back["pending"] == 0
     assert ac.ConfigStore(wire.store_path).revision(_USER) > committed_revision
 
 
@@ -355,7 +363,8 @@ def test_platform_capability_report_has_evidence(adb_host):
     assert "reset_input_authorisation" in declined["recovery"]
     # The device reports carry what answered, and the locked one says what to fix.
     ready, locked = reports[-2], reports[-1]
-    assert ready["backend"] == "adb" and ready["version"].startswith("1.0.41")
+    assert ready["backend"] == "adb"
+    assert ready["version"].startswith("1.0.41")
     assert ready["os_version"] == "14"
     assert {item["state"] for item in locked["capabilities"]} == {"needs_permission"}
     assert all(item["evidence"]["kind"] == "skipped" for item in locked["capabilities"])

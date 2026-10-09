@@ -80,11 +80,13 @@ def test_round_trip_accepts_both_argument_forms(tmp_path):
 
     cb.set_clipboard_image(str(source))          # the MCP / script form
     from_path = cb.get_clipboard_image()
-    assert from_path and Image.open(io.BytesIO(from_path)).size == (24, 16)
+    assert from_path
+    assert Image.open(io.BytesIO(from_path)).size == (24, 16)
 
     cb.set_clipboard_image(_png((8, 8)))         # the remote-desktop form
     from_bytes = cb.get_clipboard_image()
-    assert from_bytes and Image.open(io.BytesIO(from_bytes)).size == (8, 8)
+    assert from_bytes
+    assert Image.open(io.BytesIO(from_bytes)).size == (8, 8)
 
 
 def test_the_duplicate_module_is_gone():
@@ -98,5 +100,7 @@ def test_subpackage_exports_the_image_helpers():
     import je_auto_control as ac
     from je_auto_control.utils import clipboard as pkg
     for name in ("get_clipboard_image", "set_clipboard_image"):
-        assert name in pkg.__all__ and hasattr(pkg, name)
-        assert name in ac.__all__ and hasattr(ac, name)
+        assert name in pkg.__all__
+        assert hasattr(pkg, name)
+        assert name in ac.__all__
+        assert hasattr(ac, name)

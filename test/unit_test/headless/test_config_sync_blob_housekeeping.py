@@ -83,9 +83,11 @@ class _Wire:
 def test_a_file_over_the_limit_is_refused_without_being_sent():
     wire = _Wire(listing={"max_blob_bytes": 10, "blobs": []})
     data = b"x" * 11
+    digest = _sha(data)
     with patch(_PERFORM, new=wire):
+        transport = _transport()
         with pytest.raises(AssetSyncError, match="larger") as refused:
-            _transport().store(_sha(data), data)
+            transport.store(digest, data)
     assert "11 bytes; the limit is 10" in str(refused.value)
     assert wire.methods() == ["GET"], "the body never left this machine"
 
@@ -115,11 +117,13 @@ def test_a_file_at_the_limit_is_sent():
 ])
 def test_a_server_that_does_not_say_its_limit_is_simply_sent_the_file(listing):
     wire = _Wire(listing=listing, put=_reply(413))
+    data = b"x" * 11
+    digest = _sha(data)
     with patch(_PERFORM, new=wire):
         transport = _transport()
         assert transport.max_blob_bytes() is None
         with pytest.raises(AssetSyncError, match="larger"):
-            transport.store(_sha(b"x" * 11), b"x" * 11)     # the server's own 413
+            transport.store(digest, data)     # the server's own 413
     assert "PUT" in wire.methods()
 
 
@@ -128,9 +132,11 @@ def test_a_reset_during_an_oversized_upload_is_reported_as_too_large():
     wire = _Wire(listing=[OSError("timed out"), {"max_blob_bytes": 10, "blobs": []}],
                  put=ConnectionResetError(10054, "connection reset by peer"))
     data = b"x" * 11
+    digest = _sha(data)
     with patch(_PERFORM, new=wire):
+        transport = _transport()
         with pytest.raises(AssetSyncError, match="larger") as refused:
-            _transport().store(_sha(data), data)
+            transport.store(digest, data)
     assert "the limit is 10" in str(refused.value)
     assert isinstance(refused.value.__cause__, AssetSyncError), "the reset is kept as the cause"
     assert wire.methods() == ["GET", "PUT", "GET"]
@@ -139,25 +145,31 @@ def test_a_reset_during_an_oversized_upload_is_reported_as_too_large():
 def test_a_reset_during_an_upload_that_fits_is_still_a_connection_error():
     wire = _Wire(listing={"max_blob_bytes": 10, "blobs": []},
                  put=ConnectionResetError(10054, "connection reset by peer"))
+    digest = _sha(b"x")
     with patch(_PERFORM, new=wire):
+        transport = _transport()
         with pytest.raises(AssetSyncError, match="connection reset") as failed:
-            _transport().store(_sha(b"x"), b"x")
+            transport.store(digest, b"x")
     assert "larger" not in str(failed.value)
 
 
 def test_a_limit_lowered_since_it_was_read_is_noticed_when_the_upload_is_cut_off():
     wire = _Wire(listing=[{"max_blob_bytes": 100}, {"max_blob_bytes": 10}],
                  put=ConnectionResetError(10054, "reset"))
+    data = b"x" * 50
+    digest = _sha(data)
     with patch(_PERFORM, new=wire):
+        transport = _transport()
         with pytest.raises(AssetSyncError, match="the limit is 10"):
-            _transport().store(_sha(b"x" * 50), b"x" * 50)
+            transport.store(digest, data)
 
 
 def test_a_bad_digest_is_refused_before_anything_is_asked():
     wire = _Wire(listing={"max_blob_bytes": 10})
     with patch(_PERFORM, new=wire):
+        transport = _transport()
         with pytest.raises(AssetSyncError, match="SHA-256"):
-            _transport().store("not-a-digest", b"x")
+            transport.store("not-a-digest", b"x")
     assert wire.calls == []
 
 
@@ -169,17 +181,21 @@ def test_the_listing_and_delete_calls():
         transport = _transport()
         assert transport.usage() == listing
         assert transport.delete(_sha(b"abc")) is True
-    assert wire.deleted == [_sha(b"abc")]
+    digest = _sha(b"abc")
+    assert wire.deleted == [digest]
     with patch(_PERFORM, return_value=_reply(404)):
-        assert _transport().delete(_sha(b"abc")) is False
+        assert _transport().delete(digest) is False
+        transport = _transport()
         with pytest.raises(AssetSyncError, match="does not serve"):
-            _transport().usage()
+            transport.usage()
     with patch(_PERFORM, return_value={"status": 200, "text": "<html>"}):
+        transport = _transport()
         with pytest.raises(AssetSyncError, match="not JSON"):
-            _transport().usage()
+            transport.usage()
     with patch(_PERFORM, return_value=_reply(401)):
+        transport = _transport()
         with pytest.raises(AssetSyncError, match="secret"):
-            _transport().delete(_sha(b"abc"))
+            transport.delete(digest)
 
 
 # --- collecting what nothing refers to ------------------------------------------------
@@ -206,8 +222,10 @@ def test_a_dry_run_deletes_nothing_and_says_what_would_go():
     wire = _Wire(listing={"blobs": [_row(b"orphan", 2 * _DAY)]})
     with patch(_PERFORM, new=wire):
         result = collect_unreferenced_blobs(_transport(), [], dry_run=True)
-    assert result["deleted"] == [_sha(b"orphan")] and result["dry_run"] is True
-    assert wire.deleted == [] and "DELETE" not in wire.methods()
+    assert result["deleted"] == [_sha(b"orphan")]
+    assert result["dry_run"] is True
+    assert wire.deleted == []
+    assert "DELETE" not in wire.methods()
 
 
 def test_a_server_that_reports_no_ages_has_nothing_collected_unless_asked():
@@ -229,21 +247,24 @@ def test_one_blob_that_cannot_be_deleted_does_not_stop_the_others():
 
     with patch(_PERFORM, new=perform):
         result = collect_unreferenced_blobs(_transport(), [])
-    assert result["deleted"] == [_sha(b"two")] and list(result["failed"]) == [_sha(b"one")]
+    assert result["deleted"] == [_sha(b"two")]
+    assert list(result["failed"]) == [_sha(b"one")]
 
 
 @pytest.mark.parametrize("bad", [-1, "soon", True, float("nan"), None])
 def test_a_grace_period_that_is_not_one_is_refused(bad):
     with patch(_PERFORM, new=_Wire(listing={"blobs": []})) as wire:
+        transport = _transport()
         with pytest.raises(AssetSyncError, match="min_age_s"):
-            collect_unreferenced_blobs(_transport(), [], min_age_s=bad)
+            collect_unreferenced_blobs(transport, [], min_age_s=bad)
     assert wire.calls == []
 
 
 def test_a_reference_that_is_not_a_digest_is_refused_before_anything_is_deleted():
     with patch(_PERFORM, new=_Wire(listing={"blobs": [_row(b"x", _DAY * 2)]})) as wire:
+        transport = _transport()
         with pytest.raises(AssetSyncError):
-            collect_unreferenced_blobs(_transport(), ["nope"])
+            collect_unreferenced_blobs(transport, ["nope"])
     assert wire.calls == []
 
 
@@ -287,8 +308,10 @@ def test_config_sync_collect_blobs_keeps_what_the_bucket_this_machine_and_keep_n
         result = config_sync_collect_blobs(
             "https://sync.invalid/", "alice", keep=_sha(b"published by hand"),
             outbox_path=str(outbox_path), secret="s3cret")
-    assert result["deleted"] == [_sha(b"orphan")] and result["kept"] == 4
-    assert result["referenced"] == 4 and wire.deleted == [_sha(b"orphan")]
+    assert result["deleted"] == [_sha(b"orphan")]
+    assert result["kept"] == 4
+    assert result["referenced"] == 4
+    assert wire.deleted == [_sha(b"orphan")]
 
 
 def test_collecting_for_an_account_that_never_synced_here_creates_no_outbox(tmp_path):
@@ -297,8 +320,10 @@ def test_collecting_for_an_account_that_never_synced_here_creates_no_outbox(tmp_
     with patch(_PERFORM, new=wire), patch.object(ConfigSyncClient, "fetch", return_value=None):
         result = config_sync_collect_blobs("https://sync.invalid", "alice", dry_run=True,
                                            outbox_path=str(outbox_path))
-    assert result["deleted"] == [_sha(b"orphan")] and result["dry_run"] is True
-    assert not outbox_path.exists() and wire.deleted == []
+    assert result["deleted"] == [_sha(b"orphan")]
+    assert result["dry_run"] is True
+    assert not outbox_path.exists()
+    assert wire.deleted == []
 
 
 def test_an_unreachable_server_deletes_nothing(tmp_path):
@@ -349,7 +374,9 @@ def test_two_stores_on_one_folder_share_the_quota(tmp_path):
         thread.join(timeout=60)
     assert not any(thread.is_alive() for thread in threads)
     usage = stores[0].usage("alice")
-    assert usage["used"] == 30 and usage["count"] == 3 and len(refused) == 13
+    assert usage["used"] == 30
+    assert usage["count"] == 3
+    assert len(refused) == 13
     assert not (tmp_path / "blobs" / "store.lock").exists(), "the lock is released"
     assert stores[1].usage("alice")["count"] == 3, "the lock file is not listed as a blob"
 
@@ -360,8 +387,9 @@ def test_a_store_locked_by_another_process_refuses_instead_of_overshooting(tmp_p
     store = BlobStore(tmp_path / "blobs")
     (tmp_path / "blobs").mkdir()
     (tmp_path / "blobs" / "store.lock").write_bytes(b"")     # held by "another process"
+    digest = _sha(b"x")
     with pytest.raises(BlobStoreBusyError, match="locked by another process"):
-        store.put("alice", _sha(b"x"), b"x")
+        store.put("alice", digest, b"x")
     assert store.usage("alice")["count"] == 0
     (tmp_path / "blobs" / "store.lock").unlink()
     assert store.put("alice", _sha(b"x"), b"x") is True
@@ -392,7 +420,8 @@ def test_the_command_runs_from_an_action_list(tmp_path):
             "server_url": "https://sync.invalid", "user_id": "alice", "dry_run": True,
             "outbox_path": str(tmp_path / "o.sqlite3")}]])
     (result,) = record.values()
-    assert result["deleted"] == [_sha(b"orphan")] and result["dry_run"] is True
+    assert result["deleted"] == [_sha(b"orphan")]
+    assert result["dry_run"] is True
 
 
 # --- against the real server (needs the [signaling] extra; skipped without it) ------------
@@ -409,7 +438,10 @@ def test_the_server_listing_carries_the_limit_and_the_ages(tmp_path):
     assert client.put(f"/blobs/alice/{_sha(data)}", content=data,
                       headers=headers).status_code == 201
     listing = client.get("/blobs/alice", headers=headers).json()
-    assert listing["max_blob_bytes"] == 64 and listing["count"] == 1
+    assert listing["max_blob_bytes"] == 64
+    assert listing["count"] == 1
     (row,) = listing["blobs"]
-    assert row["sha256"] == _sha(data) and row["size"] == len(data)
-    assert isinstance(row["age_s"], float) and 0.0 <= row["age_s"] < 3600.0
+    assert row["sha256"] == _sha(data)
+    assert row["size"] == len(data)
+    assert isinstance(row["age_s"], float)
+    assert 0.0 <= row["age_s"] < 3600.0

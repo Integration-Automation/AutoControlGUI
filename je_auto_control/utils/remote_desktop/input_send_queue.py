@@ -114,13 +114,12 @@ class InputSendQueue:
             if self._closed:
                 raise ConnectionError(_NOT_CONNECTED_MESSAGE)
             failure = self._overdue_locked()
-            if failure is None and len(self._pending) >= self._limit:
-                if self._drop_oldest_move_locked():
-                    pass
-                elif droppable:
+            full = failure is None and len(self._pending) >= self._limit
+            if full and not self._drop_oldest_move_locked():
+                if droppable:
                     self._dropped_moves += 1        # nothing older to give way: this move is the stale one
                     return
-                elif len(self._pending) >= self._hard_limit:
+                if len(self._pending) >= self._hard_limit:
                     failure = ConnectionError(
                         f"remote input is not being delivered: {len(self._pending)} events waiting")
             if failure is None:

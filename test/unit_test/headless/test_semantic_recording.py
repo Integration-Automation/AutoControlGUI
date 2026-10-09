@@ -135,5 +135,6 @@ def test_locator_swallows_backend_errors():
          "anchor": {"role": "X"}, "button": "left"},
         locator=AnchorLocator(backend=boom),
     )
-    assert out["x"] == 1 and out["y"] == 2
+    assert out["x"] == 1
+    assert out["y"] == 2
     assert out["relocated"] is False

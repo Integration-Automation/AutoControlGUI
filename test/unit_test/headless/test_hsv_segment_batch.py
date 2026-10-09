@@ -34,13 +34,15 @@ def test_red_hue_excludes_green():
 
 def test_green_hue_found():
     greens = dominant_hue_regions(_scene(), hue=60, hue_tol=15, min_area=100)
-    assert len(greens) == 1 and greens[0]["x"] == 120
+    assert len(greens) == 1
+    assert greens[0]["x"] == 120
 
 
 def test_explicit_band_segment_and_mask():
     boxes = segment_hsv(_scene(), lower_hsv=[40, 80, 80], upper_hsv=[80, 255, 255],
                         min_area=100)
-    assert len(boxes) == 1 and boxes[0]["x"] == 120        # the green patch
+    assert len(boxes) == 1
+    assert boxes[0]["x"] == 120  # the green patch
     mask = color_mask(_scene(), lower_hsv=[40, 80, 80], upper_hsv=[80, 255, 255])
     assert int(mask.sum()) > 0
 
@@ -49,7 +51,8 @@ def test_val_floor_skips_dark():
     # require a high value floor -> the dark red (V=120) drops out, bright stays
     reds = dominant_hue_regions(_scene(), hue=0, hue_tol=10, val_min=200,
                                 min_area=100)
-    assert len(reds) == 1 and reds[0]["y"] == 10           # only the bright patch
+    assert len(reds) == 1
+    assert reds[0]["y"] == 10  # only the bright patch
 
 
 # --- wiring ---------------------------------------------------------------
@@ -67,4 +70,5 @@ def test_wiring():
 
 def test_facade_exports():
     for attr in ("segment_hsv", "color_mask", "dominant_hue_regions"):
-        assert hasattr(ac, attr) and attr in ac.__all__
+        assert hasattr(ac, attr)
+        assert attr in ac.__all__

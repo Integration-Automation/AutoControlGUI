@@ -10,7 +10,8 @@ def test_majority_cluster_wins():
     candidates = [[100, 100], [104, 98], [97, 103], [500, 400]]
     result = consensus_point(candidates, cluster_radius=24)
     assert result is not None
-    assert abs(result.point[0] - 100) <= 5 and abs(result.point[1] - 100) <= 5
+    assert abs(result.point[0] - 100) <= 5
+    assert abs(result.point[1] - 100) <= 5
     assert result.n_clusters == 2
     assert abs(result.agreement - 0.75) < 1e-9
 
@@ -60,4 +61,5 @@ def test_wiring():
 def test_facade_exports():
     for name in ("consensus_point", "consensus_element", "is_confident",
                  "ConsensusResult"):
-        assert hasattr(ac, name) and name in ac.__all__
+        assert hasattr(ac, name)
+        assert name in ac.__all__

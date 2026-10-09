@@ -17,7 +17,7 @@ platform-agnostic post-processing the dump lacks:
 Pure-stdlib over :class:`AXTreeNode` values; no device or backend access, no
 ``PySide6``. Compose it on top of any ``dump_accessibility_tree`` output.
 """
-from typing import Optional, Union
+from typing import Optional
 
 from je_auto_control.utils.accessibility.tree import AXTreeNode
 
@@ -47,7 +47,7 @@ def control_type_name(control_type: int) -> str:
     return _CONTROL_TYPE_NAMES.get(cid, f"{_ROLE_PREFIX}{cid}")
 
 
-def humanize_role(role: Union[str, int]) -> str:
+def humanize_role(role: str | int) -> str:
     """Map a raw UIA role to a friendly name.
 
     Accepts an int id (``50000``), a ``"ControlType_50000"`` string, or a bare

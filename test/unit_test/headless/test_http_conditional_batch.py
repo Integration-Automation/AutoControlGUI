@@ -16,7 +16,8 @@ _RESPONSE = {
 
 def test_parse_cache_control():
     directives = parse_cache_control({"Cache-Control": "max-age=60, no-cache"})
-    assert directives["max-age"] == 60 and directives["no-cache"] is True
+    assert directives["max-age"] == 60
+    assert directives["no-cache"] is True
 
 
 def test_store_validators():
@@ -78,4 +79,5 @@ def test_wiring():
 def test_facade_exports():
     for attr in ("parse_cache_control", "store_validators", "conditioned_call",
                  "is_fresh", "is_not_modified"):
-        assert hasattr(ac, attr) and attr in ac.__all__
+        assert hasattr(ac, attr)
+        assert attr in ac.__all__

@@ -92,12 +92,12 @@ class AgentTrace:
         """
         fields: Dict[str, Any] = {}
         start = self._clock()
+        status = STATUS_ERROR
         try:
             yield fields
-        except Exception:
-            self._record_block(operation, start, STATUS_ERROR, kwargs, fields)
-            raise
-        self._record_block(operation, start, STATUS_OK, kwargs, fields)
+            status = STATUS_OK
+        finally:
+            self._record_block(operation, start, status, kwargs, fields)
 
     def _record_block(self, operation: str, start: float, status: str,
                       kwargs: Dict[str, Any], fields: Dict[str, Any]) -> None:

@@ -52,7 +52,8 @@ def test_list_reports_a_run_and_stop_ends_it():
         assert listed[0]["stopping"] is False
         assert isinstance(listed[0]["started_at"], float)
         assert tools["ac_stop_execution"].handler(run_id="mcp-listed", reason="via mcp") == {"stopped": 1}
-        assert token.stopped and token.reason == "via mcp"
+        assert token.stopped
+        assert token.reason == "via mcp"
         assert tools["ac_list_executions"].handler()[0]["stopping"] is True
     assert tools["ac_stop_execution"].handler(run_id="mcp-listed") == {"stopped": 0}
 

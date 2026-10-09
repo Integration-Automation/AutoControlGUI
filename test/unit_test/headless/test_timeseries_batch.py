@@ -63,7 +63,8 @@ def test_resample_fill_modes():
 
 
 def test_empty_series():
-    assert ts_rate([]) == pytest.approx(0.0) and ts_resample([], 5) == []
+    assert ts_rate([]) == pytest.approx(0.0)
+    assert ts_resample([], 5) == []
 
 
 # --- wiring ---------------------------------------------------------------
@@ -93,4 +94,5 @@ def test_wiring():
 def test_facade_exports():
     for attr in ("ts_rate", "ts_irate", "ts_increase", "ts_delta", "ts_idelta",
                  "ts_downsample", "ts_resample"):
-        assert hasattr(ac, attr) and attr in ac.__all__
+        assert hasattr(ac, attr)
+        assert attr in ac.__all__

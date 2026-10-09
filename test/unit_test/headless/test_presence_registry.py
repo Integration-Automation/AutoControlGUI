@@ -35,7 +35,8 @@ def test_register_returns_row(registry):
     assert row.viewer_id == "v1"
     assert row.label == "alice"
     assert row.role == ROLE_OBSERVER
-    assert row.cursor_x is None and row.cursor_y is None
+    assert row.cursor_x is None
+    assert row.cursor_y is None
     assert row.last_seen_iso
 
 

@@ -155,7 +155,8 @@ class _ClientHandler:
         self._shutdown.set()
         receiver = self._host._file_receiver
         if receiver is not None:
-            for transfer_id in list(self._transfer_ids):
+            # reason (suppression below): the receive thread adds ids meanwhile, so this walks a snapshot
+            for transfer_id in list(self._transfer_ids):  # NOSONAR python:S7504
                 receiver.abort(transfer_id, "viewer disconnected")
         with self._host._frame_cond:
             self._host._frame_cond.notify_all()

@@ -31,7 +31,8 @@ def test_single_occurrence_is_unambiguous():
     assert result is not None
     assert result.is_ambiguous is False
     assert result.peak_ratio < 0.9
-    assert abs(result.x - 30) <= 1 and abs(result.y - 20) <= 1
+    assert abs(result.x - 30) <= 1
+    assert abs(result.y - 20) <= 1
 
 
 def test_duplicate_occurrence_is_ambiguous():
@@ -78,4 +79,5 @@ def test_wiring():
 
 def test_facade_exports():
     for name in ("match_with_trust", "score_peaks", "TrustedMatch"):
-        assert hasattr(ac, name) and name in ac.__all__
+        assert hasattr(ac, name)
+        assert name in ac.__all__

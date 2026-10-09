@@ -86,6 +86,22 @@ def _clear_usage(backend: Any) -> None:
         pass  # a fake with fixed attributes: its usage is read as it stands
 
 
+def _require_available(backend: Any) -> None:
+    """Raise ``VLMNotAvailableError`` for a backend that cannot be asked."""
+    if not getattr(backend, "available", False):
+        from je_auto_control.utils.vision.backends.base import VLMNotAvailableError
+        raise VLMNotAvailableError(
+            f"VLM backend {getattr(backend, 'name', '?')!r} is not available")
+
+
+def _shown_box(request: LocateRequest) -> Optional[Tuple[int, int, int, int]]:
+    """The part of the sample's frame the backend is shown; ``None`` when there is none."""
+    shape = getattr(request.frame, "shape", None)
+    if shape is None or len(shape) < 2:
+        raise ValueError(f"sample {request.sample_id!r}: the frame is not an image array")
+    return request.frame_box(int(shape[1]), int(shape[0]))
+
+
 def vlm_strategy(backend: Any = None, *, model: Optional[str] = None,
                  price: Optional[Mapping[str, Any]] = None) -> LocatorStrategy:
     """A strategy version that asks a VLM backend for the sample's description.
@@ -111,14 +127,8 @@ def vlm_strategy(backend: Any = None, *, model: Optional[str] = None,
         if not request.description or not str(request.description).strip():
             raise ValueError(f"sample {request.sample_id!r} has no description")
         chosen = resolve()
-        if not getattr(chosen, "available", False):
-            from je_auto_control.utils.vision.backends.base import VLMNotAvailableError
-            raise VLMNotAvailableError(
-                f"VLM backend {getattr(chosen, 'name', '?')!r} is not available")
-        shape = getattr(request.frame, "shape", None)
-        if shape is None or len(shape) < 2:
-            raise ValueError(f"sample {request.sample_id!r}: the frame is not an image array")
-        box = request.frame_box(int(shape[1]), int(shape[0]))
+        _require_available(chosen)
+        box = _shown_box(request)
         if box is None:
             return None
         image = _png_of(request.frame, box)

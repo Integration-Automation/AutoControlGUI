@@ -45,14 +45,16 @@ def test_a_theme_match_is_in_screen_coordinates(monkeypatch):
     frame = _frame_with_square()
     _with_origin(monkeypatch, frame)
     match = match_theme(frame[30:60, 50:80].copy(), region=[1000, 400, 200, 200], min_score=0.3)
-    assert match is not None and (match["x"], match["y"]) == (1050, 430)
+    assert match is not None
+    assert (match["x"], match["y"]) == (1050, 430)
 
 
 def test_element_proposals_are_in_screen_coordinates(monkeypatch):
     from je_auto_control.utils.element_proposal.element_proposal import propose_elements
     _with_origin(monkeypatch, _frame_with_square())
     proposals = propose_elements(region=[1000, 400, 200, 200], min_area=20)
-    assert proposals and all(p["box"][0] >= 1000 and p["box"][1] >= 400 for p in proposals)
+    assert proposals
+    assert all(p["box"][0] >= 1000 and p["box"][1] >= 400 for p in proposals)
 
 
 def test_barcode_points_are_in_screen_coordinates(monkeypatch):
@@ -73,7 +75,8 @@ def test_an_ensemble_votes_on_one_frame_in_screen_coordinates(monkeypatch):
     import je_auto_control.utils.visual_match as package
     monkeypatch.setattr(package, "match_template", visual_match.match_template)
     result = match_ensemble(["a", "b", "c"], region=[1000, 400, 50, 50])
-    assert len(grabs) == 1 and result["point"] == [1010, 412]
+    assert len(grabs) == 1
+    assert result["point"] == [1010, 412]
 
 
 # --- the voice router ----------------------------------------------------------------------------------
@@ -109,7 +112,8 @@ def _el(x, y, role="button", name="", **extra):
 def test_a_removed_element_carries_no_stale_index():
     from je_auto_control.utils.observation_delta.observation_delta import summarize_delta
     text = summarize_delta({"added": [], "changed": [], "removed": [_el(0, 0, name="Cancel", index=0)]})
-    assert text.startswith('- button "Cancel"') and "[0]" not in text
+    assert text.startswith('- button "Cancel"')
+    assert "[0]" not in text
 
 
 def test_delta_counts_come_from_the_summarised_frames():
@@ -117,7 +121,8 @@ def test_delta_counts_come_from_the_summarised_frames():
     label_before = _el(0, 0, role="text", name="Status: idle")
     label_after = _el(0, 0, role="text", name="Status: busy")
     result = _delta_observation([label_before], [label_after])
-    assert result["summary"] == "" and result["changed"] == 0
+    assert result["summary"] == ""
+    assert result["changed"] == 0
 
 
 # --- no home directory ------------------------------------------------------------------------------------
@@ -168,7 +173,8 @@ def test_contrast_uses_the_dominant_colours_not_their_means():
     from je_auto_control.utils.contrast_map.contrast_map import dominant_pair
     pixels = [[255, 255, 255]] * 400 + [[0x76, 0x76, 0x76]] * 100 + [[0xC0, 0xC0, 0xC0]] * 60
     pair = dominant_pair(pixels)
-    assert pair["foreground"] == [0x76, 0x76, 0x76] and pair["background"] == [255, 255, 255]
+    assert pair["foreground"] == [0x76, 0x76, 0x76]
+    assert pair["background"] == [255, 255, 255]
 
 
 # --- small contracts --------------------------------------------------------------------------------------

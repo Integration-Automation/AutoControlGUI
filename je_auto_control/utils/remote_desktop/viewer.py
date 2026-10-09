@@ -26,7 +26,6 @@ from je_auto_control.utils.remote_desktop.protocol import (
 from je_auto_control.utils.remote_desktop.transport import (
     MessageChannel, TcpMessageChannel,
 )
-from je_auto_control.utils.remote_desktop.ws_protocol import WsProtocolError
 
 FrameCallback = Callable[[bytes], None]
 AudioCallback = Callable[[bytes], None]
@@ -220,10 +219,9 @@ class RemoteDesktopViewer:
             sock = self._maybe_wrap_tls(raw_sock)
             channel = self._build_channel(sock)
             self._handshake(channel)
-        except (AuthenticationError, ProtocolError, OSError,
-                WsProtocolError):
-            # WsProtocolError (a RuntimeError subclass) is raised by the
-            # WebSocket handshake in the WS viewer subclass; without it here
+        except (AuthenticationError, ProtocolError, OSError):
+            # ProtocolError covers WsProtocolError, its subclass, which the
+            # WebSocket handshake in the WS viewer subclass raises; otherwise
             # the raw socket / TLS fd would leak on a failed WS upgrade.
             try:
                 raw_sock.close()

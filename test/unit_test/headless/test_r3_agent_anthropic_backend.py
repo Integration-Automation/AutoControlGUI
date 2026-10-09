@@ -27,16 +27,18 @@ def test_max_tokens_truncation_without_tool_use_raises():
     client = _Client(
         [SimpleNamespace(type="text", text="cut off")], stop_reason="max_tokens",
     )
+    backend = _backend(client)
     with pytest.raises(AgentBackendError):
-        _backend(client).decide_next_action("goal", None, [])
+        backend.decide_next_action("goal", None, [])
 
 
 def test_refusal_without_tool_use_raises():
     client = _Client(
         [SimpleNamespace(type="text", text="")], stop_reason="refusal",
     )
+    backend = _backend(client)
     with pytest.raises(AgentBackendError):
-        _backend(client).decide_next_action("goal", None, [])
+        backend.decide_next_action("goal", None, [])
 
 
 def test_end_turn_final_answer_still_stops():

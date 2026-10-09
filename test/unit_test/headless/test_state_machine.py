@@ -153,8 +153,9 @@ def test_max_steps_exhausts_raises():
         },
         "max_steps": 3,
     }
+    machine = StateMachine(spec, execute_action=execute)
     with pytest.raises(StateMachineError, match="max_steps"):
-        StateMachine(spec, execute_action=execute).run()
+        machine.run()
 
 
 def test_global_timeout_exhausts_raises():
@@ -173,10 +174,11 @@ def test_global_timeout_exhausts_raises():
         "max_steps": 10_000,
         "global_timeout_s": 0.05,
     }
+    machine = StateMachine(
+        spec, execute_action=execute, guard_eval=slow_guard,
+    )
     with pytest.raises(StateMachineError):
-        StateMachine(
-            spec, execute_action=execute, guard_eval=slow_guard,
-        ).run()
+        machine.run()
 
 
 def test_no_fireable_transition_raises():
@@ -192,8 +194,9 @@ def test_no_fireable_transition_raises():
             "x": {"final": True},
         },
     }
+    machine = StateMachine(spec, execute_action=execute)
     with pytest.raises(StateMachineError, match="no transition fired"):
-        StateMachine(spec, execute_action=execute).run()
+        machine.run()
 
 
 # --- validation ------------------------------------------------------

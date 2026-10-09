@@ -43,8 +43,9 @@ def test_assert_passes_when_vlm_matches():
 
 
 def test_assert_fails_and_raises_when_no_match():
+    backend = _FakeBackend(False)
     with pytest.raises(AutoControlAssertionException):
-        assert_by_description("a login form", backend=_FakeBackend(False))
+        assert_by_description("a login form", backend=backend)
 
 
 def test_assert_absence_passes_when_not_shown():
@@ -63,6 +64,7 @@ def test_raises_without_a_configured_backend():
                    image_mime="image/png"):
             return None
 
+    backend = _Unavailable()
     with pytest.raises(VLMNotAvailableError):
-        assert_by_description("anything", backend=_Unavailable(),
+        assert_by_description("anything", backend=backend,
                               raise_on_fail=False)

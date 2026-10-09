@@ -86,6 +86,7 @@ def test_chunked_bodies_decode(stream, expected):
     (b"65\r\n" + b"x" * 101 + b"\r\n0\r\n\r\n", True),
 ])
 def test_bad_or_oversized_chunked_bodies_are_refused(stream, too_large):
+    body = io.BytesIO(stream)
     with pytest.raises(ChunkedBodyError) as caught:
-        read_chunked_body(io.BytesIO(stream), 100)
+        read_chunked_body(body, 100)
     assert caught.value.too_large is too_large

@@ -64,10 +64,13 @@ def test_parallel_edits_preserve_conflict():
     right = base.edited({"combo": "ctrl+r"}, "desktop")
     decision = merge_entries(left, right)
     conflict = decision.conflict
-    assert conflict.local == left and conflict.remote == right
+    assert conflict.local == left
+    assert conflict.remote == right
     siblings = decision.entry.siblings
-    assert decision.entry.in_conflict and len(siblings) == 2
-    assert left in siblings and right in siblings
+    assert decision.entry.in_conflict
+    assert len(siblings) == 2
+    assert left in siblings
+    assert right in siblings
     # Both machines compute the same conflicted entry, so they still converge.
     assert merge_entries(right, left).entry == decision.entry
 
@@ -108,7 +111,8 @@ def test_the_same_value_made_apart_is_not_a_conflict():
     left = SyncEntry.create("hk1", {"combo": "ctrl+a"}, "laptop")
     right = SyncEntry.create("hk1", {"combo": "ctrl+a"}, "desktop")
     decision = merge_entries(left, right)
-    assert decision.conflict is None and not decision.entry.in_conflict
+    assert decision.conflict is None
+    assert not decision.entry.in_conflict
     assert decision.entry.value == {"combo": "ctrl+a"}
     assert decision.entry.vector == {"laptop": 1, "desktop": 1}
     assert merge_entries(right, left).entry == decision.entry
@@ -130,7 +134,8 @@ def test_changes_to_different_keys_merge_without_conflict():
     one = SyncEntry.create("hk1", {"combo": "a"}, "laptop")
     two = SyncEntry.create("hk2", {"combo": "b"}, "desktop")
     merged, conflicts = merge_collections({"hk1": one}, {"hk2": two})
-    assert merged == {"hk1": one, "hk2": two} and conflicts == []
+    assert merged == {"hk1": one, "hk2": two}
+    assert conflicts == []
 
 
 def test_an_entry_round_trips_through_its_bucket_shape():
@@ -154,7 +159,8 @@ def test_a_bucket_written_with_a_device_id_merges_by_causality():
     desktop.upsert("hotkeys", "hk1", {"combo": "ctrl+r"}, origin="desktop")
 
     merged, conflicts = merge_buckets(laptop, desktop)
-    assert len(conflicts) == 1 and conflicts[0].unresolved is True
+    assert len(conflicts) == 1
+    assert conflicts[0].unresolved is True
     assert merged.values("hotkeys") == {}
     [(section, entry)] = merged.conflicts()
     assert section == "hotkeys"
@@ -167,9 +173,9 @@ def test_a_versioned_tombstone_is_not_dropped_by_age():
     assert bucket.remove("hotkeys", "hk1", origin="laptop") is True
     merged, _conflicts = merge_buckets(bucket, ConfigBucket(user_id="alice"), now=9e12)
     assert merged.get_entry("hotkeys", "hk1").is_deleted is True
+    other = ConfigBucket(user_id="alice")
+    other.upsert("hotkeys", "hk1", {"combo": "ctrl+a"}, origin="laptop")
     with pytest.raises(ConfigSyncError):
-        other = ConfigBucket(user_id="alice")
-        other.upsert("hotkeys", "hk1", {"combo": "ctrl+a"}, origin="laptop")
         other.remove("hotkeys", "hk1", versioned=False)   # a flat tombstone cannot delete it
 
 
@@ -233,8 +239,9 @@ def test_retired_peer_requires_full_sync(server):
     assert collected.bucket.sections["hotkeys"] == {}
 
     before = server.revision
+    stale_operations = [_op(stale_edit)]
     with pytest.raises(FullResyncRequired):
-        client.push_operations([_op(stale_edit)], device_id="desktop")
+        client.push_operations(stale_operations, device_id="desktop")
     assert server.revision == before, "a retired device must not write"
 
     adopted = client.full_resync(device_id="desktop")
@@ -281,7 +288,8 @@ def test_resending_a_batch_changes_nothing(server):
     operations = [_op(SyncEntry.create("hk1", {"combo": "a"}, "laptop"))]
     first = client.push_operations(operations, device_id="laptop")
     again = client.push_operations(operations, device_id="laptop")
-    assert first.pushed is True and again.pushed is False
+    assert first.pushed is True
+    assert again.pushed is False
     assert again.revision == first.revision == 1
 
 
@@ -299,7 +307,9 @@ def test_restart_retries_outbox(tmp_path, server):
     first_run.enqueue(_op(entry))
     report = first_run.drain(
         lambda batch: _client().push_operations(batch, device_id="laptop"), max_attempts=2)
-    assert report.offline is True and report.pending == 1 and report.attempts == 2
+    assert report.offline is True
+    assert report.pending == 1
+    assert report.attempts == 2
 
     # The program restarts; the server comes back.
     server.offline = False
@@ -308,7 +318,9 @@ def test_restart_retries_outbox(tmp_path, server):
     assert [operation.operation_id for operation in queued] == [entry.operation_id]
     report = second_run.drain(
         lambda batch: _client().push_operations(batch, device_id="laptop"))
-    assert report.sent == 1 and report.pending == 0 and report.offline is False
+    assert report.sent == 1
+    assert report.pending == 0
+    assert report.offline is False
     assert server.body["sections"]["hotkeys"]["hk1"]["operation_id"] == entry.operation_id
 
 
@@ -327,7 +339,8 @@ def test_an_uncertain_send_is_resent_under_the_same_operation_id(tmp_path, serve
             raise ConfigSyncError("config sync PUT failed: timed out")
 
     report = outbox.drain(send)
-    assert report.sent == 1 and report.attempts == 2
+    assert report.sent == 1
+    assert report.attempts == 2
     assert server.revision == 1, "the resend found its change already there"
 
 
@@ -341,7 +354,9 @@ def test_backoff_is_bounded_and_the_queue_waits_for_it(tmp_path):
     assert outbox.seconds_until_due(100.0) == pytest.approx(2.0)
     calls = []
     report = outbox.drain(calls.append, wait=False, clock=lambda: 100.5)
-    assert calls == [] and report.pending == 1 and report.offline is True
+    assert calls == []
+    assert report.pending == 1
+    assert report.offline is True
 
 
 def test_a_drain_waiting_to_retry_can_be_cancelled(tmp_path):
@@ -356,7 +371,9 @@ def test_a_drain_waiting_to_retry_can_be_cancelled(tmp_path):
         raise ConfigSyncError("offline")
 
     report = outbox.drain(send, cancel=cancel, max_attempts=10)
-    assert report.cancelled is True and len(attempts) == 1 and report.pending == 1
+    assert report.cancelled is True
+    assert len(attempts) == 1
+    assert report.pending == 1
 
 
 def test_outboxes_are_isolated_by_account_and_endpoint(tmp_path):
@@ -367,8 +384,10 @@ def test_outboxes_are_isolated_by_account_and_endpoint(tmp_path):
     alice.enqueue(_op(SyncEntry.create("hk1", {"combo": "a"}, "laptop")))
     alice.save_baseline(ConfigBucket(user_id="alice", revision=7))
     assert len(alice.pending()) == 1
-    assert bob.pending() == [] and elsewhere.pending() == []
-    assert bob.load_baseline() is None and elsewhere.load_baseline() is None
+    assert bob.pending() == []
+    assert elsewhere.pending() == []
+    assert bob.load_baseline() is None
+    assert elsewhere.load_baseline() is None
     assert SyncOutbox(path, account="alice",
                       endpoint="https://one.invalid/").load_baseline().revision == 7
 

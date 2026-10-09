@@ -19,7 +19,8 @@ def test_format_annotation_github_command():
 def test_format_annotation_escapes_and_defaults_level():
     line = format_annotation({"message": "a, b\nc", "file": "x,y.py"})
     assert line.startswith("::error file=x%2Cy.py::")
-    assert "%0A" in line and line.count("::") >= 2     # newline escaped
+    assert "%0A" in line
+    assert line.count("::") >= 2  # newline escaped
 
 
 def test_emit_annotations_writes_and_returns():

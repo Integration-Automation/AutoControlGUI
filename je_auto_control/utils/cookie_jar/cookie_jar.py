@@ -27,12 +27,13 @@ _WSP = " \t"
 # RFC 6265bis 5.6 step 1: a set-cookie-string with a CTL other than HTAB is
 # ignored entirely -- "a=b\r\nX-Injected: 1" reached the Cookie header.
 _CTL = re.compile(r"[\x00-\x08\x0a-\x1f\x7f]")
-_MAX_AGE = re.compile(r"-?[0-9]+")                        # 5.2.2: ASCII DIGIT and "-" only
+_MAX_AGE = re.compile(r"-?\d+", re.ASCII)                 # 5.2.2: ASCII DIGIT and "-" only
 # RFC 6265 5.1.1 cookie-date grammar.
 _DATE_DELIMITER = re.compile(r"[\x09\x20-\x2f\x3b-\x40\x5b-\x60\x7b-\x7e]+")
-_DATE_TIME = re.compile(r"([0-9]{1,2}):([0-9]{1,2}):([0-9]{1,2})(?:[^0-9].*)?", re.S)
-_DATE_DAY = re.compile(r"([0-9]{1,2})(?:[^0-9].*)?", re.S)
-_DATE_YEAR = re.compile(r"([0-9]{2,4})(?:[^0-9].*)?", re.S)
+# re.ASCII: "\d" is then the ASCII digits the grammar names, and "\D" everything else.
+_DATE_TIME = re.compile(r"(\d{1,2}):(\d{1,2}):(\d{1,2})(?:\D.*)?", re.S | re.ASCII)
+_DATE_DAY = re.compile(r"(\d{1,2})(?:\D.*)?", re.S | re.ASCII)
+_DATE_YEAR = re.compile(r"(\d{2,4})(?:\D.*)?", re.S | re.ASCII)
 _MONTHS = ("jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec")
 
 

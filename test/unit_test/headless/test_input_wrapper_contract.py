@@ -182,7 +182,8 @@ def test_type_unicode_keys_reports_what_it_dispatched():
     events = []
     result = text_unicode.type_unicode_keys("a\n", sink=events.append)
     assert [event["op"] for event in events] == ["unicode_unit", "key"]
-    assert result["ops"] == 2 and result["method"] == "keys"
+    assert result["ops"] == 2
+    assert result["method"] == "keys"
 
 
 # --- mouse ------------------------------------------------------------------
@@ -225,13 +226,15 @@ def test_coordinates_are_rounded_not_cut_toward_zero(mouse):
 def test_a_scroll_point_that_is_not_a_number_moves_nothing(mouse, point):
     with pytest.raises(AutoControlMouseException):
         ms.mouse_scroll(3, **point)
-    assert mouse.moves == [] and mouse.scrolls == []
+    assert mouse.moves == []
+    assert mouse.scrolls == []
 
 
 def test_a_scroll_point_off_the_desktop_is_still_clamped(mouse, monkeypatch):
     monkeypatch.setattr(sys, "platform", "win32")
     ms.mouse_scroll(3, x=99999, y=100.4)
-    assert mouse.moves == [(1919, 100)] and mouse.scrolls == [(3,)]
+    assert mouse.moves == [(1919, 100)]
+    assert mouse.scrolls == [(3,)]
 
 
 def test_a_positive_scroll_goes_up_by_default_on_x11(mouse, monkeypatch):
@@ -299,7 +302,8 @@ def test_the_layout_table_is_built_on_a_private_handle(monkeypatch):
     monkeypatch.setattr(kl, "_user32", lambda: fake)
     monkeypatch.setattr(kl, "_LAYOUT_CACHE", {})
     table = kl.layout_char_table(0x04090409)
-    assert table[0x36] == ("6", None) and table[0x31] == ("1", None)
+    assert table[0x36] == ("6", None)
+    assert table[0x31] == ("1", None)
 
 
 @pytest.mark.skipif(sys.platform != "win32", reason="ctypes.windll is Windows-only")

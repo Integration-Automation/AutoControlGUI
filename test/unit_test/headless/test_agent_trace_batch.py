@@ -53,9 +53,12 @@ def test_operation_context_times_and_records():
 
 def test_operation_marks_error_on_exception():
     trace = AgentTrace(clock=_Clock())
-    with pytest.raises(ValueError):
+    def failing_operation():
         with trace.operation("tool", tool_name="x"):
             raise ValueError("boom")
+
+    with pytest.raises(ValueError):
+        failing_operation()
     span = trace.spans()[0]
     assert span["status"] == "error"
     assert span["attributes"]["gen_ai.tool.name"] == "x"
@@ -71,7 +74,8 @@ def test_to_otel_shape():
     assert otel[0]["status"]["code"] == 2
     assert {"key": "gen_ai.operation.name", "value": {"stringValue": "chat"}} \
         in otel[0]["attributes"]
-    assert len(otel[0]["traceId"]) == 32 and len(otel[0]["spanId"]) == 16
+    assert len(otel[0]["traceId"]) == 32
+    assert len(otel[0]["spanId"]) == 16
     assert int(otel[0]["endTimeUnixNano"]) >= int(otel[0]["startTimeUnixNano"]) > 0
 
 
