@@ -337,6 +337,38 @@ bearer token and is never subject to RBAC.
   ``DATA_TOOLS`` in ``je_auto_control.utils.rbac.policy``. A ``viewer`` keeps
   every other read-only tool: screen size, windows, pixels, image and text
   location, accessibility reads, waits.
+- The rule behind that list: a tool that returns **records or configuration
+  the host keeps** needs ``read_data``; a tool that only observes the live
+  screen needs ``read_screen``. So ``read_data`` also covers run history and
+  what is computed from it (``ac_list_run_history``, ``ac_flaky_report``,
+  ``ac_rank_tests``, ``ac_select_tests``, ``ac_shard_suite``); agent traces
+  and the cost ledger (``ac_trace_export``, ``ac_trace_summary``,
+  ``ac_costs_list``, ``ac_costs_summary``); action journals
+  (``ac_journal_read``, ``ac_journal_runs``); the self-healing log, its
+  statistics, stored revisions and datasets (``ac_self_heal_log_list``,
+  ``ac_heal_stats``, ``ac_self_heal_revision_list``,
+  ``ac_self_heal_evaluate``); locator strategy history, repairs and saved
+  libraries (``ac_ab_report``, ``ac_ab_best_strategy``, ``ac_repair_pending``,
+  ``ac_repair_resolved``, ``ac_element_list``, ``ac_skill_list``,
+  ``ac_skill_search``); stored policy and state (``ac_usb_acl_list``,
+  ``ac_lease_active``, ``ac_quarantine_list``, ``ac_pending_artifacts``,
+  ``ac_config_sync_status``); and a connected device's clipboard
+  (``ac_android_get_clipboard``, ``ac_ios_get_clipboard``). These were
+  ``read_screen`` before, so **a viewer token can no longer call them**;
+  ``operator`` and ``admin`` are unaffected.
+- What a call costs is not a capability. ``ac_vlm_locate`` and
+  ``ac_self_heal_locate`` read the screen and stay ``read_screen`` although a
+  call may be billed by a model provider; limit spend with the rate limiter
+  or by not configuring a VLM backend for a server viewers reach.
+- The classification covers MCP tools only. The REST routes ``GET /history``
+  and ``GET /usb/acl`` still need ``read_screen``, as the REST table in the
+  operations chapter says, so a viewer token reads the same run history and
+  USB ACL there.
+- Tools that report the live state of this process rather than a stored
+  record -- ``ac_list_executions``, ``ac_scheduler_list_jobs``,
+  ``ac_trigger_list``, ``ac_hotkey_list``, ``ac_observe_list``,
+  ``ac_watchdog_list``, ``ac_journal_status``, the USB device lists -- stay
+  ``read_screen``.
 - ``tools/list`` returns only the tools the caller may call, and
   ``tools/call`` on any other answers JSON-RPC error ``-32003``
   (``Forbidden: ...``, ``data.required_capability``) without running it.
@@ -669,11 +701,12 @@ that is not marked read-only and is registered on a running read-only server
 out of ``tools/list`` and a call to it is answered ``-32602`` and recorded in
 the audit log as ``denied``. In the default ``full`` mode the filter used to
 run only when the registry was built, so such a tool was listed and ran.
-Plugin tools are registered as destructive, so **a read-only server runs no
-plugin tool**; a tool your own code registers with ``readOnlyHint`` true is
-still offered. ``MCPServer(tools=[...])`` with the variable set is filtered
-the same way -- pass ``read_only=False`` to an embedded server that must
-ignore the variable.
+Plugin tools are registered as destructive unless the plugin declares
+otherwise, so **a read-only server runs no plugin tool that has not declared
+itself read-only** (see `Plugin hot-reload`_); a tool your own code registers
+with ``readOnlyHint`` true is still offered. ``MCPServer(tools=[...])`` with
+the variable set is filtered the same way -- pass ``read_only=False`` to an
+embedded server that must ignore the variable.
 
 Confining file arguments to root directories
 ============================================
@@ -881,6 +914,48 @@ directory and let :class:`PluginWatcher` keep the registry in sync:
 Each register / unregister fires
 ``notifications/tools/list_changed`` so the client refreshes its
 cached catalogue automatically.
+
+**Declaring a plugin tool read-only.** A plugin tool is registered as
+mutating: it is absent from a read-only server and needs ``drive_input``
+under RBAC. A plugin opts one of its callables out by setting the attribute
+``mcp_read_only`` to ``True`` on it:
+
+.. code-block:: python
+
+   def AC_queue_depth():
+       """How many jobs are waiting."""
+       return {"depth": len(_pending)}
+
+   AC_queue_depth.mcp_read_only = True
+
+The tool is then registered with ``readOnlyHint`` true. It is listed and
+runs on a read-only server in all three tool modes (``full``,
+``progressive`` -- once enabled -- and ``static``, when the profile names
+it), and under RBAC it needs only ``read_screen``, so a ``viewer`` may call
+it. Only the read-only hint is taken from the plugin; the tool is not
+marked idempotent.
+
+.. warning::
+
+   The declaration is **trusted, not verified**. It is the plugin author's
+   word: the server cannot tell what arbitrary Python does, and a callable
+   that declares itself read-only and then writes files or sends input will
+   do so on a read-only server and for a viewer. Declaring it does not
+   sandbox it. Review a plugin before giving it a directory a read-only or
+   viewer-facing server watches. Each time such a tool is registered the
+   server logs a warning naming it (``plugin tool 'plugin_ac_queue_depth' is
+   registered read-only because its plugin declared mcp_read_only=True; the
+   declaration is trusted, not verified``).
+
+Anything other than the boolean ``True`` is not a declaration: ``"true"``,
+``1``, a callable, an attribute that raises. Such a value is logged and the
+tool stays mutating, as does a tool with no attribute or with ``False``.
+The same rule applies to tools registered through
+``register_plugin_tools(server, commands)`` and ``make_plugin_tool``; the
+attribute's name is ``PLUGIN_READ_ONLY_ATTRIBUTE`` in
+``je_auto_control.utils.mcp_server.tools.plugin_tools``. The declaration
+says nothing to the ``AC_*`` executor command of the same name, and the path
+roots still do not reach a plugin tool's arguments.
 
 CI smoke tests with the fake backend
 ====================================

@@ -489,7 +489,16 @@ Chat-ops bot
 Transport-agnostic ``CommandRouter`` plus a polling Slack adapter so
 ``/run <script>`` over Slack hits the same execution path as the
 scheduler. Built-in commands: ``/help``, ``/scripts``, ``/run``,
-``/screenshot [name]``, ``/status``. ``/screenshot`` writes into the
+``/stop [run-id]``, ``/screenshot [name]``, ``/status``. ``/run`` is a
+stoppable run named ``chatops-<script>-<8 hex digits>`` (the id is in the
+reply's ``metadata["run_id"]`` and in ``AC_list_executions`` while it
+lasts): ``AC_stop_execution``, the MCP ``ac_stop_execution`` tool and the
+GUI's stop-all end it, **including a stop-all that names no run**, and the
+reply is ``run stopped.``. ``/stop`` asks the chat-started runs to stop;
+``/stop <run-id>`` asks the one named, wherever it was started. The Slack
+adapter handles one message at a time, so a ``/stop`` posted while its own
+``/run`` is still going is read after that run has ended -- stop such a run
+from the GUI, an action list or MCP. ``/screenshot`` writes into the
 context's ``screenshot_dir`` (default: ``je_auto_control_chatops`` in the
 temp directory) and keeps only the file name it is given. The Slack
 adapter goes through the package HTTP client, so the egress policy applies.

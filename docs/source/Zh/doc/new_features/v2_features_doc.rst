@@ -434,8 +434,14 @@ Chat-ops 機器人
 
 傳輸層中立的 ``CommandRouter`` 加上 Slack polling adapter，
 ``/run <script>`` 經 Slack 進入和 scheduler 相同的執行路徑。
-內建命令：``/help``、``/scripts``、``/run``、``/screenshot``、
-``/status``。``/screenshot [name]`` 寫進 context 的 ``screenshot_dir``
+內建命令：``/help``、``/scripts``、``/run``、``/stop [run-id]``、``/screenshot``、
+``/status``。``/run`` 是一個可停止的執行，名稱為 ``chatops-<腳本>-<8 個十六進位字元>``
+（id 在回覆的 ``metadata["run_id"]`` 裡，執行期間也列在 ``AC_list_executions``）：
+``AC_stop_execution``、MCP 的 ``ac_stop_execution`` 工具與 GUI 的「全部停止」都能結束它，
+**包含不指名的全部停止**，回覆是 ``run stopped.``。``/stop`` 要求由聊天啟動的執行停止；
+``/stop <run-id>`` 要求指名的那一個停止，不論它從哪裡啟動。Slack adapter 一次處理一則訊息，
+所以在自己的 ``/run`` 還在跑時送出的 ``/stop`` 要等那次執行結束後才會被讀到——
+這種執行請從 GUI、action list 或 MCP 停止。``/screenshot [name]`` 寫進 context 的 ``screenshot_dir``
 （預設為暫存目錄下的 ``je_auto_control_chatops``），給的名稱只保留檔名。
 Slack adapter 走套件的 HTTP client，所以出站政策同樣適用。
 RBAC 透過 ``required_role`` 參數。

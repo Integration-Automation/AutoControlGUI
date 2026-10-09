@@ -23,7 +23,7 @@ from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.mcp_server.audit import AuditLogger
 from je_auto_control.utils.mcp_server.http_transport import DEFAULT_PATH, HttpMCPServer
 from je_auto_control.utils.mcp_server.server import MCPServer
-from je_auto_control.utils.mcp_server.tools import build_default_tool_registry
+from je_auto_control.utils.mcp_server.tools import MCPTool, build_default_tool_registry
 from je_auto_control.utils.rbac import (
     USERS_ENV, AuthorizationContext, AuthorizationError, Capability, IssuedToken,
     Role, UserAuthError, UserStore, admin, authorization_scope, can,
@@ -392,6 +392,61 @@ def test_data_tools_need_more_than_read_screen(users):
     assert not names & DATA_TOOLS
     assert {"ac_screen_size", "ac_list_windows", "ac_get_pixel", "screenshot"} - names == {
         "screenshot"}, "screen-state tools stay; the screenshot tool is not read-only"
+
+
+_STORED_RECORD_TOOLS = (
+    # the ones the maintainer named
+    "ac_list_run_history", "ac_costs_list", "ac_costs_summary", "ac_trace_export",
+    "ac_self_heal_log_list", "ac_usb_acl_list",
+    # the rest of the registry that meets the same rule
+    "ac_trace_summary", "ac_heal_stats", "ac_self_heal_revision_list",
+    "ac_self_heal_evaluate", "ac_flaky_report", "ac_rank_tests", "ac_select_tests",
+    "ac_shard_suite", "ac_ab_report", "ac_ab_best_strategy", "ac_journal_read",
+    "ac_journal_runs", "ac_lease_active", "ac_element_list", "ac_skill_list",
+    "ac_skill_search", "ac_repair_pending", "ac_repair_resolved", "ac_quarantine_list",
+    "ac_pending_artifacts", "ac_config_sync_status",
+    "ac_android_get_clipboard", "ac_ios_get_clipboard",
+)
+_LIVE_SCREEN_TOOLS = (
+    "ac_vlm_locate", "ac_self_heal_locate",  # they read the screen; cost is not a capability
+    "ac_locate_text", "ac_locate_image_center", "ac_a11y_list", "ac_element_find",
+    "ac_list_executions", "ac_scheduler_list_jobs", "ac_journal_status",
+)
+
+
+def test_stored_records_need_read_data_and_the_live_screen_only_read_screen():
+    registry = {tool.name: tool for tool in build_default_tool_registry(read_only=False)}
+    for name in _STORED_RECORD_TOOLS:
+        assert registry[name].annotations.read_only, name
+        assert capability_for_tool(name, True) == Capability.READ_DATA, name
+    for name in _LIVE_SCREEN_TOOLS:
+        assert registry[name].annotations.read_only, name
+        assert capability_for_tool(name, True) == Capability.READ_SCREEN, name
+    assert len(DATA_TOOLS) == 71
+
+
+def test_a_viewer_is_refused_a_stored_record_tool_and_an_operator_is_not():
+    ran = []
+
+    def handler():
+        ran.append("history")
+        return []
+
+    registry = [tool for tool in build_default_tool_registry(read_only=False)
+                if tool.name == "ac_list_run_history"]
+    server = MCPServer(tools=[MCPTool(
+        name=registry[0].name, description="history", input_schema={"type": "object"},
+        handler=handler, annotations=registry[0].annotations)])
+    call = json.dumps({"jsonrpc": "2.0", "id": 1, "method": "tools/call",
+                       "params": {"name": "ac_list_run_history", "arguments": {}}})
+    with authorization_scope(AuthorizationContext("viewer-user", Role.VIEWER)):
+        refused = json.loads(server.handle_line(call))
+    assert refused["error"]["code"] == -32003
+    assert refused["error"]["data"]["required_capability"] == Capability.READ_DATA
+    assert ran == []
+    with authorization_scope(AuthorizationContext("op", Role.OPERATOR)):
+        allowed = json.loads(server.handle_line(call))
+    assert allowed["result"]["isError"] is False and ran == ["history"]
 
 
 def test_an_alias_needs_what_its_tool_needs():

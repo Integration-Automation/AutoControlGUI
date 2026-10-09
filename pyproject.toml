@@ -364,6 +364,7 @@ module = [
     "je_auto_control.gui.remote_desktop.webrtc_viewer_files",
     "je_auto_control.gui.remote_desktop.webrtc_viewer_media",
     "je_auto_control.gui.remote_desktop.webrtc_viewer_ui",
+    "je_auto_control.gui.script_builder.one_time_dialog",
     "je_auto_control.gui.tab_registry",
     "je_auto_control.gui.task_controller",
     "je_auto_control.gui.theme",

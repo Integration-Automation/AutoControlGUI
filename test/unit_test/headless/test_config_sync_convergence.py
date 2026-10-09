@@ -193,9 +193,12 @@ def test_a_deletion_reaches_an_offline_machine_however_long_it_was_away(server):
     client = _client()
     entry = SyncEntry.create("hk1", {"combo": "ctrl+a"}, "laptop")
     client.push_operations([_op(entry)], device_id="laptop", now=0.0)
-    client.push_operations([], device_id="desktop", now=0.0)
+    # Reading the bucket lists nobody; the desktop's first own change does.
+    assert client.push_operations([], device_id="desktop", now=0.0).pushed is False
+    shared = entry.edited({"combo": "ctrl+a"}, "desktop")
+    client.push_operations([_op(shared)], device_id="desktop", now=0.0)
 
-    client.push_operations([_op(entry.removed("laptop"))], device_id="laptop", now=1.0)
+    client.push_operations([_op(shared.removed("laptop"))], device_id="laptop", now=1.0)
     # Years pass on the laptop's clock; the desktop has not been back.
     for year in range(1, 4):
         result = client.push_operations([], device_id="laptop", now=year * 3.2e7)
@@ -219,7 +222,8 @@ def test_retired_peer_requires_full_sync(server):
     client = ConfigSyncClient("https://sync.invalid", user_id="alice", tombstone_hold_s=0)
     entry = SyncEntry.create("hk1", {"combo": "ctrl+a"}, "laptop")
     client.push_operations([_op(entry)], device_id="laptop")
-    client.push_operations([], device_id="desktop")
+    entry = entry.edited({"combo": "ctrl+a"}, "desktop")
+    client.push_operations([_op(entry)], device_id="desktop")   # lists the desktop
     stale_edit = entry.edited({"combo": "made while away"}, "desktop")
 
     client.retire_peer("desktop")
@@ -243,7 +247,8 @@ def test_peers_unseen_for_too_long_are_retired_when_asked(server):
     client = _client()
     seed = SyncEntry.create("hk0", {"combo": "seed"}, "laptop")
     client.push_operations([_op(seed)], device_id="laptop", now=0.0)
-    client.push_operations([], device_id="desktop", now=0.0)
+    client.push_operations([_op(seed.edited({"combo": "seed"}, "desktop"))],
+                           device_id="desktop", now=0.0)
     entry = SyncEntry.create("hk1", {"combo": "a"}, "laptop")
     client.push_operations([_op(entry)], device_id="laptop", now=100.0, max_offline_s=50.0)
     assert server.body["peers"]["desktop"]["retired"] is True

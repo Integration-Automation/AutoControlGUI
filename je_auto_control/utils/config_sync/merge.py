@@ -200,16 +200,22 @@ def apply_operation(bucket: ConfigBucket, operation: SyncOperation,
 def awaits_ack(bucket: ConfigBucket, device_id: str) -> bool:
     """Whether ``bucket`` needs a write from ``device_id`` that carries no change.
 
-    A device already listed under ``peers`` owes one while a tombstone waits
-    for its acknowledgement. A device not listed yet owes one to *join* --
-    so that later deletions wait for it -- but only when the bucket holds
-    versioned entries: with none there is nothing whose deletion could be
-    forgotten before this device saw it, and the write would be an empty
-    revision.
+    Only a device already listed under ``peers`` can owe one, and only while
+    a tombstone waits for its acknowledgement. A device the bucket does not
+    list owes nothing: joining is not worth a revision of its own. It is
+    listed by the first change it commits, and until then a deletion reaches
+    it through the tombstone, which is held for
+    :data:`~je_auto_control.utils.config_sync.versions.TOMBSTONE_HOLD_S`
+    after every listed device acknowledged it.
+
+    What that gives up: an unlisted device that edits an entry and first
+    sends the edit after the hold has run out re-creates an entry deleted in
+    the meantime, with no conflict. (A copy it did not touch is still
+    removed -- its own baseline shows the entry was deleted elsewhere.)
     """
     peer = bucket.peer_states().get(device_id)
     if peer is None:
-        return any(bucket.sync_entries(section) for section in bucket.sections)
+        return False
     return any(entry.deleted and entry.deleted_revision > peer.acked_revision
                for section in bucket.sections
                for entry in bucket.sync_entries(section).values())

@@ -42,7 +42,8 @@ class CommandSpec:
     body_keys: Tuple[str, ...] = ()
     description: str = ""
     #: The command's result carries a secret that exists nowhere else (a
-    #: freshly issued token). The builder masks it before displaying a run.
+    #: freshly issued token). The builder masks it before displaying a run and
+    #: offers it once through its one-time reveal.
     sensitive_result: bool = False
 
 
@@ -2872,7 +2873,9 @@ def _add_misc_specs(specs: List[CommandSpec]) -> None:
                       placeholder="HS256",
                       choices=("HS256", "HS384", "HS512")),
         ),
-        description="Sign a compact JWT (HMAC) from claims; returns {token}.",
+        description="Sign a compact JWT (HMAC) from claims; returns {token}. This builder masks "
+                    "the token -- read it with 'One-time values' after the run.",
+        sensitive_result=True,
     ))
     specs.append(CommandSpec(
         "AC_jwt_decode", "Security", "JWT: Verify Token",
@@ -5344,7 +5347,7 @@ def _add_user_specs(specs: List[CommandSpec]) -> None:
                            placeholder="default: JE_AUTOCONTROL_RBAC_USERS")
     roles = ("viewer", "operator", "admin")
     token_note = (" The token is in the run's record once; this builder masks it -- "
-                  "run the step from a script, REST or the CLI to read it.")
+                  "read it with 'One-time values' after the run (top-level steps only).")
     specs.append(CommandSpec(
         "AC_user_add", "Security", "User: Add",
         fields=(

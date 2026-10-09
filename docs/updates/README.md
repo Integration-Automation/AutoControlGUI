@@ -58,6 +58,8 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261009-38 | 2026-10-09 | Script Builder shows a freshly issued token once; command results are masked before they are logged | #done #gui #security | [2026-10](2026-10.md) |
+| U-20261009-37 | 2026-10-09 | Plug-in tools can declare themselves read-only; stored records need read_data; a chat /run can be stopped; joining a bucket commits nothing | #done #mcp #rbac #chatops #sync | [2026-10](2026-10.md) |
 | U-20261009-36 | 2026-10-09 | GUI: task callbacks held weakly, dispose() on every panel and tab with background work, per-thread UI Automation, 52 fewer typing exemptions | #done #gui #accessibility #typing | [2026-10](2026-10.md) |
 | U-20261009-35 | 2026-10-09 | Config sync: oversize blobs refused before upload, unused blobs collected, a deletion held for 30 days, the mirror sees same-tick edits | #done #sync | [2026-10](2026-10.md) |
 | U-20261009-34 | 2026-10-09 | A stop wakes the polling waits; MCP can stop and list runs; a USB ACL file that fails its check denies everything; per-thread context | #done #executor #mcp #security #rbac | [2026-10](2026-10.md) |
@@ -385,7 +387,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | File | Period | Entries |
 |---|---|---:|
-| [2026-10.md](2026-10.md) | 2026-10 | 49 |
+| [2026-10.md](2026-10.md) | 2026-10 | 51 |
 | [2026-09-e.md](2026-09-e.md) | 2026-09 | 7 |
 | [2026-09-d.md](2026-09-d.md) | 2026-09 | 55 |
 | [2026-09-c.md](2026-09-c.md) | 2026-09 | 38 |

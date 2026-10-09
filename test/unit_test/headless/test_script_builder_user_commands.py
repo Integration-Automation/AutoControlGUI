@@ -45,7 +45,8 @@ def test_role_fields_offer_exactly_the_three_roles():
 
 def test_only_the_token_returning_commands_are_marked():
     marked = {command for command, spec in COMMAND_SPECS.items() if spec.sensitive_result}
-    assert marked == _TOKEN_COMMANDS
+    # AC_jwt_encode mints a bearer credential the same way: it exists only in the reply.
+    assert marked == _TOKEN_COMMANDS | {"AC_jwt_encode"}
 
 
 def test_a_run_record_is_shown_without_the_token(tmp_path):

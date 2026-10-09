@@ -560,8 +560,11 @@ Over MCP the same two are the tools ``ac_stop_execution`` (``run_id``,
 ``ac_list_executions`` (read-only). There is no separate "run stoppably" tool:
 ``ac_execute_actions`` and ``ac_execute_action_file`` take any action list, so
 the list itself carries the ``AC_run_stoppable`` block shown above. A ChatOps
-command whose run is stopped replies ``<command> stopped.`` (with the reason
-in parentheses) instead of reporting a failure.
+``/run`` is a stoppable run by itself, named ``chatops-<script>-<id>``, so
+every stop above reaches it -- a stop that names no run included -- and the
+chat command ``/stop [run-id]`` does too. A ChatOps command whose run is
+stopped replies ``<command> stopped.`` (with the reason in parentheses)
+instead of reporting a failure.
 
 What a stop does:
 

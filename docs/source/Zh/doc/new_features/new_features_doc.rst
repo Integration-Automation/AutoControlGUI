@@ -517,7 +517,9 @@ GUI：**Variables** 分頁 — 即時檢視 ``executor.variables``，可單筆�
 在 MCP 上，同樣的兩件事是工具 ``ac_stop_execution``\ （參數 ``run_id`` 與 ``reason``\ ，需要
 ``drive_input``\ ，唯讀的 server 不提供）與 ``ac_list_executions``\ （唯讀）。沒有另外的
 「以可停止方式執行」工具： ``ac_execute_actions`` 與 ``ac_execute_action_file`` 接受
-任何 action list，所以由清單自己帶上面的 ``AC_run_stoppable`` 區塊。ChatOps 指令的
+任何 action list，所以由清單自己帶上面的 ``AC_run_stoppable`` 區塊。ChatOps 的
+``/run`` 本身就是可停止的執行，名稱為 ``chatops-<腳本>-<id>``\ ，所以上面每一種停止
+（包含不指名的停止）都停得到它，聊天指令 ``/stop [run-id]`` 也可以。ChatOps 指令的
 執行被停止時，回覆是 ``<command> stopped.``\ （原因放在括號裡），而不是回報失敗。
 
 停止時會發生的事：

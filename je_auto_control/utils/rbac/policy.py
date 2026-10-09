@@ -127,12 +127,36 @@ COMMAND_CAPABILITIES: Dict[str, str] = {
 #: Read-only MCP tools that expose data rather than screen state. "Read-only"
 #: says a tool changes nothing; it does not say that what it returns is
 #: something a viewer of the desktop was meant to see.
+#:
+#: The rule: a tool that returns records or configuration the host keeps --
+#: history, traces, cost ledgers, healing logs, journals, saved libraries, ACL
+#: contents -- is listed here; a tool that only observes the live screen (or
+#: computes on what the caller sent) is not. What a tool costs to run is a
+#: separate question this table does not answer: ``ac_vlm_locate`` and
+#: ``ac_self_heal_locate`` read the screen and stay ``read_screen`` although a
+#: call may be billed by a model provider.
 DATA_TOOLS = frozenset({
-    # the clipboard and its history
+    # the clipboard and its history, a connected device's included
     "ac_get_clipboard", "ac_get_clipboard_csv", "ac_get_clipboard_files",
     "ac_get_clipboard_html", "ac_get_clipboard_image", "ac_get_clipboard_rtf",
     "ac_clipboard_formats", "ac_assert_clipboard",
     "ac_clip_history_list", "ac_clip_history_search",
+    "ac_android_get_clipboard", "ac_ios_get_clipboard",
+    # records the host keeps of what ran: run history and what is derived
+    # from it, agent traces, the cost ledger, action journals
+    "ac_list_run_history", "ac_flaky_report", "ac_rank_tests", "ac_select_tests",
+    "ac_shard_suite", "ac_trace_export", "ac_trace_summary",
+    "ac_costs_list", "ac_costs_summary", "ac_journal_read", "ac_journal_runs",
+    # the self-healing log, its statistics, stored revisions and datasets;
+    # locator strategy history and repairs; saved locators and skills
+    "ac_self_heal_log_list", "ac_heal_stats", "ac_self_heal_revision_list",
+    "ac_self_heal_evaluate", "ac_ab_report", "ac_ab_best_strategy",
+    "ac_repair_pending", "ac_repair_resolved", "ac_element_list",
+    "ac_skill_list", "ac_skill_search",
+    # stored policy and state: the USB ACL, lease tokens, quarantine,
+    # artifacts awaiting approval, the recorded config-sync state
+    "ac_usb_acl_list", "ac_lease_active", "ac_quarantine_list",
+    "ac_pending_artifacts", "ac_config_sync_status",
     # files: their content, or an oracle on it (substring, digest)
     "ac_load_dotenv", "ac_load_data", "ac_read_action_file", "ac_read_document",
     "ac_read_presentation", "ac_read_workbook", "ac_extract_pdf_text",
