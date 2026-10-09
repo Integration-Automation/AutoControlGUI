@@ -33,6 +33,7 @@ editing one block.
 """
 from __future__ import annotations
 
+import html
 import json
 import os
 import smtplib
@@ -167,6 +168,11 @@ def _path_inside(base_dir: Path, name: str) -> Path:
     return Path(candidate)
 
 
+def _refuse_fetch(url: str, *_args: object, **_kwargs: object) -> dict:
+    """WeasyPrint URL fetcher that loads nothing: the digest has no assets."""
+    raise ValueError(f"the digest loads no external resource: {url!r}")
+
+
 def render_report(summary: str, raw_messages: Sequence[SlackMessage],
                    output_dir: Path) -> Path:
     """Render an HTML report + (if weasyprint is available) a PDF.
@@ -176,11 +182,14 @@ def render_report(summary: str, raw_messages: Sequence[SlackMessage],
     """
     output_dir.mkdir(parents=True, exist_ok=True)
     today = datetime.now(tz=timezone.utc).date().isoformat()
+    # Slack messages and the model's summary are text from outside the
+    # program: escaped, they cannot add markup (an <img> or <link> that
+    # would make the PDF renderer open a local file or a URL).
     rows = "".join(
-        f"<li><strong>{m.user}</strong>: {m.text}</li>"
+        f"<li><strong>{html.escape(m.user)}</strong>: {html.escape(m.text)}</li>"
         for m in raw_messages
     )
-    html = f"""<!doctype html>
+    page = f"""<!doctype html>
 <html><head><meta charset="utf-8"><title>Daily Slack digest — {today}</title>
 <style>
   body {{ font-family: -apple-system, sans-serif; margin: 2em; }}
@@ -191,20 +200,21 @@ def render_report(summary: str, raw_messages: Sequence[SlackMessage],
 <body>
 <h1>Daily Slack digest — {today}</h1>
 <h2>Summary</h2>
-<pre>{summary}</pre>
+<pre>{html.escape(summary)}</pre>
 <h2>Raw messages ({len(raw_messages)})</h2>
 <ul>{rows}</ul>
 </body></html>
 """
     html_path = _path_inside(output_dir, f"digest-{today}.html")
-    html_path.write_text(html, encoding="utf-8")
+    html_path.write_text(page, encoding="utf-8")
     try:
         from weasyprint import HTML
     except ImportError:
         print("  (no weasyprint — sending the HTML instead)")
         return html_path
     pdf_path = _path_inside(output_dir, f"digest-{today}.pdf")
-    HTML(string=html).write_pdf(str(pdf_path))
+    # The page needs nothing but itself, so the renderer may fetch nothing.
+    HTML(string=page, url_fetcher=_refuse_fetch).write_pdf(str(pdf_path))
     return pdf_path
 
 
