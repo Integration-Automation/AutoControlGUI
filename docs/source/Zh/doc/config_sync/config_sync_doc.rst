@@ -178,9 +178,19 @@ vector 為 ``{"<裝置 id>": n}``。``peers`` 多出
 這個版本之前蓋章的 tombstone 沒有 ``deleted_at``,和以前一樣在確認後就移除;那樣的版本也不會保留
 已確認的 tombstone,所以保留期的效果取決於仍在提交的最舊 client。
 
-裝置在第一次 push 時加入 ``peers``;bucket 還沒列出的裝置呼叫 ``push_operations([])``,
-在 bucket 有 entry 時就是這樣的一次 push(之後的刪除必須等它),在 bucket 沒有任何 entry 時
-不寫入任何東西 —— 空帳號的第一次同步不會提交 revision。
+裝置在第一次提交變更時加入 ``peers``。bucket 還沒列出的裝置呼叫 ``push_operations([])``
+不會寫入任何東西,不論 bucket 有沒有 entry:只讀取 bucket 的裝置不會為了加入而提交 revision,
+空帳號的第一次同步也不會。(先前對已有內容的 bucket 加入時會寫一個 revision,
+讓之後的刪除等這台裝置。)
+
+**還沒被列出的裝置仍然得到什麼、得不到什麼。** 裝置未被列出期間發生的刪除,透過保留中的
+tombstone 送達:三十天內,它沒動過的副本會被移除,期間編輯過的副本會變成衝突。保留期過後
+tombstone 就不在了。裝置沒動過的副本仍然會被移除 —— 它自己的基準記錄了那筆 entry 來自
+bucket,所以 entry 不見就是別處做的刪除。不再保證的是編輯過的副本:一台只讀取過 bucket
+的裝置,編輯了某筆 entry,並在該 entry 於別處被刪除超過 ``TOMBSTONE_HOLD_S`` 之後才第一次
+送出這個編輯,會\ **在沒有衝突的情況下把 entry 重新建立**。有加入 revision 時,tombstone
+會無限期等這台裝置,那個編輯會是衝突。補救方式和從未同步過的機器相同:讓每台機器至少每三十天
+同步一次,或在離線之前先提交一次變更。
 
 不會再回來的裝置以 ``client.retire_peer(device_id)`` 退休(或以
 ``push_operations(..., max_offline_s=...)`` 自動退休,它比較 ``last_seen`` ——

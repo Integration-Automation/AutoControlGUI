@@ -226,11 +226,12 @@ class ConfigSyncClient:
         commits against the fetched revision -- fetching again when another
         device got there first, up to ``max_attempts`` times. Applying the
         same operations twice changes nothing, so a batch can be resent
-        after an uncertain failure. With no operations this still pushes
-        when the bucket holds a deletion this device has not acknowledged,
-        or to list a device the bucket does not know yet -- unless the
-        bucket holds no entries, when there is nothing to commit and
-        ``pushed`` is false.
+        after an uncertain failure. With no operations this pushes only
+        when the bucket lists this device and holds a deletion it has not
+        acknowledged; otherwise nothing is committed and ``pushed`` is
+        false. In particular a device the bucket does not list yet is not
+        recorded for merely reading it: it joins ``peers`` with the first
+        change it commits.
 
         Raises :class:`FullResyncRequired` when the group has retired this
         device. ``max_offline_s`` retires peers not seen for that long.

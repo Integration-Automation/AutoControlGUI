@@ -4,8 +4,10 @@ A device's first ``push_operations([])`` always pushed, to list the device
 under ``peers``. Against an account with no entries that produced revision 1
 of a bucket holding nothing but the device's own name -- a write, a row in
 the server's database and a 409 for anyone pushing at the same moment, all
-for no content. Joining is only worth a revision when the bucket holds
-entries whose later deletion must wait for this device.
+for no content. Joining a bucket that does hold entries is not worth a
+revision either: the device is listed by the first change it commits, and
+until then a deletion reaches it through the held tombstone
+(``test_config_sync_join_without_commit.py``).
 """
 from unittest.mock import patch
 
@@ -90,14 +92,18 @@ def test_the_first_real_change_still_creates_the_bucket_and_lists_the_device(tmp
     assert list(server.body["peers"]) == ["laptop"]
 
 
-def test_joining_a_bucket_that_holds_entries_is_still_recorded(tmp_path, server):
-    # Not an empty change: from here on a deletion of "a" must wait for the desktop.
+def test_joining_a_bucket_that_holds_entries_commits_nothing_either(tmp_path, server):
     _run(tmp_path, "laptop", {"a": {"v": 1}})
     store = {}
     report, _outbox = _run(tmp_path, "desktop", store)
     assert store == {"a": {"v": 1}}
+    assert report.state == "synced" and report.revision == 1
+    assert server.puts == 1 and list(server.body["peers"]) == ["laptop"]
+    # The desktop's first real change is what lists it ...
+    store["b"] = {"v": 2}
+    report, _outbox = _run(tmp_path, "desktop", store)
     assert report.revision == 2 and set(server.body["peers"]) == {"laptop", "desktop"}
-    # Once listed, a further sync with nothing new writes nothing.
+    # ... and once listed, a further sync with nothing new writes nothing.
     _run(tmp_path, "desktop", store)
     assert server.puts == 2
 
