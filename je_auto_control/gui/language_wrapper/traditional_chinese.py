@@ -857,10 +857,10 @@ traditional_chinese_word_dict = {
     "sb_one_time_step": "步驟 {step}",
     "sb_one_time_copy": "複製",
     "sb_one_time_available": "有 {count} 個一次性的值：按「一次性的值」查看，只能看一次。",
-    "sb_one_time_nested": (
-        "這裡無法取得：在區塊內產生的值（{commands}）。"
-        "區塊不會記錄其內部指令的結果。"
-    ),
+    "sb_one_time_inside": "{block} 第 {run} 次，步驟 {step}",
+    "sb_one_time_shown": "一次性的值已經顯示過，不再保留。",
+    "sb_one_time_limit": "這次執行只保留了前 {limit} 個一次性的值；之後的值無法顯示。",
+    "sb_one_time_close_clear": "關閉並清除剪貼簿",
     "jr_dialog_open": "開啟動作日誌",
     "jr_dialog_start": "要附加寫入的日誌檔",
     "jr_dialog_save_code": "儲存候選腳本",

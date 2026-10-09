@@ -69,6 +69,8 @@ optional ``alg``; it returns ``{token}``. ``AC_jwt_decode`` takes ``token``,
 raising). Both are exposed as the MCP tools ``ac_jwt_encode`` / ``ac_jwt_decode``
 and as Script Builder commands under **Security**. The builder masks the
 token ``AC_jwt_encode`` returns in its result pane; read it once with
-**One-time values** after the run (a script still receives it). The executor's
-result log masks secret-named fields (``token``, ``password``...) of every
-command's result.
+**One-time values** after the run (a script still receives it), also when the
+step ran inside a block such as ``AC_loop``. The executor's result log masks
+secret-named fields (``token``, ``password``...) of every command's result at
+any depth, and the builder's result pane applies the same rule to every
+command.

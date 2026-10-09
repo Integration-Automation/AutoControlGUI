@@ -60,5 +60,6 @@ token 可直接接上 HTTP 用戶端:
 ``audience`` / ``leeway``,回傳 ``{ok, claims}``(或 ``{ok: false, error}``,讓流程可在不拋出
 例外的情況下分支)。兩者皆以 MCP 工具 ``ac_jwt_encode`` / ``ac_jwt_decode`` 以及 Script Builder
 中 **Security** 分類下的命令提供。Script Builder 的結果面板會遮蔽 ``AC_jwt_encode`` 回傳的
-token;執行後按 **一次性的值** 可看一次(腳本照舊收到 token)。執行器的結果 log 會遮蔽每個命令
-結果中名稱屬於機密的欄位(``token``、``password``…)。
+token;執行後按 **一次性的值** 可看一次(腳本照舊收到 token),步驟位於 ``AC_loop`` 之類的區塊
+裡時也一樣。執行器的結果 log 會遮蔽每個命令結果中、任何深度、名稱屬於機密的欄位(``token``、
+``password``…),Script Builder 的結果面板對每個命令套用同一條規則。

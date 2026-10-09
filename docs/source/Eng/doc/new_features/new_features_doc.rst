@@ -44,6 +44,25 @@ Run an action list through the executor without invoking any side effects
 
    executor.execute_action(actions, step_callback=lambda a: print(a))
 
+``result_callback`` is told the result of every command that returned,
+including the ones inside a block (``AC_loop``, ``AC_try``, ``AC_if_*``...),
+whose results are in no execution record::
+
+   def seen(command, arguments, result, path):
+       # path: one (run, position, command) per enclosing action list,
+       # e.g. step 2 (AC_loop) > iteration 3, step 1
+       ...
+
+   executor.execute_action(actions, result_callback=seen)
+
+The hook lasts for that run on the calling thread only (a thread the run
+starts, such as an ``AC_parallel`` branch, is not followed), a failed command
+and a ``dry_run`` report nothing, and a callback that raises is logged by its
+exception type and ignored. The run returns and logs the same with or without
+it. ``result`` is the recorded object: do not change it. To observe several
+runs, use ``with observe_results(seen):`` from
+``je_auto_control.utils.executor.result_hook``.
+
 From the CLI::
 
    python -m je_auto_control.cli run script.json --dry-run

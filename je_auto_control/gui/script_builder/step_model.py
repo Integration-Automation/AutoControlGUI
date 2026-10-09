@@ -1,17 +1,21 @@
 """Step data model and (de)serialisation between the tree view and AC JSON.
 
-Also what the builder may show of a run: :func:`displayable_record` masks the
-results of commands whose schema entry is marked ``sensitive_result``, and
-:func:`one_time_values` lists what it masked, for the builder's one-time
-reveal. Neither writes anything anywhere; both are free of Qt.
+Also what the builder may show of a run: :func:`displayable_record` masks
+every secret-named field of every command's result, and
+:class:`OneTimeCollector` gathers what it masked while the run reports each
+result, for the builder's one-time reveal. Neither writes anything anywhere;
+both are free of Qt.
 """
 import json
-import re
+import threading
 from dataclasses import dataclass, field
-from typing import Any, Dict, Iterator, List, Mapping, Optional, Set, Tuple
+from typing import Any, Dict, List, Mapping, Optional, Tuple
 
 from je_auto_control.gui.script_builder.command_schema import COMMAND_SPECS
-from je_auto_control.utils.executor.action_redaction import SENSITIVE_ARGUMENT_NAMES
+from je_auto_control.utils.executor.action_redaction import (
+    FieldPath, MaskedField, masked_fields, record_command, redact_result,
+)
+from je_auto_control.utils.executor.result_hook import StepPath
 from je_auto_control.utils.json.json_file import read_action_json, write_action_json
 
 
@@ -46,133 +50,140 @@ class Step:
 
 #: Shown in place of a marked command's result that is not a mapping.
 HIDDEN_RESULT = "(hidden: this command's result carries a secret)"
-_MASK = "***"
-# A record key is "execute: " + str(action); the command is its first element.
-_RECORD_COMMAND = re.compile(r"^execute: \['(AC_\w+)'")
+#: The most one-time values kept for one run; a loop issuing more keeps the first ones.
+MAX_ONE_TIME_VALUES = 200
 
 
 def displayable_record(record: Any) -> Any:
     """A copy of an execution record that is safe to print in the builder.
 
-    The result of a command marked ``sensitive_result`` -- at the top level or
-    inside a block's nested record -- keeps its shape with every secret-named
-    field masked, so the row still says which user it was. A failure is a
-    string (the error's ``repr``) and is shown as it is. The record itself is
-    not changed.
+    Every command's result keeps its shape with every secret-named field
+    masked, at any depth, by the rule the executor's result log uses
+    (:func:`~je_auto_control.utils.executor.action_redaction.redact_result`);
+    the identifiers that rule lists (an approval request's id) stay readable.
+    A failure is a string (the error's ``repr``) and is shown as it is. The
+    result of a command marked ``sensitive_result`` that has no fields to mask
+    by name is hidden whole. The record itself is not changed.
     """
-    if isinstance(record, list):
-        return [displayable_record(item) for item in record]
     if not isinstance(record, dict):
-        return record
-    shown: Dict[Any, Any] = {}
-    for key, value in record.items():
-        if _marked_command(key) is not None:
-            shown[key] = _without_secrets(value)
-        else:
-            shown[key] = displayable_record(value)
-    return shown
+        return redact_result(None, record, show_identifiers=True)
+    return {key: _shown_result(record_command(key), value) for key, value in record.items()}
 
 
-def _marked_command(key: Any) -> Optional[str]:
-    """The command of record key ``key`` when its result is marked sensitive."""
-    match = _RECORD_COMMAND.match(key) if isinstance(key, str) else None
-    if match is None:
-        return None
-    spec = COMMAND_SPECS.get(match.group(1))
-    return match.group(1) if spec is not None and spec.sensitive_result else None
+def _shown_result(command: Optional[str], value: Any) -> Any:
+    if _hidden_whole(command, value):
+        return HIDDEN_RESULT
+    return redact_result(command, value, show_identifiers=True)
+
+
+def _hidden_whole(command: Optional[str], value: Any) -> bool:
+    """Whether ``value`` is a marked command's result with no named fields (a string is a failure)."""
+    spec = COMMAND_SPECS.get(command or "")
+    return (spec is not None and spec.sensitive_result
+            and value is not None and not isinstance(value, (dict, str)))
 
 
 @dataclass(frozen=True)
 class OneTimeValue:
     """One secret a run produced, with what identifies the step that produced it.
 
-    ``step`` is the 1-based position of the top-level step in the run,
-    ``subject`` what the command acted on (the user id) and ``name`` the
-    result field that held the value. ``value`` is left out of the text form,
-    so formatting or logging the object never prints it.
+    ``path`` is where the step ran (one
+    :class:`~je_auto_control.utils.executor.result_hook.StepPosition` per
+    enclosing action list, outermost first), ``subject`` what the command
+    acted on (the user id, the secret's name) and ``name`` the result field
+    that held the value. ``value`` is left out of the text form, so formatting
+    or logging the object never prints it.
     """
-    step: int
+    path: StepPath
     command: str
     subject: str
     name: str
     value: str = field(repr=False)
 
+    @property
+    def step(self) -> int:
+        """The 1-based position of the top-level step the value came from."""
+        return self.path[0].position if self.path else 0
 
-def one_time_values(record: Any) -> List[OneTimeValue]:
-    """Every secret :func:`displayable_record` would mask in ``record``, in run order.
 
-    A command that failed (its result is the error's text) produced none. The
-    record is only read.
+class OneTimeCollector:
+    """Gathers the secrets of one run as the executor reports each command's result.
+
+    :meth:`note` is the run's result hook
+    (``execute_action(actions, result_callback=collector.note)``), so a
+    command in the body of a block is seen as well as a top-level one. What
+    it keeps of a result is exactly what :func:`displayable_record` masks in
+    it. At most ``limit`` values are kept -- the first ones; :meth:`take`
+    says whether any were left out. Nothing is stored outside this object.
     """
-    found: List[OneTimeValue] = []
-    if isinstance(record, dict):
-        for position, (key, value) in enumerate(record.items(), start=1):
-            _collect_secrets(key, value, position, found)
-    return found
+
+    def __init__(self, limit: int = MAX_ONE_TIME_VALUES) -> None:
+        #: The most values kept for the run.
+        self.limit = limit
+        self._values: List[OneTimeValue] = []
+        self._truncated = False
+        self._lock = threading.Lock()
+
+    def note(self, command: str, arguments: Any, result: Any, path: StepPath) -> None:
+        """Keep the secrets of ``result``, what ``command`` at ``path`` returned."""
+        if _hidden_whole(command, result):
+            fields = [MaskedField((), result)]
+        else:
+            fields = masked_fields(command, result, show_identifiers=True)
+        if not fields:
+            return
+        with self._lock:
+            # A block that returns its body's record repeats what the body's steps reported.
+            reported = {value.value for value in self._values
+                        if len(value.path) > len(path) and value.path[:len(path)] == path}
+            for found in fields:
+                text = _as_text(found.value)
+                if text not in reported:
+                    self._keep(OneTimeValue(path, command, _subject(result, arguments, found.path),
+                                            _field_name(found.path), text))
+
+    def _keep(self, value: OneTimeValue) -> None:
+        if len(self._values) < self.limit:
+            self._values.append(value)
+        else:
+            self._truncated = True
+
+    def take(self) -> Tuple[List[OneTimeValue], bool]:
+        """The values kept, in run order, and whether the limit left some out; then forget them."""
+        with self._lock:
+            values, self._values = self._values, []
+            truncated, self._truncated = self._truncated, False
+        return values, truncated
 
 
-def _collect_secrets(key: Any, value: Any, step: int, found: List[OneTimeValue]) -> None:
-    command = _marked_command(key)
-    if command is not None:
-        found.extend(_secrets_of(step, command, value))
-        return
-    for nested_key, nested in _entries(value):
-        _collect_secrets(nested_key, nested, step, found)
+def _as_text(value: Any) -> str:
+    return value if isinstance(value, str) else json.dumps(value, default=str, ensure_ascii=False)
 
 
-def _entries(value: Any) -> Iterator[Tuple[Any, Any]]:
-    """The ``(key, item)`` pairs of a container; a list's items have no key."""
-    if isinstance(value, dict):
-        yield from value.items()
-    elif isinstance(value, list):
-        for item in value:
-            yield None, item
+def _field_name(path: FieldPath) -> str:
+    """``leases[0].token`` for ``("leases", 0, "token")``; a record key is named by its command."""
+    name = ""
+    for part in path:
+        if isinstance(part, int):
+            name += f"[{part}]"
+        else:
+            name += ("." if name else "") + (record_command(part) or str(part))
+    return name
 
 
-def _secrets_of(step: int, command: str, value: Any) -> List[OneTimeValue]:
-    """What a marked command's result holds that the display hides."""
-    if value is None or isinstance(value, str):
-        return []
-    if not isinstance(value, dict):
-        text = json.dumps(value, default=str, ensure_ascii=False)
-        return [OneTimeValue(step, command, "", "", text)]
-    subject = str(value.get("user_id", ""))
-    return [OneTimeValue(step, command, subject, str(name), str(item))
-            for name, item in value.items()
-            if str(name).lower() in SENSITIVE_ARGUMENT_NAMES and item not in (None, "")]
+_SUBJECT_KEYS = ("user_id", "name")
 
 
-def nested_sensitive_commands(actions: Any) -> List[str]:
-    """The marked commands that sit inside a block of ``actions``, sorted.
-
-    A block (``AC_loop``, ``AC_if_*``, ``AC_try``...) records its own summary,
-    not the results of the commands in its body, so a secret issued there is in
-    no record and cannot be revealed afterwards.
-    """
-    names: Set[str] = set()
-    for action in actions if isinstance(actions, list) else []:
-        for argument in action[1:] if isinstance(action, list) else []:
-            _nested_marked(argument, names)
-    return sorted(names)
-
-
-def _nested_marked(value: Any, names: Set[str]) -> None:
-    if isinstance(value, list) and value and isinstance(value[0], str) and value[0] in COMMAND_SPECS:
-        if COMMAND_SPECS[value[0]].sensitive_result:
-            names.add(value[0])
-        value = value[1:]
-    for _key, item in _entries(value):
-        _nested_marked(item, names)
-
-
-def _without_secrets(value: Any) -> Any:
-    """``value`` with its secret-named fields masked; hidden whole when it has no fields."""
-    if isinstance(value, str):
-        return value
-    if not isinstance(value, dict):
-        return HIDDEN_RESULT
-    return {key: _MASK if str(key).lower() in SENSITIVE_ARGUMENT_NAMES else item
-            for key, item in value.items()}
+def _subject(result: Any, arguments: Any, path: FieldPath) -> str:
+    """Whom or what a value is for: named beside it in the result, else in the arguments."""
+    holder = result
+    for part in path[:-1]:
+        holder = holder[part]
+    for source in (holder, arguments):
+        for key in _SUBJECT_KEYS if isinstance(source, dict) else ():
+            if isinstance(source.get(key), (str, int)) and source[key] != "":
+                return str(source[key])
+    return ""
 
 
 def step_to_action(step: Step) -> list:

@@ -41,9 +41,10 @@ class CommandSpec:
     fields: Tuple[FieldSpec, ...] = ()
     body_keys: Tuple[str, ...] = ()
     description: str = ""
-    #: The command's result carries a secret that exists nowhere else (a
-    #: freshly issued token). The builder masks it before displaying a run and
-    #: offers it once through its one-time reveal.
+    #: The command's result carries a secret (a freshly issued token). The
+    #: builder masks secret-named fields in every command's result and offers
+    #: them once through its one-time reveal, flagged or not; the flag says so
+    #: in the schema and also hides a result that has no named fields at all.
     sensitive_result: bool = False
 
 
@@ -2164,7 +2165,8 @@ def _add_misc_specs(specs: List[CommandSpec]) -> None:
             FieldSpec("requester", FieldType.STRING, optional=True),
             FieldSpec("db", FieldType.STRING, optional=True),
         ),
-        description="Maker-checker: file a high-risk action for approval.",
+        description="Maker-checker: file a high-risk action for approval; returns {token}, the "
+                    "request id to hand to the checker (shown, not masked).",
     ))
     specs.append(CommandSpec(
         "AC_approval_approve", "Tools", "Approval: Approve",
@@ -2198,7 +2200,9 @@ def _add_misc_specs(specs: List[CommandSpec]) -> None:
             FieldSpec("name", FieldType.STRING),
             FieldSpec("ttl", FieldType.FLOAT, optional=True, default=300.0),
         ),
-        description="Issue a short-lived JIT lease for a secret (no value).",
+        description="Issue a short-lived JIT lease for a secret (no value); returns {token, ttl}. "
+                    "This builder masks the token -- read it with 'One-time values' after the run.",
+        sensitive_result=True,
     ))
     specs.append(CommandSpec(
         "AC_lease_valid", "Tools", "Lease: Valid?",
@@ -2213,7 +2217,9 @@ def _add_misc_specs(specs: List[CommandSpec]) -> None:
     specs.append(CommandSpec(
         "AC_lease_active", "Tools", "Lease: List Active",
         fields=(),
-        description="List active leases (token, name, ttl_remaining).",
+        description="List active leases (token, name, ttl_remaining). This builder masks each "
+                    "token -- read them with 'One-time values' after the run.",
+        sensitive_result=True,
     ))
     specs.append(CommandSpec(
         "AC_egress_allow", "Tools", "Egress: Set Allowlist",

@@ -182,12 +182,29 @@ surface, each of which needs the ``manage_users`` capability:
   tab, closing it empties it, and starting the next run or closing the tab
   drops what nobody read. They are never written to the result pane, the
   log, the test record, the run history, the action journal, a saved script
-  or the GUI settings; the Copy button puts one on the clipboard. A token
-  issued inside a block (``AC_loop``, ``AC_try``...) is in no record -- a
-  block records its own summary -- so the result pane says it is not
-  available; keep such a step at the top level, or run it from a script, the
-  CLI or the Users group. ``execute_action`` still returns the token to a
-  script, as before;
+  or the GUI settings; the Copy button puts one on the clipboard. Once a
+  value was copied, **Close and clear clipboard** closes the dialog and
+  empties the clipboard -- only while the clipboard still holds a value
+  copied from that dialog; anything copied since is left alone. After the
+  dialog was opened the result pane says the values were shown. A token
+  issued inside a block (``AC_loop``, ``AC_try``, ``AC_if_*``...) is offered
+  too, although a block records only its own summary: the run reports each
+  command's result to the builder through the executor's result hook, and
+  the value is labelled by its path (``Step 2 › Loop run 3, step 1 · User:
+  Rotate Token · alice · token``). At most 200 values are kept for one run
+  -- the first ones; the result pane says when a run issued more. A run
+  that was stopped or failed still offers what it had issued by then. The
+  hook follows the run's own thread, so a command in an ``AC_parallel``
+  branch is offered from the block's result instead. The pane masks every
+  secret-named field (``token``, ``password``, ``api_key``...) of every
+  command's result at any depth -- a lease token from ``AC_lease_secret`` /
+  ``AC_lease_active``, the shared bearer token ``AC_rest_api_start`` /
+  ``AC_rest_api_status`` answer with -- by the rule the executor's result log
+  uses, and **One-time values** offers exactly the fields that were masked.
+  The one exemption is an identifier the person has to read:
+  ``AC_approval_request`` answers ``{token}``, the request id the maker hands
+  to the checker, which the pane shows (the log still masks it).
+  ``execute_action`` still returns every token to a script, as before;
 - the MCP tools ``ac_user_add`` / ``ac_user_remove`` / ``ac_user_set_role`` /
   ``ac_user_rotate_token`` / ``ac_user_list``;
 - the **Users (RBAC)** group of the REST API tab (commands in the Actions
