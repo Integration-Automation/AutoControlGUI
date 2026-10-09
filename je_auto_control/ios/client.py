@@ -18,7 +18,7 @@ from __future__ import annotations
 
 import functools
 import threading
-from typing import Any, Callable, Optional, Tuple, Type, TypeVar
+from typing import Any, Callable, Optional, TypeVar
 
 from je_auto_control.wrapper.device_context import DeviceUnavailableError
 
@@ -100,9 +100,9 @@ __all__ = [
 _Result = TypeVar("_Result")
 
 
-def _sdk_errors() -> Tuple[Type[BaseException], ...]:
+def _sdk_errors() -> tuple:
     """facebook-wda's base error (an invalid session, a crashed app...), if installed."""
-    errors: Tuple[Type[BaseException], ...] = ()
+    errors: tuple = ()
     try:
         from wda import exceptions as wda_exceptions
     except ImportError:

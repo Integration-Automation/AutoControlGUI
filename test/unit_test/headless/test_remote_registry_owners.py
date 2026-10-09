@@ -270,7 +270,8 @@ def test_a_script_only_session_behaves_as_before(reg, slot):
     assert not _is_up(second)
     assert _occupant(reg, slot) is None
     assert closed["owner"] is None
-    assert not (closed.get("connected") or closed.get("running"))
+    assert not closed.get("connected")
+    assert not closed.get("running")
     getattr(reg, _SCRIPT_CLOSE[slot])()                   # closing nothing is still fine
 
 

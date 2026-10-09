@@ -1,7 +1,7 @@
 """OpenAI (GPT-4-vision family) VLM backend."""
 import base64
 import os
-from typing import Optional, Tuple, Type
+from typing import Optional, Tuple
 
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.vision.backends._parse import (
@@ -79,14 +79,14 @@ class OpenAIVLMBackend(VLMBackend):
         return parse_coords(text)
 
 
-def _sdk_errors() -> Tuple[Type[BaseException], ...]:
+def _sdk_errors() -> tuple:
     """``(openai.OpenAIError,)``, the base of every error the SDK raises.
 
     Evaluated while an exception is being matched, so it must not raise:
     with an injected client and no SDK installed there is nothing of the
     SDK's to catch.
     """
-    errors: Tuple[Type[BaseException], ...] = ()
+    errors: tuple = ()
     try:
         import openai  # nosemgrep: codacy.python.openai.import-without-guardrails  # reason: error type only
     except ImportError:
