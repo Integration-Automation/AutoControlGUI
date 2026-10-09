@@ -42,7 +42,9 @@ executed: measured, that was 11,962 statements and ~24 percentage points
 module `je_auto_control_pytest`, which imports only pytest
 (`test_pytest_entrypoint_light.py` keeps it so), but `coverage run` remains the
 rule: it does not depend on what a plugin imports or on which build is
-installed, and `pytest --cov` has not been re-measured since.
+installed. Re-measured on 2026-10-09 the two agreed (87.35% against 87.32%),
+and the maintainer decided the same day to keep `coverage run` as the only
+spelling.
 `test/unit_test/headless/test_coverage_measurement.py` holds CI to the
 correct spelling. After changing the entry point, reinstall (`pip install -e .`)
 for it to take effect.

@@ -308,8 +308,6 @@ U-20261009-18 的每一個裝置面呼叫都只對假的 ADB／uiautomator2／WD
   新轉成可停止的等待裡，`AC_handle_file_dialog`、`AC_wait_until_app_idle`、`AC_wait_for_composition_commit`、`AC_wait_for_unlock` 與行動裝置的 `wait_for_app` 只對假探針測過。
 - **WebRTC**：`StatsPoller.start()` 會在 GUI 執行緒上最多等 2 秒（`future.result(timeout=2.0)`，是啟動路徑，沒動）。LAN 廣播的註冊與取消已移出 GUI 執行緒，
   但真的 zeroconf 的時間與名稱衝突行為只對假物件測過。
-- **`DECIDE`：釋放 Remote Desktop 分頁時，WebRTC 的 host 與 viewer session 現在會被結束**（TCP／WebSocket 的仍留在 registry）。理由：WebRTC host 只屬於面板，
-  面板釋放後沒有東西能停它，會在看不到的情況下繼續分享畫面。要改回去是拿掉兩個 `dispose()` 裡的 `self._stop_host_if_any` 與 `self._end_session_for_good`。
 - **切換主題後那幾個事件迴圈回合內**，以被暫存的頁面為 parent 的 `QMessageBox` 會相對於隱藏的暫存 widget 定位（只影響位置）。
   系統匣路徑在 offscreen 下沒有 tray，`_on_tray_open` 是直接呼叫測的。基準（`benchmarks/gui_*.py`）CI 仍不設門檻。
 - **把 Python 建的 widget 放進分頁列在結束時崩潰**：已查明觸發條件——分頁列按鈕上接了 Python callable、又有排隊中的 `deleteLater()`、而行程經 `os._exit` 離開；
@@ -326,8 +324,6 @@ U-20261009-18 的每一個裝置面呼叫都只對假的 ADB／uiautomator2／WD
 
 `TODO` — 小項目，各自獨立
 
-- **`DECIDE`：`pytest --cov` 可以放行了嗎**。進入點搬到 `je_auto_control_pytest` 之後重新量過（2026-10-09）：`coverage run -m pytest` 87.35%，`pytest --cov` 87.32%。
-  `CLAUDE.md` 與 `test_coverage_measurement.py` 仍規定只能用 `coverage run`；要不要放寬由維護者決定。
 - **本機的共用 `.venv` 裝著 `je_auto_control_dev 0.0.136`**，它的 `pytest11` 進入點還是舊的重量級路徑；重裝即可，不影響 CI。
 - **free-threaded**：呼叫者身分、綁定的裝置、自愈的執行標記與 stop token 都改成只在設定它的執行緒上有效（`utils/thread_bound.py`）。
   這台機器沒有 free-threaded 直譯器：驗證用的是模擬繼承與真的 `-X thread_inherit_context=1`（3.14.7，GIL 開著）；`free-threaded-scope` job（3.14t）是第一次真的跑。
