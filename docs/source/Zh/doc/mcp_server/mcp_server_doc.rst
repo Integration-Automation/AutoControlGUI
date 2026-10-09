@@ -327,10 +327,11 @@ Bearer token 也可從 ``JE_AUTOCONTROL_MCP_TOKEN`` 環境變數讀取。
 - REST API 依同一條規則：``GET /history`` 與 ``GET /usb/acl`` 和
   ``ac_list_run_history``、``ac_usb_acl_list`` 一樣需要 ``read_data``，所以 viewer 的
   token 在那裡也讀不到執行歷史與 USB ACL（見維運章節的 REST 表格）。
-- 這個分類涵蓋工具，不涵蓋 resource：``resources/read`` 不檢查能力，所以任何通過驗證
-  的角色仍然讀得到 ``autocontrol://history``\ （最近 100 筆執行歷史）與
-  ``autocontrol://files/`` 底下的動作檔。viewer 不該看到時，請用不含它們的 resource
-  provider 啟動伺服器。
+- resource 適用同一條規則。\ ``autocontrol://history``\ （最近 100 筆執行歷史）與
+  ``autocontrol://files/`` 底下的動作檔需要 ``read_data``\ ；\ ``autocontrol://commands``
+  與即時畫面需要 ``read_screen``\ 。\ ``resources/list`` 只列出呼叫者讀得到的，
+  ``resources/read`` 與 ``resources/subscribe`` 對其餘的回 ``-32003``\ 。伺服器不認得的
+  resource URI（自訂 provider 的）視為已儲存的資料，需要 ``read_data``\ 。
 - 回報這個行程目前狀態、而不是保存紀錄的工具——``ac_list_executions``、
   ``ac_scheduler_list_jobs``、``ac_trigger_list``、``ac_hotkey_list``、
   ``ac_observe_list``、``ac_watchdog_list``、``ac_journal_status``、USB 裝置清單——

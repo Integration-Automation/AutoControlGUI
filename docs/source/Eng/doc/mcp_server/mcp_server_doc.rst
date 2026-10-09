@@ -364,11 +364,13 @@ bearer token and is never subject to RBAC.
   need ``read_data`` like ``ac_list_run_history`` and ``ac_usb_acl_list``, so
   a viewer token reads neither the run history nor the USB ACL there either
   (see the REST table in the operations chapter).
-- The classification covers tools, not resources: ``resources/read`` is not
-  checked against a capability, so any authenticated role can still read
-  ``autocontrol://history`` (the last 100 run-history rows) and the action
-  files under ``autocontrol://files/``. Start the server with a resource
-  provider that leaves them out if viewers must not see them.
+- Resources follow the same rule. ``autocontrol://history`` (the last 100
+  run-history rows) and the action files under ``autocontrol://files/`` need
+  ``read_data``; ``autocontrol://commands`` and the live screen feed need
+  ``read_screen``. ``resources/list`` shows a caller only what it may read,
+  and ``resources/read`` and ``resources/subscribe`` refuse the rest with
+  ``-32003``. A resource URI the server does not recognise (one from a custom
+  provider) is treated as stored data and needs ``read_data``.
 - Tools that report the live state of this process rather than a stored
   record -- ``ac_list_executions``, ``ac_scheduler_list_jobs``,
   ``ac_trigger_list``, ``ac_hotkey_list``, ``ac_observe_list``,

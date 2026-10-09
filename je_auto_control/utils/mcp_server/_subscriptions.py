@@ -21,6 +21,7 @@ import threading
 from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Tuple
 
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
+from je_auto_control.utils.mcp_server._authz import authorize_resource
 from je_auto_control.utils.mcp_server._protocol import (
     _is_hashable, _MCPError, _notification_message, _result_response,
 )
@@ -108,6 +109,7 @@ class SubscriptionMixin:
 
     if TYPE_CHECKING:
         _resources: Any
+        _audit: Any
         _resource_subscriptions: Dict[str, Any]
         _subscriptions_lock: threading.Lock
         _listeners: Dict[Any, Listener]
@@ -243,6 +245,8 @@ class SubscriptionMixin:
         uri = params.get("uri")
         if not isinstance(uri, str) or not uri:
             raise _MCPError(-32602, "resources/subscribe requires 'uri'")
+        # A subscription delivers the resource's updates: the same right as reading it.
+        authorize_resource(uri, self._audit, "resources/subscribe")
         # Hold the lock across the check *and* the subscribe so two concurrent
         # requests for the same uri cannot both create a provider handle and
         # leak the loser (a TOCTOU that left an orphaned subscription running).
