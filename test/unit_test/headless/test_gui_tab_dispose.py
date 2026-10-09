@@ -209,9 +209,13 @@ def test_dispose_cancels_the_tabs_background_tasks(qapp):
     controller = task_controller()
     before = controller.active_count()
     controller.submit(work, owner=owner)
-    _dispose.release_resources(owner)
-    assert released == [True]
-    release.set()
+    try:
+        _dispose.release_resources(owner)
+        # The worker may not have reached on_cancel yet; a callback registered
+        # after the cancel runs at once, on the worker thread.
+        assert pump_until(lambda: released == [True])
+    finally:
+        release.set()       # never leave the worker waiting for the next test
     assert pump_until(lambda: controller.active_count() == before)
 
 
