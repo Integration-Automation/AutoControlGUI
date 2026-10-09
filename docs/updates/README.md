@@ -58,6 +58,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261009-41 | 2026-10-09 | Release 1.0.0; the publish job releases a hand-set version as written | #release #ci | [2026-10](2026-10.md) |
 | U-20261009-40 | 2026-10-09 | A result hook reports nested command results; secret-named result fields are masked at any depth and offered once | #done #executor #gui #security | [2026-10](2026-10.md) |
 | U-20261009-39 | 2026-10-09 | REST and MCP resources follow the read_data rule; a Slack /stop no longer waits for the run it stops | #done #security #rbac #mcp #chatops | [2026-10](2026-10.md) |
 | U-20261009-38 | 2026-10-09 | Script Builder shows a freshly issued token once; command results are masked before they are logged | #done #gui #security | [2026-10](2026-10.md) |

@@ -12,9 +12,32 @@ available for compatibility but is not expanded with new integrations.
   replacement. Use `je_auto_control.utils.deprecation.deprecated`.
 - Breaking changes and migrations are recorded in `CHANGELOG.md`.
 
-The project remains pre-1.0. A 1.0 release requires passing stable capability
-tests on every claimed platform, documented recovery/diagnostic behavior, and
-no unresolved critical security advisories.
+## What 1.0.0 promises
+
+1.0.0 (2026-10-09) is the first release under semantic versioning. The
+promise covers the **stable** surface only: `je_auto_control.api`, and the
+capabilities `docs/CAPABILITY_MATRIX.md` marks stable. From here a breaking
+change to that surface needs a new major version and the deprecation window
+above. Beta and experimental surfaces keep the rules above and may change in a
+minor release with a release note.
+
+The bar for 1.0 was: stable capability tests passing on every platform the
+matrix claims, documented recovery and diagnostic behavior, and no unresolved
+critical security advisory. As released:
+
+- The stable rows of the matrix are run by CI on Windows, Linux X11 and Linux
+  Wayland. On macOS the mouse / keyboard / screenshot row is still
+  "implementation": the stable-API suite passes on the macOS runner, but no
+  job drives a real pointer there. Treat macOS input as beta until that row
+  says CI.
+- Recovery and diagnostics are `create_failure_bundle`, the trace and report
+  writers and the action journal, described in the README and `docs/source`.
+- GitHub reported no open Dependabot alert and no open repository security
+  advisory on the day of the release.
+
+What has not been verified on real hardware (a Mac, a phone, a Wayland desktop
+session, USB devices) is listed in `Progress.md`; none of it is in the stable
+surface.
 
 ## Formats and wire versions
 

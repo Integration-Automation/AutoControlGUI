@@ -3,8 +3,10 @@
 This file records user-visible compatibility changes. Detailed development
 notes are recorded in `docs/updates/` (index: `docs/updates/README.md`).
 
-The format follows Keep a Changelog. Until 1.0, breaking changes are permitted
-only when documented here with a migration path.
+The format follows Keep a Changelog and, from 1.0.0, semantic versioning as
+`docs/API_LIFECYCLE.md` scopes it: the stable surface is `je_auto_control.api`,
+and a breaking change to it needs a deprecation here first. Beta and
+experimental surfaces change with a release note in this file.
 
 New entries go under `## Unreleased`. The version bump on `main` is automated
 and does not touch this file, so after a release tag appears, move the entries
@@ -12,6 +14,21 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 `CHANGELOG.md` shows which ones those are (`git show vX.Y.Z:CHANGELOG.md`).
 
 ## Unreleased
+
+## [1.0.0] - 2026-10-09
+
+The first release under semantic versioning. `docs/API_LIFECYCLE.md` says what
+the number promises: the stable surface is `je_auto_control.api` and the rows
+`docs/CAPABILITY_MATRIX.md` marks stable; everything else keeps its beta or
+experimental label. No name is removed or renamed by this release itself. This
+section also holds what 0.0.223 to 0.0.234 shipped, which was never moved out
+of `Unreleased`.
+
+- The package classifier is `Development Status :: 5 - Production/Stable`
+  (was `2 - Pre-Alpha`).
+- Releases: a merge to `main` still releases the next patch; a minor or major
+  version is released by declaring it in `pyproject.toml`
+  (`scripts/stable_release.py`).
 
 ### Added
 

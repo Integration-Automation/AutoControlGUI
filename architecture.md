@@ -36,7 +36,7 @@ entry points → execution core (`utils/executor/`) → headless capabilities (`
 | `examples/`, `benchmarks/` | Runnable example scripts; latency smoke benchmark. |
 | `docker/`, `k8s/helm/`, `ci_templates/` | Container images and backend verification harnesses, Helm chart, GitLab CI template. |
 | `browser-extension/`, `AutoControl/`, `exe/`, `autocontrol_driver/` | Manifest v3 companion extension, project-template sample, packaged GUI launcher, driver build script. |
-| `scripts/` | Release tooling, not shipped: `dev_release.py` numbers and gates the dev-channel package (§3). |
+| `scripts/` | Release tooling, not shipped: `dev_release.py` numbers and gates the dev-channel package, `stable_release.py` picks the version a push to `main` releases (§3). |
 
 ## 3. Entry points and public interfaces
 
@@ -53,7 +53,7 @@ entry points → execution core (`utils/executor/`) → headless capabilities (`
 | LSP | `autocontrol-lsp` → `autocontrol_lsp.server.server:run`; `python -m autocontrol_lsp.server` | Command list is read from the live executor. |
 | GUI | `start_autocontrol_gui()` in `gui/__init__.py`; `exe/start_autocontrol_gui.py` | Needs `pip install je_auto_control[gui]`; PySide6 is imported only under `gui/`. |
 | Action lint | `python -m je_auto_control.utils.action_lint` | Used by `.github/workflows/action-json-lint.yml`. |
-| PyPI packages | `je_auto_control` (stable), `je_auto_control_dev` (dev channel) | Both ship the same `je_auto_control` import package. Stable: a push to `main` runs the `publish` job of `stable.yml`, which bumps `pyproject.toml`, uploads and tags. Dev: the `publish-dev` job of `dev.yml` runs after the headless suite on a push to `dev`, builds from `dev.toml` and uploads when the commit is still the tip of `dev` and the wheel differs from the newest published one; `scripts/dev_release.py` takes the version from PyPI (newest release plus one patch), so nothing is committed back. `dev.toml` declares what `pyproject.toml` declares (`test_dev_toml_parity.py`). Both jobs hold the PyPI token and install nothing but the hash-locked `.github/requirements/publish.txt` (`build`, `twine` and the `setuptools` backend, generated from `publish.in` beside it), then build with `python -m build --no-isolation`, so the backend is the locked one (`test_publish_tooling_lock.py`). |
+| PyPI packages | `je_auto_control` (stable), `je_auto_control_dev` (dev channel) | Both ship the same `je_auto_control` import package. Stable: a push to `main` runs the `publish` job of `stable.yml`, which takes the version from `scripts/stable_release.py` (one patch above the declared version when that one is tagged; the declared version itself when it is not, which is how a minor or major release such as 1.0.0 is made), uploads and tags. Dev: the `publish-dev` job of `dev.yml` runs after the headless suite on a push to `dev`, builds from `dev.toml` and uploads when the commit is still the tip of `dev` and the wheel differs from the newest published one; `scripts/dev_release.py` takes the version from PyPI (newest release plus one patch), so nothing is committed back. `dev.toml` declares what `pyproject.toml` declares (`test_dev_toml_parity.py`). Both jobs hold the PyPI token and install nothing but the hash-locked `.github/requirements/publish.txt` (`build`, `twine` and the `setuptools` backend, generated from `publish.in` beside it), then build with `python -m build --no-isolation`, so the backend is the locked one (`test_publish_tooling_lock.py`). |
 
 ## 4. Main flows
 

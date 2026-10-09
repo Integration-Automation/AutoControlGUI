@@ -123,9 +123,10 @@ jobs:
 
   publish:
     needs: test
-    # Releases ride on merges to main: this job bumps the patch version,
-    # uploads to PyPI with the PYPI_API_TOKEN secret, then pushes the bump
-    # commit (marked [skip ci]) and its v* tag. The guard is what keeps it
+    # Releases ride on merges to main: this job picks the version
+    # (scripts/stable_release.py: the next patch, or the untagged version
+    # pyproject.toml declares), uploads to PyPI with the PYPI_API_TOKEN
+    # secret, then pushes the bump commit (marked [skip ci]) and its v* tag. The guard is what keeps it
     # off pull requests and the nightly schedule, which the same workflow
     # also triggers on — without it every PR would cut a release.
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
@@ -149,33 +150,12 @@ jobs:
       - name: Install the hash-locked build tooling
         run: "python -m pip install --require-hashes --only-binary :all: -r .github/requirements/publish.txt"
 
-      - name: Bump patch version in pyproject.toml
+      # One patch above the declared version when that one is already tagged
+      # (every ordinary merge); the declared version itself when it is not,
+      # which is how a minor or major release is made. See the script.
+      - name: Choose the version to release
         id: bump
-        run: |
-          python <<'PY'
-          import os
-          import re
-          import pathlib
-
-          path = pathlib.Path("pyproject.toml")
-          text = path.read_text(encoding="utf-8")
-          match = re.search(r'^version\s*=\s*"(\d+)\.(\d+)\.(\d+)"', text, flags=re.M)
-          if not match:
-              raise SystemExit("version line not found in pyproject.toml")
-          major, minor, patch = (int(part) for part in match.groups())
-          new_version = f"{major}.{minor}.{patch + 1}"
-          text = re.sub(
-              r'^version\s*=\s*"\d+\.\d+\.\d+"',
-              f'version = "{new_version}"',
-              text,
-              count=1,
-              flags=re.M,
-          )
-          path.write_text(text, encoding="utf-8")
-          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as fh:
-              fh.write(f"new_version={new_version}\n")
-          print(f"Bumped to {new_version}")
-          PY
+        run: python scripts/stable_release.py
 
       # --no-isolation: the backend is the setuptools the lock pins, not the
       # newest one downloaded into a fresh build environment.
@@ -193,7 +173,8 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add pyproject.toml
-          git commit -m "Bump version to ${{ steps.bump.outputs.new_version }} [skip ci]"
+          # A version set by hand is already what main declares: nothing to commit.
+          git diff --cached --quiet || git commit -m "Bump version to ${{ steps.bump.outputs.new_version }} [skip ci]"
           git tag "v${{ steps.bump.outputs.new_version }}"
           git pull --rebase origin main
           git push origin main
