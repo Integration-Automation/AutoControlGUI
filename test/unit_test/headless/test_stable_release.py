@@ -6,6 +6,7 @@ out as 1.0.1), and releasing a version that is already tagged. The last tests re
 ``.github/workflows/stable.yml``, since the script only matters while the publish job runs it.
 """
 import importlib.util
+import shutil
 from pathlib import Path
 
 import pytest
@@ -63,6 +64,8 @@ def test_prepare_refuses_a_pyproject_without_a_plain_version(tmp_path):
         stable_release.prepare(tmp_path)
 
 
+@pytest.mark.skipif(shutil.which("git") is None or not (REPO_ROOT / ".git").exists(),
+                    reason="needs git and a checkout; the Docker image has neither")
 def test_released_tags_reads_the_release_tags_of_this_repository():
     tags = stable_release.released_tags(REPO_ROOT)
     assert all(len(tag) == 3 for tag in tags)
