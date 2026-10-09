@@ -389,12 +389,12 @@ def test_the_token_reaches_no_log_record_journal_history_script_or_setting(
 
 def test_the_reveal_code_names_no_store_that_persists():
     """The dialog and the tab hold the values; neither module can write them anywhere."""
-    from je_auto_control.gui.script_builder import builder_tab, one_time_dialog
-
-    dialog_source = Path(one_time_dialog.__file__).read_text(encoding="utf-8")
+    # Read as text: importing the modules needs a Qt that some CI images lack.
+    package = Path(__file__).resolve().parents[3] / "je_auto_control" / "gui" / "script_builder"
+    dialog_source = (package / "one_time_dialog.py").read_text(encoding="utf-8")
     for word in ("autocontrol_logger", "QSettings", "window_settings", "run_history",
                  "test_record", "action_journal", "open(", "write"):
         assert word not in dialog_source.replace("dialog.open()", "").replace("``open()``", ""), word
-    tab_source = Path(builder_tab.__file__).read_text(encoding="utf-8")
+    tab_source = (package / "builder_tab.py").read_text(encoding="utf-8")
     for word in ("autocontrol_logger", "QSettings", "window_settings", "run_history", "test_record"):
         assert word not in tab_source, word
