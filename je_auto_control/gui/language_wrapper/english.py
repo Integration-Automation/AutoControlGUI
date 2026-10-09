@@ -981,6 +981,19 @@ english_word_dict = {
     "rh_journal_link": "Journal run {run} in {path}",
     "re_import_journal": "Import journal run…",
     "sb_import_journal": "Import journal",
+    "sb_one_time_show": "One-time values",
+    "sb_one_time_title": "One-time values of the last run",
+    "sb_one_time_notice": (
+        "These values exist nowhere else and are shown this once. Copy what you need now: "
+        "closing this window, or starting another run, forgets them."
+    ),
+    "sb_one_time_step": "Step {step}",
+    "sb_one_time_copy": "Copy",
+    "sb_one_time_available": "{count} one-time value(s) available: press 'One-time values' to read them, once.",
+    "sb_one_time_nested": (
+        "Not available here: values issued inside a block ({commands}). "
+        "A block records no result for the commands in its body."
+    ),
     "jr_dialog_open": "Open action journal",
     "jr_dialog_start": "Journal file to append to",
     "jr_dialog_save_code": "Save candidate script",

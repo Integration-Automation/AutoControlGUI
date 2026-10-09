@@ -158,7 +158,15 @@ CLI::
   ``AC_user_remove``、``AC_user_set_role``、``AC_user_rotate_token`` 與
   ``AC_user_list``——所以 ``POST /execute`` 也可以。Script Builder 在 **Security**
   分類列出這五個指令；執行結果面板顯示 ``AC_user_add``／``AC_user_rotate_token`` 時
-  會遮蔽 token，所以新 token 請從使用者群組、CLI 或腳本取得；
+  會遮蔽 token，並註明有一次性的值可看。接著按工具列的 **一次性的值**，就會把該次
+  執行的每個 token 顯示一次，各自標上步驟（``步驟 1 · User: Add · alice · token``），
+  每個值有自己的「複製」按鈕。對話框不會自動開啟，所以無人值守的執行不會被打斷。
+  這些值只存在記憶體裡：開啟對話框時就從分頁取走，關閉對話框即清空，開始下一次
+  執行或關閉分頁則丟棄沒人看過的值。它們不會寫進結果面板、log、測試紀錄、執行歷史、
+  動作日誌、儲存的腳本或 GUI 設定；「複製」按鈕會把值放到剪貼簿。在區塊
+  （``AC_loop``、``AC_try``…）裡產生的 token 不在任何紀錄中——區塊只記錄自己的
+  摘要——所以結果面板會註明無法取得；請把這種步驟放在最上層，或改從腳本、CLI、
+  使用者群組執行。``execute_action`` 照舊把 token 回傳給腳本；
 - MCP 工具 ``ac_user_add``／``ac_user_remove``／``ac_user_set_role``／
   ``ac_user_rotate_token``／``ac_user_list``；
 - REST API 分頁的 **使用者（RBAC）** 群組（指令在 Actions 選單），該分頁也可以用這個

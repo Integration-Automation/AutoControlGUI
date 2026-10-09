@@ -871,6 +871,19 @@ japanese_word_dict = {
     "rh_journal_link": "ジャーナル実行 {run}({path})",
     "re_import_journal": "ジャーナルの実行を取り込む…",
     "sb_import_journal": "ジャーナル取込",
+    "sb_one_time_show": "一度だけの値",
+    "sb_one_time_title": "前回の実行の一度だけの値",
+    "sb_one_time_notice": (
+        "これらの値は他のどこにも存在せず、今回だけ表示されます。必要な値を今コピーしてください。"
+        "このウィンドウを閉じるか次の実行を開始すると破棄されます。"
+    ),
+    "sb_one_time_step": "ステップ {step}",
+    "sb_one_time_copy": "コピー",
+    "sb_one_time_available": "一度だけの値が {count} 件あります。「一度だけの値」を押すと一度だけ確認できます。",
+    "sb_one_time_nested": (
+        "ここでは取得できません：ブロック内で発行された値（{commands}）。"
+        "ブロックは内部のコマンドの結果を記録しません。"
+    ),
     "jr_dialog_open": "アクションジャーナルを開く",
     "jr_dialog_start": "追記するジャーナルファイル",
     "jr_dialog_save_code": "候補スクリプトを保存",

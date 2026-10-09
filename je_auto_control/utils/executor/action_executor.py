@@ -8517,7 +8517,8 @@ class Executor:
                     signal, execute_record_dict, raise_on_error, key)
 
         for key, value in execute_record_dict.items():
-            autocontrol_logger.info("%s -> %s", key, value)
+            # Masked by field name: a minted token (AC_jwt_encode, a lease) is a result, not an argument.
+            autocontrol_logger.info("%s -> %s", key, redact_actions(value))
         return execute_record_dict
 
     @staticmethod
