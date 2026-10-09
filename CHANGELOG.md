@@ -238,6 +238,21 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Changed
 
+- RBAC: REST `GET /history` and `GET /usb/acl` need `read_data`; a `viewer`
+  token gets 403 there. MCP `resources/read`, `resources/list` and
+  `resources/subscribe` are gated the same way: `autocontrol://history` and
+  `autocontrol://files/...` need `read_data`, and a resource URI the server
+  does not recognise is treated as stored data.
+- Slack bot: `/run` runs on a worker thread and its reply arrives when the
+  script ends; a second `/run` while one is going is refused instead of queued.
+  `SlackBot.stop()` also stops the running command and returns `bool`.
+- `execute_action` takes `result_callback=`; it is called after every command
+  that returned, nested ones included.
+- Script Builder: every secret-named field of a command's result is masked at
+  any depth, flagged or not (`AC_lease_secret`, `AC_lease_active`,
+  `AC_rest_api_start`, `AC_rest_api_status` were shown in plain text). The
+  executor's result log leaves a secret-named field that is `None` or empty
+  as it is.
 - RBAC: 29 MCP tools that return stored records or configuration (run history,
   costs, traces, heal logs, journals, the USB ACL, lease tokens, mobile
   clipboards) now need `read_data` instead of `read_screen`. The built-in

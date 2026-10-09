@@ -182,12 +182,29 @@ surface, each of which needs the ``manage_users`` capability:
   tab, closing it empties it, and starting the next run or closing the tab
   drops what nobody read. They are never written to the result pane, the
   log, the test record, the run history, the action journal, a saved script
-  or the GUI settings; the Copy button puts one on the clipboard. A token
-  issued inside a block (``AC_loop``, ``AC_try``...) is in no record -- a
-  block records its own summary -- so the result pane says it is not
-  available; keep such a step at the top level, or run it from a script, the
-  CLI or the Users group. ``execute_action`` still returns the token to a
-  script, as before;
+  or the GUI settings; the Copy button puts one on the clipboard. Once a
+  value was copied, **Close and clear clipboard** closes the dialog and
+  empties the clipboard -- only while the clipboard still holds a value
+  copied from that dialog; anything copied since is left alone. After the
+  dialog was opened the result pane says the values were shown. A token
+  issued inside a block (``AC_loop``, ``AC_try``, ``AC_if_*``...) is offered
+  too, although a block records only its own summary: the run reports each
+  command's result to the builder through the executor's result hook, and
+  the value is labelled by its path (``Step 2 › Loop run 3, step 1 · User:
+  Rotate Token · alice · token``). At most 200 values are kept for one run
+  -- the first ones; the result pane says when a run issued more. A run
+  that was stopped or failed still offers what it had issued by then. The
+  hook follows the run's own thread, so a command in an ``AC_parallel``
+  branch is offered from the block's result instead. The pane masks every
+  secret-named field (``token``, ``password``, ``api_key``...) of every
+  command's result at any depth -- a lease token from ``AC_lease_secret`` /
+  ``AC_lease_active``, the shared bearer token ``AC_rest_api_start`` /
+  ``AC_rest_api_status`` answer with -- by the rule the executor's result log
+  uses, and **One-time values** offers exactly the fields that were masked.
+  The one exemption is an identifier the person has to read:
+  ``AC_approval_request`` answers ``{token}``, the request id the maker hands
+  to the checker, which the pane shows (the log still masks it).
+  ``execute_action`` still returns every token to a script, as before;
 - the MCP tools ``ac_user_add`` / ``ac_user_remove`` / ``ac_user_set_role`` /
   ``ac_user_rotate_token`` / ``ac_user_list``;
 - the **Users (RBAC)** group of the REST API tab (commands in the Actions
@@ -213,11 +230,16 @@ rotated token or a changed role applies to the next request.
      - Endpoints
    * - ``read_screen``
      - viewer, operator, admin
-     - every ``GET`` except the two below, ``/metrics`` included
+     - the ``GET`` routes that observe live state: ``/screenshot``,
+       ``/mouse_position``, ``/screen_size``, ``/windows``, ``/sessions``,
+       ``/commands``, ``/jobs``, ``/inspector/recent``, ``/inspector/summary``,
+       ``/usb/devices``, ``/usb/events``, ``/usb/passthrough/status``,
+       ``/usb/loopback/devices``, ``/usb/remote/devices``, ``/diagnose``,
+       ``/metrics``, ``/openapi.json``
    * - ``read_data``
      - operator, admin
-     - no REST route; the MCP tools that return the host's data rather than
-       its screen (see the MCP chapter)
+     - ``GET /history``, ``GET /usb/acl``; the MCP tools that return the
+       host's data rather than its screen (see the MCP chapter)
    * - ``drive_input``
      - operator, admin
      - ``POST /execute``, ``/execute_file``, ``/usb/loopback/open``,
@@ -241,6 +263,25 @@ A role that lacks the capability gets ``403``
 ``{"error": "forbidden", "required_capability": "...", "role": "..."}``.
 The same value is published per operation as ``x-required-capability`` in
 ``/openapi.json``.
+
+**Stored records need** ``read_data`` **on REST as on MCP.** A route that
+returns records or configuration the host keeps needs ``read_data``; a route
+that observes live state needs ``read_screen``. ``GET /history`` (the run
+history, as the MCP tool ``ac_list_run_history``) and ``GET /usb/acl`` (the
+stored USB ACL, as ``ac_usb_acl_list``) needed only ``read_screen`` before, so
+**a viewer token is now answered 403 on those two routes**; ``operator`` and
+``admin`` are unaffected, and so is a server without a user store (the shared
+token is not restricted by any role). Every other ``GET`` keeps its
+capability: each one that has an MCP counterpart (``/jobs`` and
+``ac_scheduler_list_jobs``, ``/sessions`` and ``ac_remote_host_status``,
+``/usb/passthrough/status``, the USB device lists...) already needed what its
+tool needs. A test pairs each route with the read-only MCP tools whose
+handler reads the same source and fails when the two disagree.
+
+The built-in dashboard calls neither route. With a token whose role lacks a
+panel's capability -- the audit panel needs ``read_audit`` -- that panel now
+says ``not available to role '<role>': needs the '<capability>' capability``
+instead of ``HTTP 403 on <path>``, and the other panels keep refreshing.
 
 Being allowed to ``POST /execute`` is being allowed to run actions, not every
 command. Signing an action file (``sign_actions``), reading the audit log

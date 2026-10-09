@@ -5,7 +5,9 @@ turns the ``Authorization`` header value into either a refusal or -- when a user
 store is configured -- the caller's identity. :func:`visible_tools` and
 :func:`authorize_tool_call` are the dispatcher's: ``tools/list`` shows only
 what the caller may call, and ``tools/call`` refuses the rest, so the two
-answers cannot disagree.
+answers cannot disagree. :func:`visible_resources` and
+:func:`authorize_resource` do the same for ``resources/list``,
+``resources/read`` and ``resources/subscribe``.
 
 Without a user store nothing here identifies anyone: the transport keeps
 its optional shared token and the dispatcher offers every tool, as before.
@@ -103,6 +105,43 @@ def authorize_tool_call(tool: MCPTool, arguments: Dict[str, Any],
     raise _MCPError(FORBIDDEN_CODE, message, {"required_capability": needed})
 
 
+def resource_capability(uri: str) -> str:
+    """The capability reading resource ``uri`` needs.
+
+    The same rule as for tools: what observes the live host (the command
+    catalogue, the screen feed) needs ``read_screen``; stored records and
+    files (run history, action files) need ``read_data``. A URI this does not
+    recognise is treated as stored data, so a provider added later is closed
+    to a viewer until it is classified here.
+    """
+    _scheme, _sep, path = uri.partition("://")
+    if path == "commands" or path == "screen" or path.startswith("screen/"):
+        return Capability.READ_SCREEN
+    return Capability.READ_DATA
+
+
+def visible_resources(resources: List[Any]) -> List[Any]:
+    """The resources the current caller may read; all of them outside an RBAC scope."""
+    caller = current_authorization()
+    if caller is None:
+        return resources
+    return [resource for resource in resources if caller.allows(resource_capability(resource.uri))]
+
+
+def authorize_resource(uri: str, audit: AuditLogger, method: str = "resources/read") -> None:
+    """Refuse, and record, a resource the current caller's role does not grant."""
+    caller = current_authorization()
+    needed = resource_capability(uri)
+    if caller is None or caller.allows(needed):
+        return
+    message = (f"Forbidden: resource {uri!r} needs the {needed!r} capability; "
+               f"role {caller.role!r} does not grant it")
+    audit.record(tool=method, arguments={"uri": uri}, status="denied",
+                 duration_seconds=0.0, error_text=message)
+    raise _MCPError(FORBIDDEN_CODE, message, {"required_capability": needed})
+
+
 __all__ = [
-    "FORBIDDEN_CODE", "authorize_tool_call", "check_bearer", "visible_tools",
+    "FORBIDDEN_CODE", "authorize_resource", "authorize_tool_call", "check_bearer",
+    "resource_capability", "visible_resources", "visible_tools",
 ]

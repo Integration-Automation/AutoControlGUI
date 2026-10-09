@@ -360,10 +360,17 @@ bearer token and is never subject to RBAC.
   ``ac_self_heal_locate`` read the screen and stay ``read_screen`` although a
   call may be billed by a model provider; limit spend with the rate limiter
   or by not configuring a VLM backend for a server viewers reach.
-- The classification covers MCP tools only. The REST routes ``GET /history``
-  and ``GET /usb/acl`` still need ``read_screen``, as the REST table in the
-  operations chapter says, so a viewer token reads the same run history and
-  USB ACL there.
+- The REST API follows the same rule: ``GET /history`` and ``GET /usb/acl``
+  need ``read_data`` like ``ac_list_run_history`` and ``ac_usb_acl_list``, so
+  a viewer token reads neither the run history nor the USB ACL there either
+  (see the REST table in the operations chapter).
+- Resources follow the same rule. ``autocontrol://history`` (the last 100
+  run-history rows) and the action files under ``autocontrol://files/`` need
+  ``read_data``; ``autocontrol://commands`` and the live screen feed need
+  ``read_screen``. ``resources/list`` shows a caller only what it may read,
+  and ``resources/read`` and ``resources/subscribe`` refuse the rest with
+  ``-32003``. A resource URI the server does not recognise (one from a custom
+  provider) is treated as stored data and needs ``read_data``.
 - Tools that report the live state of this process rather than a stored
   record -- ``ac_list_executions``, ``ac_scheduler_list_jobs``,
   ``ac_trigger_list``, ``ac_hotkey_list``, ``ac_observe_list``,

@@ -42,6 +42,22 @@ Linux (``xclip`` 或 ``xsel``)。若無可用後端會拋出 ``RuntimeError``。
 
    executor.execute_action(actions, step_callback=lambda a: print(a))
 
+``result_callback`` 會收到每一個成功回傳的指令的結果，包含區塊（``AC_loop``、
+``AC_try``、``AC_if_*``…）裡的指令——這些結果不在任何執行紀錄裡::
+
+   def seen(command, arguments, result, path):
+       # path：每一層 action 列表一個 (run, position, command)，
+       # 例如 步驟 2（AC_loop）> 第 3 次、步驟 1
+       ...
+
+   executor.execute_action(actions, result_callback=seen)
+
+掛鉤只在該次執行、呼叫它的執行緒上有效（執行中啟動的執行緒，例如 ``AC_parallel``
+的分支，不會被跟到）；失敗的指令與 ``dry_run`` 不會回報；callback 丟出例外時只記錄
+例外型別並忽略。有沒有掛鉤，執行的回傳值與 log 都相同。``result`` 就是紀錄裡的那個
+物件，請勿修改。要觀察多次執行，可用
+``je_auto_control.utils.executor.result_hook`` 的 ``with observe_results(seen):``。
+
 CLI::
 
    python -m je_auto_control.cli run script.json --dry-run

@@ -880,10 +880,10 @@ japanese_word_dict = {
     "sb_one_time_step": "ステップ {step}",
     "sb_one_time_copy": "コピー",
     "sb_one_time_available": "一度だけの値が {count} 件あります。「一度だけの値」を押すと一度だけ確認できます。",
-    "sb_one_time_nested": (
-        "ここでは取得できません：ブロック内で発行された値（{commands}）。"
-        "ブロックは内部のコマンドの結果を記録しません。"
-    ),
+    "sb_one_time_inside": "{block} {run} 回目、ステップ {step}",
+    "sb_one_time_shown": "一度だけの値は表示済みで、もう保持されていません。",
+    "sb_one_time_limit": "この実行の一度だけの値は最初の {limit} 件だけ保持されました。それ以降の値は表示できません。",
+    "sb_one_time_close_clear": "閉じてクリップボードを消去",
     "jr_dialog_open": "アクションジャーナルを開く",
     "jr_dialog_start": "追記するジャーナルファイル",
     "jr_dialog_save_code": "候補スクリプトを保存",

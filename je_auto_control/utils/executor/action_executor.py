@@ -32,7 +32,12 @@ from je_auto_control.utils.executor.flags import as_bool as _as_bool
 from je_auto_control.utils.executor.flow_control import (
     BLOCK_COMMANDS, LoopBreak, LoopContinue, MacroDepthExceeded,
 )
-from je_auto_control.utils.executor.action_redaction import describe_action, redact_actions
+from je_auto_control.utils.executor.action_redaction import (
+    describe_action, record_command, redact_actions, redact_result,
+)
+from je_auto_control.utils.executor.result_hook import (
+    ResultHook, enter_list, leave_list, observe_results, report_result,
+)
 from je_auto_control.utils.action_journal.recorder import step as _journal_step
 from je_auto_control.utils.executor.mouse_aliases import MOUSE_BUTTON_COMMANDS
 from je_auto_control.utils.executor.run_control import (
@@ -8457,6 +8462,7 @@ class Executor:
                        _validated: bool = False,
                        dry_run: bool = False,
                        step_callback: Optional[Callable[[list], None]] = None,
+                       result_callback: Optional[ResultHook] = None,
                        ) -> Dict[str, str]:
         """
         執行 action list
@@ -8467,8 +8473,15 @@ class Executor:
         :param _validated: 內部用；子呼叫已驗證過時避免重複驗證
         :param dry_run: 若為 True，只記錄將執行的動作，不實際呼叫。
         :param step_callback: 每個 action 開始前呼叫此 hook（偵錯用）。
+        :param result_callback: called with ``(command, arguments, result, path)`` after every
+            command that returned, nested ones included, for this run on this thread only
+            (:mod:`je_auto_control.utils.executor.result_hook`).
         :return: 執行紀錄字典
         """
+        if result_callback is not None:
+            with observe_results(result_callback):
+                return self.execute_action(action_list, raise_on_error, _validated,
+                                           dry_run, step_callback)
         autocontrol_logger.info(f"execute_action, action_list: {redact_actions(action_list)}")
         # A nested body inherits the strictness of the list that runs it, so
         # a failure inside an AC_loop / AC_if_* / macro under raise_on_error
@@ -8499,27 +8512,38 @@ class Executor:
             validate_actions(action_list, self.known_commands(), self._self_loadable())
 
         execute_record_dict: Dict[str, Any] = {}
-        for action in action_list:
-            checkpoint()  # a stop requested for this run ends it between actions
-            if step_callback is not None:
-                step_callback(action)
-            if dry_run:
-                key = _unique_key(execute_record_dict, "dry-run: " + describe_action(action))
-                execute_record_dict[key] = "(not executed)"
-                continue
-            key = _unique_key(execute_record_dict, "execute: " + describe_action(action))
-            try:
-                self._run_one_action(action, execute_record_dict, raise_on_error, key)
-            except (LoopBreak, LoopContinue, MacroDepthExceeded) as signal:
-                if _validated:
-                    raise  # a nested body: the enclosing block handles it
-                self._record_unwound_signal(
-                    signal, execute_record_dict, raise_on_error, key)
+        frame = enter_list()  # None unless a result hook watches this run
+        try:
+            for position, action in enumerate(action_list, start=1):
+                checkpoint()  # a stop requested for this run ends it between actions
+                if frame is not None:
+                    frame.advance(position, action)
+                if step_callback is not None:
+                    step_callback(action)
+                self._run_listed_action(action, execute_record_dict,
+                                        (raise_on_error, _validated, dry_run))
+        finally:
+            leave_list(frame)
 
         for key, value in execute_record_dict.items():
             # Masked by field name: a minted token (AC_jwt_encode, a lease) is a result, not an argument.
-            autocontrol_logger.info("%s -> %s", key, redact_actions(value))
+            autocontrol_logger.info("%s -> %s", key, redact_result(record_command(key), value))
         return execute_record_dict
+
+    def _run_listed_action(self, action: list, record: Dict[str, Any],
+                           modes: Tuple[bool, bool, bool]) -> None:
+        """Run one action of a list under ``modes`` (raise_on_error, _validated, dry_run)."""
+        raise_on_error, _validated, dry_run = modes
+        if dry_run:
+            record[_unique_key(record, "dry-run: " + describe_action(action))] = "(not executed)"
+            return
+        key = _unique_key(record, "execute: " + describe_action(action))
+        try:
+            self._run_one_action(action, record, raise_on_error, key)
+        except (LoopBreak, LoopContinue, MacroDepthExceeded) as signal:
+            if _validated:
+                raise  # a nested body: the enclosing block handles it
+            self._record_unwound_signal(signal, record, raise_on_error, key)
 
     @staticmethod
     def _record_unwound_signal(signal: Exception, record: Dict[str, Any],
@@ -8570,6 +8594,7 @@ class Executor:
             with default_profiler.measure(action_name), _journal_step(action) as step:
                 record[key] = self._execute_event(action)
                 step.outcome(record[key])
+            report_result(action, record[key])  # a no-op unless a result hook watches this run
             _observe_executor_metrics(action_name, started, error=None)
         except (LoopBreak, LoopContinue, ExecutionStopped):
             raise  # a stop is never recorded-and-continued, whatever raise_on_error says
@@ -8681,17 +8706,21 @@ def add_command_to_executor(command_dict: dict) -> None:
 def execute_action(action_list: Union[list, dict], *,
                    raise_on_error: bool = False, dry_run: bool = False,
                    step_callback: Optional[Callable[[list], None]] = None,
+                   result_callback: Optional[ResultHook] = None,
                    ) -> Dict[str, str]:
     """Run ``action_list`` on the shared executor; return its execution record.
 
     The keywords are the ones :meth:`Executor.execute_action` takes:
     ``raise_on_error`` raises at the first failed action instead of recording
-    it, ``dry_run`` lists what would run without calling anything, and
-    ``step_callback`` is called with each action before it starts.
+    it, ``dry_run`` lists what would run without calling anything,
+    ``step_callback`` is called with each top-level action before it starts,
+    and ``result_callback`` with ``(command, arguments, result, path)`` after
+    every command that returned, the ones nested in a block included
+    (:mod:`je_auto_control.utils.executor.result_hook`).
     """
     return executor.execute_action(
         action_list, raise_on_error=raise_on_error, dry_run=dry_run,
-        step_callback=step_callback)
+        step_callback=step_callback, result_callback=result_callback)
 
 
 def execute_files(execute_files_list: list) -> List[Dict[str, str]]:

@@ -163,10 +163,22 @@ CLI::
   每個值有自己的「複製」按鈕。對話框不會自動開啟，所以無人值守的執行不會被打斷。
   這些值只存在記憶體裡：開啟對話框時就從分頁取走，關閉對話框即清空，開始下一次
   執行或關閉分頁則丟棄沒人看過的值。它們不會寫進結果面板、log、測試紀錄、執行歷史、
-  動作日誌、儲存的腳本或 GUI 設定；「複製」按鈕會把值放到剪貼簿。在區塊
-  （``AC_loop``、``AC_try``…）裡產生的 token 不在任何紀錄中——區塊只記錄自己的
-  摘要——所以結果面板會註明無法取得；請把這種步驟放在最上層，或改從腳本、CLI、
-  使用者群組執行。``execute_action`` 照舊把 token 回傳給腳本；
+  動作日誌、儲存的腳本或 GUI 設定；「複製」按鈕會把值放到剪貼簿。只要複製過值，
+  **關閉並清除剪貼簿** 就會關閉對話框並清空剪貼簿——僅在剪貼簿仍是從這個對話框
+  複製的值時才清；之後複製的其他內容不會被動到。對話框開過之後，結果面板會改成
+  註明這些值已經顯示過。在區塊（``AC_loop``、``AC_try``、``AC_if_*``…）裡產生的
+  token 同樣可以看，雖然區塊只記錄自己的摘要：執行時每個指令的結果會透過執行器的
+  結果掛鉤回報給 Script Builder，值則以路徑標示（``步驟 2 › Loop 第 3 次，步驟 1 ·
+  User: Rotate Token · alice · token``）。一次執行最多保留 200 個值——保留最先
+  產生的；超過時結果面板會註明。被停止或失敗的執行，仍可看到在那之前已經產生的值。
+  掛鉤只跟著執行本身的執行緒，所以 ``AC_parallel`` 分支裡的指令改由區塊的結果取得。
+  結果面板會遮蔽每個指令結果中、任何深度、名稱屬於機密的欄位（``token``、
+  ``password``、``api_key``…）——``AC_lease_secret``／``AC_lease_active`` 的租約
+  token、``AC_rest_api_start``／``AC_rest_api_status`` 回傳的共用 bearer token——
+  用的是執行器結果 log 的同一條規則，而 **一次性的值** 提供的正好就是被遮蔽的欄位。
+  唯一的例外是使用者必須看到的識別碼：``AC_approval_request`` 回傳 ``{token}``，
+  那是 maker 交給 checker 的申請編號，結果面板會照樣顯示（log 仍然遮蔽）。
+  ``execute_action`` 照舊把每個 token 回傳給腳本；
 - MCP 工具 ``ac_user_add``／``ac_user_remove``／``ac_user_set_role``／
   ``ac_user_rotate_token``／``ac_user_list``；
 - REST API 分頁的 **使用者（RBAC）** 群組（指令在 Actions 選單），該分頁也可以用這個
@@ -190,10 +202,15 @@ CLI::
      - 端點
    * - ``read_screen``
      - viewer、operator、admin
-     - 除下列兩個之外的所有 ``GET``，包含 ``/metrics``
+     - 觀察目前狀態的 ``GET`` 路由：``/screenshot``、``/mouse_position``、
+       ``/screen_size``、``/windows``、``/sessions``、``/commands``、``/jobs``、
+       ``/inspector/recent``、``/inspector/summary``、``/usb/devices``、
+       ``/usb/events``、``/usb/passthrough/status``、``/usb/loopback/devices``、
+       ``/usb/remote/devices``、``/diagnose``、``/metrics``、``/openapi.json``
    * - ``read_data``
      - operator、admin
-     - 沒有 REST 路由；回傳主機資料而非畫面的 MCP 工具（見 MCP 章節）
+     - ``GET /history``、``GET /usb/acl``；以及回傳主機資料而非畫面的 MCP 工具
+       （見 MCP 章節）
    * - ``drive_input``
      - operator、admin
      - ``POST /execute``、``/execute_file``、``/usb/loopback/open``、
@@ -216,6 +233,21 @@ CLI::
 角色沒有該能力時回 ``403``
 ``{"error": "forbidden", "required_capability": "...", "role": "..."}``。
 同一個值也以 ``x-required-capability`` 列在 ``/openapi.json`` 的每個 operation 上。
+
+**保存的紀錄在 REST 與 MCP 都需要** ``read_data``\ **。** 回傳主機保存的紀錄或設定的
+路由需要 ``read_data``；觀察目前狀態的路由需要 ``read_screen``。``GET /history``\
+（執行歷史，與 MCP 工具 ``ac_list_run_history`` 相同）與 ``GET /usb/acl``\ （保存的
+USB ACL，與 ``ac_usb_acl_list`` 相同）以前只需要 ``read_screen``，所以\ **viewer 的
+token 現在在這兩個路由會得到 403**\ ；``operator`` 與 ``admin`` 不受影響，沒有使用者
+存放檔的伺服器也不受影響（共用 token 不受任何角色限制）。其餘 ``GET`` 的能力不變：
+有對應 MCP 工具的路由（``/jobs`` 與 ``ac_scheduler_list_jobs``、``/sessions`` 與
+``ac_remote_host_status``、``/usb/passthrough/status``、USB 裝置清單……）原本就與工具
+一致。有一個測試會把每個路由與讀取同一個來源的唯讀 MCP 工具配對，兩者不一致時失敗。
+
+內建的 dashboard 不會呼叫這兩個路由。token 的角色缺少某個面板需要的能力時——稽核
+面板需要 ``read_audit``——該面板現在顯示
+``not available to role '<角色>': needs the '<能力>' capability``，而不是
+``HTTP 403 on <路徑>``；其他面板照常更新。
 
 可以 ``POST /execute`` 代表可以執行動作，不代表可以執行每一個指令。替動作檔簽章
 （``sign_actions``）、讀取稽核紀錄（``read_audit``），以及管理主機本身的指令——

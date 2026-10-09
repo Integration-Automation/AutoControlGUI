@@ -5,8 +5,9 @@ default command set::
 
     /help                    list every registered command
     /scripts                 list .json scripts under ``script_root``
-    /run <script-name>       execute one of those scripts
-    /screenshot [path]       capture the screen, reply with the saved path
+    /run <script-name>       execute one of those scripts (one at a time)
+    /stop [run-id]           stop the run /run started, or the one named
+    /screenshot [name]       capture the screen, reply with the saved path
     /status                  show the last 5 runs from the run-history store
 
 Register your own commands by calling ``router.register("deploy", …)``
@@ -60,7 +61,7 @@ def main() -> None:
     try:
         bot.run_forever()
     except KeyboardInterrupt:
-        bot.stop()
+        bot.stop()  # also stops a /run still going and waits for it
 
 
 if __name__ == "__main__":
