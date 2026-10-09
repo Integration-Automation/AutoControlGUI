@@ -39,7 +39,7 @@ _REPO_ROOT = Path(__file__).resolve().parents[3]
 @pytest.fixture(scope="module")
 def qapp():
     app = QApplication.instance() or QApplication([])
-    yield app
+    return app
 
 
 def _flush_deletes(app) -> None:

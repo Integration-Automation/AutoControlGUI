@@ -77,7 +77,10 @@ def _replace(source: str, destination: str) -> None:
     deadline = time.monotonic() + _REPLACE_WAIT_S
     while True:
         try:
-            os.replace(source, destination)
+            # ``source`` is the mkstemp() sibling _atomic_write made; ``destination``
+            # is the file its caller asked to write. This is the shared atomic
+            # writer: it joins no path and takes none from a request itself.
+            os.replace(source, destination)  # NOSONAR pythonsecurity:S8707  # reason: see above
             return
         except PermissionError:
             if time.monotonic() > deadline:

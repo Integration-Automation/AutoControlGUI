@@ -152,8 +152,9 @@ def test_only_authorized_tools_are_indexed():
             "", limit=MAX_SEARCH_LIMIT)]
         assert hidden_tool not in search_names
         assert "fx_where" in search_names
+        index = server.disclosure.index()
         with pytest.raises(ToolDiscoveryError):
-            server.disclosure.index().get_schema(hidden_tool)
+            index.get_schema(hidden_tool)
     # No user store, no RBAC: the same server indexes everything.
     assert hidden_tool in [item.name for item in server.disclosure.index().search(
         "", limit=MAX_SEARCH_LIMIT)]

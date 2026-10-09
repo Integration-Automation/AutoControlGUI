@@ -154,8 +154,9 @@ def test_context_reaches_the_log_from_executor_and_mcp(tmp_path, monkeypatch):
     assert (first.locator_version, first.run_id) == ("v2", "r1")
     assert second.locator_version == "v3"
     assert second.run_id is None
+    handler = _mcp("ac_self_heal_locate").handler
     with pytest.raises(ValueError):
-        _mcp("ac_self_heal_locate").handler(template_path="t.png", context={"x": "y"})
+        handler(template_path="t.png", context={"x": "y"})
 
 
 # --- GUI: a thin shell over the same calls --------------------------------

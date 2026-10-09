@@ -230,8 +230,9 @@ def test_a_change_that_cannot_get_the_lock_is_refused_not_applied(tmp_path, monk
     acl.add_rule(_rule(1))
     monkeypatch.setattr(json_store, "_LOCK_WAIT_S", 0.2)
     (tmp_path / "usb_acl.json.lock").write_text("held", encoding="utf-8")
+    second = _rule(2)
     with pytest.raises(UsbAclBusyError):
-        acl.add_rule(_rule(2))
+        acl.add_rule(second)
     assert len(acl.list_rules()) == 1, "nothing changed in memory either"
     (tmp_path / "usb_acl.json.lock").unlink()
     acl.add_rule(_rule(2))

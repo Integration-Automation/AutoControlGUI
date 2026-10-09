@@ -49,8 +49,9 @@ def _tool(name):
 def test_a_refused_show_command_is_an_error(show, name, command, verb):
     from je_auto_control.utils.exception.exceptions import AutoControlActionException
     show.answer = False
+    tool = _tool(name)
     with pytest.raises(AutoControlActionException) as refused:
-        _tool(name).invoke({"title_substring": "Notepad"})
+        tool.invoke({"title_substring": "Notepad"})
     assert show.calls == [(456, command)]
     message = str(refused.value)
     assert f"could not {verb} 'Notepad' (hwnd 456)" in message
@@ -83,6 +84,7 @@ def test_the_refusal_reaches_the_client_as_a_tool_error(show):
 def test_a_window_that_does_not_match_is_still_its_own_error(show, monkeypatch):
     import je_auto_control.wrapper.auto_control_window as window_module
     monkeypatch.setattr(window_module, "find_window", lambda title, case_sensitive=False: None)
+    tool = _tool("ac_window_minimize")
     with pytest.raises(ValueError, match="no window matches"):
-        _tool("ac_window_minimize").invoke({"title_substring": "Nope"})
+        tool.invoke({"title_substring": "Nope"})
     assert show.calls == []

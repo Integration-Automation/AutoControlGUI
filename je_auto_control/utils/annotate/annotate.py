@@ -25,7 +25,8 @@ from typing import (
 if TYPE_CHECKING:  # pragma: no cover - annotations only
     from PIL import Image, ImageDraw
 
-ImageSource = Union[str, Path, bytes, "Image.Image"]
+# "Image.Image" is a string forward reference, which "|" cannot take at runtime.
+ImageSource = Union[str, Path, bytes, "Image.Image"]  # NOSONAR python:S6546  # reason: see the line above
 
 
 def _load_image(source: ImageSource) -> "Image.Image":

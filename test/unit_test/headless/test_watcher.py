@@ -40,8 +40,9 @@ def test_mouse_watcher_reports_failure(monkeypatch):
         raise OSError("nope")
     import je_auto_control.wrapper.auto_control_mouse as mouse_mod
     monkeypatch.setattr(mouse_mod, "get_mouse_position", broken)
+    watcher = MouseWatcher()
     with pytest.raises(RuntimeError):
-        MouseWatcher().sample()
+        watcher.sample()
 
 
 def test_pixel_watcher_returns_none_on_error(monkeypatch):

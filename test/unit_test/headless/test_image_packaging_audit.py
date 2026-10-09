@@ -91,8 +91,9 @@ def test_a_docstring_cannot_break_the_stub():
 def test_provenance_reports_subjects_nobody_checked():
     statement = build_provenance([subject_for_bytes("a.whl", b"a")])
     assert [m["name"] for m in verify_provenance(statement, {})] == ["a.whl"]
+    same_name = [subject_for_bytes("x.whl", b"1"), subject_for_bytes("x.whl", b"2")]
     with pytest.raises(ValueError, match="share names"):
-        build_provenance([subject_for_bytes("x.whl", b"1"), subject_for_bytes("x.whl", b"2")])
+        build_provenance(same_name)
 
 
 def test_a_decimal_point_does_not_end_a_sentence():

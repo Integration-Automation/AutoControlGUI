@@ -483,9 +483,9 @@ def _build_reports(samples: Sequence[EvaluationSample], names: Sequence[str],
 
 def _report(version: str, rows: Sequence[SampleResult], recovered: int,
             recoverable: int) -> VersionReport:
-    counts = {outcome: 0 for outcome in (
+    counts = dict.fromkeys((
         OUTCOME_CORRECT, OUTCOME_FALSE_POSITIVE, OUTCOME_MISS,
-        OUTCOME_TRUE_NEGATIVE, OUTCOME_UNKNOWN, OUTCOME_ERROR)}
+        OUTCOME_TRUE_NEGATIVE, OUTCOME_UNKNOWN, OUTCOME_ERROR), 0)
     for row in rows:
         counts[row.outcome] += 1
     latencies = sorted(row.latency_ms for row in rows)
@@ -562,14 +562,15 @@ def format_comparison(comparison: HealingComparison) -> str:
     """Plain-text table of the comparison, followed by each version's failures."""
     lines = [f"baseline: {comparison.baseline}"]
     for name, report in comparison.reports.items():
-        lines.append(
+        lines.extend([
             f"[{name}] samples={report.total} labelled={report.labelled} "
-            f"unknown={report.unknown} error={report.error}")
-        lines.append(f"  located      {report.hit_rate}")
-        lines.append(f"  accuracy     {report.accuracy}")
-        lines.append(f"  false pos.   {report.false_positive_rate}")
-        lines.append(f"  recovery     {report.recovery_rate}")
-        lines.append(f"  latency ms   p50={report.p50_ms} p95={report.p95_ms}")
+            f"unknown={report.unknown} error={report.error}",
+            f"  located      {report.hit_rate}",
+            f"  accuracy     {report.accuracy}",
+            f"  false pos.   {report.false_positive_rate}",
+            f"  recovery     {report.recovery_rate}",
+            f"  latency ms   p50={report.p50_ms} p95={report.p95_ms}",
+        ])
         if report.usage.calls:
             used = report.usage
             lines.append(

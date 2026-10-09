@@ -29,6 +29,8 @@ fi
 
 GEOMETRY="${SCREEN_GEOMETRY:-1280x800x24}"
 DISPLAY_NUM="${DISPLAY:-:99}"
+# The rule drawn around every heading in the log.
+RULE="========================================================================"
 
 echo "starting Xvfb on ${DISPLAY_NUM} at ${GEOMETRY}"
 Xvfb "${DISPLAY_NUM}" -screen 0 "${GEOMETRY}" +extension RANDR \
@@ -88,9 +90,9 @@ export PYTHONPATH=/opt/verify
 # Runs one pass over one monitor layout; echoes the number of failed checks.
 run_pass() {
     label="$1"
-    echo "========================================================================"
+    echo "${RULE}"
     echo "layout: ${label}"
-    echo "========================================================================"
+    echo "${RULE}"
     xrandr --listmonitors || true
     rc=0
     python3 /opt/verify/x11_verify.py || rc=$?
@@ -121,21 +123,21 @@ run_pass "two monitors side by side" || total=$((total + $?))
 # Window management does not depend on the monitor layout — it is about what
 # the window manager agrees to — so it runs once, after both layout passes.
 echo
-echo "========================================================================"
+echo "${RULE}"
 echo "window management against a real window manager"
-echo "========================================================================"
+echo "${RULE}"
 python3 /opt/verify/x11_window_verify.py || total=$((total + $?))
 
 echo
-echo "========================================================================"
+echo "${RULE}"
 echo "accessibility against a real AT-SPI bus"
-echo "========================================================================"
+echo "${RULE}"
 python3 /opt/verify/x11_atspi_verify.py || total=$((total + $?))
 
 echo
-echo "========================================================================"
+echo "${RULE}"
 echo "total failed checks: ${total}"
-echo "========================================================================"
+echo "${RULE}"
 
 kill "$OPENBOX_PID" 2>/dev/null || true
 kill "$XVFB_PID" 2>/dev/null || true

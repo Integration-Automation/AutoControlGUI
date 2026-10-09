@@ -36,9 +36,9 @@ def test_retry_exhausts_and_reraises():
     def always_fail():
         raise KeyError("nope")
 
+    policy = RetryPolicy(max_attempts=2, backoff=0)
     with pytest.raises(KeyError):
-        RetryPolicy(max_attempts=2, backoff=0).run(always_fail,
-                                                    sleep=lambda s: None)
+        policy.run(always_fail, sleep=lambda s: None)
 
 
 def test_retry_call_convenience():

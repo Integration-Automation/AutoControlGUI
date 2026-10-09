@@ -213,9 +213,9 @@ def test_a_callback_that_cannot_be_called_is_refused_before_anything_runs(runner
     with pytest.raises(AutoControlActionException):
         runner.execute_action([["AC_fake_note"]], result_callback="not a function")
     assert ran == []
-    with pytest.raises(AutoControlActionException):
-        with observe_results(None):
-            ran.append(2)
+    observing = observe_results(None)
+    with pytest.raises(AutoControlActionException), observing:
+        ran.append(2)
     assert ran == []
 
 

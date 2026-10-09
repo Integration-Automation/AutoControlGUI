@@ -61,8 +61,9 @@ def test_length_truncation_without_tool_call_raises():
     client = _RecordingOpenAIClient(
         _response(content="partial", finish_reason="length"),
     )
+    backend = _backend(client)
     with pytest.raises(AgentBackendError):
-        _backend(client).decide_next_action("goal", None, [])
+        backend.decide_next_action("goal", None, [])
 
 
 def test_normal_completion_still_stops():

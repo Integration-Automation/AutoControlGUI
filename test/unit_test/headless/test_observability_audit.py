@@ -166,6 +166,6 @@ def test_welch_with_no_variance_and_different_means():
 
 
 def test_negative_token_counts_are_refused(tmp_path):
+    store = CostStore(str(tmp_path / "c.jsonl"))
     with pytest.raises(ValueError):
-        CostStore(str(tmp_path / "c.jsonl")).record(provider="p", model="m",
-                                                    input_tokens=-1000, output_tokens=10)
+        store.record(provider="p", model="m", input_tokens=-1000, output_tokens=10)

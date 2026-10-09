@@ -233,21 +233,22 @@ def test_cmd_status_handles_empty_history():
 # === Slack adapter =======================================================
 
 def test_slack_bot_rejects_bad_token():
+    router = CommandRouter()
     with pytest.raises(SlackError):
-        SlackBot(token="bad", channel_id="C1",
-                  router=CommandRouter())
+        SlackBot(token="bad", channel_id="C1", router=router)
 
 
 def test_slack_bot_rejects_blank_channel():
+    router = CommandRouter()
     with pytest.raises(SlackError):
-        SlackBot(token="xoxb-abc", channel_id="",
-                  router=CommandRouter())
+        SlackBot(token="xoxb-abc", channel_id="", router=router)
 
 
 def test_slack_bot_rejects_short_poll_interval():
+    router = CommandRouter()
     with pytest.raises(SlackError):
         SlackBot(token="xoxb-abc", channel_id="C1",
-                  router=CommandRouter(), poll_interval_s=0.1)
+                  router=router, poll_interval_s=0.1)
 
 
 def test_slack_bot_request_refuses_non_slack_url():

@@ -340,7 +340,7 @@ def _write_one_char(single_char: str, is_shift: bool) -> None:
     elif key is not None:
         type_keyboard(key, is_shift or _needs_shift(single_char, key), skip_record=True)
     elif _write_char_via_unicode(single_char):
-        pass
+        return  # typed as Unicode code units: no key is left to press
     elif single_char.isspace():
         type_keyboard("space", is_shift, skip_record=True)
     else:

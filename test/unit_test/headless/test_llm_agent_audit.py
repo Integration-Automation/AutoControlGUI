@@ -105,8 +105,9 @@ class _FixedLLM(LLMBackend):
 
 
 def test_an_empty_plan_is_refused():
+    backend = _FixedLLM("[]")
     with pytest.raises(LLMPlanError, match="empty plan"):
-        plan_actions("do nothing", backend=_FixedLLM("[]"), known_commands=["AC_x"])
+        plan_actions("do nothing", backend=backend, known_commands=["AC_x"])
 
 
 @pytest.mark.parametrize("reply, expected", [

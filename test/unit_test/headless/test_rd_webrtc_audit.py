@@ -37,7 +37,7 @@ def qapp(monkeypatch):
     monkeypatch.setattr(registry, "_viewer", None)
     monkeypatch.setattr(registry, "_ws_viewer", None)
     app.messages = messages
-    yield app
+    return app
 
 
 @pytest.fixture(autouse=True)

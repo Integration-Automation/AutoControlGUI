@@ -245,7 +245,8 @@ class ConfigSyncClient:
             merged = ConfigBucket.from_dict(remote.to_dict())
             conflicts: List["SyncConflict"] = []
             changed = [apply_operation(merged, operation, conflicts) for operation in operations]
-            if not any(changed) and not awaits_ack(remote, device_id):
+            # reason (suppression below): every operation must be applied; any() over a generator stops early
+            if not any(changed) and not awaits_ack(remote, device_id):  # NOSONAR python:S7492
                 return SyncResult(bucket=remote, revision=remote.revision, conflicts=conflicts)
             settle(merged, device_id, remote.revision + 1, stamp, max_offline_s,
                    self._tombstone_hold_s)

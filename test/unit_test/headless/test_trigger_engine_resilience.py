@@ -45,48 +45,40 @@ def test_a_valid_cron_still_constructs():
     assert trigger.cron == "*/5 * * * *"
 
 
-def test_a_trigger_whose_is_fired_raises_is_disabled_not_fatal(engine):
+def test_a_trigger_whose_is_fired_raises_is_disabled_not_fatal(engine, monkeypatch):
     """Regression: an exception from is_fired() killed the polling thread."""
     caught: list = []
-    original = threading.excepthook
-    threading.excepthook = lambda args: caught.append(
-        type(args.exc_value).__name__)
-    try:
-        engine.add(_RogueTrigger(trigger_id="rogue", script_path="r.json",
-                                 repeat=True))
-        engine.start()
-        time.sleep(0.4)
+    monkeypatch.setattr(threading, "excepthook", lambda args: caught.append(
+        type(args.exc_value).__name__))
+    engine.add(_RogueTrigger(trigger_id="rogue", script_path="r.json",
+                             repeat=True))
+    engine.start()
+    time.sleep(0.4)
 
-        assert engine._thread.is_alive(), "polling thread died"
-        assert caught == []
-        assert engine._triggers["rogue"].enabled is False, (
-            "the offender should be disabled so it stops re-raising each tick"
-        )
-    finally:
-        threading.excepthook = original
+    assert engine._thread.is_alive(), "polling thread died"
+    assert caught == []
+    assert engine._triggers["rogue"].enabled is False, (
+        "the offender should be disabled so it stops re-raising each tick"
+    )
 
 
-def test_a_trigger_pointing_at_a_missing_script_is_not_fatal(engine):
+def test_a_trigger_pointing_at_a_missing_script_is_not_fatal(engine, monkeypatch):
     """Regression: _fire caught only (OSError, ValueError, RuntimeError).
 
     read_action_json raises AutoControlJsonActionException, which is none of
     those — so merely renaming a trigger's script file killed the engine.
     """
     caught: list = []
-    original = threading.excepthook
-    threading.excepthook = lambda args: caught.append(
-        type(args.exc_value).__name__)
-    try:
-        engine.add(CronTrigger(trigger_id="missing",
-                               script_path="does-not-exist.json",
-                               cron="* * * * *", repeat=True))
-        engine.start()
-        time.sleep(0.4)
+    monkeypatch.setattr(threading, "excepthook", lambda args: caught.append(
+        type(args.exc_value).__name__))
+    engine.add(CronTrigger(trigger_id="missing",
+                           script_path="does-not-exist.json",
+                           cron="* * * * *", repeat=True))
+    engine.start()
+    time.sleep(0.4)
 
-        assert engine._thread.is_alive(), "polling thread died"
-        assert caught == []
-    finally:
-        threading.excepthook = original
+    assert engine._thread.is_alive(), "polling thread died"
+    assert caught == []
 
 
 def test_a_healthy_trigger_keeps_firing_alongside_a_broken_one(engine):

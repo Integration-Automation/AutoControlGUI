@@ -88,9 +88,8 @@ class AuditLogger:
             entry["artifact_path"] = artifact_path
         line = json.dumps(entry, ensure_ascii=False, default=str)
         try:
-            with self._lock:
-                with open(self._path, "a", encoding="utf-8") as handle:
-                    handle.write(line + "\n")
+            with self._lock, open(self._path, "a", encoding="utf-8") as handle:
+                handle.write(line + "\n")
         except OSError as error:
             # Recorded after the tool ran: raising here turned a click that
             # happened into an internal error, inviting a retry, and put the

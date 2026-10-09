@@ -141,5 +141,6 @@ def test_dbus_addresses_are_unescaped_and_bad_values_are_dbus_errors():
     assert session_bus._socket_target("unix:path=/run/bus-for-%3A0") == ("/run/bus-for-:0", False)
     assert session_bus._socket_target("unix:abstract=/tmp/dbus%2dABC") == ("/tmp/dbus-ABC", True)
     for signature, value in (("u", -1), ("i", 2 ** 31), ("y", 300), ("(i", (1,)), ("a", [])):
+        writer = session_bus._Writer()
         with pytest.raises(session_bus.DBusError):
-            session_bus._Writer().value(signature, value)
+            writer.value(signature, value)

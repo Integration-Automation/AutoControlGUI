@@ -173,9 +173,9 @@ def test_a_versioned_tombstone_is_not_dropped_by_age():
     assert bucket.remove("hotkeys", "hk1", origin="laptop") is True
     merged, _conflicts = merge_buckets(bucket, ConfigBucket(user_id="alice"), now=9e12)
     assert merged.get_entry("hotkeys", "hk1").is_deleted is True
+    other = ConfigBucket(user_id="alice")
+    other.upsert("hotkeys", "hk1", {"combo": "ctrl+a"}, origin="laptop")
     with pytest.raises(ConfigSyncError):
-        other = ConfigBucket(user_id="alice")
-        other.upsert("hotkeys", "hk1", {"combo": "ctrl+a"}, origin="laptop")
         other.remove("hotkeys", "hk1", versioned=False)   # a flat tombstone cannot delete it
 
 
@@ -239,8 +239,9 @@ def test_retired_peer_requires_full_sync(server):
     assert collected.bucket.sections["hotkeys"] == {}
 
     before = server.revision
+    stale_operations = [_op(stale_edit)]
     with pytest.raises(FullResyncRequired):
-        client.push_operations([_op(stale_edit)], device_id="desktop")
+        client.push_operations(stale_operations, device_id="desktop")
     assert server.revision == before, "a retired device must not write"
 
     adopted = client.full_resync(device_id="desktop")

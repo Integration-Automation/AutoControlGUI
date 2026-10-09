@@ -169,7 +169,9 @@ def _win_input_desktop() -> str:
         name = ctypes.create_unicode_buffer(256)
         needed = wintypes.DWORD(0)
         if not user32.GetUserObjectInformationW(
-                handle, _UOI_NAME, name, ctypes.sizeof(name), ctypes.byref(needed)):
+                handle, _UOI_NAME, name,
+                ctypes.sizeof(name),  # NOSONAR python:S5655  # reason: sizeof takes a ctypes instance: the buffer
+                ctypes.byref(needed)):
             return ""
         return str(name.value)
     finally:

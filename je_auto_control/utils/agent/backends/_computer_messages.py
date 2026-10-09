@@ -14,7 +14,7 @@ from je_auto_control.utils.agent.backends.base import (
 )
 
 
-def _final_answer(response: Any, content: List[Any]) -> Dict[str, Any]:
+def _final_answer(content: List[Any]) -> Dict[str, Any]:
     """A turn without tool calls: the final answer (a truncated turn was refused earlier)."""
     text_parts: List[str] = [
         _attr(b, "text") or ""

@@ -335,8 +335,9 @@ def test_a_macos_region_is_clipped_to_the_displays():
     image, origin_x, origin_y = grab_logical((-2000, -30, 200, 100), grabber=_ScreenCapture(),
                                              displays=_displays)
     assert (image.size, origin_x, origin_y) == ((120, 70), -1920, 0)
+    grabber = _ScreenCapture()
     with pytest.raises(AutoControlScreenException, match="off screen"):
-        grab_logical((9000, 0, 10, 10), grabber=_ScreenCapture(), displays=_displays)
+        grab_logical((9000, 0, 10, 10), grabber=grabber, displays=_displays)
 
 
 def test_the_macos_primary_only_frame_is_in_points_too():

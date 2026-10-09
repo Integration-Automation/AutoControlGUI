@@ -62,6 +62,7 @@ from je_auto_control.linux_wayland.authorisation import (
 
 _WAYLAND_ENV = {"XDG_SESSION_TYPE": "wayland", "WAYLAND_DISPLAY": "wayland-0",
                 "XDG_RUNTIME_DIR": "/run/user/1000"}
+_SWAY_YDOTOOL_GRIM = "sway with ydotool and grim"
 
 
 def show(title: str, snapshot: ac.CapabilitySnapshot) -> None:
@@ -98,7 +99,7 @@ def validate() -> int:
             _WAYLAND_ENV, tools=("gnome-screenshot",), libei=True),
         "GNOME, consent refused": _context(
             _WAYLAND_ENV, tools=("gnome-screenshot", "ydotool"), libei=True, ledger=refused),
-        "sway with ydotool and grim": _context(
+        _SWAY_YDOTOOL_GRIM: _context(
             {**_WAYLAND_ENV, "JE_AUTOCONTROL_WAYLAND_RECORD_DEVICES": "/dev/input/event3"},
             tools=("ydotool", "grim"), bus=False),
         "X11 backend on a Wayland session": _context(
@@ -120,7 +121,7 @@ def validate() -> int:
         "GNOME, portal not asked yet": ("not_requested", "libei", True),
         # ydotool is installed, and is still not used: a refusal is not a fallback.
         "GNOME, consent refused": ("needs_permission", "libei", True),
-        "sway with ydotool and grim": ("available", "ydotool", True),
+        _SWAY_YDOTOOL_GRIM: ("available", "ydotool", True),
         "X11 backend on a Wayland session": ("available", "xwayland", False),
     }
     problems: List[str] = []
@@ -129,7 +130,7 @@ def validate() -> int:
         got = (found.state.value, found.backend, found.desktop_wide)
         if got != wanted:
             problems.append(f"{title}: input is {got}, expected {wanted}")
-    if snapshots["sway with ydotool and grim"].get("recording").state.value != "needs_permission":
+    if snapshots[_SWAY_YDOTOOL_GRIM].get("recording").state.value != "needs_permission":
         problems.append("an unreadable recording device should read as needs_permission")
     if len(log.steps) != 2:
         problems.append(f"expected 2 journalled steps, got {len(log.steps)}")

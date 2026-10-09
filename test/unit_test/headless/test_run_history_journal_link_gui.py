@@ -15,7 +15,7 @@ from je_auto_control.utils.run_history.history_store import HistoryStore  # noqa
 @pytest.fixture(scope="module")
 def qapp():
     app = QApplication.instance() or QApplication([])
-    yield app
+    return app
 
 
 def test_detail_shows_the_journal_run_only_for_a_linked_row(qapp, monkeypatch):

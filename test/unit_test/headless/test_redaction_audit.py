@@ -94,9 +94,9 @@ def test_vault_command_arguments_do_not_reach_the_bundle(tmp_path):
 def test_the_blocks_error_survives_a_bundle_that_cannot_be_written(tmp_path):
     blocker = tmp_path / "file"
     blocker.write_text("x", encoding="utf-8")
-    with pytest.raises(KeyError, match="original"):
-        with failure_bundle_on_error(blocker / "sub" / "b.zip", options=_NO_COLLECTORS):
-            raise KeyError("original")
+    bundling = failure_bundle_on_error(blocker / "sub" / "b.zip", options=_NO_COLLECTORS)
+    with pytest.raises(KeyError, match="original"), bundling:
+        raise KeyError("original")
 
 
 def test_a_truncated_log_tail_drops_its_partial_first_line(tmp_path):

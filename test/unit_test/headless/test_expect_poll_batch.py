@@ -55,8 +55,9 @@ def test_to_be_stable_requires_repeats():
 
 def test_assert_poll_raises_on_timeout():
     from je_auto_control.utils.exception.exceptions import AutoControlActionException
+    matcher = to_equal(1)
     with pytest.raises(AutoControlActionException):
-        assert_poll(lambda: 0, to_equal(1), timeout_s=0)
+        assert_poll(lambda: 0, matcher, timeout_s=0)
 
 
 def test_assert_poll_returns_result_on_success():

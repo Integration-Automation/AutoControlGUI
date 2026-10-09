@@ -145,9 +145,10 @@ def test_a_truncated_error_body_is_an_oserror():
         conn.close()
 
     threading.Thread(target=serve, daemon=True).start()
+    url = "http://127.0.0.1:%d/t500" % listener.getsockname()[1]  # NOSONAR loopback test server
     try:
         with pytest.raises(OSError):
-            http_request("http://127.0.0.1:%d/t500" % listener.getsockname()[1])  # NOSONAR loopback test server
+            http_request(url)
     finally:
         listener.close()
 

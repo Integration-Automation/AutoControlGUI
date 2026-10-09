@@ -32,7 +32,7 @@ _WIDTH_RANGE = (200, 800)
 _TEXT_SIZE_RANGE = (6, 48)
 _GROUP = "main_window"
 _FORMS_GROUP = "forms"
-_FORM_NAME = re.compile(r"[A-Za-z][A-Za-z0-9_]{0,63}")
+_FORM_NAME = re.compile(r"[A-Za-z]\w{0,63}", re.ASCII)
 #: A remembered field longer than this was not typed into a one-line input.
 _FORM_VALUE_LIMIT = 2048
 _UNSET: Any = object()

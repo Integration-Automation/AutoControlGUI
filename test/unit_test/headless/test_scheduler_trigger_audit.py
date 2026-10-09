@@ -46,8 +46,9 @@ def test_29_february_is_found_more_than_a_year_ahead():
 
 
 def test_an_impossible_date_still_raises():
+    never = parse_cron("0 0 31 2 *")
     with pytest.raises(ValueError):
-        next_match(parse_cron("0 0 31 2 *"), _NOW)
+        next_match(never, _NOW)
 
 
 # --- scheduler ----------------------------------------------------------------
@@ -56,8 +57,9 @@ def test_an_impossible_date_still_raises():
 def test_max_runs_below_one_is_refused(add):
     schedule = scheduler_module.Scheduler()
     args = ("s.json", 60) if add == "add_job" else ("s.json", "* * * * *")
+    add_a_job = getattr(schedule, add)
     with pytest.raises(ValueError, match="max_runs"):
-        getattr(schedule, add)(*args, max_runs=0)
+        add_a_job(*args, max_runs=0)
 
 
 def test_a_cron_job_with_no_next_run_is_removed_not_refired(monkeypatch, tmp_path):

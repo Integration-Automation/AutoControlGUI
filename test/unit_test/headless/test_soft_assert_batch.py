@@ -15,11 +15,14 @@ def test_all_pass_does_not_raise():
 
 
 def test_aggregates_failures_on_exit():
-    with pytest.raises(AutoControlActionException) as excinfo:
+    def leave_with_failures():
         with SoftAssertions() as soft:
             soft.check(True, "a")
             soft.check(False, "b failed")
             soft.check_equal(1, 2, "c failed")
+
+    with pytest.raises(AutoControlActionException) as excinfo:
+        leave_with_failures()
     message = str(excinfo.value)
     assert "b failed" in message
     assert "c failed" in message
@@ -35,10 +38,13 @@ def test_check_returns_bool_and_records():
 
 
 def test_exit_does_not_mask_existing_exception():
-    with pytest.raises(KeyError):
+    def raise_inside_the_block():
         with SoftAssertions() as soft:
             soft.check(False, "would-fail")
             raise KeyError("real error")        # must propagate, not aggregated
+
+    with pytest.raises(KeyError):
+        raise_inside_the_block()
 
 
 def test_manual_assert_all():

@@ -66,8 +66,9 @@ def test_a_watchdog_key_is_not_pressed_when_the_popup_cannot_be_fronted(monkeypa
     monkeypatch.setattr(auto_control_keyboard, "type_keyboard", pressed.append)
     monkeypatch.setattr(auto_control_window, "find_window", lambda *a, **k: (9, "Session expiring"))
     monkeypatch.setattr(window_backends, "get_backend", lambda: _Backend([], front_ok=False))
+    action = popup_watchdog._window_action("Session expiring", "enter", False)  # noqa: SLF001
     with pytest.raises(AutoControlActionException):
-        popup_watchdog._window_action("Session expiring", "enter", False)()  # noqa: SLF001
+        action()
     assert pressed == []
 
 

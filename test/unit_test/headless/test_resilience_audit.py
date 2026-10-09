@@ -36,8 +36,9 @@ def test_the_first_retry_sleep_respects_max_backoff():
     def fail():
         raise ValueError("x")
 
+    policy = RetryPolicy(max_attempts=3, backoff=10, max_backoff=1)
     with pytest.raises(ValueError):
-        RetryPolicy(max_attempts=3, backoff=10, max_backoff=1).run(fail, sleep=slept.append)
+        policy.run(fail, sleep=slept.append)
     assert slept == [1, 1]
 
 
@@ -82,8 +83,9 @@ def test_loop_guard_reports_the_longest_pattern():
 
 @pytest.mark.parametrize("ttl", [float("nan"), float("inf"), 0, -1])
 def test_a_lease_needs_a_finite_positive_ttl(ttl):
+    broker = CredentialBroker(clock=lambda: 0.0)
     with pytest.raises(CredentialBrokerError):
-        CredentialBroker(clock=lambda: 0.0).lease("db", ttl)
+        broker.lease("db", ttl)
 
 
 def test_approval_commands_share_a_gate_without_db():

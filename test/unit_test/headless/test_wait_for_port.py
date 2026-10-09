@@ -51,12 +51,13 @@ def test_validation_errors(kwargs):
     args = {"host": "localhost", "port": 8080, "timeout_s": 10.0,
             "poll_interval_s": 0.25, "connect_timeout_s": 1.0}
     args.update(kwargs)
+    connector = _connector([True])
     with pytest.raises(ValueError):
         wait_until_port(
             args["host"], args["port"], timeout_s=args["timeout_s"],
             poll_interval_s=args["poll_interval_s"],
             connect_timeout_s=args["connect_timeout_s"],
-            connector=_connector([True]))
+            connector=connector)
 
 
 def test_real_loopback_listener():

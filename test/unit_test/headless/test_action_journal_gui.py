@@ -24,8 +24,7 @@ from je_auto_control.utils.action_journal import recorder  # noqa: E402
 
 @pytest.fixture(scope="module")
 def qapp():
-    app = QApplication.instance() or QApplication([])
-    yield app
+    return QApplication.instance() or QApplication([])
 
 
 @pytest.fixture(autouse=True)

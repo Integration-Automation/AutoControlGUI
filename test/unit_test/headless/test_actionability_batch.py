@@ -94,8 +94,9 @@ def test_act_when_ready_calls_action_with_center():
 
 def test_act_when_ready_raises_on_timeout():
     from je_auto_control.utils.exception.exceptions import AutoControlActionException
+    config = _config()
     with pytest.raises(AutoControlActionException):
-        act_when_ready(lambda point: "never", lambda: None, config=_config())
+        act_when_ready(lambda point: "never", lambda: None, config=config)
 
 
 # --- wiring ---------------------------------------------------------------

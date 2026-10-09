@@ -52,7 +52,7 @@ _QUALITY_YML = _REPO_ROOT / ".github" / "workflows" / "quality.yml"
 @pytest.fixture(scope="module")
 def qapp():
     app = QApplication.instance() or QApplication([])
-    yield app
+    return app
 
 
 @pytest.fixture

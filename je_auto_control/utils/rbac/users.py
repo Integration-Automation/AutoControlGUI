@@ -283,7 +283,7 @@ class UserStore:
 
 def _copy(record: UserRecord) -> UserRecord:
     """A copy with its own tag list."""
-    return replace(record, tags=list(record.tags))
+    return replace(record, tags=list(record.tags))  # NOSONAR python:S5886  # reason: replace keeps the type
 
 
 def _tags(value: object) -> List[str]:

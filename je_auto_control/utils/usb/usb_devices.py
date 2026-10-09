@@ -259,7 +259,7 @@ def _hex4_from_macos(value: Any) -> Optional[str]:
     text = str(value).strip()
     # The lookahead is what rejects "apple_vendor_id": its leading "a"
     # is a valid hex digit, so without it the id would parse as 000a.
-    match = re.match(r"(?:0x)?([0-9A-Fa-f]{1,4})(?![0-9A-Za-z_])", text)
+    match = re.match(r"(?:0x)?([0-9A-Fa-f]{1,4})(?!\w)", text, re.ASCII)
     if match is None:
         return None
     return f"{int(match.group(1), 16):04x}"

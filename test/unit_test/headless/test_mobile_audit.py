@@ -91,6 +91,7 @@ def test_a_wda_error_becomes_the_ios_error(monkeypatch):
         raise WDAError("invalid session id")
 
     # By name, like the Android test: test_ios_xcuitest reloads the client.
+    device = IOSDevice(handle=types.SimpleNamespace(tap=tap))
     with pytest.raises(Exception, match="invalid session id") as raised:
-        ios_input.tap(1, 2, device=IOSDevice(handle=types.SimpleNamespace(tap=tap)))
+        ios_input.tap(1, 2, device=device)
     assert type(raised.value).__name__ == "IOSUnavailableError"

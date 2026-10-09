@@ -25,9 +25,9 @@ from typing import Any, BinaryIO, Callable, Dict, List, Optional, Sequence, Set,
 
 from je_auto_control.linux_wayland.ei_transport import (
     ABS_X, ABS_Y, BUTTON_CODES, REL_HWHEEL, REL_WHEEL, EiDependencyMissing,
-    EiEmitRefused, EiProtocolError, EiWorkerCancelled, EiWorkerDied,
-    EiWorkerError, EiWorkerTimeout, Held, InputAck, encode_batch, read_frame,
-    write_frame,
+    EiEmitRefused, EiProtocolError, EiRequestUncertain, EiWorkerCancelled,
+    EiWorkerDied, EiWorkerError, EiWorkerTimeout, Held, InputAck, encode_batch,
+    read_frame, write_frame,
 )
 from je_auto_control.linux_wayland.input_events import (
     EV_ABS, EV_KEY, EV_REL, EV_SYN, InputEvent,
@@ -270,7 +270,7 @@ class EiWorkerClient:
         return frame
 
     def _abandon(self, request_id: int, events: List[List[int]],
-                 cancelled: bool) -> Exception:
+                 cancelled: bool) -> EiRequestUncertain:
         """Tell the helper to stop this request; build what to raise."""
         self._write({"op": "cancel", "id": request_id})
         applied = None
@@ -353,7 +353,7 @@ def _presses(events: Sequence[Sequence[int]]) -> Set[Held]:
     return down
 
 
-def _start_failure(frame: Dict[str, Any]) -> Exception:
+def _start_failure(frame: Dict[str, Any]) -> LibeiUnavailable:
     """The typed error a ``failed`` frame stands for."""
     message = str(frame.get("message", "the libei helper could not start"))
     code = frame.get("code")

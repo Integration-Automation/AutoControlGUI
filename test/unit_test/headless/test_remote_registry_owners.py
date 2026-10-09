@@ -122,8 +122,9 @@ def test_owner_tokens_are_unique_and_never_the_script_owner():
 def test_an_unknown_slot_is_refused(reg, call):
     args = {"owner_of": (), "owned": ("me",), "evict": ("me",), "release": ("me",),
             "adopt": (object(), "me")}[call]
+    method = getattr(reg, call)
     with pytest.raises(AutoControlException):
-        getattr(reg, call)("webrtc", *args)
+        method("webrtc", *args)
 
 
 # --- a panel's own session ---------------------------------------------------------------------------------
@@ -247,8 +248,9 @@ def test_script_input_goes_to_the_active_viewer_whoever_opened_it(reg, slot, sen
     assert getattr(reg, send)({"action": "type", "text": "a"}) == {"sent": True}
     assert viewer.sent == [{"action": "type", "text": "a"}]
     reg.release(slot, panel.owner)
+    send_input = getattr(reg, send)
     with pytest.raises(ConnectionError):
-        getattr(reg, send)({"action": "type", "text": "b"})
+        send_input({"action": "type", "text": "b"})
 
 
 # --- script alone: unchanged ---------------------------------------------------------------------------------

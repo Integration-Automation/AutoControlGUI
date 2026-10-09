@@ -34,7 +34,7 @@ def test_replayed_scroll_names_its_direction(mouse):
 
 
 def test_the_cleanup_release_stays_where_the_button_went_down(mouse):
-    with pytest.raises(Exception):
+    with pytest.raises(ValueError, match="unknown input op"):
         input_macro.replay_timeline(
             [{"op": "mouse_down", "button": "left", "x": 800, "y": 600}, {"op": "bogus"}],
             sleep=lambda _s: None)

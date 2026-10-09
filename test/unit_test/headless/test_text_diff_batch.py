@@ -22,8 +22,9 @@ def test_apply_unified_round_trip():
 
 
 def test_apply_unified_context_mismatch():
+    diff = unified_diff(A, B)
     with pytest.raises(PatchApplyError):
-        apply_unified("totally\ndifferent\ncontent\n", unified_diff(A, B))
+        apply_unified("totally\ndifferent\ncontent\n", diff)
 
 
 def test_apply_unified_no_op():

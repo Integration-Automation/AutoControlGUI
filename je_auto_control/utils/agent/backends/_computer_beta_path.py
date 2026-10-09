@@ -65,7 +65,7 @@ class BetaToolPath:
             self._pending_tool_use_id = _attr(block, "id")
             decision = unscale_decision(_decision_from_computer_action(payload), self._scale)
             return _clamp_decision(decision, *self._display)
-        return _final_answer(response, content)
+        return _final_answer(content)
 
     def _pending_result(self, history: Sequence[AgentStep],
                         screenshot: Optional[bytes]) -> List[Dict[str, Any]]:

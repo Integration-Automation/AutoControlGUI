@@ -82,8 +82,9 @@ def test_a_blank_screen_does_not_match_a_coloured_glyph():
 def test_an_image_opencv_cannot_convert_is_a_framework_error():
     from je_auto_control.utils.color_match import match_color
     from je_auto_control.utils.exception.exceptions import AutoControlException
+    needle, haystack = _plus((255, 0, 0)), np.zeros((40, 40, 3), np.float64)
     with pytest.raises(AutoControlException):
-        match_color(_plus((255, 0, 0)), haystack=np.zeros((40, 40, 3), np.float64))
+        match_color(needle, haystack=haystack)
 
 
 # --- mark labels -------------------------------------------------------------------------------------------

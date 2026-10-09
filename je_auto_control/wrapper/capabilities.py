@@ -290,10 +290,12 @@ def _x11(ctx: BackendContext, xwayland: bool) -> CapabilitySnapshot:
     state = (CapabilityStatus.AVAILABLE if has_display
              else CapabilityStatus.NEEDS_SETUP)
     detail = _XWAYLAND_SCOPE if xwayland else ""
-    recovery = _XWAYLAND_RECOVERY if xwayland else (
-        "" if has_display else "Set DISPLAY to a running X server.")
-    key = "cap_fix_xwayland" if xwayland else (
-        "" if has_display else "cap_fix_display")
+    if xwayland:
+        recovery, key = _XWAYLAND_RECOVERY, "cap_fix_xwayland"
+    elif has_display:
+        recovery, key = "", ""
+    else:
+        recovery, key = "Set DISPLAY to a running X server.", "cap_fix_display"
     return CapabilitySnapshot(ctx.platform, "x11", xwayland, tuple(
         Capability(name, state, "xwayland" if xwayland else "x11",
                    desktop_wide=not xwayland, detail=detail,
@@ -345,10 +347,12 @@ def _wayland_input(ctx: BackendContext) -> Capability:
             recovery_key="cap_fix_input_consent",
             authorisation=record.state.value, restore_token=_RESTORE_UNSUPPORTED)
     state, key = _INPUT_STATES[record.state]
+    if key == "cap_fix_input_consent":
+        recovery = INPUT_RECOVERY
+    else:
+        recovery = "Answer the consent dialog on the desktop." if key else ""
     return Capability(
-        INPUT, state, "libei", detail=record.detail,
-        recovery=INPUT_RECOVERY if key == "cap_fix_input_consent" else (
-            "Answer the consent dialog on the desktop." if key else ""),
+        INPUT, state, "libei", detail=record.detail, recovery=recovery,
         recovery_key=key, authorisation=record.state.value,
         restore_token=_RESTORE_UNSUPPORTED)
 

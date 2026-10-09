@@ -38,8 +38,9 @@ def _segment(obj) -> str:
 
 
 def test_a_jwt_is_rejected_at_its_expiry_second():
+    token = encode_jwt({"exp": 100}, KEY)
     with pytest.raises(ExpiredTokenError):
-        decode_jwt(encode_jwt({"exp": 100}, KEY), KEY, now=100)
+        decode_jwt(token, KEY, now=100)
     assert decode_jwt(encode_jwt({"exp": 100}, KEY), KEY, now=99)["exp"] == 100
 
 
@@ -49,8 +50,9 @@ def test_malformed_tokens_are_jwt_errors():
     for token in (f"{header}.p{chr(0xE9)}.{signature}", f"{deep}.{_segment({})}.{signature}"):
         with pytest.raises(JwtError):
             decode_jwt(token, KEY)
+    huge_expiry = encode_jwt({"exp": 10 ** 400}, KEY)
     with pytest.raises(JwtError):
-        decode_jwt(encode_jwt({"exp": 10 ** 400}, KEY), KEY, now=0)
+        decode_jwt(huge_expiry, KEY, now=0)
 
 
 def test_a_signature_has_one_spelling():
@@ -86,8 +88,9 @@ def test_samples_sharing_a_timestamp_keep_their_order():
 @pytest.mark.parametrize("kwargs", [{"fill": "linaer"}, {"bucket_s": math.inf}, {"bucket_s": math.nan}])
 def test_resample_rejects_bad_arguments(kwargs):
     arguments = {"bucket_s": 10, **kwargs}
+    bucket_s = arguments.pop("bucket_s")
     with pytest.raises(ValueError):
-        ts_resample([(0, 1), (15, 2), (30, 3)], arguments.pop("bucket_s"), **arguments)
+        ts_resample([(0, 1), (15, 2), (30, 3)], bucket_s, **arguments)
 
 
 def test_range_rules_reject_non_finite_numbers_and_unhashables():

@@ -85,11 +85,14 @@ def test_the_seed_still_rejects_an_invalid_name(seen):
 # --- the context manager ----------------------------------------------------
 
 def test_execution_scope_is_restored_after_an_error(seen):
-    with pytest.raises(RuntimeError):
+    def fail_inside_the_scope():
         with execution_scope({"user": "alice"}) as scope:
             assert isinstance(scope, VariableScope)
             assert executor.variables is scope
             raise RuntimeError("boom")
+
+    with pytest.raises(RuntimeError):
+        fail_inside_the_scope()
     assert current_scope() is None
     assert "user" not in executor.variables
 

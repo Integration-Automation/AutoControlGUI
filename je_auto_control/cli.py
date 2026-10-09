@@ -33,11 +33,7 @@ import threading
 import time
 from typing import Callable, Dict, List, Optional, Sequence
 
-from je_auto_control.utils.exception.exceptions import (
-    AutoControlActionException,
-    AutoControlException,
-    AutoControlJsonActionException,
-)
+from je_auto_control.utils.exception.exceptions import AutoControlException
 
 
 def _parse_vars(pairs: Optional[Sequence[str]]) -> Dict[str, object]:
@@ -411,9 +407,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     utf8_stdout()
     try:
         return args.func(args)
-    except (AutoControlActionException, AutoControlException,
-            AutoControlJsonActionException, OSError, RuntimeError,
-            ValueError) as error:
+    except (AutoControlException, OSError, RuntimeError, ValueError) as error:
         sys.stderr.write(f"error: {error}\n")
         return 1
 

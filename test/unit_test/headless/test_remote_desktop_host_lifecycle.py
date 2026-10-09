@@ -128,7 +128,7 @@ def test_a_handshake_from_the_stopped_run_does_not_join_the_next_one(
         host.stop(timeout=1.0)
 
 
-def test_stop_racing_start_never_raises_or_leaks_a_thread_exception():
+def test_stop_racing_start_never_raises_or_leaks_a_thread_exception(monkeypatch):
     """start() and stop() must be mutually exclusive.
 
     Three distinct regressions lived here, all reproducible only under a
@@ -146,24 +146,20 @@ def test_stop_racing_start_never_raises_or_leaks_a_thread_exception():
     couple of seconds. The two tests around it are deterministic.
     """
     caught: list = []
-    original = threading.excepthook
-    threading.excepthook = lambda args: caught.append(
-        (args.thread.name, type(args.exc_value).__name__))
+    monkeypatch.setattr(threading, "excepthook", lambda args: caught.append(
+        (args.thread.name, type(args.exc_value).__name__)))
     raised: list = []
-    try:
-        for _ in range(400):
-            host = _make_host()
-            starter = threading.Thread(target=host.start)
-            starter.start()
-            for _ in range(2):
-                try:
-                    host.stop(timeout=0.2)
-                except (RuntimeError, AttributeError) as error:
-                    raised.append(type(error).__name__)
-            starter.join(2.0)
-            host.stop(timeout=0.2)
-    finally:
-        threading.excepthook = original
+    for _ in range(400):
+        host = _make_host()
+        starter = threading.Thread(target=host.start)
+        starter.start()
+        for _ in range(2):
+            try:
+                host.stop(timeout=0.2)
+            except (RuntimeError, AttributeError) as error:
+                raised.append(type(error).__name__)
+        starter.join(2.0)
+        host.stop(timeout=0.2)
 
     assert raised == [], f"stop() raised: {raised[:3]}"
     assert caught == [], f"thread died: {caught[:3]}"

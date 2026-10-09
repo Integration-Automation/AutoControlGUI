@@ -181,10 +181,11 @@ def test_invalid_inputs_are_rejected():
         evaluate_locators([sample], {})
     with pytest.raises(HealingEvaluationError, match="duplicate"):
         evaluate_locators([sample, sample], {"v1": _never})
+    frame = _frame()
     with pytest.raises(HealingEvaluationError, match="expect_miss"):
-        EvaluationSample("x", _frame(), expected_box=(0, 0, 5, 5), expect_miss=True)
+        EvaluationSample("x", frame, expected_box=(0, 0, 5, 5), expect_miss=True)
     with pytest.raises(HealingEvaluationError, match="scale"):
-        EvaluationSample("x", _frame(), scale=0)
+        EvaluationSample("x", frame, scale=0)
 
 
 def test_thresholds_report_each_violation():

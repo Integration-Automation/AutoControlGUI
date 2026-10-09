@@ -35,7 +35,6 @@ same list even if a plugin changed the registry in between; a cursor whose
 snapshot is no longer kept is refused instead of paging a different list.
 """
 import base64
-import binascii
 import hashlib
 import hmac
 import os
@@ -109,8 +108,10 @@ def resolve_mode(explicit: str | ToolMode | None,
     :class:`ToolDisclosureError`: a typo must not quietly start a server
     that offers every tool.
     """
-    raw = explicit if explicit is not None else (
-        os.environ if environ is None else environ).get(MODE_ENV, "")
+    if explicit is not None:
+        raw = explicit
+    else:
+        raw = (os.environ if environ is None else environ).get(MODE_ENV, "")
     if isinstance(raw, ToolMode):
         return raw
     text = str(raw).strip().lower()
@@ -415,7 +416,7 @@ class ToolView:
         try:
             padded = cursor + "=" * (-len(cursor) % 4)
             text = base64.b64decode(padded, altchars=b"-_", validate=True).decode("ascii")
-        except (binascii.Error, ValueError) as error:
+        except ValueError as error:  # binascii.Error and UnicodeDecodeError are both ValueErrors
             raise malformed from error
         snapshot_id, _, rest = text.partition(".")
         number, _, mac = rest.partition(".")

@@ -83,9 +83,11 @@ class _Wire:
 def test_a_file_over_the_limit_is_refused_without_being_sent():
     wire = _Wire(listing={"max_blob_bytes": 10, "blobs": []})
     data = b"x" * 11
+    digest = _sha(data)
     with patch(_PERFORM, new=wire):
+        transport = _transport()
         with pytest.raises(AssetSyncError, match="larger") as refused:
-            _transport().store(_sha(data), data)
+            transport.store(digest, data)
     assert "11 bytes; the limit is 10" in str(refused.value)
     assert wire.methods() == ["GET"], "the body never left this machine"
 
@@ -115,11 +117,13 @@ def test_a_file_at_the_limit_is_sent():
 ])
 def test_a_server_that_does_not_say_its_limit_is_simply_sent_the_file(listing):
     wire = _Wire(listing=listing, put=_reply(413))
+    data = b"x" * 11
+    digest = _sha(data)
     with patch(_PERFORM, new=wire):
         transport = _transport()
         assert transport.max_blob_bytes() is None
         with pytest.raises(AssetSyncError, match="larger"):
-            transport.store(_sha(b"x" * 11), b"x" * 11)     # the server's own 413
+            transport.store(digest, data)     # the server's own 413
     assert "PUT" in wire.methods()
 
 
@@ -128,9 +132,11 @@ def test_a_reset_during_an_oversized_upload_is_reported_as_too_large():
     wire = _Wire(listing=[OSError("timed out"), {"max_blob_bytes": 10, "blobs": []}],
                  put=ConnectionResetError(10054, "connection reset by peer"))
     data = b"x" * 11
+    digest = _sha(data)
     with patch(_PERFORM, new=wire):
+        transport = _transport()
         with pytest.raises(AssetSyncError, match="larger") as refused:
-            _transport().store(_sha(data), data)
+            transport.store(digest, data)
     assert "the limit is 10" in str(refused.value)
     assert isinstance(refused.value.__cause__, AssetSyncError), "the reset is kept as the cause"
     assert wire.methods() == ["GET", "PUT", "GET"]
@@ -139,25 +145,31 @@ def test_a_reset_during_an_oversized_upload_is_reported_as_too_large():
 def test_a_reset_during_an_upload_that_fits_is_still_a_connection_error():
     wire = _Wire(listing={"max_blob_bytes": 10, "blobs": []},
                  put=ConnectionResetError(10054, "connection reset by peer"))
+    digest = _sha(b"x")
     with patch(_PERFORM, new=wire):
+        transport = _transport()
         with pytest.raises(AssetSyncError, match="connection reset") as failed:
-            _transport().store(_sha(b"x"), b"x")
+            transport.store(digest, b"x")
     assert "larger" not in str(failed.value)
 
 
 def test_a_limit_lowered_since_it_was_read_is_noticed_when_the_upload_is_cut_off():
     wire = _Wire(listing=[{"max_blob_bytes": 100}, {"max_blob_bytes": 10}],
                  put=ConnectionResetError(10054, "reset"))
+    data = b"x" * 50
+    digest = _sha(data)
     with patch(_PERFORM, new=wire):
+        transport = _transport()
         with pytest.raises(AssetSyncError, match="the limit is 10"):
-            _transport().store(_sha(b"x" * 50), b"x" * 50)
+            transport.store(digest, data)
 
 
 def test_a_bad_digest_is_refused_before_anything_is_asked():
     wire = _Wire(listing={"max_blob_bytes": 10})
     with patch(_PERFORM, new=wire):
+        transport = _transport()
         with pytest.raises(AssetSyncError, match="SHA-256"):
-            _transport().store("not-a-digest", b"x")
+            transport.store("not-a-digest", b"x")
     assert wire.calls == []
 
 
@@ -169,17 +181,21 @@ def test_the_listing_and_delete_calls():
         transport = _transport()
         assert transport.usage() == listing
         assert transport.delete(_sha(b"abc")) is True
-    assert wire.deleted == [_sha(b"abc")]
+    digest = _sha(b"abc")
+    assert wire.deleted == [digest]
     with patch(_PERFORM, return_value=_reply(404)):
-        assert _transport().delete(_sha(b"abc")) is False
+        assert _transport().delete(digest) is False
+        transport = _transport()
         with pytest.raises(AssetSyncError, match="does not serve"):
-            _transport().usage()
+            transport.usage()
     with patch(_PERFORM, return_value={"status": 200, "text": "<html>"}):
+        transport = _transport()
         with pytest.raises(AssetSyncError, match="not JSON"):
-            _transport().usage()
+            transport.usage()
     with patch(_PERFORM, return_value=_reply(401)):
+        transport = _transport()
         with pytest.raises(AssetSyncError, match="secret"):
-            _transport().delete(_sha(b"abc"))
+            transport.delete(digest)
 
 
 # --- collecting what nothing refers to ------------------------------------------------
@@ -238,15 +254,17 @@ def test_one_blob_that_cannot_be_deleted_does_not_stop_the_others():
 @pytest.mark.parametrize("bad", [-1, "soon", True, float("nan"), None])
 def test_a_grace_period_that_is_not_one_is_refused(bad):
     with patch(_PERFORM, new=_Wire(listing={"blobs": []})) as wire:
+        transport = _transport()
         with pytest.raises(AssetSyncError, match="min_age_s"):
-            collect_unreferenced_blobs(_transport(), [], min_age_s=bad)
+            collect_unreferenced_blobs(transport, [], min_age_s=bad)
     assert wire.calls == []
 
 
 def test_a_reference_that_is_not_a_digest_is_refused_before_anything_is_deleted():
     with patch(_PERFORM, new=_Wire(listing={"blobs": [_row(b"x", _DAY * 2)]})) as wire:
+        transport = _transport()
         with pytest.raises(AssetSyncError):
-            collect_unreferenced_blobs(_transport(), ["nope"])
+            collect_unreferenced_blobs(transport, ["nope"])
     assert wire.calls == []
 
 
@@ -369,8 +387,9 @@ def test_a_store_locked_by_another_process_refuses_instead_of_overshooting(tmp_p
     store = BlobStore(tmp_path / "blobs")
     (tmp_path / "blobs").mkdir()
     (tmp_path / "blobs" / "store.lock").write_bytes(b"")     # held by "another process"
+    digest = _sha(b"x")
     with pytest.raises(BlobStoreBusyError, match="locked by another process"):
-        store.put("alice", _sha(b"x"), b"x")
+        store.put("alice", digest, b"x")
     assert store.usage("alice")["count"] == 0
     (tmp_path / "blobs" / "store.lock").unlink()
     assert store.put("alice", _sha(b"x"), b"x") is True

@@ -50,7 +50,8 @@ PATCH_PX = 28
 
 #: "claude-<family>-<major>[-<minor>]", minor being one or two digits (a date
 #: suffix is eight), anywhere in the id so Bedrock / Vertex ids match too.
-_MODEL_VERSION = re.compile(r"claude-[a-z]+-(\d+)(?:-(\d{1,2}))?(?![0-9])")
+_MODEL_VERSION = re.compile(
+    r"claude-[a-z]+-(\d+)(?:-(\d{1,2}))?(?![0-9])")  # NOSONAR python:S6353  # reason: \d also matches Unicode digits
 
 
 def image_tier(model: Optional[str]) -> Tuple[int, int]:

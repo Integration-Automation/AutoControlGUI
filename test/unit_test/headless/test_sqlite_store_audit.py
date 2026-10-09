@@ -100,8 +100,9 @@ def test_a_corrupt_history_database_raises_a_framework_error(tmp_path):
 
 
 def test_a_corrupt_audit_database_raises_a_framework_error(tmp_path):
+    corrupt = _corrupt(tmp_path / "audit.db")
     with pytest.raises(AuditLogError):
-        AuditLog(_corrupt(tmp_path / "audit.db"))
+        AuditLog(corrupt)
 
 
 def test_two_audit_writers_on_one_file_keep_the_chain(tmp_path):

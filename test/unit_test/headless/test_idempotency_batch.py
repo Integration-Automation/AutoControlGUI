@@ -24,8 +24,9 @@ def test_begin_new_then_replay():
 def test_conflict_on_different_request():
     store = IdempotencyStore()
     store.begin("k", request_fingerprint({"amount": 100}))
+    other = request_fingerprint({"amount": 999})
     with pytest.raises(IdempotencyConflict):
-        store.begin("k", request_fingerprint({"amount": 999}))
+        store.begin("k", other)
 
 
 def test_ttl_expiry_with_injected_clock():

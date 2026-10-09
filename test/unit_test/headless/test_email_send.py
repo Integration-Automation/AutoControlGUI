@@ -93,9 +93,9 @@ def test_attachment_is_added(tmp_path):
 
 
 def test_missing_attachment_raises(tmp_path):
+    message = _msg(attachments=[str(tmp_path / "nope.txt")])
     with pytest.raises(FileNotFoundError):
-        ac.send_email(_msg(attachments=[str(tmp_path / "nope.txt")]),
-                      {"host": "smtp.x.com"})
+        ac.send_email(message, {"host": "smtp.x.com"})
 
 
 def test_missing_sender_or_recipient_raises():
@@ -104,8 +104,9 @@ def test_missing_sender_or_recipient_raises():
 
 
 def test_missing_host_raises():
+    message = _msg()
     with pytest.raises(ValueError):
-        ac.send_email(_msg(), {})
+        ac.send_email(message, {})
 
 
 def test_facade_executor_and_mcp_wiring():

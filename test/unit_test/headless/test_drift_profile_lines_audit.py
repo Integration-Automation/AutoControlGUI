@@ -87,8 +87,9 @@ def test_sixteen_bit_images_are_read_and_opencv_errors_are_framework_errors(monk
         raise cv2.error("degenerate input")
 
     monkeypatch.setattr(cv2, "HoughLinesP", broken)
+    image = _divider(100)
     with pytest.raises(AutoControlException):
-        find_lines(_divider(100), min_length=20)
+        find_lines(image, min_length=20)
 
 
 # --- annotations ----------------------------------------------------------------------
@@ -172,7 +173,8 @@ def test_an_empty_baggage_key_is_refused():
     from je_auto_control.utils.baggage import Baggage, format_baggage, parse_baggage
     with pytest.raises(ValueError):
         Baggage({"": "x"})
+    baggage = Baggage()
     with pytest.raises(ValueError):
-        Baggage().set("", "x")
+        baggage.set("", "x")
     header = format_baggage(Baggage({"user id": "a,b;c=d"}))
     assert parse_baggage(header).to_dict() == {"user id": "a,b;c=d"}

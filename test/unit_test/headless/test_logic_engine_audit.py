@@ -73,9 +73,9 @@ def _machine(transitions, **extra):
 
 
 def test_an_unimplemented_guard_is_an_error_not_a_pass():
+    machine = _machine([{"if_pixel": [1, 2], "go_to": "done"}])
     with pytest.raises(StateMachineError, match="unknown guard"):
-        run_state_machine(_machine([{"if_pixel": [1, 2], "go_to": "done"}]),
-                          execute_action=lambda action: None)
+        run_state_machine(machine, execute_action=lambda action: None)
 
 
 def test_if_image_found_fires_only_once_the_image_is_on_screen(monkeypatch):

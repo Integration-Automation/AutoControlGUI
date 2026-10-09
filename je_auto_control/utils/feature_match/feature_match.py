@@ -128,7 +128,7 @@ def feature_match(template: ImageSource, *,
     located = _locate(template_gray.shape, kp1, kp2, good, min_inliers)
     if located is None or not (origin_x or origin_y):
         return located
-    return dataclasses.replace(
+    return dataclasses.replace(  # NOSONAR python:S5886  # reason: replace() returns its argument's type
         located,
         corners=[[x + origin_x, y + origin_y] for x, y in located.corners],
         center=[located.center[0] + origin_x, located.center[1] + origin_y])

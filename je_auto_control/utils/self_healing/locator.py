@@ -206,8 +206,9 @@ def _locate(template_path: Optional[str], description: Optional[str],
         coords, image_error = _try_image(template_path, detect_threshold, frame)
     image_ms = _ms_since(started)
     if coords is not None:
-        return replace(base, found=True, coordinates=coords, method=METHOD_IMAGE,
-                       image_ms=image_ms, duration_ms=_ms_since(started))
+        return replace(  # NOSONAR python:S5886  # reason: dataclasses.replace returns its argument's type
+            base, found=True, coordinates=coords, method=METHOD_IMAGE,
+            image_ms=image_ms, duration_ms=_ms_since(started))
     vlm_started = monotonic()
     vlm_region = None if region is None else list(region)
     coords, vlm_error = (_try_vlm(description, vlm_region, model) if frame is None
@@ -218,9 +219,10 @@ def _locate(template_path: Optional[str], description: Optional[str],
         autocontrol_logger.warning(
             f"self_heal: image miss ({image_error}); VLM healed → {coords}",
         )
-        return replace(timed, found=True, coordinates=coords, method=METHOD_VLM,
-                       duration_ms=_ms_since(started))
-    return replace(timed, vlm_error=vlm_error, duration_ms=_ms_since(started))
+        return replace(  # NOSONAR python:S5886  # reason: as above
+            timed, found=True, coordinates=coords, method=METHOD_VLM, duration_ms=_ms_since(started))
+    return replace(  # NOSONAR python:S5886  # reason: as above
+        timed, vlm_error=vlm_error, duration_ms=_ms_since(started))
 
 
 def _raise_on_miss(outcome: HealOutcome, raise_on_miss: bool) -> None:

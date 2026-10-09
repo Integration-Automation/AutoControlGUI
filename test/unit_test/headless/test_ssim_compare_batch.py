@@ -58,8 +58,9 @@ def test_changed_regions_empty_when_identical():
 
 def test_size_mismatch_raises():
     small = np.zeros((40, 40), dtype=np.uint8)
+    base = _base()
     with pytest.raises(ValueError):
-        ssim_compare(_base(), small)
+        ssim_compare(base, small)
 
 
 # --- wiring ---------------------------------------------------------------

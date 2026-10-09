@@ -228,11 +228,9 @@ def test_declared_arguments_reach_the_delegate_unchanged(case, monkeypatch):
         monkeypatch, module_path, attribute)
     payload = _tool_arguments(tool.input_schema, required_only=False)
     assert tool.invoke(payload) is sentinel
-    try:
-        bound = inspect.signature(original).bind(
-            *record["args"], **record["kwargs"]).arguments
-    except TypeError as error:  # the real delegate would have rejected it
-        pytest.fail(f"{tool.name} calls {attribute} wrongly: {error}")
+    # A TypeError here means the real delegate would have rejected the call.
+    bound = inspect.signature(original).bind(
+        *record["args"], **record["kwargs"]).arguments
     for name, value in payload.items():
         if name in bound:
             assert bound[name] == value, (
@@ -340,11 +338,8 @@ def test_command_dispatches_and_records_json(command, monkeypatch):
     _stop_whatever_it_started(command, lambda stop: executor.execute_action(
         [[stop, _command_arguments(stop, executor.event_dict[stop])]]))
     assert record, f"{command} produced no execution record"
-    try:
-        json.dumps(record)
-    except (TypeError, ValueError) as error:
-        pytest.fail(f"{command} put an unencodable value in the record: "
-                    f"{error}")
+    # A TypeError or ValueError here is an unencodable value in the record.
+    assert json.dumps(record), f"{command} produced a record that encodes to nothing"
 
 
 def test_every_schema_field_names_a_parameter_of_its_command():

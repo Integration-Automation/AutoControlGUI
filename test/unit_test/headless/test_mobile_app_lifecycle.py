@@ -104,8 +104,9 @@ def test_wait_for_app_times_out_and_stops_on_cancel(adb_host):
 
 def test_unreachable_device_is_not_read_as_not_running(adb_host):
     adb_host.devices["phone"].state = "unauthorized"
+    android = _android()
     with pytest.raises(DeviceError, match="unauthorized"):
-        app_state(_android(), APP)
+        app_state(android, APP)
 
 
 def test_matrix_stops_the_app_it_started_even_when_the_run_fails(adb_host):
@@ -145,8 +146,9 @@ def test_alert_accept_and_dismiss(adb_host):
 
 
 def test_android_alert_without_the_widget_tree_says_why(adb_host, no_uiautomator):
+    android = _android()
     with pytest.raises(DeviceUnsupportedError) as caught:
-        accept_alert(_android())
+        accept_alert(android)
     assert "uiautomator2" in caught.value.reason
     assert caught.value.alternative
     assert adb_host.devices["phone"].input_calls == []
@@ -234,8 +236,9 @@ def test_adapter_absent_reports_dependency(adb_host, no_uiautomator):
     assert android["recording"].available
     assert android["clipboard"].state == "needs_dependency"
     assert "uiautomator2" in android["clipboard"].reason
+    extension = mobile_extension(_android())
     with pytest.raises(DeviceUnsupportedError):
-        mobile_extension(_android()).get_clipboard()
+        extension.get_clipboard()
 
 
 class _HostToolAdapter:

@@ -353,7 +353,7 @@ _CHECKERS = (
 )
 
 
-_ARRAY_INDEX = re.compile(r"0|[1-9][0-9]*")
+_ARRAY_INDEX = re.compile(r"0|[1-9]\d*", re.ASCII)
 
 
 def _ref_step(node: Any, token: str, ref: str) -> Any:

@@ -81,5 +81,6 @@ def test_a_malformed_vault_is_a_store_error(tmp_path, change):
     vault = json.loads(path.read_text(encoding="utf-8"))
     change(vault)
     path.write_text(json.dumps(vault), encoding="utf-8")
+    manager = SecretManager(path)
     with pytest.raises(SecretStoreError):
-        SecretManager(path).unlock(PASS)
+        manager.unlock(PASS)

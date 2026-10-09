@@ -30,14 +30,16 @@ def test_shell_to_var_refuses_cmd_syntax_in_a_batch_files_arguments(monkeypatch)
     from je_auto_control.utils.executor.flow_data_commands import exec_shell_to_var
     monkeypatch.setattr(shell_exec.sys, "platform", "win32")
     monkeypatch.setattr(shell_exec, "run_captured", lambda *a, **k: pytest.fail("must not run"))
+    executor = _Executor()
     with pytest.raises(ValueError, match="metacharacters"):
-        exec_shell_to_var(_Executor(), {"command": ["probe.bat", "x&ver"]})
+        exec_shell_to_var(executor, {"command": ["probe.bat", "x&ver"]})
 
 
 def test_shell_to_var_needs_a_command():
     from je_auto_control.utils.executor.flow_data_commands import exec_shell_to_var
+    executor = _Executor()
     with pytest.raises(AutoControlActionException, match="needs 'command'"):
-        exec_shell_to_var(_Executor(), {})
+        exec_shell_to_var(executor, {})
 
 
 def test_a_timeout_ends_the_whole_process_tree():

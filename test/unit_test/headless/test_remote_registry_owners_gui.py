@@ -97,7 +97,7 @@ def qapp(monkeypatch, tmp_path):
     book = AddressBook(tmp_path / "book.json")        # never the operator's own address book
     monkeypatch.setattr(connection_screen, "default_address_book", lambda: book)
     app.messages = messages
-    yield app
+    return app
 
 
 @pytest.fixture(autouse=True)

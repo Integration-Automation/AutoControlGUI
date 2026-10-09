@@ -48,8 +48,8 @@ def test_collector_failure_does_not_prevent_bundle(tmp_path):
 
 def test_context_manager_bundles_and_reraises(tmp_path):
     output = tmp_path / "failure.zip"
-    with pytest.raises(RuntimeError, match="boom"):
-        with failure_bundle_on_error(output, options=FailureBundleOptions(
-                screenshot=False, diagnostics=False)):
-            raise RuntimeError("boom")
+    options = FailureBundleOptions(screenshot=False, diagnostics=False)
+    bundling = failure_bundle_on_error(output, options=options)
+    with pytest.raises(RuntimeError, match="boom"), bundling:
+        raise RuntimeError("boom")
     assert output.is_file()

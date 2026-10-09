@@ -65,7 +65,7 @@ class _FakeBackend(backend_base.AccessibilityBackend):
     name = "fake"
     available = True
 
-    def list_elements(self, app_name=None, max_results=200):
+    def list_elements(self, app_name=None, max_results=200, window_title=None):
         return [AccessibilityElement(name="OK", role="ControlType_50000",
                                      bounds=(1, 1, 2, 2), app_name="demo.exe")]
 

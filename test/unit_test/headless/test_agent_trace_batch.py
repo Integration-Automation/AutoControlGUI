@@ -53,9 +53,12 @@ def test_operation_context_times_and_records():
 
 def test_operation_marks_error_on_exception():
     trace = AgentTrace(clock=_Clock())
-    with pytest.raises(ValueError):
+    def failing_operation():
         with trace.operation("tool", tool_name="x"):
             raise ValueError("boom")
+
+    with pytest.raises(ValueError):
+        failing_operation()
     span = trace.spans()[0]
     assert span["status"] == "error"
     assert span["attributes"]["gen_ai.tool.name"] == "x"

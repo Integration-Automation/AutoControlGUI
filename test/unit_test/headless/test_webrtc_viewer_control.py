@@ -112,8 +112,9 @@ def test_deleting_a_file_names_it(viewer):
 
 @pytest.mark.parametrize("method", ["request_inbox_file", "delete_inbox_file"])
 def test_an_empty_name_is_refused_before_it_reaches_the_wire(viewer, method):
+    file_request = getattr(viewer, method)
     with pytest.raises(ValueError, match="name required"):
-        getattr(viewer, method)("")
+        file_request("")
     assert _sent(viewer) == []
 
 

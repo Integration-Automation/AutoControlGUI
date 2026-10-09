@@ -53,8 +53,9 @@ def test_a_duplicated_key_still_invalidates_the_header():
 def test_an_invalid_member_never_reaches_an_outgoing_header(items):
     with pytest.raises(TraceContextError):
         format_tracestate(items)
+    context = SpanContext(TRACE, SPAN, 1, items)
     with pytest.raises(TraceContextError):
-        inject_context({}, SpanContext(TRACE, SPAN, 1, items))
+        inject_context({}, context)
 
 
 @pytest.mark.parametrize("ctx", [

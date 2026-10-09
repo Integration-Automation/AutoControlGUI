@@ -640,17 +640,16 @@ def _helper_measurements_in_a_child() -> None:
               "about the opt-in helper only and is not counted")
 
 
-def _helper_measurements_main() -> int:
-    """Entry point of the measurement child."""
+def _helper_measurements_main() -> None:
+    """Entry point of the measurement child; nothing here is counted, so it has no status."""
     sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
     from eis_server import RecordingEisServer, load_symbols
     from je_auto_control.linux_wayland import libei
     if load_symbols() is None:
         print("note  libeis is not installed; nothing to measure")
-        return 0
+        return
     _run_helper_measurements(os.path.join(_scratch_dir(), "eis-helper"),
                              libei, RecordingEisServer)
-    return 0
 
 
 def _run_helper_measurements(path, libei, server_class) -> None:
@@ -901,5 +900,6 @@ def main() -> int:
 
 if __name__ == "__main__":
     if _HELPER_FLAG in sys.argv[1:]:
-        sys.exit(_helper_measurements_main())
+        _helper_measurements_main()
+        sys.exit(0)
     sys.exit(main())

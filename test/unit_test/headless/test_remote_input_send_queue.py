@@ -150,8 +150,9 @@ def test_a_write_error_goes_to_on_error_once_and_the_queue_refuses_more(errors):
     assert _wait(lambda: len(errors) == 1)
     assert errors == [sink.error]
     assert queue.closed
+    refused = _key(2)
     with pytest.raises(ConnectionError):
-        queue.put(_key(2))
+        queue.put(refused)
     assert errors == [sink.error]
     queue.close()
 
@@ -170,8 +171,9 @@ def test_a_write_out_too_long_is_reported_as_a_timeout_and_the_socket_is_let_go(
     assert len(errors) == 1
     assert isinstance(errors[0], TimeoutError)
     assert aborted == [True]
+    refused = _key(3)
     with pytest.raises(ConnectionError):
-        queue.put(_key(3))
+        queue.put(refused)
     queue.close()
 
 
@@ -198,8 +200,9 @@ def test_close_stops_the_writer_and_is_safe_twice(errors):
     queue.close()
     queue.close()
     assert not queue._thread.is_alive()
+    refused = _key(1)
     with pytest.raises(ConnectionError):
-        queue.put(_key(1))
+        queue.put(refused)
 
 
 def test_a_send_timeout_bounds_a_write_nobody_reads_and_leaves_reads_alone():
@@ -270,8 +273,9 @@ def test_a_failed_write_reaches_on_error_and_the_viewer_reads_as_down(connected,
     assert _wait(lambda: len(errors) == 1)
     assert errors == [channel.sink.error]
     assert not viewer.connected
+    refused = _key(2)
     with pytest.raises(ConnectionError):
-        viewer.send_input(_key(2))
+        viewer.send_input(refused)
 
 
 def test_send_input_still_validates_and_refuses_when_not_connected(connected):
@@ -280,8 +284,9 @@ def test_send_input_still_validates_and_refuses_when_not_connected(connected):
         viewer.send_input(["not", "a", "mapping"])
     viewer.disconnect()
     assert viewer.input_backlog() == {"pending": 0, "dropped_moves": 0}
+    refused = _key(1)
     with pytest.raises(ConnectionError):
-        viewer.send_input(_key(1))
+        viewer.send_input(refused)
 
 
 def test_disconnect_ends_the_writer_even_with_a_write_in_the_socket(connected):

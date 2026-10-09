@@ -101,7 +101,7 @@ def qapp(monkeypatch, tmp_path):
     monkeypatch.setattr(host_panel, "is_audio_backend_available", lambda: False)
     book = AddressBook(tmp_path / "book.json")        # never the operator's own address book
     monkeypatch.setattr(connection_screen, "default_address_book", lambda: book)
-    yield app
+    return app
 
 
 @pytest.fixture(autouse=True)
@@ -143,8 +143,8 @@ def test_the_viewer_panel_closes_its_window_and_leaves_the_session_in_the_regist
     assert viewer.connected
 
 
-def test_the_viewer_panel_gives_up_a_connect_that_has_not_answered():
-    _Viewer.gate = threading.Event()
+def test_the_viewer_panel_gives_up_a_connect_that_has_not_answered(monkeypatch):
+    monkeypatch.setattr(_Viewer, "gate", threading.Event())
     panel = _viewer_tab()
     assert panel._connect_task is not None
     panel.dispose()
@@ -177,8 +177,8 @@ def test_quick_connect_stops_polling_and_leaves_its_host_and_session_running():
     screen.dispose()
 
 
-def test_quick_connect_gives_up_a_connect_that_has_not_answered():
-    _Viewer.gate = threading.Event()
+def test_quick_connect_gives_up_a_connect_that_has_not_answered(monkeypatch):
+    monkeypatch.setattr(_Viewer, "gate", threading.Event())
     screen = connection_screen.QuickConnectScreen()
     screen._dispatch_target(parse_target("desk:5555"), "tok")
     assert screen._connect_task is not None

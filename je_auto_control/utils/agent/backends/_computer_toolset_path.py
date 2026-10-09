@@ -61,7 +61,7 @@ class ToolsetPath:
         calls = [(_attr(block, "id"), self._toolset_decision(block))
                  for block in content if _block_type(block) == "tool_use"]
         if not calls:
-            return _final_answer(response, content)
+            return _final_answer(content)
         batch.load(calls)
         return batch.next_decision()
 

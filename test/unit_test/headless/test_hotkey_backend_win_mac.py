@@ -151,8 +151,8 @@ def win_backend():
 def test_a_new_binding_is_registered_with_its_parsed_combo(win_backend,
                                                             user32):
     win_backend._sync(user32, [_binding()])
-    [(_reg_id, modifiers, vk)] = user32.registered
-    assert (modifiers, vk) == parse_combo("ctrl+alt+k")
+    [registration] = user32.registered
+    assert registration[1:] == parse_combo("ctrl+alt+k")
 
 
 def test_each_registration_gets_its_own_id(win_backend, user32):

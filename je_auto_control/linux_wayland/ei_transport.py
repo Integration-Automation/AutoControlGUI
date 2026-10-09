@@ -181,7 +181,7 @@ def read_frame(stream: BinaryIO) -> Optional[Dict[str, Any]]:
         raise EiProtocolError("the stream ended inside a frame")
     try:
         message = json.loads(payload.decode("utf-8"))
-    except (UnicodeDecodeError, ValueError) as error:
+    except ValueError as error:  # a UnicodeDecodeError is one too
         raise EiProtocolError(f"a frame was not valid JSON: {error}") from error
     if not isinstance(message, dict):
         raise EiProtocolError("a frame was not a JSON object")

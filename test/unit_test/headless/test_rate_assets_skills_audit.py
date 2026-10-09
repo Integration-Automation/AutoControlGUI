@@ -67,8 +67,9 @@ def test_retry_delays_stay_finite_and_bounded():
                                                ("enabled", "bool")])
 def test_an_asset_type_refuses_values_it_cannot_hold(value, asset_type):
     from je_auto_control.utils.assets import AssetStore
+    store = AssetStore(None)
     with pytest.raises(ValueError):
-        AssetStore(None).set("x", value, asset_type=asset_type)
+        store.set("x", value, asset_type=asset_type)
 
 
 def test_asset_types_keep_what_they_can_hold():
@@ -168,10 +169,11 @@ def test_the_mcp_saga_reports_rollback_errors_and_bad_steps_are_refused():
 
 def test_rate_limit_library_edges_are_refused():
     from je_auto_control.utils.rate_limit import SlidingWindowLimiter, TokenBucket, throttle
+    bucket, not_a_number = TokenBucket(1, 1), float("nan")
     with pytest.raises(AutoControlException):
-        TokenBucket(1, 1).acquire(2 * 0.5, timeout=float("nan"))
+        bucket.acquire(2 * 0.5, timeout=not_a_number)
     for limit in (0.5, float("inf")):
         with pytest.raises(AutoControlException):
             SlidingWindowLimiter(limit, 1.0)
     with pytest.raises(AutoControlException):
-        throttle(float("nan"))
+        throttle(not_a_number)

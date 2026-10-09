@@ -23,10 +23,8 @@ def _status_line(port: int, path: str, extra_headers: str = "") -> bytes:
             "Content-Length: abc\r\nContent-Type: application/json\r\n\r\n"
             .encode()
         )
-        try:
-            data = sock.recv(200)
-        except OSError as error:            # connection reset == thread died
-            pytest.fail(f"no response, socket reset: {error}")
+        # An OSError here is a connection reset: the handler thread died.
+        data = sock.recv(200)
         assert data, "handler thread died: server sent nothing"
         return data.split(b"\r\n")[0]
     finally:

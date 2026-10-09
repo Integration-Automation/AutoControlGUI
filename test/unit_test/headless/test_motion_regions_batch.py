@@ -49,8 +49,9 @@ def test_min_area_filters_specks():
 
 def test_size_mismatch_raises():
     small = np.zeros((40, 40), dtype=np.uint8)
+    before = _before()
     with pytest.raises(ValueError):
-        changed_regions(_before(), small)
+        changed_regions(before, small)
 
 
 # --- wiring ---------------------------------------------------------------

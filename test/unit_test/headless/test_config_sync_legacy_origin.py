@@ -176,8 +176,10 @@ def test_a_retired_device_is_refused_by_the_old_sync_too(server):
     _client("laptop").sync(ConfigBucket(user_id="alice"))
     _client("desktop").sync(ConfigBucket(user_id="alice"))
     _client("laptop").retire_peer("desktop")
+    desktop = _client("desktop")
+    bucket = ConfigBucket(user_id="alice")
     with pytest.raises(FullResyncRequired):
-        _client("desktop").sync(ConfigBucket(user_id="alice"))
+        desktop.sync(bucket)
 
 
 def test_a_flat_bucket_file_after_its_first_sync_with_this_code(server):

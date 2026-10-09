@@ -120,7 +120,7 @@ def validate() -> int:
         problems.append("v1 should fail exactly the HiDPI sample")
     if comparison.failures("v2-multi-scale"):
         problems.append("v2 should get every labelled sample right")
-    if not (old.accuracy.value or 0) < (new.accuracy.value or 0):
+    if (old.accuracy.value or 0) >= (new.accuracy.value or 0):
         problems.append("v2 should be measurably more accurate than v1")
     for problem in problems:
         print(f"FAILED: {problem}")

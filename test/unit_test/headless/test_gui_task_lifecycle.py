@@ -229,12 +229,15 @@ def test_no_worker_touches_widget(qapp):
     assert owner.text() == "payload"
 
     # Work that could reach a widget is refused before it starts.
+    refusing = TaskController()
     with pytest.raises(TaskUsageError):
-        TaskController().submit(owner.setText, owner=owner)                  # a widget's own method
+        refusing.submit(owner.setText, owner=owner)                          # a widget's own method
+    refusing = TaskController()
     with pytest.raises(TaskUsageError):
-        TaskController().submit(lambda _token: owner.text(), owner=owner)    # closes over the widget
+        refusing.submit(lambda _token: owner.text(), owner=owner)            # closes over the widget
+    refusing, bound_to_widget = TaskController(), functools.partial(lambda label, _token: label, owner)
     with pytest.raises(TaskUsageError):
-        TaskController().submit(functools.partial(lambda label, _token: label, owner), owner=owner)
+        refusing.submit(bound_to_widget, owner=owner)
     assert issubclass(TaskUsageError, AutoControlException)
     _destroy(qapp, owner)
 
@@ -457,7 +460,7 @@ def test_a_second_connect_supersedes_the_first(qapp, remote_panels):
     panel._disconnect()
 
 
-def test_quick_connect_does_not_hold_the_gui_thread(qapp, remote_panels):
+def test_quick_connect_does_not_hold_the_gui_thread(qapp, remote_panels, monkeypatch):
     from je_auto_control.utils.remote_desktop.connect_coordinator import parse_target
     _panel, connection_screen, registry, warnings = remote_panels
     screen = connection_screen.QuickConnectScreen()
@@ -473,14 +476,10 @@ def test_quick_connect_does_not_hold_the_gui_thread(qapp, remote_panels):
     assert screen._screen_window is not None
     screen._disconnect()
     # A refusal arrives as a warning, on the GUI thread, and adopts nothing.
-    monkeypatch_refuse = _SlowViewer.refuse
-    _SlowViewer.refuse = True
-    try:
-        screen._dispatch_target(parse_target("desk:5555"), "tok")
-        _SlowViewer.made[1].answer.set()
-        assert _pump(qapp, lambda: screen._connect_task is None)
-    finally:
-        _SlowViewer.refuse = monkeypatch_refuse
+    monkeypatch.setattr(_SlowViewer, "refuse", True)
+    screen._dispatch_target(parse_target("desk:5555"), "tok")
+    _SlowViewer.made[1].answer.set()
+    assert _pump(qapp, lambda: screen._connect_task is None)
     assert warnings == ["refused"]
     assert registry.owned("viewer", screen._owner) is None
     screen._refresh_timer.stop()

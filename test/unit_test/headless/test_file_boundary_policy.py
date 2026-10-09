@@ -149,8 +149,10 @@ def test_policy_accepts_inside_and_rejects_outside(tmp_path):
 def test_policy_rejects_dot_dot_escape(tmp_path, escape):
     root = tmp_path / "root"
     root.mkdir()
+    policy = PathPolicy([root])
+    escaping = str(root / escape)
     with pytest.raises(PathNotAllowedError):
-        PathPolicy([root]).validate(str(root / escape), operation="t")
+        policy.validate(escaping, operation="t")
 
 
 def test_symlink_escape_is_rejected(tmp_path):
@@ -177,8 +179,9 @@ def test_drive_and_unc_escapes_are_rejected(tmp_path, monkeypatch, path):
     root = tmp_path / "root"
     root.mkdir()
     monkeypatch.chdir(root)
+    policy = PathPolicy([root])
     with pytest.raises(PathNotAllowedError):
-        PathPolicy([root]).validate(path, operation="t")
+        policy.validate(path, operation="t")
 
 
 def test_tilde_must_be_inside_both_expanded_and_literal(tmp_path, monkeypatch):
@@ -189,18 +192,20 @@ def test_tilde_must_be_inside_both_expanded_and_literal(tmp_path, monkeypatch):
     monkeypatch.setenv("HOME", str(home))
     monkeypatch.setenv("USERPROFILE", str(home))
     monkeypatch.chdir(cwd)
+    cwd_only, home_only = PathPolicy([cwd]), PathPolicy([home])
     with pytest.raises(PathNotAllowedError):   # a handler that expands it leaves the root
-        PathPolicy([cwd]).validate("~/x.txt", operation="t")
+        cwd_only.validate("~/x.txt", operation="t")
     with pytest.raises(PathNotAllowedError):   # a handler that does not leaves it too
-        PathPolicy([home]).validate("~/x.txt", operation="t")
+        home_only.validate("~/x.txt", operation="t")
     assert PathPolicy([home, cwd]).validate("~/x.txt", operation="t") == \
         Path(os.path.realpath(home / "x.txt"))
 
 
 @pytest.mark.parametrize("bad", ["", "a\x00b"])
 def test_policy_rejects_malformed_paths(tmp_path, bad):
+    policy = PathPolicy([tmp_path])
     with pytest.raises(PathNotAllowedError):
-        PathPolicy([tmp_path]).validate(bad, operation="t")
+        policy.validate(bad, operation="t")
 
 
 def test_policy_from_env(tmp_path):
@@ -265,9 +270,11 @@ def test_walk_rejects_an_outside_path_wherever_it_sits(tmp_path, arguments, wher
     root.mkdir()
     outside = str(tmp_path / "outside.txt")
     text = json.dumps(arguments).replace("OUT", outside.replace("\\", "\\\\"))
+    policy = ArgumentPolicy(PathPolicy([root]))
+    outside_arguments = json.loads(text)
     with pytest.raises(PathNotAllowedError, match=where.replace("$", r"\$") if "\\" not in where
                        else where):
-        ArgumentPolicy(PathPolicy([root])).apply("tool", _SCHEMA, json.loads(text))
+        policy.apply("tool", _SCHEMA, outside_arguments)
 
 
 def test_walk_leaves_an_empty_path_to_the_handler(tmp_path):
@@ -382,8 +389,9 @@ def test_env_ref_allowlist():
     with pytest.raises(SecretRefError, match="allowlist"):
         limited.check_all({"a": [{"b": "env://ANTHROPIC_API_KEY"}]})
     limited.check_all({"a": ["env://APP_KEY", "plain", 3, "secret://x"]})
+    closed = RefResolver(env=env, env_allowlist=[])
     with pytest.raises(SecretRefError):
-        RefResolver(env=env, env_allowlist=[]).resolve("env://APP_URL")
+        closed.resolve("env://APP_URL")
 
 
 @pytest.mark.parametrize("raw, expected", [

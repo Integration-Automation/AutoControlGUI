@@ -38,14 +38,16 @@ def _token(header: dict, claims: dict) -> str:
 
 
 def test_a_list_alg_is_a_jwt_error_not_a_type_error():
+    token = _token({"alg": ["HS256"]}, {"sub": "a"})
     with pytest.raises(JwtError):
-        decode_jwt(_token({"alg": ["HS256"]}, {"sub": "a"}), _KEY)
+        decode_jwt(token, _KEY)
     assert issubclass(JwtError, AutoControlException)
 
 
 def test_a_critical_extension_is_rejected():
+    token = _token({"alg": "HS256", "crit": ["exp-ext"], "exp-ext": 1}, {"sub": "a"})
     with pytest.raises(JwtError, match="critical"):
-        decode_jwt(_token({"alg": "HS256", "crit": ["exp-ext"], "exp-ext": 1}, {"sub": "a"}), _KEY)
+        decode_jwt(token, _KEY)
     assert decode_jwt(_token({"alg": "HS256"}, {"sub": "a"}), _KEY)["sub"] == "a"
 
 
@@ -76,7 +78,10 @@ def test_mistyped_problem_members_are_ignored():
     problem = parse_problem({
         "headers": {"Content-Type": "application/problem+json"},
         "json": {"title": 42, "status": "404", "detail": ["x"], "instance": 7}})
-    assert (problem.title, problem.status, problem.detail, problem.instance) == (None,) * 4
+    assert problem.title is None
+    assert problem.status is None
+    assert problem.detail is None
+    assert problem.instance is None
     good = parse_problem({"headers": {"Content-Type": "application/problem+json"},
                           "json": {"title": "Nope", "status": 404, "detail": "d"}})
     assert (good.title, good.status, good.detail) == ("Nope", 404, "d")

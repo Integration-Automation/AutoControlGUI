@@ -73,6 +73,7 @@ from je_auto_control.utils.rbac.authorization import (
 from je_auto_control.utils.rbac.users import UserStore
 
 DEFAULT_PATH = "/mcp"
+_UNKNOWN_PATH = "unknown path"
 # Bound per-request reads so a client that declares a Content-Length then
 # stalls (body underrun) can't pin a worker thread forever.
 _REQUEST_TIMEOUT = 30.0
@@ -133,7 +134,7 @@ class _MCPHttpHandler(HttpResponseMixin, BaseHTTPRequestHandler):
         if not self._caller_allowed():
             return
         if self.path != DEFAULT_PATH:
-            self._send_json({"error": "unknown path"}, status=404)
+            self._send_json({"error": _UNKNOWN_PATH}, status=404)
             return
         line = self._read_body()
         if line is None:
@@ -373,7 +374,7 @@ class _MCPHttpHandler(HttpResponseMixin, BaseHTTPRequestHandler):
         if not self._authorize():
             return
         if self.path != DEFAULT_PATH:
-            self._send_json({"error": "unknown path"}, status=404)
+            self._send_json({"error": _UNKNOWN_PATH}, status=404)
             return
         if not self._client_accepts_sse():
             self._send_json(
@@ -446,7 +447,7 @@ class _MCPHttpHandler(HttpResponseMixin, BaseHTTPRequestHandler):
             return
         if self.path != DEFAULT_PATH:
             # GET and POST answer 404 here; DELETE /anything ended the session.
-            self._send_json({"error": "unknown path"}, status=404)
+            self._send_json({"error": _UNKNOWN_PATH}, status=404)
             return
         registry: SessionRegistry = self.server.sessions  # type: ignore[attr-defined]
         header_id = session_id_from_headers(self.headers)

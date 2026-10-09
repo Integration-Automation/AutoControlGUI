@@ -31,7 +31,7 @@ from headless._qt_settle import settle  # noqa: E402
 @pytest.fixture(scope="module")
 def qapp():
     app = QApplication.instance() or QApplication([])
-    yield app
+    return app
 
 
 @pytest.fixture(autouse=True)
@@ -64,7 +64,7 @@ def _process_until(app: QApplication, predicate, timeout: float = 10.0,
     return predicate()
 
 
-def test_viewer_panel_renders_frame_from_host(qapp):
+def test_viewer_panel_renders_frame_from_host(qapp, monkeypatch):
     from je_auto_control.gui.remote_desktop_tab import _ViewerPanel
     from je_auto_control.utils.remote_desktop.host import RemoteDesktopHost
 
@@ -77,7 +77,7 @@ def test_viewer_panel_renders_frame_from_host(qapp):
         input_dispatcher=captured_input.append,
     )
     host.start()
-    registry._host = host  # noqa: SLF001  # test-only injection
+    monkeypatch.setattr(registry, "_host", host)  # test-only injection
     try:
         panel = _ViewerPanel()
         panel._host_field.setText("127.0.0.1")  # noqa: SLF001
@@ -95,10 +95,9 @@ def test_viewer_panel_renders_frame_from_host(qapp):
     finally:
         registry.disconnect_viewer()
         host.stop(timeout=1.0)
-        registry._host = None  # noqa: SLF001
 
 
-def test_host_preview_shows_streamed_frame(qapp):
+def test_host_preview_shows_streamed_frame(qapp, monkeypatch):
     from je_auto_control.gui.remote_desktop_tab import _HostPanel
     from je_auto_control.utils.remote_desktop.host import RemoteDesktopHost
 
@@ -108,7 +107,7 @@ def test_host_preview_shows_streamed_frame(qapp):
         frame_provider=lambda: jpeg,
     )
     host.start()
-    registry._host = host  # noqa: SLF001
+    monkeypatch.setattr(registry, "_host", host)
     try:
         panel = _HostPanel()
         panel.show()  # the preview only refreshes while visible
@@ -119,10 +118,9 @@ def test_host_preview_shows_streamed_frame(qapp):
         assert panel._preview._image.height() == 60  # noqa: SLF001
     finally:
         host.stop(timeout=1.0)
-        registry._host = None  # noqa: SLF001
 
 
-def test_viewer_input_round_trips_to_dispatcher(qapp):
+def test_viewer_input_round_trips_to_dispatcher(qapp, monkeypatch):
     from je_auto_control.gui.remote_desktop_tab import _ViewerPanel
     from je_auto_control.utils.remote_desktop.host import RemoteDesktopHost
 
@@ -134,7 +132,7 @@ def test_viewer_input_round_trips_to_dispatcher(qapp):
         input_dispatcher=captured.append,
     )
     host.start()
-    registry._host = host  # noqa: SLF001
+    monkeypatch.setattr(registry, "_host", host)
     try:
         panel = _ViewerPanel()
         panel._host_field.setText("127.0.0.1")  # noqa: SLF001
@@ -160,7 +158,6 @@ def test_viewer_input_round_trips_to_dispatcher(qapp):
     finally:
         registry.disconnect_viewer()
         host.stop(timeout=1.0)
-        registry._host = None  # noqa: SLF001
 
 
 def test_a_frame_that_beats_the_connect_result_is_shown(qapp):

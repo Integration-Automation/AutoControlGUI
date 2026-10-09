@@ -118,8 +118,9 @@ def _bot():
 def test_the_slack_bot_obeys_the_egress_policy():
     set_egress_policy(deny=["slack.com"])
     try:
+        bot = _bot()
         with pytest.raises(slack_bot.SlackError, match="egress"):
-            _bot()._request("https://slack.com/api/auth.test", method="GET")
+            bot._request("https://slack.com/api/auth.test", method="GET")
     finally:
         set_egress_policy()
 

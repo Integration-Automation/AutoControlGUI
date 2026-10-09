@@ -280,13 +280,13 @@ def test_a_reference_cannot_escape_the_scripts_folder(tmp_path):
                 "$local": "path", "root": "scripts", "relative": drive_or_backslash}}, None)
     good = hashlib.sha256(b"[]").hexdigest()
     for key in ("../evil.json", "/abs.json", "C:/abs.json", "a\\..\\..\\evil.json"):
+        scripts = ScriptSyncAdapter("laptop", tmp_path / "s")
         with pytest.raises(ConfigSyncError):
-            ScriptSyncAdapter("laptop", tmp_path / "s").write_local(
-                key, {"content": "[]", "sha256": good}, None)
+            scripts.write_local(key, {"content": "[]", "sha256": good}, None)
     assert not (tmp_path / "evil.json").exists()
+    scripts = ScriptSyncAdapter("laptop", tmp_path)
     with pytest.raises(ConfigSyncError):
-        ScriptSyncAdapter("laptop", tmp_path).write_local(
-            "ok.json", {"content": "[]", "sha256": "0" * 64}, None)
+        scripts.write_local("ok.json", {"content": "[]", "sha256": "0" * 64}, None)
 
 
 # --- hotkeys and triggers are never armed by a sync ------------------------

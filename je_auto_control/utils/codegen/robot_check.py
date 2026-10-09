@@ -50,11 +50,9 @@ _MARKERS = frozenset({
     "END", "ELSE", "ELSE IF", "EXCEPT", "FINALLY", "BREAK", "CONTINUE", "RETURN",
     "VAR",
 })
-_HEADER = re.compile(r"^\*+\s*(.*?)\s*\**\s*$")
 _CELLS = re.compile(r" {2,}|\t+")
 _ASSIGNMENT = re.compile(r"^[$@&]\{[^{}]+\}\s?=?$")
 _VARIABLE_NAME = re.compile(r"^[$@&]\{[^{}]+\}\s?=?$")
-_SETTING_CELL = re.compile(r"^\[\s*(.+?)\s*\]$")
 _CONTINUATION = "..."
 
 
@@ -117,9 +115,20 @@ def _unbalanced_variable(cell: str) -> bool:
     return depth != 0
 
 
+def _header_name(text: str) -> str:
+    """The name in ``*** Name ***``: no leading or trailing asterisks, no padding."""
+    return text.lstrip("*").strip().rstrip("*").rstrip()
+
+
+def _setting_name(cell: str) -> Optional[str]:
+    """The name in a ``[Name]`` cell; ``None`` for a cell that is not one."""
+    if len(cell) < 3 or cell[0] != "[" or cell[-1] != "]":
+        return None
+    return cell[1:-1].strip()
+
+
 def _check_header(state: _State, number: int, text: str) -> None:
-    match = _HEADER.match(text)
-    name = (match.group(1) if match else "").lower()
+    name = _header_name(text).lower()
     state.close_owner()
     state.section = _SECTIONS.get(name)
     if state.section is None:
@@ -169,9 +178,9 @@ def _check_blocks(owner: _Owner, state: _State, number: int, first: str) -> None
 
 def _check_body_cells(state: _State, number: int, cells: Sequence[str]) -> None:
     first = cells[0]
-    setting = _SETTING_CELL.match(first)
+    setting = _setting_name(first)
     if setting is not None:
-        if setting.group(1).lower() not in _BODY_SETTINGS:
+        if setting.lower() not in _BODY_SETTINGS:
             state.note(number, f"unknown setting {first!r}")
         return
     if first in _OPENERS or first in _MARKERS:

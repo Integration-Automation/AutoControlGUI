@@ -93,25 +93,19 @@ def test_tools_list_via_http_uses_registered_tools():
 
 
 def test_unknown_path_returns_404(http_server):
-    try:
+    with pytest.raises(urllib.error.HTTPError) as refused:
         _post(http_server, {"jsonrpc": "2.0", "id": 1,
                              "method": "ping"}, path="/elsewhere")
-    except urllib.error.HTTPError as error:
-        assert error.code == 404
-    else:
-        pytest.fail("expected 404 response")
+    assert refused.value.code == 404
 
 
 def test_get_returns_405(http_server):
     host, port = http_server.address
     url = f"{_TEST_SCHEME}://{host}:{port}{DEFAULT_PATH}"
     req = urllib.request.Request(url, method="GET")
-    try:
+    with pytest.raises(urllib.error.HTTPError) as refused:
         urllib.request.urlopen(req, timeout=3)  # nosec B310
-    except urllib.error.HTTPError as error:
-        assert error.code == 405
-    else:
-        pytest.fail("expected 405 response")
+    assert refused.value.code == 405
 
 
 def test_invalid_content_length_rejected(http_server):
@@ -119,12 +113,9 @@ def test_invalid_content_length_rejected(http_server):
     url = f"{_TEST_SCHEME}://{host}:{port}{DEFAULT_PATH}"
     req = urllib.request.Request(url, data=b"", method="POST",
                                   headers={"Content-Type": "application/json"})
-    try:
+    with pytest.raises(urllib.error.HTTPError) as refused:
         urllib.request.urlopen(req, timeout=3)  # nosec B310
-    except urllib.error.HTTPError as error:
-        assert error.code == 400
-    else:
-        pytest.fail("expected 400 response")
+    assert refused.value.code == 400
 
 
 def test_sse_streams_progress_then_final_response():
@@ -196,12 +187,9 @@ def test_authentication_rejects_missing_bearer():
             url, data=body, method="POST",
             headers={"Content-Type": "application/json"},
         )
-        try:
+        with pytest.raises(urllib.error.HTTPError) as refused:
             urllib.request.urlopen(req, timeout=3)  # nosec B310
-        except urllib.error.HTTPError as error:
-            assert error.code == 401
-        else:
-            pytest.fail("expected 401 response")
+        assert refused.value.code == 401
     finally:
         server.stop(timeout=1.0)
 
@@ -222,15 +210,12 @@ def test_authentication_rejects_wrong_bearer():
             headers={"Content-Type": "application/json",
                       "Authorization": "Bearer wrong"},
         )
-        try:
+        with pytest.raises(urllib.error.HTTPError) as refused:
             urllib.request.urlopen(req, timeout=3)  # nosec B310
-        except urllib.error.HTTPError as error:
-            # 401, not 403: the MCP authorization spec answers an invalid
-            # token 401, with a WWW-Authenticate challenge.
-            assert error.code == 401
-            assert 'error="invalid_token"' in error.headers["WWW-Authenticate"]
-        else:
-            pytest.fail("expected 401 response")
+        # 401, not 403: the MCP authorization spec answers an invalid
+        # token 401, with a WWW-Authenticate challenge.
+        assert refused.value.code == 401
+        assert 'error="invalid_token"' in refused.value.headers["WWW-Authenticate"]
     finally:
         server.stop(timeout=1.0)
 

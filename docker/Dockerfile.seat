@@ -78,10 +78,16 @@ RUN printf 'deb https://deb.debian.org/debian sid main\n' \
     && apt-get update \
     && apt-get install -y --no-install-recommends -t sid ydotool \
     && apt-get install -y --no-install-recommends \
-        grim sway wlr-randr wtype \
-        dmz-cursor-theme libinput-tools udev \
-        libgl1 libglib2.0-0 \
         ca-certificates \
+        dmz-cursor-theme \
+        grim \
+        libgl1 \
+        libglib2.0-0 \
+        libinput-tools \
+        sway \
+        udev \
+        wlr-randr \
+        wtype \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app

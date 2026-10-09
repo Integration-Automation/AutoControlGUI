@@ -109,13 +109,14 @@ def test_a_secret_cut_by_the_length_limit_leaves_no_prefix(tmp_path, fake_execut
 
 def test_write_secret_input_and_vault_reads_are_noted(tmp_path, monkeypatch):
     import je_auto_control.wrapper.auto_control_keyboard as keyboard_module
+    from je_auto_control.utils.exception.exceptions import AutoControlKeyboardException
     from je_auto_control.utils.secret_ref.secret_ref import RefResolver
     noted = []
     monkeypatch.setattr(recorder, "note_secret_value",
                         lambda value: noted.append(value) or True)
     # Refuse before any key event: the note has to happen first.
     monkeypatch.setattr(keyboard_module, "keyboard", object())
-    with pytest.raises(Exception):
+    with pytest.raises(AutoControlKeyboardException, match="cannot type Unicode"):
         keyboard_module.write_secret(PLAIN)
     resolver = RefResolver(secret_resolver=lambda name: f"value-of-{name}")
     assert resolver.resolve("secret://db") == "value-of-db"

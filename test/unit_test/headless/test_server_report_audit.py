@@ -273,8 +273,9 @@ def test_clients_turn_a_reply_nested_too_deeply_into_their_own_error(deep_server
     [status] = admin.poll_all()
     assert status.healthy is False
     assert "nested too deeply" in status.error
+    sync_client = ConfigSyncClient(deep_server, user_id="u")
     with pytest.raises(ConfigSyncError):
-        ConfigSyncClient(deep_server, user_id="u").fetch()
+        sync_client.fetch()
     with pytest.raises(SignalingError):
         _request("GET", deep_server + "/x")
 

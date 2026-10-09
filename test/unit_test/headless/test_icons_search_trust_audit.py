@@ -33,8 +33,9 @@ def test_a_box_past_the_edge_uses_the_clipped_patch_and_bad_arrays_are_framework
     from je_auto_control.utils.icon_classify import box_features, classify_icon
     image = _checkbox(255, 0)
     assert box_features(image, [-10, 0, 30, 20])["aspect"] == box_features(image, [0, 0, 20, 20])["aspect"]
+    as_float = image.astype(np.float32)
     with pytest.raises(AutoControlException):
-        classify_icon(image.astype(np.float32), [2, 2, 26, 26])
+        classify_icon(as_float, [2, 2, 26, 26])
 
 
 # --- nested runs on the running executor ------------------------------------------------------------------

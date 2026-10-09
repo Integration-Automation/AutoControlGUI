@@ -52,7 +52,7 @@ _ABSOLUTE_PREFIXES = ("/", "\\", "~")
 
 def file_url_path(value: str) -> Optional[str]:
     """The filesystem path a ``file:`` URL names; ``None`` for anything else."""
-    if not value[:len(_FILE_SCHEME)].lower() == _FILE_SCHEME:
+    if value[:len(_FILE_SCHEME)].lower() != _FILE_SCHEME:
         return None
     parts = urlsplit(value)
     path = url2pathname(parts.path) if parts.path else unquote(parts.netloc)

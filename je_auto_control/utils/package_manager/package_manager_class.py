@@ -9,7 +9,9 @@ from typing import Optional
 from je_auto_control.utils.exception.exceptions import AutoControlExecuteActionException
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 
-_PACKAGE_NAME_RE = re.compile(r"^[A-Za-z_]\w*(\.[A-Za-z_]\w*)*$")
+#: One name of a dotted module name. Each part is matched on its own, so no
+#: pattern here repeats a group that itself repeats.
+_PACKAGE_PART_RE = re.compile(r"[A-Za-z_]\w*")
 
 #: Comma-separated package names the gate allows, for hosts with no Python of
 #: their own to call ``executor.allow_packages``: the CLIs, the socket / REST /
@@ -19,7 +21,9 @@ ALLOWED_PACKAGES_ENV = "JE_AUTOCONTROL_ALLOWED_PACKAGES"
 
 def is_package_name(name: object) -> bool:
     """Whether ``name`` is a dotted Python module name, the only thing the gate lists."""
-    return isinstance(name, str) and bool(_PACKAGE_NAME_RE.match(name))
+    if not isinstance(name, str):
+        return False
+    return all(_PACKAGE_PART_RE.fullmatch(part) for part in name.split("."))
 
 
 def _packages_from_environment() -> set[str]:
@@ -111,7 +115,7 @@ class PackageManager:
         :param package: 套件名稱 Package name (must match a Python dotted identifier)
         :return: 套件模組 ModuleType 或 None
         """
-        if not isinstance(package, str) or not _PACKAGE_NAME_RE.match(package):
+        if not is_package_name(package):
             autocontrol_logger.error("rejected invalid package name: %r", package)
             return None
         if package not in self.installed_package_dict:

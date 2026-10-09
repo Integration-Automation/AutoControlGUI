@@ -28,7 +28,7 @@ from je_auto_control.gui.script_builder.step_model import (  # noqa: E402
 
 @pytest.fixture(autouse=True)
 def qapp():
-    yield QApplication.instance() or QApplication([])
+    return QApplication.instance() or QApplication([])
 
 
 @pytest.fixture(autouse=True)

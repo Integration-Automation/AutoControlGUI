@@ -92,7 +92,7 @@ class _Session:
                 event, sequence=sequence, step_id=f"{self.token}-{sequence}")
             self.journal.append(numbered)
             self.started = sequence
-        return numbered
+        return numbered  # NOSONAR python:S5886  # reason: replace() returns its argument's type
 
     def status(self) -> Dict[str, Any]:
         """The session as a JSON-ready dict."""
@@ -263,7 +263,7 @@ class _Step:
         found = self.artifacts + [
             item for item in artifacts_of_step(params, self._result, event.started_at)
             if item not in self.artifacts]
-        return dataclasses.replace(
+        return dataclasses.replace(  # NOSONAR python:S5886  # reason: replace() returns its argument's type
             event, status=status, error=error, outcome=outcome,
             finished_at=time.time(), artifacts=_masked_artifacts(found, known))
 

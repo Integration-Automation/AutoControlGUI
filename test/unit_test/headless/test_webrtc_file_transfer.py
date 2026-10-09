@@ -286,11 +286,12 @@ def test_a_read_failure_mid_transfer_aborts_the_receiver_too(bridge, tmp_path):
         return _Failing(handle) if self == source else handle
 
     channel = _Channel()
+    sender = FileTransferSender(channel)
     monkey = pytest.MonkeyPatch()
     monkey.setattr(type(source), "open", _open)
     try:
         with pytest.raises(FileTransferError, match="read failed"):
-            FileTransferSender(channel).send(source, chunk_size=4)
+            sender.send(source, chunk_size=4)
     finally:
         monkey.undo()
     assert json.loads(channel.messages[-1])["type"] == "file_abort"

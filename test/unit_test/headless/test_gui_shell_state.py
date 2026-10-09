@@ -35,8 +35,7 @@ ROOT = pathlib.Path(__file__).resolve().parents[3]
 
 @pytest.fixture(scope="module")
 def qapp():
-    app = QApplication.instance() or QApplication([])
-    yield app
+    return QApplication.instance() or QApplication([])
 
 
 def _settle(app) -> None:

@@ -46,7 +46,7 @@ def qapp(monkeypatch):
     for box in ("warning", "information", "question", "critical"):
         monkeypatch.setattr(QMessageBox, box, lambda *args: messages.append(args[-1]))
     app.messages = messages
-    yield app
+    return app
 
 
 @pytest.fixture(autouse=True)
@@ -333,10 +333,10 @@ def _start(panel, token):
     assert settle_op(panel._host_op)
 
 
-def test_host_stop_joins_off_the_gui_thread_and_clears_the_slot_when_it_reports(host):
+def test_host_stop_joins_off_the_gui_thread_and_clears_the_slot_when_it_reports(host, monkeypatch):
     _start(host, "one")
     running = registry.host
-    _Host.gate = _Gate()
+    monkeypatch.setattr(_Host, "gate", _Gate())
     assert _timed(host._stop) < _PROMPT_S
     assert _Host.gate.entered.wait(10.0)
     assert _Host.gate.threads[0] is not threading.main_thread()
@@ -357,9 +357,9 @@ def test_host_stop_joins_off_the_gui_thread_and_clears_the_slot_when_it_reports(
     assert host._stop_btn.isEnabled()
 
 
-def test_host_start_stops_the_old_host_before_the_new_one_binds(host):
+def test_host_start_stops_the_old_host_before_the_new_one_binds(host, monkeypatch):
     _start(host, "one")
-    _Host.gate = _Gate()
+    monkeypatch.setattr(_Host, "gate", _Gate())
     host._token.setText("two")
     assert _timed(host._start) < _PROMPT_S
     assert _Host.gate.entered.wait(10.0)
@@ -374,9 +374,9 @@ def test_host_start_stops_the_old_host_before_the_new_one_binds(host):
     assert host._shared["token"] == "two"
 
 
-def test_a_host_that_comes_up_for_a_panel_that_is_gone_is_stopped(qapp, host):
+def test_a_host_that_comes_up_for_a_panel_that_is_gone_is_stopped(qapp, host, monkeypatch):
     _start(host, "one")
-    _Host.gate = _Gate()
+    monkeypatch.setattr(_Host, "gate", _Gate())
     panel = host_panel._HostPanel()
     panel._token.setText("two")
     panel._start()

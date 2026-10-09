@@ -40,8 +40,9 @@ _JSON_NUMBER = re.compile(r"-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?")
 _LITERALS = {"true": True, "false": False, "null": None}
 _BARE_KEY = re.compile(r"[\w-]+")
 _HEX4 = re.compile(r"[0-9A-Fa-f]{4}")
-_INDEX = re.compile(r"0|-?[1-9][0-9]*")
-_DIGITS = re.compile(r"-?[0-9]+")
+# re.ASCII: without it "\d" would also take the Unicode digits.
+_INDEX = re.compile(r"0|-?[1-9]\d*", re.ASCII)
+_DIGITS = re.compile(r"-?\d+", re.ASCII)
 _MAX_INDEX = 2 ** 53 - 1          # RFC 9535 2.1: the I-JSON exact integer range
 _QUOTES = "'\""
 _ABSENT = object()

@@ -19,6 +19,8 @@ from typing import Optional
 
 from je_auto_control.utils.exception.exceptions import AutoControlException
 
+_PILLOW_REQUIRED = "Pillow is required for clipboard image support"
+
 
 def get_clipboard() -> str:
     """Return the current clipboard text (empty string if empty)."""
@@ -64,9 +66,7 @@ def _as_png_bytes(image: bytes | bytearray | str | os.PathLike) -> bytes:
         try:
             from PIL import Image  # noqa: PLC0415  lazy import
         except ImportError as error:
-            raise RuntimeError(
-                "Pillow is required for clipboard image support"
-            ) from error
+            raise RuntimeError(_PILLOW_REQUIRED) from error
         buffer = BytesIO()
         with Image.open(safe_path) as opened:
             opened.convert("RGB").save(buffer, format="PNG")
@@ -207,9 +207,7 @@ def _win_get_image() -> Optional[bytes]:
     try:
         from PIL import ImageGrab  # noqa: PLC0415  lazy import
     except ImportError as error:
-        raise RuntimeError(
-            "Pillow is required for clipboard image support"
-        ) from error
+        raise RuntimeError(_PILLOW_REQUIRED) from error
     image = ImageGrab.grabclipboard()
     if image is None or isinstance(image, list):
         return None
@@ -225,9 +223,7 @@ def _win_set_image(png_bytes: bytes) -> None:
     try:
         from PIL import Image  # noqa: PLC0415  lazy import
     except ImportError as error:
-        raise RuntimeError(
-            "Pillow is required for clipboard image support"
-        ) from error
+        raise RuntimeError(_PILLOW_REQUIRED) from error
     # `Image.open` returns an `ImageFile`; `convert` returns a plain
     # `Image`, so the variable has to be declared as the wider one.
     image: Image.Image = Image.open(BytesIO(png_bytes))

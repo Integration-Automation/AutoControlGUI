@@ -183,8 +183,7 @@ def test_small_window_is_usable(window):
 
 @pytest.fixture(scope="module")
 def qapp():
-    app = QApplication.instance() or QApplication([])
-    yield app
+    return QApplication.instance() or QApplication([])
 
 
 def test_unsupported_feature_has_reason(qapp, monkeypatch):

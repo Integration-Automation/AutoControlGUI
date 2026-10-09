@@ -118,7 +118,7 @@ def validate() -> int:
     print(f"state: {json.dumps(state)[:200]}")
 
     problems = []
-    if not len(core) < len(full):
+    if len(core) >= len(full):
         problems.append("progressive mode did not start smaller than full mode")
     if target in core or target not in after:
         problems.append(f"{target} was not added by ac_tools_enable")

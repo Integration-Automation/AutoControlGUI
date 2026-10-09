@@ -191,9 +191,10 @@ def test_push_round_trip_uses_put():
 def test_push_to_a_server_without_revision_checks_is_an_error():
     """A pre-version-2 server answers {"ok": true}: nothing was checked."""
     client = ConfigSyncClient("https://x", user_id="alice")
+    bucket = ConfigBucket(user_id="alice")
     with _patch_request({"ok": True}):
         with pytest.raises(ConfigSyncError, match="predates"):
-            client.push(ConfigBucket(user_id="alice"))
+            client.push(bucket)
 
 
 def test_sync_merges_remote_into_local_and_pushes_result():
@@ -263,7 +264,8 @@ def test_sync_gives_up_after_a_bounded_number_of_lost_races():
         attempts.append(body["operation_id"])
         raise ConfigSyncConflict("behind", 9)
 
+    bucket = ConfigBucket(user_id="alice")
     with patch.object(ConfigSyncClient, "_request", new=fake_request):
         with pytest.raises(ConfigSyncConflict):
-            client.sync(ConfigBucket(user_id="alice"), max_attempts=3)
+            client.sync(bucket, max_attempts=3)
     assert len(attempts) == 3

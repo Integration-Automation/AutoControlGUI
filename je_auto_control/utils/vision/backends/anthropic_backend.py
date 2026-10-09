@@ -99,7 +99,7 @@ def _first_text_block(response) -> str:
     return ""
 
 
-def _sdk_errors() -> tuple:
+def _sdk_errors() -> tuple:  # NOSONAR python:S8495  # reason: unpacked into an except tuple; empty with no SDK
     """``(anthropic.AnthropicError,)``, the base of every error the SDK raises.
 
     Evaluated while an exception is being matched, so it must not raise:

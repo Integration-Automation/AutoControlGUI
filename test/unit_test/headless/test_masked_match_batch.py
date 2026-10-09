@@ -77,8 +77,9 @@ def test_match_all_dedupes_to_one():
 def test_mask_shape_mismatch_raises():
     tmpl, _ = _template_with_border()
     bad = np.zeros((5, 5), dtype=np.uint8)
+    haystack = _scene_with_different_border()
     with pytest.raises(ValueError):
-        match_masked(tmpl, mask=bad, haystack=_scene_with_different_border())
+        match_masked(tmpl, mask=bad, haystack=haystack)
 
 
 # --- wiring ---------------------------------------------------------------

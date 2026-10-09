@@ -38,7 +38,7 @@ def qapp(monkeypatch):
     for box in ("warning", "information", "question", "critical"):
         monkeypatch.setattr(QMessageBox, box, lambda *args: messages.append(args[-1]))
     app.messages = messages
-    yield app
+    return app
 
 
 @pytest.fixture(autouse=True)

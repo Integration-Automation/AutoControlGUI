@@ -63,8 +63,9 @@ def test_an_asset_without_db_survives_to_the_next_command():
 
 @pytest.mark.parametrize("value, asset_type", [("eighty", "int"), ("x", "integer")])
 def test_an_unreadable_asset_is_refused_when_set(value, asset_type):
+    store = assets.AssetStore(None)
     with pytest.raises(ValueError):
-        assets.AssetStore(None).set("port", value, asset_type=asset_type)
+        store.set("port", value, asset_type=asset_type)
 
 
 def _bundle(entry):

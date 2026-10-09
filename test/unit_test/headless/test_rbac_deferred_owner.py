@@ -276,9 +276,12 @@ def test_owner_scope_restores_the_thread_and_refuses_before_running(users):
     with authorization_scope(outer):
         with owner_scope(None):
             assert current_authorization() is outer
-        with pytest.raises(AuthorizationError) as refused:
+        def start_deferred_work():
             with owner_scope(owner):
                 pytest.fail("a viewer's deferred work must not start")
+
+        with pytest.raises(AuthorizationError) as refused:
+            start_deferred_work()
         assert refused.value.capability == "drive_input"
         assert current_authorization() is outer
 

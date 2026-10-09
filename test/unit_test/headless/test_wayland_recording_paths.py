@@ -201,8 +201,9 @@ def test_recording_is_opt_in_per_device():
     with pytest.raises(InputRecordingError) as unnamed:
         recorder.start([])
     assert "opt-in" in str(unnamed.value)
+    devices = [YDOTOOL, InputDevice("/dev/input/event7")]
     with pytest.raises(InputRecordingError) as nothing_physical:
-        recorder.start([YDOTOOL, InputDevice("/dev/input/event7")])
+        recorder.start(devices)
     assert "virtual or of unknown origin" in str(nothing_physical.value)
     assert recorder.is_recording is False
 

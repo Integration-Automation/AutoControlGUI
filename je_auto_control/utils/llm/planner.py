@@ -114,8 +114,7 @@ def _build_user_prompt(description: str,
                        allowed: List[str],
                        examples: Optional[List[Dict[str, Any]]]) -> str:
     """Compose the user-side prompt, including allowlist and few-shot."""
-    parts = ["Allowed commands:"]
-    parts.append(", ".join(allowed))
+    parts = ["Allowed commands:", ", ".join(allowed)]
     if examples:
         parts.append("\nExamples:")
         for example in examples:
@@ -123,11 +122,9 @@ def _build_user_prompt(description: str,
             actions = example.get("actions")
             if not desc or not isinstance(actions, list):
                 continue
-            parts.append(f"Description: {desc}")
-            parts.append("Actions: " + json.dumps(actions, ensure_ascii=False))
-    parts.append("\nDescription:")
-    parts.append(description.strip())
-    parts.append("\nReturn the JSON array now:")
+            parts.extend([f"Description: {desc}",
+                          "Actions: " + json.dumps(actions, ensure_ascii=False)])
+    parts.extend(["\nDescription:", description.strip(), "\nReturn the JSON array now:"])
     return "\n".join(parts)
 
 

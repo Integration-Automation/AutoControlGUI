@@ -80,9 +80,10 @@ def test_writer_released_on_error(tmp_path):
         raise RuntimeError("disk full")
 
     writer.write = exploding_write
+    steps, output = [VideoStep("a.png", "x")], str(tmp_path / "o.mp4")
     with pytest.raises(RuntimeError):
         write_step_video(
-            [VideoStep("a.png", "x")], str(tmp_path / "o.mp4"),
+            steps, output,
             size=(8, 8), loader=lambda i: "f", drawer=lambda f, c, s: f,
             writer_factory=lambda p, fp, sz: writer)
     assert writer.released is True

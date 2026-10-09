@@ -34,7 +34,7 @@ def qapp(monkeypatch):
     monkeypatch.setattr(registry, "_ws_viewer", None)
     monkeypatch.setattr(registry, "_host", None)
     app.warnings = warnings
-    yield app
+    return app
 
 
 class _FakeViewer:

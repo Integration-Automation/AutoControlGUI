@@ -173,8 +173,9 @@ def test_anchor_locate_reports_a_backend_that_is_not_set_up(monkeypatch):
         raise OCRBackendNotAvailableError("no OCR backend ready")
 
     monkeypatch.setattr(ocr_engine, "find_text_matches", no_engine)
+    by_text = locator.ocr_locator("Name")
     with pytest.raises(OCRBackendNotAvailableError):
-        locator._ocr_candidates(locator.ocr_locator("Name"))  # noqa: SLF001
+        locator._ocr_candidates(by_text)  # noqa: SLF001
 
 
 def test_an_integer_role_is_matched_not_crashed():

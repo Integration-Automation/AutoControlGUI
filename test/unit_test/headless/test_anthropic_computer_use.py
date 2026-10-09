@@ -276,9 +276,10 @@ def test_backend_rewraps_client_failures_as_AgentBackendError():  # NOSONAR pyth
 
 
 def test_backend_rejects_zero_display_size():
+    client = _StubClient()
     with pytest.raises(AgentBackendError, match="display_width_px"):
         ComputerUseAgentBackend(
-            display_width_px=0, display_height_px=600, client=_StubClient(),
+            display_width_px=0, display_height_px=600, client=client,
         )
 
 

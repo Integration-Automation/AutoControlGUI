@@ -239,7 +239,7 @@ def settle(bucket: ConfigBucket, device_id: str, revision: int, now: float,
                           if device != device_id and peer.last_seen < now - max_offline_s else peer)
                  for device, peer in peers.items()}
     bucket.peers = {device: peer.to_dict() for device, peer in peers.items()}
-    for section in list(bucket.sections):
+    for section in bucket.sections:  # each value is replaced; no key is added or removed
         versioned = _stamped(bucket.sync_entries(section), revision, now)
         kept = collect_tombstones(versioned, peers.values(), now=now, hold_s=hold_s)
         flat = {key: body for key, body in bucket.sections[section].items() if key not in versioned}

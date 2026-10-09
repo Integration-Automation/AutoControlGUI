@@ -106,7 +106,7 @@ english_word_dict = {
     "dm_col_error": "Error",
     "dm_summary": "{passed} passed, {failed} failed of {total}",
     "dm_error": "Run failed: {error}",
-    "dm_running": "Running...",
+    "dm_running": "Running...",  # NOSONAR python:S1192  # reason: one catalogue entry per key, by design
 
     # Media checks tab
     "media_audio_label": "Audio activity check",

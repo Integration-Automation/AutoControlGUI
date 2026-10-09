@@ -29,12 +29,12 @@ class _FakeBackend(AccessibilityBackend):
         self.invoked = []
         self.toggled = []
 
-    def list_elements(self, app_name=None, max_results=200):
+    def list_elements(self, app_name=None, max_results=200, window_title=None):
         return [AccessibilityElement(name="Username", role="edit",
                                      bounds=(0, 0, 10, 10))]
 
     def get_value(self, name=None, role=None, app_name=None,
-                  automation_id=None):
+                  automation_id=None, window_title=None, contains=False):
         return self.values.get(name)
 
     def set_value(self, value, name=None, role=None, app_name=None,

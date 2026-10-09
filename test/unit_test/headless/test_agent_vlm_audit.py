@@ -71,8 +71,9 @@ def test_a_computer_use_turn_cut_short_does_not_run_its_tool(model, name, payloa
     tool_use = _block(type="tool_use", name=name, id="t1", input=payload)
     backend = ComputerUseAgentBackend(display_width_px=100, display_height_px=100, model=model,
                                       client=_Client([_cut_short("max_tokens", tool_use)]))
+    screenshot = _png(100, 100)
     with pytest.raises(base.AgentBackendError, match="max_tokens"):
-        backend.decide_next_action("goal", _png(100, 100), [])
+        backend.decide_next_action("goal", screenshot, [])
 
 
 # --- tool schemas ---------------------------------------------------------------------------------

@@ -47,8 +47,9 @@ def test_a_palette_image_is_read_by_colour_not_index():
 
 @pytest.mark.parametrize("scale", [0, -2, float("nan")])
 def test_upscale_refuses_a_non_positive_scale(scale):
+    image = np.zeros((4, 4), dtype=np.uint8)
     with pytest.raises(ValueError):
-        pre.upscale(np.zeros((4, 4), dtype=np.uint8), scale=scale)
+        pre.upscale(image, scale=scale)
 
 
 def test_the_adaptive_steps_take_block_size_and_c():

@@ -108,8 +108,8 @@ def test_null_backend_raises_with_custom_reason():
     assert "because reasons" in str(info.value)
 
 
-def test_reset_backend_cache_clears_cached_instance():
-    backends_mod._cached_backend = _FakeBackend([])
+def test_reset_backend_cache_clears_cached_instance(monkeypatch):
+    monkeypatch.setattr(backends_mod, "_cached_backend", _FakeBackend([]))
     assert backends_mod.get_backend() is backends_mod._cached_backend
     backends_mod.reset_backend_cache()
     assert backends_mod._cached_backend is None

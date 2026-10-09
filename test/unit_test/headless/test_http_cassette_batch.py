@@ -27,8 +27,10 @@ def test_replay_miss_raises():
     cassette = Cassette()
     cassette.recording_transport(_fake_inner)(
         build_call("https://api.example.com/a", "GET"))
+    replay = cassette.replay_transport()
+    unrecorded = build_call("https://api.example.com/b", "GET")
     with pytest.raises(CassetteMissError):
-        cassette.replay_transport()(build_call("https://api.example.com/b", "GET"))
+        replay(unrecorded)
 
 
 def test_save_and_load_round_trip(tmp_path):
@@ -49,9 +51,10 @@ def test_match_on_body():
     transport = cassette.replay_transport(match_on=("method", "url", "body"))
     assert transport(build_call("https://api.example.com/x", "POST",
                                 json_body={"a": 1}))["status"] == 200
+    other_body = build_call("https://api.example.com/x", "POST",
+                            json_body={"a": 2})
     with pytest.raises(CassetteMissError):
-        transport(build_call("https://api.example.com/x", "POST",
-                             json_body={"a": 2}))
+        transport(other_body)
 
 
 def test_recording_passes_through_response():

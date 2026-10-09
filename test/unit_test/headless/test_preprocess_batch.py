@@ -36,8 +36,9 @@ def test_upscale_doubles_dimensions():
 
 
 def test_upscale_rejects_unknown_interp():
+    image = _color()
     with pytest.raises(ValueError):
-        upscale(_color(), interp="magic")
+        upscale(image, interp="magic")
 
 
 def test_binarize_otsu_is_two_valued():
@@ -49,8 +50,9 @@ def test_binarize_adaptive_keeps_shape():
 
 
 def test_binarize_rejects_unknown_method():
+    image = _color()
     with pytest.raises(ValueError):
-        binarize(_color(), method="triangle")
+        binarize(image, method="triangle")
 
 
 def test_denoise_and_contrast_keep_grayscale_shape():
@@ -81,8 +83,9 @@ def test_pipeline_chains_steps():
 
 
 def test_pipeline_rejects_unknown_step():
+    image = _color()
     with pytest.raises(ValueError):
-        preprocess_image(_color(), steps=("sharpen",))
+        preprocess_image(image, steps=("sharpen",))
 
 
 # --- wiring ---------------------------------------------------------------

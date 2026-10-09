@@ -438,7 +438,7 @@ def publish_assets(manifest: AssetManifest, transport: AssetTransport, *,
 
 def _checked_grace(min_age_s: Any) -> float:
     if isinstance(min_age_s, bool) or not isinstance(min_age_s, (int, float)) \
-            or not min_age_s >= 0:
+            or not min_age_s >= 0:  # NOSONAR python:S1940  # reason: `< 0` would let NaN through
         raise AssetSyncError(f"min_age_s must be a number >= 0, got {min_age_s!r}")
     return float(min_age_s)
 

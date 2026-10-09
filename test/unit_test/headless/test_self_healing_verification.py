@@ -146,7 +146,7 @@ def test_a_check_that_cannot_run_raises_and_is_logged_unverified(screen, temp_lo
     assert len(screen["clicks"]) == 1
 
 
-def test_the_check_is_polled_until_it_holds_or_time_runs_out():
+def test_the_check_is_polled_until_it_holds_or_time_runs_out(monkeypatch):
     now = [0.0]
     slept = []
     answers = iter([False, False, True])
@@ -157,18 +157,14 @@ def test_the_check_is_polled_until_it_holds_or_time_runs_out():
 
     verify = build_verifier({"type": "text_present", "text": "x", "timeout_s": 5, "poll_s": 1},
                             clock=lambda: now[0], sleep=sleep)
-    original = verification.text_on_screen
-    verification.text_on_screen = lambda *args, **kwargs: next(answers)
-    try:
-        assert verify(None) is True
-        assert slept == [1.0, 1.0]
-        verification.text_on_screen = lambda *args, **kwargs: False
-        slept.clear()
-        assert verify(None) is False
-        assert len(slept) == 5
-        assert now[0] >= 7.0
-    finally:
-        verification.text_on_screen = original
+    monkeypatch.setattr(verification, "text_on_screen", lambda *args, **kwargs: next(answers))
+    assert verify(None) is True
+    assert slept == [1.0, 1.0]
+    monkeypatch.setattr(verification, "text_on_screen", lambda *args, **kwargs: False)
+    slept.clear()
+    assert verify(None) is False
+    assert len(slept) == 5
+    assert now[0] >= 7.0
 
 
 def test_image_on_screen_tells_absent_from_unreadable(monkeypatch):

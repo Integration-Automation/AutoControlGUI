@@ -81,7 +81,6 @@ def imap_stub(monkeypatch):
     _FakeIMAP.instances = []
     monkeypatch.setattr(et.imaplib, "IMAP4_SSL", _FakeIMAP)
     monkeypatch.setattr(et.imaplib, "IMAP4", _FakeIMAP)
-    yield
 
 
 def _build_message(subject: str, sender: str, body: str) -> bytes:
@@ -125,17 +124,17 @@ def test_add_default_port_for_plain(watcher):
     assert trigger.port == 143
 
 
-def test_poll_once_returns_zero_when_no_messages(watcher, tmp_path):
+def test_poll_once_returns_zero_when_no_messages(watcher, tmp_path, monkeypatch):
     script = tmp_path / "s.json"
     script.write_text('[["AC_screen_size"]]', encoding="utf-8")
     watcher.add(host="imap.example.com", username="u", password=_FAKE_PW,
                 script_path=str(script))
-    _FakeIMAP.next_uids = []
-    _FakeIMAP.next_messages = {}
+    monkeypatch.setattr(_FakeIMAP, "next_uids", [])
+    monkeypatch.setattr(_FakeIMAP, "next_messages", {})
     assert watcher.poll_once() == 0
 
 
-def test_poll_once_fires_on_matching_message(watcher, tmp_path):
+def test_poll_once_fires_on_matching_message(watcher, tmp_path, monkeypatch):
     script = tmp_path / "s.json"
     script.write_text('[["AC_screen_size"]]', encoding="utf-8")
     trigger = watcher.add(
@@ -143,8 +142,8 @@ def test_poll_once_fires_on_matching_message(watcher, tmp_path):
         script_path=str(script),
     )
     raw = _build_message("Build OK", "ci@example.com", "everything green")
-    _FakeIMAP.next_uids = [b"42"]
-    _FakeIMAP.next_messages = {b"42": raw}
+    monkeypatch.setattr(_FakeIMAP, "next_uids", [b"42"])
+    monkeypatch.setattr(_FakeIMAP, "next_messages", {b"42": raw})
 
     fired = watcher.poll_once()
 
@@ -159,52 +158,52 @@ def test_poll_once_fires_on_matching_message(watcher, tmp_path):
     assert trigger.fired == 1
 
 
-def test_mark_seen_flag_is_sent(watcher, tmp_path):
+def test_mark_seen_flag_is_sent(watcher, tmp_path, monkeypatch):
     script = tmp_path / "s.json"
     script.write_text('[["AC_screen_size"]]', encoding="utf-8")
     watcher.add(host="imap.example.com", username="u", password=_FAKE_PW,
                 script_path=str(script))
-    _FakeIMAP.next_uids = [b"7"]
-    _FakeIMAP.next_messages = {b"7": _build_message("hi", "a@b.c", "body")}
+    monkeypatch.setattr(_FakeIMAP, "next_uids", [b"7"])
+    monkeypatch.setattr(_FakeIMAP, "next_messages", {b"7": _build_message("hi", "a@b.c", "body")})
     watcher.poll_once()
     inst = _FakeIMAP.instances[-1]
     assert inst.flagged == [b"7"]
 
 
-def test_mark_seen_disabled_skips_flag(watcher, tmp_path):
+def test_mark_seen_disabled_skips_flag(watcher, tmp_path, monkeypatch):
     script = tmp_path / "s.json"
     script.write_text('[["AC_screen_size"]]', encoding="utf-8")
     watcher.add(host="imap.example.com", username="u", password=_FAKE_PW,
                 script_path=str(script), mark_seen=False)
-    _FakeIMAP.next_uids = [b"7"]
-    _FakeIMAP.next_messages = {b"7": _build_message("hi", "a@b.c", "body")}
+    monkeypatch.setattr(_FakeIMAP, "next_uids", [b"7"])
+    monkeypatch.setattr(_FakeIMAP, "next_messages", {b"7": _build_message("hi", "a@b.c", "body")})
     watcher.poll_once()
     inst = _FakeIMAP.instances[-1]
     assert inst.flagged == []
 
 
-def test_uid_not_double_fired(watcher, tmp_path):
+def test_uid_not_double_fired(watcher, tmp_path, monkeypatch):
     script = tmp_path / "s.json"
     script.write_text('[["AC_screen_size"]]', encoding="utf-8")
     watcher.add(host="imap.example.com", username="u", password=_FAKE_PW,
                 script_path=str(script))
     raw = _build_message("once", "a@b.c", "hello")
-    _FakeIMAP.next_uids = [b"7"]
-    _FakeIMAP.next_messages = {b"7": raw}
+    monkeypatch.setattr(_FakeIMAP, "next_uids", [b"7"])
+    monkeypatch.setattr(_FakeIMAP, "next_messages", {b"7": raw})
     assert watcher.poll_once() == 1
     assert watcher.poll_once() == 0
 
 
-def test_disabled_trigger_does_not_poll(watcher, tmp_path):
+def test_disabled_trigger_does_not_poll(watcher, tmp_path, monkeypatch):
     script = tmp_path / "s.json"
     script.write_text('[["AC_screen_size"]]', encoding="utf-8")
     trigger = watcher.add(host="imap.example.com", username="u",
                           password=_FAKE_PW, script_path=str(script))
     watcher.set_enabled(trigger.trigger_id, False)
-    _FakeIMAP.next_uids = [b"99"]
-    _FakeIMAP.next_messages = {
+    monkeypatch.setattr(_FakeIMAP, "next_uids", [b"99"])
+    monkeypatch.setattr(_FakeIMAP, "next_messages", {
         b"99": _build_message("ignored", "a@b.c", "x"),
-    }
+    })
     assert watcher.poll_once() == 0
 
 

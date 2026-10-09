@@ -33,8 +33,9 @@ def test_empty_is_full_budget():
 
 
 def test_bad_target_raises():
+    records = _records(1, 0)
     with pytest.raises(AutoControlException):
-        evaluate_slo(_records(1, 0), 1.5, now=1)
+        evaluate_slo(records, 1.5, now=1)
 
 
 def test_window_excludes_old_records():

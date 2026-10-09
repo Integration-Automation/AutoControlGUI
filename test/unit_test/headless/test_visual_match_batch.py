@@ -58,8 +58,9 @@ def test_multiscale_finds_scaled_template():
 
 
 def test_unknown_method_raises():
+    template, haystack = _patch(), _haystack()
     with pytest.raises(ValueError):
-        match_template(_patch(), haystack=_haystack(), method="bogus")
+        match_template(template, haystack=haystack, method="bogus")
 
 
 def test_to_dict_has_center():
@@ -108,10 +109,11 @@ def test_flat_template_is_refused_rather_than_matched_anywhere():
     # colour saturates the whole score map at 1.0 and "finds" the target at an
     # arbitrary position — worse than failing, because the caller clicks there.
     flat = np.full((20, 20), 128, dtype=np.uint8)
+    haystack = _haystack()
     with pytest.raises(ac.AutoControlScreenException):
-        match_template(flat, haystack=_haystack())
+        match_template(flat, haystack=haystack)
     with pytest.raises(ac.AutoControlScreenException):
-        match_template_all(flat, haystack=_haystack())
+        match_template_all(flat, haystack=haystack)
 
 
 def test_template_larger_than_haystack_finds_nothing():

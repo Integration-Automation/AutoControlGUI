@@ -154,8 +154,9 @@ def test_the_approval_request_id_is_readable_in_the_builder_and_not_offered(tmp_
     approved = execute_action([["AC_approval_approve", {"token": request_id, "approver": "checker", "db": db}]])
     assert list(approved.values())[0] == {"approved": True}, "the id shown is the one the checker uses"
     record, logged = _logged_run(caplog, actions)
-    assert "AC_approval_request" in logged, "the log keeps masking it: the exemption is for the person reading their own run"
-    assert list(record.values())[0]["token"] not in logged, "the log keeps masking it: the exemption is for the person reading their own run"
+    masked = "the log keeps masking it: the exemption is for the person reading their own run"
+    assert "AC_approval_request" in logged, masked
+    assert list(record.values())[0]["token"] not in logged, masked
 
 
 # --- the commands that were printed in plain text ----------------------------

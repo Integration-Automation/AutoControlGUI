@@ -188,14 +188,16 @@ def test_the_first_window_whose_title_matches_wins(windows):
 
 def test_a_title_that_matches_nothing_says_so(windows):
     windows.append((1, "Calculator"))
+    automation = _Automation()
     with pytest.raises(AccessibilityNotAvailableError, match="Notepad"):
-        search_root(_Automation(), "Notepad")
+        search_root(automation, "Notepad")
 
 
 def test_a_window_with_no_title_is_not_a_match(windows):
     windows.append((1, None))
+    automation = _Automation()
     with pytest.raises(AccessibilityNotAvailableError):
-        search_root(_Automation(), "anything")
+        search_root(automation, "anything")
 
 
 def test_a_window_uia_will_not_open_is_skipped(windows):

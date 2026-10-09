@@ -309,7 +309,7 @@ def run_as_helper() -> None:
     signal.signal(signal.SIGTERM, _unwind)
     try:
         code = main()
-    except SystemExit as stop:
+    except SystemExit as stop:  # NOSONAR python:S5754  # reason: its status is what os._exit ends with below
         code = stop.code if isinstance(stop.code, int) else 0
     logging.shutdown()
     sys.stderr.flush()

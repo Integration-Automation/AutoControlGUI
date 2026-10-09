@@ -186,7 +186,7 @@ def throttle(interval_s: float, *,
     are dropped (the wrapper returns ``None``). ``interval_s`` must be a
     number >= 0: NaN compared false with every elapsed time and never throttled.
     """
-    if not float(interval_s) >= 0:
+    if not float(interval_s) >= 0:  # NOSONAR python:S1940  # reason: "< 0" is false for NaN
         raise AutoControlException(f"interval_s must be a number >= 0, got {interval_s!r}")
 
     def decorator(func: Callable) -> Callable:

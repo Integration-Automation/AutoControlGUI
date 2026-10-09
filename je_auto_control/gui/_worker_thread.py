@@ -94,7 +94,7 @@ class WorkerHandle:
         if relay is not None:
             relay.drop_outcome()
 
-    def isRunning(self) -> bool:  # noqa: N802  # reason: the QThread spelling its callers use
+    def isRunning(self) -> bool:  # NOSONAR python:S100  # noqa: N802  # reason: the QThread spelling callers use
         """Whether ``run()`` has not returned yet."""
         return self._thread is not None and self._thread.is_alive()
 
@@ -201,7 +201,8 @@ def cancel_workers(owner: QObject) -> int:
 
     What a tab's ``dispose()`` needs: see :meth:`WorkerHandle.cancel`.
     """
-    handles = [handle for handle in list(_RUNNING)
+    # reason (suppression below): list() is an atomic snapshot of a registry start_worker and the reaper mutate
+    handles = [handle for handle in list(_RUNNING)  # NOSONAR python:S7504
                if handle._owner is not None and handle._owner() is owner]  # noqa: SLF001  # reason: own class
     for handle in handles:
         handle.cancel()

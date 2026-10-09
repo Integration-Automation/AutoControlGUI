@@ -46,12 +46,10 @@ def test_locator_rejects_unknown_kind():
 def test_anchor_locate_rejects_unknown_relation(monkeypatch):
     monkeypatch.setattr(locator_mod, "_resolve_single", lambda _l: (0, 0))
     monkeypatch.setattr(locator_mod, "_resolve_candidates", lambda _l: [])
+    anchor = image_locator("a.png")
+    target = image_locator("b.png")
     with pytest.raises(AnchorLocatorError):
-        anchor_locate(
-            anchor=image_locator("a.png"),
-            target=image_locator("b.png"),
-            relation="diagonally",
-        )
+        anchor_locate(anchor=anchor, target=target, relation="diagonally")
 
 
 # === Resolution paths =====================================================

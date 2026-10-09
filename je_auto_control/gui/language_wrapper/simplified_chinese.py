@@ -1,5 +1,6 @@
 _BROWSE = "浏览..."  # NOSONAR python:S1192 — shared button label
 _LOCATE_CLICK = "定位并点击"  # NOSONAR python:S1192
+_RUNNING = "执行中..."
 
 simplified_chinese_word_dict = {
     "application_name": "AutoControlGUI",
@@ -1255,7 +1256,7 @@ simplified_chinese_word_dict = {
     "ocr_regex_required": "请先输入 regex 表达式",
     "ocr_regex_invalid": "Regex 不正确",
     "ocr_running": "识别中...",
-    "dm_running": "执行中...",
+    "dm_running": _RUNNING,
 
     # Variables Tab
     "vars_current_group": "当前作用域",
@@ -1294,10 +1295,10 @@ simplified_chinese_word_dict = {
     "llm_planning": "规划中...",
     "llm_plan_count": "已规划 {n} 个指令",
     "llm_no_plan": "请先按下「规划」",
-    "llm_running": "执行中...",
+    "llm_running": _RUNNING,
     "llm_run_done": "完成",
     # Background runs shared by the tabs (gui/_tab_task.py)
-    "task_running": "执行中...",
+    "task_running": _RUNNING,
     "task_busy": "已在执行中：请等它结束，或先停止。",
     "task_stopping": "正在停止...",
     "task_stopped": "已停止。",

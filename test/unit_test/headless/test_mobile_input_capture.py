@@ -81,14 +81,16 @@ def test_unicode_goes_to_uiautomator_without_the_ime(adb_host):
 @pytest.mark.parametrize("text", [UNICODE_TEXT, "100%s done"])
 def test_text_no_path_can_carry_is_refused_not_sent(adb_host, no_uiautomator, text):
     phone = adb_host.devices["phone"]
+    device = _android(adb_host)
     with pytest.raises(DeviceUnsupportedError) as caught:
-        _android(adb_host).type_text(text)
+        device.type_text(text)
     assert caught.value.alternative
     assert phone.input_calls == []
     assert phone.typed == []
     # The low-level method refuses it too, instead of reporting success.
+    client = AdbClient(adb_path="fake-adb", default_serial="phone")
     with pytest.raises(DeviceUnsupportedError):
-        AdbClient(adb_path="fake-adb", default_serial="phone").text(text)
+        client.text(text)
     assert phone.input_calls == []
 
 
@@ -145,13 +147,15 @@ def test_drag_falls_back_when_input_lacks_draganddrop(adb_host, no_uiautomator):
     assert handle.calls == [{"op": "drag", "sx": 1, "sy": 2, "ex": 3, "ey": 4,
                              "duration": 0.5}]
     # With no fallback, the usage text `input` printed is an error, not a success.
+    device, drag = _android(adb_host), Drag(1, 2, 3, 4)
     with pytest.raises(DeviceUnsupportedError):
-        _android(adb_host).perform(Drag(1, 2, 3, 4))
+        device.perform(drag)
 
 
 def test_pinch_without_multi_touch_says_why(adb_host, no_uiautomator):
+    device, pinch = _android(adb_host), Pinch(1, 2, scale=2.0)
     with pytest.raises(DeviceUnsupportedError) as caught:
-        _android(adb_host).perform(Pinch(1, 2, scale=2.0))
+        device.perform(pinch)
     assert "uiautomator2" in caught.value.alternative
     assert adb_host.devices["phone"].input_calls == []
 

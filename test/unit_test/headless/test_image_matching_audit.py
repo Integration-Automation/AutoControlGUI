@@ -65,8 +65,9 @@ def test_rotated_sqdiff_picks_the_best_spot():
 ])
 def test_a_flat_template_is_refused_everywhere(finder):
     flat = np.full((10, 10), 128, np.uint8)
+    haystack = RNG.integers(0, 255, (60, 60), dtype=np.uint8)
     with pytest.raises(AutoControlFlatTemplateException):
-        finder(flat, RNG.integers(0, 255, (60, 60), dtype=np.uint8))
+        finder(flat, haystack)
 
 
 def test_each_blob_reports_its_own_peak():

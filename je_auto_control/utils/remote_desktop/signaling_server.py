@@ -187,7 +187,8 @@ class _AnswerIn(BaseModel):
     sdp: str
 
 
-_AUTH_RESPONSES = {401: {"description": "bad shared secret"}}
+_UNAUTHORISED_DETAIL = "bad shared secret"
+_AUTH_RESPONSES = {401: {"description": _UNAUTHORISED_DETAIL}}
 _VALIDATION_RESPONSES = {
     400: {"description": "invalid host_id or sdp"},
     **_AUTH_RESPONSES,
@@ -210,7 +211,7 @@ def _build_secret_dependency(shared_secret: Optional[str]):
         ] = None,
     ) -> None:
         if not _secret_matches(x_signaling_secret, shared_secret):
-            raise HTTPException(status_code=401, detail="bad shared secret")
+            raise HTTPException(status_code=401, detail=_UNAUTHORISED_DETAIL)
     return _check
 
 
@@ -332,7 +333,7 @@ def _guard_refusal(request: Request, shared_secret: Optional[str],
     if not path.startswith(("/sessions", "/config", "/blobs")) or request.method == "OPTIONS":
         return None
     if not _secret_matches(request.headers.get("X-Signaling-Secret"), shared_secret):
-        return JSONResponse({"detail": "bad shared secret"}, status_code=401)
+        return JSONResponse({"detail": _UNAUTHORISED_DETAIL}, status_code=401)
     if request.method not in ("POST", "PUT"):
         return None
     length = request.headers.get("Content-Length")
@@ -449,7 +450,7 @@ def _register_config_routes(app: FastAPI, store: ConfigStore, secret_dep,
         try:
             bucket = store.get(user_id)
         except ConfigSyncError as error:
-            _LOG.error("config store read failed: %s", error)
+            _LOG.exception("config store read failed: %s", error)
             raise HTTPException(status_code=503, detail="config store unavailable") from error  # NOSONAR
         if bucket is None:
             raise HTTPException(status_code=404, detail="no bucket")  # NOSONAR — see _CONFIG_RESPONSES
@@ -463,7 +464,7 @@ def _register_config_routes(app: FastAPI, store: ConfigStore, secret_dep,
         except StoreCapacityError as error:
             raise HTTPException(status_code=503, detail="too many users") from error  # NOSONAR
         except ConfigSyncError as error:
-            _LOG.error("config store write failed: %s", error)
+            _LOG.exception("config store write failed: %s", error)
             raise HTTPException(status_code=503, detail="config store unavailable") from error  # NOSONAR
         if isinstance(outcome, JSONResponse):
             return outcome
