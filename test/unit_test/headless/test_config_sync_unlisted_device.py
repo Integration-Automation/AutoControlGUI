@@ -65,8 +65,10 @@ def _delete_on_both_listed_devices(now=_T0, **options):
     """laptop and desktop both know ``hk1``; laptop deletes it; both acknowledge."""
     created = SyncEntry.create("hk1", {"combo": "ctrl+a"}, "laptop")
     _push("laptop", [created], now=now, **options)
-    _push("desktop", now=now, **options)                    # joins: it now holds hk1 too
-    _push("laptop", [created.removed("laptop")], now=now, **options)
+    # Reading does not list a device; the desktop's own change to hk1 does.
+    shared = created.edited({"combo": "ctrl+a"}, "desktop")
+    _push("desktop", [shared], now=now, **options)
+    _push("laptop", [shared.removed("laptop")], now=now, **options)
     _push("desktop", now=now, **options)                    # acknowledges the deletion
     _push("laptop", now=now, **options)
     return created
@@ -134,8 +136,9 @@ def test_a_held_tombstone_does_not_make_acknowledged_devices_commit_again(server
 def test_no_clock_drops_a_tombstone_a_listed_device_has_not_acknowledged(server):
     created = SyncEntry.create("hk1", {"combo": "ctrl+a"}, "laptop")
     _push("laptop", [created], now=_T0)
-    _push("desktop", now=_T0)
-    _push("laptop", [created.removed("laptop")], now=_T0)
+    shared = created.edited({"combo": "ctrl+a"}, "desktop")
+    _push("desktop", [shared], now=_T0)                     # lists the desktop
+    _push("laptop", [shared.removed("laptop")], now=_T0)
     # The desktop has not acknowledged; the laptop's clock jumps ten years.
     _push("laptop", [SyncEntry.create("hk2", {"combo": "b"}, "laptop")], now=_T0 + 3650 * _DAY)
     assert server.bucket().get_entry("hotkeys", "hk1").deleted

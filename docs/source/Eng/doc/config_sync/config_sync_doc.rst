@@ -215,10 +215,27 @@ applies the hold only when ``now`` is given. A tombstone stamped by a release
 from before this has no ``deleted_at`` and is dropped on acknowledgement as
 before; such a release also drops acknowledged tombstones without holding
 them, so the hold is only as good as the oldest client still committing.
-A device joins ``peers`` with its first push; ``push_operations([])`` from a
-device the bucket does not list is such a push when the bucket holds entries
-(their later deletion must wait for it) and writes nothing when it holds
-none -- a first sync of an empty account commits no revision.
+A device joins ``peers`` with the first change it commits.
+``push_operations([])`` from a device the bucket does not list writes
+nothing, whether the bucket holds entries or not: a device that only reads a
+bucket commits no revision for joining it, and a first sync of an empty
+account commits none either. (Earlier a join against a non-empty bucket
+wrote one revision so that later deletions would wait for the device.)
+
+**What an unlisted device still gets, and what it does not.** A deletion made
+while the device is unlisted reaches it through the held tombstone: inside
+the thirty days its untouched copy is removed, and a copy it edited in the
+meantime becomes a conflict. After the hold the tombstone is gone. A copy
+the device did not touch is still removed -- its own baseline records that
+the entry came from the bucket, so its absence is a deletion made elsewhere.
+What is no longer guaranteed is the edited copy: a device that has only ever
+read the bucket, edits an entry, and first sends that edit more than
+``TOMBSTONE_HOLD_S`` after the entry was deleted elsewhere **re-creates the
+entry with no conflict**. With the join revision the tombstone would have
+waited for that device indefinitely and the edit would have been a
+conflict. The remedy is the same as for a machine that never synced: sync
+every machine at least once every thirty days, or have it commit a change
+before it goes away.
 
 A device that will not come back is retired with
 ``client.retire_peer(device_id)`` (or automatically with

@@ -306,6 +306,31 @@ Bearer token 也可從 ``JE_AUTOCONTROL_MCP_TOKEN`` 環境變數讀取。
   ``ac_assert_audio``）。完整清單是 ``je_auto_control.utils.rbac.policy`` 的
   ``DATA_TOOLS``。其餘唯讀工具 ``viewer`` 都保留：螢幕尺寸、視窗、像素、影像與文字
   定位、無障礙讀取、等待。
+- 這份清單背後的規則：回傳\ **主機保存的紀錄或設定**\ 的工具需要 ``read_data``；
+  只觀察目前畫面的工具需要 ``read_screen``。所以 ``read_data`` 也包含執行歷史與由它
+  算出來的結果（``ac_list_run_history``、``ac_flaky_report``、``ac_rank_tests``、
+  ``ac_select_tests``、``ac_shard_suite``）；agent trace 與費用帳本
+  （``ac_trace_export``、``ac_trace_summary``、``ac_costs_list``、
+  ``ac_costs_summary``）；動作日誌（``ac_journal_read``、``ac_journal_runs``）；
+  自愈紀錄、其統計、保存的 revision 與資料集（``ac_self_heal_log_list``、
+  ``ac_heal_stats``、``ac_self_heal_revision_list``、``ac_self_heal_evaluate``）；
+  定位策略歷史、修復與保存的函式庫（``ac_ab_report``、``ac_ab_best_strategy``、
+  ``ac_repair_pending``、``ac_repair_resolved``、``ac_element_list``、
+  ``ac_skill_list``、``ac_skill_search``）；保存的政策與狀態（``ac_usb_acl_list``、
+  ``ac_lease_active``、``ac_quarantine_list``、``ac_pending_artifacts``、
+  ``ac_config_sync_status``）；以及連線裝置的剪貼簿（``ac_android_get_clipboard``、
+  ``ac_ios_get_clipboard``）。這些以前是 ``read_screen``，所以\ **viewer 的 token
+  現在不能呼叫它們**\ ；``operator`` 與 ``admin`` 不受影響。
+- 一次呼叫要花多少錢不是一種能力。``ac_vlm_locate`` 與 ``ac_self_heal_locate`` 讀的是
+  畫面，雖然呼叫可能被模型供應商計費，仍然是 ``read_screen``；要限制花費，請用
+  rate limiter，或不要在 viewer 連得到的伺服器上設定 VLM 後端。
+- 這個分類只涵蓋 MCP 工具。REST 的 ``GET /history`` 與 ``GET /usb/acl`` 仍然只需要
+  ``read_screen``\ （如維運章節的 REST 表格所列），所以 viewer 的 token 在那裡讀得到
+  同樣的執行歷史與 USB ACL。
+- 回報這個行程目前狀態、而不是保存紀錄的工具——``ac_list_executions``、
+  ``ac_scheduler_list_jobs``、``ac_trigger_list``、``ac_hotkey_list``、
+  ``ac_observe_list``、``ac_watchdog_list``、``ac_journal_status``、USB 裝置清單——
+  維持 ``read_screen``。
 - ``tools/list`` 只回呼叫者可以呼叫的工具；對其他工具 ``tools/call`` 會回 JSON-RPC
   錯誤 ``-32003``\ （``Forbidden: ...``、``data.required_capability``），且不會執行。
 - 接受動作清單的工具（``ac_execute_actions`` 等）在清單含有呼叫者角色沒有的指令時
@@ -572,7 +597,8 @@ process 內量測兩種模式。以 680 個工具的 registry 量測(2026-10-09,
 標為唯讀的工具(透過 ``register_tool``、``ac_load_plugins`` 或 plugin watcher),不會
 出現在 ``tools/list``,呼叫它會得到 ``-32602`` 並在稽核 log 記為 ``denied``。預設的
 ``full`` 模式以前只在建立 registry 時過濾,所以這種工具會被列出、也會執行。Plugin
-工具一律註冊為破壞性,因此\ **唯讀伺服器不會執行任何 plugin 工具**;你自己的程式以
+工具除非自己宣告,否則註冊為破壞性,因此\ **唯讀伺服器不會執行沒有宣告自己唯讀的
+plugin 工具**\ (見下方「Plugin Hot-Reload」);你自己的程式以
 ``readOnlyHint`` 為 true 註冊的工具仍然會提供。設了該環境變數時,
 ``MCPServer(tools=[...])`` 也會被同樣過濾——內嵌的伺服器若必須忽略該變數,請傳
 ``read_only=False``。
@@ -749,6 +775,40 @@ Plugin Hot-Reload
 
 每次 register / unregister 都會送出
 ``notifications/tools/list_changed``,client 會自動更新工具目錄。
+
+**宣告 plugin 工具為唯讀。** Plugin 工具預設註冊為會變更狀態的工具:唯讀伺服器不提供它,
+在 RBAC 下需要 ``drive_input``。Plugin 可以在某個 callable 上把屬性 ``mcp_read_only``
+設為 ``True``,讓它例外:
+
+.. code-block:: python
+
+   def AC_queue_depth():
+       """有多少工作在等待。"""
+       return {"depth": len(_pending)}
+
+   AC_queue_depth.mcp_read_only = True
+
+這個工具就會以 ``readOnlyHint`` 為 true 註冊。唯讀伺服器在三種工具模式下都會列出並執行它
+(``full``、``progressive`` —— 啟用之後 —— 以及 profile 有列它的 ``static``),在 RBAC 下
+只需要 ``read_screen``,所以 ``viewer`` 可以呼叫。從 plugin 取用的只有唯讀這一項;
+工具不會被標成 idempotent。
+
+.. warning::
+
+   這個宣告是\ **被信任的,不是被驗證的**。它只是 plugin 作者的說法:伺服器無從得知
+   任意的 Python 程式做了什麼,一個宣告自己唯讀、實際上卻寫檔或送出輸入的 callable,
+   在唯讀伺服器上、對 viewer 也照樣會那樣做。宣告不會把它關進沙箱。把 plugin 放進
+   唯讀或給 viewer 用的伺服器所監看的目錄之前,請先審查它。每次註冊這樣的工具,
+   伺服器都會記一筆指名它的 warning(``plugin tool 'plugin_ac_queue_depth' is
+   registered read-only because its plugin declared mcp_read_only=True; the
+   declaration is trusted, not verified``)。
+
+布林值 ``True`` 以外的任何值都不算宣告:``"true"``、``1``、callable、讀取時丟例外的屬性。
+這樣的值會被記錄,工具維持會變更狀態;沒有這個屬性或值為 ``False`` 的工具也一樣。
+透過 ``register_plugin_tools(server, commands)`` 與 ``make_plugin_tool`` 註冊的工具適用
+同一條規則;屬性名稱是 ``je_auto_control.utils.mcp_server.tools.plugin_tools`` 的
+``PLUGIN_READ_ONLY_ATTRIBUTE``。這個宣告不影響同名的 ``AC_*`` executor 指令,
+路徑根目錄也仍然管不到 plugin 工具的參數。
 
 CI 煙霧測試 (Fake Backend)
 ==========================
