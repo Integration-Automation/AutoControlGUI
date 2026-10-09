@@ -2,10 +2,16 @@
 
 Run executes the steps off the GUI thread as a stoppable executor run, one at
 a time; Stop ends it at its next checkpoint.
+
+A step whose result carries a secret (``sensitive_result`` in the schema: a
+freshly issued token) is masked in the result pane. The values of the last
+run are kept in memory, and the "one-time values" button hands them to
+:class:`OneTimeValueDialog` -- once: the tab forgets them as it opens the
+dialog, when the next run starts and when it is disposed.
 """
 import functools
 import json
-from typing import Optional
+from typing import List, Optional
 
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QAction
@@ -24,11 +30,12 @@ from je_auto_control.gui.language_wrapper.multi_language_wrapper import (
 from je_auto_control.gui.script_builder.command_schema import (
     CATEGORIES, COMMAND_SPECS, specs_in_category,
 )
+from je_auto_control.gui.script_builder.one_time_dialog import OneTimeValueDialog
 from je_auto_control.gui.script_builder.step_form_view import StepFormView
 from je_auto_control.gui.script_builder.step_list_view import StepTreeView
 from je_auto_control.gui.script_builder.step_model import (
-    Step, actions_to_steps, displayable_record, load_action_file, save_action_file,
-    steps_to_actions,
+    OneTimeValue, Step, actions_to_steps, displayable_record, load_action_file,
+    nested_sensitive_commands, one_time_values, save_action_file, steps_to_actions,
 )
 from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.executor.action_executor import execute_action
@@ -58,6 +65,11 @@ class ScriptBuilderTab(TranslatableMixin, QWidget):
         # The other top-level keys of a loaded {"auto_control": [...]} file,
         # written back on Save; None for a bare list.
         self._file_extras: Optional[dict] = None
+        # The secrets of the last run, until they are revealed or the next run starts.
+        self._one_time: List[OneTimeValue] = []
+        self._nested_marked: List[str] = []
+        self._reveal_btn = QPushButton()
+        self._reveal_dialog: Optional[OneTimeValueDialog] = None
         self._runs = TabTask(self)
         self._runs.result.connect(self._show_run_result)
         self._runs.error.connect(self._show_run_error)
@@ -70,7 +82,7 @@ class ScriptBuilderTab(TranslatableMixin, QWidget):
         A script run is stopped; other work cannot be interrupted, so it runs to its end and its
         result is dropped. Called by ``close_tab(key, release=True)``; safe to call twice.
         """
-        release_resources(self)
+        release_resources(self, self._forget_one_time)
 
     def retranslate(self) -> None:
         TranslatableMixin.retranslate(self)
@@ -111,6 +123,10 @@ class ScriptBuilderTab(TranslatableMixin, QWidget):
             btn = self._tr(QPushButton(), key)
             btn.clicked.connect(handler)
             bar.addWidget(btn)
+        self._tr(self._reveal_btn, "sb_one_time_show")
+        self._reveal_btn.setEnabled(False)
+        self._reveal_btn.clicked.connect(self._on_reveal)
+        bar.addWidget(self._reveal_btn)
         return bar
 
     def _add_button(self) -> QToolButton:
@@ -205,6 +221,8 @@ class ScriptBuilderTab(TranslatableMixin, QWidget):
         if not self._runs.start_script(functools.partial(_run_actions, actions)):
             self._result.setPlainText(_t("task_busy"))
             return
+        self._forget_one_time()
+        self._nested_marked = nested_sensitive_commands(actions)
         self._result.setPlainText(_t("task_running"))
 
     def _on_stop(self) -> None:
@@ -213,8 +231,43 @@ class ScriptBuilderTab(TranslatableMixin, QWidget):
 
     def _show_run_result(self, result: object) -> None:
         # Masked first: AC_user_add / AC_user_rotate_token answer with a token.
-        self._result.setPlainText(json.dumps(
-            displayable_record(result), indent=2, default=str, ensure_ascii=False))
+        lines = [json.dumps(displayable_record(result), indent=2, default=str, ensure_ascii=False)]
+        self._one_time = one_time_values(result)
+        if self._one_time:
+            lines.append(_t("sb_one_time_available").format(count=len(self._one_time)))
+        if self._nested_marked:
+            lines.append(_t("sb_one_time_nested").format(commands=", ".join(self._nested_marked)))
+        self._result.setPlainText("\n\n".join(lines))
+        self._reveal_btn.setEnabled(bool(self._one_time))
+
+    def _forget_one_time(self) -> None:
+        """Drop the last run's secrets and close the dialog still showing them."""
+        self._one_time = []
+        self._reveal_btn.setEnabled(False)
+        dialog, self._reveal_dialog = self._reveal_dialog, None
+        if dialog is not None:
+            dialog.forget()
+            dialog.done(0)  # emits ``finished`` even when it was never shown
+
+    def _take_one_time_dialog(self) -> Optional[OneTimeValueDialog]:
+        """Build the reveal dialog for the pending values and forget them here; not shown yet."""
+        if not self._one_time:
+            return None
+        values, self._one_time = self._one_time, []
+        self._reveal_btn.setEnabled(False)
+        dialog = OneTimeValueDialog(values, self)
+        dialog.finished.connect(dialog.deleteLater)
+        dialog.finished.connect(self._on_reveal_closed)
+        self._reveal_dialog = dialog
+        return dialog
+
+    def _on_reveal(self) -> None:
+        dialog = self._take_one_time_dialog()
+        if dialog is not None:
+            dialog.open()  # window-modal without a nested event loop
+
+    def _on_reveal_closed(self, _result: int = 0) -> None:
+        self._reveal_dialog = None
 
     def _show_run_error(self, error: object) -> None:
         if was_stopped(error):

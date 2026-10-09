@@ -848,6 +848,19 @@ traditional_chinese_word_dict = {
     "rh_journal_link": "日誌執行 {run},位於 {path}",
     "re_import_journal": "匯入日誌的執行…",
     "sb_import_journal": "匯入日誌",
+    "sb_one_time_show": "一次性的值",
+    "sb_one_time_title": "上次執行的一次性的值",
+    "sb_one_time_notice": (
+        "這些值不存在於其他任何地方，而且只顯示這一次。請現在複製需要的值："
+        "關閉這個視窗或開始下一次執行後就會被捨棄。"
+    ),
+    "sb_one_time_step": "步驟 {step}",
+    "sb_one_time_copy": "複製",
+    "sb_one_time_available": "有 {count} 個一次性的值：按「一次性的值」查看，只能看一次。",
+    "sb_one_time_nested": (
+        "這裡無法取得：在區塊內產生的值（{commands}）。"
+        "區塊不會記錄其內部指令的結果。"
+    ),
     "jr_dialog_open": "開啟動作日誌",
     "jr_dialog_start": "要附加寫入的日誌檔",
     "jr_dialog_save_code": "儲存候選腳本",

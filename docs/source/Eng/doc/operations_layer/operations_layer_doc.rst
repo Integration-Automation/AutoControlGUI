@@ -173,8 +173,21 @@ surface, each of which needs the ``manage_users`` capability:
   ``AC_user_remove``, ``AC_user_set_role``, ``AC_user_rotate_token`` and
   ``AC_user_list`` in an action list -- so also through ``POST /execute``.
   The Script Builder lists all five under **Security**; a run's result pane
-  shows ``AC_user_add`` / ``AC_user_rotate_token`` with the token masked, so
-  read a new token from the Users group, the CLI or a script instead;
+  shows ``AC_user_add`` / ``AC_user_rotate_token`` with the token masked and
+  says that a one-time value is available. **One-time values** on the
+  builder's toolbar then shows each token of that run once, labelled by its
+  step (``Step 1 · User: Add · alice · token``), with a Copy button per value.
+  Nothing opens by itself, so an unattended run is not interrupted. The
+  values are held in memory only: opening the dialog takes them from the
+  tab, closing it empties it, and starting the next run or closing the tab
+  drops what nobody read. They are never written to the result pane, the
+  log, the test record, the run history, the action journal, a saved script
+  or the GUI settings; the Copy button puts one on the clipboard. A token
+  issued inside a block (``AC_loop``, ``AC_try``...) is in no record -- a
+  block records its own summary -- so the result pane says it is not
+  available; keep such a step at the top level, or run it from a script, the
+  CLI or the Users group. ``execute_action`` still returns the token to a
+  script, as before;
 - the MCP tools ``ac_user_add`` / ``ac_user_remove`` / ``ac_user_set_role`` /
   ``ac_user_rotate_token`` / ``ac_user_list``;
 - the **Users (RBAC)** group of the REST API tab (commands in the Actions
