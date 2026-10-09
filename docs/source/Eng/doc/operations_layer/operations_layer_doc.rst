@@ -213,11 +213,16 @@ rotated token or a changed role applies to the next request.
      - Endpoints
    * - ``read_screen``
      - viewer, operator, admin
-     - every ``GET`` except the two below, ``/metrics`` included
+     - the ``GET`` routes that observe live state: ``/screenshot``,
+       ``/mouse_position``, ``/screen_size``, ``/windows``, ``/sessions``,
+       ``/commands``, ``/jobs``, ``/inspector/recent``, ``/inspector/summary``,
+       ``/usb/devices``, ``/usb/events``, ``/usb/passthrough/status``,
+       ``/usb/loopback/devices``, ``/usb/remote/devices``, ``/diagnose``,
+       ``/metrics``, ``/openapi.json``
    * - ``read_data``
      - operator, admin
-     - no REST route; the MCP tools that return the host's data rather than
-       its screen (see the MCP chapter)
+     - ``GET /history``, ``GET /usb/acl``; the MCP tools that return the
+       host's data rather than its screen (see the MCP chapter)
    * - ``drive_input``
      - operator, admin
      - ``POST /execute``, ``/execute_file``, ``/usb/loopback/open``,
@@ -241,6 +246,25 @@ A role that lacks the capability gets ``403``
 ``{"error": "forbidden", "required_capability": "...", "role": "..."}``.
 The same value is published per operation as ``x-required-capability`` in
 ``/openapi.json``.
+
+**Stored records need** ``read_data`` **on REST as on MCP.** A route that
+returns records or configuration the host keeps needs ``read_data``; a route
+that observes live state needs ``read_screen``. ``GET /history`` (the run
+history, as the MCP tool ``ac_list_run_history``) and ``GET /usb/acl`` (the
+stored USB ACL, as ``ac_usb_acl_list``) needed only ``read_screen`` before, so
+**a viewer token is now answered 403 on those two routes**; ``operator`` and
+``admin`` are unaffected, and so is a server without a user store (the shared
+token is not restricted by any role). Every other ``GET`` keeps its
+capability: each one that has an MCP counterpart (``/jobs`` and
+``ac_scheduler_list_jobs``, ``/sessions`` and ``ac_remote_host_status``,
+``/usb/passthrough/status``, the USB device lists...) already needed what its
+tool needs. A test pairs each route with the read-only MCP tools whose
+handler reads the same source and fails when the two disagree.
+
+The built-in dashboard calls neither route. With a token whose role lacks a
+panel's capability -- the audit panel needs ``read_audit`` -- that panel now
+says ``not available to role '<role>': needs the '<capability>' capability``
+instead of ``HTTP 403 on <path>``, and the other panels keep refreshing.
 
 Being allowed to ``POST /execute`` is being allowed to run actions, not every
 command. Signing an action file (``sign_actions``), reading the audit log
