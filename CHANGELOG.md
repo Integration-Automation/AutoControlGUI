@@ -18,8 +18,8 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 ### Security
 
 - `examples/18_slack_daily_report.py` escapes the Slack messages and the
-  model's summary before they go into the report, and gives WeasyPrint a URL
-  fetcher that loads nothing. Unescaped, a message could add markup that made
+  model's summary before they go into the report, and renders the PDF from
+  the written file through a URL fetcher that serves only that file. Unescaped, a message could add markup that made
   the PDF renderer read a local file.
 
 ### Changed

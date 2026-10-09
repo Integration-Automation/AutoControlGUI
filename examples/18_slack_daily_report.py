@@ -201,7 +201,8 @@ def render_report(summary: str, raw_messages: Sequence[SlackMessage],
 </body></html>
 """
     html_path = _path_inside(output_dir, f"digest-{today}.html")
-    html_path.write_text(page, encoding="utf-8")
+    with open(html_path, "w", encoding="utf-8") as report:
+        report.write(page)
     try:
         from weasyprint import HTML, default_url_fetcher
     except ImportError:
