@@ -6,7 +6,7 @@
 > 擷取每個模組的 docstring 與頂層公開名稱；統計數字取自實際檔案，非估算。
 > 指令數與公開 API 數以 `executor.known_commands()` 與 `je_auto_control.__all__` 在工作樹上實測取得。
 >
-> **掃描時間**：2026-10-09　**版本**：`pyproject.toml` version `0.0.232`　**分支**：`feat/maintainer-decisions`
+> **掃描時間**：2026-10-09　**版本**：`pyproject.toml` version `0.0.233`　**分支**：`feat/decisions-followup`
 
 ---
 
@@ -536,6 +536,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 > `utils/accessibility/backends/windows_automation.py`（每個執行緒的 COM apartment 與 UIAutomation 物件）、
 > `gui/_weak_call.py`（弱參照持有的工作回呼）、`gui/_qt_typed.py`（對真實 Qt 型別檢查用的小工具）。
 > 之後新增：`gui/script_builder/one_time_dialog.py`（Script Builder 的一次性值對話框，值只留在記憶體）。
+> `utils/executor/result_hook.py`（每次執行、每個執行緒的指令結果掛鉤，巢狀指令也回報）。
 
 ### 5.4.11 伺服器、網路協定與外部整合
 

@@ -59,9 +59,9 @@ repository has driven a real phone, not because the code is unfinished.
 
 ## Compatibility notes for callers
 
-- `je_auto_control.execute_action(actions)` takes the action list only.
-  `dry_run`, `raise_on_error` and `step_callback` are parameters of
-  `je_auto_control.executor.execute_action`.
+- `je_auto_control.execute_action(actions, *, raise_on_error=False,
+  dry_run=False, step_callback=None, result_callback=None)` takes the same
+  keyword-only options as `je_auto_control.executor.execute_action`.
 - A refused or revoked Wayland input consent raises
   `WaylandAuthorisationError` and no longer falls back to `ydotool`. It is
   deliberately not a `RuntimeError`.
