@@ -990,10 +990,10 @@ english_word_dict = {
     "sb_one_time_step": "Step {step}",
     "sb_one_time_copy": "Copy",
     "sb_one_time_available": "{count} one-time value(s) available: press 'One-time values' to read them, once.",
-    "sb_one_time_nested": (
-        "Not available here: values issued inside a block ({commands}). "
-        "A block records no result for the commands in its body."
-    ),
+    "sb_one_time_inside": "{block} run {run}, step {step}",
+    "sb_one_time_shown": "The one-time values were shown and are no longer kept.",
+    "sb_one_time_limit": "Only the first {limit} one-time values of this run were kept; later ones cannot be shown.",
+    "sb_one_time_close_clear": "Close and clear clipboard",
     "jr_dialog_open": "Open action journal",
     "jr_dialog_start": "Journal file to append to",
     "jr_dialog_save_code": "Save candidate script",

@@ -1284,6 +1284,7 @@ def AC_execute_action(
     _validated: bool = ...,
     dry_run: bool = ...,
     step_callback: Callable[[list], None] | None = ...,
+    result_callback: Any = ...,
 ) -> Dict[str, str]:
     """執行 action list"""
 

@@ -45,8 +45,8 @@ def test_role_fields_offer_exactly_the_three_roles():
 
 def test_only_the_token_returning_commands_are_marked():
     marked = {command for command, spec in COMMAND_SPECS.items() if spec.sensitive_result}
-    # AC_jwt_encode mints a bearer credential the same way: it exists only in the reply.
-    assert marked == _TOKEN_COMMANDS | {"AC_jwt_encode"}
+    # AC_jwt_encode and the lease commands answer with a credential the same way.
+    assert marked == _TOKEN_COMMANDS | {"AC_jwt_encode", "AC_lease_secret", "AC_lease_active"}
 
 
 def test_a_run_record_is_shown_without_the_token(tmp_path):
@@ -96,9 +96,13 @@ def test_a_failed_marked_command_still_shows_its_error():
     assert displayable_record({key: "UserAuthError('unknown user')"})[key].startswith("UserAuthError")
 
 
-def test_other_commands_are_displayed_unchanged():
-    record = {"execute: ['AC_get_var', {'name': 'token'}]": {"token": "kept: not a marked command"}}
-    assert displayable_record(record) == record
+def test_a_secret_named_field_is_masked_for_a_command_that_is_not_marked():
+    """Only marked commands were masked, so a lease or REST bearer token was printed."""
+    key = "execute: ['AC_get_var', {'name': 'token'}]"
+    record = {key: {"token": "masked whatever the command", "count": 3}}
+    assert displayable_record(record) == {key: {"token": "***", "count": 3}}
+    plain = {"execute: ['AC_get_var', {'name': 'a'}]": {"count": 3, "items": ["a"]}}
+    assert displayable_record(plain) == plain
 
 
 def test_the_builder_tab_does_not_put_the_token_in_its_result_pane(monkeypatch, tmp_path):
@@ -114,8 +118,8 @@ def test_the_builder_tab_does_not_put_the_token_in_its_result_pane(monkeypatch, 
         tab._tree.load_steps([Step("AC_user_add", {"user_id": "eve", "users_path": users})])
         seen = []
 
-        def run(actions):
-            record = execute_action(actions)
+        def run(actions, **keywords):
+            record = execute_action(actions, **keywords)
             seen.extend(value["token"] for value in record.values())
             return record
         monkeypatch.setattr(builder_tab, "execute_action", run)

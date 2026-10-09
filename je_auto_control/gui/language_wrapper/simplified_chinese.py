@@ -850,10 +850,10 @@ simplified_chinese_word_dict = {
     "sb_one_time_step": "步骤 {step}",
     "sb_one_time_copy": "复制",
     "sb_one_time_available": "有 {count} 个一次性的值：按「一次性的值」查看，只能看一次。",
-    "sb_one_time_nested": (
-        "这里无法取得：在区块内产生的值（{commands}）。"
-        "区块不会记录其内部指令的结果。"
-    ),
+    "sb_one_time_inside": "{block} 第 {run} 次，步骤 {step}",
+    "sb_one_time_shown": "一次性的值已经显示过，不再保留。",
+    "sb_one_time_limit": "这次执行只保留了前 {limit} 个一次性的值；之后的值无法显示。",
+    "sb_one_time_close_clear": "关闭并清除剪贴板",
     "jr_dialog_open": "打开动作日志",
     "jr_dialog_start": "要追加写入的日志文件",
     "jr_dialog_save_code": "保存候选脚本",
