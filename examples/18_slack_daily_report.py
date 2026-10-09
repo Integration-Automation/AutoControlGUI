@@ -168,11 +168,6 @@ def _path_inside(base_dir: Path, name: str) -> Path:
     return Path(candidate)
 
 
-def _refuse_fetch(url: str, *_args: object, **_kwargs: object) -> dict:
-    """WeasyPrint URL fetcher that loads nothing: the digest has no assets."""
-    raise ValueError(f"the digest loads no external resource: {url!r}")
-
-
 def render_report(summary: str, raw_messages: Sequence[SlackMessage],
                    output_dir: Path) -> Path:
     """Render an HTML report + (if weasyprint is available) a PDF.
@@ -208,13 +203,22 @@ def render_report(summary: str, raw_messages: Sequence[SlackMessage],
     html_path = _path_inside(output_dir, f"digest-{today}.html")
     html_path.write_text(page, encoding="utf-8")
     try:
-        from weasyprint import HTML
+        from weasyprint import HTML, default_url_fetcher
     except ImportError:
         print("  (no weasyprint — sending the HTML instead)")
         return html_path
+    page_url = html_path.as_uri()
+
+    def only_the_page(url: str, *args: object, **kwargs: object) -> dict:
+        """Let WeasyPrint read the page it renders and nothing else."""
+        if url != page_url:
+            raise ValueError(f"the digest loads no other resource: {url!r}")
+        return default_url_fetcher(url, *args, **kwargs)
+
     pdf_path = _path_inside(output_dir, f"digest-{today}.pdf")
-    # The page needs nothing but itself, so the renderer may fetch nothing.
-    HTML(string=page, url_fetcher=_refuse_fetch).write_pdf(str(pdf_path))
+    # Rendered from the file just written, through a fetcher that serves only
+    # that file: the page needs no image, stylesheet or font from anywhere.
+    HTML(filename=str(html_path), url_fetcher=only_the_page).write_pdf(str(pdf_path))
     return pdf_path
 
 
