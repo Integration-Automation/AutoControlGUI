@@ -15,6 +15,22 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ## Unreleased
 
+### Security
+
+- `examples/18_slack_daily_report.py` escapes the Slack messages and the
+  model's summary before they go into the report, and renders the PDF from
+  the written file through a URL fetcher that serves only that file. Unescaped, a message could add markup that made
+  the PDF renderer read a local file.
+
+### Changed
+
+- Web viewer: sending a file and waiting for the host's offer no longer await
+  inside a loop. The order of chunks, the 4 MiB backpressure limit and
+  one-transfer-at-a-time are unchanged; a channel that closes mid-transfer now
+  ends that transfer with an error instead of leaving it pending.
+
+## [1.0.1] - 2026-10-09
+
 ### Changed
 
 - `is_package_name` (the gate behind `AC_add_package_to_executor` and

@@ -12,6 +12,7 @@ USB ACL file: the two routes that would are replaced by recorders.
 import ast
 import inspect
 import json
+import time
 import re
 import textwrap
 import urllib.error
@@ -142,6 +143,21 @@ def _get(server, path: str, token: str):
         return error.code, json.loads(error.read().decode("utf-8"))
 
 
+def _wait_for_refusal(server, timeout_s: float = 5.0) -> bool:
+    """Whether the audit log gets a READ_DATA refusal within ``timeout_s``.
+
+    The handler thread writes the row after it has sent the reply, so the
+    client can be back here first; that lost race failed this test on CI.
+    """
+    deadline = time.monotonic() + timeout_s
+    wanted = f"forbidden:{Capability.READ_DATA}"
+    while time.monotonic() < deadline:
+        if any(wanted in json.dumps(row) for row in list(server._audit_log.rows)):
+            return True
+        time.sleep(0.01)
+    return False
+
+
 # --- what a role may read -----------------------------------------------------
 
 @pytest.mark.parametrize("path", ["/history", "/usb/acl"])
@@ -152,9 +168,7 @@ def test_a_viewer_is_refused_a_stored_record_route(rest, users, path):
     assert body == {"error": "forbidden", "role": Role.VIEWER,
                     "required_capability": Capability.READ_DATA}
     assert server.served == [], "the handler must not run for a refused caller"
-    refusals = [row for row in server._audit_log.rows
-                if f"forbidden:{Capability.READ_DATA}" in json.dumps(row)]
-    assert refusals, "the refusal is in the audit log with the capability it lacked"
+    assert _wait_for_refusal(server), "the refusal is in the audit log with the capability it lacked"
 
 
 @pytest.mark.parametrize("role", [Role.OPERATOR, Role.ADMIN])

@@ -585,20 +585,22 @@ async function signalingFetch(path, options = {}) {
   return response.json();
 }
 
+// One attempt per call, then the next call a second later: each attempt
+// waits for the one before it, until the deadline.
 async function pollOffer(hostId, deadlineMs) {
-  while (Date.now() < deadlineMs) {
-    try {
-      const data = await signalingFetch(
-        `/sessions/${encodeURIComponent(hostId)}/offer`,
-      );
-      if (data && data.sdp) return data.sdp;
-    } catch (error) {
-      if (!String(error).includes("404")) throw error;
-    }
-    // NOSONAR javascript:S9382 - reason: polling, each attempt waits for the last
-    await new Promise(r => setTimeout(r, 1000));  // NOSONAR
+  if (Date.now() >= deadlineMs) {
+    throw new Error("timed out waiting for host offer");
   }
-  throw new Error("timed out waiting for host offer");
+  try {
+    const data = await signalingFetch(
+      `/sessions/${encodeURIComponent(hostId)}/offer`,
+    );
+    if (data?.sdp) return data.sdp;
+  } catch (error) {
+    if (!String(error).includes("404")) throw error;
+  }
+  await new Promise(r => setTimeout(r, 1000));
+  return pollOffer(hostId, deadlineMs);
 }
 
 async function connect() {
@@ -931,6 +933,46 @@ function stopMic() {
   els.mic.classList.remove("primary");
 }
 
+// Sends the file's bytes in order, one chunk at a time. Each step reads a
+// chunk, waits (20 ms at a time) while the channel holds more than 4 MiB
+// unsent, sends, then schedules the next step; the promise settles after the
+// last chunk or on the first failure.
+function sendFileChunks(file) {
+  const chunkSize = 16 * 1024;
+  const highWater = 4 * 1024 * 1024;
+  return new Promise((resolve, reject) => {
+    let offset = 0;
+    const sendWhenDrained = (buf) => {
+      // A channel closed mid-transfer throws here; that ends the transfer.
+      try {
+        if (filesChannel.bufferedAmount > highWater) {
+          setTimeout(() => sendWhenDrained(buf), 20);
+          return;
+        }
+        filesChannel.send(buf);
+      } catch (error) {
+        reject(error);
+        return;
+      }
+      offset += buf.byteLength;
+      if (offset % (256 * 1024) < chunkSize) {
+        setStatus(t("msg_sending",
+          { name: file.name, sent: offset, total: file.size }));
+      }
+      step();
+    };
+    const step = () => {
+      if (offset >= file.size) {
+        resolve();
+        return;
+      }
+      file.slice(offset, offset + chunkSize).arrayBuffer()
+        .then(sendWhenDrained, reject);
+    };
+    step();
+  });
+}
+
 async function sendLocalFile(file) {
   if (!filesChannel || filesChannel.readyState !== "open") {
     setStatus(t("msg_files_channel_not_ready"), "#ff6666");
@@ -942,24 +984,8 @@ async function sendLocalFile(file) {
     type: "file_begin", name: file.name,
     size: file.size, transfer_id: transferId,
   }));
-  const chunkSize = 16 * 1024;
-  let offset = 0;
   setStatus(t("msg_sending", { name: file.name, sent: 0, total: file.size }));
-  while (offset < file.size) {
-    const slice = file.slice(offset, offset + chunkSize);
-    // NOSONAR javascript:S9382 - reason: chunks go out in file order, and the
-    // inner wait is backpressure on the one data channel; neither can be parallel.
-    const buf = await slice.arrayBuffer();  // NOSONAR
-    while (filesChannel.bufferedAmount > 4 * 1024 * 1024) {
-      await new Promise((r) => setTimeout(r, 20));  // NOSONAR
-    }
-    filesChannel.send(buf);
-    offset += buf.byteLength;
-    if (offset % (256 * 1024) < chunkSize) {
-      setStatus(t("msg_sending",
-        { name: file.name, sent: offset, total: file.size }));
-    }
-  }
+  await sendFileChunks(file);
   filesChannel.send(JSON.stringify({
     type: "file_end", transfer_id: transferId,
   }));
@@ -1207,13 +1233,15 @@ filesPanel.addEventListener("drop", async (e) => {
   filesPanel.classList.remove("dragover");
   if (!filesChannel || filesChannel.readyState !== "open") return;
   const droppedFiles = Array.from(e.dataTransfer.files || []);
-  for (const f of droppedFiles) {
-    // NOSONAR javascript:S9382 - reason: one transfer at a time on the files channel
-    try { await sendLocalFile(f); } catch (err) {  // NOSONAR
+  // One transfer at a time on the files channel: each starts when the one
+  // before it has finished or failed.
+  await droppedFiles.reduce(
+    (earlier, f) => earlier.then(() => sendLocalFile(f)).catch((err) => {
       setStatus(t("msg_upload_failed",
         { name: f.name, error: String(err) }), "#ff6666");
-    }
-  }
+    }),
+    Promise.resolve(),
+  );
   setTimeout(refreshFiles, 300);
 });
 

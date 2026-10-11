@@ -208,8 +208,9 @@ def test_missing_initial_raises():
 
 def test_unknown_initial_state_raises():
     spec = {"initial": "nowhere", "states": {"done": {"final": True}}}
+    machine = StateMachine(spec)
     with pytest.raises(StateMachineError, match="initial state"):
-        StateMachine(spec).run()
+        machine.run()
 
 
 def test_transition_to_undefined_state_raises():
@@ -219,8 +220,9 @@ def test_transition_to_undefined_state_raises():
             "a": {"transitions": [{"go_to": "z"}]},
         },
     }
+    machine = StateMachine(spec)
     with pytest.raises(StateMachineError, match="undefined state"):
-        StateMachine(spec).run()
+        machine.run()
 
 
 def test_non_mapping_spec_raises():

@@ -58,6 +58,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261009-43 | 2026-10-09 | The seven SonarCloud issues left on main after U-20261009-42 | #done #quality #sonar #security | [2026-10](2026-10.md) |
 | U-20261009-42 | 2026-10-09 | SonarCloud and Codacy backlog on main: 2,344 and 8 findings worked through | #done #quality #sonar #codacy | [2026-10](2026-10.md) |
 | U-20261009-41 | 2026-10-09 | Release 1.0.0; the publish job releases a hand-set version as written | #release #ci | [2026-10](2026-10.md) |
 | U-20261009-40 | 2026-10-09 | A result hook reports nested command results; secret-named result fields are masked at any depth and offered once | #done #executor #gui #security | [2026-10](2026-10.md) |

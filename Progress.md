@@ -329,7 +329,6 @@ U-20261009-18 的每一個裝置面呼叫都只對假的 ADB／uiautomator2／WD
   這台機器沒有 free-threaded 直譯器：驗證用的是模擬繼承與真的 `-X thread_inherit_context=1`（3.14.7，GIL 開著）；`free-threaded-scope` job（3.14t）是第一次真的跑。
 - **能力探測**：Windows 的鎖定工作站、session 0、低完整性與擷取失敗分支只用假資料判斷；macOS 的三個 preflight 呼叫只對假物件跑過，
   pyobjc 的 `Quartz` 有沒有 `CGPreflightListenEventAccess` 未知（沒有的話 `recording`／`stop_shortcut` 回 `unknown`）。
-- **SonarCloud／Codacy 的抑制還沒被下一次分析確認**（U-20261009-42）：`web_viewer/index.html` 裡內嵌 script 的四個 `// NOSONAR`（S9382，同檔先前的 NOSONAR 就沒被認）、`run_history/history_store.py` 分兩行寫的 `nosemgrep`、以及 `examples/18_slack_daily_report.py` 的 realpath 檢查是否被 Sonar 認成 sanitizer（S2083）。分析跑完後還開著的：內嵌 script 搬到 `.js` 檔，其餘在儀表板標 accepted。
 - **Windows 的版面鍵名**（`slash` 等 8 個）只在美式配置上實際呼叫過。
 - **狀態機 `on_enter` 的單一動作寫法**以前一直被拒絕、從沒執行過（已修，U-20261009-24）：依賴「它不會跑」的既有狀態機現在會跑它。
 

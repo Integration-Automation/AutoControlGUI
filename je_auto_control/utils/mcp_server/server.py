@@ -53,7 +53,7 @@ from je_auto_control.utils.mcp_server._input_required import (
 from je_auto_control.utils.mcp_server._stateless import StatelessDispatchMixin
 from je_auto_control.utils.mcp_server._subscriptions import NO_RESPONSE, SubscriptionMixin
 from je_auto_control.utils.mcp_server._protocol import (
-    PROTOCOL_VERSION as PROTOCOL_VERSION,  # explicit re-export: callers import it from server
+    PROTOCOL_VERSION,
     _capture_error_screenshot, negotiate_protocol_version,
     _coerce_params, _DISPATCH_ERRORS, _error_response, _invalid_envelope, _InvalidToolArguments,
     _is_hashable,
@@ -64,6 +64,9 @@ from je_auto_control.utils.mcp_server._protocol import (
 #: How long a transport waits for in-flight tool replies before it gives up
 #: and shuts down anyway.
 WORKER_DRAIN_TIMEOUT = 10.0
+
+# PROTOCOL_VERSION is re-exported: callers import it from this module.
+__all__ = ["MCPServer", "PROTOCOL_VERSION", "WORKER_DRAIN_TIMEOUT", "start_mcp_stdio_server"]
 
 
 class MCPServer(ConnectionStateMixin, StatelessDispatchMixin, SubscriptionMixin,
