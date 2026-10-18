@@ -58,6 +58,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261019-11 | 2026-10-19 | Keep progress focused on unfinished work and active exemptions | #docs #progress | [2026-10](2026-10.md) |
 | U-20261019-10 | 2026-10-19 | Verify explicit healing operations using fresh logical evidence | #done #self-healing #verification | [2026-10](2026-10.md) |
 | U-20261019-09 | 2026-10-19 | Share runtime healing frames and record unverified operation evidence | #done #self-healing #capture | [2026-10](2026-10.md) |
 | U-20261019-08 | 2026-10-19 | Compare locator versions on provided frames across execution surfaces | #done #self-healing #gui | [2026-10](2026-10.md) |
@@ -392,7 +393,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | File | Period | Entries |
 |---|---|---:|
-| [2026-10.md](2026-10.md) | 2026-10 | 56 |
+| [2026-10.md](2026-10.md) | 2026-10 | 57 |
 | [2026-09-e.md](2026-09-e.md) | 2026-09 | 7 |
 | [2026-09-d.md](2026-09-d.md) | 2026-09 | 55 |
 | [2026-09-c.md](2026-09-c.md) | 2026-09 | 38 |
