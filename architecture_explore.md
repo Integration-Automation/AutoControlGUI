@@ -20,13 +20,13 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 | 指標 | 數值 |
 | --- | ---: |
 | Python 模組總數（含周邊子專案） | 1,087 |
-| 程式碼總行數 | 163,053 |
+| 程式碼總行數 | 163,110 |
 | `je_auto_control/utils/` 子套件數 | 311 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 779 |
-| 套件門面 `__all__` 公開名稱數 | 1,244 |
+| 套件門面 `__all__` 公開名稱數 | 1,273 |
 | GUI 分頁數（`main_widget` 註冊） | 48 |
 | MCP 工具數（`build_default_tool_registry()` 實測） | 680 |
-| `test_*.py` 測試檔／測試函式 | 478 / 4,654 |
+| `test_*.py` 測試檔／測試函式 | 761 / 8,016 |
 | 範例腳本 | 27 |
 
 **技術基線**：Python ≥ 3.10、MIT 授權、必要相依只有 `je_open_cv`／`opencv-python`／`pillow`／`mss`／
@@ -92,7 +92,7 @@ USB/IP 協定、Prometheus 指標），以維持這條輕相依基線。
 | 模式 | 落點 | 說明 |
 | --- | --- | --- |
 | **Strategy** | `wrapper/platform_wrapper.py` | 依 `sys.platform` 只匯入當前 OS 的 `keyboard`／`mouse`／`screen`／`recorder` 實作；Linux 再細分 Wayland／X11，Wayland 後端不可用時自動退回 XWayland 並記警告。新增平台不需要改 wrapper。 |
-| **Facade** | `je_auto_control/__init__.py` | 把 1,264 個公開名稱集中再匯出，使用者只 `import je_auto_control`。`api/core.py` 另提供一個小而穩定的版本化門面（7 個名稱）給新整合使用。 |
+| **Facade** | `je_auto_control/__init__.py` | 把 1,273 個公開名稱集中再匯出，使用者只 `import je_auto_control`。`api/core.py` 另提供一個小而穩定的版本化門面（7 個名稱）給新整合使用。 |
 | **Command** | `utils/executor/action_executor.py` | `Executor.event_dict` 是字串 → callable 的分派表；JSON 動作檔即指令序列，因此可錄製、序列化、重播、簽章。 |
 | **Observer** | `utils/callback/`、`utils/observer/`、`utils/triggers/` | 動作完成後觸發回呼；畫面出現／消失／變化與外部事件（webhook／IMAP／檔案）驅動腳本。 |
 | **Template Method** | `utils/generate_report/` | HTML／JSON／XML 三個產生器共用「收集紀錄 → 格式化 → 寫檔」骨架，各自實作渲染。 |
@@ -154,9 +154,9 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
-| `je_auto_control/__init__.py` | 1,994 | **套件門面**。集中匯入並再匯出 1,264 個公開名稱，以功能區塊註解分段（callback／exception／executor／a11y／vision／clipboard…）。 |
+| `je_auto_control/__init__.py` | 2,001 | **套件門面**。集中匯入並再匯出 1,273 個公開名稱，以功能區塊註解分段（callback／exception／executor／a11y／vision／clipboard…）。 |
 | `je_auto_control/__main__.py` | 106 | 舊版 argparse 進入點：`-e` 執行單檔、`-d` 執行整個目錄、`--execute_str` 執行 JSON 字串、`-c` 建立專案。 |
-| `je_auto_control/cli.py` | 370 | **主 CLI**（`je_auto_control` console script）。子命令：`run`（含 `--var`／`--dry-run`）、`validate`／`lint`、`list-commands`、`fmt`、`record`、`codegen`、`failure-bundle`、`list-jobs`、`start-server`、`start-rest`、`version`。所有子命令延遲匯入，確保不碰 Qt。 |
+| `je_auto_control/cli.py` | 420 | **主 CLI**（`je_auto_control` console script）。子命令：`run`（含 `--var`／`--dry-run`／`--journal`）、`journal`（依 run 篩選與有界遮罩快照）、`validate`／`lint`、`list-commands`、`fmt`、`record`、`codegen`、`failure-bundle`、`list-jobs`、`start-server`、`start-rest`、`version`。所有子命令延遲匯入，確保不碰 Qt。 |
 | `je_auto_control/api/__init__.py` | 22 | 版本化整合進入點。 |
 | `je_auto_control/api/core.py` | 19 | **穩定無頭 API 門面**：只暴露 `execute_action`、`execute_action_with_vars`、`generate_code`、`run_diagnostics`、`create_failure_bundle`、`failure_bundle_on_error`、`FailureBundleOptions`。mypy 型別契約以此為起點，現已擴到整包（見「設定基線」）。 |
 | `je_auto_control/utils/cli_output.py` | 44 | 本套件命令列工具與 stdio 伺服器的標準串流：不論碼頁一律 UTF-8。 |
@@ -283,7 +283,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/dag/` | 584 | 跨主機 DAG 編排器；node 的完整錯誤處理綁定擁有者秘密遮罩，含獨立呼叫與自訂 local runner |
 | `utils/decision_table/` | 112 | DMN 風格決策表：規則 + 命中策略，把分支外部化 |
 | `utils/deterministic/` | 116 | 決定性執行控制：固定亂數種子 + 凍結時鐘 |
-| `utils/action_journal/` | 587 | 結構化動作日誌：schema v1、寫入前遮罩、跨行程排序／尾端復原、executor 明確 scope 擷取與本機 parallel／DAG parent 傳遞；操作介面待接入。 |
+| `utils/action_journal/` | 587 | 結構化動作日誌：schema v1、寫入前遮罩、跨行程排序／尾端復原、executor 明確 scope 擷取與本機 parallel／DAG parent 傳遞；門面與 CLI 擷取／有界查閱已接入，其他操作介面待補。 |
 | `utils/executor/` | 9,700 | **核心**。`Executor` 指令分派表（779 個 `AC_*`）、參數插值、乾跑、逐步 callback；`flow_control` 提供 34 個區塊指令（迴圈／分支／try／巨集／變數） |
 | `utils/flow_debugger/` | 166 | action list 的單步除錯器與追蹤器 |
 | `utils/input_macro/` | 462 | 定時輸入事件：錄製結果的整形（`timeline`／`InputRecorder`，Windows 與 macOS 共用）、重播與宣告式輸入序列 DSL |
@@ -1087,7 +1087,7 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `utils/remote_desktop/` | 56 | 13,301 |
 | `utils/executor/` | 8 | 9,700 |
 | `utils/usb/` | 17 | 4,816 |
-| `je_auto_control/`（頂層 3 檔） | 3 | 2,470 |
+| `je_auto_control/`（頂層 3 檔） | 3 | 2,527 |
 | `utils/accessibility/` | 14 | 3,143 |
 | `wrapper/` | 19 | 4,099 |
 | `windows/` | 23 | 2,154 |
@@ -1103,5 +1103,5 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 861 |
 | 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 697 | 59,679 |
-| **總計** | **1,081** | **162,988** |
+| **總計** | **1,081** | **163,045** |
 

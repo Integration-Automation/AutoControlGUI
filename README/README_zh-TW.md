@@ -244,7 +244,7 @@ python -c "import je_auto_control; je_auto_control.start_autocontrol_gui()"
 
 ---
 
-結構化日誌可透過 `utils.action_journal` 的明確 Python 範圍擷取：`journal_scope` 記錄現有 executor 呼叫，`execute_action_with_journal` 隔離一次執行。本機 loop／parallel／DAG 步驟保留 parent ID，並區分失敗、取消與 dry-run。既有 history 擁有者會自動連結明確擷取，包含本機 parallel／DAG worker 開啟的 journal；`HistoryStore.journals_for_run` 可查詢非擁有式連結，清理 history 不會刪除日誌檔。門面、動作指令、CLI／MCP／GUI 與手動執行的 history 控制仍待接入。
+實驗性的結構化日誌已從 `je_auto_control` 匯出（也可透過 `utils.action_journal` 使用）：`journal_scope` 記錄現有 executor 呼叫，`execute_action_with_journal` 隔離一次執行。本機 loop／parallel／DAG 步驟保留 parent ID，並區分失敗、取消與 dry-run。既有 history 擁有者會自動連結明確擷取，包含本機 parallel／DAG worker 開啟的 journal；`HistoryStore.journals_for_run` 可查詢非擁有式連結，清理 history 不會刪除日誌檔。CLI 支援 `run script.json --journal run.jsonl [--journal-run-id ID]` 與 `journal run.jsonl [--run-id ID] [--limit 100]`。查閱會按附加順序顯示遮罩後的生命週期快照，預設最多 100 筆，上限 10,000 筆。動作指令、MCP／GUI 與手動執行的 history 控制仍待接入。
 
 `${secrets.NAME}` 解析後的值會在 executor 執行期間的應用程式診斷中遮罩，包含巢狀動作及本機 parallel／DAG。CLI／REST／MCP 請求與排程、trigger、hotkey、email 執行會將遮罩保留到錯誤處理及 audit／history 寫入完成；報表紀錄保存遮罩後的快照。DAG 會將擁有者的遮罩保留到 node 診斷完成，包含獨立呼叫與自訂 local runner。watchdog、observer 與 callback executor 會將遮罩保留到最後的錯誤處理；獨立規則彼此隔離。CLI stderr 會遮罩，API 結果、拋出的例外與 CLI 結果資料保留原始值。遮罩於擁有者的請求或執行結束時清除。中止的 history 記為 `error`，journal 步驟維持 `cancelled`，不再擷取錯誤截圖。取消會穿過非嚴格執行、復原／重試、回呼與本機 worker；history 結算失敗也不會取代原始硬中止訊號。
 

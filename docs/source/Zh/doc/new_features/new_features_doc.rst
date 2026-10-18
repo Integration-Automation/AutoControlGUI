@@ -338,7 +338,7 @@ GUI：**OCR Reader** 分頁。可用既有的選取 overlay 圈出區域（留�
 執行期變數與資料驅動流程控制
 ============================
 
-過去 :mod:`script_vars.interpolate` 只能在執行前一次性把 ``${var}``
+過去 ``script_vars.interpolate`` 只能在執行前一次性把 ``${var}``
 取代成靜態 mapping 中的值，腳本沒辦法在執行時修改狀態。``VariableScope``
 是 executor 暴露給流程控制指令的執行期 mapping，讓它們能讀寫與
 runtime interpolator 相同的容器。
@@ -469,7 +469,7 @@ LLM 動作規劃器
    # 或者一行做完：
    ac.run_from_description("開記事本，輸入 hello", executor=executor)
 
-後端選擇對齊 :mod:`vision.backends`：
+後端選擇對齊 ``vision.backends``：
 
 - Anthropic（``anthropic`` SDK，``ANTHROPIC_API_KEY``）— 預設
 - 用 ``AUTOCONTROL_LLM_BACKEND``、``AUTOCONTROL_LLM_MODEL`` 覆寫
@@ -532,7 +532,7 @@ Headless viewer（控制別人）::
 - ``type`` ``{text}``
 - ``ping``
 
-Action-JSON 指令（使用 :mod:`utils.remote_desktop.registry` 的單例）::
+Action-JSON 指令（使用 ``utils.remote_desktop.registry`` 的單例）::
 
    AC_start_remote_host       # token, bind, port, fps, quality, region
    AC_stop_remote_host
@@ -953,7 +953,7 @@ GUI：*傳送檔案...* 按鈕開啟檔案選擇器 + 目的路徑提示，上�
 ================================
 
 Viewer 分頁不再把遠端畫面內嵌在面板裡 — viewer 認證成功後,會
-另外開啟一個獨立的 :class:`RemoteScreenWindow` 顯示遠端桌面,
+另外開啟一個獨立的 ``RemoteScreenWindow`` 顯示遠端桌面,
 面板本身只剩下連線卡片 + 控制元件。關閉 popup 視窗的 ✕ 按鈕
 會自動斷線,跟 AnyDesk 的 session 視窗體驗一致。
 
@@ -1277,7 +1277,7 @@ GUI: **Secrets** 分頁 — 建立 vault、解鎖、新增 / 移除條目、變�
 Webhook(HTTP push)觸發
 =======================
 
-內建的 :mod:`http.server` dispatcher 在外部服務 POST 到註冊路徑時
+內建的 ``http.server`` dispatcher 在外部服務 POST 到註冊路徑時
 觸發腳本。可設定路徑、允許的方法(``GET``、``POST``、``PUT``、``PATCH``、
 ``DELETE``;其他方法在註冊時就會被拒絕)、可選 bearer token;請求方法、
 路徑、query、headers、原始 body、解析後 JSON 都會種到變數作用域::
@@ -1311,7 +1311,7 @@ Action JSON 指令::
 每次觸發以 ``trigger`` 來源寫入 run history,source id 為
 ``webhook:<id>``,讓 dashboard 把 webhook 活動和其他 trigger 並排
 顯示;只要有任何動作失敗,這次觸發就記為錯誤(並附錯誤截圖),排程、觸發器與熱鍵的執行也一樣。Body 上限 1 MiB,bearer token 比對用
-:func:`hmac.compare_digest`。除非你真的需要從網路其他地方連入,
+``hmac.compare_digest``。除非你真的需要從網路其他地方連入,
 否則綁定 ``127.0.0.1``。
 
 GUI: **Webhooks** 分頁 — 啟動 / 停止伺服器、註冊路徑、檢視每條
@@ -1370,16 +1370,18 @@ Watcher 在 process 記憶體中追蹤已觸發的 UID,可選擇把訊息標為
 GUI: **Email Triggers** 分頁 — 註冊 IMAP 觸發、啟動 / 停止 watcher、
 手動觸發一次輪詢、檢視最近錯誤與觸發次數。
 
-結構化動作日誌儲存（待接入執行流程）
-====================================
+結構化動作日誌（部分介面待接入）
+================================
 
-B1 的儲存與明確擷取位於 ``je_auto_control.utils.action_journal``；門面與動作指令匯出、
-CLI／MCP／GUI 與手動執行的 history 控制仍待接入。應用程式可明確寫入 schema-v1 快照::
+B1 的儲存與明確擷取／查閱 API 已從 ``je_auto_control`` 匯出，也可透過
+``je_auto_control.utils.action_journal`` 使用。CLI 擷取與有界快照查閱已接入；
+動作指令、MCP／GUI 與手動執行的 history 控制仍待接入。B1 整合期間，日誌與來源連結 API
+仍屬實驗性介面。應用程式可明確寫入 schema-v1 快照::
 
    import time
    from dataclasses import replace
    from pathlib import Path
-   from je_auto_control.utils.action_journal import ActionEvent, ActionJournal, read_events
+   from je_auto_control import ActionEvent, ActionJournal, read_events
 
    journal = ActionJournal(Path("actions.jsonl"))
    started = ActionEvent(
@@ -1405,7 +1407,7 @@ CLI／MCP／GUI 與手動執行的 history 控制仍待接入。應用程式可�
 亦可明確擷取 executor 執行::
 
    from pathlib import Path
-   from je_auto_control.utils.action_journal import execute_action_with_journal, read_events
+   from je_auto_control import execute_action_with_journal, read_events
 
    summary = execute_action_with_journal(
        [["AC_set_var", {"name": "count", "value": 1}]],

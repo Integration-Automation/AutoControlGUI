@@ -37,6 +37,30 @@ been allowed. The ``JE_AUTOCONTROL_ALLOWED_PACKAGES`` environment variable
 (comma-separated names) does the same for every entry point, including the
 legacy flags below, ``start-server``, ``start-rest`` and the MCP server.
 
+Capture and inspect action journals
+-----------------------------------
+
+.. code-block:: bash
+
+   python -m je_auto_control.cli run script.json --journal run.jsonl --journal-run-id example
+   python -m je_auto_control.cli journal run.jsonl --run-id example --limit 100
+
+``run --journal PATH`` appends structured lifecycle snapshots while preserving
+the normal stdout record and action-failure exit code. It also supports
+``--dry-run`` and ``--var``. Each capture generates a run ID unless
+``--journal-run-id ID`` is supplied; that option requires ``--journal``.
+No history row or database is created implicitly.
+
+``journal PATH`` validates the entire file and prints a JSON array of sanitized
+snapshots in append order. ``--run-id`` filters a run; ``--limit`` bounds output
+to 1–10,000 snapshots (default 100), after filtering. Validation still reads the
+whole file. Start and completion snapshots remain separate; incomplete entries
+are never inferred successful. A missing file returns an empty array without
+creating it. Malformed committed records fail before any JSON output.
+Reading applies the journal's masking policy again and never changes the file.
+Both journal paths use the existing allowed-root guard; configure
+``AUTOCONTROL_ALLOWED_PATH_ROOTS`` for destinations outside the default roots.
+
 List scheduler jobs
 -------------------
 

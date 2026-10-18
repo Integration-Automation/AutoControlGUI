@@ -6,7 +6,9 @@ Installed as the ``je_auto_control`` console script; also runnable via
 Usage::
 
     je_auto_control run script.json [--var x=10 --var y=20] [--dry-run]
-                        [--allow-package NAME ...]
+                        [--allow-package NAME ...] [--journal run.jsonl]
+                        [--journal-run-id ID]
+    je_auto_control journal run.jsonl [--run-id ID] [--limit 100]
     je_auto_control validate script.json          # alias: lint
     je_auto_control list-commands [--filter mouse] [--json]
     je_auto_control fmt script.json [--check]
@@ -27,6 +29,7 @@ import signal
 import sys
 import threading
 import time
+from contextlib import AbstractContextManager, nullcontext
 from typing import Callable, Dict, List, Optional, Sequence
 
 from je_auto_control.utils.logging.secret_scope import scrub_secret_text, secret_log_scope
@@ -76,7 +79,7 @@ def cmd_run(args: argparse.Namespace) -> int:
     variables = _parse_vars(args.var)
     _allow_packages(args.allow_package)
     reset_recorded_failures()
-    with execution_scope(variables):
+    with _run_capture(args), execution_scope(variables):
         # Seeded, not interpolated over the whole tree: that failed on a loop
         # body's ${item} ("Unknown variable") and would print ${secrets.X}
         # resolved into the dry-run keys.
@@ -89,6 +92,33 @@ def cmd_run(args: argparse.Namespace) -> int:
     if failures:
         sys.stderr.write(f"error: {failures} action(s) failed\n")
         return 1
+    return 0
+
+
+def _run_capture(args: argparse.Namespace) -> AbstractContextManager[object]:
+    """Open only an explicitly requested journal, before any action effects."""
+    from pathlib import Path
+    from je_auto_control.utils.action_journal import ActionJournal, journal_scope
+    from je_auto_control.utils.path_guard.path_guard import validate_path
+    path = getattr(args, "journal", None)
+    run_id = getattr(args, "journal_run_id", None)
+    if path is None:
+        if run_id is not None:
+            raise ValueError("--journal-run-id requires --journal")
+        return nullcontext()
+    return journal_scope(ActionJournal(validate_path(Path(path))), run_id=run_id)
+
+
+def cmd_journal(args: argparse.Namespace) -> int:
+    """Read sanitized snapshots in append order without changing the journal."""
+    from pathlib import Path
+    from je_auto_control.utils.action_journal import read_events
+    from je_auto_control.utils.action_journal.redaction import sanitize_event
+    from je_auto_control.utils.path_guard.path_guard import validate_path
+    events = read_events(validate_path(Path(args.path)), run_id=args.run_id)
+    payload = [sanitize_event(event) for event in events[:args.limit]]
+    json.dump(payload, sys.stdout, indent=2, ensure_ascii=False, allow_nan=False)
+    sys.stdout.write("\n")
     return 0
 
 
@@ -266,11 +296,20 @@ def build_parser() -> argparse.ArgumentParser:
                        help="name=value override; may be repeated")
     p_run.add_argument("--dry-run", action="store_true",
                        help="record actions without calling them")
+    p_run.add_argument("--journal", metavar="PATH", help="append structured action snapshots to this journal")
+    p_run.add_argument("--journal-run-id", metavar="ID", help="explicit capture run ID; requires --journal")
     p_run.add_argument("--allow-package", action="append", metavar="NAME",
                        help="package AC_add_package_to_executor may load (submodules "
                             "included); may be repeated. JE_AUTOCONTROL_ALLOWED_PACKAGES "
                             "lists them for every entry point")
     p_run.set_defaults(func=cmd_run)
+
+    p_journal = sub.add_parser("journal", help="Read sanitized action journal snapshots")
+    p_journal.add_argument("path")
+    p_journal.add_argument("--run-id", help="Only snapshots for this journal run")
+    p_journal.add_argument("--limit", type=_journal_limit, default=100,
+                           help="maximum output snapshots, 1-10000 (default: 100)")
+    p_journal.set_defaults(func=cmd_journal)
 
     for name in ("validate", "lint"):
         p_validate = sub.add_parser(name, help="Validate an action JSON file")
@@ -336,6 +375,17 @@ def build_parser() -> argparse.ArgumentParser:
     p_rest.add_argument("--port", type=_port, default=9939)
     p_rest.set_defaults(func=cmd_start_rest)
     return parser
+
+
+def _journal_limit(text: str) -> int:
+    """Bound journal output without silently accepting zero or negative slices."""
+    try:
+        limit = int(text)
+    except ValueError as error:
+        raise argparse.ArgumentTypeError("journal limit must be an integer from 1 to 10000") from error
+    if not 1 <= limit <= 10000:
+        raise argparse.ArgumentTypeError("journal limit must be an integer from 1 to 10000")
+    return limit
 
 
 def _port(text: str) -> int:

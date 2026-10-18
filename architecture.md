@@ -125,8 +125,13 @@ steps and ignore bounded uncommitted tails; opaque outcomes/errors are redacted.
 Explicit `journal_scope` capture wraps each executor dispatch; loop bodies keep
 their step parent and local parallel/DAG workers rebind the same run metadata.
 `execute_action_with_journal` opens a fresh variable scope and returns a typed
-run summary. Capture starts are durable before effects; failed actions, handled
-loop signals, cancellation and dry-runs receive distinct completion statuses.
+run summary. Journal types, capture/read helpers and `JournalLink` are exported
+from the Qt-free facade. CLI `run --journal` retains the original record/exit
+contract; `journal` validates a full file then emits a bounded, sanitized snapshot
+selection. Both new CLI paths use the existing allowed-root guard and create no
+history row or database implicitly. Capture starts are durable before effects;
+failed actions, handled loop signals, cancellation and dry-runs receive distinct
+completion statuses.
 `utils/run_history/context.py` binds an existing history row to execution.
 Scheduler/trigger/hotkey/webhook/email owners bind their own row; local parallel
 and DAG workers carry it explicitly. `journal_scope` attaches an idempotent

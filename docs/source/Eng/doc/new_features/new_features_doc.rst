@@ -363,7 +363,7 @@ JSON list with text, bounding box, and confidence per hit.
 Runtime variables and data-driven control flow
 ==============================================
 
-Pre-execution interpolation in :mod:`script_vars.interpolate` only
+Pre-execution interpolation in ``script_vars.interpolate`` only
 substituted ``${var}`` placeholders once against a static mapping;
 scripts had no way to mutate state during execution. ``VariableScope``
 is a runtime mapping the executor exposes to flow-control commands so
@@ -506,7 +506,7 @@ so the result can be piped straight into ``execute_action``::
    # Or in one call:
    ac.run_from_description("open Notepad and type hello", executor=executor)
 
-Backend selection mirrors :mod:`vision.backends`:
+Backend selection mirrors ``vision.backends``:
 
 - Anthropic (``anthropic`` SDK, ``ANTHROPIC_API_KEY``) — default
 - ``AUTOCONTROL_LLM_BACKEND`` and ``AUTOCONTROL_LLM_MODEL`` for overrides
@@ -574,7 +574,7 @@ Input message allowlist (validated on the host before dispatch):
 - ``ping``
 
 Action-JSON commands (use the singleton in
-:mod:`utils.remote_desktop.registry`)::
+``utils.remote_desktop.registry``)::
 
    AC_start_remote_host       # token, bind, port, fps, quality, region
    AC_stop_remote_host
@@ -1025,7 +1025,7 @@ Remote desktop — AnyDesk-style popout window
 
 The viewer panel no longer renders the live remote screen inline —
 when the viewer authenticates, a dedicated top-level
-:class:`RemoteScreenWindow` opens with the remote desktop, and the
+``RemoteScreenWindow`` opens with the remote desktop, and the
 panel shrinks back to the connection card + controls. Closing the
 popup ✕ disconnects the session, matching AnyDesk's session-window
 ergonomics.
@@ -1379,7 +1379,7 @@ read access to the owning user.
 Webhook (HTTP push) trigger
 ===========================
 
-A bundled :mod:`http.server` dispatcher fires an action script when an
+A bundled ``http.server`` dispatcher fires an action script when an
 external service POSTs to a registered path. Configure path, allowed
 methods (``GET``, ``POST``, ``PUT``, ``PATCH``, ``DELETE``; any other verb
 is refused when the webhook is added), and an optional bearer token; the request method, path, query,
@@ -1415,7 +1415,7 @@ Each fire is recorded in run history as ``trigger`` with source id
 ``webhook:<id>`` so the dashboard surfaces webhook activity alongside
 other triggers; a fire in which any action failed is recorded as an error
 (with an error snapshot), as scheduled, triggered and hotkey runs are. The body is capped at 1 MiB and bearer-token comparison
-uses :func:`hmac.compare_digest`. Bind to ``127.0.0.1`` unless the
+uses ``hmac.compare_digest``. Bind to ``127.0.0.1`` unless the
 listener genuinely needs to be reachable from elsewhere on the network.
 
 GUI: **Webhooks** tab — start/stop the server, register paths, view the
@@ -1474,17 +1474,19 @@ with ``${secrets.NAME}`` so passwords never appear in the JSON.
 GUI: **Email Triggers** tab — register IMAP triggers, start/stop the
 watcher, run a manual poll, inspect last error and fire counter.
 
-Structured action journal storage (integration pending)
-=======================================================
+Structured action journals (partial integration)
+================================================
 
-B1 provides a storage foundation under ``je_auto_control.utils.action_journal``;
-facade and command exports, CLI/MCP/GUI and manual-run history controls remain
-pending integration. Applications can explicitly write schema-v1 snapshots::
+B1 exports storage and explicit capture/read APIs from ``je_auto_control`` and
+``je_auto_control.utils.action_journal``. CLI capture and bounded snapshot reads
+are available; command, MCP/GUI and manual-run history controls remain pending
+integration. The journal/provenance APIs remain experimental during B1.
+Applications can explicitly write schema-v1 snapshots::
 
    import time
    from dataclasses import replace
    from pathlib import Path
-   from je_auto_control.utils.action_journal import ActionEvent, ActionJournal, read_events
+   from je_auto_control import ActionEvent, ActionJournal, read_events
 
    journal = ActionJournal(Path("actions.jsonl"))
    started = ActionEvent(
@@ -1515,7 +1517,7 @@ and does not infer a completed step from a missing final record.
 Explicit executor capture is also available::
 
    from pathlib import Path
-   from je_auto_control.utils.action_journal import execute_action_with_journal, read_events
+   from je_auto_control import execute_action_with_journal, read_events
 
    summary = execute_action_with_journal(
        [["AC_set_var", {"name": "count", "value": 1}]],

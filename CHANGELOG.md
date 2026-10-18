@@ -13,6 +13,12 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ## Unreleased
 
+- Structured journal types and capture/read helpers, plus history `JournalLink`,
+  are exported from `je_auto_control`. CLI `run --journal PATH` captures actions
+  with an optional `--journal-run-id`; `journal PATH` supports run filtering and
+  bounded, sanitized snapshot output. Existing run stdout and exit codes remain
+  unchanged; these operations create no history database or row implicitly.
+
 - DAG node error diagnostics retain the owning run's resolved-secret mask after
   the runner exits. Standalone DAG calls and custom local runners receive the
   same protection; returned node-error data and run outcomes stay unchanged.

@@ -3,7 +3,17 @@
 The supported entry point for new integrations is `je_auto_control.api`.
 Everything reachable only through `je_auto_control.utils` is internal unless a
 document explicitly says otherwise. The historical top-level package remains
-available for compatibility but is not expanded with new integrations.
+a broad convenience facade and also exports new headless features under the
+project's facade rule. Membership in its `__all__` does not promote a feature
+into the versioned stable API.
+
+Structured action-journal storage, capture/read helpers and history provenance
+links are experimental while B1 interface integration remains in progress.
+The documented names are available through `je_auto_control` and
+`je_auto_control.utils.action_journal`; `JournalLink` is also exported from
+`je_auto_control.utils.run_history`. CLI journal capture/inspection uses the same
+experimental schema-v1 snapshots. These additions do not change the lifecycle
+of existing executor or history APIs.
 
 - Stable API removal requires a deprecation warning and two minor releases.
 - Beta API removal requires one release note and one minor release.

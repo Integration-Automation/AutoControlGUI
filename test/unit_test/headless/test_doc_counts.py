@@ -24,6 +24,11 @@ def _commands() -> int:
     return len(executor.known_commands())
 
 
+def _facade_names() -> int:
+    import je_auto_control
+    return len(je_auto_control.__all__)
+
+
 def _mcp_tools() -> int:
     from je_auto_control.utils.mcp_server.tools import build_default_tool_registry
     # Pinned, not defaulted: the registry consults
@@ -58,6 +63,12 @@ def _typing_exemptions() -> int:
 
 # (doc, regex with one capture group, what it counts, how to measure it)
 CITATIONS: List[Tuple[str, str, str, Callable[[], int]]] = [
+    ("architecture_explore.md", r"套件門面 `__all__` 公開名稱數 \| ([\d,]+) \|",
+     "facade names", _facade_names),
+    ("architecture_explore.md", r"把 ([\d,]+) 個公開名稱集中再匯出",
+     "facade names", _facade_names),
+    ("architecture_explore.md", r"集中匯入並再匯出 ([\d,]+) 個公開名稱",
+     "facade names", _facade_names),
     ("architecture_explore.md",
      r"`AC_\*` 動作指令數（`known_commands\(\)` 實測） \| (\d+) \|",
      "AC_* commands", _commands),
@@ -107,7 +118,7 @@ def test_quoted_count_matches_the_tree(doc, pattern, label, measure):
     )
     actual = measure()
     for quoted in found:
-        assert int(quoted) == actual, (
+        assert int(quoted.replace(",", "")) == actual, (
             f"{doc} says {quoted} {label}, the tree has {actual}. "
             f"Re-measure and update every document that quotes it "
             f"(architecture_explore.md, README.md and both translations)."
