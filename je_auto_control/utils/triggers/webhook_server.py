@@ -41,6 +41,7 @@ from je_auto_control.utils.http_headers import (
 )
 from je_auto_control.utils.json.json_file import read_executable_action_json
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
+from je_auto_control.utils.run_history.context import HistoryBinding, bound_history
 from je_auto_control.utils.logging.secret_scope import secret_log_scope
 from je_auto_control.utils.rbac.authorization import AuthorizationError
 from je_auto_control.utils.rbac.deferred import DeferredAuthorization
@@ -390,7 +391,7 @@ class WebhookTriggerServer:
             # response. Catch the whole family so the fire is recorded as an
             # error and _dispatch still answers the request.
             try:
-                with trigger._authorization.scope():
+                with trigger._authorization.scope(), bound_history(HistoryBinding(default_history_store, run_id)):
                     actions = read_executable_action_json(trigger.script_path)
                     run_counting_failures(lambda: self._executor(actions, payload))
             except Exception as error:  # noqa: BLE001  # reason: any script failure must be recorded and answered

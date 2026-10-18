@@ -27,6 +27,7 @@ from typing import Any, Callable, Dict, Iterable, List, Optional
 
 from je_auto_control.utils.json.json_file import read_executable_action_json
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
+from je_auto_control.utils.run_history.context import HistoryBinding, bound_history
 from je_auto_control.utils.logging.secret_scope import scrub_secret_text, secret_log_scope
 from je_auto_control.utils.rbac.deferred import DeferredAuthorization
 from je_auto_control.utils.run_history.artifact_manager import (
@@ -493,7 +494,7 @@ class EmailTriggerWatcher:
             status = STATUS_OK
             error_text: Optional[str] = None
             try:
-                with trigger._authorization.scope():
+                with trigger._authorization.scope(), bound_history(HistoryBinding(default_history_store, run_id)):
                     actions = read_executable_action_json(trigger.script_path)
                     run_counting_failures(lambda: self._executor(actions, payload))
             # Any failure is recorded as STATUS_ERROR -- not a bogus

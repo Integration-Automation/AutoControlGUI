@@ -1475,7 +1475,7 @@ Structured action journal storage (integration pending)
 =======================================================
 
 B1 provides a storage foundation under ``je_auto_control.utils.action_journal``;
-facade and command exports, CLI/MCP/GUI controls and run-history linking remain
+facade and command exports, CLI/MCP/GUI and manual-run history controls remain
 pending integration. Applications can explicitly write schema-v1 snapshots::
 
    import time
@@ -1530,3 +1530,40 @@ Soft/strict failures, cancellation and ``dry_run`` stay distinct. ``ok`` reports
 dispatch completion; domain verification is a separate check. A process killed
 mid-command retains its durable incomplete start. Completion-storage failure
 preserves an original cancellation/error and leaves the start incomplete.
+
+
+History provenance links
+------------------------
+
+Scheduler, trigger, hotkey, webhook and email owners bind their existing history
+row during execution. Explicit ``journal_scope`` capture automatically attaches
+a canonical journal path and journal run ID to that row before dispatch. Local
+parallel and default DAG workers carry this owner when they open captures too.
+Multiple captures can link to one history row; duplicate links are idempotent.
+Plain capture without an owner does not create a history row or open a history
+database. For an explicitly managed manual row::
+
+   from pathlib import Path
+   from je_auto_control.utils.action_journal import ActionJournal, journal_scope
+   from je_auto_control.utils.executor.action_executor import executor
+   from je_auto_control.utils.run_history.context import HistoryBinding, bound_history
+   from je_auto_control.utils.run_history.history_store import HistoryStore, SOURCE_MANUAL, STATUS_OK
+
+   history = HistoryStore("history.sqlite")
+   try:
+       row_id = history.start_run(SOURCE_MANUAL, "example", "actions.json")
+       with bound_history(HistoryBinding(history, row_id)):
+           with journal_scope(ActionJournal(Path("run.jsonl")), run_id="example"):
+               executor.execute_action([["AC_set_var", {"name": "count", "value": 1}]])
+       history.finish_run(row_id, STATUS_OK)
+       links = history.journals_for_run(row_id)
+   finally:
+       history.close()
+
+``HistoryStore.attach_journal`` stores metadata only: it does not open, validate,
+copy or take ownership of the target file. ``journals_for_run`` returns immutable
+``JournalLink`` values with ``run_id``, ``journal_path`` and ``journal_run_id``.
+Clearing/pruning history removes links and preserves journal files. Existing
+history schemas migrate on opening; original rows and screenshot links survive.
+An unknown bound history row refuses capture before device effects. GUI and
+manual-run convenience wiring remain pending integration.

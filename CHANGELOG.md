@@ -13,6 +13,13 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ## Unreleased
 
+- Explicit action journals now link to an enclosing existing run-history row,
+  including local parallel/DAG captures. Links are idempotent and non-owning;
+  clearing/pruning history keeps external journal files. Plain captures create
+  no implicit history row. Legacy history databases migrate without losing rows.
+- Failed run-history initialization closes its connection before propagating
+  the failure, and no partially initialized connection remains cached.
+
 - Watchdog and observer rules, and callback-executor invocations, retain their
   resolved-secret mask through detection, callbacks and final error logging.
   Independent rules/calls isolate masks; existing return and failure semantics

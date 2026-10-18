@@ -16,6 +16,7 @@ from je_auto_control.utils.action_journal.store import ActionJournal
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.path_guard.path_guard import validate_path
 from je_auto_control.utils.script_vars.execution import execution_scope
+from je_auto_control.utils.run_history.context import current_history
 
 
 @dataclass(frozen=True)
@@ -73,6 +74,9 @@ def journal_scope(journal: ActionJournal, *, run_id: Optional[str] = None,
     if not isinstance(identity, str) or not identity:
         raise ActionJournalError("journal run ID must be a non-empty string")
     binding = JournalBinding(journal, identity, device_id=device_id, session_id=session_id)
+    history = current_history()
+    if history is not None and not history.store.attach_journal(history.run_id, str(journal.path.resolve()), identity):
+        raise ActionJournalError("cannot attach journal to a missing history run")
     with bound_journal(binding):
         yield binding
 

@@ -1372,7 +1372,7 @@ GUI: **Email Triggers** 分頁 — 註冊 IMAP 觸發、啟動 / 停止 watcher�
 ====================================
 
 B1 的儲存與明確擷取位於 ``je_auto_control.utils.action_journal``；門面與動作指令匯出、
-CLI／MCP／GUI 控制、run-history 連結仍待接入。應用程式可明確寫入 schema-v1 快照::
+CLI／MCP／GUI 與手動執行的 history 控制仍待接入。應用程式可明確寫入 schema-v1 快照::
 
    import time
    from dataclasses import replace
@@ -1418,3 +1418,38 @@ CLI／MCP／GUI 控制、run-history 連結仍待接入。應用程式可明確�
 一般／嚴格失敗、取消與 ``dry_run`` 分別記錄；``ok`` 表示 dispatch 完成，業務結果需另外驗證。
 行程在動作中被結束時，保留已落盤的未完成起始紀錄。
 完成紀錄無法寫入時會保留原本的取消／錯誤，起始紀錄維持未完成。
+
+
+執行歷史的日誌來源連結
+------------------------
+
+排程、trigger、hotkey、webhook 與 email 擁有者會在執行期間綁定既有 history 列。
+明確的 ``journal_scope`` 擷取會在 dispatch 前附加 canonical journal 路徑與 journal
+run ID；本機 parallel 與預設 DAG worker 另開擷取時也保留擁有者。
+同一列可連結多份 journal，重複附加相同連結不會增加資料。
+未綁定擁有者的普通擷取不會建立 history 列或開啟 history 資料庫。
+手動管理既有列的用法::
+
+   from pathlib import Path
+   from je_auto_control.utils.action_journal import ActionJournal, journal_scope
+   from je_auto_control.utils.executor.action_executor import executor
+   from je_auto_control.utils.run_history.context import HistoryBinding, bound_history
+   from je_auto_control.utils.run_history.history_store import HistoryStore, SOURCE_MANUAL, STATUS_OK
+
+   history = HistoryStore("history.sqlite")
+   try:
+       row_id = history.start_run(SOURCE_MANUAL, "example", "actions.json")
+       with bound_history(HistoryBinding(history, row_id)):
+           with journal_scope(ActionJournal(Path("run.jsonl")), run_id="example"):
+               executor.execute_action([["AC_set_var", {"name": "count", "value": 1}]])
+       history.finish_run(row_id, STATUS_OK)
+       links = history.journals_for_run(row_id)
+   finally:
+       history.close()
+
+``HistoryStore.attach_journal`` 只保存中繼資料，不開啟、驗證、複製或擁有目標檔案。
+``journals_for_run`` 回傳不可變的 ``JournalLink``，欄位為 ``run_id``、
+``journal_path`` 與 ``journal_run_id``。清空／裁剪 history 只移除連結，保留 journal 檔。
+舊 history schema 會在開啟時遷移，保留原有列與截圖連結。
+綁定不存在的 history 列時，會在裝置動作發生前拒絕擷取。
+GUI 與手動執行的便利接線仍待整合。

@@ -17,6 +17,7 @@ from typing import TYPE_CHECKING, Callable, ClassVar, Dict, List, Optional, Tupl
 from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.json.json_file import read_executable_action_json
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
+from je_auto_control.utils.run_history.context import HistoryBinding, bound_history
 from je_auto_control.utils.logging.secret_scope import secret_log_scope
 from je_auto_control.utils.rbac.deferred import DeferredAuthorization
 from je_auto_control.utils.timeouts import clamp_poll_interval
@@ -374,7 +375,7 @@ class TriggerEngine:
         status = STATUS_OK
         error_text: Optional[str] = None
         try:
-            with authorization.scope():
+            with authorization.scope(), bound_history(HistoryBinding(default_history_store, run_id)):
                 actions = read_executable_action_json(trigger.script_path)
                 run_counting_failures(lambda: self._execute(actions))
         # 這裡刻意攔截所有例外：一個 trigger 失敗必須記錄成 STATUS_ERROR

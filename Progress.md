@@ -14,7 +14,7 @@
 
 `WIP` — 計畫 A（既有決策與執行契約）已交付，A2、A7 在 2026-10-08、其餘在 2026-10-09（U-20261009-01…14）；
 各項沒驗到或沒做完的部分在本檔下面三節（輸入與視窗、macOS、這一輪修正留下的後續）。計畫 F（GUI）：F1 的延遲分頁註冊與 F2 的導覽／搜尋／主題已交付（U-20261008-02）。
-計畫 B（動作日誌、自愈量測、codegen）仍缺 B1 的門面／動作指令／CLI／MCP／GUI 介面與 run-history 連結、B2 自愈評估、B3 日誌產碼。計畫 C（持久化同步與遠端 session；C4 以外）、D（Wayland）、E（Android／iOS）、G（MCP 逐步揭露）、H（型別深化與總驗收）尚未開始。F 還缺：
+計畫 B（動作日誌、自愈量測、codegen）仍缺 B1 的門面／動作指令／CLI／MCP／GUI 介面、手動執行的 run-history 接線與日誌查閱、B2 自愈評估、B3 日誌產碼。計畫 C（持久化同步與遠端 session；C4 以外）、D（Wayland）、E（Android／iOS）、G（MCP 逐步揭露）、H（型別深化與總驗收）尚未開始。F 還缺：
 
 - **Remote Desktop 與 Script Builder 仍在啟動時建立**（預設開啟），啟動時間 2.6–2.7 秒裡大半是它們與門面匯入。
 - **F1 的遺留面板釋放**：擁有者直接建立的核心表單與 Remote Desktop 在關閉時仍保留 widget；需隨 F3 遷移直接控制項引用、執行中工作與連線生命週期，再啟用銷毀。
@@ -222,6 +222,7 @@ U-20261009-06 與 -04 的 macOS 部分是在 Windows 上對假的 pyobjc／Quart
 - **USB passthrough**：client 仍在 `reply_timeout_s`（10 秒）放棄，即使呼叫端要的 `timeout_ms` 更長（host 接受到 60 秒）；
   對新 host 逾時已經無害，對舊 host 正常使用就會進入「需重連」。通道層的 ERROR（passthrough 關閉、bad frame、host 沒有 session）在 session 之前送出、不帶請求編號，
   呼叫仍是等到逾時。沒對真的舊版 host、真的 WebRTC 通道或真的 USB 裝置跑過。
+- **背景執行的硬中止狀態**（`TODO`）：`utils/{scheduler,triggers,hotkey}/` 的 run owner 只在 `Exception` 設錯誤狀態，`KeyboardInterrupt`／`SystemExit` 等硬中止仍會由 finally 寫成 history `ok`；需改為失敗／中止結果並保留原始控制流程，且中止後不再擷取錯誤截圖。
 - **變數範圍**：free-threaded 原生執行緒繼承與同時存取範圍的行為尚未實測。
 - **遠端桌面的擁有者模型**：Quick Connect 沒有狀態列，它的連線被取代時視窗只是關掉；主機的 Stop 會停任何擁有者開的 host（刻意的）；
   只用假的 viewer／host 測過，真的 viewer 被擠掉時會不會觸發 `on_error` 而多跳一個警告框，沒看過。

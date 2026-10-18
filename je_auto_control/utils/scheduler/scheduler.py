@@ -12,6 +12,7 @@ from typing import Callable, Dict, List, Optional, Set
 
 from je_auto_control.utils.json.json_file import read_executable_action_json
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
+from je_auto_control.utils.run_history.context import HistoryBinding, bound_history
 from je_auto_control.utils.logging.secret_scope import secret_log_scope
 from je_auto_control.utils.rbac.deferred import DeferredAuthorization
 from je_auto_control.utils.run_history.artifact_manager import (
@@ -237,7 +238,7 @@ class Scheduler:
         status = STATUS_OK
         error_text: Optional[str] = None
         try:
-            with job._authorization.scope():
+            with job._authorization.scope(), bound_history(HistoryBinding(default_history_store, run_id)):
                 actions = read_executable_action_json(job.script_path)
                 run_counting_failures(lambda: self._execute(actions))
         # 一個排程工作失敗必須記錄為 STATUS_ERROR 並繼續輪詢,絕不能拖垮

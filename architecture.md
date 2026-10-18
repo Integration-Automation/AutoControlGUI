@@ -125,7 +125,12 @@ their step parent and local parallel/DAG workers rebind the same run metadata.
 `execute_action_with_journal` opens a fresh variable scope and returns a typed
 run summary. Capture starts are durable before effects; failed actions, handled
 loop signals, cancellation and dry-runs receive distinct completion statuses.
-Facade/command/CLI/MCP/GUI surfaces and run-history linking remain pending.
+`utils/run_history/context.py` binds an existing history row to execution.
+Scheduler/trigger/hotkey/webhook/email owners bind their own row; local parallel
+and DAG workers carry it explicitly. `journal_scope` attaches an idempotent
+non-owning path/run-ID link before dispatch. `run_journals` cascades metadata
+when rows are pruned/cleared; external journal files are never deleted by history.
+Facade/command/CLI/MCP/GUI and manual-run history controls remain pending.
 
 **C. Record → edit → generate code**
 
