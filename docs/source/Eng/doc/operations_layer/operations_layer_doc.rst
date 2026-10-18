@@ -137,6 +137,17 @@ CLI::
 Roles (opt-in RBAC)
 -------------------
 
+The REST GUI labels RBAC mode and disables its shared-token input. Registry
+status includes ``rbac_enabled`` and reports ``token: null`` while a user store is
+configured; use a token belonging to an individual user. Stopping the server
+restores the shared-token controls. The Python server's ``token`` property still
+holds its configured shared token, which RBAC does not accept.
+
+Custom REST gates implementing only ``check(client_ip=..., header_value=...)``
+retain their verdict and rate-limit behavior in shared-token mode. When the
+server has a user store, a successful gate result must include an authenticated
+``AuthorizationContext``; an identityless success returns HTTP 401.
+
 By default every caller holds the one shared token and may use every
 endpoint. Point the server at a user store and each caller gets a token of
 their own and a role instead:

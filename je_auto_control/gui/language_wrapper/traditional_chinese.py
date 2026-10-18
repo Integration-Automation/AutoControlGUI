@@ -219,6 +219,7 @@ traditional_chinese_word_dict = {
     "rest_url": "URL:",
     "rest_active_token": "Bearer 權杖:",
     "rest_running": "REST API 執行中。",
+    "rest_running_rbac": "REST API 以 RBAC 執行中。請使用個別使用者權杖；共用權杖已停用。",
     "rest_stopped": "REST API 已停止。",
     "rest_config_export": "匯出設定",
     "rest_config_import": "匯入設定",

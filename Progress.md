@@ -210,9 +210,7 @@ U-20261009-06 與 -04 的 macOS 部分是在 Windows 上對假的 pyobjc／Quart
   強制簽章經 socket／REST／MCP 的端到端沒有跑過，覆蓋的是共用的 `read_executable_action_json` 與指令本身。
 - **RBAC**（`JE_AUTOCONTROL_RBAC_USERS`，預設關閉）：
   - 使用者只能用 Python 管（`UserStore.add_user/set_role/rotate_token/remove_user`），沒有 `AC_*`、CLI 或 GUI；`Capability.MANAGE_USERS` 因此沒有任何路由或工具對應。
-  - `gui/rest_api_tab.py` 仍顯示共用 token，RBAC 開啟後那個 token 會被拒絕。
   - viewer 拿得到所有標成唯讀的工具，包括 `ac_sql_query`、`ac_load_dotenv`、`ac_get_clipboard`、`ac_jwt_encode`，沒有重新分類。
-  - 只實作 `check()` 的自製 REST gate 現在會 `AttributeError`（要有 `authenticate()`）。
   - 沒對真的 client（Claude Desktop、VS Code、內建 dashboard）試過；SSE、無狀態與 `subscriptions/listen` 路徑、TLS 加 RBAC 沒有測試。
 - **MCP 路徑根目錄**（`JE_AUTOCONTROL_MCP_PATH_ROOTS`，預設關閉）管不到的參數：執行動作清單的工具、
   有時才是路徑的參數（`ac_open_path`／`ac_plan_open`／`ac_file_association`／`ac_act_in_view` 的 `target`，`ac_launch_process`／`ac_shell` 的 `argv`／`command`）、

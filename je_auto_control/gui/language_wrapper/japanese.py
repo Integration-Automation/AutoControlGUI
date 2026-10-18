@@ -231,6 +231,7 @@ japanese_word_dict = {
     "rest_url": "URL:",
     "rest_active_token": "ベアラートークン:",
     "rest_running": "REST API は稼働中です。",
+    "rest_running_rbac": "REST API は RBAC で稼働中です。ユーザートークンを使用してください。共有トークンは無効です。",
     "rest_stopped": "REST API は停止しています。",
     "rest_config_export": "設定をエクスポート",
     "rest_config_import": "設定をインポート",

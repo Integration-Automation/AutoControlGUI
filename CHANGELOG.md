@@ -13,6 +13,12 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ## Unreleased
 
+- REST registry status adds `rbac_enabled` and suppresses the inactive shared
+  token in RBAC mode (`token: null`). The GUI explains user-token authentication
+  and disables its shared-token field. The Python server's `token` property stays
+  unchanged. Check-only custom gates work in shared-token mode; an identityless
+  success cannot bypass a server's configured RBAC policy.
+
 - The GUI tab close button now releases factory-built feature panels and their
   destruction-bound resources; reopening creates a fresh panel. View-menu hiding
   and `hide_tab` retain state. Explicit `TabRegistry.open/close` and `close_tab`

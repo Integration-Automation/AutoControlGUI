@@ -85,6 +85,11 @@ AC_web_run / AC_web_run_actions → utils/webrunner_bridge/bridge.py
     (event_dict["WR_*"] on a WebRunner without execute_one); a failure → WebRunnerBridgeError
 ```
 
+REST gate adaptation preserves check-only custom gates under shared-token auth;
+store-backed servers require an authenticated user context even from replacement
+gates. Registry status exposes `rbac_enabled` and omits the inactive shared token
+so the GUI presents the authentication mode that the server actually accepts.
+
 Delayed work captures registration authority through `utils/rbac/deferred.py`.
 Schedulers, triggers, hotkeys, watchdogs, webhooks, e-mail watchers and observers
 bind that owner at dispatch, independently of the worker's ambient context.

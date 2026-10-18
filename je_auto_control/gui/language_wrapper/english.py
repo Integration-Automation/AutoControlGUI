@@ -342,6 +342,7 @@ english_word_dict = {
     "rest_url": "URL:",
     "rest_active_token": "Bearer token:",
     "rest_running": "REST API is running.",
+    "rest_running_rbac": "REST API is running with RBAC. Use a user token; shared tokens are disabled.",
     "rest_stopped": "REST API is stopped.",
     "rest_config_export": "Export config",
     "rest_config_import": "Import config",

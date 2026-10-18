@@ -57,17 +57,21 @@ class _RestApiRegistry:
         return self.status()
 
     def status(self) -> Dict[str, Any]:
+        """Report the active auth mode; expose shared credentials only when usable."""
         with self._lock:
             server = self._server
         if server is None:
             return {
                 "running": False, "host": None, "port": 0,
                 "token": None, "url": None,  # nosec B105  # reason: dict key, value None means server stopped
+                "rbac_enabled": False,
             }
         host, port = server.address
+        rbac_enabled = server.user_store is not None
         return {
             "running": server.is_running, "host": host, "port": int(port),
-            "token": server.token, "url": server.base_url,
+            "token": None if rbac_enabled else server.token, "url": server.base_url,
+            "rbac_enabled": rbac_enabled,
         }
 
 

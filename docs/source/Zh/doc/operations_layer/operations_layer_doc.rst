@@ -128,6 +128,14 @@ CLI::
 角色（選用的 RBAC）
 --------------------
 
+REST GUI 會標示 RBAC 模式並停用共用 token 輸入。Registry 狀態提供 ``rbac_enabled``，
+使用者存放檔啟用時回報 ``token: null``；請改用個別使用者的 token。停止伺服器會恢復共用
+token 控制項。Python 伺服器的 ``token`` 屬性仍保留設定的共用 token，RBAC 不接受它。
+
+只實作 ``check(client_ip=..., header_value=...)`` 的自製 REST gate 在共用 token 模式下
+保留原本的判定與限流行為。伺服器設定使用者存放檔時，成功結果必須包含已驗證的
+``AuthorizationContext``；沒有身分的成功判定會回覆 HTTP 401。
+
 預設情況下所有呼叫端共用同一個 token，可以使用所有端點。把伺服器指向一個使用者
 存放檔之後，每個呼叫端改為擁有自己的 token 與角色：
 

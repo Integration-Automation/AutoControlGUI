@@ -27,7 +27,7 @@ from je_auto_control.utils.rbac.authorization import (
 )
 from je_auto_control.utils.rbac.policy import capability_for_route, denied_command_in
 from je_auto_control.utils.rbac.users import UserStore
-from je_auto_control.utils.rest_api.rest_auth import RestAuthGate, generate_token
+from je_auto_control.utils.rest_api.rest_auth import AuthResult, RestAuthGate, generate_token
 from je_auto_control.utils.rest_api.rest_handlers import (
     HandlerResult, RouteContext,
     handle_audit_list, handle_audit_verify,
@@ -227,10 +227,7 @@ class _RestRequestHandler(BaseHTTPRequestHandler):
         The caller is ``None`` under the shared token: there is no user to
         hold a role, so there is nothing to authorise.
         """
-        result = self._gate().authenticate(
-            client_ip=client_ip,
-            header_value=self.headers.get("Authorization"),
-        )
+        result = self._authenticate(client_ip)
         if result.verdict != "ok":
             if result.verdict == "unauthorized":
                 self._metrics().record_failed_auth()
@@ -283,6 +280,23 @@ class _RestRequestHandler(BaseHTTPRequestHandler):
 
     def _gate(self) -> RestAuthGate:
         return self.server.auth_gate  # type: ignore[attr-defined]
+
+    def _authenticate(self, client_ip: str) -> AuthResult:
+        """Adapt check-only gates, requiring identity when the server uses RBAC."""
+        gate = self._gate()
+        authenticate = getattr(gate, "authenticate", None)
+        header = self.headers.get("Authorization")
+        result: AuthResult
+        if callable(authenticate):
+            result = authenticate(client_ip=client_ip, header_value=header)
+        else:
+            result = AuthResult(gate.check(client_ip=client_ip, header_value=header))
+        # This flag belongs to the server configuration, independently of a
+        # replacement gate. An identityless "ok" must never disable RBAC.
+        if (getattr(self.server, "rbac_enabled", False)
+                and result.verdict == "ok" and result.context is None):
+            return AuthResult("unauthorized")
+        return result
 
     def _metrics(self) -> RestMetrics:
         return self.server.metrics  # type: ignore[attr-defined]
@@ -511,6 +525,7 @@ class RestApiServer:
 
     @property
     def token(self) -> str:
+        """The configured shared token, inactive when ``user_store`` is set."""
         return self._token
 
     @property
@@ -536,6 +551,7 @@ class RestApiServer:
             return
         server = ThreadingHTTPServer(self._address, _RestRequestHandler)
         server.auth_gate = self._auth  # type: ignore[attr-defined]
+        setattr(server, "rbac_enabled", self._users is not None)
         server.audit_log = self._audit_log  # type: ignore[attr-defined]
         server.metrics = self._metrics  # type: ignore[attr-defined]
         # `server_address` is typed for every address family a socketserver

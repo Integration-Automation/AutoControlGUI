@@ -218,6 +218,7 @@ simplified_chinese_word_dict = {
     "rest_url": "URL:",
     "rest_active_token": "Bearer 令牌:",
     "rest_running": "REST API 运行中。",
+    "rest_running_rbac": "REST API 以 RBAC 运行中。请使用个别用户令牌；共用令牌已禁用。",
     "rest_stopped": "REST API 已停止。",
     "rest_config_export": "导出配置",
     "rest_config_import": "导入配置",

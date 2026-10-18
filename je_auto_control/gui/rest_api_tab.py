@@ -184,10 +184,12 @@ class RestApiTab(TranslatableMixin, QWidget):
 
     def _refresh_status(self) -> None:
         status = rest_api_registry.status()
+        rbac_enabled = bool(status.get("rbac_enabled", False))
+        self._token_input.setEnabled(not rbac_enabled)
         if status["running"]:
             self._url_value.setText(status["url"])
-            self._token_value.setText(status["token"])
-            self._status_label.setText(_t("rest_running"))
+            self._token_value.setText("-" if rbac_enabled else status["token"])
+            self._status_label.setText(_t("rest_running_rbac" if rbac_enabled else "rest_running"))
         else:
             self._url_value.setText("-")
             self._token_value.setText("-")
