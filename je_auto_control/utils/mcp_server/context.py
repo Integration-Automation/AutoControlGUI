@@ -9,6 +9,8 @@ import threading
 from dataclasses import dataclass, field
 from typing import Any, Callable, Optional
 
+from je_auto_control.utils.path_guard.policy import PathPolicy
+
 class OperationCancelledError(RuntimeError):
     """Raised by :meth:`ToolCallContext.check_cancelled` when the client cancels."""
 
@@ -34,6 +36,7 @@ class ToolCallContext:
         default=None, repr=False,
     )
     cancelled_event: threading.Event = field(default_factory=threading.Event)
+    path_policy: Optional[PathPolicy] = field(default=None, repr=False)
 
     @property
     def cancelled(self) -> bool:

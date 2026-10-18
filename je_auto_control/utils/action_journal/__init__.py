@@ -5,6 +5,8 @@ from je_auto_control.utils.action_journal.inspection import inspect_journal
 from je_auto_control.utils.action_journal.capture import (
     JournalBinding, JournalRunResult, execute_action_with_journal, journal_scope,
 )
+from je_auto_control.utils.action_journal.run import JournalRunOptions, execute_journal_run
 
 __all__ = ["ActionEvent", "ActionJournal", "ActionJournalError", "JournalBinding", "JournalRunResult",
-           "read_events", "inspect_journal", "execute_action_with_journal", "journal_scope"]
+           "read_events", "inspect_journal", "execute_action_with_journal", "journal_scope",
+           "JournalRunOptions", "execute_journal_run"]

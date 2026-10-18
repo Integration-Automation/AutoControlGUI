@@ -8,14 +8,30 @@ OpenAI tool-use 迴圈)都能透過 AutoControl 操控本機桌面。實作純�
 準函式庫:JSON-RPC 2.0 走 stdio 或 HTTP+SSE,不需要額外的執行階段
 依賴。
 
-預設暴露約 90 個工具,並支援完整的 MCP 協定能力:tools、resources、
+預設暴露 682 個工具（663 個正式名稱與 19 個別名），並支援 MCP 協定能力：tools、resources、
 prompts、sampling、roots、logging、progress、cancellation、
 list-changed 通知與 elicitation。
+
+結構化日誌
+==========
+
+``ac_journal_capture`` 接受 ``actions``、``path``，以及可選的 ``metadata``
+（``run_id``、``device_id``、``session_id``）、``variables`` 與 ``dry_run``。
+``ac_journal_read`` 接受 ``path``、可選的 ``run_id`` 與 ``limit``（預設 100，範圍
+1–10,000）。兩者都有 output schema，支援進度與合作式取消。RBAC 下都要求
+``drive_input``；唯讀模式保留查閱、移除擷取。日誌路徑同時受 MCP 政策與預設 journal
+根目錄限制；巢狀擷取、worker 繼承與查閱取消邊界詳見日誌指南。
+
+擷取回傳 ``run_id``、``journal_path``、``record`` 與 ``failed_actions``；查閱回傳
+``{"events": [...]}``。executor 記錄失敗時設定 ``isError``，並保留結構化 run 資料。
+擴充 handler 可回傳 ``MCPToolResult``：它是 JSON 相容的字典，另帶 ``is_error``／
+``error_text`` metadata。只有此明確型別會控制工具錯誤／audit 狀態；一般字典中的資料
+欄位無法設定協定旗標。受控失敗會保留資料，不透過例外或錯誤截圖回報。
 
 工具目錄
 ========
 
-預設註冊表會把每個正式 ``ac_*`` 工具同時註冊一個短別名(``click``、
+預設註冊表會為部分常用的正式 ``ac_*`` 工具註冊短別名(``click``、
 ``type``、``screenshot``...),提示文字可以更精簡。要看實際目錄請
 用下方「CLI 檢視」段落的 ``--list-tools``。
 
@@ -139,7 +155,7 @@ Logging 通知 / Progress / Cancellation
   ``io.modelcontextprotocol/logLevel`` 時才收到(見 `無狀態請求
   (2026-07-28)`_)。
 - 接受 ``ctx`` 參數的長時間工具會收到
-  :class:`ToolCallContext`:呼叫
+  ``ToolCallContext``:呼叫
   ``ctx.progress(value, total, message)`` 推送
   ``notifications/progress``(client 須提供 ``progressToken``);呼
   叫 ``ctx.check_cancelled()`` 在收到 ``notifications/cancelled``
@@ -395,7 +411,7 @@ client 不用改,可以和 2026-07-28 的 client 並存。
 ===============
 
 設定 ``JE_AUTOCONTROL_MCP_READONLY=1``(或對 ``je_auto_control_mcp`` 加上
-``--read-only``,或呼叫 :func:`build_default_tool_registry` 時傳 ``read_only=True``)只暴
+``--read-only``,或呼叫 ``build_default_tool_registry`` 時傳 ``read_only=True``)只暴
 露 ``readOnlyHint`` 為 true 的工具(座標、OCR 查詢、剪貼簿讀取、歷
 程等):
 
@@ -468,8 +484,8 @@ client 不用改,可以和 2026-07-28 的 client 並存。
     只有名稱符合時才會解析，其餘回工具執行錯誤。沒設時和以前一樣，任何變數都讀得到——
     包括放 API 金鑰的那些。
 
-在程式裡，同一份設定是 ``server.argument_policy`` （ :class:`ArgumentPolicy` ，內含
-:class:`je_auto_control.PathPolicy` 與允許清單）；自己建立的伺服器可以指派另一個。
+在程式裡，同一份設定是 ``server.argument_policy`` （ ``ArgumentPolicy`` ，內含
+``je_auto_control.PathPolicy`` 與允許清單）；自己建立的伺服器可以指派另一個。
 
 破壞性動作確認(Elicitation)
 =============================
@@ -531,7 +547,7 @@ auto-screenshot 路徑(見下)。
 Rate Limiting
 =============
 
-把 :class:`RateLimiter` 傳給 :class:`MCPServer` 防止失控的迴圈灌
+把 ``RateLimiter`` 傳給 ``MCPServer`` 防止失控的迴圈灌
 爆主機:
 
 .. code-block:: python
@@ -548,7 +564,7 @@ Plugin Hot-Reload
 =================
 
 把暴露頂層 ``AC_*`` callable 的 ``*.py`` 丟進資料夾,讓
-:class:`PluginWatcher` 自動同步 registry:
+``PluginWatcher`` 自動同步 registry:
 
 .. code-block:: python
 

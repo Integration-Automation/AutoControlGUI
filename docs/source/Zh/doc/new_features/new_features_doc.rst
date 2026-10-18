@@ -1375,8 +1375,8 @@ GUI: **Email Triggers** 分頁 — 註冊 IMAP 觸發、啟動 / 停止 watcher�
 
 B1 的儲存與明確擷取／查閱 API 已從 ``je_auto_control`` 匯出，也可透過
 ``je_auto_control.utils.action_journal`` 使用。CLI 擷取與有界快照查閱已接入；
-動作指令與 Script Builder 表單也已接入；MCP 工具、專用 GUI 查閱與手動執行的 history 控制
-仍待接入。B1 整合期間，日誌與來源連結 API
+動作指令、Script Builder 表單與專用 MCP 擷取／查閱工具也已接入；專用 GUI 查閱與手動
+執行的 history 控制仍待接入。B1 整合期間，日誌與來源連結 API
 仍屬實驗性介面。應用程式可明確寫入 schema-v1 快照::
 
    import time
@@ -1458,6 +1458,51 @@ Python 的 ``execute_action_with_journal`` 便利函式則建立全新變數。
 在 Script Builder 的 Flow 類別加入 **Capture Action Journal**，可編輯來源標記與巢狀
 body；Data 類別的 **Read Action Journal** 可編輯路徑、run 篩選與輸出上限。
 ``examples/28_action_journal.py`` 示範只操作變數的擷取與查閱，不送出桌面輸入。
+
+
+可觀察執行與 MCP 接線
+------------------------
+
+``execute_journal_run(actions, path, options=JournalRunOptions(...))`` 建立全新變數範圍，
+回傳既有四欄位的 ``JournalRunResult``。options 整合 ``variables``、``dry_run``、
+``run_id``、``device_id``、``session_id``、``observer`` 與 ``path_policy``。
+原本七參數的 ``execute_action_with_journal`` 會委派至此執行器，保留既有簽章。例如::
+
+   from pathlib import Path
+   from je_auto_control import JournalRunOptions, execute_journal_run
+
+   statuses = []
+   result = execute_journal_run(
+       [["AC_set_var", {"name": "message", "value": "hello"}]],
+       Path("run.jsonl"),
+       options=JournalRunOptions(run_id="observed", observer=statuses.append),
+   )
+   # statuses == ["incomplete", "ok"]
+
+Observer 在步驟起始快照持久化前與完成快照持久化後收到狀態字串，可丟出例外中止執行。
+完成 observer 的次要失敗不會取代原本正在傳遞的錯誤或控制訊號。本機 workers 會在各自的
+執行緒呼叫 observer。巢狀擷取保留外層 observer 並交集路徑政策，包含既有便利 API 開啟的
+擷取。每次附加都會檢查綁定政策當下的根目錄；完成寫入遭拒時，保留已持久化的未完成起始。
+
+``inspect_journal`` 與 ``read_events`` 支援筆數 observer，可合作式取消查閱。計數包含
+篩選前每筆已驗證紀錄；callback 例外傳遞前會關閉檔案。``inspect_journal`` 另會交集
+外層 journal 政策與可選的明確政策。
+
+MCP 提供 ``ac_journal_capture`` 與 ``ac_journal_read``。擷取接受 ``actions``、``path``，
+以及可選的 ``metadata``（``run_id``、``device_id``、``session_id``）、``variables`` 與
+``dry_run``。它回報已持久化完成的步驟數，在動作邊界觀察取消，並回傳結構化 run 來源資料。
+executor 記錄的失敗會設定 ``isError: true``，同時保留來源資料與原始 record。DAG node
+失敗等領域結果仍位於 ``record``，須另外檢視。
+
+查閱接受 ``path``、可選的 ``run_id`` 與 ``limit``，回傳 ``{"events": [...]}``。
+它在逐筆驗證時檢查取消，每 100 筆回報掃描進度，結束時回報最終筆數。limit 限制輸出，
+整份檔案仍會驗證。兩個工具在 RBAC 下都要求 ``drive_input``；唯讀模式保留查閱、移除擷取。
+
+MCP context 會將伺服器的路徑政策帶入日誌操作，包含巢狀日誌指令與本機 workers。
+預設 journal 根目錄也須允許該路徑；其他目的地除了 MCP roots，也需設定
+``AUTOCONTROL_ALLOWED_PATH_ROOTS``。一般巢狀動作的引數政策接線仍追蹤於 ``Progress.md``。
+取消在上述邊界合作進行，不會強制中斷已執行的原生 I/O。
+``examples/29_mcp_journal.py`` 以同一行程示範 JSON-RPC 流程，不送出桌面輸入或呼叫外部服務。
 
 
 執行歷史的日誌來源連結

@@ -141,6 +141,18 @@ full-file validation and bounded sanitized snapshots across the facade, CLI and
 `drive_input` under RBAC. Linting walks body-bearing ordinary commands as well
 as blocks. A plain outer dry-run previews the capture command without opening
 a journal; Python/CLI run-level capture can record individual dry-run steps.
+`action_journal/run.py` supplies frozen `JournalRunOptions` and the isolated
+`execute_journal_run` service; the seven-parameter convenience API delegates to
+it. Bindings retain observer/policy tuples through nested roots and local workers.
+Policies intersect and are checked before linking and at each append; observers
+run before a start and after durable completion, preserving pending failures.
+The reader owns a closing generator and invokes count observers outside storage
+error translation. MCP journal adapters use these hooks for progress/cancellation
+and receive the server's live policy through `ToolCallContext`. This confines
+nested journal operations; general nested action argument policies remain pending.
+`MCPToolResult` keeps failure metadata outside its JSON dictionary fields. The
+server sets `isError` and audit status from this explicit type while preserving
+structured payloads; ordinary dictionaries cannot set protocol flags.
 `utils/run_history/context.py` binds an existing history row to execution.
 Scheduler/trigger/hotkey/webhook/email owners bind their own row; local parallel
 and DAG workers carry it explicitly. `journal_scope` attaches an idempotent

@@ -36,6 +36,7 @@ from je_auto_control.utils.mcp_server.resources import (
 from je_auto_control.utils.mcp_server.tools import (
     MCPTool, build_default_tool_registry,
 )
+from je_auto_control.utils.mcp_server.tools._base import _tool_result_error
 from je_auto_control.utils.mcp_server.tools._validation import (
     undeclared_arguments, validate_arguments,
 )
@@ -684,13 +685,15 @@ class MCPServer(StatelessDispatchMixin, SubscriptionMixin, ClientRequestMixin):
         finally:
             with self._calls_lock:
                 self._active_calls.pop(call_key, None)
+        failure = _tool_result_error(result)
         self._audit.record(
-            tool=name, arguments=arguments, status="ok",
+            tool=name, arguments=arguments, status="error" if failure is not None else "ok",
             duration_seconds=time.monotonic() - started_at,
+            error_text=failure,
         )
         response: Dict[str, Any] = {
             "content": _to_content_blocks(result),
-            "isError": False,
+            "isError": failure is not None,
         }
         # 2025-06-18 spec: tools with an outputSchema return their dict result
         # as structuredContent for typed, token-cheap client consumption.
@@ -706,6 +709,7 @@ class MCPServer(StatelessDispatchMixin, SubscriptionMixin, ClientRequestMixin):
         return ToolCallContext(
             request_id=msg_id, progress_token=progress_token,
             notifier=self._notifier,
+            path_policy=self.argument_policy.path_policy,
         )
 
 

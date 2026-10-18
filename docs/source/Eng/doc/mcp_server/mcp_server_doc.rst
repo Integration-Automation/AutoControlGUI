@@ -8,14 +8,35 @@ custom Anthropic / OpenAI tool-use loops) can drive the host machine
 through AutoControl. Implementation is stdlib-only — JSON-RPC 2.0
 over stdio or HTTP+SSE — no extra runtime dependencies.
 
-Roughly 90 tools are exposed, plus the full set of MCP protocol
+The default registry exposes 682 tools (663 canonical names and 19 aliases),
+plus the full set of MCP protocol
 capabilities: tools, resources, prompts, sampling, roots, logging,
 progress, cancellation, list-changed notifications, and elicitation.
+
+Structured journals
+===================
+
+``ac_journal_capture`` accepts ``actions``, ``path`` and optional ``metadata``
+(``run_id``, ``device_id``, ``session_id``), ``variables`` and ``dry_run``.
+``ac_journal_read`` accepts ``path``, optional ``run_id`` and ``limit`` (default
+100, range 1–10,000). Both have output schemas and support progress and
+cooperative cancellation. Both require ``drive_input`` under RBAC; read-only
+mode exposes read while omitting capture. Journal paths follow the MCP policy
+and the default journal-root guard. See the journal guide for nested capture,
+worker inheritance and read-cancellation boundaries.
+
+Capture returns ``run_id``, ``journal_path``, ``record`` and ``failed_actions``;
+read returns ``{"events": [...]}``. A recorded executor failure sets ``isError``
+while retaining structured run data. For extension handlers, ``MCPToolResult``
+is a JSON-compatible dictionary with separate ``is_error``/``error_text``
+metadata. Only this explicit type controls tool error/audit status; data fields
+in an ordinary dictionary cannot set protocol flags. Controlled failure results
+retain their payload without an exception/error screenshot.
 
 Tool catalogue
 ==============
 
-The default registry pairs every canonical ``ac_*`` tool with a
+The default registry gives selected common ``ac_*`` tools a
 short alias (``click``, ``type``, ``screenshot``, ...) so prompts
 can stay terse. Use ``--list-tools`` (see *CLI inspection* below) to
 dump the live catalogue as JSON.
@@ -154,7 +175,7 @@ Logging notifications, progress, cancellation
   ``io.modelcontextprotocol/logLevel`` (see `Stateless requests
   (2026-07-28)`_).
 - Long-running tools that accept a ``ctx`` parameter receive a
-  :class:`ToolCallContext` and can call
+  ``ToolCallContext`` and can call
   ``ctx.progress(value, total, message)`` to push
   ``notifications/progress`` (when the client supplied a
   ``progressToken``) and ``ctx.check_cancelled()`` to abort
@@ -461,7 +482,7 @@ Read-only / safe mode
 
 Set ``JE_AUTOCONTROL_MCP_READONLY=1`` (or pass ``--read-only`` to
 ``je_auto_control_mcp``, or ``read_only=True`` to
-:func:`build_default_tool_registry`) to drop every tool whose
+``build_default_tool_registry``) to drop every tool whose
 ``readOnlyHint`` is false. Only observers (positions, OCR queries,
 clipboard reads, history, ...) survive:
 
@@ -546,7 +567,7 @@ reach:
     is readable, as before — including the ones that hold API keys.
 
 Programmatically, the same policy is ``server.argument_policy``
-(:class:`ArgumentPolicy` holding a :class:`je_auto_control.PathPolicy` and
+(``ArgumentPolicy`` holding a ``je_auto_control.PathPolicy`` and
 the allowlist); assign another to a server you build yourself.
 
 Confirmation prompts (elicitation)
@@ -622,7 +643,7 @@ returned to the model — fast forensic trail for flaky automations.
 Rate limiting
 =============
 
-Pass a :class:`RateLimiter` to :class:`MCPServer` to guard against
+Pass a ``RateLimiter`` to ``MCPServer`` to guard against
 runaway loops:
 
 .. code-block:: python
@@ -640,7 +661,7 @@ Plugin hot-reload
 =================
 
 Drop ``*.py`` files exposing top-level ``AC_*`` callables into a
-directory and let :class:`PluginWatcher` keep the registry in sync:
+directory and let ``PluginWatcher`` keep the registry in sync:
 
 .. code-block:: python
 

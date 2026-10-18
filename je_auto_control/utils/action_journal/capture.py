@@ -6,7 +6,7 @@ from contextlib import contextmanager
 from contextvars import ContextVar
 from dataclasses import dataclass, replace
 from pathlib import Path
-from typing import Iterator, Mapping, Optional, Sequence, TypedDict, cast
+from typing import Callable, Iterator, Mapping, Optional, Sequence, TypedDict, cast
 from uuid import uuid4
 
 from je_auto_control.utils.action_journal.events import ActionEvent, ActionJournalError, EventStatus
@@ -14,8 +14,8 @@ from je_auto_control.utils.action_journal.redaction import sanitize_event
 from je_auto_control.utils.action_journal.store import ActionJournal
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.logging.secret_scope import scrub_secret_text
-from je_auto_control.utils.path_guard.path_guard import validate_path
-from je_auto_control.utils.script_vars.execution import execution_scope
+from je_auto_control.utils.path_guard.policy import PathPolicy
+from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.run_history.context import current_history
 from je_auto_control.utils.run_history.run_outcome import is_run_interruption
 
@@ -29,6 +29,8 @@ class JournalBinding:
     parent_id: Optional[str] = None
     device_id: Optional[str] = None
     session_id: Optional[str] = None
+    observers: tuple[Callable[[EventStatus], None], ...] = ()
+    path_policies: tuple[PathPolicy, ...] = ()
 
 
 class JournalRunResult(TypedDict):
@@ -65,26 +67,55 @@ def bound_journal(binding: Optional[JournalBinding]) -> Iterator[None]:
 
 @contextmanager
 def journal_scope(journal: ActionJournal, *, run_id: Optional[str] = None,
-                  device_id: Optional[str] = None, session_id: Optional[str] = None) -> Iterator[JournalBinding]:
+                  device_id: Optional[str] = None, session_id: Optional[str] = None,
+                  observer: Optional[Callable[[EventStatus], None]] = None,
+                  path_policy: Optional[PathPolicy] = None) -> Iterator[JournalBinding]:
     """Capture enclosed executor calls in one explicit run, restoring any outer run.
 
     Worker helpers carry the binding explicitly. A new scope starts a new root;
     nested action bodies share the current binding until their call returns.
     Identifiers and destinations containing secrets known to the enclosing run
     are refused before history linking, file creation or body execution.
+    Nested scopes retain enclosing observers and intersect path policies.
+    Observers receive ``incomplete`` before dispatch and the final status only
+    after durable completion; joined workers invoke them on their own threads.
     """
+    identity = _scope_identity(journal, run_id, device_id, session_id)
+    parent = current_journal()
+    observers = parent.observers if parent is not None else ()
+    if observer is not None and all(item is not observer for item in observers):
+        observers += (observer,)
+    policies = _effective_path_policies(path_policy)
+    for policy in policies:
+        policy.validate(journal.path, operation="journal capture")
+    binding = JournalBinding(journal, identity, device_id=device_id, session_id=session_id,
+                             observers=observers, path_policies=policies)
+    history = current_history()
+    if history is not None and not history.store.attach_journal(history.run_id, str(journal.path.resolve()), identity):
+        raise ActionJournalError("cannot attach journal to a missing history run")
+    with bound_journal(binding):
+        yield binding
+
+
+def _scope_identity(journal: ActionJournal, run_id: Optional[str], device_id: Optional[str],
+                    session_id: Optional[str]) -> str:
+    """Validate public metadata before any provenance link or file effect."""
     identity = uuid4().hex if run_id is None else run_id
     if not isinstance(identity, str) or not identity:
         raise ActionJournalError("journal run ID must be a non-empty string")
     for value in (identity, device_id, session_id, str(journal.path)):
         if isinstance(value, str) and scrub_secret_text(value) != value:
             raise ActionJournalError("journal identifiers and destination cannot contain a resolved secret")
-    binding = JournalBinding(journal, identity, device_id=device_id, session_id=session_id)
-    history = current_history()
-    if history is not None and not history.store.attach_journal(history.run_id, str(journal.path.resolve()), identity):
-        raise ActionJournalError("cannot attach journal to a missing history run")
-    with bound_journal(binding):
-        yield binding
+    return identity
+
+
+def _effective_path_policies(policy: Optional[PathPolicy]) -> tuple[PathPolicy, ...]:
+    """Intersect explicit roots with every enclosing captured run's roots."""
+    parent = current_journal()
+    policies = parent.path_policies if parent is not None else ()
+    if policy is not None and all(item is not policy for item in policies):
+        policies += (policy,)
+    return policies
 
 
 def _snapshot(action: list[object], binding: JournalBinding) -> ActionEvent:
@@ -138,7 +169,8 @@ def action_step(action: list[object], *, dry_run: bool = False) -> Iterator[Opti
         yield None
         return
     event = _snapshot(action, binding)
-    binding.journal.append(event)  # durable start precedes every device effect
+    _notify_observers(binding, event.status)
+    _append_event(binding, event)  # durable start precedes every device effect
     step, before = _CapturedStep(), _failure_count()
     error: Optional[BaseException] = None
     with bound_journal(replace(binding, parent_id=event.step_id)):
@@ -148,14 +180,37 @@ def action_step(action: list[object], *, dry_run: bool = False) -> Iterator[Opti
             error = failure
             raise
         finally:
-            try:
-                binding.journal.append(_completion(event, step, before, error, dry_run))
-            except ActionJournalError:
-                if error is None:
-                    raise
-                # Preserve a cancellation or original failure. Its durable start
-                # stays incomplete if completion could not be written.
-                autocontrol_logger.error("action journal completion unavailable; preserving original exception")
+            _finish_step(binding, _completion(event, step, before, error, dry_run), error)
+
+
+def _append_event(binding: JournalBinding, event: ActionEvent) -> None:
+    """Check current roots at each append, including client-root revocation."""
+    for policy in binding.path_policies:
+        policy.validate(binding.journal.path, operation="journal append")
+    binding.journal.append(event)
+
+
+def _notify_observers(binding: JournalBinding, status: EventStatus, error: Optional[BaseException] = None) -> None:
+    """Notify observers while preserving any original failure or control signal."""
+    try:
+        for observer in binding.observers:
+            observer(status)
+    except BaseException:  # pylint: disable=broad-exception-caught  # reason: retain the pending original signal
+        if error is None:
+            raise
+        autocontrol_logger.error("action journal observer unavailable; preserving original exception")
+
+
+def _finish_step(binding: JournalBinding, event: ActionEvent, error: Optional[BaseException]) -> None:
+    """Notify completion only after persistence; retain a pending hard signal."""
+    try:
+        _append_event(binding, event)
+    except AutoControlException:
+        if error is None:
+            raise
+        autocontrol_logger.error("action journal completion unavailable; preserving original exception")
+    else:
+        _notify_observers(binding, event.status, error)
 
 
 def execute_action_with_journal(action_list: Sequence[object] | Mapping[str, object], path: Path, *,
@@ -168,13 +223,7 @@ def execute_action_with_journal(action_list: Sequence[object] | Mapping[str, obj
     run's failure-count delta. Direct private executors can use ``journal_scope``
     to capture their existing scope without changing ownership of their variables.
     """
-    # pylint: disable-next=import-outside-toplevel  # reason: breaks the capture/executor import cycle
-    from je_auto_control.utils.executor.action_executor import executor
-    journal = ActionJournal(validate_path(path))
-    with execution_scope(variables), journal_scope(journal, run_id=run_id,
-                                                  device_id=device_id, session_id=session_id) as binding:
-        before = _failure_count()
-        actions = dict(action_list) if isinstance(action_list, Mapping) else list(action_list)
-        record: dict[str, object] = dict(executor.execute_action(actions, dry_run=dry_run))
-    return {"run_id": binding.run_id, "journal_path": str(journal.path), "record": record,
-            "failed_actions": _failure_count() - before}
+    # pylint: disable-next=import-outside-toplevel  # reason: the options runner imports this capture boundary
+    from je_auto_control.utils.action_journal.run import JournalRunOptions, execute_journal_run
+    return execute_journal_run(action_list, path, options=JournalRunOptions(
+        variables=variables, dry_run=dry_run, run_id=run_id, device_id=device_id, session_id=session_id))

@@ -8,7 +8,7 @@ import inspect
 import os
 from dataclasses import dataclass
 from functools import lru_cache
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Mapping, Optional
 
 
 @dataclass(frozen=True)
@@ -75,6 +75,35 @@ class MCPToolAnnotations:
         if self.title is not None:
             annotations["title"] = self.title
         return annotations
+
+
+class MCPToolResult(dict[str, object]):
+    """A JSON object with explicit tool-failure metadata outside its data fields."""
+
+    __slots__ = ("_is_error", "_error_text")
+
+    def __init__(self, value: Mapping[str, object], *, is_error: bool = False,
+                 error_text: Optional[str] = None) -> None:
+        super().__init__(value)
+        self._is_error = is_error
+        self._error_text = error_text
+
+    @property
+    def is_error(self) -> bool:
+        """Whether the tool reports a controlled execution failure."""
+        return self._is_error
+
+    @property
+    def error_text(self) -> Optional[str]:
+        """Optional audit detail; it is not added to the JSON data object."""
+        return self._error_text
+
+
+def _tool_result_error(value: Any) -> Optional[str]:
+    """Only explicit result objects can set the protocol's error status."""
+    if isinstance(value, MCPToolResult) and value.is_error:
+        return value.error_text or "tool reported an execution failure"
+    return None
 
 
 @dataclass(frozen=True)

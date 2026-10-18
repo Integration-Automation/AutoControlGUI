@@ -1081,7 +1081,7 @@ from je_auto_control.utils.gamepad import (
 # MCP server (headless stdio bridge for Claude / other MCP clients)
 from je_auto_control.utils.mcp_server import (
     AuditLogger, HttpMCPServer, MCPContent, MCPPrompt, MCPPromptArgument,
-    MCPResource, MCPServer, MCPTool, MCPToolAnnotations,
+    MCPResource, MCPServer, MCPTool, MCPToolAnnotations, MCPToolResult,
     OperationCancelledError, PromptProvider, RateLimiter,
     ResourceProvider, ToolCallContext, build_default_tool_registry,
     default_prompt_provider, default_resource_provider,
@@ -1159,8 +1159,8 @@ from je_auto_control.utils.run_history.history_store import (
 )
 # Structured action provenance (headless, explicit capture only)
 from je_auto_control.utils.action_journal import (
-    ActionEvent, ActionJournal, ActionJournalError, JournalBinding, JournalRunResult,
-    execute_action_with_journal, inspect_journal, journal_scope, read_events,
+    ActionEvent, ActionJournal, ActionJournalError, JournalBinding, JournalRunOptions, JournalRunResult,
+    execute_action_with_journal, execute_journal_run, inspect_journal, journal_scope, read_events,
 )
 # Triggers (headless)
 from je_auto_control.utils.triggers.trigger_engine import (
@@ -1758,7 +1758,7 @@ __all__ = [
     # MCP server
     "AuditLogger", "HttpMCPServer", "MCPContent", "MCPPrompt",
     "MCPPromptArgument", "MCPResource", "MCPServer", "MCPTool",
-    "MCPToolAnnotations", "OperationCancelledError", "PromptProvider",
+    "MCPToolAnnotations", "MCPToolResult", "OperationCancelledError", "PromptProvider",
     "RateLimiter", "ResourceProvider", "ToolCallContext",
     "build_default_tool_registry",
     "default_prompt_provider", "default_resource_provider",
@@ -1812,8 +1812,8 @@ __all__ = [
     "Tracer", "default_tracer", "traced",
     # Run history
     "HistoryStore", "JournalLink", "RunRecord", "default_history_store",
-    "ActionEvent", "ActionJournal", "ActionJournalError", "JournalBinding", "JournalRunResult",
-    "execute_action_with_journal", "inspect_journal", "journal_scope", "read_events",
+    "ActionEvent", "ActionJournal", "ActionJournalError", "JournalBinding", "JournalRunOptions", "JournalRunResult",
+    "execute_action_with_journal", "execute_journal_run", "inspect_journal", "journal_scope", "read_events",
     # Accessibility
     "AccessibilityElement", "AccessibilityNotAvailableError",
     "accessibility_status",

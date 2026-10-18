@@ -25,9 +25,8 @@ real OS runner for it. It must not be interpreted as a production guarantee.
 Hardware-backed results and known limitations should be attached to releases.
 
 Journal storage, executor capture, provenance links, facade/CLI entry points
-and Script Builder commands have controlled tests. The journal work does not
-claim native device acceptance. Dedicated browsing, manual history ownership
-and MCP journal tools remain pending B1 integration.
+and Script Builder commands, observed runs and MCP journal tools have controlled tests. The journal work does not
+claim native device acceptance. Dedicated browsing and manual history ownership remain pending B1 integration.
 
 Linux Wayland is split: **capture is exercised by CI against a real
 compositor; input is exercised by CI against a real EI peer and a real portal.**

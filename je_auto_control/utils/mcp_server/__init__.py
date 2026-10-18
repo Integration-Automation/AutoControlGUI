@@ -31,14 +31,14 @@ from je_auto_control.utils.mcp_server.resources import (
     default_resource_provider,
 )
 from je_auto_control.utils.mcp_server.tools import (
-    MCPContent, MCPTool, MCPToolAnnotations, build_default_tool_registry,
+    MCPContent, MCPTool, MCPToolAnnotations, MCPToolResult, build_default_tool_registry,
     make_plugin_tool, register_plugin_tools,
 )
 
 __all__ = [
     "AuditLogger", "FakeState", "HttpMCPServer", "LiveScreenProvider",
     "MCPContent", "MCPLogBridge", "MCPPrompt", "MCPPromptArgument",
-    "MCPResource", "MCPServer", "MCPTool", "MCPToolAnnotations",
+    "MCPResource", "MCPServer", "MCPTool", "MCPToolAnnotations", "MCPToolResult",
     "OperationCancelledError", "PluginWatcher", "PromptProvider",
     "RateLimiter", "ResourceProvider", "ToolCallContext",
     "build_default_tool_registry",

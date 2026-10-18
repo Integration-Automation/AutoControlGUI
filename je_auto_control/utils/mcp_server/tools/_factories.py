@@ -16,6 +16,7 @@ from je_auto_control.utils.mcp_server.tools import _handlers_input as h_input
 from je_auto_control.utils.mcp_server.tools import _handlers_screen as h_screen
 from je_auto_control.utils.mcp_server.tools import _handlers_system as h_system
 from je_auto_control.utils.mcp_server.tools import _handlers_runs as h_runs
+from je_auto_control.utils.mcp_server.tools import _handlers_journal as h_journal
 from je_auto_control.utils.mcp_server.tools import _handlers_scheduling as h_sched
 from je_auto_control.utils.mcp_server.tools import _handlers_remote as h_remote
 from je_auto_control.utils.mcp_server.tools._base import (
@@ -25,6 +26,47 @@ from je_auto_control.utils.mcp_server.tools._base import (
 
 #: A JSON document argument: an object or an array (a root array was refused).
 _JSON_DOCUMENT = {"type": ["object", "array"]}
+
+
+def journal_tools() -> List[MCPTool]:
+    """Build capture and sensitive-read tools with explicit result schemas."""
+    metadata = schema({name: {"type": "string", "minLength": 1}
+                       for name in ("run_id", "device_id", "session_id")})
+    metadata["additionalProperties"] = False
+    return [
+        MCPTool(
+            name="ac_journal_capture",
+            description=("Capture actions with fresh variables and durable journal snapshots. "
+                         "metadata may label run_id, device_id and session_id. Reports progress "
+                         "and observes cancellation at action boundaries, including local workers. "
+                         "Recorded executor failures set isError; inspect record for domain outcomes."),
+            input_schema=schema({
+                "actions": {"type": "array", "items": {"type": "array"}, "minItems": 1},
+                "path": {"type": "string", "format": "path"},
+                "metadata": metadata, "variables": {"type": "object"}, "dry_run": {"type": "boolean"},
+            }, required=["actions", "path"]),
+            handler=h_journal.journal_capture,
+            annotations=DESTRUCTIVE,
+            output_schema=schema({
+                "run_id": {"type": "string"}, "journal_path": {"type": "string"},
+                "record": {"type": "object"}, "failed_actions": {"type": "integer", "minimum": 0},
+            }, required=["run_id", "journal_path", "record", "failed_actions"]),
+        ),
+        MCPTool(
+            name="ac_journal_read",
+            description=("Validate a whole journal and return bounded sanitized snapshots. "
+                         "Filter by run_id; limit defaults to 100 (1-10000). Progress counts "
+                         "scanned records, and cancellation is checked between records. "
+                         "Private file reads require drive_input under RBAC."),
+            input_schema=schema({
+                "path": {"type": "string", "format": "path"}, "run_id": {"type": "string"},
+                "limit": {"type": "integer", "minimum": 1, "maximum": 10000},
+            }, required=["path"]),
+            handler=h_journal.journal_read,
+            annotations=READ_ONLY,
+            output_schema=schema({"events": {"type": "array", "items": {"type": "object"}}}, required=["events"]),
+        ),
+    ]
 
 
 def mouse_tools() -> List[MCPTool]:
@@ -8995,6 +9037,7 @@ def media_assert_tools() -> List[MCPTool]:
 
 
 ALL_FACTORIES = (
+    journal_tools,
     mouse_tools, keyboard_tools, screen_tools, image_and_ocr_tools,
     window_tools, system_tools, recording_tools, drag_and_send_tools,
     semantic_locator_tools, self_healing_tools, anchor_locator_tools,

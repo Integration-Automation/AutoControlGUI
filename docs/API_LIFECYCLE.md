@@ -20,6 +20,12 @@ of existing executor or history APIs.
 Explicit capture scopes reject identifiers and destinations containing values
 known to the enclosing run's resolved-secret mask before linking history or
 running actions.
+`JournalRunOptions` and `execute_journal_run` add typed run controls without
+expanding the existing seven-parameter convenience signature. Nested scopes
+inherit observers and intersect policies; callbacks may run on joined worker
+threads. `MCPToolResult` is an experimental JSON-compatible object result with
+separate controlled-failure metadata. The MCP journal tools remain experimental
+alongside the other B1 journal APIs.
 
 - Stable API removal requires a deprecation warning and two minor releases.
 - Beta API removal requires one release note and one minor release.

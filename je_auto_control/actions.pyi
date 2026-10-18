@@ -1565,8 +1565,8 @@ def AC_journal_capture(
 ) -> Any:
     """Capture named body arguments on their executor without eager interpolation."""
 
-def AC_journal_read(path: str | Path, *, run_id: Optional[str] = ..., limit: int = ...) -> list[dict[str, object]]:
-    """Validate a whole journal, then return at most ``limit`` sanitized snapshots."""
+def AC_journal_read(path: str | Path, *, run_id: str | None = ..., limit: int = ...) -> list[dict[str, object]]:
+    """Return bounded sanitized snapshots under the enclosing journal roots."""
 
 def AC_json_extract(data: Any, mapping: Any) -> Dict[str, Any]:
     """Adapter: extract a {key: path} mapping from data into a flat dict."""

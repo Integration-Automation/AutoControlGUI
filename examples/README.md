@@ -44,6 +44,13 @@ glue between AutoControl's public API and your code.
 
 ## Running
 
+[`29_mcp_journal.py`](29_mcp_journal.py) sends capture/read JSON-RPC requests to
+an in-process MCP server with variable-only actions:
+
+```bash
+python examples/29_mcp_journal.py run.jsonl
+```
+
 [`28_action_journal.py`](28_action_journal.py) captures variable-only actions
 through `AC_journal_capture` and prints sanitized snapshots with
 `inspect_journal`; it sends no desktop input:

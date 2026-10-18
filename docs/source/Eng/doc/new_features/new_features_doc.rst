@@ -1479,8 +1479,9 @@ Structured action journals (partial integration)
 
 B1 exports storage and explicit capture/read APIs from ``je_auto_control`` and
 ``je_auto_control.utils.action_journal``. CLI capture and bounded snapshot reads
-are available, along with action commands and Script Builder forms. MCP tools,
-dedicated GUI browsing and manual-run history controls remain pending integration. The journal/provenance APIs remain experimental during B1.
+are available, along with action commands, Script Builder forms and dedicated
+MCP capture/read tools. Dedicated GUI browsing and manual-run history controls
+remain pending integration. The journal/provenance APIs remain experimental during B1.
 Applications can explicitly write schema-v1 snapshots::
 
    import time
@@ -1579,6 +1580,64 @@ In Script Builder, add **Capture Action Journal** (Flow) to edit metadata and
 nested body steps, or **Read Action Journal** (Data) to edit path, run filter
 and limit. ``examples/28_action_journal.py`` demonstrates variable-only capture
 and inspection without desktop input.
+
+
+Observed runs and MCP integration
+----------------------------------
+
+``execute_journal_run(actions, path, options=JournalRunOptions(...))`` starts
+fresh variables and returns the existing four-field ``JournalRunResult``.
+Options group ``variables``, ``dry_run``, ``run_id``, ``device_id``,
+``session_id``, ``observer`` and ``path_policy``. The original seven-parameter
+``execute_action_with_journal`` API delegates to this runner and keeps its
+signature. For example::
+
+   from pathlib import Path
+   from je_auto_control import JournalRunOptions, execute_journal_run
+
+   statuses = []
+   result = execute_journal_run(
+       [["AC_set_var", {"name": "message", "value": "hello"}]],
+       Path("run.jsonl"),
+       options=JournalRunOptions(run_id="observed", observer=statuses.append),
+   )
+   # statuses == ["incomplete", "ok"]
+
+Observers receive a status string before a step's durable start and after its
+completion snapshot is persisted. They may raise to stop execution. A secondary
+completion-observer failure cannot replace a pending original error or control
+signal. Joined workers invoke observers on their own threads. Nested captures
+retain enclosing observers and intersect path policies, including captures
+opened by existing convenience APIs. The bound policy's live roots are checked
+at each append. A refused completion leaves the durable start incomplete.
+
+``inspect_journal`` and ``read_events`` accept count observers for cooperative
+read cancellation. Counts include every validated record before filtering;
+file handles close before callback exceptions propagate. ``inspect_journal``
+also intersects enclosing journal policies and an optional explicit policy.
+
+MCP exposes ``ac_journal_capture`` and ``ac_journal_read``. Capture accepts
+``actions``, ``path``, optional ``metadata`` (``run_id``, ``device_id``,
+``session_id``), ``variables`` and ``dry_run``. It reports durable completed-step
+counts, observes cancellation at action boundaries and returns structured run
+metadata. Recorded executor failures set ``isError: true`` while preserving
+that metadata and the original record. Domain outcomes such as a failed DAG
+node remain in ``record`` and require separate inspection.
+
+Read accepts ``path``, optional ``run_id`` and ``limit`` and returns
+``{"events": [...]}``. It checks cancellation between validated records,
+reports scan progress every 100 records and sends a final count. Limits bound
+output, while the whole file is validated. Both tools require ``drive_input``
+under RBAC. Read-only mode keeps read and omits capture.
+
+The MCP context carries the server's path policy into journal operations,
+including nested journal commands and local workers. Default journal roots
+must also allow the path; configure ``AUTOCONTROL_ALLOWED_PATH_ROOTS`` for an
+additional destination alongside MCP roots. General nested-action argument
+policy integration remains tracked in ``Progress.md``. Cancellation is
+cooperative at the described boundaries; running native I/O is not forcibly
+interrupted. ``examples/29_mcp_journal.py`` demonstrates the JSON-RPC workflow
+in process without desktop input or an external service.
 
 
 History provenance links

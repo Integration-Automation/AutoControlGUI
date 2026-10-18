@@ -13,6 +13,16 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ## Unreleased
 
+- MCP `ac_journal_capture` and `ac_journal_read` support structured journal
+  results, progress and cooperative cancellation. Recorded action failures set
+  `isError` while retaining the run metadata. `MCPToolResult` lets handlers mark
+  controlled failures without adding protocol flags to their JSON data.
+  `JournalRunOptions`/`execute_journal_run` add typed observers and path policies;
+  nested captures and joined workers retain these controls, and each append
+  rechecks the bound roots. Readers can cancel between validated records and
+  close the file before propagating the original signal. Existing capture
+  convenience signatures and ordinary tool-result dictionaries stay compatible.
+
 - `AC_journal_capture` captures a nested body while retaining its owning
   executor, variables, strictness and control signals; structural validation
   and linting include the body. `AC_journal_read` and public `inspect_journal`

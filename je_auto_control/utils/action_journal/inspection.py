@@ -2,23 +2,33 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Optional
+from typing import Callable, Optional
 
 from je_auto_control.utils.action_journal.events import ActionJournalError
 from je_auto_control.utils.action_journal.redaction import sanitize_event
 from je_auto_control.utils.action_journal.store import read_events
 from je_auto_control.utils.path_guard.path_guard import validate_path
+from je_auto_control.utils.path_guard.policy import PathPolicy
 
 
-def inspect_journal(path: str | Path, *, run_id: Optional[str] = None, limit: int = 100) -> list[dict[str, object]]:
+def inspect_journal(path: str | Path, *, run_id: Optional[str] = None, limit: int = 100,
+                     observer: Optional[Callable[[int], None]] = None,
+                     path_policy: Optional[PathPolicy] = None) -> list[dict[str, object]]:
     """Validate a whole journal, then return at most ``limit`` sanitized snapshots.
 
     Filtering precedes the 1–10,000 output limit; validation still loads the
     whole file. Start/completion snapshots stay separate, and missing files
     return an empty list. The source is never modified. The default path-root
     guard applies, unlike the low-level ``read_events`` storage reader.
+    Enclosing captured roots and an explicit policy intersect. The observer
+    sees every validated record count before filtering and may cancel reading.
     """
     if isinstance(limit, bool) or not isinstance(limit, int) or not 1 <= limit <= 10000:
         raise ActionJournalError("journal limit must be an integer from 1 to 10000")
-    events = read_events(validate_path(path), run_id=run_id)
+    # pylint: disable-next=import-outside-toplevel  # reason: package initialization imports this reader before capture
+    from je_auto_control.utils.action_journal.capture import _effective_path_policies
+    candidate = validate_path(path)
+    for policy in _effective_path_policies(path_policy):
+        candidate = policy.validate(candidate, operation="journal inspection")
+    events = read_events(candidate, run_id=run_id, observer=observer)
     return [sanitize_event(event) for event in events[:limit]]

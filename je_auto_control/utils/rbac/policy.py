@@ -120,6 +120,8 @@ COMMAND_CAPABILITIES: Dict[str, str] = {
 
 #: MCP tools whose capability is not the one their read-only hint implies.
 TOOL_CAPABILITIES: Dict[str, str] = {
+    "ac_journal_capture": _DRIVE,
+    "ac_journal_read": _DRIVE,
     "ac_remote_host_start": _HOSTS,
     "ac_remote_host_stop": _HOSTS,
     "ac_usb_acl_add": _HOSTS,

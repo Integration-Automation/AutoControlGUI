@@ -3,8 +3,9 @@ from __future__ import annotations
 
 import json
 import os
+from contextlib import closing
 from pathlib import Path
-from typing import BinaryIO, Iterator, Optional
+from typing import BinaryIO, Callable, Generator, Iterator, Optional
 
 from je_auto_control.utils.action_journal.events import ActionEvent, ActionJournalError
 from je_auto_control.utils.action_journal.redaction import sanitize_event
@@ -122,19 +123,34 @@ def _decode(raw: bytes, line_number: int) -> ActionEvent:
         raise ActionJournalError(f"invalid action journal record at line {line_number}") from None
 
 
-def read_events(path: Path, *, run_id: Optional[str] = None) -> list[ActionEvent]:
+def read_events(path: Path, *, run_id: Optional[str] = None,
+                 observer: Optional[Callable[[int], None]] = None) -> list[ActionEvent]:
     """Read validated snapshots in append order, optionally selecting one run.
 
     A final unterminated fragment after a valid record is uncommitted and ignored.
     Ambiguous first fragments, malformed complete lines, unsupported schemas and
     non-increasing sequences are rejected. Start
     snapshots remain incomplete; reading never infers successful completion.
+    An observer receives the validated record count before filtering, and may
+    raise to cancel. The handle closes before its original exception propagates.
     """
+    selected = []
+    with closing(_iter_events(path)) as events:
+        for count, event in enumerate(events, 1):
+            if observer is not None:
+                observer(count)
+            if run_id is None or event.run_id == run_id:
+                selected.append(event)
+    return selected
+
+
+def _iter_events(path: Path) -> Generator[ActionEvent, None, None]:
+    """Own the handle and translate storage failures without wrapping observers."""
     try:
         with Path(path).open("rb") as handle:
-            return [event for event in _snapshots(handle) if run_id is None or event.run_id == run_id]
+            yield from _snapshots(handle)
     except FileNotFoundError:
-        return []
+        return
     except (OSError, TypeError, ValueError) as error:
         if isinstance(error, ActionJournalError):
             raise
